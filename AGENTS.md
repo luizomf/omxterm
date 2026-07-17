@@ -47,9 +47,9 @@ The default flow is **issue -> branch -> PR -> merge**.
    `docs`, `chore`, and `ci`.
 5. Open a PR that contains `Closes #<issue>`, maps the acceptance criteria, and
    records verification evidence.
-6. Do not merge while required reviews or checks are pending. If the repository
-   still has no documented merge strategy, ask before the first merge only.
-7. After integration, verify issue closure and branch cleanup.
+6. Merge PRs with squash after required reviews and checks pass. Use the PR
+   title as the conventional squash commit subject.
+7. After integration, verify issue closure and delete the merged branch.
 
 Keep tracker state accurate. A delivered change that is not reflected in its
 issue or PR is unfinished work.
