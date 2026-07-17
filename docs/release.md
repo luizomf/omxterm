@@ -25,9 +25,9 @@ startup events through a running PTY. It rejects source maps, tests, source
 trees, alternate-architecture PTY binaries, common secret files, and signing
 identities in the package.
 
-For packaging alone, use `npm run package:mac`; run `npm run package:verify`
-against its unpacked app afterward. Both commands are local-only and pass
-`--publish never` to the packager.
+For packaging alone, use `npm run package:mac`, which passes `--publish never`
+to the packager. Run the non-publishing `npm run package:verify` command against
+the unpacked app afterward.
 
 The DMG is intentionally unsigned and not notarized. It must not be treated as
 a release candidate until every automated check is green and the exact DMG has
