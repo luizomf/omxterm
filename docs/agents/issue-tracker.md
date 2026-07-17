@@ -1,7 +1,7 @@
 # Issue tracker: GitHub
 
 Specs, tickets, and issues for this repository live as GitHub issues in
-`luizomf/omxterm-local`. Use the `gh` CLI for all operations.
+`luizomf/omxterm`. Use the `gh` CLI for all operations.
 
 ## Conventions
 

@@ -7,11 +7,12 @@ a shared terminal package until repeated, stable common behavior demonstrates a
 real shared boundary; intentional local duplication is preferable to premature
 cross-product coupling.
 
-The canonical repository names will match the product names. The existing web
-broker currently named `omxterm` locally and on GitHub must first become
-`omxterm-web`; the desktop repository currently named `omxterm-local` must then
-become `omxterm`. This order frees the canonical desktop name without collision.
-The transition must update both GitHub repositories, local clone directories,
-Git remotes, and repository-owned references, while checking deployment and
-automation references in OMXTerm Web before changing them. The current names are
-temporary bootstrap identities, not a reason to block specification work.
+The canonical repository names match the product names: the web broker is
+`luizomf/omxterm-web`, and the desktop terminal is `luizomf/omxterm`. During
+bootstrap, the web repository occupied `luizomf/omxterm` while the desktop
+repository used `luizomf/omxterm-local`, so the web repository had to move
+first to free the canonical desktop name without collision. The transition
+updated both GitHub repositories, local clone directories, Git remotes, and
+repository-owned references after checking deployment and automation references
+in OMXTerm Web. Those previous names remain part of the ordered decision
+history, not current repository identities.

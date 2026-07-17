@@ -19,10 +19,10 @@ _Avoid_: OMXTerm, bastion, local terminal
 
 **Repository Identity**:
 The canonical one-to-one mapping between product and repository names: the
-desktop terminal is `omxterm`, and the browser SSH broker is `omxterm-web`.
-During bootstrap the desktop repository is temporarily `omxterm-local` and the
-web repository temporarily occupies `omxterm`; ADR 0005 defines the ordered
-rename that removes this collision.
+desktop terminal is `luizomf/omxterm`, and the browser SSH broker is
+`luizomf/omxterm-web`. During bootstrap the desktop repository temporarily used
+`luizomf/omxterm-local` while the web repository occupied `luizomf/omxterm`;
+ADR 0005 records the ordered rename that established the canonical mapping.
 _Avoid_: permanent omxterm-local, shared omxterm repository, product variant
 
 **Terminal Assistance**:

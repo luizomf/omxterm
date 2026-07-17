@@ -109,7 +109,7 @@ state exactly why.
 
 ### Issue tracker
 
-Issues are tracked in GitHub at `luizomf/omxterm-local`. See
+Issues are tracked in GitHub at `luizomf/omxterm`. See
 `docs/agents/issue-tracker.md`.
 
 ### Triage labels
