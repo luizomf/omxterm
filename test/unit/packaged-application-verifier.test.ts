@@ -31,6 +31,7 @@ describe("packaged application verifier", () => {
     "/node_modules/node-pty/src/index.ts",
     "/node_modules/node-pty/prebuilds/darwin-x64/pty.node",
     "/node_modules/node-pty/lib/terminal.test.js",
+    "/node_modules/node-addon-api/napi.h",
     "/session-transcript.txt",
   ])("rejects development or private-looking entry %s", (entry) => {
     expect(inspectAsarEntries([...requiredEntries, entry]).forbidden).toEqual([

@@ -14,6 +14,7 @@ files:
   - "!dist/**/*.map"
   - "!node_modules/**/*.map"
   - "!node_modules/@xterm/*/src/**"
+  - "!node_modules/node-addon-api/**"
   - "!node_modules/node-pty/deps/**"
   - "!node_modules/node-pty/prebuilds/darwin-x64/**"
   - "!node_modules/node-pty/prebuilds/win32-*/**"

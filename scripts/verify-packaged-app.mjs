@@ -37,6 +37,7 @@ const requiredAsarEntries = [
 const forbiddenEntryPatterns = [
   /(^|\/)\.(?:env|git|npmrc)(?:\.|\/|$)/iu,
   /(^|\/)(?:src|test|tests|scripts|typings)(?:\/|$)/iu,
+  /(?:^|\/)node_modules\/node-addon-api(?:\/|$)/iu,
   /(?:^|\/)node_modules\/node-pty\/(?:deps|prebuilds\/(?:darwin-x64|win32-))/iu,
   /\.(?:map|pem|p12|key)$/iu,
   /\.test\.js$/iu,
