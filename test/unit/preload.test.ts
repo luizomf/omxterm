@@ -1,0 +1,78 @@
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import type { TerminalBridge } from "../../src/shared/terminal-bridge";
+import { terminalIpc } from "../../src/shared/terminal-ipc";
+
+const electron = vi.hoisted(() => {
+  const listeners = new Map<
+    string,
+    (event: unknown, payload: unknown) => void
+  >();
+  return {
+    bridge: undefined as TerminalBridge | undefined,
+    listeners,
+    send: vi.fn(),
+    invoke: vi.fn(async () => undefined),
+    removeListener: vi.fn((channel: string) => listeners.delete(channel)),
+  };
+});
+
+vi.mock("electron", () => ({
+  contextBridge: {
+    exposeInMainWorld(_key: string, value: { terminal: TerminalBridge }) {
+      electron.bridge = value.terminal;
+    },
+  },
+  ipcRenderer: {
+    send: electron.send,
+    invoke: electron.invoke,
+    on(channel: string, listener: (event: unknown, payload: unknown) => void) {
+      electron.listeners.set(channel, listener);
+    },
+    removeListener: electron.removeListener,
+  },
+}));
+
+describe("isolated preload terminal bridge", () => {
+  beforeAll(async () => {
+    await import("../../src/preload/index");
+  });
+
+  it("validates outbound input and resize message shapes", () => {
+    const bridge = electron.bridge!;
+
+    bridge.input("hello");
+    bridge.resize({ cols: 80, rows: 24 });
+    expect(() => bridge.input("")).toThrow(TypeError);
+    expect(() => bridge.resize({ cols: 0, rows: 24 })).toThrow(TypeError);
+
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.input, "hello");
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.resize, {
+      cols: 80,
+      rows: 24,
+    });
+  });
+
+  it("delivers only valid bounded messages from main and removes subscriptions", () => {
+    const bridge = electron.bridge!;
+    const onOutput = vi.fn();
+    const onExit = vi.fn();
+    const removeOutput = bridge.onOutput(onOutput);
+    const removeExit = bridge.onExit(onExit);
+
+    electron.listeners.get(terminalIpc.output)?.({}, "output");
+    electron.listeners.get(terminalIpc.output)?.({}, "");
+    electron.listeners.get(terminalIpc.exit)?.({}, { exitCode: 0, signal: 0 });
+    electron.listeners.get(terminalIpc.exit)?.(
+      {},
+      { exitCode: "0", signal: 0 },
+    );
+    removeOutput();
+    removeExit();
+
+    expect(onOutput).toHaveBeenCalledOnce();
+    expect(onOutput).toHaveBeenCalledWith("output");
+    expect(onExit).toHaveBeenCalledOnce();
+    expect(onExit).toHaveBeenCalledWith({ exitCode: 0, signal: 0 });
+    expect(electron.removeListener).toHaveBeenCalledTimes(2);
+  });
+});

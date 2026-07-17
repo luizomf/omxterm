@@ -1,0 +1,86 @@
+import type { IPty, IPtyForkOptions, IDisposable } from "node-pty";
+import {
+  isBoundedTerminalPayload,
+  isTerminalSize,
+  splitTerminalPayload,
+  type TerminalExit,
+  type TerminalSize,
+} from "../shared/terminal-contract";
+
+export interface LocalTerminalSession {
+  write(data: string): void;
+  resize(size: TerminalSize): void;
+  close(): void;
+}
+
+export interface LocalTerminalSessionOptions {
+  readonly shell: string;
+  readonly homeDirectory: string;
+  readonly environment: NodeJS.ProcessEnv;
+  readonly onOutput: (data: string) => void;
+  readonly onExit: (exit: TerminalExit) => void;
+}
+
+export type SpawnPty = (
+  file: string,
+  args: string[],
+  options: IPtyForkOptions,
+) => IPty;
+
+export function createLocalTerminalSession(
+  spawnPty: SpawnPty,
+  options: LocalTerminalSessionOptions,
+): LocalTerminalSession {
+  let pty: IPty;
+  try {
+    pty = spawnPty(options.shell, ["-l"], {
+      cwd: options.homeDirectory,
+      env: options.environment,
+      cols: 80,
+      rows: 24,
+    });
+  } catch (error) {
+    throw new Error(`Failed to start the Default Shell at ${options.shell}`, {
+      cause: error,
+    });
+  }
+
+  let closed = false;
+  let exited = false;
+  let dataSubscription: IDisposable | undefined;
+  let exitSubscription: IDisposable | undefined;
+
+  const releaseSubscriptions = () => {
+    dataSubscription?.dispose();
+    exitSubscription?.dispose();
+    dataSubscription = undefined;
+    exitSubscription = undefined;
+  };
+
+  dataSubscription = pty.onData((data) => {
+    if (closed) return;
+    for (const chunk of splitTerminalPayload(data)) options.onOutput(chunk);
+  });
+  exitSubscription = pty.onExit((exit) => {
+    if (exited) return;
+    exited = true;
+    releaseSubscriptions();
+    options.onExit({ exitCode: exit.exitCode, signal: exit.signal ?? 0 });
+  });
+
+  return {
+    write(data) {
+      if (!closed && !exited && isBoundedTerminalPayload(data)) pty.write(data);
+    },
+    resize(size) {
+      if (!closed && !exited && isTerminalSize(size))
+        pty.resize(size.cols, size.rows);
+    },
+    close() {
+      if (closed) return;
+      closed = true;
+      releaseSubscriptions();
+      if (!exited) pty.kill();
+    },
+  };
+}

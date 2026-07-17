@@ -8,6 +8,11 @@
 .hermes/
 ._.DS_Store
 
+# Node / Electron
+node_modules/
+dist/
+npm-debug.log*
+
 # A bit unreadable, but "temp.md" and "tmp.md". Case does not matter
 [Tt][Ee][Mm][Pp].[Mm][Dd]
 [Tt][Mm][Pp].[Mm][Dd]

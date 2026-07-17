@@ -1,0 +1,75 @@
+export const MAX_TERMINAL_PAYLOAD_BYTES = 64 * 1024;
+export const MAX_TERMINAL_COLUMNS = 1_000;
+export const MAX_TERMINAL_ROWS = 1_000;
+
+export interface TerminalSize {
+  readonly cols: number;
+  readonly rows: number;
+}
+
+export interface TerminalExit {
+  readonly exitCode: number;
+  readonly signal: number;
+}
+
+const encoder = new TextEncoder();
+
+export function isBoundedTerminalPayload(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    encoder.encode(value).byteLength <= MAX_TERMINAL_PAYLOAD_BYTES
+  );
+}
+
+export function splitTerminalPayload(value: string): string[] {
+  if (value.length === 0) return [];
+
+  const chunks: string[] = [];
+  let chunk = "";
+  let chunkBytes = 0;
+
+  for (const character of value) {
+    const characterBytes = encoder.encode(character).byteLength;
+    if (chunkBytes + characterBytes > MAX_TERMINAL_PAYLOAD_BYTES) {
+      chunks.push(chunk);
+      chunk = "";
+      chunkBytes = 0;
+    }
+    chunk += character;
+    chunkBytes += characterBytes;
+  }
+
+  if (chunk.length > 0) chunks.push(chunk);
+  return chunks;
+}
+
+export function isTerminalSize(value: unknown): value is TerminalSize {
+  if (!isStrictRecord(value, ["cols", "rows"])) return false;
+  return (
+    Number.isInteger(value.cols) &&
+    Number.isInteger(value.rows) &&
+    (value.cols as number) >= 1 &&
+    (value.cols as number) <= MAX_TERMINAL_COLUMNS &&
+    (value.rows as number) >= 1 &&
+    (value.rows as number) <= MAX_TERMINAL_ROWS
+  );
+}
+
+export function isTerminalExit(value: unknown): value is TerminalExit {
+  if (!isStrictRecord(value, ["exitCode", "signal"])) return false;
+  return Number.isInteger(value.exitCode) && Number.isInteger(value.signal);
+}
+
+function isStrictRecord(
+  value: unknown,
+  keys: readonly string[],
+): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return false;
+  const actualKeys = Object.keys(value);
+  return (
+    actualKeys.length === keys.length &&
+    keys.every((key) => actualKeys.includes(key))
+  );
+}
