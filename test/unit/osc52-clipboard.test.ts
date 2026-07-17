@@ -6,6 +6,13 @@ import {
 } from "../../src/terminal-surface/osc52-clipboard";
 
 describe("write-only OSC 52 clipboard", () => {
+  it.each([
+    ["c;77u/", "\uFEFF"],
+    ["c;77u/YQ==", "\uFEFFa"],
+  ])("preserves a leading UTF-8 BOM in valid write %j", (data, text) => {
+    expect(decodeOsc52Write(data)).toBe(text);
+  });
+
   it.each(["c;?", "c;", "c;%%%", "c;8A==", "c;AB==", "p;aGVsbG8=", "c;===="])(
     "refuses read, clear, malformed UTF-8, target, or Base64 request %j",
     (data) => expect(decodeOsc52Write(data)).toBeUndefined(),

@@ -238,9 +238,7 @@ function createTerminalIpcController(
     return options.confirmPaste(payload);
   };
   const showClipboardContextMenu = (payload?: unknown) => {
-    if (payload !== undefined)
-      throw new TypeError("Invalid clipboard context menu payload");
-    options.showClipboardContextMenu();
+    if (payload === undefined) options.showClipboardContextMenu();
   };
 
   return {

@@ -207,6 +207,39 @@ describe("portable Terminal Surface", () => {
     surface.dispose();
   });
 
+  it("pastes printable single-line text raw without confirmation when bracketed paste is disabled", async () => {
+    const text = "printf hello";
+    const clipboard = {
+      writeText: vi.fn(async () => undefined),
+      readText: vi.fn(async () => text),
+      confirmPaste: vi.fn(async () => false),
+      requestContextMenu: vi.fn(),
+    };
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { clipboard },
+    );
+
+    expect(xterm.FakeTerminal.current.modes.bracketedPasteMode).toBe(false);
+    await surface.paste();
+
+    expect(clipboard.confirmPaste).not.toHaveBeenCalled();
+    expect(xterm.FakeTerminal.current.paste).not.toHaveBeenCalled();
+    expect(adapter.write.mock.calls.map(([chunk]) => chunk).join("")).toBe(
+      text,
+    );
+    surface.dispose();
+  });
+
   it.each([
     "one\ntwo",
     "one\r\ntwo",

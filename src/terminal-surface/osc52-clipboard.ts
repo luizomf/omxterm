@@ -31,7 +31,10 @@ export function decodeOsc52Write(data: string): string | undefined {
     const bytes = Uint8Array.from(binary, (character) =>
       character.charCodeAt(0),
     );
-    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const text = new TextDecoder("utf-8", {
+      fatal: true,
+      ignoreBOM: true,
+    }).decode(bytes);
     return text.length > 0 ? text : undefined;
   } catch {
     return undefined;

@@ -80,6 +80,27 @@ describe("standard xterm compatibility fixtures", () => {
     terminal.dispose();
   });
 
+  it.each([
+    ["BOM-only", "77u/", "\uFEFF"],
+    ["BOM-prefixed text", "77u/YQ==", "\uFEFFa"],
+  ])(
+    "preserves %s through the real OSC parser without a PTY response",
+    async (_request, encoded, text) => {
+      const terminal = new Terminal();
+      const writeText = vi.fn(async () => undefined);
+      const responses: string[] = [];
+      terminal.onData((data) => responses.push(data));
+      registerOsc52Clipboard(terminal.parser, writeText);
+
+      await write(terminal, `\u001b]52;c;${encoded}\u0007`);
+
+      expect(writeText).toHaveBeenCalledOnce();
+      expect(writeText).toHaveBeenCalledWith(text);
+      expect(responses).toEqual([]);
+      terminal.dispose();
+    },
+  );
+
   it("enforces the pinned xterm OSC payload limit at adjacent valid Base64 lengths", async () => {
     const terminal = new Terminal();
     const writeText = vi.fn(async () => undefined);

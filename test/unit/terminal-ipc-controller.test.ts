@@ -247,6 +247,50 @@ describe("terminal IPC controller", () => {
     expect(session.write).not.toHaveBeenCalled();
   });
 
+  it("consumes malformed and forged context-menu IPC without side effects", () => {
+    const ipc = createIpcHarness();
+    const mainFrame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const session: LocalTerminalSession = {
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const clipboard = clipboardOptions();
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    router.registerController({
+      ...clipboard,
+      webContents,
+      createSession: () => session,
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+    const contextMenu = ipc.listeners.get(terminalIpc.clipboardContextMenu)!;
+
+    expect(() =>
+      contextMenu(
+        { sender: webContents, senderFrame: mainFrame },
+        { malformed: true },
+      ),
+    ).not.toThrow();
+    expect(() =>
+      contextMenu({ sender: webContents, senderFrame: {} }),
+    ).not.toThrow();
+
+    expect(clipboard.showClipboardContextMenu).not.toHaveBeenCalled();
+    expect(clipboard.writeClipboardText).not.toHaveBeenCalled();
+    expect(clipboard.readClipboardText).not.toHaveBeenCalled();
+    expect(clipboard.confirmPaste).not.toHaveBeenCalled();
+    expect(session.write).not.toHaveBeenCalled();
+
+    contextMenu({ sender: webContents, senderFrame: mainFrame });
+    expect(clipboard.showClipboardContextMenu).toHaveBeenCalledOnce();
+  });
+
   it("forwards bounded output/exit and disposes session and IPC listeners once", () => {
     const ipc = createIpcHarness();
     const mainFrame = {};
