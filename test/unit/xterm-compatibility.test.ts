@@ -6,6 +6,10 @@ import {
   XTERM_OSC_PAYLOAD_LIMIT,
 } from "../../src/terminal-surface/osc52-clipboard";
 import { registerTerminalTitleEvents } from "../../src/terminal-surface/terminal-title-events";
+import {
+  createTerminalWindowTitleController,
+  DEFAULT_TERMINAL_TITLE,
+} from "../../src/main/terminal-window-title";
 
 function write(terminal: Terminal, data: string): Promise<void> {
   return new Promise((resolve) => terminal.write(data, resolve));
@@ -47,6 +51,40 @@ describe("standard xterm compatibility fixtures", () => {
 
     expect(titles).toEqual([]);
     expect(responses).toEqual([]);
+    terminal.dispose();
+  });
+
+  it("falls back at the native boundary for parser-delivered titles above the generic IPC limit", async () => {
+    const terminal = new Terminal();
+    const responses: string[] = [];
+    const nativeTitles: string[] = [];
+    const dockRequests = vi.fn();
+    const window = {
+      isFocused: () => true,
+      setTitle: (title: string) => nativeTitles.push(title),
+      on: vi.fn(),
+      removeListener: vi.fn(),
+    };
+    const controller = createTerminalWindowTitleController(
+      window,
+      dockRequests,
+    );
+    terminal.onData((data) => responses.push(data));
+    registerTerminalTitleEvents(terminal, {
+      onTitleRequest: controller.requestTitle,
+    });
+    const canary = `CANARY${"x".repeat(65_537)}`;
+
+    await write(terminal, `\u001b]2;${canary}\u001b\\`);
+
+    expect(nativeTitles).toEqual([
+      DEFAULT_TERMINAL_TITLE,
+      DEFAULT_TERMINAL_TITLE,
+    ]);
+    expect(JSON.stringify(nativeTitles)).not.toContain("CANARY");
+    expect(responses).toEqual([]);
+    expect(dockRequests).not.toHaveBeenCalled();
+    controller.dispose();
     terminal.dispose();
   });
   it("renders Unicode and representative REPL cursor movement", async () => {

@@ -1,6 +1,19 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { Terminal } from "@xterm/xterm";
 import type { TerminalBridge } from "../../src/shared/terminal-bridge";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import {
+  registerTerminalIpcRouter,
+  type IpcEvent,
+  type IpcMainPort,
+  type TrustedWebContents,
+} from "../../src/main/terminal-ipc-controller";
+import { createTerminalWindowTitleController } from "../../src/main/terminal-window-title";
+import { registerTerminalTitleEvents } from "../../src/terminal-surface/terminal-title-events";
+
+function write(terminal: Terminal, data: string): Promise<void> {
+  return new Promise((resolve) => terminal.write(data, resolve));
+}
 
 const electron = vi.hoisted(() => {
   const listeners = new Map<
@@ -52,13 +65,13 @@ describe("isolated preload terminal bridge", () => {
     });
   });
 
-  it("exposes bounded one-way title and payload-free BEL signals", () => {
+  it("exposes one-way title and payload-free BEL signals", () => {
     const bridge = electron.bridge!;
 
     bridge.title("");
     bridge.title("terminal title");
     bridge.bell();
-    expect(() => bridge.title("x".repeat(65_537))).toThrow(TypeError);
+    bridge.title("x".repeat(65_537));
 
     expect(electron.send).toHaveBeenCalledWith(terminalIpc.title, "");
     expect(electron.send).toHaveBeenCalledWith(
@@ -66,6 +79,84 @@ describe("isolated preload terminal bridge", () => {
       "terminal title",
     );
     expect(electron.send).toHaveBeenCalledWith(terminalIpc.bell);
+    expect(electron.send).toHaveBeenCalledWith(
+      terminalIpc.title,
+      "x".repeat(65_537),
+    );
+  });
+
+  it("delivers an oversized parser title through preload and main to the safe native fallback", async () => {
+    const handlers = new Map<
+      string,
+      (event: IpcEvent, payload?: unknown) => unknown
+    >();
+    const listeners = new Map<
+      string,
+      (event: IpcEvent, payload?: unknown) => void
+    >();
+    const ipcMain: IpcMainPort = {
+      handle: (channel, handler) => handlers.set(channel, handler),
+      removeHandler: (channel) => handlers.delete(channel),
+      on: (channel, listener) => listeners.set(channel, listener),
+      removeListener: (channel) => listeners.delete(channel),
+    };
+    const frame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame: frame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const event = { sender: webContents, senderFrame: frame };
+    const nativeTitles: string[] = [];
+    const titleController = createTerminalWindowTitleController(
+      {
+        isFocused: () => true,
+        setTitle: (title) => nativeTitles.push(title),
+        on: vi.fn(),
+        removeListener: vi.fn(),
+      },
+      vi.fn(),
+    );
+    const router = registerTerminalIpcRouter(ipcMain);
+    const routed = router.registerController({
+      webContents,
+      createSession: vi.fn(() => ({
+        write: vi.fn(),
+        resize: vi.fn(),
+        close: vi.fn(),
+      })),
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+      onTitleRequest: titleController.requestTitle,
+      onBell: titleController.ringBell,
+      onUserInteraction: titleController.resetAttention,
+      writeClipboardText: vi.fn(),
+      readClipboardText: vi.fn(() => ""),
+      confirmPaste: vi.fn(async () => false),
+      showClipboardContextMenu: vi.fn(),
+    });
+    electron.send.mockImplementation((channel: string, payload?: unknown) =>
+      listeners.get(channel)?.(event, payload),
+    );
+    const terminal = new Terminal();
+    const ptyResponses: string[] = [];
+    terminal.onData((data) => ptyResponses.push(data));
+    registerTerminalTitleEvents(terminal, {
+      onTitleRequest: electron.bridge!.title,
+    });
+    const canary = `CANARY${"x".repeat(65_537)}`;
+
+    await write(terminal, `\u001b]0;${canary}\u0007`);
+
+    expect(nativeTitles).toEqual(["OMXTerm", "OMXTerm"]);
+    expect(JSON.stringify(nativeTitles)).not.toContain("CANARY");
+    expect(ptyResponses).toEqual([]);
+
+    terminal.dispose();
+    routed.dispose();
+    router.dispose();
+    titleController.dispose();
+    electron.send.mockReset();
   });
 
   it("delivers only valid bounded messages from main and removes subscriptions", () => {

@@ -94,6 +94,16 @@ describe("native Terminal Title and bell attention", () => {
     );
   });
 
+  it("preserves Private Use glyphs while rejecting other invalid Unicode categories", () => {
+    const nerdFontFolder = "\uf07b projects";
+
+    expect(safeTerminalBaseTitle(nerdFontFolder)).toBe(nerdFontFolder);
+    expect(safeTerminalBaseTitle("valid\u0378")).toBe(DEFAULT_TERMINAL_TITLE);
+    expect(safeTerminalBaseTitle("valid\ud800")).toBe(DEFAULT_TERMINAL_TITLE);
+    expect(safeTerminalBaseTitle("valid\u200b")).toBe(DEFAULT_TERMINAL_TITLE);
+    expect(safeTerminalBaseTitle("valid\u2028")).toBe(DEFAULT_TERMINAL_TITLE);
+  });
+
   it("keeps focused BEL silent and deduplicates unfocused Dock attention", () => {
     const focusedFixture = createWindow(true);
     const focusedDock = vi.fn();

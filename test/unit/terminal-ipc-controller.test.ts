@@ -237,14 +237,14 @@ describe("terminal IPC controller", () => {
     const forged = { sender: otherWebContents, senderFrame: otherFrame };
 
     ipc.listeners.get(terminalIpc.title)?.(trusted, "owned title");
+    ipc.listeners.get(terminalIpc.title)?.(trusted, "x".repeat(65_537));
     ipc.listeners.get(terminalIpc.title)?.(trusted, { canary: "CANARY" });
     ipc.listeners.get(terminalIpc.title)?.(forged, "forged title");
     ipc.listeners.get(terminalIpc.bell)?.(trusted);
     ipc.listeners.get(terminalIpc.bell)?.(trusted, "malformed");
     ipc.listeners.get(terminalIpc.input)?.(trusted, "key");
 
-    expect(title).toHaveBeenCalledOnce();
-    expect(title).toHaveBeenCalledWith("owned title");
+    expect(title.mock.calls).toEqual([["owned title"], ["x".repeat(65_537)]]);
     expect(JSON.stringify(title.mock.calls)).not.toContain("CANARY");
     expect(bell).toHaveBeenCalledOnce();
     expect(interaction).toHaveBeenCalledOnce();

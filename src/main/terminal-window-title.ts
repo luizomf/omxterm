@@ -21,7 +21,10 @@ export function safeTerminalBaseTitle(request: string): string {
     return DEFAULT_TERMINAL_TITLE;
 
   const sanitized = request.replace(/[\p{Cc}\p{Bidi_Control}]/gu, "");
-  if (sanitized.length === 0 || /[\p{C}\p{Zl}\p{Zp}]/u.test(sanitized))
+  if (
+    sanitized.length === 0 ||
+    /[\p{Cc}\p{Cf}\p{Cs}\p{Cn}\p{Zl}\p{Zp}]/u.test(sanitized)
+  )
     return DEFAULT_TERMINAL_TITLE;
   return sanitized;
 }
