@@ -1,0 +1,29 @@
+# Keep clipboard access explicit and one-way
+
+OMXTerm will not copy terminal selections automatically. On macOS, `Ctrl+C`
+remains terminal input, while `Cmd+C`, `Cmd+V`, and the contextual menu provide
+explicit text copy and paste actions. `Ctrl+V` also remains terminal input so a
+local application such as an AI CLI can handle the shortcut and read image data
+directly from the operating-system clipboard. Those image bytes do not travel
+through the PTY.
+
+OSC 52 may write to the host clipboard so tmux and terminal applications can
+copy naturally, but clipboard read requests, empty writes, and malformed
+payloads are consumed without changing the clipboard. OMXTerm will not inherit
+the 64 KiB project limit from OMXTerm Web: local processes have a different
+trust and transport boundary, and large valid copies and text pastes must not be
+truncated by an arbitrary SSH-oriented limit. Runtime dependencies may still
+enforce their documented safety bounds.
+
+Potentially executable multiline or control-character pastes require user
+confirmation unless the receiving process has enabled bracketed paste. Neither
+clipboard contents nor pasted Terminal Payload may be logged. A confirmed paste
+is forwarded completely and, when bracketed paste is enabled, remains one
+semantic paste even if IPC or PTY streaming splits its bytes internally. OMXTerm
+does not truncate, summarize, convert, or otherwise interpret large text; an
+interactive CLI may replace it with a placeholder or attachment inside its own
+input model.
+
+Platform-specific key mappings belong inside the Terminal Surface rather than
+its public Interface, so adding another Supported Platform does not change the
+session Adapter contract.

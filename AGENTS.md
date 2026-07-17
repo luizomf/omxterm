@@ -1,496 +1,122 @@
-# Rules
+# AGENTS.md
 
-AI context for this repository. Read this before doing anything.
+Instructions for agents working on OMXTerm.
 
----
+## Project
 
-## Agent Entry Points
+OMXTerm is Otávio Miranda's open-source personal desktop terminal for Apple
+Silicon macOS. It uses Electron and TypeScript around a portable DOM+xterm
+Terminal Surface and a local PTY Adapter.
 
-`CLAUDE.md` is the source of truth for agent instructions in this project.
+The terminal is the product. AI assistance, SSH brokering, saved sessions,
+tabs, splits, shell integration, and cross-platform support are outside the
+first release. Do not turn nearby ideas into requirements.
 
-Other agent files like `AGENTS.md`, `GEMINI.md`, `CODEX.md` are all links to
-`CLAUDE.md`.
+## Sources of truth
 
----
+Read these before changing product behavior or architecture:
 
-## Who / Environment
+- `docs/spec.md` — observable first-release contract;
+- `CONTEXT.md` — project vocabulary;
+- relevant files under `docs/adr/` — durable decisions and tradeoffs;
+- the current GitHub issue — scope, acceptance criteria, and dependencies.
 
-- **Owner Name:** Otávio Miranda
-- **Tone:** teammate, direct, no corporate fluff.
-- **Language:** English everywhere related to code, git, GitHub, documentation,
-  `README.md`. For chat, use the user's language (detected by the message).
-
----
-
-## Repository Context
-
-**IF THIS TEXT IS STILL HERE, THIS PROJECT IS STARTING RIGHT NOW. AGENT, PLEASE
-FIND OUT WHAT THIS PROJECT IS ABOUT AND REPLACE THIS MESSAGE WITH A PROPER
-DESCRIPTION FOR THE PROJECT.**
-
----
-
-## Workflow
-
-**DEFAULT FLOW: issue -> branch -> PR -> merge**.
-
-Before starting new feature work, check open issues and confirm whether the
-request already maps to an open issue, was intentionally deferred, or was
-already delivered locally but not cleaned up in the tracker. Keep the issue list
-accurate as part of the workflow.
-
-1. Pick or create the issue. If no issue template exists, warn the user and
-   create one.
-2. Create a branch for that issue.
-3. Work in small conventional commits: `feat`, `fix`, `refactor`, `chore`,
-   `docs`, `ci`, etc.
-4. Open a PR using the PR template and reference the issue with `closes #N`. If
-   no PR template exists, warn the owner and create one.
-5. Merge according to the repository convention. If no convention is documented,
-   ask the owner before merging (squash, merge commit, or rebase).
-6. Delete the branch after merge (merge, squash and delete).
-
-Since Git and GitHub are the main project context, be explicit, precise, and
-concise about every change. Always describe what matters for project
-understanding in commits, issues, PRs, and handoffs.
-
-### Commit Style
-
-```text
-type(scope): short imperative description
-
-Optional body explaining what changed and why.
-
-Co-Authored-By: <agent-name> <noreply@example.com>
-```
-
-`Co-Authored-By` is optional, but useful when more than one agent worked on the
-change. Replace `<agent-name>` with the actual agent (Claude, Codex, Gemini,
-etc.) instead of leaving a placeholder.
-
-If a task is explicitly about a release, use semantic versioning and annotated
-git tags unless the repository documents another process.
-
-Keep sessions focused. One issue per session is the default. Leave a clear
-handoff when you finish.
-
----
-
-## Project Coding Rules
-
-These rules define the default engineering baseline for this project.
-
-They are not decorative. Follow them unless there is a clear technical reason
-not to. When breaking a rule, keep the code simple and make the reason obvious.
-
-### Core principles
-
-- Prefer boring, explicit, maintainable code.
-- Do not over-engineer.
-- Do not create abstractions before there is a real need (they are welcome, but
-  start simple first).
-- Do not hide complexity behind vague names.
-- Do not rewrite working code just to make it look different.
-- Follow the conventions of the framework, language, and ecosystem.
-- Optimize for maintainability, readability, testability, and safe future
-  changes.
-
-### Code style
-
-The code style is our objective, not a law. Whenever possible, follow the rules
-below.
-
-- Functions should usually be small and focused.
-
-  - Aim for up to 40 lines.
-  - Keep Cyclomatic Complexity as low as possible.
-  - Longer functions are acceptable when the flow is simple, linear, and easier
-    to read in one place.
-  - Split functions when they mix responsibilities, contain repeated blocks, or
-    require deep nesting.
-
-- Files should stay focused.
-
-  - Aim to keep files under 500 lines (this helps humans and agents).
-  - Larger files are acceptable for generated code, schemas, constants,
-    mappings, fixtures, or framework-required structure.
-  - Split files by responsibility, not just by line count.
-
-- Each function should do one clear thing.
-
-- Each module should own one clear responsibility.
-
-- Prefer clear domain names over generic names.
-
-Avoid vague names such as (unless for libs and framework conventions):
-
-- `data`
-- `handler`
-- `manager`
-- `processor`
-- `service`
-- `utils`
-- `helper`
-- `thing`
-- `item`
-
-Use names that describe the domain, behavior, or returned value.
-
-Bad:
-
-```ts
-function handle(data: any) {} // handle what? which data? what type is the data?
-```
-
-Better:
-
-```ts
-function createUserSession(credentials: LoginCredentials) {} // The same function, way easier to read, find and understand
-```
-
-- Avoid names that are impossible to search in the codebase.
-- Generic names like `request`, `response`, `payload`, `config`, `logger`, or
-  `client` are allowed when the context makes them obvious.
-- Prefer early returns over deeply nested conditionals.
-- Prefer shallow nesting. Reconsider the design when nesting goes beyond two or
-  three levels — usually a guard clause, an early return, or a small extracted
-  function fixes it.
-- Keep control flow obvious.
-- Avoid clever code.
-- Avoid hidden side effects.
-- Avoid mutation unless it makes the code simpler and safer.
-- Keep domain and business logic decoupled from infrastructure (databases,
-  filesystems, external binaries, network calls, system clocks). Inject these as
-  dependencies at the boundary instead of importing them directly inside domain
-  code.
-- Do not hardcode magic numbers, magic strings, secrets, passwords, tokens and
-  other values known to be tied to the environment.
-
-### Types
-
-- Use explicit types at public boundaries.
-- Do not use `any` unless there is no safer option.
-- When `any` is unavoidable, isolate it and explain why.
-- Avoid untyped functions.
-- Prefer domain-specific types over loose dictionaries/objects.
-- Avoid broad generic types like `Dict`, `object`, `Record<string, unknown>`, or
-  `{}` when the expected shape is known.
-- Validate external input at the boundary.
-- Do not trust API input, CLI input, environment variables, database rows, or
-  user-controlled data without validation.
-- Use type checkers and linters, for instance: `biome`, `eslint`, `ruff`,
-  `pyright`, `prettier`, `editorconfig`, etc (these are just examples for
-  clarity).
-
-### Duplication
-
-- Do not duplicate business rules.
-- Do not duplicate validation logic.
-- Do not duplicate complex transformations.
-- Small local duplication is acceptable when abstraction would make the code
-  harder to understand.
-- Extract shared logic only when the abstraction has a clear name and a stable
-  purpose.
-- Avoid premature "reusable" helpers.
-
-### Errors and exceptions
-
-- Error messages must be useful.
-- Include the offending value when safe.
-- Include the expected shape, format, or allowed values.
-- Do not swallow errors silently (this won't help the user nor the agent).
-- Do not replace specific errors with vague generic messages.
-- Preserve the original error when wrapping exceptions.
-
-Bad:
-
-```ts
-throw new Error('Invalid input'); // now nobody knows what happened
-```
-
-Better:
-
-```ts
-throw new Error(
-  `Invalid user role "${role}". Expected one of: admin, editor, viewer.`,
-);
-```
-
-### Comments
-
-- Keep existing comments unless they are clearly wrong or obsolete. Comments
-  help the agent to remember **WHY** that code exists.
-- Do not remove comments during refactors just because the code changed (this is
-  to help the agent to remember **WHY** the code exists, not **WHAT** the code
-  does).
-- Comments often carry intent, history, or context.
-- When you do something unusual, add **WHY** you did that in comment. That will
-  help you in future rounds.
-
-Again, write comments that explain **WHY**, not **WHAT** (we can see what the
-code does).
-
-Bad:
-
-```ts
-// Increment counter (obvious)
-counter++;
-```
-
-Better:
-
-```ts
-// GitHub API may return duplicated events during pagination, so we dedupe by id. (not obvious)
-seenEventIds.add(event.id);
-```
-
-- Use comments for non-obvious decisions, upstream constraints, workarounds,
-  performance tradeoffs, and security concerns.
-- Reference issue numbers, PRs, commit SHAs, or external bugs when a line exists
-  because of a specific bug or constraint.
-- Public functions should have docstrings/comments when their purpose, usage, or
-  constraints are not obvious.
-- Public APIs should include intent and at least one usage example when useful.
-
-### Tests
-
-- Tests must run with one project-specific command.
-
-Examples:
-
-```sh
-npm test
-pnpm test
-uv run pytest
-cargo test
-go test ./...
-```
-
-- New behavior needs tests.
-- Bug fixes need regression tests.
-- Business rules need tests.
-- Validation rules need tests.
-- Public functions and public APIs should be tested through observable behavior.
-- Private helper functions do not always need direct tests if they are covered
-  through public behavior.
-- Avoid tests that only mirror implementation details.
-
-**Test logic, inputs, outputs, and all paths — not implementation details.**
-
-Avoid asserting on values that change often during maintenance: versions,
-timestamps, model names, prompt text, generated documentation, internal call
-shapes, log strings, and similar volatile values. If a refactor that preserves
-behavior breaks a test, the test was probably testing the wrong thing.
-
-For example:
-
-```ts
-// Test should not break when we change arguments. The test should break when
-// the output is not what we expected (in this case, a string with the model answer).
-exec('ollama', [
-  'run',
-  'gpt-oss:120b',
-  '--think=high',
-  '--hidethinking',
-  '--nowordwrap',
-  'Why is the sky blue?',
-]); // output: The sky appears blue due to a phenomenon...
-```
-
-Tests should be F.I.R.S.T:
-
-- Fast
-- Independent
-- Repeatable
-- Self-validating
-- Timely
-
-Additional testing rules:
-
-- Mock external I/O.
-- Do not call real APIs in unit tests.
-- Do not depend on real databases, real filesystems, real network, or real time
-  unless the test is explicitly an integration/e2e test.
-- Prefer named fake classes or fixtures over anonymous inline stubs when the
-  fake has behavior.
-- Test names should describe behavior, not implementation.
-
-Bad:
-
-```ts
-test('handleSubmit works', () => {});
-```
-
-Better:
-
-```ts
-test('creates a user session when credentials are valid', () => {});
-```
-
-### Dependencies
-
-- Prefer dependency injection through parameters, constructors, or small factory
-  functions.
-- Avoid hidden dependencies through global state.
-- Avoid importing concrete infrastructure directly into domain/business logic.
-- Wrap third-party libraries when:
-
-  - they touch business logic;
-  - they are hard to test;
-  - they may be replaced;
-  - they spread complex types through the project;
-  - they require project-specific defaults or error handling.
-
-- Do not create wrappers for trivial library calls unless they improve clarity,
-  testing, or isolation.
-- Keep wrappers thin and owned by this project.
-
-### Structure
-
-- Follow the framework's conventions first.
-- Do not fight the framework without a strong reason.
-- Prefer predictable paths over personal architecture experiments.
-- Keep modules small and focused.
-- Avoid god files.
-- Avoid generic dumping grounds like:
-
-```txt
-utils/
-helpers/
-common/
-misc/
-```
-
-Unless the content is genuinely small, stable, and well named.
-
-Prefer structure by responsibility/domain.
-
-Examples:
-
-```txt
-src/users/create-user.ts
-src/users/user-repository.ts
-src/auth/create-session.ts
-src/billing/calculate-invoice-total.ts
-```
-
-Instead of:
-
-```txt
-src/utils/user-utils.ts
-src/services/manager.ts
-src/helpers/index.ts
-```
-
-### Formatting
-
-- Use the default formatter for the language/ecosystem.
-- Do not manually debate formatting.
-- Do not reformat unrelated files.
-- Do not mix formatting-only changes with behavior changes unless explicitly
-  requested.
-
-Examples:
-
-```sh
-prettier
-black
-ruff format
-gofmt
-cargo fmt
-rubocop -A
-```
-
-### Logging
-
-- Logs for debugging and observability should be structured.
-- Prefer JSON or JSONL logs in services, workers, APIs, and production systems.
-- CLI output intended for humans should be plain text and readable.
-- Do not leak secrets, tokens, passwords, cookies, authorization headers,
-  private keys, or personal data in logs.
-- Log meaningful events, not noise.
-- Include useful context such as ids, operation names, durations, and failure
-  reasons.
-- Do not use logs as a replacement for proper error handling.
-
-### Refactoring
-
-- Refactor only with a clear goal.
-- Do not rewrite working code just because you prefer another style.
-- Keep refactors small and reviewable.
-- Preserve behavior unless the task explicitly asks for behavior changes.
-- Preserve public APIs unless the change is intentional.
-- Preserve existing comments unless wrong or obsolete.
-- Update tests when behavior changes.
-- Add regression tests before or with bug fixes.
-
-### AI / agent rules
-
-When an AI assistant or coding agent works on this project:
-
-- Read the relevant files before changing anything.
-- Understand the current structure before proposing a new one.
-- Make the smallest safe change that solves the task.
-- Do not invent architecture.
-- Do not add dependencies without a clear reason.
-- Do not introduce frameworks, services, queues, caches, ORMs, state managers,
-  or build tools unless explicitly requested.
-- Do not create generic abstractions just to look clean.
-- Do not rename files, functions, or public APIs unless necessary.
-- Do not move code across folders unless the task requires it.
-- Do not delete comments, tests, or docs unless they are wrong and the change is
-  justified.
-- Do not silently ignore failing tests.
-- Do not claim something works without running or explaining the relevant check.
-- If a command cannot be run, say so clearly.
-- Prefer editing existing code over creating parallel implementations.
-- Prefer project conventions over personal preferences.
-- Stop and explain when the requested change conflicts with these rules.
-
-### Before finishing a task
-
-Verify at least:
-
-- The code is formatted.
-- The code type-checks, when applicable.
-- Relevant tests pass, when available.
-- New behavior has tests, when practical.
-- Errors include useful context.
-- No unrelated files were changed.
-- No secrets or sensitive data were added.
-- The final response explains what changed and what was verified.
+Use the terms defined in `CONTEXT.md`. Surface a conflict with the spec or an
+ADR instead of silently overriding it. Do not reopen settled decisions merely
+because another design is possible.
 
 ## Communication
 
-- Before writing code, make sure you understand what the owner wants. If the
-  request is ambiguous, ask a brief clarifying question first. Even when chat is
-  casual and informal.
-- Explain blockers and tradeoffs plainly. Avoid corporate fluff.
-- When the owner references a tool, flag, or concept, consider whether it
-  belongs to the current project or to an external tool before searching or
-  editing the codebase.
+- Chat in the user's language. Write code, documentation, GitHub artifacts, and
+  commit messages in English.
+- Be direct and practical. Avoid corporate language and ceremony.
+- Ask only when a missing answer materially changes product behavior, safety,
+  scope, or authority. Otherwise make the smallest reasonable assumption,
+  state it when relevant, and continue.
+- Explain blockers with evidence and a recommended next action.
 
----
+## Workflow
 
-## Security / Safety Rules
+The default flow is **issue -> branch -> PR -> merge**.
 
-Always apply these safety checks.
+1. Check existing issues, PRs, branches, and working-tree changes before taking
+   ownership. Never duplicate an active writer.
+2. Work on one issue at a time in its own branch.
+3. Preserve unrelated and uncommitted user changes.
+4. Use small conventional commits such as `feat`, `fix`, `refactor`, `test`,
+   `docs`, `chore`, and `ci`.
+5. Open a PR that contains `Closes #<issue>`, maps the acceptance criteria, and
+   records verification evidence.
+6. Do not merge while required reviews or checks are pending. If the repository
+   still has no documented merge strategy, ask before the first merge only.
+7. After integration, verify issue closure and branch cleanup.
 
-- Check whether `.gitignore` is correct when adding files, fixtures, generated
-  output, caches, logs, or local-only artifacts.
-- **NEVER COMMIT `.env` OR ANY SECRETS.**
-- Never hardcode secrets or any private information.
-- Never log secrets or any private information.
-- Never commit `.env` files with real secrets.
-- Never force-push `main`.
-- No destructive git operations without explicit user confirmation.
-- Validate all external input.
-- Escape, sanitize, or encode user-controlled output when needed.
-- Use least privilege for tokens, credentials, files, services, and database
-  users.
-- Treat filesystem paths, URLs, shell arguments, uploaded files, and serialized
-  data as unsafe by default.
-- Avoid shell execution when a safer API exists.
-- When shell execution is necessary, do not concatenate unsanitized strings.
+Keep tracker state accurate. A delivered change that is not reflected in its
+issue or PR is unfinished work.
 
----
+## Engineering approach
+
+- Prefer the smallest complete change. Do not build speculative abstractions,
+  compatibility layers, frameworks, or future features.
+- Follow ecosystem conventions before inventing project conventions.
+- Keep the project as one package organized by real runtime responsibility:
+  Electron main, preload, renderer, and the portable Terminal Surface.
+- Preserve the boundaries in the spec: privileged capabilities belong to the
+  Electron main process; preload exposes a minimal typed bridge; the renderer
+  remains sandboxed; the Terminal Surface does not import Electron or
+  `node-pty`.
+- Keep modules focused and interfaces small. Wrap a dependency only at a real
+  seam or when project-owned validation, defaults, or cleanup justify it.
+- Prefer clear searchable names and explicit control flow. Avoid generic dumping
+  grounds such as `utils`, `helpers`, `common`, or `manager`.
+- Use strict types at public and IPC boundaries. Avoid `any`; isolate and explain
+  it when unavoidable.
+- Validate external input at its boundary. Preserve useful error context and
+  never fail silently.
+- Comments explain non-obvious reasons, constraints, or security tradeoffs — not
+  what the next line visibly does.
+- Do not add a dependency without a concrete need in the current issue.
+
+## Tests and verification
+
+- New behavior needs observable behavior tests. Bug fixes need regression tests.
+- Test public contracts rather than private implementation details.
+- Mock external I/O in unit tests. Use real PTYs, filesystems, packaging, or GUI
+  behavior only in explicitly scoped integration or end-to-end tests.
+- Do not assert volatile versions, timestamps, full log messages, or internal
+  call shapes unless they are the behavior under test.
+- Keep one documented project command capable of running the test suite.
+
+Before delivery, run the relevant formatter, typecheck, tests, build, and
+packaging checks for the issue. Inspect the final diff for unrelated changes,
+secrets, generated files, and missing documentation. If a check cannot run,
+state exactly why.
+
+## Safety
+
+- Never commit secrets, credentials, `.env` files, private data, terminal
+  payload, clipboard contents, or session transcripts.
+- Treat PTY data, IPC messages, URLs, filesystem paths, configuration, and shell
+  arguments as untrusted at their boundaries.
+- Do not weaken renderer isolation or broaden preload capabilities for
+  convenience.
+- Do not use destructive Git commands, force-push `main`, or discard user work.
+- Avoid shell command construction from untrusted strings. Prefer a safer API
+  when one exists.
+- Logs contain only the operational metadata allowed by `docs/spec.md`.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub at `luizomf/omxterm-local`. See
+`docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The repository uses the five canonical omskills triage labels. See
+`docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a single-context repository. See `docs/agents/domain.md`.
