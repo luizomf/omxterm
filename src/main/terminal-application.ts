@@ -1,4 +1,7 @@
-import type { TerminalExit } from "../shared/terminal-contract";
+import type {
+  TerminalExit,
+  TerminalFontZoom,
+} from "../shared/terminal-contract";
 
 export const DEFAULT_CONFIRM_CLOSE = true;
 export const DEFAULT_ALWAYS_ON_TOP = false;
@@ -42,6 +45,7 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
     window: Window,
     failure: TerminalSessionFailure,
   ) => Promise<void>;
+  readonly sendFontZoom: (window: Window, command: TerminalFontZoom) => void;
   readonly quit: () => void;
 }
 
@@ -51,6 +55,7 @@ export interface TerminalApplication {
   requestQuit(): Promise<void>;
   toggleSelectedFullScreen(): void;
   toggleSelectedAlwaysOnTop(): void;
+  zoomSelectedWindow(command: TerminalFontZoom): void;
   isQuitting(): boolean;
 }
 
@@ -171,6 +176,10 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     toggleSelectedAlwaysOnTop() {
       const window = selectedWindow();
       if (window) window.setAlwaysOnTop(!window.isAlwaysOnTop(), "floating");
+    },
+    zoomSelectedWindow(command) {
+      const window = selectedWindow();
+      if (window) options.sendFontZoom(window, command);
     },
     isQuitting: () => quitting,
   };

@@ -1,4 +1,8 @@
-import type { TerminalExit, TerminalSize } from "./terminal-contract";
+import type {
+  TerminalExit,
+  TerminalFontZoom,
+  TerminalSize,
+} from "./terminal-contract";
 
 export interface TerminalBridge {
   start(): Promise<void>;
@@ -7,6 +11,7 @@ export interface TerminalBridge {
   close(): void;
   onOutput(listener: (data: string) => void): () => void;
   onExit(listener: (exit: TerminalExit) => void): () => void;
+  onFontZoom(listener: (command: TerminalFontZoom) => void): () => void;
 }
 
 declare global {

@@ -1,13 +1,25 @@
 import type { TerminalSessionAdapter } from "../terminal-surface/terminal-session-adapter";
 import {
   mountTerminalSurface,
+  type TerminalAppearance,
   type TerminalSurface,
 } from "../terminal-surface/terminal-surface";
+import type { TerminalFontZoom } from "../shared/terminal-contract";
 
 type MountTerminalSurface = (
   container: HTMLElement,
   adapter: TerminalSessionAdapter,
+  options: { readonly appearance?: TerminalAppearance },
 ) => Promise<TerminalSurface>;
+
+interface TerminalWindowPageOptions {
+  readonly appearance?: TerminalAppearance;
+  readonly page?: Pick<Window, "addEventListener" | "removeEventListener">;
+  readonly mount?: MountTerminalSurface;
+  readonly subscribeToFontZoom?: (
+    listener: (command: TerminalFontZoom) => void,
+  ) => () => void;
+}
 
 export interface TerminalWindowPageHost {
   readonly ready: Promise<void>;
@@ -17,29 +29,40 @@ export interface TerminalWindowPageHost {
 export function mountTerminalWindowPage(
   container: HTMLElement,
   adapter: TerminalSessionAdapter,
-  page: Pick<Window, "addEventListener" | "removeEventListener"> = window,
-  mount: MountTerminalSurface = mountTerminalSurface,
+  options: TerminalWindowPageOptions = {},
 ): TerminalWindowPageHost {
+  const page = options.page ?? window;
+  const mount = options.mount ?? mountTerminalSurface;
   let disposed = false;
   let surface: TerminalSurface | undefined;
+  let removeZoomListener: (() => void) | undefined;
 
   const dispose = () => {
     if (disposed) return;
     disposed = true;
     page.removeEventListener("pagehide", onPageHide);
+    removeZoomListener?.();
     surface?.dispose();
     surface = undefined;
   };
   const onPageHide = () => dispose();
 
   page.addEventListener("pagehide", onPageHide, { once: true });
-  const ready = mount(container, adapter).then((mountedSurface) => {
-    if (disposed) {
-      mountedSurface.dispose();
-      return;
-    }
-    surface = mountedSurface;
-  });
+  const surfaceOptions = options.appearance
+    ? { appearance: options.appearance }
+    : {};
+  const ready = mount(container, adapter, surfaceOptions).then(
+    (mountedSurface) => {
+      if (disposed) {
+        mountedSurface.dispose();
+        return;
+      }
+      surface = mountedSurface;
+      removeZoomListener = options.subscribeToFontZoom?.((command) =>
+        surface?.zoom(command),
+      );
+    },
+  );
 
   return { ready, dispose };
 }

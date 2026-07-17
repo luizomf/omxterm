@@ -9,6 +9,9 @@ describe("native application menu", () => {
       requestQuit: vi.fn(),
       toggleSelectedFullScreen: vi.fn(),
       toggleSelectedAlwaysOnTop: vi.fn(),
+      zoomInSelectedWindow: vi.fn(),
+      zoomOutSelectedWindow: vi.fn(),
+      resetSelectedWindowZoom: vi.fn(),
     };
     const template = terminalApplicationMenuTemplate("OMXTerm", actions);
 
@@ -36,6 +39,21 @@ describe("native application menu", () => {
           label: "Toggle Full Screen",
           accelerator: "Control+Command+F",
           click: actions.toggleSelectedFullScreen,
+        }),
+        expect.objectContaining({
+          label: "Zoom In",
+          accelerator: "CommandOrControl+Plus",
+          click: actions.zoomInSelectedWindow,
+        }),
+        expect.objectContaining({
+          label: "Zoom Out",
+          accelerator: "CommandOrControl+-",
+          click: actions.zoomOutSelectedWindow,
+        }),
+        expect.objectContaining({
+          label: "Actual Size",
+          accelerator: "CommandOrControl+0",
+          click: actions.resetSelectedWindowZoom,
         }),
         expect.objectContaining({
           label: "Always on Top",

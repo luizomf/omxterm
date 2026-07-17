@@ -18,7 +18,11 @@ const xterm = vi.hoisted(() => {
     readonly resizeDispose = vi.fn(() => {
       this.onTerminalResize = undefined;
     });
-    readonly options: { macOptionIsMeta?: boolean };
+    readonly options: {
+      fontSize?: number;
+      macOptionIsMeta?: boolean;
+      [key: string]: unknown;
+    };
     readonly constructorOptions: Record<string, unknown>;
     private onInput: ((data: string) => void) | undefined;
     private onTerminalResize: ((size: TerminalSize) => void) | undefined;
@@ -29,7 +33,10 @@ const xterm = vi.hoisted(() => {
       FakeTerminal.current = this;
       FakeTerminal.instances.push(this);
       this.constructorOptions = options;
-      this.options = { macOptionIsMeta: options.macOptionIsMeta as boolean };
+      this.options = {
+        fontSize: options.fontSize as number,
+        macOptionIsMeta: options.macOptionIsMeta as boolean,
+      };
     }
 
     loadAddon(addon: { dispose(): void }) {
@@ -94,10 +101,20 @@ class FakeResizeObserver {
 describe("portable Terminal Surface", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    xterm.fit.mockReset();
     xterm.FakeTerminal.instances = [];
     xterm.openError = undefined;
     FakeResizeObserver.observeError = undefined;
     vi.stubGlobal("ResizeObserver", FakeResizeObserver);
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: undefined,
+    });
   });
 
   it("starts/subscribes through its Adapter and releases every resource exactly once", async () => {
@@ -259,6 +276,176 @@ describe("portable Terminal Surface", () => {
     });
     expect(rejectedAdapter.close).toHaveBeenCalledOnce();
     expect(xterm.FakeTerminal.instances).toHaveLength(3);
+  });
+
+  it("applies the exact omtheme palette and bundled default Terminal Font Stack", async () => {
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+    );
+
+    expect(xterm.FakeTerminal.current.constructorOptions).toMatchObject({
+      fontFamily: '"JetBrainsMono Nerd Font Mono", monospace',
+      fontSize: 16,
+      theme: {
+        background: "#000000",
+        foreground: "#f0f0ff",
+        cursor: "#f0f0ff",
+        selectionBackground: "#3b4fa6",
+        selectionForeground: "#ffffff",
+        black: "#000000",
+        red: "#ff7e9a",
+        green: "#37feb7",
+        yellow: "#ffda76",
+        blue: "#88aaf2",
+        magenta: "#ff87bc",
+        cyan: "#6bccff",
+        white: "#f0f0ff",
+        brightBlack: "#505068",
+        brightRed: "#ffa8bb",
+        brightGreen: "#72ffcd",
+        brightYellow: "#ffeab2",
+        brightBlue: "#b2cbff",
+        brightMagenta: "#ff88ef",
+        brightCyan: "#77c6ff",
+        brightWhite: "#ffffff",
+      },
+    });
+    surface.dispose();
+  });
+
+  it("loads the bundled font before opening xterm", async () => {
+    const load = vi.fn(async () => [{} as FontFace]);
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: { load },
+    });
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+    );
+
+    expect(load).toHaveBeenCalledWith('16px "JetBrainsMono Nerd Font Mono"');
+    surface.dispose();
+  });
+
+  it("places an available supplied system family before bundled and OS fallbacks", async () => {
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      {
+        appearance: {
+          fontSize: 19,
+          systemFont: { family: "SF Mono", available: true },
+        },
+      },
+    );
+
+    expect(xterm.FakeTerminal.current.constructorOptions).toMatchObject({
+      fontFamily: '"SF Mono", "JetBrainsMono Nerd Font Mono", monospace',
+      fontSize: 19,
+    });
+    surface.dispose();
+  });
+
+  it("reports an absent supplied system family without using it as primary", async () => {
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+
+    await expect(
+      mountTerminalSurface(document.createElement("main"), adapter, {
+        appearance: {
+          fontSize: 16,
+          systemFont: { family: "Missing Mono", available: false },
+        },
+      }),
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({
+        family: "Missing Mono",
+        message: 'Configured font family "Missing Mono" is not available',
+      }),
+    });
+
+    expect(xterm.FakeTerminal.instances).toHaveLength(0);
+    expect(adapter.close).toHaveBeenCalledOnce();
+  });
+
+  it("keeps Window Font Zoom independent, resets to each supplied size, and refits the PTY", async () => {
+    const createAdapter = () => ({
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    });
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const firstAdapter = createAdapter();
+    xterm.fit.mockImplementation(() => {
+      xterm.FakeTerminal.current.emitResize({ cols: 92, rows: 28 });
+    });
+    const first = await mountTerminalSurface(
+      document.createElement("main"),
+      firstAdapter,
+      { appearance: { fontSize: 16 } },
+    );
+    const firstTerminal = xterm.FakeTerminal.current;
+
+    first.zoom("in");
+    expect(firstTerminal.options.fontSize).toBe(17);
+    expect(firstAdapter.resize).toHaveBeenLastCalledWith({
+      cols: 92,
+      rows: 28,
+    });
+
+    const secondAdapter = createAdapter();
+    const second = await mountTerminalSurface(
+      document.createElement("main"),
+      secondAdapter,
+      { appearance: { fontSize: 20 } },
+    );
+    const secondTerminal = xterm.FakeTerminal.current;
+    second.zoom("out");
+    second.zoom("reset");
+
+    expect(firstTerminal.options.fontSize).toBe(17);
+    expect(secondTerminal.options.fontSize).toBe(20);
+    expect(secondAdapter.resize).toHaveBeenCalled();
+
+    first.dispose();
+    second.dispose();
   });
 
   it.each([

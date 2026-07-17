@@ -12,6 +12,8 @@ export interface TerminalExit {
   readonly signal: number;
 }
 
+export type TerminalFontZoom = "in" | "out" | "reset";
+
 const encoder = new TextEncoder();
 
 export function isBoundedTerminalPayload(value: unknown): value is string {
@@ -59,6 +61,10 @@ export function isTerminalSize(value: unknown): value is TerminalSize {
 export function isTerminalExit(value: unknown): value is TerminalExit {
   if (!isStrictRecord(value, ["exitCode", "signal"])) return false;
   return Number.isInteger(value.exitCode) && Number.isInteger(value.signal);
+}
+
+export function isTerminalFontZoom(value: unknown): value is TerminalFontZoom {
+  return value === "in" || value === "out" || value === "reset";
 }
 
 function isStrictRecord(

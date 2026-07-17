@@ -3,6 +3,7 @@ import * as nodePty from "node-pty";
 import { userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { terminalIpc } from "../shared/terminal-ipc";
 import { terminalApplicationMenuTemplate } from "./application-menu";
 import { createLocalTerminalSession } from "./local-terminal-session";
 import {
@@ -116,6 +117,8 @@ app
           noLink: true,
         });
       },
+      sendFontZoom: (window, command) =>
+        window.webContents.send(terminalIpc.fontZoom, command),
       quit: () => app.quit(),
     });
 
@@ -136,6 +139,12 @@ app
             terminalApplication.toggleSelectedFullScreen,
           toggleSelectedAlwaysOnTop:
             terminalApplication.toggleSelectedAlwaysOnTop,
+          zoomInSelectedWindow: () =>
+            terminalApplication!.zoomSelectedWindow("in"),
+          zoomOutSelectedWindow: () =>
+            terminalApplication!.zoomSelectedWindow("out"),
+          resetSelectedWindowZoom: () =>
+            terminalApplication!.zoomSelectedWindow("reset"),
         }),
       ),
     );

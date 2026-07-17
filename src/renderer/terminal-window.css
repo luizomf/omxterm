@@ -1,6 +1,14 @@
 :root {
   color-scheme: dark;
-  background: #101010;
+  background: #000000;
+}
+
+@font-face {
+  font-family: "JetBrainsMono Nerd Font Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("./fonts/JetBrainsMonoNerdFontMono-Regular.woff2") format("woff2");
 }
 
 html,
@@ -11,7 +19,7 @@ body,
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: #101010;
+  background: #000000;
 }
 
 #terminal-surface {

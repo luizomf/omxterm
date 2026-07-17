@@ -57,6 +57,7 @@ function createApplicationHarness(
   let selected: NativeTerminalWindow | undefined;
   const showQuitConfirmation = vi.fn(async () => true);
   const showSessionFailure = vi.fn(async () => {});
+  const sendFontZoom = vi.fn();
   const quit = vi.fn();
   const application = startTerminalApplication({
     createWindow(lifecycle) {
@@ -67,6 +68,7 @@ function createApplicationHarness(
     getSelectedWindow: () => selected,
     showQuitConfirmation,
     showSessionFailure,
+    sendFontZoom,
     quit,
     ...overrides,
   });
@@ -76,6 +78,7 @@ function createApplicationHarness(
     windows,
     showQuitConfirmation,
     showSessionFailure,
+    sendFontZoom,
     quit,
     select(window: NativeTerminalWindow | undefined) {
       selected = window;
@@ -165,6 +168,7 @@ describe("Terminal application lifecycle", () => {
       getSelectedWindow: () => windows[0]?.window,
       showQuitConfirmation: vi.fn(async () => true),
       showSessionFailure: vi.fn(async () => {}),
+      sendFontZoom: vi.fn(),
       quit,
     });
     await application.newWindow();
@@ -281,6 +285,23 @@ describe("Terminal application lifecycle", () => {
       "floating",
     );
     expect(harness.windows[1]!.setAlwaysOnTop).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends Window Font Zoom only to the selected Terminal Window", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    await harness.application.newWindow();
+    harness.select(harness.windows[1]!.window);
+
+    harness.application.zoomSelectedWindow("in");
+    harness.application.zoomSelectedWindow("out");
+    harness.application.zoomSelectedWindow("reset");
+
+    expect(harness.sendFontZoom.mock.calls).toEqual([
+      [harness.windows[1]!.window, "in"],
+      [harness.windows[1]!.window, "out"],
+      [harness.windows[1]!.window, "reset"],
+    ]);
   });
 
   it("applies the supplied always-on-top default independently to each new window", async () => {

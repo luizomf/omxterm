@@ -3,8 +3,10 @@ import type { TerminalBridge } from "../shared/terminal-bridge";
 import {
   isBoundedTerminalPayload,
   isTerminalExit,
+  isTerminalFontZoom,
   isTerminalSize,
   type TerminalExit,
+  type TerminalFontZoom,
   type TerminalSize,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
@@ -39,6 +41,13 @@ const terminal: TerminalBridge = {
     };
     ipcRenderer.on(terminalIpc.exit, handler);
     return () => ipcRenderer.removeListener(terminalIpc.exit, handler);
+  },
+  onFontZoom(listener: (command: TerminalFontZoom) => void) {
+    const handler = (_event: Electron.IpcRendererEvent, command: unknown) => {
+      if (isTerminalFontZoom(command)) listener(command);
+    };
+    ipcRenderer.on(terminalIpc.fontZoom, handler);
+    return () => ipcRenderer.removeListener(terminalIpc.fontZoom, handler);
   },
 };
 

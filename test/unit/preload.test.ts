@@ -75,4 +75,21 @@ describe("isolated preload terminal bridge", () => {
     expect(onExit).toHaveBeenCalledWith({ exitCode: 0, signal: 0 });
     expect(electron.removeListener).toHaveBeenCalledTimes(2);
   });
+
+  it("delivers only valid Window Font Zoom commands from main", () => {
+    const bridge = electron.bridge!;
+    const onFontZoom = vi.fn();
+    const remove = bridge.onFontZoom(onFontZoom);
+
+    electron.listeners.get(terminalIpc.fontZoom)?.({}, "in");
+    electron.listeners.get(terminalIpc.fontZoom)?.({}, "application");
+    electron.listeners.get(terminalIpc.fontZoom)?.({}, "reset");
+    remove();
+
+    expect(onFontZoom.mock.calls).toEqual([["in"], ["reset"]]);
+    expect(electron.removeListener).toHaveBeenCalledWith(
+      terminalIpc.fontZoom,
+      expect.any(Function),
+    );
+  });
 });

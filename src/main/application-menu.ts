@@ -6,6 +6,9 @@ interface TerminalApplicationMenuActions {
   readonly requestQuit: () => void;
   readonly toggleSelectedFullScreen: () => void;
   readonly toggleSelectedAlwaysOnTop: () => void;
+  readonly zoomInSelectedWindow: () => void;
+  readonly zoomOutSelectedWindow: () => void;
+  readonly resetSelectedWindowZoom: () => void;
 }
 
 export function terminalApplicationMenuTemplate(
@@ -43,6 +46,22 @@ export function terminalApplicationMenuTemplate(
     {
       label: "View",
       submenu: [
+        {
+          label: "Zoom In",
+          accelerator: "CommandOrControl+Plus",
+          click: actions.zoomInSelectedWindow,
+        },
+        {
+          label: "Zoom Out",
+          accelerator: "CommandOrControl+-",
+          click: actions.zoomOutSelectedWindow,
+        },
+        {
+          label: "Actual Size",
+          accelerator: "CommandOrControl+0",
+          click: actions.resetSelectedWindowZoom,
+        },
+        { type: "separator" },
         {
           label: "Toggle Full Screen",
           accelerator: "Control+Command+F",

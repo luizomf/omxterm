@@ -5,4 +5,5 @@ export const terminalIpc = {
   close: "terminal:close",
   output: "terminal:output",
   exit: "terminal:exit",
+  fontZoom: "terminal:font-zoom",
 } as const;
