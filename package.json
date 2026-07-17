@@ -8,7 +8,7 @@
   "type": "module",
   "main": "dist/main/index.js",
   "scripts": {
-    "postinstall": "chmod +x node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper",
+    "postinstall": "install-electron && chmod +x node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
