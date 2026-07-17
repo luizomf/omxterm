@@ -2,12 +2,18 @@
 import { Terminal, type ILink, type ILinkProvider } from "@xterm/xterm";
 import { describe, expect, it, vi } from "vitest";
 import {
-  ignoredOscLinkHandler,
+  ignoreOscLinks,
   registerVisibleWebLinks,
 } from "../../src/terminal-surface/visible-web-links";
 
 function write(terminal: Terminal, data: string): Promise<void> {
   return new Promise((resolve) => terminal.write(data, resolve));
+}
+
+function providerLinks(provider: ILinkProvider, line = 1): Promise<ILink[]> {
+  return new Promise((resolve) =>
+    provider.provideLinks(line, (value) => resolve(value ?? [])),
+  );
 }
 
 async function linksFor(
@@ -52,36 +58,49 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
     ]);
   });
 
-  it("ignores OSC 8 metadata while matching its visible literal URL across split writes", async () => {
-    const terminal = new Terminal({ cols: 120, rows: 8 });
-    let provider: ILinkProvider | undefined;
-    terminal.registerLinkProvider = vi.fn((value) => {
-      provider = value;
-      return { dispose: vi.fn() };
-    });
-    const activate = vi.fn();
-    registerVisibleWebLinks(terminal, activate);
-    await write(terminal, "\u001b]8;;file:///hidden\u001b\\https://visible");
-    await write(terminal, ".test/path\u001b]8;;\u001b\\");
-    const links = await new Promise<ILink[]>((resolve) =>
-      provider!.provideLinks(1, (value) => resolve(value ?? [])),
-    );
-    expect(links.map((link) => link.text)).toEqual([
-      "https://visible.test/path",
-    ]);
-    const open = vi.spyOn(window, "open");
-    expect(() =>
-      ignoredOscLinkHandler.activate(
-        new MouseEvent("click", { metaKey: true }),
-        "file:///hidden",
-        links[0]!.range,
-      ),
-    ).not.toThrow();
-    expect(open).not.toHaveBeenCalled();
-    expect(activate).not.toHaveBeenCalled();
-    open.mockRestore();
-    terminal.dispose();
-  });
+  it.each([
+    ["ST", "\u001b]8;;https://hidden.test/path\u001b\\", "\u001b]8;;\u001b\\"],
+    ["BEL", "\u001b]8;;https://hidden.test/path\u0007", "\u001b]8;;\u0007"],
+  ])(
+    "removes the native OSC 8 provider overlap for split %s controls while preserving the visible URL provider",
+    async (_variant, start, end) => {
+      const terminal = new Terminal({ cols: 120, rows: 8 });
+      const ignoredOscLinks = ignoreOscLinks(terminal);
+      const activate = vi.fn();
+      const webLinks = registerVisibleWebLinks(terminal, activate);
+      await write(terminal, start.slice(0, -1));
+      await write(terminal, `${start.slice(-1)}https://visible`);
+      await write(terminal, ".test/path");
+      await write(terminal, end.slice(0, -1));
+      await write(terminal, end.slice(-1));
+
+      const providers = (
+        terminal as unknown as {
+          _core: {
+            _linkProviderService: { linkProviders: ILinkProvider[] };
+          };
+        }
+      )._core._linkProviderService.linkProviders;
+      expect(providers).toHaveLength(2);
+      expect(await providerLinks(providers[0]!)).toEqual([]);
+      const visibleLinks = await providerLinks(providers[1]!);
+      expect(visibleLinks.map((link) => link.text)).toEqual([
+        "https://visible.test/path",
+      ]);
+
+      const visibleLink = visibleLinks[0]!;
+      visibleLink.activate(
+        new MouseEvent("click", { button: 0, metaKey: true }),
+        visibleLink.text,
+      );
+      expect(activate).toHaveBeenCalledOnce();
+      expect(activate).toHaveBeenCalledWith("https://visible.test/path");
+
+      webLinks.dispose();
+      ignoredOscLinks.dispose();
+      terminal.dispose();
+    },
+  );
 
   it("requires a primary-button Cmd+click and forwards the provider string unchanged once per gesture", async () => {
     const { links, activate } = await linksFor("https://example.test/a");

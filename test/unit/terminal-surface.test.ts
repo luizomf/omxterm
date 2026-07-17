@@ -219,7 +219,10 @@ describe("portable Terminal Surface", () => {
     expect(onTitleRequest.mock.calls).toEqual([["first"], ["second"]]);
     expect(onBell).toHaveBeenCalledOnce();
     surface.dispose();
-    expect(xterm.FakeTerminal.current.oscDispose).toHaveBeenCalledTimes(2);
+    expect(
+      xterm.FakeTerminal.current.parser.registerOscHandler,
+    ).toHaveBeenCalledWith(8, expect.any(Function));
+    expect(xterm.FakeTerminal.current.oscDispose).toHaveBeenCalledTimes(3);
     expect(xterm.FakeTerminal.current.csiDispose).toHaveBeenCalledOnce();
     expect(xterm.FakeTerminal.current.bellDispose).toHaveBeenCalledOnce();
   });

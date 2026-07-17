@@ -11,10 +11,7 @@ import {
 import type { TerminalSessionAdapter } from "./terminal-session-adapter";
 import { registerOsc52Clipboard } from "./osc52-clipboard";
 import { registerTerminalTitleEvents } from "./terminal-title-events";
-import {
-  ignoredOscLinkHandler,
-  registerVisibleWebLinks,
-} from "./visible-web-links";
+import { ignoreOscLinks, registerVisibleWebLinks } from "./visible-web-links";
 
 export interface TerminalSurface {
   zoom(command: TerminalFontZoom): void;
@@ -81,6 +78,7 @@ export async function mountTerminalSurface(
   let osc52Subscription: { dispose(): void } | undefined;
   let titleEventSubscription: { dispose(): void } | undefined;
   let webLinksSubscription: { dispose(): void } | undefined;
+  let ignoredOscLinksSubscription: { dispose(): void } | undefined;
   let resizeObserver: ResizeObserver | undefined;
   let fitAddon: FitAddon | undefined;
   let pendingFitFrame: number | undefined;
@@ -170,6 +168,7 @@ export async function mountTerminalSurface(
       () => osc52Subscription?.dispose(),
       () => titleEventSubscription?.dispose(),
       () => webLinksSubscription?.dispose(),
+      () => ignoredOscLinksSubscription?.dispose(),
       () => adapter.close(),
       () => terminal?.dispose(),
     ]) {
@@ -217,9 +216,9 @@ export async function mountTerminalSurface(
       fontFamily: appearance.fontFamily,
       fontSize: appearance.fontSize,
       theme: terminalTheme,
-      linkHandler: ignoredOscLinkHandler,
     });
     terminal = mountedTerminal;
+    ignoredOscLinksSubscription = ignoreOscLinks(mountedTerminal);
     titleEventSubscription = registerTerminalTitleEvents(mountedTerminal, {
       ...(options.onTitleRequest
         ? { onTitleRequest: options.onTitleRequest }

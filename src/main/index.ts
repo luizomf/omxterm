@@ -93,7 +93,12 @@ app
           onTitleRequest: titleController.requestTitle,
           onBell: titleController.ringBell,
           onUserInteraction: titleController.resetAttention,
-          openExternalLink: (url) => void shell.openExternal(url),
+          openExternalLink: (url) => shell.openExternal(url),
+          onExternalLinkOpenError: () =>
+            dialog.showErrorBox(
+              "External Link Error",
+              "The External Link could not be opened.",
+            ),
           writeClipboardText: (text) => clipboard.writeText(text),
           readClipboardText: () => clipboard.readText(),
           async confirmPaste() {

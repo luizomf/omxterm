@@ -1,14 +1,14 @@
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import type { ILinkHandler, Terminal } from "@xterm/xterm";
+import type { Terminal } from "@xterm/xterm";
 
 // This is the lowercase-only form of the provider's pinned 0.12.0 strict URL
 // expression. The provider remains responsible for the complete visible span.
 const visibleWebUrlRegex =
   /https?:[/]{2}[^\s"'!*(){}|\\\^<>`]*[^\s"':,.!?{}|\\\^~\[\]`()<>]/;
 
-export const ignoredOscLinkHandler: ILinkHandler = {
-  activate() {},
-};
+export function ignoreOscLinks(terminal: Terminal): { dispose(): void } {
+  return terminal.parser.registerOscHandler(8, () => true);
+}
 
 export function registerVisibleWebLinks(
   terminal: Terminal,

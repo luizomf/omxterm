@@ -50,7 +50,8 @@ export interface TerminalIpcControllerOptions {
   readonly onTitleRequest: (request: string) => void;
   readonly onBell: () => void;
   readonly onUserInteraction: () => void;
-  readonly openExternalLink: (url: string) => void;
+  readonly openExternalLink: (url: string) => Promise<void>;
+  readonly onExternalLinkOpenError: () => void;
 }
 
 export interface TerminalIpcController {
@@ -271,7 +272,9 @@ function createTerminalIpcController(
   };
   const openExternalLink = (payload?: unknown) => {
     if (!isValidExternalLink(payload)) return;
-    options.openExternalLink(payload);
+    void options.openExternalLink(payload).catch(() => {
+      options.onExternalLinkOpenError();
+    });
   };
 
   return {
@@ -300,7 +303,7 @@ export function isValidExternalLink(value: unknown): value is string {
     typeof value !== "string" ||
     value.length === 0 ||
     value.length > 2_048 ||
-    /[\s\u0000-\u001f\u007f]/u.test(value) ||
+    /[\s\p{Cc}\p{Cf}\\]/u.test(value) ||
     (!value.startsWith("http://") && !value.startsWith("https://"))
   )
     return false;
