@@ -1,7 +1,15 @@
 import { listPackage } from "@electron/asar";
 import { execFile as execFileCallback, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -351,15 +359,22 @@ export async function verifyPackagedApplication(
   const temporaryRoot = await mkdtemp(
     path.join(tmpdir(), "omxterm-packaged-startup-"),
   );
+  const configurationRoot = path.join(temporaryRoot, "config");
   const stateRoot = path.join(temporaryRoot, "state");
+  const userDataRoot = path.join(temporaryRoot, "electron-user-data");
+  await mkdir(path.join(configurationRoot, "omxterm"), { recursive: true });
+  await writeFile(
+    path.join(configurationRoot, "omxterm", "config.json"),
+    `${JSON.stringify({ version: 1, confirmClose: false })}\n`,
+  );
   const canary = `OMXTERM_PACKAGE_SECRET_CANARY_${Date.now()}`;
   let stderr = "";
-  const child = spawn(executable, [], {
+  const child = spawn(executable, [`--user-data-dir=${userDataRoot}`], {
     detached: true,
     env: {
       ...process.env,
       HOME: path.join(temporaryRoot, "home"),
-      XDG_CONFIG_HOME: path.join(temporaryRoot, "config"),
+      XDG_CONFIG_HOME: configurationRoot,
       XDG_STATE_HOME: stateRoot,
       OMXTERM_PACKAGE_SECRET_CANARY: canary,
     },

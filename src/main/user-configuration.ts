@@ -57,7 +57,7 @@ export function userConfigurationDiagnostic(
 export interface LoadUserConfigurationOptions {
   readonly environment: Readonly<Record<string, string | undefined>>;
   readonly homeDirectory: string;
-  readonly discoverInstalledFontFamilies: () => Promise<ReadonlySet<string>>;
+  readonly isFontFamilyAvailable: (family: string) => Promise<boolean>;
   readonly read?: typeof readFile;
 }
 
@@ -118,8 +118,13 @@ export async function loadUserConfiguration(
     new Set(declaredFontFamily === undefined ? [] : [declaredFontFamily]),
   );
   if (preliminary.fontFamily === undefined) return preliminary;
-  const installedFontFamilies = await discoverFonts(options, configurationPath);
-  if (!installedFontFamilies.has(preliminary.fontFamily))
+  if (
+    !(await checkFontAvailability(
+      options,
+      configurationPath,
+      preliminary.fontFamily,
+    ))
+  )
     fail(
       configurationPath,
       "font.family",
@@ -156,12 +161,13 @@ function configuredFontFamily(document: unknown): string | undefined {
   return typeof family === "string" ? family : undefined;
 }
 
-async function discoverFonts(
+async function checkFontAvailability(
   options: LoadUserConfigurationOptions,
   configurationPath: string,
-): Promise<ReadonlySet<string>> {
+  family: string,
+): Promise<boolean> {
   try {
-    return await options.discoverInstalledFontFamilies();
+    return await options.isFontFamilyAvailable(family);
   } catch {
     throw new UserConfigurationError(
       configurationPath,

@@ -1,35 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { parseInstalledFontFamilies } from "../../src/main/installed-font-families";
+import { isInstalledFontFamilyAvailable } from "../../src/main/installed-font-family";
 
-describe("macOS installed font-family discovery", () => {
-  it("returns only exact enabled and valid family fields, not face or PostScript names", () => {
-    const profile = JSON.stringify({
-      SPFontsDataType: [
-        {
-          enabled: "yes",
-          valid: "yes",
-          typefaces: [
-            {
-              _name: "ExactFamily-Regular",
-              fullname: "Exact Family Regular",
-              family: "Exact Family",
-              enabled: "yes",
-              valid: "yes",
-            },
-            {
-              family: "Disabled Family",
-              enabled: "no",
-              valid: "yes",
-            },
-          ],
-        },
-      ],
-    });
+describe("macOS installed font-family availability", () => {
+  it("asks AppKit about only the exact configured family", async () => {
+    const run = async (file: string, arguments_: readonly string[]) => {
+      expect(file).toBe("/usr/bin/osascript");
+      expect(arguments_).not.toContain("/usr/sbin/system_profiler");
+      expect(arguments_.at(-1)).toBe("Exact Family");
+      return { stdout: "available\n" };
+    };
 
-    expect([...parseInstalledFontFamilies(profile)]).toEqual(["Exact Family"]);
+    await expect(
+      isInstalledFontFamilyAvailable("Exact Family", run),
+    ).resolves.toBe(true);
   });
 
-  it("rejects malformed discovery JSON", () => {
-    expect(() => parseInstalledFontFamilies("not JSON")).toThrow(TypeError);
+  it("reports an unavailable exact family without falling back", async () => {
+    const run = async () => ({ stdout: "missing\n" });
+
+    await expect(
+      isInstalledFontFamilyAvailable("Missing Family", run),
+    ).resolves.toBe(false);
   });
 });

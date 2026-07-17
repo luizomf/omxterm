@@ -177,15 +177,17 @@ describe("isolated User Configuration loading", () => {
 
   it("treats only ENOENT as absence and creates no file or directory", async () => {
     const { xdg, home } = await roots();
-    const discover = vi.fn(async () => installedFonts);
+    const isFontFamilyAvailable = vi.fn(async (family) =>
+      installedFonts.has(family),
+    );
     const configuration = await loadUserConfiguration({
       environment: { XDG_CONFIG_HOME: xdg },
       homeDirectory: home,
-      discoverInstalledFontFamilies: discover,
+      isFontFamilyAvailable,
     });
     expect(configuration).toEqual(DEFAULT_USER_CONFIGURATION);
     await expect(stat(xdg)).rejects.toMatchObject({ code: "ENOENT" });
-    expect(discover).not.toHaveBeenCalled();
+    expect(isFontFamilyAvailable).not.toHaveBeenCalled();
   });
 
   it("rejects a dangling configuration symlink without changing it or starting", async () => {
@@ -203,7 +205,9 @@ describe("isolated User Configuration loading", () => {
         {
           environment: { XDG_CONFIG_HOME: xdg },
           homeDirectory: home,
-          discoverInstalledFontFamilies: vi.fn(async () => installedFonts),
+          isFontFamilyAvailable: vi.fn(async (family) =>
+            installedFonts.has(family),
+          ),
         },
         start,
       ),
@@ -221,7 +225,9 @@ describe("isolated User Configuration loading", () => {
     const base = {
       environment: { XDG_CONFIG_HOME: "/isolated" },
       homeDirectory: "/home/tester",
-      discoverInstalledFontFamilies: vi.fn(async () => installedFonts),
+      isFontFamilyAvailable: vi.fn(async (family) =>
+        installedFonts.has(family),
+      ),
     };
     await expect(
       loadUserConfiguration({
@@ -255,7 +261,9 @@ describe("isolated User Configuration loading", () => {
         {
           environment: { XDG_CONFIG_HOME: xdg },
           homeDirectory: home,
-          discoverInstalledFontFamilies: vi.fn(async () => installedFonts),
+          isFontFamilyAvailable: vi.fn(async (family) =>
+            installedFonts.has(family),
+          ),
         },
         start,
       );
@@ -271,7 +279,7 @@ describe("isolated User Configuration loading", () => {
     expect(await readFile(file)).toEqual(original);
   });
 
-  it("loads the XDG file instead of an existing home fallback and discovers fonts only when configured", async () => {
+  it("loads the XDG file and checks only the configured font family", async () => {
     const { xdg, home } = await roots();
     const xdgFile = path.join(xdg, "omxterm", "config.json");
     const homeFile = path.join(home, ".config", "omxterm", "config.json");
@@ -285,17 +293,50 @@ describe("isolated User Configuration loading", () => {
       homeFile,
       JSON.stringify({ version: 1, font: { size: 30 } }),
     );
-    const discover = vi.fn(async () => installedFonts);
+    const isFontFamilyAvailable = vi.fn(
+      async (family: string) => family === "Exact Family",
+    );
 
     const configuration = await loadUserConfiguration({
       environment: { XDG_CONFIG_HOME: xdg },
       homeDirectory: home,
-      discoverInstalledFontFamilies: discover,
+      isFontFamilyAvailable,
     });
 
     expect(configuration.fontFamily).toBe("Exact Family");
     expect(configuration.fontSize).toBe(16);
-    expect(discover).toHaveBeenCalledOnce();
+    expect(isFontFamilyAvailable).toHaveBeenCalledExactlyOnceWith(
+      "Exact Family",
+    );
+  });
+
+  it("rejects an unavailable configured family without starting or changing the file", async () => {
+    const { xdg, home } = await roots();
+    const file = path.join(xdg, "omxterm", "config.json");
+    await mkdir(path.dirname(file), { recursive: true });
+    const original = Buffer.from(
+      '{"version":1,"confirmClose":false,"font":{"family":"Missing Family"}}',
+    );
+    await writeFile(file, original);
+    const start = vi.fn();
+
+    await expect(
+      startWithUserConfiguration(
+        {
+          environment: { XDG_CONFIG_HOME: xdg },
+          homeDirectory: home,
+          isFontFamilyAvailable: vi.fn(async () => false),
+        },
+        start,
+      ),
+    ).rejects.toMatchObject({
+      configurationPath: file,
+      location: "font.family",
+      reason: "must exactly name an installed font family",
+    });
+
+    expect(start).not.toHaveBeenCalled();
+    expect(await readFile(file)).toEqual(original);
   });
 
   it("hands the complete validated contract to startup once without changing the file", async () => {
@@ -313,7 +354,9 @@ describe("isolated User Configuration loading", () => {
       {
         environment: { XDG_CONFIG_HOME: xdg },
         homeDirectory: home,
-        discoverInstalledFontFamilies: vi.fn(async () => installedFonts),
+        isFontFamilyAvailable: vi.fn(async (family) =>
+          installedFonts.has(family),
+        ),
       },
       start,
     );

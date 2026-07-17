@@ -36,7 +36,7 @@ import {
 } from "./terminal-window";
 import { registerTerminalWindowHost } from "./terminal-window-host";
 import { createTerminalWindowTitleController } from "./terminal-window-title";
-import { discoverInstalledFontFamilies } from "./installed-font-families";
+import { isInstalledFontFamilyAvailable } from "./installed-font-family";
 import { UserConfigurationError } from "./user-configuration";
 import { reportUserConfigurationFailure } from "./user-configuration-failure";
 import { startWithUserConfiguration } from "./configured-startup";
@@ -80,7 +80,7 @@ app
       {
         environment: process.env,
         homeDirectory: account.homedir,
-        discoverInstalledFontFamilies,
+        isFontFamilyAvailable: isInstalledFontFamilyAvailable,
       },
       async (userConfiguration) => {
         operationalEvents!.setLevel(userConfiguration.logLevel);
