@@ -44,6 +44,7 @@ describe("Terminal appearance build", () => {
     );
     expect(css).toContain("JetBrainsMonoNerdFontMono-Regular.woff2");
     expect(css).toContain("JetBrainsMono Nerd Font Mono");
+    expect(css).toContain("app-region: drag");
     expect(css).not.toContain("JetBrainsMonoNerdFontMono-Bold");
   }, 30_000);
 
@@ -62,5 +63,26 @@ describe("Terminal appearance build", () => {
     expect(xtermRule?.groups?.body).toContain("width: 100%");
     expect(xtermRule?.groups?.body).toContain("height: 100%");
     expect(xtermRule?.groups?.body).toContain("padding: 30px 8px 8px");
+  });
+
+  it("reserves only the visible title area for native window dragging", async () => {
+    const css = await readFile(
+      path.join(projectRoot, "src", "renderer", "terminal-window.css"),
+      "utf8",
+    );
+    const surfaceRule = css.match(/#terminal-surface\s*\{(?<body>[^}]*)\}/u);
+    const titleAreaRule = css.match(
+      /#terminal-surface::before\s*\{(?<body>[^}]*)\}/u,
+    );
+    const xtermRule = css.match(
+      /#terminal-surface \.xterm\s*\{(?<body>[^}]*)\}/u,
+    );
+
+    expect(titleAreaRule?.groups?.body).toContain('content: ""');
+    expect(titleAreaRule?.groups?.body).toContain("position: fixed");
+    expect(titleAreaRule?.groups?.body).toContain("height: 30px");
+    expect(titleAreaRule?.groups?.body).toContain("app-region: drag");
+    expect(surfaceRule?.groups?.body).not.toContain("app-region");
+    expect(xtermRule?.groups?.body).not.toContain("app-region");
   });
 });
