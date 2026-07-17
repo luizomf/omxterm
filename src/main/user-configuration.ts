@@ -6,17 +6,29 @@ import type {
 } from "../shared/user-configuration";
 import {
   DEFAULT_SCROLLBACK_LINES,
+  DEFAULT_TERMINAL_LINE_HEIGHT,
+  DEFAULT_TERMINAL_PADDING,
   DEFAULT_TERMINAL_FONT_SIZE,
+  MAX_TERMINAL_LINE_HEIGHT,
+  MAX_TERMINAL_PADDING,
   MAX_SCROLLBACK_LINES,
   MAX_TERMINAL_FONT_SIZE,
+  MIN_TERMINAL_LINE_HEIGHT,
+  MIN_TERMINAL_PADDING,
   MIN_TERMINAL_FONT_SIZE,
 } from "../shared/user-configuration";
 
 export {
   DEFAULT_SCROLLBACK_LINES,
+  DEFAULT_TERMINAL_LINE_HEIGHT,
+  DEFAULT_TERMINAL_PADDING,
   DEFAULT_TERMINAL_FONT_SIZE,
+  MAX_TERMINAL_LINE_HEIGHT,
+  MAX_TERMINAL_PADDING,
   MAX_SCROLLBACK_LINES,
   MAX_TERMINAL_FONT_SIZE,
+  MIN_TERMINAL_LINE_HEIGHT,
+  MIN_TERMINAL_PADDING,
   MIN_TERMINAL_FONT_SIZE,
 } from "../shared/user-configuration";
 
@@ -27,6 +39,8 @@ export const DEFAULT_USER_CONFIGURATION: UserConfiguration = Object.freeze({
   confirmClose: true,
   logLevel: "info",
   fontSize: DEFAULT_TERMINAL_FONT_SIZE,
+  fontLineHeight: DEFAULT_TERMINAL_LINE_HEIGHT,
+  terminalPadding: DEFAULT_TERMINAL_PADDING,
   scrollbackLines: DEFAULT_SCROLLBACK_LINES,
   optionKeyMode: "none",
   alwaysOnTop: false,
@@ -188,6 +202,7 @@ export function validateUserConfiguration(
     "confirmClose",
     "logLevel",
     "font",
+    "terminal",
     "scrollback",
     "keyboard",
     "window",
@@ -202,10 +217,29 @@ export function validateUserConfiguration(
     configurationPath,
     "scrollback",
   );
+  const terminal = optionalObject(root.terminal, configurationPath, "terminal");
+  const padding = optionalObject(
+    terminal?.padding,
+    configurationPath,
+    "terminal.padding",
+  );
   const keyboard = optionalObject(root.keyboard, configurationPath, "keyboard");
   const window = optionalObject(root.window, configurationPath, "window");
   if (font)
-    rejectUnknownKeys(font, configurationPath, "font", ["family", "size"]);
+    rejectUnknownKeys(font, configurationPath, "font", [
+      "family",
+      "size",
+      "lineHeight",
+    ]);
+  if (terminal)
+    rejectUnknownKeys(terminal, configurationPath, "terminal", ["padding"]);
+  if (padding)
+    rejectUnknownKeys(padding, configurationPath, "terminal.padding", [
+      "top",
+      "right",
+      "bottom",
+      "left",
+    ]);
   if (scrollback)
     rejectUnknownKeys(scrollback, configurationPath, "scrollback", ["lines"]);
   if (keyboard)
@@ -233,6 +267,48 @@ export function validateUserConfiguration(
     MAX_TERMINAL_FONT_SIZE,
     DEFAULT_TERMINAL_FONT_SIZE,
   );
+  const fontLineHeight = numberInRange(
+    font?.lineHeight,
+    configurationPath,
+    "font.lineHeight",
+    MIN_TERMINAL_LINE_HEIGHT,
+    MAX_TERMINAL_LINE_HEIGHT,
+    DEFAULT_TERMINAL_LINE_HEIGHT,
+  );
+  const terminalPadding = Object.freeze({
+    top: integerInRange(
+      padding?.top,
+      configurationPath,
+      "terminal.padding.top",
+      MIN_TERMINAL_PADDING,
+      MAX_TERMINAL_PADDING,
+      DEFAULT_TERMINAL_PADDING.top,
+    ),
+    right: integerInRange(
+      padding?.right,
+      configurationPath,
+      "terminal.padding.right",
+      MIN_TERMINAL_PADDING,
+      MAX_TERMINAL_PADDING,
+      DEFAULT_TERMINAL_PADDING.right,
+    ),
+    bottom: integerInRange(
+      padding?.bottom,
+      configurationPath,
+      "terminal.padding.bottom",
+      MIN_TERMINAL_PADDING,
+      MAX_TERMINAL_PADDING,
+      DEFAULT_TERMINAL_PADDING.bottom,
+    ),
+    left: integerInRange(
+      padding?.left,
+      configurationPath,
+      "terminal.padding.left",
+      MIN_TERMINAL_PADDING,
+      MAX_TERMINAL_PADDING,
+      DEFAULT_TERMINAL_PADDING.left,
+    ),
+  });
   const scrollbackLines = integerInRange(
     scrollback?.lines,
     configurationPath,
@@ -274,6 +350,8 @@ export function validateUserConfiguration(
     logLevel,
     ...(fontFamily === undefined ? {} : { fontFamily }),
     fontSize,
+    fontLineHeight,
+    terminalPadding,
     scrollbackLines,
     optionKeyMode,
     alwaysOnTop,
@@ -338,6 +416,26 @@ function integerInRange(
       `must be from ${minimum} through ${maximum}`,
     );
   return value as number;
+}
+
+function numberInRange(
+  value: unknown,
+  configurationPath: string,
+  location: string,
+  minimum: number,
+  maximum: number,
+  defaultValue: number,
+): number {
+  if (value === undefined) return defaultValue;
+  if (typeof value !== "number" || !Number.isFinite(value))
+    fail(configurationPath, location, "must be a finite number");
+  if (value < minimum || value > maximum)
+    fail(
+      configurationPath,
+      location,
+      `must be from ${minimum} through ${maximum}`,
+    );
+  return value;
 }
 
 function optionalBoolean(

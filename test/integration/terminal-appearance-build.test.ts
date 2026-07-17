@@ -72,10 +72,22 @@ describe("Terminal appearance build", () => {
     );
 
     expect(surfaceRule?.groups?.body).not.toContain("padding");
+    expect(surfaceRule?.groups?.body).toContain("background: #000000");
     expect(xtermRule?.groups?.body).toContain("box-sizing: border-box");
     expect(xtermRule?.groups?.body).toContain("width: 100%");
     expect(xtermRule?.groups?.body).toContain("height: 100%");
-    expect(xtermRule?.groups?.body).toContain("padding: 30px 8px 8px");
+    expect(xtermRule?.groups?.body).toContain(
+      "padding: calc(30px + var(--terminal-padding-top, 0px))",
+    );
+    expect(xtermRule?.groups?.body).toContain(
+      "var(--terminal-padding-right, 8px)",
+    );
+    expect(xtermRule?.groups?.body).toContain(
+      "var(--terminal-padding-bottom, 8px)",
+    );
+    expect(xtermRule?.groups?.body).toContain(
+      "var(--terminal-padding-left, 8px)",
+    );
   });
 
   it("reserves only the visible title area for native window dragging", async () => {

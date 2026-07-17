@@ -73,6 +73,8 @@ describe("renderer Terminal Window page host", () => {
     const mount = vi.fn(async () => createSurface({ zoom }));
     const configuration = {
       fontSize: 19,
+      fontLineHeight: 1.2,
+      terminalPadding: { top: 4, right: 12, bottom: 6, left: 14 },
       fontFamily: "SF Mono",
       scrollbackLines: 2_000,
       optionKeyMode: "right",
@@ -100,8 +102,10 @@ describe("renderer Terminal Window page host", () => {
       {
         appearance: {
           fontSize: 19,
+          lineHeight: 1.2,
           systemFont: { family: "SF Mono", available: true },
         },
+        padding: { top: 4, right: 12, bottom: 6, left: 14 },
         scrollbackLines: 2_000,
         optionKeyMode: "right",
       },

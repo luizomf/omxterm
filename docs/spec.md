@@ -53,6 +53,9 @@ remote terminal features are outside this release.
 - The Terminal Surface and Live Terminal Session grid refit in both directions
   after Terminal Window width or height changes and after Window Font Zoom. The
   xterm grid remains inside the visible content area with its bottom row visible.
+- The Terminal Surface keeps a fixed 30 px native title/drag inset above the
+  configurable top padding. Its black background fills the complete Terminal
+  Window behind all configured padding.
 - `Window -> Always on Top` toggles only the selected window at the ordinary
   native floating level. New windows use the configured default.
 - BEL is silent. An unfocused window prepends a bell marker to its title and
@@ -102,18 +105,26 @@ file. A present file must contain `"version": 1` and only supported keys:
 
 - `confirmClose`;
 - `logLevel`;
-- `font.family` and `font.size`;
+- `font.family`, `font.size`, and `font.lineHeight`;
+- `terminal.padding.top`, `terminal.padding.right`,
+  `terminal.padding.bottom`, and `terminal.padding.left`;
 - `scrollback.lines`;
 - `keyboard.optionAsAlt`: `none`, `left`, `right`, or `both`;
 - `window.alwaysOnTop`.
 
 The bundled JetBrainsMono Nerd Font Mono at 16 px is the default, matching the
 existing OMXTerm Web terminal baseline. `font.size` accepts only integral pixel
-sizes from 8 through 72 inclusive. `logLevel` defaults to `info`,
+sizes from 8 through 72 inclusive. `font.lineHeight` is an independent
+row-height multiplier from 1.0 through 2.0 inclusive, accepts fractional
+values, does not change glyph size, and defaults to 1.0. Terminal padding uses
+explicit per-side integer CSS pixels from 0 through 128 inclusive and defaults
+to top 0, right 8, bottom 8, and left 8. User top padding is added to the fixed,
+non-configurable 30 px native title inset. `logLevel` defaults to `info`,
 `keyboard.optionAsAlt` to `none`, and `window.alwaysOnTop` to `false`.
 
-Invalid JSON, unknown keys, unsupported versions, missing configured fonts, and
-invalid values are errors. OMXTerm reports the exact problem through a native
+Invalid JSON, unknown keys, unsupported versions, missing configured fonts,
+non-finite or out-of-range line heights, and non-integral or out-of-range
+padding values are errors. OMXTerm reports the exact problem through a native
 dialog and stderr, keeps the file unchanged, and requires restart after edits.
 It never migrates, repairs, rewrites, or silently ignores user configuration.
 

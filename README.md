@@ -45,7 +45,10 @@ optional. OMXTerm does not create, rewrite, migrate, or reload this file.
   "version": 1,
   "confirmClose": true,
   "logLevel": "info",
-  "font": { "family": "SF Mono", "size": 16 },
+  "font": { "family": "Fira Code", "size": 16, "lineHeight": 1.15 },
+  "terminal": {
+    "padding": { "top": 0, "right": 8, "bottom": 8, "left": 8 }
+  },
   "scrollback": { "lines": 10000 },
   "keyboard": { "optionAsAlt": "none" },
   "window": { "alwaysOnTop": false }
@@ -53,11 +56,25 @@ optional. OMXTerm does not create, rewrite, migrate, or reload this file.
 ```
 
 `font.size` accepts integral pixel sizes from 8 through 72 (inclusive) and
-defaults to 16. A configured `font.family` must exactly match an installed
-system font family. `scrollback.lines` accepts integers from 0 through 100,000.
-`logLevel` accepts `error`, `info`, or `debug`; `keyboard.optionAsAlt` accepts
-`none`, `left`, `right`, or `both`. Unknown keys and invalid values stop startup
-with an actionable error. Fixing a file requires restarting OMXTerm.
+defaults to 16. `font.lineHeight` is an independent row-height multiplier from
+1.0 through 2.0 (inclusive), supports fractional values, and defaults to 1.0;
+it does not change glyph size. A configured `font.family` must exactly match an
+installed system font family.
+
+`terminal.padding` accepts only the explicit `top`, `right`, `bottom`, and
+`left` integer CSS-pixel fields. Each side accepts 0 through 128 (inclusive) and
+defaults to `0`, `8`, `8`, and `8`, respectively. The configured top padding is
+added below OMXTerm's fixed 30 px native title/drag inset, which cannot be
+configured, so zero top padding never overlaps the traffic-light controls or
+drag region. The black window background continues behind all padding.
+
+For a flush configurable content box, set every padding side to `0`. A roomier
+example is `{"top":8,"right":12,"bottom":8,"left":12}`.
+`scrollback.lines` accepts integers from 0 through 100,000. `logLevel` accepts
+`error`, `info`, or `debug`; `keyboard.optionAsAlt` accepts `none`, `left`,
+`right`, or `both`. Unknown keys and invalid values stop startup with an
+actionable error. OMXTerm reads configuration only at startup, so every edit
+requires restarting it.
 
 - [First-release specification](docs/spec.md)
 - [Domain language](CONTEXT.md)

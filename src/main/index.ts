@@ -91,6 +91,8 @@ app
             ? { fontFamily: userConfiguration.fontFamily }
             : {}),
           fontSize: userConfiguration.fontSize,
+          fontLineHeight: userConfiguration.fontLineHeight,
+          terminalPadding: userConfiguration.terminalPadding,
           scrollbackLines: userConfiguration.scrollbackLines,
           optionKeyMode: userConfiguration.optionKeyMode,
         });

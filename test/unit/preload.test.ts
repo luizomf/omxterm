@@ -134,6 +134,8 @@ describe("isolated preload terminal bridge", () => {
     const routed = router.registerController({
       configuration: {
         fontSize: 16,
+        fontLineHeight: 1,
+        terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
         scrollbackLines: 10_000,
         optionKeyMode: "none",
       },
@@ -225,16 +227,28 @@ describe("isolated preload terminal bridge", () => {
     electron.invoke.mockResolvedValueOnce({
       fontFamily: "SF Mono",
       fontSize: 18,
+      fontLineHeight: 1.15,
+      terminalPadding: { top: 0, right: 12, bottom: 8, left: 12 },
       scrollbackLines: 500,
       optionKeyMode: "right",
     });
     await expect(bridge.configuration()).resolves.toEqual({
       fontFamily: "SF Mono",
       fontSize: 18,
+      fontLineHeight: 1.15,
+      terminalPadding: { top: 0, right: 12, bottom: 8, left: 12 },
       scrollbackLines: 500,
       optionKeyMode: "right",
     });
     electron.invoke.mockResolvedValueOnce({ fontSize: "18" });
+    await expect(bridge.configuration()).rejects.toThrow(TypeError);
+    electron.invoke.mockResolvedValueOnce({
+      fontSize: 18,
+      fontLineHeight: 1,
+      terminalPadding: { top: 0, right: 8, bottom: 8, left: 129 },
+      scrollbackLines: 500,
+      optionKeyMode: "none",
+    });
     await expect(bridge.configuration()).rejects.toThrow(TypeError);
     expect(electron.invoke).toHaveBeenCalledWith(terminalIpc.configuration);
   });

@@ -112,6 +112,8 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
     const controller = router.registerController({
       configuration: {
         fontSize: 16,
+        fontLineHeight: 1,
+        terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
         scrollbackLines: 10_000,
         optionKeyMode: "none",
       },

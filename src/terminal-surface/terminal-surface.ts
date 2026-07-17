@@ -11,9 +11,16 @@ import {
 import type { TerminalSessionAdapter } from "./terminal-session-adapter";
 import {
   DEFAULT_SCROLLBACK_LINES,
+  DEFAULT_TERMINAL_LINE_HEIGHT,
+  DEFAULT_TERMINAL_PADDING,
   DEFAULT_TERMINAL_FONT_SIZE,
+  MAX_TERMINAL_LINE_HEIGHT,
+  MAX_TERMINAL_PADDING,
   MAX_SCROLLBACK_LINES,
+  MIN_TERMINAL_LINE_HEIGHT,
+  MIN_TERMINAL_PADDING,
   type OptionKeyMode,
+  type TerminalPadding,
 } from "../shared/user-configuration";
 import { registerOsc52Clipboard } from "./osc52-clipboard";
 import { registerTerminalTitleEvents } from "./terminal-title-events";
@@ -43,6 +50,7 @@ export const BUNDLED_TERMINAL_FONT_FAMILY = "JetBrainsMono Nerd Font Mono";
 
 export interface TerminalAppearance {
   readonly fontSize?: number;
+  readonly lineHeight?: number;
   readonly systemFont?: {
     readonly family: string;
     readonly available: boolean;
@@ -62,6 +70,7 @@ export interface TerminalSurfaceOptions {
   readonly scrollbackLines?: number;
   readonly optionKeyMode?: OptionKeyMode;
   readonly appearance?: TerminalAppearance;
+  readonly padding?: TerminalPadding;
   readonly clipboard?: TerminalClipboard;
   readonly onTitleRequest?: (request: string) => void;
   readonly onBell?: () => void;
@@ -78,6 +87,7 @@ export async function mountTerminalSurface(
   const scrollbackLines = options.scrollbackLines ?? DEFAULT_SCROLLBACK_LINES;
   const optionKeyMode = options.optionKeyMode ?? "none";
   let appearance = resolveTerminalAppearance();
+  let padding = DEFAULT_TERMINAL_PADDING;
 
   let disposed = false;
   let terminal: Terminal | undefined;
@@ -194,6 +204,7 @@ export async function mountTerminalSurface(
 
   try {
     appearance = resolveTerminalAppearance(options.appearance);
+    padding = resolveTerminalPadding(options.padding);
     if (
       !Number.isInteger(scrollbackLines) ||
       scrollbackLines < 0 ||
@@ -216,6 +227,17 @@ export async function mountTerminalSurface(
 
     await loadBundledTerminalFont(appearance.fontSize);
 
+    container.style.setProperty("--terminal-padding-top", `${padding.top}px`);
+    container.style.setProperty(
+      "--terminal-padding-right",
+      `${padding.right}px`,
+    );
+    container.style.setProperty(
+      "--terminal-padding-bottom",
+      `${padding.bottom}px`,
+    );
+    container.style.setProperty("--terminal-padding-left", `${padding.left}px`);
+
     const mountedTerminal = new Terminal({
       cursorBlink: true,
       convertEol: false,
@@ -223,6 +245,7 @@ export async function mountTerminalSurface(
       macOptionIsMeta: optionKeyMode === "both",
       fontFamily: appearance.fontFamily,
       fontSize: appearance.fontSize,
+      lineHeight: appearance.lineHeight,
       theme: terminalTheme,
     });
     terminal = mountedTerminal;
@@ -282,15 +305,28 @@ export async function mountTerminalSurface(
 
 function resolveTerminalAppearance(
   appearance: TerminalAppearance | undefined = undefined,
-): { readonly fontFamily: string; readonly fontSize: number } {
+): {
+  readonly fontFamily: string;
+  readonly fontSize: number;
+  readonly lineHeight: number;
+} {
   const fontSize = appearance?.fontSize ?? DEFAULT_TERMINAL_FONT_SIZE;
+  const lineHeight = appearance?.lineHeight ?? DEFAULT_TERMINAL_LINE_HEIGHT;
   if (!Number.isFinite(fontSize) || fontSize <= 0)
     throw new TypeError("Terminal font size must be a positive number");
+  if (
+    !Number.isFinite(lineHeight) ||
+    lineHeight < MIN_TERMINAL_LINE_HEIGHT ||
+    lineHeight > MAX_TERMINAL_LINE_HEIGHT
+  )
+    throw new TypeError(
+      `font.lineHeight must be a finite number from ${MIN_TERMINAL_LINE_HEIGHT} through ${MAX_TERMINAL_LINE_HEIGHT}`,
+    );
 
   const bundledFamily = quoteFontFamily(BUNDLED_TERMINAL_FONT_FAMILY);
   const systemFont = appearance?.systemFont;
   if (!systemFont)
-    return { fontFamily: `${bundledFamily}, monospace`, fontSize };
+    return { fontFamily: `${bundledFamily}, monospace`, fontSize, lineHeight };
   if (!systemFont.available)
     throw new MissingTerminalFontError(systemFont.family);
   if (
@@ -302,7 +338,26 @@ function resolveTerminalAppearance(
   return {
     fontFamily: `${quoteFontFamily(systemFont.family)}, ${bundledFamily}, monospace`,
     fontSize,
+    lineHeight,
   };
+}
+
+function resolveTerminalPadding(
+  padding: TerminalPadding | undefined,
+): TerminalPadding {
+  const resolved = padding ?? DEFAULT_TERMINAL_PADDING;
+  for (const side of ["top", "right", "bottom", "left"] as const) {
+    const value = resolved[side];
+    if (
+      !Number.isInteger(value) ||
+      value < MIN_TERMINAL_PADDING ||
+      value > MAX_TERMINAL_PADDING
+    )
+      throw new TypeError(
+        `terminal.padding.${side} must be an integer from ${MIN_TERMINAL_PADDING} through ${MAX_TERMINAL_PADDING}`,
+      );
+  }
+  return resolved;
 }
 
 function quoteFontFamily(family: string): string {

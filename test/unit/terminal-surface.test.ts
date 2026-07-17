@@ -753,6 +753,7 @@ describe("portable Terminal Surface", () => {
     expect(xterm.FakeTerminal.current.constructorOptions).toMatchObject({
       fontFamily: '"JetBrainsMono Nerd Font Mono", monospace',
       fontSize: 16,
+      lineHeight: 1,
       theme: {
         background: "#000000",
         foreground: "#f0f0ff",
@@ -777,6 +778,87 @@ describe("portable Terminal Surface", () => {
         brightWhite: "#ffffff",
       },
     });
+    surface.dispose();
+  });
+
+  it("applies row spacing independently of font size and keeps it through Window Font Zoom", async () => {
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { appearance: { fontSize: 19, lineHeight: 1.2 } },
+    );
+    const terminal = xterm.FakeTerminal.current;
+
+    expect(terminal.constructorOptions).toMatchObject({
+      fontSize: 19,
+      lineHeight: 1.2,
+    });
+    surface.zoom("in");
+    expect(terminal.options.fontSize).toBe(20);
+    expect(terminal.constructorOptions.lineHeight).toBe(1.2);
+
+    surface.dispose();
+  });
+
+  it("keeps configured spacing fitted through initial mount, shrink, grow, and zoom grids", async () => {
+    const container = document.createElement("main");
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    let fittedSize: TerminalSize = { cols: 88, rows: 27 };
+    xterm.fit.mockImplementation(() => {
+      xterm.FakeTerminal.current.emitResize(fittedSize);
+    });
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+
+    const surface = await mountTerminalSurface(container, adapter, {
+      appearance: { fontSize: 16, lineHeight: 1.15 },
+      padding: { top: 0, right: 12, bottom: 8, left: 16 },
+    });
+
+    expect(container.style.getPropertyValue("--terminal-padding-top")).toBe(
+      "0px",
+    );
+    expect(container.style.getPropertyValue("--terminal-padding-right")).toBe(
+      "12px",
+    );
+    expect(container.style.getPropertyValue("--terminal-padding-bottom")).toBe(
+      "8px",
+    );
+    expect(container.style.getPropertyValue("--terminal-padding-left")).toBe(
+      "16px",
+    );
+    expect(adapter.resize).toHaveBeenLastCalledWith({ cols: 88, rows: 27 });
+
+    adapter.resize.mockClear();
+    fittedSize = { cols: 60, rows: 18 };
+    FakeResizeObserver.current.notify();
+    fittedSize = { cols: 104, rows: 34 };
+    FakeResizeObserver.current.notify();
+    fittedSize = { cols: 98, rows: 31 };
+    surface.zoom("in");
+    fittedSize = { cols: 104, rows: 34 };
+    surface.zoom("reset");
+
+    expect(adapter.resize.mock.calls).toEqual([
+      [{ cols: 60, rows: 18 }],
+      [{ cols: 104, rows: 34 }],
+      [{ cols: 98, rows: 31 }],
+      [{ cols: 104, rows: 34 }],
+    ]);
+
     surface.dispose();
   });
 

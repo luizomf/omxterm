@@ -64,6 +64,7 @@ export function mountTerminalWindowPage(
       ? {
           appearance: {
             fontSize: options.configuration.fontSize,
+            lineHeight: options.configuration.fontLineHeight,
             ...(options.configuration.fontFamily
               ? {
                   systemFont: {
@@ -74,6 +75,7 @@ export function mountTerminalWindowPage(
               : {}),
           },
           scrollbackLines: options.configuration.scrollbackLines,
+          padding: options.configuration.terminalPadding,
           optionKeyMode: options.configuration.optionKeyMode,
         }
       : {}),

@@ -32,6 +32,8 @@ function clipboardOptions() {
   return {
     configuration: {
       fontSize: 16,
+      fontLineHeight: 1,
+      terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
       scrollbackLines: 10_000,
       optionKeyMode: "none" as const,
     },
@@ -112,6 +114,48 @@ describe("terminal IPC controller", () => {
     expect(secondSession.close).not.toHaveBeenCalled();
     expect(ipc.handlers.size).toBe(5);
     expect(ipc.listeners.size).toBe(7);
+  });
+
+  it("returns the complete immutable startup spacing configuration to its bound renderer", () => {
+    const ipc = createIpcHarness();
+    const mainFrame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const configuration = Object.freeze({
+      fontSize: 18,
+      fontLineHeight: 1.15,
+      terminalPadding: Object.freeze({
+        top: 4,
+        right: 12,
+        bottom: 6,
+        left: 14,
+      }),
+      scrollbackLines: 500,
+      optionKeyMode: "right" as const,
+    });
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    router.registerController({
+      ...clipboardOptions(),
+      configuration,
+      webContents,
+      createSession: vi.fn(() => ({
+        write: vi.fn(),
+        resize: vi.fn(),
+        close: vi.fn(),
+      })),
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+
+    expect(
+      ipc.handlers.get(terminalIpc.configuration)!({
+        sender: webContents,
+        senderFrame: mainFrame,
+      }),
+    ).toBe(configuration);
   });
 
   it("reports a normalized shell startup failure without disclosing the cause", () => {
