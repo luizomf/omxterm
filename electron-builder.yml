@@ -1,0 +1,61 @@
+appId: com.otaviomiranda.omxterm
+productName: OMXTerm
+copyright: Copyright © 2026 Luiz Otávio Miranda
+asar:
+  smartUnpack: false
+npmRebuild: false
+asarUnpack:
+  - node_modules/node-pty/prebuilds/darwin-arm64/pty.node
+  - node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper
+directories:
+  output: release
+files:
+  - dist/**
+  - "!dist/**/*.map"
+  - "!node_modules/**/*.map"
+  - "!node_modules/@xterm/*/src/**"
+  - "!node_modules/node-pty/deps/**"
+  - "!node_modules/node-pty/prebuilds/darwin-x64/**"
+  - "!node_modules/node-pty/prebuilds/win32-*/**"
+  - "!node_modules/node-pty/scripts/**"
+  - "!node_modules/node-pty/src/**"
+  - "!node_modules/node-pty/typings/**"
+  - "!node_modules/node-pty/lib/**/*.test.js"
+extraResources:
+  - from: LICENSE
+    to: LICENSE.txt
+  - from: THIRD_PARTY_NOTICES.md
+    to: THIRD_PARTY_NOTICES.md
+  - from: assets/fonts/OFL.txt
+    to: licenses/JetBrainsMono-OFL.txt
+  - from: node_modules/@xterm/xterm/LICENSE
+    to: licenses/xterm.txt
+  - from: node_modules/@xterm/addon-fit/LICENSE
+    to: licenses/xterm-addon-fit.txt
+  - from: node_modules/@xterm/addon-web-links/LICENSE
+    to: licenses/xterm-addon-web-links.txt
+  - from: node_modules/node-pty/LICENSE
+    to: licenses/node-pty.txt
+  - from: node_modules/electron/dist/LICENSE
+    to: LICENSE.electron.txt
+  - from: node_modules/electron/dist/LICENSES.chromium.html
+    to: LICENSES.chromium.html
+artifactName: ${productName}-${version}-${arch}.${ext}
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch:
+        - arm64
+  identity: null
+  hardenedRuntime: false
+dmg:
+  sign: false
+  title: ${productName} ${version}
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications

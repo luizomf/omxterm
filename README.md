@@ -24,8 +24,14 @@ Project checks are available as root scripts:
 - `npm test` runs the complete automated test suite, including the scoped local
   PTY integration check;
 - `npm run build` creates the unpackaged development build under `dist/`;
-- `npm run check` runs formatting, typechecking, the complete test suite, and the
-  build.
+- `npm run package:mac` creates a local unsigned, non-notarized Apple Silicon
+  DMG under `release/` and never publishes it;
+- `npm run check` runs formatting, typechecking, the complete test suite, the
+  arm64 DMG build, packaged-content inspection, and packaged-startup check.
+
+See the [local arm64 release procedure](docs/release.md) for prerequisites, the
+exact-DMG manual checklist, checksum generation, Gatekeeper guidance, and the
+separately authorized publication gate.
 
 ## Configuration
 

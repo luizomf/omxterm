@@ -1,6 +1,9 @@
 {
   "name": "omxterm",
   "version": "0.0.0",
+  "description": "Otávio's open-source personal desktop terminal for Apple Silicon macOS",
+  "author": "Luiz Otávio Miranda",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "main": "dist/main/index.js",
@@ -12,7 +15,9 @@
     "test": "vitest run",
     "test:integration": "vitest run test/integration/local-shell.test.ts",
     "build": "node build.mjs",
-    "check": "npm run format:check && npm run typecheck && npm test && npm run build",
+    "package:mac": "npm run build && electron-builder --config electron-builder.yml --mac dmg --arm64 --publish never",
+    "package:verify": "node scripts/verify-packaged-app.mjs",
+    "check": "npm run format:check && npm run typecheck && npm test && npm run package:mac && npm run package:verify",
     "dev": "npm run build && electron ."
   },
   "engines": {
@@ -25,8 +30,10 @@
     "node-pty": "1.1.0"
   },
   "devDependencies": {
+    "@electron/asar": "3.4.1",
     "@types/node": "24.0.15",
     "electron": "43.1.1",
+    "electron-builder": "26.15.3",
     "esbuild": "0.28.1",
     "jsdom": "29.1.1",
     "prettier": "3.9.5",

@@ -11,6 +11,7 @@
 # Node / Electron
 node_modules/
 dist/
+release/
 npm-debug.log*
 
 # A bit unreadable, but "temp.md" and "tmp.md". Case does not matter
