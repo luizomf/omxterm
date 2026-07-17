@@ -16,6 +16,19 @@ export interface TerminalWindowTitleController {
   dispose(): void;
 }
 
+export type TerminalTitleRejectionReason = "too-long" | "invalid-characters";
+
+export function terminalTitleRejectionReason(
+  request: string,
+): TerminalTitleRejectionReason | undefined {
+  if ([...request].length > MAX_TERMINAL_TITLE_CODE_POINTS) return "too-long";
+  const sanitized = request.replace(/[\p{Cc}\p{Bidi_Control}]/gu, "");
+  if (request.length > 0 && sanitized.length === 0) return "invalid-characters";
+  if (/[\p{Cc}\p{Cf}\p{Cs}\p{Cn}\p{Zl}\p{Zp}]/u.test(sanitized))
+    return "invalid-characters";
+  return undefined;
+}
+
 export function safeTerminalBaseTitle(request: string): string {
   if ([...request].length > MAX_TERMINAL_TITLE_CODE_POINTS)
     return DEFAULT_TERMINAL_TITLE;
@@ -32,6 +45,7 @@ export function safeTerminalBaseTitle(request: string): string {
 export function createTerminalWindowTitleController(
   window: TerminalTitleWindow,
   requestDockAttention: () => void,
+  onRejected: (reason: TerminalTitleRejectionReason) => void = () => {},
 ): TerminalWindowTitleController {
   let baseTitle = DEFAULT_TERMINAL_TITLE;
   let attentionPending = false;
@@ -56,6 +70,8 @@ export function createTerminalWindowTitleController(
   return {
     requestTitle(request) {
       if (disposed) return;
+      const rejection = terminalTitleRejectionReason(request);
+      if (rejection) onRejected(rejection);
       baseTitle = safeTerminalBaseTitle(request);
       displayTitle();
     },

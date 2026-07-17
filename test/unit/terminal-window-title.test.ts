@@ -68,9 +68,11 @@ describe("native Terminal Title and bell attention", () => {
   it("falls back without exposing empty, non-printable, invalid, or oversized canary payloads", () => {
     const fixture = createWindow();
     const dock = vi.fn();
+    const rejected = vi.fn();
     const controller = createTerminalWindowTitleController(
       fixture.window,
       dock,
+      rejected,
     );
 
     controller.requestTitle("valid");
@@ -92,6 +94,13 @@ describe("native Terminal Title and bell attention", () => {
     expect(JSON.stringify(fixture.window.setTitle.mock.calls)).not.toContain(
       "CANARY",
     );
+    expect(rejected.mock.calls).toEqual([
+      ["invalid-characters"],
+      ["invalid-characters"],
+      ["invalid-characters"],
+      ["too-long"],
+    ]);
+    expect(JSON.stringify(rejected.mock.calls)).not.toContain("CANARY");
   });
 
   it("preserves Private Use glyphs while rejecting other invalid Unicode categories", () => {

@@ -9,6 +9,7 @@ import {
 import { terminalIpc } from "../shared/terminal-ipc";
 import type { LocalTerminalSession } from "./local-terminal-session";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
+import type { OperationalEventLog } from "./operational-events";
 
 export interface TrustedWebContents {
   readonly mainFrame: object;
@@ -40,6 +41,7 @@ interface SessionCallbacks {
 }
 
 export interface TerminalIpcControllerOptions {
+  readonly windowId?: number;
   readonly configuration: TerminalRendererConfiguration;
   readonly webContents: TrustedWebContents;
   readonly createSession: (callbacks: SessionCallbacks) => LocalTerminalSession;
@@ -84,6 +86,7 @@ interface RoutedTerminalIpcController extends TerminalIpcController {
 
 export function registerTerminalIpcRouter(
   ipcMain: IpcMainPort,
+  operationalEvents?: Pick<OperationalEventLog, "write">,
 ): TerminalIpcRouter {
   const controllers = new Map<
     TrustedWebContents,
@@ -97,49 +100,99 @@ export function registerTerminalIpcRouter(
       : undefined;
   const start: IpcHandler = (event, payload) => {
     const controller = controllerFor(event);
-    if (!controller)
+    if (!controller) {
+      operationalEvents?.write({
+        name: "boundary.rejected",
+        boundary: "ipc",
+        reason: "untrusted-sender",
+      });
       throw new Error("Rejected terminal IPC from an untrusted sender");
+    }
     controller.start(payload);
   };
   const configuration: IpcHandler = (event, payload) => {
     const controller = controllerFor(event);
-    if (!controller)
+    if (!controller) {
+      operationalEvents?.write({
+        name: "boundary.rejected",
+        boundary: "ipc",
+        reason: "untrusted-sender",
+      });
       throw new Error("Rejected configuration IPC from an untrusted sender");
+    }
     return controller.configuration(payload);
   };
+  const route = (
+    event: IpcEvent,
+    action: (controller: RoutedTerminalIpcController) => void,
+  ) => {
+    const controller = controllerFor(event);
+    if (controller) action(controller);
+    else
+      operationalEvents?.write({
+        name: "boundary.rejected",
+        boundary: "ipc",
+        reason: "untrusted-sender",
+      });
+  };
   const input: IpcListener = (event, payload) =>
-    controllerFor(event)?.input(payload);
+    route(event, (controller) => controller.input(payload));
   const resize: IpcListener = (event, payload) =>
-    controllerFor(event)?.resize(payload);
+    route(event, (controller) => controller.resize(payload));
   const close: IpcListener = (event, payload) =>
-    controllerFor(event)?.close(payload);
+    route(event, (controller) => controller.close(payload));
   const title: IpcListener = (event, payload) =>
-    controllerFor(event)?.title(payload);
+    route(event, (controller) => controller.title(payload));
   const bell: IpcListener = (event, payload) =>
-    controllerFor(event)?.bell(payload);
+    route(event, (controller) => controller.bell(payload));
   const externalLink: IpcListener = (event, payload) =>
-    controllerFor(event)?.openExternalLink(payload);
+    route(event, (controller) => controller.openExternalLink(payload));
   const writeClipboardText: IpcHandler = (event, payload) => {
     const controller = controllerFor(event);
-    if (!controller)
+    if (!controller) {
+      operationalEvents?.write({
+        name: "boundary.rejected",
+        boundary: "clipboard",
+        reason: "untrusted-sender",
+      });
       throw new Error("Rejected clipboard IPC from an untrusted sender");
+    }
     controller.writeClipboardText(payload);
   };
   const readClipboardText: IpcHandler = (event, payload) => {
     const controller = controllerFor(event);
-    if (!controller)
+    if (!controller) {
+      operationalEvents?.write({
+        name: "boundary.rejected",
+        boundary: "clipboard",
+        reason: "untrusted-sender",
+      });
       throw new Error("Rejected clipboard IPC from an untrusted sender");
+    }
     return controller.readClipboardText(payload);
   };
   const confirmPaste: IpcHandler = (event, payload) => {
     const controller = controllerFor(event);
-    if (!controller)
+    if (!controller) {
+      operationalEvents?.write({
+        name: "boundary.rejected",
+        boundary: "clipboard",
+        reason: "untrusted-sender",
+      });
       throw new Error("Rejected clipboard IPC from an untrusted sender");
+    }
     return controller.confirmPaste(payload);
   };
   const showClipboardContextMenu: IpcListener = (event, payload) => {
     const controller = controllerFor(event);
-    if (!controller) return;
+    if (!controller) {
+      operationalEvents?.write({
+        name: "boundary.rejected",
+        boundary: "clipboard",
+        reason: "untrusted-sender",
+      });
+      return;
+    }
     controller.showClipboardContextMenu(payload);
   };
 
@@ -163,10 +216,14 @@ export function registerTerminalIpcRouter(
         throw new Error("Terminal IPC controller already registered");
 
       let controller: RoutedTerminalIpcController;
-      controller = createTerminalIpcController(options, () => {
-        if (controllers.get(options.webContents) === controller)
-          controllers.delete(options.webContents);
-      });
+      controller = createTerminalIpcController(
+        options,
+        operationalEvents,
+        () => {
+          if (controllers.get(options.webContents) === controller)
+            controllers.delete(options.webContents);
+        },
+      );
       controllers.set(options.webContents, controller);
       return controller;
     },
@@ -195,12 +252,30 @@ export function registerTerminalIpcRouter(
 
 function createTerminalIpcController(
   options: TerminalIpcControllerOptions,
+  operationalEvents: Pick<OperationalEventLog, "write"> | undefined,
   unregister: () => void,
 ): RoutedTerminalIpcController {
   let disposed = false;
   let session: LocalTerminalSession | undefined;
   let sessionClosed = false;
   let starting = false;
+  let startedAt: number | undefined;
+  const windowId = options.windowId;
+  const writeWindowEvent = (
+    event: Parameters<OperationalEventLog["write"]>[0],
+  ) => {
+    if (windowId !== undefined) operationalEvents?.write(event);
+  };
+  const reject = (
+    boundary: "ipc" | "title" | "external-link" | "clipboard",
+    reason:
+      | "untrusted-sender"
+      | "invalid-payload"
+      | "invalid-value"
+      | "too-long"
+      | "invalid-characters",
+  ) =>
+    operationalEvents?.write({ name: "boundary.rejected", boundary, reason });
 
   const closeSession = () => {
     if (!session || sessionClosed) return;
@@ -209,8 +284,10 @@ function createTerminalIpcController(
   };
 
   const start = (payload?: unknown) => {
-    if (payload !== undefined)
+    if (payload !== undefined) {
+      reject("ipc", "invalid-payload");
       throw new TypeError("Invalid terminal start payload");
+    }
     if (disposed) throw new Error("Terminal IPC controller is disposed");
     if (session || starting)
       throw new Error("Live Terminal Session already started");
@@ -230,9 +307,34 @@ function createTerminalIpcController(
             options.webContents.send(terminalIpc.exit, exit);
           }
           options.onSessionExit(exit);
+          if (windowId !== undefined) {
+            const outcome =
+              exit.signal !== 0
+                ? "signal"
+                : exit.exitCode === 0
+                  ? "clean"
+                  : "nonzero-exit";
+            writeWindowEvent({
+              name: "pty.exit",
+              windowId,
+              outcome,
+              code: normalizeCode(
+                outcome === "signal" ? exit.signal : exit.exitCode,
+              ),
+              durationMs: elapsedMilliseconds(startedAt),
+            });
+          }
         },
       });
     } catch {
+      if (windowId !== undefined)
+        writeWindowEvent({
+          name: "pty.exit",
+          windowId,
+          outcome: "spawn-failure",
+          code: null,
+          durationMs: elapsedMilliseconds(startedAt),
+        });
       options.onSessionStartError();
       throw new Error("The Default Shell could not be started");
     } finally {
@@ -240,13 +342,22 @@ function createTerminalIpcController(
     }
 
     session = createdSession;
+    startedAt = Date.now();
+    if (windowId !== undefined)
+      writeWindowEvent({
+        name: "pty.control",
+        windowId,
+        action: "started",
+      });
     if (disposed) {
       closeSession();
     }
   };
   const configuration = (payload?: unknown) => {
-    if (payload !== undefined)
+    if (payload !== undefined) {
+      reject("ipc", "invalid-payload");
       throw new TypeError("Invalid User Configuration payload");
+    }
     if (disposed) throw new Error("Terminal IPC controller is disposed");
     return options.configuration;
   };
@@ -255,41 +366,69 @@ function createTerminalIpcController(
     if (isBoundedTerminalPayload(payload)) {
       options.onUserInteraction();
       session?.write(payload);
-    }
+    } else reject("ipc", "invalid-payload");
   };
   const resize = (payload?: unknown) => {
-    if (isTerminalSize(payload)) session?.resize(payload);
+    if (isTerminalSize(payload)) {
+      session?.resize(payload);
+      if (windowId !== undefined)
+        writeWindowEvent({ name: "pty.resize", windowId, ...payload });
+    } else reject("ipc", "invalid-payload");
   };
   const close = (payload?: unknown) => {
-    if (payload === undefined) closeSession();
+    if (payload === undefined) {
+      if (windowId !== undefined)
+        writeWindowEvent({
+          name: "pty.control",
+          windowId,
+          action: "close-requested",
+        });
+      closeSession();
+    } else reject("ipc", "invalid-payload");
   };
   const writeClipboardText = (payload?: unknown) => {
-    if (!isNonemptyClipboardText(payload))
+    if (!isNonemptyClipboardText(payload)) {
+      reject("clipboard", "invalid-payload");
       throw new TypeError("Invalid clipboard write payload");
+    }
     options.writeClipboardText(payload);
   };
   const readClipboardText = (payload?: unknown) => {
-    if (payload !== undefined)
+    if (payload !== undefined) {
+      reject("clipboard", "invalid-payload");
       throw new TypeError("Invalid clipboard read payload");
+    }
     return options.readClipboardText();
   };
   const confirmPaste = async (payload?: unknown) => {
-    if (!isNonemptyClipboardText(payload) || !requiresProtectedPaste(payload))
+    if (!isNonemptyClipboardText(payload) || !requiresProtectedPaste(payload)) {
+      reject("clipboard", "invalid-payload");
       throw new TypeError("Invalid Protected Paste payload");
+    }
     return options.confirmPaste(payload);
   };
   const showClipboardContextMenu = (payload?: unknown) => {
     if (payload === undefined) options.showClipboardContextMenu();
+    else reject("clipboard", "invalid-payload");
   };
   const title = (payload?: unknown) => {
     if (isTerminalTitleRequest(payload)) options.onTitleRequest(payload);
+    else reject("title", "invalid-payload");
   };
   const bell = (payload?: unknown) => {
     if (payload === undefined) options.onBell();
+    else reject("ipc", "invalid-payload");
   };
   const openExternalLink = (payload?: unknown) => {
-    if (!isValidExternalLink(payload)) return;
+    if (!isValidExternalLink(payload)) {
+      reject("external-link", "invalid-value");
+      return;
+    }
     void options.openExternalLink(payload).catch(() => {
+      operationalEvents?.write({
+        name: "application.failure",
+        stage: "external-link-open",
+      });
       options.onExternalLinkOpenError();
     });
   };
@@ -314,6 +453,16 @@ function createTerminalIpcController(
       closeSession();
     },
   };
+}
+
+function elapsedMilliseconds(startedAt: number | undefined): number {
+  return startedAt === undefined
+    ? 0
+    : Math.max(0, Math.round(Date.now() - startedAt));
+}
+
+function normalizeCode(value: number): number | null {
+  return Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
 export function isValidExternalLink(value: unknown): value is string {

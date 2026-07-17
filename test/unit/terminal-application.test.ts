@@ -348,4 +348,26 @@ describe("Terminal application lifecycle", () => {
       "floating",
     );
   });
+
+  it("records window lifecycle with local identifiers and bounded duration only", async () => {
+    const write = vi.fn(() => true);
+    const harness = createApplicationHarness({ operationalEvents: { write } });
+
+    await harness.application.newWindow();
+    harness.select(harness.windows[0]!.window);
+    harness.application.closeSelectedWindow();
+
+    expect(write).toHaveBeenNthCalledWith(1, {
+      name: "window.opened",
+      windowId: 1,
+    });
+    expect(write).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        name: "window.closed",
+        windowId: 1,
+        durationMs: expect.any(Number),
+      }),
+    );
+  });
 });

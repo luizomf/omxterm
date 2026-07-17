@@ -380,8 +380,9 @@ describe("terminal IPC controller", () => {
     };
     const rejectedUrl = "https://private.example.test/secret";
     const options = clipboardOptions();
+    const write = vi.fn(() => true);
     options.openExternalLink.mockRejectedValueOnce(new Error(rejectedUrl));
-    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    const router = registerTerminalIpcRouter(ipc.ipcMain, { write });
     router.registerController({
       ...options,
       webContents,
@@ -398,10 +399,15 @@ describe("terminal IPC controller", () => {
 
     expect(options.openExternalLink).toHaveBeenCalledOnce();
     expect(options.onExternalLinkOpenError).toHaveBeenCalledWith();
+    expect(write).toHaveBeenCalledWith({
+      name: "application.failure",
+      stage: "external-link-open",
+    });
     expect(webContents.send).not.toHaveBeenCalled();
     expect(
       JSON.stringify(options.onExternalLinkOpenError.mock.calls),
     ).not.toContain(rejectedUrl);
+    expect(JSON.stringify(write.mock.calls)).not.toContain(rejectedUrl);
   });
 
   it("consumes malformed and forged context-menu IPC without side effects", () => {
@@ -536,5 +542,91 @@ describe("terminal IPC controller", () => {
     expect(ipc.handlers.size).toBe(0);
     expect(ipc.listeners.size).toBe(0);
     expect(webContents.send).not.toHaveBeenCalled();
+  });
+
+  it("emits only normalized content-free IPC, PTY control, resize, duration, and failure metadata", () => {
+    const ipc = createIpcHarness();
+    const frame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame: frame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const write = vi.fn(() => true);
+    const router = registerTerminalIpcRouter(ipc.ipcMain, { write });
+    let callbacks:
+      | Parameters<
+          Parameters<typeof router.registerController>[0]["createSession"]
+        >[0]
+      | undefined;
+    router.registerController({
+      ...clipboardOptions(),
+      windowId: 7,
+      webContents,
+      createSession(value) {
+        callbacks = value;
+        return { write: vi.fn(), resize: vi.fn(), close: vi.fn() };
+      },
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+    const trusted = { sender: webContents, senderFrame: frame };
+    const terminalPayload = "TERMINAL_PAYLOAD_CANARY";
+
+    ipc.handlers.get(terminalIpc.start)!(trusted);
+    ipc.listeners.get(terminalIpc.input)?.(trusted, terminalPayload);
+    ipc.listeners.get(terminalIpc.resize)?.(trusted, { cols: 120, rows: 40 });
+    ipc.listeners.get(terminalIpc.title)?.(trusted, { title: "TITLE_CANARY" });
+    ipc.listeners.get(terminalIpc.externalLink)?.(
+      trusted,
+      "file:///URL_CANARY",
+    );
+    expect(() =>
+      ipc.handlers.get(terminalIpc.clipboardWrite)!(trusted, {
+        text: "CLIPBOARD_CANARY",
+      }),
+    ).toThrow(TypeError);
+    callbacks!.onExit({ exitCode: 23, signal: 0 });
+
+    expect(write.mock.calls).toEqual(
+      expect.arrayContaining([
+        [{ name: "pty.control", windowId: 7, action: "started" }],
+        [{ name: "pty.resize", windowId: 7, cols: 120, rows: 40 }],
+        [
+          {
+            name: "boundary.rejected",
+            boundary: "title",
+            reason: "invalid-payload",
+          },
+        ],
+        [
+          {
+            name: "boundary.rejected",
+            boundary: "external-link",
+            reason: "invalid-value",
+          },
+        ],
+        [
+          {
+            name: "boundary.rejected",
+            boundary: "clipboard",
+            reason: "invalid-payload",
+          },
+        ],
+      ]),
+    );
+    expect(write.mock.calls).toContainEqual([
+      expect.objectContaining({
+        name: "pty.exit",
+        windowId: 7,
+        outcome: "nonzero-exit",
+        code: 23,
+        durationMs: expect.any(Number),
+      }),
+    ]);
+    expect(JSON.stringify(write.mock.calls)).not.toContain(terminalPayload);
+    expect(JSON.stringify(write.mock.calls)).not.toContain("TITLE_CANARY");
+    expect(JSON.stringify(write.mock.calls)).not.toContain("URL_CANARY");
+    expect(JSON.stringify(write.mock.calls)).not.toContain("CLIPBOARD_CANARY");
   });
 });

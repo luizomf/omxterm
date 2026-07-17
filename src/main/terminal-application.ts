@@ -3,6 +3,7 @@ import type {
   TerminalFontZoom,
   TerminalClipboardAction,
 } from "../shared/terminal-contract";
+import type { OperationalEventLog } from "./operational-events";
 
 export const DEFAULT_CONFIRM_CLOSE = true;
 export const DEFAULT_ALWAYS_ON_TOP = false;
@@ -17,6 +18,7 @@ export interface NativeTerminalWindow {
 }
 
 export interface TerminalWindowLifecycle {
+  readonly windowId: number;
   onWindowClosed(): void;
   onSessionStartError(): void;
   onSessionExit(exit: TerminalExit): void;
@@ -52,6 +54,7 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
     action: TerminalClipboardAction,
   ) => void;
   readonly quit: () => void;
+  readonly operationalEvents?: Pick<OperationalEventLog, "write">;
 }
 
 export interface TerminalApplication {
@@ -71,6 +74,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
   const windows = new Map<Window, { failurePending: boolean }>();
   let quitting = false;
   let quitRequest: Promise<void> | undefined;
+  let nextWindowId = 1;
 
   const selectedWindow = () => {
     const selected = options.getSelectedWindow();
@@ -104,6 +108,9 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     async newWindow() {
       if (quitting) return;
 
+      const windowId = nextWindowId;
+      nextWindowId += 1;
+      const openedAt = Date.now();
       let window: Window | undefined;
       const pendingLifecycleEvents: Array<() => void> = [];
       const dispatch = (event: () => void) => {
@@ -111,9 +118,15 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
         else pendingLifecycleEvents.push(event);
       };
       const instance = options.createWindow({
+        windowId,
         onWindowClosed() {
           dispatch(() => {
             windows.delete(instance.window);
+            options.operationalEvents?.write({
+              name: "window.closed",
+              windowId,
+              durationMs: elapsedMilliseconds(openedAt),
+            });
             if (windows.size === 0) quit();
           });
         },
@@ -144,6 +157,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       });
       window = instance.window;
       windows.set(window, { failurePending: false });
+      options.operationalEvents?.write({ name: "window.opened", windowId });
       window.setAlwaysOnTop(
         options.alwaysOnTopDefault ?? DEFAULT_ALWAYS_ON_TOP,
         "floating",
@@ -193,6 +207,10 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     },
     isQuitting: () => quitting,
   };
+}
+
+function elapsedMilliseconds(startedAt: number): number {
+  return Math.max(0, Math.round(Date.now() - startedAt));
 }
 
 function normalizeLifecycleCode(value: number): number | null {
