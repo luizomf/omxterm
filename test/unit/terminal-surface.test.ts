@@ -9,16 +9,27 @@ import type { TerminalSessionHandlers } from "../../src/terminal-surface/termina
 const xterm = vi.hoisted(() => {
   class FakeTerminal {
     static current: FakeTerminal;
+    static instances: FakeTerminal[] = [];
     readonly write = vi.fn();
     readonly dispose = vi.fn(() => this.addon?.dispose());
-    readonly inputDispose = vi.fn();
-    readonly resizeDispose = vi.fn();
+    readonly inputDispose = vi.fn(() => {
+      this.onInput = undefined;
+    });
+    readonly resizeDispose = vi.fn(() => {
+      this.onTerminalResize = undefined;
+    });
+    readonly options: { macOptionIsMeta?: boolean };
+    readonly constructorOptions: Record<string, unknown>;
     private onInput: ((data: string) => void) | undefined;
     private onTerminalResize: ((size: TerminalSize) => void) | undefined;
+    private onKey: ((event: KeyboardEvent) => boolean) | undefined;
     private addon: { dispose(): void } | undefined;
 
-    constructor() {
+    constructor(options: Record<string, unknown>) {
       FakeTerminal.current = this;
+      FakeTerminal.instances.push(this);
+      this.constructorOptions = options;
+      this.options = { macOptionIsMeta: options.macOptionIsMeta as boolean };
     }
 
     loadAddon(addon: { dispose(): void }) {
@@ -35,11 +46,17 @@ const xterm = vi.hoisted(() => {
       this.onTerminalResize = listener;
       return { dispose: this.resizeDispose };
     }
+    attachCustomKeyEventHandler(listener: (event: KeyboardEvent) => boolean) {
+      this.onKey = listener;
+    }
     emitInput(data: string) {
       this.onInput?.(data);
     }
     emitResize(size: TerminalSize) {
       this.onTerminalResize?.(size);
+    }
+    emitKey(event: Partial<KeyboardEvent>) {
+      return this.onKey?.(event as KeyboardEvent);
     }
   }
 
@@ -77,6 +94,7 @@ class FakeResizeObserver {
 describe("portable Terminal Surface", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    xterm.FakeTerminal.instances = [];
     xterm.openError = undefined;
     FakeResizeObserver.observeError = undefined;
     vi.stubGlobal("ResizeObserver", FakeResizeObserver);
@@ -192,5 +210,160 @@ describe("portable Terminal Surface", () => {
     expect(FakeResizeObserver.current.disconnect).toHaveBeenCalledOnce();
     expect(xterm.FakeTerminal.current.dispose).toHaveBeenCalledOnce();
     expect(xterm.fitDispose).toHaveBeenCalledOnce();
+  });
+
+  it("owns independent memory-only scrollback with the documented bounds", async () => {
+    const createAdapter = () => ({
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    });
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+
+    const defaultSurface = await mountTerminalSurface(
+      document.createElement("main"),
+      createAdapter(),
+    );
+    const zeroSurface = await mountTerminalSurface(
+      document.createElement("main"),
+      createAdapter(),
+      { scrollbackLines: 0 },
+    );
+    const maximumSurface = await mountTerminalSurface(
+      document.createElement("main"),
+      createAdapter(),
+      { scrollbackLines: 100_000 },
+    );
+
+    expect(
+      xterm.FakeTerminal.instances.map(
+        (terminal) => terminal.constructorOptions.scrollback,
+      ),
+    ).toEqual([10_000, 0, 100_000]);
+
+    defaultSurface.dispose();
+    zeroSurface.dispose();
+    maximumSurface.dispose();
+
+    const rejectedAdapter = createAdapter();
+    await expect(
+      mountTerminalSurface(document.createElement("main"), rejectedAdapter, {
+        scrollbackLines: 100_001,
+      }),
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({
+        message: expect.stringContaining("scrollback.lines"),
+      }),
+    });
+    expect(rejectedAdapter.close).toHaveBeenCalledOnce();
+    expect(xterm.FakeTerminal.instances).toHaveLength(3);
+  });
+
+  it.each([
+    { mode: "none" as const, initial: false, selectedCode: "AltLeft" },
+    { mode: "left" as const, initial: false, selectedCode: "AltLeft" },
+    { mode: "right" as const, initial: false, selectedCode: "AltRight" },
+    { mode: "both" as const, initial: true, selectedCode: "AltLeft" },
+  ])(
+    "applies Option Key Mode $mode without changing terminal input",
+    async (value) => {
+      const adapter = {
+        start: vi.fn(async () => undefined),
+        write: vi.fn(),
+        resize: vi.fn(),
+        close: vi.fn(),
+      };
+      const { mountTerminalSurface } =
+        await import("../../src/terminal-surface/terminal-surface");
+      const surface = await mountTerminalSurface(
+        document.createElement("main"),
+        adapter,
+        { optionKeyMode: value.mode },
+      );
+      const terminal = xterm.FakeTerminal.current;
+
+      expect(terminal.options.macOptionIsMeta).toBe(value.initial);
+      terminal.emitKey({
+        type: "keydown",
+        code: value.selectedCode,
+        altKey: true,
+      });
+      expect(terminal.options.macOptionIsMeta).toBe(value.mode !== "none");
+      terminal.emitInput("á🙂");
+      terminal.emitKey({
+        type: "keyup",
+        code: value.selectedCode,
+        altKey: false,
+      });
+
+      expect(adapter.write).toHaveBeenCalledWith("á🙂");
+      expect(terminal.options.macOptionIsMeta).toBe(value.mode === "both");
+      surface.dispose();
+    },
+  );
+
+  it("distinguishes left and right Option keys", async () => {
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { optionKeyMode: "right" },
+    );
+    const terminal = xterm.FakeTerminal.current;
+
+    terminal.emitKey({ type: "keydown", code: "AltLeft", altKey: true });
+    expect(terminal.options.macOptionIsMeta).toBe(false);
+    terminal.emitKey({ type: "keyup", code: "AltLeft", altKey: false });
+    terminal.emitKey({ type: "keydown", code: "AltRight", altKey: true });
+    expect(terminal.options.macOptionIsMeta).toBe(true);
+
+    surface.dispose();
+  });
+
+  it("keeps representative SSH/tmux payload opaque and teardown bounded", async () => {
+    let handlers: TerminalSessionHandlers | undefined;
+    const adapter = {
+      start: vi.fn(async (value: TerminalSessionHandlers) => {
+        handlers = value;
+      }),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+    );
+    const terminal = xterm.FakeTerminal.current;
+    const tmuxPassthrough = "\u001bPtmux;\u001b\u001b[?1h\u001b\\";
+
+    terminal.emitInput("ssh user@example.invalid\r");
+    for (let index = 0; index < 256; index += 1) {
+      handlers!.onOutput(tmuxPassthrough);
+      terminal.emitInput("\u0002c");
+      terminal.emitResize({ cols: 80 + (index % 20), rows: 24 });
+    }
+    surface.dispose();
+    handlers!.onOutput("ignored after teardown");
+    terminal.emitInput("ignored after teardown");
+
+    expect(terminal.write).toHaveBeenCalledTimes(256);
+    expect(terminal.write).toHaveBeenCalledWith(tmuxPassthrough);
+    expect(adapter.write).toHaveBeenCalledTimes(257);
+    expect(adapter.write).toHaveBeenCalledWith("ssh user@example.invalid\r");
+    expect(adapter.write).toHaveBeenCalledWith("\u0002c");
+    expect(adapter.resize).toHaveBeenCalledTimes(256);
+    expect(adapter.close).toHaveBeenCalledOnce();
   });
 });

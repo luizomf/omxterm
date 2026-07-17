@@ -32,6 +32,7 @@ async function createTerminalWindow(): Promise<void> {
       return createLocalTerminalSession(nodePty.spawn, {
         shell: defaultShell,
         homeDirectory: account.homedir,
+        applicationVersion: app.getVersion(),
         environment: process.env,
         ...callbacks,
       });

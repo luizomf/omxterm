@@ -46,14 +46,29 @@ describe("local PTY Adapter", () => {
     const session = createLocalTerminalSession(spawn, {
       shell: "/bin/example-shell",
       homeDirectory: "/Users/example",
-      environment: { PATH: "/usr/bin" },
+      applicationVersion: "1.2.3",
+      environment: {
+        PATH: "/usr/bin",
+        TERM: "inherited-term",
+        COLORTERM: "inherited-color",
+        TERM_PROGRAM: "InheritedTerminal",
+        TERM_PROGRAM_VERSION: "0.0.1",
+        ZDOTDIR: "/Users/example/.zsh",
+      },
       onOutput,
       onExit,
     });
 
     expect(spawn).toHaveBeenCalledWith("/bin/example-shell", ["-l"], {
       cwd: "/Users/example",
-      env: { PATH: "/usr/bin" },
+      env: {
+        PATH: "/usr/bin",
+        TERM: "xterm-256color",
+        COLORTERM: "truecolor",
+        TERM_PROGRAM: "OMXTerm",
+        TERM_PROGRAM_VERSION: "1.2.3",
+        ZDOTDIR: "/Users/example/.zsh",
+      },
       cols: 80,
       rows: 24,
     });
@@ -77,6 +92,7 @@ describe("local PTY Adapter", () => {
     const session = createLocalTerminalSession(() => harness.pty, {
       shell: "/bin/example-shell",
       homeDirectory: "/Users/example",
+      applicationVersion: "1.2.3",
       environment: {},
       onOutput: vi.fn(),
       onExit,
@@ -91,5 +107,50 @@ describe("local PTY Adapter", () => {
     expect(harness.disposeData).toHaveBeenCalledOnce();
     expect(harness.disposeExit).toHaveBeenCalledOnce();
     expect(harness.pty.kill).not.toHaveBeenCalled();
+  });
+
+  it("does not mutate or disclose the inherited environment when spawn fails", () => {
+    const environment = {
+      PATH: "/usr/bin",
+      OMXTERM_TEST_SECRET: "must-not-appear",
+    };
+
+    expect(() =>
+      createLocalTerminalSession(
+        () => {
+          throw new Error("native spawn failed");
+        },
+        {
+          shell: "/bin/example-shell",
+          homeDirectory: "/Users/example",
+          applicationVersion: "1.2.3",
+          environment,
+          onOutput: vi.fn(),
+          onExit: vi.fn(),
+        },
+      ),
+    ).toThrow("Failed to start the Default Shell at /bin/example-shell");
+
+    expect(environment).toEqual({
+      PATH: "/usr/bin",
+      OMXTERM_TEST_SECRET: "must-not-appear",
+    });
+    try {
+      createLocalTerminalSession(
+        () => {
+          throw new Error("native spawn failed");
+        },
+        {
+          shell: "/bin/example-shell",
+          homeDirectory: "/Users/example",
+          applicationVersion: "1.2.3",
+          environment,
+          onOutput: vi.fn(),
+          onExit: vi.fn(),
+        },
+      );
+    } catch (error) {
+      expect(String(error)).not.toContain("must-not-appear");
+    }
   });
 });

@@ -11,10 +11,24 @@ export interface TerminalSurface {
   dispose(): void;
 }
 
+export const DEFAULT_SCROLLBACK_LINES = 10_000;
+export const MAX_SCROLLBACK_LINES = 100_000;
+
+export type OptionKeyMode = "none" | "left" | "right" | "both";
+
+export interface TerminalSurfaceOptions {
+  readonly scrollbackLines?: number;
+  readonly optionKeyMode?: OptionKeyMode;
+}
+
 export async function mountTerminalSurface(
   container: HTMLElement,
   adapter: TerminalSessionAdapter,
+  options: TerminalSurfaceOptions = {},
 ): Promise<TerminalSurface> {
+  const scrollbackLines = options.scrollbackLines ?? DEFAULT_SCROLLBACK_LINES;
+  const optionKeyMode = options.optionKeyMode ?? "none";
+
   let disposed = false;
   let terminal: Terminal | undefined;
   let inputSubscription: { dispose(): void } | undefined;
@@ -53,11 +67,34 @@ export async function mountTerminalSurface(
   };
 
   try {
+    if (
+      !Number.isInteger(scrollbackLines) ||
+      scrollbackLines < 0 ||
+      scrollbackLines > MAX_SCROLLBACK_LINES
+    ) {
+      throw new TypeError(
+        `scrollback.lines must be an integer from 0 through ${MAX_SCROLLBACK_LINES}`,
+      );
+    }
+    if (
+      optionKeyMode !== "none" &&
+      optionKeyMode !== "left" &&
+      optionKeyMode !== "right" &&
+      optionKeyMode !== "both"
+    ) {
+      throw new TypeError(
+        "keyboard.optionAsAlt must be none, left, right, or both",
+      );
+    }
+
     const mountedTerminal = new Terminal({
       cursorBlink: true,
       convertEol: false,
+      scrollback: scrollbackLines,
+      macOptionIsMeta: optionKeyMode === "both",
     });
     terminal = mountedTerminal;
+    applyOptionKeyMode(mountedTerminal, optionKeyMode);
     const mountedFitAddon = new FitAddon();
     mountedTerminal.loadAddon(mountedFitAddon);
     mountedTerminal.open(container);
@@ -88,4 +125,24 @@ export async function mountTerminalSurface(
       cause: error,
     });
   }
+}
+
+function applyOptionKeyMode(terminal: Terminal, mode: OptionKeyMode): void {
+  let leftOptionDown = false;
+  let rightOptionDown = false;
+
+  terminal.attachCustomKeyEventHandler((event) => {
+    if (event.code === "AltLeft") leftOptionDown = event.type !== "keyup";
+    if (event.code === "AltRight") rightOptionDown = event.type !== "keyup";
+    if (!event.altKey) {
+      leftOptionDown = false;
+      rightOptionDown = false;
+    }
+
+    terminal.options.macOptionIsMeta =
+      mode === "both" ||
+      (mode === "left" && leftOptionDown) ||
+      (mode === "right" && rightOptionDown);
+    return true;
+  });
 }

@@ -16,6 +16,7 @@ export interface LocalTerminalSession {
 export interface LocalTerminalSessionOptions {
   readonly shell: string;
   readonly homeDirectory: string;
+  readonly applicationVersion: string;
   readonly environment: NodeJS.ProcessEnv;
   readonly onOutput: (data: string) => void;
   readonly onExit: (exit: TerminalExit) => void;
@@ -35,7 +36,13 @@ export function createLocalTerminalSession(
   try {
     pty = spawnPty(options.shell, ["-l"], {
       cwd: options.homeDirectory,
-      env: options.environment,
+      env: {
+        ...options.environment,
+        TERM: "xterm-256color",
+        COLORTERM: "truecolor",
+        TERM_PROGRAM: "OMXTerm",
+        TERM_PROGRAM_VERSION: options.applicationVersion,
+      },
       cols: 80,
       rows: 24,
     });
