@@ -7,8 +7,10 @@ icon. It was imported byte-for-byte from
 `9c1673b934821cb83ace4f18291d8015e5b0c1fb`, SHA-256
 `3c078dfc92467afa0ebb065aeaeb7c84f4442757d5ca831f028d16c39e9d8905`).
 
-`application-icon.png` is the 1024 px development Dock icon.
-`application-icon.icns` contains the standard 16, 32, 128, 256, and 512 px
-macOS representations and their Retina variants for packaged builds. Both are
-derived artifacts committed so packaging stays self-contained and does not
-depend on image tooling or an OMXTerm Web checkout.
+`application-icon-macos.svg` places the accepted artwork on the transparent,
+rounded 1024 px macOS canvas without changing its prompt or colors.
+`application-icon.png` is the matching 1024 px development Dock icon, and
+`application-icon.icns` contains Retina representations for 16 and 32 logical
+pixels plus standard and Retina representations from 128 through 512 pixels for
+packaged builds. The raster derivatives are committed so packaging stays
+self-contained and does not depend on image tooling or an OMXTerm Web checkout.

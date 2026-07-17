@@ -25,16 +25,14 @@ const applicationIconPath = path.join(
 );
 
 const requiredIcnsRepresentations = [
-  "icon_16x16.png",
-  "icon_16x16@2x.png",
-  "icon_32x32.png",
-  "icon_32x32@2x.png",
-  "icon_128x128.png",
-  "icon_128x128@2x.png",
-  "icon_256x256.png",
-  "icon_256x256@2x.png",
-  "icon_512x512.png",
-  "icon_512x512@2x.png",
+  { name: "icon_16x16@2x.png", width: 32, height: 32 },
+  { name: "icon_32x32@2x.png", width: 64, height: 64 },
+  { name: "icon_128x128.png", width: 128, height: 128 },
+  { name: "icon_128x128@2x.png", width: 256, height: 256 },
+  { name: "icon_256x256.png", width: 256, height: 256 },
+  { name: "icon_256x256@2x.png", width: 512, height: 512 },
+  { name: "icon_512x512.png", width: 512, height: 512 },
+  { name: "icon_512x512@2x.png", width: 1024, height: 1024 },
 ];
 
 const requiredAsarEntries = [
@@ -76,10 +74,42 @@ export function inspectAsarEntries(entries) {
 }
 
 export function inspectIcnsRepresentations(representations) {
+  const actualByName = new Map(
+    representations.map((representation) => [
+      representation.name,
+      representation,
+    ]),
+  );
   return {
-    missing: requiredIcnsRepresentations.filter(
-      (required) => !representations.includes(required),
-    ),
+    missing: requiredIcnsRepresentations
+      .filter((required) => !actualByName.has(required.name))
+      .map((required) => required.name),
+    wrongDimensions: requiredIcnsRepresentations.flatMap((required) => {
+      const actual = actualByName.get(required.name);
+      if (
+        !actual ||
+        (actual.width === required.width && actual.height === required.height)
+      )
+        return [];
+      return [
+        `${required.name} (expected ${required.width}x${required.height}, got ${actual.width}x${actual.height})`,
+      ];
+    }),
+  };
+}
+
+async function readPngRepresentation(file) {
+  const data = await readFile(file);
+  if (
+    data.length < 24 ||
+    data.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a" ||
+    data.subarray(12, 16).toString("ascii") !== "IHDR"
+  )
+    throw new Error(`ICNS representation is not a PNG: ${path.basename(file)}`);
+  return {
+    name: path.basename(file),
+    width: data.readUInt32BE(16),
+    height: data.readUInt32BE(20),
   };
 }
 
@@ -147,10 +177,19 @@ async function inspectApplicationIcon(applicationPath) {
   const iconset = path.join(temporaryRoot, "application-icon.iconset");
   try {
     await execFile("iconutil", ["-c", "iconset", "-o", iconset, packagedIcon]);
-    const inspection = inspectIcnsRepresentations(await readdir(iconset));
-    if (inspection.missing.length > 0)
+    const representations = await Promise.all(
+      (await readdir(iconset)).map((name) =>
+        readPngRepresentation(path.join(iconset, name)),
+      ),
+    );
+    const inspection = inspectIcnsRepresentations(representations);
+    const problems = [
+      ...inspection.missing.map((name) => `missing ${name}`),
+      ...inspection.wrongDimensions,
+    ];
+    if (problems.length > 0)
       throw new Error(
-        `Packaged application icon representations are missing: ${inspection.missing.join(", ")}`,
+        `Packaged application icon representations are invalid: ${problems.join(", ")}`,
       );
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
