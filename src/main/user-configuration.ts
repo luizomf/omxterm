@@ -17,6 +17,7 @@ import {
   MIN_TERMINAL_PADDING,
   MIN_TERMINAL_FONT_SIZE,
 } from "../shared/user-configuration";
+import type { InstalledFontFamilyMetrics } from "./installed-font-family";
 
 export {
   DEFAULT_SCROLLBACK_LINES,
@@ -71,8 +72,15 @@ export function userConfigurationDiagnostic(
 export interface LoadUserConfigurationOptions {
   readonly environment: Readonly<Record<string, string | undefined>>;
   readonly homeDirectory: string;
-  readonly isFontFamilyAvailable: (family: string) => Promise<boolean>;
+  readonly getInstalledFontFamilyMetrics: (
+    family: string,
+    fontSize: number,
+  ) => Promise<InstalledFontFamilyMetrics | undefined>;
   readonly read?: typeof readFile;
+}
+
+export interface LoadedUserConfiguration extends UserConfiguration {
+  readonly configuredFontMetrics?: InstalledFontFamilyMetrics;
 }
 
 export function resolveUserConfigurationPath(
@@ -86,7 +94,7 @@ export function resolveUserConfigurationPath(
 
 export async function loadUserConfiguration(
   options: LoadUserConfigurationOptions,
-): Promise<UserConfiguration> {
+): Promise<LoadedUserConfiguration> {
   const configurationPath = resolveUserConfigurationPath(
     options.environment,
     options.homeDirectory,
@@ -132,19 +140,19 @@ export async function loadUserConfiguration(
     new Set(declaredFontFamily === undefined ? [] : [declaredFontFamily]),
   );
   if (preliminary.fontFamily === undefined) return preliminary;
-  if (
-    !(await checkFontAvailability(
-      options,
-      configurationPath,
-      preliminary.fontFamily,
-    ))
-  )
+  const configuredFontMetrics = await checkFontMetrics(
+    options,
+    configurationPath,
+    preliminary.fontFamily,
+    preliminary.fontSize,
+  );
+  if (configuredFontMetrics === undefined)
     fail(
       configurationPath,
       "font.family",
       "must exactly name an installed font family",
     );
-  return preliminary;
+  return Object.freeze({ ...preliminary, configuredFontMetrics });
 }
 
 async function isPathAbsent(configurationPath: string): Promise<boolean> {
@@ -175,13 +183,14 @@ function configuredFontFamily(document: unknown): string | undefined {
   return typeof family === "string" ? family : undefined;
 }
 
-async function checkFontAvailability(
+async function checkFontMetrics(
   options: LoadUserConfigurationOptions,
   configurationPath: string,
   family: string,
-): Promise<boolean> {
+  fontSize: number,
+): Promise<InstalledFontFamilyMetrics | undefined> {
   try {
-    return await options.isFontFamilyAvailable(family);
+    return await options.getInstalledFontFamilyMetrics(family, fontSize);
   } catch {
     throw new UserConfigurationError(
       configurationPath,
