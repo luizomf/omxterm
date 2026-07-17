@@ -53,6 +53,9 @@ remote terminal features are outside this release.
 - The Terminal Surface and Live Terminal Session grid refit in both directions
   after Terminal Window width or height changes and after Window Font Zoom. The
   xterm grid remains inside the visible content area with its bottom row visible.
+- Native minimum window bounds keep the existing 320 px width and 200 px height
+  as floors and grow at startup when configured font or padding needs more room
+  for a visible terminal grid.
 - The Terminal Surface keeps a fixed 30 px native title/drag inset above the
   configurable top padding. Its black background fills the complete Terminal
   Window behind all configured padding.

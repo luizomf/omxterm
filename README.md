@@ -66,7 +66,9 @@ installed system font family.
 defaults to `0`, `8`, `8`, and `8`, respectively. The configured top padding is
 added below OMXTerm's fixed 30 px native title/drag inset, which cannot be
 configured, so zero top padding never overlaps the traffic-light controls or
-drag region. The black window background continues behind all padding.
+drag region. The black window background continues behind all padding. Native
+minimum window bounds remain at least 320 x 200 px and grow at startup when the
+configured font or padding needs more room for a visible terminal grid.
 
 For a flush configurable content box, set every padding side to `0`. A roomier
 example is `{"top":8,"right":12,"bottom":8,"left":12}`.

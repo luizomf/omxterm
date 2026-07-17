@@ -112,7 +112,7 @@ app
             const defaultShell = account.shell;
 
             const window = new BrowserWindow(
-              terminalWindowOptions(preloadPath),
+              terminalWindowOptions(preloadPath, userConfiguration),
             );
             lockTerminalRendererNavigation(window.webContents);
             const titleController = createTerminalWindowTitleController(
