@@ -13,13 +13,16 @@ payloads are consumed without changing the clipboard. OMXTerm will not inherit
 the 64 KiB project limit from OMXTerm Web: local processes have a different
 trust and transport boundary, and large valid copies and text pastes must not be
 truncated by an arbitrary SSH-oriented limit. Runtime dependencies may still
-enforce their documented safety bounds. The pinned terminal dependency,
-`@xterm/xterm` 6.0.0, documents and enforces a 10,000,000 UTF-16-code-unit OSC
-parser payload limit. OMXTerm consumes OSC 52 outside that bound without a
-clipboard or PTY side effect. Because an OSC 52 write includes the `c;` target
-and Base64 advances in four-character groups, the largest valid request inside
-the parser bound is 9,999,998 code units and the next valid request is
-10,000,002 code units, outside the bound.
+enforce their safety bounds. The pinned terminal dependency, `@xterm/xterm`
+6.0.0, defines
+[`PAYLOAD_LIMIT = 10000000`](https://github.com/xtermjs/xterm.js/blob/6.0.0/src/common/parser/Constants.ts#L58)
+for OSC and DCS parser payloads; its
+[`OscParser` aborts a payload when the JavaScript string length exceeds that limit](https://github.com/xtermjs/xterm.js/blob/6.0.0/src/common/parser/OscParser.ts#L210-L215).
+OMXTerm consumes OSC 52 outside that bound without a clipboard or PTY side
+effect. Because an OSC 52 write includes the `c;` target and Base64 advances in
+four-character groups, the largest valid request inside the parser bound is
+9,999,998 UTF-16 code units and the next valid request is 10,000,002 UTF-16 code
+units, outside the bound.
 
 Potentially executable multiline or control-character pastes require user
 confirmation unless the receiving process has enabled bracketed paste. Neither

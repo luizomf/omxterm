@@ -312,8 +312,48 @@ describe("portable Terminal Surface", () => {
     surface.dispose();
   });
 
-  it("forwards a valid paste over 64 KiB unchanged as one semantic paste", async () => {
-    const text = "🙂".repeat(20_000);
+  it("requires confirmation after bracketed paste becomes disabled while reading", async () => {
+    const text = "first\nsecond";
+    let releaseClipboardRead: ((text: string) => void) | undefined;
+    const clipboard = {
+      writeText: vi.fn(async () => undefined),
+      readText: vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            releaseClipboardRead = resolve;
+          }),
+      ),
+      confirmPaste: vi.fn(async () => false),
+      requestContextMenu: vi.fn(),
+    };
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { clipboard },
+    );
+    xterm.FakeTerminal.current.modes.bracketedPasteMode = true;
+
+    const pendingPaste = surface.paste();
+    expect(clipboard.readText).toHaveBeenCalledOnce();
+    xterm.FakeTerminal.current.modes.bracketedPasteMode = false;
+    releaseClipboardRead!(text);
+    await pendingPaste;
+
+    expect(clipboard.confirmPaste).toHaveBeenCalledWith(text);
+    expect(adapter.write).not.toHaveBeenCalled();
+    surface.dispose();
+  });
+
+  it("forwards a confirmed protected paste over 64 KiB unchanged across chunks", async () => {
+    const text = `first\n${"🙂".repeat(20_000)}`;
     const clipboard = {
       writeText: vi.fn(async () => undefined),
       readText: vi.fn(async () => text),
@@ -336,7 +376,10 @@ describe("portable Terminal Surface", () => {
 
     await surface.paste();
 
-    expect(clipboard.confirmPaste).not.toHaveBeenCalled();
+    expect(new TextEncoder().encode(text).byteLength).toBeGreaterThan(
+      64 * 1024,
+    );
+    expect(clipboard.confirmPaste).toHaveBeenCalledWith(text);
     expect(xterm.FakeTerminal.current.paste).not.toHaveBeenCalled();
     expect(adapter.write.mock.calls.length).toBeGreaterThan(1);
     expect(adapter.write.mock.calls.map(([chunk]) => chunk).join("")).toBe(
