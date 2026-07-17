@@ -254,7 +254,8 @@ export async function mountTerminalSurface(
     inputSubscription = mountedTerminal.onData((data) => {
       for (const chunk of splitTerminalPayload(data)) adapter.write(chunk);
     });
-    resizeSubscription = mountedTerminal.onResize((size) => {
+    resizeSubscription = mountedTerminal.onResize(({ cols, rows }) => {
+      const size = { cols, rows };
       if (isTerminalSize(size)) adapter.resize(size);
     });
     resizeObserver = new ResizeObserver(scheduleFit);

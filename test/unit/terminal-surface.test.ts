@@ -6,6 +6,11 @@ import type {
 } from "../../src/shared/terminal-contract";
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
 
+type XtermResize = TerminalSize & {
+  readonly colsChanged?: boolean;
+  readonly rowsChanged?: boolean;
+};
+
 const xterm = vi.hoisted(() => {
   class FakeTerminal {
     static current: FakeTerminal;
@@ -29,7 +34,7 @@ const xterm = vi.hoisted(() => {
     };
     readonly constructorOptions: Record<string, unknown>;
     private onInput: ((data: string) => void) | undefined;
-    private onTerminalResize: ((size: TerminalSize) => void) | undefined;
+    private onTerminalResize: ((size: XtermResize) => void) | undefined;
     private onKey: ((event: KeyboardEvent) => boolean) | undefined;
     private addon: { dispose(): void } | undefined;
     private selection = "";
@@ -74,7 +79,7 @@ const xterm = vi.hoisted(() => {
       this.onInput = listener;
       return { dispose: this.inputDispose };
     }
-    onResize(listener: (size: TerminalSize) => void) {
+    onResize(listener: (size: XtermResize) => void) {
       this.onTerminalResize = listener;
       return { dispose: this.resizeDispose };
     }
@@ -88,7 +93,7 @@ const xterm = vi.hoisted(() => {
     emitInput(data: string) {
       this.onInput?.(data);
     }
-    emitResize(size: TerminalSize) {
+    emitResize(size: XtermResize) {
       this.onTerminalResize?.(size);
     }
     emitKey(event: Partial<KeyboardEvent>) {
@@ -207,7 +212,11 @@ describe("portable Terminal Surface", () => {
     });
     let fittedSize: TerminalSize = { cols: 120, rows: 40 };
     xterm.fit.mockImplementation(() => {
-      xterm.FakeTerminal.current.emitResize(fittedSize);
+      xterm.FakeTerminal.current.emitResize({
+        ...fittedSize,
+        colsChanged: true,
+        rowsChanged: true,
+      });
     });
     const adapter = {
       start: vi.fn(async () => undefined),
