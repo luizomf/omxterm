@@ -1,11 +1,41 @@
 // @vitest-environment jsdom
 import { Terminal, type ILink, type ILinkProvider } from "@xterm/xterm";
 import { describe, expect, it, vi } from "vitest";
-import { isValidExternalLink } from "../../src/main/terminal-ipc-controller";
+import type { TerminalBridge } from "../../src/shared/terminal-bridge";
+import { terminalIpc } from "../../src/shared/terminal-ipc";
+import {
+  registerTerminalIpcRouter,
+  type IpcEvent,
+  type IpcMainPort,
+  type TrustedWebContents,
+} from "../../src/main/terminal-ipc-controller";
+import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";
+import type { TerminalSessionAdapter } from "../../src/terminal-surface/terminal-session-adapter";
 import {
   ignoreOscLinks,
   registerVisibleWebLinks,
 } from "../../src/terminal-surface/visible-web-links";
+
+const electron = vi.hoisted(() => ({
+  bridge: undefined as TerminalBridge | undefined,
+  send: vi.fn(),
+}));
+
+vi.mock("electron", () => ({
+  contextBridge: {
+    exposeInMainWorld(_key: string, value: { terminal: TerminalBridge }) {
+      electron.bridge = value.terminal;
+    },
+  },
+  ipcRenderer: {
+    send: electron.send,
+    invoke: vi.fn(),
+    on: vi.fn(),
+    removeListener: vi.fn(),
+  },
+}));
+
+await import("../../src/preload/index");
 
 function write(terminal: Terminal, data: string): Promise<void> {
   return new Promise((resolve) => terminal.write(data, resolve));
@@ -20,8 +50,8 @@ function providerLinks(provider: ILinkProvider, line = 1): Promise<ILink[]> {
 async function linksFor(
   data: string,
   cols = 120,
-  activate = vi.fn(),
-): Promise<{ links: ILink[]; activate: ReturnType<typeof vi.fn> }> {
+  activate: (value: string) => void = vi.fn(),
+): Promise<{ links: ILink[]; activate: (value: string) => void }> {
   const terminal = new Terminal({ cols, rows: 8 });
   let provider: ILinkProvider | undefined;
   terminal.registerLinkProvider = vi.fn((value) => {
@@ -61,11 +91,75 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
 
   it("opens a provider-owned URL longer than 2,048 characters across soft wraps unchanged", async () => {
     const url = `https://example.test/${"a".repeat(2_100)}`;
-    const opener = vi.fn();
-    const activate = vi.fn((value: string) => {
-      if (isValidExternalLink(value)) opener(value);
+    const opener = vi.fn(async () => {});
+    const listeners = new Map<
+      string,
+      (event: IpcEvent, payload?: unknown) => void
+    >();
+    const ipcMain: IpcMainPort = {
+      handle: vi.fn(),
+      removeHandler: vi.fn(),
+      on: (channel, listener) => listeners.set(channel, listener),
+      removeListener: (channel) => listeners.delete(channel),
+    };
+    const frame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame: frame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const router = registerTerminalIpcRouter(ipcMain);
+    const controller = router.registerController({
+      webContents,
+      createSession: vi.fn(),
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+      writeClipboardText: vi.fn(),
+      readClipboardText: vi.fn(() => ""),
+      confirmPaste: vi.fn(async () => false),
+      showClipboardContextMenu: vi.fn(),
+      onTitleRequest: vi.fn(),
+      onBell: vi.fn(),
+      onUserInteraction: vi.fn(),
+      openExternalLink: opener,
+      onExternalLinkOpenError: vi.fn(),
     });
-    const { links } = await linksFor(url, 80, activate);
+    electron.send.mockImplementation((channel: string, payload?: unknown) =>
+      listeners.get(channel)?.(
+        { sender: webContents, senderFrame: frame },
+        payload,
+      ),
+    );
+
+    let rendererExternalLink: ((url: string) => void) | undefined;
+    const adapter: TerminalSessionAdapter = {
+      start: vi.fn(async () => {}),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const host = mountTerminalWindowPage(
+      document.createElement("div"),
+      adapter,
+      {
+        onExternalLink: electron.bridge!.openExternalLink,
+        mount: async (_container, _adapter, options) => {
+          rendererExternalLink = (
+            options as { readonly onExternalLink?: (url: string) => void }
+          ).onExternalLink;
+          return {
+            zoom: vi.fn(),
+            copy: vi.fn(async () => {}),
+            paste: vi.fn(async () => {}),
+            selectAll: vi.fn(),
+            dispose: vi.fn(),
+          };
+        },
+      },
+    );
+    await host.ready;
+
+    const { links } = await linksFor(url, 80, rendererExternalLink);
     const link = links[0]!;
 
     expect(link.text).toBe(url);
@@ -76,9 +170,13 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
       ),
     ).not.toThrow();
 
-    expect(activate).toHaveBeenCalledOnce();
     expect(opener).toHaveBeenCalledOnce();
     expect(opener).toHaveBeenCalledWith(url);
+
+    host.dispose();
+    controller.dispose();
+    router.dispose();
+    electron.send.mockReset();
   });
 
   it.each([
@@ -141,10 +239,9 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
       new MouseEvent("click", { button: 1, metaKey: true }),
       link.text,
     );
-    expect(activate.mock.calls).toEqual([
-      ["https://example.test/a"],
-      ["https://example.test/a"],
-    ]);
+    expect(activate).toHaveBeenCalledTimes(2);
+    expect(activate).toHaveBeenNthCalledWith(1, "https://example.test/a");
+    expect(activate).toHaveBeenNthCalledWith(2, "https://example.test/a");
   });
 
   it("does not expose uppercase protocols as visible links", async () => {

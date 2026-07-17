@@ -41,7 +41,7 @@ const terminal: TerminalBridge = {
     ipcRenderer.send(terminalIpc.bell);
   },
   openExternalLink(url: string) {
-    if (typeof url !== "string" || url.length === 0 || url.length > 2_048)
+    if (typeof url !== "string" || url.length === 0)
       throw new TypeError("Invalid External Link request");
     ipcRenderer.send(terminalIpc.externalLink, url);
   },
