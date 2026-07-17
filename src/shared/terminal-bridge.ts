@@ -12,6 +12,7 @@ export interface TerminalBridge {
   close(): void;
   title(request: string): void;
   bell(): void;
+  openExternalLink(url: string): void;
   onOutput(listener: (data: string) => void): () => void;
   onExit(listener: (exit: TerminalExit) => void): () => void;
   onFontZoom(listener: (command: TerminalFontZoom) => void): () => void;

@@ -134,18 +134,19 @@ describe("renderer Terminal Window page host", () => {
   it("passes title and BEL signals into the portable Surface", async () => {
     const onTitleRequest = vi.fn();
     const onBell = vi.fn();
+    const onExternalLink = vi.fn();
     const mount = vi.fn(async () => createSurface());
     const host = mountTerminalWindowPage(
       document.createElement("main"),
       createAdapter(),
-      { page: window, mount, onTitleRequest, onBell },
+      { page: window, mount, onTitleRequest, onBell, onExternalLink },
     );
     await host.ready;
 
     expect(mount).toHaveBeenCalledWith(
       expect.any(HTMLElement),
       expect.any(Object),
-      { onTitleRequest, onBell },
+      { onTitleRequest, onBell, onExternalLink },
     );
     host.dispose();
   });

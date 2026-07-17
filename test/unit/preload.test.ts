@@ -85,6 +85,19 @@ describe("isolated preload terminal bridge", () => {
     );
   });
 
+  it("sends an exact bounded External Link request without exposing Electron", () => {
+    const bridge = electron.bridge!;
+    bridge.openExternalLink("https://example.test/path");
+    expect(() => bridge.openExternalLink("")).toThrow(TypeError);
+    expect(electron.send).toHaveBeenCalledWith(
+      terminalIpc.externalLink,
+      "https://example.test/path",
+    );
+    expect(Object.keys(bridge)).not.toEqual(
+      expect.arrayContaining(["shell", "navigate", "openWindow"]),
+    );
+  });
+
   it("delivers an oversized parser title through preload and main to the safe native fallback", async () => {
     const handlers = new Map<
       string,
@@ -130,6 +143,7 @@ describe("isolated preload terminal bridge", () => {
       onTitleRequest: titleController.requestTitle,
       onBell: titleController.ringBell,
       onUserInteraction: titleController.resetAttention,
+      openExternalLink: vi.fn(),
       writeClipboardText: vi.fn(),
       readClipboardText: vi.fn(() => ""),
       confirmPaste: vi.fn(async () => false),

@@ -20,3 +20,18 @@ export function terminalWindowOptions(
     },
   };
 }
+
+export interface LockedTerminalWebContents {
+  setWindowOpenHandler(handler: () => { action: "deny" }): void;
+  on(
+    event: "will-navigate",
+    listener: (event: { preventDefault(): void }) => void,
+  ): void;
+}
+
+export function lockTerminalRendererNavigation(
+  webContents: LockedTerminalWebContents,
+): void {
+  webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  webContents.on("will-navigate", (event) => event.preventDefault());
+}

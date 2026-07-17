@@ -26,6 +26,7 @@ interface TerminalWindowPageOptions {
   ) => () => void;
   readonly onTitleRequest?: (request: string) => void;
   readonly onBell?: () => void;
+  readonly onExternalLink?: (url: string) => void;
 }
 
 export interface TerminalWindowPageHost {
@@ -64,6 +65,9 @@ export function mountTerminalWindowPage(
       ? { onTitleRequest: options.onTitleRequest }
       : {}),
     ...(options.onBell ? { onBell: options.onBell } : {}),
+    ...(options.onExternalLink
+      ? { onExternalLink: options.onExternalLink }
+      : {}),
   };
   const ready = mount(container, adapter, surfaceOptions).then(
     (mountedSurface) => {

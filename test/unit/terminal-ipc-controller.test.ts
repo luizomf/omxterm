@@ -37,6 +37,7 @@ function clipboardOptions() {
     onTitleRequest: vi.fn(),
     onBell: vi.fn(),
     onUserInteraction: vi.fn(),
+    openExternalLink: vi.fn(),
   };
 }
 
@@ -104,7 +105,7 @@ describe("terminal IPC controller", () => {
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();
     expect(ipc.handlers.size).toBe(4);
-    expect(ipc.listeners.size).toBe(6);
+    expect(ipc.listeners.size).toBe(7);
   });
 
   it("reports a normalized shell startup failure without disclosing the cause", () => {
@@ -299,6 +300,53 @@ describe("terminal IPC controller", () => {
     expect(clipboard.readClipboardText).not.toHaveBeenCalled();
     expect(clipboard.confirmPaste).not.toHaveBeenCalled();
     expect(session.write).not.toHaveBeenCalled();
+  });
+
+  it("opens only exact lowercase HTTP(S) requests from the owning main frame with one-call-per-request cardinality", () => {
+    const ipc = createIpcHarness();
+    const mainFrame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const options = clipboardOptions();
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    router.registerController({
+      ...options,
+      webContents,
+      createSession: vi.fn(),
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+    const request = ipc.listeners.get(terminalIpc.externalLink)!;
+    const trusted = { sender: webContents, senderFrame: mainFrame };
+    const forged = { sender: webContents, senderFrame: {} };
+
+    request(trusted, "https://example.test/a?x=%2F#fragment");
+    request(trusted, "https://example.test/a?x=%2F#fragment");
+    for (const rejected of [
+      "HTTP://example.test",
+      "HTTPS://example.test",
+      "%68ttp://example.test",
+      "\u0000https://example.test",
+      "https://example.test/\u0001path",
+      "https://example.test/trailing ",
+      "//example.test/path",
+      "https://",
+      "not a URL",
+      "file:///tmp/example",
+      "custom://example.test",
+      "http:///missing-host",
+    ])
+      request(trusted, rejected);
+    request(forged, "https://forged.test");
+
+    expect(options.openExternalLink.mock.calls).toEqual([
+      ["https://example.test/a?x=%2F#fragment"],
+      ["https://example.test/a?x=%2F#fragment"],
+    ]);
+    expect(webContents.send).not.toHaveBeenCalled();
   });
 
   it("consumes malformed and forged context-menu IPC without side effects", () => {

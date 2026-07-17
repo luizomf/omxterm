@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { terminalWindowOptions } from "../../src/main/terminal-window";
+import { describe, expect, it, vi } from "vitest";
+import {
+  lockTerminalRendererNavigation,
+  terminalWindowOptions,
+} from "../../src/main/terminal-window";
 
 describe("Terminal Window startup contract", () => {
   it("uses small native chrome and an isolated renderer preload", () => {
@@ -13,5 +16,23 @@ describe("Terminal Window startup contract", () => {
       nodeIntegration: false,
       webSecurity: true,
     });
+  });
+
+  it("denies renderer-created windows and renderer navigation", () => {
+    let openHandler: (() => { action: "deny" }) | undefined;
+    let navigateHandler:
+      ((event: { preventDefault(): void }) => void) | undefined;
+    lockTerminalRendererNavigation({
+      setWindowOpenHandler(handler) {
+        openHandler = handler;
+      },
+      on(_event, handler) {
+        navigateHandler = handler;
+      },
+    });
+    const preventDefault = vi.fn();
+    navigateHandler!({ preventDefault });
+    expect(openHandler!()).toEqual({ action: "deny" });
+    expect(preventDefault).toHaveBeenCalledOnce();
   });
 });

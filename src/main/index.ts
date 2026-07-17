@@ -1,4 +1,12 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu } from "electron";
+import {
+  app,
+  BrowserWindow,
+  clipboard,
+  dialog,
+  ipcMain,
+  Menu,
+  shell,
+} from "electron";
 import * as nodePty from "node-pty";
 import { userInfo } from "node:os";
 import path from "node:path";
@@ -24,7 +32,10 @@ import {
   type IpcMainPort,
 } from "./terminal-ipc-controller";
 import { terminalSessionFailureDialog } from "./terminal-session-failure";
-import { terminalWindowOptions } from "./terminal-window";
+import {
+  lockTerminalRendererNavigation,
+  terminalWindowOptions,
+} from "./terminal-window";
 import { registerTerminalWindowHost } from "./terminal-window-host";
 import { createTerminalWindowTitleController } from "./terminal-window-title";
 
@@ -60,6 +71,7 @@ app
         const defaultShell = account.shell;
 
         const window = new BrowserWindow(terminalWindowOptions(preloadPath));
+        lockTerminalRendererNavigation(window.webContents);
         const titleController = createTerminalWindowTitleController(
           window,
           () => app.dock?.bounce("informational"),
@@ -81,6 +93,7 @@ app
           onTitleRequest: titleController.requestTitle,
           onBell: titleController.ringBell,
           onUserInteraction: titleController.resetAttention,
+          openExternalLink: (url) => void shell.openExternal(url),
           writeClipboardText: (text) => clipboard.writeText(text),
           readClipboardText: () => clipboard.readText(),
           async confirmPaste() {

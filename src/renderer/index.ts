@@ -12,6 +12,7 @@ const host = mountTerminalWindowPage(container, adapter, {
   subscribeToClipboardActions: window.omxterm.terminal.onClipboardAction,
   onTitleRequest: window.omxterm.terminal.title,
   onBell: window.omxterm.terminal.bell,
+  onExternalLink: window.omxterm.terminal.openExternalLink,
   clipboard: {
     writeText: window.omxterm.terminal.writeClipboardText,
     readText: window.omxterm.terminal.readClipboardText,
