@@ -33,10 +33,9 @@ interface SessionCallbacks {
 }
 
 export interface TerminalIpcControllerOptions {
-  readonly ipcMain: IpcMainPort;
   readonly webContents: TrustedWebContents;
   readonly createSession: (callbacks: SessionCallbacks) => LocalTerminalSession;
-  readonly onSessionStartError: (error: unknown) => void;
+  readonly onSessionStartError: () => void;
   readonly onSessionExit: (exit: TerminalExit) => void;
 }
 
@@ -44,20 +43,93 @@ export interface TerminalIpcController {
   dispose(): void;
 }
 
-export function registerTerminalIpcController(
+export interface TerminalIpcRouter {
+  registerController(
+    options: TerminalIpcControllerOptions,
+  ): TerminalIpcController;
+  dispose(): void;
+}
+
+interface RoutedTerminalIpcController extends TerminalIpcController {
+  start(payload?: unknown): void;
+  input(payload?: unknown): void;
+  resize(payload?: unknown): void;
+  close(payload?: unknown): void;
+}
+
+export function registerTerminalIpcRouter(
+  ipcMain: IpcMainPort,
+): TerminalIpcRouter {
+  const controllers = new Map<
+    TrustedWebContents,
+    RoutedTerminalIpcController
+  >();
+  let disposed = false;
+
+  const controllerFor = (event: IpcEvent) =>
+    event.senderFrame === event.sender.mainFrame
+      ? controllers.get(event.sender)
+      : undefined;
+  const start: IpcHandler = (event, payload) => {
+    const controller = controllerFor(event);
+    if (!controller)
+      throw new Error("Rejected terminal IPC from an untrusted sender");
+    controller.start(payload);
+  };
+  const input: IpcListener = (event, payload) =>
+    controllerFor(event)?.input(payload);
+  const resize: IpcListener = (event, payload) =>
+    controllerFor(event)?.resize(payload);
+  const close: IpcListener = (event, payload) =>
+    controllerFor(event)?.close(payload);
+
+  ipcMain.handle(terminalIpc.start, start);
+  ipcMain.on(terminalIpc.input, input);
+  ipcMain.on(terminalIpc.resize, resize);
+  ipcMain.on(terminalIpc.close, close);
+
+  return {
+    registerController(options) {
+      if (disposed) throw new Error("Terminal IPC router is disposed");
+      if (controllers.has(options.webContents))
+        throw new Error("Terminal IPC controller already registered");
+
+      let controller: RoutedTerminalIpcController;
+      controller = createTerminalIpcController(options, () => {
+        if (controllers.get(options.webContents) === controller)
+          controllers.delete(options.webContents);
+      });
+      controllers.set(options.webContents, controller);
+      return controller;
+    },
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      for (const controller of [...controllers.values()]) controller.dispose();
+      ipcMain.removeHandler(terminalIpc.start);
+      ipcMain.removeListener(terminalIpc.input, input);
+      ipcMain.removeListener(terminalIpc.resize, resize);
+      ipcMain.removeListener(terminalIpc.close, close);
+    },
+  };
+}
+
+function createTerminalIpcController(
   options: TerminalIpcControllerOptions,
-): TerminalIpcController {
+  unregister: () => void,
+): RoutedTerminalIpcController {
   let disposed = false;
   let session: LocalTerminalSession | undefined;
+  let sessionClosed = false;
   let starting = false;
 
-  const isTrusted = (event: IpcEvent) =>
-    event.sender === options.webContents &&
-    event.senderFrame === options.webContents.mainFrame;
+  const closeSession = () => {
+    if (!session || sessionClosed) return;
+    sessionClosed = true;
+    session.close();
+  };
 
-  const start: IpcHandler = (event, payload) => {
-    if (!isTrusted(event))
-      throw new Error("Rejected terminal IPC from an untrusted sender");
+  const start = (payload?: unknown) => {
     if (payload !== undefined)
       throw new TypeError("Invalid terminal start payload");
     if (disposed) throw new Error("Terminal IPC controller is disposed");
@@ -81,45 +153,39 @@ export function registerTerminalIpcController(
           options.onSessionExit(exit);
         },
       });
-    } catch (error) {
-      options.onSessionStartError(error);
-      throw error;
+    } catch {
+      options.onSessionStartError();
+      throw new Error("The Default Shell could not be started");
     } finally {
       starting = false;
     }
 
     session = createdSession;
     if (disposed) {
-      session = undefined;
-      createdSession.close();
+      closeSession();
     }
   };
 
-  const input: IpcListener = (event, payload) => {
-    if (isTrusted(event) && isBoundedTerminalPayload(payload))
-      session?.write(payload);
+  const input = (payload?: unknown) => {
+    if (isBoundedTerminalPayload(payload)) session?.write(payload);
   };
-  const resize: IpcListener = (event, payload) => {
-    if (isTrusted(event) && isTerminalSize(payload)) session?.resize(payload);
+  const resize = (payload?: unknown) => {
+    if (isTerminalSize(payload)) session?.resize(payload);
   };
-  const close: IpcListener = (event, payload) => {
-    if (isTrusted(event) && payload === undefined) session?.close();
+  const close = (payload?: unknown) => {
+    if (payload === undefined) closeSession();
   };
-
-  options.ipcMain.handle(terminalIpc.start, start);
-  options.ipcMain.on(terminalIpc.input, input);
-  options.ipcMain.on(terminalIpc.resize, resize);
-  options.ipcMain.on(terminalIpc.close, close);
 
   return {
+    start,
+    input,
+    resize,
+    close,
     dispose() {
       if (disposed) return;
       disposed = true;
-      options.ipcMain.removeHandler(terminalIpc.start);
-      options.ipcMain.removeListener(terminalIpc.input, input);
-      options.ipcMain.removeListener(terminalIpc.resize, resize);
-      options.ipcMain.removeListener(terminalIpc.close, close);
-      session?.close();
+      unregister();
+      closeSession();
     },
   };
 }

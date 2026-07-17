@@ -11,9 +11,10 @@ npm install
 npm run dev
 ```
 
-`npm run dev` builds the application and launches exactly one native Terminal
-Window containing the user's operating-system-configured interactive login shell.
-The shell starts in the user's home directory.
+`npm run dev` builds the application and launches one native Terminal Window
+containing the user's operating-system-configured interactive login shell. The
+shell starts in the user's home directory. Use the native File and Window menus
+to create and control additional independent Terminal Windows.
 
 Project checks are available as root scripts:
 

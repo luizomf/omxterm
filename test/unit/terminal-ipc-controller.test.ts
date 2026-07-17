@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  registerTerminalIpcController,
+  registerTerminalIpcRouter,
   type IpcEvent,
   type IpcMainPort,
   type TrustedWebContents,
@@ -29,7 +29,71 @@ function createIpcHarness() {
 }
 
 describe("terminal IPC controller", () => {
-  it("preserves shell startup failures for the Terminal Window host", () => {
+  it("routes two Terminal Windows to independent Live Terminal Sessions", () => {
+    const ipc = createIpcHarness();
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    const firstFrame = {};
+    const secondFrame = {};
+    const firstWebContents: TrustedWebContents = {
+      mainFrame: firstFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const secondWebContents: TrustedWebContents = {
+      mainFrame: secondFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const firstSession: LocalTerminalSession = {
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const secondSession: LocalTerminalSession = {
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+
+    router.registerController({
+      webContents: firstWebContents,
+      createSession: vi.fn(() => firstSession),
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+    router.registerController({
+      webContents: secondWebContents,
+      createSession: vi.fn(() => secondSession),
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+
+    ipc.handlers.get(terminalIpc.start)!({
+      sender: firstWebContents,
+      senderFrame: firstFrame,
+    });
+    ipc.handlers.get(terminalIpc.start)!({
+      sender: secondWebContents,
+      senderFrame: secondFrame,
+    });
+    ipc.listeners.get(terminalIpc.input)?.(
+      { sender: secondWebContents, senderFrame: secondFrame },
+      "second window input",
+    );
+    ipc.listeners.get(terminalIpc.close)?.({
+      sender: firstWebContents,
+      senderFrame: firstFrame,
+    });
+
+    expect(firstSession.write).not.toHaveBeenCalled();
+    expect(secondSession.write).toHaveBeenCalledWith("second window input");
+    expect(firstSession.close).toHaveBeenCalledOnce();
+    expect(secondSession.close).not.toHaveBeenCalled();
+    expect(ipc.handlers.size).toBe(1);
+    expect(ipc.listeners.size).toBe(3);
+  });
+
+  it("reports a normalized shell startup failure without disclosing the cause", () => {
     const ipc = createIpcHarness();
     const mainFrame = {};
     const webContents: TrustedWebContents = {
@@ -37,10 +101,10 @@ describe("terminal IPC controller", () => {
       isDestroyed: () => false,
       send: vi.fn(),
     };
-    const failure = new Error("spawn failed");
+    const failure = new Error("spawn failed: TERMINAL_PAYLOAD_CANARY");
     const onSessionStartError = vi.fn();
-    registerTerminalIpcController({
-      ipcMain: ipc.ipcMain,
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    router.registerController({
       webContents,
       createSession() {
         throw failure;
@@ -54,8 +118,11 @@ describe("terminal IPC controller", () => {
         sender: webContents,
         senderFrame: mainFrame,
       }),
-    ).toThrow(failure);
-    expect(onSessionStartError).toHaveBeenCalledWith(failure);
+    ).toThrow("The Default Shell could not be started");
+    expect(onSessionStartError).toHaveBeenCalledWith();
+    expect(JSON.stringify(onSessionStartError.mock.calls)).not.toContain(
+      "TERMINAL_PAYLOAD_CANARY",
+    );
   });
 
   it("accepts only the bound web contents and its main frame", () => {
@@ -72,8 +139,8 @@ describe("terminal IPC controller", () => {
       close: vi.fn(),
     };
     const createSession = vi.fn(() => session);
-    registerTerminalIpcController({
-      ipcMain: ipc.ipcMain,
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    router.registerController({
       webContents,
       createSession,
       onSessionStartError: vi.fn(),
@@ -127,14 +194,14 @@ describe("terminal IPC controller", () => {
       send,
     };
     const close = vi.fn();
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
     let callbacks:
       | Parameters<
-          Parameters<typeof registerTerminalIpcController>[0]["createSession"]
+          Parameters<typeof router.registerController>[0]["createSession"]
         >[0]
       | undefined;
     const onSessionExit = vi.fn();
-    const controller = registerTerminalIpcController({
-      ipcMain: ipc.ipcMain,
+    const controller = router.registerController({
       webContents,
       createSession(value) {
         callbacks = value;
@@ -150,8 +217,13 @@ describe("terminal IPC controller", () => {
     });
     callbacks!.onOutput("output");
     callbacks!.onExit({ exitCode: 0, signal: 0 });
+    ipc.listeners.get(terminalIpc.close)?.({
+      sender: webContents,
+      senderFrame: mainFrame,
+    });
     controller.dispose();
     controller.dispose();
+    router.dispose();
 
     expect(send).toHaveBeenNthCalledWith(1, terminalIpc.output, "output");
     expect(send).toHaveBeenNthCalledWith(2, terminalIpc.exit, {
@@ -173,9 +245,9 @@ describe("terminal IPC controller", () => {
       send: vi.fn(),
     };
     const close = vi.fn();
-    let controller: ReturnType<typeof registerTerminalIpcController>;
-    controller = registerTerminalIpcController({
-      ipcMain: ipc.ipcMain,
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    let controller: ReturnType<typeof router.registerController>;
+    controller = router.registerController({
       webContents,
       createSession(callbacks) {
         callbacks.onExit({ exitCode: 0, signal: 0 });
@@ -192,6 +264,7 @@ describe("terminal IPC controller", () => {
       senderFrame: mainFrame,
     });
     controller.dispose();
+    router.dispose();
 
     expect(close).toHaveBeenCalledOnce();
     expect(ipc.handlers.size).toBe(0);
