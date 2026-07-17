@@ -9,6 +9,7 @@ import {
   type IpcMainPort,
 } from "./terminal-ipc-controller";
 import { terminalWindowOptions } from "./terminal-window";
+import { registerTerminalWindowHost } from "./terminal-window-host";
 
 const mainDirectory = path.dirname(fileURLToPath(import.meta.url));
 const applicationRoot = path.resolve(mainDirectory, "..");
@@ -70,15 +71,14 @@ async function createTerminalWindow(): Promise<void> {
   });
 
   window.once("ready-to-show", () => window.show());
-  window.once("closed", () => {
-    controller.dispose();
+  const windowHost = registerTerminalWindowHost(window, controller, () => {
     if (BrowserWindow.getAllWindows().length === 0) app.quit();
   });
 
   try {
     await window.loadFile(path.join(applicationRoot, "renderer", "index.html"));
   } catch (error) {
-    controller.dispose();
+    windowHost.dispose();
     if (!window.isDestroyed()) window.close();
     throw new Error("Failed to load the Terminal Window renderer", {
       cause: error,

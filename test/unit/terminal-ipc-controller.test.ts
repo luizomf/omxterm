@@ -163,4 +163,39 @@ describe("terminal IPC controller", () => {
     expect(ipc.handlers.size).toBe(0);
     expect(ipc.listeners.size).toBe(0);
   });
+
+  it("closes a session returned after reentrant exit disposal exactly once", () => {
+    const ipc = createIpcHarness();
+    const mainFrame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => true,
+      send: vi.fn(),
+    };
+    const close = vi.fn();
+    let controller: ReturnType<typeof registerTerminalIpcController>;
+    controller = registerTerminalIpcController({
+      ipcMain: ipc.ipcMain,
+      webContents,
+      createSession(callbacks) {
+        callbacks.onExit({ exitCode: 0, signal: 0 });
+        return { write: vi.fn(), resize: vi.fn(), close };
+      },
+      onSessionStartError: vi.fn(),
+      onSessionExit() {
+        controller.dispose();
+      },
+    });
+
+    ipc.handlers.get(terminalIpc.start)!({
+      sender: webContents,
+      senderFrame: mainFrame,
+    });
+    controller.dispose();
+
+    expect(close).toHaveBeenCalledOnce();
+    expect(ipc.handlers.size).toBe(0);
+    expect(ipc.listeners.size).toBe(0);
+    expect(webContents.send).not.toHaveBeenCalled();
+  });
 });

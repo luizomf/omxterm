@@ -15,50 +15,76 @@ export async function mountTerminalSurface(
   container: HTMLElement,
   adapter: TerminalSessionAdapter,
 ): Promise<TerminalSurface> {
-  const terminal = new Terminal({
-    cursorBlink: true,
-    convertEol: false,
-  });
-  const fitAddon = new FitAddon();
-  terminal.loadAddon(fitAddon);
-  terminal.open(container);
-
   let disposed = false;
-  const inputSubscription = terminal.onData((data) => {
-    for (const chunk of splitTerminalPayload(data)) adapter.write(chunk);
-  });
-  const resizeSubscription = terminal.onResize((size) => {
-    if (isTerminalSize(size)) adapter.resize(size);
-  });
-  const resizeObserver = new ResizeObserver(() => fitAddon.fit());
-  resizeObserver.observe(container);
+  let terminal: Terminal | undefined;
+  let inputSubscription: { dispose(): void } | undefined;
+  let resizeSubscription: { dispose(): void } | undefined;
+  let resizeObserver: ResizeObserver | undefined;
 
   const surface: TerminalSurface = {
     dispose() {
-      if (disposed) return;
-      disposed = true;
-      resizeObserver.disconnect();
-      inputSubscription.dispose();
-      resizeSubscription.dispose();
-      adapter.close();
-      terminal.dispose();
+      const cleanupError = disposeResources();
+      if (cleanupError) throw cleanupError.error;
     },
   };
 
+  const disposeResources = (): { readonly error: unknown } | undefined => {
+    if (disposed) return undefined;
+    disposed = true;
+    let firstError: unknown;
+    let failed = false;
+    for (const dispose of [
+      () => resizeObserver?.disconnect(),
+      () => inputSubscription?.dispose(),
+      () => resizeSubscription?.dispose(),
+      () => adapter.close(),
+      () => terminal?.dispose(),
+    ]) {
+      try {
+        dispose();
+      } catch (error) {
+        if (!failed) {
+          failed = true;
+          firstError = error;
+        }
+      }
+    }
+    return failed ? { error: firstError } : undefined;
+  };
+
   try {
+    const mountedTerminal = new Terminal({
+      cursorBlink: true,
+      convertEol: false,
+    });
+    terminal = mountedTerminal;
+    const mountedFitAddon = new FitAddon();
+    mountedTerminal.loadAddon(mountedFitAddon);
+    mountedTerminal.open(container);
+
+    inputSubscription = mountedTerminal.onData((data) => {
+      for (const chunk of splitTerminalPayload(data)) adapter.write(chunk);
+    });
+    resizeSubscription = mountedTerminal.onResize((size) => {
+      if (isTerminalSize(size)) adapter.resize(size);
+    });
+    resizeObserver = new ResizeObserver(() => mountedFitAddon.fit());
+    resizeObserver.observe(container);
+
     await adapter.start({
       onOutput(data) {
-        if (!disposed && isBoundedTerminalPayload(data)) terminal.write(data);
+        if (!disposed && isBoundedTerminalPayload(data))
+          mountedTerminal.write(data);
       },
       onExit() {
         surface.dispose();
       },
     });
-    if (!disposed) fitAddon.fit();
+    if (!disposed) mountedFitAddon.fit();
     return surface;
   } catch (error) {
-    surface.dispose();
-    throw new Error("Failed to start the Terminal Surface session Adapter", {
+    disposeResources();
+    throw new Error("Failed to mount the Terminal Surface", {
       cause: error,
     });
   }

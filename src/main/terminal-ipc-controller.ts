@@ -49,6 +49,7 @@ export function registerTerminalIpcController(
 ): TerminalIpcController {
   let disposed = false;
   let session: LocalTerminalSession | undefined;
+  let starting = false;
 
   const isTrusted = (event: IpcEvent) =>
     event.sender === options.webContents &&
@@ -60,10 +61,13 @@ export function registerTerminalIpcController(
     if (payload !== undefined)
       throw new TypeError("Invalid terminal start payload");
     if (disposed) throw new Error("Terminal IPC controller is disposed");
-    if (session) throw new Error("Live Terminal Session already started");
+    if (session || starting)
+      throw new Error("Live Terminal Session already started");
 
+    starting = true;
+    let createdSession: LocalTerminalSession;
     try {
-      session = options.createSession({
+      createdSession = options.createSession({
         onOutput(data) {
           if (!disposed && !options.webContents.isDestroyed()) {
             options.webContents.send(terminalIpc.output, data);
@@ -80,6 +84,14 @@ export function registerTerminalIpcController(
     } catch (error) {
       options.onSessionStartError(error);
       throw error;
+    } finally {
+      starting = false;
+    }
+
+    session = createdSession;
+    if (disposed) {
+      session = undefined;
+      createdSession.close();
     }
   };
 
