@@ -26,6 +26,7 @@ import {
 import { terminalSessionFailureDialog } from "./terminal-session-failure";
 import { terminalWindowOptions } from "./terminal-window";
 import { registerTerminalWindowHost } from "./terminal-window-host";
+import { createTerminalWindowTitleController } from "./terminal-window-title";
 
 const mainDirectory = path.dirname(fileURLToPath(import.meta.url));
 const applicationRoot = path.resolve(mainDirectory, "..");
@@ -59,6 +60,11 @@ app
         const defaultShell = account.shell;
 
         const window = new BrowserWindow(terminalWindowOptions(preloadPath));
+        const titleController = createTerminalWindowTitleController(
+          window,
+          () => app.dock?.bounce("informational"),
+        );
+        window.once("closed", () => titleController.dispose());
         const controller = terminalIpcRouter.registerController({
           webContents: window.webContents,
           createSession(callbacks) {
@@ -72,6 +78,9 @@ app
           },
           onSessionStartError: lifecycle.onSessionStartError,
           onSessionExit: lifecycle.onSessionExit,
+          onTitleRequest: titleController.requestTitle,
+          onBell: titleController.ringBell,
+          onUserInteraction: titleController.resetAttention,
           writeClipboardText: (text) => clipboard.writeText(text),
           readClipboardText: () => clipboard.readText(),
           async confirmPaste() {

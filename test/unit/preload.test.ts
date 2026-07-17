@@ -52,6 +52,22 @@ describe("isolated preload terminal bridge", () => {
     });
   });
 
+  it("exposes bounded one-way title and payload-free BEL signals", () => {
+    const bridge = electron.bridge!;
+
+    bridge.title("");
+    bridge.title("terminal title");
+    bridge.bell();
+    expect(() => bridge.title("x".repeat(65_537))).toThrow(TypeError);
+
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.title, "");
+    expect(electron.send).toHaveBeenCalledWith(
+      terminalIpc.title,
+      "terminal title",
+    );
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.bell);
+  });
+
   it("delivers only valid bounded messages from main and removes subscriptions", () => {
     const bridge = electron.bridge!;
     const onOutput = vi.fn();

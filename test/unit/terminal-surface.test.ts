@@ -34,18 +34,24 @@ const xterm = vi.hoisted(() => {
     private addon: { dispose(): void } | undefined;
     private selection = "";
     readonly oscDispose = vi.fn();
-    private oscHandler:
-      ((data: string) => boolean | Promise<boolean>) | undefined;
+    private readonly oscHandlers = new Map<
+      number,
+      (data: string) => boolean | Promise<boolean>
+    >();
+    private bellHandler: (() => void) | undefined;
+    readonly csiDispose = vi.fn();
+    readonly bellDispose = vi.fn();
     readonly parser = {
       registerOscHandler: vi.fn(
         (
-          _ident: number,
+          ident: number,
           handler: (data: string) => boolean | Promise<boolean>,
         ) => {
-          this.oscHandler = handler;
+          this.oscHandlers.set(ident, handler);
           return { dispose: this.oscDispose };
         },
       ),
+      registerCsiHandler: vi.fn(() => ({ dispose: this.csiDispose })),
     };
 
     constructor(options: Record<string, unknown>) {
@@ -72,6 +78,10 @@ const xterm = vi.hoisted(() => {
       this.onTerminalResize = listener;
       return { dispose: this.resizeDispose };
     }
+    onBell(listener: () => void) {
+      this.bellHandler = listener;
+      return { dispose: this.bellDispose };
+    }
     attachCustomKeyEventHandler(listener: (event: KeyboardEvent) => boolean) {
       this.onKey = listener;
     }
@@ -88,7 +98,13 @@ const xterm = vi.hoisted(() => {
       this.selection = text;
     }
     emitOsc52(data: string) {
-      return this.oscHandler?.(data);
+      return this.oscHandlers.get(52)?.(data);
+    }
+    emitTitle(ident: 0 | 2, data: string) {
+      return this.oscHandlers.get(ident)?.(data);
+    }
+    emitBell() {
+      this.bellHandler?.();
     }
   }
 
@@ -177,6 +193,35 @@ describe("portable Terminal Surface", () => {
     expect(FakeResizeObserver.current.disconnect).toHaveBeenCalledOnce();
     expect(xterm.FakeTerminal.current.dispose).toHaveBeenCalledOnce();
     expect(xterm.fitDispose).toHaveBeenCalledOnce();
+  });
+
+  it("forwards parser title and BEL events and disposes their subscriptions", async () => {
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const onTitleRequest = vi.fn();
+    const onBell = vi.fn();
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { onTitleRequest, onBell },
+    );
+
+    xterm.FakeTerminal.current.emitTitle(0, "first");
+    xterm.FakeTerminal.current.emitTitle(2, "second");
+    xterm.FakeTerminal.current.emitBell();
+
+    expect(onTitleRequest.mock.calls).toEqual([["first"], ["second"]]);
+    expect(onBell).toHaveBeenCalledOnce();
+    surface.dispose();
+    expect(xterm.FakeTerminal.current.oscDispose).toHaveBeenCalledTimes(2);
+    expect(xterm.FakeTerminal.current.csiDispose).toHaveBeenCalledOnce();
+    expect(xterm.FakeTerminal.current.bellDispose).toHaveBeenCalledOnce();
   });
 
   it("copies only explicit selections and never copies selection changes", async () => {

@@ -3,6 +3,7 @@ import {
   isNonemptyClipboardText,
   isBoundedTerminalPayload,
   isTerminalSize,
+  isTerminalTitleRequest,
   requiresProtectedPaste,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
@@ -46,6 +47,9 @@ export interface TerminalIpcControllerOptions {
   readonly readClipboardText: () => string;
   readonly confirmPaste: (text: string) => Promise<boolean>;
   readonly showClipboardContextMenu: () => void;
+  readonly onTitleRequest: (request: string) => void;
+  readonly onBell: () => void;
+  readonly onUserInteraction: () => void;
 }
 
 export interface TerminalIpcController {
@@ -68,6 +72,8 @@ interface RoutedTerminalIpcController extends TerminalIpcController {
   readClipboardText(payload?: unknown): string;
   confirmPaste(payload?: unknown): Promise<boolean>;
   showClipboardContextMenu(payload?: unknown): void;
+  title(payload?: unknown): void;
+  bell(payload?: unknown): void;
 }
 
 export function registerTerminalIpcRouter(
@@ -95,6 +101,10 @@ export function registerTerminalIpcRouter(
     controllerFor(event)?.resize(payload);
   const close: IpcListener = (event, payload) =>
     controllerFor(event)?.close(payload);
+  const title: IpcListener = (event, payload) =>
+    controllerFor(event)?.title(payload);
+  const bell: IpcListener = (event, payload) =>
+    controllerFor(event)?.bell(payload);
   const writeClipboardText: IpcHandler = (event, payload) => {
     const controller = controllerFor(event);
     if (!controller)
@@ -123,6 +133,8 @@ export function registerTerminalIpcRouter(
   ipcMain.on(terminalIpc.input, input);
   ipcMain.on(terminalIpc.resize, resize);
   ipcMain.on(terminalIpc.close, close);
+  ipcMain.on(terminalIpc.title, title);
+  ipcMain.on(terminalIpc.bell, bell);
   ipcMain.handle(terminalIpc.clipboardWrite, writeClipboardText);
   ipcMain.handle(terminalIpc.clipboardRead, readClipboardText);
   ipcMain.handle(terminalIpc.clipboardConfirmPaste, confirmPaste);
@@ -150,6 +162,8 @@ export function registerTerminalIpcRouter(
       ipcMain.removeListener(terminalIpc.input, input);
       ipcMain.removeListener(terminalIpc.resize, resize);
       ipcMain.removeListener(terminalIpc.close, close);
+      ipcMain.removeListener(terminalIpc.title, title);
+      ipcMain.removeListener(terminalIpc.bell, bell);
       ipcMain.removeHandler(terminalIpc.clipboardWrite);
       ipcMain.removeHandler(terminalIpc.clipboardRead);
       ipcMain.removeHandler(terminalIpc.clipboardConfirmPaste);
@@ -214,7 +228,10 @@ function createTerminalIpcController(
   };
 
   const input = (payload?: unknown) => {
-    if (isBoundedTerminalPayload(payload)) session?.write(payload);
+    if (isBoundedTerminalPayload(payload)) {
+      options.onUserInteraction();
+      session?.write(payload);
+    }
   };
   const resize = (payload?: unknown) => {
     if (isTerminalSize(payload)) session?.resize(payload);
@@ -240,6 +257,12 @@ function createTerminalIpcController(
   const showClipboardContextMenu = (payload?: unknown) => {
     if (payload === undefined) options.showClipboardContextMenu();
   };
+  const title = (payload?: unknown) => {
+    if (isTerminalTitleRequest(payload)) options.onTitleRequest(payload);
+  };
+  const bell = (payload?: unknown) => {
+    if (payload === undefined) options.onBell();
+  };
 
   return {
     start,
@@ -250,6 +273,8 @@ function createTerminalIpcController(
     readClipboardText,
     confirmPaste,
     showClipboardContextMenu,
+    title,
+    bell,
     dispose() {
       if (disposed) return;
       disposed = true;

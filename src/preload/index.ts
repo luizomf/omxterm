@@ -8,6 +8,7 @@ import {
   isTerminalExit,
   isTerminalFontZoom,
   isTerminalSize,
+  isTerminalTitleRequest,
   type TerminalExit,
   type TerminalFontZoom,
   type TerminalSize,
@@ -30,6 +31,14 @@ const terminal: TerminalBridge = {
   },
   close() {
     ipcRenderer.send(terminalIpc.close);
+  },
+  title(request: string) {
+    if (!isTerminalTitleRequest(request))
+      throw new TypeError("Invalid Terminal Title request");
+    ipcRenderer.send(terminalIpc.title, request);
+  },
+  bell() {
+    ipcRenderer.send(terminalIpc.bell);
   },
   onOutput(listener: (data: string) => void) {
     const handler = (_event: Electron.IpcRendererEvent, data: unknown) => {

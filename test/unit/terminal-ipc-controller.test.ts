@@ -34,6 +34,9 @@ function clipboardOptions() {
     readClipboardText: vi.fn(() => "clipboard text"),
     confirmPaste: vi.fn(async () => true),
     showClipboardContextMenu: vi.fn(),
+    onTitleRequest: vi.fn(),
+    onBell: vi.fn(),
+    onUserInteraction: vi.fn(),
   };
 }
 
@@ -101,7 +104,7 @@ describe("terminal IPC controller", () => {
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();
     expect(ipc.handlers.size).toBe(4);
-    expect(ipc.listeners.size).toBe(4);
+    expect(ipc.listeners.size).toBe(6);
   });
 
   it("reports a normalized shell startup failure without disclosing the cause", () => {
@@ -195,6 +198,57 @@ describe("terminal IPC controller", () => {
     expect(session.write).toHaveBeenCalledWith("hello");
     expect(session.resize).toHaveBeenCalledOnce();
     expect(session.resize).toHaveBeenCalledWith({ cols: 100, rows: 30 });
+  });
+
+  it("routes title, BEL, and terminal interaction only to the owning window", () => {
+    const ipc = createIpcHarness();
+    const frame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame: frame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const otherFrame = {};
+    const otherWebContents: TrustedWebContents = {
+      mainFrame: otherFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const title = vi.fn();
+    const bell = vi.fn();
+    const interaction = vi.fn();
+    const session: LocalTerminalSession = {
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    router.registerController({
+      ...clipboardOptions(),
+      webContents,
+      createSession: () => session,
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+      onTitleRequest: title,
+      onBell: bell,
+      onUserInteraction: interaction,
+    });
+    const trusted = { sender: webContents, senderFrame: frame };
+    const forged = { sender: otherWebContents, senderFrame: otherFrame };
+
+    ipc.listeners.get(terminalIpc.title)?.(trusted, "owned title");
+    ipc.listeners.get(terminalIpc.title)?.(trusted, { canary: "CANARY" });
+    ipc.listeners.get(terminalIpc.title)?.(forged, "forged title");
+    ipc.listeners.get(terminalIpc.bell)?.(trusted);
+    ipc.listeners.get(terminalIpc.bell)?.(trusted, "malformed");
+    ipc.listeners.get(terminalIpc.input)?.(trusted, "key");
+
+    expect(title).toHaveBeenCalledOnce();
+    expect(title).toHaveBeenCalledWith("owned title");
+    expect(JSON.stringify(title.mock.calls)).not.toContain("CANARY");
+    expect(bell).toHaveBeenCalledOnce();
+    expect(interaction).toHaveBeenCalledOnce();
+    expect(session.write).not.toHaveBeenCalled();
   });
 
   it("validates clipboard senders and payloads without clipboard or PTY side effects", async () => {

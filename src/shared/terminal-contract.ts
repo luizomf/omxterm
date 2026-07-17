@@ -1,6 +1,7 @@
 export const MAX_TERMINAL_PAYLOAD_BYTES = 64 * 1024;
 export const MAX_TERMINAL_COLUMNS = 1_000;
 export const MAX_TERMINAL_ROWS = 1_000;
+export const MAX_TERMINAL_TITLE_REQUEST_BYTES = 64 * 1024;
 
 export interface TerminalSize {
   readonly cols: number;
@@ -22,6 +23,13 @@ export function isBoundedTerminalPayload(value: unknown): value is string {
     typeof value === "string" &&
     value.length > 0 &&
     encoder.encode(value).byteLength <= MAX_TERMINAL_PAYLOAD_BYTES
+  );
+}
+
+export function isTerminalTitleRequest(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    encoder.encode(value).byteLength <= MAX_TERMINAL_TITLE_REQUEST_BYTES
   );
 }
 

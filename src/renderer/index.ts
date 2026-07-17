@@ -10,6 +10,8 @@ const adapter = createElectronTerminalAdapter(window.omxterm.terminal);
 const host = mountTerminalWindowPage(container, adapter, {
   subscribeToFontZoom: window.omxterm.terminal.onFontZoom,
   subscribeToClipboardActions: window.omxterm.terminal.onClipboardAction,
+  onTitleRequest: window.omxterm.terminal.title,
+  onBell: window.omxterm.terminal.bell,
   clipboard: {
     writeText: window.omxterm.terminal.writeClipboardText,
     readText: window.omxterm.terminal.readClipboardText,

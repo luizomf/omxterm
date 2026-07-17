@@ -24,6 +24,8 @@ interface TerminalWindowPageOptions {
   readonly subscribeToClipboardActions?: (
     listener: (action: "copy" | "paste" | "select-all") => void,
   ) => () => void;
+  readonly onTitleRequest?: (request: string) => void;
+  readonly onBell?: () => void;
 }
 
 export interface TerminalWindowPageHost {
@@ -58,6 +60,10 @@ export function mountTerminalWindowPage(
   const surfaceOptions = {
     ...(options.appearance ? { appearance: options.appearance } : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
+    ...(options.onTitleRequest
+      ? { onTitleRequest: options.onTitleRequest }
+      : {}),
+    ...(options.onBell ? { onBell: options.onBell } : {}),
   };
   const ready = mount(container, adapter, surfaceOptions).then(
     (mountedSurface) => {

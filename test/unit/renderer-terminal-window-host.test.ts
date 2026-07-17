@@ -130,4 +130,23 @@ describe("renderer Terminal Window page host", () => {
     expect(surface.selectAll).toHaveBeenCalledOnce();
     host.dispose();
   });
+
+  it("passes title and BEL signals into the portable Surface", async () => {
+    const onTitleRequest = vi.fn();
+    const onBell = vi.fn();
+    const mount = vi.fn(async () => createSurface());
+    const host = mountTerminalWindowPage(
+      document.createElement("main"),
+      createAdapter(),
+      { page: window, mount, onTitleRequest, onBell },
+    );
+    await host.ready;
+
+    expect(mount).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.any(Object),
+      { onTitleRequest, onBell },
+    );
+    host.dispose();
+  });
 });

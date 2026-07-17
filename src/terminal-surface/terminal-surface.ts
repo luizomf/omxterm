@@ -10,6 +10,7 @@ import {
 } from "../shared/terminal-contract";
 import type { TerminalSessionAdapter } from "./terminal-session-adapter";
 import { registerOsc52Clipboard } from "./osc52-clipboard";
+import { registerTerminalTitleEvents } from "./terminal-title-events";
 
 export interface TerminalSurface {
   zoom(command: TerminalFontZoom): void;
@@ -53,6 +54,8 @@ export interface TerminalSurfaceOptions {
   readonly optionKeyMode?: OptionKeyMode;
   readonly appearance?: TerminalAppearance;
   readonly clipboard?: TerminalClipboard;
+  readonly onTitleRequest?: (request: string) => void;
+  readonly onBell?: () => void;
 }
 
 const terminalTheme: ITheme = omtheme.colors;
@@ -71,6 +74,7 @@ export async function mountTerminalSurface(
   let inputSubscription: { dispose(): void } | undefined;
   let resizeSubscription: { dispose(): void } | undefined;
   let osc52Subscription: { dispose(): void } | undefined;
+  let titleEventSubscription: { dispose(): void } | undefined;
   let resizeObserver: ResizeObserver | undefined;
   let fitAddon: FitAddon | undefined;
   let pendingFitFrame: number | undefined;
@@ -158,6 +162,7 @@ export async function mountTerminalSurface(
       () => inputSubscription?.dispose(),
       () => resizeSubscription?.dispose(),
       () => osc52Subscription?.dispose(),
+      () => titleEventSubscription?.dispose(),
       () => adapter.close(),
       () => terminal?.dispose(),
     ]) {
@@ -207,6 +212,12 @@ export async function mountTerminalSurface(
       theme: terminalTheme,
     });
     terminal = mountedTerminal;
+    titleEventSubscription = registerTerminalTitleEvents(mountedTerminal, {
+      ...(options.onTitleRequest
+        ? { onTitleRequest: options.onTitleRequest }
+        : {}),
+      ...(options.onBell ? { onBell: options.onBell } : {}),
+    });
     applyOptionKeyMode(mountedTerminal, optionKeyMode);
     const mountedFitAddon = new FitAddon();
     fitAddon = mountedFitAddon;

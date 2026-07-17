@@ -10,6 +10,8 @@ export interface TerminalBridge {
   input(data: string): void;
   resize(size: TerminalSize): void;
   close(): void;
+  title(request: string): void;
+  bell(): void;
   onOutput(listener: (data: string) => void): () => void;
   onExit(listener: (exit: TerminalExit) => void): () => void;
   onFontZoom(listener: (command: TerminalFontZoom) => void): () => void;
