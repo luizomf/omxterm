@@ -28,6 +28,15 @@ function createIpcHarness() {
   return { ipcMain, handlers, listeners };
 }
 
+function clipboardOptions() {
+  return {
+    writeClipboardText: vi.fn(),
+    readClipboardText: vi.fn(() => "clipboard text"),
+    confirmPaste: vi.fn(async () => true),
+    showClipboardContextMenu: vi.fn(),
+  };
+}
+
 describe("terminal IPC controller", () => {
   it("routes two Terminal Windows to independent Live Terminal Sessions", () => {
     const ipc = createIpcHarness();
@@ -56,12 +65,14 @@ describe("terminal IPC controller", () => {
     };
 
     router.registerController({
+      ...clipboardOptions(),
       webContents: firstWebContents,
       createSession: vi.fn(() => firstSession),
       onSessionStartError: vi.fn(),
       onSessionExit: vi.fn(),
     });
     router.registerController({
+      ...clipboardOptions(),
       webContents: secondWebContents,
       createSession: vi.fn(() => secondSession),
       onSessionStartError: vi.fn(),
@@ -89,8 +100,8 @@ describe("terminal IPC controller", () => {
     expect(secondSession.write).toHaveBeenCalledWith("second window input");
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();
-    expect(ipc.handlers.size).toBe(1);
-    expect(ipc.listeners.size).toBe(3);
+    expect(ipc.handlers.size).toBe(4);
+    expect(ipc.listeners.size).toBe(4);
   });
 
   it("reports a normalized shell startup failure without disclosing the cause", () => {
@@ -105,6 +116,7 @@ describe("terminal IPC controller", () => {
     const onSessionStartError = vi.fn();
     const router = registerTerminalIpcRouter(ipc.ipcMain);
     router.registerController({
+      ...clipboardOptions(),
       webContents,
       createSession() {
         throw failure;
@@ -141,6 +153,7 @@ describe("terminal IPC controller", () => {
     const createSession = vi.fn(() => session);
     const router = registerTerminalIpcRouter(ipc.ipcMain);
     router.registerController({
+      ...clipboardOptions(),
       webContents,
       createSession,
       onSessionStartError: vi.fn(),
@@ -184,6 +197,56 @@ describe("terminal IPC controller", () => {
     expect(session.resize).toHaveBeenCalledWith({ cols: 100, rows: 30 });
   });
 
+  it("validates clipboard senders and payloads without clipboard or PTY side effects", async () => {
+    const ipc = createIpcHarness();
+    const mainFrame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const session: LocalTerminalSession = {
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const clipboard = clipboardOptions();
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    router.registerController({
+      ...clipboard,
+      webContents,
+      createSession: () => session,
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+    const trusted = { sender: webContents, senderFrame: mainFrame };
+    const forged = { sender: webContents, senderFrame: {} };
+
+    expect(() =>
+      ipc.handlers.get(terminalIpc.clipboardWrite)!(forged, "stolen"),
+    ).toThrow("untrusted sender");
+    expect(() =>
+      ipc.handlers.get(terminalIpc.clipboardWrite)!(trusted, ""),
+    ).toThrow(TypeError);
+    expect(() =>
+      ipc.handlers.get(terminalIpc.clipboardRead)!(trusted, { forged: true }),
+    ).toThrow(TypeError);
+    await expect(
+      ipc.handlers.get(terminalIpc.clipboardConfirmPaste)!(trusted, null),
+    ).rejects.toThrow(TypeError);
+    await expect(
+      ipc.handlers.get(terminalIpc.clipboardConfirmPaste)!(
+        trusted,
+        "safe single line",
+      ),
+    ).rejects.toThrow(TypeError);
+
+    expect(clipboard.writeClipboardText).not.toHaveBeenCalled();
+    expect(clipboard.readClipboardText).not.toHaveBeenCalled();
+    expect(clipboard.confirmPaste).not.toHaveBeenCalled();
+    expect(session.write).not.toHaveBeenCalled();
+  });
+
   it("forwards bounded output/exit and disposes session and IPC listeners once", () => {
     const ipc = createIpcHarness();
     const mainFrame = {};
@@ -202,6 +265,7 @@ describe("terminal IPC controller", () => {
       | undefined;
     const onSessionExit = vi.fn();
     const controller = router.registerController({
+      ...clipboardOptions(),
       webContents,
       createSession(value) {
         callbacks = value;
@@ -248,6 +312,7 @@ describe("terminal IPC controller", () => {
     const router = registerTerminalIpcRouter(ipc.ipcMain);
     let controller: ReturnType<typeof router.registerController>;
     controller = router.registerController({
+      ...clipboardOptions(),
       webContents,
       createSession(callbacks) {
         callbacks.onExit({ exitCode: 0, signal: 0 });

@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";
 import type { TerminalFontZoom } from "../../src/shared/terminal-contract";
+import type { TerminalSurface } from "../../src/terminal-surface/terminal-surface";
 
 function createAdapter() {
   return {
@@ -9,6 +10,17 @@ function createAdapter() {
     write: vi.fn(),
     resize: vi.fn(),
     close: vi.fn(),
+  };
+}
+
+function createSurface(overrides: Record<string, unknown> = {}) {
+  return {
+    dispose: vi.fn(),
+    zoom: vi.fn(),
+    copy: vi.fn(async () => undefined),
+    paste: vi.fn(async () => undefined),
+    selectAll: vi.fn(),
+    ...overrides,
   };
 }
 
@@ -20,7 +32,7 @@ describe("renderer Terminal Window page host", () => {
       createAdapter(),
       {
         page: window,
-        mount: vi.fn(async () => ({ dispose, zoom: vi.fn() })),
+        mount: vi.fn(async () => createSurface({ dispose })),
       },
     );
     await host.ready;
@@ -33,16 +45,8 @@ describe("renderer Terminal Window page host", () => {
 
   it("disposes a Surface that mounts after page teardown", async () => {
     const dispose = vi.fn();
-    let finishMount:
-      | ((surface: {
-          dispose(): void;
-          zoom(command: TerminalFontZoom): void;
-        }) => void)
-      | undefined;
-    const pendingMount = new Promise<{
-      dispose(): void;
-      zoom(command: TerminalFontZoom): void;
-    }>((resolve) => {
+    let finishMount: ((surface: TerminalSurface) => void) | undefined;
+    const pendingMount = new Promise<TerminalSurface>((resolve) => {
       finishMount = resolve;
     });
     const host = mountTerminalWindowPage(
@@ -55,7 +59,7 @@ describe("renderer Terminal Window page host", () => {
     );
 
     window.dispatchEvent(new Event("pagehide"));
-    finishMount!({ dispose, zoom: vi.fn() });
+    finishMount!(createSurface({ dispose }));
     await host.ready;
     host.dispose();
 
@@ -66,7 +70,7 @@ describe("renderer Terminal Window page host", () => {
     const zoom = vi.fn();
     const listeners = new Set<(command: TerminalFontZoom) => void>();
     const removeZoomListener = vi.fn((listener) => listeners.delete(listener));
-    const mount = vi.fn(async () => ({ dispose: vi.fn(), zoom }));
+    const mount = vi.fn(async () => createSurface({ zoom }));
     const appearance = {
       fontSize: 19,
       systemFont: { family: "SF Mono", available: true },
@@ -97,5 +101,33 @@ describe("renderer Terminal Window page host", () => {
 
     host.dispose();
     expect(removeZoomListener).toHaveBeenCalledOnce();
+  });
+
+  it("routes native clipboard actions to the selected mounted Surface", async () => {
+    let actionListener:
+      ((action: "copy" | "paste" | "select-all") => void) | undefined;
+    const surface = createSurface();
+    const host = mountTerminalWindowPage(
+      document.createElement("main"),
+      createAdapter(),
+      {
+        page: window,
+        mount: vi.fn(async () => surface),
+        subscribeToClipboardActions(listener) {
+          actionListener = listener;
+          return vi.fn();
+        },
+      },
+    );
+    await host.ready;
+
+    actionListener!("copy");
+    actionListener!("paste");
+    actionListener!("select-all");
+
+    expect(surface.copy).toHaveBeenCalledOnce();
+    expect(surface.paste).toHaveBeenCalledOnce();
+    expect(surface.selectAll).toHaveBeenCalledOnce();
+    host.dispose();
   });
 });

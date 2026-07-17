@@ -9,6 +9,9 @@ interface TerminalApplicationMenuActions {
   readonly zoomInSelectedWindow: () => void;
   readonly zoomOutSelectedWindow: () => void;
   readonly resetSelectedWindowZoom: () => void;
+  readonly copySelectedTerminal: () => void;
+  readonly pasteSelectedTerminal: () => void;
+  readonly selectAllSelectedTerminal: () => void;
 }
 
 export function terminalApplicationMenuTemplate(
@@ -25,6 +28,27 @@ export function terminalApplicationMenuTemplate(
           label: `Quit ${applicationName}`,
           accelerator: "CommandOrControl+Q",
           click: actions.requestQuit,
+        },
+      ],
+    },
+    {
+      label: "Edit",
+      submenu: [
+        {
+          label: "Copy",
+          accelerator: "CommandOrControl+C",
+          click: actions.copySelectedTerminal,
+        },
+        {
+          label: "Paste",
+          accelerator: "CommandOrControl+V",
+          click: actions.pasteSelectedTerminal,
+        },
+        { type: "separator" },
+        {
+          label: "Select All",
+          accelerator: "CommandOrControl+A",
+          click: actions.selectAllSelectedTerminal,
         },
       ],
     },
@@ -79,5 +103,18 @@ export function terminalApplicationMenuTemplate(
         },
       ],
     },
+  ];
+}
+
+export function terminalClipboardContextMenuTemplate(actions: {
+  readonly copy: () => void;
+  readonly paste: () => void;
+  readonly selectAll: () => void;
+}): MenuItemConstructorOptions[] {
+  return [
+    { label: "Copy", click: actions.copy },
+    { label: "Paste", click: actions.paste },
+    { type: "separator" },
+    { label: "Select All", click: actions.selectAll },
   ];
 }

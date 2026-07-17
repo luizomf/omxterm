@@ -58,6 +58,7 @@ function createApplicationHarness(
   const showQuitConfirmation = vi.fn(async () => true);
   const showSessionFailure = vi.fn(async () => {});
   const sendFontZoom = vi.fn();
+  const sendClipboardAction = vi.fn();
   const quit = vi.fn();
   const application = startTerminalApplication({
     createWindow(lifecycle) {
@@ -69,6 +70,7 @@ function createApplicationHarness(
     showQuitConfirmation,
     showSessionFailure,
     sendFontZoom,
+    sendClipboardAction,
     quit,
     ...overrides,
   });
@@ -79,6 +81,7 @@ function createApplicationHarness(
     showQuitConfirmation,
     showSessionFailure,
     sendFontZoom,
+    sendClipboardAction,
     quit,
     select(window: NativeTerminalWindow | undefined) {
       selected = window;
@@ -99,6 +102,23 @@ describe("Terminal application lifecycle", () => {
     expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
     expect(harness.windows[1]!.closeSession).toHaveBeenCalledOnce();
     expect(harness.quit).not.toHaveBeenCalled();
+  });
+
+  it("sends explicit clipboard actions only to the selected Terminal Window", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    await harness.application.newWindow();
+    harness.select(harness.windows[1]!.window);
+
+    harness.application.clipboardSelectedWindow("copy");
+    harness.application.clipboardSelectedWindow("paste");
+    harness.application.clipboardSelectedWindow("select-all");
+
+    expect(harness.sendClipboardAction.mock.calls).toEqual([
+      [harness.windows[1]!.window, "copy"],
+      [harness.windows[1]!.window, "paste"],
+      [harness.windows[1]!.window, "select-all"],
+    ]);
   });
 
   it("quits exactly once after the last window closes", async () => {
@@ -169,6 +189,7 @@ describe("Terminal application lifecycle", () => {
       showQuitConfirmation: vi.fn(async () => true),
       showSessionFailure: vi.fn(async () => {}),
       sendFontZoom: vi.fn(),
+      sendClipboardAction: vi.fn(),
       quit,
     });
     await application.newWindow();

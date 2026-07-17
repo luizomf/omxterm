@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { terminalApplicationMenuTemplate } from "../../src/main/application-menu";
+import {
+  terminalApplicationMenuTemplate,
+  terminalClipboardContextMenuTemplate,
+} from "../../src/main/application-menu";
 
 describe("native application menu", () => {
   it("wires native window lifecycle accelerators to application actions", () => {
@@ -12,6 +15,9 @@ describe("native application menu", () => {
       zoomInSelectedWindow: vi.fn(),
       zoomOutSelectedWindow: vi.fn(),
       resetSelectedWindowZoom: vi.fn(),
+      copySelectedTerminal: vi.fn(),
+      pasteSelectedTerminal: vi.fn(),
+      selectAllSelectedTerminal: vi.fn(),
     };
     const template = terminalApplicationMenuTemplate("OMXTerm", actions);
 
@@ -59,7 +65,32 @@ describe("native application menu", () => {
           label: "Always on Top",
           click: actions.toggleSelectedAlwaysOnTop,
         }),
+        expect.objectContaining({
+          label: "Copy",
+          accelerator: "CommandOrControl+C",
+          click: actions.copySelectedTerminal,
+        }),
+        expect.objectContaining({
+          label: "Paste",
+          accelerator: "CommandOrControl+V",
+          click: actions.pasteSelectedTerminal,
+        }),
+        expect.objectContaining({
+          label: "Select All",
+          accelerator: "CommandOrControl+A",
+          click: actions.selectAllSelectedTerminal,
+        }),
       ]),
     );
   });
+});
+
+it("wires the native context menu to explicit Terminal Surface actions", () => {
+  const actions = { copy: vi.fn(), paste: vi.fn(), selectAll: vi.fn() };
+  expect(terminalClipboardContextMenuTemplate(actions)).toEqual([
+    expect.objectContaining({ label: "Copy", click: actions.copy }),
+    expect.objectContaining({ label: "Paste", click: actions.paste }),
+    expect.objectContaining({ type: "separator" }),
+    expect.objectContaining({ label: "Select All", click: actions.selectAll }),
+  ]);
 });

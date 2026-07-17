@@ -4,14 +4,26 @@ import omtheme from "../../docs/omtheme.json";
 import {
   isBoundedTerminalPayload,
   isTerminalSize,
+  requiresProtectedPaste,
   splitTerminalPayload,
   type TerminalFontZoom,
 } from "../shared/terminal-contract";
 import type { TerminalSessionAdapter } from "./terminal-session-adapter";
+import { registerOsc52Clipboard } from "./osc52-clipboard";
 
 export interface TerminalSurface {
   zoom(command: TerminalFontZoom): void;
+  copy(): Promise<void>;
+  paste(): Promise<void>;
+  selectAll(): void;
   dispose(): void;
+}
+
+export interface TerminalClipboard {
+  writeText(text: string): Promise<void>;
+  readText(): Promise<string>;
+  confirmPaste(text: string): Promise<boolean>;
+  requestContextMenu(): void;
 }
 
 export const DEFAULT_SCROLLBACK_LINES = 10_000;
@@ -40,6 +52,7 @@ export interface TerminalSurfaceOptions {
   readonly scrollbackLines?: number;
   readonly optionKeyMode?: OptionKeyMode;
   readonly appearance?: TerminalAppearance;
+  readonly clipboard?: TerminalClipboard;
 }
 
 const terminalTheme: ITheme = omtheme.colors;
@@ -57,9 +70,15 @@ export async function mountTerminalSurface(
   let terminal: Terminal | undefined;
   let inputSubscription: { dispose(): void } | undefined;
   let resizeSubscription: { dispose(): void } | undefined;
+  let osc52Subscription: { dispose(): void } | undefined;
   let resizeObserver: ResizeObserver | undefined;
   let fitAddon: FitAddon | undefined;
   let pendingFitFrame: number | undefined;
+  const onContextMenu = (event: Event) => {
+    if (!options.clipboard) return;
+    event.preventDefault();
+    options.clipboard.requestContextMenu();
+  };
 
   const surface: TerminalSurface = {
     zoom(command) {
@@ -74,6 +93,38 @@ export async function mountTerminalSurface(
       if (nextSize === currentSize) return;
       terminal.options.fontSize = nextSize;
       scheduleFit();
+    },
+    async copy() {
+      const text = terminal?.getSelection() ?? "";
+      if (!disposed && text.length > 0)
+        await options.clipboard?.writeText(text);
+    },
+    async paste() {
+      if (disposed || !terminal || !options.clipboard) return;
+      const text = await options.clipboard.readText();
+      if (disposed || text.length === 0) return;
+
+      let confirmedText: string | undefined;
+      if (requiresProtectedPaste(text) && !terminal.modes.bracketedPasteMode) {
+        if (!(await options.clipboard.confirmPaste(text))) return;
+        confirmedText = text;
+      }
+
+      if (disposed || !terminal) return;
+      const bracketedPasteEnabled = terminal.modes.bracketedPasteMode;
+      if (
+        requiresProtectedPaste(text) &&
+        !bracketedPasteEnabled &&
+        confirmedText !== text
+      )
+        return;
+      const payload = bracketedPasteEnabled
+        ? `\u001b[200~${text}\u001b[201~`
+        : text;
+      for (const chunk of splitTerminalPayload(payload)) adapter.write(chunk);
+    },
+    selectAll() {
+      if (!disposed) terminal?.selectAll();
     },
     dispose() {
       const cleanupError = disposeResources();
@@ -99,12 +150,14 @@ export async function mountTerminalSurface(
     let failed = false;
     for (const dispose of [
       () => resizeObserver?.disconnect(),
+      () => container.removeEventListener("contextmenu", onContextMenu),
       () => {
         if (pendingFitFrame !== undefined)
           cancelAnimationFrame(pendingFitFrame);
       },
       () => inputSubscription?.dispose(),
       () => resizeSubscription?.dispose(),
+      () => osc52Subscription?.dispose(),
       () => adapter.close(),
       () => terminal?.dispose(),
     ]) {
@@ -159,6 +212,13 @@ export async function mountTerminalSurface(
     fitAddon = mountedFitAddon;
     mountedTerminal.loadAddon(mountedFitAddon);
     mountedTerminal.open(container);
+    if (options.clipboard) {
+      osc52Subscription = registerOsc52Clipboard(
+        mountedTerminal.parser,
+        options.clipboard.writeText,
+      );
+    }
+    container.addEventListener("contextmenu", onContextMenu);
 
     inputSubscription = mountedTerminal.onData((data) => {
       for (const chunk of splitTerminalPayload(data)) adapter.write(chunk);
@@ -231,6 +291,8 @@ function applyOptionKeyMode(terminal: Terminal, mode: OptionKeyMode): void {
   let rightOptionDown = false;
 
   terminal.attachCustomKeyEventHandler((event) => {
+    if (event.metaKey && ["c", "v", "a"].includes(event.key.toLowerCase()))
+      return false;
     if (event.code === "AltLeft") leftOptionDown = event.type !== "keyup";
     if (event.code === "AltRight") rightOptionDown = event.type !== "keyup";
     if (!event.altKey) {

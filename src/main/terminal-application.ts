@@ -1,6 +1,7 @@
 import type {
   TerminalExit,
   TerminalFontZoom,
+  TerminalClipboardAction,
 } from "../shared/terminal-contract";
 
 export const DEFAULT_CONFIRM_CLOSE = true;
@@ -46,6 +47,10 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
     failure: TerminalSessionFailure,
   ) => Promise<void>;
   readonly sendFontZoom: (window: Window, command: TerminalFontZoom) => void;
+  readonly sendClipboardAction: (
+    window: Window,
+    action: TerminalClipboardAction,
+  ) => void;
   readonly quit: () => void;
 }
 
@@ -56,6 +61,7 @@ export interface TerminalApplication {
   toggleSelectedFullScreen(): void;
   toggleSelectedAlwaysOnTop(): void;
   zoomSelectedWindow(command: TerminalFontZoom): void;
+  clipboardSelectedWindow(action: TerminalClipboardAction): void;
   isQuitting(): boolean;
 }
 
@@ -180,6 +186,10 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     zoomSelectedWindow(command) {
       const window = selectedWindow();
       if (window) options.sendFontZoom(window, command);
+    },
+    clipboardSelectedWindow(action) {
+      const window = selectedWindow();
+      if (window) options.sendClipboardAction(window, action);
     },
     isQuitting: () => quitting,
   };

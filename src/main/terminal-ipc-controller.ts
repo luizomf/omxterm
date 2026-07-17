@@ -1,7 +1,9 @@
 import type { TerminalExit } from "../shared/terminal-contract";
 import {
+  isNonemptyClipboardText,
   isBoundedTerminalPayload,
   isTerminalSize,
+  requiresProtectedPaste,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
 import type { LocalTerminalSession } from "./local-terminal-session";
@@ -18,7 +20,10 @@ export interface IpcEvent {
 }
 
 type IpcListener = (event: IpcEvent, payload?: unknown) => void;
-type IpcHandler = (event: IpcEvent, payload?: unknown) => Promise<void> | void;
+type IpcHandler = (
+  event: IpcEvent,
+  payload?: unknown,
+) => Promise<unknown> | unknown;
 
 export interface IpcMainPort {
   handle(channel: string, handler: IpcHandler): void;
@@ -37,6 +42,10 @@ export interface TerminalIpcControllerOptions {
   readonly createSession: (callbacks: SessionCallbacks) => LocalTerminalSession;
   readonly onSessionStartError: () => void;
   readonly onSessionExit: (exit: TerminalExit) => void;
+  readonly writeClipboardText: (text: string) => void;
+  readonly readClipboardText: () => string;
+  readonly confirmPaste: (text: string) => Promise<boolean>;
+  readonly showClipboardContextMenu: () => void;
 }
 
 export interface TerminalIpcController {
@@ -55,6 +64,10 @@ interface RoutedTerminalIpcController extends TerminalIpcController {
   input(payload?: unknown): void;
   resize(payload?: unknown): void;
   close(payload?: unknown): void;
+  writeClipboardText(payload?: unknown): void;
+  readClipboardText(payload?: unknown): string;
+  confirmPaste(payload?: unknown): Promise<boolean>;
+  showClipboardContextMenu(payload?: unknown): void;
 }
 
 export function registerTerminalIpcRouter(
@@ -82,11 +95,38 @@ export function registerTerminalIpcRouter(
     controllerFor(event)?.resize(payload);
   const close: IpcListener = (event, payload) =>
     controllerFor(event)?.close(payload);
+  const writeClipboardText: IpcHandler = (event, payload) => {
+    const controller = controllerFor(event);
+    if (!controller)
+      throw new Error("Rejected clipboard IPC from an untrusted sender");
+    controller.writeClipboardText(payload);
+  };
+  const readClipboardText: IpcHandler = (event, payload) => {
+    const controller = controllerFor(event);
+    if (!controller)
+      throw new Error("Rejected clipboard IPC from an untrusted sender");
+    return controller.readClipboardText(payload);
+  };
+  const confirmPaste: IpcHandler = (event, payload) => {
+    const controller = controllerFor(event);
+    if (!controller)
+      throw new Error("Rejected clipboard IPC from an untrusted sender");
+    return controller.confirmPaste(payload);
+  };
+  const showClipboardContextMenu: IpcListener = (event, payload) => {
+    const controller = controllerFor(event);
+    if (!controller) return;
+    controller.showClipboardContextMenu(payload);
+  };
 
   ipcMain.handle(terminalIpc.start, start);
   ipcMain.on(terminalIpc.input, input);
   ipcMain.on(terminalIpc.resize, resize);
   ipcMain.on(terminalIpc.close, close);
+  ipcMain.handle(terminalIpc.clipboardWrite, writeClipboardText);
+  ipcMain.handle(terminalIpc.clipboardRead, readClipboardText);
+  ipcMain.handle(terminalIpc.clipboardConfirmPaste, confirmPaste);
+  ipcMain.on(terminalIpc.clipboardContextMenu, showClipboardContextMenu);
 
   return {
     registerController(options) {
@@ -110,6 +150,13 @@ export function registerTerminalIpcRouter(
       ipcMain.removeListener(terminalIpc.input, input);
       ipcMain.removeListener(terminalIpc.resize, resize);
       ipcMain.removeListener(terminalIpc.close, close);
+      ipcMain.removeHandler(terminalIpc.clipboardWrite);
+      ipcMain.removeHandler(terminalIpc.clipboardRead);
+      ipcMain.removeHandler(terminalIpc.clipboardConfirmPaste);
+      ipcMain.removeListener(
+        terminalIpc.clipboardContextMenu,
+        showClipboardContextMenu,
+      );
     },
   };
 }
@@ -175,12 +222,36 @@ function createTerminalIpcController(
   const close = (payload?: unknown) => {
     if (payload === undefined) closeSession();
   };
+  const writeClipboardText = (payload?: unknown) => {
+    if (!isNonemptyClipboardText(payload))
+      throw new TypeError("Invalid clipboard write payload");
+    options.writeClipboardText(payload);
+  };
+  const readClipboardText = (payload?: unknown) => {
+    if (payload !== undefined)
+      throw new TypeError("Invalid clipboard read payload");
+    return options.readClipboardText();
+  };
+  const confirmPaste = async (payload?: unknown) => {
+    if (!isNonemptyClipboardText(payload) || !requiresProtectedPaste(payload))
+      throw new TypeError("Invalid Protected Paste payload");
+    return options.confirmPaste(payload);
+  };
+  const showClipboardContextMenu = (payload?: unknown) => {
+    if (payload !== undefined)
+      throw new TypeError("Invalid clipboard context menu payload");
+    options.showClipboardContextMenu();
+  };
 
   return {
     start,
     input,
     resize,
     close,
+    writeClipboardText,
+    readClipboardText,
+    confirmPaste,
+    showClipboardContextMenu,
     dispose() {
       if (disposed) return;
       disposed = true;

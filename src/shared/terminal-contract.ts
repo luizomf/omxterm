@@ -13,6 +13,7 @@ export interface TerminalExit {
 }
 
 export type TerminalFontZoom = "in" | "out" | "reset";
+export type TerminalClipboardAction = "copy" | "paste" | "select-all";
 
 const encoder = new TextEncoder();
 
@@ -65,6 +66,24 @@ export function isTerminalExit(value: unknown): value is TerminalExit {
 
 export function isTerminalFontZoom(value: unknown): value is TerminalFontZoom {
   return value === "in" || value === "out" || value === "reset";
+}
+
+export function isTerminalClipboardAction(
+  value: unknown,
+): value is TerminalClipboardAction {
+  return value === "copy" || value === "paste" || value === "select-all";
+}
+
+export function isClipboardText(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+export function isNonemptyClipboardText(value: unknown): value is string {
+  return isClipboardText(value) && value.length > 0;
+}
+
+export function requiresProtectedPaste(text: string): boolean {
+  return /[\r\n\u2028\u2029]|\p{Cc}/u.test(text);
 }
 
 function isStrictRecord(

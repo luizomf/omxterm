@@ -1,7 +1,10 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { TerminalBridge } from "../shared/terminal-bridge";
 import {
+  isClipboardText,
   isBoundedTerminalPayload,
+  isNonemptyClipboardText,
+  isTerminalClipboardAction,
   isTerminalExit,
   isTerminalFontZoom,
   isTerminalSize,
@@ -48,6 +51,39 @@ const terminal: TerminalBridge = {
     };
     ipcRenderer.on(terminalIpc.fontZoom, handler);
     return () => ipcRenderer.removeListener(terminalIpc.fontZoom, handler);
+  },
+  async writeClipboardText(text: string) {
+    if (!isNonemptyClipboardText(text))
+      throw new TypeError("Invalid clipboard write payload");
+    await ipcRenderer.invoke(terminalIpc.clipboardWrite, text);
+  },
+  async readClipboardText() {
+    const text: unknown = await ipcRenderer.invoke(terminalIpc.clipboardRead);
+    if (!isClipboardText(text))
+      throw new TypeError("Invalid clipboard read response");
+    return text;
+  },
+  async confirmPaste(text: string) {
+    if (!isNonemptyClipboardText(text))
+      throw new TypeError("Invalid Protected Paste payload");
+    const confirmed: unknown = await ipcRenderer.invoke(
+      terminalIpc.clipboardConfirmPaste,
+      text,
+    );
+    if (typeof confirmed !== "boolean")
+      throw new TypeError("Invalid Protected Paste response");
+    return confirmed;
+  },
+  requestClipboardContextMenu() {
+    ipcRenderer.send(terminalIpc.clipboardContextMenu);
+  },
+  onClipboardAction(listener) {
+    const handler = (_event: Electron.IpcRendererEvent, action: unknown) => {
+      if (isTerminalClipboardAction(action)) listener(action);
+    };
+    ipcRenderer.on(terminalIpc.clipboardAction, handler);
+    return () =>
+      ipcRenderer.removeListener(terminalIpc.clipboardAction, handler);
   },
 };
 

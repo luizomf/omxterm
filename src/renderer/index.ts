@@ -9,6 +9,13 @@ if (!container) throw new Error("Terminal Surface container is missing");
 const adapter = createElectronTerminalAdapter(window.omxterm.terminal);
 const host = mountTerminalWindowPage(container, adapter, {
   subscribeToFontZoom: window.omxterm.terminal.onFontZoom,
+  subscribeToClipboardActions: window.omxterm.terminal.onClipboardAction,
+  clipboard: {
+    writeText: window.omxterm.terminal.writeClipboardText,
+    readText: window.omxterm.terminal.readClipboardText,
+    confirmPaste: window.omxterm.terminal.confirmPaste,
+    requestContextMenu: window.omxterm.terminal.requestClipboardContextMenu,
+  },
 });
 void host.ready.catch((error: unknown) => {
   host.dispose();

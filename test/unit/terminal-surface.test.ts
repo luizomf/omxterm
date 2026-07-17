@@ -11,6 +11,10 @@ const xterm = vi.hoisted(() => {
     static current: FakeTerminal;
     static instances: FakeTerminal[] = [];
     readonly write = vi.fn();
+    readonly paste = vi.fn((data: string) => this.onInput?.(data));
+    readonly selectAll = vi.fn();
+    readonly getSelection = vi.fn(() => this.selection);
+    readonly modes = { bracketedPasteMode: false };
     readonly dispose = vi.fn(() => this.addon?.dispose());
     readonly inputDispose = vi.fn(() => {
       this.onInput = undefined;
@@ -28,6 +32,21 @@ const xterm = vi.hoisted(() => {
     private onTerminalResize: ((size: TerminalSize) => void) | undefined;
     private onKey: ((event: KeyboardEvent) => boolean) | undefined;
     private addon: { dispose(): void } | undefined;
+    private selection = "";
+    readonly oscDispose = vi.fn();
+    private oscHandler:
+      ((data: string) => boolean | Promise<boolean>) | undefined;
+    readonly parser = {
+      registerOscHandler: vi.fn(
+        (
+          _ident: number,
+          handler: (data: string) => boolean | Promise<boolean>,
+        ) => {
+          this.oscHandler = handler;
+          return { dispose: this.oscDispose };
+        },
+      ),
+    };
 
     constructor(options: Record<string, unknown>) {
       FakeTerminal.current = this;
@@ -64,6 +83,12 @@ const xterm = vi.hoisted(() => {
     }
     emitKey(event: Partial<KeyboardEvent>) {
       return this.onKey?.(event as KeyboardEvent);
+    }
+    setSelection(text: string) {
+      this.selection = text;
+    }
+    emitOsc52(data: string) {
+      return this.oscHandler?.(data);
     }
   }
 
@@ -152,6 +177,259 @@ describe("portable Terminal Surface", () => {
     expect(FakeResizeObserver.current.disconnect).toHaveBeenCalledOnce();
     expect(xterm.FakeTerminal.current.dispose).toHaveBeenCalledOnce();
     expect(xterm.fitDispose).toHaveBeenCalledOnce();
+  });
+
+  it("copies only explicit selections and never copies selection changes", async () => {
+    const clipboard = {
+      writeText: vi.fn(async () => undefined),
+      readText: vi.fn(async () => ""),
+      confirmPaste: vi.fn(async () => false),
+      requestContextMenu: vi.fn(),
+    };
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { clipboard },
+    );
+
+    xterm.FakeTerminal.current.setSelection("selected text");
+    expect(clipboard.writeText).not.toHaveBeenCalled();
+    await surface.copy();
+    expect(clipboard.writeText).toHaveBeenCalledWith("selected text");
+    surface.dispose();
+  });
+
+  it.each([
+    "one\ntwo",
+    "one\r\ntwo",
+    "one\u2028two",
+    "one\u2029two",
+    "a\u0000b",
+    "a\u007fb",
+  ])(
+    "protects paste trigger %j when bracketed paste is disabled",
+    async (text) => {
+      const clipboard = {
+        writeText: vi.fn(async () => undefined),
+        readText: vi.fn(async () => text),
+        confirmPaste: vi.fn(async () => false),
+        requestContextMenu: vi.fn(),
+      };
+      const adapter = {
+        start: vi.fn(async () => undefined),
+        write: vi.fn(),
+        resize: vi.fn(),
+        close: vi.fn(),
+      };
+      const { mountTerminalSurface } =
+        await import("../../src/terminal-surface/terminal-surface");
+      const surface = await mountTerminalSurface(
+        document.createElement("main"),
+        adapter,
+        { clipboard },
+      );
+
+      await surface.paste();
+
+      expect(clipboard.confirmPaste).toHaveBeenCalledWith(text);
+      expect(adapter.write).not.toHaveBeenCalled();
+      surface.dispose();
+    },
+  );
+
+  it("binds confirmation to the exact text and rechecks bracketed mode at commit", async () => {
+    const text = "first\nsecond";
+    const clipboard = {
+      writeText: vi.fn(async () => undefined),
+      readText: vi.fn(async () => text),
+      confirmPaste: vi.fn(async (confirmedText: string) => {
+        expect(confirmedText).toBe(text);
+        xterm.FakeTerminal.current.modes.bracketedPasteMode = true;
+        return true;
+      }),
+      requestContextMenu: vi.fn(),
+    };
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { clipboard },
+    );
+
+    await surface.paste();
+
+    expect(xterm.FakeTerminal.current.paste).not.toHaveBeenCalled();
+    expect(adapter.write.mock.calls.flat().join("")).toBe(
+      `\u001b[200~${text}\u001b[201~`,
+    );
+    surface.dispose();
+  });
+
+  it("does not confirm dangerous text when bracketed paste is enabled", async () => {
+    const text = "first\nsecond";
+    const clipboard = {
+      writeText: vi.fn(async () => undefined),
+      readText: vi.fn(async () => text),
+      confirmPaste: vi.fn(async () => true),
+      requestContextMenu: vi.fn(),
+    };
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { clipboard },
+    );
+    xterm.FakeTerminal.current.modes.bracketedPasteMode = true;
+
+    await surface.paste();
+
+    expect(clipboard.confirmPaste).not.toHaveBeenCalled();
+    expect(adapter.write.mock.calls.flat().join("")).toBe(
+      `\u001b[200~${text}\u001b[201~`,
+    );
+    surface.dispose();
+  });
+
+  it("forwards a valid paste over 64 KiB unchanged as one semantic paste", async () => {
+    const text = "🙂".repeat(20_000);
+    const clipboard = {
+      writeText: vi.fn(async () => undefined),
+      readText: vi.fn(async () => text),
+      confirmPaste: vi.fn(async () => true),
+      requestContextMenu: vi.fn(),
+    };
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { clipboard },
+    );
+
+    await surface.paste();
+
+    expect(clipboard.confirmPaste).not.toHaveBeenCalled();
+    expect(xterm.FakeTerminal.current.paste).not.toHaveBeenCalled();
+    expect(adapter.write.mock.calls.length).toBeGreaterThan(1);
+    expect(adapter.write.mock.calls.map(([chunk]) => chunk).join("")).toBe(
+      text,
+    );
+    surface.dispose();
+  });
+
+  it("copies valid selections over 64 KiB without truncation", async () => {
+    const text = "copy🙂".repeat(15_000);
+    const clipboard = {
+      writeText: vi.fn(async () => undefined),
+      readText: vi.fn(async () => ""),
+      confirmPaste: vi.fn(async () => true),
+      requestContextMenu: vi.fn(),
+    };
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { clipboard },
+    );
+    xterm.FakeTerminal.current.setSelection(text);
+
+    await surface.copy();
+
+    expect(clipboard.writeText).toHaveBeenCalledWith(text);
+    surface.dispose();
+  });
+
+  it("keeps Ctrl+C/Ctrl+V as terminal keys while reserving Command actions", async () => {
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+    );
+
+    expect(
+      xterm.FakeTerminal.current.emitKey({ key: "c", ctrlKey: true }),
+    ).toBe(true);
+    expect(
+      xterm.FakeTerminal.current.emitKey({ key: "v", ctrlKey: true }),
+    ).toBe(true);
+    expect(
+      xterm.FakeTerminal.current.emitKey({ key: "c", metaKey: true }),
+    ).toBe(false);
+    expect(
+      xterm.FakeTerminal.current.emitKey({ key: "v", metaKey: true }),
+    ).toBe(false);
+    surface.dispose();
+  });
+
+  it("requests the native context menu without forwarding terminal input", async () => {
+    const container = document.createElement("main");
+    const clipboard = {
+      writeText: vi.fn(async () => undefined),
+      readText: vi.fn(async () => ""),
+      confirmPaste: vi.fn(async () => true),
+      requestContextMenu: vi.fn(),
+    };
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(container, adapter, {
+      clipboard,
+    });
+    const event = new MouseEvent("contextmenu", { cancelable: true });
+
+    container.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(clipboard.requestContextMenu).toHaveBeenCalledOnce();
+    expect(adapter.write).not.toHaveBeenCalled();
+    surface.dispose();
   });
 
   it("closes created resources when terminal open fails and preserves the cause", async () => {

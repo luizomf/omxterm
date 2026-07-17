@@ -1,10 +1,13 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu } from "electron";
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu } from "electron";
 import * as nodePty from "node-pty";
 import { userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { terminalIpc } from "../shared/terminal-ipc";
-import { terminalApplicationMenuTemplate } from "./application-menu";
+import {
+  terminalApplicationMenuTemplate,
+  terminalClipboardContextMenuTemplate,
+} from "./application-menu";
 import { createLocalTerminalSession } from "./local-terminal-session";
 import {
   DEFAULT_ALWAYS_ON_TOP,
@@ -69,6 +72,33 @@ app
           },
           onSessionStartError: lifecycle.onSessionStartError,
           onSessionExit: lifecycle.onSessionExit,
+          writeClipboardText: (text) => clipboard.writeText(text),
+          readClipboardText: () => clipboard.readText(),
+          async confirmPaste() {
+            const result = await dialog.showMessageBox(window, {
+              type: "warning",
+              title: "Protected Paste",
+              message: "Paste text that may contain multiple commands?",
+              detail:
+                "The paste contains multiple lines or control characters.",
+              buttons: ["Paste", "Cancel"],
+              defaultId: 1,
+              cancelId: 1,
+              noLink: true,
+            });
+            return result.response === 0;
+          },
+          showClipboardContextMenu() {
+            const send = (action: "copy" | "paste" | "select-all") =>
+              window.webContents.send(terminalIpc.clipboardAction, action);
+            Menu.buildFromTemplate(
+              terminalClipboardContextMenuTemplate({
+                copy: () => send("copy"),
+                paste: () => send("paste"),
+                selectAll: () => send("select-all"),
+              }),
+            ).popup({ window });
+          },
         });
 
         window.once("ready-to-show", () => window.show());
@@ -119,6 +149,8 @@ app
       },
       sendFontZoom: (window, command) =>
         window.webContents.send(terminalIpc.fontZoom, command),
+      sendClipboardAction: (window, action) =>
+        window.webContents.send(terminalIpc.clipboardAction, action),
       quit: () => app.quit(),
     });
 
@@ -145,6 +177,12 @@ app
             terminalApplication!.zoomSelectedWindow("out"),
           resetSelectedWindowZoom: () =>
             terminalApplication!.zoomSelectedWindow("reset"),
+          copySelectedTerminal: () =>
+            terminalApplication!.clipboardSelectedWindow("copy"),
+          pasteSelectedTerminal: () =>
+            terminalApplication!.clipboardSelectedWindow("paste"),
+          selectAllSelectedTerminal: () =>
+            terminalApplication!.clipboardSelectedWindow("select-all"),
         }),
       ),
     );

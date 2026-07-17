@@ -4,6 +4,7 @@ import {
   isTerminalSize,
   MAX_TERMINAL_PAYLOAD_BYTES,
   splitTerminalPayload,
+  requiresProtectedPaste,
 } from "../../src/shared/terminal-contract";
 
 describe("terminal IPC payload contract", () => {
@@ -14,6 +15,21 @@ describe("terminal IPC payload contract", () => {
     expect(chunks.length).toBeGreaterThan(1);
     expect(chunks.join("")).toBe(payload);
     expect(chunks.every(isBoundedTerminalPayload)).toBe(true);
+  });
+
+  it("protects every Unicode Cc code point and every logical line separator", () => {
+    const controls = [
+      ...Array.from({ length: 32 }, (_, code) => String.fromCodePoint(code)),
+      ...Array.from({ length: 33 }, (_, offset) =>
+        String.fromCodePoint(0x7f + offset),
+      ),
+    ];
+    expect(
+      controls.every((control) => requiresProtectedPaste(`a${control}b`)),
+    ).toBe(true);
+    expect(requiresProtectedPaste("one\u2028two")).toBe(true);
+    expect(requiresProtectedPaste("one\u2029two")).toBe(true);
+    expect(requiresProtectedPaste("one line 🙂\u200d")).toBe(false);
   });
 
   it("accepts only strict, finite terminal dimensions", () => {

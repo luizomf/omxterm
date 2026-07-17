@@ -6,4 +6,9 @@ export const terminalIpc = {
   output: "terminal:output",
   exit: "terminal:exit",
   fontZoom: "terminal:font-zoom",
+  clipboardAction: "terminal:clipboard-action",
+  clipboardWrite: "terminal:clipboard-write",
+  clipboardRead: "terminal:clipboard-read",
+  clipboardConfirmPaste: "terminal:clipboard-confirm-paste",
+  clipboardContextMenu: "terminal:clipboard-context-menu",
 } as const;

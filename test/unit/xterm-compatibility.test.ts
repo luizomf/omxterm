@@ -1,5 +1,7 @@
 import { Terminal } from "@xterm/xterm";
 import { describe, expect, it } from "vitest";
+import { vi } from "vitest";
+import { registerOsc52Clipboard } from "../../src/terminal-surface/osc52-clipboard";
 
 function write(terminal: Terminal, data: string): Promise<void> {
   return new Promise((resolve) => terminal.write(data, resolve));
@@ -59,6 +61,19 @@ describe("standard xterm compatibility fixtures", () => {
     await write(terminal, "\u001b[?2004l");
     expect(terminal.modes.bracketedPasteMode).toBe(false);
 
+    terminal.dispose();
+  });
+
+  it("consumes a valid OSC 52 write split across transport chunks", async () => {
+    const terminal = new Terminal();
+    const writeText = vi.fn(async () => undefined);
+    registerOsc52Clipboard(terminal.parser, writeText);
+
+    await write(terminal, "\u001b]52;c;aGVs");
+    await write(terminal, "bG8g8J+Zgg==\u0007");
+
+    expect(writeText).toHaveBeenCalledOnce();
+    expect(writeText).toHaveBeenCalledWith("hello 🙂");
     terminal.dispose();
   });
 });

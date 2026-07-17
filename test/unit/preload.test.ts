@@ -11,7 +11,7 @@ const electron = vi.hoisted(() => {
     bridge: undefined as TerminalBridge | undefined,
     listeners,
     send: vi.fn(),
-    invoke: vi.fn(async () => undefined),
+    invoke: vi.fn(async (_channel?: string): Promise<unknown> => undefined),
     removeListener: vi.fn((channel: string) => listeners.delete(channel)),
   };
 });
@@ -91,5 +91,30 @@ describe("isolated preload terminal bridge", () => {
       terminalIpc.fontZoom,
       expect.any(Function),
     );
+  });
+
+  it("exposes only text clipboard operations and validates both directions", async () => {
+    const bridge = electron.bridge!;
+    electron.invoke.mockImplementation(async (channel?: string) => {
+      if (channel === terminalIpc.clipboardRead) return "pasted text";
+      if (channel === terminalIpc.clipboardConfirmPaste) return true;
+      return undefined;
+    });
+
+    await bridge.writeClipboardText("copied text");
+    await expect(bridge.readClipboardText()).resolves.toBe("pasted text");
+    await expect(bridge.confirmPaste("one\ntwo")).resolves.toBe(true);
+    await expect(bridge.writeClipboardText("")).rejects.toThrow(TypeError);
+
+    expect(electron.invoke).toHaveBeenCalledWith(
+      terminalIpc.clipboardWrite,
+      "copied text",
+    );
+    expect(electron.invoke).toHaveBeenCalledWith(terminalIpc.clipboardRead);
+    expect(electron.invoke).toHaveBeenCalledWith(
+      terminalIpc.clipboardConfirmPaste,
+      "one\ntwo",
+    );
+    expect(Object.keys(bridge).some((key) => /image/i.test(key))).toBe(false);
   });
 });
