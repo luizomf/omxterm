@@ -110,6 +110,11 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
     };
     const router = registerTerminalIpcRouter(ipcMain);
     const controller = router.registerController({
+      configuration: {
+        fontSize: 16,
+        scrollbackLines: 10_000,
+        optionKeyMode: "none",
+      },
       webContents,
       createSession: vi.fn(),
       onSessionStartError: vi.fn(),

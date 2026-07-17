@@ -132,6 +132,11 @@ describe("isolated preload terminal bridge", () => {
     );
     const router = registerTerminalIpcRouter(ipcMain);
     const routed = router.registerController({
+      configuration: {
+        fontSize: 16,
+        scrollbackLines: 10_000,
+        optionKeyMode: "none",
+      },
       webContents,
       createSession: vi.fn(() => ({
         write: vi.fn(),
@@ -213,6 +218,25 @@ describe("isolated preload terminal bridge", () => {
       terminalIpc.fontZoom,
       expect.any(Function),
     );
+  });
+
+  it("exposes only a validated renderer configuration response", async () => {
+    const bridge = electron.bridge!;
+    electron.invoke.mockResolvedValueOnce({
+      fontFamily: "SF Mono",
+      fontSize: 18,
+      scrollbackLines: 500,
+      optionKeyMode: "right",
+    });
+    await expect(bridge.configuration()).resolves.toEqual({
+      fontFamily: "SF Mono",
+      fontSize: 18,
+      scrollbackLines: 500,
+      optionKeyMode: "right",
+    });
+    electron.invoke.mockResolvedValueOnce({ fontSize: "18" });
+    await expect(bridge.configuration()).rejects.toThrow(TypeError);
+    expect(electron.invoke).toHaveBeenCalledWith(terminalIpc.configuration);
   });
 
   it("exposes only text clipboard operations and validates both directions", async () => {

@@ -101,7 +101,8 @@ file. A present file must contain `"version": 1` and only supported keys:
 - `window.alwaysOnTop`.
 
 The bundled JetBrainsMono Nerd Font Mono at 16 px is the default, matching the
-existing OMXTerm Web terminal baseline. `logLevel` defaults to `info`,
+existing OMXTerm Web terminal baseline. `font.size` accepts only integral pixel
+sizes from 8 through 72 inclusive. `logLevel` defaults to `info`,
 `keyboard.optionAsAlt` to `none`, and `window.alwaysOnTop` to `false`.
 
 Invalid JSON, unknown keys, unsupported versions, missing configured fonts, and

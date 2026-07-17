@@ -14,8 +14,17 @@ import {
   type TerminalSize,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
+import { isTerminalRendererConfiguration } from "../shared/user-configuration";
 
 const terminal: TerminalBridge = {
+  async configuration() {
+    const configuration: unknown = await ipcRenderer.invoke(
+      terminalIpc.configuration,
+    );
+    if (!isTerminalRendererConfiguration(configuration))
+      throw new TypeError("Invalid User Configuration response");
+    return configuration;
+  },
   async start() {
     await ipcRenderer.invoke(terminalIpc.start);
   },

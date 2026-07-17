@@ -18,8 +18,6 @@ import {
 } from "./application-menu";
 import { createLocalTerminalSession } from "./local-terminal-session";
 import {
-  DEFAULT_ALWAYS_ON_TOP,
-  DEFAULT_CONFIRM_CLOSE,
   startTerminalApplication,
   type TerminalApplication,
 } from "./terminal-application";
@@ -38,6 +36,10 @@ import {
 } from "./terminal-window";
 import { registerTerminalWindowHost } from "./terminal-window-host";
 import { createTerminalWindowTitleController } from "./terminal-window-title";
+import { discoverInstalledFontFamilies } from "./installed-font-families";
+import { UserConfigurationError } from "./user-configuration";
+import { reportUserConfigurationFailure } from "./user-configuration-failure";
+import { startWithUserConfiguration } from "./configured-startup";
 
 const mainDirectory = path.dirname(fileURLToPath(import.meta.url));
 const applicationRoot = path.resolve(mainDirectory, "..");
@@ -55,168 +57,197 @@ app.on("before-quit", (event) => {
 app
   .whenReady()
   .then(async () => {
-    const terminalIpcRouter = registerTerminalIpcRouter(
-      // Electron's public handler type contains `any`; isolate that boundary here.
-      ipcMain as unknown as IpcMainPort,
-    );
-    terminalApplication = startTerminalApplication<BrowserWindow>({
-      confirmClose: DEFAULT_CONFIRM_CLOSE,
-      alwaysOnTopDefault: DEFAULT_ALWAYS_ON_TOP,
-      createWindow(lifecycle) {
-        const account = userInfo();
-        if (!account.shell)
-          throw new Error(
-            "The operating system did not provide a Default Shell",
-          );
-        const defaultShell = account.shell;
-
-        const window = new BrowserWindow(terminalWindowOptions(preloadPath));
-        lockTerminalRendererNavigation(window.webContents);
-        const titleController = createTerminalWindowTitleController(
-          window,
-          () => app.dock?.bounce("informational"),
+    const account = userInfo();
+    return startWithUserConfiguration(
+      {
+        environment: process.env,
+        homeDirectory: account.homedir,
+        discoverInstalledFontFamilies,
+      },
+      async (userConfiguration) => {
+        const rendererConfiguration = Object.freeze({
+          ...(userConfiguration.fontFamily
+            ? { fontFamily: userConfiguration.fontFamily }
+            : {}),
+          fontSize: userConfiguration.fontSize,
+          scrollbackLines: userConfiguration.scrollbackLines,
+          optionKeyMode: userConfiguration.optionKeyMode,
+        });
+        const terminalIpcRouter = registerTerminalIpcRouter(
+          // Electron's public handler type contains `any`; isolate that boundary here.
+          ipcMain as unknown as IpcMainPort,
         );
-        window.once("closed", () => titleController.dispose());
-        const controller = terminalIpcRouter.registerController({
-          webContents: window.webContents,
-          createSession(callbacks) {
-            return createLocalTerminalSession(nodePty.spawn, {
-              shell: defaultShell,
-              homeDirectory: account.homedir,
-              applicationVersion: app.getVersion(),
-              environment: process.env,
-              ...callbacks,
+        terminalApplication = startTerminalApplication<BrowserWindow>({
+          confirmClose: userConfiguration.confirmClose,
+          alwaysOnTopDefault: userConfiguration.alwaysOnTop,
+          createWindow(lifecycle) {
+            if (!account.shell)
+              throw new Error(
+                "The operating system did not provide a Default Shell",
+              );
+            const defaultShell = account.shell;
+
+            const window = new BrowserWindow(
+              terminalWindowOptions(preloadPath),
+            );
+            lockTerminalRendererNavigation(window.webContents);
+            const titleController = createTerminalWindowTitleController(
+              window,
+              () => app.dock?.bounce("informational"),
+            );
+            window.once("closed", () => titleController.dispose());
+            const controller = terminalIpcRouter.registerController({
+              configuration: rendererConfiguration,
+              webContents: window.webContents,
+              createSession(callbacks) {
+                return createLocalTerminalSession(nodePty.spawn, {
+                  shell: defaultShell,
+                  homeDirectory: account.homedir,
+                  applicationVersion: app.getVersion(),
+                  environment: process.env,
+                  ...callbacks,
+                });
+              },
+              onSessionStartError: lifecycle.onSessionStartError,
+              onSessionExit: lifecycle.onSessionExit,
+              onTitleRequest: titleController.requestTitle,
+              onBell: titleController.ringBell,
+              onUserInteraction: titleController.resetAttention,
+              openExternalLink: (url) => shell.openExternal(url),
+              onExternalLinkOpenError: () =>
+                dialog.showErrorBox(
+                  "External Link Error",
+                  "The External Link could not be opened.",
+                ),
+              writeClipboardText: (text) => clipboard.writeText(text),
+              readClipboardText: () => clipboard.readText(),
+              async confirmPaste() {
+                const result = await dialog.showMessageBox(window, {
+                  type: "warning",
+                  title: "Protected Paste",
+                  message: "Paste text that may contain multiple commands?",
+                  detail:
+                    "The paste contains multiple lines or control characters.",
+                  buttons: ["Paste", "Cancel"],
+                  defaultId: 1,
+                  cancelId: 1,
+                  noLink: true,
+                });
+                return result.response === 0;
+              },
+              showClipboardContextMenu() {
+                const send = (action: "copy" | "paste" | "select-all") =>
+                  window.webContents.send(terminalIpc.clipboardAction, action);
+                Menu.buildFromTemplate(
+                  terminalClipboardContextMenuTemplate({
+                    copy: () => send("copy"),
+                    paste: () => send("paste"),
+                    selectAll: () => send("select-all"),
+                  }),
+                ).popup({ window });
+              },
             });
+
+            window.once("ready-to-show", () => window.show());
+            const windowHost = registerTerminalWindowHost(
+              window,
+              controller,
+              lifecycle.onWindowClosed,
+            );
+
+            return {
+              window,
+              async load() {
+                try {
+                  await window.loadFile(rendererPath);
+                } catch (cause) {
+                  windowHost.dispose();
+                  if (!window.isDestroyed()) window.close();
+                  throw terminalApplicationFailure("renderer-load", cause);
+                }
+              },
+            };
           },
-          onSessionStartError: lifecycle.onSessionStartError,
-          onSessionExit: lifecycle.onSessionExit,
-          onTitleRequest: titleController.requestTitle,
-          onBell: titleController.ringBell,
-          onUserInteraction: titleController.resetAttention,
-          openExternalLink: (url) => shell.openExternal(url),
-          onExternalLinkOpenError: () =>
-            dialog.showErrorBox(
-              "External Link Error",
-              "The External Link could not be opened.",
-            ),
-          writeClipboardText: (text) => clipboard.writeText(text),
-          readClipboardText: () => clipboard.readText(),
-          async confirmPaste() {
-            const result = await dialog.showMessageBox(window, {
-              type: "warning",
-              title: "Protected Paste",
-              message: "Paste text that may contain multiple commands?",
-              detail:
-                "The paste contains multiple lines or control characters.",
-              buttons: ["Paste", "Cancel"],
+          getSelectedWindow: () =>
+            BrowserWindow.getFocusedWindow() ?? undefined,
+          async showQuitConfirmation(window) {
+            const options = {
+              type: "question" as const,
+              title: "Quit OMXTerm",
+              message: "Quit OMXTerm and close all Terminal Windows?",
+              detail: "All open Live Terminal Sessions will end.",
+              buttons: ["Quit", "Cancel"],
               defaultId: 1,
               cancelId: 1,
               noLink: true,
-            });
+            };
+            const result =
+              window && !window.isDestroyed()
+                ? await dialog.showMessageBox(window, options)
+                : await dialog.showMessageBox(options);
             return result.response === 0;
           },
-          showClipboardContextMenu() {
-            const send = (action: "copy" | "paste" | "select-all") =>
-              window.webContents.send(terminalIpc.clipboardAction, action);
-            Menu.buildFromTemplate(
-              terminalClipboardContextMenuTemplate({
-                copy: () => send("copy"),
-                paste: () => send("paste"),
-                selectAll: () => send("select-all"),
-              }),
-            ).popup({ window });
+          async showSessionFailure(window, failure) {
+            const failureDialog = terminalSessionFailureDialog(failure);
+            await dialog.showMessageBox(window, {
+              ...failureDialog,
+              buttons: [...failureDialog.buttons],
+              noLink: true,
+            });
           },
+          sendFontZoom: (window, command) =>
+            window.webContents.send(terminalIpc.fontZoom, command),
+          sendClipboardAction: (window, action) =>
+            window.webContents.send(terminalIpc.clipboardAction, action),
+          quit: () => app.quit(),
         });
 
-        window.once("ready-to-show", () => window.show());
-        const windowHost = registerTerminalWindowHost(
-          window,
-          controller,
-          lifecycle.onWindowClosed,
+        const openNewWindow = () => {
+          void terminalApplication!.newWindow().catch((cause) => {
+            const failure = terminalApplicationFailure("new-window", cause);
+            const display = terminalApplicationFailureDisplay(failure);
+            dialog.showErrorBox(display.title, display.message);
+          });
+        };
+        Menu.setApplicationMenu(
+          Menu.buildFromTemplate(
+            terminalApplicationMenuTemplate(app.name, {
+              newWindow: openNewWindow,
+              closeSelectedWindow: terminalApplication.closeSelectedWindow,
+              requestQuit: () => void terminalApplication!.requestQuit(),
+              toggleSelectedFullScreen:
+                terminalApplication.toggleSelectedFullScreen,
+              toggleSelectedAlwaysOnTop:
+                terminalApplication.toggleSelectedAlwaysOnTop,
+              zoomInSelectedWindow: () =>
+                terminalApplication!.zoomSelectedWindow("in"),
+              zoomOutSelectedWindow: () =>
+                terminalApplication!.zoomSelectedWindow("out"),
+              resetSelectedWindowZoom: () =>
+                terminalApplication!.zoomSelectedWindow("reset"),
+              copySelectedTerminal: () =>
+                terminalApplication!.clipboardSelectedWindow("copy"),
+              pasteSelectedTerminal: () =>
+                terminalApplication!.clipboardSelectedWindow("paste"),
+              selectAllSelectedTerminal: () =>
+                terminalApplication!.clipboardSelectedWindow("select-all"),
+            }),
+          ),
         );
 
-        return {
-          window,
-          async load() {
-            try {
-              await window.loadFile(rendererPath);
-            } catch (cause) {
-              windowHost.dispose();
-              if (!window.isDestroyed()) window.close();
-              throw terminalApplicationFailure("renderer-load", cause);
-            }
-          },
-        };
+        await terminalApplication.newWindow();
       },
-      getSelectedWindow: () => BrowserWindow.getFocusedWindow() ?? undefined,
-      async showQuitConfirmation(window) {
-        const options = {
-          type: "question" as const,
-          title: "Quit OMXTerm",
-          message: "Quit OMXTerm and close all Terminal Windows?",
-          detail: "All open Live Terminal Sessions will end.",
-          buttons: ["Quit", "Cancel"],
-          defaultId: 1,
-          cancelId: 1,
-          noLink: true,
-        };
-        const result =
-          window && !window.isDestroyed()
-            ? await dialog.showMessageBox(window, options)
-            : await dialog.showMessageBox(options);
-        return result.response === 0;
-      },
-      async showSessionFailure(window, failure) {
-        const failureDialog = terminalSessionFailureDialog(failure);
-        await dialog.showMessageBox(window, {
-          ...failureDialog,
-          buttons: [...failureDialog.buttons],
-          noLink: true,
-        });
-      },
-      sendFontZoom: (window, command) =>
-        window.webContents.send(terminalIpc.fontZoom, command),
-      sendClipboardAction: (window, action) =>
-        window.webContents.send(terminalIpc.clipboardAction, action),
-      quit: () => app.quit(),
-    });
-
-    const openNewWindow = () => {
-      void terminalApplication!.newWindow().catch((cause) => {
-        const failure = terminalApplicationFailure("new-window", cause);
-        const display = terminalApplicationFailureDisplay(failure);
-        dialog.showErrorBox(display.title, display.message);
-      });
-    };
-    Menu.setApplicationMenu(
-      Menu.buildFromTemplate(
-        terminalApplicationMenuTemplate(app.name, {
-          newWindow: openNewWindow,
-          closeSelectedWindow: terminalApplication.closeSelectedWindow,
-          requestQuit: () => void terminalApplication!.requestQuit(),
-          toggleSelectedFullScreen:
-            terminalApplication.toggleSelectedFullScreen,
-          toggleSelectedAlwaysOnTop:
-            terminalApplication.toggleSelectedAlwaysOnTop,
-          zoomInSelectedWindow: () =>
-            terminalApplication!.zoomSelectedWindow("in"),
-          zoomOutSelectedWindow: () =>
-            terminalApplication!.zoomSelectedWindow("out"),
-          resetSelectedWindowZoom: () =>
-            terminalApplication!.zoomSelectedWindow("reset"),
-          copySelectedTerminal: () =>
-            terminalApplication!.clipboardSelectedWindow("copy"),
-          pasteSelectedTerminal: () =>
-            terminalApplication!.clipboardSelectedWindow("paste"),
-          selectAllSelectedTerminal: () =>
-            terminalApplication!.clipboardSelectedWindow("select-all"),
-        }),
-      ),
     );
-
-    await terminalApplication.newWindow();
   })
   .catch((cause) => {
+    if (cause instanceof UserConfigurationError) {
+      reportUserConfigurationFailure(cause, {
+        writeStderr: (diagnostic) => process.stderr.write(diagnostic),
+        showErrorBox: (title, message) => dialog.showErrorBox(title, message),
+        quit: () => app.quit(),
+      });
+      return;
+    }
     const failure = terminalApplicationFailure("startup", cause);
     const display = terminalApplicationFailureDisplay(failure);
     dialog.showErrorBox(display.title, display.message);

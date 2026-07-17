@@ -1,20 +1,21 @@
 import type { TerminalSessionAdapter } from "../terminal-surface/terminal-session-adapter";
 import {
   mountTerminalSurface,
-  type TerminalAppearance,
   type TerminalClipboard,
   type TerminalSurface,
+  type TerminalSurfaceOptions,
 } from "../terminal-surface/terminal-surface";
 import type { TerminalFontZoom } from "../shared/terminal-contract";
+import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 
 type MountTerminalSurface = (
   container: HTMLElement,
   adapter: TerminalSessionAdapter,
-  options: { readonly appearance?: TerminalAppearance },
+  options: TerminalSurfaceOptions,
 ) => Promise<TerminalSurface>;
 
 interface TerminalWindowPageOptions {
-  readonly appearance?: TerminalAppearance;
+  readonly configuration?: TerminalRendererConfiguration;
   readonly page?: Pick<Window, "addEventListener" | "removeEventListener">;
   readonly mount?: MountTerminalSurface;
   readonly subscribeToFontZoom?: (
@@ -59,7 +60,23 @@ export function mountTerminalWindowPage(
 
   page.addEventListener("pagehide", onPageHide, { once: true });
   const surfaceOptions = {
-    ...(options.appearance ? { appearance: options.appearance } : {}),
+    ...(options.configuration
+      ? {
+          appearance: {
+            fontSize: options.configuration.fontSize,
+            ...(options.configuration.fontFamily
+              ? {
+                  systemFont: {
+                    family: options.configuration.fontFamily,
+                    available: true,
+                  },
+                }
+              : {}),
+          },
+          scrollbackLines: options.configuration.scrollbackLines,
+          optionKeyMode: options.configuration.optionKeyMode,
+        }
+      : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.onTitleRequest
       ? { onTitleRequest: options.onTitleRequest }

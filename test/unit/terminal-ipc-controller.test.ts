@@ -30,6 +30,11 @@ function createIpcHarness() {
 
 function clipboardOptions() {
   return {
+    configuration: {
+      fontSize: 16,
+      scrollbackLines: 10_000,
+      optionKeyMode: "none" as const,
+    },
     writeClipboardText: vi.fn(),
     readClipboardText: vi.fn(() => "clipboard text"),
     confirmPaste: vi.fn(async () => true),
@@ -105,7 +110,7 @@ describe("terminal IPC controller", () => {
     expect(secondSession.write).toHaveBeenCalledWith("second window input");
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();
-    expect(ipc.handlers.size).toBe(4);
+    expect(ipc.handlers.size).toBe(5);
     expect(ipc.listeners.size).toBe(7);
   });
 

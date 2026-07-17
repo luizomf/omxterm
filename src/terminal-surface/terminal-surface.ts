@@ -9,6 +9,12 @@ import {
   type TerminalFontZoom,
 } from "../shared/terminal-contract";
 import type { TerminalSessionAdapter } from "./terminal-session-adapter";
+import {
+  DEFAULT_SCROLLBACK_LINES,
+  DEFAULT_TERMINAL_FONT_SIZE,
+  MAX_SCROLLBACK_LINES,
+  type OptionKeyMode,
+} from "../shared/user-configuration";
 import { registerOsc52Clipboard } from "./osc52-clipboard";
 import { registerTerminalTitleEvents } from "./terminal-title-events";
 import { ignoreOscLinks, registerVisibleWebLinks } from "./visible-web-links";
@@ -28,9 +34,11 @@ export interface TerminalClipboard {
   requestContextMenu(): void;
 }
 
-export const DEFAULT_SCROLLBACK_LINES = 10_000;
-export const MAX_SCROLLBACK_LINES = 100_000;
-export const DEFAULT_TERMINAL_FONT_SIZE = 16;
+export {
+  DEFAULT_SCROLLBACK_LINES,
+  DEFAULT_TERMINAL_FONT_SIZE,
+  MAX_SCROLLBACK_LINES,
+} from "../shared/user-configuration";
 export const BUNDLED_TERMINAL_FONT_FAMILY = "JetBrainsMono Nerd Font Mono";
 
 export interface TerminalAppearance {
@@ -48,7 +56,7 @@ export class MissingTerminalFontError extends Error {
   }
 }
 
-export type OptionKeyMode = "none" | "left" | "right" | "both";
+export type { OptionKeyMode } from "../shared/user-configuration";
 
 export interface TerminalSurfaceOptions {
   readonly scrollbackLines?: number;

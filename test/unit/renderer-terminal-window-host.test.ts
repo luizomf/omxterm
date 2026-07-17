@@ -71,15 +71,17 @@ describe("renderer Terminal Window page host", () => {
     const listeners = new Set<(command: TerminalFontZoom) => void>();
     const removeZoomListener = vi.fn((listener) => listeners.delete(listener));
     const mount = vi.fn(async () => createSurface({ zoom }));
-    const appearance = {
+    const configuration = {
       fontSize: 19,
-      systemFont: { family: "SF Mono", available: true },
+      fontFamily: "SF Mono",
+      scrollbackLines: 2_000,
+      optionKeyMode: "right",
     } as const;
     const host = mountTerminalWindowPage(
       document.createElement("main"),
       createAdapter(),
       {
-        appearance,
+        configuration,
         page: window,
         mount,
         subscribeToFontZoom(listener) {
@@ -95,7 +97,14 @@ describe("renderer Terminal Window page host", () => {
     expect(mount).toHaveBeenCalledWith(
       expect.any(HTMLElement),
       expect.any(Object),
-      { appearance },
+      {
+        appearance: {
+          fontSize: 19,
+          systemFont: { family: "SF Mono", available: true },
+        },
+        scrollbackLines: 2_000,
+        optionKeyMode: "right",
+      },
     );
     expect(zoom).toHaveBeenCalledWith("in");
 

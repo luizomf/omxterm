@@ -27,6 +27,32 @@ Project checks are available as root scripts:
 - `npm run check` runs formatting, typechecking, the complete test suite, and the
   build.
 
+## Configuration
+
+OMXTerm optionally reads `$XDG_CONFIG_HOME/omxterm/config.json`, or
+`~/.config/omxterm/config.json` when `XDG_CONFIG_HOME` is unset or empty. The
+file is strict JSON: `version` is required and must be `1`; all preferences are
+optional. OMXTerm does not create, rewrite, migrate, or reload this file.
+
+```json
+{
+  "version": 1,
+  "confirmClose": true,
+  "logLevel": "info",
+  "font": { "family": "SF Mono", "size": 16 },
+  "scrollback": { "lines": 10000 },
+  "keyboard": { "optionAsAlt": "none" },
+  "window": { "alwaysOnTop": false }
+}
+```
+
+`font.size` accepts integral pixel sizes from 8 through 72 (inclusive) and
+defaults to 16. A configured `font.family` must exactly match an installed
+system font family. `scrollback.lines` accepts integers from 0 through 100,000.
+`logLevel` accepts `error`, `info`, or `debug`; `keyboard.optionAsAlt` accepts
+`none`, `left`, `right`, or `both`. Unknown keys and invalid values stop startup
+with an actionable error. Fixing a file requires restarting OMXTerm.
+
 - [First-release specification](docs/spec.md)
 - [Domain language](CONTEXT.md)
 - [Architecture decisions](docs/adr/)

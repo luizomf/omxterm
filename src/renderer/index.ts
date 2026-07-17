@@ -6,21 +6,24 @@ import { mountTerminalWindowPage } from "./terminal-window-host";
 const container = document.querySelector<HTMLElement>("#terminal-surface");
 if (!container) throw new Error("Terminal Surface container is missing");
 
-const adapter = createElectronTerminalAdapter(window.omxterm.terminal);
-const host = mountTerminalWindowPage(container, adapter, {
-  subscribeToFontZoom: window.omxterm.terminal.onFontZoom,
-  subscribeToClipboardActions: window.omxterm.terminal.onClipboardAction,
-  onTitleRequest: window.omxterm.terminal.title,
-  onBell: window.omxterm.terminal.bell,
-  onExternalLink: window.omxterm.terminal.openExternalLink,
-  clipboard: {
-    writeText: window.omxterm.terminal.writeClipboardText,
-    readText: window.omxterm.terminal.readClipboardText,
-    confirmPaste: window.omxterm.terminal.confirmPaste,
-    requestContextMenu: window.omxterm.terminal.requestClipboardContextMenu,
-  },
-});
-void host.ready.catch((error: unknown) => {
-  host.dispose();
-  throw new Error("Failed to mount the Terminal Surface", { cause: error });
+void window.omxterm.terminal.configuration().then((configuration) => {
+  const adapter = createElectronTerminalAdapter(window.omxterm.terminal);
+  const host = mountTerminalWindowPage(container, adapter, {
+    configuration,
+    subscribeToFontZoom: window.omxterm.terminal.onFontZoom,
+    subscribeToClipboardActions: window.omxterm.terminal.onClipboardAction,
+    onTitleRequest: window.omxterm.terminal.title,
+    onBell: window.omxterm.terminal.bell,
+    onExternalLink: window.omxterm.terminal.openExternalLink,
+    clipboard: {
+      writeText: window.omxterm.terminal.writeClipboardText,
+      readText: window.omxterm.terminal.readClipboardText,
+      confirmPaste: window.omxterm.terminal.confirmPaste,
+      requestContextMenu: window.omxterm.terminal.requestClipboardContextMenu,
+    },
+  });
+  void host.ready.catch((error: unknown) => {
+    host.dispose();
+    throw new Error("Failed to mount the Terminal Surface", { cause: error });
+  });
 });

@@ -8,6 +8,7 @@ import {
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
 import type { LocalTerminalSession } from "./local-terminal-session";
+import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 
 export interface TrustedWebContents {
   readonly mainFrame: object;
@@ -39,6 +40,7 @@ interface SessionCallbacks {
 }
 
 export interface TerminalIpcControllerOptions {
+  readonly configuration: TerminalRendererConfiguration;
   readonly webContents: TrustedWebContents;
   readonly createSession: (callbacks: SessionCallbacks) => LocalTerminalSession;
   readonly onSessionStartError: () => void;
@@ -66,6 +68,7 @@ export interface TerminalIpcRouter {
 }
 
 interface RoutedTerminalIpcController extends TerminalIpcController {
+  configuration(payload?: unknown): TerminalRendererConfiguration;
   start(payload?: unknown): void;
   input(payload?: unknown): void;
   resize(payload?: unknown): void;
@@ -97,6 +100,12 @@ export function registerTerminalIpcRouter(
     if (!controller)
       throw new Error("Rejected terminal IPC from an untrusted sender");
     controller.start(payload);
+  };
+  const configuration: IpcHandler = (event, payload) => {
+    const controller = controllerFor(event);
+    if (!controller)
+      throw new Error("Rejected configuration IPC from an untrusted sender");
+    return controller.configuration(payload);
   };
   const input: IpcListener = (event, payload) =>
     controllerFor(event)?.input(payload);
@@ -135,6 +144,7 @@ export function registerTerminalIpcRouter(
   };
 
   ipcMain.handle(terminalIpc.start, start);
+  ipcMain.handle(terminalIpc.configuration, configuration);
   ipcMain.on(terminalIpc.input, input);
   ipcMain.on(terminalIpc.resize, resize);
   ipcMain.on(terminalIpc.close, close);
@@ -165,6 +175,7 @@ export function registerTerminalIpcRouter(
       disposed = true;
       for (const controller of [...controllers.values()]) controller.dispose();
       ipcMain.removeHandler(terminalIpc.start);
+      ipcMain.removeHandler(terminalIpc.configuration);
       ipcMain.removeListener(terminalIpc.input, input);
       ipcMain.removeListener(terminalIpc.resize, resize);
       ipcMain.removeListener(terminalIpc.close, close);
@@ -233,6 +244,12 @@ function createTerminalIpcController(
       closeSession();
     }
   };
+  const configuration = (payload?: unknown) => {
+    if (payload !== undefined)
+      throw new TypeError("Invalid User Configuration payload");
+    if (disposed) throw new Error("Terminal IPC controller is disposed");
+    return options.configuration;
+  };
 
   const input = (payload?: unknown) => {
     if (isBoundedTerminalPayload(payload)) {
@@ -278,6 +295,7 @@ function createTerminalIpcController(
   };
 
   return {
+    configuration,
     start,
     input,
     resize,

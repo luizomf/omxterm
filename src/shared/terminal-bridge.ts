@@ -4,8 +4,10 @@ import type {
   TerminalFontZoom,
   TerminalSize,
 } from "./terminal-contract";
+import type { TerminalRendererConfiguration } from "./user-configuration";
 
 export interface TerminalBridge {
+  configuration(): Promise<TerminalRendererConfiguration>;
   start(): Promise<void>;
   input(data: string): void;
   resize(size: TerminalSize): void;
