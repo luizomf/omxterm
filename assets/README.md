@@ -10,7 +10,7 @@ icon. It was imported byte-for-byte from
 `application-icon-macos.svg` places the accepted artwork on the transparent,
 rounded 1024 px macOS canvas without changing its prompt or colors.
 `application-icon.png` is the matching 1024 px development Dock icon, and
-`application-icon.icns` contains Retina representations for 16 and 32 logical
-pixels plus standard and Retina representations from 128 through 512 pixels for
-packaged builds. The raster derivatives are committed so packaging stays
-self-contained and does not depend on image tooling or an OMXTerm Web checkout.
+`application-icon.icns` contains standard and Retina representations from 16
+through 512 logical pixels for packaged builds. The raster derivatives are
+committed so packaging stays self-contained and does not depend on image tooling
+or an OMXTerm Web checkout.
