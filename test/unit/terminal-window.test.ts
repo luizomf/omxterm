@@ -20,19 +20,28 @@ describe("Terminal Window startup contract", () => {
 
   it("denies renderer-created windows and renderer navigation", () => {
     let openHandler: (() => { action: "deny" }) | undefined;
-    let navigateHandler:
-      ((event: { preventDefault(): void }) => void) | undefined;
+    const navigateHandlers = new Map<
+      string,
+      (event: { preventDefault(): void }) => void
+    >();
     lockTerminalRendererNavigation({
       setWindowOpenHandler(handler) {
         openHandler = handler;
       },
-      on(_event, handler) {
-        navigateHandler = handler;
+      on(event, handler) {
+        navigateHandlers.set(event, handler);
       },
     });
-    const preventDefault = vi.fn();
-    navigateHandler!({ preventDefault });
+    const preventMainFrameNavigation = vi.fn();
+    const preventSubframeNavigation = vi.fn();
+    navigateHandlers.get("will-navigate")!({
+      preventDefault: preventMainFrameNavigation,
+    });
+    navigateHandlers.get("will-frame-navigate")!({
+      preventDefault: preventSubframeNavigation,
+    });
     expect(openHandler!()).toEqual({ action: "deny" });
-    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(preventMainFrameNavigation).toHaveBeenCalledOnce();
+    expect(preventSubframeNavigation).toHaveBeenCalledOnce();
   });
 });

@@ -302,7 +302,6 @@ export function isValidExternalLink(value: unknown): value is string {
   if (
     typeof value !== "string" ||
     value.length === 0 ||
-    value.length > 2_048 ||
     /[\s\p{Cc}\p{Cf}\\]/u.test(value) ||
     (!value.startsWith("http://") && !value.startsWith("https://"))
   )

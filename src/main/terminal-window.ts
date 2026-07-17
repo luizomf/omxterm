@@ -24,7 +24,7 @@ export function terminalWindowOptions(
 export interface LockedTerminalWebContents {
   setWindowOpenHandler(handler: () => { action: "deny" }): void;
   on(
-    event: "will-navigate",
+    event: "will-navigate" | "will-frame-navigate",
     listener: (event: { preventDefault(): void }) => void,
   ): void;
 }
@@ -34,4 +34,5 @@ export function lockTerminalRendererNavigation(
 ): void {
   webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   webContents.on("will-navigate", (event) => event.preventDefault());
+  webContents.on("will-frame-navigate", (event) => event.preventDefault());
 }

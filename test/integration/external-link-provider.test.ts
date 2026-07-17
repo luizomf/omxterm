@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { Terminal, type ILink, type ILinkProvider } from "@xterm/xterm";
 import { describe, expect, it, vi } from "vitest";
+import { isValidExternalLink } from "../../src/main/terminal-ipc-controller";
 import {
   ignoreOscLinks,
   registerVisibleWebLinks,
@@ -19,6 +20,7 @@ function providerLinks(provider: ILinkProvider, line = 1): Promise<ILink[]> {
 async function linksFor(
   data: string,
   cols = 120,
+  activate = vi.fn(),
 ): Promise<{ links: ILink[]; activate: ReturnType<typeof vi.fn> }> {
   const terminal = new Terminal({ cols, rows: 8 });
   let provider: ILinkProvider | undefined;
@@ -26,7 +28,6 @@ async function linksFor(
     provider = value;
     return { dispose: vi.fn() };
   });
-  const activate = vi.fn();
   registerVisibleWebLinks(terminal, activate);
   await write(terminal, data);
   const links = await new Promise<ILink[]>((resolve) =>
@@ -56,6 +57,28 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
     expect(wrapped.links.map((link) => link.text)).toEqual([
       "https://example.test/wrapped",
     ]);
+  });
+
+  it("opens a provider-owned URL longer than 2,048 characters across soft wraps unchanged", async () => {
+    const url = `https://example.test/${"a".repeat(2_100)}`;
+    const opener = vi.fn();
+    const activate = vi.fn((value: string) => {
+      if (isValidExternalLink(value)) opener(value);
+    });
+    const { links } = await linksFor(url, 80, activate);
+    const link = links[0]!;
+
+    expect(link.text).toBe(url);
+    expect(() =>
+      link.activate(
+        new MouseEvent("click", { button: 0, metaKey: true }),
+        link.text,
+      ),
+    ).not.toThrow();
+
+    expect(activate).toHaveBeenCalledOnce();
+    expect(opener).toHaveBeenCalledOnce();
+    expect(opener).toHaveBeenCalledWith(url);
   });
 
   it.each([
