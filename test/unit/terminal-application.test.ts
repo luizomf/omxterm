@@ -247,6 +247,24 @@ describe("Terminal application lifecycle", () => {
     },
   );
 
+  it("consumes a rejected failure dialog and closes and tears down exactly once", async () => {
+    const showSessionFailure = vi.fn(async () => {
+      throw new Error("native dialog unavailable");
+    });
+    const harness = createApplicationHarness({ showSessionFailure });
+    await harness.application.newWindow();
+
+    harness.windows[0]!.lifecycle.onSessionStartError();
+    harness.windows[0]!.lifecycle.onSessionStartError();
+
+    await vi.waitFor(() => {
+      expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
+    });
+    expect(showSessionFailure).toHaveBeenCalledOnce();
+    expect(harness.windows[0]!.window.close).toHaveBeenCalledOnce();
+    expect(harness.quit).toHaveBeenCalledOnce();
+  });
+
   it("targets fullscreen and ordinary floating always-on-top at the selected window", async () => {
     const harness = createApplicationHarness();
     await harness.application.newWindow();

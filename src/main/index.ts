@@ -12,6 +12,10 @@ import {
   type TerminalApplication,
 } from "./terminal-application";
 import {
+  terminalApplicationFailure,
+  terminalApplicationFailureDisplay,
+} from "./terminal-application-failure";
+import {
   registerTerminalIpcRouter,
   type IpcMainPort,
 } from "./terminal-ipc-controller";
@@ -78,10 +82,10 @@ app
           async load() {
             try {
               await window.loadFile(rendererPath);
-            } catch {
+            } catch (cause) {
               windowHost.dispose();
               if (!window.isDestroyed()) window.close();
-              throw new Error("Failed to load the Terminal Window renderer");
+              throw terminalApplicationFailure("renderer-load", cause);
             }
           },
         };
@@ -116,11 +120,10 @@ app
     });
 
     const openNewWindow = () => {
-      void terminalApplication!.newWindow().catch(() => {
-        dialog.showErrorBox(
-          "Terminal Window could not open",
-          "OMXTerm could not create a new Terminal Window.",
-        );
+      void terminalApplication!.newWindow().catch((cause) => {
+        const failure = terminalApplicationFailure("new-window", cause);
+        const display = terminalApplicationFailureDisplay(failure);
+        dialog.showErrorBox(display.title, display.message);
       });
     };
     Menu.setApplicationMenu(
@@ -139,10 +142,9 @@ app
 
     await terminalApplication.newWindow();
   })
-  .catch(() => {
-    dialog.showErrorBox(
-      "OMXTerm could not start",
-      "The initial Terminal Window could not be created.",
-    );
+  .catch((cause) => {
+    const failure = terminalApplicationFailure("startup", cause);
+    const display = terminalApplicationFailureDisplay(failure);
+    dialog.showErrorBox(display.title, display.message);
     app.quit();
   });

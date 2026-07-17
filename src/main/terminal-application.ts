@@ -81,9 +81,12 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     const state = windows.get(window);
     if (!state || state.failurePending) return;
     state.failurePending = true;
-    void options.showSessionFailure(window, failure).then(() => {
+    const closeWindow = () => {
       if (!window.isDestroyed()) window.close();
-    });
+    };
+    void options
+      .showSessionFailure(window, failure)
+      .then(closeWindow, closeWindow);
   };
 
   return {
