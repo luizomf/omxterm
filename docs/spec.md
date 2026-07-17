@@ -46,6 +46,9 @@ remote terminal features are outside this release.
   then closes.
 - Each window starts at configured font size. `Cmd++`, `Cmd+-`, and `Cmd+0`
   affect only that window and are not persisted.
+- The Terminal Surface and Live Terminal Session grid refit in both directions
+  after Terminal Window width or height changes and after Window Font Zoom. The
+  xterm grid remains inside the visible content area with its bottom row visible.
 - `Window -> Always on Top` toggles only the selected window at the ordinary
   native floating level. New windows use the configured default.
 - BEL is silent. An unfocused window prepends a bell marker to its title and

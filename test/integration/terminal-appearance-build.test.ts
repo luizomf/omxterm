@@ -46,4 +46,21 @@ describe("Terminal appearance build", () => {
     expect(css).toContain("JetBrainsMono Nerd Font Mono");
     expect(css).not.toContain("JetBrainsMonoNerdFontMono-Bold");
   }, 30_000);
+
+  it("places the title-area inset on xterm so fitting excludes it from the grid", async () => {
+    const css = await readFile(
+      path.join(projectRoot, "src", "renderer", "terminal-window.css"),
+      "utf8",
+    );
+    const surfaceRule = css.match(/#terminal-surface\s*\{(?<body>[^}]*)\}/u);
+    const xtermRule = css.match(
+      /#terminal-surface \.xterm\s*\{(?<body>[^}]*)\}/u,
+    );
+
+    expect(surfaceRule?.groups?.body).not.toContain("padding");
+    expect(xtermRule?.groups?.body).toContain("box-sizing: border-box");
+    expect(xtermRule?.groups?.body).toContain("width: 100%");
+    expect(xtermRule?.groups?.body).toContain("height: 100%");
+    expect(xtermRule?.groups?.body).toContain("padding: 30px 8px 8px");
+  });
 });

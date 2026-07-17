@@ -257,7 +257,7 @@ export async function mountTerminalSurface(
     resizeSubscription = mountedTerminal.onResize((size) => {
       if (isTerminalSize(size)) adapter.resize(size);
     });
-    resizeObserver = new ResizeObserver(() => mountedFitAddon.fit());
+    resizeObserver = new ResizeObserver(scheduleFit);
     resizeObserver.observe(container);
 
     await adapter.start({
