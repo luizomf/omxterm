@@ -25,6 +25,12 @@ Use the terms defined in `CONTEXT.md`. Surface a conflict with the spec or an
 ADR instead of silently overriding it. Do not reopen settled decisions merely
 because another design is possible.
 
+When accepted observable product behavior is added, removed, or changed, update
+`docs/spec.md` in the same PR unless the existing contract already states that
+behavior. An issue, PR discussion, test, or implementation is not a substitute
+for keeping the spec current. Add or update an ADR as well when the change makes
+or revises a durable architectural decision or tradeoff.
+
 ## Communication
 
 - Chat in the user's language. Write code, documentation, GitHub artifacts, and
@@ -53,6 +59,35 @@ The default flow is **issue -> branch -> PR -> merge**.
 
 Keep tracker state accurate. A delivered change that is not reflected in its
 issue or PR is unfinished work.
+
+## Documentation
+
+- Update user-facing documentation in the same PR when a change affects
+  installation, configuration, controls, supported behavior, limitations, or
+  troubleshooting.
+- Before a release, ensure public documentation describes the shipped product
+  and its operating requirements accurately. Write factual product and process
+  documentation; do not include private conversations, maintainer biography, or
+  personal learning context.
+- Complete the PR documentation-impact section with the updated documents or a
+  concrete reason no documentation change is needed.
+
+## Versioning and releases
+
+- Releases are deliberate, manual, and owner-authorized. Do not bump versions,
+  create tags, publish GitHub Releases, or upload artifacts unless the current
+  issue and Otávio explicitly authorize those side effects.
+- Proactively surface when an accepted batch of changes forms a coherent release
+  candidate or appears to require a version change. State the recommended next
+  version and reasoning, and identify any missing versioning policy instead of
+  silently choosing one.
+- Before proposing a release, reconcile package metadata, the intended tag,
+  artifact filenames, public documentation, release notes, and the exact-artifact
+  checklist in `docs/release.md`.
+- A release is not ready while required checks, regression coverage, packaging
+  verification, user-facing documentation, or applicable manual checks are
+  missing. Publication remains blocked until Otávio accepts the exact artifact
+  and separately authorizes publication.
 
 ## Engineering approach
 
