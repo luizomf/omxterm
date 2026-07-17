@@ -49,6 +49,12 @@ const mainDirectory = path.dirname(fileURLToPath(import.meta.url));
 const applicationRoot = path.resolve(mainDirectory, "..");
 const preloadPath = path.join(applicationRoot, "preload", "index.cjs");
 const rendererPath = path.join(applicationRoot, "renderer", "index.html");
+const developmentApplicationIconPath = path.resolve(
+  applicationRoot,
+  "..",
+  "assets",
+  "application-icon.png",
+);
 
 let terminalApplication: TerminalApplication | undefined;
 let operationalEvents: OperationalEventLog | undefined;
@@ -63,6 +69,8 @@ app.on("before-quit", (event) => {
 app
   .whenReady()
   .then(async () => {
+    if (!app.isPackaged) app.dock?.setIcon(developmentApplicationIconPath);
+
     const account = userInfo();
     operationalEvents = createOperationalEventLog({
       environment: process.env,

@@ -24,6 +24,8 @@ The first useful release must:
 - render the fixed [`omtheme`](omtheme.json) palette with JetBrainsMono Nerd
   Font Mono bundled under its OFL license as the default and missing-glyph
   fallback;
+- use the accepted black-and-blue OMXTerm application icon in development and
+  on the packaged macOS Dock, Finder, application-switcher, and DMG surfaces;
 - read strict, versioned JSON configuration and write bounded local JSONL
   operational logs;
 - package a ready-to-run arm64 `.dmg` from an accepted version.
@@ -163,7 +165,8 @@ resize and bounded input flow, Unicode, bracketed and protected paste, title
 sanitization, URL validation, OSC 52 restrictions, log redaction/rotation,
 renderer IPC boundaries, and packaged startup. A manual release check exercises
 the exact `.dmg` on the supported Mac, including first launch, shell exit,
-multiple windows, tmux/TUI use, clipboard, zoom, always-on-top, and Gatekeeper
+multiple windows, tmux/TUI use, clipboard, zoom, always-on-top,
+application-icon presentation at small and large display sizes, and Gatekeeper
 documentation.
 
 The ADRs in `docs/adr/` own the reasoning behind the durable choices; this file

@@ -43,6 +43,7 @@ extraResources:
     to: LICENSES.chromium.html
 artifactName: ${productName}-${version}-${arch}.${ext}
 mac:
+  icon: assets/application-icon.icns
   category: public.app-category.developer-tools
   target:
     - target: dmg

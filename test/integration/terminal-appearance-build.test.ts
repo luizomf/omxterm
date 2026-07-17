@@ -10,6 +10,11 @@ const execute = promisify(execFile);
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
 const fontDirectory = path.join(projectRoot, "assets", "fonts");
 const outputFontDirectory = path.join(projectRoot, "dist", "renderer", "fonts");
+const applicationIconSource = path.join(
+  projectRoot,
+  "assets",
+  "application-icon.svg",
+);
 
 const expectedAssets = {
   "JetBrainsMonoNerdFontMono-Regular.woff2":
@@ -18,6 +23,14 @@ const expectedAssets = {
 } as const;
 
 describe("Terminal appearance build", () => {
+  it("owns the accepted OMXTerm application icon source byte-for-byte", async () => {
+    const source = await readFile(applicationIconSource);
+
+    expect(createHash("sha256").update(source).digest("hex")).toBe(
+      "3c078dfc92467afa0ebb065aeaeb7c84f4442757d5ca831f028d16c39e9d8905",
+    );
+  });
+
   it("ships the accepted regular Nerd Font and OFL without another font weight", async () => {
     await execute(process.execPath, ["build.mjs"], { cwd: projectRoot });
 

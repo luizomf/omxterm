@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { inspectAsarEntries } from "../../scripts/verify-packaged-app.mjs";
+import {
+  inspectAsarEntries,
+  inspectIcnsRepresentations,
+} from "../../scripts/verify-packaged-app.mjs";
 
 const requiredEntries = [
   "/dist/main/index.js",
@@ -17,6 +20,28 @@ const requiredEntries = [
 ];
 
 describe("packaged application verifier", () => {
+  it("requires every standard and Retina macOS icon representation", () => {
+    const representations = [
+      "icon_16x16.png",
+      "icon_16x16@2x.png",
+      "icon_32x32.png",
+      "icon_32x32@2x.png",
+      "icon_128x128.png",
+      "icon_128x128@2x.png",
+      "icon_256x256.png",
+      "icon_256x256@2x.png",
+      "icon_512x512.png",
+      "icon_512x512@2x.png",
+    ];
+
+    expect(inspectIcnsRepresentations(representations)).toEqual({
+      missing: [],
+    });
+    expect(inspectIcnsRepresentations(representations.slice(1))).toEqual({
+      missing: ["icon_16x16.png"],
+    });
+  });
+
   it("accepts the complete production runtime boundary", () => {
     expect(inspectAsarEntries(requiredEntries)).toEqual({
       missing: [],

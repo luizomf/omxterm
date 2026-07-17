@@ -1,7 +1,7 @@
 import { listPackage } from "@electron/asar";
 import { execFile as execFileCallback, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -18,6 +18,24 @@ const defaultApplicationPath = path.join(
   "mac-arm64",
   "OMXTerm.app",
 );
+const applicationIconPath = path.join(
+  projectRoot,
+  "assets",
+  "application-icon.icns",
+);
+
+const requiredIcnsRepresentations = [
+  "icon_16x16.png",
+  "icon_16x16@2x.png",
+  "icon_32x32.png",
+  "icon_32x32@2x.png",
+  "icon_128x128.png",
+  "icon_128x128@2x.png",
+  "icon_256x256.png",
+  "icon_256x256@2x.png",
+  "icon_512x512.png",
+  "icon_512x512@2x.png",
+];
 
 const requiredAsarEntries = [
   "/dist/main/index.js",
@@ -57,6 +75,14 @@ export function inspectAsarEntries(entries) {
   return { missing, forbidden };
 }
 
+export function inspectIcnsRepresentations(representations) {
+  return {
+    missing: requiredIcnsRepresentations.filter(
+      (required) => !representations.includes(required),
+    ),
+  };
+}
+
 async function sha256(file) {
   return createHash("sha256")
     .update(await readFile(file))
@@ -94,6 +120,40 @@ async function inspectUnsignedApplication(applicationPath) {
   } catch (cause) {
     const stderr = String(cause?.stderr ?? "");
     if (!stderr.includes("code object is not signed at all")) throw cause;
+  }
+}
+
+async function inspectApplicationIcon(applicationPath) {
+  const resources = path.join(applicationPath, "Contents", "Resources");
+  const infoPlist = path.join(applicationPath, "Contents", "Info.plist");
+  const { stdout } = await execFile("plutil", [
+    "-extract",
+    "CFBundleIconFile",
+    "raw",
+    "-o",
+    "-",
+    infoPlist,
+  ]);
+  const iconName = stdout.trim();
+  if (!iconName.endsWith(".icns"))
+    throw new Error(
+      `Packaged CFBundleIconFile is not an ICNS file: ${iconName}`,
+    );
+
+  const packagedIcon = path.join(resources, iconName);
+  await assertSameFile(applicationIconPath, packagedIcon);
+
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "omxterm-icon-"));
+  const iconset = path.join(temporaryRoot, "application-icon.iconset");
+  try {
+    await execFile("iconutil", ["-c", "iconset", "-o", iconset, packagedIcon]);
+    const inspection = inspectIcnsRepresentations(await readdir(iconset));
+    if (inspection.missing.length > 0)
+      throw new Error(
+        `Packaged application icon representations are missing: ${inspection.missing.join(", ")}`,
+      );
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
   }
 }
 
@@ -189,6 +249,7 @@ export async function verifyPackagedApplication(
     path.join(nativeRoot, "spawn-helper"),
     "node-pty spawn helper",
   );
+  await inspectApplicationIcon(applicationPath);
   await inspectUnsignedApplication(applicationPath);
 
   const asarInspection = inspectAsarEntries(await listPackage(asar));
