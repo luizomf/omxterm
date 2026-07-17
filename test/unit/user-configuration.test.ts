@@ -1,4 +1,12 @@
-import { mkdtemp, mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  readlink,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -178,6 +186,35 @@ describe("isolated User Configuration loading", () => {
     expect(configuration).toEqual(DEFAULT_USER_CONFIGURATION);
     await expect(stat(xdg)).rejects.toMatchObject({ code: "ENOENT" });
     expect(discover).not.toHaveBeenCalled();
+  });
+
+  it("rejects a dangling configuration symlink without changing it or starting", async () => {
+    const { xdg, home, root } = await roots();
+    const directory = path.join(xdg, "omxterm");
+    const file = path.join(directory, "config.json");
+    const target = path.join(root, "missing-config.json");
+    await mkdir(directory, { recursive: true });
+    await symlink(target, file);
+    const originalTarget = await readlink(file);
+    const start = vi.fn();
+
+    await expect(
+      startWithUserConfiguration(
+        {
+          environment: { XDG_CONFIG_HOME: xdg },
+          homeDirectory: home,
+          discoverInstalledFontFamilies: vi.fn(async () => installedFonts),
+        },
+        start,
+      ),
+    ).rejects.toMatchObject({
+      configurationPath: file,
+      reason: "the file could not be read",
+    });
+
+    expect(start).not.toHaveBeenCalled();
+    expect(await readlink(file)).toBe(originalTarget);
+    await expect(readFile(target)).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("reports read and UTF-8 decoding failures without treating them as absence", async () => {

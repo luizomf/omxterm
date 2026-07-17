@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { lstat, readFile } from "node:fs/promises";
 import path from "node:path";
 import type {
   OperationalLogLevel,
@@ -81,7 +81,8 @@ export async function loadUserConfiguration(
   try {
     bytes = await (options.read ?? readFile)(configurationPath);
   } catch (cause) {
-    if (isNotFound(cause)) return DEFAULT_USER_CONFIGURATION;
+    if (isNotFound(cause) && (await isPathAbsent(configurationPath)))
+      return DEFAULT_USER_CONFIGURATION;
     throw new UserConfigurationError(
       configurationPath,
       undefined,
@@ -125,6 +126,15 @@ export async function loadUserConfiguration(
       "must exactly name an installed font family",
     );
   return preliminary;
+}
+
+async function isPathAbsent(configurationPath: string): Promise<boolean> {
+  try {
+    await lstat(configurationPath);
+    return false;
+  } catch (cause) {
+    return isNotFound(cause);
+  }
 }
 
 function configuredFontFamily(document: unknown): string | undefined {
