@@ -21,15 +21,11 @@ export function terminalSessionFailureDialog(
     };
   }
 
-  const detail =
-    failure.reason === "signal"
-      ? `Signal: ${failure.signal ?? "unknown"}.`
-      : `Exit code: ${failure.exitCode ?? "unknown"}.`;
   return {
     type: "error",
     title: "Shell exited unexpectedly",
     message: "The Default Shell exited unexpectedly.",
-    detail,
+    detail: `Signal: ${failure.signal ?? "unknown"}.`,
     buttons: ["OK"],
   };
 }

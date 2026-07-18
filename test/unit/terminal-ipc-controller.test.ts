@@ -666,8 +666,18 @@ describe("terminal IPC controller", () => {
       expect.objectContaining({
         name: "pty.exit",
         windowId: 7,
-        outcome: "nonzero-exit",
+        outcome: "clean",
         code: 23,
+        durationMs: expect.any(Number),
+      }),
+    ]);
+    callbacks!.onExit({ exitCode: 0, signal: 15 });
+    expect(write.mock.calls).toContainEqual([
+      expect.objectContaining({
+        name: "pty.exit",
+        windowId: 7,
+        outcome: "signal",
+        code: 15,
         durationMs: expect.any(Number),
       }),
     ]);

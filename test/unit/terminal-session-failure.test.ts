@@ -11,13 +11,6 @@ describe("Terminal Session native failure dialog", () => {
       },
     ],
     [
-      { reason: "nonzero-exit", exitCode: 23 } as const,
-      {
-        title: "Shell exited unexpectedly",
-        detail: "Exit code: 23.",
-      },
-    ],
-    [
       { reason: "signal", signal: 15 } as const,
       {
         title: "Shell exited unexpectedly",

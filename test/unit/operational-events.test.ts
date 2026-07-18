@@ -154,6 +154,15 @@ describe("local Operational Events", () => {
     expect(log.write({ name: "unknown", ...canaries } as never)).toBe(false);
     expect(
       log.write({
+        name: "pty.exit",
+        windowId: 1,
+        outcome: "nonzero-exit",
+        code: 7,
+        durationMs: 1,
+      } as never),
+    ).toBe(false);
+    expect(
+      log.write({
         name: "application.failure",
         stage: "startup",
         unexpected: canaries.terminalPayload,

@@ -49,10 +49,11 @@ updates, and remote terminal features are outside this release.
   enabled.
 - `confirmClose` defaults to `true`; OMXTerm does not inspect child processes to
   guess whether closing is safe.
-- A clean shell exit closes its window without confirmation.
-- A spawn failure, nonzero shell exit, or unexpected signal remains visible in
-  a native error dialog and local log until acknowledged; the useless window
-  then closes.
+- After the Default Shell starts successfully, an ordinary shell exit closes
+  its window without confirmation or a failure dialog, regardless of its
+  numeric exit code.
+- A spawn failure or unexpected signal remains visible in a native error dialog
+  and local log until acknowledged; the useless window then closes.
 - Each window starts at configured font size. `Cmd++`, `Cmd+-`, and `Cmd+0`
   affect only that window and are not persisted.
 - The Terminal Surface and Live Terminal Session grid refit in both directions

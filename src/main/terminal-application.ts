@@ -26,7 +26,6 @@ export interface TerminalWindowLifecycle {
 
 export type TerminalSessionFailure =
   | { readonly reason: "spawn" }
-  | { readonly reason: "nonzero-exit"; readonly exitCode: number | null }
   | { readonly reason: "signal"; readonly signal: number | null };
 
 interface TerminalWindowInstance<Window extends NativeTerminalWindow> {
@@ -137,20 +136,13 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
         },
         onSessionExit(exit) {
           dispatch(() => {
-            if (exit.exitCode === 0 && exit.signal === 0) {
+            if (exit.signal === 0) {
               if (!instance.window.isDestroyed()) instance.window.close();
               return;
             }
-            if (exit.signal !== 0) {
-              closeAfterFailure(instance.window, {
-                reason: "signal",
-                signal: normalizeLifecycleCode(exit.signal),
-              });
-              return;
-            }
             closeAfterFailure(instance.window, {
-              reason: "nonzero-exit",
-              exitCode: normalizeLifecycleCode(exit.exitCode),
+              reason: "signal",
+              signal: normalizeLifecycleCode(exit.signal),
             });
           });
         },

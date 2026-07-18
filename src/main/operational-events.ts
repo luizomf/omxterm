@@ -63,7 +63,7 @@ export type OperationalEvent =
   | {
       readonly name: "pty.exit";
       readonly windowId: number;
-      readonly outcome: "clean" | "spawn-failure" | "nonzero-exit" | "signal";
+      readonly outcome: "clean" | "spawn-failure" | "signal";
       readonly code: number | null;
       readonly durationMs: number;
     }
@@ -349,7 +349,7 @@ function isOperationalEvent(value: unknown): value is OperationalEvent {
           "durationMs",
         ]) &&
         isId(value.windowId) &&
-        ["clean", "spawn-failure", "nonzero-exit", "signal"].includes(
+        ["clean", "spawn-failure", "signal"].includes(
           value.outcome as string,
         ) &&
         (value.code === null || isNonnegativeSafeInteger(value.code)) &&

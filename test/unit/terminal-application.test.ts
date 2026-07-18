@@ -202,14 +202,35 @@ describe("Terminal application lifecycle", () => {
     expect(windows[1]!.closeSession).toHaveBeenCalledOnce();
   });
 
-  it("closes a cleanly exited shell without quit confirmation", async () => {
+  it.each([0, 1, 37])(
+    "closes an ordinarily exited shell with code %i without a failure dialog or quit confirmation",
+    async (exitCode) => {
+      const harness = createApplicationHarness();
+      await harness.application.newWindow();
+
+      harness.windows[0]!.lifecycle.onSessionExit({ exitCode, signal: 0 });
+
+      expect(harness.showSessionFailure).not.toHaveBeenCalled();
+      expect(harness.showQuitConfirmation).not.toHaveBeenCalled();
+      expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
+      expect(harness.quit).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("closes only the window whose shell exits and quits after the last ordinary exit", async () => {
     const harness = createApplicationHarness();
     await harness.application.newWindow();
+    await harness.application.newWindow();
 
-    harness.windows[0]!.lifecycle.onSessionExit({ exitCode: 0, signal: 0 });
+    harness.windows[0]!.lifecycle.onSessionExit({ exitCode: 1, signal: 0 });
 
-    expect(harness.showQuitConfirmation).not.toHaveBeenCalled();
     expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
+    expect(harness.windows[1]!.closeSession).not.toHaveBeenCalled();
+    expect(harness.quit).not.toHaveBeenCalled();
+
+    harness.windows[1]!.lifecycle.onSessionExit({ exitCode: 7, signal: 0 });
+
+    expect(harness.windows[1]!.closeSession).toHaveBeenCalledOnce();
     expect(harness.quit).toHaveBeenCalledOnce();
   });
 
@@ -221,17 +242,6 @@ describe("Terminal application lifecycle", () => {
         lifecycle.onSessionStartError();
       },
       expected: { reason: "spawn" },
-    },
-    {
-      label: "nonzero exit",
-      emit(lifecycle: TerminalWindowLifecycle, terminalPayloadCanary: string) {
-        lifecycle.onSessionExit({
-          exitCode: 37,
-          signal: 0,
-          terminalPayloadCanary,
-        } as never);
-      },
-      expected: { reason: "nonzero-exit", exitCode: 37 },
     },
     {
       label: "unexpected signal",

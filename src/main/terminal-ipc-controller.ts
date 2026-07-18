@@ -308,12 +308,7 @@ function createTerminalIpcController(
           }
           options.onSessionExit(exit);
           if (windowId !== undefined) {
-            const outcome =
-              exit.signal !== 0
-                ? "signal"
-                : exit.exitCode === 0
-                  ? "clean"
-                  : "nonzero-exit";
+            const outcome = exit.signal !== 0 ? "signal" : "clean";
             writeWindowEvent({
               name: "pty.exit",
               windowId,

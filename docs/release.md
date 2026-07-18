@@ -84,11 +84,12 @@ the unpacked build directory or a previous installation.
   as `UNEXECUTED` rather than manufacturing or bypassing a warning.
 - **Default Shell and clean exit:** verify the operating-system-configured
   interactive login shell starts in the home directory; verify `TERM`,
-  `COLORTERM`, `TERM_PROGRAM`, and `TERM_PROGRAM_VERSION`; run `exit 0` and
-  confirm the Terminal Window closes without a failure dialog.
-- **Abnormal shell exit:** in fresh windows, run `exit 7` and then
-  `kill -TERM $$`; confirm each failure stays visible in the native dialog until
-  acknowledged and the unusable window then closes.
+  `COLORTERM`, `TERM_PROGRAM`, and `TERM_PROGRAM_VERSION`; in fresh windows, run
+  `exit 0` and `exit 7`, and confirm each Terminal Window closes without a
+  failure dialog.
+- **Abnormal shell exit:** in a fresh window, run `kill -TERM $$`; confirm the
+  failure stays visible in the native dialog until acknowledged and the
+  unusable window then closes.
 - **Multiple windows and cleanup:** use `Cmd+N` for at least two independent
   Live Terminal Sessions; verify `Cmd+W` closes only the selected window, the
   last window quits OMXTerm, and `Cmd+Q` requests one confirmation for all open
