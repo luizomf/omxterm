@@ -62,15 +62,16 @@ describe("Terminal appearance build", () => {
   }, 30_000);
 
   it("places the title-area inset on xterm so fitting excludes it from the grid", async () => {
-    const css = await readFile(
+    const sourceCss = await readFile(
       path.join(projectRoot, "src", "renderer", "terminal-window.css"),
       "utf8",
     );
-    const surfaceRule = css.match(/#terminal-surface\s*\{(?<body>[^}]*)\}/u);
-    const xtermRule = css.match(
+    const surfaceRule = sourceCss.match(
+      /#terminal-surface\s*\{(?<body>[^}]*)\}/u,
+    );
+    const xtermRule = sourceCss.match(
       /#terminal-surface \.xterm\s*\{(?<body>[^}]*)\}/u,
     );
-
     expect(surfaceRule?.groups?.body).not.toContain("padding");
     expect(surfaceRule?.groups?.body).toContain(
       "background: var(--terminal-background, transparent)",
@@ -90,6 +91,28 @@ describe("Terminal appearance build", () => {
     expect(xtermRule?.groups?.body).toContain(
       "var(--terminal-padding-left, 8px)",
     );
+  });
+
+  it("overrides xterm's black viewport across the themed title inset", async () => {
+    const sourceCss = await readFile(
+      path.join(projectRoot, "src", "renderer", "terminal-window.css"),
+      "utf8",
+    );
+    const viewportRule = sourceCss.match(
+      /#terminal-surface \.xterm-viewport\s*\{(?<body>[^}]*)\}/u,
+    );
+
+    expect(viewportRule?.groups?.body).toContain(
+      "background-color: var(--terminal-background, transparent)",
+    );
+    await execute(process.execPath, ["build.mjs"], { cwd: projectRoot });
+    const builtCss = await readFile(
+      path.join(projectRoot, "dist", "renderer", "index.css"),
+      "utf8",
+    );
+    expect(
+      builtCss.lastIndexOf("#terminal-surface .xterm-viewport"),
+    ).toBeGreaterThan(builtCss.indexOf(".xterm .xterm-viewport"));
   });
 
   it("reserves only the visible title area for native window dragging", async () => {

@@ -41,3 +41,7 @@ body,
     var(--terminal-padding-right, 8px) var(--terminal-padding-bottom, 8px)
     var(--terminal-padding-left, 8px);
 }
+
+#terminal-surface .xterm-viewport {
+  background-color: var(--terminal-background, transparent);
+}
