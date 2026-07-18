@@ -1,0 +1,208 @@
+# User configuration
+
+OMXTerm works without a configuration file. When one is present, it is strict,
+versioned JSON that OMXTerm reads once during startup and never creates,
+rewrites, migrates, or reloads.
+
+This guide explains how to use the configuration contract. The normative
+behavior remains in the [first-release specification](spec.md#configuration-and-local-state).
+
+## Configuration location
+
+OMXTerm reads:
+
+1. `$XDG_CONFIG_HOME/omxterm/config.json` when `XDG_CONFIG_HOME` is non-empty;
+2. `~/.config/omxterm/config.json` otherwise.
+
+When `XDG_CONFIG_HOME` is unset or empty, create the default directory with:
+
+```sh
+mkdir -p ~/.config/omxterm/themes
+```
+
+When it is set, use the configured location instead:
+
+```sh
+mkdir -p "$XDG_CONFIG_HOME/omxterm/themes"
+```
+
+Every change requires quitting and reopening OMXTerm. A missing file selects
+all defaults. An invalid file stops startup with an actionable error and is
+left unchanged.
+
+## Otávio's configuration
+
+This is the configuration Otávio uses. It is an example, not a second set of
+defaults. `Fira Code` must be installed on the Mac, and the selected external
+theme file must exist relative to `config.json`.
+
+```json
+{
+  "version": 1,
+  "confirmClose": true,
+  "logLevel": "info",
+  "font": {
+    "family": "Fira Code",
+    "size": 22,
+    "lineHeight": 1.1
+  },
+  "terminal": {
+    "padding": {
+      "top": 4,
+      "right": 4,
+      "bottom": 8,
+      "left": 16
+    }
+  },
+  "scrollback": {
+    "lines": 10000
+  },
+  "keyboard": {
+    "optionAsAlt": "none"
+  },
+  "window": {
+    "alwaysOnTop": false
+  },
+  "theme": {
+    "path": "./themes/omtheme.json"
+  }
+}
+```
+
+His local directory is organized like this:
+
+```text
+~/.config/omxterm/
+├── config.json
+└── themes/
+    ├── catppuccin-mocha.json
+    ├── moonfly-default.json
+    └── omtheme.json
+```
+
+Only the file referenced by `theme.path` is loaded. The other files are a local
+collection and do not create profiles or a theme catalog. Otávio's third-party
+themes are not distributed by this repository.
+
+The external `omtheme.json` in this example is a local copy. Remove the entire
+`theme` property to use OMXTerm's bundled canonical `omtheme` without keeping a
+copy:
+
+```json
+{
+  "version": 1
+}
+```
+
+Alternatively, from an OMXTerm source checkout, copy the canonical theme into
+the default configuration location used by the example:
+
+```sh
+cp docs/omtheme.json ~/.config/omxterm/themes/omtheme.json
+```
+
+Use `$XDG_CONFIG_HOME/omxterm/themes/omtheme.json` as the destination when that
+environment variable selects the configuration root.
+
+## Configuration reference
+
+All preferences other than `version` are optional. Omitted preferences use
+their defaults. Objects and the root reject unknown keys.
+
+| Preference                | Accepted value                          | Default                              |
+| ------------------------- | --------------------------------------- | ------------------------------------ |
+| `version`                 | exactly `1`                             | required                             |
+| `confirmClose`            | boolean                                 | `true`                               |
+| `logLevel`                | `error`, `info`, or `debug`             | `info`                               |
+| `font.family`             | exact installed system font-family name | bundled JetBrainsMono Nerd Font Mono |
+| `font.size`               | integer from 8 through 72 CSS pixels    | `16`                                 |
+| `font.lineHeight`         | number from 1.0 through 2.0             | `1.0`                                |
+| `terminal.padding.top`    | integer from 0 through 128 CSS pixels   | `0`                                  |
+| `terminal.padding.right`  | integer from 0 through 128 CSS pixels   | `8`                                  |
+| `terminal.padding.bottom` | integer from 0 through 128 CSS pixels   | `8`                                  |
+| `terminal.padding.left`   | integer from 0 through 128 CSS pixels   | `8`                                  |
+| `scrollback.lines`        | integer from 0 through 100,000          | `10000`                              |
+| `keyboard.optionAsAlt`    | `none`, `left`, `right`, or `both`      | `none`                               |
+| `window.alwaysOnTop`      | boolean                                 | `false`                              |
+| `theme.path`              | non-empty filesystem path without NUL   | bundled `omtheme`                    |
+
+The configured top padding begins below a fixed 30 px native title and drag
+inset. `font.lineHeight` changes row height independently of glyph size.
+Window Font Zoom and the native Always on Top menu are per-window runtime
+actions and never rewrite this file.
+
+## Terminal Themes
+
+A Terminal Theme is a complete OMXTerm palette stored as strict JSON. Start
+with the [canonical `omtheme` file](omtheme.json), copy it under your
+configuration directory, and change the copy.
+
+Select it with a path relative to `config.json`:
+
+```json
+{
+  "version": 1,
+  "theme": {
+    "path": "./themes/my-theme.json"
+  }
+}
+```
+
+Absolute paths are used as written. Relative paths are resolved from the
+directory containing `config.json`. OMXTerm does not expand `~`, environment
+variables, shell syntax, or URLs in `theme.path`. A symlink is accepted when its
+final target is a readable regular file.
+
+The theme root must contain exactly:
+
+- `version`, with the value `1`;
+- `name`, a printable non-empty single line of at most 64 Unicode code points;
+- `colors`, containing the five interface colors and all 16 normal and bright
+  ANSI colors shown in [`omtheme.json`](omtheme.json).
+
+Every color is an exact hexadecimal `#RRGGBB` value. Partial palettes,
+transparency, CSS colors, inheritance, and imports are unsupported.
+
+### Converting a Ghostty theme
+
+The source repository contains an optional conversion helper. It is not an
+OMXTerm application feature, supported import format, network service, or part
+of the configuration schema.
+
+From an OMXTerm source checkout, convert a downloaded Ghostty theme with:
+
+```sh
+node scripts/convert-ghostty-theme.mjs \
+  ~/Downloads/catppuccin-mocha \
+  ~/.config/omxterm/themes/catppuccin-mocha.json
+```
+
+If the output path is omitted, the converted JSON is printed to standard
+output. The input filename becomes the OMXTerm theme name. The helper requires
+the Ghostty file to define background, foreground, cursor, selection, and all
+16 palette colors.
+
+Otávio created local themes by downloading Ghostty palettes from
+[TerminalColors](https://terminalcolors.com/ghostty/) and passing them through
+this helper. A conversion changes file syntax only: it does not establish the
+theme's authorship, provenance, license, security, or suitability for
+redistribution. Review a theme's source and rights before using or publishing
+it. OMXTerm's own startup validation remains the authority on whether the
+converted result is a valid Terminal Theme.
+
+## Troubleshooting
+
+OMXTerm reports the configuration path and, when relevant, the resolved theme
+path. Common startup failures are:
+
+- a trailing comma, comment, or other syntax that is not valid JSON;
+- an unknown or misspelled key;
+- a missing installed font family;
+- an out-of-range number or non-integral size or padding value;
+- a `theme.path` resolved somewhere other than expected;
+- a missing, unreadable, non-regular, or invalid theme file;
+- a partial palette or a color that is not exactly `#RRGGBB`.
+
+Fix the reported file and restart OMXTerm. It does not silently ignore invalid
+preferences or fall back to the bundled theme after an external theme was
+explicitly selected.

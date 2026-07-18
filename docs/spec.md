@@ -107,6 +107,10 @@ OSC 8 destinations and all other schemes are ignored.
 
 ## Configuration and local state
 
+This section is the normative configuration contract. The
+[User Configuration guide](configuration.md) provides non-normative examples,
+field reference, theme conversion guidance, and troubleshooting.
+
 OMXTerm reads an optional configuration from
 `$XDG_CONFIG_HOME/omxterm/config.json`, falling back to
 `~/.config/omxterm/config.json`. Absence uses defaults and does not create a
@@ -190,9 +194,11 @@ Surface.
 
 ## Release contract
 
-The project uses the MIT License. An accepted version may be tagged `v0.x.y`.
-Otávio builds and tests the exact arm64 `.dmg` locally, then attaches it and a
-SHA-256 checksum to the canonical GitHub Release.
+The project uses the MIT License and follows the documented
+[Semantic Versioning policy](versioning.md). An accepted initial-development
+version may be tagged `v0.y.z`. Otávio builds and tests the exact arm64 `.dmg`
+locally, then attaches it and a SHA-256 checksum to the canonical GitHub
+Release.
 
 The artifact is intentionally unsigned and not notarized. Release notes must
 explain the macOS Gatekeeper warning, link to Apple's current `Open Anyway`

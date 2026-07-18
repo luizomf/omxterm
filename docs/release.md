@@ -4,11 +4,23 @@ This procedure prepares and verifies the unsigned OMXTerm Release Artifact. It
 does not authorize a tag, GitHub Release, upload, signing, notarization, or any
 other publication. Those actions require separate approval from Otávio.
 
+## Version selection and consistency
+
+Select the release version under the [versioning policy](versioning.md) in an
+explicitly authorized release preparation issue. This procedure does not choose
+or increment a version by itself. The placeholder `0.0.0` is never releasable.
+
+Before building a release candidate, confirm that `package.json` and
+`package-lock.json` contain the same accepted `X.Y.Z` version. The application
+version, intended `vX.Y.Z` tag, `TERM_PROGRAM_VERSION`, DMG filename, checksum
+filename, and GitHub Release must all identify that same version.
+
 ## Build and automated verification
 
-Use an accepted `v0.x.y` source state on the Supported Platform: Otávio's
-current Apple Silicon (`arm64`) Mac. Install Node.js 22 or newer, check out the
-accepted source without local or private files, and run:
+Use an accepted release commit for `X.Y.Z`, with `vX.Y.Z` recorded as the
+intended tag, on the Supported Platform: Otávio's current Apple Silicon
+(`arm64`) Mac. Install Node.js 22 or newer, check out the accepted source
+without local or private files, and run:
 
 ```sh
 npm ci
@@ -35,9 +47,11 @@ completed the manual checklist below.
 
 ## Exact-artifact record
 
-Record the following before manual testing. Use `UNEXECUTED` for every item the
-environment cannot genuinely observe; do not infer a pass from build output,
-process existence, or automated test results.
+Create the following record before manual testing, fill in every value already
+known, and keep the publication gate `BLOCKED`. Complete the results, SHA-256,
+unexecuted reasons, and final gate as their required steps finish. Use
+`UNEXECUTED` for every item the environment cannot genuinely observe; do not
+infer a pass from build output, process existence, or automated test results.
 
 ```text
 Source commit:
@@ -119,9 +133,13 @@ the unpacked build directory or a previous installation.
   remove the copied app and disposable test configuration/state after recording
   evidence.
 
-Any failed or unexecuted item keeps every future tag, GitHub Release, attachment,
-or upload blocked. Missing exact-artifact manual evidence does not prevent a
-preparatory packaging change from merging, but it does prevent publication.
+Any failed required item or any unexplained unexecuted item keeps every future
+tag, GitHub Release, attachment, or upload blocked. The Gatekeeper observation
+may remain `UNEXECUTED` only when the locally built DMG has no download
+quarantine and that reason is recorded; this conditional observation does not
+by itself block publication, but the required Gatekeeper release guidance still
+applies. Missing exact-artifact manual evidence does not prevent a preparatory
+packaging change from merging, but it does prevent publication.
 
 ## SHA-256
 
@@ -158,9 +176,12 @@ Only after Otávio accepts the exact-artifact record and separately authorizes
 publication:
 
 1. confirm the canonical repository is `luizomf/omxterm`, the accepted source is
-   tagged `v0.x.y`, and the DMG/checksum still match the accepted record;
+   tagged `vX.Y.Z`, and the package metadata, DMG, and checksum still match the
+   accepted record;
 2. create the canonical GitHub Release for that exact tag with the Gatekeeper
-   and provenance note above;
+   and provenance note above; summarize material changes, identify incompatible
+   changes and migration or state that there are none, and record relevant
+   known limitations;
 3. attach exactly `OMXTerm-<version>-arm64.dmg` and
    `OMXTerm-<version>-arm64.dmg.sha256` manually;
 4. download both attachments, verify the checksum again, and preserve the final
