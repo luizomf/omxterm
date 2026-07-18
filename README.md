@@ -2,9 +2,10 @@
 
 OMXTerm is an open-source personal desktop terminal for Apple Silicon macOS.
 
-The project is in initial development and does not have a published release
-yet. The current `0.0.0` package version is an unreleased placeholder, not an
-installable version.
+The source version is `0.1.0`, selected as the intended first public version.
+There is no public download, `v0.1.0` tag, or GitHub Release yet. Any DMG built
+from the current source is an unsigned, non-notarized verification artifact,
+not a published release.
 
 ## Development
 
@@ -62,6 +63,7 @@ migrates, or reloads the file.
 - [First-release specification](docs/spec.md)
 - [Versioning policy](docs/versioning.md)
 - [Local arm64 release procedure](docs/release.md)
+- [0.1.0 release-note draft](docs/releases/0.1.0.md)
 - [Domain language](CONTEXT.md)
 - [Architecture decisions](docs/adr/)
 

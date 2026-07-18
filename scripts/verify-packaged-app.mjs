@@ -206,6 +206,26 @@ async function inspectApplicationIcon(applicationPath) {
   }
 }
 
+async function inspectApplicationVersion(applicationPath) {
+  const packageMetadata = JSON.parse(
+    await readFile(path.join(projectRoot, "package.json"), "utf8"),
+  );
+  const infoPlist = path.join(applicationPath, "Contents", "Info.plist");
+  const { stdout } = await execFile("plutil", [
+    "-extract",
+    "CFBundleShortVersionString",
+    "raw",
+    "-o",
+    "-",
+    infoPlist,
+  ]);
+  const installedVersion = stdout.trim();
+  if (installedVersion !== packageMetadata.version)
+    throw new Error(
+      `Packaged application version ${installedVersion} differs from package version ${packageMetadata.version}`,
+    );
+}
+
 function waitForExit(child, timeoutMs) {
   return new Promise((resolve) => {
     if (child.exitCode !== null || child.signalCode !== null)
@@ -299,6 +319,7 @@ export async function verifyPackagedApplication(
     "node-pty spawn helper",
   );
   await inspectApplicationIcon(applicationPath);
+  await inspectApplicationVersion(applicationPath);
   await inspectUnsignedApplication(applicationPath);
 
   const asarInspection = inspectAsarEntries(await listPackage(asar));
