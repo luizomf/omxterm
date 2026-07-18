@@ -13,10 +13,14 @@ export interface LocalTerminalSession {
   close(): void;
 }
 
+export interface ApplicationVersionProvider {
+  getVersion(): string;
+}
+
 export interface LocalTerminalSessionOptions {
   readonly shell: string;
   readonly homeDirectory: string;
-  readonly applicationVersion: string;
+  readonly applicationVersionProvider: ApplicationVersionProvider;
   readonly environment: NodeJS.ProcessEnv;
   readonly onOutput: (data: string) => void;
   readonly onExit: (exit: TerminalExit) => void;
@@ -41,7 +45,7 @@ export function createLocalTerminalSession(
         TERM: "xterm-256color",
         COLORTERM: "truecolor",
         TERM_PROGRAM: "OMXTerm",
-        TERM_PROGRAM_VERSION: options.applicationVersion,
+        TERM_PROGRAM_VERSION: options.applicationVersionProvider.getVersion(),
       },
       cols: 80,
       rows: 24,

@@ -1,4 +1,4 @@
-import { listPackage } from "@electron/asar";
+import { extractFile, listPackage } from "@electron/asar";
 import { execFile as execFileCallback, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -206,9 +206,48 @@ async function inspectApplicationIcon(applicationPath) {
   }
 }
 
-async function inspectApplicationVersion(applicationPath) {
-  const packageMetadata = JSON.parse(
-    await readFile(path.join(projectRoot, "package.json"), "utf8"),
+export function inspectApplicationVersions({
+  sourceVersion,
+  packagedVersion,
+  bundleVersion,
+}) {
+  if (packagedVersion !== sourceVersion)
+    throw new Error(
+      `Packaged app.asar package version ${packagedVersion} differs from source package version ${sourceVersion}`,
+    );
+  if (bundleVersion !== sourceVersion)
+    throw new Error(
+      `Packaged CFBundleShortVersionString ${bundleVersion} differs from source package version ${sourceVersion}`,
+    );
+}
+
+function parsePackageVersion(contents, label) {
+  let metadata;
+  try {
+    metadata = JSON.parse(contents);
+  } catch (cause) {
+    throw new Error(`${label} is not valid JSON`, { cause });
+  }
+  if (typeof metadata.version !== "string" || metadata.version.length === 0)
+    throw new Error(`${label} does not contain a non-empty version`);
+  return metadata.version;
+}
+
+async function inspectApplicationVersion(applicationPath, asar) {
+  const sourcePackagePath = path.join(projectRoot, "package.json");
+  const sourceVersion = parsePackageVersion(
+    await readFile(sourcePackagePath, "utf8"),
+    sourcePackagePath,
+  );
+  let packagedPackage;
+  try {
+    packagedPackage = extractFile(asar, "package.json");
+  } catch (cause) {
+    throw new Error(`Could not extract package.json from ${asar}`, { cause });
+  }
+  const packagedVersion = parsePackageVersion(
+    packagedPackage.toString("utf8"),
+    `${asar}/package.json`,
   );
   const infoPlist = path.join(applicationPath, "Contents", "Info.plist");
   const { stdout } = await execFile("plutil", [
@@ -219,11 +258,11 @@ async function inspectApplicationVersion(applicationPath) {
     "-",
     infoPlist,
   ]);
-  const installedVersion = stdout.trim();
-  if (installedVersion !== packageMetadata.version)
-    throw new Error(
-      `Packaged application version ${installedVersion} differs from package version ${packageMetadata.version}`,
-    );
+  inspectApplicationVersions({
+    sourceVersion,
+    packagedVersion,
+    bundleVersion: stdout.trim(),
+  });
 }
 
 function waitForExit(child, timeoutMs) {
@@ -319,7 +358,7 @@ export async function verifyPackagedApplication(
     "node-pty spawn helper",
   );
   await inspectApplicationIcon(applicationPath);
-  await inspectApplicationVersion(applicationPath);
+  await inspectApplicationVersion(applicationPath, asar);
   await inspectUnsignedApplication(applicationPath);
 
   const asarInspection = inspectAsarEntries(await listPackage(asar));

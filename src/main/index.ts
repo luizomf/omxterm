@@ -135,7 +135,7 @@ app
                 return createLocalTerminalSession(nodePty.spawn, {
                   shell: defaultShell,
                   homeDirectory: account.homedir,
-                  applicationVersion: app.getVersion(),
+                  applicationVersionProvider: app,
                   environment: process.env,
                   ...callbacks,
                 });

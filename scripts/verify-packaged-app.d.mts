@@ -18,6 +18,14 @@ export function inspectIcnsRepresentations(
   readonly wrongDimensions: string[];
 };
 
+export interface ApplicationVersions {
+  readonly sourceVersion: string;
+  readonly packagedVersion: string;
+  readonly bundleVersion: string;
+}
+
+export function inspectApplicationVersions(versions: ApplicationVersions): void;
+
 export function verifyPackagedApplication(applicationPath?: string): Promise<{
   readonly applicationPath: string;
   readonly records: number;

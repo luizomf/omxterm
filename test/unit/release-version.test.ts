@@ -15,10 +15,6 @@ const lockMetadata = JSON.parse(readRepositoryFile("package-lock.json")) as {
   packages: Record<string, { version?: string }>;
 };
 const builderConfiguration = readRepositoryFile("electron-builder.yml");
-const mainSource = readRepositoryFile("src/main/index.ts");
-const localTerminalSessionSource = readRepositoryFile(
-  "src/main/local-terminal-session.ts",
-);
 
 function builderValue(name: string): string {
   const match = builderConfiguration.match(new RegExp(`^${name}: (.+)$`, "mu"));
@@ -32,13 +28,6 @@ describe("release version consistency", () => {
     expect(packageMetadata.version).toBe("0.1.0");
     expect(lockMetadata.version).toBe(packageMetadata.version);
     expect(lockMetadata.packages[""]?.version).toBe(packageMetadata.version);
-  });
-
-  it("passes Electron's installed application version to the PTY environment", () => {
-    expect(mainSource).toMatch(/applicationVersion:\s*app\.getVersion\(\)/u);
-    expect(localTerminalSessionSource).toMatch(
-      /TERM_PROGRAM_VERSION:\s*options\.applicationVersion/u,
-    );
   });
 
   it("derives the exact DMG and checksum names from builder metadata", () => {

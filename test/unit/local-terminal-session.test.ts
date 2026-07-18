@@ -43,10 +43,11 @@ describe("local PTY Adapter", () => {
     const spawn = vi.fn<SpawnPty>(() => harness.pty);
     const onOutput = vi.fn();
     const onExit = vi.fn();
+    const getVersion = vi.fn(() => "1.2.3");
     const session = createLocalTerminalSession(spawn, {
       shell: "/bin/example-shell",
       homeDirectory: "/Users/example",
-      applicationVersion: "1.2.3",
+      applicationVersionProvider: { getVersion },
       environment: {
         PATH: "/usr/bin",
         TERM: "inherited-term",
@@ -60,6 +61,7 @@ describe("local PTY Adapter", () => {
       onExit,
     });
 
+    expect(getVersion).toHaveBeenCalledOnce();
     expect(spawn).toHaveBeenCalledWith("/bin/example-shell", ["-l"], {
       cwd: "/Users/example",
       env: {
@@ -94,7 +96,7 @@ describe("local PTY Adapter", () => {
     const session = createLocalTerminalSession(() => harness.pty, {
       shell: "/bin/example-shell",
       homeDirectory: "/Users/example",
-      applicationVersion: "1.2.3",
+      applicationVersionProvider: { getVersion: () => "1.2.3" },
       environment: {},
       onOutput: vi.fn(),
       onExit,
@@ -125,7 +127,7 @@ describe("local PTY Adapter", () => {
         {
           shell: "/bin/example-shell",
           homeDirectory: "/Users/example",
-          applicationVersion: "1.2.3",
+          applicationVersionProvider: { getVersion: () => "1.2.3" },
           environment,
           onOutput: vi.fn(),
           onExit: vi.fn(),
@@ -145,7 +147,7 @@ describe("local PTY Adapter", () => {
         {
           shell: "/bin/example-shell",
           homeDirectory: "/Users/example",
-          applicationVersion: "1.2.3",
+          applicationVersionProvider: { getVersion: () => "1.2.3" },
           environment,
           onOutput: vi.fn(),
           onExit: vi.fn(),

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   inspectAsarEntries,
+  inspectApplicationVersions,
   inspectIcnsRepresentations,
 } from "../../scripts/verify-packaged-app.mjs";
 
@@ -20,6 +21,30 @@ const requiredEntries = [
 ];
 
 describe("packaged application verifier", () => {
+  it("requires source, embedded package, and bundle versions to agree", () => {
+    expect(() =>
+      inspectApplicationVersions({
+        sourceVersion: "0.1.0",
+        packagedVersion: "0.1.0",
+        bundleVersion: "0.1.0",
+      }),
+    ).not.toThrow();
+    expect(() =>
+      inspectApplicationVersions({
+        sourceVersion: "0.1.0",
+        packagedVersion: "0.0.0",
+        bundleVersion: "0.1.0",
+      }),
+    ).toThrow("app.asar package version 0.0.0");
+    expect(() =>
+      inspectApplicationVersions({
+        sourceVersion: "0.1.0",
+        packagedVersion: "0.1.0",
+        bundleVersion: "0.0.0",
+      }),
+    ).toThrow("CFBundleShortVersionString 0.0.0");
+  });
+
   it("requires every standard and Retina macOS icon representation", () => {
     const representations = [
       { name: "icon_16x16.png", width: 16, height: 16 },

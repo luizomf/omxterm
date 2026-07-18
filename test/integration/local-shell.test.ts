@@ -23,7 +23,7 @@ describe.skipIf(!supportedEnvironment)("real local PTY", () => {
       session = createLocalTerminalSession(nodePty.spawn, {
         shell: defaultShell,
         homeDirectory: account.homedir,
-        applicationVersion: "9.8.7-test",
+        applicationVersionProvider: { getVersion: () => "9.8.7-test" },
         environment: {
           ...process.env,
           OMXTERM_INHERITED_TEST: "inherited-value",
