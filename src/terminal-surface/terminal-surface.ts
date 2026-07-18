@@ -1,6 +1,5 @@
 import { FitAddon } from "@xterm/addon-fit";
-import { Terminal, type ITheme } from "@xterm/xterm";
-import omtheme from "../../docs/omtheme.json";
+import { Terminal } from "@xterm/xterm";
 import {
   isBoundedTerminalPayload,
   isTerminalSize,
@@ -25,6 +24,10 @@ import {
 import { registerOsc52Clipboard } from "./osc52-clipboard";
 import { registerTerminalTitleEvents } from "./terminal-title-events";
 import { ignoreOscLinks, registerVisibleWebLinks } from "./visible-web-links";
+import {
+  DEFAULT_TERMINAL_THEME,
+  type TerminalTheme,
+} from "../shared/terminal-theme";
 
 export interface TerminalSurface {
   focus(): void;
@@ -72,13 +75,12 @@ export interface TerminalSurfaceOptions {
   readonly optionKeyMode?: OptionKeyMode;
   readonly appearance?: TerminalAppearance;
   readonly padding?: TerminalPadding;
+  readonly theme?: TerminalTheme;
   readonly clipboard?: TerminalClipboard;
   readonly onTitleRequest?: (request: string) => void;
   readonly onBell?: () => void;
   readonly onExternalLink?: (url: string) => void;
 }
-
-const terminalTheme: ITheme = omtheme.colors;
 
 export async function mountTerminalSurface(
   container: HTMLElement,
@@ -87,6 +89,7 @@ export async function mountTerminalSurface(
 ): Promise<TerminalSurface> {
   const scrollbackLines = options.scrollbackLines ?? DEFAULT_SCROLLBACK_LINES;
   const optionKeyMode = options.optionKeyMode ?? "none";
+  const terminalTheme = options.theme ?? DEFAULT_TERMINAL_THEME;
   let appearance = resolveTerminalAppearance();
   let padding = DEFAULT_TERMINAL_PADDING;
 
@@ -241,6 +244,10 @@ export async function mountTerminalSurface(
       `${padding.bottom}px`,
     );
     container.style.setProperty("--terminal-padding-left", `${padding.left}px`);
+    container.style.setProperty(
+      "--terminal-background",
+      terminalTheme.colors.background,
+    );
 
     const mountedTerminal = new Terminal({
       cursorBlink: true,
@@ -250,7 +257,7 @@ export async function mountTerminalSurface(
       fontFamily: appearance.fontFamily,
       fontSize: appearance.fontSize,
       lineHeight: appearance.lineHeight,
-      theme: terminalTheme,
+      theme: terminalTheme.colors,
     });
     terminal = mountedTerminal;
     ignoredOscLinksSubscription = ignoreOscLinks(mountedTerminal);

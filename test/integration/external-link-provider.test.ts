@@ -3,6 +3,7 @@ import { Terminal, type ILink, type ILinkProvider } from "@xterm/xterm";
 import { describe, expect, it, vi } from "vitest";
 import type { TerminalBridge } from "../../src/shared/terminal-bridge";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import {
   registerTerminalIpcRouter,
   type IpcEvent,
@@ -116,6 +117,7 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
         terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
         scrollbackLines: 10_000,
         optionKeyMode: "none",
+        terminalTheme: DEFAULT_TERMINAL_THEME,
       },
       webContents,
       createSession: vi.fn(),

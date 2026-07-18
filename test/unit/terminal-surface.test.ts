@@ -804,6 +804,39 @@ describe("portable Terminal Surface", () => {
     surface.dispose();
   });
 
+  it("applies a supplied Terminal Theme to xterm and the complete Surface", async () => {
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { DEFAULT_TERMINAL_THEME } =
+      await import("../../src/shared/terminal-theme");
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const container = document.createElement("main");
+    const theme = Object.freeze({
+      ...DEFAULT_TERMINAL_THEME,
+      name: "non-black",
+      colors: Object.freeze({
+        ...DEFAULT_TERMINAL_THEME.colors,
+        background: "#1e1e2e",
+        foreground: "#cdd6f4",
+      }),
+    });
+
+    const surface = await mountTerminalSurface(container, adapter, { theme });
+
+    expect(xterm.FakeTerminal.current.constructorOptions.theme).toEqual(
+      theme.colors,
+    );
+    expect(container.style.getPropertyValue("--terminal-background")).toBe(
+      "#1e1e2e",
+    );
+    surface.dispose();
+  });
+
   it("applies row spacing independently of font size and keeps it through Window Font Zoom", async () => {
     const adapter = {
       start: vi.fn(async () => undefined),

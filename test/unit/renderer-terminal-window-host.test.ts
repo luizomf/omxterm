@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
 import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";
+import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import type { TerminalFontZoom } from "../../src/shared/terminal-contract";
 import type { TerminalSurface } from "../../src/terminal-surface/terminal-surface";
 
@@ -141,6 +142,7 @@ describe("renderer Terminal Window page host", () => {
       fontFamily: "SF Mono",
       scrollbackLines: 2_000,
       optionKeyMode: "right",
+      terminalTheme: DEFAULT_TERMINAL_THEME,
     } as const;
     const host = mountTerminalWindowPage(
       document.createElement("main"),
@@ -171,12 +173,55 @@ describe("renderer Terminal Window page host", () => {
         padding: { top: 4, right: 12, bottom: 6, left: 14 },
         scrollbackLines: 2_000,
         optionKeyMode: "right",
+        theme: DEFAULT_TERMINAL_THEME,
       },
     );
     expect(zoom).toHaveBeenCalledWith("in");
 
     host.dispose();
     expect(removeZoomListener).toHaveBeenCalledOnce();
+  });
+
+  it("applies a non-black theme to the page, root, Surface, and mount options", async () => {
+    const theme = Object.freeze({
+      ...DEFAULT_TERMINAL_THEME,
+      name: "non-black",
+      colors: Object.freeze({
+        ...DEFAULT_TERMINAL_THEME.colors,
+        background: "#1e1e2e",
+      }),
+    });
+    const container = document.createElement("main");
+    const mount = vi.fn(async () => createSurface());
+    const host = mountTerminalWindowPage(container, createAdapter(), {
+      page: window,
+      mount,
+      configuration: {
+        fontSize: 16,
+        fontLineHeight: 1,
+        terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
+        scrollbackLines: 10_000,
+        optionKeyMode: "none",
+        terminalTheme: theme,
+      },
+    });
+    await host.ready;
+
+    expect(
+      document.documentElement.style.getPropertyValue("--terminal-background"),
+    ).toBe("#1e1e2e");
+    expect(document.body.style.getPropertyValue("--terminal-background")).toBe(
+      "#1e1e2e",
+    );
+    expect(container.style.getPropertyValue("--terminal-background")).toBe(
+      "#1e1e2e",
+    );
+    expect(mount).toHaveBeenCalledWith(
+      container,
+      expect.any(Object),
+      expect.objectContaining({ theme }),
+    );
+    host.dispose();
   });
 
   it("routes native clipboard actions to the selected mounted Surface", async () => {

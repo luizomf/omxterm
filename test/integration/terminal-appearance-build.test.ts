@@ -72,7 +72,9 @@ describe("Terminal appearance build", () => {
     );
 
     expect(surfaceRule?.groups?.body).not.toContain("padding");
-    expect(surfaceRule?.groups?.body).toContain("background: #000000");
+    expect(surfaceRule?.groups?.body).toContain(
+      "background: var(--terminal-background, transparent)",
+    );
     expect(xtermRule?.groups?.body).toContain("box-sizing: border-box");
     expect(xtermRule?.groups?.body).toContain("width: 100%");
     expect(xtermRule?.groups?.body).toContain("height: 100%");

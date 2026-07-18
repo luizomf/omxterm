@@ -4,6 +4,7 @@ import {
   terminalWindowOptions,
 } from "../../src/main/terminal-window";
 import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
+import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 
 describe("Terminal Window startup contract", () => {
   const extremeGeometryConfiguration = Object.freeze({
@@ -41,6 +42,22 @@ describe("Terminal Window startup contract", () => {
       nodeIntegration: false,
       webSecurity: true,
     });
+  });
+
+  it("uses the resolved Terminal Theme background before renderer startup", () => {
+    const options = terminalWindowOptions("/application/preload.cjs", {
+      ...DEFAULT_USER_CONFIGURATION,
+      terminalTheme: Object.freeze({
+        ...DEFAULT_TERMINAL_THEME,
+        name: "non-black",
+        colors: Object.freeze({
+          ...DEFAULT_TERMINAL_THEME.colors,
+          background: "#1e1e2e",
+        }),
+      }),
+    });
+
+    expect(options.backgroundColor).toBe("#1e1e2e");
   });
 
   it("keeps the existing native minimums for common configuration", () => {

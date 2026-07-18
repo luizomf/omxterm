@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { startWithUserConfiguration } from "../../src/main/configured-startup";
+import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import {
   DEFAULT_USER_CONFIGURATION,
   loadUserConfiguration,
@@ -24,6 +25,14 @@ import {
 const configPath = "/isolated/config/omxterm/config.json";
 const installedFonts = new Set(["SF Mono", "Exact Family"]);
 const commonFontMetrics = Object.freeze({ cellWidth: 8, cellHeight: 16 });
+
+function externalTheme(background = "#1e1e2e") {
+  return {
+    version: 1,
+    name: "external-theme",
+    colors: { ...DEFAULT_TERMINAL_THEME.colors, background },
+  };
+}
 
 async function getInstalledFontFamilyMetrics(family: string) {
   return installedFonts.has(family) ? commonFontMetrics : undefined;
@@ -92,6 +101,7 @@ describe("strict version 1 User Configuration", () => {
       scrollbackLines: 0,
       optionKeyMode: "left",
       alwaysOnTop: true,
+      terminalTheme: DEFAULT_TERMINAL_THEME,
     });
   });
 
@@ -232,6 +242,11 @@ describe("strict version 1 User Configuration", () => {
     [{ version: 1, scrollback: { extra: 1 } }, "scrollback.extra"],
     [{ version: 1, keyboard: { extra: 1 } }, "keyboard.extra"],
     [{ version: 1, window: { extra: 1 } }, "window.extra"],
+    [{ version: 1, theme: {} }, "theme.path"],
+    [{ version: 1, theme: { path: "" } }, "theme.path"],
+    [{ version: 1, theme: { path: 42 } }, "theme.path"],
+    [{ version: 1, theme: { path: "bad\0path" } }, "theme.path"],
+    [{ version: 1, theme: { path: "theme.json", extra: true } }, "theme.extra"],
     [{ version: 1, confirmClose: 1 }, "confirmClose"],
     [{ version: 1, logLevel: "warn" }, "logLevel"],
     [{ version: 1, keyboard: { optionAsAlt: "alt" } }, "keyboard.optionAsAlt"],
@@ -395,6 +410,70 @@ describe("isolated User Configuration loading", () => {
     expect(configuration.fontSize).toBe(16);
     expect(configuration.configuredFontMetrics).toEqual(commonFontMetrics);
     expect(getMetrics).toHaveBeenCalledExactlyOnceWith("Exact Family", 16);
+  });
+
+  it.each(["relative", "absolute"])(
+    "loads a complete external theme from a %s path relative to config.json rules",
+    async (pathKind) => {
+      const { xdg, home, root } = await roots();
+      const configurationPath = path.join(xdg, "omxterm", "config.json");
+      const themePath =
+        pathKind === "relative"
+          ? path.join(xdg, "omxterm", "themes", "custom.json")
+          : path.join(root, "absolute-theme.json");
+      await mkdir(path.dirname(configurationPath), { recursive: true });
+      await mkdir(path.dirname(themePath), { recursive: true });
+      await writeFile(themePath, JSON.stringify(externalTheme()));
+      await writeFile(
+        configurationPath,
+        JSON.stringify({
+          version: 1,
+          theme: {
+            path: pathKind === "relative" ? "./themes/custom.json" : themePath,
+          },
+        }),
+      );
+
+      const configuration = await loadUserConfiguration({
+        environment: { XDG_CONFIG_HOME: xdg },
+        homeDirectory: home,
+        getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
+      });
+
+      expect(configuration.terminalTheme).toEqual(externalTheme());
+      expect(configuration.terminalTheme.colors.background).toBe("#1e1e2e");
+    },
+  );
+
+  it("reports both configuration and resolved theme paths without falling back", async () => {
+    const { xdg, home } = await roots();
+    const configurationPath = path.join(xdg, "omxterm", "config.json");
+    const resolvedThemePath = path.join(
+      xdg,
+      "omxterm",
+      "themes",
+      "missing.json",
+    );
+    await mkdir(path.dirname(configurationPath), { recursive: true });
+    await writeFile(
+      configurationPath,
+      JSON.stringify({
+        version: 1,
+        theme: { path: "./themes/missing.json" },
+      }),
+    );
+
+    await expect(
+      loadUserConfiguration({
+        environment: { XDG_CONFIG_HOME: xdg },
+        homeDirectory: home,
+        getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
+      }),
+    ).rejects.toMatchObject({
+      configurationPath,
+      location: "theme.path",
+      reason: expect.stringContaining(resolvedThemePath),
+    });
   });
 
   it("rejects an unavailable configured family without starting or changing the file", async () => {

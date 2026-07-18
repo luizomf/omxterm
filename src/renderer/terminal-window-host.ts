@@ -51,6 +51,16 @@ export function mountTerminalWindowPage(
   let removeClipboardActionListener: (() => void) | undefined;
   const onPageFocus = () => surface?.focus();
 
+  if (options.configuration) {
+    const background = options.configuration.terminalTheme.colors.background;
+    page.document.documentElement.style.setProperty(
+      "--terminal-background",
+      background,
+    );
+    page.document.body.style.setProperty("--terminal-background", background);
+    container.style.setProperty("--terminal-background", background);
+  }
+
   const dispose = () => {
     if (disposed) return;
     disposed = true;
@@ -83,6 +93,7 @@ export function mountTerminalWindowPage(
           scrollbackLines: options.configuration.scrollbackLines,
           padding: options.configuration.terminalPadding,
           optionKeyMode: options.configuration.optionKeyMode,
+          theme: options.configuration.terminalTheme,
         }
       : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),

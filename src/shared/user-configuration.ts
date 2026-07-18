@@ -1,3 +1,5 @@
+import { isTerminalTheme, type TerminalTheme } from "./terminal-theme";
+
 export const MIN_TERMINAL_FONT_SIZE = 8;
 export const MAX_TERMINAL_FONT_SIZE = 72;
 export const DEFAULT_TERMINAL_FONT_SIZE = 16;
@@ -32,6 +34,7 @@ export interface TerminalRendererConfiguration {
   readonly terminalPadding: TerminalPadding;
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
+  readonly terminalTheme: TerminalTheme;
 }
 
 export interface UserConfiguration {
@@ -45,6 +48,7 @@ export interface UserConfiguration {
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
   readonly alwaysOnTop: boolean;
+  readonly terminalTheme: TerminalTheme;
 }
 
 export function isTerminalRendererConfiguration(
@@ -61,6 +65,7 @@ export function isTerminalRendererConfiguration(
         "terminalPadding",
         "scrollbackLines",
         "optionKeyMode",
+        "terminalTheme",
       ].includes(key),
     ) &&
     (value.fontFamily === undefined || typeof value.fontFamily === "string") &&
@@ -75,7 +80,8 @@ export function isTerminalRendererConfiguration(
     Number.isInteger(value.scrollbackLines) &&
     (value.scrollbackLines as number) >= 0 &&
     (value.scrollbackLines as number) <= MAX_SCROLLBACK_LINES &&
-    ["none", "left", "right", "both"].includes(value.optionKeyMode as string)
+    ["none", "left", "right", "both"].includes(value.optionKeyMode as string) &&
+    isTerminalTheme(value.terminalTheme)
   );
 }
 

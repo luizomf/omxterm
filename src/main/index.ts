@@ -95,6 +95,7 @@ app
           terminalPadding: userConfiguration.terminalPadding,
           scrollbackLines: userConfiguration.scrollbackLines,
           optionKeyMode: userConfiguration.optionKeyMode,
+          terminalTheme: userConfiguration.terminalTheme,
         });
         const terminalIpcRouter = registerTerminalIpcRouter(
           // Electron's public handler type contains `any`; isolate that boundary here.

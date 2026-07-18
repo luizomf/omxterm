@@ -18,6 +18,8 @@ import {
   MIN_TERMINAL_FONT_SIZE,
 } from "../shared/user-configuration";
 import type { InstalledFontFamilyMetrics } from "./installed-font-family";
+import { DEFAULT_TERMINAL_THEME } from "../shared/terminal-theme";
+import { loadTerminalTheme, TerminalThemeError } from "./terminal-theme";
 
 export {
   DEFAULT_SCROLLBACK_LINES,
@@ -45,6 +47,7 @@ export const DEFAULT_USER_CONFIGURATION: UserConfiguration = Object.freeze({
   scrollbackLines: DEFAULT_SCROLLBACK_LINES,
   optionKeyMode: "none",
   alwaysOnTop: false,
+  terminalTheme: DEFAULT_TERMINAL_THEME,
 });
 
 export class UserConfigurationError extends Error {
@@ -139,7 +142,26 @@ export async function loadUserConfiguration(
     configurationPath,
     new Set(declaredFontFamily === undefined ? [] : [declaredFontFamily]),
   );
-  if (preliminary.fontFamily === undefined) return preliminary;
+  const configuredThemePath = selectedTerminalThemePath(
+    document,
+    configurationPath,
+  );
+  let terminalTheme = DEFAULT_TERMINAL_THEME;
+  if (configuredThemePath) {
+    try {
+      terminalTheme = await loadTerminalTheme(configuredThemePath);
+    } catch (cause) {
+      if (cause instanceof TerminalThemeError)
+        throw new UserConfigurationError(
+          configurationPath,
+          "theme.path",
+          cause.message,
+        );
+      throw cause;
+    }
+  }
+  if (preliminary.fontFamily === undefined)
+    return Object.freeze({ ...preliminary, terminalTheme });
   const configuredFontMetrics = await checkFontMetrics(
     options,
     configurationPath,
@@ -152,7 +174,11 @@ export async function loadUserConfiguration(
       "font.family",
       "must exactly name an installed font family",
     );
-  return Object.freeze({ ...preliminary, configuredFontMetrics });
+  return Object.freeze({
+    ...preliminary,
+    terminalTheme,
+    configuredFontMetrics,
+  });
 }
 
 async function isPathAbsent(configurationPath: string): Promise<boolean> {
@@ -215,6 +241,7 @@ export function validateUserConfiguration(
     "scrollback",
     "keyboard",
     "window",
+    "theme",
   ]);
   if (!("version" in root)) fail(configurationPath, "version", "is required");
   if (root.version !== USER_CONFIGURATION_VERSION)
@@ -234,6 +261,7 @@ export function validateUserConfiguration(
   );
   const keyboard = optionalObject(root.keyboard, configurationPath, "keyboard");
   const window = optionalObject(root.window, configurationPath, "window");
+  const theme = optionalObject(root.theme, configurationPath, "theme");
   if (font)
     rejectUnknownKeys(font, configurationPath, "font", [
       "family",
@@ -255,6 +283,22 @@ export function validateUserConfiguration(
     rejectUnknownKeys(keyboard, configurationPath, "keyboard", ["optionAsAlt"]);
   if (window)
     rejectUnknownKeys(window, configurationPath, "window", ["alwaysOnTop"]);
+  if (theme) rejectUnknownKeys(theme, configurationPath, "theme", ["path"]);
+
+  if (theme) {
+    if (!("path" in theme))
+      fail(configurationPath, "theme.path", "is required");
+    if (
+      typeof theme.path !== "string" ||
+      theme.path.length === 0 ||
+      theme.path.includes("\0")
+    )
+      fail(
+        configurationPath,
+        "theme.path",
+        "must be a non-empty string without a NUL character",
+      );
+  }
 
   const fontFamily = font?.family;
   if (fontFamily !== undefined) {
@@ -364,7 +408,26 @@ export function validateUserConfiguration(
     scrollbackLines,
     optionKeyMode,
     alwaysOnTop,
+    terminalTheme: DEFAULT_TERMINAL_THEME,
   });
+}
+
+function selectedTerminalThemePath(
+  document: unknown,
+  configurationPath: string,
+): string | undefined {
+  if (
+    typeof document !== "object" ||
+    document === null ||
+    Array.isArray(document)
+  )
+    return undefined;
+  const theme = (document as Record<string, unknown>).theme;
+  if (theme === undefined) return undefined;
+  const selectedPath = (theme as Record<string, unknown>).path as string;
+  return path.isAbsolute(selectedPath)
+    ? selectedPath
+    : path.resolve(path.dirname(configurationPath), selectedPath);
 }
 
 function isNotFound(cause: unknown): boolean {

@@ -21,7 +21,8 @@ The first useful release must:
 - use one independent shell session per native Terminal Window;
 - provide native new-window, close, copy, paste, select-all, zoom, fullscreen,
   always-on-top, and quit actions without an in-window toolbar;
-- render the fixed [`omtheme`](omtheme.json) palette with JetBrainsMono Nerd
+- render the bundled [`omtheme`](omtheme.json) palette by default, allow one
+  explicitly configured external Terminal Theme, and use JetBrainsMono Nerd
   Font Mono bundled under its OFL license as the default and missing-glyph
   fallback;
 - use the accepted black-and-blue OMXTerm application icon in development and
@@ -31,8 +32,8 @@ The first useful release must:
 - package a ready-to-run arm64 `.dmg` from an accepted version.
 
 AI assistance, tabs, splits, saved or reconnectable sessions, shell integration,
-profiles, theme selection, live configuration reload, automatic updates, and
-remote terminal features are outside this release.
+profiles, a theme picker or catalog, live configuration reload, automatic
+updates, and remote terminal features are outside this release.
 
 ## Window and session behavior
 
@@ -61,8 +62,9 @@ remote terminal features are outside this release.
   as floors and grow at startup when configured font or padding needs more room
   for a visible terminal grid.
 - The Terminal Surface keeps a fixed 30 px native title/drag inset above the
-  configurable top padding. Its black background fills the complete Terminal
-  Window behind all configured padding.
+  configurable top padding. The selected Terminal Theme background fills the
+  complete app-controlled Terminal Window content, including the title inset
+  and all configured padding.
 - `Window -> Always on Top` toggles only the selected window at the ordinary
   native floating level. New windows use the configured default.
 - BEL is silent. An unfocused window prepends a bell marker to its title and
@@ -117,7 +119,8 @@ file. A present file must contain `"version": 1` and only supported keys:
   `terminal.padding.bottom`, and `terminal.padding.left`;
 - `scrollback.lines`;
 - `keyboard.optionAsAlt`: `none`, `left`, `right`, or `both`;
-- `window.alwaysOnTop`.
+- `window.alwaysOnTop`;
+- `theme.path`.
 
 The bundled JetBrainsMono Nerd Font Mono at 16 px is the default, matching the
 existing OMXTerm Web terminal baseline. `font.size` accepts only integral pixel
@@ -129,11 +132,32 @@ to top 0, right 8, bottom 8, and left 8. User top padding is added to the fixed,
 non-configurable 30 px native title inset. `logLevel` defaults to `info`,
 `keyboard.optionAsAlt` to `none`, and `window.alwaysOnTop` to `false`.
 
-Invalid JSON, unknown keys, unsupported versions, missing configured fonts,
-non-finite or out-of-range line heights, and non-integral or out-of-range
-padding values are errors. OMXTerm reports the exact problem through a native
-dialog and stderr, keeps the file unchanged, and requires restart after edits.
-It never migrates, repairs, rewrites, or silently ignores user configuration.
+An absent `theme` uses the bundled canonical [`omtheme`](omtheme.json). A
+present `theme` must contain exactly one required `path`: a non-empty string
+without a NUL character. Absolute paths are used as written; relative paths are
+resolved from the directory containing `config.json`. OMXTerm does not expand
+`~`, environment variables, shell syntax, or URLs. Symlinks are accepted only
+when their final target is a readable regular file. The Electron main process
+reads and resolves the theme once during startup and sends only the validated,
+typed palette through the existing configuration boundary.
+
+A Terminal Theme is strict JSON containing exactly `version`, `name`, and
+`colors`. Version must be `1`. The name is a non-empty printable single line of
+at most 64 Unicode code points. `colors` contains exactly the foreground,
+background, cursor, selection foreground and background, and all 16 normal and
+bright ANSI fields shown in [`omtheme`](omtheme.json). Every color is an exact,
+case-insensitive hexadecimal `#RRGGBB` value. Alpha colors, partial palettes,
+CSS names, functions or variables, inheritance, imports, transparency, blur,
+opacity, and tint are unsupported.
+
+Invalid JSON or UTF-8, unknown or missing keys, unsupported versions, missing
+configured fonts or theme files, non-regular theme targets, invalid theme
+fields or colors, non-finite or out-of-range line heights, and non-integral or
+out-of-range padding values are errors. OMXTerm reports the exact problem
+through a native dialog and stderr, includes the configured or resolved path
+when relevant, keeps both files unchanged, and requires restart after edits. It
+never migrates, repairs, rewrites, silently ignores user configuration, or
+falls back to `omtheme` after an external theme was explicitly selected.
 
 Operational logs are JSONL under `$XDG_STATE_HOME/omxterm/logs`, falling back to
 `~/.local/state/omxterm/logs`. Levels are `error`, `info`, and `debug`. Only the

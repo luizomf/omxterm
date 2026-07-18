@@ -51,7 +51,8 @@ optional. OMXTerm does not create, rewrite, migrate, or reload this file.
   },
   "scrollback": { "lines": 10000 },
   "keyboard": { "optionAsAlt": "none" },
-  "window": { "alwaysOnTop": false }
+  "window": { "alwaysOnTop": false },
+  "theme": { "path": "./themes/my-theme.json" }
 }
 ```
 
@@ -66,9 +67,10 @@ installed system font family.
 defaults to `0`, `8`, `8`, and `8`, respectively. The configured top padding is
 added below OMXTerm's fixed 30 px native title/drag inset, which cannot be
 configured, so zero top padding never overlaps the traffic-light controls or
-drag region. The black window background continues behind all padding. Native
-minimum window bounds remain at least 320 x 200 px and grow at startup when the
-configured font or padding needs more room for a visible terminal grid.
+drag region. The selected Terminal Theme background continues behind all
+padding. Native minimum window bounds remain at least 320 x 200 px and grow at
+startup when the configured font or padding needs more room for a visible
+terminal grid.
 
 For a flush configurable content box, set every padding side to `0`. A roomier
 example is `{"top":8,"right":12,"bottom":8,"left":12}`.
@@ -77,6 +79,29 @@ example is `{"top":8,"right":12,"bottom":8,"left":12}`.
 `right`, or `both`. Unknown keys and invalid values stop startup with an
 actionable error. OMXTerm reads configuration only at startup, so every edit
 requires restarting it.
+
+### Terminal Theme
+
+When `theme` is absent, OMXTerm uses the bundled canonical
+[`omtheme`](docs/omtheme.json). To use a separate theme, copy that complete
+example, edit the copy, and select it with `theme.path`. An absolute path is
+used as written; a relative path is resolved from the directory containing
+`config.json`. OMXTerm does not expand `~`, environment variables, shell
+syntax, or URLs. A symlink works when its final target is a readable regular
+file.
+
+The theme file is strict, versioned JSON. Its root must contain exactly
+`version`, `name`, and `colors`; `version` must be `1`; `name` must be a
+non-empty printable single line of at most 64 Unicode code points; and `colors`
+must contain every field shown in the canonical example. Each color must be an
+exact hexadecimal `#RRGGBB` value. Partial palettes, alpha colors, CSS
+names/functions/variables, inheritance, and imports are unsupported.
+
+An explicitly configured missing, unreadable, non-regular, invalid UTF-8,
+invalid JSON, or invalid theme stops startup with the configuration path,
+resolved theme path, and actionable reason. OMXTerm never falls back silently
+or changes either file. The theme is read once during startup, so theme and
+configuration changes require restarting OMXTerm.
 
 - [First-release specification](docs/spec.md)
 - [Domain language](CONTEXT.md)

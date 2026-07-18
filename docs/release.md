@@ -102,7 +102,13 @@ the unpacked build directory or a previous installation.
 - **Configuration:** verify absent configuration uses defaults without creating
   a file; verify a valid version 1 file after restart; verify invalid JSON,
   unknown keys, unsupported versions, invalid values, and missing fonts produce
-  actionable errors without rewriting the file.
+  actionable errors without rewriting the file. Verify the bundled `omtheme`
+  default, an absolute external theme path, a config-relative external theme
+  path, a valid symlink, and a non-black theme across the initial window,
+  title inset, padding, and terminal cells. Verify missing, unreadable,
+  non-regular, invalid UTF-8, invalid JSON, and invalid-schema theme files stop
+  startup without fallback or rewriting either file; verify theme changes take
+  effect only after restart.
 - **Operational logs:** verify current/previous JSONL retention, configured log
   levels, bounded permissions and size, useful lifecycle/failure metadata, and
   absence of Terminal Payload, clipboard data, commands, titles, environment,

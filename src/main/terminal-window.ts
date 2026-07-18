@@ -19,6 +19,7 @@ type TerminalWindowGeometryConfiguration = Pick<
   | "terminalPadding"
   | "scrollbackLines"
   | "configuredFontMetrics"
+  | "terminalTheme"
 >;
 
 export function terminalWindowOptions(
@@ -31,6 +32,7 @@ export function terminalWindowOptions(
     terminalPadding,
     scrollbackLines,
     configuredFontMetrics,
+    terminalTheme,
   } = configuration;
   const cellWidth = configuredFontMetrics?.cellWidth ?? fontSize;
   const baseCellHeight =
@@ -62,6 +64,7 @@ export function terminalWindowOptions(
     show: false,
     title: "OMXTerm",
     titleBarStyle: "hiddenInset",
+    backgroundColor: terminalTheme.colors.background,
     webPreferences: {
       preload: preloadPath,
       sandbox: true,

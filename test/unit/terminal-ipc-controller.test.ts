@@ -7,6 +7,7 @@ import {
 } from "../../src/main/terminal-ipc-controller";
 import type { LocalTerminalSession } from "../../src/main/local-terminal-session";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 
 function createIpcHarness() {
   const handlers = new Map<
@@ -36,6 +37,7 @@ function clipboardOptions() {
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
       scrollbackLines: 10_000,
       optionKeyMode: "none" as const,
+      terminalTheme: DEFAULT_TERMINAL_THEME,
     },
     writeClipboardText: vi.fn(),
     readClipboardText: vi.fn(() => "clipboard text"),
@@ -135,6 +137,7 @@ describe("terminal IPC controller", () => {
       }),
       scrollbackLines: 500,
       optionKeyMode: "right" as const,
+      terminalTheme: DEFAULT_TERMINAL_THEME,
     });
     const router = registerTerminalIpcRouter(ipc.ipcMain);
     router.registerController({

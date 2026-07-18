@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { Terminal } from "@xterm/xterm";
 import type { TerminalBridge } from "../../src/shared/terminal-bridge";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import {
   registerTerminalIpcRouter,
   type IpcEvent,
@@ -138,6 +139,7 @@ describe("isolated preload terminal bridge", () => {
         terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
         scrollbackLines: 10_000,
         optionKeyMode: "none",
+        terminalTheme: DEFAULT_TERMINAL_THEME,
       },
       webContents,
       createSession: vi.fn(() => ({
@@ -231,6 +233,7 @@ describe("isolated preload terminal bridge", () => {
       terminalPadding: { top: 0, right: 12, bottom: 8, left: 12 },
       scrollbackLines: 500,
       optionKeyMode: "right",
+      terminalTheme: DEFAULT_TERMINAL_THEME,
     });
     await expect(bridge.configuration()).resolves.toEqual({
       fontFamily: "SF Mono",
@@ -239,8 +242,21 @@ describe("isolated preload terminal bridge", () => {
       terminalPadding: { top: 0, right: 12, bottom: 8, left: 12 },
       scrollbackLines: 500,
       optionKeyMode: "right",
+      terminalTheme: DEFAULT_TERMINAL_THEME,
     });
     electron.invoke.mockResolvedValueOnce({ fontSize: "18" });
+    await expect(bridge.configuration()).rejects.toThrow(TypeError);
+    electron.invoke.mockResolvedValueOnce({
+      fontSize: 18,
+      fontLineHeight: 1,
+      terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
+      scrollbackLines: 500,
+      optionKeyMode: "none",
+      terminalTheme: {
+        ...DEFAULT_TERMINAL_THEME,
+        colors: { ...DEFAULT_TERMINAL_THEME.colors, background: "black" },
+      },
+    });
     await expect(bridge.configuration()).rejects.toThrow(TypeError);
     electron.invoke.mockResolvedValueOnce({
       fontSize: 18,
