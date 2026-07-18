@@ -27,6 +27,7 @@ import { registerTerminalTitleEvents } from "./terminal-title-events";
 import { ignoreOscLinks, registerVisibleWebLinks } from "./visible-web-links";
 
 export interface TerminalSurface {
+  focus(): void;
   zoom(command: TerminalFontZoom): void;
   copy(): Promise<void>;
   paste(): Promise<void>;
@@ -107,6 +108,9 @@ export async function mountTerminalSurface(
   };
 
   const surface: TerminalSurface = {
+    focus() {
+      if (!disposed) terminal?.focus();
+    },
     zoom(command) {
       if (disposed || !terminal || !fitAddon) return;
       const currentSize = terminal.options.fontSize ?? appearance.fontSize;

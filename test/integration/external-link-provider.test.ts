@@ -155,6 +155,7 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
             options as { readonly onExternalLink?: (url: string) => void }
           ).onExternalLink;
           return {
+            focus: vi.fn(),
             zoom: vi.fn(),
             copy: vi.fn(async () => {}),
             paste: vi.fn(async () => {}),

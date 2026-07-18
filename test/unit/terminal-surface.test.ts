@@ -17,6 +17,7 @@ const xterm = vi.hoisted(() => {
     static instances: FakeTerminal[] = [];
     readonly write = vi.fn();
     readonly paste = vi.fn((data: string) => this.onInput?.(data));
+    readonly focus = vi.fn();
     readonly selectAll = vi.fn();
     readonly getSelection = vi.fn(() => this.selection);
     readonly modes = { bracketedPasteMode: false };
@@ -202,6 +203,28 @@ describe("portable Terminal Surface", () => {
     expect(FakeResizeObserver.current.disconnect).toHaveBeenCalledOnce();
     expect(xterm.FakeTerminal.current.dispose).toHaveBeenCalledOnce();
     expect(xterm.fitDispose).toHaveBeenCalledOnce();
+  });
+
+  it("delegates focus to xterm only while mounted", async () => {
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+    );
+
+    surface.focus();
+    expect(xterm.FakeTerminal.current.focus).toHaveBeenCalledOnce();
+
+    surface.dispose();
+    surface.focus();
+    expect(xterm.FakeTerminal.current.focus).toHaveBeenCalledOnce();
   });
 
   it("refits through the observed container after shrinking and growing", async () => {

@@ -37,6 +37,10 @@ remote terminal features are outside this release.
 ## Window and session behavior
 
 - Launching OMXTerm creates a Terminal Window. `Cmd+N` creates another.
+- After its Terminal Surface mounts, an active Terminal Window gives terminal
+  input DOM focus. Returning from another application or another OMXTerm window
+  restores that focus only in the active Terminal Window without activating,
+  raising, or showing OMXTerm by itself.
 - Every Terminal Window can be repositioned through its visible native title
   area while the Terminal Surface remains fully interactive.
 - `Cmd+W` closes only the selected window. Closing its last window quits OMXTerm.

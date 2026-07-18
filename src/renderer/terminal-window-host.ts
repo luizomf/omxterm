@@ -16,7 +16,10 @@ type MountTerminalSurface = (
 
 interface TerminalWindowPageOptions {
   readonly configuration?: TerminalRendererConfiguration;
-  readonly page?: Pick<Window, "addEventListener" | "removeEventListener">;
+  readonly page?: Pick<
+    Window,
+    "addEventListener" | "removeEventListener" | "document"
+  >;
   readonly mount?: MountTerminalSurface;
   readonly subscribeToFontZoom?: (
     listener: (command: TerminalFontZoom) => void,
@@ -46,11 +49,13 @@ export function mountTerminalWindowPage(
   let surface: TerminalSurface | undefined;
   let removeZoomListener: (() => void) | undefined;
   let removeClipboardActionListener: (() => void) | undefined;
+  const onPageFocus = () => surface?.focus();
 
   const dispose = () => {
     if (disposed) return;
     disposed = true;
     page.removeEventListener("pagehide", onPageHide);
+    page.removeEventListener("focus", onPageFocus);
     removeZoomListener?.();
     removeClipboardActionListener?.();
     surface?.dispose();
@@ -59,6 +64,7 @@ export function mountTerminalWindowPage(
   const onPageHide = () => dispose();
 
   page.addEventListener("pagehide", onPageHide, { once: true });
+  page.addEventListener("focus", onPageFocus);
   const surfaceOptions = {
     ...(options.configuration
       ? {
@@ -95,6 +101,7 @@ export function mountTerminalWindowPage(
         return;
       }
       surface = mountedSurface;
+      if (page.document.hasFocus()) surface.focus();
       removeZoomListener = options.subscribeToFontZoom?.((command) =>
         surface?.zoom(command),
       );

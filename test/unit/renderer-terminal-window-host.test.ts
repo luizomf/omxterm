@@ -16,6 +16,7 @@ function createAdapter() {
 function createSurface(overrides: Record<string, unknown> = {}) {
   return {
     dispose: vi.fn(),
+    focus: vi.fn(),
     zoom: vi.fn(),
     copy: vi.fn(async () => undefined),
     paste: vi.fn(async () => undefined),
@@ -25,6 +26,68 @@ function createSurface(overrides: Record<string, unknown> = {}) {
 }
 
 describe("renderer Terminal Window page host", () => {
+  it("focuses a successfully mounted Surface when its page is active", async () => {
+    const focus = vi.fn();
+    const hasFocus = vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    const host = mountTerminalWindowPage(
+      document.createElement("main"),
+      createAdapter(),
+      {
+        page: window,
+        mount: vi.fn(async () => createSurface({ focus })),
+      },
+    );
+
+    await host.ready;
+
+    expect(focus).toHaveBeenCalledOnce();
+    hasFocus.mockRestore();
+    host.dispose();
+  });
+
+  it("focuses only after an inactive page becomes active", async () => {
+    const focus = vi.fn();
+    const hasFocus = vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    const host = mountTerminalWindowPage(
+      document.createElement("main"),
+      createAdapter(),
+      {
+        page: window,
+        mount: vi.fn(async () => createSurface({ focus })),
+      },
+    );
+
+    window.dispatchEvent(new Event("focus"));
+    await host.ready;
+    expect(focus).not.toHaveBeenCalled();
+
+    window.dispatchEvent(new Event("focus"));
+    expect(focus).toHaveBeenCalledOnce();
+
+    hasFocus.mockRestore();
+    host.dispose();
+  });
+
+  it("removes page activation focus on disposal", async () => {
+    const focus = vi.fn();
+    const hasFocus = vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    const host = mountTerminalWindowPage(
+      document.createElement("main"),
+      createAdapter(),
+      {
+        page: window,
+        mount: vi.fn(async () => createSurface({ focus })),
+      },
+    );
+    await host.ready;
+
+    host.dispose();
+    window.dispatchEvent(new Event("focus"));
+
+    expect(focus).not.toHaveBeenCalled();
+    hasFocus.mockRestore();
+  });
+
   it("disposes the mounted Surface exactly once on page teardown", async () => {
     const dispose = vi.fn();
     const host = mountTerminalWindowPage(
