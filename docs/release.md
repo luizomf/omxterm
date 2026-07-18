@@ -87,7 +87,7 @@ the unpacked build directory or a previous installation.
   `COLORTERM`, `TERM_PROGRAM`, and `TERM_PROGRAM_VERSION`; in fresh windows, run
   `exit 0` and `exit 7`, and confirm each Terminal Window closes without a
   failure dialog.
-- **Abnormal shell exit:** in a fresh window, run `kill -TERM $$`; confirm the
+- **Abnormal shell exit:** in a fresh window, run `kill -s KILL $$`; confirm the
   failure stays visible in the native dialog until acknowledged and the
   unusable window then closes.
 - **Multiple windows and cleanup:** use `Cmd+N` for at least two independent
