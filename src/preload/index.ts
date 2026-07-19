@@ -5,12 +5,15 @@ import {
   isBoundedTerminalPayload,
   isNonemptyClipboardText,
   isTerminalClipboardAction,
-  isTerminalExit,
   isTerminalFontZoom,
+  isTerminalSessionExit,
+  isTerminalSessionId,
+  isTerminalSessionOutput,
   isTerminalSize,
   isTerminalTitleRequest,
   type TerminalExit,
   type TerminalFontZoom,
+  type TerminalSessionId,
   type TerminalSize,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
@@ -41,20 +44,29 @@ const terminal: TerminalBridge = {
       ipcRenderer.removeListener(terminalIpc.snippetsToggle, handler);
   },
   async start() {
-    await ipcRenderer.invoke(terminalIpc.start);
+    const sessionId: unknown = await ipcRenderer.invoke(terminalIpc.start);
+    if (!isTerminalSessionId(sessionId))
+      throw new TypeError("Invalid Live Terminal Session identifier");
+    return sessionId;
   },
-  input(data: string) {
-    if (!isBoundedTerminalPayload(data))
+  input(sessionId: TerminalSessionId, data: string) {
+    if (!isTerminalSessionId(sessionId) || !isBoundedTerminalPayload(data))
       throw new TypeError("Invalid terminal input payload");
-    ipcRenderer.send(terminalIpc.input, data);
+    ipcRenderer.send(terminalIpc.input, { sessionId, data });
   },
-  resize(size: TerminalSize) {
-    if (!isTerminalSize(size))
+  resize(sessionId: TerminalSessionId, size: TerminalSize) {
+    if (!isTerminalSessionId(sessionId) || !isTerminalSize(size))
       throw new TypeError("Invalid terminal resize payload");
-    ipcRenderer.send(terminalIpc.resize, size);
+    ipcRenderer.send(terminalIpc.resize, {
+      sessionId,
+      cols: size.cols,
+      rows: size.rows,
+    });
   },
-  close() {
-    ipcRenderer.send(terminalIpc.close);
+  close(sessionId: TerminalSessionId) {
+    if (!isTerminalSessionId(sessionId))
+      throw new TypeError("Invalid terminal close payload");
+    ipcRenderer.send(terminalIpc.close, { sessionId });
   },
   title(request: string) {
     if (!isTerminalTitleRequest(request))
@@ -69,16 +81,21 @@ const terminal: TerminalBridge = {
       throw new TypeError("Invalid External Link request");
     ipcRenderer.send(terminalIpc.externalLink, url);
   },
-  onOutput(listener: (data: string) => void) {
-    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => {
-      if (isBoundedTerminalPayload(data)) listener(data);
+  onOutput(listener: (sessionId: TerminalSessionId, data: string) => void) {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (isTerminalSessionOutput(payload))
+        listener(payload.sessionId, payload.data);
     };
     ipcRenderer.on(terminalIpc.output, handler);
     return () => ipcRenderer.removeListener(terminalIpc.output, handler);
   },
-  onExit(listener: (exit: TerminalExit) => void) {
-    const handler = (_event: Electron.IpcRendererEvent, exit: unknown) => {
-      if (isTerminalExit(exit)) listener(exit);
+  onExit(listener: (sessionId: TerminalSessionId, exit: TerminalExit) => void) {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (isTerminalSessionExit(payload))
+        listener(payload.sessionId, {
+          exitCode: payload.exitCode,
+          signal: payload.signal,
+        });
     };
     ipcRenderer.on(terminalIpc.exit, handler);
     return () => ipcRenderer.removeListener(terminalIpc.exit, handler);

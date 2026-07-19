@@ -1,8 +1,12 @@
-import type { TerminalExit } from "../shared/terminal-contract";
+import type {
+  TerminalExit,
+  TerminalSessionId,
+} from "../shared/terminal-contract";
 import {
   isNonemptyClipboardText,
-  isBoundedTerminalPayload,
-  isTerminalSize,
+  isTerminalSessionInput,
+  isTerminalSessionReference,
+  isTerminalSessionResize,
   isTerminalTitleRequest,
   requiresProtectedPaste,
 } from "../shared/terminal-contract";
@@ -73,7 +77,7 @@ export interface TerminalIpcRouter {
 
 interface RoutedTerminalIpcController extends TerminalIpcController {
   configuration(payload?: unknown): TerminalRendererConfiguration;
-  start(payload?: unknown): void;
+  start(payload?: unknown): TerminalSessionId;
   input(payload?: unknown): void;
   resize(payload?: unknown): void;
   close(payload?: unknown): void;
@@ -111,7 +115,7 @@ export function registerTerminalIpcRouter(
       });
       throw new Error("Rejected terminal IPC from an untrusted sender");
     }
-    controller.start(payload);
+    return controller.start(payload);
   };
   const configuration: IpcHandler = (event, payload) => {
     const controller = controllerFor(event);
@@ -268,16 +272,19 @@ export function registerTerminalIpcRouter(
   };
 }
 
+interface RoutedSessionState {
+  readonly session: LocalTerminalSession;
+  closed: boolean;
+}
+
 function createTerminalIpcController(
   options: TerminalIpcControllerOptions,
   operationalEvents: Pick<OperationalEventLog, "write"> | undefined,
   unregister: () => void,
 ): RoutedTerminalIpcController {
   let disposed = false;
-  let session: LocalTerminalSession | undefined;
-  let sessionClosed = false;
-  let starting = false;
-  let startedAt: number | undefined;
+  const sessions = new Map<TerminalSessionId, RoutedSessionState>();
+  let nextSessionNumber = 1;
   const windowId = options.windowId;
   const writeWindowEvent = (
     event: Parameters<OperationalEventLog["write"]>[0],
@@ -291,38 +298,51 @@ function createTerminalIpcController(
       | "invalid-payload"
       | "invalid-value"
       | "too-long"
-      | "invalid-characters",
+      | "invalid-characters"
+      | "unknown-session",
   ) =>
     operationalEvents?.write({ name: "boundary.rejected", boundary, reason });
 
-  const closeSession = () => {
-    if (!session || sessionClosed) return;
-    sessionClosed = true;
-    session.close();
+  const closeSession = (sessionId: TerminalSessionId) => {
+    const state = sessions.get(sessionId);
+    if (!state || state.closed) return;
+    state.closed = true;
+    state.session.close();
   };
 
-  const start = (payload?: unknown) => {
+  // A session-scoped payload is rejected before it is routed: an invalid shape
+  // never reaches a session, and a well-formed message may only address a
+  // session id this controller allocated for its own Terminal Window.
+  const routedSession = (
+    sessionId: TerminalSessionId,
+  ): RoutedSessionState | undefined => {
+    const state = sessions.get(sessionId);
+    if (!state) reject("ipc", "unknown-session");
+    return state;
+  };
+
+  const start = (payload?: unknown): TerminalSessionId => {
     if (payload !== undefined) {
       reject("ipc", "invalid-payload");
       throw new TypeError("Invalid terminal start payload");
     }
     if (disposed) throw new Error("Terminal IPC controller is disposed");
-    if (session || starting)
-      throw new Error("Live Terminal Session already started");
 
-    starting = true;
+    const sessionId: TerminalSessionId = `s${nextSessionNumber}`;
+    nextSessionNumber += 1;
+    let startedAt: number | undefined;
     let createdSession: LocalTerminalSession;
     try {
       createdSession = options.createSession({
         onOutput(data) {
           if (!disposed && !options.webContents.isDestroyed()) {
-            options.webContents.send(terminalIpc.output, data);
+            options.webContents.send(terminalIpc.output, { sessionId, data });
           }
         },
         onExit(exit) {
           if (disposed) return;
           if (!options.webContents.isDestroyed()) {
-            options.webContents.send(terminalIpc.exit, exit);
+            options.webContents.send(terminalIpc.exit, { sessionId, ...exit });
           }
           options.onSessionExit(exit);
           if (windowId !== undefined) {
@@ -350,11 +370,9 @@ function createTerminalIpcController(
         });
       options.onSessionStartError();
       throw new Error("The Default Shell could not be started");
-    } finally {
-      starting = false;
     }
 
-    session = createdSession;
+    sessions.set(sessionId, { session: createdSession, closed: false });
     startedAt = Date.now();
     if (windowId !== undefined)
       writeWindowEvent({
@@ -363,8 +381,9 @@ function createTerminalIpcController(
         action: "started",
       });
     if (disposed) {
-      closeSession();
+      closeSession(sessionId);
     }
+    return sessionId;
   };
   const configuration = (payload?: unknown) => {
     if (payload !== undefined) {
@@ -376,28 +395,44 @@ function createTerminalIpcController(
   };
 
   const input = (payload?: unknown) => {
-    if (isBoundedTerminalPayload(payload)) {
-      options.onUserInteraction();
-      session?.write(payload);
-    } else reject("ipc", "invalid-payload");
+    if (!isTerminalSessionInput(payload)) {
+      reject("ipc", "invalid-payload");
+      return;
+    }
+    const state = routedSession(payload.sessionId);
+    if (!state) return;
+    options.onUserInteraction();
+    state.session.write(payload.data);
   };
   const resize = (payload?: unknown) => {
-    if (isTerminalSize(payload)) {
-      session?.resize(payload);
-      if (windowId !== undefined)
-        writeWindowEvent({ name: "pty.resize", windowId, ...payload });
-    } else reject("ipc", "invalid-payload");
+    if (!isTerminalSessionResize(payload)) {
+      reject("ipc", "invalid-payload");
+      return;
+    }
+    const state = routedSession(payload.sessionId);
+    if (!state) return;
+    state.session.resize({ cols: payload.cols, rows: payload.rows });
+    if (windowId !== undefined)
+      writeWindowEvent({
+        name: "pty.resize",
+        windowId,
+        cols: payload.cols,
+        rows: payload.rows,
+      });
   };
   const close = (payload?: unknown) => {
-    if (payload === undefined) {
-      if (windowId !== undefined)
-        writeWindowEvent({
-          name: "pty.control",
-          windowId,
-          action: "close-requested",
-        });
-      closeSession();
-    } else reject("ipc", "invalid-payload");
+    if (!isTerminalSessionReference(payload)) {
+      reject("ipc", "invalid-payload");
+      return;
+    }
+    if (!routedSession(payload.sessionId)) return;
+    if (windowId !== undefined)
+      writeWindowEvent({
+        name: "pty.control",
+        windowId,
+        action: "close-requested",
+      });
+    closeSession(payload.sessionId);
   };
   const writeClipboardText = (payload?: unknown) => {
     if (!isNonemptyClipboardText(payload)) {
@@ -472,7 +507,7 @@ function createTerminalIpcController(
       if (disposed) return;
       disposed = true;
       unregister();
-      closeSession();
+      for (const sessionId of [...sessions.keys()]) closeSession(sessionId);
     },
   };
 }

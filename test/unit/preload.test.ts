@@ -51,19 +51,42 @@ describe("isolated preload terminal bridge", () => {
     await import("../../src/preload/index");
   });
 
-  it("validates outbound input and resize message shapes", () => {
+  it("validates outbound session-scoped input, resize, and close shapes", () => {
     const bridge = electron.bridge!;
 
-    bridge.input("hello");
-    bridge.resize({ cols: 80, rows: 24 });
-    expect(() => bridge.input("")).toThrow(TypeError);
-    expect(() => bridge.resize({ cols: 0, rows: 24 })).toThrow(TypeError);
+    bridge.input("s1", "hello");
+    bridge.resize("s1", { cols: 80, rows: 24 });
+    bridge.close("s2");
+    expect(() => bridge.input("s1", "")).toThrow(TypeError);
+    expect(() => bridge.input("session-1", "hello")).toThrow(TypeError);
+    expect(() => bridge.resize("s1", { cols: 0, rows: 24 })).toThrow(TypeError);
+    expect(() => bridge.resize("", { cols: 80, rows: 24 })).toThrow(TypeError);
+    expect(() => bridge.close("s0")).toThrow(TypeError);
 
-    expect(electron.send).toHaveBeenCalledWith(terminalIpc.input, "hello");
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.input, {
+      sessionId: "s1",
+      data: "hello",
+    });
     expect(electron.send).toHaveBeenCalledWith(terminalIpc.resize, {
+      sessionId: "s1",
       cols: 80,
       rows: 24,
     });
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.close, {
+      sessionId: "s2",
+    });
+  });
+
+  it("returns only a validated Live Terminal Session identifier from start", async () => {
+    const bridge = electron.bridge!;
+
+    electron.invoke.mockResolvedValueOnce("s7");
+    await expect(bridge.start()).resolves.toBe("s7");
+    expect(electron.invoke).toHaveBeenCalledWith(terminalIpc.start);
+    electron.invoke.mockResolvedValueOnce(undefined);
+    await expect(bridge.start()).rejects.toThrow(TypeError);
+    electron.invoke.mockResolvedValueOnce("session-1");
+    await expect(bridge.start()).rejects.toThrow(TypeError);
   });
 
   it("exposes one-way title and payload-free BEL signals", () => {
@@ -228,20 +251,31 @@ describe("isolated preload terminal bridge", () => {
     const removeOutput = bridge.onOutput(onOutput);
     const removeExit = bridge.onExit(onExit);
 
+    electron.listeners.get(terminalIpc.output)?.(
+      {},
+      { sessionId: "s1", data: "output" },
+    );
+    electron.listeners.get(terminalIpc.output)?.(
+      {},
+      { sessionId: "s1", data: "" },
+    );
     electron.listeners.get(terminalIpc.output)?.({}, "output");
-    electron.listeners.get(terminalIpc.output)?.({}, "");
+    electron.listeners.get(terminalIpc.exit)?.(
+      {},
+      { sessionId: "s2", exitCode: 0, signal: 0 },
+    );
     electron.listeners.get(terminalIpc.exit)?.({}, { exitCode: 0, signal: 0 });
     electron.listeners.get(terminalIpc.exit)?.(
       {},
-      { exitCode: "0", signal: 0 },
+      { sessionId: "s2", exitCode: "0", signal: 0 },
     );
     removeOutput();
     removeExit();
 
     expect(onOutput).toHaveBeenCalledOnce();
-    expect(onOutput).toHaveBeenCalledWith("output");
+    expect(onOutput).toHaveBeenCalledWith("s1", "output");
     expect(onExit).toHaveBeenCalledOnce();
-    expect(onExit).toHaveBeenCalledWith({ exitCode: 0, signal: 0 });
+    expect(onExit).toHaveBeenCalledWith("s2", { exitCode: 0, signal: 0 });
     expect(electron.removeListener).toHaveBeenCalledTimes(2);
   });
 

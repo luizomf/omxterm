@@ -6,6 +6,7 @@ import {
   type TrustedWebContents,
 } from "../../src/main/terminal-ipc-controller";
 import type { LocalTerminalSession } from "../../src/main/local-terminal-session";
+import type { OperationalEvent } from "../../src/main/operational-events";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 
@@ -95,22 +96,26 @@ describe("terminal IPC controller", () => {
       onSessionExit: vi.fn(),
     });
 
-    ipc.handlers.get(terminalIpc.start)!({
-      sender: firstWebContents,
-      senderFrame: firstFrame,
-    });
-    ipc.handlers.get(terminalIpc.start)!({
-      sender: secondWebContents,
-      senderFrame: secondFrame,
-    });
+    expect(
+      ipc.handlers.get(terminalIpc.start)!({
+        sender: firstWebContents,
+        senderFrame: firstFrame,
+      }),
+    ).toBe("s1");
+    expect(
+      ipc.handlers.get(terminalIpc.start)!({
+        sender: secondWebContents,
+        senderFrame: secondFrame,
+      }),
+    ).toBe("s1");
     ipc.listeners.get(terminalIpc.input)?.(
       { sender: secondWebContents, senderFrame: secondFrame },
-      "second window input",
+      { sessionId: "s1", data: "second window input" },
     );
-    ipc.listeners.get(terminalIpc.close)?.({
-      sender: firstWebContents,
-      senderFrame: firstFrame,
-    });
+    ipc.listeners.get(terminalIpc.close)?.(
+      { sender: firstWebContents, senderFrame: firstFrame },
+      { sessionId: "s1" },
+    );
 
     expect(firstSession.write).not.toHaveBeenCalled();
     expect(secondSession.write).toHaveBeenCalledWith("second window input");
@@ -285,17 +290,30 @@ describe("terminal IPC controller", () => {
         { unexpected: true },
       ),
     ).toThrow("Invalid terminal start payload");
-    start({ sender: webContents, senderFrame: mainFrame });
+    expect(start({ sender: webContents, senderFrame: mainFrame })).toBe("s1");
 
     const trustedEvent = { sender: webContents, senderFrame: mainFrame };
+    ipc.listeners.get(terminalIpc.input)?.(trustedEvent, {
+      sessionId: "s1",
+      data: "hello",
+    });
+    ipc.listeners.get(terminalIpc.input)?.(trustedEvent, {
+      sessionId: "s1",
+      data: "x".repeat(65_537),
+    });
     ipc.listeners.get(terminalIpc.input)?.(trustedEvent, "hello");
-    ipc.listeners.get(terminalIpc.input)?.(trustedEvent, "x".repeat(65_537));
     ipc.listeners.get(terminalIpc.resize)?.(trustedEvent, {
+      sessionId: "s1",
       cols: 100,
       rows: 30,
     });
     ipc.listeners.get(terminalIpc.resize)?.(trustedEvent, {
+      sessionId: "s1",
       cols: -1,
+      rows: 30,
+    });
+    ipc.listeners.get(terminalIpc.resize)?.(trustedEvent, {
+      cols: 100,
       rows: 30,
     });
 
@@ -342,19 +360,24 @@ describe("terminal IPC controller", () => {
     const trusted = { sender: webContents, senderFrame: frame };
     const forged = { sender: otherWebContents, senderFrame: otherFrame };
 
+    ipc.handlers.get(terminalIpc.start)!(trusted);
     ipc.listeners.get(terminalIpc.title)?.(trusted, "owned title");
     ipc.listeners.get(terminalIpc.title)?.(trusted, "x".repeat(65_537));
     ipc.listeners.get(terminalIpc.title)?.(trusted, { canary: "CANARY" });
     ipc.listeners.get(terminalIpc.title)?.(forged, "forged title");
     ipc.listeners.get(terminalIpc.bell)?.(trusted);
     ipc.listeners.get(terminalIpc.bell)?.(trusted, "malformed");
-    ipc.listeners.get(terminalIpc.input)?.(trusted, "key");
+    ipc.listeners.get(terminalIpc.input)?.(trusted, {
+      sessionId: "s1",
+      data: "key",
+    });
 
     expect(title.mock.calls).toEqual([["owned title"], ["x".repeat(65_537)]]);
     expect(JSON.stringify(title.mock.calls)).not.toContain("CANARY");
     expect(bell).toHaveBeenCalledOnce();
     expect(interaction).toHaveBeenCalledOnce();
-    expect(session.write).not.toHaveBeenCalled();
+    expect(session.write).toHaveBeenCalledOnce();
+    expect(session.write).toHaveBeenCalledWith("key");
   });
 
   it("validates clipboard senders and payloads without clipboard or PTY side effects", async () => {
@@ -587,16 +610,20 @@ describe("terminal IPC controller", () => {
     });
     callbacks!.onOutput("output");
     callbacks!.onExit({ exitCode: 0, signal: 0 });
-    ipc.listeners.get(terminalIpc.close)?.({
-      sender: webContents,
-      senderFrame: mainFrame,
-    });
+    ipc.listeners.get(terminalIpc.close)?.(
+      { sender: webContents, senderFrame: mainFrame },
+      { sessionId: "s1" },
+    );
     controller.dispose();
     controller.dispose();
     router.dispose();
 
-    expect(send).toHaveBeenNthCalledWith(1, terminalIpc.output, "output");
+    expect(send).toHaveBeenNthCalledWith(1, terminalIpc.output, {
+      sessionId: "s1",
+      data: "output",
+    });
     expect(send).toHaveBeenNthCalledWith(2, terminalIpc.exit, {
+      sessionId: "s1",
       exitCode: 0,
       signal: 0,
     });
@@ -673,8 +700,15 @@ describe("terminal IPC controller", () => {
     const terminalPayload = "TERMINAL_PAYLOAD_CANARY";
 
     ipc.handlers.get(terminalIpc.start)!(trusted);
-    ipc.listeners.get(terminalIpc.input)?.(trusted, terminalPayload);
-    ipc.listeners.get(terminalIpc.resize)?.(trusted, { cols: 120, rows: 40 });
+    ipc.listeners.get(terminalIpc.input)?.(trusted, {
+      sessionId: "s1",
+      data: terminalPayload,
+    });
+    ipc.listeners.get(terminalIpc.resize)?.(trusted, {
+      sessionId: "s1",
+      cols: 120,
+      rows: 40,
+    });
     ipc.listeners.get(terminalIpc.title)?.(trusted, { title: "TITLE_CANARY" });
     ipc.listeners.get(terminalIpc.externalLink)?.(
       trusted,
@@ -737,5 +771,210 @@ describe("terminal IPC controller", () => {
     expect(JSON.stringify(write.mock.calls)).not.toContain("TITLE_CANARY");
     expect(JSON.stringify(write.mock.calls)).not.toContain("URL_CANARY");
     expect(JSON.stringify(write.mock.calls)).not.toContain("CLIPBOARD_CANARY");
+  });
+
+  it("routes several Live Terminal Sessions inside one Terminal Window independently", () => {
+    const ipc = createIpcHarness();
+    const mainFrame = {};
+    const send = vi.fn();
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => false,
+      send,
+    };
+    const firstSession: LocalTerminalSession = {
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const secondSession: LocalTerminalSession = {
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    const sessionInstances = [firstSession, secondSession];
+    const sessionCallbacks: Array<
+      Parameters<
+        Parameters<typeof router.registerController>[0]["createSession"]
+      >[0]
+    > = [];
+    const createSession = vi.fn(
+      (
+        callbacks: Parameters<
+          Parameters<typeof router.registerController>[0]["createSession"]
+        >[0],
+      ) => {
+        sessionCallbacks.push(callbacks);
+        return sessionInstances[sessionCallbacks.length - 1]!;
+      },
+    );
+    router.registerController({
+      ...clipboardOptions(),
+      webContents,
+      createSession,
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+    const trusted = { sender: webContents, senderFrame: mainFrame };
+
+    expect(ipc.handlers.get(terminalIpc.start)!(trusted)).toBe("s1");
+    expect(ipc.handlers.get(terminalIpc.start)!(trusted)).toBe("s2");
+    ipc.listeners.get(terminalIpc.input)?.(trusted, {
+      sessionId: "s2",
+      data: "second tab input",
+    });
+    ipc.listeners.get(terminalIpc.resize)?.(trusted, {
+      sessionId: "s1",
+      cols: 90,
+      rows: 25,
+    });
+    sessionCallbacks[0]!.onOutput("first output");
+    sessionCallbacks[1]!.onOutput("second output");
+    ipc.listeners.get(terminalIpc.close)?.(trusted, { sessionId: "s1" });
+
+    expect(firstSession.write).not.toHaveBeenCalled();
+    expect(secondSession.write).toHaveBeenCalledWith("second tab input");
+    expect(firstSession.resize).toHaveBeenCalledWith({ cols: 90, rows: 25 });
+    expect(secondSession.resize).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledWith(terminalIpc.output, {
+      sessionId: "s1",
+      data: "first output",
+    });
+    expect(send).toHaveBeenCalledWith(terminalIpc.output, {
+      sessionId: "s2",
+      data: "second output",
+    });
+    expect(firstSession.close).toHaveBeenCalledOnce();
+    expect(secondSession.close).not.toHaveBeenCalled();
+  });
+
+  it("rejects session-scoped payloads with unknown or foreign session ids", () => {
+    const ipc = createIpcHarness();
+    const write = vi.fn((_event: OperationalEvent) => true);
+    const mainFrame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const otherFrame = {};
+    const otherWebContents: TrustedWebContents = {
+      mainFrame: otherFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const session: LocalTerminalSession = {
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const foreignSecondSession: LocalTerminalSession = {
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const interaction = vi.fn();
+    const router = registerTerminalIpcRouter(ipc.ipcMain, { write });
+    router.registerController({
+      ...clipboardOptions(),
+      webContents,
+      createSession: () => session,
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+      onUserInteraction: interaction,
+    });
+    const foreignCreateSession = vi
+      .fn()
+      .mockImplementationOnce(() => ({
+        write: vi.fn(),
+        resize: vi.fn(),
+        close: vi.fn(),
+      }))
+      .mockImplementationOnce(() => foreignSecondSession);
+    router.registerController({
+      ...clipboardOptions(),
+      webContents: otherWebContents,
+      createSession: foreignCreateSession,
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+    const trusted = { sender: webContents, senderFrame: mainFrame };
+    const foreign = { sender: otherWebContents, senderFrame: otherFrame };
+
+    ipc.handlers.get(terminalIpc.start)!(trusted);
+    ipc.handlers.get(terminalIpc.start)!(foreign);
+    // "s2" exists only in the other Terminal Window.
+    expect(ipc.handlers.get(terminalIpc.start)!(foreign)).toBe("s2");
+    ipc.listeners.get(terminalIpc.input)?.(trusted, {
+      sessionId: "s2",
+      data: "foreign session input",
+    });
+    ipc.listeners.get(terminalIpc.input)?.(trusted, {
+      sessionId: "s9",
+      data: "unknown session input",
+    });
+    ipc.listeners.get(terminalIpc.resize)?.(trusted, {
+      sessionId: "s9",
+      cols: 80,
+      rows: 24,
+    });
+    ipc.listeners.get(terminalIpc.close)?.(trusted, { sessionId: "s9" });
+
+    expect(session.write).not.toHaveBeenCalled();
+    expect(session.resize).not.toHaveBeenCalled();
+    expect(session.close).not.toHaveBeenCalled();
+    expect(foreignSecondSession.write).not.toHaveBeenCalled();
+    expect(interaction).not.toHaveBeenCalled();
+    expect(
+      write.mock.calls.filter(
+        ([event]) =>
+          event.name === "boundary.rejected" &&
+          event.boundary === "ipc" &&
+          event.reason === "unknown-session",
+      ),
+    ).toHaveLength(4);
+    expect(JSON.stringify(write.mock.calls)).not.toContain("session input");
+  });
+
+  it("disposes every Live Terminal Session in the window when the window closes", () => {
+    const ipc = createIpcHarness();
+    const mainFrame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const sessions: LocalTerminalSession[] = [];
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    const controller = router.registerController({
+      ...clipboardOptions(),
+      webContents,
+      createSession() {
+        const session: LocalTerminalSession = {
+          write: vi.fn(),
+          resize: vi.fn(),
+          close: vi.fn(),
+        };
+        sessions.push(session);
+        return session;
+      },
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+    const trusted = { sender: webContents, senderFrame: mainFrame };
+    const start = ipc.handlers.get(terminalIpc.start)!;
+
+    start(trusted);
+    start(trusted);
+    start(trusted);
+    controller.dispose();
+    controller.dispose();
+
+    expect(sessions).toHaveLength(3);
+    for (const session of sessions)
+      expect(session.close).toHaveBeenCalledOnce();
+    expect(() => start(trusted)).toThrow("untrusted sender");
+    router.dispose();
   });
 });

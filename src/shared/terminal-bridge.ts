@@ -2,6 +2,7 @@ import type {
   TerminalExit,
   TerminalClipboardAction,
   TerminalFontZoom,
+  TerminalSessionId,
   TerminalSize,
 } from "./terminal-contract";
 import type { TerminalRendererConfiguration } from "./user-configuration";
@@ -11,15 +12,19 @@ export interface TerminalBridge {
   configuration(): Promise<TerminalRendererConfiguration>;
   snippets(): Promise<TerminalSnippetsResponse>;
   onSnippetsToggle(listener: () => void): () => void;
-  start(): Promise<void>;
-  input(data: string): void;
-  resize(size: TerminalSize): void;
-  close(): void;
+  start(): Promise<TerminalSessionId>;
+  input(sessionId: TerminalSessionId, data: string): void;
+  resize(sessionId: TerminalSessionId, size: TerminalSize): void;
+  close(sessionId: TerminalSessionId): void;
   title(request: string): void;
   bell(): void;
   openExternalLink(url: string): void;
-  onOutput(listener: (data: string) => void): () => void;
-  onExit(listener: (exit: TerminalExit) => void): () => void;
+  onOutput(
+    listener: (sessionId: TerminalSessionId, data: string) => void,
+  ): () => void;
+  onExit(
+    listener: (sessionId: TerminalSessionId, exit: TerminalExit) => void,
+  ): () => void;
   onFontZoom(listener: (command: TerminalFontZoom) => void): () => void;
   writeClipboardText(text: string): Promise<void>;
   readClipboardText(): Promise<string>;

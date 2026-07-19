@@ -75,7 +75,8 @@ export type OperationalEvent =
         | "invalid-payload"
         | "invalid-value"
         | "too-long"
-        | "invalid-characters";
+        | "invalid-characters"
+        | "unknown-session";
     };
 
 export interface OperationalEventLog {
@@ -367,6 +368,7 @@ function isOperationalEvent(value: unknown): value is OperationalEvent {
           "invalid-value",
           "too-long",
           "invalid-characters",
+          "unknown-session",
         ].includes(value.reason as string)
       );
     default:

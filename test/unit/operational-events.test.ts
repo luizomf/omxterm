@@ -175,6 +175,13 @@ describe("local Operational Events", () => {
         reason: "too-long",
       }),
     ).toBe(true);
+    expect(
+      log.write({
+        name: "boundary.rejected",
+        boundary: "ipc",
+        reason: "unknown-session",
+      }),
+    ).toBe(true);
     log.flush();
 
     const file = path.join(
@@ -186,7 +193,7 @@ describe("local Operational Events", () => {
     const text = await readFile(file, "utf8");
     for (const canary of Object.values(canaries))
       expect(text).not.toContain(canary);
-    expect(await readRecords(file)).toHaveLength(1);
+    expect(await readRecords(file)).toHaveLength(2);
     expect((await stat(file)).size).toBeLessThanOrEqual(
       MAX_OPERATIONAL_LOG_BYTES,
     );
