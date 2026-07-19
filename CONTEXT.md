@@ -57,9 +57,9 @@ _Avoid_: terminal font, webfont, system default font
 
 **Window Font Zoom**:
 An ephemeral font-size adjustment for one Terminal Window through `Cmd++`,
-`Cmd+-`, and `Cmd+0`. It never rewrites User Configuration, and a new window
-starts from the configured font size rather than inheriting another window's
-zoom.
+`Cmd+-`, and `Cmd+0`, shared by every Terminal Tab in that window. It never
+rewrites User Configuration, and a new window starts from the configured font
+size rather than inheriting another window's zoom.
 _Avoid_: font configuration, application zoom, persisted zoom
 
 **Option Key Mode**:
@@ -84,10 +84,18 @@ the user's responsibility.
 _Avoid_: automatic shell setup, managed shell, OMXTerm hooks
 
 **Terminal Window**:
-An independent native window containing exactly one Terminal Surface and one
-Live Terminal Session. OMXTerm may own several Terminal Windows without tabs,
-workspaces, or a user-facing session manager.
-_Avoid_: tab, workspace, application instance
+An independent native window containing one or more Terminal Tabs, exactly one
+of them selected. OMXTerm may own several Terminal Windows without workspaces
+or a user-facing session manager.
+_Avoid_: workspace, application instance, tab group
+
+**Terminal Tab**:
+One selectable container inside a Terminal Window owning exactly one Live
+Terminal Session and its Terminal Surface. Closing a tab terminates only its
+session, and a window's last tab closing closes the window. Tabs are
+ephemeral: they are not saved, restored, reordered, or moved between windows —
+capabilities deferred rather than permanently rejected (ADR 0016).
+_Avoid_: saved tab, workspace, split pane
 
 **Always-on-Top Window**:
 A Terminal Window temporarily kept above ordinary windows using the native
@@ -169,14 +177,15 @@ The in-memory lines retained above a Live Terminal Session's visible viewport.
 User Configuration sets `scrollback.lines`; the default is 10,000, zero
 disables retention, and values above 100,000 are rejected rather than silently
 clamped. The buffer is ephemeral and its memory cost is paid independently by
-every Terminal Window.
+every Live Terminal Session.
 _Avoid_: terminal history, persisted output, transcript
 
 **Terminal Title**:
-The single-line printable label shown by a Terminal Window. A local process may
-request it through OSC 0 or OSC 2, but OMXTerm sanitizes and bounds the display
-value, never reports it back to the PTY, and never treats it as an Operational
-Event or trustworthy application metadata.
+The single-line printable label of a Live Terminal Session, shown on its
+Terminal Tab and mirrored by the Terminal Window while that tab is selected. A
+local process may request it through OSC 0 or OSC 2, but OMXTerm sanitizes and
+bounds the display value, never reports it back to the PTY, and never treats
+it as an Operational Event or trustworthy application metadata.
 _Avoid_: session name, shell identity, logged command
 
 **External Link**:
@@ -189,8 +198,9 @@ _Avoid_: trusted link, renderer navigation, arbitrary protocol URL
 
 **Terminal Bell**:
 A process request for the user's attention using BEL. OMXTerm keeps it silent,
-prepends `🔔` to the Terminal Title until the user focuses or interacts with the
-window, and requests Dock attention once only when that window is unfocused.
+prepends `🔔` to the ringing session's Terminal Title until the user focuses or
+interacts with it, and requests Dock attention once only when that session's
+window is unfocused.
 _Avoid_: notification, alarm, terminal error
 
 **Release Artifact**:
