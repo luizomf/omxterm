@@ -91,10 +91,14 @@ the unpacked build directory or a previous installation.
 - **Abnormal shell exit:** in a fresh window, run `kill -s KILL $$`; confirm the
   failure stays visible in the native dialog until acknowledged and the
   unusable window then closes.
-- **Multiple windows and cleanup:** use `Cmd+N` for at least two independent
-  Live Terminal Sessions; verify `Cmd+W` closes only the selected window, the
-  last window quits OMXTerm, and `Cmd+Q` requests one confirmation for all open
-  windows. Confirm no OMXTerm or child shell remains after quit.
+- **Multiple windows, tabs, and cleanup:** use `Cmd+N` for at least two
+  independent windows and `Cmd+T` for at least two Terminal Tabs in one of
+  them; verify the tab strip appears only with two or more tabs, `Cmd+W`
+  closes only the selected tab with one confirmation, `Cmd+Shift+W` closes the
+  selected window and all of its tabs with one confirmation, the last tab
+  closing closes its window, the last window quits OMXTerm, and `Cmd+Q`
+  requests one confirmation for all open windows. Confirm no OMXTerm or child
+  shell remains after quit.
 - **tmux, TUI, and terminal compatibility:** exercise tmux, an alternate-screen
   TUI, Unicode, truecolor, scrolling, resize, a REPL, bracketed paste, and SSH
   started by the user. Confirm OMXTerm installs no shell integration or custom

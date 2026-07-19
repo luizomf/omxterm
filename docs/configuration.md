@@ -140,27 +140,36 @@ actions and never rewrite this file.
 vocabulary; the values are [Electron accelerator](https://www.electronjs.org/docs/latest/api/accelerator)
 strings such as `CommandOrControl+T`. Actions you omit keep their defaults:
 
-| Action             | Menu item          | Default                    |
-| ------------------ | ------------------ | -------------------------- |
-| `quit`             | Quit OMXTerm       | `CommandOrControl+Q`       |
-| `copy`             | Copy               | `CommandOrControl+C`       |
-| `paste`            | Paste              | `CommandOrControl+V`       |
-| `selectAll`        | Select All         | `CommandOrControl+A`       |
-| `newWindow`        | New Window         | `CommandOrControl+N`       |
-| `closeWindow`      | Close Window       | `CommandOrControl+W`       |
-| `zoomIn`           | Zoom In            | `CommandOrControl+Plus`    |
-| `zoomOut`          | Zoom Out           | `CommandOrControl+-`       |
-| `actualSize`       | Actual Size        | `CommandOrControl+0`       |
-| `toggleFullScreen` | Toggle Full Screen | `Control+Command+F`        |
-| `toggleSnippets`   | Toggle Snippets    | `CommandOrControl+Shift+S` |
+| Action                      | Menu item          | Default                    |
+| --------------------------- | ------------------ | -------------------------- |
+| `quit`                      | Quit OMXTerm       | `CommandOrControl+Q`       |
+| `copy`                      | Copy               | `CommandOrControl+C`       |
+| `paste`                     | Paste              | `CommandOrControl+V`       |
+| `selectAll`                 | Select All         | `CommandOrControl+A`       |
+| `newWindow`                 | New Window         | `CommandOrControl+N`       |
+| `newTab`                    | New Tab            | `CommandOrControl+T`       |
+| `closeTab`                  | Close Tab          | `CommandOrControl+W`       |
+| `closeWindow`               | Close Window       | `CommandOrControl+Shift+W` |
+| `nextTab`                   | Show Next Tab      | `Control+Tab`              |
+| `previousTab`               | Show Previous Tab  | `Control+Shift+Tab`        |
+| `selectTab1` … `selectTab9` | Tab 1 … Tab 9      | `CommandOrControl+1` … `9` |
+| `zoomIn`                    | Zoom In            | `CommandOrControl+Plus`    |
+| `zoomOut`                   | Zoom Out           | `CommandOrControl+-`       |
+| `actualSize`                | Actual Size        | `CommandOrControl+0`       |
+| `toggleFullScreen`          | Toggle Full Screen | `Control+Command+F`        |
+| `toggleSnippets`            | Toggle Snippets    | `CommandOrControl+Shift+S` |
 
-For example, to open new windows with `Cmd+T` instead of `Cmd+N`:
+Following the macOS convention, `Cmd+W` closes the selected tab and
+`Cmd+Shift+W` closes the whole window. `selectTab1` through `selectTab9`
+select literal tab positions; a position beyond the open tabs does nothing.
+
+For example, to open new windows with `Cmd+G` instead of `Cmd+N`:
 
 ```json
 {
   "version": 1,
   "keybinds": {
-    "newWindow": "CommandOrControl+T"
+    "newWindow": "CommandOrControl+G"
   }
 }
 ```
@@ -170,7 +179,7 @@ modifier (`Command`, `Control`, `CommandOrControl`, `Alt`/`Option`, `Super`)
 and exactly one key — a bare key or `Shift`-only accelerator would steal plain
 typing from the terminal, so it is rejected. Two actions can never share an
 effective accelerator: remapping `newWindow` to `CommandOrControl+W` conflicts
-with `closeWindow`'s remaining default and is reported exactly like two
+with `closeTab`'s remaining default and is reported exactly like two
 explicit entries colliding (swap both explicitly if that is what you want).
 `CommandOrControl`, `Super`, and `Meta` count as `Command` on macOS when
 duplicates are judged. The menu shows the shortcut that is actually active.
