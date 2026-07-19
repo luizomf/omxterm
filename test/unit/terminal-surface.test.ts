@@ -15,6 +15,8 @@ const xterm = vi.hoisted(() => {
   class FakeTerminal {
     static current: FakeTerminal;
     static instances: FakeTerminal[] = [];
+    cols = 80;
+    rows = 24;
     readonly write = vi.fn();
     readonly paste = vi.fn((data: string) => this.onInput?.(data));
     readonly focus = vi.fn();
@@ -95,6 +97,8 @@ const xterm = vi.hoisted(() => {
       this.onInput?.(data);
     }
     emitResize(size: XtermResize) {
+      this.cols = size.cols;
+      this.rows = size.rows;
       this.onTerminalResize?.(size);
     }
     emitKey(event: Partial<KeyboardEvent>) {
@@ -225,6 +229,46 @@ describe("portable Terminal Surface", () => {
     surface.dispose();
     surface.focus();
     expect(xterm.FakeTerminal.current.focus).toHaveBeenCalledOnce();
+  });
+
+  it("pushes the settled grid to the session after start even when fitting changes nothing", async () => {
+    // Regression: a fit that ran while start was still in flight was dropped
+    // by the session adapter, and the post-start fit emitted no resize event
+    // because the grid already had its final size — leaving the PTY at 80x24
+    // until the window itself was resized.
+    const preStartFit = { cols: 150, rows: 40 };
+    xterm.fit.mockImplementation(() => {
+      const terminal = xterm.FakeTerminal.current;
+      if (terminal.cols !== preStartFit.cols)
+        terminal.emitResize({ ...preStartFit, colsChanged: true });
+    });
+    let releaseStart: (() => void) | undefined;
+    const adapter = {
+      start: vi.fn(
+        (_handlers: TerminalSessionHandlers) =>
+          new Promise<void>((resolve) => {
+            releaseStart = resolve;
+          }),
+      ),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const mounting = mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+    );
+    await vi.waitFor(() => expect(adapter.start).toHaveBeenCalledOnce());
+
+    // The container is observed and fitted before the session is addressable.
+    FakeResizeObserver.current.notify();
+    releaseStart!();
+    const surface = await mounting;
+
+    expect(adapter.resize).toHaveBeenLastCalledWith({ cols: 150, rows: 40 });
+    surface.dispose();
   });
 
   it("refits through the observed container after shrinking and growing", async () => {
@@ -1147,7 +1191,8 @@ describe("portable Terminal Surface", () => {
     expect(adapter.write).toHaveBeenCalledTimes(257);
     expect(adapter.write).toHaveBeenCalledWith("ssh user@example.invalid\r");
     expect(adapter.write).toHaveBeenCalledWith("\u0002c");
-    expect(adapter.resize).toHaveBeenCalledTimes(256);
+    // 256 emitted resizes plus the settled-grid push at mount time.
+    expect(adapter.resize).toHaveBeenCalledTimes(257);
     expect(adapter.close).toHaveBeenCalledOnce();
   });
 });

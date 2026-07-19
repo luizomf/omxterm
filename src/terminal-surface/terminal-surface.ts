@@ -320,7 +320,18 @@ export async function mountTerminalSurface(
         surface.dispose();
       },
     });
-    if (!disposed) mountedFitAddon.fit();
+    if (!disposed) {
+      mountedFitAddon.fit();
+      // The session can only be addressed after start resolves, so a grid
+      // change fitted while start was in flight never reached it — and a fit
+      // that changes nothing emits no resize event to resend it. Push the
+      // settled grid so the session always matches what is on screen.
+      const settledSize = {
+        cols: mountedTerminal.cols,
+        rows: mountedTerminal.rows,
+      };
+      if (isTerminalSize(settledSize)) adapter.resize(settledSize);
+    }
     return surface;
   } catch (error) {
     disposeResources();
