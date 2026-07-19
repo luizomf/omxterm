@@ -12,6 +12,36 @@ export interface TerminalExit {
   readonly signal: number;
 }
 
+// The main process allocates ids as `s` plus a positive counter scoped to one
+// Terminal Window; the renderer only echoes ids it received from `start`.
+export type TerminalSessionId = string;
+
+export interface TerminalSessionInput {
+  readonly sessionId: TerminalSessionId;
+  readonly data: string;
+}
+
+export interface TerminalSessionResize {
+  readonly sessionId: TerminalSessionId;
+  readonly cols: number;
+  readonly rows: number;
+}
+
+export interface TerminalSessionReference {
+  readonly sessionId: TerminalSessionId;
+}
+
+export interface TerminalSessionOutput {
+  readonly sessionId: TerminalSessionId;
+  readonly data: string;
+}
+
+export interface TerminalSessionExit {
+  readonly sessionId: TerminalSessionId;
+  readonly exitCode: number;
+  readonly signal: number;
+}
+
 export type TerminalFontZoom = "in" | "out" | "reset";
 export type TerminalClipboardAction = "copy" | "paste" | "select-all";
 
@@ -27,6 +57,54 @@ export function isBoundedTerminalPayload(value: unknown): value is string {
 
 export function isTerminalTitleRequest(value: unknown): value is string {
   return typeof value === "string";
+}
+
+export function isTerminalSessionId(
+  value: unknown,
+): value is TerminalSessionId {
+  return typeof value === "string" && /^s[1-9][0-9]{0,8}$/.test(value);
+}
+
+export function isTerminalSessionInput(
+  value: unknown,
+): value is TerminalSessionInput {
+  if (!isStrictRecord(value, ["sessionId", "data"])) return false;
+  return (
+    isTerminalSessionId(value.sessionId) && isBoundedTerminalPayload(value.data)
+  );
+}
+
+export function isTerminalSessionResize(
+  value: unknown,
+): value is TerminalSessionResize {
+  if (!isStrictRecord(value, ["sessionId", "cols", "rows"])) return false;
+  return (
+    isTerminalSessionId(value.sessionId) &&
+    isTerminalSize({ cols: value.cols, rows: value.rows })
+  );
+}
+
+export function isTerminalSessionReference(
+  value: unknown,
+): value is TerminalSessionReference {
+  if (!isStrictRecord(value, ["sessionId"])) return false;
+  return isTerminalSessionId(value.sessionId);
+}
+
+export function isTerminalSessionOutput(
+  value: unknown,
+): value is TerminalSessionOutput {
+  return isTerminalSessionInput(value);
+}
+
+export function isTerminalSessionExit(
+  value: unknown,
+): value is TerminalSessionExit {
+  if (!isStrictRecord(value, ["sessionId", "exitCode", "signal"])) return false;
+  return (
+    isTerminalSessionId(value.sessionId) &&
+    isTerminalExit({ exitCode: value.exitCode, signal: value.signal })
+  );
 }
 
 export function splitTerminalPayload(value: string): string[] {
