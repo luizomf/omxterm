@@ -147,16 +147,29 @@ describe("native Terminal Title and bell attention", () => {
     expect(JSON.stringify(harness.rejected.mock.calls)).not.toContain("CANARY");
   });
 
-  it("keeps a focused selected-tab BEL silent and marks an unselected ringing tab", () => {
+  it("marks every ringing session, selected or not, and reserves the Dock for unfocused windows", () => {
     const harness = createControllerHarness(true);
     harness.controller.sessionStarted("s1");
     harness.controller.sessionStarted("s2");
     harness.controller.selectSession("s1");
     harness.sessionTitles.mockClear();
 
+    // The selected tab of a focused window is marked too: silent, but visible.
     harness.controller.ringBell("s1");
-    expect(harness.sessionTitles).not.toHaveBeenCalled();
+    expect(harness.sessionTitles).toHaveBeenLastCalledWith(
+      "s1",
+      "🔔example-shell",
+    );
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("🔔example-shell");
     expect(harness.dock).not.toHaveBeenCalled();
+
+    // Typing in the selected tab acknowledges its own bell.
+    harness.controller.resetAttention();
+    expect(harness.sessionTitles).toHaveBeenLastCalledWith(
+      "s1",
+      "example-shell",
+    );
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("example-shell");
 
     harness.controller.ringBell("s2");
     expect(harness.sessionTitles).toHaveBeenLastCalledWith(

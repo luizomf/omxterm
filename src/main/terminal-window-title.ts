@@ -147,8 +147,9 @@ export function createTerminalWindowTitleController(
       if (disposed) return;
       const state = sessions.get(sessionId);
       if (!state) return;
-      // A bell in the tab the user is looking at stays completely silent.
-      if (sessionId === selectedSessionId && window.isFocused()) return;
+      // The marker is unconditional: even the tab the user is looking at
+      // shows that its session rang, until focus or interaction clears it.
+      // Only the Dock request is reserved for an unfocused window.
       if (!state.bellPending) {
         state.bellPending = true;
         pushSessionTitle(sessionId);
