@@ -127,11 +127,54 @@ their defaults. Objects and the root reject unknown keys.
 | `keyboard.optionAsAlt`    | `none`, `left`, `right`, or `both`      | `none`                               |
 | `window.alwaysOnTop`      | boolean                                 | `false`                              |
 | `theme.path`              | non-empty filesystem path without NUL   | bundled `omtheme`                    |
+| `keybinds.<action>`       | accelerator with a non-Shift modifier   | built-in shortcut per action         |
 
 The configured top padding begins below a fixed 30 px native title and drag
 inset. `font.lineHeight` changes row height independently of glyph size.
 Window Font Zoom and the native Always on Top menu are per-window runtime
 actions and never rewrite this file.
+
+### Keybinds
+
+`keybinds` remaps the application-menu shortcuts. The keys are a fixed action
+vocabulary; the values are [Electron accelerator](https://www.electronjs.org/docs/latest/api/accelerator)
+strings such as `CommandOrControl+T`. Actions you omit keep their defaults:
+
+| Action             | Menu item          | Default                 |
+| ------------------ | ------------------ | ----------------------- |
+| `quit`             | Quit OMXTerm       | `CommandOrControl+Q`    |
+| `copy`             | Copy               | `CommandOrControl+C`    |
+| `paste`            | Paste              | `CommandOrControl+V`    |
+| `selectAll`        | Select All         | `CommandOrControl+A`    |
+| `newWindow`        | New Window         | `CommandOrControl+N`    |
+| `closeWindow`      | Close Window       | `CommandOrControl+W`    |
+| `zoomIn`           | Zoom In            | `CommandOrControl+Plus` |
+| `zoomOut`          | Zoom Out           | `CommandOrControl+-`    |
+| `actualSize`       | Actual Size        | `CommandOrControl+0`    |
+| `toggleFullScreen` | Toggle Full Screen | `Control+Command+F`     |
+
+For example, to open new windows with `Cmd+T` instead of `Cmd+N`:
+
+```json
+{
+  "version": 1,
+  "keybinds": {
+    "newWindow": "CommandOrControl+T"
+  }
+}
+```
+
+Accelerators are case-insensitive and must contain at least one non-Shift
+modifier (`Command`, `Control`, `CommandOrControl`, `Alt`/`Option`, `Super`)
+and exactly one key — a bare key or `Shift`-only accelerator would steal plain
+typing from the terminal, so it is rejected. Two actions can never share an
+effective accelerator: remapping `newWindow` to `CommandOrControl+W` conflicts
+with `closeWindow`'s remaining default and is reported exactly like two
+explicit entries colliding (swap both explicitly if that is what you want).
+`CommandOrControl`, `Super`, and `Meta` count as `Command` on macOS when
+duplicates are judged. The menu shows the shortcut that is actually active.
+Keybinds change application shortcuts only; what the shell or a TUI receives
+from the keyboard is not affected.
 
 ### Tuning padding around the terminal grid
 
@@ -232,7 +275,9 @@ stderr. Common failures are:
 - an out-of-range number or non-integral size or padding value;
 - a `theme.path` resolved somewhere other than expected;
 - a missing, unreadable, non-regular, or invalid theme file;
-- a partial palette or a color that is not exactly `#RRGGBB`.
+- a partial palette or a color that is not exactly `#RRGGBB`;
+- a `keybinds` entry with an unknown action name, a malformed accelerator, a
+  missing non-Shift modifier, or two actions sharing one effective accelerator.
 
 Fix the reported file and restart OMXTerm. It never silently ignores invalid
 preferences, never edits or repairs your files, and never falls back to a

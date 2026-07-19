@@ -125,7 +125,8 @@ file. A present file must contain `"version": 1` and only supported keys:
 - `scrollback.lines`;
 - `keyboard.optionAsAlt`: `none`, `left`, `right`, or `both`;
 - `window.alwaysOnTop`;
-- `theme.path`.
+- `theme.path`;
+- `keybinds.<action>` for the fixed application-shortcut vocabulary below.
 
 The bundled JetBrainsMono Nerd Font Mono at 16 px is the default, matching the
 existing OMXTerm Web terminal baseline. `font.size` accepts only integral pixel
@@ -136,6 +137,23 @@ explicit per-side integer CSS pixels from 0 through 128 inclusive and defaults
 to top 0, right 8, bottom 8, and left 8. User top padding is added to the fixed,
 non-configurable 30 px native title inset. `logLevel` defaults to `info`,
 `keyboard.optionAsAlt` to `none`, and `window.alwaysOnTop` to `false`.
+
+An optional `keybinds` object remaps application-chrome shortcuts for a fixed
+action vocabulary: `quit`, `copy`, `paste`, `selectAll`, `newWindow`,
+`closeWindow`, `zoomIn`, `zoomOut`, `actualSize`, and `toggleFullScreen`. Each
+value is a case-insensitive Electron accelerator containing at least one
+non-Shift modifier and exactly one key; bare or Shift-only accelerators are
+rejected so a keybind can never swallow plain typing. Unmapped actions keep
+their built-in defaults. The application menu displays the effective
+accelerator and is the single shortcut registration point; there is no second
+shortcut system, and terminal control sequences inside the PTY are untouched.
+Unknown action names, malformed accelerators, and duplicate accelerators are
+errors under the resilient failure contract below. Duplicates are judged on
+the effective map with macOS semantics (`CommandOrControl`, `Super`, and
+`Meta` count as `Command`): a remap that collides with another action's
+remaining default is the same error as two explicit entries colliding.
+Creating new actions, system-global shortcuts, chords or sequences, and
+per-platform alternate maps are unsupported.
 
 An absent `theme` uses the bundled canonical [`omtheme`](omtheme.json). A
 present `theme` must contain exactly one required `path`: a non-empty string
