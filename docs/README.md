@@ -35,6 +35,8 @@ release procedures so that each kind of information has one clear owner.
   version.
 - [0.2.0 release notes](releases/0.2.0.md) describe the current published
   version.
+- [0.3.0 release-note draft](releases/0.3.0.md) describes the selected next
+  version without claiming that its tag, GitHub Release, or download exists.
 
 Issue and pull-request descriptions may describe work in progress, but they do
 not replace these maintained project documents.
