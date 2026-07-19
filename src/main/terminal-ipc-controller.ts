@@ -9,6 +9,7 @@ import {
 import { terminalIpc } from "../shared/terminal-ipc";
 import type { LocalTerminalSession } from "./local-terminal-session";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
+import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type { OperationalEventLog } from "./operational-events";
 
 export interface TrustedWebContents {
@@ -56,6 +57,7 @@ export interface TerminalIpcControllerOptions {
   readonly onUserInteraction: () => void;
   readonly openExternalLink: (url: string) => Promise<void>;
   readonly onExternalLinkOpenError: () => void;
+  readonly loadSnippets: () => Promise<TerminalSnippetsResponse>;
 }
 
 export interface TerminalIpcController {
@@ -82,6 +84,7 @@ interface RoutedTerminalIpcController extends TerminalIpcController {
   title(payload?: unknown): void;
   bell(payload?: unknown): void;
   openExternalLink(payload?: unknown): void;
+  snippets(payload?: unknown): Promise<TerminalSnippetsResponse>;
 }
 
 export function registerTerminalIpcRouter(
@@ -196,8 +199,22 @@ export function registerTerminalIpcRouter(
     controller.showClipboardContextMenu(payload);
   };
 
+  const snippets: IpcHandler = (event, payload) => {
+    const controller = controllerFor(event);
+    if (!controller) {
+      operationalEvents?.write({
+        name: "boundary.rejected",
+        boundary: "ipc",
+        reason: "untrusted-sender",
+      });
+      throw new Error("Rejected snippets IPC from an untrusted sender");
+    }
+    return controller.snippets(payload);
+  };
+
   ipcMain.handle(terminalIpc.start, start);
   ipcMain.handle(terminalIpc.configuration, configuration);
+  ipcMain.handle(terminalIpc.snippets, snippets);
   ipcMain.on(terminalIpc.input, input);
   ipcMain.on(terminalIpc.resize, resize);
   ipcMain.on(terminalIpc.close, close);
@@ -233,6 +250,7 @@ export function registerTerminalIpcRouter(
       for (const controller of [...controllers.values()]) controller.dispose();
       ipcMain.removeHandler(terminalIpc.start);
       ipcMain.removeHandler(terminalIpc.configuration);
+      ipcMain.removeHandler(terminalIpc.snippets);
       ipcMain.removeListener(terminalIpc.input, input);
       ipcMain.removeListener(terminalIpc.resize, resize);
       ipcMain.removeListener(terminalIpc.close, close);
@@ -406,6 +424,14 @@ function createTerminalIpcController(
     if (payload === undefined) options.showClipboardContextMenu();
     else reject("clipboard", "invalid-payload");
   };
+  const snippets = async (payload?: unknown) => {
+    if (payload !== undefined) {
+      reject("ipc", "invalid-payload");
+      throw new TypeError("Invalid snippets payload");
+    }
+    if (disposed) throw new Error("Terminal IPC controller is disposed");
+    return options.loadSnippets();
+  };
   const title = (payload?: unknown) => {
     if (isTerminalTitleRequest(payload)) options.onTitleRequest(payload);
     else reject("title", "invalid-payload");
@@ -441,6 +467,7 @@ function createTerminalIpcController(
     title,
     bell,
     openExternalLink,
+    snippets,
     dispose() {
       if (disposed) return;
       disposed = true;

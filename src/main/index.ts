@@ -37,6 +37,7 @@ import {
 import { registerTerminalWindowHost } from "./terminal-window-host";
 import { createTerminalWindowTitleController } from "./terminal-window-title";
 import { installedFontFamilyMetrics } from "./installed-font-family";
+import { loadTerminalSnippets } from "./snippets";
 import {
   userConfigurationFallbackNotice,
   type UserConfigurationError,
@@ -168,6 +169,11 @@ app
                 ),
               writeClipboardText: (text) => clipboard.writeText(text),
               readClipboardText: () => clipboard.readText(),
+              loadSnippets: () =>
+                loadTerminalSnippets({
+                  environment: process.env,
+                  homeDirectory: account.homedir,
+                }),
               async confirmPaste() {
                 const result = await dialog.showMessageBox(window, {
                   type: "warning",
@@ -250,6 +256,8 @@ app
             window.webContents.send(terminalIpc.fontZoom, command),
           sendClipboardAction: (window, action) =>
             window.webContents.send(terminalIpc.clipboardAction, action),
+          sendSnippetsToggle: (window) =>
+            window.webContents.send(terminalIpc.snippetsToggle),
           quit: () => app.quit(),
           operationalEvents: operationalEvents!,
         });
@@ -289,6 +297,8 @@ app
                   terminalApplication!.clipboardSelectedWindow("paste"),
                 selectAllSelectedTerminal: () =>
                   terminalApplication!.clipboardSelectedWindow("select-all"),
+                toggleSelectedSnippets:
+                  terminalApplication.toggleSelectedSnippets,
               },
               userConfiguration.keybinds,
             ),

@@ -52,6 +52,7 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
     window: Window,
     action: TerminalClipboardAction,
   ) => void;
+  readonly sendSnippetsToggle: (window: Window) => void;
   readonly quit: () => void;
   readonly operationalEvents?: Pick<OperationalEventLog, "write">;
 }
@@ -64,6 +65,7 @@ export interface TerminalApplication {
   toggleSelectedAlwaysOnTop(): void;
   zoomSelectedWindow(command: TerminalFontZoom): void;
   clipboardSelectedWindow(action: TerminalClipboardAction): void;
+  toggleSelectedSnippets(): void;
   isQuitting(): boolean;
 }
 
@@ -196,6 +198,10 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     clipboardSelectedWindow(action) {
       const window = selectedWindow();
       if (window) options.sendClipboardAction(window, action);
+    },
+    toggleSelectedSnippets() {
+      const window = selectedWindow();
+      if (window) options.sendSnippetsToggle(window);
     },
     isQuitting: () => quitting,
   };

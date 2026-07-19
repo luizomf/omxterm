@@ -8,6 +8,9 @@ const container = document.querySelector<HTMLElement>("#terminal-surface");
 if (!container) throw new Error("Terminal Surface container is missing");
 const errorBanner = document.querySelector<HTMLElement>("#user-file-errors");
 if (!errorBanner) throw new Error("User File Error banner is missing");
+const snippetsElement =
+  document.querySelector<HTMLElement>("#snippets-sidebar");
+if (!snippetsElement) throw new Error("Snippets Sidebar container is missing");
 
 void window.omxterm.terminal.configuration().then((configuration) => {
   // Render before mounting so the Terminal Surface measures the space the
@@ -26,6 +29,11 @@ void window.omxterm.terminal.configuration().then((configuration) => {
       readText: window.omxterm.terminal.readClipboardText,
       confirmPaste: window.omxterm.terminal.confirmPaste,
       requestContextMenu: window.omxterm.terminal.requestClipboardContextMenu,
+    },
+    snippets: {
+      element: snippetsElement,
+      load: window.omxterm.terminal.snippets,
+      subscribeToToggle: window.omxterm.terminal.onSnippetsToggle,
     },
   });
   void host.ready.catch((error: unknown) => {

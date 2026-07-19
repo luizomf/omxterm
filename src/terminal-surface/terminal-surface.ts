@@ -34,6 +34,7 @@ export interface TerminalSurface {
   zoom(command: TerminalFontZoom): void;
   copy(): Promise<void>;
   paste(): Promise<void>;
+  inject(text: string, options?: { readonly submit?: boolean }): Promise<void>;
   selectAll(): void;
   dispose(): void;
 }
@@ -136,25 +137,14 @@ export async function mountTerminalSurface(
       if (disposed || !terminal || !options.clipboard) return;
       const text = await options.clipboard.readText();
       if (disposed || text.length === 0) return;
-
-      let confirmedText: string | undefined;
-      if (requiresProtectedPaste(text) && !terminal.modes.bracketedPasteMode) {
-        if (!(await options.clipboard.confirmPaste(text))) return;
-        confirmedText = text;
-      }
-
-      if (disposed || !terminal) return;
-      const bracketedPasteEnabled = terminal.modes.bracketedPasteMode;
-      if (
-        requiresProtectedPaste(text) &&
-        !bracketedPasteEnabled &&
-        confirmedText !== text
-      )
-        return;
-      const payload = bracketedPasteEnabled
-        ? `\u001b[200~${text}\u001b[201~`
-        : text;
-      for (const chunk of splitTerminalPayload(payload)) adapter.write(chunk);
+      await deliverText(text);
+    },
+    async inject(text, injectOptions) {
+      if (disposed || !terminal || text.length === 0) return;
+      const delivered = await deliverText(text);
+      // A submitting snippet sends Enter only after the bracketed paste has
+      // closed: Enter inside the paste body would never submit.
+      if (delivered && injectOptions?.submit) adapter.write("\r");
     },
     selectAll() {
       if (!disposed) terminal?.selectAll();
@@ -163,6 +153,32 @@ export async function mountTerminalSurface(
       const cleanupError = disposeResources();
       if (cleanupError) throw cleanupError.error;
     },
+  };
+
+  // Shared delivery path for clipboard paste and snippet injection: the same
+  // protected-paste confirmation and bracketed-paste wrapping apply to both.
+  const deliverText = async (text: string): Promise<boolean> => {
+    if (disposed || !terminal) return false;
+    let confirmedText: string | undefined;
+    if (requiresProtectedPaste(text) && !terminal.modes.bracketedPasteMode) {
+      if (!options.clipboard) return false;
+      if (!(await options.clipboard.confirmPaste(text))) return false;
+      confirmedText = text;
+    }
+
+    if (disposed || !terminal) return false;
+    const bracketedPasteEnabled = terminal.modes.bracketedPasteMode;
+    if (
+      requiresProtectedPaste(text) &&
+      !bracketedPasteEnabled &&
+      confirmedText !== text
+    )
+      return false;
+    const payload = bracketedPasteEnabled
+      ? `\u001b[200~${text}\u001b[201~`
+      : text;
+    for (const chunk of splitTerminalPayload(payload)) adapter.write(chunk);
+    return true;
   };
 
   const scheduleFit = () => {

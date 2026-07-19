@@ -13,6 +13,7 @@ interface TerminalApplicationMenuActions {
   readonly copySelectedTerminal: () => void;
   readonly pasteSelectedTerminal: () => void;
   readonly selectAllSelectedTerminal: () => void;
+  readonly toggleSelectedSnippets: () => void;
 }
 
 export function terminalApplicationMenuTemplate(
@@ -86,6 +87,12 @@ export function terminalApplicationMenuTemplate(
           label: "Actual Size",
           accelerator: keybinds.actualSize,
           click: actions.resetSelectedWindowZoom,
+        },
+        { type: "separator" },
+        {
+          label: "Toggle Snippets",
+          accelerator: keybinds.toggleSnippets,
+          click: actions.toggleSelectedSnippets,
         },
         { type: "separator" },
         {

@@ -15,4 +15,6 @@ export const terminalIpc = {
   clipboardRead: "terminal:clipboard-read",
   clipboardConfirmPaste: "terminal:clipboard-confirm-paste",
   clipboardContextMenu: "terminal:clipboard-context-menu",
+  snippets: "terminal:snippets",
+  snippetsToggle: "terminal:snippets-toggle",
 } as const;

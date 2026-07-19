@@ -159,6 +159,7 @@ describe("isolated preload terminal bridge", () => {
       readClipboardText: vi.fn(() => ""),
       confirmPaste: vi.fn(async () => false),
       showClipboardContextMenu: vi.fn(),
+      loadSnippets: vi.fn(async () => ({ snippets: [] })),
     });
     electron.send.mockImplementation((channel: string, payload?: unknown) =>
       listeners.get(channel)?.(event, payload),
@@ -182,6 +183,42 @@ describe("isolated preload terminal bridge", () => {
     router.dispose();
     titleController.dispose();
     electron.send.mockReset();
+  });
+
+  it("exposes only a validated Snippets response and a payload-free toggle", async () => {
+    const bridge = electron.bridge!;
+    const valid = {
+      snippets: [
+        { name: "greet", body: "printf hi", execute: false },
+        { name: "up", body: "brew update", description: "d", execute: true },
+      ],
+      error: "Snippets broke",
+    };
+    electron.invoke.mockResolvedValueOnce(valid);
+    await expect(bridge.snippets()).resolves.toEqual(valid);
+    expect(electron.invoke).toHaveBeenCalledWith(terminalIpc.snippets);
+    for (const invalid of [
+      undefined,
+      { snippets: [{ name: "a", body: "b" }] },
+      { snippets: [{ name: "a", body: "b", execute: "yes" }] },
+      { snippets: [], error: "" },
+      { snippets: [], extra: true },
+    ]) {
+      electron.invoke.mockResolvedValueOnce(invalid);
+      await expect(bridge.snippets()).rejects.toThrow(TypeError);
+    }
+
+    const onToggle = vi.fn();
+    const remove = bridge.onSnippetsToggle(onToggle);
+    electron.listeners.get(terminalIpc.snippetsToggle)?.({}, undefined);
+    electron.listeners.get(terminalIpc.snippetsToggle)?.({}, "payload");
+    remove();
+    expect(onToggle).toHaveBeenCalledOnce();
+    expect(electron.removeListener).toHaveBeenCalledWith(
+      terminalIpc.snippetsToggle,
+      expect.any(Function),
+    );
+    electron.removeListener.mockClear();
   });
 
   it("delivers only valid bounded messages from main and removes subscriptions", () => {

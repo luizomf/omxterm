@@ -49,6 +49,7 @@ function clipboardOptions() {
     onUserInteraction: vi.fn(),
     openExternalLink: vi.fn(async () => {}),
     onExternalLinkOpenError: vi.fn(),
+    loadSnippets: vi.fn(async () => ({ snippets: [] })),
   };
 }
 
@@ -115,7 +116,7 @@ describe("terminal IPC controller", () => {
     expect(secondSession.write).toHaveBeenCalledWith("second window input");
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();
-    expect(ipc.handlers.size).toBe(5);
+    expect(ipc.handlers.size).toBe(6);
     expect(ipc.listeners.size).toBe(7);
   });
 
@@ -161,6 +162,55 @@ describe("terminal IPC controller", () => {
         senderFrame: mainFrame,
       }),
     ).toBe(configuration);
+  });
+
+  it("serves an on-demand snippets read to its bound renderer and rejects payloads", async () => {
+    const ipc = createIpcHarness();
+    const mainFrame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const firstResponse = {
+      snippets: [{ name: "greet", body: "printf hi", execute: false }],
+    };
+    const secondResponse = { snippets: [], error: "Snippets broke" };
+    const loadSnippets = vi
+      .fn()
+      .mockResolvedValueOnce(firstResponse)
+      .mockResolvedValueOnce(secondResponse);
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    router.registerController({
+      ...clipboardOptions(),
+      loadSnippets,
+      webContents,
+      createSession: vi.fn(() => ({
+        write: vi.fn(),
+        resize: vi.fn(),
+        close: vi.fn(),
+      })),
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+    const event = { sender: webContents, senderFrame: mainFrame };
+
+    await expect(ipc.handlers.get(terminalIpc.snippets)!(event)).resolves.toBe(
+      firstResponse,
+    );
+    await expect(ipc.handlers.get(terminalIpc.snippets)!(event)).resolves.toBe(
+      secondResponse,
+    );
+    expect(loadSnippets).toHaveBeenCalledTimes(2);
+    await expect(
+      ipc.handlers.get(terminalIpc.snippets)!(event, { name: "x" }),
+    ).rejects.toThrow(TypeError);
+    expect(() =>
+      ipc.handlers.get(terminalIpc.snippets)!({
+        sender: { mainFrame: {}, isDestroyed: () => false, send: vi.fn() },
+        senderFrame: {},
+      }),
+    ).toThrow("untrusted");
   });
 
   it("reports a normalized shell startup failure without disclosing the cause", () => {

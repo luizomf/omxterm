@@ -59,6 +59,7 @@ function createApplicationHarness(
   const showSessionFailure = vi.fn(async () => {});
   const sendFontZoom = vi.fn();
   const sendClipboardAction = vi.fn();
+  const sendSnippetsToggle = vi.fn();
   const quit = vi.fn();
   const application = startTerminalApplication({
     createWindow(lifecycle) {
@@ -71,6 +72,7 @@ function createApplicationHarness(
     showSessionFailure,
     sendFontZoom,
     sendClipboardAction,
+    sendSnippetsToggle,
     quit,
     ...overrides,
   });
@@ -82,6 +84,7 @@ function createApplicationHarness(
     showSessionFailure,
     sendFontZoom,
     sendClipboardAction,
+    sendSnippetsToggle,
     quit,
     select(window: NativeTerminalWindow | undefined) {
       selected = window;
@@ -102,6 +105,22 @@ describe("Terminal application lifecycle", () => {
     expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
     expect(harness.windows[1]!.closeSession).toHaveBeenCalledOnce();
     expect(harness.quit).not.toHaveBeenCalled();
+  });
+
+  it("sends the Snippets toggle only to the selected Terminal Window", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    await harness.application.newWindow();
+
+    harness.select(undefined);
+    harness.application.toggleSelectedSnippets();
+    expect(harness.sendSnippetsToggle).not.toHaveBeenCalled();
+
+    harness.select(harness.windows[1]!.window);
+    harness.application.toggleSelectedSnippets();
+    expect(harness.sendSnippetsToggle).toHaveBeenCalledExactlyOnceWith(
+      harness.windows[1]!.window,
+    );
   });
 
   it("sends explicit clipboard actions only to the selected Terminal Window", async () => {
@@ -190,6 +209,7 @@ describe("Terminal application lifecycle", () => {
       showSessionFailure: vi.fn(async () => {}),
       sendFontZoom: vi.fn(),
       sendClipboardAction: vi.fn(),
+      sendSnippetsToggle: vi.fn(),
       quit,
     });
     await application.newWindow();

@@ -18,6 +18,7 @@ function createSurface(overrides: Record<string, unknown> = {}) {
   return {
     dispose: vi.fn(),
     focus: vi.fn(),
+    inject: vi.fn(async () => {}),
     zoom: vi.fn(),
     copy: vi.fn(async () => undefined),
     paste: vi.fn(async () => undefined),

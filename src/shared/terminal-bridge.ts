@@ -5,9 +5,12 @@ import type {
   TerminalSize,
 } from "./terminal-contract";
 import type { TerminalRendererConfiguration } from "./user-configuration";
+import type { TerminalSnippetsResponse } from "./terminal-snippets";
 
 export interface TerminalBridge {
   configuration(): Promise<TerminalRendererConfiguration>;
+  snippets(): Promise<TerminalSnippetsResponse>;
+  onSnippetsToggle(listener: () => void): () => void;
   start(): Promise<void>;
   input(data: string): void;
   resize(size: TerminalSize): void;

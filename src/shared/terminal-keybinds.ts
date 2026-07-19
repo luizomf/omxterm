@@ -12,6 +12,7 @@ export const TERMINAL_ACTION_NAMES = [
   "zoomOut",
   "actualSize",
   "toggleFullScreen",
+  "toggleSnippets",
 ] as const;
 
 export type TerminalActionName = (typeof TERMINAL_ACTION_NAMES)[number];
@@ -29,6 +30,7 @@ export const DEFAULT_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   zoomOut: "CommandOrControl+-",
   actualSize: "CommandOrControl+0",
   toggleFullScreen: "Control+Command+F",
+  toggleSnippets: "CommandOrControl+Shift+S",
 });
 
 export const MAX_ACCELERATOR_LENGTH = 64;

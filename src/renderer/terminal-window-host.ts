@@ -7,6 +7,11 @@ import {
 } from "../terminal-surface/terminal-surface";
 import type { TerminalFontZoom } from "../shared/terminal-contract";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
+import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
+import {
+  createSnippetsSidebar,
+  type SnippetsSidebar,
+} from "./snippets-sidebar";
 
 type MountTerminalSurface = (
   container: HTMLElement,
@@ -31,6 +36,11 @@ interface TerminalWindowPageOptions {
   readonly onTitleRequest?: (request: string) => void;
   readonly onBell?: () => void;
   readonly onExternalLink?: (url: string) => void;
+  readonly snippets?: {
+    readonly element: HTMLElement;
+    readonly load: () => Promise<TerminalSnippetsResponse>;
+    readonly subscribeToToggle: (listener: () => void) => () => void;
+  };
 }
 
 export interface TerminalWindowPageHost {
@@ -49,6 +59,8 @@ export function mountTerminalWindowPage(
   let surface: TerminalSurface | undefined;
   let removeZoomListener: (() => void) | undefined;
   let removeClipboardActionListener: (() => void) | undefined;
+  let snippetsSidebar: SnippetsSidebar | undefined;
+  let removeSnippetsToggleListener: (() => void) | undefined;
   const onPageFocus = () => surface?.focus();
 
   if (options.configuration) {
@@ -68,6 +80,9 @@ export function mountTerminalWindowPage(
     page.removeEventListener("focus", onPageFocus);
     removeZoomListener?.();
     removeClipboardActionListener?.();
+    removeSnippetsToggleListener?.();
+    snippetsSidebar?.dispose();
+    snippetsSidebar = undefined;
     surface?.dispose();
     surface = undefined;
   };
@@ -123,6 +138,18 @@ export function mountTerminalWindowPage(
           else surface?.selectAll();
         },
       );
+      if (options.snippets) {
+        const sidebar = createSnippetsSidebar(options.snippets.element, {
+          loadSnippets: options.snippets.load,
+          inject: (snippet) =>
+            void surface?.inject(snippet.body, { submit: snippet.execute }),
+          focusTerminal: () => surface?.focus(),
+        });
+        snippetsSidebar = sidebar;
+        removeSnippetsToggleListener = options.snippets.subscribeToToggle(
+          () => void sidebar.toggle(),
+        );
+      }
     },
   );
 

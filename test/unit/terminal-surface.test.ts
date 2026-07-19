@@ -1151,3 +1151,112 @@ describe("portable Terminal Surface", () => {
     expect(adapter.close).toHaveBeenCalledOnce();
   });
 });
+
+describe("snippet injection", () => {
+  function injectHarness(confirm = false) {
+    const clipboard = {
+      writeText: vi.fn(async () => undefined),
+      readText: vi.fn(async () => ""),
+      confirmPaste: vi.fn(async () => confirm),
+      requestContextMenu: vi.fn(),
+    };
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    return { clipboard, adapter };
+  }
+
+  it("injects a single-line snippet raw and does not submit by default", async () => {
+    const { clipboard, adapter } = injectHarness();
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { clipboard },
+    );
+
+    await surface.inject("printf hello");
+
+    expect(clipboard.confirmPaste).not.toHaveBeenCalled();
+    expect(adapter.write.mock.calls.map(([chunk]) => chunk).join("")).toBe(
+      "printf hello",
+    );
+    surface.dispose();
+  });
+
+  it("wraps a multi-line snippet in one bracketed paste and submits after it closes only when execute is set", async () => {
+    const { clipboard, adapter } = injectHarness();
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { clipboard },
+    );
+    xterm.FakeTerminal.current.modes.bracketedPasteMode = true;
+
+    await surface.inject("line one\nline two", { submit: true });
+
+    const written = adapter.write.mock.calls.map(([chunk]) => chunk).join("");
+    expect(written).toBe("\u001b[200~line one\nline two\u001b[201~\r");
+    expect(written.indexOf("\r")).toBeGreaterThan(written.indexOf("[201~"));
+    expect(clipboard.confirmPaste).not.toHaveBeenCalled();
+    surface.dispose();
+  });
+
+  it("protects a multi-line snippet exactly like a paste when bracketed paste is disabled", async () => {
+    const { clipboard, adapter } = injectHarness(false);
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { clipboard },
+    );
+
+    await surface.inject("one\ntwo", { submit: true });
+
+    expect(clipboard.confirmPaste).toHaveBeenCalledWith("one\ntwo");
+    expect(adapter.write).not.toHaveBeenCalled();
+    surface.dispose();
+  });
+
+  it("delivers a confirmed protected snippet and submits only after delivery", async () => {
+    const { clipboard, adapter } = injectHarness(true);
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { clipboard },
+    );
+
+    await surface.inject("one\ntwo", { submit: true });
+
+    expect(clipboard.confirmPaste).toHaveBeenCalledWith("one\ntwo");
+    expect(adapter.write.mock.calls.map(([chunk]) => chunk).join("")).toBe(
+      "one\ntwo\r",
+    );
+    surface.dispose();
+  });
+
+  it("ignores empty snippet bodies", async () => {
+    const { clipboard, adapter } = injectHarness();
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { clipboard },
+    );
+
+    await surface.inject("", { submit: true });
+
+    expect(adapter.write).not.toHaveBeenCalled();
+    surface.dispose();
+  });
+});

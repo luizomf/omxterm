@@ -15,6 +15,7 @@ import {
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
 import { isTerminalRendererConfiguration } from "../shared/user-configuration";
+import { isTerminalSnippetsResponse } from "../shared/terminal-snippets";
 
 const terminal: TerminalBridge = {
   async configuration() {
@@ -24,6 +25,20 @@ const terminal: TerminalBridge = {
     if (!isTerminalRendererConfiguration(configuration))
       throw new TypeError("Invalid User Configuration response");
     return configuration;
+  },
+  async snippets() {
+    const response: unknown = await ipcRenderer.invoke(terminalIpc.snippets);
+    if (!isTerminalSnippetsResponse(response))
+      throw new TypeError("Invalid Snippets response");
+    return response;
+  },
+  onSnippetsToggle(listener: () => void) {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (payload === undefined) listener();
+    };
+    ipcRenderer.on(terminalIpc.snippetsToggle, handler);
+    return () =>
+      ipcRenderer.removeListener(terminalIpc.snippetsToggle, handler);
   },
   async start() {
     await ipcRenderer.invoke(terminalIpc.start);

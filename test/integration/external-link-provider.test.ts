@@ -133,6 +133,7 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
       onUserInteraction: vi.fn(),
       openExternalLink: opener,
       onExternalLinkOpenError: vi.fn(),
+      loadSnippets: vi.fn(async () => ({ snippets: [] })),
     });
     electron.send.mockImplementation((channel: string, payload?: unknown) =>
       listeners.get(channel)?.(
@@ -162,6 +163,7 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
             zoom: vi.fn(),
             copy: vi.fn(async () => {}),
             paste: vi.fn(async () => {}),
+            inject: vi.fn(async () => {}),
             selectAll: vi.fn(),
             dispose: vi.fn(),
           };

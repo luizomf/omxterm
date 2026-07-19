@@ -18,6 +18,7 @@ function menuActions() {
     copySelectedTerminal: vi.fn(),
     pasteSelectedTerminal: vi.fn(),
     selectAllSelectedTerminal: vi.fn(),
+    toggleSelectedSnippets: vi.fn(),
   };
 }
 
@@ -88,6 +89,11 @@ describe("native application menu", () => {
           label: "Select All",
           accelerator: "CommandOrControl+A",
           click: actions.selectAllSelectedTerminal,
+        }),
+        expect.objectContaining({
+          label: "Toggle Snippets",
+          accelerator: "CommandOrControl+Shift+S",
+          click: actions.toggleSelectedSnippets,
         }),
       ]),
     );

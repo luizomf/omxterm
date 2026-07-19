@@ -27,10 +27,114 @@ body {
   flex-direction: column;
 }
 
+#terminal-window-content {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
 #terminal-surface {
   flex: 1 1 auto;
   height: auto;
   min-height: 0;
+  min-width: 0;
+}
+
+#snippets-sidebar {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 280px;
+  padding: 38px 12px 12px;
+  overflow-y: auto;
+  font:
+    13px/1.45 -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  color: #e6e6e6;
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    #808080 12%
+  );
+}
+
+#snippets-sidebar[hidden] {
+  display: none;
+}
+
+#snippets-sidebar input[type="search"] {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  font: inherit;
+  color: inherit;
+  background: rgb(255 255 255 / 8%);
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 6px;
+  outline: none;
+}
+
+#snippets-sidebar input[type="search"]:focus {
+  border-color: rgb(255 255 255 / 45%);
+}
+
+#snippets-sidebar ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#snippets-sidebar li button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+}
+
+#snippets-sidebar li button:hover,
+#snippets-sidebar li button:focus-visible {
+  background: rgb(255 255 255 / 10%);
+}
+
+#snippets-sidebar .snippet-name {
+  font-weight: 600;
+}
+
+#snippets-sidebar .snippet-description {
+  overflow: hidden;
+  color: rgb(230 230 230 / 65%);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#snippets-sidebar .snippets-empty {
+  margin: 0;
+  color: rgb(230 230 230 / 65%);
+}
+
+#snippets-sidebar .snippets-error {
+  margin: 0;
+  padding: 8px;
+  overflow-wrap: anywhere;
+  color: #ffffff;
+  background: #8c1d18;
+  border-radius: 6px;
 }
 
 #user-file-errors {
