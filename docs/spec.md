@@ -144,7 +144,8 @@ resolved from the directory containing `config.json`. OMXTerm does not expand
 `~`, environment variables, shell syntax, or URLs. Symlinks are accepted only
 when their final target is a readable regular file. The Electron main process
 reads and resolves the theme once during startup and sends only the validated,
-typed palette through the existing configuration boundary.
+typed palette — plus any user-file error notice — through the existing
+configuration boundary.
 
 A Terminal Theme is strict JSON containing exactly `version`, `name`, and
 `colors`. Version must be `1`. The name is a non-empty printable single line of
@@ -158,11 +159,18 @@ opacity, and tint are unsupported.
 Invalid JSON or UTF-8, unknown or missing keys, unsupported versions, missing
 configured fonts or theme files, non-regular theme targets, invalid theme
 fields or colors, non-finite or out-of-range line heights, and non-integral or
-out-of-range padding values are errors. OMXTerm reports the exact problem
-through a native dialog and stderr, includes the configured or resolved path
-when relevant, keeps both files unchanged, and requires restart after edits. It
-never migrates, repairs, rewrites, silently ignores user configuration, or
-falls back to `omtheme` after an external theme was explicitly selected.
+out-of-range padding values are errors. An error never stops OMXTerm from
+opening: an invalid `config.json` starts the application with the built-in
+defaults for every setting, and an invalid or missing selected theme file
+starts it with the bundled `omtheme` while keeping the rest of the validated
+configuration. The fallback target is always the built-in defaults, never a
+cached or previous configuration. OMXTerm reports the exact problem — including
+the configured or resolved path when relevant — through stderr and a persistent
+in-app error surface that states which defaults are active, stays visible until
+the application is restarted, and never blocks typing into the Terminal
+Surface, so the file can be fixed inside OMXTerm itself. Both files stay
+unchanged, and edits take effect after restart. OMXTerm never migrates,
+repairs, rewrites, or silently ignores user configuration.
 
 Operational logs are JSONL under `$XDG_STATE_HOME/omxterm/logs`, falling back to
 `~/.local/state/omxterm/logs`. Levels are `error`, `info`, and `debug`. Only the

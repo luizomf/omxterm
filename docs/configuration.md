@@ -27,8 +27,10 @@ mkdir -p "$XDG_CONFIG_HOME/omxterm/themes"
 ```
 
 Every change requires quitting and reopening OMXTerm. A missing file selects
-all defaults. An invalid file stops startup with an actionable error and is
-left unchanged.
+all defaults. An invalid file never stops OMXTerm from opening: the application
+starts with its built-in defaults, shows a persistent in-app error describing
+the exact problem, and leaves the file unchanged so you can fix it inside
+OMXTerm and restart.
 
 ## Otávio's configuration
 
@@ -215,8 +217,14 @@ converted result is a valid Terminal Theme.
 
 ## Troubleshooting
 
-OMXTerm reports the configuration path and, when relevant, the resolved theme
-path. Common startup failures are:
+When a user file is invalid, OMXTerm still opens. It uses its built-in
+defaults for whatever failed — every setting when `config.json` is invalid, or
+only the bundled `omtheme` theme when the selected theme file is invalid or
+missing — and shows a persistent error bar at the bottom of the window. The
+error states the configuration path and, when relevant, the resolved theme
+path, and stays visible until you restart. It never blocks typing, so you can
+fix the file in the terminal it reports on. The same diagnostic also goes to
+stderr. Common failures are:
 
 - a trailing comma, comment, or other syntax that is not valid JSON;
 - an unknown or misspelled key;
@@ -226,6 +234,6 @@ path. Common startup failures are:
 - a missing, unreadable, non-regular, or invalid theme file;
 - a partial palette or a color that is not exactly `#RRGGBB`.
 
-Fix the reported file and restart OMXTerm. It does not silently ignore invalid
-preferences or fall back to the bundled theme after an external theme was
-explicitly selected.
+Fix the reported file and restart OMXTerm. It never silently ignores invalid
+preferences, never edits or repairs your files, and never falls back to a
+cached or previous configuration — only to the built-in defaults, loudly.
