@@ -258,11 +258,23 @@ describe("renderer Terminal Window page host", () => {
     host.dispose();
   });
 
-  it("passes title and BEL signals into the portable Surface", async () => {
+  it("passes session-tagged title and BEL signals into the portable Surface", async () => {
     const onTitleRequest = vi.fn();
     const onBell = vi.fn();
     const onExternalLink = vi.fn();
-    const mount = vi.fn(async () => createSurface());
+    let mountedOptions:
+      | {
+          onTitleRequest?: (request: string) => void;
+          onBell?: () => void;
+          onExternalLink?: (url: string) => void;
+        }
+      | undefined;
+    const mount = vi.fn(
+      async (_container: unknown, _adapter: unknown, options: unknown) => {
+        mountedOptions = options as typeof mountedOptions;
+        return createSurface();
+      },
+    );
     const host = mountTerminalWindowPage(createPageElements(), {
       createAdapter: createAdapterFactory(),
       page: window,
@@ -273,12 +285,51 @@ describe("renderer Terminal Window page host", () => {
     });
     await host.ready;
 
-    expect(mount).toHaveBeenCalledWith(
-      expect.any(HTMLElement),
-      expect.any(Object),
-      { onTitleRequest, onBell, onExternalLink },
+    expect(mountedOptions?.onExternalLink).toBe(onExternalLink);
+    mountedOptions?.onTitleRequest?.("current directory");
+    mountedOptions?.onBell?.();
+
+    expect(onTitleRequest).toHaveBeenCalledExactlyOnceWith(
+      "s1",
+      "current directory",
     );
+    expect(onBell).toHaveBeenCalledExactlyOnceWith("s1");
     host.dispose();
+  });
+
+  it("routes tab title updates from main into the strip labels", async () => {
+    let titleListener: ((sessionId: string, title: string) => void) | undefined;
+    let commandListener: ((command: { action: "new" }) => void) | undefined;
+    const removeTabTitleListener = vi.fn();
+    const elements = createPageElements();
+    const host = mountTerminalWindowPage(elements, {
+      createAdapter: createAdapterFactory(),
+      page: window,
+      mount: vi.fn(async () => createSurface()),
+      subscribeToTabCommands: (listener) => {
+        commandListener = listener;
+        return vi.fn();
+      },
+      subscribeToTabTitles: (listener) => {
+        titleListener = listener;
+        return removeTabTitleListener;
+      },
+    });
+    await host.ready;
+
+    commandListener!({ action: "new" });
+    await vi.waitFor(() =>
+      expect(elements.tabsContainer.children).toHaveLength(2),
+    );
+    titleListener!("s1", "vim");
+
+    const labels = [...elements.tabStrip.querySelectorAll("button")].map(
+      (button) => button.textContent,
+    );
+    expect(labels).toEqual(["vim", "2"]);
+
+    host.dispose();
+    expect(removeTabTitleListener).toHaveBeenCalledOnce();
   });
 
   it("routes tab commands from main into the Terminal Tabs", async () => {

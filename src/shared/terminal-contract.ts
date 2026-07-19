@@ -42,6 +42,14 @@ export interface TerminalSessionExit {
   readonly signal: number;
 }
 
+// A session-scoped Terminal Title: renderer-to-main it carries the raw OSC
+// 0/2 request for main-side sanitization (ADR 0010); main-to-renderer it
+// carries the sanitized display value for the owning tab's label.
+export interface TerminalSessionTitle {
+  readonly sessionId: TerminalSessionId;
+  readonly title: string;
+}
+
 // Tab selection keybinds are literal positions 1 through 9 (ADR 0016).
 export const MAX_TAB_SELECT_POSITION = 9;
 
@@ -119,6 +127,15 @@ export function isTerminalSessionExit(
   return (
     isTerminalSessionId(value.sessionId) &&
     isTerminalExit({ exitCode: value.exitCode, signal: value.signal })
+  );
+}
+
+export function isTerminalSessionTitle(
+  value: unknown,
+): value is TerminalSessionTitle {
+  if (!isStrictRecord(value, ["sessionId", "title"])) return false;
+  return (
+    isTerminalSessionId(value.sessionId) && typeof value.title === "string"
   );
 }
 

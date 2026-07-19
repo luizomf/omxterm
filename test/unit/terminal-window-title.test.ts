@@ -1,9 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createTerminalWindowTitleController,
-  DEFAULT_TERMINAL_TITLE,
   MAX_TERMINAL_TITLE_CODE_POINTS,
-  safeTerminalBaseTitle,
+  sanitizedTerminalTitle,
 } from "../../src/main/terminal-window-title";
 
 const BIDI_CONTROL_CODE_POINTS = [
@@ -29,7 +28,24 @@ function createWindow(focused = false) {
       isFocused = true;
       for (const listener of focusListeners) listener();
     },
+    unfocus() {
+      isFocused = false;
+    },
   };
+}
+
+function createControllerHarness(focused = false) {
+  const fixture = createWindow(focused);
+  const dock = vi.fn();
+  const rejected = vi.fn();
+  const sessionTitles = vi.fn();
+  const controller = createTerminalWindowTitleController(fixture.window, {
+    fallbackSessionTitle: "example-shell",
+    requestDockAttention: dock,
+    sendSessionTitle: sessionTitles,
+    onRejected: rejected,
+  });
+  return { ...fixture, dock, rejected, sessionTitles, controller };
 }
 
 describe("native Terminal Title and bell attention", () => {
@@ -52,132 +68,180 @@ describe("native Terminal Title and bell attention", () => {
       .map((codePoint) => String.fromCodePoint(codePoint))
       .join("");
 
-    expect(safeTerminalBaseTitle(`before${controls}after`)).toBe("beforeafter");
+    expect(sanitizedTerminalTitle(`before${controls}after`)).toBe(
+      "beforeafter",
+    );
   });
 
   it("counts original Unicode code points before sanitization", () => {
     const accepted = "🙂".repeat(MAX_TERMINAL_TITLE_CODE_POINTS);
-    const rejected = `${accepted}\u202e`;
+    const rejected = `${accepted}‮`;
 
     expect([...accepted]).toHaveLength(256);
-    expect(safeTerminalBaseTitle(accepted)).toBe(accepted);
-    expect(safeTerminalBaseTitle(rejected)).toBe(DEFAULT_TERMINAL_TITLE);
-    expect(safeTerminalBaseTitle(`${accepted}🙂`)).toBe(DEFAULT_TERMINAL_TITLE);
-  });
-
-  it("falls back without exposing empty, non-printable, invalid, or oversized canary payloads", () => {
-    const fixture = createWindow();
-    const dock = vi.fn();
-    const rejected = vi.fn();
-    const controller = createTerminalWindowTitleController(
-      fixture.window,
-      dock,
-      rejected,
-    );
-
-    controller.requestTitle("valid");
-    controller.requestTitle("");
-    controller.requestTitle("CANARY\u200b");
-    controller.requestTitle("CANARY\u2028");
-    controller.requestTitle("CANARY\ud800");
-    controller.requestTitle(`CANARY${"x".repeat(256)}`);
-
-    expect(fixture.window.setTitle.mock.calls).toEqual([
-      ["OMXTerm"],
-      ["valid"],
-      ["OMXTerm"],
-      ["OMXTerm"],
-      ["OMXTerm"],
-      ["OMXTerm"],
-      ["OMXTerm"],
-    ]);
-    expect(JSON.stringify(fixture.window.setTitle.mock.calls)).not.toContain(
-      "CANARY",
-    );
-    expect(rejected.mock.calls).toEqual([
-      ["invalid-characters"],
-      ["invalid-characters"],
-      ["invalid-characters"],
-      ["too-long"],
-    ]);
-    expect(JSON.stringify(rejected.mock.calls)).not.toContain("CANARY");
+    expect(sanitizedTerminalTitle(accepted)).toBe(accepted);
+    expect(sanitizedTerminalTitle(rejected)).toBeUndefined();
+    expect(sanitizedTerminalTitle(`${accepted}🙂`)).toBeUndefined();
   });
 
   it("preserves Private Use glyphs while rejecting other invalid Unicode categories", () => {
-    const nerdFontFolder = "\uf07b projects";
+    const nerdFontFolder = " projects";
 
-    expect(safeTerminalBaseTitle(nerdFontFolder)).toBe(nerdFontFolder);
-    expect(safeTerminalBaseTitle("valid\u0378")).toBe(DEFAULT_TERMINAL_TITLE);
-    expect(safeTerminalBaseTitle("valid\ud800")).toBe(DEFAULT_TERMINAL_TITLE);
-    expect(safeTerminalBaseTitle("valid\u200b")).toBe(DEFAULT_TERMINAL_TITLE);
-    expect(safeTerminalBaseTitle("valid\u2028")).toBe(DEFAULT_TERMINAL_TITLE);
+    expect(sanitizedTerminalTitle(nerdFontFolder)).toBe(nerdFontFolder);
+    expect(sanitizedTerminalTitle("valid͸")).toBeUndefined();
+    expect(sanitizedTerminalTitle("valid\ud800")).toBeUndefined();
+    expect(sanitizedTerminalTitle("valid​")).toBeUndefined();
+    expect(sanitizedTerminalTitle("valid ")).toBeUndefined();
   });
 
-  it("keeps focused BEL silent and deduplicates unfocused Dock attention", () => {
-    const focusedFixture = createWindow(true);
-    const focusedDock = vi.fn();
-    const focused = createTerminalWindowTitleController(
-      focusedFixture.window,
-      focusedDock,
-    );
-    focused.ringBell();
-    expect(focusedFixture.window.setTitle).toHaveBeenLastCalledWith("OMXTerm");
-    expect(focusedDock).not.toHaveBeenCalled();
+  it("mirrors the selected session on the window and falls back per session and per window", () => {
+    const harness = createControllerHarness(true);
+    harness.controller.sessionStarted("s1");
+    harness.controller.sessionStarted("s2");
+    harness.controller.selectSession("s1");
 
-    const fixture = createWindow(false);
-    const dock = vi.fn();
-    const controller = createTerminalWindowTitleController(
-      fixture.window,
-      dock,
-    );
-    controller.ringBell();
-    controller.ringBell();
+    harness.controller.requestTitle("s1", "first title");
+    harness.controller.requestTitle("s2", "second title");
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("first title");
 
-    expect(fixture.window.setTitle).toHaveBeenLastCalledWith("🔔OMXTerm");
-    expect(dock).toHaveBeenCalledOnce();
+    harness.controller.selectSession("s2");
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("second title");
+
+    harness.controller.requestTitle("s2", "");
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("example-shell");
+
+    harness.controller.sessionEnded("s2");
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("OMXTerm");
+    expect(harness.sessionTitles.mock.calls).toEqual([
+      ["s1", "example-shell"],
+      ["s2", "example-shell"],
+      ["s1", "first title"],
+      ["s2", "second title"],
+      ["s2", "example-shell"],
+    ]);
   });
 
-  it("composes the app marker over the latest base title until reset", () => {
-    const fixture = createWindow(false);
-    const dock = vi.fn();
-    const controller = createTerminalWindowTitleController(
-      fixture.window,
-      dock,
+  it("keeps one session's hostile title from ever reaching another session or the window", () => {
+    const harness = createControllerHarness(true);
+    harness.controller.sessionStarted("s1");
+    harness.controller.sessionStarted("s2");
+    harness.controller.selectSession("s1");
+    harness.controller.requestTitle("s1", "safe");
+
+    harness.controller.requestTitle("s2", "CANARY\u2028");
+    harness.controller.requestTitle("s2", `CANARY${"x".repeat(256)}`);
+    harness.controller.requestTitle("s2", "CANARY​");
+    harness.controller.requestTitle("s9", "unknown session CANARY");
+
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("safe");
+    expect(JSON.stringify(harness.window.setTitle.mock.calls)).not.toContain(
+      "CANARY",
+    );
+    expect(JSON.stringify(harness.sessionTitles.mock.calls)).not.toContain(
+      "CANARY",
+    );
+    expect(harness.rejected.mock.calls).toEqual([
+      ["invalid-characters"],
+      ["too-long"],
+      ["invalid-characters"],
+    ]);
+    expect(JSON.stringify(harness.rejected.mock.calls)).not.toContain("CANARY");
+  });
+
+  it("keeps a focused selected-tab BEL silent and marks an unselected ringing tab", () => {
+    const harness = createControllerHarness(true);
+    harness.controller.sessionStarted("s1");
+    harness.controller.sessionStarted("s2");
+    harness.controller.selectSession("s1");
+    harness.sessionTitles.mockClear();
+
+    harness.controller.ringBell("s1");
+    expect(harness.sessionTitles).not.toHaveBeenCalled();
+    expect(harness.dock).not.toHaveBeenCalled();
+
+    harness.controller.ringBell("s2");
+    expect(harness.sessionTitles).toHaveBeenLastCalledWith(
+      "s2",
+      "🔔example-shell",
+    );
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("example-shell");
+    expect(harness.dock).not.toHaveBeenCalled();
+
+    harness.controller.selectSession("s2");
+    expect(harness.sessionTitles).toHaveBeenLastCalledWith(
+      "s2",
+      "example-shell",
+    );
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("example-shell");
+  });
+
+  it("requests Dock attention once for an unfocused window until focus clears it", () => {
+    const harness = createControllerHarness(false);
+    harness.controller.sessionStarted("s1");
+    harness.controller.selectSession("s1");
+    harness.controller.requestTitle("s1", "remote job");
+
+    harness.controller.ringBell("s1");
+    harness.controller.ringBell("s1");
+    expect(harness.dock).toHaveBeenCalledOnce();
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("🔔remote job");
+    expect(harness.sessionTitles).toHaveBeenLastCalledWith(
+      "s1",
+      "🔔remote job",
     );
 
-    controller.requestTitle("🔔legitimate");
-    controller.ringBell();
-    expect(fixture.window.setTitle).toHaveBeenLastCalledWith("🔔🔔legitimate");
-    controller.requestTitle("latest");
-    expect(fixture.window.setTitle).toHaveBeenLastCalledWith("🔔latest");
-    controller.requestTitle("");
-    expect(fixture.window.setTitle).toHaveBeenLastCalledWith("🔔OMXTerm");
-    controller.resetAttention();
-    expect(fixture.window.setTitle).toHaveBeenLastCalledWith("OMXTerm");
+    harness.focus();
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("remote job");
+    expect(harness.sessionTitles).toHaveBeenLastCalledWith("s1", "remote job");
 
-    controller.ringBell();
-    expect(dock).toHaveBeenCalledTimes(2);
-    fixture.focus();
-    expect(fixture.window.setTitle).toHaveBeenLastCalledWith("OMXTerm");
+    harness.unfocus();
+    harness.controller.ringBell("s1");
+    expect(harness.dock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps an unselected tab's marker through selected-tab interaction and composes over titles", () => {
+    const harness = createControllerHarness(false);
+    harness.controller.sessionStarted("s1");
+    harness.controller.sessionStarted("s2");
+    harness.controller.selectSession("s1");
+    harness.controller.requestTitle("s2", "🔔legitimate");
+
+    harness.controller.ringBell("s2");
+    expect(harness.sessionTitles).toHaveBeenLastCalledWith(
+      "s2",
+      "🔔🔔legitimate",
+    );
+
+    // Interaction happens in the selected tab; the other marker stays.
+    harness.controller.resetAttention();
+    expect(harness.sessionTitles).toHaveBeenLastCalledWith(
+      "s2",
+      "🔔🔔legitimate",
+    );
+
+    harness.controller.requestTitle("s2", "latest");
+    expect(harness.sessionTitles).toHaveBeenLastCalledWith("s2", "🔔latest");
+
+    harness.focus();
+    harness.controller.selectSession("s2");
+    expect(harness.sessionTitles).toHaveBeenLastCalledWith("s2", "latest");
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("latest");
   });
 
   it("keeps title and attention state isolated per owning window", () => {
-    const first = createWindow(false);
-    const second = createWindow(false);
-    const firstController = createTerminalWindowTitleController(
-      first.window,
-      vi.fn(),
-    );
-    const secondController = createTerminalWindowTitleController(
-      second.window,
-      vi.fn(),
-    );
+    const first = createControllerHarness(false);
+    const second = createControllerHarness(false);
+    first.controller.sessionStarted("s1");
+    first.controller.selectSession("s1");
+    second.controller.sessionStarted("s1");
+    second.controller.selectSession("s1");
 
-    firstController.requestTitle("first");
-    firstController.ringBell();
-    secondController.requestTitle("second");
+    first.controller.requestTitle("s1", "first");
+    first.controller.ringBell("s1");
+    second.controller.requestTitle("s1", "second");
 
     expect(first.window.setTitle).toHaveBeenLastCalledWith("🔔first");
     expect(second.window.setTitle).toHaveBeenLastCalledWith("second");
+    expect(first.dock).toHaveBeenCalledOnce();
+    expect(second.dock).not.toHaveBeenCalled();
   });
 });

@@ -9,6 +9,7 @@ import {
   isTerminalSessionExit,
   isTerminalSessionId,
   isTerminalSessionOutput,
+  isTerminalSessionTitle,
   isTerminalSize,
   isTerminalTabCommand,
   isTerminalTitleRequest,
@@ -70,13 +71,15 @@ const terminal: TerminalBridge = {
       throw new TypeError("Invalid terminal close payload");
     ipcRenderer.send(terminalIpc.close, { sessionId });
   },
-  title(request: string) {
-    if (!isTerminalTitleRequest(request))
+  title(sessionId: TerminalSessionId, request: string) {
+    if (!isTerminalSessionId(sessionId) || !isTerminalTitleRequest(request))
       throw new TypeError("Invalid Terminal Title request");
-    ipcRenderer.send(terminalIpc.title, request);
+    ipcRenderer.send(terminalIpc.title, { sessionId, title: request });
   },
-  bell() {
-    ipcRenderer.send(terminalIpc.bell);
+  bell(sessionId: TerminalSessionId) {
+    if (!isTerminalSessionId(sessionId))
+      throw new TypeError("Invalid Terminal Bell signal");
+    ipcRenderer.send(terminalIpc.bell, { sessionId });
   },
   openExternalLink(url: string) {
     if (typeof url !== "string" || url.length === 0)
@@ -108,6 +111,14 @@ const terminal: TerminalBridge = {
     };
     ipcRenderer.on(terminalIpc.tabCommand, handler);
     return () => ipcRenderer.removeListener(terminalIpc.tabCommand, handler);
+  },
+  onTabTitle(listener: (sessionId: TerminalSessionId, title: string) => void) {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (isTerminalSessionTitle(payload))
+        listener(payload.sessionId, payload.title);
+    };
+    ipcRenderer.on(terminalIpc.tabTitle, handler);
+    return () => ipcRenderer.removeListener(terminalIpc.tabTitle, handler);
   },
   notifyTabSelection(sessionId: TerminalSessionId) {
     if (!isTerminalSessionId(sessionId))

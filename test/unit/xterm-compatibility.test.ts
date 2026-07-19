@@ -65,13 +65,17 @@ describe("standard xterm compatibility fixtures", () => {
       on: vi.fn(),
       removeListener: vi.fn(),
     };
-    const controller = createTerminalWindowTitleController(
-      window,
-      dockRequests,
-    );
+    const sessionTitles: string[] = [];
+    const controller = createTerminalWindowTitleController(window, {
+      fallbackSessionTitle: "example-shell",
+      requestDockAttention: dockRequests,
+      sendSessionTitle: (_sessionId, title) => sessionTitles.push(title),
+    });
+    controller.sessionStarted("s1");
+    controller.selectSession("s1");
     terminal.onData((data) => responses.push(data));
     registerTerminalTitleEvents(terminal, {
-      onTitleRequest: controller.requestTitle,
+      onTitleRequest: (request) => controller.requestTitle("s1", request),
     });
     const canary = `CANARY${"x".repeat(65_537)}`;
 
@@ -79,9 +83,11 @@ describe("standard xterm compatibility fixtures", () => {
 
     expect(nativeTitles).toEqual([
       DEFAULT_TERMINAL_TITLE,
-      DEFAULT_TERMINAL_TITLE,
+      "example-shell",
+      "example-shell",
     ]);
     expect(JSON.stringify(nativeTitles)).not.toContain("CANARY");
+    expect(JSON.stringify(sessionTitles)).not.toContain("CANARY");
     expect(responses).toEqual([]);
     expect(dockRequests).not.toHaveBeenCalled();
     controller.dispose();

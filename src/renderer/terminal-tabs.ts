@@ -30,11 +30,17 @@ export interface TerminalTabsOptions {
   readonly mount: MountTerminalSurface;
   readonly surfaceOptions: TerminalSurfaceOptions;
   readonly notifySelection?: (sessionId: TerminalSessionId) => void;
+  readonly notifyTitle?: (
+    sessionId: TerminalSessionId,
+    request: string,
+  ) => void;
+  readonly notifyBell?: (sessionId: TerminalSessionId) => void;
 }
 
 export interface TerminalTabs {
   readonly ready: Promise<void>;
   handleCommand(command: TerminalTabCommand): void;
+  setSessionTitle(sessionId: TerminalSessionId, title: string): void;
   zoom(command: TerminalFontZoom): void;
   clipboardAction(action: TerminalClipboardAction): void;
   injectSnippet(body: string, options: { readonly submit: boolean }): void;
@@ -46,6 +52,7 @@ interface TerminalTab {
   readonly container: HTMLElement;
   readonly adapter: ElectronTerminalAdapter;
   surface: TerminalSurface | undefined;
+  label: string;
   removed: boolean;
 }
 
@@ -73,9 +80,9 @@ export function createTerminalTabs(
       ...tabs.map((tab, index) => {
         const button = document.createElement("button");
         button.type = "button";
-        // Interim label: the literal position Cmd+1..9 selects. The
-        // per-session Terminal Title replaces it in the titles slice.
-        button.textContent = String(index + 1);
+        // Sanitized display title pushed by main (ADR 0010); the literal
+        // position stands in until the first push lands.
+        button.textContent = tab.label || String(index + 1);
         button.setAttribute("role", "tab");
         button.setAttribute(
           "aria-selected",
@@ -149,6 +156,7 @@ export function createTerminalTabs(
       container,
       adapter,
       surface: undefined,
+      label: "",
       removed: false,
     };
     tabs.push(tab);
@@ -167,13 +175,36 @@ export function createTerminalTabs(
       resize: (size) => adapter.resize(size),
       close: () => adapter.close(),
     };
+    // Title and BEL events carry the emitting tab's session id; the Surface
+    // itself stays tab-unaware. Events can only follow session output, so
+    // the id is always known by the time they fire.
+    const tabSurfaceOptions: TerminalSurfaceOptions = {
+      ...options.surfaceOptions,
+      ...(options.notifyTitle
+        ? {
+            onTitleRequest: (request: string) => {
+              const sessionId = adapter.sessionId();
+              if (sessionId !== undefined)
+                options.notifyTitle?.(sessionId, request);
+            },
+          }
+        : {}),
+      ...(options.notifyBell
+        ? {
+            onBell: () => {
+              const sessionId = adapter.sessionId();
+              if (sessionId !== undefined) options.notifyBell?.(sessionId);
+            },
+          }
+        : {}),
+    };
 
     let surface: TerminalSurface;
     try {
       surface = await options.mount(
         container,
         sessionAdapter,
-        options.surfaceOptions,
+        tabSurfaceOptions,
       );
     } catch (error) {
       removeTab(tab);
@@ -196,6 +227,13 @@ export function createTerminalTabs(
 
   return {
     ready,
+    setSessionTitle(sessionId, title) {
+      if (disposed) return;
+      const tab = findBySession(tabs, sessionId);
+      if (!tab) return;
+      tab.label = title;
+      renderStrip();
+    },
     handleCommand(command) {
       if (disposed) return;
       switch (command.action) {

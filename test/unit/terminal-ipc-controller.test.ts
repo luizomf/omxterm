@@ -47,6 +47,8 @@ function clipboardOptions() {
     showClipboardContextMenu: vi.fn(),
     onTitleRequest: vi.fn(),
     onBell: vi.fn(),
+    onSessionStarted: vi.fn(),
+    onSessionSelected: vi.fn(),
     onUserInteraction: vi.fn(),
     openExternalLink: vi.fn(async () => {}),
     onExternalLinkOpenError: vi.fn(),
@@ -367,20 +369,39 @@ describe("terminal IPC controller", () => {
     const forged = { sender: otherWebContents, senderFrame: otherFrame };
 
     ipc.handlers.get(terminalIpc.start)!(trusted);
-    ipc.listeners.get(terminalIpc.title)?.(trusted, "owned title");
-    ipc.listeners.get(terminalIpc.title)?.(trusted, "x".repeat(65_537));
+    ipc.listeners.get(terminalIpc.title)?.(trusted, {
+      sessionId: "s1",
+      title: "owned title",
+    });
+    ipc.listeners.get(terminalIpc.title)?.(trusted, {
+      sessionId: "s1",
+      title: "x".repeat(65_537),
+    });
+    ipc.listeners.get(terminalIpc.title)?.(trusted, "bare title");
     ipc.listeners.get(terminalIpc.title)?.(trusted, { canary: "CANARY" });
-    ipc.listeners.get(terminalIpc.title)?.(forged, "forged title");
-    ipc.listeners.get(terminalIpc.bell)?.(trusted);
+    ipc.listeners.get(terminalIpc.title)?.(trusted, {
+      sessionId: "s9",
+      title: "unknown session title",
+    });
+    ipc.listeners.get(terminalIpc.title)?.(forged, {
+      sessionId: "s1",
+      title: "forged title",
+    });
+    ipc.listeners.get(terminalIpc.bell)?.(trusted, { sessionId: "s1" });
     ipc.listeners.get(terminalIpc.bell)?.(trusted, "malformed");
+    ipc.listeners.get(terminalIpc.bell)?.(trusted, { sessionId: "s9" });
     ipc.listeners.get(terminalIpc.input)?.(trusted, {
       sessionId: "s1",
       data: "key",
     });
 
-    expect(title.mock.calls).toEqual([["owned title"], ["x".repeat(65_537)]]);
+    expect(title.mock.calls).toEqual([
+      ["s1", "owned title"],
+      ["s1", "x".repeat(65_537)],
+    ]);
     expect(JSON.stringify(title.mock.calls)).not.toContain("CANARY");
-    expect(bell).toHaveBeenCalledOnce();
+    expect(JSON.stringify(title.mock.calls)).not.toContain("unknown session");
+    expect(bell).toHaveBeenCalledExactlyOnceWith("s1");
     expect(interaction).toHaveBeenCalledOnce();
     expect(session.write).toHaveBeenCalledOnce();
     expect(session.write).toHaveBeenCalledWith("key");

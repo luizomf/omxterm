@@ -124,6 +124,8 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
       createSession: vi.fn(),
       onSessionStartError: vi.fn(),
       onSessionExit: vi.fn(),
+      onSessionStarted: vi.fn(),
+      onSessionSelected: vi.fn(),
       writeClipboardText: vi.fn(),
       readClipboardText: vi.fn(() => ""),
       confirmPaste: vi.fn(async () => false),

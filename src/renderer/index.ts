@@ -27,6 +27,7 @@ void window.omxterm.terminal.configuration().then((configuration) => {
       subscribeToFontZoom: window.omxterm.terminal.onFontZoom,
       subscribeToClipboardActions: window.omxterm.terminal.onClipboardAction,
       subscribeToTabCommands: window.omxterm.terminal.onTabCommand,
+      subscribeToTabTitles: window.omxterm.terminal.onTabTitle,
       notifyTabSelection: window.omxterm.terminal.notifyTabSelection,
       onTitleRequest: window.omxterm.terminal.title,
       onBell: window.omxterm.terminal.bell,

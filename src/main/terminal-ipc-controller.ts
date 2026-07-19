@@ -7,7 +7,7 @@ import {
   isTerminalSessionInput,
   isTerminalSessionReference,
   isTerminalSessionResize,
-  isTerminalTitleRequest,
+  isTerminalSessionTitle,
   requiresProtectedPaste,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
@@ -71,12 +71,17 @@ export interface TerminalIpcControllerOptions {
     exit: TerminalExit,
     context: TerminalSessionEndContext,
   ) => void;
+  readonly onSessionStarted: (sessionId: TerminalSessionId) => void;
+  readonly onSessionSelected: (sessionId: TerminalSessionId) => void;
   readonly writeClipboardText: (text: string) => void;
   readonly readClipboardText: () => string;
   readonly confirmPaste: (text: string) => Promise<boolean>;
   readonly showClipboardContextMenu: () => void;
-  readonly onTitleRequest: (request: string) => void;
-  readonly onBell: () => void;
+  readonly onTitleRequest: (
+    sessionId: TerminalSessionId,
+    request: string,
+  ) => void;
+  readonly onBell: (sessionId: TerminalSessionId) => void;
   readonly onUserInteraction: () => void;
   readonly openExternalLink: (url: string) => Promise<void>;
   readonly onExternalLinkOpenError: () => void;
@@ -355,6 +360,7 @@ function createTerminalIpcController(
     }
     if (!routedSession(payload.sessionId)) return;
     selectedSessionId = payload.sessionId;
+    options.onSessionSelected(payload.sessionId);
   };
 
   // A session-scoped payload is rejected before it is routed: an invalid shape
@@ -441,6 +447,8 @@ function createTerminalIpcController(
       });
     if (disposed) {
       closeSession(sessionId);
+    } else {
+      options.onSessionStarted(sessionId);
     }
     return sessionId;
   };
@@ -527,12 +535,20 @@ function createTerminalIpcController(
     return options.loadSnippets();
   };
   const title = (payload?: unknown) => {
-    if (isTerminalTitleRequest(payload)) options.onTitleRequest(payload);
-    else reject("title", "invalid-payload");
+    if (!isTerminalSessionTitle(payload)) {
+      reject("title", "invalid-payload");
+      return;
+    }
+    if (!routedSession(payload.sessionId)) return;
+    options.onTitleRequest(payload.sessionId, payload.title);
   };
   const bell = (payload?: unknown) => {
-    if (payload === undefined) options.onBell();
-    else reject("ipc", "invalid-payload");
+    if (!isTerminalSessionReference(payload)) {
+      reject("ipc", "invalid-payload");
+      return;
+    }
+    if (!routedSession(payload.sessionId)) return;
+    options.onBell(payload.sessionId);
   };
   const openExternalLink = (payload?: unknown) => {
     if (!isValidExternalLink(payload)) {

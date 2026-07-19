@@ -101,24 +101,56 @@ describe("isolated preload terminal bridge", () => {
     await expect(bridge.start()).rejects.toThrow(TypeError);
   });
 
-  it("exposes one-way title and payload-free BEL signals", () => {
+  it("exposes one-way session-scoped title and BEL signals", () => {
     const bridge = electron.bridge!;
 
-    bridge.title("");
-    bridge.title("terminal title");
-    bridge.bell();
-    bridge.title("x".repeat(65_537));
+    bridge.title("s1", "");
+    bridge.title("s1", "terminal title");
+    bridge.bell("s2");
+    bridge.title("s1", "x".repeat(65_537));
+    expect(() => bridge.title("session-1", "title")).toThrow(TypeError);
+    expect(() => bridge.bell("")).toThrow(TypeError);
 
-    expect(electron.send).toHaveBeenCalledWith(terminalIpc.title, "");
-    expect(electron.send).toHaveBeenCalledWith(
-      terminalIpc.title,
-      "terminal title",
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.title, {
+      sessionId: "s1",
+      title: "",
+    });
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.title, {
+      sessionId: "s1",
+      title: "terminal title",
+    });
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.bell, {
+      sessionId: "s2",
+    });
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.title, {
+      sessionId: "s1",
+      title: "x".repeat(65_537),
+    });
+  });
+
+  it("delivers only validated tab title updates from main", () => {
+    const bridge = electron.bridge!;
+    const onTabTitle = vi.fn();
+    const remove = bridge.onTabTitle(onTabTitle);
+
+    electron.listeners.get(terminalIpc.tabTitle)?.(
+      {},
+      { sessionId: "s1", title: "vim" },
     );
-    expect(electron.send).toHaveBeenCalledWith(terminalIpc.bell);
-    expect(electron.send).toHaveBeenCalledWith(
-      terminalIpc.title,
-      "x".repeat(65_537),
+    electron.listeners.get(terminalIpc.tabTitle)?.({}, { sessionId: "s1" });
+    electron.listeners.get(terminalIpc.tabTitle)?.({}, "vim");
+    electron.listeners.get(terminalIpc.tabTitle)?.(
+      {},
+      { sessionId: "nope", title: "vim" },
     );
+    remove();
+
+    expect(onTabTitle.mock.calls).toEqual([["s1", "vim"]]);
+    expect(electron.removeListener).toHaveBeenCalledWith(
+      terminalIpc.tabTitle,
+      expect.any(Function),
+    );
+    electron.removeListener.mockClear();
   });
 
   it("sends an exact bounded External Link request without exposing Electron", () => {
@@ -157,6 +189,7 @@ describe("isolated preload terminal bridge", () => {
     };
     const event = { sender: webContents, senderFrame: frame };
     const nativeTitles: string[] = [];
+    const sessionTitles: string[] = [];
     const titleController = createTerminalWindowTitleController(
       {
         isFocused: () => true,
@@ -164,7 +197,11 @@ describe("isolated preload terminal bridge", () => {
         on: vi.fn(),
         removeListener: vi.fn(),
       },
-      vi.fn(),
+      {
+        fallbackSessionTitle: "example-shell",
+        requestDockAttention: vi.fn(),
+        sendSessionTitle: (_sessionId, title) => sessionTitles.push(title),
+      },
     );
     const router = registerTerminalIpcRouter(ipcMain);
     const routed = router.registerController({
@@ -186,6 +223,8 @@ describe("isolated preload terminal bridge", () => {
       })),
       onSessionStartError: vi.fn(),
       onSessionExit: vi.fn(),
+      onSessionStarted: titleController.sessionStarted,
+      onSessionSelected: titleController.selectSession,
       onTitleRequest: titleController.requestTitle,
       onBell: titleController.ringBell,
       onUserInteraction: titleController.resetAttention,
@@ -200,18 +239,24 @@ describe("isolated preload terminal bridge", () => {
     electron.send.mockImplementation((channel: string, payload?: unknown) =>
       listeners.get(channel)?.(event, payload),
     );
+    handlers.get(terminalIpc.start)!(event);
+    electron.bridge!.notifyTabSelection("s1");
     const terminal = new Terminal();
     const ptyResponses: string[] = [];
     terminal.onData((data) => ptyResponses.push(data));
     registerTerminalTitleEvents(terminal, {
-      onTitleRequest: electron.bridge!.title,
+      onTitleRequest: (request) => electron.bridge!.title("s1", request),
     });
     const canary = `CANARY${"x".repeat(65_537)}`;
 
     await write(terminal, `\u001b]0;${canary}\u0007`);
 
-    expect(nativeTitles).toEqual(["OMXTerm", "OMXTerm"]);
+    // Window: startup fallback, selection mirror, then the rejected request
+    // landing back on the Default Shell fallback — never the canary.
+    expect(nativeTitles).toEqual(["OMXTerm", "example-shell", "example-shell"]);
+    expect(sessionTitles).toEqual(["example-shell", "example-shell"]);
     expect(JSON.stringify(nativeTitles)).not.toContain("CANARY");
+    expect(JSON.stringify(sessionTitles)).not.toContain("CANARY");
     expect(ptyResponses).toEqual([]);
 
     terminal.dispose();

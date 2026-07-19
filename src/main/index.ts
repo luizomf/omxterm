@@ -131,6 +131,7 @@ app
             const window = new BrowserWindow(
               terminalWindowOptions(preloadPath, userConfiguration),
             );
+            const defaultShellName = path.basename(defaultShell);
             lockTerminalRendererNavigation(window.webContents);
             // Closing a window is guarded by confirmClose regardless of its
             // trigger (menu, keybind, or native close button). A window whose
@@ -151,13 +152,24 @@ app
             });
             const titleController = createTerminalWindowTitleController(
               window,
-              () => app.dock?.bounce("informational"),
-              (reason) =>
-                operationalEvents!.write({
-                  name: "boundary.rejected",
-                  boundary: "title",
-                  reason,
-                }),
+              {
+                fallbackSessionTitle: defaultShellName,
+                requestDockAttention: () =>
+                  void app.dock?.bounce("informational"),
+                sendSessionTitle: (sessionId, title) => {
+                  if (!window.webContents.isDestroyed())
+                    window.webContents.send(terminalIpc.tabTitle, {
+                      sessionId,
+                      title,
+                    });
+                },
+                onRejected: (reason) =>
+                  operationalEvents!.write({
+                    name: "boundary.rejected",
+                    boundary: "title",
+                    reason,
+                  }),
+              },
             );
             window.once("closed", () => titleController.dispose());
             const controller = terminalIpcRouter.registerController({
@@ -174,7 +186,12 @@ app
                 });
               },
               onSessionStartError: lifecycle.onSessionStartError,
-              onSessionExit: lifecycle.onSessionExit,
+              onSessionExit: (exit, context) => {
+                titleController.sessionEnded(context.sessionId);
+                lifecycle.onSessionExit(exit, context);
+              },
+              onSessionStarted: titleController.sessionStarted,
+              onSessionSelected: titleController.selectSession,
               onTitleRequest: titleController.requestTitle,
               onBell: titleController.ringBell,
               onUserInteraction: titleController.resetAttention,

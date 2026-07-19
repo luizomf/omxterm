@@ -17,8 +17,8 @@ export interface TerminalBridge {
   input(sessionId: TerminalSessionId, data: string): void;
   resize(sessionId: TerminalSessionId, size: TerminalSize): void;
   close(sessionId: TerminalSessionId): void;
-  title(request: string): void;
-  bell(): void;
+  title(sessionId: TerminalSessionId, request: string): void;
+  bell(sessionId: TerminalSessionId): void;
   openExternalLink(url: string): void;
   onOutput(
     listener: (sessionId: TerminalSessionId, data: string) => void,
@@ -27,6 +27,9 @@ export interface TerminalBridge {
     listener: (sessionId: TerminalSessionId, exit: TerminalExit) => void,
   ): () => void;
   onTabCommand(listener: (command: TerminalTabCommand) => void): () => void;
+  onTabTitle(
+    listener: (sessionId: TerminalSessionId, title: string) => void,
+  ): () => void;
   notifyTabSelection(sessionId: TerminalSessionId): void;
   onFontZoom(listener: (command: TerminalFontZoom) => void): () => void;
   writeClipboardText(text: string): Promise<void>;

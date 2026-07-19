@@ -48,9 +48,15 @@ interface TerminalWindowPageOptions {
   readonly subscribeToTabCommands?: (
     listener: (command: TerminalTabCommand) => void,
   ) => () => void;
+  readonly subscribeToTabTitles?: (
+    listener: (sessionId: TerminalSessionId, title: string) => void,
+  ) => () => void;
   readonly notifyTabSelection?: (sessionId: TerminalSessionId) => void;
-  readonly onTitleRequest?: (request: string) => void;
-  readonly onBell?: () => void;
+  readonly onTitleRequest?: (
+    sessionId: TerminalSessionId,
+    request: string,
+  ) => void;
+  readonly onBell?: (sessionId: TerminalSessionId) => void;
   readonly onExternalLink?: (url: string) => void;
   readonly snippets?: {
     readonly element: HTMLElement;
@@ -74,6 +80,7 @@ export function mountTerminalWindowPage(
   let removeZoomListener: (() => void) | undefined;
   let removeClipboardActionListener: (() => void) | undefined;
   let removeTabCommandListener: (() => void) | undefined;
+  let removeTabTitleListener: (() => void) | undefined;
   let snippetsSidebar: SnippetsSidebar | undefined;
   let removeSnippetsToggleListener: (() => void) | undefined;
 
@@ -112,10 +119,6 @@ export function mountTerminalWindowPage(
         }
       : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
-    ...(options.onTitleRequest
-      ? { onTitleRequest: options.onTitleRequest }
-      : {}),
-    ...(options.onBell ? { onBell: options.onBell } : {}),
     ...(options.onExternalLink
       ? { onExternalLink: options.onExternalLink }
       : {}),
@@ -130,6 +133,10 @@ export function mountTerminalWindowPage(
       ...(options.notifyTabSelection
         ? { notifySelection: options.notifyTabSelection }
         : {}),
+      ...(options.onTitleRequest
+        ? { notifyTitle: options.onTitleRequest }
+        : {}),
+      ...(options.onBell ? { notifyBell: options.onBell } : {}),
     },
   );
 
@@ -142,6 +149,7 @@ export function mountTerminalWindowPage(
     removeZoomListener?.();
     removeClipboardActionListener?.();
     removeTabCommandListener?.();
+    removeTabTitleListener?.();
     removeSnippetsToggleListener?.();
     snippetsSidebar?.dispose();
     snippetsSidebar = undefined;
@@ -162,6 +170,9 @@ export function mountTerminalWindowPage(
     );
     removeTabCommandListener = options.subscribeToTabCommands?.((command) =>
       tabs.handleCommand(command),
+    );
+    removeTabTitleListener = options.subscribeToTabTitles?.(
+      (sessionId, title) => tabs.setSessionTitle(sessionId, title),
     );
     if (options.snippets) {
       const sidebar = createSnippetsSidebar(options.snippets.element, {

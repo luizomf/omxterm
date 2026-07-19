@@ -1,3 +1,5 @@
+import type { TerminalSessionId } from "../shared/terminal-contract";
+
 export const DEFAULT_TERMINAL_TITLE = "OMXTerm";
 export const TERMINAL_BELL_MARKER = "🔔";
 export const MAX_TERMINAL_TITLE_CODE_POINTS = 256;
@@ -9,9 +11,25 @@ interface TerminalTitleWindow {
   removeListener(event: "focus", listener: () => void): void;
 }
 
+export interface TerminalWindowTitleControllerOptions {
+  // The Default Shell's name, known from the spawn — the per-session display
+  // fallback per ADR 0016. The native window keeps DEFAULT_TERMINAL_TITLE as
+  // its final fallback when no session is selected.
+  readonly fallbackSessionTitle: string;
+  readonly requestDockAttention: () => void;
+  readonly sendSessionTitle: (
+    sessionId: TerminalSessionId,
+    title: string,
+  ) => void;
+  readonly onRejected?: (reason: TerminalTitleRejectionReason) => void;
+}
+
 export interface TerminalWindowTitleController {
-  requestTitle(request: string): void;
-  ringBell(): void;
+  sessionStarted(sessionId: TerminalSessionId): void;
+  sessionEnded(sessionId: TerminalSessionId): void;
+  selectSession(sessionId: TerminalSessionId): void;
+  requestTitle(sessionId: TerminalSessionId, request: string): void;
+  ringBell(sessionId: TerminalSessionId): void;
   resetAttention(): void;
   dispose(): void;
 }
@@ -29,57 +47,117 @@ export function terminalTitleRejectionReason(
   return undefined;
 }
 
-export function safeTerminalBaseTitle(request: string): string {
-  if ([...request].length > MAX_TERMINAL_TITLE_CODE_POINTS)
-    return DEFAULT_TERMINAL_TITLE;
+// The accepted display value of one OSC 0/2 request, or undefined when the
+// request is empty, oversized, or invalid and the session falls back.
+export function sanitizedTerminalTitle(request: string): string | undefined {
+  if ([...request].length > MAX_TERMINAL_TITLE_CODE_POINTS) return undefined;
 
   const sanitized = request.replace(/[\p{Cc}\p{Bidi_Control}]/gu, "");
   if (
     sanitized.length === 0 ||
     /[\p{Cc}\p{Cf}\p{Cs}\p{Cn}\p{Zl}\p{Zp}]/u.test(sanitized)
   )
-    return DEFAULT_TERMINAL_TITLE;
+    return undefined;
   return sanitized;
+}
+
+interface SessionTitleState {
+  title: string | undefined;
+  bellPending: boolean;
 }
 
 export function createTerminalWindowTitleController(
   window: TerminalTitleWindow,
-  requestDockAttention: () => void,
-  onRejected: (reason: TerminalTitleRejectionReason) => void = () => {},
+  options: TerminalWindowTitleControllerOptions,
 ): TerminalWindowTitleController {
-  let baseTitle = DEFAULT_TERMINAL_TITLE;
-  let attentionPending = false;
+  const sessions = new Map<TerminalSessionId, SessionTitleState>();
+  let selectedSessionId: TerminalSessionId | undefined;
+  let dockAttentionPending = false;
   let disposed = false;
+  const onRejected = options.onRejected ?? (() => {});
 
-  const displayTitle = () => {
-    if (disposed) return;
-    window.setTitle(
-      attentionPending ? `${TERMINAL_BELL_MARKER}${baseTitle}` : baseTitle,
-    );
+  const displayTitle = (state: SessionTitleState) =>
+    `${state.bellPending ? TERMINAL_BELL_MARKER : ""}${
+      state.title ?? options.fallbackSessionTitle
+    }`;
+
+  const pushSessionTitle = (sessionId: TerminalSessionId) => {
+    const state = sessions.get(sessionId);
+    if (state) options.sendSessionTitle(sessionId, displayTitle(state));
   };
+
+  const updateWindowTitle = () => {
+    if (disposed) return;
+    const selected = selectedSessionId
+      ? sessions.get(selectedSessionId)
+      : undefined;
+    window.setTitle(selected ? displayTitle(selected) : DEFAULT_TERMINAL_TITLE);
+  };
+
+  const clearBell = (sessionId: TerminalSessionId | undefined) => {
+    const state = sessionId ? sessions.get(sessionId) : undefined;
+    if (!state || !state.bellPending) return;
+    state.bellPending = false;
+    pushSessionTitle(sessionId!);
+    if (sessionId === selectedSessionId) updateWindowTitle();
+  };
+
   const resetAttention = () => {
-    if (disposed || !attentionPending) return;
-    attentionPending = false;
-    displayTitle();
+    if (disposed) return;
+    dockAttentionPending = false;
+    clearBell(selectedSessionId);
   };
   const onFocus = () => resetAttention();
 
   window.on("focus", onFocus);
-  displayTitle();
+  updateWindowTitle();
 
   return {
-    requestTitle(request) {
+    sessionStarted(sessionId) {
       if (disposed) return;
+      sessions.set(sessionId, { title: undefined, bellPending: false });
+      pushSessionTitle(sessionId);
+    },
+    sessionEnded(sessionId) {
+      if (disposed) return;
+      sessions.delete(sessionId);
+      if (selectedSessionId === sessionId) {
+        selectedSessionId = undefined;
+        updateWindowTitle();
+      }
+    },
+    selectSession(sessionId) {
+      if (disposed || !sessions.has(sessionId)) return;
+      selectedSessionId = sessionId;
+      // Selecting a ringing tab is looking at it: its marker is done.
+      if (window.isFocused()) clearBell(sessionId);
+      updateWindowTitle();
+    },
+    requestTitle(sessionId, request) {
+      if (disposed) return;
+      const state = sessions.get(sessionId);
+      if (!state) return;
       const rejection = terminalTitleRejectionReason(request);
       if (rejection) onRejected(rejection);
-      baseTitle = safeTerminalBaseTitle(request);
-      displayTitle();
+      state.title = sanitizedTerminalTitle(request);
+      pushSessionTitle(sessionId);
+      if (sessionId === selectedSessionId) updateWindowTitle();
     },
-    ringBell() {
-      if (disposed || window.isFocused() || attentionPending) return;
-      attentionPending = true;
-      displayTitle();
-      requestDockAttention();
+    ringBell(sessionId) {
+      if (disposed) return;
+      const state = sessions.get(sessionId);
+      if (!state) return;
+      // A bell in the tab the user is looking at stays completely silent.
+      if (sessionId === selectedSessionId && window.isFocused()) return;
+      if (!state.bellPending) {
+        state.bellPending = true;
+        pushSessionTitle(sessionId);
+        if (sessionId === selectedSessionId) updateWindowTitle();
+      }
+      if (!window.isFocused() && !dockAttentionPending) {
+        dockAttentionPending = true;
+        options.requestDockAttention();
+      }
     },
     resetAttention,
     dispose() {

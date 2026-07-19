@@ -116,8 +116,11 @@ the unpacked build directory or a previous installation.
   selected window changes. Verify a new window uses the configured default and
   the menu does not rewrite configuration.
 - **Titles and BEL:** exercise OSC 0 and OSC 2, invalid/control/bidi/oversized
-  titles, and BEL in focused and unfocused windows. Confirm sanitized bounded
-  titles, silent BEL, one Dock attention request, and the temporary bell marker.
+  titles, and BEL in focused and unfocused windows and in selected and
+  unselected tabs. Confirm sanitized bounded titles per tab with the Default
+  Shell name as the untitled fallback, the window title mirroring the selected
+  tab, silent BEL, one Dock attention request, and the bell marker on the
+  ringing tab until it is focused again.
 - **Links:** verify only literal visible HTTP and HTTPS URLs activate on
   `Cmd+click`; verify invalid URLs, other schemes, OSC 8 destinations, and
   renderer navigation are refused.

@@ -53,15 +53,17 @@ function createTabsHarness(options: { failMountAt?: number } = {}) {
     return adapter;
   });
   let mountCount = 0;
+  const mountedSurfaceOptions: TerminalSurfaceOptions[] = [];
   const mount = vi.fn(
     async (
       _container: HTMLElement,
       adapter: TerminalSessionAdapter,
-      _options: TerminalSurfaceOptions,
+      surfaceOptions: TerminalSurfaceOptions,
     ) => {
       mountCount += 1;
       if (mountCount === options.failMountAt)
         throw new Error("The Default Shell could not be started");
+      mountedSurfaceOptions.push(surfaceOptions);
       await adapter.start({ onOutput: vi.fn(), onExit: vi.fn() });
       const surface = createFakeSurface();
       surfaces.push(surface);
@@ -70,11 +72,31 @@ function createTabsHarness(options: { failMountAt?: number } = {}) {
   );
 
   const notifySelection = vi.fn();
+  const notifyTitle = vi.fn();
+  const notifyBell = vi.fn();
   const tabs = createTerminalTabs(
     { strip, container },
-    { createAdapter, mount, surfaceOptions: {}, notifySelection },
+    {
+      createAdapter,
+      mount,
+      surfaceOptions: {},
+      notifySelection,
+      notifyTitle,
+      notifyBell,
+    },
   );
-  return { tabs, strip, container, adapters, surfaces, mount, notifySelection };
+  return {
+    tabs,
+    strip,
+    container,
+    adapters,
+    surfaces,
+    mount,
+    mountedSurfaceOptions,
+    notifySelection,
+    notifyTitle,
+    notifyBell,
+  };
 }
 
 function visibleContainers(container: HTMLElement): number[] {
@@ -289,6 +311,41 @@ describe("renderer Terminal Tabs", () => {
     expect(harness.strip.hidden).toBe(true);
     expect(visibleContainers(harness.container)).toEqual([0]);
     expect(document.body.classList.contains("tabs-visible")).toBe(false);
+  });
+
+  it("tags title and BEL events with the emitting tab's session id", async () => {
+    const harness = createTabsHarness();
+    await harness.tabs.ready;
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+
+    harness.mountedSurfaceOptions[0]!.onTitleRequest?.("first directory");
+    harness.mountedSurfaceOptions[1]!.onTitleRequest?.("second directory");
+    harness.mountedSurfaceOptions[1]!.onBell?.();
+
+    expect(harness.notifyTitle.mock.calls).toEqual([
+      ["s1", "first directory"],
+      ["s2", "second directory"],
+    ]);
+    expect(harness.notifyBell).toHaveBeenCalledExactlyOnceWith("s2");
+  });
+
+  it("labels tabs with their session's display title pushed by main", async () => {
+    const harness = createTabsHarness();
+    await harness.tabs.ready;
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+
+    expect(selectedStates(harness.strip)).toEqual(["1:false", "2:true"]);
+
+    harness.tabs.setSessionTitle("s1", "vim");
+    harness.tabs.setSessionTitle("s2", "🔔ssh m132");
+    harness.tabs.setSessionTitle("s9", "unknown session");
+
+    expect(selectedStates(harness.strip)).toEqual([
+      "vim:false",
+      "🔔ssh m132:true",
+    ]);
   });
 
   it("disposes every tab on window teardown", async () => {
