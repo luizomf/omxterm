@@ -158,9 +158,11 @@ describe("native Terminal Title and bell attention", () => {
     harness.controller.ringBell("s1");
     expect(harness.sessionTitles).toHaveBeenLastCalledWith(
       "s1",
-      "🔔example-shell",
+      "🔔 example-shell",
     );
-    expect(harness.window.setTitle).toHaveBeenLastCalledWith("🔔example-shell");
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith(
+      "🔔 example-shell",
+    );
     expect(harness.dock).not.toHaveBeenCalled();
 
     // Typing in the selected tab acknowledges its own bell.
@@ -174,7 +176,7 @@ describe("native Terminal Title and bell attention", () => {
     harness.controller.ringBell("s2");
     expect(harness.sessionTitles).toHaveBeenLastCalledWith(
       "s2",
-      "🔔example-shell",
+      "🔔 example-shell",
     );
     expect(harness.window.setTitle).toHaveBeenLastCalledWith("example-shell");
     expect(harness.dock).not.toHaveBeenCalled();
@@ -196,10 +198,10 @@ describe("native Terminal Title and bell attention", () => {
     harness.controller.ringBell("s1");
     harness.controller.ringBell("s1");
     expect(harness.dock).toHaveBeenCalledOnce();
-    expect(harness.window.setTitle).toHaveBeenLastCalledWith("🔔remote job");
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("🔔 remote job");
     expect(harness.sessionTitles).toHaveBeenLastCalledWith(
       "s1",
-      "🔔remote job",
+      "🔔 remote job",
     );
 
     harness.focus();
@@ -221,18 +223,18 @@ describe("native Terminal Title and bell attention", () => {
     harness.controller.ringBell("s2");
     expect(harness.sessionTitles).toHaveBeenLastCalledWith(
       "s2",
-      "🔔🔔legitimate",
+      "🔔 🔔legitimate",
     );
 
     // Interaction happens in the selected tab; the other marker stays.
     harness.controller.resetAttention();
     expect(harness.sessionTitles).toHaveBeenLastCalledWith(
       "s2",
-      "🔔🔔legitimate",
+      "🔔 🔔legitimate",
     );
 
     harness.controller.requestTitle("s2", "latest");
-    expect(harness.sessionTitles).toHaveBeenLastCalledWith("s2", "🔔latest");
+    expect(harness.sessionTitles).toHaveBeenLastCalledWith("s2", "🔔 latest");
 
     harness.focus();
     harness.controller.selectSession("s2");
@@ -252,7 +254,7 @@ describe("native Terminal Title and bell attention", () => {
     first.controller.ringBell("s1");
     second.controller.requestTitle("s1", "second");
 
-    expect(first.window.setTitle).toHaveBeenLastCalledWith("🔔first");
+    expect(first.window.setTitle).toHaveBeenLastCalledWith("🔔 first");
     expect(second.window.setTitle).toHaveBeenLastCalledWith("second");
     expect(first.dock).toHaveBeenCalledOnce();
     expect(second.dock).not.toHaveBeenCalled();

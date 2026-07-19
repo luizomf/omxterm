@@ -77,7 +77,7 @@ export function createTerminalWindowTitleController(
   const onRejected = options.onRejected ?? (() => {});
 
   const displayTitle = (state: SessionTitleState) =>
-    `${state.bellPending ? TERMINAL_BELL_MARKER : ""}${
+    `${state.bellPending ? `${TERMINAL_BELL_MARKER} ` : ""}${
       state.title ?? options.fallbackSessionTitle
     }`;
 
