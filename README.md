@@ -6,10 +6,12 @@ OMXTerm is an open-source personal desktop terminal for Apple Silicon macOS.
   <img src="docs/images/omxterm-hero.png" alt="OMXTerm icon: a light blue terminal prompt on a dark rounded square" width="480" />
 </p>
 
-The source version is `0.1.0`, selected as the intended first public version.
-There is no public download, `v0.1.0` tag, or GitHub Release yet. Any DMG built
-from the current source is an unsigned, non-notarized verification artifact,
-not a published release.
+The current published release is `v0.1.0`, available from the
+[GitHub Releases page](https://github.com/luizomf/omxterm/releases) as an
+unsigned, non-notarized Apple Silicon DMG with its SHA-256 checksum. Between
+releases, `main` carries a `-dev` development baseline version under the
+[versioning policy](docs/versioning.md); any DMG built from `main` is a local
+verification artifact, not a published release.
 
 ## Development
 
