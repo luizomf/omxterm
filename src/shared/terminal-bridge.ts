@@ -4,6 +4,7 @@ import type {
   TerminalFontZoom,
   TerminalSessionId,
   TerminalSize,
+  TerminalTabCommand,
 } from "./terminal-contract";
 import type { TerminalRendererConfiguration } from "./user-configuration";
 import type { TerminalSnippetsResponse } from "./terminal-snippets";
@@ -25,6 +26,7 @@ export interface TerminalBridge {
   onExit(
     listener: (sessionId: TerminalSessionId, exit: TerminalExit) => void,
   ): () => void;
+  onTabCommand(listener: (command: TerminalTabCommand) => void): () => void;
   onFontZoom(listener: (command: TerminalFontZoom) => void): () => void;
   writeClipboardText(text: string): Promise<void>;
   readClipboardText(): Promise<string>;

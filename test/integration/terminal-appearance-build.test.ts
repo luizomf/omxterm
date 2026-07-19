@@ -67,10 +67,10 @@ describe("Terminal appearance build", () => {
       "utf8",
     );
     const surfaceRule = sourceCss.match(
-      /#terminal-surface\s*\{(?<body>[^}]*)\}/u,
+      /\.terminal-surface\s*\{(?<body>[^}]*)\}/u,
     );
     const xtermRule = sourceCss.match(
-      /#terminal-surface \.xterm\s*\{(?<body>[^}]*)\}/u,
+      /\.terminal-surface \.xterm\s*\{(?<body>[^}]*)\}/u,
     );
     expect(surfaceRule?.groups?.body).not.toContain("padding");
     expect(surfaceRule?.groups?.body).toContain(
@@ -99,7 +99,7 @@ describe("Terminal appearance build", () => {
       "utf8",
     );
     const viewportRule = sourceCss.match(
-      /#terminal-surface \.xterm-viewport\s*\{(?<body>[^}]*)\}/u,
+      /\.terminal-surface \.xterm-viewport\s*\{(?<body>[^}]*)\}/u,
     );
 
     expect(viewportRule?.groups?.body).toContain(
@@ -111,7 +111,7 @@ describe("Terminal appearance build", () => {
       "utf8",
     );
     expect(
-      builtCss.lastIndexOf("#terminal-surface .xterm-viewport"),
+      builtCss.lastIndexOf(".terminal-surface .xterm-viewport"),
     ).toBeGreaterThan(builtCss.indexOf(".xterm .xterm-viewport"));
   });
 
@@ -120,12 +120,12 @@ describe("Terminal appearance build", () => {
       path.join(projectRoot, "src", "renderer", "terminal-window.css"),
       "utf8",
     );
-    const surfaceRule = css.match(/#terminal-surface\s*\{(?<body>[^}]*)\}/u);
+    const surfaceRule = css.match(/\.terminal-surface\s*\{(?<body>[^}]*)\}/u);
     const titleAreaRule = css.match(
-      /#terminal-surface::before\s*\{(?<body>[^}]*)\}/u,
+      /\.terminal-surface::before\s*\{(?<body>[^}]*)\}/u,
     );
     const xtermRule = css.match(
-      /#terminal-surface \.xterm\s*\{(?<body>[^}]*)\}/u,
+      /\.terminal-surface \.xterm\s*\{(?<body>[^}]*)\}/u,
     );
 
     expect(titleAreaRule?.groups?.body).toContain('content: ""');

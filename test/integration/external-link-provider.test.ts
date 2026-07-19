@@ -143,18 +143,26 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
     );
 
     let rendererExternalLink: ((url: string) => void) | undefined;
-    const adapter: TerminalSessionAdapter = {
-      start: vi.fn(async () => {}),
-      write: vi.fn(),
-      resize: vi.fn(),
-      close: vi.fn(),
-    };
+    const tabStrip = document.createElement("nav");
+    tabStrip.hidden = true;
+    const tabsContainer = document.createElement("div");
+    document.body.append(tabStrip, tabsContainer);
     const host = mountTerminalWindowPage(
-      document.createElement("div"),
-      adapter,
+      { tabStrip, tabsContainer },
       {
+        createAdapter: () => ({
+          sessionId: () => undefined,
+          start: vi.fn(async () => {}),
+          write: vi.fn(),
+          resize: vi.fn(),
+          close: vi.fn(),
+        }),
         onExternalLink: electron.bridge!.openExternalLink,
-        mount: async (_container, _adapter, options) => {
+        mount: async (
+          _container: HTMLElement,
+          _adapter: TerminalSessionAdapter,
+          options: unknown,
+        ) => {
           rendererExternalLink = (
             options as { readonly onExternalLink?: (url: string) => void }
           ).onExternalLink;

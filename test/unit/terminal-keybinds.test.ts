@@ -67,4 +67,20 @@ describe("terminal keybind accelerators", () => {
     });
     expect(new Set(canonicals).size).toBe(TERMINAL_ACTION_NAMES.length);
   });
+
+  it("ships the ADR 0016 tab defaults with Cmd+W moved to closeTab", () => {
+    expect(DEFAULT_TERMINAL_KEYBINDS.newTab).toBe("CommandOrControl+T");
+    expect(DEFAULT_TERMINAL_KEYBINDS.closeTab).toBe("CommandOrControl+W");
+    expect(DEFAULT_TERMINAL_KEYBINDS.closeWindow).toBe(
+      "CommandOrControl+Shift+W",
+    );
+    expect(DEFAULT_TERMINAL_KEYBINDS.nextTab).toBe("Control+Tab");
+    expect(DEFAULT_TERMINAL_KEYBINDS.previousTab).toBe("Control+Shift+Tab");
+    for (let position = 1; position <= 9; position += 1)
+      expect(
+        DEFAULT_TERMINAL_KEYBINDS[
+          `selectTab${position}` as keyof typeof DEFAULT_TERMINAL_KEYBINDS
+        ],
+      ).toBe(`CommandOrControl+${position}`);
+  });
 });

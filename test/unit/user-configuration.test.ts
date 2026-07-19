@@ -89,7 +89,7 @@ describe("strict version 1 User Configuration", () => {
           scrollback: { lines: 0 },
           keyboard: { optionAsAlt: "left" },
           window: { alwaysOnTop: true },
-          keybinds: { newWindow: "CommandOrControl+T" },
+          keybinds: { newWindow: "CommandOrControl+G" },
         },
         configPath,
         installedFonts,
@@ -108,7 +108,7 @@ describe("strict version 1 User Configuration", () => {
       terminalTheme: DEFAULT_TERMINAL_THEME,
       keybinds: {
         ...DEFAULT_TERMINAL_KEYBINDS,
-        newWindow: "CommandOrControl+T",
+        newWindow: "CommandOrControl+G",
       },
     });
   });
@@ -266,12 +266,12 @@ describe("strict version 1 User Configuration", () => {
 
   it("applies keybind remaps to the effective map while unmapped actions keep their defaults", () => {
     const configuration = validateUserConfiguration(
-      { version: 1, keybinds: { newWindow: "CommandOrControl+T" } },
+      { version: 1, keybinds: { newWindow: "CommandOrControl+G" } },
       configPath,
       installedFonts,
     );
-    expect(configuration.keybinds.newWindow).toBe("CommandOrControl+T");
-    expect(configuration.keybinds.closeWindow).toBe("CommandOrControl+W");
+    expect(configuration.keybinds.newWindow).toBe("CommandOrControl+G");
+    expect(configuration.keybinds.closeWindow).toBe("CommandOrControl+Shift+W");
     expect(configuration.keybinds.quit).toBe(DEFAULT_TERMINAL_KEYBINDS.quit);
     expect(Object.isFrozen(configuration.keybinds)).toBe(true);
   });
@@ -315,7 +315,7 @@ describe("strict version 1 User Configuration", () => {
       validateUserConfiguration(
         {
           version: 1,
-          keybinds: { newWindow: "Cmd+T", zoomIn: "CommandOrControl+T" },
+          keybinds: { newWindow: "Cmd+G", zoomIn: "CommandOrControl+G" },
         },
         configPath,
         installedFonts,
@@ -328,8 +328,8 @@ describe("strict version 1 User Configuration", () => {
       location: "keybinds.zoomIn",
       reason: 'conflicts with the "newWindow" keybind',
     });
-    expect((failure as Error).message).not.toContain("Cmd+T");
-    expect((failure as Error).message).not.toContain("CommandOrControl+T");
+    expect((failure as Error).message).not.toContain("Cmd+G");
+    expect((failure as Error).message).not.toContain("CommandOrControl+G");
   });
 
   it("judges duplicates on the effective map: a remap colliding with a remaining default is an error", () => {
@@ -343,7 +343,7 @@ describe("strict version 1 User Configuration", () => {
       ).toThrow(
         expect.objectContaining({
           location: "keybinds.newWindow",
-          reason: 'conflicts with the "closeWindow" keybind',
+          reason: 'conflicts with the "closeTab" keybind',
         }),
       );
     }
@@ -354,15 +354,15 @@ describe("strict version 1 User Configuration", () => {
       {
         version: 1,
         keybinds: {
-          newWindow: "CommandOrControl+W",
-          closeWindow: "CommandOrControl+N",
+          newWindow: "CommandOrControl+T",
+          newTab: "CommandOrControl+N",
         },
       },
       configPath,
       installedFonts,
     );
-    expect(configuration.keybinds.newWindow).toBe("CommandOrControl+W");
-    expect(configuration.keybinds.closeWindow).toBe("CommandOrControl+N");
+    expect(configuration.keybinds.newWindow).toBe("CommandOrControl+T");
+    expect(configuration.keybinds.newTab).toBe("CommandOrControl+N");
   });
 
   it("requires a non-empty exact installed family without trimming or aliases", () => {
@@ -485,7 +485,7 @@ describe("isolated User Configuration loading", () => {
       "a conflicting keybind",
       '{"version":1,"keybinds":{"newWindow":"CommandOrControl+W"}}',
       "keybinds.newWindow",
-      'conflicts with the "closeWindow" keybind',
+      'conflicts with the "closeTab" keybind',
     ],
   ])(
     "starts with full defaults and a precise diagnostic for %s",

@@ -279,6 +279,42 @@ describe("isolated preload terminal bridge", () => {
     expect(electron.removeListener).toHaveBeenCalledTimes(2);
   });
 
+  it("delivers only valid tab commands from main", () => {
+    const bridge = electron.bridge!;
+    const onTabCommand = vi.fn();
+    const remove = bridge.onTabCommand(onTabCommand);
+
+    electron.listeners.get(terminalIpc.tabCommand)?.({}, { action: "new" });
+    electron.listeners.get(terminalIpc.tabCommand)?.({}, { action: "close" });
+    electron.listeners.get(terminalIpc.tabCommand)?.(
+      {},
+      { action: "select", position: 4 },
+    );
+    electron.listeners.get(terminalIpc.tabCommand)?.(
+      {},
+      { action: "close-session", sessionId: "s3" },
+    );
+    electron.listeners.get(terminalIpc.tabCommand)?.({}, { action: "detach" });
+    electron.listeners.get(terminalIpc.tabCommand)?.(
+      {},
+      { action: "select", position: 10 },
+    );
+    electron.listeners.get(terminalIpc.tabCommand)?.({}, "new");
+    remove();
+
+    expect(onTabCommand.mock.calls).toEqual([
+      [{ action: "new" }],
+      [{ action: "close" }],
+      [{ action: "select", position: 4 }],
+      [{ action: "close-session", sessionId: "s3" }],
+    ]);
+    expect(electron.removeListener).toHaveBeenCalledWith(
+      terminalIpc.tabCommand,
+      expect.any(Function),
+    );
+    electron.removeListener.mockClear();
+  });
+
   it("delivers only valid Window Font Zoom commands from main", () => {
     const bridge = electron.bridge!;
     const onFontZoom = vi.fn();

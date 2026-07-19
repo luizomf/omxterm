@@ -245,7 +245,7 @@ describe("terminal IPC controller", () => {
         senderFrame: mainFrame,
       }),
     ).toThrow("The Default Shell could not be started");
-    expect(onSessionStartError).toHaveBeenCalledWith();
+    expect(onSessionStartError).toHaveBeenCalledWith({ liveSessions: 0 });
     expect(JSON.stringify(onSessionStartError.mock.calls)).not.toContain(
       "TERMINAL_PAYLOAD_CANARY",
     );
@@ -847,6 +847,51 @@ describe("terminal IPC controller", () => {
     });
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();
+  });
+
+  it("reports each session end with its identity, close origin, and remaining live sessions", () => {
+    const ipc = createIpcHarness();
+    const mainFrame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    const sessionCallbacks: Array<
+      Parameters<
+        Parameters<typeof router.registerController>[0]["createSession"]
+      >[0]
+    > = [];
+    const onSessionExit = vi.fn();
+    router.registerController({
+      ...clipboardOptions(),
+      webContents,
+      createSession(callbacks) {
+        sessionCallbacks.push(callbacks);
+        return { write: vi.fn(), resize: vi.fn(), close: vi.fn() };
+      },
+      onSessionStartError: vi.fn(),
+      onSessionExit,
+    });
+    const trusted = { sender: webContents, senderFrame: mainFrame };
+
+    ipc.handlers.get(terminalIpc.start)!(trusted);
+    ipc.handlers.get(terminalIpc.start)!(trusted);
+    ipc.listeners.get(terminalIpc.close)?.(trusted, { sessionId: "s1" });
+    sessionCallbacks[0]!.onExit({ exitCode: 0, signal: 1 });
+    sessionCallbacks[1]!.onExit({ exitCode: 5, signal: 0 });
+
+    expect(onSessionExit.mock.calls).toEqual([
+      [
+        { exitCode: 0, signal: 1 },
+        { sessionId: "s1", closeRequested: true, liveSessions: 1 },
+      ],
+      [
+        { exitCode: 5, signal: 0 },
+        { sessionId: "s2", closeRequested: false, liveSessions: 0 },
+      ],
+    ]);
   });
 
   it("rejects session-scoped payloads with unknown or foreign session ids", () => {

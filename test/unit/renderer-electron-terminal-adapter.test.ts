@@ -63,9 +63,11 @@ describe("renderer Electron terminal adapter", () => {
     const onOutput = vi.fn();
     const onExit = vi.fn();
 
+    expect(adapter.sessionId()).toBeUndefined();
     const started = adapter.start({ onOutput, onExit });
     harness.startSession("s2");
     await started;
+    expect(adapter.sessionId()).toBe("s2");
     harness.output("s2", "own output");
     harness.output("s1", "foreign output");
     harness.exit("s3", { exitCode: 0, signal: 0 });

@@ -10,9 +10,15 @@ import type {
   TerminalSessionHandlers,
 } from "../terminal-surface/terminal-session-adapter";
 
+// The Terminal Surface only sees the portable TerminalSessionAdapter; the
+// session id is exposed for the tab layer that owns this adapter.
+export interface ElectronTerminalAdapter extends TerminalSessionAdapter {
+  sessionId(): TerminalSessionId | undefined;
+}
+
 export function createElectronTerminalAdapter(
   bridge: TerminalBridge,
-): TerminalSessionAdapter {
+): ElectronTerminalAdapter {
   let closed = false;
   let started = false;
   let sessionId: TerminalSessionId | undefined;
@@ -20,6 +26,7 @@ export function createElectronTerminalAdapter(
   let removeExitListener: (() => void) | undefined;
 
   return {
+    sessionId: () => sessionId,
     async start(handlers: TerminalSessionHandlers) {
       if (started || closed)
         throw new Error("Terminal Adapter cannot be started twice");

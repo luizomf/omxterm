@@ -2,16 +2,36 @@
 import { describe, expect, it, vi } from "vitest";
 import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
-import type { TerminalFontZoom } from "../../src/shared/terminal-contract";
+import type {
+  TerminalFontZoom,
+  TerminalTabCommand,
+} from "../../src/shared/terminal-contract";
+import type { ElectronTerminalAdapter } from "../../src/renderer/electron-terminal-adapter";
 import type { TerminalSurface } from "../../src/terminal-surface/terminal-surface";
 
-function createAdapter() {
-  return {
-    start: vi.fn(),
-    write: vi.fn(),
-    resize: vi.fn(),
-    close: vi.fn(),
-  };
+function createPageElements() {
+  document.body.innerHTML = "";
+  document.body.className = "";
+  const tabStrip = document.createElement("nav");
+  tabStrip.hidden = true;
+  const tabsContainer = document.createElement("div");
+  document.body.append(tabStrip, tabsContainer);
+  return { tabStrip, tabsContainer };
+}
+
+function createAdapterFactory() {
+  let nextSession = 1;
+  return vi.fn((): ElectronTerminalAdapter => {
+    const sessionId = `s${nextSession}`;
+    nextSession += 1;
+    return {
+      sessionId: () => sessionId,
+      start: vi.fn(async () => {}),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+  });
 }
 
 function createSurface(overrides: Record<string, unknown> = {}) {
@@ -31,14 +51,11 @@ describe("renderer Terminal Window page host", () => {
   it("focuses a successfully mounted Surface when its page is active", async () => {
     const focus = vi.fn();
     const hasFocus = vi.spyOn(document, "hasFocus").mockReturnValue(true);
-    const host = mountTerminalWindowPage(
-      document.createElement("main"),
-      createAdapter(),
-      {
-        page: window,
-        mount: vi.fn(async () => createSurface({ focus })),
-      },
-    );
+    const host = mountTerminalWindowPage(createPageElements(), {
+      createAdapter: createAdapterFactory(),
+      page: window,
+      mount: vi.fn(async () => createSurface({ focus })),
+    });
 
     await host.ready;
 
@@ -50,14 +67,11 @@ describe("renderer Terminal Window page host", () => {
   it("focuses only after an inactive page becomes active", async () => {
     const focus = vi.fn();
     const hasFocus = vi.spyOn(document, "hasFocus").mockReturnValue(false);
-    const host = mountTerminalWindowPage(
-      document.createElement("main"),
-      createAdapter(),
-      {
-        page: window,
-        mount: vi.fn(async () => createSurface({ focus })),
-      },
-    );
+    const host = mountTerminalWindowPage(createPageElements(), {
+      createAdapter: createAdapterFactory(),
+      page: window,
+      mount: vi.fn(async () => createSurface({ focus })),
+    });
 
     window.dispatchEvent(new Event("focus"));
     await host.ready;
@@ -73,14 +87,11 @@ describe("renderer Terminal Window page host", () => {
   it("removes page activation focus on disposal", async () => {
     const focus = vi.fn();
     const hasFocus = vi.spyOn(document, "hasFocus").mockReturnValue(false);
-    const host = mountTerminalWindowPage(
-      document.createElement("main"),
-      createAdapter(),
-      {
-        page: window,
-        mount: vi.fn(async () => createSurface({ focus })),
-      },
-    );
+    const host = mountTerminalWindowPage(createPageElements(), {
+      createAdapter: createAdapterFactory(),
+      page: window,
+      mount: vi.fn(async () => createSurface({ focus })),
+    });
     await host.ready;
 
     host.dispose();
@@ -92,14 +103,11 @@ describe("renderer Terminal Window page host", () => {
 
   it("disposes the mounted Surface exactly once on page teardown", async () => {
     const dispose = vi.fn();
-    const host = mountTerminalWindowPage(
-      document.createElement("main"),
-      createAdapter(),
-      {
-        page: window,
-        mount: vi.fn(async () => createSurface({ dispose })),
-      },
-    );
+    const host = mountTerminalWindowPage(createPageElements(), {
+      createAdapter: createAdapterFactory(),
+      page: window,
+      mount: vi.fn(async () => createSurface({ dispose })),
+    });
     await host.ready;
 
     window.dispatchEvent(new Event("pagehide"));
@@ -114,17 +122,14 @@ describe("renderer Terminal Window page host", () => {
     const pendingMount = new Promise<TerminalSurface>((resolve) => {
       finishMount = resolve;
     });
-    const host = mountTerminalWindowPage(
-      document.createElement("main"),
-      createAdapter(),
-      {
-        page: window,
-        mount: vi.fn(() => pendingMount),
-      },
-    );
+    const host = mountTerminalWindowPage(createPageElements(), {
+      createAdapter: createAdapterFactory(),
+      page: window,
+      mount: vi.fn(() => pendingMount),
+    });
 
     window.dispatchEvent(new Event("pagehide"));
-    finishMount!(createSurface({ dispose }));
+    finishMount!(createSurface({ dispose }) as unknown as TerminalSurface);
     await host.ready;
     host.dispose();
 
@@ -134,7 +139,10 @@ describe("renderer Terminal Window page host", () => {
   it("applies supplied appearance and independent native zoom to its Surface", async () => {
     const zoom = vi.fn();
     const listeners = new Set<(command: TerminalFontZoom) => void>();
-    const removeZoomListener = vi.fn((listener) => listeners.delete(listener));
+    const removeZoomListener = vi.fn(
+      (listener: (command: TerminalFontZoom) => void) =>
+        listeners.delete(listener),
+    );
     const mount = vi.fn(async () => createSurface({ zoom }));
     const configuration = {
       fontSize: 19,
@@ -146,19 +154,16 @@ describe("renderer Terminal Window page host", () => {
       terminalTheme: DEFAULT_TERMINAL_THEME,
       userFileErrors: [],
     } as const;
-    const host = mountTerminalWindowPage(
-      document.createElement("main"),
-      createAdapter(),
-      {
-        configuration,
-        page: window,
-        mount,
-        subscribeToFontZoom(listener) {
-          listeners.add(listener);
-          return () => removeZoomListener(listener);
-        },
+    const host = mountTerminalWindowPage(createPageElements(), {
+      createAdapter: createAdapterFactory(),
+      configuration,
+      page: window,
+      mount,
+      subscribeToFontZoom(listener) {
+        listeners.add(listener);
+        return () => removeZoomListener(listener);
       },
-    );
+    });
     await host.ready;
 
     for (const listener of listeners) listener("in");
@@ -184,7 +189,7 @@ describe("renderer Terminal Window page host", () => {
     expect(removeZoomListener).toHaveBeenCalledOnce();
   });
 
-  it("applies a non-black theme to the page, root, Surface, and mount options", async () => {
+  it("applies a non-black theme to the page, root, tabs container, and mount options", async () => {
     const theme = Object.freeze({
       ...DEFAULT_TERMINAL_THEME,
       name: "non-black",
@@ -193,9 +198,10 @@ describe("renderer Terminal Window page host", () => {
         background: "#1e1e2e",
       }),
     });
-    const container = document.createElement("main");
+    const elements = createPageElements();
     const mount = vi.fn(async () => createSurface());
-    const host = mountTerminalWindowPage(container, createAdapter(), {
+    const host = mountTerminalWindowPage(elements, {
+      createAdapter: createAdapterFactory(),
       page: window,
       mount,
       configuration: {
@@ -216,11 +222,11 @@ describe("renderer Terminal Window page host", () => {
     expect(document.body.style.getPropertyValue("--terminal-background")).toBe(
       "#1e1e2e",
     );
-    expect(container.style.getPropertyValue("--terminal-background")).toBe(
-      "#1e1e2e",
-    );
+    expect(
+      elements.tabsContainer.style.getPropertyValue("--terminal-background"),
+    ).toBe("#1e1e2e");
     expect(mount).toHaveBeenCalledWith(
-      container,
+      expect.any(HTMLElement),
       expect.any(Object),
       expect.objectContaining({ theme }),
     );
@@ -231,18 +237,15 @@ describe("renderer Terminal Window page host", () => {
     let actionListener:
       ((action: "copy" | "paste" | "select-all") => void) | undefined;
     const surface = createSurface();
-    const host = mountTerminalWindowPage(
-      document.createElement("main"),
-      createAdapter(),
-      {
-        page: window,
-        mount: vi.fn(async () => surface),
-        subscribeToClipboardActions(listener) {
-          actionListener = listener;
-          return vi.fn();
-        },
+    const host = mountTerminalWindowPage(createPageElements(), {
+      createAdapter: createAdapterFactory(),
+      page: window,
+      mount: vi.fn(async () => surface),
+      subscribeToClipboardActions(listener) {
+        actionListener = listener;
+        return vi.fn();
       },
-    );
+    });
     await host.ready;
 
     actionListener!("copy");
@@ -260,11 +263,14 @@ describe("renderer Terminal Window page host", () => {
     const onBell = vi.fn();
     const onExternalLink = vi.fn();
     const mount = vi.fn(async () => createSurface());
-    const host = mountTerminalWindowPage(
-      document.createElement("main"),
-      createAdapter(),
-      { page: window, mount, onTitleRequest, onBell, onExternalLink },
-    );
+    const host = mountTerminalWindowPage(createPageElements(), {
+      createAdapter: createAdapterFactory(),
+      page: window,
+      mount,
+      onTitleRequest,
+      onBell,
+      onExternalLink,
+    });
     await host.ready;
 
     expect(mount).toHaveBeenCalledWith(
@@ -272,6 +278,69 @@ describe("renderer Terminal Window page host", () => {
       expect.any(Object),
       { onTitleRequest, onBell, onExternalLink },
     );
+    host.dispose();
+  });
+
+  it("routes tab commands from main into the Terminal Tabs", async () => {
+    let commandListener: ((command: TerminalTabCommand) => void) | undefined;
+    const removeTabCommandListener = vi.fn();
+    const elements = createPageElements();
+    const mount = vi.fn(async () => createSurface());
+    const host = mountTerminalWindowPage(elements, {
+      createAdapter: createAdapterFactory(),
+      page: window,
+      mount,
+      subscribeToTabCommands(listener) {
+        commandListener = listener;
+        return removeTabCommandListener;
+      },
+    });
+    await host.ready;
+
+    commandListener!({ action: "new" });
+    await vi.waitFor(() =>
+      expect(elements.tabsContainer.children).toHaveLength(2),
+    );
+    expect(elements.tabStrip.hidden).toBe(false);
+
+    host.dispose();
+    expect(removeTabCommandListener).toHaveBeenCalledOnce();
+  });
+
+  it("injects a chosen snippet into the selected tab's session", async () => {
+    const surface = createSurface();
+    const elements = createPageElements();
+    const snippetsElement = document.createElement("aside");
+    snippetsElement.hidden = true;
+    document.body.append(snippetsElement);
+    let toggleListener: (() => void) | undefined;
+    const host = mountTerminalWindowPage(elements, {
+      createAdapter: createAdapterFactory(),
+      page: window,
+      mount: vi.fn(async () => surface),
+      snippets: {
+        element: snippetsElement,
+        load: vi.fn(async () => ({
+          snippets: [{ name: "greet", body: "printf hi", execute: true }],
+        })),
+        subscribeToToggle: (listener) => {
+          toggleListener = listener;
+          return vi.fn();
+        },
+      },
+    });
+    await host.ready;
+
+    toggleListener!();
+    await vi.waitFor(() => {
+      expect(snippetsElement.querySelector("li button")).not.toBeNull();
+    });
+    snippetsElement.querySelector<HTMLButtonElement>("li button")!.click();
+
+    expect(surface.inject).toHaveBeenCalledExactlyOnceWith("printf hi", {
+      submit: true,
+    });
+    expect(surface.focus).toHaveBeenCalled();
     host.dispose();
   });
 });

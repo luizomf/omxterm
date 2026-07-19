@@ -56,10 +56,13 @@ function createApplicationHarness(
   const windows: ReturnType<typeof createWindowHarness>[] = [];
   let selected: NativeTerminalWindow | undefined;
   const showQuitConfirmation = vi.fn(async () => true);
+  const showCloseWindowConfirmation = vi.fn(async () => true);
+  const showCloseTabConfirmation = vi.fn(async () => true);
   const showSessionFailure = vi.fn(async () => {});
   const sendFontZoom = vi.fn();
   const sendClipboardAction = vi.fn();
   const sendSnippetsToggle = vi.fn();
+  const sendTabCommand = vi.fn();
   const quit = vi.fn();
   const application = startTerminalApplication({
     createWindow(lifecycle) {
@@ -69,10 +72,13 @@ function createApplicationHarness(
     },
     getSelectedWindow: () => selected,
     showQuitConfirmation,
+    showCloseWindowConfirmation,
+    showCloseTabConfirmation,
     showSessionFailure,
     sendFontZoom,
     sendClipboardAction,
     sendSnippetsToggle,
+    sendTabCommand,
     quit,
     ...overrides,
   });
@@ -81,15 +87,22 @@ function createApplicationHarness(
     application,
     windows,
     showQuitConfirmation,
+    showCloseWindowConfirmation,
+    showCloseTabConfirmation,
     showSessionFailure,
     sendFontZoom,
     sendClipboardAction,
     sendSnippetsToggle,
+    sendTabCommand,
     quit,
     select(window: NativeTerminalWindow | undefined) {
       selected = window;
     },
   };
+}
+
+function lastSessionEnd(sessionId = "s1") {
+  return { sessionId, closeRequested: false, liveSessions: 0 };
 }
 
 describe("Terminal application lifecycle", () => {
@@ -99,7 +112,7 @@ describe("Terminal application lifecycle", () => {
     await harness.application.newWindow();
     await harness.application.newWindow();
     harness.select(harness.windows[1]!.window);
-    harness.application.closeSelectedWindow();
+    await harness.application.closeSelectedWindow();
 
     expect(harness.windows).toHaveLength(2);
     expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
@@ -145,8 +158,8 @@ describe("Terminal application lifecycle", () => {
     await harness.application.newWindow();
     harness.select(harness.windows[0]!.window);
 
-    harness.application.closeSelectedWindow();
-    harness.application.closeSelectedWindow();
+    await harness.application.closeSelectedWindow();
+    await harness.application.closeSelectedWindow();
 
     expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
     expect(harness.quit).toHaveBeenCalledOnce();
@@ -206,10 +219,13 @@ describe("Terminal application lifecycle", () => {
       },
       getSelectedWindow: () => windows[0]?.window,
       showQuitConfirmation: vi.fn(async () => true),
+      showCloseWindowConfirmation: vi.fn(async () => true),
+      showCloseTabConfirmation: vi.fn(async () => true),
       showSessionFailure: vi.fn(async () => {}),
       sendFontZoom: vi.fn(),
       sendClipboardAction: vi.fn(),
       sendSnippetsToggle: vi.fn(),
+      sendTabCommand: vi.fn(),
       quit,
     });
     await application.newWindow();
@@ -228,10 +244,14 @@ describe("Terminal application lifecycle", () => {
       const harness = createApplicationHarness();
       await harness.application.newWindow();
 
-      harness.windows[0]!.lifecycle.onSessionExit({ exitCode, signal: 0 });
+      harness.windows[0]!.lifecycle.onSessionExit(
+        { exitCode, signal: 0 },
+        lastSessionEnd(),
+      );
 
       expect(harness.showSessionFailure).not.toHaveBeenCalled();
       expect(harness.showQuitConfirmation).not.toHaveBeenCalled();
+      expect(harness.showCloseWindowConfirmation).not.toHaveBeenCalled();
       expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
       expect(harness.quit).toHaveBeenCalledOnce();
     },
@@ -242,13 +262,19 @@ describe("Terminal application lifecycle", () => {
     await harness.application.newWindow();
     await harness.application.newWindow();
 
-    harness.windows[0]!.lifecycle.onSessionExit({ exitCode: 1, signal: 0 });
+    harness.windows[0]!.lifecycle.onSessionExit(
+      { exitCode: 1, signal: 0 },
+      lastSessionEnd(),
+    );
 
     expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
     expect(harness.windows[1]!.closeSession).not.toHaveBeenCalled();
     expect(harness.quit).not.toHaveBeenCalled();
 
-    harness.windows[1]!.lifecycle.onSessionExit({ exitCode: 7, signal: 0 });
+    harness.windows[1]!.lifecycle.onSessionExit(
+      { exitCode: 7, signal: 0 },
+      lastSessionEnd(),
+    );
 
     expect(harness.windows[1]!.closeSession).toHaveBeenCalledOnce();
     expect(harness.quit).toHaveBeenCalledOnce();
@@ -259,18 +285,21 @@ describe("Terminal application lifecycle", () => {
       label: "spawn failure",
       emit(lifecycle: TerminalWindowLifecycle, terminalPayloadCanary: string) {
         void terminalPayloadCanary;
-        lifecycle.onSessionStartError();
+        lifecycle.onSessionStartError({ liveSessions: 0 });
       },
       expected: { reason: "spawn" },
     },
     {
       label: "unexpected signal",
       emit(lifecycle: TerminalWindowLifecycle, terminalPayloadCanary: string) {
-        lifecycle.onSessionExit({
-          exitCode: 0,
-          signal: 15,
-          terminalPayloadCanary,
-        } as never);
+        lifecycle.onSessionExit(
+          {
+            exitCode: 0,
+            signal: 15,
+            terminalPayloadCanary,
+          } as never,
+          lastSessionEnd(),
+        );
       },
       expected: { reason: "signal", signal: 15 },
     },
@@ -309,8 +338,8 @@ describe("Terminal application lifecycle", () => {
     const harness = createApplicationHarness({ showSessionFailure });
     await harness.application.newWindow();
 
-    harness.windows[0]!.lifecycle.onSessionStartError();
-    harness.windows[0]!.lifecycle.onSessionStartError();
+    harness.windows[0]!.lifecycle.onSessionStartError({ liveSessions: 0 });
+    harness.windows[0]!.lifecycle.onSessionStartError({ liveSessions: 0 });
 
     await vi.waitFor(() => {
       expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
@@ -379,13 +408,199 @@ describe("Terminal application lifecycle", () => {
     );
   });
 
+  it("asks once before closing the selected tab and sends the close command only on confirmation", async () => {
+    const answer = deferred<boolean>();
+    const showCloseTabConfirmation = vi.fn(() => answer.promise);
+    const harness = createApplicationHarness({ showCloseTabConfirmation });
+    await harness.application.newWindow();
+    harness.select(harness.windows[0]!.window);
+
+    const firstRequest = harness.application.closeSelectedTab();
+    const secondRequest = harness.application.closeSelectedTab();
+    expect(showCloseTabConfirmation).toHaveBeenCalledOnce();
+    expect(harness.sendTabCommand).not.toHaveBeenCalled();
+
+    answer.resolve(true);
+    await Promise.all([firstRequest, secondRequest]);
+
+    expect(harness.sendTabCommand).toHaveBeenCalledExactlyOnceWith(
+      harness.windows[0]!.window,
+      { action: "close" },
+    );
+  });
+
+  it("keeps the selected tab when its close confirmation is cancelled", async () => {
+    const showCloseTabConfirmation = vi.fn(async () => false);
+    const harness = createApplicationHarness({ showCloseTabConfirmation });
+    await harness.application.newWindow();
+    harness.select(harness.windows[0]!.window);
+
+    await harness.application.closeSelectedTab();
+
+    expect(showCloseTabConfirmation).toHaveBeenCalledOnce();
+    expect(harness.sendTabCommand).not.toHaveBeenCalled();
+    expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
+  });
+
+  it("closes the selected tab without a dialog when confirmClose is false", async () => {
+    const harness = createApplicationHarness({ confirmClose: false });
+    await harness.application.newWindow();
+    harness.select(harness.windows[0]!.window);
+
+    await harness.application.closeSelectedTab();
+
+    expect(harness.showCloseTabConfirmation).not.toHaveBeenCalled();
+    expect(harness.sendTabCommand).toHaveBeenCalledExactlyOnceWith(
+      harness.windows[0]!.window,
+      { action: "close" },
+    );
+  });
+
+  it("asks once before closing a window and cancellation keeps it open", async () => {
+    const answer = deferred<boolean>();
+    const showCloseWindowConfirmation = vi.fn(() => answer.promise);
+    const harness = createApplicationHarness({ showCloseWindowConfirmation });
+    await harness.application.newWindow();
+    harness.select(harness.windows[0]!.window);
+
+    const firstRequest = harness.application.closeSelectedWindow();
+    const secondRequest = harness.application.closeSelectedWindow();
+    expect(showCloseWindowConfirmation).toHaveBeenCalledOnce();
+    expect(harness.application.mayCloseWindow(harness.windows[0]!.window)).toBe(
+      false,
+    );
+
+    answer.resolve(false);
+    await Promise.all([firstRequest, secondRequest]);
+
+    expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
+    expect(harness.quit).not.toHaveBeenCalled();
+  });
+
+  it("closes a window without a dialog when confirmClose is false", async () => {
+    const harness = createApplicationHarness({ confirmClose: false });
+    await harness.application.newWindow();
+    harness.select(harness.windows[0]!.window);
+
+    expect(harness.application.mayCloseWindow(harness.windows[0]!.window)).toBe(
+      true,
+    );
+    await harness.application.closeSelectedWindow();
+
+    expect(harness.showCloseWindowConfirmation).not.toHaveBeenCalled();
+    expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the window open when a tab's shell exits with sessions remaining", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+
+    harness.windows[0]!.lifecycle.onSessionExit(
+      { exitCode: 0, signal: 0 },
+      { sessionId: "s1", closeRequested: false, liveSessions: 1 },
+    );
+
+    expect(harness.showSessionFailure).not.toHaveBeenCalled();
+    expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
+    expect(harness.sendTabCommand).not.toHaveBeenCalled();
+    expect(harness.quit).not.toHaveBeenCalled();
+  });
+
+  it("treats a requested kill signal as an ordinary tab end", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+
+    harness.windows[0]!.lifecycle.onSessionExit(
+      { exitCode: 0, signal: 1 },
+      { sessionId: "s2", closeRequested: true, liveSessions: 1 },
+    );
+    expect(harness.showSessionFailure).not.toHaveBeenCalled();
+    expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
+
+    harness.windows[0]!.lifecycle.onSessionExit(
+      { exitCode: 0, signal: 1 },
+      { sessionId: "s1", closeRequested: true, liveSessions: 0 },
+    );
+    expect(harness.showSessionFailure).not.toHaveBeenCalled();
+    expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
+  });
+
+  it("acknowledges a non-last unexpected signal and only then orders the dead tab closed", async () => {
+    const acknowledgement = deferred<void>();
+    const showSessionFailure = vi.fn(() => acknowledgement.promise);
+    const harness = createApplicationHarness({ showSessionFailure });
+    await harness.application.newWindow();
+
+    harness.windows[0]!.lifecycle.onSessionExit(
+      { exitCode: 0, signal: 9 },
+      { sessionId: "s2", closeRequested: false, liveSessions: 1 },
+    );
+
+    expect(showSessionFailure).toHaveBeenCalledExactlyOnceWith(
+      harness.windows[0]!.window,
+      { reason: "signal", signal: 9 },
+    );
+    expect(harness.sendTabCommand).not.toHaveBeenCalled();
+
+    acknowledgement.resolve();
+    await acknowledgement.promise;
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(harness.sendTabCommand).toHaveBeenCalledExactlyOnceWith(
+      harness.windows[0]!.window,
+      { action: "close-session", sessionId: "s2" },
+    );
+    expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
+    expect(harness.quit).not.toHaveBeenCalled();
+  });
+
+  it("keeps the window open when an additional tab spawn fails", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+
+    harness.windows[0]!.lifecycle.onSessionStartError({ liveSessions: 1 });
+    await Promise.resolve();
+
+    expect(harness.showSessionFailure).toHaveBeenCalledExactlyOnceWith(
+      harness.windows[0]!.window,
+      { reason: "spawn" },
+    );
+    expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
+    expect(harness.quit).not.toHaveBeenCalled();
+  });
+
+  it("sends tab commands only to the selected Terminal Window", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    await harness.application.newWindow();
+
+    harness.select(undefined);
+    harness.application.newTabInSelectedWindow();
+    harness.application.selectNextTab();
+    expect(harness.sendTabCommand).not.toHaveBeenCalled();
+
+    harness.select(harness.windows[1]!.window);
+    harness.application.newTabInSelectedWindow();
+    harness.application.selectNextTab();
+    harness.application.selectPreviousTab();
+    harness.application.selectTabInSelectedWindow(3);
+
+    expect(harness.sendTabCommand.mock.calls).toEqual([
+      [harness.windows[1]!.window, { action: "new" }],
+      [harness.windows[1]!.window, { action: "next" }],
+      [harness.windows[1]!.window, { action: "previous" }],
+      [harness.windows[1]!.window, { action: "select", position: 3 }],
+    ]);
+  });
+
   it("records window lifecycle with local identifiers and bounded duration only", async () => {
     const write = vi.fn(() => true);
     const harness = createApplicationHarness({ operationalEvents: { write } });
 
     await harness.application.newWindow();
     harness.select(harness.windows[0]!.window);
-    harness.application.closeSelectedWindow();
+    await harness.application.closeSelectedWindow();
 
     expect(write).toHaveBeenNthCalledWith(1, {
       name: "window.opened",

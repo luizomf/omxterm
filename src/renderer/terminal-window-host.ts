@@ -5,9 +5,14 @@ import {
   type TerminalSurface,
   type TerminalSurfaceOptions,
 } from "../terminal-surface/terminal-surface";
-import type { TerminalFontZoom } from "../shared/terminal-contract";
+import type {
+  TerminalFontZoom,
+  TerminalTabCommand,
+} from "../shared/terminal-contract";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
+import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
+import { createTerminalTabs, type TerminalTabs } from "./terminal-tabs";
 import {
   createSnippetsSidebar,
   type SnippetsSidebar,
@@ -19,7 +24,13 @@ type MountTerminalSurface = (
   options: TerminalSurfaceOptions,
 ) => Promise<TerminalSurface>;
 
+export interface TerminalWindowPageElements {
+  readonly tabStrip: HTMLElement;
+  readonly tabsContainer: HTMLElement;
+}
+
 interface TerminalWindowPageOptions {
+  readonly createAdapter: () => ElectronTerminalAdapter;
   readonly configuration?: TerminalRendererConfiguration;
   readonly page?: Pick<
     Window,
@@ -32,6 +43,9 @@ interface TerminalWindowPageOptions {
   readonly clipboard?: TerminalClipboard;
   readonly subscribeToClipboardActions?: (
     listener: (action: "copy" | "paste" | "select-all") => void,
+  ) => () => void;
+  readonly subscribeToTabCommands?: (
+    listener: (command: TerminalTabCommand) => void,
   ) => () => void;
   readonly onTitleRequest?: (request: string) => void;
   readonly onBell?: () => void;
@@ -49,19 +63,17 @@ export interface TerminalWindowPageHost {
 }
 
 export function mountTerminalWindowPage(
-  container: HTMLElement,
-  adapter: TerminalSessionAdapter,
-  options: TerminalWindowPageOptions = {},
+  elements: TerminalWindowPageElements,
+  options: TerminalWindowPageOptions,
 ): TerminalWindowPageHost {
   const page = options.page ?? window;
   const mount = options.mount ?? mountTerminalSurface;
   let disposed = false;
-  let surface: TerminalSurface | undefined;
   let removeZoomListener: (() => void) | undefined;
   let removeClipboardActionListener: (() => void) | undefined;
+  let removeTabCommandListener: (() => void) | undefined;
   let snippetsSidebar: SnippetsSidebar | undefined;
   let removeSnippetsToggleListener: (() => void) | undefined;
-  const onPageFocus = () => surface?.focus();
 
   if (options.configuration) {
     const background = options.configuration.terminalTheme.colors.background;
@@ -70,27 +82,13 @@ export function mountTerminalWindowPage(
       background,
     );
     page.document.body.style.setProperty("--terminal-background", background);
-    container.style.setProperty("--terminal-background", background);
+    elements.tabsContainer.style.setProperty(
+      "--terminal-background",
+      background,
+    );
   }
 
-  const dispose = () => {
-    if (disposed) return;
-    disposed = true;
-    page.removeEventListener("pagehide", onPageHide);
-    page.removeEventListener("focus", onPageFocus);
-    removeZoomListener?.();
-    removeClipboardActionListener?.();
-    removeSnippetsToggleListener?.();
-    snippetsSidebar?.dispose();
-    snippetsSidebar = undefined;
-    surface?.dispose();
-    surface = undefined;
-  };
-  const onPageHide = () => dispose();
-
-  page.addEventListener("pagehide", onPageHide, { once: true });
-  page.addEventListener("focus", onPageFocus);
-  const surfaceOptions = {
+  const surfaceOptions: TerminalSurfaceOptions = {
     ...(options.configuration
       ? {
           appearance: {
@@ -120,38 +118,59 @@ export function mountTerminalWindowPage(
       ? { onExternalLink: options.onExternalLink }
       : {}),
   };
-  const ready = mount(container, adapter, surfaceOptions).then(
-    (mountedSurface) => {
-      if (disposed) {
-        mountedSurface.dispose();
-        return;
-      }
-      surface = mountedSurface;
-      if (page.document.hasFocus()) surface.focus();
-      removeZoomListener = options.subscribeToFontZoom?.((command) =>
-        surface?.zoom(command),
-      );
-      removeClipboardActionListener = options.subscribeToClipboardActions?.(
-        (action) => {
-          if (action === "copy") void surface?.copy();
-          else if (action === "paste") void surface?.paste();
-          else surface?.selectAll();
-        },
-      );
-      if (options.snippets) {
-        const sidebar = createSnippetsSidebar(options.snippets.element, {
-          loadSnippets: options.snippets.load,
-          inject: (snippet) =>
-            void surface?.inject(snippet.body, { submit: snippet.execute }),
-          focusTerminal: () => surface?.focus(),
-        });
-        snippetsSidebar = sidebar;
-        removeSnippetsToggleListener = options.snippets.subscribeToToggle(
-          () => void sidebar.toggle(),
-        );
-      }
+
+  const tabs: TerminalTabs = createTerminalTabs(
+    { strip: elements.tabStrip, container: elements.tabsContainer },
+    {
+      createAdapter: options.createAdapter,
+      mount,
+      surfaceOptions,
     },
   );
+
+  const onPageFocus = () => tabs.focusSelected();
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    page.removeEventListener("pagehide", onPageHide);
+    page.removeEventListener("focus", onPageFocus);
+    removeZoomListener?.();
+    removeClipboardActionListener?.();
+    removeTabCommandListener?.();
+    removeSnippetsToggleListener?.();
+    snippetsSidebar?.dispose();
+    snippetsSidebar = undefined;
+    tabs.dispose();
+  };
+  const onPageHide = () => dispose();
+
+  page.addEventListener("pagehide", onPageHide, { once: true });
+  page.addEventListener("focus", onPageFocus);
+
+  const ready = tabs.ready.then(() => {
+    if (disposed) return;
+    removeZoomListener = options.subscribeToFontZoom?.((command) =>
+      tabs.zoom(command),
+    );
+    removeClipboardActionListener = options.subscribeToClipboardActions?.(
+      (action) => tabs.clipboardAction(action),
+    );
+    removeTabCommandListener = options.subscribeToTabCommands?.((command) =>
+      tabs.handleCommand(command),
+    );
+    if (options.snippets) {
+      const sidebar = createSnippetsSidebar(options.snippets.element, {
+        loadSnippets: options.snippets.load,
+        inject: (snippet) =>
+          tabs.injectSnippet(snippet.body, { submit: snippet.execute }),
+        focusTerminal: () => tabs.focusSelected(),
+      });
+      snippetsSidebar = sidebar;
+      removeSnippetsToggleListener = options.snippets.subscribeToToggle(
+        () => void sidebar.toggle(),
+      );
+    }
+  });
 
   return { ready, dispose };
 }

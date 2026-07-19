@@ -4,6 +4,11 @@ import type { TerminalKeybinds } from "../shared/terminal-keybinds";
 interface TerminalApplicationMenuActions {
   readonly newWindow: () => void;
   readonly closeSelectedWindow: () => void;
+  readonly newTabInSelectedWindow: () => void;
+  readonly closeSelectedTab: () => void;
+  readonly selectNextTab: () => void;
+  readonly selectPreviousTab: () => void;
+  readonly selectTabInSelectedWindow: (position: number) => void;
   readonly requestQuit: () => void;
   readonly toggleSelectedFullScreen: () => void;
   readonly toggleSelectedAlwaysOnTop: () => void;
@@ -64,6 +69,17 @@ export function terminalApplicationMenuTemplate(
           click: actions.newWindow,
         },
         {
+          label: "New Tab",
+          accelerator: keybinds.newTab,
+          click: actions.newTabInSelectedWindow,
+        },
+        { type: "separator" },
+        {
+          label: "Close Tab",
+          accelerator: keybinds.closeTab,
+          click: actions.closeSelectedTab,
+        },
+        {
           label: "Close Window",
           accelerator: keybinds.closeWindow,
           click: actions.closeSelectedWindow,
@@ -110,10 +126,34 @@ export function terminalApplicationMenuTemplate(
           label: "Always on Top",
           click: actions.toggleSelectedAlwaysOnTop,
         },
+        { type: "separator" },
+        {
+          label: "Show Next Tab",
+          accelerator: keybinds.nextTab,
+          click: actions.selectNextTab,
+        },
+        {
+          label: "Show Previous Tab",
+          accelerator: keybinds.previousTab,
+          click: actions.selectPreviousTab,
+        },
+        {
+          label: "Select Tab",
+          submenu: Array.from({ length: 9 }, (_, index) => {
+            const position = index + 1;
+            return {
+              label: `Tab ${position}`,
+              accelerator: keybinds[`selectTab${position}` as SelectTabAction],
+              click: () => actions.selectTabInSelectedWindow(position),
+            };
+          }),
+        },
       ],
     },
   ];
 }
+
+type SelectTabAction = keyof TerminalKeybinds & `selectTab${number}`;
 
 export function terminalClipboardContextMenuTemplate(actions: {
   readonly copy: () => void;

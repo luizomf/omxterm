@@ -59,7 +59,7 @@ const developmentApplicationIconPath = path.resolve(
   "application-icon.png",
 );
 
-let terminalApplication: TerminalApplication | undefined;
+let terminalApplication: TerminalApplication<BrowserWindow> | undefined;
 let operationalEvents: OperationalEventLog | undefined;
 
 app.on("before-quit", (event) => {
@@ -132,6 +132,23 @@ app
               terminalWindowOptions(preloadPath, userConfiguration),
             );
             lockTerminalRendererNavigation(window.webContents);
+            // Closing a window is guarded by confirmClose regardless of its
+            // trigger (menu, keybind, or native close button). A window whose
+            // renderer is gone closes without asking: there is no session
+            // worth guarding and no usable window to confirm against.
+            let rendererLost = false;
+            window.webContents.once("render-process-gone", () => {
+              rendererLost = true;
+            });
+            window.webContents.once("destroyed", () => {
+              rendererLost = true;
+            });
+            window.on("close", (event) => {
+              if (rendererLost || terminalApplication!.mayCloseWindow(window))
+                return;
+              event.preventDefault();
+              void terminalApplication!.requestWindowClose(window);
+            });
             const titleController = createTerminalWindowTitleController(
               window,
               () => app.dock?.bounce("informational"),
@@ -215,7 +232,7 @@ app
                   await window.loadFile(rendererPath);
                 } catch (cause) {
                   windowHost.dispose();
-                  if (!window.isDestroyed()) window.close();
+                  terminalApplication!.forceCloseWindow(window);
                   operationalEvents!.write({
                     name: "application.failure",
                     stage: "renderer-load",
@@ -244,6 +261,32 @@ app
                 : await dialog.showMessageBox(options);
             return result.response === 0;
           },
+          async showCloseWindowConfirmation(window) {
+            const result = await dialog.showMessageBox(window, {
+              type: "question",
+              title: "Close Window",
+              message: "Close this Terminal Window and all of its tabs?",
+              detail: "All of its Live Terminal Sessions will end.",
+              buttons: ["Close", "Cancel"],
+              defaultId: 1,
+              cancelId: 1,
+              noLink: true,
+            });
+            return result.response === 0;
+          },
+          async showCloseTabConfirmation(window) {
+            const result = await dialog.showMessageBox(window, {
+              type: "question",
+              title: "Close Tab",
+              message: "Close this Terminal Tab?",
+              detail: "Its Live Terminal Session will end.",
+              buttons: ["Close", "Cancel"],
+              defaultId: 1,
+              cancelId: 1,
+              noLink: true,
+            });
+            return result.response === 0;
+          },
           async showSessionFailure(window, failure) {
             const failureDialog = terminalSessionFailureDialog(failure);
             await dialog.showMessageBox(window, {
@@ -258,6 +301,8 @@ app
             window.webContents.send(terminalIpc.clipboardAction, action),
           sendSnippetsToggle: (window) =>
             window.webContents.send(terminalIpc.snippetsToggle),
+          sendTabCommand: (window, command) =>
+            window.webContents.send(terminalIpc.tabCommand, command),
           quit: () => app.quit(),
           operationalEvents: operationalEvents!,
         });
@@ -279,7 +324,17 @@ app
               app.name,
               {
                 newWindow: openNewWindow,
-                closeSelectedWindow: terminalApplication.closeSelectedWindow,
+                closeSelectedWindow: () =>
+                  void terminalApplication!.closeSelectedWindow(),
+                newTabInSelectedWindow: () =>
+                  terminalApplication!.newTabInSelectedWindow(),
+                closeSelectedTab: () =>
+                  void terminalApplication!.closeSelectedTab(),
+                selectNextTab: () => terminalApplication!.selectNextTab(),
+                selectPreviousTab: () =>
+                  terminalApplication!.selectPreviousTab(),
+                selectTabInSelectedWindow: (position) =>
+                  terminalApplication!.selectTabInSelectedWindow(position),
                 requestQuit: () => void terminalApplication!.requestQuit(),
                 toggleSelectedFullScreen:
                   terminalApplication.toggleSelectedFullScreen,

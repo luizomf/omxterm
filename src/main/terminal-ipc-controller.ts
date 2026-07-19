@@ -45,13 +45,32 @@ interface SessionCallbacks {
   readonly onExit: (exit: TerminalExit) => void;
 }
 
+// Lifecycle context for one ended (or failed) Live Terminal Session within
+// its window: `liveSessions` counts the sessions still running afterwards,
+// and `closeRequested` distinguishes a close-driven end from a spontaneous
+// exit so an expected kill signal is not treated as a failure.
+export interface TerminalSessionEndContext {
+  readonly sessionId: TerminalSessionId;
+  readonly closeRequested: boolean;
+  readonly liveSessions: number;
+}
+
+export interface TerminalSessionStartErrorContext {
+  readonly liveSessions: number;
+}
+
 export interface TerminalIpcControllerOptions {
   readonly windowId?: number;
   readonly configuration: TerminalRendererConfiguration;
   readonly webContents: TrustedWebContents;
   readonly createSession: (callbacks: SessionCallbacks) => LocalTerminalSession;
-  readonly onSessionStartError: () => void;
-  readonly onSessionExit: (exit: TerminalExit) => void;
+  readonly onSessionStartError: (
+    context: TerminalSessionStartErrorContext,
+  ) => void;
+  readonly onSessionExit: (
+    exit: TerminalExit,
+    context: TerminalSessionEndContext,
+  ) => void;
   readonly writeClipboardText: (text: string) => void;
   readonly readClipboardText: () => string;
   readonly confirmPaste: (text: string) => Promise<boolean>;
@@ -275,6 +294,7 @@ export function registerTerminalIpcRouter(
 interface RoutedSessionState {
   readonly session: LocalTerminalSession;
   closed: boolean;
+  exited: boolean;
 }
 
 function createTerminalIpcController(
@@ -310,6 +330,9 @@ function createTerminalIpcController(
     state.session.close();
   };
 
+  const countLiveSessions = () =>
+    [...sessions.values()].filter((state) => !state.exited).length;
+
   // A session-scoped payload is rejected before it is routed: an invalid shape
   // never reaches a session, and a well-formed message may only address a
   // session id this controller allocated for its own Terminal Window.
@@ -331,6 +354,7 @@ function createTerminalIpcController(
     const sessionId: TerminalSessionId = `s${nextSessionNumber}`;
     nextSessionNumber += 1;
     let startedAt: number | undefined;
+    let exitedBeforeRegistration = false;
     let createdSession: LocalTerminalSession;
     try {
       createdSession = options.createSession({
@@ -341,10 +365,17 @@ function createTerminalIpcController(
         },
         onExit(exit) {
           if (disposed) return;
+          const state = sessions.get(sessionId);
+          if (state) state.exited = true;
+          else exitedBeforeRegistration = true;
           if (!options.webContents.isDestroyed()) {
             options.webContents.send(terminalIpc.exit, { sessionId, ...exit });
           }
-          options.onSessionExit(exit);
+          options.onSessionExit(exit, {
+            sessionId,
+            closeRequested: state?.closed ?? false,
+            liveSessions: countLiveSessions(),
+          });
           if (windowId !== undefined) {
             const outcome = exit.signal !== 0 ? "signal" : "clean";
             writeWindowEvent({
@@ -368,11 +399,15 @@ function createTerminalIpcController(
           code: null,
           durationMs: elapsedMilliseconds(startedAt),
         });
-      options.onSessionStartError();
+      options.onSessionStartError({ liveSessions: countLiveSessions() });
       throw new Error("The Default Shell could not be started");
     }
 
-    sessions.set(sessionId, { session: createdSession, closed: false });
+    sessions.set(sessionId, {
+      session: createdSession,
+      closed: false,
+      exited: exitedBeforeRegistration,
+    });
     startedAt = Date.now();
     if (windowId !== undefined)
       writeWindowEvent({

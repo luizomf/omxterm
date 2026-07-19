@@ -2,7 +2,12 @@ import type {
   TerminalExit,
   TerminalFontZoom,
   TerminalClipboardAction,
+  TerminalTabCommand,
 } from "../shared/terminal-contract";
+import type {
+  TerminalSessionEndContext,
+  TerminalSessionStartErrorContext,
+} from "./terminal-ipc-controller";
 import type { OperationalEventLog } from "./operational-events";
 
 export const DEFAULT_CONFIRM_CLOSE = true;
@@ -20,8 +25,8 @@ export interface NativeTerminalWindow {
 export interface TerminalWindowLifecycle {
   readonly windowId: number;
   onWindowClosed(): void;
-  onSessionStartError(): void;
-  onSessionExit(exit: TerminalExit): void;
+  onSessionStartError(context: TerminalSessionStartErrorContext): void;
+  onSessionExit(exit: TerminalExit, context: TerminalSessionEndContext): void;
 }
 
 export type TerminalSessionFailure =
@@ -31,6 +36,13 @@ export type TerminalSessionFailure =
 interface TerminalWindowInstance<Window extends NativeTerminalWindow> {
   readonly window: Window;
   load(): Promise<void>;
+}
+
+interface TerminalWindowState {
+  failurePending: boolean;
+  closeConfirmed: boolean;
+  closeRequest: Promise<void> | undefined;
+  tabCloseRequest: Promise<void> | undefined;
 }
 
 interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
@@ -43,6 +55,8 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
   readonly showQuitConfirmation: (
     window: Window | undefined,
   ) => Promise<boolean>;
+  readonly showCloseWindowConfirmation: (window: Window) => Promise<boolean>;
+  readonly showCloseTabConfirmation: (window: Window) => Promise<boolean>;
   readonly showSessionFailure: (
     window: Window,
     failure: TerminalSessionFailure,
@@ -53,14 +67,28 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
     action: TerminalClipboardAction,
   ) => void;
   readonly sendSnippetsToggle: (window: Window) => void;
+  readonly sendTabCommand: (
+    window: Window,
+    command: TerminalTabCommand,
+  ) => void;
   readonly quit: () => void;
   readonly operationalEvents?: Pick<OperationalEventLog, "write">;
 }
 
-export interface TerminalApplication {
+export interface TerminalApplication<
+  Window extends NativeTerminalWindow = NativeTerminalWindow,
+> {
   newWindow(): Promise<void>;
-  closeSelectedWindow(): void;
+  closeSelectedWindow(): Promise<void>;
+  requestWindowClose(window: Window): Promise<void>;
+  mayCloseWindow(window: Window): boolean;
+  forceCloseWindow(window: Window): void;
   requestQuit(): Promise<void>;
+  newTabInSelectedWindow(): void;
+  closeSelectedTab(): Promise<void>;
+  selectNextTab(): void;
+  selectPreviousTab(): void;
+  selectTabInSelectedWindow(position: number): void;
   toggleSelectedFullScreen(): void;
   toggleSelectedAlwaysOnTop(): void;
   zoomSelectedWindow(command: TerminalFontZoom): void;
@@ -71,11 +99,14 @@ export interface TerminalApplication {
 
 export function startTerminalApplication<Window extends NativeTerminalWindow>(
   options: TerminalApplicationOptions<Window>,
-): TerminalApplication {
-  const windows = new Map<Window, { failurePending: boolean }>();
+): TerminalApplication<Window> {
+  const windows = new Map<Window, TerminalWindowState>();
   let quitting = false;
   let quitRequest: Promise<void> | undefined;
   let nextWindowId = 1;
+
+  const confirmClose = () =>
+    (options.confirmClose ?? DEFAULT_CONFIRM_CLOSE) !== false;
 
   const selectedWindow = () => {
     const selected = options.getSelectedWindow();
@@ -90,6 +121,12 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     options.quit();
   };
 
+  const forceCloseWindow = (window: Window) => {
+    const state = windows.get(window);
+    if (state) state.closeConfirmed = true;
+    if (!window.isDestroyed()) window.close();
+  };
+
   const closeAfterFailure = (
     window: Window,
     failure: TerminalSessionFailure,
@@ -97,12 +134,15 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     const state = windows.get(window);
     if (!state || state.failurePending) return;
     state.failurePending = true;
-    const closeWindow = () => {
-      if (!window.isDestroyed()) window.close();
-    };
+    const closeWindow = () => forceCloseWindow(window);
     void options
       .showSessionFailure(window, failure)
       .then(closeWindow, closeWindow);
+  };
+
+  const sendToSelected = (command: TerminalTabCommand) => {
+    const window = selectedWindow();
+    if (window) options.sendTabCommand(window, command);
   };
 
   return {
@@ -131,26 +171,63 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
             if (windows.size === 0) quit();
           });
         },
-        onSessionStartError() {
-          dispatch(() =>
-            closeAfterFailure(instance.window, { reason: "spawn" }),
-          );
-        },
-        onSessionExit(exit) {
+        onSessionStartError(context) {
           dispatch(() => {
-            if (exit.signal === 0) {
-              if (!instance.window.isDestroyed()) instance.window.close();
+            // The renderer already dropped the tab whose spawn failed; the
+            // window itself is useless only when no session is running in it.
+            if (context.liveSessions === 0)
+              closeAfterFailure(instance.window, { reason: "spawn" });
+            else
+              void options
+                .showSessionFailure(instance.window, { reason: "spawn" })
+                .catch(() => {});
+          });
+        },
+        onSessionExit(exit, context) {
+          dispatch(() => {
+            const unexpectedSignal =
+              exit.signal !== 0 && !context.closeRequested;
+            if (!unexpectedSignal) {
+              // An ordinary end closes only its tab; the window follows when
+              // that was the last Live Terminal Session, without confirmation.
+              if (context.liveSessions === 0) forceCloseWindow(instance.window);
               return;
             }
-            closeAfterFailure(instance.window, {
-              reason: "signal",
-              signal: normalizeLifecycleCode(exit.signal),
-            });
+            if (context.liveSessions === 0) {
+              closeAfterFailure(instance.window, {
+                reason: "signal",
+                signal: normalizeLifecycleCode(exit.signal),
+              });
+              return;
+            }
+            // The dead tab stays visible until the failure is acknowledged;
+            // only then is the renderer told to drop it.
+            void options
+              .showSessionFailure(instance.window, {
+                reason: "signal",
+                signal: normalizeLifecycleCode(exit.signal),
+              })
+              .catch(() => {})
+              .then(() => {
+                if (
+                  !instance.window.isDestroyed() &&
+                  windows.has(instance.window)
+                )
+                  options.sendTabCommand(instance.window, {
+                    action: "close-session",
+                    sessionId: context.sessionId,
+                  });
+              });
           });
         },
       });
       window = instance.window;
-      windows.set(window, { failurePending: false });
+      windows.set(window, {
+        failurePending: false,
+        closeConfirmed: false,
+        closeRequest: undefined,
+        tabCloseRequest: undefined,
+      });
       options.operationalEvents?.write({ name: "window.opened", windowId });
       window.setAlwaysOnTop(
         options.alwaysOnTopDefault ?? DEFAULT_ALWAYS_ON_TOP,
@@ -160,15 +237,37 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       await instance.load();
     },
     closeSelectedWindow() {
-      selectedWindow()?.close();
+      const window = selectedWindow();
+      return window ? this.requestWindowClose(window) : Promise.resolve();
     },
+    requestWindowClose(window) {
+      const state = windows.get(window);
+      if (!state || window.isDestroyed()) return Promise.resolve();
+      if (this.mayCloseWindow(window)) {
+        forceCloseWindow(window);
+        return Promise.resolve();
+      }
+      if (state.closeRequest) return state.closeRequest;
+      state.closeRequest = options
+        .showCloseWindowConfirmation(window)
+        .then((confirmed) => {
+          if (confirmed) forceCloseWindow(window);
+        })
+        .finally(() => {
+          state.closeRequest = undefined;
+        });
+      return state.closeRequest;
+    },
+    mayCloseWindow(window) {
+      if (quitting || !confirmClose()) return true;
+      const state = windows.get(window);
+      return state === undefined || state.closeConfirmed;
+    },
+    forceCloseWindow,
     requestQuit() {
       if (quitting) return Promise.resolve();
       if (quitRequest) return quitRequest;
-      if (
-        (options.confirmClose ?? DEFAULT_CONFIRM_CLOSE) === false ||
-        windows.size === 0
-      ) {
+      if (!confirmClose() || windows.size === 0) {
         quit();
         return Promise.resolve();
       }
@@ -182,6 +281,38 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
           quitRequest = undefined;
         });
       return quitRequest;
+    },
+    newTabInSelectedWindow() {
+      sendToSelected({ action: "new" });
+    },
+    closeSelectedTab() {
+      const window = selectedWindow();
+      if (!window) return Promise.resolve();
+      if (!confirmClose()) {
+        options.sendTabCommand(window, { action: "close" });
+        return Promise.resolve();
+      }
+      const state = windows.get(window)!;
+      if (state.tabCloseRequest) return state.tabCloseRequest;
+      state.tabCloseRequest = options
+        .showCloseTabConfirmation(window)
+        .then((confirmed) => {
+          if (confirmed && !window.isDestroyed() && windows.has(window))
+            options.sendTabCommand(window, { action: "close" });
+        })
+        .finally(() => {
+          state.tabCloseRequest = undefined;
+        });
+      return state.tabCloseRequest;
+    },
+    selectNextTab() {
+      sendToSelected({ action: "next" });
+    },
+    selectPreviousTab() {
+      sendToSelected({ action: "previous" });
+    },
+    selectTabInSelectedWindow(position) {
+      sendToSelected({ action: "select", position });
     },
     toggleSelectedFullScreen() {
       const window = selectedWindow();

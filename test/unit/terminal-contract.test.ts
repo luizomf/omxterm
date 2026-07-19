@@ -7,6 +7,7 @@ import {
   isTerminalSessionReference,
   isTerminalSessionResize,
   isTerminalSize,
+  isTerminalTabCommand,
   MAX_TERMINAL_PAYLOAD_BYTES,
   splitTerminalPayload,
   requiresProtectedPaste,
@@ -109,5 +110,32 @@ describe("terminal IPC payload contract", () => {
       isTerminalSessionExit({ sessionId: "s1", exitCode: "0", signal: 0 }),
     ).toBe(false);
     expect(isTerminalSessionExit({ exitCode: 0, signal: 0 })).toBe(false);
+  });
+
+  it("validates strict tab command envelopes", () => {
+    for (const accepted of [
+      { action: "new" },
+      { action: "close" },
+      { action: "next" },
+      { action: "previous" },
+      { action: "select", position: 1 },
+      { action: "select", position: 9 },
+      { action: "close-session", sessionId: "s7" },
+    ])
+      expect(isTerminalTabCommand(accepted)).toBe(true);
+    for (const rejected of [
+      undefined,
+      "new",
+      { action: "detach" },
+      { action: "select" },
+      { action: "select", position: 0 },
+      { action: "select", position: 10 },
+      { action: "select", position: 1.5 },
+      { action: "select", position: 1, extra: true },
+      { action: "close-session" },
+      { action: "close-session", sessionId: "session-1" },
+      { action: "new", extra: true },
+    ])
+      expect(isTerminalTabCommand(rejected)).toBe(false);
   });
 });

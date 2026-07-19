@@ -10,11 +10,13 @@ import {
   isTerminalSessionId,
   isTerminalSessionOutput,
   isTerminalSize,
+  isTerminalTabCommand,
   isTerminalTitleRequest,
   type TerminalExit,
   type TerminalFontZoom,
   type TerminalSessionId,
   type TerminalSize,
+  type TerminalTabCommand,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
 import { isTerminalRendererConfiguration } from "../shared/user-configuration";
@@ -99,6 +101,13 @@ const terminal: TerminalBridge = {
     };
     ipcRenderer.on(terminalIpc.exit, handler);
     return () => ipcRenderer.removeListener(terminalIpc.exit, handler);
+  },
+  onTabCommand(listener: (command: TerminalTabCommand) => void) {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (isTerminalTabCommand(payload)) listener(payload);
+    };
+    ipcRenderer.on(terminalIpc.tabCommand, handler);
+    return () => ipcRenderer.removeListener(terminalIpc.tabCommand, handler);
   },
   onFontZoom(listener: (command: TerminalFontZoom) => void) {
     const handler = (_event: Electron.IpcRendererEvent, command: unknown) => {

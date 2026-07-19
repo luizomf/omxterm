@@ -42,6 +42,21 @@ export interface TerminalSessionExit {
   readonly signal: number;
 }
 
+// Tab selection keybinds are literal positions 1 through 9 (ADR 0016).
+export const MAX_TAB_SELECT_POSITION = 9;
+
+// Main-to-renderer instructions for the Terminal Tabs owned by one window.
+// "close" targets the selected tab after main confirmed the action;
+// "close-session" removes the tab of a failed session after its native
+// failure dialog was acknowledged.
+export type TerminalTabCommand =
+  | { readonly action: "new" }
+  | { readonly action: "close" }
+  | { readonly action: "next" }
+  | { readonly action: "previous" }
+  | { readonly action: "select"; readonly position: number }
+  | { readonly action: "close-session"; readonly sessionId: TerminalSessionId };
+
 export type TerminalFontZoom = "in" | "out" | "reset";
 export type TerminalClipboardAction = "copy" | "paste" | "select-all";
 
@@ -105,6 +120,30 @@ export function isTerminalSessionExit(
     isTerminalSessionId(value.sessionId) &&
     isTerminalExit({ exitCode: value.exitCode, signal: value.signal })
   );
+}
+
+export function isTerminalTabCommand(
+  value: unknown,
+): value is TerminalTabCommand {
+  if (isStrictRecord(value, ["action"]))
+    return (
+      value.action === "new" ||
+      value.action === "close" ||
+      value.action === "next" ||
+      value.action === "previous"
+    );
+  if (isStrictRecord(value, ["action", "position"]))
+    return (
+      value.action === "select" &&
+      Number.isInteger(value.position) &&
+      (value.position as number) >= 1 &&
+      (value.position as number) <= MAX_TAB_SELECT_POSITION
+    );
+  if (isStrictRecord(value, ["action", "sessionId"]))
+    return (
+      value.action === "close-session" && isTerminalSessionId(value.sessionId)
+    );
+  return false;
 }
 
 export function splitTerminalPayload(value: string): string[] {
