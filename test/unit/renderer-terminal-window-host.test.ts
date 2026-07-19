@@ -143,6 +143,7 @@ describe("renderer Terminal Window page host", () => {
       scrollbackLines: 2_000,
       optionKeyMode: "right",
       terminalTheme: DEFAULT_TERMINAL_THEME,
+      userFileErrors: [],
     } as const;
     const host = mountTerminalWindowPage(
       document.createElement("main"),
@@ -203,6 +204,7 @@ describe("renderer Terminal Window page host", () => {
         scrollbackLines: 10_000,
         optionKeyMode: "none",
         terminalTheme: theme,
+        userFileErrors: [],
       },
     });
     await host.ready;

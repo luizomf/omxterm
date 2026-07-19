@@ -16,6 +16,8 @@ export const DEFAULT_TERMINAL_PADDING: TerminalPadding = Object.freeze({
 });
 export const DEFAULT_SCROLLBACK_LINES = 10_000;
 export const MAX_SCROLLBACK_LINES = 100_000;
+export const MAX_USER_FILE_ERROR_COUNT = 8;
+export const MAX_USER_FILE_ERROR_LENGTH = 2048;
 
 export type OperationalLogLevel = "error" | "info" | "debug";
 export type OptionKeyMode = "none" | "left" | "right" | "both";
@@ -35,6 +37,7 @@ export interface TerminalRendererConfiguration {
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
   readonly terminalTheme: TerminalTheme;
+  readonly userFileErrors: readonly string[];
 }
 
 export interface UserConfiguration {
@@ -66,6 +69,7 @@ export function isTerminalRendererConfiguration(
         "scrollbackLines",
         "optionKeyMode",
         "terminalTheme",
+        "userFileErrors",
       ].includes(key),
     ) &&
     (value.fontFamily === undefined || typeof value.fontFamily === "string") &&
@@ -81,7 +85,21 @@ export function isTerminalRendererConfiguration(
     (value.scrollbackLines as number) >= 0 &&
     (value.scrollbackLines as number) <= MAX_SCROLLBACK_LINES &&
     ["none", "left", "right", "both"].includes(value.optionKeyMode as string) &&
-    isTerminalTheme(value.terminalTheme)
+    isTerminalTheme(value.terminalTheme) &&
+    isUserFileErrors(value.userFileErrors)
+  );
+}
+
+function isUserFileErrors(value: unknown): value is readonly string[] {
+  return (
+    Array.isArray(value) &&
+    value.length <= MAX_USER_FILE_ERROR_COUNT &&
+    value.every(
+      (entry) =>
+        typeof entry === "string" &&
+        entry.length > 0 &&
+        entry.length <= MAX_USER_FILE_ERROR_LENGTH,
+    )
   );
 }
 

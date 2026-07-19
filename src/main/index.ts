@@ -37,8 +37,10 @@ import {
 import { registerTerminalWindowHost } from "./terminal-window-host";
 import { createTerminalWindowTitleController } from "./terminal-window-title";
 import { installedFontFamilyMetrics } from "./installed-font-family";
-import { UserConfigurationError } from "./user-configuration";
-import { reportUserConfigurationFailure } from "./user-configuration-failure";
+import {
+  userConfigurationFallbackNotice,
+  type UserConfigurationError,
+} from "./user-configuration";
 import { startWithUserConfiguration } from "./configured-startup";
 import {
   createOperationalEventLog,
@@ -82,9 +84,19 @@ app
         homeDirectory: account.homedir,
         getInstalledFontFamilyMetrics: installedFontFamilyMetrics,
       },
-      async (userConfiguration) => {
+      async ({ configuration: userConfiguration, fallback }) => {
         operationalEvents!.setLevel(userConfiguration.logLevel);
-        operationalEvents!.write({ name: "configuration.validated" });
+        if (fallback) {
+          operationalEvents!.write({
+            name: "configuration.rejected",
+            reason: configurationRejectionReason(fallback.error),
+          });
+          process.stderr.write(
+            `${userConfigurationFallbackNotice(fallback)}\n`,
+          );
+        } else {
+          operationalEvents!.write({ name: "configuration.validated" });
+        }
         operationalEvents!.write({ name: "application.started" });
         const rendererConfiguration = Object.freeze({
           ...(userConfiguration.fontFamily
@@ -96,6 +108,9 @@ app
           scrollbackLines: userConfiguration.scrollbackLines,
           optionKeyMode: userConfiguration.optionKeyMode,
           terminalTheme: userConfiguration.terminalTheme,
+          userFileErrors: Object.freeze(
+            fallback ? [userConfigurationFallbackNotice(fallback)] : [],
+          ),
         });
         const terminalIpcRouter = registerTerminalIpcRouter(
           // Electron's public handler type contains `any`; isolate that boundary here.
@@ -281,18 +296,6 @@ app
     );
   })
   .catch((cause) => {
-    if (cause instanceof UserConfigurationError) {
-      operationalEvents?.write({
-        name: "configuration.rejected",
-        reason: configurationRejectionReason(cause),
-      });
-      reportUserConfigurationFailure(cause, {
-        writeStderr: (diagnostic) => process.stderr.write(diagnostic),
-        showErrorBox: (title, message) => dialog.showErrorBox(title, message),
-        quit: () => app.quit(),
-      });
-      return;
-    }
     const failure = terminalApplicationFailure("startup", cause);
     operationalEvents?.write({
       name: "application.failure",

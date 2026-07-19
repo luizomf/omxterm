@@ -19,7 +19,9 @@ import {
   MIN_TERMINAL_FONT_SIZE,
   resolveUserConfigurationPath,
   UserConfigurationError,
+  userConfigurationFallbackNotice,
   validateUserConfiguration,
+  type UserConfigurationLoad,
 } from "../../src/main/user-configuration";
 
 const configPath = "/isolated/config/omxterm/config.json";
@@ -286,20 +288,21 @@ describe("isolated User Configuration loading", () => {
     };
   }
 
-  it("treats only ENOENT as absence and creates no file or directory", async () => {
+  it("treats only ENOENT as absence, without a fallback diagnostic, and creates no file or directory", async () => {
     const { xdg, home } = await roots();
     const getMetrics = vi.fn(getInstalledFontFamilyMetrics);
-    const configuration = await loadUserConfiguration({
+    const load = await loadUserConfiguration({
       environment: { XDG_CONFIG_HOME: xdg },
       homeDirectory: home,
       getInstalledFontFamilyMetrics: getMetrics,
     });
-    expect(configuration).toEqual(DEFAULT_USER_CONFIGURATION);
+    expect(load.configuration).toEqual(DEFAULT_USER_CONFIGURATION);
+    expect(load.fallback).toBeUndefined();
     await expect(stat(xdg)).rejects.toMatchObject({ code: "ENOENT" });
     expect(getMetrics).not.toHaveBeenCalled();
   });
 
-  it("rejects a dangling configuration symlink without changing it or starting", async () => {
+  it("starts with defaults for a dangling configuration symlink without changing it", async () => {
     const { xdg, home, root } = await roots();
     const directory = path.join(xdg, "omxterm");
     const file = path.join(directory, "config.json");
@@ -307,23 +310,26 @@ describe("isolated User Configuration loading", () => {
     await mkdir(directory, { recursive: true });
     await symlink(target, file);
     const originalTarget = await readlink(file);
-    const start = vi.fn();
+    const start = vi.fn((load: UserConfigurationLoad) => load);
 
-    await expect(
-      startWithUserConfiguration(
-        {
-          environment: { XDG_CONFIG_HOME: xdg },
-          homeDirectory: home,
-          getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
-        },
-        start,
-      ),
-    ).rejects.toMatchObject({
-      configurationPath: file,
-      reason: "the file could not be read",
+    const load = await startWithUserConfiguration(
+      {
+        environment: { XDG_CONFIG_HOME: xdg },
+        homeDirectory: home,
+        getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
+      },
+      start,
+    );
+
+    expect(start).toHaveBeenCalledOnce();
+    expect(load.configuration).toEqual(DEFAULT_USER_CONFIGURATION);
+    expect(load.fallback).toMatchObject({
+      surface: "configuration",
+      error: {
+        configurationPath: file,
+        reason: "the file could not be read",
+      },
     });
-
-    expect(start).not.toHaveBeenCalled();
     expect(await readlink(file)).toBe(originalTarget);
     await expect(readFile(target)).rejects.toMatchObject({ code: "ENOENT" });
   });
@@ -334,23 +340,66 @@ describe("isolated User Configuration loading", () => {
       homeDirectory: "/home/tester",
       getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
     };
-    await expect(
-      loadUserConfiguration({
-        ...base,
-        read: vi.fn(async () => {
-          throw Object.assign(new Error("denied"), { code: "EACCES" });
-        }) as never,
-      }),
-    ).rejects.toMatchObject({ reason: "the file could not be read" });
-    await expect(
-      loadUserConfiguration({
-        ...base,
-        read: vi.fn(async () => Uint8Array.from([0xff])) as never,
-      }),
-    ).rejects.toMatchObject({ reason: "the file is not valid UTF-8" });
+    const denied = await loadUserConfiguration({
+      ...base,
+      read: vi.fn(async () => {
+        throw Object.assign(new Error("denied"), { code: "EACCES" });
+      }) as never,
+    });
+    expect(denied.configuration).toEqual(DEFAULT_USER_CONFIGURATION);
+    expect(denied.fallback?.error).toMatchObject({
+      reason: "the file could not be read",
+    });
+    const binary = await loadUserConfiguration({
+      ...base,
+      read: vi.fn(async () => Uint8Array.from([0xff])) as never,
+    });
+    expect(binary.configuration).toEqual(DEFAULT_USER_CONFIGURATION);
+    expect(binary.fallback?.error).toMatchObject({
+      reason: "the file is not valid UTF-8",
+    });
   });
 
-  it("validates before startup, leaves invalid bytes untouched, and emits content-free diagnostics", async () => {
+  it.each([
+    ["invalid JSON", "{not json", undefined, "the file is not valid JSON"],
+    [
+      "an unknown key",
+      '{"version":1,"unknown":true}',
+      "$.unknown",
+      "is unknown",
+    ],
+    [
+      "an invalid value",
+      '{"version":1,"font":{"size":4}}',
+      "font.size",
+      "must be from 8 through 72",
+    ],
+  ])(
+    "starts with full defaults and a precise diagnostic for %s",
+    async (_kind, contents, location, reason) => {
+      const { xdg, home } = await roots();
+      const file = path.join(xdg, "omxterm", "config.json");
+      await mkdir(path.dirname(file), { recursive: true });
+      const original = Buffer.from(contents);
+      await writeFile(file, original);
+
+      const load = await loadUserConfiguration({
+        environment: { XDG_CONFIG_HOME: xdg },
+        homeDirectory: home,
+        getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
+      });
+
+      expect(load.configuration).toEqual(DEFAULT_USER_CONFIGURATION);
+      expect(load.fallback).toMatchObject({
+        surface: "configuration",
+        error: { configurationPath: file, location, reason },
+      });
+      expect(load.fallback!.error.message).toContain(file);
+      expect(await readFile(file)).toEqual(original);
+    },
+  );
+
+  it("starts with defaults, leaves invalid bytes untouched, and emits content-free diagnostics", async () => {
     const { xdg, home } = await roots();
     const directory = path.join(xdg, "omxterm");
     const file = path.join(directory, "config.json");
@@ -358,27 +407,27 @@ describe("isolated User Configuration loading", () => {
     const canary = "SECRET-CONFIG-CANARY";
     const original = Buffer.from(`{"version":1,"unknown":"${canary}"}`);
     await writeFile(file, original);
-    const start = vi.fn();
+    const start = vi.fn((load: UserConfigurationLoad) => load);
 
-    let failure: unknown;
-    try {
-      await startWithUserConfiguration(
-        {
-          environment: { XDG_CONFIG_HOME: xdg },
-          homeDirectory: home,
-          getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
-        },
-        start,
-      );
-    } catch (cause) {
-      failure = cause;
-    }
+    const load = await startWithUserConfiguration(
+      {
+        environment: { XDG_CONFIG_HOME: xdg },
+        homeDirectory: home,
+        getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
+      },
+      start,
+    );
 
+    expect(start).toHaveBeenCalledOnce();
+    expect(load.configuration).toEqual(DEFAULT_USER_CONFIGURATION);
+    const failure = load.fallback!.error;
     expect(failure).toBeInstanceOf(UserConfigurationError);
-    expect((failure as Error).message).toContain(file);
-    expect((failure as Error).message).toContain("$.unknown");
-    expect((failure as Error).message).not.toContain(canary);
-    expect(start).not.toHaveBeenCalled();
+    expect(failure.message).toContain(file);
+    expect(failure.message).toContain("$.unknown");
+    expect(failure.message).not.toContain(canary);
+    expect(userConfigurationFallbackNotice(load.fallback!)).not.toContain(
+      canary,
+    );
     expect(await readFile(file)).toEqual(original);
   });
 
@@ -400,12 +449,13 @@ describe("isolated User Configuration loading", () => {
       family === "Exact Family" ? commonFontMetrics : undefined,
     );
 
-    const configuration = await loadUserConfiguration({
+    const { configuration, fallback } = await loadUserConfiguration({
       environment: { XDG_CONFIG_HOME: xdg },
       homeDirectory: home,
       getInstalledFontFamilyMetrics: getMetrics,
     });
 
+    expect(fallback).toBeUndefined();
     expect(configuration.fontFamily).toBe("Exact Family");
     expect(configuration.fontSize).toBe(16);
     expect(configuration.configuredFontMetrics).toEqual(commonFontMetrics);
@@ -434,18 +484,19 @@ describe("isolated User Configuration loading", () => {
         }),
       );
 
-      const configuration = await loadUserConfiguration({
+      const { configuration, fallback } = await loadUserConfiguration({
         environment: { XDG_CONFIG_HOME: xdg },
         homeDirectory: home,
         getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
       });
 
+      expect(fallback).toBeUndefined();
       expect(configuration.terminalTheme).toEqual(externalTheme());
       expect(configuration.terminalTheme.colors.background).toBe("#1e1e2e");
     },
   );
 
-  it("reports both configuration and resolved theme paths without falling back", async () => {
+  it("starts with the bundled theme when the selected theme file is missing, keeping the rest of the configuration", async () => {
     const { xdg, home } = await roots();
     const configurationPath = path.join(xdg, "omxterm", "config.json");
     const resolvedThemePath = path.join(
@@ -459,24 +510,33 @@ describe("isolated User Configuration loading", () => {
       configurationPath,
       JSON.stringify({
         version: 1,
+        confirmClose: false,
         theme: { path: "./themes/missing.json" },
       }),
     );
 
-    await expect(
-      loadUserConfiguration({
-        environment: { XDG_CONFIG_HOME: xdg },
-        homeDirectory: home,
-        getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
-      }),
-    ).rejects.toMatchObject({
-      configurationPath,
-      location: "theme.path",
-      reason: expect.stringContaining(resolvedThemePath),
+    const { configuration, fallback } = await loadUserConfiguration({
+      environment: { XDG_CONFIG_HOME: xdg },
+      homeDirectory: home,
+      getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
     });
+
+    expect(configuration.terminalTheme).toEqual(DEFAULT_TERMINAL_THEME);
+    expect(configuration.confirmClose).toBe(false);
+    expect(fallback).toMatchObject({
+      surface: "theme",
+      error: {
+        configurationPath,
+        location: "theme.path",
+        reason: expect.stringContaining(resolvedThemePath) as string,
+      },
+    });
+    expect(userConfigurationFallbackNotice(fallback!)).toContain(
+      "bundled omtheme",
+    );
   });
 
-  it("rejects an unavailable configured family without starting or changing the file", async () => {
+  it("starts with full defaults when the configured family is unavailable, without changing the file", async () => {
     const { xdg, home } = await roots();
     const file = path.join(xdg, "omxterm", "config.json");
     await mkdir(path.dirname(file), { recursive: true });
@@ -484,24 +544,30 @@ describe("isolated User Configuration loading", () => {
       '{"version":1,"confirmClose":false,"font":{"family":"Missing Family"}}',
     );
     await writeFile(file, original);
-    const start = vi.fn();
+    const start = vi.fn((load: UserConfigurationLoad) => load);
 
-    await expect(
-      startWithUserConfiguration(
-        {
-          environment: { XDG_CONFIG_HOME: xdg },
-          homeDirectory: home,
-          getInstalledFontFamilyMetrics: vi.fn(async () => undefined),
-        },
-        start,
-      ),
-    ).rejects.toMatchObject({
-      configurationPath: file,
-      location: "font.family",
-      reason: "must exactly name an installed font family",
+    const load = await startWithUserConfiguration(
+      {
+        environment: { XDG_CONFIG_HOME: xdg },
+        homeDirectory: home,
+        getInstalledFontFamilyMetrics: vi.fn(async () => undefined),
+      },
+      start,
+    );
+
+    expect(start).toHaveBeenCalledOnce();
+    expect(load.configuration).toEqual(DEFAULT_USER_CONFIGURATION);
+    expect(load.fallback).toMatchObject({
+      surface: "configuration",
+      error: {
+        configurationPath: file,
+        location: "font.family",
+        reason: "must exactly name an installed font family",
+      },
     });
-
-    expect(start).not.toHaveBeenCalled();
+    expect(userConfigurationFallbackNotice(load.fallback!)).toContain(
+      "built-in default settings",
+    );
     expect(await readFile(file)).toEqual(original);
   });
 
@@ -513,26 +579,24 @@ describe("isolated User Configuration loading", () => {
       '{"version":1,"font":{"family":"Exact Family","size":72}}',
     );
     await writeFile(file, original);
-    const start = vi.fn();
 
-    await expect(
-      startWithUserConfiguration(
-        {
-          environment: { XDG_CONFIG_HOME: xdg },
-          homeDirectory: home,
-          getInstalledFontFamilyMetrics: vi.fn(async () => {
-            throw Object.assign(new Error("timed out"), { code: "ETIMEDOUT" });
-          }),
-        },
-        start,
-      ),
-    ).rejects.toMatchObject({
-      configurationPath: file,
-      location: "font.family",
-      reason: "installed font families could not be discovered",
+    const load = await loadUserConfiguration({
+      environment: { XDG_CONFIG_HOME: xdg },
+      homeDirectory: home,
+      getInstalledFontFamilyMetrics: vi.fn(async () => {
+        throw Object.assign(new Error("timed out"), { code: "ETIMEDOUT" });
+      }),
     });
 
-    expect(start).not.toHaveBeenCalled();
+    expect(load.configuration).toEqual(DEFAULT_USER_CONFIGURATION);
+    expect(load.fallback).toMatchObject({
+      surface: "configuration",
+      error: {
+        configurationPath: file,
+        location: "font.family",
+        reason: "installed font families could not be discovered",
+      },
+    });
     expect(await readFile(file)).toEqual(original);
   });
 
@@ -545,7 +609,7 @@ describe("isolated User Configuration loading", () => {
       '{\n  "version": 1, "confirmClose": false, "logLevel": "error", "window": { "alwaysOnTop": true }\n}\n',
     );
     await writeFile(file, original);
-    const start = vi.fn((configuration) => configuration);
+    const start = vi.fn((load: UserConfigurationLoad) => load);
     const getMetrics = vi.fn(getInstalledFontFamilyMetrics);
 
     const result = await startWithUserConfiguration(
@@ -558,7 +622,8 @@ describe("isolated User Configuration loading", () => {
     );
 
     expect(start).toHaveBeenCalledOnce();
-    expect(result).toMatchObject({
+    expect(result.fallback).toBeUndefined();
+    expect(result.configuration).toMatchObject({
       confirmClose: false,
       logLevel: "error",
       alwaysOnTop: true,

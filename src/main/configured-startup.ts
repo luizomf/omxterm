@@ -1,13 +1,13 @@
 import {
   loadUserConfiguration,
   type LoadUserConfigurationOptions,
-  type LoadedUserConfiguration,
+  type UserConfigurationLoad,
 } from "./user-configuration";
 
 export async function startWithUserConfiguration<Result>(
   options: LoadUserConfigurationOptions,
-  start: (configuration: LoadedUserConfiguration) => Result | Promise<Result>,
+  start: (load: UserConfigurationLoad) => Result | Promise<Result>,
 ): Promise<Result> {
-  const configuration = await loadUserConfiguration(options);
-  return start(configuration);
+  const load = await loadUserConfiguration(options);
+  return start(load);
 }

@@ -22,6 +22,44 @@ body,
   background: var(--terminal-background, transparent);
 }
 
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+#terminal-surface {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
+#user-file-errors {
+  flex: none;
+  max-height: 40%;
+  margin: 0;
+  padding: 10px 16px;
+  overflow-y: auto;
+  font:
+    13px/1.5 -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  color: #ffffff;
+  background: #8c1d18;
+  user-select: text;
+}
+
+#user-file-errors[hidden] {
+  display: none;
+}
+
+#user-file-errors p {
+  margin: 0;
+}
+
+#user-file-errors p + p {
+  margin-top: 6px;
+}
+
 #terminal-surface::before {
   content: "";
   position: fixed;

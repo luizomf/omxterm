@@ -86,6 +86,28 @@ export interface LoadedUserConfiguration extends UserConfiguration {
   readonly configuredFontMetrics?: InstalledFontFamilyMetrics;
 }
 
+export type UserConfigurationFallbackSurface = "configuration" | "theme";
+
+export interface UserConfigurationFallback {
+  readonly surface: UserConfigurationFallbackSurface;
+  readonly error: UserConfigurationError;
+}
+
+export interface UserConfigurationLoad {
+  readonly configuration: LoadedUserConfiguration;
+  readonly fallback?: UserConfigurationFallback;
+}
+
+export function userConfigurationFallbackNotice(
+  fallback: UserConfigurationFallback,
+): string {
+  const activeDefaults =
+    fallback.surface === "theme"
+      ? "OMXTerm opened with the bundled omtheme Terminal Theme instead."
+      : "OMXTerm opened with its built-in default settings instead.";
+  return `${activeDefaults} ${fallback.error.message}`;
+}
+
 export function resolveUserConfigurationPath(
   environment: Readonly<Record<string, string | undefined>>,
   homeDirectory: string,
@@ -97,87 +119,112 @@ export function resolveUserConfigurationPath(
 
 export async function loadUserConfiguration(
   options: LoadUserConfigurationOptions,
-): Promise<LoadedUserConfiguration> {
+): Promise<UserConfigurationLoad> {
   const configurationPath = resolveUserConfigurationPath(
     options.environment,
     options.homeDirectory,
   );
+  // Any config.json failure keeps the application usable: the whole file
+  // (including its theme selection) is replaced by built-in defaults and the
+  // precise diagnostic travels with the result instead of aborting startup.
+  const configurationFallback = (
+    location: string | undefined,
+    reason: string,
+  ): UserConfigurationLoad =>
+    Object.freeze({
+      configuration: DEFAULT_USER_CONFIGURATION,
+      fallback: Object.freeze({
+        surface: "configuration" as const,
+        error: new UserConfigurationError(configurationPath, location, reason),
+      }),
+    });
+
   let bytes: Uint8Array;
   try {
     bytes = await (options.read ?? readFile)(configurationPath);
   } catch (cause) {
     if (isNotFound(cause) && (await isPathAbsent(configurationPath)))
-      return DEFAULT_USER_CONFIGURATION;
-    throw new UserConfigurationError(
-      configurationPath,
-      undefined,
-      "the file could not be read",
-    );
+      return Object.freeze({ configuration: DEFAULT_USER_CONFIGURATION });
+    return configurationFallback(undefined, "the file could not be read");
   }
 
   let text: string;
   try {
     text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
-    throw new UserConfigurationError(
-      configurationPath,
-      undefined,
-      "the file is not valid UTF-8",
-    );
+    return configurationFallback(undefined, "the file is not valid UTF-8");
   }
 
   let document: unknown;
   try {
     document = JSON.parse(text) as unknown;
   } catch {
-    throw new UserConfigurationError(
-      configurationPath,
-      undefined,
-      "the file is not valid JSON",
-    );
+    return configurationFallback(undefined, "the file is not valid JSON");
   }
   const declaredFontFamily = configuredFontFamily(document);
-  const preliminary = validateUserConfiguration(
-    document,
-    configurationPath,
-    new Set(declaredFontFamily === undefined ? [] : [declaredFontFamily]),
-  );
+  let preliminary: UserConfiguration;
+  try {
+    preliminary = validateUserConfiguration(
+      document,
+      configurationPath,
+      new Set(declaredFontFamily === undefined ? [] : [declaredFontFamily]),
+    );
+  } catch (cause) {
+    if (cause instanceof UserConfigurationError)
+      return configurationFallback(cause.location, cause.reason);
+    throw cause;
+  }
   const configuredThemePath = selectedTerminalThemePath(
     document,
     configurationPath,
   );
   let terminalTheme = DEFAULT_TERMINAL_THEME;
+  let themeFallback: UserConfigurationFallback | undefined;
   if (configuredThemePath) {
     try {
       terminalTheme = await loadTerminalTheme(configuredThemePath);
     } catch (cause) {
-      if (cause instanceof TerminalThemeError)
-        throw new UserConfigurationError(
+      if (!(cause instanceof TerminalThemeError)) throw cause;
+      themeFallback = Object.freeze({
+        surface: "theme" as const,
+        error: new UserConfigurationError(
           configurationPath,
           "theme.path",
           cause.message,
-        );
-      throw cause;
+        ),
+      });
     }
   }
-  if (preliminary.fontFamily === undefined)
-    return Object.freeze({ ...preliminary, terminalTheme });
-  const configuredFontMetrics = await checkFontMetrics(
-    options,
-    configurationPath,
-    preliminary.fontFamily,
-    preliminary.fontSize,
-  );
-  if (configuredFontMetrics === undefined)
-    fail(
-      configurationPath,
-      "font.family",
-      "must exactly name an installed font family",
-    );
+  if (preliminary.fontFamily !== undefined) {
+    let configuredFontMetrics: InstalledFontFamilyMetrics | undefined;
+    try {
+      configuredFontMetrics = await options.getInstalledFontFamilyMetrics(
+        preliminary.fontFamily,
+        preliminary.fontSize,
+      );
+    } catch {
+      return configurationFallback(
+        "font.family",
+        "installed font families could not be discovered",
+      );
+    }
+    if (configuredFontMetrics === undefined)
+      return configurationFallback(
+        "font.family",
+        "must exactly name an installed font family",
+      );
+    return Object.freeze({
+      configuration: Object.freeze({
+        ...preliminary,
+        terminalTheme,
+        configuredFontMetrics,
+      }),
+      ...(themeFallback ? { fallback: themeFallback } : {}),
+    });
+  }
   return Object.freeze({
-    ...preliminary,
-    terminalTheme,
-    configuredFontMetrics,
+    configuration: Object.freeze({ ...preliminary, terminalTheme }),
+    ...(themeFallback ? { fallback: themeFallback } : {}),
   });
 }
 
@@ -207,23 +254,6 @@ function configuredFontFamily(document: unknown): string | undefined {
     return undefined;
   const family = (font as Record<string, unknown>).family;
   return typeof family === "string" ? family : undefined;
-}
-
-async function checkFontMetrics(
-  options: LoadUserConfigurationOptions,
-  configurationPath: string,
-  family: string,
-  fontSize: number,
-): Promise<InstalledFontFamilyMetrics | undefined> {
-  try {
-    return await options.getInstalledFontFamilyMetrics(family, fontSize);
-  } catch {
-    throw new UserConfigurationError(
-      configurationPath,
-      "font.family",
-      "installed font families could not be discovered",
-    );
-  }
 }
 
 export function validateUserConfiguration(

@@ -38,6 +38,7 @@ function clipboardOptions() {
       scrollbackLines: 10_000,
       optionKeyMode: "none" as const,
       terminalTheme: DEFAULT_TERMINAL_THEME,
+      userFileErrors: [],
     },
     writeClipboardText: vi.fn(),
     readClipboardText: vi.fn(() => "clipboard text"),
@@ -138,6 +139,7 @@ describe("terminal IPC controller", () => {
       scrollbackLines: 500,
       optionKeyMode: "right" as const,
       terminalTheme: DEFAULT_TERMINAL_THEME,
+      userFileErrors: [],
     });
     const router = registerTerminalIpcRouter(ipc.ipcMain);
     router.registerController({

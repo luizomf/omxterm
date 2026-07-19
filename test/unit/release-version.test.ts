@@ -25,7 +25,7 @@ function builderValue(name: string): string {
 
 describe("release version consistency", () => {
   it("uses the selected version in npm package metadata", () => {
-    expect(packageMetadata.version).toBe("0.1.1-dev.0");
+    expect(packageMetadata.version).toBe("0.2.0-dev.0");
     expect(lockMetadata.version).toBe(packageMetadata.version);
     expect(lockMetadata.packages[""]?.version).toBe(packageMetadata.version);
   });
@@ -38,9 +38,9 @@ describe("release version consistency", () => {
       .replace("${ext}", "dmg");
 
     expect(packageMetadata.name).toBe("omxterm");
-    expect(artifactName).toBe("OMXTerm-0.1.1-dev.0-arm64.dmg");
+    expect(artifactName).toBe("OMXTerm-0.2.0-dev.0-arm64.dmg");
     expect(`${artifactName}.sha256`).toBe(
-      "OMXTerm-0.1.1-dev.0-arm64.dmg.sha256",
+      "OMXTerm-0.2.0-dev.0-arm64.dmg.sha256",
     );
   });
 });

@@ -118,6 +118,7 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
         scrollbackLines: 10_000,
         optionKeyMode: "none",
         terminalTheme: DEFAULT_TERMINAL_THEME,
+        userFileErrors: [],
       },
       webContents,
       createSession: vi.fn(),

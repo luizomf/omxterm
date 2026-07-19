@@ -140,6 +140,7 @@ describe("isolated preload terminal bridge", () => {
         scrollbackLines: 10_000,
         optionKeyMode: "none",
         terminalTheme: DEFAULT_TERMINAL_THEME,
+        userFileErrors: [],
       },
       webContents,
       createSession: vi.fn(() => ({
@@ -234,6 +235,7 @@ describe("isolated preload terminal bridge", () => {
       scrollbackLines: 500,
       optionKeyMode: "right",
       terminalTheme: DEFAULT_TERMINAL_THEME,
+      userFileErrors: [],
     });
     await expect(bridge.configuration()).resolves.toEqual({
       fontFamily: "SF Mono",
@@ -243,6 +245,7 @@ describe("isolated preload terminal bridge", () => {
       scrollbackLines: 500,
       optionKeyMode: "right",
       terminalTheme: DEFAULT_TERMINAL_THEME,
+      userFileErrors: [],
     });
     electron.invoke.mockResolvedValueOnce({ fontSize: "18" });
     await expect(bridge.configuration()).rejects.toThrow(TypeError);
@@ -264,6 +267,16 @@ describe("isolated preload terminal bridge", () => {
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 129 },
       scrollbackLines: 500,
       optionKeyMode: "none",
+    });
+    await expect(bridge.configuration()).rejects.toThrow(TypeError);
+    electron.invoke.mockResolvedValueOnce({
+      fontSize: 18,
+      fontLineHeight: 1,
+      terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
+      scrollbackLines: 500,
+      optionKeyMode: "none",
+      terminalTheme: DEFAULT_TERMINAL_THEME,
+      userFileErrors: [42],
     });
     await expect(bridge.configuration()).rejects.toThrow(TypeError);
     expect(electron.invoke).toHaveBeenCalledWith(terminalIpc.configuration);
