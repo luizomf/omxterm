@@ -68,6 +68,13 @@ updates, and remote terminal features are outside this release.
   and all configured padding.
 - `Window -> Always on Top` toggles only the selected window at the ordinary
   native floating level. New windows use the configured default.
+- `View -> Toggle Snippets` (default `Cmd+Shift+S`, remappable through
+  `keybinds`) shows or hides the selected window's Snippets Sidebar beside its
+  Terminal Surface. The sidebar lists the snippets from `snippets.json`,
+  filters them by name and description as the user types, and a click injects
+  the snippet into that window's Live Terminal Session and returns focus to
+  the terminal. Opening the sidebar rereads the file; there is no file
+  watching, and the sidebar never blocks terminal use.
 - BEL is silent. An unfocused window prepends a bell marker to its title and
   requests Dock attention once until the user focuses or interacts with it.
 
@@ -140,7 +147,8 @@ non-configurable 30 px native title inset. `logLevel` defaults to `info`,
 
 An optional `keybinds` object remaps application-chrome shortcuts for a fixed
 action vocabulary: `quit`, `copy`, `paste`, `selectAll`, `newWindow`,
-`closeWindow`, `zoomIn`, `zoomOut`, `actualSize`, and `toggleFullScreen`. Each
+`closeWindow`, `zoomIn`, `zoomOut`, `actualSize`, `toggleFullScreen`, and
+`toggleSnippets`. Each
 value is a case-insensitive Electron accelerator containing at least one
 non-Shift modifier and exactly one key; bare or Shift-only accelerators are
 rejected so a keybind can never swallow plain typing. Unmapped actions keep
@@ -154,6 +162,26 @@ the effective map with macOS semantics (`CommandOrControl`, `Super`, and
 remaining default is the same error as two explicit entries colliding.
 Creating new actions, system-global shortcuts, chords or sequences, and
 per-platform alternate maps are unsupported.
+
+An optional read-only `snippets.json` next to `config.json` defines the
+Snippets Sidebar contents. The file is strict JSON containing exactly
+`"version": 1` and a `snippets` array of at most 512 entries; each entry has a
+non-empty `name` (the searchable label, at most 128 characters), a non-empty
+`body` (the text to inject, at most 65,536 characters), an optional
+`description` (at most 512 characters), and an optional boolean `execute`
+defaulting to `false`. OMXTerm never creates, rewrites, or migrates the file;
+absence is the clean empty state, and the file is reread each time the sidebar
+opens. Injection uses the same protected-paste path as a normal paste:
+bracketed-paste protections apply, a multi-line body behaves like one
+multi-line paste, and nothing runs until the user presses Enter. With
+`execute` true, OMXTerm additionally submits the snippet by sending Enter
+after the bracketed paste closes — per-snippet opt-in only. An invalid
+`snippets.json` never blocks startup and is never silent: the sidebar shows
+the exact actionable problem, including the resolved path and field location,
+in place of the list, and the terminal is unaffected. The Electron main
+process reads and validates the file and sends only validated, typed data
+over the preload bridge. Snippet contents are user payload and are never
+logged.
 
 An absent `theme` uses the bundled canonical [`omtheme`](omtheme.json). A
 present `theme` must contain exactly one required `path`: a non-empty string

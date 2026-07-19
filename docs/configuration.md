@@ -140,18 +140,19 @@ actions and never rewrite this file.
 vocabulary; the values are [Electron accelerator](https://www.electronjs.org/docs/latest/api/accelerator)
 strings such as `CommandOrControl+T`. Actions you omit keep their defaults:
 
-| Action             | Menu item          | Default                 |
-| ------------------ | ------------------ | ----------------------- |
-| `quit`             | Quit OMXTerm       | `CommandOrControl+Q`    |
-| `copy`             | Copy               | `CommandOrControl+C`    |
-| `paste`            | Paste              | `CommandOrControl+V`    |
-| `selectAll`        | Select All         | `CommandOrControl+A`    |
-| `newWindow`        | New Window         | `CommandOrControl+N`    |
-| `closeWindow`      | Close Window       | `CommandOrControl+W`    |
-| `zoomIn`           | Zoom In            | `CommandOrControl+Plus` |
-| `zoomOut`          | Zoom Out           | `CommandOrControl+-`    |
-| `actualSize`       | Actual Size        | `CommandOrControl+0`    |
-| `toggleFullScreen` | Toggle Full Screen | `Control+Command+F`     |
+| Action             | Menu item          | Default                    |
+| ------------------ | ------------------ | -------------------------- |
+| `quit`             | Quit OMXTerm       | `CommandOrControl+Q`       |
+| `copy`             | Copy               | `CommandOrControl+C`       |
+| `paste`            | Paste              | `CommandOrControl+V`       |
+| `selectAll`        | Select All         | `CommandOrControl+A`       |
+| `newWindow`        | New Window         | `CommandOrControl+N`       |
+| `closeWindow`      | Close Window       | `CommandOrControl+W`       |
+| `zoomIn`           | Zoom In            | `CommandOrControl+Plus`    |
+| `zoomOut`          | Zoom Out           | `CommandOrControl+-`       |
+| `actualSize`       | Actual Size        | `CommandOrControl+0`       |
+| `toggleFullScreen` | Toggle Full Screen | `Control+Command+F`        |
+| `toggleSnippets`   | Toggle Snippets    | `CommandOrControl+Shift+S` |
 
 For example, to open new windows with `Cmd+T` instead of `Cmd+N`:
 
@@ -198,6 +199,56 @@ terminal grid and keeps it usable, but it does not redistribute leftover pixels
 or automatically rebalance padding. `Cmd+0` returns the window to its
 configured font size when you want to return to the size around which the
 padding was tuned.
+
+## Snippets
+
+OMXTerm optionally reads `snippets.json` next to `config.json` — things you
+type all the time, one search-and-click away. The file is strict, hand-authored
+JSON that OMXTerm never creates, edits, or rewrites. A missing file simply
+means no snippets.
+
+```json
+{
+  "version": 1,
+  "snippets": [
+    {
+      "name": "git amend",
+      "body": "git commit --amend --no-edit",
+      "description": "amend staged changes into the last commit"
+    },
+    {
+      "name": "brew maintenance",
+      "body": "brew update && brew upgrade",
+      "execute": true
+    }
+  ]
+}
+```
+
+Each snippet has:
+
+| Field         | Accepted value                           | Default  |
+| ------------- | ---------------------------------------- | -------- |
+| `name`        | non-empty string up to 128 characters    | required |
+| `body`        | non-empty string up to 65,536 characters | required |
+| `description` | string up to 512 characters              | none     |
+| `execute`     | boolean                                  | `false`  |
+
+`Cmd+Shift+S` (the `toggleSnippets` keybind, remappable) shows or hides the
+Snippets Sidebar in the selected window. The search field filters by name and
+description; clicking a snippet injects its body into that window's terminal
+and returns focus to the terminal. The file is reread every time the sidebar
+opens, so editing `snippets.json` and reopening the sidebar shows the new
+content without restarting OMXTerm.
+
+Injection behaves exactly like pasting the body: bracketed-paste protections
+apply, a multi-line body arrives as one multi-line paste, and nothing runs
+until you press Enter. A snippet with `"execute": true` also presses Enter for
+you — opt in per snippet, and prefer leaving it off for anything destructive.
+
+If `snippets.json` is invalid, OMXTerm still opens and the terminal is
+unaffected; the sidebar shows the exact problem (path and field) in place of
+the list. Fix the file and reopen the sidebar.
 
 ## Terminal Themes
 

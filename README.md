@@ -57,10 +57,16 @@ optional, so this is a complete configuration:
 }
 ```
 
+OMXTerm also optionally reads `snippets.json` from the same directory:
+user-defined snippets listed in a per-window sidebar toggled with
+`Cmd+Shift+S`, filtered by search, and injected into the terminal with a
+click. Application shortcuts are remappable through the `keybinds`
+preference.
+
 See the [complete configuration guide](docs/configuration.md) for every field,
-Otávio's real configuration, external Terminal Themes, the optional Ghostty
-conversion helper, and troubleshooting. OMXTerm never creates, rewrites,
-migrates, or reloads the file.
+Otávio's real configuration, keybinds, snippets, external Terminal Themes, the
+optional Ghostty conversion helper, and troubleshooting. OMXTerm never
+creates, rewrites, migrates, or reloads these files.
 
 ## Documentation
 
