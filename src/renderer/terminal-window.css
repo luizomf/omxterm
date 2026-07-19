@@ -79,7 +79,7 @@ body {
 }
 
 #tab-strip button {
-  flex: 0 1 160px;
+  flex: 1 1 0;
   min-width: 36px;
   padding: 4px 12px;
   overflow: hidden;
