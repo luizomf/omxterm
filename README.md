@@ -75,7 +75,8 @@ creates, rewrites, migrates, or reloads these files.
 - [First-release specification](docs/spec.md)
 - [Versioning policy](docs/versioning.md)
 - [Local arm64 release procedure](docs/release.md)
-- [0.1.0 release-note draft](docs/releases/0.1.0.md)
+- [0.1.0 release notes](docs/releases/0.1.0.md)
+- [0.2.0 release-note draft](docs/releases/0.2.0.md)
 - [Domain language](CONTEXT.md)
 - [Architecture decisions](docs/adr/)
 

@@ -1,6 +1,6 @@
 {
   "name": "omxterm",
-  "version": "0.2.0-dev.0",
+  "version": "0.2.0",
   "description": "Otávio's open-source personal desktop terminal for Apple Silicon macOS",
   "author": "Luiz Otávio Miranda",
   "license": "MIT",

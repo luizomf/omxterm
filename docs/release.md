@@ -117,14 +117,34 @@ the unpacked build directory or a previous installation.
   renderer navigation are refused.
 - **Configuration:** verify absent configuration uses defaults without creating
   a file; verify a valid version 1 file after restart; verify invalid JSON,
-  unknown keys, unsupported versions, invalid values, and missing fonts produce
-  actionable errors without rewriting the file. Verify the bundled `omtheme`
-  default, an absolute external theme path, a config-relative external theme
-  path, a valid symlink, and a non-black theme across the initial window,
-  title inset, padding, and terminal cells. Verify missing, unreadable,
-  non-regular, invalid UTF-8, invalid JSON, and invalid-schema theme files stop
-  startup without fallback or rewriting either file; verify theme changes take
-  effect only after restart.
+  unknown keys, unsupported versions, invalid values, and missing fonts still
+  open the application on built-in defaults with the exact problem reported on
+  stderr and in the persistent in-app error surface, without rewriting the
+  file, and with the terminal fully usable beneath the error. Verify the
+  bundled `omtheme` default, an absolute external theme path, a
+  config-relative external theme path, a valid symlink, and a non-black theme
+  across the initial window, title inset, padding, and terminal cells. Verify
+  missing, unreadable, non-regular, invalid UTF-8, invalid JSON, and
+  invalid-schema theme files open the application with the bundled `omtheme`,
+  the rest of the validated configuration, and the loud error surface, without
+  rewriting either file; verify configuration and theme changes take effect
+  only after restart.
+- **Keybinds:** verify a remapped action (for example `newWindow` on
+  `CommandOrControl+T`) triggers via the new accelerator, no longer via the
+  default, and the menu displays the new accelerator; verify unmapped actions
+  keep their defaults; verify an unknown action name, a malformed or
+  modifier-less accelerator, and a remap colliding with a remaining default
+  each start the application on default keybinds with the exact field reported
+  in the error surface.
+- **Snippets Sidebar:** with no `snippets.json`, verify the toggle keybind
+  (default `Cmd+Shift+S`) opens a clean empty sidebar beside a still-usable
+  terminal. With a valid file, verify search filters by name and description,
+  a click injects into that window's session and returns focus to the
+  terminal, a default snippet lands unexecuted, an `execute: true` snippet
+  runs, and a multi-line body arrives as one bracketed paste. Verify editing
+  the file and reopening the sidebar shows the new content without restart.
+  With an invalid file, verify the application and terminal stay unaffected
+  and the sidebar shows the exact path and field in place of the list.
 - **Operational logs:** verify current/previous JSONL retention, configured log
   levels, bounded permissions and size, useful lifecycle/failure metadata, and
   absence of Terminal Payload, clipboard data, commands, titles, environment,
