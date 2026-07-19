@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { startWithUserConfiguration } from "../../src/main/configured-startup";
+import { DEFAULT_TERMINAL_KEYBINDS } from "../../src/shared/terminal-keybinds";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import {
   DEFAULT_USER_CONFIGURATION,
@@ -88,6 +89,7 @@ describe("strict version 1 User Configuration", () => {
           scrollback: { lines: 0 },
           keyboard: { optionAsAlt: "left" },
           window: { alwaysOnTop: true },
+          keybinds: { newWindow: "CommandOrControl+T" },
         },
         configPath,
         installedFonts,
@@ -104,6 +106,10 @@ describe("strict version 1 User Configuration", () => {
       optionKeyMode: "left",
       alwaysOnTop: true,
       terminalTheme: DEFAULT_TERMINAL_THEME,
+      keybinds: {
+        ...DEFAULT_TERMINAL_KEYBINDS,
+        newWindow: "CommandOrControl+T",
+      },
     });
   });
 
@@ -258,6 +264,107 @@ describe("strict version 1 User Configuration", () => {
     ).toThrow(expect.objectContaining({ location }));
   });
 
+  it("applies keybind remaps to the effective map while unmapped actions keep their defaults", () => {
+    const configuration = validateUserConfiguration(
+      { version: 1, keybinds: { newWindow: "CommandOrControl+T" } },
+      configPath,
+      installedFonts,
+    );
+    expect(configuration.keybinds.newWindow).toBe("CommandOrControl+T");
+    expect(configuration.keybinds.closeWindow).toBe("CommandOrControl+W");
+    expect(configuration.keybinds.quit).toBe(DEFAULT_TERMINAL_KEYBINDS.quit);
+    expect(Object.isFrozen(configuration.keybinds)).toBe(true);
+  });
+
+  it.each([
+    [{ quitt: "CommandOrControl+Q" }, "keybinds.quitt", "is unknown"],
+    [
+      { resetSelectedWindowZoom: "Cmd+0" },
+      "keybinds.resetSelectedWindowZoom",
+      "is unknown",
+    ],
+    [{ quit: "Q" }, "keybinds.quit", "non-Shift modifier"],
+    [{ quit: "Shift+Q" }, "keybinds.quit", "non-Shift modifier"],
+    [{ quit: "NotAModifier+Q" }, "keybinds.quit", "non-Shift modifier"],
+    [{ quit: 5 }, "keybinds.quit", "non-Shift modifier"],
+    [{ quit: "" }, "keybinds.quit", "non-Shift modifier"],
+  ])(
+    "rejects the keybind entry %j at its exact location",
+    (keybinds, location, reasonFragment) => {
+      let failure: unknown;
+      try {
+        validateUserConfiguration(
+          { version: 1, keybinds },
+          configPath,
+          installedFonts,
+        );
+      } catch (cause) {
+        failure = cause;
+      }
+      expect(failure).toBeInstanceOf(UserConfigurationError);
+      expect(failure).toMatchObject({ location });
+      expect((failure as UserConfigurationError).reason).toContain(
+        reasonFragment,
+      );
+    },
+  );
+
+  it("rejects two explicit keybinds that collide, naming both actions and no accelerator contents", () => {
+    let failure: unknown;
+    try {
+      validateUserConfiguration(
+        {
+          version: 1,
+          keybinds: { newWindow: "Cmd+T", zoomIn: "CommandOrControl+T" },
+        },
+        configPath,
+        installedFonts,
+      );
+    } catch (cause) {
+      failure = cause;
+    }
+    expect(failure).toBeInstanceOf(UserConfigurationError);
+    expect(failure).toMatchObject({
+      location: "keybinds.zoomIn",
+      reason: 'conflicts with the "newWindow" keybind',
+    });
+    expect((failure as Error).message).not.toContain("Cmd+T");
+    expect((failure as Error).message).not.toContain("CommandOrControl+T");
+  });
+
+  it("judges duplicates on the effective map: a remap colliding with a remaining default is an error", () => {
+    for (const accelerator of ["CommandOrControl+W", "Cmd+W"]) {
+      expect(() =>
+        validateUserConfiguration(
+          { version: 1, keybinds: { newWindow: accelerator } },
+          configPath,
+          installedFonts,
+        ),
+      ).toThrow(
+        expect.objectContaining({
+          location: "keybinds.newWindow",
+          reason: 'conflicts with the "closeWindow" keybind',
+        }),
+      );
+    }
+  });
+
+  it("accepts swapping two defaults through explicit remaps", () => {
+    const configuration = validateUserConfiguration(
+      {
+        version: 1,
+        keybinds: {
+          newWindow: "CommandOrControl+W",
+          closeWindow: "CommandOrControl+N",
+        },
+      },
+      configPath,
+      installedFonts,
+    );
+    expect(configuration.keybinds.newWindow).toBe("CommandOrControl+W");
+    expect(configuration.keybinds.closeWindow).toBe("CommandOrControl+N");
+  });
+
   it("requires a non-empty exact installed family without trimming or aliases", () => {
     expect(
       validateUserConfiguration(
@@ -373,6 +480,12 @@ describe("isolated User Configuration loading", () => {
       '{"version":1,"font":{"size":4}}',
       "font.size",
       "must be from 8 through 72",
+    ],
+    [
+      "a conflicting keybind",
+      '{"version":1,"keybinds":{"newWindow":"CommandOrControl+W"}}',
+      "keybinds.newWindow",
+      'conflicts with the "closeWindow" keybind',
     ],
   ])(
     "starts with full defaults and a precise diagnostic for %s",

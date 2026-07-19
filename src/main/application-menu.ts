@@ -1,4 +1,5 @@
 import type { MenuItemConstructorOptions } from "electron";
+import type { TerminalKeybinds } from "../shared/terminal-keybinds";
 
 interface TerminalApplicationMenuActions {
   readonly newWindow: () => void;
@@ -17,6 +18,7 @@ interface TerminalApplicationMenuActions {
 export function terminalApplicationMenuTemplate(
   applicationName: string,
   actions: TerminalApplicationMenuActions,
+  keybinds: TerminalKeybinds,
 ): MenuItemConstructorOptions[] {
   return [
     {
@@ -26,7 +28,7 @@ export function terminalApplicationMenuTemplate(
         { type: "separator" },
         {
           label: `Quit ${applicationName}`,
-          accelerator: "CommandOrControl+Q",
+          accelerator: keybinds.quit,
           click: actions.requestQuit,
         },
       ],
@@ -36,18 +38,18 @@ export function terminalApplicationMenuTemplate(
       submenu: [
         {
           label: "Copy",
-          accelerator: "CommandOrControl+C",
+          accelerator: keybinds.copy,
           click: actions.copySelectedTerminal,
         },
         {
           label: "Paste",
-          accelerator: "CommandOrControl+V",
+          accelerator: keybinds.paste,
           click: actions.pasteSelectedTerminal,
         },
         { type: "separator" },
         {
           label: "Select All",
-          accelerator: "CommandOrControl+A",
+          accelerator: keybinds.selectAll,
           click: actions.selectAllSelectedTerminal,
         },
       ],
@@ -57,12 +59,12 @@ export function terminalApplicationMenuTemplate(
       submenu: [
         {
           label: "New Window",
-          accelerator: "CommandOrControl+N",
+          accelerator: keybinds.newWindow,
           click: actions.newWindow,
         },
         {
           label: "Close Window",
-          accelerator: "CommandOrControl+W",
+          accelerator: keybinds.closeWindow,
           click: actions.closeSelectedWindow,
         },
       ],
@@ -72,23 +74,23 @@ export function terminalApplicationMenuTemplate(
       submenu: [
         {
           label: "Zoom In",
-          accelerator: "CommandOrControl+Plus",
+          accelerator: keybinds.zoomIn,
           click: actions.zoomInSelectedWindow,
         },
         {
           label: "Zoom Out",
-          accelerator: "CommandOrControl+-",
+          accelerator: keybinds.zoomOut,
           click: actions.zoomOutSelectedWindow,
         },
         {
           label: "Actual Size",
-          accelerator: "CommandOrControl+0",
+          accelerator: keybinds.actualSize,
           click: actions.resetSelectedWindowZoom,
         },
         { type: "separator" },
         {
           label: "Toggle Full Screen",
-          accelerator: "Control+Command+F",
+          accelerator: keybinds.toggleFullScreen,
           click: actions.toggleSelectedFullScreen,
         },
       ],

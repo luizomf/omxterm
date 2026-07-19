@@ -19,6 +19,14 @@ import {
 } from "../shared/user-configuration";
 import type { InstalledFontFamilyMetrics } from "./installed-font-family";
 import { DEFAULT_TERMINAL_THEME } from "../shared/terminal-theme";
+import {
+  canonicalAccelerator,
+  DEFAULT_TERMINAL_KEYBINDS,
+  isValidAccelerator,
+  TERMINAL_ACTION_NAMES,
+  type TerminalActionName,
+  type TerminalKeybinds,
+} from "../shared/terminal-keybinds";
 import { loadTerminalTheme, TerminalThemeError } from "./terminal-theme";
 
 export {
@@ -48,6 +56,7 @@ export const DEFAULT_USER_CONFIGURATION: UserConfiguration = Object.freeze({
   optionKeyMode: "none",
   alwaysOnTop: false,
   terminalTheme: DEFAULT_TERMINAL_THEME,
+  keybinds: DEFAULT_TERMINAL_KEYBINDS,
 });
 
 export class UserConfigurationError extends Error {
@@ -272,6 +281,7 @@ export function validateUserConfiguration(
     "keyboard",
     "window",
     "theme",
+    "keybinds",
   ]);
   if (!("version" in root)) fail(configurationPath, "version", "is required");
   if (root.version !== USER_CONFIGURATION_VERSION)
@@ -292,6 +302,7 @@ export function validateUserConfiguration(
   const keyboard = optionalObject(root.keyboard, configurationPath, "keyboard");
   const window = optionalObject(root.window, configurationPath, "window");
   const theme = optionalObject(root.theme, configurationPath, "theme");
+  const keybinds = optionalObject(root.keybinds, configurationPath, "keybinds");
   if (font)
     rejectUnknownKeys(font, configurationPath, "font", [
       "family",
@@ -314,6 +325,17 @@ export function validateUserConfiguration(
   if (window)
     rejectUnknownKeys(window, configurationPath, "window", ["alwaysOnTop"]);
   if (theme) rejectUnknownKeys(theme, configurationPath, "theme", ["path"]);
+  if (keybinds)
+    rejectUnknownKeys(
+      keybinds,
+      configurationPath,
+      "keybinds",
+      TERMINAL_ACTION_NAMES,
+    );
+  const terminalKeybinds = validateTerminalKeybinds(
+    keybinds,
+    configurationPath,
+  );
 
   if (theme) {
     if (!("path" in theme))
@@ -439,7 +461,56 @@ export function validateUserConfiguration(
     optionKeyMode,
     alwaysOnTop,
     terminalTheme: DEFAULT_TERMINAL_THEME,
+    keybinds: terminalKeybinds,
   });
+}
+
+function validateTerminalKeybinds(
+  keybinds: Record<string, unknown> | undefined,
+  configurationPath: string,
+): TerminalKeybinds {
+  if (!keybinds) return DEFAULT_TERMINAL_KEYBINDS;
+  const effective: Record<TerminalActionName, string> = {
+    ...DEFAULT_TERMINAL_KEYBINDS,
+  };
+  for (const action of TERMINAL_ACTION_NAMES) {
+    const value = keybinds[action];
+    if (value === undefined) continue;
+    if (typeof value !== "string" || !isValidAccelerator(value))
+      fail(
+        configurationPath,
+        `keybinds.${action}`,
+        "must be an accelerator with at least one non-Shift modifier and one key",
+      );
+    effective[action] = value;
+  }
+  // Duplicates are judged on the effective map: a remap that collides with
+  // another action's remaining default is the same error as two explicit
+  // entries colliding. Diagnostics name actions, never accelerator contents.
+  const actionsByAccelerator = new Map<string, TerminalActionName>();
+  for (const action of TERMINAL_ACTION_NAMES) {
+    const canonical = canonicalAccelerator(effective[action]);
+    if (canonical === undefined)
+      fail(
+        configurationPath,
+        `keybinds.${action}`,
+        "must be an accelerator with at least one non-Shift modifier and one key",
+      );
+    const holder = actionsByAccelerator.get(canonical);
+    if (holder === undefined) {
+      actionsByAccelerator.set(canonical, action);
+      continue;
+    }
+    // Defaults never collide with each other, so blame a remapped entry.
+    const blamed = action in keybinds ? action : holder;
+    const other = blamed === action ? holder : action;
+    fail(
+      configurationPath,
+      `keybinds.${blamed}`,
+      `conflicts with the "${other}" keybind`,
+    );
+  }
+  return Object.freeze(effective);
 }
 
 function selectedTerminalThemePath(

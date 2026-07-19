@@ -1,4 +1,5 @@
 import { isTerminalTheme, type TerminalTheme } from "./terminal-theme";
+import type { TerminalKeybinds } from "./terminal-keybinds";
 
 export const MIN_TERMINAL_FONT_SIZE = 8;
 export const MAX_TERMINAL_FONT_SIZE = 72;
@@ -52,6 +53,7 @@ export interface UserConfiguration {
   readonly optionKeyMode: OptionKeyMode;
   readonly alwaysOnTop: boolean;
   readonly terminalTheme: TerminalTheme;
+  readonly keybinds: TerminalKeybinds;
 }
 
 export function isTerminalRendererConfiguration(

@@ -267,27 +267,31 @@ app
         };
         Menu.setApplicationMenu(
           Menu.buildFromTemplate(
-            terminalApplicationMenuTemplate(app.name, {
-              newWindow: openNewWindow,
-              closeSelectedWindow: terminalApplication.closeSelectedWindow,
-              requestQuit: () => void terminalApplication!.requestQuit(),
-              toggleSelectedFullScreen:
-                terminalApplication.toggleSelectedFullScreen,
-              toggleSelectedAlwaysOnTop:
-                terminalApplication.toggleSelectedAlwaysOnTop,
-              zoomInSelectedWindow: () =>
-                terminalApplication!.zoomSelectedWindow("in"),
-              zoomOutSelectedWindow: () =>
-                terminalApplication!.zoomSelectedWindow("out"),
-              resetSelectedWindowZoom: () =>
-                terminalApplication!.zoomSelectedWindow("reset"),
-              copySelectedTerminal: () =>
-                terminalApplication!.clipboardSelectedWindow("copy"),
-              pasteSelectedTerminal: () =>
-                terminalApplication!.clipboardSelectedWindow("paste"),
-              selectAllSelectedTerminal: () =>
-                terminalApplication!.clipboardSelectedWindow("select-all"),
-            }),
+            terminalApplicationMenuTemplate(
+              app.name,
+              {
+                newWindow: openNewWindow,
+                closeSelectedWindow: terminalApplication.closeSelectedWindow,
+                requestQuit: () => void terminalApplication!.requestQuit(),
+                toggleSelectedFullScreen:
+                  terminalApplication.toggleSelectedFullScreen,
+                toggleSelectedAlwaysOnTop:
+                  terminalApplication.toggleSelectedAlwaysOnTop,
+                zoomInSelectedWindow: () =>
+                  terminalApplication!.zoomSelectedWindow("in"),
+                zoomOutSelectedWindow: () =>
+                  terminalApplication!.zoomSelectedWindow("out"),
+                resetSelectedWindowZoom: () =>
+                  terminalApplication!.zoomSelectedWindow("reset"),
+                copySelectedTerminal: () =>
+                  terminalApplication!.clipboardSelectedWindow("copy"),
+                pasteSelectedTerminal: () =>
+                  terminalApplication!.clipboardSelectedWindow("paste"),
+                selectAllSelectedTerminal: () =>
+                  terminalApplication!.clipboardSelectedWindow("select-all"),
+              },
+              userConfiguration.keybinds,
+            ),
           ),
         );
 
