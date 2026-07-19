@@ -2,6 +2,10 @@
 
 OMXTerm is an open-source personal desktop terminal for Apple Silicon macOS.
 
+<p align="center">
+  <img src="docs/images/omxterm-hero.png" alt="OMXTerm icon: a light blue terminal prompt on a dark rounded square" width="480" />
+</p>
+
 The source version is `0.1.0`, selected as the intended first public version.
 There is no public download, `v0.1.0` tag, or GitHub Release yet. Any DMG built
 from the current source is an unsigned, non-notarized verification artifact,
