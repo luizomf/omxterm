@@ -227,6 +227,7 @@ app
 
             return {
               window,
+              sessionActivity: controller,
               async load() {
                 try {
                   await window.loadFile(rendererPath);

@@ -84,6 +84,11 @@ export interface TerminalIpcControllerOptions {
 }
 
 export interface TerminalIpcController {
+  // Close confirmations ask only when the affected sessions are running a
+  // foreground child process (ADR 0017). The selected session is the one the
+  // renderer last reported; before any report, every live session counts.
+  hasBusySelectedSession(): boolean;
+  hasBusySession(): boolean;
   dispose(): void;
 }
 
@@ -100,6 +105,7 @@ interface RoutedTerminalIpcController extends TerminalIpcController {
   input(payload?: unknown): void;
   resize(payload?: unknown): void;
   close(payload?: unknown): void;
+  tabSelected(payload?: unknown): void;
   writeClipboardText(payload?: unknown): void;
   readClipboardText(payload?: unknown): string;
   confirmPaste(payload?: unknown): Promise<boolean>;
@@ -167,6 +173,8 @@ export function registerTerminalIpcRouter(
     route(event, (controller) => controller.resize(payload));
   const close: IpcListener = (event, payload) =>
     route(event, (controller) => controller.close(payload));
+  const tabSelected: IpcListener = (event, payload) =>
+    route(event, (controller) => controller.tabSelected(payload));
   const title: IpcListener = (event, payload) =>
     route(event, (controller) => controller.title(payload));
   const bell: IpcListener = (event, payload) =>
@@ -241,6 +249,7 @@ export function registerTerminalIpcRouter(
   ipcMain.on(terminalIpc.input, input);
   ipcMain.on(terminalIpc.resize, resize);
   ipcMain.on(terminalIpc.close, close);
+  ipcMain.on(terminalIpc.tabSelected, tabSelected);
   ipcMain.on(terminalIpc.title, title);
   ipcMain.on(terminalIpc.bell, bell);
   ipcMain.on(terminalIpc.externalLink, externalLink);
@@ -277,6 +286,7 @@ export function registerTerminalIpcRouter(
       ipcMain.removeListener(terminalIpc.input, input);
       ipcMain.removeListener(terminalIpc.resize, resize);
       ipcMain.removeListener(terminalIpc.close, close);
+      ipcMain.removeListener(terminalIpc.tabSelected, tabSelected);
       ipcMain.removeListener(terminalIpc.title, title);
       ipcMain.removeListener(terminalIpc.bell, bell);
       ipcMain.removeListener(terminalIpc.externalLink, externalLink);
@@ -305,6 +315,7 @@ function createTerminalIpcController(
   let disposed = false;
   const sessions = new Map<TerminalSessionId, RoutedSessionState>();
   let nextSessionNumber = 1;
+  let selectedSessionId: TerminalSessionId | undefined;
   const windowId = options.windowId;
   const writeWindowEvent = (
     event: Parameters<OperationalEventLog["write"]>[0],
@@ -332,6 +343,19 @@ function createTerminalIpcController(
 
   const countLiveSessions = () =>
     [...sessions.values()].filter((state) => !state.exited).length;
+
+  const isBusy = (state: RoutedSessionState) =>
+    !state.closed && !state.exited && state.session.hasForegroundChildProcess();
+  const hasBusySession = () => [...sessions.values()].some(isBusy);
+
+  const tabSelected = (payload?: unknown) => {
+    if (!isTerminalSessionReference(payload)) {
+      reject("ipc", "invalid-payload");
+      return;
+    }
+    if (!routedSession(payload.sessionId)) return;
+    selectedSessionId = payload.sessionId;
+  };
 
   // A session-scoped payload is rejected before it is routed: an invalid shape
   // never reaches a session, and a well-formed message may only address a
@@ -530,6 +554,14 @@ function createTerminalIpcController(
     input,
     resize,
     close,
+    tabSelected,
+    hasBusySelectedSession() {
+      const selected = selectedSessionId
+        ? sessions.get(selectedSessionId)
+        : undefined;
+      return selected ? isBusy(selected) : hasBusySession();
+    },
+    hasBusySession,
     writeClipboardText,
     readClipboardText,
     confirmPaste,

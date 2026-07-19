@@ -17,7 +17,7 @@ export interface TerminalWindowHost {
 
 export function registerTerminalWindowHost(
   window: HostedTerminalWindow,
-  controller: TerminalIpcController,
+  controller: Pick<TerminalIpcController, "dispose">,
   onWindowClosed: () => void,
 ): TerminalWindowHost {
   let resourcesDisposed = false;

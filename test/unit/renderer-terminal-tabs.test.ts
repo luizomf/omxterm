@@ -69,11 +69,12 @@ function createTabsHarness(options: { failMountAt?: number } = {}) {
     },
   );
 
+  const notifySelection = vi.fn();
   const tabs = createTerminalTabs(
     { strip, container },
-    { createAdapter, mount, surfaceOptions: {} },
+    { createAdapter, mount, surfaceOptions: {}, notifySelection },
   );
-  return { tabs, strip, container, adapters, surfaces, mount };
+  return { tabs, strip, container, adapters, surfaces, mount, notifySelection };
 }
 
 function visibleContainers(container: HTMLElement): number[] {
@@ -122,12 +123,27 @@ describe("renderer Terminal Tabs", () => {
     harness.tabs.handleCommand({ action: "new" });
     await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
     harness.surfaces[0]!.focus.mockClear();
+    harness.notifySelection.mockClear();
 
     harness.strip.querySelectorAll("button")[0]!.click();
 
     expect(selectedStates(harness.strip)).toEqual(["1:true", "2:false"]);
     expect(visibleContainers(harness.container)).toEqual([0, -1]);
     expect(harness.surfaces[0]!.focus).toHaveBeenCalledOnce();
+    expect(harness.notifySelection).toHaveBeenCalledExactlyOnceWith("s1");
+  });
+
+  it("reports the selected session to main across creation, switching, and closing", async () => {
+    const harness = createTabsHarness();
+    await harness.tabs.ready;
+    expect(harness.notifySelection).toHaveBeenLastCalledWith("s1");
+
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+    expect(harness.notifySelection).toHaveBeenLastCalledWith("s2");
+
+    harness.tabs.handleCommand({ action: "close" });
+    expect(harness.notifySelection).toHaveBeenLastCalledWith("s1");
   });
 
   it("cycles the selection with wraparound in both directions", async () => {

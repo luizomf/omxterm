@@ -77,6 +77,18 @@ describe("isolated preload terminal bridge", () => {
     });
   });
 
+  it("sends only validated tab selection notices", () => {
+    const bridge = electron.bridge!;
+
+    bridge.notifyTabSelection("s3");
+    expect(() => bridge.notifyTabSelection("")).toThrow(TypeError);
+    expect(() => bridge.notifyTabSelection("session-1")).toThrow(TypeError);
+
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.tabSelected, {
+      sessionId: "s3",
+    });
+  });
+
   it("returns only a validated Live Terminal Session identifier from start", async () => {
     const bridge = electron.bridge!;
 
@@ -169,6 +181,7 @@ describe("isolated preload terminal bridge", () => {
       createSession: vi.fn(() => ({
         write: vi.fn(),
         resize: vi.fn(),
+        hasForegroundChildProcess: () => false,
         close: vi.fn(),
       })),
       onSessionStartError: vi.fn(),

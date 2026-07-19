@@ -7,6 +7,7 @@ import {
 } from "../terminal-surface/terminal-surface";
 import type {
   TerminalFontZoom,
+  TerminalSessionId,
   TerminalTabCommand,
 } from "../shared/terminal-contract";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
@@ -47,6 +48,7 @@ interface TerminalWindowPageOptions {
   readonly subscribeToTabCommands?: (
     listener: (command: TerminalTabCommand) => void,
   ) => () => void;
+  readonly notifyTabSelection?: (sessionId: TerminalSessionId) => void;
   readonly onTitleRequest?: (request: string) => void;
   readonly onBell?: () => void;
   readonly onExternalLink?: (url: string) => void;
@@ -125,6 +127,9 @@ export function mountTerminalWindowPage(
       createAdapter: options.createAdapter,
       mount,
       surfaceOptions,
+      ...(options.notifyTabSelection
+        ? { notifySelection: options.notifyTabSelection }
+        : {}),
     },
   );
 

@@ -10,12 +10,16 @@ function createPtyHarness() {
   let onData: ((data: string) => void) | undefined;
   let onExit:
     ((event: { exitCode: number; signal?: number }) => void) | undefined;
+  let foregroundProcess: () => unknown = () => "example-shell";
   const disposeData = vi.fn();
   const disposeExit = vi.fn();
   const pty = {
     write: vi.fn(),
     resize: vi.fn(),
     kill: vi.fn(),
+    get process() {
+      return foregroundProcess();
+    },
     onData(listener: (data: string) => void): IDisposable {
       onData = listener;
       return { dispose: disposeData };
@@ -32,6 +36,14 @@ function createPtyHarness() {
     pty,
     emitData: (data: string) => onData?.(data),
     emitExit: (exitCode: number, signal = 0) => onExit?.({ exitCode, signal }),
+    setForegroundProcess: (value: unknown) => {
+      foregroundProcess = () => value;
+    },
+    failForegroundProcess: () => {
+      foregroundProcess = () => {
+        throw new Error("foreground process unavailable");
+      };
+    },
     disposeData,
     disposeExit,
   };
@@ -156,5 +168,62 @@ describe("local PTY Adapter", () => {
     } catch (error) {
       expect(String(error)).not.toContain("must-not-appear");
     }
+  });
+
+  it("reports a Busy Session only while a foreground child process runs", () => {
+    const harness = createPtyHarness();
+    const session = createLocalTerminalSession(
+      vi.fn<SpawnPty>(() => harness.pty),
+      {
+        shell: "/bin/example-shell",
+        homeDirectory: "/Users/example",
+        applicationVersionProvider: { getVersion: () => "1.2.3" },
+        environment: {},
+        onOutput: vi.fn(),
+        onExit: vi.fn(),
+      },
+    );
+
+    expect(session.hasForegroundChildProcess()).toBe(false);
+    harness.setForegroundProcess("-example-shell");
+    expect(session.hasForegroundChildProcess()).toBe(false);
+    harness.setForegroundProcess("Example-Shell");
+    expect(session.hasForegroundChildProcess()).toBe(false);
+    harness.setForegroundProcess("htop");
+    expect(session.hasForegroundChildProcess()).toBe(true);
+    harness.setForegroundProcess("");
+    expect(session.hasForegroundChildProcess()).toBe(true);
+    harness.setForegroundProcess(42);
+    expect(session.hasForegroundChildProcess()).toBe(true);
+    harness.failForegroundProcess();
+    expect(session.hasForegroundChildProcess()).toBe(true);
+  });
+
+  it("never reports a Busy Session after close or exit", () => {
+    const harness = createPtyHarness();
+    const options = {
+      shell: "/bin/example-shell",
+      homeDirectory: "/Users/example",
+      applicationVersionProvider: { getVersion: () => "1.2.3" },
+      environment: {},
+      onOutput: vi.fn(),
+      onExit: vi.fn(),
+    };
+    const closedSession = createLocalTerminalSession(
+      vi.fn<SpawnPty>(() => harness.pty),
+      options,
+    );
+    harness.setForegroundProcess("htop");
+    closedSession.close();
+    expect(closedSession.hasForegroundChildProcess()).toBe(false);
+
+    const exitedHarness = createPtyHarness();
+    const exitedSession = createLocalTerminalSession(
+      vi.fn<SpawnPty>(() => exitedHarness.pty),
+      options,
+    );
+    exitedHarness.setForegroundProcess("htop");
+    exitedHarness.emitExit(0);
+    expect(exitedSession.hasForegroundChildProcess()).toBe(false);
   });
 });

@@ -73,11 +73,13 @@ describe("terminal IPC controller", () => {
     const firstSession: LocalTerminalSession = {
       write: vi.fn(),
       resize: vi.fn(),
+      hasForegroundChildProcess: () => false,
       close: vi.fn(),
     };
     const secondSession: LocalTerminalSession = {
       write: vi.fn(),
       resize: vi.fn(),
+      hasForegroundChildProcess: () => false,
       close: vi.fn(),
     };
 
@@ -122,7 +124,7 @@ describe("terminal IPC controller", () => {
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();
     expect(ipc.handlers.size).toBe(6);
-    expect(ipc.listeners.size).toBe(7);
+    expect(ipc.listeners.size).toBe(8);
   });
 
   it("returns the complete immutable startup spacing configuration to its bound renderer", () => {
@@ -155,6 +157,7 @@ describe("terminal IPC controller", () => {
       createSession: vi.fn(() => ({
         write: vi.fn(),
         resize: vi.fn(),
+        hasForegroundChildProcess: () => false,
         close: vi.fn(),
       })),
       onSessionStartError: vi.fn(),
@@ -193,6 +196,7 @@ describe("terminal IPC controller", () => {
       createSession: vi.fn(() => ({
         write: vi.fn(),
         resize: vi.fn(),
+        hasForegroundChildProcess: () => false,
         close: vi.fn(),
       })),
       onSessionStartError: vi.fn(),
@@ -262,6 +266,7 @@ describe("terminal IPC controller", () => {
     const session: LocalTerminalSession = {
       write: vi.fn(),
       resize: vi.fn(),
+      hasForegroundChildProcess: () => false,
       close: vi.fn(),
     };
     const createSession = vi.fn(() => session);
@@ -344,6 +349,7 @@ describe("terminal IPC controller", () => {
     const session: LocalTerminalSession = {
       write: vi.fn(),
       resize: vi.fn(),
+      hasForegroundChildProcess: () => false,
       close: vi.fn(),
     };
     const router = registerTerminalIpcRouter(ipc.ipcMain);
@@ -391,6 +397,7 @@ describe("terminal IPC controller", () => {
     const session: LocalTerminalSession = {
       write: vi.fn(),
       resize: vi.fn(),
+      hasForegroundChildProcess: () => false,
       close: vi.fn(),
     };
     const clipboard = clipboardOptions();
@@ -543,6 +550,7 @@ describe("terminal IPC controller", () => {
     const session: LocalTerminalSession = {
       write: vi.fn(),
       resize: vi.fn(),
+      hasForegroundChildProcess: () => false,
       close: vi.fn(),
     };
     const clipboard = clipboardOptions();
@@ -598,7 +606,12 @@ describe("terminal IPC controller", () => {
       webContents,
       createSession(value) {
         callbacks = value;
-        return { write: vi.fn(), resize: vi.fn(), close };
+        return {
+          write: vi.fn(),
+          resize: vi.fn(),
+          hasForegroundChildProcess: () => false,
+          close,
+        };
       },
       onSessionStartError: vi.fn(),
       onSessionExit,
@@ -649,7 +662,12 @@ describe("terminal IPC controller", () => {
       webContents,
       createSession(callbacks) {
         callbacks.onExit({ exitCode: 0, signal: 0 });
-        return { write: vi.fn(), resize: vi.fn(), close };
+        return {
+          write: vi.fn(),
+          resize: vi.fn(),
+          hasForegroundChildProcess: () => false,
+          close,
+        };
       },
       onSessionStartError: vi.fn(),
       onSessionExit() {
@@ -691,7 +709,12 @@ describe("terminal IPC controller", () => {
       webContents,
       createSession(value) {
         callbacks = value;
-        return { write: vi.fn(), resize: vi.fn(), close: vi.fn() };
+        return {
+          write: vi.fn(),
+          resize: vi.fn(),
+          hasForegroundChildProcess: () => false,
+          close: vi.fn(),
+        };
       },
       onSessionStartError: vi.fn(),
       onSessionExit: vi.fn(),
@@ -785,11 +808,13 @@ describe("terminal IPC controller", () => {
     const firstSession: LocalTerminalSession = {
       write: vi.fn(),
       resize: vi.fn(),
+      hasForegroundChildProcess: () => false,
       close: vi.fn(),
     };
     const secondSession: LocalTerminalSession = {
       write: vi.fn(),
       resize: vi.fn(),
+      hasForegroundChildProcess: () => false,
       close: vi.fn(),
     };
     const router = registerTerminalIpcRouter(ipc.ipcMain);
@@ -869,7 +894,12 @@ describe("terminal IPC controller", () => {
       webContents,
       createSession(callbacks) {
         sessionCallbacks.push(callbacks);
-        return { write: vi.fn(), resize: vi.fn(), close: vi.fn() };
+        return {
+          write: vi.fn(),
+          resize: vi.fn(),
+          hasForegroundChildProcess: () => false,
+          close: vi.fn(),
+        };
       },
       onSessionStartError: vi.fn(),
       onSessionExit,
@@ -894,6 +924,73 @@ describe("terminal IPC controller", () => {
     ]);
   });
 
+  it("tracks the renderer-selected session for Busy Session queries", () => {
+    const ipc = createIpcHarness();
+    const write = vi.fn((_event: OperationalEvent) => true);
+    const mainFrame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const busyBySession = new Map<number, boolean>([
+      [1, false],
+      [2, true],
+    ]);
+    let created = 0;
+    const router = registerTerminalIpcRouter(ipc.ipcMain, { write });
+    const controller = router.registerController({
+      ...clipboardOptions(),
+      webContents,
+      createSession() {
+        created += 1;
+        const index = created;
+        return {
+          write: vi.fn(),
+          resize: vi.fn(),
+          hasForegroundChildProcess: () => busyBySession.get(index) ?? false,
+          close: vi.fn(),
+        };
+      },
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+    const trusted = { sender: webContents, senderFrame: mainFrame };
+
+    ipc.handlers.get(terminalIpc.start)!(trusted);
+    ipc.handlers.get(terminalIpc.start)!(trusted);
+    // No selection reported yet: any live Busy Session counts.
+    expect(controller.hasBusySelectedSession()).toBe(true);
+    expect(controller.hasBusySession()).toBe(true);
+
+    ipc.listeners.get(terminalIpc.tabSelected)?.(trusted, { sessionId: "s1" });
+    expect(controller.hasBusySelectedSession()).toBe(false);
+    ipc.listeners.get(terminalIpc.tabSelected)?.(trusted, { sessionId: "s2" });
+    expect(controller.hasBusySelectedSession()).toBe(true);
+
+    ipc.listeners.get(terminalIpc.tabSelected)?.(trusted, { sessionId: "s9" });
+    expect(controller.hasBusySelectedSession()).toBe(true);
+    expect(write.mock.calls).toContainEqual([
+      {
+        name: "boundary.rejected",
+        boundary: "ipc",
+        reason: "unknown-session",
+      },
+    ]);
+    ipc.listeners.get(terminalIpc.tabSelected)?.(trusted, "s1");
+    expect(write.mock.calls).toContainEqual([
+      {
+        name: "boundary.rejected",
+        boundary: "ipc",
+        reason: "invalid-payload",
+      },
+    ]);
+
+    ipc.listeners.get(terminalIpc.close)?.(trusted, { sessionId: "s2" });
+    expect(controller.hasBusySelectedSession()).toBe(false);
+    expect(controller.hasBusySession()).toBe(false);
+  });
+
   it("rejects session-scoped payloads with unknown or foreign session ids", () => {
     const ipc = createIpcHarness();
     const write = vi.fn((_event: OperationalEvent) => true);
@@ -912,11 +1009,13 @@ describe("terminal IPC controller", () => {
     const session: LocalTerminalSession = {
       write: vi.fn(),
       resize: vi.fn(),
+      hasForegroundChildProcess: () => false,
       close: vi.fn(),
     };
     const foreignSecondSession: LocalTerminalSession = {
       write: vi.fn(),
       resize: vi.fn(),
+      hasForegroundChildProcess: () => false,
       close: vi.fn(),
     };
     const interaction = vi.fn();
@@ -934,6 +1033,7 @@ describe("terminal IPC controller", () => {
       .mockImplementationOnce(() => ({
         write: vi.fn(),
         resize: vi.fn(),
+        hasForegroundChildProcess: () => false,
         close: vi.fn(),
       }))
       .mockImplementationOnce(() => foreignSecondSession);
@@ -999,6 +1099,7 @@ describe("terminal IPC controller", () => {
         const session: LocalTerminalSession = {
           write: vi.fn(),
           resize: vi.fn(),
+          hasForegroundChildProcess: () => false,
           close: vi.fn(),
         };
         sessions.push(session);

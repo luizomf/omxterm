@@ -29,6 +29,7 @@ export interface TerminalTabsOptions {
   readonly createAdapter: () => ElectronTerminalAdapter;
   readonly mount: MountTerminalSurface;
   readonly surfaceOptions: TerminalSurfaceOptions;
+  readonly notifySelection?: (sessionId: TerminalSessionId) => void;
 }
 
 export interface TerminalTabs {
@@ -95,6 +96,10 @@ export function createTerminalTabs(
     for (const [position, candidate] of tabs.entries())
       candidate.container.hidden = position !== index;
     renderStrip();
+    // Main tracks the selected session for close confirmations (a tab still
+    // starting has no id yet and is reported once its session starts).
+    const sessionId = tab.adapter.sessionId();
+    if (sessionId !== undefined) options.notifySelection?.(sessionId);
     tab.surface?.focus();
   };
 
@@ -180,7 +185,11 @@ export function createTerminalTabs(
     }
     tab.surface = surface;
     replayZoom(surface);
-    if (selectedTab() === tab && document.hasFocus()) surface.focus();
+    if (selectedTab() === tab) {
+      const sessionId = tab.adapter.sessionId();
+      if (sessionId !== undefined) options.notifySelection?.(sessionId);
+      if (document.hasFocus()) surface.focus();
+    }
   };
 
   const ready = createTab();

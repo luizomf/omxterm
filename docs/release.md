@@ -94,11 +94,13 @@ the unpacked build directory or a previous installation.
 - **Multiple windows, tabs, and cleanup:** use `Cmd+N` for at least two
   independent windows and `Cmd+T` for at least two Terminal Tabs in one of
   them; verify the tab strip appears only with two or more tabs, `Cmd+W`
-  closes only the selected tab with one confirmation, `Cmd+Shift+W` closes the
-  selected window and all of its tabs with one confirmation, the last tab
-  closing closes its window, the last window quits OMXTerm, and `Cmd+Q`
-  requests one confirmation for all open windows. Confirm no OMXTerm or child
-  shell remains after quit.
+  closes an idle tab without asking and a tab running a foreground process
+  (e.g. `htop`) with one confirmation, `Cmd+Shift+W` closes the selected
+  window and all of its tabs with one confirmation only when one of them is
+  Busy, the last tab closing closes its window, the last window quits
+  OMXTerm, and `Cmd+Q` requests one confirmation for all open windows only
+  while a session is Busy. Confirm no OMXTerm or child shell remains after
+  quit.
 - **tmux, TUI, and terminal compatibility:** exercise tmux, an alternate-screen
   TUI, Unicode, truecolor, scrolling, resize, a REPL, bracketed paste, and SSH
   started by the user. Confirm OMXTerm installs no shell integration or custom

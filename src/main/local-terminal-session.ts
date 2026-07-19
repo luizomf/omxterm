@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { IPty, IPtyForkOptions, IDisposable } from "node-pty";
 import {
   isBoundedTerminalPayload,
@@ -10,6 +11,7 @@ import {
 export interface LocalTerminalSession {
   write(data: string): void;
   resize(size: TerminalSize): void;
+  hasForegroundChildProcess(): boolean;
   close(): void;
 }
 
@@ -79,6 +81,8 @@ export function createLocalTerminalSession(
     options.onExit({ exitCode: exit.exitCode, signal: exit.signal ?? 0 });
   });
 
+  const shellProcessName = normalizeProcessName(options.shell);
+
   return {
     write(data) {
       if (!closed && !exited && isBoundedTerminalPayload(data)) pty.write(data);
@@ -87,6 +91,22 @@ export function createLocalTerminalSession(
       if (!closed && !exited && isTerminalSize(size))
         pty.resize(size.cols, size.rows);
     },
+    // Close confirmation asks only when the PTY's foreground process is not
+    // the idle Default Shell. The name is compared in memory and never
+    // logged, displayed, or transmitted (ADR 0017). When the name cannot be
+    // read, the session counts as busy so closing still asks first.
+    hasForegroundChildProcess() {
+      if (closed || exited) return false;
+      let foreground: unknown;
+      try {
+        foreground = pty.process;
+      } catch {
+        return true;
+      }
+      if (typeof foreground !== "string" || foreground.length === 0)
+        return true;
+      return normalizeProcessName(foreground) !== shellProcessName;
+    },
     close() {
       if (closed) return;
       closed = true;
@@ -94,4 +114,9 @@ export function createLocalTerminalSession(
       if (!exited) pty.kill();
     },
   };
+}
+
+// A login shell may report itself with a leading dash (e.g. "-zsh").
+function normalizeProcessName(value: string): string {
+  return path.basename(value).replace(/^-/u, "").toLowerCase();
 }

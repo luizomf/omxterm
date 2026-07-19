@@ -109,6 +109,11 @@ const terminal: TerminalBridge = {
     ipcRenderer.on(terminalIpc.tabCommand, handler);
     return () => ipcRenderer.removeListener(terminalIpc.tabCommand, handler);
   },
+  notifyTabSelection(sessionId: TerminalSessionId) {
+    if (!isTerminalSessionId(sessionId))
+      throw new TypeError("Invalid Terminal Tab selection");
+    ipcRenderer.send(terminalIpc.tabSelected, { sessionId });
+  },
   onFontZoom(listener: (command: TerminalFontZoom) => void) {
     const handler = (_event: Electron.IpcRendererEvent, command: unknown) => {
       if (isTerminalFontZoom(command)) listener(command);

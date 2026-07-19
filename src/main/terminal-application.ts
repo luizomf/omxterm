@@ -33,12 +33,21 @@ export type TerminalSessionFailure =
   | { readonly reason: "spawn" }
   | { readonly reason: "signal"; readonly signal: number | null };
 
+// Whether the window's sessions run a foreground child process (ADR 0017):
+// close confirmations ask only for busy sessions, never for an idle shell.
+export interface TerminalSessionActivity {
+  hasBusySelectedSession(): boolean;
+  hasBusySession(): boolean;
+}
+
 interface TerminalWindowInstance<Window extends NativeTerminalWindow> {
   readonly window: Window;
+  readonly sessionActivity: TerminalSessionActivity;
   load(): Promise<void>;
 }
 
 interface TerminalWindowState {
+  readonly sessionActivity: TerminalSessionActivity;
   failurePending: boolean;
   closeConfirmed: boolean;
   closeRequest: Promise<void> | undefined;
@@ -223,6 +232,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       });
       window = instance.window;
       windows.set(window, {
+        sessionActivity: instance.sessionActivity,
         failurePending: false,
         closeConfirmed: false,
         closeRequest: undefined,
@@ -261,13 +271,20 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     mayCloseWindow(window) {
       if (quitting || !confirmClose()) return true;
       const state = windows.get(window);
-      return state === undefined || state.closeConfirmed;
+      return (
+        state === undefined ||
+        state.closeConfirmed ||
+        !state.sessionActivity.hasBusySession()
+      );
     },
     forceCloseWindow,
     requestQuit() {
       if (quitting) return Promise.resolve();
       if (quitRequest) return quitRequest;
-      if (!confirmClose() || windows.size === 0) {
+      const anySessionBusy = [...windows.values()].some((state) =>
+        state.sessionActivity.hasBusySession(),
+      );
+      if (!confirmClose() || windows.size === 0 || !anySessionBusy) {
         quit();
         return Promise.resolve();
       }
@@ -288,11 +305,11 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     closeSelectedTab() {
       const window = selectedWindow();
       if (!window) return Promise.resolve();
-      if (!confirmClose()) {
+      const state = windows.get(window)!;
+      if (!confirmClose() || !state.sessionActivity.hasBusySelectedSession()) {
         options.sendTabCommand(window, { action: "close" });
         return Promise.resolve();
       }
-      const state = windows.get(window)!;
       if (state.tabCloseRequest) return state.tabCloseRequest;
       state.tabCloseRequest = options
         .showCloseTabConfirmation(window)

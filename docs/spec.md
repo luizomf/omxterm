@@ -56,11 +56,15 @@ updates, and remote terminal features are outside this release.
   a window's last tab closes that window; `Cmd+Shift+W` closes the selected
   window with all of its tabs. Closing the last window quits OMXTerm.
 - `Cmd+Q` requests one confirmation for all open windows when confirmation is
-  enabled.
+  enabled and at least one Live Terminal Session is Busy.
 - `confirmClose` defaults to `true` and guards closing a tab, closing a
   window, and quitting with one confirmation per action — closing a window
-  with several tabs asks once, not per tab. OMXTerm does not inspect child
-  processes to guess whether closing is safe.
+  with several tabs asks once, not per tab. A close action asks only when an
+  affected Live Terminal Session is Busy: its PTY foreground process is not
+  the idle Default Shell. Closing only idle sessions proceeds without
+  confirmation. OMXTerm reads the foreground process name solely for this
+  in-memory decision and never logs, displays, or transmits it; when the name
+  cannot be read, the session counts as Busy.
 - After the Default Shell starts successfully, an ordinary shell exit closes
   its tab — and its window when that was the last tab — without confirmation
   or a failure dialog, regardless of its numeric exit code.

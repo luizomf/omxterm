@@ -18,4 +18,5 @@ export const terminalIpc = {
   snippets: "terminal:snippets",
   snippetsToggle: "terminal:snippets-toggle",
   tabCommand: "terminal:tab-command",
+  tabSelected: "terminal:tab-selected",
 } as const;

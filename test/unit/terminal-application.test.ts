@@ -9,6 +9,8 @@ function createWindowHarness(lifecycle: TerminalWindowLifecycle) {
   let destroyed = false;
   let fullScreen = false;
   let alwaysOnTop = false;
+  // Sessions count as Busy by default so confirmation tests exercise dialogs.
+  const busy = { selected: true, any: true };
   const closeSession = vi.fn();
   const setFullScreen = vi.fn((value: boolean) => {
     fullScreen = value;
@@ -37,6 +39,14 @@ function createWindowHarness(lifecycle: TerminalWindowLifecycle) {
     closeSession,
     setFullScreen,
     setAlwaysOnTop,
+    sessionActivity: {
+      hasBusySelectedSession: () => busy.selected,
+      hasBusySession: () => busy.any,
+    },
+    setBusy(value: boolean) {
+      busy.selected = value;
+      busy.any = value;
+    },
   };
 }
 
@@ -68,7 +78,11 @@ function createApplicationHarness(
     createWindow(lifecycle) {
       const harness = createWindowHarness(lifecycle);
       windows.push(harness);
-      return { window: harness.window, load: vi.fn(async () => {}) };
+      return {
+        window: harness.window,
+        sessionActivity: harness.sessionActivity,
+        load: vi.fn(async () => {}),
+      };
     },
     getSelectedWindow: () => selected,
     showQuitConfirmation,
@@ -215,7 +229,11 @@ describe("Terminal application lifecycle", () => {
       createWindow(lifecycle) {
         const harness = createWindowHarness(lifecycle);
         windows.push(harness);
-        return { window: harness.window, load: vi.fn(async () => {}) };
+        return {
+          window: harness.window,
+          sessionActivity: harness.sessionActivity,
+          load: vi.fn(async () => {}),
+        };
       },
       getSelectedWindow: () => windows[0]?.window,
       showQuitConfirmation: vi.fn(async () => true),
@@ -568,6 +586,61 @@ describe("Terminal application lifecycle", () => {
     );
     expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
     expect(harness.quit).not.toHaveBeenCalled();
+  });
+
+  it("closes an idle tab without any confirmation dialog", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    harness.select(harness.windows[0]!.window);
+    harness.windows[0]!.setBusy(false);
+
+    await harness.application.closeSelectedTab();
+
+    expect(harness.showCloseTabConfirmation).not.toHaveBeenCalled();
+    expect(harness.sendTabCommand).toHaveBeenCalledExactlyOnceWith(
+      harness.windows[0]!.window,
+      { action: "close" },
+    );
+  });
+
+  it("closes a window of idle sessions without any confirmation dialog", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    harness.select(harness.windows[0]!.window);
+    harness.windows[0]!.setBusy(false);
+
+    expect(harness.application.mayCloseWindow(harness.windows[0]!.window)).toBe(
+      true,
+    );
+    await harness.application.closeSelectedWindow();
+
+    expect(harness.showCloseWindowConfirmation).not.toHaveBeenCalled();
+    expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
+  });
+
+  it("quits without a confirmation when every open session is idle", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    await harness.application.newWindow();
+    harness.windows[0]!.setBusy(false);
+    harness.windows[1]!.setBusy(false);
+
+    await harness.application.requestQuit();
+
+    expect(harness.showQuitConfirmation).not.toHaveBeenCalled();
+    expect(harness.quit).toHaveBeenCalledOnce();
+  });
+
+  it("still asks before quitting while any window holds a Busy Session", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    await harness.application.newWindow();
+    harness.windows[0]!.setBusy(false);
+
+    await harness.application.requestQuit();
+
+    expect(harness.showQuitConfirmation).toHaveBeenCalledOnce();
+    expect(harness.quit).toHaveBeenCalledOnce();
   });
 
   it("sends tab commands only to the selected Terminal Window", async () => {

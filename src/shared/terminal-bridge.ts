@@ -27,6 +27,7 @@ export interface TerminalBridge {
     listener: (sessionId: TerminalSessionId, exit: TerminalExit) => void,
   ): () => void;
   onTabCommand(listener: (command: TerminalTabCommand) => void): () => void;
+  notifyTabSelection(sessionId: TerminalSessionId): void;
   onFontZoom(listener: (command: TerminalFontZoom) => void): () => void;
   writeClipboardText(text: string): Promise<void>;
   readClipboardText(): Promise<string>;

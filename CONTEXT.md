@@ -120,6 +120,15 @@ The user's operating-system-configured interactive shell, launched when no
 explicit command is requested.
 _Avoid_: bundled shell, OMXTerm shell, hard-coded zsh
 
+**Busy Session**:
+A Live Terminal Session whose PTY foreground process is not the idle Default
+Shell — something is running in it. Close confirmations ask only for Busy
+Sessions; the foreground process name is an in-memory detail that is never
+logged, displayed, or transmitted, and an unreadable name counts as Busy
+(ADR 0017).
+_Avoid_: dirty session, active tab, process inspection beyond the foreground
+name
+
 **Initial Working Directory**:
 The directory inherited by a newly launched Default Shell. It is the user's home
 directory unless a future explicit launch request says otherwise.
