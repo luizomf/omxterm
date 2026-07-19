@@ -8,7 +8,8 @@ other publication. Those actions require separate approval from Otávio.
 
 Select the release version under the [versioning policy](versioning.md) in an
 explicitly authorized release preparation issue. This procedure does not choose
-or increment a version by itself. The placeholder `0.0.0` is never releasable.
+or increment a version by itself. A `-dev` development baseline version is
+never releasable; release preparation removes the prerelease suffix.
 
 Before building a release candidate, confirm that `package.json` and
 `package-lock.json` contain the same accepted `X.Y.Z` version. The application

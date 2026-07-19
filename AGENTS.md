@@ -119,6 +119,10 @@ issue or PR is unfinished work.
 - Releases are deliberate, manual, and owner-authorized. Do not bump versions,
   create tags, publish GitHub Releases, or upload artifacts unless the current
   issue and Otávio explicitly authorize those side effects.
+- Between releases, `main` carries a `-dev` baseline version (see
+  `docs/versioning.md`). Ordinary commits and PRs do not bump it. Release
+  preparation owns final versions. Identify exact dogfood builds by the source
+  commit SHA in addition to the development version.
 - Proactively surface when an accepted batch of changes forms a coherent release
   candidate or appears to require a version change. State the recommended next
   version and reasoning, and identify any missing versioning policy instead of

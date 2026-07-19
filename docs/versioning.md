@@ -54,14 +54,28 @@ commit, all version-bearing surfaces must agree:
 - the checksum file is named `OMXTerm-X.Y.Z-arm64.dmg.sha256`;
 - the GitHub Release targets `vX.Y.Z` and describes that exact artifact.
 
-The repository's `0.0.0` value denotes unreleased development. It must not be
-tagged, published, or presented as an OMXTerm release. Selecting and applying
-the first publishable version belongs to an explicitly authorized release
-preparation issue.
-
 Pre-release identifiers such as `0.2.0-rc.1` may be used later when there is a
 concrete testing need. Build metadata is not currently used. Neither form
 creates permission to publish.
+
+## Development baseline between releases
+
+After `X.Y.Z` is published, `main` moves to `X.Y.(Z+1)-dev.0` as the default
+next-patch development baseline:
+
+- ordinary commits and pull requests do not increment the version or the
+  prerelease identifier;
+- when `main` accepts a user-visible feature — or, during `0.x`, an intentional
+  breaking contract change — the baseline moves to the next minor prerelease,
+  such as `0.2.0-dev.0`;
+- release preparation removes the prerelease suffix and selects the final
+  version under this policy;
+- development versions are never tagged, attached to a GitHub Release,
+  uploaded, or presented as published releases.
+
+A development build is identified by both its `-dev` version and the exact
+source commit SHA it was built from. The version alone does not identify a
+dogfood build, because the baseline does not change per commit.
 
 ## Schema compatibility
 
