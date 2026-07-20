@@ -159,9 +159,10 @@ export function terminalApplicationMenuTemplate(
 type SelectTabAction = keyof TerminalKeybinds & `selectTab${number}`;
 
 // The keybind vocabulary keyed by action name, invoking the same application
-// actions as the menu items above. This is what the main-process key-event
-// delivery path calls when a registered accelerator never fires its menu item
-// (see keybind-delivery.ts), keeping the menu the single behavior definition.
+// actions as the menu items above. The main-process key-event delivery path
+// (see keybind-delivery.ts) calls these so a keybind works even when the
+// platform refuses to fire its registered menu accelerator, keeping the menu
+// the single behavior definition.
 export function terminalActionInvocations(
   actions: TerminalApplicationMenuActions,
 ): Readonly<Record<TerminalActionName, () => void>> {

@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { deliverUnhandledKeybinds } from "../../src/main/keybind-delivery";
+import { deliverKeybindsFromKeyEvents } from "../../src/main/keybind-delivery";
 import {
   DEFAULT_TERMINAL_KEYBINDS,
   type TerminalKeybinds,
@@ -24,7 +24,7 @@ function keybindDeliveryHarness(
         input: Required<KeyboardInputOverrides>,
       ) => void)
     | undefined;
-  deliverUnhandledKeybinds(
+  deliverKeybindsFromKeyEvents(
     {
       on(_event, handler) {
         listener = handler;
@@ -49,15 +49,20 @@ function keybindDeliveryHarness(
 }
 
 // Regression for #82: macOS never delivers Control+Tab to a menu accelerator,
-// so the action must be observed from the key event itself.
-it("delivers a Control+Tab key event as the nextTab action and consumes the key", () => {
-  const { invoke, sendKey } = keybindDeliveryHarness();
+// so the action must be observed from the key event itself. Physical presses
+// can surface as rawKeyDown while synthesized ones surface as keyDown; both
+// spellings must deliver or the shipped fix silently dies again.
+it.each(["keyDown", "rawKeyDown"])(
+  "delivers a Control+Tab %s event as the nextTab action and consumes the key",
+  (type) => {
+    const { invoke, sendKey } = keybindDeliveryHarness();
 
-  const event = sendKey({ key: "Tab", control: true });
+    const event = sendKey({ type, key: "Tab", control: true });
 
-  expect(invoke).toHaveBeenCalledExactlyOnceWith("nextTab");
-  expect(event.preventDefault).toHaveBeenCalled();
-});
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("nextTab");
+    expect(event.preventDefault).toHaveBeenCalled();
+  },
+);
 
 it("delivers a Control+Shift+Tab key event as the previousTab action", () => {
   const { invoke, sendKey } = keybindDeliveryHarness();

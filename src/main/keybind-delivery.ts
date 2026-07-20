@@ -20,13 +20,16 @@ export interface KeybindWebContents {
   ): unknown;
 }
 
-// macOS AppKit refuses to deliver some registered menu key equivalents —
-// Control+Tab is reserved for key-view loop navigation — so those key events
-// fall through to the window instead of firing their menu item (#82). An event
-// a menu does handle never reaches before-input-event, which makes this the
-// exact complement of the menu: matching every keybind here delivers the
-// refused ones without ever double-firing a delivered one.
-export function deliverUnhandledKeybinds(
+// macOS AppKit refuses to fire some registered menu key equivalents —
+// Control+Tab is reserved for key-view loop navigation — so those keybinds
+// shipped inert and the key fell through to the PTY (#82). before-input-event
+// fires before the page and before menu-shortcut dispatch, so this delivers a
+// matched keybind itself and consumes the event; preventDefault suppresses
+// both the page event and the menu shortcut (documented Electron behavior),
+// which is what guarantees one keybind fires exactly once. A key the matcher
+// does not recognize is left untouched and keeps its old path: menu shortcut
+// first, then the terminal.
+export function deliverKeybindsFromKeyEvents(
   webContents: KeybindWebContents,
   keybinds: TerminalKeybinds,
   invokeAction: (action: TerminalActionName) => void,

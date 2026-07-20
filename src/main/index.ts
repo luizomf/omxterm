@@ -17,7 +17,7 @@ import {
   terminalApplicationMenuTemplate,
   terminalClipboardContextMenuTemplate,
 } from "./application-menu";
-import { deliverUnhandledKeybinds } from "./keybind-delivery";
+import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { createLocalTerminalSession } from "./local-terminal-session";
 import {
   startTerminalApplication,
@@ -135,9 +135,10 @@ app
             );
             const defaultShellName = path.basename(defaultShell);
             lockTerminalRendererNavigation(window.webContents);
-            // Delivery path for keybinds whose registered menu accelerator the
-            // platform refuses to fire, e.g. Control+Tab on macOS (#82).
-            deliverUnhandledKeybinds(
+            // Delivers keybinds from the key event itself, so a binding works
+            // even when the platform refuses to fire its registered menu
+            // accelerator, e.g. Control+Tab on macOS (#82).
+            deliverKeybindsFromKeyEvents(
               window.webContents,
               userConfiguration.keybinds,
               (action) => keybindActionInvocations[action](),
