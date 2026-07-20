@@ -178,6 +178,11 @@ rejected so a keybind can never swallow plain typing. Unmapped actions keep
 their built-in defaults. The application menu displays the effective
 accelerator and is the single shortcut registration point; there is no second
 shortcut system, and terminal control sequences inside the PTY are untouched.
+An effective keybind works even when the platform refuses to fire its menu
+accelerator (macOS never delivers `Control+Tab` to a menu item): the main
+process invokes the same action from the key event itself, and a key that
+triggered a keybind this way is consumed — it never reaches the terminal as
+input.
 Unknown action names, malformed accelerators, and duplicate accelerators are
 errors under the resilient failure contract below. Duplicates are judged on
 the effective map with macOS semantics (`CommandOrControl`, `Super`, and
