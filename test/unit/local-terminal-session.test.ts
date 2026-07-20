@@ -11,8 +11,14 @@ function createPtyHarness() {
   let onExit:
     ((event: { exitCode: number; signal?: number }) => void) | undefined;
   let foregroundProcess: () => unknown = () => "example-shell";
-  const disposeData = vi.fn();
-  const disposeExit = vi.fn();
+  // Disposing really stops delivery, as node-pty's IDisposable does — a
+  // harness that keeps delivering after dispose() hides suppressed events.
+  const disposeData = vi.fn(() => {
+    onData = undefined;
+  });
+  const disposeExit = vi.fn(() => {
+    onExit = undefined;
+  });
   const pty = {
     write: vi.fn(),
     resize: vi.fn(),
@@ -100,6 +106,33 @@ describe("local PTY Adapter", () => {
     expect(onOutput).toHaveBeenCalledWith("shell output");
     expect(harness.pty.resize).toHaveBeenCalledOnce();
     expect(harness.pty.resize).toHaveBeenCalledWith(120, 40);
+  });
+
+  // Regression for #85: closing a tab kills the PTY, but the session end must
+  // still be reported when the process actually exits — a swallowed report
+  // leaves the closed session counted as live and the window never follows
+  // its last tab.
+  it("reports the PTY exit that follows a requested close", () => {
+    const harness = createPtyHarness();
+    const onExit = vi.fn();
+    const session = createLocalTerminalSession(() => harness.pty, {
+      shell: "/bin/example-shell",
+      homeDirectory: "/Users/example",
+      applicationVersionProvider: { getVersion: () => "1.2.3" },
+      environment: {},
+      onOutput: vi.fn(),
+      onExit,
+    });
+
+    session.close();
+    expect(harness.pty.kill).toHaveBeenCalledOnce();
+    expect(onExit).not.toHaveBeenCalled();
+
+    harness.emitExit(0, 1);
+
+    expect(onExit).toHaveBeenCalledExactlyOnceWith({ exitCode: 0, signal: 1 });
+    expect(harness.disposeData).toHaveBeenCalledOnce();
+    expect(harness.disposeExit).toHaveBeenCalledOnce();
   });
 
   it("releases the PTY and listeners exactly once", () => {

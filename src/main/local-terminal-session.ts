@@ -110,7 +110,11 @@ export function createLocalTerminalSession(
     close() {
       if (closed) return;
       closed = true;
-      releaseSubscriptions();
+      // Only output stops at close. The exit subscription stays until the
+      // process really ends: the exit report is what lets the window follow
+      // its last tab, and a kill only requests that end (#85).
+      dataSubscription?.dispose();
+      dataSubscription = undefined;
       if (!exited) pty.kill();
     },
   };
