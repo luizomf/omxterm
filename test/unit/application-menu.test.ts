@@ -1,9 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  terminalActionInvocations,
   terminalApplicationMenuTemplate,
   terminalClipboardContextMenuTemplate,
 } from "../../src/main/application-menu";
-import { DEFAULT_TERMINAL_KEYBINDS } from "../../src/shared/terminal-keybinds";
+import {
+  DEFAULT_TERMINAL_KEYBINDS,
+  TERMINAL_ACTION_NAMES,
+} from "../../src/shared/terminal-keybinds";
 
 function menuActions() {
   return {
@@ -182,6 +186,56 @@ describe("native application menu", () => {
     expect(
       items.some((item) => item.accelerator === "CommandOrControl+N"),
     ).toBe(false);
+  });
+});
+
+describe("keybind action invocations", () => {
+  it("invokes the same application action as the menu item for every keybind action", () => {
+    const actions = menuActions();
+    const invocations = terminalActionInvocations(actions);
+
+    invocations.nextTab();
+    expect(actions.selectNextTab).toHaveBeenCalledOnce();
+    invocations.previousTab();
+    expect(actions.selectPreviousTab).toHaveBeenCalledOnce();
+    invocations.newTab();
+    expect(actions.newTabInSelectedWindow).toHaveBeenCalledOnce();
+    invocations.closeTab();
+    expect(actions.closeSelectedTab).toHaveBeenCalledOnce();
+    invocations.newWindow();
+    expect(actions.newWindow).toHaveBeenCalledOnce();
+    invocations.closeWindow();
+    expect(actions.closeSelectedWindow).toHaveBeenCalledOnce();
+    invocations.quit();
+    expect(actions.requestQuit).toHaveBeenCalledOnce();
+    invocations.copy();
+    expect(actions.copySelectedTerminal).toHaveBeenCalledOnce();
+    invocations.paste();
+    expect(actions.pasteSelectedTerminal).toHaveBeenCalledOnce();
+    invocations.selectAll();
+    expect(actions.selectAllSelectedTerminal).toHaveBeenCalledOnce();
+    invocations.zoomIn();
+    expect(actions.zoomInSelectedWindow).toHaveBeenCalledOnce();
+    invocations.zoomOut();
+    expect(actions.zoomOutSelectedWindow).toHaveBeenCalledOnce();
+    invocations.actualSize();
+    expect(actions.resetSelectedWindowZoom).toHaveBeenCalledOnce();
+    invocations.toggleFullScreen();
+    expect(actions.toggleSelectedFullScreen).toHaveBeenCalledOnce();
+    invocations.toggleSnippets();
+    expect(actions.toggleSelectedSnippets).toHaveBeenCalledOnce();
+
+    for (let position = 1; position <= 9; position += 1)
+      invocations[`selectTab${position}` as keyof typeof invocations]();
+    expect(actions.selectTabInSelectedWindow.mock.calls).toEqual(
+      Array.from({ length: 9 }, (_, index) => [index + 1]),
+    );
+  });
+
+  it("covers the whole keybind action vocabulary", () => {
+    const invocations = terminalActionInvocations(menuActions());
+    for (const action of TERMINAL_ACTION_NAMES)
+      expect(invocations[action]).toBeTypeOf("function");
   });
 });
 

@@ -13,9 +13,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { terminalIpc } from "../shared/terminal-ipc";
 import {
+  terminalActionInvocations,
   terminalApplicationMenuTemplate,
   terminalClipboardContextMenuTemplate,
 } from "./application-menu";
+import { deliverUnhandledKeybinds } from "./keybind-delivery";
 import { createLocalTerminalSession } from "./local-terminal-session";
 import {
   startTerminalApplication,
@@ -133,6 +135,13 @@ app
             );
             const defaultShellName = path.basename(defaultShell);
             lockTerminalRendererNavigation(window.webContents);
+            // Delivery path for keybinds whose registered menu accelerator the
+            // platform refuses to fire, e.g. Control+Tab on macOS (#82).
+            deliverUnhandledKeybinds(
+              window.webContents,
+              userConfiguration.keybinds,
+              (action) => keybindActionInvocations[action](),
+            );
             // Closing a window is guarded by confirmClose regardless of its
             // trigger (menu, keybind, or native close button). A window whose
             // renderer is gone closes without asking: there is no session
@@ -336,43 +345,42 @@ app
             dialog.showErrorBox(display.title, display.message);
           });
         };
+        const menuActions = {
+          newWindow: openNewWindow,
+          closeSelectedWindow: () =>
+            void terminalApplication!.closeSelectedWindow(),
+          newTabInSelectedWindow: () =>
+            terminalApplication!.newTabInSelectedWindow(),
+          closeSelectedTab: () => void terminalApplication!.closeSelectedTab(),
+          selectNextTab: () => terminalApplication!.selectNextTab(),
+          selectPreviousTab: () => terminalApplication!.selectPreviousTab(),
+          selectTabInSelectedWindow: (position: number) =>
+            terminalApplication!.selectTabInSelectedWindow(position),
+          requestQuit: () => void terminalApplication!.requestQuit(),
+          toggleSelectedFullScreen:
+            terminalApplication.toggleSelectedFullScreen,
+          toggleSelectedAlwaysOnTop:
+            terminalApplication.toggleSelectedAlwaysOnTop,
+          zoomInSelectedWindow: () =>
+            terminalApplication!.zoomSelectedWindow("in"),
+          zoomOutSelectedWindow: () =>
+            terminalApplication!.zoomSelectedWindow("out"),
+          resetSelectedWindowZoom: () =>
+            terminalApplication!.zoomSelectedWindow("reset"),
+          copySelectedTerminal: () =>
+            terminalApplication!.clipboardSelectedWindow("copy"),
+          pasteSelectedTerminal: () =>
+            terminalApplication!.clipboardSelectedWindow("paste"),
+          selectAllSelectedTerminal: () =>
+            terminalApplication!.clipboardSelectedWindow("select-all"),
+          toggleSelectedSnippets: terminalApplication.toggleSelectedSnippets,
+        };
+        const keybindActionInvocations = terminalActionInvocations(menuActions);
         Menu.setApplicationMenu(
           Menu.buildFromTemplate(
             terminalApplicationMenuTemplate(
               app.name,
-              {
-                newWindow: openNewWindow,
-                closeSelectedWindow: () =>
-                  void terminalApplication!.closeSelectedWindow(),
-                newTabInSelectedWindow: () =>
-                  terminalApplication!.newTabInSelectedWindow(),
-                closeSelectedTab: () =>
-                  void terminalApplication!.closeSelectedTab(),
-                selectNextTab: () => terminalApplication!.selectNextTab(),
-                selectPreviousTab: () =>
-                  terminalApplication!.selectPreviousTab(),
-                selectTabInSelectedWindow: (position) =>
-                  terminalApplication!.selectTabInSelectedWindow(position),
-                requestQuit: () => void terminalApplication!.requestQuit(),
-                toggleSelectedFullScreen:
-                  terminalApplication.toggleSelectedFullScreen,
-                toggleSelectedAlwaysOnTop:
-                  terminalApplication.toggleSelectedAlwaysOnTop,
-                zoomInSelectedWindow: () =>
-                  terminalApplication!.zoomSelectedWindow("in"),
-                zoomOutSelectedWindow: () =>
-                  terminalApplication!.zoomSelectedWindow("out"),
-                resetSelectedWindowZoom: () =>
-                  terminalApplication!.zoomSelectedWindow("reset"),
-                copySelectedTerminal: () =>
-                  terminalApplication!.clipboardSelectedWindow("copy"),
-                pasteSelectedTerminal: () =>
-                  terminalApplication!.clipboardSelectedWindow("paste"),
-                selectAllSelectedTerminal: () =>
-                  terminalApplication!.clipboardSelectedWindow("select-all"),
-                toggleSelectedSnippets:
-                  terminalApplication.toggleSelectedSnippets,
-              },
+              menuActions,
               userConfiguration.keybinds,
             ),
           ),

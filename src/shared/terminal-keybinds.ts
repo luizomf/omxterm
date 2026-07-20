@@ -163,6 +163,50 @@ export function isValidAccelerator(value: string): boolean {
   return parseAccelerator(value) !== undefined;
 }
 
+// Modifier and key state of one keyboard event, as Electron's
+// before-input-event reports it (DOM KeyboardEvent key values).
+export interface AcceleratorKeyboardInput {
+  readonly key: string;
+  readonly control: boolean;
+  readonly meta: boolean;
+  readonly alt: boolean;
+  readonly shift: boolean;
+}
+
+// Resolves a key event against the effective keybind map with the shipped
+// macOS semantics of canonicalAccelerator: CommandOrControl, Super, and Meta
+// count as Command. Modifiers must match exactly so Control+Shift+Tab never
+// resolves to a bare Control+Tab binding.
+export function terminalActionForKeyboardInput(
+  keybinds: TerminalKeybinds,
+  input: AcceleratorKeyboardInput,
+): TerminalActionName | undefined {
+  const key = acceleratorKeyForInputKey(input.key);
+  if (key === undefined) return undefined;
+  for (const action of TERMINAL_ACTION_NAMES) {
+    const parsed = parseAccelerator(keybinds[action]);
+    if (
+      parsed !== undefined &&
+      parsed.key === key &&
+      parsed.modifiers.has("cmd") === input.meta &&
+      parsed.modifiers.has("ctrl") === input.control &&
+      parsed.modifiers.has("alt") === input.alt &&
+      parsed.modifiers.has("shift") === input.shift
+    )
+      return action;
+  }
+  return undefined;
+}
+
+function acceleratorKeyForInputKey(inputKey: string): string | undefined {
+  if (inputKey === " ") return "space";
+  if (inputKey.length === 1) return canonicalKey(inputKey.toLowerCase());
+  const key = inputKey.toLowerCase();
+  // DOM names arrows "ArrowUp"; the accelerator grammar names them "Up".
+  if (key.startsWith("arrow")) return key.slice("arrow".length);
+  return NAMED_KEYS.has(key) ? canonicalKey(key) : undefined;
+}
+
 // Canonical form for duplicate detection on the shipped platform (macOS),
 // where CommandOrControl, Super, and Meta all resolve to Command.
 export function canonicalAccelerator(value: string): string | undefined {

@@ -4,6 +4,8 @@ import {
   DEFAULT_TERMINAL_KEYBINDS,
   isValidAccelerator,
   TERMINAL_ACTION_NAMES,
+  terminalActionForKeyboardInput,
+  type AcceleratorKeyboardInput,
 } from "../../src/shared/terminal-keybinds";
 
 describe("terminal keybind accelerators", () => {
@@ -66,6 +68,71 @@ describe("terminal keybind accelerators", () => {
       return canonicalAccelerator(DEFAULT_TERMINAL_KEYBINDS[action]);
     });
     expect(new Set(canonicals).size).toBe(TERMINAL_ACTION_NAMES.length);
+  });
+
+  describe("resolving a keyboard input to an action", () => {
+    const keyInput = (
+      overrides: Partial<AcceleratorKeyboardInput> & { key: string },
+    ): AcceleratorKeyboardInput => ({
+      control: false,
+      meta: false,
+      alt: false,
+      shift: false,
+      ...overrides,
+    });
+    const resolve = (input: AcceleratorKeyboardInput) =>
+      terminalActionForKeyboardInput(DEFAULT_TERMINAL_KEYBINDS, input);
+
+    it("resolves CommandOrControl bindings through the Command key", () => {
+      expect(resolve(keyInput({ key: "t", meta: true }))).toBe("newTab");
+      expect(resolve(keyInput({ key: "T", meta: true }))).toBe("newTab");
+      expect(resolve(keyInput({ key: "t", control: true }))).toBeUndefined();
+    });
+
+    it("requires the exact modifier set of the binding", () => {
+      expect(resolve(keyInput({ key: "Tab", control: true }))).toBe("nextTab");
+      expect(
+        resolve(keyInput({ key: "Tab", control: true, shift: true })),
+      ).toBe("previousTab");
+      expect(
+        resolve(keyInput({ key: "Tab", control: true, alt: true })),
+      ).toBeUndefined();
+      expect(resolve(keyInput({ key: "Tab", meta: true }))).toBeUndefined();
+      expect(resolve(keyInput({ key: "Tab" }))).toBeUndefined();
+    });
+
+    it("resolves named and aliased keys the accelerator grammar accepts", () => {
+      const keybinds = {
+        ...DEFAULT_TERMINAL_KEYBINDS,
+        nextTab: "Ctrl+PageDown",
+        previousTab: "Ctrl+Up",
+        newTab: "Cmd+Plus",
+        closeTab: "Cmd+Return",
+        toggleSnippets: "Cmd+Space",
+      };
+      const resolveWith = (input: AcceleratorKeyboardInput) =>
+        terminalActionForKeyboardInput(keybinds, input);
+      expect(resolveWith(keyInput({ key: "PageDown", control: true }))).toBe(
+        "nextTab",
+      );
+      expect(resolveWith(keyInput({ key: "ArrowUp", control: true }))).toBe(
+        "previousTab",
+      );
+      expect(resolveWith(keyInput({ key: "+", meta: true }))).toBe("newTab");
+      expect(resolveWith(keyInput({ key: "Enter", meta: true }))).toBe(
+        "closeTab",
+      );
+      expect(resolveWith(keyInput({ key: " ", meta: true }))).toBe(
+        "toggleSnippets",
+      );
+    });
+
+    it("resolves nothing for keys outside the accelerator grammar", () => {
+      expect(resolve(keyInput({ key: "Dead", control: true }))).toBeUndefined();
+      expect(
+        resolve(keyInput({ key: "MediaFastForward", control: true })),
+      ).toBeUndefined();
+    });
   });
 
   it("ships the ADR 0016 tab defaults with Cmd+W moved to closeTab", () => {

@@ -1,5 +1,8 @@
 import type { MenuItemConstructorOptions } from "electron";
-import type { TerminalKeybinds } from "../shared/terminal-keybinds";
+import type {
+  TerminalActionName,
+  TerminalKeybinds,
+} from "../shared/terminal-keybinds";
 
 interface TerminalApplicationMenuActions {
   readonly newWindow: () => void;
@@ -154,6 +157,41 @@ export function terminalApplicationMenuTemplate(
 }
 
 type SelectTabAction = keyof TerminalKeybinds & `selectTab${number}`;
+
+// The keybind vocabulary keyed by action name, invoking the same application
+// actions as the menu items above. This is what the main-process key-event
+// delivery path calls when a registered accelerator never fires its menu item
+// (see keybind-delivery.ts), keeping the menu the single behavior definition.
+export function terminalActionInvocations(
+  actions: TerminalApplicationMenuActions,
+): Readonly<Record<TerminalActionName, () => void>> {
+  return Object.freeze({
+    quit: actions.requestQuit,
+    copy: actions.copySelectedTerminal,
+    paste: actions.pasteSelectedTerminal,
+    selectAll: actions.selectAllSelectedTerminal,
+    newWindow: actions.newWindow,
+    closeWindow: actions.closeSelectedWindow,
+    newTab: actions.newTabInSelectedWindow,
+    closeTab: actions.closeSelectedTab,
+    nextTab: actions.selectNextTab,
+    previousTab: actions.selectPreviousTab,
+    ...(Object.fromEntries(
+      Array.from({ length: 9 }, (_, index) => {
+        const position = index + 1;
+        return [
+          `selectTab${position}`,
+          () => actions.selectTabInSelectedWindow(position),
+        ];
+      }),
+    ) as Record<SelectTabAction, () => void>),
+    zoomIn: actions.zoomInSelectedWindow,
+    zoomOut: actions.zoomOutSelectedWindow,
+    actualSize: actions.resetSelectedWindowZoom,
+    toggleFullScreen: actions.toggleSelectedFullScreen,
+    toggleSnippets: actions.toggleSelectedSnippets,
+  });
+}
 
 export function terminalClipboardContextMenuTemplate(actions: {
   readonly copy: () => void;
