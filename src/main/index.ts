@@ -20,6 +20,10 @@ import {
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { createLocalTerminalSession } from "./local-terminal-session";
 import {
+  isFilePathPlatform,
+  readClipboardPathInsertion,
+} from "../shared/file-path-insertion";
+import {
   startTerminalApplication,
   type TerminalApplication,
 } from "./terminal-application";
@@ -212,7 +216,18 @@ app
                   "The External Link could not be opened.",
                 ),
               writeClipboardText: (text) => clipboard.writeText(text),
-              readClipboardText: () => clipboard.readText(),
+              readClipboardText: () => {
+                if (!isFilePathPlatform(process.platform))
+                  return clipboard.readText();
+                return readClipboardPathInsertion(
+                  {
+                    availableFormats: () => clipboard.availableFormats(),
+                    readText: () => clipboard.readText(),
+                    readBuffer: (format) => clipboard.readBuffer(format),
+                  },
+                  process.platform,
+                );
+              },
               loadSnippets: () =>
                 loadTerminalSnippets({
                   environment: process.env,

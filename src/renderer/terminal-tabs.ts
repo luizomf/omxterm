@@ -43,6 +43,7 @@ export interface TerminalTabs {
   setSessionTitle(sessionId: TerminalSessionId, title: string): void;
   zoom(command: TerminalFontZoom): void;
   clipboardAction(action: TerminalClipboardAction): void;
+  injectText(text: string): void;
   injectSnippet(body: string, options: { readonly submit: boolean }): void;
   focusSelected(): void;
   dispose(): void;
@@ -271,6 +272,9 @@ export function createTerminalTabs(
       if (action === "copy") void surface.copy();
       else if (action === "paste") void surface.paste();
       else surface.selectAll();
+    },
+    injectText(text) {
+      void selectedTab()?.surface?.inject(text);
     },
     injectSnippet(body, injectOptions) {
       void selectedTab()?.surface?.inject(body, {

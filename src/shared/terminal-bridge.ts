@@ -34,6 +34,7 @@ export interface TerminalBridge {
   onFontZoom(listener: (command: TerminalFontZoom) => void): () => void;
   writeClipboardText(text: string): Promise<void>;
   readClipboardText(): Promise<string>;
+  droppedFilePathInsertion(files: readonly File[]): string;
   confirmPaste(text: string): Promise<boolean>;
   requestClipboardContextMenu(): void;
   onClipboardAction(

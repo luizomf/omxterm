@@ -258,6 +258,66 @@ describe("renderer Terminal Window page host", () => {
     host.dispose();
   });
 
+  it("prevents document drop navigation and injects only dropped files into the selected Surface", async () => {
+    const elements = createPageElements();
+    const first = createSurface();
+    const second = createSurface();
+    const surfaces = [first, second];
+    let commandListener: ((command: { action: "new" }) => void) | undefined;
+    const droppedFilePathInsertion = vi.fn((files: readonly File[]) =>
+      files.length > 0 ? "'/Users/me/A B.txt'" : "",
+    );
+    const host = mountTerminalWindowPage(elements, {
+      createAdapter: createAdapterFactory(),
+      page: window,
+      mount: vi.fn(async () => surfaces.shift()!),
+      droppedFilePathInsertion,
+      subscribeToTabCommands(listener) {
+        commandListener = listener as typeof commandListener;
+        return vi.fn();
+      },
+    });
+    await host.ready;
+    commandListener!({ action: "new" });
+    await vi.waitFor(() => expect(elements.tabStrip.hidden).toBe(false));
+    elements.tabStrip.querySelector<HTMLButtonElement>("button")!.click();
+
+    const dragOver = new Event("dragover", { bubbles: true, cancelable: true });
+    document.body.dispatchEvent(dragOver);
+    expect(dragOver.defaultPrevented).toBe(true);
+
+    const file = new File([""], "A B.txt");
+    const drop = new Event("drop", { bubbles: true, cancelable: true });
+    Object.defineProperty(drop, "dataTransfer", {
+      value: {
+        files: {
+          0: file,
+          length: 1,
+          item: () => file,
+          *[Symbol.iterator]() {
+            yield file;
+          },
+        },
+      },
+    });
+    elements.tabStrip.dispatchEvent(drop);
+
+    expect(drop.defaultPrevented).toBe(true);
+    expect(droppedFilePathInsertion).toHaveBeenCalledWith([file]);
+    expect(first.inject).toHaveBeenCalledExactlyOnceWith("'/Users/me/A B.txt'");
+    expect(second.inject).not.toHaveBeenCalled();
+
+    const textDrop = new Event("drop", { bubbles: true, cancelable: true });
+    Object.defineProperty(textDrop, "dataTransfer", {
+      value: { files: { length: 0, item: () => null } },
+    });
+    document.documentElement.dispatchEvent(textDrop);
+    expect(textDrop.defaultPrevented).toBe(true);
+    expect(droppedFilePathInsertion).toHaveBeenCalledOnce();
+    expect(first.inject).toHaveBeenCalledOnce();
+    host.dispose();
+  });
+
   it("passes session-tagged title and BEL signals into the portable Surface", async () => {
     const onTitleRequest = vi.fn();
     const onBell = vi.fn();

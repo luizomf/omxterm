@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, webUtils } from "electron";
 import type { TerminalBridge } from "../shared/terminal-bridge";
 import {
   isClipboardText,
@@ -20,6 +20,11 @@ import {
   type TerminalTabCommand,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
+import {
+  formatFilePathInsertion,
+  isFilePathPlatform,
+  MAX_INSERTED_PATHS,
+} from "../shared/file-path-insertion";
 import { isTerminalRendererConfiguration } from "../shared/user-configuration";
 import { isTerminalSnippetsResponse } from "../shared/terminal-snippets";
 
@@ -142,6 +147,23 @@ const terminal: TerminalBridge = {
     if (!isClipboardText(text))
       throw new TypeError("Invalid clipboard read response");
     return text;
+  },
+  droppedFilePathInsertion(files: readonly File[]) {
+    if (
+      !Array.isArray(files) ||
+      files.length === 0 ||
+      files.length > MAX_INSERTED_PATHS
+    )
+      return "";
+    try {
+      if (!isFilePathPlatform(process.platform)) return "";
+      return formatFilePathInsertion(
+        files.map((file) => webUtils.getPathForFile(file)),
+        process.platform,
+      );
+    } catch {
+      return "";
+    }
   },
   async confirmPaste(text: string) {
     if (!isNonemptyClipboardText(text))

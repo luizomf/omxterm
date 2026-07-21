@@ -27,6 +27,12 @@ const electron = vi.hoisted(() => {
     send: vi.fn(),
     invoke: vi.fn(async (_channel?: string): Promise<unknown> => undefined),
     removeListener: vi.fn((channel: string) => listeners.delete(channel)),
+    getPathForFile: vi.fn((file: File) => {
+      if (!("name" in file)) throw new TypeError("not a File");
+      return process.platform === "win32"
+        ? `C:\\Users\\me\\${file.name}`
+        : `/Users/me/${file.name}`;
+    }),
   };
 });
 
@@ -35,6 +41,9 @@ vi.mock("electron", () => ({
     exposeInMainWorld(_key: string, value: { terminal: TerminalBridge }) {
       electron.bridge = value.terminal;
     },
+  },
+  webUtils: {
+    getPathForFile: electron.getPathForFile,
   },
   ipcRenderer: {
     send: electron.send,
@@ -445,6 +454,29 @@ describe("isolated preload terminal bridge", () => {
     });
     await expect(bridge.configuration()).rejects.toThrow(TypeError);
     expect(electron.invoke).toHaveBeenCalledWith(terminalIpc.configuration);
+  });
+
+  it("extracts and formats only bounded dropped File objects through webUtils", () => {
+    const bridge = electron.bridge!;
+    const files = [
+      new File([""], "A B.txt"),
+      new File([""], "O'Brien $100.txt"),
+    ];
+
+    expect(bridge.droppedFilePathInsertion(files)).toBe(
+      process.platform === "win32"
+        ? "'C:\\Users\\me\\A B.txt' 'C:\\Users\\me\\O''Brien $100.txt'"
+        : "'/Users/me/A B.txt' '/Users/me/O'\\''Brien $100.txt'",
+    );
+    expect(electron.getPathForFile.mock.calls.map(([file]) => file)).toEqual(
+      files,
+    );
+    expect(bridge.droppedFilePathInsertion([])).toBe("");
+    expect(() => bridge.droppedFilePathInsertion([{} as File])).not.toThrow();
+    expect(bridge.droppedFilePathInsertion([{} as File])).toBe("");
+    expect(Object.keys(bridge)).not.toEqual(
+      expect.arrayContaining(["webUtils", "getPathForFile"]),
+    );
   });
 
   it("exposes only text clipboard operations and validates both directions", async () => {

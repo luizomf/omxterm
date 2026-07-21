@@ -90,6 +90,12 @@ updates, and remote terminal features are outside the current product contract.
   and all configured padding.
 - `Window -> Always on Top` toggles only the selected window at the ordinary
   native floating level. New windows use the configured default.
+- Dropping one or more native file-manager files or folders anywhere in a
+  Terminal Window inserts their absolute paths into only the selected Terminal
+  Tab. The paths retain platform order, are separated by one space, and are
+  delivered through Protected Paste without sending Enter. Drag navigation is
+  prevented over the whole renderer document; a drop with no native files has
+  no terminal side effect.
 - `View -> Toggle Snippets` (default `Cmd+Shift+S`, remappable through
   `keybinds`) shows or hides the selected window's Snippets Sidebar beside its
   Terminal Surface. The sidebar lists the snippets from `snippets.json`,
@@ -131,7 +137,29 @@ OSC 8 destinations and all other schemes are ignored.
 - Selection never copies automatically.
 - `Ctrl+C` and `Ctrl+V` remain PTY input.
 - `Cmd+C`, `Cmd+V`, and the native context menu perform explicit text copy and
-  paste.
+  paste. Any non-empty plain text, including whitespace-only text, is pasted
+  unchanged and takes priority over every file-list representation. When text
+  is empty and the clipboard exposes a supported native file-manager file list,
+  Paste inserts its paths in the same form as a file drop. Plain-text URLs and
+  non-file URI-list entries are never inferred to be paths. Electron 43 exposes
+  only one Explorer `FileNameW` path through its public Windows clipboard API,
+  so Windows clipboard Paste inserts that one path; dropping several Windows
+  files remains complete and ordered. A future supported Electron file-list API
+  may remove this clipboard-only limitation without changing insertion syntax.
+- Inserted paths are lexical platform-absolute values only: OMXTerm never reads,
+  resolves, normalizes, or checks the target. A malformed, empty, over-bound, or
+  mixed list inserts nothing. A list accepts at most 256 paths, each at most
+  32,768 UTF-16 code units, with at most 1,048,576 code units in the decoded
+  source or formatted result; a serialized native UTF-8 source above 1,048,576
+  bytes is rejected before decoding.
+- On macOS and Linux, each path is an independently single-quoted POSIX shell
+  token, with an apostrophe represented by closing the quote, a quoted
+  apostrophe, and reopening it. On Windows, each path is an independently
+  single-quoted Windows PowerShell 5.1 token; U+0027 and U+2018 through U+201B
+  are doubled. Tokens are separated by one ASCII space. This encoding assumes
+  insertion starts at a fresh ordinary argument-token boundary in the initial
+  Default Shell. Without Shell Integration, OMXTerm cannot promise correct
+  syntax inside a partial quote, nested shell, SSH session, REPL, or TUI.
 - Multiline or control-character paste asks for confirmation only when the
   receiving process has not enabled bracketed paste.
 - Paste is never truncated, interpreted, summarized, or logged.

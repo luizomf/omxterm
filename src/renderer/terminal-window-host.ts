@@ -45,6 +45,7 @@ interface TerminalWindowPageOptions {
   readonly subscribeToClipboardActions?: (
     listener: (action: "copy" | "paste" | "select-all") => void,
   ) => () => void;
+  readonly droppedFilePathInsertion?: (files: readonly File[]) => string;
   readonly subscribeToTabCommands?: (
     listener: (command: TerminalTabCommand) => void,
   ) => () => void;
@@ -141,11 +142,22 @@ export function mountTerminalWindowPage(
   );
 
   const onPageFocus = () => tabs.focusSelected();
+  const onDragOver = (event: DragEvent) => event.preventDefault();
+  const onDrop = (event: DragEvent) => {
+    event.preventDefault();
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0 || !options.droppedFilePathInsertion)
+      return;
+    const insertion = options.droppedFilePathInsertion([...files]);
+    if (insertion.length > 0) tabs.injectText(insertion);
+  };
   const dispose = () => {
     if (disposed) return;
     disposed = true;
     page.removeEventListener("pagehide", onPageHide);
     page.removeEventListener("focus", onPageFocus);
+    page.document.removeEventListener("dragover", onDragOver);
+    page.document.removeEventListener("drop", onDrop);
     removeZoomListener?.();
     removeClipboardActionListener?.();
     removeTabCommandListener?.();
@@ -159,6 +171,8 @@ export function mountTerminalWindowPage(
 
   page.addEventListener("pagehide", onPageHide, { once: true });
   page.addEventListener("focus", onPageFocus);
+  page.document.addEventListener("dragover", onDragOver);
+  page.document.addEventListener("drop", onDrop);
 
   const ready = tabs.ready.then(() => {
     if (disposed) return;
