@@ -5,7 +5,7 @@ documents when exploring or changing the project:
 
 - `CONTEXT.md` at the repository root defines the shared domain language.
 - `docs/adr/` records durable architectural decisions.
-- `docs/spec.md` owns the observable first-release contract.
+- `docs/spec.md` owns the current observable product contract.
 
 ## Consumer rules
 

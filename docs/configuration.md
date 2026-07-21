@@ -5,7 +5,7 @@ versioned JSON that OMXTerm reads once during startup and never creates,
 rewrites, migrates, or reloads.
 
 This guide explains how to use the configuration contract. The normative
-behavior remains in the [first-release specification](spec.md#configuration-and-local-state).
+behavior remains in the [current product contract](spec.md#configuration-and-local-state).
 
 ## Configuration location
 

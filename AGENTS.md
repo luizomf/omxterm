@@ -9,14 +9,14 @@ Silicon macOS. It uses Electron and TypeScript around a portable DOM+xterm
 Terminal Surface and a local PTY Adapter.
 
 The terminal is the product. AI assistance, SSH brokering, saved sessions,
-tabs, splits, shell integration, and cross-platform support are outside the
-first release. Do not turn nearby ideas into requirements.
+splits, shell integration, and cross-platform support are outside the current
+product contract. Do not turn nearby ideas into requirements.
 
 ## Sources of truth
 
 Read these before changing product behavior or architecture:
 
-- `docs/spec.md` — observable first-release contract;
+- `docs/spec.md` — current observable product contract;
 - `CONTEXT.md` — project vocabulary;
 - relevant files under `docs/adr/` — durable decisions and tradeoffs;
 - the current GitHub issue — scope, acceptance criteria, and dependencies.

@@ -72,12 +72,12 @@ creates, rewrites, migrates, or reloads these files.
 
 - [Documentation map](docs/README.md)
 - [Contributing](CONTRIBUTING.md)
-- [First-release specification](docs/spec.md)
+- [Current product contract](docs/spec.md)
 - [Versioning policy](docs/versioning.md)
 - [Local arm64 release procedure](docs/release.md)
 - [0.1.0 release notes](docs/releases/0.1.0.md)
 - [0.2.0 release notes](docs/releases/0.2.0.md)
-- [0.3.0 release-note draft](docs/releases/0.3.0.md)
+- [0.3.0 release notes](docs/releases/0.3.0.md)
 - [Domain language](CONTEXT.md)
 - [Architecture decisions](docs/adr/)
 

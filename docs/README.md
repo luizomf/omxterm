@@ -10,8 +10,8 @@ release procedures so that each kind of information has one clear owner.
   verification, and pull-request workflow.
 - [User configuration](configuration.md) explains how to configure OMXTerm and
   organize external Terminal Themes.
-- [First-release specification](spec.md) is the normative contract for
-  observable product behavior.
+- [Current product contract](spec.md) defines the normative observable product
+  behavior.
 
 ## Project decisions and language
 
@@ -33,10 +33,10 @@ release procedures so that each kind of information has one clear owner.
   Artifact.
 - [0.1.0 release notes](releases/0.1.0.md) describe the first published
   version.
-- [0.2.0 release notes](releases/0.2.0.md) describe the current published
+- [0.2.0 release notes](releases/0.2.0.md) describe the previous published
   version.
-- [0.3.0 release-note draft](releases/0.3.0.md) describes the selected next
-  version without claiming that its tag, GitHub Release, or download exists.
+- [0.3.0 release notes](releases/0.3.0.md) describe the current published
+  version.
 
 Issue and pull-request descriptions may describe work in progress, but they do
 not replace these maintained project documents.

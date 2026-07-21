@@ -13,7 +13,7 @@ project documents.
 
 Read the relevant sources first:
 
-- [`docs/spec.md`](docs/spec.md) defines observable first-release behavior;
+- [`docs/spec.md`](docs/spec.md) defines the current observable product contract;
 - [`CONTEXT.md`](CONTEXT.md) defines project vocabulary;
 - [`docs/adr/`](docs/adr/) records durable decisions and tradeoffs;
 - [`docs/configuration.md`](docs/configuration.md) documents user configuration;
@@ -25,10 +25,10 @@ or configuration work. This lets the maintainer confirm scope, identify
 dependencies, and prevent duplicate implementations. A small typo or broken
 link may go directly to a focused pull request.
 
-Keep proposals inside the current product boundary. Tabs, splits, saved
-sessions, AI assistance, SSH brokering, shell integration, theme catalogs,
-automatic updates, and cross-platform support are not first-release
-requirements merely because they are common in other terminals.
+Keep proposals inside the current product boundary. Splits, saved sessions, AI
+assistance, SSH brokering, shell integration, theme catalogs, automatic updates,
+and cross-platform support remain outside the current product contract; their
+presence in other terminals does not make them requirements.
 
 ## Development environment
 

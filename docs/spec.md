@@ -1,4 +1,7 @@
-# OMXTerm v0 specification
+# OMXTerm product contract
+
+This document is the maintained normative contract for current observable
+OMXTerm product behavior.
 
 ## Product
 
@@ -7,12 +10,12 @@ local shell in a standard macOS window with the small native title bar and gives
 the Terminal Surface all remaining content space. It is not a Ghostty competitor
 claim, an SSH bastion, an AI product, a session manager, or an IDE.
 
-The first supported target is the current Apple Silicon (`arm64`) Mac. Other
+The supported target is the current Apple Silicon (`arm64`) Mac. Other
 platforms and Intel Macs are future possibilities, not current promises.
 
-## First release
+## Product scope
 
-The first useful release must:
+OMXTerm must:
 
 - open the operating-system-configured shell as an interactive login shell in
   the user's home directory;
@@ -34,7 +37,7 @@ The first useful release must:
 
 AI assistance, splits, saved or reconnectable sessions, shell integration,
 profiles, a theme picker or catalog, live configuration reload, automatic
-updates, and remote terminal features are outside this release.
+updates, and remote terminal features are outside the current product contract.
 
 ## Window and session behavior
 
@@ -302,4 +305,4 @@ application-icon presentation at small and large display sizes, and Gatekeeper
 documentation.
 
 The ADRs in `docs/adr/` own the reasoning behind the durable choices; this file
-owns the observable first-release contract.
+owns the current observable product contract.
