@@ -367,16 +367,19 @@ Only after Otávio accepts the exact-artifact record and separately authorizes
 publication:
 
 1. confirm the canonical repository is `luizomf/omxterm`, the accepted source is
-   tagged `vX.Y.Z`, and the package metadata, DMG, and checksum still match the
-   accepted record;
+   tagged `vX.Y.Z`, and the package metadata, DMG, AppImage, and both checksums
+   still match their accepted records;
 2. create the canonical GitHub Release for that exact tag with the Gatekeeper
    and provenance note above; summarize material changes, identify incompatible
    changes and migration or state that there are none, and record relevant
    known limitations;
-3. attach exactly `OMXTerm-<version>-arm64.dmg` and
-   `OMXTerm-<version>-arm64.dmg.sha256` manually;
-4. download both attachments, verify the checksum again, and preserve the final
-   release URL with the accepted evidence.
+3. attach exactly `OMXTerm-<version>-arm64.dmg`,
+   `OMXTerm-<version>-arm64.dmg.sha256`,
+   `OMXTerm-<version>-arm64.AppImage`, and
+   `OMXTerm-<version>-arm64.AppImage.sha256` manually;
+4. download all four attachments, verify both checksums again on their native
+   Supported Platforms, and preserve the final release URL with the accepted
+   evidence.
 
 Do not automate these publication steps or perform them under the authority of
 this repository procedure alone.

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   inspectAsarEntries,
   inspectApplicationVersions,
+  inspectForbiddenPackagedEntries,
   inspectIcnsRepresentations,
 } from "../../scripts/verify-packaged-app.mjs";
 
@@ -84,6 +85,7 @@ describe("packaged application verifier", () => {
       inspectAsarEntries(
         [
           ...requiredEntries,
+          "/node_modules/node-pty/prebuilds/darwin-arm64",
           "/node_modules/node-pty/prebuilds/darwin-arm64/pty.node",
           "/node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper",
         ],
@@ -124,6 +126,36 @@ describe("packaged application verifier", () => {
         "linux",
       ).forbidden,
     ).toEqual(["/node_modules/node-pty/prebuilds/darwin-arm64/pty.node"]);
+  });
+
+  it("rejects Linux node-pty rebuild intermediates", () => {
+    expect(
+      inspectAsarEntries(
+        [
+          ...requiredEntries,
+          "/node_modules/node-pty/build/Release/pty.node",
+          "/node_modules/node-pty/build/Makefile",
+          "/node_modules/node-pty/build/Release/obj.target/pty/src/unix/pty.o",
+        ],
+        "linux",
+      ).forbidden,
+    ).toEqual([
+      "/node_modules/node-pty/build/Makefile",
+      "/node_modules/node-pty/build/Release/obj.target/pty/src/unix/pty.o",
+    ]);
+  });
+
+  it("rejects private-looking files anywhere in an extracted package tree", () => {
+    expect(
+      inspectForbiddenPackagedEntries([
+        "/resources/app.asar",
+        "/resources/private-key.pem",
+        "/usr/share/omxterm/session-transcript.txt",
+      ]),
+    ).toEqual([
+      "/resources/private-key.pem",
+      "/usr/share/omxterm/session-transcript.txt",
+    ]);
   });
 
   it("reports a missing runtime asset", () => {

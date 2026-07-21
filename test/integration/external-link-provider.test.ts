@@ -52,6 +52,7 @@ async function linksFor(
   data: string,
   cols = 120,
   activate: (value: string) => void = vi.fn(),
+  platform = "MacIntel",
 ): Promise<{ links: ILink[]; activate: (value: string) => void }> {
   const terminal = new Terminal({ cols, rows: 8 });
   let provider: ILinkProvider | undefined;
@@ -59,7 +60,7 @@ async function linksFor(
     provider = value;
     return { dispose: vi.fn() };
   });
-  registerVisibleWebLinks(terminal, activate);
+  registerVisibleWebLinks(terminal, activate, platform);
   await write(terminal, data);
   const links = await new Promise<ILink[]>((resolve) =>
     provider!.provideLinks(1, (value) => resolve(value ?? [])),
@@ -211,7 +212,7 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
       const terminal = new Terminal({ cols: 120, rows: 8 });
       const ignoredOscLinks = ignoreOscLinks(terminal);
       const activate = vi.fn();
-      const webLinks = registerVisibleWebLinks(terminal, activate);
+      const webLinks = registerVisibleWebLinks(terminal, activate, "MacIntel");
       await write(terminal, start.slice(0, -1));
       await write(terminal, `${start.slice(-1)}https://visible`);
       await write(terminal, ".test/path");
@@ -246,31 +247,41 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
     },
   );
 
-  it("requires a primary-button Cmd+click or Ctrl+click and forwards the provider string unchanged once per gesture", async () => {
-    const { links, activate } = await linksFor("https://example.test/a");
-    const link = links[0]!;
-    link.activate(new MouseEvent("click", { button: 0 }), link.text);
-    link.activate(
-      new MouseEvent("click", { button: 0, metaKey: true }),
-      link.text,
-    );
-    link.activate(
-      new MouseEvent("click", { button: 0, metaKey: true }),
-      link.text,
-    );
-    link.activate(
-      new MouseEvent("click", { button: 0, ctrlKey: true }),
-      link.text,
-    );
-    link.activate(
-      new MouseEvent("click", { button: 1, metaKey: true }),
-      link.text,
-    );
-    expect(activate).toHaveBeenCalledTimes(3);
-    expect(activate).toHaveBeenNthCalledWith(1, "https://example.test/a");
-    expect(activate).toHaveBeenNthCalledWith(2, "https://example.test/a");
-    expect(activate).toHaveBeenNthCalledWith(3, "https://example.test/a");
-  });
+  it.each([
+    ["macOS", "MacIntel", true],
+    ["Linux", "Linux aarch64", false],
+  ])(
+    "requires only the native primary-button modifier on %s",
+    async (_name, platform, usesMeta) => {
+      const { links, activate } = await linksFor(
+        "https://example.test/a",
+        120,
+        vi.fn(),
+        platform,
+      );
+      const link = links[0]!;
+      link.activate(new MouseEvent("click", { button: 0 }), link.text);
+      link.activate(
+        new MouseEvent("click", { button: 0, metaKey: usesMeta }),
+        link.text,
+      );
+      link.activate(
+        new MouseEvent("click", { button: 0, ctrlKey: !usesMeta }),
+        link.text,
+      );
+      link.activate(
+        new MouseEvent("click", {
+          button: 1,
+          metaKey: usesMeta,
+          ctrlKey: !usesMeta,
+        }),
+        link.text,
+      );
+      expect(activate).toHaveBeenCalledExactlyOnceWith(
+        "https://example.test/a",
+      );
+    },
+  );
 
   it("does not expose uppercase protocols as visible links", async () => {
     const { links } = await linksFor(

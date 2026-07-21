@@ -8,6 +8,8 @@ export function inspectAsarEntries(
   platform?: "darwin" | "linux",
 ): AsarInspection;
 
+export function inspectForbiddenPackagedEntries(entries: string[]): string[];
+
 export interface IcnsRepresentation {
   readonly name: string;
   readonly width: number;

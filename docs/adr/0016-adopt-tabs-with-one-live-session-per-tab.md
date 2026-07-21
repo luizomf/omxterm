@@ -36,7 +36,12 @@ as the final fallback. The keybind vocabulary gains `newTab`, `closeTab`,
 macOS convention, `Cmd+W` moves from `closeWindow` to `closeTab` and
 `closeWindow` becomes `Cmd+Shift+W`; tab cycling defaults to `Ctrl+Tab` and
 `Ctrl+Shift+Tab`, and tab selection to `Cmd+1` through `Cmd+9` (literal
-positions). All remain remappable and duplicate-checked on the effective map.
+positions). On Linux, application shortcuts preserve ordinary terminal `Ctrl`
+input: tab cycling uses `Ctrl+PageDown` and `Ctrl+PageUp`, literal tab selection
+uses `Alt+1` through `Alt+9`, and tab/window actions use the conventional
+shifted terminal shortcuts recorded in the product contract. These are native
+platform defaults, not a profile system. All remain remappable and
+duplicate-checked on the effective native map.
 
 Session restoration, workspaces, splits, moving tabs between windows, and
 in-window tab reordering stay out of this round — deferred, not foreclosed.

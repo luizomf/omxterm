@@ -69,6 +69,21 @@ const forbiddenEntryPatterns = [
   /\.test\.js$/iu,
   /(?:credential|private[_-]?key|session[_-]?transcript)/iu,
 ];
+
+export function inspectForbiddenPackagedEntries(entries) {
+  return entries
+    .map((entry) => (entry.startsWith("/") ? entry : `/${entry}`))
+    .filter((entry) =>
+      forbiddenEntryPatterns.some((pattern) => pattern.test(entry)),
+    );
+}
+
+const allowedLinuxNodePtyBuildEntries = new Set([
+  "/node_modules/node-pty/build",
+  "/node_modules/node-pty/build/Release",
+  "/node_modules/node-pty/build/Release/pty.node",
+]);
+
 export function inspectAsarEntries(entries, platform = "darwin") {
   if (platform !== "darwin" && platform !== "linux")
     throw new Error(`Unsupported packaged platform: ${platform}`);
@@ -78,16 +93,21 @@ export function inspectAsarEntries(entries, platform = "darwin") {
   const missing = requiredAsarEntries.filter(
     (entry) => !normalized.includes(entry),
   );
+  const privateLooking = new Set(inspectForbiddenPackagedEntries(normalized));
   const forbidden = normalized.filter(
     (entry) =>
-      forbiddenEntryPatterns.some((pattern) => pattern.test(entry)) ||
+      privateLooking.has(entry) ||
       (platform === "linux" &&
         entry.includes("/node_modules/node-pty/prebuilds/")) ||
+      (platform === "linux" &&
+        entry.startsWith("/node_modules/node-pty/build") &&
+        !allowedLinuxNodePtyBuildEntries.has(entry)) ||
       (platform === "darwin" &&
         entry.includes("/node_modules/node-pty/build/")) ||
       (platform === "darwin" &&
         entry.includes("/node_modules/node-pty/prebuilds/") &&
-        !entry.includes("/node_modules/node-pty/prebuilds/darwin-arm64/")),
+        entry !== "/node_modules/node-pty/prebuilds/darwin-arm64" &&
+        !entry.startsWith("/node_modules/node-pty/prebuilds/darwin-arm64/")),
   );
   return { missing, forbidden };
 }
@@ -318,33 +338,49 @@ async function defaultApplicationPath() {
   );
 }
 
-function waitForExit(child, timeoutMs) {
-  return new Promise((resolve) => {
-    if (child.exitCode !== null || child.signalCode !== null)
-      return resolve(true);
-    const timer = setTimeout(() => resolve(false), timeoutMs);
-    child.once("exit", () => {
-      clearTimeout(timer);
-      resolve(true);
-    });
-  });
+async function listTreeEntries(root, directory = root) {
+  const entries = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const absolute = path.join(directory, entry.name);
+    const relative = `/${path.relative(root, absolute).split(path.sep).join("/")}`;
+    entries.push(relative);
+    if (entry.isDirectory())
+      entries.push(...(await listTreeEntries(root, absolute)));
+  }
+  return entries;
+}
+
+function signalProcessGroup(processGroupId, signal) {
+  try {
+    process.kill(-processGroupId, signal);
+    return true;
+  } catch (cause) {
+    if (cause?.code === "ESRCH") return false;
+    throw cause;
+  }
+}
+
+function processGroupExists(processGroupId) {
+  return signalProcessGroup(processGroupId, 0);
+}
+
+async function waitForProcessGroupExit(processGroupId, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (processGroupExists(processGroupId)) {
+    if (Date.now() >= deadline) return false;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return true;
 }
 
 async function stopProcessGroup(child) {
-  if (!child.pid || child.exitCode !== null || child.signalCode !== null)
-    return;
-  try {
-    process.kill(-child.pid, "SIGTERM");
-  } catch (cause) {
-    if (cause?.code !== "ESRCH") throw cause;
-  }
-  if (await waitForExit(child, 2_000)) return;
-  try {
-    process.kill(-child.pid, "SIGKILL");
-  } catch (cause) {
-    if (cause?.code !== "ESRCH") throw cause;
-  }
-  await waitForExit(child, 2_000);
+  if (!child.pid) return;
+  const processGroupId = child.pid;
+  if (!signalProcessGroup(processGroupId, "SIGTERM")) return;
+  if (await waitForProcessGroupExit(processGroupId, 2_000)) return;
+  if (!signalProcessGroup(processGroupId, "SIGKILL")) return;
+  if (!(await waitForProcessGroupExit(processGroupId, 2_000)))
+    throw new Error(`Packaged process group ${processGroupId} did not exit`);
 }
 
 async function waitForStartup(logFile, child, stderrText) {
@@ -415,6 +451,13 @@ export async function verifyPackagedApplication(applicationPath) {
         maxBuffer: 16 * 1024 * 1024,
       });
       applicationRoot = path.join(extractionRoot, "squashfs-root");
+      const forbidden = inspectForbiddenPackagedEntries(
+        await listTreeEntries(applicationRoot),
+      );
+      if (forbidden.length > 0)
+        throw new Error(
+          `Development/private-looking files were packaged outside app.asar: ${forbidden.join(", ")}`,
+        );
     }
 
     const resources =

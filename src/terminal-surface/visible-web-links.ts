@@ -13,11 +13,14 @@ export function ignoreOscLinks(terminal: Terminal): { dispose(): void } {
 export function registerVisibleWebLinks(
   terminal: Terminal,
   requestActivation: (url: string) => void,
+  platform: string = navigator.platform,
 ): WebLinksAddon {
   const addon = new WebLinksAddon(
     (event, url) => {
-      if ((event.metaKey || event.ctrlKey) && event.button === 0)
-        requestActivation(url);
+      const modifier = platform.startsWith("Mac")
+        ? event.metaKey
+        : event.ctrlKey;
+      if (modifier && event.button === 0) requestActivation(url);
     },
     { urlRegex: visibleWebUrlRegex },
   );
