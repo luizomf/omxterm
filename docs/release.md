@@ -1,8 +1,36 @@
-# Local arm64 release procedure
+# ARM64 release policy and macOS procedure
 
-This procedure prepares and verifies the unsigned OMXTerm Release Artifact. It
-does not authorize a tag, GitHub Release, upload, signing, notarization, or any
-other publication. Those actions require separate approval from Otávio.
+The policy below applies to all initial OMXTerm Release Artifacts. The detailed
+procedure in the remainder of this document prepares and verifies the unsigned
+macOS DMG only. It does not authorize a tag, GitHub Release, upload, signing,
+notarization, or any other publication. Those actions require separate approval
+from Otávio.
+
+## Cross-platform release policy
+
+The initial Supported Platforms and artifact formats are macOS arm64 DMG, Linux
+arm64 AppImage, and Windows arm64 NSIS. Initial artifacts are unsigned; signing,
+Apple notarization, certificates, and paid signing services are deferred.
+
+While the repository is private, every release candidate is built locally and
+natively. macOS builds run on Otávio's current Apple Silicon Mac. Linux arm64
+and Windows arm64 builds run in native Parallels VM clones and use the VM's
+native filesystem, never a host shared folder. Each target requires its own
+automated checks and native operating-system behavior verification, recorded
+against the exact artifact being considered. Rebuilding or changing one
+artifact invalidates that artifact's acceptance evidence.
+
+Exact-artifact acceptance and publication are separate owner gates. Acceptance
+never authorizes a tag, upload, or GitHub Release; publication remains manual
+and requires separate authorization from Otávio. x64, Intel macOS, additional
+package formats, signing and notarization, paid CI, and a multi-platform CI
+matrix are deferred until the repository is public.
+
+The macOS steps below remain the complete implemented release procedure for
+that platform and preserve its Gatekeeper policy. Platform-specific commands,
+artifact records, and manual checklists for Linux and Windows will be added with
+their packaging implementations; this policy does not imply that those
+procedures already exist.
 
 ## Version selection and consistency
 
@@ -19,7 +47,7 @@ filename, and GitHub Release must all identify that same version.
 ## Build and automated verification
 
 Use an accepted release commit for `X.Y.Z`, with `vX.Y.Z` recorded as the
-intended tag, on the Supported Platform: Otávio's current Apple Silicon
+intended tag, on the macOS Supported Platform: Otávio's current Apple Silicon
 (`arm64`) Mac. Install Node.js 22 or newer, check out the accepted source
 without local or private files, and run:
 

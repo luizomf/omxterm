@@ -6,12 +6,13 @@ OMXTerm product behavior.
 ## Product
 
 OMXTerm is Otávio's personal, open-source desktop terminal. It opens a normal
-local shell in a standard macOS window with the small native title bar and gives
-the Terminal Surface all remaining content space. It is not a Ghostty competitor
+local shell in a standard native window with a small title bar and gives the
+Terminal Surface all remaining content space. It is not a Ghostty competitor
 claim, an SSH bastion, an AI product, a session manager, or an IDE.
 
-The supported target is the current Apple Silicon (`arm64`) Mac. Other
-platforms and Intel Macs are future possibilities, not current promises.
+The initial Supported Platforms are macOS arm64, Linux arm64, and Windows
+arm64. x64, Intel macOS, and other operating systems are deferred rather than
+current support commitments.
 
 ## Product scope
 
@@ -33,7 +34,8 @@ OMXTerm must:
   on the packaged macOS Dock, Finder, application-switcher, and DMG surfaces;
 - read strict, versioned JSON configuration and write bounded local JSONL
   operational logs;
-- package a ready-to-run arm64 `.dmg` from an accepted version.
+- package ready-to-run arm64 artifacts from an accepted version: DMG for
+  macOS, AppImage for Linux, and NSIS for Windows.
 
 AI assistance, splits, saved or reconnectable sessions, shell integration,
 profiles, a theme picker or catalog, live configuration reload, automatic
@@ -282,27 +284,37 @@ Surface.
 
 The project uses the MIT License and follows the documented
 [Semantic Versioning policy](versioning.md). An accepted initial-development
-version may be tagged `v0.y.z`. Otávio builds and tests the exact arm64 `.dmg`
-locally, then attaches it and a SHA-256 checksum to the canonical GitHub
-Release.
+version may be tagged `v0.y.z`. Release candidates are built locally and
+natively on each Supported Platform: macOS on Otávio's current Apple Silicon
+Mac, and Linux arm64 and Windows arm64 in native Parallels VM clones using the
+VM's native filesystem, never shared folders. The initial formats are DMG,
+AppImage, and NSIS respectively.
 
-The artifact is intentionally unsigned and not notarized. Release notes must
-explain the macOS Gatekeeper warning, link to Apple's current `Open Anyway`
-instructions, and never recommend disabling system-wide security. The claim is
-limited to provenance: this is the open-source build Otávio published and uses,
-not software independently audited or approved by Apple.
+Each exact artifact requires its own recorded automated and native
+operating-system verification and owner acceptance. Publication remains manual
+and requires separate owner authorization after acceptance; published
+artifacts include SHA-256 checksums. Initial artifacts are intentionally
+unsigned. Signing, Apple notarization, certificates, x64, Intel macOS,
+additional formats, paid CI, and a multi-platform CI matrix are deferred until
+the repository is public. macOS release notes must explain the Gatekeeper
+warning, link to Apple's current `Open Anyway` instructions, and never recommend
+disabling system-wide security. Provenance claims do not state that the
+software was independently audited or approved by a platform vendor.
 
 ## Acceptance boundary
 
 Automated tests cover configuration validation, tab and window lifecycle and
 cleanup, PTY resize and bounded input flow, Unicode, bracketed and protected
 paste, title sanitization, URL validation, OSC 52 restrictions, log
-redaction/rotation,
-renderer IPC boundaries, and packaged startup. A manual release check exercises
-the exact `.dmg` on the supported Mac, including first launch, shell exit,
-multiple windows and tabs, tmux/TUI use, clipboard, zoom, always-on-top,
-application-icon presentation at small and large display sizes, and Gatekeeper
-documentation.
+redaction/rotation, renderer IPC boundaries, and packaged startup. Each release
+candidate receives automated and native operating-system behavior verification
+on its target, recorded against the exact artifact. The existing macOS manual
+release check exercises the exact DMG on the supported Mac, including first
+launch, shell exit, multiple windows and tabs, tmux/TUI use, clipboard, zoom,
+always-on-top, application-icon presentation at small and large display sizes,
+and Gatekeeper documentation. Linux and Windows receive equally native checks;
+their detailed procedures land with their packaging implementations rather than
+being inferred from the macOS checklist.
 
 The ADRs in `docs/adr/` own the reasoning behind the durable choices; this file
 owns the current observable product contract.

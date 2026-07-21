@@ -1,5 +1,10 @@
 # Publish tested unsigned arm64 releases
 
+This ADR owns the macOS-specific artifact and Gatekeeper policy. The broader
+Supported Platform, native-build, verification, and publication policy is
+recorded in
+[ADR 0019](0019-support-native-arm64-releases-on-macos-linux-and-windows.md).
+
 Each accepted OMXTerm version may be tagged as `v0.x.y` and published as a
 ready-to-run Apple Silicon macOS `.dmg`. Otávio builds and tests the exact
 artifact locally on the supported machine before attaching it and a SHA-256

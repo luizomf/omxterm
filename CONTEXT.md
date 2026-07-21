@@ -31,11 +31,11 @@ without defining the terminal's identity or being required for normal operation.
 _Avoid_: terminal core, autonomous agent, smart terminal
 
 **Supported Platform**:
-An operating system on which OMXTerm is deliberately built, tested, and
-claimed to work. The initial target is Apple Silicon (`arm64`) on Otávio's
-current macOS environment. Intel Macs and possible future operating-system
-ports are not support commitments until they are deliberately tested.
-_Avoid_: compatible platform, planned platform
+An operating-system and architecture pair on which OMXTerm is deliberately
+built, tested, and claimed to work. The initial Supported Platforms are macOS
+arm64, Linux arm64, and Windows arm64. x64 and Intel macOS are deferred rather
+than support commitments.
+_Avoid_: compatible platform, planned platform, support tier
 
 **Terminal Surface**:
 The full-bleed area in which the terminal is rendered and operated. It is the
@@ -213,14 +213,14 @@ window is unfocused.
 _Avoid_: notification, alarm, terminal error
 
 **Release Artifact**:
-A ready-to-run Apple Silicon macOS build published from an accepted version tag,
-alongside the public source code and a reproducible local build path. Otávio
-builds and tests the exact `.dmg` locally before attaching it and its SHA-256
-checksum to the canonical GitHub Release. It is intentionally not Developer ID-
-signed or Apple-notarized. Release documentation explains the resulting one-
-time Gatekeeper review and links to Apple's current instructions without asking
-users to disable system-wide security protections. Otávio may attest that this
-is the artifact he publishes and uses; the statement is not an independent
-security audit, an Apple trust decision, or a guarantee about all code and
-dependencies.
+A ready-to-run native arm64 package published from an accepted version tag
+alongside the public source code and a reproducible local build path. The
+initial formats are DMG for macOS, AppImage for Linux, and NSIS for Windows.
+Otávio accepts each exact artifact after native build and verification, then
+separately authorizes any manual publication with its SHA-256 checksum. Initial
+artifacts are unsigned. macOS release documentation additionally explains its
+Gatekeeper review and links to Apple's current instructions without asking
+users to disable system-wide security protections. A provenance statement is
+not an independent security audit, platform trust decision, or guarantee about
+all code and dependencies.
 _Avoid_: signed release, notarized release, compile-only distribution
