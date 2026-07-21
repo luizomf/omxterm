@@ -246,7 +246,7 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
     },
   );
 
-  it("requires a primary-button Cmd+click and forwards the provider string unchanged once per gesture", async () => {
+  it("requires a primary-button Cmd+click or Ctrl+click and forwards the provider string unchanged once per gesture", async () => {
     const { links, activate } = await linksFor("https://example.test/a");
     const link = links[0]!;
     link.activate(new MouseEvent("click", { button: 0 }), link.text);
@@ -259,12 +259,17 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
       link.text,
     );
     link.activate(
+      new MouseEvent("click", { button: 0, ctrlKey: true }),
+      link.text,
+    );
+    link.activate(
       new MouseEvent("click", { button: 1, metaKey: true }),
       link.text,
     );
-    expect(activate).toHaveBeenCalledTimes(2);
+    expect(activate).toHaveBeenCalledTimes(3);
     expect(activate).toHaveBeenNthCalledWith(1, "https://example.test/a");
     expect(activate).toHaveBeenNthCalledWith(2, "https://example.test/a");
+    expect(activate).toHaveBeenNthCalledWith(3, "https://example.test/a");
   });
 
   it("does not expose uppercase protocols as visible links", async () => {

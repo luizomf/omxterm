@@ -20,7 +20,7 @@ const projectRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
-const defaultApplicationPath = path.join(
+const defaultMacApplicationPath = path.join(
   projectRoot,
   "release",
   "mac-arm64",
@@ -64,21 +64,30 @@ const forbiddenEntryPatterns = [
   /(^|\/)\.(?:env|git|npmrc)(?:\.|\/|$)/iu,
   /(^|\/)(?:src|test|tests|scripts|typings)(?:\/|$)/iu,
   /(?:^|\/)node_modules\/node-addon-api(?:\/|$)/iu,
-  /(?:^|\/)node_modules\/node-pty\/(?:deps|prebuilds\/(?:darwin-x64|win32-))/iu,
+  /(?:^|\/)node_modules\/node-pty\/deps(?:\/|$)/iu,
   /\.(?:map|pem|p12|key)$/iu,
   /\.test\.js$/iu,
   /(?:credential|private[_-]?key|session[_-]?transcript)/iu,
 ];
-
-export function inspectAsarEntries(entries) {
+export function inspectAsarEntries(entries, platform = "darwin") {
+  if (platform !== "darwin" && platform !== "linux")
+    throw new Error(`Unsupported packaged platform: ${platform}`);
   const normalized = entries.map((entry) =>
     entry.startsWith("/") ? entry : `/${entry}`,
   );
   const missing = requiredAsarEntries.filter(
-    (required) => !normalized.includes(required),
+    (entry) => !normalized.includes(entry),
   );
-  const forbidden = normalized.filter((entry) =>
-    forbiddenEntryPatterns.some((pattern) => pattern.test(entry)),
+  const forbidden = normalized.filter(
+    (entry) =>
+      forbiddenEntryPatterns.some((pattern) => pattern.test(entry)) ||
+      (platform === "linux" &&
+        entry.includes("/node_modules/node-pty/prebuilds/")) ||
+      (platform === "darwin" &&
+        entry.includes("/node_modules/node-pty/build/")) ||
+      (platform === "darwin" &&
+        entry.includes("/node_modules/node-pty/prebuilds/") &&
+        !entry.includes("/node_modules/node-pty/prebuilds/darwin-arm64/")),
   );
   return { missing, forbidden };
 }
@@ -137,10 +146,16 @@ async function assertSameFile(source, packaged) {
     );
 }
 
-async function inspectArchitecture(file, label) {
+async function inspectArchitecture(file, label, platform) {
   const { stdout } = await execFile("file", [file]);
-  if (!stdout.includes("arm64") || stdout.includes("x86_64"))
-    throw new Error(`${label} is not an arm64-only Mach-O: ${stdout.trim()}`);
+  const isArm64 =
+    platform === "darwin"
+      ? stdout.includes("arm64") && !stdout.includes("x86_64")
+      : stdout.includes("ARM aarch64") && !stdout.includes("x86-64");
+  if (!isArm64)
+    throw new Error(
+      `${label} is not an arm64-only ${platform === "darwin" ? "Mach-O" : "ELF"}: ${stdout.trim()}`,
+    );
 }
 
 async function inspectUnsignedApplication(applicationPath) {
@@ -233,12 +248,21 @@ function parsePackageVersion(contents, label) {
   return metadata.version;
 }
 
-async function inspectApplicationVersion(applicationPath, asar) {
+async function sourceVersion() {
   const sourcePackagePath = path.join(projectRoot, "package.json");
-  const sourceVersion = parsePackageVersion(
+  return parsePackageVersion(
     await readFile(sourcePackagePath, "utf8"),
     sourcePackagePath,
   );
+}
+
+async function inspectApplicationVersion({
+  applicationRoot,
+  asar,
+  platform,
+  artifactPath,
+}) {
+  const expectedVersion = await sourceVersion();
   let packagedPackage;
   try {
     packagedPackage = extractFile(asar, "package.json");
@@ -249,20 +273,49 @@ async function inspectApplicationVersion(applicationPath, asar) {
     packagedPackage.toString("utf8"),
     `${asar}/package.json`,
   );
-  const infoPlist = path.join(applicationPath, "Contents", "Info.plist");
-  const { stdout } = await execFile("plutil", [
-    "-extract",
-    "CFBundleShortVersionString",
-    "raw",
-    "-o",
-    "-",
-    infoPlist,
-  ]);
+  if (platform === "darwin") {
+    const infoPlist = path.join(applicationRoot, "Contents", "Info.plist");
+    const { stdout } = await execFile("plutil", [
+      "-extract",
+      "CFBundleShortVersionString",
+      "raw",
+      "-o",
+      "-",
+      infoPlist,
+    ]);
+    inspectApplicationVersions({
+      sourceVersion: expectedVersion,
+      packagedVersion,
+      bundleVersion: stdout.trim(),
+    });
+    return;
+  }
+
   inspectApplicationVersions({
-    sourceVersion,
+    sourceVersion: expectedVersion,
     packagedVersion,
-    bundleVersion: stdout.trim(),
+    bundleVersion: expectedVersion,
   });
+  const expectedName = `OMXTerm-${expectedVersion}-arm64.AppImage`;
+  if (path.basename(artifactPath) !== expectedName)
+    throw new Error(
+      `Linux artifact filename ${path.basename(artifactPath)} differs from ${expectedName}`,
+    );
+  const desktopFile = path.join(applicationRoot, "omxterm.desktop");
+  const desktopContents = await readFile(desktopFile, "utf8");
+  if (!desktopContents.includes(`X-AppImage-Version=${expectedVersion}\n`))
+    throw new Error(
+      `Packaged AppImage desktop version differs from source package version ${expectedVersion}`,
+    );
+}
+
+async function defaultApplicationPath() {
+  if (process.platform === "darwin") return defaultMacApplicationPath;
+  return path.join(
+    projectRoot,
+    "release",
+    `OMXTerm-${await sourceVersion()}-arm64.AppImage`,
+  );
 }
 
 function waitForExit(child, timeoutMs) {
@@ -326,135 +379,211 @@ async function waitForStartup(logFile, child, stderrText) {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   throw new Error(
-    `Timed out waiting for packaged startup events: ${[...requiredEvents].join(", ")}`,
+    `Timed out waiting for packaged startup events: ${[...requiredEvents].join(", ")}: ${stderrText()}`,
   );
 }
 
-export async function verifyPackagedApplication(
-  applicationPath = defaultApplicationPath,
-) {
-  if (process.platform !== "darwin" || process.arch !== "arm64")
-    throw new Error("Packaged startup verification requires arm64 macOS");
-
-  const resources = path.join(applicationPath, "Contents", "Resources");
-  const executable = path.join(applicationPath, "Contents", "MacOS", "OMXTerm");
-  const asar = path.join(resources, "app.asar");
-  const nativeRoot = path.join(
-    resources,
-    "app.asar.unpacked",
-    "node_modules",
-    "node-pty",
-    "prebuilds",
-    "darwin-arm64",
-  );
-
-  await inspectArchitecture(executable, "OMXTerm executable");
-  await inspectArchitecture(
-    path.join(nativeRoot, "pty.node"),
-    "node-pty module",
-  );
-  await inspectArchitecture(
-    path.join(nativeRoot, "spawn-helper"),
-    "node-pty spawn helper",
-  );
-  await inspectApplicationIcon(applicationPath);
-  await inspectApplicationVersion(applicationPath, asar);
-  await inspectUnsignedApplication(applicationPath);
-
-  const asarInspection = inspectAsarEntries(await listPackage(asar));
-  if (asarInspection.missing.length > 0)
+export async function verifyPackagedApplication(applicationPath) {
+  if (
+    (process.platform !== "darwin" && process.platform !== "linux") ||
+    process.arch !== "arm64"
+  )
     throw new Error(
-      `Packaged runtime assets are missing: ${asarInspection.missing.join(", ")}`,
-    );
-  if (asarInspection.forbidden.length > 0)
-    throw new Error(
-      `Development/private-looking files were packaged: ${asarInspection.forbidden.join(", ")}`,
+      "Packaged startup verification requires arm64 macOS or Linux",
     );
 
-  await Promise.all([
-    assertSameFile(
-      path.join(projectRoot, "LICENSE"),
-      path.join(resources, "LICENSE.txt"),
-    ),
-    assertSameFile(
-      path.join(projectRoot, "THIRD_PARTY_NOTICES.md"),
-      path.join(resources, "THIRD_PARTY_NOTICES.md"),
-    ),
-    assertSameFile(
-      path.join(projectRoot, "assets", "fonts", "OFL.txt"),
-      path.join(resources, "licenses", "JetBrainsMono-OFL.txt"),
-    ),
-    assertSameFile(
-      path.join(projectRoot, "node_modules", "@xterm", "xterm", "LICENSE"),
-      path.join(resources, "licenses", "xterm.txt"),
-    ),
-    assertSameFile(
-      path.join(projectRoot, "node_modules", "@xterm", "addon-fit", "LICENSE"),
-      path.join(resources, "licenses", "xterm-addon-fit.txt"),
-    ),
-    assertSameFile(
-      path.join(
-        projectRoot,
-        "node_modules",
-        "@xterm",
-        "addon-web-links",
-        "LICENSE",
+  const platform = process.platform;
+  const packagedPath = path.resolve(
+    applicationPath ?? (await defaultApplicationPath()),
+  );
+  let extractionRoot;
+  let applicationRoot = packagedPath;
+
+  try {
+    if (platform === "linux") {
+      await inspectArchitecture(packagedPath, "AppImage", platform);
+      const { stdout: signature } = await execFile(packagedPath, [
+        "--appimage-signature",
+      ]);
+      if (signature.trim().length > 0)
+        throw new Error("AppImage unexpectedly contains an embedded signature");
+      extractionRoot = await mkdtemp(
+        path.join(tmpdir(), "omxterm-appimage-inspection-"),
+      );
+      await execFile(packagedPath, ["--appimage-extract"], {
+        cwd: extractionRoot,
+        maxBuffer: 16 * 1024 * 1024,
+      });
+      applicationRoot = path.join(extractionRoot, "squashfs-root");
+    }
+
+    const resources =
+      platform === "darwin"
+        ? path.join(applicationRoot, "Contents", "Resources")
+        : path.join(applicationRoot, "resources");
+    const executable =
+      platform === "darwin"
+        ? path.join(applicationRoot, "Contents", "MacOS", "OMXTerm")
+        : path.join(applicationRoot, "omxterm");
+    const asar = path.join(resources, "app.asar");
+    const nativeRoot = path.join(
+      resources,
+      "app.asar.unpacked",
+      "node_modules",
+      "node-pty",
+      ...(platform === "darwin"
+        ? ["prebuilds", "darwin-arm64"]
+        : ["build", "Release"]),
+    );
+
+    await inspectArchitecture(executable, "OMXTerm executable", platform);
+    await inspectArchitecture(
+      path.join(nativeRoot, "pty.node"),
+      "node-pty module",
+      platform,
+    );
+    if (platform === "darwin") {
+      await inspectArchitecture(
+        path.join(nativeRoot, "spawn-helper"),
+        "node-pty spawn helper",
+        platform,
+      );
+      await inspectApplicationIcon(applicationRoot);
+      await inspectUnsignedApplication(applicationRoot);
+    } else {
+      await assertSameFile(
+        path.join(projectRoot, "assets", "application-icon.png"),
+        path.join(
+          applicationRoot,
+          "usr",
+          "share",
+          "icons",
+          "hicolor",
+          "1024x1024",
+          "apps",
+          "omxterm.png",
+        ),
+      );
+    }
+    await inspectApplicationVersion({
+      applicationRoot,
+      asar,
+      platform,
+      artifactPath: packagedPath,
+    });
+
+    const asarInspection = inspectAsarEntries(
+      await listPackage(asar),
+      platform,
+    );
+    if (asarInspection.missing.length > 0)
+      throw new Error(
+        `Packaged runtime assets are missing: ${asarInspection.missing.join(", ")}`,
+      );
+    if (asarInspection.forbidden.length > 0)
+      throw new Error(
+        `Development/private-looking files were packaged: ${asarInspection.forbidden.join(", ")}`,
+      );
+
+    await Promise.all([
+      assertSameFile(
+        path.join(projectRoot, "LICENSE"),
+        path.join(resources, "LICENSE.txt"),
       ),
-      path.join(resources, "licenses", "xterm-addon-web-links.txt"),
-    ),
-    assertSameFile(
-      path.join(projectRoot, "node_modules", "node-pty", "LICENSE"),
-      path.join(resources, "licenses", "node-pty.txt"),
-    ),
-    stat(path.join(resources, "LICENSE.electron.txt")),
-    stat(path.join(resources, "LICENSES.chromium.html")),
-  ]);
-  try {
-    await stat(path.join(resources, "default_app.asar"));
-    throw new Error("Electron's development default_app.asar was packaged");
-  } catch (cause) {
-    if (cause?.code !== "ENOENT") throw cause;
-  }
+      assertSameFile(
+        path.join(projectRoot, "THIRD_PARTY_NOTICES.md"),
+        path.join(resources, "THIRD_PARTY_NOTICES.md"),
+      ),
+      assertSameFile(
+        path.join(projectRoot, "assets", "fonts", "OFL.txt"),
+        path.join(resources, "licenses", "JetBrainsMono-OFL.txt"),
+      ),
+      assertSameFile(
+        path.join(projectRoot, "node_modules", "@xterm", "xterm", "LICENSE"),
+        path.join(resources, "licenses", "xterm.txt"),
+      ),
+      assertSameFile(
+        path.join(
+          projectRoot,
+          "node_modules",
+          "@xterm",
+          "addon-fit",
+          "LICENSE",
+        ),
+        path.join(resources, "licenses", "xterm-addon-fit.txt"),
+      ),
+      assertSameFile(
+        path.join(
+          projectRoot,
+          "node_modules",
+          "@xterm",
+          "addon-web-links",
+          "LICENSE",
+        ),
+        path.join(resources, "licenses", "xterm-addon-web-links.txt"),
+      ),
+      assertSameFile(
+        path.join(projectRoot, "node_modules", "node-pty", "LICENSE"),
+        path.join(resources, "licenses", "node-pty.txt"),
+      ),
+      stat(path.join(resources, "LICENSE.electron.txt")),
+      stat(path.join(resources, "LICENSES.chromium.html")),
+    ]);
+    try {
+      await stat(path.join(resources, "default_app.asar"));
+      throw new Error("Electron's development default_app.asar was packaged");
+    } catch (cause) {
+      if (cause?.code !== "ENOENT") throw cause;
+    }
 
-  const temporaryRoot = await mkdtemp(
-    path.join(tmpdir(), "omxterm-packaged-startup-"),
-  );
-  const configurationRoot = path.join(temporaryRoot, "config");
-  const stateRoot = path.join(temporaryRoot, "state");
-  const userDataRoot = path.join(temporaryRoot, "electron-user-data");
-  await mkdir(path.join(configurationRoot, "omxterm"), { recursive: true });
-  await writeFile(
-    path.join(configurationRoot, "omxterm", "config.json"),
-    `${JSON.stringify({ version: 1, confirmClose: false })}\n`,
-  );
-  const canary = `OMXTERM_PACKAGE_SECRET_CANARY_${Date.now()}`;
-  let stderr = "";
-  const child = spawn(executable, [`--user-data-dir=${userDataRoot}`], {
-    detached: true,
-    env: {
-      ...process.env,
-      HOME: path.join(temporaryRoot, "home"),
-      XDG_CONFIG_HOME: configurationRoot,
-      XDG_STATE_HOME: stateRoot,
-      OMXTERM_PACKAGE_SECRET_CANARY: canary,
-    },
-    stdio: ["ignore", "ignore", "pipe"],
-  });
-  child.stderr.setEncoding("utf8");
-  child.stderr.on("data", (chunk) => {
-    if (stderr.length < 16_384) stderr += chunk;
-  });
+    const temporaryRoot = await mkdtemp(
+      path.join(tmpdir(), "omxterm-packaged-startup-"),
+    );
+    const configurationRoot = path.join(temporaryRoot, "config");
+    const stateRoot = path.join(temporaryRoot, "state");
+    const userDataRoot = path.join(temporaryRoot, "electron-user-data");
+    const homeRoot = path.join(temporaryRoot, "home");
+    await Promise.all([
+      mkdir(path.join(configurationRoot, "omxterm"), { recursive: true }),
+      mkdir(homeRoot, { recursive: true }),
+    ]);
+    await writeFile(
+      path.join(configurationRoot, "omxterm", "config.json"),
+      `${JSON.stringify({ version: 1, confirmClose: false })}\n`,
+    );
+    const canary = `OMXTERM_PACKAGE_SECRET_CANARY_${Date.now()}`;
+    let stderr = "";
+    const launchPath = platform === "darwin" ? executable : packagedPath;
+    const child = spawn(launchPath, [`--user-data-dir=${userDataRoot}`], {
+      detached: true,
+      env: {
+        ...process.env,
+        HOME: homeRoot,
+        XDG_CONFIG_HOME: configurationRoot,
+        XDG_STATE_HOME: stateRoot,
+        OMXTERM_PACKAGE_SECRET_CANARY: canary,
+      },
+      stdio: ["ignore", "ignore", "pipe"],
+    });
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => {
+      if (stderr.length < 16_384) stderr += chunk;
+    });
 
-  try {
-    const logFile = path.join(stateRoot, "omxterm", "logs", "omxterm.jsonl");
-    const records = await waitForStartup(logFile, child, () => stderr.trim());
-    const logText = await readFile(logFile, "utf8");
-    if (logText.includes(canary))
-      throw new Error("Operational log persisted an environment canary");
-    return { applicationPath, records: records.length };
+    try {
+      const logFile = path.join(stateRoot, "omxterm", "logs", "omxterm.jsonl");
+      const records = await waitForStartup(logFile, child, () => stderr.trim());
+      const logText = await readFile(logFile, "utf8");
+      if (logText.includes(canary))
+        throw new Error("Operational log persisted an environment canary");
+      return { applicationPath: packagedPath, records: records.length };
+    } finally {
+      await stopProcessGroup(child);
+      await rm(temporaryRoot, { recursive: true, force: true });
+    }
   } finally {
-    await stopProcessGroup(child);
-    await rm(temporaryRoot, { recursive: true, force: true });
+    if (extractionRoot)
+      await rm(extractionRoot, { recursive: true, force: true });
   }
 }
 

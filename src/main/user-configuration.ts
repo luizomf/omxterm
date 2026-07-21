@@ -23,6 +23,7 @@ import {
   canonicalAccelerator,
   DEFAULT_TERMINAL_KEYBINDS,
   isValidAccelerator,
+  terminalDefaultKeybinds,
   TERMINAL_ACTION_NAMES,
   type TerminalActionName,
   type TerminalKeybinds,
@@ -89,6 +90,7 @@ export interface LoadUserConfigurationOptions {
     fontSize: number,
   ) => Promise<InstalledFontFamilyMetrics | undefined>;
   readonly read?: typeof readFile;
+  readonly platform?: NodeJS.Platform | string;
 }
 
 export interface LoadedUserConfiguration extends UserConfiguration {
@@ -129,6 +131,14 @@ export function resolveUserConfigurationPath(
 export async function loadUserConfiguration(
   options: LoadUserConfigurationOptions,
 ): Promise<UserConfigurationLoad> {
+  const defaultKeybinds = terminalDefaultKeybinds(options.platform ?? "darwin");
+  const defaultConfiguration =
+    defaultKeybinds === DEFAULT_TERMINAL_KEYBINDS
+      ? DEFAULT_USER_CONFIGURATION
+      : Object.freeze({
+          ...DEFAULT_USER_CONFIGURATION,
+          keybinds: defaultKeybinds,
+        });
   const configurationPath = resolveUserConfigurationPath(
     options.environment,
     options.homeDirectory,
@@ -141,7 +151,7 @@ export async function loadUserConfiguration(
     reason: string,
   ): UserConfigurationLoad =>
     Object.freeze({
-      configuration: DEFAULT_USER_CONFIGURATION,
+      configuration: defaultConfiguration,
       fallback: Object.freeze({
         surface: "configuration" as const,
         error: new UserConfigurationError(configurationPath, location, reason),
@@ -153,7 +163,7 @@ export async function loadUserConfiguration(
     bytes = await (options.read ?? readFile)(configurationPath);
   } catch (cause) {
     if (isNotFound(cause) && (await isPathAbsent(configurationPath)))
-      return Object.freeze({ configuration: DEFAULT_USER_CONFIGURATION });
+      return Object.freeze({ configuration: defaultConfiguration });
     return configurationFallback(undefined, "the file could not be read");
   }
 
@@ -177,6 +187,8 @@ export async function loadUserConfiguration(
       document,
       configurationPath,
       new Set(declaredFontFamily === undefined ? [] : [declaredFontFamily]),
+      defaultKeybinds,
+      options.platform ?? "darwin",
     );
   } catch (cause) {
     if (cause instanceof UserConfigurationError)
@@ -269,6 +281,8 @@ export function validateUserConfiguration(
   document: unknown,
   configurationPath: string,
   installedFontFamilies: ReadonlySet<string>,
+  defaultKeybinds: TerminalKeybinds = DEFAULT_TERMINAL_KEYBINDS,
+  platform: string = "darwin",
 ): UserConfiguration {
   const root = requireObject(document, configurationPath, "$", "an object");
   rejectUnknownKeys(root, configurationPath, "$", [
@@ -335,6 +349,8 @@ export function validateUserConfiguration(
   const terminalKeybinds = validateTerminalKeybinds(
     keybinds,
     configurationPath,
+    defaultKeybinds,
+    platform,
   );
 
   if (theme) {
@@ -468,10 +484,12 @@ export function validateUserConfiguration(
 function validateTerminalKeybinds(
   keybinds: Record<string, unknown> | undefined,
   configurationPath: string,
+  defaultKeybinds: TerminalKeybinds,
+  platform: string,
 ): TerminalKeybinds {
-  if (!keybinds) return DEFAULT_TERMINAL_KEYBINDS;
+  if (!keybinds) return defaultKeybinds;
   const effective: Record<TerminalActionName, string> = {
-    ...DEFAULT_TERMINAL_KEYBINDS,
+    ...defaultKeybinds,
   };
   for (const action of TERMINAL_ACTION_NAMES) {
     const value = keybinds[action];
@@ -489,7 +507,7 @@ function validateTerminalKeybinds(
   // entries colliding. Diagnostics name actions, never accelerator contents.
   const actionsByAccelerator = new Map<string, TerminalActionName>();
   for (const action of TERMINAL_ACTION_NAMES) {
-    const canonical = canonicalAccelerator(effective[action]);
+    const canonical = canonicalAccelerator(effective[action], platform);
     if (canonical === undefined)
       fail(
         configurationPath,

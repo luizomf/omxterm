@@ -61,19 +61,46 @@ export const DEFAULT_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   toggleSnippets: "CommandOrControl+Shift+S",
 });
 
+const LINUX_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
+  quit: "Control+Alt+Shift+Q",
+  copy: "Control+Shift+C",
+  paste: "Control+Shift+V",
+  selectAll: "Control+Shift+A",
+  newWindow: "Control+Shift+N",
+  closeWindow: "Control+Shift+Q",
+  newTab: "Control+Shift+T",
+  closeTab: "Control+Shift+W",
+  nextTab: "Control+PageDown",
+  previousTab: "Control+PageUp",
+  selectTab1: "Alt+1",
+  selectTab2: "Alt+2",
+  selectTab3: "Alt+3",
+  selectTab4: "Alt+4",
+  selectTab5: "Alt+5",
+  selectTab6: "Alt+6",
+  selectTab7: "Alt+7",
+  selectTab8: "Alt+8",
+  selectTab9: "Alt+9",
+  zoomIn: "Control+Plus",
+  zoomOut: "Control+-",
+  actualSize: "Control+0",
+  toggleFullScreen: "Control+Shift+F",
+  toggleSnippets: "Control+Shift+S",
+});
+
+export function terminalDefaultKeybinds(platform: string): TerminalKeybinds {
+  return platform === "linux"
+    ? LINUX_TERMINAL_KEYBINDS
+    : DEFAULT_TERMINAL_KEYBINDS;
+}
+
 export const MAX_ACCELERATOR_LENGTH = 64;
 
 // Electron accelerator grammar, case-insensitive. Shift alone is excluded from
 // the required modifiers: a bare or Shift-only accelerator would swallow plain
 // typing before it reaches the terminal.
-const COMMAND_MODIFIERS = new Set([
-  "command",
-  "cmd",
-  "commandorcontrol",
-  "cmdorctrl",
-  "super",
-  "meta",
-]);
+const COMMAND_MODIFIERS = new Set(["command", "cmd", "super", "meta"]);
+const COMMAND_OR_CONTROL_MODIFIERS = new Set(["commandorcontrol", "cmdorctrl"]);
 const CONTROL_MODIFIERS = new Set(["control", "ctrl"]);
 const ALT_MODIFIERS = new Set(["alt", "option", "altgr"]);
 const SHIFT_MODIFIERS = new Set(["shift"]);
@@ -122,7 +149,10 @@ interface ParsedAccelerator {
   readonly key: string;
 }
 
-function parseAccelerator(value: string): ParsedAccelerator | undefined {
+function parseAccelerator(
+  value: string,
+  platform: string = "darwin",
+): ParsedAccelerator | undefined {
   if (
     value.length === 0 ||
     value.length > MAX_ACCELERATOR_LENGTH ||
@@ -138,6 +168,8 @@ function parseAccelerator(value: string): ParsedAccelerator | undefined {
   for (const segment of segments) {
     const modifier = segment.toLowerCase();
     if (COMMAND_MODIFIERS.has(modifier)) modifiers.add("cmd");
+    else if (COMMAND_OR_CONTROL_MODIFIERS.has(modifier))
+      modifiers.add(platform === "darwin" ? "cmd" : "ctrl");
     else if (CONTROL_MODIFIERS.has(modifier)) modifiers.add("ctrl");
     else if (ALT_MODIFIERS.has(modifier)) modifiers.add("alt");
     else if (SHIFT_MODIFIERS.has(modifier)) modifiers.add("shift");
@@ -173,18 +205,18 @@ export interface AcceleratorKeyboardInput {
   readonly shift: boolean;
 }
 
-// Resolves a key event against the effective keybind map with the shipped
-// macOS semantics of canonicalAccelerator: CommandOrControl, Super, and Meta
-// count as Command. Modifiers must match exactly so Control+Shift+Tab never
-// resolves to a bare Control+Tab binding.
+// Resolves a key event against the effective keybind map with native
+// CommandOrControl semantics. Modifiers must match exactly so a shifted
+// accelerator never resolves to its unshifted counterpart.
 export function terminalActionForKeyboardInput(
   keybinds: TerminalKeybinds,
   input: AcceleratorKeyboardInput,
+  platform: string = "darwin",
 ): TerminalActionName | undefined {
   const key = acceleratorKeyForInputKey(input.key);
   if (key === undefined) return undefined;
   for (const action of TERMINAL_ACTION_NAMES) {
-    const parsed = parseAccelerator(keybinds[action]);
+    const parsed = parseAccelerator(keybinds[action], platform);
     if (
       parsed !== undefined &&
       parsed.key === key &&
@@ -207,10 +239,14 @@ function acceleratorKeyForInputKey(inputKey: string): string | undefined {
   return NAMED_KEYS.has(key) ? canonicalKey(key) : undefined;
 }
 
-// Canonical form for duplicate detection on the shipped platform (macOS),
-// where CommandOrControl, Super, and Meta all resolve to Command.
-export function canonicalAccelerator(value: string): string | undefined {
-  const parsed = parseAccelerator(value);
+// Canonical form for native duplicate detection. CommandOrControl resolves to
+// Command on macOS and Control elsewhere; Super and Meta remain the Command
+// accelerator family represented by Electron's `meta` key-event flag.
+export function canonicalAccelerator(
+  value: string,
+  platform: string = "darwin",
+): string | undefined {
+  const parsed = parseAccelerator(value, platform);
   if (!parsed) return undefined;
   const modifiers = (["cmd", "ctrl", "alt", "shift"] as const).filter(
     (modifier) => parsed.modifiers.has(modifier),

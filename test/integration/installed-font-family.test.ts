@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { installedFontFamilyMetrics } from "../../src/main/installed-font-family";
 
-describe("macOS installed font-family availability", () => {
+describe("native installed font-family availability", () => {
   it("accepts an exact built-in family and rejects a nonexistent family", async () => {
-    const metrics = await installedFontFamilyMetrics("Helvetica", 16);
+    const installedFamily =
+      process.platform === "darwin" ? "Helvetica" : "DejaVu Sans";
+    const metrics = await installedFontFamilyMetrics(installedFamily, 16);
     expect(metrics?.cellWidth).toBeGreaterThan(0);
     expect(metrics?.cellHeight).toBeGreaterThan(0);
     await expect(

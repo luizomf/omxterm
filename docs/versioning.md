@@ -50,9 +50,11 @@ commit, all version-bearing surfaces must agree:
 - `package.json` and `package-lock.json` contain `X.Y.Z`;
 - the application reports `X.Y.Z` through `TERM_PROGRAM_VERSION`;
 - the source tag is `vX.Y.Z`;
-- the DMG is named `OMXTerm-X.Y.Z-arm64.dmg`;
-- the checksum file is named `OMXTerm-X.Y.Z-arm64.dmg.sha256`;
-- the GitHub Release targets `vX.Y.Z` and describes that exact artifact.
+- the DMG is named `OMXTerm-X.Y.Z-arm64.dmg` and its checksum file adds
+  `.sha256`;
+- the AppImage is named `OMXTerm-X.Y.Z-arm64.AppImage` and its checksum file
+  adds `.sha256`;
+- the GitHub Release targets `vX.Y.Z` and describes each exact artifact.
 
 Pre-release identifiers such as `0.2.0-rc.1` may be used later when there is a
 concrete testing need. Build metadata is not currently used. Neither form

@@ -89,6 +89,7 @@ app
       {
         environment: process.env,
         homeDirectory: account.homedir,
+        platform: process.platform,
         getInstalledFontFamilyMetrics: installedFontFamilyMetrics,
       },
       async ({ configuration: userConfiguration, fallback }) => {
@@ -146,6 +147,7 @@ app
               window.webContents,
               userConfiguration.keybinds,
               (action) => keybindActionInvocations[action](),
+              process.platform,
             );
             // Closing a window is guarded by confirmClose regardless of its
             // trigger (menu, keybind, or native close button). A window whose

@@ -140,28 +140,30 @@ actions and never rewrite this file.
 vocabulary; the values are [Electron accelerator](https://www.electronjs.org/docs/latest/api/accelerator)
 strings such as `CommandOrControl+T`. Actions you omit keep their defaults:
 
-| Action                      | Menu item          | Default                    |
-| --------------------------- | ------------------ | -------------------------- |
-| `quit`                      | Quit OMXTerm       | `CommandOrControl+Q`       |
-| `copy`                      | Copy               | `CommandOrControl+C`       |
-| `paste`                     | Paste              | `CommandOrControl+V`       |
-| `selectAll`                 | Select All         | `CommandOrControl+A`       |
-| `newWindow`                 | New Window         | `CommandOrControl+N`       |
-| `newTab`                    | New Tab            | `CommandOrControl+T`       |
-| `closeTab`                  | Close Tab          | `CommandOrControl+W`       |
-| `closeWindow`               | Close Window       | `CommandOrControl+Shift+W` |
-| `nextTab`                   | Show Next Tab      | `Control+Tab`              |
-| `previousTab`               | Show Previous Tab  | `Control+Shift+Tab`        |
-| `selectTab1` … `selectTab9` | Tab 1 … Tab 9      | `CommandOrControl+1` … `9` |
-| `zoomIn`                    | Zoom In            | `CommandOrControl+Plus`    |
-| `zoomOut`                   | Zoom Out           | `CommandOrControl+-`       |
-| `actualSize`                | Actual Size        | `CommandOrControl+0`       |
-| `toggleFullScreen`          | Toggle Full Screen | `Control+Command+F`        |
-| `toggleSnippets`            | Toggle Snippets    | `CommandOrControl+Shift+S` |
+| Action                      | macOS default              | Linux default         |
+| --------------------------- | -------------------------- | --------------------- |
+| `quit`                      | `CommandOrControl+Q`       | `Control+Alt+Shift+Q` |
+| `copy`                      | `CommandOrControl+C`       | `Control+Shift+C`     |
+| `paste`                     | `CommandOrControl+V`       | `Control+Shift+V`     |
+| `selectAll`                 | `CommandOrControl+A`       | `Control+Shift+A`     |
+| `newWindow`                 | `CommandOrControl+N`       | `Control+Shift+N`     |
+| `newTab`                    | `CommandOrControl+T`       | `Control+Shift+T`     |
+| `closeTab`                  | `CommandOrControl+W`       | `Control+Shift+W`     |
+| `closeWindow`               | `CommandOrControl+Shift+W` | `Control+Shift+Q`     |
+| `nextTab`                   | `Control+Tab`              | `Control+PageDown`    |
+| `previousTab`               | `Control+Shift+Tab`        | `Control+PageUp`      |
+| `selectTab1` … `selectTab9` | `CommandOrControl+1` … `9` | `Alt+1` … `9`         |
+| `zoomIn`                    | `CommandOrControl+Plus`    | `Control+Plus`        |
+| `zoomOut`                   | `CommandOrControl+-`       | `Control+-`           |
+| `actualSize`                | `CommandOrControl+0`       | `Control+0`           |
+| `toggleFullScreen`          | `Control+Command+F`        | `Control+Shift+F`     |
+| `toggleSnippets`            | `CommandOrControl+Shift+S` | `Control+Shift+S`     |
 
-Following the macOS convention, `Cmd+W` closes the selected tab and
-`Cmd+Shift+W` closes the whole window. `selectTab1` through `selectTab9`
-select literal tab positions; a position beyond the open tabs does nothing.
+The Linux defaults use the conventional shifted terminal shortcuts so ordinary
+`Ctrl` shell and TUI input remains PTY input. On macOS, `Cmd+W` closes the
+selected tab and `Cmd+Shift+W` closes the whole window. `selectTab1` through
+`selectTab9` select literal tab positions; a position beyond the open tabs does
+nothing.
 
 For example, to open new windows with `Cmd+G` instead of `Cmd+N`:
 
@@ -181,8 +183,9 @@ typing from the terminal, so it is rejected. Two actions can never share an
 effective accelerator: remapping `newWindow` to `CommandOrControl+W` conflicts
 with `closeTab`'s remaining default and is reported exactly like two
 explicit entries colliding (swap both explicitly if that is what you want).
-`CommandOrControl`, `Super`, and `Meta` count as `Command` on macOS when
-duplicates are judged. The menu shows the shortcut that is actually active.
+`CommandOrControl` counts as `Command` on macOS and `Control` on Linux when
+duplicates are judged; `Super` and `Meta` use Electron's Command accelerator
+family. The menu shows the shortcut that is actually active.
 Keybinds change application shortcuts only; what the shell or a TUI receives
 from the keyboard is not affected.
 
@@ -205,8 +208,9 @@ four padding sides by eye. Resizing the window or using Window Font Zoom changes
 the cell measurements without changing the configured padding, so a balance
 that looks right at one size may shift at another. OMXTerm currently refits the
 terminal grid and keeps it usable, but it does not redistribute leftover pixels
-or automatically rebalance padding. `Cmd+0` returns the window to its
-configured font size when you want to return to the size around which the
+or automatically rebalance padding. `Cmd+0` on macOS or `Ctrl+0` on Linux
+returns the window to its configured font size when you want to return to the
+size around which the
 padding was tuned.
 
 ## Snippets
@@ -243,8 +247,9 @@ Each snippet has:
 | `description` | string up to 512 characters              | none     |
 | `execute`     | boolean                                  | `false`  |
 
-`Cmd+Shift+S` (the `toggleSnippets` keybind, remappable) shows or hides the
-Snippets Sidebar in the selected window. The search field filters by name and
+`Cmd+Shift+S` on macOS or `Ctrl+Shift+S` on Linux (the `toggleSnippets`
+keybind, remappable) shows or hides the Snippets Sidebar in the selected window.
+The search field filters by name and
 description; clicking a snippet injects its body into that window's terminal
 and returns focus to the terminal. The file is reread every time the sidebar
 opens, so editing `snippets.json` and reopening the sidebar shows the new

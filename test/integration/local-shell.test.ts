@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { createLocalTerminalSession } from "../../src/main/local-terminal-session";
 
 const supportedEnvironment =
-  process.platform === "darwin" && process.arch === "arm64";
+  (process.platform === "darwin" || process.platform === "linux") &&
+  process.arch === "arm64";
 
 describe.skipIf(!supportedEnvironment)("real local PTY", () => {
   it("starts the OS-configured interactive login shell in home and carries input/output", async () => {

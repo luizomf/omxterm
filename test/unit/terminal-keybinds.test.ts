@@ -5,6 +5,7 @@ import {
   isValidAccelerator,
   TERMINAL_ACTION_NAMES,
   terminalActionForKeyboardInput,
+  terminalDefaultKeybinds,
   type AcceleratorKeyboardInput,
 } from "../../src/shared/terminal-keybinds";
 
@@ -135,7 +136,28 @@ describe("terminal keybind accelerators", () => {
     });
   });
 
-  it("ships the ADR 0016 tab defaults with Cmd+W moved to closeTab", () => {
+  it("preserves PTY control keys in the Linux defaults", () => {
+    const linux = terminalDefaultKeybinds("linux");
+    expect(linux.copy).toBe("Control+Shift+C");
+    expect(linux.paste).toBe("Control+Shift+V");
+    expect(linux.selectAll).toBe("Control+Shift+A");
+    expect(linux.newWindow).toBe("Control+Shift+N");
+    expect(linux.newTab).toBe("Control+Shift+T");
+    expect(linux.closeTab).toBe("Control+Shift+W");
+    expect(linux.closeWindow).toBe("Control+Shift+Q");
+    expect(linux.quit).toBe("Control+Alt+Shift+Q");
+    expect(linux.nextTab).toBe("Control+PageDown");
+    expect(linux.previousTab).toBe("Control+PageUp");
+    expect(canonicalAccelerator("CommandOrControl+C", "linux")).toBe(
+      canonicalAccelerator("Control+C", "linux"),
+    );
+    for (let position = 1; position <= 9; position += 1)
+      expect(linux[`selectTab${position}` as keyof typeof linux]).toBe(
+        `Alt+${position}`,
+      );
+  });
+
+  it("ships the ADR 0016 macOS tab defaults with Cmd+W moved to closeTab", () => {
     expect(DEFAULT_TERMINAL_KEYBINDS.newTab).toBe("CommandOrControl+T");
     expect(DEFAULT_TERMINAL_KEYBINDS.closeTab).toBe("CommandOrControl+W");
     expect(DEFAULT_TERMINAL_KEYBINDS.closeWindow).toBe(

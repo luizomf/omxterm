@@ -29,8 +29,8 @@ Keep proposals inside the current product boundary. Splits, saved sessions, AI
 assistance, SSH brokering, shell integration, theme catalogs, and automatic
 updates remain outside the current product contract; their presence in other
 terminals does not make them requirements. The Supported Platforms are ARM64
-macOS, Linux, and Windows, while native Linux and Windows runtime and packaging
-work remains scoped to [#60](https://github.com/luizomf/omxterm/issues/60) and
+macOS, Linux, and Windows. Linux ARM64 runtime and AppImage packaging are
+implemented, while native Windows runtime and packaging remains scoped to
 [#61](https://github.com/luizomf/omxterm/issues/61).
 
 ## Development environment
@@ -39,9 +39,15 @@ Use an ARM64 machine running macOS, Linux, or Windows with Node.js 22 or newer
 and its bundled npm. Install dependencies from the lockfile with `npm ci`.
 
 On Linux, `node-pty` builds from source and requires `python3`, `make`, and a C++
-compiler. Install those tools through the distribution's package manager before
-running `npm ci`. macOS and Windows contributors should install the native build
-toolchain requested by npm if no matching dependency prebuild is available.
+compiler (`build-essential` provides the latter two on Ubuntu). Install those
+tools through the distribution's package manager before running `npm ci`.
+OMXTerm's postinstall then rebuilds `node-pty` against the installed Electron
+Linux ARM64 runtime; do not use a module copied from Node.js, macOS, or another
+architecture. Linux also needs the `fontconfig` utilities for exact configured
+font-family validation. Running the AppImage normally requires FUSE 2, such as
+`libfuse2t64` on Ubuntu 24.04 or `libfuse2` on older Ubuntu releases. macOS and
+Windows contributors should install the native build toolchain requested by npm
+if no matching dependency prebuild is available.
 
 The portable development baseline does not require a packaged application:
 
@@ -52,10 +58,11 @@ npm run check:portable
 
 This command runs formatting checks, strict typechecking, the complete automated
 test suite, and the unpackaged build. Native packaging and operating-system
-behavior evidence are platform-owned work: macOS uses `npm run check`; Linux
-and Windows procedures land with #60 and #61. In a pull request, list every
-check run and state exactly why any relevant platform check could not run. Never
-infer a platform pass from another operating system.
+behavior evidence are platform-owned work: macOS uses `npm run check`, and a
+native Linux ARM64 clone uses `npm run check:linux`. The Windows procedure lands
+with #61. In a pull request, list every check run and state exactly why any
+relevant platform check could not run. Never infer a platform pass from another
+operating system.
 
 Do not commit local configuration, logs, terminal contents, environment files,
 credentials, release output, or other private data.
@@ -102,10 +109,13 @@ npm run build
 ```
 
 Before delivery on any Supported Platform, run `npm run check:portable`. On
-macOS, `npm run check` remains the full project command: formatting,
-typechecking, tests, ARM64 packaging, packaged-content inspection, and
-packaged-startup verification. It creates local output under `release/` but
-never publishes it.
+macOS, `npm run check` is the full native project command. On Linux ARM64, use
+`npm run check:linux`; it formats and typechecks, runs all tests including the
+real-PTY test, builds the AppImage, extracts and inspects its exact contents,
+and launches that exact AppImage with isolated configuration and state. These
+commands create local output under `release/` but never publish it. Use
+`npm run package:linux` for a non-publishing AppImage build alone, followed by
+`npm run package:verify` on the same host.
 
 If a required or platform-specific check cannot run, state exactly which check
 was not run and why in the pull request. Do not report an inferred result as a

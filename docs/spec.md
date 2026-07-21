@@ -43,9 +43,10 @@ updates, and remote terminal features are outside the current product contract.
 
 ## Window and session behavior
 
-- Launching OMXTerm creates a Terminal Window with one Terminal Tab. `Cmd+N`
-  creates another window; `Cmd+T` creates another tab in the selected window.
-  Each tab owns its own independent Live Terminal Session.
+- Launching OMXTerm creates a Terminal Window with one Terminal Tab. New Window
+  and New Tab default to `Cmd+N` and `Cmd+T` on macOS, and `Ctrl+Shift+N` and
+  `Ctrl+Shift+T` on Linux. Each tab owns its own independent Live Terminal
+  Session.
 - After its Terminal Surface mounts, an active Terminal Window gives terminal
   input DOM focus. Returning from another application or another OMXTerm window
   restores that focus only in the active Terminal Window without activating,
@@ -57,11 +58,14 @@ updates, and remote terminal features are outside the current product contract.
   its own full-width row below the fixed 30 px title inset, above the Terminal
   Surface and Snippets Sidebar row. Clicking a tab selects it; the selected
   tab's grid refits and receives terminal focus.
-- `Cmd+W` closes only the selected tab, terminating only its session. Closing
-  a window's last tab closes that window; `Cmd+Shift+W` closes the selected
-  window with all of its tabs. Closing the last window quits OMXTerm.
-- `Cmd+Q` requests one confirmation for all open windows when confirmation is
-  enabled and at least one Live Terminal Session is Busy.
+- Close Tab defaults to `Cmd+W` on macOS and `Ctrl+Shift+W` on Linux, and
+  terminates only the selected tab's session. Closing a window's last tab closes
+  that window. Close Window defaults to `Cmd+Shift+W` on macOS and
+  `Ctrl+Shift+Q` on Linux and closes all of the selected window's tabs. Closing
+  the last window quits OMXTerm.
+- Quit defaults to `Cmd+Q` on macOS and `Ctrl+Alt+Shift+Q` on Linux. It requests
+  one confirmation for all open windows when confirmation is enabled and at
+  least one Live Terminal Session is Busy.
 - `confirmClose` defaults to `true` and guards closing a tab, closing a
   window, and quitting with one confirmation per action — closing a window
   with several tabs asks once, not per tab. A close action asks only when an
@@ -75,8 +79,10 @@ updates, and remote terminal features are outside the current product contract.
   or a failure dialog, regardless of its numeric exit code.
 - A spawn failure or unexpected signal remains visible in a native error dialog
   and local log until acknowledged; the useless tab then closes.
-- Each window starts at configured font size. `Cmd++`, `Cmd+-`, and `Cmd+0`
-  affect only that window, apply to every tab in it, and are not persisted.
+- Each window starts at configured font size. Window Font Zoom defaults to
+  `Cmd++`, `Cmd+-`, and `Cmd+0` on macOS and `Ctrl++`, `Ctrl+-`, and `Ctrl+0`
+  on Linux; it affects only that window, applies to every tab in it, and is not
+  persisted.
 - The Terminal Surface and Live Terminal Session grid refit in both directions
   after Terminal Window width or height changes, after Window Font Zoom, and
   after tab selection. The xterm grid remains inside the visible content area
@@ -96,8 +102,9 @@ updates, and remote terminal features are outside the current product contract.
   delivered through Protected Paste without sending Enter. Drag navigation is
   prevented over the whole renderer document; a drop with no native files has
   no terminal side effect.
-- `View -> Toggle Snippets` (default `Cmd+Shift+S`, remappable through
-  `keybinds`) shows or hides the selected window's Snippets Sidebar beside its
+- `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and
+  `Ctrl+Shift+S` on Linux, remappable through `keybinds`) shows or hides the
+  selected window's Snippets Sidebar beside its
   Terminal Surface. The sidebar lists the snippets from `snippets.json`,
   filters them by name and description as the user types, and a click injects
   the snippet into the selected tab's Live Terminal Session and returns focus to
@@ -128,16 +135,18 @@ to the Default Shell's name; the native window title mirrors the selected tab
 and falls back to `OMXTerm`. Title contents are never logged or reported to
 the PTY.
 
-Only literal visible `http:` and `https:` URLs are links. `Cmd+click` asks the
-Electron main process to parse and validate the exact URL before opening it.
-OSC 8 destinations and all other schemes are ignored.
+Only literal visible `http:` and `https:` URLs are links. `Cmd+click` on macOS
+or `Ctrl+click` on Linux asks the Electron main process to parse and validate
+the exact URL before opening it. OSC 8 destinations and all other schemes are
+ignored.
 
 ## Clipboard
 
 - Selection never copies automatically.
 - `Ctrl+C` and `Ctrl+V` remain PTY input.
-- `Cmd+C`, `Cmd+V`, and the native context menu perform explicit text copy and
-  paste. Any non-empty plain text, including whitespace-only text, is pasted
+- `Cmd+C` and `Cmd+V` on macOS, `Ctrl+Shift+C` and `Ctrl+Shift+V` on Linux,
+  and the native context menu perform explicit text copy and paste. Any
+  non-empty plain text, including whitespace-only text, is pasted
   unchanged and takes priority over every file-list representation. When text
   is empty and the clipboard exposes a supported native file-manager file list,
   Paste inserts its paths in the same form as a file drop. Plain-text URLs and
@@ -218,9 +227,10 @@ triggered a keybind this way is consumed — it never reaches the terminal as
 input.
 Unknown action names, malformed accelerators, and duplicate accelerators are
 errors under the resilient failure contract below. Duplicates are judged on
-the effective map with macOS semantics (`CommandOrControl`, `Super`, and
-`Meta` count as `Command`): a remap that collides with another action's
-remaining default is the same error as two explicit entries colliding.
+the effective native map: `CommandOrControl` resolves to `Command` on macOS and
+`Control` on Linux, while `Super` and `Meta` use Electron's Command accelerator
+family. A remap that collides with another action's remaining default is the
+same error as two explicit entries colliding.
 Creating new actions, system-global shortcuts, chords or sequences, and
 per-platform alternate maps are unsupported.
 

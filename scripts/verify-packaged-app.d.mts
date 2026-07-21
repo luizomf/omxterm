@@ -3,7 +3,10 @@ export interface AsarInspection {
   readonly forbidden: string[];
 }
 
-export function inspectAsarEntries(entries: string[]): AsarInspection;
+export function inspectAsarEntries(
+  entries: string[],
+  platform?: "darwin" | "linux",
+): AsarInspection;
 
 export interface IcnsRepresentation {
   readonly name: string;

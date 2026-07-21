@@ -1,10 +1,10 @@
-# ARM64 release policy and macOS procedure
+# ARM64 release policy and native procedures
 
-The policy below applies to all initial OMXTerm Release Artifacts. The detailed
-procedure in the remainder of this document prepares and verifies the unsigned
-macOS DMG only. It does not authorize a tag, GitHub Release, upload, signing,
-notarization, or any other publication. Those actions require separate approval
-from Otávio.
+The policy below applies to all initial OMXTerm Release Artifacts. This document
+implements the native procedures for the unsigned macOS DMG and Linux ARM64
+AppImage; the Windows procedure remains pending. Nothing here authorizes a tag,
+GitHub Release, upload, signing, notarization, or any other publication. Those
+actions require separate approval from Otávio.
 
 ## Cross-platform release policy
 
@@ -26,11 +26,10 @@ and requires separate authorization from Otávio. x64, Intel macOS, additional
 package formats, signing and notarization, paid CI, and a multi-platform CI
 matrix are deferred until the repository is public.
 
-The macOS steps below remain the complete implemented release procedure for
-that platform and preserve its Gatekeeper policy. Platform-specific commands,
-artifact records, and manual checklists for Linux and Windows will be added with
-their packaging implementations; this policy does not imply that those
-procedures already exist.
+The macOS and Linux steps below are the implemented procedures for those
+platforms. The macOS procedure preserves its Gatekeeper policy; the Linux
+procedure records the unsigned AppImage and FUSE limitations. Windows commands,
+artifact records, and manual checks land with its packaging implementation.
 
 ## Version selection and consistency
 
@@ -41,10 +40,14 @@ never releasable; release preparation removes the prerelease suffix.
 
 Before building a release candidate, confirm that `package.json` and
 `package-lock.json` contain the same accepted `X.Y.Z` version. The application
-version, intended `vX.Y.Z` tag, `TERM_PROGRAM_VERSION`, DMG filename, checksum
-filename, and GitHub Release must all identify that same version.
+version, intended `vX.Y.Z` tag, `TERM_PROGRAM_VERSION`, native artifact
+filenames, checksum filenames, and GitHub Release must all identify that same
+version. The package names are `OMXTerm-X.Y.Z-arm64.dmg` and
+`OMXTerm-X.Y.Z-arm64.AppImage`.
 
 ## Build and automated verification
+
+### macOS arm64
 
 Use an accepted release commit for `X.Y.Z`, with `vX.Y.Z` recorded as the
 intended tag, on the macOS Supported Platform: Otávio's current Apple Silicon
@@ -74,7 +77,41 @@ The DMG is intentionally unsigned and not notarized. It must not be treated as
 a release candidate until every automated check is green and the exact DMG has
 completed the manual checklist below.
 
-## Exact-artifact record
+### Linux arm64
+
+Use a native Linux arm64 clone on the VM's native filesystem, never a Parallels
+shared folder. Install Node.js 22 or newer, `python3`, `make`, a C++ compiler
+(`build-essential` on Ubuntu), and the `fontconfig` utilities, then run from the
+accepted source commit:
+
+```sh
+npm ci
+npm run check:linux
+```
+
+The postinstall rebuilds `node-pty` against Electron's Linux arm64 runtime.
+`npm run check:linux` runs all portable and real-PTY checks, creates the
+non-published `release/OMXTerm-<version>-arm64.AppImage`, extracts that exact
+AppImage, checks its arm64 executable and native module, runtime files, version,
+icon, licenses, and forbidden/private-looking files, then launches the exact
+AppImage with isolated configuration, state, and user data. Startup must reach
+a running PTY and its Operational Event log must not contain the environment
+canary.
+
+For packaging alone, run `npm run package:linux`, followed on the same native
+host by `npm run package:verify`. A normal AppImage launch requires FUSE 2
+(`libfuse2t64` on Ubuntu 24.04 or `libfuse2` on older Ubuntu releases). If that
+runtime cannot be installed, the safe manual fallback is:
+
+```sh
+./release/OMXTerm-<version>-arm64.AppImage --appimage-extract-and-run
+```
+
+The AppImage is intentionally unsigned and provides no verified publisher
+identity. It is not a release candidate until all automated checks and the
+exact-AppImage manual checklist below are complete.
+
+## macOS exact-artifact record
 
 Create the following record before manual testing, fill in every value already
 known, and keep the publication gate `BLOCKED`. Complete the results, SHA-256,
@@ -192,6 +229,85 @@ the unpacked build directory or a previous installation.
   remove the copied app and disposable test configuration/state after recording
   evidence.
 
+## Linux exact-artifact record
+
+Create this record before manual testing the AppImage and keep the publication
+gate `BLOCKED` until Otávio accepts the exact artifact. Record `UNEXECUTED` for
+anything not genuinely observed.
+
+```text
+Source commit:
+Source tag (only when separately authorized):
+Linux distribution and version:
+Kernel version:
+Architecture:
+Node.js and npm versions:
+Native toolchain versions:
+FUSE 2 runtime package/version:
+Exact AppImage absolute path:
+Exact AppImage filename:
+AppImage byte size:
+SHA-256:
+Automated npm run check:linux result:
+Packaged-startup result:
+Manual checklist results and evidence:
+Unexecuted items and reasons:
+Publication gate: BLOCKED or OWNER ACCEPTED
+```
+
+### Manual checklist for the exact AppImage
+
+Use the exact unchanged AppImage named in the record, not the unpacked build
+directory or another copy. Use disposable configuration, state, and user-data
+roots for invalid-file and log checks.
+
+- **AppImage and first launch:** confirm the filename and `file` output identify
+  ARM aarch64, make the artifact executable, and launch it normally. Record the
+  installed FUSE 2 runtime. If normal mounting is unavailable, record that result
+  and exercise `--appimage-extract-and-run` as the documented safe fallback;
+  never infer the normal launch result from extraction. Confirm the desktop icon
+  and window association are correct. Record that no publisher signature is
+  presented.
+- **Default Shell and exits:** verify the operating-system-configured interactive
+  login shell starts in the account home directory and reports `TERM`,
+  `COLORTERM`, `TERM_PROGRAM`, and `TERM_PROGRAM_VERSION` exactly as documented.
+  In fresh windows, run `exit 0`, `exit 7`, and `kill -s KILL $$`; confirm normal
+  exits close without a failure dialog and the signal failure remains visible
+  until acknowledged.
+- **Windows, tabs, and cleanup:** using Linux `Ctrl` application shortcuts and
+  native menu items, exercise independent windows and tabs, idle and Busy close
+  behavior, fullscreen, zoom, always-on-top, copy, paste, select-all, and quit.
+  Confirm the tab strip and focus behavior, one confirmation per guarded action,
+  and that no OMXTerm, AppImage mount, child shell, or foreground process remains
+  after the last window quits.
+- **Terminal compatibility:** exercise tmux, an alternate-screen TUI, Unicode,
+  truecolor, scrolling, resize, a REPL, bracketed paste, and SSH started by the
+  user. Confirm OMXTerm adds neither custom terminfo nor Shell Integration.
+- **Linux file and folder insertion:** from the native Linux file manager, drop
+  multiple files and folders containing spaces, apostrophes, Unicode, and shell
+  metacharacters into a window. Confirm ordered, independently POSIX-quoted
+  absolute paths reach only the selected tab through Protected Paste without
+  Enter. Copy the same native selection and confirm Paste uses the GNOME file
+  list or URI-list fallback only when plain text is empty. Confirm a non-file
+  URL, malformed list, and drop without native files have no side effect.
+- **Clipboard and Protected Paste:** verify selection does not copy, `Ctrl+C` and
+  `Ctrl+V` remain PTY input, the default `Ctrl+Shift+C` and `Ctrl+Shift+V` plus
+  native menu/context copy and paste work, unsafe multiline or control-character paste
+  is confirmed outside bracketed-paste mode, bracketed paste is not prompted,
+  and OSC 52 can write but cannot read or clear the clipboard.
+- **Titles, BEL, links, configuration, and snippets:** exercise the same accepted
+  title sanitization, silent BEL, literal HTTP/HTTPS activation, valid and
+  invalid configuration/theme behavior, keybind remapping, and Snippets Sidebar
+  behavior documented in the macOS checklist, using Linux menu labels and
+  shortcuts. Do not infer these results from unit tests.
+- **Logs, application boundary, and cleanup:** verify bounded local JSONL
+  retention and permissions, useful payload-free Operational Events, no
+  application telemetry or update traffic, and absence of Terminal Payload,
+  clipboard contents, paths inserted by drop or paste, environment canaries,
+  configuration contents, commands, titles, secrets, and transcripts. Remove
+  disposable test state after recording evidence, but preserve the exact
+  AppImage unchanged for checksum and owner acceptance.
+
 Any failed required item or any unexplained unexecuted item keeps every future
 tag, GitHub Release, attachment, or upload blocked. The Gatekeeper observation
 may remain `UNEXECUTED` only when the locally built DMG has no download
@@ -200,7 +316,7 @@ by itself block publication, but the required Gatekeeper release guidance still
 applies. Missing exact-artifact manual evidence does not prevent a preparatory
 packaging change from merging, but it does prevent publication.
 
-## SHA-256
+## macOS SHA-256
 
 Generate the checksum only after the exact DMG finishes manual testing. From
 the output directory, preserving the artifact's filename:
@@ -213,6 +329,22 @@ shasum -a 256 -c OMXTerm-<version>-arm64.dmg.sha256
 
 Changing or rebuilding the DMG invalidates the checklist and checksum. Repeat
 the entire exact-artifact check for the replacement.
+
+## Linux SHA-256
+
+Generate the checksum only after manual testing finishes against the unchanged
+exact AppImage:
+
+```sh
+cd release
+sha256sum OMXTerm-<version>-arm64.AppImage > OMXTerm-<version>-arm64.AppImage.sha256
+sha256sum --check OMXTerm-<version>-arm64.AppImage.sha256
+```
+
+Record both the filename and digest in the exact-artifact record. Rebuilding,
+renaming, or changing the AppImage invalidates its manual evidence and checksum.
+Keep publication blocked until Otávio accepts this exact artifact and separately
+authorizes publication.
 
 ## Gatekeeper and provenance release note
 

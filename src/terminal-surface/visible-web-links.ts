@@ -16,7 +16,8 @@ export function registerVisibleWebLinks(
 ): WebLinksAddon {
   const addon = new WebLinksAddon(
     (event, url) => {
-      if (event.metaKey && event.button === 0) requestActivation(url);
+      if ((event.metaKey || event.ctrlKey) && event.button === 0)
+        requestActivation(url);
     },
     { urlRegex: visibleWebUrlRegex },
   );

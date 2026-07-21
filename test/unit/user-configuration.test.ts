@@ -11,7 +11,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { startWithUserConfiguration } from "../../src/main/configured-startup";
-import { DEFAULT_TERMINAL_KEYBINDS } from "../../src/shared/terminal-keybinds";
+import {
+  DEFAULT_TERMINAL_KEYBINDS,
+  terminalDefaultKeybinds,
+} from "../../src/shared/terminal-keybinds";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import {
   DEFAULT_USER_CONFIGURATION,
@@ -274,6 +277,30 @@ describe("strict version 1 User Configuration", () => {
     expect(configuration.keybinds.closeWindow).toBe("CommandOrControl+Shift+W");
     expect(configuration.keybinds.quit).toBe(DEFAULT_TERMINAL_KEYBINDS.quit);
     expect(Object.isFrozen(configuration.keybinds)).toBe(true);
+  });
+
+  it("applies Linux remaps over Linux defaults", () => {
+    const configuration = validateUserConfiguration(
+      { version: 1, keybinds: { newWindow: "Alt+N" } },
+      configPath,
+      installedFonts,
+      terminalDefaultKeybinds("linux"),
+    );
+    expect(configuration.keybinds.newWindow).toBe("Alt+N");
+    expect(configuration.keybinds.copy).toBe("Control+Shift+C");
+    expect(configuration.keybinds.closeWindow).toBe("Control+Shift+Q");
+    expect(() =>
+      validateUserConfiguration(
+        {
+          version: 1,
+          keybinds: { newWindow: "CommandOrControl+Shift+C" },
+        },
+        configPath,
+        installedFonts,
+        terminalDefaultKeybinds("linux"),
+        "linux",
+      ),
+    ).toThrow('conflicts with the "copy" keybind');
   });
 
   it.each([

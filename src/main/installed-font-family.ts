@@ -62,7 +62,28 @@ export async function installedFontFamilyMetrics(
   family: string,
   fontSize: number,
   run: FontMetricsCommand = runFontMetricsCommand,
+  platform: string = process.platform,
 ): Promise<InstalledFontFamilyMetrics | undefined> {
+  if (platform === "linux") {
+    const { stdout } = await run("/usr/bin/fc-match", [
+      "--format=%{family}\\n",
+      "--",
+      family,
+    ]);
+    const installedFamilies = stdout
+      .trim()
+      .split(",")
+      .map((value) => value.trim());
+    if (!installedFamilies.includes(family)) return undefined;
+    return Object.freeze({
+      // fontconfig establishes exact family availability; Chromium measures
+      // the real cells when the Terminal Surface mounts. These conservative
+      // values are used only for native minimum-window sizing before mount.
+      cellWidth: fontSize * 0.6,
+      cellHeight: fontSize * 1.2,
+    });
+  }
+
   const { stdout } = await run("/usr/bin/osascript", [
     "-l",
     "JavaScript",
