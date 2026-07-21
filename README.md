@@ -1,6 +1,7 @@
 # OMXTerm
 
-OMXTerm is an open-source personal desktop terminal for Apple Silicon macOS.
+OMXTerm is an open-source personal desktop terminal for ARM64 macOS, Linux,
+and Windows.
 
 <p align="center">
   <img src="docs/images/omxterm-hero.png" alt="OMXTerm icon: a light blue terminal prompt on a dark rounded square" width="480" />
@@ -15,17 +16,20 @@ verification artifact, not a published release.
 
 ## Development
 
-Requires Node.js 22 or newer on Apple Silicon macOS.
+Source development supports ARM64 macOS, Linux, and Windows with Node.js 22 or
+newer and npm. Linux also needs the native build prerequisites listed in the
+[contribution guide](CONTRIBUTING.md).
 
 ```sh
-npm install
-npm run dev
+npm ci
+npm run check:portable
 ```
 
-`npm run dev` builds the application and launches one native Terminal Window
-containing the user's operating-system-configured interactive login shell. The
-shell starts in the user's home directory. Use the native File and Window menus
-to create and control additional independent Terminal Windows.
+The current published `v0.3.0` artifact is macOS-only. Native Linux and Windows
+runtime and packaging work is tracked in [#60](https://github.com/luizomf/omxterm/issues/60)
+and [#61](https://github.com/luizomf/omxterm/issues/61); their absence does not
+change the current three-platform ARM64 product contract. On a platform whose
+runtime is implemented, `npm run dev` builds the application and launches it.
 
 Project checks are available as root scripts:
 
@@ -35,6 +39,8 @@ Project checks are available as root scripts:
 - `npm test` runs the complete automated test suite, including the scoped local
   PTY integration check;
 - `npm run build` creates the unpackaged development build under `dist/`;
+- `npm run check:portable` runs formatting, typechecking, the complete test
+  suite, and the unpackaged build on every Supported Platform;
 - `npm run package:mac` creates a local unsigned, non-notarized Apple Silicon
   DMG under `release/` and never publishes it;
 - `npm run check` runs formatting, typechecking, the complete test suite, the

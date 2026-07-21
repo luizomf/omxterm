@@ -4,13 +4,15 @@ Instructions for agents working on OMXTerm.
 
 ## Project
 
-OMXTerm is Otávio Miranda's open-source personal desktop terminal for Apple
-Silicon macOS. It uses Electron and TypeScript around a portable DOM+xterm
-Terminal Surface and a local PTY Adapter.
+OMXTerm is Otávio Miranda's open-source personal desktop terminal for ARM64
+macOS, Linux, and Windows. It uses Electron and TypeScript around a portable
+DOM+xterm Terminal Surface and a local PTY Adapter.
 
 The terminal is the product. AI assistance, SSH brokering, saved sessions,
-splits, shell integration, and cross-platform support are outside the current
-product contract. Do not turn nearby ideas into requirements.
+splits, and shell integration are outside the current product contract. Do not
+turn nearby ideas into requirements. Linux and Windows packaging remain tracked
+implementation work; do not mistake their current absence for a change to the
+three-platform product contract.
 
 ## Sources of truth
 

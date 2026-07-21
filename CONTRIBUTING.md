@@ -26,32 +26,49 @@ dependencies, and prevent duplicate implementations. A small typo or broken
 link may go directly to a focused pull request.
 
 Keep proposals inside the current product boundary. Splits, saved sessions, AI
-assistance, SSH brokering, shell integration, theme catalogs, automatic updates,
-and cross-platform support remain outside the current product contract; their
-presence in other terminals does not make them requirements.
+assistance, SSH brokering, shell integration, theme catalogs, and automatic
+updates remain outside the current product contract; their presence in other
+terminals does not make them requirements. The Supported Platforms are ARM64
+macOS, Linux, and Windows, while native Linux and Windows runtime and packaging
+work remains scoped to [#60](https://github.com/luizomf/omxterm/issues/60) and
+[#61](https://github.com/luizomf/omxterm/issues/61).
 
 ## Development environment
 
-Development currently requires:
+Use an ARM64 machine running macOS, Linux, or Windows with Node.js 22 or newer
+and its bundled npm. Install dependencies from the lockfile with `npm ci`.
 
-- an Apple Silicon (`arm64`) Mac;
-- Node.js 22 or newer;
-- npm;
-- the native build tools required by Electron and `node-pty`.
+On Linux, `node-pty` builds from source and requires `python3`, `make`, and a C++
+compiler. Install those tools through the distribution's package manager before
+running `npm ci`. macOS and Windows contributors should install the native build
+toolchain requested by npm if no matching dependency prebuild is available.
 
-Install the exact dependency set and launch the development application:
+The portable development baseline does not require a packaged application:
 
 ```sh
 npm ci
-npm run dev
+npm run check:portable
 ```
+
+This command runs formatting checks, strict typechecking, the complete automated
+test suite, and the unpackaged build. Native packaging and operating-system
+behavior evidence are platform-owned work: macOS uses `npm run check`; Linux
+and Windows procedures land with #60 and #61. In a pull request, list every
+check run and state exactly why any relevant platform check could not run. Never
+infer a platform pass from another operating system.
 
 Do not commit local configuration, logs, terminal contents, environment files,
 credentials, release output, or other private data.
 
 ## Making a change
 
-1. Create a focused branch from current `main`.
+External contributors use fork-and-pull: fork the repository, create a focused
+branch from current upstream `main`, push that branch to the fork, and open a
+pull request against this repository. A contribution does not grant authority
+to change assignments, labels, dependencies, roadmap state, versions, release
+artifacts, or publication state; those remain maintainer operations.
+
+1. Create a focused branch from current upstream `main` in your fork.
 2. Implement the smallest complete change that satisfies the issue.
 3. Add observable behavior tests for new behavior and a regression test for a
    bug fix.
@@ -84,13 +101,15 @@ npm test
 npm run build
 ```
 
-Before delivery, run the checks relevant to the issue. `npm run check` is the
-complete project command: formatting, typechecking, tests, arm64 packaging,
-packaged-content inspection, and packaged-startup verification. It creates
-local output under `release/` but never publishes it.
+Before delivery on any Supported Platform, run `npm run check:portable`. On
+macOS, `npm run check` remains the full project command: formatting,
+typechecking, tests, ARM64 packaging, packaged-content inspection, and
+packaged-startup verification. It creates local output under `release/` but
+never publishes it.
 
-If a required check cannot run, state exactly which check was not run and why
-in the pull request. Do not report an inferred result as a pass.
+If a required or platform-specific check cannot run, state exactly which check
+was not run and why in the pull request. Do not report an inferred result as a
+pass.
 
 ## Commits and pull requests
 
