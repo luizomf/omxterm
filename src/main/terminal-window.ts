@@ -69,6 +69,9 @@ export function terminalWindowOptions(
     ),
     show: false,
     title: "OMXTerm",
+    // Framed platforms must apply these bounds to renderer content; otherwise
+    // the native title/menu frame consumes part of the promised terminal grid.
+    useContentSize: nativeTitleInset === 0,
     titleBarStyle: nativeTitleInset > 0 ? "hiddenInset" : "default",
     backgroundColor: terminalTheme.colors.background,
     webPreferences: {

@@ -45,9 +45,11 @@ OMXTerm's postinstall then rebuilds `node-pty` against the installed Electron
 Linux ARM64 runtime; do not use a module copied from Node.js, macOS, or another
 architecture. Linux also needs the `fontconfig` utilities for exact configured
 font-family validation. Running the AppImage normally requires FUSE 2, such as
-`libfuse2t64` on Ubuntu 24.04 or `libfuse2` on older Ubuntu releases. macOS and
-Windows contributors should install the native build toolchain requested by npm
-if no matching dependency prebuild is available.
+`libfuse2t64` on Ubuntu 24.04 or `libfuse2` on older Ubuntu releases. Linux
+rendering uses X11 and requires XWayland under a Wayland session; native Wayland
+is not currently claimed. macOS and Windows contributors should install the
+native build toolchain requested by npm if no matching dependency prebuild is
+available.
 
 The portable development baseline does not require a packaged application:
 

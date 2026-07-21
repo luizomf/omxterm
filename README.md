@@ -64,8 +64,12 @@ chmod +x release/OMXTerm-<version>-arm64.AppImage
 
 Its unsigned status means Linux distributions do not receive a publisher
 identity to verify. Linux needs the `fontconfig` utilities for configured
-system-font validation. The default AppImage mount path requires FUSE 2 (for
-example `libfuse2t64` on Ubuntu 24.04 or `libfuse2` on older Ubuntu releases).
+system-font validation. OMXTerm defaults to Electron's X11 backend; a Wayland
+session must provide XWayland. Native Wayland remains unclaimed because the
+supported ARM64 VM started without presenting a visible window. An explicit
+Electron `--ozone-platform` argument overrides the default for diagnosis and
+future retesting. The default AppImage mount path requires FUSE 2 (for example
+`libfuse2t64` on Ubuntu 24.04 or `libfuse2` on older Ubuntu releases).
 When FUSE 2 cannot be installed, use the AppImage runtime's safe extraction
 fallback:
 

@@ -287,9 +287,12 @@ describe("renderer Terminal Window page host", () => {
     await vi.waitFor(() => expect(elements.tabStrip.hidden).toBe(false));
     elements.tabStrip.querySelector<HTMLButtonElement>("button")!.click();
 
+    const targetDragOver = vi.fn();
+    elements.tabStrip.addEventListener("dragover", targetDragOver);
     const dragOver = new Event("dragover", { bubbles: true, cancelable: true });
-    document.body.dispatchEvent(dragOver);
+    elements.tabStrip.dispatchEvent(dragOver);
     expect(dragOver.defaultPrevented).toBe(true);
+    expect(targetDragOver).not.toHaveBeenCalled();
 
     const file = new File([""], "A B.txt");
     const drop = new Event("drop", { bubbles: true, cancelable: true });
@@ -305,9 +308,12 @@ describe("renderer Terminal Window page host", () => {
         },
       },
     });
+    const targetDrop = vi.fn();
+    elements.tabStrip.addEventListener("drop", targetDrop);
     elements.tabStrip.dispatchEvent(drop);
 
     expect(drop.defaultPrevented).toBe(true);
+    expect(targetDrop).not.toHaveBeenCalled();
     expect(droppedFilePathInsertion).toHaveBeenCalledWith([file]);
     expect(first.inject).toHaveBeenCalledExactlyOnceWith("'/Users/me/A B.txt'");
     expect(second.inject).not.toHaveBeenCalled();

@@ -37,6 +37,7 @@ describe("Terminal Window startup contract", () => {
     );
 
     expect(terminalNativeTitleInset("darwin")).toBe(30);
+    expect(options.useContentSize).toBe(false);
     expect(options.titleBarStyle).toBe("hiddenInset");
     expect(options.webPreferences).toMatchObject({
       preload: "/application/preload.cjs",
@@ -55,6 +56,7 @@ describe("Terminal Window startup contract", () => {
     );
 
     expect(terminalNativeTitleInset("linux")).toBe(0);
+    expect(options.useContentSize).toBe(true);
     expect(options.titleBarStyle).toBe("default");
     expect(options.minHeight).toBe(544);
   });

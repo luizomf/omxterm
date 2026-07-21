@@ -19,6 +19,7 @@ import {
 } from "./application-menu";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { createLocalTerminalSession } from "./local-terminal-session";
+import { applyLinuxDisplayBackendDefault } from "./linux-display-backend";
 import {
   isFilePathPlatform,
   readClipboardPathInsertion,
@@ -68,6 +69,8 @@ const developmentApplicationIconPath = path.resolve(
 
 let terminalApplication: TerminalApplication<BrowserWindow> | undefined;
 let operationalEvents: OperationalEventLog | undefined;
+
+applyLinuxDisplayBackendDefault(app.commandLine);
 
 app.on("before-quit", (event) => {
   operationalEvents?.flush();

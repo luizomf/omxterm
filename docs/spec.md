@@ -11,8 +11,11 @@ Terminal Surface all remaining content space. It is not a Ghostty competitor
 claim, an SSH bastion, an AI product, a session manager, or an IDE.
 
 The initial Supported Platforms are macOS arm64, Linux arm64, and Windows
-arm64. x64, Intel macOS, and other operating systems are deferred rather than
-current support commitments.
+arm64. Linux rendering defaults to X11 and requires XWayland when the desktop
+session is Wayland; native Wayland rendering is not currently claimed. An
+explicit Electron `--ozone-platform` switch overrides the Linux default for
+diagnosis. x64, Intel macOS, and other operating systems are deferred rather
+than current support commitments.
 
 ## Product scope
 

@@ -81,8 +81,9 @@ completed the manual checklist below.
 
 Use a native Linux arm64 clone on the VM's native filesystem, never a Parallels
 shared folder. Install Node.js 22 or newer, `python3`, `make`, a C++ compiler
-(`build-essential` on Ubuntu), and the `fontconfig` utilities, then run from the
-accepted source commit:
+(`build-essential` on Ubuntu), the `fontconfig` utilities, and an X11 display or
+XWayland in a Wayland session. Native Wayland is not currently claimed. Then run
+from the accepted source commit:
 
 ```sh
 npm ci
@@ -262,8 +263,11 @@ directory or another copy. Use disposable configuration, state, and user-data
 roots for invalid-file and log checks.
 
 - **AppImage and first launch:** confirm the filename and `file` output identify
-  ARM aarch64, make the artifact executable, and launch it normally. Record the
-  installed FUSE 2 runtime. If normal mounting is unavailable, record that result
+  ARM aarch64, make the artifact executable, and launch it normally. Confirm the
+  default X11 backend presents a visible window, recording XWayland when the
+  desktop session is Wayland; an explicit Ozone override is diagnostic evidence,
+  not the normal-launch result. Record the installed FUSE 2 runtime. If normal
+  mounting is unavailable, record that result
   and exercise `--appimage-extract-and-run` as the documented safe fallback;
   never infer the normal launch result from extraction. Confirm the desktop icon
   and window association are correct. Record that no publisher signature is
