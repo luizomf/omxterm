@@ -3,7 +3,7 @@ import type { LoadedUserConfiguration } from "./user-configuration";
 
 const DEFAULT_MINIMUM_WINDOW_WIDTH = 320;
 const DEFAULT_MINIMUM_WINDOW_HEIGHT = 200;
-const NATIVE_TITLE_AREA_INSET = 30;
+const MACOS_NATIVE_TITLE_AREA_INSET = 30;
 const MINIMUM_TERMINAL_COLUMNS = 2;
 const MINIMUM_TERMINAL_ROWS = 1;
 // Keep aligned with xterm's viewport width reserved by FitAddon.
@@ -22,9 +22,14 @@ type TerminalWindowGeometryConfiguration = Pick<
   | "terminalTheme"
 >;
 
+export function terminalNativeTitleInset(platform: string): 0 | 30 {
+  return platform === "darwin" ? MACOS_NATIVE_TITLE_AREA_INSET : 0;
+}
+
 export function terminalWindowOptions(
   preloadPath: string,
   configuration: TerminalWindowGeometryConfiguration,
+  platform: string = "darwin",
 ): BrowserWindowConstructorOptions {
   const {
     fontSize,
@@ -42,8 +47,9 @@ export function terminalWindowOptions(
     terminalPadding.right +
     (scrollbackLines > 0 ? XTERM_SCROLLBAR_WIDTH : 0) +
     cellWidth * MINIMUM_TERMINAL_COLUMNS;
+  const nativeTitleInset = terminalNativeTitleInset(platform);
   const minimumContentHeight =
-    NATIVE_TITLE_AREA_INSET +
+    nativeTitleInset +
     terminalPadding.top +
     terminalPadding.bottom +
     // xterm rounds the base character envelope before applying lineHeight.
@@ -63,7 +69,7 @@ export function terminalWindowOptions(
     ),
     show: false,
     title: "OMXTerm",
-    titleBarStyle: "hiddenInset",
+    titleBarStyle: nativeTitleInset > 0 ? "hiddenInset" : "default",
     backgroundColor: terminalTheme.colors.background,
     webPreferences: {
       preload: preloadPath,

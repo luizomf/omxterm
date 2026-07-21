@@ -1,6 +1,7 @@
 :root {
   color-scheme: dark;
   background: var(--terminal-background, transparent);
+  --native-title-inset: 30px;
 }
 
 @font-face {
@@ -54,8 +55,8 @@ body {
   display: none;
 }
 
-/* The tab strip occupies its own full-width row below the fixed 30 px native
-   title inset and only exists with two or more tabs (body.tabs-visible). */
+/* The tab strip occupies its own full-width row below any app-controlled
+   native title inset and only exists with two or more tabs (body.tabs-visible). */
 #tab-strip {
   display: flex;
   flex: none;
@@ -63,7 +64,7 @@ body {
   align-items: stretch;
   box-sizing: border-box;
   width: 100%;
-  margin-top: 30px;
+  margin-top: var(--native-title-inset);
   padding: 4px 8px;
   overflow: hidden;
   font:
@@ -120,7 +121,7 @@ body {
   gap: 8px;
   box-sizing: border-box;
   width: 280px;
-  padding: 38px 12px 12px;
+  padding: calc(var(--native-title-inset) + 8px) 12px 12px;
   overflow-y: auto;
   font:
     13px/1.45 -apple-system,
@@ -243,7 +244,7 @@ body {
   top: 0;
   right: 0;
   left: 0;
-  height: 30px;
+  height: var(--native-title-inset);
   app-region: drag;
 }
 
@@ -251,13 +252,13 @@ body {
   box-sizing: border-box;
   width: 100%;
   height: 100%;
-  padding: calc(30px + var(--terminal-padding-top, 0px))
+  padding: calc(var(--native-title-inset) + var(--terminal-padding-top, 0px))
     var(--terminal-padding-right, 8px) var(--terminal-padding-bottom, 8px)
     var(--terminal-padding-left, 8px);
 }
 
 /* With a visible tab strip, the surface row no longer starts at the window
-   top: the strip already sits below the 30 px title inset. */
+   top: the strip already sits below any app-controlled title inset. */
 body.tabs-visible .terminal-surface .xterm {
   padding-top: var(--terminal-padding-top, 0px);
 }

@@ -220,6 +220,7 @@ describe("isolated preload terminal bridge", () => {
         terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
         scrollbackLines: 10_000,
         optionKeyMode: "none",
+        nativeTitleInset: 0,
         terminalTheme: DEFAULT_TERMINAL_THEME,
         userFileErrors: [],
       },
@@ -401,26 +402,24 @@ describe("isolated preload terminal bridge", () => {
 
   it("exposes only a validated renderer configuration response", async () => {
     const bridge = electron.bridge!;
+    const configuration = {
+      fontFamily: "SF Mono",
+      fontSize: 18,
+      fontLineHeight: 1.15,
+      terminalPadding: { top: 0, right: 12, bottom: 8, left: 12 },
+      scrollbackLines: 500,
+      optionKeyMode: "right",
+      nativeTitleInset: 30,
+      terminalTheme: DEFAULT_TERMINAL_THEME,
+      userFileErrors: [],
+    };
+    electron.invoke.mockResolvedValueOnce(configuration);
+    await expect(bridge.configuration()).resolves.toEqual(configuration);
     electron.invoke.mockResolvedValueOnce({
-      fontFamily: "SF Mono",
-      fontSize: 18,
-      fontLineHeight: 1.15,
-      terminalPadding: { top: 0, right: 12, bottom: 8, left: 12 },
-      scrollbackLines: 500,
-      optionKeyMode: "right",
-      terminalTheme: DEFAULT_TERMINAL_THEME,
-      userFileErrors: [],
+      ...configuration,
+      nativeTitleInset: 1,
     });
-    await expect(bridge.configuration()).resolves.toEqual({
-      fontFamily: "SF Mono",
-      fontSize: 18,
-      fontLineHeight: 1.15,
-      terminalPadding: { top: 0, right: 12, bottom: 8, left: 12 },
-      scrollbackLines: 500,
-      optionKeyMode: "right",
-      terminalTheme: DEFAULT_TERMINAL_THEME,
-      userFileErrors: [],
-    });
+    await expect(bridge.configuration()).rejects.toThrow(TypeError);
     electron.invoke.mockResolvedValueOnce({ fontSize: "18" });
     await expect(bridge.configuration()).rejects.toThrow(TypeError);
     electron.invoke.mockResolvedValueOnce({
@@ -429,6 +428,7 @@ describe("isolated preload terminal bridge", () => {
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
       scrollbackLines: 500,
       optionKeyMode: "none",
+      nativeTitleInset: 0,
       terminalTheme: {
         ...DEFAULT_TERMINAL_THEME,
         colors: { ...DEFAULT_TERMINAL_THEME.colors, background: "black" },
@@ -441,6 +441,7 @@ describe("isolated preload terminal bridge", () => {
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 129 },
       scrollbackLines: 500,
       optionKeyMode: "none",
+      nativeTitleInset: 0,
     });
     await expect(bridge.configuration()).rejects.toThrow(TypeError);
     electron.invoke.mockResolvedValueOnce({
@@ -449,6 +450,7 @@ describe("isolated preload terminal bridge", () => {
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
       scrollbackLines: 500,
       optionKeyMode: "none",
+      nativeTitleInset: 0,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       userFileErrors: [42],
     });

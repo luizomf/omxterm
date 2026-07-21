@@ -129,8 +129,10 @@ their defaults. Objects and the root reject unknown keys.
 | `theme.path`              | non-empty filesystem path without NUL   | bundled `omtheme`                    |
 | `keybinds.<action>`       | accelerator with a non-Shift modifier   | built-in shortcut per action         |
 
-The configured top padding begins below a fixed 30 px native title and drag
-inset. `font.lineHeight` changes row height independently of glyph size.
+On macOS, the configured top padding begins below the fixed 30 px native title
+and drag inset. On Linux, it begins directly below the operating system's native
+window chrome without another inset. `font.lineHeight` changes row height
+independently of glyph size.
 Window Font Zoom and the native Always on Top menu are per-window runtime
 actions and never rewrite this file.
 
@@ -192,9 +194,9 @@ from the keyboard is not affected.
 ### Tuning padding around the terminal grid
 
 The Terminal Surface is a grid of whole character cells, not ordinary text
-that can end at any pixel. After accounting for the title inset and configured
-padding, OMXTerm fits the largest whole number of columns and rows that the
-window can contain. Cell width and height depend on the font family, font size,
+that can end at any pixel. After accounting for any platform title inset and
+configured padding, OMXTerm fits the largest whole number of columns and rows
+that the window can contain. Cell width and height depend on the font family, font size,
 line height, and renderer, so the remaining width and height rarely divide
 evenly into cells.
 

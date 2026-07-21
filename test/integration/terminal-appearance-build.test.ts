@@ -61,7 +61,7 @@ describe("Terminal appearance build", () => {
     expect(css).not.toContain("JetBrainsMonoNerdFontMono-Bold");
   }, 30_000);
 
-  it("places the title-area inset on xterm so fitting excludes it from the grid", async () => {
+  it("places the platform title-area inset on xterm so fitting excludes it from the grid", async () => {
     const sourceCss = await readFile(
       path.join(projectRoot, "src", "renderer", "terminal-window.css"),
       "utf8",
@@ -80,7 +80,7 @@ describe("Terminal appearance build", () => {
     expect(xtermRule?.groups?.body).toContain("width: 100%");
     expect(xtermRule?.groups?.body).toContain("height: 100%");
     expect(xtermRule?.groups?.body).toContain(
-      "padding: calc(30px + var(--terminal-padding-top, 0px))",
+      "var(--native-title-inset) + var(--terminal-padding-top, 0px)",
     );
     expect(xtermRule?.groups?.body).toContain(
       "var(--terminal-padding-right, 8px)",
@@ -130,7 +130,9 @@ describe("Terminal appearance build", () => {
 
     expect(titleAreaRule?.groups?.body).toContain('content: ""');
     expect(titleAreaRule?.groups?.body).toContain("position: fixed");
-    expect(titleAreaRule?.groups?.body).toContain("height: 30px");
+    expect(titleAreaRule?.groups?.body).toContain(
+      "height: var(--native-title-inset)",
+    );
     expect(titleAreaRule?.groups?.body).toContain("app-region: drag");
     expect(surfaceRule?.groups?.body).not.toContain("app-region");
     expect(xtermRule?.groups?.body).not.toContain("app-region");

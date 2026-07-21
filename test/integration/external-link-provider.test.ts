@@ -118,6 +118,7 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
         terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
         scrollbackLines: 10_000,
         optionKeyMode: "none",
+        nativeTitleInset: 0,
         terminalTheme: DEFAULT_TERMINAL_THEME,
         userFileErrors: [],
       },

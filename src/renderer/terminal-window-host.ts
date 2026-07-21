@@ -88,6 +88,10 @@ export function mountTerminalWindowPage(
   if (options.configuration) {
     const background = options.configuration.terminalTheme.colors.background;
     page.document.documentElement.style.setProperty(
+      "--native-title-inset",
+      `${options.configuration.nativeTitleInset}px`,
+    );
+    page.document.documentElement.style.setProperty(
       "--terminal-background",
       background,
     );

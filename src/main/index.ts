@@ -38,6 +38,7 @@ import {
 import { terminalSessionFailureDialog } from "./terminal-session-failure";
 import {
   lockTerminalRendererNavigation,
+  terminalNativeTitleInset,
   terminalWindowOptions,
 } from "./terminal-window";
 import { registerTerminalWindowHost } from "./terminal-window-host";
@@ -115,6 +116,7 @@ app
           terminalPadding: userConfiguration.terminalPadding,
           scrollbackLines: userConfiguration.scrollbackLines,
           optionKeyMode: userConfiguration.optionKeyMode,
+          nativeTitleInset: terminalNativeTitleInset(process.platform),
           terminalTheme: userConfiguration.terminalTheme,
           userFileErrors: Object.freeze(
             fallback ? [userConfigurationFallbackNotice(fallback)] : [],
@@ -136,7 +138,11 @@ app
             const defaultShell = account.shell;
 
             const window = new BrowserWindow(
-              terminalWindowOptions(preloadPath, userConfiguration),
+              terminalWindowOptions(
+                preloadPath,
+                userConfiguration,
+                process.platform,
+              ),
             );
             const defaultShellName = path.basename(defaultShell);
             lockTerminalRendererNavigation(window.webContents);

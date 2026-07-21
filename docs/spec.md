@@ -55,9 +55,11 @@ updates, and remote terminal features are outside the current product contract.
   area while the Terminal Surface remains fully interactive.
 - A window with a single tab shows no tab strip and renders exactly like the
   pre-tab contract. With two or more tabs, an OMXTerm-drawn tab strip occupies
-  its own full-width row below the fixed 30 px title inset, above the Terminal
-  Surface and Snippets Sidebar row. Clicking a tab selects it; the selected
-  tab's grid refits and receives terminal focus.
+  its own full-width row above the Terminal Surface and Snippets Sidebar row.
+  On macOS it sits below the app-controlled 30 px native title inset; on Linux
+  it starts immediately below the operating system's native title and menu,
+  without another inset. Clicking a tab selects it; the selected tab's grid
+  refits and receives terminal focus.
 - Close Tab defaults to `Cmd+W` on macOS and `Ctrl+Shift+W` on Linux, and
   terminates only the selected tab's session. Closing a window's last tab closes
   that window. Close Window defaults to `Cmd+Shift+W` on macOS and
@@ -90,10 +92,12 @@ updates, and remote terminal features are outside the current product contract.
 - Native minimum window bounds keep the existing 320 px width and 200 px height
   as floors and grow at startup when configured font or padding needs more room
   for a visible terminal grid.
-- The Terminal Surface keeps a fixed 30 px native title/drag inset above the
-  configurable top padding. The selected Terminal Theme background fills the
-  complete app-controlled Terminal Window content, including the title inset
-  and all configured padding.
+- On macOS, the Terminal Surface keeps a fixed 30 px native title/drag inset
+  above the configurable top padding. Linux uses its operating-system title
+  and menu outside the app-controlled content and adds no duplicate inset. The
+  selected Terminal Theme background fills the complete app-controlled
+  Terminal Window content, including any title inset and all configured
+  padding.
 - `Window -> Always on Top` toggles only the selected window at the ordinary
   native floating level. New windows use the configured default.
 - Dropping one or more native file-manager files or folders anywhere in a
@@ -206,7 +210,8 @@ row-height multiplier from 1.0 through 2.0 inclusive, accepts fractional
 values, does not change glyph size, and defaults to 1.0. Terminal padding uses
 explicit per-side integer CSS pixels from 0 through 128 inclusive and defaults
 to top 0, right 8, bottom 8, and left 8. User top padding is added to the fixed,
-non-configurable 30 px native title inset. `logLevel` defaults to `info`,
+non-configurable 30 px native title inset on macOS; on Linux it begins directly
+below the native window chrome. `logLevel` defaults to `info`,
 `keyboard.optionAsAlt` to `none`, and `window.alwaysOnTop` to `false`.
 
 An optional `keybinds` object remaps application-chrome shortcuts for a fixed

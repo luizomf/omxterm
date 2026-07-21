@@ -37,6 +37,7 @@ export interface TerminalRendererConfiguration {
   readonly terminalPadding: TerminalPadding;
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
+  readonly nativeTitleInset: 0 | 30;
   readonly terminalTheme: TerminalTheme;
   readonly userFileErrors: readonly string[];
 }
@@ -70,6 +71,7 @@ export function isTerminalRendererConfiguration(
         "terminalPadding",
         "scrollbackLines",
         "optionKeyMode",
+        "nativeTitleInset",
         "terminalTheme",
         "userFileErrors",
       ].includes(key),
@@ -87,6 +89,7 @@ export function isTerminalRendererConfiguration(
     (value.scrollbackLines as number) >= 0 &&
     (value.scrollbackLines as number) <= MAX_SCROLLBACK_LINES &&
     ["none", "left", "right", "both"].includes(value.optionKeyMode as string) &&
+    (value.nativeTitleInset === 0 || value.nativeTitleInset === 30) &&
     isTerminalTheme(value.terminalTheme) &&
     isUserFileErrors(value.userFileErrors)
   );

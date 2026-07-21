@@ -38,6 +38,7 @@ function clipboardOptions() {
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
       scrollbackLines: 10_000,
       optionKeyMode: "none" as const,
+      nativeTitleInset: 0 as const,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       userFileErrors: [],
     },
@@ -148,6 +149,7 @@ describe("terminal IPC controller", () => {
       }),
       scrollbackLines: 500,
       optionKeyMode: "right" as const,
+      nativeTitleInset: 30 as const,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       userFileErrors: [],
     });
