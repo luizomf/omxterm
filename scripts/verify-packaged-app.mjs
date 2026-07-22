@@ -597,7 +597,13 @@ export async function verifyPackagedApplication(applicationPath) {
     const canary = `OMXTERM_PACKAGE_SECRET_CANARY_${Date.now()}`;
     let stderr = "";
     const launchPath = platform === "darwin" ? executable : packagedPath;
-    const child = spawn(launchPath, [`--user-data-dir=${userDataRoot}`], {
+    const launchArguments = [`--user-data-dir=${userDataRoot}`];
+    // The packaged Linux app relaunches itself onto X11 when Electron seeds
+    // a Wayland session backend (ADR 0020), and this harness cannot follow a
+    // relaunch. Pin the backend explicitly; default-backend selection is
+    // covered by unit tests and the manual exact-artifact checklist.
+    if (platform === "linux") launchArguments.push("--ozone-platform=x11");
+    const child = spawn(launchPath, launchArguments, {
       detached: true,
       env: {
         ...process.env,

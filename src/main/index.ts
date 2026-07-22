@@ -8,6 +8,7 @@ import {
   shell,
 } from "electron";
 import * as nodePty from "node-pty";
+import { spawn } from "node:child_process";
 import { userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,7 +20,7 @@ import {
 } from "./application-menu";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { createLocalTerminalSession } from "./local-terminal-session";
-import { applyLinuxDisplayBackendDefault } from "./linux-display-backend";
+import { planLinuxDisplayBackendDefault } from "./linux-display-backend";
 import {
   isFilePathPlatform,
   readClipboardPathInsertion,
@@ -70,7 +71,27 @@ const developmentApplicationIconPath = path.resolve(
 let terminalApplication: TerminalApplication<BrowserWindow> | undefined;
 let operationalEvents: OperationalEventLog | undefined;
 
-applyLinuxDisplayBackendDefault(app.commandLine);
+const displayBackendAction = planLinuxDisplayBackendDefault(
+  app.commandLine.getSwitchValue("ozone-platform"),
+);
+if (displayBackendAction === "append-x11") {
+  app.commandLine.appendSwitch("ozone-platform", "x11");
+} else if (displayBackendAction === "relaunch-x11") {
+  // app.relaunch cannot escape an AppImage: Chromium's relauncher helper
+  // runs from the FUSE mount, which unmounts when this process exits, so
+  // the helper dies before starting the target. Spawn the persistent outer
+  // AppImage (or the on-disk executable) directly, then exit.
+  try {
+    spawn(
+      process.env["APPIMAGE"] ?? process.execPath,
+      [...process.argv.slice(1), "--ozone-platform=x11"],
+      { detached: true, stdio: "ignore" },
+    ).unref();
+    app.exit(0);
+  } catch {
+    // Keep running on the seeded backend rather than exiting into nothing.
+  }
+}
 
 app.on("before-quit", (event) => {
   operationalEvents?.flush();
