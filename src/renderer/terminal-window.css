@@ -267,6 +267,13 @@ body.tabs-visible #snippets-sidebar {
   padding-top: 12px;
 }
 
+/* xterm 6 scrolls through its scrollable element and draws its own
+   scrollback slider; this companion viewport stays empty and never
+   scrolls, yet its stock overflow-y: scroll makes platforms with classic
+   scrollbars (Linux, Windows) paint a permanent disabled track at the
+   terminal edge. Hide that vestigial scrollbar; macOS overlay scrollbars
+   never painted it. */
 .terminal-surface .xterm-viewport {
+  overflow-y: hidden;
   background-color: var(--terminal-background, transparent);
 }

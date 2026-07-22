@@ -133,7 +133,9 @@ It installs no custom terminfo and does not edit or inject shell startup files.
 
 Scrollback is memory-only and per Live Terminal Session. `scrollback.lines`
 defaults to 10,000, accepts 0 through 100,000, and rejects larger values
-rather than clamping them.
+rather than clamping them. The scrollback scrollbar shows a thumb only while
+scrollback extends beyond the visible screen; an empty scrollbar track paints
+nothing on any platform.
 
 OSC 0 and OSC 2 titles are display-only and per session: control and bidi
 characters are removed, and the result must be one printable line no longer
