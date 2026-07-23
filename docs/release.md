@@ -352,8 +352,9 @@ hiding an omission.
 - **`MAC-GATEKEEPER` — Gatekeeper observation.** Initial result:
   `UNEXECUTED — PENDING: not yet observed`. Record whether macOS displayed a
   Gatekeeper warning. A locally built image may not carry download quarantine,
-  so record `UNEXECUTED — IMPOSSIBLE: locally built DMG has no download
-quarantine` rather than manufacturing or bypassing a warning.
+  so record
+  `UNEXECUTED — IMPOSSIBLE: locally built DMG has no download quarantine`
+  rather than manufacturing or bypassing a warning.
 - **`SH-SHELL-EXIT-MAC` — Default Shell and clean exit.** Initial result:
   `UNEXECUTED — PENDING: not yet observed`. Verify the
   operating-system-configured interactive login shell starts in the home directory; verify `TERM`,
@@ -569,8 +570,9 @@ recorded.
 - **`WIN-SMARTSCREEN` — SmartScreen observation.** Initial result:
   `UNEXECUTED — PENDING: not yet observed`. Record the SmartScreen observation
   verbatim. A locally built installer may not carry the download mark-of-the-web,
-  so record `UNEXECUTED — IMPOSSIBLE: locally built installer has no
-mark-of-the-web` rather than manufacturing or bypassing a warning. Never
+  so record
+  `UNEXECUTED — IMPOSSIBLE: locally built installer has no mark-of-the-web`
+  rather than manufacturing or bypassing a warning. Never
   disable SmartScreen or other system protections.
 - **`SH-SHELL-EXIT-WIN` — Default Shell and exits.** Initial result:
   `UNEXECUTED — PENDING: not yet observed`. Verify Windows PowerShell starts as a plain

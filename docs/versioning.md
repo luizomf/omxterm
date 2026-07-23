@@ -54,6 +54,8 @@ commit, all version-bearing surfaces must agree:
   `.sha256`;
 - the AppImage is named `OMXTerm-X.Y.Z-arm64.AppImage` and its checksum file
   adds `.sha256`;
+- the NSIS installer is named `OMXTerm-X.Y.Z-arm64.exe` and its checksum file
+  adds `.sha256`;
 - the GitHub Release targets `vX.Y.Z` and describes each exact artifact.
 
 Pre-release identifiers such as `0.2.0-rc.1` may be used later when there is a

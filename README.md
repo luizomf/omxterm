@@ -11,9 +11,9 @@ The current published release is `v0.3.0`, available from the
 [GitHub Releases page](https://github.com/luizomf/omxterm/releases) as an
 unsigned, non-notarized Apple Silicon DMG with its SHA-256 checksum. Linux
 ARM64 AppImage packaging is implemented but is not part of that published
-release. Between releases, `main` carries a `-dev` development baseline version
-under the [versioning policy](docs/versioning.md); any package built from
-`main` is a local verification artifact, not a published release.
+release. The source package is prepared at version `0.4.0`, but that version
+change does not publish a release. Outside release preparation, `main` carries
+a `-dev` development baseline under the [versioning policy](docs/versioning.md).
 
 ## Development
 
