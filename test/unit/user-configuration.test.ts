@@ -602,6 +602,36 @@ describe("isolated User Configuration loading", () => {
     expect(getMetrics).toHaveBeenCalledExactlyOnceWith("Exact Family", 16);
   });
 
+  it("warns and keeps a keybind that shadows a PTY control key on Linux, but not on macOS", async () => {
+    const base = {
+      environment: { XDG_CONFIG_HOME: "/isolated" },
+      homeDirectory: "/home/tester",
+      getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
+      read: vi.fn(async () =>
+        new TextEncoder().encode(
+          JSON.stringify({
+            version: 1,
+            keybinds: { copy: "CommandOrControl+C" },
+          }),
+        ),
+      ) as never,
+    };
+
+    const linux = await loadUserConfiguration({ ...base, platform: "linux" });
+    expect(linux.fallback).toBeUndefined();
+    // Warn-and-keep: the binding is still the configured accelerator.
+    expect(linux.configuration.keybinds.copy).toBe("CommandOrControl+C");
+    expect(linux.warnings).toHaveLength(1);
+    expect(linux.warnings?.[0]).toContain("keybinds.copy");
+    expect(linux.warnings?.[0]).toContain("Ctrl+C");
+    expect(linux.warnings?.[0]).toContain("SIGINT");
+
+    const darwin = await loadUserConfiguration({ ...base, platform: "darwin" });
+    expect(darwin.fallback).toBeUndefined();
+    expect(darwin.configuration.keybinds.copy).toBe("CommandOrControl+C");
+    expect(darwin.warnings).toBeUndefined();
+  });
+
   it.each(["relative", "absolute"])(
     "loads a complete external theme from a %s path relative to config.json rules",
     async (pathKind) => {

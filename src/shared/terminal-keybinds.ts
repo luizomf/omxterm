@@ -239,6 +239,53 @@ function acceleratorKeyForInputKey(inputKey: string): string | undefined {
   return NAMED_KEYS.has(key) ? canonicalKey(key) : undefined;
 }
 
+// PTY control keys that a bare Ctrl+<key> accelerator intercepts before the
+// terminal (delivery consumes the event, so the byte never reaches the shell).
+// The set is explicit so a deliberate remap that merely uses Control without
+// hitting one of these keys never warns. Values label the shadowed effect for
+// the load-time portability warning.
+const SHADOWED_PTY_CONTROL_KEYS: ReadonlyMap<string, string> = new Map([
+  ["c", "SIGINT (interrupt)"],
+  ["d", "end-of-input (EOF)"],
+  ["z", "SIGTSTP (suspend)"],
+  ["\\", "SIGQUIT (quit)"],
+  ["u", "kill line"],
+  ["w", "delete previous word"],
+  ["a", "start of line"],
+  ["e", "end of line"],
+]);
+
+export interface ShadowedControlKeyBinding {
+  readonly action: TerminalActionName;
+  readonly controlKey: string;
+  readonly shadows: string;
+}
+
+// Reports keybinds that resolve, on the given platform, to a bare Ctrl+<key>
+// accelerator shadowing a PTY control key. CommandOrControl becomes Control on
+// every non-macOS platform, so a macOS-authored map turns terminal-hostile
+// there (#102); an explicit Control+<key> shadows on macOS too. The bindings
+// stay active — this only surfaces the foot-gun (warn-and-keep).
+export function shadowedControlKeyBindings(
+  keybinds: TerminalKeybinds,
+  platform: string = "darwin",
+): readonly ShadowedControlKeyBinding[] {
+  const shadowed: ShadowedControlKeyBinding[] = [];
+  for (const action of TERMINAL_ACTION_NAMES) {
+    const parsed = parseAccelerator(keybinds[action], platform);
+    if (parsed === undefined) continue;
+    if (parsed.modifiers.size !== 1 || !parsed.modifiers.has("ctrl")) continue;
+    const shadows = SHADOWED_PTY_CONTROL_KEYS.get(parsed.key);
+    if (shadows === undefined) continue;
+    shadowed.push({
+      action,
+      controlKey: `Ctrl+${parsed.key.toUpperCase()}`,
+      shadows,
+    });
+  }
+  return shadowed;
+}
+
 // Canonical form for native duplicate detection. CommandOrControl resolves to
 // Command on macOS and Control elsewhere; Super and Meta remain the Command
 // accelerator family represented by Electron's `meta` key-event flag.

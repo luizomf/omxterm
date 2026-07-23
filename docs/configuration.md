@@ -191,6 +191,15 @@ family. The menu shows the shortcut that is actually active.
 Keybinds change application shortcuts only; what the shell or a TUI receives
 from the keyboard is not affected.
 
+Because `CommandOrControl` becomes `Control` on Linux and Windows, a map you
+authored on macOS can bind an action onto a bare `Ctrl+<key>` that the terminal
+normally uses — `Ctrl+C` (interrupt), `Ctrl+D`, `Ctrl+Z`, `Ctrl+\`, `Ctrl+U`,
+`Ctrl+W`, `Ctrl+A`, or `Ctrl+E`. OMXTerm keeps such a binding active but shows a
+warning on the in-app error surface naming the action and the shadowed control
+key, so a deliberate remap still works while an accidental one is easy to spot.
+Add `Shift` (for example `CommandOrControl+Shift+C`) or pick a different key if
+you want that control key to keep reaching the shell.
+
 ### Tuning padding around the terminal grid
 
 The Terminal Surface is a grid of whole character cells, not ordinary text

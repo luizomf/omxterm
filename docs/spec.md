@@ -187,6 +187,12 @@ ignored.
   clipboard read, clear, and malformed requests are refused.
 - Image clipboard behavior belongs to the child CLI. OMXTerm forwards its key
   input but never moves image bytes through the PTY.
+- These shortcuts are the built-in keybind defaults. A `keybinds` remap can move
+  copy or paste onto other keys or bind an application action onto a bare
+  `Ctrl+<key>` these defaults keep as PTY input; because `CommandOrControl`
+  resolves to `Control` off macOS, importing another platform's map can do this
+  unintentionally. The keybinds contract honors such a remap and warns when it
+  shadows a PTY control key on the current platform.
 
 ## Configuration and local state
 
@@ -243,6 +249,13 @@ the effective native map: `CommandOrControl` resolves to `Command` on macOS and
 `Control` on Linux, while `Super` and `Meta` use Electron's Command accelerator
 family. A remap that collides with another action's remaining default is the
 same error as two explicit entries colliding.
+A valid keybind that resolves, on the current platform, to a bare `Ctrl+<key>`
+shadowing a PTY control key (`Ctrl+C`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+\`, `Ctrl+U`,
+`Ctrl+W`, `Ctrl+A`, `Ctrl+E`) stays active but is warned about through the
+resilient failure surface below, naming the action and the shadowed control
+key. The binding is never rejected or dropped; the warning only informs, since
+`CommandOrControl` accelerators authored on macOS become `Control` off macOS and
+can shadow these keys unintentionally.
 Creating new actions, system-global shortcuts, chords or sequences, and
 per-platform alternate maps are unsupported.
 
@@ -299,7 +312,10 @@ in-app error surface that states which defaults are active, stays visible until
 the application is restarted, and never blocks typing into the Terminal
 Surface, so the file can be fixed inside OMXTerm itself. Both files stay
 unchanged, and edits take effect after restart. OMXTerm never migrates,
-repairs, rewrites, or silently ignores user configuration.
+repairs, rewrites, or silently ignores user configuration. The same surface
+also carries non-fatal warnings for a valid configuration that stays fully
+active — currently a keybind shadowing a PTY control key — which inform without
+activating any default.
 
 Operational logs are JSONL under `$XDG_STATE_HOME/omxterm/logs`, falling back to
 `~/.local/state/omxterm/logs`. Levels are `error`, `info`, and `debug`. Only the

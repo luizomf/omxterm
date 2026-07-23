@@ -23,6 +23,7 @@ import {
   canonicalAccelerator,
   DEFAULT_TERMINAL_KEYBINDS,
   isValidAccelerator,
+  shadowedControlKeyBindings,
   terminalDefaultKeybinds,
   TERMINAL_ACTION_NAMES,
   type TerminalActionName,
@@ -107,6 +108,9 @@ export interface UserConfigurationFallback {
 export interface UserConfigurationLoad {
   readonly configuration: LoadedUserConfiguration;
   readonly fallback?: UserConfigurationFallback;
+  // Non-fatal load-time notices for a valid configuration that stays active,
+  // e.g. a keybind that shadows a PTY control key on this platform (#102).
+  readonly warnings?: readonly string[];
 }
 
 export function userConfigurationFallbackNotice(
@@ -117,6 +121,25 @@ export function userConfigurationFallbackNotice(
       ? "OMXTerm opened with the bundled omtheme Terminal Theme instead."
       : "OMXTerm opened with its built-in default settings instead.";
   return `${activeDefaults} ${fallback.error.message}`;
+}
+
+// Warn-and-keep: a valid keybind that resolves to a bare Ctrl+<key> shadowing a
+// PTY control key on this platform stays active, but the user is told which
+// control key it swallows so they can rebind it (#102). The message names the
+// action and the well-known control key, never the raw accelerator contents.
+export function keybindPortabilityWarnings(
+  keybinds: TerminalKeybinds,
+  configurationPath: string,
+  platform: string,
+): readonly string[] {
+  return shadowedControlKeyBindings(keybinds, platform).map(
+    ({ action, controlKey, shadows }) =>
+      userConfigurationDiagnostic(
+        configurationPath,
+        `keybinds.${action}`,
+        `resolves to ${controlKey}, which shadows the terminal's ${shadows} control key on this platform. The keybind stays active, so ${controlKey} no longer reaches the shell`,
+      ),
+  );
 }
 
 export function resolveUserConfigurationPath(
@@ -195,6 +218,17 @@ export async function loadUserConfiguration(
       return configurationFallback(cause.location, cause.reason);
     throw cause;
   }
+  // Keybinds are valid but may still shadow PTY control keys on this platform;
+  // that is a non-fatal warning, not a fallback (#102).
+  const keybindWarnings = keybindPortabilityWarnings(
+    preliminary.keybinds,
+    configurationPath,
+    options.platform ?? "darwin",
+  );
+  const warnings =
+    keybindWarnings.length > 0
+      ? { warnings: Object.freeze(keybindWarnings) }
+      : {};
   const configuredThemePath = selectedTerminalThemePath(
     document,
     configurationPath,
@@ -241,11 +275,13 @@ export async function loadUserConfiguration(
         configuredFontMetrics,
       }),
       ...(themeFallback ? { fallback: themeFallback } : {}),
+      ...warnings,
     });
   }
   return Object.freeze({
     configuration: Object.freeze({ ...preliminary, terminalTheme }),
     ...(themeFallback ? { fallback: themeFallback } : {}),
+    ...warnings,
   });
 }
 

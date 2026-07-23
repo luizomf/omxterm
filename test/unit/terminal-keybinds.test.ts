@@ -3,10 +3,12 @@ import {
   canonicalAccelerator,
   DEFAULT_TERMINAL_KEYBINDS,
   isValidAccelerator,
+  shadowedControlKeyBindings,
   TERMINAL_ACTION_NAMES,
   terminalActionForKeyboardInput,
   terminalDefaultKeybinds,
   type AcceleratorKeyboardInput,
+  type TerminalKeybinds,
 } from "../../src/shared/terminal-keybinds";
 
 describe("terminal keybind accelerators", () => {
@@ -171,5 +173,78 @@ describe("terminal keybind accelerators", () => {
           `selectTab${position}` as keyof typeof DEFAULT_TERMINAL_KEYBINDS
         ],
       ).toBe(`CommandOrControl+${position}`);
+  });
+
+  describe("detecting keybinds that shadow PTY control keys", () => {
+    function withKeybinds(
+      overrides: Partial<TerminalKeybinds>,
+      platform: string,
+    ): TerminalKeybinds {
+      return { ...terminalDefaultKeybinds(platform), ...overrides };
+    }
+
+    it("flags a bare Ctrl+<key> that shadows a control key on this platform", () => {
+      const shadowed = shadowedControlKeyBindings(
+        withKeybinds({ copy: "CommandOrControl+C" }, "linux"),
+        "linux",
+      );
+      expect(shadowed).toEqual([
+        { action: "copy", controlKey: "Ctrl+C", shadows: "SIGINT (interrupt)" },
+      ]);
+    });
+
+    it("does not flag the same CommandOrControl bind on macOS, where it is Cmd", () => {
+      expect(
+        shadowedControlKeyBindings(
+          withKeybinds({ copy: "CommandOrControl+C" }, "darwin"),
+          "darwin",
+        ),
+      ).toEqual([]);
+    });
+
+    it("flags an explicit Control+<key> shadow on macOS too", () => {
+      const shadowed = shadowedControlKeyBindings(
+        withKeybinds({ paste: "Control+D" }, "darwin"),
+        "darwin",
+      );
+      expect(shadowed).toEqual([
+        {
+          action: "paste",
+          controlKey: "Ctrl+D",
+          shadows: "end-of-input (EOF)",
+        },
+      ]);
+    });
+
+    it("reports the backslash control key readably", () => {
+      const shadowed = shadowedControlKeyBindings(
+        withKeybinds({ quit: "Control+\\" }, "linux"),
+        "linux",
+      );
+      expect(shadowed).toEqual([
+        { action: "quit", controlKey: "Ctrl+\\", shadows: "SIGQUIT (quit)" },
+      ]);
+    });
+
+    it("ignores Control combos that add another modifier or miss the set", () => {
+      expect(
+        shadowedControlKeyBindings(
+          withKeybinds(
+            { copy: "Control+Shift+C", newTab: "Control+B" },
+            "linux",
+          ),
+          "linux",
+        ),
+      ).toEqual([]);
+    });
+
+    it("never flags the built-in defaults on either platform", () => {
+      expect(
+        shadowedControlKeyBindings(terminalDefaultKeybinds("linux"), "linux"),
+      ).toEqual([]);
+      expect(
+        shadowedControlKeyBindings(terminalDefaultKeybinds("darwin"), "darwin"),
+      ).toEqual([]);
+    });
   });
 });

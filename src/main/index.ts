@@ -130,7 +130,7 @@ app
         platform: process.platform,
         getInstalledFontFamilyMetrics: installedFontFamilyMetrics,
       },
-      async ({ configuration: userConfiguration, fallback }) => {
+      async ({ configuration: userConfiguration, fallback, warnings }) => {
         operationalEvents!.setLevel(userConfiguration.logLevel);
         if (fallback) {
           operationalEvents!.write({
@@ -143,6 +143,11 @@ app
         } else {
           operationalEvents!.write({ name: "configuration.validated" });
         }
+        // Warn-and-keep notices (e.g. a keybind shadowing a PTY control key)
+        // reach the same stderr + in-app surface as fallbacks, but the
+        // configuration stays active (#102).
+        for (const warning of warnings ?? [])
+          process.stderr.write(`${warning}\n`);
         operationalEvents!.write({ name: "application.started" });
         const rendererConfiguration = Object.freeze({
           ...(userConfiguration.fontFamily
@@ -155,9 +160,10 @@ app
           optionKeyMode: userConfiguration.optionKeyMode,
           nativeTitleInset: terminalNativeTitleInset(process.platform),
           terminalTheme: userConfiguration.terminalTheme,
-          userFileErrors: Object.freeze(
-            fallback ? [userConfigurationFallbackNotice(fallback)] : [],
-          ),
+          userFileErrors: Object.freeze([
+            ...(fallback ? [userConfigurationFallbackNotice(fallback)] : []),
+            ...(warnings ?? []),
+          ]),
         });
         const terminalIpcRouter = registerTerminalIpcRouter(
           // Electron's public handler type contains `any`; isolate that boundary here.
