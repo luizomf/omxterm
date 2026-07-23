@@ -69,7 +69,9 @@ next-patch development baseline:
   prerelease identifier;
 - when `main` accepts a user-visible feature — or, during `0.x`, an intentional
   breaking contract change — the baseline moves to the next minor prerelease,
-  such as `0.2.0-dev.0`;
+  such as `0.2.0-dev.0`. The pull request introducing that change owns the
+  move: it updates `package.json` and `package-lock.json` itself, and makes no
+  change when an earlier pull request already moved the baseline to that minor;
 - release preparation removes the prerelease suffix and selects the final
   version under this policy;
 - development versions are never tagged, attached to a GitHub Release,
