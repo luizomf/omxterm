@@ -157,115 +157,216 @@ The installer is intentionally unsigned and triggers a Microsoft Defender
 SmartScreen unknown-publisher warning. It is not a release candidate until all
 automated checks and the exact-installer manual checklist below are complete.
 
+## Dogfood and exact-artifact acceptance
+
+Exploratory dogfood and an exact-artifact release checklist have different
+purposes. Dogfood may use a development build, vary actions as useful, and
+record findings against its source commit. It can discover defects, but it is
+not Release Artifact acceptance and its results cannot be copied into or used
+to infer a checklist result. An exact-artifact run starts a new durable record,
+uses every applicable check identifier below, and remains bound to one unchanged
+artifact by filename, byte size, and SHA-256. Rebuilding, renaming, or changing
+the artifact starts a new record; rerunning a failed or unexecuted check is valid
+only after confirming that identity again.
+
+The SHA-256 used to bind a run may be calculated before testing. Do not create
+the distributable `.sha256` file until the platform's checksum section says to
+do so after manual testing.
+
 ## Agent-guided manual testing
 
 The exact-artifact manual checklists below are the slowest and most error-prone
 part of a release candidate. The default way to run them is **agent-guided**: a
-human exercises the packaged application while an agent acts as scribe and guide.
-This lowers the bar for the owner and for outside contributors who want to help
-test an artifact with their own agent, and it produces a complete, honest record
-without inflating the checklist into automation it is not.
+human exercises the packaged application while an agent acts as scribe and
+guide. No private skill, agent product, or orchestration setup is required. The
+agent never observes the GUI for the tester; it prepares, dictates, records, and
+verifies the system side, while the human reports what they actually see.
 
-The agent never observes the GUI for the tester. It prepares, dictates, records,
-and verifies the system side; the human reports what they actually see.
+### Prepare once
 
-- **Prepare test assets in advance.** The agent stages the adversarial inputs a
-  checklist item needs before the run: file and folder sets whose names contain
-  spaces, an apostrophe, `$(...)`, `;` and `&`, and Unicode with emoji;
-  log-grep canary commands; and the environment records the exact-artifact
-  record asks for. Prepared assets keep the tester moving and make edge cases
-  reproducible.
-- **Dictate one step at a time, expectation last.** The agent gives the tester
-  one action, and states the expected outcome only _after_ the tester reports
-  what happened. The tester runs blind, so each observation is unbiased evidence
-  rather than a confirmation of what it was supposed to be.
-- **Record verbatim under the never-infer rule.** The agent writes each item as
-  `PASS`, `FAIL`, or `UNEXECUTED` from the tester's own words. Anything the run
-  did not genuinely observe is `UNEXECUTED` with its reason — never inferred from
-  build output, process existence, or automated test results.
-- **Verify the system side in parallel.** While the human drives the GUI, the
-  agent inspects the machine: running processes and AppImage mounts after quit,
-  window properties such as `xprop`/`_NET_WM_ICON`, artifact identity with
-  `file` and the SHA-256, and the Operational Event JSONL for the environment
-  canary and for forbidden payload. These are evidence the agent can gather
-  directly and must not attribute to the human.
-- **Post the exact-artifact record on the tracking issue.** The agent fills in
-  the platform record template from this document and posts it, with per-item
-  results and every unexecuted reason, as the durable artifact evidence.
+Before the first check, the agent:
+
+1. creates the canonical run record below on the release tracking issue, fills
+   every known field, and leaves every check `UNEXECUTED — PENDING`;
+2. verifies the accepted source and the local absolute artifact path, then posts
+   only the public-safe identity: artifact type, filename, byte size, and
+   SHA-256. The absolute path remains in a local worksheet and never appears in
+   tracker evidence;
+3. stages the adversarial inputs required below: file and folder sets whose
+   names contain spaces, an apostrophe, `$(...)`, `;` and `&`, and Unicode with
+   emoji; log-grep canaries; and the required environment records; and
+4. keeps the publication gate `BLOCKED`. Exact-artifact acceptance and separate
+   publication authorization remain owner gates; neither is inferred from a
+   completed checklist.
+
+### Resume and checkpoint
+
+For a new or resumed run, use this sequence exactly:
+
+1. Read the complete durable run record on the tracking issue. Private chat is
+   not continuation authority.
+2. Recalculate filename, byte size, and SHA-256 from the artifact at the locally
+   retained absolute path. If any value differs from the record, stop, mark the
+   run invalid, keep publication blocked, and start a new record for the new
+   artifact.
+3. Select the first applicable row whose current result is
+   `UNEXECUTED — PENDING`. The record's `Next pending check` must name that same
+   identifier. An `UNEXECUTED — IMPOSSIBLE: <reason>` row is not selectable, but
+   remains a release blocker unless an explicit exception below applies.
+4. Give the tester exactly one action from that row. Do not reveal the expected
+   outcome until after the tester reports what happened.
+5. Record the owner's observation verbatim, then assign `PASS`, `FAIL`, or
+   `UNEXECUTED`. Never infer a result from automated checks, process existence,
+   or a different artifact. System-side evidence gathered by the agent must be
+   labeled as such and never attributed to the owner.
+6. Checkpoint the safe observation on the tracking issue before dictating
+   another action. If the row needs more observations, keep its current result
+   `UNEXECUTED — PENDING`, list the safe completed observations and the exact
+   remaining observation, and leave it as `Next pending check`. Otherwise update
+   the row, cleanup state, and exact next pending identifier. Before handoff or
+   context exhaustion, post the same durable checkpoint; local notes and private
+   chat are never continuation state.
+
+While the human drives the GUI, verify applicable system-side evidence in
+parallel: running processes and AppImage mounts after quit, window properties
+such as `xprop`/`_NET_WM_ICON`, artifact identity with `file` and SHA-256, and
+the Operational Event JSONL for the environment canary and forbidden payload.
+Label this as agent-gathered evidence; never attribute it to the human.
 
 A checklist item that depends on seeing the screen — a Gatekeeper dialog, a
-rendered gradient, a dock icon — stays with the human. The agent's job is to
-remove everything around that observation, not to make the observation for them.
+rendered gradient, or an icon — stays with the human. The agent's job is to
+remove everything around that observation, not to make the observation for
+them.
+
+### Tracker evidence safety
+
+The tracking issue is the durable record, but it must never contain Terminal
+Payload, clipboard contents, commands, private paths, screenshots containing
+payload, secrets, or transcripts. Operational-log evidence keeps the existing
+privacy restrictions below. Keep raw observations and the local absolute
+artifact path only in the local worksheet. In the tracker row, quote the
+owner's words verbatim only when they are public-safe. Otherwise replace each
+forbidden part with an explicit marker such as `[omitted: command]` or
+`[omitted: private path]` and record a safe outcome summary; if useful evidence
+cannot be separated safely, write `EVIDENCE OMITTED: <forbidden category>`.
+This is honest omission, not permission to paraphrase forbidden material as if
+it were verbatim. Do not link to unsafe external evidence.
+
+### Canonical durable run record
+
+The following metadata block plus every identifier and initial result from the
+applicable platform checklist is the one canonical template. Do not use
+identifier ranges or omit identifiers, and do not copy the action text (which
+may contain commands) into the tracker. Each identifier has chronological
+attempt entries; its last entry is its current result. Use exactly
+`PASS — <safe evidence>`, `FAIL — <safe evidence>`,
+`UNEXECUTED — PENDING: <safe observation still needed>`, or
+`UNEXECUTED — IMPOSSIBLE: <reason>`.
+
+```text
+Run title: <version> <platform> exact-artifact checklist
+Tracking issue: <public issue URL>
+Source commit: <full commit SHA>
+Source tag: <tag, or UNEXECUTED — not separately authorized>
+Artifact type: <DMG, AppImage, or NSIS installer>
+Artifact filename: <public-safe basename>
+Artifact byte size: <integer>
+Artifact SHA-256: <lowercase digest>
+Local absolute artifact path verified: YES — retained locally, not posted
+Host identity: <public-safe model/OS/build/architecture fields required below>
+Toolchain identity: <public-safe versions required below>
+Automated check: <PASS/FAIL/UNEXECUTED and safe evidence; no command or output>
+Packaged startup: <PASS/FAIL/UNEXECUTED and safe evidence>
+
+Check results:
+<copy every applicable identifier and its chronological results; omit the action text>
+
+Cleanup state: <COMPLETE, INCOMPLETE — reason, or NOT STARTED>
+Exact-artifact acceptance: PENDING or OWNER ACCEPTED
+Publication gate: BLOCKED — separate owner authorization required
+Next pending check: <first identifier whose current result is UNEXECUTED — PENDING, or NONE>
+```
+
+A failed row remains current and blocking until it is deliberately scheduled
+for a same-artifact rerun. After rechecking artifact identity, append
+`UNEXECUTED — PENDING: rerun after FAIL` to that identifier and select it through
+the normal sequence. Append the rerun result instead of deleting history. The
+latest result controls the row's gate state, so a later `PASS` against the same
+unchanged artifact supersedes an earlier `FAIL` without erasing it. A changed
+artifact always starts a new record.
+
+`Next pending check: NONE` means only that no pending row is selectable; it does
+not imply readiness. Exact-artifact acceptance may become `OWNER ACCEPTED` only
+when automated verification and packaged startup passed, cleanup is complete,
+and every applicable manual row's current result is `PASS`, except that
+`MAC-GATEKEEPER` or `WIN-SMARTSCREEN` may be `UNEXECUTED — IMPOSSIBLE` for the
+exact conditional reason stated in its row. A current `FAIL`,
+`UNEXECUTED — PENDING`, or any other `UNEXECUTED — IMPOSSIBLE` keeps acceptance
+and publication blocked. Missing or unexplained results are also blocking.
+
+Identifiers beginning with `SH-` are shared behavior families; their final
+`MAC`, `LIN`, or `WIN` segment identifies the native observation. Identifiers
+beginning with `MAC-`, `LIN-`, or `WIN-` are platform-specific. Treat every full
+identifier as stable: do not rename or reuse one for a different check.
 
 ### Worked example — the #60 Linux run
 
 The Linux ARM64 AppImage checklist for
-[#60](https://github.com/luizomf/omxterm/issues/60) was run this way. The method
-produced one of the most complete manual records in the repository, found two
-real regressions mid-run, and left every unobserved item honestly `UNEXECUTED`:
+[#60](https://github.com/luizomf/omxterm/issues/60) was run with the earlier
+record format. It produced a complete manual history and found two regressions,
+but new runs use the canonical record above:
 
-- the [exact-artifact record](https://github.com/luizomf/omxterm/issues/60#issuecomment-5053075065)
-  in this document's Linux template, with per-item results and unexecuted
-  reasons;
-- the pending-item [re-run](https://github.com/luizomf/omxterm/issues/60#issuecomment-5053144161)
+- the [exact-artifact record](https://github.com/luizomf/omxterm/issues/60#issuecomment-5053075065),
+  with per-item results and unexecuted reasons;
+- the pending-item [rerun](https://github.com/luizomf/omxterm/issues/60#issuecomment-5053144161)
   and [edge-case addendum](https://github.com/luizomf/omxterm/issues/60#issuecomment-5053411307)
-  against the same exact artifact;
+  against the same exact artifact; and
 - the two regressions the run surfaced — an invisible plain launch
   ([`b28ae76`](https://github.com/luizomf/omxterm/issues/60#issuecomment-5052788958))
   and a missing window icon
   ([`af10b18`](https://github.com/luizomf/omxterm/issues/60#issuecomment-5053024945))
-  — each fixed on-branch and re-verified.
-
-A reusable checklist-scribe skill is a possible future convenience; formalizing
-one is not required to run the checklists this way today.
+  — each fixed on-branch and reverified.
 
 ## macOS exact-artifact record
 
-Create the following record before manual testing, fill in every value already
-known, and keep the publication gate `BLOCKED`. Complete the results, SHA-256,
-unexecuted reasons, and final gate as their required steps finish. Use
-`UNEXECUTED` for every item the environment cannot genuinely observe; do not
-infer a pass from build output, process existence, or automated test results.
-
-```text
-Source commit:
-Source tag (only when separately authorized):
-Host model:
-macOS version and build:
-Architecture:
-Node.js version:
-Exact DMG absolute path:
-Exact DMG filename:
-DMG byte size:
-SHA-256:
-Automated npm run check result:
-Packaged-startup result:
-Manual checklist results and evidence:
-Unexecuted items and reasons:
-Publication gate: BLOCKED or OWNER ACCEPTED
-```
+Use the canonical record with host model, macOS version and build, architecture,
+and Node.js version in its identity fields. Verify the exact DMG's absolute path
+locally, but post only its filename, byte size, and SHA-256. Keep the exact path
+private and local. Use a disposable configuration/state root where a check calls
+for invalid data or log inspection. Test the application copied from the
+mounted exact DMG, not the unpacked build directory or a previous installation.
 
 ### Manual checklist for the exact DMG
 
-Use a disposable configuration/state root where a check calls for invalid data
-or log inspection. Test the application copied from the mounted exact DMG, not
-the unpacked build directory or a previous installation.
+Copy every identifier and initial result below into the run record, not the
+action text. Each row starts `UNEXECUTED — PENDING: not yet observed`. A row is
+`PASS` only when every independently stated observation in that row was made. If only part was
+observed, keep the row `UNEXECUTED — PENDING`, record the completed parts, and
+name the exact remaining observation; this prevents a grouped behavior from
+hiding an omission.
 
-- **DMG and first launch:** mount the exact DMG, verify it contains `OMXTerm.app`
-  and an Applications link, copy the app, eject the DMG, and launch the copied
-  app. Record whether macOS displayed a Gatekeeper warning. A locally built
-  image may not carry download quarantine, so record the Gatekeeper observation
-  as `UNEXECUTED` rather than manufacturing or bypassing a warning.
-- **Default Shell and clean exit:** verify the operating-system-configured
-  interactive login shell starts in the home directory; verify `TERM`,
+- **`MAC-DMG-FIRST-LAUNCH` — DMG and first launch.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Mount the exact DMG, verify it
+  contains `OMXTerm.app` and an Applications link, copy the app, eject the DMG,
+  and launch the copied app.
+- **`MAC-GATEKEEPER` — Gatekeeper observation.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Record whether macOS displayed a
+  Gatekeeper warning. A locally built image may not carry download quarantine,
+  so record `UNEXECUTED — IMPOSSIBLE: locally built DMG has no download
+quarantine` rather than manufacturing or bypassing a warning.
+- **`SH-SHELL-EXIT-MAC` — Default Shell and clean exit.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Verify the
+  operating-system-configured interactive login shell starts in the home directory; verify `TERM`,
   `COLORTERM`, `TERM_PROGRAM`, and `TERM_PROGRAM_VERSION`; in fresh windows, run
   `exit 0` and `exit 7`, and confirm each Terminal Window closes without a
   failure dialog.
-- **Abnormal shell exit:** in a fresh window, run `kill -s KILL $$`; confirm the
-  failure stays visible in the native dialog until acknowledged and the
+- **`SH-ABNORMAL-EXIT-MAC` — Abnormal shell exit.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. In a fresh window, run
+  `kill -s KILL $$`; confirm the failure stays visible in the native dialog until acknowledged and the
   unusable window then closes.
-- **Multiple windows, tabs, and cleanup:** use `Cmd+N` for at least two
-  independent windows and `Cmd+T` for at least two Terminal Tabs in one of
+- **`SH-WINDOW-TAB-CLEANUP-MAC` — Multiple windows, tabs, and cleanup.**
+  Initial result: `UNEXECUTED — PENDING: not yet observed`. Use `Cmd+N` for at
+  least two independent windows and `Cmd+T` for at least two Terminal Tabs in one of
   them; verify the tab strip appears only with two or more tabs, `Cmd+W`
   closes an idle tab without asking and a tab running a foreground process
   (e.g. `htop`) with one confirmation, `Cmd+Shift+W` closes the selected
@@ -274,11 +375,13 @@ the unpacked build directory or a previous installation.
   OMXTerm, and `Cmd+Q` requests one confirmation for all open windows only
   while a session is Busy. Confirm no OMXTerm or child shell remains after
   quit.
-- **tmux, TUI, and terminal compatibility:** exercise tmux, an alternate-screen
-  TUI, Unicode, truecolor, scrolling, resize, a REPL, bracketed paste, and SSH
+- **`SH-TERMINAL-COMPAT-MAC` — tmux, TUI, and terminal compatibility.**
+  Initial result: `UNEXECUTED — PENDING: not yet observed`. Exercise tmux, an
+  alternate-screen TUI, Unicode, truecolor, scrolling, resize, a REPL, bracketed paste, and SSH
   started by the user. Confirm OMXTerm installs no shell integration or custom
   terminfo.
-- **macOS file and folder insertion:** from Finder, drag-drop multiple files
+- **`MAC-FILE-INSERTION` — macOS file and folder insertion.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. From Finder, drag-drop multiple files
   and folders containing spaces, apostrophes, Unicode, and shell
   metacharacters into a window. Confirm ordered, independently POSIX-quoted
   absolute paths reach only the selected tab through Protected Paste without
@@ -286,27 +389,33 @@ the unpacked build directory or a previous installation.
   `NSFilenamesPboardType` or `public.file-url` fallback only when plain text
   is empty. Confirm a non-file URL, malformed list, and drop without native
   files have no side effect.
-- **Clipboard and Protected Paste:** verify selection does not copy, `Ctrl+C`
-  and `Ctrl+V` remain PTY input, native/context-menu copy and paste work, unsafe
-  multiline or control-character paste is confirmed outside bracketed-paste
+- **`SH-CLIPBOARD-MAC` — Clipboard and Protected Paste.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Verify selection does not copy,
+  `Ctrl+C` and `Ctrl+V` remain PTY input, native/context-menu copy and paste work,
+  unsafe multiline or control-character paste is confirmed outside bracketed-paste
   mode, bracketed paste does not show that confirmation, and OSC 52 can write
   but cannot read or clear the clipboard.
-- **Zoom:** verify `Cmd++`, `Cmd+-`, and `Cmd+0` affect only the selected window,
-  do not alter User Configuration, and do not affect a newly opened window.
-- **Always on Top:** toggle `Window -> Always on Top` and verify only the
-  selected window changes. Verify a new window uses the configured default and
+- **`SH-ZOOM-MAC` — Zoom.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Verify `Cmd++`, `Cmd+-`, and `Cmd+0`
+  affect only the selected window, do not alter User Configuration, and do not affect a newly opened window.
+- **`SH-ALWAYS-ON-TOP-MAC` — Always on Top.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Toggle `Window -> Always on Top` and
+  verify only the selected window changes. Verify a new window uses the configured default and
   the menu does not rewrite configuration.
-- **Titles and BEL:** exercise OSC 0 and OSC 2, invalid/control/bidi/oversized
-  titles, and BEL in focused and unfocused windows and in selected and
+- **`SH-TITLES-BEL-MAC` — Titles and BEL.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Exercise OSC 0 and OSC 2,
+  invalid/control/bidi/oversized titles, and BEL in focused and unfocused windows and in selected and
   unselected tabs. Confirm sanitized bounded titles per tab with the Default
   Shell name as the untitled fallback, the window title mirroring the selected
   tab, silent BEL, one Dock attention request, and the bell marker on the
   ringing tab until it is focused again.
-- **Links:** verify only literal visible HTTP and HTTPS URLs activate on
-  `Cmd+click`; verify invalid URLs, other schemes, OSC 8 destinations, and
+- **`SH-LINKS-MAC` — Links.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Verify only literal visible HTTP and
+  HTTPS URLs activate on `Cmd+click`; verify invalid URLs, other schemes, OSC 8 destinations, and
   renderer navigation are refused.
-- **Configuration:** verify absent configuration uses defaults without creating
-  a file; verify a valid version 1 file after restart; verify invalid JSON,
+- **`SH-CONFIGURATION-MAC` — Configuration.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Verify absent configuration uses
+  defaults without creating a file; verify a valid version 1 file after restart; verify invalid JSON,
   unknown keys, unsupported versions, invalid values, and missing fonts still
   open the application on built-in defaults with the exact problem reported on
   stderr and in the persistent in-app error surface, without rewriting the
@@ -319,15 +428,17 @@ the unpacked build directory or a previous installation.
   the rest of the validated configuration, and the loud error surface, without
   rewriting either file; verify configuration and theme changes take effect
   only after restart.
-- **Keybinds:** verify a remapped action (for example `newWindow` on
-  `CommandOrControl+T`) triggers via the new accelerator, no longer via the
+- **`SH-KEYBINDS-MAC` — Keybinds.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Verify a remapped action (for example
+  `newWindow` on `CommandOrControl+T`) triggers via the new accelerator, no longer via the
   default, and the menu displays the new accelerator; verify unmapped actions
   keep their defaults; verify an unknown action name, a malformed or
   modifier-less accelerator, and a remap colliding with a remaining default
   each start the application on default keybinds with the exact field reported
   in the error surface.
-- **Snippets Sidebar:** with no `snippets.json`, verify the toggle keybind
-  (default `Cmd+Shift+S`) opens a clean empty sidebar beside a still-usable
+- **`SH-SNIPPETS-MAC` — Snippets Sidebar.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. With no `snippets.json`, verify the
+  toggle keybind (default `Cmd+Shift+S`) opens a clean empty sidebar beside a still-usable
   terminal. With a valid file, verify search filters by name and description,
   a click injects into that window's session and returns focus to the
   terminal, a default snippet lands unexecuted, an `execute: true` snippet
@@ -335,49 +446,39 @@ the unpacked build directory or a previous installation.
   the file and reopening the sidebar shows the new content without restart.
   With an invalid file, verify the application and terminal stay unaffected
   and the sidebar shows the exact path and field in place of the list.
-- **Operational logs:** verify current/previous JSONL retention, configured log
-  levels, bounded permissions and size, useful lifecycle/failure metadata, and
+- **`SH-LOGS-MAC` — Operational logs.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Verify current/previous JSONL
+  retention, configured log levels, bounded permissions and size, useful lifecycle/failure metadata, and
   absence of Terminal Payload, clipboard data, commands, titles, environment,
   configuration contents, secrets, and transcripts.
-- **Application boundary and cleanup:** verify native copy/paste/select-all,
-  fullscreen, close, quit, and Window actions; verify the Terminal Surface fills
+- **`SH-APP-BOUNDARY-MAC` — Application boundary and cleanup.** Initial
+  result: `UNEXECUTED — PENDING: not yet observed`. Verify native
+  copy/paste/select-all, fullscreen, close, quit, and Window actions; verify the Terminal Surface fills
   the content area; verify there is no application telemetry/update traffic;
   remove the copied app and disposable test configuration/state after recording
   evidence.
 
 ## Linux exact-artifact record
 
-Create this record before manual testing the AppImage and keep the publication
-gate `BLOCKED` until Otávio accepts the exact artifact. Record `UNEXECUTED` for
-anything not genuinely observed.
-
-```text
-Source commit:
-Source tag (only when separately authorized):
-Linux distribution and version:
-Kernel version:
-Architecture:
-Node.js and npm versions:
-Native toolchain versions:
-FUSE 2 runtime package/version:
-Exact AppImage absolute path:
-Exact AppImage filename:
-AppImage byte size:
-SHA-256:
-Automated npm run check:linux result:
-Packaged-startup result:
-Manual checklist results and evidence:
-Unexecuted items and reasons:
-Publication gate: BLOCKED or OWNER ACCEPTED
-```
+Use the canonical record with Linux distribution and version, kernel version,
+architecture, Node.js and npm versions, native toolchain versions, and the FUSE
+2 runtime package/version in its identity fields. Verify the exact AppImage's
+absolute path locally, but post only its filename, byte size, and SHA-256. Keep
+the exact path private and local.
 
 ### Manual checklist for the exact AppImage
 
 Use the exact unchanged AppImage named in the record, not the unpacked build
 directory or another copy. Use disposable configuration, state, and user-data
-roots for invalid-file and log checks.
+roots for invalid-file and log checks. Copy every identifier and initial result
+below into the run record, not the action text; each starts
+`UNEXECUTED — PENDING: not yet observed`. A row is `PASS` only when
+every independently stated observation in it was made. A partial row remains
+`UNEXECUTED — PENDING` with both completed and exactly remaining observations
+recorded.
 
-- **AppImage and first launch:** confirm the filename and `file` output identify
+- **`LIN-APPIMAGE-FIRST-LAUNCH` — AppImage and first launch.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Confirm the filename and `file` output identify
   ARM aarch64, make the artifact executable, and launch it normally. Confirm the
   default X11 backend presents a visible window, recording XWayland when the
   desktop session is Wayland; an explicit Ozone override is diagnostic evidence,
@@ -389,40 +490,51 @@ roots for invalid-file and log checks.
   the GNOME dock icon requires the desktop-integration step documented in the
   README for directly-run AppImages. Record that no publisher signature is
   presented.
-- **Default Shell and exits:** verify the operating-system-configured interactive
+- **`SH-SHELL-EXIT-LIN` — Default Shell and exits.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Verify the operating-system-configured interactive
   login shell starts in the account home directory and reports `TERM`,
   `COLORTERM`, `TERM_PROGRAM`, and `TERM_PROGRAM_VERSION` exactly as documented.
   In fresh windows, run `exit 0`, `exit 7`, and `kill -s KILL $$`; confirm normal
   exits close without a failure dialog and the signal failure remains visible
   until acknowledged.
-- **Windows, tabs, and cleanup:** using Linux `Ctrl` application shortcuts and
+- **`SH-WINDOW-TAB-CLEANUP-LIN` — Windows, tabs, and cleanup.** Initial
+  result: `UNEXECUTED — PENDING: not yet observed`. Using Linux `Ctrl` application shortcuts and
   native menu items, exercise independent windows and tabs, idle and Busy close
   behavior, fullscreen, zoom, always-on-top, copy, paste, select-all, and quit.
   Confirm the tab strip and focus behavior, one confirmation per guarded action,
   and that no OMXTerm, AppImage mount, child shell, or foreground process remains
   after the last window quits.
-- **Terminal compatibility:** exercise tmux, an alternate-screen TUI, Unicode,
+- **`SH-TERMINAL-COMPAT-LIN` — Terminal compatibility.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Exercise tmux, an alternate-screen TUI, Unicode,
   truecolor, scrolling, resize, a REPL, bracketed paste, and SSH started by the
   user. Confirm OMXTerm adds neither custom terminfo nor Shell Integration.
-- **Linux file and folder insertion:** from the native Linux file manager, drop
+- **`LIN-FILE-INSERTION` — Linux file and folder insertion.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. From the native Linux file manager, drop
   multiple files and folders containing spaces, apostrophes, Unicode, and shell
   metacharacters into a window. Confirm ordered, independently POSIX-quoted
   absolute paths reach only the selected tab through Protected Paste without
   Enter. Copy the same native selection and confirm Paste uses the GNOME file
   list or URI-list fallback only when plain text is empty. Confirm a non-file
   URL, malformed list, and drop without native files have no side effect.
-- **Clipboard and Protected Paste:** verify selection does not copy, `Ctrl+C` and
-  `Ctrl+V` remain PTY input, the default `Ctrl+Shift+C` and `Ctrl+Shift+V` plus
-  native menu/context copy and paste work, unsafe multiline or control-character paste
-  is confirmed outside bracketed-paste mode, bracketed paste is not prompted,
-  and OSC 52 can write but cannot read or clear the clipboard.
-- **Titles, BEL, links, configuration, and snippets:** exercise the same accepted
-  title sanitization, silent BEL, literal HTTP/HTTPS activation, valid and
-  invalid configuration/theme behavior, keybind remapping, and Snippets Sidebar
-  behavior documented in the macOS checklist, using Linux menu labels and
-  shortcuts. Do not infer these results from unit tests.
-- **Logs, application boundary, and cleanup:** verify bounded local JSONL
-  retention and permissions, useful payload-free Operational Events, no
+- **`SH-CLIPBOARD-LIN` — Clipboard and Protected Paste.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Verify selection does not copy,
+  `Ctrl+C` and `Ctrl+V` remain PTY input, the default `Ctrl+Shift+C` and
+  `Ctrl+Shift+V` plus native menu/context copy and paste work, unsafe multiline
+  or control-character paste is confirmed outside bracketed-paste mode,
+  bracketed paste is not prompted, and OSC 52 can write but cannot read or clear
+  the clipboard.
+- **`SH-TITLES-BEL-LINKS-LIN` — Titles, BEL, and links.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Exercise the same accepted title
+  sanitization, silent BEL, and literal HTTP/HTTPS activation documented in the
+  macOS checklist, using Linux menu labels and shortcuts.
+- **`SH-CONFIG-KEYBINDS-SNIPPETS-LIN` — Configuration, keybinds, and snippets.**
+  Initial result: `UNEXECUTED — PENDING: not yet observed`. Exercise the same
+  valid and invalid configuration/theme behavior, keybind remapping, and
+  Snippets Sidebar behavior documented in the macOS checklist, using Linux menu
+  labels and shortcuts. Do not infer these results from unit tests.
+- **`SH-LOGS-APP-CLEANUP-LIN` — Logs, application boundary, and cleanup.**
+  Initial result: `UNEXECUTED — PENDING: not yet observed`. Verify bounded local
+  JSONL retention and permissions, useful payload-free Operational Events, no
   application telemetry or update traffic, and absence of Terminal Payload,
   clipboard contents, paths inserted by drop or paste, environment canaries,
   configuration contents, commands, titles, secrets, and transcripts. Remove
@@ -431,83 +543,86 @@ roots for invalid-file and log checks.
 
 ## Windows exact-artifact record
 
-Create this record before manual testing the NSIS installer and keep the
-publication gate `BLOCKED` until Otávio accepts the exact artifact. Record
-`UNEXECUTED` for anything not genuinely observed.
-
-```text
-Source commit:
-Source tag (only when separately authorized):
-Windows edition, version, and build:
-Architecture:
-Node.js and npm versions:
-Exact installer absolute path:
-Exact installer filename:
-Installer byte size:
-SHA-256:
-Automated npm run check:win result:
-Packaged-startup result:
-Manual checklist results and evidence:
-Unexecuted items and reasons:
-Publication gate: BLOCKED or OWNER ACCEPTED
-```
+Use the canonical record with Windows edition, version, and build, architecture,
+and Node.js and npm versions in its identity fields. Verify the exact
+installer's absolute path locally, but post only its filename, byte size, and
+SHA-256. Keep the exact path private and local.
 
 ### Manual checklist for the exact NSIS installer
 
 Use the exact unchanged installer named in the record, not the unpacked build
 directory. Use disposable configuration, state, and user-data roots for
-invalid-file and log checks.
+invalid-file and log checks. Copy every identifier and initial result below into
+the run record, not the action text; each starts
+`UNEXECUTED — PENDING: not yet observed`. A row is `PASS` only when every
+independently stated observation in it was made. A partial row remains
+`UNEXECUTED — PENDING` with both completed and exactly remaining observations
+recorded.
 
-- **Installer and first launch:** confirm the filename identifies the accepted
-  version and arm64. Run the exact installer from Explorer and record the
-  SmartScreen observation verbatim; a locally built installer may not carry
-  the download mark-of-the-web, so record SmartScreen as `UNEXECUTED` rather
-  than manufacturing or bypassing a warning, and never disable SmartScreen or
-  other system protections. Confirm the one-click per-user install completes
-  without elevation, the Start Menu entry and its icon appear, and the
-  installed application launches with the OMXTerm window icon. Record that no
-  publisher signature is presented.
-- **Default Shell and exits:** verify Windows PowerShell starts as a plain
+- **`WIN-INSTALLER-FIRST-LAUNCH` — Installer and first launch.** Initial
+  result: `UNEXECUTED — PENDING: not yet observed`. Confirm the filename
+  identifies the accepted version and arm64. Run the exact installer from
+  Explorer. Confirm the one-click per-user install completes without elevation,
+  the Start Menu entry and its icon appear, and the installed application
+  launches with the OMXTerm window icon. Record that no publisher signature is
+  presented.
+- **`WIN-SMARTSCREEN` — SmartScreen observation.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Record the SmartScreen observation
+  verbatim. A locally built installer may not carry the download mark-of-the-web,
+  so record `UNEXECUTED — IMPOSSIBLE: locally built installer has no
+mark-of-the-web` rather than manufacturing or bypassing a warning. Never
+  disable SmartScreen or other system protections.
+- **`SH-SHELL-EXIT-WIN` — Default Shell and exits.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Verify Windows PowerShell starts as a plain
   interactive session in the user profile directory and reports `TERM`,
   `COLORTERM`, `TERM_PROGRAM`, and `TERM_PROGRAM_VERSION` exactly as
   documented. In fresh windows, run `exit 0` and `exit 7`; confirm each closes
   without a failure dialog. Stop the shell process abnormally (for example
   `Stop-Process -Id $PID` from that shell) and confirm an abnormal end stays
   visible until acknowledged when it is reported as a failure.
-- **Windows, tabs, and Busy behavior:** using `Ctrl` application shortcuts and
+- **`SH-WINDOW-TAB-BUSY-WIN` — Windows, tabs, and Busy behavior.** Initial
+  result: `UNEXECUTED — PENDING: not yet observed`. Using `Ctrl` application shortcuts and
   native menu items, exercise independent windows and tabs, fullscreen, zoom,
   always-on-top, copy, paste, select-all, and quit. Confirm the documented
   Windows Busy contract: because ConPTY hides the foreground process name,
   closing any live tab, window, or the application asks exactly once per
   guarded action while `confirmClose` is enabled. Confirm no OMXTerm or child
   shell process remains after the last window quits.
-- **Terminal compatibility:** exercise an alternate-screen TUI, Unicode and
+- **`SH-TERMINAL-COMPAT-WIN` — Terminal compatibility.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Exercise an alternate-screen TUI, Unicode and
   emoji, truecolor, scrolling, resize, a REPL, bracketed paste, and SSH
   started by the user (`ssh.exe`). Confirm OMXTerm installs no shell
   integration.
-- **Windows file and folder insertion:** from Explorer, drop multiple files
+- **`WIN-FILE-INSERTION` — Windows file and folder insertion.** Initial
+  result: `UNEXECUTED — PENDING: not yet observed`. From Explorer, drop multiple files
   and folders containing spaces, apostrophes, Unicode, and shell
   metacharacters into a window. Confirm ordered, independently quoted
   absolute paths reach only the selected tab through Protected Paste without
   Enter. Copy a file in Explorer and confirm Paste inserts the documented
   single-path clipboard fallback only when plain text is empty.
-- **Clipboard and Protected Paste:** verify selection does not copy, `Ctrl+C`
-  and `Ctrl+V` remain PTY input, the default `Ctrl+Shift+C` and
-  `Ctrl+Shift+V` plus native menu/context copy and paste work, unsafe
-  multiline or control-character paste is confirmed outside bracketed-paste
-  mode, bracketed paste is not prompted, and OSC 52 can write but cannot read
-  or clear the clipboard.
-- **Titles, BEL, links, configuration, and snippets:** exercise the same
-  accepted title sanitization, silent BEL, literal HTTP/HTTPS activation,
+- **`SH-CLIPBOARD-WIN` — Clipboard and Protected Paste.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Verify selection does not copy,
+  `Ctrl+C` and `Ctrl+V` remain PTY input, the default `Ctrl+Shift+C` and
+  `Ctrl+Shift+V` plus native menu/context copy and paste work, unsafe multiline
+  or control-character paste is confirmed outside bracketed-paste mode,
+  bracketed paste is not prompted, and OSC 52 can write but cannot read or clear
+  the clipboard.
+- **`SH-TITLES-BEL-LINKS-WIN` — Titles, BEL, and links.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. Exercise the same accepted title
+  sanitization, silent BEL, and literal HTTP/HTTPS activation documented in the
+  macOS checklist, using Windows menu labels and shortcuts.
+- **`SH-CONFIG-KEYBINDS-SNIPPETS-WIN` — Configuration, keybinds, and snippets.**
+  Initial result: `UNEXECUTED — PENDING: not yet observed`. Exercise the same
   valid and invalid configuration/theme behavior at
   `%USERPROFILE%\.config\omxterm\`, keybind remapping, and Snippets Sidebar
   behavior documented in the macOS checklist, using Windows menu labels and
   shortcuts. Do not infer these results from unit tests.
-- **Logs, application boundary, and cleanup:** verify bounded local JSONL
-  retention at `%USERPROFILE%\.local\state\omxterm\logs\`, useful payload-free
-  Operational Events, no application telemetry or update traffic, and absence
-  of Terminal Payload, clipboard contents, inserted paths, environment
-  canaries, configuration contents, commands, titles, secrets, and
+- **`SH-LOGS-APP-CLEANUP-WIN` — Logs, application boundary, and cleanup.**
+  Initial result: `UNEXECUTED — PENDING: not yet observed`. Verify bounded local
+  JSONL retention at `%USERPROFILE%\.local\state\omxterm\logs\`, useful
+  payload-free Operational Events, no application telemetry or update traffic,
+  and absence of Terminal Payload, clipboard contents, inserted paths,
+  environment canaries, configuration contents, commands, titles, secrets, and
   transcripts. Uninstall the per-user application after recording evidence,
   confirm the uninstaller removes the Start Menu entry, and preserve the exact
   installer unchanged for checksum and owner acceptance.
