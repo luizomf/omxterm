@@ -507,6 +507,12 @@ export async function verifyPackagedApplication(applicationPath) {
           "omxterm.png",
         ),
       );
+      // Linux Terminal Windows resolve their icon from resources (a
+      // directly-run AppImage has no registered desktop entry to supply one).
+      await assertSameFile(
+        path.join(projectRoot, "assets", "application-icon.png"),
+        path.join(resources, "application-icon.png"),
+      );
     }
     await inspectApplicationVersion({
       applicationRoot,

@@ -9,6 +9,7 @@ import {
 } from "electron";
 import * as nodePty from "node-pty";
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -67,6 +68,18 @@ const developmentApplicationIconPath = path.resolve(
   "assets",
   "application-icon.png",
 );
+const packagedApplicationIconPath = path.join(
+  process.resourcesPath,
+  "application-icon.png",
+);
+// Linux windows must carry their own icon: a directly-run AppImage has no
+// registered desktop entry for the environment to resolve one from.
+const linuxWindowIconPath =
+  process.platform === "linux"
+    ? existsSync(packagedApplicationIconPath)
+      ? packagedApplicationIconPath
+      : developmentApplicationIconPath
+    : undefined;
 
 let terminalApplication: TerminalApplication<BrowserWindow> | undefined;
 let operationalEvents: OperationalEventLog | undefined;
@@ -166,6 +179,7 @@ app
                 preloadPath,
                 userConfiguration,
                 process.platform,
+                linuxWindowIconPath,
               ),
             );
             const defaultShellName = path.basename(defaultShell);

@@ -61,6 +61,26 @@ describe("Terminal Window startup contract", () => {
     expect(options.minHeight).toBe(544);
   });
 
+  // A directly-run AppImage has no registered desktop entry, so the window
+  // itself must carry the icon or the environment shows a placeholder.
+  it("carries the window icon when the platform provides one", () => {
+    const options = terminalWindowOptions(
+      "/application/preload.cjs",
+      DEFAULT_USER_CONFIGURATION,
+      "linux",
+      "/resources/application-icon.png",
+    );
+
+    expect(options.icon).toBe("/resources/application-icon.png");
+    expect(
+      terminalWindowOptions(
+        "/application/preload.cjs",
+        DEFAULT_USER_CONFIGURATION,
+        "darwin",
+      ),
+    ).not.toHaveProperty("icon");
+  });
+
   it("uses the resolved Terminal Theme background before renderer startup", () => {
     const options = terminalWindowOptions("/application/preload.cjs", {
       ...DEFAULT_USER_CONFIGURATION,

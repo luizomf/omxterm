@@ -30,6 +30,7 @@ export function terminalWindowOptions(
   preloadPath: string,
   configuration: TerminalWindowGeometryConfiguration,
   platform: string = "darwin",
+  windowIconPath?: string,
 ): BrowserWindowConstructorOptions {
   const {
     fontSize,
@@ -74,6 +75,10 @@ export function terminalWindowOptions(
     useContentSize: nativeTitleInset === 0,
     titleBarStyle: nativeTitleInset > 0 ? "hiddenInset" : "default",
     backgroundColor: terminalTheme.colors.background,
+    // Without a window icon, environments that resolve icons from the window
+    // itself (a directly-run Linux AppImage has no registered desktop entry)
+    // fall back to a generic placeholder.
+    ...(windowIconPath ? { icon: windowIconPath } : {}),
     webPreferences: {
       preload: preloadPath,
       sandbox: true,

@@ -9,6 +9,10 @@ directories:
 extraResources:
   - from: LICENSE
     to: LICENSE.txt
+  # Linux Terminal Windows resolve their icon from resources because a
+  # directly-run AppImage has no registered desktop entry to supply one.
+  - from: assets/application-icon.png
+    to: application-icon.png
   - from: THIRD_PARTY_NOTICES.md
     to: THIRD_PARTY_NOTICES.md
   - from: assets/fonts/OFL.txt
