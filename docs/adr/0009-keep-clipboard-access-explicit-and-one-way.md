@@ -1,5 +1,10 @@
 # Keep clipboard access explicit and one-way
 
+File-manager path insertion through drop and Paste is a later, complementary
+decision recorded in
+[ADR 0021](0021-insert-lexical-shell-quoted-paths-through-protected-paste.md);
+it does not change the one-way stance below.
+
 OMXTerm will not copy terminal selections automatically. On macOS, `Ctrl+C`
 remains terminal input, while `Cmd+C`, `Cmd+V`, and the contextual menu provide
 explicit text copy and paste actions. `Ctrl+V` also remains terminal input so a
