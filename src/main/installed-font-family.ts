@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import path from "node:path";
 import { promisify } from "node:util";
 
 const FONT_METRICS_SCRIPT = `
@@ -39,23 +40,45 @@ if (members.isNil()) {
 }
 `;
 
+// The family travels through the environment instead of the command line so
+// no PowerShell quoting or escaping ever applies to its characters.
+const WINDOWS_FONT_SCRIPT = `
+Add-Type -AssemblyName System.Drawing
+$family = $env:OMXTERM_FONT_FAMILY
+$families = (New-Object System.Drawing.Text.InstalledFontCollection).Families
+if ($families | Where-Object { $_.Name -ceq $family }) { 'installed' } else { 'missing' }
+`;
+
 export interface InstalledFontFamilyMetrics {
   readonly cellWidth: number;
   readonly cellHeight: number;
 }
 
+export interface FontMetricsCommandOptions {
+  readonly timeoutMs?: number;
+  readonly environment?: Readonly<Record<string, string>>;
+}
+
 export type FontMetricsCommand = (
   file: string,
   arguments_: readonly string[],
+  options?: FontMetricsCommandOptions,
 ) => Promise<{ readonly stdout: string }>;
 
 const execFileAsync = promisify(execFile);
 
-const runFontMetricsCommand: FontMetricsCommand = async (file, arguments_) =>
+const runFontMetricsCommand: FontMetricsCommand = async (
+  file,
+  arguments_,
+  options,
+) =>
   execFileAsync(file, [...arguments_], {
     encoding: "utf8",
     maxBuffer: 1024,
-    timeout: 2_000,
+    timeout: options?.timeoutMs ?? 2_000,
+    ...(options?.environment
+      ? { env: { ...process.env, ...options.environment } }
+      : {}),
   });
 
 export async function installedFontFamilyMetrics(
@@ -79,6 +102,30 @@ export async function installedFontFamilyMetrics(
       // fontconfig establishes exact family availability; Chromium measures
       // the real cells when the Terminal Surface mounts. These conservative
       // values are used only for native minimum-window sizing before mount.
+      cellWidth: fontSize * 0.6,
+      cellHeight: fontSize * 1.2,
+    });
+  }
+
+  if (platform === "win32") {
+    // GDI+ establishes exact family availability; Chromium measures the real
+    // cells when the Terminal Surface mounts, mirroring the Linux probe. The
+    // longer timeout absorbs Windows PowerShell's cold start.
+    const { stdout } = await run(
+      path.join(
+        process.env["SystemRoot"] ?? "C:\\Windows",
+        "System32",
+        "WindowsPowerShell",
+        "v1.0",
+        "powershell.exe",
+      ),
+      ["-NoProfile", "-NonInteractive", "-Command", WINDOWS_FONT_SCRIPT],
+      { timeoutMs: 10_000, environment: { OMXTERM_FONT_FAMILY: family } },
+    );
+    const status = stdout.trim();
+    if (status === "missing") return undefined;
+    if (status !== "installed") throw invalidFontMetrics();
+    return Object.freeze({
       cellWidth: fontSize * 0.6,
       cellHeight: fontSize * 1.2,
     });

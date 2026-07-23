@@ -45,6 +45,51 @@ describe("macOS installed font-family availability", () => {
     ).rejects.toThrow("Installed font family metrics returned invalid data");
   });
 
+  it("asks GDI+ about only the exact configured family on Windows", async () => {
+    const run = async (
+      file: string,
+      arguments_: readonly string[],
+      options?: {
+        readonly timeoutMs?: number;
+        readonly environment?: Readonly<Record<string, string>>;
+      },
+    ) => {
+      expect(file).toMatch(/[/\\]powershell\.exe$/u);
+      expect(arguments_.slice(0, 3)).toEqual([
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+      ]);
+      // The family reaches PowerShell through the environment, never through
+      // the command line, so no quoting can change or reinterpret it.
+      expect(arguments_.at(-1)).not.toContain("Exact Family");
+      expect(options?.environment).toEqual({
+        OMXTERM_FONT_FAMILY: "Exact Family",
+      });
+      return { stdout: "installed\n" };
+    };
+
+    await expect(
+      installedFontFamilyMetrics("Exact Family", 20, run, "win32"),
+    ).resolves.toEqual({ cellWidth: 12, cellHeight: 24 });
+    await expect(
+      installedFontFamilyMetrics(
+        "Missing Family",
+        20,
+        async () => ({ stdout: "missing\n" }),
+        "win32",
+      ),
+    ).resolves.toBeUndefined();
+    await expect(
+      installedFontFamilyMetrics(
+        "Exact Family",
+        20,
+        async () => ({ stdout: "Add-Type : failed\n" }),
+        "win32",
+      ),
+    ).rejects.toThrow("Installed font family metrics returned invalid data");
+  });
+
   it("uses fontconfig without accepting a fallback family on Linux", async () => {
     const exactRun = async (file: string, arguments_: readonly string[]) => {
       expect(file).toBe("/usr/bin/fc-match");
