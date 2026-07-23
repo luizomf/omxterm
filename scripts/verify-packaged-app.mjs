@@ -572,6 +572,16 @@ export async function verifyPackagedApplication(applicationPath) {
         path.join(resources, "licenses", "xterm-addon-web-links.txt"),
       ),
       assertSameFile(
+        path.join(
+          projectRoot,
+          "node_modules",
+          "@xterm",
+          "addon-unicode-graphemes",
+          "LICENSE",
+        ),
+        path.join(resources, "licenses", "xterm-addon-unicode-graphemes.txt"),
+      ),
+      assertSameFile(
         path.join(projectRoot, "node_modules", "node-pty", "LICENSE"),
         path.join(resources, "licenses", "node-pty.txt"),
       ),
