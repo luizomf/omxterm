@@ -7,7 +7,10 @@ adjacent feature.
 
 This guide explains the public contribution workflow. The
 [documentation map](docs/README.md) points to the authoritative product and
-project documents.
+project documents. If a coding agent drives your contribution, point it at
+[`AGENTS.md`](AGENTS.md): it carries the same engineering, boundary, and
+safety instructions repository agents follow, and its Authority section
+explains which operations a fork agent requests rather than performs.
 
 ## Before proposing a change
 
@@ -161,7 +164,12 @@ Releases, or upload artifacts. The maintainer selects versions under the
 [versioning policy](docs/versioning.md) and authorizes each release separately
 after the exact artifact passes the [release procedure](docs/release.md).
 
-Do not include an unsolicited version bump in a pull request.
+Do not include a version bump in a pull request, with one exception: the
+[versioning policy](docs/versioning.md) assigns the development-baseline move
+to the pull request that adds user-visible behavior, so such a pull request
+may move the baseline to the next minor `-dev.0` (updating `package.json`,
+`package-lock.json`, and the pinned release-version test together). The
+maintainer repairs a missing baseline move during review.
 
 ## Collaboration
 
