@@ -32,9 +32,8 @@ Keep proposals inside the current product boundary. Splits, saved sessions, AI
 assistance, SSH brokering, shell integration, theme catalogs, and automatic
 updates remain outside the current product contract; their presence in other
 terminals does not make them requirements. The Supported Platforms are ARM64
-macOS, Linux, and Windows. Linux ARM64 runtime and AppImage packaging are
-implemented, while native Windows runtime and packaging remains scoped to
-[#61](https://github.com/luizomf/omxterm/issues/61).
+macOS, Linux, and Windows. Linux ARM64 AppImage and Windows ARM64 NSIS
+runtime and packaging are both implemented.
 
 ## Development environment
 
@@ -60,6 +59,19 @@ Windows contributors should install the
 native build toolchain requested by npm if no matching dependency prebuild is
 available.
 
+On Windows, clone with `core.autocrlf=false` — a system Git for Windows
+configuration that smudges the tree to CRLF breaks `prettier --check` — and
+with `core.symlinks=true`, because the repository contains symlinked files
+that must check out as symlinks; enabling Windows Developer Mode allows
+unprivileged symlink creation. Electron's runtime needs the Visual C++
+Redistributable for ARM64 (without it the postinstall fails with
+`ERR_DLOPEN_FAILED`), and npm's `.ps1` shims need a PowerShell execution
+policy that permits local scripts. If `npm ci` fails with `EPERM` file locks,
+an antivirus scanner racing the extractor is the usual cause; an exclusion
+for the clone directory resolves it. Windows launches — including the
+packaged launch inside `npm run package:verify` and `npm run check:win` —
+need a graphical session.
+
 The portable development baseline does not require a packaged application:
 
 ```sh
@@ -69,9 +81,9 @@ npm run check:portable
 
 This command runs formatting checks, strict typechecking, the complete automated
 test suite, and the unpackaged build. Native packaging and operating-system
-behavior evidence are platform-owned work: macOS uses `npm run check`, and a
-native Linux ARM64 clone uses `npm run check:linux`. The Windows procedure lands
-with #61. In a pull request, list every check run and state exactly why any
+behavior evidence are platform-owned work: macOS uses `npm run check`, a
+native Linux ARM64 clone uses `npm run check:linux`, and a native Windows
+ARM64 clone uses `npm run check:win`. In a pull request, list every check run and state exactly why any
 relevant platform check could not run. Never infer a platform pass from another
 operating system.
 
