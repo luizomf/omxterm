@@ -31,6 +31,11 @@ export interface ApplicationVersions {
 
 export function inspectApplicationVersions(versions: ApplicationVersions): void;
 
+export function signalProcessGroup(
+  processGroupId: number,
+  signal: NodeJS.Signals | 0,
+): boolean;
+
 export function verifyPackagedApplication(applicationPath?: string): Promise<{
   readonly applicationPath: string;
   readonly records: number;

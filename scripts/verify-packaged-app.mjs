@@ -440,12 +440,13 @@ async function verifyWindowsInstallerExtraction(installer, unpackedRoot) {
   }
 }
 
-function signalProcessGroup(processGroupId, signal) {
+export function signalProcessGroup(processGroupId, signal) {
   try {
     process.kill(-processGroupId, signal);
     return true;
   } catch (cause) {
     if (cause?.code === "ESRCH") return false;
+    if (cause?.code === "EPERM") return true;
     throw cause;
   }
 }

@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   inspectAsarEntries,
   inspectApplicationVersions,
   inspectForbiddenPackagedEntries,
   inspectIcnsRepresentations,
+  signalProcessGroup,
 } from "../../scripts/verify-packaged-app.mjs";
 
 const requiredEntries = [
@@ -22,6 +23,58 @@ const requiredEntries = [
 ];
 
 describe("packaged application verifier", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("reports a missing process group when signaling returns ESRCH", () => {
+    const cause = Object.assign(new Error("missing process group"), {
+      code: "ESRCH",
+    });
+    const kill = vi.spyOn(process, "kill").mockImplementation(() => {
+      throw cause;
+    });
+
+    expect(signalProcessGroup(123, 0)).toBe(false);
+    expect(kill).toHaveBeenCalledWith(-123, 0);
+  });
+
+  it("reports an EPERM process group as present during a liveness probe", () => {
+    const cause = Object.assign(new Error("process group is not signalable"), {
+      code: "EPERM",
+    });
+    vi.spyOn(process, "kill").mockImplementation(() => {
+      throw cause;
+    });
+
+    expect(signalProcessGroup(123, 0)).toBe(true);
+  });
+
+  it.each(["SIGTERM", "SIGKILL"] as const)(
+    "keeps teardown running when %s returns EPERM",
+    (signal) => {
+      const cause = Object.assign(
+        new Error("process group is not signalable"),
+        { code: "EPERM" },
+      );
+      const kill = vi.spyOn(process, "kill").mockImplementation(() => {
+        throw cause;
+      });
+
+      expect(signalProcessGroup(123, signal)).toBe(true);
+      expect(kill).toHaveBeenCalledWith(-123, signal);
+    },
+  );
+
+  it("rethrows an unexpected process-group signaling error", () => {
+    const cause = Object.assign(new Error("unexpected signaling failure"), {
+      code: "EINVAL",
+    });
+    vi.spyOn(process, "kill").mockImplementation(() => {
+      throw cause;
+    });
+
+    expect(() => signalProcessGroup(123, "SIGTERM")).toThrow(cause);
+  });
+
   it("requires source, embedded package, and bundle versions to agree", () => {
     expect(() =>
       inspectApplicationVersions({
