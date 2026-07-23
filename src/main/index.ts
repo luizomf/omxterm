@@ -20,6 +20,7 @@ import {
   terminalClipboardContextMenuTemplate,
 } from "./application-menu";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
+import { resolveDefaultShell } from "./default-shell";
 import { createLocalTerminalSession } from "./local-terminal-session";
 import { planLinuxDisplayBackendDefault } from "./linux-display-backend";
 import {
@@ -174,11 +175,11 @@ app
           confirmClose: userConfiguration.confirmClose,
           alwaysOnTopDefault: userConfiguration.alwaysOnTop,
           createWindow(lifecycle) {
-            if (!account.shell)
-              throw new Error(
-                "The operating system did not provide a Default Shell",
-              );
-            const defaultShell = account.shell;
+            const defaultShell = resolveDefaultShell(
+              process.platform,
+              account.shell,
+              process.env,
+            );
 
             const window = new BrowserWindow(
               terminalWindowOptions(
@@ -245,6 +246,7 @@ app
               createSession(callbacks) {
                 return createLocalTerminalSession(nodePty.spawn, {
                   shell: defaultShell,
+                  platform: process.platform,
                   homeDirectory: account.homedir,
                   applicationVersionProvider: app,
                   environment: process.env,

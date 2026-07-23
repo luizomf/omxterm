@@ -21,8 +21,10 @@ than current support commitments.
 
 OMXTerm must:
 
-- open the operating-system-configured shell as an interactive login shell in
-  the user's home directory;
+- open the Default Shell in the user's home directory: on macOS and Linux the
+  operating-system-configured shell as an interactive login shell; on Windows,
+  which has no login-shell concept, Windows PowerShell — falling back to the
+  ComSpec command processor — started interactively without a login flag;
 - remain compatible with ordinary shells, SSH started by the user, tmux, TUIs,
   REPLs, alternate-screen applications, Unicode, and bracketed paste, rendering
   emoji-presentation and ZWJ grapheme clusters as single two-column cells that
@@ -80,7 +82,10 @@ updates, and remote terminal features are outside the current product contract.
   the idle Default Shell. Closing only idle sessions proceeds without
   confirmation. OMXTerm reads the foreground process name solely for this
   in-memory decision and never logs, displays, or transmits it; when the name
-  cannot be read, the session counts as Busy.
+  cannot be read, the session counts as Busy. On Windows, ConPTY exposes only
+  a static console title instead of the foreground process name, so every
+  live session counts as Busy and closing it always asks while confirmation
+  is enabled.
 - After the Default Shell starts successfully, an ordinary shell exit closes
   its tab — and its window when that was the last tab — without confirmation
   or a failure dialog, regardless of its numeric exit code.

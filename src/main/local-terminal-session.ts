@@ -21,6 +21,7 @@ export interface ApplicationVersionProvider {
 
 export interface LocalTerminalSessionOptions {
   readonly shell: string;
+  readonly platform: NodeJS.Platform | string;
   readonly homeDirectory: string;
   readonly applicationVersionProvider: ApplicationVersionProvider;
   readonly environment: NodeJS.ProcessEnv;
@@ -38,9 +39,12 @@ export function createLocalTerminalSession(
   spawnPty: SpawnPty,
   options: LocalTerminalSessionOptions,
 ): LocalTerminalSession {
+  // POSIX keeps the interactive login-shell contract through "-l". Windows
+  // shells reject the flag and have no login-shell concept (#61).
+  const shellArguments = options.platform === "win32" ? [] : ["-l"];
   let pty: IPty;
   try {
-    pty = spawnPty(options.shell, ["-l"], {
+    pty = spawnPty(options.shell, shellArguments, {
       cwd: options.homeDirectory,
       env: {
         ...options.environment,
@@ -97,6 +101,10 @@ export function createLocalTerminalSession(
     // read, the session counts as busy so closing still asks first.
     hasForegroundChildProcess() {
       if (closed || exited) return false;
+      // ConPTY reports a static console title through pty.process, never
+      // the foreground process name, so on Windows the name cannot be read
+      // and a live session always counts as Busy (#61).
+      if (options.platform === "win32") return true;
       let foreground: unknown;
       try {
         foreground = pty.process;

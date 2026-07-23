@@ -64,6 +64,7 @@ describe("local PTY Adapter", () => {
     const getVersion = vi.fn(() => "1.2.3");
     const session = createLocalTerminalSession(spawn, {
       shell: "/bin/example-shell",
+      platform: "darwin",
       homeDirectory: "/Users/example",
       applicationVersionProvider: { getVersion },
       environment: {
@@ -108,6 +109,47 @@ describe("local PTY Adapter", () => {
     expect(harness.pty.resize).toHaveBeenCalledWith(120, 40);
   });
 
+  it("spawns Windows shells without the POSIX login flag", () => {
+    const harness = createPtyHarness();
+    const spawn = vi.fn<SpawnPty>(() => harness.pty);
+    createLocalTerminalSession(spawn, {
+      shell: "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      platform: "win32",
+      homeDirectory: "C:\\Users\\example",
+      applicationVersionProvider: { getVersion: () => "1.2.3" },
+      environment: {},
+      onOutput: vi.fn(),
+      onExit: vi.fn(),
+    });
+
+    expect(spawn).toHaveBeenCalledWith(
+      "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      [],
+      expect.objectContaining({ cwd: "C:\\Users\\example" }),
+    );
+  });
+
+  it("counts a live Windows session as Busy because ConPTY hides the foreground name", () => {
+    const harness = createPtyHarness();
+    const session = createLocalTerminalSession(
+      vi.fn<SpawnPty>(() => harness.pty),
+      {
+        shell: "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        platform: "win32",
+        homeDirectory: "C:\\Users\\example",
+        applicationVersionProvider: { getVersion: () => "1.2.3" },
+        environment: {},
+        onOutput: vi.fn(),
+        onExit: vi.fn(),
+      },
+    );
+
+    harness.setForegroundProcess("Windows Shell");
+    expect(session.hasForegroundChildProcess()).toBe(true);
+    session.close();
+    expect(session.hasForegroundChildProcess()).toBe(false);
+  });
+
   // Regression for #85: closing a tab kills the PTY, but the session end must
   // still be reported when the process actually exits — a swallowed report
   // leaves the closed session counted as live and the window never follows
@@ -117,6 +159,7 @@ describe("local PTY Adapter", () => {
     const onExit = vi.fn();
     const session = createLocalTerminalSession(() => harness.pty, {
       shell: "/bin/example-shell",
+      platform: "darwin",
       homeDirectory: "/Users/example",
       applicationVersionProvider: { getVersion: () => "1.2.3" },
       environment: {},
@@ -140,6 +183,7 @@ describe("local PTY Adapter", () => {
     const onExit = vi.fn();
     const session = createLocalTerminalSession(() => harness.pty, {
       shell: "/bin/example-shell",
+      platform: "darwin",
       homeDirectory: "/Users/example",
       applicationVersionProvider: { getVersion: () => "1.2.3" },
       environment: {},
@@ -171,6 +215,7 @@ describe("local PTY Adapter", () => {
         },
         {
           shell: "/bin/example-shell",
+          platform: "darwin",
           homeDirectory: "/Users/example",
           applicationVersionProvider: { getVersion: () => "1.2.3" },
           environment,
@@ -191,6 +236,7 @@ describe("local PTY Adapter", () => {
         },
         {
           shell: "/bin/example-shell",
+          platform: "darwin",
           homeDirectory: "/Users/example",
           applicationVersionProvider: { getVersion: () => "1.2.3" },
           environment,
@@ -209,6 +255,7 @@ describe("local PTY Adapter", () => {
       vi.fn<SpawnPty>(() => harness.pty),
       {
         shell: "/bin/example-shell",
+        platform: "darwin",
         homeDirectory: "/Users/example",
         applicationVersionProvider: { getVersion: () => "1.2.3" },
         environment: {},
@@ -236,6 +283,7 @@ describe("local PTY Adapter", () => {
     const harness = createPtyHarness();
     const options = {
       shell: "/bin/example-shell",
+      platform: "darwin",
       homeDirectory: "/Users/example",
       applicationVersionProvider: { getVersion: () => "1.2.3" },
       environment: {},
