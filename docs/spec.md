@@ -52,7 +52,7 @@ updates, and remote terminal features are outside the current product contract.
 
 - Launching OMXTerm creates a Terminal Window with one Terminal Tab. New Window
   and New Tab default to `Cmd+N` and `Cmd+T` on macOS, and `Ctrl+Shift+N` and
-  `Ctrl+Shift+T` on Linux. Each tab owns its own independent Live Terminal
+  `Ctrl+Shift+T` on Linux and Windows. Each tab owns its own independent Live Terminal
   Session.
 - After its Terminal Surface mounts, an active Terminal Window gives terminal
   input DOM focus. Returning from another application or another OMXTerm window
@@ -64,15 +64,16 @@ updates, and remote terminal features are outside the current product contract.
   pre-tab contract. With two or more tabs, an OMXTerm-drawn tab strip occupies
   its own full-width row above the Terminal Surface and Snippets Sidebar row.
   On macOS it sits below the app-controlled 30 px native title inset; on Linux
-  it starts immediately below the operating system's native title and menu,
-  without another inset. Clicking a tab selects it; the selected tab's grid
+  and Windows it starts immediately below the operating system's native title
+  and menu, without another inset. Clicking a tab selects it; the selected tab's grid
   refits and receives terminal focus.
-- Close Tab defaults to `Cmd+W` on macOS and `Ctrl+Shift+W` on Linux, and
+- Close Tab defaults to `Cmd+W` on macOS and `Ctrl+Shift+W` on Linux and Windows, and
   terminates only the selected tab's session. Closing a window's last tab closes
   that window. Close Window defaults to `Cmd+Shift+W` on macOS and
-  `Ctrl+Shift+Q` on Linux and closes all of the selected window's tabs. Closing
+  `Ctrl+Shift+Q` on Linux and Windows and closes all of the selected window's tabs. Closing
   the last window quits OMXTerm.
-- Quit defaults to `Cmd+Q` on macOS and `Ctrl+Alt+Shift+Q` on Linux. It requests
+- Quit defaults to `Cmd+Q` on macOS and `Ctrl+Alt+Shift+Q` on Linux and
+  Windows. It requests
   one confirmation for all open windows when confirmation is enabled and at
   least one Live Terminal Session is Busy.
 - `confirmClose` defaults to `true` and guards closing a tab, closing a
@@ -93,8 +94,8 @@ updates, and remote terminal features are outside the current product contract.
   and local log until acknowledged; the useless tab then closes.
 - Each window starts at configured font size. Window Font Zoom defaults to
   `Cmd++`, `Cmd+-`, and `Cmd+0` on macOS and `Ctrl++`, `Ctrl+-`, and `Ctrl+0`
-  on Linux; it affects only that window, applies to every tab in it, and is not
-  persisted.
+  on Linux and Windows; it affects only that window, applies to every tab in
+  it, and is not persisted.
 - The Terminal Surface and Live Terminal Session grid refit in both directions
   after Terminal Window width or height changes, after Window Font Zoom, and
   after tab selection. The xterm grid remains inside the visible content area
@@ -103,8 +104,9 @@ updates, and remote terminal features are outside the current product contract.
   as floors and grow at startup when configured font or padding needs more room
   for a visible terminal grid.
 - On macOS, the Terminal Surface keeps a fixed 30 px native title/drag inset
-  above the configurable top padding. Linux uses its operating-system title
-  and menu outside the app-controlled content and adds no duplicate inset. The
+  above the configurable top padding. Linux and Windows use their
+  operating-system title and menu outside the app-controlled content and add
+  no duplicate inset. The
   selected Terminal Theme background fills the complete app-controlled
   Terminal Window content, including any title inset and all configured
   padding.
@@ -117,7 +119,7 @@ updates, and remote terminal features are outside the current product contract.
   prevented over the whole renderer document; a drop with no native files has
   no terminal side effect.
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and
-  `Ctrl+Shift+S` on Linux, remappable through `keybinds`) shows or hides the
+  `Ctrl+Shift+S` on Linux and Windows, remappable through `keybinds`) shows or hides the
   selected window's Snippets Sidebar beside its
   Terminal Surface. The sidebar lists the snippets from `snippets.json`,
   filters them by name and description as the user types, and a click injects
@@ -152,16 +154,16 @@ title mirrors the selected tab and falls back to `OMXTerm`. Title contents are
 never logged or reported to the PTY.
 
 Only literal visible `http:` and `https:` URLs are links. `Cmd+click` on macOS
-or `Ctrl+click` on Linux asks the Electron main process to parse and validate
-the exact URL before opening it. OSC 8 destinations and all other schemes are
+or `Ctrl+click` on Linux and Windows asks the Electron main process to parse
+and validate the exact URL before opening it. OSC 8 destinations and all other schemes are
 ignored.
 
 ## Clipboard
 
 - Selection never copies automatically.
 - `Ctrl+C` and `Ctrl+V` remain PTY input.
-- `Cmd+C` and `Cmd+V` on macOS, `Ctrl+Shift+C` and `Ctrl+Shift+V` on Linux,
-  and the native context menu perform explicit text copy and paste. Any
+- `Cmd+C` and `Cmd+V` on macOS, `Ctrl+Shift+C` and `Ctrl+Shift+V` on Linux
+  and Windows, and the native context menu perform explicit text copy and paste. Any
   non-empty plain text, including whitespace-only text, is pasted
   unchanged and takes priority over every file-list representation. When text
   is empty and the clipboard exposes a supported native file-manager file list,
@@ -207,8 +209,10 @@ field reference, theme conversion guidance, and troubleshooting.
 
 OMXTerm reads an optional configuration from
 `$XDG_CONFIG_HOME/omxterm/config.json`, falling back to
-`~/.config/omxterm/config.json`. Absence uses defaults and does not create a
-file. A present file must contain `"version": 1` and only supported keys:
+`~/.config/omxterm/config.json`. The same XDG-style resolution applies on
+every Supported Platform, including Windows, where the fallback is
+`%USERPROFILE%\.config\omxterm\config.json` (ADR 0002). Absence uses defaults
+and does not create a file. A present file must contain `"version": 1` and only supported keys:
 
 - `confirmClose`;
 - `logLevel`;
@@ -228,8 +232,8 @@ row-height multiplier from 1.0 through 2.0 inclusive, accepts fractional
 values, does not change glyph size, and defaults to 1.0. Terminal padding uses
 explicit per-side integer CSS pixels from 0 through 128 inclusive and defaults
 to top 0, right 8, bottom 8, and left 8. User top padding is added to the fixed,
-non-configurable 30 px native title inset on macOS; on Linux it begins directly
-below the native window chrome. `logLevel` defaults to `info`,
+non-configurable 30 px native title inset on macOS; on Linux and Windows it
+begins directly below the native window chrome. `logLevel` defaults to `info`,
 `keyboard.optionAsAlt` to `none`, and `window.alwaysOnTop` to `false`.
 
 An optional `keybinds` object remaps application-chrome shortcuts for a fixed
@@ -251,8 +255,8 @@ input.
 Unknown action names, malformed accelerators, and duplicate accelerators are
 errors under the resilient failure contract below. Duplicates are judged on
 the effective native map: `CommandOrControl` resolves to `Command` on macOS and
-`Control` on Linux, while `Super` and `Meta` use Electron's Command accelerator
-family. A remap that collides with another action's remaining default is the
+`Control` on Linux and Windows, while `Super` and `Meta` use Electron's Command
+accelerator family. A remap that collides with another action's remaining default is the
 same error as two explicit entries colliding.
 A valid keybind that resolves, on the current platform, to a bare `Ctrl+<key>`
 shadowing a PTY control key (`Ctrl+C`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+\`, `Ctrl+U`,
@@ -369,7 +373,10 @@ unsigned. Signing, Apple notarization, certificates, x64, Intel macOS,
 additional formats, paid CI, and a multi-platform CI matrix are deferred until
 the repository is public. macOS release notes must explain the Gatekeeper
 warning, link to Apple's current `Open Anyway` instructions, and never recommend
-disabling system-wide security. Provenance claims do not state that the
+disabling system-wide security. Windows release notes must equally explain the
+Microsoft Defender SmartScreen unknown-publisher warning for the unsigned NSIS
+installer and never recommend disabling SmartScreen or other system-wide
+protections. Provenance claims do not state that the
 software was independently audited or approved by a platform vendor.
 
 ## Acceptance boundary
@@ -384,9 +391,8 @@ release check exercises the exact DMG on the supported Mac, including first
 launch, shell exit, multiple windows and tabs, tmux/TUI use, clipboard, zoom,
 always-on-top, application-icon presentation at small and large display sizes,
 and Gatekeeper documentation. Linux and Windows receive equally native checks;
-Linux's detailed procedures already landed with its packaging implementation,
-and Windows's remain pending, landing with its own packaging implementation
-rather than being inferred from the macOS checklist.
+their detailed procedures landed with their packaging implementations rather
+than being inferred from the macOS checklist.
 
 The ADRs in `docs/adr/` own the reasoning behind the durable choices; this file
 owns the current observable product contract.

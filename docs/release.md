@@ -1,8 +1,8 @@
 # ARM64 release policy and native procedures
 
 The policy below applies to all initial OMXTerm Release Artifacts. This document
-implements the native procedures for the unsigned macOS DMG and Linux ARM64
-AppImage; the Windows procedure remains pending. Nothing here authorizes a tag,
+implements the native procedures for the unsigned macOS DMG, Linux ARM64
+AppImage, and Windows ARM64 NSIS installer. Nothing here authorizes a tag,
 GitHub Release, upload, signing, notarization, or any other publication. Those
 actions require separate approval from Otávio.
 
@@ -26,10 +26,10 @@ and requires separate authorization from Otávio. x64, Intel macOS, additional
 package formats, signing and notarization, paid CI, and a multi-platform CI
 matrix are deferred until the repository is public.
 
-The macOS and Linux steps below are the implemented procedures for those
-platforms. The macOS procedure preserves its Gatekeeper policy; the Linux
-procedure records the unsigned AppImage and FUSE limitations. Windows commands,
-artifact records, and manual checks land with its packaging implementation.
+The macOS, Linux, and Windows steps below are the implemented procedures for
+those platforms. The macOS procedure preserves its Gatekeeper policy; the Linux
+procedure records the unsigned AppImage and FUSE limitations; the Windows
+procedure records the unsigned NSIS installer and SmartScreen limitation.
 
 ## Version selection and consistency
 
@@ -42,8 +42,8 @@ Before building a release candidate, confirm that `package.json` and
 `package-lock.json` contain the same accepted `X.Y.Z` version. The application
 version, intended `vX.Y.Z` tag, `TERM_PROGRAM_VERSION`, native artifact
 filenames, checksum filenames, and GitHub Release must all identify that same
-version. The package names are `OMXTerm-X.Y.Z-arm64.dmg` and
-`OMXTerm-X.Y.Z-arm64.AppImage`.
+version. The package names are `OMXTerm-X.Y.Z-arm64.dmg`,
+`OMXTerm-X.Y.Z-arm64.AppImage`, and `OMXTerm-X.Y.Z-arm64.exe`.
 
 ## Build and automated verification
 
@@ -111,6 +111,38 @@ runtime cannot be installed, the safe manual fallback is:
 The AppImage is intentionally unsigned and provides no verified publisher
 identity. It is not a release candidate until all automated checks and the
 exact-AppImage manual checklist below are complete.
+
+### Windows arm64
+
+Use a native Windows arm64 clone on the VM's native filesystem, never a
+Parallels shared folder, in a graphical session. Install Node.js 22 or newer
+and the Visual C++ Redistributable for ARM64 (Electron's runtime requires it),
+allow script execution for npm's cmd shims, and clone with
+`core.autocrlf=false` and `core.symlinks=true` (symlinked repository files
+must check out as symlinks; Developer Mode enables unprivileged symlinks).
+Then run from the accepted source commit:
+
+```powershell
+npm ci
+npm run check:win
+```
+
+`npm run check:win` runs all portable and real-ConPTY checks, creates the
+non-published `release/OMXTerm-<version>-arm64.exe` NSIS installer, inspects
+the unpacked application's arm64 PE executables and win32-arm64 node-pty
+runtime, version, licenses, and forbidden/private-looking files, then launches
+the unpacked application with isolated configuration, state, and user data.
+Startup must reach a running PTY and its Operational Event log must not
+contain the environment canary.
+
+For packaging alone, run `npm run package:win`, followed on the same native
+host by `npm run package:verify`. The automated startup check runs the
+unpacked `release/win-arm64-unpacked/OMXTerm.exe`; installing and launching
+the exact NSIS installer is a manual checklist step.
+
+The installer is intentionally unsigned and triggers a Microsoft Defender
+SmartScreen unknown-publisher warning. It is not a release candidate until all
+automated checks and the exact-installer manual checklist below are complete.
 
 ## Agent-guided manual testing
 
@@ -384,12 +416,96 @@ roots for invalid-file and log checks.
   disposable test state after recording evidence, but preserve the exact
   AppImage unchanged for checksum and owner acceptance.
 
+## Windows exact-artifact record
+
+Create this record before manual testing the NSIS installer and keep the
+publication gate `BLOCKED` until Otávio accepts the exact artifact. Record
+`UNEXECUTED` for anything not genuinely observed.
+
+```text
+Source commit:
+Source tag (only when separately authorized):
+Windows edition, version, and build:
+Architecture:
+Node.js and npm versions:
+Exact installer absolute path:
+Exact installer filename:
+Installer byte size:
+SHA-256:
+Automated npm run check:win result:
+Packaged-startup result:
+Manual checklist results and evidence:
+Unexecuted items and reasons:
+Publication gate: BLOCKED or OWNER ACCEPTED
+```
+
+### Manual checklist for the exact NSIS installer
+
+Use the exact unchanged installer named in the record, not the unpacked build
+directory. Use disposable configuration, state, and user-data roots for
+invalid-file and log checks.
+
+- **Installer and first launch:** confirm the filename identifies the accepted
+  version and arm64. Run the exact installer from Explorer and record the
+  SmartScreen observation verbatim; a locally built installer may not carry
+  the download mark-of-the-web, so record SmartScreen as `UNEXECUTED` rather
+  than manufacturing or bypassing a warning, and never disable SmartScreen or
+  other system protections. Confirm the one-click per-user install completes
+  without elevation, the Start Menu entry and its icon appear, and the
+  installed application launches with the OMXTerm window icon. Record that no
+  publisher signature is presented.
+- **Default Shell and exits:** verify Windows PowerShell starts as a plain
+  interactive session in the user profile directory and reports `TERM`,
+  `COLORTERM`, `TERM_PROGRAM`, and `TERM_PROGRAM_VERSION` exactly as
+  documented. In fresh windows, run `exit 0` and `exit 7`; confirm each closes
+  without a failure dialog. Stop the shell process abnormally (for example
+  `Stop-Process -Id $PID` from that shell) and confirm an abnormal end stays
+  visible until acknowledged when it is reported as a failure.
+- **Windows, tabs, and Busy behavior:** using `Ctrl` application shortcuts and
+  native menu items, exercise independent windows and tabs, fullscreen, zoom,
+  always-on-top, copy, paste, select-all, and quit. Confirm the documented
+  Windows Busy contract: because ConPTY hides the foreground process name,
+  closing any live tab, window, or the application asks exactly once per
+  guarded action while `confirmClose` is enabled. Confirm no OMXTerm or child
+  shell process remains after the last window quits.
+- **Terminal compatibility:** exercise an alternate-screen TUI, Unicode and
+  emoji, truecolor, scrolling, resize, a REPL, bracketed paste, and SSH
+  started by the user (`ssh.exe`). Confirm OMXTerm installs no shell
+  integration.
+- **Windows file and folder insertion:** from Explorer, drop multiple files
+  and folders containing spaces, apostrophes, Unicode, and shell
+  metacharacters into a window. Confirm ordered, independently quoted
+  absolute paths reach only the selected tab through Protected Paste without
+  Enter. Copy a file in Explorer and confirm Paste inserts the documented
+  single-path clipboard fallback only when plain text is empty.
+- **Clipboard and Protected Paste:** verify selection does not copy, `Ctrl+C`
+  and `Ctrl+V` remain PTY input, the default `Ctrl+Shift+C` and
+  `Ctrl+Shift+V` plus native menu/context copy and paste work, unsafe
+  multiline or control-character paste is confirmed outside bracketed-paste
+  mode, bracketed paste is not prompted, and OSC 52 can write but cannot read
+  or clear the clipboard.
+- **Titles, BEL, links, configuration, and snippets:** exercise the same
+  accepted title sanitization, silent BEL, literal HTTP/HTTPS activation,
+  valid and invalid configuration/theme behavior at
+  `%USERPROFILE%\.config\omxterm\`, keybind remapping, and Snippets Sidebar
+  behavior documented in the macOS checklist, using Windows menu labels and
+  shortcuts. Do not infer these results from unit tests.
+- **Logs, application boundary, and cleanup:** verify bounded local JSONL
+  retention at `%USERPROFILE%\.local\state\omxterm\logs\`, useful payload-free
+  Operational Events, no application telemetry or update traffic, and absence
+  of Terminal Payload, clipboard contents, inserted paths, environment
+  canaries, configuration contents, commands, titles, secrets, and
+  transcripts. Uninstall the per-user application after recording evidence,
+  confirm the uninstaller removes the Start Menu entry, and preserve the exact
+  installer unchanged for checksum and owner acceptance.
+
 Any failed required item or any unexplained unexecuted item keeps every future
-tag, GitHub Release, attachment, or upload blocked. The Gatekeeper observation
-may remain `UNEXECUTED` only when the locally built DMG has no download
-quarantine and that reason is recorded; this conditional observation does not
-by itself block publication, but the required Gatekeeper release guidance still
-applies. Missing exact-artifact manual evidence does not prevent a preparatory
+tag, GitHub Release, attachment, or upload blocked. The Gatekeeper and
+SmartScreen observations may remain `UNEXECUTED` only when the locally built
+artifact carries no download quarantine or mark-of-the-web and that reason is
+recorded; these conditional observations do not by themselves block
+publication, but the required Gatekeeper and SmartScreen release guidance
+still applies. Missing exact-artifact manual evidence does not prevent a preparatory
 packaging change from merging, but it does prevent publication.
 
 ## macOS SHA-256
@@ -422,6 +538,23 @@ renaming, or changing the AppImage invalidates its manual evidence and checksum.
 Keep publication blocked until Otávio accepts this exact artifact and separately
 authorizes publication.
 
+## Windows SHA-256
+
+Generate the checksum only after manual testing finishes against the unchanged
+exact installer:
+
+```powershell
+cd release
+$name = "OMXTerm-<version>-arm64.exe"
+"$((Get-FileHash $name -Algorithm SHA256).Hash.ToLower())  $name" |
+  Out-File -Encoding ascii "$name.sha256"
+Get-Content "$name.sha256"
+```
+
+Confirm the digest matches a fresh `Get-FileHash` of the same file. The same
+rebuild/rename invalidation and blocked-publication rules as the other
+platforms apply.
+
 ## Gatekeeper and provenance release note
 
 Use this language in any later owner-authorized release, updated only with the
@@ -437,24 +570,41 @@ accepted version and checksum:
 > uses; it is not independently audited, approved by Apple, or guaranteed free
 > of defects in all code and dependencies.
 
+## SmartScreen and provenance release note
+
+Use this language in any later owner-authorized release that attaches the
+Windows installer, updated only with the accepted version and checksum:
+
+> OMXTerm for Windows ARM64 is intentionally not signed with a code-signing
+> certificate. Microsoft Defender SmartScreen may warn that the installer is
+> from an unknown publisher. Review the source, verify the published SHA-256,
+> and proceed only if you trust this exact artifact. If you choose to install
+> it, use SmartScreen's `More info -> Run anyway` for this one file. Do not
+> disable SmartScreen or other system-wide Windows security protections. This
+> is the open-source build Otávio published and uses; it is not independently
+> audited, approved by Microsoft, or guaranteed free of defects in all code
+> and dependencies.
+
 ## Later owner-authorized GitHub Release
 
 Only after Otávio accepts the exact-artifact record and separately authorizes
 publication:
 
 1. confirm the canonical repository is `luizomf/omxterm`, the accepted source is
-   tagged `vX.Y.Z`, and the package metadata, DMG, AppImage, and both checksums
-   still match their accepted records;
+   tagged `vX.Y.Z`, and the package metadata, DMG, AppImage, installer, and
+   their checksums still match their accepted records;
 2. create the canonical GitHub Release for that exact tag with the Gatekeeper
-   and provenance note above; summarize material changes, identify incompatible
-   changes and migration or state that there are none, and record relevant
-   known limitations;
+   and SmartScreen provenance notes above; summarize material changes, identify
+   incompatible changes and migration or state that there are none, and record
+   relevant known limitations;
 3. attach exactly `OMXTerm-<version>-arm64.dmg`,
    `OMXTerm-<version>-arm64.dmg.sha256`,
-   `OMXTerm-<version>-arm64.AppImage`, and
-   `OMXTerm-<version>-arm64.AppImage.sha256` manually;
-4. download all four attachments, verify both checksums again on their native
-   Supported Platforms, and preserve the final release URL with the accepted
+   `OMXTerm-<version>-arm64.AppImage`,
+   `OMXTerm-<version>-arm64.AppImage.sha256`,
+   `OMXTerm-<version>-arm64.exe`, and
+   `OMXTerm-<version>-arm64.exe.sha256` manually;
+4. download all six attachments, verify every checksum again on its native
+   Supported Platform, and preserve the final release URL with the accepted
    evidence.
 
 Do not automate these publication steps or perform them under the authority of

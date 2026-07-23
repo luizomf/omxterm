@@ -18,18 +18,18 @@ under the [versioning policy](docs/versioning.md); any package built from
 ## Development
 
 Source development targets ARM64 macOS, Linux, and Windows with Node.js 22 or
-newer and npm; Windows is not yet implemented (see below). Linux also needs the
-native build prerequisites listed in the [contribution guide](CONTRIBUTING.md).
+newer and npm. Linux also needs the native build prerequisites listed in the
+[contribution guide](CONTRIBUTING.md).
 
 ```sh
 npm ci
 npm run check:portable
 ```
 
-The current published `v0.3.0` artifact is macOS-only. Linux ARM64 development
-and AppImage packaging are implemented; native Windows runtime and packaging
-remains tracked in [#61](https://github.com/luizomf/omxterm/issues/61). On an
-implemented platform, `npm run dev` builds the application and launches it.
+The current published `v0.3.0` artifact is macOS-only. Linux ARM64 AppImage
+and Windows ARM64 NSIS packaging are implemented but are not part of that
+published release. On every Supported Platform, `npm run dev` builds the
+application and launches it.
 
 Project checks are available as root scripts:
 
@@ -45,12 +45,17 @@ Project checks are available as root scripts:
   DMG under `release/` and never publishes it;
 - `npm run package:linux` creates
   `release/OMXTerm-<version>-arm64.AppImage` and never publishes it;
+- `npm run package:win` creates the unsigned Windows ARM64 NSIS installer
+  `release/OMXTerm-<version>-arm64.exe` and never publishes it;
 - `npm run package:verify` inspects and starts the native package for the current
-  macOS or Linux ARM64 host;
+  macOS, Linux, or Windows ARM64 host;
 - `npm run check` runs the full macOS packaging check;
 - `npm run check:linux` runs formatting, typechecking, the complete test suite,
   the Linux ARM64 AppImage build, exact AppImage inspection, and isolated
-  packaged startup through a real PTY.
+  packaged startup through a real PTY;
+- `npm run check:win` runs the same sequence for Windows: the ARM64 NSIS
+  build, unpacked-application inspection, and isolated packaged startup
+  through a real ConPTY.
 
 ### Running the Linux AppImage
 
@@ -102,6 +107,26 @@ The icon PNG is available inside the AppImage at
 windows with the entry. Moving or renaming the AppImage requires updating the
 `Exec` path.
 
+### Running the Windows installer
+
+`npm run package:win` produces the unsigned one-click NSIS installer
+`release/OMXTerm-<version>-arm64.exe`, which installs per-user and needs no
+administrator elevation.
+
+Because the installer is intentionally unsigned, Microsoft Defender
+SmartScreen warns that it is from an unknown publisher. Review the source,
+verify the published SHA-256 checksum, and proceed only if you trust the
+exact artifact; SmartScreen's `More info -> Run anyway` applies to that one
+file. Do not disable SmartScreen or other system-wide Windows security
+protections.
+
+On Windows the Default Shell is Windows PowerShell, falling back to the
+`ComSpec` command processor; Windows has no login-shell concept, so the shell
+starts as a plain interactive session in the user's home directory. Because
+ConPTY does not expose the PTY foreground process name, every live session
+counts as Busy: with `confirmClose` enabled, closing a tab, window, or the
+application always asks once.
+
 See the [local ARM64 release procedure](docs/release.md) for prerequisites,
 native package verification, exact-artifact manual checklists, checksum
 generation, unsigned-package guidance, and the separately authorized
@@ -111,6 +136,8 @@ acceptance and publication gates.
 
 OMXTerm optionally reads `$XDG_CONFIG_HOME/omxterm/config.json`, or
 `~/.config/omxterm/config.json` when `XDG_CONFIG_HOME` is unset or empty. The
+same XDG-style resolution applies on Windows, where the default location is
+`%USERPROFILE%\.config\omxterm\config.json`. The
 file is strict JSON: `version` is required and must be `1`. All preferences are
 optional, so this is a complete configuration:
 
@@ -122,7 +149,8 @@ optional, so this is a complete configuration:
 
 OMXTerm also optionally reads `snippets.json` from the same directory:
 user-defined snippets listed in a per-window sidebar toggled with
-`Cmd+Shift+S` on macOS or `Ctrl+Shift+S` on Linux, filtered by search, and
+`Cmd+Shift+S` on macOS or `Ctrl+Shift+S` on Linux and Windows, filtered by
+search, and
 injected into the terminal with a click. Application shortcuts are remappable
 through the `keybinds`
 preference.

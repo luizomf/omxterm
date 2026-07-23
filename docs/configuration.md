@@ -26,6 +26,14 @@ When it is set, use the configured location instead:
 mkdir -p "$XDG_CONFIG_HOME/omxterm/themes"
 ```
 
+The same XDG-style resolution applies on Windows. With `XDG_CONFIG_HOME`
+unset — the common case — the location is
+`%USERPROFILE%\.config\omxterm\config.json`:
+
+```powershell
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.config\omxterm\themes"
+```
+
 Every change requires quitting and reopening OMXTerm. A missing file selects
 all defaults. An invalid file never stops OMXTerm from opening: the application
 starts with its built-in defaults, shows a persistent in-app error describing
@@ -130,8 +138,8 @@ their defaults. Objects and the root reject unknown keys.
 | `keybinds.<action>`       | accelerator with a non-Shift modifier   | built-in shortcut per action         |
 
 On macOS, the configured top padding begins below the fixed 30 px native title
-and drag inset. On Linux, it begins directly below the operating system's native
-window chrome without another inset. `font.lineHeight` changes row height
+and drag inset. On Linux and Windows, it begins directly below the operating
+system's native window chrome without another inset. `font.lineHeight` changes row height
 independently of glyph size.
 Window Font Zoom and the native Always on Top menu are per-window runtime
 actions and never rewrite this file.
@@ -142,7 +150,7 @@ actions and never rewrite this file.
 vocabulary; the values are [Electron accelerator](https://www.electronjs.org/docs/latest/api/accelerator)
 strings such as `CommandOrControl+T`. Actions you omit keep their defaults:
 
-| Action                      | macOS default              | Linux default         |
+| Action                      | macOS default              | Linux/Windows default |
 | --------------------------- | -------------------------- | --------------------- |
 | `quit`                      | `CommandOrControl+Q`       | `Control+Alt+Shift+Q` |
 | `copy`                      | `CommandOrControl+C`       | `Control+Shift+C`     |
@@ -161,8 +169,8 @@ strings such as `CommandOrControl+T`. Actions you omit keep their defaults:
 | `toggleFullScreen`          | `Control+Command+F`        | `Control+Shift+F`     |
 | `toggleSnippets`            | `CommandOrControl+Shift+S` | `Control+Shift+S`     |
 
-The Linux defaults use the conventional shifted terminal shortcuts so ordinary
-`Ctrl` shell and TUI input remains PTY input. On macOS, `Cmd+W` closes the
+The Linux and Windows defaults use the conventional shifted terminal shortcuts
+so ordinary `Ctrl` shell and TUI input remains PTY input. On macOS, `Cmd+W` closes the
 selected tab and `Cmd+Shift+W` closes the whole window. `selectTab1` through
 `selectTab9` select literal tab positions; a position beyond the open tabs does
 nothing.
@@ -185,8 +193,8 @@ typing from the terminal, so it is rejected. Two actions can never share an
 effective accelerator: remapping `newWindow` to `CommandOrControl+W` conflicts
 with `closeTab`'s remaining default and is reported exactly like two
 explicit entries colliding (swap both explicitly if that is what you want).
-`CommandOrControl` counts as `Command` on macOS and `Control` on Linux when
-duplicates are judged; `Super` and `Meta` use Electron's Command accelerator
+`CommandOrControl` counts as `Command` on macOS and `Control` on Linux and
+Windows when duplicates are judged; `Super` and `Meta` use Electron's Command accelerator
 family. The menu shows the shortcut that is actually active.
 Keybinds change application shortcuts only; what the shell or a TUI receives
 from the keyboard is not affected.
@@ -219,8 +227,8 @@ four padding sides by eye. Resizing the window or using Window Font Zoom changes
 the cell measurements without changing the configured padding, so a balance
 that looks right at one size may shift at another. OMXTerm currently refits the
 terminal grid and keeps it usable, but it does not redistribute leftover pixels
-or automatically rebalance padding. `Cmd+0` on macOS or `Ctrl+0` on Linux
-returns the window to its configured font size when you want to return to the
+or automatically rebalance padding. `Cmd+0` on macOS or `Ctrl+0` on Linux and
+Windows returns the window to its configured font size when you want to return to the
 size around which the
 padding was tuned.
 
@@ -258,8 +266,9 @@ Each snippet has:
 | `description` | string up to 512 characters              | none     |
 | `execute`     | boolean                                  | `false`  |
 
-`Cmd+Shift+S` on macOS or `Ctrl+Shift+S` on Linux (the `toggleSnippets`
-keybind, remappable) shows or hides the Snippets Sidebar in the selected window.
+`Cmd+Shift+S` on macOS or `Ctrl+Shift+S` on Linux and Windows (the
+`toggleSnippets` keybind, remappable) shows or hides the Snippets Sidebar in
+the selected window.
 The search field filters by name and
 description; clicking a snippet injects its body into that window's terminal
 and returns focus to the terminal. The file is reread every time the sidebar
