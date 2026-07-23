@@ -1,6 +1,9 @@
 # Adopt tabs with one live session per tab
 
 Supersedes [ADR 0007](0007-one-live-session-per-independent-window.md).
+Amended by [ADR 0017](0017-confirm-close-only-for-busy-sessions.md): the
+`confirmClose` consequence recorded below was later narrowed to ask only for
+Busy Sessions.
 
 A Terminal Window holds one or more Terminal Tabs, and each tab owns exactly
 one Live Terminal Session. `Cmd+T` (the `newTab` default) creates a tab in the

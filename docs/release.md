@@ -233,6 +233,14 @@ the unpacked build directory or a previous installation.
   TUI, Unicode, truecolor, scrolling, resize, a REPL, bracketed paste, and SSH
   started by the user. Confirm OMXTerm installs no shell integration or custom
   terminfo.
+- **macOS file and folder insertion:** from Finder, drag-drop multiple files
+  and folders containing spaces, apostrophes, Unicode, and shell
+  metacharacters into a window. Confirm ordered, independently POSIX-quoted
+  absolute paths reach only the selected tab through Protected Paste without
+  Enter. Copy the same Finder selection and confirm Paste uses the
+  `NSFilenamesPboardType` or `public.file-url` fallback only when plain text
+  is empty. Confirm a non-file URL, malformed list, and drop without native
+  files have no side effect.
 - **Clipboard and Protected Paste:** verify selection does not copy, `Ctrl+C`
   and `Ctrl+V` remain PTY input, native/context-menu copy and paste work, unsafe
   multiline or control-character paste is confirmed outside bracketed-paste

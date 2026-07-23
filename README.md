@@ -17,9 +17,9 @@ under the [versioning policy](docs/versioning.md); any package built from
 
 ## Development
 
-Source development supports ARM64 macOS, Linux, and Windows with Node.js 22 or
-newer and npm. Linux also needs the native build prerequisites listed in the
-[contribution guide](CONTRIBUTING.md).
+Source development targets ARM64 macOS, Linux, and Windows with Node.js 22 or
+newer and npm; Windows is not yet implemented (see below). Linux also needs the
+native build prerequisites listed in the [contribution guide](CONTRIBUTING.md).
 
 ```sh
 npm ci

@@ -139,12 +139,12 @@ rather than clamping them. The scrollback scrollbar shows a thumb only while
 scrollback extends beyond the visible screen; an empty scrollbar track paints
 nothing on any platform.
 
-OSC 0 and OSC 2 titles are display-only and per session: control and bidi
-characters are removed, and the result must be one printable line no longer
-than 256 characters. A tab shows its session's accepted title and falls back
-to the Default Shell's name; the native window title mirrors the selected tab
-and falls back to `OMXTerm`. Title contents are never logged or reported to
-the PTY.
+OSC 0 and OSC 2 titles are display-only and per session: the raw OSC request
+must be no longer than 256 code points, then control and bidi characters are
+removed and the result must be one printable line. A tab shows its session's
+accepted title and falls back to the Default Shell's name; the native window
+title mirrors the selected tab and falls back to `OMXTerm`. Title contents are
+never logged or reported to the PTY.
 
 Only literal visible `http:` and `https:` URLs are links. `Cmd+click` on macOS
 or `Ctrl+click` on Linux asks the Electron main process to parse and validate
@@ -379,8 +379,9 @@ release check exercises the exact DMG on the supported Mac, including first
 launch, shell exit, multiple windows and tabs, tmux/TUI use, clipboard, zoom,
 always-on-top, application-icon presentation at small and large display sizes,
 and Gatekeeper documentation. Linux and Windows receive equally native checks;
-their detailed procedures land with their packaging implementations rather than
-being inferred from the macOS checklist.
+Linux's detailed procedures already landed with its packaging implementation,
+and Windows's remain pending, landing with its own packaging implementation
+rather than being inferred from the macOS checklist.
 
 The ADRs in `docs/adr/` own the reasoning behind the durable choices; this file
 owns the current observable product contract.
