@@ -80,7 +80,10 @@ export function userConfigurationDiagnostic(
   const safeLocation = location
     ? ` at ${JSON.stringify(location.slice(0, 128))}`
     : "";
-  return `User Configuration ${JSON.stringify(configurationPath)}${safeLocation}: ${reason}. Fix the file and restart OMXTerm.`;
+  // The location is file content and stays JSON-escaped; the path is
+  // system-derived and must remain copyable, so Windows backslashes are
+  // never doubled by escaping.
+  return `User Configuration "${configurationPath}"${safeLocation}: ${reason}. Fix the file and restart OMXTerm.`;
 }
 
 export interface LoadUserConfigurationOptions {

@@ -80,7 +80,10 @@ export function terminalSnippetsDiagnostic(
   const safeLocation = location
     ? ` at ${JSON.stringify(location.slice(0, 128))}`
     : "";
-  return `Snippets ${JSON.stringify(snippetsPath)}${safeLocation}: ${reason}. Fix the file and reopen the Snippets Sidebar.`;
+  // The location is file content and stays JSON-escaped; the path is
+  // system-derived and must remain copyable, so Windows backslashes are
+  // never doubled by escaping.
+  return `Snippets "${snippetsPath}"${safeLocation}: ${reason}. Fix the file and reopen the Snippets Sidebar.`;
 }
 
 function validateTerminalSnippets(

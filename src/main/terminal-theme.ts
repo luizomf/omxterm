@@ -15,7 +15,10 @@ export class TerminalThemeError extends Error {
     readonly reason: string,
   ) {
     const field = location ? ` at ${JSON.stringify(location)}` : "";
-    super(`Terminal Theme ${JSON.stringify(themePath)}${field} ${reason}`);
+    // The location is file content and stays JSON-escaped; the path is
+    // system-derived and must remain copyable, so Windows backslashes are
+    // never doubled by escaping.
+    super(`Terminal Theme "${themePath}"${field} ${reason}`);
     this.name = "TerminalThemeError";
   }
 }
