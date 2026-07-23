@@ -1,11 +1,15 @@
 import * as nodePty from "node-pty";
 import { userInfo } from "node:os";
 import { describe, expect, it } from "vitest";
+import { resolveDefaultShell } from "../../src/main/default-shell";
 import { createLocalTerminalSession } from "../../src/main/local-terminal-session";
 
 const supportedEnvironment =
   (process.platform === "darwin" || process.platform === "linux") &&
   process.arch === "arm64";
+
+const windowsEnvironment =
+  process.platform === "win32" && process.arch === "arm64";
 
 describe.skipIf(!supportedEnvironment)("real local PTY", () => {
   it("starts the OS-configured interactive login shell in home and carries input/output", async () => {
@@ -23,6 +27,7 @@ describe.skipIf(!supportedEnvironment)("real local PTY", () => {
       );
       session = createLocalTerminalSession(nodePty.spawn, {
         shell: defaultShell,
+        platform: process.platform,
         homeDirectory: account.homedir,
         applicationVersionProvider: { getVersion: () => "9.8.7-test" },
         environment: {
@@ -74,6 +79,97 @@ describe.skipIf(!supportedEnvironment)("real local PTY", () => {
     }
   }, 15_000);
 });
+
+// ConPTY renders into an 80-column screen buffer and repaints with cursor
+// and styling sequences, so a long single-line marker would be split. The
+// Windows check emits one short marker per line and matches after stripping
+// the rendering sequences (#61).
+describe.skipIf(!windowsEnvironment)("real local ConPTY", () => {
+  it("starts the Windows Default Shell in home and carries input/output", async () => {
+    const account = userInfo();
+    const defaultShell = resolveDefaultShell(
+      process.platform,
+      account.shell,
+      process.env,
+    );
+
+    let terminalPayload = "";
+    let session: ReturnType<typeof createLocalTerminalSession> | undefined;
+    const cwdMarker = `__OMXTERM_CWD__${account.homedir}__END__`;
+    const observed = new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("Local shell check timed out")),
+        25_000,
+      );
+      session = createLocalTerminalSession(nodePty.spawn, {
+        shell: defaultShell,
+        platform: process.platform,
+        homeDirectory: account.homedir,
+        applicationVersionProvider: { getVersion: () => "9.8.7-test" },
+        environment: {
+          ...process.env,
+          OMXTERM_INHERITED_TEST: "inherited-value",
+        },
+        onOutput(data) {
+          terminalPayload = (terminalPayload + data).slice(-65_536);
+          const plain = stripConptyRendering(terminalPayload);
+          // Both markers only exist expanded: the echoed command line shows
+          // the unexpanded $(...) subexpressions instead.
+          if (plain.includes(cwdMarker) && plain.includes("__OMXTERM_DONE__")) {
+            clearTimeout(timer);
+            resolve();
+          }
+        },
+        onExit(event) {
+          if (!stripConptyRendering(terminalPayload).includes(cwdMarker)) {
+            clearTimeout(timer);
+            reject(
+              new Error(
+                `Local shell exited before the check completed (${event.exitCode})`,
+              ),
+            );
+          }
+        },
+      });
+
+      session.write(
+        '"__OMXTERM_CWD__$($PWD.Path)__END__"; ' +
+          '"__CAPS__$env:TERM|$env:COLORTERM"; ' +
+          '"__PROG__$env:TERM_PROGRAM|$env:TERM_PROGRAM_VERSION"; ' +
+          '"__INH__${env:OMXTERM_INHERITED_TEST}__U__Olá🙂"; ' +
+          "\"__OMXTERM_$('DONE')__\"\r",
+      );
+    });
+    try {
+      await observed;
+      const plain = stripConptyRendering(terminalPayload);
+      expect(plain).toContain(cwdMarker);
+      expect(plain).toContain("__CAPS__xterm-256color|truecolor");
+      expect(plain).toContain("__PROG__OMXTerm|9.8.7-test");
+      expect(plain).toContain("__INH__inherited-value__U__Olá🙂");
+    } finally {
+      session?.close();
+      terminalPayload = "";
+    }
+  }, 30_000);
+});
+
+// Removes OSC and CSI rendering sequences, remaining escapes, and line
+// breaks so wrapped repaints compare as plain contiguous text. Control
+// characters are built from char codes to keep this source printable.
+const ESC = String.fromCharCode(27);
+const BEL = String.fromCharCode(7);
+
+function stripConptyRendering(payload: string): string {
+  const osc = new RegExp(`${ESC}\\][^]*?(?:${BEL}|${ESC}\\\\)`, "gu");
+  const csi = new RegExp(`${ESC}\\[[0-9;?]*[ -/]*[@-~]`, "gu");
+  const escape = new RegExp(`${ESC}[@-Z\\\\-_]`, "gu");
+  return payload
+    .replace(osc, "")
+    .replace(csi, "")
+    .replace(escape, "")
+    .replace(/[\r\n]/gu, "");
+}
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
