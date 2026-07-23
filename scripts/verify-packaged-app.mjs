@@ -85,11 +85,12 @@ const allowedLinuxNodePtyBuildEntries = new Set([
 ]);
 
 export function inspectAsarEntries(entries, platform = "darwin") {
-  if (platform !== "darwin" && platform !== "linux")
+  if (platform !== "darwin" && platform !== "linux" && platform !== "win32")
     throw new Error(`Unsupported packaged platform: ${platform}`);
-  const normalized = entries.map((entry) =>
-    entry.startsWith("/") ? entry : `/${entry}`,
-  );
+  // @electron/asar lists entries with the host separator on Windows.
+  const normalized = entries
+    .map((entry) => entry.split("\\").join("/"))
+    .map((entry) => (entry.startsWith("/") ? entry : `/${entry}`));
   const missing = requiredAsarEntries.filter(
     (entry) => !normalized.includes(entry),
   );
@@ -107,7 +108,14 @@ export function inspectAsarEntries(entries, platform = "darwin") {
       (platform === "darwin" &&
         entry.includes("/node_modules/node-pty/prebuilds/") &&
         entry !== "/node_modules/node-pty/prebuilds/darwin-arm64" &&
-        !entry.startsWith("/node_modules/node-pty/prebuilds/darwin-arm64/")),
+        !entry.startsWith("/node_modules/node-pty/prebuilds/darwin-arm64/")) ||
+      (platform === "win32" &&
+        entry.includes("/node_modules/node-pty/build/")) ||
+      (platform === "win32" && entry.endsWith(".pdb")) ||
+      (platform === "win32" &&
+        entry.includes("/node_modules/node-pty/prebuilds/") &&
+        entry !== "/node_modules/node-pty/prebuilds/win32-arm64" &&
+        !entry.startsWith("/node_modules/node-pty/prebuilds/win32-arm64/")),
   );
   return { missing, forbidden };
 }
@@ -166,7 +174,32 @@ async function assertSameFile(source, packaged) {
     );
 }
 
+const PE_MACHINE_ARM64 = 0xaa64;
+
+// Windows has no `file` command; the PE COFF header states the machine
+// type directly (IMAGE_FILE_MACHINE_ARM64 = 0xAA64).
+async function readPeMachine(file) {
+  const data = await readFile(file);
+  if (data.length < 0x40 || data.readUInt16LE(0) !== 0x5a4d)
+    throw new Error(`${file} is not a PE executable`);
+  const peOffset = data.readUInt32LE(0x3c);
+  if (
+    data.length < peOffset + 6 ||
+    data.readUInt32LE(peOffset) !== 0x00004550
+  )
+    throw new Error(`${file} has no PE signature`);
+  return data.readUInt16LE(peOffset + 4);
+}
+
 async function inspectArchitecture(file, label, platform) {
+  if (platform === "win32") {
+    const machine = await readPeMachine(file);
+    if (machine !== PE_MACHINE_ARM64)
+      throw new Error(
+        `${label} is not an arm64-only PE: machine 0x${machine.toString(16)}`,
+      );
+    return;
+  }
   const { stdout } = await execFile("file", [file]);
   const isArm64 =
     platform === "darwin"
@@ -316,6 +349,15 @@ async function inspectApplicationVersion({
     packagedVersion,
     bundleVersion: expectedVersion,
   });
+  if (platform === "win32") {
+    const installer = path.join(
+      projectRoot,
+      "release",
+      `OMXTerm-${expectedVersion}-arm64.exe`,
+    );
+    await stat(installer);
+    return;
+  }
   const expectedName = `OMXTerm-${expectedVersion}-arm64.AppImage`;
   if (path.basename(artifactPath) !== expectedName)
     throw new Error(
@@ -331,6 +373,8 @@ async function inspectApplicationVersion({
 
 async function defaultApplicationPath() {
   if (process.platform === "darwin") return defaultMacApplicationPath;
+  if (process.platform === "win32")
+    return path.join(projectRoot, "release", "win-arm64-unpacked");
   return path.join(
     projectRoot,
     "release",
@@ -375,6 +419,16 @@ async function waitForProcessGroupExit(processGroupId, timeoutMs) {
 
 async function stopProcessGroup(child) {
   if (!child.pid) return;
+  if (process.platform === "win32") {
+    // Windows has no POSIX process groups; taskkill ends the process tree.
+    try {
+      await execFile("taskkill", ["/pid", String(child.pid), "/T", "/F"]);
+    } catch (cause) {
+      // taskkill exits 128 when the tree has already gone away.
+      if (cause?.code !== 128) throw cause;
+    }
+    return;
+  }
   const processGroupId = child.pid;
   if (!signalProcessGroup(processGroupId, "SIGTERM")) return;
   if (await waitForProcessGroupExit(processGroupId, 2_000)) return;
@@ -421,11 +475,13 @@ async function waitForStartup(logFile, child, stderrText) {
 
 export async function verifyPackagedApplication(applicationPath) {
   if (
-    (process.platform !== "darwin" && process.platform !== "linux") ||
+    (process.platform !== "darwin" &&
+      process.platform !== "linux" &&
+      process.platform !== "win32") ||
     process.arch !== "arm64"
   )
     throw new Error(
-      "Packaged startup verification requires arm64 macOS or Linux",
+      "Packaged startup verification requires arm64 macOS, Linux, or Windows",
     );
 
   const platform = process.platform;
@@ -467,7 +523,9 @@ export async function verifyPackagedApplication(applicationPath) {
     const executable =
       platform === "darwin"
         ? path.join(applicationRoot, "Contents", "MacOS", "OMXTerm")
-        : path.join(applicationRoot, "omxterm");
+        : platform === "win32"
+          ? path.join(applicationRoot, "OMXTerm.exe")
+          : path.join(applicationRoot, "omxterm");
     const asar = path.join(resources, "app.asar");
     const nativeRoot = path.join(
       resources,
@@ -476,7 +534,9 @@ export async function verifyPackagedApplication(applicationPath) {
       "node-pty",
       ...(platform === "darwin"
         ? ["prebuilds", "darwin-arm64"]
-        : ["build", "Release"]),
+        : platform === "win32"
+          ? ["prebuilds", "win32-arm64"]
+          : ["build", "Release"]),
     );
 
     await inspectArchitecture(executable, "OMXTerm executable", platform);
@@ -485,6 +545,12 @@ export async function verifyPackagedApplication(applicationPath) {
       "node-pty module",
       platform,
     );
+    if (platform === "win32")
+      await inspectArchitecture(
+        path.join(nativeRoot, "conpty.node"),
+        "node-pty ConPTY module",
+        platform,
+      );
     if (platform === "darwin") {
       await inspectArchitecture(
         path.join(nativeRoot, "spawn-helper"),
@@ -494,21 +560,24 @@ export async function verifyPackagedApplication(applicationPath) {
       await inspectApplicationIcon(applicationRoot);
       await inspectUnsignedApplication(applicationRoot);
     } else {
-      await assertSameFile(
-        path.join(projectRoot, "assets", "application-icon.png"),
-        path.join(
-          applicationRoot,
-          "usr",
-          "share",
-          "icons",
-          "hicolor",
-          "1024x1024",
-          "apps",
-          "omxterm.png",
-        ),
-      );
+      if (platform === "linux")
+        await assertSameFile(
+          path.join(projectRoot, "assets", "application-icon.png"),
+          path.join(
+            applicationRoot,
+            "usr",
+            "share",
+            "icons",
+            "hicolor",
+            "1024x1024",
+            "apps",
+            "omxterm.png",
+          ),
+        );
       // Linux Terminal Windows resolve their icon from resources (a
       // directly-run AppImage has no registered desktop entry to supply one).
+      // The same extra resource ships on Windows, where the window icon
+      // itself comes from the executable.
       await assertSameFile(
         path.join(projectRoot, "assets", "application-icon.png"),
         path.join(resources, "application-icon.png"),
@@ -612,7 +681,7 @@ export async function verifyPackagedApplication(applicationPath) {
     );
     const canary = `OMXTERM_PACKAGE_SECRET_CANARY_${Date.now()}`;
     let stderr = "";
-    const launchPath = platform === "darwin" ? executable : packagedPath;
+    const launchPath = platform === "linux" ? packagedPath : executable;
     const launchArguments = [`--user-data-dir=${userDataRoot}`];
     // The packaged Linux app relaunches itself onto X11 when Electron seeds
     // a Wayland session backend (ADR 0020), and this harness cannot follow a
@@ -644,7 +713,13 @@ export async function verifyPackagedApplication(applicationPath) {
       return { applicationPath: packagedPath, records: records.length };
     } finally {
       await stopProcessGroup(child);
-      await rm(temporaryRoot, { recursive: true, force: true });
+      // Windows releases the stopped tree's file locks asynchronously.
+      await rm(temporaryRoot, {
+        recursive: true,
+        force: true,
+        maxRetries: 10,
+        retryDelay: 200,
+      });
     }
   } finally {
     if (extractionRoot)

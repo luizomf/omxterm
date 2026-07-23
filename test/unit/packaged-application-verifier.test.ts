@@ -100,6 +100,36 @@ describe("packaged application verifier", () => {
     ).toEqual({ missing: [], forbidden: [] });
   });
 
+  it("accepts only the win32-arm64 native runtime and rejects debug symbols on Windows", () => {
+    expect(
+      inspectAsarEntries(
+        [
+          ...requiredEntries,
+          "/node_modules/node-pty/prebuilds/win32-arm64",
+          "/node_modules/node-pty/prebuilds/win32-arm64/pty.node",
+          "/node_modules/node-pty/prebuilds/win32-arm64/conpty.node",
+          "/node_modules/node-pty/prebuilds/win32-arm64/conpty/OpenConsole.exe",
+        ],
+        "win32",
+      ),
+    ).toEqual({ missing: [], forbidden: [] });
+    expect(
+      inspectAsarEntries(
+        [
+          ...requiredEntries,
+          "/node_modules/node-pty/prebuilds/win32-x64/pty.node",
+          "/node_modules/node-pty/prebuilds/win32-arm64/pty.pdb",
+          "/node_modules/node-pty/build/Release/pty.node",
+        ],
+        "win32",
+      ).forbidden,
+    ).toEqual([
+      "/node_modules/node-pty/prebuilds/win32-x64/pty.node",
+      "/node_modules/node-pty/prebuilds/win32-arm64/pty.pdb",
+      "/node_modules/node-pty/build/Release/pty.node",
+    ]);
+  });
+
   it.each([
     "/.env",
     "/.git/config",

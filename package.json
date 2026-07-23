@@ -19,9 +19,11 @@
     "check:portable": "npm run format:check && npm run typecheck && npm test && npm run build",
     "package:mac": "npm run build && electron-builder --config electron-builder.yml --mac dmg --arm64 --publish never",
     "package:linux": "npm run build && electron-builder --config electron-builder.yml --linux AppImage --arm64 --publish never",
+    "package:win": "npm run build && electron-builder --config electron-builder.yml --win nsis --arm64 --publish never",
     "package:verify": "node scripts/verify-packaged-app.mjs",
     "check": "npm run format:check && npm run typecheck && npm test && npm run package:mac && npm run package:verify",
     "check:linux": "npm run format:check && npm run typecheck && npm test && npm run package:linux && npm run package:verify",
+    "check:win": "npm run format:check && npm run typecheck && npm test && npm run package:win && npm run package:verify",
     "dev": "npm run build && electron ."
   },
   "engines": {

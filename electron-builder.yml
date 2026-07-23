@@ -93,6 +93,36 @@ linux:
     - target: AppImage
       arch:
         - arm64
+win:
+  icon: assets/application-icon.png
+  files:
+    - dist/**
+    - "!dist/**/*.map"
+    - "!node_modules/**/*.map"
+    - "!node_modules/@xterm/*/src/**"
+    - "!scripts/**"
+    - "!node_modules/node-addon-api/**"
+    - "!node_modules/node-pty/node-addon-api/**"
+    - "!node_modules/node-pty/build/**"
+    - "!node_modules/node-pty/deps/**"
+    - "!node_modules/node-pty/prebuilds/darwin-arm64/**"
+    - "!node_modules/node-pty/prebuilds/darwin-x64/**"
+    - "!node_modules/node-pty/prebuilds/win32-x64/**"
+    - "!node_modules/node-pty/prebuilds/win32-arm64/*.pdb"
+    - "!node_modules/node-pty/scripts/**"
+    - "!node_modules/node-pty/src/**"
+    - "!node_modules/node-pty/typings/**"
+    - "!node_modules/node-pty/lib/**/*.test.js"
+  asarUnpack:
+    - node_modules/node-pty/prebuilds/win32-arm64/**
+  target:
+    - target: nsis
+      arch:
+        - arm64
+nsis:
+  oneClick: true
+  perMachine: false
+  deleteAppDataOnUninstall: false
 dmg:
   sign: false
   title: ${productName} ${version}
