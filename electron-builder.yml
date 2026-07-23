@@ -123,6 +123,16 @@ nsis:
   oneClick: true
   perMachine: false
   deleteAppDataOnUninstall: false
+  # On an ARM64 build host electron-builder compresses the app payload with the
+  # ARM64 BCJ2 7-Zip filter, which the NSIS-bundled Nsis7z extraction plugin
+  # cannot decode — it silently drops every PE file at install time, leaving a
+  # broken install of only the data files. A zip payload uses deflate with no
+  # executable filter, which Nsis7z extracts correctly. Disabling the
+  # differential package is what lets useZip take effect and costs nothing here:
+  # OMXTerm ships no automatic updates (docs/spec.md), so blockmap deltas are
+  # unused.
+  differentialPackage: false
+  useZip: true
 dmg:
   sign: false
   title: ${productName} ${version}

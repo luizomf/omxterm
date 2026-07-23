@@ -130,15 +130,28 @@ npm run check:win
 `npm run check:win` runs all portable and real-ConPTY checks, creates the
 non-published `release/OMXTerm-<version>-arm64.exe` NSIS installer, inspects
 the unpacked application's arm64 PE executables and win32-arm64 node-pty
-runtime, version, licenses, and forbidden/private-looking files, then launches
-the unpacked application with isolated configuration, state, and user data.
-Startup must reach a running PTY and its Operational Event log must not
-contain the environment canary.
+runtime, version, licenses, and forbidden/private-looking files, installs the
+exact installer into a throwaway directory to confirm it extracts every
+executable, then launches the unpacked application with isolated
+configuration, state, and user data. Startup must reach a running PTY and its
+Operational Event log must not contain the environment canary.
 
 For packaging alone, run `npm run package:win`, followed on the same native
-host by `npm run package:verify`. The automated startup check runs the
-unpacked `release/win-arm64-unpacked/OMXTerm.exe`; installing and launching
-the exact NSIS installer is a manual checklist step.
+host by `npm run package:verify`. The automated check installs the exact
+installer to a temporary location — its one-click `/D=` never touches the
+real per-user install — and asserts that every packaged executable and DLL
+lands, then uninstalls; installing to the real location and launching from the
+Start Menu remains a manual checklist step.
+
+The installer carries a zip-compressed application payload rather than the
+smaller default LZMA archive. On an ARM64 build host electron-builder
+compresses executables with the ARM64 BCJ2 7-Zip filter, which the installer's
+bundled extraction plugin cannot decode — it drops every PE file at install
+time. The zip payload avoids that filter, so the installer is larger than a
+macOS or Linux artifact of the same application but installs completely.
+Because this disables the differential (blockmap) package, no `latest.yml` or
+`.blockmap` is produced; OMXTerm ships no automatic updates, so nothing depends
+on them.
 
 The installer is intentionally unsigned and triggers a Microsoft Defender
 SmartScreen unknown-publisher warning. It is not a release candidate until all

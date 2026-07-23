@@ -111,7 +111,10 @@ windows with the entry. Moving or renaming the AppImage requires updating the
 
 `npm run package:win` produces the unsigned one-click NSIS installer
 `release/OMXTerm-<version>-arm64.exe`, which installs per-user and needs no
-administrator elevation.
+administrator elevation. Its application payload is zip-compressed, which makes
+the installer larger than the macOS or Linux artifact but is required for the
+installer to extract completely on ARM64 (see the
+[release procedure](docs/release.md) for the underlying 7-Zip filter reason).
 
 Because the installer is intentionally unsigned, Microsoft Defender
 SmartScreen warns that it is from an unknown publisher. Review the source,

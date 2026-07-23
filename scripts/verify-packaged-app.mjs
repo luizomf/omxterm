@@ -391,6 +391,55 @@ async function listTreeEntries(root, directory = root) {
   return entries;
 }
 
+// The Windows installer bug this guards against dropped every PE file at
+// install time while the unpacked tree stayed intact, so inspecting only the
+// unpacked directory missed it. This installs the exact NSIS one-click
+// installer into a throwaway directory (its `/D=` never touches the real
+// per-user location) and asserts every executable and DLL the unpacked tree
+// contains actually lands, then uninstalls to remove its shortcut and
+// registry entry.
+async function verifyWindowsInstallerExtraction(installer, unpackedRoot) {
+  const expectedPeFiles = (await listTreeEntries(unpackedRoot)).filter(
+    (entry) => /\.(?:exe|dll|node)$/iu.test(entry),
+  );
+  const installRoot = await mkdtemp(path.join(tmpdir(), "omxterm-installed-"));
+  try {
+    await execFile(installer, ["/S", `/D=${installRoot}`]);
+    const installedExe = path.join(installRoot, "OMXTerm.exe");
+    await stat(installedExe);
+    await inspectArchitecture(installedExe, "installed OMXTerm.exe", "win32");
+    const missing = [];
+    for (const relative of expectedPeFiles) {
+      try {
+        await stat(path.join(installRoot, ...relative.slice(1).split("/")));
+      } catch {
+        missing.push(relative);
+      }
+    }
+    if (missing.length > 0)
+      throw new Error(
+        `Installer did not extract ${missing.length} executable file(s): ${missing.join(", ")}`,
+      );
+  } finally {
+    const uninstaller = path.join(installRoot, "Uninstall OMXTerm.exe");
+    try {
+      await execFile(uninstaller, ["/S"]);
+      // The uninstaller relaunches a copy of itself and returns before that
+      // copy finishes clearing installRoot; wait briefly so cleanup succeeds.
+      await new Promise((resolve) => setTimeout(resolve, 3_000));
+    } catch {
+      // A failed uninstall must not mask a real extraction assertion; the
+      // throwaway directory is removed next regardless.
+    }
+    await rm(installRoot, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    });
+  }
+}
+
 function signalProcessGroup(processGroupId, signal) {
   try {
     process.kill(-processGroupId, signal);
@@ -586,6 +635,15 @@ export async function verifyPackagedApplication(applicationPath) {
       platform,
       artifactPath: packagedPath,
     });
+
+    if (platform === "win32") {
+      const installer = path.join(
+        projectRoot,
+        "release",
+        `OMXTerm-${await sourceVersion()}-arm64.exe`,
+      );
+      await verifyWindowsInstallerExtraction(installer, applicationRoot);
+    }
 
     const asarInspection = inspectAsarEntries(
       await listPackage(asar),
