@@ -123,6 +123,13 @@ If a required or platform-specific check cannot run, state exactly which check
 was not run and why in the pull request. Do not report an inferred result as a
 pass.
 
+The exact-artifact manual checklists that gate a release candidate are run
+agent-guided by default: an agent prepares test assets, dictates one blind step
+at a time, records verbatim `PASS`/`FAIL`/`UNEXECUTED` under the never-infer
+rule, verifies the system side, and posts the record on the tracking issue. See
+[agent-guided manual testing](docs/release.md#agent-guided-manual-testing) if you
+want to help test an artifact with your own agent.
+
 ## Commits and pull requests
 
 Use small [Conventional Commit](https://www.conventionalcommits.org/) subjects,

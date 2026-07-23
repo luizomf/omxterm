@@ -112,6 +112,68 @@ The AppImage is intentionally unsigned and provides no verified publisher
 identity. It is not a release candidate until all automated checks and the
 exact-AppImage manual checklist below are complete.
 
+## Agent-guided manual testing
+
+The exact-artifact manual checklists below are the slowest and most error-prone
+part of a release candidate. The default way to run them is **agent-guided**: a
+human exercises the packaged application while an agent acts as scribe and guide.
+This lowers the bar for the owner and for outside contributors who want to help
+test an artifact with their own agent, and it produces a complete, honest record
+without inflating the checklist into automation it is not.
+
+The agent never observes the GUI for the tester. It prepares, dictates, records,
+and verifies the system side; the human reports what they actually see.
+
+- **Prepare test assets in advance.** The agent stages the adversarial inputs a
+  checklist item needs before the run: file and folder sets whose names contain
+  spaces, an apostrophe, `$(...)`, `;` and `&`, and Unicode with emoji;
+  log-grep canary commands; and the environment records the exact-artifact
+  record asks for. Prepared assets keep the tester moving and make edge cases
+  reproducible.
+- **Dictate one step at a time, expectation last.** The agent gives the tester
+  one action, and states the expected outcome only _after_ the tester reports
+  what happened. The tester runs blind, so each observation is unbiased evidence
+  rather than a confirmation of what it was supposed to be.
+- **Record verbatim under the never-infer rule.** The agent writes each item as
+  `PASS`, `FAIL`, or `UNEXECUTED` from the tester's own words. Anything the run
+  did not genuinely observe is `UNEXECUTED` with its reason — never inferred from
+  build output, process existence, or automated test results.
+- **Verify the system side in parallel.** While the human drives the GUI, the
+  agent inspects the machine: running processes and AppImage mounts after quit,
+  window properties such as `xprop`/`_NET_WM_ICON`, artifact identity with
+  `file` and the SHA-256, and the Operational Event JSONL for the environment
+  canary and for forbidden payload. These are evidence the agent can gather
+  directly and must not attribute to the human.
+- **Post the exact-artifact record on the tracking issue.** The agent fills in
+  the platform record template from this document and posts it, with per-item
+  results and every unexecuted reason, as the durable artifact evidence.
+
+A checklist item that depends on seeing the screen — a Gatekeeper dialog, a
+rendered gradient, a dock icon — stays with the human. The agent's job is to
+remove everything around that observation, not to make the observation for them.
+
+### Worked example — the #60 Linux run
+
+The Linux ARM64 AppImage checklist for
+[#60](https://github.com/luizomf/omxterm/issues/60) was run this way. The method
+produced one of the most complete manual records in the repository, found two
+real regressions mid-run, and left every unobserved item honestly `UNEXECUTED`:
+
+- the [exact-artifact record](https://github.com/luizomf/omxterm/issues/60#issuecomment-5053075065)
+  in this document's Linux template, with per-item results and unexecuted
+  reasons;
+- the pending-item [re-run](https://github.com/luizomf/omxterm/issues/60#issuecomment-5053144161)
+  and [edge-case addendum](https://github.com/luizomf/omxterm/issues/60#issuecomment-5053411307)
+  against the same exact artifact;
+- the two regressions the run surfaced — an invisible plain launch
+  ([`b28ae76`](https://github.com/luizomf/omxterm/issues/60#issuecomment-5052788958))
+  and a missing window icon
+  ([`af10b18`](https://github.com/luizomf/omxterm/issues/60#issuecomment-5053024945))
+  — each fixed on-branch and re-verified.
+
+A reusable checklist-scribe skill is a possible future convenience; formalizing
+one is not required to run the checklists this way today.
+
 ## macOS exact-artifact record
 
 Create the following record before manual testing, fill in every value already
