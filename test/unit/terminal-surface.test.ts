@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   TerminalExit,
@@ -72,7 +73,9 @@ const xterm = vi.hoisted(() => {
       };
     }
 
+    readonly loadedAddons: { dispose(): void }[] = [];
     loadAddon(addon: { dispose(): void }) {
+      this.loadedAddons.push(addon);
       this.addon = addon;
     }
     open() {
@@ -207,6 +210,29 @@ describe("portable Terminal Surface", () => {
     expect(FakeResizeObserver.current.disconnect).toHaveBeenCalledOnce();
     expect(xterm.FakeTerminal.current.dispose).toHaveBeenCalledOnce();
     expect(xterm.fitDispose).toHaveBeenCalledOnce();
+  });
+
+  it("enables grapheme-cluster width by loading the Unicode grapheme addon on a proposed-API terminal", async () => {
+    // Regression for #103: without the grapheme addon and the proposed Unicode
+    // API it needs, xterm measures width per codepoint, so VS16 emoji and ZWJ
+    // clusters get one column while their glyph draws two and overlaps.
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    await mountTerminalSurface(document.createElement("main"), adapter);
+
+    const terminal = xterm.FakeTerminal.current;
+    expect(terminal.constructorOptions.allowProposedApi).toBe(true);
+    expect(
+      terminal.loadedAddons.some(
+        (addon) => addon instanceof UnicodeGraphemesAddon,
+      ),
+    ).toBe(true);
   });
 
   it("delegates focus to xterm only while mounted", async () => {

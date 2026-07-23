@@ -1,3 +1,4 @@
+import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
 import { Terminal } from "@xterm/xterm";
 import { describe, expect, it } from "vitest";
 import { vi } from "vitest";
@@ -112,6 +113,46 @@ describe("standard xterm compatibility fixtures", () => {
     );
 
     terminal.dispose();
+  });
+
+  it("keeps default xterm width per codepoint, splitting emoji-presentation clusters", async () => {
+    // Baseline that motivates the grapheme addon: the pinned default provider
+    // gives VS16 emoji-presentation sequences and ZWJ clusters fewer columns
+    // than their glyph draws, so the glyph overlaps the following cell (#103).
+    const terminal = new Terminal({ cols: 40, rows: 4 });
+
+    await write(terminal, "❤️"); // heart + VS16
+    expect(terminal.buffer.active.cursorX).toBe(1);
+
+    terminal.dispose();
+  });
+
+  it("gives emoji-presentation and ZWJ clusters two columns with the grapheme addon", async () => {
+    // Regression for #103: the Terminal Surface loads this official addon on a
+    // proposed-API terminal so each grapheme cluster occupies two columns as a
+    // single cell and never overlaps its neighbor.
+    const clusters: [string, string][] = [
+      ["heart VS16", "❤️"],
+      ["scissors VS16", "✂️"],
+      ["keycap 1", "1️⃣"],
+      ["ZWJ family", "\u{1F468}‍\u{1F469}‍\u{1F467}"],
+      ["standalone emoji", "\u{1F604}"],
+    ];
+
+    for (const [name, sequence] of clusters) {
+      const terminal = new Terminal({
+        cols: 40,
+        rows: 4,
+        allowProposedApi: true,
+      });
+      terminal.loadAddon(new UnicodeGraphemesAddon());
+
+      await write(terminal, sequence);
+
+      expect(terminal.unicode.activeVersion, name).toBe("15-graphemes");
+      expect(terminal.buffer.active.cursorX, name).toBe(2);
+      terminal.dispose();
+    }
   });
 
   it("enters and leaves a representative alternate-screen TUI", async () => {

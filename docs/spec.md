@@ -24,7 +24,9 @@ OMXTerm must:
 - open the operating-system-configured shell as an interactive login shell in
   the user's home directory;
 - remain compatible with ordinary shells, SSH started by the user, tmux, TUIs,
-  REPLs, alternate-screen applications, Unicode, and bracketed paste;
+  REPLs, alternate-screen applications, Unicode, and bracketed paste, rendering
+  emoji-presentation and ZWJ grapheme clusters as single two-column cells that
+  do not overlap neighboring cells;
 - use one independent shell session per Terminal Tab, with one or more tabs
   per native Terminal Window;
 - provide native new-window, new-tab, close, copy, paste, select-all, zoom,

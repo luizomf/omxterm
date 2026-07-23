@@ -1,4 +1,5 @@
 import { FitAddon } from "@xterm/addon-fit";
+import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
 import { Terminal } from "@xterm/xterm";
 import {
   isBoundedTerminalPayload,
@@ -274,8 +275,17 @@ export async function mountTerminalSurface(
       fontSize: appearance.fontSize,
       lineHeight: appearance.lineHeight,
       theme: terminalTheme.colors,
+      // The Unicode provider API is proposed in xterm 6.0.0; the grapheme addon
+      // registers and activates its provider through it.
+      allowProposedApi: true,
     });
     terminal = mountedTerminal;
+    // Default xterm width is per-codepoint (wcwidth): VS16 emoji-presentation
+    // sequences and ZWJ clusters get one column while their color glyph draws
+    // two, so the glyph overlaps the next cell. The official grapheme addon
+    // switches width to grapheme clusters so each cluster occupies two columns
+    // as a single cell. xterm disposes loaded addons with the terminal.
+    mountedTerminal.loadAddon(new UnicodeGraphemesAddon());
     ignoredOscLinksSubscription = ignoreOscLinks(mountedTerminal);
     titleEventSubscription = registerTerminalTitleEvents(mountedTerminal, {
       ...(options.onTitleRequest
