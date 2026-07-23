@@ -183,10 +183,7 @@ async function readPeMachine(file) {
   if (data.length < 0x40 || data.readUInt16LE(0) !== 0x5a4d)
     throw new Error(`${file} is not a PE executable`);
   const peOffset = data.readUInt32LE(0x3c);
-  if (
-    data.length < peOffset + 6 ||
-    data.readUInt32LE(peOffset) !== 0x00004550
-  )
+  if (data.length < peOffset + 6 || data.readUInt32LE(peOffset) !== 0x00004550)
     throw new Error(`${file} has no PE signature`);
   return data.readUInt16LE(peOffset + 4);
 }
