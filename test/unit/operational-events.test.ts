@@ -31,15 +31,16 @@ async function readRecords(file: string): Promise<unknown[]> {
 
 describe("local Operational Events", () => {
   it("uses a non-empty XDG state root and otherwise the documented home fallback", async () => {
+    // path.join keeps the expectation exact on every host separator.
     expect(
       resolveOperationalLogDirectory(
         { XDG_STATE_HOME: "/xdg/state" },
         "/Users/tester",
       ),
-    ).toBe("/xdg/state/omxterm/logs");
+    ).toBe(path.join("/xdg/state", "omxterm", "logs"));
     for (const environment of [{}, { XDG_STATE_HOME: "" }]) {
       expect(resolveOperationalLogDirectory(environment, "/Users/tester")).toBe(
-        "/Users/tester/.local/state/omxterm/logs",
+        path.join("/Users/tester", ".local", "state", "omxterm", "logs"),
       );
     }
 

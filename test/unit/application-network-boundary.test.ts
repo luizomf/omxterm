@@ -42,7 +42,7 @@ describe("Application Network Boundary", () => {
     for (const file of await sourceFiles(root)) {
       const source = await readFile(file, "utf8");
       if (source.includes("shell.openExternal"))
-        matches.push(path.relative(root, file));
+        matches.push(path.relative(root, file).split(path.sep).join("/"));
     }
 
     expect(matches).toEqual(["main/index.ts"]);

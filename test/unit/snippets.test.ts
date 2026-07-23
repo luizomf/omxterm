@@ -21,11 +21,12 @@ async function writeSnippetsFile(xdg: string, contents: string | Buffer) {
 
 describe("Snippets file loading", () => {
   it("resolves next to config.json under the XDG configuration root", () => {
+    // path.join keeps the expectation exact on every host separator.
     expect(
       resolveTerminalSnippetsPath({ XDG_CONFIG_HOME: "/xdg" }, "/home/t"),
-    ).toBe("/xdg/omxterm/snippets.json");
+    ).toBe(path.join("/xdg", "omxterm", "snippets.json"));
     expect(resolveTerminalSnippetsPath({}, "/home/t")).toBe(
-      "/home/t/.config/omxterm/snippets.json",
+      path.join("/home/t", ".config", "omxterm", "snippets.json"),
     );
   });
 

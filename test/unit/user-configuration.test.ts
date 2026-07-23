@@ -46,17 +46,18 @@ async function getInstalledFontFamilyMetrics(family: string) {
 
 describe("strict version 1 User Configuration", () => {
   it("resolves non-empty XDG_CONFIG_HOME exactly and falls back for unset or empty values", () => {
+    // path.join keeps the expectation exact on every host separator.
     expect(
       resolveUserConfigurationPath(
         { XDG_CONFIG_HOME: "/xdg-root" },
         "/home/tester",
       ),
-    ).toBe("/xdg-root/omxterm/config.json");
+    ).toBe(path.join("/xdg-root", "omxterm", "config.json"));
     expect(
       resolveUserConfigurationPath({ XDG_CONFIG_HOME: "" }, "/home/tester"),
-    ).toBe("/home/tester/.config/omxterm/config.json");
+    ).toBe(path.join("/home/tester", ".config", "omxterm", "config.json"));
     expect(resolveUserConfigurationPath({}, "/home/tester")).toBe(
-      "/home/tester/.config/omxterm/config.json",
+      path.join("/home/tester", ".config", "omxterm", "config.json"),
     );
   });
 
