@@ -138,7 +138,10 @@ describe("terminal keybind accelerators", () => {
     });
   });
 
-  it("preserves PTY control keys in the Linux defaults", () => {
+  it("preserves PTY control keys in the Linux and Windows defaults", () => {
+    expect(terminalDefaultKeybinds("win32")).toEqual(
+      terminalDefaultKeybinds("linux"),
+    );
     const linux = terminalDefaultKeybinds("linux");
     expect(linux.copy).toBe("Control+Shift+C");
     expect(linux.paste).toBe("Control+Shift+V");

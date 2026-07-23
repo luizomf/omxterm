@@ -61,7 +61,9 @@ export const DEFAULT_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   toggleSnippets: "CommandOrControl+Shift+S",
 });
 
-const LINUX_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
+// Linux and Windows share the conventional shifted terminal shortcuts so
+// ordinary Ctrl shell and TUI input remains PTY input (#61).
+const SHIFTED_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   quit: "Control+Alt+Shift+Q",
   copy: "Control+Shift+C",
   paste: "Control+Shift+V",
@@ -89,8 +91,8 @@ const LINUX_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
 });
 
 export function terminalDefaultKeybinds(platform: string): TerminalKeybinds {
-  return platform === "linux"
-    ? LINUX_TERMINAL_KEYBINDS
+  return platform === "linux" || platform === "win32"
+    ? SHIFTED_TERMINAL_KEYBINDS
     : DEFAULT_TERMINAL_KEYBINDS;
 }
 
