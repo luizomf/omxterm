@@ -251,7 +251,10 @@ describe("standard xterm compatibility fixtures", () => {
     expect(writeText).not.toHaveBeenCalled();
     expect(responses).toEqual([]);
     terminal.dispose();
-  });
+    // Feeding two limit-sized payloads through the real parser takes ~5s on
+    // the ARM64 Windows verification VM, past the 5s default when the real
+    // ConPTY integration check runs concurrently.
+  }, 15_000);
 
   it.each([
     ["read", "c;?"],
