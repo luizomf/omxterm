@@ -1,6 +1,6 @@
 // User-facing keybind action vocabulary. These names are the stable
-// configuration keys in config.json; future actions (snippets sidebar toggle,
-// tab actions) join this list without a schema change.
+// configuration keys in config.json; future actions join this list without a
+// schema change.
 export const TERMINAL_ACTION_NAMES = [
   "quit",
   "copy",
