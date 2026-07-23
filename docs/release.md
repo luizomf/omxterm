@@ -270,7 +270,9 @@ roots for invalid-file and log checks.
   mounting is unavailable, record that result
   and exercise `--appimage-extract-and-run` as the documented safe fallback;
   never infer the normal launch result from extraction. Confirm the desktop icon
-  and window association are correct. Record that no publisher signature is
+  and window association are correct; the window carries its own icon, while
+  the GNOME dock icon requires the desktop-integration step documented in the
+  README for directly-run AppImages. Record that no publisher signature is
   presented.
 - **Default Shell and exits:** verify the operating-system-configured interactive
   login shell starts in the account home directory and reports `TERM`,

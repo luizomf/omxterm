@@ -77,6 +77,31 @@ fallback:
 ./release/OMXTerm-<version>-arm64.AppImage --appimage-extract-and-run
 ```
 
+A directly-run AppImage is not registered with the desktop environment, so
+GNOME's dock and app grid show a generic placeholder icon for it even though
+the Terminal Window itself carries the OMXTerm icon. To get the correct dock
+icon and an Activities launcher entry, integrate the AppImage: either use an
+AppImage integration tool of your choice, or install a user-level desktop
+entry pointing at your AppImage location, for example:
+
+```ini
+# ~/.local/share/applications/omxterm.desktop
+[Desktop Entry]
+Name=OMXTerm
+Exec=/absolute/path/to/OMXTerm-<version>-arm64.AppImage %U
+Terminal=false
+Type=Application
+Icon=/absolute/path/to/omxterm.png
+StartupWMClass=omxterm
+Categories=Utility;TerminalEmulator;
+```
+
+The icon PNG is available inside the AppImage at
+`squashfs-root/usr/share/icons/hicolor/1024x1024/apps/omxterm.png` after
+`--appimage-extract`, and `StartupWMClass=omxterm` is what associates running
+windows with the entry. Moving or renaming the AppImage requires updating the
+`Exec` path.
+
 See the [local ARM64 release procedure](docs/release.md) for prerequisites,
 native package verification, exact-artifact manual checklists, checksum
 generation, unsigned-package guidance, and the separately authorized
