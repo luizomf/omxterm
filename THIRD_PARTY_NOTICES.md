@@ -1,8 +1,10 @@
 # Third-party notices
 
 OMXTerm includes the following runtime components. Their original license texts
-are distributed with the application under `OMXTerm.app/Contents/Resources`.
-The exact dependency versions are locked in `package-lock.json`.
+are distributed in the application resources directory:
+`OMXTerm.app/Contents/Resources` on macOS and `resources` in the packaged Linux
+and Windows application layouts. The exact dependency versions are locked in
+`package-lock.json`.
 
 | Component                                   | License                   | Packaged notice                              |
 | ------------------------------------------- | ------------------------- | -------------------------------------------- |

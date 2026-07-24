@@ -23,10 +23,15 @@ Read the relevant sources first:
 - [`docs/versioning.md`](docs/versioning.md) and
   [`docs/release.md`](docs/release.md) govern versions and releases.
 
-Open a GitHub issue before substantial code, behavior, architecture, security,
-or configuration work. This lets the maintainer confirm scope, identify
-dependencies, and prevent duplicate implementations. A small typo or broken
-link may go directly to a focused pull request.
+Open a GitHub issue before substantial code, behavior, architecture, planned
+security hardening, or configuration work. This lets the maintainer confirm
+scope, identify dependencies, and prevent duplicate implementations. A small
+typo or broken link may go directly to a focused pull request.
+
+Do not disclose a suspected vulnerability in a public issue or pull request.
+Report it privately to the maintainer using the email address on
+[Otávio's GitHub profile](https://github.com/luizomf), with the affected
+version, reproduction details, and impact.
 
 Keep proposals inside the current product boundary. Splits, saved sessions, AI
 assistance, SSH brokering, shell integration, theme catalogs, and automatic
@@ -37,8 +42,8 @@ runtime and packaging are both implemented.
 
 ## Development environment
 
-Use an ARM64 machine running macOS, Linux, or Windows with Node.js 22 or newer
-and its bundled npm. Install dependencies from the lockfile with `npm ci`.
+Use an ARM64 machine running macOS, Linux, or Windows with Node.js 22.13 or
+later in the Node.js 22 line, or Node.js 24 or newer, and its bundled npm. Install dependencies from the lockfile with `npm ci`.
 
 On Linux, `node-pty` builds from source and requires `python3`, `make`, and a C++
 compiler (`build-essential` provides the latter two on Ubuntu). Install those

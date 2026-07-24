@@ -6,7 +6,9 @@ fallback remains last in the Terminal Font Stack.
 
 - Source: `ryanoasis/nerd-fonts` release `v3.4.0`, `JetBrainsMono.zip`
 - Variant: `Mono`, keeping patched glyphs within one terminal cell
-- Input reused from the repository-owned OMXTerm Web release asset
+- WOFF2 source: `apps/web/public/fonts/JetBrainsMonoNerdFontMono-Regular.woff2`
+  at OMXTerm Web commit `b8b1f6c4fc21e92ce360fb46f470f69afc881817`
+  (Git blob `e26dc35021c91a75ffaa659548598008c4766471`)
 - Regular WOFF2 SHA-256:
   `50680a64466fbcc3eff68e00f84505f55681c86f8450c042416af5a8dbc1cce1`
 - OFL SHA-256:

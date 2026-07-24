@@ -137,6 +137,10 @@ their defaults. Objects and the root reject unknown keys.
 | `theme.path`              | non-empty filesystem path without NUL   | bundled `omtheme`                    |
 | `keybinds.<action>`       | accelerator with a non-Shift modifier   | built-in shortcut per action         |
 
+`keyboard.optionAsAlt` applies only on macOS: `none` preserves the active
+keyboard layout's native Unicode input, while `left`, `right`, and `both`
+select which Option keys produce terminal Alt sequences.
+
 On macOS, the configured top padding begins below the fixed 30 px native title
 and drag inset. On Linux and Windows, it begins directly below the operating
 system's native window chrome without another inset. `font.lineHeight` changes row height
@@ -147,7 +151,7 @@ actions and never rewrite this file.
 ### Keybinds
 
 `keybinds` remaps the application-menu shortcuts. The keys are a fixed action
-vocabulary; the values are [Electron accelerator](https://www.electronjs.org/docs/latest/api/accelerator)
+vocabulary; the values are [Electron accelerator](https://www.electronjs.org/docs/latest/tutorial/keyboard-shortcuts#accelerators)
 strings such as `CommandOrControl+T`. Actions you omit keep their defaults:
 
 | Action                      | macOS default              | Linux/Windows default |
@@ -196,8 +200,9 @@ explicit entries colliding (swap both explicitly if that is what you want).
 `CommandOrControl` counts as `Command` on macOS and `Control` on Linux and
 Windows when duplicates are judged; `Super` and `Meta` use Electron's Command accelerator
 family. The menu shows the shortcut that is actually active.
-Keybinds change application shortcuts only; what the shell or a TUI receives
-from the keyboard is not affected.
+Keybinds change application shortcuts only. A matched accelerator is consumed
+by its application action and does not reach the terminal; unmatched keyboard
+input continues to the PTY unchanged.
 
 Because `CommandOrControl` becomes `Control` on Linux and Windows, a map you
 authored on macOS can bind an action onto a bare `Ctrl+<key>` that the terminal
@@ -257,7 +262,7 @@ means no snippets.
 }
 ```
 
-Each snippet has:
+The required `snippets` array accepts at most 512 entries. Each snippet has:
 
 | Field         | Accepted value                           | Default  |
 | ------------- | ---------------------------------------- | -------- |
@@ -345,10 +350,11 @@ converted result is a valid Terminal Theme.
 
 ## Troubleshooting
 
-When a user file is invalid, OMXTerm still opens. It uses its built-in
-defaults for whatever failed — every setting when `config.json` is invalid, or
-only the bundled `omtheme` theme when the selected theme file is invalid or
-missing — and shows a persistent error bar at the bottom of the window. The
+When `config.json` or a selected Terminal Theme is invalid, OMXTerm still
+opens. It uses its built-in defaults for whatever failed — every setting when
+`config.json` is invalid, or only the bundled `omtheme` theme when the selected
+theme file is invalid or missing — and shows a persistent error bar at the
+bottom of the window. The
 error states the configuration path and, when relevant, the resolved theme
 path, and stays visible until you restart. It never blocks typing, so you can
 fix the file in the terminal it reports on. The same diagnostic also goes to

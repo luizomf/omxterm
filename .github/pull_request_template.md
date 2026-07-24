@@ -1,10 +1,12 @@
 ## Closing issue
 
+<!-- Use "Closes #<number>" when applicable; otherwise write "N/A". -->
+
 Closes #
 
 ## Acceptance-criteria mapping
 
-<!-- Map each issue criterion to the change that satisfies it. -->
+<!-- Map each issue criterion to the change, or write "N/A" for an allowed PR without an issue. -->
 
 - [ ]
 

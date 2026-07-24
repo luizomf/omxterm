@@ -120,8 +120,8 @@ application always asks once.
 
 ## Development
 
-Source development targets ARM64 macOS, Linux, and Windows with Node.js 22 or
-newer and npm. Linux also needs the native build prerequisites listed in the
+Source development targets ARM64 macOS, Linux, and Windows with Node.js 22.13
+or later in the Node.js 22 line, or Node.js 24 or newer, and npm. Linux also needs the native build prerequisites listed in the
 [contribution guide](CONTRIBUTING.md).
 
 ```sh
@@ -188,8 +188,9 @@ preference.
 
 See the [complete configuration guide](docs/configuration.md) for every field,
 Otávio's real configuration, keybinds, snippets, external Terminal Themes, the
-optional Ghostty conversion helper, and troubleshooting. OMXTerm never
-creates, rewrites, migrates, or reloads these files.
+optional Ghostty conversion helper, and troubleshooting. OMXTerm never creates, rewrites, or migrates these files. Changes to
+`config.json` and Terminal Themes require an application restart;
+`snippets.json` is reread whenever the Snippets Sidebar opens.
 
 ## Documentation
 

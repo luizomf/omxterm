@@ -335,16 +335,23 @@ unchanged artifact supersedes an earlier `FAIL` without erasing it. A changed
 artifact always starts a new record.
 
 `Next pending check: NONE` means only that no pending row is selectable; it does
-not imply readiness. Exact-artifact acceptance may become `OWNER ACCEPTED` only
-when automated verification and packaged startup passed, cleanup is complete,
-and every applicable manual row's current result is `PASS`, except that
+not imply readiness. Exact-artifact acceptance may become `OWNER ACCEPTED` when
+automated verification and packaged startup passed, cleanup is complete, and
+every applicable manual row's current result is `PASS`, except that
 `MAC-GATEKEEPER` or `WIN-SMARTSCREEN` may be `UNEXECUTED — IMPOSSIBLE` for the
 exact conditional reason stated in its row. `SH-SHELL-EXIT-WIN` may be `PASS`
 when every actionable observation passes and its evidence includes the exact
-allowed `UNEXECUTED — IMPOSSIBLE` sub-observation stated in that row. A current
-`FAIL`, `UNEXECUTED — PENDING`, or any other `UNEXECUTED — IMPOSSIBLE` keeps
-acceptance and publication blocked. Missing or unexplained results are also
-blocking.
+allowed `UNEXECUTED — IMPOSSIBLE` sub-observation stated in that row.
+
+For one exact artifact and release, the owner may instead explicitly accept one
+or more current `FAIL` or unexecuted rows through a durable waiver. The record
+must preserve each actual result and reason, identify the accepted artifact by
+filename, byte size, and SHA-256, explain the accepted risk or substitute
+evidence, and put every user-visible deviation in the release notes. A waiver
+never relabels a row as `PASS`, applies to a replacement artifact, or implies
+publication authorization. Without such an explicit waiver, a current `FAIL`,
+`UNEXECUTED — PENDING`, or any other `UNEXECUTED — IMPOSSIBLE` keeps acceptance
+and publication blocked. Missing or unexplained results are always blocking.
 
 Identifiers beginning with `SH-` are shared behavior families; their final
 `MAC`, `LIN`, or `WIN` segment identifies the native observation. Identifiers
@@ -678,13 +685,13 @@ recorded.
   confirm the uninstaller removes the Start Menu entry, and preserve the exact
   installer unchanged for checksum and owner acceptance.
 
-Any failed required item or any unexplained unexecuted item keeps every future
-tag, GitHub Release, attachment, or upload blocked. The Gatekeeper and
-SmartScreen observations may remain `UNEXECUTED` only when the locally built
-artifact carries no download quarantine or mark-of-the-web and that reason is
-recorded; these conditional observations do not by themselves block
-publication, but the required Gatekeeper and SmartScreen release guidance
-still applies. Missing exact-artifact manual evidence does not prevent a preparatory
+Unless explicitly accepted through the narrow owner-waiver rule above, any
+failed required item or any unexplained unexecuted item keeps every future tag,
+GitHub Release, attachment, or upload blocked. The Gatekeeper and SmartScreen
+observations may remain `UNEXECUTED` only when the locally built artifact
+carries no download quarantine or mark-of-the-web and that reason is recorded;
+these conditional observations do not by themselves block publication, but
+the required Gatekeeper and SmartScreen release guidance still applies. Missing exact-artifact manual evidence does not prevent a preparatory
 packaging change from merging, but it does prevent publication.
 
 ## macOS SHA-256
