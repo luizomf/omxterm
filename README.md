@@ -7,13 +7,116 @@ and Windows.
   <img src="docs/images/omxterm-hero.png" alt="OMXTerm icon: a light blue terminal prompt on a dark rounded square" width="480" />
 </p>
 
-The current published release is `v0.3.0`, available from the
-[GitHub Releases page](https://github.com/luizomf/omxterm/releases) as an
-unsigned, non-notarized Apple Silicon DMG with its SHA-256 checksum. Linux
-ARM64 AppImage packaging is implemented but is not part of that published
-release. The source package is prepared at version `0.4.0`, but that version
-change does not publish a release. Outside release preparation, `main` carries
-a `-dev` development baseline under the [versioning policy](docs/versioning.md).
+The current release is `v0.4.0`, available from the
+[GitHub Releases page](https://github.com/luizomf/omxterm/releases) for each
+Supported Platform:
+
+- `OMXTerm-0.4.0-arm64.dmg` for Apple Silicon macOS;
+- `OMXTerm-0.4.0-arm64.AppImage` for Linux ARM64; and
+- `OMXTerm-0.4.0-arm64.exe` for Windows ARM64.
+
+Every package is ARM64-only and intentionally unsigned; the macOS package is
+also not notarized. Each artifact has a matching `.sha256` file. Verify the
+checksum before opening it, and read the [0.4.0 release notes](docs/releases/0.4.0.md)
+for changes, compatibility, provenance, and known limitations.
+
+## Installation
+
+### Installing on macOS
+
+Download the DMG and its matching checksum file into the same directory, then
+verify it:
+
+```sh
+shasum -a 256 -c OMXTerm-0.4.0-arm64.dmg.sha256
+```
+
+Open the DMG, drag `OMXTerm.app` to Applications, eject the DMG, and launch
+OMXTerm from Applications. Because the app is intentionally unsigned and not
+notarized, macOS may warn that it cannot verify the developer or check the app
+for malicious software. Review the source
+and proceed only if you trust the exact artifact. If you choose to open it,
+follow Apple's current [Open Anyway instructions](https://support.apple.com/102445)
+in System Settings -> Privacy & Security. Do not disable system-wide macOS
+security protections.
+
+### Installing on Linux
+
+Download the AppImage and its matching checksum file into the same directory.
+Verify it, make it executable, and run it without an installer:
+
+```sh
+sha256sum --check OMXTerm-0.4.0-arm64.AppImage.sha256
+chmod +x OMXTerm-0.4.0-arm64.AppImage
+./OMXTerm-0.4.0-arm64.AppImage
+```
+
+Its unsigned status means Linux distributions do not receive a publisher
+identity to verify. Linux needs the `fontconfig` utilities for configured
+system-font validation. OMXTerm defaults to Electron's X11 backend; a Wayland
+session must provide XWayland. Native Wayland rendering is not currently
+claimed. An explicit Electron `--ozone-platform` argument overrides the default
+for diagnosis. The default AppImage mount path requires FUSE 2 (for example
+`libfuse2t64` on Ubuntu 24.04 or `libfuse2` on older Ubuntu releases).
+When FUSE 2 cannot be installed, use the AppImage runtime's safe extraction
+fallback:
+
+```sh
+./OMXTerm-0.4.0-arm64.AppImage --appimage-extract-and-run
+```
+
+A directly-run AppImage is not registered with the desktop environment, so
+GNOME's dock and app grid show a generic placeholder icon for it even though
+the Terminal Window itself carries the OMXTerm icon. To get the correct dock
+icon and an Activities launcher entry, integrate the AppImage: either use an
+AppImage integration tool of your choice, or install a user-level desktop
+entry pointing at your AppImage location, for example:
+
+```ini
+# ~/.local/share/applications/omxterm.desktop
+[Desktop Entry]
+Name=OMXTerm
+Exec=/absolute/path/to/OMXTerm-0.4.0-arm64.AppImage %U
+Terminal=false
+Type=Application
+Icon=/absolute/path/to/omxterm.png
+StartupWMClass=omxterm
+Categories=Utility;TerminalEmulator;
+```
+
+The icon PNG is available inside the AppImage at
+`squashfs-root/usr/share/icons/hicolor/1024x1024/apps/omxterm.png` after
+`--appimage-extract`, and `StartupWMClass=omxterm` is what associates running
+windows with the entry. Moving or renaming the AppImage requires updating the
+`Exec` path.
+
+### Installing on Windows
+
+Install the
+[Microsoft Visual C++ Redistributable for ARM64](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
+if it is not already present. Download the NSIS installer and its matching
+checksum file into the same directory. Compare the checksum file with a fresh
+hash:
+
+```powershell
+Get-Content .\OMXTerm-0.4.0-arm64.exe.sha256
+(Get-FileHash .\OMXTerm-0.4.0-arm64.exe -Algorithm SHA256).Hash.ToLower()
+```
+
+Run `OMXTerm-0.4.0-arm64.exe`. It installs per-user without administrator
+elevation; launch OMXTerm from the Start Menu. Because the installer is
+intentionally unsigned, Microsoft Defender SmartScreen may warn that it is from
+an unknown publisher. Review the source,
+verify the checksum, and proceed only if you trust the exact artifact;
+SmartScreen's `More info -> Run anyway` applies to that one file. Do not disable
+SmartScreen or other system-wide Windows security protections.
+
+On Windows the Default Shell is Windows PowerShell, falling back to the
+`ComSpec` command processor; Windows has no login-shell concept, so the shell
+starts as a plain interactive session in the user's home directory. Because
+ConPTY does not expose the PTY foreground process name, every live session
+counts as Busy: with `confirmClose` enabled, closing a tab, window, or the
+application always asks once.
 
 ## Development
 
@@ -26,10 +129,8 @@ npm ci
 npm run check:portable
 ```
 
-The current published `v0.3.0` artifact is macOS-only. Linux ARM64 AppImage
-and Windows ARM64 NSIS packaging are implemented but are not part of that
-published release. On every Supported Platform, `npm run dev` builds the
-application and launches it.
+On every Supported Platform, `npm run dev` builds the application and launches
+it.
 
 Project checks are available as root scripts:
 
@@ -56,79 +157,6 @@ Project checks are available as root scripts:
 - `npm run check:win` runs the same sequence for Windows: the ARM64 NSIS
   build, unpacked-application inspection, and isolated packaged startup
   through a real ConPTY.
-
-### Running the Linux AppImage
-
-The AppImage is portable: make it executable if necessary and run it without an
-installer:
-
-```sh
-chmod +x release/OMXTerm-<version>-arm64.AppImage
-./release/OMXTerm-<version>-arm64.AppImage
-```
-
-Its unsigned status means Linux distributions do not receive a publisher
-identity to verify. Linux needs the `fontconfig` utilities for configured
-system-font validation. OMXTerm defaults to Electron's X11 backend; a Wayland
-session must provide XWayland. Native Wayland remains unclaimed because the
-supported ARM64 VM started without presenting a visible window. An explicit
-Electron `--ozone-platform` argument overrides the default for diagnosis and
-future retesting. The default AppImage mount path requires FUSE 2 (for example
-`libfuse2t64` on Ubuntu 24.04 or `libfuse2` on older Ubuntu releases).
-When FUSE 2 cannot be installed, use the AppImage runtime's safe extraction
-fallback:
-
-```sh
-./release/OMXTerm-<version>-arm64.AppImage --appimage-extract-and-run
-```
-
-A directly-run AppImage is not registered with the desktop environment, so
-GNOME's dock and app grid show a generic placeholder icon for it even though
-the Terminal Window itself carries the OMXTerm icon. To get the correct dock
-icon and an Activities launcher entry, integrate the AppImage: either use an
-AppImage integration tool of your choice, or install a user-level desktop
-entry pointing at your AppImage location, for example:
-
-```ini
-# ~/.local/share/applications/omxterm.desktop
-[Desktop Entry]
-Name=OMXTerm
-Exec=/absolute/path/to/OMXTerm-<version>-arm64.AppImage %U
-Terminal=false
-Type=Application
-Icon=/absolute/path/to/omxterm.png
-StartupWMClass=omxterm
-Categories=Utility;TerminalEmulator;
-```
-
-The icon PNG is available inside the AppImage at
-`squashfs-root/usr/share/icons/hicolor/1024x1024/apps/omxterm.png` after
-`--appimage-extract`, and `StartupWMClass=omxterm` is what associates running
-windows with the entry. Moving or renaming the AppImage requires updating the
-`Exec` path.
-
-### Running the Windows installer
-
-`npm run package:win` produces the unsigned one-click NSIS installer
-`release/OMXTerm-<version>-arm64.exe`, which installs per-user and needs no
-administrator elevation. Its application payload is zip-compressed, which makes
-the installer larger than the macOS or Linux artifact but is required for the
-installer to extract completely on ARM64 (see the
-[release procedure](docs/release.md) for the underlying 7-Zip filter reason).
-
-Because the installer is intentionally unsigned, Microsoft Defender
-SmartScreen warns that it is from an unknown publisher. Review the source,
-verify the published SHA-256 checksum, and proceed only if you trust the
-exact artifact; SmartScreen's `More info -> Run anyway` applies to that one
-file. Do not disable SmartScreen or other system-wide Windows security
-protections.
-
-On Windows the Default Shell is Windows PowerShell, falling back to the
-`ComSpec` command processor; Windows has no login-shell concept, so the shell
-starts as a plain interactive session in the user's home directory. Because
-ConPTY does not expose the PTY foreground process name, every live session
-counts as Busy: with `confirmClose` enabled, closing a tab, window, or the
-application always asks once.
 
 See the [local ARM64 release procedure](docs/release.md) for prerequisites,
 native package verification, exact-artifact manual checklists, checksum
@@ -173,6 +201,7 @@ creates, rewrites, migrates, or reloads these files.
 - [0.1.0 release notes](docs/releases/0.1.0.md)
 - [0.2.0 release notes](docs/releases/0.2.0.md)
 - [0.3.0 release notes](docs/releases/0.3.0.md)
+- [0.4.0 release notes](docs/releases/0.4.0.md)
 - [Domain language](CONTEXT.md)
 - [Architecture decisions](docs/adr/)
 
