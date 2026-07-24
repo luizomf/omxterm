@@ -197,6 +197,7 @@ describe("renderer Terminal Window page host", () => {
       colors: Object.freeze({
         ...DEFAULT_TERMINAL_THEME.colors,
         background: "#1e1e2e",
+        foreground: "#d9e1f2",
       }),
     });
     const elements = createPageElements();
@@ -227,6 +228,9 @@ describe("renderer Terminal Window page host", () => {
     expect(document.body.style.getPropertyValue("--terminal-background")).toBe(
       "#1e1e2e",
     );
+    expect(
+      document.documentElement.style.getPropertyValue("--terminal-foreground"),
+    ).toBe("#d9e1f2");
     expect(
       elements.tabsContainer.style.getPropertyValue("--terminal-background"),
     ).toBe("#1e1e2e");

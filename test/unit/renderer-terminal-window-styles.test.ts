@@ -1,11 +1,18 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { createSnippetsSidebar } from "../../src/renderer/snippets-sidebar";
+import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 
 // Regression for #96: xterm 6 keeps an empty companion viewport whose stock
 // overflow-y: scroll paints a permanent disabled scrollbar track on platforms
 // with classic scrollbars. The Terminal Window stylesheet must win the cascade
 // against the bundled xterm stylesheet and hide that vestigial scrollbar.
+const terminalWindowCss = readFileSync(
+  "src/renderer/terminal-window.css",
+  "utf8",
+);
+
 describe("terminal window viewport scrollbar", () => {
   it("hides the vestigial xterm viewport scrollbar", () => {
     for (const stylesheet of [
@@ -13,7 +20,10 @@ describe("terminal window viewport scrollbar", () => {
       "src/renderer/terminal-window.css",
     ]) {
       const style = document.createElement("style");
-      style.textContent = readFileSync(stylesheet, "utf8");
+      style.textContent =
+        stylesheet === "src/renderer/terminal-window.css"
+          ? terminalWindowCss
+          : readFileSync(stylesheet, "utf8");
       document.head.append(style);
     }
     const surface = document.createElement("div");
@@ -26,3 +36,208 @@ describe("terminal window viewport scrollbar", () => {
     expect(getComputedStyle(viewport).overflowY).toBe("hidden");
   });
 });
+
+describe("Snippets Sidebar theme contrast", () => {
+  it.each([
+    ["light", "#f5f5f5", "#161616"],
+    [
+      "dark",
+      DEFAULT_TERMINAL_THEME.colors.background,
+      DEFAULT_TERMINAL_THEME.colors.foreground,
+    ],
+  ])(
+    "keeps text and interactive states visible with a representative %s theme",
+    async (_name, backgroundHex, foregroundHex) => {
+      const root = document.createElement("aside");
+      root.id = "snippets-sidebar";
+      root.hidden = true;
+      document.body.append(root);
+      const sidebar = createSnippetsSidebar(root, {
+        loadSnippets: vi.fn(async () => ({
+          snippets: [
+            {
+              name: "greet",
+              body: "printf hello",
+              description: "say hi",
+              execute: false,
+            },
+          ],
+        })),
+        inject: vi.fn(),
+        focusTerminal: vi.fn(),
+      });
+      await sidebar.toggle();
+
+      expect(root.querySelector('input[type="search"]')).not.toBeNull();
+      expect(root.querySelector(".snippet-name")).not.toBeNull();
+      expect(root.querySelector(".snippet-description")).not.toBeNull();
+      expect(root.querySelector(".snippets-empty")).not.toBeNull();
+
+      const background = hexColor(backgroundHex);
+      const foreground = hexColor(foregroundHex);
+      const sidebarRule = ruleBody("#snippets-sidebar");
+      const inputRule = ruleBody('#snippets-sidebar input[type="search"]');
+      expect(declaration(sidebarRule, "color")).toContain(
+        "--terminal-foreground",
+      );
+      expect(declaration(inputRule, "color")).toBe("inherit");
+      expect(
+        declaration(ruleBody("#snippets-sidebar li button"), "color"),
+      ).toBe("inherit");
+
+      const inputFocusRule = ruleBody(
+        '#snippets-sidebar input[type="search"]:focus',
+      );
+      const buttonHoverRule = ruleBody("#snippets-sidebar li button:hover");
+      const buttonFocusRule = ruleBody(
+        "#snippets-sidebar li button:focus-visible",
+      );
+      const descriptionRule = ruleBody(
+        "#snippets-sidebar .snippet-description",
+      );
+      const emptyRule = ruleBody("#snippets-sidebar .snippets-empty");
+      const placeholderRule = ruleBody(
+        '#snippets-sidebar input[type="search"]::placeholder',
+      );
+      const sidebarBackground = mix(
+        background,
+        foreground,
+        foregroundMix(declaration(sidebarRule, "background")),
+      );
+      const inputBackground = mix(
+        background,
+        foreground,
+        foregroundMix(declaration(inputRule, "background")),
+      );
+      const inputBorder = mix(
+        background,
+        foreground,
+        foregroundMix(declaration(inputRule, "border")),
+      );
+      const inputFocusBorder = mix(
+        background,
+        foreground,
+        foregroundMix(declaration(inputFocusRule, "border-color")),
+      );
+      const hoverBackground = mix(
+        background,
+        foreground,
+        foregroundMix(declaration(buttonHoverRule, "background")),
+      );
+      const buttonFocusOutline = mix(
+        background,
+        foreground,
+        foregroundMix(declaration(buttonFocusRule, "outline")),
+      );
+      const description = mix(
+        background,
+        foreground,
+        foregroundMix(declaration(descriptionRule, "color")),
+      );
+      const empty = mix(
+        background,
+        foreground,
+        foregroundMix(declaration(emptyRule, "color")),
+      );
+      const placeholder = mix(
+        background,
+        foreground,
+        foregroundMix(declaration(placeholderRule, "color")),
+      );
+
+      expect(contrast(foreground, sidebarBackground)).toBeGreaterThanOrEqual(
+        4.5,
+      );
+      expect(contrast(foreground, inputBackground)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(description, sidebarBackground)).toBeGreaterThanOrEqual(
+        4.5,
+      );
+      expect(contrast(empty, sidebarBackground)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(placeholder, inputBackground)).toBeGreaterThanOrEqual(
+        4.5,
+      );
+      expect(contrast(inputBorder, inputBackground)).toBeGreaterThanOrEqual(3);
+      expect(
+        contrast(inputFocusBorder, inputBackground),
+      ).toBeGreaterThanOrEqual(3);
+      expect(contrast(hoverBackground, sidebarBackground)).toBeGreaterThan(
+        1.25,
+      );
+      expect(
+        contrast(buttonFocusOutline, sidebarBackground),
+      ).toBeGreaterThanOrEqual(3);
+
+      sidebar.dispose();
+      root.remove();
+    },
+  );
+});
+
+type Color = readonly [number, number, number];
+
+function ruleBody(selector: string): string {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  const match = terminalWindowCss.match(
+    new RegExp(`${escaped}\\s*\\{(?<body>[^}]*)\\}`, "u"),
+  );
+  expect(match?.groups?.body, `missing CSS rule ${selector}`).toBeDefined();
+  return match!.groups!.body!;
+}
+
+function declaration(rule: string, property: string): string {
+  const escaped = property;
+  const match = rule.match(
+    new RegExp(`(?:^|\\n)\\s*${escaped}:\\s*(?<value>[^;]+);`, "u"),
+  );
+  expect(
+    match?.groups?.value,
+    `missing CSS property ${property}`,
+  ).toBeDefined();
+  return match!.groups!.value!.replace(/\\s+/gu, " ").trim();
+}
+
+function foregroundMix(value: string): number {
+  expect(value).toContain("--terminal-background");
+  const match = value.match(
+    /var\(--terminal-foreground[^)]*\)\s+(?<percent>\d+)%/u,
+  );
+  expect(
+    match?.groups?.percent,
+    `missing foreground mix in ${value}`,
+  ).toBeDefined();
+  return Number(match!.groups!.percent) / 100;
+}
+
+function hexColor(value: string): Color {
+  return [1, 3, 5].map((offset) =>
+    Number.parseInt(value.slice(offset, offset + 2), 16),
+  ) as unknown as Color;
+}
+
+function mix(background: Color, foreground: Color, amount: number): Color {
+  return background.map(
+    (channel, index) => channel * (1 - amount) + foreground[index]! * amount,
+  ) as unknown as Color;
+}
+
+function contrast(first: Color, second: Color): number {
+  const firstLuminance = luminance(first);
+  const secondLuminance = luminance(second);
+  return (
+    (Math.max(firstLuminance, secondLuminance) + 0.05) /
+    (Math.min(firstLuminance, secondLuminance) + 0.05)
+  );
+}
+
+function luminance(color: Color): number {
+  return color
+    .map((channel) => channel / 255)
+    .map((channel) =>
+      channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+    )
+    .reduce(
+      (total, channel, index) =>
+        total + channel * [0.2126, 0.7152, 0.0722][index]!,
+      0,
+    );
+}

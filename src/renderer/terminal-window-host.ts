@@ -86,7 +86,8 @@ export function mountTerminalWindowPage(
   let removeSnippetsToggleListener: (() => void) | undefined;
 
   if (options.configuration) {
-    const background = options.configuration.terminalTheme.colors.background;
+    const { background, foreground } =
+      options.configuration.terminalTheme.colors;
     page.document.documentElement.style.setProperty(
       "--native-title-inset",
       `${options.configuration.nativeTitleInset}px`,
@@ -94,6 +95,10 @@ export function mountTerminalWindowPage(
     page.document.documentElement.style.setProperty(
       "--terminal-background",
       background,
+    );
+    page.document.documentElement.style.setProperty(
+      "--terminal-foreground",
+      foreground,
     );
     page.document.body.style.setProperty("--terminal-background", background);
     elements.tabsContainer.style.setProperty(

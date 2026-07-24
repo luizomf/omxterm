@@ -127,11 +127,11 @@ body {
     13px/1.45 -apple-system,
     BlinkMacSystemFont,
     sans-serif;
-  color: #e6e6e6;
+  color: var(--terminal-foreground, #e6e6e6);
   background: color-mix(
     in srgb,
     var(--terminal-background, #000000),
-    #808080 12%
+    var(--terminal-foreground, #e6e6e6) 8%
   );
 }
 
@@ -145,14 +145,35 @@ body {
   padding: 6px 8px;
   font: inherit;
   color: inherit;
-  background: rgb(255 255 255 / 8%);
-  border: 1px solid rgb(255 255 255 / 20%);
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 14%
+  );
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--terminal-background, #000000),
+      var(--terminal-foreground, #e6e6e6) 58%
+    );
   border-radius: 6px;
   outline: none;
 }
 
+#snippets-sidebar input[type="search"]::placeholder {
+  color: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 70%
+  );
+}
+
 #snippets-sidebar input[type="search"]:focus {
-  border-color: rgb(255 255 255 / 45%);
+  border-color: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 78%
+  );
 }
 
 #snippets-sidebar ul {
@@ -180,9 +201,27 @@ body {
   border-radius: 6px;
 }
 
-#snippets-sidebar li button:hover,
+#snippets-sidebar li button:hover {
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 24%
+  );
+}
+
 #snippets-sidebar li button:focus-visible {
-  background: rgb(255 255 255 / 10%);
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 24%
+  );
+  outline: 2px solid
+    color-mix(
+      in srgb,
+      var(--terminal-background, #000000),
+      var(--terminal-foreground, #e6e6e6) 78%
+    );
+  outline-offset: -2px;
 }
 
 #snippets-sidebar .snippet-name {
@@ -191,14 +230,22 @@ body {
 
 #snippets-sidebar .snippet-description {
   overflow: hidden;
-  color: rgb(230 230 230 / 65%);
+  color: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 70%
+  );
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 #snippets-sidebar .snippets-empty {
   margin: 0;
-  color: rgb(230 230 230 / 65%);
+  color: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 70%
+  );
 }
 
 #snippets-sidebar .snippets-error {
