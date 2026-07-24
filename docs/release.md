@@ -339,9 +339,12 @@ not imply readiness. Exact-artifact acceptance may become `OWNER ACCEPTED` only
 when automated verification and packaged startup passed, cleanup is complete,
 and every applicable manual row's current result is `PASS`, except that
 `MAC-GATEKEEPER` or `WIN-SMARTSCREEN` may be `UNEXECUTED — IMPOSSIBLE` for the
-exact conditional reason stated in its row. A current `FAIL`,
-`UNEXECUTED — PENDING`, or any other `UNEXECUTED — IMPOSSIBLE` keeps acceptance
-and publication blocked. Missing or unexplained results are also blocking.
+exact conditional reason stated in its row. `SH-SHELL-EXIT-WIN` may be `PASS`
+when every actionable observation passes and its evidence includes the exact
+allowed `UNEXECUTED — IMPOSSIBLE` sub-observation stated in that row. A current
+`FAIL`, `UNEXECUTED — PENDING`, or any other `UNEXECUTED — IMPOSSIBLE` keeps
+acceptance and publication blocked. Missing or unexplained results are also
+blocking.
 
 Identifiers beginning with `SH-` are shared behavior families; their final
 `MAC`, `LIN`, or `WIN` segment identifies the native observation. Identifiers
@@ -595,7 +598,9 @@ directory. Use disposable configuration, state, and user-data roots for
 invalid-file and log checks. Copy every identifier and initial result below into
 the run record, not the action text; each starts
 `UNEXECUTED — PENDING: not yet observed`. A row is `PASS` only when every
-independently stated observation in it was made. A partial row remains
+independently stated actionable observation in it was made. The explicit
+`SH-SHELL-EXIT-WIN` platform-limitation sub-observation below is not actionable
+and follows the canonical acceptance exception above. A partial row remains
 `UNEXECUTED — PENDING` with both completed and exactly remaining observations
 recorded.
 
@@ -614,13 +619,18 @@ recorded.
   rather than manufacturing or bypassing a warning. Never
   disable SmartScreen or other system protections.
 - **`SH-SHELL-EXIT-WIN` — Default Shell and exits.** Initial result:
-  `UNEXECUTED — PENDING: not yet observed`. Verify Windows PowerShell starts as a plain
-  interactive session in the user profile directory and reports `TERM`,
+  `UNEXECUTED — PENDING: not yet observed`. Verify Windows PowerShell starts as
+  a plain interactive session in the user profile directory and reports `TERM`,
   `COLORTERM`, `TERM_PROGRAM`, and `TERM_PROGRAM_VERSION` exactly as
   documented. In fresh windows, run `exit 0` and `exit 7`; confirm each closes
-  without a failure dialog. Stop the shell process abnormally (for example
-  `Stop-Process -Id $PID` from that shell) and confirm an abnormal end stays
-  visible until acknowledged when it is reported as a failure.
+  without a failure dialog. Do not use `Stop-Process` as an unexpected-signal
+  check: node-pty and ConPTY expose neither a signal nor reliable termination
+  provenance, and a forced shell termination can produce the same exit tuple as
+  an explicit ordinary numeric exit. Record the unavailable observation as
+  `UNEXECUTED — IMPOSSIBLE: ConPTY exposes no termination provenance`. This
+  allowed platform limitation does not block `PASS` after all other observations
+  pass; do not manufacture a distinction or classify
+  a numeric exit code as a failure.
 - **`SH-WINDOW-TAB-BUSY-WIN` — Windows, tabs, and Busy behavior.** Initial
   result: `UNEXECUTED — PENDING: not yet observed`. Using `Ctrl` application shortcuts and
   native menu items, exercise independent windows and tabs, fullscreen, zoom,
