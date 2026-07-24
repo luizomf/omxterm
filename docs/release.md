@@ -31,6 +31,43 @@ those platforms. The macOS procedure preserves its Gatekeeper policy; the Linux
 procedure records the unsigned AppImage and FUSE limitations; the Windows
 procedure records the unsigned NSIS installer and SmartScreen limitation.
 
+### Artifact-affecting and documentation-only changes
+
+Each native record keeps the exact **artifact build commit** used for its
+package. The three artifact build commits normally match. They may differ only
+when every intervening change qualifies for the documentation-only exception
+below; all artifact-affecting source must remain identical across the three
+packages.
+
+A change qualifies only when every changed path is a non-packaged Markdown file
+and none is:
+
+- `docs/spec.md` or a file under `docs/adr/`, because these define the product
+  contract and durable decisions;
+- `THIRD_PARTY_NOTICES.md`, because it is packaged in every artifact; or
+- a license, package/version file, executable or test source, dependency,
+  configuration, build or packaging input, asset, generated application file,
+  or any other non-Markdown path.
+
+Eligible examples include `README.md`, `CONTRIBUTING.md`, tutorials, agent
+instructions, release procedures, and platform guidance that is not packaged.
+Such a change does not alter or invalidate an unchanged artifact. If it adds or
+changes a required automated or manual verification, the existing exact
+artifact must satisfy the current requirement before acceptance or publication;
+documentation-only status avoids a rebuild, not the new gate.
+
+Any non-eligible change after an artifact build invalidates every earlier native
+record for that version. Rebuild those packages from the new accepted source and
+start new exact-artifact records. Record every artifact build commit; before
+publication, compare each one with the intended tag and confirm that every
+intervening path is eligible under this section. If that proof fails, do not tag
+or publish.
+
+This exception applies only before publication. Published releases are
+immutable: never move their tags, replace their artifacts or checksums, or reuse
+their GitHub Releases. Later documentation corrections ship from `main` or with
+a future release without rewriting the published one.
+
 ## Version selection and consistency
 
 Select the release version under the [versioning policy](versioning.md) in an
@@ -42,7 +79,9 @@ Before building a release candidate, confirm that `package.json` and
 `package-lock.json` contain the same accepted `X.Y.Z` version. The application
 version, intended `vX.Y.Z` tag, `TERM_PROGRAM_VERSION`, native artifact
 filenames, checksum filenames, and GitHub Release must all identify that same
-version. The package names are `OMXTerm-X.Y.Z-arm64.dmg`,
+version. The intended tag points to every artifact build commit directly or to
+a descendant that differs from it only through the documentation-only exception
+above. The package names are `OMXTerm-X.Y.Z-arm64.dmg`,
 `OMXTerm-X.Y.Z-arm64.AppImage`, and `OMXTerm-X.Y.Z-arm64.exe`.
 
 ## Build and automated verification
@@ -720,9 +759,10 @@ Windows installer, updated only with the accepted version and checksum:
 Only after Otávio accepts the exact-artifact record and separately authorizes
 publication:
 
-1. confirm the canonical repository is `luizomf/omxterm`, the accepted source is
-   tagged `vX.Y.Z`, and the package metadata, DMG, AppImage, installer, and
-   their checksums still match their accepted records;
+1. confirm the canonical repository is `luizomf/omxterm`; the package metadata,
+   DMG, AppImage, installer, and checksums still match their accepted records;
+   and `vX.Y.Z` points to each recorded artifact build commit or differs from it
+   only through paths eligible for the documentation-only exception above;
 2. create the canonical GitHub Release for that exact tag with the Gatekeeper
    and SmartScreen provenance notes above; summarize material changes, identify
    incompatible changes and migration or state that there are none, and record
