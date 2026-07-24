@@ -90,7 +90,8 @@ above. The package names are `OMXTerm-X.Y.Z-arm64.dmg`,
 
 Use an accepted release commit for `X.Y.Z`, with `vX.Y.Z` recorded as the
 intended tag, on the macOS Supported Platform: Otávio's current Apple Silicon
-(`arm64`) Mac. Install Node.js 22 or newer, check out the accepted source
+(`arm64`) Mac. Install Node.js 22.13 or later in the Node.js 22 line, or
+Node.js 24 or newer, check out the accepted source
 without local or private files, and run:
 
 ```sh
@@ -119,7 +120,8 @@ completed the manual checklist below.
 ### Linux arm64
 
 Use a native Linux arm64 clone on the VM's native filesystem, never a Parallels
-shared folder. Install Node.js 22 or newer, `python3`, `make`, a C++ compiler
+shared folder. Install Node.js 22.13 or later in the Node.js 22 line, or
+Node.js 24 or newer, plus `python3`, `make`, a C++ compiler
 (`build-essential` on Ubuntu), the `fontconfig` utilities, and an X11 display or
 XWayland in a Wayland session. Native Wayland is not currently claimed. Then run
 from the accepted source commit:
@@ -154,8 +156,8 @@ exact-AppImage manual checklist below are complete.
 ### Windows arm64
 
 Use a native Windows arm64 clone on the VM's native filesystem, never a
-Parallels shared folder, in a graphical session. Install Node.js 22 or newer
-and the Visual C++ Redistributable for ARM64 (Electron's runtime requires it),
+Parallels shared folder, in a graphical session. Install Node.js 22.13 or later
+in the Node.js 22 line, or Node.js 24 or newer, and the Visual C++ Redistributable for ARM64 (Electron's runtime requires it),
 allow script execution for npm's cmd shims, and clone with
 `core.autocrlf=false` and `core.symlinks=true` (symlinked repository files
 must check out as symlinks; Developer Mode enables unprivileged symlinks).
@@ -335,23 +337,25 @@ unchanged artifact supersedes an earlier `FAIL` without erasing it. A changed
 artifact always starts a new record.
 
 `Next pending check: NONE` means only that no pending row is selectable; it does
-not imply readiness. Exact-artifact acceptance may become `OWNER ACCEPTED` when
-automated verification and packaged startup passed, cleanup is complete, and
-every applicable manual row's current result is `PASS`, except that
+not imply readiness. Exact-artifact acceptance may become `OWNER ACCEPTED` only
+when automated verification and packaged startup passed, cleanup is complete,
+and every applicable manual row's current result is `PASS`, except that
 `MAC-GATEKEEPER` or `WIN-SMARTSCREEN` may be `UNEXECUTED — IMPOSSIBLE` for the
 exact conditional reason stated in its row. `SH-SHELL-EXIT-WIN` may be `PASS`
 when every actionable observation passes and its evidence includes the exact
-allowed `UNEXECUTED — IMPOSSIBLE` sub-observation stated in that row.
+allowed `UNEXECUTED — IMPOSSIBLE` sub-observation stated in that row. A current
+`FAIL`, `UNEXECUTED — PENDING`, or any other `UNEXECUTED — IMPOSSIBLE` keeps
+acceptance and publication blocked. Missing or unexplained results are also
+blocking.
 
-For one exact artifact and release, the owner may instead explicitly accept one
-or more current `FAIL` or unexecuted rows through a durable waiver. The record
-must preserve each actual result and reason, identify the accepted artifact by
-filename, byte size, and SHA-256, explain the accepted risk or substitute
-evidence, and put every user-visible deviation in the release notes. A waiver
-never relabels a row as `PASS`, applies to a replacement artifact, or implies
-publication authorization. Without such an explicit waiver, a current `FAIL`,
-`UNEXECUTED — PENDING`, or any other `UNEXECUTED — IMPOSSIBLE` keeps acceptance
-and publication blocked. Missing or unexplained results are always blocking.
+The 0.4.0 record in [#127](https://github.com/luizomf/omxterm/issues/127)
+contains two explicit, release-specific owner exceptions to this procedure: the
+known Linux #135 failure was accepted and disclosed in the release notes, and
+the macOS row-by-row replacement matrix was waived after exact installed-bundle
+identity and prolonged current-artifact dogfood were recorded. Neither
+exception relabels failed or unexecuted checks as passes, applies to another
+artifact or release, or changes the default gates above. Reusing either kind of
+exception requires an explicit contract and ADR decision before acceptance.
 
 Identifiers beginning with `SH-` are shared behavior families; their final
 `MAC`, `LIN`, or `WIN` segment identifies the native observation. Identifiers
@@ -685,13 +689,13 @@ recorded.
   confirm the uninstaller removes the Start Menu entry, and preserve the exact
   installer unchanged for checksum and owner acceptance.
 
-Unless explicitly accepted through the narrow owner-waiver rule above, any
-failed required item or any unexplained unexecuted item keeps every future tag,
-GitHub Release, attachment, or upload blocked. The Gatekeeper and SmartScreen
-observations may remain `UNEXECUTED` only when the locally built artifact
-carries no download quarantine or mark-of-the-web and that reason is recorded;
-these conditional observations do not by themselves block publication, but
-the required Gatekeeper and SmartScreen release guidance still applies. Missing exact-artifact manual evidence does not prevent a preparatory
+Any failed required item or any unexplained unexecuted item keeps every future
+tag, GitHub Release, attachment, or upload blocked. The Gatekeeper and
+SmartScreen observations may remain `UNEXECUTED` only when the locally built
+artifact carries no download quarantine or mark-of-the-web and that reason is
+recorded; these conditional observations do not by themselves block
+publication, but the required Gatekeeper and SmartScreen release guidance
+still applies. Missing exact-artifact manual evidence does not prevent a preparatory
 packaging change from merging, but it does prevent publication.
 
 ## macOS SHA-256
