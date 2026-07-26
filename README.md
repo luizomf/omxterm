@@ -207,6 +207,7 @@ optional Ghostty conversion helper, and troubleshooting. OMXTerm never creates, 
 - [0.1.0 release notes](docs/releases/0.1.0.md)
 - [0.2.0 release notes](docs/releases/0.2.0.md)
 - [0.3.0 release notes](docs/releases/0.3.0.md)
+- [0.4.0 release notes](docs/releases/0.4.0.md)
 - [0.4.1 release notes](docs/releases/0.4.1.md)
 - [Domain language](CONTEXT.md)
 - [Architecture decisions](docs/adr/)
