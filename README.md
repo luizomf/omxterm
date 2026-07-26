@@ -7,19 +7,19 @@ and Windows.
   <img src="docs/images/omxterm-hero.png" alt="OMXTerm icon: a light blue terminal prompt on a dark rounded square" width="480" />
 </p>
 
-The current release is `v0.4.0`, available from the
+The current release is `v0.4.1`, available from the
 [GitHub Releases page](https://github.com/luizomf/omxterm/releases) for each
 Supported Platform:
 
-- `OMXTerm-0.4.0-arm64.dmg` for Apple Silicon macOS;
-- `OMXTerm-0.4.0-arm64.AppImage` for Linux ARM64; and
-- `OMXTerm-0.4.0-arm64.exe` for Windows ARM64.
+- `OMXTerm-0.4.1-arm64.dmg` for Apple Silicon macOS;
+- `OMXTerm-0.4.1-arm64.AppImage` for Linux ARM64; and
+- `OMXTerm-0.4.1-arm64.exe` for Windows ARM64.
 
 Every package is ARM64-only and intentionally carries no verified publisher
 identity; the macOS application uses an ad-hoc code seal for bundle integrity
 but has no Apple Developer ID signature or notarization. Each artifact has a
 matching `.sha256` file. Verify the checksum before opening it, and read the
-[0.4.0 release notes](docs/releases/0.4.0.md)
+[0.4.1 release notes](docs/releases/0.4.1.md)
 for changes, compatibility, provenance, and known limitations.
 
 ## Installation
@@ -30,16 +30,11 @@ Download the DMG and its matching checksum file into the same directory, then
 verify it:
 
 ```sh
-shasum -a 256 -c OMXTerm-0.4.0-arm64.dmg.sha256
+shasum -a 256 -c OMXTerm-0.4.1-arm64.dmg.sha256
 ```
 
 Open the DMG, drag `OMXTerm.app` to Applications, eject the DMG, and launch
 OMXTerm from Applications.
-
-> **Known 0.4.0 installation issue:** its application bundle has an incomplete
-> ad-hoc seal and macOS may report that the app is damaged after a browser
-> download. Do not disable Gatekeeper or install Electron separately. This is
-> fixed for the next patch release.
 
 Because the app has no Apple Developer ID signature and is not notarized, macOS
 may warn that it cannot verify the developer or check the app for malicious
@@ -55,9 +50,9 @@ Download the AppImage and its matching checksum file into the same directory.
 Verify it, make it executable, and run it without an installer:
 
 ```sh
-sha256sum --check OMXTerm-0.4.0-arm64.AppImage.sha256
-chmod +x OMXTerm-0.4.0-arm64.AppImage
-./OMXTerm-0.4.0-arm64.AppImage
+sha256sum --check OMXTerm-0.4.1-arm64.AppImage.sha256
+chmod +x OMXTerm-0.4.1-arm64.AppImage
+./OMXTerm-0.4.1-arm64.AppImage
 ```
 
 Its unsigned status means Linux distributions do not receive a publisher
@@ -71,7 +66,7 @@ When FUSE 2 cannot be installed, use the AppImage runtime's safe extraction
 fallback:
 
 ```sh
-./OMXTerm-0.4.0-arm64.AppImage --appimage-extract-and-run
+./OMXTerm-0.4.1-arm64.AppImage --appimage-extract-and-run
 ```
 
 A directly-run AppImage is not registered with the desktop environment, so
@@ -85,7 +80,7 @@ entry pointing at your AppImage location, for example:
 # ~/.local/share/applications/omxterm.desktop
 [Desktop Entry]
 Name=OMXTerm
-Exec=/absolute/path/to/OMXTerm-0.4.0-arm64.AppImage %U
+Exec=/absolute/path/to/OMXTerm-0.4.1-arm64.AppImage %U
 Terminal=false
 Type=Application
 Icon=/absolute/path/to/omxterm.png
@@ -108,11 +103,11 @@ checksum file into the same directory. Compare the checksum file with a fresh
 hash:
 
 ```powershell
-Get-Content .\OMXTerm-0.4.0-arm64.exe.sha256
-(Get-FileHash .\OMXTerm-0.4.0-arm64.exe -Algorithm SHA256).Hash.ToLower()
+Get-Content .\OMXTerm-0.4.1-arm64.exe.sha256
+(Get-FileHash .\OMXTerm-0.4.1-arm64.exe -Algorithm SHA256).Hash.ToLower()
 ```
 
-Run `OMXTerm-0.4.0-arm64.exe`. It installs per-user without administrator
+Run `OMXTerm-0.4.1-arm64.exe`. It installs per-user without administrator
 elevation; launch OMXTerm from the Start Menu. Because the installer is
 intentionally unsigned, Microsoft Defender SmartScreen may warn that it is from
 an unknown publisher. Review the source,
@@ -212,7 +207,7 @@ optional Ghostty conversion helper, and troubleshooting. OMXTerm never creates, 
 - [0.1.0 release notes](docs/releases/0.1.0.md)
 - [0.2.0 release notes](docs/releases/0.2.0.md)
 - [0.3.0 release notes](docs/releases/0.3.0.md)
-- [0.4.0 release notes](docs/releases/0.4.0.md)
+- [0.4.1 release notes](docs/releases/0.4.1.md)
 - [Domain language](CONTEXT.md)
 - [Architecture decisions](docs/adr/)
 
