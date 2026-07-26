@@ -108,7 +108,9 @@ Release notes must identify:
 - material user-visible changes and fixes;
 - incompatible changes and manual migration, or explicitly state that there
   are none;
-- supported platform and the unsigned, non-notarized status;
+- supported platforms and verified-publisher status; for macOS, state whether
+  the application has its required ad-hoc integrity seal, Developer ID
+  signature, and notarization;
 - the exact artifact filename and SHA-256;
 - known limitations relevant to users.
 
