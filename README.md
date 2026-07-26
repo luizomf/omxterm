@@ -47,7 +47,7 @@ security protections.
 ### Installing on Linux
 
 Download the AppImage and its matching checksum file into the same directory.
-Verify it, make it executable, and run it without an installer:
+Verify the download before running it:
 
 ```sh
 sha256sum --check OMXTerm-0.4.1-arm64.AppImage.sha256
@@ -55,44 +55,69 @@ chmod +x OMXTerm-0.4.1-arm64.AppImage
 ./OMXTerm-0.4.1-arm64.AppImage
 ```
 
-Its unsigned status means Linux distributions do not receive a publisher
-identity to verify. Linux needs the `fontconfig` utilities for configured
-system-font validation. OMXTerm defaults to Electron's X11 backend; a Wayland
-session must provide XWayland. Native Wayland rendering is not currently
-claimed. An explicit Electron `--ozone-platform` argument overrides the default
-for diagnosis. The default AppImage mount path requires FUSE 2 (for example
-`libfuse2t64` on Ubuntu 24.04 or `libfuse2` on older Ubuntu releases).
-When FUSE 2 cannot be installed, use the AppImage runtime's safe extraction
-fallback:
+The AppImage is ready to run and does not need a system-wide installer. Its
+unsigned status means Linux distributions receive no publisher identity to
+verify. Linux needs the `fontconfig` utilities for configured system-font
+validation. Normal AppImage mounting also requires FUSE 2 (`libfuse2t64` on
+Ubuntu 24.04 or `libfuse2` on older Ubuntu releases). Without FUSE 2, use:
 
 ```sh
 ./OMXTerm-0.4.1-arm64.AppImage --appimage-extract-and-run
 ```
 
-A directly-run AppImage is not registered with the desktop environment, so
-GNOME's dock and app grid show a generic placeholder icon for it even though
-the Terminal Window itself carries the OMXTerm icon. To get the correct dock
-icon and an Activities launcher entry, integrate the AppImage: either use an
-AppImage integration tool of your choice, or install a user-level desktop
-entry pointing at your AppImage location, for example:
+OMXTerm defaults to Electron's X11 backend. A Wayland desktop must provide
+XWayland; native Wayland rendering is not currently claimed. An explicit
+Electron `--ozone-platform` argument overrides the default for diagnosis.
 
-```ini
-# ~/.local/share/applications/omxterm.desktop
+#### Add OMXTerm to Activities and the Dock
+
+Running an AppImage directly does not register it with the desktop. The Terminal
+Window has the OMXTerm icon, but GNOME may show a placeholder in Activities or
+the Dock until you create a desktop entry. The following user-level setup needs
+no administrator access. Run it from the directory containing the verified
+AppImage:
+
+```sh
+app="$HOME/.local/opt/omxterm/OMXTerm.AppImage"
+icon="$HOME/.local/share/icons/hicolor/1024x1024/apps/omxterm.png"
+desktop="$HOME/.local/share/applications/omxterm.desktop"
+
+# Keep the runnable AppImage and icon outside the temporary extraction tree.
+install -Dm755 OMXTerm-0.4.1-arm64.AppImage "$app"
+extract_dir="$(mktemp -d)"
+(
+  cd "$extract_dir"
+  "$app" --appimage-extract \
+    usr/share/icons/hicolor/1024x1024/apps/omxterm.png >/dev/null
+  install -Dm644 \
+    squashfs-root/usr/share/icons/hicolor/1024x1024/apps/omxterm.png \
+    "$icon"
+)
+rm -rf -- "$extract_dir"
+
+mkdir -p "$(dirname "$desktop")"
+cat > "$desktop" <<EOF
 [Desktop Entry]
 Name=OMXTerm
-Exec=/absolute/path/to/OMXTerm-0.4.1-arm64.AppImage %U
+Exec="$app" %U
 Terminal=false
 Type=Application
-Icon=/absolute/path/to/omxterm.png
+Icon=$icon
 StartupWMClass=omxterm
 Categories=Utility;TerminalEmulator;
+EOF
+
+if command -v update-desktop-database >/dev/null 2>&1; then
+  update-desktop-database "$HOME/.local/share/applications"
+fi
 ```
 
-The icon PNG is available inside the AppImage at
-`squashfs-root/usr/share/icons/hicolor/1024x1024/apps/omxterm.png` after
-`--appimage-extract`, and `StartupWMClass=omxterm` is what associates running
-windows with the entry. Moving or renaming the AppImage requires updating the
-`Exec` path.
+Search for **OMXTerm** in Activities, launch it, and optionally pin it to the
+Dock. The desktop entry points to permanent user files, not to the temporary
+`squashfs-root`; deleting an extraction directory therefore cannot break the
+icon. To update later, verify the new AppImage and overwrite
+`~/.local/opt/omxterm/OMXTerm.AppImage`. If FUSE 2 is unavailable, add
+`--appimage-extract-and-run` after `"$app"` in the desktop entry's `Exec` line.
 
 ### Installing on Windows
 
