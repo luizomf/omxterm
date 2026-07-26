@@ -7,9 +7,9 @@ and Windows.
   <img src="docs/images/omxterm-hero.png" alt="OMXTerm icon: a light blue terminal prompt on a dark rounded square" width="480" />
 </p>
 
-The current release is `v0.4.1`, available from the
-[GitHub Releases page](https://github.com/luizomf/omxterm/releases) for each
-Supported Platform:
+The current version is `0.4.1`. Release artifacts for each Supported Platform
+are published manually on the
+[GitHub Releases page](https://github.com/luizomf/omxterm/releases):
 
 - `OMXTerm-0.4.1-arm64.dmg` for Apple Silicon macOS;
 - `OMXTerm-0.4.1-arm64.AppImage` for Linux ARM64; and

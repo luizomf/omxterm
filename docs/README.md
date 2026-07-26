@@ -37,8 +37,7 @@ release procedures so that each kind of information has one clear owner.
   [0.3.0 release notes](releases/0.3.0.md), and
   [0.4.0 release notes](releases/0.4.0.md) describe previous published
   versions.
-- [0.4.1 release notes](releases/0.4.1.md) describe the current published
-  version.
+- [0.4.1 release notes](releases/0.4.1.md) describe the current version.
 
 Issue and pull-request descriptions may describe work in progress, but they do
 not replace these maintained project documents.
