@@ -169,9 +169,9 @@ Project checks are available as root scripts:
   through a real ConPTY.
 
 See the [local ARM64 release procedure](docs/release.md) for prerequisites,
-native package verification, exact-artifact manual checklists, checksum
-generation, unverified-publisher guidance, and the separately authorized
-acceptance and publication gates.
+native package verification, changed-boundary evidence, checksum generation,
+unverified-publisher guidance, and the separately authorized acceptance and
+publication gates.
 
 ## Configuration
 

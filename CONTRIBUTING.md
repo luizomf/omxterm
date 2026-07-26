@@ -149,12 +149,13 @@ If a required or platform-specific check cannot run, state exactly which check
 was not run and why in the pull request. Do not report an inferred result as a
 pass.
 
-The exact-artifact manual checklists that gate a release candidate are run
-agent-guided by default: an agent prepares test assets, dictates one blind step
-at a time, records verbatim `PASS`/`FAIL`/`UNEXECUTED` under the never-infer
-rule, verifies the system side, and posts the record on the tracking issue. See
-[agent-guided manual testing](docs/release.md#agent-guided-manual-testing) if you
-want to help test an artifact with your own agent.
+Release validation is automation-first. Every exact artifact runs the complete
+native command above. A release adds narrowly targeted human evidence only when
+a changed platform boundary cannot be observed reliably through automation;
+unchanged boundaries are not manually replayed. Linux and Windows contributors
+are welcome to provide that targeted native evidence without taking ownership
+of an exhaustive product matrix. See
+[automation-first exact-artifact acceptance](docs/release.md#automation-first-exact-artifact-acceptance).
 
 ## Commits and pull requests
 
