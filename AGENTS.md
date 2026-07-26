@@ -163,11 +163,13 @@ issue or PR is unfinished work.
   silently choosing one.
 - Before proposing a release, reconcile package metadata, the intended tag,
   artifact filenames, public documentation, release notes, and the exact-artifact
-  checklist in `docs/release.md`.
+  acceptance record in `docs/release.md`.
 - A release is not ready while required checks, regression coverage, packaging
-  verification, user-facing documentation, or applicable manual checks are
-  missing. Publication remains blocked until Otávio accepts the exact artifact
-  and separately authorizes publication.
+  verification, user-facing documentation, or targeted native evidence for a
+  changed boundary that automation cannot observe are missing. Unchanged
+  boundaries do not require replaying historical manual checks. Publication
+  remains blocked until Otávio accepts the exact artifact and separately
+  authorizes publication.
 
 ## Engineering approach
 

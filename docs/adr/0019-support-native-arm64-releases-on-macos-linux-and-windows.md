@@ -1,4 +1,4 @@
-# Support native arm64 releases on macOS, Linux, and Windows
+# Support native arm64 releases with automation-first validation
 
 The initial Supported Platforms are macOS arm64, Linux arm64, and Windows
 arm64. Their initial Release Artifact formats are respectively DMG, AppImage,
@@ -9,24 +9,48 @@ ad-hoc code seal required for internal bundle integrity. Its distribution and
 Gatekeeper policy remains in
 [ADR 0015](0015-publish-tested-unsigned-arm64-releases.md).
 
-While the repository is private, release candidates are built locally and
-natively: macOS on Otávio's current Apple Silicon Mac, and Linux arm64 and
-Windows arm64 in native Parallels VM clones. VM work uses the clone's native
-filesystem, never a host shared folder, so native dependency, filesystem, and
-packaging behavior are not hidden by a cross-platform mount. Each target must
-pass its automated checks and native operating-system behavior verification.
-Acceptance is recorded against each exact artifact; rebuilding or changing an
-artifact invalidates that artifact's evidence.
+Every target is built and verified natively: macOS on Apple Silicon, and Linux
+arm64 and Windows arm64 on native runners or native Parallels VM filesystems,
+never host shared folders. Cross-compilation and build-only evidence do not
+establish Supported Platform behavior.
 
-Publication remains manual. Exact-artifact acceptance does not itself authorize
-a tag, upload, or GitHub Release: Otávio must separately authorize publication.
-This keeps build and publication credentials out of automation while the
-repository is private and preserves a deliberate human gate over the artifact
-that users receive.
+Release validation is automation-first and risk-based. Every exact artifact
+must pass native automated package construction, architecture and content
+inspection, version agreement, packaged startup, PTY readiness, and applicable
+portable contract tests. A release records which product, packaging, security,
+or platform boundaries changed since the previous version and maps each changed
+boundary to that automation.
 
-The project accepts the cost of maintaining three native ARM64 verification
-environments rather than claiming support from cross-compilation or build-only
-evidence. x64, Intel macOS, additional package formats, signing and
-notarization, paid CI, and a multi-platform CI matrix are deferred rather than
-rejected. They will be reconsidered after the repository becomes public, when
-public CI can be evaluated from actual platform and contribution needs.
+Human validation is required only when a changed boundary cannot be observed
+reliably through an automated seam. Examples include platform security UI,
+native visual output, and desktop-shell integration. The check is narrowly
+scoped to that boundary rather than replaying the complete product matrix.
+Unchanged boundaries need no repeated manual evidence. A changed boundary with
+neither adequate automation nor qualified targeted evidence remains a release
+blocker.
+
+Otávio continuously dogfoods the macOS application, which supplies useful
+ongoing product evidence but does not replace exact-artifact validation for a
+changed packaging, security, or visual boundary. Otávio is not the routine
+manual tester for Linux or Windows. Qualified open-source contributors may
+supply targeted native evidence when those platforms change; contributor
+availability is not a release dependency when relevant boundaries are
+unchanged and automated.
+
+The exhaustive native exercise performed for the initial three-platform 0.4.0
+release remains baseline evidence, not a script to repeat for every version.
+This transition reduces repetitive owner ceremony without changing the
+three-platform product contract or claiming an independent audit.
+
+Publication remains manual. Native automation and targeted evidence do not
+authorize a tag, upload, or GitHub Release. Otávio separately accepts each exact
+artifact and authorizes publication. Rebuilding an artifact invalidates its
+identity and automated evidence, but targeted evidence may carry to the rebuilt
+artifact when an automated comparison proves the boundary-relevant packaged
+payload and metadata are identical.
+
+The project accepts the cost of maintaining native ARM64 build and automated
+verification environments. x64, Intel macOS, additional package formats,
+publisher signing, notarization, paid CI, and automatic publication are deferred
+rather than rejected. The non-publishing multi-platform automation work is
+tracked separately and must reflect the current ARM64 product contract.

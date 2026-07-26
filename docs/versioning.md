@@ -115,4 +115,5 @@ Release notes must identify:
 - known limitations relevant to users.
 
 The [local arm64 release procedure](release.md) defines the required automated
-checks, manual checks, provenance language, and separate publication gate.
+checks, changed-boundary evidence, provenance language, and separate
+publication gate.

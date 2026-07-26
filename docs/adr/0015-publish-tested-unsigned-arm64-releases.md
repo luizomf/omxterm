@@ -6,10 +6,10 @@ recorded in
 [ADR 0019](0019-support-native-arm64-releases-on-macos-linux-and-windows.md).
 
 Each accepted OMXTerm version may be tagged as `v0.x.y` and published as a
-ready-to-run Apple Silicon macOS `.dmg`. Otávio builds and tests the exact
-artifact locally on the supported machine before attaching it and a SHA-256
-checksum to the canonical GitHub Release. Releases remain manual and the
-application has no automatic update mechanism.
+ready-to-run Apple Silicon macOS `.dmg`. The exact artifact is built and
+verified natively before it and a SHA-256 checksum are attached to the canonical
+GitHub Release. Releases remain manual and the application has no automatic
+update mechanism.
 
 The application is not signed with an Apple Developer ID and is not submitted
 for notarization. This avoids turning a personal open-source project into a paid
@@ -22,10 +22,17 @@ notarization.
 
 Automated package verification must run `codesign --verify --deep --strict`
 against the assembled application and reject both an invalid seal and any
-unexpected signing authority or Team ID. Native acceptance must exercise a
-browser-quarantined copy of the exact DMG on a clean macOS machine or disposable
-VM that has not approved that bundle. A locally built artifact
-without quarantine is not evidence for this Gatekeeper path.
+unexpected signing authority or Team ID. When a release changes macOS packaging,
+code sealing, or Gatekeeper-facing metadata, targeted native evidence must
+exercise a browser-quarantined DMG on a clean macOS environment and confirm the
+per-application review path rather than a damaged-application failure. Ordinary
+releases do not replay that UI check when this boundary is unchanged.
+
+Gatekeeper evidence may carry to a rebuilt DMG only when automated comparison
+proves the enclosed application bundle is equivalent entry-for-entry across
+code and resources, hashes, symlinks, modes, signing metadata, and version. A
+locally built artifact without quarantine is not independent Gatekeeper
+evidence.
 
 Release notes must state the unverified and unnotarized limitation, link to
 Apple's current review instructions, and describe provenance narrowly: the

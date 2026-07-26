@@ -365,8 +365,9 @@ Mac, and Linux arm64 and Windows arm64 in native Parallels VM clones using the
 VM's native filesystem, never shared folders. The initial formats are DMG,
 AppImage, and NSIS respectively.
 
-Each exact artifact requires its own recorded automated and native
-operating-system verification and owner acceptance. Publication remains manual
+Each exact artifact requires its own recorded native automated verification,
+plus targeted native human evidence only for a changed boundary that automation
+cannot reliably observe, and owner acceptance. Publication remains manual
 and requires separate owner authorization after acceptance; published
 artifacts include SHA-256 checksums. Initial artifacts intentionally carry no
 verified publisher identity. The macOS application receives a complete ad-hoc
@@ -387,17 +388,24 @@ software was independently audited or approved by a platform vendor.
 Automated tests cover configuration validation, tab and window lifecycle and
 cleanup, PTY resize and bounded input flow, Unicode, bracketed and protected
 paste, title sanitization, URL validation, OSC 52 restrictions, log
-redaction/rotation, renderer IPC boundaries, and packaged startup. Each release
-candidate receives automated and native operating-system behavior verification
-on its target, recorded against the exact artifact. The existing macOS manual
-release check exercises the exact DMG on the supported Mac, including first
-launch from a browser-quarantined exact DMG in a clean account, shell exit,
-multiple windows and tabs, tmux/TUI use, clipboard, zoom, always-on-top,
-application-icon presentation at small and large display sizes, and Gatekeeper
-review without a damaged-application failure. Linux and Windows receive equally
-native checks; their detailed procedures landed with their packaging
-implementations rather
-than being inferred from the macOS checklist.
+redaction/rotation, renderer IPC boundaries, and packaged startup. Every exact
+release candidate receives native automated package, architecture, content,
+version, startup, PTY, and applicable contract verification on its target.
+
+Release evidence is risk-based. Each release records the boundaries changed
+since the previous version and maps each to existing automation or, only when
+automation cannot reliably observe it, one targeted native human check.
+Unchanged boundaries are not manually replayed. The owner continuously dogfoods
+macOS, while routine Linux and Windows acceptance relies on native automation;
+qualified community evidence may cover a changed platform-specific visual,
+desktop-integration, security-UI, or other automation-resistant boundary. A
+release remains blocked when such a changed boundary has neither automation nor
+targeted evidence.
+
+Exact-artifact identity, checksum reconciliation, owner acceptance, and
+separate publication authorization remain mandatory. Evidence for a targeted
+boundary may carry across a rebuild only when automated comparison proves the
+relevant packaged payload and metadata are identical.
 
 The ADRs in `docs/adr/` own the reasoning behind the durable choices; this file
 owns the current observable product contract.
