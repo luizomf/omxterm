@@ -368,11 +368,14 @@ AppImage, and NSIS respectively.
 Each exact artifact requires its own recorded automated and native
 operating-system verification and owner acceptance. Publication remains manual
 and requires separate owner authorization after acceptance; published
-artifacts include SHA-256 checksums. Initial artifacts are intentionally
-unsigned. Signing, Apple notarization, certificates, x64, Intel macOS,
-additional formats, paid CI, and a multi-platform CI matrix are deferred until
-the repository is public. macOS release notes must explain the Gatekeeper
-warning, link to Apple's current `Open Anyway` instructions, and never recommend
+artifacts include SHA-256 checksums. Initial artifacts intentionally carry no
+verified publisher identity. The macOS application receives a complete ad-hoc
+code seal for bundle integrity but no
+Apple Developer ID signature or notarization. Developer ID signing, Apple
+notarization, certificates, x64, Intel macOS, additional formats, paid CI, and a
+multi-platform CI matrix remain deferred. macOS release notes must explain the
+Gatekeeper warning, link to Apple's current `Open Anyway` instructions, and
+never recommend
 disabling system-wide security. Windows release notes must equally explain the
 Microsoft Defender SmartScreen unknown-publisher warning for the unsigned NSIS
 installer and never recommend disabling SmartScreen or other system-wide
@@ -388,10 +391,12 @@ redaction/rotation, renderer IPC boundaries, and packaged startup. Each release
 candidate receives automated and native operating-system behavior verification
 on its target, recorded against the exact artifact. The existing macOS manual
 release check exercises the exact DMG on the supported Mac, including first
-launch, shell exit, multiple windows and tabs, tmux/TUI use, clipboard, zoom,
-always-on-top, application-icon presentation at small and large display sizes,
-and Gatekeeper documentation. Linux and Windows receive equally native checks;
-their detailed procedures landed with their packaging implementations rather
+launch from a browser-quarantined exact DMG in a clean account, shell exit,
+multiple windows and tabs, tmux/TUI use, clipboard, zoom, always-on-top,
+application-icon presentation at small and large display sizes, and Gatekeeper
+review without a damaged-application failure. Linux and Windows receive equally
+native checks; their detailed procedures landed with their packaging
+implementations rather
 than being inferred from the macOS checklist.
 
 The ADRs in `docs/adr/` own the reasoning behind the durable choices; this file

@@ -30,6 +30,11 @@ describe("release version consistency", () => {
     expect(lockMetadata.packages[""]?.version).toBe(packageMetadata.version);
   });
 
+  it("requires a complete ad-hoc macOS application seal", () => {
+    expect(builderConfiguration).toMatch(/^  identity: "-"$/mu);
+    expect(builderConfiguration).toMatch(/^  hardenedRuntime: false$/mu);
+  });
+
   it.each([
     ["DMG", "dmg", "OMXTerm-0.4.1-dev.0-arm64.dmg"],
     ["AppImage", "AppImage", "OMXTerm-0.4.1-dev.0-arm64.AppImage"],

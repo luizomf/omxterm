@@ -1,4 +1,4 @@
-# Publish tested unsigned arm64 releases
+# Publish tested arm64 releases without verified publisher identities
 
 This ADR owns the macOS-specific artifact and Gatekeeper policy. The broader
 Supported Platform, native-build, verification, and publication policy is
@@ -11,10 +11,23 @@ artifact locally on the supported machine before attaching it and a SHA-256
 checksum to the canonical GitHub Release. Releases remain manual and the
 application has no automatic update mechanism.
 
-The artifact will not be signed with an Apple Developer ID or submitted for
-notarization. This avoids turning a personal open-source project into a paid
+The application is not signed with an Apple Developer ID and is not submitted
+for notarization. This avoids turning a personal open-source project into a paid
 Apple distribution obligation, at the cost of a deliberate one-time Gatekeeper
-warning for users. Release notes must state that limitation, link to Apple's
-current review instructions, and describe provenance narrowly: the artifact is
-the build Otávio published and uses, not independently audited software. They
-must not ask users to disable system-wide macOS protections.
+review for users. The assembled application still receives a complete ad-hoc
+code seal: Apple Silicon requires internal code integrity even when an
+application has no verified publisher identity. Ad-hoc sealing does not identify
+a publisher, satisfy Gatekeeper trust, or replace Developer ID signing and
+notarization.
+
+Automated package verification must run `codesign --verify --deep --strict`
+against the assembled application and reject both an invalid seal and any
+unexpected signing authority or Team ID. Native acceptance must exercise a
+browser-quarantined copy of the exact DMG on a clean macOS machine or disposable
+VM that has not approved that bundle. A locally built artifact
+without quarantine is not evidence for this Gatekeeper path.
+
+Release notes must state the unverified and unnotarized limitation, link to
+Apple's current review instructions, and describe provenance narrowly: the
+artifact is the build Otávio published and uses, not independently audited
+software. They must not ask users to disable system-wide macOS protections.

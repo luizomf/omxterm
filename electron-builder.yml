@@ -58,7 +58,10 @@ mac:
     - target: dmg
       arch:
         - arm64
-  identity: null
+  # Apple Silicon requires a complete code seal even when no Developer ID is
+  # used. Explicit ad-hoc signing keeps the bundle internally valid while the
+  # release remains unnotarized and carries no verified publisher identity.
+  identity: "-"
   hardenedRuntime: false
 linux:
   icon: assets/application-icon.png

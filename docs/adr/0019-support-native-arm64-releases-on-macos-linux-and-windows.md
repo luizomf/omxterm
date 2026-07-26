@@ -2,9 +2,11 @@
 
 The initial Supported Platforms are macOS arm64, Linux arm64, and Windows
 arm64. Their initial Release Artifact formats are respectively DMG, AppImage,
-and NSIS. Initial artifacts remain unsigned: code signing, Apple notarization,
-certificates, and other paid signing services are deferred. The macOS-specific
-unsigned distribution and Gatekeeper policy remains in
+and NSIS. Initial artifacts carry no verified publisher identity: Developer ID
+or equivalent publisher signing, Apple notarization, certificates, and other
+paid signing services are deferred. The macOS application still receives the
+ad-hoc code seal required for internal bundle integrity. Its distribution and
+Gatekeeper policy remains in
 [ADR 0015](0015-publish-tested-unsigned-arm64-releases.md).
 
 While the repository is private, release candidates are built locally and

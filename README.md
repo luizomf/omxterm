@@ -15,9 +15,11 @@ Supported Platform:
 - `OMXTerm-0.4.0-arm64.AppImage` for Linux ARM64; and
 - `OMXTerm-0.4.0-arm64.exe` for Windows ARM64.
 
-Every package is ARM64-only and intentionally unsigned; the macOS package is
-also not notarized. Each artifact has a matching `.sha256` file. Verify the
-checksum before opening it, and read the [0.4.0 release notes](docs/releases/0.4.0.md)
+Every package is ARM64-only and intentionally carries no verified publisher
+identity; the macOS application uses an ad-hoc code seal for bundle integrity
+but has no Apple Developer ID signature or notarization. Each artifact has a
+matching `.sha256` file. Verify the checksum before opening it, and read the
+[0.4.0 release notes](docs/releases/0.4.0.md)
 for changes, compatibility, provenance, and known limitations.
 
 ## Installation
@@ -32,9 +34,16 @@ shasum -a 256 -c OMXTerm-0.4.0-arm64.dmg.sha256
 ```
 
 Open the DMG, drag `OMXTerm.app` to Applications, eject the DMG, and launch
-OMXTerm from Applications. Because the app is intentionally unsigned and not
-notarized, macOS may warn that it cannot verify the developer or check the app
-for malicious software. Review the source
+OMXTerm from Applications.
+
+> **Known 0.4.0 installation issue:** its application bundle has an incomplete
+> ad-hoc seal and macOS may report that the app is damaged after a browser
+> download. Do not disable Gatekeeper or install Electron separately. This is
+> fixed for the next patch release.
+
+Because the app has no Apple Developer ID signature and is not notarized, macOS
+may warn that it cannot verify the developer or check the app for malicious
+software. Review the source
 and proceed only if you trust the exact artifact. If you choose to open it,
 follow Apple's current [Open Anyway instructions](https://support.apple.com/102445)
 in System Settings -> Privacy & Security. Do not disable system-wide macOS
@@ -142,8 +151,9 @@ Project checks are available as root scripts:
 - `npm run build` creates the unpackaged development build under `dist/`;
 - `npm run check:portable` runs formatting, typechecking, the complete test
   suite, and the unpackaged build on every Supported Platform;
-- `npm run package:mac` creates a local unsigned, non-notarized Apple Silicon
-  DMG under `release/` and never publishes it;
+- `npm run package:mac` creates a local Apple Silicon DMG under `release/` and
+  never publishes it; its application is ad-hoc sealed but has no Developer ID
+  signature or notarization;
 - `npm run package:linux` creates
   `release/OMXTerm-<version>-arm64.AppImage` and never publishes it;
 - `npm run package:win` creates the unsigned Windows ARM64 NSIS installer
@@ -160,7 +170,7 @@ Project checks are available as root scripts:
 
 See the [local ARM64 release procedure](docs/release.md) for prerequisites,
 native package verification, exact-artifact manual checklists, checksum
-generation, unsigned-package guidance, and the separately authorized
+generation, unverified-publisher guidance, and the separately authorized
 acceptance and publication gates.
 
 ## Configuration

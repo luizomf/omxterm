@@ -208,24 +208,31 @@ async function inspectArchitecture(file, label, platform) {
     );
 }
 
-async function inspectUnsignedApplication(applicationPath) {
-  try {
-    const { stderr } = await execFile("codesign", [
-      "-dv",
-      "--verbose=4",
-      applicationPath,
-    ]);
-    if (
-      /^Authority=/mu.test(stderr) ||
-      /TeamIdentifier=(?!not set)/u.test(stderr)
-    )
-      throw new Error(
-        "Packaged application unexpectedly has a signing authority",
-      );
-  } catch (cause) {
-    const stderr = String(cause?.stderr ?? "");
-    if (!stderr.includes("code object is not signed at all")) throw cause;
-  }
+export async function inspectAdHocApplication(
+  applicationPath,
+  execute = execFile,
+) {
+  await execute("codesign", [
+    "--verify",
+    "--deep",
+    "--strict",
+    "--verbose=4",
+    applicationPath,
+  ]);
+
+  const { stderr } = await execute("codesign", [
+    "-dv",
+    "--verbose=4",
+    applicationPath,
+  ]);
+  if (
+    !/^Signature=adhoc$/mu.test(stderr) ||
+    /^Authority=/mu.test(stderr) ||
+    /TeamIdentifier=(?!not set)/u.test(stderr)
+  )
+    throw new Error(
+      "Packaged application unexpectedly has a signing authority",
+    );
 }
 
 async function inspectApplicationIcon(applicationPath) {
@@ -605,7 +612,7 @@ export async function verifyPackagedApplication(applicationPath) {
         platform,
       );
       await inspectApplicationIcon(applicationRoot);
-      await inspectUnsignedApplication(applicationRoot);
+      await inspectAdHocApplication(applicationRoot);
     } else {
       if (platform === "linux")
         await assertSameFile(

@@ -1,16 +1,20 @@
 # ARM64 release policy and native procedures
 
 The policy below applies to all initial OMXTerm Release Artifacts. This document
-implements the native procedures for the unsigned macOS DMG, Linux ARM64
-AppImage, and Windows ARM64 NSIS installer. Nothing here authorizes a tag,
+implements the native procedures for the macOS DMG containing an ad-hoc-sealed,
+unnotarized application, Linux ARM64 AppImage, and Windows ARM64 NSIS
+installer. Nothing here authorizes a tag,
 GitHub Release, upload, signing, notarization, or any other publication. Those
 actions require separate approval from Otávio.
 
 ## Cross-platform release policy
 
 The initial Supported Platforms and artifact formats are macOS arm64 DMG, Linux
-arm64 AppImage, and Windows arm64 NSIS. Initial artifacts are unsigned; signing,
-Apple notarization, certificates, and paid signing services are deferred.
+arm64 AppImage, and Windows arm64 NSIS. Initial artifacts carry no verified
+publisher identity; publisher signing, Apple notarization, certificates, and
+paid signing services are deferred. The macOS application receives a complete
+ad-hoc code seal for internal bundle integrity without gaining a publisher
+identity.
 
 While the repository is private, every release candidate is built locally and
 natively. macOS builds run on Otávio's current Apple Silicon Mac. Linux arm64
@@ -106,15 +110,18 @@ packaged `release/mac-arm64/OMXTerm.app` with isolated configuration and state.
 The packaged-startup check requires the arm64 executable, renderer, Terminal
 Surface, bundled font, native PTY helper, project and third-party licenses, and
 startup events through a running PTY. It rejects source maps, tests, source
-trees, alternate-architecture PTY binaries, common secret files, and signing
-identities in the package.
+trees, alternate-architecture PTY binaries, common secret files, and publisher
+signing identities in the package. It also requires the complete ad-hoc
+application seal to pass `codesign --verify --deep --strict`; inspecting only
+signature metadata is insufficient.
 
 For packaging alone, use `npm run package:mac`, which passes `--publish never`
 to the packager. Run the non-publishing `npm run package:verify` command against
 the unpacked app afterward.
 
-The DMG is intentionally unsigned and not notarized. It must not be treated as
-a release candidate until every automated check is green and the exact DMG has
+The DMG has no publisher signature and is not notarized; the application inside
+it is ad-hoc sealed only for bundle integrity. It must not be treated as a
+release candidate until every automated check is green and the exact DMG has
 completed the manual checklist below.
 
 ### Linux arm64
@@ -340,8 +347,10 @@ artifact always starts a new record.
 not imply readiness. Exact-artifact acceptance may become `OWNER ACCEPTED` only
 when automated verification and packaged startup passed, cleanup is complete,
 and every applicable manual row's current result is `PASS`, except that
-`MAC-GATEKEEPER` or `WIN-SMARTSCREEN` may be `UNEXECUTED — IMPOSSIBLE` for the
-exact conditional reason stated in its row. `SH-SHELL-EXIT-WIN` may be `PASS`
+`WIN-SMARTSCREEN` may be `UNEXECUTED — IMPOSSIBLE` for the exact conditional
+reason stated in its row. `MAC-GATEKEEPER` has no unexecuted exception because
+the local browser-download procedure supplies quarantine before publication.
+`SH-SHELL-EXIT-WIN` may be `PASS`
 when every actionable observation passes and its evidence includes the exact
 allowed `UNEXECUTED — IMPOSSIBLE` sub-observation stated in that row. A current
 `FAIL`, `UNEXECUTED — PENDING`, or any other `UNEXECUTED — IMPOSSIBLE` keeps
@@ -402,12 +411,16 @@ hiding an omission.
   `UNEXECUTED — PENDING: not yet observed`. Mount the exact DMG, verify it
   contains `OMXTerm.app` and an Applications link, copy the app, eject the DMG,
   and launch the copied app.
-- **`MAC-GATEKEEPER` — Gatekeeper observation.** Initial result:
-  `UNEXECUTED — PENDING: not yet observed`. Record whether macOS displayed a
-  Gatekeeper warning. A locally built image may not carry download quarantine,
-  so record
-  `UNEXECUTED — IMPOSSIBLE: locally built DMG has no download quarantine`
-  rather than manufacturing or bypassing a warning.
+- **`MAC-GATEKEEPER` — quarantined Gatekeeper observation.** Initial result:
+  `UNEXECUTED — PENDING: not yet observed`. From a clean macOS machine or
+  disposable VM that has never approved this exact bundle, serve the exact DMG
+  unchanged over a local HTTP server and download it through the browser used
+  for the check. Reverify its byte size and SHA-256 after download, then install
+  and launch that browser-quarantined copy. Record the Gatekeeper text verbatim
+  and confirm it follows the documented unverified/unnotarized review path,
+  offers Apple's per-application review mechanism, and never reports that the
+  application is damaged. Do not remove quarantine, alter system-wide security,
+  or infer this result from a locally built copy without quarantine.
 - **`SH-SHELL-EXIT-MAC` — Default Shell and clean exit.** Initial result:
   `UNEXECUTED — PENDING: not yet observed`. Verify the
   operating-system-configured interactive login shell starts in the home directory; verify `TERM`,
@@ -690,13 +703,14 @@ recorded.
   installer unchanged for checksum and owner acceptance.
 
 Any failed required item or any unexplained unexecuted item keeps every future
-tag, GitHub Release, attachment, or upload blocked. The Gatekeeper and
-SmartScreen observations may remain `UNEXECUTED` only when the locally built
-artifact carries no download quarantine or mark-of-the-web and that reason is
-recorded; these conditional observations do not by themselves block
-publication, but the required Gatekeeper and SmartScreen release guidance
-still applies. Missing exact-artifact manual evidence does not prevent a preparatory
-packaging change from merging, but it does prevent publication.
+tag, GitHub Release, attachment, or upload blocked. The SmartScreen observation
+may remain `UNEXECUTED` only when the locally built artifact carries no
+mark-of-the-web and that reason is recorded; this conditional observation does
+not by itself block publication. The macOS local browser-download procedure
+makes its quarantined Gatekeeper observation mandatory. The required
+Gatekeeper and SmartScreen release guidance still applies. Missing
+exact-artifact manual evidence does not prevent a preparatory packaging change
+from merging, but it does prevent publication.
 
 ## macOS SHA-256
 

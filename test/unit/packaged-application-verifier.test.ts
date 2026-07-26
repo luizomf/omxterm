@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   inspectAsarEntries,
+  inspectAdHocApplication,
   inspectApplicationVersions,
   inspectForbiddenPackagedEntries,
   inspectIcnsRepresentations,
@@ -97,6 +98,55 @@ describe("packaged application verifier", () => {
         bundleVersion: "0.0.0",
       }),
     ).toThrow("CFBundleShortVersionString 0.0.0");
+  });
+
+  it("requires a structurally valid ad-hoc macOS application seal", async () => {
+    const execute = vi
+      .fn()
+      .mockResolvedValueOnce({ stdout: "", stderr: "" })
+      .mockResolvedValueOnce({
+        stdout: "",
+        stderr: "Signature=adhoc\nTeamIdentifier=not set\n",
+      });
+
+    await expect(inspectAdHocApplication("OMXTerm.app", execute)).resolves.toBe(
+      undefined,
+    );
+    expect(execute).toHaveBeenNthCalledWith(1, "codesign", [
+      "--verify",
+      "--deep",
+      "--strict",
+      "--verbose=4",
+      "OMXTerm.app",
+    ]);
+  });
+
+  it("rejects the incomplete linker signature shipped in 0.4.0", async () => {
+    const cause = Object.assign(new Error("invalid seal"), {
+      stderr:
+        "OMXTerm.app: code has no resources but signature indicates they must be present",
+    });
+    const execute = vi.fn().mockRejectedValue(cause);
+
+    await expect(
+      inspectAdHocApplication("OMXTerm.app", execute),
+    ).rejects.toThrow("invalid seal");
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a macOS application with a publisher identity", async () => {
+    const execute = vi
+      .fn()
+      .mockResolvedValueOnce({ stdout: "", stderr: "" })
+      .mockResolvedValueOnce({
+        stdout: "",
+        stderr:
+          "Authority=Developer ID Application: Example\nTeamIdentifier=EXAMPLE123\n",
+      });
+
+    await expect(
+      inspectAdHocApplication("OMXTerm.app", execute),
+    ).rejects.toThrow("unexpectedly has a signing authority");
   });
 
   it("requires every standard and Retina macOS icon representation", () => {

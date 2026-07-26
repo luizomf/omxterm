@@ -31,6 +31,16 @@ export interface ApplicationVersions {
 
 export function inspectApplicationVersions(versions: ApplicationVersions): void;
 
+export type ExecuteFile = (
+  file: string,
+  args: string[],
+) => Promise<{ readonly stdout: string; readonly stderr: string }>;
+
+export function inspectAdHocApplication(
+  applicationPath: string,
+  execute?: ExecuteFile,
+): Promise<void>;
+
 export function signalProcessGroup(
   processGroupId: number,
   signal: NodeJS.Signals | 0,
