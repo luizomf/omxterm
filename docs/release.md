@@ -19,10 +19,11 @@ identity.
 Every release candidate is built and verified natively. macOS builds run on
 Apple Silicon. Linux arm64 and Windows arm64 builds run on native runners or in
 native Parallels VM clones using the VM's native filesystem, never a host shared
-folder. Each exact artifact requires its own automated checks. Targeted native
-human evidence is added only for a changed boundary that automation cannot
-reliably observe. Rebuilding or changing an artifact invalidates its identity
-and automated evidence.
+folder. Each exact artifact requires its own automated checks. Manual testing is
+optional and never gates acceptance or publication. A material changed boundary
+that automation cannot observe is recorded as unverified rather than inferred
+as passing. Rebuilding or changing an artifact invalidates its identity and
+automated evidence.
 
 Exact-artifact acceptance and publication are separate owner gates. Acceptance
 never authorizes a tag, upload, or GitHub Release; publication remains manual
@@ -121,8 +122,8 @@ the unpacked app afterward.
 
 The DMG has no publisher signature and is not notarized; the application inside
 it is ad-hoc sealed only for bundle integrity. It is not a release candidate
-until every automated check is green and any targeted evidence selected by the
-changed-boundary assessment below is complete.
+until every automated check is green and material automation-resistant risk is
+recorded honestly.
 
 ### Linux arm64
 
@@ -157,9 +158,8 @@ runtime cannot be installed, the safe manual fallback is:
 ```
 
 The AppImage is intentionally unsigned and provides no verified publisher
-identity. It is not a release candidate until all automated checks and any
-targeted evidence selected by the changed-boundary assessment below are
-complete.
+identity. It is not a release candidate until all automated checks pass and
+material automation-resistant risk is recorded honestly.
 
 ### Windows arm64
 
@@ -205,8 +205,8 @@ on them.
 
 The installer is intentionally unsigned and may trigger a Microsoft Defender
 SmartScreen unknown-publisher warning. It is not a release candidate until all
-automated checks and any targeted evidence selected by the changed-boundary
-assessment below are complete.
+automated checks pass and material automation-resistant risk is recorded
+honestly.
 
 ## Automation-first exact-artifact acceptance
 
@@ -215,10 +215,12 @@ manual exercise completed for the initial three-platform 0.4.0 release is
 baseline evidence, not a script to replay for each version.
 
 Dogfood remains valuable but has a different role. Otávio continuously uses the
-macOS application, so ordinary terminal behavior receives ongoing real-world
-exercise. Dogfood may identify regressions and support a changed-boundary
-assessment, but exact artifact identity, native automated verification, owner
-acceptance, and separate publication authorization remain mandatory.
+macOS application and reports problems encountered during ordinary work. This
+is opportunistic feedback, not a prescribed checklist, an exact-artifact test,
+or a release gate. Otávio does not manually validate Linux or Windows; those
+platforms rely on native automation and later contributor or user reports.
+Exact artifact identity, native automated verification, owner acceptance, and
+separate publication authorization remain mandatory.
 
 ### 1. Record changed boundaries
 
@@ -233,10 +235,10 @@ the smallest applicable category:
 - rendering, icon, window-system, or desktop integration;
 - version metadata or documentation only.
 
-For each changed boundary, name the automated seam that observes it. A boundary
-that has no reliable automated seam receives one narrowly scoped targeted native
-check. Unchanged boundaries are not listed as pending and do not inherit the
-historical manual matrix.
+For each changed boundary, name the automated seam that observes it. Record a
+material boundary with no reliable automated seam as `UNVERIFIED`, together with
+the affected platform and risk. Missing manual coverage is not pending release
+work, and no boundary inherits the historical manual matrix.
 
 ### 2. Run mandatory native automation
 
@@ -253,48 +255,36 @@ licenses, embedded version agreement, package extraction or installation seam,
 startup, PTY readiness, required Operational Events, and cleanup of verifier
 state.
 
-A version-only or documentation-policy rebuild with no changed product or
-platform boundary needs no human replay after all three native commands pass.
+No release requires a human replay after all three native commands pass. Owner
+acceptance remains explicit but does not represent manual exercise of every
+artifact.
 
-### 3. Add only applicable targeted native evidence
+### 3. Record optional observations and unverified risk
 
-Human evidence is required only when a changed boundary cannot be observed
-reliably through automation. Examples include:
+Manual product testing is optional and non-blocking on every platform. Otávio's
+macOS dogfood may reveal regressions during ordinary use, but no release assigns
+him a walkthrough, visual matrix, Gatekeeper exercise, or other targeted manual
+check. Otávio does not manually validate Linux or Windows. Community testing and
+later user reports are welcome but are never scheduled release dependencies.
 
-- a browser-quarantined Gatekeeper flow after macOS packaging, code-seal, or
-  Gatekeeper-facing metadata changes;
-- SmartScreen presentation after Windows publisher or installer trust changes;
-- native rendering, icon, window association, or desktop-shell presentation
-  after those outputs change;
-- a platform-specific interaction for which no reliable native automation seam
-  exists.
+When automation cannot observe a material changed boundary, record it as
+`UNVERIFIED` instead of manufacturing a pass. Examples include Gatekeeper or
+SmartScreen presentation, native rendering, icon or window association,
+desktop-shell integration, and other native UI behavior without a reliable
+seam. State the affected platform, the unobserved outcome, and the user-facing
+risk in the exact-artifact record or release notes. The absence of a report is
+not evidence that the boundary passed.
 
-State the one action and expected boundary outcome. Do not expand it into an
-unrelated application walkthrough. A qualified open-source contributor may
-provide Linux or Windows evidence; Otávio is not the routine manual tester for
-those platforms. Missing volunteers do not block a release whose relevant
-boundaries are unchanged and automated.
+Security protections are never disabled to manufacture a result. An optional
+observation may be recorded factually, but it does not become a reusable release
+gate or imply coverage of another artifact.
 
-A changed automation-resistant boundary remains blocking until targeted evidence
-exists. Security protections are never disabled to manufacture a pass.
+### 4. Rebuilds require fresh automation
 
-### 4. Reuse boundary evidence only with equivalence proof
-
-Rebuilding changes artifact identity and requires fresh native automation.
-Targeted evidence may carry to a rebuilt artifact only when an automated
-comparison proves the payload and metadata relevant to that check are
-identical. The record must state what was compared and why it is the complete
-boundary:
-
-- for Gatekeeper, compare the enclosed application bundle entry-for-entry,
-  including code and resource hashes, symlinks, modes, signing metadata, and
-  version;
-- for an installer or desktop-integration check, compare the complete packaged
-  payload and applicable installer/desktop metadata;
-- for visual evidence, compare the rendering inputs and packaged renderer or
-  asset bytes that determine the observed output.
-
-A matching version number or source claim alone is insufficient.
+Rebuilding changes artifact identity and requires fresh native automation. Prior
+dogfood observations remain historical context only; they do not establish the
+behavior of a rebuilt artifact. A matching version number or source claim alone
+is insufficient to reuse automated evidence.
 
 ### 5. Canonical exact-artifact record
 
@@ -308,9 +298,8 @@ Artifact: <filename>
 Byte size: <integer>
 SHA-256: <lowercase digest>
 Native automated verification: <PASS/FAIL and safe summary>
-Changed boundaries: <each boundary -> automated seam or targeted evidence>
-Targeted native evidence: <PASS/FAIL/NOT APPLICABLE with reason>
-Equivalent prior evidence: <none, or exact proof and source record>
+Changed boundaries: <each boundary -> automated seam or UNVERIFIED risk>
+Optional dogfood observations: <none, or factual non-blocking observations>
 Cleanup: <COMPLETE/INCOMPLETE with reason>
 Exact-artifact acceptance: <PENDING/OWNER ACCEPTED>
 Publication gate: <BLOCKED/AUTHORIZED separately>
@@ -324,15 +313,17 @@ configuration contents, secrets, or transcripts in tracker evidence.
 An exact artifact may be owner-accepted when:
 
 - mandatory native automation passed against that exact identity;
-- every changed boundary maps to passing automation or applicable targeted
-  evidence;
-- any reused evidence has the required equivalence proof;
-- verifier and targeted-check cleanup is complete; and
+- every changed boundary maps to passing automation or an honestly recorded
+  `UNVERIFIED` platform risk;
+- verifier cleanup is complete; and
 - public documentation accurately describes the package and known limitations.
 
-A current failure, an uncovered changed boundary, incomplete cleanup, an
-identity mismatch, or missing documentation blocks acceptance. Unexecuted rows
-from the historical exhaustive matrix are not release state under this policy.
+A current automated failure, an undisclosed automation-resistant risk,
+incomplete cleanup, an identity mismatch, or missing documentation blocks
+acceptance. Missing manual exercise does not. Owner acceptance is a release
+decision, not a claim that the owner ran or observed the artifact. Unexecuted
+rows from the historical exhaustive matrix are not release state under this
+policy.
 
 Owner acceptance does not authorize publication. Tagging, uploading the exact
 artifacts and checksums, and creating the GitHub Release still require a
@@ -343,17 +334,16 @@ byte-verification host.
 ### Public provenance
 
 Release notes may state factually that the initial three-platform release
-received exhaustive native human testing, that the macOS build is continuously
-dogfooded by maintainer Otávio Miranda, that future releases use automation-first
-validation with targeted checks for changed native boundaries, and that Linux
-and Windows community testing is welcome. These statements are process
-provenance, not an independent security audit, platform-vendor approval, or a
-guarantee.
+received exhaustive native human testing, that the macOS build is dogfooded by
+maintainer Otávio Miranda during ordinary use, that later releases rely on
+native automation without required manual testing, and that Linux and Windows
+community reports are welcome. These statements are process provenance, not a
+claim that every release or platform was manually exercised, an independent
+security audit, platform-vendor approval, or a guarantee.
 
 ## macOS SHA-256
 
-Generate the checksum after native automation and any applicable targeted
-evidence finish against the exact DMG. From the output directory, preserving
+Generate the checksum after native automation finishes against the exact DMG. From the output directory, preserving
 the artifact's filename:
 
 ```sh
@@ -367,8 +357,8 @@ checksum. Run the acceptance model against the replacement.
 
 ## Linux SHA-256
 
-Generate the checksum after native automation and any applicable targeted
-evidence finish against the unchanged exact AppImage:
+Generate the checksum after native automation finishes against the unchanged
+exact AppImage:
 
 ```sh
 cd release
@@ -447,8 +437,8 @@ publication:
    `OMXTerm-<version>-arm64.AppImage.sha256`,
    `OMXTerm-<version>-arm64.exe`, and
    `OMXTerm-<version>-arm64.exe.sha256` manually;
-4. download all six attachments, verify every checksum again on its native
-   Supported Platform, and preserve the final release URL with the accepted
+4. download all six attachments, verify every checksum again on any trustworthy
+   byte-verification host, and preserve the final release URL with the accepted
    evidence.
 
 Do not automate these publication steps or perform them under the authority of

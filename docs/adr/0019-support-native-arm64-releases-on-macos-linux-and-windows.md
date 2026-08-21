@@ -21,33 +21,31 @@ portable contract tests. A release records which product, packaging, security,
 or platform boundaries changed since the previous version and maps each changed
 boundary to that automation.
 
-Human validation is required only when a changed boundary cannot be observed
-reliably through an automated seam. Examples include platform security UI,
-native visual output, and desktop-shell integration. The check is narrowly
-scoped to that boundary rather than replaying the complete product matrix.
-Unchanged boundaries need no repeated manual evidence. A changed boundary with
-neither adequate automation nor qualified targeted evidence remains a release
-blocker.
+Manual validation is optional and never a release gate. A changed boundary that
+cannot be observed reliably through an automated seam is recorded as unverified
+rather than silently inferred as passing. This applies to platform security UI,
+native visual output, desktop-shell integration, and every other
+automation-resistant boundary. Missing human coverage does not block an
+otherwise passing exact artifact.
 
-Otávio continuously dogfoods the macOS application, which supplies useful
-ongoing product evidence but does not replace exact-artifact validation for a
-changed packaging, security, or visual boundary. Otávio is not the routine
-manual tester for Linux or Windows. Qualified open-source contributors may
-supply targeted native evidence when those platforms change; contributor
-availability is not a release dependency when relevant boundaries are
-unchanged and automated.
+Otávio continuously dogfoods the macOS application during ordinary daily use
+and reports problems when he observes them. This is opportunistic product
+feedback, not a prescribed checklist, exact-artifact test, or promise of manual
+coverage for each change. Otávio does not manually validate Linux or Windows;
+those platforms rely on native automation and later contributor or user reports.
+Community testing is welcome but is never a scheduled release dependency.
 
 The exhaustive native exercise performed for the initial three-platform 0.4.0
-release remains baseline evidence, not a script to repeat for every version.
-This transition reduces repetitive owner ceremony without changing the
-three-platform product contract or claiming an independent audit.
+release remains historical baseline evidence, not a script or coverage promise
+for later versions. This policy accepts unobserved platform-specific risk to
+keep maintenance proportionate for a personal, free project without changing
+the three-platform product contract or claiming an independent audit.
 
-Publication remains manual. Native automation and targeted evidence do not
-authorize a tag, upload, or GitHub Release. Otávio separately accepts each exact
-artifact and authorizes publication. Rebuilding an artifact invalidates its
-identity and automated evidence, but targeted evidence may carry to the rebuilt
-artifact when an automated comparison proves the boundary-relevant packaged
-payload and metadata are identical.
+Publication remains manual. Native automation and optional dogfood observations
+do not authorize a tag, upload, or GitHub Release. Otávio separately accepts
+each exact artifact and authorizes publication; acceptance is a release decision,
+not a claim that he manually exercised that artifact. Rebuilding an artifact
+invalidates its identity and automated evidence.
 
 The project accepts the cost of maintaining native ARM64 build and automated
 verification environments. x64, Intel macOS, additional package formats,

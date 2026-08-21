@@ -150,11 +150,12 @@ was not run and why in the pull request. Do not report an inferred result as a
 pass.
 
 Release validation is automation-first. Every exact artifact runs the complete
-native command above. A release adds narrowly targeted human evidence only when
-a changed platform boundary cannot be observed reliably through automation;
-unchanged boundaries are not manually replayed. Linux and Windows contributors
-are welcome to provide that targeted native evidence without taking ownership
-of an exhaustive product matrix. See
+native command above. Manual testing is optional and never a release gate:
+Otávio dogfoods macOS during ordinary use rather than replaying a prescribed
+matrix, and does not manually validate Linux or Windows. Contributors are
+welcome to report platform problems whenever they encounter them. A changed
+platform boundary that automation cannot observe is recorded as unverified
+rather than inferred as passing. See
 [automation-first exact-artifact acceptance](docs/release.md#automation-first-exact-artifact-acceptance).
 
 ## Commits and pull requests

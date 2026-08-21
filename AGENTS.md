@@ -164,12 +164,13 @@ issue or PR is unfinished work.
 - Before proposing a release, reconcile package metadata, the intended tag,
   artifact filenames, public documentation, release notes, and the exact-artifact
   acceptance record in `docs/release.md`.
-- A release is not ready while required checks, regression coverage, packaging
-  verification, user-facing documentation, or targeted native evidence for a
-  changed boundary that automation cannot observe are missing. Unchanged
-  boundaries do not require replaying historical manual checks. Publication
-  remains blocked until Otávio accepts the exact artifact and separately
-  authorizes publication.
+- A release is not ready while required automated checks, regression coverage,
+  packaging verification, or user-facing documentation are missing. Manual
+  testing is optional and never a release gate: Otávio dogfoods macOS during
+  ordinary use rather than following a prescribed matrix, and does not manually
+  validate Linux or Windows. Record material automation-resistant platform risk
+  as unverified instead of inferring a pass. Publication remains blocked until
+  Otávio accepts the exact artifact and separately authorizes publication.
 
 ## Engineering approach
 

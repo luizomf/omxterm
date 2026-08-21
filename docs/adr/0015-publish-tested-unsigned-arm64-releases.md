@@ -22,17 +22,13 @@ notarization.
 
 Automated package verification must run `codesign --verify --deep --strict`
 against the assembled application and reject both an invalid seal and any
-unexpected signing authority or Team ID. When a release changes macOS packaging,
-code sealing, or Gatekeeper-facing metadata, targeted native evidence must
-exercise a browser-quarantined DMG on a clean macOS environment and confirm the
-per-application review path rather than a damaged-application failure. Ordinary
-releases do not replay that UI check when this boundary is unchanged.
-
-Gatekeeper evidence may carry to a rebuilt DMG only when automated comparison
-proves the enclosed application bundle is equivalent entry-for-entry across
-code and resources, hashes, symlinks, modes, signing metadata, and version. A
-locally built artifact without quarantine is not independent Gatekeeper
-evidence.
+unexpected signing authority or Team ID. Browser-quarantined Gatekeeper
+exercise is optional macOS dogfood, not a release gate, even when packaging,
+code sealing, or Gatekeeper-facing metadata changes. When automation cannot
+observe the resulting security UI, the release record states that boundary as
+unverified and the release notes retain the unsigned, unnotarized limitation.
+A locally built artifact without quarantine is never represented as independent
+Gatekeeper evidence.
 
 Release notes must state the unverified and unnotarized limitation, link to
 Apple's current review instructions, and describe provenance narrowly: the

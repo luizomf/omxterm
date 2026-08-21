@@ -365,10 +365,11 @@ Mac, and Linux arm64 and Windows arm64 in native Parallels VM clones using the
 VM's native filesystem, never shared folders. The initial formats are DMG,
 AppImage, and NSIS respectively.
 
-Each exact artifact requires its own recorded native automated verification,
-plus targeted native human evidence only for a changed boundary that automation
-cannot reliably observe, and owner acceptance. Publication remains manual
-and requires separate owner authorization after acceptance; published
+Each exact artifact requires its own recorded native automated verification and
+owner acceptance. Manual testing is optional and never a release gate. Otávio
+exercises macOS through ordinary daily use rather than a prescribed release
+matrix and does not manually validate Linux or Windows. Publication remains
+manual and requires separate owner authorization after acceptance; published
 artifacts include SHA-256 checksums. Initial artifacts intentionally carry no
 verified publisher identity. The macOS application receives a complete ad-hoc
 code seal for bundle integrity but no
@@ -393,19 +394,18 @@ release candidate receives native automated package, architecture, content,
 version, startup, PTY, and applicable contract verification on its target.
 
 Release evidence is risk-based. Each release records the boundaries changed
-since the previous version and maps each to existing automation or, only when
-automation cannot reliably observe it, one targeted native human check.
-Unchanged boundaries are not manually replayed. The owner continuously dogfoods
-macOS, while routine Linux and Windows acceptance relies on native automation;
-qualified community evidence may cover a changed platform-specific visual,
-desktop-integration, security-UI, or other automation-resistant boundary. A
-release remains blocked when such a changed boundary has neither automation nor
-targeted evidence.
+since the previous version and maps each to existing automation. A material
+platform-specific boundary that automation cannot observe is recorded honestly
+as unverified; missing human coverage does not block acceptance or publication.
+The owner continuously dogfoods macOS and reports problems found during normal
+use, without replaying a release checklist. Linux and Windows rely on native
+automation and later contributor or user reports rather than owner-operated
+manual testing.
 
 Exact-artifact identity, checksum reconciliation, owner acceptance, and
-separate publication authorization remain mandatory. Evidence for a targeted
-boundary may carry across a rebuild only when automated comparison proves the
-relevant packaged payload and metadata are identical.
+separate publication authorization remain mandatory. Owner acceptance is a
+release decision, not a claim that every artifact or automation-resistant
+boundary received manual exercise.
 
 The ADRs in `docs/adr/` own the reasoning behind the durable choices; this file
 owns the current observable product contract.
