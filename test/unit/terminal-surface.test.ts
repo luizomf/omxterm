@@ -157,6 +157,40 @@ class FakeResizeObserver {
 }
 
 describe("portable Terminal Surface", () => {
+  async function mountOutputHarness(
+    frameId: (scheduledCount: number) => number = (count) => count,
+  ) {
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      frames.push(callback);
+      return frameId(frames.length);
+    });
+    const cancelAnimationFrame = vi.fn();
+    vi.stubGlobal("cancelAnimationFrame", cancelAnimationFrame);
+    let handlers: TerminalSessionHandlers | undefined;
+    const adapter = {
+      start: vi.fn(async (value: TerminalSessionHandlers) => {
+        handlers = value;
+      }),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+    );
+    return {
+      adapter,
+      cancelAnimationFrame,
+      frames,
+      handlers: handlers!,
+      surface,
+    };
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     xterm.fit.mockReset();
@@ -173,6 +207,76 @@ describe("portable Terminal Surface", () => {
       configurable: true,
       value: undefined,
     });
+  });
+
+  it("writes same-frame session output once in exact arrival order", async () => {
+    const { frames, handlers, surface } = await mountOutputHarness();
+
+    handlers.onOutput("first\u0000");
+    handlers.onOutput("🙂second");
+
+    expect(xterm.FakeTerminal.current.write).not.toHaveBeenCalled();
+    expect(frames).toHaveLength(1);
+    frames.shift()!(0);
+    expect(xterm.FakeTerminal.current.write.mock.calls).toEqual([
+      ["first\u0000🙂second"],
+    ]);
+    surface.dispose();
+  });
+
+  it("flushes later output on a later frame and writes nothing from an empty callback", async () => {
+    const { frames, handlers, surface } = await mountOutputHarness();
+
+    handlers.onOutput("frame one");
+    const firstFrame = frames.shift()!;
+    firstFrame(0);
+    firstFrame(1);
+    expect(xterm.FakeTerminal.current.write.mock.calls).toEqual([
+      ["frame one"],
+    ]);
+
+    handlers.onOutput("frame two");
+    expect(frames).toHaveLength(1);
+    expect(xterm.FakeTerminal.current.write).toHaveBeenCalledOnce();
+    frames.shift()!(2);
+    expect(xterm.FakeTerminal.current.write.mock.calls).toEqual([
+      ["frame one"],
+      ["frame two"],
+    ]);
+    surface.dispose();
+  });
+
+  it("sustains consecutive output frames without callback backlog or payload loss", async () => {
+    const { frames, handlers, surface } = await mountOutputHarness();
+    const expectedWrites: string[][] = [];
+
+    for (let frame = 0; frame < 100; frame += 1) {
+      handlers.onOutput(`${frame}:a|`);
+      handlers.onOutput(`${frame}:🙂|`);
+      handlers.onOutput(`${frame}:z\u0000`);
+      expect(frames).toHaveLength(1);
+      frames.shift()!(frame);
+      expectedWrites.push([`${frame}:a|${frame}:🙂|${frame}:z\u0000`]);
+      expect(xterm.FakeTerminal.current.write).toHaveBeenCalledTimes(frame + 1);
+      expect(frames).toHaveLength(0);
+    }
+
+    expect(xterm.FakeTerminal.current.write.mock.calls).toEqual(expectedWrites);
+    surface.dispose();
+  });
+
+  it("cancels and discards pending output when disposed", async () => {
+    const { cancelAnimationFrame, frames, handlers, surface } =
+      await mountOutputHarness(() => 41);
+
+    handlers.onOutput("discard me");
+    expect(frames).toHaveLength(1);
+    surface.dispose();
+
+    expect(cancelAnimationFrame).toHaveBeenCalledWith(41);
+    frames.shift()!(0);
+    handlers.onOutput("ignore me");
+    expect(xterm.FakeTerminal.current.write).not.toHaveBeenCalled();
   });
 
   it("starts/subscribes through its Adapter and releases every resource exactly once", async () => {

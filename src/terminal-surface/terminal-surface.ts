@@ -106,6 +106,8 @@ export async function mountTerminalSurface(
   let resizeObserver: ResizeObserver | undefined;
   let fitAddon: FitAddon | undefined;
   let pendingFitFrame: number | undefined;
+  let pendingOutputFrame: number | undefined;
+  let pendingOutputChunks: string[] = [];
   const onContextMenu = (event: Event) => {
     if (!options.clipboard) return;
     event.preventDefault();
@@ -193,6 +195,20 @@ export async function mountTerminalSurface(
     if (!ranSynchronously) pendingFitFrame = frame;
   };
 
+  const scheduleOutput = (data: string) => {
+    pendingOutputChunks.push(data);
+    if (pendingOutputFrame !== undefined) return;
+    let ranSynchronously = false;
+    const frame = requestAnimationFrame(() => {
+      ranSynchronously = true;
+      pendingOutputFrame = undefined;
+      const payload = pendingOutputChunks.join("");
+      pendingOutputChunks = [];
+      if (!disposed && payload.length > 0) terminal?.write(payload);
+    });
+    if (!ranSynchronously) pendingOutputFrame = frame;
+  };
+
   const disposeResources = (): { readonly error: unknown } | undefined => {
     if (disposed) return undefined;
     disposed = true;
@@ -204,6 +220,12 @@ export async function mountTerminalSurface(
       () => {
         if (pendingFitFrame !== undefined)
           cancelAnimationFrame(pendingFitFrame);
+      },
+      () => {
+        const frame = pendingOutputFrame;
+        pendingOutputFrame = undefined;
+        pendingOutputChunks = [];
+        if (frame !== undefined) cancelAnimationFrame(frame);
       },
       () => inputSubscription?.dispose(),
       () => resizeSubscription?.dispose(),
@@ -323,8 +345,7 @@ export async function mountTerminalSurface(
 
     await adapter.start({
       onOutput(data) {
-        if (!disposed && isBoundedTerminalPayload(data))
-          mountedTerminal.write(data);
+        if (!disposed && isBoundedTerminalPayload(data)) scheduleOutput(data);
       },
       onExit() {
         surface.dispose();
