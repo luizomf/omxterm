@@ -165,6 +165,7 @@ export function isTerminalTabCommand(
 
 export function splitTerminalPayload(value: string): string[] {
   if (value.length === 0) return [];
+  if (value.length * 3 <= MAX_TERMINAL_PAYLOAD_BYTES) return [value];
 
   const chunks: string[] = [];
   let chunk = "";

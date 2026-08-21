@@ -14,6 +14,26 @@ import {
 } from "../../src/shared/terminal-contract";
 
 describe("terminal IPC payload contract", () => {
+  it("emits no chunks for an empty payload", () => {
+    expect(splitTerminalPayload("")).toEqual([]);
+  });
+
+  it("keeps a payload inside the sound UTF-16 bound unchanged", () => {
+    const payload = "a".repeat(Math.floor(MAX_TERMINAL_PAYLOAD_BYTES / 3));
+    const chunks = splitTerminalPayload(payload);
+
+    expect(chunks).toEqual([payload]);
+    expect(chunks.every(isBoundedTerminalPayload)).toBe(true);
+  });
+
+  it("keeps a bounded payload whose UTF-16 upper bound just exceeds the byte ceiling unchanged", () => {
+    const payload = "a".repeat(Math.floor(MAX_TERMINAL_PAYLOAD_BYTES / 3) + 1);
+    const chunks = splitTerminalPayload(payload);
+
+    expect(chunks).toEqual([payload]);
+    expect(chunks.every(isBoundedTerminalPayload)).toBe(true);
+  });
+
   it("splits output into byte-bounded chunks without losing Unicode data", () => {
     const payload = "🙂".repeat(MAX_TERMINAL_PAYLOAD_BYTES / 2);
     const chunks = splitTerminalPayload(payload);
@@ -21,6 +41,11 @@ describe("terminal IPC payload contract", () => {
     expect(chunks.length).toBeGreaterThan(1);
     expect(chunks.join("")).toBe(payload);
     expect(chunks.every(isBoundedTerminalPayload)).toBe(true);
+    expect(
+      chunks.every((chunk) =>
+        [...chunk].every((codePoint) => codePoint === "🙂"),
+      ),
+    ).toBe(true);
   });
 
   it("protects every Unicode Cc code point and every logical line separator", () => {
