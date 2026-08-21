@@ -189,9 +189,10 @@ For packaging alone, run `npm run package:win`, followed on the same native
 host by `npm run package:verify`. The automated check installs the exact
 installer to a temporary location — its one-click `/D=` never touches the
 real per-user install — and asserts that every packaged executable and DLL
-lands, then uninstalls. A real Start Menu installation is targeted human
-evidence only when installer or desktop-integration behavior changed and no
-automated seam covers the change.
+lands, then uninstalls. A real Start Menu installation is optional; when
+installer or desktop-integration behavior changes beyond this automated seam,
+record the remaining Windows behavior as unverified rather than requiring a
+manual installation.
 
 The installer carries a zip-compressed application payload rather than the
 smaller default LZMA archive. On an ARM64 build host electron-builder
@@ -373,8 +374,8 @@ and separately authorizes publication.
 
 ## Windows SHA-256
 
-Generate the checksum after native automation and any applicable targeted
-evidence finish against the unchanged exact installer:
+Generate the checksum after native automation finishes against the unchanged
+exact installer:
 
 ```powershell
 cd release
