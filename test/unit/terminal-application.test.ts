@@ -684,7 +684,7 @@ describe("Terminal application lifecycle", () => {
       expect.objectContaining({
         name: "window.closed",
         windowId: 1,
-        durationMs: expect.any(Number),
+        durationMs: expect.any(Number) as unknown,
       }),
     );
   });

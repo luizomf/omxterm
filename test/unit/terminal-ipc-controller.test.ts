@@ -800,7 +800,7 @@ describe("terminal IPC controller", () => {
         windowId: 7,
         outcome: "clean",
         code: 23,
-        durationMs: expect.any(Number),
+        durationMs: expect.any(Number) as unknown,
       }),
     ]);
     callbacks!.onExit({ exitCode: 0, signal: 15 });
@@ -810,7 +810,7 @@ describe("terminal IPC controller", () => {
         windowId: 7,
         outcome: "signal",
         code: 15,
-        durationMs: expect.any(Number),
+        durationMs: expect.any(Number) as unknown,
       }),
     ]);
     expect(JSON.stringify(write.mock.calls)).not.toContain(terminalPayload);

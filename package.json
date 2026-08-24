@@ -12,7 +12,7 @@
     "postinstall": "install-electron && node scripts/prepare-node-pty-runtime.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "oxlint --type-aware --config .oxlintrc.json --disable-nested-config --deny-warnings --report-unused-disable-directives .",
+    "lint": "oxlint --type-aware --config .oxlintrc.json --disable-nested-config --deny-warnings --report-unused-disable-directives --threads=1 .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:integration": "vitest run test/integration/local-shell.test.ts",

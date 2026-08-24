@@ -43,11 +43,6 @@
     {
       "files": ["test/**/*.test.ts"],
       "rules": {
-        // Vitest's asymmetric matchers and deliberately dynamic fakes expose `any` internally.
-        // Explicit `any`, unsafe calls/arguments, and promise rules remain enforced in tests.
-        "typescript/no-unsafe-assignment": "allow",
-        "typescript/no-unsafe-member-access": "allow",
-        "typescript/no-unsafe-return": "allow",
         // Test files and describe callbacks are cohesive executable specifications.
         "max-lines": [
           "error",

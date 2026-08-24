@@ -175,7 +175,7 @@ describe("Terminal Surface Option Key Mode with real xterm input", () => {
       enterOptionInput(textarea!, "left", left);
       enterOptionInput(textarea!, "right", right);
 
-      expect(adapter.write.mock.calls.map(([data]) => data)).toEqual(expected);
+      expect(adapter.write.mock.calls.flat()).toEqual(expected);
       surface.dispose();
     },
   );

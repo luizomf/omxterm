@@ -15,7 +15,7 @@ function clipboard(
   return {
     readText: vi.fn(() => text),
     availableFormats: vi.fn(() => advertisedFormats),
-    readBuffer: vi.fn((format) => {
+    readBuffer: vi.fn((format: string) => {
       const value = formats[format];
       return Buffer.isBuffer(value) ? value : Buffer.from(value ?? "", "utf8");
     }),

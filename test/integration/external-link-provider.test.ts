@@ -56,7 +56,7 @@ async function linksFor(
 ): Promise<{ links: ILink[]; activate: (value: string) => void }> {
   const terminal = new Terminal({ cols, rows: 8 });
   let provider: ILinkProvider | undefined;
-  terminal.registerLinkProvider = vi.fn((value) => {
+  terminal.registerLinkProvider = vi.fn((value: ILinkProvider) => {
     provider = value;
     return { dispose: vi.fn() };
   });

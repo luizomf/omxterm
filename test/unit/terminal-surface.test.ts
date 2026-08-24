@@ -534,9 +534,7 @@ describe("portable Terminal Surface", () => {
 
     expect(clipboard.confirmPaste).not.toHaveBeenCalled();
     expect(xterm.FakeTerminal.current.paste).not.toHaveBeenCalled();
-    expect(adapter.write.mock.calls.map(([chunk]) => chunk).join("")).toBe(
-      text,
-    );
+    expect(adapter.write.mock.calls.flat().join("")).toBe(text);
     surface.dispose();
   });
 
@@ -715,9 +713,7 @@ describe("portable Terminal Surface", () => {
     expect(clipboard.confirmPaste).toHaveBeenCalledWith(text);
     expect(xterm.FakeTerminal.current.paste).not.toHaveBeenCalled();
     expect(adapter.write.mock.calls.length).toBeGreaterThan(1);
-    expect(adapter.write.mock.calls.map(([chunk]) => chunk).join("")).toBe(
-      text,
-    );
+    expect(adapter.write.mock.calls.flat().join("")).toBe(text);
     surface.dispose();
   });
 
@@ -925,8 +921,8 @@ describe("portable Terminal Surface", () => {
       }),
     ).rejects.toMatchObject({
       cause: expect.objectContaining({
-        message: expect.stringContaining("scrollback.lines"),
-      }),
+        message: expect.stringContaining("scrollback.lines") as unknown,
+      }) as unknown,
     });
     expect(rejectedAdapter.close).toHaveBeenCalledOnce();
     expect(xterm.FakeTerminal.instances).toHaveLength(3);
@@ -1165,7 +1161,7 @@ describe("portable Terminal Surface", () => {
       cause: expect.objectContaining({
         family: "Missing Mono",
         message: 'Configured font family "Missing Mono" is not available',
-      }),
+      }) as unknown,
     });
 
     expect(xterm.FakeTerminal.instances).toHaveLength(0);
@@ -1357,9 +1353,7 @@ describe("snippet injection", () => {
     await surface.inject("printf hello");
 
     expect(clipboard.confirmPaste).not.toHaveBeenCalled();
-    expect(adapter.write.mock.calls.map(([chunk]) => chunk).join("")).toBe(
-      "printf hello",
-    );
+    expect(adapter.write.mock.calls.flat().join("")).toBe("printf hello");
     surface.dispose();
   });
 
@@ -1376,7 +1370,7 @@ describe("snippet injection", () => {
 
     await surface.inject("line one\nline two", { submit: true });
 
-    const written = adapter.write.mock.calls.map(([chunk]) => chunk).join("");
+    const written = adapter.write.mock.calls.flat().join("");
     expect(written).toBe("\u001b[200~line one\nline two\u001b[201~\r");
     expect(written.indexOf("\r")).toBeGreaterThan(written.indexOf("[201~"));
     expect(clipboard.confirmPaste).not.toHaveBeenCalled();
@@ -1413,9 +1407,7 @@ describe("snippet injection", () => {
     await surface.inject("one\ntwo", { submit: true });
 
     expect(clipboard.confirmPaste).toHaveBeenCalledWith("one\ntwo");
-    expect(adapter.write.mock.calls.map(([chunk]) => chunk).join("")).toBe(
-      "one\ntwo\r",
-    );
+    expect(adapter.write.mock.calls.flat().join("")).toBe("one\ntwo\r");
     surface.dispose();
   });
 
