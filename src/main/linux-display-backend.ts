@@ -18,8 +18,11 @@ export function planLinuxDisplayBackendDefault(
   // arguments and Electron's hint variable carry user intent, and escaping
   // an already-initialized Wayland backend requires a relaunch with the
   // explicit switch on the command line.
+  const launchMarkerIndex = argv.indexOf("-e");
+  const applicationArguments =
+    launchMarkerIndex === -1 ? argv : argv.slice(0, launchMarkerIndex);
   const userChoseBackend =
-    argv.some((argument) =>
+    applicationArguments.some((argument) =>
       OZONE_BACKEND_SWITCHES.some(
         (switchName) =>
           argument === switchName || argument.startsWith(`${switchName}=`),

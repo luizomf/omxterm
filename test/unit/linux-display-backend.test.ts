@@ -41,6 +41,24 @@ describe("Linux display backend", () => {
     ).toBe("none");
   });
 
+  it.each([
+    ["--ozone-platform=wayland"],
+    ["--ozone-platform-hint=auto"],
+    ["--ozone-platform", "wayland"],
+  ])(
+    "treats backend-looking values after -e as literal argv",
+    (...literalArgv) => {
+      expect(
+        planLinuxDisplayBackendDefault(
+          "wayland",
+          "linux",
+          ["/usr/lib/omxterm/omxterm", "-e", "program", ...literalArgv],
+          NO_ENV,
+        ),
+      ).toBe("relaunch-x11");
+    },
+  );
+
   it("preserves an ELECTRON_OZONE_PLATFORM_HINT environment choice", () => {
     expect(
       planLinuxDisplayBackendDefault("wayland", "linux", PLAIN_ARGV, {

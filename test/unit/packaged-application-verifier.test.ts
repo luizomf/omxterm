@@ -33,6 +33,9 @@ describe("packaged application verifier", () => {
     expect(posix.arguments[0]).toBe("-c");
     expect(posix.arguments.at(-1)).toBe("--literal-option-looking-argument");
     expect(posix.arguments.join(" ")).toContain(
+      "--literal-option-looking-argument",
+    );
+    expect(posix.arguments.join(" ")).toContain(
       "$OMXTERM_PACKAGE_ARGUMENT_CANARY",
     );
     expect(posix.arguments.join(" ")).toContain("$TERM_PROGRAM_VERSION");
@@ -49,6 +52,8 @@ describe("packaged application verifier", () => {
         "--literal-option-looking-argument",
       ]),
     );
+    expect(windows.arguments.join(" ")).toContain("$args[0]");
+    expect(windows.arguments.join(" ")).toContain("$args[1]");
   });
 
   it("reports a missing process group when signaling returns ESRCH", () => {

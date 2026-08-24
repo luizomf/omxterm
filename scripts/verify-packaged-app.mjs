@@ -508,7 +508,7 @@ export function packagedExplicitCommand(
         "-NoLogo",
         "-NoProfile",
         "-Command",
-        "$ok = $PWD.Path -eq $env:OMXTERM_PACKAGE_EXPECTED_HOME -and $env:TERM -eq 'xterm-256color' -and $env:COLORTERM -eq 'truecolor' -and $env:TERM_PROGRAM -eq 'OMXTerm' -and $env:TERM_PROGRAM_VERSION -and $args[0] -eq $env:OMXTERM_PACKAGE_ARGUMENT_CANARY; if (-not $ok) { exit 23 }; New-Item -ItemType File -Path $env:OMXTERM_PACKAGE_READINESS_FILE -Force | Out-Null; Start-Sleep -Seconds 30",
+        "$ok = $PWD.Path -eq $env:OMXTERM_PACKAGE_EXPECTED_HOME -and $env:TERM -eq 'xterm-256color' -and $env:COLORTERM -eq 'truecolor' -and $env:TERM_PROGRAM -eq 'OMXTerm' -and $env:TERM_PROGRAM_VERSION -and $args[0] -eq '--literal-option-looking-argument' -and $args[1] -eq $env:OMXTERM_PACKAGE_ARGUMENT_CANARY; if (-not $ok) { exit 23 }; New-Item -ItemType File -Path $env:OMXTERM_PACKAGE_READINESS_FILE -Force | Out-Null; Start-Sleep -Seconds 30",
         "--literal-option-looking-argument",
       ],
     };
@@ -517,7 +517,7 @@ export function packagedExplicitCommand(
     executable: "/bin/sh",
     arguments: [
       "-c",
-      'test "$PWD" = "$OMXTERM_PACKAGE_EXPECTED_HOME" && test "$TERM" = xterm-256color && test "$COLORTERM" = truecolor && test "$TERM_PROGRAM" = OMXTerm && test -n "$TERM_PROGRAM_VERSION" && test "$1" = "$OMXTERM_PACKAGE_ARGUMENT_CANARY" && : > "$OMXTERM_PACKAGE_READINESS_FILE"; exec sleep 30',
+      'test "$PWD" = "$OMXTERM_PACKAGE_EXPECTED_HOME" && test "$TERM" = xterm-256color && test "$COLORTERM" = truecolor && test "$TERM_PROGRAM" = OMXTerm && test -n "$TERM_PROGRAM_VERSION" && test "$1" = --literal-option-looking-argument && test "$2" = "$OMXTERM_PACKAGE_ARGUMENT_CANARY" && : > "$OMXTERM_PACKAGE_READINESS_FILE"; exec sleep 30',
       "omxterm-packaged-verifier",
       "--literal-option-looking-argument",
     ],
@@ -789,7 +789,7 @@ export async function verifyPackagedApplication(applicationPath) {
       ...(platform === "linux" ? ["--ozone-platform=x11"] : []),
       "-e",
       explicitCommand.executable,
-      ...explicitCommand.arguments.slice(0, -1),
+      ...explicitCommand.arguments,
       argumentCanary,
     ];
     // The packaged Linux app relaunches itself onto X11 when Electron seeds
