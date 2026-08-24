@@ -13,6 +13,7 @@ import type {
   TerminalSurfaceConfiguration,
   TerminalSurfaceOptions,
 } from "../terminal-surface/terminal-surface";
+import { DEFAULT_TERMINAL_FONT_SIZE } from "../shared/user-configuration";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
 
 type MountTerminalSurface = (
@@ -243,6 +244,7 @@ export function createTerminalTabs(
     applyConfiguration(configuration) {
       if (disposed) return;
       activeSurfaceOptions = { ...activeSurfaceOptions, ...configuration };
+      zoomSteps = Math.max(1 - configuration.appearance.fontSize, zoomSteps);
       for (const tab of tabs) tab.surface?.applyConfiguration(configuration);
     },
     handleCommand(command) {
@@ -272,8 +274,14 @@ export function createTerminalTabs(
       }
     },
     zoom(command) {
+      const baseline =
+        activeSurfaceOptions.appearance?.fontSize ?? DEFAULT_TERMINAL_FONT_SIZE;
       zoomSteps =
-        command === "reset" ? 0 : zoomSteps + (command === "in" ? 1 : -1);
+        command === "reset"
+          ? 0
+          : command === "in"
+            ? zoomSteps + 1
+            : Math.max(1 - baseline, zoomSteps - 1);
       for (const tab of tabs) tab.surface?.zoom(command);
     },
     clipboardAction(action) {
@@ -311,7 +319,8 @@ function completeConfiguration(
   options: TerminalSurfaceOptions,
 ): TerminalSurfaceConfiguration | undefined {
   if (
-    options.appearance === undefined ||
+    options.appearance?.fontSize === undefined ||
+    options.appearance.lineHeight === undefined ||
     options.padding === undefined ||
     options.scrollbackLines === undefined ||
     options.optionKeyMode === undefined ||
@@ -319,7 +328,13 @@ function completeConfiguration(
   )
     return undefined;
   return {
-    appearance: options.appearance,
+    appearance: {
+      fontSize: options.appearance.fontSize,
+      lineHeight: options.appearance.lineHeight,
+      ...(options.appearance.systemFont
+        ? { systemFont: options.appearance.systemFont }
+        : {}),
+    },
     padding: options.padding,
     scrollbackLines: options.scrollbackLines,
     optionKeyMode: options.optionKeyMode,

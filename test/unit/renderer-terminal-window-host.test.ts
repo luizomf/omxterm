@@ -357,6 +357,45 @@ describe("renderer Terminal Window page host", () => {
     host.dispose();
   });
 
+  it("updates rejection notices without reapplying the last-valid Surface configuration", async () => {
+    const errorBanner = document.createElement("aside");
+    const surface = createSurface();
+    let configurationListener:
+      ((configuration: TerminalRendererConfiguration) => void) | undefined;
+    const configuration = {
+      fontSize: 16,
+      fontLineHeight: 1,
+      terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
+      scrollbackLines: 10_000,
+      optionKeyMode: "none",
+      nativeTitleInset: 0,
+      terminalTheme: DEFAULT_TERMINAL_THEME,
+      userFileErrors: [],
+    } as const;
+    const host = mountTerminalWindowPage(createPageElements(), {
+      createAdapter: createAdapterFactory(),
+      configuration,
+      page: window,
+      mount: vi.fn(async () => surface),
+      userFileErrorBanner: errorBanner,
+      subscribeToConfigurationUpdates(listener) {
+        configurationListener = listener;
+        return vi.fn();
+      },
+    });
+    await host.ready;
+    surface.applyConfiguration.mockClear();
+
+    configurationListener!({
+      ...configuration,
+      userFileErrors: ["reload rejected"],
+    });
+
+    expect(surface.applyConfiguration).not.toHaveBeenCalled();
+    expect(errorBanner.textContent).toContain("reload rejected");
+    host.dispose();
+  });
+
   it("routes native clipboard actions to the selected mounted Surface", async () => {
     let actionListener:
       ((action: "copy" | "paste" | "select-all") => void) | undefined;
@@ -555,10 +594,16 @@ describe("renderer Terminal Window page host", () => {
     snippetsElement.hidden = true;
     document.body.append(snippetsElement);
     let toggleListener: (() => void) | undefined;
+    let configurationListener:
+      ((configuration: TerminalRendererConfiguration) => void) | undefined;
     const host = mountTerminalWindowPage(elements, {
       createAdapter: createAdapterFactory(),
       page: window,
       mount: vi.fn(async () => surface),
+      subscribeToConfigurationUpdates(listener) {
+        configurationListener = listener;
+        return vi.fn();
+      },
       snippets: {
         element: snippetsElement,
         load: vi.fn(async () => ({
@@ -576,6 +621,17 @@ describe("renderer Terminal Window page host", () => {
     await vi.waitFor(() => {
       expect(snippetsElement.querySelector("li button")).not.toBeNull();
     });
+    configurationListener!({
+      fontSize: 20,
+      fontLineHeight: 1.2,
+      terminalPadding: { top: 1, right: 2, bottom: 3, left: 4 },
+      scrollbackLines: 0,
+      optionKeyMode: "both",
+      nativeTitleInset: 0,
+      terminalTheme: DEFAULT_TERMINAL_THEME,
+      userFileErrors: [],
+    });
+    expect(snippetsElement.hidden).toBe(false);
     snippetsElement.querySelector<HTMLButtonElement>("li button")!.click();
 
     expect(surface.inject).toHaveBeenCalledExactlyOnceWith("printf hi", {

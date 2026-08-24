@@ -78,7 +78,10 @@ export type { OptionKeyMode } from "../shared/user-configuration";
 export interface TerminalSurfaceConfiguration {
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
-  readonly appearance: TerminalAppearance;
+  readonly appearance: TerminalAppearance & {
+    readonly fontSize: number;
+    readonly lineHeight: number;
+  };
   readonly padding: TerminalPadding;
   readonly theme: TerminalTheme;
 }

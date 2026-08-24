@@ -92,6 +92,9 @@ export function mountTerminalWindowPage(
   let removeTabTitleListener: (() => void) | undefined;
   let snippetsSidebar: SnippetsSidebar | undefined;
   let removeSnippetsToggleListener: (() => void) | undefined;
+  let activeSurfaceConfiguration = options.configuration
+    ? surfaceConfiguration(options.configuration)
+    : undefined;
 
   const applyPageTheme = (theme: TerminalTheme) => {
     const { background, foreground } = theme.colors;
@@ -119,9 +122,7 @@ export function mountTerminalWindowPage(
   }
 
   const surfaceOptions: TerminalSurfaceOptions = {
-    ...(options.configuration
-      ? surfaceConfiguration(options.configuration)
-      : {}),
+    ...activeSurfaceConfiguration,
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.onExternalLink
       ? { onExternalLink: options.onExternalLink }
@@ -190,7 +191,16 @@ export function mountTerminalWindowPage(
         `${configuration.nativeTitleInset}px`,
       );
       applyPageTheme(configuration.terminalTheme);
-      tabs.applyConfiguration(surfaceConfiguration(configuration));
+      const nextSurfaceConfiguration = surfaceConfiguration(configuration);
+      if (
+        !activeSurfaceConfiguration ||
+        !sameSurfaceConfiguration(
+          activeSurfaceConfiguration,
+          nextSurfaceConfiguration,
+        )
+      )
+        tabs.applyConfiguration(nextSurfaceConfiguration);
+      activeSurfaceConfiguration = nextSurfaceConfiguration;
       if (options.userFileErrorBanner)
         renderUserFileErrorBanner(
           options.userFileErrorBanner,
@@ -228,6 +238,31 @@ export function mountTerminalWindowPage(
   });
 
   return { ready, dispose };
+}
+
+function sameSurfaceConfiguration(
+  first: TerminalSurfaceConfiguration,
+  second: TerminalSurfaceConfiguration,
+): boolean {
+  const firstSystemFont = first.appearance.systemFont;
+  const secondSystemFont = second.appearance.systemFont;
+  return (
+    first.appearance.fontSize === second.appearance.fontSize &&
+    first.appearance.lineHeight === second.appearance.lineHeight &&
+    firstSystemFont?.family === secondSystemFont?.family &&
+    firstSystemFont?.available === secondSystemFont?.available &&
+    first.scrollbackLines === second.scrollbackLines &&
+    first.optionKeyMode === second.optionKeyMode &&
+    first.padding.top === second.padding.top &&
+    first.padding.right === second.padding.right &&
+    first.padding.bottom === second.padding.bottom &&
+    first.padding.left === second.padding.left &&
+    first.theme.version === second.theme.version &&
+    first.theme.name === second.theme.name &&
+    (
+      Object.keys(first.theme.colors) as Array<keyof TerminalTheme["colors"]>
+    ).every((key) => first.theme.colors[key] === second.theme.colors[key])
+  );
 }
 
 function surfaceConfiguration(

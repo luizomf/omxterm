@@ -6,7 +6,10 @@ import type {
   TerminalSessionAdapter,
   TerminalSessionHandlers,
 } from "../../src/terminal-surface/terminal-session-adapter";
-import type { TerminalSurfaceOptions } from "../../src/terminal-surface/terminal-surface";
+import type {
+  TerminalSurface,
+  TerminalSurfaceOptions,
+} from "../../src/terminal-surface/terminal-surface";
 
 function createFakeSurface() {
   return {
@@ -26,7 +29,12 @@ interface FakeAdapter extends ElectronTerminalAdapter {
   handlers: TerminalSessionHandlers | undefined;
 }
 
-function createTabsHarness(options: { failMountAt?: number } = {}) {
+function createTabsHarness(
+  options: {
+    failMountAt?: number;
+    surfaceOptions?: TerminalSurfaceOptions;
+  } = {},
+) {
   document.body.innerHTML = "";
   document.body.className = "";
   vi.spyOn(document, "hasFocus").mockReturnValue(true);
@@ -81,7 +89,7 @@ function createTabsHarness(options: { failMountAt?: number } = {}) {
     {
       createAdapter,
       mount,
-      surfaceOptions: {},
+      surfaceOptions: options.surfaceOptions ?? {},
       notifySelection,
       notifyTitle,
       notifyBell,
@@ -379,5 +387,109 @@ describe("renderer Terminal Tabs", () => {
 
     expect(harness.surfaces[0]!.dispose).toHaveBeenCalledOnce();
     expect(harness.surfaces[1]!.dispose).toHaveBeenCalledOnce();
+  });
+});
+
+describe("renderer Terminal Tabs runtime configuration", () => {
+  it("reconciles an update received while a Surface mount is pending", async () => {
+    const { DEFAULT_TERMINAL_THEME } =
+      await import("../../src/shared/terminal-theme");
+    const strip = document.createElement("nav");
+    const container = document.createElement("div");
+    document.body.replaceChildren(strip, container);
+    let finishMount: ((surface: TerminalSurface) => void) | undefined;
+    const pendingMount = new Promise<TerminalSurface>((resolve) => {
+      finishMount = resolve;
+    });
+    const adapter: ElectronTerminalAdapter = {
+      sessionId: () => "s1",
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const surface = createFakeSurface();
+    const tabs = createTerminalTabs(
+      { strip, container },
+      {
+        createAdapter: () => adapter,
+        mount: vi.fn(() => pendingMount),
+        surfaceOptions: {
+          appearance: { fontSize: 16, lineHeight: 1 },
+          padding: { top: 0, right: 8, bottom: 8, left: 8 },
+          scrollbackLines: 10_000,
+          optionKeyMode: "none",
+          theme: DEFAULT_TERMINAL_THEME,
+        },
+      },
+    );
+    const update = {
+      appearance: { fontSize: 24, lineHeight: 1.25 },
+      padding: { top: 1, right: 2, bottom: 3, left: 4 },
+      scrollbackLines: 0,
+      optionKeyMode: "both" as const,
+      theme: DEFAULT_TERMINAL_THEME,
+    };
+
+    tabs.applyConfiguration(update);
+    finishMount!(surface);
+    await tabs.ready;
+
+    expect(surface.applyConfiguration).toHaveBeenCalledExactlyOnceWith(update);
+    expect(adapter.close).not.toHaveBeenCalled();
+    tabs.dispose();
+  });
+
+  it("normalizes saturated zoom so current and future tabs share one delta", async () => {
+    const { DEFAULT_TERMINAL_THEME } =
+      await import("../../src/shared/terminal-theme");
+    const initialConfiguration = {
+      appearance: { fontSize: 8, lineHeight: 1 },
+      padding: { top: 0, right: 8, bottom: 8, left: 8 },
+      scrollbackLines: 10_000,
+      optionKeyMode: "none" as const,
+      theme: DEFAULT_TERMINAL_THEME,
+    };
+    const harness = createTabsHarness({
+      surfaceOptions: initialConfiguration,
+    });
+    await harness.tabs.ready;
+
+    for (let index = 0; index < 8; index += 1) harness.tabs.zoom("out");
+    harness.tabs.applyConfiguration({
+      ...initialConfiguration,
+      appearance: { fontSize: 20, lineHeight: 1 },
+    });
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+
+    expect(harness.surfaces[1]!.zoom.mock.calls).toEqual(
+      Array.from({ length: 7 }, () => ["out"]),
+    );
+  });
+
+  it("preserves selection, titles, bell state, and sessions", async () => {
+    const { DEFAULT_TERMINAL_THEME } =
+      await import("../../src/shared/terminal-theme");
+    const harness = createTabsHarness();
+    await harness.tabs.ready;
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+    harness.tabs.setSessionTitle("s1", "vim");
+    harness.tabs.setSessionTitle("s2", "🔔ssh");
+    harness.strip.querySelectorAll("button")[0]!.click();
+
+    harness.tabs.applyConfiguration({
+      appearance: { fontSize: 20, lineHeight: 1.2 },
+      padding: { top: 1, right: 2, bottom: 3, left: 4 },
+      scrollbackLines: 0,
+      optionKeyMode: "both",
+      theme: DEFAULT_TERMINAL_THEME,
+    });
+
+    expect(selectedStates(harness.strip)).toEqual(["vim:true", "🔔ssh:false"]);
+    expect(visibleContainers(harness.container)).toEqual([0, -1]);
+    for (const adapter of harness.adapters)
+      expect(adapter.close).not.toHaveBeenCalled();
   });
 });
