@@ -12,6 +12,7 @@ import type {
   TerminalSurfaceOptions,
 } from "../../src/terminal-surface/terminal-surface";
 import type { TerminalSessionAdapter } from "../../src/terminal-surface/terminal-session-adapter";
+import type { TerminalRendererConfiguration } from "../../src/shared/user-configuration";
 
 function createPageElements() {
   document.body.innerHTML = "";
@@ -43,6 +44,7 @@ function createSurface(overrides: Record<string, unknown> = {}) {
     dispose: vi.fn(),
     focus: vi.fn(),
     applyTheme: vi.fn(),
+    applyConfiguration: vi.fn(),
     inject: vi.fn(async () => {}),
     zoom: vi.fn(),
     copy: vi.fn(async () => undefined),
@@ -279,12 +281,8 @@ describe("renderer Terminal Window page host", () => {
     const second = createSurface();
     const surfaces = [first, second];
     const mountedThemes: unknown[] = [];
-    let themeListener:
-      | ((update: {
-          terminalTheme: typeof updatedTheme;
-          userFileErrors: readonly string[];
-        }) => void)
-      | undefined;
+    let configurationListener:
+      ((configuration: TerminalRendererConfiguration) => void) | undefined;
     let commandListener: ((command: { action: "new" }) => void) | undefined;
     const host = mountTerminalWindowPage(elements, {
       createAdapter: adapters,
@@ -310,8 +308,8 @@ describe("renderer Terminal Window page host", () => {
           return surfaces.shift()!;
         },
       ),
-      subscribeToThemeUpdates(listener) {
-        themeListener = listener;
+      subscribeToConfigurationUpdates(listener) {
+        configurationListener = listener;
         return vi.fn();
       },
       subscribeToTabCommands(listener) {
@@ -321,12 +319,24 @@ describe("renderer Terminal Window page host", () => {
     });
     await host.ready;
 
-    themeListener!({
+    configurationListener!({
+      fontSize: 20,
+      fontLineHeight: 1.2,
+      terminalPadding: { top: 1, right: 2, bottom: 3, left: 4 },
+      scrollbackLines: 0,
+      optionKeyMode: "both",
+      nativeTitleInset: 0,
       terminalTheme: updatedTheme,
       userFileErrors: ["startup warning", "reload failed at /themes/live.json"],
     });
 
-    expect(first.applyTheme).toHaveBeenLastCalledWith(updatedTheme);
+    expect(first.applyConfiguration).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        scrollbackLines: 0,
+        optionKeyMode: "both",
+        theme: updatedTheme,
+      }),
+    );
     expect(
       document.documentElement.style.getPropertyValue("--terminal-background"),
     ).toBe("#123456");
@@ -339,7 +349,9 @@ describe("renderer Terminal Window page host", () => {
     commandListener!({ action: "new" });
     await vi.waitFor(() => expect(mountedThemes).toHaveLength(2));
     expect(mountedThemes).toEqual([initialTheme, updatedTheme]);
-    expect(second.applyTheme).toHaveBeenLastCalledWith(updatedTheme);
+    expect(second.applyConfiguration).toHaveBeenLastCalledWith(
+      expect.objectContaining({ theme: updatedTheme }),
+    );
     expect(adapterCloses[0]).not.toHaveBeenCalled();
     expect(adapterCloses[1]).not.toHaveBeenCalled();
     host.dispose();

@@ -33,6 +33,7 @@ import {
 
 export interface TerminalSurface {
   focus(): void;
+  applyConfiguration(configuration: TerminalSurfaceConfiguration): void;
   applyTheme(theme: TerminalTheme): void;
   zoom(command: TerminalFontZoom): void;
   copy(): Promise<void>;
@@ -74,6 +75,14 @@ export class MissingTerminalFontError extends Error {
 
 export type { OptionKeyMode } from "../shared/user-configuration";
 
+export interface TerminalSurfaceConfiguration {
+  readonly scrollbackLines: number;
+  readonly optionKeyMode: OptionKeyMode;
+  readonly appearance: TerminalAppearance;
+  readonly padding: TerminalPadding;
+  readonly theme: TerminalTheme;
+}
+
 export interface TerminalSurfaceOptions {
   readonly scrollbackLines?: number;
   readonly optionKeyMode?: OptionKeyMode;
@@ -91,9 +100,9 @@ export async function mountTerminalSurface(
   adapter: TerminalSessionAdapter,
   options: TerminalSurfaceOptions = {},
 ): Promise<TerminalSurface> {
-  const scrollbackLines = options.scrollbackLines ?? DEFAULT_SCROLLBACK_LINES;
-  const optionKeyMode = options.optionKeyMode ?? "none";
-  const terminalTheme = options.theme ?? DEFAULT_TERMINAL_THEME;
+  let scrollbackLines = options.scrollbackLines ?? DEFAULT_SCROLLBACK_LINES;
+  let optionKeyMode = options.optionKeyMode ?? "none";
+  let terminalTheme = options.theme ?? DEFAULT_TERMINAL_THEME;
   let appearance = resolveTerminalAppearance();
   let padding = DEFAULT_TERMINAL_PADDING;
 
@@ -124,11 +133,39 @@ export async function mountTerminalSurface(
       if (!isTerminalTheme(theme))
         throw new TypeError("Invalid Terminal Theme update");
       if (disposed || !terminal) return;
+      terminalTheme = theme;
       terminal.options.theme = theme.colors;
       container.style.setProperty(
         "--terminal-background",
         theme.colors.background,
       );
+    },
+    applyConfiguration(configuration) {
+      const nextAppearance = resolveTerminalAppearance(
+        configuration.appearance,
+      );
+      const nextPadding = resolveTerminalPadding(configuration.padding);
+      validateScrollbackLines(configuration.scrollbackLines);
+      validateOptionKeyMode(configuration.optionKeyMode);
+      if (!isTerminalTheme(configuration.theme))
+        throw new TypeError("Invalid Terminal Theme update");
+      if (disposed || !terminal) return;
+
+      const zoomDelta =
+        (terminal.options.fontSize ?? appearance.fontSize) -
+        appearance.fontSize;
+      appearance = nextAppearance;
+      padding = nextPadding;
+      scrollbackLines = configuration.scrollbackLines;
+      optionKeyMode = configuration.optionKeyMode;
+      terminalTheme = configuration.theme;
+      terminal.options.fontFamily = appearance.fontFamily;
+      terminal.options.fontSize = Math.max(1, appearance.fontSize + zoomDelta);
+      terminal.options.lineHeight = appearance.lineHeight;
+      terminal.options.scrollback = scrollbackLines;
+      terminal.options.theme = terminalTheme.colors;
+      setContainerAppearance(container, padding, terminalTheme);
+      scheduleFit();
     },
     zoom(command) {
       if (disposed || !terminal || !fitAddon) return;
@@ -263,42 +300,11 @@ export async function mountTerminalSurface(
   try {
     appearance = resolveTerminalAppearance(options.appearance);
     padding = resolveTerminalPadding(options.padding);
-    if (
-      !Number.isInteger(scrollbackLines) ||
-      scrollbackLines < 0 ||
-      scrollbackLines > MAX_SCROLLBACK_LINES
-    ) {
-      throw new TypeError(
-        `scrollback.lines must be an integer from 0 through ${MAX_SCROLLBACK_LINES}`,
-      );
-    }
-    if (
-      optionKeyMode !== "none" &&
-      optionKeyMode !== "left" &&
-      optionKeyMode !== "right" &&
-      optionKeyMode !== "both"
-    ) {
-      throw new TypeError(
-        "keyboard.optionAsAlt must be none, left, right, or both",
-      );
-    }
+    validateScrollbackLines(scrollbackLines);
+    validateOptionKeyMode(optionKeyMode);
 
     await loadBundledTerminalFont(appearance.fontSize);
-
-    container.style.setProperty("--terminal-padding-top", `${padding.top}px`);
-    container.style.setProperty(
-      "--terminal-padding-right",
-      `${padding.right}px`,
-    );
-    container.style.setProperty(
-      "--terminal-padding-bottom",
-      `${padding.bottom}px`,
-    );
-    container.style.setProperty("--terminal-padding-left", `${padding.left}px`);
-    container.style.setProperty(
-      "--terminal-background",
-      terminalTheme.colors.background,
-    );
+    setContainerAppearance(container, padding, terminalTheme);
 
     const mountedTerminal = new Terminal({
       cursorBlink: true,
@@ -327,7 +333,7 @@ export async function mountTerminalSurface(
         : {}),
       ...(options.onBell ? { onBell: options.onBell } : {}),
     });
-    applyOptionKeyMode(mountedTerminal, optionKeyMode);
+    applyOptionKeyMode(mountedTerminal, () => optionKeyMode);
     const mountedFitAddon = new FitAddon();
     fitAddon = mountedFitAddon;
     mountedTerminal.loadAddon(mountedFitAddon);
@@ -454,7 +460,37 @@ async function loadBundledTerminalFont(fontSize: number): Promise<void> {
     throw new Error("Bundled Terminal Font could not be loaded");
 }
 
-function applyOptionKeyMode(terminal: Terminal, mode: OptionKeyMode): void {
+function validateScrollbackLines(value: number): void {
+  if (!Number.isInteger(value) || value < 0 || value > MAX_SCROLLBACK_LINES)
+    throw new TypeError(
+      `scrollback.lines must be an integer from 0 through ${MAX_SCROLLBACK_LINES}`,
+    );
+}
+
+function validateOptionKeyMode(value: OptionKeyMode): void {
+  if (!(["none", "left", "right", "both"] as const).includes(value))
+    throw new TypeError(
+      "keyboard.optionAsAlt must be none, left, right, or both",
+    );
+}
+
+function setContainerAppearance(
+  container: HTMLElement,
+  padding: TerminalPadding,
+  theme: TerminalTheme,
+): void {
+  for (const side of ["top", "right", "bottom", "left"] as const)
+    container.style.setProperty(
+      `--terminal-padding-${side}`,
+      `${padding[side]}px`,
+    );
+  container.style.setProperty("--terminal-background", theme.colors.background);
+}
+
+function applyOptionKeyMode(
+  terminal: Terminal,
+  currentMode: () => OptionKeyMode,
+): void {
   let leftOptionDown = false;
   let rightOptionDown = false;
 
@@ -468,6 +504,7 @@ function applyOptionKeyMode(terminal: Terminal, mode: OptionKeyMode): void {
       rightOptionDown = false;
     }
 
+    const mode = currentMode();
     terminal.options.macOptionIsMeta =
       mode === "both" ||
       (mode === "left" && leftOptionDown) ||

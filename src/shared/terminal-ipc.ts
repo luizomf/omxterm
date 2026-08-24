@@ -1,7 +1,7 @@
 export const terminalIpc = {
   start: "terminal:start",
   configuration: "terminal:configuration",
-  themeUpdate: "terminal:theme-update",
+  configurationUpdate: "terminal:configuration-update",
   input: "terminal:input",
   resize: "terminal:resize",
   close: "terminal:close",

@@ -1,8 +1,4 @@
-import {
-  isTerminalTheme,
-  type TerminalTheme,
-  type TerminalThemeUpdate,
-} from "./terminal-theme";
+import { isTerminalTheme, type TerminalTheme } from "./terminal-theme";
 import type { TerminalKeybinds } from "./terminal-keybinds";
 
 export const MIN_TERMINAL_FONT_SIZE = 8;
@@ -99,19 +95,6 @@ export function isTerminalRendererConfiguration(
     (value.scrollbackLines as number) <= MAX_SCROLLBACK_LINES &&
     ["none", "left", "right", "both"].includes(value.optionKeyMode as string) &&
     (value.nativeTitleInset === 0 || value.nativeTitleInset === 30) &&
-    isTerminalTheme(value.terminalTheme) &&
-    isUserFileErrors(value.userFileErrors)
-  );
-}
-
-export function isTerminalThemeUpdate(
-  value: unknown,
-): value is TerminalThemeUpdate {
-  if (!isRecord(value)) return false;
-  const keys = Object.keys(value);
-  return (
-    keys.length === 2 &&
-    keys.every((key) => ["terminalTheme", "userFileErrors"].includes(key)) &&
     isTerminalTheme(value.terminalTheme) &&
     isUserFileErrors(value.userFileErrors)
   );

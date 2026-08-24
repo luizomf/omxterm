@@ -12,6 +12,7 @@ function createFakeSurface() {
   return {
     focus: vi.fn(),
     applyTheme: vi.fn(),
+    applyConfiguration: vi.fn(),
     zoom: vi.fn(),
     copy: vi.fn(async () => undefined),
     paste: vi.fn(async () => undefined),
@@ -277,6 +278,24 @@ describe("renderer Terminal Tabs", () => {
     harness.tabs.handleCommand({ action: "new" });
     await vi.waitFor(() => expect(harness.surfaces).toHaveLength(3));
     expect(harness.surfaces[2]!.zoom.mock.calls).toEqual([["in"]]);
+  });
+
+  it("keeps Window Font Zoom and Actual Size independent between windows", async () => {
+    const firstWindow = createTabsHarness();
+    const secondWindow = createTabsHarness();
+    await Promise.all([firstWindow.tabs.ready, secondWindow.tabs.ready]);
+
+    firstWindow.tabs.zoom("in");
+    firstWindow.tabs.zoom("in");
+    secondWindow.tabs.zoom("out");
+    firstWindow.tabs.zoom("reset");
+
+    expect(firstWindow.surfaces[0]!.zoom.mock.calls).toEqual([
+      ["in"],
+      ["in"],
+      ["reset"],
+    ]);
+    expect(secondWindow.surfaces[0]!.zoom.mock.calls).toEqual([["out"]]);
   });
 
   it("routes clipboard actions and snippet injection to the selected tab only", async () => {

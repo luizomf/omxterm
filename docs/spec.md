@@ -101,8 +101,8 @@ updates, and remote terminal features are outside the current product contract.
   after tab selection. The xterm grid remains inside the visible content area
   with its bottom row visible.
 - Native minimum window bounds keep the existing 320 px width and 200 px height
-  as floors and grow at startup when configured font or padding needs more room
-  for a visible terminal grid.
+  as floors and grow at startup or after a valid reload when configured font or
+  padding needs more room for a visible terminal grid.
 - On macOS, the Terminal Surface keeps a fixed 30 px native title/drag inset
   above the configurable top padding. Linux and Windows use their
   operating-system title and menu outside the app-controlled content and add
@@ -121,14 +121,16 @@ updates, and remote terminal features are outside the current product contract.
 - `View -> Reload User Configuration` is always available and defaults to
   `Cmd+Shift+,` on macOS and `Ctrl+Shift+,` on Linux and Windows. It manually
   rereads and validates the complete User Configuration through the startup
-  boundary. A valid reload atomically updates the Terminal Theme across every
-  current and future Terminal Window, Terminal Tab, Terminal Surface, native
-  window background, Window Chrome, and Snippets Sidebar without disturbing a
-  Live Terminal Session. It also updates close confirmation, logging, the menu,
-  effective keybind delivery, and the Always-on-Top default for future windows.
-  Existing windows keep their ephemeral Always-on-Top state. Typography,
-  line height, padding, scrollback, and Option Key Mode remain at their startup
-  values for all Terminal Surfaces created during this run and require restart.
+  boundary. A valid reload atomically updates font family, configured font-size
+  baseline, line height, per-side padding, scrollback, Option Key Mode, and
+  Terminal Theme across every current and future Terminal Window, Terminal Tab,
+  and Terminal Surface without disturbing a Live Terminal Session. Native
+  backgrounds, Window Chrome, and the Snippets Sidebar follow the theme. It also
+  updates close confirmation, logging, the menu, effective keybind delivery,
+  and the Always-on-Top default for future windows. Existing windows keep their
+  ephemeral Always-on-Top state and independent Window Font Zoom delta over the
+  new baseline; Actual Size returns that window to the latest baseline.
+  Reconfigured Surfaces refit in place and resize their existing PTYs.
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and
   `Ctrl+Shift+S` on Linux and Windows, remappable through `keybinds`) shows or hides the
   selected window's Snippets Sidebar beside its
@@ -338,9 +340,12 @@ selects all defaults without creating a file. A rejected reload changes no
 active setting, keeps the complete last valid in-memory configuration, and
 replaces the non-blocking notice with the current actionable failure. A later
 valid reload replaces resolved startup or reload errors and stale warnings with
-notices from the current validation. Reloaded font family and size, line height,
-padding, scrollback, and Option Key Mode intentionally remain unapplied to both
-existing and newly created Terminal Surfaces until restart. OMXTerm never
+notices from the current validation. The complete committed renderer snapshot
+reaches existing and newly created Terminal Surfaces. Font and spacing changes
+recompute the existing native minimum-window bounds, refit the grid with its
+bottom row visible, and resize the same PTY through its existing adapter.
+Runtime scrollback reduction, including zero, uses xterm's in-memory buffer
+behavior; Option Key Mode changes only subsequent keyboard events. OMXTerm never
 migrates, repairs, rewrites, or silently ignores User Configuration. The same surface
 also carries non-fatal warnings for a valid configuration that stays fully
 active — currently a keybind shadowing a PTY control key — which inform without

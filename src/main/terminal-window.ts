@@ -23,13 +23,17 @@ type TerminalWindowGeometryConfiguration = Pick<
   | "terminalTheme"
 >;
 
-export interface ThemeableTerminalWindow {
+export interface ConfigurableTerminalWindow {
   isDestroyed(): boolean;
   setBackgroundColor(color: string): void;
+  setMinimumSize(width: number, height: number): void;
 }
 
 export function applyTerminalThemeToNativeWindows(
-  windows: readonly ThemeableTerminalWindow[],
+  windows: readonly Pick<
+    ConfigurableTerminalWindow,
+    "isDestroyed" | "setBackgroundColor"
+  >[],
   theme: TerminalTheme,
 ): void {
   for (const window of windows)
@@ -39,6 +43,23 @@ export function applyTerminalThemeToNativeWindows(
 
 export function terminalNativeTitleInset(platform: string): 0 | 30 {
   return platform === "darwin" ? MACOS_NATIVE_TITLE_AREA_INSET : 0;
+}
+
+export function applyTerminalWindowConfiguration(
+  windows: readonly ConfigurableTerminalWindow[],
+  configuration: TerminalWindowGeometryConfiguration,
+  platform: string,
+): void {
+  const { minWidth, minHeight } = terminalWindowOptions(
+    "",
+    configuration,
+    platform,
+  );
+  for (const window of windows) {
+    if (window.isDestroyed()) continue;
+    window.setBackgroundColor(configuration.terminalTheme.colors.background);
+    window.setMinimumSize(minWidth!, minHeight!);
+  }
 }
 
 export function terminalWindowOptions(

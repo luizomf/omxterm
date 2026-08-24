@@ -3,6 +3,7 @@ import {
   mountTerminalSurface,
   type TerminalClipboard,
   type TerminalSurface,
+  type TerminalSurfaceConfiguration,
   type TerminalSurfaceOptions,
 } from "../terminal-surface/terminal-surface";
 import type {
@@ -12,10 +13,7 @@ import type {
 } from "../shared/terminal-contract";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
-import type {
-  TerminalTheme,
-  TerminalThemeUpdate,
-} from "../shared/terminal-theme";
+import type { TerminalTheme } from "../shared/terminal-theme";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
 import { createTerminalTabs, type TerminalTabs } from "./terminal-tabs";
 import {
@@ -46,8 +44,8 @@ interface TerminalWindowPageOptions {
   readonly subscribeToFontZoom?: (
     listener: (command: TerminalFontZoom) => void,
   ) => () => void;
-  readonly subscribeToThemeUpdates?: (
-    listener: (update: TerminalThemeUpdate) => void,
+  readonly subscribeToConfigurationUpdates?: (
+    listener: (configuration: TerminalRendererConfiguration) => void,
   ) => () => void;
   readonly userFileErrorBanner?: HTMLElement;
   readonly clipboard?: TerminalClipboard;
@@ -88,7 +86,7 @@ export function mountTerminalWindowPage(
   const mount = options.mount ?? mountTerminalSurface;
   let disposed = false;
   let removeZoomListener: (() => void) | undefined;
-  let removeThemeUpdateListener: (() => void) | undefined;
+  let removeConfigurationUpdateListener: (() => void) | undefined;
   let removeClipboardActionListener: (() => void) | undefined;
   let removeTabCommandListener: (() => void) | undefined;
   let removeTabTitleListener: (() => void) | undefined;
@@ -122,24 +120,7 @@ export function mountTerminalWindowPage(
 
   const surfaceOptions: TerminalSurfaceOptions = {
     ...(options.configuration
-      ? {
-          appearance: {
-            fontSize: options.configuration.fontSize,
-            lineHeight: options.configuration.fontLineHeight,
-            ...(options.configuration.fontFamily
-              ? {
-                  systemFont: {
-                    family: options.configuration.fontFamily,
-                    available: true,
-                  },
-                }
-              : {}),
-          },
-          scrollbackLines: options.configuration.scrollbackLines,
-          padding: options.configuration.terminalPadding,
-          optionKeyMode: options.configuration.optionKeyMode,
-          theme: options.configuration.terminalTheme,
-        }
+      ? surfaceConfiguration(options.configuration)
       : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.onExternalLink
@@ -186,7 +167,7 @@ export function mountTerminalWindowPage(
     page.document.removeEventListener("dragover", onDragOver, true);
     page.document.removeEventListener("drop", onDrop, true);
     removeZoomListener?.();
-    removeThemeUpdateListener?.();
+    removeConfigurationUpdateListener?.();
     removeClipboardActionListener?.();
     removeTabCommandListener?.();
     removeTabTitleListener?.();
@@ -202,15 +183,21 @@ export function mountTerminalWindowPage(
   page.document.addEventListener("dragover", onDragOver, true);
   page.document.addEventListener("drop", onDrop, true);
 
-  removeThemeUpdateListener = options.subscribeToThemeUpdates?.((update) => {
-    applyPageTheme(update.terminalTheme);
-    tabs.applyTheme(update.terminalTheme);
-    if (options.userFileErrorBanner)
-      renderUserFileErrorBanner(
-        options.userFileErrorBanner,
-        update.userFileErrors,
+  removeConfigurationUpdateListener = options.subscribeToConfigurationUpdates?.(
+    (configuration) => {
+      page.document.documentElement.style.setProperty(
+        "--native-title-inset",
+        `${configuration.nativeTitleInset}px`,
       );
-  });
+      applyPageTheme(configuration.terminalTheme);
+      tabs.applyConfiguration(surfaceConfiguration(configuration));
+      if (options.userFileErrorBanner)
+        renderUserFileErrorBanner(
+          options.userFileErrorBanner,
+          configuration.userFileErrors,
+        );
+    },
+  );
 
   const ready = tabs.ready.then(() => {
     if (disposed) return;
@@ -241,4 +228,27 @@ export function mountTerminalWindowPage(
   });
 
   return { ready, dispose };
+}
+
+function surfaceConfiguration(
+  configuration: TerminalRendererConfiguration,
+): TerminalSurfaceConfiguration {
+  return {
+    appearance: {
+      fontSize: configuration.fontSize,
+      lineHeight: configuration.fontLineHeight,
+      ...(configuration.fontFamily
+        ? {
+            systemFont: {
+              family: configuration.fontFamily,
+              available: true,
+            },
+          }
+        : {}),
+    },
+    scrollbackLines: configuration.scrollbackLines,
+    padding: configuration.terminalPadding,
+    optionKeyMode: configuration.optionKeyMode,
+    theme: configuration.terminalTheme,
+  };
 }

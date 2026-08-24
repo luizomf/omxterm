@@ -332,18 +332,23 @@ the complete document through the same boundary as startup, including a changed
 `theme.path`, installed font availability, platform keybinds, and warnings.
 There is no file watching or automatic reload.
 
-A valid reload atomically updates the Terminal Theme in every current and future
-window, tab, Terminal Surface, native background, Window Chrome, and Snippets
-Sidebar. It also updates close confirmation, log level, the application menu,
-effective keybind delivery in existing and future windows, and the
-Always-on-Top default for future windows. Existing windows keep their current
-Always-on-Top toggle, and Live Terminal Sessions continue without being
-restarted, replaced, or closed.
+A valid reload atomically applies font family, the configured font-size
+baseline, line height, per-side padding, scrollback, Option Key Mode, and the
+Terminal Theme to every current and future window, tab, and Terminal Surface.
+Native backgrounds, Window Chrome, and the Snippets Sidebar follow the theme.
+It also updates close confirmation, log level, the application menu, effective
+keybind delivery in existing and future windows, and the Always-on-Top default
+for future windows.
 
-Font family and size, line height, padding, scrollback, and Option Key Mode are
-validated but remain at their startup values for both existing and newly
-created Terminal Surfaces until OMXTerm is restarted. Runtime application of
-those Terminal Surface settings is not part of this reload slice.
+Terminal Surfaces and Live Terminal Sessions are updated in place: tabs,
+sessions, PTY adapters, titles, bell state, and other window state are not
+restarted, replaced, or closed. Each existing window keeps its current
+Always-on-Top toggle and Window Font Zoom delta over the new baseline; Actual
+Size resets that window to the latest configured size. Font and spacing changes
+recompute the existing platform minimum-window bounds and refit each grid.
+Reducing scrollback, including setting it to zero, takes effect on the current
+in-memory xterm buffer. Option Key Mode affects keyboard events received after
+the reload.
 
 If a present `config.json` is unreadable or invalid, or its selected theme is
 missing, unreadable, or invalid, OMXTerm keeps the complete last valid in-memory
@@ -403,9 +408,9 @@ stale warnings with current notices. Common failures are:
 - a `keybinds` entry with an unknown action name, a malformed accelerator, a
   missing non-Shift modifier, or two actions sharing one effective accelerator.
 
-Fix the reported file and use `View -> Reload User Configuration`. Restart is
-still required only for reloaded font family or size, line height, padding,
-scrollback, and Option Key Mode to reach Terminal Surfaces. OMXTerm never
-silently ignores invalid preferences and never edits or repairs your files.
+Fix the reported file and use `View -> Reload User Configuration`. A successful
+reload applies every validated Terminal Surface preference without a restart.
+OMXTerm never silently ignores invalid preferences and never edits or repairs
+your files.
 Startup falls back only to built-in defaults, loudly; a failed runtime reload
 instead preserves the complete last valid active configuration.

@@ -25,31 +25,33 @@ import {
   isFilePathPlatform,
   MAX_INSERTED_PATHS,
 } from "../shared/file-path-insertion";
-import {
-  isTerminalRendererConfiguration,
-  isTerminalThemeUpdate,
-} from "../shared/user-configuration";
+import { isTerminalRendererConfiguration } from "../shared/user-configuration";
 import { isTerminalSnippetsResponse } from "../shared/terminal-snippets";
-import type { TerminalThemeUpdate } from "../shared/terminal-theme";
+import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 
-let latestThemeUpdate: TerminalThemeUpdate | undefined;
-const themeUpdateListeners = new Set<(update: TerminalThemeUpdate) => void>();
-ipcRenderer.on(terminalIpc.themeUpdate, (_event, payload: unknown) => {
-  if (!isTerminalThemeUpdate(payload)) return;
-  latestThemeUpdate = payload;
-  for (const listener of themeUpdateListeners) listener(payload);
+let latestConfiguration: TerminalRendererConfiguration | undefined;
+let configurationRevision = 0;
+const configurationUpdateListeners = new Set<
+  (configuration: TerminalRendererConfiguration) => void
+>();
+ipcRenderer.on(terminalIpc.configurationUpdate, (_event, payload: unknown) => {
+  if (!isTerminalRendererConfiguration(payload)) return;
+  latestConfiguration = payload;
+  configurationRevision += 1;
+  for (const listener of configurationUpdateListeners) listener(payload);
 });
 
 const terminal: TerminalBridge = {
   async configuration() {
+    const revisionAtRequest = configurationRevision;
     const configuration: unknown = await ipcRenderer.invoke(
       terminalIpc.configuration,
     );
     if (!isTerminalRendererConfiguration(configuration))
       throw new TypeError("Invalid User Configuration response");
-    return latestThemeUpdate
-      ? Object.freeze({ ...configuration, ...latestThemeUpdate })
-      : configuration;
+    return configurationRevision === revisionAtRequest
+      ? configuration
+      : latestConfiguration!;
   },
   async snippets() {
     const response: unknown = await ipcRenderer.invoke(terminalIpc.snippets);
@@ -65,10 +67,10 @@ const terminal: TerminalBridge = {
     return () =>
       ipcRenderer.removeListener(terminalIpc.snippetsToggle, handler);
   },
-  onTerminalThemeUpdate(listener) {
-    themeUpdateListeners.add(listener);
-    if (latestThemeUpdate) listener(latestThemeUpdate);
-    return () => themeUpdateListeners.delete(listener);
+  onConfigurationUpdate(listener) {
+    configurationUpdateListeners.add(listener);
+    if (latestConfiguration) listener(latestConfiguration);
+    return () => configurationUpdateListeners.delete(listener);
   },
   async start() {
     const sessionId: unknown = await ipcRenderer.invoke(terminalIpc.start);

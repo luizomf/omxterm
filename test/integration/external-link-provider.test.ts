@@ -173,6 +173,7 @@ describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
           return {
             focus: vi.fn(),
             applyTheme: vi.fn(),
+            applyConfiguration: vi.fn(),
             zoom: vi.fn(),
             copy: vi.fn(async () => {}),
             paste: vi.fn(async () => {}),

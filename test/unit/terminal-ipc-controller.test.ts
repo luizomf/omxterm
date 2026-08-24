@@ -130,7 +130,7 @@ describe("terminal IPC controller", () => {
     expect(ipc.listeners.size).toBe(8);
   });
 
-  it("validates and broadcasts Terminal Theme updates without touching sessions", () => {
+  it("validates and broadcasts complete configuration updates without touching sessions", () => {
     const ipc = createIpcHarness();
     const router = registerTerminalIpcRouter(ipc.ipcMain);
     const mainFrame = {};
@@ -161,14 +161,16 @@ describe("terminal IPC controller", () => {
       },
     };
     const update = {
+      ...clipboardOptions().configuration,
+      fontSize: 24,
       terminalTheme: updatedTheme,
       userFileErrors: ["unrelated warning"],
     };
 
-    router.applyThemeUpdate(update);
+    router.applyConfiguration(update);
 
     expect(webContents.send).toHaveBeenCalledExactlyOnceWith(
-      terminalIpc.themeUpdate,
+      terminalIpc.configurationUpdate,
       update,
     );
     expect(
@@ -180,7 +182,7 @@ describe("terminal IPC controller", () => {
     expect(session.close).not.toHaveBeenCalled();
     expect(session.write).not.toHaveBeenCalled();
     expect(() =>
-      router.applyThemeUpdate({
+      router.applyConfiguration({
         ...update,
         terminalTheme: {
           ...updatedTheme,

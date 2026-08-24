@@ -8,45 +8,60 @@ import type {
 } from "./terminal-application";
 import {
   applyTerminalThemeToNativeWindows,
-  type ThemeableTerminalWindow,
+  applyTerminalWindowConfiguration,
+  type ConfigurableTerminalWindow,
 } from "./terminal-window";
 
 export function applyActiveUserConfiguration<
-  Window extends NativeTerminalWindow & ThemeableTerminalWindow,
+  Window extends NativeTerminalWindow & ConfigurableTerminalWindow,
 >(
   state: ActiveUserConfiguration,
   committed: boolean,
-  router: Pick<TerminalIpcRouter, "applyThemeUpdate">,
+  router: Pick<TerminalIpcRouter, "applyConfiguration">,
   windows: readonly Window[],
   application: TerminalApplication<Window> | undefined,
-  rebuildMenu: () => void,
+  options: {
+    readonly rebuildMenu: () => void;
+    readonly nativeTitleInset: 0 | 30;
+    readonly platform: string;
+  },
 ): void {
-  const update = {
-    terminalTheme: state.configuration.terminalTheme,
-    userFileErrors: state.userFileErrors,
-  };
-  router.applyThemeUpdate(update);
-  applyTerminalThemeToNativeWindows(windows, update.terminalTheme);
+  const rendererConfiguration = terminalRendererConfiguration(
+    state,
+    options.nativeTitleInset,
+  );
+  router.applyConfiguration(rendererConfiguration);
+  applyTerminalThemeToNativeWindows(
+    windows,
+    rendererConfiguration.terminalTheme,
+  );
   if (!committed) return;
+  applyTerminalWindowConfiguration(
+    windows,
+    state.configuration,
+    options.platform,
+  );
   application?.applyConfiguration({
     confirmClose: state.configuration.confirmClose,
     alwaysOnTopDefault: state.configuration.alwaysOnTop,
   });
-  rebuildMenu();
+  options.rebuildMenu();
 }
 
 export function terminalRendererConfiguration(
-  startup: LoadedUserConfiguration,
   active: ActiveUserConfiguration,
   nativeTitleInset: 0 | 30,
 ): TerminalRendererConfiguration {
+  const configuration: LoadedUserConfiguration = active.configuration;
   return Object.freeze({
-    ...(startup.fontFamily ? { fontFamily: startup.fontFamily } : {}),
-    fontSize: startup.fontSize,
-    fontLineHeight: startup.fontLineHeight,
-    terminalPadding: startup.terminalPadding,
-    scrollbackLines: startup.scrollbackLines,
-    optionKeyMode: startup.optionKeyMode,
+    ...(configuration.fontFamily
+      ? { fontFamily: configuration.fontFamily }
+      : {}),
+    fontSize: configuration.fontSize,
+    fontLineHeight: configuration.fontLineHeight,
+    terminalPadding: configuration.terminalPadding,
+    scrollbackLines: configuration.scrollbackLines,
+    optionKeyMode: configuration.optionKeyMode,
     nativeTitleInset,
     terminalTheme: active.configuration.terminalTheme,
     userFileErrors: active.userFileErrors,

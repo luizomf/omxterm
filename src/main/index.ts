@@ -179,12 +179,15 @@ app
               terminalIpcRouter,
               BrowserWindow.getAllWindows(),
               terminalApplication,
-              rebuildMenu,
+              {
+                rebuildMenu,
+                nativeTitleInset: terminalNativeTitleInset(process.platform),
+                platform: process.platform,
+              },
             ),
         });
         const rendererConfiguration = () =>
           terminalRendererConfiguration(
-            userConfiguration,
             configurationReloader.current(),
             terminalNativeTitleInset(process.platform),
           );
@@ -202,10 +205,7 @@ app
             const window = new BrowserWindow(
               terminalWindowOptions(
                 preloadPath,
-                {
-                  ...userConfiguration,
-                  terminalTheme: active.configuration.terminalTheme,
-                },
+                active.configuration,
                 process.platform,
                 linuxWindowIconPath,
               ),

@@ -25,7 +25,8 @@ void window.omxterm.terminal.configuration().then((configuration) => {
       createAdapter: () =>
         createElectronTerminalAdapter(window.omxterm.terminal),
       subscribeToFontZoom: window.omxterm.terminal.onFontZoom,
-      subscribeToThemeUpdates: window.omxterm.terminal.onTerminalThemeUpdate,
+      subscribeToConfigurationUpdates:
+        window.omxterm.terminal.onConfigurationUpdate,
       userFileErrorBanner: errorBanner,
       subscribeToClipboardActions: window.omxterm.terminal.onClipboardAction,
       droppedFilePathInsertion:

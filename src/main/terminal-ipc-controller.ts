@@ -15,8 +15,7 @@ import type { LocalTerminalSession } from "./local-terminal-session";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type { OperationalEventLog } from "./operational-events";
-import type { TerminalThemeUpdate } from "../shared/terminal-theme";
-import { isTerminalThemeUpdate } from "../shared/user-configuration";
+import { isTerminalRendererConfiguration } from "../shared/user-configuration";
 
 export interface TrustedWebContents {
   readonly mainFrame: object;
@@ -91,7 +90,7 @@ export interface TerminalIpcControllerOptions {
 }
 
 export interface TerminalIpcController {
-  applyThemeUpdate(update: TerminalThemeUpdate): void;
+  applyConfiguration(configuration: TerminalRendererConfiguration): void;
   // Close confirmations ask only when the affected sessions are running a
   // foreground child process (ADR 0017). The selected session is the one the
   // renderer last reported; before any report, every live session counts.
@@ -104,7 +103,7 @@ export interface TerminalIpcRouter {
   registerController(
     options: TerminalIpcControllerOptions,
   ): TerminalIpcController;
-  applyThemeUpdate(update: TerminalThemeUpdate): void;
+  applyConfiguration(configuration: TerminalRendererConfiguration): void;
   dispose(): void;
 }
 
@@ -285,11 +284,11 @@ export function registerTerminalIpcRouter(
       controllers.set(options.webContents, controller);
       return controller;
     },
-    applyThemeUpdate(update) {
-      if (!isTerminalThemeUpdate(update))
-        throw new TypeError("Invalid Terminal Theme update");
+    applyConfiguration(configuration) {
+      if (!isTerminalRendererConfiguration(configuration))
+        throw new TypeError("Invalid renderer configuration update");
       for (const controller of controllers.values())
-        controller.applyThemeUpdate(update);
+        controller.applyConfiguration(configuration);
     },
     dispose() {
       if (disposed) return;
@@ -577,14 +576,13 @@ function createTerminalIpcController(
 
   return {
     configuration,
-    applyThemeUpdate(update) {
+    applyConfiguration(configuration) {
       if (disposed || options.webContents.isDestroyed()) return;
-      rendererConfiguration = Object.freeze({
-        ...rendererConfiguration,
-        terminalTheme: update.terminalTheme,
-        userFileErrors: update.userFileErrors,
-      });
-      options.webContents.send(terminalIpc.themeUpdate, update);
+      rendererConfiguration = Object.freeze({ ...configuration });
+      options.webContents.send(
+        terminalIpc.configurationUpdate,
+        rendererConfiguration,
+      );
     },
     start,
     input,

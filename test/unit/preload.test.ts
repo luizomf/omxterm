@@ -383,11 +383,18 @@ describe("isolated preload terminal bridge", () => {
     electron.removeListener.mockClear();
   });
 
-  it("delivers only validated bounded Terminal Theme updates from main", () => {
+  it("delivers only complete validated renderer configuration updates from main", () => {
     const bridge = electron.bridge!;
     const listener = vi.fn();
-    const remove = bridge.onTerminalThemeUpdate(listener);
+    const remove = bridge.onConfigurationUpdate(listener);
     const valid = {
+      fontFamily: "SF Mono",
+      fontSize: 24,
+      fontLineHeight: 1.25,
+      terminalPadding: { top: 1, right: 2, bottom: 3, left: 4 },
+      scrollbackLines: 500,
+      optionKeyMode: "left",
+      nativeTitleInset: 30,
       terminalTheme: {
         ...DEFAULT_TERMINAL_THEME,
         name: "updated",
@@ -399,8 +406,8 @@ describe("isolated preload terminal bridge", () => {
       userFileErrors: ["reload failed"],
     };
 
-    electron.listeners.get(terminalIpc.themeUpdate)?.({}, valid);
-    electron.listeners.get(terminalIpc.themeUpdate)?.(
+    electron.listeners.get(terminalIpc.configurationUpdate)?.({}, valid);
+    electron.listeners.get(terminalIpc.configurationUpdate)?.(
       {},
       {
         ...valid,
@@ -410,14 +417,14 @@ describe("isolated preload terminal bridge", () => {
         },
       },
     );
-    electron.listeners.get(terminalIpc.themeUpdate)?.(
+    electron.listeners.get(terminalIpc.configurationUpdate)?.(
       {},
       {
         ...valid,
         userFileErrors: ["x".repeat(65_537)],
       },
     );
-    electron.listeners.get(terminalIpc.themeUpdate)?.(
+    electron.listeners.get(terminalIpc.configurationUpdate)?.(
       {},
       {
         ...valid,
@@ -425,17 +432,17 @@ describe("isolated preload terminal bridge", () => {
       },
     );
     remove();
-    electron.listeners.get(terminalIpc.themeUpdate)?.({}, valid);
+    electron.listeners.get(terminalIpc.configurationUpdate)?.({}, valid);
 
     expect(listener).toHaveBeenCalledExactlyOnceWith(valid);
 
-    electron.listeners.get(terminalIpc.themeUpdate)?.(
+    electron.listeners.get(terminalIpc.configurationUpdate)?.(
       {},
       { terminalTheme: DEFAULT_TERMINAL_THEME, userFileErrors: [] },
     );
   });
 
-  it("reconciles a theme update received while configuration is in flight", async () => {
+  it("reconciles a complete update received while configuration is in flight", async () => {
     const bridge = electron.bridge!;
     const configuration = {
       fontSize: 16,
@@ -448,6 +455,10 @@ describe("isolated preload terminal bridge", () => {
       userFileErrors: ["startup warning"],
     } as const;
     const update = {
+      ...configuration,
+      fontSize: 25,
+      scrollbackLines: 0,
+      optionKeyMode: "both",
       terminalTheme: {
         ...DEFAULT_TERMINAL_THEME,
         name: "received during startup",
@@ -466,19 +477,16 @@ describe("isolated preload terminal bridge", () => {
     );
 
     const pendingConfiguration = bridge.configuration();
-    electron.listeners.get(terminalIpc.themeUpdate)?.({}, update);
+    electron.listeners.get(terminalIpc.configurationUpdate)?.({}, update);
     resolveConfiguration(configuration);
 
-    await expect(pendingConfiguration).resolves.toEqual({
-      ...configuration,
-      ...update,
-    });
+    await expect(pendingConfiguration).resolves.toEqual(update);
     const listener = vi.fn();
-    const remove = bridge.onTerminalThemeUpdate(listener);
+    const remove = bridge.onConfigurationUpdate(listener);
     expect(listener).toHaveBeenCalledExactlyOnceWith(update);
     remove();
 
-    electron.listeners.get(terminalIpc.themeUpdate)?.(
+    electron.listeners.get(terminalIpc.configurationUpdate)?.(
       {},
       { terminalTheme: DEFAULT_TERMINAL_THEME, userFileErrors: [] },
     );
