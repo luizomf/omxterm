@@ -179,4 +179,35 @@ describe("Terminal Surface Option Key Mode with real xterm input", () => {
       surface.dispose();
     },
   );
+
+  it("applies a reloaded Option Key Mode to subsequent real xterm input", async () => {
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { DEFAULT_TERMINAL_THEME } =
+      await import("../../src/shared/terminal-theme");
+    const container = document.createElement("main");
+    document.body.append(container);
+    const surface = await mountTerminalSurface(container, adapter, {
+      optionKeyMode: "none",
+    });
+    const textarea = container.querySelector("textarea");
+    expect(textarea).toBeInstanceOf(HTMLTextAreaElement);
+
+    surface.applyConfiguration({
+      appearance: { fontSize: 16, lineHeight: 1 },
+      padding: { top: 0, right: 8, bottom: 8, left: 8 },
+      scrollbackLines: 10_000,
+      optionKeyMode: "left",
+      theme: DEFAULT_TERMINAL_THEME,
+    });
+    enterOptionInput(textarea!, "left", ["KeyA"]);
+    enterOptionInput(textarea!, "right", ["KeyB", "∫"]);
+
+    expect(adapter.write.mock.calls.flat()).toEqual(["\u001ba", "∫"]);
+    surface.dispose();
+  });
 });

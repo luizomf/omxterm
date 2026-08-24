@@ -1282,6 +1282,57 @@ describe("portable Terminal Surface", () => {
     expect(adapter.close).toHaveBeenCalledOnce();
   });
 
+  it("preserves independent cross-window zoom deltas over a reloaded baseline", async () => {
+    const createAdapter = () => ({
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    });
+    const { DEFAULT_TERMINAL_THEME } =
+      await import("../../src/shared/terminal-theme");
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const initialConfiguration = {
+      appearance: { fontSize: 16, lineHeight: 1 },
+      padding: { top: 0, right: 8, bottom: 8, left: 8 },
+      scrollbackLines: 10_000,
+      optionKeyMode: "none" as const,
+      theme: DEFAULT_TERMINAL_THEME,
+    };
+    const first = await mountTerminalSurface(
+      document.createElement("main"),
+      createAdapter(),
+      initialConfiguration,
+    );
+    const firstTerminal = xterm.FakeTerminal.current;
+    const second = await mountTerminalSurface(
+      document.createElement("main"),
+      createAdapter(),
+      initialConfiguration,
+    );
+    const secondTerminal = xterm.FakeTerminal.current;
+
+    first.zoom("in");
+    first.zoom("in");
+    second.zoom("out");
+    const reloadedConfiguration = {
+      ...initialConfiguration,
+      appearance: { fontSize: 20, lineHeight: 1.2 },
+    };
+    first.applyConfiguration(reloadedConfiguration);
+    second.applyConfiguration(reloadedConfiguration);
+
+    expect(firstTerminal.options.fontSize).toBe(22);
+    expect(secondTerminal.options.fontSize).toBe(19);
+    first.zoom("reset");
+    expect(firstTerminal.options.fontSize).toBe(20);
+    expect(secondTerminal.options.fontSize).toBe(19);
+
+    first.dispose();
+    second.dispose();
+  });
+
   it("keeps Window Font Zoom independent, resets to each supplied size, and refits the PTY", async () => {
     const createAdapter = () => ({
       start: vi.fn(async () => undefined),

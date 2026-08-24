@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   applyTerminalThemeToNativeWindows,
+  applyTerminalWindowConfiguration,
   lockTerminalRendererNavigation,
   terminalNativeTitleInset,
   terminalWindowOptions,
@@ -46,6 +47,39 @@ describe("Terminal Window startup contract", () => {
       "#123456",
     );
     expect(destroyed.setBackgroundColor).not.toHaveBeenCalled();
+  });
+
+  it("recomputes native minimum bounds for every live window after reload", () => {
+    const first = {
+      isDestroyed: () => false,
+      setBackgroundColor: vi.fn(),
+      setMinimumSize: vi.fn(),
+    };
+    const second = {
+      isDestroyed: () => false,
+      setBackgroundColor: vi.fn(),
+      setMinimumSize: vi.fn(),
+    };
+    const destroyed = {
+      isDestroyed: () => true,
+      setBackgroundColor: vi.fn(),
+      setMinimumSize: vi.fn(),
+    };
+
+    applyTerminalWindowConfiguration(
+      [first, second, destroyed],
+      configuredZapfinoGeometry,
+      "darwin",
+    );
+
+    for (const window of [first, second]) {
+      expect(window.setBackgroundColor).toHaveBeenCalledWith(
+        configuredZapfinoGeometry.terminalTheme.colors.background,
+      );
+      expect(window.setMinimumSize).toHaveBeenCalledWith(542, 774);
+    }
+    expect(destroyed.setBackgroundColor).not.toHaveBeenCalled();
+    expect(destroyed.setMinimumSize).not.toHaveBeenCalled();
   });
 
   it("uses small native chrome and an isolated renderer preload", () => {
