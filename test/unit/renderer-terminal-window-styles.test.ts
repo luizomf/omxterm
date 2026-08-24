@@ -37,6 +37,14 @@ describe("terminal window viewport scrollbar", () => {
   });
 });
 
+describe("Terminal Tab theme", () => {
+  it("uses the active Terminal Theme foreground", () => {
+    expect(declaration(ruleBody("#tab-strip button"), "color")).toContain(
+      "--terminal-foreground",
+    );
+  });
+});
+
 describe("Snippets Sidebar theme contrast", () => {
   it.each([
     ["light", "#f5f5f5", "#161616"],

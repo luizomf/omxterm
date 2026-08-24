@@ -85,7 +85,7 @@ body {
   padding: 4px 12px;
   overflow: hidden;
   font: inherit;
-  color: #e6e6e6;
+  color: var(--terminal-foreground, #e6e6e6);
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
