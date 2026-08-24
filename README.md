@@ -191,12 +191,14 @@ Project checks are available as root scripts:
 
 - `npm run format` formats source files;
 - `npm run format:check` checks formatting without changing files;
+- `npm run lint` runs the type-aware TypeScript policy with zero accepted
+  warnings;
 - `npm run typecheck` checks strict TypeScript types;
 - `npm test` runs the complete automated test suite, including the scoped local
   PTY integration check;
 - `npm run build` creates the unpackaged development build under `dist/`;
-- `npm run check:portable` runs formatting, typechecking, the complete test
-  suite, and the unpackaged build on every Supported Platform;
+- `npm run check:portable` runs formatting, lint, typechecking, the complete
+  test suite, and the unpackaged build on every Supported Platform;
 - `npm run package:mac` creates a local Apple Silicon DMG under `release/` and
   never publishes it; its application is ad-hoc sealed but has no Developer ID
   signature or notarization;
@@ -207,11 +209,11 @@ Project checks are available as root scripts:
 - `npm run package:verify` inspects and starts the native package for the current
   macOS, Linux, or Windows ARM64 host;
 - `npm run check` runs the full macOS packaging check;
-- `npm run check:linux` runs formatting, typechecking, the complete test suite,
-  the Linux ARM64 AppImage build, exact AppImage inspection, and isolated
-  packaged startup through a real PTY;
-- `npm run check:win` runs the same sequence for Windows: the ARM64 NSIS
-  build, unpacked-application inspection, and isolated packaged startup
+- `npm run check:linux` runs the portable quality gate, the Linux ARM64 AppImage
+  build, exact AppImage inspection, and isolated packaged startup through a real
+  PTY;
+- `npm run check:win` runs the same shared portable sequence for Windows: the
+  ARM64 NSIS build, unpacked-application inspection, and isolated packaged startup
   through a real ConPTY.
 
 See the [local ARM64 release procedure](docs/release.md) for prerequisites,

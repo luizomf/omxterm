@@ -464,8 +464,8 @@ describe("portable Terminal Surface", () => {
       { onTitleRequest, onBell },
     );
 
-    xterm.FakeTerminal.current.emitTitle(0, "first");
-    xterm.FakeTerminal.current.emitTitle(2, "second");
+    void xterm.FakeTerminal.current.emitTitle(0, "first");
+    void xterm.FakeTerminal.current.emitTitle(2, "second");
     xterm.FakeTerminal.current.emitBell();
 
     expect(onTitleRequest.mock.calls).toEqual([["first"], ["second"]]);

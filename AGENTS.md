@@ -189,6 +189,8 @@ issue or PR is unfinished work.
   grounds such as `utils`, `helpers`, `common`, or `manager`.
 - Use strict types at public and IPC boundaries. Avoid `any`; isolate and explain
   it when unavoidable.
+- Lint is mandatory. The executable lint configuration owns numeric limits; do
+  not weaken rules or tests, or fragment cohesive linear code, to game metrics.
 - Validate external input at its boundary. Preserve useful error context and
   never fail silently.
 - Comments explain non-obvious reasons, constraints, or security tradeoffs — not

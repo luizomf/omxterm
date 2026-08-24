@@ -1,0 +1,138 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "allow",
+    "suspicious": "allow",
+    "pedantic": "allow",
+    "perf": "allow",
+    "style": "allow",
+    "restriction": "allow",
+    "nursery": "allow"
+  },
+  "plugins": ["typescript"],
+  "ignorePatterns": [
+    "**/*",
+    "!src/",
+    "!src/**/*.ts",
+    "!test/",
+    "!test/**/*.ts",
+    "!vitest.config.ts"
+  ],
+  "rules": {
+    "typescript/no-explicit-any": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "complexity": ["error", 24],
+    "max-depth": ["error", 4],
+    "max-params": ["error", 6],
+    "max-lines": [
+      "error",
+      { "max": 500, "skipBlankLines": true, "skipComments": true }
+    ],
+    "max-lines-per-function": [
+      "error",
+      { "max": 250, "skipBlankLines": true, "skipComments": true }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["test/**/*.test.ts"],
+      "rules": {
+        // Vitest's asymmetric matchers and deliberately dynamic fakes expose `any` internally.
+        // Explicit `any`, unsafe calls/arguments, and promise rules remain enforced in tests.
+        "typescript/no-unsafe-assignment": "allow",
+        "typescript/no-unsafe-member-access": "allow",
+        "typescript/no-unsafe-return": "allow",
+        // Test files and describe callbacks are cohesive executable specifications.
+        "max-lines": [
+          "error",
+          { "max": 600, "skipBlankLines": true, "skipComments": true }
+        ],
+        "max-lines-per-function": [
+          "error",
+          { "max": 300, "skipBlankLines": true, "skipComments": true }
+        ]
+      }
+    },
+    {
+      // These suites keep one large fixture/harness close to the behavior it specifies.
+      "files": [
+        "test/unit/preload.test.ts",
+        "test/unit/renderer-terminal-window-host.test.ts",
+        "test/unit/terminal-application.test.ts",
+        "test/unit/user-configuration.test.ts"
+      ],
+      "rules": {
+        "max-lines": [
+          "error",
+          { "max": 850, "skipBlankLines": true, "skipComments": true }
+        ],
+        "max-lines-per-function": [
+          "error",
+          { "max": 600, "skipBlankLines": true, "skipComments": true }
+        ]
+      }
+    },
+    {
+      // IPC and Terminal Surface suites cover their large stateful contracts end to end.
+      "files": [
+        "test/unit/terminal-ipc-controller.test.ts",
+        "test/unit/terminal-surface.test.ts"
+      ],
+      "rules": {
+        "max-lines": [
+          "error",
+          { "max": 1500, "skipBlankLines": true, "skipComments": true }
+        ],
+        "max-lines-per-function": [
+          "error",
+          { "max": 1200, "skipBlankLines": true, "skipComments": true }
+        ]
+      }
+    },
+    {
+      // These modules are cohesive orchestration/validation seams that predate this gate.
+      "files": [
+        "src/main/index.ts",
+        "src/main/terminal-ipc-controller.ts",
+        "src/terminal-surface/terminal-surface.ts"
+      ],
+      "rules": {
+        "max-lines-per-function": [
+          "error",
+          { "max": 350, "skipBlankLines": true, "skipComments": true }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/main/terminal-ipc-controller.ts",
+        "src/main/user-configuration.ts"
+      ],
+      "rules": {
+        "max-lines": [
+          "error",
+          { "max": 750, "skipBlankLines": true, "skipComments": true }
+        ]
+      }
+    },
+    {
+      // Existing validators branch over closed schemas; their local bounds remain explicit.
+      "files": ["src/main/snippets.ts"],
+      "rules": { "complexity": ["error", 28] }
+    },
+    {
+      "files": ["src/main/operational-events.ts"],
+      "rules": { "complexity": ["error", 32] }
+    },
+    {
+      "files": ["src/main/user-configuration.ts"],
+      "rules": { "complexity": ["error", 34] }
+    }
+  ]
+}

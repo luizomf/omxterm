@@ -84,9 +84,10 @@ npm ci
 npm run check:portable
 ```
 
-This command runs formatting checks, strict typechecking, the complete automated
-test suite, and the unpackaged build. Native packaging and operating-system
-behavior evidence are platform-owned work: macOS uses `npm run check`, a
+This command runs formatting checks, type-aware lint with zero accepted warnings,
+strict typechecking, the complete automated test suite, and the unpackaged
+build. Native packaging and operating-system behavior evidence are
+platform-owned work: macOS uses `npm run check`, a
 native Linux ARM64 clone uses `npm run check:linux`, and a native Windows
 ARM64 clone uses `npm run check:win`. In a pull request, list every check run and state exactly why any
 relevant platform check could not run. Never infer a platform pass from another
@@ -131,6 +132,7 @@ Use the narrowest useful checks while developing:
 
 ```sh
 npm run format:check
+npm run lint
 npm run typecheck
 npm test
 npm run build
@@ -138,8 +140,8 @@ npm run build
 
 Before delivery on any Supported Platform, run `npm run check:portable`. On
 macOS, `npm run check` is the full native project command. On Linux ARM64, use
-`npm run check:linux`; it formats and typechecks, runs all tests including the
-real-PTY test, builds the AppImage, extracts and inspects its exact contents,
+`npm run check:linux`; it formats, lints, and typechecks, runs all tests
+including the real-PTY test, builds the AppImage, extracts and inspects its exact contents,
 and launches that exact AppImage with isolated configuration and state. These
 commands create local output under `release/` but never publish it. Use
 `npm run package:linux` for a non-publishing AppImage build alone, followed by

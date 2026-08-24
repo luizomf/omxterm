@@ -157,8 +157,9 @@ const terminal: TerminalBridge = {
       return "";
     try {
       if (!isFilePathPlatform(process.platform)) return "";
+      const droppedFiles = files as readonly File[];
       return formatFilePathInsertion(
-        files.map((file) => webUtils.getPathForFile(file)),
+        droppedFiles.map((file) => webUtils.getPathForFile(file)),
         process.platform,
       );
     } catch {
