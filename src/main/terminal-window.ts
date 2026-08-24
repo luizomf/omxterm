@@ -1,5 +1,6 @@
 import type { BrowserWindowConstructorOptions } from "electron";
 import type { LoadedUserConfiguration } from "./user-configuration";
+import type { TerminalTheme } from "../shared/terminal-theme";
 
 const DEFAULT_MINIMUM_WINDOW_WIDTH = 320;
 const DEFAULT_MINIMUM_WINDOW_HEIGHT = 200;
@@ -21,6 +22,20 @@ type TerminalWindowGeometryConfiguration = Pick<
   | "configuredFontMetrics"
   | "terminalTheme"
 >;
+
+export interface ThemeableTerminalWindow {
+  isDestroyed(): boolean;
+  setBackgroundColor(color: string): void;
+}
+
+export function applyTerminalThemeToNativeWindows(
+  windows: readonly ThemeableTerminalWindow[],
+  theme: TerminalTheme,
+): void {
+  for (const window of windows)
+    if (!window.isDestroyed())
+      window.setBackgroundColor(theme.colors.background);
+}
 
 export function terminalNativeTitleInset(platform: string): 0 | 30 {
   return platform === "darwin" ? MACOS_NATIVE_TITLE_AREA_INSET : 0;

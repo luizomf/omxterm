@@ -110,6 +110,7 @@ export interface UserConfigurationFallback {
 
 export interface UserConfigurationLoad {
   readonly configuration: LoadedUserConfiguration;
+  readonly selectedTerminalThemePath?: string;
   readonly fallback?: UserConfigurationFallback;
   // Non-fatal load-time notices for a valid configuration that stays active,
   // e.g. a keybind that shadows a PTY control key on this platform (#102).
@@ -277,12 +278,18 @@ export async function loadUserConfiguration(
         terminalTheme,
         configuredFontMetrics,
       }),
+      ...(configuredThemePath
+        ? { selectedTerminalThemePath: configuredThemePath }
+        : {}),
       ...(themeFallback ? { fallback: themeFallback } : {}),
       ...warnings,
     });
   }
   return Object.freeze({
     configuration: Object.freeze({ ...preliminary, terminalTheme }),
+    ...(configuredThemePath
+      ? { selectedTerminalThemePath: configuredThemePath }
+      : {}),
     ...(themeFallback ? { fallback: themeFallback } : {}),
     ...warnings,
   });

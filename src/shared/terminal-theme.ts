@@ -38,6 +38,11 @@ export interface TerminalTheme {
   readonly colors: TerminalThemeColors;
 }
 
+export interface TerminalThemeUpdate {
+  readonly terminalTheme: TerminalTheme;
+  readonly userFileErrors: readonly string[];
+}
+
 export const DEFAULT_TERMINAL_THEME: TerminalTheme = Object.freeze({
   version: TERMINAL_THEME_VERSION,
   name: omthemeDocument.name,

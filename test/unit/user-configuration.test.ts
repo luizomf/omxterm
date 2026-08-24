@@ -655,13 +655,15 @@ describe("isolated User Configuration loading", () => {
         }),
       );
 
-      const { configuration, fallback } = await loadUserConfiguration({
-        environment: { XDG_CONFIG_HOME: xdg },
-        homeDirectory: home,
-        getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
-      });
+      const { configuration, fallback, selectedTerminalThemePath } =
+        await loadUserConfiguration({
+          environment: { XDG_CONFIG_HOME: xdg },
+          homeDirectory: home,
+          getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
+        });
 
       expect(fallback).toBeUndefined();
+      expect(selectedTerminalThemePath).toBe(themePath);
       expect(configuration.terminalTheme).toEqual(externalTheme());
       expect(configuration.terminalTheme.colors.background).toBe("#1e1e2e");
     },
@@ -686,14 +688,16 @@ describe("isolated User Configuration loading", () => {
       }),
     );
 
-    const { configuration, fallback } = await loadUserConfiguration({
-      environment: { XDG_CONFIG_HOME: xdg },
-      homeDirectory: home,
-      getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
-    });
+    const { configuration, fallback, selectedTerminalThemePath } =
+      await loadUserConfiguration({
+        environment: { XDG_CONFIG_HOME: xdg },
+        homeDirectory: home,
+        getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
+      });
 
     expect(configuration.terminalTheme).toEqual(DEFAULT_TERMINAL_THEME);
     expect(configuration.confirmClose).toBe(false);
+    expect(selectedTerminalThemePath).toBe(resolvedThemePath);
     expect(fallback).toMatchObject({
       surface: "theme",
       error: {

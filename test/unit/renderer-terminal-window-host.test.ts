@@ -7,7 +7,11 @@ import type {
   TerminalTabCommand,
 } from "../../src/shared/terminal-contract";
 import type { ElectronTerminalAdapter } from "../../src/renderer/electron-terminal-adapter";
-import type { TerminalSurface } from "../../src/terminal-surface/terminal-surface";
+import type {
+  TerminalSurface,
+  TerminalSurfaceOptions,
+} from "../../src/terminal-surface/terminal-surface";
+import type { TerminalSessionAdapter } from "../../src/terminal-surface/terminal-session-adapter";
 
 function createPageElements() {
   document.body.innerHTML = "";
@@ -38,6 +42,7 @@ function createSurface(overrides: Record<string, unknown> = {}) {
   return {
     dispose: vi.fn(),
     focus: vi.fn(),
+    applyTheme: vi.fn(),
     inject: vi.fn(async () => {}),
     zoom: vi.fn(),
     copy: vi.fn(async () => undefined),
@@ -239,6 +244,104 @@ describe("renderer Terminal Window page host", () => {
       expect.any(Object),
       expect.objectContaining({ theme }),
     );
+    host.dispose();
+  });
+
+  it("applies runtime themes and notices to current and later-created tabs without closing sessions", async () => {
+    const initialTheme = DEFAULT_TERMINAL_THEME;
+    const updatedTheme = Object.freeze({
+      ...initialTheme,
+      name: "runtime",
+      colors: Object.freeze({
+        ...initialTheme.colors,
+        background: "#123456",
+        foreground: "#abcdef",
+      }),
+    });
+    const elements = createPageElements();
+    const errorBanner = document.createElement("aside");
+    const adapterCloses: Array<ReturnType<typeof vi.fn>> = [];
+    let nextSession = 1;
+    const adapters = vi.fn((): ElectronTerminalAdapter => {
+      const sessionId = `s${nextSession}`;
+      nextSession += 1;
+      const close = vi.fn();
+      adapterCloses.push(close);
+      return {
+        sessionId: () => sessionId,
+        start: vi.fn(async () => {}),
+        write: vi.fn(),
+        resize: vi.fn(),
+        close,
+      };
+    });
+    const first = createSurface();
+    const second = createSurface();
+    const surfaces = [first, second];
+    const mountedThemes: unknown[] = [];
+    let themeListener:
+      | ((update: {
+          terminalTheme: typeof updatedTheme;
+          userFileErrors: readonly string[];
+        }) => void)
+      | undefined;
+    let commandListener: ((command: { action: "new" }) => void) | undefined;
+    const host = mountTerminalWindowPage(elements, {
+      createAdapter: adapters,
+      page: window,
+      configuration: {
+        fontSize: 16,
+        fontLineHeight: 1,
+        terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
+        scrollbackLines: 10_000,
+        optionKeyMode: "none",
+        nativeTitleInset: 0,
+        terminalTheme: initialTheme,
+        userFileErrors: ["startup warning"],
+      },
+      userFileErrorBanner: errorBanner,
+      mount: vi.fn(
+        async (
+          _container: HTMLElement,
+          _adapter: TerminalSessionAdapter,
+          options: TerminalSurfaceOptions,
+        ) => {
+          mountedThemes.push(options.theme);
+          return surfaces.shift()!;
+        },
+      ),
+      subscribeToThemeUpdates(listener) {
+        themeListener = listener;
+        return vi.fn();
+      },
+      subscribeToTabCommands(listener) {
+        commandListener = listener as typeof commandListener;
+        return vi.fn();
+      },
+    });
+    await host.ready;
+
+    themeListener!({
+      terminalTheme: updatedTheme,
+      userFileErrors: ["startup warning", "reload failed at /themes/live.json"],
+    });
+
+    expect(first.applyTheme).toHaveBeenLastCalledWith(updatedTheme);
+    expect(
+      document.documentElement.style.getPropertyValue("--terminal-background"),
+    ).toBe("#123456");
+    expect(
+      document.documentElement.style.getPropertyValue("--terminal-foreground"),
+    ).toBe("#abcdef");
+    expect(errorBanner.textContent).toContain("/themes/live.json");
+    expect(adapterCloses[0]).not.toHaveBeenCalled();
+
+    commandListener!({ action: "new" });
+    await vi.waitFor(() => expect(mountedThemes).toHaveLength(2));
+    expect(mountedThemes).toEqual([initialTheme, updatedTheme]);
+    expect(second.applyTheme).toHaveBeenLastCalledWith(updatedTheme);
+    expect(adapterCloses[0]).not.toHaveBeenCalled();
+    expect(adapterCloses[1]).not.toHaveBeenCalled();
     host.dispose();
   });
 

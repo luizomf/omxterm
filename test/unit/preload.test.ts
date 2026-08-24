@@ -383,6 +383,57 @@ describe("isolated preload terminal bridge", () => {
     electron.removeListener.mockClear();
   });
 
+  it("delivers only validated bounded Terminal Theme updates from main", () => {
+    const bridge = electron.bridge!;
+    const listener = vi.fn();
+    const remove = bridge.onTerminalThemeUpdate(listener);
+    const valid = {
+      terminalTheme: {
+        ...DEFAULT_TERMINAL_THEME,
+        name: "updated",
+        colors: {
+          ...DEFAULT_TERMINAL_THEME.colors,
+          background: "#123456",
+        },
+      },
+      userFileErrors: ["reload failed"],
+    };
+
+    electron.listeners.get(terminalIpc.themeUpdate)?.({}, valid);
+    electron.listeners.get(terminalIpc.themeUpdate)?.(
+      {},
+      {
+        ...valid,
+        terminalTheme: {
+          ...valid.terminalTheme,
+          colors: { ...valid.terminalTheme.colors, background: "black" },
+        },
+      },
+    );
+    electron.listeners.get(terminalIpc.themeUpdate)?.(
+      {},
+      {
+        ...valid,
+        userFileErrors: ["x".repeat(65_537)],
+      },
+    );
+    electron.listeners.get(terminalIpc.themeUpdate)?.(
+      {},
+      {
+        ...valid,
+        extra: true,
+      },
+    );
+    remove();
+
+    expect(listener).toHaveBeenCalledExactlyOnceWith(valid);
+    expect(electron.removeListener).toHaveBeenCalledWith(
+      terminalIpc.themeUpdate,
+      expect.any(Function),
+    );
+    electron.removeListener.mockClear();
+  });
+
   it("delivers only valid Window Font Zoom commands from main", () => {
     const bridge = electron.bridge!;
     const onFontZoom = vi.fn();

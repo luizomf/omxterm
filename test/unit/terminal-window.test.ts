@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  applyTerminalThemeToNativeWindows,
   lockTerminalRendererNavigation,
   terminalNativeTitleInset,
   terminalWindowOptions,
@@ -27,6 +28,24 @@ describe("Terminal Window startup contract", () => {
       cellWidth: 135.72,
       cellHeight: 243.18017578125,
     }),
+  });
+
+  it("updates every live native window background without recreating it", () => {
+    const first = { isDestroyed: () => false, setBackgroundColor: vi.fn() };
+    const second = { isDestroyed: () => false, setBackgroundColor: vi.fn() };
+    const destroyed = { isDestroyed: () => true, setBackgroundColor: vi.fn() };
+    const theme = {
+      ...DEFAULT_TERMINAL_THEME,
+      colors: { ...DEFAULT_TERMINAL_THEME.colors, background: "#123456" },
+    };
+
+    applyTerminalThemeToNativeWindows([first, second, destroyed], theme);
+
+    expect(first.setBackgroundColor).toHaveBeenCalledExactlyOnceWith("#123456");
+    expect(second.setBackgroundColor).toHaveBeenCalledExactlyOnceWith(
+      "#123456",
+    );
+    expect(destroyed.setBackgroundColor).not.toHaveBeenCalled();
   });
 
   it("uses small native chrome and an isolated renderer preload", () => {

@@ -130,6 +130,66 @@ describe("terminal IPC controller", () => {
     expect(ipc.listeners.size).toBe(8);
   });
 
+  it("validates and broadcasts Terminal Theme updates without touching sessions", () => {
+    const ipc = createIpcHarness();
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    const mainFrame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const session = {
+      write: vi.fn(),
+      resize: vi.fn(),
+      hasForegroundChildProcess: () => false,
+      close: vi.fn(),
+    };
+    router.registerController({
+      ...clipboardOptions(),
+      webContents,
+      createSession: vi.fn(() => session),
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+    const updatedTheme = {
+      ...DEFAULT_TERMINAL_THEME,
+      name: "updated",
+      colors: {
+        ...DEFAULT_TERMINAL_THEME.colors,
+        background: "#123456",
+      },
+    };
+    const update = {
+      terminalTheme: updatedTheme,
+      userFileErrors: ["unrelated warning"],
+    };
+
+    router.applyThemeUpdate(update);
+
+    expect(webContents.send).toHaveBeenCalledExactlyOnceWith(
+      terminalIpc.themeUpdate,
+      update,
+    );
+    expect(
+      ipc.handlers.get(terminalIpc.configuration)!({
+        sender: webContents,
+        senderFrame: mainFrame,
+      }),
+    ).toEqual(expect.objectContaining(update));
+    expect(session.close).not.toHaveBeenCalled();
+    expect(session.write).not.toHaveBeenCalled();
+    expect(() =>
+      router.applyThemeUpdate({
+        ...update,
+        terminalTheme: {
+          ...updatedTheme,
+          colors: { ...updatedTheme.colors, background: "black" },
+        },
+      }),
+    ).toThrow(TypeError);
+  });
+
   it("returns the complete immutable startup spacing configuration to its bound renderer", () => {
     const ipc = createIpcHarness();
     const mainFrame = {};

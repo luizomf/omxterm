@@ -45,8 +45,9 @@ OMXTerm must:
   macOS, AppImage for Linux, and NSIS for Windows.
 
 AI assistance, splits, saved or reconnectable sessions, shell integration,
-profiles, a theme picker or catalog, live configuration reload, automatic
-updates, and remote terminal features are outside the current product contract.
+profiles, a theme picker or catalog, whole-configuration or automatic reload,
+automatic updates, and remote terminal features are outside the current product
+contract.
 
 ## Window and session behavior
 
@@ -118,6 +119,14 @@ updates, and remote terminal features are outside the current product contract.
   delivered through Protected Paste without sending Enter. Drag navigation is
   prevented over the whole renderer document; a drop with no native files has
   no terminal side effect.
+- `View -> Reload Terminal Theme` has no accelerator and is enabled only when
+  startup selected an external Terminal Theme path, including when that file
+  initially failed and startup used bundled `omtheme`. It rereads that retained
+  path without rereading User Configuration. A valid palette immediately
+  updates every current Terminal Window, Terminal Tab, Terminal Surface,
+  native window background, Window Chrome, and Snippets Sidebar without
+  disturbing a Live Terminal Session; later-created windows and tabs use the
+  active reloaded palette.
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and
   `Ctrl+Shift+S` on Linux and Windows, remappable through `keybinds`) shows or hides the
   selected window's Snippets Sidebar beside its
@@ -294,9 +303,11 @@ without a NUL character. Absolute paths are used as written; relative paths are
 resolved from the directory containing `config.json`. OMXTerm does not expand
 `~`, environment variables, shell syntax, or URLs. Symlinks are accepted only
 when their final target is a readable regular file. The Electron main process
-reads and resolves the theme once during startup and sends only the validated,
-typed palette — plus any user-file error notice — through the existing
-configuration boundary.
+reads and resolves the selected path during startup, retains that resolved path
+for the run, and sends only validated, typed palette data — plus bounded
+user-file notice state — through the existing configuration boundary. `View ->
+Reload Terminal Theme` rereads only that retained file; it never rereads
+`config.json` or changes the selected path.
 
 A Terminal Theme is strict JSON containing exactly `version`, `name`, and
 `colors`. Version must be `1`. The name is a non-empty printable single line of
@@ -320,8 +331,14 @@ the configured or resolved path when relevant — through stderr and a persisten
 in-app error surface that states which defaults are active, stays visible until
 the application is restarted, and never blocks typing into the Terminal
 Surface, so the file can be fixed inside OMXTerm itself. Both files stay
-unchanged, and edits take effect after restart. OMXTerm never migrates,
-repairs, rewrites, or silently ignores user configuration. The same surface
+unchanged. User Configuration edits take effect only after restart; edits to a
+selected external Terminal Theme may instead be applied with `View -> Reload
+Terminal Theme`. A failed manual reload keeps the last valid active palette and
+adds the resolved path and precise actionable validation failure to the same
+non-blocking surface. A later successful reload applies the corrected palette
+and removes only that reload-specific notice, preserving startup errors and
+warnings. OMXTerm never migrates, repairs, rewrites, or silently ignores User
+Configuration. The same surface
 also carries non-fatal warnings for a valid configuration that stays fully
 active — currently a keybind shadowing a PTY control key — which inform without
 activating any default.

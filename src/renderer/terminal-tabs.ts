@@ -13,6 +13,7 @@ import type {
   TerminalSurfaceOptions,
 } from "../terminal-surface/terminal-surface";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
+import type { TerminalTheme } from "../shared/terminal-theme";
 
 type MountTerminalSurface = (
   container: HTMLElement,
@@ -41,6 +42,7 @@ export interface TerminalTabs {
   readonly ready: Promise<void>;
   handleCommand(command: TerminalTabCommand): void;
   setSessionTitle(sessionId: TerminalSessionId, title: string): void;
+  applyTheme(theme: TerminalTheme): void;
   zoom(command: TerminalFontZoom): void;
   clipboardAction(action: TerminalClipboardAction): void;
   injectText(text: string): void;
@@ -65,6 +67,7 @@ export function createTerminalTabs(
   const tabs: TerminalTab[] = [];
   let selectedIndex = -1;
   let zoomSteps = 0;
+  let activeTheme = options.surfaceOptions.theme;
   let disposed = false;
 
   const selectedTab = (): TerminalTab | undefined => tabs[selectedIndex];
@@ -181,6 +184,7 @@ export function createTerminalTabs(
     // the id is always known by the time they fire.
     const tabSurfaceOptions: TerminalSurfaceOptions = {
       ...options.surfaceOptions,
+      ...(activeTheme ? { theme: activeTheme } : {}),
       ...(options.notifyTitle
         ? {
             onTitleRequest: (request: string) => {
@@ -216,6 +220,7 @@ export function createTerminalTabs(
       return;
     }
     tab.surface = surface;
+    if (activeTheme) surface.applyTheme(activeTheme);
     replayZoom(surface);
     if (selectedTab() === tab) {
       const sessionId = tab.adapter.sessionId();
@@ -234,6 +239,11 @@ export function createTerminalTabs(
       if (!tab) return;
       tab.label = title;
       renderStrip();
+    },
+    applyTheme(theme) {
+      if (disposed) return;
+      activeTheme = theme;
+      for (const tab of tabs) tab.surface?.applyTheme(theme);
     },
     handleCommand(command) {
       if (disposed) return;

@@ -27,6 +27,7 @@ import {
 } from "../shared/file-path-insertion";
 import { isTerminalRendererConfiguration } from "../shared/user-configuration";
 import { isTerminalSnippetsResponse } from "../shared/terminal-snippets";
+import { isTerminalThemeUpdate } from "../shared/user-configuration";
 
 const terminal: TerminalBridge = {
   async configuration() {
@@ -50,6 +51,13 @@ const terminal: TerminalBridge = {
     ipcRenderer.on(terminalIpc.snippetsToggle, handler);
     return () =>
       ipcRenderer.removeListener(terminalIpc.snippetsToggle, handler);
+  },
+  onTerminalThemeUpdate(listener) {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (isTerminalThemeUpdate(payload)) listener(payload);
+    };
+    ipcRenderer.on(terminalIpc.themeUpdate, handler);
+    return () => ipcRenderer.removeListener(terminalIpc.themeUpdate, handler);
   },
   async start() {
     const sessionId: unknown = await ipcRenderer.invoke(terminalIpc.start);

@@ -1004,6 +1004,29 @@ describe("portable Terminal Surface", () => {
     expect(container.style.getPropertyValue("--terminal-background")).toBe(
       "#1e1e2e",
     );
+
+    const updated = Object.freeze({
+      ...theme,
+      name: "runtime update",
+      colors: Object.freeze({
+        ...theme.colors,
+        background: "#123456",
+        foreground: "#abcdef",
+      }),
+    });
+    surface.applyTheme(updated);
+    expect(xterm.FakeTerminal.current.options.theme).toBe(updated.colors);
+    expect(container.style.getPropertyValue("--terminal-background")).toBe(
+      "#123456",
+    );
+    expect(adapter.close).not.toHaveBeenCalled();
+    expect(() =>
+      surface.applyTheme({
+        ...updated,
+        colors: { ...updated.colors, background: "black" },
+      }),
+    ).toThrow(TypeError);
+
     surface.dispose();
   });
 

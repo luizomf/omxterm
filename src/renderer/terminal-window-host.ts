@@ -12,12 +12,17 @@ import type {
 } from "../shared/terminal-contract";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
+import type {
+  TerminalTheme,
+  TerminalThemeUpdate,
+} from "../shared/terminal-theme";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
 import { createTerminalTabs, type TerminalTabs } from "./terminal-tabs";
 import {
   createSnippetsSidebar,
   type SnippetsSidebar,
 } from "./snippets-sidebar";
+import { renderUserFileErrorBanner } from "./user-file-error-banner";
 
 type MountTerminalSurface = (
   container: HTMLElement,
@@ -41,6 +46,10 @@ interface TerminalWindowPageOptions {
   readonly subscribeToFontZoom?: (
     listener: (command: TerminalFontZoom) => void,
   ) => () => void;
+  readonly subscribeToThemeUpdates?: (
+    listener: (update: TerminalThemeUpdate) => void,
+  ) => () => void;
+  readonly userFileErrorBanner?: HTMLElement;
   readonly clipboard?: TerminalClipboard;
   readonly subscribeToClipboardActions?: (
     listener: (action: "copy" | "paste" | "select-all") => void,
@@ -79,19 +88,15 @@ export function mountTerminalWindowPage(
   const mount = options.mount ?? mountTerminalSurface;
   let disposed = false;
   let removeZoomListener: (() => void) | undefined;
+  let removeThemeUpdateListener: (() => void) | undefined;
   let removeClipboardActionListener: (() => void) | undefined;
   let removeTabCommandListener: (() => void) | undefined;
   let removeTabTitleListener: (() => void) | undefined;
   let snippetsSidebar: SnippetsSidebar | undefined;
   let removeSnippetsToggleListener: (() => void) | undefined;
 
-  if (options.configuration) {
-    const { background, foreground } =
-      options.configuration.terminalTheme.colors;
-    page.document.documentElement.style.setProperty(
-      "--native-title-inset",
-      `${options.configuration.nativeTitleInset}px`,
-    );
+  const applyPageTheme = (theme: TerminalTheme) => {
+    const { background, foreground } = theme.colors;
     page.document.documentElement.style.setProperty(
       "--terminal-background",
       background,
@@ -105,6 +110,14 @@ export function mountTerminalWindowPage(
       "--terminal-background",
       background,
     );
+  };
+
+  if (options.configuration) {
+    page.document.documentElement.style.setProperty(
+      "--native-title-inset",
+      `${options.configuration.nativeTitleInset}px`,
+    );
+    applyPageTheme(options.configuration.terminalTheme);
   }
 
   const surfaceOptions: TerminalSurfaceOptions = {
@@ -173,6 +186,7 @@ export function mountTerminalWindowPage(
     page.document.removeEventListener("dragover", onDragOver, true);
     page.document.removeEventListener("drop", onDrop, true);
     removeZoomListener?.();
+    removeThemeUpdateListener?.();
     removeClipboardActionListener?.();
     removeTabCommandListener?.();
     removeTabTitleListener?.();
@@ -187,6 +201,16 @@ export function mountTerminalWindowPage(
   page.addEventListener("focus", onPageFocus);
   page.document.addEventListener("dragover", onDragOver, true);
   page.document.addEventListener("drop", onDrop, true);
+
+  removeThemeUpdateListener = options.subscribeToThemeUpdates?.((update) => {
+    applyPageTheme(update.terminalTheme);
+    tabs.applyTheme(update.terminalTheme);
+    if (options.userFileErrorBanner)
+      renderUserFileErrorBanner(
+        options.userFileErrorBanner,
+        update.userFileErrors,
+      );
+  });
 
   const ready = tabs.ready.then(() => {
     if (disposed) return;

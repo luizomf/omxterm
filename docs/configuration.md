@@ -2,7 +2,9 @@
 
 OMXTerm works without a configuration file. When one is present, it is strict,
 versioned JSON that OMXTerm reads once during startup and never creates,
-rewrites, migrates, or reloads.
+rewrites, migrates, or reloads. A selected external Terminal Theme is the one
+exception: its retained path can be reloaded manually without rereading this
+configuration.
 
 This guide explains how to use the configuration contract. The normative
 behavior remains in the [current product contract](spec.md#configuration-and-local-state).
@@ -34,8 +36,10 @@ unset — the common case — the location is
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.config\omxterm\themes"
 ```
 
-Every change requires quitting and reopening OMXTerm. A missing file selects
-all defaults. An invalid file never stops OMXTerm from opening: the application
+Changes to `config.json` require quitting and reopening OMXTerm. An external
+Terminal Theme selected at startup can instead be reapplied with `View -> Reload
+Terminal Theme`. A missing configuration file selects all defaults. An invalid
+file never stops OMXTerm from opening: the application
 starts with its built-in defaults, shows a persistent in-app error describing
 the exact problem, and leaves the file unchanged so you can fix it inside
 OMXTerm and restart.
@@ -321,6 +325,28 @@ The theme root must contain exactly:
 Every color is an exact hexadecimal `#RRGGBB` value. Partial palettes,
 transparency, CSS colors, inheritance, and imports are unsupported.
 
+### Reloading an external Terminal Theme
+
+`View -> Reload Terminal Theme` has no keyboard shortcut. It is enabled when
+`theme.path` selected an external file at startup, even if that initial load
+failed and OMXTerm opened with bundled `omtheme`; it is disabled when no
+external path was selected.
+
+The action rereads and strictly validates exactly the resolved path retained at
+startup. It does not reread `config.json`, select another path, or reload fonts,
+padding, keybinds, snippets, window defaults, or any other preference. A valid
+reload updates every open Terminal Window, Terminal Tab, Terminal Surface,
+native window background, Window Chrome, and Snippets Sidebar. Windows and tabs
+opened afterward use the reloaded palette. Live Terminal Sessions continue
+without being restarted, replaced, or closed. There is no file watching or
+automatic reload.
+
+If the file is missing, unreadable, or invalid, OMXTerm keeps the last valid
+active palette and adds the resolved path and exact validation problem to the
+non-blocking error bar. Fix the same file and choose the action again. A
+successful retry applies the palette and removes only the reload failure;
+startup errors and warnings remain visible.
+
 ### Converting a Ghostty theme
 
 The source repository contains an optional conversion helper. It is not an
@@ -354,11 +380,12 @@ When `config.json` or a selected Terminal Theme is invalid, OMXTerm still
 opens. It uses its built-in defaults for whatever failed — every setting when
 `config.json` is invalid, or only the bundled `omtheme` theme when the selected
 theme file is invalid or missing — and shows a persistent error bar at the
-bottom of the window. The
-error states the configuration path and, when relevant, the resolved theme
-path, and stays visible until you restart. It never blocks typing, so you can
-fix the file in the terminal it reports on. The same diagnostic also goes to
-stderr. Common failures are:
+bottom of the window. The error states the configuration path and, when relevant, the resolved theme
+path. Startup notices stay visible for the run. It never blocks typing, so you
+can fix the file in the terminal it reports on. The same startup diagnostic
+also goes to stderr. A manual Terminal Theme reload failure is added to this
+surface until a successful reload, which clears only that reload-specific
+notice. Common failures are:
 
 - a trailing comma, comment, or other syntax that is not valid JSON;
 - an unknown or misspelled key;
@@ -370,6 +397,8 @@ stderr. Common failures are:
 - a `keybinds` entry with an unknown action name, a malformed accelerator, a
   missing non-Shift modifier, or two actions sharing one effective accelerator.
 
-Fix the reported file and restart OMXTerm. It never silently ignores invalid
-preferences, never edits or repairs your files, and never falls back to a
-cached or previous configuration — only to the built-in defaults, loudly.
+Fix `config.json` and restart OMXTerm. For a selected external Terminal Theme,
+fix the reported theme file and use `View -> Reload Terminal Theme` or restart.
+OMXTerm never silently ignores invalid preferences and never edits or repairs
+your files. Startup falls back only to built-in defaults, loudly; a failed
+runtime theme reload instead preserves the last valid active palette.

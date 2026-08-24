@@ -41,6 +41,7 @@ import {
 } from "./terminal-ipc-controller";
 import { terminalSessionFailureDialog } from "./terminal-session-failure";
 import {
+  applyTerminalThemeToNativeWindows,
   lockTerminalRendererNavigation,
   terminalNativeTitleInset,
   terminalWindowOptions,
@@ -49,9 +50,11 @@ import { registerTerminalWindowHost } from "./terminal-window-host";
 import { createTerminalWindowTitleController } from "./terminal-window-title";
 import { installedFontFamilyMetrics } from "./installed-font-family";
 import { loadTerminalSnippets } from "./snippets";
+import { createTerminalThemeReloader } from "./terminal-theme-reloader";
 import {
   userConfigurationFallbackNotice,
   type UserConfigurationError,
+  type UserConfigurationFallback,
 } from "./user-configuration";
 import { startWithUserConfiguration } from "./configured-startup";
 import {
@@ -131,7 +134,12 @@ app
         platform: process.platform,
         getInstalledFontFamilyMetrics: installedFontFamilyMetrics,
       },
-      async ({ configuration: userConfiguration, fallback, warnings }) => {
+      async ({
+        configuration: userConfiguration,
+        selectedTerminalThemePath,
+        fallback,
+        warnings,
+      }) => {
         operationalEvents!.setLevel(userConfiguration.logLevel);
         if (fallback) {
           operationalEvents!.write({
@@ -150,27 +158,41 @@ app
         for (const warning of warnings ?? [])
           process.stderr.write(`${warning}\n`);
         operationalEvents!.write({ name: "application.started" });
-        const rendererConfiguration = Object.freeze({
-          ...(userConfiguration.fontFamily
-            ? { fontFamily: userConfiguration.fontFamily }
-            : {}),
-          fontSize: userConfiguration.fontSize,
-          fontLineHeight: userConfiguration.fontLineHeight,
-          terminalPadding: userConfiguration.terminalPadding,
-          scrollbackLines: userConfiguration.scrollbackLines,
-          optionKeyMode: userConfiguration.optionKeyMode,
-          nativeTitleInset: terminalNativeTitleInset(process.platform),
-          terminalTheme: userConfiguration.terminalTheme,
-          userFileErrors: Object.freeze([
-            ...(fallback ? [userConfigurationFallbackNotice(fallback)] : []),
-            ...(warnings ?? []),
-          ]),
-        });
+        const startupNotices = startupUserFileNotices(fallback, warnings);
         const terminalIpcRouter = registerTerminalIpcRouter(
           // Electron's public handler type contains `any`; isolate that boundary here.
           ipcMain as unknown as IpcMainPort,
           operationalEvents!,
         );
+        const themeReloader = createTerminalThemeReloader({
+          ...(selectedTerminalThemePath
+            ? { selectedPath: selectedTerminalThemePath }
+            : {}),
+          initialTheme: userConfiguration.terminalTheme,
+          startupNotices,
+          apply(update) {
+            terminalIpcRouter.applyThemeUpdate(update);
+            applyTerminalThemeToNativeWindows(
+              BrowserWindow.getAllWindows(),
+              update.terminalTheme,
+            );
+          },
+        });
+        const rendererConfiguration = () => {
+          const themeState = themeReloader.current();
+          return Object.freeze({
+            ...(userConfiguration.fontFamily
+              ? { fontFamily: userConfiguration.fontFamily }
+              : {}),
+            fontSize: userConfiguration.fontSize,
+            fontLineHeight: userConfiguration.fontLineHeight,
+            terminalPadding: userConfiguration.terminalPadding,
+            scrollbackLines: userConfiguration.scrollbackLines,
+            optionKeyMode: userConfiguration.optionKeyMode,
+            nativeTitleInset: terminalNativeTitleInset(process.platform),
+            ...themeState,
+          });
+        };
         terminalApplication = startTerminalApplication<BrowserWindow>({
           confirmClose: userConfiguration.confirmClose,
           alwaysOnTopDefault: userConfiguration.alwaysOnTop,
@@ -181,10 +203,11 @@ app
               process.env,
             );
 
+            const activeTheme = themeReloader.current().terminalTheme;
             const window = new BrowserWindow(
               terminalWindowOptions(
                 preloadPath,
-                userConfiguration,
+                { ...userConfiguration, terminalTheme: activeTheme },
                 process.platform,
                 linuxWindowIconPath,
               ),
@@ -241,7 +264,7 @@ app
             window.once("closed", () => titleController.dispose());
             const controller = terminalIpcRouter.registerController({
               windowId: lifecycle.windowId,
-              configuration: rendererConfiguration,
+              configuration: rendererConfiguration(),
               webContents: window.webContents,
               createSession(callbacks) {
                 return createLocalTerminalSession(nodePty.spawn, {
@@ -444,6 +467,7 @@ app
           selectAllSelectedTerminal: () =>
             terminalApplication!.clipboardSelectedWindow("select-all"),
           toggleSelectedSnippets: terminalApplication.toggleSelectedSnippets,
+          reloadTerminalTheme: () => void themeReloader.reload(),
         };
         const keybindActionInvocations = terminalActionInvocations(menuActions);
         Menu.setApplicationMenu(
@@ -452,6 +476,7 @@ app
               app.name,
               menuActions,
               userConfiguration.keybinds,
+              themeReloader.enabled,
             ),
           ),
         );
@@ -470,6 +495,16 @@ app
     dialog.showErrorBox(display.title, display.message);
     app.quit();
   });
+
+function startupUserFileNotices(
+  fallback: UserConfigurationFallback | undefined,
+  warnings: readonly string[] | undefined,
+): readonly string[] {
+  return Object.freeze([
+    ...(fallback ? [userConfigurationFallbackNotice(fallback)] : []),
+    ...(warnings ?? []),
+  ]);
+}
 
 function configurationRejectionReason(
   failure: UserConfigurationError,

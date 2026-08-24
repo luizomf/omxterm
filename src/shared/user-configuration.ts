@@ -1,4 +1,8 @@
-import { isTerminalTheme, type TerminalTheme } from "./terminal-theme";
+import {
+  isTerminalTheme,
+  type TerminalTheme,
+  type TerminalThemeUpdate,
+} from "./terminal-theme";
 import type { TerminalKeybinds } from "./terminal-keybinds";
 
 export const MIN_TERMINAL_FONT_SIZE = 8;
@@ -17,8 +21,13 @@ export const DEFAULT_TERMINAL_PADDING: TerminalPadding = Object.freeze({
 });
 export const DEFAULT_SCROLLBACK_LINES = 10_000;
 export const MAX_SCROLLBACK_LINES = 100_000;
-export const MAX_USER_FILE_ERROR_COUNT = 8;
-export const MAX_USER_FILE_ERROR_LENGTH = 2048;
+// One startup fallback, every distinct PTY-control shadow warning, and one
+// runtime Terminal Theme reload failure can coexist without dropping an
+// unrelated notice.
+export const MAX_USER_FILE_ERROR_COUNT = 10;
+// Large enough to retain an exact platform path while still bounding every
+// notice crossing into the renderer.
+export const MAX_USER_FILE_ERROR_LENGTH = 65_536;
 
 export type OperationalLogLevel = "error" | "info" | "debug";
 export type OptionKeyMode = "none" | "left" | "right" | "both";
@@ -95,7 +104,20 @@ export function isTerminalRendererConfiguration(
   );
 }
 
-function isUserFileErrors(value: unknown): value is readonly string[] {
+export function isTerminalThemeUpdate(
+  value: unknown,
+): value is TerminalThemeUpdate {
+  if (!isRecord(value)) return false;
+  const keys = Object.keys(value);
+  return (
+    keys.length === 2 &&
+    keys.every((key) => ["terminalTheme", "userFileErrors"].includes(key)) &&
+    isTerminalTheme(value.terminalTheme) &&
+    isUserFileErrors(value.userFileErrors)
+  );
+}
+
+export function isUserFileErrors(value: unknown): value is readonly string[] {
   return (
     Array.isArray(value) &&
     value.length <= MAX_USER_FILE_ERROR_COUNT &&

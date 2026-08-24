@@ -27,11 +27,13 @@ import { registerTerminalTitleEvents } from "./terminal-title-events";
 import { ignoreOscLinks, registerVisibleWebLinks } from "./visible-web-links";
 import {
   DEFAULT_TERMINAL_THEME,
+  isTerminalTheme,
   type TerminalTheme,
 } from "../shared/terminal-theme";
 
 export interface TerminalSurface {
   focus(): void;
+  applyTheme(theme: TerminalTheme): void;
   zoom(command: TerminalFontZoom): void;
   copy(): Promise<void>;
   paste(): Promise<void>;
@@ -117,6 +119,16 @@ export async function mountTerminalSurface(
   const surface: TerminalSurface = {
     focus() {
       if (!disposed) terminal?.focus();
+    },
+    applyTheme(theme) {
+      if (!isTerminalTheme(theme))
+        throw new TypeError("Invalid Terminal Theme update");
+      if (disposed || !terminal) return;
+      terminal.options.theme = theme.colors;
+      container.style.setProperty(
+        "--terminal-background",
+        theme.colors.background,
+      );
     },
     zoom(command) {
       if (disposed || !terminal || !fitAddon) return;

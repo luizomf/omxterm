@@ -11,6 +11,7 @@ import type { TerminalSurfaceOptions } from "../../src/terminal-surface/terminal
 function createFakeSurface() {
   return {
     focus: vi.fn(),
+    applyTheme: vi.fn(),
     zoom: vi.fn(),
     copy: vi.fn(async () => undefined),
     paste: vi.fn(async () => undefined),

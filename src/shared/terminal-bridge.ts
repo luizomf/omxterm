@@ -8,11 +8,15 @@ import type {
 } from "./terminal-contract";
 import type { TerminalRendererConfiguration } from "./user-configuration";
 import type { TerminalSnippetsResponse } from "./terminal-snippets";
+import type { TerminalThemeUpdate } from "./terminal-theme";
 
 export interface TerminalBridge {
   configuration(): Promise<TerminalRendererConfiguration>;
   snippets(): Promise<TerminalSnippetsResponse>;
   onSnippetsToggle(listener: () => void): () => void;
+  onTerminalThemeUpdate(
+    listener: (update: TerminalThemeUpdate) => void,
+  ): () => void;
   start(): Promise<TerminalSessionId>;
   input(sessionId: TerminalSessionId, data: string): void;
   resize(sessionId: TerminalSessionId, size: TerminalSize): void;

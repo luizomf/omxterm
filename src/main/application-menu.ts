@@ -22,12 +22,14 @@ interface TerminalApplicationMenuActions {
   readonly pasteSelectedTerminal: () => void;
   readonly selectAllSelectedTerminal: () => void;
   readonly toggleSelectedSnippets: () => void;
+  readonly reloadTerminalTheme: () => void;
 }
 
 export function terminalApplicationMenuTemplate(
   applicationName: string,
   actions: TerminalApplicationMenuActions,
   keybinds: TerminalKeybinds,
+  canReloadTerminalTheme: boolean = false,
 ): MenuItemConstructorOptions[] {
   return [
     {
@@ -112,6 +114,11 @@ export function terminalApplicationMenuTemplate(
           label: "Toggle Snippets",
           accelerator: keybinds.toggleSnippets,
           click: actions.toggleSelectedSnippets,
+        },
+        {
+          label: "Reload Terminal Theme",
+          enabled: canReloadTerminalTheme,
+          click: actions.reloadTerminalTheme,
         },
         { type: "separator" },
         {

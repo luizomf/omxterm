@@ -28,6 +28,7 @@ function menuActions() {
     pasteSelectedTerminal: vi.fn(),
     selectAllSelectedTerminal: vi.fn(),
     toggleSelectedSnippets: vi.fn(),
+    reloadTerminalTheme: vi.fn(),
   };
 }
 
@@ -138,6 +139,38 @@ describe("native application menu", () => {
         }),
       ]),
     );
+  });
+
+  it("adds an unbound Terminal Theme reload action enabled only for an external selection", () => {
+    const actions = menuActions();
+    const enabledItems = flattenMenuItems(
+      terminalApplicationMenuTemplate(
+        "OMXTerm",
+        actions,
+        DEFAULT_TERMINAL_KEYBINDS,
+        true,
+      ),
+    );
+    const enabled = enabledItems.find(
+      (item) => item.label === "Reload Terminal Theme",
+    );
+    expect(enabled).toEqual({
+      label: "Reload Terminal Theme",
+      enabled: true,
+      click: actions.reloadTerminalTheme,
+    });
+    (enabled?.click as () => void)();
+    expect(actions.reloadTerminalTheme).toHaveBeenCalledOnce();
+
+    const disabled = flattenMenuItems(
+      terminalApplicationMenuTemplate(
+        "OMXTerm",
+        actions,
+        DEFAULT_TERMINAL_KEYBINDS,
+      ),
+    ).find((item) => item.label === "Reload Terminal Theme");
+    expect(disabled?.enabled).toBe(false);
+    expect(disabled?.accelerator).toBeUndefined();
   });
 
   it("registers one literal-position accelerator per selectable tab", () => {
