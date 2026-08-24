@@ -171,6 +171,22 @@ describe("local Operational Events", () => {
     ).toBe(false);
     expect(
       log.write({
+        name: "configuration.reload.rejected",
+        trigger: "manual",
+        durationMs: 1,
+        reason: "invalid-schema",
+        path: canaries.configuration,
+      } as never),
+    ).toBe(false);
+    expect(
+      log.write({
+        name: "configuration.reload.succeeded",
+        trigger: "manual",
+        durationMs: 86_400_001,
+      }),
+    ).toBe(false);
+    expect(
+      log.write({
         name: "boundary.rejected",
         boundary: "title",
         reason: "too-long",

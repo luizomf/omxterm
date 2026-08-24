@@ -26,6 +26,7 @@ export const TERMINAL_ACTION_NAMES = [
   "actualSize",
   "toggleFullScreen",
   "toggleSnippets",
+  "reloadConfig",
 ] as const;
 
 export type TerminalActionName = (typeof TERMINAL_ACTION_NAMES)[number];
@@ -59,6 +60,7 @@ export const DEFAULT_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   actualSize: "CommandOrControl+0",
   toggleFullScreen: "Control+Command+F",
   toggleSnippets: "CommandOrControl+Shift+S",
+  reloadConfig: "CommandOrControl+Shift+,",
 });
 
 // Linux and Windows share the conventional shifted terminal shortcuts so
@@ -88,6 +90,7 @@ const SHIFTED_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   actualSize: "Control+0",
   toggleFullScreen: "Control+Shift+F",
   toggleSnippets: "Control+Shift+S",
+  reloadConfig: "Control+Shift+,",
 });
 
 export function terminalDefaultKeybinds(platform: string): TerminalKeybinds {

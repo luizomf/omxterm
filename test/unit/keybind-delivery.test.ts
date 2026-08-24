@@ -18,6 +18,7 @@ function keybindDeliveryHarness(
   keybinds: TerminalKeybinds = DEFAULT_TERMINAL_KEYBINDS,
 ) {
   const invoke = vi.fn();
+  let activeKeybinds = keybinds;
   let listener:
     | ((
         event: { preventDefault: () => void },
@@ -30,7 +31,7 @@ function keybindDeliveryHarness(
         listener = handler;
       },
     },
-    keybinds,
+    () => activeKeybinds,
     invoke,
   );
   const sendKey = (overrides: KeyboardInputOverrides) => {
@@ -45,7 +46,13 @@ function keybindDeliveryHarness(
     });
     return event;
   };
-  return { invoke, sendKey };
+  return {
+    invoke,
+    sendKey,
+    setKeybinds(keybinds: TerminalKeybinds) {
+      activeKeybinds = keybinds;
+    },
+  };
 }
 
 // Regression for #82: macOS never delivers Control+Tab to a menu accelerator,
@@ -97,13 +104,14 @@ it("ignores key events that are not key presses", () => {
   expect(event.preventDefault).not.toHaveBeenCalled();
 });
 
-it("delivers against the effective keybind map, not the defaults", () => {
-  const { invoke, sendKey } = keybindDeliveryHarness({
+it("delivers against the latest effective keybind map in an existing window", () => {
+  const { invoke, sendKey, setKeybinds } = keybindDeliveryHarness();
+
+  setKeybinds({
     ...DEFAULT_TERMINAL_KEYBINDS,
     nextTab: "Control+PageDown",
     previousTab: "Control+PageUp",
   });
-
   sendKey({ key: "PageDown", control: true });
   expect(invoke).toHaveBeenCalledExactlyOnceWith("nextTab");
 

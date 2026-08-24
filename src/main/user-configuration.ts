@@ -595,6 +595,32 @@ function selectedTerminalThemePath(
     : path.resolve(path.dirname(configurationPath), selectedPath);
 }
 
+export type ConfigurationRejectionReason =
+  | "read-failed"
+  | "invalid-utf8"
+  | "invalid-json"
+  | "invalid-schema"
+  | "font-discovery-failed"
+  | "theme-read-failed"
+  | "theme-invalid";
+
+export function configurationRejectionReason(
+  failure: UserConfigurationError,
+  surface: UserConfigurationFallbackSurface = "configuration",
+): ConfigurationRejectionReason {
+  if (surface === "theme")
+    return failure.reason.includes("could not be read") ||
+      failure.reason.includes("does not exist")
+      ? "theme-read-failed"
+      : "theme-invalid";
+  if (failure.reason === "the file could not be read") return "read-failed";
+  if (failure.reason === "the file is not valid UTF-8") return "invalid-utf8";
+  if (failure.reason === "the file is not valid JSON") return "invalid-json";
+  if (failure.reason === "installed font families could not be discovered")
+    return "font-discovery-failed";
+  return "invalid-schema";
+}
+
 function isNotFound(cause: unknown): boolean {
   return (
     typeof cause === "object" &&

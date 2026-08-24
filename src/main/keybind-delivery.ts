@@ -31,13 +31,13 @@ export interface KeybindWebContents {
 // first, then the terminal.
 export function deliverKeybindsFromKeyEvents(
   webContents: KeybindWebContents,
-  keybinds: TerminalKeybinds,
+  keybinds: () => TerminalKeybinds,
   invokeAction: (action: TerminalActionName) => void,
   platform: string = "darwin",
 ): void {
   webContents.on("before-input-event", (event, input) => {
     if (input.type !== "keyDown" && input.type !== "rawKeyDown") return;
-    const action = terminalActionForKeyboardInput(keybinds, input, platform);
+    const action = terminalActionForKeyboardInput(keybinds(), input, platform);
     if (action === undefined) return;
     // A delivered keybind must never also reach the Terminal Surface or PTY.
     event.preventDefault();

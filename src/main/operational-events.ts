@@ -36,12 +36,19 @@ export type OperationalEvent =
   | { readonly name: "configuration.validated" }
   | {
       readonly name: "configuration.rejected";
-      readonly reason:
-        | "read-failed"
-        | "invalid-utf8"
-        | "invalid-json"
-        | "invalid-schema"
-        | "font-discovery-failed";
+      readonly reason: ConfigurationFailureReason;
+    }
+  | {
+      readonly name:
+        "configuration.reload.requested" | "configuration.reload.succeeded";
+      readonly trigger: "manual";
+      readonly durationMs: number;
+    }
+  | {
+      readonly name: "configuration.reload.rejected";
+      readonly trigger: "manual";
+      readonly durationMs: number;
+      readonly reason: ConfigurationFailureReason | "unexpected-failure";
     }
   | { readonly name: "window.opened"; readonly windowId: number }
   | {
@@ -78,6 +85,25 @@ export type OperationalEvent =
         | "invalid-characters"
         | "unknown-session";
     };
+
+type ConfigurationFailureReason =
+  | "read-failed"
+  | "invalid-utf8"
+  | "invalid-json"
+  | "invalid-schema"
+  | "font-discovery-failed"
+  | "theme-read-failed"
+  | "theme-invalid";
+
+const configurationFailureReasons: readonly ConfigurationFailureReason[] = [
+  "read-failed",
+  "invalid-utf8",
+  "invalid-json",
+  "invalid-schema",
+  "font-discovery-failed",
+  "theme-read-failed",
+  "theme-invalid",
+];
 
 export interface OperationalEventLog {
   setLevel(level: OperationalLogLevel): void;
@@ -282,6 +308,7 @@ function eventLevel(event: OperationalEvent): OperationalLogLevel {
   if (
     event.name === "application.failure" ||
     event.name === "configuration.rejected" ||
+    event.name === "configuration.reload.rejected" ||
     (event.name === "pty.exit" && event.outcome !== "clean")
   )
     return "error";
@@ -292,9 +319,10 @@ function eventLevel(event: OperationalEvent): OperationalLogLevel {
 
 function isOperationalEvent(value: unknown): value is OperationalEvent {
   if (!isRecord(value) || typeof value.name !== "string") return false;
+  if (value.name.startsWith("configuration."))
+    return isConfigurationEvent(value);
   switch (value.name) {
     case "application.started":
-    case "configuration.validated":
       return hasExactKeys(value, ["name"]);
     case "application.failure":
       return (
@@ -305,17 +333,6 @@ function isOperationalEvent(value: unknown): value is OperationalEvent {
           "renderer-load",
           "external-link-open",
         ].includes(value.stage as string)
-      );
-    case "configuration.rejected":
-      return (
-        hasExactKeys(value, ["name", "reason"]) &&
-        [
-          "read-failed",
-          "invalid-utf8",
-          "invalid-json",
-          "invalid-schema",
-          "font-discovery-failed",
-        ].includes(value.reason as string)
       );
     case "window.opened":
       return hasExactKeys(value, ["name", "windowId"]) && isId(value.windowId);
@@ -376,6 +393,39 @@ function isOperationalEvent(value: unknown): value is OperationalEvent {
   }
 }
 
+function isConfigurationEvent(
+  value: Record<string, unknown>,
+): value is Extract<OperationalEvent, { name: `configuration.${string}` }> {
+  if (value.name === "configuration.validated")
+    return hasExactKeys(value, ["name"]);
+  if (value.name === "configuration.rejected")
+    return (
+      hasExactKeys(value, ["name", "reason"]) &&
+      configurationFailureReasons.includes(
+        value.reason as ConfigurationFailureReason,
+      )
+    );
+  if (
+    value.name === "configuration.reload.requested" ||
+    value.name === "configuration.reload.succeeded"
+  )
+    return (
+      hasExactKeys(value, ["name", "trigger", "durationMs"]) &&
+      value.trigger === "manual" &&
+      isReloadDuration(value.durationMs)
+    );
+  return (
+    value.name === "configuration.reload.rejected" &&
+    hasExactKeys(value, ["name", "trigger", "durationMs", "reason"]) &&
+    value.trigger === "manual" &&
+    isReloadDuration(value.durationMs) &&
+    (configurationFailureReasons.includes(
+      value.reason as ConfigurationFailureReason,
+    ) ||
+      value.reason === "unexpected-failure")
+  );
+}
+
 function isPersistedOperationalEvent(
   value: unknown,
 ): value is PersistedOperationalEvent {
@@ -424,6 +474,10 @@ function isPositiveSafeInteger(value: unknown): value is number {
 
 function isNonnegativeSafeInteger(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) >= 0;
+}
+
+function isReloadDuration(value: unknown): value is number {
+  return isNonnegativeSafeInteger(value) && value <= 86_400_000;
 }
 
 function existingFileSize(file: string): number {

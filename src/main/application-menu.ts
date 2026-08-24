@@ -22,14 +22,13 @@ interface TerminalApplicationMenuActions {
   readonly pasteSelectedTerminal: () => void;
   readonly selectAllSelectedTerminal: () => void;
   readonly toggleSelectedSnippets: () => void;
-  readonly reloadTerminalTheme: () => void;
+  readonly reloadUserConfiguration: () => void;
 }
 
 export function terminalApplicationMenuTemplate(
   applicationName: string,
   actions: TerminalApplicationMenuActions,
   keybinds: TerminalKeybinds,
-  canReloadTerminalTheme: boolean = false,
 ): MenuItemConstructorOptions[] {
   return [
     {
@@ -116,9 +115,9 @@ export function terminalApplicationMenuTemplate(
           click: actions.toggleSelectedSnippets,
         },
         {
-          label: "Reload Terminal Theme",
-          enabled: canReloadTerminalTheme,
-          click: actions.reloadTerminalTheme,
+          label: "Reload User Configuration",
+          accelerator: keybinds.reloadConfig,
+          click: actions.reloadUserConfiguration,
         },
         { type: "separator" },
         {
@@ -198,6 +197,7 @@ export function terminalActionInvocations(
     actualSize: actions.resetSelectedWindowZoom,
     toggleFullScreen: actions.toggleSelectedFullScreen,
     toggleSnippets: actions.toggleSelectedSnippets,
+    reloadConfig: actions.reloadUserConfiguration,
   });
 }
 

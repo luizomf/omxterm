@@ -28,7 +28,7 @@ function menuActions() {
     pasteSelectedTerminal: vi.fn(),
     selectAllSelectedTerminal: vi.fn(),
     toggleSelectedSnippets: vi.fn(),
-    reloadTerminalTheme: vi.fn(),
+    reloadUserConfiguration: vi.fn(),
   };
 }
 
@@ -141,36 +141,23 @@ describe("native application menu", () => {
     );
   });
 
-  it("adds an unbound Terminal Theme reload action enabled only for an external selection", () => {
+  it("adds an always-available remappable User Configuration reload action", () => {
     const actions = menuActions();
-    const enabledItems = flattenMenuItems(
+    const item = flattenMenuItems(
       terminalApplicationMenuTemplate(
         "OMXTerm",
         actions,
         DEFAULT_TERMINAL_KEYBINDS,
-        true,
       ),
-    );
-    const enabled = enabledItems.find(
-      (item) => item.label === "Reload Terminal Theme",
-    );
-    expect(enabled).toEqual({
-      label: "Reload Terminal Theme",
-      enabled: true,
-      click: actions.reloadTerminalTheme,
-    });
-    (enabled?.click as () => void)();
-    expect(actions.reloadTerminalTheme).toHaveBeenCalledOnce();
+    ).find((candidate) => candidate.label === "Reload User Configuration");
 
-    const disabled = flattenMenuItems(
-      terminalApplicationMenuTemplate(
-        "OMXTerm",
-        actions,
-        DEFAULT_TERMINAL_KEYBINDS,
-      ),
-    ).find((item) => item.label === "Reload Terminal Theme");
-    expect(disabled?.enabled).toBe(false);
-    expect(disabled?.accelerator).toBeUndefined();
+    expect(item).toEqual({
+      label: "Reload User Configuration",
+      accelerator: "CommandOrControl+Shift+,",
+      click: actions.reloadUserConfiguration,
+    });
+    (item?.click as () => void)();
+    expect(actions.reloadUserConfiguration).toHaveBeenCalledOnce();
   });
 
   it("registers one literal-position accelerator per selectable tab", () => {
@@ -257,6 +244,8 @@ describe("keybind action invocations", () => {
     expect(actions.toggleSelectedFullScreen).toHaveBeenCalledOnce();
     invocations.toggleSnippets();
     expect(actions.toggleSelectedSnippets).toHaveBeenCalledOnce();
+    invocations.reloadConfig();
+    expect(actions.reloadUserConfiguration).toHaveBeenCalledOnce();
 
     for (let position = 1; position <= 9; position += 1)
       invocations[`selectTab${position}` as keyof typeof invocations]();

@@ -103,6 +103,10 @@ export interface TerminalApplication<
   zoomSelectedWindow(command: TerminalFontZoom): void;
   clipboardSelectedWindow(action: TerminalClipboardAction): void;
   toggleSelectedSnippets(): void;
+  applyConfiguration(configuration: {
+    readonly confirmClose: boolean;
+    readonly alwaysOnTopDefault: boolean;
+  }): void;
   isQuitting(): boolean;
 }
 
@@ -113,9 +117,10 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
   let quitting = false;
   let quitRequest: Promise<void> | undefined;
   let nextWindowId = 1;
+  let confirmCloseEnabled = options.confirmClose ?? DEFAULT_CONFIRM_CLOSE;
+  let alwaysOnTopDefault = options.alwaysOnTopDefault ?? DEFAULT_ALWAYS_ON_TOP;
 
-  const confirmClose = () =>
-    (options.confirmClose ?? DEFAULT_CONFIRM_CLOSE) !== false;
+  const confirmClose = () => confirmCloseEnabled;
 
   const selectedWindow = () => {
     const selected = options.getSelectedWindow();
@@ -239,10 +244,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
         tabCloseRequest: undefined,
       });
       options.operationalEvents?.write({ name: "window.opened", windowId });
-      window.setAlwaysOnTop(
-        options.alwaysOnTopDefault ?? DEFAULT_ALWAYS_ON_TOP,
-        "floating",
-      );
+      window.setAlwaysOnTop(alwaysOnTopDefault, "floating");
       for (const event of pendingLifecycleEvents) event();
       await instance.load();
     },
@@ -350,6 +352,10 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     toggleSelectedSnippets() {
       const window = selectedWindow();
       if (window) options.sendSnippetsToggle(window);
+    },
+    applyConfiguration(configuration) {
+      confirmCloseEnabled = configuration.confirmClose;
+      alwaysOnTopDefault = configuration.alwaysOnTopDefault;
     },
     isQuitting: () => quitting,
   };

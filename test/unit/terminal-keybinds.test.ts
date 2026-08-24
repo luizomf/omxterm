@@ -170,6 +170,15 @@ describe("terminal keybind accelerators", () => {
     );
     expect(DEFAULT_TERMINAL_KEYBINDS.nextTab).toBe("Control+Tab");
     expect(DEFAULT_TERMINAL_KEYBINDS.previousTab).toBe("Control+Shift+Tab");
+    expect(DEFAULT_TERMINAL_KEYBINDS.reloadConfig).toBe(
+      "CommandOrControl+Shift+,",
+    );
+    expect(terminalDefaultKeybinds("linux").reloadConfig).toBe(
+      "Control+Shift+,",
+    );
+    expect(terminalDefaultKeybinds("win32").reloadConfig).toBe(
+      "Control+Shift+,",
+    );
     for (let position = 1; position <= 9; position += 1)
       expect(
         DEFAULT_TERMINAL_KEYBINDS[

@@ -402,6 +402,29 @@ describe("Terminal application lifecycle", () => {
     ]);
   });
 
+  it("updates close policy and only the future-window always-on-top default", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    harness.select(harness.windows[0]!.window);
+    harness.application.toggleSelectedAlwaysOnTop();
+
+    harness.application.applyConfiguration({
+      confirmClose: false,
+      alwaysOnTopDefault: false,
+    });
+    expect(harness.windows[0]!.window.isAlwaysOnTop()).toBe(true);
+    expect(harness.application.mayCloseWindow(harness.windows[0]!.window)).toBe(
+      true,
+    );
+
+    await harness.application.newWindow();
+    expect(harness.windows[1]!.setAlwaysOnTop).toHaveBeenCalledExactlyOnceWith(
+      false,
+      "floating",
+    );
+    expect(harness.windows[0]!.setAlwaysOnTop).toHaveBeenCalledTimes(2);
+  });
+
   it("applies the supplied always-on-top default independently to each new window", async () => {
     const harness = createApplicationHarness({ alwaysOnTopDefault: true });
     await harness.application.newWindow();
