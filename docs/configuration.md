@@ -345,13 +345,13 @@ validated but remain at their startup values for both existing and newly
 created Terminal Surfaces until OMXTerm is restarted. Runtime application of
 those Terminal Surface settings is not part of this reload slice.
 
-If `config.json` or its selected theme is missing, unreadable, or invalid,
-OMXTerm keeps the complete last valid in-memory configuration and shows the
-current exact validation problem in the non-blocking error bar and on stderr.
-Fix it and choose the action again. A successful retry replaces resolved startup
-or reload errors and stale warnings with notices from the current validation.
-Removing `config.json` and reloading successfully selects all defaults without
-creating a file.
+If a present `config.json` is unreadable or invalid, or its selected theme is
+missing, unreadable, or invalid, OMXTerm keeps the complete last valid in-memory
+configuration and shows the current exact validation problem in the non-blocking
+error bar and on stderr. Fix it and choose the action again. A successful retry
+replaces resolved startup or reload errors and stale warnings with notices from
+the current validation. Removing `config.json` and reloading successfully selects
+all defaults without creating a file.
 
 ### Converting a Ghostty theme
 
