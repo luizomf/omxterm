@@ -140,6 +140,14 @@ preferences. It is the shared configuration source for text editing now
 and a possible graphical preferences interface later.
 _Avoid_: settings database, custom configuration language, application state
 
+**User Configuration Reload**:
+The explicit manual action that rereads and validates the complete User
+Configuration through the same boundary used at startup, then atomically
+applies every valid preference according to its existing ownership semantics.
+A failed reload keeps the last valid in-memory configuration active and reports
+the new error; it never watches files or partially applies a document.
+_Avoid_: theme reload, automatic reload, partial configuration reload
+
 **Terminal Payload**:
 The opaque input and output exchanged between the user-facing terminal and its
 processes. It belongs to the user and is transported without becoming
@@ -147,9 +155,10 @@ application history, diagnostics, or persisted state.
 _Avoid_: transcript, application event, diagnostic data
 
 **Operational Event**:
-Safe metadata about behavior owned by OMXTerm, such as lifecycle,
-configuration validation, IPC, PTY control, resize, and application failures.
-Operational Events may be logged without including Terminal Payload.
+Structured safe metadata about behavior owned by OMXTerm for human and
+automated local diagnosis, such as lifecycle, configuration validation, IPC,
+PTY control, resize, and application failures. Operational Events never include
+Terminal Payload or private input contents.
 _Avoid_: terminal output, command history, session transcript
 
 **Application Network Boundary**:
