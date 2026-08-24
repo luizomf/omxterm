@@ -108,7 +108,54 @@ describe("local PTY Adapter", () => {
     expect(harness.pty.resize).toHaveBeenCalledOnce();
     expect(harness.pty.resize).toHaveBeenCalledWith(120, 40);
   });
+});
 
+describe("explicit-command local PTY Adapter", () => {
+  it("forwards an explicit executable and literal argv with home, environment, and capability identity", () => {
+    const harness = createPtyHarness();
+    const spawn = vi.fn<SpawnPty>(() => harness.pty);
+    const session = createLocalTerminalSession(spawn, {
+      shell: "/bin/default-shell",
+      launchRequest: {
+        kind: "explicit-command",
+        executable: "/usr/bin/example",
+        arguments: ["--option-looking", "-e", "two words", ""],
+      },
+      platform: "darwin",
+      homeDirectory: "/Users/example",
+      applicationVersionProvider: { getVersion: () => "1.2.3" },
+      environment: {
+        PATH: "/usr/bin",
+        INHERITED_VALUE: "present",
+        TERM: "inherited-term",
+      },
+      onOutput: vi.fn(),
+      onExit: vi.fn(),
+    });
+
+    expect(spawn).toHaveBeenCalledExactlyOnceWith(
+      "/usr/bin/example",
+      ["--option-looking", "-e", "two words", ""],
+      {
+        cwd: "/Users/example",
+        env: {
+          PATH: "/usr/bin",
+          INHERITED_VALUE: "present",
+          TERM: "xterm-256color",
+          COLORTERM: "truecolor",
+          TERM_PROGRAM: "OMXTerm",
+          TERM_PROGRAM_VERSION: "1.2.3",
+        },
+        cols: 80,
+        rows: 24,
+      },
+    );
+    harness.setForegroundProcess("/usr/bin/example");
+    expect(session.hasForegroundChildProcess()).toBe(true);
+  });
+});
+
+describe("local PTY Adapter lifecycle", () => {
   it("spawns Windows shells without the POSIX login flag", () => {
     const harness = createPtyHarness();
     const spawn = vi.fn<SpawnPty>(() => harness.pty);
@@ -247,6 +294,48 @@ describe("local PTY Adapter", () => {
     } catch (error) {
       expect(String(error)).not.toContain("must-not-appear");
     }
+  });
+
+  it("redacts an explicit executable, argv, environment, and native spawn detail", () => {
+    const privateValues = [
+      "/private/executable-canary",
+      "argument-canary",
+      "environment-canary",
+      "native-canary",
+    ];
+
+    let failure: unknown;
+    try {
+      createLocalTerminalSession(
+        () => {
+          throw new Error("native-canary");
+        },
+        {
+          shell: "/bin/default-shell",
+          launchRequest: {
+            kind: "explicit-command",
+            executable: "/private/executable-canary",
+            arguments: ["argument-canary"],
+          },
+          platform: "darwin",
+          homeDirectory: "/Users/example",
+          applicationVersionProvider: { getVersion: () => "1.2.3" },
+          environment: { PRIVATE_VALUE: "environment-canary" },
+          onOutput: vi.fn(),
+          onExit: vi.fn(),
+        },
+      );
+    } catch (cause) {
+      failure = cause;
+    }
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(String(failure)).toBe(
+      "Error: Failed to start the requested command",
+    );
+    expect((failure as Error).cause).toBeUndefined();
+    for (const privateValue of privateValues)
+      expect(String(failure)).not.toContain(privateValue);
   });
 
   it("reports a Busy Session only while a foreground child process runs", () => {

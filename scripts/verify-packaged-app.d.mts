@@ -41,6 +41,14 @@ export function inspectAdHocApplication(
   execute?: ExecuteFile,
 ): Promise<void>;
 
+export function packagedExplicitCommand(
+  platform: NodeJS.Platform | string,
+  systemRoot?: string,
+): {
+  readonly executable: string;
+  readonly arguments: readonly string[];
+};
+
 export function signalProcessGroup(
   processGroupId: number,
   signal: NodeJS.Signals | 0,

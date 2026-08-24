@@ -14,8 +14,8 @@ export function terminalSessionFailureDialog(
   if (failure.reason === "spawn") {
     return {
       type: "error",
-      title: "Shell could not start",
-      message: "The Default Shell could not be started.",
+      title: "Session could not start",
+      message: "The Live Terminal Session could not be started.",
       detail: "Lifecycle failure: spawn.",
       buttons: ["OK"],
     };
@@ -23,8 +23,8 @@ export function terminalSessionFailureDialog(
 
   return {
     type: "error",
-    title: "Shell exited unexpectedly",
-    message: "The Default Shell exited unexpectedly.",
+    title: "Session exited unexpectedly",
+    message: "The Live Terminal Session exited unexpectedly.",
     detail: `Signal: ${failure.signal ?? "unknown"}.`,
     buttons: ["OK"],
   };

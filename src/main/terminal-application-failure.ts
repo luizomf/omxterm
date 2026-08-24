@@ -1,5 +1,5 @@
 export type TerminalApplicationFailureStage =
-  "renderer-load" | "new-window" | "startup";
+  "launch-request" | "renderer-load" | "new-window" | "startup";
 
 interface TerminalApplicationFailureDescription {
   readonly title: string;
@@ -10,6 +10,10 @@ const descriptions: Record<
   TerminalApplicationFailureStage,
   TerminalApplicationFailureDescription
 > = {
+  "launch-request": {
+    title: "OMXTerm could not start",
+    message: "The -e option requires an executable.",
+  },
   "renderer-load": {
     title: "Terminal Window could not load",
     message: "OMXTerm could not load the Terminal Window renderer.",

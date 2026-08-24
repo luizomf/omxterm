@@ -8,6 +8,11 @@ import {
 describe("Terminal application failure", () => {
   it.each([
     {
+      stage: "launch-request",
+      title: "OMXTerm could not start",
+      message: "The -e option requires an executable.",
+    },
+    {
       stage: "renderer-load",
       title: "Terminal Window could not load",
       message: "OMXTerm could not load the Terminal Window renderer.",

@@ -31,7 +31,11 @@ export type OperationalEvent =
   | {
       readonly name: "application.failure";
       readonly stage:
-        "startup" | "new-window" | "renderer-load" | "external-link-open";
+        | "launch-request"
+        | "startup"
+        | "new-window"
+        | "renderer-load"
+        | "external-link-open";
     }
   | { readonly name: "configuration.validated" }
   | {
@@ -328,6 +332,7 @@ function isOperationalEvent(value: unknown): value is OperationalEvent {
       return (
         hasExactKeys(value, ["name", "stage"]) &&
         [
+          "launch-request",
           "startup",
           "new-window",
           "renderer-load",

@@ -10,7 +10,7 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { tmpdir, userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
@@ -491,7 +491,40 @@ async function stopProcessGroup(child) {
     throw new Error(`Packaged process group ${processGroupId} did not exit`);
 }
 
-async function waitForStartup(logFile, child, stderrText) {
+export function packagedExplicitCommand(
+  platform,
+  systemRoot = process.env.SystemRoot ?? "C:\\Windows",
+) {
+  if (platform === "win32")
+    return {
+      executable: path.win32.join(
+        systemRoot,
+        "System32",
+        "WindowsPowerShell",
+        "v1.0",
+        "powershell.exe",
+      ),
+      arguments: [
+        "-NoLogo",
+        "-NoProfile",
+        "-Command",
+        "$ok = $PWD.Path -eq $env:OMXTERM_PACKAGE_EXPECTED_HOME -and $env:TERM -eq 'xterm-256color' -and $env:COLORTERM -eq 'truecolor' -and $env:TERM_PROGRAM -eq 'OMXTerm' -and $env:TERM_PROGRAM_VERSION -and $args[0] -eq $env:OMXTERM_PACKAGE_ARGUMENT_CANARY; if (-not $ok) { exit 23 }; New-Item -ItemType File -Path $env:OMXTERM_PACKAGE_READINESS_FILE -Force | Out-Null; Start-Sleep -Seconds 30",
+        "--literal-option-looking-argument",
+      ],
+    };
+
+  return {
+    executable: "/bin/sh",
+    arguments: [
+      "-c",
+      'test "$PWD" = "$OMXTERM_PACKAGE_EXPECTED_HOME" && test "$TERM" = xterm-256color && test "$COLORTERM" = truecolor && test "$TERM_PROGRAM" = OMXTerm && test -n "$TERM_PROGRAM_VERSION" && test "$1" = "$OMXTERM_PACKAGE_ARGUMENT_CANARY" && : > "$OMXTERM_PACKAGE_READINESS_FILE"; exec sleep 30',
+      "omxterm-packaged-verifier",
+      "--literal-option-looking-argument",
+    ],
+  };
+}
+
+async function waitForStartup(logFile, readinessFile, child, stderrText) {
   const deadline = Date.now() + 20_000;
   const requiredEvents = new Set([
     "configuration.validated",
@@ -516,7 +549,10 @@ async function waitForStartup(logFile, child, stderrText) {
         if (record.name === "pty.control" && record.action === "started")
           requiredEvents.delete("pty.control:started");
       }
-      if (requiredEvents.size === 0) return records;
+      if (requiredEvents.size === 0) {
+        await stat(readinessFile);
+        return records;
+      }
     } catch (cause) {
       if (cause?.code !== "ENOENT") throw cause;
     }
@@ -743,14 +779,23 @@ export async function verifyPackagedApplication(applicationPath) {
       `${JSON.stringify({ version: 1, confirmClose: false })}\n`,
     );
     const canary = `OMXTERM_PACKAGE_SECRET_CANARY_${Date.now()}`;
+    const argumentCanary = `OMXTERM_PACKAGE_ARGUMENT_CANARY_${Date.now()}`;
+    const readinessFile = path.join(temporaryRoot, "explicit-command-ready");
+    const explicitCommand = packagedExplicitCommand(platform);
     let stderr = "";
     const launchPath = platform === "linux" ? packagedPath : executable;
-    const launchArguments = [`--user-data-dir=${userDataRoot}`];
+    const launchArguments = [
+      `--user-data-dir=${userDataRoot}`,
+      ...(platform === "linux" ? ["--ozone-platform=x11"] : []),
+      "-e",
+      explicitCommand.executable,
+      ...explicitCommand.arguments.slice(0, -1),
+      argumentCanary,
+    ];
     // The packaged Linux app relaunches itself onto X11 when Electron seeds
     // a Wayland session backend (ADR 0020), and this harness cannot follow a
     // relaunch. Pin the backend explicitly; default-backend selection is
     // covered by unit tests and the manual exact-artifact checklist.
-    if (platform === "linux") launchArguments.push("--ozone-platform=x11");
     const child = spawn(launchPath, launchArguments, {
       detached: true,
       env: {
@@ -759,6 +804,9 @@ export async function verifyPackagedApplication(applicationPath) {
         XDG_CONFIG_HOME: configurationRoot,
         XDG_STATE_HOME: stateRoot,
         OMXTERM_PACKAGE_SECRET_CANARY: canary,
+        OMXTERM_PACKAGE_ARGUMENT_CANARY: argumentCanary,
+        OMXTERM_PACKAGE_EXPECTED_HOME: userInfo().homedir,
+        OMXTERM_PACKAGE_READINESS_FILE: readinessFile,
       },
       stdio: ["ignore", "ignore", "pipe"],
     });
@@ -769,10 +817,21 @@ export async function verifyPackagedApplication(applicationPath) {
 
     try {
       const logFile = path.join(stateRoot, "omxterm", "logs", "omxterm.jsonl");
-      const records = await waitForStartup(logFile, child, () => stderr.trim());
+      const records = await waitForStartup(logFile, readinessFile, child, () =>
+        stderr.trim(),
+      );
       const logText = await readFile(logFile, "utf8");
-      if (logText.includes(canary))
-        throw new Error("Operational log persisted an environment canary");
+      const diagnostics = `${logText}\n${stderr}`;
+      const privateLaunchValues = [
+        canary,
+        argumentCanary,
+        explicitCommand.executable,
+        ...explicitCommand.arguments,
+      ];
+      if (privateLaunchValues.some((value) => diagnostics.includes(value)))
+        throw new Error(
+          "Packaged startup diagnostics disclosed explicit launch data",
+        );
       return { applicationPath: packagedPath, records: records.length };
     } finally {
       await stopProcessGroup(child);

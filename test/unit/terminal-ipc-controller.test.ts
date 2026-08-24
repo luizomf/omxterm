@@ -288,7 +288,7 @@ describe("terminal IPC controller", () => {
     ).toThrow("untrusted");
   });
 
-  it("reports a normalized shell startup failure without disclosing the cause", () => {
+  it("reports a normalized Live Terminal Session startup failure without disclosing the cause", () => {
     const ipc = createIpcHarness();
     const mainFrame = {};
     const webContents: TrustedWebContents = {
@@ -314,7 +314,7 @@ describe("terminal IPC controller", () => {
         sender: webContents,
         senderFrame: mainFrame,
       }),
-    ).toThrow("The Default Shell could not be started");
+    ).toThrow("The Live Terminal Session could not be started");
     expect(onSessionStartError).toHaveBeenCalledWith({ liveSessions: 0 });
     expect(JSON.stringify(onSessionStartError.mock.calls)).not.toContain(
       "TERMINAL_PAYLOAD_CANARY",

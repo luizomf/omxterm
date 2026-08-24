@@ -6,14 +6,14 @@ describe("Terminal Session native failure dialog", () => {
     [
       { reason: "spawn" } as const,
       {
-        title: "Shell could not start",
+        title: "Session could not start",
         detail: "Lifecycle failure: spawn.",
       },
     ],
     [
       { reason: "signal", signal: 15 } as const,
       {
-        title: "Shell exited unexpectedly",
+        title: "Session exited unexpectedly",
         detail: "Signal: 15.",
       },
     ],

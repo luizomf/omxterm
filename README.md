@@ -173,6 +173,30 @@ ConPTY does not expose the PTY foreground process name, every live session
 counts as Busy: with `confirmClose` enabled, closing a tab, window, or the
 application always asks once.
 
+## Launching an explicit command
+
+Use `-e <program> [arguments...]` to run one explicit command in the first
+Terminal Tab of a new OMXTerm process. On macOS, for example:
+
+```sh
+open -na OMXTerm --args -e nvim /tmp/scratch.txt
+```
+
+OMXTerm passes the program and every following argument directly to the PTY.
+It does not construct a command string, rewrite arguments, or insert a shell.
+If shell syntax is needed, choose the shell explicitly and provide its literal
+arguments:
+
+```sh
+open -na OMXTerm --args -e /bin/zsh -lc 'printf "%s\n" "hello"'
+```
+
+Only the initial tab consumes the request. Later tabs and windows start the
+Default Shell normally. The explicit command starts in the user's home
+directory with the inherited environment and OMXTerm's standard terminal
+capabilities. A trailing `-e` without a program is rejected instead of falling
+back to the Default Shell.
+
 ## Development
 
 Source development targets ARM64 macOS, Linux, and Windows with Node.js 22.13

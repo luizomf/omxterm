@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { IPty, IPtyForkOptions, IDisposable } from "node-pty";
+import type { LaunchRequest } from "./launch-request";
 import {
   isBoundedTerminalPayload,
   isTerminalSize,
@@ -21,6 +22,7 @@ export interface ApplicationVersionProvider {
 
 export interface LocalTerminalSessionOptions {
   readonly shell: string;
+  readonly launchRequest?: LaunchRequest;
   readonly platform: NodeJS.Platform | string;
   readonly homeDirectory: string;
   readonly applicationVersionProvider: ApplicationVersionProvider;
@@ -39,12 +41,19 @@ export function createLocalTerminalSession(
   spawnPty: SpawnPty,
   options: LocalTerminalSessionOptions,
 ): LocalTerminalSession {
-  // POSIX keeps the interactive login-shell contract through "-l". Windows
-  // shells reject the flag and have no login-shell concept (#61).
-  const shellArguments = options.platform === "win32" ? [] : ["-l"];
+  const launchRequest = options.launchRequest;
+  const explicitCommand = launchRequest?.kind === "explicit-command";
+  const executable = explicitCommand ? launchRequest.executable : options.shell;
+  // POSIX keeps the interactive Default Shell contract through "-l". An
+  // explicit executable receives only the literal arguments the user supplied.
+  const arguments_ = explicitCommand
+    ? [...launchRequest.arguments]
+    : options.platform === "win32"
+      ? []
+      : ["-l"];
   let pty: IPty;
   try {
-    pty = spawnPty(options.shell, shellArguments, {
+    pty = spawnPty(executable, arguments_, {
       cwd: options.homeDirectory,
       env: {
         ...options.environment,
@@ -57,6 +66,8 @@ export function createLocalTerminalSession(
       rows: 24,
     });
   } catch (error) {
+    if (explicitCommand)
+      throw new Error("Failed to start the requested command");
     throw new Error(`Failed to start the Default Shell at ${options.shell}`, {
       cause: error,
     });
@@ -101,6 +112,9 @@ export function createLocalTerminalSession(
     // read, the session counts as busy so closing still asks first.
     hasForegroundChildProcess() {
       if (closed || exited) return false;
+      // An explicit command has no idle Default Shell state and remains Busy
+      // for its complete live lifetime, independent of its reported name.
+      if (explicitCommand) return true;
       // ConPTY reports a static console title through pty.process, never
       // the foreground process name, so on Windows the name cannot be read
       // and a live session always counts as Busy (#61).

@@ -21,6 +21,11 @@ import {
 } from "./application-menu";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { resolveDefaultShell } from "./default-shell";
+import {
+  MalformedLaunchRequestError,
+  startupLaunchRequest,
+  withSwitchBeforeLaunchRequest,
+} from "./launch-request";
 import { createLocalTerminalSession } from "./local-terminal-session";
 import { planLinuxDisplayBackendDefault } from "./linux-display-backend";
 import {
@@ -105,7 +110,10 @@ if (displayBackendAction === "append-x11") {
   try {
     spawn(
       process.env["APPIMAGE"] ?? process.execPath,
-      [...process.argv.slice(1), "--ozone-platform=x11"],
+      withSwitchBeforeLaunchRequest(
+        process.argv.slice(1),
+        "--ozone-platform=x11",
+      ),
       { detached: true, stdio: "ignore" },
     ).unref();
     app.exit(0);
@@ -124,9 +132,7 @@ app.on("before-quit", (event) => {
 app
   .whenReady()
   .then(async () => {
-    if (!app.isPackaged) app.dock?.setIcon(developmentApplicationIconPath);
-
-    const account = userInfo();
+    const { account, consumeLaunchRequest } = prepareStartup();
     operationalEvents = createOperationalEventLog({
       environment: process.env,
       homeDirectory: account.homedir,
@@ -195,6 +201,7 @@ app
           confirmClose: userConfiguration.confirmClose,
           alwaysOnTopDefault: userConfiguration.alwaysOnTop,
           createWindow(lifecycle) {
+            const consumeLaunch = consumeLaunchRequest(lifecycle.windowId);
             const defaultShell = resolveDefaultShell(
               process.platform,
               account.shell,
@@ -261,6 +268,7 @@ app
               createSession(callbacks) {
                 return createLocalTerminalSession(nodePty.spawn, {
                   shell: defaultShell,
+                  launchRequest: consumeLaunch(),
                   platform: process.platform,
                   homeDirectory: account.homedir,
                   applicationVersionProvider: app,
@@ -480,7 +488,11 @@ app
     );
   })
   .catch((cause) => {
-    const failure = terminalApplicationFailure("startup", cause);
+    const stage =
+      cause instanceof MalformedLaunchRequestError
+        ? "launch-request"
+        : "startup";
+    const failure = terminalApplicationFailure(stage, cause);
     operationalEvents?.write({
       name: "application.failure",
       stage: failure.stage,
@@ -489,6 +501,12 @@ app
     dialog.showErrorBox(display.title, display.message);
     app.quit();
   });
+
+function prepareStartup() {
+  const launch = startupLaunchRequest(process.argv, app.isPackaged);
+  if (!app.isPackaged) app.dock?.setIcon(developmentApplicationIconPath);
+  return { account: userInfo(), consumeLaunchRequest: launch };
+}
 
 function startupUserFileNotices(
   fallback: UserConfigurationFallback | undefined,

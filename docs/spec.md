@@ -24,7 +24,10 @@ OMXTerm must:
 - open the Default Shell in the user's home directory: on macOS and Linux the
   operating-system-configured shell as an interactive login shell; on Windows,
   which has no login-shell concept, Windows PowerShell — falling back to the
-  ComSpec command processor — started interactively without a login flag;
+  ComSpec command processor — started interactively without a login flag; or,
+  when startup includes `-e <program> [arguments...]`, run that executable and
+  literal argument vector directly in the first Terminal Tab without an
+  implicit shell;
 - remain compatible with ordinary shells, SSH started by the user, tmux, TUIs,
   REPLs, alternate-screen applications, Unicode, and bracketed paste, rendering
   emoji-presentation and ZWJ grapheme clusters as single two-column cells that
@@ -54,6 +57,21 @@ updates, and remote terminal features are outside the current product contract.
   and New Tab default to `Cmd+N` and `Cmd+T` on macOS, and `Ctrl+Shift+N` and
   `Ctrl+Shift+T` on Linux and Windows. Each tab owns its own independent Live Terminal
   Session.
+- A startup Launch Request uses `-e <program> [arguments...]`. The value after
+  the first `-e` is required as the executable, and every remaining value —
+  including another `-e` or an option-looking value — is literal argv. OMXTerm
+  passes the executable and argv directly to the PTY without constructing a
+  command string, rewriting arguments, or inserting a shell. A user may
+  explicitly choose a shell and pass literal arguments such as `-lc`. The
+  request is consumed only by the first Terminal Tab of the first Terminal
+  Window in that application process; all later tabs and windows use the
+  Default Shell. A terminal `-e` is an actionable startup failure and never
+  falls back to the Default Shell.
+- An explicit command starts in the user's home directory, inherits the normal
+  process environment, and receives the Terminal Capability Identity. It is a
+  Busy Session for its complete live lifetime. Its clean exit, unexpected
+  signal, spawn failure, requested close, tab and window closure, and
+  last-window quit use the existing Live Terminal Session lifecycle.
 - After its Terminal Surface mounts, an active Terminal Window gives terminal
   input DOM focus. Returning from another application or another OMXTerm window
   restores that focus only in the active Terminal Window without activating,
@@ -359,7 +377,8 @@ and a normalized failure category, never paths, validation detail, configuration
 contents, or Terminal Payload. Logs may describe
 OMXTerm lifecycle, validation, IPC, PTY control, resize, duration, and failures;
 they must never contain PTY input/output, clipboard data, environment contents,
-configuration contents, commands, titles, secrets, or transcripts.
+configuration contents, executable names, command arguments, commands, titles,
+secrets, or transcripts.
 
 The application performs no network requests: no analytics, telemetry, crash
 reporting, update check, or remote log delivery. Child processes retain their

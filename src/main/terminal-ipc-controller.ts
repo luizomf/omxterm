@@ -440,7 +440,7 @@ function createTerminalIpcController(
           durationMs: elapsedMilliseconds(startedAt),
         });
       options.onSessionStartError({ liveSessions: countLiveSessions() });
-      throw new Error("The Default Shell could not be started");
+      throw new Error("The Live Terminal Session could not be started");
     }
 
     sessions.set(sessionId, {
