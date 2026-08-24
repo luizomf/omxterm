@@ -116,7 +116,12 @@ function createApplicationHarness(
 }
 
 function lastSessionEnd(sessionId = "s1") {
-  return { sessionId, closeRequested: false, liveSessions: 0 };
+  return {
+    sessionId,
+    launchKind: "default-shell" as const,
+    closeRequested: false,
+    liveSessions: 0,
+  };
 }
 
 describe("Terminal application lifecycle", () => {
@@ -303,9 +308,12 @@ describe("Terminal application lifecycle", () => {
       label: "spawn failure",
       emit(lifecycle: TerminalWindowLifecycle, terminalPayloadCanary: string) {
         void terminalPayloadCanary;
-        lifecycle.onSessionStartError({ liveSessions: 0 });
+        lifecycle.onSessionStartError({
+          launchKind: "default-shell",
+          liveSessions: 0,
+        });
       },
-      expected: { reason: "spawn" },
+      expected: { reason: "spawn", launchKind: "default-shell" },
     },
     {
       label: "unexpected signal",
@@ -319,7 +327,11 @@ describe("Terminal application lifecycle", () => {
           lastSessionEnd(),
         );
       },
-      expected: { reason: "signal", signal: 15 },
+      expected: {
+        reason: "signal",
+        launchKind: "default-shell",
+        signal: 15,
+      },
     },
   ])(
     "keeps the window open for $label acknowledgement and excludes Terminal Payload",
@@ -356,8 +368,14 @@ describe("Terminal application lifecycle", () => {
     const harness = createApplicationHarness({ showSessionFailure });
     await harness.application.newWindow();
 
-    harness.windows[0]!.lifecycle.onSessionStartError({ liveSessions: 0 });
-    harness.windows[0]!.lifecycle.onSessionStartError({ liveSessions: 0 });
+    harness.windows[0]!.lifecycle.onSessionStartError({
+      launchKind: "default-shell",
+      liveSessions: 0,
+    });
+    harness.windows[0]!.lifecycle.onSessionStartError({
+      launchKind: "default-shell",
+      liveSessions: 0,
+    });
 
     await vi.waitFor(() => {
       expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
@@ -538,7 +556,12 @@ describe("Terminal application lifecycle", () => {
 
     harness.windows[0]!.lifecycle.onSessionExit(
       { exitCode: 0, signal: 0 },
-      { sessionId: "s1", closeRequested: false, liveSessions: 1 },
+      {
+        sessionId: "s1",
+        launchKind: "default-shell",
+        closeRequested: false,
+        liveSessions: 1,
+      },
     );
 
     expect(harness.showSessionFailure).not.toHaveBeenCalled();
@@ -553,14 +576,24 @@ describe("Terminal application lifecycle", () => {
 
     harness.windows[0]!.lifecycle.onSessionExit(
       { exitCode: 0, signal: 1 },
-      { sessionId: "s2", closeRequested: true, liveSessions: 1 },
+      {
+        sessionId: "s2",
+        launchKind: "default-shell",
+        closeRequested: true,
+        liveSessions: 1,
+      },
     );
     expect(harness.showSessionFailure).not.toHaveBeenCalled();
     expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
 
     harness.windows[0]!.lifecycle.onSessionExit(
       { exitCode: 0, signal: 1 },
-      { sessionId: "s1", closeRequested: true, liveSessions: 0 },
+      {
+        sessionId: "s1",
+        launchKind: "default-shell",
+        closeRequested: true,
+        liveSessions: 0,
+      },
     );
     expect(harness.showSessionFailure).not.toHaveBeenCalled();
     expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
@@ -574,12 +607,17 @@ describe("Terminal application lifecycle", () => {
 
     harness.windows[0]!.lifecycle.onSessionExit(
       { exitCode: 0, signal: 9 },
-      { sessionId: "s2", closeRequested: false, liveSessions: 1 },
+      {
+        sessionId: "s2",
+        launchKind: "default-shell",
+        closeRequested: false,
+        liveSessions: 1,
+      },
     );
 
     expect(showSessionFailure).toHaveBeenCalledExactlyOnceWith(
       harness.windows[0]!.window,
-      { reason: "signal", signal: 9 },
+      { reason: "signal", launchKind: "default-shell", signal: 9 },
     );
     expect(harness.sendTabCommand).not.toHaveBeenCalled();
 
@@ -600,12 +638,15 @@ describe("Terminal application lifecycle", () => {
     const harness = createApplicationHarness();
     await harness.application.newWindow();
 
-    harness.windows[0]!.lifecycle.onSessionStartError({ liveSessions: 1 });
+    harness.windows[0]!.lifecycle.onSessionStartError({
+      launchKind: "default-shell",
+      liveSessions: 1,
+    });
     await Promise.resolve();
 
     expect(harness.showSessionFailure).toHaveBeenCalledExactlyOnceWith(
       harness.windows[0]!.window,
-      { reason: "spawn" },
+      { reason: "spawn", launchKind: "default-shell" },
     );
     expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
     expect(harness.quit).not.toHaveBeenCalled();

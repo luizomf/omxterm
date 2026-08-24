@@ -30,8 +30,15 @@ export interface TerminalWindowLifecycle {
 }
 
 export type TerminalSessionFailure =
-  | { readonly reason: "spawn" }
-  | { readonly reason: "signal"; readonly signal: number | null };
+  | {
+      readonly reason: "spawn";
+      readonly launchKind: TerminalSessionStartErrorContext["launchKind"];
+    }
+  | {
+      readonly reason: "signal";
+      readonly launchKind: TerminalSessionEndContext["launchKind"];
+      readonly signal: number | null;
+    };
 
 // Whether the window's sessions run a foreground child process (ADR 0017):
 // close confirmations ask only for busy sessions, never for an idle shell.
@@ -189,11 +196,15 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
           dispatch(() => {
             // The renderer already dropped the tab whose spawn failed; the
             // window itself is useless only when no session is running in it.
+            const failure = {
+              reason: "spawn" as const,
+              launchKind: context.launchKind,
+            };
             if (context.liveSessions === 0)
-              closeAfterFailure(instance.window, { reason: "spawn" });
+              closeAfterFailure(instance.window, failure);
             else
               void options
-                .showSessionFailure(instance.window, { reason: "spawn" })
+                .showSessionFailure(instance.window, failure)
                 .catch(() => {});
           });
         },
@@ -210,6 +221,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
             if (context.liveSessions === 0) {
               closeAfterFailure(instance.window, {
                 reason: "signal",
+                launchKind: context.launchKind,
                 signal: normalizeLifecycleCode(exit.signal),
               });
               return;
@@ -219,6 +231,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
             void options
               .showSessionFailure(instance.window, {
                 reason: "signal",
+                launchKind: context.launchKind,
                 signal: normalizeLifecycleCode(exit.signal),
               })
               .catch(() => {})

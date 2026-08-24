@@ -5,7 +5,10 @@ import {
   type IpcMainPort,
   type TrustedWebContents,
 } from "../../src/main/terminal-ipc-controller";
-import type { LocalTerminalSession } from "../../src/main/local-terminal-session";
+import {
+  LocalTerminalSessionStartError,
+  type LocalTerminalSession,
+} from "../../src/main/local-terminal-session";
 import type { OperationalEvent } from "../../src/main/operational-events";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
@@ -314,10 +317,51 @@ describe("terminal IPC controller", () => {
         sender: webContents,
         senderFrame: mainFrame,
       }),
-    ).toThrow("The Live Terminal Session could not be started");
-    expect(onSessionStartError).toHaveBeenCalledWith({ liveSessions: 0 });
+    ).toThrow("The Default Shell could not be started");
+    expect(onSessionStartError).toHaveBeenCalledWith({
+      launchKind: "default-shell",
+      liveSessions: 0,
+    });
     expect(JSON.stringify(onSessionStartError.mock.calls)).not.toContain(
       "TERMINAL_PAYLOAD_CANARY",
+    );
+  });
+
+  it("reports an explicit-command startup failure without disclosing launch data", () => {
+    const ipc = createIpcHarness();
+    const mainFrame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const onSessionStartError = vi.fn();
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    router.registerController({
+      ...clipboardOptions(),
+      webContents,
+      createSession() {
+        throw new LocalTerminalSessionStartError(
+          "explicit-command",
+          "PRIVATE_LAUNCH_CANARY",
+        );
+      },
+      onSessionStartError,
+      onSessionExit: vi.fn(),
+    });
+
+    expect(() =>
+      ipc.handlers.get(terminalIpc.start)!({
+        sender: webContents,
+        senderFrame: mainFrame,
+      }),
+    ).toThrow("The requested command could not be started");
+    expect(onSessionStartError).toHaveBeenCalledWith({
+      launchKind: "explicit-command",
+      liveSessions: 0,
+    });
+    expect(JSON.stringify(onSessionStartError.mock.calls)).not.toContain(
+      "PRIVATE_LAUNCH_CANARY",
     );
   });
 
@@ -1000,11 +1044,21 @@ describe("terminal IPC controller", () => {
     expect(onSessionExit.mock.calls).toEqual([
       [
         { exitCode: 0, signal: 1 },
-        { sessionId: "s1", closeRequested: true, liveSessions: 1 },
+        {
+          sessionId: "s1",
+          launchKind: "default-shell",
+          closeRequested: true,
+          liveSessions: 1,
+        },
       ],
       [
         { exitCode: 5, signal: 0 },
-        { sessionId: "s2", closeRequested: false, liveSessions: 0 },
+        {
+          sessionId: "s2",
+          launchKind: "default-shell",
+          closeRequested: false,
+          liveSessions: 0,
+        },
       ],
     ]);
   });

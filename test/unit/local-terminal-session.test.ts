@@ -114,6 +114,7 @@ describe("explicit-command local PTY Adapter", () => {
   it("forwards an explicit executable and literal argv with home, environment, and capability identity", () => {
     const harness = createPtyHarness();
     const spawn = vi.fn<SpawnPty>(() => harness.pty);
+    const onExit = vi.fn();
     const session = createLocalTerminalSession(spawn, {
       shell: "/bin/default-shell",
       launchRequest: {
@@ -130,7 +131,7 @@ describe("explicit-command local PTY Adapter", () => {
         TERM: "inherited-term",
       },
       onOutput: vi.fn(),
-      onExit: vi.fn(),
+      onExit,
     });
 
     expect(spawn).toHaveBeenCalledExactlyOnceWith(
@@ -152,6 +153,11 @@ describe("explicit-command local PTY Adapter", () => {
     );
     harness.setForegroundProcess("/usr/bin/example");
     expect(session.hasForegroundChildProcess()).toBe(true);
+    harness.emitExit(0);
+    expect(onExit).toHaveBeenCalledExactlyOnceWith(
+      { exitCode: 0, signal: 0 },
+      "explicit-command",
+    );
   });
 });
 
@@ -220,7 +226,10 @@ describe("local PTY Adapter lifecycle", () => {
 
     harness.emitExit(0, 1);
 
-    expect(onExit).toHaveBeenCalledExactlyOnceWith({ exitCode: 0, signal: 1 });
+    expect(onExit).toHaveBeenCalledExactlyOnceWith(
+      { exitCode: 0, signal: 1 },
+      "default-shell",
+    );
     expect(harness.disposeData).toHaveBeenCalledOnce();
     expect(harness.disposeExit).toHaveBeenCalledOnce();
   });

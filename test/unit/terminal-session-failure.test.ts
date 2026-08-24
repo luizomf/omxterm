@@ -4,16 +4,38 @@ import { terminalSessionFailureDialog } from "../../src/main/terminal-session-fa
 describe("Terminal Session native failure dialog", () => {
   it.each([
     [
-      { reason: "spawn" } as const,
+      { reason: "spawn", launchKind: "default-shell" } as const,
       {
-        title: "Session could not start",
+        title: "Shell could not start",
+        message: "The Default Shell could not be started.",
         detail: "Lifecycle failure: spawn.",
       },
     ],
     [
-      { reason: "signal", signal: 15 } as const,
+      { reason: "signal", launchKind: "default-shell", signal: 15 } as const,
       {
-        title: "Session exited unexpectedly",
+        title: "Shell exited unexpectedly",
+        message: "The Default Shell exited unexpectedly.",
+        detail: "Signal: 15.",
+      },
+    ],
+    [
+      { reason: "spawn", launchKind: "explicit-command" } as const,
+      {
+        title: "Command could not start",
+        message: "The requested command could not be started.",
+        detail: "Lifecycle failure: spawn.",
+      },
+    ],
+    [
+      {
+        reason: "signal",
+        launchKind: "explicit-command",
+        signal: 15,
+      } as const,
+      {
+        title: "Command exited unexpectedly",
+        message: "The requested command exited unexpectedly.",
         detail: "Signal: 15.",
       },
     ],
@@ -29,6 +51,7 @@ describe("Terminal Session native failure dialog", () => {
     expect(
       terminalSessionFailureDialog({
         reason: "signal",
+        launchKind: "explicit-command",
         signal: null,
       }).detail,
     ).toBe("Signal: unknown.");

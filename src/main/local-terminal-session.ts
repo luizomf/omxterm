@@ -9,11 +9,28 @@ import {
   type TerminalSize,
 } from "../shared/terminal-contract";
 
+export type TerminalSessionLaunchKind = LaunchRequest["kind"];
+
 export interface LocalTerminalSession {
+  readonly launchKind?: TerminalSessionLaunchKind;
   write(data: string): void;
   resize(size: TerminalSize): void;
   hasForegroundChildProcess(): boolean;
   close(): void;
+}
+
+export class LocalTerminalSessionStartError extends Error {
+  readonly launchKind: TerminalSessionLaunchKind;
+
+  constructor(
+    launchKind: TerminalSessionLaunchKind,
+    message: string,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.name = "Error";
+    this.launchKind = launchKind;
+  }
 }
 
 export interface ApplicationVersionProvider {
@@ -28,7 +45,10 @@ export interface LocalTerminalSessionOptions {
   readonly applicationVersionProvider: ApplicationVersionProvider;
   readonly environment: NodeJS.ProcessEnv;
   readonly onOutput: (data: string) => void;
-  readonly onExit: (exit: TerminalExit) => void;
+  readonly onExit: (
+    exit: TerminalExit,
+    launchKind: TerminalSessionLaunchKind,
+  ) => void;
 }
 
 export type SpawnPty = (
@@ -67,10 +87,15 @@ export function createLocalTerminalSession(
     });
   } catch (error) {
     if (explicitCommand)
-      throw new Error("Failed to start the requested command");
-    throw new Error(`Failed to start the Default Shell at ${options.shell}`, {
-      cause: error,
-    });
+      throw new LocalTerminalSessionStartError(
+        "explicit-command",
+        "Failed to start the requested command",
+      );
+    throw new LocalTerminalSessionStartError(
+      "default-shell",
+      `Failed to start the Default Shell at ${options.shell}`,
+      { cause: error },
+    );
   }
 
   let closed = false;
@@ -93,12 +118,16 @@ export function createLocalTerminalSession(
     if (exited) return;
     exited = true;
     releaseSubscriptions();
-    options.onExit({ exitCode: exit.exitCode, signal: exit.signal ?? 0 });
+    options.onExit(
+      { exitCode: exit.exitCode, signal: exit.signal ?? 0 },
+      explicitCommand ? "explicit-command" : "default-shell",
+    );
   });
 
   const shellProcessName = normalizeProcessName(options.shell);
 
   return {
+    launchKind: explicitCommand ? "explicit-command" : "default-shell",
     write(data) {
       if (!closed && !exited && isBoundedTerminalPayload(data)) pty.write(data);
     },

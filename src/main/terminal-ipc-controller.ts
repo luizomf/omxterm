@@ -11,7 +11,11 @@ import {
   requiresProtectedPaste,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
-import type { LocalTerminalSession } from "./local-terminal-session";
+import {
+  LocalTerminalSessionStartError,
+  type LocalTerminalSession,
+  type TerminalSessionLaunchKind,
+} from "./local-terminal-session";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type { OperationalEventLog } from "./operational-events";
@@ -43,7 +47,10 @@ export interface IpcMainPort {
 
 interface SessionCallbacks {
   readonly onOutput: (data: string) => void;
-  readonly onExit: (exit: TerminalExit) => void;
+  readonly onExit: (
+    exit: TerminalExit,
+    launchKind?: TerminalSessionLaunchKind,
+  ) => void;
 }
 
 // Lifecycle context for one ended (or failed) Live Terminal Session within
@@ -52,11 +59,13 @@ interface SessionCallbacks {
 // exit so an expected kill signal is not treated as a failure.
 export interface TerminalSessionEndContext {
   readonly sessionId: TerminalSessionId;
+  readonly launchKind: TerminalSessionLaunchKind;
   readonly closeRequested: boolean;
   readonly liveSessions: number;
 }
 
 export interface TerminalSessionStartErrorContext {
+  readonly launchKind: TerminalSessionLaunchKind;
   readonly liveSessions: number;
 }
 
@@ -403,7 +412,7 @@ function createTerminalIpcController(
             options.webContents.send(terminalIpc.output, { sessionId, data });
           }
         },
-        onExit(exit) {
+        onExit(exit, reportedLaunchKind) {
           if (disposed) return;
           const state = sessions.get(sessionId);
           if (state) state.exited = true;
@@ -413,6 +422,10 @@ function createTerminalIpcController(
           }
           options.onSessionExit(exit, {
             sessionId,
+            launchKind:
+              state?.session.launchKind ??
+              reportedLaunchKind ??
+              "default-shell",
             closeRequested: state?.closed ?? false,
             liveSessions: countLiveSessions(),
           });
@@ -430,7 +443,7 @@ function createTerminalIpcController(
           }
         },
       });
-    } catch {
+    } catch (cause) {
       if (windowId !== undefined)
         writeWindowEvent({
           name: "pty.exit",
@@ -439,8 +452,19 @@ function createTerminalIpcController(
           code: null,
           durationMs: elapsedMilliseconds(startedAt),
         });
-      options.onSessionStartError({ liveSessions: countLiveSessions() });
-      throw new Error("The Live Terminal Session could not be started");
+      const launchKind =
+        cause instanceof LocalTerminalSessionStartError
+          ? cause.launchKind
+          : "default-shell";
+      options.onSessionStartError({
+        launchKind,
+        liveSessions: countLiveSessions(),
+      });
+      throw new Error(
+        launchKind === "explicit-command"
+          ? "The requested command could not be started"
+          : "The Default Shell could not be started",
+      );
     }
 
     sessions.set(sessionId, {
