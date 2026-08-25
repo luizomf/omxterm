@@ -48,6 +48,87 @@ follow Apple's current [Open Anyway instructions](https://support.apple.com/1024
 in System Settings -> Privacy & Security. Do not disable system-wide macOS
 security protections.
 
+### Installing on Linux
+
+Download the AppImage and its separately downloaded, published matching
+checksum file into the same directory. The checksum verifies the downloaded
+AppImage bytes; it does not provide a publisher identity. Verify the download
+and make it executable:
+
+```sh
+sha256sum --check OMXTerm-0.8.0-arm64.AppImage.sha256
+chmod +x OMXTerm-0.8.0-arm64.AppImage
+```
+
+The AppImage is ready to run and does not need a system-wide installer. Its
+unsigned status means Linux distributions receive no publisher identity to
+verify. Linux needs the `fontconfig` utilities for configured system-font
+validation. The statically linked AppImage runtime does not require zlib
+development headers or a system `libfuse2` library. Before first launch, choose
+the command for the host: ordinary execution uses kernel FUSE mounting, while
+the supported fallback extracts and runs without it.
+
+```sh
+./OMXTerm-0.8.0-arm64.AppImage
+# If kernel FUSE mounting is unavailable:
+./OMXTerm-0.8.0-arm64.AppImage --appimage-extract-and-run
+```
+
+OMXTerm defaults to Electron's X11 backend. A Wayland desktop must provide
+XWayland; native Wayland rendering is not currently claimed. An explicit
+Electron `--ozone-platform` argument overrides the default for diagnosis.
+
+### Installing on Windows
+
+Install the
+[Microsoft Visual C++ Redistributable for ARM64](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
+if it is not already present. Download the NSIS installer and its matching
+checksum file into the same directory, then verify it automatically:
+
+```powershell
+$installerName = "OMXTerm-0.8.0-arm64.exe"
+$checksumName = "$installerName.sha256"
+$checksumRecord = Get-Content -LiteralPath $checksumName -Raw
+$checksumMatch = [regex]::Match(
+  $checksumRecord,
+  '\A(?<digest>[0-9A-Fa-f]{64})[ \t]+(?<filename>\*?\S+)(?:\r?\n)?\z'
+)
+
+if (-not $checksumMatch.Success) {
+  throw "The checksum file is malformed."
+}
+
+$recordedName = $checksumMatch.Groups['filename'].Value.TrimStart('*')
+if ($recordedName -cne $installerName) {
+  throw "The checksum file names a different installer: $recordedName"
+}
+
+$expectedHash = $checksumMatch.Groups['digest'].Value
+$actualHash = (Get-FileHash -LiteralPath $installerName -Algorithm SHA256).Hash
+if (-not [StringComparer]::OrdinalIgnoreCase.Equals($actualHash, $expectedHash)) {
+  throw "SHA-256 verification failed for $installerName"
+}
+
+Write-Host "SHA-256 verification succeeded for $installerName"
+```
+
+Run `OMXTerm-0.8.0-arm64.exe`. It installs per-user without administrator
+elevation; launch OMXTerm from the Start Menu. Because the installer is
+intentionally unsigned, Microsoft Defender SmartScreen may warn that it is from
+an unknown publisher. Review the source,
+verify the checksum, and proceed only if you trust the exact artifact;
+SmartScreen's `More info -> Run anyway` applies to that one file. Do not disable
+SmartScreen or other system-wide Windows security protections.
+
+On Windows the Default Shell is Windows PowerShell, falling back to the
+`ComSpec` command processor; Windows has no login-shell concept, so the shell
+starts as a plain interactive session in the user's home directory. Because
+ConPTY does not expose the PTY foreground process name, every live session
+counts as Busy: with `confirmClose` enabled, closing a tab, window, or the
+application always asks once.
+
+### Advanced installation and recovery
+
 #### Troubleshooting stale macOS privacy permissions
 
 After repeatedly installing and removing different OMXTerm builds, macOS may
@@ -74,35 +155,7 @@ To clear OMXTerm's app-specific privacy records and grant them again:
 The reset command is scoped to OMXTerm's bundle identifier; it does not reset
 privacy permissions for other applications.
 
-### Installing on Linux
-
-Download the AppImage and its matching checksum file into the same directory.
-Verify the download and make it executable:
-
-```sh
-sha256sum --check OMXTerm-0.8.0-arm64.AppImage.sha256
-chmod +x OMXTerm-0.8.0-arm64.AppImage
-```
-
-The AppImage is ready to run and does not need a system-wide installer. Its
-unsigned status means Linux distributions receive no publisher identity to
-verify. Linux needs the `fontconfig` utilities for configured system-font
-validation. The statically linked AppImage runtime does not require zlib
-development headers or a system `libfuse2` library. Before first launch, choose
-the command for the host: ordinary execution uses kernel FUSE mounting, while
-the supported fallback extracts and runs without it.
-
-```sh
-./OMXTerm-0.8.0-arm64.AppImage
-# If kernel FUSE mounting is unavailable:
-./OMXTerm-0.8.0-arm64.AppImage --appimage-extract-and-run
-```
-
-OMXTerm defaults to Electron's X11 backend. A Wayland desktop must provide
-XWayland; native Wayland rendering is not currently claimed. An explicit
-Electron `--ozone-platform` argument overrides the default for diagnosis.
-
-#### Add OMXTerm to Activities and the Dock
+#### Add OMXTerm to Linux Activities and the Dock
 
 Running an AppImage directly does not register it with the desktop. The Terminal
 Window has the OMXTerm icon, but GNOME may show a placeholder in Activities or
@@ -119,23 +172,24 @@ chmod +x OMXTerm-0.8.0-arm64.AppImage OMXTerm-0.8.0-arm64.AppImage-installer.sh
 ./OMXTerm-0.8.0-arm64.AppImage-installer.sh install ./OMXTerm-0.8.0-arm64.AppImage
 ```
 
-The helper does not download or verify network content, use a package manager,
-or request administrator access. It validates the local Linux ARM64 AppImage,
-then transactionally installs only the per-user AppImage, icon, and desktop
-entry. At installation time it tests actual kernel FUSE mounting and fixes the
-desktop launcher to direct execution or `--appimage-extract-and-run`. Rerun the
-same install command to update all three files or after the host's FUSE
-availability changes. To remove only those files while preserving unrelated
-files and parent directories, run:
+The helper does not authenticate a publisher or replace either checksum check.
+It does not download or verify network content, use a package manager, or
+request administrator access. It only structurally validates the user-supplied
+local Linux ARM64 OMXTerm AppImage, then transactionally installs the per-user
+AppImage, icon, and desktop entry. At installation time it tests actual kernel
+FUSE mounting and fixes the desktop launcher to direct execution or
+`--appimage-extract-and-run`. Rerun the same install command to update all three
+files or after the host's FUSE availability changes. To remove only those files
+while preserving unrelated files and parent directories, run:
 
 ```sh
 ./OMXTerm-0.8.0-arm64.AppImage-installer.sh uninstall
 ```
 
 If installation reports invalid input, confirm that the AppImage is the
-verified Linux ARM64 OMXTerm asset and that `file` is installed. A failed update
-preserves the previous installation; correct the reported filesystem problem
-and rerun it.
+checksum-verified Linux ARM64 OMXTerm asset and that `file` is installed. A
+failed update preserves the previous installation; correct the reported
+filesystem problem and rerun it.
 
 The manual user-level setup below remains supported and needs no administrator
 access. Run it from the directory containing the verified AppImage:
@@ -181,34 +235,6 @@ Dock. The desktop entry points to permanent user files, not to the temporary
 icon. To update later, verify the new AppImage and overwrite
 `~/.local/opt/omxterm/OMXTerm.AppImage`. If FUSE mounting is unavailable, add
 `--appimage-extract-and-run` after `"$app"` in the desktop entry's `Exec` line.
-
-### Installing on Windows
-
-Install the
-[Microsoft Visual C++ Redistributable for ARM64](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
-if it is not already present. Download the NSIS installer and its matching
-checksum file into the same directory. Compare the checksum file with a fresh
-hash:
-
-```powershell
-Get-Content .\OMXTerm-0.8.0-arm64.exe.sha256
-(Get-FileHash .\OMXTerm-0.8.0-arm64.exe -Algorithm SHA256).Hash.ToLower()
-```
-
-Run `OMXTerm-0.8.0-arm64.exe`. It installs per-user without administrator
-elevation; launch OMXTerm from the Start Menu. Because the installer is
-intentionally unsigned, Microsoft Defender SmartScreen may warn that it is from
-an unknown publisher. Review the source,
-verify the checksum, and proceed only if you trust the exact artifact;
-SmartScreen's `More info -> Run anyway` applies to that one file. Do not disable
-SmartScreen or other system-wide Windows security protections.
-
-On Windows the Default Shell is Windows PowerShell, falling back to the
-`ComSpec` command processor; Windows has no login-shell concept, so the shell
-starts as a plain interactive session in the user's home directory. Because
-ConPTY does not expose the PTY foreground process name, every live session
-counts as Busy: with `confirmClose` enabled, closing a tab, window, or the
-application always asks once.
 
 ## Launching an explicit command
 

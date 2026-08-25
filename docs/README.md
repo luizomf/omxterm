@@ -17,9 +17,9 @@ release procedures so that each kind of information has one clear owner.
 
 - [Domain language](../CONTEXT.md) defines the terms used throughout the
   project.
-- [Architecture decision records](adr/) explain durable technical and product
-  tradeoffs. ADRs record why a decision was made; the specification records the
-  behavior users can rely on.
+- [Architecture decision records](adr/README.md) index the status of durable
+  technical and product tradeoffs and link to their original reasoning. The
+  specification records the behavior users can rely on.
 - [MIT License](../LICENSE) defines the rights granted for OMXTerm source, and
   [Third-Party Notices](../THIRD_PARTY_NOTICES.md) records bundled components
   with their own terms.
