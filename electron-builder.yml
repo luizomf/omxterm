@@ -4,6 +4,11 @@ copyright: Copyright © 2026 Luiz Otávio Miranda
 asar:
   smartUnpack: false
 npmRebuild: false
+# The legacy ARM64 AppImage runtime dynamically requests the development-only
+# libz.so linker name. Use electron-builder's static runtime so the artifact has
+# no host zlib or libfuse2 library dependency.
+toolsets:
+  appimage: 1.0.3
 directories:
   output: release
 extraResources:

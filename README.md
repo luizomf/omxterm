@@ -84,8 +84,9 @@ chmod +x OMXTerm-0.4.1-arm64.AppImage
 The AppImage is ready to run and does not need a system-wide installer. Its
 unsigned status means Linux distributions receive no publisher identity to
 verify. Linux needs the `fontconfig` utilities for configured system-font
-validation. Normal AppImage mounting also requires FUSE 2 (`libfuse2t64` on
-Ubuntu 24.04 or `libfuse2` on older Ubuntu releases). Without FUSE 2, use:
+validation. The statically linked AppImage runtime does not require zlib
+development headers or a system `libfuse2` library. Normal mounting uses the
+system's kernel FUSE support; when mounting is unavailable, use:
 
 ```sh
 ./OMXTerm-0.4.1-arm64.AppImage --appimage-extract-and-run
@@ -142,7 +143,7 @@ Search for **OMXTerm** in Activities, launch it, and optionally pin it to the
 Dock. The desktop entry points to permanent user files, not to the temporary
 `squashfs-root`; deleting an extraction directory therefore cannot break the
 icon. To update later, verify the new AppImage and overwrite
-`~/.local/opt/omxterm/OMXTerm.AppImage`. If FUSE 2 is unavailable, add
+`~/.local/opt/omxterm/OMXTerm.AppImage`. If FUSE mounting is unavailable, add
 `--appimage-extract-and-run` after `"$app"` in the desktop entry's `Exec` line.
 
 ### Installing on Windows
@@ -234,8 +235,9 @@ Project checks are available as root scripts:
   macOS, Linux, or Windows ARM64 host;
 - `npm run check` runs the full macOS packaging check;
 - `npm run check:linux` runs the portable quality gate, the Linux ARM64 AppImage
-  build, exact AppImage inspection, and isolated packaged startup through a real
-  PTY;
+  build, exact AppImage metadata, dependency, and content inspection, and
+  isolated packaged startup through a real PTY using both normal FUSE mounting
+  and `--appimage-extract-and-run`;
 - `npm run check:win` runs the same shared portable sequence for Windows: the
   ARM64 NSIS build, unpacked-application inspection, and isolated packaged startup
   through a real ConPTY.

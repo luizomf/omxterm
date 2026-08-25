@@ -3,6 +3,7 @@ import {
   inspectAsarEntries,
   inspectAdHocApplication,
   inspectApplicationVersions,
+  inspectElfDynamicDependencies,
   inspectForbiddenPackagedEntries,
   inspectIcnsRepresentations,
   packagedExplicitCommand,
@@ -104,6 +105,25 @@ describe("packaged application verifier", () => {
     });
 
     expect(() => signalProcessGroup(123, "SIGTERM")).toThrow(cause);
+  });
+
+  it("reads exact ELF dynamic dependencies for AppImage runtime checks", () => {
+    expect(
+      inspectElfDynamicDependencies(`
+ 0x0000000000000001 (NEEDED)             Shared library: [libfuse.so.2]
+ 0x0000000000000001 (NEEDED)             Shared library: [libz.so.1]
+`),
+    ).toEqual(["libfuse.so.2", "libz.so.1"]);
+    expect(() =>
+      inspectElfDynamicDependencies(`
+ 0x0000000000000001 (NEEDED)             Shared library: [libz.so]
+`),
+    ).toThrow("development-only unversioned libz.so");
+    expect(
+      inspectElfDynamicDependencies(
+        "There is no dynamic section in this file.\n",
+      ),
+    ).toEqual([]);
   });
 
   it("requires source, embedded package, and bundle versions to agree", () => {

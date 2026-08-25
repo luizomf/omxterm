@@ -188,6 +188,22 @@ async function readPeMachine(file) {
   return data.readUInt16LE(peOffset + 4);
 }
 
+export function inspectElfDynamicDependencies(dynamicSection) {
+  const dependencies = [
+    ...dynamicSection.matchAll(/\(NEEDED\).*\[([^\]]+)\]/gu),
+  ].map((match) => match[1]);
+  if (dependencies.includes("libz.so"))
+    throw new Error(
+      "AppImage runtime depends on development-only unversioned libz.so",
+    );
+  return dependencies;
+}
+
+async function inspectLinuxAppImageDependencies(appImagePath) {
+  const { stdout } = await execFile("readelf", ["--dynamic", appImagePath]);
+  inspectElfDynamicDependencies(stdout);
+}
+
 async function inspectArchitecture(file, label, platform) {
   if (platform === "win32") {
     const machine = await readPeMachine(file);
@@ -584,6 +600,7 @@ export async function verifyPackagedApplication(applicationPath) {
   try {
     if (platform === "linux") {
       await inspectArchitecture(packagedPath, "AppImage", platform);
+      await inspectLinuxAppImageDependencies(packagedPath);
       const { stdout: signature } = await execFile(packagedPath, [
         "--appimage-signature",
       ]);
@@ -763,86 +780,101 @@ export async function verifyPackagedApplication(applicationPath) {
       if (cause?.code !== "ENOENT") throw cause;
     }
 
-    const temporaryRoot = await mkdtemp(
-      path.join(tmpdir(), "omxterm-packaged-startup-"),
-    );
-    const configurationRoot = path.join(temporaryRoot, "config");
-    const stateRoot = path.join(temporaryRoot, "state");
-    const userDataRoot = path.join(temporaryRoot, "electron-user-data");
-    const homeRoot = path.join(temporaryRoot, "home");
-    await Promise.all([
-      mkdir(path.join(configurationRoot, "omxterm"), { recursive: true }),
-      mkdir(homeRoot, { recursive: true }),
-    ]);
-    await writeFile(
-      path.join(configurationRoot, "omxterm", "config.json"),
-      `${JSON.stringify({ version: 1, confirmClose: false })}\n`,
-    );
-    const canary = `OMXTERM_PACKAGE_SECRET_CANARY_${Date.now()}`;
-    const argumentCanary = `OMXTERM_PACKAGE_ARGUMENT_CANARY_${Date.now()}`;
-    const readinessFile = path.join(temporaryRoot, "explicit-command-ready");
-    const explicitCommand = packagedExplicitCommand(platform);
-    let stderr = "";
-    const launchPath = platform === "linux" ? packagedPath : executable;
-    const launchArguments = [
-      `--user-data-dir=${userDataRoot}`,
-      ...(platform === "linux" ? ["--ozone-platform=x11"] : []),
-      "-e",
-      explicitCommand.executable,
-      ...explicitCommand.arguments,
-      argumentCanary,
-    ];
-    // The packaged Linux app relaunches itself onto X11 when Electron seeds
-    // a Wayland session backend (ADR 0020), and this harness cannot follow a
-    // relaunch. Pin the backend explicitly; default-backend selection is
-    // covered by unit tests and the manual exact-artifact checklist.
-    const child = spawn(launchPath, launchArguments, {
-      detached: true,
-      env: {
-        ...process.env,
-        HOME: homeRoot,
-        XDG_CONFIG_HOME: configurationRoot,
-        XDG_STATE_HOME: stateRoot,
-        OMXTERM_PACKAGE_SECRET_CANARY: canary,
-        OMXTERM_PACKAGE_ARGUMENT_CANARY: argumentCanary,
-        OMXTERM_PACKAGE_EXPECTED_HOME: userInfo().homedir,
-        OMXTERM_PACKAGE_READINESS_FILE: readinessFile,
-      },
-      stdio: ["ignore", "ignore", "pipe"],
-    });
-    child.stderr.setEncoding("utf8");
-    child.stderr.on("data", (chunk) => {
-      if (stderr.length < 16_384) stderr += chunk;
-    });
-
-    try {
-      const logFile = path.join(stateRoot, "omxterm", "logs", "omxterm.jsonl");
-      const records = await waitForStartup(logFile, readinessFile, child, () =>
-        stderr.trim(),
+    const linuxLaunchModes =
+      platform === "linux" ? [[], ["--appimage-extract-and-run"]] : [[]];
+    let verifiedRecords = 0;
+    for (const runtimeArguments of linuxLaunchModes) {
+      const temporaryRoot = await mkdtemp(
+        path.join(tmpdir(), "omxterm-packaged-startup-"),
       );
-      const logText = await readFile(logFile, "utf8");
-      const diagnostics = `${logText}\n${stderr}`;
-      const privateLaunchValues = [
-        canary,
-        argumentCanary,
+      const configurationRoot = path.join(temporaryRoot, "config");
+      const stateRoot = path.join(temporaryRoot, "state");
+      const userDataRoot = path.join(temporaryRoot, "electron-user-data");
+      const homeRoot = path.join(temporaryRoot, "home");
+      await Promise.all([
+        mkdir(path.join(configurationRoot, "omxterm"), { recursive: true }),
+        mkdir(homeRoot, { recursive: true }),
+      ]);
+      await writeFile(
+        path.join(configurationRoot, "omxterm", "config.json"),
+        `${JSON.stringify({ version: 1, confirmClose: false })}\n`,
+      );
+      const canary = `OMXTERM_PACKAGE_SECRET_CANARY_${Date.now()}`;
+      const argumentCanary = `OMXTERM_PACKAGE_ARGUMENT_CANARY_${Date.now()}`;
+      const readinessFile = path.join(temporaryRoot, "explicit-command-ready");
+      const explicitCommand = packagedExplicitCommand(platform);
+      let stderr = "";
+      const launchPath = platform === "linux" ? packagedPath : executable;
+      const launchArguments = [
+        ...runtimeArguments,
+        `--user-data-dir=${userDataRoot}`,
+        ...(platform === "linux" ? ["--ozone-platform=x11"] : []),
+        "-e",
         explicitCommand.executable,
         ...explicitCommand.arguments,
+        argumentCanary,
       ];
-      if (privateLaunchValues.some((value) => diagnostics.includes(value)))
-        throw new Error(
-          "Packaged startup diagnostics disclosed explicit launch data",
-        );
-      return { applicationPath: packagedPath, records: records.length };
-    } finally {
-      await stopProcessGroup(child);
-      // Windows releases the stopped tree's file locks asynchronously.
-      await rm(temporaryRoot, {
-        recursive: true,
-        force: true,
-        maxRetries: 10,
-        retryDelay: 200,
+      // The packaged Linux app relaunches itself onto X11 when Electron seeds
+      // a Wayland session backend (ADR 0020), and this harness cannot follow a
+      // relaunch. Pin the backend explicitly; default-backend selection is
+      // covered by unit tests and the manual exact-artifact checklist.
+      const child = spawn(launchPath, launchArguments, {
+        detached: true,
+        env: {
+          ...process.env,
+          HOME: homeRoot,
+          XDG_CONFIG_HOME: configurationRoot,
+          XDG_STATE_HOME: stateRoot,
+          OMXTERM_PACKAGE_SECRET_CANARY: canary,
+          OMXTERM_PACKAGE_ARGUMENT_CANARY: argumentCanary,
+          OMXTERM_PACKAGE_EXPECTED_HOME: userInfo().homedir,
+          OMXTERM_PACKAGE_READINESS_FILE: readinessFile,
+        },
+        stdio: ["ignore", "ignore", "pipe"],
       });
+      child.stderr.setEncoding("utf8");
+      child.stderr.on("data", (chunk) => {
+        if (stderr.length < 16_384) stderr += chunk;
+      });
+
+      try {
+        const logFile = path.join(
+          stateRoot,
+          "omxterm",
+          "logs",
+          "omxterm.jsonl",
+        );
+        const records = await waitForStartup(
+          logFile,
+          readinessFile,
+          child,
+          () => stderr.trim(),
+        );
+        const logText = await readFile(logFile, "utf8");
+        const diagnostics = `${logText}\n${stderr}`;
+        const privateLaunchValues = [
+          canary,
+          argumentCanary,
+          explicitCommand.executable,
+          ...explicitCommand.arguments,
+        ];
+        if (privateLaunchValues.some((value) => diagnostics.includes(value)))
+          throw new Error(
+            "Packaged startup diagnostics disclosed explicit launch data",
+          );
+        verifiedRecords += records.length;
+      } finally {
+        await stopProcessGroup(child);
+        // Windows releases the stopped tree's file locks asynchronously.
+        await rm(temporaryRoot, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 200,
+        });
+      }
     }
+    return { applicationPath: packagedPath, records: verifiedRecords };
   } finally {
     if (extractionRoot)
       await rm(extractionRoot, { recursive: true, force: true });

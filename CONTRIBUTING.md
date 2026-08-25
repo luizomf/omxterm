@@ -46,15 +46,18 @@ Use an ARM64 machine running macOS, Linux, or Windows with Node.js 22.13 or
 later in the Node.js 22 line, or Node.js 24 or newer, and its bundled npm. Install dependencies from the lockfile with `npm ci`.
 
 On Linux, `node-pty` builds from source and requires `python3`, `make`, and a C++
-compiler (`build-essential` provides the latter two on Ubuntu). Install those
-tools through the distribution's package manager before running `npm ci`.
-OMXTerm's postinstall then rebuilds `node-pty` against the installed Electron
-Linux ARM64 runtime; do not use a module copied from Node.js, macOS, or another
-architecture. Linux also needs the `fontconfig` utilities for exact configured
-font-family validation. Running the AppImage normally requires FUSE 2, such as
-`libfuse2t64` on Ubuntu 24.04 or `libfuse2` on older Ubuntu releases. Linux
-rendering uses X11 and requires XWayland under a Wayland session; native Wayland
-is not currently claimed. Launching OMXTerm — including the packaged launch
+compiler (`build-essential` provides the latter two on Ubuntu). Native package
+verification also uses `readelf` from `binutils`; Ubuntu's build toolchain pulls
+that package in. Install those tools through the distribution's package manager
+before running `npm ci`. OMXTerm's postinstall then rebuilds `node-pty` against
+the installed Electron Linux ARM64 runtime; do not use a module copied from
+Node.js, macOS, or another architecture. Linux also needs the `fontconfig`
+utilities for exact configured font-family validation. The statically linked
+AppImage runtime needs neither zlib development headers nor a system `libfuse2`
+library. Normal AppImage mounting uses kernel FUSE support; the
+`--appimage-extract-and-run` fallback remains available when mounting is not.
+Linux rendering uses X11 and requires XWayland under a Wayland session; native
+Wayland is not currently claimed. Launching OMXTerm — including the packaged launch
 inside `npm run package:verify` and `npm run check:linux` — needs a running
 graphical session; a headless or SSH shell without `$DISPLAY` fails with
 `Missing X server or $DISPLAY`. Over SSH, point `DISPLAY` at the machine's
@@ -142,8 +145,10 @@ Before delivery on any Supported Platform, run `npm run check:portable`. On
 macOS, `npm run check` is the full native project command. On Linux ARM64, use
 `npm run check:linux`; it formats, lints, and typechecks, runs all tests
 including the real-PTY test, builds the AppImage, extracts and inspects its exact contents,
-and launches that exact AppImage with isolated configuration and state. These
-commands create local output under `release/` but never publish it. Use
+and checks its ELF dependencies before launching that exact AppImage through
+both normal FUSE mounting and `--appimage-extract-and-run`, with isolated
+configuration and state for each real-PTY launch. These commands create local
+output under `release/` but never publish it. Use
 `npm run package:linux` for a non-publishing AppImage build alone, followed by
 `npm run package:verify` on the same host.
 

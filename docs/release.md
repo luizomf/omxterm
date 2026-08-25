@@ -130,8 +130,9 @@ recorded honestly.
 Use a native Linux arm64 clone on the VM's native filesystem, never a Parallels
 shared folder. Install Node.js 22.13 or later in the Node.js 22 line, or
 Node.js 24 or newer, plus `python3`, `make`, a C++ compiler
-(`build-essential` on Ubuntu), the `fontconfig` utilities, and an X11 display or
-XWayland in a Wayland session. Native Wayland is not currently claimed. Then run
+(`build-essential` on Ubuntu), `readelf` (`binutils` on Ubuntu), the `fontconfig`
+utilities, and an X11 display or XWayland in a Wayland session. Native Wayland
+is not currently claimed. Then run
 from the accepted source commit:
 
 ```sh
@@ -142,16 +143,19 @@ npm run check:linux
 The postinstall rebuilds `node-pty` against Electron's Linux arm64 runtime.
 `npm run check:linux` runs all portable and real-PTY checks, creates the
 non-published `release/OMXTerm-<version>-arm64.AppImage`, extracts that exact
-AppImage, checks its arm64 executable and native module, runtime files, version,
-icon, licenses, and forbidden/private-looking files, then launches the exact
-AppImage with isolated configuration, state, and user data. Startup must reach
-a running PTY and its Operational Event log must not contain the environment
-canary.
+AppImage, rejects the unversioned `libz.so` development linker dependency,
+and checks its arm64 executable and native module, runtime files, version, icon,
+licenses, and forbidden/private-looking files. It then launches that exact
+AppImage through both normal FUSE mounting and `--appimage-extract-and-run`,
+with isolated configuration, state, and user data for each launch. Both startup
+paths must reach a running PTY, and their Operational Event logs must not contain
+the environment canary.
 
 For packaging alone, run `npm run package:linux`, followed on the same native
-host by `npm run package:verify`. A normal AppImage launch requires FUSE 2
-(`libfuse2t64` on Ubuntu 24.04 or `libfuse2` on older Ubuntu releases). If that
-runtime cannot be installed, the safe manual fallback is:
+host by `npm run package:verify`. The statically linked AppImage runtime needs
+neither zlib development headers nor a system `libfuse2` library. Normal
+mounting uses kernel FUSE support. When mounting is unavailable, the safe manual
+fallback is:
 
 ```sh
 ./release/OMXTerm-<version>-arm64.AppImage --appimage-extract-and-run

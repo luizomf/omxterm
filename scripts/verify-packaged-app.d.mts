@@ -10,6 +10,8 @@ export function inspectAsarEntries(
 
 export function inspectForbiddenPackagedEntries(entries: string[]): string[];
 
+export function inspectElfDynamicDependencies(dynamicSection: string): string[];
+
 export interface IcnsRepresentation {
   readonly name: string;
   readonly width: number;
