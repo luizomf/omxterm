@@ -7,9 +7,10 @@ and Windows.
   <img src="docs/images/omxterm-hero.png" alt="OMXTerm icon: a light blue terminal prompt on a dark rounded square" width="480" />
 </p>
 
-The current release candidate is `0.8.0`. Its intended `v0.8.0` tag and native
-artifacts are not published yet; exact-artifact verification, owner acceptance,
-and separate publication authorization remain pending. When authorized, the
+The current release candidate is `0.8.0`. Its exact native artifacts passed
+automated verification but are not published yet; owner acceptance, the intended
+`v0.8.0` tag, and separate publication authorization remain pending. After that
+authorization, the
 [GitHub Releases page](https://github.com/luizomf/omxterm/releases) will provide:
 
 - `OMXTerm-0.8.0-arm64.dmg` for Apple Silicon macOS;
