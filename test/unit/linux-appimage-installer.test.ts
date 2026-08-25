@@ -3,6 +3,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   rm,
   stat,
   writeFile,
@@ -168,11 +169,16 @@ describe.skipIf(process.platform === "win32")(
       await writeFile(invalid, "not an AppImage\n");
 
       await expect(
-        runHelper(home, bin, ["install", invalid]),
+        runHelper(home, bin, ["install", invalid], { TMPDIR: root }),
       ).rejects.toThrow();
       await expect(stat(path.join(home, ".local"))).rejects.toMatchObject({
         code: "ENOENT",
       });
+      expect(
+        (await readdir(root)).filter((entry) =>
+          entry.startsWith("omxterm-installer."),
+        ),
+      ).toEqual([]);
     });
 
     it("leaves no partial clean installation when a replacement fails", async () => {

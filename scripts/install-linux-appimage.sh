@@ -103,6 +103,7 @@ install_appimage() {
     *) fail "input is not a Linux ARM64 ELF AppImage" ;;
   esac
 
+  owned_paths
   work=$(mktemp -d "${TMPDIR:-/tmp}/omxterm-installer.XXXXXX") ||
     fail "could not create a temporary directory"
   trap rollback EXIT HUP INT TERM
@@ -127,7 +128,6 @@ install_appimage() {
     fail "the AppImage does not contain the required OMXTerm desktop metadata"
 
   probe_fuse_mode
-  owned_paths
   escaped_app=$(printf '%s' "$app" | sed 's/\\/\\\\/g; s/"/\\"/g')
   desktop_contents=$work/omxterm.desktop
   cat > "$desktop_contents" <<EOF
