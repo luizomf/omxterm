@@ -51,6 +51,7 @@ export function inspectAdHocApplication(
 
 export function packagedExplicitCommand(
   platform: NodeJS.Platform | string,
+  argumentCanary: string,
   systemRoot?: string,
 ): {
   readonly executable: string;

@@ -29,32 +29,37 @@ describe("packaged application verifier", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("launches a direct packaged command that checks literal argv and the session contract", () => {
-    const posix = packagedExplicitCommand("darwin");
+    const argumentCanary = "generated-argument-canary";
+    const expectedArguments = [
+      "--literal-option-looking-argument",
+      argumentCanary,
+    ];
+    const posix = packagedExplicitCommand("darwin", argumentCanary);
     expect(posix.executable).toBe("/bin/sh");
     expect(posix.arguments[0]).toBe("-c");
-    expect(posix.arguments.at(-1)).toBe("--literal-option-looking-argument");
-    expect(posix.arguments.join(" ")).toContain(
-      "--literal-option-looking-argument",
-    );
+    expect(posix.arguments.slice(-2)).toEqual(expectedArguments);
     expect(posix.arguments.join(" ")).toContain(
       "$OMXTERM_PACKAGE_ARGUMENT_CANARY",
     );
     expect(posix.arguments.join(" ")).toContain("$TERM_PROGRAM_VERSION");
     expect(posix.arguments.join(" ")).toContain("$PWD");
 
-    const windows = packagedExplicitCommand("win32", "C:\\System");
+    const windows = packagedExplicitCommand("win32", argumentCanary, "C:\\");
     expect(windows.executable).toBe(
-      "C:\\System\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "C:\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
     );
-    expect(windows.arguments).toEqual(
-      expect.arrayContaining([
-        "-NoProfile",
-        "-Command",
-        "--literal-option-looking-argument",
-      ]),
+    expect(windows.arguments.slice(1, 3)).toEqual(["-NoProfile", "-Command"]);
+    expect(windows.arguments.slice(-2)).toEqual(expectedArguments);
+    expect(windows.arguments.join(" ")).toContain(
+      "& { param($firstArgument, $secondArgument)",
     );
-    expect(windows.arguments.join(" ")).toContain("$args[0]");
-    expect(windows.arguments.join(" ")).toContain("$args[1]");
+    expect(windows.arguments.join(" ")).toContain(
+      "$firstArgument -eq '--literal-option-looking-argument'",
+    );
+    expect(windows.arguments.join(" ")).toContain(
+      "$secondArgument -eq $env:OMXTERM_PACKAGE_ARGUMENT_CANARY",
+    );
+    expect(windows.arguments.join(" ")).not.toContain("$args");
   });
 
   it("reports a missing process group when signaling returns ESRCH", () => {
