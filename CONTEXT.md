@@ -1,9 +1,8 @@
 # OMXTerm
 
-OMXTerm is Otávio's personal desktop terminal: an environment shaped around his
-own workflows, preferences, and experiments rather than a commercial product or
-a claim of superiority over other terminals. OMXTerm Web is the separate
-browser-based SSH broker previously named OMXTerm.
+OMXTerm is an open-source personal desktop terminal built around the Personal
+Terminal concept: an environment deliberately shaped by its user. OMXTerm Web
+is the separate browser-based SSH broker previously named OMXTerm.
 
 ## Language
 

@@ -340,7 +340,7 @@ through the `keybinds`
 preference.
 
 See the [complete configuration guide](docs/configuration.md) for every field,
-Otávio's real configuration, keybinds, snippets, external Terminal Themes, the
+step-by-step examples, keybinds, snippets, external Terminal Themes, the
 optional Ghostty conversion helper, and troubleshooting. OMXTerm never creates, rewrites, or migrates these files. Use `View -> Reload
 User Configuration` to apply `config.json` and Terminal Theme changes manually;
 `snippets.json` is reread whenever the Snippets Sidebar opens.

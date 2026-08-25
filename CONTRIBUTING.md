@@ -41,7 +41,7 @@ In a substantial-change issue, explain the user-facing problem and desired
 outcome before implementation details. This gives the maintainer enough context
 to confirm scope, identify dependencies, and prevent duplicate work.
 
-OMXTerm is Otávio's personal desktop terminal, with a deliberately focused
+OMXTerm is an open-source personal desktop terminal with a deliberately focused
 product boundary. Splits, saved sessions, AI assistance, SSH brokering, shell
 integration, theme catalogs, and automatic updates remain outside the current
 product contract. The Supported Platforms are ARM64 macOS, Linux, and Windows;

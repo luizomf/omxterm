@@ -5,7 +5,7 @@ OMXTerm product behavior.
 
 ## Product
 
-OMXTerm is Otávio's personal, open-source desktop terminal. It opens a normal
+OMXTerm is an open-source personal desktop terminal. It opens a normal
 local shell in a standard native window with a small title bar and gives the
 Terminal Surface all remaining content space. It is not a Ghostty competitor
 claim, an SSH bastion, an AI product, a session manager, or an IDE.
