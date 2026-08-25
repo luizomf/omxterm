@@ -97,10 +97,11 @@ chmod +x OMXTerm-0.8.0-arm64.AppImage OMXTerm-0.8.0-arm64.AppImage-installer.sh
 ./OMXTerm-0.8.0-arm64.AppImage-installer.sh install ./OMXTerm-0.8.0-arm64.AppImage
 ```
 
-The helper uses only the supplied local files, performs no download or
-system-wide installation, and does not establish a publisher identity. See the
-[release notes](docs/releases/0.8.0.md#what-is-new) for its ownership and
-transaction guarantees.
+The helper structurally validates the supplied local Linux ARM64 AppImage, but
+does not authenticate a publisher or replace either checksum check. It uses
+only the supplied local files and performs no download or system-wide
+installation. See the [release notes](docs/releases/0.8.0.md#what-is-new) for
+its ownership and transaction guarantees.
 
 ### Windows
 
