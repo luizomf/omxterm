@@ -1,105 +1,16 @@
 # User configuration
 
-OMXTerm works without a configuration file. When one is present, it is strict,
-versioned JSON that OMXTerm reads at startup and when you manually choose
-`View -> Reload User Configuration`. OMXTerm never creates, rewrites, or
-migrates the file.
+OMXTerm works without configuration files. Add them only when you want to
+change a default, create Snippets, or use an external Terminal Theme.
 
-This guide explains how to use the configuration contract. The normative
-behavior remains in the [current product contract](spec.md#configuration-and-local-state).
+User Configuration is strict, versioned JSON. OMXTerm reads it at startup and
+when you choose `View -> Reload User Configuration`; it never creates,
+rewrites, repairs, or migrates the file. The normative behavior remains in the
+[current product contract](spec.md#configuration-and-local-state).
 
-## Configuration location
+## Quick start: use the bundled defaults
 
-OMXTerm reads:
-
-1. `$XDG_CONFIG_HOME/omxterm/config.json` when `XDG_CONFIG_HOME` is non-empty;
-2. `~/.config/omxterm/config.json` otherwise.
-
-When `XDG_CONFIG_HOME` is unset or empty, create the default directory with:
-
-```sh
-mkdir -p ~/.config/omxterm/themes
-```
-
-When it is set, use the configured location instead:
-
-```sh
-mkdir -p "$XDG_CONFIG_HOME/omxterm/themes"
-```
-
-The same XDG-style resolution applies on Windows. With `XDG_CONFIG_HOME`
-unset — the common case — the location is
-`%USERPROFILE%\.config\omxterm\config.json`:
-
-```powershell
-New-Item -ItemType Directory -Force "$env:USERPROFILE\.config\omxterm\themes"
-```
-
-Choose `View -> Reload User Configuration` after editing `config.json`. The
-action defaults to `Cmd+Shift+,` on macOS and `Ctrl+Shift+,` on Linux and
-Windows and can be remapped as `reloadConfig`. A missing configuration file
-selects all defaults. An invalid file never stops OMXTerm from opening: the
-application starts with its built-in defaults, shows a persistent in-app error
-describing the exact problem, and leaves the file unchanged so you can fix and
-reload it inside OMXTerm.
-
-## Otávio's configuration
-
-This is the configuration Otávio uses. It is an example, not a second set of
-defaults. `Fira Code` must be installed on the Mac, and the selected external
-theme file must exist relative to `config.json`.
-
-```json
-{
-  "version": 1,
-  "confirmClose": true,
-  "logLevel": "info",
-  "font": {
-    "family": "Fira Code",
-    "size": 22,
-    "lineHeight": 1.1
-  },
-  "terminal": {
-    "padding": {
-      "top": 4,
-      "right": 4,
-      "bottom": 8,
-      "left": 16
-    }
-  },
-  "scrollback": {
-    "lines": 10000
-  },
-  "keyboard": {
-    "optionAsAlt": "none"
-  },
-  "window": {
-    "alwaysOnTop": false
-  },
-  "theme": {
-    "path": "./themes/omtheme.json"
-  }
-}
-```
-
-His local directory is organized like this:
-
-```text
-~/.config/omxterm/
-├── config.json
-└── themes/
-    ├── catppuccin-mocha.json
-    ├── moonfly-default.json
-    └── omtheme.json
-```
-
-Only the file referenced by `theme.path` is loaded. The other files are a local
-collection and do not create profiles or a theme catalog. Otávio's third-party
-themes are not distributed by this repository.
-
-The external `omtheme.json` in this example is a local copy. Remove the entire
-`theme` property to use OMXTerm's bundled canonical `omtheme` without keeping a
-copy:
+Start with the smallest valid `config.json`:
 
 ```json
 {
@@ -107,20 +18,133 @@ copy:
 }
 ```
 
-Alternatively, from an OMXTerm source checkout, copy the canonical theme into
-the default configuration location used by the example:
+This file works on every Supported Platform. It uses the bundled JetBrainsMono
+Nerd Font Mono, the bundled `omtheme` Terminal Theme, and every other built-in
+default. It does not require an installed font or another file.
+
+### Create the configuration directory
+
+On macOS or Linux, create the directory selected by `XDG_CONFIG_HOME`, or the
+default directory when that variable is unset or empty:
 
 ```sh
-cp docs/omtheme.json ~/.config/omxterm/themes/omtheme.json
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/omxterm"
 ```
 
-Use `$XDG_CONFIG_HOME/omxterm/themes/omtheme.json` as the destination when that
-environment variable selects the configuration root.
+Save the JSON above as
+`${XDG_CONFIG_HOME:-$HOME/.config}/omxterm/config.json`.
+
+On Windows, the common default path is
+`%USERPROFILE%\.config\omxterm\config.json`. This PowerShell sequence also
+honors a non-empty `XDG_CONFIG_HOME`:
+
+```powershell
+$configRoot = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Path $HOME ".config" }
+$configDirectory = Join-Path $configRoot "omxterm"
+New-Item -ItemType Directory -Force $configDirectory
+```
+
+Save the JSON as `config.json` inside `$configDirectory`.
+
+After saving, choose `View -> Reload User Configuration`. The built-in shortcut
+is `Cmd+Shift+,` on macOS and `Ctrl+Shift+,` on Linux and Windows. A missing
+file also selects all defaults and is not an error.
+
+### Keep every edit strict
+
+Each User Configuration example in this section is a complete valid JSON
+document. Copy one, save it as `config.json`, and reload. When combining
+examples, keep exactly one root object and one `"version": 1` property.
+
+JSON comments, trailing commas, unknown or misspelled keys, duplicate
+accelerators, unsupported versions, and values outside the documented ranges
+are errors. OMXTerm does not guess what an invalid value meant or partially
+apply a document.
+
+At startup, invalid `config.json` uses every built-in default and reports the
+exact problem without changing the file. During a manual reload, an invalid
+file keeps the complete last valid in-memory configuration active. Fix the
+reported problem and reload again.
+
+## Add one display change
+
+Once the minimal file loads, try changing only the font size. The bundled font
+remains selected:
+
+```json
+{
+  "version": 1,
+  "font": {
+    "size": 18
+  }
+}
+```
+
+Next, add line height while keeping the previous change:
+
+```json
+{
+  "version": 1,
+  "font": {
+    "size": 18,
+    "lineHeight": 1.1
+  }
+}
+```
+
+Then add per-side padding:
+
+```json
+{
+  "version": 1,
+  "font": {
+    "size": 18,
+    "lineHeight": 1.1
+  },
+  "terminal": {
+    "padding": {
+      "top": 4,
+      "right": 8,
+      "bottom": 8,
+      "left": 8
+    }
+  }
+}
+```
+
+Choose values for your own display rather than treating these as alternate
+defaults. To select a system font later, add `font.family` with its exact
+installed family name. A missing configured family is an error; omit
+`font.family` to keep using the bundled font.
+
+The Terminal Surface is a grid of whole character cells. Cell dimensions depend
+on font family, size, line height, and renderer, so leftover window pixels are
+not automatically redistributed. Choose font size and line height first, then
+tune each padding side by eye. Window Font Zoom is temporary and does not edit
+configuration; Actual Size (`Cmd+0` on macOS or `Ctrl+0` on Linux and Windows)
+returns to the configured size.
+
+## Add one behavior change
+
+Preferences can stay small and focused. For example, this document changes only
+scrollback retention:
+
+```json
+{
+  "version": 1,
+  "scrollback": {
+    "lines": 20000
+  }
+}
+```
+
+Omitted preferences keep their defaults. Use the reference below to add only
+the settings you need.
 
 ## Configuration reference
 
-All preferences other than `version` are optional. Omitted preferences use
-their defaults. Objects and the root reject unknown keys.
+All preferences other than `version` are optional. Objects and the root reject
+unknown keys.
 
 | Preference                | Accepted value                          | Default                              |
 | ------------------------- | --------------------------------------- | ------------------------------------ |
@@ -140,22 +164,21 @@ their defaults. Objects and the root reject unknown keys.
 | `theme.path`              | non-empty filesystem path without NUL   | bundled `omtheme`                    |
 | `keybinds.<action>`       | accelerator with a non-Shift modifier   | built-in shortcut per action         |
 
-`keyboard.optionAsAlt` applies only on macOS: `none` preserves the active
-keyboard layout's native Unicode input, while `left`, `right`, and `both`
-select which Option keys produce terminal Alt sequences.
+`keyboard.optionAsAlt` applies only on macOS. `none` preserves the active
+keyboard layout's native Unicode input; `left`, `right`, and `both` select which
+Option keys produce terminal Alt sequences.
 
-On macOS, the configured top padding begins below the fixed 30 px native title
-and drag inset. On Linux and Windows, it begins directly below the operating
-system's native window chrome without another inset. `font.lineHeight` changes row height
-independently of glyph size.
-Window Font Zoom and the native Always on Top menu are per-window runtime
-actions and never rewrite this file.
+On macOS, configured top padding begins below the fixed 30 px native title and
+drag inset. On Linux and Windows, it begins directly below native Window Chrome.
+`font.lineHeight` changes row height independently of glyph size. The native
+Always on Top menu changes one current window; `window.alwaysOnTop` sets the
+default for new windows.
 
 ### Keybinds
 
-`keybinds` remaps the application-menu shortcuts. The keys are a fixed action
-vocabulary; the values are [Electron accelerator](https://www.electronjs.org/docs/latest/tutorial/keyboard-shortcuts#accelerators)
-strings such as `CommandOrControl+T`. Actions you omit keep their defaults:
+`keybinds` remaps application-menu shortcuts. The keys are a fixed action
+vocabulary; values are [Electron accelerator](https://www.electronjs.org/docs/latest/tutorial/keyboard-shortcuts#accelerators)
+strings. Omitted actions keep their defaults:
 
 | Action                      | macOS default              | Linux/Windows default |
 | --------------------------- | -------------------------- | --------------------- |
@@ -177,13 +200,7 @@ strings such as `CommandOrControl+T`. Actions you omit keep their defaults:
 | `toggleSnippets`            | `CommandOrControl+Shift+S` | `Control+Shift+S`     |
 | `reloadConfig`              | `CommandOrControl+Shift+,` | `Control+Shift+,`     |
 
-The Linux and Windows defaults use the conventional shifted terminal shortcuts
-so ordinary `Ctrl` shell and TUI input remains PTY input. On macOS, `Cmd+W` closes the
-selected tab and `Cmd+Shift+W` closes the whole window. `selectTab1` through
-`selectTab9` select literal tab positions; a position beyond the open tabs does
-nothing.
-
-For example, to open new windows with `Cmd+G` instead of `Cmd+N`:
+For example, this changes only New Window:
 
 ```json
 {
@@ -194,112 +211,160 @@ For example, to open new windows with `Cmd+G` instead of `Cmd+N`:
 }
 ```
 
-Accelerators are case-insensitive and must contain at least one non-Shift
-modifier (`Command`, `Control`, `CommandOrControl`, `Alt`/`Option`, `Super`)
-and exactly one key — a bare key or `Shift`-only accelerator would steal plain
-typing from the terminal, so it is rejected. Two actions can never share an
-effective accelerator: remapping `newWindow` to `CommandOrControl+W` conflicts
-with `closeTab`'s remaining default and is reported exactly like two
-explicit entries colliding (swap both explicitly if that is what you want).
-`CommandOrControl` counts as `Command` on macOS and `Control` on Linux and
-Windows when duplicates are judged; `Super` and `Meta` use Electron's Command accelerator
-family. The menu shows the shortcut that is actually active.
-Keybinds change application shortcuts only. A matched accelerator is consumed
-by its application action and does not reach the terminal; unmatched keyboard
-input continues to the PTY unchanged.
+Accelerators are case-insensitive and require at least one non-Shift modifier
+(`Command`, `Control`, `CommandOrControl`, `Alt`/`Option`, or `Super`) and
+exactly one key. A bare key or Shift-only accelerator is rejected so it cannot
+swallow plain terminal typing.
 
-Because `CommandOrControl` becomes `Control` on Linux and Windows, a map you
-authored on macOS can bind an action onto a bare `Ctrl+<key>` that the terminal
-normally uses — `Ctrl+C` (interrupt), `Ctrl+D`, `Ctrl+Z`, `Ctrl+\`, `Ctrl+U`,
-`Ctrl+W`, `Ctrl+A`, or `Ctrl+E`. OMXTerm keeps such a binding active but shows a
-warning on the in-app error surface naming the action and the shadowed control
-key, so a deliberate remap still works while an accidental one is easy to spot.
-Add `Shift` (for example `CommandOrControl+Shift+C`) or pick a different key if
-you want that control key to keep reaching the shell.
+Two actions cannot share one effective accelerator. A remap also cannot collide
+with another action's remaining default. `CommandOrControl` resolves to
+`Command` on macOS and `Control` on Linux and Windows when collisions are
+checked; `Super` and `Meta` use Electron's Command accelerator family.
 
-### Tuning padding around the terminal grid
-
-The Terminal Surface is a grid of whole character cells, not ordinary text
-that can end at any pixel. After accounting for any platform title inset and
-configured padding, OMXTerm fits the largest whole number of columns and rows
-that the window can contain. Cell width and height depend on the font family, font size,
-line height, and renderer, so the remaining width and height rarely divide
-evenly into cells.
-
-This is why Otávio's example uses visually asymmetric padding. Its
-`4 / 4 / 8 / 16` top, right, bottom, and left values were tuned around Fira
-Code at 22 px with a 1.1 line height; they are not universal values that make
-every font and window geometrically balanced.
-
-Choose the font size and line height you normally use first, then adjust the
-four padding sides by eye. Resizing the window or using Window Font Zoom changes
-the cell measurements without changing the configured padding, so a balance
-that looks right at one size may shift at another. OMXTerm currently refits the
-terminal grid and keeps it usable, but it does not redistribute leftover pixels
-or automatically rebalance padding. `Cmd+0` on macOS or `Ctrl+0` on Linux and
-Windows returns the window to its configured font size when you want to return to the
-size around which the
-padding was tuned.
+A matched application keybind is consumed and does not reach the PTY. On Linux
+and Windows, a macOS-authored `CommandOrControl` binding can therefore shadow a
+bare terminal control key such as `Ctrl+C`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+\`,
+`Ctrl+U`, `Ctrl+W`, `Ctrl+A`, or `Ctrl+E`. OMXTerm keeps a valid binding active
+but warns which action and control key conflict. Add `Shift` or choose another
+key when the control key should continue to reach the shell.
 
 ## Snippets
 
-OMXTerm optionally reads `snippets.json` next to `config.json` — things you
-type all the time, one search-and-click away. The file is strict, hand-authored
-JSON that OMXTerm never creates, edits, or rewrites. A missing file simply
-means no snippets.
+OMXTerm optionally reads `snippets.json` next to `config.json`. It is a separate
+strict JSON file that OMXTerm never creates, edits, rewrites, or migrates. A
+missing file means the Snippets Sidebar is empty.
+
+Start with one generic, single-line snippet that inserts text but does not add
+Enter:
 
 ```json
 {
   "version": 1,
   "snippets": [
     {
-      "name": "git amend",
-      "body": "git commit --amend --no-edit",
-      "description": "amend staged changes into the last commit"
-    },
-    {
-      "name": "brew maintenance",
-      "body": "brew update && brew upgrade",
-      "execute": true
+      "name": "Show current directory",
+      "body": "pwd",
+      "description": "Insert a command that prints the current directory"
     }
   ]
 }
 ```
 
-The required `snippets` array accepts at most 512 entries. Each snippet has:
+Save it as `snippets.json` in the same directory as `config.json`. Open
+`View -> Toggle Snippets` (`Cmd+Shift+S` on macOS or `Ctrl+Shift+S` on Linux
+and Windows), then click the snippet. Review the inserted command and press
+Enter yourself.
 
-| Field         | Accepted value                           | Default  |
-| ------------- | ---------------------------------------- | -------- |
-| `name`        | non-empty string up to 128 characters    | required |
-| `body`        | non-empty string up to 65,536 characters | required |
-| `description` | string up to 512 characters              | none     |
-| `execute`     | boolean                                  | `false`  |
+Next, opt one non-destructive snippet into automatic submission:
 
-`Cmd+Shift+S` on macOS or `Ctrl+Shift+S` on Linux and Windows (the
-`toggleSnippets` keybind, remappable) shows or hides the Snippets Sidebar in
-the selected window.
-The search field filters by name and
-description; clicking a snippet injects its body into that window's terminal
-and returns focus to the terminal. The file is reread every time the sidebar
-opens, so editing `snippets.json` and reopening the sidebar shows the new
-content without restarting OMXTerm.
+```json
+{
+  "version": 1,
+  "snippets": [
+    {
+      "name": "Show current directory",
+      "body": "pwd",
+      "description": "Print the current directory",
+      "execute": true
+    },
+    {
+      "name": "List directory",
+      "body": "ls",
+      "description": "Insert a command that lists directory entries"
+    }
+  ]
+}
+```
 
-Injection behaves exactly like pasting the body: bracketed-paste protections
-apply, a multi-line body arrives as one multi-line paste, and nothing runs
-until you press Enter. A snippet with `"execute": true` also presses Enter for
-you — opt in per snippet, and prefer leaving it off for anything destructive.
+Every snippet body uses the same Protected Paste path as ordinary paste;
+`execute` does not bypass or replace it. The exact sequence is:
 
-If `snippets.json` is invalid, OMXTerm still opens and the terminal is
-unaffected; the sidebar shows the exact problem (path and field) in place of
-the list. Fix the file and reopen the sidebar.
+1. OMXTerm delivers the body through Protected Paste.
+2. `"execute": false` (the default) appends nothing.
+3. `"execute": true` appends Enter only after body delivery. With bracketed
+   paste, Enter follows the closing bracketed-paste marker.
+
+A paste-aware receiver enables bracketed paste, so OMXTerm sends the body as one
+bracketed paste without a confirmation. When bracketed paste is unavailable, a
+body containing line breaks or control characters requires Protected Paste
+approval. After approval, OMXTerm sends that body unchanged; embedded line
+breaks or controls may execute input even when `execute` is `false`. Therefore,
+`execute: false` means only “do not append Enter,” not “this body can never
+execute.” Keep reusable bodies single-line and inspect unfamiliar content.
+
+The `snippets` array accepts at most 512 entries. Each entry has:
+
+| Field         | Accepted value                                     | Default  |
+| ------------- | -------------------------------------------------- | -------- |
+| `name`        | non-empty string, at most 128 UTF-16 code units    | required |
+| `body`        | non-empty string, at most 65,536 UTF-16 code units | required |
+| `description` | string, at most 512 UTF-16 code units              | none     |
+| `execute`     | boolean                                            | `false`  |
+
+The sidebar filters by name and description. Opening it rereads
+`snippets.json`; there is no file watching. If the file is invalid, the sidebar
+shows the exact path and field problem instead of the list, while the terminal
+continues working. Fix the file and reopen the sidebar.
 
 ## Terminal Themes
 
-A Terminal Theme is a complete OMXTerm palette stored as strict JSON. Start
-with the [canonical `omtheme` file](omtheme.json), copy it under your
-configuration directory, and change the copy.
+A Terminal Theme is a complete OMXTerm palette in another strict JSON file. You
+do not need an external theme: omitting `theme` from `config.json` always uses
+the bundled canonical `omtheme`.
 
-Select it with a path relative to `config.json`:
+To make your own theme, first create a `themes` directory beside
+`config.json`.
+
+On macOS or Linux:
+
+```sh
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/omxterm/themes"
+```
+
+On Windows, this PowerShell sequence handles both the common default and a
+non-empty `XDG_CONFIG_HOME`:
+
+```powershell
+$configRoot = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Path $HOME ".config" }
+$themesDirectory = Join-Path $configRoot "omxterm\themes"
+New-Item -ItemType Directory -Force $themesDirectory
+```
+
+Save the following complete starter palette as `themes/my-theme.json`. It uses
+the bundled palette's colors so you can first verify the file and path, then
+change one `#RRGGBB` color at a time:
+
+```json
+{
+  "version": 1,
+  "name": "My theme",
+  "colors": {
+    "background": "#000000",
+    "foreground": "#f0f0ff",
+    "cursor": "#f0f0ff",
+    "selectionBackground": "#3b4fa6",
+    "selectionForeground": "#ffffff",
+    "black": "#000000",
+    "red": "#ff7e9a",
+    "green": "#37feb7",
+    "yellow": "#ffda76",
+    "blue": "#88aaf2",
+    "magenta": "#ff87bc",
+    "cyan": "#6bccff",
+    "white": "#f0f0ff",
+    "brightBlack": "#505068",
+    "brightRed": "#ffa8bb",
+    "brightGreen": "#72ffcd",
+    "brightYellow": "#ffeab2",
+    "brightBlue": "#b2cbff",
+    "brightMagenta": "#ff88ef",
+    "brightCyan": "#77c6ff",
+    "brightWhite": "#ffffff"
+  }
+}
+```
+
+Now select it with a path relative to `config.json`:
 
 ```json
 {
@@ -310,107 +375,111 @@ Select it with a path relative to `config.json`:
 }
 ```
 
-Absolute paths are used as written. Relative paths are resolved from the
-directory containing `config.json`. OMXTerm does not expand `~`, environment
-variables, shell syntax, or URLs in `theme.path`. A symlink is accepted when its
-final target is a readable regular file.
+The same relative path works on macOS, Linux, and Windows. It avoids embedding a
+machine-specific absolute path and requires neither a source checkout nor a
+custom font. Choose `View -> Reload User Configuration` to validate and apply
+the complete configuration and palette.
 
-The theme root must contain exactly:
+A Terminal Theme root contains exactly `version`, `name`, and `colors`.
+`version` is `1`; `name` is one printable non-empty line of at most 64 Unicode
+code points; and `colors` contains every field shown above. Every color is an
+exact, case-insensitive hexadecimal `#RRGGBB` value. Partial palettes, extra
+keys, alpha colors, CSS names, functions, variables, transparency, inheritance,
+imports, and URLs are unsupported.
 
-- `version`, with the value `1`;
-- `name`, a printable non-empty single line of at most 64 Unicode code points;
-- `colors`, containing the five interface colors and all 16 normal and bright
-  ANSI colors shown in [`omtheme.json`](omtheme.json).
+Absolute `theme.path` values are used as written. Relative values resolve from
+the directory containing `config.json`. OMXTerm does not expand `~`,
+environment variables, shell syntax, or URLs inside the JSON string. A symlink
+is accepted only when its final target is a readable regular file.
 
-Every color is an exact hexadecimal `#RRGGBB` value. Partial palettes,
-transparency, CSS colors, inheritance, and imports are unsupported.
+### Theme troubleshooting
 
-### Reloading User Configuration
+If a theme does not load, keep `config.json` as the small theme-selection
+example above until the path works. Then check the persistent in-app error and
+stderr for the configured and resolved paths and the exact invalid field.
+Common causes are:
 
-`View -> Reload User Configuration` rereads `config.json` and strictly validates
-the complete document through the same boundary as startup, including a changed
-`theme.path`, installed font availability, platform keybinds, and warnings.
-There is no file watching or automatic reload.
+- saving `my-theme.json` outside the `themes` directory beside `config.json`;
+- putting `~`, `$HOME`, `%USERPROFILE%`, or another variable in `theme.path` and
+  expecting expansion;
+- omitting one of the five interface colors or 16 normal and bright ANSI
+  colors;
+- using a color other than exact `#RRGGBB` form;
+- adding a comment, trailing comma, unsupported key, or partial palette; or
+- selecting a missing, unreadable, or non-regular file.
 
-A valid reload atomically applies font family, the configured font-size
-baseline, line height, per-side padding, scrollback, Option Key Mode, and the
-Terminal Theme to every current and future window, tab, and Terminal Surface.
-Native backgrounds, Window Chrome, and the Snippets Sidebar follow the theme.
-It also updates close confirmation, log level, the application menu, effective
-keybind delivery in existing and future windows, and the Always-on-Top default
-for future windows.
+At startup, an invalid or missing selected theme uses bundled `omtheme` while
+other validated settings remain active. A rejected manual reload instead keeps
+the complete last valid in-memory configuration and theme. OMXTerm leaves both
+files unchanged. Fix the reported problem and reload again; there is no file
+watcher or theme-only reload.
 
-Terminal Surfaces and Live Terminal Sessions are updated in place: tabs,
-sessions, PTY adapters, titles, bell state, and other window state are not
-restarted, replaced, or closed. Each existing window keeps its current
-Always-on-Top toggle and Window Font Zoom delta over the new baseline; Actual
-Size resets that window to the latest configured size. Font and spacing changes
-recompute the existing platform minimum-window bounds and refit each grid.
-Reducing scrollback, including setting it to zero, takes effect on the current
-in-memory xterm buffer. Option Key Mode affects keyboard events received after
-the reload.
-
-If a present `config.json` is unreadable or invalid, or its selected theme is
-missing, unreadable, or invalid, OMXTerm keeps the complete last valid in-memory
-configuration and shows the current exact validation problem in the non-blocking
-error bar and on stderr. Fix it and choose the action again. A successful retry
-replaces resolved startup or reload errors and stale warnings with notices from
-the current validation. Removing `config.json` and reloading successfully selects
-all defaults without creating a file.
-
-### Converting a Ghostty theme
-
-The source repository contains an optional conversion helper. It is not an
-OMXTerm application feature, supported import format, network service, or part
-of the configuration schema.
-
-From an OMXTerm source checkout, convert a downloaded Ghostty theme with:
+The repository's [canonical palette](omtheme.json) is also a complete reference.
+An optional source-checkout helper can convert a downloaded Ghostty palette:
 
 ```sh
-node scripts/convert-ghostty-theme.mjs \
-  ~/Downloads/catppuccin-mocha \
-  ~/.config/omxterm/themes/catppuccin-mocha.json
+node scripts/convert-ghostty-theme.mjs input-theme output-theme.json
 ```
 
-If the output path is omitted, the converted JSON is printed to standard
-output. The input filename becomes the OMXTerm theme name. The helper requires
-the Ghostty file to define background, foreground, cursor, selection, and all
-16 palette colors.
+This helper is not an application feature, import format, network service, or
+configuration-schema capability. Conversion changes syntax only; review the
+source, authorship, license, and redistribution rights of third-party themes.
+OMXTerm's normal strict validation remains authoritative.
 
-Otávio created local themes by downloading Ghostty palettes from
-[TerminalColors](https://terminalcolors.com/ghostty/) and passing them through
-this helper. A conversion changes file syntax only: it does not establish the
-theme's authorship, provenance, license, security, or suitability for
-redistribution. Review a theme's source and rights before using or publishing
-it. OMXTerm's own startup validation remains the authority on whether the
-converted result is a valid Terminal Theme.
+## Reloading User Configuration
 
-## Troubleshooting
+`View -> Reload User Configuration` rereads and validates the complete
+`config.json` through the startup boundary. It can select a changed
+`theme.path`; Snippets are instead reread whenever their sidebar opens. There
+is no automatic reload or file watching.
 
-When `config.json` or a selected Terminal Theme is invalid, OMXTerm still
-opens. It uses its built-in defaults for whatever failed — every setting when
-`config.json` is invalid, or only the bundled `omtheme` theme when the selected
-theme file is invalid or missing — and shows a persistent error bar at the
-bottom of the window. The error states the configuration path and, when
-relevant, the resolved theme path. It never blocks typing, so you can fix the
-file in the terminal it reports on. The same diagnostic also goes to stderr.
-A rejected manual reload preserves the whole last valid configuration and shows
-the current reload failure; a successful reload replaces resolved errors and
-stale warnings with current notices. Common failures are:
+A valid reload atomically applies font family, configured font-size baseline,
+line height, padding, scrollback, Option Key Mode, Terminal Theme, close
+confirmation, logging, keybinds, and the Always-on-Top default. Existing
+Terminal Surfaces and Live Terminal Sessions remain in place and refit as
+needed. Existing windows keep their current Always-on-Top state and Window Font
+Zoom delta; Actual Size returns to the latest configured baseline.
 
-- a trailing comma, comment, or other syntax that is not valid JSON;
-- an unknown or misspelled key;
-- a missing installed font family;
-- an out-of-range number or non-integral size or padding value;
-- a `theme.path` resolved somewhere other than expected;
-- a missing, unreadable, non-regular, or invalid theme file;
-- a partial palette or a color that is not exactly `#RRGGBB`;
-- a `keybinds` entry with an unknown action name, a malformed accelerator, a
-  missing non-Shift modifier, or two actions sharing one effective accelerator.
+A rejected reload applies nothing and preserves the complete last valid
+in-memory configuration. Removing `config.json` and reloading is a valid way to
+select all built-in defaults without creating another file.
 
-Fix the reported file and use `View -> Reload User Configuration`. A successful
-reload applies every validated Terminal Surface preference without a restart.
-OMXTerm never silently ignores invalid preferences and never edits or repairs
-your files.
-Startup falls back only to built-in defaults, loudly; a failed runtime reload
-instead preserves the complete last valid active configuration.
+## Local files, diagnostics, and privacy
+
+Treat `config.json`, `snippets.json`, and external Terminal Theme files as local
+user files. OMXTerm reads them from the paths described above and never creates,
+rewrites, repairs, migrates, or uploads them. They are ordinary files protected
+by your operating-system account and filesystem permissions. Avoid putting
+credentials, private hostnames, or sensitive commands in Snippets, and inspect
+files before sharing them or screenshots of them.
+
+Actionable validation errors are deliberately local and specific.
+Configuration and theme failures appear on the persistent in-app error surface
+and stderr with the relevant configured or resolved path. A Snippet failure
+instead appears in the Snippets Sidebar with the resolved file path and field.
+Those paths can reveal account or directory names, so redact them before
+publishing a screenshot or copied diagnostic.
+
+Operational Events are separate bounded JSONL logs under
+`$XDG_STATE_HOME/omxterm/logs`, falling back to
+`~/.local/state/omxterm/logs`. On Windows, the fallback is
+`%USERPROFILE%\.local\state\omxterm\logs`. The current file is
+`omxterm.jsonl`; rotation keeps only `omxterm.previous.jsonl`, and each is
+capped at 5 MiB. `logLevel` changes verbosity, not the privacy boundary.
+
+No log level records Terminal Payload, PTY input or output, clipboard data,
+environment or configuration contents, Snippet bodies, executable names,
+command arguments, commands, Terminal Titles, secrets, or transcripts. User
+Configuration Reload events contain only safe outcomes, bounded duration, and a
+normalized failure category—not paths, validation details, or file contents.
+Terminal Payload remains opaque transport between the Terminal Surface and the
+processes running in a Live Terminal Session; OMXTerm does not turn it into
+application history or diagnostics.
+
+OMXTerm itself makes no network requests for analytics, telemetry, crash
+reporting, updates, or remote log delivery. Shells and other child processes in
+a Live Terminal Session are ordinary local processes: they retain the network
+and filesystem access allowed by your operating system and user account.
+Running a command from a Snippet can therefore read files or contact a network
+just as typing that command can. Child-process activity is not OMXTerm
+telemetry, and OMXTerm does not sandbox or reinterpret it.
