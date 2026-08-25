@@ -1,6 +1,16 @@
-## Closing issue
+<!--
+Thanks for contributing. Keep this pull request focused and remove credentials,
+private paths, terminal input or output (Terminal Payload), clipboard contents,
+configuration or environment contents, and session transcripts.
+-->
 
-<!-- Use "Closes #<number>" when applicable; otherwise write "N/A". -->
+## Summary
+
+<!-- Explain the problem and the material changes in a few sentences. -->
+
+## Related issue
+
+<!-- Use "Closes #<number>" when applicable; otherwise replace the line below with "N/A". -->
 
 Closes #
 
@@ -12,7 +22,7 @@ Closes #
 
 ## Verification evidence
 
-<!-- List commands, results, and any required manual checks. -->
+<!-- List each exact command and result. State why any relevant check was unavailable; never infer a platform pass. -->
 
 ## Security impact
 
@@ -21,3 +31,7 @@ Closes #
 ## Documentation impact
 
 <!-- List updated docs or explain why no documentation change is required. -->
+
+## Deviations and concerns
+
+<!-- Call out intentional deviations, unresolved risk, or unavailable evidence. Write "None" when applicable. -->

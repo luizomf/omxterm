@@ -7,9 +7,9 @@ assignees: ""
 ---
 
 <!--
-A feature request is a proposal, not a commitment or roadmap item. It may be
-deferred or declined based on product scope, priorities, and maintenance cost.
-Please search existing issues before submitting a new request.
+Thanks for sharing an idea. Search existing issues first, then help us understand
+the practical problem and the observable outcome you would find useful. You do
+not need to design the implementation.
 -->
 
 ## Problem or use case
@@ -32,7 +32,11 @@ Please search existing issues before submitting a new request.
 
 <!--
 Add only information needed to evaluate the request. Never include terminal
-input/output, command history, clipboard contents, configuration contents,
-environment contents, credentials, secrets, private paths, or session
-transcripts.
+input or output (Terminal Payload), command history, clipboard contents,
+configuration contents, environment contents, credentials, secrets, private
+paths, or session transcripts.
+
+Requests are evaluated against the documented product scope, priorities, and
+maintenance cost. A proposal starts a conversation; it is not yet a roadmap
+commitment.
 -->

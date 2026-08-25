@@ -6,9 +6,14 @@ labels: needs-triage
 assignees: ""
 ---
 
+<!--
+Thanks for helping define focused work. Complete each section with the clearest
+evidence available; "None" is useful when a section does not apply.
+-->
+
 ## Intent
 
-<!-- What observable outcome should this issue produce, and why? -->
+<!-- What observable outcome should this issue produce, for whom, and why? -->
 
 ## Authoritative sources
 
@@ -32,7 +37,7 @@ assignees: ""
 
 ## Verification
 
-<!-- Name the checks and evidence that will prove the criteria. -->
+<!-- Name the exact checks and evidence that will prove the criteria. Do not include private data, credentials, terminal contents, or session transcripts. -->
 
 ## Review policy
 
