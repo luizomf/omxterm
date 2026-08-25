@@ -21,6 +21,20 @@ describe("Default Shell resolution", () => {
     );
   });
 
+  it.each([
+    ["darwin", "/bin/zsh"],
+    ["linux", "/bin/bash"],
+  ])("ignores a configured Windows shell on %s", (platform, accountShell) => {
+    expect(
+      resolveDefaultShell(
+        platform,
+        accountShell,
+        {},
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+      ),
+    ).toBe(accountShell);
+  });
+
   it("uses a validated configured Windows shell as written", () => {
     const configured = "C:\\Program Files\\Git\\bin\\bash.exe";
     const exists = vi.fn(() => {
