@@ -101,6 +101,20 @@ describe("Terminal Window startup contract", () => {
     });
   });
 
+  it.each([
+    ["linux", true],
+    ["win32", true],
+    ["darwin", false],
+  ])("sets native menu auto-hide for %s", (platform, autoHideMenuBar) => {
+    const options = terminalWindowOptions(
+      "/application/preload.cjs",
+      DEFAULT_USER_CONFIGURATION,
+      platform,
+    );
+
+    expect(options.autoHideMenuBar).toBe(autoHideMenuBar);
+  });
+
   it("uses native Linux chrome without an app-controlled title inset", () => {
     const options = terminalWindowOptions(
       "/application/preload.cjs",

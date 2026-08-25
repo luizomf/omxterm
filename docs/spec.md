@@ -84,8 +84,8 @@ updates, and remote terminal features are outside the current product contract.
   pre-tab contract. With two or more tabs, an OMXTerm-drawn tab strip occupies
   its own full-width row above the Terminal Surface and Snippets Sidebar row.
   On macOS it sits below the app-controlled 30 px native title inset; on Linux
-  and Windows it starts immediately below the operating system's native title
-  and menu, without another inset. Clicking a tab selects it; the selected tab's
+  and Windows it starts immediately below the operating system's native Window
+  Chrome, without another inset. Clicking a tab selects it; the selected tab's
   grid refits and receives terminal focus. Dragging a tab horizontally within
   that strip reorders the existing tabs in that window. The reordered positions
   immediately drive visible order, next/previous cycling, and literal positional
@@ -131,8 +131,12 @@ updates, and remote terminal features are outside the current product contract.
 - On macOS, the Terminal Surface keeps a fixed 30 px native title/drag inset
   above the configurable top padding. Linux and Windows use their
   operating-system title and menu outside the app-controlled content and add
-  no duplicate inset. The
-  selected Terminal Theme background fills the complete app-controlled
+  no duplicate inset. Every Linux and Windows Terminal Window auto-hides the
+  installed native application menu bar by default; pressing and releasing Alt
+  alone temporarily reveals it, and using or dismissing the menu returns it to
+  hidden. This is fixed Window Chrome behavior rather than User Configuration,
+  and macOS menu behavior is unchanged. The selected Terminal Theme background
+  fills the complete app-controlled
   Terminal Window content, including any title inset and all configured
   padding.
 - `Window -> Always on Top` toggles only the selected window at the ordinary

@@ -106,6 +106,7 @@ export function terminalWindowOptions(
     ),
     show: false,
     title: "OMXTerm",
+    autoHideMenuBar: platform !== "darwin",
     // Framed platforms must apply these bounds to renderer content; otherwise
     // the native title/menu frame consumes part of the promised terminal grid.
     useContentSize: nativeTitleInset === 0,
