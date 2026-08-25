@@ -453,11 +453,12 @@ by your operating-system account and filesystem permissions. Avoid putting
 credentials, private hostnames, or sensitive commands in Snippets, and inspect
 files before sharing them or screenshots of them.
 
-Actionable validation errors are deliberately local and specific. The
-persistent in-app error surface and stderr can show the resolved configuration,
-Snippet, or theme path and the invalid field so you can repair it. Those paths
-can reveal account or directory names, so redact them before publishing a
-screenshot or copied diagnostic.
+Actionable validation errors are deliberately local and specific.
+Configuration and theme failures appear on the persistent in-app error surface
+and stderr with the relevant configured or resolved path. A Snippet failure
+instead appears in the Snippets Sidebar with the resolved file path and field.
+Those paths can reveal account or directory names, so redact them before
+publishing a screenshot or copied diagnostic.
 
 Operational Events are separate bounded JSONL logs under
 `$XDG_STATE_HOME/omxterm/logs`, falling back to
