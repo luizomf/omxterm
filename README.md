@@ -7,11 +7,10 @@ and Windows.
   <img src="docs/images/omxterm-hero.png" alt="OMXTerm icon: a light blue terminal prompt on a dark rounded square" width="480" />
 </p>
 
-The current release candidate is `0.8.0`. Its exact native artifacts passed
-automated verification and owner testing on every Supported Platform, but are
-not published yet. The intended `v0.8.0` tag and separate publication
-authorization remain pending. After that authorization, the
-[GitHub Releases page](https://github.com/luizomf/omxterm/releases) will provide:
+The current published version is `0.8.0`. Its exact native artifacts passed
+automated verification and were optionally tested and owner-accepted on every
+Supported Platform. The
+[GitHub Releases page](https://github.com/luizomf/omxterm/releases/tag/v0.8.0) provides:
 
 - `OMXTerm-0.8.0-arm64.dmg` for Apple Silicon macOS;
 - `OMXTerm-0.8.0-arm64.AppImage` and
@@ -21,13 +20,13 @@ authorization remain pending. After that authorization, the
 Every package is ARM64-only and intentionally carries no verified publisher
 identity; the macOS application uses an ad-hoc code seal for bundle integrity
 but has no Apple Developer ID signature or notarization. Each asset has a
-matching `.sha256` file. After publication, verify the checksum before opening
-it, and read the [0.8.0 release notes](docs/releases/0.8.0.md) for changes,
+matching `.sha256` file. Verify the checksum before opening an asset, and read
+the [0.8.0 release notes](docs/releases/0.8.0.md) for changes,
 compatibility, provenance, and known limitations.
 
 ## Installation
 
-The commands below apply after the pending 0.8.0 assets are published.
+The commands below install the published 0.8.0 assets.
 
 ### Installing on macOS
 
