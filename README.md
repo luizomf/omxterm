@@ -8,8 +8,13 @@ and Windows.
 </p>
 
 The current published version is `0.8.0`. Its exact native artifacts passed
-automated verification and were optionally tested and owner-accepted on every
-Supported Platform. The
+mandatory automated verification and received owner acceptance on every
+Supported Platform. That release's optional cross-platform observations are
+[exceptional factual historical provenance](docs/releases/0.8.0.md#changed-boundary-verification-plan),
+not routine validation, a manual-coverage requirement, inferred coverage, or a
+reusable gate under the
+[current automation-first policy](docs/release.md#automation-first-exact-artifact-acceptance).
+The
 [GitHub Releases page](https://github.com/luizomf/omxterm/releases/tag/v0.8.0) provides:
 
 - `OMXTerm-0.8.0-arm64.dmg` for Apple Silicon macOS;
