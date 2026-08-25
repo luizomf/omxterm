@@ -1,16 +1,30 @@
 # Contributing to OMXTerm
 
-OMXTerm welcomes focused bug reports, documentation improvements, and code
-contributions that fit its documented product scope. It is Otávio's personal
-desktop terminal, not a general terminal framework or a promise to absorb every
-adjacent feature.
+Thanks for helping improve OMXTerm. Focused bug reports, documentation fixes,
+and code contributions are welcome. If this is your first contribution, the
+shortest path is:
+
+1. Search the existing issues for related work.
+2. Open a bug report or feature request with the details requested by the
+   template. A small typo or broken link may go directly to a focused pull
+   request.
+3. For a substantial change, wait for the maintainer to confirm the scope before
+   investing in implementation.
+4. Fork the repository, create a focused branch from current upstream `main`,
+   and make the smallest complete change.
+5. Run `npm run check:portable` and any relevant platform checks.
+6. Open a pull request that links the issue and reports the exact checks run.
+
+If you suspect a vulnerability, do not open a public issue or pull request.
+Report it privately to the maintainer using the email address on
+[Otávio's GitHub profile](https://github.com/luizomf), with the affected
+version, reproduction details, and impact.
 
 This guide explains the public contribution workflow. The
 [documentation map](docs/README.md) points to the authoritative product and
-project documents. If a coding agent drives your contribution, point it at
-[`AGENTS.md`](AGENTS.md): it carries the same engineering, boundary, and
-safety instructions repository agents follow, and its Authority section
-explains which operations a fork agent requests rather than performs.
+project documents. If a coding agent helps with your contribution, point it at
+[`AGENTS.md`](AGENTS.md) for the repository's engineering, boundary, safety,
+and fork-and-pull instructions.
 
 ## Before proposing a change
 
@@ -23,22 +37,15 @@ Read the relevant sources first:
 - [`docs/versioning.md`](docs/versioning.md) and
   [`docs/release.md`](docs/release.md) govern versions and releases.
 
-Open a GitHub issue before substantial code, behavior, architecture, planned
-security hardening, or configuration work. This lets the maintainer confirm
-scope, identify dependencies, and prevent duplicate implementations. A small
-typo or broken link may go directly to a focused pull request.
+In a substantial-change issue, explain the user-facing problem and desired
+outcome before implementation details. This gives the maintainer enough context
+to confirm scope, identify dependencies, and prevent duplicate work.
 
-Do not disclose a suspected vulnerability in a public issue or pull request.
-Report it privately to the maintainer using the email address on
-[Otávio's GitHub profile](https://github.com/luizomf), with the affected
-version, reproduction details, and impact.
-
-Keep proposals inside the current product boundary. Splits, saved sessions, AI
-assistance, SSH brokering, shell integration, theme catalogs, and automatic
-updates remain outside the current product contract; their presence in other
-terminals does not make them requirements. The Supported Platforms are ARM64
-macOS, Linux, and Windows. Linux ARM64 AppImage and Windows ARM64 NSIS
-runtime and packaging are both implemented.
+OMXTerm is Otávio's personal desktop terminal, with a deliberately focused
+product boundary. Splits, saved sessions, AI assistance, SSH brokering, shell
+integration, theme catalogs, and automatic updates remain outside the current
+product contract. The Supported Platforms are ARM64 macOS, Linux, and Windows;
+native DMG, AppImage, and NSIS packaging is implemented for those platforms.
 
 ## Development environment
 
@@ -101,11 +108,11 @@ credentials, release output, or other private data.
 
 ## Making a change
 
-External contributors use fork-and-pull: fork the repository, create a focused
-branch from current upstream `main`, push that branch to the fork, and open a
-pull request against this repository. A contribution does not grant authority
-to change assignments, labels, dependencies, roadmap state, versions, release
-artifacts, or publication state; those remain maintainer operations.
+Contributions use fork-and-pull: fork the repository, create a focused branch
+from current upstream `main`, push that branch to your fork, and open a pull
+request against this repository. The maintainer handles assignments, labels,
+dependencies, roadmap state, versions, Release Artifacts, and publication. If
+one of those needs attention, request it in the issue or pull request.
 
 1. Create a focused branch from current upstream `main` in your fork.
 2. Implement the smallest complete change that satisfies the issue.
@@ -191,10 +198,12 @@ existing behavior, or lacks contract-level tests or documentation.
 
 ## Version and release authority
 
-Ordinary contributions do not change versions, create tags, publish GitHub
-Releases, or upload artifacts. The maintainer selects versions under the
-[versioning policy](docs/versioning.md) and authorizes each release separately
-after the exact artifact passes the [release procedure](docs/release.md).
+Release work is maintainer-led and explicitly authorized. Each exact Release
+Artifact must pass the [release procedure](docs/release.md) and receive owner
+acceptance; publication requires separate owner authorization. Ordinary
+contributions do not create tags, publish GitHub Releases, or upload artifacts.
+The maintainer selects release versions under the
+[versioning policy](docs/versioning.md).
 
 Do not include a version bump in a pull request, with one exception: the
 [versioning policy](docs/versioning.md) assigns the development-baseline move
