@@ -8,9 +8,9 @@ and Windows.
 </p>
 
 The current release candidate is `0.8.0`. Its exact native artifacts passed
-automated verification but are not published yet; owner acceptance, the intended
-`v0.8.0` tag, and separate publication authorization remain pending. After that
-authorization, the
+automated verification and owner testing on every Supported Platform, but are
+not published yet. The intended `v0.8.0` tag and separate publication
+authorization remain pending. After that authorization, the
 [GitHub Releases page](https://github.com/luizomf/omxterm/releases) will provide:
 
 - `OMXTerm-0.8.0-arm64.dmg` for Apple Silicon macOS;

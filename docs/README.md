@@ -38,8 +38,8 @@ release procedures so that each kind of information has one clear owner.
   [0.4.0 release notes](releases/0.4.0.md) describe previous published
   versions.
 - [0.4.1 release notes](releases/0.4.1.md) describe the latest published version.
-- [0.8.0 release notes](releases/0.8.0.md) describe the verified current release
-  candidate; owner acceptance, its intended tag, and publication remain pending.
+- [0.8.0 release notes](releases/0.8.0.md) describe the verified and owner-accepted
+  current release candidate; its intended tag and publication remain pending.
 
 Issue and pull-request descriptions may describe work in progress, but they do
 not replace these maintained project documents.
