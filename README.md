@@ -87,7 +87,8 @@ Linux needs the `fontconfig` utilities. OMXTerm defaults to X11, so Wayland
 sessions must provide XWayland; native Wayland rendering is not claimed.
 
 To add the verified AppImage to the desktop without administrator access,
-verify the optional helper separately before running it:
+ensure the helper's `file` command prerequisite is installed, then verify the
+optional helper separately before running it:
 
 ```sh
 sha256sum --check OMXTerm-0.8.0-arm64.AppImage.sha256
@@ -124,6 +125,8 @@ $actualHash = (Get-FileHash -LiteralPath $installerName -Algorithm SHA256).Hash
 if (-not [StringComparer]::OrdinalIgnoreCase.Equals($actualHash, $expectedHash)) {
   throw "SHA-256 verification failed."
 }
+
+Write-Host "SHA-256 verification succeeded for $installerName"
 ```
 
 Run `OMXTerm-0.8.0-arm64.exe`; it installs per-user without administrator
