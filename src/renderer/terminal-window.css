@@ -88,7 +88,7 @@ body {
   color: var(--terminal-foreground, #e6e6e6);
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: pointer;
+  cursor: grab;
   background: color-mix(
     in srgb,
     var(--terminal-background, #000000),
@@ -96,6 +96,10 @@ body {
   );
   border: none;
   border-radius: 6px;
+}
+
+#tab-strip button:active {
+  cursor: grabbing;
 }
 
 #tab-strip button:hover {

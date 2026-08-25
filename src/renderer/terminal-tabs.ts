@@ -16,6 +16,8 @@ import type {
 import { DEFAULT_TERMINAL_FONT_SIZE } from "../shared/user-configuration";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
 
+export const TERMINAL_TAB_DRAG_DATA_TYPE = "application/x-omxterm-tab";
+
 type MountTerminalSurface = (
   container: HTMLElement,
   adapter: TerminalSessionAdapter,
@@ -72,6 +74,12 @@ export function createTerminalTabs(
   let disposed = false;
 
   const selectedTab = (): TerminalTab | undefined => tabs[selectedIndex];
+  const tabDragging = installTabDragging(elements.strip, (tab, clientX) => {
+    const selected = selectedTab();
+    if (!moveTabToHorizontalDrop(tabs, tab, elements.strip, clientX)) return;
+    selectedIndex = selected ? tabs.indexOf(selected) : -1;
+    renderStrip();
+  });
 
   const renderStrip = () => {
     const visible = tabs.length >= 2;
@@ -85,6 +93,7 @@ export function createTerminalTabs(
       ...tabs.map((tab, index) => {
         const button = document.createElement("button");
         button.type = "button";
+        tabDragging.bind(button, tab);
         // Sanitized display title pushed by main (ADR 0010); the literal
         // position stands in until the first push lands.
         button.textContent = tab.label || String(index + 1);
@@ -305,6 +314,7 @@ export function createTerminalTabs(
     dispose() {
       if (disposed) return;
       disposed = true;
+      tabDragging.dispose();
       for (const tab of [...tabs]) {
         tab.removed = true;
         if (tab.surface) tab.surface.dispose();
@@ -313,6 +323,75 @@ export function createTerminalTabs(
       tabs.length = 0;
     },
   };
+}
+
+function installTabDragging(
+  strip: HTMLElement,
+  reorder: (tab: TerminalTab, clientX: number) => void,
+) {
+  let draggedTab: TerminalTab | undefined;
+  let enabled = true;
+  const onDragOver = (event: DragEvent) => {
+    if (!draggedTab) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  };
+  const onDrop = (event: DragEvent) => {
+    const tab = draggedTab;
+    draggedTab = undefined;
+    if (!tab) return;
+    event.preventDefault();
+    event.stopPropagation();
+    reorder(tab, event.clientX);
+  };
+  const onDragEnd = () => {
+    draggedTab = undefined;
+  };
+  strip.addEventListener("dragover", onDragOver);
+  strip.addEventListener("drop", onDrop);
+  strip.addEventListener("dragend", onDragEnd);
+  return {
+    bind(button: HTMLButtonElement, tab: TerminalTab) {
+      button.draggable = true;
+      button.addEventListener("dragstart", (event) => {
+        if (!enabled) return;
+        draggedTab = tab;
+        if (!event.dataTransfer) return;
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData(TERMINAL_TAB_DRAG_DATA_TYPE, "reorder");
+      });
+    },
+    dispose() {
+      enabled = false;
+      draggedTab = undefined;
+      strip.removeEventListener("dragover", onDragOver);
+      strip.removeEventListener("drop", onDrop);
+      strip.removeEventListener("dragend", onDragEnd);
+    },
+  };
+}
+
+function moveTabToHorizontalDrop(
+  tabs: TerminalTab[],
+  tab: TerminalTab,
+  strip: HTMLElement,
+  clientX: number,
+): boolean {
+  const sourceIndex = tabs.indexOf(tab);
+  if (sourceIndex < 0) return false;
+  const rawDestination = [...strip.querySelectorAll("button")].findIndex(
+    (button) =>
+      clientX <
+      button.getBoundingClientRect().left +
+        button.getBoundingClientRect().width / 2,
+  );
+  const insertionIndex = rawDestination < 0 ? tabs.length : rawDestination;
+  const destinationIndex =
+    sourceIndex < insertionIndex ? insertionIndex - 1 : insertionIndex;
+  if (destinationIndex === sourceIndex) return false;
+  tabs.splice(sourceIndex, 1);
+  tabs.splice(destinationIndex, 0, tab);
+  return true;
 }
 
 function completeConfiguration(

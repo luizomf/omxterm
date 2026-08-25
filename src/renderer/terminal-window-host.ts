@@ -15,7 +15,11 @@ import type { TerminalRendererConfiguration } from "../shared/user-configuration
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type { TerminalTheme } from "../shared/terminal-theme";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
-import { createTerminalTabs, type TerminalTabs } from "./terminal-tabs";
+import {
+  createTerminalTabs,
+  TERMINAL_TAB_DRAG_DATA_TYPE,
+  type TerminalTabs,
+} from "./terminal-tabs";
 import {
   createSnippetsSidebar,
   type SnippetsSidebar,
@@ -146,13 +150,18 @@ export function mountTerminalWindowPage(
   );
 
   const onPageFocus = () => tabs.focusSelected();
+  const isInternalTabDrag = (event: DragEvent) =>
+    [...(event.dataTransfer?.types ?? [])].includes(
+      TERMINAL_TAB_DRAG_DATA_TYPE,
+    );
   const onDragOver = (event: DragEvent) => {
     event.preventDefault();
-    event.stopPropagation();
+    if (!isInternalTabDrag(event)) event.stopPropagation();
   };
   const onDrop = (event: DragEvent) => {
     // Capture before xterm or another target can interpret a native file URI.
     event.preventDefault();
+    if (isInternalTabDrag(event)) return;
     event.stopPropagation();
     const files = event.dataTransfer?.files;
     if (!files || files.length === 0 || !options.droppedFilePathInsertion)

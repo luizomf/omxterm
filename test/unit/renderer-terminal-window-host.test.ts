@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
 import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";
+import { TERMINAL_TAB_DRAG_DATA_TYPE } from "../../src/renderer/terminal-tabs";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import type {
   TerminalFontZoom,
@@ -427,6 +428,7 @@ describe("renderer Terminal Window page host", () => {
     const second = createSurface();
     const surfaces = [first, second];
     let commandListener: ((command: { action: "new" }) => void) | undefined;
+    let titleListener: ((sessionId: string, title: string) => void) | undefined;
     const droppedFilePathInsertion = vi.fn((files: readonly File[]) =>
       files.length > 0 ? "'/Users/me/A B.txt'" : "",
     );
@@ -439,11 +441,56 @@ describe("renderer Terminal Window page host", () => {
         commandListener = listener as typeof commandListener;
         return vi.fn();
       },
+      subscribeToTabTitles(listener) {
+        titleListener = listener;
+        return vi.fn();
+      },
     });
     await host.ready;
     commandListener!({ action: "new" });
     await vi.waitFor(() => expect(elements.tabStrip.hidden).toBe(false));
+    titleListener!("s1", "one");
+    titleListener!("s2", "two");
     elements.tabStrip.querySelector<HTMLButtonElement>("button")!.click();
+
+    const tabButtons = [...elements.tabStrip.querySelectorAll("button")];
+    tabButtons.forEach((button, index) =>
+      vi.spyOn(button, "getBoundingClientRect").mockReturnValue({
+        left: index * 100,
+        width: 100,
+      } as DOMRect),
+    );
+    const internalTypes: string[] = [];
+    const internalTransfer = {
+      files: { length: 0, item: () => null },
+      types: internalTypes,
+      effectAllowed: "none",
+      dropEffect: "none",
+      setData: vi.fn((type: string) => internalTypes.push(type)),
+    };
+    const tabDragStart = new Event("dragstart", { bubbles: true });
+    Object.defineProperty(tabDragStart, "dataTransfer", {
+      value: internalTransfer,
+    });
+    tabButtons[0]!.dispatchEvent(tabDragStart);
+    expect(internalTypes).toContain(TERMINAL_TAB_DRAG_DATA_TYPE);
+    expect(internalTransfer.effectAllowed).toBe("move");
+    const tabDrop = new Event("drop", { bubbles: true, cancelable: true });
+    Object.defineProperties(tabDrop, {
+      clientX: { value: 175 },
+      dataTransfer: { value: internalTransfer },
+    });
+    elements.tabStrip.dispatchEvent(tabDrop);
+
+    expect(internalTypes).toContain(TERMINAL_TAB_DRAG_DATA_TYPE);
+    expect(
+      [...elements.tabStrip.querySelectorAll("button")].map(
+        (button) => button.textContent,
+      ),
+    ).toEqual(["two", "one"]);
+    expect(droppedFilePathInsertion).not.toHaveBeenCalled();
+    expect(first.inject).not.toHaveBeenCalled();
+    expect(second.inject).not.toHaveBeenCalled();
 
     const targetDragOver = vi.fn();
     elements.tabStrip.addEventListener("dragover", targetDragOver);

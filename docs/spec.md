@@ -83,8 +83,13 @@ updates, and remote terminal features are outside the current product contract.
   its own full-width row above the Terminal Surface and Snippets Sidebar row.
   On macOS it sits below the app-controlled 30 px native title inset; on Linux
   and Windows it starts immediately below the operating system's native title
-  and menu, without another inset. Clicking a tab selects it; the selected tab's grid
-  refits and receives terminal focus.
+  and menu, without another inset. Clicking a tab selects it; the selected tab's
+  grid refits and receives terminal focus. Dragging a tab horizontally within
+  that strip reorders the existing tabs in that window. The reordered positions
+  immediately drive visible order, next/previous cycling, and literal positional
+  selection while the selected tab and every Live Terminal Session and Terminal
+  Surface remain unchanged. Tab order is ephemeral and is neither shared between
+  windows nor persisted or restored.
 - Close Tab defaults to `Cmd+W` on macOS and `Ctrl+Shift+W` on Linux and Windows, and
   terminates only the selected tab's session. Closing a window's last tab closes
   that window. Close Window defaults to `Cmd+Shift+W` on macOS and
@@ -134,8 +139,9 @@ updates, and remote terminal features are outside the current product contract.
   Terminal Window inserts their absolute paths into only the selected Terminal
   Tab. The paths retain platform order, are separated by one space, and are
   delivered through Protected Paste without sending Enter. Drag navigation is
-  prevented over the whole renderer document; a drop with no native files has
-  no terminal side effect.
+  prevented over the whole renderer document. Internal tab dragging only
+  reorders tabs and never inserts a path; any other drop with no native files
+  has no terminal side effect.
 - `View -> Reload User Configuration` is always available and defaults to
   `Cmd+Shift+,` on macOS and `Ctrl+Shift+,` on Linux and Windows. It manually
   rereads and validates the complete User Configuration through the startup

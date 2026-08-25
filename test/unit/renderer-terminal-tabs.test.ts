@@ -121,6 +121,31 @@ function selectedStates(strip: HTMLElement): string[] {
   );
 }
 
+function dragTabTo(strip: HTMLElement, sourceIndex: number, clientX: number) {
+  const buttons = [...strip.querySelectorAll("button")];
+  buttons.forEach((button, index) =>
+    vi.spyOn(button, "getBoundingClientRect").mockReturnValue({
+      left: index * 100,
+      right: (index + 1) * 100,
+      width: 100,
+    } as DOMRect),
+  );
+  const dataTransfer = {
+    effectAllowed: "none",
+    dropEffect: "none",
+    setData: vi.fn(),
+  };
+  const dragStart = new Event("dragstart", { bubbles: true });
+  Object.defineProperty(dragStart, "dataTransfer", { value: dataTransfer });
+  buttons[sourceIndex]!.dispatchEvent(dragStart);
+  const drop = new Event("drop", { bubbles: true, cancelable: true });
+  Object.defineProperties(drop, {
+    clientX: { value: clientX },
+    dataTransfer: { value: dataTransfer },
+  });
+  strip.dispatchEvent(drop);
+}
+
 describe("renderer Terminal Tabs", () => {
   it("renders a single tab without a strip, exactly like the pre-tab contract", async () => {
     const harness = createTabsHarness();
@@ -147,6 +172,66 @@ describe("renderer Terminal Tabs", () => {
     await vi.waitFor(() =>
       expect(harness.surfaces[1]!.focus).toHaveBeenCalled(),
     );
+  });
+
+  it("reorders existing tabs by horizontal drag while preserving selection and sessions", async () => {
+    const harness = createTabsHarness();
+    await harness.tabs.ready;
+    harness.tabs.handleCommand({ action: "new" });
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(3));
+    harness.tabs.setSessionTitle("s1", "one");
+    harness.tabs.setSessionTitle("s2", "two");
+    harness.tabs.setSessionTitle("s3", "three");
+
+    dragTabTo(harness.strip, 0, 275);
+
+    expect(selectedStates(harness.strip)).toEqual([
+      "two:false",
+      "three:true",
+      "one:false",
+    ]);
+    expect(visibleContainers(harness.container)).toEqual([-1, -1, 2]);
+    expect(harness.mount).toHaveBeenCalledTimes(3);
+
+    dragTabTo(harness.strip, 2, 25);
+    expect(selectedStates(harness.strip)).toEqual([
+      "one:false",
+      "two:false",
+      "three:true",
+    ]);
+    expect(visibleContainers(harness.container)).toEqual([-1, -1, 2]);
+
+    for (const adapter of harness.adapters)
+      expect(adapter.close).not.toHaveBeenCalled();
+    for (const surface of harness.surfaces)
+      expect(surface.dispose).not.toHaveBeenCalled();
+  });
+
+  it("uses reordered positions for cycling and literal selection", async () => {
+    const harness = createTabsHarness();
+    await harness.tabs.ready;
+    harness.tabs.handleCommand({ action: "new" });
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(3));
+    harness.tabs.setSessionTitle("s1", "one");
+    harness.tabs.setSessionTitle("s2", "two");
+    harness.tabs.setSessionTitle("s3", "three");
+    dragTabTo(harness.strip, 0, 275);
+
+    harness.tabs.handleCommand({ action: "next" });
+    expect(selectedStates(harness.strip)).toEqual([
+      "two:false",
+      "three:false",
+      "one:true",
+    ]);
+    harness.tabs.handleCommand({ action: "select", position: 1 });
+    expect(selectedStates(harness.strip)).toEqual([
+      "two:true",
+      "three:false",
+      "one:false",
+    ]);
+    expect(visibleContainers(harness.container)).toEqual([-1, 1, -1]);
   });
 
   it("clicking a tab selects it and gives its Surface terminal focus", async () => {
@@ -304,6 +389,33 @@ describe("renderer Terminal Tabs", () => {
       ["reset"],
     ]);
     expect(secondWindow.surfaces[0]!.zoom.mock.calls).toEqual([["out"]]);
+  });
+
+  it("keeps reordered positions independent between Terminal Windows", async () => {
+    const firstWindow = createTabsHarness();
+    await firstWindow.tabs.ready;
+    firstWindow.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(firstWindow.surfaces).toHaveLength(2));
+    firstWindow.tabs.setSessionTitle("s1", "first-one");
+    firstWindow.tabs.setSessionTitle("s2", "first-two");
+
+    const secondWindow = createTabsHarness();
+    await secondWindow.tabs.ready;
+    secondWindow.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(secondWindow.surfaces).toHaveLength(2));
+    secondWindow.tabs.setSessionTitle("s1", "second-one");
+    secondWindow.tabs.setSessionTitle("s2", "second-two");
+
+    dragTabTo(firstWindow.strip, 0, 175);
+
+    expect(selectedStates(firstWindow.strip)).toEqual([
+      "first-two:true",
+      "first-one:false",
+    ]);
+    expect(selectedStates(secondWindow.strip)).toEqual([
+      "second-one:false",
+      "second-two:true",
+    ]);
   });
 
   it("routes clipboard actions and snippet injection to the selected tab only", async () => {

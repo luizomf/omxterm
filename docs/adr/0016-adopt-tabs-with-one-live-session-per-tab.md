@@ -54,11 +54,21 @@ shifted terminal shortcuts recorded in the product contract. These are native
 platform defaults, not a profile system. All remain remappable and
 duplicate-checked on the effective native map.
 
-Session restoration, workspaces, splits, moving tabs between windows, and
-in-window tab reordering stay out of this round — deferred, not foreclosed.
-ADR 0007's "will not add" phrasing aged badly the moment dogfooding
-contradicted it, so this decision records no permanent rejections: any deferred
-capability returns only through its own issue and ADR. Main consequences: IPC
-routing gains per-session identity beneath the existing per-window controller,
-the active tab's grid refits on selection, and the spec's window-and-session
-contract is rewritten around the tab model.
+A later amendment accepts horizontal drag-only reordering within one Terminal
+Window. The renderer-owned tab array remains the source of visual and logical
+order, so cycling and literal positional selection immediately follow the moved
+identities. Reordering preserves the selected tab by identity and does not
+close, recreate, restart, dispose, or move any Live Terminal Session, Terminal
+Surface, or adapter. The order remains ephemeral and per-window. Internal tab
+drag data is distinguished at the renderer's whole-document drop boundary so it
+cannot navigate or become file-path insertion, while native file and folder
+drops retain their existing selected-tab behavior. This changes no main,
+preload, Terminal Surface, or ownership boundary.
+
+Session restoration, workspaces, splits, and moving tabs between windows stay
+out of this round — deferred, not foreclosed. ADR 0007's "will not add" phrasing
+aged badly the moment dogfooding contradicted it, so this decision records no
+permanent rejections: any deferred capability returns only through its own
+issue and ADR. Main consequences: IPC routing gains per-session identity beneath
+the existing per-window controller, the active tab's grid refits on selection,
+and the spec's window-and-session contract is rewritten around the tab model.

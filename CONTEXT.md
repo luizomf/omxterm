@@ -93,8 +93,9 @@ _Avoid_: workspace, application instance, tab group
 One selectable container inside a Terminal Window owning exactly one Live
 Terminal Session and its Terminal Surface. Closing a tab terminates only its
 session, and a window's last tab closing closes the window. Tabs are
-ephemeral: they are not saved, restored, reordered, or moved between windows —
-capabilities deferred rather than permanently rejected (ADR 0016).
+ephemeral: their order may be changed by dragging within their current window,
+but they are not saved, restored, or moved between windows — capabilities
+deferred rather than permanently rejected (ADR 0016).
 _Avoid_: saved tab, workspace, split pane
 
 **Always-on-Top Window**:
