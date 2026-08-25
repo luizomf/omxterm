@@ -1,45 +1,72 @@
 # Documentation
 
-OMXTerm separates product contracts, user guidance, durable decisions, and
-release procedures so that each kind of information has one clear owner.
+Use this map to move from practical guidance to authoritative contracts and
+project history. Each detailed topic has one primary owner; linked documents
+should be used instead of copying their procedures elsewhere.
 
-## Start here
+## User guidance
 
-- [README](../README.md) introduces the project and development commands.
-- [Contributing](../CONTRIBUTING.md) explains the issue, implementation,
-  verification, and pull-request workflow.
-- [User configuration](configuration.md) explains how to configure OMXTerm and
-  organize external Terminal Themes.
-- [Current product contract](spec.md) defines the normative observable product
-  behavior.
+1. [Project landing page](../README.md) — product identity, Supported Platforms,
+   current release, checksum-safe installation, and quick start.
+2. [Everyday OMXTerm use](usage.md) — windows, tabs, sessions, controls,
+   shortcuts, clipboard and Protected Paste behavior, file-path insertion,
+   links, bells, and local Operational Events.
+3. [User Configuration](configuration.md) — `config.json`, keybinds,
+   `snippets.json`, external Terminal Themes, reload behavior, examples, and
+   troubleshooting.
 
-## Project decisions and language
+The guides are practical summaries. When wording differs, the normative product
+contract below is authoritative.
 
-- [Domain language](../CONTEXT.md) defines the terms used throughout the
-  project.
-- [Architecture decision records](adr/README.md) index the status of durable
-  technical and product tradeoffs and link to their original reasoning. The
-  specification records the behavior users can rely on.
-- [MIT License](../LICENSE) defines the rights granted for OMXTerm source, and
-  [Third-Party Notices](../THIRD_PARTY_NOTICES.md) records bundled components
-  with their own terms.
+## Contribution and development
 
-## Versions and releases
+- [Contributing](../CONTRIBUTING.md) is the single guide for development setup,
+  issue and fork-and-pull workflow, engineering boundaries, verification,
+  commits, and pull requests.
 
-- [Versioning policy](versioning.md) defines the public compatibility contract,
-  Semantic Versioning rules, version sources, and tag conventions.
-- [Local arm64 release procedure](release.md) is the operational checklist for
-  building, testing, accepting, and manually publishing an exact Release
-  Artifact.
-- [0.1.0 release notes](releases/0.1.0.md) describe the first published
-  version.
-- [0.2.0 release notes](releases/0.2.0.md),
-  [0.3.0 release notes](releases/0.3.0.md), and
-  [0.4.0 release notes](releases/0.4.0.md) describe previous published
-  versions.
-- [0.4.1 release notes](releases/0.4.1.md) describe the previous published version.
-- [0.8.0 release notes](releases/0.8.0.md) describe the current published version
-  and its verified, owner-accepted artifacts.
+## Normative contracts and language
 
-Issue and pull-request descriptions may describe work in progress, but they do
-not replace these maintained project documents.
+- [Current product contract](spec.md) defines observable behavior, Supported
+  Platforms, security and privacy boundaries, architecture boundaries, and the
+  release contract.
+- [Domain language](../CONTEXT.md) defines canonical OMXTerm terms used across
+  the project.
+
+Issues, pull requests, guides, and release notes may describe a point in time,
+but they do not replace the maintained product contract.
+
+## Durable decisions
+
+- [Architecture decision record index](adr/README.md) lists every durable
+  decision, its current status, superseding relationships, and links to the
+  original reasoning. The ADRs own architectural and product tradeoffs; the
+  product contract owns current observable behavior.
+
+## Release procedure and version policy
+
+- [ARM64 release policy and native procedures](release.md) is the operational
+  owner for native building, exact-artifact verification, acceptance,
+  checksum generation, and separately authorized manual publication.
+- [Versioning policy](versioning.md) defines compatibility rules, version
+  sources, development baselines, tags, and release immutability.
+- [Publication visibility](../README.md#publication-visibility) records the
+  current private-repository gate for unauthenticated GitHub release and issue
+  links. Documentation does not authorize publication or a visibility change.
+
+## Immutable release history
+
+Published release records are historical and must not be rewritten to describe
+the current development baseline:
+
+- [0.1.0](releases/0.1.0.md) — first published Apple Silicon version;
+- [0.2.0](releases/0.2.0.md) — resilient configuration, keybinds, and Snippets;
+- [0.3.0](releases/0.3.0.md) — Terminal Tabs;
+- [0.4.0](releases/0.4.0.md) — first macOS, Linux, and Windows ARM64 release;
+- [0.4.1](releases/0.4.1.md) — macOS bundle-integrity packaging fix; and
+- [0.8.0](releases/0.8.0.md) — current published release.
+
+## Legal
+
+- [MIT License](../LICENSE) defines the rights granted for OMXTerm source.
+- [Third-Party Notices](../THIRD_PARTY_NOTICES.md) records bundled components
+  that retain their own terms.
