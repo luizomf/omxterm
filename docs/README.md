@@ -55,14 +55,12 @@ but they do not replace the maintained product contract.
 
 ## Current release candidate
 
-- [0.9.0 candidate release notes](releases/0.9.0.md) describe the current source
-  candidate, intended assets, changed-boundary verification plan, compatibility,
-  and known limitations. Native verification, exact-artifact owner acceptance,
-  the intended `v0.9.0` tag, and publication remain pending.
+- [0.9.0 candidate release notes](releases/0.9.0.md) describe the verified
+  current candidate, exact artifact identities, changed-boundary evidence,
+  compatibility, and known limitations. Owner acceptance, the intended `v0.9.0`
+  tag, and publication remain pending.
 
-This candidate record is separate from immutable published history. Its exact
-artifact identities and verification records will be added only after the
-native builds complete under the release procedure.
+This candidate record is separate from immutable published history.
 
 ## Immutable published release history
 

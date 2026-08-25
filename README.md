@@ -17,13 +17,13 @@ not current support commitments.
 
 ## Current release
 
-The current source candidate is **0.9.0**, with `v0.9.0` as its intended tag.
-The tag and native assets do not exist yet; native verification, exact-artifact
-owner acceptance, and separate publication authorization remain pending. See
-the [0.9.0 candidate release notes](docs/releases/0.9.0.md) for changes,
-compatibility, the changed-boundary verification plan, and known limitations.
+The current release candidate is **0.9.0**. Its exact native artifacts passed
+automated verification but are not published; owner acceptance, the intended
+`v0.9.0` tag, and separate publication authorization remain pending. See the
+[0.9.0 candidate release notes](docs/releases/0.9.0.md) for exact identities,
+changes, compatibility, verification evidence, and known limitations.
 
-The intended eight ARM64 assets are:
+The exact eight ARM64 candidate assets are:
 
 - `OMXTerm-0.9.0-arm64.dmg` and its `.sha256` record for macOS;
 - `OMXTerm-0.9.0-arm64.AppImage`, its `.sha256` record,
@@ -31,11 +31,10 @@ The intended eight ARM64 assets are:
   record for Linux; and
 - `OMXTerm-0.9.0-arm64.exe` and its `.sha256` record for Windows.
 
-These filenames are the candidate contract, not a claim that the files have
-been built, accepted, tagged, or published. The intended packages are ARM64-only
-and carry no verified publisher identity. The macOS app must receive its
-complete ad-hoc integrity seal during native packaging, but will have no Apple
-Developer ID signature or notarization.
+These exact files are staged locally for owner testing but have not been
+accepted, tagged, or published. The packages are ARM64-only and carry no
+verified publisher identity. The macOS app passed its complete ad-hoc integrity
+seal verification but has no Apple Developer ID signature or notarization.
 
 The current published release remains **0.8.0**. Its immutable
 [release notes](docs/releases/0.8.0.md) record the exact accepted filenames,
@@ -53,12 +52,12 @@ change repository visibility or publish anything.
 
 ## Installation
 
-The 0.9.0 commands below apply only after the intended assets pass native
-verification, receive owner acceptance, and are separately authorized and
-published. Those assets are not available yet. After publication, keep each
-package and its matching `.sha256` file in the same directory, verify the
-checksum before opening the package, and do not install an artifact whose check
-fails. To install the currently published 0.8.0 release instead, follow its
+The 0.9.0 commands below apply after the verified candidate assets receive owner
+acceptance, separate publication authorization, and publication. They are not
+published yet. After publication, keep each package and its matching `.sha256`
+file in the same directory, verify the checksum before opening the package, and
+do not install an artifact whose check fails. To install the currently published
+0.8.0 release instead, follow its
 [immutable release notes](docs/releases/0.8.0.md#downloads-and-installation).
 
 ### macOS
