@@ -14,27 +14,25 @@ import {
 
 describe("Linux release assets", () => {
   it("derives exact versioned AppImage and helper names", () => {
-    expect(linuxAppImageName("0.8.0-dev.0")).toBe(
-      "OMXTerm-0.8.0-dev.0-arm64.AppImage",
-    );
-    expect(linuxHelperName("0.8.0-dev.0")).toBe(
-      "OMXTerm-0.8.0-dev.0-arm64.AppImage-installer.sh",
+    expect(linuxAppImageName("0.8.0")).toBe("OMXTerm-0.8.0-arm64.AppImage");
+    expect(linuxHelperName("0.8.0")).toBe(
+      "OMXTerm-0.8.0-arm64.AppImage-installer.sh",
     );
   });
 
   it("embeds exactly the package version in the helper", () => {
-    expect(
-      renderLinuxHelper("version=@OMXTERM_VERSION@\n", "0.8.0-dev.0"),
-    ).toBe("version=0.8.0-dev.0\n");
-    expect(() => renderLinuxHelper("no marker", "0.8.0-dev.0")).toThrow(
+    expect(renderLinuxHelper("version=@OMXTERM_VERSION@\n", "0.8.0")).toBe(
+      "version=0.8.0\n",
+    );
+    expect(() => renderLinuxHelper("no marker", "0.8.0")).toThrow(
       "exactly one",
     );
   });
 
   it("materializes the exact helper and both checksum assets", async () => {
     const output = await mkdtemp(path.join(tmpdir(), "omxterm-linux-assets-"));
-    const appImageName = linuxAppImageName("0.8.0-dev.0");
-    const helperName = linuxHelperName("0.8.0-dev.0");
+    const appImageName = linuxAppImageName("0.8.0");
+    const helperName = linuxHelperName("0.8.0");
     try {
       await writeFile(path.join(output, appImageName), "appimage");
       await packageLinuxAssets(output);
@@ -43,7 +41,7 @@ describe("Linux release assets", () => {
         await readFile(path.join(output, `${appImageName}.sha256`), "utf8"),
       ).toContain(`  ${appImageName}\n`);
       expect(await readFile(path.join(output, helperName), "utf8")).toContain(
-        "VERSION='0.8.0-dev.0'",
+        "VERSION='0.8.0'",
       );
       expect(
         await readFile(path.join(output, `${helperName}.sha256`), "utf8"),

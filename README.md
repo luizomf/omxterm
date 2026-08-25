@@ -7,22 +7,26 @@ and Windows.
   <img src="docs/images/omxterm-hero.png" alt="OMXTerm icon: a light blue terminal prompt on a dark rounded square" width="480" />
 </p>
 
-The current version is `0.4.1`. Release artifacts for each Supported Platform
-are published manually on the
-[GitHub Releases page](https://github.com/luizomf/omxterm/releases):
+The current release candidate is `0.8.0`. Its intended `v0.8.0` tag and native
+artifacts are not published yet; exact-artifact verification, owner acceptance,
+and separate publication authorization remain pending. When authorized, the
+[GitHub Releases page](https://github.com/luizomf/omxterm/releases) will provide:
 
-- `OMXTerm-0.4.1-arm64.dmg` for Apple Silicon macOS;
-- `OMXTerm-0.4.1-arm64.AppImage` for Linux ARM64; and
-- `OMXTerm-0.4.1-arm64.exe` for Windows ARM64.
+- `OMXTerm-0.8.0-arm64.dmg` for Apple Silicon macOS;
+- `OMXTerm-0.8.0-arm64.AppImage` and
+  `OMXTerm-0.8.0-arm64.AppImage-installer.sh` for Linux ARM64; and
+- `OMXTerm-0.8.0-arm64.exe` for Windows ARM64.
 
 Every package is ARM64-only and intentionally carries no verified publisher
 identity; the macOS application uses an ad-hoc code seal for bundle integrity
-but has no Apple Developer ID signature or notarization. Each artifact has a
-matching `.sha256` file. Verify the checksum before opening it, and read the
-[0.4.1 release notes](docs/releases/0.4.1.md)
-for changes, compatibility, provenance, and known limitations.
+but has no Apple Developer ID signature or notarization. Each asset has a
+matching `.sha256` file. After publication, verify the checksum before opening
+it, and read the [0.8.0 release notes](docs/releases/0.8.0.md) for changes,
+compatibility, provenance, and known limitations.
 
 ## Installation
+
+The commands below apply after the pending 0.8.0 assets are published.
 
 ### Installing on macOS
 
@@ -30,7 +34,7 @@ Download the DMG and its matching checksum file into the same directory, then
 verify it:
 
 ```sh
-shasum -a 256 -c OMXTerm-0.4.1-arm64.dmg.sha256
+shasum -a 256 -c OMXTerm-0.8.0-arm64.dmg.sha256
 ```
 
 Open the DMG, drag `OMXTerm.app` to Applications, eject the DMG, and launch
@@ -76,8 +80,8 @@ Download the AppImage and its matching checksum file into the same directory.
 Verify the download and make it executable:
 
 ```sh
-sha256sum --check OMXTerm-0.4.1-arm64.AppImage.sha256
-chmod +x OMXTerm-0.4.1-arm64.AppImage
+sha256sum --check OMXTerm-0.8.0-arm64.AppImage.sha256
+chmod +x OMXTerm-0.8.0-arm64.AppImage
 ```
 
 The AppImage is ready to run and does not need a system-wide installer. Its
@@ -89,9 +93,9 @@ the command for the host: ordinary execution uses kernel FUSE mounting, while
 the supported fallback extracts and runs without it.
 
 ```sh
-./OMXTerm-0.4.1-arm64.AppImage
+./OMXTerm-0.8.0-arm64.AppImage
 # If kernel FUSE mounting is unavailable:
-./OMXTerm-0.4.1-arm64.AppImage --appimage-extract-and-run
+./OMXTerm-0.8.0-arm64.AppImage --appimage-extract-and-run
 ```
 
 OMXTerm defaults to Electron's X11 backend. A Wayland desktop must provide
@@ -106,14 +110,13 @@ the Dock until you create a desktop entry.
 
 Releases that include the optional installer provide its own matching checksum.
 Verify both downloaded assets, make them executable, and run this one install
-command from their directory (replace `<version>` with the exact release
-version):
+command from their directory:
 
 ```sh
-sha256sum --check OMXTerm-<version>-arm64.AppImage.sha256
-sha256sum --check OMXTerm-<version>-arm64.AppImage-installer.sh.sha256
-chmod +x OMXTerm-<version>-arm64.AppImage OMXTerm-<version>-arm64.AppImage-installer.sh
-./OMXTerm-<version>-arm64.AppImage-installer.sh install ./OMXTerm-<version>-arm64.AppImage
+sha256sum --check OMXTerm-0.8.0-arm64.AppImage.sha256
+sha256sum --check OMXTerm-0.8.0-arm64.AppImage-installer.sh.sha256
+chmod +x OMXTerm-0.8.0-arm64.AppImage OMXTerm-0.8.0-arm64.AppImage-installer.sh
+./OMXTerm-0.8.0-arm64.AppImage-installer.sh install ./OMXTerm-0.8.0-arm64.AppImage
 ```
 
 The helper does not download or verify network content, use a package manager,
@@ -126,7 +129,7 @@ availability changes. To remove only those files while preserving unrelated
 files and parent directories, run:
 
 ```sh
-./OMXTerm-<version>-arm64.AppImage-installer.sh uninstall
+./OMXTerm-0.8.0-arm64.AppImage-installer.sh uninstall
 ```
 
 If installation reports invalid input, confirm that the AppImage is the
@@ -143,7 +146,7 @@ icon="$HOME/.local/share/icons/hicolor/1024x1024/apps/omxterm.png"
 desktop="$HOME/.local/share/applications/omxterm.desktop"
 
 # Keep the runnable AppImage and icon outside the temporary extraction tree.
-install -Dm755 OMXTerm-0.4.1-arm64.AppImage "$app"
+install -Dm755 OMXTerm-0.8.0-arm64.AppImage "$app"
 extract_dir="$(mktemp -d)"
 (
   cd "$extract_dir"
@@ -188,11 +191,11 @@ checksum file into the same directory. Compare the checksum file with a fresh
 hash:
 
 ```powershell
-Get-Content .\OMXTerm-0.4.1-arm64.exe.sha256
-(Get-FileHash .\OMXTerm-0.4.1-arm64.exe -Algorithm SHA256).Hash.ToLower()
+Get-Content .\OMXTerm-0.8.0-arm64.exe.sha256
+(Get-FileHash .\OMXTerm-0.8.0-arm64.exe -Algorithm SHA256).Hash.ToLower()
 ```
 
-Run `OMXTerm-0.4.1-arm64.exe`. It installs per-user without administrator
+Run `OMXTerm-0.8.0-arm64.exe`. It installs per-user without administrator
 elevation; launch OMXTerm from the Start Menu. Because the installer is
 intentionally unsigned, Microsoft Defender SmartScreen may warn that it is from
 an unknown publisher. Review the source,
@@ -307,8 +310,8 @@ preference.
 
 See the [complete configuration guide](docs/configuration.md) for every field,
 Otávio's real configuration, keybinds, snippets, external Terminal Themes, the
-optional Ghostty conversion helper, and troubleshooting. OMXTerm never creates, rewrites, or migrates these files. Changes to
-`config.json` and Terminal Themes require an application restart;
+optional Ghostty conversion helper, and troubleshooting. OMXTerm never creates, rewrites, or migrates these files. Use `View -> Reload
+User Configuration` to apply `config.json` and Terminal Theme changes manually;
 `snippets.json` is reread whenever the Snippets Sidebar opens.
 
 ## Documentation
@@ -323,6 +326,7 @@ optional Ghostty conversion helper, and troubleshooting. OMXTerm never creates, 
 - [0.3.0 release notes](docs/releases/0.3.0.md)
 - [0.4.0 release notes](docs/releases/0.4.0.md)
 - [0.4.1 release notes](docs/releases/0.4.1.md)
+- [0.8.0 release notes](docs/releases/0.8.0.md)
 - [Domain language](CONTEXT.md)
 - [Architecture decisions](docs/adr/)
 
