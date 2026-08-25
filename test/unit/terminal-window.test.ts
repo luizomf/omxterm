@@ -105,6 +105,7 @@ describe("Terminal Window startup contract", () => {
     ["linux", true],
     ["win32", true],
     ["darwin", false],
+    ["freebsd", false],
   ])("sets native menu auto-hide for %s", (platform, autoHideMenuBar) => {
     const options = terminalWindowOptions(
       "/application/preload.cjs",
