@@ -53,10 +53,21 @@ but they do not replace the maintained product contract.
   current private-repository gate for unauthenticated GitHub release and issue
   links. Documentation does not authorize publication or a visibility change.
 
-## Immutable release history
+## Current release candidate
+
+- [0.9.0 candidate release notes](releases/0.9.0.md) describe the current source
+  candidate, intended assets, changed-boundary verification plan, compatibility,
+  and known limitations. Native verification, exact-artifact owner acceptance,
+  the intended `v0.9.0` tag, and publication remain pending.
+
+This candidate record is separate from immutable published history. Its exact
+artifact identities and verification records will be added only after the
+native builds complete under the release procedure.
+
+## Immutable published release history
 
 Published release records are historical and must not be rewritten to describe
-the current development baseline:
+the current candidate or development baseline:
 
 - [0.1.0](releases/0.1.0.md) — first published Apple Silicon version;
 - [0.2.0](releases/0.2.0.md) — resilient configuration, keybinds, and Snippets;
