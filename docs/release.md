@@ -87,7 +87,9 @@ filenames, checksum filenames, and GitHub Release must all identify that same
 version. The intended tag points to every artifact build commit directly or to
 a descendant that differs from it only through the documentation-only exception
 above. The package names are `OMXTerm-X.Y.Z-arm64.dmg`,
-`OMXTerm-X.Y.Z-arm64.AppImage`, and `OMXTerm-X.Y.Z-arm64.exe`.
+`OMXTerm-X.Y.Z-arm64.AppImage`, and `OMXTerm-X.Y.Z-arm64.exe`. Linux also
+produces `OMXTerm-X.Y.Z-arm64.AppImage-installer.sh`; its embedded `--version`,
+filename, and checksum must identify the same version.
 
 ## Build and automated verification
 
@@ -142,17 +144,23 @@ npm run check:linux
 
 The postinstall rebuilds `node-pty` against Electron's Linux arm64 runtime.
 `npm run check:linux` runs all portable and real-PTY checks, creates the
-non-published `release/OMXTerm-<version>-arm64.AppImage`, extracts that exact
-AppImage, rejects the unversioned `libz.so` development linker dependency,
-and checks its arm64 executable and native module, runtime files, version, icon,
-licenses, and forbidden/private-looking files. It then launches that exact
-AppImage through both normal FUSE mounting and `--appimage-extract-and-run`,
-with isolated configuration, state, and user data for each launch. Both startup
-paths must reach a running PTY, and their Operational Event logs must not contain
-the environment canary.
+non-published `release/OMXTerm-<version>-arm64.AppImage`, its checksum, the
+exact versioned `release/OMXTerm-<version>-arm64.AppImage-installer.sh`, and the
+helper checksum. It extracts that exact AppImage, rejects the unversioned
+`libz.so` development linker dependency, and checks its arm64 executable and
+native module, runtime files, version, icon, licenses, and
+forbidden/private-looking files. It verifies both checksum records and helper
+version agreement, installs that AppImage through the exact helper in an
+isolated home, and launches the installed result through
+`--appimage-extract-and-run` and through normal kernel-FUSE mounting when the
+host's installation-time probe establishes that direct seam is available. Each
+available startup path must reach a running PTY, and its Operational Event logs
+must not contain the environment canary; an unavailable direct seam is not
+inferred as passing.
 
 For packaging alone, run `npm run package:linux`, followed on the same native
-host by `npm run package:verify`. The statically linked AppImage runtime needs
+host by `npm run package:verify`. Packaging creates the AppImage, helper, and
+both matching `.sha256` files without downloading or publishing anything. The statically linked AppImage runtime needs
 neither zlib development headers nor a system `libfuse2` library. Normal
 mounting uses kernel FUSE support. When mounting is unavailable, the safe manual
 fallback is:
@@ -362,17 +370,18 @@ checksum. Run the acceptance model against the replacement.
 
 ## Linux SHA-256
 
-Generate the checksum after native automation finishes against the unchanged
-exact AppImage:
+`npm run package:linux` generates checksum records for both unchanged exact
+Linux assets. Recheck them after native automation:
 
 ```sh
 cd release
-sha256sum OMXTerm-<version>-arm64.AppImage > OMXTerm-<version>-arm64.AppImage.sha256
 sha256sum --check OMXTerm-<version>-arm64.AppImage.sha256
+sha256sum --check OMXTerm-<version>-arm64.AppImage-installer.sh.sha256
+./OMXTerm-<version>-arm64.AppImage-installer.sh --version
 ```
 
-Record both the filename and digest in the exact-artifact record. Rebuilding,
-renaming, or changing the AppImage invalidates its identity, native automation,
+Record both asset filenames and digests in the exact-artifact record. Rebuilding,
+renaming, or changing either asset invalidates its identity, native automation,
 and checksum. Keep publication blocked until Otávio accepts this exact artifact
 and separately authorizes publication.
 
@@ -440,9 +449,11 @@ publication:
    `OMXTerm-<version>-arm64.dmg.sha256`,
    `OMXTerm-<version>-arm64.AppImage`,
    `OMXTerm-<version>-arm64.AppImage.sha256`,
+   `OMXTerm-<version>-arm64.AppImage-installer.sh`,
+   `OMXTerm-<version>-arm64.AppImage-installer.sh.sha256`,
    `OMXTerm-<version>-arm64.exe`, and
    `OMXTerm-<version>-arm64.exe.sha256` manually;
-4. download all six attachments, verify every checksum again on any trustworthy
+4. download all eight attachments, verify every checksum again on any trustworthy
    byte-verification host, and preserve the final release URL with the accepted
    evidence.
 

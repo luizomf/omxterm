@@ -12,6 +12,12 @@ export function inspectForbiddenPackagedEntries(entries: string[]): string[];
 
 export function inspectElfDynamicDependencies(dynamicSection: string): string[];
 
+export function inspectChecksumRecord(
+  contents: string,
+  filename: string,
+  digest: string,
+): void;
+
 export interface IcnsRepresentation {
   readonly name: string;
   readonly width: number;

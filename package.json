@@ -1,6 +1,6 @@
 {
   "name": "omxterm",
-  "version": "0.7.0-dev.0",
+  "version": "0.8.0-dev.0",
   "description": "Otávio's open-source personal desktop terminal for ARM64 macOS, Linux, and Windows",
   "desktopName": "omxterm.desktop",
   "author": "Luiz Otávio Miranda",
@@ -19,7 +19,7 @@
     "build": "node build.mjs",
     "check:portable": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build",
     "package:mac": "npm run build && electron-builder --config electron-builder.yml --mac dmg --arm64 --publish never",
-    "package:linux": "npm run build && electron-builder --config electron-builder.yml --linux AppImage --arm64 --publish never",
+    "package:linux": "npm run build && electron-builder --config electron-builder.yml --linux AppImage --arm64 --publish never && node scripts/package-linux-assets.mjs",
     "package:win": "npm run build && electron-builder --config electron-builder.yml --win nsis --arm64 --publish never",
     "package:verify": "node scripts/verify-packaged-app.mjs",
     "check": "npm run check:portable && npm run package:mac && npm run package:verify",

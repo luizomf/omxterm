@@ -45,7 +45,9 @@ OMXTerm must:
 - read strict, versioned JSON configuration and write bounded local JSONL
   operational logs;
 - package ready-to-run arm64 artifacts from an accepted version: DMG for
-  macOS, AppImage for Linux, and NSIS for Windows.
+  macOS, AppImage for Linux, and NSIS for Windows. Linux releases additionally
+  provide an optional versioned per-user AppImage desktop installer and its
+  checksum; running the AppImage directly remains supported.
 
 AI assistance, splits, saved or reconnectable sessions, shell integration,
 profiles, a theme picker or catalog, automatic configuration reload, automatic
@@ -390,6 +392,20 @@ The application performs no network requests: no analytics, telemetry, crash
 reporting, update check, or remote log delivery. Child processes retain their
 normal network access.
 
+The optional Linux AppImage desktop installer accepts only a user-supplied,
+previously verified local Linux ARM64 OMXTerm AppImage and performs no download,
+release discovery, package-manager operation, elevation, system-wide change, or
+update. It owns exactly
+`~/.local/opt/omxterm/OMXTerm.AppImage`,
+`~/.local/share/icons/hicolor/1024x1024/apps/omxterm.png`, and
+`~/.local/share/applications/omxterm.desktop`. Install and update replace all
+three files transactionally; invalid input or failure preserves the complete
+previous installation. Uninstall removes only those files and preserves
+unrelated files and parent directories. At installation time the helper tests
+actual kernel FUSE mounting and writes one fixed desktop entry that either runs
+the AppImage directly or adds `--appimage-extract-and-run`; launch time performs
+no mode discovery.
+
 ## Architecture boundaries
 
 Electron main owns native windows, PTYs, filesystem access, configuration,
@@ -415,8 +431,10 @@ The project uses the MIT License and follows the documented
 version may be tagged `v0.y.z`. Release candidates are built locally and
 natively on each Supported Platform: macOS on Otávio's current Apple Silicon
 Mac, and Linux arm64 and Windows arm64 in native Parallels VM clones using the
-VM's native filesystem, never shared folders. The initial formats are DMG,
-AppImage, and NSIS respectively.
+VM's native filesystem, never shared folders. The initial application-package formats are DMG, AppImage, and NSIS
+respectively. A Linux release also includes the optional versioned AppImage
+desktop-installer shell asset and its checksum; it is not another application
+package format.
 
 Each exact artifact requires its own recorded native automated verification and
 owner acceptance. Manual testing is optional and never a release gate. Otávio

@@ -73,22 +73,24 @@ privacy permissions for other applications.
 ### Installing on Linux
 
 Download the AppImage and its matching checksum file into the same directory.
-Verify the download before running it:
+Verify the download and make it executable:
 
 ```sh
 sha256sum --check OMXTerm-0.4.1-arm64.AppImage.sha256
 chmod +x OMXTerm-0.4.1-arm64.AppImage
-./OMXTerm-0.4.1-arm64.AppImage
 ```
 
 The AppImage is ready to run and does not need a system-wide installer. Its
 unsigned status means Linux distributions receive no publisher identity to
 verify. Linux needs the `fontconfig` utilities for configured system-font
 validation. The statically linked AppImage runtime does not require zlib
-development headers or a system `libfuse2` library. Normal mounting uses the
-system's kernel FUSE support; when mounting is unavailable, use:
+development headers or a system `libfuse2` library. Before first launch, choose
+the command for the host: ordinary execution uses kernel FUSE mounting, while
+the supported fallback extracts and runs without it.
 
 ```sh
+./OMXTerm-0.4.1-arm64.AppImage
+# If kernel FUSE mounting is unavailable:
 ./OMXTerm-0.4.1-arm64.AppImage --appimage-extract-and-run
 ```
 
@@ -100,9 +102,40 @@ Electron `--ozone-platform` argument overrides the default for diagnosis.
 
 Running an AppImage directly does not register it with the desktop. The Terminal
 Window has the OMXTerm icon, but GNOME may show a placeholder in Activities or
-the Dock until you create a desktop entry. The following user-level setup needs
-no administrator access. Run it from the directory containing the verified
-AppImage:
+the Dock until you create a desktop entry.
+
+Releases that include the optional installer provide its own matching checksum.
+Verify both downloaded assets, make them executable, and run this one install
+command from their directory (replace `<version>` with the exact release
+version):
+
+```sh
+sha256sum --check OMXTerm-<version>-arm64.AppImage.sha256
+sha256sum --check OMXTerm-<version>-arm64.AppImage-installer.sh.sha256
+chmod +x OMXTerm-<version>-arm64.AppImage OMXTerm-<version>-arm64.AppImage-installer.sh
+./OMXTerm-<version>-arm64.AppImage-installer.sh install ./OMXTerm-<version>-arm64.AppImage
+```
+
+The helper does not download or verify network content, use a package manager,
+or request administrator access. It validates the local Linux ARM64 AppImage,
+then transactionally installs only the per-user AppImage, icon, and desktop
+entry. At installation time it tests actual kernel FUSE mounting and fixes the
+desktop launcher to direct execution or `--appimage-extract-and-run`. Rerun the
+same install command to update all three files or after the host's FUSE
+availability changes. To remove only those files while preserving unrelated
+files and parent directories, run:
+
+```sh
+./OMXTerm-<version>-arm64.AppImage-installer.sh uninstall
+```
+
+If installation reports invalid input, confirm that the AppImage is the
+verified Linux ARM64 OMXTerm asset and that `file` is installed. A failed update
+preserves the previous installation; correct the reported filesystem problem
+and rerun it.
+
+The manual user-level setup below remains supported and needs no administrator
+access. Run it from the directory containing the verified AppImage:
 
 ```sh
 app="$HOME/.local/opt/omxterm/OMXTerm.AppImage"
@@ -227,17 +260,19 @@ Project checks are available as root scripts:
 - `npm run package:mac` creates a local Apple Silicon DMG under `release/` and
   never publishes it; its application is ad-hoc sealed but has no Developer ID
   signature or notarization;
-- `npm run package:linux` creates
-  `release/OMXTerm-<version>-arm64.AppImage` and never publishes it;
+- `npm run package:linux` creates the versioned Linux ARM64 AppImage, optional
+  desktop-installer helper, and both matching checksums under `release/`, and
+  never publishes them;
 - `npm run package:win` creates the unsigned Windows ARM64 NSIS installer
   `release/OMXTerm-<version>-arm64.exe` and never publishes it;
 - `npm run package:verify` inspects and starts the native package for the current
   macOS, Linux, or Windows ARM64 host;
 - `npm run check` runs the full macOS packaging check;
 - `npm run check:linux` runs the portable quality gate, the Linux ARM64 AppImage
-  build, exact AppImage metadata, dependency, and content inspection, and
-  isolated packaged startup through a real PTY using both normal FUSE mounting
-  and `--appimage-extract-and-run`;
+  and helper build, exact filenames, checksums, metadata, dependency, content,
+  and transactional installation checks, and isolated installed startup through
+  a real PTY using the extraction fallback plus normal FUSE mounting when that
+  seam is available;
 - `npm run check:win` runs the same shared portable sequence for Windows: the
   ARM64 NSIS build, unpacked-application inspection, and isolated packaged startup
   through a real ConPTY.

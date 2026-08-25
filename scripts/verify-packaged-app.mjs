@@ -14,6 +14,7 @@ import { tmpdir, userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import { linuxHelperName } from "./package-linux-assets.mjs";
 
 const execFile = promisify(execFileCallback);
 const projectRoot = path.resolve(
@@ -164,6 +165,23 @@ async function sha256(file) {
   return createHash("sha256")
     .update(await readFile(file))
     .digest("hex");
+}
+
+export function inspectChecksumRecord(contents, filename, digest) {
+  const expected = `${digest}  ${filename}\n`;
+  if (contents !== expected)
+    throw new Error(
+      `Checksum record does not identify exact asset ${filename}`,
+    );
+}
+
+async function verifyChecksum(file) {
+  const checksum = `${file}.sha256`;
+  inspectChecksumRecord(
+    await readFile(checksum, "utf8"),
+    path.basename(file),
+    await sha256(file),
+  );
 }
 
 async function assertSameFile(source, packaged) {
@@ -595,10 +613,57 @@ export async function verifyPackagedApplication(applicationPath) {
     applicationPath ?? (await defaultApplicationPath()),
   );
   let extractionRoot;
+  let linuxInstallationRoot;
+  let linuxInstalledApp;
+  let linuxDirectLaunchAvailable = false;
   let applicationRoot = packagedPath;
 
   try {
     if (platform === "linux") {
+      const version = await sourceVersion();
+      const helper = path.join(
+        projectRoot,
+        "release",
+        linuxHelperName(version),
+      );
+      await Promise.all([verifyChecksum(packagedPath), verifyChecksum(helper)]);
+      const { stdout: helperVersion } = await execFile(helper, ["--version"]);
+      if (helperVersion.trim() !== version)
+        throw new Error(
+          `Linux helper version ${helperVersion.trim()} differs from source package version ${version}`,
+        );
+      linuxInstallationRoot = await mkdtemp(
+        path.join(tmpdir(), "omxterm-helper-installation-"),
+      );
+      await execFile(helper, ["install", packagedPath], {
+        env: { ...process.env, HOME: linuxInstallationRoot },
+        maxBuffer: 16 * 1024 * 1024,
+      });
+      linuxInstalledApp = path.join(
+        linuxInstallationRoot,
+        ".local",
+        "opt",
+        "omxterm",
+        "OMXTerm.AppImage",
+      );
+      const installedDesktop = await readFile(
+        path.join(
+          linuxInstallationRoot,
+          ".local",
+          "share",
+          "applications",
+          "omxterm.desktop",
+        ),
+        "utf8",
+      );
+      linuxDirectLaunchAvailable = !installedDesktop.includes(
+        " --appimage-extract-and-run %U\n",
+      );
+      await inspectArchitecture(
+        linuxInstalledApp,
+        "installed AppImage",
+        platform,
+      );
       await inspectArchitecture(packagedPath, "AppImage", platform);
       await inspectLinuxAppImageDependencies(packagedPath);
       const { stdout: signature } = await execFile(packagedPath, [
@@ -781,7 +846,12 @@ export async function verifyPackagedApplication(applicationPath) {
     }
 
     const linuxLaunchModes =
-      platform === "linux" ? [[], ["--appimage-extract-and-run"]] : [[]];
+      platform === "linux"
+        ? [
+            ...(linuxDirectLaunchAvailable ? [[]] : []),
+            ["--appimage-extract-and-run"],
+          ]
+        : [[]];
     let verifiedRecords = 0;
     for (const runtimeArguments of linuxLaunchModes) {
       const temporaryRoot = await mkdtemp(
@@ -804,7 +874,7 @@ export async function verifyPackagedApplication(applicationPath) {
       const readinessFile = path.join(temporaryRoot, "explicit-command-ready");
       const explicitCommand = packagedExplicitCommand(platform);
       let stderr = "";
-      const launchPath = platform === "linux" ? packagedPath : executable;
+      const launchPath = platform === "linux" ? linuxInstalledApp : executable;
       const launchArguments = [
         ...runtimeArguments,
         `--user-data-dir=${userDataRoot}`,
@@ -878,6 +948,8 @@ export async function verifyPackagedApplication(applicationPath) {
   } finally {
     if (extractionRoot)
       await rm(extractionRoot, { recursive: true, force: true });
+    if (linuxInstallationRoot)
+      await rm(linuxInstallationRoot, { recursive: true, force: true });
   }
 }
 

@@ -54,6 +54,9 @@ commit, all version-bearing surfaces must agree:
   `.sha256`;
 - the AppImage is named `OMXTerm-X.Y.Z-arm64.AppImage` and its checksum file
   adds `.sha256`;
+- the optional Linux desktop installer is named
+  `OMXTerm-X.Y.Z-arm64.AppImage-installer.sh`, reports `X.Y.Z` through
+  `--version`, and its checksum file adds `.sha256`;
 - the NSIS installer is named `OMXTerm-X.Y.Z-arm64.exe` and its checksum file
   adds `.sha256`;
 - the GitHub Release targets `vX.Y.Z` and describes each exact artifact.
