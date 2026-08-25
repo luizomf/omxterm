@@ -44,7 +44,7 @@ _Avoid_: terminal page, terminal card, browser terminal
 **Terminal Theme**:
 The OMXTerm-owned visual palette for the Terminal Surface, including terminal
 foreground, background, cursor, selection, and ANSI colors. Its default is the
-canonical `omtheme` palette also used in Otávio's Ghostty configuration.
+canonical `omtheme` palette.
 _Avoid_: xterm theme, Ghostty theme, application CSS
 
 **Terminal Font Stack**:
