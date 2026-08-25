@@ -10,9 +10,10 @@ DOM+xterm Terminal Surface and a local PTY Adapter.
 
 The terminal is the product. AI assistance, SSH brokering, saved sessions,
 splits, and shell integration are outside the current product contract. Do not
-turn nearby ideas into requirements. Linux and Windows packaging remain tracked
-implementation work; do not mistake their current absence for a change to the
-three-platform product contract.
+turn nearby ideas into requirements. Native ARM64 packaging is implemented for
+all three Supported Platforms: macOS DMG, Linux AppImage, and Windows NSIS. x64,
+Intel macOS, additional package formats, signing and notarization, paid CI, a
+multi-platform CI matrix, and automatic publication remain deferred.
 
 ## Authority
 
