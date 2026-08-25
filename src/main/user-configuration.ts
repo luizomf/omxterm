@@ -1,4 +1,4 @@
-import { lstat, readFile } from "node:fs/promises";
+import { lstat, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import type {
   OperationalLogLevel,
@@ -94,6 +94,7 @@ export interface LoadUserConfigurationOptions {
     fontSize: number,
   ) => Promise<InstalledFontFamilyMetrics | undefined>;
   readonly read?: typeof readFile;
+  readonly inspectWindowsShell?: typeof stat;
   readonly platform?: NodeJS.Platform | string;
 }
 
@@ -222,6 +223,27 @@ export async function loadUserConfiguration(
       return configurationFallback(cause.location, cause.reason);
     throw cause;
   }
+  if (
+    (options.platform ?? "darwin") === "win32" &&
+    preliminary.windowsShell !== undefined
+  ) {
+    let finalTargetIsFile: boolean;
+    try {
+      finalTargetIsFile = (
+        await (options.inspectWindowsShell ?? stat)(preliminary.windowsShell)
+      ).isFile();
+    } catch {
+      return configurationFallback(
+        "windowsShell",
+        "the final target could not be inspected",
+      );
+    }
+    if (!finalTargetIsFile)
+      return configurationFallback(
+        "windowsShell",
+        "the final target must be an existing regular file",
+      );
+  }
   // Keybinds are valid but may still shadow PTY control keys on this platform;
   // that is a non-fatal warning, not a fallback (#102).
   const keybindWarnings = keybindPortabilityWarnings(
@@ -335,6 +357,7 @@ export function validateUserConfiguration(
     "version",
     "confirmClose",
     "logLevel",
+    "windowsShell",
     "font",
     "terminal",
     "scrollback",
@@ -413,6 +436,12 @@ export function validateUserConfiguration(
         "must be a non-empty string without a NUL character",
       );
   }
+
+  const windowsShell = validateWindowsShell(
+    root.windowsShell,
+    configurationPath,
+    platform,
+  );
 
   const fontFamily = font?.family;
   if (fontFamily !== undefined) {
@@ -515,6 +544,7 @@ export function validateUserConfiguration(
     version: USER_CONFIGURATION_VERSION,
     confirmClose,
     logLevel,
+    ...windowsShellProperty(windowsShell),
     ...(fontFamily === undefined ? {} : { fontFamily }),
     fontSize,
     fontLineHeight,
@@ -525,6 +555,33 @@ export function validateUserConfiguration(
     terminalTheme: DEFAULT_TERMINAL_THEME,
     keybinds: terminalKeybinds,
   });
+}
+
+function windowsShellProperty(windowsShell: string | undefined): {
+  readonly windowsShell?: string;
+} {
+  return windowsShell === undefined ? {} : { windowsShell };
+}
+
+function validateWindowsShell(
+  value: unknown,
+  configurationPath: string,
+  platform: string,
+): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.length === 0 || value.includes("\0"))
+    fail(
+      configurationPath,
+      "windowsShell",
+      "must be a non-empty string without a NUL character",
+    );
+  if (platform === "win32" && !path.win32.isAbsolute(value))
+    fail(
+      configurationPath,
+      "windowsShell",
+      "must be an absolute Windows filesystem path",
+    );
+  return value;
 }
 
 function validateTerminalKeybinds(

@@ -25,7 +25,10 @@ export interface TerminalWindowTitleControllerOptions {
 }
 
 export interface TerminalWindowTitleController {
-  sessionStarted(sessionId: TerminalSessionId): void;
+  sessionStarted(
+    sessionId: TerminalSessionId,
+    fallbackSessionTitle?: string,
+  ): void;
   sessionEnded(sessionId: TerminalSessionId): void;
   selectSession(sessionId: TerminalSessionId): void;
   requestTitle(sessionId: TerminalSessionId, request: string): void;
@@ -63,6 +66,7 @@ export function sanitizedTerminalTitle(request: string): string | undefined {
 
 interface SessionTitleState {
   title: string | undefined;
+  fallbackTitle: string;
   bellPending: boolean;
 }
 
@@ -78,7 +82,7 @@ export function createTerminalWindowTitleController(
 
   const displayTitle = (state: SessionTitleState) =>
     `${state.bellPending ? `${TERMINAL_BELL_MARKER} ` : ""}${
-      state.title ?? options.fallbackSessionTitle
+      state.title ?? state.fallbackTitle
     }`;
 
   const pushSessionTitle = (sessionId: TerminalSessionId) => {
@@ -113,9 +117,13 @@ export function createTerminalWindowTitleController(
   updateWindowTitle();
 
   return {
-    sessionStarted(sessionId) {
+    sessionStarted(sessionId, fallbackSessionTitle) {
       if (disposed) return;
-      sessions.set(sessionId, { title: undefined, bellPending: false });
+      sessions.set(sessionId, {
+        title: undefined,
+        fallbackTitle: fallbackSessionTitle ?? options.fallbackSessionTitle,
+        bellPending: false,
+      });
       pushSessionTitle(sessionId);
     },
     sessionEnded(sessionId) {

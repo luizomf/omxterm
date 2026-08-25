@@ -120,6 +120,21 @@ describe("native Terminal Title and bell attention", () => {
     ]);
   });
 
+  it("keeps the shell fallback selected when each session starts", () => {
+    const harness = createControllerHarness(true);
+    harness.controller.sessionStarted("s1", "powershell.exe");
+    harness.controller.sessionStarted("s2", "bash.exe");
+    harness.controller.selectSession("s1");
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("powershell.exe");
+
+    harness.controller.selectSession("s2");
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("bash.exe");
+    expect(harness.sessionTitles.mock.calls).toEqual([
+      ["s1", "powershell.exe"],
+      ["s2", "bash.exe"],
+    ]);
+  });
+
   it("keeps one session's hostile title from ever reaching another session or the window", () => {
     const harness = createControllerHarness(true);
     harness.controller.sessionStarted("s1");

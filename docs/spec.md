@@ -23,8 +23,9 @@ OMXTerm must:
 
 - open the Default Shell in the user's home directory: on macOS and Linux the
   operating-system-configured shell as an interactive login shell; on Windows,
-  which has no login-shell concept, Windows PowerShell — falling back to the
-  ComSpec command processor — started interactively without a login flag; or,
+  which has no login-shell concept, a configured `windowsShell` executable when
+  present, otherwise Windows PowerShell — falling back to the ComSpec command
+  processor — started interactively without a login flag; or,
   when startup includes `-e <program> [arguments...]`, run that executable and
   literal argument vector directly in the first Terminal Tab without an
   implicit shell;
@@ -157,7 +158,10 @@ updates, and remote terminal features are outside the current product contract.
   and Terminal Surface without disturbing a Live Terminal Session. Native
   backgrounds, Window Chrome, and the Snippets Sidebar follow the theme. It also
   updates close confirmation, logging, the menu, effective keybind delivery,
-  and the Always-on-Top default for future windows. Existing windows keep their
+  and the Always-on-Top default for future windows. On Windows, it also changes
+  the shell selected for every subsequently created Default Shell session,
+  including new tabs in existing windows, without restarting existing sessions.
+  Existing windows keep their
   ephemeral Always-on-Top state and independent Window Font Zoom delta over the
   new baseline; Actual Size returns that window to the latest baseline.
   Reconfigured Surfaces refit in place and resize their existing PTYs.
@@ -192,7 +196,8 @@ nothing on any platform.
 OSC 0 and OSC 2 titles are display-only and per session: the raw OSC request
 must be no longer than 256 code points, then control and bidi characters are
 removed and the result must be one printable line. A tab shows its session's
-accepted title and falls back to the Default Shell's name; the native window
+accepted title and falls back to the basename of the shell selected when that
+session started; the native window
 title mirrors the selected tab and falls back to `OMXTerm`. Title contents are
 never logged or reported to the PTY.
 
@@ -259,6 +264,7 @@ and does not create a file. A present file must contain `"version": 1` and only 
 
 - `confirmClose`;
 - `logLevel`;
+- `windowsShell`;
 - `font.family`, `font.size`, and `font.lineHeight`;
 - `terminal.padding.top`, `terminal.padding.right`,
   `terminal.padding.bottom`, and `terminal.padding.left`;
@@ -278,6 +284,17 @@ to top 0, right 8, bottom 8, and left 8. User top padding is added to the fixed,
 non-configurable 30 px native title inset on macOS; on Linux and Windows it
 begins directly below the native window chrome. `logLevel` defaults to `info`,
 `keyboard.optionAsAlt` to `none`, and `window.alwaysOnTop` to `false`.
+
+`windowsShell` is an optional non-empty string without NUL on every Supported
+Platform. On Windows it must be an absolute Windows filesystem path whose final
+target, followed through links or reparse points, is an existing regular file;
+an inspection failure is invalid. The validated path is used as written for
+each future Default Shell session and is passed directly to the PTY with an
+empty argument vector. OMXTerm does not expand it, identify the shell, check
+ACL readability or executability, preflight a spawn, add arguments, use a
+wrapper, or construct a command string. On macOS and Linux the key is accepted
+without filesystem access or warning but has no effect on operating-system
+shell selection.
 
 An optional `keybinds` object remaps application-chrome shortcuts for a fixed
 action vocabulary: `quit`, `copy`, `paste`, `selectAll`, `newWindow`,
@@ -356,7 +373,8 @@ CSS names, functions or variables, inheritance, imports, transparency, blur,
 opacity, and tint are unsupported.
 
 Invalid JSON or UTF-8, unknown or missing keys, unsupported versions, missing
-configured fonts or theme files, non-regular theme targets, invalid theme
+configured fonts or theme files, invalid Windows shell paths or final targets,
+non-regular theme targets, invalid theme
 fields or colors, non-finite or out-of-range line heights, and non-integral or
 out-of-range padding values are errors. An error never stops OMXTerm from
 opening: an invalid `config.json` starts the application with the built-in
@@ -369,7 +387,9 @@ in-app error surface that states which defaults are active and never blocks
 typing into the Terminal Surface, so the file can be fixed inside OMXTerm
 itself. Both files stay unchanged. `View -> Reload User Configuration` performs
 one complete startup-equivalent load. A valid reload atomically replaces the
-active application configuration and current notices; absence successfully
+active application configuration and current notices; on Windows its shell
+selection applies to every subsequently created Default Shell session while
+existing sessions retain the shell they started with. Absence successfully
 selects all defaults without creating a file. A rejected reload changes no
 active setting, keeps the complete last valid in-memory configuration, and
 replaces the non-blocking notice with the current actionable failure. A later

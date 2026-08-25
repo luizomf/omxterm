@@ -20,7 +20,7 @@ import {
   terminalClipboardContextMenuTemplate,
 } from "./application-menu";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
-import { resolveDefaultShell } from "./default-shell";
+import { createDefaultShellResolver, defaultShellName } from "./default-shell";
 import {
   MalformedLaunchRequestError,
   startupLaunchRequest,
@@ -197,18 +197,17 @@ app
             configurationReloader.current(),
             terminalNativeTitleInset(process.platform),
           );
+        const resolveCurrentDefaultShell = createDefaultShellResolver(
+          account.shell,
+          () => configurationReloader.current().configuration.windowsShell,
+        );
         terminalApplication = startTerminalApplication<BrowserWindow>({
           confirmClose: userConfiguration.confirmClose,
           alwaysOnTopDefault: userConfiguration.alwaysOnTop,
           createWindow(lifecycle) {
             const consumeLaunch = consumeLaunchRequest(lifecycle.windowId);
-            const defaultShell = resolveDefaultShell(
-              process.platform,
-              account.shell,
-              process.env,
-            );
-
             const active = configurationReloader.current();
+            const initialShell = resolveCurrentDefaultShell();
             const window = new BrowserWindow(
               terminalWindowOptions(
                 preloadPath,
@@ -217,7 +216,7 @@ app
                 linuxWindowIconPath,
               ),
             );
-            const defaultShellName = path.basename(defaultShell);
+            const shellName = defaultShellName(process.platform, initialShell);
             lockTerminalRendererNavigation(window.webContents);
             deliverKeybindsFromKeyEvents(
               window.webContents,
@@ -242,7 +241,7 @@ app
             const titleController = createTerminalWindowTitleController(
               window,
               {
-                fallbackSessionTitle: defaultShellName,
+                fallbackSessionTitle: shellName,
                 requestDockAttention: () =>
                   void app.dock?.bounce("informational"),
                 sendSessionTitle: (sessionId, title) => {
@@ -267,7 +266,7 @@ app
               webContents: window.webContents,
               createSession(callbacks) {
                 return createLocalTerminalSession(nodePty.spawn, {
-                  shell: defaultShell,
+                  shell: resolveCurrentDefaultShell(),
                   launchRequest: consumeLaunch(),
                   platform: process.platform,
                   homeDirectory: account.homedir,

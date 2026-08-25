@@ -133,6 +133,46 @@ describe("terminal IPC controller", () => {
     expect(ipc.listeners.size).toBe(8);
   });
 
+  it("associates each started session with its selected shell fallback title", () => {
+    const ipc = createIpcHarness();
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    const mainFrame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const fallbackTitles = ["powershell.exe", "bash.exe"];
+    let sessionIndex = 0;
+    const onSessionStarted = vi.fn();
+    router.registerController({
+      ...clipboardOptions(),
+      webContents,
+      createSession: vi.fn(() => ({
+        fallbackTitle: fallbackTitles[sessionIndex++]!,
+        write: vi.fn(),
+        resize: vi.fn(),
+        hasForegroundChildProcess: () => false,
+        close: vi.fn(),
+      })),
+      onSessionStarted,
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+    const start = () =>
+      ipc.handlers.get(terminalIpc.start)!({
+        sender: webContents,
+        senderFrame: mainFrame,
+      });
+
+    expect(start()).toBe("s1");
+    expect(start()).toBe("s2");
+    expect(onSessionStarted.mock.calls).toEqual([
+      ["s1", "powershell.exe"],
+      ["s2", "bash.exe"],
+    ]);
+  });
+
   it("validates and broadcasts complete configuration updates without touching sessions", () => {
     const ipc = createIpcHarness();
     const router = registerTerminalIpcRouter(ipc.ipcMain);

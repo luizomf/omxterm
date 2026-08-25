@@ -18,7 +18,7 @@ not current support commitments.
 ## Current release
 
 The current published release is **0.8.0**. The repository's
-`0.8.1-dev.0` development baseline is not a published release.
+`0.9.0-dev.0` development baseline is not a published release.
 
 The exact 0.8.0 native artifacts passed the required automated verification and
 received owner acceptance on every Supported Platform. Optional cross-platform

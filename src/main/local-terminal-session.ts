@@ -13,6 +13,7 @@ export type TerminalSessionLaunchKind = LaunchRequest["kind"];
 
 export interface LocalTerminalSession {
   readonly launchKind?: TerminalSessionLaunchKind;
+  readonly fallbackTitle?: string;
   write(data: string): void;
   resize(size: TerminalSize): void;
   hasForegroundChildProcess(): boolean;
@@ -128,6 +129,10 @@ export function createLocalTerminalSession(
 
   return {
     launchKind: explicitCommand ? "explicit-command" : "default-shell",
+    fallbackTitle:
+      options.platform === "win32"
+        ? path.win32.basename(options.shell)
+        : path.posix.basename(options.shell),
     write(data) {
       if (!closed && !exited && isBoundedTerminalPayload(data)) pty.write(data);
     },

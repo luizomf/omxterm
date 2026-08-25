@@ -151,6 +151,7 @@ unknown keys.
 | `version`                 | exactly `1`                             | required                             |
 | `confirmClose`            | boolean                                 | `true`                               |
 | `logLevel`                | `error`, `info`, or `debug`             | `info`                               |
+| `windowsShell`            | non-empty string without NUL            | Windows PowerShell, then ComSpec     |
 | `font.family`             | exact installed system font-family name | bundled JetBrainsMono Nerd Font Mono |
 | `font.size`               | integer from 8 through 72 CSS pixels    | `16`                                 |
 | `font.lineHeight`         | number from 1.0 through 2.0             | `1.0`                                |
@@ -173,6 +174,45 @@ drag inset. On Linux and Windows, it begins directly below native Window Chrome.
 `font.lineHeight` changes row height independently of glyph size. The native
 Always on Top menu changes one current window; `window.alwaysOnTop` sets the
 default for new windows.
+
+### Choose the Windows Default Shell
+
+On Windows, `windowsShell` selects the executable for future Default Shell
+sessions. Use an absolute Windows filesystem path:
+
+```json
+{
+  "version": 1,
+  "windowsShell": "C:\\Program Files\\Git\\bin\\bash.exe"
+}
+```
+
+The final target must be an existing regular file. Links and reparse points are
+accepted when their final target is a regular file; an inspection failure is an
+error. OMXTerm uses the validated path exactly as written, starts it directly
+with an empty argument vector, and does not expand `~`, environment variables,
+URLs, or shell syntax. It does not add profiles or arguments, identify or
+preflight the shell, or separately check ACL readability or executability.
+
+On macOS and Linux, a non-empty NUL-free `windowsShell` string is accepted
+without reading or interpreting the path, produces no warning, and has no
+effect. The operating-system-configured shell remains selected, so one
+`config.json` containing a Windows path can be shared across Supported
+Platforms. Empty and NUL-containing values are invalid everywhere.
+
+A valid reload applies the selection to every Default Shell session created
+after the reload commits, including new tabs in existing windows and tabs in
+new windows. Existing sessions keep running unchanged. A rejected reload keeps
+the complete previous configuration and shell selection; an invalid startup
+selection uses all built-in defaults. Startup `-e` still controls only the first
+tab, and later Default Shell sessions use the current `windowsShell` selection.
+Each session without an accepted process title displays the basename of the
+shell selected when that session started.
+
+`wsl.exe` inherits OMXTerm's Windows home as its Initial Working Directory. WSL
+commonly exposes that directory as `/mnt/c/Users/<user>` rather than starting in
+the Linux distribution's home. OMXTerm does not translate the working directory
+for WSL.
 
 ### Keybinds
 
@@ -435,7 +475,9 @@ is no automatic reload or file watching.
 
 A valid reload atomically applies font family, configured font-size baseline,
 line height, padding, scrollback, Option Key Mode, Terminal Theme, close
-confirmation, logging, keybinds, and the Always-on-Top default. Existing
+confirmation, logging, keybinds, and the Always-on-Top default. On Windows it
+also selects `windowsShell` for subsequently created Default Shell sessions.
+Existing
 Terminal Surfaces and Live Terminal Sessions remain in place and refit as
 needed. Existing windows keep their current Always-on-Top state and Window Font
 Zoom delta; Actual Size returns to the latest configured baseline.

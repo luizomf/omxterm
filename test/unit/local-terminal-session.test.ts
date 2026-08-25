@@ -165,8 +165,8 @@ describe("local PTY Adapter lifecycle", () => {
   it("spawns Windows shells without the POSIX login flag", () => {
     const harness = createPtyHarness();
     const spawn = vi.fn<SpawnPty>(() => harness.pty);
-    createLocalTerminalSession(spawn, {
-      shell: "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    const session = createLocalTerminalSession(spawn, {
+      shell: "C:\\Program Files\\Git\\bin\\bash.exe",
       platform: "win32",
       homeDirectory: "C:\\Users\\example",
       applicationVersionProvider: { getVersion: () => "1.2.3" },
@@ -176,10 +176,11 @@ describe("local PTY Adapter lifecycle", () => {
     });
 
     expect(spawn).toHaveBeenCalledWith(
-      "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "C:\\Program Files\\Git\\bin\\bash.exe",
       [],
       expect.objectContaining({ cwd: "C:\\Users\\example" }),
     );
+    expect(session.fallbackTitle).toBe("bash.exe");
   });
 
   it("counts a live Windows session as Busy because ConPTY hides the foreground name", () => {

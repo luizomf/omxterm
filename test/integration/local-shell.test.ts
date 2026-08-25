@@ -152,6 +152,67 @@ describe.skipIf(!windowsEnvironment)("real local ConPTY", () => {
       terminalPayload = "";
     }
   }, 30_000);
+  it.skipIf(!process.env.OMXTERM_WINDOWS_SHELL_TEST)(
+    "starts a configured Git for Windows Bash through ConPTY",
+    async () => {
+      const account = userInfo();
+      const configuredShell = process.env.OMXTERM_WINDOWS_SHELL_TEST!;
+      const defaultShell = resolveDefaultShell(
+        process.platform,
+        account.shell,
+        process.env,
+        configuredShell,
+      );
+
+      let terminalPayload = "";
+      let session: ReturnType<typeof createLocalTerminalSession> | undefined;
+      const observed = new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(
+          () => reject(new Error("Configured Bash ConPTY check timed out")),
+          25_000,
+        );
+        session = createLocalTerminalSession(nodePty.spawn, {
+          shell: defaultShell,
+          platform: process.platform,
+          homeDirectory: account.homedir,
+          applicationVersionProvider: { getVersion: () => "9.8.7-test" },
+          environment: process.env,
+          onOutput(data) {
+            terminalPayload = (terminalPayload + data).slice(-65_536);
+            if (
+              stripConptyRendering(terminalPayload).includes(
+                "__OMXTERM_CONFIGURED_BASH__xterm-256color|OMXTerm__",
+              )
+            ) {
+              clearTimeout(timer);
+              resolve();
+            }
+          },
+          onExit(event) {
+            clearTimeout(timer);
+            reject(
+              new Error(
+                `Configured Bash exited before the check completed (${event.exitCode})`,
+              ),
+            );
+          },
+        });
+
+        session.write(
+          'printf \'__OMXTERM_CONFIGURED_BASH__%s|%s__\\n\' "$TERM" "$TERM_PROGRAM"\r',
+        );
+      });
+      try {
+        await observed;
+        expect(defaultShell).toBe(configuredShell);
+        expect(session?.fallbackTitle).toBe("bash.exe");
+      } finally {
+        session?.close();
+        terminalPayload = "";
+      }
+    },
+    30_000,
+  );
 });
 
 // Removes OSC and CSI rendering sequences, remaining escapes, and line

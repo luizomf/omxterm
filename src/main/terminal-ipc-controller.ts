@@ -81,7 +81,10 @@ export interface TerminalIpcControllerOptions {
     exit: TerminalExit,
     context: TerminalSessionEndContext,
   ) => void;
-  readonly onSessionStarted: (sessionId: TerminalSessionId) => void;
+  readonly onSessionStarted: (
+    sessionId: TerminalSessionId,
+    fallbackTitle?: string,
+  ) => void;
   readonly onSessionSelected: (sessionId: TerminalSessionId) => void;
   readonly writeClipboardText: (text: string) => void;
   readonly readClipboardText: () => string;
@@ -482,7 +485,7 @@ function createTerminalIpcController(
     if (disposed) {
       closeSession(sessionId);
     } else {
-      options.onSessionStarted(sessionId);
+      options.onSessionStarted(sessionId, createdSession.fallbackTitle);
     }
     return sessionId;
   };

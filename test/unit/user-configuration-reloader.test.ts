@@ -50,6 +50,7 @@ function harness(load: () => Promise<UserConfigurationLoad>) {
       confirmClose: true,
       alwaysOnTop: true,
       logLevel: "debug",
+      windowsShell: "C:\\initial\\shell.exe",
     }),
     userFileErrors: ["stale startup notice"],
   };
@@ -79,6 +80,7 @@ describe("User Configuration reloader", () => {
       logLevel: "error",
       fontSize: 42,
       scrollbackLines: 7,
+      windowsShell: "C:\\next\\shell.exe",
     });
     const load = vi.fn(async () => valid(next, ["current warning"]));
     const { reloader, apply, setLevel, write } = harness(load);
@@ -90,6 +92,9 @@ describe("User Configuration reloader", () => {
       configuration: next,
       userFileErrors: ["current warning"],
     });
+    expect(reloader.current().configuration.windowsShell).toBe(
+      "C:\\next\\shell.exe",
+    );
     expect(apply).toHaveBeenCalledExactlyOnceWith(reloader.current(), true);
     expect(setLevel).toHaveBeenCalledExactlyOnceWith("error");
     expect(write.mock.calls).toEqual([
@@ -130,6 +135,9 @@ describe("User Configuration reloader", () => {
     await reloader.reload();
 
     expect(reloader.current().configuration).toBe(initial.configuration);
+    expect(reloader.current().configuration.windowsShell).toBe(
+      "C:\\initial\\shell.exe",
+    );
     expect(reloader.current().userFileErrors).toHaveLength(1);
     expect(reloader.current().userFileErrors[0]).toContain(privatePath);
     expect(reloader.current().userFileErrors[0]).toContain("font.size");

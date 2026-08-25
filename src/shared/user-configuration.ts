@@ -51,6 +51,7 @@ export interface UserConfiguration {
   readonly version: 1;
   readonly confirmClose: boolean;
   readonly logLevel: OperationalLogLevel;
+  readonly windowsShell?: string;
   readonly fontFamily?: string;
   readonly fontSize: number;
   readonly fontLineHeight: number;

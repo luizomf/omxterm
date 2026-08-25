@@ -86,6 +86,7 @@ describe("strict version 1 User Configuration", () => {
           version: 1,
           confirmClose: false,
           logLevel: "debug",
+          windowsShell: "C:\\configured\\shell.exe",
           font: { family: "Exact Family", size: 23, lineHeight: 1.15 },
           terminal: {
             padding: { top: 0, right: 12, bottom: 8, left: 16 },
@@ -102,6 +103,7 @@ describe("strict version 1 User Configuration", () => {
       version: 1,
       confirmClose: false,
       logLevel: "debug",
+      windowsShell: "C:\\configured\\shell.exe",
       fontFamily: "Exact Family",
       fontSize: 23,
       fontLineHeight: 1.15,
