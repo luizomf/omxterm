@@ -181,6 +181,36 @@ describe.skipIf(process.platform === "win32")(
       ).toEqual([]);
     });
 
+    it("preserves the previous installation when backup preparation fails", async () => {
+      const { root, home, bin } = await fixtureRoot();
+      const first = await fakeAppImage(root, "one");
+      const second = await fakeAppImage(root, "two");
+      await runHelper(home, bin, ["install", first]);
+      const paths = owned(home);
+      const before = await Promise.all(
+        Object.values(paths).map((file) => readFile(file, "utf8")),
+      );
+      await writeFile(
+        path.join(bin, "mktemp"),
+        `#!/bin/sh
+for argument do
+  case $argument in
+    *.omxterm-icon-backup.*) exit 70 ;;
+  esac
+done
+exec /usr/bin/mktemp "$@"
+`,
+        { mode: 0o755 },
+      );
+
+      await expect(runHelper(home, bin, ["install", second])).rejects.toThrow();
+
+      const after = await Promise.all(
+        Object.values(paths).map((file) => readFile(file, "utf8")),
+      );
+      expect(after).toEqual(before);
+    });
+
     it("leaves no partial clean installation when a replacement fails", async () => {
       const { root, home, bin } = await fixtureRoot();
       const appImage = await fakeAppImage(root, "one");

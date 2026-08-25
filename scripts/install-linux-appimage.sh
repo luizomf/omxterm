@@ -41,7 +41,8 @@ rollback() {
       mv -- "$backup" "$target"
     fi
   done
-  rm -rf -- "${work:-}"
+  rm -rf -- "${work:-}" "${backup_app_root:-}" \
+    "${backup_icon_root:-}" "${backup_desktop_root:-}"
   rm -f -- "${new_app:-}" "${new_icon:-}" "${new_desktop:-}" \
     "${backup_app:-}" "${backup_icon:-}" "${backup_desktop:-}"
   printf '%s\n' "OMXTerm installer: installation failed; the previous installation was restored" >&2
@@ -150,10 +151,12 @@ EOF
   install -m 644 "$extracted_icon" "$new_icon"
   install -m 644 "$desktop_contents" "$new_desktop"
 
-  backup_app=$(mktemp "$(dirname "$app")/.omxterm-app-backup.XXXXXX")
-  backup_icon=$(mktemp "$(dirname "$icon")/.omxterm-icon-backup.XXXXXX")
-  backup_desktop=$(mktemp "$(dirname "$desktop")/.omxterm-desktop-backup.XXXXXX")
-  rm -f -- "$backup_app" "$backup_icon" "$backup_desktop"
+  backup_app_root=$(mktemp -d "$(dirname "$app")/.omxterm-app-backup.XXXXXX")
+  backup_icon_root=$(mktemp -d "$(dirname "$icon")/.omxterm-icon-backup.XXXXXX")
+  backup_desktop_root=$(mktemp -d "$(dirname "$desktop")/.omxterm-desktop-backup.XXXXXX")
+  backup_app=$backup_app_root/previous
+  backup_icon=$backup_icon_root/previous
+  backup_desktop=$backup_desktop_root/previous
   replaced_app=false
   replaced_icon=false
   replaced_desktop=false
@@ -163,8 +166,8 @@ EOF
   replace_owned_file desktop
 
   trap - EXIT HUP INT TERM
-  rm -rf -- "$work"
-  rm -f -- "$backup_app" "$backup_icon" "$backup_desktop"
+  rm -rf -- "$work" "$backup_app_root" "$backup_icon_root" \
+    "$backup_desktop_root"
   printf '%s\n' "Installed OMXTerm for the current user ($([ -n "$launcher_suffix" ] && printf fallback || printf kernel-FUSE) launcher)."
 }
 
