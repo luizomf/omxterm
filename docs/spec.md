@@ -314,17 +314,21 @@ per-platform alternate maps are unsupported.
 An optional read-only `snippets.json` next to `config.json` defines the
 Snippets Sidebar contents. The file is strict JSON containing exactly
 `"version": 1` and a `snippets` array of at most 512 entries; each entry has a
-non-empty `name` (the searchable label, at most 128 characters), a non-empty
-`body` (the text to inject, at most 65,536 characters), an optional
-`description` (at most 512 characters), and an optional boolean `execute`
-defaulting to `false`. OMXTerm never creates, rewrites, or migrates the file;
-absence is the clean empty state, and the file is reread each time the sidebar
-opens. Injection uses the same protected-paste path as a normal paste:
-bracketed-paste protections apply, a multi-line body behaves like one
-multi-line paste, and nothing runs until the user presses Enter. With
-`execute` true, OMXTerm additionally submits the snippet by sending Enter
-after the bracketed paste closes — per-snippet opt-in only. An invalid
-`snippets.json` never blocks startup and is never silent: the sidebar shows
+non-empty `name` (the searchable label, at most 128 UTF-16 code units), a
+non-empty `body` (the text to inject, at most 65,536 UTF-16 code units), an
+optional `description` (at most 512 UTF-16 code units), and an optional boolean
+`execute` defaulting to `false`. OMXTerm never creates, rewrites, or migrates
+the file; absence is the clean empty state, and the file is reread each time
+the sidebar opens. Injection uses the same Protected Paste path as a normal
+paste. With bracketed paste disabled, a multiline or control-character body
+requires Protected Paste approval; after approval, the body is delivered
+unchanged and may execute through its embedded line breaks or control
+characters. With bracketed paste enabled, paste-aware delivery bypasses the
+Protected Paste confirmation and sends the body as one bracketed paste.
+`execute` controls only whether OMXTerm appends Enter after body delivery:
+`false` appends nothing, while `true` sends Enter after the body and any closing
+bracketed-paste marker — per-snippet opt-in only. An invalid `snippets.json`
+never blocks startup and is never silent: the sidebar shows
 the exact actionable problem, including the resolved path and field location,
 in place of the list, and the terminal is unaffected. The Electron main
 process reads and validates the file and sends only validated, typed data
