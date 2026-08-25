@@ -656,6 +656,20 @@ export async function verifyPackagedApplication(applicationPath) {
         ),
         "utf8",
       );
+      const installedIcon = path.join(
+        linuxInstallationRoot,
+        ".local",
+        "share",
+        "icons",
+        "hicolor",
+        "1024x1024",
+        "apps",
+        "omxterm.png",
+      );
+      if (!installedDesktop.includes(`Icon=${installedIcon}\n`))
+        throw new Error(
+          "Linux helper desktop entry does not use the installed icon path",
+        );
       linuxDirectLaunchAvailable = !installedDesktop.includes(
         " --appimage-extract-and-run %U\n",
       );

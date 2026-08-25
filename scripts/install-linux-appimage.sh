@@ -130,6 +130,7 @@ install_appimage() {
 
   probe_fuse_mode
   escaped_app=$(printf '%s' "$app" | sed 's/\\/\\\\/g; s/"/\\"/g')
+  escaped_icon=$(printf '%s' "$icon" | sed 's/\\/\\\\/g')
   desktop_contents=$work/omxterm.desktop
   cat > "$desktop_contents" <<EOF
 [Desktop Entry]
@@ -138,7 +139,7 @@ Comment=Personal desktop terminal
 Exec="$escaped_app"$launcher_suffix %U
 Terminal=false
 Type=Application
-Icon=omxterm
+Icon=$escaped_icon
 StartupWMClass=omxterm
 Categories=Utility;TerminalEmulator;
 EOF

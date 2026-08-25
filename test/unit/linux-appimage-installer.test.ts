@@ -111,7 +111,8 @@ describe.skipIf(process.platform === "win32")(
     ])(
       "installs all owned files with the %s launcher mode",
       async (mode, expected, absent) => {
-        const { root, home, bin } = await fixtureRoot();
+        const { root, home: fixtureHome, bin } = await fixtureRoot();
+        const home = `${fixtureHome}\\profile`;
         const appImage = await fakeAppImage(root, "one");
 
         await runHelper(home, bin, ["install", appImage], {
@@ -124,9 +125,11 @@ describe.skipIf(process.platform === "win32")(
         const desktop = await readFile(paths.desktop, "utf8");
         expect(desktop).toContain("[Desktop Entry]\nName=OMXTerm\n");
         expect(desktop).toContain("Comment=Personal desktop terminal\n");
+        expect(desktop).toContain("Terminal=false\nType=Application\n");
         expect(desktop).toContain(
-          "Terminal=false\nType=Application\nIcon=omxterm\n",
+          `Icon=${paths.icon.replaceAll("\\", "\\\\")}\n`,
         );
+        expect(desktop).not.toContain("Icon=omxterm\n");
         expect(desktop).toContain("StartupWMClass=omxterm\n");
         expect(desktop).toContain("Categories=Utility;TerminalEmulator;\n");
         expect(desktop).toContain(expected);
