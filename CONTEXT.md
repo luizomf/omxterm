@@ -225,10 +225,10 @@ _Avoid_: notification, alarm, terminal error
 A ready-to-run native arm64 package published from an accepted version tag
 alongside the public source code and a reproducible local build path. The
 initial formats are DMG for macOS, AppImage for Linux, and NSIS for Windows.
-Otávio accepts each exact artifact after native build and verification, then
-separately authorizes any manual publication with its SHA-256 checksum. Initial
-artifacts carry no verified publisher identity. The macOS application has a
-complete ad-hoc code seal for bundle integrity but no Apple Developer ID
+The release owner accepts each exact artifact after native build and
+verification, then separately authorizes any manual publication with its
+SHA-256 checksum. Initial artifacts carry no verified publisher identity. The
+macOS application has a complete ad-hoc code seal for bundle integrity but no Apple Developer ID
 signature or notarization. macOS release documentation additionally explains
 its Gatekeeper review and links to Apple's current instructions without asking
 users to disable system-wide security protections. A provenance statement is

@@ -21,9 +21,9 @@ reusing the macOS inset below Linux's existing title and menu produced an empty
 behavior. The Electron main process therefore owns the platform choice and
 provides zero inset on Linux while preserving the settled macOS chrome.
 
-ADR 0007 recorded no rationale, so the 2026-07-19 design interview with Otávio
-reconstructed it: the rejection protected first-release scope and the
-one-window–one-renderer–one-session simplicity, and assumed tmux would cover
+ADR 0007 recorded no rationale, so the 2026-07-19 design interview with the
+maintainer reconstructed it: the rejection protected first-release scope and
+the one-window–one-renderer–one-session simplicity, and assumed tmux would cover
 multiplexing. Daily dogfooding of v0.1.0 and v0.2.0 invalidated that
 assumption — missing tabs became the single most-felt gap. The rejection was
 never product identity, so tabs enter through this explicit supersession
@@ -67,7 +67,7 @@ preload, Terminal Surface, or ownership boundary.
 
 Session restoration, workspaces, splits, and moving tabs between windows stay
 out of this round — deferred, not foreclosed. ADR 0007's "will not add" phrasing
-aged badly the moment dogfooding contradicted it, so this decision records no
+proved too absolute when dogfooding contradicted it, so this decision records no
 permanent rejections: any deferred capability returns only through its own
 issue and ADR. Main consequences: IPC routing gains per-session identity beneath
 the existing per-window controller, the active tab's grid refits on selection,

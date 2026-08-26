@@ -25,6 +25,6 @@ the convention terminals and browsers share and is ADR 0016's stated default);
 handling the keys in the renderer (the effective keybind map lives in the main
 process, and [ADR 0008](0008-make-the-terminal-surface-the-portable-module.md)
 keeps application key policy out of the Terminal Surface); and rejecting
-platform-undeliverable accelerators at configuration time. Otávio chose
+platform-undeliverable accelerators at configuration time. The maintainer chose
 delivery over rejection: any accelerator the configuration contract accepts
 works, whether or not the platform menu can fire it.

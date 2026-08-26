@@ -1,7 +1,7 @@
 {
   "name": "omxterm",
   "version": "0.9.1-dev.0",
-  "description": "Otávio's open-source personal desktop terminal for ARM64 macOS, Linux, and Windows",
+  "description": "Open-source personal desktop terminal for ARM64 macOS, Linux, and Windows",
   "desktopName": "omxterm.desktop",
   "author": "Luiz Otávio Miranda",
   "license": "MIT",
@@ -28,7 +28,7 @@
     "dev": "npm run build && electron ."
   },
   "engines": {
-    "node": ">=22"
+    "node": "^22.13.0 || >=24.0.0"
   },
   "dependencies": {
     "@xterm/addon-fit": "0.11.0",

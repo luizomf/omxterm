@@ -632,7 +632,7 @@ describe("terminal IPC controller", () => {
     request(trusted, "http://example.test");
     request(
       trusted,
-      "https://example.test:8443/path?name=Luiz%20Otavio#section",
+      "https://example.test:8443/path?name=%E4%BE%8B%E7%A4%BA%20User#section",
     );
     request(trusted, "https://example.test:443/path");
     request(trusted, "https://münchen.example/path");
@@ -661,7 +661,7 @@ describe("terminal IPC controller", () => {
       ["https://example.test/a?x=%2F#fragment"],
       ["https://example.test/a?x=%2F#fragment"],
       ["http://example.test"],
-      ["https://example.test:8443/path?name=Luiz%20Otavio#section"],
+      ["https://example.test:8443/path?name=%E4%BE%8B%E7%A4%BA%20User#section"],
       ["https://example.test:443/path"],
       ["https://münchen.example/path"],
     ]);

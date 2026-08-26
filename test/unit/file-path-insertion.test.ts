@@ -26,10 +26,10 @@ describe("file path insertion", () => {
   it("quotes Unix paths as POSIX shell tokens at a fresh token boundary", () => {
     expect(
       formatFilePathInsertion(
-        ["/tmp/A B/$x & y/O'Brien", "/home/Otávio/\nfile"],
+        ["/tmp/A B/$x & y/O'Brien", "/home/例示/\nfile"],
         "darwin",
       ),
-    ).toBe("'/tmp/A B/$x & y/O'\\''Brien' '/home/Otávio/\nfile'");
+    ).toBe("'/tmp/A B/$x & y/O'\\''Brien' '/home/例示/\nfile'");
     expect(formatFilePathInsertion(["/tmp/a`$(touch nope)"], "linux")).toBe(
       "'/tmp/a`$(touch nope)'",
     );
@@ -87,12 +87,12 @@ describe("file path insertion", () => {
       readClipboardPathInsertion(
         clipboard("", {
           "x-special/gnome-copied-files":
-            "copy\nfile:///home/Ot%C3%A1vio/A%20B\nfile:///tmp/O%27Brien\n",
+            "copy\nfile:///home/%E4%BE%8B%E7%A4%BA/A%20B\nfile:///tmp/O%27Brien\n",
           "text/uri-list": "file:///ignored",
         }),
         "linux",
       ),
-    ).toBe("'/home/Otávio/A B' '/tmp/O'\\''Brien'");
+    ).toBe("'/home/例示/A B' '/tmp/O'\\''Brien'");
     expect(
       readClipboardPathInsertion(
         clipboard("", {
@@ -107,7 +107,7 @@ describe("file path insertion", () => {
   it("parses the macOS filename plist and public file URL fallback", () => {
     const plist = `<?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0"><array>
-<string>/Users/Otávio/A &amp; B</string><string>/tmp/O&apos;Brien</string>
+<string>/Users/例示/A &amp; B</string><string>/tmp/O&apos;Brien</string>
 </array></plist>`;
     expect(
       readClipboardPathInsertion(
@@ -121,7 +121,7 @@ describe("file path insertion", () => {
         ),
         "darwin",
       ),
-    ).toBe("'/Users/Otávio/A & B' '/tmp/O'\\''Brien'");
+    ).toBe("'/Users/例示/A & B' '/tmp/O'\\''Brien'");
     expect(
       readClipboardPathInsertion(
         clipboard("", { "public.file-url": "file:///Users/me/A%20B" }),
@@ -134,12 +134,12 @@ describe("file path insertion", () => {
     const source = clipboard(
       "",
       {
-        FileNameW: Buffer.from("C:\\Users\\Otávio\\A B & O'Brien\0", "utf16le"),
+        FileNameW: Buffer.from("C:\\Users\\例示\\A B & O'Brien\0", "utf16le"),
       },
       ["text/uri-list"],
     );
     expect(readClipboardPathInsertion(source, "win32")).toBe(
-      "'C:\\Users\\Otávio\\A B & O''Brien'",
+      "'C:\\Users\\例示\\A B & O''Brien'",
     );
   });
 

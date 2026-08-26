@@ -10,8 +10,8 @@ assignees: ""
 Thanks for taking the time to report a problem. Search existing issues first,
 then share the smallest safe example that lets someone reproduce it.
 
-Do not report a suspected vulnerability here. Send it privately to the
-maintainer using the email address on https://github.com/luizomf instead.
+Do not report a suspected vulnerability here. Follow the private process in the
+[security policy](../../SECURITY.md) instead.
 -->
 
 ## Version or source commit

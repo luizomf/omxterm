@@ -32,9 +32,10 @@ observations, and known limitations. The exact eight published ARM64 assets are:
   record for Linux; and
 - `OMXTerm-0.9.0-arm64.exe` and its `.sha256` record for Windows.
 
-Otávio accepted these exact artifact identities after optional observations on
-every Supported Platform. Those observations are factual non-automation,
-non-reusable provenance, not a release gate for another artifact or version.
+The release owner accepted these exact artifact identities after optional
+observations on every Supported Platform. Those observations are factual
+non-automation, non-reusable provenance, not a release gate for another artifact
+or version.
 The packages are ARM64-only and carry no verified publisher identity. The macOS
 app passed its complete ad-hoc integrity seal verification but has no Apple
 Developer ID signature or notarization.
@@ -175,6 +176,10 @@ contents, commands, arguments, titles, and transcripts are excluded from
 Operational Events. OMXTerm itself makes no telemetry, analytics, crash-report,
 update-check, or remote-log network requests; processes launched in a Live
 Terminal Session retain their normal operating-system access.
+
+Report suspected vulnerabilities through the private route in the
+[security policy](SECURITY.md), which also defines the sensitive data that
+reports must exclude.
 
 The maintained [product contract](docs/spec.md) is authoritative for observable
 behavior and boundaries. OMXTerm Web is a separate browser-based SSH broker,

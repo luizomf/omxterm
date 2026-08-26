@@ -10,10 +10,10 @@ dialog. Quit asks when any open session is Busy.
 
 The pre-tab contract said OMXTerm "does not inspect child processes to guess
 whether closing is safe" and asked every time. With one session per window
-that cost one dialog per window close; with tabs it made `Cmd+W` on an idle
-shell nag on every tab, which 2026-07-19 dogfooding of the tabs branch showed
-to be the wrong default. Otávio decided the confirmation should protect
-running work, not idle shells — the convention Terminal.app and Ghostty
+that cost one dialog per window close; with tabs it required a dialog whenever
+`Cmd+W` closed an idle shell. Dogfooding of the tabs branch on 2026-07-19 showed
+that this was the wrong default. The maintainer decided the confirmation should
+protect running work, not idle shells — the convention Terminal.app and Ghostty
 follow.
 
 The inspection is deliberately minimal: OMXTerm reads only the PTY's

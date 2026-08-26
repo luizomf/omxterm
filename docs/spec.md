@@ -457,19 +457,19 @@ Surface.
 The project uses the MIT License and follows the documented
 [Semantic Versioning policy](versioning.md). An accepted initial-development
 version may be tagged `v0.y.z`. Release candidates are built locally and
-natively on each Supported Platform: macOS on Otávio's current Apple Silicon
-Mac, and Linux arm64 and Windows arm64 in native Parallels VM clones using the
-VM's native filesystem, never shared folders. The initial application-package formats are DMG, AppImage, and NSIS
-respectively. A Linux release also includes the optional versioned AppImage
-desktop-installer shell asset and its checksum; it is not another application
-package format.
+natively on each Supported Platform: macOS on the current maintainer-operated
+Apple Silicon Mac, and Linux arm64 and Windows arm64 in native Parallels VM
+clones using the VM's native filesystem, never shared folders. The initial
+application-package formats are DMG, AppImage, and NSIS respectively. A Linux
+release also includes the optional versioned AppImage desktop-installer shell
+asset and its checksum; it is not another application package format.
 
 Each exact artifact requires its own recorded native automated verification and
-owner acceptance. Manual testing is optional and never a release gate. Otávio
-exercises macOS through ordinary daily use rather than a prescribed release
-matrix and does not manually validate Linux or Windows. Publication remains
-manual and requires separate owner authorization after acceptance; published
-artifacts include SHA-256 checksums. Initial artifacts intentionally carry no
+owner acceptance. Manual testing is optional and never a release gate. The
+maintainer exercises macOS through ordinary daily use rather than a prescribed
+release matrix and does not manually validate Linux or Windows. Publication
+remains manual and requires separate owner authorization after acceptance;
+published artifacts include SHA-256 checksums. Initial artifacts intentionally carry no
 verified publisher identity. The macOS application receives a complete ad-hoc
 code seal for bundle integrity but no
 Apple Developer ID signature or notarization. Developer ID signing, Apple
@@ -496,10 +496,10 @@ Release evidence is risk-based. Each release records the boundaries changed
 since the previous version and maps each to existing automation. A material
 platform-specific boundary that automation cannot observe is recorded honestly
 as unverified; missing human coverage does not block acceptance or publication.
-The owner continuously dogfoods macOS and reports problems found during normal
-use, without replaying a release checklist. Linux and Windows rely on native
-automation and later contributor or user reports rather than owner-operated
-manual testing.
+The maintainer continuously dogfoods macOS and reports problems found during
+normal use, without replaying a release checklist. Linux and Windows rely on
+native automation and later contributor or user reports rather than
+maintainer-run manual testing.
 
 Exact-artifact identity, checksum reconciliation, owner acceptance, and
 separate publication authorization remain mandatory. Owner acceptance is a

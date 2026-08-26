@@ -35,18 +35,19 @@ native visual output, desktop-shell integration, and every other
 automation-resistant boundary. Missing human coverage does not block an
 otherwise passing exact artifact.
 
-Otávio continuously dogfoods the macOS application during ordinary daily use
-and reports problems when he observes them. This is opportunistic product
-feedback, not a prescribed checklist, exact-artifact test, or promise of manual
-coverage for each change. Otávio does not manually validate Linux or Windows;
-those platforms rely on native automation and later contributor or user reports.
+The maintainer continuously dogfoods the macOS application during ordinary
+daily use and reports problems when they are encountered. This is opportunistic
+product feedback, not a prescribed checklist, exact-artifact test, or promise of
+manual coverage for each change. The maintainer does not manually validate Linux
+or Windows; those platforms rely on native automation and later contributor or
+user reports.
 Community testing is welcome but is never a scheduled release dependency.
 
 The exhaustive native exercise performed for the initial three-platform 0.4.0
 release remains historical baseline evidence, not a script or coverage promise
 for later versions. This policy accepts unobserved platform-specific risk to
-keep maintenance proportionate for a personal, free project without changing
-the three-platform product contract or claiming an independent audit.
+keep maintenance proportionate for a small, free project without changing the
+three-platform product contract or claiming an independent audit.
 
 The Linux helper is deliberately narrow: it performs no network or release
 discovery, establishes no trust in downloaded content, and owns only the
@@ -56,10 +57,10 @@ contract. Installation resolves kernel-FUSE versus
 uninstall removes only those files. The manual AppImage path remains supported.
 
 Publication remains manual. Native automation and optional dogfood observations
-do not authorize a tag, upload, or GitHub Release. Otávio separately accepts
-each exact artifact and authorizes publication; acceptance is a release decision,
-not a claim that he manually exercised that artifact. Rebuilding an artifact
-invalidates its identity and automated evidence.
+do not authorize a tag, upload, or GitHub Release. The release owner accepts
+each exact artifact and separately authorizes publication; acceptance is a
+release decision, not a claim that the artifact was manually exercised.
+Rebuilding an artifact invalidates its identity and automated evidence.
 
 The project accepts the cost of maintaining native ARM64 build and automated
 verification environments. x64, Intel macOS, additional package formats,

@@ -5,7 +5,7 @@ implements the native procedures for the macOS DMG containing an ad-hoc-sealed,
 unnotarized application, Linux ARM64 AppImage, and Windows ARM64 NSIS
 installer. Nothing here authorizes a tag,
 GitHub Release, upload, signing, notarization, or any other publication. Those
-actions require separate approval from Otávio.
+actions require separate approval from the release owner.
 
 ## Cross-platform release policy
 
@@ -27,8 +27,8 @@ automated evidence.
 
 Exact-artifact acceptance and publication are separate owner gates. Acceptance
 never authorizes a tag, upload, or GitHub Release; publication remains manual
-and requires separate authorization from Otávio. x64, Intel macOS, additional
-package formats, signing and notarization, paid CI, and automatic publication
+and requires separate authorization from the release owner. x64, Intel macOS,
+additional package formats, signing and notarization, paid CI, and automatic publication
 remain deferred.
 
 The macOS, Linux, and Windows steps below are the implemented procedures for
@@ -96,9 +96,9 @@ filename, and checksum must identify the same version.
 ### macOS arm64
 
 Use an accepted release commit for `X.Y.Z`, with `vX.Y.Z` recorded as the
-intended tag, on the macOS Supported Platform: Otávio's current Apple Silicon
-(`arm64`) Mac. Install Node.js 22.13 or later in the Node.js 22 line, or
-Node.js 24 or newer, check out the accepted source
+intended tag, on the macOS Supported Platform: the current maintainer-operated
+Apple Silicon (`arm64`) Mac. Install Node.js 22.13 or later in the Node.js 22
+line, or Node.js 24 or newer, check out the accepted source
 without local or private files, and run:
 
 ```sh
@@ -227,11 +227,12 @@ OMXTerm uses native automation as the routine release gate. The exhaustive
 manual exercise completed for the initial three-platform 0.4.0 release is
 baseline evidence, not a script to replay for each version.
 
-Dogfood remains valuable but has a different role. Otávio continuously uses the
-macOS application and reports problems encountered during ordinary work. This
-is opportunistic feedback, not a prescribed checklist, an exact-artifact test,
-or a release gate. Otávio does not manually validate Linux or Windows; those
-platforms rely on native automation and later contributor or user reports.
+Dogfood remains valuable but has a different role. The maintainer continuously
+uses the macOS application and reports problems encountered during ordinary
+work. This is opportunistic feedback, not a prescribed checklist, an
+exact-artifact test, or a release gate. The maintainer does not manually
+validate Linux or Windows; those platforms rely on native automation and later
+contributor or user reports.
 Exact artifact identity, native automated verification, owner acceptance, and
 separate publication authorization remain mandatory.
 
@@ -274,11 +275,12 @@ artifact.
 
 ### 3. Record optional observations and unverified risk
 
-Manual product testing is optional and non-blocking on every platform. Otávio's
-macOS dogfood may reveal regressions during ordinary use, but no release assigns
-him a walkthrough, visual matrix, Gatekeeper exercise, or other targeted manual
-check. Otávio does not manually validate Linux or Windows. Community testing and
-later user reports are welcome but are never scheduled release dependencies.
+Manual product testing is optional and non-blocking on every platform. Routine
+macOS dogfood may reveal regressions during ordinary use, but no release
+requires a walkthrough, visual matrix, Gatekeeper exercise, or other targeted
+manual check. The maintainer does not manually validate Linux or Windows.
+Community testing and later user reports are welcome but are never scheduled
+release dependencies.
 
 When automation cannot observe a material changed boundary, record it as
 `UNVERIFIED` instead of manufacturing a pass. Examples include Gatekeeper or
@@ -334,9 +336,8 @@ An exact artifact may be owner-accepted when:
 A current automated failure, an undisclosed automation-resistant risk,
 incomplete cleanup, an identity mismatch, or missing documentation blocks
 acceptance. Missing manual exercise does not. Owner acceptance is a release
-decision, not a claim that the owner ran or observed the artifact. Unexecuted
-rows from the historical exhaustive matrix are not release state under this
-policy.
+decision and does not represent manual exercise of the artifact. Unexecuted rows
+from the historical exhaustive matrix are not release state under this policy.
 
 Owner acceptance does not authorize publication. Tagging, uploading the exact
 artifacts and checksums, and creating the GitHub Release still require a
@@ -348,8 +349,8 @@ byte-verification host.
 
 Release notes may state factually that the initial three-platform release
 received exhaustive native human testing, that the macOS build is dogfooded by
-maintainer Otávio Miranda during ordinary use, that later releases rely on
-native automation without required manual testing, and that Linux and Windows
+the project maintainer during ordinary use, that later releases rely on native
+automation without required manual testing, and that Linux and Windows
 community reports are welcome. These statements are process provenance, not a
 claim that every release or platform was manually exercised, an independent
 security audit, platform-vendor approval, or a guarantee.
@@ -382,8 +383,8 @@ sha256sum --check OMXTerm-<version>-arm64.AppImage-installer.sh.sha256
 
 Record both asset filenames and digests in the exact-artifact record. Rebuilding,
 renaming, or changing either asset invalidates its identity, native automation,
-and checksum. Keep publication blocked until Otávio accepts this exact artifact
-and separately authorizes publication.
+and checksum. Keep publication blocked until the release owner accepts this
+exact artifact and separately authorizes publication.
 
 ## Windows SHA-256
 
@@ -413,9 +414,9 @@ accepted version and checksum:
 > SHA-256, and proceed only if you trust this exact artifact. If you choose to
 > open it, follow Apple's current [Open Anyway instructions](https://support.apple.com/102445)
 > in System Settings -> Privacy & Security. Do not disable system-wide macOS
-> security protections. This is the open-source build Otávio published and
-> uses; it is not independently audited, approved by Apple, or guaranteed free
-> of defects in all code and dependencies.
+> security protections. This is the open-source build published and used by the
+> maintainer; it is not independently audited, approved by Apple, or guaranteed
+> free of defects in all code and dependencies.
 
 ## SmartScreen and provenance release note
 
@@ -428,14 +429,14 @@ Windows installer, updated only with the accepted version and checksum:
 > and proceed only if you trust this exact artifact. If you choose to install
 > it, use SmartScreen's `More info -> Run anyway` for this one file. Do not
 > disable SmartScreen or other system-wide Windows security protections. This
-> is the open-source build Otávio published and uses; it is not independently
-> audited, approved by Microsoft, or guaranteed free of defects in all code
-> and dependencies.
+> is the open-source build published and used by the maintainer; it is not
+> independently audited, approved by Microsoft, or guaranteed free of defects in
+> all code and dependencies.
 
 ## Later owner-authorized GitHub Release
 
-Only after Otávio accepts the exact-artifact record and separately authorizes
-publication:
+Only after the release owner accepts the exact-artifact record and separately
+authorizes publication:
 
 1. confirm the canonical repository is `luizomf/omxterm`; the package metadata,
    DMG, AppImage, installer, and checksums still match their accepted records;

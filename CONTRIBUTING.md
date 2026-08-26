@@ -15,10 +15,8 @@ shortest path is:
 5. Run `npm run check:portable` and any relevant platform checks.
 6. Open a pull request that links the issue and reports the exact checks run.
 
-If you suspect a vulnerability, do not open a public issue or pull request.
-Report it privately to the maintainer using the email address on
-[Otávio's GitHub profile](https://github.com/luizomf), with the affected
-version, reproduction details, and impact.
+Suspected vulnerabilities follow the private process in the
+[security policy](SECURITY.md), not the public issue or pull-request workflow.
 
 This guide explains the public contribution workflow. The
 [documentation map](docs/README.md) points to the authoritative product and
@@ -164,8 +162,8 @@ was not run and why in the pull request. Do not report an inferred result as a
 pass.
 
 Release validation is automation-first. Every exact artifact runs the complete
-native command above. Manual testing is optional and never a release gate:
-Otávio dogfoods macOS during ordinary use rather than replaying a prescribed
+native command above. Manual testing is optional and never a release gate: the
+maintainer dogfoods macOS during ordinary use rather than replaying a prescribed
 matrix, and does not manually validate Linux or Windows. Contributors are
 welcome to report platform problems whenever they encounter them. A changed
 platform boundary that automation cannot observe is recorded as unverified
@@ -218,6 +216,5 @@ Be direct, respectful, and specific. Critique code and decisions rather than
 people. Assume good intent, provide evidence for technical claims, and make
 room for maintainers and contributors to disagree without hostility.
 
-The maintainer may decline a well-written contribution when it does not fit the
-product, timing, or maintenance budget. That decision is about project scope,
-not the contributor's worth.
+A well-written contribution may still be declined when it does not fit the
+product, timing, or maintenance budget.

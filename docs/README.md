@@ -23,6 +23,9 @@ contract below is authoritative.
 - [Contributing](../CONTRIBUTING.md) is the single guide for development setup,
   issue and fork-and-pull workflow, engineering boundaries, verification,
   commits, and pull requests.
+- [Security policy](../SECURITY.md) defines supported reports, the private
+  reporting route, required safe details, excluded sensitive data, and
+  disclosure coordination.
 
 ## Normative contracts and language
 

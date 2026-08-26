@@ -12,8 +12,8 @@ GitHub Release. Releases remain manual and the application has no automatic
 update mechanism.
 
 The application is not signed with an Apple Developer ID and is not submitted
-for notarization. This avoids turning a personal open-source project into a paid
-Apple distribution obligation, at the cost of a deliberate one-time Gatekeeper
+for notarization. This avoids imposing a paid Apple distribution obligation on
+a small open-source project, at the cost of a deliberate one-time Gatekeeper
 review for users. The assembled application still receives a complete ad-hoc
 code seal: Apple Silicon requires internal code integrity even when an
 application has no verified publisher identity. Ad-hoc sealing does not identify
@@ -32,5 +32,6 @@ Gatekeeper evidence.
 
 Release notes must state the unverified and unnotarized limitation, link to
 Apple's current review instructions, and describe provenance narrowly: the
-artifact is the build Otávio published and uses, not independently audited
-software. They must not ask users to disable system-wide macOS protections.
+artifact is the build published and used by the maintainer, not independently
+audited software. They must not ask users to disable system-wide macOS
+protections.
