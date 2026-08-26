@@ -49,30 +49,35 @@ but they do not replace the maintained product contract.
   checksum generation, and separately authorized manual publication.
 - [Versioning policy](versioning.md) defines compatibility rules, version
   sources, development baselines, tags, and release immutability.
-- [Publication visibility](../README.md#publication-visibility) records the
-  current private-repository gate for unauthenticated GitHub release and issue
-  links. Documentation does not authorize publication or a visibility change.
+- [Publication visibility](../README.md#publication-visibility) records that the
+  canonical repository remains private and that unauthenticated GitHub release
+  and issue links have not been validated. Documentation does not change
+  repository visibility.
 
-## Current release candidate
+## Current release
 
-- [0.9.0 candidate release notes](releases/0.9.0.md) describe the verified
-  current candidate, exact artifact identities, changed-boundary evidence,
-  compatibility, and known limitations. Owner acceptance, the intended `v0.9.0`
-  tag, and publication remain pending.
+- [0.9.0 release notes](releases/0.9.0.md) describe the current published
+  release, exact accepted artifact identities, native and changed-boundary
+  verification evidence, optional owner observations, compatibility, and known
+  limitations.
+- The canonical publication record is the
+  [v0.9.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.9.0).
 
-This candidate record is separate from immutable published history.
+The 0.9.0 record is immutable published history. Its optional observations are
+factual non-automation, non-reusable provenance rather than a release gate for
+another artifact or version.
 
-## Immutable published release history
+## Earlier immutable published release history
 
 Published release records are historical and must not be rewritten to describe
-the current candidate or development baseline:
+the current release or development baseline:
 
 - [0.1.0](releases/0.1.0.md) — first published Apple Silicon version;
 - [0.2.0](releases/0.2.0.md) — resilient configuration, keybinds, and Snippets;
 - [0.3.0](releases/0.3.0.md) — Terminal Tabs;
 - [0.4.0](releases/0.4.0.md) — first macOS, Linux, and Windows ARM64 release;
 - [0.4.1](releases/0.4.1.md) — macOS bundle-integrity packaging fix; and
-- [0.8.0](releases/0.8.0.md) — current published release.
+- [0.8.0](releases/0.8.0.md) — previous published release.
 
 ## Legal
 

@@ -17,13 +17,14 @@ not current support commitments.
 
 ## Current release
 
-The current release candidate is **0.9.0**. Its exact native artifacts passed
-automated verification but are not published; owner acceptance, the intended
-`v0.9.0` tag, and separate publication authorization remain pending. See the
-[0.9.0 candidate release notes](docs/releases/0.9.0.md) for exact identities,
-changes, compatibility, verification evidence, and known limitations.
+The current published release is **0.9.0**:
 
-The exact eight ARM64 candidate assets are:
+- [v0.9.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.9.0)
+- [0.9.0 release notes](docs/releases/0.9.0.md)
+
+The release notes record the exact filenames, byte sizes, SHA-256 identities,
+changes, compatibility, native verification evidence, optional owner
+observations, and known limitations. The exact eight published ARM64 assets are:
 
 - `OMXTerm-0.9.0-arm64.dmg` and its `.sha256` record for macOS;
 - `OMXTerm-0.9.0-arm64.AppImage`, its `.sha256` record,
@@ -31,34 +32,30 @@ The exact eight ARM64 candidate assets are:
   record for Linux; and
 - `OMXTerm-0.9.0-arm64.exe` and its `.sha256` record for Windows.
 
-These exact files are staged locally for owner testing but have not been
-accepted, tagged, or published. The packages are ARM64-only and carry no
-verified publisher identity. The macOS app passed its complete ad-hoc integrity
-seal verification but has no Apple Developer ID signature or notarization.
+Otávio accepted these exact artifact identities after optional observations on
+every Supported Platform. Those observations are factual non-automation,
+non-reusable provenance, not a release gate for another artifact or version.
+The packages are ARM64-only and carry no verified publisher identity. The macOS
+app passed its complete ad-hoc integrity seal verification but has no Apple
+Developer ID signature or notarization.
 
-The current published release remains **0.8.0**. Its immutable
-[release notes](docs/releases/0.8.0.md) record the exact accepted filenames,
-SHA-256 digests, changes, compatibility, and historical verification evidence.
+Earlier published releases remain immutable. The previous
+[0.8.0 release notes](docs/releases/0.8.0.md) preserve that version's exact
+identities and historical evidence.
 
 ### Publication visibility
 
-The canonical GitHub repository is currently **private**. The authenticated
-[v0.8.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.8.0)
-remains the published release record. There is no `v0.9.0` tag or GitHub Release
-yet. Unauthenticated access to GitHub release and issue links cannot currently
-be claimed as publicly validated. Making those links and the source publicly
-reachable is a separate external publication gate; this documentation does not
-change repository visibility or publish anything.
+The canonical GitHub repository remains **private**. The authenticated
+[v0.9.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.9.0)
+is the canonical published release record. This documentation does not change
+repository visibility. Unauthenticated access to GitHub release and issue links
+has not been validated and is not claimed.
 
 ## Installation
 
-The 0.9.0 commands below apply after the verified candidate assets receive owner
-acceptance, separate publication authorization, and publication. They are not
-published yet. After publication, keep each package and its matching `.sha256`
-file in the same directory, verify the checksum before opening the package, and
-do not install an artifact whose check fails. To install the currently published
-0.8.0 release instead, follow its
-[immutable release notes](docs/releases/0.8.0.md#downloads-and-installation).
+The commands below apply to the published 0.9.0 assets. Keep each package and
+its matching `.sha256` file in the same directory, verify the checksum before
+opening the package, and do not install an artifact whose check fails.
 
 ### macOS
 
@@ -142,8 +139,8 @@ if (-not [StringComparer]::OrdinalIgnoreCase.Equals($actualHash, $expectedHash))
 Write-Host "SHA-256 verification succeeded for $installerName"
 ```
 
-After publication, run `OMXTerm-0.9.0-arm64.exe`; it installs per-user
-without administrator elevation. The unsigned installer may trigger a Microsoft Defender SmartScreen
+Run `OMXTerm-0.9.0-arm64.exe`; it installs per-user without administrator
+elevation. The unsigned installer may trigger a Microsoft Defender SmartScreen
 unknown-publisher warning. Review the source and proceed only if you trust the
 exact, checksum-verified artifact. If you choose to continue, SmartScreen's
 `More info -> Run anyway` applies to that one file. Do not disable SmartScreen
