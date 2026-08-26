@@ -57,9 +57,9 @@ contract. Installation resolves kernel-FUSE versus
 uninstall removes only those files. The manual AppImage path remains supported.
 
 Publication remains manual. Native automation and optional dogfood observations
-do not authorize a tag, upload, or GitHub Release. The release owner accepts
-each exact artifact and separately authorizes publication; acceptance is a
-release decision, not a claim that the artifact was manually exercised.
+do not authorize a tag, upload, or GitHub Release. Each exact artifact requires
+owner acceptance, and publication requires separate authorization; acceptance
+is a release decision, not a claim that the artifact was manually exercised.
 Rebuilding an artifact invalidates its identity and automated evidence.
 
 The project accepts the cost of maintaining native ARM64 build and automated

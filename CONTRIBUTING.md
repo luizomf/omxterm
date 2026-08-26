@@ -8,7 +8,7 @@ shortest path is:
 2. Open a bug report or feature request with the details requested by the
    template. A small typo or broken link may go directly to a focused pull
    request.
-3. For a substantial change, wait for the maintainer to confirm the scope before
+3. For a substantial change, use the issue discussion to align on scope before
    investing in implementation.
 4. Fork the repository, create a focused branch from current upstream `main`,
    and make the smallest complete change.
@@ -36,8 +36,8 @@ Read the relevant sources first:
   [`docs/release.md`](docs/release.md) govern versions and releases.
 
 In a substantial-change issue, explain the user-facing problem and desired
-outcome before implementation details. This gives the maintainer enough context
-to confirm scope, identify dependencies, and prevent duplicate work.
+outcome before implementation details. This lets contributors and maintainers
+align on scope, identify dependencies, and prevent duplicate work.
 
 OMXTerm is an open-source personal desktop terminal with a deliberately focused
 product boundary. Splits, saved sessions, AI assistance, SSH brokering, shell
@@ -207,8 +207,8 @@ Do not include a version bump in a pull request, with one exception: the
 [versioning policy](docs/versioning.md) assigns the development-baseline move
 to the pull request that adds user-visible behavior, so such a pull request
 may move the baseline to the next minor `-dev.0` (updating `package.json`,
-`package-lock.json`, and the pinned release-version test together). The
-maintainer repairs a missing baseline move during review.
+`package-lock.json`, and the pinned release-version test together). A missing
+baseline move can be repaired during review.
 
 ## Collaboration
 
@@ -217,4 +217,5 @@ people. Assume good intent, provide evidence for technical claims, and make
 room for maintainers and contributors to disagree without hostility.
 
 A well-written contribution may still be declined when it does not fit the
-product, timing, or maintenance budget.
+product, timing, or maintenance budget. That reflects project scope, not the
+contributor's worth.

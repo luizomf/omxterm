@@ -22,5 +22,6 @@ Do not include Terminal Payload, terminal or session transcripts, command
 history, clipboard data, configuration or environment contents, credentials or
 secrets, or private paths or hostnames.
 
-No acknowledgement, fix, or disclosure timeline is promised. Please coordinate
-public disclosure with the maintainer before publishing vulnerability details.
+Responses are best effort; no acknowledgment, fix, or disclosure timeline is
+guaranteed. Please coordinate public disclosure with the maintainer before
+publishing vulnerability details.

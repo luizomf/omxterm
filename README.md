@@ -23,8 +23,8 @@ The current published release is **0.9.0**:
 - [0.9.0 release notes](docs/releases/0.9.0.md)
 
 The release notes record the exact filenames, byte sizes, SHA-256 identities,
-changes, compatibility, native verification evidence, optional owner
-observations, and known limitations. The exact eight published ARM64 assets are:
+changes, compatibility, native verification evidence, optional observations,
+and known limitations. The exact eight published ARM64 assets are:
 
 - `OMXTerm-0.9.0-arm64.dmg` and its `.sha256` record for macOS;
 - `OMXTerm-0.9.0-arm64.AppImage`, its `.sha256` record,
@@ -32,12 +32,12 @@ observations, and known limitations. The exact eight published ARM64 assets are:
   record for Linux; and
 - `OMXTerm-0.9.0-arm64.exe` and its `.sha256` record for Windows.
 
-The release owner accepted these exact artifact identities after optional
+These exact artifact identities received owner acceptance after optional
 observations on every Supported Platform. Those observations are factual
 non-automation, non-reusable provenance, not a release gate for another artifact
-or version.
-The packages are ARM64-only and carry no verified publisher identity. The macOS
-app passed its complete ad-hoc integrity seal verification but has no Apple
+or version. The packages are ARM64-only and carry no verified publisher
+identity. The macOS app passed its complete ad-hoc integrity seal verification
+but has no Apple
 Developer ID signature or notarization.
 
 Earlier published releases remain immutable. The previous

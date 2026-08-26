@@ -32,6 +32,5 @@ Gatekeeper evidence.
 
 Release notes must state the unverified and unnotarized limitation, link to
 Apple's current review instructions, and describe provenance narrowly: the
-artifact is the build published and used by the maintainer, not independently
-audited software. They must not ask users to disable system-wide macOS
-protections.
+artifact is a maintainer-published open-source build, not independently audited
+software. They must not ask users to disable system-wide macOS protections.

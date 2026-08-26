@@ -61,7 +61,7 @@ but they do not replace the maintained product contract.
 
 - [0.9.0 release notes](releases/0.9.0.md) describe the current published
   release, exact accepted artifact identities, native and changed-boundary
-  verification evidence, optional owner observations, compatibility, and known
+  verification evidence, optional observations, compatibility, and known
   limitations.
 - The canonical publication record is the
   [v0.9.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.9.0).

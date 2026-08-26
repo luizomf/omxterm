@@ -457,8 +457,8 @@ Surface.
 The project uses the MIT License and follows the documented
 [Semantic Versioning policy](versioning.md). An accepted initial-development
 version may be tagged `v0.y.z`. Release candidates are built locally and
-natively on each Supported Platform: macOS on the current maintainer-operated
-Apple Silicon Mac, and Linux arm64 and Windows arm64 in native Parallels VM
+natively on each Supported Platform: macOS on the designated Apple Silicon Mac,
+and Linux arm64 and Windows arm64 in native Parallels VM
 clones using the VM's native filesystem, never shared folders. The initial
 application-package formats are DMG, AppImage, and NSIS respectively. A Linux
 release also includes the optional versioned AppImage desktop-installer shell

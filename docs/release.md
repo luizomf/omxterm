@@ -5,7 +5,7 @@ implements the native procedures for the macOS DMG containing an ad-hoc-sealed,
 unnotarized application, Linux ARM64 AppImage, and Windows ARM64 NSIS
 installer. Nothing here authorizes a tag,
 GitHub Release, upload, signing, notarization, or any other publication. Those
-actions require separate approval from the release owner.
+actions require separate maintainer approval.
 
 ## Cross-platform release policy
 
@@ -27,8 +27,8 @@ automated evidence.
 
 Exact-artifact acceptance and publication are separate owner gates. Acceptance
 never authorizes a tag, upload, or GitHub Release; publication remains manual
-and requires separate authorization from the release owner. x64, Intel macOS,
-additional package formats, signing and notarization, paid CI, and automatic publication
+and requires separate maintainer authorization. x64, Intel macOS, additional
+package formats, signing and notarization, paid CI, and automatic publication
 remain deferred.
 
 The macOS, Linux, and Windows steps below are the implemented procedures for
@@ -96,8 +96,8 @@ filename, and checksum must identify the same version.
 ### macOS arm64
 
 Use an accepted release commit for `X.Y.Z`, with `vX.Y.Z` recorded as the
-intended tag, on the macOS Supported Platform: the current maintainer-operated
-Apple Silicon (`arm64`) Mac. Install Node.js 22.13 or later in the Node.js 22
+intended tag, on the macOS Supported Platform: the designated Apple Silicon
+(`arm64`) Mac. Install Node.js 22.13 or later in the Node.js 22
 line, or Node.js 24 or newer, check out the accepted source
 without local or private files, and run:
 
@@ -383,8 +383,8 @@ sha256sum --check OMXTerm-<version>-arm64.AppImage-installer.sh.sha256
 
 Record both asset filenames and digests in the exact-artifact record. Rebuilding,
 renaming, or changing either asset invalidates its identity, native automation,
-and checksum. Keep publication blocked until the release owner accepts this
-exact artifact and separately authorizes publication.
+and checksum. Keep publication blocked until the exact artifact has owner
+acceptance and publication is separately authorized.
 
 ## Windows SHA-256
 
@@ -414,9 +414,9 @@ accepted version and checksum:
 > SHA-256, and proceed only if you trust this exact artifact. If you choose to
 > open it, follow Apple's current [Open Anyway instructions](https://support.apple.com/102445)
 > in System Settings -> Privacy & Security. Do not disable system-wide macOS
-> security protections. This is the open-source build published and used by the
-> maintainer; it is not independently audited, approved by Apple, or guaranteed
-> free of defects in all code and dependencies.
+> security protections. This is a maintainer-published open-source build; it is
+> not independently audited, approved by Apple, or guaranteed free of defects in
+> all code and dependencies.
 
 ## SmartScreen and provenance release note
 
@@ -429,14 +429,14 @@ Windows installer, updated only with the accepted version and checksum:
 > and proceed only if you trust this exact artifact. If you choose to install
 > it, use SmartScreen's `More info -> Run anyway` for this one file. Do not
 > disable SmartScreen or other system-wide Windows security protections. This
-> is the open-source build published and used by the maintainer; it is not
-> independently audited, approved by Microsoft, or guaranteed free of defects in
-> all code and dependencies.
+> is a maintainer-published open-source build; it is not independently audited,
+> approved by Microsoft, or guaranteed free of defects in all code and
+> dependencies.
 
 ## Later owner-authorized GitHub Release
 
-Only after the release owner accepts the exact-artifact record and separately
-authorizes publication:
+Only after the exact-artifact record has owner acceptance and the maintainer
+separately authorizes publication:
 
 1. confirm the canonical repository is `luizomf/omxterm`; the package metadata,
    DMG, AppImage, installer, and checksums still match their accepted records;
