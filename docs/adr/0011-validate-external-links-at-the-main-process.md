@@ -31,7 +31,7 @@ repeated activation. Tests must prove that rejected input causes no external
 side effect and that link contents do not enter Operational Events.
 
 The visible-span implementation is pinned to `@xterm/addon-web-links` 0.12.0
-alongside `@xterm/xterm` 6.0.0. Its strict provider expression owns the matched
+alongside `@xterm/xterm` `6.1.0-beta.304`. Its strict provider expression owns the matched
 span: surrounding prose punctuation and closing brackets are excluded, an
 opening parenthesis terminates a match, nearby URLs remain separate, and a URL
 may span xterm soft-wrapped buffer lines. OMXTerm supplies the lowercase-only

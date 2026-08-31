@@ -123,6 +123,61 @@ Terminal Surface gets more room. Press and release `Alt` by itself to reveal
 it temporarily. Using or dismissing the menu hides it again. macOS keeps its
 normal menu behavior.
 
+## Inline terminal images
+
+**Current, direct sessions only:** OMXTerm renders bounded static PNG images
+sent through the Pi-compatible Kitty graphics protocol. This works in regular
+and fullscreen terminal interfaces when the child application emits the
+supported protocol directly. It does not work through tmux, screen, or another
+terminal multiplexer, and OMXTerm does not add passthrough wrappers.
+
+Pi 0.84.4 does not yet recognize `TERM_PROGRAM=OMXTerm` automatically. Select
+Kitty explicitly in Pi until that recognition ships:
+
+```json
+{
+  "terminal": {
+    "images": "kitty"
+  }
+}
+```
+
+For one run, `PI_IMAGE_PROTOCOL=kitty pi` selects the same protocol. OMXTerm
+keeps its truthful Terminal Capability Identity and does not rewrite Pi
+settings, inject Pi-specific variables, install terminfo, or add Shell
+Integration.
+
+Each Terminal Surface accepts Pi's direct PNG transmissions and image-ID,
+delete-all, and delete-all-placements commands. It replies to Pi's cell-size
+query and keeps supported images anchored while the direct session scrolls,
+the Terminal Window resizes, Window Font Zoom changes, tabs are selected, or a
+valid User Configuration Reload applies. Reset, alternate-buffer exit, and tab
+disposal release the applicable images.
+
+The per-Surface controls are 4,194,304 placement pixels, a 33,554,432-byte
+Kitty transport target, and approximately 64,000,000 bytes of canvas-only FIFO
+storage. Pi's padded Base64 ceiling under that transport target is 44,739,240
+characters / 33,554,430 decoded bytes. An evicted image may become a
+placeholder.
+
+These controls are not a complete memory limit. The pinned beta addon has known
+gaps around compressed and raw-pixel paths, natural PNG dimensions before
+browser decode, retained payload Blobs, and an aggregate-uncapped pending map
+where each distinct unfinished chunked image can retain an approximately 4 MiB
+decoder until completion, reset, or tab disposal. Canvas rescaling, Chromium
+decoding, and aggregate use across tabs are also outside the controls. The compatibility target is Pi's default
+autoresized 2,000-by-2,000 pipeline; disabling Pi image autoresize removes that
+finite compatibility envelope. SIXEL, iTerm2 images, animation, placement IDs,
+remote images, downloads, and image persistence are unsupported.
+
+Image bytes remain memory-only Terminal Payload on the existing PTY output IPC
+path. Kitty support adds no image-specific IPC capability and never copies the
+bytes into the clipboard, files, Operational Events, or application network
+traffic. Clipboard Image Input remains a separate child-CLI behavior.
+
+See the normative [Terminal behavior](spec.md#terminal-behavior) and
+[ADR 0022](adr/0022-render-bounded-kitty-images-in-direct-sessions.md).
+
 ## Copy and paste
 
 **Current:** selection alone never copies. After selecting text, deliberately

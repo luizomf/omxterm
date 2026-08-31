@@ -186,6 +186,48 @@ remains the user's session manager.
 OMXTerm advertises `TERM=xterm-256color`, `COLORTERM=truecolor`,
 `TERM_PROGRAM=OMXTerm`, and its installed version in `TERM_PROGRAM_VERSION`.
 It installs no custom terminfo and does not edit or inject shell startup files.
+Inline-image support does not impersonate another terminal or inject
+application-specific capability variables.
+
+In a direct Live Terminal Session, the Terminal Surface renders static PNG
+images carried through the Kitty graphics protocol subset emitted by Pi 0.84.4
+at commit `b79e4cc834970cca69daebffab7df1da7d1e52c4`: direct
+transmit-and-display (`a=T`, `f=100`, `q=2`), optional cell columns and rows,
+image ID and cursor movement, 4,096-character Base64 chunks joined with `m=1`
+and `m=0`, and image-ID (`d=I`), all-image (`d=A`), and
+all-placement (`d=a`) deletion. `CSI 16 t` receives the terminal cell-size
+response after the Surface opens. Images stay cell-anchored through direct
+session scrolling, Terminal Window resizing, Window Font Zoom, tab selection,
+and valid User Configuration Reload, subject to the pinned addon's documented
+wrapping and bottom-truncation limitations. Terminal reset, tab disposal, and
+leaving the alternate buffer release the applicable image resources.
+
+Every Terminal Surface enables only the Kitty image handler with
+`pixelLimit: 4_194_304`, `kittySizeLimit: 33_554_432`, and
+`storageLimit: 64`. The transport target enforces an aggregate 44,739,243
+Base64-character threshold, so Pi's padded Base64 can contain at most
+44,739,240 characters / 33,554,430 decoded bytes. The pixel limit is a
+post-decode placement-canvas area, while storage is approximately 64,000,000
+bytes of canvas-only FIFO accounting; an evicted image may show a placeholder.
+These settings are not a complete renderer-memory boundary: decompressed
+`o=z` output, raw-pixel formats, natural-PNG dimensions before browser decode,
+retained payload Blobs, and the aggregate-uncapped pending map where each
+distinct unfinished `m=1` image ID can retain an approximately 4 MiB decoder
+remain accepted beta dogfood risks. Pending transmissions are released by
+completion, reset, or Surface disposal. Font-rescaling allocations, Chromium
+codec/canvas allocations, and aggregate use across tabs are likewise outside
+the controls.
+Pi's default 2,000-by-2,000 autoresized pipeline is the compatibility target;
+images produced with autoresize disabled have no finite compatibility promise.
+
+SIXEL, iTerm2 Inline Image Protocol, placement IDs, animation, remote image
+sources, downloads, persistence, and image behavior through tmux, screen, or
+another multiplexer are unsupported. Other Kitty paths exposed by the pinned
+beta addon are unclaimed. Until Pi recognizes `TERM_PROGRAM=OMXTerm`, a user
+must explicitly select Kitty in Pi; OMXTerm does not configure Pi. Image bytes
+remain opaque, memory-only Terminal Payload on the existing PTY output path:
+they introduce no main-process, preload, IPC, Adapter, clipboard, filesystem,
+logging, or application-network capability.
 
 Scrollback is memory-only and per Live Terminal Session. `scrollback.lines`
 defaults to 10,000, accepts 0 through 100,000, and rejects larger values
@@ -442,8 +484,8 @@ sandboxed with context isolation and no Node integration. A minimal typed
 preload bridge validates every IPC message and sender.
 
 The framework-independent DOM+xterm Terminal Surface is the portable deep
-Module. Its small Interface hides xterm setup, addons, rendering, input, resize,
-theme, fonts, clipboard, zoom, and cleanup. It receives a session Adapter rather
+Module. Its small Interface hides xterm setup, addons, text and Kitty image
+rendering, input, resize, theme, fonts, clipboard, zoom, and cleanup. It receives a session Adapter rather
 than importing Electron or `node-pty`; OMXTerm provides the local IPC/PTY
 Adapter, while another host could independently provide WebSocket transport.
 
@@ -486,9 +528,11 @@ software was independently audited or approved by a platform vendor.
 ## Acceptance boundary
 
 Automated tests cover configuration validation, tab and window lifecycle and
-cleanup, PTY resize and bounded input flow, Unicode, bracketed and protected
-paste, title sanitization, URL validation, OSC 52 restrictions, log
-redaction/rotation, renderer IPC boundaries, and packaged startup. Every exact
+cleanup, PTY resize and bounded input flow, Unicode, direct-session Kitty image
+rendering, deletion, resource limits and cleanup under the production renderer
+CSP, bracketed and protected paste, title sanitization, URL validation, OSC 52
+restrictions, log redaction/rotation, renderer IPC boundaries, and packaged
+startup. Every exact
 release candidate receives native automated package, architecture, content,
 version, startup, PTY, and applicable contract verification on its target.
 

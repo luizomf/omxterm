@@ -19,6 +19,7 @@ const requiredEntries = [
   "/dist/renderer/fonts/JetBrainsMonoNerdFontMono-Regular.woff2",
   "/dist/renderer/fonts/OFL.txt",
   "/node_modules/@xterm/addon-fit/lib/addon-fit.js",
+  "/node_modules/@xterm/addon-image/lib/addon-image.js",
   "/node_modules/@xterm/addon-web-links/lib/addon-web-links.js",
   "/node_modules/@xterm/xterm/lib/xterm.js",
   "/node_modules/node-pty/lib/index.js",
@@ -350,5 +351,16 @@ describe("packaged application verifier", () => {
     expect(
       inspectAsarEntries(requiredEntries.slice(1), "linux").missing,
     ).toEqual(["/dist/main/index.js"]);
+  });
+});
+
+describe("Kitty image packaged runtime", () => {
+  it("requires the image addon entry", () => {
+    const withoutImageAddon = requiredEntries.filter(
+      (entry) => !entry.includes("@xterm/addon-image"),
+    );
+    expect(inspectAsarEntries(withoutImageAddon, "darwin").missing).toEqual([
+      "/node_modules/@xterm/addon-image/lib/addon-image.js",
+    ]);
   });
 });

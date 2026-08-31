@@ -55,6 +55,7 @@ const requiredAsarEntries = [
   "/dist/renderer/fonts/JetBrainsMonoNerdFontMono-Regular.woff2",
   "/dist/renderer/fonts/OFL.txt",
   "/node_modules/@xterm/addon-fit/lib/addon-fit.js",
+  "/node_modules/@xterm/addon-image/lib/addon-image.js",
   "/node_modules/@xterm/addon-web-links/lib/addon-web-links.js",
   "/node_modules/@xterm/xterm/lib/xterm.js",
   "/node_modules/node-pty/lib/index.js",
@@ -827,6 +828,33 @@ export async function verifyPackagedApplication(applicationPath) {
           "LICENSE",
         ),
         path.join(resources, "licenses", "xterm-addon-fit.txt"),
+      ),
+      assertSameFile(
+        path.join(
+          projectRoot,
+          "node_modules",
+          "@xterm",
+          "addon-image",
+          "LICENSE",
+        ),
+        path.join(resources, "licenses", "xterm-addon-image.txt"),
+      ),
+      assertSameFile(
+        path.join(projectRoot, "assets", "licenses", "sixel-MIT.txt"),
+        path.join(resources, "licenses", "sixel.txt"),
+      ),
+      assertSameFile(
+        path.join(
+          projectRoot,
+          "assets",
+          "licenses",
+          "xterm-wasm-parts-MIT.txt",
+        ),
+        path.join(resources, "licenses", "xterm-wasm-parts.txt"),
+      ),
+      assertSameFile(
+        path.join(projectRoot, "assets", "licenses", "inwasm-runtime-MIT.txt"),
+        path.join(resources, "licenses", "inwasm-runtime.txt"),
       ),
       assertSameFile(
         path.join(

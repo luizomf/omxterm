@@ -1,4 +1,5 @@
 import { FitAddon } from "@xterm/addon-fit";
+import { ImageAddon, type IImageAddonOptions } from "@xterm/addon-image";
 import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
 import { Terminal } from "@xterm/xterm";
 import {
@@ -56,6 +57,16 @@ export {
   MAX_SCROLLBACK_LINES,
 } from "../shared/user-configuration";
 export const BUNDLED_TERMINAL_FONT_FAMILY = "JetBrainsMono Nerd Font Mono";
+export const TERMINAL_IMAGE_ADDON_OPTIONS = Object.freeze({
+  enableSizeReports: true,
+  iipSupport: false,
+  kittySizeLimit: 33_554_432,
+  kittySupport: true,
+  pixelLimit: 4_194_304,
+  showPlaceholder: true,
+  sixelSupport: false,
+  storageLimit: 64,
+} satisfies IImageAddonOptions);
 
 export interface TerminalAppearance {
   readonly fontSize?: number;
@@ -318,8 +329,8 @@ export async function mountTerminalSurface(
       fontSize: appearance.fontSize,
       lineHeight: appearance.lineHeight,
       theme: terminalTheme.colors,
-      // The Unicode provider API is proposed in xterm 6.0.0; the grapheme addon
-      // registers and activates its provider through it.
+      // The Unicode provider API remains proposed in the pinned xterm beta; the
+      // grapheme addon registers and activates its provider through it.
       allowProposedApi: true,
     });
     terminal = mountedTerminal;
@@ -340,6 +351,7 @@ export async function mountTerminalSurface(
     const mountedFitAddon = new FitAddon();
     fitAddon = mountedFitAddon;
     mountedTerminal.loadAddon(mountedFitAddon);
+    mountedTerminal.loadAddon(new ImageAddon(TERMINAL_IMAGE_ADDON_OPTIONS));
     if (options.onExternalLink)
       webLinksSubscription = registerVisibleWebLinks(
         mountedTerminal,

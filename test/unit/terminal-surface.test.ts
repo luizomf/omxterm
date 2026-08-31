@@ -12,6 +12,19 @@ type XtermResize = TerminalSize & {
   readonly rowsChanged?: boolean;
 };
 
+const imageAddon = vi.hoisted(() => {
+  class FakeImageAddon {
+    static instances: FakeImageAddon[] = [];
+    readonly dispose = vi.fn();
+
+    constructor(readonly options: Record<string, unknown>) {
+      FakeImageAddon.instances.push(this);
+    }
+  }
+
+  return { FakeImageAddon };
+});
+
 const xterm = vi.hoisted(() => {
   class FakeTerminal {
     static current: FakeTerminal;
@@ -24,7 +37,9 @@ const xterm = vi.hoisted(() => {
     readonly selectAll = vi.fn();
     readonly getSelection = vi.fn(() => this.selection);
     readonly modes = { bracketedPasteMode: false };
-    readonly dispose = vi.fn(() => this.addon?.dispose());
+    readonly dispose = vi.fn(() => {
+      for (const addon of this.loadedAddons) addon.dispose();
+    });
     readonly inputDispose = vi.fn(() => {
       this.onInput = undefined;
     });
@@ -40,7 +55,6 @@ const xterm = vi.hoisted(() => {
     private onInput: ((data: string) => void) | undefined;
     private onTerminalResize: ((size: XtermResize) => void) | undefined;
     private onKey: ((event: KeyboardEvent) => boolean) | undefined;
-    private addon: { dispose(): void } | undefined;
     private selection = "";
     readonly oscDispose = vi.fn();
     private readonly oscHandlers = new Map<
@@ -76,7 +90,6 @@ const xterm = vi.hoisted(() => {
     readonly loadedAddons: { dispose(): void }[] = [];
     loadAddon(addon: { dispose(): void }) {
       this.loadedAddons.push(addon);
-      this.addon = addon;
     }
     open() {
       if (xterm.openError) throw xterm.openError;
@@ -130,6 +143,9 @@ const xterm = vi.hoisted(() => {
 });
 
 vi.mock("@xterm/xterm", () => ({ Terminal: xterm.FakeTerminal }));
+vi.mock("@xterm/addon-image", () => ({
+  ImageAddon: imageAddon.FakeImageAddon,
+}));
 vi.mock("@xterm/addon-fit", () => ({
   FitAddon: class {
     fit = xterm.fit;
@@ -155,6 +171,61 @@ class FakeResizeObserver {
     this.listener([], this as unknown as ResizeObserver);
   }
 }
+
+function resetTerminalSurfaceHarness(): void {
+  vi.clearAllMocks();
+  xterm.fit.mockReset();
+  imageAddon.FakeImageAddon.instances = [];
+  xterm.FakeTerminal.instances = [];
+  xterm.openError = undefined;
+  FakeResizeObserver.observeError = undefined;
+  vi.stubGlobal("ResizeObserver", FakeResizeObserver);
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    callback(0);
+    return 1;
+  });
+  vi.stubGlobal("cancelAnimationFrame", vi.fn());
+  Object.defineProperty(document, "fonts", {
+    configurable: true,
+    value: undefined,
+  });
+}
+
+describe("Kitty image addon configuration", () => {
+  beforeEach(resetTerminalSurfaceHarness);
+
+  it("enables only bounded Kitty graphics and cell-size reports inside the Terminal Surface", async () => {
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    const surface = await mountTerminalSurface(
+      document.createElement("main"),
+      adapter,
+    );
+
+    expect(imageAddon.FakeImageAddon.instances).toHaveLength(1);
+    const addon = imageAddon.FakeImageAddon.instances[0]!;
+    expect(addon.options).toEqual({
+      enableSizeReports: true,
+      iipSupport: false,
+      kittySizeLimit: 33_554_432,
+      kittySupport: true,
+      pixelLimit: 4_194_304,
+      showPlaceholder: true,
+      sixelSupport: false,
+      storageLimit: 64,
+    });
+    expect(xterm.FakeTerminal.current.loadedAddons).toContain(addon);
+
+    surface.dispose();
+    expect(addon.dispose).toHaveBeenCalledOnce();
+  });
+});
 
 describe("portable Terminal Surface", () => {
   async function mountOutputHarness(
@@ -191,23 +262,7 @@ describe("portable Terminal Surface", () => {
     };
   }
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    xterm.fit.mockReset();
-    xterm.FakeTerminal.instances = [];
-    xterm.openError = undefined;
-    FakeResizeObserver.observeError = undefined;
-    vi.stubGlobal("ResizeObserver", FakeResizeObserver);
-    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
-      callback(0);
-      return 1;
-    });
-    vi.stubGlobal("cancelAnimationFrame", vi.fn());
-    Object.defineProperty(document, "fonts", {
-      configurable: true,
-      value: undefined,
-    });
-  });
+  beforeEach(resetTerminalSurfaceHarness);
 
   it("writes same-frame session output once in exact arrival order", async () => {
     const { frames, handlers, surface } = await mountOutputHarness();

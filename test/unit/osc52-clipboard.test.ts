@@ -18,7 +18,7 @@ describe("write-only OSC 52 clipboard", () => {
     (data) => expect(decodeOsc52Write(data)).toBeUndefined(),
   );
 
-  it("uses the @xterm/xterm 6.0.0 parser bound without a 64 KiB project limit", () => {
+  it("uses the pinned @xterm/xterm parser bound without a 64 KiB project limit", () => {
     const largestValidEncodedLength =
       Math.floor((XTERM_OSC_PAYLOAD_LIMIT - 2) / 4) * 4;
     const immediatelyInside = `c;${"A".repeat(largestValidEncodedLength)}`;
