@@ -7,33 +7,44 @@ import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 // Regression for #96: xterm 6 keeps an empty companion viewport whose stock
 // overflow-y: scroll paints a permanent disabled scrollbar track on platforms
 // with classic scrollbars. The Terminal Window stylesheet must win the cascade
-// against the bundled xterm stylesheet and hide that vestigial scrollbar.
+// against the bundled xterm stylesheet for all viewport styling.
 const terminalWindowCss = readFileSync(
   "src/renderer/terminal-window.css",
   "utf8",
 );
 
-describe("terminal window viewport scrollbar", () => {
-  it("hides the vestigial xterm viewport scrollbar", () => {
+describe("Terminal Window viewport", () => {
+  it("hides the scrollbar and applies the active Terminal Theme background", () => {
+    const terminalThemeBackground = "#1e1e2e";
     for (const stylesheet of [
       "node_modules/@xterm/xterm/css/xterm.css",
       "src/renderer/terminal-window.css",
     ]) {
       const style = document.createElement("style");
-      style.textContent =
+      const source =
         stylesheet === "src/renderer/terminal-window.css"
           ? terminalWindowCss
           : readFileSync(stylesheet, "utf8");
+      // jsdom preserves var() in computed colors, so resolve the representative
+      // active theme value before exercising the real stylesheet cascade.
+      style.textContent = source.replaceAll(
+        "var(--terminal-background, transparent)",
+        terminalThemeBackground,
+      );
       document.head.append(style);
     }
     const surface = document.createElement("div");
     surface.className = "terminal-surface";
+    const xterm = document.createElement("div");
+    xterm.className = "xterm";
     const viewport = document.createElement("div");
     viewport.className = "xterm-viewport";
-    surface.append(viewport);
+    xterm.append(viewport);
+    surface.append(xterm);
     document.body.append(surface);
 
     expect(getComputedStyle(viewport).overflowY).toBe("hidden");
+    expect(getComputedStyle(viewport).backgroundColor).toBe("rgb(30, 30, 46)");
   });
 });
 

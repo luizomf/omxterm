@@ -323,8 +323,9 @@ body.tabs-visible #snippets-sidebar {
    scrolls, yet its stock overflow-y: scroll makes platforms with classic
    scrollbars (Linux, Windows) paint a permanent disabled track at the
    terminal edge. Hide that vestigial scrollbar; macOS overlay scrollbars
-   never painted it. */
-.terminal-surface .xterm-viewport {
+   never painted it. Keep the xterm ancestor so the active Terminal Theme
+   also beats xterm's equally specific opaque black viewport default. */
+.terminal-surface .xterm .xterm-viewport {
   overflow-y: hidden;
   background-color: var(--terminal-background, transparent);
 }

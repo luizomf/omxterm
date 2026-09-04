@@ -93,13 +93,13 @@ describe("Terminal appearance build", () => {
     );
   });
 
-  it("overrides xterm's black viewport across the themed title inset", async () => {
+  it("ships the theme viewport override after xterm's black default", async () => {
     const sourceCss = await readFile(
       path.join(projectRoot, "src", "renderer", "terminal-window.css"),
       "utf8",
     );
     const viewportRule = sourceCss.match(
-      /\.terminal-surface \.xterm-viewport\s*\{(?<body>[^}]*)\}/u,
+      /\.terminal-surface \.xterm \.xterm-viewport\s*\{(?<body>[^}]*)\}/u,
     );
 
     expect(viewportRule?.groups?.body).toContain(
@@ -111,8 +111,10 @@ describe("Terminal appearance build", () => {
       "utf8",
     );
     expect(
-      builtCss.lastIndexOf(".terminal-surface .xterm-viewport"),
-    ).toBeGreaterThan(builtCss.indexOf(".xterm .xterm-viewport"));
+      builtCss.lastIndexOf(".terminal-surface .xterm .xterm-viewport"),
+    ).toBeGreaterThan(
+      builtCss.indexOf(".xterm:not(.allow-transparency) .xterm-viewport"),
+    );
   });
 
   it("reserves only the visible title area for native window dragging", async () => {
