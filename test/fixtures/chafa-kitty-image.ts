@@ -17,6 +17,7 @@ export async function exerciseChafaKittyImages(
   handlers: TerminalSessionHandlers,
   checks: Record<string, boolean>,
 ): Promise<void> {
+  await exerciseStandaloneCompletion(handlers, checks);
   await exerciseInterruptedControlSequences(handlers, checks);
   const prelude = apc(VALID_PRELUDE);
   send(handlers, prelude.slice(0, 9));
@@ -61,7 +62,7 @@ export async function exerciseChafaKittyImages(
     handlers,
     checks,
     "malformed Chafa Base64 renders nothing",
-    `${apc(VALID_PRELUDE)}${apc("m=0;%%%")}`,
+    `${apc(VALID_PRELUDE)}${apc("m=1;%%%")}${apc("m=0")}`,
     "CHAFA_MALFORMED",
   );
   await expectNoImageAfter(
@@ -101,7 +102,7 @@ export async function exerciseChafaKittyImages(
       handlers,
       checks,
       `Chafa ${name} decoded length renders nothing`,
-      `${apc(VALID_PRELUDE)}${apc(`m=0;${bytesToBase64(bytes)}`)}`,
+      `${apc(VALID_PRELUDE)}${apc(`m=1;${bytesToBase64(bytes)}`)}${apc("m=0")}`,
       `CHAFA_LENGTH_${name.toUpperCase()}`,
     );
   }
@@ -146,6 +147,55 @@ export async function exerciseChafaKittyImages(
     "leaving the alternate buffer releases pending Chafa metadata",
     `\u001b[?1049h${apc(VALID_PRELUDE)}${apc(`m=1;${TINY_RGBA_BASE64.slice(0, 8)}`)}\u001b[?1049l${apc(`m=0;${TINY_RGBA_BASE64.slice(8)}`)}`,
     "CHAFA_ALT_RELEASE",
+  );
+}
+
+async function exerciseStandaloneCompletion(
+  handlers: TerminalSessionHandlers,
+  checks: Record<string, boolean>,
+): Promise<void> {
+  // Chafa 1.18.2, generated solid pixels, fresh 80x24 PTY (800x480 px),
+  // -f kitty -s 1x1: four APCs, 680 + 388 Base64 characters, then no ';'.
+  const pixels = new Uint8Array(10 * 20 * 4);
+  for (let offset = 0; offset < pixels.length; offset += 4)
+    pixels.set(CHAFA_COLOR, offset);
+  const encoded = bytesToBase64(pixels);
+  const transmission =
+    apc("a=T,f=32,s=10,v=20,c=1,r=1,m=1,q=2") +
+    apc(`m=1;${encoded.slice(0, 680)}`) +
+    apc(`m=1;${encoded.slice(680)}`) +
+    apc("m=0");
+  for (const fragmented of [false, true]) {
+    if (fragmented) {
+      for (const character of transmission) send(handlers, character);
+    } else send(handlers, transmission);
+    send(handlers, "__CHAFA_STANDALONE__\r\n");
+    await waitFor(
+      () =>
+        terminalText().includes("__CHAFA_STANDALONE__") &&
+        canvasContainsColor(CHAFA_COLOR),
+    );
+    record(
+      checks,
+      `standalone Chafa completion paints with fragmented transport ${fragmented}`,
+      true,
+    );
+    send(handlers, kittyDelete("A"));
+    await waitFor(() => !canvasIsPainted());
+    await expectNoImageAfter(
+      handlers,
+      checks,
+      `standalone completion releases pending state with fragmented transport ${fragmented}`,
+      apc("m=0"),
+      "CHAFA_STANDALONE_RELEASE",
+    );
+  }
+  await expectNoImageAfter(
+    handlers,
+    checks,
+    "standalone Chafa completion stays ordered before deletion",
+    transmission + kittyDelete("A"),
+    "CHAFA_STANDALONE_ORDER",
   );
 }
 

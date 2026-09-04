@@ -200,7 +200,9 @@ Chafa-compatible path is the output emitted by Chafa 1.18.2 with `-f kitty`: one
 anonymous, semicolon-less metadata prelude using direct transmission (`t=d` or
 the default), `a=T`, `f=32`, positive source width and height (`s` and `v`),
 positive cell columns and rows (`c` and `r`), `m=1`, and `q=2`, followed by
-anonymous Base64 payload chunks using `m=1` and a final `m=0`. It accepts only
+anonymous Base64 payload chunks using `m=1` and a final standalone `m=0`
+APC with no semicolon or payload (completion on the last data-bearing chunk
+also remains accepted). It accepts only
 uncompressed RGBA with exactly four decoded bytes per source pixel.
 
 `CSI 16 t` receives the terminal cell-size response after the Surface opens.

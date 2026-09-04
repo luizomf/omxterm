@@ -133,7 +133,12 @@ export class ChafaKittyImageAddon implements ITerminalAddon {
 
   private handleKittyApc(data: string, original: string): string {
     const separator = data.indexOf(";");
-    if (separator === -1) return this.handlePrelude(data, original);
+    if (separator === -1) {
+      // Chafa finishes with a standalone anonymous APC, not a payload chunk.
+      if (data === "m=0" && (this.pending || this.discardAnonymousPending))
+        return this.completeTransmission();
+      return this.handlePrelude(data, original);
+    }
 
     const controls = parseControls(data.slice(0, separator));
     const more = controls ? parsePositiveOrZero(controls.get("m")) : undefined;
@@ -173,9 +178,16 @@ export class ChafaKittyImageAddon implements ITerminalAddon {
     appendPayload(this.pending.payloads, payload);
     if (more === 1) return "";
 
+    return this.completeTransmission();
+  }
+
+  private completeTransmission(): string {
     const completed = this.pending;
-    this.pending = undefined;
-    if (decodedBase64Length(completed.payloads) !== completed.expectedBytes)
+    this.releaseTransmission();
+    if (
+      !completed ||
+      decodedBase64Length(completed.payloads) !== completed.expectedBytes
+    )
       return "";
     return replay(completed);
   }

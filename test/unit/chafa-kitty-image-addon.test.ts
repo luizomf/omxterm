@@ -29,6 +29,72 @@ describe("Chafa Kitty image transport", () => {
     expect(addon.transform(finalPayload)).toBe(finalPayload);
   });
 
+  it("completes a standalone terminator at every transport split and releases it once", () => {
+    const input = `${prelude}${apc("m=1;AAAA/w==")}${apc("m=0")}after`;
+    const expected =
+      terminator.repeat(2) +
+      apc("a=T,f=32,s=1,v=1,c=2,r=1,m=0,q=2,t=d;AAAA/w==") +
+      "after";
+    for (let split = 0; split <= input.length; split += 1) {
+      const addon = new ChafaKittyImageAddon(options);
+      expect(
+        addon.transform(input.slice(0, split)) +
+          addon.transform(input.slice(split)),
+      ).toBe(expected);
+      expect(addon.transform(apc("m=0"))).toBe(apc("m=0"));
+    }
+  });
+
+  it.each([
+    "",
+    "AAAA",
+    "AAAA/w=",
+    "AAAA/x==",
+    "%%%%/w==",
+    "AAAA/w==AAAA",
+    "AAAA/w==!",
+  ])(
+    "rejects invalid or incomplete RGBA %j at standalone completion and accepts a fresh image",
+    (payload) => {
+      const addon = new ChafaKittyImageAddon(options);
+      expect(
+        addon.transform(prelude + apc(`m=1;${payload}`) + apc("m=0") + "after"),
+      ).toBe(terminator.repeat(3) + "after");
+      expect(addon.transform(apc("m=0"))).toBe(apc("m=0"));
+      expect(addon.transform(prelude + completePayload)).toBe(
+        terminator + apc("a=T,f=32,s=1,v=1,c=2,r=1,m=0,q=2,t=d;/wAA/w=="),
+      );
+    },
+  );
+
+  it.each(["m=1", "m=0,i=7", "m=0,q=1", "m=0,m=0"])(
+    "does not treat unsupported no-payload controls %j as completion",
+    (controls) => {
+      const addon = new ChafaKittyImageAddon(options);
+      addon.transform(prelude + apc("m=1;AAAA/w=="));
+      expect(addon.transform(apc(controls))).toBe(apc(controls));
+      expect(addon.transform(apc("m=0"))).toBe(apc("m=0"));
+    },
+  );
+
+  it.each(["\u001bc", "\u001b[!p", "\u001b[?1049l", apc("a=d,d=A,q=2")])(
+    "releases fully received but unfinished RGBA before %j",
+    (sequence) => {
+      const addon = new ChafaKittyImageAddon(options);
+      addon.transform(prelude + apc("m=1;AAAA/w=="));
+      expect(addon.transform(sequence + apc("m=0"))).toBe(
+        sequence + apc("m=0"),
+      );
+    },
+  );
+
+  it("disposal releases fully received RGBA awaiting standalone completion", () => {
+    const addon = new ChafaKittyImageAddon(options);
+    addon.transform(prelude + apc("m=1;AAAA/w=="));
+    addon.dispose();
+    expect(addon.transform(apc("m=0"))).toBe(apc("m=0"));
+  });
+
   it("preserves Pi-shaped chunked PNG sequences exactly", () => {
     const addon = new ChafaKittyImageAddon(options);
     const first = apc("a=T,f=100,q=2,i=7,m=1;iVBORw0K");

@@ -9,9 +9,11 @@ movement, plus Pi's delete-by-image-ID, delete-all, and
 delete-all-placements commands. The second is Chafa 1.18.2's anonymous,
 metadata-first `-f kitty` output: direct static `f=32` transmit-and-display with
 positive source and cell dimensions, `q=2`, one no-payload `m=1` prelude, and
-following anonymous `m=1`/`m=0` Base64 chunks containing exact uncompressed
-RGBA bytes. Raw RGB, compressed raw pixels, other Chafa or Kitty paths, terminal
-multiplexers, placement IDs, SIXEL, iTerm2 Inline Image Protocol, animation,
+following anonymous `m=1` Base64 chunks containing exact uncompressed
+RGBA bytes, then a standalone `m=0` APC with no semicolon or payload.
+Completion on the last data-bearing chunk also remains accepted. Raw RGB,
+compressed raw pixels, other Chafa or Kitty paths, terminal multiplexers,
+placement IDs, SIXEL, iTerm2 Inline Image Protocol, animation,
 remote or filesystem image sources, and persistence are not part of this
 decision.
 
