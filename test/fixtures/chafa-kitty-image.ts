@@ -167,7 +167,10 @@ async function exerciseStandaloneCompletion(
     apc("m=0");
   for (const fragmented of [false, true]) {
     if (fragmented) {
-      for (const character of transmission) send(handlers, character);
+      for (let offset = 0; offset < transmission.length; offset += 7) {
+        send(handlers, transmission.slice(offset, offset + 7));
+        await nextFrames(1);
+      }
     } else send(handlers, transmission);
     send(handlers, "__CHAFA_STANDALONE__\r\n");
     await waitFor(
