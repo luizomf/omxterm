@@ -20,10 +20,11 @@ not current support commitments.
 ### 0.10.0 exact release candidates
 
 Exact **0.10.0** ARM64 candidates were built and verified natively from source
-commit `2711f502d45cd86056ce76bffba22e1f8f92499d`. They have not received owner
-acceptance. The intended `v0.10.0` tag has not been created, and upload and
-publication remain blocked; no 0.10.0 download is claimed or available through
-this document.
+commit `2711f502d45cd86056ce76bffba22e1f8f92499d`, then owner-accepted. Publication
+is separately owner-authorized but has not been executed: PR review and
+integration remain pending, the intended `v0.10.0` tag has not been created, and
+no asset has been uploaded or published. No 0.10.0 download is claimed or
+available through this document.
 
 The [0.10.0 candidate notes](docs/releases/0.10.0.md) record the identities and
 verification evidence for these exact filenames:
@@ -37,9 +38,9 @@ verification evidence for these exact filenames:
 - `OMXTerm-0.10.0-arm64.exe`; and
 - `OMXTerm-0.10.0-arm64.exe.sha256`.
 
-These exact candidates and checksum records were verified after transfer, but
-they are not accepted, uploaded, or published. Installation instructions below
-continue to apply only to 0.9.0.
+These exact candidates and checksum records were verified after transfer and
+accepted by the owner, but they are not uploaded or published. Installation
+instructions below continue to apply only to 0.9.0.
 
 ### Current published release: 0.9.0
 

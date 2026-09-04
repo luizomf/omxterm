@@ -64,9 +64,11 @@ but they do not replace the maintained product contract.
 [0.10.0 candidate notes](releases/0.10.0.md) record the exact ARM64 candidates
 built and verified natively from source commit
 `2711f502d45cd86056ce76bffba22e1f8f92499d`, including their identities and
-changed-boundary results. Owner acceptance remains pending, publication remains
-blocked, and the intended `v0.10.0` tag has not been created. The exact eight
-candidate filenames are:
+changed-boundary results. The exact candidates are owner-accepted, and
+publication is separately owner-authorized but has not been executed. PR review
+and integration remain pending, the intended `v0.10.0` tag has not been created,
+and no asset has been uploaded or published. The exact eight candidate filenames
+are:
 
 - `OMXTerm-0.10.0-arm64.dmg`;
 - `OMXTerm-0.10.0-arm64.dmg.sha256`;
@@ -77,8 +79,8 @@ candidate filenames are:
 - `OMXTerm-0.10.0-arm64.exe`; and
 - `OMXTerm-0.10.0-arm64.exe.sha256`.
 
-These exact candidates exist in verified release state, but they are not
-accepted, uploaded, published, or available through this documentation.
+These exact candidates exist in verified and owner-accepted release state, but
+they are not uploaded, published, or available through this documentation.
 
 ### Current published release: 0.9.0
 
