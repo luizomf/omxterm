@@ -11,6 +11,10 @@ import {
   type PixelBounds,
 } from "./kitty-image-canvas";
 import { usedJavaScriptHeap } from "./electron-memory-fixture";
+import {
+  disposePendingChafaImage,
+  exerciseChafaKittyImages,
+} from "./chafa-kitty-image";
 import { exerciseStorageLimit } from "./kitty-image-storage";
 import {
   bytesToBase64,
@@ -106,6 +110,8 @@ async function run(): Promise<void> {
   record("JavaScript eval remains blocked", javaScriptEvalIsBlocked());
   const cellSizeResponse = await requestCellSize(handlers);
   record("cell-size report", /^\u001b\[6;\d+;\d+t$/u.test(cellSizeResponse));
+
+  await exerciseChafaKittyImages(handlers, checks);
 
   const tinyPng = createUncompressedPng(2, 2, 0x2272_2722);
   const contiguous = kittyTransmission(tinyPng, {
@@ -285,12 +291,7 @@ async function run(): Promise<void> {
     encodedCharacters === PI_PHOTON_PNG_BASE64_CHARACTERS,
   );
 
-  surface.dispose();
-  await nextFrames(2);
-  record(
-    "tab disposal removes image canvas",
-    !document.querySelector(".xterm-image-layer-top"),
-  );
+  await disposePendingChafaImage(surface, handlers, checks);
   const storageLimit = await exerciseStorageLimit(largeBase64);
   record(
     "storageLimit retains a sentinel below 64,000,000 accounted bytes",

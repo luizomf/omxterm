@@ -10,6 +10,7 @@ import {
   type TerminalFontZoom,
 } from "../shared/terminal-contract";
 import type { TerminalSessionAdapter } from "./terminal-session-adapter";
+import { ChafaKittyImageAddon } from "./chafa-kitty-image-addon";
 import {
   DEFAULT_SCROLLBACK_LINES,
   DEFAULT_TERMINAL_LINE_HEIGHT,
@@ -130,6 +131,7 @@ export async function mountTerminalSurface(
   let ignoredOscLinksSubscription: { dispose(): void } | undefined;
   let resizeObserver: ResizeObserver | undefined;
   let fitAddon: FitAddon | undefined;
+  let chafaKittyImageAddon: ChafaKittyImageAddon | undefined;
   let pendingFitFrame: number | undefined;
   let pendingOutputFrame: number | undefined;
   let pendingOutputChunks: string[] = [];
@@ -267,7 +269,10 @@ export async function mountTerminalSurface(
       pendingOutputFrame = undefined;
       const payload = pendingOutputChunks.join("");
       pendingOutputChunks = [];
-      if (!disposed && payload.length > 0) terminal?.write(payload);
+      if (!disposed && payload.length > 0) {
+        const transformed = chafaKittyImageAddon?.transform(payload) ?? payload;
+        if (transformed.length > 0) terminal?.write(transformed);
+      }
     });
     if (!ranSynchronously) pendingOutputFrame = frame;
   };
@@ -352,6 +357,12 @@ export async function mountTerminalSurface(
     fitAddon = mountedFitAddon;
     mountedTerminal.loadAddon(mountedFitAddon);
     mountedTerminal.loadAddon(new ImageAddon(TERMINAL_IMAGE_ADDON_OPTIONS));
+    const mountedChafaKittyImageAddon = new ChafaKittyImageAddon({
+      kittySizeLimit: TERMINAL_IMAGE_ADDON_OPTIONS.kittySizeLimit,
+      pixelLimit: TERMINAL_IMAGE_ADDON_OPTIONS.pixelLimit,
+    });
+    chafaKittyImageAddon = mountedChafaKittyImageAddon;
+    mountedTerminal.loadAddon(mountedChafaKittyImageAddon);
     if (options.onExternalLink)
       webLinksSubscription = registerVisibleWebLinks(
         mountedTerminal,

@@ -189,40 +189,59 @@ It installs no custom terminfo and does not edit or inject shell startup files.
 Inline-image support does not impersonate another terminal or inject
 application-specific capability variables.
 
-In a direct Live Terminal Session, the Terminal Surface renders static PNG
-images carried through the Kitty graphics protocol subset emitted by Pi 0.84.4
-at commit `b79e4cc834970cca69daebffab7df1da7d1e52c4`: direct
-transmit-and-display (`a=T`, `f=100`, `q=2`), optional cell columns and rows,
-image ID and cursor movement, 4,096-character Base64 chunks joined with `m=1`
-and `m=0`, and image-ID (`d=I`), all-image (`d=A`), and
-all-placement (`d=a`) deletion. `CSI 16 t` receives the terminal cell-size
-response after the Surface opens. Images stay cell-anchored through direct
-session scrolling, Terminal Window resizing, Window Font Zoom, tab selection,
-and valid User Configuration Reload, subject to the pinned addon's documented
-wrapping and bottom-truncation limitations. Terminal reset, tab disposal, and
-leaving the alternate buffer release the applicable image resources.
+In a direct Live Terminal Session, the Terminal Surface renders two bounded
+static-image paths through the Kitty graphics protocol. The Pi-compatible path
+is the subset emitted by Pi 0.84.4 at commit
+`b79e4cc834970cca69daebffab7df1da7d1e52c4`: direct transmit-and-display
+(`a=T`, `f=100`, `q=2`), optional cell columns and rows, image ID and cursor
+movement, 4,096-character Base64 chunks joined with `m=1` and `m=0`, and
+image-ID (`d=I`), all-image (`d=A`), and all-placement (`d=a`) deletion. The
+Chafa-compatible path is the output emitted by Chafa 1.18.2 with `-f kitty`: one
+anonymous, semicolon-less metadata prelude using direct transmission (`t=d` or
+the default), `a=T`, `f=32`, positive source width and height (`s` and `v`),
+positive cell columns and rows (`c` and `r`), `m=1`, and `q=2`, followed by
+anonymous Base64 payload chunks using `m=1` and a final `m=0`. It accepts only
+uncompressed RGBA with exactly four decoded bytes per source pixel.
+
+`CSI 16 t` receives the terminal cell-size response after the Surface opens.
+Images stay cell-anchored through direct-session scrolling, Terminal Window
+resizing, Window Font Zoom, tab selection, and valid User Configuration Reload,
+subject to the pinned addon's documented wrapping and bottom-truncation
+limitations. Terminal reset, tab disposal, and leaving the alternate buffer
+release the applicable image resources.
 
 Every Terminal Surface enables only the Kitty image handler with
 `pixelLimit: 4_194_304`, `kittySizeLimit: 33_554_432`, and
 `storageLimit: 64`. The transport target enforces an aggregate 44,739,243
 Base64-character threshold, so Pi's padded Base64 can contain at most
-44,739,240 characters / 33,554,430 decoded bytes. The pixel limit is a
-post-decode placement-canvas area, while storage is approximately 64,000,000
-bytes of canvas-only FIFO accounting; an evicted image may show a placeholder.
-These settings are not a complete renderer-memory boundary: decompressed
-`o=z` output, raw-pixel formats, natural-PNG dimensions before browser decode,
-retained payload Blobs, and the aggregate-uncapped pending map where each
-distinct unfinished `m=1` image ID can retain an approximately 4 MiB decoder
-remain accepted beta dogfood risks. Pending transmissions are released by
-completion, reset, or Surface disposal. Font-rescaling allocations, Chromium
-codec/canvas allocations, and aggregate use across tabs are likewise outside
-the controls.
+44,739,240 characters / 33,554,430 decoded bytes. Chafa source dimensions must
+be positive and contain at most 4,194,304 pixels; the exact RGBA length is
+therefore at most 16,777,216 decoded bytes, or 22,369,624 padded Base64
+characters. Only one anonymous metadata-first Chafa transmission may be pending
+per Surface. A new prelude replaces it, and completion, terminal reset,
+alternate-buffer exit, or Surface disposal releases it. Invalid Base64, missing
+or invalid dimensions, a decoded-length mismatch, an incomplete or replaced
+transmission, or an exceeded limit renders nothing and does not block later
+terminal output.
+
+The pixel limit also applies to the post-decode placement-canvas area, while
+storage is approximately 64,000,000 bytes of canvas-only FIFO accounting; an
+evicted image may show a placeholder. These settings are not a complete
+renderer-memory boundary: decompressed `o=z` output and raw-pixel paths outside
+the accepted Chafa subset, natural-PNG dimensions before browser decode,
+retained payload Blobs, and the aggregate-uncapped pinned-addon map where each
+distinct unfinished image-ID `m=1` transmission can retain an approximately 4
+MiB decoder remain accepted beta dogfood risks. The Chafa adapter temporarily
+retains at most one validated transmission's encoded chunks before replaying
+them to that decoder. Font-rescaling allocations, Chromium codec/canvas
+allocations, and aggregate use across tabs are likewise outside the controls.
 Pi's default 2,000-by-2,000 autoresized pipeline is the compatibility target;
 images produced with autoresize disabled have no finite compatibility promise.
 
-SIXEL, iTerm2 Inline Image Protocol, placement IDs, animation, remote image
-sources, downloads, persistence, and image behavior through tmux, screen, or
-another multiplexer are unsupported. Other Kitty paths exposed by the pinned
+SIXEL, iTerm2 Inline Image Protocol, raw RGB (`f=24`), compressed raw pixels
+(`o=z`), placement IDs, animation, remote or filesystem image sources,
+downloads, persistence, and image behavior through tmux, screen, or another
+multiplexer are unsupported. Other Kitty and Chafa paths exposed by the pinned
 beta addon are unclaimed. Until Pi recognizes `TERM_PROGRAM=OMXTerm`, a user
 must explicitly select Kitty in Pi; OMXTerm does not configure Pi. Image bytes
 remain opaque, memory-only Terminal Payload on the existing PTY output path:

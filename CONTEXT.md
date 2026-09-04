@@ -155,12 +155,13 @@ application history, diagnostics, or persisted state.
 _Avoid_: transcript, application event, diagnostic data
 
 **Inline Terminal Image**:
-A bounded static PNG carried as memory-only Terminal Payload through the Kitty
-graphics protocol and rendered on a browser canvas owned by a direct Terminal
-Surface. It remains cell-anchored terminal output rather than a file, clipboard
-transfer, application image viewer, remote resource, or persisted attachment.
-OMXTerm claims only the pinned Pi-compatible subset; multiplexer passthrough and
-other image protocols remain unsupported.
+A bounded static PNG or raw-RGBA image carried as memory-only Terminal Payload
+through a pinned Kitty graphics protocol subset and rendered on a browser canvas
+owned by a direct Terminal Surface. It remains cell-anchored terminal output
+rather than a file, clipboard transfer, application image viewer, remote
+resource, or persisted attachment. OMXTerm claims only the pinned Pi- and
+Chafa-compatible paths; multiplexer passthrough and other image protocols remain
+unsupported.
 _Avoid_: image upload, clipboard image, terminal attachment, image viewer
 
 **Operational Event**:

@@ -125,11 +125,23 @@ normal menu behavior.
 
 ## Inline terminal images
 
-**Current, direct sessions only:** OMXTerm renders bounded static PNG images
-sent through the Pi-compatible Kitty graphics protocol. This works in regular
-and fullscreen terminal interfaces when the child application emits the
+**Current, direct sessions only:** OMXTerm renders bounded static images sent
+through its pinned Pi- and Chafa-compatible Kitty graphics paths. This works in
+regular and fullscreen terminal interfaces when the child application emits the
 supported protocol directly. It does not work through tmux, screen, or another
 terminal multiplexer, and OMXTerm does not add passthrough wrappers.
+
+Chafa 1.18.2's explicit Kitty output renders its static raw-RGBA image directly:
+
+```sh
+chafa -f kitty ~/Desktop/smart.png
+```
+
+The supported Chafa path is intentionally narrow: an anonymous metadata-only
+`a=T,f=32,...,m=1,q=2` prelude with positive source and cell dimensions,
+followed by anonymous Base64 chunks and a final `m=0`. It supports direct,
+uncompressed RGBA only; this is not a promise of every Chafa output mode or
+Ghostty compatibility.
 
 Pi 0.84.4 does not yet recognize `TERM_PROGRAM=OMXTerm` automatically. Select
 Kitty explicitly in Pi until that recognition ships:
@@ -147,28 +159,35 @@ keeps its truthful Terminal Capability Identity and does not rewrite Pi
 settings, inject Pi-specific variables, install terminfo, or add Shell
 Integration.
 
-Each Terminal Surface accepts Pi's direct PNG transmissions and image-ID,
+Each Terminal Surface also accepts Pi's direct PNG transmissions and image-ID,
 delete-all, and delete-all-placements commands. It replies to Pi's cell-size
 query and keeps supported images anchored while the direct session scrolls,
 the Terminal Window resizes, Window Font Zoom changes, tabs are selected, or a
 valid User Configuration Reload applies. Reset, alternate-buffer exit, and tab
-disposal release the applicable images.
+disposal release the applicable images and pending Chafa metadata.
 
-The per-Surface controls are 4,194,304 placement pixels, a 33,554,432-byte
-Kitty transport target, and approximately 64,000,000 bytes of canvas-only FIFO
-storage. Pi's padded Base64 ceiling under that transport target is 44,739,240
-characters / 33,554,430 decoded bytes. An evicted image may become a
-placeholder.
+The per-Surface controls are 4,194,304 source and placement pixels for Chafa, a
+33,554,432-byte Kitty transport target, and approximately 64,000,000 bytes of
+canvas-only FIFO storage. Chafa's RGBA payload must be exactly four bytes per
+source pixel, so it is at most 16,777,216 decoded bytes or 22,369,624 padded
+Base64 characters. Only one anonymous Chafa transmission may be pending; a new
+prelude replaces it. Malformed, incomplete, replaced, or over-limit input
+renders nothing and leaves later terminal output usable. Pi's padded Base64
+ceiling under the transport target remains 44,739,240 characters / 33,554,430
+decoded bytes. An evicted image may become a placeholder.
 
 These controls are not a complete memory limit. The pinned beta addon has known
-gaps around compressed and raw-pixel paths, natural PNG dimensions before
-browser decode, retained payload Blobs, and an aggregate-uncapped pending map
-where each distinct unfinished chunked image can retain an approximately 4 MiB
-decoder until completion, reset, or tab disposal. Canvas rescaling, Chromium
-decoding, and aggregate use across tabs are also outside the controls. The compatibility target is Pi's default
-autoresized 2,000-by-2,000 pipeline; disabling Pi image autoresize removes that
-finite compatibility envelope. SIXEL, iTerm2 images, animation, placement IDs,
-remote images, downloads, and image persistence are unsupported.
+gaps around compressed and unclaimed raw-pixel paths, natural PNG dimensions
+before browser decode, retained payload Blobs, and an aggregate-uncapped pending
+map where each distinct unfinished image-ID upload can retain an approximately
+4 MiB decoder until completion, reset, or tab disposal. The Chafa adapter holds
+at most one validated transmission's encoded chunks before replay. Canvas
+rescaling, Chromium decoding, and aggregate use across tabs are also outside
+the controls. The compatibility target for Pi remains its default autoresized
+2,000-by-2,000 pipeline; disabling Pi image autoresize removes that finite
+compatibility envelope. Raw RGB, compressed raw pixels, SIXEL, iTerm2 images,
+animation, placement IDs, remote or filesystem images, downloads, image
+persistence, and other Chafa or Kitty paths are unsupported.
 
 Image bytes remain memory-only Terminal Payload on the existing PTY output IPC
 path. Kitty support adds no image-specific IPC capability and never copies the

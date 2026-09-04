@@ -24,6 +24,21 @@ export function canvasIsPainted(root: ParentNode = document): boolean {
   return paintedBounds(root) !== undefined;
 }
 
+export function canvasContainsColor(
+  expected: readonly [number, number, number, number],
+  root: ParentNode = document,
+): boolean {
+  const canvas = imageCanvas(root);
+  const context = canvas?.getContext("2d");
+  if (!canvas || !context) return false;
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  for (let index = 0; index < pixels.length; index += 4) {
+    if (expected.every((value, offset) => pixels[index + offset] === value))
+      return true;
+  }
+  return false;
+}
+
 export function paintedBounds(
   root: ParentNode = document,
 ): PixelBounds | undefined {

@@ -52,7 +52,7 @@ interface FixtureResult {
 }
 
 describe("Kitty images in production Chromium", () => {
-  it("renders and releases Pi-shaped images under the production CSP without blocking output", async () => {
+  it("renders and releases bounded Pi- and Chafa-shaped images under the production CSP", async () => {
     const fixtureRoot = await mkdtemp(
       path.join(tmpdir(), "omxterm-kitty-electron-"),
     );
