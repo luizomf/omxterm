@@ -6,7 +6,7 @@ export const LARGEST_PADDED_BASE64 = 4 * Math.floor(KITTY_ENCODED_LIMIT / 4);
 export const PI_PHOTON_PNG_BYTES = 16_003_288;
 export const PI_PHOTON_PNG_BASE64_CHARACTERS = 21_337_720;
 const KITTY_CHUNK_CHARACTERS = 4_096;
-const OUTPUTS_PER_FRAME = 64;
+const OUTPUTS_PER_TASK = 64;
 
 export interface KittyPlacement {
   readonly columns?: number;
@@ -55,17 +55,22 @@ export async function sendKittyBase64(
   transportSplit = false,
 ): Promise<void> {
   let index = 0;
+  // One real frame proves cross-frame parsing without gating bulk transport on visual cadence.
+  let crossTransportFrame = transportSplit;
   for (const sequence of kittyChunks(encoded, placement)) {
     if (transportSplit) {
       const splitAt = Math.min(sequence.length - 1, 31 + (index % 17));
       handlers.onOutput(sequence.slice(0, splitAt));
-      await nextFrame();
+      if (crossTransportFrame) {
+        await nextFrame();
+        crossTransportFrame = false;
+      }
       handlers.onOutput(sequence.slice(splitAt));
     } else {
       handlers.onOutput(sequence);
     }
     index += 1;
-    if (index % OUTPUTS_PER_FRAME === 0) await nextFrame();
+    if (index % OUTPUTS_PER_TASK === 0) await nextTask();
   }
   await nextFrame();
   await nextFrame();
@@ -96,6 +101,10 @@ function kittyChunk(
 
 async function nextFrame(): Promise<void> {
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+async function nextTask(): Promise<void> {
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
 }
 
 export function bytesToBase64(bytes: Uint8Array): string {

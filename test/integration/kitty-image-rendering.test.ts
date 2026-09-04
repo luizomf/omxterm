@@ -23,6 +23,10 @@ const fixtureEntry = path.join(
 );
 const electronExecutable = createRequire(import.meta.url)("electron") as string;
 const resultPrefix = "__OMXTERM_KITTY_RESULT__";
+// Harness guards allow twice the observed slow-host runtime; they are not a
+// product performance contract.
+const fixtureDeadlineMilliseconds = 280_000;
+const processTimeoutMilliseconds = 290_000;
 
 interface FixtureResult {
   readonly ok: boolean;
@@ -95,7 +99,7 @@ describe("Kitty images in production Chromium", () => {
     } finally {
       await rm(fixtureRoot, { recursive: true, force: true });
     }
-  }, 180_000);
+  }, 300_000);
 });
 
 async function buildFixture(fixtureRoot: string): Promise<void> {
@@ -181,7 +185,7 @@ app.whenReady().then(async () => {
     },
   });
   await window.loadFile(path.join(__dirname, "index.html"));
-  const deadline = Date.now() + 165_000;
+  const deadline = Date.now() + ${fixtureDeadlineMilliseconds};
   const rendererPid = window.webContents.getOSProcessId();
   let peakWorkingSetKilobytes = 0;
   let result;
@@ -258,7 +262,7 @@ async function runElectronFixture(fixtureRoot: string): Promise<{
     } else {
       child.kill("SIGKILL");
     }
-  }, 175_000);
+  }, processTimeoutMilliseconds);
 
   const exitCode = await new Promise<number | null>((resolve, reject) => {
     child.once("error", reject);
