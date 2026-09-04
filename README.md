@@ -17,70 +17,58 @@ not current support commitments.
 
 ## Release status
 
-### 0.10.0 exact release candidates
+### Current published release: 0.10.0
 
-Exact **0.10.0** ARM64 candidates were built and verified natively from source
-commit `2711f502d45cd86056ce76bffba22e1f8f92499d`, then owner-accepted. Publication
-is separately owner-authorized but has not been executed: PR review and
-integration remain pending, the intended `v0.10.0` tag has not been created, and
-no asset has been uploaded or published. No 0.10.0 download is claimed or
-available through this document.
+The current published release is **0.10.0**:
 
-The [0.10.0 candidate notes](docs/releases/0.10.0.md) record the identities and
-verification evidence for these exact filenames:
+- [v0.10.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.10.0)
+- [0.10.0 release notes](docs/releases/0.10.0.md)
 
-- `OMXTerm-0.10.0-arm64.dmg`;
-- `OMXTerm-0.10.0-arm64.dmg.sha256`;
-- `OMXTerm-0.10.0-arm64.AppImage`;
-- `OMXTerm-0.10.0-arm64.AppImage.sha256`;
-- `OMXTerm-0.10.0-arm64.AppImage-installer.sh`;
-- `OMXTerm-0.10.0-arm64.AppImage-installer.sh.sha256`;
-- `OMXTerm-0.10.0-arm64.exe`; and
-- `OMXTerm-0.10.0-arm64.exe.sha256`.
+The exact ARM64 artifacts were built and verified natively from source commit
+`2711f502d45cd86056ce76bffba22e1f8f92499d`, accepted by the owner, and
+published unchanged. Download each package with its linked checksum record:
 
-These exact candidates and checksum records were verified after transfer and
-accepted by the owner, but they are not uploaded or published. Installation
-instructions below continue to apply only to 0.9.0.
+- macOS: [`OMXTerm-0.10.0-arm64.dmg`](https://github.com/luizomf/omxterm/releases/download/v0.10.0/OMXTerm-0.10.0-arm64.dmg)
+  — 121914290 bytes — SHA-256
+  `fb8673b56e641b8da196941464991b40bf7b403729042c67c5fa31047139d03b`;
+  [checksum record](https://github.com/luizomf/omxterm/releases/download/v0.10.0/OMXTerm-0.10.0-arm64.dmg.sha256)
+  `OMXTerm-0.10.0-arm64.dmg.sha256` (91 bytes).
+- Linux: [`OMXTerm-0.10.0-arm64.AppImage`](https://github.com/luizomf/omxterm/releases/download/v0.10.0/OMXTerm-0.10.0-arm64.AppImage)
+  — 118836462 bytes — SHA-256
+  `2268d50436bd459071aee89a39f7084ab14c2bd089cef2513b21ce26d8ccceff`;
+  [checksum record](https://github.com/luizomf/omxterm/releases/download/v0.10.0/OMXTerm-0.10.0-arm64.AppImage.sha256)
+  `OMXTerm-0.10.0-arm64.AppImage.sha256` (96 bytes).
+- Linux desktop installer:
+  [`OMXTerm-0.10.0-arm64.AppImage-installer.sh`](https://github.com/luizomf/omxterm/releases/download/v0.10.0/OMXTerm-0.10.0-arm64.AppImage-installer.sh)
+  — 6215 bytes — SHA-256
+  `068881ea74195851faa327216cac833fac64bcada758e16495b58646a7472e56`;
+  [checksum record](https://github.com/luizomf/omxterm/releases/download/v0.10.0/OMXTerm-0.10.0-arm64.AppImage-installer.sh.sha256)
+  `OMXTerm-0.10.0-arm64.AppImage-installer.sh.sha256` (109 bytes).
+- Windows: [`OMXTerm-0.10.0-arm64.exe`](https://github.com/luizomf/omxterm/releases/download/v0.10.0/OMXTerm-0.10.0-arm64.exe)
+  — 142479729 bytes — SHA-256
+  `033045b6afbd227eb3edcb44d866b9c14c4a152fafc589e86edd1aaa76117c6a`;
+  [checksum record](https://github.com/luizomf/omxterm/releases/download/v0.10.0/OMXTerm-0.10.0-arm64.exe.sha256)
+  `OMXTerm-0.10.0-arm64.exe.sha256` (91 bytes).
 
-### Current published release: 0.9.0
+The packages are ARM64-only and carry no verified publisher identity. The macOS
+app passed complete ad-hoc integrity-seal verification but has no Apple
+Developer ID signature or notarization.
 
-The current published release remains **0.9.0**:
-
-- [v0.9.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.9.0)
-- [0.9.0 release notes](docs/releases/0.9.0.md)
-
-Its release notes record exact filenames, byte sizes, SHA-256 identities,
-changes, compatibility, native verification evidence, optional observations,
-and known limitations. The exact eight published ARM64 assets are:
-
-- `OMXTerm-0.9.0-arm64.dmg` and its `.sha256` record for macOS;
-- `OMXTerm-0.9.0-arm64.AppImage`, its `.sha256` record,
-  `OMXTerm-0.9.0-arm64.AppImage-installer.sh`, and the helper's `.sha256`
-  record for Linux; and
-- `OMXTerm-0.9.0-arm64.exe` and its `.sha256` record for Windows.
-
-These exact 0.9.0 artifact identities received owner acceptance after optional
-observations on every Supported Platform. Those observations are factual
-non-automation, non-reusable provenance, not a release gate for another artifact
-or version. The packages are ARM64-only and carry no verified publisher
-identity. The macOS app passed its complete ad-hoc integrity seal verification
-but has no Apple Developer ID signature or notarization.
-
-Earlier published releases remain immutable. The previous
-[0.8.0 release notes](docs/releases/0.8.0.md) preserve that version's exact
-identities and historical evidence.
+The previous [v0.9.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.9.0)
+and its [release notes](docs/releases/0.9.0.md) remain immutable published
+history. Earlier release records are linked from the documentation map.
 
 ### Publication visibility
 
 The canonical GitHub repository remains **private**. The authenticated
-[v0.9.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.9.0)
-is the canonical published release record. This documentation does not change
+[v0.10.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.10.0)
+is the canonical publication record. This documentation does not change
 repository visibility. Unauthenticated access to GitHub release and issue links
 has not been validated and is not claimed.
 
 ## Installation
 
-The commands below apply to the published 0.9.0 assets. Keep each package and
+The commands below apply to the published 0.10.0 assets. Keep each package and
 its matching `.sha256` file in the same directory, verify the checksum before
 opening the package, and do not install an artifact whose check fails.
 
@@ -89,7 +77,7 @@ opening the package, and do not install an artifact whose check fails.
 Verify the Apple Silicon DMG:
 
 ```sh
-shasum -a 256 -c OMXTerm-0.9.0-arm64.dmg.sha256
+shasum -a 256 -c OMXTerm-0.10.0-arm64.dmg.sha256
 ```
 
 Open the DMG, drag `OMXTerm.app` to Applications, eject the DMG, and launch the
@@ -107,15 +95,15 @@ checksum-verified artifact. If you choose to open it, follow Apple's current
 Verify the unsigned AppImage, make it executable, and run it:
 
 ```sh
-sha256sum --check OMXTerm-0.9.0-arm64.AppImage.sha256
-chmod +x OMXTerm-0.9.0-arm64.AppImage
-./OMXTerm-0.9.0-arm64.AppImage
+sha256sum --check OMXTerm-0.10.0-arm64.AppImage.sha256
+chmod +x OMXTerm-0.10.0-arm64.AppImage
+./OMXTerm-0.10.0-arm64.AppImage
 ```
 
 If kernel FUSE mounting is unavailable, use the supported fallback:
 
 ```sh
-./OMXTerm-0.9.0-arm64.AppImage --appimage-extract-and-run
+./OMXTerm-0.10.0-arm64.AppImage --appimage-extract-and-run
 ```
 
 Linux needs the `fontconfig` utilities. OMXTerm defaults to X11, so Wayland
@@ -126,10 +114,10 @@ ensure the helper's `file` command prerequisite is installed, then verify the
 optional helper separately before running it:
 
 ```sh
-sha256sum --check OMXTerm-0.9.0-arm64.AppImage.sha256
-sha256sum --check OMXTerm-0.9.0-arm64.AppImage-installer.sh.sha256
-chmod +x OMXTerm-0.9.0-arm64.AppImage OMXTerm-0.9.0-arm64.AppImage-installer.sh
-./OMXTerm-0.9.0-arm64.AppImage-installer.sh install ./OMXTerm-0.9.0-arm64.AppImage
+sha256sum --check OMXTerm-0.10.0-arm64.AppImage.sha256
+sha256sum --check OMXTerm-0.10.0-arm64.AppImage-installer.sh.sha256
+chmod +x OMXTerm-0.10.0-arm64.AppImage OMXTerm-0.10.0-arm64.AppImage-installer.sh
+./OMXTerm-0.10.0-arm64.AppImage-installer.sh install ./OMXTerm-0.10.0-arm64.AppImage
 ```
 
 The helper structurally validates the supplied local Linux ARM64 AppImage, but
@@ -147,7 +135,7 @@ if it is not already present. Then verify that the checksum record names and
 matches the exact NSIS installer:
 
 ```powershell
-$installerName = "OMXTerm-0.9.0-arm64.exe"
+$installerName = "OMXTerm-0.10.0-arm64.exe"
 $checksumRecord = Get-Content -LiteralPath "$installerName.sha256" -Raw
 $checksumMatch = [regex]::Match(
   $checksumRecord,
@@ -166,7 +154,7 @@ if (-not [StringComparer]::OrdinalIgnoreCase.Equals($actualHash, $expectedHash))
 Write-Host "SHA-256 verification succeeded for $installerName"
 ```
 
-Run `OMXTerm-0.9.0-arm64.exe`; it installs per-user without administrator
+Run `OMXTerm-0.10.0-arm64.exe`; it installs per-user without administrator
 elevation. The unsigned installer may trigger a Microsoft Defender SmartScreen
 unknown-publisher warning. Review the source and proceed only if you trust the
 exact, checksum-verified artifact. If you choose to continue, SmartScreen's

@@ -59,41 +59,28 @@ but they do not replace the maintained product contract.
 
 ## Release status
 
-### 0.10.0 exact release candidates
+### Current published release: 0.10.0
 
-[0.10.0 candidate notes](releases/0.10.0.md) record the exact ARM64 candidates
-built and verified natively from source commit
-`2711f502d45cd86056ce76bffba22e1f8f92499d`, including their identities and
-changed-boundary results. The exact candidates are owner-accepted, and
-publication is separately owner-authorized but has not been executed. PR review
-and integration remain pending, the intended `v0.10.0` tag has not been created,
-and no asset has been uploaded or published. The exact eight candidate filenames
-are:
-
-- `OMXTerm-0.10.0-arm64.dmg`;
-- `OMXTerm-0.10.0-arm64.dmg.sha256`;
-- `OMXTerm-0.10.0-arm64.AppImage`;
-- `OMXTerm-0.10.0-arm64.AppImage.sha256`;
-- `OMXTerm-0.10.0-arm64.AppImage-installer.sh`;
-- `OMXTerm-0.10.0-arm64.AppImage-installer.sh.sha256`;
-- `OMXTerm-0.10.0-arm64.exe`; and
-- `OMXTerm-0.10.0-arm64.exe.sha256`.
-
-These exact candidates exist in verified and owner-accepted release state, but
-they are not uploaded, published, or available through this documentation.
-
-### Current published release: 0.9.0
-
-- [0.9.0 release notes](releases/0.9.0.md) describe the current published
+- [0.10.0 release notes](releases/0.10.0.md) describe the current published
   release, exact accepted artifact identities, native and changed-boundary
-  verification evidence, optional observations, compatibility, and known
+  verification evidence, exact-install observations, compatibility, and known
   limitations.
 - The canonical publication record is the
-  [v0.9.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.9.0).
+  [v0.10.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.10.0).
 
-The 0.9.0 record is immutable published history. Its optional observations are
-factual non-automation, non-reusable provenance rather than a release gate for
-another artifact or version.
+The exact ARM64 artifacts were built and verified natively from source commit
+`2711f502d45cd86056ce76bffba22e1f8f92499d`, owner-accepted, and published
+unchanged. The tagged source differs from that artifact build commit only
+through the eligible non-packaged Markdown paths named in the release record.
+The canonical repository remains private, so unauthenticated availability is
+not claimed.
+
+### Previous immutable published release: 0.9.0
+
+- [0.9.0 release notes](releases/0.9.0.md) preserve the exact accepted artifact
+  identities and historical evidence.
+- [v0.9.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.9.0)
+  remains the immutable previous publication record.
 
 ## Earlier immutable published release history
 
@@ -105,7 +92,7 @@ the current release or development baseline:
 - [0.3.0](releases/0.3.0.md) — Terminal Tabs;
 - [0.4.0](releases/0.4.0.md) — first macOS, Linux, and Windows ARM64 release;
 - [0.4.1](releases/0.4.1.md) — macOS bundle-integrity packaging fix; and
-- [0.8.0](releases/0.8.0.md) — previous published release.
+- [0.8.0](releases/0.8.0.md) — earlier published release.
 
 ## Legal
 
