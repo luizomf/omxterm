@@ -57,7 +57,29 @@ but they do not replace the maintained product contract.
   and issue links have not been validated. Documentation does not change
   repository visibility.
 
-## Current release
+## Release status
+
+### 0.10.0 source candidate
+
+[0.10.0 candidate notes](releases/0.10.0.md) describe the current source
+candidate and its changed-boundary plan. The intended tag is `v0.10.0`, but
+native final verification, exact artifact identities and checksums, owner
+acceptance, the tag, uploads, and publication remain pending. The intended eight
+ARM64 filenames are:
+
+- `OMXTerm-0.10.0-arm64.dmg`;
+- `OMXTerm-0.10.0-arm64.dmg.sha256`;
+- `OMXTerm-0.10.0-arm64.AppImage`;
+- `OMXTerm-0.10.0-arm64.AppImage.sha256`;
+- `OMXTerm-0.10.0-arm64.AppImage-installer.sh`;
+- `OMXTerm-0.10.0-arm64.AppImage-installer.sh.sha256`;
+- `OMXTerm-0.10.0-arm64.exe`; and
+- `OMXTerm-0.10.0-arm64.exe.sha256`.
+
+These names do not claim that any 0.10.0 asset exists, is available, or is
+published.
+
+### Current published release: 0.9.0
 
 - [0.9.0 release notes](releases/0.9.0.md) describe the current published
   release, exact accepted artifact identities, native and changed-boundary

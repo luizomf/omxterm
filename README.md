@@ -15,14 +15,39 @@ The Supported Platforms are exactly:
 x64, Intel macOS, and other operating-system/architecture pairs are deferred,
 not current support commitments.
 
-## Current release
+## Release status
 
-The current published release is **0.9.0**:
+### 0.10.0 source candidate
+
+The repository currently prepares **0.10.0** as a source candidate with
+`v0.10.0` as the intended tag. It is not the current published release. Native
+final verification, exact artifact identities and checksums, owner acceptance,
+tagging, upload, and publication remain pending; no 0.10.0 download is claimed
+or available through this document.
+
+The [0.10.0 candidate notes](docs/releases/0.10.0.md) define these intended
+ARM64 filenames:
+
+- `OMXTerm-0.10.0-arm64.dmg`;
+- `OMXTerm-0.10.0-arm64.dmg.sha256`;
+- `OMXTerm-0.10.0-arm64.AppImage`;
+- `OMXTerm-0.10.0-arm64.AppImage.sha256`;
+- `OMXTerm-0.10.0-arm64.AppImage-installer.sh`;
+- `OMXTerm-0.10.0-arm64.AppImage-installer.sh.sha256`;
+- `OMXTerm-0.10.0-arm64.exe`; and
+- `OMXTerm-0.10.0-arm64.exe.sha256`.
+
+These are candidate names, not evidence that the files were built, accepted, or
+published. Installation instructions below continue to apply only to 0.9.0.
+
+### Current published release: 0.9.0
+
+The current published release remains **0.9.0**:
 
 - [v0.9.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.9.0)
 - [0.9.0 release notes](docs/releases/0.9.0.md)
 
-The release notes record the exact filenames, byte sizes, SHA-256 identities,
+Its release notes record exact filenames, byte sizes, SHA-256 identities,
 changes, compatibility, native verification evidence, optional observations,
 and known limitations. The exact eight published ARM64 assets are:
 
@@ -32,13 +57,12 @@ and known limitations. The exact eight published ARM64 assets are:
   record for Linux; and
 - `OMXTerm-0.9.0-arm64.exe` and its `.sha256` record for Windows.
 
-These exact artifact identities received owner acceptance after optional
+These exact 0.9.0 artifact identities received owner acceptance after optional
 observations on every Supported Platform. Those observations are factual
 non-automation, non-reusable provenance, not a release gate for another artifact
 or version. The packages are ARM64-only and carry no verified publisher
 identity. The macOS app passed its complete ad-hoc integrity seal verification
-but has no Apple
-Developer ID signature or notarization.
+but has no Apple Developer ID signature or notarization.
 
 Earlier published releases remain immutable. The previous
 [0.8.0 release notes](docs/releases/0.8.0.md) preserve that version's exact
