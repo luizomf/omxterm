@@ -394,6 +394,22 @@ describe("portable Terminal Surface", () => {
     ).toBe(true);
   });
 
+  it("configures xterm to keep bold text on its requested palette color", async () => {
+    const adapter = {
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const { mountTerminalSurface } =
+      await import("../../src/terminal-surface/terminal-surface");
+    await mountTerminalSurface(document.createElement("main"), adapter);
+
+    expect(
+      xterm.FakeTerminal.current.constructorOptions.drawBoldTextInBrightColors,
+    ).toBe(false);
+  });
+
   it("delegates focus to xterm only while mounted", async () => {
     const adapter = {
       start: vi.fn(async () => undefined),

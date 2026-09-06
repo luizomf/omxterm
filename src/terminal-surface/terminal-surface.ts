@@ -328,6 +328,8 @@ export async function mountTerminalSurface(
     const mountedTerminal = new Terminal({
       cursorBlink: true,
       convertEol: false,
+      // SGR 1 changes weight; applications request bright palette colors explicitly.
+      drawBoldTextInBrightColors: false,
       scrollback: scrollbackLines,
       macOptionIsMeta: optionKeyMode === "both",
       fontFamily: appearance.fontFamily,

@@ -48,15 +48,104 @@ describe("Terminal Window viewport", () => {
   });
 });
 
-describe("Terminal Tab theme", () => {
-  it("uses the active Terminal Theme foreground", () => {
-    expect(declaration(ruleBody("#tab-strip button"), "color")).toContain(
-      "--terminal-foreground",
-    );
+describe("Terminal font rendering", () => {
+  it("requests thinner macOS smoothing only for terminal glyphs", () => {
+    expect(
+      declaration(
+        ruleBody(".terminal-surface .xterm"),
+        "-webkit-font-smoothing",
+      ),
+    ).toBe("antialiased");
+    expect(ruleBody("html,\nbody")).not.toContain("font-smoothing");
+    expect(terminalWindowCss).not.toContain("-moz-osx-font-smoothing");
+    expect(terminalWindowCss).not.toContain("text-rendering");
   });
 });
 
+describe("Terminal Tab theme", () => {
+  it("uses the cool chrome neutral without tinting text", () => {
+    expect(declaration(ruleBody("#tab-strip button"), "color")).toContain(
+      "--terminal-foreground",
+    );
+
+    for (const selector of [
+      "#tab-strip button",
+      "#tab-strip button:hover",
+      '#tab-strip button[aria-selected="true"]',
+    ]) {
+      const background = declaration(ruleBody(selector), "background");
+      expect(background).toContain("--terminal-chrome-neutral");
+      expect(background).not.toContain("--terminal-foreground");
+    }
+  });
+
+  it.each([
+    ["light", "#f5f5f5", "#161616"],
+    ["dark", "#000000", "#f0f0ff"],
+  ])(
+    "keeps text and tab states visible with a representative %s theme",
+    (_name, backgroundHex, foregroundHex) => {
+      const background = hexColor(backgroundHex);
+      const foreground = hexColor(foregroundHex);
+      const chromeNeutral = hexColor("#808090");
+      const tab = mix(
+        background,
+        chromeNeutral,
+        chromeNeutralMix(
+          declaration(ruleBody("#tab-strip button"), "background"),
+        ),
+      );
+      const hover = mix(
+        background,
+        chromeNeutral,
+        chromeNeutralMix(
+          declaration(ruleBody("#tab-strip button:hover"), "background"),
+        ),
+      );
+      const selected = mix(
+        background,
+        chromeNeutral,
+        chromeNeutralMix(
+          declaration(
+            ruleBody('#tab-strip button[aria-selected="true"]'),
+            "background",
+          ),
+        ),
+      );
+
+      expect(contrast(foreground, tab)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(foreground, hover)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(foreground, selected)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(hover, tab)).toBeGreaterThan(1.08);
+      expect(contrast(selected, tab)).toBeGreaterThan(1.2);
+    },
+  );
+});
+
 describe("Snippets Sidebar theme contrast", () => {
+  it("keeps chrome surfaces neutral when the Terminal Theme foreground is warm", () => {
+    expect(declaration(ruleBody(":root"), "--terminal-chrome-neutral")).toBe(
+      "#808090",
+    );
+
+    for (const selector of [
+      "#snippets-sidebar",
+      '#snippets-sidebar input[type="search"]',
+      "#snippets-sidebar li button:hover",
+    ]) {
+      const background = declaration(ruleBody(selector), "background");
+      expect(background).toContain("--terminal-chrome-neutral");
+      expect(background).not.toContain("--terminal-foreground");
+    }
+
+    expect(
+      declaration(
+        ruleBody("#snippets-sidebar li button:focus-visible"),
+        "background",
+      ),
+    ).toBe("transparent");
+  });
+
   it.each([
     ["light", "#f5f5f5", "#161616"],
     [
@@ -94,6 +183,7 @@ describe("Snippets Sidebar theme contrast", () => {
 
       const background = hexColor(backgroundHex);
       const foreground = hexColor(foregroundHex);
+      const chromeNeutral = hexColor("#808090");
       const sidebarRule = ruleBody("#snippets-sidebar");
       const inputRule = ruleBody('#snippets-sidebar input[type="search"]');
       expect(declaration(sidebarRule, "color")).toContain(
@@ -120,13 +210,13 @@ describe("Snippets Sidebar theme contrast", () => {
       );
       const sidebarBackground = mix(
         background,
-        foreground,
-        foregroundMix(declaration(sidebarRule, "background")),
+        chromeNeutral,
+        chromeNeutralMix(declaration(sidebarRule, "background")),
       );
       const inputBackground = mix(
         background,
-        foreground,
-        foregroundMix(declaration(inputRule, "background")),
+        chromeNeutral,
+        chromeNeutralMix(declaration(inputRule, "background")),
       );
       const inputBorder = mix(
         background,
@@ -140,8 +230,8 @@ describe("Snippets Sidebar theme contrast", () => {
       );
       const hoverBackground = mix(
         background,
-        foreground,
-        foregroundMix(declaration(buttonHoverRule, "background")),
+        chromeNeutral,
+        chromeNeutralMix(declaration(buttonHoverRule, "background")),
       );
       const buttonFocusOutline = mix(
         background,
@@ -216,13 +306,21 @@ function declaration(rule: string, property: string): string {
 }
 
 function foregroundMix(value: string): number {
+  return variableMix(value, "terminal-foreground");
+}
+
+function chromeNeutralMix(value: string): number {
+  return variableMix(value, "terminal-chrome-neutral");
+}
+
+function variableMix(value: string, variable: string): number {
   expect(value).toContain("--terminal-background");
   const match = value.match(
-    /var\(--terminal-foreground[^)]*\)\s+(?<percent>\d+)%/u,
+    new RegExp(`var\\(--${variable}[^)]*\\)\\s+(?<percent>\\d+)%`, "u"),
   );
   expect(
     match?.groups?.percent,
-    `missing foreground mix in ${value}`,
+    `missing ${variable} mix in ${value}`,
   ).toBeDefined();
   return Number(match!.groups!.percent) / 100;
 }

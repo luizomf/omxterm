@@ -43,9 +43,10 @@ OMXTerm must:
 - provide native new-window, new-tab, close, copy, paste, select-all, zoom,
   fullscreen, always-on-top, and quit actions without an in-window toolbar;
 - render the bundled [`omtheme`](omtheme.json) palette by default, allow one
-  explicitly configured external Terminal Theme, and use JetBrainsMono Nerd
-  Font Mono bundled under its OFL license as the default and missing-glyph
-  fallback;
+  explicitly configured external Terminal Theme, keep SGR bold text on its
+  requested ANSI `0–7` color without remapping it to bright `8–15` (applications
+  may request bright colors explicitly), and use JetBrainsMono Nerd Font Mono
+  bundled under its OFL license as the default and missing-glyph fallback;
 - use the accepted black-and-blue OMXTerm application icon in development and
   on the packaged macOS Dock, Finder, application-switcher, and DMG surfaces;
 - read strict, versioned JSON configuration and write bounded local JSONL
