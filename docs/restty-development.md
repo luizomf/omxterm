@@ -51,10 +51,13 @@ lowercase visible HTTP(S) text through the existing host route, including during
 TUI mouse reporting without a duplicate PTY report. Restty joins rows only when
 Ghostty selection text proves a visible soft wrap; hard breaks remain separate,
 OSC 8 destinations are ignored, and a destination that may continue into a
-concealed row is refused. Parsed titles and bell, Option Key Mode, inline images
-and other runtime configuration remain unavailable until their migration
-tickets land. The xterm Surface retains all
-existing behavior. There is no automatic xterm fallback.
+concealed row is refused. Parsed OSC 0/2 titles and BEL use the existing
+per-session title and silent-bell host controller, including raw title bounds,
+sanitization and fallback, tab/window ownership, focus/interaction reset and
+platform attention. The candidate sends no title reports; cancelled/malformed
+controls and OSC BEL terminators have no extra title or bell effect. Option Key
+Mode, inline images and other runtime configuration remain unavailable until
+their migration tickets land. The xterm Surface retains all existing behavior. There is no automatic xterm fallback.
 
 ## Pinned inputs and restoration
 
@@ -89,14 +92,18 @@ git ls-tree HEAD reference/ghostty reference/text-shaper
 
 The lockfile restores the npm tarballs identified by that manifest. `npm ci`
 then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
-Restty runtime and embedded-core SHA-256 values and produces corrected runtime
-SHA-256 `ed0282ed0062fc23a8ac90d2173633129cdd88d706adabb5f0e06bf3ff73aa11`
-and embedded-core chunk SHA-256
-`5a64d5de8f573ac2f392f8863ef6bbeb6228a57d267b8b4d73cf0694e221f56c`.
+Restty runtime, declarations and embedded-core SHA-256 values and produces
+corrected runtime SHA-256
+`15ca6dc64c45c1f42a88337aec58367a5e69fc0889dfa92c305aa333cba2a651`,
+embedded-core chunk SHA-256
+`fb4ff0ec8463a634a54078f3970a3cef86c1be3a880ad1da70f4d9fd3e2b8411`,
+and event declarations SHA-256
+`428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34`.
 The narrow correction makes font-load failure reject initialization, disables
 Restty's direct browser clipboard and link-opening callbacks, and exposes raw
-paste origin, current bracketed mode, selection/Select All, parsed OSC and OSC cancellation, and visible cell/soft-wrap
-lookup to OMXTerm's existing host policy. Borrowed render cells are snapshotted
+paste origin, current bracketed mode, selection/Select All, parsed OSC and OSC
+cancellation, visible cell/soft-wrap lookup, and parsed Ghostty title/BEL runtime
+events to OMXTerm's existing host policy. Borrowed render cells are snapshotted
 before selection-text queries can allocate WASM memory. It also removes Restty's 10–64
 live-size clamp in favor of OMXTerm's existing minimum of 1 for Window Font
 Zoom, carries the creation-time line-height factor into cell metrics without
@@ -107,20 +114,24 @@ Reinstall with `npm ci` to restore and reapply the reviewed bytes; do not edit
 `node_modules` manually.
 
 `assets/restty/omxterm-restty-core.wasm` is built from the pinned Restty and
-Ghostty commits above with the tracked
-`assets/restty/scrollback-limits.patch`. Its SHA-256 is
-`64447381534a21b72e6e51cd88346a27eb8dc9e8b8c0a0f3973f9ce9babb81eb`.
+Ghostty commits above with tracked Restty patch
+`assets/restty/omxterm-core.patch` and Ghostty patch
+`assets/restty/ghostty-title-events.patch`. Their SHA-256 values are recorded in
+`assets/restty-sources.json`. The artifact SHA-256 is
+`a8eefd8df5266b4f558da607f129c8735f0964ca098af663e8785716126456bb`.
 To reproduce it in an owned disposable checkout, check out the pinned Restty
-commit and submodules, apply the patch at repository root, install Zig 0.16.0,
-and run:
+commit and submodules, apply the Restty patch at repository root and the
+Ghostty patch inside `reference/ghostty`, use Zig 0.16.0, and run:
 
 ```sh
+git apply --unidiff-zero /path/to/assets/restty/omxterm-core.patch
+git -C reference/ghostty apply --unidiff-zero /path/to/assets/restty/ghostty-title-events.patch
 RESTTY_WASM_OPTIMIZE=ReleaseSafe bun run scripts/build-wasm.ts
 shasum -a 256 wasm/zig-out/bin/restty.wasm
 ```
 
 The build target is `wasm32-freestanding` with `baseline+simd128` as declared by
-the pinned Restty build. `assets/restty-sources.json` records the patch,
+the pinned Restty build. `assets/restty-sources.json` records both patches,
 artifact and build-input checksums. The tracked core is used at runtime; no
 network access or source build occurs during `npm ci`.
 
@@ -134,11 +145,12 @@ fetches. Packaged license texts are listed in `THIRD_PARTY_NOTICES.md`.
 router, preload bridge, Electron Adapter, Restty Surface and owned macOS PTYs in
 one fixture under the production CSP. It covers Unicode and bare-control-key
 input, large chunked DOM paste through a real owned PTY, explicit host
-copy/paste, Select All, context menu and OSC 52, resize, focus return, two
-isolated tabs, Default Shell and explicit-command startup, owned session
+copy/paste, Select All, context menu and OSC 52, parsed title/BEL ownership,
+title-query silence, disposal, resize, focus return, two isolated tabs, Default
+Shell and explicit-command startup, owned session
 termination, explicit close, renderer-process loss and remaining candidate-route refusal without
 using a user session or real clipboard.
 
-Native runtime evidence through the current clipboard slice is macOS ARM64.
+Native runtime evidence through the current parsed-event slice is macOS ARM64.
 Linux and Windows Restty behavior remains unverified; their xterm package
 contract is unchanged.

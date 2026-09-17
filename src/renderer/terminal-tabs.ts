@@ -213,6 +213,7 @@ export function createTerminalTabs(
       ...(options.notifyTitle
         ? {
             onTitleRequest: (request: string) => {
+              if (disposed || tab.removed) return;
               const sessionId = adapter.sessionId();
               if (sessionId !== undefined)
                 options.notifyTitle?.(sessionId, request);
@@ -222,6 +223,7 @@ export function createTerminalTabs(
       ...(options.notifyBell
         ? {
             onBell: () => {
+              if (disposed || tab.removed) return;
               const sessionId = adapter.sessionId();
               if (sessionId !== undefined) options.notifyBell?.(sessionId);
             },

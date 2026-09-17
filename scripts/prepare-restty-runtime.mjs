@@ -9,16 +9,26 @@ const entryPath = require.resolve("restty");
 const packageDist = path.dirname(entryPath);
 const runtimePath = path.join(packageDist, "chunk-c0rcpsc5.js");
 const corePath = path.join(packageDist, "chunk-6dxqza9q.js");
-const scrollbackCorePath = path.resolve(
+const eventTypesPath = path.join(
+  packageDist,
+  "runtime/core/runtime-events.d.ts",
+);
+const correctedCorePath = path.resolve(
   import.meta.dirname,
   "../assets/restty/omxterm-restty-core.wasm",
 );
 const originalCoreDigest =
   "e7b41a730c6994748e02468d8b656fe9258cd15e801df3a6d859e3eb6b37c74a";
-const correctedCoreDigest =
+const priorCorrectedCoreDigest =
   "5a64d5de8f573ac2f392f8863ef6bbeb6228a57d267b8b4d73cf0694e221f56c";
+const correctedCoreDigest =
+  "fb4ff0ec8463a634a54078f3970a3cef86c1be3a880ad1da70f4d9fd3e2b8411";
 const correctedCoreWasmDigest =
-  "64447381534a21b72e6e51cd88346a27eb8dc9e8b8c0a0f3973f9ce9babb81eb";
+  "a8eefd8df5266b4f558da607f129c8735f0964ca098af663e8785716126456bb";
+const originalEventTypesDigest =
+  "1c9383be2d0377635b3463a5ac2ec31eac3e2b233fc664de751ad3e9f54ea650";
+const correctedEventTypesDigest =
+  "428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34";
 const originalDigest =
   "e07e8d84898917de2b22b858602260a6dd921bbaf924526773f94fc38fbbaf9d";
 const priorCorrectedDigest =
@@ -37,8 +47,10 @@ const priorClipboardDigest =
   "272bfb31f240a8e45ec2c36e85858a0cfadec1e6fc9a7fd8a7efe70a2f350c94";
 const priorVisibleLinksDigest =
   "595f72d3be87f0965dea3733180264768720f7cba0c7c35aad797e2a22689665";
-const correctedDigest =
+const priorParsedEventsDigest =
   "ed0282ed0062fc23a8ac90d2173633129cdd88d706adabb5f0e06bf3ff73aa11";
+const correctedDigest =
+  "15ca6dc64c45c1f42a88337aec58367a5e69fc0889dfa92c305aa333cba2a651";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 
 const securityCorrections = [
@@ -640,12 +652,51 @@ const visibleLinkCorrections = [
   },
 ];
 
-const scrollbackCoreCorrections = [
+const parsedEventRuntimeCorrections = [
+  {
+    original: `    writeToWasm(shared.wasmHandle, normalized);
+    flushWasmOutputToPty();`,
+    corrected: `    writeToWasm(shared.wasmHandle, normalized);
+    for (const event of shared.wasm.drainParsedEvents(shared.wasmHandle))
+      options.emitRuntimeEvent(event);
+    flushWasmOutputToPty();`,
+  },
+  {
+    original: `    forwardTerminalReplies: runtime.forwardTerminalReplies,
+    markSearchDirty: hooks.markSearchDirty,`,
+    corrected: `    forwardTerminalReplies: runtime.forwardTerminalReplies,
+    emitRuntimeEvent: options.runtimeEvents.emit,
+    markSearchDirty: hooks.markSearchDirty,`,
+  },
+];
+
+const parsedEventTypeCorrections = [
+  {
+    original: `} | {
+    type: "search-state";
+    state: ResttySearchState;
+};`,
+    corrected: `} | {
+    type: "search-state";
+    state: ResttySearchState;
+} | {
+    type: "title";
+    title: string;
+} | {
+    type: "bell";
+};`,
+  },
+];
+
+const coreRuntimeCorrections = [
   {
     original: `  "restty_resize",
   "restty_render_update",`,
     corrected: `  "restty_resize",
   "restty_set_scrollback_limits",
+  "restty_event_ptr",
+  "restty_event_len",
+  "restty_event_consume",
   "restty_render_update",`,
   },
   {
@@ -667,6 +718,60 @@ const scrollbackCoreCorrections = [
   }
   tickKittyAnimations`,
   },
+  {
+    original: "var textDecoder = new TextDecoder;",
+    corrected: `var textDecoder = new TextDecoder;
+var eventTextDecoder = new TextDecoder("utf-8", { ignoreBOM: true });`,
+  },
+  {
+    original: `  getKittyKeyboardFlags(handle) {`,
+    corrected: `  drainParsedEvents(handle) {
+    const len = this.exports.restty_event_len(handle);
+    if (!len)
+      return [];
+    const ptr = this.exports.restty_event_ptr(handle);
+    if (!ptr)
+      throw new Error("Cannot read parsed terminal events");
+    const bytes = Uint8Array.from(new Uint8Array(this.memory.buffer, ptr, len));
+    this.exports.restty_event_consume(handle, len);
+    const events = [];
+    for (let offset = 0; offset < bytes.length;) {
+      const kind = bytes[offset++];
+      if (kind === 1) {
+        events.push({ type: "bell" });
+        continue;
+      }
+      if (kind === 3) {
+        events.push({ type: "title", title: "\\0".repeat(257) });
+        continue;
+      }
+      if (kind !== 2 || offset + 4 > bytes.length)
+        throw new Error("Invalid parsed terminal event");
+      const titleLen = new DataView(bytes.buffer, bytes.byteOffset + offset, 4).getUint32(0, true);
+      offset += 4;
+      if (offset + titleLen > bytes.length)
+        throw new Error("Invalid parsed terminal title event");
+      events.push({ type: "title", title: eventTextDecoder.decode(bytes.subarray(offset, offset + titleLen)) });
+      offset += titleLen;
+    }
+    return events;
+  }
+  getKittyKeyboardFlags(handle) {`,
+  },
+];
+
+const parsedEventCoreCorrections = [
+  {
+    original: `  "restty_set_scrollback_limits",
+  "restty_render_update",`,
+    corrected: `  "restty_set_scrollback_limits",
+  "restty_event_ptr",
+  "restty_event_len",
+  "restty_event_consume",
+  "restty_render_update",`,
+  },
+  coreRuntimeCorrections[2],
+  coreRuntimeCorrections[3],
 ];
 
 function applyCorrections(source, corrections) {
@@ -702,12 +807,15 @@ function encodeWasmBinary(bytes) {
 async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
   const core = await readFile(selectedArtifactPath);
   if (digest(core) !== correctedCoreWasmDigest)
-    throw new Error("Restty scrollback core artifact failed its checksum");
+    throw new Error("Restty core artifact failed its checksum");
 
   let source = await readFile(selectedCorePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest === correctedCoreDigest) return;
-  if (sourceDigest !== originalCoreDigest)
+  if (
+    sourceDigest !== originalCoreDigest &&
+    sourceDigest !== priorCorrectedCoreDigest
+  )
     throw new Error(
       "Unrecognized Restty WASM runtime; review the pinned OMXTerm corrections",
     );
@@ -718,12 +826,33 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     match[0],
     () => `var WASM_BINARY = \`${encodeWasmBinary(core)}\`;`,
   );
-  source = applyCorrections(source, scrollbackCoreCorrections);
+  source = applyCorrections(
+    source,
+    sourceDigest === originalCoreDigest
+      ? coreRuntimeCorrections
+      : parsedEventCoreCorrections,
+  );
   if (digest(source) !== correctedCoreDigest)
     throw new Error(
       `Restty WASM correction did not produce reviewed bytes: ${digest(source)}`,
     );
   await writeFile(selectedCorePath, source);
+}
+
+async function prepareResttyEventTypes(selectedPath) {
+  let source = await readFile(selectedPath, "utf8");
+  const sourceDigest = digest(source);
+  if (sourceDigest === correctedEventTypesDigest) return;
+  if (sourceDigest !== originalEventTypesDigest)
+    throw new Error(
+      "Unrecognized Restty event types; review the pinned OMXTerm corrections",
+    );
+  source = applyCorrections(source, parsedEventTypeCorrections);
+  if (digest(source) !== correctedEventTypesDigest)
+    throw new Error(
+      `Restty event type correction did not produce reviewed bytes: ${digest(source)}`,
+    );
+  await writeFile(selectedPath, source);
 }
 
 // Restty 0.3.0 otherwise reports readiness with an unusable font, exposes
@@ -738,73 +867,80 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
 export async function prepareResttyRuntime(options = {}) {
   const selectedRuntimePath = options.runtimePath ?? runtimePath;
   const selectedCorePath = options.corePath ?? corePath;
-  const selectedArtifactPath = options.scrollbackCorePath ?? scrollbackCorePath;
+  const selectedEventTypesPath = options.eventTypesPath ?? eventTypesPath;
+  const selectedArtifactPath =
+    options.correctedCorePath ??
+    options.scrollbackCorePath ??
+    correctedCorePath;
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorVisibleLinksDigest) {
-      source = applyCorrections(source, visibleLinkCorrections);
-    } else if (sourceDigest === priorClipboardDigest) {
-      // Only complete-buffer Select All remains to be applied.
-    } else if (sourceDigest === priorScrollbackDigest) {
-      // Clipboard/runtime parser and Select All seams remain to be applied.
-    } else if (sourceDigest === priorFontDigest) {
-      // Scrollback and clipboard/runtime parser seams remain to be applied.
-    } else if (sourceDigest === priorFamilyFilterDigest) {
-      source = applyCorrections(source, requiredFontCorrections);
-    } else if (sourceDigest === originalDigest) {
-      source = applyCorrections(source, securityCorrections);
-      source = applyCorrections(source, geometryCorrections);
-    } else if (sourceDigest === priorCorrectedDigest) {
-      source = applyCorrections(source, geometryCorrections);
-    } else if (
-      sourceDigest !== priorAppearanceDigest &&
-      sourceDigest !== priorBoldColorDigest
-    ) {
-      throw new Error(
-        "Unrecognized Restty runtime; review the pinned OMXTerm corrections",
-      );
-    }
-
-    if (
-      sourceDigest !== priorVisibleLinksDigest &&
-      sourceDigest !== priorFontDigest &&
-      sourceDigest !== priorScrollbackDigest &&
-      sourceDigest !== priorClipboardDigest
-    ) {
-      if (sourceDigest !== priorFamilyFilterDigest) {
-        if (sourceDigest !== priorBoldColorDigest)
-          source = applyCorrections(source, boldColorCorrections);
-        source = applyCorrections(source, fontCorrections);
+    if (sourceDigest === priorParsedEventsDigest) {
+      source = applyCorrections(source, parsedEventRuntimeCorrections);
+    } else {
+      if (sourceDigest === priorVisibleLinksDigest) {
+        source = applyCorrections(source, visibleLinkCorrections);
+      } else if (sourceDigest === priorClipboardDigest) {
+        // Only complete-buffer Select All remains to be applied.
+      } else if (sourceDigest === priorScrollbackDigest) {
+        // Clipboard/runtime parser and Select All seams remain to be applied.
+      } else if (sourceDigest === priorFontDigest) {
+        // Scrollback and clipboard/runtime parser seams remain to be applied.
+      } else if (sourceDigest === priorFamilyFilterDigest) {
+        source = applyCorrections(source, requiredFontCorrections);
+      } else if (sourceDigest === originalDigest) {
+        source = applyCorrections(source, securityCorrections);
+        source = applyCorrections(source, geometryCorrections);
+      } else if (sourceDigest === priorCorrectedDigest) {
+        source = applyCorrections(source, geometryCorrections);
+      } else if (
+        sourceDigest !== priorAppearanceDigest &&
+        sourceDigest !== priorBoldColorDigest
+      ) {
+        throw new Error(
+          "Unrecognized Restty runtime; review the pinned OMXTerm corrections",
+        );
       }
-    }
-    if (
-      sourceDigest !== priorVisibleLinksDigest &&
-      sourceDigest !== priorScrollbackDigest &&
-      sourceDigest !== priorClipboardDigest
-    )
-      source = applyCorrections(source, scrollbackRuntimeCorrections);
-    if (
-      sourceDigest !== priorVisibleLinksDigest &&
-      sourceDigest !== priorClipboardDigest
-    )
-      source = applyCorrections(source, clipboardCorrections);
-    else if (sourceDigest === priorClipboardDigest)
-      source = applyCorrections(source, [
-        {
-          original:
-            "    // OMXTerm keeps candidate clipboard and OSC 52 integration disabled.",
-          corrected:
-            "    // OMXTerm keeps direct browser clipboard access disabled.",
-        },
-        {
-          original:
-            "  // OMXTerm exposes no candidate clipboard action before Protected Paste lands.",
-          corrected:
-            "  // OMXTerm owns clipboard actions through its typed host bridge.",
-        },
-        {
-          original: `  const selectAll = () => {
+
+      if (
+        sourceDigest !== priorVisibleLinksDigest &&
+        sourceDigest !== priorFontDigest &&
+        sourceDigest !== priorScrollbackDigest &&
+        sourceDigest !== priorClipboardDigest
+      ) {
+        if (sourceDigest !== priorFamilyFilterDigest) {
+          if (sourceDigest !== priorBoldColorDigest)
+            source = applyCorrections(source, boldColorCorrections);
+          source = applyCorrections(source, fontCorrections);
+        }
+      }
+      if (
+        sourceDigest !== priorVisibleLinksDigest &&
+        sourceDigest !== priorScrollbackDigest &&
+        sourceDigest !== priorClipboardDigest
+      )
+        source = applyCorrections(source, scrollbackRuntimeCorrections);
+      if (
+        sourceDigest !== priorVisibleLinksDigest &&
+        sourceDigest !== priorClipboardDigest
+      )
+        source = applyCorrections(source, clipboardCorrections);
+      else if (sourceDigest === priorClipboardDigest)
+        source = applyCorrections(source, [
+          {
+            original:
+              "    // OMXTerm keeps candidate clipboard and OSC 52 integration disabled.",
+            corrected:
+              "    // OMXTerm keeps direct browser clipboard access disabled.",
+          },
+          {
+            original:
+              "  // OMXTerm exposes no candidate clipboard action before Protected Paste lands.",
+            corrected:
+              "  // OMXTerm owns clipboard actions through its typed host bridge.",
+          },
+          {
+            original: `  const selectAll = () => {
     const renderState = getCurrentRenderState();
     if (!renderState || renderState.rows <= 0 || renderState.cols <= 0)
       return false;
@@ -818,13 +954,15 @@ export async function prepareResttyRuntime(options = {}) {
     markNeedsRender();
     return true;
   };`,
-          corrected: clipboardCorrections[10].corrected.split(
-            "\n  const selectWordAtClientPoint",
-          )[0],
-        },
-      ]);
-    if (sourceDigest !== priorVisibleLinksDigest)
-      source = applyCorrections(source, visibleLinkCorrections);
+            corrected: clipboardCorrections[10].corrected.split(
+              "\n  const selectWordAtClientPoint",
+            )[0],
+          },
+        ]);
+      if (sourceDigest !== priorVisibleLinksDigest)
+        source = applyCorrections(source, visibleLinkCorrections);
+      source = applyCorrections(source, parsedEventRuntimeCorrections);
+    }
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,
@@ -832,6 +970,7 @@ export async function prepareResttyRuntime(options = {}) {
     await writeFile(selectedRuntimePath, source);
   }
   await prepareResttyCore(selectedCorePath, selectedArtifactPath);
+  await prepareResttyEventTypes(selectedEventTypesPath);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)

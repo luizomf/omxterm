@@ -68,9 +68,14 @@ Modified primary click overrides application mouse reporting only for a stable
 valid destination and produces no duplicate PTY report; changed targets return
 to ordinary routing, while cancellation and focus loss produce no spurious
 input. Viewport-edge destinations that may continue into concealed rows are
-refused, and OSC 8 link IDs are never considered. Titles, bell and images stay
-unavailable until their owning migration tickets. These gates apply only to
-Restty. xterm's existing behavior and security boundaries remain unchanged. Renderer isolation,
+refused, and OSC 8 link IDs are never considered. Parsed Ghostty OSC 0/2 title
+and BEL events now leave the pinned WASM core through a bounded event queue and
+Restty runtime event API, then use the existing per-session Surface callbacks
+and host controller. The core preserves raw over-limit evidence before
+Ghostty's internal title bound, suppresses cancelled title requests, and never
+enables title reports; OSC BEL terminators do not become bell events. Images
+stay unavailable until their owning migration ticket. These gates apply only
+to Restty. xterm's existing behavior and security boundaries remain unchanged. Renderer isolation,
 the production CSP, application network boundary and platform sandbox policy
 also remain unchanged.
 
@@ -80,9 +85,10 @@ factor into cell height while leaving glyph scale tied to font size. This keeps
 OMXTerm's size and row-spacing contract without CSS scaling, clipping or a
 custom renderer.
 
-The scrollback slice extends that correction with a reproducible pinned WASM
-artifact and a narrow runtime setter over Ghostty's existing byte and physical
-line limits. Positive `scrollback.lines` values are approximate because Ghostty
+The scrollback and parsed-event slices extend that correction with a
+reproducible pinned WASM artifact. The artifact exposes a narrow runtime setter
+over Ghostty's existing byte and physical line limits plus parsed title/BEL
+events; it does not introduce an application-owned parser. Positive `scrollback.lines` values are approximate because Ghostty
 prunes only complete historical pages: one minimum boundary page can exceed the
 target. The independent 10,000,000-byte limit remains active and can retain
 fewer rows; no byte-per-line conversion is used. Zero invokes Ghostty's byte-zero

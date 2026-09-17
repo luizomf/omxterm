@@ -1,0 +1,63 @@
+diff --git a/src/terminal/osc.zig b/src/terminal/osc.zig
+index dbc35492a..8caf53ef4 100644
+--- a/src/terminal/osc.zig
++++ b/src/terminal/osc.zig
+@@ -651,3 +651,5 @@ pub const Parser = struct {
+-            // We have overflowed our buffer or had some other error, set
+-            // the state to invalid so that we discard any further input.
+-            error.WriteFailed => self.state = .invalid,
++            // Saturated title captures remain recognizable as overlong;
++            // every other capture failure invalidates the command.
++            error.WriteFailed => if (self.state != .@"0" and self.state != .@"2") {
++                self.state = .invalid;
++            },
+@@ -667,3 +669,5 @@ pub const Parser = struct {
+-                // We have overflowed our buffer or had some other error, set the
+-                // state to invalid so that we discard any further input.
+-                error.WriteFailed => self.state = .invalid,
++                // Saturated title captures remain recognizable as overlong;
++                // every other capture failure invalidates the command.
++                error.WriteFailed => if (self.state != .@"0" and self.state != .@"2") {
++                    self.state = .invalid;
++                },
+diff --git a/src/terminal/osc/parsers/change_window_title.zig b/src/terminal/osc/parsers/change_window_title.zig
+index 5bd84dc38..3dad6f641 100644
+--- a/src/terminal/osc/parsers/change_window_title.zig
++++ b/src/terminal/osc/parsers/change_window_title.zig
+@@ -7 +7,3 @@ const Command = @import("../../osc.zig").Command;
+-pub fn parse(parser: *Parser, _: ?u8) ?*Command {
++pub fn parse(parser: *Parser, terminator: ?u8) ?*Command {
++    // CAN and SUB abort OSC without committing the partial title.
++    if (terminator == 0x18 or terminator == 0x1A) return null;
+@@ -11,0 +14,4 @@ pub fn parse(parser: *Parser, _: ?u8) ?*Command {
++    if (cap.trailing().len == Parser.MAX_BUF) {
++        parser.command = .{ .change_window_title = "x" ** 257 };
++        return &parser.command;
++    }
+@@ -22,0 +29,12 @@ pub fn parse(parser: *Parser, _: ?u8) ?*Command {
++test "OSC 0: CAN and SUB cancel change_window_title" {
++    const testing = std.testing;
++
++    for ([_]u8{ 0x18, 0x1A }) |terminator| {
++        var p: Parser = .init(null);
++        p.next('0');
++        p.next(';');
++        p.next('a');
++        try testing.expect(p.end(terminator) == null);
++    }
++}
++
+@@ -36 +54 @@ test "OSC 0: change_window_title" {
+-test "OSC 0: longer than buffer" {
++test "OSC 0: longer than buffer reports an overlong title" {
+@@ -44 +62,3 @@ test "OSC 0: longer than buffer" {
+-    try testing.expect(p.end(null) == null);
++    const cmd = p.end(null).?.*;
++    try testing.expect(cmd == .change_window_title);
++    try testing.expectEqual(@as(usize, 257), cmd.change_window_title.len);
+@@ -72,2 +92,3 @@ test "OSC 0: exactly at buffer length" {
+-    // This should be null because we always reserve space for a null terminator.
+-    try testing.expect(p.end(null) == null);
++    const cmd = p.end(null).?.*;
++    try testing.expect(cmd == .change_window_title);
++    try testing.expectEqual(@as(usize, 257), cmd.change_window_title.len);

@@ -222,9 +222,15 @@ Semantic paste and injection requests retain request order, recheck the current
 bracketed-paste mode and Surface lifetime after asynchronous decisions, and stop
 future chunks if their owning Surface closes. Bytes already sent before closure
 cannot be recalled, and a submitting snippet never appends Enter after closure.
-Title, bell, Option Key Mode and image routes remain unavailable in this slice;
-xterm retains those parts of the complete contract below. Restty
-scrollback follows the shared contract below through the pinned Ghostty core. Linux and Windows Restty
+Restty delivers Ghostty's parsed OSC 0/2 title and BEL events through the same
+per-session host callbacks used by xterm. It does not scan Terminal Payload or
+add a second parser: title sanitization, fallback, ownership, silent bell marker,
+focus/interaction reset and platform attention remain existing host policy.
+OSC BEL terminators and cancelled or malformed controls produce no extra title
+or bell event, and title-report queries receive no reply. Option Key Mode and
+image routes remain unavailable in this slice; xterm retains those parts of the
+complete contract below. Restty scrollback follows the shared contract below
+through the pinned Ghostty core. Linux and Windows Restty
 behavior is unverified; this slice's native runtime evidence is macOS ARM64.
 Native rasterization can differ between Restty and xterm; pixel-identical glyph
 output is not claimed.
@@ -314,8 +320,9 @@ independent. The scrollback scrollbar shows a thumb only while scrollback
 extends beyond the visible screen; an empty scrollbar track paints nothing on
 any platform.
 
-OSC 0 and OSC 2 titles are display-only and per session: the raw OSC request
-must be no longer than 256 code points, then control and bidi characters are
+OSC 0 and OSC 2 titles are display-only and per session on both Terminal
+Surfaces: the raw OSC request must be no longer than 256 code points, then
+control and bidi characters are
 removed and the result must be one printable line. A tab shows its session's
 accepted title and falls back to the basename of the shell selected when that
 session started; the native window

@@ -60,8 +60,11 @@ describe("Restty dependency contract", () => {
       omxtermCore: {
         sourceCommit: string;
         ghosttyCommit: string;
-        patch: string;
-        patchSha256: string;
+        patches: ReadonlyArray<{
+          repository: "restty" | "ghostty";
+          path: string;
+          sha256: string;
+        }>;
         artifact: string;
         artifactSha256: string;
         zigVersion: string;
@@ -102,8 +105,12 @@ describe("Restty dependency contract", () => {
       cpu: "baseline+simd128",
     });
     expect(
-      digest(readFileSync(path.join(projectRoot, sources.omxtermCore.patch))),
-    ).toBe(sources.omxtermCore.patchSha256);
+      sources.omxtermCore.patches.map(({ repository }) => repository),
+    ).toEqual(["restty", "ghostty"]);
+    for (const patch of sources.omxtermCore.patches)
+      expect(digest(readFileSync(path.join(projectRoot, patch.path)))).toBe(
+        patch.sha256,
+      );
     expect(
       digest(
         readFileSync(path.join(projectRoot, sources.omxtermCore.artifact)),
@@ -119,15 +126,17 @@ describe("Restty dependency contract", () => {
       path.join(packageRoot, "dist", "chunk-c0rcpsc5.js"),
     );
     expect(digest(runtime)).toBe(
-      "ed0282ed0062fc23a8ac90d2173633129cdd88d706adabb5f0e06bf3ff73aa11",
+      "15ca6dc64c45c1f42a88337aec58367a5e69fc0889dfa92c305aa333cba2a651",
     );
     const core = readFileSync(
       path.join(packageRoot, "dist", "chunk-6dxqza9q.js"),
     );
     expect(digest(core)).toBe(
-      "5a64d5de8f573ac2f392f8863ef6bbeb6228a57d267b8b4d73cf0694e221f56c",
+      "fb4ff0ec8463a634a54078f3970a3cef86c1be3a880ad1da70f4d9fd3e2b8411",
     );
     expect(core.toString("utf8")).toContain("restty_set_scrollback_limits");
+    expect(core.toString("utf8")).toContain("restty_event_consume");
+    expect(core.toString("utf8")).toContain("ignoreBOM: true");
     const source = runtime.toString("utf8");
     expect(source).toContain("Math.max(1, Math.round(value))");
     expect(source).toContain("lineHeight * fontConfig.lineHeightFactor");
@@ -150,23 +159,40 @@ describe("Restty dependency contract", () => {
     expect(source).toContain("totalRows - viewportOffset - 1");
     expect(source).toContain("onOsc: services.onOsc");
     expect(source).toContain("code === 24 || code === 26");
+    expect(source).toContain("drainParsedEvents");
+    expect(source).toContain("options.emitRuntimeEvent(event)");
+    const eventTypes = readFileSync(
+      path.join(packageRoot, "dist", "runtime/core/runtime-events.d.ts"),
+      "utf8",
+    );
+    expect(digest(Buffer.from(eventTypes))).toBe(
+      "428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34",
+    );
+    expect(eventTypes).toContain('type: "title"');
+    expect(eventTypes).toContain('type: "bell"');
     expect(source).not.toContain(
       "Math.max(10, Math.min(64, Math.round(value)))",
     );
   });
 
-  it("rejects runtime, embedded-core, and tracked-artifact drift", async () => {
+  it("rejects runtime, embedded-core, event-type, and artifact drift", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "omxterm-restty-drift-"));
     try {
       const runtimePath = path.join(root, "runtime.js");
       const corePath = path.join(root, "core.js");
       const artifactPath = path.join(root, "core.wasm");
+      const eventTypesPath = path.join(root, "runtime-events.d.ts");
       const installedRuntime = path.join(
         packageRoot,
         "dist",
         "chunk-c0rcpsc5.js",
       );
       const installedCore = path.join(packageRoot, "dist", "chunk-6dxqza9q.js");
+      const installedEventTypes = path.join(
+        packageRoot,
+        "dist",
+        "runtime/core/runtime-events.d.ts",
+      );
       const trackedCore = path.resolve(
         import.meta.dirname,
         "../../assets/restty/omxterm-restty-core.wasm",
@@ -174,37 +200,38 @@ describe("Restty dependency contract", () => {
       await Promise.all([
         copyFile(installedRuntime, runtimePath),
         copyFile(installedCore, corePath),
+        copyFile(installedEventTypes, eventTypesPath),
         copyFile(trackedCore, artifactPath),
       ]);
+      const options = {
+        runtimePath,
+        corePath,
+        correctedCorePath: artifactPath,
+        eventTypesPath,
+      };
 
       await writeFile(runtimePath, `${readFileSync(runtimePath, "utf8")}\n`);
-      await expect(
-        prepareResttyRuntime({
-          runtimePath,
-          corePath,
-          scrollbackCorePath: artifactPath,
-        }),
-      ).rejects.toThrow(/Unrecognized Restty runtime/u);
+      await expect(prepareResttyRuntime(options)).rejects.toThrow(
+        /Unrecognized Restty runtime/u,
+      );
 
       await copyFile(installedRuntime, runtimePath);
       await writeFile(corePath, `${readFileSync(corePath, "utf8")}\n`);
-      await expect(
-        prepareResttyRuntime({
-          runtimePath,
-          corePath,
-          scrollbackCorePath: artifactPath,
-        }),
-      ).rejects.toThrow(/Unrecognized Restty WASM runtime/u);
+      await expect(prepareResttyRuntime(options)).rejects.toThrow(
+        /Unrecognized Restty WASM runtime/u,
+      );
 
       await copyFile(installedCore, corePath);
       await writeFile(artifactPath, Buffer.from([0, 97, 115, 109]));
-      await expect(
-        prepareResttyRuntime({
-          runtimePath,
-          corePath,
-          scrollbackCorePath: artifactPath,
-        }),
-      ).rejects.toThrow(/artifact failed its checksum/u);
+      await expect(prepareResttyRuntime(options)).rejects.toThrow(
+        /artifact failed its checksum/u,
+      );
+
+      await copyFile(trackedCore, artifactPath);
+      await writeFile(eventTypesPath, "export type Drift = true;\n");
+      await expect(prepareResttyRuntime(options)).rejects.toThrow(
+        /Unrecognized Restty event types/u,
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }

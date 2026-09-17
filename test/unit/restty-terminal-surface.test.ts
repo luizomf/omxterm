@@ -9,7 +9,9 @@ const harness = vi.hoisted(() => {
   type RuntimeEvent =
     | { type: "state"; state: string }
     | { type: "backend"; backend: string }
-    | { type: "term-size"; cols: number; rows: number };
+    | { type: "term-size"; cols: number; rows: number }
+    | { type: "title"; title: string }
+    | { type: "bell" };
   class FakeRestty {
     readonly options: Record<string, unknown>;
     readonly canvas = document.createElement("canvas");
@@ -171,6 +173,32 @@ describe("Restty Terminal Surface", () => {
     surface.dispose();
     expect(adapter.close).toHaveBeenCalledOnce();
     expect(restty.destroy).toHaveBeenCalledOnce();
+  });
+
+  it("forwards parsed title and bell events once and ignores them after disposal", async () => {
+    const { adapter } = createAdapter();
+    const onTitleRequest = vi.fn();
+    const onBell = vi.fn();
+    const { mountResttyTerminalSurface } =
+      await import("../../src/terminal-surface/restty-terminal-surface");
+    const surface = await mountResttyTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { onTitleRequest, onBell },
+    );
+    const restty = harness.instances[0]!;
+
+    restty.emit({ type: "title", title: "parsed title" });
+    restty.emit({ type: "bell" });
+
+    expect(onTitleRequest).toHaveBeenCalledExactlyOnceWith("parsed title");
+    expect(onBell).toHaveBeenCalledOnce();
+
+    surface.dispose();
+    restty.emit({ type: "title", title: "late private title" });
+    restty.emit({ type: "bell" });
+    expect(onTitleRequest).toHaveBeenCalledOnce();
+    expect(onBell).toHaveBeenCalledOnce();
   });
 
   it("loads an exact configured face before bundled and local OS fallbacks", async () => {

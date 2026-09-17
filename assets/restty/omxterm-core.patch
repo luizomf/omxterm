@@ -1,0 +1,91 @@
+diff --git a/wasm/src/restty.zig b/wasm/src/restty.zig
+index 28bdd04..ae8f94d 100644
+--- a/wasm/src/restty.zig
++++ b/wasm/src/restty.zig
+@@ -169,0 +170,7 @@ const KittyPlacementAbi = extern struct {
++const ParsedEvent = enum(u8) {
++    bell = 1,
++    title = 2,
++    title_overlong = 3,
++};
++const max_event_title_bytes: usize = 1024;
++
+@@ -172,0 +180 @@ const StreamHandler = struct {
++    events: *std.ArrayListUnmanaged(u8),
+@@ -174 +182,5 @@ const StreamHandler = struct {
+-    fn init(term: *ghostty.Terminal, output: *std.ArrayListUnmanaged(u8)) StreamHandler {
++    fn init(
++        term: *ghostty.Terminal,
++        output: *std.ArrayListUnmanaged(u8),
++        events: *std.ArrayListUnmanaged(u8),
++    ) StreamHandler {
+@@ -177 +189 @@ const StreamHandler = struct {
+-        return .{ .readonly = handler, .output = output };
++        return .{ .readonly = handler, .output = output, .events = events };
+@@ -190,0 +203,17 @@ const StreamHandler = struct {
++    fn appendTag(self: *StreamHandler, tag: ParsedEvent) void {
++        self.events.append(self.readonly.terminal.gpa(), @intFromEnum(tag)) catch {};
++    }
++    fn appendTitle(self: *StreamHandler, title: []const u8) void {
++        if (title.len > max_event_title_bytes) {
++            self.appendTag(.title_overlong);
++            return;
++        }
++        const needed = 1 + @sizeOf(u32) + title.len;
++        const alloc = self.readonly.terminal.gpa();
++        self.events.ensureUnusedCapacity(alloc, needed) catch return;
++        self.events.appendAssumeCapacity(@intFromEnum(ParsedEvent.title));
++        var length: [4]u8 = undefined;
++        std.mem.writeInt(u32, &length, @intCast(title.len), .little);
++        self.events.appendSliceAssumeCapacity(&length);
++        self.events.appendSliceAssumeCapacity(title);
++    }
+@@ -191,0 +221,5 @@ const StreamHandler = struct {
++        // Parsed host events are recorded before Ghostty's bounded display state
++        // can truncate a raw title request.
++        if (action == .bell) self.appendTag(.bell);
++        if (action == .window_title) self.appendTitle(value.title);
++
+@@ -218,0 +253 @@ const Restty = struct {
++    events: std.ArrayListUnmanaged(u8) = .empty,
+@@ -591 +626 @@ pub export fn restty_create(cols: u16, rows: u16, max_scrollback: u32) ?*Restty
+-    handle.stream = TerminalStream.init(.{ .allocator = alloc, .handler = StreamHandler.init(&handle.term, &handle.output) });
++    handle.stream = TerminalStream.init(.{ .allocator = alloc, .handler = StreamHandler.init(&handle.term, &handle.output, &handle.events) });
+@@ -607,0 +643 @@ pub export fn restty_destroy(handle: ?*Restty) void {
++    h.events.deinit(h.alloc);
+@@ -751,0 +788,19 @@ pub export fn restty_scrollbar_len(handle: ?*Restty) u32 {
++pub export fn restty_event_ptr(handle: ?*Restty) usize {
++    const h = handle orelse return 0;
++    return if (h.events.items.len == 0) 0 else @intFromPtr(h.events.items.ptr);
++}
++
++pub export fn restty_event_len(handle: ?*Restty) u32 {
++    const h = handle orelse return 0;
++    return @intCast(h.events.items.len);
++}
++
++pub export fn restty_event_consume(handle: ?*Restty, len: usize) u32 {
++    const h = handle orelse return @intFromEnum(ErrorCode.invalid_handle);
++    const consumed = @min(len, h.events.items.len);
++    const remaining = h.events.items.len - consumed;
++    std.mem.copyForwards(u8, h.events.items[0..remaining], h.events.items[consumed..]);
++    h.events.items.len = remaining;
++    return @intFromEnum(ErrorCode.ok);
++}
++
+@@ -1194,0 +1250,15 @@ pub export fn restty_free(ptr: usize, len: usize) void {
++pub export fn restty_set_scrollback_limits(
++    handle: ?*Restty,
++    max_lines: u32,
++    max_bytes: u32,
++) u32 {
++    const h = handle orelse return @intFromEnum(ErrorCode.invalid_handle);
++    if (max_lines == 0) {
++        h.term.setScrollbackMaxBytes(0);
++        h.term.setScrollbackMaxLines(null);
++    } else {
++        h.term.setScrollbackMaxBytes(max_bytes);
++        h.term.setScrollbackMaxLines(max_lines);
++    }
++    return @intFromEnum(ErrorCode.ok);
++}

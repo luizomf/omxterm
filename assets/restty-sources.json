@@ -17,10 +17,20 @@
   "omxtermCore": {
     "sourceCommit": "3db45b0e10dbe53c52a77131d366f519546e4f04",
     "ghosttyCommit": "0309af1b7f0724105a0805efa88bbee808a616ae",
-    "patch": "assets/restty/scrollback-limits.patch",
-    "patchSha256": "e40eed76281a7fa493af312ed2b77a726daabf2c023dea4f174cff5d31ac912d",
+    "patches": [
+      {
+        "repository": "restty",
+        "path": "assets/restty/omxterm-core.patch",
+        "sha256": "7c3f94ead1c2337094863f41d5d2b1b28c1d6ce0c589bf77a730ec3181fbd6df"
+      },
+      {
+        "repository": "ghostty",
+        "path": "assets/restty/ghostty-title-events.patch",
+        "sha256": "ce5cff91382d5038bdf10348f6f9c6f3c1a01741d096f1b05c577062ac91ba87"
+      }
+    ],
     "artifact": "assets/restty/omxterm-restty-core.wasm",
-    "artifactSha256": "64447381534a21b72e6e51cd88346a27eb8dc9e8b8c0a0f3973f9ce9babb81eb",
+    "artifactSha256": "a8eefd8df5266b4f558da607f129c8735f0964ca098af663e8785716126456bb",
     "zigVersion": "0.16.0",
     "optimize": "ReleaseSafe",
     "target": "wasm32-freestanding",

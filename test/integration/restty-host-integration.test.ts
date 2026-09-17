@@ -36,8 +36,12 @@ interface HostResult {
   readonly validLinkMouseReports: string;
   readonly ordinaryGestureMouseReports: string;
   readonly cancelledGestureMouseReports: string;
-  readonly titles: number;
-  readonly bells: number;
+  readonly titleEvents: ReadonlyArray<{
+    readonly sessionId: string;
+    readonly fixture: "first" | "overlong" | "second" | "unexpected";
+  }>;
+  readonly bellSessionIds: readonly string[];
+  readonly titleQueryReplyBytes: number;
   readonly navigations: number;
   readonly openedWindows: number;
   readonly permissionRequests: number;
@@ -128,13 +132,27 @@ describe.skipIf(process.platform !== "darwin")(
           largePasteLength: 79_000,
           validLinkMouseReports: "",
           cancelledGestureMouseReports: "",
-          titles: 0,
-          bells: 0,
+          titleQueryReplyBytes: 0,
           navigations: 0,
           openedWindows: 0,
           permissionRequests: 0,
           ptyExits: 3,
         });
+        expect(result.titleEvents.map(({ fixture }) => fixture)).toEqual([
+          "first",
+          "overlong",
+          "second",
+        ]);
+        expect(result.titleEvents[0]?.sessionId).toBe(
+          result.titleEvents[1]?.sessionId,
+        );
+        expect(result.titleEvents[0]?.sessionId).not.toBe(
+          result.titleEvents[2]?.sessionId,
+        );
+        expect(result.bellSessionIds).toEqual([
+          result.titleEvents[0]?.sessionId,
+          result.titleEvents[2]?.sessionId,
+        ]);
       } finally {
         await rm(root, { recursive: true, force: true });
       }

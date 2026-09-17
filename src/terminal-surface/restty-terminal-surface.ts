@@ -45,9 +45,14 @@ import type {
 const BUNDLED_FONT_NAME = "JetBrainsMono Nerd Font Mono";
 const RESTTY_SCROLLBACK_MAX_BYTES = 10_000_000;
 
+type CandidateRuntimeEvent =
+  | ResttyRuntimeEvent
+  | { readonly type: "title"; readonly title: string }
+  | { readonly type: "bell" };
+
 type CandidateRuntime = {
   readonly events: {
-    subscribe(listener: (event: ResttyRuntimeEvent) => void): () => void;
+    subscribe(listener: (event: CandidateRuntimeEvent) => void): () => void;
   };
   readonly lifecycle: {
     init(): Promise<void>;
@@ -301,12 +306,13 @@ export async function mountResttyTerminalSurface(
       (restty.getActivePane() as unknown as CandidatePane | null) ?? undefined;
     if (!pane) throw new Error("Restty did not create its terminal pane");
 
-    removeRuntimeListener = pane.runtime.events.subscribe(
-      (event: ResttyRuntimeEvent) => {
-        if (event.type === "term-size")
-          settledSize = { cols: event.cols, rows: event.rows };
-      },
-    );
+    removeRuntimeListener = pane.runtime.events.subscribe((event) => {
+      if (disposed) return;
+      if (event.type === "term-size")
+        settledSize = { cols: event.cols, rows: event.rows };
+      else if (event.type === "title") options.onTitleRequest?.(event.title);
+      else if (event.type === "bell") options.onBell?.();
+    });
     await pane.runtime.lifecycle.init();
     if (disposed) throw new Error("Restty initialization was cancelled");
     if (

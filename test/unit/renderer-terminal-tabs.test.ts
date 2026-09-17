@@ -518,6 +518,31 @@ describe("renderer Terminal Tabs fatal Surface isolation", () => {
     expect(harness.surfaces[0]!.dispose).not.toHaveBeenCalled();
     expect(harness.container.children).toHaveLength(1);
   });
+
+  it("ignores title and BEL callbacks after their owning tab or window closes", async () => {
+    const tabClosed = createTabsHarness();
+    await tabClosed.tabs.ready;
+    tabClosed.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(tabClosed.surfaces).toHaveLength(2));
+    const closedCallbacks = tabClosed.mountedSurfaceOptions[1]!;
+
+    tabClosed.tabs.handleCommand({ action: "close" });
+    closedCallbacks.onTitleRequest?.("late private title");
+    closedCallbacks.onBell?.();
+
+    expect(tabClosed.notifyTitle).not.toHaveBeenCalled();
+    expect(tabClosed.notifyBell).not.toHaveBeenCalled();
+
+    const windowClosed = createTabsHarness();
+    await windowClosed.tabs.ready;
+    const disposedCallbacks = windowClosed.mountedSurfaceOptions[0]!;
+    windowClosed.tabs.dispose();
+    disposedCallbacks.onTitleRequest?.("late window title");
+    disposedCallbacks.onBell?.();
+
+    expect(windowClosed.notifyTitle).not.toHaveBeenCalled();
+    expect(windowClosed.notifyBell).not.toHaveBeenCalled();
+  });
 });
 
 describe("renderer Terminal Tabs runtime configuration", () => {

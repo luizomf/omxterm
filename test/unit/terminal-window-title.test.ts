@@ -257,6 +257,23 @@ describe("native Terminal Title and bell attention", () => {
     expect(harness.window.setTitle).toHaveBeenLastCalledWith("latest");
   });
 
+  it("ignores late title and bell events after its Terminal Window closes", () => {
+    const harness = createControllerHarness(false);
+    harness.controller.sessionStarted("s1");
+    harness.controller.selectSession("s1");
+    harness.sessionTitles.mockClear();
+    harness.window.setTitle.mockClear();
+
+    harness.controller.dispose();
+    harness.controller.requestTitle("s1", "late private title");
+    harness.controller.ringBell("s1");
+    harness.focus();
+
+    expect(harness.sessionTitles).not.toHaveBeenCalled();
+    expect(harness.window.setTitle).not.toHaveBeenCalled();
+    expect(harness.dock).not.toHaveBeenCalled();
+  });
+
   it("keeps title and attention state isolated per owning window", () => {
     const first = createControllerHarness(false);
     const second = createControllerHarness(false);

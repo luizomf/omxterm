@@ -17,6 +17,8 @@ import {
   installedFontData,
 } from "../../src/main/installed-font-family";
 import { exerciseResttyLinks } from "./restty-link-gestures";
+import { exerciseResttyEvents } from "./restty-host-events";
+import { captureResttyFontPaintEvidence } from "./restty-host-paint";
 import { createLargePasteFixture, dispatchDomPaste } from "./restty-host-paste";
 
 const prefix = "__OMXTERM_RESTTY_HOST_RESULT__";
@@ -42,8 +44,12 @@ let selectAllCoveredScrollback = false;
 let protectedPasteConfirmations = 0;
 let contextMenus = 0;
 const externalLinks: string[] = [];
-let titles = 0;
-let bells = 0;
+const titleEvents: Array<{
+  sessionId: string;
+  fixture: "first" | "overlong" | "second" | "unexpected";
+}> = [];
+const bellSessionIds: string[] = [];
+let titleQueryReplyBytes = 0;
 let navigations = 0;
 let openedWindows = 0;
 let permissionRequests = 0;
@@ -118,7 +124,7 @@ function createHost(window: BrowserWindow) {
                 executable: "/bin/sh",
                 arguments: [
                   "-c",
-                  "printf '__EXPLICIT_READY__Olá🙂\\n\\033]0;blocked-title\\007\\007\\033]52;c;dW5zYWZl\\007\\033]8;;https://example.com\\007https://example.com\\033]8;;\\007'; IFS= read -r line; printf '__EXPLICIT_INPUT__%s\\n' \"$line\"; sleep 30",
+                  "printf '__EXPLICIT_READY__Olá🙂\\n\\033]2;second-title\\007\\007\\033]52;c;dW5zYWZl\\007\\033]8;;https://example.com\\007https://example.com\\033]8;;\\007'; IFS= read -r line; printf '__EXPLICIT_INPUT__%s\\n' \"$line\"; sleep 30",
                 ],
               },
             }
@@ -184,11 +190,21 @@ function createHost(window: BrowserWindow) {
     showClipboardContextMenu() {
       contextMenus += 1;
     },
-    onTitleRequest() {
-      titles += 1;
+    onTitleRequest(sessionId, title) {
+      titleEvents.push({
+        sessionId,
+        fixture:
+          title === "first-title"
+            ? "first"
+            : title === `\ufeff${"z".repeat(256)}`
+              ? "overlong"
+              : title === "second-title"
+                ? "second"
+                : "unexpected",
+      });
     },
-    onBell() {
-      bells += 1;
+    onBell(sessionId) {
+      bellSessionIds.push(sessionId);
     },
     onUserInteraction() {},
     async openExternalLink(url) {
@@ -278,37 +294,20 @@ app
       "initial terminal focus",
     );
 
-    const canvasBounds = (await window.webContents.executeJavaScript(
-      "(() => { const bounds = document.querySelector('.restty-terminal-surface canvas')?.getBoundingClientRect(); return bounds ? { x: Math.floor(bounds.x), y: Math.floor(bounds.y), width: Math.floor(bounds.width), height: Math.floor(bounds.height) } : null })()",
-      true,
-    )) as { x: number; y: number; width: number; height: number } | null;
-    if (!canvasBounds) throw new Error("Restty canvas bounds are unavailable");
-    const paintedPixels = async () => {
-      const bitmap = (
-        await window.webContents.capturePage(canvasBounds)
-      ).toBitmap();
-      let painted = 0;
-      for (let offset = 0; offset < bitmap.length; offset += 4)
-        if (
-          bitmap[offset] !== 0 ||
-          bitmap[offset + 1] !== 0 ||
-          bitmap[offset + 2] !== 0
-        )
-          painted += 1;
-      return painted;
-    };
-    deliverOutputs[0]!("\u001b[2J\u001b[H\u001b[?25l");
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    const blankPaintedPixels = await paintedPixels();
-    deliverOutputs[0]!("WWW");
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    const configuredPaintedPixels = await paintedPixels();
-    deliverOutputs[0]!("\r\n漢");
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    const cjkPaintedPixels = await paintedPixels();
-    deliverOutputs[0]!("\r\n🙂⌘");
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    const fallbackPaintedPixels = await paintedPixels();
+    ({ titleQueryReplyBytes } = await exerciseResttyEvents({
+      deliverOutput: deliverOutputs[0]!,
+      input: () => inputs[0]!.join(""),
+      eventCount: () => ({
+        titles: titleEvents.length,
+        bells: bellSessionIds.length,
+      }),
+      waitFor,
+    }));
+
+    const renderedPixels = await captureResttyFontPaintEvidence(
+      window,
+      deliverOutputs[0]!,
+    );
 
     await window.webContents.insertText("printf '__DEFAULT_INPUT__Olá🙂\\n'");
     window.webContents.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
@@ -389,6 +388,10 @@ app
       () => outputs[1]!.join("").includes("__EXPLICIT_READY__Olá🙂"),
       "explicit command output",
     );
+    await waitFor(
+      () => titleEvents.length === 3 && bellSessionIds.length === 2,
+      "second tab parsed title and bell callbacks",
+    );
     await reloader.reload();
     const reloadState = (await window.webContents.executeJavaScript(
       "({ fonts: [...document.querySelectorAll('.restty-terminal-surface')].map((element) => element.dataset.resttyFont), notice: document.querySelector('#user-file-errors')?.textContent ?? '' })",
@@ -428,6 +431,8 @@ app
         ended.some((entry) => entry.closeRequested && entry.liveSessions === 1),
       "explicit tab close cleanup",
     );
+    deliverOutputs[1]!("\u001b]0;late-private-title\u0007\u0007");
+    await new Promise((resolve) => setTimeout(resolve, 100));
     terminals[0]!.close();
     await waitFor(
       () =>
@@ -461,12 +466,7 @@ app
       beforeDestroy,
       configuredFontFamily,
       renderedFontFamily,
-      renderedPixels: {
-        blank: blankPaintedPixels,
-        configured: configuredPaintedPixels,
-        cjk: cjkPaintedPixels,
-        emojiAndSymbol: fallbackPaintedPixels,
-      },
+      renderedPixels,
       reloadState,
       clipboardReads,
       clipboardWrites,
@@ -476,8 +476,9 @@ app
       largePasteLength: largePaste.length,
       externalLinks,
       ...linkEvidence,
-      titles,
-      bells,
+      titleEvents,
+      bellSessionIds,
+      titleQueryReplyBytes,
       navigations,
       openedWindows,
       permissionRequests,
