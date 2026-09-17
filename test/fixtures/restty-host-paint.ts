@@ -28,16 +28,28 @@ export async function captureResttyFontPaintEvidence(
         painted += 1;
     return painted;
   };
-  const paint = async (text: string) => {
+  const paint = async (text: string, previous?: number) => {
     deliverOutput(text);
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    return paintedPixels();
+    await window.webContents.executeJavaScript(
+      "new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))",
+      true,
+    );
+    const deadline = Date.now() + 2_000;
+    let current = await paintedPixels();
+    while (
+      previous !== undefined &&
+      current === previous &&
+      Date.now() < deadline
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      current = await paintedPixels();
+    }
+    return current;
   };
 
-  return {
-    blank: await paint("\u001b[2J\u001b[H\u001b[?25l"),
-    configured: await paint("WWW"),
-    cjk: await paint("\r\n漢"),
-    emojiAndSymbol: await paint("\r\n🙂⌘"),
-  };
+  const blank = await paint("\u001b[2J\u001b[H\u001b[?25l");
+  const configured = await paint("WWW", blank);
+  const cjk = await paint("\r\n漢", configured);
+  const emojiAndSymbol = await paint("\r\n🙂⌘", cjk);
+  return { blank, configured, cjk, emojiAndSymbol };
 }

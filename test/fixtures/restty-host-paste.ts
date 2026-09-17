@@ -12,6 +12,7 @@ export function createLargePasteFixture() {
   if (process.platform !== "win32")
     return {
       startCommand: undefined,
+      completionMarker: undefined,
       command: `${process.platform === "darwin" ? "shasum -a 256" : "sha256sum"} <<'__OMXTERM_PAYLOAD__'\n${payload}__OMXTERM_PAYLOAD__\nstty echo\n`,
       digest,
       length: payload.length,
@@ -24,8 +25,10 @@ export function createLargePasteFixture() {
   // traverse the PTY as stdin, not be embedded in a command-line argument.
   const program = `const c=require('node:crypto');let b=Buffer.alloc(0);process.stdin.setRawMode(true);process.stdin.on('data',chunk=>{b=Buffer.concat([b,chunk]);if(b.length>=${Buffer.byteLength(payload)}){process.stdin.setRawMode(false);process.stdin.pause();process.stdout.write(c.createHash('sha256').update(b).digest('hex')+'  -\\n',()=>process.exit(0))}});process.stdout.write('__PASTE_RECEIVER_READY__\\n')`;
   const executable = `'${nodeExecutable.replaceAll("'", "''")}'`;
+  const completionMarker = "__PASTE_RECEIVER_EXITED__";
   return {
-    startCommand: `& ${executable} -e '${program.replaceAll("'", "''")}'\r`,
+    startCommand: `& ${executable} -e '${program.replaceAll("'", "''")}'; Write-Output '${completionMarker}'\r`,
+    completionMarker,
     command: payload,
     digest,
     length: payload.length,
@@ -51,6 +54,12 @@ export async function exerciseLargePasteThroughPty(options: {
     () => options.output().includes(`${fixture.digest}  -`),
     "complete ordered large DOM paste through the owned PTY",
   );
+  const { completionMarker } = fixture;
+  if (completionMarker)
+    await options.waitFor(
+      () => options.output().includes(completionMarker),
+      "owned raw paste receiver exit",
+    );
   return fixture;
 }
 
