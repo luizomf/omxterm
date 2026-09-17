@@ -16,6 +16,16 @@ interface HostResult {
   readonly beforeDestroy: { readonly canvases: number; readonly tabs: number };
   readonly configuredFontFamily: string;
   readonly renderedFontFamily: string | null;
+  readonly renderedPixels: {
+    readonly blank: number;
+    readonly configured: number;
+    readonly cjk: number;
+    readonly emojiAndSymbol: number;
+  };
+  readonly reloadState: {
+    readonly fonts: readonly string[];
+    readonly notice: string;
+  };
   readonly clipboardReads: number;
   readonly clipboardWrites: number;
   readonly externalLinks: number;
@@ -57,21 +67,38 @@ describe.skipIf(process.platform !== "darwin")(
           execution.exitCode,
           `Host fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
         ).toBe(0);
-        expect(result).toBeDefined();
-        expect(result?.sessionStarts).toBe(3);
-        expect(result?.renderedFontFamily).toBe(result?.configuredFontFamily);
-        expect(result?.launchKinds).toEqual([
+        if (!result) throw new Error("Host fixture returned no result");
+        expect(result.sessionStarts).toBe(3);
+        expect(result.renderedFontFamily).toBe(result.configuredFontFamily);
+        expect(result.renderedPixels.configured).toBeGreaterThan(
+          result.renderedPixels.blank,
+        );
+        expect(result.renderedPixels.cjk).toBeGreaterThan(
+          result.renderedPixels.configured,
+        );
+        expect(result.renderedPixels.emojiAndSymbol).toBeGreaterThan(
+          result.renderedPixels.cjk,
+        );
+        expect(result.reloadState.fonts).toEqual([
+          "Helvetica",
+          "Times New Roman",
+        ]);
+        expect(result.reloadState.notice).toContain(
+          "font.family and font.lineHeight",
+        );
+        expect(result.reloadState.notice).toContain("Restart OMXTerm");
+        expect(result.launchKinds).toEqual([
           "default-shell",
           "explicit-command",
           "default-shell",
         ]);
-        expect(result?.resizeCounts).toHaveLength(3);
-        expect(result?.resizeCounts.every((count) => count > 0)).toBe(true);
-        expect(result?.output[0]).toContain("__DEFAULT_INPUT__Olá🙂");
-        expect(result?.output[1]).toContain("__EXPLICIT_READY__Olá🙂");
-        expect(result?.output[1]).toContain("__EXPLICIT_INPUT__second🙂");
-        expect(result?.beforeDestroy).toEqual({ canvases: 1, tabs: 1 });
-        expect(result?.ended).toEqual([
+        expect(result.resizeCounts).toHaveLength(3);
+        expect(result.resizeCounts.every((count) => count > 0)).toBe(true);
+        expect(result.output[0]).toContain("__DEFAULT_INPUT__Olá🙂");
+        expect(result.output[1]).toContain("__EXPLICIT_READY__Olá🙂");
+        expect(result.output[1]).toContain("__EXPLICIT_INPUT__second🙂");
+        expect(result.beforeDestroy).toEqual({ canvases: 1, tabs: 1 });
+        expect(result.ended).toEqual([
           { closeRequested: true, liveSessions: 1 },
           { closeRequested: false, liveSessions: 0 },
         ]);

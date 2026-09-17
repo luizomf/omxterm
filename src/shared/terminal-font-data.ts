@@ -4,6 +4,7 @@ export const MAX_TERMINAL_FONT_DATA_BYTES = 536_870_912;
 
 export interface TerminalFontFaceData {
   readonly family: string;
+  readonly sourceFamily?: string;
   readonly data: Uint8Array;
 }
 
@@ -49,8 +50,13 @@ export function isTerminalFontFamily(value: unknown): value is string {
 function isFontFace(value: unknown): value is TerminalFontFaceData {
   return (
     isRecord(value) &&
-    Object.keys(value).length === 2 &&
+    Object.keys(value).every((key) =>
+      ["family", "sourceFamily", "data"].includes(key),
+    ) &&
+    (Object.keys(value).length === 2 || Object.keys(value).length === 3) &&
     isTerminalFontFamily(value.family) &&
+    (value.sourceFamily === undefined ||
+      isTerminalFontFamily(value.sourceFamily)) &&
     value.data instanceof Uint8Array &&
     value.data.byteLength > 0 &&
     value.data.byteLength <= MAX_TERMINAL_FONT_BYTES

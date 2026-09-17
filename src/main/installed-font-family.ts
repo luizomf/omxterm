@@ -2,7 +2,16 @@ import { execFile } from "node:child_process";
 import { open } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { MAX_TERMINAL_FONT_BYTES } from "../shared/terminal-font-data";
+import {
+  Font,
+  getFontFamily,
+  getFontSubfamily,
+  type CollectionFaceName,
+} from "text-shaper";
+import {
+  MAX_TERMINAL_FONT_BYTES,
+  MAX_TERMINAL_FONT_DATA_BYTES,
+} from "../shared/terminal-font-data";
 
 const MACOS_FONT_SCRIPT = `
 ObjC.import("AppKit");
@@ -28,7 +37,7 @@ if (members.isNil()) {
     const attributes = $.NSDictionary.dictionaryWithObjectForKey(font, $.NSFontAttributeName);
     const cellWidth = Number($("W").sizeWithAttributes(attributes).width);
     const cellHeight = Number(font.ascender - font.descender + Math.max(0, font.leading));
-    JSON.stringify({ status: "available", family: installedFamily, path: ObjC.unwrap(url.path), cellWidth, cellHeight });
+    JSON.stringify({ status: "available", family: installedFamily, postScriptName: ObjC.unwrap(font.fontName), path: ObjC.unwrap(url.path), cellWidth, cellHeight });
   }
 }
 `;
@@ -73,7 +82,13 @@ export interface InstalledFontFamilyMetrics {
 
 export interface InstalledFontFace extends InstalledFontFamilyMetrics {
   readonly family: string;
+  readonly postScriptName?: string;
   readonly path: string;
+}
+
+export interface InstalledFontData {
+  readonly data: Uint8Array;
+  readonly sourceFamily: string;
 }
 
 export interface FontMetricsCommandOptions {
@@ -126,14 +141,32 @@ export async function installedFontData(
   family: string,
   run: FontMetricsCommand = runFontMetricsCommand,
   platform: string = process.platform,
+  readFace: (
+    face: InstalledFontFace,
+    maxBytes?: number,
+  ) => Promise<Uint8Array> = readInstalledFontFace,
 ): Promise<Uint8Array | undefined> {
   const face = await resolveInstalledFontFace(family, 16, run, platform);
-  return face ? readInstalledFontFace(face) : undefined;
+  return face ? readFace(face) : undefined;
+}
+
+export async function installedFontDataForRestty(
+  family: string,
+  run: FontMetricsCommand = runFontMetricsCommand,
+  platform: string = process.platform,
+): Promise<InstalledFontData | undefined> {
+  const face = await resolveInstalledFontFace(family, 16, run, platform);
+  return face ? readInstalledFontFaceData(face) : undefined;
 }
 
 export async function installedFallbackFontData(
   run: FontMetricsCommand = runFontMetricsCommand,
   platform: string = process.platform,
+  byteBudget: number = MAX_TERMINAL_FONT_DATA_BYTES,
+  readFace: (
+    face: InstalledFontFace,
+    maxBytes?: number,
+  ) => Promise<Uint8Array> = readInstalledFontFace,
 ): Promise<readonly { readonly family: string; readonly data: Uint8Array }[]> {
   const candidates =
     platform === "darwin"
@@ -142,10 +175,17 @@ export async function installedFallbackFontData(
         ? ["Segoe UI Emoji", "Microsoft YaHei UI", "Segoe UI Symbol"]
         : ["Noto Color Emoji", "Noto Sans CJK SC", "DejaVu Sans Mono"];
   const loaded = [];
+  let remaining = Math.max(0, byteBudget);
   for (const family of candidates) {
+    if (remaining === 0) break;
     try {
-      const data = await installedFontData(family, run, platform);
-      if (data) loaded.push(Object.freeze({ family, data }));
+      const data = await installedFontData(family, run, platform, (face) =>
+        readFace(face, remaining),
+      );
+      if (data && data.byteLength <= remaining) {
+        loaded.push(Object.freeze({ family, data }));
+        remaining -= data.byteLength;
+      }
     } catch {
       // OS fallbacks are best-effort additions after the licensed bundled face.
     }
@@ -161,13 +201,12 @@ async function resolveInstalledFontFace(
 ): Promise<InstalledFontFace | undefined> {
   if (platform === "linux") {
     const { stdout } = await run("/usr/bin/fc-match", [
-      "--format=%{family}\\0%{weight}\\0%{slant}\\0%{file}\\n",
+      "--format=%{family}\\0%{weight}\\0%{slant}\\0%{file}\\0%{postscriptname}\\n",
       "--",
       `${family}:style=Regular`,
     ]);
-    const [installedFamilies, weight, slant, file, extra] = stdout
-      .trimEnd()
-      .split("\0");
+    const [installedFamilies, weight, slant, file, postScriptName, extra] =
+      stdout.trimEnd().split("\0");
     if (
       extra !== undefined ||
       !installedFamilies
@@ -181,6 +220,7 @@ async function resolveInstalledFontFace(
     return Object.freeze({
       family,
       path: file,
+      ...(postScriptName ? { postScriptName } : {}),
       cellWidth: fontSize * 0.6,
       cellHeight: fontSize * 1.2,
     });
@@ -218,6 +258,7 @@ async function resolveInstalledFontFace(
   if (!isAvailableResult(result, platform)) throw invalidFontResult();
   return Object.freeze({
     family: result.family,
+    ...(result.postScriptName ? { postScriptName: result.postScriptName } : {}),
     path: result.path,
     cellWidth: platform === "win32" ? fontSize * 0.6 : result.cellWidth,
     cellHeight: platform === "win32" ? fontSize * 1.2 : result.cellHeight,
@@ -226,16 +267,25 @@ async function resolveInstalledFontFace(
 
 export async function readInstalledFontFace(
   face: InstalledFontFace,
+  maxBytes: number = MAX_TERMINAL_FONT_BYTES,
 ): Promise<Uint8Array> {
+  return (await readInstalledFontFaceData(face, maxBytes)).data;
+}
+
+async function readInstalledFontFaceData(
+  face: InstalledFontFace,
+  maxBytes: number = MAX_TERMINAL_FONT_BYTES,
+): Promise<InstalledFontData> {
   let handle;
   try {
     handle = await open(face.path, "r");
     const info = await handle.stat();
     if (!info.isFile())
       throw new Error("the selected font face is not a regular file");
-    if (info.size <= 0 || info.size > MAX_TERMINAL_FONT_BYTES)
+    const boundedMaximum = Math.min(MAX_TERMINAL_FONT_BYTES, maxBytes);
+    if (info.size <= 0 || info.size > boundedMaximum)
       throw new Error(
-        `the selected font face exceeds the ${MAX_TERMINAL_FONT_BYTES}-byte limit`,
+        `the selected font face exceeds the ${boundedMaximum}-byte limit`,
       );
     const bytes = new Uint8Array(info.size);
     let offset = 0;
@@ -256,7 +306,8 @@ export async function readInstalledFontFace(
       throw new Error(
         "the selected font face has an unsupported or corrupt format",
       );
-    return bytes;
+    const sourceFamily = await validateInstalledFontFace(face, bytes);
+    return Object.freeze({ data: bytes, sourceFamily });
   } catch (cause) {
     const detail =
       cause instanceof Error ? cause.message : "unknown read failure";
@@ -279,6 +330,86 @@ function hasSupportedSfntSignature(bytes: Uint8Array): boolean {
   );
 }
 
+async function validateInstalledFontFace(
+  face: InstalledFontFace,
+  bytes: Uint8Array,
+): Promise<string> {
+  const buffer = bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
+  const collection = Font.collection(buffer);
+  let font: Font;
+  if (collection) {
+    const selectedFace = collection
+      .names()
+      .find(
+        (candidate) =>
+          (candidate.family === face.family ||
+            candidate.postScriptName === face.postScriptName) &&
+          (isRegularFace(candidate) ||
+            candidate.postScriptName === face.postScriptName),
+      );
+    if (!selectedFace)
+      throw new Error(
+        "the selected font collection has no exact regular family face",
+      );
+    font = collection.get(selectedFace.index);
+    forceResttyFontTables(font);
+    return selectedFace.family ?? face.family;
+  }
+
+  font = await Font.loadAsync(buffer);
+  const parsedFamily = font.name ? getFontFamily(font.name) : null;
+  const parsedSubfamily = font.name ? getFontSubfamily(font.name) : null;
+  if (
+    !font.name ||
+    (parsedFamily !== face.family &&
+      !hasPostScriptName(font.name, face.postScriptName)) ||
+    (!isRegularSubfamily(parsedSubfamily) &&
+      !hasPostScriptName(font.name, face.postScriptName))
+  )
+    throw new Error("the selected font has no exact regular family face");
+  forceResttyFontTables(font);
+  return parsedFamily ?? face.family;
+}
+
+function forceResttyFontTables(font: Font): void {
+  // Restty requires these tables and metrics during shaping/rasterization.
+  // Force their lazy parser now so configuration cannot commit bytes that fail
+  // only after a new Terminal Surface is created.
+  void font.head;
+  void font.maxp;
+  void font.hhea;
+  void font.hmtx;
+  void font.cmap;
+  if (
+    !Number.isFinite(font.unitsPerEm) ||
+    font.unitsPerEm <= 0 ||
+    !Number.isFinite(font.ascender) ||
+    !Number.isFinite(font.descender)
+  )
+    throw new Error("the selected font has invalid shaping metrics");
+}
+
+function hasPostScriptName(
+  name: NonNullable<Font["name"]>,
+  postScriptName: string | undefined,
+): boolean {
+  if (!postScriptName) return false;
+  return name.records.some(
+    (record) => record.nameId === 6 && record.value === postScriptName,
+  );
+}
+
+function isRegularFace(face: CollectionFaceName): boolean {
+  return isRegularSubfamily(face.subfamily);
+}
+
+function isRegularSubfamily(subfamily: string | null | undefined): boolean {
+  return /^(regular|book|roman)$/iu.test(subfamily ?? "");
+}
+
 function isStatus(value: unknown, status: string): boolean {
   return (
     isRecord(value) &&
@@ -294,6 +425,7 @@ function isAvailableResult(
   readonly status: "available";
   readonly family: string;
   readonly path: string;
+  readonly postScriptName?: string;
   readonly cellWidth: number;
   readonly cellHeight: number;
 } {
@@ -308,10 +440,22 @@ function isAvailableResult(
   const expected =
     platform === "win32"
       ? ["status", "family", "path"]
-      : ["status", "family", "path", "cellWidth", "cellHeight"];
+      : [
+          "status",
+          "family",
+          "path",
+          "postScriptName",
+          "cellWidth",
+          "cellHeight",
+        ];
   return (
-    Object.keys(value).length === expected.length &&
+    (Object.keys(value).length === expected.length ||
+      (platform !== "win32" &&
+        value.postScriptName === undefined &&
+        Object.keys(value).length === expected.length - 1)) &&
     Object.keys(value).every((key) => expected.includes(key)) &&
+    (value.postScriptName === undefined ||
+      typeof value.postScriptName === "string") &&
     (platform === "win32" ||
       (isPositiveFiniteNumber(value.cellWidth) &&
         isPositiveFiniteNumber(value.cellHeight)))

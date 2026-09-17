@@ -229,6 +229,45 @@ describe("User Configuration reloader", () => {
     expect(apply).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps the restart notice when Surfaces from multiple font generations remain live", async () => {
+    const initial = configuration("initial", {
+      fontFamily: "Initial Family",
+      fontLineHeight: 1,
+    });
+    const changed = configuration("changed", {
+      fontFamily: "Changed Family",
+      fontLineHeight: 1.25,
+    });
+    const load = vi
+      .fn<() => Promise<UserConfigurationLoad>>()
+      .mockResolvedValueOnce(valid(changed))
+      .mockResolvedValueOnce(valid(initial));
+    const activeSurfaces = [
+      { fontFamily: "Initial Family", fontLineHeight: 1 },
+    ];
+    const reloader = createUserConfigurationReloader({
+      initial: { configuration: initial, userFileErrors: [] },
+      load,
+      apply: vi.fn(),
+      resttyRestartBaseline: {
+        fontFamily: "Initial Family",
+        fontLineHeight: 1,
+      },
+      activeResttySurfaceFontConfigurations: () => activeSurfaces,
+    });
+
+    await reloader.reload();
+    activeSurfaces.push({
+      fontFamily: "Changed Family",
+      fontLineHeight: 1.25,
+    });
+    await reloader.reload();
+
+    expect(reloader.current().userFileErrors).toEqual([
+      expect.stringContaining("font.family and font.lineHeight"),
+    ]);
+  });
+
   it("serializes repeated requests so later successful state cannot be lost", async () => {
     const first = deferred<UserConfigurationLoad>();
     const second = deferred<UserConfigurationLoad>();

@@ -1,8 +1,11 @@
 import {
   installedFallbackFontData,
-  installedFontData,
+  installedFontDataForRestty,
 } from "./installed-font-family";
-import type { TerminalFontData } from "../shared/terminal-font-data";
+import {
+  MAX_TERMINAL_FONT_DATA_BYTES,
+  type TerminalFontData,
+} from "../shared/terminal-font-data";
 import type { OperationalEventLog } from "./operational-events";
 import {
   registerTerminalIpcRouter,
@@ -23,16 +26,25 @@ export function fontIpcRouter(
 export async function loadTerminalFontData(
   family: string | undefined,
 ): Promise<TerminalFontData> {
-  const [configuredData, fallbacks] = await Promise.all([
-    family === undefined ? undefined : installedFontData(family),
-    installedFallbackFontData(),
-  ]);
+  const configuredData =
+    family === undefined ? undefined : await installedFontDataForRestty(family);
   if (family !== undefined && configuredData === undefined)
     throw new Error("The active configured font family is no longer installed");
+  const fallbacks = await installedFallbackFontData(
+    undefined,
+    undefined,
+    MAX_TERMINAL_FONT_DATA_BYTES - (configuredData?.data.byteLength ?? 0),
+  );
   return Object.freeze({
     ...(family === undefined
       ? {}
-      : { configured: Object.freeze({ family, data: configuredData! }) }),
+      : {
+          configured: Object.freeze({
+            family,
+            sourceFamily: configuredData!.sourceFamily,
+            data: configuredData!.data,
+          }),
+        }),
     fallbacks,
   });
 }

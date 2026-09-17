@@ -1,8 +1,9 @@
-import { mkdtemp, rm, truncate, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, truncate, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
+  installedFallbackFontData,
   installedFontFamilyMetrics,
   readInstalledFontFace,
   type InstalledFontFace,
@@ -106,19 +107,26 @@ describe("installed font-family command seams", () => {
   it("bounds reads and rejects unreadable, empty, oversized, and corrupt faces", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "omxterm-font-read-"));
     const face = (file: string): InstalledFontFace => ({
-      family: "Exact Family",
+      family: "JetBrainsMono Nerd Font Mono",
       path: path.join(root, file),
       cellWidth: 8,
       cellHeight: 16,
     });
     try {
+      const validFont = await readFile(
+        path.resolve("assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf"),
+      );
+      await writeFile(face("valid.ttf").path, validFont);
+      await expect(
+        readInstalledFontFace(face("valid.ttf")),
+      ).resolves.toHaveLength(validFont.byteLength);
       await writeFile(
-        face("valid.ttf").path,
+        face("signature-only.ttf").path,
         new Uint8Array([0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
       );
       await expect(
-        readInstalledFontFace(face("valid.ttf")),
-      ).resolves.toHaveLength(12);
+        readInstalledFontFace(face("signature-only.ttf")),
+      ).rejects.toThrow("no exact regular family face");
       await expect(readInstalledFontFace(face("missing.ttf"))).rejects.toThrow(
         "could not be read",
       );
@@ -136,17 +144,36 @@ describe("installed font-family command seams", () => {
     }
   });
 
+  it("keeps optional fallback bytes within the supplied aggregate budget", async () => {
+    const run = vi.fn(async (_file: string, arguments_: readonly string[]) => {
+      const requested = arguments_.at(-1)?.split(":", 1)[0] ?? "";
+      return {
+        stdout: `${requested}\u000080\u00000\u0000/${requested}.ttf\n`,
+      };
+    });
+
+    const fallbacks = await installedFallbackFontData(
+      run,
+      "linux",
+      10,
+      async () => new Uint8Array(6),
+    );
+
+    expect(fallbacks).toHaveLength(1);
+    expect(fallbacks[0]?.data).toHaveLength(6);
+  });
+
   it("uses fontconfig exact-family and regular-face output without a shell", async () => {
     const run = vi.fn(async (file: string, arguments_: readonly string[]) => {
       expect(file).toBe("/usr/bin/fc-match");
       expect(arguments_).toEqual([
-        "--format=%{family}\\0%{weight}\\0%{slant}\\0%{file}\\n",
+        "--format=%{family}\\0%{weight}\\0%{slant}\\0%{file}\\0%{postscriptname}\\n",
         "--",
         "Exact Família:style=Regular",
       ]);
       return {
         stdout:
-          "Exact Família,Alias\u000080\u00000\u0000/usr/share/fonts/A Space 正規.ttf\n",
+          "Exact Família,Alias\u000080\u00000\u0000/usr/share/fonts/A Space 正規.ttf\u0000ExactFamilia-Regular\n",
       };
     });
     await expect(
@@ -163,7 +190,8 @@ describe("installed font-family command seams", () => {
         "Missing",
         20,
         async () => ({
-          stdout: "Fallback\u000080\u00000\u0000/fallback.ttf\n",
+          stdout:
+            "Fallback\u000080\u00000\u0000/fallback.ttf\u0000Fallback-Regular\n",
         }),
         "linux",
         readableFace,

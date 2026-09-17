@@ -159,6 +159,8 @@ app
           },
           load: () => loadUserConfiguration(configurationLoadOptions),
           ...resttyBaseline(terminalSurface, userConfiguration),
+          activeResttySurfaceFontConfigurations: () =>
+            terminalIpcRouter.activeResttySurfaceFontConfigurations(),
           operationalEvents: operationalEvents!,
           writeStderr: (detail) => process.stderr.write(detail),
           apply: (state, committed) =>

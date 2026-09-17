@@ -23,6 +23,10 @@ interface UserConfigurationReloaderOptions {
     LoadedUserConfiguration,
     "fontFamily" | "fontLineHeight"
   >;
+  readonly activeResttySurfaceFontConfigurations?: () => readonly Pick<
+    LoadedUserConfiguration,
+    "fontFamily" | "fontLineHeight"
+  >[];
 }
 
 export interface UserConfigurationReloader {
@@ -78,6 +82,7 @@ export function createUserConfigurationReloader(
           load.configuration,
           load.warnings ?? [],
           options.resttyRestartBaseline,
+          options.activeResttySurfaceFontConfigurations?.(),
         ),
       );
       options.operationalEvents?.setLevel(load.configuration.logLevel);
@@ -135,13 +140,22 @@ function currentNotices(
   warnings: readonly string[],
   baseline:
     Pick<LoadedUserConfiguration, "fontFamily" | "fontLineHeight"> | undefined,
+  activeSurfaces:
+    | readonly Pick<LoadedUserConfiguration, "fontFamily" | "fontLineHeight">[]
+    | undefined,
 ): readonly string[] {
   if (!baseline) return warnings;
+  const surfaces =
+    activeSurfaces && activeSurfaces.length > 0 ? activeSurfaces : [baseline];
   const deferred = [
-    ...(configuration.fontFamily === baseline.fontFamily
+    ...(surfaces.every(
+      (surface) => configuration.fontFamily === surface.fontFamily,
+    )
       ? []
       : ["font.family"]),
-    ...(configuration.fontLineHeight === baseline.fontLineHeight
+    ...(surfaces.every(
+      (surface) => configuration.fontLineHeight === surface.fontLineHeight,
+    )
       ? []
       : ["font.lineHeight"]),
   ];

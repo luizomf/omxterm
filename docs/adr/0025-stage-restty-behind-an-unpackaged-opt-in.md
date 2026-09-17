@@ -42,8 +42,8 @@ Theme, size and padding update existing Surfaces without replacing their core
 or PTY. `font.family` and `font.lineHeight` are the complete restart-only set:
 existing Restty Surfaces keep their creation-time values, while new Surfaces use
 the latest fully validated values. A persistent notice names changed deferred
-settings and requests restart; reverting to startup-active values clears the
-applicable notice. Failed lookup, bounded read or font decoding starts no
+settings and requests restart; a deferred setting clears only when its requested
+value is already active in every existing Surface. Failed lookup, bounded read or font decoding starts no
 invisible shell and an invalid reload commits nothing.
 
 Candidate copy/paste, snippets/path injection, OSC 52, links, titles, bell,

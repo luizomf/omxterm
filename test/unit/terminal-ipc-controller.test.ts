@@ -3,6 +3,7 @@ import {
   registerTerminalIpcRouter,
   type IpcEvent,
   type IpcMainPort,
+  type TerminalIpcControllerOptions,
   type TrustedWebContents,
 } from "../../src/main/terminal-ipc-controller";
 import {
@@ -1367,6 +1368,9 @@ describe("Terminal Font IPC", () => {
         }),
     );
     const superseded = handler(trusted, "Exact Família");
+    await expect(handler(trusted, "Exact Família")).rejects.toThrow(
+      "already in progress",
+    );
     controller.applyConfiguration({
       ...clipboardOptions().configuration,
       terminalSurface: "restty",
@@ -1380,6 +1384,57 @@ describe("Terminal Font IPC", () => {
       fallbacks: [],
     });
     await expect(superseded).rejects.toThrow("superseded");
+    router.dispose();
+  });
+
+  it("reports the restart-only font settings of every live Restty Surface", () => {
+    const ipc = createIpcHarness();
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    const mainFrame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    let onExit:
+      ((exit: { exitCode: number; signal: number }) => void) | undefined;
+    const controller = router.registerController({
+      ...clipboardOptions(),
+      configuration: {
+        ...clipboardOptions().configuration,
+        terminalSurface: "restty",
+        fontFamily: "Initial Family",
+        fontLineHeight: 1.25,
+      },
+      webContents,
+      createSession: vi.fn(
+        (
+          callbacks: Parameters<
+            TerminalIpcControllerOptions["createSession"]
+          >[0],
+        ) => {
+          onExit = callbacks.onExit;
+          return {
+            write: vi.fn(),
+            resize: vi.fn(),
+            hasForegroundChildProcess: () => false,
+            close: vi.fn(),
+          };
+        },
+      ),
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+    const trusted = { sender: webContents, senderFrame: mainFrame };
+    ipc.handlers.get(terminalIpc.start)!(trusted);
+
+    expect(router.activeResttySurfaceFontConfigurations()).toEqual([
+      { fontFamily: "Initial Family", fontLineHeight: 1.25 },
+    ]);
+    onExit?.({ exitCode: 0, signal: 0 });
+    expect(router.activeResttySurfaceFontConfigurations()).toEqual([]);
+
+    controller.dispose();
     router.dispose();
   });
 });

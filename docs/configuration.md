@@ -489,8 +489,8 @@ needed. The opt-in Restty candidate updates theme, font size and padding live,
 but an existing Restty Surface retains its initial font family and line height.
 A persistent notice names either deferred setting and asks you to restart
 OMXTerm to apply it everywhere. New Restty Surfaces use the latest fully
-validated values; reverting to startup-active values clears the applicable
-stale notice. Existing windows keep their current Always-on-Top state and Window Font Zoom delta;
+validated values; a deferred setting clears only when its requested value is
+already active in every existing Surface. Existing windows keep their current Always-on-Top state and Window Font Zoom delta;
 Actual Size returns to the latest configured baseline.
 
 A rejected reload applies nothing and preserves the complete last valid

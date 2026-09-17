@@ -505,8 +505,8 @@ Surfaces. A valid reload applies all live-safe settings and host preferences,
 keeps those two creation-time values in every existing Restty Surface, and
 shows a persistent non-blocking notice naming each deferred setting and asking
 the user to restart OMXTerm. New tabs and windows use the latest fully validated
-family and line height. Reverting a deferred preference to its startup-active
-value clears that setting's stale notice. Theme, configured font-size baseline,
+family and line height. A deferred setting clears only when its requested value
+is already active in every existing Restty Surface. Theme, configured font-size baseline,
 padding and Window Font Zoom remain live and preserve the existing Surface and
 PTY. Invalid, missing, unreadable, unsupported or corrupt configured font input
 rejects the whole reload. This temporary exception does not affect xterm.

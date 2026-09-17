@@ -169,7 +169,7 @@ export async function mountResttyTerminalSurface(
           ? [
               {
                 data: loadedFonts.configured.data,
-                name: loadedFonts.configured.family,
+                name: fontSourceFamily(loadedFonts.configured),
                 weight: 400,
                 style: "normal" as const,
               },
@@ -179,9 +179,9 @@ export async function mountResttyTerminalSurface(
           data: bundledFontBytes,
           name: BUNDLED_FONT_NAME,
         },
-        ...loadedFonts.fallbacks.map(({ family, data }) => ({
-          data,
-          name: family,
+        ...loadedFonts.fallbacks.map((font) => ({
+          data: font.data,
+          name: fontSourceFamily(font),
         })),
       ],
       theme: toGhosttyTheme(terminalTheme),
@@ -360,6 +360,13 @@ function toGhosttyTheme(theme: TerminalTheme): GhosttyTheme {
     },
     raw: {},
   };
+}
+
+function fontSourceFamily(font: {
+  readonly family: string;
+  readonly sourceFamily?: string;
+}): string {
+  return font.sourceFamily ?? font.family;
 }
 
 function setContainerAppearance(

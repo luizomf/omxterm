@@ -176,9 +176,16 @@ describe("Restty Terminal Surface", () => {
     const loadFontData = vi.fn(async () => ({
       configured: {
         family: "Exact Família",
+        sourceFamily: "Embedded Exact Family",
         data: new Uint8Array([10, 11]),
       },
-      fallbacks: [{ family: "Local Emoji", data: new Uint8Array([20, 21]) }],
+      fallbacks: [
+        {
+          family: "Local Emoji",
+          sourceFamily: "Embedded Emoji",
+          data: new Uint8Array([20, 21]),
+        },
+      ],
     }));
     const { mountResttyTerminalSurface } =
       await import("../../src/terminal-surface/restty-terminal-surface");
@@ -198,7 +205,7 @@ describe("Restty Terminal Surface", () => {
     ).toEqual([
       {
         data: new Uint8Array([10, 11]),
-        name: "Exact Família",
+        name: "Embedded Exact Family",
         weight: 400,
         style: "normal",
       },
@@ -206,7 +213,7 @@ describe("Restty Terminal Surface", () => {
         data: new Uint8Array([0, 1, 2, 3]),
         name: "JetBrainsMono Nerd Font Mono",
       },
-      { data: new Uint8Array([20, 21]), name: "Local Emoji" },
+      { data: new Uint8Array([20, 21]), name: "Embedded Emoji" },
     ]);
   });
 
