@@ -5,6 +5,7 @@ import type {
 import {
   isNonemptyClipboardText,
   isTerminalSessionInput,
+  isTerminalSessionClose,
   isTerminalSessionReference,
   isTerminalSessionResize,
   isTerminalSessionTitle,
@@ -300,7 +301,24 @@ interface RoutedSessionState {
   readonly resttyFontConfiguration?: ResttySurfaceFontConfiguration;
   readonly outputFlow: TerminalOutputFlow;
   closed: boolean;
+  closeReason?: "rendering-failure";
   exited: boolean;
+}
+
+function sessionEndContext(
+  sessionId: TerminalSessionId,
+  state: RoutedSessionState | undefined,
+  reportedLaunchKind: TerminalSessionLaunchKind | undefined,
+  liveSessions: number,
+) {
+  return {
+    sessionId,
+    launchKind:
+      state?.session.launchKind ?? reportedLaunchKind ?? "default-shell",
+    closeRequested: state?.closed ?? false,
+    ...(state?.closeReason ? { closeReason: state.closeReason } : {}),
+    liveSessions,
+  };
 }
 
 function activeResttyFontConfigurations(
@@ -363,10 +381,14 @@ function createTerminalIpcController(
   const reject: RejectBoundary = (boundary, reason) =>
     operationalEvents?.write({ name: "boundary.rejected", boundary, reason });
 
-  const closeSession = (sessionId: TerminalSessionId) => {
+  const closeSession = (
+    sessionId: TerminalSessionId,
+    reason?: "rendering-failure",
+  ) => {
     const state = sessions.get(sessionId);
     if (!state || state.closed) return;
     state.closed = true;
+    if (reason) state.closeReason = reason;
     state.session.close();
   };
 
@@ -445,15 +467,15 @@ function createTerminalIpcController(
           if (!options.webContents.isDestroyed()) {
             options.webContents.send(terminalIpc.exit, { sessionId, ...exit });
           }
-          options.onSessionExit(exit, {
-            sessionId,
-            launchKind:
-              state?.session.launchKind ??
-              reportedLaunchKind ??
-              "default-shell",
-            closeRequested: state?.closed ?? false,
-            liveSessions: countLiveSessions(),
-          });
+          options.onSessionExit(
+            exit,
+            sessionEndContext(
+              sessionId,
+              state,
+              reportedLaunchKind,
+              countLiveSessions(),
+            ),
+          );
           if (windowId !== undefined) {
             const outcome = exit.signal !== 0 ? "signal" : "clean";
             writeWindowEvent({
@@ -561,7 +583,7 @@ function createTerminalIpcController(
       reject,
     );
   const close = (payload?: unknown) => {
-    if (!isTerminalSessionReference(payload)) {
+    if (!isTerminalSessionClose(payload)) {
       reject("ipc", "invalid-payload");
       return;
     }
@@ -572,7 +594,7 @@ function createTerminalIpcController(
         windowId,
         action: "close-requested",
       });
-    closeSession(payload.sessionId);
+    closeSession(payload.sessionId, payload.reason);
   };
   const writeClipboardText = (payload?: unknown) => {
     if (!isNonemptyClipboardText(payload)) {

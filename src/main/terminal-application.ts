@@ -31,6 +31,10 @@ export interface TerminalWindowLifecycle {
 
 export type TerminalSessionFailure =
   | {
+      readonly reason: "rendering";
+      readonly launchKind: TerminalSessionEndContext["launchKind"];
+    }
+  | {
       readonly reason: "spawn";
       readonly launchKind: TerminalSessionStartErrorContext["launchKind"];
     }
@@ -212,28 +216,29 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
           dispatch(() => {
             const unexpectedSignal =
               exit.signal !== 0 && !context.closeRequested;
-            if (!unexpectedSignal) {
+            const renderingFailure =
+              context.closeReason === "rendering-failure";
+            if (!unexpectedSignal && !renderingFailure) {
               // An ordinary end closes only its tab; the window follows when
               // that was the last Live Terminal Session, without confirmation.
               if (context.liveSessions === 0) forceCloseWindow(instance.window);
               return;
             }
+            const failure: TerminalSessionFailure = renderingFailure
+              ? { reason: "rendering", launchKind: context.launchKind }
+              : {
+                  reason: "signal",
+                  launchKind: context.launchKind,
+                  signal: normalizeLifecycleCode(exit.signal),
+                };
             if (context.liveSessions === 0) {
-              closeAfterFailure(instance.window, {
-                reason: "signal",
-                launchKind: context.launchKind,
-                signal: normalizeLifecycleCode(exit.signal),
-              });
+              closeAfterFailure(instance.window, failure);
               return;
             }
             // The dead tab stays visible until the failure is acknowledged;
             // only then is the renderer told to drop it.
             void options
-              .showSessionFailure(instance.window, {
-                reason: "signal",
-                launchKind: context.launchKind,
-                signal: normalizeLifecycleCode(exit.signal),
-              })
+              .showSessionFailure(instance.window, failure)
               .catch(() => {})
               .then(() => {
                 if (

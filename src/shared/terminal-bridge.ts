@@ -21,7 +21,7 @@ export interface TerminalBridge {
   start(): Promise<TerminalSessionId>;
   input(sessionId: TerminalSessionId, data: string): void;
   resize(sessionId: TerminalSessionId, size: TerminalSize): void;
-  close(sessionId: TerminalSessionId): void;
+  close(sessionId: TerminalSessionId, reason?: "rendering-failure"): void;
   title(sessionId: TerminalSessionId, request: string): void;
   bell(sessionId: TerminalSessionId): void;
   openExternalLink(url: string): void;

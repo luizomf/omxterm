@@ -62,6 +62,67 @@ function clipboardOptions() {
   };
 }
 
+describe("rendering failure IPC", () => {
+  it("carries only an owned fixed rendering failure through session termination", () => {
+    const ipc = createIpcHarness();
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    const frame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame: frame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const onSessionExit = vi.fn();
+    const close = vi.fn();
+    router.registerController({
+      ...clipboardOptions(),
+      webContents,
+      onSessionStartError: vi.fn(),
+      onSessionExit,
+      createSession(callbacks) {
+        close.mockImplementation(() =>
+          callbacks.onExit({ exitCode: 0, signal: 0 }),
+        );
+        return {
+          close,
+          write: vi.fn(),
+          resize: vi.fn(),
+          hasForegroundChildProcess: () => false,
+        };
+      },
+    });
+    const owner = { sender: webContents, senderFrame: frame };
+    ipc.handlers.get(terminalIpc.start)!(owner);
+    const sendClose = ipc.listeners.get(terminalIpc.close)!;
+    sendClose(
+      { ...owner, senderFrame: {} },
+      { sessionId: "s1", reason: "rendering-failure" },
+    );
+    sendClose(owner, { sessionId: "s2", reason: "rendering-failure" });
+    sendClose(owner, { sessionId: "s1", reason: "arbitrary message" });
+    sendClose(owner, {
+      sessionId: "s1",
+      reason: "rendering-failure",
+      message: "untrusted",
+    });
+    expect(close).not.toHaveBeenCalled();
+    sendClose(owner, { sessionId: "s1", reason: "rendering-failure" });
+    sendClose(owner, { sessionId: "s1", reason: "rendering-failure" });
+    expect(close).toHaveBeenCalledOnce();
+    expect(onSessionExit).toHaveBeenCalledExactlyOnceWith(
+      { exitCode: 0, signal: 0 },
+      {
+        sessionId: "s1",
+        launchKind: "default-shell",
+        closeRequested: true,
+        closeReason: "rendering-failure",
+        liveSessions: 0,
+      },
+    );
+    router.dispose();
+  });
+});
+
 describe("terminal IPC controller", () => {
   it("routes two Terminal Windows to independent Live Terminal Sessions", () => {
     const ipc = createIpcHarness();

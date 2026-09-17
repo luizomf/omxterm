@@ -202,7 +202,8 @@ renderer-loss cleanup. It requires the bundled JetBrainsMono Nerd Font Mono TTF,
 Ghostty core and an actual WebGL2 backend before a PTY starts. Initialization
 failure releases partial resources and starts no shell. WebGL context loss shows
 a persistent failure and disposes only the owning Surface/session without core
-recreation. Restty applies the selected Terminal Theme, configured font size,
+recreation. Main retains a fixed actionable native failure dialog until
+acknowledgement, including when the failed session was the window's last one. Restty applies the selected Terminal Theme, configured font size,
 per-side padding and Window Font Zoom through its runtime and existing host
 geometry. It resolves an exact configured installed family through the Electron main
 process and gives Restty only bounded bytes for that validated active family,
@@ -300,8 +301,7 @@ uncompressed RGBA with exactly four decoded bytes per source pixel.
 `CSI 16 t` receives the terminal cell-size response after the Surface opens.
 Images stay cell-anchored through direct-session scrolling, Terminal Window
 resizing, Window Font Zoom, tab selection, and valid User Configuration Reload,
-subject to the pinned addon's documented wrapping and bottom-truncation
-limitations. Terminal reset, tab disposal, and leaving the alternate buffer
+subject to the pinned Ghostty core's placement and scrollback retention. Terminal reset, tab disposal, and leaving the alternate buffer
 release the applicable image resources.
 
 The Restty Surface uses the pinned Ghostty core as its Kitty parser,
@@ -334,7 +334,7 @@ SIXEL, iTerm2 Inline Image Protocol, raw RGB (`f=24`), compressed raw pixels
 (`o=z`), placement IDs, animation, remote or filesystem image sources,
 downloads, persistence, and image behavior through tmux, screen, or another
 multiplexer are unsupported. Other Kitty and Chafa paths exposed by the pinned
-beta addon are unclaimed. Until Pi recognizes `TERM_PROGRAM=OMXTerm`, a user
+Ghostty core are unclaimed. Until Pi recognizes `TERM_PROGRAM=OMXTerm`, a user
 must explicitly select Kitty in Pi; OMXTerm does not configure Pi. Image bytes
 remain opaque, memory-only Terminal Payload on the existing PTY output path:
 they introduce no main-process, preload, IPC, Adapter, clipboard, filesystem,

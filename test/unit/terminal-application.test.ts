@@ -125,6 +125,31 @@ function lastSessionEnd(sessionId = "s1") {
 }
 
 describe("Terminal application lifecycle", () => {
+  it("retains a rendering failure until acknowledgement after last-session cleanup", async () => {
+    const acknowledgement = deferred<void>();
+    const showSessionFailure = vi.fn(() => acknowledgement.promise);
+    const harness = createApplicationHarness({ showSessionFailure });
+    await harness.application.newWindow();
+    const owner = harness.windows[0]!;
+    const context = {
+      ...lastSessionEnd(),
+      closeRequested: true,
+      closeReason: "rendering-failure" as const,
+    };
+    owner.lifecycle.onSessionExit({ exitCode: 0, signal: 0 }, context);
+    expect(showSessionFailure).toHaveBeenCalledWith(owner.window, {
+      reason: "rendering",
+      launchKind: "default-shell",
+    });
+    expect(owner.window.close).not.toHaveBeenCalled();
+    expect(harness.quit).not.toHaveBeenCalled();
+    acknowledgement.resolve();
+    await acknowledgement.promise;
+    await Promise.resolve();
+    expect(owner.window.close).toHaveBeenCalledOnce();
+    expect(harness.quit).toHaveBeenCalledOnce();
+  });
+
   it("owns one independent session per window and closes only the selected window", async () => {
     const harness = createApplicationHarness();
 

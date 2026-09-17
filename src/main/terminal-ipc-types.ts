@@ -45,6 +45,7 @@ export interface TerminalSessionEndContext {
   readonly sessionId: TerminalSessionId;
   readonly launchKind: TerminalSessionLaunchKind;
   readonly closeRequested: boolean;
+  readonly closeReason?: "rendering-failure";
   readonly liveSessions: number;
 }
 

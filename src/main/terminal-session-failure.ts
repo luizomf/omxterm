@@ -11,6 +11,17 @@ interface TerminalSessionFailureDialog {
 export function terminalSessionFailureDialog(
   failure: TerminalSessionFailure,
 ): TerminalSessionFailureDialog {
+  if (failure.reason === "rendering") {
+    return {
+      type: "error",
+      title: "Terminal rendering failed",
+      message:
+        "The rendering backend was lost. Its terminal session has been closed.",
+      detail:
+        "Restart OMXTerm to create a new session. Other sessions are unaffected.",
+      buttons: ["OK"],
+    };
+  }
   const explicitCommand = failure.launchKind === "explicit-command";
   if (failure.reason === "spawn") {
     return {

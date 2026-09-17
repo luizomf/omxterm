@@ -9,5 +9,5 @@ export interface TerminalSessionAdapter {
   start(handlers: TerminalSessionHandlers): Promise<void>;
   write(data: string): void;
   resize(size: TerminalSize): void;
-  close(): void;
+  close(reason?: "rendering-failure"): void;
 }

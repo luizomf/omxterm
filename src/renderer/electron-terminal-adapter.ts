@@ -21,6 +21,7 @@ export function createElectronTerminalAdapter(
 ): ElectronTerminalAdapter {
   let closed = false;
   let started = false;
+  let closeReason: "rendering-failure" | undefined;
   let sessionId: TerminalSessionId | undefined;
   let removeOutputListener: (() => void) | undefined;
   let removeExitListener: (() => void) | undefined;
@@ -77,6 +78,7 @@ export function createElectronTerminalAdapter(
         deliverExit(source, exit);
       });
       const startedSessionId = await bridge.start();
+      const closedBeforeStart = closed;
       sessionId = startedSessionId;
       for (const event of pendingEvents) {
         if (event.type === "output")
@@ -86,7 +88,7 @@ export function createElectronTerminalAdapter(
       pendingEvents = [];
       // The adapter owns exactly one Live Terminal Session: a close requested
       // while the start round-trip was in flight still terminates it.
-      if (closed) bridge.close(startedSessionId);
+      if (closedBeforeStart) bridge.close(startedSessionId, closeReason);
     },
     write(data: string) {
       if (!closed && sessionId !== undefined && isBoundedTerminalPayload(data))
@@ -96,13 +98,14 @@ export function createElectronTerminalAdapter(
       if (!closed && sessionId !== undefined && isTerminalSize(size))
         bridge.resize(sessionId, size);
     },
-    close() {
+    close(reason) {
       if (closed) return;
       closed = true;
+      closeReason = reason;
       removeOutputListener?.();
       removeExitListener?.();
       pendingEvents = [];
-      if (sessionId !== undefined) bridge.close(sessionId);
+      if (sessionId !== undefined) bridge.close(sessionId, closeReason);
     },
   };
 }

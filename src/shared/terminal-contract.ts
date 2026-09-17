@@ -120,6 +120,19 @@ export function isTerminalSessionReference(
   return isTerminalSessionId(value.sessionId);
 }
 
+export function isTerminalSessionClose(
+  value: unknown,
+): value is TerminalSessionReference & {
+  readonly reason?: "rendering-failure";
+} {
+  if (isTerminalSessionReference(value)) return true;
+  return (
+    isStrictRecord(value, ["sessionId", "reason"]) &&
+    isTerminalSessionId(value.sessionId) &&
+    value.reason === "rendering-failure"
+  );
+}
+
 export function isTerminalSessionOutput(
   value: unknown,
 ): value is TerminalSessionOutput {

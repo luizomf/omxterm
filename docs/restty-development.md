@@ -13,6 +13,8 @@ tabs, Default Shell and `-e` command startup, shell exit, explicit close and
 renderer-loss cleanup. It requires the bundled TTF, Ghostty WASM core and a real
 WebGL2 backend before starting a PTY. Initialization failure starts no shell;
 WebGL context loss reports a visible failure and disposes only the owning tab.
+A native failure dialog explains recovery and remains until acknowledged, even
+when cleanup ended the window's last session. No terminal state is recreated.
 
 The Surface applies the selected Terminal Theme, configured font family,
 size, independent line height, per-side padding, Window Font Zoom and

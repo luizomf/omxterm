@@ -513,7 +513,9 @@ describe("renderer Terminal Tabs fatal Surface isolation", () => {
     harness.mountedSurfaceOptions[1]!.onFatalError?.("backend lost");
 
     expect(onFatalError).toHaveBeenCalledExactlyOnceWith("backend lost");
-    expect(harness.surfaces[1]!.dispose).toHaveBeenCalledOnce();
+    // Failure disposal belongs to the Surface, preserving its failure reason
+    // rather than racing it with ordinary tab-close disposal.
+    expect(harness.surfaces[1]!.dispose).not.toHaveBeenCalled();
     expect(harness.adapters[1]!.close).not.toHaveBeenCalled();
     expect(harness.surfaces[0]!.dispose).not.toHaveBeenCalled();
     expect(harness.container.children).toHaveLength(1);

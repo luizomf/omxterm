@@ -37,6 +37,7 @@ import {
   type ResttyVisibleLinkInteraction,
 } from "./restty-visible-links";
 import { resttyHostServices } from "./restty-host-services";
+import { toGhosttyTheme } from "./restty-theme";
 import type {
   TerminalSurface,
   TerminalSurfaceConfiguration,
@@ -226,22 +227,37 @@ export async function mountResttyTerminalSurface(
     refit();
   };
 
-  const dispose = () => {
+  const dispose = (reason?: "rendering-failure") => {
     if (disposed) return;
     disposed = true;
-    delivery.dispose();
-    container.removeEventListener("contextmenu", onContextMenu);
-    removeRuntimeListener?.();
+    const failures: unknown[] = [];
+    for (const release of [
+      () => delivery.dispose(),
+      () => container.removeEventListener("contextmenu", onContextMenu),
+      () => removeRuntimeListener?.(),
+      () => removeVisibleLinkListeners?.(),
+      () => adapter.close(reason),
+      () => restty?.destroy(),
+    ]) {
+      try {
+        release();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
     removeRuntimeListener = undefined;
-    removeVisibleLinkListeners?.();
     removeVisibleLinkListeners = undefined;
-    adapter.close();
-    restty?.destroy();
+    if (failures.length === 1) throw failures[0];
+    if (failures.length > 1)
+      throw new AggregateError(failures, "Terminal Surface cleanup failed");
   };
   const fail = (message: string) => {
     if (disposed) return;
-    options.onFatalError?.(message);
-    dispose();
+    try {
+      options.onFatalError?.(message);
+    } finally {
+      dispose("rendering-failure");
+    }
   };
 
   const transport: PtyTransport = {
@@ -351,6 +367,10 @@ export async function mountResttyTerminalSurface(
       { once: true },
     );
 
+    // Backend readiness precedes PTY creation. The Adapter may synchronously
+    // replay owned startup output before start resolves; its parser replies
+    // must already be allowed through the established transport.
+    ready = true;
     await adapter.start({
       onOutput(data) {
         if (!disposed) ptyCallbacks?.onData?.(data);
@@ -360,7 +380,6 @@ export async function mountResttyTerminalSurface(
       },
     });
     if (disposed) return createDisposedSurface();
-    ready = true;
     if (settledSize) adapter.resize(settledSize);
 
     return {
@@ -400,9 +419,7 @@ export async function mountResttyTerminalSurface(
       dispose,
     };
   } catch (cause) {
-    const detail = cause instanceof Error ? cause.message : String(cause);
-    fail(`Failed to initialize the Restty Terminal Surface: ${detail}`);
-    throw new Error("Failed to mount the Restty Terminal Surface", { cause });
+    throwInitializationFailure(cause, fail);
   }
 }
 
@@ -453,45 +470,21 @@ function resolveTheme(theme = DEFAULT_TERMINAL_THEME): TerminalTheme {
   return theme;
 }
 
-function color(hex: string) {
-  const value = Number.parseInt(hex.slice(1), 16);
-  return { r: value >> 16, g: (value >> 8) & 0xff, b: value & 0xff };
-}
-
-function toGhosttyTheme(theme: TerminalTheme): GhosttyTheme {
-  const colors = theme.colors;
-  const palette = new Array<ReturnType<typeof color> | undefined>(256);
-  const ansi = [
-    colors.black,
-    colors.red,
-    colors.green,
-    colors.yellow,
-    colors.blue,
-    colors.magenta,
-    colors.cyan,
-    colors.white,
-    colors.brightBlack,
-    colors.brightRed,
-    colors.brightGreen,
-    colors.brightYellow,
-    colors.brightBlue,
-    colors.brightMagenta,
-    colors.brightCyan,
-    colors.brightWhite,
-  ];
-  ansi.forEach((value, index) => (palette[index] = color(value)));
-  return {
-    name: theme.name,
-    colors: {
-      background: color(colors.background),
-      foreground: color(colors.foreground),
-      cursor: color(colors.cursor),
-      selectionBackground: color(colors.selectionBackground),
-      selectionForeground: color(colors.selectionForeground),
-      palette,
-    },
-    raw: {},
-  };
+function throwInitializationFailure(
+  cause: unknown,
+  fail: (message: string) => void,
+): never {
+  const detail = cause instanceof Error ? cause.message : String(cause);
+  try {
+    fail(`Failed to initialize the Restty Terminal Surface: ${detail}`);
+  } catch (cleanupError) {
+    throw new AggregateError(
+      [cause, cleanupError],
+      "Failed to mount and clean the Restty Terminal Surface",
+      { cause },
+    );
+  }
+  throw new Error("Failed to mount the Restty Terminal Surface", { cause });
 }
 
 function fontSourceFamily(font: {

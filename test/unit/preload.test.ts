@@ -60,6 +60,14 @@ describe("isolated preload terminal bridge", () => {
     bridge.input("s1", "hello");
     bridge.resize("s1", { cols: 80, rows: 24 });
     bridge.close("s2");
+    bridge.close("s2", "rendering-failure");
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.close, {
+      sessionId: "s2",
+      reason: "rendering-failure",
+    });
+    expect(() =>
+      bridge.close("s2", "untrusted" as "rendering-failure"),
+    ).toThrow(TypeError);
     expect(() => bridge.input("s1", "")).toThrow(TypeError);
     expect(() => bridge.input("session-1", "hello")).toThrow(TypeError);
     expect(() => bridge.resize("s1", { cols: 0, rows: 24 })).toThrow(TypeError);

@@ -47,6 +47,17 @@ describe("Terminal Session native failure dialog", () => {
     expect(JSON.stringify(dialog)).not.toContain("Terminal Payload");
   });
 
+  it("explains rendering failure and recovery without accepting renderer text", () => {
+    const dialog = terminalSessionFailureDialog({
+      reason: "rendering",
+      launchKind: "default-shell",
+    });
+    expect(dialog.message).toContain("session has been closed");
+    expect(dialog.detail).toContain("Restart OMXTerm");
+    expect(dialog.detail).toContain("Other sessions are unaffected");
+    expect(dialog.buttons).toEqual(["OK"]);
+  });
+
   it("does not interpolate non-normalized values", () => {
     expect(
       terminalSessionFailureDialog({

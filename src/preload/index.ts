@@ -108,10 +108,16 @@ const terminal: TerminalBridge = {
       rows: size.rows,
     });
   },
-  close(sessionId: TerminalSessionId) {
-    if (!isTerminalSessionId(sessionId))
+  close(sessionId: TerminalSessionId, reason?: "rendering-failure") {
+    if (
+      !isTerminalSessionId(sessionId) ||
+      (reason !== undefined && reason !== "rendering-failure")
+    )
       throw new TypeError("Invalid terminal close payload");
-    ipcRenderer.send(terminalIpc.close, { sessionId });
+    ipcRenderer.send(terminalIpc.close, {
+      sessionId,
+      ...(reason ? { reason } : {}),
+    });
   },
   title(sessionId: TerminalSessionId, request: string) {
     if (!isTerminalSessionId(sessionId) || !isTerminalTitleRequest(request))

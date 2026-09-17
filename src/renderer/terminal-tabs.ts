@@ -194,7 +194,7 @@ export function createTerminalTabs(
         }),
       write: (data) => adapter.write(data),
       resize: (size) => adapter.resize(size),
-      close: () => adapter.close(),
+      close: (reason) => adapter.close(reason),
     };
     // Title and BEL events carry the emitting tab's session id; the Surface
     // itself stays tab-unaware. Events can only follow session output, so
@@ -206,7 +206,9 @@ export function createTerminalTabs(
         ? {
             onFatalError: (message: string) => {
               activeSurfaceOptions.onFatalError?.(message);
-              closeTab(tab);
+              // The Surface owns failure disposal and reports its close reason
+              // before main decides whether the last window may disappear.
+              removeTab(tab);
             },
           }
         : {}),

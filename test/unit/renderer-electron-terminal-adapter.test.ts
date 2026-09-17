@@ -65,6 +65,29 @@ function createBridgeHarness() {
 }
 
 describe("renderer Electron terminal adapter", () => {
+  it("routes startup parser replies and a failure close once after establishing ownership", async () => {
+    const harness = createBridgeHarness();
+    const adapter = createElectronTerminalAdapter(harness.bridge);
+    const started = adapter.start({
+      onOutput: () => {
+        adapter.write("\u001b[?1;2c");
+        adapter.close("rendering-failure");
+      },
+      onExit: vi.fn(),
+    });
+    harness.output("s1", "\u001b[c");
+    harness.startSession("s1");
+    await started;
+    expect(harness.calls.input).toHaveBeenCalledExactlyOnceWith(
+      "s1",
+      "\u001b[?1;2c",
+    );
+    expect(harness.calls.close).toHaveBeenCalledExactlyOnceWith(
+      "s1",
+      "rendering-failure",
+    );
+  });
+
   it("binds to the started session id and forwards only its own output and exit", async () => {
     const harness = createBridgeHarness();
     const adapter = createElectronTerminalAdapter(harness.bridge);
@@ -155,7 +178,7 @@ describe("renderer Electron terminal adapter", () => {
     adapter.close();
 
     expect(harness.calls.close).toHaveBeenCalledOnce();
-    expect(harness.calls.close).toHaveBeenCalledWith("s1");
+    expect(harness.calls.close).toHaveBeenCalledWith("s1", undefined);
     expect(harness.removeOutputListener).toHaveBeenCalledOnce();
     expect(harness.removeExitListener).toHaveBeenCalledOnce();
   });
@@ -175,7 +198,7 @@ describe("renderer Electron terminal adapter", () => {
     adapter.resize({ cols: 100, rows: 30 });
 
     expect(harness.calls.close).toHaveBeenCalledOnce();
-    expect(harness.calls.close).toHaveBeenCalledWith("s1");
+    expect(harness.calls.close).toHaveBeenCalledWith("s1", undefined);
     expect(harness.calls.input).not.toHaveBeenCalled();
     expect(harness.calls.resize).not.toHaveBeenCalled();
   });

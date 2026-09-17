@@ -16,7 +16,10 @@ embedded, reproducibly licensed JetBrainsMono Nerd Font Mono TTF and a WebGL2
 backend. Font, Ghostty core and backend readiness precede PTY creation. Partial
 initialization is disposed without starting a shell. Irrecoverable WebGL context
 loss produces a visible failure and disposes that Surface and its Adapter; it
-does not recreate a core around a surviving PTY or affect another tab.
+does not recreate a core around a surviving PTY or affect another tab. The
+existing sender/session-validated close route carries only a fixed rendering
+failure reason, never renderer-supplied dialog text. Main retains its actionable
+native failure dialog through last-session cleanup until acknowledgement.
 
 Restty 0.3.0 is pinned to
 `3db45b0e10dbe53c52a77131d366f519546e4f04`, including Ghostty

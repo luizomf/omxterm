@@ -75,6 +75,7 @@ describe("Restty under production Electron policy", () => {
         clipboardReads: 0,
         clipboardWrites: 0,
         terminalReplies: process.platform === "darwin" ? 11 : 10,
+        startupReplies: ["\u001b[?1;2c", "\u001b[>0;0;0c"],
         // Physical Option-to-ASCII mapping is macOS-only. Elsewhere the
         // synthetic non-ASCII Alt keys retain their literal browser values;
         // a dead key itself emits no text before composition completes.

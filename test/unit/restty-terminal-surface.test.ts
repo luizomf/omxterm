@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
+import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
 
 const harness = vi.hoisted(() => {
   const instances: FakeRestty[] = [];
@@ -137,10 +138,63 @@ describe("Restty Terminal Surface", () => {
     harness.setInitError(undefined);
   });
 
+  it("delivers parser replies while the Adapter replays owned startup output", async () => {
+    const { adapter } = createAdapter();
+    adapter.start.mockImplementation(async (handlers) => {
+      const restty = harness.instances[0]!;
+      const transport = (
+        restty.options.services as {
+          ptyTransport: { sendInput(data: string): boolean };
+        }
+      ).ptyTransport;
+      restty.sendInput.mockImplementation((data: string) => {
+        if (data === "\u001b[c") transport.sendInput("\u001b[?1;2c");
+      });
+      handlers.onOutput("\u001b[c");
+    });
+    const surface = await mountResttyTerminalSurface(
+      document.createElement("main"),
+      adapter,
+    );
+    expect(adapter.write).toHaveBeenCalledExactlyOnceWith("\u001b[?1;2c");
+    surface.dispose();
+  });
+
+  it("destroys renderer resources even when Adapter close fails", async () => {
+    const { adapter } = createAdapter();
+    const surface = await mountResttyTerminalSurface(
+      document.createElement("main"),
+      adapter,
+    );
+    adapter.close.mockImplementation(() => {
+      throw new Error("close failed");
+    });
+    expect(() => surface.dispose()).toThrow("close failed");
+    expect(harness.instances[0]!.destroy).toHaveBeenCalledOnce();
+    expect(() => surface.dispose()).not.toThrow();
+  });
+
+  it("preserves initialization and cleanup failure context while releasing resources", async () => {
+    const { adapter } = createAdapter();
+    const initial = new Error("font initialization failed");
+    const cleanup = new Error("close failed");
+    harness.setInitError(initial);
+    adapter.close.mockImplementation(() => {
+      throw cleanup;
+    });
+    const error = await mountResttyTerminalSurface(
+      document.createElement("main"),
+      adapter,
+    ).catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(AggregateError);
+    expect((error as AggregateError).errors).toContain(initial);
+    expect((error as AggregateError).errors).toContain(cleanup);
+    expect(harness.instances[0]!.destroy).toHaveBeenCalledOnce();
+    expect(adapter.start).not.toHaveBeenCalled();
+  });
+
   it("requires a font, core, and WebGL backend before starting the PTY", async () => {
     const { adapter, handlers } = createAdapter();
-    const { mountResttyTerminalSurface } =
-      await import("../../src/terminal-surface/restty-terminal-surface");
     const surface = await mountResttyTerminalSurface(
       document.createElement("main"),
       adapter,
@@ -179,8 +233,6 @@ describe("Restty Terminal Surface", () => {
 
   it("applies Option Key Mode at creation and reload without replacing the PTY", async () => {
     const { adapter } = createAdapter();
-    const { mountResttyTerminalSurface } =
-      await import("../../src/terminal-surface/restty-terminal-surface");
     const surface = await mountResttyTerminalSurface(
       document.createElement("main"),
       adapter,
@@ -344,7 +396,7 @@ describe("Restty Terminal Surface", () => {
     expect(onFatalError).toHaveBeenCalledExactlyOnceWith(
       "The Restty rendering backend was lost",
     );
-    expect(adapter.close).toHaveBeenCalledOnce();
+    expect(adapter.close).toHaveBeenCalledExactlyOnceWith("rendering-failure");
     expect(restty.destroy).toHaveBeenCalledOnce();
   });
 });

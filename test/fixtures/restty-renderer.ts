@@ -12,6 +12,7 @@ interface ResttyFixtureResult {
   readonly clipboardReads?: number;
   readonly clipboardWrites?: number;
   readonly terminalReplies?: number;
+  readonly startupReplies?: readonly string[];
   readonly optionInput?: readonly string[];
   readonly resize?: { readonly cols: number; readonly rows: number };
 }
@@ -64,6 +65,7 @@ void mountResttyTerminalSurface(
     async start(nextHandlers) {
       ptyStarts += 1;
       handlers = nextHandlers;
+      nextHandlers.onOutput("\u001b[c\u001b[>c");
     },
     write(data) {
       terminalInput.push(data);
@@ -80,6 +82,7 @@ void mountResttyTerminalSurface(
   },
 )
   .then(async (surface) => {
+    const startupReplies = terminalInput.splice(0);
     const input = container.querySelector("textarea");
     if (!input) throw new Error("Restty IME input is missing");
     const dispatchKey = (
@@ -183,6 +186,7 @@ void mountResttyTerminalSurface(
       clipboardReads,
       clipboardWrites,
       terminalReplies: terminalInput.length,
+      startupReplies,
       optionInput: terminalInput.slice(0, 11),
       ...(resize ? { resize } : {}),
     };
