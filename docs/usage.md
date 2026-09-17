@@ -110,7 +110,9 @@ shortcut.
 | Actual Size            | `Cmd+0`           | `Ctrl+0`           |
 | Toggle Full Screen     | `Ctrl+Cmd+F`      | `Ctrl+Shift+F`     |
 
-Always on Top has a menu action but no built-in shortcut.
+Always on Top has a menu action but no built-in shortcut. `View -> Toggle
+Developer Tools` is likewise menu-only; it opens or closes Developer Tools for
+the selected Terminal Window.
 
 **Configurable:** application shortcuts can be remapped through `keybinds`.
 Unmapped actions keep these defaults. A remapped application action consumes
@@ -312,7 +314,17 @@ resets the attention state.
 
 See the normative [window and session behavior](spec.md#window-and-session-behavior).
 
-## Local Operational Events
+## Local diagnostics
+
+**Current:** `View -> Toggle Developer Tools` opens or closes Electron's local
+Developer Tools for only the selected Terminal Window. It works in development
+and packaged applications, has no built-in shortcut, does not open
+automatically, and does not enable a remote-debugging listener.
+
+Developer Tools are intentionally more revealing than Operational Events.
+Inspectors, console output, memory snapshots, traces, profiles, and screenshots
+can expose private Terminal Payload and runtime state. Review and redact every
+diagnostic before sharing it.
 
 **Current:** OMXTerm writes bounded, local JSONL Operational Events for behavior
 it owns, such as application and window lifecycle, configuration validation,

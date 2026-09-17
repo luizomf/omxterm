@@ -156,6 +156,12 @@ selector or fallback Surface; rendering initialization failure starts no shell
   padding.
 - `Window -> Always on Top` toggles only the selected window at the ordinary
   native floating level. New windows use the configured default.
+- `View -> Toggle Developer Tools` is a menu-only diagnostic action that opens
+  or closes Electron's local Developer Tools for only the selected Terminal
+  Window in development and packaged applications. It does not open
+  automatically or enable remote debugging. Developer Tools can expose private
+  Terminal Payload and runtime state; users must review and redact diagnostic
+  output, screenshots, traces, and profiles before sharing them.
 - Dropping one or more native file-manager files or folders anywhere in a
   Terminal Window inserts their absolute paths into only the selected Terminal
   Tab. The paths retain platform order, are separated by one space, and are

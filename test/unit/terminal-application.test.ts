@@ -72,6 +72,7 @@ function createApplicationHarness(
   const sendFontZoom = vi.fn();
   const sendClipboardAction = vi.fn();
   const sendSnippetsToggle = vi.fn();
+  const toggleDeveloperTools = vi.fn();
   const sendTabCommand = vi.fn();
   const quit = vi.fn();
   const application = startTerminalApplication({
@@ -92,6 +93,7 @@ function createApplicationHarness(
     sendFontZoom,
     sendClipboardAction,
     sendSnippetsToggle,
+    toggleDeveloperTools,
     sendTabCommand,
     quit,
     ...overrides,
@@ -107,6 +109,7 @@ function createApplicationHarness(
     sendFontZoom,
     sendClipboardAction,
     sendSnippetsToggle,
+    toggleDeveloperTools,
     sendTabCommand,
     quit,
     select(window: NativeTerminalWindow | undefined) {
@@ -176,6 +179,22 @@ describe("Terminal application lifecycle", () => {
     harness.select(harness.windows[1]!.window);
     harness.application.toggleSelectedSnippets();
     expect(harness.sendSnippetsToggle).toHaveBeenCalledExactlyOnceWith(
+      harness.windows[1]!.window,
+    );
+  });
+
+  it("toggles Developer Tools only for the selected Terminal Window", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    await harness.application.newWindow();
+
+    harness.select(undefined);
+    harness.application.toggleSelectedDevTools();
+    expect(harness.toggleDeveloperTools).not.toHaveBeenCalled();
+
+    harness.select(harness.windows[1]!.window);
+    harness.application.toggleSelectedDevTools();
+    expect(harness.toggleDeveloperTools).toHaveBeenCalledExactlyOnceWith(
       harness.windows[1]!.window,
     );
   });
@@ -273,6 +292,7 @@ describe("Terminal application lifecycle", () => {
       sendFontZoom: vi.fn(),
       sendClipboardAction: vi.fn(),
       sendSnippetsToggle: vi.fn(),
+      toggleDeveloperTools: vi.fn(),
       sendTabCommand: vi.fn(),
       quit,
     });

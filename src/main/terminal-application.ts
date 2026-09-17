@@ -87,6 +87,7 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
     action: TerminalClipboardAction,
   ) => void;
   readonly sendSnippetsToggle: (window: Window) => void;
+  readonly toggleDeveloperTools: (window: Window) => void;
   readonly sendTabCommand: (
     window: Window,
     command: TerminalTabCommand,
@@ -111,6 +112,7 @@ export interface TerminalApplication<
   selectTabInSelectedWindow(position: number): void;
   toggleSelectedFullScreen(): void;
   toggleSelectedAlwaysOnTop(): void;
+  toggleSelectedDevTools(): void;
   zoomSelectedWindow(command: TerminalFontZoom): void;
   clipboardSelectedWindow(action: TerminalClipboardAction): void;
   toggleSelectedSnippets(): void;
@@ -358,6 +360,10 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     toggleSelectedAlwaysOnTop() {
       const window = selectedWindow();
       if (window) window.setAlwaysOnTop(!window.isAlwaysOnTop(), "floating");
+    },
+    toggleSelectedDevTools() {
+      const window = selectedWindow();
+      if (window) options.toggleDeveloperTools(window);
     },
     zoomSelectedWindow(command) {
       const window = selectedWindow();

@@ -528,6 +528,13 @@ instead appears in the Snippets Sidebar with the resolved file path and field.
 Those paths can reveal account or directory names, so redact them before
 publishing a screenshot or copied diagnostic.
 
+`View -> Toggle Developer Tools` opens Electron's local Developer Tools for the
+selected Terminal Window. Unlike bounded Operational Events, Developer Tools
+can expose private Terminal Payload and runtime state through inspectors,
+console output, memory snapshots, traces, profiles, and screenshots. Review and
+redact every diagnostic before sharing it. The action is menu-only, does not
+open automatically, and does not enable remote debugging.
+
 Operational Events are separate bounded JSONL logs under
 `$XDG_STATE_HOME/omxterm/logs`, falling back to
 `~/.local/state/omxterm/logs`. On Windows, the fallback is

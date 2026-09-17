@@ -407,6 +407,7 @@ app
             window.webContents.send(terminalIpc.clipboardAction, action),
           sendSnippetsToggle: (window) =>
             window.webContents.send(terminalIpc.snippetsToggle),
+          toggleDeveloperTools: (window) => window.webContents.toggleDevTools(),
           sendTabCommand: (window, command) =>
             window.webContents.send(terminalIpc.tabCommand, command),
           quit: () => app.quit(),
@@ -440,6 +441,7 @@ app
             terminalApplication.toggleSelectedFullScreen,
           toggleSelectedAlwaysOnTop:
             terminalApplication.toggleSelectedAlwaysOnTop,
+          toggleSelectedDevTools: terminalApplication.toggleSelectedDevTools,
           zoomInSelectedWindow: () =>
             terminalApplication!.zoomSelectedWindow("in"),
           zoomOutSelectedWindow: () =>

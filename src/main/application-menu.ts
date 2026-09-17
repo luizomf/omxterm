@@ -15,6 +15,7 @@ interface TerminalApplicationMenuActions {
   readonly requestQuit: () => void;
   readonly toggleSelectedFullScreen: () => void;
   readonly toggleSelectedAlwaysOnTop: () => void;
+  readonly toggleSelectedDevTools: () => void;
   readonly zoomInSelectedWindow: () => void;
   readonly zoomOutSelectedWindow: () => void;
   readonly resetSelectedWindowZoom: () => void;
@@ -118,6 +119,10 @@ export function terminalApplicationMenuTemplate(
           label: "Reload User Configuration",
           accelerator: keybinds.reloadConfig,
           click: actions.reloadUserConfiguration,
+        },
+        {
+          label: "Toggle Developer Tools",
+          click: actions.toggleSelectedDevTools,
         },
         { type: "separator" },
         {

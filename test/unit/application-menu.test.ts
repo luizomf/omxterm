@@ -21,6 +21,7 @@ function menuActions() {
     requestQuit: vi.fn(),
     toggleSelectedFullScreen: vi.fn(),
     toggleSelectedAlwaysOnTop: vi.fn(),
+    toggleSelectedDevTools: vi.fn(),
     zoomInSelectedWindow: vi.fn(),
     zoomOutSelectedWindow: vi.fn(),
     resetSelectedWindowZoom: vi.fn(),
@@ -139,6 +140,24 @@ describe("native application menu", () => {
         }),
       ]),
     );
+  });
+
+  it("offers a menu-only Developer Tools toggle for the selected Terminal Window", () => {
+    const actions = menuActions();
+    const item = flattenMenuItems(
+      terminalApplicationMenuTemplate(
+        "OMXTerm",
+        actions,
+        DEFAULT_TERMINAL_KEYBINDS,
+      ),
+    ).find((candidate) => candidate.label === "Toggle Developer Tools");
+
+    expect(item).toEqual({
+      label: "Toggle Developer Tools",
+      click: actions.toggleSelectedDevTools,
+    });
+    (item?.click as () => void)();
+    expect(actions.toggleSelectedDevTools).toHaveBeenCalledOnce();
   });
 
   it("adds an always-available remappable User Configuration reload action", () => {
