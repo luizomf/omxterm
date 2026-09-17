@@ -43,7 +43,12 @@ redistributable coverage, while the prior JetBrains Nerd face and native
 emoji/CJK/symbol candidates remain later fallbacks. Restty's existing
 style-aware ordered picker owns face selection; this adds no second shaper,
 renderer filesystem access, network source, or ANSI bold-to-bright color
-mapping.
+mapping. When a family is explicitly configured, OMXTerm omits the bundled
+bold faces: Restty otherwise searches all bold-labelled faces before the
+configured regular face, silently changing families for ordinary bold text.
+The configured face instead retains its existing synthetic-bold rendering and
+regular missing-glyph fallbacks. This preserves configured-family precedence
+without expanding native font resolution or its IPC contract.
 
 The appearance and font slices map OMXTerm Terminal Themes into Restty, use the
 configured size and creation-time line height, apply per-side padding, and

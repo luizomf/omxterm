@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { terminalFontInputs } from "../../src/terminal-surface/terminal-font-stack";
 
 describe("Terminal Font Stack", () => {
+  it("provides real bold faces for the default bundled stack", () => {
+    const fonts = terminalFontInputs({ fallbacks: [] });
+    expect(
+      fonts.filter((font) => font.weight === 700).map((font) => font.name),
+    ).toEqual(["FiraCode Nerd Font Mono Bold", "DejaVu Sans Mono Bold"]);
+  });
   it("keeps configured-family precedence before bundled and OS coverage faces", () => {
     const configuredBytes = new Uint8Array([10, 11]);
     const osFallbackBytes = new Uint8Array([20, 21]);
@@ -23,9 +29,7 @@ describe("Terminal Font Stack", () => {
     expect(fonts.map((font) => font.name)).toEqual([
       "Embedded Exact Family",
       "FiraCode Nerd Font Mono",
-      "FiraCode Nerd Font Mono Bold",
       "DejaVu Sans Mono",
-      "DejaVu Sans Mono Bold",
       "JetBrainsMono Nerd Font Mono",
       "Embedded Emoji",
     ]);
@@ -34,8 +38,7 @@ describe("Terminal Font Stack", () => {
       weight: 400,
       style: "normal",
     });
-    expect(fonts[2]).toMatchObject({ weight: 700, style: "normal" });
-    expect(fonts[4]).toMatchObject({ weight: 700, style: "normal" });
+    expect(fonts.some((font) => font.weight === 700)).toBe(false);
     expect(fonts.at(-1)?.data).toBe(osFallbackBytes);
   });
 });

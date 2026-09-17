@@ -53,7 +53,9 @@ font when present; bundled regular and bold FiraCode Nerd Font Mono defaults;
 bundled regular and bold DejaVu Sans Mono coverage fallback; the retained
 bundled JetBrainsMono Nerd Font Mono coverage face; and representative operating
 system emoji, CJK, and symbol fallbacks last. A configured family that does not
-exist is an error rather than a silent fallback.
+exist is an error rather than a silent fallback. An explicit configured family
+omits bundled bold faces so its regular face retains priority for both regular
+and synthetically bold text.
 _Avoid_: terminal font, webfont, system default font
 
 **Window Font Zoom**:

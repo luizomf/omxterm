@@ -4,7 +4,9 @@ OMXTerm passes these tracked TTF bytes directly to Restty. The ordered bundled
 faces are FiraCode Nerd Font Mono regular/bold, DejaVu Sans Mono regular/bold,
 and the retained JetBrainsMono Nerd Font Mono regular coverage face. An exact
 configured system face precedes them; representative operating-system emoji,
-CJK, and symbol faces follow them. OMXTerm never downloads fonts at runtime.
+CJK, and symbol faces follow them. With a configured system family, bundled bold
+faces are omitted so the configured regular face retains priority for both
+regular and synthetically bold text. OMXTerm never downloads fonts at runtime.
 
 ## FiraCode Nerd Font Mono
 

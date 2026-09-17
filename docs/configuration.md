@@ -186,7 +186,12 @@ drag inset. On Linux and Windows, it begins directly below native Window Chrome.
 an existing Surface keeps both until OMXTerm restarts. Restty obtains the exact
 installed regular face through the main process, then uses bundled FiraCode
 regular/bold, DejaVu Sans Mono regular/bold, retained JetBrainsMono Nerd Font
-Mono, and available local operating-system fallback faces. A missing, unreadable,
+Mono, and available local operating-system fallback faces. With an explicit
+`font.family`, bundled bold faces are omitted so bold text keeps your chosen
+family instead of silently switching to FiraCode. Restty synthesizes bold from
+the configured regular face; OMXTerm does not yet load that family's native
+bold face. Missing glyphs still fall back through regular faces.
+A missing, unreadable,
 oversized, unsupported or corrupt configured face is an actionable error, never
 a similarly named substitute. The native Always on Top menu changes one current
 window; `window.alwaysOnTop` sets the default for new windows.

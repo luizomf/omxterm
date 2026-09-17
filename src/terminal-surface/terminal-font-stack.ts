@@ -21,7 +21,7 @@ export interface TerminalFontInput {
 export function terminalFontInputs(
   fontData: TerminalFontData,
 ): TerminalFontInput[] {
-  return [
+  const fonts: TerminalFontInput[] = [
     ...(fontData.configured
       ? [
           {
@@ -62,6 +62,12 @@ export function terminalFontInputs(
       name: fontSourceFamily(font),
     })),
   ];
+  // Restty tries all bold-labelled faces before regular faces. Until configured
+  // bold faces have a validated native route, preserve the configured family
+  // for both styles instead of silently replacing its bold text with Fira.
+  return fontData.configured
+    ? fonts.filter((font) => font.weight !== 700)
+    : fonts;
 }
 
 function fontSourceFamily(font: {

@@ -212,7 +212,11 @@ geometry. It resolves an exact configured installed family through the Electron 
 process and gives Restty only bounded bytes for that validated active family,
 followed by the licensed bundled FiraCode regular/bold, DejaVu Sans Mono
 regular/bold and retained JetBrainsMono Nerd Font Mono faces, then
-representative locally installed operating-system fallback faces. Font reads use
+representative locally installed operating-system fallback faces. When a family
+is explicitly configured, the bundled bold faces are omitted: the configured
+regular face keeps precedence for regular and bold text, with Restty's existing
+synthetic bold rendering. Missing glyphs still use the regular fallback faces.
+Native configured-family bold-face resolution is not claimed. Font reads use
 native platform facilities without shell interpolation; no font path, broad filesystem API,
 remote fallback or persistent byte cache crosses the bridge. A Restty Surface
 applies its configured family and line height when it is created; an existing

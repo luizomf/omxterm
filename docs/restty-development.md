@@ -192,7 +192,11 @@ under the production `connect-src 'none'` CSP without local fonts, user dotfiles
 or remote fetches. Packaged license texts are listed in
 `THIRD_PARTY_NOTICES.md`. The real regular/bold Electron fixture exercises
 Restty's style-aware face picker plus representative Fira-only and DejaVu-only
-glyphs; pixel-identical native rasterization remains unclaimed.
+glyphs. A differential configured-family case compares regular and synthetic-bold
+pixels against the regular-only reference stack through the same Surface and
+Restty renderer. Bundled bold faces are omitted for configured families so a
+style match cannot silently override the chosen family. Pixel-identical native
+rasterization remains unclaimed.
 
 `test/integration/restty-host-integration.test.ts` runs the real main IPC
 router, preload bridge, Electron Adapter, Restty Surface and owned native PTYs
