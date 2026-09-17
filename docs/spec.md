@@ -227,10 +227,9 @@ per-session host callbacks used by xterm. It does not scan Terminal Payload or
 add a second parser: title sanitization, fallback, ownership, silent bell marker,
 focus/interaction reset and platform attention remain existing host policy.
 OSC BEL terminators and cancelled or malformed controls produce no extra title
-or bell event, and title-report queries receive no reply. Option Key Mode and
-image routes remain unavailable in this slice; xterm retains those parts of the
-complete contract below. Restty scrollback follows the shared contract below
-through the pinned Ghostty core. Linux and Windows Restty
+or bell event, and title-report queries receive no reply. Option Key Mode remains
+unavailable in this slice. Restty image rendering and scrollback follow the
+shared contracts below through the pinned Ghostty core. Linux and Windows Restty
 behavior is unverified; this slice's native runtime evidence is macOS ARM64.
 Native rasterization can differ between Restty and xterm; pixel-identical glyph
 output is not claimed.
@@ -264,33 +263,41 @@ subject to the pinned addon's documented wrapping and bottom-truncation
 limitations. Terminal reset, tab disposal, and leaving the alternate buffer
 release the applicable image resources.
 
-Every Terminal Surface enables only the Kitty image handler with
+The xterm Surface enables only the Kitty image handler with
 `pixelLimit: 4_194_304`, `kittySizeLimit: 33_554_432`, and
-`storageLimit: 64`. The transport target enforces an aggregate 44,739,243
+`storageLimit: 64`. Its transport target enforces an aggregate 44,739,243
 Base64-character threshold, so Pi's padded Base64 can contain at most
-44,739,240 characters / 33,554,430 decoded bytes. Chafa source dimensions must
-be positive and contain at most 4,194,304 pixels; the exact RGBA length is
-therefore at most 16,777,216 decoded bytes, or 22,369,624 padded Base64
-characters. Only one anonymous metadata-first Chafa transmission may be pending
-per Surface. A new prelude replaces it, and completion, terminal reset,
-alternate-buffer exit, or Surface disposal releases it. Invalid Base64, missing
-or invalid dimensions, a decoded-length mismatch, an incomplete or replaced
-transmission, or an exceeded limit renders nothing and does not block later
-terminal output.
+44,739,240 characters / 33,554,430 decoded bytes. Its pixel limit applies to
+the post-decode placement-canvas area, while storage is approximately
+64,000,000 bytes of canvas-only FIFO accounting; an evicted image may show a
+placeholder. The xterm-specific residual memory risks remain those documented
+in ADR 0022.
 
-The pixel limit also applies to the post-decode placement-canvas area, while
-storage is approximately 64,000,000 bytes of canvas-only FIFO accounting; an
-evicted image may show a placeholder. These settings are not a complete
-renderer-memory boundary: decompressed `o=z` output and raw-pixel paths outside
-the accepted Chafa subset, natural-PNG dimensions before browser decode,
-retained payload Blobs, and the aggregate-uncapped pinned-addon map where each
-distinct unfinished image-ID `m=1` transmission can retain an approximately 4
-MiB decoder remain accepted beta dogfood risks. The Chafa adapter temporarily
-retains at most one validated transmission's encoded chunks before replaying
-them to that decoder. Font-rescaling allocations, Chromium codec/canvas
-allocations, and aggregate use across tabs are likewise outside the controls.
-Pi's default 2,000-by-2,000 autoresized pipeline is the compatibility target;
-images produced with autoresize disabled have no finite compatibility promise.
+The Restty Surface instead uses the pinned Ghostty core as its Kitty parser,
+decoder, image store and placement authority; OMXTerm does not add a second
+parser. A direct transmission may contain at most 33,554,432 decoded input
+bytes, and positive source dimensions may contain at most 4,194,304 pixels
+before PNG or raw-RGBA decode can allocate the completed image. Chafa RGBA must
+have exactly four bytes per source pixel, so it contains at most 16,777,216
+bytes. Invalid Base64, malformed or cancelled APC, invalid dimensions, decoded
+length mismatch, decode failure, or an exceeded limit renders nothing, clears
+unfinished state, and does not block later terminal output.
+
+Restty retains at most one unfinished Kitty image per screen, matching the
+native Ghostty pending-image model. A new metadata-bearing transmission replaces
+that unfinished image, including Chafa's anonymous semicolon-less prelude;
+completion, reset, alternate-buffer exit, and Surface disposal release it.
+Each screen stores at most 64,000,000 bytes of completed decoded image data and
+uses Ghostty's native eviction behavior. Deletion by Pi image ID, all-image
+deletion, all-placement deletion and reset release their corresponding native
+resources.
+
+These controls are not a total process-memory limit. Base64 decoding and PNG
+decoding have transient allocations; Restty's JavaScript/WebGL renderer may
+copy visible decoded RGBA into browser and GPU resources outside core storage
+accounting; concurrent tabs multiply those costs. Pi's default 2,000-by-2,000
+autoresized PNG pipeline is the compatibility target; images produced with
+autoresize disabled have no finite compatibility promise.
 
 SIXEL, iTerm2 Inline Image Protocol, raw RGB (`f=24`), compressed raw pixels
 (`o=z`), placement IDs, animation, remote or filesystem image sources,

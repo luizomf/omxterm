@@ -73,10 +73,12 @@ and BEL events now leave the pinned WASM core through a bounded event queue and
 Restty runtime event API, then use the existing per-session Surface callbacks
 and host controller. The core preserves raw over-limit evidence before
 Ghostty's internal title bound, suppresses cancelled title requests, and never
-enables title reports; OSC BEL terminators do not become bell events. Images
-stay unavailable until their owning migration ticket. These gates apply only
-to Restty. xterm's existing behavior and security boundaries remain unchanged. Renderer isolation,
-the production CSP, application network boundary and platform sandbox policy
+enables title reports; OSC BEL terminators do not become bell events. The later
+image slice keeps Kitty parsing, decode, placement and bounded storage in the
+pinned Ghostty core under ADR 0022; it adds no application parser or privilege
+seam. These gates apply only to Restty. xterm's existing behavior and security
+boundaries remain unchanged. Renderer isolation, the production CSP,
+application network boundary and platform sandbox policy
 also remain unchanged.
 
 The temporary checksum-guarded dependency correction also removes Restty's

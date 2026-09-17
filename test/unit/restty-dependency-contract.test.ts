@@ -132,10 +132,11 @@ describe("Restty dependency contract", () => {
       path.join(packageRoot, "dist", "chunk-6dxqza9q.js"),
     );
     expect(digest(core)).toBe(
-      "fb4ff0ec8463a634a54078f3970a3cef86c1be3a880ad1da70f4d9fd3e2b8411",
+      "c41282dfd80a93380712710fe5821f4c50dee5cd3837b552827b55f91e37c89c",
     );
     expect(core.toString("utf8")).toContain("restty_set_scrollback_limits");
     expect(core.toString("utf8")).toContain("restty_event_consume");
+    expect(core.toString("utf8")).toContain("restty_debug_kitty_total_limit");
     expect(core.toString("utf8")).toContain("ignoreBOM: true");
     const source = runtime.toString("utf8");
     expect(source).toContain("Math.max(1, Math.round(value))");

@@ -19,6 +19,7 @@ import {
 import { exerciseResttyLinks } from "./restty-link-gestures";
 import { exerciseResttyEvents } from "./restty-host-events";
 import { captureResttyFontPaintEvidence } from "./restty-host-paint";
+import * as resttyImages from "./restty-host-images";
 import { createLargePasteFixture, dispatchDomPaste } from "./restty-host-paste";
 
 const prefix = "__OMXTERM_RESTTY_HOST_RESULT__";
@@ -78,6 +79,10 @@ async function waitFor(
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
   throw new Error(`Timed out waiting for ${label}`);
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", `'"'"'`)}'`;
 }
 
 function createHost(window: BrowserWindow) {
@@ -371,6 +376,18 @@ app
     await waitFor(() => contextMenus === 1, "native context menu route");
 
     await reloader.reload();
+    const initialImageEvidence =
+      await resttyImages.exerciseResttyImagesThroughPty({
+        window,
+        terminal: terminals[0]!,
+        root,
+        outputs,
+        inputs,
+        deliverOutputs,
+        resizes,
+        waitFor,
+      });
+
     window.webContents.send(terminalIpc.tabCommand, { action: "new" });
     await waitFor(
       () => launchKinds.length === 2 && resizes[1]!.length > 0,
@@ -433,6 +450,12 @@ app
     );
     deliverOutputs[1]!("\u001b]0;late-private-title\u0007\u0007");
     await new Promise((resolve) => setTimeout(resolve, 100));
+    const imageEvidence = await resttyImages.completeResttyImageEvidence(
+      window,
+      initialImageEvidence,
+      resizes[0]!.at(-1)!,
+    );
+
     terminals[0]!.close();
     await waitFor(
       () =>
@@ -479,6 +502,7 @@ app
       titleEvents,
       bellSessionIds,
       titleQueryReplyBytes,
+      imageEvidence,
       navigations,
       openedWindows,
       permissionRequests,

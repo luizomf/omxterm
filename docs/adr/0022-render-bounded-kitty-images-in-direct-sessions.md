@@ -83,6 +83,23 @@ memory-only Terminal Payload on the existing PTY-to-Terminal-Surface path and
 never become Operational Events, clipboard transport, files, or application
 network traffic.
 
+The development-only Restty candidate implements the same claimed Pi and Chafa
+paths inside its pinned Ghostty core rather than through the xterm transport
+adapter. OMXTerm carries checksum-guarded source patches in the reproducible
+Restty build: direct input is limited to 33,554,432 decoded bytes, source area is
+limited to 4,194,304 pixels before completed-image allocation, and exact Chafa
+RGBA length is validated. The native one-pending-image-per-screen model replaces
+unfinished state on new metadata and clears it on malformed, cancelled, failed,
+reset, alternate-screen-exit and disposal paths. Completed decoded image data is
+limited to 64,000,000 bytes per screen using Ghostty's native eviction policy.
+Pi deletion and reset use the same core-owned image and placement state.
+
+Restty's browser/WebGL rendering copies visible decoded RGBA outside core storage
+accounting, while decode and Base64 operations may allocate transient data. As
+with xterm, tabs multiply memory, the limits do not claim a total process-memory
+boundary, and unsupported protocol paths remain unclaimed. The Restty path adds
+no application parser, IPC, filesystem, clipboard, logging, or network seam.
+
 Kitty rendering does not change the Terminal Capability Identity. OMXTerm keeps
 `TERM=xterm-256color`, `COLORTERM=truecolor`, `TERM_PROGRAM=OMXTerm`, and its
 installed version without branded terminfo, Shell Integration, Kitty or iTerm2

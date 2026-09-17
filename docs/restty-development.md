@@ -55,9 +55,24 @@ concealed row is refused. Parsed OSC 0/2 titles and BEL use the existing
 per-session title and silent-bell host controller, including raw title bounds,
 sanitization and fallback, tab/window ownership, focus/interaction reset and
 platform attention. The candidate sends no title reports; cancelled/malformed
-controls and OSC BEL terminators have no extra title or bell effect. Option Key
-Mode, inline images and other runtime configuration remain unavailable until
-their migration tickets land. The xterm Surface retains all existing behavior. There is no automatic xterm fallback.
+controls and OSC BEL terminators have no extra title or bell effect.
+
+The candidate renders the same bounded direct Pi PNG and anonymous
+metadata-first Chafa RGBA Kitty paths as xterm, but parsing, decode, placement,
+deletion and reset remain in the pinned Ghostty core. Decoded transport input is
+limited to 33,554,432 bytes, source dimensions to 4,194,304 pixels, and completed
+decoded image storage to 64,000,000 bytes per screen. Ghostty retains at most one
+unfinished image per screen and uses its native completed-image eviction policy.
+The JavaScript/WebGL rendering copies and transient decoder allocations are not
+included in that storage total, and tabs multiply memory. Images remain
+cell-anchored through resize, Window Font Zoom, tab selection and live theme
+reload; `CSI 16 t` reports the current cell size. Pi's default 2,000-by-2,000
+autoresized output is the compatibility target. Unsupported protocol paths and
+Linux/Windows candidate rendering remain unclaimed.
+
+Option Key Mode and other runtime configuration remain unavailable until their
+migration tickets land. The xterm Surface retains all existing behavior. There
+is no automatic xterm fallback.
 
 ## Pinned inputs and restoration
 
@@ -96,7 +111,7 @@ Restty runtime, declarations and embedded-core SHA-256 values and produces
 corrected runtime SHA-256
 `15ca6dc64c45c1f42a88337aec58367a5e69fc0889dfa92c305aa333cba2a651`,
 embedded-core chunk SHA-256
-`fb4ff0ec8463a634a54078f3970a3cef86c1be3a880ad1da70f4d9fd3e2b8411`,
+`c41282dfd80a93380712710fe5821f4c50dee5cd3837b552827b55f91e37c89c`,
 and event declarations SHA-256
 `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34`.
 The narrow correction makes font-load failure reject initialization, disables
@@ -118,7 +133,7 @@ Ghostty commits above with tracked Restty patch
 `assets/restty/omxterm-core.patch` and Ghostty patch
 `assets/restty/ghostty-title-events.patch`. Their SHA-256 values are recorded in
 `assets/restty-sources.json`. The artifact SHA-256 is
-`a8eefd8df5266b4f558da607f129c8735f0964ca098af663e8785716126456bb`.
+`a1b61d3277ea01a05c496520a6a188bb484f35e30c3c8215614f3b873e6a7e89`.
 To reproduce it in an owned disposable checkout, check out the pinned Restty
 commit and submodules, apply the Restty patch at repository root and the
 Ghostty patch inside `reference/ghostty`, use Zig 0.16.0, and run:
@@ -148,8 +163,10 @@ input, large chunked DOM paste through a real owned PTY, explicit host
 copy/paste, Select All, context menu and OSC 52, parsed title/BEL ownership,
 title-query silence, disposal, resize, focus return, two isolated tabs, Default
 Shell and explicit-command startup, owned session
-termination, explicit close, renderer-process loss and remaining candidate-route refusal without
-using a user session or real clipboard.
+termination, explicit close, renderer-process loss, direct Pi and Chafa Terminal
+Payload through the PTY, rendered image content and placement, live image
+geometry, and remaining candidate-route refusal without using a user session or
+real clipboard.
 
 Native runtime evidence through the current parsed-event slice is macOS ARM64.
 Linux and Windows Restty behavior remains unverified; their xterm package

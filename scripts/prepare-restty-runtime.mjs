@@ -21,10 +21,12 @@ const originalCoreDigest =
   "e7b41a730c6994748e02468d8b656fe9258cd15e801df3a6d859e3eb6b37c74a";
 const priorCorrectedCoreDigest =
   "5a64d5de8f573ac2f392f8863ef6bbeb6228a57d267b8b4d73cf0694e221f56c";
-const correctedCoreDigest =
+const priorImageCoreDigest =
   "fb4ff0ec8463a634a54078f3970a3cef86c1be3a880ad1da70f4d9fd3e2b8411";
+const correctedCoreDigest =
+  "c41282dfd80a93380712710fe5821f4c50dee5cd3837b552827b55f91e37c89c";
 const correctedCoreWasmDigest =
-  "a8eefd8df5266b4f558da607f129c8735f0964ca098af663e8785716126456bb";
+  "a1b61d3277ea01a05c496520a6a188bb484f35e30c3c8215614f3b873e6a7e89";
 const originalEventTypesDigest =
   "1c9383be2d0377635b3463a5ac2ec31eac3e2b233fc664de751ad3e9f54ea650";
 const correctedEventTypesDigest =
@@ -814,7 +816,8 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
   if (sourceDigest === correctedCoreDigest) return;
   if (
     sourceDigest !== originalCoreDigest &&
-    sourceDigest !== priorCorrectedCoreDigest
+    sourceDigest !== priorCorrectedCoreDigest &&
+    sourceDigest !== priorImageCoreDigest
   )
     throw new Error(
       "Unrecognized Restty WASM runtime; review the pinned OMXTerm corrections",
@@ -830,7 +833,9 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     source,
     sourceDigest === originalCoreDigest
       ? coreRuntimeCorrections
-      : parsedEventCoreCorrections,
+      : sourceDigest === priorImageCoreDigest
+        ? []
+        : parsedEventCoreCorrections,
   );
   if (digest(source) !== correctedCoreDigest)
     throw new Error(

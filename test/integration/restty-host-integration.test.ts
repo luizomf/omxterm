@@ -6,6 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
+import { createUncompressedPng } from "../fixtures/kitty-image-data";
+import { resttyImageEmitterSource } from "../fixtures/restty-host-images";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
 
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -42,6 +44,30 @@ interface HostResult {
   }>;
   readonly bellSessionIds: readonly string[];
   readonly titleQueryReplyBytes: number;
+  readonly imageEvidence: {
+    readonly cellSizeResponse: string;
+    readonly gridSize: { readonly cols: number; readonly rows: number };
+    readonly pixels: {
+      readonly bitmapSize: readonly [number, number];
+      readonly changedInPiPlacement: number;
+      readonly changedOutsidePlacements: number;
+      readonly colorBucketsInPiPlacement: number;
+      readonly greenInChafaPlacement: number;
+      readonly greenOutsideChafaPlacement: number;
+    };
+    readonly afterZoomPixels: {
+      readonly changedInPiPlacement: number;
+      readonly greenInChafaPlacement: number;
+    };
+    readonly afterResizePixels: {
+      readonly changedInPiPlacement: number;
+      readonly greenInChafaPlacement: number;
+    };
+    readonly afterTabAndThemePixels: {
+      readonly colorBucketsInBitmap: number;
+      readonly greenInBitmap: number;
+    };
+  };
   readonly navigations: number;
   readonly openedWindows: number;
   readonly permissionRequests: number;
@@ -153,6 +179,52 @@ describe.skipIf(process.platform !== "darwin")(
           result.titleEvents[0]?.sessionId,
           result.titleEvents[2]?.sessionId,
         ]);
+        expect(result.imageEvidence.cellSizeResponse).toMatch(
+          /^\u001b\[6;\d+;\d+t$/u,
+        );
+        const [, reportedHeight, reportedWidth] =
+          /^\u001b\[6;(\d+);(\d+)t$/u.exec(
+            result.imageEvidence.cellSizeResponse,
+          )!;
+        expect(
+          Math.abs(
+            Number(reportedWidth) -
+              result.imageEvidence.pixels.bitmapSize[0] /
+                result.imageEvidence.gridSize.cols,
+          ),
+        ).toBeLessThan(2);
+        expect(
+          Math.abs(
+            Number(reportedHeight) -
+              result.imageEvidence.pixels.bitmapSize[1] /
+                result.imageEvidence.gridSize.rows,
+          ),
+        ).toBeLessThan(2);
+        expect(
+          result.imageEvidence.pixels.changedInPiPlacement,
+        ).toBeGreaterThan(1_000);
+        expect(
+          result.imageEvidence.pixels.greenInChafaPlacement,
+        ).toBeGreaterThan(100);
+        expect(
+          result.imageEvidence.pixels.colorBucketsInPiPlacement,
+        ).toBeGreaterThan(1_000);
+        expect(
+          result.imageEvidence.pixels.greenOutsideChafaPlacement,
+        ).toBeLessThan(200);
+        for (const evidence of [
+          result.imageEvidence.afterZoomPixels,
+          result.imageEvidence.afterResizePixels,
+        ]) {
+          expect(evidence.changedInPiPlacement).toBeGreaterThan(1_000);
+          expect(evidence.greenInChafaPlacement).toBeGreaterThan(100);
+        }
+        expect(
+          result.imageEvidence.afterTabAndThemePixels.colorBucketsInBitmap,
+        ).toBeGreaterThan(1_000);
+        expect(
+          result.imageEvidence.afterTabAndThemePixels.greenInBitmap,
+        ).toBeGreaterThan(100);
       } finally {
         await rm(root, { recursive: true, force: true });
       }
@@ -216,6 +288,11 @@ async function buildHostFixture(root: string): Promise<void> {
       path.join(root, "package.json"),
       `${JSON.stringify({ name: "omxterm-restty-host-fixture", main: "main.cjs" })}\n`,
     ),
+    writeFile(
+      path.join(root, "pi-2000.png"),
+      createUncompressedPng(2_000, 2_000, 0x2272_2722),
+    ),
+    writeFile(path.join(root, "image-emitter.cjs"), resttyImageEmitterSource()),
     symlink(
       path.join(projectRoot, "node_modules"),
       path.join(root, "node_modules"),

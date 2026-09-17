@@ -1,8 +1,11 @@
 diff --git a/wasm/src/restty.zig b/wasm/src/restty.zig
-index 28bdd04..ae8f94d 100644
+index 28bdd04..012b681 100644
 --- a/wasm/src/restty.zig
 +++ b/wasm/src/restty.zig
-@@ -169,0 +170,7 @@ const KittyPlacementAbi = extern struct {
+@@ -167,14 +167,26 @@ const KittyPlacementAbi = extern struct {
+     image_revision_high: u32,
+ };
+
 +const ParsedEvent = enum(u8) {
 +    bell = 1,
 +    title = 2,
@@ -10,19 +13,28 @@ index 28bdd04..ae8f94d 100644
 +};
 +const max_event_title_bytes: usize = 1024;
 +
-@@ -172,0 +180 @@ const StreamHandler = struct {
+ const StreamHandler = struct {
+     readonly: ReadonlyHandler,
+     output: *std.ArrayListUnmanaged(u8),
 +    events: *std.ArrayListUnmanaged(u8),
-@@ -174 +182,5 @@ const StreamHandler = struct {
+
 -    fn init(term: *ghostty.Terminal, output: *std.ArrayListUnmanaged(u8)) StreamHandler {
 +    fn init(
 +        term: *ghostty.Terminal,
 +        output: *std.ArrayListUnmanaged(u8),
 +        events: *std.ArrayListUnmanaged(u8),
 +    ) StreamHandler {
-@@ -177 +189 @@ const StreamHandler = struct {
+         var handler = term.vtHandler();
+         handler.effects.write_pty = &writePty;
 -        return .{ .readonly = handler, .output = output };
 +        return .{ .readonly = handler, .output = output, .events = events };
-@@ -190,0 +203,17 @@ const StreamHandler = struct {
+     }
+     fn writePty(handler: *ReadonlyHandler, bytes: []const u8) void {
+         const self: *StreamHandler = @fieldParentPtr("readonly", handler);
+@@ -188,7 +200,29 @@ const StreamHandler = struct {
+         }
+         self.output.appendSlice(alloc, kept) catch {};
+     }
 +    fn appendTag(self: *StreamHandler, tag: ParsedEvent) void {
 +        self.events.append(self.readonly.terminal.gpa(), @intFromEnum(tag)) catch {};
 +    }
@@ -40,20 +52,52 @@ index 28bdd04..ae8f94d 100644
 +        self.events.appendSliceAssumeCapacity(&length);
 +        self.events.appendSliceAssumeCapacity(title);
 +    }
-@@ -191,0 +221,5 @@ const StreamHandler = struct {
+     pub fn vt(self: *StreamHandler, comptime action: StreamAction.Tag, value: StreamAction.Value(action)) void {
 +        // Parsed host events are recorded before Ghostty's bounded display state
 +        // can truncate a raw title request.
 +        if (action == .bell) self.appendTag(.bell);
 +        if (action == .window_title) self.appendTitle(value.title);
 +
-@@ -218,0 +253 @@ const Restty = struct {
+         // Keep Restty's device identity while upstream handles protocol behavior.
+         if (action == .device_attributes) {
+             switch (value) {
+@@ -216,6 +250,7 @@ const Restty = struct {
+     link_buffer: std.ArrayListUnmanaged(u8) = .empty,
+     kitty_placements: std.ArrayListUnmanaged(KittyPlacementAbi) = .empty,
+     output: std.ArrayListUnmanaged(u8) = .empty,
 +    events: std.ArrayListUnmanaged(u8) = .empty,
-@@ -591 +626 @@ pub export fn restty_create(cols: u16, rows: u16, max_scrollback: u32) ?*Restty
+     cursor: CursorInfo = .{
+         .row = 0,
+         .col = 0,
+@@ -568,6 +603,7 @@ pub export fn restty_create(cols: u16, rows: u16, max_scrollback: u32) ?*Restty
+         .cols = cols,
+         .rows = rows,
+         .max_scrollback_bytes = max_scrollback,
++        .kitty_image_storage_limit = 64_000_000,
+         .colors = colors,
+     }) catch return null;
+     errdefer term.deinit(alloc);
+@@ -588,7 +624,7 @@ pub export fn restty_create(cols: u16, rows: u16, max_scrollback: u32) ?*Restty
+         .rows = rows,
+         .cols = cols,
+     };
 -    handle.stream = TerminalStream.init(.{ .allocator = alloc, .handler = StreamHandler.init(&handle.term, &handle.output) });
 +    handle.stream = TerminalStream.init(.{ .allocator = alloc, .handler = StreamHandler.init(&handle.term, &handle.output, &handle.events) });
-@@ -607,0 +643 @@ pub export fn restty_destroy(handle: ?*Restty) void {
+     return handle;
+ }
+
+@@ -605,6 +641,7 @@ pub export fn restty_destroy(handle: ?*Restty) void {
+     h.link_buffer.deinit(h.alloc);
+     h.kitty_placements.deinit(h.alloc);
+     h.output.deinit(h.alloc);
 +    h.events.deinit(h.alloc);
-@@ -751,0 +788,19 @@ pub export fn restty_scrollbar_len(handle: ?*Restty) u32 {
+     h.alloc.destroy(h);
+ }
+
+@@ -749,6 +786,25 @@ pub export fn restty_scrollbar_len(handle: ?*Restty) u32 {
+     return @intCast(sb.len);
+ }
+
 +pub export fn restty_event_ptr(handle: ?*Restty) usize {
 +    const h = handle orelse return 0;
 +    return if (h.events.items.len == 0) 0 else @intFromPtr(h.events.items.ptr);
@@ -73,7 +117,40 @@ index 28bdd04..ae8f94d 100644
 +    return @intFromEnum(ErrorCode.ok);
 +}
 +
-@@ -1194,0 +1250,15 @@ pub export fn restty_free(ptr: usize, len: usize) void {
+ pub export fn restty_output_ptr(handle: ?*Restty) usize {
+     const h = handle orelse return 0;
+     return if (h.output.items.len == 0) 0 else @intFromPtr(h.output.items.ptr);
+@@ -1167,6 +1223,26 @@ pub export fn restty_debug_page_rows(handle: ?*Restty) u32 {
+     return h.term.screens.active.pages.rows;
+ }
+
++pub export fn restty_debug_kitty_image_count(handle: ?*Restty) u32 {
++    const h = handle orelse return 0;
++    return @intCast(h.term.screens.active.kitty_images.images.count());
++}
++
++pub export fn restty_debug_kitty_total_bytes(handle: ?*Restty) u32 {
++    const h = handle orelse return 0;
++    return @intCast(h.term.screens.active.kitty_images.total_bytes);
++}
++
++pub export fn restty_debug_kitty_total_limit(handle: ?*Restty) u32 {
++    const h = handle orelse return 0;
++    return @intCast(h.term.screens.active.kitty_images.total_limit);
++}
++
++pub export fn restty_debug_kitty_has_loading(handle: ?*Restty) u32 {
++    const h = handle orelse return 0;
++    return @intFromBool(h.term.screens.active.kitty_images.loading != null);
++}
++
+ pub export fn restty_kitty_placement_stride() u32 {
+     return @sizeOf(KittyPlacementAbi);
+ }
+@@ -1192,3 +1268,18 @@ pub export fn restty_free(ptr: usize, len: usize) void {
+     const buf = @as([*]u8, @ptrFromInt(ptr));
+     std.heap.wasm_allocator.free(buf[0..len]);
+ }
 +pub export fn restty_set_scrollback_limits(
 +    handle: ?*Restty,
 +    max_lines: u32,

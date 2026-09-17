@@ -166,28 +166,27 @@ the Terminal Window resizes, Window Font Zoom changes, tabs are selected, or a
 valid User Configuration Reload applies. Reset, alternate-buffer exit, and tab
 disposal release the applicable images and pending Chafa metadata.
 
-The per-Surface controls are 4,194,304 source and placement pixels for Chafa, a
-33,554,432-byte Kitty transport target, and approximately 64,000,000 bytes of
-canvas-only FIFO storage. Chafa's RGBA payload must be exactly four bytes per
-source pixel, so it is at most 16,777,216 decoded bytes or 22,369,624 padded
-Base64 characters. Only one anonymous Chafa transmission may be pending; a new
-prelude replaces it. Malformed, incomplete, replaced, or over-limit input
-renders nothing and leaves later terminal output usable. Pi's padded Base64
-ceiling under the transport target remains 44,739,240 characters / 33,554,430
-decoded bytes. An evicted image may become a placeholder.
+Both Surfaces use a 33,554,432-byte decoded Kitty input target and a
+4,194,304-source-pixel Chafa limit. Chafa's RGBA payload must be exactly four
+bytes per source pixel, so it is at most 16,777,216 decoded bytes. Malformed,
+incomplete, replaced, cancelled, or over-limit input renders nothing and leaves
+later terminal output usable.
 
-These controls are not a complete memory limit. The pinned beta addon has known
-gaps around compressed and unclaimed raw-pixel paths, natural PNG dimensions
-before browser decode, retained payload Blobs, and an aggregate-uncapped pending
-map where each distinct unfinished image-ID upload can retain an approximately
-4 MiB decoder until completion, reset, or tab disposal. The Chafa adapter holds
-at most one validated transmission's encoded chunks before replay. Canvas
-rescaling, Chromium decoding, and aggregate use across tabs are also outside
-the controls. The compatibility target for Pi remains its default autoresized
-2,000-by-2,000 pipeline; disabling Pi image autoresize removes that finite
-compatibility envelope. Raw RGB, compressed raw pixels, SIXEL, iTerm2 images,
-animation, placement IDs, remote or filesystem images, downloads, image
-persistence, and other Chafa or Kitty paths are unsupported.
+The default xterm Surface retains its pinned addon's approximately 64,000,000
+bytes of canvas-only FIFO storage and its documented residual decoder, Blob,
+and unclaimed-path risks. The development-only Restty candidate instead keeps
+parsing and decode inside its pinned Ghostty core, retains at most one unfinished
+image per screen, validates the source area before completed-image allocation,
+and stores at most 64,000,000 bytes of completed decoded image data per screen
+with Ghostty's native eviction behavior.
+
+These controls are not a complete process-memory limit. Decode operations can
+allocate transient data, browser canvas/WebGL resources are outside core storage
+accounting, and tabs multiply memory. The compatibility target for Pi remains
+its default autoresized 2,000-by-2,000 pipeline; disabling Pi image autoresize
+removes that finite compatibility envelope. Raw RGB, compressed raw pixels,
+SIXEL, iTerm2 images, animation, placement IDs, remote or filesystem images,
+downloads, image persistence, and other Chafa or Kitty paths are unsupported.
 
 Image bytes remain memory-only Terminal Payload on the existing PTY output IPC
 path. Kitty support adds no image-specific IPC capability and never copies the
