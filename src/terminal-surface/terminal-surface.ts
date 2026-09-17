@@ -5,7 +5,6 @@ import { Terminal } from "@xterm/xterm";
 import {
   isBoundedTerminalPayload,
   isTerminalSize,
-  requiresProtectedPaste,
   splitTerminalPayload,
   type TerminalFontZoom,
 } from "../shared/terminal-contract";
@@ -26,6 +25,7 @@ import {
   type TerminalPadding,
 } from "../shared/user-configuration";
 import { registerOsc52Clipboard } from "./osc52-clipboard";
+import { createSemanticInputDelivery } from "./semantic-input-delivery";
 import { registerTerminalTitleEvents } from "./terminal-title-events";
 import { ignoreOscLinks, registerVisibleWebLinks } from "./visible-web-links";
 import {
@@ -108,6 +108,7 @@ export interface TerminalSurfaceOptions {
   readonly padding?: TerminalPadding;
   readonly theme?: TerminalTheme;
   readonly clipboard?: TerminalClipboard;
+  readonly onClipboardError?: () => void;
   readonly onTitleRequest?: (request: string) => void;
   readonly onBell?: () => void;
   readonly onExternalLink?: (url: string) => void;
@@ -144,6 +145,17 @@ export async function mountTerminalSurface(
     event.preventDefault();
     options.clipboard.requestContextMenu();
   };
+  const delivery = createSemanticInputDelivery({
+    isLive: () => !disposed && terminal !== undefined,
+    isBracketedPasteEnabled: () => terminal?.modes.bracketedPasteMode ?? false,
+    ...(options.clipboard
+      ? { confirmPaste: options.clipboard.confirmPaste }
+      : {}),
+    write: (chunk) => adapter.write(chunk),
+    ...(options.onClipboardError
+      ? { onFailure: options.onClipboardError }
+      : {}),
+  });
 
   const surface: TerminalSurface = {
     focus() {
@@ -202,21 +214,20 @@ export async function mountTerminalSurface(
     },
     async copy() {
       const text = terminal?.getSelection() ?? "";
-      if (!disposed && text.length > 0)
-        await options.clipboard?.writeText(text);
+      if (!disposed && text.length > 0) {
+        try {
+          await options.clipboard?.writeText(text);
+        } catch {
+          options.onClipboardError?.();
+        }
+      }
     },
     async paste() {
-      if (disposed || !terminal || !options.clipboard) return;
-      const text = await options.clipboard.readText();
-      if (disposed || text.length === 0) return;
-      await deliverText(text);
+      if (!options.clipboard) return;
+      await delivery.deliverFrom(options.clipboard.readText);
     },
     async inject(text, injectOptions) {
-      if (disposed || !terminal || text.length === 0) return;
-      const delivered = await deliverText(text);
-      // A submitting snippet sends Enter only after the bracketed paste has
-      // closed: Enter inside the paste body would never submit.
-      if (delivered && injectOptions?.submit) adapter.write("\r");
+      await delivery.deliver(text, injectOptions);
     },
     selectAll() {
       if (!disposed) terminal?.selectAll();
@@ -225,32 +236,6 @@ export async function mountTerminalSurface(
       const cleanupError = disposeResources();
       if (cleanupError) throw cleanupError.error;
     },
-  };
-
-  // Shared delivery path for clipboard paste and snippet injection: the same
-  // protected-paste confirmation and bracketed-paste wrapping apply to both.
-  const deliverText = async (text: string): Promise<boolean> => {
-    if (disposed || !terminal) return false;
-    let confirmedText: string | undefined;
-    if (requiresProtectedPaste(text) && !terminal.modes.bracketedPasteMode) {
-      if (!options.clipboard) return false;
-      if (!(await options.clipboard.confirmPaste(text))) return false;
-      confirmedText = text;
-    }
-
-    if (disposed || !terminal) return false;
-    const bracketedPasteEnabled = terminal.modes.bracketedPasteMode;
-    if (
-      requiresProtectedPaste(text) &&
-      !bracketedPasteEnabled &&
-      confirmedText !== text
-    )
-      return false;
-    const payload = bracketedPasteEnabled
-      ? `\u001b[200~${text}\u001b[201~`
-      : text;
-    for (const chunk of splitTerminalPayload(payload)) adapter.write(chunk);
-    return true;
   };
 
   const scheduleFit = () => {
@@ -284,6 +269,7 @@ export async function mountTerminalSurface(
   const disposeResources = (): { readonly error: unknown } | undefined => {
     if (disposed) return undefined;
     disposed = true;
+    delivery.dispose();
     let firstError: unknown;
     let failed = false;
     for (const dispose of [
@@ -379,6 +365,7 @@ export async function mountTerminalSurface(
       osc52Subscription = registerOsc52Clipboard(
         mountedTerminal.parser,
         options.clipboard.writeText,
+        options.onClipboardError,
       );
     }
     container.addEventListener("contextmenu", onContextMenu);

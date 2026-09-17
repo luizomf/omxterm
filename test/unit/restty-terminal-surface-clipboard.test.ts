@@ -1,0 +1,275 @@
+// @vitest-environment jsdom
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
+
+const harness = vi.hoisted(() => {
+  class FakeRestty {
+    static instances: FakeRestty[] = [];
+    readonly canvas = document.createElement("canvas");
+    readonly destroy = vi.fn();
+    readonly getSelectionText = vi.fn(() => this.selection);
+    readonly selectAll = vi.fn(() => true);
+    selection = "";
+    bracketedPaste = false;
+    readonly pane = {
+      container: document.createElement("div"),
+      runtime: {
+        events: { subscribe: () => () => undefined },
+        lifecycle: { init: async () => undefined, state: () => "ready" },
+        render: { getBackend: () => "webgl2" },
+        io: {
+          connectPty: () => {
+            const transport = this.services().ptyTransport;
+            transport.connect({ callbacks: { onData: vi.fn() } });
+          },
+        },
+        interaction: {
+          focus: vi.fn(),
+          getSelectionText: this.getSelectionText,
+          selectAll: this.selectAll,
+          updateSize: vi.fn(),
+        },
+        terminal: {
+          applyTheme: vi.fn(),
+          isBracketedPasteEnabled: () => this.bracketedPaste,
+          setFontSize: vi.fn(),
+          setScrollbackLines: vi.fn(),
+        },
+      },
+    };
+
+    constructor(readonly options: Record<string, unknown>) {
+      this.pane.container.append(this.canvas);
+      (options.root as HTMLElement).append(this.pane.container);
+      FakeRestty.instances.push(this);
+    }
+
+    getActivePane() {
+      return this.pane;
+    }
+
+    services() {
+      return this.options.services as {
+        ptyTransport: {
+          connect(value: { callbacks: { onData(data: string): void } }): void;
+          sendInput(data: string): boolean;
+        };
+        beforeInput(payload: {
+          text: string;
+          source: string;
+        }): string | null | undefined;
+        onOsc(command: number, payload: string): void;
+      };
+    }
+  }
+  return { FakeRestty };
+});
+
+vi.mock("restty", () => ({ Restty: harness.FakeRestty }));
+vi.mock("../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf", () => ({
+  default: new Uint8Array([0, 1, 2, 3]),
+}));
+
+function createHarness() {
+  let handlers: TerminalSessionHandlers | undefined;
+  const adapter = {
+    start: vi.fn(async (next: TerminalSessionHandlers) => {
+      handlers = next;
+    }),
+    write: vi.fn(),
+    resize: vi.fn(),
+    close: vi.fn(),
+  };
+  const clipboard = {
+    writeText: vi.fn(async () => undefined),
+    readText: vi.fn(async () => ""),
+    confirmPaste: vi.fn(async () => false),
+    requestContextMenu: vi.fn(),
+  };
+  return { adapter, clipboard, handlers: () => handlers! };
+}
+
+async function mount(
+  harnessOptions = createHarness(),
+  options: Record<string, unknown> = {},
+) {
+  const { mountResttyTerminalSurface } =
+    await import("../../src/terminal-surface/restty-terminal-surface");
+  const container = document.createElement("main");
+  const surface = await mountResttyTerminalSurface(
+    container,
+    harnessOptions.adapter,
+    { clipboard: harnessOptions.clipboard, ...options },
+  );
+  return {
+    ...harnessOptions,
+    container,
+    surface,
+    restty: harness.FakeRestty.instances.at(-1)!,
+  };
+}
+
+describe("Restty clipboard and Protected Paste", () => {
+  beforeEach(() => {
+    harness.FakeRestty.instances.length = 0;
+  });
+
+  it("copies only explicit nonempty selection and routes selection/context actions", async () => {
+    const value = await mount();
+    await value.surface.copy();
+    value.restty.selection = "selected text";
+    await value.surface.copy();
+    value.surface.selectAll();
+    const menu = new MouseEvent("contextmenu", { cancelable: true });
+    value.container.dispatchEvent(menu);
+
+    expect(value.clipboard.writeText).toHaveBeenCalledExactlyOnceWith(
+      "selected text",
+    );
+    expect(value.restty.selectAll).toHaveBeenCalledOnce();
+    expect(menu.defaultPrevented).toBe(true);
+    expect(value.clipboard.requestContextMenu).toHaveBeenCalledOnce();
+    value.surface.dispose();
+  });
+
+  it("diverts native paste asynchronously while ordinary keyboard input stays direct", async () => {
+    let decide: ((approved: boolean) => void) | undefined;
+    const value = createHarness();
+    value.clipboard.confirmPaste.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          decide = resolve;
+        }),
+    );
+    const mounted = await mount(value);
+    const services = mounted.restty.services();
+
+    expect(
+      services.beforeInput({ text: "one\ntwo", source: "paste" }),
+    ).toBeNull();
+    await vi.waitFor(() =>
+      expect(mounted.clipboard.confirmPaste).toHaveBeenCalledOnce(),
+    );
+    expect(services.beforeInput({ text: "x", source: "key" })).toBe("x");
+    services.ptyTransport.sendInput("x");
+    expect(mounted.adapter.write.mock.calls.flat()).toEqual(["x"]);
+
+    mounted.restty.bracketedPaste = true;
+    decide!(true);
+    await vi.waitFor(() =>
+      expect(mounted.adapter.write.mock.calls.flat().join("")).toBe(
+        "x\u001b[200~one\ntwo\u001b[201~",
+      ),
+    );
+    mounted.surface.dispose();
+  });
+
+  it("preserves paste request order when clipboard reads resolve out of order", async () => {
+    const reads: Array<(text: string) => void> = [];
+    const value = createHarness();
+    value.clipboard.readText.mockImplementation(
+      () =>
+        new Promise<string>((resolve) => {
+          reads.push(resolve);
+        }),
+    );
+    const mounted = await mount(value);
+
+    const first = mounted.surface.paste();
+    const second = mounted.surface.paste();
+    await vi.waitFor(() => expect(reads).toHaveLength(2));
+    reads[1]!("second");
+    expect(mounted.adapter.write).not.toHaveBeenCalled();
+    reads[0]!("first");
+
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      undefined,
+      undefined,
+    ]);
+    expect(mounted.adapter.write.mock.calls.flat().join("")).toBe(
+      "firstsecond",
+    );
+    mounted.surface.dispose();
+  });
+
+  it("serializes two pastes, cancellation, and current-mode decisions", async () => {
+    const decisions: Array<(approved: boolean) => void> = [];
+    const value = createHarness();
+    value.clipboard.confirmPaste.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          decisions.push(resolve);
+        }),
+    );
+    const mounted = await mount(value);
+    const beforeInput = mounted.restty.services().beforeInput;
+
+    beforeInput({ text: "cancelled\n", source: "paste" });
+    beforeInput({ text: "second\n", source: "paste" });
+    await vi.waitFor(() => expect(decisions).toHaveLength(1));
+    decisions.shift()!(false);
+    await vi.waitFor(() => expect(decisions).toHaveLength(1));
+    mounted.restty.bracketedPaste = true;
+    decisions.shift()!(true);
+
+    await vi.waitFor(() =>
+      expect(mounted.adapter.write.mock.calls.flat().join("")).toBe(
+        "\u001b[200~second\n\u001b[201~",
+      ),
+    );
+    mounted.surface.dispose();
+  });
+
+  it("drops rejection/disposal work and stops chunks before snippet Enter", async () => {
+    let decide: ((approved: boolean) => void) | undefined;
+    const onClipboardError = vi.fn();
+    const value = createHarness();
+    value.clipboard.confirmPaste
+      .mockRejectedValueOnce(new Error("dialog failed"))
+      .mockImplementationOnce(
+        () =>
+          new Promise<boolean>((resolve) => {
+            decide = resolve;
+          }),
+      );
+    const mounted = await mount(value, { onClipboardError });
+    const beforeInput = mounted.restty.services().beforeInput;
+
+    beforeInput({ text: "rejected\n", source: "paste" });
+    await vi.waitFor(() => expect(onClipboardError).toHaveBeenCalledOnce());
+    beforeInput({ text: "disposed\n", source: "paste" });
+    await vi.waitFor(() => expect(decide).toBeTypeOf("function"));
+    mounted.surface.dispose();
+    decide!(true);
+    await Promise.resolve();
+    expect(mounted.adapter.write).not.toHaveBeenCalled();
+
+    const second = await mount();
+    second.restty.bracketedPaste = true;
+    second.adapter.write.mockImplementationOnce(() => second.surface.dispose());
+    await second.surface.inject(`first\n${"🙂".repeat(40_000)}`, {
+      submit: true,
+    });
+    expect(second.adapter.write).toHaveBeenCalledOnce();
+    expect(second.adapter.write.mock.calls.flat().join("")).not.toContain("\r");
+  });
+
+  it("submits after bracketed delivery and accepts only valid parsed OSC writes", async () => {
+    const mounted = await mount();
+    mounted.restty.bracketedPaste = true;
+    await mounted.surface.inject("one\ntwo", { submit: true });
+    mounted.restty.services().onOsc(52, "c;aGVsbG8=");
+    mounted.restty.services().onOsc(52, "c;?");
+    mounted.restty.services().onOsc(8, "c;aGVsbG8=");
+    await vi.waitFor(() =>
+      expect(mounted.clipboard.writeText).toHaveBeenCalledOnce(),
+    );
+
+    expect(mounted.adapter.write.mock.calls.flat().join("")).toBe(
+      "\u001b[200~one\ntwo\u001b[201~\r",
+    );
+    expect(mounted.clipboard.writeText).toHaveBeenCalledWith("hello");
+    expect(mounted.clipboard.readText).not.toHaveBeenCalled();
+    mounted.surface.dispose();
+  });
+});

@@ -41,11 +41,15 @@ continued output or resize, and a later positive value retains only new output.
 Live changes preserve reflow, alternate-screen state, selection and viewport
 coherence in the same Surface and remain isolated per Surface.
 
-The following Restty routes are deliberately unavailable until their migration
-tickets land: copy, paste, Protected Paste, snippets and file-path injection;
-OSC 52 clipboard effects; OSC 8 or visible-link activation; parsed titles and
-bell; Option Key Mode, inline images and other runtime configuration. The xterm Surface retains all existing
-behavior. There is no automatic xterm fallback.
+Explicit copy/paste, selection, native context actions, Protected Paste,
+snippets, file-path injection and write-only OSC 52 use the existing OMXTerm
+host routes. DOM paste enters the same asynchronous confirmation and ordered
+delivery path without browser clipboard permission; ordinary key input remains
+direct. OSC 52 reads, clears, malformed, cancelled and over-bound requests have
+no clipboard or PTY side effect. OSC 8 or visible-link activation, parsed titles
+and bell, Option Key Mode, inline images and other runtime configuration remain
+unavailable until their migration tickets land. The xterm Surface retains all
+existing behavior. There is no automatic xterm fallback.
 
 ## Pinned inputs and restoration
 
@@ -81,11 +85,13 @@ git ls-tree HEAD reference/ghostty reference/text-shaper
 The lockfile restores the npm tarballs identified by that manifest. `npm ci`
 then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
 Restty runtime and embedded-core SHA-256 values and produces corrected runtime
-SHA-256 `c8580ea08273aa17dc3ae1f658aafe8340114a751e2a36e09e933e3bcabb3bad`
+SHA-256 `272bfb31f240a8e45ec2c36e85858a0cfadec1e6fc9a7fd8a7efe70a2f350c94`
 and embedded-core chunk SHA-256
 `5a64d5de8f573ac2f392f8863ef6bbeb6228a57d267b8b4d73cf0694e221f56c`.
 The narrow correction makes font-load failure reject initialization, disables
-Restty's direct clipboard/OSC 52 and link-opening callbacks, removes its 10–64
+Restty's direct browser clipboard and link-opening callbacks, and exposes raw
+paste origin, current bracketed mode, selection/Select All, parsed OSC and OSC
+cancellation to OMXTerm's existing host policy. It also removes Restty's 10–64
 live-size clamp in favor of OMXTerm's existing minimum of 1 for Window Font
 Zoom, carries the creation-time line-height factor into cell metrics without
 scaling glyphs, keeps bold ANSI 0–7 colors unchanged, and exposes Ghostty's
@@ -120,11 +126,13 @@ fetches. Packaged license texts are listed in `THIRD_PARTY_NOTICES.md`.
 
 `test/integration/restty-host-integration.test.ts` runs the real main IPC
 router, preload bridge, Electron Adapter, Restty Surface and owned macOS PTYs in
-one fixture. It covers Unicode input/output, resize, focus return, two isolated
-tabs, Default Shell and explicit-command startup, shell exit, explicit close,
-renderer-process loss, and candidate-route refusal without using a user session
-or clipboard.
+one fixture under the production CSP. It covers Unicode and bare-control-key
+input, large chunked DOM paste through a real owned PTY, explicit host
+copy/paste, Select All, context menu and OSC 52, resize, focus return, two
+isolated tabs, Default Shell and explicit-command startup, owned session
+termination, explicit close, renderer-process loss and remaining candidate-route refusal without
+using a user session or real clipboard.
 
-Native runtime evidence through the current appearance slice is macOS ARM64.
+Native runtime evidence through the current clipboard slice is macOS ARM64.
 Linux and Windows Restty behavior remains unverified; their xterm package
 contract is unchanged.

@@ -10,10 +10,17 @@ interface OscParser {
 export function registerOsc52Clipboard(
   parser: OscParser,
   writeText: (text: string) => Promise<void>,
+  onError?: () => void,
 ): { dispose(): void } {
   return parser.registerOscHandler(52, async (data) => {
     const text = decodeOsc52Write(data);
-    if (text !== undefined) await writeText(text);
+    if (text !== undefined) {
+      try {
+        await writeText(text);
+      } catch {
+        onError?.();
+      }
+    }
     return true;
   });
 }

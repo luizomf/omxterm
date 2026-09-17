@@ -28,6 +28,9 @@ interface HostResult {
   };
   readonly clipboardReads: number;
   readonly clipboardWrites: number;
+  readonly protectedPasteConfirmations: number;
+  readonly contextMenus: number;
+  readonly largePasteLength: number;
   readonly externalLinks: number;
   readonly titles: number;
   readonly bells: number;
@@ -95,6 +98,7 @@ describe.skipIf(process.platform !== "darwin")(
         expect(result.resizeCounts).toHaveLength(3);
         expect(result.resizeCounts.every((count) => count > 0)).toBe(true);
         expect(result.output[0]).toContain("__DEFAULT_INPUT__Olá🙂");
+        expect(result.output[0]).toContain("__LARGE_PASTE__80000");
         expect(result.output[1]).toContain("__EXPLICIT_READY__Olá🙂");
         expect(result.output[1]).toContain("__EXPLICIT_INPUT__second🙂");
         expect(result.beforeDestroy).toEqual({ canvases: 1, tabs: 1 });
@@ -103,8 +107,11 @@ describe.skipIf(process.platform !== "darwin")(
           { closeRequested: false, liveSessions: 0 },
         ]);
         expect(result).toMatchObject({
-          clipboardReads: 0,
-          clipboardWrites: 0,
+          clipboardReads: 1,
+          clipboardWrites: 2,
+          protectedPasteConfirmations: 1,
+          contextMenus: 1,
+          largePasteLength: 80_000,
           externalLinks: 0,
           titles: 0,
           bells: 0,

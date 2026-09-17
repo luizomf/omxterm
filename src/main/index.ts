@@ -71,6 +71,8 @@ import {
   type OperationalEventLog,
 } from "./operational-events";
 
+const showClipboardError = () =>
+  dialog.showErrorBox("Clipboard Error", "Clipboard operation failed.");
 const mainDirectory = path.dirname(fileURLToPath(import.meta.url));
 const applicationRoot = path.resolve(mainDirectory, "..");
 const preloadPath = path.join(applicationRoot, "preload", "index.cjs");
@@ -291,6 +293,7 @@ app
                   process.platform,
                 );
               },
+              onClipboardError: showClipboardError,
               loadSnippets: () =>
                 loadTerminalSnippets({
                   environment: process.env,

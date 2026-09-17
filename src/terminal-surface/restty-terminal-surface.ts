@@ -8,6 +8,12 @@ import {
 } from "restty";
 import bundledFontBytes from "../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf";
 import type { TerminalSize } from "../shared/terminal-contract";
+import type { TerminalFontData } from "../shared/terminal-font-data";
+import { decodeOsc52Write } from "./osc52-clipboard";
+import {
+  createSemanticInputDelivery,
+  type SemanticInputDelivery,
+} from "./semantic-input-delivery";
 import {
   DEFAULT_SCROLLBACK_LINES,
   DEFAULT_TERMINAL_FONT_SIZE,
@@ -45,9 +51,15 @@ type CandidateRuntime = {
   };
   readonly render: { getBackend(): string | null };
   readonly io: { connectPty(): void };
-  readonly interaction: { focus(): void; updateSize(force?: boolean): void };
+  readonly interaction: {
+    focus(): void;
+    getSelectionText(): string;
+    selectAll(): boolean;
+    updateSize(force?: boolean): void;
+  };
   readonly terminal: {
     applyTheme(theme: GhosttyTheme, sourceLabel?: string): void;
+    isBracketedPasteEnabled(): boolean;
     setFontSize(value: number): void;
     setScrollbackLines(value: number): void;
   };
@@ -63,6 +75,97 @@ type CandidatePane = {
   readonly container: HTMLElement;
   readonly runtime: CandidateRuntime;
 };
+
+function resttyTerminalConfig(
+  fontData: TerminalFontData,
+  fontSize: number,
+  lineHeight: number,
+  scrollbackLines: number,
+  theme: TerminalTheme,
+): ResttyAppearanceConfig {
+  return {
+    renderer: "webgl2",
+    fontSize,
+    lineHeight,
+    maxScrollbackBytes: RESTTY_SCROLLBACK_MAX_BYTES,
+    scrollbackLines,
+    fonts: [
+      ...(fontData.configured
+        ? [
+            {
+              data: fontData.configured.data,
+              name: fontSourceFamily(fontData.configured),
+              weight: 400,
+              style: "normal" as const,
+            },
+          ]
+        : []),
+      { data: bundledFontBytes, name: BUNDLED_FONT_NAME },
+      ...fontData.fallbacks.map((font) => ({
+        data: font.data,
+        name: fontSourceFamily(font),
+      })),
+    ],
+    theme: toGhosttyTheme(theme),
+    showResizeOverlay: false,
+  };
+}
+
+function resttyDelivery(
+  adapter: TerminalSessionAdapter,
+  options: TerminalSurfaceOptions,
+  isLive: () => boolean,
+  isBracketedPasteEnabled: () => boolean,
+): SemanticInputDelivery {
+  return createSemanticInputDelivery({
+    isLive,
+    isBracketedPasteEnabled,
+    ...(options.clipboard
+      ? { confirmPaste: options.clipboard.confirmPaste }
+      : {}),
+    write: (chunk) => adapter.write(chunk),
+    ...(options.onClipboardError
+      ? { onFailure: options.onClipboardError }
+      : {}),
+  });
+}
+
+function resttyClipboardServices(
+  transport: PtyTransport,
+  delivery: SemanticInputDelivery,
+  options: TerminalSurfaceOptions,
+) {
+  return {
+    ptyTransport: transport,
+    beforeInput: ({ text, source }: { text: string; source: string }) => {
+      if (source !== "paste") return text;
+      void delivery.deliver(text);
+      return null;
+    },
+    onOsc: (command: number, payload: string) => {
+      if (command !== 52 || !options.clipboard) return;
+      const text = decodeOsc52Write(payload);
+      if (text === undefined) return;
+      void options.clipboard
+        .writeText(text)
+        .catch(() => options.onClipboardError?.());
+    },
+  };
+}
+
+async function copyResttySelection(
+  pane: CandidatePane | undefined,
+  options: TerminalSurfaceOptions,
+  disposed: boolean,
+): Promise<void> {
+  const text = pane?.runtime.interaction.getSelectionText() ?? "";
+  if (disposed || text.length === 0) return;
+  try {
+    await options.clipboard?.writeText(text);
+  } catch {
+    options.onClipboardError?.();
+  }
+}
 
 export async function mountResttyTerminalSurface(
   container: HTMLElement,
@@ -84,6 +187,17 @@ export async function mountResttyTerminalSurface(
   let padding = resolvePadding(options.padding);
   const scrollbackLines = validateScrollbackLines(options.scrollbackLines);
   const initialFamily = options.appearance?.systemFont?.family;
+  const onContextMenu = (event: Event) => {
+    if (!options.clipboard) return;
+    event.preventDefault();
+    options.clipboard.requestContextMenu();
+  };
+  const delivery = resttyDelivery(
+    adapter,
+    options,
+    () => !disposed && ready,
+    () => pane?.runtime.terminal.isBracketedPasteEnabled() ?? false,
+  );
 
   const applyRuntimeTheme = (theme: TerminalTheme) => {
     pane?.runtime.terminal.applyTheme(toGhosttyTheme(theme), "OMXTerm");
@@ -117,6 +231,8 @@ export async function mountResttyTerminalSurface(
   const dispose = () => {
     if (disposed) return;
     disposed = true;
+    delivery.dispose();
+    container.removeEventListener("contextmenu", onContextMenu);
     removeRuntimeListener?.();
     removeRuntimeListener = undefined;
     adapter.close();
@@ -171,35 +287,14 @@ export async function mountResttyTerminalSurface(
       );
     container.classList.add("restty-terminal-surface");
     setContainerAppearance(container, padding, terminalTheme);
-    const terminal: ResttyAppearanceConfig = {
-      renderer: "webgl2",
-      fontSize: baselineFontSize,
-      lineHeight: initialLineHeight,
-      maxScrollbackBytes: RESTTY_SCROLLBACK_MAX_BYTES,
+    const terminal = resttyTerminalConfig(
+      loadedFonts,
+      baselineFontSize,
+      initialLineHeight,
       scrollbackLines,
-      fonts: [
-        ...(loadedFonts.configured
-          ? [
-              {
-                data: loadedFonts.configured.data,
-                name: fontSourceFamily(loadedFonts.configured),
-                weight: 400,
-                style: "normal" as const,
-              },
-            ]
-          : []),
-        {
-          data: bundledFontBytes,
-          name: BUNDLED_FONT_NAME,
-        },
-        ...loadedFonts.fallbacks.map((font) => ({
-          data: font.data,
-          name: fontSourceFamily(font),
-        })),
-      ],
-      theme: toGhosttyTheme(terminalTheme),
-      showResizeOverlay: false,
-    };
+      terminalTheme,
+    );
+    const services = resttyClipboardServices(transport, delivery, options);
     restty = new Restty({
       root: container,
       surface: {
@@ -211,8 +306,8 @@ export async function mountResttyTerminalSurface(
         shortcuts: false,
       },
       terminal,
-      services: { ptyTransport: transport },
-    });
+      services,
+    } as ConstructorParameters<typeof Restty>[0]);
     pane =
       (restty.getActivePane() as unknown as CandidatePane | null) ?? undefined;
     if (!pane) throw new Error("Restty did not create its terminal pane");
@@ -238,6 +333,7 @@ export async function mountResttyTerminalSurface(
     if (!canvas) throw new Error("Restty did not create its rendering canvas");
     container.dataset.resttyBackend = "webgl2";
     container.dataset.resttyFont = initialFamily ?? BUNDLED_FONT_NAME;
+    container.addEventListener("contextmenu", onContextMenu);
     canvas.addEventListener(
       "webglcontextlost",
       (event) => {
@@ -282,10 +378,17 @@ export async function mountResttyTerminalSurface(
         applyRuntimeSize(nextSize);
         refit();
       },
-      copy: async () => undefined,
-      paste: async () => undefined,
-      inject: async () => undefined,
-      selectAll: () => undefined,
+      copy: () => copyResttySelection(pane, options, disposed),
+      async paste() {
+        if (!options.clipboard) return;
+        await delivery.deliverFrom(options.clipboard.readText);
+      },
+      async inject(text, injectOptions) {
+        await delivery.deliver(text, injectOptions);
+      },
+      selectAll: () => {
+        if (!disposed) pane?.runtime.interaction.selectAll();
+      },
       dispose,
     };
   } catch (cause) {

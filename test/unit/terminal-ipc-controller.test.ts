@@ -50,6 +50,7 @@ function clipboardOptions() {
     writeClipboardText: vi.fn(),
     readClipboardText: vi.fn(() => "clipboard text"),
     confirmPaste: vi.fn(async () => true),
+    onClipboardError: vi.fn(),
     showClipboardContextMenu: vi.fn(),
     onTitleRequest: vi.fn(),
     onBell: vi.fn(),

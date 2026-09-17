@@ -214,10 +214,17 @@ remote fallback or persistent byte cache crosses the bridge. A Restty Surface
 applies its configured family and line height when it is created; an existing
 Restty Surface keeps both after User Configuration Reload until OMXTerm is
 restarted, while theme, font size and padding update it in place and refit the
-same PTY. Restty copy, paste, Protected Paste, snippets/path injection, OSC 52,
-links, title, bell, Option Key Mode and image routes remain unavailable in this
-slice; xterm retains the complete contract below. Restty scrollback follows the
-shared contract below through the pinned Ghostty core. Linux and Windows Restty
+same PTY. Restty explicit copy/paste, selection, context-menu actions, Protected Paste,
+snippets/path injection and write-only OSC 52 follow the shared contract below.
+Its DOM paste source is intercepted synchronously only to enter OMXTerm's
+asynchronous policy and delivery path; ordinary key input remains direct.
+Semantic paste and injection requests retain request order, recheck the current
+bracketed-paste mode and Surface lifetime after asynchronous decisions, and stop
+future chunks if their owning Surface closes. Bytes already sent before closure
+cannot be recalled, and a submitting snippet never appends Enter after closure.
+Links, title, bell, Option Key Mode and image routes remain unavailable in this
+slice; xterm retains those parts of the complete contract below. Restty
+scrollback follows the shared contract below through the pinned Ghostty core. Linux and Windows Restty
 behavior is unverified; this slice's native runtime evidence is macOS ARM64.
 Native rasterization can differ between Restty and xterm; pixel-identical glyph
 output is not claimed.
@@ -351,9 +358,18 @@ ignored.
   syntax inside a partial quote, nested shell, SSH session, REPL, or TUI.
 - Multiline or control-character paste asks for confirmation only when the
   receiving process has not enabled bracketed paste.
-- Paste is never truncated, interpreted, summarized, or logged.
-- OSC 52 may write the clipboard within the terminal dependency's safety bound;
-  clipboard read, clear, and malformed requests are refused.
+- Paste is never truncated, interpreted, summarized, or logged. Semantic paste,
+  snippet and path-insertion operations preserve request order without delaying
+  ordinary keyboard input. Current bracketed mode and ownership are checked
+  after asynchronous clipboard reads or confirmation. Mid-delivery disposal
+  stops later chunks and a snippet's optional Enter, without rollback or replay.
+- OSC 52 may write the clipboard only for target `c` with non-empty canonical
+  padded Base64 that decodes as UTF-8. The 10,000,000 UTF-16-code-unit handler
+  payload bound counts `c;` and Base64 but excludes the OSC introducer, command
+  and terminator. Thus a canonical 9,999,998-unit request is accepted completely
+  and the next canonical 10,000,002-unit request is consumed without action.
+  Clipboard read, clear, invalid target, malformed, non-canonical, cancelled and
+  over-bound requests are consumed without clipboard action or PTY reply.
 - Image clipboard behavior belongs to the child CLI. OMXTerm forwards its key
   input but never moves image bytes through the PTY.
 - These shortcuts are the built-in keybind defaults. A `keybinds` remap can move

@@ -744,7 +744,7 @@ describe("portable Terminal Surface", () => {
     xterm.FakeTerminal.current.modes.bracketedPasteMode = true;
 
     const pendingPaste = surface.paste();
-    expect(clipboard.readText).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(clipboard.readText).toHaveBeenCalledOnce());
     xterm.FakeTerminal.current.modes.bracketedPasteMode = false;
     releaseClipboardRead!(text);
     await pendingPaste;

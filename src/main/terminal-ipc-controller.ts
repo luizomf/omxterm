@@ -90,6 +90,7 @@ export interface TerminalIpcControllerOptions {
   readonly writeClipboardText: (text: string) => void;
   readonly readClipboardText: () => string;
   readonly confirmPaste: (text: string) => Promise<boolean>;
+  readonly onClipboardError?: () => void;
   readonly showClipboardContextMenu: () => void;
   readonly onTitleRequest: (
     sessionId: TerminalSessionId,
@@ -369,6 +370,31 @@ interface RoutedSessionState {
   exited: boolean;
 }
 
+function useClipboard<T>(
+  operation: () => T,
+  onError: (() => void) | undefined,
+  fallback: T,
+): T {
+  try {
+    return operation();
+  } catch {
+    onError?.();
+    return fallback;
+  }
+}
+
+async function confirmClipboardPaste(
+  options: TerminalIpcControllerOptions,
+  text: string,
+): Promise<boolean> {
+  try {
+    return await options.confirmPaste(text);
+  } catch {
+    options.onClipboardError?.();
+    return false;
+  }
+}
+
 function createTerminalIpcController(
   options: TerminalIpcControllerOptions,
   operationalEvents: Pick<OperationalEventLog, "write"> | undefined,
@@ -593,21 +619,29 @@ function createTerminalIpcController(
       reject("clipboard", "invalid-payload");
       throw new TypeError("Invalid clipboard write payload");
     }
-    options.writeClipboardText(payload);
+    useClipboard(
+      () => options.writeClipboardText(payload),
+      options.onClipboardError,
+      undefined,
+    );
   };
   const readClipboardText = (payload?: unknown) => {
     if (payload !== undefined) {
       reject("clipboard", "invalid-payload");
       throw new TypeError("Invalid clipboard read payload");
     }
-    return options.readClipboardText();
+    return useClipboard(
+      options.readClipboardText,
+      options.onClipboardError,
+      "",
+    );
   };
   const confirmPaste = async (payload?: unknown) => {
     if (!isNonemptyClipboardText(payload) || !requiresProtectedPaste(payload)) {
       reject("clipboard", "invalid-payload");
       throw new TypeError("Invalid Protected Paste payload");
     }
-    return options.confirmPaste(payload);
+    return confirmClipboardPaste(options, payload);
   };
   const showClipboardContextMenu = (payload?: unknown) => {
     if (payload === undefined) options.showClipboardContextMenu();

@@ -23,8 +23,12 @@ Restty 0.3.0 is pinned to
 `3db45b0e10dbe53c52a77131d366f519546e4f04`, including Ghostty
 `0309af1b7f0724105a0805efa88bbee808a616ae`, with `text-shaper` 0.1.28.
 OMXTerm applies one checksum-guarded build-input correction after lockfile
-installation: font-load errors reject readiness, and Restty's direct clipboard,
-OSC 52 and link-opening callbacks are disabled. Dependency drift requires review.
+installation. Font-load errors reject readiness; direct browser clipboard and
+link-opening callbacks stay disabled. Narrow reviewed runtime seams expose raw
+DOM-paste origin, current bracketed-paste mode, selection/Select All and parsed
+OSC commands so the OMXTerm host can own asynchronous Protected Paste and
+write-only clipboard policy. OSC cancellation resumes later ordinary output.
+Dependency drift requires review.
 The bundled TTF replaces the prototype's non-equivalent WOFF2 shaping input.
 
 The appearance and font slices map OMXTerm Terminal Themes into Restty, use the
@@ -46,9 +50,19 @@ settings and requests restart; a deferred setting clears only when its requested
 value is already active in every existing Surface. Failed lookup, bounded read or font decoding starts no
 invisible shell and an invalid reload commits nothing.
 
-Candidate copy/paste, snippets/path injection, OSC 52, links, titles, bell and
-images stay unavailable until their owning migration tickets. These gates apply only to Restty. xterm's
-existing behavior and security boundaries remain unchanged. Renderer isolation,
+Candidate explicit copy/paste, selection, context-menu actions,
+snippets/path injection and OSC 52 are enabled through OMXTerm's existing host
+capabilities. Restty's synchronous `beforeInput` only tags and diverts raw DOM
+paste into the application-owned asynchronous semantic-delivery queue; it never
+runs confirmation policy or requests browser clipboard permission. Delivery
+rechecks current bracketed mode and ownership, preserves semantic request order
+without blocking ordinary key input, and stops future chunks and snippet Enter
+after disposal without rollback. OSC 52 passes the parsed handler payload to the
+shared canonical UTF-8 Base64 validator and its dependency-equivalent
+10,000,000-code-unit bound; reads, clears, malformed, cancelled and over-bound
+requests have no host or PTY side effect. Links, titles, bell and images stay
+unavailable until their owning migration tickets. These gates apply only to
+Restty. xterm's existing behavior and security boundaries remain unchanged. Renderer isolation,
 the production CSP, application network boundary and platform sandbox policy
 also remain unchanged.
 

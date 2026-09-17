@@ -28,6 +28,7 @@ for (const name of ["userData", "sessionData"] as const) {
 mkdirSync(home, { recursive: true });
 
 const outputs: string[][] = [];
+const inputs: string[][] = [];
 const deliverOutputs: Array<(data: string) => void> = [];
 const resizes: Array<Array<{ cols: number; rows: number }>> = [];
 const launchKinds: string[] = [];
@@ -35,6 +36,8 @@ const terminals: Array<ReturnType<typeof createLocalTerminalSession>> = [];
 const ended: Array<{ closeRequested: boolean; liveSessions: number }> = [];
 let clipboardReads = 0;
 let clipboardWrites = 0;
+let protectedPasteConfirmations = 0;
+let contextMenus = 0;
 let externalLinks = 0;
 let titles = 0;
 let bells = 0;
@@ -99,6 +102,7 @@ function createHost(window: BrowserWindow) {
     createSession(callbacks) {
       const index = sessionIndex++;
       outputs[index] = [];
+      inputs[index] = [];
       deliverOutputs[index] = callbacks.onOutput;
       resizes[index] = [];
       const explicit = index === 1;
@@ -130,8 +134,13 @@ function createHost(window: BrowserWindow) {
         },
       });
       const resize = terminal.resize.bind(terminal);
+      const write = terminal.write.bind(terminal);
       const routedTerminal = {
         ...terminal,
+        write(data: string) {
+          inputs[index]!.push(data);
+          write(data);
+        },
         resize(size: { cols: number; rows: number }) {
           resizes[index]!.push(size);
           resize(size);
@@ -162,8 +171,13 @@ function createHost(window: BrowserWindow) {
       clipboardReads += 1;
       return "private";
     },
-    confirmPaste: async () => false,
-    showClipboardContextMenu() {},
+    confirmPaste: async () => {
+      protectedPasteConfirmations += 1;
+      return true;
+    },
+    showClipboardContextMenu() {
+      contextMenus += 1;
+    },
     onTitleRequest() {
       titles += 1;
     },
@@ -298,6 +312,55 @@ app
       "default shell Unicode input/output",
     );
 
+    window.webContents.sendInputEvent({
+      type: "keyDown",
+      keyCode: "V",
+      modifiers: ["control"],
+    });
+    window.webContents.sendInputEvent({
+      type: "keyUp",
+      keyCode: "V",
+      modifiers: ["control"],
+    });
+    await waitFor(
+      () => inputs[0]!.join("").includes("\u0016"),
+      "bare Ctrl+V terminal input",
+    );
+    terminals[0]!.write("x\u0015");
+
+    const largePasteLength = 80_000;
+    await window.webContents.executeJavaScript(
+      `(() => {
+        const text = "printf '__LARGE_PASTE__${largePasteLength}\\n'; #" + "A".repeat(${largePasteLength}) + "\\n";
+        const target = document.querySelector('.restty-terminal-surface textarea');
+        if (!target) throw new Error('Restty paste target is missing');
+        const event = new Event('paste', { bubbles: true, cancelable: true });
+        Object.defineProperty(event, 'clipboardData', { value: { getData: (type) => type === 'text/plain' ? text : '' } });
+        target.dispatchEvent(event);
+      })()`,
+      true,
+    );
+    await waitFor(
+      () => outputs[0]!.join("").includes(`__LARGE_PASTE__${largePasteLength}`),
+      "large DOM paste through the owned PTY",
+    );
+
+    window.webContents.send(terminalIpc.clipboardAction, "paste");
+    await waitFor(
+      () => inputs[0]!.join("").includes("private"),
+      "native Paste host route",
+    );
+    terminals[0]!.write("\u0003");
+    deliverOutputs[0]!("selected output");
+    window.webContents.send(terminalIpc.clipboardAction, "select-all");
+    window.webContents.send(terminalIpc.clipboardAction, "copy");
+    await waitFor(() => clipboardWrites >= 1, "explicit copy host route");
+    await window.webContents.executeJavaScript(
+      `document.querySelector('.restty-terminal-surface')?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }))`,
+      true,
+    );
+    await waitFor(() => contextMenus === 1, "native context menu route");
+
     await reloader.reload();
     window.webContents.send(terminalIpc.tabCommand, { action: "new" });
     await waitFor(
@@ -346,14 +409,18 @@ app
         ended.some((entry) => entry.closeRequested && entry.liveSessions === 1),
       "explicit tab close cleanup",
     );
-    terminals[0]!.write("exit\r");
+    terminals[0]!.close();
     await waitFor(
       () =>
         ended.some(
           (entry) => !entry.closeRequested && entry.liveSessions === 0,
         ),
-      "ordinary shell exit",
+      "owned default-shell termination",
     );
+    window.webContents.send(terminalIpc.tabCommand, {
+      action: "close-session",
+      sessionId: "s1",
+    });
 
     window.webContents.send(terminalIpc.tabCommand, { action: "new" });
     await waitFor(
@@ -384,6 +451,9 @@ app
       reloadState,
       clipboardReads,
       clipboardWrites,
+      protectedPasteConfirmations,
+      contextMenus,
+      largePasteLength,
       externalLinks,
       titles,
       bells,

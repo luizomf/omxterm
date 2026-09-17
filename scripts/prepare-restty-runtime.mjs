@@ -31,8 +31,10 @@ const priorFamilyFilterDigest =
   "ecba146c51073810b44d469c75a60ce12d62d0e7311b227c6d13d87da86af627";
 const priorFontDigest =
   "23f4bf4377dfcc34b39f439f2e4865be41a65603e405ec08ebb1f3a467ada867";
-const correctedDigest =
+const priorScrollbackDigest =
   "c8580ea08273aa17dc3ae1f658aafe8340114a751e2a36e09e933e3bcabb3bad";
+const correctedDigest =
+  "272bfb31f240a8e45ec2c36e85858a0cfadec1e6fc9a7fd8a7efe70a2f350c94";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 
 const securityCorrections = [
@@ -255,6 +257,238 @@ const scrollbackRuntimeCorrections = [
   },
 ];
 
+const clipboardCorrections = [
+  {
+    original: `  clipboardRead;
+  getDefaultColors;`,
+    corrected: `  clipboardRead;
+  oscHandler;
+  getDefaultColors;`,
+  },
+  {
+    original: `    this.clipboardRead = options.onClipboardRead;
+    this.windowOpHandler = options.onWindowOp;`,
+    corrected: `    this.clipboardRead = options.onClipboardRead;
+    this.oscHandler = options.onOsc;
+    this.windowOpHandler = options.onWindowOp;`,
+  },
+  {
+    original: `      onClipboardRead: this.clipboardRead,
+      onDesktopNotification: this.desktopNotificationHandler`,
+    corrected: `      onClipboardRead: this.clipboardRead,
+      onOsc: this.oscHandler,
+      onDesktopNotification: this.desktopNotificationHandler`,
+  },
+  {
+    original: `  if (code === "52") {
+    const target = parts[1] ?? "c";`,
+    corrected: `  if (code === "52") {
+    if (handlers.onOsc) {
+      const firstSep = content.indexOf(";");
+      handlers.onOsc(52, firstSep < 0 ? "" : content.slice(firstSep + 1));
+      return true;
+    }
+    const target = parts[1] ?? "c";`,
+  },
+  {
+    original: `    onClipboardRead: options.onClipboardRead,
+    onClipboardWrite: options.onClipboardWrite,
+    onWindowOp: options.onWindowOp,`,
+    corrected: `    onClipboardRead: options.onClipboardRead,
+    onClipboardWrite: options.onClipboardWrite,
+    onOsc: options.onOsc,
+    onWindowOp: options.onWindowOp,`,
+  },
+  {
+    original: `  function sendPasteText(text) {
+    if (!text)
+      return;
+    const bracketedPasteEnabled = !!inputHandler.isBracketedPaste();
+    sendKeyInput(formatPasteText(text, bracketedPasteEnabled));
+  }`,
+    corrected: `  function sendPasteText(text) {
+    if (!text)
+      return;
+    const intercepted = runBeforeInputHook(text, "paste");
+    if (!intercepted)
+      return;
+    if (shouldClearSelection())
+      clearSelection();
+    const payload = formatPasteText(intercepted, !!inputHandler.isBracketedPaste());
+    if (ptyTransport.isConnected()) {
+      ptyTransport.sendInput(payload);
+      return;
+    }
+    sendInput(payload, "paste", { skipHooks: true });
+  }`,
+  },
+  {
+    original: `  clearScreen,
+  terminalCapabilities
+}) {`,
+    corrected: `  clearScreen,
+  terminalCapabilities,
+  inputHandler
+}) {`,
+  },
+  {
+    original: `    setScrollbackLines: terminalCapabilities.setScrollbackLines,
+    applyTheme,`,
+    corrected: `    setScrollbackLines: terminalCapabilities.setScrollbackLines,
+    isBracketedPasteEnabled: () => inputHandler.isBracketedPaste(),
+    applyTheme,`,
+  },
+  {
+    original: `  interactionCapabilities,
+  copySelectionToClipboard,
+  pasteFromClipboard
+}) {`,
+    corrected: `  interactionCapabilities,
+  copySelectionToClipboard,
+  pasteFromClipboard,
+  getSelectionText
+}) {`,
+  },
+  {
+    original: `    copySelectionToClipboard,
+    pasteFromClipboard,
+    selectWordAtClientPoint: interaction.selectWordAtClientPoint,`,
+    corrected: `    copySelectionToClipboard,
+    pasteFromClipboard,
+    getSelectionText,
+    selectAll: interaction.selectAll,
+    selectWordAtClientPoint: interaction.selectWordAtClientPoint,`,
+  },
+  {
+    original: `  const selectWordAtClientPoint = (clientX, clientY) => {
+    const cell = normalizeSelectionCell(positionToCell({ clientX, clientY }));
+    return selectWordAtCell(cell);
+  };`,
+    corrected: `  const selectAll = () => {
+    const renderState = getCurrentRenderState();
+    if (!renderState || renderState.rows <= 0 || renderState.cols <= 0)
+      return false;
+    clearPendingDesktopSelection();
+    selectionState.active = true;
+    selectionState.dragging = false;
+    selectionState.anchor = { row: 0, col: 0 };
+    selectionState.focus = { row: renderState.rows - 1, col: renderState.cols - 1 };
+    updateLinkHover(null);
+    updateCanvasCursor();
+    markNeedsRender();
+    return true;
+  };
+  const selectWordAtClientPoint = (clientX, clientY) => {
+    const cell = normalizeSelectionCell(positionToCell({ clientX, clientY }));
+    return selectWordAtCell(cell);
+  };`,
+  },
+  {
+    original: `    positionToPixel,
+    selectWordAtClientPoint,
+    clearSelection,`,
+    corrected: `    positionToPixel,
+    selectAll,
+    selectWordAtClientPoint,
+    clearSelection,`,
+  },
+  {
+    original: `      clearScreen: deps.clearScreen,
+      terminalCapabilities: deps.publicApiCapabilities.terminal`,
+    corrected: `      clearScreen: deps.clearScreen,
+      terminalCapabilities: deps.publicApiCapabilities.terminal,
+      inputHandler: deps.inputHandler`,
+  },
+  {
+    original: `      copySelectionToClipboard: deps.copySelectionToClipboard,
+      pasteFromClipboard: deps.pasteFromClipboard`,
+    corrected: `      copySelectionToClipboard: deps.copySelectionToClipboard,
+      pasteFromClipboard: deps.pasteFromClipboard,
+      getSelectionText: deps.getSelectionText`,
+  },
+  {
+    original: `  const copySelectionToClipboard = async () => false;
+  const pasteFromClipboard = async () => false;`,
+    corrected: `  const copySelectionToClipboard = async () => false;
+  const pasteFromClipboard = async () => false;
+  const getSelectionText = hooks.getSelectionText;`,
+  },
+  {
+    original: `      copySelectionToClipboard,
+      pasteFromClipboard,
+      publicApiCapabilities`,
+    corrected: `      copySelectionToClipboard,
+      pasteFromClipboard,
+      getSelectionText,
+      publicApiCapabilities`,
+  },
+  {
+    original: `    onClipboardWrite: void 0,
+    onClipboardRead: void 0,`,
+    corrected: `    onClipboardWrite: void 0,
+    onClipboardRead: void 0,
+    onOsc: services.onOsc,`,
+  },
+  {
+    original: `        let j = i + 2;
+        let terminatorLen = 0;
+        while (j < data.length) {
+          const code = data.charCodeAt(j);
+          if (code === 7) {
+            terminatorLen = 1;
+            break;
+          }
+          if (code === 27 && j + 1 < data.length && data[j + 1] === "\\\\") {
+            terminatorLen = 2;
+            break;
+          }
+          j += 1;
+        }
+        if (!terminatorLen) {
+          this.remainder = data.slice(i);
+          break;
+        }
+        const seq = data.slice(i, j);
+        this.observeOsc(seq);
+        if (!this.handleOsc(seq)) {
+          result += data.slice(i, j + terminatorLen);
+        }
+        i = j + terminatorLen;`,
+    corrected: `        let j = i + 2;
+        let terminatorLen = 0;
+        let cancelled = false;
+        while (j < data.length) {
+          const code = data.charCodeAt(j);
+          if (code === 7) {
+            terminatorLen = 1;
+            break;
+          }
+          if (code === 24 || code === 26) {
+            terminatorLen = 1;
+            cancelled = true;
+            break;
+          }
+          if (code === 27 && j + 1 < data.length && data[j + 1] === "\\\\") {
+            terminatorLen = 2;
+            break;
+          }
+          j += 1;
+        }
+        if (!terminatorLen) {
+          this.remainder = data.slice(i);
+          break;
+        }
+        if (!cancelled) {
+          const seq = data.slice(i, j);
+          this.observeOsc(seq);
+          if (!this.handleOsc(seq)) {
+            result += data.slice(i, j + terminatorLen);
+          }
+        }
+        i = j + terminatorLen;`,
+  },
+];
+
 const scrollbackCoreCorrections = [
   {
     original: `  "restty_resize",
@@ -344,8 +578,10 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
 // Restty 0.3.0 otherwise reports readiness with an unusable font, exposes
 // clipboard/link side effects before OMXTerm owns those routes, clamps live
 // size to 10–64, has no independent row-height or live line-limit input,
-// brightens bold ANSI colors, and expands every face in a collection without
-// exact family/regular selection. Correct only the reviewed npm bytes;
+// tags DOM paste as ordinary input, and hides current paste mode, selection,
+// parsed OSC and Select All. It also brightens bold ANSI colors and expands
+// every face in a collection without exact family/regular selection. Correct
+// only the reviewed npm bytes;
 // dependency drift requires a fresh review.
 export async function prepareResttyRuntime(options = {}) {
   const selectedRuntimePath = options.runtimePath ?? runtimePath;
@@ -354,8 +590,10 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorFontDigest) {
-      // Only the scrollback runtime seam remains to be applied.
+    if (sourceDigest === priorScrollbackDigest) {
+      // Only the clipboard/runtime parser seams remain to be applied.
+    } else if (sourceDigest === priorFontDigest) {
+      // Scrollback and clipboard/runtime parser seams remain to be applied.
     } else if (sourceDigest === priorFamilyFilterDigest) {
       source = applyCorrections(source, requiredFontCorrections);
     } else if (sourceDigest === originalDigest) {
@@ -372,14 +610,19 @@ export async function prepareResttyRuntime(options = {}) {
       );
     }
 
-    if (sourceDigest !== priorFontDigest) {
+    if (
+      sourceDigest !== priorFontDigest &&
+      sourceDigest !== priorScrollbackDigest
+    ) {
       if (sourceDigest !== priorFamilyFilterDigest) {
         if (sourceDigest !== priorBoldColorDigest)
           source = applyCorrections(source, boldColorCorrections);
         source = applyCorrections(source, fontCorrections);
       }
     }
-    source = applyCorrections(source, scrollbackRuntimeCorrections);
+    if (sourceDigest !== priorScrollbackDigest)
+      source = applyCorrections(source, scrollbackRuntimeCorrections);
+    source = applyCorrections(source, clipboardCorrections);
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,
