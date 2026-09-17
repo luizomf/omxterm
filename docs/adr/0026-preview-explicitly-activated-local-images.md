@@ -28,8 +28,8 @@ animation metadata is rejected; filename extension is never evidence of format.
 Closing the owner aborts picker continuation and makes later read results inert.
 No path or payload enters Operational Events.
 
-The narrow sender-validated preload route accepts only a picker marker or the
-exact bounded file URL and returns only validated filename, media type,
+The narrow sender-validated preload route accepts only a picker marker, the
+exact bounded file URL, or an exact bounded native absolute path and returns only validated filename, media type,
 dimensions, and bytes. It exposes no path, directory enumeration, generic read,
 or arbitrary filesystem capability. The renderer creates one memory-only Blob
 URL under a CSP that permits `blob:` only for images while preserving

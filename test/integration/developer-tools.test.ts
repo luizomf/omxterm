@@ -58,7 +58,13 @@ describe("Developer Tools through native Electron", () => {
         selectedWindowClosed: true,
       });
     } finally {
-      await rm(root, { recursive: true, force: true });
+      // Windows may release Chromium profile handles shortly after child exit.
+      await rm(root, {
+        recursive: true,
+        force: true,
+        maxRetries: 10,
+        retryDelay: 100,
+      });
     }
   }, 20_000);
 });
