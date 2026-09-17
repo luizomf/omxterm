@@ -118,38 +118,57 @@ export async function exerciseResttyImages(options: {
     );
   }
 
+  const waitForImagePixels = async (
+    label: string,
+    previousGrid?: { readonly cols: number; readonly rows: number },
+  ) => {
+    let evidence: PixelEvidence | undefined;
+    let gridSize: { readonly cols: number; readonly rows: number } | undefined;
+    await waitFor(async () => {
+      gridSize = size();
+      evidence = await captureResttyImagePixels(
+        window,
+        gridSize.cols,
+        gridSize.rows,
+      );
+      return (
+        evidence.changedInPiPlacement > 1_000 &&
+        evidence.greenInChafaPlacement > 100 &&
+        evidence.colorBucketsInPiPlacement > 1_000 &&
+        (previousGrid === undefined ||
+          gridSize.cols !== previousGrid.cols ||
+          gridSize.rows !== previousGrid.rows)
+      );
+    }, label);
+    if (!evidence || !gridSize)
+      throw new Error(`Image rendering produced no ${label} evidence`);
+    return { evidence, gridSize };
+  };
+
+  const initial = await waitForImagePixels(
+    "initial Pi and Chafa image rendering",
+  );
   window.webContents.send(terminalIpc.fontZoom, "in");
-  await new Promise((resolve) => setTimeout(resolve, 1_000));
-  const zoomSize = size();
-  const afterZoomPixels = await captureResttyImagePixels(
-    window,
-    zoomSize.cols,
-    zoomSize.rows,
+  const zoom = await waitForImagePixels(
+    "Pi and Chafa images after font zoom",
+    initial.gridSize,
   );
 
   window.webContents.send(terminalIpc.fontZoom, "reset");
-  await new Promise((resolve) => setTimeout(resolve, 1_000));
-  const terminalSize = size();
-  const canvasBounds = await readCanvasBounds(window);
-  const captured = await window.webContents.capturePage(canvasBounds);
-  const finalPng = captured.toPNG();
-  const pixels = await inspectScreenshot(
-    window,
-    finalPng,
-    terminalSize.cols,
-    terminalSize.rows,
+  const reset = await waitForImagePixels(
+    "Pi and Chafa images after zoom reset",
+    zoom.gridSize,
   );
+  const canvasBounds = await readCanvasBounds(window);
+  const finalPng = (await window.webContents.capturePage(canvasBounds)).toPNG();
   const screenshotPath = process.env["OMXTERM_RESTTY_IMAGE_SCREENSHOT_PATH"];
   if (screenshotPath) writeFileSync(screenshotPath, finalPng);
 
   const windowSize = window.getSize();
   window.setSize(windowSize[0]! + 100, windowSize[1]! + 80);
-  await new Promise((resolve) => setTimeout(resolve, 1_000));
-  const resizeSize = size();
-  const afterResizePixels = await captureResttyImagePixels(
-    window,
-    resizeSize.cols,
-    resizeSize.rows,
+  const resized = await waitForImagePixels(
+    "Pi and Chafa images after resize",
+    reset.gridSize,
   );
 
   await waitFor(
@@ -163,10 +182,10 @@ export async function exerciseResttyImages(options: {
 
   return {
     cellSizeResponse,
-    gridSize: terminalSize,
-    pixels,
-    afterZoomPixels,
-    afterResizePixels,
+    gridSize: reset.gridSize,
+    pixels: reset.evidence,
+    afterZoomPixels: zoom.evidence,
+    afterResizePixels: resized.evidence,
   };
 }
 
