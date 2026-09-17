@@ -1,7 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   loadLocalImageRequest,
   readLocalImage,
@@ -16,34 +13,29 @@ const JPEG_2X1 = Buffer.from([
   0xff, 0xd8, 0xff, 0xc0, 0x00, 0x0b, 0x08, 0x00, 0x01, 0x00, 0x02, 0x01, 0x01,
   0x11, 0x00, 0xff, 0xd9,
 ]);
-const directories: string[] = [];
-const acceptDecodedImage = () => true;
-
-async function temporaryDirectory(): Promise<string> {
-  const directory = await mkdtemp(path.join(tmpdir(), "omxterm-image-"));
-  directories.push(directory);
-  return directory;
+function fileOptions(bytes: Uint8Array, size = bytes.length) {
+  return {
+    validateDecodedImage: vi.fn(() => true),
+    open: async () => {
+      let position = 0;
+      return {
+        stat: async () => ({ isFile: () => true, size }),
+        async read(buffer: Uint8Array, offset: number, length: number) {
+          const chunk = bytes.subarray(position, position + length);
+          buffer.set(chunk, offset);
+          position += chunk.length;
+          return { bytesRead: chunk.length };
+        },
+        close: async () => {},
+      };
+    },
+  };
 }
-
-afterEach(async () => {
-  await Promise.all(
-    directories
-      .splice(0)
-      .map((directory) => rm(directory, { recursive: true, force: true })),
-  );
-});
 
 describe("bounded local image loader", () => {
   it("accepts PNG and JPEG by validated contents without trusting extensions", async () => {
-    const directory = await temporaryDirectory();
-    const pngPath = path.join(directory, "not-an-extension");
-    const jpegPath = path.join(directory, "pretends.png");
-    await writeFile(pngPath, PNG_1X1);
-    await writeFile(jpegPath, JPEG_2X1);
-    const validateDecodedImage = (bytes: Uint8Array) => bytes.length > 0;
-
     await expect(
-      readLocalImage(pngPath, { validateDecodedImage }),
+      readLocalImage("/fixture/not-an-extension", fileOptions(PNG_1X1)),
     ).resolves.toMatchObject({
       name: "not-an-extension",
       mime: "image/png",
@@ -52,7 +44,7 @@ describe("bounded local image loader", () => {
       data: new Uint8Array(PNG_1X1),
     });
     await expect(
-      readLocalImage(jpegPath, { validateDecodedImage }),
+      readLocalImage("/fixture/pretends.png", fileOptions(JPEG_2X1)),
     ).resolves.toMatchObject({
       name: "pretends.png",
       mime: "image/jpeg",
@@ -63,27 +55,20 @@ describe("bounded local image loader", () => {
   });
 
   it("rejects unsupported, oversized, changing, animated, and decode-invalid input", async () => {
-    const directory = await temporaryDirectory();
-    const unsupported = path.join(directory, "fake.png");
-    const oversized = path.join(directory, "large.png");
-    await writeFile(unsupported, "<svg/>");
-    await writeFile(oversized, Buffer.alloc(16 * 1024 * 1024 + 1));
-
     await expect(
-      readLocalImage(unsupported, { validateDecodedImage: acceptDecodedImage }),
+      readLocalImage("/fixture/fake.png", fileOptions(Buffer.from("<svg/>"))),
     ).rejects.toThrow(/PNG or JPEG/u);
     await expect(
-      readLocalImage(oversized, { validateDecodedImage: acceptDecodedImage }),
+      readLocalImage(
+        "/fixture/large.png",
+        fileOptions(PNG_1X1, 16 * 1024 * 1024 + 1),
+      ),
     ).rejects.toThrow(/16 MiB/u);
     await expect(
-      readLocalImage(path.join(directory, "synthetic"), {
-        validateDecodedImage: acceptDecodedImage,
-        open: async () => ({
-          stat: async () => ({ isFile: () => true, size: 1 }),
-          read: async () => ({ bytesRead: 0 }),
-          close: async () => undefined,
-        }),
-      }),
+      readLocalImage(
+        "/fixture/changing.png",
+        fileOptions(PNG_1X1, PNG_1X1.length + 1),
+      ),
     ).rejects.toThrow(/changed/u);
 
     const animated = Buffer.concat([
@@ -91,21 +76,67 @@ describe("bounded local image loader", () => {
       pngChunk("acTL", Buffer.from([0, 0, 0, 1, 0, 0, 0, 0])),
       PNG_1X1.subarray(33),
     ]);
-    const animatedPath = path.join(directory, "animated.png");
-    await writeFile(animatedPath, animated);
     await expect(
-      readLocalImage(animatedPath, {
-        validateDecodedImage: acceptDecodedImage,
-      }),
+      readLocalImage("/fixture/animated.png", fileOptions(animated)),
     ).rejects.toThrow(/Animated/u);
-
-    const imagePath = path.join(directory, "image.png");
-    await writeFile(imagePath, PNG_1X1);
     await expect(
-      readLocalImage(imagePath, { validateDecodedImage: () => false }),
+      readLocalImage("/fixture/image.png", {
+        ...fileOptions(PNG_1X1),
+        validateDecodedImage: () => false,
+      }),
     ).rejects.toThrow(/Invalid PNG/u);
   });
 });
+
+describe.each(["png", "jpeg"] as const)(
+  "%s predecode dimension budgets",
+  (format) => {
+    it.each([
+      [8192, 1, true],
+      [8193, 1, false],
+      [1, 8192, true],
+      [1, 8193, false],
+      [4000, 4000, true],
+      [4001, 4000, false],
+    ] as const)(
+      "checks %i×%i before native allocation (accepted=%s)",
+      async (width, height, accepted) => {
+        // Only metadata is needed to prove the predecode gate. Native decoding is
+        // an injected boundary here; real PNG/JPEG decode lives in integration.
+        const options = fileOptions(dimensionFixture(format, width, height));
+        const pending = readLocalImage("/fixture/image", options);
+        if (accepted) {
+          await expect(pending).resolves.toMatchObject({ width, height });
+          expect(options.validateDecodedImage).toHaveBeenCalledOnce();
+        } else {
+          await expect(pending).rejects.toThrow(/preview limit/u);
+          expect(options.validateDecodedImage).not.toHaveBeenCalled();
+        }
+      },
+    );
+  },
+);
+
+function dimensionFixture(
+  format: "png" | "jpeg",
+  width: number,
+  height: number,
+): Buffer {
+  if (format === "jpeg") {
+    const bytes = Buffer.from(JPEG_2X1);
+    bytes.writeUInt16BE(height, 7);
+    bytes.writeUInt16BE(width, 9);
+    return bytes;
+  }
+  const header = Buffer.from(PNG_1X1.subarray(16, 29));
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  return Buffer.concat([
+    PNG_1X1.subarray(0, 8),
+    pngChunk("IHDR", header),
+    PNG_1X1.subarray(33),
+  ]);
+}
 
 describe("native local image request", () => {
   it.each([
