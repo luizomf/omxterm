@@ -35,8 +35,10 @@ const priorScrollbackDigest =
   "c8580ea08273aa17dc3ae1f658aafe8340114a751e2a36e09e933e3bcabb3bad";
 const priorClipboardDigest =
   "272bfb31f240a8e45ec2c36e85858a0cfadec1e6fc9a7fd8a7efe70a2f350c94";
-const correctedDigest =
+const priorVisibleLinksDigest =
   "595f72d3be87f0965dea3733180264768720f7cba0c7c35aad797e2a22689665";
+const correctedDigest =
+  "f309665b0761fedb862600208b4c3950d9a28523f1f0c2e5bf8554ce96a89c6a";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 
 const securityCorrections = [
@@ -497,6 +499,144 @@ const clipboardCorrections = [
   },
 ];
 
+const visibleLinkCorrections = [
+  {
+    original: `function createRuntimeInteraction(options) {
+  const {
+    attachCanvasEvents,
+    touchSelectionMode,
+    touchSelectionLongPressMs,
+    touchSelectionMoveThresholdPx,
+    imeInput,
+    cleanupCanvasFns,
+    getCanvas,
+    getCurrentDpr,
+    getGridState,
+    getLastRenderState,
+    getWasmReady,
+    getWasm,
+    getWasmHandle,
+    getWasmExports,
+    updateLinkHover,`,
+    corrected: `function createRuntimeInteraction(options) {
+  const {
+    attachCanvasEvents,
+    touchSelectionMode,
+    touchSelectionLongPressMs,
+    touchSelectionMoveThresholdPx,
+    imeInput,
+    cleanupCanvasFns,
+    getCanvas,
+    getCurrentDpr,
+    getGridState,
+    getLastRenderState,
+    getWasmReady,
+    getWasm,
+    getWasmHandle,
+    getWasmExports,
+    resolveVisibleLink,
+    updateLinkHover,`,
+  },
+  {
+    original: `  const clearSelection = () => {
+    clearPendingDesktopSelection();`,
+    corrected: `  const getVisibleLinkAtClientPoint = (clientX, clientY) => {
+    if (!resolveVisibleLink)
+      return null;
+    const render = getCurrentRenderState();
+    const wasm = getWasm();
+    const wasmHandle = getWasmHandle();
+    if (!render || !wasm || !wasmHandle || render.rows <= 0 || render.cols <= 0)
+      return null;
+
+    // Render-state views borrow WASM memory. Snapshot every cell before the
+    // selection-text queries below allocate and may grow that memory.
+    const rows = Array.from({ length: render.rows }, (_, row) =>
+      Array.from({ length: render.cols }, (_, col) => {
+        const idx = row * render.cols + col;
+        const wide = render.wide?.[idx] ?? 0;
+        return wide === 2 || wide === 3 ? "" : readClusterText(render, idx);
+      }),
+    );
+    const rowText = rows.map((cells) => cells.join("").replace(/[ \\t]+$/gu, ""));
+    for (let row = 0; row < render.rows; row += 1) {
+      if (wasm.getSelectionText(wasmHandle, row, 0, row, render.cols - 1) !== rowText[row])
+        return null;
+    }
+    const selectionRowText = (row) =>
+      row >= 0 && row < render.rows
+        ? rowText[row]
+        : wasm.getSelectionText(wasmHandle, row, 0, row, render.cols - 1);
+    const isSoftWrap = (firstRow, secondRow) => {
+      const first = selectionRowText(firstRow);
+      const second = selectionRowText(secondRow);
+      const pair = wasm.getSelectionText(
+        wasmHandle,
+        firstRow,
+        0,
+        secondRow,
+        render.cols - 1,
+      );
+      if (pair === first + second)
+        return true;
+      if (pair === first + "\\n" + second)
+        return false;
+      return null;
+    };
+
+    const cell = normalizeSelectionCell(positionToCell({ clientX, clientY }));
+    let firstRow = cell.row;
+    let lastRow = cell.row;
+    while (firstRow > 0 && isSoftWrap(firstRow - 1, firstRow) === true)
+      firstRow -= 1;
+    while (lastRow + 1 < render.rows && isSoftWrap(lastRow, lastRow + 1) === true)
+      lastRow += 1;
+    const text = rowText.slice(firstRow, lastRow + 1).join("");
+    const offset =
+      rowText.slice(firstRow, cell.row).join("").length +
+      rows[cell.row].slice(0, cell.col).join("").length;
+    const wasmExports = getWasmExports();
+    const viewportOffset = wasmExports?.restty_scrollbar_offset?.(wasmHandle) ?? 0;
+    const viewportLength = wasmExports?.restty_scrollbar_len?.(wasmHandle) ?? render.rows;
+    const totalRows = wasmExports?.restty_scrollbar_total?.(wasmHandle) ?? render.rows;
+    const clippedStart =
+      firstRow === 0 && viewportOffset > 0 && isSoftWrap(-1, 0) === true;
+    const clippedEnd =
+      lastRow === render.rows - 1 &&
+      viewportOffset + viewportLength < totalRows &&
+      (isSoftWrap(render.rows - 1, render.rows) === true ||
+        rows[lastRow][render.cols - 1] !== " ");
+    const match = resolveVisibleLink({ text, offset, clippedStart, clippedEnd });
+    return match
+      ? { ...match, id: \`\${firstRow}:\${match.start}:\${match.end}\` }
+      : null;
+  };
+  const clearSelection = () => {
+    clearPendingDesktopSelection();`,
+  },
+  {
+    original: `    positionToPixel,
+    selectAll,`,
+    corrected: `    positionToPixel,
+    getVisibleLinkAtClientPoint,
+    selectAll,`,
+  },
+  {
+    original: `    getMouseStatus: () => inputHandler.getMouseStatus(),
+    copySelectionToClipboard,`,
+    corrected: `    getMouseStatus: () => inputHandler.getMouseStatus(),
+    getVisibleLinkAtClientPoint: interaction.getVisibleLinkAtClientPoint,
+    copySelectionToClipboard,`,
+  },
+  {
+    original: `    getWasmExports: () => wasmExports,
+    updateLinkHover,`,
+    corrected: `    getWasmExports: () => wasmExports,
+    resolveVisibleLink: services.resolveVisibleLink,
+    updateLinkHover,`,
+  },
+];
+
 const scrollbackCoreCorrections = [
   {
     original: `  "restty_resize",
@@ -587,7 +727,8 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
 // clipboard/link side effects before OMXTerm owns those routes, clamps live
 // size to 10–64, has no independent row-height or live line-limit input,
 // tags DOM paste as ordinary input, and hides current paste mode, selection,
-// parsed OSC and Select All. It also brightens bold ANSI colors and expands
+// parsed OSC, Select All and visible-cell/soft-wrap link lookup. It also
+// brightens bold ANSI colors and expands
 // every face in a collection without exact family/regular selection. Correct
 // only the reviewed npm bytes;
 // dependency drift requires a fresh review.
@@ -598,7 +739,9 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorClipboardDigest) {
+    if (sourceDigest === priorVisibleLinksDigest) {
+      source = applyCorrections(source, visibleLinkCorrections);
+    } else if (sourceDigest === priorClipboardDigest) {
       // Only complete-buffer Select All remains to be applied.
     } else if (sourceDigest === priorScrollbackDigest) {
       // Clipboard/runtime parser and Select All seams remain to be applied.
@@ -621,6 +764,7 @@ export async function prepareResttyRuntime(options = {}) {
     }
 
     if (
+      sourceDigest !== priorVisibleLinksDigest &&
       sourceDigest !== priorFontDigest &&
       sourceDigest !== priorScrollbackDigest &&
       sourceDigest !== priorClipboardDigest
@@ -632,13 +776,17 @@ export async function prepareResttyRuntime(options = {}) {
       }
     }
     if (
+      sourceDigest !== priorVisibleLinksDigest &&
       sourceDigest !== priorScrollbackDigest &&
       sourceDigest !== priorClipboardDigest
     )
       source = applyCorrections(source, scrollbackRuntimeCorrections);
-    if (sourceDigest !== priorClipboardDigest)
+    if (
+      sourceDigest !== priorVisibleLinksDigest &&
+      sourceDigest !== priorClipboardDigest
+    )
       source = applyCorrections(source, clipboardCorrections);
-    else
+    else if (sourceDigest === priorClipboardDigest)
       source = applyCorrections(source, [
         {
           original:
@@ -672,6 +820,8 @@ export async function prepareResttyRuntime(options = {}) {
           )[0],
         },
       ]);
+    if (sourceDigest !== priorVisibleLinksDigest)
+      source = applyCorrections(source, visibleLinkCorrections);
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,

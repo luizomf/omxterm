@@ -60,7 +60,15 @@ without blocking ordinary key input, and stops future chunks and snippet Enter
 after disposal without rollback. OSC 52 passes the parsed handler payload to the
 shared canonical UTF-8 Base64 validator and its dependency-equivalent
 10,000,000-code-unit bound; reads, clears, malformed, cancelled and over-bound
-requests have no host or PTY side effect. Links, titles, bell and images stay
+requests have no host or PTY side effect. Candidate External Links use the
+existing exact-URL host route and lowercase xterm-provider expression over
+visible cell snapshots joined only by Ghostty selection-text proof of a soft
+wrap. Cell text is copied before selection queries can allocate WASM memory.
+Modified primary click overrides application mouse reporting only for a stable
+valid destination and produces no duplicate PTY report; changed targets return
+to ordinary routing, while cancellation and focus loss produce no spurious
+input. Viewport-edge destinations that may continue into concealed rows are
+refused, and OSC 8 link IDs are never considered. Titles, bell and images stay
 unavailable until their owning migration tickets. These gates apply only to
 Restty. xterm's existing behavior and security boundaries remain unchanged. Renderer isolation,
 the production CSP, application network boundary and platform sandbox policy

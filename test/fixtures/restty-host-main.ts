@@ -1,5 +1,4 @@
 import { app, BrowserWindow, ipcMain, session } from "electron";
-import { createHash } from "node:crypto";
 import * as nodePty from "node-pty";
 import { mkdirSync, writeSync } from "node:fs";
 import path from "node:path";
@@ -17,6 +16,8 @@ import {
   installedFallbackFontData,
   installedFontData,
 } from "../../src/main/installed-font-family";
+import { exerciseResttyLinks } from "./restty-link-gestures";
+import { createLargePasteFixture, dispatchDomPaste } from "./restty-host-paste";
 
 const prefix = "__OMXTERM_RESTTY_HOST_RESULT__";
 const root = __dirname;
@@ -40,7 +41,7 @@ let clipboardWrites = 0;
 let selectAllCoveredScrollback = false;
 let protectedPasteConfirmations = 0;
 let contextMenus = 0;
-let externalLinks = 0;
+const externalLinks: string[] = [];
 let titles = 0;
 let bells = 0;
 let navigations = 0;
@@ -65,7 +66,7 @@ async function waitFor(
   predicate: () => boolean | Promise<boolean>,
   label: string,
 ) {
-  const deadline = Date.now() + 30_000;
+  const deadline = Date.now() + 60_000;
   while (Date.now() < deadline) {
     if (await predicate()) return;
     await new Promise((resolve) => setTimeout(resolve, 25));
@@ -190,8 +191,8 @@ function createHost(window: BrowserWindow) {
       bells += 1;
     },
     onUserInteraction() {},
-    async openExternalLink() {
-      externalLinks += 1;
+    async openExternalLink(url) {
+      externalLinks.push(url);
     },
     onExternalLinkOpenError() {},
     loadSnippets: async () => ({ snippets: [] }),
@@ -223,34 +224,6 @@ function createHost(window: BrowserWindow) {
       router.activeResttySurfaceFontConfigurations(),
   });
   return { reloader };
-}
-
-function createLargePasteFixture() {
-  const payload =
-    Array.from(
-      { length: 100 },
-      (_, index) =>
-        `${index.toString().padStart(4, "0")}:${"0123456789abcdef".repeat(49)}`,
-    ).join("\n") + "\n";
-  return {
-    command: `shasum -a 256 <<'__OMXTERM_PAYLOAD__'\n${payload}__OMXTERM_PAYLOAD__\nstty echo\n`,
-    digest: createHash("sha256").update(payload).digest("hex"),
-    length: payload.length,
-  };
-}
-
-async function dispatchDomPaste(window: BrowserWindow, text: string) {
-  await window.webContents.executeJavaScript(
-    `(() => {
-      const text = ${JSON.stringify(text)};
-      const target = document.querySelector('.restty-terminal-surface textarea');
-      if (!target) throw new Error('Restty paste target is missing');
-      const event = new Event('paste', { bubbles: true, cancelable: true });
-      Object.defineProperty(event, 'clipboardData', { value: { getData: (type) => type === 'text/plain' ? text : '' } });
-      target.dispatchEvent(event);
-    })()`,
-    true,
-  );
 }
 
 app
@@ -429,6 +402,15 @@ app
       "selected-tab Unicode input isolation",
     );
 
+    const linkEvidence = await exerciseResttyLinks({
+      window,
+      deliverOutput: deliverOutputs[1]!,
+      inputs: inputs[1]!,
+      resizes: resizes[1]!,
+      externalLinks,
+      waitFor,
+    });
+
     window.blur();
     window.focus();
     await waitFor(
@@ -493,6 +475,7 @@ app
       contextMenus,
       largePasteLength: largePaste.length,
       externalLinks,
+      ...linkEvidence,
       titles,
       bells,
       navigations,

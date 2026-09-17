@@ -29,6 +29,15 @@ type CoreExports = WebAssembly.Exports & {
   restty_scrollbar_total(handle: number): number;
   restty_scrollbar_offset(handle: number): number;
   restty_scrollbar_len(handle: number): number;
+  restty_selection_text(
+    handle: number,
+    anchorRow: number,
+    anchorCol: number,
+    focusRow: number,
+    focusCol: number,
+    resultPointer: number,
+    resultLength: number,
+  ): number;
 };
 
 async function loadCore() {
@@ -75,6 +84,43 @@ function write(exports: CoreExports, handle: number, text: string): void {
   }
 }
 
+function selectionText(
+  exports: CoreExports,
+  handle: number,
+  anchorRow: number,
+  anchorCol: number,
+  focusRow: number,
+  focusCol: number,
+): string {
+  const result = exports.restty_alloc(8);
+  if (!result)
+    throw new Error("actual Restty selection result allocation failed");
+  let pointer = 0;
+  let length = 0;
+  try {
+    expect(
+      exports.restty_selection_text(
+        handle,
+        anchorRow,
+        anchorCol,
+        focusRow,
+        focusCol,
+        result,
+        result + 4,
+      ),
+    ).toBe(0);
+    const view = new DataView(exports.memory.buffer);
+    pointer = view.getUint32(result, true);
+    length = view.getUint32(result + 4, true);
+    return new TextDecoder().decode(
+      new Uint8Array(exports.memory.buffer, pointer, length),
+    );
+  } finally {
+    if (pointer && length) exports.restty_free(pointer, length);
+    exports.restty_free(result, 8);
+  }
+}
+
 function output(lines: number, width: number): string {
   const chunks = new Array<string>(lines);
   for (let index = 0; index < lines; index += 1)
@@ -100,6 +146,43 @@ function visibleText(exports: CoreExports, handle: number): string {
 }
 
 describe("pinned Restty/Ghostty scrollback core", () => {
+  it("preserves graphemes across proven soft wraps and separates hard breaks", async () => {
+    const core = await loadCore();
+    try {
+      const soft = core.create(10, 4, 10_000_000);
+      const softText = "漢e\u0301 http://x.test";
+      write(core.exports, soft, softText);
+      expect(selectionText(core.exports, soft, 0, 0, 1, 9)).toBe(softText);
+
+      const hard = core.create(20, 4, 10_000_000);
+      write(core.exports, hard, "http://one.test\r\nhttp://two.test");
+      expect(selectionText(core.exports, hard, 0, 0, 1, 19)).toBe(
+        "http://one.test\nhttp://two.test",
+      );
+    } finally {
+      core.destroyAll();
+    }
+  });
+
+  it("exposes viewport evidence when a soft-wrapped destination is concealed", async () => {
+    const core = await loadCore();
+    try {
+      const handle = core.create(20, 5, 10_000_000);
+      const url = `https://clipped.test/${"z".repeat(20)}`;
+      write(core.exports, handle, `${"\r\n".repeat(3)}${url}`);
+      core.exports.restty_scroll_viewport(handle, -1);
+      expect(core.exports.restty_scrollbar_offset(handle)).toBe(0);
+      expect(core.exports.restty_scrollbar_total(handle)).toBeGreaterThan(
+        core.exports.restty_scrollbar_len(handle),
+      );
+      const visible = selectionText(core.exports, handle, 0, 0, 4, 19);
+      expect(url.startsWith(visible.trimStart())).toBe(true);
+      expect(visible).not.toContain(url);
+    } finally {
+      core.destroyAll();
+    }
+  });
+
   it("enforces creation policies from 1 through 100,000 by whole pages", async () => {
     const core = await loadCore();
     try {

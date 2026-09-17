@@ -15,6 +15,7 @@ import type { TerminalSessionAdapter } from "../../src/terminal-surface/terminal
 import {
   ignoreOscLinks,
   registerVisibleWebLinks,
+  visibleWebLinkAtOffset,
 } from "../../src/terminal-surface/visible-web-links";
 
 const electron = vi.hoisted(() => ({
@@ -70,6 +71,23 @@ async function linksFor(
 }
 
 describe("pinned @xterm/addon-web-links 0.12.0 visible span contract", () => {
+  it("matches a clicked provider span without merging adjacent links or clipped destinations", () => {
+    const text = "https://one.test/a https://two.test/b";
+    expect(visibleWebLinkAtOffset(text, 3)).toEqual({
+      url: "https://one.test/a",
+      start: 0,
+      end: 18,
+    });
+    expect(visibleWebLinkAtOffset(text, 22)).toEqual({
+      url: "https://two.test/b",
+      start: 19,
+      end: 37,
+    });
+    expect(visibleWebLinkAtOffset(text, 3, true, false)).toBeUndefined();
+    expect(visibleWebLinkAtOffset(text, 22, false, true)).toBeUndefined();
+    expect(visibleWebLinkAtOffset("HTTPS://upper.test", 3)).toBeUndefined();
+  });
+
   it.each([
     ["See https://example.test/path, now", "https://example.test/path"],
     ["[http://one.test/a]", "http://one.test/a"],

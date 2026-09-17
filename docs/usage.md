@@ -286,7 +286,13 @@ Activate a link with primary-button `Cmd+click` on macOS or `Ctrl+click` on
 Linux and Windows. The Terminal Surface sends the exact visible URL to the
 Electron main process, which independently validates the sender, URL,
 HTTP(S) protocol, and host before asking the operating system to open it.
-Other protocols and invalid URLs have no external-opening side effect.
+Other protocols and invalid URLs have no external-opening side effect. The
+Restty development candidate follows the same provider punctuation and
+lowercase-protocol rules, including through fully visible soft wraps. It
+conservatively refuses a destination that may continue above or below the
+visible viewport; scroll until the complete URL is visible before activating
+it. A valid modified click takes precedence while a TUI reports mouse input and
+does not also send that click to the TUI.
 
 Terminal output is untrusted, so the activation gesture is consent, not proof
 that a destination is safe. Check the visible destination before opening it.

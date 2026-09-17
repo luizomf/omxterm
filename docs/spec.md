@@ -222,8 +222,8 @@ Semantic paste and injection requests retain request order, recheck the current
 bracketed-paste mode and Surface lifetime after asynchronous decisions, and stop
 future chunks if their owning Surface closes. Bytes already sent before closure
 cannot be recalled, and a submitting snippet never appends Enter after closure.
-Links, title, bell, Option Key Mode and image routes remain unavailable in this
-slice; xterm retains those parts of the complete contract below. Restty
+Title, bell, Option Key Mode and image routes remain unavailable in this slice;
+xterm retains those parts of the complete contract below. Restty
 scrollback follows the shared contract below through the pinned Ghostty core. Linux and Windows Restty
 behavior is unverified; this slice's native runtime evidence is macOS ARM64.
 Native rasterization can differ between Restty and xterm; pixel-identical glyph
@@ -322,10 +322,16 @@ session started; the native window
 title mirrors the selected tab and falls back to `OMXTerm`. Title contents are
 never logged or reported to the PTY.
 
-Only literal visible `http:` and `https:` URLs are links. `Cmd+click` on macOS
-or `Ctrl+click` on Linux and Windows asks the Electron main process to parse
-and validate the exact URL before opening it. OSC 8 destinations and all other schemes are
-ignored.
+Only literal visible lowercase `http:` and `https:` URLs are links. `Cmd+click`
+on macOS or `Ctrl+click` on Linux and Windows asks the Electron main process to
+parse and validate the exact URL before opening it. The valid modified primary
+click takes precedence over application mouse reporting and is consumed without
+a duplicate PTY mouse report; other gestures retain ordinary selection or
+application-mouse routing. The Restty candidate reconstructs a destination only
+across core-proven, fully visible soft wraps. It preserves hard breaks and cell
+coordinates for grapheme and wide-cell prefixes, and conservatively refuses a
+destination that may continue beyond the visible viewport. OSC 8 destinations
+and all other schemes are ignored.
 
 ## Clipboard
 

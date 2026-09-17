@@ -9,7 +9,6 @@ import {
 import bundledFontBytes from "../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf";
 import type { TerminalSize } from "../shared/terminal-contract";
 import type { TerminalFontData } from "../shared/terminal-font-data";
-import { decodeOsc52Write } from "./osc52-clipboard";
 import {
   createSemanticInputDelivery,
   type SemanticInputDelivery,
@@ -32,6 +31,11 @@ import {
   type TerminalTheme,
 } from "../shared/terminal-theme";
 import type { TerminalSessionAdapter } from "./terminal-session-adapter";
+import {
+  installResttyVisibleLinks,
+  type ResttyVisibleLinkInteraction,
+} from "./restty-visible-links";
+import { resttyHostServices } from "./restty-host-services";
 import type {
   TerminalSurface,
   TerminalSurfaceConfiguration,
@@ -51,7 +55,7 @@ type CandidateRuntime = {
   };
   readonly render: { getBackend(): string | null };
   readonly io: { connectPty(): void };
-  readonly interaction: {
+  readonly interaction: ResttyVisibleLinkInteraction & {
     focus(): void;
     getSelectionText(): string;
     selectAll(): boolean;
@@ -135,29 +139,6 @@ function resttyDelivery(
   });
 }
 
-function resttyClipboardServices(
-  transport: PtyTransport,
-  delivery: SemanticInputDelivery,
-  options: TerminalSurfaceOptions,
-) {
-  return {
-    ptyTransport: transport,
-    beforeInput: ({ text, source }: { text: string; source: string }) => {
-      if (source !== "paste") return text;
-      void delivery.deliver(text);
-      return null;
-    },
-    onOsc: (command: number, payload: string) => {
-      if (command !== 52 || !options.clipboard) return;
-      const text = decodeOsc52Write(payload);
-      if (text === undefined) return;
-      void options.clipboard
-        .writeText(text)
-        .catch(() => options.onClipboardError?.());
-    },
-  };
-}
-
 async function copyResttySelection(
   pane: CandidatePane | undefined,
   options: TerminalSurfaceOptions,
@@ -183,6 +164,7 @@ export async function mountResttyTerminalSurface(
   let ptyCallbacks: PtyCallbacks | undefined;
   let settledSize: TerminalSize | undefined;
   let removeRuntimeListener: (() => void) | undefined;
+  let removeVisibleLinkListeners: (() => void) | undefined;
   let restty: Restty | undefined;
   let pane: CandidatePane | undefined;
   let baselineFontSize = resolveFontSize(options.appearance?.fontSize);
@@ -240,6 +222,8 @@ export async function mountResttyTerminalSurface(
     container.removeEventListener("contextmenu", onContextMenu);
     removeRuntimeListener?.();
     removeRuntimeListener = undefined;
+    removeVisibleLinkListeners?.();
+    removeVisibleLinkListeners = undefined;
     adapter.close();
     restty?.destroy();
   };
@@ -299,7 +283,7 @@ export async function mountResttyTerminalSurface(
       scrollbackLines,
       terminalTheme,
     );
-    const services = resttyClipboardServices(transport, delivery, options);
+    const services = resttyHostServices(transport, delivery, options);
     restty = new Restty({
       root: container,
       surface: {
@@ -338,6 +322,12 @@ export async function mountResttyTerminalSurface(
     if (!canvas) throw new Error("Restty did not create its rendering canvas");
     container.dataset.resttyBackend = "webgl2";
     container.dataset.resttyFont = initialFamily ?? BUNDLED_FONT_NAME;
+    if (options.onExternalLink)
+      removeVisibleLinkListeners = installResttyVisibleLinks(
+        canvas,
+        pane.runtime.interaction,
+        options.onExternalLink,
+      );
     container.addEventListener("contextmenu", onContextMenu);
     canvas.addEventListener(
       "webglcontextlost",

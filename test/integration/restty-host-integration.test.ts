@@ -32,7 +32,10 @@ interface HostResult {
   readonly protectedPasteConfirmations: number;
   readonly contextMenus: number;
   readonly largePasteLength: number;
-  readonly externalLinks: number;
+  readonly externalLinks: readonly string[];
+  readonly validLinkMouseReports: string;
+  readonly ordinaryGestureMouseReports: string;
+  readonly cancelledGestureMouseReports: string;
   readonly titles: number;
   readonly bells: number;
   readonly navigations: number;
@@ -106,6 +109,15 @@ describe.skipIf(process.platform !== "darwin")(
           { closeRequested: true, liveSessions: 1 },
           { closeRequested: false, liveSessions: 0 },
         ]);
+        expect(result.externalLinks[0]).toMatch(
+          /^https:\/\/example\.test\/a+$/u,
+        );
+        expect(result.externalLinks[0]).toBe(result.externalLinks[1]);
+        expect(result.externalLinks.slice(2)).toEqual([
+          "https://one.test/a",
+          "https://two.test/b",
+        ]);
+        expect(result.ordinaryGestureMouseReports).toMatch(/\u001b\[</u);
         expect(result).toMatchObject({
           clipboardReads: 1,
           clipboardWrites: 2,
@@ -113,7 +125,8 @@ describe.skipIf(process.platform !== "darwin")(
           protectedPasteConfirmations: 1,
           contextMenus: 1,
           largePasteLength: 79_000,
-          externalLinks: 0,
+          validLinkMouseReports: "",
+          cancelledGestureMouseReports: "",
           titles: 0,
           bells: 0,
           navigations: 0,
@@ -124,7 +137,7 @@ describe.skipIf(process.platform !== "darwin")(
       } finally {
         await rm(root, { recursive: true, force: true });
       }
-    }, 120_000);
+    }, 150_000);
   },
 );
 
@@ -223,7 +236,7 @@ async function runFixture(root: string): Promise<{
   child.stderr.on("data", (chunk: string) => (stderr += chunk));
   const timeout = setTimeout(() => {
     if (child.pid) process.kill(-child.pid, "SIGKILL");
-  }, 110_000);
+  }, 140_000);
   const exitCode = await new Promise<number | null>((resolve, reject) => {
     child.once("error", reject);
     child.once("close", resolve);
