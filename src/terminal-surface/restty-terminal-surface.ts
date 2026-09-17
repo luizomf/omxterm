@@ -66,6 +66,7 @@ type CandidateRuntime = {
     focus(): void;
     getSelectionText(): string;
     selectAll(): boolean;
+    scrollToBottom(): void;
     updateSize(force?: boolean): void;
   };
   readonly terminal: {
@@ -131,6 +132,7 @@ function resttyDelivery(
   options: TerminalSurfaceOptions,
   isLive: () => boolean,
   isBracketedPasteEnabled: () => boolean,
+  revealInput: () => void,
 ): SemanticInputDelivery {
   return createSemanticInputDelivery({
     isLive,
@@ -138,7 +140,10 @@ function resttyDelivery(
     ...(options.clipboard
       ? { confirmPaste: options.clipboard.confirmPaste }
       : {}),
-    write: (chunk) => adapter.write(chunk),
+    write: (chunk) => {
+      revealInput();
+      adapter.write(chunk);
+    },
     // Keep large semantic pastes complete through asynchronous IPC and native
     // PTY queues without turning ordinary key input into scheduled work.
     chunkBytes: 512,
@@ -190,11 +195,13 @@ export async function mountResttyTerminalSurface(
     event.preventDefault();
     options.clipboard.requestContextMenu();
   };
+  const revealInput = () => pane?.runtime.interaction.scrollToBottom();
   const delivery = resttyDelivery(
     adapter,
     options,
     () => !disposed && ready,
     () => pane?.runtime.terminal.isBracketedPasteEnabled() ?? false,
+    revealInput,
   );
 
   const applyRuntimeTheme = (theme: TerminalTheme) => {
@@ -311,7 +318,6 @@ export async function mountResttyTerminalSurface(
       options.optionKeyMode,
       terminalTheme,
     );
-    const services = resttyHostServices(transport, delivery, options);
     restty = new Restty({
       root: container,
       surface: {
@@ -323,7 +329,7 @@ export async function mountResttyTerminalSurface(
         shortcuts: false,
       },
       terminal,
-      services,
+      services: resttyHostServices(transport, delivery, options, revealInput),
     } as ConstructorParameters<typeof Restty>[0]);
     pane =
       (restty.getActivePane() as unknown as CandidatePane | null) ?? undefined;

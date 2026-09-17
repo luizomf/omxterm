@@ -27,6 +27,7 @@ const harness = vi.hoisted(() => {
           focus: vi.fn(),
           getSelectionText: this.getSelectionText,
           selectAll: this.selectAll,
+          scrollToBottom: vi.fn(),
           updateSize: vi.fn(),
         },
         terminal: {
@@ -112,6 +113,24 @@ async function mount(
 describe("Restty clipboard and Protected Paste", () => {
   beforeEach(() => {
     harness.FakeRestty.instances.length = 0;
+  });
+
+  it("reveals accepted input but not focus, replies, empty input or rejected paste", async () => {
+    const value = await mount();
+    const reveal = value.restty.pane.runtime.interaction.scrollToBottom;
+    const services = value.restty.services();
+    services.beforeInput({ text: "\u001b[I", source: "program" });
+    services.beforeInput({ text: "", source: "key" });
+    services.ptyTransport.sendInput("\u001b[1;1R");
+    value.surface.focus();
+    value.clipboard.confirmPaste.mockResolvedValue(false);
+    await value.surface.inject("one\ntwo");
+    expect(reveal).not.toHaveBeenCalled();
+    services.beforeInput({ text: "x", source: "key" });
+    expect(reveal).toHaveBeenCalledOnce();
+    await value.surface.inject("accepted");
+    expect(reveal).toHaveBeenCalledTimes(2);
+    value.surface.dispose();
   });
 
   it("copies only explicit nonempty selection and routes selection/context actions", async () => {

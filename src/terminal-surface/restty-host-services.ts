@@ -8,11 +8,15 @@ export function resttyHostServices(
   transport: PtyTransport,
   delivery: SemanticInputDelivery,
   options: TerminalSurfaceOptions,
+  revealInput: () => void,
 ) {
   return {
     ptyTransport: transport,
     beforeInput: ({ text, source }: { text: string; source: string }) => {
-      if (source !== "paste") return text;
+      if (source !== "paste") {
+        if (source === "key" && text.length > 0) revealInput();
+        return text;
+      }
       void delivery.deliver(text);
       return null;
     },

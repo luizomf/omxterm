@@ -136,7 +136,8 @@ selector or fallback Surface; rendering initialization failure starts no shell
 - The Terminal Surface and Live Terminal Session grid refit in both directions
   after Terminal Window width or height changes, after Window Font Zoom, and
   after tab selection. The grid remains inside the visible content area with
-  its bottom row visible.
+  its bottom row visible. Hiding a Terminal Tab preserves its last real grid;
+  a hidden layout box must not collapse the Surface or PTY to a 1×1 grid.
 - Native minimum window bounds keep the existing 320 px width and 200 px height
   as floors and grow at startup or after a valid reload when configured font or
   padding needs more room for a visible terminal grid.
@@ -353,7 +354,10 @@ retained history, retains none through sustained output or resize, and can
 retain only new output after a later positive reload. Valid live changes keep
 the same Surface, core, Live Terminal Session and PTY and preserve coherent
 reflow, alternate-screen, selection and viewport state. Each Surface remains
-independent. The scrollback scrollbar shows a thumb only while scrollback
+independent. Accepted keyboard input and delivered paste, snippet, or path input return the
+viewport to the live cursor. Output alone, protocol replies, focus, selection,
+and cancelled paste do not force the viewport to the bottom.
+The scrollback scrollbar shows a thumb only while scrollback
 extends beyond the visible screen; an empty scrollbar track paints nothing on
 any platform.
 

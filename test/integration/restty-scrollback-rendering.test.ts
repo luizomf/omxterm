@@ -27,6 +27,19 @@ interface Metrics {
 }
 
 interface Result {
+  readonly viewport: {
+    readonly outputTop: number;
+    readonly typed: Metrics;
+    readonly injected: Metrics;
+    readonly writes: string[];
+    readonly geometry: {
+      sizes: { cols: number; rows: number }[];
+      baseline: { cols: number; rows: number };
+      hiddenSizes: { cols: number; rows: number }[];
+      hiddenCanvasUnchanged: boolean;
+      sameCanvas: boolean;
+    };
+  };
   readonly initial: Metrics;
   readonly scrolledTop: number;
   readonly autoscrollStartTop: number;
@@ -64,6 +77,34 @@ describe("Restty scrollback through the production Surface seam", () => {
         `Scrollback fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
       ).toBe(0);
       expect(result).toBeDefined();
+      expect.soft(result!.viewport.outputTop).toBe(0);
+      expect
+        .soft(result!.viewport.typed.scrollTop)
+        .toBe(
+          result!.viewport.typed.scrollHeight -
+            result!.viewport.typed.clientHeight,
+        );
+      expect
+        .soft(result!.viewport.injected.scrollTop)
+        .toBe(
+          result!.viewport.injected.scrollHeight -
+            result!.viewport.injected.clientHeight,
+        );
+      expect.soft(result!.viewport.writes).toContain("x");
+      expect.soft(result!.viewport.writes).toContain("injected");
+      expect.soft(result!.viewport.geometry.sameCanvas).toBe(true);
+      expect.soft(result!.viewport.geometry.hiddenSizes).toEqual([]);
+      expect.soft(result!.viewport.geometry.hiddenCanvasUnchanged).toBe(true);
+      expect
+        .soft(result!.viewport.geometry.sizes.at(-1)?.cols)
+        .toBeLessThan(result!.viewport.geometry.baseline.cols);
+      expect
+        .soft(
+          result!.viewport.geometry.sizes.every(
+            ({ cols, rows }) => cols > 1 && rows > 1,
+          ),
+        )
+        .toBe(true);
       expect(result!.initial.scrollHeight).toBeGreaterThan(
         result!.initial.clientHeight,
       );
@@ -219,8 +260,21 @@ app.whenReady().then(async () => {
   const selectedPixels = countSelection((await window.webContents.capturePage()).toBitmap());
   const zero = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.disableHistory()", true);
   const positiveAgain = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.enableHistory()", true);
+  const geometry = await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.hiddenGeometry()', true);
+  await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.scrollToTop()', true);
+  const outputMetrics = await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.outputWhileScrolled()', true);
+  window.webContents.sendInputEvent({ type: 'char', keyCode: 'x' });
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const typed = await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.metrics()', true);
+  await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.scrollToTop()', true);
+  await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.surface.inject('injected')", true);
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const injected = await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.metrics()', true);
+  const writes = await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.writes', true);
+  const viewport = { geometry, outputTop: outputMetrics.scrollTop, typed, injected, writes };
   const preferences = window.webContents.getLastWebPreferences();
   const result = {
+    viewport,
     initial,
     scrolledTop,
     autoscrollStartTop,

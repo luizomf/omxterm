@@ -61,9 +61,44 @@ const priorInteractionDigest =
   "ac05624abac2fddea9a38f3e29d26ebbde3f41484b86c0082ce5e3d5cb334e1f";
 const reviewedInteractionDigest =
   "1cda40a3b3e5dfbda54a2dd5616277e3d337e6f964639f8edc6e3c0c892011c3";
-const correctedDigest =
+const priorViewportDigest =
   "46031b070690dc8763b38182abe4cf5205e405e3bdeece179fb7fe00d654a344";
+const correctedDigest =
+  "56dd27c2e2239c3660ccd79c93c3e4a4bfde0bc548ecce09e59c3af00982105c";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
+
+const viewportCorrections = [
+  {
+    original: `    const rect = canvas.getBoundingClientRect();
+    const nextWidth = Math.max(1, Math.floor(rect.width * dpr));`,
+    corrected: `    const rect = canvas.getBoundingClientRect();
+    // Hidden tabs have no layout box; preserve their last real core/PTY grid.
+    if (rect.width <= 0 || rect.height <= 0)
+      return;
+    const nextWidth = Math.max(1, Math.floor(rect.width * dpr));`,
+  },
+  {
+    original: `    noteScrollActivity,
+    scrollViewportByLines,`,
+    corrected: `    noteScrollActivity,
+    scrollToBottom: () => setViewportScrollOffset(Number.MAX_SAFE_INTEGER),
+    scrollViewportByLines,`,
+  },
+  {
+    original: `    syncScrollbar: scrollbarRuntime.syncScrollbar,
+    bindCanvasEvents`,
+    corrected: `    syncScrollbar: scrollbarRuntime.syncScrollbar,
+    scrollToBottom: scrollbarRuntime.scrollToBottom,
+    bindCanvasEvents`,
+  },
+  {
+    original: `    selectAll: interaction.selectAll,
+    selectWordAtClientPoint: interaction.selectWordAtClientPoint,`,
+    corrected: `    selectAll: interaction.selectAll,
+    scrollToBottom: interaction.scrollToBottom,
+    selectWordAtClientPoint: interaction.selectWordAtClientPoint,`,
+  },
+];
 
 const securityCorrections = [
   {
@@ -1277,7 +1312,9 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === reviewedInteractionDigest) {
+    if (sourceDigest === priorViewportDigest) {
+      source = applyCorrections(source, viewportCorrections);
+    } else if (sourceDigest === reviewedInteractionDigest) {
       source = applyCorrections(source, interactionReviewCorrections);
     } else if (sourceDigest === priorInteractionDigest) {
       source = applyCorrections(source, interactionCorrections);
@@ -1379,6 +1416,8 @@ export async function prepareResttyRuntime(options = {}) {
       source = applyCorrections(source, interactionCorrections);
     if (digest(source) === reviewedInteractionDigest)
       source = applyCorrections(source, interactionReviewCorrections);
+    if (digest(source) === priorViewportDigest)
+      source = applyCorrections(source, viewportCorrections);
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,

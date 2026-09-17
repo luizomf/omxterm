@@ -17,6 +17,16 @@ interface ScrollbackFixture {
   disableHistory(): Promise<ScrollMetrics>;
   enableHistory(): Promise<ScrollMetrics>;
   readonly surface: TerminalSurface;
+  readonly writes: string[];
+  scrollToTop(): Promise<ScrollMetrics>;
+  outputWhileScrolled(): Promise<ScrollMetrics>;
+  hiddenGeometry(): Promise<{
+    sizes: { cols: number; rows: number }[];
+    baseline: { cols: number; rows: number };
+    hiddenSizes: { cols: number; rows: number }[];
+    hiddenCanvasUnchanged: boolean;
+    sameCanvas: boolean;
+  }>;
 }
 
 declare global {
@@ -29,6 +39,8 @@ const container = document.createElement("main");
 container.className = "terminal-surface";
 root.append(container);
 let handlers: TerminalSessionHandlers | undefined;
+const writes: string[] = [];
+const sizes: { cols: number; rows: number }[] = [];
 const initialCanvas = () => container.querySelector("canvas");
 const waitForRender = () =>
   new Promise<void>((resolve) =>
@@ -70,8 +82,12 @@ async function run() {
       async start(nextHandlers) {
         handlers = nextHandlers;
       },
-      write() {},
-      resize() {},
+      write(text) {
+        writes.push(text);
+      },
+      resize(size) {
+        sizes.push(size);
+      },
       close() {},
     },
     {
@@ -88,6 +104,49 @@ async function run() {
   globalThis.__omxtermResttyScrollback = {
     ready: true,
     surface,
+    writes,
+    async scrollToTop() {
+      const host = container.querySelector<HTMLElement>(
+        ".restty-native-scroll-host",
+      )!;
+      host.scrollTop = 0;
+      host.dispatchEvent(new Event("scroll"));
+      await waitForRender();
+      return metrics(canvas);
+    },
+    async outputWhileScrolled() {
+      handlers?.onOutput("ordinary output\r\n\u001b[6n");
+      surface.focus();
+      await waitForRender();
+      return metrics(canvas);
+    },
+    async hiddenGeometry() {
+      const baseline = sizes.at(-1)!;
+      const width = canvas!.width;
+      const height = canvas!.height;
+      sizes.length = 0;
+      container.hidden = true;
+      container.style.maxWidth = "500px";
+      await waitForRender();
+      await new Promise((resolve) => window.setTimeout(resolve, 250));
+      const hiddenSizes = [...sizes];
+      const hiddenCanvasUnchanged =
+        canvas!.width === width && canvas!.height === height;
+      container.hidden = false;
+      surface.focus();
+      await waitForRender();
+      await new Promise((resolve) => window.setTimeout(resolve, 250));
+      const result = {
+        baseline,
+        hiddenSizes,
+        hiddenCanvasUnchanged,
+        sizes: [...sizes],
+        sameCanvas: canvas === initialCanvas(),
+      };
+      container.style.maxWidth = "";
+      await waitForRender();
+      return result;
+    },
     metrics: () => metrics(canvas),
     async reduceHistory() {
       surface.applyConfiguration(configuration(1_200));
