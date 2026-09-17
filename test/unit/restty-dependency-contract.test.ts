@@ -126,7 +126,7 @@ describe("Restty dependency contract", () => {
       path.join(packageRoot, "dist", "chunk-c0rcpsc5.js"),
     );
     expect(digest(runtime)).toBe(
-      "1cda40a3b3e5dfbda54a2dd5616277e3d337e6f964639f8edc6e3c0c892011c3",
+      "46031b070690dc8763b38182abe4cf5205e405e3bdeece179fb7fe00d654a344",
     );
     const core = readFileSync(
       path.join(packageRoot, "dist", "chunk-6dxqza9q.js"),
@@ -152,6 +152,9 @@ describe("Restty dependency contract", () => {
     expect(source).toContain("setOptionKeyMode");
     expect(source).toContain("getOptionKeyMode");
     expect(source).toContain("isNativeOptionText");
+    expect(source).toContain("baseKey.toUpperCase()");
+    expect(source).not.toContain("const wantsCopy =");
+    expect(source).not.toContain("const wantsPaste =");
     expect(source).toContain('seq.startsWith("\\x1B[>")');
     expect(source).toContain('runBeforeInputHook(text, "paste")');
     expect(source).toContain("isBracketedPasteEnabled");

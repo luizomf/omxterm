@@ -137,15 +137,16 @@ The lockfile restores the npm tarballs identified by that manifest. `npm ci`
 then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
 Restty runtime, declarations and embedded-core SHA-256 values and produces
 corrected runtime SHA-256
-`1cda40a3b3e5dfbda54a2dd5616277e3d337e6f964639f8edc6e3c0c892011c3`,
+`46031b070690dc8763b38182abe4cf5205e405e3bdeece179fb7fe00d654a344`,
 embedded-core chunk SHA-256
 `3b3f4ef21e2fe5d5bfc7d5ad47b2557c1e12cca33619dbd5f15df9572e038f4d`,
 and event declarations SHA-256
 `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34`.
 The narrow correction makes font-load failure reject initialization, disables
 Restty's direct browser clipboard and link-opening callbacks, preserves native
-Option Unicode/composition versus configured physical-side Alt input, gives DA2
-its own deterministic response, bounds unfinished OSC/CSI control bodies with
+Option Unicode/composition versus configured physical-side Alt input, leaves
+all renderer-received Ctrl+C/Ctrl+V events as PTY input, gives DA2 its own
+deterministic response, bounds unfinished OSC/CSI control bodies with
 whole-control recovery, and exposes raw paste
 origin, current bracketed mode, selection/Select All, parsed OSC and OSC
 cancellation, visible cell/soft-wrap lookup, and parsed Ghostty title/BEL runtime

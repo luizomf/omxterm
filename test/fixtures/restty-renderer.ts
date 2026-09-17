@@ -87,9 +87,16 @@ void mountResttyTerminalSurface(
       key: string,
       code: string,
       altKey: boolean,
+      shiftKey = false,
     ) =>
       input.dispatchEvent(
-        new KeyboardEvent(type, { key, code, altKey, bubbles: true }),
+        new KeyboardEvent(type, {
+          key,
+          code,
+          altKey,
+          shiftKey,
+          bubbles: true,
+        }),
       );
     const setOptionMode = (optionKeyMode: OptionKeyMode) =>
       surface.applyConfiguration({
@@ -154,6 +161,12 @@ void mountResttyTerminalSurface(
     setOptionMode("both");
     optionText("left", "å", "KeyA");
     optionText("right", "∫", "KeyB");
+    dispatchKey("keydown", "Alt", "AltLeft", true);
+    dispatchKey("keydown", "Dead", "KeyE", true);
+    dispatchKey("keyup", "Dead", "KeyE", true);
+    dispatchKey("keydown", "Å", "KeyA", true, true);
+    dispatchKey("keyup", "Å", "KeyA", true, true);
+    dispatchKey("keyup", "Alt", "AltLeft", false);
 
     handlers?.onOutput(
       "OMXTerm Restty Olá\r\n\u001b]52;c;dW5zYWZl\u0007\u001b]52;c;?\u0007",
@@ -170,7 +183,7 @@ void mountResttyTerminalSurface(
       clipboardReads,
       clipboardWrites,
       terminalReplies: terminalInput.length,
-      optionInput: terminalInput.slice(0, 9),
+      optionInput: terminalInput.slice(0, 11),
       ...(resize ? { resize } : {}),
     };
   })

@@ -74,7 +74,7 @@ describe("Restty under production Electron policy", () => {
         ptyStarts: 1,
         clipboardReads: 0,
         clipboardWrites: 0,
-        terminalReplies: 9,
+        terminalReplies: 11,
         optionInput: [
           "å",
           "é",
@@ -85,6 +85,8 @@ describe("Restty under production Electron policy", () => {
           "\u001bb",
           "\u001ba",
           "\u001bb",
+          "\u001be",
+          "\u001bA",
         ],
       });
       expect(result?.available.resize?.cols).toBeGreaterThan(1);

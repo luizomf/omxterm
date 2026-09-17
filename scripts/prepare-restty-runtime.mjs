@@ -59,8 +59,10 @@ const splitTerminatorOutputSafetyDigest =
   "cfe2c967cc201689f4e1ca2a9231e9652ff5fce47d7671ab73dba78b2b5fa7ea";
 const priorInteractionDigest =
   "ac05624abac2fddea9a38f3e29d26ebbde3f41484b86c0082ce5e3d5cb334e1f";
-const correctedDigest =
+const reviewedInteractionDigest =
   "1cda40a3b3e5dfbda54a2dd5616277e3d337e6f964639f8edc6e3c0c892011c3";
+const correctedDigest =
+  "46031b070690dc8763b38182abe4cf5205e405e3bdeece179fb7fe00d654a344";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 
 const securityCorrections = [
@@ -1018,6 +1020,53 @@ const interactionCorrections = [
   },
 ];
 
+const interactionReviewCorrections = [
+  {
+    original: `  const configuredAltEvent = (event) => {
+    if (!options.isMacPlatform || !event.altKey || !optionActsAsAlt() || event.key.length !== 1)
+      return event;
+    const base = deriveBaseLayoutCodepoint(event);
+    const shifted = event.shiftKey ? SHIFTED_CODE_BY_CODE[event.code || ""] : undefined;
+    const key = shifted || (base > 0 ? String.fromCodePoint(base) : event.key);`,
+    corrected: `  const configuredAltEvent = (event) => {
+    if (!options.isMacPlatform || !event.altKey || !optionActsAsAlt())
+      return event;
+    const base = deriveBaseLayoutCodepoint(event);
+    const baseKey = base > 0 ? String.fromCodePoint(base) : event.key;
+    const shifted = event.shiftKey ? SHIFTED_CODE_BY_CODE[event.code || ""] : undefined;
+    const key = shifted || (event.shiftKey && /^[a-z]$/u.test(baseKey) ? baseKey.toUpperCase() : baseKey);
+    if (key.length !== 1)
+      return event;`,
+  },
+  {
+    original: `    const key = event.key?.toLowerCase?.() ?? "";
+    const hasPrimaryShortcutModifier = options.isMacPlatform ? event.metaKey : event.ctrlKey;
+    const wantsCopy = hasPrimaryShortcutModifier && !event.altKey && (key === "c" || event.shiftKey && key === "c");
+    const wantsPaste = hasPrimaryShortcutModifier && !event.altKey && (key === "v" || event.shiftKey && key === "v");
+    if (wantsCopy && options.interaction.selectionState.active) {
+      event.preventDefault();
+      options.copySelectionToClipboard();
+      return;
+    }
+    if (wantsPaste) {
+      if (options.imeInput) {
+        ensureImeInputFocus();
+        return;
+      }
+      event.preventDefault();
+      const seq = options.inputHandler.encodeKeyEvent(event);
+      if (seq) {
+        options.ptyInputRuntime.sendKeyInput(seq);
+      }
+      return;
+    }
+    const effectiveEvent = configuredAltEvent(event);`,
+    corrected: `    // Application shortcuts are consumed in Electron main. Any key reaching
+    // the Surface, including bare Ctrl+C/Ctrl+V, remains terminal input.
+    const effectiveEvent = configuredAltEvent(event);`,
+  },
+];
+
 const parsedEventTypeCorrections = [
   {
     original: `} | {
@@ -1228,7 +1277,9 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorInteractionDigest) {
+    if (sourceDigest === reviewedInteractionDigest) {
+      source = applyCorrections(source, interactionReviewCorrections);
+    } else if (sourceDigest === priorInteractionDigest) {
       source = applyCorrections(source, interactionCorrections);
     } else if (sourceDigest === splitTerminatorOutputSafetyDigest) {
       source = applyCorrections(source, splitTerminatorOutputSafetyCorrections);
@@ -1326,6 +1377,8 @@ export async function prepareResttyRuntime(options = {}) {
     }
     if (digest(source) === priorInteractionDigest)
       source = applyCorrections(source, interactionCorrections);
+    if (digest(source) === reviewedInteractionDigest)
+      source = applyCorrections(source, interactionReviewCorrections);
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,
