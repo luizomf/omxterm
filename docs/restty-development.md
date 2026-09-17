@@ -196,7 +196,11 @@ flow control, clean producer exit, direct Pi and Chafa Terminal Payload through
 the PTY, rendered image content and placement, live image geometry, and
 privileged-route refusal without using a user session or real
 clipboard. Its result contains only synthetic outcome and queue/heap/RSS
-metadata, not captured Terminal Payload.
+metadata, not captured Terminal Payload. The stress fixture waits for native
+producer readiness and holds only its synthetic session's output ACKs until the
+real high-water pause is observed, then releases them and asserts native resume,
+complete ordered content and zero pending bytes. This avoids depending on
+platform throughput during the fixed renderer-stall interval.
 
 The complete native package commands run this host/runtime coverage on macOS,
 Linux and Windows ARM64. Native glyph rasterization and platform security UI

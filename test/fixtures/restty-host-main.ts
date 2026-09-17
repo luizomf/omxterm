@@ -90,7 +90,7 @@ async function waitFor(
 
 function createHost(window: BrowserWindow) {
   const router = registerTerminalIpcRouter(
-    ipcMain as unknown as IpcMainPort,
+    outputStress.ipcPort(ipcMain as unknown as IpcMainPort),
     undefined,
     async (family) => {
       if (family !== configuredFontFamily && family !== reloadedFontFamily)

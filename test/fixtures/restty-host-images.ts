@@ -139,7 +139,12 @@ export async function exerciseResttyImages(options: {
           gridSize.cols !== previousGrid.cols ||
           gridSize.rows !== previousGrid.rows)
       );
-    }, label);
+    }, label).catch((cause: unknown) => {
+      throw new Error(
+        `Image rendering failed at ${label}: ${JSON.stringify({ gridSize, evidence })}`,
+        { cause },
+      );
+    });
     if (!evidence || !gridSize)
       throw new Error(`Image rendering produced no ${label} evidence`);
     return { evidence, gridSize };

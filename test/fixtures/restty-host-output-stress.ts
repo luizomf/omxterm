@@ -2,6 +2,11 @@ import type { BrowserWindow } from "electron";
 import type { LaunchRequest } from "../../src/main/launch-request";
 import type { LocalTerminalSession } from "../../src/main/local-terminal-session";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import { isTerminalSessionOutputAck } from "../../src/shared/terminal-contract";
+import type {
+  IpcMainPort,
+  IpcListener,
+} from "../../src/main/terminal-ipc-types";
 
 const RECORDS = 65_536;
 const RECORD_BYTES = 32;
@@ -48,6 +53,8 @@ export function createOutputStressHarness() {
   let bytes = 0;
   let began = false;
   let producerReady = false;
+  let holdAcknowledgements = false;
+  const pendingAcknowledgements: Array<() => void> = [];
   let nextRecord = 0;
   let remainder = "";
   let endSeen = false;
@@ -85,6 +92,31 @@ export function createOutputStressHarness() {
   };
 
   return {
+    ipcPort(port: IpcMainPort): IpcMainPort {
+      const wrappers = new Map<IpcListener, IpcListener>();
+      return {
+        handle: (channel, handler) => port.handle(channel, handler),
+        removeHandler: (channel) => port.removeHandler(channel),
+        on(channel, listener) {
+          const wrapped: IpcListener = (event, payload) => {
+            if (
+              channel === terminalIpc.outputAck &&
+              holdAcknowledgements &&
+              isTerminalSessionOutputAck(payload) &&
+              payload.sessionId === "s3"
+            )
+              pendingAcknowledgements.push(() => listener(event, payload));
+            else listener(event, payload);
+          };
+          wrappers.set(listener, wrapped);
+          port.on(channel, wrapped);
+        },
+        removeListener(channel, listener) {
+          port.removeListener(channel, wrappers.get(listener) ?? listener);
+          wrappers.delete(listener);
+        },
+      };
+    },
     observeOutput,
     observeClipboard(text: string) {
       markerVisible ||= text.includes(END);
@@ -124,6 +156,10 @@ export function createOutputStressHarness() {
       );
       void rendererStall.catch(() => undefined);
       await new Promise((resolve) => setTimeout(resolve, 25));
+      // Hold only this synthetic session's ACK delivery until the real native
+      // high-water pause is observed. ConPTY throughput need not fill 64 KiB
+      // during a fixed 350 ms renderer stall on every machine.
+      holdAcknowledgements = true;
       terminal.write("g\r");
       setTimeout(() => {
         const bounds = options.window.getBounds();
@@ -133,6 +169,16 @@ export function createOutputStressHarness() {
         });
       }, 100);
       await new Promise((resolve) => setTimeout(resolve, 400));
+      try {
+        await options.waitFor(
+          () => (terminal.outputFlowMetrics?.().pauseCount ?? 0) > 0,
+          "native high-water pause while output acknowledgements are held",
+        );
+      } finally {
+        holdAcknowledgements = false;
+        for (const acknowledge of pendingAcknowledgements.splice(0))
+          acknowledge();
+      }
       await options.waitFor(() => endSeen, "ordered 2 MiB output end marker");
       await options.waitFor(
         () => (terminal.outputFlowMetrics?.().resumeCount ?? 0) > 0,
