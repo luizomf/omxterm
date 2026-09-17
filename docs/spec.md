@@ -41,7 +41,8 @@ OMXTerm must:
 - use one independent shell session per Terminal Tab, with one or more tabs
   per native Terminal Window;
 - provide native new-window, new-tab, close, copy, paste, select-all, zoom,
-  fullscreen, always-on-top, and quit actions without an in-window toolbar;
+  fullscreen, always-on-top, bounded local-image preview, and quit actions
+  without an in-window toolbar;
 - render the bundled [`omtheme`](omtheme.json) palette by default, allow one
   explicitly configured external Terminal Theme, keep SGR bold text on its
   requested ANSI `0–7` color without remapping it to bright `8–15` (applications
@@ -162,6 +163,14 @@ selector or fallback Surface; rendering initialization failure starts no shell
   automatically or enable remote debugging. Developer Tools can expose private
   Terminal Payload and runtime state; users must review and redact diagnostic
   output, screenshots, traces, and profiles before sharing them.
+- `File -> Open Local Image…` is a menu-only action for the selected Terminal
+  Window. It opens a native picker and previews one validated local static PNG
+  or JPEG in a temporary overlay without writing the file or changing User
+  Configuration. Escape, the close button, or the backdrop dismisses the
+  overlay, releases its renderer Blob source synchronously, and returns focus
+  to the live selected Terminal Tab. Picker cancellation returns terminal focus
+  without an error. The picker and visible local-image links share the bounded
+  read and overlay contract below.
 - Dropping one or more native file-manager files or folders anywhere in a
   Terminal Window inserts their absolute paths into only the selected Terminal
   Tab. The paths retain platform order, are separated by one space, and are
@@ -345,9 +354,11 @@ autoresized PNG pipeline is the compatibility target; images produced with
 autoresize disabled have no finite compatibility promise.
 
 SIXEL, iTerm2 Inline Image Protocol, raw RGB (`f=24`), compressed raw pixels
-(`o=z`), placement IDs, animation, remote or filesystem image sources,
-downloads, persistence, and image behavior through tmux, screen, or another
-multiplexer are unsupported. Other Kitty and Chafa paths exposed by the pinned
+(`o=z`), placement IDs, animation, remote or filesystem image sources inside
+Kitty Terminal Payload, downloads, persistence, and image behavior through
+`tmux`, `screen`, or another multiplexer are unsupported. The separately
+activated Local Image Preview below is not an Inline Terminal Image or Kitty
+filesystem source. Other Kitty and Chafa paths exposed by the pinned
 Ghostty core are unclaimed. Until Pi recognizes `TERM_PROGRAM=OMXTerm`, a user
 must explicitly select Kitty in Pi; OMXTerm does not configure Pi. Image bytes
 remain opaque, memory-only Terminal Payload on the existing PTY output path:
@@ -382,9 +393,10 @@ session started; the native window
 title mirrors the selected tab and falls back to `OMXTerm`. Title contents are
 never logged or reported to the PTY.
 
-Only literal visible lowercase `http:` and `https:` URLs are links. `Cmd+click`
-on macOS or `Ctrl+click` on Linux and Windows asks the Electron main process to
-parse and validate the exact URL before opening it. The valid modified primary
+Only literal visible lowercase `http:`, `https:`, and absolute authority-free
+`file:///` URLs are links. `Cmd+click` on macOS or `Ctrl+click` on Linux and
+Windows explicitly activates one. For HTTP(S), the Electron main process parses
+and validates the exact URL before asking the operating system to open it. The valid modified primary
 click takes precedence over application mouse reporting and is consumed without
 a duplicate PTY mouse report; other gestures retain ordinary selection or
 application-mouse routing. Restty reconstructs a destination only
@@ -393,10 +405,30 @@ coordinates for grapheme and wide-cell prefixes, and conservatively refuses a
 destination that may continue beyond the visible viewport. Restty enables
 Ghostty's grapheme-cluster mode by default so emoji-presentation and ZWJ
 clusters occupy one two-column terminal cell for rendering and selection.
+For `file:///`, main independently requires the literal lowercase scheme, no
+remote or `localhost` authority, no query or fragment, and a platform-absolute
+local path. It opens no operating-system URL handler: after activation only, it
+reads the selected target through a non-shell regular-file boundary. The content
+must be a structurally valid, natively decodable static PNG or JPEG of at most
+16 MiB encoded, 8192 pixels per side, and 16 million pixels. APNG and every
+other animated or unsupported format are rejected regardless of extension. The
+same Terminal Window permits at most one picker or link read at a time; owner
+closure makes late picker, read, and decode results inert.
+
+The renderer receives only bounded validated name, dimensions, media type, and
+bytes, creates a memory-only Blob URL under the production CSP, and synchronously
+removes the image source and revokes that URL on dismissal, replacement failure,
+page teardown, or owner close. It never receives an arbitrary filesystem API or
+path. Failed reads and decode failures show only a fixed non-path error. OMXTerm
+never reads on output or hover, infers a relative or bare path, consults shell
+cwd, fetches a remote image, accepts UNC/file authorities, treats OSC 8 metadata
+as a local link, logs image paths or payload, writes/downloads image data, or
+persists the preview.
+
 Application mouse modes own buttons, motion, and wheel reporting in normal and
 alternate screens; Shift retains the selection override, and explicit copy and
-valid modified-link gestures do not produce duplicate PTY mouse input. OSC 8
-destinations and all other schemes are ignored.
+valid modified-link gestures — web or local image — do not produce duplicate
+PTY mouse input. OSC 8 destinations and all other schemes are ignored.
 
 ## Clipboard
 
@@ -650,7 +682,8 @@ no mode discovery.
 ## Architecture boundaries
 
 Electron main owns native windows, PTYs, filesystem access, configuration,
-logs, clipboard capabilities, and external-link opening. The renderer keeps
+logs, clipboard capabilities, external-link opening, and bounded Local Image
+Preview reads. The renderer keeps
 context isolation and no Node integration. A minimal typed preload bridge
 validates every IPC message and sender. Its font route accepts no path: it may
 return bounded bytes only for the active validated configured family and fixed
@@ -718,7 +751,8 @@ software was independently audited or approved by a platform vendor.
 Automated tests cover configuration validation, tab and window lifecycle and
 cleanup, PTY resize and bounded input flow, Unicode, direct-session Kitty image
 rendering, deletion, resource limits and cleanup under the production renderer
-CSP, bracketed and protected paste, title sanitization, URL validation, OSC 52
+CSP, bounded local-image reads and overlay cleanup, local and web link gesture
+precedence, bracketed and protected paste, title sanitization, URL validation, OSC 52
 restrictions, log redaction/rotation, renderer IPC boundaries, and packaged
 startup. Every exact
 release candidate receives native automated package, architecture, content,

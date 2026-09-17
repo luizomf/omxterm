@@ -65,6 +65,7 @@ import {
   terminalRendererConfiguration,
 } from "./active-user-configuration";
 import { startWithUserConfiguration } from "./configured-startup";
+import { loadLocalImageForWindow } from "./local-image-loader";
 import {
   createOperationalEventLog,
   type OperationalEventLog,
@@ -278,24 +279,18 @@ app
                   "The External Link could not be opened.",
                 ),
               writeClipboardText: (text) => clipboard.writeText(text),
-              readClipboardText: () => {
-                if (!isFilePathPlatform(process.platform))
-                  return clipboard.readText();
-                return readClipboardPathInsertion(
-                  {
-                    availableFormats: () => clipboard.availableFormats(),
-                    readText: () => clipboard.readText(),
-                    readBuffer: (format) => clipboard.readBuffer(format),
-                  },
-                  process.platform,
-                );
-              },
+              readClipboardText: () =>
+                isFilePathPlatform(process.platform)
+                  ? readClipboardPathInsertion(clipboard, process.platform)
+                  : clipboard.readText(),
               onClipboardError: showClipboardError,
               loadSnippets: () =>
                 loadTerminalSnippets({
                   environment: process.env,
                   homeDirectory: account.homedir,
                 }),
+              loadLocalImage: (request, abortSignal) =>
+                loadLocalImageForWindow(window, request, abortSignal),
               async confirmPaste() {
                 const result = await dialog.showMessageBox(window, {
                   type: "warning",
@@ -407,6 +402,8 @@ app
             window.webContents.send(terminalIpc.clipboardAction, action),
           sendSnippetsToggle: (window) =>
             window.webContents.send(terminalIpc.snippetsToggle),
+          sendLocalImageOpen: (window) =>
+            window.webContents.send(terminalIpc.localImageOpen),
           toggleDeveloperTools: (window) => window.webContents.toggleDevTools(),
           sendTabCommand: (window, command) =>
             window.webContents.send(terminalIpc.tabCommand, command),
@@ -456,6 +453,8 @@ app
             terminalApplication!.clipboardSelectedWindow("select-all"),
           toggleSelectedSnippets: terminalApplication.toggleSelectedSnippets,
           reloadUserConfiguration: () => void configurationReloader.reload(),
+          openLocalImage: () =>
+            terminalApplication!.openLocalImageInSelectedWindow(),
         };
         const keybindActionInvocations = terminalActionInvocations(menuActions);
         rebuildMenu = () => {

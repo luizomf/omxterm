@@ -48,6 +48,8 @@ void window.omxterm.terminal.configuration().then((configuration) => {
       onTitleRequest: window.omxterm.terminal.title,
       onBell: window.omxterm.terminal.bell,
       onExternalLink: window.omxterm.terminal.openExternalLink,
+      loadLocalImage: window.omxterm.terminal.loadLocalImage,
+      subscribeToLocalImageOpen: window.omxterm.terminal.onLocalImageOpen,
       clipboard: {
         writeText: window.omxterm.terminal.writeClipboardText,
         readText: window.omxterm.terminal.readClipboardText,

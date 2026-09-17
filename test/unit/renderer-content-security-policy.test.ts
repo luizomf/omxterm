@@ -34,11 +34,11 @@ describe("renderer Content Security Policy", () => {
       "'self'",
       "'wasm-unsafe-eval'",
     ]);
-    expect(directives.get("img-src")).toEqual(["'none'"]);
+    expect(directives.get("img-src")).toEqual(["blob:"]);
     expect(directives.get("connect-src")).toEqual(["'none'"]);
     expect(directives.get("object-src")).toEqual(["'none'"]);
     expect(directives.get("base-uri")).toEqual(["'none'"]);
     expect(directives.get("script-src")).not.toContain("'unsafe-eval'");
-    expect(policy).not.toMatch(/(?:https?:|data:|blob:|\*)/u);
+    expect(policy).not.toMatch(/(?:https?:|data:|\*)/u);
   });
 });

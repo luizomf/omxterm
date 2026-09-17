@@ -4,6 +4,7 @@ import type {
 } from "../shared/terminal-contract";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
+import type { LocalImageData, LocalImageRequest } from "../shared/local-image";
 import type {
   LocalTerminalSession,
   TerminalSessionLaunchKind,
@@ -85,6 +86,10 @@ export interface TerminalIpcControllerOptions {
   readonly openExternalLink: (url: string) => Promise<void>;
   readonly onExternalLinkOpenError: () => void;
   readonly loadSnippets: () => Promise<TerminalSnippetsResponse>;
+  readonly loadLocalImage: (
+    request: LocalImageRequest,
+    abortSignal: AbortSignal,
+  ) => Promise<LocalImageData | null>;
 }
 
 export interface TerminalIpcController {

@@ -26,6 +26,11 @@ import {
   type SnippetsSidebar,
 } from "./snippets-sidebar";
 import { renderUserFileErrorBanner } from "./user-file-error-banner";
+import {
+  createLocalImagePreview,
+  type LocalImagePreview,
+} from "./local-image-preview";
+import type { LocalImageData } from "../shared/local-image";
 
 type MountTerminalSurface = (
   container: HTMLElement,
@@ -73,6 +78,10 @@ interface TerminalWindowPageOptions {
   ) => void;
   readonly onBell?: (sessionId: TerminalSessionId) => void;
   readonly onExternalLink?: (url: string) => void;
+  readonly loadLocalImage?: (
+    fileUrl?: string,
+  ) => Promise<LocalImageData | null>;
+  readonly subscribeToLocalImageOpen?: (listener: () => void) => () => void;
   readonly snippets?: {
     readonly element: HTMLElement;
     readonly load: () => Promise<TerminalSnippetsResponse>;
@@ -99,6 +108,8 @@ export function mountTerminalWindowPage(
   let removeTabTitleListener: (() => void) | undefined;
   let snippetsSidebar: SnippetsSidebar | undefined;
   let removeSnippetsToggleListener: (() => void) | undefined;
+  let removeLocalImageOpenListener: (() => void) | undefined;
+  let localImagePreview: LocalImagePreview | undefined;
   let activeSurfaceConfiguration = options.configuration
     ? surfaceConfiguration(options.configuration)
     : undefined;
@@ -135,6 +146,11 @@ export function mountTerminalWindowPage(
     ...(options.onExternalLink
       ? { onExternalLink: options.onExternalLink }
       : {}),
+    ...(options.loadLocalImage
+      ? {
+          onLocalImageLink: (url: string) => void localImagePreview?.open(url),
+        }
+      : {}),
     ...(options.onSurfaceFailure
       ? { onFatalError: options.onSurfaceFailure }
       : {}),
@@ -155,6 +171,16 @@ export function mountTerminalWindowPage(
       ...(options.onBell ? { notifyBell: options.onBell } : {}),
     },
   );
+
+  if (options.loadLocalImage) {
+    localImagePreview = createLocalImagePreview(page.document, {
+      loadImage: options.loadLocalImage,
+      focusTerminal: () => tabs.focusSelected(),
+    });
+    removeLocalImageOpenListener = options.subscribeToLocalImageOpen?.(
+      () => void localImagePreview?.open(),
+    );
+  }
 
   const onPageFocus = () => tabs.focusSelected();
   const isInternalTabDrag = (event: DragEvent) =>
@@ -189,6 +215,9 @@ export function mountTerminalWindowPage(
     removeTabCommandListener?.();
     removeTabTitleListener?.();
     removeSnippetsToggleListener?.();
+    removeLocalImageOpenListener?.();
+    localImagePreview?.dispose();
+    localImagePreview = undefined;
     snippetsSidebar?.dispose();
     snippetsSidebar = undefined;
     tabs.dispose();

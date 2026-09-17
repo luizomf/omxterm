@@ -12,6 +12,8 @@ export const terminalIpc = {
   title: "terminal:title",
   bell: "terminal:bell",
   externalLink: "terminal:external-link",
+  localImage: "terminal:local-image",
+  localImageOpen: "terminal:local-image-open",
   fontZoom: "terminal:font-zoom",
   clipboardAction: "terminal:clipboard-action",
   clipboardWrite: "terminal:clipboard-write",

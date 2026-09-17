@@ -24,6 +24,7 @@ interface TerminalApplicationMenuActions {
   readonly selectAllSelectedTerminal: () => void;
   readonly toggleSelectedSnippets: () => void;
   readonly reloadUserConfiguration: () => void;
+  readonly openLocalImage: () => void;
 }
 
 export function terminalApplicationMenuTemplate(
@@ -77,6 +78,11 @@ export function terminalApplicationMenuTemplate(
           label: "New Tab",
           accelerator: keybinds.newTab,
           click: actions.newTabInSelectedWindow,
+        },
+        { type: "separator" },
+        {
+          label: "Open Local Image…",
+          click: actions.openLocalImage,
         },
         { type: "separator" },
         {

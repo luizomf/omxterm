@@ -30,6 +30,7 @@ function menuActions() {
     selectAllSelectedTerminal: vi.fn(),
     toggleSelectedSnippets: vi.fn(),
     reloadUserConfiguration: vi.fn(),
+    openLocalImage: vi.fn(),
   };
 }
 
@@ -140,6 +141,25 @@ describe("native application menu", () => {
         }),
       ]),
     );
+  });
+
+  it("offers a menu-only local image picker without adding shortcut vocabulary", () => {
+    const actions = menuActions();
+    const item = flattenMenuItems(
+      terminalApplicationMenuTemplate(
+        "OMXTerm",
+        actions,
+        DEFAULT_TERMINAL_KEYBINDS,
+      ),
+    ).find((candidate) => candidate.label === "Open Local Image…");
+
+    expect(item).toEqual({
+      label: "Open Local Image…",
+      click: actions.openLocalImage,
+    });
+    (item?.click as () => void)();
+    expect(actions.openLocalImage).toHaveBeenCalledOnce();
+    expect(TERMINAL_ACTION_NAMES).not.toContain("openLocalImage");
   });
 
   it("offers a menu-only Developer Tools toggle for the selected Terminal Window", () => {

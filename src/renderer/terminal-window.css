@@ -333,3 +333,84 @@ body.tabs-visible .restty-terminal-surface {
 body.tabs-visible #snippets-sidebar {
   padding-top: 12px;
 }
+
+.local-image-preview {
+  position: fixed;
+  max-width: min(90vw, 1200px);
+  max-height: 90vh;
+  margin: auto;
+  padding: 42px 16px 16px;
+  overflow: hidden;
+  color: var(--terminal-foreground, #e6e6e6);
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-chrome-neutral) 18%
+  );
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--terminal-background, #000000),
+      var(--terminal-foreground, #e6e6e6) 45%
+    );
+  border-radius: 10px;
+  box-shadow: 0 18px 60px rgb(0 0 0 / 55%);
+  app-region: no-drag;
+}
+
+.local-image-preview::backdrop {
+  background: rgb(0 0 0 / 72%);
+}
+
+.local-image-preview img {
+  display: block;
+  max-width: calc(90vw - 32px);
+  max-height: calc(90vh - 58px);
+  object-fit: contain;
+}
+
+.local-image-preview img[hidden],
+.local-image-preview-error[hidden] {
+  display: none;
+}
+
+.local-image-preview-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font:
+    22px/28px -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+}
+
+.local-image-preview-close:hover,
+.local-image-preview-close:focus-visible {
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-chrome-neutral) 45%
+  );
+  outline: none;
+}
+
+.local-image-preview-error {
+  max-width: 520px;
+  margin: 0;
+  padding: 12px;
+  font:
+    13px/1.5 -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  color: #ffffff;
+  background: #8c1d18;
+  border-radius: 6px;
+}

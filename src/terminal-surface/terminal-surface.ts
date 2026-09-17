@@ -59,6 +59,7 @@ export interface TerminalSurfaceOptions {
   readonly onTitleRequest?: (request: string) => void;
   readonly onBell?: () => void;
   readonly onExternalLink?: (url: string) => void;
+  readonly onLocalImageLink?: (url: string) => void;
   readonly onFatalError?: (message: string) => void;
 }
 

@@ -140,6 +140,14 @@ function resttyDelivery(
   });
 }
 
+function requestVisibleLink(
+  url: string,
+  options: TerminalSurfaceOptions,
+): void {
+  if (url.startsWith("file:///")) options.onLocalImageLink?.(url);
+  else options.onExternalLink?.(url);
+}
+
 async function copyResttySelection(
   pane: CandidatePane | undefined,
   options: TerminalSurfaceOptions,
@@ -343,11 +351,11 @@ export async function mountResttyTerminalSurface(
     container.dataset.resttyBackend = "webgl2";
     container.dataset.resttyFont =
       initialFamily ?? DEFAULT_TERMINAL_FONT_FAMILY;
-    if (options.onExternalLink)
+    if (options.onExternalLink || options.onLocalImageLink)
       removeVisibleLinkListeners = installResttyVisibleLinks(
         canvas,
         pane.runtime.interaction,
-        options.onExternalLink,
+        (url) => requestVisibleLink(url, options),
       );
     container.addEventListener("contextmenu", onContextMenu);
     canvas.addEventListener(

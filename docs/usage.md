@@ -125,6 +125,36 @@ Terminal Surface gets more room. Press and release `Alt` by itself to reveal
 it temporarily. Using or dismissing the menu hides it again. macOS keeps its
 normal menu behavior.
 
+## Previewing local images
+
+**Current:** choose `File -> Open Local Image…` to select one local static PNG
+or JPEG, or activate a literal visible absolute `file:///` URL with `Cmd+click`
+on macOS or `Ctrl+click` on Linux and Windows. The preview appears in a temporary
+overlay. Escape, its close button, or the dark backdrop dismisses it and returns
+focus to the selected Terminal Tab. The action intentionally has no built-in or
+configurable shortcut.
+
+OMXTerm reads only after that explicit picker or modified-click activation. The
+Electron main process requires a bounded regular file whose contents validate
+as a natively decodable static PNG or JPEG: at most 16 MiB encoded, 8192 pixels
+per side, and 16 million pixels. APNG, GIF, SVG, WebP, animation, unsupported or
+invalid contents, and oversized images are rejected even when their filename
+extension looks supported.
+
+Local link activation is deliberately literal. OMXTerm accepts an
+authority-free `file:///` URL with a platform-absolute path; it does not infer a
+bare or relative path, use the shell working directory, interpret an SSH path,
+trust OSC 8 metadata, accept a remote/UNC file authority, or fetch an HTTP(S)
+image. Visible HTTP(S) links retain their existing browser behavior described
+below. Merely printing or hovering over any path reads nothing.
+
+Preview bytes and the renderer Blob URL remain memory-only. Dismissal or window
+teardown removes the image source and revokes the URL; OMXTerm does not write,
+download, persist, or log the image path or payload. This Local Image Preview is
+separate from cell-anchored Inline Terminal Images carried as Terminal Payload.
+
+See [ADR 0026](adr/0026-preview-explicitly-activated-local-images.md).
+
 ## Inline terminal images
 
 **Current, direct sessions only:** OMXTerm renders bounded static images sent

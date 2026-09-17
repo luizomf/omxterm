@@ -177,6 +177,51 @@ describe("isolated preload terminal bridge", () => {
     );
   });
 
+  it("exposes only bounded local image requests and validated image bytes", async () => {
+    const bridge = electron.bridge!;
+    const selected = {
+      name: "image.png",
+      mime: "image/png" as const,
+      width: 1,
+      height: 1,
+      data: new Uint8Array([1, 2, 3]),
+    };
+    electron.invoke.mockResolvedValueOnce(selected);
+    await expect(
+      bridge.loadLocalImage("file:///tmp/image.png"),
+    ).resolves.toEqual(selected);
+    expect(electron.invoke).toHaveBeenCalledWith(terminalIpc.localImage, {
+      source: "file-url",
+      url: "file:///tmp/image.png",
+    });
+    electron.invoke.mockResolvedValueOnce(null);
+    await expect(bridge.loadLocalImage()).resolves.toBeNull();
+    expect(electron.invoke).toHaveBeenCalledWith(terminalIpc.localImage, {
+      source: "picker",
+    });
+    expect(() => bridge.loadLocalImage("")).toThrow(TypeError);
+    expect(() => bridge.loadLocalImage("x".repeat(32_769))).toThrow(TypeError);
+    electron.invoke.mockResolvedValueOnce({
+      ...selected,
+      mime: "image/svg+xml",
+    });
+    await expect(bridge.loadLocalImage()).rejects.toThrow(TypeError);
+  });
+
+  it("delivers only an empty native local-image menu signal", () => {
+    const bridge = electron.bridge!;
+    const listener = vi.fn();
+    const remove = bridge.onLocalImageOpen(listener);
+    electron.listeners.get(terminalIpc.localImageOpen)?.({}, undefined);
+    electron.listeners.get(terminalIpc.localImageOpen)?.({}, "forged");
+    remove();
+    expect(listener).toHaveBeenCalledOnce();
+    expect(electron.removeListener).toHaveBeenCalledWith(
+      terminalIpc.localImageOpen,
+      expect.any(Function),
+    );
+  });
+
   it("delivers an oversized parser title through preload and main to the safe native fallback", async () => {
     const handlers = new Map<
       string,
@@ -247,6 +292,7 @@ describe("isolated preload terminal bridge", () => {
       confirmPaste: vi.fn(async () => false),
       showClipboardContextMenu: vi.fn(),
       loadSnippets: vi.fn(async () => ({ snippets: [] })),
+      loadLocalImage: vi.fn(async () => null),
     });
     electron.send.mockImplementation((channel: string, payload?: unknown) =>
       listeners.get(channel)?.(event, payload),
@@ -632,6 +678,8 @@ describe("isolated preload terminal bridge", () => {
       terminalIpc.clipboardConfirmPaste,
       "one\ntwo",
     );
-    expect(Object.keys(bridge).some((key) => /image/i.test(key))).toBe(false);
+    expect(Object.keys(bridge)).not.toEqual(
+      expect.arrayContaining(["readClipboardImage", "writeClipboardImage"]),
+    );
   });
 });

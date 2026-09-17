@@ -87,6 +87,7 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
     action: TerminalClipboardAction,
   ) => void;
   readonly sendSnippetsToggle: (window: Window) => void;
+  readonly sendLocalImageOpen: (window: Window) => void;
   readonly toggleDeveloperTools: (window: Window) => void;
   readonly sendTabCommand: (
     window: Window,
@@ -116,6 +117,7 @@ export interface TerminalApplication<
   zoomSelectedWindow(command: TerminalFontZoom): void;
   clipboardSelectedWindow(action: TerminalClipboardAction): void;
   toggleSelectedSnippets(): void;
+  openLocalImageInSelectedWindow(): void;
   applyConfiguration(configuration: {
     readonly confirmClose: boolean;
     readonly alwaysOnTopDefault: boolean;
@@ -376,6 +378,10 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     toggleSelectedSnippets() {
       const window = selectedWindow();
       if (window) options.sendSnippetsToggle(window);
+    },
+    openLocalImageInSelectedWindow() {
+      const window = selectedWindow();
+      if (window) options.sendLocalImageOpen(window);
     },
     applyConfiguration(configuration) {
       confirmCloseEnabled = configuration.confirmClose;

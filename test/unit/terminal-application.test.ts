@@ -72,6 +72,7 @@ function createApplicationHarness(
   const sendFontZoom = vi.fn();
   const sendClipboardAction = vi.fn();
   const sendSnippetsToggle = vi.fn();
+  const sendLocalImageOpen = vi.fn();
   const toggleDeveloperTools = vi.fn();
   const sendTabCommand = vi.fn();
   const quit = vi.fn();
@@ -93,6 +94,7 @@ function createApplicationHarness(
     sendFontZoom,
     sendClipboardAction,
     sendSnippetsToggle,
+    sendLocalImageOpen,
     toggleDeveloperTools,
     sendTabCommand,
     quit,
@@ -109,6 +111,7 @@ function createApplicationHarness(
     sendFontZoom,
     sendClipboardAction,
     sendSnippetsToggle,
+    sendLocalImageOpen,
     toggleDeveloperTools,
     sendTabCommand,
     quit,
@@ -179,6 +182,22 @@ describe("Terminal application lifecycle", () => {
     harness.select(harness.windows[1]!.window);
     harness.application.toggleSelectedSnippets();
     expect(harness.sendSnippetsToggle).toHaveBeenCalledExactlyOnceWith(
+      harness.windows[1]!.window,
+    );
+  });
+
+  it("opens the local image picker only in the selected Terminal Window", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    await harness.application.newWindow();
+
+    harness.select(undefined);
+    harness.application.openLocalImageInSelectedWindow();
+    expect(harness.sendLocalImageOpen).not.toHaveBeenCalled();
+
+    harness.select(harness.windows[1]!.window);
+    harness.application.openLocalImageInSelectedWindow();
+    expect(harness.sendLocalImageOpen).toHaveBeenCalledExactlyOnceWith(
       harness.windows[1]!.window,
     );
   });
@@ -292,6 +311,7 @@ describe("Terminal application lifecycle", () => {
       sendFontZoom: vi.fn(),
       sendClipboardAction: vi.fn(),
       sendSnippetsToggle: vi.fn(),
+      sendLocalImageOpen: vi.fn(),
       toggleDeveloperTools: vi.fn(),
       sendTabCommand: vi.fn(),
       quit,

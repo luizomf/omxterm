@@ -168,6 +168,14 @@ Chafa-compatible paths; multiplexer passthrough and other image protocols remain
 unsupported.
 _Avoid_: image upload, clipboard image, terminal attachment, image viewer
 
+**Local Image Preview**:
+A temporary renderer overlay for one explicitly selected or activated local
+static PNG or JPEG. Electron main validates and bounds the regular-file read,
+while the renderer receives only image bytes and releases its Blob source on
+dismissal. It is separate from Terminal Payload and Inline Terminal Images and
+never infers a shell working directory, remote path, bare path, or OSC 8 target.
+_Avoid_: inline image, file browser, remote image, image attachment
+
 **Operational Event**:
 Structured safe metadata about behavior owned by OMXTerm for human and
 automated local diagnosis, such as lifecycle, configuration validation, IPC,

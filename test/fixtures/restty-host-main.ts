@@ -220,6 +220,7 @@ function createHost(window: BrowserWindow) {
     },
     onExternalLinkOpenError() {},
     loadSnippets: async () => ({ snippets: [] }),
+    loadLocalImage: async () => null,
   });
   registerTerminalWindowHost(window, controller, () => router.dispose());
   const initialConfiguration = {

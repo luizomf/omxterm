@@ -59,6 +59,7 @@ function clipboardOptions() {
     openExternalLink: vi.fn(async () => {}),
     onExternalLinkOpenError: vi.fn(),
     loadSnippets: vi.fn(async () => ({ snippets: [] })),
+    loadLocalImage: vi.fn(async () => null),
   };
 }
 
@@ -192,7 +193,7 @@ describe("terminal IPC controller", () => {
     expect(secondSession.write).toHaveBeenCalledWith("second window input");
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();
-    expect(ipc.handlers.size).toBe(7);
+    expect(ipc.handlers.size).toBe(8);
     expect(ipc.listeners.size).toBe(9);
   });
 
@@ -662,10 +663,14 @@ describe("terminal IPC controller", () => {
         "safe single line",
       ),
     ).rejects.toThrow(TypeError);
+    await expect(
+      ipc.handlers.get(terminalIpc.localImage)!(forged, { source: "picker" }),
+    ).rejects.toThrow("untrusted sender");
 
     expect(clipboard.writeClipboardText).not.toHaveBeenCalled();
     expect(clipboard.readClipboardText).not.toHaveBeenCalled();
     expect(clipboard.confirmPaste).not.toHaveBeenCalled();
+    expect(clipboard.loadLocalImage).not.toHaveBeenCalled();
     expect(session.write).not.toHaveBeenCalled();
   });
 

@@ -30,6 +30,11 @@ import { isTerminalRendererConfiguration } from "../shared/user-configuration";
 import { isTerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import {
+  isLocalImageData,
+  isLocalImageRequest,
+  type LocalImageRequest,
+} from "../shared/local-image";
+import {
   isTerminalFontData,
   isTerminalFontFamily,
 } from "../shared/terminal-font-data";
@@ -133,6 +138,29 @@ const terminal: TerminalBridge = {
     if (typeof url !== "string" || url.length === 0)
       throw new TypeError("Invalid External Link request");
     ipcRenderer.send(terminalIpc.externalLink, url);
+  },
+  loadLocalImage(fileUrl?: string) {
+    const request: LocalImageRequest =
+      fileUrl === undefined
+        ? { source: "picker" }
+        : { source: "file-url", url: fileUrl };
+    if (!isLocalImageRequest(request))
+      throw new TypeError("Invalid local image request");
+    return ipcRenderer
+      .invoke(terminalIpc.localImage, request)
+      .then((response: unknown) => {
+        if (response !== null && !isLocalImageData(response))
+          throw new TypeError("Invalid local image response");
+        return response;
+      });
+  },
+  onLocalImageOpen(listener: () => void) {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (payload === undefined) listener();
+    };
+    ipcRenderer.on(terminalIpc.localImageOpen, handler);
+    return () =>
+      ipcRenderer.removeListener(terminalIpc.localImageOpen, handler);
   },
   acknowledgeOutput(sessionId: TerminalSessionId, end: number) {
     const payload = { sessionId, end };

@@ -2,7 +2,7 @@ import type { PtyTransport } from "restty";
 import { decodeOsc52Write } from "./osc52-clipboard";
 import type { SemanticInputDelivery } from "./semantic-input-delivery";
 import type { TerminalSurfaceOptions } from "./terminal-surface";
-import { visibleWebLinkAtOffset } from "./visible-web-links";
+import { visibleLinkAtOffset } from "./visible-links";
 
 export function resttyHostServices(
   transport: PtyTransport,
@@ -34,7 +34,7 @@ export function resttyHostServices(
       readonly clippedStart: boolean;
       readonly clippedEnd: boolean;
     }) =>
-      visibleWebLinkAtOffset(
+      visibleLinkAtOffset(
         candidate.text,
         candidate.offset,
         candidate.clippedStart,

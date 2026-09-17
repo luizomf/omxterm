@@ -65,6 +65,7 @@ it("reports host clipboard failures without exposing payload", async () => {
     onClipboardError,
     showClipboardContextMenu: vi.fn(),
     loadSnippets: vi.fn(async () => ({ snippets: [] })),
+    loadLocalImage: vi.fn(async () => null),
   });
   const trusted = { sender: webContents, senderFrame: mainFrame };
 

@@ -1,25 +1,25 @@
 // This is the lowercase-only form of the previously pinned xterm provider's
 // strict URL expression. Restty uses it only over core-proven visible text.
-const visibleWebUrlRegex =
-  /https?:[/]{2}[^\s"'!*(){}|\\\^<>`]*[^\s"':,.!?{}|\\\^~\[\]`()<>]/;
+const visibleUrlRegex =
+  /(?:https?:[/]{2}|file:[/]{3}(?![/]))[^\s"'!*(){}|\\\^<>`]*[^\s"':,.!?{}|\\\^~\[\]`()<>]/;
 
-export interface VisibleWebLinkMatch {
+export interface VisibleLinkMatch {
   readonly url: string;
   readonly start: number;
   readonly end: number;
 }
 
-export function visibleWebLinkAtOffset(
+export function visibleLinkAtOffset(
   text: string,
   offset: number,
   clippedStart = false,
   clippedEnd = false,
-): VisibleWebLinkMatch | undefined {
+): VisibleLinkMatch | undefined {
   if (!Number.isInteger(offset) || offset < 0 || offset >= text.length)
     return undefined;
   let searched = 0;
   while (searched < text.length) {
-    const match = visibleWebUrlRegex.exec(text.slice(searched));
+    const match = visibleUrlRegex.exec(text.slice(searched));
     if (!match || match.index === undefined) return undefined;
     const start = searched + match.index;
     const end = start + match[0].length;

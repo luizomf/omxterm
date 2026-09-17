@@ -1,7 +1,7 @@
 # Validate external links at the main process
 
-OMXTerm will recognize only literal HTTP and HTTPS URLs visible in Terminal
-Payload, and activation on macOS requires `Cmd+click`. The exact visible string
+OMXTerm will recognize as External Links only literal HTTP and HTTPS URLs
+visible in Terminal Payload, and activation on macOS requires `Cmd+click`. The exact visible string
 is the activation request; OMXTerm will consume OSC 8 control sequences but
 ignore their semantic-link metadata because it can hide a destination behind
 unrelated text. Text carried by OSC 8 still renders normally, and a literal URL
@@ -30,8 +30,13 @@ protocols, renderer navigation/window creation, forged IPC senders, and
 repeated activation. Tests must prove that rejected input causes no external
 side effect and that link contents do not enter Operational Events.
 
-OMXTerm retains the lowercase-only form of the previously pinned strict provider
-expression. Restty applies it to visible cell snapshots and joins rows only when
+OMXTerm retains the lowercase-only HTTP(S) branch of the previously pinned
+strict provider expression. Restty applies it to visible cell snapshots and
+joins rows only when
 Ghostty selection text proves a soft wrap. Surrounding prose punctuation and
 closing brackets are excluded, an opening parenthesis terminates a match, nearby
 URLs remain separate, and clipped destinations are refused rather than guessed.
+
+[ADR 0026](0026-preview-explicitly-activated-local-images.md) adds literal
+`file:///` recognition to the same visible-span and gesture owner, but keeps its
+bounded local-file preview route separate from External Link opening.

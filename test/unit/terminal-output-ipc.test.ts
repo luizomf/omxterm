@@ -57,6 +57,7 @@ function options(): Omit<
     openExternalLink: vi.fn(async () => undefined),
     onExternalLinkOpenError: vi.fn(),
     loadSnippets: vi.fn(async () => ({ snippets: [] })),
+    loadLocalImage: vi.fn(async () => null),
   };
 }
 

@@ -44,6 +44,8 @@ export type {
 import type { OperationalEventLog } from "./operational-events";
 import { isTerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalFontData } from "../shared/terminal-font-data";
+import type { LocalImageData } from "../shared/local-image";
+import { createLocalImageIpcBoundary } from "./local-image-ipc";
 export { isValidExternalLink } from "./external-link";
 import {
   acknowledgeTerminalOutput,
@@ -70,6 +72,7 @@ interface RoutedTerminalIpcController extends TerminalIpcController {
   title(payload?: unknown): void;
   bell(payload?: unknown): void;
   openExternalLink(payload?: unknown): void;
+  localImage(payload?: unknown): Promise<LocalImageData | null>;
   snippets(payload?: unknown): Promise<TerminalSnippetsResponse>;
   fontData(payload?: unknown): Promise<TerminalFontData>;
   activeResttySurfaceFontConfigurations(): readonly ResttySurfaceFontConfiguration[];
@@ -145,6 +148,18 @@ export function registerTerminalIpcRouter(
     route(event, (controller) => controller.bell(payload));
   const externalLink: IpcListener = (event, payload) =>
     route(event, (controller) => controller.openExternalLink(payload));
+  const localImage: IpcHandler = async (event, payload) => {
+    const controller = controllerFor(event);
+    if (!controller) {
+      operationalEvents?.write({
+        name: "boundary.rejected",
+        boundary: "ipc",
+        reason: "untrusted-sender",
+      });
+      throw new Error("Rejected local image IPC from an untrusted sender");
+    }
+    return controller.localImage(payload);
+  };
   const writeClipboardText: IpcHandler = (event, payload) => {
     const controller = controllerFor(event);
     if (!controller) {
@@ -232,6 +247,7 @@ export function registerTerminalIpcRouter(
   ipcMain.on(terminalIpc.title, title);
   ipcMain.on(terminalIpc.bell, bell);
   ipcMain.on(terminalIpc.externalLink, externalLink);
+  ipcMain.handle(terminalIpc.localImage, localImage);
   ipcMain.handle(terminalIpc.clipboardWrite, writeClipboardText);
   ipcMain.handle(terminalIpc.clipboardRead, readClipboardText);
   ipcMain.handle(terminalIpc.clipboardConfirmPaste, confirmPaste);
@@ -285,6 +301,7 @@ export function registerTerminalIpcRouter(
       ipcMain.removeListener(terminalIpc.title, title);
       ipcMain.removeListener(terminalIpc.bell, bell);
       ipcMain.removeListener(terminalIpc.externalLink, externalLink);
+      ipcMain.removeHandler(terminalIpc.localImage);
       ipcMain.removeHandler(terminalIpc.clipboardWrite);
       ipcMain.removeHandler(terminalIpc.clipboardRead);
       ipcMain.removeHandler(terminalIpc.clipboardConfirmPaste);
@@ -358,6 +375,39 @@ async function confirmClipboardPaste(
   }
 }
 
+function createFontDataRequest(options: {
+  readonly family: () => string | undefined;
+  readonly isDisposed: () => boolean;
+  readonly load: (family: string | undefined) => Promise<TerminalFontData>;
+  readonly reject: () => void;
+}) {
+  let inFlight = false;
+  return async (payload?: unknown) => {
+    const family = options.family();
+    if (payload !== family) {
+      options.reject();
+      throw new TypeError(
+        "Terminal Font request does not match the active configured family",
+      );
+    }
+    if (options.isDisposed())
+      throw new Error("Terminal IPC controller is disposed");
+    if (inFlight) {
+      options.reject();
+      throw new Error("A Terminal Font request is already in progress");
+    }
+    inFlight = true;
+    try {
+      const loaded = await options.load(family);
+      if (options.isDisposed() || options.family() !== family)
+        throw new Error("Terminal Font request was superseded");
+      return loaded;
+    } finally {
+      inFlight = false;
+    }
+  };
+}
+
 function createTerminalIpcController(
   options: TerminalIpcControllerOptions,
   operationalEvents: Pick<OperationalEventLog, "write"> | undefined,
@@ -368,7 +418,6 @@ function createTerminalIpcController(
 ): RoutedTerminalIpcController {
   let disposed = false;
   let rendererConfiguration = options.configuration;
-  let fontRequestInFlight = false;
   const sessions = new Map<TerminalSessionId, RoutedSessionState>();
   let nextSessionNumber = 1;
   let selectedSessionId: TerminalSessionId | undefined;
@@ -629,29 +678,17 @@ function createTerminalIpcController(
     if (payload === undefined) options.showClipboardContextMenu();
     else reject("clipboard", "invalid-payload");
   };
-  const fontData = async (payload?: unknown) => {
-    const family = rendererConfiguration.fontFamily;
-    if (payload !== family) {
-      reject("ipc", "invalid-payload");
-      throw new TypeError(
-        "Terminal Font request does not match the active configured family",
-      );
-    }
-    if (disposed) throw new Error("Terminal IPC controller is disposed");
-    if (fontRequestInFlight) {
-      reject("ipc", "invalid-payload");
-      throw new Error("A Terminal Font request is already in progress");
-    }
-    fontRequestInFlight = true;
-    try {
-      const loaded = await loadTerminalFontData(family);
-      if (disposed || rendererConfiguration.fontFamily !== family)
-        throw new Error("Terminal Font request was superseded");
-      return loaded;
-    } finally {
-      fontRequestInFlight = false;
-    }
-  };
+  const fontData = createFontDataRequest({
+    family: () => rendererConfiguration.fontFamily,
+    isDisposed: () => disposed,
+    load: loadTerminalFontData,
+    reject: () => reject("ipc", "invalid-payload"),
+  });
+  const localImageBoundary = createLocalImageIpcBoundary({
+    load: options.loadLocalImage,
+    isOwnerLost: () => disposed || options.webContents.isDestroyed(),
+    reject: () => reject("ipc", "invalid-payload"),
+  });
   const snippets = async (payload?: unknown) => {
     if (payload !== undefined) {
       reject("ipc", "invalid-payload");
@@ -709,6 +746,7 @@ function createTerminalIpcController(
     title,
     bell,
     openExternalLink,
+    localImage: localImageBoundary.request,
     snippets,
     fontData,
     activeResttySurfaceFontConfigurations: () =>
@@ -716,6 +754,7 @@ function createTerminalIpcController(
     dispose() {
       if (disposed) return;
       disposed = true;
+      localImageBoundary.dispose();
       unregister();
       for (const sessionId of [...sessions.keys()]) closeSession(sessionId);
     },
