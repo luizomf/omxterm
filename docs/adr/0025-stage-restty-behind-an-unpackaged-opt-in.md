@@ -27,12 +27,26 @@ installation: font-load errors reject readiness, and Restty's direct clipboard,
 OSC 52 and link-opening callbacks are disabled. Dependency drift requires review.
 The bundled TTF replaces the prototype's non-equivalent WOFF2 shaping input.
 
+The appearance slice maps OMXTerm Terminal Themes into Restty, uses the bundled
+font at the configured size and creation-time line height, applies per-side
+padding, and preserves per-window zoom through runtime operations. Theme, size
+and padding update existing Surfaces without replacing their core or PTY.
+Existing Restty Surfaces keep their initial family and line height until OMXTerm
+restarts; the next font slice owns the persistent notice and latest-setting
+behavior for newly created Surfaces.
+
 Candidate copy/paste, snippets/path injection, OSC 52, links, titles, bell,
-configuration, theme, geometry, scrollback and images stay unavailable until
+installed configured-font loading, scrollback and images stay unavailable until
 their owning migration tickets. These gates apply only to Restty. xterm's
 existing behavior and security boundaries remain unchanged. Renderer isolation,
 the production CSP, application network boundary and platform sandbox policy
 also remain unchanged.
+
+The temporary checksum-guarded dependency correction also removes Restty's
+10–64 live font-size clamp and carries an independent creation-time line-height
+factor into cell height while leaving glyph scale tied to font size. This keeps
+OMXTerm's size and row-spacing contract without CSS scaling, clipping or a
+custom renderer.
 
 The cost is an intentionally incomplete development candidate and a temporary
 pinned dependency correction. This is preferable to unsafe passthrough, invisible

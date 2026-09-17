@@ -23,12 +23,22 @@ renderer-loss cleanup. It requires the bundled TTF, Ghostty WASM core and a real
 WebGL2 backend before starting a PTY. Initialization failure starts no shell;
 WebGL context loss reports a visible failure and disposes only the owning tab.
 
+The candidate applies the selected Terminal Theme, configured size, independent
+line height, per-side padding and Window Font Zoom. Theme, size and padding
+reload live without replacing the Surface, core or PTY. A Restty Surface keeps
+the bundled JetBrainsMono family and line height it was created with; restart
+OMXTerm to apply a changed line height to every existing Restty Surface. New
+Surfaces use the latest validated line height. Installed-family loading, its
+restart notice and its new-Surface behavior remain deferred to the next
+migration slice. Native glyph rasterization can differ from xterm and is not
+claimed to be pixel-identical.
+
 The following Restty routes are deliberately unavailable until their migration
 tickets land: copy, paste, Protected Paste, snippets and file-path injection;
 OSC 52 clipboard effects; OSC 8 or visible-link activation; parsed titles and
-bell; Terminal Theme, configured fonts, spacing, scrollback, Option Key Mode,
-font zoom, inline images and other runtime configuration. The xterm Surface
-retains all existing behavior. There is no automatic xterm fallback.
+bell; installed configured-font loading, scrollback, Option Key Mode, inline
+images and other runtime configuration. The xterm Surface retains all existing
+behavior. There is no automatic xterm fallback.
 
 ## Pinned inputs and restoration
 
@@ -64,11 +74,15 @@ git ls-tree HEAD reference/ghostty reference/text-shaper
 The lockfile restores the npm tarballs identified by that manifest. `npm ci`
 then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
 Restty runtime SHA-256 and produces corrected SHA-256
-`8f9620d4c39b9e88bb149010e8aad24b0c35073373c2d8a66d78466ccbafec2a`.
-The narrow correction makes font-load failure reject initialization and disables
-Restty's direct clipboard/OSC 52 and link-opening callbacks. Unknown dependency
-bytes fail instead of receiving a best-effort patch. Reinstall with `npm ci` to
-restore and reapply the reviewed bytes; do not edit `node_modules` manually.
+`a0cd79e08164bde293ca4ee6b52ab1b71cc8959eb1da646f95dde52015aad270`.
+The narrow correction makes font-load failure reject initialization, disables
+Restty's direct clipboard/OSC 52 and link-opening callbacks, removes its 10–64
+live-size clamp in favor of OMXTerm's existing minimum of 1 for Window Font
+Zoom, carries the creation-time line-height factor into cell metrics without
+scaling glyphs, and keeps bold ANSI 0–7 colors unchanged. Unknown dependency
+bytes fail instead of receiving a best-effort
+patch. Reinstall with `npm ci` to restore and reapply the reviewed bytes; do not
+edit `node_modules` manually.
 
 The TTF is tracked because Restty/text-shaper consumes font bytes and the prior
 WOFF2 path did not provide equivalent shaping. `assets/fonts/README.md` records
@@ -83,5 +97,6 @@ tabs, Default Shell and explicit-command startup, shell exit, explicit close,
 renderer-process loss, and candidate-route refusal without using a user session
 or clipboard.
 
-Native runtime evidence for this first slice is macOS ARM64. Linux and Windows
-Restty behavior remains unverified; their xterm package contract is unchanged.
+Native runtime evidence through the current appearance slice is macOS ARM64.
+Linux and Windows Restty behavior remains unverified; their xterm package
+contract is unchanged.

@@ -1,9 +1,32 @@
-import { Restty, type PtyTransport, type ResttyRuntimeEvent } from "restty";
+import {
+  Restty,
+  type GhosttyTheme,
+  type PtyCallbacks,
+  type PtyTransport,
+  type ResttyRuntimeEvent,
+  type ResttyTerminalConfig,
+} from "restty";
 import bundledFontBytes from "../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf";
 import type { TerminalSize } from "../shared/terminal-contract";
+import {
+  DEFAULT_TERMINAL_FONT_SIZE,
+  DEFAULT_TERMINAL_LINE_HEIGHT,
+  DEFAULT_TERMINAL_PADDING,
+  MAX_TERMINAL_LINE_HEIGHT,
+  MAX_TERMINAL_PADDING,
+  MIN_TERMINAL_LINE_HEIGHT,
+  MIN_TERMINAL_PADDING,
+  type TerminalPadding,
+} from "../shared/user-configuration";
+import {
+  DEFAULT_TERMINAL_THEME,
+  isTerminalTheme,
+  type TerminalTheme,
+} from "../shared/terminal-theme";
 import type { TerminalSessionAdapter } from "./terminal-session-adapter";
 import type {
   TerminalSurface,
+  TerminalSurfaceConfiguration,
   TerminalSurfaceOptions,
 } from "./terminal-surface";
 
@@ -18,8 +41,16 @@ type CandidateRuntime = {
     state(): string;
   };
   readonly render: { getBackend(): string | null };
-  readonly io: { sendInput(data: string, source: "pty"): void };
-  readonly interaction: { focus(): void };
+  readonly io: { connectPty(): void };
+  readonly interaction: { focus(): void; updateSize(force?: boolean): void };
+  readonly terminal: {
+    applyTheme(theme: GhosttyTheme, sourceLabel?: string): void;
+    setFontSize(value: number): void;
+  };
+};
+
+type ResttyAppearanceConfig = ResttyTerminalConfig & {
+  readonly lineHeight: number;
 };
 
 type CandidatePane = {
@@ -34,10 +65,42 @@ export async function mountResttyTerminalSurface(
 ): Promise<TerminalSurface> {
   let disposed = false;
   let ready = false;
+  let transportConnected = false;
+  let ptyCallbacks: PtyCallbacks | undefined;
   let settledSize: TerminalSize | undefined;
   let removeRuntimeListener: (() => void) | undefined;
   let restty: Restty | undefined;
   let pane: CandidatePane | undefined;
+  let baselineFontSize = resolveFontSize(options.appearance?.fontSize);
+  let currentFontSize = baselineFontSize;
+  const initialLineHeight = resolveLineHeight(options.appearance?.lineHeight);
+  let terminalTheme = resolveTheme(options.theme);
+  let padding = resolvePadding(options.padding);
+
+  const applyRuntimeTheme = (theme: TerminalTheme) => {
+    pane?.runtime.terminal.applyTheme(toGhosttyTheme(theme), "OMXTerm");
+  };
+  const applyRuntimeSize = (fontSize: number) => {
+    currentFontSize = fontSize;
+    pane?.runtime.terminal.setFontSize(fontSize);
+  };
+  const refit = () => pane?.runtime.interaction.updateSize(true);
+  const applyConfiguration = (configuration: TerminalSurfaceConfiguration) => {
+    const nextBaseline = resolveFontSize(configuration.appearance.fontSize);
+    resolveLineHeight(configuration.appearance.lineHeight);
+    const nextPadding = resolvePadding(configuration.padding);
+    const nextTheme = resolveTheme(configuration.theme);
+    if (disposed || !pane) return;
+
+    const zoomDelta = currentFontSize - baselineFontSize;
+    baselineFontSize = nextBaseline;
+    padding = nextPadding;
+    terminalTheme = nextTheme;
+    setContainerAppearance(container, padding, terminalTheme);
+    applyRuntimeTheme(terminalTheme);
+    applyRuntimeSize(Math.max(1, baselineFontSize + zoomDelta));
+    refit();
+  };
 
   const dispose = () => {
     if (disposed) return;
@@ -54,8 +117,19 @@ export async function mountResttyTerminalSurface(
   };
 
   const transport: PtyTransport = {
-    connect: () => undefined,
-    disconnect: () => undefined,
+    connect({ callbacks }) {
+      if (disposed) return;
+      ptyCallbacks = callbacks;
+      transportConnected = true;
+      callbacks.onConnect?.();
+    },
+    disconnect() {
+      if (!transportConnected) return;
+      transportConnected = false;
+      const callbacks = ptyCallbacks;
+      ptyCallbacks = undefined;
+      callbacks?.onDisconnect?.();
+    },
     sendInput(data) {
       if (!disposed && ready) adapter.write(data);
       return !disposed && ready;
@@ -66,12 +140,26 @@ export async function mountResttyTerminalSurface(
       if (!disposed && ready) adapter.resize(size);
       return !disposed && ready;
     },
-    isConnected: () => !disposed,
+    isConnected: () => transportConnected && !disposed,
     destroy: () => undefined,
   };
 
   try {
     container.classList.add("restty-terminal-surface");
+    setContainerAppearance(container, padding, terminalTheme);
+    const terminal: ResttyAppearanceConfig = {
+      renderer: "webgl2",
+      fontSize: baselineFontSize,
+      lineHeight: initialLineHeight,
+      fonts: [
+        {
+          data: bundledFontBytes,
+          name: BUNDLED_FONT_NAME,
+        },
+      ],
+      theme: toGhosttyTheme(terminalTheme),
+      showResizeOverlay: false,
+    };
     restty = new Restty({
       root: container,
       surface: {
@@ -82,17 +170,7 @@ export async function mountResttyTerminalSurface(
         searchUi: false,
         shortcuts: false,
       },
-      terminal: {
-        renderer: "webgl2",
-        fontSize: 16,
-        fonts: [
-          {
-            data: bundledFontBytes,
-            name: BUNDLED_FONT_NAME,
-          },
-        ],
-        showResizeOverlay: false,
-      },
+      terminal,
       services: { ptyTransport: transport },
     });
     pane =
@@ -115,6 +193,7 @@ export async function mountResttyTerminalSurface(
         "Restty did not initialize an available rendering backend",
       );
 
+    pane.runtime.io.connectPty();
     const canvas = pane.container.querySelector("canvas");
     if (!canvas) throw new Error("Restty did not create its rendering canvas");
     container.dataset.resttyBackend = "webgl2";
@@ -130,7 +209,7 @@ export async function mountResttyTerminalSurface(
 
     await adapter.start({
       onOutput(data) {
-        if (!disposed) pane?.runtime.io.sendInput(data, "pty");
+        if (!disposed) ptyCallbacks?.onData?.(data);
       },
       onExit() {
         dispose();
@@ -144,9 +223,25 @@ export async function mountResttyTerminalSurface(
       focus: () => {
         if (!disposed) pane?.runtime.interaction.focus();
       },
-      applyConfiguration: () => undefined,
-      applyTheme: () => undefined,
-      zoom: () => undefined,
+      applyConfiguration,
+      applyTheme(theme) {
+        terminalTheme = resolveTheme(theme);
+        if (disposed) return;
+        setContainerAppearance(container, padding, terminalTheme);
+        applyRuntimeTheme(terminalTheme);
+      },
+      zoom(command) {
+        if (disposed) return;
+        const nextSize =
+          command === "reset"
+            ? baselineFontSize
+            : command === "in"
+              ? currentFontSize + 1
+              : Math.max(1, currentFontSize - 1);
+        if (nextSize === currentFontSize) return;
+        applyRuntimeSize(nextSize);
+        refit();
+      },
       copy: async () => undefined,
       paste: async () => undefined,
       inject: async () => undefined,
@@ -158,6 +253,99 @@ export async function mountResttyTerminalSurface(
     fail(`Failed to initialize the Restty Terminal Surface: ${detail}`);
     throw new Error("Failed to mount the Restty Terminal Surface", { cause });
   }
+}
+
+function resolveFontSize(value = DEFAULT_TERMINAL_FONT_SIZE): number {
+  if (!Number.isFinite(value) || value <= 0)
+    throw new TypeError("Terminal font size must be a positive number");
+  return value;
+}
+
+function resolveLineHeight(value = DEFAULT_TERMINAL_LINE_HEIGHT): number {
+  if (
+    !Number.isFinite(value) ||
+    value < MIN_TERMINAL_LINE_HEIGHT ||
+    value > MAX_TERMINAL_LINE_HEIGHT
+  )
+    throw new TypeError(
+      `font.lineHeight must be a finite number from ${MIN_TERMINAL_LINE_HEIGHT} through ${MAX_TERMINAL_LINE_HEIGHT}`,
+    );
+  return value;
+}
+
+function resolvePadding(value = DEFAULT_TERMINAL_PADDING): TerminalPadding {
+  for (const side of ["top", "right", "bottom", "left"] as const) {
+    const sideValue = value[side];
+    if (
+      !Number.isInteger(sideValue) ||
+      sideValue < MIN_TERMINAL_PADDING ||
+      sideValue > MAX_TERMINAL_PADDING
+    )
+      throw new TypeError(
+        `terminal.padding.${side} must be an integer from ${MIN_TERMINAL_PADDING} through ${MAX_TERMINAL_PADDING}`,
+      );
+  }
+  return value;
+}
+
+function resolveTheme(theme = DEFAULT_TERMINAL_THEME): TerminalTheme {
+  if (!isTerminalTheme(theme))
+    throw new TypeError("Invalid Terminal Theme update");
+  return theme;
+}
+
+function color(hex: string) {
+  const value = Number.parseInt(hex.slice(1), 16);
+  return { r: value >> 16, g: (value >> 8) & 0xff, b: value & 0xff };
+}
+
+function toGhosttyTheme(theme: TerminalTheme): GhosttyTheme {
+  const colors = theme.colors;
+  const palette = new Array<ReturnType<typeof color> | undefined>(256);
+  const ansi = [
+    colors.black,
+    colors.red,
+    colors.green,
+    colors.yellow,
+    colors.blue,
+    colors.magenta,
+    colors.cyan,
+    colors.white,
+    colors.brightBlack,
+    colors.brightRed,
+    colors.brightGreen,
+    colors.brightYellow,
+    colors.brightBlue,
+    colors.brightMagenta,
+    colors.brightCyan,
+    colors.brightWhite,
+  ];
+  ansi.forEach((value, index) => (palette[index] = color(value)));
+  return {
+    name: theme.name,
+    colors: {
+      background: color(colors.background),
+      foreground: color(colors.foreground),
+      cursor: color(colors.cursor),
+      selectionBackground: color(colors.selectionBackground),
+      selectionForeground: color(colors.selectionForeground),
+      palette,
+    },
+    raw: {},
+  };
+}
+
+function setContainerAppearance(
+  container: HTMLElement,
+  padding: TerminalPadding,
+  theme: TerminalTheme,
+): void {
+  for (const side of ["top", "right", "bottom", "left"] as const)
+    container.style.setProperty(
+      `--terminal-padding-${side}`,
+      `${padding[side]}px`,
+    );
+  container.style.setProperty("--terminal-background", theme.colors.background);
 }
 
 function createDisposedSurface(): TerminalSurface {

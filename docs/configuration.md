@@ -171,9 +171,11 @@ Option keys produce terminal Alt sequences.
 
 On macOS, configured top padding begins below the fixed 30 px native title and
 drag inset. On Linux and Windows, it begins directly below native Window Chrome.
-`font.lineHeight` changes row height independently of glyph size. The native
-Always on Top menu changes one current window; `window.alwaysOnTop` sets the
-default for new windows.
+`font.lineHeight` changes row height independently of glyph size. In the
+opt-in development Restty candidate, line height is applied when a Surface is
+created but an existing Surface keeps that value until OMXTerm restarts; xterm
+continues to apply it live. The native Always on Top menu changes one current
+window; `window.alwaysOnTop` sets the default for new windows.
 
 ### Choose the Windows Default Shell
 
@@ -479,8 +481,14 @@ confirmation, logging, keybinds, and the Always-on-Top default. On Windows it
 also selects `windowsShell` for subsequently created Default Shell sessions.
 Existing
 Terminal Surfaces and Live Terminal Sessions remain in place and refit as
-needed. Existing windows keep their current Always-on-Top state and Window Font
-Zoom delta; Actual Size returns to the latest configured baseline.
+needed. The opt-in Restty candidate updates theme, font size and padding live,
+but an existing Restty Surface retains its initial font family and line height;
+restart OMXTerm to apply a changed line height everywhere. New Restty Surfaces
+use the latest validated line height; installed configured-family loading, its
+restart notice and its new-Surface behavior remain deferred to the next
+migration slice. Existing
+windows keep their current Always-on-Top state and Window Font Zoom delta;
+Actual Size returns to the latest configured baseline.
 
 A rejected reload applies nothing and preserves the complete last valid
 in-memory configuration. Removing `config.json` and reloading is a valid way to

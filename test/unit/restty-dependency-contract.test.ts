@@ -85,8 +85,18 @@ describe("Restty dependency contract", () => {
     await prepareResttyRuntime();
     await prepareResttyRuntime();
 
-    expect(
-      digest(readFileSync(path.join(packageRoot, "dist", "chunk-c0rcpsc5.js"))),
-    ).toBe("8f9620d4c39b9e88bb149010e8aad24b0c35073373c2d8a66d78466ccbafec2a");
+    const runtime = readFileSync(
+      path.join(packageRoot, "dist", "chunk-c0rcpsc5.js"),
+    );
+    expect(digest(runtime)).toBe(
+      "a0cd79e08164bde293ca4ee6b52ab1b71cc8959eb1da646f95dde52015aad270",
+    );
+    const source = runtime.toString("utf8");
+    expect(source).toContain("Math.max(1, Math.round(value))");
+    expect(source).toContain("lineHeight * fontConfig.lineHeightFactor");
+    expect(source).toContain("const BOLD_BRIGHTEN = 0;");
+    expect(source).not.toContain(
+      "Math.max(10, Math.min(64, Math.round(value)))",
+    );
   });
 });

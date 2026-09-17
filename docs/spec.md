@@ -202,11 +202,19 @@ renderer-loss cleanup. It requires the bundled JetBrainsMono Nerd Font Mono TTF,
 Ghostty core and an actual WebGL2 backend before a PTY starts. Initialization
 failure releases partial resources and starts no shell. WebGL context loss shows
 a persistent failure and disposes only the owning Surface/session without core
-recreation. Restty copy, paste, Protected Paste, snippets/path injection, OSC 52,
-links, title, bell, theme, configured font, spacing, scrollback, Option Key Mode,
-font zoom and image/configuration routes are unavailable in this slice; xterm
-retains the complete contract below. Linux and Windows Restty behavior is
-unverified; this slice's native runtime evidence is macOS ARM64.
+recreation. Restty applies the selected Terminal Theme, configured font size,
+per-side padding and Window Font Zoom through its runtime and existing host
+geometry. It uses the bundled JetBrainsMono font in this slice. A Restty Surface
+applies its configured line height when it is created; an existing Restty
+Surface keeps its initial font family and line height after User Configuration
+Reload until OMXTerm is restarted, while theme, font size and padding update it
+in place and refit the same PTY. Restty copy, paste, Protected Paste,
+snippets/path injection, OSC 52, links, title, bell, installed configured-font
+loading, scrollback, Option Key Mode and image routes remain unavailable in this
+slice; xterm retains the complete contract below. Linux and Windows Restty
+behavior is unverified; this slice's native runtime evidence is macOS ARM64.
+Native rasterization can differ between Restty and xterm; pixel-identical glyph
+output is not claimed.
 
 OMXTerm advertises `TERM=xterm-256color`, `COLORTERM=truecolor`,
 `TERM_PROGRAM=OMXTerm`, and its installed version in `TERM_PROGRAM_VERSION`.
@@ -486,6 +494,14 @@ notices from the current validation. The complete committed renderer snapshot
 reaches existing and newly created Terminal Surfaces. Font and spacing changes
 recompute the existing native minimum-window bounds, refit the grid with its
 bottom row visible, and resize the same PTY through its existing adapter.
+During the development-only Restty migration, existing Restty Surfaces retain
+the font family and line height they were created with; restart OMXTerm to apply
+a changed line height everywhere. New Restty Surfaces use the latest validated
+line height, while installed configured-family loading, its restart notice and
+its new-Surface behavior remain deferred to the font migration slice. Theme,
+configured font-size baseline, padding and Window Font Zoom remain live and
+preserve the existing Surface and PTY. This temporary exception does not affect
+xterm.
 Runtime scrollback reduction, including zero, uses xterm's in-memory buffer
 behavior; Option Key Mode changes only subsequent keyboard events. OMXTerm never
 migrates, repairs, rewrites, or silently ignores User Configuration. The same surface
