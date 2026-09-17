@@ -116,6 +116,7 @@ describe.skipIf(process.platform !== "darwin")(
         expect(result.externalLinks.slice(2)).toEqual([
           "https://one.test/a",
           "https://two.test/b",
+          "https://scroll.test/complete",
         ]);
         expect(result.ordinaryGestureMouseReports).toMatch(/\u001b\[</u);
         expect(result).toMatchObject({
@@ -137,7 +138,7 @@ describe.skipIf(process.platform !== "darwin")(
       } finally {
         await rm(root, { recursive: true, force: true });
       }
-    }, 150_000);
+    }, 270_000);
   },
 );
 
@@ -236,7 +237,7 @@ async function runFixture(root: string): Promise<{
   child.stderr.on("data", (chunk: string) => (stderr += chunk));
   const timeout = setTimeout(() => {
     if (child.pid) process.kill(-child.pid, "SIGKILL");
-  }, 140_000);
+  }, 260_000);
   const exitCode = await new Promise<number | null>((resolve, reject) => {
     child.once("error", reject);
     child.once("close", resolve);

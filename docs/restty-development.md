@@ -90,7 +90,7 @@ git ls-tree HEAD reference/ghostty reference/text-shaper
 The lockfile restores the npm tarballs identified by that manifest. `npm ci`
 then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
 Restty runtime and embedded-core SHA-256 values and produces corrected runtime
-SHA-256 `f309665b0761fedb862600208b4c3950d9a28523f1f0c2e5bf8554ce96a89c6a`
+SHA-256 `ed0282ed0062fc23a8ac90d2173633129cdd88d706adabb5f0e06bf3ff73aa11`
 and embedded-core chunk SHA-256
 `5a64d5de8f573ac2f392f8863ef6bbeb6228a57d267b8b4d73cf0694e221f56c`.
 The narrow correction makes font-load failure reject initialization, disables

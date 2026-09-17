@@ -70,6 +70,23 @@ async function clickTerminalCell(
   });
 }
 
+async function scrollTerminal(
+  window: BrowserWindow,
+  row: number,
+  col: number,
+  size: TerminalSize,
+  deltaY: number,
+): Promise<void> {
+  const point = await terminalCellPoint(window, row, col, size);
+  await window.webContents.executeJavaScript(
+    `(() => {
+      const canvas = [...document.querySelectorAll('.restty-terminal-surface canvas')].find((candidate) => candidate.getBoundingClientRect().width > 0);
+      canvas.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, clientX: ${point.x}, clientY: ${point.y}, deltaMode: 1, deltaY: ${deltaY} }));
+    })()`,
+    true,
+  );
+}
+
 export async function exerciseResttyLinks(
   options: ResttyLinkGestureOptions,
 ): Promise<ResttyLinkGestureEvidence> {
@@ -164,7 +181,85 @@ export async function exerciseResttyLinks(
       ...(event.modified ? { modifiers } : {}),
     });
   await new Promise((resolve) => setTimeout(resolve, 100));
+
+  const sameSpanPoint = await terminalCellPoint(window, 0, 3, reflowedSize);
+  window.webContents.sendInputEvent({
+    type: "mouseDown",
+    x: sameSpanPoint.x,
+    y: sameSpanPoint.y,
+    button: "left",
+    clickCount: 1,
+    modifiers,
+  });
+  deliverOutput("\u001b[Hhttps://new.test/b");
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  window.webContents.sendInputEvent({
+    type: "mouseUp",
+    x: sameSpanPoint.x,
+    y: sameSpanPoint.y,
+    button: "left",
+    clickCount: 1,
+    modifiers,
+  });
+  window.webContents.sendInputEvent({
+    type: "mouseDown",
+    x: sameSpanPoint.x,
+    y: sameSpanPoint.y,
+    button: "left",
+    clickCount: 1,
+    modifiers,
+  });
+  window.webContents.sendInputEvent({
+    type: "mouseUp",
+    x: sameSpanPoint.x,
+    y: sameSpanPoint.y,
+    button: "left",
+    clickCount: 1,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  if (externalLinks.length !== 4)
+    throw new Error(
+      "Changed-target or released-modifier gesture opened a link",
+    );
   const ordinaryGestureMouseReports = inputs.join("").slice(ordinaryStart);
+
+  deliverOutput("\u001b[?1000l\u001b[?1006l\u001b[3J\u001b[2J\u001b[H");
+  const scrollbackUrl = "https://scroll.test/complete";
+  deliverOutput(
+    `${scrollbackUrl}\r\n${Array.from({ length: reflowedSize.rows }, (_, index) => `scroll-${index}`).join("\r\n")}`,
+  );
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  await scrollTerminal(window, 1, 1, reflowedSize, -1);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  await clickTerminalCell(window, 0, 3, reflowedSize);
+  await waitFor(
+    () => externalLinks.length === 5,
+    "fully visible scrollback link activation",
+  );
+
+  deliverOutput("\u001b[3J\u001b[2J\u001b[H");
+  const clippedUrl = `https://clipped.test/${"z".repeat(reflowedSize.cols)}`;
+  deliverOutput(
+    `${clippedUrl}\r\n${Array.from({ length: reflowedSize.rows - 1 }, (_, index) => `clip-${index}`).join("\r\n")}`,
+  );
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  await clickTerminalCell(window, 0, 3, reflowedSize);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  if (Number(externalLinks.length) !== 5)
+    throw new Error("Destination clipped above the viewport opened a link");
+
+  deliverOutput("\u001b[3J\u001b[2J\u001b[H");
+  const clippedEndUrl = `https://clipped-end.test/${"q".repeat(reflowedSize.cols)}`;
+  deliverOutput(
+    `${Array.from({ length: reflowedSize.rows - 1 }, (_, index) => `lead-${index}`).join("\r\n")}\r\n${clippedEndUrl}\r\n${Array.from({ length: reflowedSize.rows }, (_, index) => `trail-${index}`).join("\r\n")}`,
+  );
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  await scrollTerminal(window, 1, 1, reflowedSize, -1_000);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  await clickTerminalCell(window, reflowedSize.rows - 1, 3, reflowedSize);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  if (Number(externalLinks.length) !== 5)
+    throw new Error("Destination clipped below the viewport opened a link");
 
   const cancelledStart = inputs.join("").length;
   await window.webContents.executeJavaScript(

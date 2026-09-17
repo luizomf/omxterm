@@ -38,7 +38,7 @@ const priorClipboardDigest =
 const priorVisibleLinksDigest =
   "595f72d3be87f0965dea3733180264768720f7cba0c7c35aad797e2a22689665";
 const correctedDigest =
-  "f309665b0761fedb862600208b4c3950d9a28523f1f0c2e5bf8554ce96a89c6a";
+  "ed0282ed0062fc23a8ac90d2173633129cdd88d706adabb5f0e06bf3ff73aa11";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 
 const securityCorrections = [
@@ -608,7 +608,10 @@ const visibleLinkCorrections = [
         rows[lastRow][render.cols - 1] !== " ");
     const match = resolveVisibleLink({ text, offset, clippedStart, clippedEnd });
     return match
-      ? { ...match, id: \`\${firstRow}:\${match.start}:\${match.end}\` }
+      ? {
+          ...match,
+          id: \`\${viewportOffset}:\${firstRow}:\${match.start}:\${match.end}:\${match.url}\`
+        }
       : null;
   };
   const clearSelection = () => {

@@ -83,12 +83,17 @@ export function installResttyVisibleLinks(
     const gesture = pending;
     pending = undefined;
     const current = resolve(event);
-    if (current?.id !== gesture.link.id) {
+    if (
+      event.button !== 0 ||
+      !hasModifier(event) ||
+      current?.id !== gesture.link.id ||
+      current.url !== gesture.link.url
+    ) {
       replayDown(gesture);
       return;
     }
     consume(event);
-    requestActivation(gesture.link.url);
+    requestActivation(current.url);
   };
   const onPointerCancel = (event: PointerEvent) => {
     if (!pending || pending.pointerId !== event.pointerId) return;
