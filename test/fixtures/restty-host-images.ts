@@ -47,13 +47,16 @@ export async function exerciseResttyImagesThroughPty(options: {
     resizes,
     waitFor,
   } = options;
+  const nodeExecutable = process.env["npm_node_execpath"];
+  if (!nodeExecutable)
+    throw new Error("Native image fixture requires npm_node_execpath");
   deliverOutputs[0]!("\u001b[2J\u001b[H\u001b[?25l");
   await new Promise((resolve) => setTimeout(resolve, 100));
   const evidence = await exerciseResttyImages({
     window,
     runEmitter: () =>
       terminal.write(
-        `${process.platform === "win32" ? "& " : ""}${shellQuote(process.execPath)} ${shellQuote(`${root}/image-emitter.cjs`)} ${shellQuote(`${root}/pi-2000.png`)}\r`,
+        `${process.platform === "win32" ? "& " : ""}${shellQuote(nodeExecutable)} ${shellQuote(`${root}/image-emitter.cjs`)} ${shellQuote(`${root}/pi-2000.png`)}\r`,
       ),
     output: () => outputs[0]!.join(""),
     input: () => inputs[0]!.join(""),

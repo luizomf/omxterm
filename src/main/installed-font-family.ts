@@ -201,12 +201,14 @@ async function resolveInstalledFontFace(
 ): Promise<InstalledFontFace | undefined> {
   if (platform === "linux") {
     const { stdout } = await run("/usr/bin/fc-match", [
-      "--format=%{family}\\0%{weight}\\0%{slant}\\0%{file}\\0%{postscriptname}\\n",
+      // Fontconfig does not decode \\0. A literal separator survives its
+      // formatter; an extra separator in any field is rejected below.
+      "--format=%{family}\u001f%{weight}\u001f%{slant}\u001f%{file}\u001f%{postscriptname}\\n",
       "--",
       `${family}:style=Regular`,
     ]);
     const [installedFamilies, weight, slant, file, postScriptName, extra] =
-      stdout.trimEnd().split("\0");
+      stdout.replace(/\n$/u, "").split("\u001f");
     if (
       extra !== undefined ||
       !installedFamilies
@@ -407,7 +409,9 @@ function isRegularFace(face: CollectionFaceName): boolean {
 }
 
 function isRegularSubfamily(subfamily: string | null | undefined): boolean {
-  return /^(regular|book|roman)$/iu.test(subfamily ?? "");
+  // Windows fonts may expose the localized "Normal" name before English
+  // "Regular" in the parsed name table (including Segoe and YaHei faces).
+  return /^(regular|normal|book|roman)$/iu.test(subfamily ?? "");
 }
 
 function isStatus(value: unknown, status: string): boolean {

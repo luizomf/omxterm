@@ -22,7 +22,10 @@ import { exerciseResttyCapabilities } from "./restty-host-capabilities";
 import { exerciseResttyBackendLoss } from "./restty-host-failures";
 import { captureResttyFontPaintEvidence } from "./restty-host-paint";
 import * as resttyImages from "./restty-host-images";
-import { createLargePasteFixture, dispatchDomPaste } from "./restty-host-paste";
+import {
+  dispatchDomPaste,
+  exerciseLargePasteThroughPty,
+} from "./restty-host-paste";
 import {
   explicitFixtureLaunchRequest,
   nativeFixturePlatform,
@@ -358,12 +361,12 @@ app
         "owned PTY echo disable",
       );
     }
-    const largePaste = createLargePasteFixture();
-    await dispatchDomPaste(window, largePaste.command);
-    await waitFor(
-      () => outputs[0]!.join("").includes(`${largePaste.digest}  -`),
-      "complete ordered large DOM paste through the owned PTY",
-    );
+    const largePaste = await exerciseLargePasteThroughPty({
+      window,
+      write: (data) => terminals[0]!.write(data),
+      output: () => outputs[0]!.join(""),
+      waitFor,
+    });
 
     window.webContents.send(terminalIpc.clipboardAction, "paste");
     await waitFor(
@@ -509,6 +512,7 @@ app
     app.exit(0);
   })
   .catch((error) => {
+    for (const terminal of terminals) terminal.close();
     process.stderr.write(
       `${error instanceof Error ? error.stack : String(error)}\n`,
     );

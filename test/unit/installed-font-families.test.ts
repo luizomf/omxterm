@@ -148,7 +148,7 @@ describe("installed font-family command seams", () => {
     const run = vi.fn(async (_file: string, arguments_: readonly string[]) => {
       const requested = arguments_.at(-1)?.split(":", 1)[0] ?? "";
       return {
-        stdout: `${requested}\u000080\u00000\u0000/${requested}.ttf\n`,
+        stdout: `${requested}\u001f80\u001f0\u001f/${requested}.ttf\n`,
       };
     });
 
@@ -167,13 +167,13 @@ describe("installed font-family command seams", () => {
     const run = vi.fn(async (file: string, arguments_: readonly string[]) => {
       expect(file).toBe("/usr/bin/fc-match");
       expect(arguments_).toEqual([
-        "--format=%{family}\\0%{weight}\\0%{slant}\\0%{file}\\0%{postscriptname}\\n",
+        "--format=%{family}\u001f%{weight}\u001f%{slant}\u001f%{file}\u001f%{postscriptname}\\n",
         "--",
         "Exact Família:style=Regular",
       ]);
       return {
         stdout:
-          "Exact Família,Alias\u000080\u00000\u0000/usr/share/fonts/A Space 正規.ttf\u0000ExactFamilia-Regular\n",
+          "Exact Família,Alias\u001f80\u001f0\u001f/usr/share/fonts/A Space 正規.ttf\u001fExactFamilia-Regular\n",
       };
     });
     await expect(
@@ -191,7 +191,7 @@ describe("installed font-family command seams", () => {
         20,
         async () => ({
           stdout:
-            "Fallback\u000080\u00000\u0000/fallback.ttf\u0000Fallback-Regular\n",
+            "Fallback\u001f80\u001f0\u001f/fallback.ttf\u001fFallback-Regular\n",
         }),
         "linux",
         readableFace,

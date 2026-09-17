@@ -74,20 +74,37 @@ describe("Restty under production Electron policy", () => {
         ptyStarts: 1,
         clipboardReads: 0,
         clipboardWrites: 0,
-        terminalReplies: 11,
-        optionInput: [
-          "å",
-          "é",
-          "∫",
-          "\u001ba",
-          "∫",
-          "å",
-          "\u001bb",
-          "\u001ba",
-          "\u001bb",
-          "\u001be",
-          "\u001bA",
-        ],
+        terminalReplies: process.platform === "darwin" ? 11 : 10,
+        // Physical Option-to-ASCII mapping is macOS-only. Elsewhere the
+        // synthetic non-ASCII Alt keys retain their literal browser values;
+        // a dead key itself emits no text before composition completes.
+        optionInput:
+          process.platform === "darwin"
+            ? [
+                "å",
+                "é",
+                "∫",
+                "\u001ba",
+                "∫",
+                "å",
+                "\u001bb",
+                "\u001ba",
+                "\u001bb",
+                "\u001be",
+                "\u001bA",
+              ]
+            : [
+                "å",
+                "é",
+                "∫",
+                "\u001bå",
+                "∫",
+                "å",
+                "\u001b∫",
+                "\u001bå",
+                "\u001b∫",
+                "\u001bÅ",
+              ],
       });
       expect(result?.available.resize?.cols).toBeGreaterThan(1);
       expect(result?.available.resize?.rows).toBeGreaterThan(0);

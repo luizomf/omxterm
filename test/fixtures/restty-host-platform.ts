@@ -41,7 +41,7 @@ export function explicitFixtureLaunchRequest(): LaunchRequest {
         "-NoLogo",
         "-NoProfile",
         "-Command",
-        `$bytes=[Convert]::FromBase64String('${encoded}'); [Console]::OpenStandardOutput().Write($bytes,0,$bytes.Length); $line=[Console]::ReadLine(); [Console]::OutputEncoding=[Text.UTF8Encoding]::new(); [Console]::WriteLine('__EXPLICIT_INPUT__'+$line); Start-Sleep -Seconds 30`,
+        `$bytes=[Convert]::FromBase64String('${encoded}'); [Console]::OpenStandardOutput().Write($bytes,0,$bytes.Length); $line=[Console]::ReadLine(); [Console]::OutputEncoding=[Text.UTF8Encoding]::new(); [Console]::WriteLine('__EXPLICIT_INPUT__'+$line); [Console]::ReadLine() | Out-Null`,
       ],
     };
   }
@@ -50,7 +50,7 @@ export function explicitFixtureLaunchRequest(): LaunchRequest {
     executable: "/bin/sh",
     arguments: [
       "-c",
-      "printf '__EXPLICIT_READY__Olá🙂\\n\\033]2;second-title\\007\\007\\033]52;c;dW5zYWZl\\007\\033]8;;https://example.com\\007https://example.com\\033]8;;\\007'; IFS= read -r line; printf '__EXPLICIT_INPUT__%s\\n' \"$line\"; sleep 30",
+      "printf '__EXPLICIT_READY__Olá🙂\\n\\033]2;second-title\\007\\007\\033]52;c;dW5zYWZl\\007\\033]8;;https://example.com\\007https://example.com\\033]8;;\\007'; IFS= read -r line; printf '__EXPLICIT_INPUT__%s\\n' \"$line\"; IFS= read -r keepAlive",
     ],
   };
 }
