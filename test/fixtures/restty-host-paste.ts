@@ -22,7 +22,7 @@ export function createLargePasteFixture() {
     throw new Error("Native paste fixture requires npm_node_execpath");
   // Keep the Windows argv below its native limit. The large payload must
   // traverse the PTY as stdin, not be embedded in a command-line argument.
-  const program = `const c=require('node:crypto');let b=Buffer.alloc(0);process.stdin.setRawMode(true);process.stdin.on('data',chunk=>{b=Buffer.concat([b,chunk]);if(b.length>=${Buffer.byteLength(payload)}){process.stdout.write(c.createHash('sha256').update(b).digest('hex')+'  -\\n');process.stdin.setRawMode(false);process.stdin.pause()}});process.stdout.write('__PASTE_RECEIVER_READY__\\n')`;
+  const program = `const c=require('node:crypto');let b=Buffer.alloc(0);process.stdin.setRawMode(true);process.stdin.on('data',chunk=>{b=Buffer.concat([b,chunk]);if(b.length>=${Buffer.byteLength(payload)}){process.stdin.setRawMode(false);process.stdin.pause();process.stdout.write(c.createHash('sha256').update(b).digest('hex')+'  -\\n',()=>process.exit(0))}});process.stdout.write('__PASTE_RECEIVER_READY__\\n')`;
   const executable = `'${nodeExecutable.replaceAll("'", "''")}'`;
   return {
     startCommand: `& ${executable} -e '${program.replaceAll("'", "''")}'\r`,

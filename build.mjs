@@ -18,7 +18,10 @@ await Promise.all([
     bundle: true,
     format: "esm",
     platform: "node",
-    packages: "external",
+    // Keep only native/host modules external. The main process imports
+    // text-shaper directly, so bundling it prevents packaged startup from
+    // resolving a development checkout's ancestor node_modules by accident.
+    external: ["electron", "node-pty"],
     outfile: "dist/main/index.js",
     sourcemap: true,
   }),

@@ -44,13 +44,19 @@ describe("Terminal appearance build", () => {
       );
     }
 
-    const builtJavaScript = await readFile(
+    const rendererJavaScript = await readFile(
       path.join(projectRoot, "dist", "renderer", "index.js"),
       "utf8",
     );
-    expect(builtJavaScript).toContain("JetBrainsMono Nerd Font Mono");
-    expect(builtJavaScript).toContain("restty");
-    expect(builtJavaScript).not.toContain("@xterm");
+    expect(rendererJavaScript).toContain("JetBrainsMono Nerd Font Mono");
+    expect(rendererJavaScript).toContain("restty");
+    expect(rendererJavaScript).not.toContain("@xterm");
+
+    const mainJavaScript = await readFile(
+      path.join(projectRoot, "dist", "main", "index.js"),
+      "utf8",
+    );
+    expect(mainJavaScript).not.toMatch(/from ["']text-shaper["']/u);
   }, 30_000);
 
   it("places title inset and User Configuration padding on the Restty Surface", async () => {
