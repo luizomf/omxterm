@@ -13,6 +13,7 @@ const electronExecutable = createRequire(import.meta.url)("electron") as string;
 const resultPrefix = "__OMXTERM_DEVELOPER_TOOLS_RESULT__";
 
 interface DeveloperToolsResult {
+  readonly isolatedProfiles: boolean;
   readonly firstWindowOpened: boolean;
   readonly selectedWindowOpened: boolean;
   readonly selectedWindowClosed: boolean;
@@ -51,6 +52,7 @@ describe("Developer Tools through native Electron", () => {
         `Developer Tools fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
       ).toBe(0);
       expect(result).toEqual({
+        isolatedProfiles: true,
         firstWindowOpened: false,
         selectedWindowOpened: true,
         selectedWindowClosed: true,
@@ -85,14 +87,22 @@ async function runFixture(root: string): Promise<{
   child.stdout.on("data", (chunk: string) => (stdout += chunk));
   child.stderr.on("data", (chunk: string) => (stderr += chunk));
   const timeout = setTimeout(() => {
-    if (process.platform !== "win32" && child.pid)
-      process.kill(-child.pid, "SIGKILL");
-    else child.kill("SIGKILL");
+    try {
+      if (process.platform !== "win32" && child.pid)
+        process.kill(-child.pid, "SIGKILL");
+      else child.kill("SIGKILL");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ESRCH")
+        child.emit("error", error);
+    }
   }, 15_000);
-  const exitCode = await new Promise<number | null>((resolve, reject) => {
-    child.once("error", reject);
-    child.once("close", resolve);
-  });
-  clearTimeout(timeout);
-  return { exitCode, stderr, stdout };
+  try {
+    const exitCode = await new Promise<number | null>((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", resolve);
+    });
+    return { exitCode, stderr, stdout };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
