@@ -126,13 +126,13 @@ describe("Restty dependency contract", () => {
       path.join(packageRoot, "dist", "chunk-c0rcpsc5.js"),
     );
     expect(digest(runtime)).toBe(
-      "ac05624abac2fddea9a38f3e29d26ebbde3f41484b86c0082ce5e3d5cb334e1f",
+      "1cda40a3b3e5dfbda54a2dd5616277e3d337e6f964639f8edc6e3c0c892011c3",
     );
     const core = readFileSync(
       path.join(packageRoot, "dist", "chunk-6dxqza9q.js"),
     );
     expect(digest(core)).toBe(
-      "4c0830a7b5dc3cb986de5c980315fc68d14ef33cc193a479b062fc54a7234159",
+      "3b3f4ef21e2fe5d5bfc7d5ad47b2557c1e12cca33619dbd5f15df9572e038f4d",
     );
     expect(core.toString("utf8")).toContain("restty_set_scrollback_limits");
     expect(core.toString("utf8")).toContain("restty_event_consume");
@@ -149,6 +149,10 @@ describe("Restty dependency contract", () => {
     expect(source).toContain("required font decode failed");
     expect(source).toContain("setScrollbackLines");
     expect(source).toContain("setScrollbackLimits");
+    expect(source).toContain("setOptionKeyMode");
+    expect(source).toContain("getOptionKeyMode");
+    expect(source).toContain("isNativeOptionText");
+    expect(source).toContain('seq.startsWith("\\x1B[>")');
     expect(source).toContain('runBeforeInputHook(text, "paste")');
     expect(source).toContain("isBracketedPasteEnabled");
     expect(source).toContain("getSelectionText");

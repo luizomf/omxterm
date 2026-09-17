@@ -227,8 +227,10 @@ per-session host callbacks used by xterm. It does not scan Terminal Payload or
 add a second parser: title sanitization, fallback, ownership, silent bell marker,
 focus/interaction reset and platform attention remain existing host policy.
 OSC BEL terminators and cancelled or malformed controls produce no extra title
-or bell event, and title-report queries receive no reply. Option Key Mode remains
-unavailable in this slice. Restty image rendering and scrollback follow the
+or bell event, and title-report queries receive no reply. Restty applies Option
+Key Mode live: `none` preserves macOS native Unicode and composition input,
+while `left`, `right`, and `both` turn only the configured physical Option key
+into terminal Alt input. Restty image rendering and scrollback follow the
 shared contracts below through the pinned Ghostty core. Linux and Windows Restty
 behavior is unverified; this slice's native runtime evidence is macOS ARM64.
 Native rasterization can differ between Restty and xterm; pixel-identical glyph
@@ -275,6 +277,10 @@ costs.
 
 OMXTerm advertises `TERM=xterm-256color`, `COLORTERM=truecolor`,
 `TERM_PROGRAM=OMXTerm`, and its installed version in `TERM_PROGRAM_VERSION`.
+Restty answers DA1 as `CSI ? 1 ; 2 c` and DA2 as `CSI > 0 ; 0 ; 0 c` once per
+query, and owns cursor-position and cell-size replies once at its existing
+parsed runtime seam; split input and alternate-screen transitions do not add a
+second reply path.
 It installs no custom terminfo and does not edit or inject shell startup files.
 Inline-image support does not impersonate another terminal or inject
 application-specific capability variables.
@@ -383,8 +389,13 @@ a duplicate PTY mouse report; other gestures retain ordinary selection or
 application-mouse routing. The Restty candidate reconstructs a destination only
 across core-proven, fully visible soft wraps. It preserves hard breaks and cell
 coordinates for grapheme and wide-cell prefixes, and conservatively refuses a
-destination that may continue beyond the visible viewport. OSC 8 destinations
-and all other schemes are ignored.
+destination that may continue beyond the visible viewport. Restty enables
+Ghostty's grapheme-cluster mode by default so emoji-presentation and ZWJ
+clusters occupy one two-column terminal cell for rendering and selection.
+Application mouse modes own buttons, motion, and wheel reporting in normal and
+alternate screens; Shift retains the selection override, and explicit copy and
+valid modified-link gestures do not produce duplicate PTY mouse input. OSC 8
+destinations and all other schemes are ignored.
 
 ## Clipboard
 

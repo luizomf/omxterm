@@ -87,9 +87,18 @@ mode side effect, and does not block later ordinary text. The established valid
 large OSC 52 request remains accepted. This scanner rule is not a general text,
 copy, paste or input limit.
 
-Option Key Mode and other runtime configuration remain unavailable until their
-migration tickets land. The xterm Surface retains its existing observable
-behavior. Queue bytes, JavaScript heap and RSS are separate metrics from Ghostty
+Restty honors live Option Key Mode changes. On macOS, `none` preserves native
+layout Unicode and composition input; `left`, `right`, and `both` produce
+terminal Alt input only from the configured physical Option key. Application
+keybinds still route through Electron main exactly once. Restty keeps selection,
+copy, wide/combining/emoji graphemes, mouse buttons and wheel input coherent in
+normal and alternate screens; Shift selection and valid modified-link activation
+override application mouse reporting without duplicate PTY input. DA1, DA2,
+cursor-position and cell-size queries have one deterministic parsed-runtime
+reply path, including controls split across output messages.
+
+The xterm Surface retains its existing observable behavior. Queue bytes,
+JavaScript heap and RSS are separate metrics from Ghostty
 core, browser/WebGL and GPU allocations; no whole-application memory bound is
 claimed. There is no automatic xterm fallback.
 
@@ -128,14 +137,16 @@ The lockfile restores the npm tarballs identified by that manifest. `npm ci`
 then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
 Restty runtime, declarations and embedded-core SHA-256 values and produces
 corrected runtime SHA-256
-`ac05624abac2fddea9a38f3e29d26ebbde3f41484b86c0082ce5e3d5cb334e1f`,
+`1cda40a3b3e5dfbda54a2dd5616277e3d337e6f964639f8edc6e3c0c892011c3`,
 embedded-core chunk SHA-256
-`4c0830a7b5dc3cb986de5c980315fc68d14ef33cc193a479b062fc54a7234159`,
+`3b3f4ef21e2fe5d5bfc7d5ad47b2557c1e12cca33619dbd5f15df9572e038f4d`,
 and event declarations SHA-256
 `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34`.
 The narrow correction makes font-load failure reject initialization, disables
-Restty's direct browser clipboard and link-opening callbacks, bounds unfinished
-OSC/CSI control bodies with whole-control recovery, and exposes raw paste
+Restty's direct browser clipboard and link-opening callbacks, preserves native
+Option Unicode/composition versus configured physical-side Alt input, gives DA2
+its own deterministic response, bounds unfinished OSC/CSI control bodies with
+whole-control recovery, and exposes raw paste
 origin, current bracketed mode, selection/Select All, parsed OSC and OSC
 cancellation, visible cell/soft-wrap lookup, and parsed Ghostty title/BEL runtime
 events to OMXTerm's existing host policy. Borrowed render cells are snapshotted
@@ -157,7 +168,9 @@ Ghostty commits above with tracked Restty patch
 `assets/restty/omxterm-core.patch` and Ghostty patch
 `assets/restty/ghostty-title-events.patch`. Their SHA-256 values are recorded in
 `assets/restty-sources.json`. The artifact SHA-256 is
-`9cb603614a54fadf9bdb877ab19107df0933267b0446da32b1177f1488189404`.
+`1dff2cd4dbd1b0b32bdf88bf75e40d10ad4ec2a0843040495dc479f4d1d8a2a0`.
+The Restty patch also enables Ghostty's standard grapheme-cluster mode as a
+reset default so emoji-presentation and ZWJ clusters retain one two-column cell.
 To reproduce it in an owned disposable checkout, check out the pinned Restty
 commit and submodules, apply the Restty patch at repository root and the
 Ghostty patch inside `reference/ghostty`, use Zig 0.16.0, and run:

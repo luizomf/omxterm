@@ -89,6 +89,25 @@ runtime correction defers its 200 ms stuck-close socket destruction while the
 stream is paused, preserving the readable exit tail; it does not alter the
 Windows ConPTY path.
 
+The interaction slice keeps application accelerators in Electron main and adds
+no renderer shortcut system. Restty receives the live Option Key Mode through
+its existing runtime configuration: on macOS, unconfigured physical Option keys
+are left to the browser's native Unicode and composition path, while configured
+left, right or both keys produce terminal Alt input. The dependency runtime
+tracks the physical Option side without recording key contents. DA1, DA2,
+cursor-position and cell-size replies remain owned once by Restty's parsed
+output seam, including split controls; DA2 no longer falls through the generic
+DA1 response. Mouse button, motion and wheel reports remain in Restty's existing
+mouse controller in normal and alternate screens, with selection, explicit copy
+and validated modified-link activation retaining their overrides.
+
+The pinned Ghostty core now starts with its standard grapheme-cluster mode as a
+reset default. This makes emoji-presentation and ZWJ sequences one two-column
+cell for rendering and selection instead of layering neighboring component
+cells. The core build change is checksum-guarded beside the existing image,
+scrollback and parsed-event corrections; it does not add an OMXTerm parser or
+text-layout engine.
+
 The same slice changes Restty's existing OutputFilter rather than adding an
 OMXTerm parser. Its unfinished OSC and CSI bodies have a
 10,000,000-UTF-16-code-unit budget aligned with the pinned dependency's OSC

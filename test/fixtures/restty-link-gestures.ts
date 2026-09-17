@@ -20,6 +20,8 @@ interface ResttyLinkGestureOptions {
 export interface ResttyLinkGestureEvidence {
   readonly validLinkMouseReports: string;
   readonly ordinaryGestureMouseReports: string;
+  readonly wheelMouseReports: string;
+  readonly alternateScreenMouseReports: string;
   readonly cancelledGestureMouseReports: string;
 }
 
@@ -223,6 +225,33 @@ export async function exerciseResttyLinks(
     );
   const ordinaryGestureMouseReports = inputs.join("").slice(ordinaryStart);
 
+  const wheelStart = inputs.join("").length;
+  await scrollTerminal(window, 0, 3, reflowedSize, 2);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const wheelMouseReports = inputs.join("").slice(wheelStart);
+
+  const alternateStart = inputs.join("").length;
+  deliverOutput("\u001b[?1049h");
+  const alternatePoint = await terminalCellPoint(window, 0, 3, reflowedSize);
+  window.webContents.sendInputEvent({
+    type: "mouseDown",
+    x: alternatePoint.x,
+    y: alternatePoint.y,
+    button: "left",
+    clickCount: 1,
+  });
+  window.webContents.sendInputEvent({
+    type: "mouseUp",
+    x: alternatePoint.x,
+    y: alternatePoint.y,
+    button: "left",
+    clickCount: 1,
+  });
+  await scrollTerminal(window, 0, 3, reflowedSize, -1);
+  deliverOutput("\u001b[?1049l");
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const alternateScreenMouseReports = inputs.join("").slice(alternateStart);
+
   deliverOutput("\u001b[?1000l\u001b[?1006l\u001b[3J\u001b[2J\u001b[H");
   const scrollbackUrl = "https://scroll.test/complete";
   deliverOutput(
@@ -281,6 +310,8 @@ export async function exerciseResttyLinks(
   return {
     validLinkMouseReports,
     ordinaryGestureMouseReports,
+    wheelMouseReports,
+    alternateScreenMouseReports,
     cancelledGestureMouseReports,
   };
 }

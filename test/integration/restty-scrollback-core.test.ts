@@ -164,6 +164,24 @@ describe("pinned Restty/Ghostty scrollback core", () => {
     }
   });
 
+  it("selects wide, combining, VS16, and ZWJ graphemes without neighboring cells", async () => {
+    const core = await loadCore();
+    try {
+      const handle = core.create(12, 4, 10_000_000);
+      const text = "A漢e\u0301❤️👩‍💻Z";
+      write(core.exports, handle, text);
+
+      expect(selectionText(core.exports, handle, 0, 0, 0, 11)).toBe(text);
+      expect(selectionText(core.exports, handle, 0, 1, 0, 2)).toBe("漢");
+      expect(selectionText(core.exports, handle, 0, 3, 0, 3)).toBe("e\u0301");
+      expect(selectionText(core.exports, handle, 0, 4, 0, 5)).toBe("❤️");
+      expect(selectionText(core.exports, handle, 0, 6, 0, 7)).toBe("👩‍💻");
+      expect(selectionText(core.exports, handle, 0, 8, 0, 8)).toBe("Z");
+    } finally {
+      core.destroyAll();
+    }
+  });
+
   it("exposes viewport evidence when a soft-wrapped destination is concealed", async () => {
     const core = await loadCore();
     try {

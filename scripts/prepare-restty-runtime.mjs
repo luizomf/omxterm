@@ -23,10 +23,12 @@ const priorCorrectedCoreDigest =
   "5a64d5de8f573ac2f392f8863ef6bbeb6228a57d267b8b4d73cf0694e221f56c";
 const priorImageCoreDigest =
   "fb4ff0ec8463a634a54078f3970a3cef86c1be3a880ad1da70f4d9fd3e2b8411";
-const correctedCoreDigest =
+const priorInteractionCoreDigest =
   "4c0830a7b5dc3cb986de5c980315fc68d14ef33cc193a479b062fc54a7234159";
+const correctedCoreDigest =
+  "3b3f4ef21e2fe5d5bfc7d5ad47b2557c1e12cca33619dbd5f15df9572e038f4d";
 const correctedCoreWasmDigest =
-  "9cb603614a54fadf9bdb877ab19107df0933267b0446da32b1177f1488189404";
+  "1dff2cd4dbd1b0b32bdf88bf75e40d10ad4ec2a0843040495dc479f4d1d8a2a0";
 const originalEventTypesDigest =
   "1c9383be2d0377635b3463a5ac2ec31eac3e2b233fc664de751ad3e9f54ea650";
 const correctedEventTypesDigest =
@@ -55,8 +57,10 @@ const priorOutputSafetyDigest =
   "15ca6dc64c45c1f42a88337aec58367a5e69fc0889dfa92c305aa333cba2a651";
 const splitTerminatorOutputSafetyDigest =
   "cfe2c967cc201689f4e1ca2a9231e9652ff5fce47d7671ab73dba78b2b5fa7ea";
-const correctedDigest =
+const priorInteractionDigest =
   "ac05624abac2fddea9a38f3e29d26ebbde3f41484b86c0082ce5e3d5cb334e1f";
+const correctedDigest =
+  "1cda40a3b3e5dfbda54a2dd5616277e3d337e6f964639f8edc6e3c0c892011c3";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 
 const securityCorrections = [
@@ -836,6 +840,184 @@ const splitTerminatorOutputSafetyCorrections = [
   },
 ];
 
+const interactionCorrections = [
+  {
+    original: `function attachRuntimeControllerKeyboardEvents(options) {
+  const hasInputFocus = () => {`,
+    corrected: `function attachRuntimeControllerKeyboardEvents(options) {
+  let leftOptionDown = false;
+  let rightOptionDown = false;
+  const optionActsAsAlt = () => {
+    const mode = options.getOptionKeyMode();
+    return mode === "both" || mode === "left" && leftOptionDown || mode === "right" && rightOptionDown;
+  };
+  const updateOptionState = (event, down) => {
+    if (event.code === "AltLeft") leftOptionDown = down;
+    if (event.code === "AltRight") rightOptionDown = down;
+  };
+  const resetOptionState = () => {
+    leftOptionDown = false;
+    rightOptionDown = false;
+  };
+  const isNativeOptionText = (event) =>
+    options.isMacPlatform && event.altKey && !event.ctrlKey && !event.metaKey && !optionActsAsAlt() && (event.key === "Dead" || event.key.length === 1);
+  const configuredAltEvent = (event) => {
+    if (!options.isMacPlatform || !event.altKey || !optionActsAsAlt() || event.key.length !== 1)
+      return event;
+    const base = deriveBaseLayoutCodepoint(event);
+    const shifted = event.shiftKey ? SHIFTED_CODE_BY_CODE[event.code || ""] : undefined;
+    const key = shifted || (base > 0 ? String.fromCodePoint(base) : event.key);
+    return {
+      key,
+      code: event.code,
+      type: event.type,
+      repeat: event.repeat,
+      isComposing: event.isComposing,
+      altKey: true,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey,
+      getModifierState: (name) => event.getModifierState?.(name) ?? false
+    };
+  };
+  const hasInputFocus = () => {`,
+  },
+  {
+    original: `    if (target === options.imeInput) {
+      if (options.interaction.imeState.composing || event.isComposing)
+        return true;`,
+    corrected: `    if (isNativeOptionText(event))
+      return true;
+    if (target === options.imeInput) {
+      if (options.interaction.imeState.composing || event.isComposing)
+        return true;`,
+  },
+  {
+    original: `      if (!event.ctrlKey && !event.metaKey && event.key.length === 1 && !event.repeat) {
+        return true;
+      }`,
+    corrected: `      if (!event.ctrlKey && !event.metaKey && event.key.length === 1 && !event.repeat && !(event.altKey && optionActsAsAlt())) {
+        return true;
+      }`,
+  },
+  {
+    original: `  const onKeyDown = (event) => {
+    if (isMacInputSourceShortcut(event)) {`,
+    corrected: `  const onKeyDown = (event) => {
+    updateOptionState(event, true);
+    if (isMacInputSourceShortcut(event)) {`,
+  },
+  {
+    original: `    const seq = options.inputHandler.encodeKeyEvent(event);
+    if (seq) {
+      if (event.type === "keydown" && ["Backspace", "Delete", "Del", "Enter"].includes(event.key)) {`,
+    corrected: `    const effectiveEvent = configuredAltEvent(event);
+    const seq = options.inputHandler.encodeKeyEvent(effectiveEvent);
+    if (seq) {
+      if (event.type === "keydown" && ["Backspace", "Delete", "Del", "Enter"].includes(event.key)) {`,
+  },
+  {
+    original: `  const onKeyUp = (event) => {
+    if (isMacInputSourceShortcut(event))
+      return;`,
+    corrected: `  const onKeyUp = (event) => {
+    updateOptionState(event, false);
+    if (isMacInputSourceShortcut(event))
+      return;`,
+  },
+  {
+    original: `    const seq = options.inputHandler.encodeKeyEvent(event);
+    if (seq) {
+      event.preventDefault();
+      options.ptyInputRuntime.sendKeyInput(seq);
+    }
+  };
+  window.addEventListener("keydown", onKeyDown);`,
+    corrected: `    const seq = options.inputHandler.encodeKeyEvent(configuredAltEvent(event));
+    if (seq) {
+      event.preventDefault();
+      options.ptyInputRuntime.sendKeyInput(seq);
+    }
+  };
+  window.addEventListener("keydown", onKeyDown);`,
+  },
+  {
+    original: `  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
+  options.cleanupFns.push(() => window.removeEventListener("keydown", onKeyDown));
+  options.cleanupFns.push(() => window.removeEventListener("keyup", onKeyUp));`,
+    corrected: `  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
+  window.addEventListener("blur", resetOptionState);
+  options.cleanupFns.push(() => window.removeEventListener("keydown", onKeyDown));
+  options.cleanupFns.push(() => window.removeEventListener("keyup", onKeyUp));
+  options.cleanupFns.push(() => window.removeEventListener("blur", resetOptionState));`,
+  },
+  {
+    original: `  const scrollbackLines = Number.isInteger(lifecycleDeps.scrollbackLines) && lifecycleDeps.scrollbackLines >= 0 ? lifecycleDeps.scrollbackLines : 10000;
+  const setScrollbackLines = (value) => {`,
+    corrected: `  const scrollbackLines = Number.isInteger(lifecycleDeps.scrollbackLines) && lifecycleDeps.scrollbackLines >= 0 ? lifecycleDeps.scrollbackLines : 10000;
+  let optionKeyMode = ["none", "left", "right", "both"].includes(platform.optionKeyMode) ? platform.optionKeyMode : "none";
+  const setOptionKeyMode = (value) => {
+    if (!["none", "left", "right", "both"].includes(value))
+      throw new TypeError("option key mode must be none, left, right, or both");
+    optionKeyMode = value;
+  };
+  const setScrollbackLines = (value) => {`,
+  },
+  {
+    original: `      isMacPlatform: platform.isMacPlatform,
+      inputHandler: runtime.inputHandler,`,
+    corrected: `      isMacPlatform: platform.isMacPlatform,
+      getOptionKeyMode: () => optionKeyMode,
+      inputHandler: runtime.inputHandler,`,
+  },
+  {
+    original: `    sendInput,
+    setScrollbackLines,
+    createPublicApi:`,
+    corrected: `    sendInput,
+    setOptionKeyMode,
+    setScrollbackLines,
+    createPublicApi:`,
+  },
+  {
+    original: `    setFonts: terminalCapabilities.setFonts,
+    setScrollbackLines: terminalCapabilities.setScrollbackLines,`,
+    corrected: `    setFonts: terminalCapabilities.setFonts,
+    setOptionKeyMode: terminalCapabilities.setOptionKeyMode,
+    setScrollbackLines: terminalCapabilities.setScrollbackLines,`,
+  },
+  {
+    original: `      imeInput,
+      attachWindowEvents,
+      isMacPlatform,`,
+    corrected: `      imeInput,
+      attachWindowEvents,
+      isMacPlatform,
+      optionKeyMode: terminal.optionKeyMode,`,
+  },
+  {
+    original: `      setFonts,
+      setScrollbackLines: runtimeController.setScrollbackLines,
+      resetTheme`,
+    corrected: `      setFonts,
+      setOptionKeyMode: runtimeController.setOptionKeyMode,
+      setScrollbackLines: runtimeController.setScrollbackLines,
+      resetTheme`,
+  },
+  {
+    original: `  if (isDeviceAttributesQuery(seq)) {
+    handlers.sendReply("\\x1B[?1;2c");
+    return true;
+  }`,
+    corrected: `  if (isDeviceAttributesQuery(seq)) {
+    handlers.sendReply(seq.startsWith("\\x1B[>") ? "\\x1B[>0;0;0c" : "\\x1B[?1;2c");
+    return true;
+  }`,
+  },
+];
+
 const parsedEventTypeCorrections = [
   {
     original: `} | {
@@ -981,7 +1163,8 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
   if (
     sourceDigest !== originalCoreDigest &&
     sourceDigest !== priorCorrectedCoreDigest &&
-    sourceDigest !== priorImageCoreDigest
+    sourceDigest !== priorImageCoreDigest &&
+    sourceDigest !== priorInteractionCoreDigest
   )
     throw new Error(
       "Unrecognized Restty WASM runtime; review the pinned OMXTerm corrections",
@@ -997,7 +1180,8 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     source,
     sourceDigest === originalCoreDigest
       ? coreRuntimeCorrections
-      : sourceDigest === priorImageCoreDigest
+      : sourceDigest === priorImageCoreDigest ||
+          sourceDigest === priorInteractionCoreDigest
         ? []
         : parsedEventCoreCorrections,
   );
@@ -1044,7 +1228,9 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === splitTerminatorOutputSafetyDigest) {
+    if (sourceDigest === priorInteractionDigest) {
+      source = applyCorrections(source, interactionCorrections);
+    } else if (sourceDigest === splitTerminatorOutputSafetyDigest) {
       source = applyCorrections(source, splitTerminatorOutputSafetyCorrections);
     } else if (sourceDigest === priorOutputSafetyDigest) {
       source = applyCorrections(source, outputSafetyCorrections);
@@ -1138,6 +1324,8 @@ export async function prepareResttyRuntime(options = {}) {
       source = applyCorrections(source, parsedEventRuntimeCorrections);
       source = applyCorrections(source, outputSafetyCorrections);
     }
+    if (digest(source) === priorInteractionDigest)
+      source = applyCorrections(source, interactionCorrections);
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,

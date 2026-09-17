@@ -29,6 +29,9 @@ interface Metrics {
 interface Result {
   readonly initial: Metrics;
   readonly scrolledTop: number;
+  readonly autoscrollStartTop: number;
+  readonly autoscrolledTop: number;
+  readonly resized: Metrics;
   readonly reduced: Metrics;
   readonly selectedPixels: number;
   readonly zero: Metrics;
@@ -66,7 +69,16 @@ describe("Restty scrollback through the production Surface seam", () => {
       );
       expect(result!.initial.scrollTop).toBeGreaterThan(0);
       expect(result!.scrolledTop).toBe(0);
-      expect(result!.reduced.scrollTop).toBe(0);
+      expect(result!.autoscrollStartTop).toBeGreaterThan(0);
+      expect(result!.autoscrolledTop).toBeLessThan(result!.autoscrollStartTop);
+      expect(result!.resized.sameCanvas).toBe(true);
+      expect(result!.resized.scrollHeight).toBeGreaterThan(
+        result!.resized.clientHeight,
+      );
+      expect(result!.reduced.scrollTop).toBeGreaterThanOrEqual(0);
+      expect(result!.reduced.scrollTop).toBeLessThanOrEqual(
+        result!.reduced.scrollHeight - result!.reduced.clientHeight,
+      );
       expect(result!.reduced.scrollHeight).toBeLessThan(
         result!.initial.scrollHeight,
       );
@@ -186,6 +198,23 @@ app.whenReady().then(async () => {
       canvas.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 9, pointerType: 'mouse', button: 0, buttons: 0, clientX: bounds.left + 220, clientY: y }));
     })()\`, true);
   await new Promise((resolve) => setTimeout(resolve, 100));
+  const autoscroll = await window.webContents.executeJavaScript(
+    \`(() => {
+      const host = document.querySelector('.restty-native-scroll-host');
+      host.scrollTop = host.scrollHeight;
+      host.dispatchEvent(new Event('scroll'));
+      const bounds = document.querySelector('canvas').getBoundingClientRect();
+      return { startTop: host.scrollTop, x: Math.floor(bounds.left + 80), startY: Math.floor(bounds.bottom - 30), endY: Math.floor(bounds.top) };
+    })()\`, true);
+  const autoscrollStartTop = autoscroll.startTop;
+  window.webContents.sendInputEvent({ type: "mouseDown", x: autoscroll.x, y: autoscroll.startY, button: "left", clickCount: 1 });
+  window.webContents.sendInputEvent({ type: "mouseMove", x: autoscroll.x, y: autoscroll.endY, button: "left", clickCount: 1 });
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  window.webContents.sendInputEvent({ type: "mouseUp", x: autoscroll.x, y: autoscroll.endY, button: "left", clickCount: 1 });
+  const autoscrolledTop = await window.webContents.executeJavaScript("document.querySelector('.restty-native-scroll-host').scrollTop", true);
+  window.setSize(700, 440);
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const resized = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.metrics()", true);
   const reduced = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.reduceHistory()", true);
   const selectedPixels = countSelection((await window.webContents.capturePage()).toBitmap());
   const zero = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.disableHistory()", true);
@@ -194,6 +223,9 @@ app.whenReady().then(async () => {
   const result = {
     initial,
     scrolledTop,
+    autoscrollStartTop,
+    autoscrolledTop,
+    resized,
     reduced,
     selectedPixels,
     zero,

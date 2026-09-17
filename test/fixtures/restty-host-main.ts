@@ -18,6 +18,7 @@ import {
 } from "../../src/main/installed-font-family";
 import { exerciseExplicitResttyTab } from "./restty-host-explicit-tab";
 import { exerciseResttyEvents } from "./restty-host-events";
+import { exerciseResttyCapabilities } from "./restty-host-capabilities";
 import { captureResttyFontPaintEvidence } from "./restty-host-paint";
 import * as resttyImages from "./restty-host-images";
 import { createLargePasteFixture, dispatchDomPaste } from "./restty-host-paste";
@@ -46,6 +47,7 @@ const ended: Array<{ closeRequested: boolean; liveSessions: number }> = [];
 let clipboardReads = 0;
 let clipboardWrites = 0;
 let selectAllCoveredScrollback = false;
+let selectedUnicodeExactly = false;
 let protectedPasteConfirmations = 0;
 let contextMenus = 0;
 const externalLinks: string[] = [];
@@ -188,6 +190,9 @@ function createHost(window: BrowserWindow) {
       selectAllCoveredScrollback ||=
         text.includes("__SELECT_ALL_FIRST__") &&
         text.includes("__SELECT_ALL_LAST__");
+      selectedUnicodeExactly ||= text.includes(
+        "__UNICODE__A漢e\u0301❤️👩‍💻Z__END__",
+      );
     },
     readClipboardText() {
       clipboardReads += 1;
@@ -262,8 +267,6 @@ app
       },
     );
 
-    // Keep Electron alive long enough to observe cleanup after the tested
-    // renderer's owning BrowserWindow is destroyed.
     const keeper = new BrowserWindow({ show: false });
     const window = new BrowserWindow({
       width: 900,
@@ -325,13 +328,26 @@ app
       "document.querySelector('.restty-terminal-surface canvas')?.focus()",
       true,
     );
-    await window.webContents.insertText("printf '__DEFAULT_INPUT__Olá🙂\\n'");
-    window.webContents.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
-    window.webContents.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
+    await window.webContents.executeJavaScript(
+      `(() => {
+        const input = document.querySelector('.restty-terminal-surface textarea');
+        input.dispatchEvent(new InputEvent('input', { data: "printf '__DEFAULT_INPUT__Olá🙂\\\\n'", inputType: 'insertText', bubbles: true }));
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+        input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }));
+      })()`,
+      true,
+    );
     await waitFor(
       () => outputs[0]!.join("").includes("__DEFAULT_INPUT__Olá🙂"),
       "default shell Unicode input/output",
     );
+
+    const capabilityReplies = await exerciseResttyCapabilities({
+      deliverOutput: deliverOutputs[0]!,
+      input: () => inputs[0]!.join(""),
+      clearPtyInput: () => terminals[0]!.write("\u0015"),
+      waitFor,
+    });
 
     window.webContents.sendInputEvent({
       type: "keyDown",
@@ -368,7 +384,7 @@ app
     );
     terminals[0]!.write("\u0003");
     terminals[0]!.write(
-      `printf '__SELECT_ALL_FIRST__\\n'; i=0; while [ "$i" -lt 120 ]; do printf 'line-%03d\\n' "$i"; i=$((i+1)); done; printf '__SELECT_ALL_LAST__\\n'\r`,
+      `printf '__SELECT_ALL_FIRST__\\n__UNICODE__A漢é❤️👩‍💻Z__END__\\n'; i=0; while [ "$i" -lt 120 ]; do printf 'line-%03d\\n' "$i"; i=$((i+1)); done; printf '__SELECT_ALL_LAST__\\n'\r`,
     );
     await waitFor(
       () => outputs[0]!.join("").includes("__SELECT_ALL_LAST__"),
@@ -465,6 +481,7 @@ app
       clipboardReads,
       clipboardWrites,
       selectAllCoveredScrollback,
+      selectedUnicodeExactly,
       protectedPasteConfirmations,
       contextMenus,
       largePasteLength: largePaste.length,
@@ -473,6 +490,7 @@ app
       titleEvents,
       bellSessionIds,
       titleQueryReplyBytes,
+      capabilityReplies,
       imageEvidence,
       outputStress: outputStressEvidence,
       navigations,

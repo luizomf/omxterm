@@ -69,10 +69,11 @@ index 28bdd04..012b681 100644
      cursor: CursorInfo = .{
          .row = 0,
          .col = 0,
-@@ -568,6 +603,7 @@ pub export fn restty_create(cols: u16, rows: u16, max_scrollback: u32) ?*Restty
+@@ -568,6 +603,8 @@ pub export fn restty_create(cols: u16, rows: u16, max_scrollback: u32) ?*Restty
          .cols = cols,
          .rows = rows,
          .max_scrollback_bytes = max_scrollback,
++        .default_modes = .{ .grapheme_cluster = true },
 +        .kitty_image_storage_limit = 64_000_000,
          .colors = colors,
      }) catch return null;

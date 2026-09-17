@@ -20,6 +20,7 @@ const harness = vi.hoisted(() => {
     readonly focus = vi.fn();
     readonly sendInput = vi.fn();
     readonly setFontSize = vi.fn();
+    readonly setOptionKeyMode = vi.fn();
     readonly setScrollbackLines = vi.fn();
     readonly applyTheme = vi.fn();
     readonly updateSize = vi.fn();
@@ -79,6 +80,7 @@ const harness = vi.hoisted(() => {
         },
         terminal: {
           setFontSize: this.setFontSize,
+          setOptionKeyMode: this.setOptionKeyMode,
           setScrollbackLines: this.setScrollbackLines,
           applyTheme: this.applyTheme,
         },
@@ -173,6 +175,34 @@ describe("Restty Terminal Surface", () => {
     surface.dispose();
     expect(adapter.close).toHaveBeenCalledOnce();
     expect(restty.destroy).toHaveBeenCalledOnce();
+  });
+
+  it("applies Option Key Mode at creation and reload without replacing the PTY", async () => {
+    const { adapter } = createAdapter();
+    const { mountResttyTerminalSurface } =
+      await import("../../src/terminal-surface/restty-terminal-surface");
+    const surface = await mountResttyTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      { optionKeyMode: "left" },
+    );
+    const restty = harness.instances[0]!;
+
+    expect(restty.options).toMatchObject({
+      terminal: { optionKeyMode: "left" },
+    });
+    surface.applyConfiguration({
+      appearance: { fontSize: 16, lineHeight: 1 },
+      padding: { top: 0, right: 8, bottom: 8, left: 8 },
+      scrollbackLines: 10_000,
+      optionKeyMode: "right",
+      theme: DEFAULT_TERMINAL_THEME,
+    });
+
+    expect(restty.setOptionKeyMode).toHaveBeenCalledExactlyOnceWith("right");
+    expect(harness.instances).toHaveLength(1);
+    expect(adapter.start).toHaveBeenCalledOnce();
+    expect(adapter.close).not.toHaveBeenCalled();
   });
 
   it("forwards parsed title and bell events once and ignores them after disposal", async () => {

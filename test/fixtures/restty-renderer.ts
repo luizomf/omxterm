@@ -1,5 +1,7 @@
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
+import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
+import type { OptionKeyMode } from "../../src/shared/user-configuration";
 
 interface ResttyFixtureResult {
   readonly backend?: string;
@@ -10,6 +12,7 @@ interface ResttyFixtureResult {
   readonly clipboardReads?: number;
   readonly clipboardWrites?: number;
   readonly terminalReplies?: number;
+  readonly optionInput?: readonly string[];
   readonly resize?: { readonly cols: number; readonly rows: number };
 }
 
@@ -41,7 +44,7 @@ let resize: { cols: number; rows: number } | undefined;
 let fatal: string | undefined;
 let clipboardReads = 0;
 let clipboardWrites = 0;
-let terminalReplies = 0;
+const terminalInput: string[] = [];
 Object.defineProperty(navigator, "clipboard", {
   configurable: true,
   value: {
@@ -62,8 +65,8 @@ void mountResttyTerminalSurface(
       ptyStarts += 1;
       handlers = nextHandlers;
     },
-    write() {
-      terminalReplies += 1;
+    write(data) {
+      terminalInput.push(data);
     },
     resize(size) {
       resize = size;
@@ -76,7 +79,82 @@ void mountResttyTerminalSurface(
     },
   },
 )
-  .then(async () => {
+  .then(async (surface) => {
+    const input = container.querySelector("textarea");
+    if (!input) throw new Error("Restty IME input is missing");
+    const dispatchKey = (
+      type: "keydown" | "keyup",
+      key: string,
+      code: string,
+      altKey: boolean,
+    ) =>
+      input.dispatchEvent(
+        new KeyboardEvent(type, { key, code, altKey, bubbles: true }),
+      );
+    const setOptionMode = (optionKeyMode: OptionKeyMode) =>
+      surface.applyConfiguration({
+        appearance: { fontSize: 16, lineHeight: 1 },
+        padding: { top: 0, right: 8, bottom: 8, left: 8 },
+        scrollbackLines: 10_000,
+        optionKeyMode,
+        theme: DEFAULT_TERMINAL_THEME,
+      });
+    const optionText = (
+      side: "left" | "right",
+      key: string,
+      code: string,
+      nativeText?: string,
+    ) => {
+      const optionCode = side === "left" ? "AltLeft" : "AltRight";
+      dispatchKey("keydown", "Alt", optionCode, true);
+      dispatchKey("keydown", key, code, true);
+      if (nativeText)
+        input.dispatchEvent(
+          new InputEvent("input", {
+            data: nativeText,
+            inputType: "insertText",
+            bubbles: true,
+          }),
+        );
+      dispatchKey("keyup", key, code, true);
+      dispatchKey("keyup", "Alt", optionCode, false);
+    };
+
+    input.focus();
+    optionText("left", "å", "KeyA", "å");
+    dispatchKey("keydown", "Alt", "AltLeft", true);
+    dispatchKey("keydown", "Dead", "KeyE", true);
+    input.dispatchEvent(
+      new CompositionEvent("compositionstart", { data: "", bubbles: true }),
+    );
+    input.dispatchEvent(
+      new CompositionEvent("compositionupdate", { data: "´", bubbles: true }),
+    );
+    input.dispatchEvent(
+      new CompositionEvent("compositionend", { data: "é", bubbles: true }),
+    );
+    input.dispatchEvent(
+      new InputEvent("input", {
+        data: "é",
+        inputType: "insertText",
+        bubbles: true,
+      }),
+    );
+    dispatchKey("keyup", "Dead", "KeyE", true);
+    dispatchKey("keyup", "Alt", "AltLeft", false);
+    setOptionMode("left");
+    dispatchKey("keydown", "Alt", "AltLeft", true);
+    window.dispatchEvent(new Event("blur"));
+    optionText("right", "∫", "KeyB", "∫");
+    optionText("left", "å", "KeyA");
+    optionText("right", "∫", "KeyB", "∫");
+    setOptionMode("right");
+    optionText("left", "å", "KeyA", "å");
+    optionText("right", "∫", "KeyB");
+    setOptionMode("both");
+    optionText("left", "å", "KeyA");
+    optionText("right", "∫", "KeyB");
+
     handlers?.onOutput(
       "OMXTerm Restty Olá\r\n\u001b]52;c;dW5zYWZl\u0007\u001b]52;c;?\u0007",
     );
@@ -91,7 +169,8 @@ void mountResttyTerminalSurface(
       ptyStarts,
       clipboardReads,
       clipboardWrites,
-      terminalReplies,
+      terminalReplies: terminalInput.length,
+      optionInput: terminalInput.slice(0, 9),
       ...(resize ? { resize } : {}),
     };
   })

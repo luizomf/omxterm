@@ -23,6 +23,7 @@ import {
   MAX_TERMINAL_PADDING,
   MIN_TERMINAL_LINE_HEIGHT,
   MIN_TERMINAL_PADDING,
+  type OptionKeyMode,
   type TerminalPadding,
 } from "../shared/user-configuration";
 import {
@@ -70,6 +71,7 @@ type CandidateRuntime = {
     applyTheme(theme: GhosttyTheme, sourceLabel?: string): void;
     isBracketedPasteEnabled(): boolean;
     setFontSize(value: number): void;
+    setOptionKeyMode(value: OptionKeyMode): void;
     setScrollbackLines(value: number): void;
   };
 };
@@ -77,6 +79,7 @@ type CandidateRuntime = {
 type ResttyAppearanceConfig = ResttyTerminalConfig & {
   readonly lineHeight: number;
   readonly maxScrollbackBytes: number;
+  readonly optionKeyMode: OptionKeyMode;
   readonly scrollbackLines: number;
 };
 
@@ -90,6 +93,7 @@ function resttyTerminalConfig(
   fontSize: number,
   lineHeight: number,
   scrollbackLines: number,
+  optionKeyMode: OptionKeyMode | undefined,
   theme: TerminalTheme,
 ): ResttyAppearanceConfig {
   return {
@@ -98,6 +102,7 @@ function resttyTerminalConfig(
     lineHeight,
     maxScrollbackBytes: RESTTY_SCROLLBACK_MAX_BYTES,
     scrollbackLines,
+    optionKeyMode: optionKeyMode ?? "none",
     fonts: [
       ...(fontData.configured
         ? [
@@ -216,6 +221,7 @@ export async function mountResttyTerminalSurface(
     setContainerAppearance(container, padding, terminalTheme);
     applyRuntimeTheme(terminalTheme);
     applyRuntimeSize(Math.max(1, baselineFontSize + zoomDelta));
+    pane.runtime.terminal.setOptionKeyMode(configuration.optionKeyMode);
     pane.runtime.terminal.setScrollbackLines(nextScrollbackLines);
     refit();
   };
@@ -286,6 +292,7 @@ export async function mountResttyTerminalSurface(
       baselineFontSize,
       initialLineHeight,
       scrollbackLines,
+      options.optionKeyMode,
       terminalTheme,
     );
     const services = resttyHostServices(transport, delivery, options);

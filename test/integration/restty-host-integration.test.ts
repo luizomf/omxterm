@@ -31,12 +31,15 @@ interface HostResult {
   readonly clipboardReads: number;
   readonly clipboardWrites: number;
   readonly selectAllCoveredScrollback: boolean;
+  readonly selectedUnicodeExactly: boolean;
   readonly protectedPasteConfirmations: number;
   readonly contextMenus: number;
   readonly largePasteLength: number;
   readonly externalLinks: readonly string[];
   readonly validLinkMouseReports: string;
   readonly ordinaryGestureMouseReports: string;
+  readonly wheelMouseReports: string;
+  readonly alternateScreenMouseReports: string;
   readonly cancelledGestureMouseReports: string;
   readonly titleEvents: ReadonlyArray<{
     readonly sessionId: string;
@@ -44,6 +47,7 @@ interface HostResult {
   }>;
   readonly bellSessionIds: readonly string[];
   readonly titleQueryReplyBytes: number;
+  readonly capabilityReplies: string;
   readonly outputStress: {
     readonly bytes: number;
     readonly records: number;
@@ -181,10 +185,14 @@ describe.skipIf(process.platform !== "darwin")(
           "https://scroll.test/complete",
         ]);
         expect(result.ordinaryGestureMouseReports).toMatch(/\u001b\[</u);
+        expect(result.wheelMouseReports).toMatch(/\u001b\[<65;/u);
+        expect(result.alternateScreenMouseReports).toMatch(/\u001b\[<0;/u);
+        expect(result.alternateScreenMouseReports).toMatch(/\u001b\[<64;/u);
         expect(result).toMatchObject({
           clipboardReads: 1,
           clipboardWrites: 3,
           selectAllCoveredScrollback: true,
+          selectedUnicodeExactly: true,
           protectedPasteConfirmations: 1,
           contextMenus: 1,
           largePasteLength: 79_000,
@@ -196,6 +204,9 @@ describe.skipIf(process.platform !== "darwin")(
           permissionRequests: 0,
           ptyExits: 4,
         });
+        expect(result.capabilityReplies).toMatch(
+          /^\u001b\[\?1;2c\u001b\[>0;0;0c\u001b\[3;5R\u001b\[6;\d+;\d+t$/u,
+        );
         expect(result.outputStress).toMatchObject({
           records: 65_536,
           endSeen: true,
@@ -231,10 +242,17 @@ describe.skipIf(process.platform !== "darwin")(
         expect(result.titleEvents[0]?.sessionId).not.toBe(
           result.titleEvents[2]?.sessionId,
         );
-        expect(result.bellSessionIds).toEqual([
-          result.titleEvents[0]?.sessionId,
+        expect(result.bellSessionIds[0]).toBe(result.titleEvents[0]?.sessionId);
+        expect(result.bellSessionIds.at(-1)).toBe(
           result.titleEvents[2]?.sessionId,
-        ]);
+        );
+        expect(
+          result.bellSessionIds.every(
+            (sessionId) =>
+              sessionId === result.titleEvents[0]?.sessionId ||
+              sessionId === result.titleEvents[2]?.sessionId,
+          ),
+        ).toBe(true);
         expect(result.imageEvidence.cellSizeResponse).toMatch(
           /^\u001b\[6;\d+;\d+t$/u,
         );

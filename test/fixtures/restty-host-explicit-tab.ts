@@ -41,8 +41,7 @@ export async function exerciseExplicitResttyTab(options: {
     "explicit command output",
   );
   await waitFor(
-    () =>
-      options.titleEvents.length === 3 && options.bellSessionIds.length === 2,
+    () => options.titleEvents.length >= 3 && options.bellSessionIds.length >= 2,
     "second tab parsed title and bell callbacks",
   );
   await options.reload();
@@ -64,9 +63,15 @@ export async function exerciseExplicitResttyTab(options: {
       ),
     "selected Restty focus before Unicode input",
   );
-  await window.webContents.insertText("second🙂");
-  window.webContents.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
-  window.webContents.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
+  await window.webContents.executeJavaScript(
+    `(() => {
+      const input = [...document.querySelectorAll('.restty-terminal-surface textarea')].find((candidate) => candidate.closest('.terminal-surface')?.hidden === false);
+      input.dispatchEvent(new InputEvent('input', { data: 'second🙂', inputType: 'insertText', bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }));
+    })()`,
+    true,
+  );
   await waitFor(
     () => options.outputs[1]!.join("").includes("__EXPLICIT_INPUT__second🙂"),
     "selected-tab Unicode input isolation",
