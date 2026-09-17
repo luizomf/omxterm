@@ -28,6 +28,7 @@ interface HostResult {
   };
   readonly clipboardReads: number;
   readonly clipboardWrites: number;
+  readonly selectAllCoveredScrollback: boolean;
   readonly protectedPasteConfirmations: number;
   readonly contextMenus: number;
   readonly largePasteLength: number;
@@ -98,7 +99,6 @@ describe.skipIf(process.platform !== "darwin")(
         expect(result.resizeCounts).toHaveLength(3);
         expect(result.resizeCounts.every((count) => count > 0)).toBe(true);
         expect(result.output[0]).toContain("__DEFAULT_INPUT__Olá🙂");
-        expect(result.output[0]).toContain("__LARGE_PASTE__80000");
         expect(result.output[1]).toContain("__EXPLICIT_READY__Olá🙂");
         expect(result.output[1]).toContain("__EXPLICIT_INPUT__second🙂");
         expect(result.beforeDestroy).toEqual({ canvases: 1, tabs: 1 });
@@ -109,9 +109,10 @@ describe.skipIf(process.platform !== "darwin")(
         expect(result).toMatchObject({
           clipboardReads: 1,
           clipboardWrites: 2,
+          selectAllCoveredScrollback: true,
           protectedPasteConfirmations: 1,
           contextMenus: 1,
-          largePasteLength: 80_000,
+          largePasteLength: 79_000,
           externalLinks: 0,
           titles: 0,
           bells: 0,

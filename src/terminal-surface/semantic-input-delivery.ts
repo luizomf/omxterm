@@ -8,6 +8,8 @@ interface SemanticInputDeliveryOptions {
   readonly isBracketedPasteEnabled: () => boolean;
   readonly confirmPaste?: (text: string) => Promise<boolean>;
   readonly write: (chunk: string) => void;
+  readonly chunkBytes?: number;
+  readonly pauseBetweenChunks?: () => Promise<void>;
   readonly onFailure?: () => void;
 }
 
@@ -48,9 +50,11 @@ export function createSemanticInputDelivery(
     const bracketed = options.isBracketedPasteEnabled();
     if (protectedPaste && !bracketed && !approved) return false;
     const payload = bracketed ? `\u001b[200~${text}\u001b[201~` : text;
-    for (const chunk of splitTerminalPayload(payload)) {
+    const chunks = splitTerminalPayload(payload, options.chunkBytes);
+    for (const [index, chunk] of chunks.entries()) {
       if (disposed || !options.isLive()) return false;
       options.write(chunk);
+      if (index < chunks.length - 1) await options.pauseBetweenChunks?.();
     }
     if (submit) {
       if (disposed || !options.isLive()) return false;

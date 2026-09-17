@@ -163,9 +163,14 @@ export function isTerminalTabCommand(
   return false;
 }
 
-export function splitTerminalPayload(value: string): string[] {
+export function splitTerminalPayload(
+  value: string,
+  maxBytes = MAX_TERMINAL_PAYLOAD_BYTES,
+): string[] {
+  if (!Number.isInteger(maxBytes) || maxBytes < 4)
+    throw new TypeError("Terminal Payload chunk size must be at least 4 bytes");
   if (value.length === 0) return [];
-  if (value.length * 3 <= MAX_TERMINAL_PAYLOAD_BYTES) return [value];
+  if (value.length * 3 <= maxBytes) return [value];
 
   const chunks: string[] = [];
   let chunk = "";
@@ -173,7 +178,7 @@ export function splitTerminalPayload(value: string): string[] {
 
   for (const character of value) {
     const characterBytes = encoder.encode(character).byteLength;
-    if (chunkBytes + characterBytes > MAX_TERMINAL_PAYLOAD_BYTES) {
+    if (chunkBytes + characterBytes > maxBytes) {
       chunks.push(chunk);
       chunk = "";
       chunkBytes = 0;

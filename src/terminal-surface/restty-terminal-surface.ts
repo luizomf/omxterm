@@ -124,6 +124,11 @@ function resttyDelivery(
       ? { confirmPaste: options.clipboard.confirmPaste }
       : {}),
     write: (chunk) => adapter.write(chunk),
+    // Keep large semantic pastes complete through asynchronous IPC and native
+    // PTY queues without turning ordinary key input into scheduled work.
+    chunkBytes: 512,
+    pauseBetweenChunks: () =>
+      new Promise((resolve) => globalThis.setTimeout(resolve, 10)),
     ...(options.onClipboardError
       ? { onFailure: options.onClipboardError }
       : {}),

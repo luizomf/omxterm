@@ -254,6 +254,19 @@ describe("Restty clipboard and Protected Paste", () => {
     expect(second.adapter.write.mock.calls.flat().join("")).not.toContain("\r");
   });
 
+  it("preserves embedded bracket terminators and controls unchanged", async () => {
+    const mounted = await mount();
+    mounted.restty.bracketedPaste = true;
+    const text = "before\u001b[201~inside\u0000\u0003after";
+
+    await mounted.surface.inject(text);
+
+    expect(mounted.adapter.write.mock.calls.flat().join("")).toBe(
+      `\u001b[200~${text}\u001b[201~`,
+    );
+    mounted.surface.dispose();
+  });
+
   it("submits after bracketed delivery and accepts only valid parsed OSC writes", async () => {
     const mounted = await mount();
     mounted.restty.bracketedPaste = true;

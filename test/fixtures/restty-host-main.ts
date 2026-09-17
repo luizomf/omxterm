@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, session } from "electron";
+import { createHash } from "node:crypto";
 import * as nodePty from "node-pty";
 import { mkdirSync, writeSync } from "node:fs";
 import path from "node:path";
@@ -36,6 +37,7 @@ const terminals: Array<ReturnType<typeof createLocalTerminalSession>> = [];
 const ended: Array<{ closeRequested: boolean; liveSessions: number }> = [];
 let clipboardReads = 0;
 let clipboardWrites = 0;
+let selectAllCoveredScrollback = false;
 let protectedPasteConfirmations = 0;
 let contextMenus = 0;
 let externalLinks = 0;
@@ -164,8 +166,11 @@ function createHost(window: BrowserWindow) {
       );
     },
     onSessionSelected() {},
-    writeClipboardText() {
+    writeClipboardText(text) {
       clipboardWrites += 1;
+      selectAllCoveredScrollback ||=
+        text.includes("__SELECT_ALL_FIRST__") &&
+        text.includes("__SELECT_ALL_LAST__");
     },
     readClipboardText() {
       clipboardReads += 1;
@@ -218,6 +223,34 @@ function createHost(window: BrowserWindow) {
       router.activeResttySurfaceFontConfigurations(),
   });
   return { reloader };
+}
+
+function createLargePasteFixture() {
+  const payload =
+    Array.from(
+      { length: 100 },
+      (_, index) =>
+        `${index.toString().padStart(4, "0")}:${"0123456789abcdef".repeat(49)}`,
+    ).join("\n") + "\n";
+  return {
+    command: `shasum -a 256 <<'__OMXTERM_PAYLOAD__'\n${payload}__OMXTERM_PAYLOAD__\nstty echo\n`,
+    digest: createHash("sha256").update(payload).digest("hex"),
+    length: payload.length,
+  };
+}
+
+async function dispatchDomPaste(window: BrowserWindow, text: string) {
+  await window.webContents.executeJavaScript(
+    `(() => {
+      const text = ${JSON.stringify(text)};
+      const target = document.querySelector('.restty-terminal-surface textarea');
+      if (!target) throw new Error('Restty paste target is missing');
+      const event = new Event('paste', { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'clipboardData', { value: { getData: (type) => type === 'text/plain' ? text : '' } });
+      target.dispatchEvent(event);
+    })()`,
+    true,
+  );
 }
 
 app
@@ -328,21 +361,16 @@ app
     );
     terminals[0]!.write("x\u0015");
 
-    const largePasteLength = 80_000;
-    await window.webContents.executeJavaScript(
-      `(() => {
-        const text = "printf '__LARGE_PASTE__${largePasteLength}\\n'; #" + "A".repeat(${largePasteLength}) + "\\n";
-        const target = document.querySelector('.restty-terminal-surface textarea');
-        if (!target) throw new Error('Restty paste target is missing');
-        const event = new Event('paste', { bubbles: true, cancelable: true });
-        Object.defineProperty(event, 'clipboardData', { value: { getData: (type) => type === 'text/plain' ? text : '' } });
-        target.dispatchEvent(event);
-      })()`,
-      true,
-    );
+    terminals[0]!.write("stty -echo; printf '__PASTE_ECHO_OFF__\\n'\r");
     await waitFor(
-      () => outputs[0]!.join("").includes(`__LARGE_PASTE__${largePasteLength}`),
-      "large DOM paste through the owned PTY",
+      () => outputs[0]!.join("").includes("__PASTE_ECHO_OFF__"),
+      "owned PTY echo disable",
+    );
+    const largePaste = createLargePasteFixture();
+    await dispatchDomPaste(window, largePaste.command);
+    await waitFor(
+      () => outputs[0]!.join("").includes(`${largePaste.digest}  -`),
+      "complete ordered large DOM paste through the owned PTY",
     );
 
     window.webContents.send(terminalIpc.clipboardAction, "paste");
@@ -351,10 +379,19 @@ app
       "native Paste host route",
     );
     terminals[0]!.write("\u0003");
-    deliverOutputs[0]!("selected output");
+    terminals[0]!.write(
+      `printf '__SELECT_ALL_FIRST__\\n'; i=0; while [ "$i" -lt 120 ]; do printf 'line-%03d\\n' "$i"; i=$((i+1)); done; printf '__SELECT_ALL_LAST__\\n'\r`,
+    );
+    await waitFor(
+      () => outputs[0]!.join("").includes("__SELECT_ALL_LAST__"),
+      "scrollback selection fixture",
+    );
     window.webContents.send(terminalIpc.clipboardAction, "select-all");
     window.webContents.send(terminalIpc.clipboardAction, "copy");
-    await waitFor(() => clipboardWrites >= 1, "explicit copy host route");
+    await waitFor(
+      () => selectAllCoveredScrollback,
+      "explicit Select All and Copy across scrollback",
+    );
     await window.webContents.executeJavaScript(
       `document.querySelector('.restty-terminal-surface')?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }))`,
       true,
@@ -451,9 +488,10 @@ app
       reloadState,
       clipboardReads,
       clipboardWrites,
+      selectAllCoveredScrollback,
       protectedPasteConfirmations,
       contextMenus,
-      largePasteLength,
+      largePasteLength: largePaste.length,
       externalLinks,
       titles,
       bells,

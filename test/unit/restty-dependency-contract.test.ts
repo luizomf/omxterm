@@ -119,7 +119,7 @@ describe("Restty dependency contract", () => {
       path.join(packageRoot, "dist", "chunk-c0rcpsc5.js"),
     );
     expect(digest(runtime)).toBe(
-      "272bfb31f240a8e45ec2c36e85858a0cfadec1e6fc9a7fd8a7efe70a2f350c94",
+      "595f72d3be87f0965dea3733180264768720f7cba0c7c35aad797e2a22689665",
     );
     const core = readFileSync(
       path.join(packageRoot, "dist", "chunk-6dxqza9q.js"),
@@ -143,6 +143,8 @@ describe("Restty dependency contract", () => {
     expect(source).toContain("isBracketedPasteEnabled");
     expect(source).toContain("getSelectionText");
     expect(source).toContain("selectAll");
+    expect(source).toContain("row: -viewportOffset");
+    expect(source).toContain("totalRows - viewportOffset - 1");
     expect(source).toContain("onOsc: services.onOsc");
     expect(source).toContain("code === 24 || code === 26");
     expect(source).not.toContain(

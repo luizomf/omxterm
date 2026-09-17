@@ -33,8 +33,10 @@ const priorFontDigest =
   "23f4bf4377dfcc34b39f439f2e4865be41a65603e405ec08ebb1f3a467ada867";
 const priorScrollbackDigest =
   "c8580ea08273aa17dc3ae1f658aafe8340114a751e2a36e09e933e3bcabb3bad";
-const correctedDigest =
+const priorClipboardDigest =
   "272bfb31f240a8e45ec2c36e85858a0cfadec1e6fc9a7fd8a7efe70a2f350c94";
+const correctedDigest =
+  "595f72d3be87f0965dea3733180264768720f7cba0c7c35aad797e2a22689665";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 
 const securityCorrections = [
@@ -47,7 +49,7 @@ const securityCorrections = [
     onClipboardRead: async () => {
       return await pasteFromClipboard2() ?? "";
     },`,
-    corrected: `    // OMXTerm keeps candidate clipboard and OSC 52 integration disabled.
+    corrected: `    // OMXTerm keeps direct browser clipboard access disabled.
     onClipboardWrite: void 0,
     onClipboardRead: void 0,`,
   },
@@ -75,7 +77,7 @@ const securityCorrections = [
     getSelectionText: hooks.getSelectionText,
     ptyInputRuntime: runtime.ptyInputRuntime
   });`,
-    corrected: `  // OMXTerm exposes no candidate clipboard action before Protected Paste lands.
+    corrected: `  // OMXTerm owns clipboard actions through its typed host bridge.
   const copySelectionToClipboard = async () => false;
   const pasteFromClipboard = async () => false;`,
   },
@@ -366,13 +368,19 @@ const clipboardCorrections = [
   };`,
     corrected: `  const selectAll = () => {
     const renderState = getCurrentRenderState();
-    if (!renderState || renderState.rows <= 0 || renderState.cols <= 0)
+    const wasmExports = getWasmExports();
+    const wasmHandle = getWasmHandle();
+    if (!renderState || renderState.rows <= 0 || renderState.cols <= 0 || !wasmHandle)
+      return false;
+    const totalRows = wasmExports?.restty_scrollbar_total?.(wasmHandle) ?? renderState.rows;
+    const viewportOffset = wasmExports?.restty_scrollbar_offset?.(wasmHandle) ?? 0;
+    if (totalRows <= 0)
       return false;
     clearPendingDesktopSelection();
     selectionState.active = true;
     selectionState.dragging = false;
-    selectionState.anchor = { row: 0, col: 0 };
-    selectionState.focus = { row: renderState.rows - 1, col: renderState.cols - 1 };
+    selectionState.anchor = { row: -viewportOffset, col: 0 };
+    selectionState.focus = { row: totalRows - viewportOffset - 1, col: renderState.cols - 1 };
     updateLinkHover(null);
     updateCanvasCursor();
     markNeedsRender();
@@ -590,8 +598,10 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorScrollbackDigest) {
-      // Only the clipboard/runtime parser seams remain to be applied.
+    if (sourceDigest === priorClipboardDigest) {
+      // Only complete-buffer Select All remains to be applied.
+    } else if (sourceDigest === priorScrollbackDigest) {
+      // Clipboard/runtime parser and Select All seams remain to be applied.
     } else if (sourceDigest === priorFontDigest) {
       // Scrollback and clipboard/runtime parser seams remain to be applied.
     } else if (sourceDigest === priorFamilyFilterDigest) {
@@ -612,7 +622,8 @@ export async function prepareResttyRuntime(options = {}) {
 
     if (
       sourceDigest !== priorFontDigest &&
-      sourceDigest !== priorScrollbackDigest
+      sourceDigest !== priorScrollbackDigest &&
+      sourceDigest !== priorClipboardDigest
     ) {
       if (sourceDigest !== priorFamilyFilterDigest) {
         if (sourceDigest !== priorBoldColorDigest)
@@ -620,9 +631,47 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, fontCorrections);
       }
     }
-    if (sourceDigest !== priorScrollbackDigest)
+    if (
+      sourceDigest !== priorScrollbackDigest &&
+      sourceDigest !== priorClipboardDigest
+    )
       source = applyCorrections(source, scrollbackRuntimeCorrections);
-    source = applyCorrections(source, clipboardCorrections);
+    if (sourceDigest !== priorClipboardDigest)
+      source = applyCorrections(source, clipboardCorrections);
+    else
+      source = applyCorrections(source, [
+        {
+          original:
+            "    // OMXTerm keeps candidate clipboard and OSC 52 integration disabled.",
+          corrected:
+            "    // OMXTerm keeps direct browser clipboard access disabled.",
+        },
+        {
+          original:
+            "  // OMXTerm exposes no candidate clipboard action before Protected Paste lands.",
+          corrected:
+            "  // OMXTerm owns clipboard actions through its typed host bridge.",
+        },
+        {
+          original: `  const selectAll = () => {
+    const renderState = getCurrentRenderState();
+    if (!renderState || renderState.rows <= 0 || renderState.cols <= 0)
+      return false;
+    clearPendingDesktopSelection();
+    selectionState.active = true;
+    selectionState.dragging = false;
+    selectionState.anchor = { row: 0, col: 0 };
+    selectionState.focus = { row: renderState.rows - 1, col: renderState.cols - 1 };
+    updateLinkHover(null);
+    updateCanvasCursor();
+    markNeedsRender();
+    return true;
+  };`,
+          corrected: clipboardCorrections[10].corrected.split(
+            "\n  const selectWordAtClientPoint",
+          )[0],
+        },
+      ]);
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,
