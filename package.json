@@ -14,7 +14,7 @@
     "format:check": "prettier --check .",
     "lint": "oxlint --type-aware --config .oxlintrc.json --disable-nested-config --deny-warnings --report-unused-disable-directives --threads=1 .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --maxWorkers=4",
     "test:integration": "vitest run test/integration/local-shell.test.ts",
     "build": "node build.mjs",
     "check:portable": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build",

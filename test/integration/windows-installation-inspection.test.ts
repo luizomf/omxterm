@@ -67,6 +67,7 @@ $script = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded
         };
         expect(observation.processes).toBe(conflict);
       },
+      30_000,
     );
   },
 );
