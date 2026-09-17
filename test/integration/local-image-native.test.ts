@@ -97,7 +97,13 @@ describe("local image boundary through native Electron", () => {
         jpegHeight: 1,
       });
     } finally {
-      await rm(root, { recursive: true, force: true });
+      // Windows can retain Chromium profile handles briefly after child exit.
+      await rm(root, {
+        recursive: true,
+        force: true,
+        maxRetries: 10,
+        retryDelay: 100,
+      });
     }
   }, 20_000);
 });
