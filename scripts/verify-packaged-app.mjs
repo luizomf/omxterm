@@ -55,12 +55,6 @@ const requiredAsarEntries = [
   "/dist/renderer/index.css",
   "/dist/renderer/index.html",
   "/dist/renderer/index.js",
-  "/dist/renderer/fonts/JetBrainsMonoNerdFontMono-Regular.woff2",
-  "/dist/renderer/fonts/OFL.txt",
-  "/node_modules/@xterm/addon-fit/lib/addon-fit.js",
-  "/node_modules/@xterm/addon-image/lib/addon-image.js",
-  "/node_modules/@xterm/addon-web-links/lib/addon-web-links.js",
-  "/node_modules/@xterm/xterm/lib/xterm.js",
   "/node_modules/node-pty/lib/index.js",
   "/package.json",
 ];
@@ -103,6 +97,7 @@ export function inspectAsarEntries(entries, platform = "darwin") {
   const forbidden = normalized.filter(
     (entry) =>
       privateLooking.has(entry) ||
+      entry.includes("/node_modules/@xterm/") ||
       (platform === "linux" &&
         entry.includes("/node_modules/node-pty/prebuilds/")) ||
       (platform === "linux" &&
@@ -807,67 +802,6 @@ export async function verifyPackagedApplication(
       assertSameFile(
         path.join(projectRoot, "assets", "fonts", "OFL.txt"),
         path.join(resources, "licenses", "JetBrainsMono-OFL.txt"),
-      ),
-      assertSameFile(
-        path.join(projectRoot, "node_modules", "@xterm", "xterm", "LICENSE"),
-        path.join(resources, "licenses", "xterm.txt"),
-      ),
-      assertSameFile(
-        path.join(
-          projectRoot,
-          "node_modules",
-          "@xterm",
-          "addon-fit",
-          "LICENSE",
-        ),
-        path.join(resources, "licenses", "xterm-addon-fit.txt"),
-      ),
-      assertSameFile(
-        path.join(
-          projectRoot,
-          "node_modules",
-          "@xterm",
-          "addon-image",
-          "LICENSE",
-        ),
-        path.join(resources, "licenses", "xterm-addon-image.txt"),
-      ),
-      assertSameFile(
-        path.join(projectRoot, "assets", "licenses", "sixel-MIT.txt"),
-        path.join(resources, "licenses", "sixel.txt"),
-      ),
-      assertSameFile(
-        path.join(
-          projectRoot,
-          "assets",
-          "licenses",
-          "xterm-wasm-parts-MIT.txt",
-        ),
-        path.join(resources, "licenses", "xterm-wasm-parts.txt"),
-      ),
-      assertSameFile(
-        path.join(projectRoot, "assets", "licenses", "inwasm-runtime-MIT.txt"),
-        path.join(resources, "licenses", "inwasm-runtime.txt"),
-      ),
-      assertSameFile(
-        path.join(
-          projectRoot,
-          "node_modules",
-          "@xterm",
-          "addon-web-links",
-          "LICENSE",
-        ),
-        path.join(resources, "licenses", "xterm-addon-web-links.txt"),
-      ),
-      assertSameFile(
-        path.join(
-          projectRoot,
-          "node_modules",
-          "@xterm",
-          "addon-unicode-graphemes",
-          "LICENSE",
-        ),
-        path.join(resources, "licenses", "xterm-addon-unicode-graphemes.txt"),
       ),
       assertSameFile(
         path.join(projectRoot, "node_modules", "node-pty", "LICENSE"),

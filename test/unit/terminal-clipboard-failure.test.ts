@@ -33,7 +33,6 @@ it("reports host clipboard failures without exposing payload", async () => {
   });
   router.registerController({
     configuration: {
-      terminalSurface: "restty",
       fontSize: 16,
       fontLineHeight: 1,
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },

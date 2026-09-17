@@ -17,13 +17,10 @@ copy naturally, but clipboard read requests, empty writes, and malformed
 payloads are consumed without changing the clipboard. OMXTerm will not inherit
 the 64 KiB project limit from OMXTerm Web: local processes have a different
 trust and transport boundary, and large valid copies and text pastes must not be
-truncated by an arbitrary SSH-oriented limit. Runtime dependencies may still
-enforce their safety bounds. The pinned terminal dependency, `@xterm/xterm` `6.1.0-beta.304`, defines
-[`PAYLOAD_LIMIT = 10000000`](https://github.com/xtermjs/xterm.js/blob/c58ea3637f3968e0e6e79cd92cf9aace7ef89ee2/src/common/parser/Constants.ts#L67)
-for OSC and DCS parser payloads; its
-[`OscParser` aborts a payload when the JavaScript string length exceeds that limit](https://github.com/xtermjs/xterm.js/blob/c58ea3637f3968e0e6e79cd92cf9aace7ef89ee2/src/common/parser/OscParser.ts#L210-L215).
-OMXTerm consumes OSC 52 outside that bound without a clipboard or PTY side
-effect. Because an OSC 52 write includes the `c;` target and Base64 advances in
+truncated by an arbitrary SSH-oriented limit. Runtime dependencies may still enforce their safety bounds. Restty's pinned
+OutputFilter retains at most 10,000,000 UTF-16 code units for an unfinished OSC
+handler body and consumes an oversized OSC 52 request without a clipboard or PTY
+side effect. Because an OSC 52 write includes the `c;` target and Base64 advances in
 four-character groups, the largest valid request inside the parser bound is
 9,999,998 UTF-16 code units and the next valid request is 10,000,002 UTF-16 code
 units, outside the bound.

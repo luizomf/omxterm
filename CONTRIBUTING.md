@@ -96,15 +96,10 @@ npm ci
 npm run check:portable
 ```
 
-The temporary Restty migration candidate is an unpackaged, explicit opt-in:
-
-```sh
-OMXTERM_TERMINAL_SURFACE=restty npm run dev
-```
-
-xterm remains the default. See the [Restty development candidate guide](docs/restty-development.md)
-for pinned-source restoration, failure behavior and intentionally unavailable
-features. Do not use this selector to characterize packaged behavior.
+Restty is the sole Terminal Surface in development and packaged builds. See the
+[Restty Terminal Surface guide](docs/restty-development.md) for pinned-source
+restoration, failure behavior, graphics and memory limits. There is no renderer
+selector or fallback Surface.
 
 This command runs formatting checks, type-aware lint with zero accepted warnings,
 strict typechecking, the complete automated test suite, and the unpackaged

@@ -60,11 +60,10 @@ AI assistance, splits, saved or reconnectable sessions, shell integration,
 profiles, a theme picker or catalog, automatic configuration reload, automatic
 updates, and remote terminal features are outside the current product contract.
 
-Unpackaged development launches may explicitly select a temporary Restty 0.3.0
-Terminal Surface with `OMXTERM_TERMINAL_SURFACE=restty`. xterm remains the normal
-development and every packaged default. The selector accepts only `xterm` or
-`restty`; invalid values and packaged Restty selection are startup failures, and
-candidate failure never falls back automatically to xterm (ADR 0025).
+Restty 0.3.0 and its pinned Ghostty core are the sole Terminal Surface in
+ordinary development and every packaged application. There is no renderer
+selector or fallback Surface; rendering initialization failure starts no shell
+(ADR 0025).
 
 ## Window and session behavior
 
@@ -136,8 +135,8 @@ candidate failure never falls back automatically to xterm (ADR 0025).
   it, and is not persisted.
 - The Terminal Surface and Live Terminal Session grid refit in both directions
   after Terminal Window width or height changes, after Window Font Zoom, and
-  after tab selection. The xterm grid remains inside the visible content area
-  with its bottom row visible.
+  after tab selection. The grid remains inside the visible content area with
+  its bottom row visible.
 - Native minimum window bounds keep the existing 320 px width and 200 px height
   as floors and grow at startup or after a valid reload when configured font or
   padding needs more room for a visible terminal grid.
@@ -167,8 +166,8 @@ candidate failure never falls back automatically to xterm (ADR 0025).
   boundary. A valid reload atomically updates configured font-size baseline,
   per-side padding, scrollback, Option Key Mode, and Terminal Theme across every
   current and future Terminal Window, Terminal Tab, and Terminal Surface without
-  disturbing a Live Terminal Session. Font family and line height remain live
-  for xterm; Restty uses the restart-only exception defined below. Native
+  disturbing a Live Terminal Session. Font family and line height use the
+  restart-only exception defined below. Native
   backgrounds, Window Chrome, and the Snippets Sidebar follow the theme. It also
   updates close confirmation, logging, the menu, effective keybind delivery,
   and the Always-on-Top default for future windows. On Windows, it also changes
@@ -196,8 +195,8 @@ remains the user's session manager.
 
 ## Terminal behavior
 
-The development-only Restty candidate uses the existing Terminal Tabs, session
-Adapter and real PTY lifecycle for ordinary Unicode input/output, grid resize,
+The Restty Terminal Surface uses the existing Terminal Tabs, session Adapter
+and real PTY lifecycle for ordinary Unicode input/output, grid resize,
 focus, Default Shell and explicit-command startup, shell exit, tab close and
 renderer-loss cleanup. It requires the bundled JetBrainsMono Nerd Font Mono TTF,
 Ghostty core and an actual WebGL2 backend before a PTY starts. Initialization
@@ -223,7 +222,7 @@ bracketed-paste mode and Surface lifetime after asynchronous decisions, and stop
 future chunks if their owning Surface closes. Bytes already sent before closure
 cannot be recalled, and a submitting snippet never appends Enter after closure.
 Restty delivers Ghostty's parsed OSC 0/2 title and BEL events through the same
-per-session host callbacks used by xterm. It does not scan Terminal Payload or
+existing per-session host callbacks. It does not scan Terminal Payload or
 add a second parser: title sanitization, fallback, ownership, silent bell marker,
 focus/interaction reset and platform attention remain existing host policy.
 OSC BEL terminators and cancelled or malformed controls produce no extra title
@@ -231,10 +230,9 @@ or bell event, and title-report queries receive no reply. Restty applies Option
 Key Mode live: `none` preserves macOS native Unicode and composition input,
 while `left`, `right`, and `both` turn only the configured physical Option key
 into terminal Alt input. Restty image rendering and scrollback follow the
-shared contracts below through the pinned Ghostty core. Linux and Windows Restty
-behavior is unverified; this slice's native runtime evidence is macOS ARM64.
-Native rasterization can differ between Restty and xterm; pixel-identical glyph
-output is not claimed.
+shared contracts below through the pinned Ghostty core. Native rasterization can
+differ across Supported Platforms and GPUs; pixel-identical glyph output is not
+claimed.
 
 PTY output crosses the shared Adapter/IPC route in order. Each output message
 carries a cumulative UTF-8 byte position, and only the owning renderer main
@@ -252,9 +250,7 @@ owned session; cleanup resumes an owned paused stream before termination so it
 cannot remain an immortal paused process or send into a dead owner. On Unix,
 the pinned node-pty close guard defers its socket-destroy timeout while that
 stream is paused so a final readable tail is not discarded. This adaptation
-does not change the separate ConPTY implementation. Native evidence for this
-slice is macOS ARM64; Linux and Windows Restty output behavior remains
-unverified until final cutover qualification.
+does not change the separate ConPTY implementation.
 
 Restty's pinned OutputFilter retains at most 10,000,000 UTF-16 code units of an
 unfinished OSC or CSI control body. For OSC, the body is the handler payload
@@ -308,17 +304,7 @@ subject to the pinned addon's documented wrapping and bottom-truncation
 limitations. Terminal reset, tab disposal, and leaving the alternate buffer
 release the applicable image resources.
 
-The xterm Surface enables only the Kitty image handler with
-`pixelLimit: 4_194_304`, `kittySizeLimit: 33_554_432`, and
-`storageLimit: 64`. Its transport target enforces an aggregate 44,739,243
-Base64-character threshold, so Pi's padded Base64 can contain at most
-44,739,240 characters / 33,554,430 decoded bytes. Its pixel limit applies to
-the post-decode placement-canvas area, while storage is approximately
-64,000,000 bytes of canvas-only FIFO accounting; an evicted image may show a
-placeholder. The xterm-specific residual memory risks remain those documented
-in ADR 0022.
-
-The Restty Surface instead uses the pinned Ghostty core as its Kitty parser,
+The Restty Surface uses the pinned Ghostty core as its Kitty parser,
 decoder, image store and placement authority; OMXTerm does not add a second
 parser. A direct transmission may contain at most 33,554,432 decoded input
 bytes, and positive source dimensions may contain at most 4,194,304 pixels
@@ -356,14 +342,13 @@ logging, or application-network capability.
 
 Scrollback is memory-only and per Live Terminal Session. `scrollback.lines`
 defaults to 10,000, accepts 0 through 100,000, and rejects larger values
-rather than clamping them. xterm treats a positive value as its exact retained
-line setting. Restty treats a positive value as an approximate maximum of
+rather than clamping them. Restty treats a positive value as an approximate
+maximum of
 physical history rows, excluding the active screen: Ghostty evicts only whole
 historical pages, so retention may exceed the requested target by one minimum
 boundary page and remains bounded. Restty also enforces its independent
 10,000,000-byte core ceiling for positive history, which may retain fewer rows
-than requested; OMXTerm never estimates bytes per line. For either Surface,
-zero disables history. Restty uses Ghostty's no-history path, immediately drops
+than requested; OMXTerm never estimates bytes per line. Zero disables history. Restty uses Ghostty's no-history path, immediately drops
 retained history, retains none through sustained output or resize, and can
 retain only new output after a later positive reload. Valid live changes keep
 the same Surface, core, Live Terminal Session and PTY and preserve coherent
@@ -372,8 +357,7 @@ independent. The scrollback scrollbar shows a thumb only while scrollback
 extends beyond the visible screen; an empty scrollbar track paints nothing on
 any platform.
 
-OSC 0 and OSC 2 titles are display-only and per session on both Terminal
-Surfaces: the raw OSC request must be no longer than 256 code points, then
+OSC 0 and OSC 2 titles are display-only and per session: the raw OSC request must be no longer than 256 code points, then
 control and bidi characters are
 removed and the result must be one printable line. A tab shows its session's
 accepted title and falls back to the basename of the shell selected when that
@@ -386,7 +370,7 @@ on macOS or `Ctrl+click` on Linux and Windows asks the Electron main process to
 parse and validate the exact URL before opening it. The valid modified primary
 click takes precedence over application mouse reporting and is consumed without
 a duplicate PTY mouse report; other gestures retain ordinary selection or
-application-mouse routing. The Restty candidate reconstructs a destination only
+application-mouse routing. Restty reconstructs a destination only
 across core-proven, fully visible soft wraps. It preserves hard breaks and cell
 coordinates for grapheme and wide-cell prefixes, and conservatively refuses a
 destination that may continue beyond the visible viewport. Restty enables
@@ -598,9 +582,8 @@ notices from the current validation. The complete committed renderer snapshot
 reaches existing and newly created Terminal Surfaces. Font and spacing changes
 recompute the existing native minimum-window bounds, refit the grid with its
 bottom row visible, and resize the same PTY through its existing adapter.
-During the development-only Restty migration, `font.family` and
-`font.lineHeight` are the complete restart-only set for existing Restty
-Surfaces. A valid reload applies all live-safe settings and host preferences,
+`font.family` and `font.lineHeight` are the complete restart-only set for
+existing Restty Surfaces. A valid reload applies all live-safe settings and host preferences,
 keeps those two creation-time values in every existing Restty Surface, and
 shows a persistent non-blocking notice naming each deferred setting and asking
 the user to restart OMXTerm. New tabs and windows use the latest fully validated
@@ -608,8 +591,7 @@ family and line height. A deferred setting clears only when its requested value
 is already active in every existing Restty Surface. Theme, configured font-size baseline,
 padding and Window Font Zoom remain live and preserve the existing Surface and
 PTY. Invalid, missing, unreadable, unsupported or corrupt configured font input
-rejects the whole reload. This temporary exception does not affect xterm.
-Runtime scrollback reduction, including zero, uses the selected Surface's
+rejects the whole reload. Runtime scrollback reduction, including zero, uses the selected Surface's
 in-memory core behavior described above; Option Key Mode changes only
 subsequent keyboard events. OMXTerm never
 migrates, repairs, rewrites, or silently ignores User Configuration. The same surface
@@ -659,10 +641,9 @@ macOS and Windows and is disabled on Linux. The retained isolation and bridge
 controls do not provide equivalent protection to the Chromium sandbox.
 
 The framework-independent DOM Terminal Surface is the portable deep Module.
-Its small Interface normally hides xterm setup, addons, text and Kitty image
-rendering, input, resize, theme, fonts, clipboard, zoom, and cleanup. During the
-bounded migration, the same mount seam may select the development-only Restty
-candidate; this is not a renderer registry or a packaged user setting. It receives a session Adapter rather
+Its small Interface hides Restty setup, Ghostty parsing, text and Kitty image
+rendering, input, resize, theme, fonts, clipboard, zoom, and cleanup. Restty is
+the sole implementation; this is not a renderer registry or user setting. It receives a session Adapter rather
 than importing Electron or `node-pty`; OMXTerm provides the local IPC/PTY
 Adapter, while another host could independently provide WebSocket transport.
 

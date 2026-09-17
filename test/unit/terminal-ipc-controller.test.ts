@@ -37,7 +37,6 @@ function createIpcHarness() {
 function clipboardOptions() {
   return {
     configuration: {
-      terminalSurface: "xterm" as const,
       fontSize: 16,
       fontLineHeight: 1,
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
@@ -247,7 +246,6 @@ describe("terminal IPC controller", () => {
       send: vi.fn(),
     };
     const configuration = Object.freeze({
-      terminalSurface: "xterm" as const,
       fontSize: 18,
       fontLineHeight: 1.15,
       terminalPadding: Object.freeze({
@@ -1335,7 +1333,6 @@ describe("Terminal Font IPC", () => {
       ...clipboardOptions(),
       configuration: {
         ...clipboardOptions().configuration,
-        terminalSurface: "restty",
         fontFamily: "Exact Família",
       },
       webContents,
@@ -1377,7 +1374,6 @@ describe("Terminal Font IPC", () => {
     );
     controller.applyConfiguration({
       ...clipboardOptions().configuration,
-      terminalSurface: "restty",
       fontFamily: "New Family",
     });
     finishLookup({
@@ -1406,7 +1402,6 @@ describe("Terminal Font IPC", () => {
       ...clipboardOptions(),
       configuration: {
         ...clipboardOptions().configuration,
-        terminalSurface: "restty",
         fontFamily: "Initial Family",
         fontLineHeight: 1.25,
       },

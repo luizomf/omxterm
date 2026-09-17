@@ -16,6 +16,11 @@ const resultPrefix = "__OMXTERM_RESTTY_HOST_RESULT__";
 
 interface HostResult {
   readonly beforeDestroy: { readonly canvases: number; readonly tabs: number };
+  readonly backendLoss: {
+    readonly message: string;
+    readonly ownedSessionExited: boolean;
+    readonly unaffectedSessionResponded: boolean;
+  };
   readonly configuredFontFamily: string;
   readonly renderedFontFamily: string | null;
   readonly renderedPixels: {
@@ -114,200 +119,208 @@ interface HostResult {
   readonly sessionStarts: number;
 }
 
-describe.skipIf(process.platform !== "darwin")(
-  "Restty through the OMXTerm host and a real macOS PTY",
-  () => {
-    it("preserves session lifecycle, isolation, focus, resize, and disabled routes", async () => {
-      const root = await mkdtemp(path.join(tmpdir(), "omxterm-restty-host-"));
-      try {
-        await buildHostFixture(root);
-        const execution = await runFixture(root);
-        const resultLine = execution.stdout
-          .split("\n")
-          .find((line) => line.startsWith(resultPrefix));
-        const result = resultLine
-          ? (JSON.parse(resultLine.slice(resultPrefix.length)) as HostResult)
-          : undefined;
-        const evidencePath = process.env["OMXTERM_RESTTY_HOST_EVIDENCE_PATH"];
-        if (evidencePath && result)
-          await writeFile(evidencePath, `${JSON.stringify(result, null, 2)}\n`);
+describe.skipIf(
+  !(["darwin", "linux", "win32"] as const).includes(
+    process.platform as "darwin" | "linux" | "win32",
+  ),
+)("Restty through the OMXTerm host and a real native PTY", () => {
+  it("preserves session lifecycle, isolation, focus, resize, and disabled routes", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "omxterm-restty-host-"));
+    try {
+      await buildHostFixture(root);
+      const execution = await runFixture(root);
+      const resultLine = execution.stdout
+        .split("\n")
+        .find((line) => line.startsWith(resultPrefix));
+      const result = resultLine
+        ? (JSON.parse(resultLine.slice(resultPrefix.length)) as HostResult)
+        : undefined;
+      const evidencePath = process.env["OMXTERM_RESTTY_HOST_EVIDENCE_PATH"];
+      if (evidencePath && result)
+        await writeFile(evidencePath, `${JSON.stringify(result, null, 2)}\n`);
 
+      expect(
+        execution.exitCode,
+        `Host fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
+      ).toBe(0);
+      if (!result) throw new Error("Host fixture returned no result");
+      expect(result.sessionStarts).toBe(5);
+      expect(result.renderedFontFamily).toBe(result.configuredFontFamily);
+      expect(result.renderedPixels.configured).toBeGreaterThan(
+        result.renderedPixels.blank,
+      );
+      expect(result.renderedPixels.cjk).toBeGreaterThan(
+        result.renderedPixels.configured,
+      );
+      expect(result.renderedPixels.emojiAndSymbol).toBeGreaterThan(
+        result.renderedPixels.cjk,
+      );
+      expect(result.reloadState.fonts).toEqual(
+        process.platform === "darwin"
+          ? ["Helvetica", "Times New Roman"]
+          : process.platform === "win32"
+            ? ["Consolas", "Courier New"]
+            : ["DejaVu Sans", "Liberation Mono"],
+      );
+      expect(result.reloadState.notice).toContain(
+        "font.family and font.lineHeight",
+      );
+      expect(result.reloadState.notice).toContain("Restart OMXTerm");
+      expect(result.launchKinds).toEqual([
+        "default-shell",
+        "explicit-command",
+        "explicit-command",
+        "default-shell",
+        "default-shell",
+      ]);
+      expect(result.resizeCounts).toHaveLength(5);
+      expect(result.resizeCounts.every((count) => count > 0)).toBe(true);
+      expect(result.outputEvidence).toEqual({
+        defaultUnicode: true,
+        explicitReady: true,
+        explicitInput: true,
+      });
+      expect(result.beforeDestroy).toEqual({ canvases: 1, tabs: 1 });
+      expect(result.backendLoss).toEqual({
+        message: "The Restty rendering backend was lost",
+        ownedSessionExited: true,
+        unaffectedSessionResponded: true,
+      });
+      expect(result.ended.slice(0, 3)).toEqual([
+        { closeRequested: true, liveSessions: 1 },
+        { closeRequested: false, liveSessions: 1 },
+        { closeRequested: false, liveSessions: 0 },
+      ]);
+      expect(result.externalLinks[0]).toMatch(/^https:\/\/example\.test\/a+$/u);
+      expect(result.externalLinks[0]).toBe(result.externalLinks[1]);
+      expect(result.externalLinks.slice(2)).toEqual([
+        "https://one.test/a",
+        "https://two.test/b",
+        "https://scroll.test/complete",
+      ]);
+      expect(result.ordinaryGestureMouseReports).toMatch(/\u001b\[</u);
+      expect(result.wheelMouseReports).toMatch(/\u001b\[<65;/u);
+      expect(result.alternateScreenMouseReports).toMatch(/\u001b\[<0;/u);
+      expect(result.alternateScreenMouseReports).toMatch(/\u001b\[<64;/u);
+      expect(result).toMatchObject({
+        clipboardReads: 1,
+        clipboardWrites: 3,
+        selectAllCoveredScrollback: true,
+        selectedUnicodeExactly: true,
+        protectedPasteConfirmations: 1,
+        contextMenus: 1,
+        largePasteLength: 79_000,
+        validLinkMouseReports: "",
+        cancelledGestureMouseReports: "",
+        titleQueryReplyBytes: 0,
+        navigations: 0,
+        openedWindows: 0,
+        permissionRequests: 0,
+        ptyExits: 5,
+      });
+      expect(result.capabilityReplies).toMatch(
+        /^\u001b\[\?1;2c\u001b\[>0;0;0c\u001b\[3;5R\u001b\[6;\d+;\d+t$/u,
+      );
+      expect(result.outputStress).toMatchObject({
+        records: 65_536,
+        endSeen: true,
+        markerVisible: true,
+        resizeObserved: true,
+        producerExit: { exitCode: 0, signal: 0 },
+        flow: {
+          pendingBytes: 0,
+        },
+      });
+      expect(result.outputStress.bytes).toBeGreaterThanOrEqual(
+        2 * 1024 * 1024 + "__OMXTERM_OUTPUT_END__".length,
+      );
+      expect(result.outputStress.flow.pauseCount).toBeGreaterThan(0);
+      expect(result.outputStress.flow.resumeCount).toBeGreaterThan(0);
+      expect(result.outputStress.flow.maxPendingBytes).toBeLessThanOrEqual(
+        64 * 1024 + result.outputStress.flow.largestNativeReadBytes,
+      );
+      expect(result.outputStress.memory.mainHeapUsedBytes).toBeGreaterThan(0);
+      expect(result.outputStress.memory.mainRssBytes).toBeGreaterThan(0);
+      if (result.outputStress.memory.rendererHeapUsedBytes !== null)
         expect(
-          execution.exitCode,
-          `Host fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
-        ).toBe(0);
-        if (!result) throw new Error("Host fixture returned no result");
-        expect(result.sessionStarts).toBe(4);
-        expect(result.renderedFontFamily).toBe(result.configuredFontFamily);
-        expect(result.renderedPixels.configured).toBeGreaterThan(
-          result.renderedPixels.blank,
-        );
-        expect(result.renderedPixels.cjk).toBeGreaterThan(
-          result.renderedPixels.configured,
-        );
-        expect(result.renderedPixels.emojiAndSymbol).toBeGreaterThan(
-          result.renderedPixels.cjk,
-        );
-        expect(result.reloadState.fonts).toEqual([
-          "Helvetica",
-          "Times New Roman",
-        ]);
-        expect(result.reloadState.notice).toContain(
-          "font.family and font.lineHeight",
-        );
-        expect(result.reloadState.notice).toContain("Restart OMXTerm");
-        expect(result.launchKinds).toEqual([
-          "default-shell",
-          "explicit-command",
-          "explicit-command",
-          "default-shell",
-        ]);
-        expect(result.resizeCounts).toHaveLength(4);
-        expect(result.resizeCounts.every((count) => count > 0)).toBe(true);
-        expect(result.outputEvidence).toEqual({
-          defaultUnicode: true,
-          explicitReady: true,
-          explicitInput: true,
-        });
-        expect(result.beforeDestroy).toEqual({ canvases: 1, tabs: 1 });
-        expect(result.ended).toEqual([
-          { closeRequested: true, liveSessions: 1 },
-          { closeRequested: false, liveSessions: 1 },
-          { closeRequested: false, liveSessions: 0 },
-        ]);
-        expect(result.externalLinks[0]).toMatch(
-          /^https:\/\/example\.test\/a+$/u,
-        );
-        expect(result.externalLinks[0]).toBe(result.externalLinks[1]);
-        expect(result.externalLinks.slice(2)).toEqual([
-          "https://one.test/a",
-          "https://two.test/b",
-          "https://scroll.test/complete",
-        ]);
-        expect(result.ordinaryGestureMouseReports).toMatch(/\u001b\[</u);
-        expect(result.wheelMouseReports).toMatch(/\u001b\[<65;/u);
-        expect(result.alternateScreenMouseReports).toMatch(/\u001b\[<0;/u);
-        expect(result.alternateScreenMouseReports).toMatch(/\u001b\[<64;/u);
-        expect(result).toMatchObject({
-          clipboardReads: 1,
-          clipboardWrites: 3,
-          selectAllCoveredScrollback: true,
-          selectedUnicodeExactly: true,
-          protectedPasteConfirmations: 1,
-          contextMenus: 1,
-          largePasteLength: 79_000,
-          validLinkMouseReports: "",
-          cancelledGestureMouseReports: "",
-          titleQueryReplyBytes: 0,
-          navigations: 0,
-          openedWindows: 0,
-          permissionRequests: 0,
-          ptyExits: 4,
-        });
-        expect(result.capabilityReplies).toMatch(
-          /^\u001b\[\?1;2c\u001b\[>0;0;0c\u001b\[3;5R\u001b\[6;\d+;\d+t$/u,
-        );
-        expect(result.outputStress).toMatchObject({
-          records: 65_536,
-          endSeen: true,
-          markerVisible: true,
-          resizeObserved: true,
-          producerExit: { exitCode: 0, signal: 0 },
-          flow: {
-            pendingBytes: 0,
-          },
-        });
-        expect(result.outputStress.bytes).toBeGreaterThanOrEqual(
-          2 * 1024 * 1024 + "__OMXTERM_OUTPUT_END__".length,
-        );
-        expect(result.outputStress.flow.pauseCount).toBeGreaterThan(0);
-        expect(result.outputStress.flow.resumeCount).toBeGreaterThan(0);
-        expect(result.outputStress.flow.maxPendingBytes).toBeLessThanOrEqual(
-          64 * 1024 + result.outputStress.flow.largestNativeReadBytes,
-        );
-        expect(result.outputStress.memory.mainHeapUsedBytes).toBeGreaterThan(0);
-        expect(result.outputStress.memory.mainRssBytes).toBeGreaterThan(0);
-        if (result.outputStress.memory.rendererHeapUsedBytes !== null)
-          expect(
-            result.outputStress.memory.rendererHeapUsedBytes,
-          ).toBeGreaterThan(0);
-        expect(result.titleEvents.map(({ fixture }) => fixture)).toEqual([
-          "first",
-          "overlong",
-          "second",
-        ]);
-        expect(result.titleEvents[0]?.sessionId).toBe(
-          result.titleEvents[1]?.sessionId,
-        );
-        expect(result.titleEvents[0]?.sessionId).not.toBe(
-          result.titleEvents[2]?.sessionId,
-        );
-        expect(result.bellSessionIds[0]).toBe(result.titleEvents[0]?.sessionId);
-        expect(result.bellSessionIds.at(-1)).toBe(
-          result.titleEvents[2]?.sessionId,
-        );
-        expect(
-          result.bellSessionIds.every(
-            (sessionId) =>
-              sessionId === result.titleEvents[0]?.sessionId ||
-              sessionId === result.titleEvents[2]?.sessionId,
-          ),
-        ).toBe(true);
-        expect(result.imageEvidence.cellSizeResponse).toMatch(
-          /^\u001b\[6;\d+;\d+t$/u,
-        );
-        const [, reportedHeight, reportedWidth] =
-          /^\u001b\[6;(\d+);(\d+)t$/u.exec(
-            result.imageEvidence.cellSizeResponse,
-          )!;
-        expect(
-          Math.abs(
-            Number(reportedWidth) -
-              result.imageEvidence.pixels.bitmapSize[0] /
-                result.imageEvidence.gridSize.cols,
-          ),
-        ).toBeLessThan(2);
-        expect(
-          Math.abs(
-            Number(reportedHeight) -
-              result.imageEvidence.pixels.bitmapSize[1] /
-                result.imageEvidence.gridSize.rows,
-          ),
-        ).toBeLessThan(2);
-        expect(
-          result.imageEvidence.pixels.changedInPiPlacement,
-        ).toBeGreaterThan(1_000);
-        expect(
-          result.imageEvidence.pixels.greenInChafaPlacement,
-        ).toBeGreaterThan(100);
-        expect(
-          result.imageEvidence.pixels.colorBucketsInPiPlacement,
-        ).toBeGreaterThan(1_000);
-        expect(
-          result.imageEvidence.pixels.greenOutsideChafaPlacement,
-        ).toBeLessThan(200);
-        for (const evidence of [
-          result.imageEvidence.afterZoomPixels,
-          result.imageEvidence.afterResizePixels,
-        ]) {
-          expect(evidence.changedInPiPlacement).toBeGreaterThan(1_000);
-          expect(evidence.greenInChafaPlacement).toBeGreaterThan(100);
-        }
-        expect(
-          result.imageEvidence.afterTabAndThemePixels.colorBucketsInBitmap,
-        ).toBeGreaterThan(1_000);
-        expect(
-          result.imageEvidence.afterTabAndThemePixels.greenInBitmap,
-        ).toBeGreaterThan(100);
-      } finally {
-        await rm(root, { recursive: true, force: true });
+          result.outputStress.memory.rendererHeapUsedBytes,
+        ).toBeGreaterThan(0);
+      expect(result.titleEvents.map(({ fixture }) => fixture)).toEqual([
+        "first",
+        "overlong",
+        "second",
+      ]);
+      expect(result.titleEvents[0]?.sessionId).toBe(
+        result.titleEvents[1]?.sessionId,
+      );
+      expect(result.titleEvents[0]?.sessionId).not.toBe(
+        result.titleEvents[2]?.sessionId,
+      );
+      expect(result.bellSessionIds[0]).toBe(result.titleEvents[0]?.sessionId);
+      expect(result.bellSessionIds.at(-1)).toBe(
+        result.titleEvents[2]?.sessionId,
+      );
+      expect(
+        result.bellSessionIds.every(
+          (sessionId) =>
+            sessionId === result.titleEvents[0]?.sessionId ||
+            sessionId === result.titleEvents[2]?.sessionId,
+        ),
+      ).toBe(true);
+      expect(result.imageEvidence.cellSizeResponse).toMatch(
+        /^\u001b\[6;\d+;\d+t$/u,
+      );
+      const [, reportedHeight, reportedWidth] =
+        /^\u001b\[6;(\d+);(\d+)t$/u.exec(
+          result.imageEvidence.cellSizeResponse,
+        )!;
+      expect(
+        Math.abs(
+          Number(reportedWidth) -
+            result.imageEvidence.pixels.bitmapSize[0] /
+              result.imageEvidence.gridSize.cols,
+        ),
+      ).toBeLessThan(2);
+      expect(
+        Math.abs(
+          Number(reportedHeight) -
+            result.imageEvidence.pixels.bitmapSize[1] /
+              result.imageEvidence.gridSize.rows,
+        ),
+      ).toBeLessThan(2);
+      expect(result.imageEvidence.pixels.changedInPiPlacement).toBeGreaterThan(
+        1_000,
+      );
+      expect(result.imageEvidence.pixels.greenInChafaPlacement).toBeGreaterThan(
+        100,
+      );
+      expect(
+        result.imageEvidence.pixels.colorBucketsInPiPlacement,
+      ).toBeGreaterThan(1_000);
+      expect(
+        result.imageEvidence.pixels.greenOutsideChafaPlacement,
+      ).toBeLessThan(200);
+      for (const evidence of [
+        result.imageEvidence.afterZoomPixels,
+        result.imageEvidence.afterResizePixels,
+      ]) {
+        expect(evidence.changedInPiPlacement).toBeGreaterThan(1_000);
+        expect(evidence.greenInChafaPlacement).toBeGreaterThan(100);
       }
-    }, 270_000);
-  },
-);
+      expect(
+        result.imageEvidence.afterTabAndThemePixels.colorBucketsInBitmap,
+      ).toBeGreaterThan(1_000);
+      expect(
+        result.imageEvidence.afterTabAndThemePixels.greenInBitmap,
+      ).toBeGreaterThan(100);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }, 270_000);
+});
 
 async function buildHostFixture(root: string): Promise<void> {
-  await mkdir(path.join(root, "renderer", "fonts"), { recursive: true });
+  await mkdir(path.join(root, "renderer"), { recursive: true });
   await Promise.all([
     build({
       absWorkingDir: projectRoot,
@@ -333,7 +346,6 @@ async function buildHostFixture(root: string): Promise<void> {
       absWorkingDir: projectRoot,
       bundle: true,
       entryPoints: ["src/renderer/index.ts"],
-      external: ["./fonts/JetBrainsMonoNerdFontMono-Regular.woff2"],
       format: "iife",
       loader: { ".ttf": "binary" },
       logLevel: "silent",
@@ -343,20 +355,6 @@ async function buildHostFixture(root: string): Promise<void> {
     cp(
       path.join(projectRoot, "src", "renderer", "index.html"),
       path.join(root, "renderer", "index.html"),
-    ),
-    cp(
-      path.join(
-        projectRoot,
-        "assets",
-        "fonts",
-        "JetBrainsMonoNerdFontMono-Regular.woff2",
-      ),
-      path.join(
-        root,
-        "renderer",
-        "fonts",
-        "JetBrainsMonoNerdFontMono-Regular.woff2",
-      ),
     ),
     writeFile(
       path.join(root, "package.json"),
@@ -405,7 +403,9 @@ async function runFixture(root: string): Promise<{
   child.stdout.on("data", (chunk: string) => (stdout += chunk));
   child.stderr.on("data", (chunk: string) => (stderr += chunk));
   const timeout = setTimeout(() => {
-    if (child.pid) process.kill(-child.pid, "SIGKILL");
+    if (!child.pid) return;
+    if (process.platform === "win32") child.kill();
+    else process.kill(-child.pid, "SIGKILL");
   }, 260_000);
   const exitCode = await new Promise<number | null>((resolve, reject) => {
     child.once("error", reject);

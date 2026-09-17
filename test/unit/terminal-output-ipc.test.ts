@@ -36,7 +36,6 @@ function options(): Omit<
 > {
   return {
     configuration: {
-      terminalSurface: "xterm",
       fontSize: 16,
       fontLineHeight: 1,
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },

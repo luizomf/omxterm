@@ -26,8 +26,10 @@ contract below is authoritative.
 - [Security policy](../SECURITY.md) defines supported reports, the private
   reporting route, required safe details, excluded sensitive data, and
   disclosure coordination.
-- [Restty development candidate](restty-development.md) documents the temporary
-  unpackaged opt-in, pinned inputs, restoration and current limitations.
+- [Restty Terminal Surface](restty-development.md) documents the shipped
+  renderer, pinned inputs, restoration, resource limits and failure behavior.
+- [Restty cutover evidence](restty-cutover-evidence.md) maps the integrated
+  migration slices and parent stories to retained source and regression seams.
 
 ## Normative contracts and language
 

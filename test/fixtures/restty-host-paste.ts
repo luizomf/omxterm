@@ -8,9 +8,20 @@ export function createLargePasteFixture() {
       (_, index) =>
         `${index.toString().padStart(4, "0")}:${"0123456789abcdef".repeat(49)}`,
     ).join("\n") + "\n";
+  const digest = createHash("sha256").update(payload).digest("hex");
+  if (process.platform !== "win32")
+    return {
+      command: `${process.platform === "darwin" ? "shasum -a 256" : "sha256sum"} <<'__OMXTERM_PAYLOAD__'\n${payload}__OMXTERM_PAYLOAD__\nstty echo\n`,
+      digest,
+      length: payload.length,
+    };
+
+  const encoded = Buffer.from(payload).toString("base64");
+  const program = `const c=require('node:crypto');const b=Buffer.from('${encoded}','base64');process.stdout.write(c.createHash('sha256').update(b).digest('hex')+'  -\\n')`;
+  const executable = `'${process.execPath.replaceAll("'", "''")}'`;
   return {
-    command: `shasum -a 256 <<'__OMXTERM_PAYLOAD__'\n${payload}__OMXTERM_PAYLOAD__\nstty echo\n`,
-    digest: createHash("sha256").update(payload).digest("hex"),
+    command: `& ${executable} -e ${JSON.stringify(program)}\n`,
+    digest,
     length: payload.length,
   };
 }

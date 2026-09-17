@@ -1,4 +1,3 @@
-import "@xterm/xterm/css/xterm.css";
 import "./terminal-window.css";
 import { createElectronTerminalAdapter } from "./electron-terminal-adapter";
 import { mountTerminalWindowPage } from "./terminal-window-host";
@@ -28,9 +27,7 @@ void window.omxterm.terminal.configuration().then((configuration) => {
     { tabStrip, tabsContainer },
     {
       configuration,
-      ...(configuration.terminalSurface === "restty"
-        ? { mount: mountResttyTerminalSurface }
-        : {}),
+      mount: mountResttyTerminalSurface,
       loadFontData: window.omxterm.terminal.fontData,
       onSurfaceFailure(message) {
         surfaceFailure.textContent = message;

@@ -57,12 +57,6 @@ const requiredEntries = [
   "/dist/renderer/index.css",
   "/dist/renderer/index.html",
   "/dist/renderer/index.js",
-  "/dist/renderer/fonts/JetBrainsMonoNerdFontMono-Regular.woff2",
-  "/dist/renderer/fonts/OFL.txt",
-  "/node_modules/@xterm/addon-fit/lib/addon-fit.js",
-  "/node_modules/@xterm/addon-image/lib/addon-image.js",
-  "/node_modules/@xterm/addon-web-links/lib/addon-web-links.js",
-  "/node_modules/@xterm/xterm/lib/xterm.js",
   "/node_modules/node-pty/lib/index.js",
   "/package.json",
 ];
@@ -395,13 +389,13 @@ describe("packaged application verifier", () => {
   });
 });
 
-describe("Kitty image packaged runtime", () => {
-  it("requires the image addon entry", () => {
-    const withoutImageAddon = requiredEntries.filter(
-      (entry) => !entry.includes("@xterm/addon-image"),
-    );
-    expect(inspectAsarEntries(withoutImageAddon, "darwin").missing).toEqual([
-      "/node_modules/@xterm/addon-image/lib/addon-image.js",
-    ]);
+describe("Restty-only packaged runtime", () => {
+  it("rejects any legacy xterm runtime entry", () => {
+    expect(
+      inspectAsarEntries(
+        [...requiredEntries, "/node_modules/@xterm/xterm/lib/xterm.js"],
+        "darwin",
+      ).forbidden,
+    ).toEqual(["/node_modules/@xterm/xterm/lib/xterm.js"]);
   });
 });

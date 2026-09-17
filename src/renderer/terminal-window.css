@@ -5,14 +5,6 @@
   --terminal-chrome-neutral: #808090;
 }
 
-@font-face {
-  font-family: "JetBrainsMono Nerd Font Mono";
-  font-style: normal;
-  font-weight: 400;
-  font-display: block;
-  src: url("./fonts/JetBrainsMonoNerdFontMono-Regular.woff2") format("woff2");
-}
-
 *,
 *::before,
 *::after {
@@ -338,38 +330,6 @@ body.tabs-visible .restty-terminal-surface {
   app-region: drag;
 }
 
-.terminal-surface .xterm {
-  box-sizing: border-box;
-  -webkit-font-smoothing: antialiased;
-  width: 100%;
-  height: 100%;
-  padding: calc(var(--native-title-inset) + var(--terminal-padding-top, 0px))
-    var(--terminal-padding-right, 8px) var(--terminal-padding-bottom, 8px)
-    var(--terminal-padding-left, 8px);
-}
-
-/* With a visible tab strip, the surface row no longer starts at the window
-   top: the strip already sits below any app-controlled title inset. */
-body.tabs-visible .terminal-surface .xterm {
-  padding-top: var(--terminal-padding-top, 0px);
-}
-
 body.tabs-visible #snippets-sidebar {
   padding-top: 12px;
-}
-
-/* xterm 6 scrolls through its scrollable element and draws its own
-   scrollback slider; this companion viewport stays empty and never
-   scrolls, yet its stock overflow-y: scroll makes platforms with classic
-   scrollbars (Linux, Windows) paint a permanent disabled track at the
-   terminal edge. Hide that vestigial scrollbar; macOS overlay scrollbars
-   never painted it. Keep the xterm ancestor so the active Terminal Theme
-   also beats xterm's equally specific opaque black viewport default. */
-.terminal-surface .xterm .xterm-viewport {
-  overflow-y: hidden;
-  background-color: var(--terminal-background, transparent);
-}
-
-.terminal-surface .xterm .xterm-screen {
-  background: transparent;
 }

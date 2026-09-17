@@ -496,16 +496,12 @@ function createTerminalIpcController(
     sessions.set(sessionId, {
       session: createdSession,
       outputFlow,
-      ...(rendererConfiguration.terminalSurface === "restty"
-        ? {
-            resttyFontConfiguration: Object.freeze({
-              ...(rendererConfiguration.fontFamily === undefined
-                ? {}
-                : { fontFamily: rendererConfiguration.fontFamily }),
-              fontLineHeight: rendererConfiguration.fontLineHeight,
-            }),
-          }
-        : {}),
+      resttyFontConfiguration: Object.freeze({
+        ...(rendererConfiguration.fontFamily === undefined
+          ? {}
+          : { fontFamily: rendererConfiguration.fontFamily }),
+        fontLineHeight: rendererConfiguration.fontLineHeight,
+      }),
       closed: false,
       exited: exitedBeforeRegistration,
     });

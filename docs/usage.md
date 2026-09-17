@@ -166,19 +166,16 @@ the Terminal Window resizes, Window Font Zoom changes, tabs are selected, or a
 valid User Configuration Reload applies. Reset, alternate-buffer exit, and tab
 disposal release the applicable images and pending Chafa metadata.
 
-Both Surfaces use a 33,554,432-byte decoded Kitty input target and a
+The Terminal Surface uses a 33,554,432-byte decoded Kitty input target and a
 4,194,304-source-pixel Chafa limit. Chafa's RGBA payload must be exactly four
 bytes per source pixel, so it is at most 16,777,216 decoded bytes. Malformed,
 incomplete, replaced, cancelled, or over-limit input renders nothing and leaves
 later terminal output usable.
 
-The default xterm Surface retains its pinned addon's approximately 64,000,000
-bytes of canvas-only FIFO storage and its documented residual decoder, Blob,
-and unclaimed-path risks. The development-only Restty candidate instead keeps
-parsing and decode inside its pinned Ghostty core, retains at most one unfinished
-image per screen, validates the source area before completed-image allocation,
-and stores at most 64,000,000 bytes of completed decoded image data per screen
-with Ghostty's native eviction behavior.
+Restty keeps parsing and decode inside its pinned Ghostty core, retains at most
+one unfinished image per screen, validates the source area before completed-image
+allocation, and stores at most 64,000,000 bytes of completed decoded image data
+per screen with Ghostty's native eviction behavior.
 
 These controls are not a complete process-memory limit. Decode operations can
 allocate transient data, browser canvas/WebGL resources are outside core storage
@@ -286,8 +283,8 @@ Linux and Windows. The Terminal Surface sends the exact visible URL to the
 Electron main process, which independently validates the sender, URL,
 HTTP(S) protocol, and host before asking the operating system to open it.
 Other protocols and invalid URLs have no external-opening side effect. The
-Restty development candidate follows the same provider punctuation and
-lowercase-protocol rules, including through fully visible soft wraps. It
+Restty follows the documented punctuation and lowercase-protocol rules,
+including through fully visible soft wraps. It
 conservatively refuses a destination that may continue above or below the
 visible viewport; scroll until the complete URL is visible before activating
 it. A valid modified click takes precedence while a TUI reports mouse input and

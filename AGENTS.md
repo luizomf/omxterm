@@ -6,7 +6,7 @@ Instructions for agents working on OMXTerm.
 
 OMXTerm is an open-source personal desktop terminal for ARM64 macOS, Linux,
 and Windows. It uses Electron and TypeScript around a portable
-DOM+xterm Terminal Surface and a local PTY Adapter.
+DOM+Restty Terminal Surface and a local PTY Adapter.
 
 The terminal is the product. AI assistance, SSH brokering, saved sessions,
 splits, and shell integration are outside the current product contract. Do not

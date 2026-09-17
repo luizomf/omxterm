@@ -107,9 +107,17 @@ Portable checks include the production-Chromium image fixture with its own
 Electron userData/sessionData directories. On Windows and Linux it shows a
 non-activating native window before loading the fixture; macOS keeps it hidden.
 Hidden Windows/Linux windows can stall real image-frame progress even with
-background throttling disabled. All 63 original checks, real animation frames,
+background throttling disabled. All original checks, real animation frames,
 deadlines, production CSP and renderer isolation remain required; visibility is
 a test-harness requirement, not a Terminal Surface behavior change.
+
+Each native platform command also runs the Restty host fixture through an actual
+WebGL2 renderer and owned PTYs. It covers Default Shell and explicit-command
+startup, input/output, resize, shutdown and renderer loss; bundled and installed
+fonts; configuration and restart notices; and direct Pi/Chafa images. A missing
+backend or irrecoverable context loss must visibly fail and clean only its owned
+session while another session remains usable. Synthetic DOM coverage or another
+operating system cannot substitute for this native seam.
 
 ### macOS arm64
 

@@ -30,9 +30,8 @@ protocols, renderer navigation/window creation, forged IPC senders, and
 repeated activation. Tests must prove that rejected input causes no external
 side effect and that link contents do not enter Operational Events.
 
-The visible-span implementation is pinned to `@xterm/addon-web-links` 0.12.0
-alongside `@xterm/xterm` `6.1.0-beta.304`. Its strict provider expression owns the matched
-span: surrounding prose punctuation and closing brackets are excluded, an
-opening parenthesis terminates a match, nearby URLs remain separate, and a URL
-may span xterm soft-wrapped buffer lines. OMXTerm supplies the lowercase-only
-form of that expression and forwards the provider's matched string unchanged.
+OMXTerm retains the lowercase-only form of the previously pinned strict provider
+expression. Restty applies it to visible cell snapshots and joins rows only when
+Ghostty selection text proves a soft wrap. Surrounding prose punctuation and
+closing brackets are excluded, an opening parenthesis terminates a match, nearby
+URLs remain separate, and clipped destinations are refused rather than guessed.

@@ -1,36 +1,25 @@
-# Restty development candidate
+# Restty Terminal Surface
 
-OMXTerm has a temporary, unpackaged Restty 0.3.0 Terminal Surface candidate. The
-normal development launch and every packaged launch still use xterm. This is a
-migration aid, not User Configuration and not a second supported renderer.
+OMXTerm uses pinned Restty 0.3.0 and its Ghostty WASM core as its sole Terminal
+Surface in development and packaged applications. Restty is not a User
+Configuration choice: there is no migration selector, second renderer or
+fallback Surface.
 
-After `npm ci`, opt in explicitly:
+## Runtime contract
 
-```sh
-OMXTERM_TERMINAL_SURFACE=restty npm run dev
-```
-
-`OMXTERM_TERMINAL_SURFACE` accepts exactly `xterm` or `restty`. Any other value
-fails startup. A packaged process refuses `restty` rather than activating the
-candidate or falling back automatically.
-
-## Current slice
-
-The candidate uses the existing tabs, Electron Adapter and owned local PTYs. It
+The Surface uses the existing tabs, Electron Adapter and owned local PTYs. It
 supports ordinary Unicode shell input/output, grid resize, focus, independent
 tabs, Default Shell and `-e` command startup, shell exit, explicit close and
 renderer-loss cleanup. It requires the bundled TTF, Ghostty WASM core and a real
 WebGL2 backend before starting a PTY. Initialization failure starts no shell;
 WebGL context loss reports a visible failure and disposes only the owning tab.
 
-The candidate applies the selected Terminal Theme, configured font family,
+The Surface applies the selected Terminal Theme, configured font family,
 size, independent line height, per-side padding, Window Font Zoom and
 scrollback. Theme, size, padding and scrollback reload live without replacing
 the Surface, core or PTY. A Restty Surface keeps the font family and line height
 it was created with; restart OMXTerm to apply either changed setting to every
-existing Restty Surface. New Surfaces use the latest validated values. Native
-glyph rasterization can differ from xterm and is not claimed to be
-pixel-identical.
+existing Restty Surface. New Surfaces use the latest validated values. Native glyph rasterization can differ across operating systems and GPUs; pixel-identical output is not claimed.
 
 Positive `scrollback.lines` values are approximate physical history-row targets
 because Ghostty evicts whole historical pages. Retention can exceed the target
@@ -54,12 +43,12 @@ OSC 8 destinations are ignored, and a destination that may continue into a
 concealed row is refused. Parsed OSC 0/2 titles and BEL use the existing
 per-session title and silent-bell host controller, including raw title bounds,
 sanitization and fallback, tab/window ownership, focus/interaction reset and
-platform attention. The candidate sends no title reports; cancelled/malformed
+platform attention. The Surface sends no title reports; cancelled/malformed
 controls and OSC BEL terminators have no extra title or bell effect.
 
-The candidate renders the same bounded direct Pi PNG and anonymous
-metadata-first Chafa RGBA Kitty paths as xterm, but parsing, decode, placement,
-deletion and reset remain in the pinned Ghostty core. Decoded transport input is
+The Surface renders the bounded direct Pi PNG and anonymous metadata-first
+Chafa RGBA Kitty paths. Parsing, decode, placement, deletion and reset remain in
+the pinned Ghostty core. Decoded transport input is
 limited to 33,554,432 bytes, source dimensions to 4,194,304 pixels, and completed
 decoded image storage to 64,000,000 bytes per screen. Ghostty retains at most one
 unfinished image per screen and uses its native completed-image eviction policy.
@@ -67,8 +56,7 @@ The JavaScript/WebGL rendering copies and transient decoder allocations are not
 included in that storage total, and tabs multiply memory. Images remain
 cell-anchored through resize, Window Font Zoom, tab selection and live theme
 reload; `CSI 16 t` reports the current cell size. Pi's default 2,000-by-2,000
-autoresized output is the compatibility target. Unsupported protocol paths and
-Linux/Windows candidate rendering remain unclaimed.
+autoresized output is the compatibility target. Unsupported protocol paths remain unclaimed.
 
 Output uses the shared ordered Adapter/IPC path. Main pauses an owned PTY at
 65,536 unacknowledged UTF-8 bytes and resumes at or below 16,384. Renderer ACKs
@@ -97,10 +85,9 @@ override application mouse reporting without duplicate PTY input. DA1, DA2,
 cursor-position and cell-size queries have one deterministic parsed-runtime
 reply path, including controls split across output messages.
 
-The xterm Surface retains its existing observable behavior. Queue bytes,
-JavaScript heap and RSS are separate metrics from Ghostty
-core, browser/WebGL and GPU allocations; no whole-application memory bound is
-claimed. There is no automatic xterm fallback.
+Queue bytes, JavaScript heap and RSS are separate metrics from Ghostty core,
+browser/WebGL and GPU allocations; no whole-application memory bound is claimed.
+There is no fallback renderer.
 
 ## Pinned inputs and restoration
 
@@ -195,8 +182,8 @@ production `connect-src 'none'` CSP without local fonts, user dotfiles or remote
 fetches. Packaged license texts are listed in `THIRD_PARTY_NOTICES.md`.
 
 `test/integration/restty-host-integration.test.ts` runs the real main IPC
-router, preload bridge, Electron Adapter, Restty Surface and owned macOS PTYs in
-one fixture under the production CSP. It covers Unicode and bare-control-key
+router, preload bridge, Electron Adapter, Restty Surface and owned native PTYs
+under the production CSP. It covers Unicode and bare-control-key
 input, large chunked DOM paste through a real owned PTY, explicit host
 copy/paste, Select All, context menu and OSC 52, parsed title/BEL ownership,
 title-query silence, disposal, resize, focus return, two isolated tabs, Default
@@ -205,10 +192,10 @@ termination, explicit close, renderer-process loss, a numbered 2 MiB producer
 through production IPC during a 350 ms renderer stall and resize, cumulative
 flow control, clean producer exit, direct Pi and Chafa Terminal Payload through
 the PTY, rendered image content and placement, live image geometry, and
-remaining candidate-route refusal without using a user session or real
+privileged-route refusal without using a user session or real
 clipboard. Its result contains only synthetic outcome and queue/heap/RSS
 metadata, not captured Terminal Payload.
 
-Native runtime evidence through the current parsed-event slice is macOS ARM64.
-Linux and Windows Restty behavior remains unverified; their xterm package
-contract is unchanged.
+The complete native package commands run this host/runtime coverage on macOS,
+Linux and Windows ARM64. Native glyph rasterization and platform security UI
+remain automation-resistant risks rather than pixel-identical claims.

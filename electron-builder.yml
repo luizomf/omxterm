@@ -23,22 +23,6 @@ extraResources:
     to: THIRD_PARTY_NOTICES.md
   - from: assets/fonts/OFL.txt
     to: licenses/JetBrainsMono-OFL.txt
-  - from: node_modules/@xterm/xterm/LICENSE
-    to: licenses/xterm.txt
-  - from: node_modules/@xterm/addon-fit/LICENSE
-    to: licenses/xterm-addon-fit.txt
-  - from: node_modules/@xterm/addon-image/LICENSE
-    to: licenses/xterm-addon-image.txt
-  - from: assets/licenses/sixel-MIT.txt
-    to: licenses/sixel.txt
-  - from: assets/licenses/xterm-wasm-parts-MIT.txt
-    to: licenses/xterm-wasm-parts.txt
-  - from: assets/licenses/inwasm-runtime-MIT.txt
-    to: licenses/inwasm-runtime.txt
-  - from: node_modules/@xterm/addon-web-links/LICENSE
-    to: licenses/xterm-addon-web-links.txt
-  - from: node_modules/@xterm/addon-unicode-graphemes/LICENSE
-    to: licenses/xterm-addon-unicode-graphemes.txt
   - from: node_modules/node-pty/LICENSE
     to: licenses/node-pty.txt
   - from: assets/licenses/restty-MIT.txt
@@ -59,7 +43,8 @@ mac:
     - dist/**
     - "!dist/**/*.map"
     - "!node_modules/**/*.map"
-    - "!node_modules/@xterm/*/src/**"
+    - "!node_modules/restty/**"
+    - "!node_modules/text-shaper/**"
     - "!scripts/**"
     - "!node_modules/node-addon-api/**"
     - "!node_modules/node-pty/node-addon-api/**"
@@ -92,7 +77,8 @@ linux:
     - dist/**
     - "!dist/**/*.map"
     - "!node_modules/**/*.map"
-    - "!node_modules/@xterm/*/src/**"
+    - "!node_modules/restty/**"
+    - "!node_modules/text-shaper/**"
     - "!scripts/**"
     - "!node_modules/node-addon-api/**"
     - "!node_modules/node-pty/node-addon-api/**"
@@ -122,7 +108,8 @@ win:
     - dist/**
     - "!dist/**/*.map"
     - "!node_modules/**/*.map"
-    - "!node_modules/@xterm/*/src/**"
+    - "!node_modules/restty/**"
+    - "!node_modules/text-shaper/**"
     - "!scripts/**"
     - "!node_modules/node-addon-api/**"
     - "!node_modules/node-pty/node-addon-api/**"

@@ -19,9 +19,15 @@ import {
 import { exerciseExplicitResttyTab } from "./restty-host-explicit-tab";
 import { exerciseResttyEvents } from "./restty-host-events";
 import { exerciseResttyCapabilities } from "./restty-host-capabilities";
+import { exerciseResttyBackendLoss } from "./restty-host-failures";
 import { captureResttyFontPaintEvidence } from "./restty-host-paint";
 import * as resttyImages from "./restty-host-images";
 import { createLargePasteFixture, dispatchDomPaste } from "./restty-host-paste";
+import {
+  explicitFixtureLaunchRequest,
+  nativeFixturePlatform,
+  selectionFixtureCommand,
+} from "./restty-host-platform";
 import {
   createOutputStressHarness,
   outputStressLaunchRequest,
@@ -63,18 +69,8 @@ let permissionRequests = 0;
 let ptyExits = 0;
 let sessionIndex = 0;
 const outputStress = createOutputStressHarness();
-const configuredFontFamily =
-  process.platform === "darwin"
-    ? "Helvetica"
-    : process.platform === "win32"
-      ? "Consolas"
-      : "DejaVu Sans";
-const reloadedFontFamily =
-  process.platform === "darwin"
-    ? "Times New Roman"
-    : process.platform === "win32"
-      ? "Courier New"
-      : "Liberation Mono";
+const { defaultShell, configuredFontFamily, reloadedFontFamily } =
+  nativeFixturePlatform;
 
 async function waitFor(
   predicate: () => boolean | Promise<boolean>,
@@ -113,7 +109,6 @@ function createHost(window: BrowserWindow) {
         userFileErrors: [],
       },
       0,
-      "restty",
     ),
     webContents: window.webContents,
     createSession(callbacks) {
@@ -125,19 +120,12 @@ function createHost(window: BrowserWindow) {
       const explicit = index === 1;
       const stressLaunchRequest = outputStressLaunchRequest(index);
       const terminal = createLocalTerminalSession(nodePty.spawn, {
-        shell: "/bin/sh",
+        shell: defaultShell,
         ...(stressLaunchRequest
           ? { launchRequest: stressLaunchRequest }
           : explicit
             ? {
-                launchRequest: {
-                  kind: "explicit-command" as const,
-                  executable: "/bin/sh",
-                  arguments: [
-                    "-c",
-                    "printf '__EXPLICIT_READY__Olá🙂\\n\\033]2;second-title\\007\\007\\033]52;c;dW5zYWZl\\007\\033]8;;https://example.com\\007https://example.com\\033]8;;\\007'; IFS= read -r line; printf '__EXPLICIT_INPUT__%s\\n' \"$line\"; sleep 30",
-                  ],
-                },
+                launchRequest: explicitFixtureLaunchRequest(),
               }
             : {}),
         platform: process.platform,
@@ -244,9 +232,7 @@ function createHost(window: BrowserWindow) {
     initial: { configuration: initialConfiguration, userFileErrors: [] },
     load: async () => ({ configuration: reloads.shift()! }),
     apply: (state) =>
-      controller.applyConfiguration(
-        terminalRendererConfiguration(state, 0, "restty"),
-      ),
+      controller.applyConfiguration(terminalRendererConfiguration(state, 0)),
     resttyRestartBaseline: {
       fontFamily: configuredFontFamily,
       fontLineHeight: 1,
@@ -331,7 +317,7 @@ app
     await window.webContents.executeJavaScript(
       `(() => {
         const input = document.querySelector('.restty-terminal-surface textarea');
-        input.dispatchEvent(new InputEvent('input', { data: "printf '__DEFAULT_INPUT__Olá🙂\\\\n'", inputType: 'insertText', bubbles: true }));
+        input.dispatchEvent(new InputEvent('input', { data: ${JSON.stringify(nativeFixturePlatform.defaultInputCommand)}, inputType: 'insertText', bubbles: true }));
         input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
         input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }));
       })()`,
@@ -363,13 +349,15 @@ app
       () => inputs[0]!.join("").includes("\u0016"),
       "bare Ctrl+V terminal input",
     );
-    terminals[0]!.write("x\u0015");
+    terminals[0]!.write(process.platform === "win32" ? "\u0003" : "x\u0015");
 
-    terminals[0]!.write("stty -echo; printf '__PASTE_ECHO_OFF__\\n'\r");
-    await waitFor(
-      () => outputs[0]!.join("").includes("__PASTE_ECHO_OFF__"),
-      "owned PTY echo disable",
-    );
+    if (process.platform !== "win32") {
+      terminals[0]!.write("stty -echo; printf '__PASTE_ECHO_OFF__\\n'\r");
+      await waitFor(
+        () => outputs[0]!.join("").includes("__PASTE_ECHO_OFF__"),
+        "owned PTY echo disable",
+      );
+    }
     const largePaste = createLargePasteFixture();
     await dispatchDomPaste(window, largePaste.command);
     await waitFor(
@@ -383,9 +371,7 @@ app
       "native Paste host route",
     );
     terminals[0]!.write("\u0003");
-    terminals[0]!.write(
-      `printf '__SELECT_ALL_FIRST__\\n__UNICODE__A漢é❤️👩‍💻Z__END__\\n'; i=0; while [ "$i" -lt 120 ]; do printf 'line-%03d\\n' "$i"; i=$((i+1)); done; printf '__SELECT_ALL_LAST__\\n'\r`,
-    );
+    terminals[0]!.write(selectionFixtureCommand());
     await waitFor(
       () => outputs[0]!.join("").includes("__SELECT_ALL_LAST__"),
       "scrollback selection fixture",
@@ -456,11 +442,15 @@ app
       sessionId: "s1",
     });
 
-    window.webContents.send(terminalIpc.tabCommand, { action: "new" });
-    await waitFor(
-      () => launchKinds.length === 4 && resizes[3]!.length > 0,
-      "renderer-loss session",
-    );
+    const backendLoss = await exerciseResttyBackendLoss({
+      window,
+      launchKinds,
+      resizes,
+      ptyExits: () => ptyExits,
+      terminals,
+      outputs,
+      waitFor,
+    });
     const beforeDestroy = (await window.webContents.executeJavaScript(
       "({ canvases: document.querySelectorAll('.restty-terminal-surface canvas').length, tabs: document.querySelectorAll('.terminal-surface').length })",
       true,
@@ -469,11 +459,16 @@ app
       "document.querySelector('.restty-terminal-surface')?.dataset.resttyFont ?? null",
       true,
     )) as string | null;
+    const exitsBeforeRendererLoss = ptyExits;
     window.webContents.forcefullyCrashRenderer();
-    await waitFor(() => ptyExits === 4, "renderer-loss PTY cleanup");
+    await waitFor(
+      () => ptyExits === exitsBeforeRendererLoss + 1,
+      "renderer-loss PTY cleanup",
+    );
 
     const result = {
       beforeDestroy,
+      backendLoss,
       configuredFontFamily,
       renderedFontFamily,
       renderedPixels,

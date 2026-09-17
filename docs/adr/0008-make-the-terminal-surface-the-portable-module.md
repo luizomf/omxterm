@@ -1,7 +1,7 @@
 # Make the Terminal Surface the portable module
 
-The Terminal Surface will be a deep Module whose small Interface hides xterm
-setup, addons, rendering, input, resize, appearance, clipboard, zoom, and
+The Terminal Surface is a deep Module whose small Interface hides Restty and
+Ghostty setup, rendering, input, resize, appearance, clipboard, zoom, and
 cleanup. It receives a terminal-session Adapter at a real Seam: OMXTerm supplies
 an Electron IPC Adapter backed by a local PTY, while a web application can
 supply a WebSocket Adapter; Electron, native windows, and local PTY ownership

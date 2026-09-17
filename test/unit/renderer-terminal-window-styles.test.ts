@@ -4,61 +4,18 @@ import { describe, expect, it, vi } from "vitest";
 import { createSnippetsSidebar } from "../../src/renderer/snippets-sidebar";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 
-// Regression for #96: xterm 6 keeps an empty companion viewport whose stock
-// overflow-y: scroll paints a permanent disabled scrollbar track on platforms
-// with classic scrollbars. The Terminal Window stylesheet must win the cascade
-// against the bundled xterm stylesheet for all viewport styling.
 const terminalWindowCss = readFileSync(
   "src/renderer/terminal-window.css",
   "utf8",
 );
 
-describe("Terminal Window viewport", () => {
-  it("hides the scrollbar and applies the active Terminal Theme background", () => {
-    const terminalThemeBackground = "#1e1e2e";
-    for (const stylesheet of [
-      "node_modules/@xterm/xterm/css/xterm.css",
-      "src/renderer/terminal-window.css",
-    ]) {
-      const style = document.createElement("style");
-      const source =
-        stylesheet === "src/renderer/terminal-window.css"
-          ? terminalWindowCss
-          : readFileSync(stylesheet, "utf8");
-      // jsdom preserves var() in computed colors, so resolve the representative
-      // active theme value before exercising the real stylesheet cascade.
-      style.textContent = source.replaceAll(
-        "var(--terminal-background, transparent)",
-        terminalThemeBackground,
-      );
-      document.head.append(style);
-    }
-    const surface = document.createElement("div");
-    surface.className = "terminal-surface";
-    const xterm = document.createElement("div");
-    xterm.className = "xterm";
-    const viewport = document.createElement("div");
-    viewport.className = "xterm-viewport";
-    xterm.append(viewport);
-    surface.append(xterm);
-    document.body.append(surface);
-
-    expect(getComputedStyle(viewport).overflowY).toBe("hidden");
-    expect(getComputedStyle(viewport).backgroundColor).toBe("rgb(30, 30, 46)");
-  });
-});
-
-describe("Terminal font rendering", () => {
-  it("requests thinner macOS smoothing only for terminal glyphs", () => {
-    expect(
-      declaration(
-        ruleBody(".terminal-surface .xterm"),
-        "-webkit-font-smoothing",
-      ),
-    ).toBe("antialiased");
-    expect(ruleBody("html,\nbody")).not.toContain("font-smoothing");
-    expect(terminalWindowCss).not.toContain("-moz-osx-font-smoothing");
-    expect(terminalWindowCss).not.toContain("text-rendering");
+describe("Restty Terminal Window viewport", () => {
+  it("uses the complete Surface and leaves no legacy xterm styling", () => {
+    expect(ruleBody(".restty-terminal-surface")).toContain("display: flex");
+    expect(ruleBody(".restty-terminal-surface canvas")).toContain(
+      "width: 100%",
+    );
+    expect(terminalWindowCss).not.toContain(".xterm");
   });
 });
 

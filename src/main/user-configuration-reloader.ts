@@ -35,10 +35,8 @@ export interface UserConfigurationReloader {
 }
 
 export function resttyBaseline(
-  terminalSurface: string,
   configuration: LoadedUserConfiguration,
 ): Pick<UserConfigurationReloaderOptions, "resttyRestartBaseline"> {
-  if (terminalSurface !== "restty") return {};
   return {
     resttyRestartBaseline: {
       ...(configuration.fontFamily === undefined

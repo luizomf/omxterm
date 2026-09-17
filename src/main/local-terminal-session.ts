@@ -98,7 +98,7 @@ export function createLocalTerminalSession(
       },
       cols: 80,
       rows: 24,
-      // The OS-provided ConPTY can consume Kitty APCs before they reach xterm.
+      // The OS-provided ConPTY can consume Kitty APCs before they reach Restty.
       // Use the already-packaged ConPTY runtime that preserves this payload.
       ...(options.platform === "win32" ? { useConptyDll: true } : {}),
     });

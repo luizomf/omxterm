@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   decodeOsc52Write,
+  OSC_HANDLER_PAYLOAD_LIMIT,
   registerOsc52Clipboard,
-  XTERM_OSC_PAYLOAD_LIMIT,
 } from "../../src/terminal-surface/osc52-clipboard";
 
 describe("write-only OSC 52 clipboard", () => {
@@ -18,19 +18,21 @@ describe("write-only OSC 52 clipboard", () => {
     (data) => expect(decodeOsc52Write(data)).toBeUndefined(),
   );
 
-  it("uses the pinned @xterm/xterm parser bound without a 64 KiB project limit", () => {
+  it("uses the Restty scanner bound without a 64 KiB project limit", () => {
     const largestValidEncodedLength =
-      Math.floor((XTERM_OSC_PAYLOAD_LIMIT - 2) / 4) * 4;
+      Math.floor((OSC_HANDLER_PAYLOAD_LIMIT - 2) / 4) * 4;
     const immediatelyInside = `c;${"A".repeat(largestValidEncodedLength)}`;
     const immediatelyOutside = `c;${"A".repeat(largestValidEncodedLength + 4)}`;
 
     expect(immediatelyInside.length).toBeLessThanOrEqual(
-      XTERM_OSC_PAYLOAD_LIMIT,
+      OSC_HANDLER_PAYLOAD_LIMIT,
     );
     expect(decodeOsc52Write(immediatelyInside)?.length).toBe(
       (largestValidEncodedLength / 4) * 3,
     );
-    expect(immediatelyOutside.length).toBeGreaterThan(XTERM_OSC_PAYLOAD_LIMIT);
+    expect(immediatelyOutside.length).toBeGreaterThan(
+      OSC_HANDLER_PAYLOAD_LIMIT,
+    );
     expect(decodeOsc52Write(immediatelyOutside)).toBeUndefined();
   });
 

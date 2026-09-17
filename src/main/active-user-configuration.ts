@@ -1,5 +1,4 @@
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
-import type { TerminalSurfaceKind } from "../shared/terminal-surface-kind";
 import type { TerminalIpcRouter } from "./terminal-ipc-controller";
 import type { LoadedUserConfiguration } from "./user-configuration";
 import type { ActiveUserConfiguration } from "./user-configuration-reloader";
@@ -25,13 +24,11 @@ export function applyActiveUserConfiguration<
     readonly rebuildMenu: () => void;
     readonly nativeTitleInset: 0 | 30;
     readonly platform: string;
-    readonly terminalSurface: TerminalSurfaceKind;
   },
 ): void {
   const rendererConfiguration = terminalRendererConfiguration(
     state,
     options.nativeTitleInset,
-    options.terminalSurface,
   );
   router.applyConfiguration(rendererConfiguration);
   applyTerminalThemeToNativeWindows(
@@ -54,11 +51,9 @@ export function applyActiveUserConfiguration<
 export function terminalRendererConfiguration(
   active: ActiveUserConfiguration,
   nativeTitleInset: 0 | 30,
-  terminalSurface: TerminalSurfaceKind,
 ): TerminalRendererConfiguration {
   const configuration: LoadedUserConfiguration = active.configuration;
   return Object.freeze({
-    terminalSurface,
     ...(configuration.fontFamily
       ? { fontFamily: configuration.fontFamily }
       : {}),

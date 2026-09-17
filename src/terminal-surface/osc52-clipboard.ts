@@ -1,4 +1,4 @@
-export const XTERM_OSC_PAYLOAD_LIMIT = 10_000_000;
+export const OSC_HANDLER_PAYLOAD_LIMIT = 10_000_000;
 
 interface OscParser {
   registerOscHandler(
@@ -26,7 +26,7 @@ export function registerOsc52Clipboard(
 }
 
 export function decodeOsc52Write(data: string): string | undefined {
-  if (data.length > XTERM_OSC_PAYLOAD_LIMIT || !data.startsWith("c;"))
+  if (data.length > OSC_HANDLER_PAYLOAD_LIMIT || !data.startsWith("c;"))
     return undefined;
   const encoded = data.slice(2);
   if (encoded.length === 0 || encoded.length % 4 !== 0 || !isBase64(encoded))

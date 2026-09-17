@@ -1,5 +1,4 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { Terminal } from "@xterm/xterm";
 import type { TerminalBridge } from "../../src/shared/terminal-bridge";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
@@ -10,11 +9,6 @@ import {
   type TrustedWebContents,
 } from "../../src/main/terminal-ipc-controller";
 import { createTerminalWindowTitleController } from "../../src/main/terminal-window-title";
-import { registerTerminalTitleEvents } from "../../src/terminal-surface/terminal-title-events";
-
-function write(terminal: Terminal, data: string): Promise<void> {
-  return new Promise((resolve) => terminal.write(data, resolve));
-}
 
 const electron = vi.hoisted(() => {
   const listeners = new Map<
@@ -251,15 +245,9 @@ describe("isolated preload terminal bridge", () => {
     );
     handlers.get(terminalIpc.start)!(event);
     electron.bridge!.notifyTabSelection("s1");
-    const terminal = new Terminal();
-    const ptyResponses: string[] = [];
-    terminal.onData((data) => ptyResponses.push(data));
-    registerTerminalTitleEvents(terminal, {
-      onTitleRequest: (request) => electron.bridge!.title("s1", request),
-    });
     const canary = `CANARY${"x".repeat(65_537)}`;
 
-    await write(terminal, `\u001b]0;${canary}\u0007`);
+    electron.bridge!.title("s1", canary);
 
     // Window: startup fallback, selection mirror, then the rejected request
     // landing back on the Default Shell fallback — never the canary.
@@ -267,9 +255,7 @@ describe("isolated preload terminal bridge", () => {
     expect(sessionTitles).toEqual(["example-shell", "example-shell"]);
     expect(JSON.stringify(nativeTitles)).not.toContain("CANARY");
     expect(JSON.stringify(sessionTitles)).not.toContain("CANARY");
-    expect(ptyResponses).toEqual([]);
 
-    terminal.dispose();
     routed.dispose();
     router.dispose();
     titleController.dispose();

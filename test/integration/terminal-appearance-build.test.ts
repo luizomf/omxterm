@@ -9,7 +9,6 @@ import { describe, expect, it } from "vitest";
 const execute = promisify(execFile);
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
 const fontDirectory = path.join(projectRoot, "assets", "fonts");
-const outputFontDirectory = path.join(projectRoot, "dist", "renderer", "fonts");
 const applicationIconSource = path.join(
   projectRoot,
   "assets",
@@ -19,106 +18,63 @@ const applicationIconSource = path.join(
 const expectedAssets = {
   "JetBrainsMonoNerdFontMono-Regular.ttf":
     "f01031f40e48dc29e1112e6b0b0450a2c6cd097f3f35cfff05c55cb311f8034c",
-  "JetBrainsMonoNerdFontMono-Regular.woff2":
-    "50680a64466fbcc3eff68e00f84505f55681c86f8450c042416af5a8dbc1cce1",
   "OFL.txt": "30f0c136e3c88e422d0791acd97238870f9054a9729bc34cf2ff0d4ed8cac4ad",
 } as const;
 
 describe("Terminal appearance build", () => {
   it("owns the accepted OMXTerm application icon source byte-for-byte", async () => {
     const source = await readFile(applicationIconSource);
-
     expect(createHash("sha256").update(source).digest("hex")).toBe(
       "3c078dfc92467afa0ebb065aeaeb7c84f4442757d5ca831f028d16c39e9d8905",
     );
   });
 
-  it("ships the accepted regular Nerd Font and OFL without another font weight", async () => {
+  it("bundles only the accepted regular Nerd Font TTF and its OFL", async () => {
     await execute(process.execPath, ["build.mjs"], { cwd: projectRoot });
 
     expect((await readdir(fontDirectory)).sort()).toEqual([
       "JetBrainsMonoNerdFontMono-Regular.ttf",
-      "JetBrainsMonoNerdFontMono-Regular.woff2",
       "OFL.txt",
       "README.md",
     ]);
-
     for (const [fileName, expectedHash] of Object.entries(expectedAssets)) {
       const source = await readFile(path.join(fontDirectory, fileName));
       expect(createHash("sha256").update(source).digest("hex")).toBe(
         expectedHash,
       );
-      if (fileName.endsWith(".ttf")) continue;
-      const output = await readFile(path.join(outputFontDirectory, fileName));
-      expect(createHash("sha256").update(output).digest("hex")).toBe(
-        expectedHash,
-      );
     }
 
-    const css = await readFile(
-      path.join(projectRoot, "dist", "renderer", "index.css"),
+    const builtJavaScript = await readFile(
+      path.join(projectRoot, "dist", "renderer", "index.js"),
       "utf8",
     );
-    expect(css).toContain("JetBrainsMonoNerdFontMono-Regular.woff2");
-    expect(css).toContain("JetBrainsMono Nerd Font Mono");
-    expect(css).toContain("app-region: drag");
-    expect(css).not.toContain("JetBrainsMonoNerdFontMono-Bold");
+    expect(builtJavaScript).toContain("JetBrainsMono Nerd Font Mono");
+    expect(builtJavaScript).toContain("restty");
+    expect(builtJavaScript).not.toContain("@xterm");
   }, 30_000);
 
-  it("places the platform title-area inset on xterm so fitting excludes it from the grid", async () => {
-    const sourceCss = await readFile(
+  it("places title inset and User Configuration padding on the Restty Surface", async () => {
+    const css = await readFile(
       path.join(projectRoot, "src", "renderer", "terminal-window.css"),
       "utf8",
     );
-    const surfaceRule = sourceCss.match(
-      /\.terminal-surface\s*\{(?<body>[^}]*)\}/u,
+    const resttyRule = css.match(
+      /\.restty-terminal-surface\s*\{(?<body>[^}]*)\}/u,
     );
-    const xtermRule = sourceCss.match(
-      /\.terminal-surface \.xterm\s*\{(?<body>[^}]*)\}/u,
-    );
-    expect(surfaceRule?.groups?.body).not.toContain("padding");
-    expect(surfaceRule?.groups?.body).toContain(
-      "background: var(--terminal-background, transparent)",
-    );
-    expect(xtermRule?.groups?.body).toContain("box-sizing: border-box");
-    expect(xtermRule?.groups?.body).toContain("width: 100%");
-    expect(xtermRule?.groups?.body).toContain("height: 100%");
-    expect(xtermRule?.groups?.body).toContain(
+    expect(resttyRule?.groups?.body).toContain("display: flex");
+    expect(resttyRule?.groups?.body).toContain(
       "var(--native-title-inset) + var(--terminal-padding-top, 0px)",
     );
-    expect(xtermRule?.groups?.body).toContain(
+    expect(resttyRule?.groups?.body).toContain(
       "var(--terminal-padding-right, 8px)",
     );
-    expect(xtermRule?.groups?.body).toContain(
+    expect(resttyRule?.groups?.body).toContain(
       "var(--terminal-padding-bottom, 8px)",
     );
-    expect(xtermRule?.groups?.body).toContain(
+    expect(resttyRule?.groups?.body).toContain(
       "var(--terminal-padding-left, 8px)",
     );
-  });
-
-  it("ships the theme viewport override after xterm's black default", async () => {
-    const sourceCss = await readFile(
-      path.join(projectRoot, "src", "renderer", "terminal-window.css"),
-      "utf8",
-    );
-    const viewportRule = sourceCss.match(
-      /\.terminal-surface \.xterm \.xterm-viewport\s*\{(?<body>[^}]*)\}/u,
-    );
-
-    expect(viewportRule?.groups?.body).toContain(
-      "background-color: var(--terminal-background, transparent)",
-    );
-    await execute(process.execPath, ["build.mjs"], { cwd: projectRoot });
-    const builtCss = await readFile(
-      path.join(projectRoot, "dist", "renderer", "index.css"),
-      "utf8",
-    );
-    expect(
-      builtCss.lastIndexOf(".terminal-surface .xterm .xterm-viewport"),
-    ).toBeGreaterThan(
-      builtCss.indexOf(".xterm:not(.allow-transparency) .xterm-viewport"),
-    );
+    expect(css).not.toContain(".xterm");
   });
 
   it("reserves only the visible title area for native window dragging", async () => {
@@ -130,8 +86,8 @@ describe("Terminal appearance build", () => {
     const titleAreaRule = css.match(
       /\.terminal-surface::before\s*\{(?<body>[^}]*)\}/u,
     );
-    const xtermRule = css.match(
-      /\.terminal-surface \.xterm\s*\{(?<body>[^}]*)\}/u,
+    const resttyRule = css.match(
+      /\.restty-terminal-surface\s*\{(?<body>[^}]*)\}/u,
     );
 
     expect(titleAreaRule?.groups?.body).toContain('content: ""');
@@ -141,6 +97,6 @@ describe("Terminal appearance build", () => {
     );
     expect(titleAreaRule?.groups?.body).toContain("app-region: drag");
     expect(surfaceRule?.groups?.body).not.toContain("app-region");
-    expect(xtermRule?.groups?.body).not.toContain("app-region");
+    expect(resttyRule?.groups?.body).not.toContain("app-region");
   });
 });

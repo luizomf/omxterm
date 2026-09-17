@@ -20,7 +20,6 @@ import {
 } from "./application-menu";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { createDefaultShellResolver, defaultShellName } from "./default-shell";
-import { selectDevelopmentTerminalSurface } from "./development-terminal-surface";
 import {
   MalformedLaunchRequestError,
   startupLaunchRequest,
@@ -122,7 +121,7 @@ app.on("before-quit", (event) => {
 app
   .whenReady()
   .then(async () => {
-    const { account, consumeLaunchRequest, terminalSurface } = prepareStartup();
+    const { account, consumeLaunchRequest } = prepareStartup();
     operationalEvents = createOperationalEventLog({
       environment: process.env,
       homeDirectory: account.homedir,
@@ -160,7 +159,7 @@ app
             userFileErrors: startupNotices,
           },
           load: () => loadUserConfiguration(configurationLoadOptions),
-          ...resttyBaseline(terminalSurface, userConfiguration),
+          ...resttyBaseline(userConfiguration),
           activeResttySurfaceFontConfigurations: () =>
             terminalIpcRouter.activeResttySurfaceFontConfigurations(),
           operationalEvents: operationalEvents!,
@@ -176,7 +175,6 @@ app
                 rebuildMenu,
                 nativeTitleInset: terminalNativeTitleInset(process.platform),
                 platform: process.platform,
-                terminalSurface,
               },
             ),
         });
@@ -184,7 +182,6 @@ app
           terminalRendererConfiguration(
             configurationReloader.current(),
             terminalNativeTitleInset(process.platform),
-            terminalSurface,
           );
         const resolveCurrentDefaultShell = createDefaultShellResolver(
           account.shell,
@@ -493,15 +490,10 @@ app
 
 function prepareStartup() {
   const launch = startupLaunchRequest(process.argv, app.isPackaged);
-  const terminalSurface = selectDevelopmentTerminalSurface(
-    process.env,
-    app.isPackaged,
-  );
   if (!app.isPackaged) app.dock?.setIcon(developmentApplicationIconPath);
   return {
     account: userInfo(),
     consumeLaunchRequest: launch,
-    terminalSurface,
   };
 }
 

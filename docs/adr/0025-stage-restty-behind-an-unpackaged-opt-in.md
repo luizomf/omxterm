@@ -1,15 +1,14 @@
-# Stage Restty behind an unpackaged development opt-in
+# Use Restty as the sole Terminal Surface
 
-Amends [ADR 0008](0008-make-the-terminal-surface-the-portable-module.md) during
-the bounded migration tracked by issue 252. The portable Terminal Surface seam
-remains authoritative; this decision does not introduce a renderer registry or
-promise two permanent engines.
+Amends [ADR 0008](0008-make-the-terminal-surface-the-portable-module.md) and
+records the completed bounded migration tracked by issue 252. The portable
+Terminal Surface seam remains authoritative; this decision does not introduce a
+renderer registry or promise two permanent engines.
 
-OMXTerm will integrate pinned Restty 0.3.0 incrementally behind the validated
-unpackaged `OMXTERM_TERMINAL_SURFACE=restty` launch selection. xterm remains the
-normal development and packaged default. Packaged processes refuse the Restty
-selection, invalid values fail startup, and candidate failure never falls back
-automatically to xterm.
+OMXTerm uses pinned Restty 0.3.0 in ordinary development and every packaged
+application. The temporary `OMXTERM_TERMINAL_SURFACE` selector and xterm runtime
+were removed at final cutover. Restty initialization failure never starts an
+invisible shell or falls back to another renderer.
 
 The first slice reuses the existing Electron host, typed configuration bridge,
 Terminal Tabs, session Adapter and owned local PTYs. Each Restty Surface uses one
@@ -61,7 +60,7 @@ after disposal without rollback. OSC 52 passes the parsed handler payload to the
 shared canonical UTF-8 Base64 validator and its dependency-equivalent
 10,000,000-code-unit bound; reads, clears, malformed, cancelled and over-bound
 requests have no host or PTY side effect. Candidate External Links use the
-existing exact-URL host route and lowercase xterm-provider expression over
+existing exact-URL host route and retained lowercase provider expression over
 visible cell snapshots joined only by Ghostty selection-text proof of a soft
 wrap. Cell text is copied before selection queries can allocate WASM memory.
 Modified primary click overrides application mouse reporting only for a stable
@@ -118,11 +117,9 @@ A short numeric OSC command prefix is outside the handler body count, preserving
 the established largest valid OSC 52 request. Plain text and complete input,
 copy and paste remain unlimited by this scanner rule.
 
-These scanner gates apply only to Restty. xterm's existing parser behavior and
-security boundaries remain unchanged. The ordered shared transport preserves
-xterm's existing observable behavior. Renderer isolation, the production CSP,
-application network boundary and platform sandbox policy
-also remain unchanged.
+These scanner gates apply to the sole Restty Surface. Renderer isolation, the
+production CSP, application network boundary and platform sandbox policy remain
+unchanged.
 
 The temporary checksum-guarded dependency correction also removes Restty's
 10–64 live font-size clamp and carries an independent creation-time line-height
@@ -144,11 +141,9 @@ reflow, alternate-screen, selection and viewport state. Invalid values remain
 outside this seam because complete User Configuration validation precedes
 application.
 
-The cost is an intentionally incomplete development candidate and a temporary
-pinned dependency correction. This is preferable to unsafe passthrough, invisible
-shells, accidental packaged activation or speculative engine abstraction.
-Linux and Windows candidate behavior is unverified in this slice; macOS ARM64
-owns its native PTY evidence. Queue pending bytes, JavaScript heap and process
+The cost is a pinned dependency correction and WebGL2 requirement. This is
+preferable to unsafe passthrough, invisible shells, a permanent fallback or a
+speculative engine abstraction. Queue pending bytes, JavaScript heap and process
 RSS are reported separately; core, browser/WebGL and GPU allocations remain
-separate costs and no total application-memory bound is claimed. Final default
-replacement remains a later decision.
+separate costs and no total application-memory bound is claimed. Native ARM64
+package checks on macOS, Linux and Windows own final qualification.

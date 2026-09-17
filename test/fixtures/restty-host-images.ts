@@ -53,7 +53,7 @@ export async function exerciseResttyImagesThroughPty(options: {
     window,
     runEmitter: () =>
       terminal.write(
-        `${shellQuote(process.execPath)} ${shellQuote(`${root}/image-emitter.cjs`)} ${shellQuote(`${root}/pi-2000.png`)}\r`,
+        `${process.platform === "win32" ? "& " : ""}${shellQuote(process.execPath)} ${shellQuote(`${root}/image-emitter.cjs`)} ${shellQuote(`${root}/pi-2000.png`)}\r`,
       ),
     output: () => outputs[0]!.join(""),
     input: () => inputs[0]!.join(""),
@@ -67,7 +67,9 @@ export async function exerciseResttyImagesThroughPty(options: {
 }
 
 function shellQuote(value: string): string {
-  return `'${value.replaceAll("'", `'\\''`)}'`;
+  return process.platform === "win32"
+    ? `'${value.replaceAll("'", "''")}'`
+    : `'${value.replaceAll("'", `'\\''`)}'`;
 }
 
 interface PixelEvidence {

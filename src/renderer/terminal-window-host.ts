@@ -166,7 +166,7 @@ export function mountTerminalWindowPage(
     if (!isInternalTabDrag(event)) event.stopPropagation();
   };
   const onDrop = (event: DragEvent) => {
-    // Capture before xterm or another target can interpret a native file URI.
+    // Capture before the Terminal Surface or another target can interpret a native file URI.
     event.preventDefault();
     if (isInternalTabDrag(event)) return;
     event.stopPropagation();
