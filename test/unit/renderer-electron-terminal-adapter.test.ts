@@ -122,6 +122,27 @@ describe("renderer Electron terminal adapter", () => {
     expect(harness.calls.resize).not.toHaveBeenCalled();
   });
 
+  it("preserves a crossing native read buffered before the session id is known", async () => {
+    const harness = createBridgeHarness();
+    const adapter = createElectronTerminalAdapter(harness.bridge);
+    const onOutput = vi.fn();
+    const chunk = "x".repeat(64 * 1024);
+
+    const started = adapter.start({ onOutput, onExit: vi.fn() });
+    harness.output("s1", chunk, chunk.length);
+    harness.output("s1", chunk, chunk.length * 2);
+    harness.output("s1", chunk, chunk.length * 3);
+    harness.startSession("s1");
+    await started;
+
+    expect(onOutput).toHaveBeenCalledTimes(3);
+    expect(harness.calls.acknowledgeOutput.mock.calls).toEqual([
+      ["s1", chunk.length],
+      ["s1", chunk.length * 2],
+      ["s1", chunk.length * 3],
+    ]);
+  });
+
   it("closes its session exactly once even when close races the start round-trip", async () => {
     const harness = createBridgeHarness();
     const adapter = createElectronTerminalAdapter(harness.bridge);

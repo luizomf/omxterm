@@ -2,7 +2,6 @@ import type { TerminalBridge } from "../shared/terminal-bridge";
 import {
   isBoundedTerminalPayload,
   isTerminalSize,
-  MAX_TERMINAL_PAYLOAD_BYTES,
   type TerminalSessionId,
   type TerminalSize,
 } from "../shared/terminal-contract";
@@ -10,8 +9,6 @@ import type {
   TerminalSessionAdapter,
   TerminalSessionHandlers,
 } from "../terminal-surface/terminal-session-adapter";
-
-const encoder = new TextEncoder();
 
 // The Terminal Surface only sees the portable TerminalSessionAdapter; the
 // session id is exposed for the tab layer that owns this adapter.
@@ -27,7 +24,6 @@ export function createElectronTerminalAdapter(
   let sessionId: TerminalSessionId | undefined;
   let removeOutputListener: (() => void) | undefined;
   let removeExitListener: (() => void) | undefined;
-  const pendingOutputBytes = new Map<TerminalSessionId, number>();
   let pendingEvents: Array<
     | {
         readonly type: "output";
@@ -65,14 +61,10 @@ export function createElectronTerminalAdapter(
       };
       removeOutputListener = bridge.onOutput((source, data, end) => {
         if (sessionId === undefined) {
-          const pending = pendingOutputBytes.get(source) ?? 0;
-          const next = pending + encoder.encode(data).byteLength;
-          // The not-yet-known owning session is main-side flow controlled;
-          // cap unrelated sessions observed during the start round-trip too.
-          if (next <= 2 * MAX_TERMINAL_PAYLOAD_BYTES) {
-            pendingOutputBytes.set(source, next);
-            pendingEvents.push({ type: "output", source, data, end });
-          }
+          // The start response identifies the owner. Preserve every candidate
+          // event until then: main already flow-controls each owned session,
+          // and dropping a crossing native read here could strand it paused.
+          pendingEvents.push({ type: "output", source, data, end });
           return;
         }
         deliverOutput(source, data, end);
@@ -92,7 +84,6 @@ export function createElectronTerminalAdapter(
         else deliverExit(event.source, event.exit);
       }
       pendingEvents = [];
-      pendingOutputBytes.clear();
       // The adapter owns exactly one Live Terminal Session: a close requested
       // while the start round-trip was in flight still terminates it.
       if (closed) bridge.close(startedSessionId);
@@ -111,7 +102,6 @@ export function createElectronTerminalAdapter(
       removeOutputListener?.();
       removeExitListener?.();
       pendingEvents = [];
-      pendingOutputBytes.clear();
       if (sessionId !== undefined) bridge.close(sessionId);
     },
   };

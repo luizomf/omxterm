@@ -73,7 +73,10 @@ describe("Restty parsed OSC 52 seam", () => {
 
   it("rejects an unfinished oversized OSC as a whole and recovers at every split terminator and cancellation", () => {
     for (const terminator of ["\u0007", "\u0018", "\u001a", "\u001b\\"]) {
-      for (const split of [0, terminator.length]) {
+      for (const split of Array.from(
+        { length: terminator.length + 1 },
+        (_, index) => index,
+      )) {
         const sink = createSink();
         const prefix = `\u001b]52;c;${"A".repeat(CONTROL_BODY_LIMIT + 1)}`;
         expect(sink.handler.filterOutput(prefix)).toBe("");
@@ -111,6 +114,19 @@ describe("Restty parsed OSC 52 seam", () => {
       expect(sink.writes).toEqual([]);
       expect(sink.replies).toEqual([]);
     }
+  });
+
+  it("accepts an exact-budget OSC when its string terminator is split", () => {
+    const onOsc = vi.fn();
+    const handler = createInputHandler({
+      onOsc,
+    } as Parameters<typeof createInputHandler>[0] & ResttyOscInputOptions);
+    const payload = "A".repeat(CONTROL_BODY_LIMIT);
+
+    expect(handler.filterOutput(`\u001b]52;${payload}\u001b`)).toBe("");
+    expect(onOsc).not.toHaveBeenCalled();
+    expect(handler.filterOutput("\\later")).toBe("later");
+    expect(onOsc).toHaveBeenCalledExactlyOnceWith(52, payload);
   });
 
   it("accepts the exact inside payload and rejects the next canonical request", () => {

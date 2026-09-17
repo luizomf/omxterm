@@ -53,8 +53,10 @@ const priorParsedEventsDigest =
   "ed0282ed0062fc23a8ac90d2173633129cdd88d706adabb5f0e06bf3ff73aa11";
 const priorOutputSafetyDigest =
   "15ca6dc64c45c1f42a88337aec58367a5e69fc0889dfa92c305aa333cba2a651";
-const correctedDigest =
+const splitTerminatorOutputSafetyDigest =
   "cfe2c967cc201689f4e1ca2a9231e9652ff5fce47d7671ab73dba78b2b5fa7ea";
+const correctedDigest =
+  "ac05624abac2fddea9a38f3e29d26ebbde3f41484b86c0082ce5e3d5cb334e1f";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 
 const securityCorrections = [
@@ -749,6 +751,10 @@ class OutputFilter {
             break;
           }
           if (j - bodyStart >= MAX_RETAINED_CONTROL_CODE_UNITS) {
+            if (code === 27 && j + 1 >= data.length) {
+              j += 1;
+              continue;
+            }
             this.discardedControl = "osc";
             this.discardedOscEscape = false;
             break;
@@ -806,6 +812,27 @@ class OutputFilter {
         continue;
       }
       const seq = data.slice(i, j + 1);`,
+  },
+];
+
+const splitTerminatorOutputSafetyCorrections = [
+  {
+    original: `          if (j - bodyStart >= MAX_RETAINED_CONTROL_CODE_UNITS) {
+            this.discardedControl = "osc";
+            this.discardedOscEscape = false;
+            break;
+          }
+          j += 1;`,
+    corrected: `          if (j - bodyStart >= MAX_RETAINED_CONTROL_CODE_UNITS) {
+            if (code === 27 && j + 1 >= data.length) {
+              j += 1;
+              continue;
+            }
+            this.discardedControl = "osc";
+            this.discardedOscEscape = false;
+            break;
+          }
+          j += 1;`,
   },
 ];
 
@@ -1017,7 +1044,9 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorOutputSafetyDigest) {
+    if (sourceDigest === splitTerminatorOutputSafetyDigest) {
+      source = applyCorrections(source, splitTerminatorOutputSafetyCorrections);
+    } else if (sourceDigest === priorOutputSafetyDigest) {
       source = applyCorrections(source, outputSafetyCorrections);
     } else if (sourceDigest === priorParsedEventsDigest) {
       source = applyCorrections(source, parsedEventRuntimeCorrections);
