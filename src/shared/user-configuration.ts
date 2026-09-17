@@ -1,5 +1,6 @@
 import { isTerminalTheme, type TerminalTheme } from "./terminal-theme";
 import type { TerminalKeybinds } from "./terminal-keybinds";
+import type { TerminalSurfaceKind } from "./terminal-surface-kind";
 
 export const MIN_TERMINAL_FONT_SIZE = 8;
 export const MAX_TERMINAL_FONT_SIZE = 72;
@@ -36,6 +37,7 @@ export interface TerminalPadding {
 }
 
 export interface TerminalRendererConfiguration {
+  readonly terminalSurface?: TerminalSurfaceKind;
   readonly fontFamily?: string;
   readonly fontSize: number;
   readonly fontLineHeight: number;
@@ -71,6 +73,7 @@ export function isTerminalRendererConfiguration(
   return (
     keys.every((key) =>
       [
+        "terminalSurface",
         "fontFamily",
         "fontSize",
         "fontLineHeight",
@@ -82,6 +85,9 @@ export function isTerminalRendererConfiguration(
         "userFileErrors",
       ].includes(key),
     ) &&
+    (value.terminalSurface === undefined ||
+      value.terminalSurface === "xterm" ||
+      value.terminalSurface === "restty") &&
     (value.fontFamily === undefined || typeof value.fontFamily === "string") &&
     Number.isInteger(value.fontSize) &&
     (value.fontSize as number) >= MIN_TERMINAL_FONT_SIZE &&

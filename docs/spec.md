@@ -60,6 +60,12 @@ AI assistance, splits, saved or reconnectable sessions, shell integration,
 profiles, a theme picker or catalog, automatic configuration reload, automatic
 updates, and remote terminal features are outside the current product contract.
 
+Unpackaged development launches may explicitly select a temporary Restty 0.3.0
+Terminal Surface with `OMXTERM_TERMINAL_SURFACE=restty`. xterm remains the normal
+development and every packaged default. The selector accepts only `xterm` or
+`restty`; invalid values and packaged Restty selection are startup failures, and
+candidate failure never falls back automatically to xterm (ADR 0025).
+
 ## Window and session behavior
 
 - Launching OMXTerm creates a Terminal Window with one Terminal Tab. New Window
@@ -188,6 +194,19 @@ OMXTerm does not preserve a session after its tab or window closes. tmux
 remains the user's session manager.
 
 ## Terminal behavior
+
+The development-only Restty candidate uses the existing Terminal Tabs, session
+Adapter and real PTY lifecycle for ordinary Unicode input/output, grid resize,
+focus, Default Shell and explicit-command startup, shell exit, tab close and
+renderer-loss cleanup. It requires the bundled JetBrainsMono Nerd Font Mono TTF,
+Ghostty core and an actual WebGL2 backend before a PTY starts. Initialization
+failure releases partial resources and starts no shell. WebGL context loss shows
+a persistent failure and disposes only the owning Surface/session without core
+recreation. Restty copy, paste, Protected Paste, snippets/path injection, OSC 52,
+links, title, bell, theme, configured font, spacing, scrollback, Option Key Mode,
+font zoom and image/configuration routes are unavailable in this slice; xterm
+retains the complete contract below. Linux and Windows Restty behavior is
+unverified; this slice's native runtime evidence is macOS ARM64.
 
 OMXTerm advertises `TERM=xterm-256color`, `COLORTERM=truecolor`,
 `TERM_PROGRAM=OMXTerm`, and its installed version in `TERM_PROGRAM_VERSION`.
@@ -512,9 +531,11 @@ validates every IPC message and sender. Chromium sandboxing remains enabled on
 macOS and Windows and is disabled on Linux. The retained isolation and bridge
 controls do not provide equivalent protection to the Chromium sandbox.
 
-The framework-independent DOM+xterm Terminal Surface is the portable deep
-Module. Its small Interface hides xterm setup, addons, text and Kitty image
-rendering, input, resize, theme, fonts, clipboard, zoom, and cleanup. It receives a session Adapter rather
+The framework-independent DOM Terminal Surface is the portable deep Module.
+Its small Interface normally hides xterm setup, addons, text and Kitty image
+rendering, input, resize, theme, fonts, clipboard, zoom, and cleanup. During the
+bounded migration, the same mount seam may select the development-only Restty
+candidate; this is not a renderer registry or a packaged user setting. It receives a session Adapter rather
 than importing Electron or `node-pty`; OMXTerm provides the local IPC/PTY
 Adapter, while another host could independently provide WebSocket transport.
 

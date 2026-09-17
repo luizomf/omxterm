@@ -194,6 +194,14 @@ export function createTerminalTabs(
     // the id is always known by the time they fire.
     const tabSurfaceOptions: TerminalSurfaceOptions = {
       ...activeSurfaceOptions,
+      ...(activeSurfaceOptions.onFatalError
+        ? {
+            onFatalError: (message: string) => {
+              activeSurfaceOptions.onFatalError?.(message);
+              closeTab(tab);
+            },
+          }
+        : {}),
       ...(options.notifyTitle
         ? {
             onTitleRequest: (request: string) => {

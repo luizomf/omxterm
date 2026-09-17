@@ -502,6 +502,24 @@ describe("renderer Terminal Tabs", () => {
   });
 });
 
+describe("renderer Terminal Tabs fatal Surface isolation", () => {
+  it("removes only the Surface that reports a rendering failure", async () => {
+    const onFatalError = vi.fn();
+    const harness = createTabsHarness({ surfaceOptions: { onFatalError } });
+    await harness.tabs.ready;
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+
+    harness.mountedSurfaceOptions[1]!.onFatalError?.("backend lost");
+
+    expect(onFatalError).toHaveBeenCalledExactlyOnceWith("backend lost");
+    expect(harness.surfaces[1]!.dispose).toHaveBeenCalledOnce();
+    expect(harness.adapters[1]!.close).not.toHaveBeenCalled();
+    expect(harness.surfaces[0]!.dispose).not.toHaveBeenCalled();
+    expect(harness.container.children).toHaveLength(1);
+  });
+});
+
 describe("renderer Terminal Tabs runtime configuration", () => {
   it("reconciles an update received while a Surface mount is pending", async () => {
     const { DEFAULT_TERMINAL_THEME } =

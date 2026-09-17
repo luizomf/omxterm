@@ -54,7 +54,12 @@ it("commits applicable application state and current visual state without touchi
     { applyConfiguration: applyRendererConfiguration },
     [window],
     { applyConfiguration } as unknown as TerminalApplication<typeof window>,
-    { rebuildMenu, nativeTitleInset: 30, platform: "darwin" },
+    {
+      rebuildMenu,
+      nativeTitleInset: 30,
+      platform: "darwin",
+      terminalSurface: "restty",
+    },
   );
 
   expect(applyRendererConfiguration).toHaveBeenCalledWith(
@@ -86,15 +91,21 @@ it("keeps the complete last-valid renderer snapshot on rejection", () => {
     { applyConfiguration: applyRendererConfiguration },
     [],
     { applyConfiguration } as unknown as TerminalApplication,
-    { rebuildMenu, nativeTitleInset: 30, platform: "darwin" },
+    {
+      rebuildMenu,
+      nativeTitleInset: 30,
+      platform: "darwin",
+      terminalSurface: "restty",
+    },
   );
-  const renderer = terminalRendererConfiguration(state, 30);
+  const renderer = terminalRendererConfiguration(state, 30, "restty");
 
   expect(applyRendererConfiguration).toHaveBeenCalledOnce();
   expect(applyConfiguration).not.toHaveBeenCalled();
   expect(rebuildMenu).not.toHaveBeenCalled();
   expect(renderer).toMatchObject({
     fontSize: 40,
+    terminalSurface: "restty",
     scrollbackLines: 10_000,
     optionKeyMode: "none",
     nativeTitleInset: 30,

@@ -41,6 +41,12 @@ extraResources:
     to: licenses/xterm-addon-unicode-graphemes.txt
   - from: node_modules/node-pty/LICENSE
     to: licenses/node-pty.txt
+  - from: assets/licenses/restty-MIT.txt
+    to: licenses/restty.txt
+  - from: assets/licenses/text-shaper-MIT.txt
+    to: licenses/text-shaper.txt
+  - from: assets/licenses/ghostty-MIT.txt
+    to: licenses/ghostty.txt
   - from: node_modules/electron/dist/LICENSE
     to: LICENSE.electron.txt
   - from: node_modules/electron/dist/LICENSES.chromium.html

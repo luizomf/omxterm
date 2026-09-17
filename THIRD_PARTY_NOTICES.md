@@ -20,6 +20,9 @@ identified below.
 | `@xterm/addon-web-links`                    | MIT                       | `licenses/xterm-addon-web-links.txt`         |
 | `@xterm/addon-unicode-graphemes`            | MIT                       | `licenses/xterm-addon-unicode-graphemes.txt` |
 | `node-pty`                                  | MIT                       | `licenses/node-pty.txt`                      |
+| Restty 0.3.0                                | MIT                       | `licenses/restty.txt`                        |
+| `text-shaper` 0.1.28                        | MIT                       | `licenses/text-shaper.txt`                   |
+| Ghostty/libghostty-vt (`0309af1`)           | MIT                       | `licenses/ghostty.txt`                       |
 | JetBrainsMono Nerd Font Mono                | SIL Open Font License 1.1 | `licenses/JetBrainsMono-OFL.txt`             |
 
 The repository also preserves the bundled font's source, version, checksums,

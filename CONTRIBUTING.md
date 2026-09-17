@@ -96,6 +96,16 @@ npm ci
 npm run check:portable
 ```
 
+The temporary Restty migration candidate is an unpackaged, explicit opt-in:
+
+```sh
+OMXTERM_TERMINAL_SURFACE=restty npm run dev
+```
+
+xterm remains the default. See the [Restty development candidate guide](docs/restty-development.md)
+for pinned-source restoration, failure behavior and intentionally unavailable
+features. Do not use this selector to characterize packaged behavior.
+
 This command runs formatting checks, type-aware lint with zero accepted warnings,
 strict typechecking, the complete automated test suite, and the unpackaged
 build. Native packaging and operating-system behavior evidence are

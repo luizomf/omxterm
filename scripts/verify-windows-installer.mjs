@@ -27,7 +27,7 @@ export function inspectWindowsInstallerInputs(
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest !==
-      "c811379191ff1f1992060d522bbcdbc80af761f98d0440d3453bc0a5b7895991"
+      "e8603752a7025630611b3e1f6a106e1cebcbe0b71305b0cacec0ecee9599182e"
   )
     throw new Error(
       "Unknown Windows installer footprint; review the pinned packaging inputs before exact installer verification",

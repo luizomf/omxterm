@@ -26,6 +26,8 @@ contract below is authoritative.
 - [Security policy](../SECURITY.md) defines supported reports, the private
   reporting route, required safe details, excluded sensitive data, and
   disclosure coordination.
+- [Restty development candidate](restty-development.md) documents the temporary
+  unpackaged opt-in, pinned inputs, restoration and current limitations.
 
 ## Normative contracts and language
 

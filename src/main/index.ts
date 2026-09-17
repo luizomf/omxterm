@@ -20,6 +20,7 @@ import {
 } from "./application-menu";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { createDefaultShellResolver, defaultShellName } from "./default-shell";
+import { selectDevelopmentTerminalSurface } from "./development-terminal-surface";
 import {
   MalformedLaunchRequestError,
   startupLaunchRequest,
@@ -96,6 +97,15 @@ const linuxWindowIconPath =
 let terminalApplication: TerminalApplication<BrowserWindow> | undefined;
 let operationalEvents: OperationalEventLog | undefined;
 
+function createConfigurationLoadOptions(homeDirectory: string) {
+  return {
+    environment: process.env,
+    homeDirectory,
+    platform: process.platform,
+    getInstalledFontFamilyMetrics: installedFontFamilyMetrics,
+  };
+}
+
 applyChromiumSandboxPolicy(app.commandLine);
 
 applyLinuxDisplayBackendDefault(app);
@@ -110,17 +120,14 @@ app.on("before-quit", (event) => {
 app
   .whenReady()
   .then(async () => {
-    const { account, consumeLaunchRequest } = prepareStartup();
+    const { account, consumeLaunchRequest, terminalSurface } = prepareStartup();
     operationalEvents = createOperationalEventLog({
       environment: process.env,
       homeDirectory: account.homedir,
     });
-    const configurationLoadOptions = {
-      environment: process.env,
-      homeDirectory: account.homedir,
-      platform: process.platform,
-      getInstalledFontFamilyMetrics: installedFontFamilyMetrics,
-    };
+    const configurationLoadOptions = createConfigurationLoadOptions(
+      account.homedir,
+    );
     return startWithUserConfiguration(
       configurationLoadOptions,
       async ({ configuration: userConfiguration, fallback, warnings }) => {
@@ -167,6 +174,7 @@ app
                 rebuildMenu,
                 nativeTitleInset: terminalNativeTitleInset(process.platform),
                 platform: process.platform,
+                terminalSurface,
               },
             ),
         });
@@ -174,6 +182,7 @@ app
           terminalRendererConfiguration(
             configurationReloader.current(),
             terminalNativeTitleInset(process.platform),
+            terminalSurface,
           );
         const resolveCurrentDefaultShell = createDefaultShellResolver(
           account.shell,
@@ -481,8 +490,16 @@ app
 
 function prepareStartup() {
   const launch = startupLaunchRequest(process.argv, app.isPackaged);
+  const terminalSurface = selectDevelopmentTerminalSurface(
+    process.env,
+    app.isPackaged,
+  );
   if (!app.isPackaged) app.dock?.setIcon(developmentApplicationIconPath);
-  return { account: userInfo(), consumeLaunchRequest: launch };
+  return {
+    account: userInfo(),
+    consumeLaunchRequest: launch,
+    terminalSurface,
+  };
 }
 
 function startupUserFileNotices(

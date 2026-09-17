@@ -78,6 +78,55 @@ describe.skipIf(!supportedEnvironment)("real local PTY", () => {
       terminalPayload = "";
     }
   }, 15_000);
+
+  it.skipIf(process.platform !== "darwin")(
+    "owns a disposable macOS PTY through startup, resize, and clean exit",
+    async () => {
+      const account = userInfo();
+      if (!account.shell)
+        throw new Error("The operating system did not provide a Default Shell");
+      const defaultShell = account.shell;
+      let terminalPayload = "";
+      let exitEvent: { exitCode: number; signal: number } | undefined;
+      let session: ReturnType<typeof createLocalTerminalSession> | undefined;
+      const completed = new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(
+          () => reject(new Error("Owned macOS PTY check timed out")),
+          10_000,
+        );
+        session = createLocalTerminalSession(nodePty.spawn, {
+          shell: defaultShell,
+          platform: process.platform,
+          homeDirectory: account.homedir,
+          applicationVersionProvider: { getVersion: () => "pty-test" },
+          environment: process.env,
+          onOutput(data) {
+            terminalPayload = (terminalPayload + data).slice(-16_384);
+          },
+          onExit(exit) {
+            clearTimeout(timer);
+            exitEvent = exit;
+            resolve();
+          },
+        });
+        session.resize({ cols: 101, rows: 37 });
+        session.write(
+          "printf '__OMXTERM_SIZE__'; stty size; printf '__OMXTERM_EXIT__\\n'; exit 0\r",
+        );
+      });
+
+      try {
+        await completed;
+        expect(terminalPayload).toMatch(/__OMXTERM_SIZE__37 101/u);
+        expect(terminalPayload).toContain("__OMXTERM_EXIT__");
+        expect(exitEvent).toEqual({ exitCode: 0, signal: 0 });
+      } finally {
+        session?.close();
+        terminalPayload = "";
+      }
+    },
+    15_000,
+  );
 });
 
 // ConPTY renders into an 80-column screen buffer and repaints with cursor

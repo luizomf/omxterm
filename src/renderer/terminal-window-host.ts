@@ -45,6 +45,7 @@ interface TerminalWindowPageOptions {
     "addEventListener" | "removeEventListener" | "document"
   >;
   readonly mount?: MountTerminalSurface;
+  readonly onSurfaceFailure?: (message: string) => void;
   readonly subscribeToFontZoom?: (
     listener: (command: TerminalFontZoom) => void,
   ) => () => void;
@@ -130,6 +131,9 @@ export function mountTerminalWindowPage(
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.onExternalLink
       ? { onExternalLink: options.onExternalLink }
+      : {}),
+    ...(options.onSurfaceFailure
+      ? { onFatalError: options.onSurfaceFailure }
       : {}),
   };
 

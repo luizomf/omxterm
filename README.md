@@ -159,7 +159,9 @@ Terminal Sessions; closing one terminates its session.
 - Browse user, contributor, contract, decision, and release documents in the
   [documentation map](docs/README.md).
 - To build or contribute, use the single authoritative
-  [contribution and development guide](CONTRIBUTING.md).
+  [contribution and development guide](CONTRIBUTING.md). The temporary
+  unpackaged [Restty development candidate](docs/restty-development.md) is an
+  explicit opt-in; released packages continue to use xterm.
 
 ## Scope, security, and privacy
 

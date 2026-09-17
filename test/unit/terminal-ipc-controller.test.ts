@@ -36,6 +36,7 @@ function createIpcHarness() {
 function clipboardOptions() {
   return {
     configuration: {
+      terminalSurface: "xterm" as const,
       fontSize: 16,
       fontLineHeight: 1,
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
@@ -244,6 +245,7 @@ describe("terminal IPC controller", () => {
       send: vi.fn(),
     };
     const configuration = Object.freeze({
+      terminalSurface: "xterm" as const,
       fontSize: 18,
       fontLineHeight: 1.15,
       terminalPadding: Object.freeze({

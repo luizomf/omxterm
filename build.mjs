@@ -38,6 +38,7 @@ await Promise.all([
     bundle: true,
     format: "iife",
     platform: "browser",
+    loader: { ".ttf": "binary" },
     external: ["./fonts/JetBrainsMonoNerdFontMono-Regular.woff2"],
     outfile: "dist/renderer/index.js",
     sourcemap: true,

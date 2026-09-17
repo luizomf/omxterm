@@ -17,6 +17,8 @@ const applicationIconSource = path.join(
 );
 
 const expectedAssets = {
+  "JetBrainsMonoNerdFontMono-Regular.ttf":
+    "f01031f40e48dc29e1112e6b0b0450a2c6cd097f3f35cfff05c55cb311f8034c",
   "JetBrainsMonoNerdFontMono-Regular.woff2":
     "50680a64466fbcc3eff68e00f84505f55681c86f8450c042416af5a8dbc1cce1",
   "OFL.txt": "30f0c136e3c88e422d0791acd97238870f9054a9729bc34cf2ff0d4ed8cac4ad",
@@ -35,6 +37,7 @@ describe("Terminal appearance build", () => {
     await execute(process.execPath, ["build.mjs"], { cwd: projectRoot });
 
     expect((await readdir(fontDirectory)).sort()).toEqual([
+      "JetBrainsMonoNerdFontMono-Regular.ttf",
       "JetBrainsMonoNerdFontMono-Regular.woff2",
       "OFL.txt",
       "README.md",
@@ -42,10 +45,11 @@ describe("Terminal appearance build", () => {
 
     for (const [fileName, expectedHash] of Object.entries(expectedAssets)) {
       const source = await readFile(path.join(fontDirectory, fileName));
-      const output = await readFile(path.join(outputFontDirectory, fileName));
       expect(createHash("sha256").update(source).digest("hex")).toBe(
         expectedHash,
       );
+      if (fileName.endsWith(".ttf")) continue;
+      const output = await readFile(path.join(outputFontDirectory, fileName));
       expect(createHash("sha256").update(output).digest("hex")).toBe(
         expectedHash,
       );

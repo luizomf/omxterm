@@ -108,6 +108,7 @@ export interface TerminalSurfaceOptions {
   readonly onTitleRequest?: (request: string) => void;
   readonly onBell?: () => void;
   readonly onExternalLink?: (url: string) => void;
+  readonly onFatalError?: (message: string) => void;
 }
 
 export async function mountTerminalSurface(

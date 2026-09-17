@@ -3,6 +3,7 @@ import "./terminal-window.css";
 import { createElectronTerminalAdapter } from "./electron-terminal-adapter";
 import { mountTerminalWindowPage } from "./terminal-window-host";
 import { renderUserFileErrorBanner } from "./user-file-error-banner";
+import { mountResttyTerminalSurface } from "../terminal-surface/restty-terminal-surface";
 
 const tabStrip = document.querySelector<HTMLElement>("#tab-strip");
 if (!tabStrip) throw new Error("Terminal Tab strip container is missing");
@@ -13,6 +14,11 @@ if (!errorBanner) throw new Error("User File Error banner is missing");
 const snippetsElement =
   document.querySelector<HTMLElement>("#snippets-sidebar");
 if (!snippetsElement) throw new Error("Snippets Sidebar container is missing");
+const surfaceFailure = document.querySelector<HTMLElement>(
+  "#terminal-surface-failure",
+);
+if (!surfaceFailure)
+  throw new Error("Terminal Surface failure banner is missing");
 
 void window.omxterm.terminal.configuration().then((configuration) => {
   // Render before mounting so the Terminal Surface measures the space the
@@ -22,6 +28,13 @@ void window.omxterm.terminal.configuration().then((configuration) => {
     { tabStrip, tabsContainer },
     {
       configuration,
+      ...(configuration.terminalSurface === "restty"
+        ? { mount: mountResttyTerminalSurface }
+        : {}),
+      onSurfaceFailure(message) {
+        surfaceFailure.textContent = message;
+        surfaceFailure.hidden = false;
+      },
       createAdapter: () =>
         createElectronTerminalAdapter(window.omxterm.terminal),
       subscribeToFontZoom: window.omxterm.terminal.onFontZoom,

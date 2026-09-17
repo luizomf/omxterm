@@ -873,6 +873,18 @@ export async function verifyPackagedApplication(
         path.join(projectRoot, "node_modules", "node-pty", "LICENSE"),
         path.join(resources, "licenses", "node-pty.txt"),
       ),
+      assertSameFile(
+        path.join(projectRoot, "assets", "licenses", "restty-MIT.txt"),
+        path.join(resources, "licenses", "restty.txt"),
+      ),
+      assertSameFile(
+        path.join(projectRoot, "assets", "licenses", "text-shaper-MIT.txt"),
+        path.join(resources, "licenses", "text-shaper.txt"),
+      ),
+      assertSameFile(
+        path.join(projectRoot, "assets", "licenses", "ghostty-MIT.txt"),
+        path.join(resources, "licenses", "ghostty.txt"),
+      ),
       stat(path.join(resources, "LICENSE.electron.txt")),
       stat(path.join(resources, "LICENSES.chromium.html")),
     ]);
