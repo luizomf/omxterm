@@ -1,8 +1,9 @@
 import { mkdirSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import { app, nativeImage } from "electron";
-import { readLocalImage } from "../../src/main/local-image";
+import { pathToFileURL } from "node:url";
+import { app, BrowserWindow, nativeImage } from "electron";
+import { loadLocalImageForWindow } from "../../src/main/local-image-loader";
 
 const resultPrefix = "__OMXTERM_LOCAL_IMAGE_RESULT__";
 
@@ -13,30 +14,47 @@ async function run() {
     app.setPath(name, directory);
   }
   await app.whenReady();
-  const validateDecodedImage = (
-    bytes: Uint8Array,
-    expected: { readonly width: number; readonly height: number },
-  ) => {
-    const decoded = nativeImage.createFromBuffer(Buffer.from(bytes));
-    const size = decoded.getSize();
-    return (
-      !decoded.isEmpty() &&
-      size.width === expected.width &&
-      size.height === expected.height
+  const window = new BrowserWindow({
+    show: false,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  const load = (filePath: string) =>
+    loadLocalImageForWindow(
+      window,
+      { source: "file-url", url: pathToFileURL(filePath).href },
+      new AbortController().signal,
     );
-  };
-  const loaded = await readLocalImage(
-    path.join(process.cwd(), "fixture.data"),
-    { validateDecodedImage },
-  );
+  const loaded = await load(path.join(process.cwd(), "fixture.data"));
+  if (!loaded) throw new Error("PNG fixture was not loaded");
   const jpegBytes = nativeImage
     .createFromBuffer(Buffer.from(loaded.data))
     .toJPEG(90);
   const jpegPath = path.join(process.cwd(), "fixture-jpeg.data");
   await writeFile(jpegPath, jpegBytes);
-  const jpeg = await readLocalImage(jpegPath, { validateDecodedImage });
+  const jpeg = await load(jpegPath);
+  if (!jpeg) throw new Error("JPEG fixture was not loaded");
+  await window.loadFile(path.join(process.cwd(), "preview.html"));
+  const preview = [];
+  for (const image of [loaded, jpeg]) {
+    const payload = JSON.stringify({ ...image, data: [...image.data] });
+    const opened: unknown = await window.webContents.executeJavaScript(
+      `globalThis.__localImagePreviewProbe.open(${payload})`,
+      true,
+    );
+    const dismissed: unknown = await window.webContents.executeJavaScript(
+      "globalThis.__localImagePreviewProbe.dismiss()",
+      true,
+    );
+    preview.push({ opened, dismissed });
+  }
+  window.destroy();
   process.stdout.write(
     `${resultPrefix}${JSON.stringify({
+      preview,
       isolatedProfiles: (["userData", "sessionData"] as const).every(
         (name) => path.dirname(app.getPath(name)) === process.cwd(),
       ),

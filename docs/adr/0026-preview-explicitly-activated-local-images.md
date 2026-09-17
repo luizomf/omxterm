@@ -10,7 +10,9 @@ browser route; local image URLs never reach that route.
 
 Electron main owns URL validation, the native picker, concurrency, and the
 filesystem boundary. Each Terminal Window permits one picker or local-link
-request at a time. A request opens a non-shell file descriptor, requires a
+request at a time. Both picker and URL paths are validated before filesystem
+access; UNC/device paths and ambiguous Windows paths without a drive are
+rejected even when supplied by the native picker. A request opens a non-shell file descriptor, requires a
 bounded regular file, reads one descriptor coherently, rejects an observed size
 change while reading, and accepts only structurally valid, natively decodable
 static PNG or JPEG content. The
@@ -28,7 +30,12 @@ URL under a CSP that permits `blob:` only for images while preserving
 failure, page teardown, and owner close synchronously remove the image source
 and revoke the Blob URL. Focus returns to the live selected Terminal Tab after
 dismissal or picker cancellation. Late picker/read/decode results cannot reopen
-a disposed overlay.
+a disposed overlay. The preview exposes only its active interaction state to
+the Terminal Window host. While choosing, loading, or viewing, that host
+suppresses terminal clipboard, file-drop, zoom and snippet actions and avoids
+stealing focus; confirmed session/window lifecycle actions still proceed. This
+keeps native menu routing from bypassing the DOM modal boundary, without
+adding a general modal framework or cancelling already accepted input.
 
 Restty's existing visible-link provider and gesture owner recognize the literal
 `file:///` span alongside HTTP(S), preserving soft-wrap proof and modified-click

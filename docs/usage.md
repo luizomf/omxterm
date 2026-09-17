@@ -132,7 +132,9 @@ or JPEG, or activate a literal visible absolute `file:///` URL with `Cmd+click`
 on macOS or `Ctrl+click` on Linux and Windows. The preview appears in a temporary
 overlay. Escape, its close button, or the dark backdrop dismisses it and returns
 focus to the selected Terminal Tab. The action intentionally has no built-in or
-configurable shortcut.
+configurable shortcut. While choosing, loading, or viewing an image, terminal
+copy/paste/select-all, file drops, font zoom and snippets actions are ignored
+rather than sent to the obscured terminal. Closing tabs or windows still works.
 
 OMXTerm reads only after that explicit picker or modified-click activation. The
 Electron main process requires a bounded regular file whose contents validate
@@ -146,7 +148,9 @@ authority-free `file:///` URL with a platform-absolute path; it does not infer a
 bare or relative path, use the shell working directory, interpret an SSH path,
 trust OSC 8 metadata, accept a remote/UNC file authority, or fetch an HTTP(S)
 image. Visible HTTP(S) links retain their existing browser behavior described
-below. Merely printing or hovering over any path reads nothing.
+below. The native picker also rejects UNC/device and non-absolute paths before
+reading; Windows selections must be drive-qualified local paths. Merely printing
+or hovering over any path reads nothing.
 
 Preview bytes and the renderer Blob URL remain memory-only. Dismissal or window
 teardown removes the image source and revokes the URL; OMXTerm does not write,

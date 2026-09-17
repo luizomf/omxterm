@@ -55,7 +55,7 @@ export async function loadLocalImageRequest(
   if (options.abortSignal?.aborted)
     throw new Error("Local image request was superseded");
   if (filePath === null) return null;
-  const image = await options.read(filePath);
+  const image = await options.read(localImagePath(filePath, options.platform));
   if (options.abortSignal?.aborted)
     throw new Error("Local image request was superseded");
   return image;
@@ -149,14 +149,27 @@ export function resolveLocalImageFileUrl(
     parsed.hash !== ""
   )
     throw new TypeError("Invalid local image URL.");
-  const filePath = fileURLToPath(parsed, { windows: platform === "win32" });
-  const pathApi = platform === "win32" ? path.win32 : path.posix;
+  return localImagePath(
+    fileURLToPath(parsed, { windows: platform === "win32" }),
+    platform,
+  );
+}
+
+function localImagePath(
+  filePath: string,
+  platform: NodeJS.Platform = process.platform,
+): string {
+  // A native chooser may return UNC/device paths too; validate before any I/O.
+  const localAbsolute =
+    platform === "win32"
+      ? /^[a-z]:[\\\\/]/iu.test(filePath)
+      : path.posix.isAbsolute(filePath) && !filePath.startsWith("//");
   if (
+    !localAbsolute ||
     filePath.includes("\0") ||
-    (platform === "win32" && filePath.startsWith("\\\\")) ||
-    !pathApi.isAbsolute(filePath)
+    filePath.length > MAX_LOCAL_IMAGE_URL_LENGTH
   )
-    throw new TypeError("Invalid local image URL.");
+    throw new TypeError("Invalid local image path.");
   return filePath;
 }
 

@@ -4,6 +4,7 @@ const PREVIEW_ERROR =
   "Could not preview this image. Choose a static PNG/JPEG up to 16 MiB, 8192 per side and 16 million pixels.";
 
 export interface LocalImagePreview {
+  isActive(): boolean;
   open(fileUrl?: string): Promise<void>;
   dispose(): void;
 }
@@ -89,6 +90,7 @@ export function createLocalImagePreview(
   });
 
   return {
+    isActive: () => !disposed && (opening || dialog.open),
     async open(fileUrl) {
       if (disposed || opening || dialog.open) return;
       opening = true;

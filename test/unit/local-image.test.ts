@@ -108,6 +108,48 @@ describe("bounded local image loader", () => {
 });
 
 describe("native local image request", () => {
+  it.each([
+    "\\\\server\\share\\a.png",
+    "//server/share/a.png",
+    "\\\\?\\C:\\a.png",
+    "C:relative.png",
+    "\\rooted.png",
+  ])(
+    "rejects Windows non-local or ambiguous picker path %s before reading",
+    async (filePath) => {
+      const read = vi.fn();
+      await expect(
+        loadLocalImageRequest(
+          { source: "picker" },
+          {
+            platform: "win32",
+            chooseFile: async () => filePath,
+            read,
+          },
+        ),
+      ).rejects.toThrow("Invalid local image path");
+      expect(read).not.toHaveBeenCalled();
+    },
+  );
+
+  it("preserves a drive-qualified local picker path", async () => {
+    const read = vi.fn(async () => ({
+      name: "image.png",
+      mime: "image/png" as const,
+      width: 1,
+      height: 1,
+      data: new Uint8Array(PNG_1X1),
+    }));
+    await loadLocalImageRequest(
+      { source: "picker" },
+      {
+        platform: "win32",
+        chooseFile: async () => "C:\\Users\\me\\image.png",
+        read,
+      },
+    );
+    expect(read).toHaveBeenCalledWith("C:\\Users\\me\\image.png");
+  });
   it("treats picker cancellation and owner closure as side-effect-free results", async () => {
     const read = vi.fn();
     await expect(

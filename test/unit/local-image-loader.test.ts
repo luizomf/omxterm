@@ -4,7 +4,10 @@ import { loadLocalImageForWindow } from "../../src/main/local-image-loader";
 const electron = vi.hoisted(() => ({
   showOpenDialog: vi.fn(),
   createFromBuffer: vi.fn(),
+  open: vi.fn(),
 }));
+
+vi.mock("node:fs/promises", () => ({ open: electron.open }));
 
 vi.mock("electron", () => ({
   dialog: { showOpenDialog: electron.showOpenDialog },
@@ -28,6 +31,29 @@ describe("native local image picker boundary", () => {
     ).resolves.toBeNull();
     expect(electron.createFromBuffer).not.toHaveBeenCalled();
   });
+
+  it.each([
+    "\\\\server\\share\\image.png",
+    "//server/share/image.png",
+    "relative.png",
+  ])(
+    "rejects non-local picker path %s before filesystem access",
+    async (filePath) => {
+      electron.showOpenDialog.mockResolvedValue({
+        canceled: false,
+        filePaths: [filePath],
+      });
+      await expect(
+        loadLocalImageForWindow(
+          {} as Electron.BrowserWindow,
+          { source: "picker" },
+          new AbortController().signal,
+        ),
+      ).rejects.toThrow("The local image could not be loaded");
+      expect(electron.open).not.toHaveBeenCalled();
+      expect(electron.createFromBuffer).not.toHaveBeenCalled();
+    },
+  );
 
   it("does not expose private native failure details through IPC", async () => {
     electron.showOpenDialog.mockRejectedValue(

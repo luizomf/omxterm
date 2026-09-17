@@ -182,18 +182,25 @@ export function mountTerminalWindowPage(
     );
   }
 
-  const onPageFocus = () => tabs.focusSelected();
+  const previewActive = () => localImagePreview?.isActive() ?? false;
+  const onPageFocus = () => {
+    if (!previewActive()) tabs.focusSelected();
+  };
   const isInternalTabDrag = (event: DragEvent) =>
     [...(event.dataTransfer?.types ?? [])].includes(
       TERMINAL_TAB_DRAG_DATA_TYPE,
     );
   const onDragOver = (event: DragEvent) => {
     event.preventDefault();
-    if (!isInternalTabDrag(event)) event.stopPropagation();
+    if (previewActive() || !isInternalTabDrag(event)) event.stopPropagation();
   };
   const onDrop = (event: DragEvent) => {
     // Capture before the Terminal Surface or another target can interpret a native file URI.
     event.preventDefault();
+    if (previewActive()) {
+      event.stopPropagation();
+      return;
+    }
     if (isInternalTabDrag(event)) return;
     event.stopPropagation();
     const files = event.dataTransfer?.files;
@@ -256,11 +263,13 @@ export function mountTerminalWindowPage(
 
   const ready = tabs.ready.then(() => {
     if (disposed) return;
-    removeZoomListener = options.subscribeToFontZoom?.((command) =>
-      tabs.zoom(command),
-    );
+    removeZoomListener = options.subscribeToFontZoom?.((command) => {
+      if (!previewActive()) tabs.zoom(command);
+    });
     removeClipboardActionListener = options.subscribeToClipboardActions?.(
-      (action) => tabs.clipboardAction(action),
+      (action) => {
+        if (!previewActive()) tabs.clipboardAction(action);
+      },
     );
     removeTabCommandListener = options.subscribeToTabCommands?.((command) =>
       tabs.handleCommand(command),
@@ -271,14 +280,16 @@ export function mountTerminalWindowPage(
     if (options.snippets) {
       const sidebar = createSnippetsSidebar(options.snippets.element, {
         loadSnippets: options.snippets.load,
-        inject: (snippet) =>
-          tabs.injectSnippet(snippet.body, { submit: snippet.execute }),
-        focusTerminal: () => tabs.focusSelected(),
+        inject: (snippet) => {
+          if (!previewActive())
+            tabs.injectSnippet(snippet.body, { submit: snippet.execute });
+        },
+        focusTerminal: onPageFocus,
       });
       snippetsSidebar = sidebar;
-      removeSnippetsToggleListener = options.snippets.subscribeToToggle(
-        () => void sidebar.toggle(),
-      );
+      removeSnippetsToggleListener = options.snippets.subscribeToToggle(() => {
+        if (!previewActive()) void sidebar.toggle();
+      });
     }
   });
 

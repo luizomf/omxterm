@@ -170,9 +170,13 @@ selector or fallback Surface; rendering initialization failure starts no shell
   overlay, releases its renderer Blob source synchronously, and returns focus
   to the live selected Terminal Tab. Picker cancellation returns terminal focus
   without an error. The picker and visible local-image links share the bounded
-  read and overlay contract below.
+  read and overlay contract below. While choosing, loading, or displaying a
+  preview, terminal clipboard actions, file drops, font zoom, snippet toggles
+  and snippet injection are ignored; page activation does not steal preview
+  focus. Dismissal restores ordinary routing. Already accepted terminal input
+  is not rolled back, and confirmed tab/session/window closure remains active.
 - Dropping one or more native file-manager files or folders anywhere in a
-  Terminal Window inserts their absolute paths into only the selected Terminal
+  Terminal Window without an active Local Image Preview inserts their absolute paths into only the selected Terminal
   Tab. The paths retain platform order, are separated by one space, and are
   delivered through Protected Paste without sending Enter. Drag navigation is
   prevented over the whole renderer document. Internal tab dragging only
@@ -413,7 +417,9 @@ must be a structurally valid, natively decodable static PNG or JPEG of at most
 16 MiB encoded, 8192 pixels per side, and 16 million pixels. APNG and every
 other animated or unsupported format are rejected regardless of extension. The
 same Terminal Window permits at most one picker or link read at a time; owner
-closure makes late picker, read, and decode results inert.
+closure makes late picker, read, and decode results inert. Both picker and URL
+paths must be local absolute paths before any read; Windows paths must include
+a drive, and UNC/device paths are rejected even from the native picker.
 
 The renderer receives only bounded validated name, dimensions, media type, and
 bytes, creates a memory-only Blob URL under the production CSP, and synchronously
