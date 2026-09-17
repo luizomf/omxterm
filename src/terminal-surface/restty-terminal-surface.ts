@@ -6,7 +6,6 @@ import {
   type ResttyRuntimeEvent,
   type ResttyTerminalConfig,
 } from "restty";
-import bundledFontBytes from "../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf";
 import type { TerminalSize } from "../shared/terminal-contract";
 import type { TerminalFontData } from "../shared/terminal-font-data";
 import {
@@ -43,8 +42,10 @@ import type {
   TerminalSurfaceConfiguration,
   TerminalSurfaceOptions,
 } from "./terminal-surface";
-
-const BUNDLED_FONT_NAME = "JetBrainsMono Nerd Font Mono";
+import {
+  DEFAULT_TERMINAL_FONT_FAMILY,
+  terminalFontInputs,
+} from "./terminal-font-stack";
 const RESTTY_SCROLLBACK_MAX_BYTES = 10_000_000;
 
 type CandidateRuntimeEvent =
@@ -105,23 +106,7 @@ function resttyTerminalConfig(
     maxScrollbackBytes: RESTTY_SCROLLBACK_MAX_BYTES,
     scrollbackLines,
     optionKeyMode: optionKeyMode ?? "none",
-    fonts: [
-      ...(fontData.configured
-        ? [
-            {
-              data: fontData.configured.data,
-              name: fontSourceFamily(fontData.configured),
-              weight: 400,
-              style: "normal" as const,
-            },
-          ]
-        : []),
-      { data: bundledFontBytes, name: BUNDLED_FONT_NAME },
-      ...fontData.fallbacks.map((font) => ({
-        data: font.data,
-        name: fontSourceFamily(font),
-      })),
-    ],
+    fonts: terminalFontInputs(fontData),
     theme: toGhosttyTheme(theme),
     showResizeOverlay: false,
   };
@@ -356,7 +341,8 @@ export async function mountResttyTerminalSurface(
     const canvas = pane.container.querySelector("canvas");
     if (!canvas) throw new Error("Restty did not create its rendering canvas");
     container.dataset.resttyBackend = "webgl2";
-    container.dataset.resttyFont = initialFamily ?? BUNDLED_FONT_NAME;
+    container.dataset.resttyFont =
+      initialFamily ?? DEFAULT_TERMINAL_FONT_FAMILY;
     if (options.onExternalLink)
       removeVisibleLinkListeners = installResttyVisibleLinks(
         canvas,
@@ -491,13 +477,6 @@ function throwInitializationFailure(
     );
   }
   throw new Error("Failed to mount the Restty Terminal Surface", { cause });
-}
-
-function fontSourceFamily(font: {
-  readonly family: string;
-  readonly sourceFamily?: string;
-}): string {
-  return font.sourceFamily ?? font.family;
 }
 
 function setContainerAppearance(

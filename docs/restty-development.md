@@ -101,9 +101,17 @@ There is no fallback renderer.
   `a23058f475f2b0655b93a89bfce426eecafb9439` (Restty's source submodule at
   `94db4fba9186b99b868b401ce404a9930b93fcbf` is upstream prior art, not the
   installed npm artifact identity);
-- Nerd Fonts `v3.4.0` `JetBrainsMono.zip`, archive SHA-256
-  `76f05ff3ace48a464a6ca57977998784ff7bdbb65a6d915d7e401cd3927c493c`;
-- bundled `JetBrainsMonoNerdFontMono-Regular.ttf`, SHA-256
+- Nerd Fonts `v3.5.1` FiraCode distribution, with bundled regular SHA-256
+  `53eebbaaa09c483ebb27fdd5cf21073cc4b760308e5d666728e9db2f41616c00`
+  and bold SHA-256
+  `7435c06ecc46dc975d2c356bf9bf1d8bc2226fdb1a877e6e9580193aae429519`;
+- DejaVu Fonts `2.37`, with bundled DejaVu Sans Mono regular SHA-256
+  `b4a6c3e4faab8773f4ff761d56451646409f29abedd68f05d38c2df667d3c582`
+  and bold SHA-256
+  `bce60f1b4421acd9ea51ba6623d7024ecbe6817a953e3654df62a5e6bdf8f769`;
+- retained Nerd Fonts `v3.4.0` `JetBrainsMono.zip`, archive SHA-256
+  `76f05ff3ace48a464a6ca57977998784ff7bdbb65a6d915d7e401cd3927c493c`,
+  and bundled regular-face SHA-256
   `f01031f40e48dc29e1112e6b0b0450a2c6cd097f3f35cfff05c55cb311f8034c`.
 
 `assets/restty-sources.json` records the npm registry's package-to-commit
@@ -177,11 +185,14 @@ the pinned Restty build. `assets/restty-sources.json` records both patches,
 artifact and build-input checksums. The tracked core is used at runtime; no
 network access or source build occurs during `npm ci`.
 
-The TTF is tracked because Restty/text-shaper consumes font bytes and the prior
-WOFF2 path did not provide equivalent shaping. `assets/fonts/README.md` records
-font provenance and checksums. Runtime loading is memory-only and works under the
-production `connect-src 'none'` CSP without local fonts, user dotfiles or remote
-fetches. Packaged license texts are listed in `THIRD_PARTY_NOTICES.md`.
+The TTFs are tracked because Restty/text-shaper consumes font bytes and the
+prior WOFF2 path did not provide equivalent shaping. `assets/fonts/README.md`
+records font provenance and checksums. Runtime loading is memory-only and works
+under the production `connect-src 'none'` CSP without local fonts, user dotfiles
+or remote fetches. Packaged license texts are listed in
+`THIRD_PARTY_NOTICES.md`. The real regular/bold Electron fixture exercises
+Restty's style-aware face picker plus representative Fira-only and DejaVu-only
+glyphs; pixel-identical native rasterization remains unclaimed.
 
 `test/integration/restty-host-integration.test.ts` runs the real main IPC
 router, preload bridge, Electron Adapter, Restty Surface and owned native PTYs

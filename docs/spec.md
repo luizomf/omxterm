@@ -45,8 +45,10 @@ OMXTerm must:
 - render the bundled [`omtheme`](omtheme.json) palette by default, allow one
   explicitly configured external Terminal Theme, keep SGR bold text on its
   requested ANSI `0–7` color without remapping it to bright `8–15` (applications
-  may request bright colors explicitly), and use JetBrainsMono Nerd Font Mono
-  bundled under its OFL license as the default and missing-glyph fallback;
+  may request bright colors explicitly), and use bundled regular and bold
+  FiraCode Nerd Font Mono as the default, followed by bundled regular and bold
+  DejaVu Sans Mono, the retained JetBrainsMono Nerd Font Mono, and representative
+  operating-system emoji/CJK/symbol faces for missing-glyph coverage;
 - use the accepted black-and-blue OMXTerm application icon in development and
   on the packaged macOS Dock, Finder, application-switcher, and DMG surfaces;
 - read strict, versioned JSON configuration and write bounded local JSONL
@@ -199,7 +201,7 @@ remains the user's session manager.
 The Restty Terminal Surface uses the existing Terminal Tabs, session Adapter
 and real PTY lifecycle for ordinary Unicode input/output, grid resize,
 focus, Default Shell and explicit-command startup, shell exit, tab close and
-renderer-loss cleanup. It requires the bundled JetBrainsMono Nerd Font Mono TTF,
+renderer-loss cleanup. It requires the bundled Terminal Font Stack TTFs,
 Ghostty core and an actual WebGL2 backend before a PTY starts. Initialization
 failure releases partial resources and starts no shell. WebGL context loss shows
 a persistent failure and disposes only the owning Surface/session without core
@@ -208,9 +210,10 @@ acknowledgement, including when the failed session was the window's last one. Re
 per-side padding and Window Font Zoom through its runtime and existing host
 geometry. It resolves an exact configured installed family through the Electron main
 process and gives Restty only bounded bytes for that validated active family,
-followed by the licensed bundled JetBrainsMono face and representative locally
-installed operating-system fallback faces. Font reads use native platform
-facilities without shell interpolation; no font path, broad filesystem API,
+followed by the licensed bundled FiraCode regular/bold, DejaVu Sans Mono
+regular/bold and retained JetBrainsMono Nerd Font Mono faces, then
+representative locally installed operating-system fallback faces. Font reads use
+native platform facilities without shell interpolation; no font path, broad filesystem API,
 remote fallback or persistent byte cache crosses the bridge. A Restty Surface
 applies its configured family and line height when it is created; an existing
 Restty Surface keeps both after User Configuration Reload until OMXTerm is
@@ -462,9 +465,11 @@ and does not create a file. A present file must contain `"version": 1` and only 
 - `theme.path`;
 - `keybinds.<action>` for the fixed application-shortcut vocabulary below.
 
-The bundled JetBrainsMono Nerd Font Mono at 16 px is the default, matching the
-existing OMXTerm Web terminal baseline. `font.size` accepts only integral pixel
-sizes from 8 through 72 inclusive. `font.lineHeight` is an independent
+The bundled FiraCode Nerd Font Mono regular face at 16 px is the default. Its
+real bold face renders SGR bold without changing the requested ANSI color.
+Bundled DejaVu Sans Mono regular/bold and JetBrainsMono Nerd Font Mono follow it
+for coverage before available operating-system emoji, CJK, and symbol faces.
+`font.size` accepts only integral pixel sizes from 8 through 72 inclusive. `font.lineHeight` is an independent
 row-height multiplier from 1.0 through 2.0 inclusive, accepts fractional
 values, does not change glyph size, and defaults to 1.0. Terminal padding uses
 explicit per-side integer CSS pixels from 0 through 128 inclusive and defaults

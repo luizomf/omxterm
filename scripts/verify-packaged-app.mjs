@@ -800,7 +800,15 @@ export async function verifyPackagedApplication(
         path.join(resources, "THIRD_PARTY_NOTICES.md"),
       ),
       assertSameFile(
-        path.join(projectRoot, "assets", "fonts", "OFL.txt"),
+        path.join(projectRoot, "assets", "fonts", "FiraCode-OFL.txt"),
+        path.join(resources, "licenses", "FiraCode-OFL.txt"),
+      ),
+      assertSameFile(
+        path.join(projectRoot, "assets", "fonts", "DejaVu-LICENSE.txt"),
+        path.join(resources, "licenses", "DejaVu.txt"),
+      ),
+      assertSameFile(
+        path.join(projectRoot, "assets", "fonts", "JetBrainsMono-OFL.txt"),
         path.join(resources, "licenses", "JetBrainsMono-OFL.txt"),
       ),
       assertSameFile(

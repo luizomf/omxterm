@@ -16,9 +16,22 @@ const applicationIconSource = path.join(
 );
 
 const expectedAssets = {
+  "DejaVu-LICENSE.txt":
+    "f88d5294af5a772f9114eb385009e3478d62b21f3e5bbc34d159d328047c8867",
+  "DejaVuSansMono-Bold.ttf":
+    "bce60f1b4421acd9ea51ba6623d7024ecbe6817a953e3654df62a5e6bdf8f769",
+  "DejaVuSansMono.ttf":
+    "b4a6c3e4faab8773f4ff761d56451646409f29abedd68f05d38c2df667d3c582",
+  "FiraCode-OFL.txt":
+    "1d41e10031ab125302780a05ec4c91d218e47db0c7e37cf315cce5e608cdc25c",
+  "FiraCodeNerdFontMono-Bold.ttf":
+    "7435c06ecc46dc975d2c356bf9bf1d8bc2226fdb1a877e6e9580193aae429519",
+  "FiraCodeNerdFontMono-Regular.ttf":
+    "53eebbaaa09c483ebb27fdd5cf21073cc4b760308e5d666728e9db2f41616c00",
+  "JetBrainsMono-OFL.txt":
+    "30f0c136e3c88e422d0791acd97238870f9054a9729bc34cf2ff0d4ed8cac4ad",
   "JetBrainsMonoNerdFontMono-Regular.ttf":
     "f01031f40e48dc29e1112e6b0b0450a2c6cd097f3f35cfff05c55cb311f8034c",
-  "OFL.txt": "30f0c136e3c88e422d0791acd97238870f9054a9729bc34cf2ff0d4ed8cac4ad",
 } as const;
 
 describe("Terminal appearance build", () => {
@@ -29,12 +42,11 @@ describe("Terminal appearance build", () => {
     );
   });
 
-  it("bundles only the accepted regular Nerd Font TTF and its OFL", async () => {
+  it("bundles the accepted regular and bold Terminal Font Stack assets", async () => {
     await execute(process.execPath, ["build.mjs"], { cwd: projectRoot });
 
     expect((await readdir(fontDirectory)).sort()).toEqual([
-      "JetBrainsMonoNerdFontMono-Regular.ttf",
-      "OFL.txt",
+      ...Object.keys(expectedAssets).sort(),
       "README.md",
     ]);
     for (const [fileName, expectedHash] of Object.entries(expectedAssets)) {
@@ -48,6 +60,8 @@ describe("Terminal appearance build", () => {
       path.join(projectRoot, "dist", "renderer", "index.js"),
       "utf8",
     );
+    expect(rendererJavaScript).toContain("FiraCode Nerd Font Mono");
+    expect(rendererJavaScript).toContain("DejaVu Sans Mono");
     expect(rendererJavaScript).toContain("JetBrainsMono Nerd Font Mono");
     expect(rendererJavaScript).toContain("restty");
     expect(rendererJavaScript).not.toContain("@xterm");

@@ -15,7 +15,9 @@ identified below.
 | Restty 0.3.0                                | MIT                       | `licenses/restty.txt`            |
 | `text-shaper` 0.1.28                        | MIT                       | `licenses/text-shaper.txt`       |
 | Ghostty/libghostty-vt (`0309af1`)           | MIT                       | `licenses/ghostty.txt`           |
+| FiraCode Nerd Font Mono                     | SIL Open Font License 1.1 | `licenses/FiraCode-OFL.txt`      |
+| DejaVu Sans Mono                            | Bitstream/DejaVu/Arev     | `licenses/DejaVu.txt`            |
 | JetBrainsMono Nerd Font Mono                | SIL Open Font License 1.1 | `licenses/JetBrainsMono-OFL.txt` |
 
-The repository also preserves the bundled font's source, version, checksums,
-and license details in `assets/fonts/README.md` and `assets/fonts/OFL.txt`.
+The repository preserves each bundled font's source, version, checksums, and
+license details in `assets/fonts/README.md` and the adjacent license files.

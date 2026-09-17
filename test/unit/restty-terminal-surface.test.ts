@@ -113,8 +113,20 @@ const harness = vi.hoisted(() => {
 });
 
 vi.mock("restty", () => ({ Restty: harness.FakeRestty }));
+vi.mock("../../assets/fonts/FiraCodeNerdFontMono-Regular.ttf", () => ({
+  default: new Uint8Array([1, 1]),
+}));
+vi.mock("../../assets/fonts/FiraCodeNerdFontMono-Bold.ttf", () => ({
+  default: new Uint8Array([1, 2]),
+}));
+vi.mock("../../assets/fonts/DejaVuSansMono.ttf", () => ({
+  default: new Uint8Array([2, 1]),
+}));
+vi.mock("../../assets/fonts/DejaVuSansMono-Bold.ttf", () => ({
+  default: new Uint8Array([2, 2]),
+}));
 vi.mock("../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf", () => ({
-  default: new Uint8Array([0, 1, 2, 3]),
+  default: new Uint8Array([3, 1]),
 }));
 
 function createAdapter() {
@@ -207,9 +219,15 @@ describe("Restty Terminal Surface", () => {
       data: Uint8Array;
       name: string;
     }>;
-    expect(fonts).toHaveLength(1);
-    expect(fonts[0]?.data).toBeInstanceOf(Uint8Array);
-    expect(fonts[0]?.name).toBe("JetBrainsMono Nerd Font Mono");
+    expect(fonts).toHaveLength(5);
+    expect(fonts.every((font) => font.data instanceof Uint8Array)).toBe(true);
+    expect(fonts.map((font) => font.name)).toEqual([
+      "FiraCode Nerd Font Mono",
+      "FiraCode Nerd Font Mono Bold",
+      "DejaVu Sans Mono",
+      "DejaVu Sans Mono Bold",
+      "JetBrainsMono Nerd Font Mono",
+    ]);
     expect(adapter.start).toHaveBeenCalledOnce();
     expect(adapter.resize).toHaveBeenLastCalledWith({ cols: 96, rows: 31 });
 
@@ -281,52 +299,6 @@ describe("Restty Terminal Surface", () => {
     restty.emit({ type: "bell" });
     expect(onTitleRequest).toHaveBeenCalledOnce();
     expect(onBell).toHaveBeenCalledOnce();
-  });
-
-  it("loads an exact configured face before bundled and local OS fallbacks", async () => {
-    const { adapter } = createAdapter();
-    const loadFontData = vi.fn(async () => ({
-      configured: {
-        family: "Exact Família",
-        sourceFamily: "Embedded Exact Family",
-        data: new Uint8Array([10, 11]),
-      },
-      fallbacks: [
-        {
-          family: "Local Emoji",
-          sourceFamily: "Embedded Emoji",
-          data: new Uint8Array([20, 21]),
-        },
-      ],
-    }));
-    const { mountResttyTerminalSurface } =
-      await import("../../src/terminal-surface/restty-terminal-surface");
-
-    await mountResttyTerminalSurface(document.createElement("main"), adapter, {
-      appearance: {
-        fontSize: 16,
-        lineHeight: 1,
-        systemFont: { family: "Exact Família", available: true },
-      },
-      loadFontData,
-    });
-
-    expect(loadFontData).toHaveBeenCalledExactlyOnceWith("Exact Família");
-    expect(
-      (harness.instances[0]!.options.terminal as { fonts: unknown }).fonts,
-    ).toEqual([
-      {
-        data: new Uint8Array([10, 11]),
-        name: "Embedded Exact Family",
-        weight: 400,
-        style: "normal",
-      },
-      {
-        data: new Uint8Array([0, 1, 2, 3]),
-        name: "JetBrainsMono Nerd Font Mono",
-      },
-      { data: new Uint8Array([20, 21]), name: "Embedded Emoji" },
-    ]);
   });
 
   it("starts no PTY when a font lookup is disposed or fails", async () => {

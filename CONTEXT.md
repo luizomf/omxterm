@@ -48,10 +48,12 @@ canonical `omtheme` palette.
 _Avoid_: xterm theme, Ghostty theme, application CSS
 
 **Terminal Font Stack**:
-The ordered fonts used by the Terminal Surface: an explicitly configured system
-font when present, the bundled JetBrainsMono Nerd Font Mono for defaults and
-missing glyphs, and the operating system's monospace fallback last. A configured
-family that does not exist is an error rather than a silent fallback.
+The ordered faces used by the Terminal Surface: an explicitly configured system
+font when present; bundled regular and bold FiraCode Nerd Font Mono defaults;
+bundled regular and bold DejaVu Sans Mono coverage fallback; the retained
+bundled JetBrainsMono Nerd Font Mono coverage face; and representative operating
+system emoji, CJK, and symbol fallbacks last. A configured family that does not
+exist is an error rather than a silent fallback.
 _Avoid_: terminal font, webfont, system default font
 
 **Window Font Zoom**:

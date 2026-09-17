@@ -45,7 +45,7 @@ interface FixtureResult {
 }
 
 describe("Restty under production Electron policy", () => {
-  it("renders bundled-font text and refuses to start a PTY without a backend", async () => {
+  it("renders Terminal Font Stack text and refuses to start a PTY without a backend", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "omxterm-restty-electron-"));
     try {
       await buildFixture(root);
@@ -70,7 +70,7 @@ describe("Restty under production Electron policy", () => {
       ).toBeDefined();
       expect(result?.available).toMatchObject({
         backend: "webgl2",
-        font: "JetBrainsMono Nerd Font Mono",
+        font: "FiraCode Nerd Font Mono",
         ptyStarts: 1,
         clipboardReads: 0,
         clipboardWrites: 0,

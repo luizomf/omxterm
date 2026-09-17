@@ -48,6 +48,14 @@ interface Result {
     readonly externalLinks: number;
   };
   readonly colorCounts: Record<string, number>;
+  readonly fontRendering: {
+    readonly regularInk: number;
+    readonly boldInk: number;
+    readonly firaCoverageInk: number;
+    readonly dejaVuCoverageInk: number;
+    readonly firaDiffersFromMissing: boolean;
+    readonly dejaVuDiffersFromMissing: boolean;
+  };
   readonly devicePixelRatio: number;
   readonly security: {
     readonly contextIsolation: boolean;
@@ -173,6 +181,13 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
       expect(result!.colorCounts["#201012"]).toBeGreaterThan(
         result!.colorCounts["#90105a"]!,
       );
+      expect(result!.fontRendering.boldInk).toBeGreaterThan(
+        result!.fontRendering.regularInk,
+      );
+      expect(result!.fontRendering.firaCoverageInk).toBeGreaterThan(20);
+      expect(result!.fontRendering.dejaVuCoverageInk).toBeGreaterThan(20);
+      expect(result!.fontRendering.firaDiffersFromMissing).toBe(true);
+      expect(result!.fontRendering.dejaVuDiffersFromMissing).toBe(true);
       expect(result!.security).toEqual({
         contextIsolation: true,
         nodeIntegration: false,
@@ -283,10 +298,34 @@ app.whenReady().then(async () => {
   const image = await window.webContents.capturePage();
   if (process.env.OMXTERM_RESTTY_APPEARANCE_SCREENSHOT_PATH)
     fs.writeFileSync(process.env.OMXTERM_RESTTY_APPEARANCE_SCREENSHOT_PATH, image.toPNG());
+  const captureInk = async (row) => {
+    const region = await window.webContents.capturePage({
+      x: Math.floor(bounds.x),
+      y: Math.floor(bounds.y + (result.live.cellHeight / result.devicePixelRatio) * (row - 1)),
+      width: Math.ceil((result.live.cellWidth / result.devicePixelRatio) * 8),
+      height: Math.ceil(result.live.cellHeight / result.devicePixelRatio),
+    });
+    const bitmap = region.toBitmap();
+    let ink = 0;
+    for (let offset = 0; offset < bitmap.length; offset += 4)
+      if (Math.max(bitmap[offset], bitmap[offset + 1], bitmap[offset + 2]) > 40) ink += 1;
+    return { ink, bitmap };
+  };
+  const [regular, bold, firaCoverage, dejaVuCoverage, missing] = await Promise.all(
+    [4, 5, 6, 7, 8].map(captureInk),
+  );
   const preferences = window.webContents.getLastWebPreferences();
   const complete = {
     ...result,
     colorCounts: countColors(image.toBitmap()),
+    fontRendering: {
+      regularInk: regular.ink,
+      boldInk: bold.ink,
+      firaCoverageInk: firaCoverage.ink,
+      dejaVuCoverageInk: dejaVuCoverage.ink,
+      firaDiffersFromMissing: !firaCoverage.bitmap.equals(missing.bitmap),
+      dejaVuDiffersFromMissing: !dejaVuCoverage.bitmap.equals(missing.bitmap),
+    },
     security: {
       contextIsolation: preferences.contextIsolation,
       nodeIntegration: preferences.nodeIntegration,

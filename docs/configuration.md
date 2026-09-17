@@ -18,9 +18,9 @@ Start with the smallest valid `config.json`:
 }
 ```
 
-This file works on every Supported Platform. It uses the bundled JetBrainsMono
-Nerd Font Mono, the bundled `omtheme` Terminal Theme, and every other built-in
-default. It does not require an installed font or another file.
+This file works on every Supported Platform. It uses bundled FiraCode Nerd Font
+Mono regular and bold faces, the bundled `omtheme` Terminal Theme, and every
+other built-in default. It does not require an installed font or another file.
 
 ### Create the configuration directory
 
@@ -146,24 +146,24 @@ the settings you need.
 All preferences other than `version` are optional. Objects and the root reject
 unknown keys.
 
-| Preference                | Accepted value                          | Default                              |
-| ------------------------- | --------------------------------------- | ------------------------------------ |
-| `version`                 | exactly `1`                             | required                             |
-| `confirmClose`            | boolean                                 | `true`                               |
-| `logLevel`                | `error`, `info`, or `debug`             | `info`                               |
-| `windowsShell`            | non-empty string without NUL            | Windows PowerShell, then ComSpec     |
-| `font.family`             | exact installed system font-family name | bundled JetBrainsMono Nerd Font Mono |
-| `font.size`               | integer from 8 through 72 CSS pixels    | `16`                                 |
-| `font.lineHeight`         | number from 1.0 through 2.0             | `1.0`                                |
-| `terminal.padding.top`    | integer from 0 through 128 CSS pixels   | `0`                                  |
-| `terminal.padding.right`  | integer from 0 through 128 CSS pixels   | `8`                                  |
-| `terminal.padding.bottom` | integer from 0 through 128 CSS pixels   | `8`                                  |
-| `terminal.padding.left`   | integer from 0 through 128 CSS pixels   | `8`                                  |
-| `scrollback.lines`        | integer from 0 through 100,000          | `10000`                              |
-| `keyboard.optionAsAlt`    | `none`, `left`, `right`, or `both`      | `none`                               |
-| `window.alwaysOnTop`      | boolean                                 | `false`                              |
-| `theme.path`              | non-empty filesystem path without NUL   | bundled `omtheme`                    |
-| `keybinds.<action>`       | accelerator with a non-Shift modifier   | built-in shortcut per action         |
+| Preference                | Accepted value                          | Default                          |
+| ------------------------- | --------------------------------------- | -------------------------------- |
+| `version`                 | exactly `1`                             | required                         |
+| `confirmClose`            | boolean                                 | `true`                           |
+| `logLevel`                | `error`, `info`, or `debug`             | `info`                           |
+| `windowsShell`            | non-empty string without NUL            | Windows PowerShell, then ComSpec |
+| `font.family`             | exact installed system font-family name | bundled FiraCode Nerd Font Mono  |
+| `font.size`               | integer from 8 through 72 CSS pixels    | `16`                             |
+| `font.lineHeight`         | number from 1.0 through 2.0             | `1.0`                            |
+| `terminal.padding.top`    | integer from 0 through 128 CSS pixels   | `0`                              |
+| `terminal.padding.right`  | integer from 0 through 128 CSS pixels   | `8`                              |
+| `terminal.padding.bottom` | integer from 0 through 128 CSS pixels   | `8`                              |
+| `terminal.padding.left`   | integer from 0 through 128 CSS pixels   | `8`                              |
+| `scrollback.lines`        | integer from 0 through 100,000          | `10000`                          |
+| `keyboard.optionAsAlt`    | `none`, `left`, `right`, or `both`      | `none`                           |
+| `window.alwaysOnTop`      | boolean                                 | `false`                          |
+| `theme.path`              | non-empty filesystem path without NUL   | bundled `omtheme`                |
+| `keybinds.<action>`       | accelerator with a non-Shift modifier   | built-in shortcut per action     |
 
 `scrollback.lines` is memory-only and independent for every Live Terminal
 Session. Zero disables retention and drops existing history on a valid reload.
@@ -184,8 +184,9 @@ drag inset. On Linux and Windows, it begins directly below native Window Chrome.
 `font.lineHeight` changes row height independently of glyph size.
 `font.family` and `font.lineHeight` are applied when a Surface is created, but
 an existing Surface keeps both until OMXTerm restarts. Restty obtains the exact
-installed regular face through the main process, then uses bundled JetBrainsMono
-and available local operating-system fallback faces. A missing, unreadable,
+installed regular face through the main process, then uses bundled FiraCode
+regular/bold, DejaVu Sans Mono regular/bold, retained JetBrainsMono Nerd Font
+Mono, and available local operating-system fallback faces. A missing, unreadable,
 oversized, unsupported or corrupt configured face is an actionable error, never
 a similarly named substitute. The native Always on Top menu changes one current
 window; `window.alwaysOnTop` sets the default for new windows.

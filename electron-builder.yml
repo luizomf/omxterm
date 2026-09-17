@@ -21,7 +21,11 @@ extraResources:
     to: application-icon.png
   - from: THIRD_PARTY_NOTICES.md
     to: THIRD_PARTY_NOTICES.md
-  - from: assets/fonts/OFL.txt
+  - from: assets/fonts/FiraCode-OFL.txt
+    to: licenses/FiraCode-OFL.txt
+  - from: assets/fonts/DejaVu-LICENSE.txt
+    to: licenses/DejaVu.txt
+  - from: assets/fonts/JetBrainsMono-OFL.txt
     to: licenses/JetBrainsMono-OFL.txt
   - from: node_modules/node-pty/LICENSE
     to: licenses/node-pty.txt

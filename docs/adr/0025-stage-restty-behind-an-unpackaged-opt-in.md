@@ -11,9 +11,9 @@ were removed at final cutover. Restty initialization failure never starts an
 invisible shell or falls back to another renderer.
 
 The first slice reuses the existing Electron host, typed configuration bridge,
-Terminal Tabs, session Adapter and owned local PTYs. Each Restty Surface uses one
-embedded, reproducibly licensed JetBrainsMono Nerd Font Mono TTF and a WebGL2
-backend. Font, Ghostty core and backend readiness precede PTY creation. Partial
+Terminal Tabs, session Adapter and owned local PTYs. Each Restty Surface uses
+embedded, reproducibly licensed Terminal Font Stack TTFs and a WebGL2 backend.
+Font, Ghostty core and backend readiness precede PTY creation. Partial
 initialization is disposed without starting a shell. Irrecoverable WebGL context
 loss produces a visible failure and disposes that Surface and its Adapter; it
 does not recreate a core around a surviving PTY or affect another tab. The
@@ -31,7 +31,19 @@ DOM-paste origin, current bracketed-paste mode, selection/Select All and parsed
 OSC commands so the OMXTerm host can own asynchronous Protected Paste and
 write-only clipboard policy. OSC cancellation resumes later ordinary output.
 Dependency drift requires review.
-The bundled TTF replaces the prototype's non-equivalent WOFF2 shaping input.
+The bundled TTF inputs replace the prototype's non-equivalent WOFF2 shaping
+input.
+
+The later font-coverage correction keeps that boundary but replaces the
+regular-only default with real FiraCode Nerd Font Mono regular and bold faces.
+The prior stack could not select a real bold face, and representative missing
+private-use and extended-script glyphs reproduced through pinned Restty despite
+the regular JetBrains face loading successfully. Bundled DejaVu Sans Mono adds
+redistributable coverage, while the prior JetBrains Nerd face and native
+emoji/CJK/symbol candidates remain later fallbacks. Restty's existing
+style-aware ordered picker owns face selection; this adds no second shaper,
+renderer filesystem access, network source, or ANSI bold-to-bright color
+mapping.
 
 The appearance and font slices map OMXTerm Terminal Themes into Restty, use the
 configured size and creation-time line height, apply per-side padding, and
@@ -39,10 +51,11 @@ preserve per-window zoom through runtime operations. Main resolves an exact
 installed regular face through conventional native platform facilities, bounds
 and validates the read, and exposes only bytes for the active validated family
 and fixed local fallback candidates through sender-validated IPC. Restty orders
-the configured face before licensed bundled JetBrainsMono and available local
-OS emoji/CJK/symbol fallbacks. The renderer cannot provide a path or enumerate
-files; there is no remote fallback, Operational Event font data, or persistent
-byte cache.
+the configured face before bundled FiraCode Nerd Font Mono regular/bold,
+DejaVu Sans Mono regular/bold, the retained JetBrainsMono Nerd Font Mono face,
+and available local OS emoji/CJK/symbol fallbacks. The renderer cannot provide
+a path or enumerate files; there is no remote fallback, Operational Event font
+data, or persistent byte cache.
 
 Theme, size and padding update existing Surfaces without replacing their core
 or PTY. `font.family` and `font.lineHeight` are the complete restart-only set:
