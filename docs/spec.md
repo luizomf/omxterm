@@ -169,7 +169,7 @@ selector or fallback Surface; rendering initialization failure starts no shell
   Configuration. Escape, the close button, or the backdrop dismisses the
   overlay, releases its renderer Blob source synchronously, and returns focus
   to the live selected Terminal Tab. Picker cancellation returns terminal focus
-  without an error. The picker and visible local-image links share the bounded
+  without an error. The picker and visible local-image sources share the bounded
   read and overlay contract below. While choosing, loading, or displaying a
   preview, terminal clipboard actions, file drops, font zoom, snippet toggles
   and snippet injection are ignored; page activation does not steal preview
@@ -398,9 +398,12 @@ title mirrors the selected tab and falls back to `OMXTerm`. Title contents are
 never logged or reported to the PTY.
 
 Only literal visible lowercase `http:`, `https:`, and absolute authority-free
-`file:///` URLs are links. `Cmd+click` on macOS or `Ctrl+click` on Linux and
-Windows explicitly activates one. For HTTP(S), the Electron main process parses
-and validates the exact URL before asking the operating system to open it. The valid modified primary
+`file:///` URLs are links. Literal visible native absolute paths are separate
+Local Image Preview destinations: POSIX paths begin with one `/`, and Windows
+paths are drive-qualified with a letter, colon, and slash or backslash.
+`Cmd+click` on macOS or `Ctrl+click` on Linux and Windows explicitly activates a
+recognized destination. For HTTP(S), the Electron main process parses and
+validates the exact URL before asking the operating system to open it. The valid modified primary
 click takes precedence over application mouse reporting and is consumed without
 a duplicate PTY mouse report; other gestures retain ordinary selection or
 application-mouse routing. Restty reconstructs a destination only
@@ -411,12 +414,18 @@ Ghostty's grapheme-cluster mode by default so emoji-presentation and ZWJ
 clusters occupy one two-column terminal cell for rendering and selection.
 For `file:///`, main independently requires the literal lowercase scheme, no
 remote or `localhost` authority, no query or fragment, and a platform-absolute
-local path. It opens no operating-system URL handler: after activation only, it
-reads the selected target through a non-shell regular-file boundary. The content
-must be a structurally valid, natively decodable static PNG or JPEG of at most
+local path. A native path is sent as a distinct typed source and independently
+must be absolute for the current platform; `%` and `#` remain literal filename
+characters instead of URL escapes or fragments. Native path recognition uses
+the exact non-whitespace token beginning at a line boundary or after whitespace.
+It does not trim or decode quotes, brackets, assignment prefixes, trailing
+punctuation, or any other token content, so paths containing whitespace and
+syntactically wrapped paths are not recognized. It opens no operating-system URL
+handler: after activation only, it reads the selected target through a non-shell
+regular-file boundary. The content must be a structurally valid, natively decodable static PNG or JPEG of at most
 16 MiB encoded, 8192 pixels per side, and 16 million pixels. APNG and every
 other animated or unsupported format are rejected regardless of extension. The
-same Terminal Window permits at most one picker or link read at a time; owner
+same Terminal Window permits at most one picker or activated-source read at a time; owner
 closure makes late picker, read, and decode results inert. Both picker and URL
 paths must be local absolute paths before any read; Windows paths must include
 a drive, and UNC/device paths are rejected even from the native picker.
@@ -426,10 +435,11 @@ bytes, creates a memory-only Blob URL under the production CSP, and synchronousl
 removes the image source and revokes that URL on dismissal, replacement failure,
 page teardown, or owner close. It never receives an arbitrary filesystem API or
 path. Failed reads and decode failures show only a fixed non-path error. OMXTerm
-never reads on output or hover, infers a relative or bare path, consults shell
-cwd, fetches a remote image, accepts UNC/file authorities, treats OSC 8 metadata
-as a local link, logs image paths or payload, writes/downloads image data, or
-persists the preview.
+never reads on output or hover, infers a relative path, expands `~`, consults
+shell cwd, fetches or transfers a remote image, accepts UNC/file authorities,
+treats OSC 8 metadata as a local source, logs image paths or payload,
+writes/downloads image data, or persists the preview. A clicked path always
+addresses the machine running OMXTerm regardless of where its text originated.
 
 Application mouse modes own buttons, motion, and wheel reporting in normal and
 alternate screens; Shift retains the selection override, and explicit copy and

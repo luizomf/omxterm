@@ -170,10 +170,13 @@ _Avoid_: image upload, clipboard image, terminal attachment, image viewer
 
 **Local Image Preview**:
 A temporary renderer overlay for one explicitly selected or activated local
-static PNG or JPEG. Electron main validates and bounds the regular-file read,
-while the renderer receives only image bytes and releases its Blob source on
-dismissal. It is separate from Terminal Payload and Inline Terminal Images and
-never infers a shell working directory, remote path, bare path, or OSC 8 target.
+static PNG or JPEG. Activation may use a literal authority-free `file:///` URL
+or an unambiguous native absolute path token visible in Terminal Payload.
+Electron main validates and bounds the regular-file read, while the renderer
+receives only image bytes and releases its Blob source on dismissal. It is
+separate from Terminal Payload and Inline Terminal Images and never infers a
+shell working directory, relative path, remote file, or OSC 8 target. Visible
+path text always names a file on the OMXTerm host, even when SSH produced it.
 _Avoid_: inline image, file browser, remote image, image attachment
 
 **Operational Event**:

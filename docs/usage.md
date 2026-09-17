@@ -128,9 +128,11 @@ normal menu behavior.
 ## Previewing local images
 
 **Current:** choose `File -> Open Local Image…` to select one local static PNG
-or JPEG, or activate a literal visible absolute `file:///` URL with `Cmd+click`
-on macOS or `Ctrl+click` on Linux and Windows. The preview appears in a temporary
-overlay. Escape, its close button, or the dark backdrop dismisses it and returns
+or JPEG, or activate a literal visible absolute `file:///` URL or native
+absolute path with `Cmd+click` on macOS or `Ctrl+click` on Linux and Windows.
+POSIX paths must begin with one `/`; Windows paths must include a drive letter,
+colon, and slash or backslash. The preview appears in a temporary overlay.
+Escape, its close button, or the dark backdrop dismisses it and returns
 focus to the selected Terminal Tab. The action intentionally has no built-in or
 configurable shortcut. While choosing, loading, or viewing an image, terminal
 copy/paste/select-all, file drops, font zoom and snippets actions are ignored
@@ -143,14 +145,22 @@ per side, and 16 million pixels. APNG, GIF, SVG, WebP, animation, unsupported or
 invalid contents, and oversized images are rejected even when their filename
 extension looks supported.
 
-Local link activation is deliberately literal. OMXTerm accepts an
-authority-free `file:///` URL with a platform-absolute path; it does not infer a
-bare or relative path, use the shell working directory, interpret an SSH path,
-trust OSC 8 metadata, accept a remote/UNC file authority, or fetch an HTTP(S)
-image. Visible HTTP(S) links retain their existing browser behavior described
-below. The native picker also rejects UNC/device and non-absolute paths before
-reading; Windows selections must be drive-qualified local paths. Merely printing
-or hovering over any path reads nothing.
+Local activation is deliberately literal. OMXTerm accepts an authority-free
+`file:///` URL with a platform-absolute path or an unambiguous native absolute
+path token. Native paths use the complete non-whitespace token beginning at a
+line boundary or after whitespace. OMXTerm does not strip wrappers or trailing
+punctuation, decode the token, or guess paths containing spaces; literal `%` and
+`#` stay filename characters. Put a supported path on its own or between
+whitespace without quotes, brackets, an assignment prefix, or prose punctuation.
+
+OMXTerm does not infer a relative path, expand `~`, use the shell working
+directory, trust OSC 8 metadata, accept a remote/UNC file authority, transfer an
+SSH file, or fetch an HTTP(S) image. Clicking always names a file on the machine
+running OMXTerm, even if SSH printed the text. Visible HTTP(S) links retain their
+existing browser behavior described below. The native picker also rejects
+UNC/device and non-absolute paths before reading; Windows selections must be
+drive-qualified local paths. Merely printing or hovering over any path reads
+nothing.
 
 Preview bytes and the renderer Blob URL remain memory-only. Dismissal or window
 teardown removes the image source and revokes the URL; OMXTerm does not write,

@@ -38,5 +38,6 @@ closing brackets are excluded, an opening parenthesis terminates a match, nearby
 URLs remain separate, and clipped destinations are refused rather than guessed.
 
 [ADR 0026](0026-preview-explicitly-activated-local-images.md) adds literal
-`file:///` recognition to the same visible-span and gesture owner, but keeps its
-bounded local-file preview route separate from External Link opening.
+`file:///` URL and conservative native absolute-path recognition to the same
+visible-destination and gesture owner, but keeps their bounded local-file
+preview route separate from External Link opening.
