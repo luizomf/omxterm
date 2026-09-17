@@ -18,7 +18,7 @@
     "sourceCommit": "3db45b0e10dbe53c52a77131d366f519546e4f04",
     "ghosttyCommit": "0309af1b7f0724105a0805efa88bbee808a616ae",
     "patch": "assets/restty/scrollback-limits.patch",
-    "patchSha256": "fcdd461e528119138f38ec905cd091c971e105bae6f78c43f3d84489c92fb906",
+    "patchSha256": "e40eed76281a7fa493af312ed2b77a726daabf2c023dea4f174cff5d31ac912d",
     "artifact": "assets/restty/omxterm-restty-core.wasm",
     "artifactSha256": "64447381534a21b72e6e51cd88346a27eb8dc9e8b8c0a0f3973f9ce9babb81eb",
     "zigVersion": "0.16.0",

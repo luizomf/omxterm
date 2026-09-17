@@ -2,10 +2,7 @@ diff --git a/wasm/src/restty.zig b/wasm/src/restty.zig
 index 28bdd04..843e434 100644
 --- a/wasm/src/restty.zig
 +++ b/wasm/src/restty.zig
-@@ -623,6 +623,22 @@ pub export fn restty_scroll_viewport(handle: ?*Restty, delta: i32) u32 {
-     return @intFromEnum(ErrorCode.ok);
- }
- 
+@@ -625,0 +626,16 @@ pub export fn restty_scroll_viewport(handle: ?*Restty, delta: i32) u32 {
 +pub export fn restty_set_scrollback_limits(
 +    handle: ?*Restty,
 +    max_lines: u32,
@@ -22,6 +19,3 @@ index 28bdd04..843e434 100644
 +    return @intFromEnum(ErrorCode.ok);
 +}
 +
- pub export fn restty_search_set_query(handle: ?*Restty, ptr: [*]const u8, len: usize) u32 {
-     const h = handle orelse return @intFromEnum(ErrorCode.invalid_handle);
-     const query = ptr[0..len];

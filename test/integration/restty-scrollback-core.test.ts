@@ -16,6 +16,10 @@ type CoreExports = WebAssembly.Exports & {
   restty_free(pointer: number, length: number): void;
   restty_write(handle: number, pointer: number, length: number): number;
   restty_resize(handle: number, cols: number, rows: number): number;
+  restty_render_update(handle: number): number;
+  restty_rows(handle: number): number;
+  restty_cols(handle: number): number;
+  restty_cell_codepoints_ptr(handle: number): number;
   restty_scroll_viewport(handle: number, delta: number): number;
   restty_set_scrollback_limits(
     handle: number,
@@ -85,30 +89,54 @@ function history(exports: CoreExports, handle: number): number {
   );
 }
 
+function visibleText(exports: CoreExports, handle: number): string {
+  expect(exports.restty_render_update(handle)).toBe(0);
+  const length = exports.restty_rows(handle) * exports.restty_cols(handle);
+  const pointer = exports.restty_cell_codepoints_ptr(handle);
+  const codepoints = new Uint32Array(exports.memory.buffer, pointer, length);
+  return Array.from(codepoints, (value) =>
+    value === 0 ? " " : String.fromCodePoint(value),
+  ).join("");
+}
+
 describe("pinned Restty/Ghostty scrollback core", () => {
-  it("enforces positive physical-line targets by whole pages across several boundaries", async () => {
+  it("enforces creation policies from 1 through 100,000 by whole pages", async () => {
     const core = await loadCore();
     try {
-      const retained: number[] = [];
-      for (const limit of [1, 1_200, 3_000, 4_500, 100_000]) {
+      const policies = [
+        { label: "minimum", limit: 1 },
+        { label: "ordinary", limit: 1_200 },
+        { label: "default", limit: 10_000 },
+        { label: "maximum", limit: 100_000 },
+      ] as const;
+      const retained = new Map<string, number>();
+      for (const policy of policies) {
         const handle = core.create(40, 5, 256_000_000);
         expect(
-          core.exports.restty_set_scrollback_limits(handle, limit, 256_000_000),
+          core.exports.restty_set_scrollback_limits(
+            handle,
+            policy.limit,
+            256_000_000,
+          ),
         ).toBe(0);
-        write(core.exports, handle, output(8_000, 40));
-        retained.push(history(core.exports, handle));
+        write(core.exports, handle, output(policy.limit + 4_000, 40));
+        retained.set(policy.label, history(core.exports, handle));
         core.destroy(handle);
       }
 
-      const boundaryPage = retained[0]!;
+      const boundaryPage = retained.get("minimum")!;
       expect(boundaryPage).toBeGreaterThan(1);
       expect(boundaryPage).toBeLessThan(1_500);
-      expect(retained[1]).toBeLessThanOrEqual(1_200 + boundaryPage);
-      expect(retained[2]).toBeGreaterThan(retained[1]!);
-      expect(retained[2]).toBeLessThanOrEqual(3_000 + boundaryPage);
-      expect(retained[3]).toBeGreaterThan(retained[2]!);
-      expect(retained[3]).toBeLessThanOrEqual(4_500 + boundaryPage);
-      expect(retained[4]).toBeGreaterThan(4_500);
+      for (const policy of policies) {
+        const actual = retained.get(policy.label)!;
+        expect(actual).toBeGreaterThan(0);
+        expect(actual).toBeLessThanOrEqual(policy.limit + boundaryPage);
+      }
+      expect(retained.get("ordinary")).toBeGreaterThan(boundaryPage);
+      expect(retained.get("default")).toBeGreaterThan(
+        retained.get("ordinary")!,
+      );
+      expect(retained.get("maximum")).toBeGreaterThan(retained.get("default")!);
     } finally {
       core.destroyAll();
     }
@@ -176,21 +204,48 @@ describe("pinned Restty/Ghostty scrollback core", () => {
       write(core.exports, handle, output(6_000, 40));
       core.exports.restty_scroll_viewport(handle, -2_000);
       const before = core.exports.restty_scrollbar_offset(handle);
+      expect(before).toBeGreaterThan(0);
 
       core.exports.restty_set_scrollback_limits(handle, 3_000, 256_000_000);
       expect(core.exports.restty_resize(handle, 60, 10)).toBe(0);
       const reducedHistory = history(core.exports, handle);
+      const reflowedOffset = core.exports.restty_scrollbar_offset(handle);
       expect(reducedHistory).toBeGreaterThan(0);
       expect(reducedHistory).toBeLessThan(4_500);
-      expect(core.exports.restty_scrollbar_offset(handle)).toBeLessThanOrEqual(
-        reducedHistory,
-      );
-      expect(before).toBeGreaterThanOrEqual(0);
+      expect(before).toBeGreaterThan(reducedHistory);
+      expect(reflowedOffset).toBe(0);
 
       write(core.exports, handle, "\u001b[?1049h" + output(2_000, 58));
       expect(history(core.exports, handle)).toBe(0);
       write(core.exports, handle, "\u001b[?1049l");
       expect(history(core.exports, handle)).toBe(reducedHistory);
+    } finally {
+      core.destroyAll();
+    }
+  });
+
+  it("does not mutate another core's viewport or visible content", async () => {
+    const core = await loadCore();
+    try {
+      const first = core.create(40, 6, 10_000_000);
+      const second = core.create(40, 6, 10_000_000);
+      core.exports.restty_set_scrollback_limits(first, 3_000, 10_000_000);
+      core.exports.restty_set_scrollback_limits(second, 3_000, 10_000_000);
+      write(core.exports, first, output(4_000, 40));
+      write(core.exports, second, `${output(2_000, 40)}SECOND-SURFACE-MARKER`);
+      core.exports.restty_scroll_viewport(second, -500);
+      const secondHistory = history(core.exports, second);
+      const secondOffset = core.exports.restty_scrollbar_offset(second);
+      const secondContent = visibleText(core.exports, second);
+
+      core.exports.restty_set_scrollback_limits(first, 0, 10_000_000);
+      write(core.exports, first, output(3_000, 40));
+      core.exports.restty_set_scrollback_limits(first, 1_200, 10_000_000);
+      write(core.exports, first, output(2_000, 40));
+
+      expect(history(core.exports, second)).toBe(secondHistory);
+      expect(core.exports.restty_scrollbar_offset(second)).toBe(secondOffset);
+      expect(visibleText(core.exports, second)).toBe(secondContent);
     } finally {
       core.destroyAll();
     }

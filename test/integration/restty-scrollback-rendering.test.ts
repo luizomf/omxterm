@@ -67,6 +67,12 @@ describe("Restty scrollback through the production Surface seam", () => {
       expect(result!.initial.scrollTop).toBeGreaterThan(0);
       expect(result!.scrolledTop).toBe(0);
       expect(result!.reduced.scrollTop).toBe(0);
+      expect(result!.reduced.scrollHeight).toBeLessThan(
+        result!.initial.scrollHeight,
+      );
+      expect(result!.reduced.scrollHeight).toBeGreaterThan(
+        result!.reduced.clientHeight,
+      );
       expect(result!.reduced.sameCanvas).toBe(true);
       expect(result!.selectedPixels).toBeGreaterThan(0);
       expect(result!.zero.scrollHeight).toBe(result!.zero.clientHeight);

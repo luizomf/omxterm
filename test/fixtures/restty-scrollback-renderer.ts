@@ -82,7 +82,7 @@ async function run() {
     },
   );
   const canvas = initialCanvas();
-  output(0, 500);
+  output(0, 5_000);
   await waitForRender();
 
   globalThis.__omxtermResttyScrollback = {
@@ -103,7 +103,7 @@ async function run() {
     },
     async enableHistory() {
       surface.applyConfiguration(configuration(3_000));
-      output(20_000, 500);
+      output(20_000, 2_000);
       await waitForRender();
       return metrics(canvas);
     },
