@@ -43,19 +43,32 @@ export async function prepareLargePasteShell(options: {
   readonly output: () => string;
   readonly waitFor: (predicate: () => boolean, label: string) => Promise<void>;
 }) {
-  options.write(process.platform === "win32" ? "\u0003" : "x\u0015");
   if (process.platform === "win32") {
+    const interruptStart = options.output().length;
+    options.write("\u0003");
+    await options.waitFor(
+      () => /PS [^\r\n]*> /u.test(options.output().slice(interruptStart)),
+      "owned PowerShell prompt after interrupt",
+    );
     const marker = "__PASTE_SHELL_READY__";
     const encodedMarker = Buffer.from(marker).toString("base64");
     options.write(
       `Write-Output ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encodedMarker}')))\r`,
     );
-    await options.waitFor(
-      () => options.output().includes(marker),
-      "owned PowerShell paste fixture readiness",
-    );
+    try {
+      await options.waitFor(
+        () => options.output().includes(marker),
+        "owned PowerShell paste fixture readiness",
+      );
+    } catch (cause) {
+      throw new Error(
+        `PowerShell paste fixture produced no readiness marker; synthetic PTY tail: ${JSON.stringify(options.output().slice(-2_000))}`,
+        { cause },
+      );
+    }
     return;
   }
+  options.write("x\u0015");
   options.write("stty -echo; printf '__PASTE_ECHO_OFF__\\n'\r");
   await options.waitFor(
     () => options.output().includes("__PASTE_ECHO_OFF__"),

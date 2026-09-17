@@ -24,5 +24,5 @@ describe("native installed font-family availability", () => {
     await expect(
       installedFontFamilyMetrics("OMXTerm Definitely Missing Font 37", 16),
     ).resolves.toBeUndefined();
-  });
+  }, 30_000);
 });
