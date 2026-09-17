@@ -111,7 +111,7 @@ Restty runtime, declarations and embedded-core SHA-256 values and produces
 corrected runtime SHA-256
 `15ca6dc64c45c1f42a88337aec58367a5e69fc0889dfa92c305aa333cba2a651`,
 embedded-core chunk SHA-256
-`c41282dfd80a93380712710fe5821f4c50dee5cd3837b552827b55f91e37c89c`,
+`4c0830a7b5dc3cb986de5c980315fc68d14ef33cc193a479b062fc54a7234159`,
 and event declarations SHA-256
 `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34`.
 The narrow correction makes font-load failure reject initialization, disables
@@ -133,7 +133,7 @@ Ghostty commits above with tracked Restty patch
 `assets/restty/omxterm-core.patch` and Ghostty patch
 `assets/restty/ghostty-title-events.patch`. Their SHA-256 values are recorded in
 `assets/restty-sources.json`. The artifact SHA-256 is
-`a1b61d3277ea01a05c496520a6a188bb484f35e30c3c8215614f3b873e6a7e89`.
+`9cb603614a54fadf9bdb877ab19107df0933267b0446da32b1177f1488189404`.
 To reproduce it in an owned disposable checkout, check out the pinned Restty
 commit and submodules, apply the Restty patch at repository root and the
 Ghostty patch inside `reference/ghostty`, use Zig 0.16.0, and run:

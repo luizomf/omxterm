@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { deflateSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createPaddedPng,
@@ -63,14 +64,63 @@ function write(exports: CoreExports, handle: number, value: string): void {
 }
 
 function placementImageIds(exports: CoreExports, handle: number): number[] {
+  return placementSnapshots(exports, handle).map(({ imageId }) => imageId);
+}
+
+function placementSnapshots(
+  exports: CoreExports,
+  handle: number,
+): Array<{ readonly imageId: number; readonly x: number; readonly y: number }> {
   expect(exports.restty_render_update(handle)).toBe(0);
   const count = exports.restty_kitty_placement_count(handle);
   const pointer = exports.restty_kitty_placements_ptr(handle);
   const stride = exports.restty_kitty_placement_stride();
   const view = new DataView(exports.memory.buffer);
-  return Array.from({ length: count }, (_, index) =>
-    view.getUint32(pointer + index * stride, true),
+  return Array.from({ length: count }, (_, index) => {
+    const offset = pointer + index * stride;
+    return {
+      imageId: view.getUint32(offset, true),
+      x: view.getInt32(offset + 24, true),
+      y: view.getInt32(offset + 28, true),
+    };
+  });
+}
+
+function createCompressedSolidPng(width: number, height: number): Uint8Array {
+  const scanlines = new Uint8Array((width * 4 + 1) * height);
+  const header = new Uint8Array(13);
+  new DataView(header.buffer).setUint32(0, width);
+  new DataView(header.buffer).setUint32(4, height);
+  header.set([8, 6, 0, 0, 0], 8);
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    pngChunk("IHDR", header),
+    pngChunk("IDAT", deflateSync(scanlines)),
+    pngChunk("IEND", new Uint8Array()),
+  ]);
+}
+
+function pngChunk(type: string, data: Uint8Array): Buffer {
+  const typeBytes = Buffer.from(type);
+  const output = Buffer.alloc(12 + data.length);
+  output.writeUInt32BE(data.length, 0);
+  typeBytes.copy(output, 4);
+  Buffer.from(data).copy(output, 8);
+  output.writeUInt32BE(
+    crc32(Buffer.concat([typeBytes, data])),
+    output.length - 4,
   );
+  return output;
+}
+
+function crc32(data: Uint8Array): number {
+  let crc = 0xffff_ffff;
+  for (const byte of data) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1)
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb8_8320 : 0);
+  }
+  return (crc ^ 0xffff_ffff) >>> 0;
 }
 
 function transmit(
@@ -103,22 +153,34 @@ describe("pinned Restty/Ghostty inline images", () => {
     core.exports.restty_destroy(core.handle);
   });
 
-  it("replaces one pending anonymous Chafa prelude with the next prelude", () => {
+  it("replaces a pending image with Chafa and Pi transmission starts", () => {
     write(
       core.exports,
       core.handle,
-      "\u001b_Ga=T,f=32,s=2,v=1,c=2,r=1,m=1,q=2\u001b\\",
+      "\u001b_Ga=T,f=32,s=2,v=1,c=2,r=1,m=1,q=2,i=300\u001b\\",
     );
     write(
       core.exports,
       core.handle,
-      "\u001b_Ga=T,f=32,s=1,v=1,c=1,r=1,m=1,q=2\u001b\\",
+      "\u001b_Ga=T,f=32,s=1,v=1,c=1,r=1,m=1,q=2,i=301\u001b\\",
     );
     write(core.exports, core.handle, "\u001b_Gm=1;/wAA/w==\u001b\\");
     write(core.exports, core.handle, "\u001b_Gm=0\u001b\\");
+    expect(placementImageIds(core.exports, core.handle)).toEqual([301]);
 
-    expect(core.exports.restty_render_update(core.handle)).toBe(0);
-    expect(core.exports.restty_kitty_placement_count(core.handle)).toBe(1);
+    write(
+      core.exports,
+      core.handle,
+      "\u001b_Ga=T,f=32,s=2,v=1,c=2,r=1,m=1,q=2,i=302;AAAA\u001b\\",
+    );
+    transmit(
+      core.exports,
+      core.handle,
+      new Uint8Array([0, 255, 0, 255]),
+      "a=T,f=32,q=2,s=1,v=1,c=1,r=1,i=303",
+    );
+    expect(placementImageIds(core.exports, core.handle)).toEqual([301, 303]);
+    expect(core.exports.restty_debug_kitty_has_loading(core.handle)).toBe(0);
   });
 
   it.each([
@@ -140,6 +202,16 @@ describe("pinned Restty/Ghostty inline images", () => {
     expect(core.exports.restty_render_update(core.handle)).toBe(0);
     expect(core.exports.restty_kitty_placement_count(core.handle)).toBe(1);
   });
+
+  it("rejects oversized PNG dimensions before decoded allocation", () => {
+    const png = createCompressedSolidPng(3_000, 2_000);
+    const beforeBytes = core.exports.memory.buffer.byteLength;
+    transmit(core.exports, core.handle, png, "a=T,f=100,q=2,c=1,r=1,i=260");
+    const growthBytes = core.exports.memory.buffer.byteLength - beforeBytes;
+
+    expect(placementImageIds(core.exports, core.handle)).toEqual([]);
+    expect(growthBytes).toBeLessThan(1_000_000);
+  }, 120_000);
 
   it("rejects a source above 4,194,304 pixels without blocking a later image", () => {
     transmit(
@@ -220,6 +292,23 @@ describe("pinned Restty/Ghostty inline images", () => {
     write(core.exports, core.handle, "\u001bc");
     expect(placementImageIds(core.exports, core.handle)).toEqual([]);
     expect(core.exports.restty_debug_kitty_total_bytes(core.handle)).toBe(0);
+  });
+
+  it("keeps placements anchored while direct-session output scrolls", () => {
+    transmit(
+      core.exports,
+      core.handle,
+      new Uint8Array([0, 255, 0, 255]),
+      "a=T,f=32,q=2,s=1,v=1,c=1,r=1,i=279",
+    );
+    const before = placementSnapshots(core.exports, core.handle);
+    expect(before).toHaveLength(1);
+
+    write(core.exports, core.handle, "\r\n".repeat(24));
+    const after = placementSnapshots(core.exports, core.handle);
+    expect(after).not.toEqual(before);
+    expect(after).toEqual([]);
+    expect(core.exports.restty_debug_kitty_image_count(core.handle)).toBe(1);
   });
 
   it("accounts decoded bytes against 64,000,000 bytes and evicts oldest images", () => {

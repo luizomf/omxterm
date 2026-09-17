@@ -2,60 +2,42 @@ diff --git a/src/terminal/apc.zig b/src/terminal/apc.zig
 index 1ae70f5f1..fdd524e54 100644
 --- a/src/terminal/apc.zig
 +++ b/src/terminal/apc.zig
-@@ -34,6 +34,11 @@ pub const Handler = struct {
-         self.state.deinit();
-     }
-
+@@ -36,0 +37,5 @@ pub const Handler = struct {
 +    /// True while a recognized Kitty APC is being parsed.
 +    pub fn kittyActive(self: *const Handler) bool {
 +        return self.state == .kitty;
 +    }
 +
-     pub fn start(self: *Handler) void {
-         self.state.deinit();
-         self.state = .{ .identify = .{} };
 diff --git a/src/terminal/kitty/graphics_exec.zig b/src/terminal/kitty/graphics_exec.zig
-index b1b968b28..a01362bbe 100644
+index b1b968b28..ae5e99da5 100644
 --- a/src/terminal/kitty/graphics_exec.zig
 +++ b/src/terminal/kitty/graphics_exec.zig
-@@ -194,6 +194,16 @@ fn transmit(
-     const t = cmd.transmission().?;
-     const storage = &terminal.screens.active.kitty_images;
-
-+    // A metadata-only transmission starts a new image. Chafa uses this as
-+    // an anonymous first chunk, so replace any unfinished transmission
-+    // rather than interpreting the new metadata as payload continuation.
-+    if (storage.loading != null and cmd.data.len == 0 and
-+        (t.width > 0 or t.height > 0))
-+    {
+@@ -196,0 +197,13 @@ fn transmit(
++    // A transmit-and-display command starts a new image. Both Pi's first PNG
++    // chunk and Chafa's anonymous metadata-only prelude use a=T; bare m chunks
++    // remain continuations. Replace an unfinished transmission before any new
++    // payload can be appended to it.
++    const starts_new_image = switch (cmd.control) {
++        .transmit_and_display => true,
++        else => false,
++    };
++    if (storage.loading != null and starts_new_image) {
 +        storage.loading.?.destroy(alloc);
 +        storage.loading = null;
 +    }
 +
-     var result: Response = if (storage.loading) |loading| loading: {
-         // Any transmit-like command received while a load is in progress
-         // is a continuation chunk of that load, and the load completes
-@@ -1000,7 +1010,11 @@ fn loadAndAddImage(
-     var loading: LoadingImage = if (storage.loading) |loading| loading: {
-         // Note: we do NOT want to call "cmd.toOwnedData" here because
-         // we're _copying_ the data. We want the command data to be freed.
+@@ -1003 +1016,5 @@ fn loadAndAddImage(
 -        try loading.addData(alloc, cmd.data);
 +        loading.addData(alloc, cmd.data) catch |err| {
 +            loading.destroy(alloc);
 +            storage.loading = null;
 +            return err;
 +        };
-
-         // If we have more then we're done
-         if (t.more_chunks) return .{ .image = loading.image, .more = true };
 diff --git a/src/terminal/kitty/graphics_image.zig b/src/terminal/kitty/graphics_image.zig
-index a4fc24a80..dce3ffcb8 100644
+index a4fc24a80..92fd30cd7 100644
 --- a/src/terminal/kitty/graphics_image.zig
 +++ b/src/terminal/kitty/graphics_image.zig
-@@ -17,8 +17,11 @@ const log = std.log.scoped(.kitty_gfx);
- /// Maximum width or height of an image. Taken directly from Kitty.
- const max_dimension = 10000;
-
+@@ -20,2 +20,5 @@ const max_dimension = 10000;
 -/// Maximum size in bytes, taken from Kitty.
 -const max_size = 400 * 1024 * 1024; // 400MB
 +/// Maximum accepted direct load/decode input for OMXTerm's bounded paths.
@@ -63,26 +45,43 @@ index a4fc24a80..dce3ffcb8 100644
 +
 +/// Maximum accepted decoded source area for OMXTerm's Pi/Chafa subset.
 +const max_pixels = 4_194_304;
-
- /// An image that is still being loaded. The image should be initialized
- /// using init on the first chunk and then addData for each subsequent
-@@ -533,6 +536,8 @@ pub const LoadingImage = struct {
-         // Validate our dimensions.
-         if (img.width == 0 or img.height == 0) return error.DimensionsRequired;
-         if (img.width > max_dimension or img.height > max_dimension) return error.DimensionsTooLarge;
+@@ -530,2 +533,6 @@ pub const LoadingImage = struct {
+-        // Decode the png if we have to
+-        if (img.format == .png) try self.decodePng(alloc);
++        // Reject oversized PNG dimensions from the fixed IHDR before the
++        // decoder can allocate the completed RGBA buffer.
++        if (img.format == .png) {
++            try self.validatePngDimensions();
++            try self.decodePng(alloc);
++        }
+@@ -535,0 +543,2 @@ pub const LoadingImage = struct {
 +        if (@as(u64, img.width) * @as(u64, img.height) > max_pixels)
 +            return error.DimensionsTooLarge;
-
-         // Data length must be what we expect.
-         const bpp = command.Transmission.formatBpp(img.format);
+@@ -623,0 +633,19 @@ pub const LoadingImage = struct {
++    fn validatePngDimensions(self: *const LoadingImage) !void {
++        const data = self.data.items;
++        const signature = "\x89PNG\r\n\x1a\n";
++        if (data.len < 24 or !std.mem.eql(u8, data[0..8], signature) or
++            !std.mem.eql(u8, data[12..16], "IHDR") or
++            std.mem.readInt(u32, data[8..12], .big) != 13)
++        {
++            return error.InvalidData;
++        }
++
++        const width = std.mem.readInt(u32, data[16..20], .big);
++        const height = std.mem.readInt(u32, data[20..24], .big);
++        if (width == 0 or height == 0) return error.DimensionsRequired;
++        if (width > max_dimension or height > max_dimension)
++            return error.DimensionsTooLarge;
++        if (@as(u64, width) * @as(u64, height) > max_pixels)
++            return error.DimensionsTooLarge;
++    }
++
 diff --git a/src/terminal/kitty/graphics_storage.zig b/src/terminal/kitty/graphics_storage.zig
 index 897c8944a..fd780d5c7 100644
 --- a/src/terminal/kitty/graphics_storage.zig
 +++ b/src/terminal/kitty/graphics_storage.zig
-@@ -1208,10 +1208,21 @@ pub const ImageStorage = struct {
-             self.images.count() != images_before) self.markMutated(io);
-
-         switch (cmd) {
+@@ -1211 +1211,12 @@ pub const ImageStorage = struct {
 -            .all => |delete_images| self.deleteVisiblePlacements(
 +            .all => |delete_images| if (delete_images) {
 +                // OMXTerm's accepted Pi d=A form releases every image and
@@ -96,21 +95,14 @@ index 897c8944a..fd780d5c7 100644
 +                    .total_limit = total_limit,
 +                };
 +            } else self.deleteVisiblePlacements(
-                 alloc,
-                 t,
+@@ -1214 +1225 @@ pub const ImageStorage = struct {
 -                delete_images,
 +                false,
-             ),
-
-             .id => |v| self.deleteById(
 diff --git a/src/terminal/osc.zig b/src/terminal/osc.zig
 index dbc35492a..8caf53ef4 100644
 --- a/src/terminal/osc.zig
 +++ b/src/terminal/osc.zig
-@@ -648,9 +648,11 @@ pub const Parser = struct {
-         const rem = input[offset..];
-         if (rem.len == 0) return;
-         self.capture.?.writeSlice(rem) catch |err| switch (err) {
+@@ -651,3 +651,5 @@ pub const Parser = struct {
 -            // We have overflowed our buffer or had some other error, set
 -            // the state to invalid so that we discard any further input.
 -            error.WriteFailed => self.state = .invalid,
@@ -119,13 +111,7 @@ index dbc35492a..8caf53ef4 100644
 +            error.WriteFailed => if (self.state != .@"0" and self.state != .@"2") {
 +                self.state = .invalid;
 +            },
-         };
-     }
-
-@@ -664,9 +666,11 @@ pub const Parser = struct {
-         // OSC sequence in the writer's buffer and skip the state machine.
-         if (self.capture) |*cap| {
-             cap.writeByte(c) catch |err| switch (err) {
+@@ -667,3 +669,5 @@ pub const Parser = struct {
 -                // We have overflowed our buffer or had some other error, set the
 -                // state to invalid so that we discard any further input.
 -                error.WriteFailed => self.state = .invalid,
@@ -134,36 +120,21 @@ index dbc35492a..8caf53ef4 100644
 +                error.WriteFailed => if (self.state != .@"0" and self.state != .@"2") {
 +                    self.state = .invalid;
 +                },
-             };
-             return;
-         }
 diff --git a/src/terminal/osc/parsers/change_window_title.zig b/src/terminal/osc/parsers/change_window_title.zig
 index 5bd84dc38..3dad6f641 100644
 --- a/src/terminal/osc/parsers/change_window_title.zig
 +++ b/src/terminal/osc/parsers/change_window_title.zig
-@@ -4,11 +4,17 @@ const Parser = @import("../../osc.zig").Parser;
- const Command = @import("../../osc.zig").Command;
-
- /// Parse OSC 0 and OSC 2
+@@ -7 +7,3 @@ const Command = @import("../../osc.zig").Command;
 -pub fn parse(parser: *Parser, _: ?u8) ?*Command {
 +pub fn parse(parser: *Parser, terminator: ?u8) ?*Command {
 +    // CAN and SUB abort OSC without committing the partial title.
 +    if (terminator == 0x18 or terminator == 0x1A) return null;
-     const cap = if (parser.capture) |*c| c else {
-         parser.state = .invalid;
-         return null;
-     };
+@@ -11,0 +14,4 @@ pub fn parse(parser: *Parser, _: ?u8) ?*Command {
 +    if (cap.trailing().len == Parser.MAX_BUF) {
 +        parser.command = .{ .change_window_title = "x" ** 257 };
 +        return &parser.command;
 +    }
-     cap.writer.writeByte(0) catch {
-         parser.state = .invalid;
-         return null;
-@@ -20,6 +26,18 @@ pub fn parse(parser: *Parser, _: ?u8) ?*Command {
-     return &parser.command;
- }
-
+@@ -22,0 +29,12 @@ pub fn parse(parser: *Parser, _: ?u8) ?*Command {
 +test "OSC 0: CAN and SUB cancel change_window_title" {
 +    const testing = std.testing;
 +
@@ -176,49 +147,25 @@ index 5bd84dc38..3dad6f641 100644
 +    }
 +}
 +
- test "OSC 0: change_window_title" {
-     const testing = std.testing;
-
-@@ -33,7 +51,7 @@ test "OSC 0: change_window_title" {
-     try testing.expectEqualStrings("ab", cmd.change_window_title);
- }
-
+@@ -36 +54 @@ test "OSC 0: change_window_title" {
 -test "OSC 0: longer than buffer" {
 +test "OSC 0: longer than buffer reports an overlong title" {
-     const testing = std.testing;
-
-     var p: Parser = .init(null);
-@@ -41,7 +59,9 @@ test "OSC 0: longer than buffer" {
-     const input = "0;" ++ "a" ** (Parser.MAX_BUF + 2);
-     for (input) |ch| p.next(ch);
-
+@@ -44 +62,3 @@ test "OSC 0: longer than buffer" {
 -    try testing.expect(p.end(null) == null);
 +    const cmd = p.end(null).?.*;
 +    try testing.expect(cmd == .change_window_title);
 +    try testing.expectEqual(@as(usize, 257), cmd.change_window_title.len);
- }
-
- test "OSC 0: one shorter than buffer length" {
-@@ -69,8 +89,9 @@ test "OSC 0: exactly at buffer length" {
-     const input = prefix ++ title;
-     for (input) |ch| p.next(ch);
-
+@@ -72,2 +92,3 @@ test "OSC 0: exactly at buffer length" {
 -    // This should be null because we always reserve space for a null terminator.
 -    try testing.expect(p.end(null) == null);
 +    const cmd = p.end(null).?.*;
 +    try testing.expect(cmd == .change_window_title);
 +    try testing.expectEqual(@as(usize, 257), cmd.change_window_title.len);
- }
- test "OSC 2: change_window_title with 2" {
-     const testing = std.testing;
 diff --git a/src/terminal/stream_terminal.zig b/src/terminal/stream_terminal.zig
 index 61172423a..5597562a5 100644
 --- a/src/terminal/stream_terminal.zig
 +++ b/src/terminal/stream_terminal.zig
-@@ -1828,7 +1828,24 @@ pub const Handler = struct {
-     fn apcEnd(self: *Handler, terminated: bool) void {
-         const io = self.terminal.io();
-         const alloc = self.terminal.gpa();
+@@ -1831 +1831,18 @@ pub const Handler = struct {
 -        var result = self.apc_handler.end() orelse return;
 +        const kitty_active = self.apc_handler.kittyActive();
 +        if (!terminated) {
@@ -238,6 +185,3 @@ index 61172423a..5597562a5 100644
 +            }
 +            return;
 +        };
-         defer result.deinit(alloc);
-         switch (result) {
-             .unknown => |*unknown| {

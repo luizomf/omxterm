@@ -24,9 +24,9 @@ const priorCorrectedCoreDigest =
 const priorImageCoreDigest =
   "fb4ff0ec8463a634a54078f3970a3cef86c1be3a880ad1da70f4d9fd3e2b8411";
 const correctedCoreDigest =
-  "c41282dfd80a93380712710fe5821f4c50dee5cd3837b552827b55f91e37c89c";
+  "4c0830a7b5dc3cb986de5c980315fc68d14ef33cc193a479b062fc54a7234159";
 const correctedCoreWasmDigest =
-  "a1b61d3277ea01a05c496520a6a188bb484f35e30c3c8215614f3b873e6a7e89";
+  "9cb603614a54fadf9bdb877ab19107df0933267b0446da32b1177f1488189404";
 const originalEventTypesDigest =
   "1c9383be2d0377635b3463a5ac2ec31eac3e2b233fc664de751ad3e9f54ea650";
 const correctedEventTypesDigest =
