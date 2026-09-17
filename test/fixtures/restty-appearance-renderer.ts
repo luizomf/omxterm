@@ -31,6 +31,12 @@ interface AppearanceResult {
     readonly rows: number;
     readonly cellWidth: number;
     readonly cellHeight: number;
+    readonly imeFontSize: string;
+    readonly containerPadding: readonly string[];
+    readonly canvasCssWidth: number;
+    readonly canvasCssHeight: number;
+    readonly canvasBackingWidth: number;
+    readonly canvasBackingHeight: number;
     readonly externalLinks: number;
   };
   readonly devicePixelRatio: number;
@@ -213,6 +219,8 @@ async function run() {
     optionKeyMode: "none",
     theme: customTheme,
   });
+  surface.zoom("out");
+  surface.zoom("in");
   await waitForLayout();
   root.style.width = "700px";
   await waitForLayout();
@@ -230,16 +238,31 @@ async function run() {
     `${normalForeground}\r\n${brightForeground}\r\n\u001b[31m██\u001b[1m██\u001b[22;91m██\u001b[38;2;18;58;188m██ https://example.com\u001b[0m\u001b[${latest.rows};1H\u001b[48;2;171;205;239m  \u001b[0m\u001b[16t`,
   );
   await new Promise((resolve) => setTimeout(resolve, 100));
+  const liveCanvas = container.querySelector("canvas");
+  const canvasBounds = liveCanvas?.getBoundingClientRect();
+  const containerStyle = getComputedStyle(container);
+  const ime = container.querySelector<HTMLElement>("textarea, input");
   globalThis.__omxtermResttyAppearanceResult = {
     measurements,
     live: {
-      sameCanvas: canvas === container.querySelector("canvas"),
+      sameCanvas: canvas === liveCanvas,
       starts,
       closesBeforeDispose: closes,
       resizeCount,
       ...latest,
       cellWidth,
       cellHeight,
+      imeFontSize: ime?.style.fontSize ?? "",
+      containerPadding: [
+        containerStyle.paddingTop,
+        containerStyle.paddingRight,
+        containerStyle.paddingBottom,
+        containerStyle.paddingLeft,
+      ],
+      canvasCssWidth: canvasBounds?.width ?? 0,
+      canvasCssHeight: canvasBounds?.height ?? 0,
+      canvasBackingWidth: liveCanvas?.width ?? 0,
+      canvasBackingHeight: liveCanvas?.height ?? 0,
       externalLinks,
     },
     devicePixelRatio,

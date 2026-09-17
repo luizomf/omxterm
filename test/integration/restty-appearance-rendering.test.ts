@@ -40,6 +40,11 @@ interface Result {
     readonly sameCanvas: boolean;
     readonly closesBeforeDispose: number;
     readonly resizeCount: number;
+    readonly containerPadding: readonly string[];
+    readonly canvasCssWidth: number;
+    readonly canvasCssHeight: number;
+    readonly canvasBackingWidth: number;
+    readonly canvasBackingHeight: number;
     readonly externalLinks: number;
   };
   readonly colorCounts: Record<string, number>;
@@ -140,9 +145,29 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
         externalLinks: 0,
       });
       expect(result!.live.resizeCount).toBeGreaterThan(1);
-      expect(result!.live.cellWidth).toBeGreaterThan(0);
-      expect(result!.live.cellHeight).toBeGreaterThan(0);
-      expect(result!.devicePixelRatio).toBeGreaterThan(0);
+      expect(result!.live.containerPadding).toEqual([
+        "128px",
+        "128px",
+        "128px",
+        "128px",
+      ]);
+      expect(result!.live.cols).toBe(padding128.cols);
+      expect(result!.live.rows).toBe(padding128.rows);
+      expect(result!.live.cellWidth).toBeCloseTo(size16.cellWidth, 5);
+      expect(result!.live.cellHeight).toBe(size16.cellHeight);
+      expect(result!.live.cellHeight).toBeLessThan(line2.cellHeight);
+      expect(result!.live.imeFontSize).toBe(size16.imeFontSize);
+      expect(result!.live.canvasCssWidth).toBeGreaterThan(0);
+      expect(result!.live.canvasCssHeight).toBeGreaterThan(0);
+      expect(result!.devicePixelRatio).toBeGreaterThanOrEqual(1);
+      expect(result!.live.canvasBackingWidth).toBeCloseTo(
+        result!.live.canvasCssWidth * result!.devicePixelRatio,
+        0,
+      );
+      expect(result!.live.canvasBackingHeight).toBeCloseTo(
+        result!.live.canvasCssHeight * result!.devicePixelRatio,
+        0,
+      );
       for (const color of expectedColors)
         expect(result!.colorCounts[color], color).toBeGreaterThan(0);
       expect(result!.colorCounts["#201012"]).toBeGreaterThan(

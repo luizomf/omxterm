@@ -32,8 +32,8 @@ font at the configured size and creation-time line height, applies per-side
 padding, and preserves per-window zoom through runtime operations. Theme, size
 and padding update existing Surfaces without replacing their core or PTY.
 Existing Restty Surfaces keep their initial family and line height until OMXTerm
-restarts; the next font slice owns the persistent notice and latest-setting
-behavior for newly created Surfaces.
+restarts. New Surfaces use the latest validated line height; the next font slice
+owns installed-family loading and the persistent restart notice.
 
 Candidate copy/paste, snippets/path injection, OSC 52, links, titles, bell,
 installed configured-font loading, scrollback and images stay unavailable until
