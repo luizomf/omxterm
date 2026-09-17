@@ -91,6 +91,33 @@ Queue bytes, JavaScript heap and RSS are separate metrics from Ghostty core,
 browser/WebGL and GPU allocations; no whole-application memory bound is claimed.
 There is no fallback renderer.
 
+### Font memory ownership
+
+Native configured and fallback fonts keep the same coverage and ordering. The
+Surface snapshots each native `Uint8Array` into one exact-range owned
+`ArrayBuffer` before handing it to Restty. Restty borrows ArrayBuffer inputs but
+copies views; using the owned snapshot lets its configuration and parsed
+resources share one backing store without borrowing mutable IPC/caller bytes or
+retaining a second full native font. Bundled inputs remain stable shared views.
+This reduces retained copies, not the transient cost of IPC and snapshotting.
+Large native emoji and CJK fonts still contribute to fresh-tab memory.
+
+The pinned font-resource correction reserves each source before asynchronous
+load/parse, so budget eviction cannot leave parsed faces without their source
+entry. Successful leases preserve live fonts even above the cache budget;
+release and failed acquisition release reservations and prune source/parsed
+resources together. Concurrent acquisitions share loads without releasing each
+other's ownership. Runtime destruction or replacement invalidates pending font
+loads and releases late leases instead of resurrecting disposed resources. The
+source-cache budget is not a total memory limit or a limit on live fonts.
+
+`test/integration/restty-font-resources.test.ts` exercises the installed resource
+store with a small bundled font and controlled cache pressure, including
+concurrent acquisition and required-font failure. A bounded child process with
+explicit GC proves released parsed resources are collectible while a live font
+remains usable. A runtime test covers destruction during loading. No heap dump,
+font contents or runtime diagnostic API is needed.
+
 ## Pinned inputs and restoration
 
 - Restty npm package `0.3.0`, source commit
@@ -134,12 +161,13 @@ The lockfile restores the npm tarballs identified by that manifest. `npm ci`
 then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
 Restty runtime, declarations and embedded-core SHA-256 values and produces
 corrected runtime SHA-256
-`46031b070690dc8763b38182abe4cf5205e405e3bdeece179fb7fe00d654a344`,
+`6a7b5297bf4f7a4509c9f64ad22a29c521b0c5f48882a4451872a335e0847ccd`,
 embedded-core chunk SHA-256
 `3b3f4ef21e2fe5d5bfc7d5ad47b2557c1e12cca33619dbd5f15df9572e038f4d`,
 and event declarations SHA-256
 `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34`.
-The narrow correction makes font-load failure reject initialization, disables
+The narrow correction preserves font acquisition/lease cleanup under cache
+pressure and late completion, makes font-load failure reject initialization, disables
 Restty's direct browser clipboard and link-opening callbacks, preserves native
 Option Unicode/composition versus configured physical-side Alt input, leaves
 all renderer-received Ctrl+C/Ctrl+V events as PTY input, gives DA2 its own

@@ -8,7 +8,7 @@ import type { TerminalFontData } from "../shared/terminal-font-data";
 export const DEFAULT_TERMINAL_FONT_FAMILY = "FiraCode Nerd Font Mono";
 
 export interface TerminalFontInput {
-  readonly data: Uint8Array;
+  readonly data: Uint8Array | ArrayBuffer;
   readonly name: string;
   readonly weight?: number;
   readonly style?: "normal";
@@ -25,7 +25,7 @@ export function terminalFontInputs(
     ...(fontData.configured
       ? [
           {
-            data: fontData.configured.data,
+            data: nativeFontSnapshot(fontData.configured.data),
             name: fontSourceFamily(fontData.configured),
             weight: 400,
             style: "normal" as const,
@@ -58,7 +58,7 @@ export function terminalFontInputs(
     },
     { data: jetBrainsNerdFontBytes, name: "JetBrainsMono Nerd Font Mono" },
     ...fontData.fallbacks.map((font) => ({
-      data: font.data,
+      data: nativeFontSnapshot(font.data),
       name: fontSourceFamily(font),
     })),
   ];
@@ -68,6 +68,13 @@ export function terminalFontInputs(
   return fontData.configured
     ? fonts.filter((font) => font.weight !== 700)
     : fonts;
+}
+
+function nativeFontSnapshot(data: Uint8Array): ArrayBuffer {
+  // Restty copies views but borrows ArrayBuffers. Own an exact-range snapshot
+  // here so configuration and parsed resources share one immutable input,
+  // without borrowing IPC/caller bytes or retaining a second full native font.
+  return new Uint8Array(data).buffer;
 }
 
 function fontSourceFamily(font: {

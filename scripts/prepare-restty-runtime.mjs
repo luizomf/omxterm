@@ -63,9 +63,143 @@ const reviewedInteractionDigest =
   "1cda40a3b3e5dfbda54a2dd5616277e3d337e6f964639f8edc6e3c0c892011c3";
 const priorViewportDigest =
   "46031b070690dc8763b38182abe4cf5205e405e3bdeece179fb7fe00d654a344";
-const correctedDigest =
+const priorFontMemoryDigest =
   "56dd27c2e2239c3660ccd79c93c3e4a4bfde0bc548ecce09e59c3af00982105c";
+const correctedDigest =
+  "6a7b5297bf4f7a4509c9f64ad22a29c521b0c5f48882a4451872a335e0847ccd";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
+
+const fontMemoryCorrections = [
+  {
+    original: `  let fontPromise = null;
+  let fontLease = null;`,
+    corrected: `  let fontPromise = null;
+  let fontLease = null;
+  let fontLoadEpoch = 0;`,
+  },
+  {
+    original: `    configuredFonts = resolveFontInputs(fonts);
+    fontPromise = null;`,
+    corrected: `    configuredFonts = resolveFontInputs(fonts);
+    fontLoadEpoch += 1;
+    fontPromise = null;`,
+  },
+  {
+    original: `    fontPromise = (async () => {
+      let acquiredLease = null;`,
+    corrected: `    const loadEpoch = fontLoadEpoch;
+    fontPromise = (async () => {
+      let acquiredLease = null;`,
+  },
+  {
+    original: `        if (!acquiredLease.faces.length) {
+          throw new Error("Unable to load any configured font source.");
+        }
+        releaseFontLease();`,
+    corrected: `        // A closed/reconfigured runtime cannot adopt a late acquisition.
+        if (loadEpoch !== fontLoadEpoch) {
+          acquiredLease.release();
+          acquiredLease = null;
+          return;
+        }
+        if (!acquiredLease.faces.length) {
+          throw new Error("Unable to load any configured font source.");
+        }
+        releaseFontLease();`,
+  },
+  {
+    original: `      } catch (err) {
+        if (acquiredLease) {
+          acquiredLease.release();`,
+    corrected: `      } catch (err) {
+        if (loadEpoch !== fontLoadEpoch) {
+          acquiredLease?.release();
+          return;
+        }
+        if (acquiredLease) {
+          acquiredLease.release();`,
+  },
+  {
+    original: `  cleanupFns.push(() => {
+    releaseFontLease();
+    clearFontRuntimeState();`,
+    corrected: `  cleanupFns.push(() => {
+    fontLoadEpoch += 1;
+    releaseFontLease();
+    clearFontRuntimeState();`,
+  },
+  {
+    original: `  const acquire = async (sources) => {
+    const faces = [];
+    const sourceRefs = new Map;
+    for (let sourceIndex = 0;sourceIndex < sources.length; sourceIndex += 1) {`,
+    corrected: `  const acquire = async (sources) => {
+    const faces = [];
+    const sourceRefs = new Map;
+    const leaseId = nextLeaseId++;
+    leaseSources.set(leaseId, sourceRefs);
+    let completed = false;
+    try {
+    for (let sourceIndex = 0;sourceIndex < sources.length; sourceIndex += 1) {`,
+  },
+  {
+    original: `      const baseLabel = sourceBaseLabel(source, sourceIndex);
+      let buffer;`,
+    corrected: `      const baseLabel = sourceBaseLabel(source, sourceIndex);
+      // Pin before either load or parse can yield: pruning must not split
+      // source bytes from parsed faces during this or a concurrent acquire.
+      let sourceEntry = sourceCache.get(sourceKey);
+      if (!sourceEntry) {
+        sourceEntry = {
+          key: sourceKey, buffer: null, byteLength: 0,
+          loadedAt: now(), lastUsedAt: now(), failedAt: null, refCount: 0
+        };
+        sourceCache.set(sourceKey, sourceEntry);
+      }
+      sourceEntry.refCount += 1;
+      sourceRefs.set(sourceKey, (sourceRefs.get(sourceKey) ?? 0) + 1);
+      let buffer;`,
+  },
+  {
+    original: `      const sourceEntry = sourceCache.get(sourceKey);
+      if (sourceEntry) {
+        sourceEntry.refCount += 1;
+        sourceEntry.lastUsedAt = now();
+      }
+      sourceRefs.set(sourceKey, (sourceRefs.get(sourceKey) ?? 0) + 1);
+      for (let faceIndex`,
+    corrected: `      sourceEntry.lastUsedAt = now();
+      for (let faceIndex`,
+  },
+  {
+    original: `    const leaseId = nextLeaseId;
+    nextLeaseId += 1;
+    leaseSources.set(leaseId, sourceRefs);
+    let released = false;`,
+    corrected: `    completed = true;
+    let released = false;`,
+  },
+  {
+    original: `        releaseLease(leaseId);
+      }
+    };
+  };
+  return {
+    acquire
+  };`,
+    corrected: `        releaseLease(leaseId);
+      }
+    };
+    } finally {
+      // A required-font failure must release every earlier reservation too.
+      if (!completed) releaseLease(leaseId);
+    }
+  };
+  return {
+    acquire
+  };`,
+  },
+];
 
 const viewportCorrections = [
   {
@@ -1312,7 +1446,9 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorViewportDigest) {
+    if (sourceDigest === priorFontMemoryDigest) {
+      // Only font acquisition lifetime remains to be corrected.
+    } else if (sourceDigest === priorViewportDigest) {
       source = applyCorrections(source, viewportCorrections);
     } else if (sourceDigest === reviewedInteractionDigest) {
       source = applyCorrections(source, interactionReviewCorrections);
@@ -1418,6 +1554,8 @@ export async function prepareResttyRuntime(options = {}) {
       source = applyCorrections(source, interactionReviewCorrections);
     if (digest(source) === priorViewportDigest)
       source = applyCorrections(source, viewportCorrections);
+    if (digest(source) === priorFontMemoryDigest)
+      source = applyCorrections(source, fontMemoryCorrections);
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,
