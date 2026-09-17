@@ -41,7 +41,7 @@ export function explicitFixtureLaunchRequest(): LaunchRequest {
         "-NoLogo",
         "-NoProfile",
         "-Command",
-        `$bytes=[Convert]::FromBase64String('${encoded}'); [Console]::OpenStandardOutput().Write($bytes,0,$bytes.Length); $line=[Console]::ReadLine(); [Console]::OutputEncoding=[Text.UTF8Encoding]::new(); [Console]::WriteLine('__EXPLICIT_INPUT__'+$line); [Console]::ReadLine() | Out-Null`,
+        `[Console]::InputEncoding=[Text.UTF8Encoding]::new(); [Console]::OutputEncoding=[Text.UTF8Encoding]::new(); $bytes=[Convert]::FromBase64String('${encoded}'); [Console]::OpenStandardOutput().Write($bytes,0,$bytes.Length); $line=[Console]::ReadLine(); [Console]::WriteLine('__EXPLICIT_INPUT__'+$line); [Console]::ReadLine() | Out-Null`,
       ],
     };
   }

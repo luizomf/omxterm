@@ -106,10 +106,17 @@ export async function exerciseResttyImages(options: {
   const { window, runEmitter, output, input, size, waitFor } = options;
   const inputStart = input().length;
   runEmitter();
-  await waitFor(
-    () => output().includes("__RESTTY_IMAGES_SENT__"),
-    "Pi and Chafa image payload through the owned PTY",
-  );
+  try {
+    await waitFor(
+      () => output().includes("__RESTTY_IMAGES_SENT__"),
+      "Pi and Chafa image payload through the owned PTY",
+    );
+  } catch (cause) {
+    throw new Error(
+      `Image emitter produced no completion marker; synthetic PTY tail: ${JSON.stringify(output().slice(-2_000))}`,
+      { cause },
+    );
+  }
 
   window.webContents.send(terminalIpc.fontZoom, "in");
   await new Promise((resolve) => setTimeout(resolve, 1_000));

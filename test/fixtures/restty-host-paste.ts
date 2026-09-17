@@ -25,14 +25,42 @@ export function createLargePasteFixture() {
   // traverse the PTY as stdin, not be embedded in a command-line argument.
   const program = `const c=require('node:crypto');let b=Buffer.alloc(0);process.stdin.setRawMode(true);process.stdin.on('data',chunk=>{b=Buffer.concat([b,chunk]);if(b.length>=${Buffer.byteLength(payload)}){process.stdin.setRawMode(false);process.stdin.pause();process.stdout.write(c.createHash('sha256').update(b).digest('hex')+'  -\\n',()=>process.exit(0))}});process.stdout.write('__PASTE_RECEIVER_READY__\\n')`;
   const executable = `'${nodeExecutable.replaceAll("'", "''")}'`;
+  const encodedProgram = Buffer.from(program).toString("base64");
   const completionMarker = "__PASTE_RECEIVER_EXITED__";
+  const encodedCompletionMarker =
+    Buffer.from(completionMarker).toString("base64");
   return {
-    startCommand: `& ${executable} -e '${program.replaceAll("'", "''")}'; Write-Output '${completionMarker}'\r`,
+    startCommand: `& ${executable} -e "eval(Buffer.from('${encodedProgram}','base64').toString())"; Write-Output ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encodedCompletionMarker}')))\r`,
     completionMarker,
     command: payload,
     digest,
     length: payload.length,
   };
+}
+
+export async function prepareLargePasteShell(options: {
+  readonly write: (data: string) => void;
+  readonly output: () => string;
+  readonly waitFor: (predicate: () => boolean, label: string) => Promise<void>;
+}) {
+  options.write(process.platform === "win32" ? "\u0003" : "x\u0015");
+  if (process.platform === "win32") {
+    const marker = "__PASTE_SHELL_READY__";
+    const encodedMarker = Buffer.from(marker).toString("base64");
+    options.write(
+      `Write-Output ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encodedMarker}')))\r`,
+    );
+    await options.waitFor(
+      () => options.output().includes(marker),
+      "owned PowerShell paste fixture readiness",
+    );
+    return;
+  }
+  options.write("stty -echo; printf '__PASTE_ECHO_OFF__\\n'\r");
+  await options.waitFor(
+    () => options.output().includes("__PASTE_ECHO_OFF__"),
+    "owned PTY echo disable",
+  );
 }
 
 export async function exerciseLargePasteThroughPty(options: {
@@ -44,10 +72,17 @@ export async function exerciseLargePasteThroughPty(options: {
   const fixture = createLargePasteFixture();
   if (fixture.startCommand) {
     options.write(fixture.startCommand);
-    await options.waitFor(
-      () => options.output().includes("__PASTE_RECEIVER_READY__"),
-      "owned raw paste receiver",
-    );
+    try {
+      await options.waitFor(
+        () => options.output().includes("__PASTE_RECEIVER_READY__"),
+        "owned raw paste receiver",
+      );
+    } catch (cause) {
+      throw new Error(
+        `Raw paste receiver produced no readiness marker; synthetic PTY tail: ${JSON.stringify(options.output().slice(-2_000))}`,
+        { cause },
+      );
+    }
   }
   await dispatchDomPaste(options.window, fixture.command);
   await options.waitFor(

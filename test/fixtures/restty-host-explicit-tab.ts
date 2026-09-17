@@ -36,10 +36,17 @@ export async function exerciseExplicitResttyTab(options: {
       ),
     "two isolated tabs",
   );
-  await waitFor(
-    () => options.outputs[1]!.join("").includes("__EXPLICIT_READY__Olá🙂"),
-    "explicit command output",
-  );
+  try {
+    await waitFor(
+      () => options.outputs[1]!.join("").includes("__EXPLICIT_READY__Olá🙂"),
+      "explicit command output",
+    );
+  } catch (cause) {
+    throw new Error(
+      `Explicit command produced no readiness marker; synthetic PTY tail: ${JSON.stringify(options.outputs[1]!.join("").slice(-2_000))}`,
+      { cause },
+    );
+  }
   await waitFor(
     () => options.titleEvents.length >= 3 && options.bellSessionIds.length >= 2,
     "second tab parsed title and bell callbacks",

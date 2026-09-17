@@ -305,7 +305,10 @@ export async function exerciseResttyLinks(
     true,
   );
   await new Promise((resolve) => setTimeout(resolve, 100));
-  const cancelledGestureMouseReports = inputs.join("").slice(cancelledStart);
+  const cancelledGestureMouseReports = inputs
+    .join("")
+    .slice(cancelledStart)
+    .replaceAll(/\u001b\[[IO]/gu, "");
 
   return {
     validLinkMouseReports,

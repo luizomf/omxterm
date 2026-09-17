@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { cp, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -6,8 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
-import { createUncompressedPng } from "../fixtures/kitty-image-data";
 import { resttyImageEmitterSource } from "../fixtures/restty-host-images";
+import { createNativeHostPng } from "../fixtures/native-host-png";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
 
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -362,7 +362,7 @@ async function buildHostFixture(root: string): Promise<void> {
     ),
     writeFile(
       path.join(root, "pi-2000.png"),
-      createUncompressedPng(2_000, 2_000, 0x2272_2722),
+      createNativeHostPng(2_000, 2_000),
     ),
     writeFile(path.join(root, "image-emitter.cjs"), resttyImageEmitterSource()),
     symlink(
@@ -404,7 +404,11 @@ async function runFixture(root: string): Promise<{
   child.stderr.on("data", (chunk: string) => (stderr += chunk));
   const timeout = setTimeout(() => {
     if (!child.pid) return;
-    if (process.platform === "win32") child.kill();
+    if (process.platform === "win32")
+      spawnSync("taskkill.exe", ["/pid", String(child.pid), "/t", "/f"], {
+        stdio: "ignore",
+        windowsHide: true,
+      });
     else process.kill(-child.pid, "SIGKILL");
   }, 260_000);
   const exitCode = await new Promise<number | null>((resolve, reject) => {

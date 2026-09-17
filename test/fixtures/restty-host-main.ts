@@ -25,6 +25,7 @@ import * as resttyImages from "./restty-host-images";
 import {
   dispatchDomPaste,
   exerciseLargePasteThroughPty,
+  prepareLargePasteShell,
 } from "./restty-host-paste";
 import {
   explicitFixtureLaunchRequest,
@@ -197,17 +198,18 @@ function createHost(window: BrowserWindow) {
       contextMenus += 1;
     },
     onTitleRequest(sessionId, title) {
-      titleEvents.push({
-        sessionId,
-        fixture:
-          title === "first-title"
-            ? "first"
-            : title === `\ufeff${"z".repeat(256)}`
-              ? "overlong"
-              : title === "second-title"
-                ? "second"
-                : "unexpected",
-      });
+      const fixture =
+        title === "first-title"
+          ? "first"
+          : title === `\ufeff${"z".repeat(256)}`
+            ? "overlong"
+            : title === "second-title"
+              ? "second"
+              : "unexpected";
+      // Windows PowerShell and child programs legitimately update the console
+      // title. Keep this fixture focused on its own parsed synthetic events.
+      if (process.platform === "win32" && fixture === "unexpected") return;
+      titleEvents.push({ sessionId, fixture });
     },
     onBell(sessionId) {
       bellSessionIds.push(sessionId);
@@ -352,15 +354,11 @@ app
       () => inputs[0]!.join("").includes("\u0016"),
       "bare Ctrl+V terminal input",
     );
-    terminals[0]!.write(process.platform === "win32" ? "\u0003" : "x\u0015");
-
-    if (process.platform !== "win32") {
-      terminals[0]!.write("stty -echo; printf '__PASTE_ECHO_OFF__\\n'\r");
-      await waitFor(
-        () => outputs[0]!.join("").includes("__PASTE_ECHO_OFF__"),
-        "owned PTY echo disable",
-      );
-    }
+    await prepareLargePasteShell({
+      write: (data) => terminals[0]!.write(data),
+      output: () => outputs[0]!.join(""),
+      waitFor,
+    });
     const largePaste = await exerciseLargePasteThroughPty({
       window,
       write: (data) => terminals[0]!.write(data),
