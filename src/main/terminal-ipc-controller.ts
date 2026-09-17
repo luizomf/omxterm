@@ -18,120 +18,48 @@ import {
 } from "./local-terminal-session";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
+import type {
+  IpcEvent,
+  IpcHandler,
+  IpcListener,
+  IpcMainPort,
+  ResttySurfaceFontConfiguration,
+  TerminalIpcController,
+  TerminalIpcControllerOptions,
+  TerminalIpcRouter,
+  TrustedWebContents,
+} from "./terminal-ipc-types";
+export type {
+  IpcEvent,
+  IpcMainPort,
+  ResttySurfaceFontConfiguration,
+  TerminalIpcController,
+  TerminalIpcControllerOptions,
+  TerminalIpcRouter,
+  TerminalSessionEndContext,
+  TerminalSessionStartErrorContext,
+  TrustedWebContents,
+} from "./terminal-ipc-types";
 import type { OperationalEventLog } from "./operational-events";
 import { isTerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalFontData } from "../shared/terminal-font-data";
-
-export interface TrustedWebContents {
-  readonly mainFrame: object;
-  isDestroyed(): boolean;
-  send(channel: string, payload: unknown): void;
-}
-
-export interface IpcEvent {
-  readonly sender: TrustedWebContents;
-  readonly senderFrame: object;
-}
-
-type IpcListener = (event: IpcEvent, payload?: unknown) => void;
-type IpcHandler = (
-  event: IpcEvent,
-  payload?: unknown,
-) => Promise<unknown> | unknown;
-
-export interface IpcMainPort {
-  handle(channel: string, handler: IpcHandler): void;
-  removeHandler(channel: string): void;
-  on(channel: string, listener: IpcListener): void;
-  removeListener(channel: string, listener: IpcListener): void;
-}
-
-interface SessionCallbacks {
-  readonly onOutput: (data: string) => void;
-  readonly onExit: (
-    exit: TerminalExit,
-    launchKind?: TerminalSessionLaunchKind,
-  ) => void;
-}
-
-// Lifecycle context for one ended (or failed) Live Terminal Session within
-// its window: `liveSessions` counts the sessions still running afterwards,
-// and `closeRequested` distinguishes a close-driven end from a spontaneous
-// exit so an expected kill signal is not treated as a failure.
-export interface TerminalSessionEndContext {
-  readonly sessionId: TerminalSessionId;
-  readonly launchKind: TerminalSessionLaunchKind;
-  readonly closeRequested: boolean;
-  readonly liveSessions: number;
-}
-
-export interface TerminalSessionStartErrorContext {
-  readonly launchKind: TerminalSessionLaunchKind;
-  readonly liveSessions: number;
-}
-
-export interface TerminalIpcControllerOptions {
-  readonly windowId?: number;
-  readonly configuration: TerminalRendererConfiguration;
-  readonly webContents: TrustedWebContents;
-  readonly createSession: (callbacks: SessionCallbacks) => LocalTerminalSession;
-  readonly onSessionStartError: (
-    context: TerminalSessionStartErrorContext,
-  ) => void;
-  readonly onSessionExit: (
-    exit: TerminalExit,
-    context: TerminalSessionEndContext,
-  ) => void;
-  readonly onSessionStarted: (
-    sessionId: TerminalSessionId,
-    fallbackTitle?: string,
-  ) => void;
-  readonly onSessionSelected: (sessionId: TerminalSessionId) => void;
-  readonly writeClipboardText: (text: string) => void;
-  readonly readClipboardText: () => string;
-  readonly confirmPaste: (text: string) => Promise<boolean>;
-  readonly onClipboardError?: () => void;
-  readonly showClipboardContextMenu: () => void;
-  readonly onTitleRequest: (
-    sessionId: TerminalSessionId,
-    request: string,
-  ) => void;
-  readonly onBell: (sessionId: TerminalSessionId) => void;
-  readonly onUserInteraction: () => void;
-  readonly openExternalLink: (url: string) => Promise<void>;
-  readonly onExternalLinkOpenError: () => void;
-  readonly loadSnippets: () => Promise<TerminalSnippetsResponse>;
-}
-
-export interface TerminalIpcController {
-  applyConfiguration(configuration: TerminalRendererConfiguration): void;
-  // Close confirmations ask only when the affected sessions are running a
-  // foreground child process (ADR 0017). The selected session is the one the
-  // renderer last reported; before any report, every live session counts.
-  hasBusySelectedSession(): boolean;
-  hasBusySession(): boolean;
-  dispose(): void;
-}
-
-export interface ResttySurfaceFontConfiguration {
-  readonly fontFamily?: string;
-  readonly fontLineHeight: number;
-}
-
-export interface TerminalIpcRouter {
-  registerController(
-    options: TerminalIpcControllerOptions,
-  ): TerminalIpcController;
-  applyConfiguration(configuration: TerminalRendererConfiguration): void;
-  activeResttySurfaceFontConfigurations(): readonly ResttySurfaceFontConfiguration[];
-  dispose(): void;
-}
+export { isValidExternalLink } from "./external-link";
+import {
+  acknowledgeTerminalOutput,
+  requestExternalLink,
+  type RejectBoundary,
+} from "./terminal-ipc-boundaries";
+import {
+  createTerminalOutputFlow,
+  type TerminalOutputFlow,
+} from "./terminal-output-flow";
 
 interface RoutedTerminalIpcController extends TerminalIpcController {
   configuration(payload?: unknown): TerminalRendererConfiguration;
   start(payload?: unknown): TerminalSessionId;
   input(payload?: unknown): void;
   resize(payload?: unknown): void;
+  acknowledgeOutput(payload?: unknown): void;
   close(payload?: unknown): void;
   tabSelected(payload?: unknown): void;
   writeClipboardText(payload?: unknown): void;
@@ -204,6 +132,8 @@ export function registerTerminalIpcRouter(
     route(event, (controller) => controller.input(payload));
   const resize: IpcListener = (event, payload) =>
     route(event, (controller) => controller.resize(payload));
+  const acknowledgeOutput: IpcListener = (event, payload) =>
+    route(event, (controller) => controller.acknowledgeOutput(payload));
   const close: IpcListener = (event, payload) =>
     route(event, (controller) => controller.close(payload));
   const tabSelected: IpcListener = (event, payload) =>
@@ -295,6 +225,7 @@ export function registerTerminalIpcRouter(
   ipcMain.handle(terminalIpc.snippets, snippets);
   ipcMain.on(terminalIpc.input, input);
   ipcMain.on(terminalIpc.resize, resize);
+  ipcMain.on(terminalIpc.outputAck, acknowledgeOutput);
   ipcMain.on(terminalIpc.close, close);
   ipcMain.on(terminalIpc.tabSelected, tabSelected);
   ipcMain.on(terminalIpc.title, title);
@@ -347,6 +278,7 @@ export function registerTerminalIpcRouter(
       ipcMain.removeHandler(terminalIpc.snippets);
       ipcMain.removeListener(terminalIpc.input, input);
       ipcMain.removeListener(terminalIpc.resize, resize);
+      ipcMain.removeListener(terminalIpc.outputAck, acknowledgeOutput);
       ipcMain.removeListener(terminalIpc.close, close);
       ipcMain.removeListener(terminalIpc.tabSelected, tabSelected);
       ipcMain.removeListener(terminalIpc.title, title);
@@ -366,8 +298,21 @@ export function registerTerminalIpcRouter(
 interface RoutedSessionState {
   readonly session: LocalTerminalSession;
   readonly resttyFontConfiguration?: ResttySurfaceFontConfiguration;
+  readonly outputFlow: TerminalOutputFlow;
   closed: boolean;
   exited: boolean;
+}
+
+function activeResttyFontConfigurations(
+  sessions: ReadonlyMap<TerminalSessionId, RoutedSessionState>,
+): readonly ResttySurfaceFontConfiguration[] {
+  return Object.freeze(
+    [...sessions.values()].flatMap((state) =>
+      state.exited || state.resttyFontConfiguration === undefined
+        ? []
+        : [state.resttyFontConfiguration],
+    ),
+  );
 }
 
 function useClipboard<T>(
@@ -415,16 +360,7 @@ function createTerminalIpcController(
   ) => {
     if (windowId !== undefined) operationalEvents?.write(event);
   };
-  const reject = (
-    boundary: "ipc" | "title" | "external-link" | "clipboard",
-    reason:
-      | "untrusted-sender"
-      | "invalid-payload"
-      | "invalid-value"
-      | "too-long"
-      | "invalid-characters"
-      | "unknown-session",
-  ) =>
+  const reject: RejectBoundary = (boundary, reason) =>
     operationalEvents?.write({ name: "boundary.rejected", boundary, reason });
 
   const closeSession = (sessionId: TerminalSessionId) => {
@@ -473,12 +409,32 @@ function createTerminalIpcController(
     nextSessionNumber += 1;
     let startedAt: number | undefined;
     let exitedBeforeRegistration = false;
+    let ownerLostBeforeRegistration = false;
+    const outputFlow = createTerminalOutputFlow();
     let createdSession: LocalTerminalSession;
     try {
       createdSession = options.createSession({
         onOutput(data) {
-          if (!disposed && !options.webContents.isDestroyed()) {
-            options.webContents.send(terminalIpc.output, { sessionId, data });
+          if (disposed) return;
+          if (options.webContents.isDestroyed()) {
+            if (sessions.has(sessionId)) closeSession(sessionId);
+            else ownerLostBeforeRegistration = true;
+            return;
+          }
+          const outputEnd = outputFlow.record(data);
+          if (outputEnd === undefined) {
+            closeSession(sessionId);
+            return;
+          }
+          try {
+            options.webContents.send(terminalIpc.output, {
+              sessionId,
+              data,
+              end: outputEnd,
+            });
+          } catch {
+            if (sessions.has(sessionId)) closeSession(sessionId);
+            else ownerLostBeforeRegistration = true;
           }
         },
         onExit(exit, reportedLaunchKind) {
@@ -536,8 +492,10 @@ function createTerminalIpcController(
       );
     }
 
+    outputFlow.bind(createdSession);
     sessions.set(sessionId, {
       session: createdSession,
+      outputFlow,
       ...(rendererConfiguration.terminalSurface === "restty"
         ? {
             resttyFontConfiguration: Object.freeze({
@@ -558,7 +516,7 @@ function createTerminalIpcController(
         windowId,
         action: "started",
       });
-    if (disposed) {
+    if (disposed || ownerLostBeforeRegistration) {
       closeSession(sessionId);
     } else {
       options.onSessionStarted(sessionId, createdSession.fallbackTitle);
@@ -600,6 +558,12 @@ function createTerminalIpcController(
         rows: payload.rows,
       });
   };
+  const acknowledgeOutput = (payload?: unknown) =>
+    acknowledgeTerminalOutput(
+      payload,
+      (sessionId) => sessions.get(sessionId),
+      reject,
+    );
   const close = (payload?: unknown) => {
     if (!isTerminalSessionReference(payload)) {
       reject("ipc", "invalid-payload");
@@ -694,19 +658,8 @@ function createTerminalIpcController(
     if (!routedSession(payload.sessionId)) return;
     options.onBell(payload.sessionId);
   };
-  const openExternalLink = (payload?: unknown) => {
-    if (!isValidExternalLink(payload)) {
-      reject("external-link", "invalid-value");
-      return;
-    }
-    void options.openExternalLink(payload).catch(() => {
-      operationalEvents?.write({
-        name: "application.failure",
-        stage: "external-link-open",
-      });
-      options.onExternalLinkOpenError();
-    });
-  };
+  const openExternalLink = (payload?: unknown) =>
+    requestExternalLink(payload, options, operationalEvents, reject);
 
   return {
     configuration,
@@ -721,6 +674,7 @@ function createTerminalIpcController(
     start,
     input,
     resize,
+    acknowledgeOutput,
     close,
     tabSelected,
     hasBusySelectedSession() {
@@ -739,15 +693,8 @@ function createTerminalIpcController(
     openExternalLink,
     snippets,
     fontData,
-    activeResttySurfaceFontConfigurations() {
-      return Object.freeze(
-        [...sessions.values()].flatMap((state) =>
-          state.exited || state.resttyFontConfiguration === undefined
-            ? []
-            : [state.resttyFontConfiguration],
-        ),
-      );
-    },
+    activeResttySurfaceFontConfigurations: () =>
+      activeResttyFontConfigurations(sessions),
     dispose() {
       if (disposed) return;
       disposed = true;
@@ -765,27 +712,4 @@ function elapsedMilliseconds(startedAt: number | undefined): number {
 
 function normalizeCode(value: number): number | null {
   return Number.isSafeInteger(value) && value >= 0 ? value : null;
-}
-
-export function isValidExternalLink(value: unknown): value is string {
-  if (
-    typeof value !== "string" ||
-    value.length === 0 ||
-    /[\s\p{Cc}\p{Cf}\\]/u.test(value) ||
-    (!value.startsWith("http://") && !value.startsWith("https://"))
-  )
-    return false;
-  try {
-    const parsed = new URL(value);
-    const authority = value
-      .slice(value.startsWith("https://") ? 8 : 7)
-      .split(/[/?#]/u, 1)[0]!;
-    return (
-      (parsed.protocol === "http:" || parsed.protocol === "https:") &&
-      authority.length > 0 &&
-      parsed.host.length > 0
-    );
-  } catch {
-    return false;
-  }
 }

@@ -347,7 +347,7 @@ describe("isolated preload terminal bridge", () => {
 
     electron.listeners.get(terminalIpc.output)?.(
       {},
-      { sessionId: "s1", data: "output" },
+      { sessionId: "s1", data: "output", end: 6 },
     );
     electron.listeners.get(terminalIpc.output)?.(
       {},
@@ -367,7 +367,7 @@ describe("isolated preload terminal bridge", () => {
     removeExit();
 
     expect(onOutput).toHaveBeenCalledOnce();
-    expect(onOutput).toHaveBeenCalledWith("s1", "output");
+    expect(onOutput).toHaveBeenCalledWith("s1", "output", 6);
     expect(onExit).toHaveBeenCalledOnce();
     expect(onExit).toHaveBeenCalledWith("s2", { exitCode: 0, signal: 0 });
     expect(electron.removeListener).toHaveBeenCalledTimes(2);

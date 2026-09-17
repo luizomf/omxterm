@@ -44,6 +44,30 @@ interface HostResult {
   }>;
   readonly bellSessionIds: readonly string[];
   readonly titleQueryReplyBytes: number;
+  readonly outputStress: {
+    readonly bytes: number;
+    readonly records: number;
+    readonly endSeen: boolean;
+    readonly markerVisible: boolean;
+    readonly remainderCodeUnits: number;
+    readonly resizeObserved: boolean;
+    readonly producerExit: {
+      readonly exitCode: number;
+      readonly signal: number;
+    };
+    readonly flow: {
+      readonly pendingBytes: number;
+      readonly maxPendingBytes: number;
+      readonly largestNativeReadBytes: number;
+      readonly pauseCount: number;
+      readonly resumeCount: number;
+    };
+    readonly memory: {
+      readonly mainHeapUsedBytes: number;
+      readonly mainRssBytes: number;
+      readonly rendererHeapUsedBytes: number | null;
+    };
+  };
   readonly imageEvidence: {
     readonly cellSizeResponse: string;
     readonly gridSize: { readonly cols: number; readonly rows: number };
@@ -73,7 +97,11 @@ interface HostResult {
   readonly permissionRequests: number;
   readonly ptyExits: number;
   readonly launchKinds: readonly string[];
-  readonly output: readonly string[];
+  readonly outputEvidence: {
+    readonly defaultUnicode: boolean;
+    readonly explicitReady: boolean;
+    readonly explicitInput: boolean;
+  };
   readonly resizeCounts: readonly number[];
   readonly ended: ReadonlyArray<{
     readonly closeRequested: boolean;
@@ -105,7 +133,7 @@ describe.skipIf(process.platform !== "darwin")(
           `Host fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
         ).toBe(0);
         if (!result) throw new Error("Host fixture returned no result");
-        expect(result.sessionStarts).toBe(3);
+        expect(result.sessionStarts).toBe(4);
         expect(result.renderedFontFamily).toBe(result.configuredFontFamily);
         expect(result.renderedPixels.configured).toBeGreaterThan(
           result.renderedPixels.blank,
@@ -127,16 +155,20 @@ describe.skipIf(process.platform !== "darwin")(
         expect(result.launchKinds).toEqual([
           "default-shell",
           "explicit-command",
+          "explicit-command",
           "default-shell",
         ]);
-        expect(result.resizeCounts).toHaveLength(3);
+        expect(result.resizeCounts).toHaveLength(4);
         expect(result.resizeCounts.every((count) => count > 0)).toBe(true);
-        expect(result.output[0]).toContain("__DEFAULT_INPUT__Olá🙂");
-        expect(result.output[1]).toContain("__EXPLICIT_READY__Olá🙂");
-        expect(result.output[1]).toContain("__EXPLICIT_INPUT__second🙂");
+        expect(result.outputEvidence).toEqual({
+          defaultUnicode: true,
+          explicitReady: true,
+          explicitInput: true,
+        });
         expect(result.beforeDestroy).toEqual({ canvases: 1, tabs: 1 });
         expect(result.ended).toEqual([
           { closeRequested: true, liveSessions: 1 },
+          { closeRequested: false, liveSessions: 1 },
           { closeRequested: false, liveSessions: 0 },
         ]);
         expect(result.externalLinks[0]).toMatch(
@@ -151,7 +183,7 @@ describe.skipIf(process.platform !== "darwin")(
         expect(result.ordinaryGestureMouseReports).toMatch(/\u001b\[</u);
         expect(result).toMatchObject({
           clipboardReads: 1,
-          clipboardWrites: 2,
+          clipboardWrites: 3,
           selectAllCoveredScrollback: true,
           protectedPasteConfirmations: 1,
           contextMenus: 1,
@@ -162,8 +194,32 @@ describe.skipIf(process.platform !== "darwin")(
           navigations: 0,
           openedWindows: 0,
           permissionRequests: 0,
-          ptyExits: 3,
+          ptyExits: 4,
         });
+        expect(result.outputStress).toMatchObject({
+          records: 65_536,
+          endSeen: true,
+          markerVisible: true,
+          resizeObserved: true,
+          producerExit: { exitCode: 0, signal: 0 },
+          flow: {
+            pendingBytes: 0,
+          },
+        });
+        expect(result.outputStress.bytes).toBeGreaterThanOrEqual(
+          2 * 1024 * 1024 + "__OMXTERM_OUTPUT_END__".length,
+        );
+        expect(result.outputStress.flow.pauseCount).toBeGreaterThan(0);
+        expect(result.outputStress.flow.resumeCount).toBeGreaterThan(0);
+        expect(result.outputStress.flow.maxPendingBytes).toBeLessThanOrEqual(
+          64 * 1024 + result.outputStress.flow.largestNativeReadBytes,
+        );
+        expect(result.outputStress.memory.mainHeapUsedBytes).toBeGreaterThan(0);
+        expect(result.outputStress.memory.mainRssBytes).toBeGreaterThan(0);
+        if (result.outputStress.memory.rendererHeapUsedBytes !== null)
+          expect(
+            result.outputStress.memory.rendererHeapUsedBytes,
+          ).toBeGreaterThan(0);
         expect(result.titleEvents.map(({ fixture }) => fixture)).toEqual([
           "first",
           "overlong",

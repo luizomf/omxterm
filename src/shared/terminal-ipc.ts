@@ -7,6 +7,7 @@ export const terminalIpc = {
   resize: "terminal:resize",
   close: "terminal:close",
   output: "terminal:output",
+  outputAck: "terminal:output-ack",
   exit: "terminal:exit",
   title: "terminal:title",
   bell: "terminal:bell",

@@ -70,9 +70,28 @@ reload; `CSI 16 t` reports the current cell size. Pi's default 2,000-by-2,000
 autoresized output is the compatibility target. Unsupported protocol paths and
 Linux/Windows candidate rendering remain unclaimed.
 
+Output uses the shared ordered Adapter/IPC path. Main pauses an owned PTY at
+65,536 unacknowledged UTF-8 bytes and resumes at or below 16,384. Renderer ACKs
+are cumulative, sender/session validated, and mean only that output was
+submitted synchronously to the Surface—not rendered or released by Restty,
+Ghostty, WebGL, Chromium or the GPU. The crossing native read may raise measured
+pending bytes above 65,536. Owner loss resumes and terminates only that PTY; the
+pinned node-pty Unix correction prevents its 200 ms exit guard from destroying
+a deliberately paused readable tail. Windows ConPTY is not modified by that
+correction.
+
+Restty's existing OutputFilter retains at most 10,000,000 UTF-16 code units for
+one unfinished OSC or CSI body. An oversized control is discarded whole through
+termination or CAN/SUB cancellation, has no partial clipboard, title, reply or
+mode side effect, and does not block later ordinary text. The established valid
+large OSC 52 request remains accepted. This scanner rule is not a general text,
+copy, paste or input limit.
+
 Option Key Mode and other runtime configuration remain unavailable until their
-migration tickets land. The xterm Surface retains all existing behavior. There
-is no automatic xterm fallback.
+migration tickets land. The xterm Surface retains its existing observable
+behavior. Queue bytes, JavaScript heap and RSS are separate metrics from Ghostty
+core, browser/WebGL and GPU allocations; no whole-application memory bound is
+claimed. There is no automatic xterm fallback.
 
 ## Pinned inputs and restoration
 
@@ -109,14 +128,15 @@ The lockfile restores the npm tarballs identified by that manifest. `npm ci`
 then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
 Restty runtime, declarations and embedded-core SHA-256 values and produces
 corrected runtime SHA-256
-`15ca6dc64c45c1f42a88337aec58367a5e69fc0889dfa92c305aa333cba2a651`,
+`cfe2c967cc201689f4e1ca2a9231e9652ff5fce47d7671ab73dba78b2b5fa7ea`,
 embedded-core chunk SHA-256
 `4c0830a7b5dc3cb986de5c980315fc68d14ef33cc193a479b062fc54a7234159`,
 and event declarations SHA-256
 `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34`.
 The narrow correction makes font-load failure reject initialization, disables
-Restty's direct browser clipboard and link-opening callbacks, and exposes raw
-paste origin, current bracketed mode, selection/Select All, parsed OSC and OSC
+Restty's direct browser clipboard and link-opening callbacks, bounds unfinished
+OSC/CSI control bodies with whole-control recovery, and exposes raw paste
+origin, current bracketed mode, selection/Select All, parsed OSC and OSC
 cancellation, visible cell/soft-wrap lookup, and parsed Ghostty title/BEL runtime
 events to OMXTerm's existing host policy. Borrowed render cells are snapshotted
 before selection-text queries can allocate WASM memory. It also removes Restty's 10–64
@@ -125,8 +145,12 @@ Zoom, carries the creation-time line-height factor into cell metrics without
 scaling glyphs, keeps bold ANSI 0–7 colors unchanged, and exposes Ghostty's
 existing line and byte limit setters through one live Restty operation. Unknown
 dependency or artifact bytes fail instead of receiving a best-effort patch.
-Reinstall with `npm ci` to restore and reapply the reviewed bytes; do not edit
-`node_modules` manually.
+The same install step accepts node-pty 1.1.0 Unix runtime SHA-256
+`a62e3a60c3bc1b0e7261f58284856df748dcee6761a2bc7a5a5ba98b22660473`
+and produces
+`238f993db4aa83d57885832eabe9c1de1ce05b96c84d3270574f26f71f9afcb8`;
+Windows skips that Unix-only correction. Reinstall with `npm ci` to restore and
+reapply the reviewed bytes; do not edit `node_modules` manually.
 
 `assets/restty/omxterm-restty-core.wasm` is built from the pinned Restty and
 Ghostty commits above with tracked Restty patch
@@ -163,10 +187,13 @@ input, large chunked DOM paste through a real owned PTY, explicit host
 copy/paste, Select All, context menu and OSC 52, parsed title/BEL ownership,
 title-query silence, disposal, resize, focus return, two isolated tabs, Default
 Shell and explicit-command startup, owned session
-termination, explicit close, renderer-process loss, direct Pi and Chafa Terminal
-Payload through the PTY, rendered image content and placement, live image
-geometry, and remaining candidate-route refusal without using a user session or
-real clipboard.
+termination, explicit close, renderer-process loss, a numbered 2 MiB producer
+through production IPC during a 350 ms renderer stall and resize, cumulative
+flow control, clean producer exit, direct Pi and Chafa Terminal Payload through
+the PTY, rendered image content and placement, live image geometry, and
+remaining candidate-route refusal without using a user session or real
+clipboard. Its result contains only synthetic outcome and queue/heap/RSS
+metadata, not captured Terminal Payload.
 
 Native runtime evidence through the current parsed-event slice is macOS ARM64.
 Linux and Windows Restty behavior remains unverified; their xterm package

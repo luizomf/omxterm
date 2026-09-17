@@ -11,11 +11,24 @@ import {
 
 export type TerminalSessionLaunchKind = LaunchRequest["kind"];
 
+export const TERMINAL_OUTPUT_PAUSE_BYTES = 64 * 1024;
+export const TERMINAL_OUTPUT_RESUME_BYTES = 16 * 1024;
+
+export interface TerminalOutputFlowMetrics {
+  readonly pendingBytes: number;
+  readonly maxPendingBytes: number;
+  readonly largestNativeReadBytes: number;
+  readonly pauseCount: number;
+  readonly resumeCount: number;
+}
+
 export interface LocalTerminalSession {
   readonly launchKind?: TerminalSessionLaunchKind;
   readonly fallbackTitle?: string;
   write(data: string): void;
   resize(size: TerminalSize): void;
+  acknowledgeOutput?(bytes: number): boolean;
+  outputFlowMetrics?(): TerminalOutputFlowMetrics;
   hasForegroundChildProcess(): boolean;
   close(): void;
 }
@@ -104,6 +117,12 @@ export function createLocalTerminalSession(
 
   let closed = false;
   let exited = false;
+  let pendingOutputBytes = 0;
+  let maxPendingOutputBytes = 0;
+  let largestNativeReadBytes = 0;
+  let outputPauseCount = 0;
+  let outputResumeCount = 0;
+  let outputPaused = false;
   let dataSubscription: IDisposable | undefined;
   let exitSubscription: IDisposable | undefined;
 
@@ -116,7 +135,23 @@ export function createLocalTerminalSession(
 
   dataSubscription = pty.onData((data) => {
     if (closed) return;
-    for (const chunk of splitTerminalPayload(data)) options.onOutput(chunk);
+    largestNativeReadBytes = Math.max(
+      largestNativeReadBytes,
+      Buffer.byteLength(data, "utf8"),
+    );
+    for (const chunk of splitTerminalPayload(data)) {
+      pendingOutputBytes += Buffer.byteLength(chunk, "utf8");
+      maxPendingOutputBytes = Math.max(
+        maxPendingOutputBytes,
+        pendingOutputBytes,
+      );
+      options.onOutput(chunk);
+      if (!outputPaused && pendingOutputBytes >= TERMINAL_OUTPUT_PAUSE_BYTES) {
+        outputPaused = true;
+        outputPauseCount += 1;
+        pty.pause();
+      }
+    }
   });
   exitSubscription = pty.onExit((exit) => {
     if (exited) return;
@@ -142,6 +177,32 @@ export function createLocalTerminalSession(
     resize(size) {
       if (!closed && !exited && isTerminalSize(size))
         pty.resize(size.cols, size.rows);
+    },
+    acknowledgeOutput(bytes) {
+      if (
+        closed ||
+        exited ||
+        !Number.isSafeInteger(bytes) ||
+        bytes <= 0 ||
+        bytes > pendingOutputBytes
+      )
+        return false;
+      pendingOutputBytes -= bytes;
+      if (outputPaused && pendingOutputBytes <= TERMINAL_OUTPUT_RESUME_BYTES) {
+        outputPaused = false;
+        outputResumeCount += 1;
+        pty.resume();
+      }
+      return true;
+    },
+    outputFlowMetrics() {
+      return {
+        pendingBytes: pendingOutputBytes,
+        maxPendingBytes: maxPendingOutputBytes,
+        largestNativeReadBytes,
+        pauseCount: outputPauseCount,
+        resumeCount: outputResumeCount,
+      };
     },
     // Close confirmation asks only when the PTY's foreground process is not
     // the idle Default Shell. The name is compared in memory and never
@@ -174,6 +235,12 @@ export function createLocalTerminalSession(
       // its last tab, and a kill only requests that end (#85).
       dataSubscription?.dispose();
       dataSubscription = undefined;
+      if (outputPaused) {
+        outputPaused = false;
+        outputResumeCount += 1;
+        pty.resume();
+      }
+      pendingOutputBytes = 0;
       if (!exited) pty.kill();
     },
   };

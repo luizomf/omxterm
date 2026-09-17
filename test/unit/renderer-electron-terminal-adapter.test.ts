@@ -11,6 +11,7 @@ function createBridgeHarness() {
   let emitOutput: (
     sessionId: TerminalSessionId,
     data: string,
+    end: number,
   ) => void = () => {};
   let emitExit: (
     sessionId: TerminalSessionId,
@@ -28,8 +29,15 @@ function createBridgeHarness() {
     input: vi.fn(),
     resize: vi.fn(),
     close: vi.fn(),
+    acknowledgeOutput: vi.fn(),
     onOutput: vi.fn(
-      (listener: (sessionId: TerminalSessionId, data: string) => void) => {
+      (
+        listener: (
+          sessionId: TerminalSessionId,
+          data: string,
+          end: number,
+        ) => void,
+      ) => {
         emitOutput = listener;
         return removeOutputListener;
       },
@@ -47,8 +55,8 @@ function createBridgeHarness() {
     bridge: bridge as unknown as TerminalBridge,
     calls: bridge,
     startSession: (sessionId: TerminalSessionId) => resolveStart(sessionId),
-    output: (sessionId: TerminalSessionId, data: string) =>
-      emitOutput(sessionId, data),
+    output: (sessionId: TerminalSessionId, data: string, end = data.length) =>
+      emitOutput(sessionId, data, end),
     exit: (sessionId: TerminalSessionId, exit: TerminalExit) =>
       emitExit(sessionId, exit),
     removeOutputListener,
@@ -77,6 +85,10 @@ describe("renderer Electron terminal adapter", () => {
 
     expect(onOutput).toHaveBeenCalledOnce();
     expect(onOutput).toHaveBeenCalledWith("own output");
+    expect(harness.calls.acknowledgeOutput).toHaveBeenCalledExactlyOnceWith(
+      "s2",
+      10,
+    );
     expect(onExit).toHaveBeenCalledOnce();
     expect(onExit).toHaveBeenCalledWith({ exitCode: 0, signal: 15 });
     expect(harness.calls.input).toHaveBeenCalledWith("s2", "typed input");
@@ -86,7 +98,7 @@ describe("renderer Electron terminal adapter", () => {
     });
   });
 
-  it("drops writes, resizes, and events until the session id is known", async () => {
+  it("buffers early output until the session id is known without accepting early input", async () => {
     const harness = createBridgeHarness();
     const adapter = createElectronTerminalAdapter(harness.bridge);
     const onOutput = vi.fn();
@@ -94,12 +106,17 @@ describe("renderer Electron terminal adapter", () => {
     const started = adapter.start({ onOutput, onExit: vi.fn() });
     adapter.write("too early");
     adapter.resize({ cols: 80, rows: 24 });
-    harness.output("s1", "early output");
+    harness.output("s1", "early output", 12);
+    harness.output("s9", "foreign early output", 20);
     harness.startSession("s1");
     await started;
     adapter.write("after start");
 
-    expect(onOutput).not.toHaveBeenCalledWith("early output");
+    expect(onOutput).toHaveBeenCalledExactlyOnceWith("early output");
+    expect(harness.calls.acknowledgeOutput).toHaveBeenCalledExactlyOnceWith(
+      "s1",
+      12,
+    );
     expect(harness.calls.input).toHaveBeenCalledOnce();
     expect(harness.calls.input).toHaveBeenCalledWith("s1", "after start");
     expect(harness.calls.resize).not.toHaveBeenCalled();

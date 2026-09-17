@@ -22,6 +22,8 @@ function createPtyHarness() {
   const pty = {
     write: vi.fn(),
     resize: vi.fn(),
+    pause: vi.fn(),
+    resume: vi.fn(),
     kill: vi.fn(),
     get process() {
       return foregroundProcess();
@@ -233,6 +235,51 @@ describe("local PTY Adapter lifecycle", () => {
     );
     expect(harness.disposeData).toHaveBeenCalledOnce();
     expect(harness.disposeExit).toHaveBeenCalledOnce();
+  });
+
+  it("pauses at the pending-output high water and resumes only after low water", () => {
+    const harness = createPtyHarness();
+    const delivered: string[] = [];
+    const session = createLocalTerminalSession(() => harness.pty, {
+      shell: "/bin/example-shell",
+      platform: "darwin",
+      homeDirectory: "/Users/example",
+      applicationVersionProvider: { getVersion: () => "1.2.3" },
+      environment: {},
+      onOutput: (data) => delivered.push(data),
+      onExit: vi.fn(),
+    });
+
+    harness.emitData("a".repeat(60_000));
+    harness.emitData("b".repeat(10_000));
+    expect(harness.pty.pause).toHaveBeenCalledOnce();
+    expect(delivered.join("")).toHaveLength(70_000);
+
+    expect(session.acknowledgeOutput!(50_000)).toBe(true);
+    expect(harness.pty.resume).not.toHaveBeenCalled();
+    expect(session.acknowledgeOutput!(4_000)).toBe(true);
+    expect(harness.pty.resume).toHaveBeenCalledOnce();
+    expect(session.acknowledgeOutput!(20_000)).toBe(false);
+  });
+
+  it("resumes a paused PTY before owner-loss cleanup", () => {
+    const harness = createPtyHarness();
+    const session = createLocalTerminalSession(() => harness.pty, {
+      shell: "/bin/example-shell",
+      platform: "darwin",
+      homeDirectory: "/Users/example",
+      applicationVersionProvider: { getVersion: () => "1.2.3" },
+      environment: {},
+      onOutput: vi.fn(),
+      onExit: vi.fn(),
+    });
+
+    harness.emitData("x".repeat(65_536));
+    session.close();
+
+    expect(harness.pty.pause).toHaveBeenCalledOnce();
+    expect(harness.pty.resume).toHaveBeenCalledOnce();
+    expect(harness.pty.kill).toHaveBeenCalledOnce();
   });
 
   it("releases the PTY and listeners exactly once", () => {

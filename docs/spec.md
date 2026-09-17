@@ -234,6 +234,45 @@ behavior is unverified; this slice's native runtime evidence is macOS ARM64.
 Native rasterization can differ between Restty and xterm; pixel-identical glyph
 output is not claimed.
 
+PTY output crosses the shared Adapter/IPC route in order. Each output message
+carries a cumulative UTF-8 byte position, and only the owning renderer main
+frame may acknowledge forward progress for its own Live Terminal Session. An
+ACK means that the complete message was synchronously submitted to the selected
+Terminal Surface; it does not mean that pixels were rendered or that a parser,
+image decoder, browser, GPU, or core allocation was released. Duplicate, stale,
+unknown-session, foreign-session and beyond-sent ACKs have no flow-control
+effect. Main pauses the owned PTY at 65,536 pending bytes and resumes it at or
+below 16,384; because a native read already in progress crosses the threshold,
+the observable pending maximum is bounded by the pause threshold plus the
+largest crossing native read rather than exactly 65,536 bytes. Renderer loss,
+send failure, tab disposal and window disposal terminate only the affected
+owned session; cleanup resumes an owned paused stream before termination so it
+cannot remain an immortal paused process or send into a dead owner. On Unix,
+the pinned node-pty close guard defers its socket-destroy timeout while that
+stream is paused so a final readable tail is not discarded. This adaptation
+does not change the separate ConPTY implementation. Native evidence for this
+slice is macOS ARM64; Linux and Windows Restty output behavior remains
+unverified until final cutover qualification.
+
+Restty's pinned OutputFilter retains at most 10,000,000 UTF-16 code units of an
+unfinished OSC or CSI control body. For OSC, the body is the handler payload
+after a short numeric command and separator when present; otherwise it begins
+after the OSC introducer. For CSI, it begins after the CSI introducer and
+excludes the final byte. A control that exceeds the budget is consumed as one
+rejected control until its terminator or cancellation: BEL, ST, CAN or SUB for
+OSC, and a CSI final byte, CAN or SUB for CSI. It produces no partial clipboard,
+title, reply, mode or other control side effect, releases retained text, and
+allows following ordinary output to continue. Controls at the budget remain
+accepted, including the established largest valid OSC 52 write. This is not a
+limit on ordinary terminal text, copy, paste, input or complete output.
+
+The pending IPC byte count, JavaScript heap and process RSS are separate
+metadata domains. Ghostty core image/scrollback storage, transient decode
+allocations, browser canvas/WebGL resources and GPU memory remain separately
+accounted or unmeasured. Neither flow control nor the scanner budget is a total
+application-memory bound, and concurrent sessions multiply the independent
+costs.
+
 OMXTerm advertises `TERM=xterm-256color`, `COLORTERM=truecolor`,
 `TERM_PROGRAM=OMXTerm`, and its installed version in `TERM_PROGRAM_VERSION`.
 It installs no custom terminfo and does not edit or inject shell startup files.

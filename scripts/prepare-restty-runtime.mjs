@@ -51,8 +51,10 @@ const priorVisibleLinksDigest =
   "595f72d3be87f0965dea3733180264768720f7cba0c7c35aad797e2a22689665";
 const priorParsedEventsDigest =
   "ed0282ed0062fc23a8ac90d2173633129cdd88d706adabb5f0e06bf3ff73aa11";
-const correctedDigest =
+const priorOutputSafetyDigest =
   "15ca6dc64c45c1f42a88337aec58367a5e69fc0889dfa92c305aa333cba2a651";
+const correctedDigest =
+  "cfe2c967cc201689f4e1ca2a9231e9652ff5fce47d7671ab73dba78b2b5fa7ea";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 
 const securityCorrections = [
@@ -672,6 +674,141 @@ const parsedEventRuntimeCorrections = [
   },
 ];
 
+const outputSafetyCorrections = [
+  {
+    original: `class OutputFilter {
+  remainder = "";
+  getCursorPosition;`,
+    corrected: `const MAX_RETAINED_CONTROL_CODE_UNITS = 1e7;
+class OutputFilter {
+  remainder = "";
+  discardedControl = null;
+  discardedOscEscape = false;
+  getCursorPosition;`,
+  },
+  {
+    original: `    let result = "";
+    let i = 0;
+    while (i < data.length) {
+      const ch = data[i];`,
+    corrected: `    let result = "";
+    let i = 0;
+    while (i < data.length) {
+      const ch = data[i];
+      const code = data.charCodeAt(i);
+      if (this.discardedControl === "osc") {
+        if (this.discardedOscEscape && ch === "\\\\") {
+          this.discardedControl = null;
+          this.discardedOscEscape = false;
+        } else if (code === 7 || code === 24 || code === 26) {
+          this.discardedControl = null;
+          this.discardedOscEscape = false;
+        } else {
+          this.discardedOscEscape = code === 27;
+        }
+        i += 1;
+        continue;
+      }
+      if (this.discardedControl === "csi") {
+        if (code === 24 || code === 26 || code >= 64 && code <= 126)
+          this.discardedControl = null;
+        i += 1;
+        continue;
+      }`,
+  },
+  {
+    original: `      if (data[i + 1] === "]") {
+        let j = i + 2;
+        let terminatorLen = 0;
+        let cancelled = false;
+        while (j < data.length) {
+          const code = data.charCodeAt(j);`,
+    corrected: `      if (data[i + 1] === "]") {
+        let j = i + 2;
+        let bodyStart = j;
+        let terminatorLen = 0;
+        let cancelled = false;
+        while (j < data.length) {
+          const code = data.charCodeAt(j);
+          if (code === 59 && j - (i + 2) <= 16 && /^[0-9]+$/.test(data.slice(i + 2, j)))
+            bodyStart = j + 1;`,
+  },
+  {
+    original: `          if (code === 27 && j + 1 < data.length && data[j + 1] === "\\\\") {
+            terminatorLen = 2;
+            break;
+          }
+          j += 1;
+        }
+        if (!terminatorLen) {
+          this.remainder = data.slice(i);
+          break;
+        }`,
+    corrected: `          if (code === 27 && j + 1 < data.length && data[j + 1] === "\\\\") {
+            terminatorLen = 2;
+            break;
+          }
+          if (j - bodyStart >= MAX_RETAINED_CONTROL_CODE_UNITS) {
+            this.discardedControl = "osc";
+            this.discardedOscEscape = false;
+            break;
+          }
+          j += 1;
+        }
+        if (this.discardedControl === "osc") {
+          i = j;
+          continue;
+        }
+        if (!terminatorLen) {
+          this.remainder = data.slice(i);
+          break;
+        }`,
+  },
+  {
+    original: `      let j = i + 2;
+      while (j < data.length) {
+        const code = data.charCodeAt(j);
+        if (code >= 64 && code <= 126)
+          break;
+        j += 1;
+      }
+      if (j >= data.length) {
+        this.remainder = data.slice(i);
+        break;
+      }
+      const seq = data.slice(i, j + 1);`,
+    corrected: `      let j = i + 2;
+      let cancelled = false;
+      while (j < data.length) {
+        const code = data.charCodeAt(j);
+        if (code === 24 || code === 26) {
+          cancelled = true;
+          break;
+        }
+        if (code >= 64 && code <= 126)
+          break;
+        if (j - (i + 2) >= MAX_RETAINED_CONTROL_CODE_UNITS) {
+          this.discardedControl = "csi";
+          break;
+        }
+        j += 1;
+      }
+      if (this.discardedControl === "csi") {
+        i = j;
+        continue;
+      }
+      if (j >= data.length) {
+        this.remainder = data.slice(i);
+        break;
+      }
+      if (cancelled) {
+        i = j + 1;
+        continue;
+      }
+      const seq = data.slice(i, j + 1);`,
+  },
+];
+
 const parsedEventTypeCorrections = [
   {
     original: `} | {
@@ -880,8 +1017,11 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorParsedEventsDigest) {
+    if (sourceDigest === priorOutputSafetyDigest) {
+      source = applyCorrections(source, outputSafetyCorrections);
+    } else if (sourceDigest === priorParsedEventsDigest) {
       source = applyCorrections(source, parsedEventRuntimeCorrections);
+      source = applyCorrections(source, outputSafetyCorrections);
     } else {
       if (sourceDigest === priorVisibleLinksDigest) {
         source = applyCorrections(source, visibleLinkCorrections);
@@ -967,6 +1107,7 @@ export async function prepareResttyRuntime(options = {}) {
       if (sourceDigest !== priorVisibleLinksDigest)
         source = applyCorrections(source, visibleLinkCorrections);
       source = applyCorrections(source, parsedEventRuntimeCorrections);
+      source = applyCorrections(source, outputSafetyCorrections);
     }
     if (digest(source) !== correctedDigest)
       throw new Error(

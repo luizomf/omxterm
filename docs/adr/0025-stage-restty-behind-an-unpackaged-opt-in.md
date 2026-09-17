@@ -76,8 +76,32 @@ Ghostty's internal title bound, suppresses cancelled title requests, and never
 enables title reports; OSC BEL terminators do not become bell events. The later
 image slice keeps Kitty parsing, decode, placement and bounded storage in the
 pinned Ghostty core under ADR 0022; it adds no application parser or privilege
-seam. These gates apply only to Restty. xterm's existing behavior and security
-boundaries remain unchanged. Renderer isolation, the production CSP,
+seam. The output-safety slice keeps the shared Adapter but makes its IPC delivery
+ordered and acknowledged. Main tags each output chunk with a cumulative UTF-8
+byte position, accepts progress only from the owning renderer main frame and
+session, pauses an owned PTY at 65,536 pending bytes, and resumes at or below
+16,384. An ACK means synchronous submission to the Surface, not rendering or
+parser/resource release. The crossing native read can put measured pending
+bytes above the high water, so the bound is the high water plus that read, not
+a whole-process memory claim. Disposal and renderer/send loss resume and
+terminate only the owned PTY. A checksum-guarded pinned node-pty 1.1.0 Unix
+runtime correction defers its 200 ms stuck-close socket destruction while the
+stream is paused, preserving the readable exit tail; it does not alter the
+Windows ConPTY path.
+
+The same slice changes Restty's existing OutputFilter rather than adding an
+OMXTerm parser. Its unfinished OSC and CSI bodies have a
+10,000,000-UTF-16-code-unit budget aligned with the pinned dependency's OSC
+safety boundary. Exceeding it enters a bounded discard state through control
+termination or CAN/SUB cancellation, rejects the complete control without
+clipboard, title, reply or mode side effects, and resumes later ordinary text.
+A short numeric OSC command prefix is outside the handler body count, preserving
+the established largest valid OSC 52 request. Plain text and complete input,
+copy and paste remain unlimited by this scanner rule.
+
+These scanner gates apply only to Restty. xterm's existing parser behavior and
+security boundaries remain unchanged. The ordered shared transport preserves
+xterm's existing observable behavior. Renderer isolation, the production CSP,
 application network boundary and platform sandbox policy
 also remain unchanged.
 
@@ -105,4 +129,7 @@ The cost is an intentionally incomplete development candidate and a temporary
 pinned dependency correction. This is preferable to unsafe passthrough, invisible
 shells, accidental packaged activation or speculative engine abstraction.
 Linux and Windows candidate behavior is unverified in this slice; macOS ARM64
-owns its native PTY evidence. Final default replacement remains a later decision.
+owns its native PTY evidence. Queue pending bytes, JavaScript heap and process
+RSS are reported separately; core, browser/WebGL and GPU allocations remain
+separate costs and no total application-memory bound is claimed. Final default
+replacement remains a later decision.

@@ -30,6 +30,8 @@ function feedSplit(
   return sink;
 }
 
+const CONTROL_BODY_LIMIT = 10_000_000;
+
 describe("Restty parsed OSC 52 seam", () => {
   it.each(["\u0007", "\u001b\\"])(
     "consumes a valid write split at every boundary through %j and preserves later output",
@@ -68,6 +70,48 @@ describe("Restty parsed OSC 52 seam", () => {
       expect(sink.replies).toEqual([]);
     },
   );
+
+  it("rejects an unfinished oversized OSC as a whole and recovers at every split terminator and cancellation", () => {
+    for (const terminator of ["\u0007", "\u0018", "\u001a", "\u001b\\"]) {
+      for (const split of [0, terminator.length]) {
+        const sink = createSink();
+        const prefix = `\u001b]52;c;${"A".repeat(CONTROL_BODY_LIMIT + 1)}`;
+        expect(sink.handler.filterOutput(prefix)).toBe("");
+        expect(sink.handler.filterOutput(terminator.slice(0, split))).toBe("");
+        expect(
+          sink.handler.filterOutput(`${terminator.slice(split)}later`),
+        ).toBe("later");
+        expect(sink.writes).toEqual([]);
+        expect(sink.replies).toEqual([]);
+      }
+    }
+  });
+
+  it("bounds unfinished CSI bodies below, at, and above the control budget and recovers later text", () => {
+    for (const size of [CONTROL_BODY_LIMIT - 1, CONTROL_BODY_LIMIT]) {
+      for (const cancel of ["\u0018", "\u001a"]) {
+        const sink = createSink();
+        expect(sink.handler.filterOutput(`\u001b[${"1".repeat(size)}`)).toBe(
+          "",
+        );
+        expect(sink.handler.filterOutput(`${cancel}later`)).toBe("later");
+        expect(sink.writes).toEqual([]);
+        expect(sink.replies).toEqual([]);
+      }
+    }
+
+    for (const final of ["m", "\u0018", "\u001a"]) {
+      const sink = createSink();
+      expect(
+        sink.handler.filterOutput(
+          `\u001b[${"1".repeat(CONTROL_BODY_LIMIT + 1)}`,
+        ),
+      ).toBe("");
+      expect(sink.handler.filterOutput(`${final}later`)).toBe("later");
+      expect(sink.writes).toEqual([]);
+      expect(sink.replies).toEqual([]);
+    }
+  });
 
   it("accepts the exact inside payload and rejects the next canonical request", () => {
     const writeText = vi.fn();

@@ -9,6 +9,7 @@ import {
   isTerminalSessionExit,
   isTerminalSessionId,
   isTerminalSessionOutput,
+  isTerminalSessionOutputAck,
   isTerminalSessionTitle,
   isTerminalSize,
   isTerminalTabCommand,
@@ -127,10 +128,18 @@ const terminal: TerminalBridge = {
       throw new TypeError("Invalid External Link request");
     ipcRenderer.send(terminalIpc.externalLink, url);
   },
-  onOutput(listener: (sessionId: TerminalSessionId, data: string) => void) {
+  acknowledgeOutput(sessionId: TerminalSessionId, end: number) {
+    const payload = { sessionId, end };
+    if (!isTerminalSessionOutputAck(payload))
+      throw new TypeError("Invalid terminal output acknowledgement");
+    ipcRenderer.send(terminalIpc.outputAck, payload);
+  },
+  onOutput(
+    listener: (sessionId: TerminalSessionId, data: string, end: number) => void,
+  ) {
     const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
       if (isTerminalSessionOutput(payload))
-        listener(payload.sessionId, payload.data);
+        listener(payload.sessionId, payload.data, payload.end);
     };
     ipcRenderer.on(terminalIpc.output, handler);
     return () => ipcRenderer.removeListener(terminalIpc.output, handler);

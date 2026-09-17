@@ -16,11 +16,15 @@ import {
   installedFallbackFontData,
   installedFontData,
 } from "../../src/main/installed-font-family";
-import { exerciseResttyLinks } from "./restty-link-gestures";
+import { exerciseExplicitResttyTab } from "./restty-host-explicit-tab";
 import { exerciseResttyEvents } from "./restty-host-events";
 import { captureResttyFontPaintEvidence } from "./restty-host-paint";
 import * as resttyImages from "./restty-host-images";
 import { createLargePasteFixture, dispatchDomPaste } from "./restty-host-paste";
+import {
+  createOutputStressHarness,
+  outputStressLaunchRequest,
+} from "./restty-host-output-stress";
 
 const prefix = "__OMXTERM_RESTTY_HOST_RESULT__";
 const root = __dirname;
@@ -56,6 +60,7 @@ let openedWindows = 0;
 let permissionRequests = 0;
 let ptyExits = 0;
 let sessionIndex = 0;
+const outputStress = createOutputStressHarness();
 const configuredFontFamily =
   process.platform === "darwin"
     ? "Helvetica"
@@ -79,10 +84,6 @@ async function waitFor(
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
   throw new Error(`Timed out waiting for ${label}`);
-}
-
-function shellQuote(value: string): string {
-  return `'${value.replaceAll("'", `'"'"'`)}'`;
 }
 
 function createHost(window: BrowserWindow) {
@@ -120,29 +121,34 @@ function createHost(window: BrowserWindow) {
       deliverOutputs[index] = callbacks.onOutput;
       resizes[index] = [];
       const explicit = index === 1;
+      const stressLaunchRequest = outputStressLaunchRequest(index);
       const terminal = createLocalTerminalSession(nodePty.spawn, {
         shell: "/bin/sh",
-        ...(explicit
-          ? {
-              launchRequest: {
-                kind: "explicit-command" as const,
-                executable: "/bin/sh",
-                arguments: [
-                  "-c",
-                  "printf '__EXPLICIT_READY__Olá🙂\\n\\033]2;second-title\\007\\007\\033]52;c;dW5zYWZl\\007\\033]8;;https://example.com\\007https://example.com\\033]8;;\\007'; IFS= read -r line; printf '__EXPLICIT_INPUT__%s\\n' \"$line\"; sleep 30",
-                ],
-              },
-            }
-          : {}),
+        ...(stressLaunchRequest
+          ? { launchRequest: stressLaunchRequest }
+          : explicit
+            ? {
+                launchRequest: {
+                  kind: "explicit-command" as const,
+                  executable: "/bin/sh",
+                  arguments: [
+                    "-c",
+                    "printf '__EXPLICIT_READY__Olá🙂\\n\\033]2;second-title\\007\\007\\033]52;c;dW5zYWZl\\007\\033]8;;https://example.com\\007https://example.com\\033]8;;\\007'; IFS= read -r line; printf '__EXPLICIT_INPUT__%s\\n' \"$line\"; sleep 30",
+                  ],
+                },
+              }
+            : {}),
         platform: process.platform,
         homeDirectory: home,
         applicationVersionProvider: app,
         environment: { ...process.env, HOME: home },
         onOutput(data) {
-          outputs[index]!.push(data);
+          if (!outputStress.observeOutput(index, data))
+            outputs[index]!.push(data);
           callbacks.onOutput(data);
         },
         onExit(exit, launchKind) {
+          outputStress.observeExit(index, exit);
           ptyExits += 1;
           callbacks.onExit(exit, launchKind);
         },
@@ -173,13 +179,12 @@ function createHost(window: BrowserWindow) {
       });
     },
     onSessionStarted() {
-      launchKinds.push(
-        sessionIndex === 2 ? "explicit-command" : "default-shell",
-      );
+      launchKinds.push(terminals[sessionIndex - 1]!.launchKind!);
     },
     onSessionSelected() {},
     writeClipboardText(text) {
       clipboardWrites += 1;
+      outputStress.observeClipboard(text);
       selectAllCoveredScrollback ||=
         text.includes("__SELECT_ALL_FIRST__") &&
         text.includes("__SELECT_ALL_LAST__");
@@ -314,6 +319,12 @@ app
       deliverOutputs[0]!,
     );
 
+    window.focus();
+    window.webContents.focus();
+    await window.webContents.executeJavaScript(
+      "document.querySelector('.restty-terminal-surface canvas')?.focus()",
+      true,
+    );
     await window.webContents.insertText("printf '__DEFAULT_INPUT__Olá🙂\\n'");
     window.webContents.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
     window.webContents.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
@@ -388,73 +399,33 @@ app
         waitFor,
       });
 
-    window.webContents.send(terminalIpc.tabCommand, { action: "new" });
-    await waitFor(
-      () => launchKinds.length === 2 && resizes[1]!.length > 0,
-      "explicit-command Restty tab",
-    );
-    await waitFor(
-      () =>
-        window.webContents.executeJavaScript(
-          "document.querySelectorAll('#tab-strip button').length === 2",
-          true,
-        ),
-      "two isolated tabs",
-    );
-    await waitFor(
-      () => outputs[1]!.join("").includes("__EXPLICIT_READY__Olá🙂"),
-      "explicit command output",
-    );
-    await waitFor(
-      () => titleEvents.length === 3 && bellSessionIds.length === 2,
-      "second tab parsed title and bell callbacks",
-    );
-    await reloader.reload();
-    const reloadState = (await window.webContents.executeJavaScript(
-      "({ fonts: [...document.querySelectorAll('.restty-terminal-surface')].map((element) => element.dataset.resttyFont), notice: document.querySelector('#user-file-errors')?.textContent ?? '' })",
-      true,
-    )) as { fonts: string[]; notice: string };
-    await window.webContents.insertText("second🙂");
-    window.webContents.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
-    window.webContents.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
-    await waitFor(
-      () => outputs[1]!.join("").includes("__EXPLICIT_INPUT__second🙂"),
-      "selected-tab Unicode input isolation",
-    );
-
-    const linkEvidence = await exerciseResttyLinks({
+    const { reloadState, linkEvidence } = await exerciseExplicitResttyTab({
       window,
-      deliverOutput: deliverOutputs[1]!,
-      inputs: inputs[1]!,
-      resizes: resizes[1]!,
+      launchKinds,
+      resizes,
+      outputs,
+      inputs,
+      deliverOutputs,
       externalLinks,
+      titleEvents,
+      bellSessionIds,
+      ended,
+      reload: () => reloader.reload(),
       waitFor,
     });
-
-    window.blur();
-    window.focus();
-    await waitFor(
-      () =>
-        window.webContents.executeJavaScript(
-          "document.activeElement?.closest('.restty-terminal-surface') !== null",
-          true,
-        ),
-      "returned focus",
-    );
-
-    window.webContents.send(terminalIpc.tabCommand, { action: "close" });
-    await waitFor(
-      () =>
-        ended.some((entry) => entry.closeRequested && entry.liveSessions === 1),
-      "explicit tab close cleanup",
-    );
-    deliverOutputs[1]!("\u001b]0;late-private-title\u0007\u0007");
-    await new Promise((resolve) => setTimeout(resolve, 100));
     const imageEvidence = await resttyImages.completeResttyImageEvidence(
       window,
       initialImageEvidence,
       resizes[0]!.at(-1)!,
     );
+
+    const outputStressEvidence = await outputStress.exercise({
+      window,
+      terminals,
+      resizes,
+      launchKinds,
+      waitFor,
+    });
 
     terminals[0]!.close();
     await waitFor(
@@ -471,7 +442,7 @@ app
 
     window.webContents.send(terminalIpc.tabCommand, { action: "new" });
     await waitFor(
-      () => launchKinds.length === 3 && resizes[2]!.length > 0,
+      () => launchKinds.length === 4 && resizes[3]!.length > 0,
       "renderer-loss session",
     );
     const beforeDestroy = (await window.webContents.executeJavaScript(
@@ -483,7 +454,7 @@ app
       true,
     )) as string | null;
     window.webContents.forcefullyCrashRenderer();
-    await waitFor(() => ptyExits === 3, "renderer-loss PTY cleanup");
+    await waitFor(() => ptyExits === 4, "renderer-loss PTY cleanup");
 
     const result = {
       beforeDestroy,
@@ -503,12 +474,19 @@ app
       bellSessionIds,
       titleQueryReplyBytes,
       imageEvidence,
+      outputStress: outputStressEvidence,
       navigations,
       openedWindows,
       permissionRequests,
       ptyExits,
       launchKinds,
-      output: outputs.map((chunks) => chunks.join("")),
+      outputEvidence: {
+        defaultUnicode: outputs[0]!.join("").includes("__DEFAULT_INPUT__Olá🙂"),
+        explicitReady: outputs[1]!.join("").includes("__EXPLICIT_READY__Olá🙂"),
+        explicitInput: outputs[1]!
+          .join("")
+          .includes("__EXPLICIT_INPUT__second🙂"),
+      },
       resizeCounts: resizes.map((entries) => entries.length),
       ended,
       sessionStarts: sessionIndex,

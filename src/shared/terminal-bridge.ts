@@ -25,8 +25,9 @@ export interface TerminalBridge {
   title(sessionId: TerminalSessionId, request: string): void;
   bell(sessionId: TerminalSessionId): void;
   openExternalLink(url: string): void;
+  acknowledgeOutput(sessionId: TerminalSessionId, end: number): void;
   onOutput(
-    listener: (sessionId: TerminalSessionId, data: string) => void,
+    listener: (sessionId: TerminalSessionId, data: string, end: number) => void,
   ): () => void;
   onExit(
     listener: (sessionId: TerminalSessionId, exit: TerminalExit) => void,

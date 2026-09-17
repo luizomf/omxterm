@@ -1,8 +1,12 @@
 import * as nodePty from "node-pty";
+import type { IPty } from "node-pty";
 import { userInfo } from "node:os";
 import { describe, expect, it } from "vitest";
 import { resolveDefaultShell } from "../../src/main/default-shell";
-import { createLocalTerminalSession } from "../../src/main/local-terminal-session";
+import {
+  createLocalTerminalSession,
+  TERMINAL_OUTPUT_PAUSE_BYTES,
+} from "../../src/main/local-terminal-session";
 
 const supportedEnvironment =
   (process.platform === "darwin" || process.platform === "linux") &&
@@ -78,6 +82,118 @@ describe.skipIf(!supportedEnvironment)("real local PTY", () => {
       terminalPayload = "";
     }
   }, 15_000);
+
+  it.skipIf(process.platform !== "darwin")(
+    "bounds a stalled 2 MiB macOS PTY stream and preserves ordered exit tail",
+    async () => {
+      const lineCount = 65_536;
+      const lineBytes = 32;
+      const expectedPayloadBytes = lineCount * lineBytes;
+      const endMarker = "__OMXTERM_OUTPUT_END__";
+      const producer = `let i=0;const write=()=>{while(i<${lineCount}){const line=String(i).padStart(8,"0")+":"+"x".repeat(23);i++;if(!process.stdout.write(line)){process.stdout.once("drain",write);return}}process.stdout.write("${endMarker}")};write()`;
+      let pauseCount = 0;
+      let resumeCount = 0;
+      const spawn = (...arguments_: Parameters<typeof nodePty.spawn>) => {
+        const terminal = nodePty.spawn(...arguments_);
+        const pause = terminal.pause.bind(terminal);
+        const resume = terminal.resume.bind(terminal);
+        terminal.pause = () => {
+          pauseCount += 1;
+          return pause();
+        };
+        terminal.resume = () => {
+          resumeCount += 1;
+          return resume();
+        };
+        return terminal as IPty;
+      };
+      let session: ReturnType<typeof createLocalTerminalSession> | undefined;
+      let remainder = "";
+      let nextLine = 0;
+      let receivedBytes = 0;
+      let acknowledgedBytes = 0;
+      let maxPendingBytes = 0;
+      let largestChunkBytes = 0;
+      let markerSeen = false;
+      let stallReleased = false;
+      let exitEvent: { exitCode: number; signal: number } | undefined;
+      const completed = new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(
+          () => reject(new Error("Stalled output PTY check timed out")),
+          20_000,
+        );
+        session = createLocalTerminalSession(spawn, {
+          shell: "/bin/sh",
+          launchRequest: {
+            kind: "explicit-command",
+            executable: process.execPath,
+            arguments: ["-e", producer],
+          },
+          platform: process.platform,
+          homeDirectory: process.cwd(),
+          applicationVersionProvider: { getVersion: () => "output-test" },
+          environment: process.env,
+          onOutput(data) {
+            const chunkBytes = Buffer.byteLength(data);
+            receivedBytes += chunkBytes;
+            largestChunkBytes = Math.max(largestChunkBytes, chunkBytes);
+            maxPendingBytes = Math.max(
+              maxPendingBytes,
+              receivedBytes - acknowledgedBytes,
+            );
+            remainder += data;
+            while (remainder.length >= lineBytes && nextLine < lineCount) {
+              const line = remainder.slice(0, lineBytes);
+              remainder = remainder.slice(lineBytes);
+              const expected = `${String(nextLine).padStart(8, "0")}:${"x".repeat(23)}`;
+              if (line !== expected) {
+                reject(new Error(`Output order failed at record ${nextLine}`));
+                return;
+              }
+              nextLine += 1;
+            }
+            if (nextLine === lineCount && remainder.includes(endMarker)) {
+              markerSeen = true;
+              remainder = remainder.replace(endMarker, "");
+            }
+            if (stallReleased && session?.acknowledgeOutput?.(chunkBytes))
+              acknowledgedBytes += chunkBytes;
+          },
+          onExit(exit) {
+            clearTimeout(timer);
+            exitEvent = exit;
+            resolve();
+          },
+        });
+        session.resize({ cols: 101, rows: 37 });
+        setTimeout(() => {
+          session?.resize({ cols: 93, rows: 31 });
+          const progress = receivedBytes - acknowledgedBytes;
+          if (progress > 0 && session?.acknowledgeOutput?.(progress))
+            acknowledgedBytes += progress;
+          stallReleased = true;
+        }, 300);
+      });
+
+      try {
+        await completed;
+        expect(nextLine).toBe(lineCount);
+        expect(receivedBytes).toBe(expectedPayloadBytes + endMarker.length);
+        expect(markerSeen).toBe(true);
+        expect(remainder).toBe("");
+        expect(exitEvent).toEqual({ exitCode: 0, signal: 0 });
+        expect(pauseCount).toBeGreaterThan(0);
+        expect(resumeCount).toBeGreaterThan(0);
+        expect(maxPendingBytes).toBeLessThanOrEqual(
+          TERMINAL_OUTPUT_PAUSE_BYTES + largestChunkBytes,
+        );
+      } finally {
+        session?.close();
+        remainder = "";
+      }
+    },
+    25_000,
+  );
 
   it.skipIf(process.platform !== "darwin")(
     "owns a disposable macOS PTY through startup, resize, and clean exit",

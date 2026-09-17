@@ -87,7 +87,8 @@ export type OperationalEvent =
         | "invalid-value"
         | "too-long"
         | "invalid-characters"
-        | "unknown-session";
+        | "unknown-session"
+        | "invalid-progress";
     };
 
 type ConfigurationFailureReason =
@@ -391,6 +392,7 @@ function isOperationalEvent(value: unknown): value is OperationalEvent {
           "too-long",
           "invalid-characters",
           "unknown-session",
+          "invalid-progress",
         ].includes(value.reason as string)
       );
     default:

@@ -133,7 +133,7 @@ describe("terminal IPC controller", () => {
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();
     expect(ipc.handlers.size).toBe(7);
-    expect(ipc.listeners.size).toBe(8);
+    expect(ipc.listeners.size).toBe(9);
   });
 
   it("associates each started session with its selected shell fallback title", () => {
@@ -807,6 +807,7 @@ describe("terminal IPC controller", () => {
     expect(send).toHaveBeenNthCalledWith(1, terminalIpc.output, {
       sessionId: "s1",
       data: "output",
+      end: 6,
     });
     expect(send).toHaveBeenNthCalledWith(2, terminalIpc.exit, {
       sessionId: "s1",
@@ -1038,10 +1039,12 @@ describe("terminal IPC controller", () => {
     expect(send).toHaveBeenCalledWith(terminalIpc.output, {
       sessionId: "s1",
       data: "first output",
+      end: 12,
     });
     expect(send).toHaveBeenCalledWith(terminalIpc.output, {
       sessionId: "s2",
       data: "second output",
+      end: 13,
     });
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();

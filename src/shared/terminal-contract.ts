@@ -34,6 +34,12 @@ export interface TerminalSessionReference {
 export interface TerminalSessionOutput {
   readonly sessionId: TerminalSessionId;
   readonly data: string;
+  readonly end: number;
+}
+
+export interface TerminalSessionOutputAck {
+  readonly sessionId: TerminalSessionId;
+  readonly end: number;
 }
 
 export interface TerminalSessionExit {
@@ -117,7 +123,23 @@ export function isTerminalSessionReference(
 export function isTerminalSessionOutput(
   value: unknown,
 ): value is TerminalSessionOutput {
-  return isTerminalSessionInput(value);
+  if (!isStrictRecord(value, ["sessionId", "data", "end"])) return false;
+  return (
+    isTerminalSessionId(value.sessionId) &&
+    isBoundedTerminalPayload(value.data) &&
+    isOutputProgress(value.end)
+  );
+}
+
+export function isTerminalSessionOutputAck(
+  value: unknown,
+): value is TerminalSessionOutputAck {
+  if (!isStrictRecord(value, ["sessionId", "end"])) return false;
+  return isTerminalSessionId(value.sessionId) && isOutputProgress(value.end);
+}
+
+function isOutputProgress(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) > 0;
 }
 
 export function isTerminalSessionExit(
