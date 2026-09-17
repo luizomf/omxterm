@@ -144,7 +144,7 @@ body.tabs-visible .restty-terminal-surface {
   background: color-mix(
     in srgb,
     var(--terminal-background, #000000),
-    var(--terminal-chrome-neutral) 15%
+    var(--terminal-chrome-neutral) 25%
   );
 }
 
@@ -152,7 +152,7 @@ body.tabs-visible .restty-terminal-surface {
   background: color-mix(
     in srgb,
     var(--terminal-background, #000000),
-    var(--terminal-chrome-neutral) 20%
+    var(--terminal-chrome-neutral) 40%
   );
 }
 
@@ -195,7 +195,7 @@ body.tabs-visible .restty-terminal-surface {
     color-mix(
       in srgb,
       var(--terminal-background, #000000),
-      var(--terminal-foreground, #e6e6e6) 30%
+      var(--terminal-foreground, #e6e6e6) 60%
     );
   border-radius: 6px;
   outline: none;
@@ -213,7 +213,7 @@ body.tabs-visible .restty-terminal-surface {
   border-color: color-mix(
     in srgb,
     var(--terminal-background, #000000),
-    var(--terminal-foreground, #e6e6e6) 50%
+    var(--terminal-foreground, #e6e6e6) 70%
   );
 }
 
@@ -246,21 +246,17 @@ body.tabs-visible .restty-terminal-surface {
   background: color-mix(
     in srgb,
     var(--terminal-background, #000000),
-    var(--terminal-chrome-neutral) 30%
+    var(--terminal-chrome-neutral) 45%
   );
 }
 
 #snippets-sidebar li button:focus-visible {
-  background: color-mix(
-    in srgb,
-    var(--terminal-background, #000000),
-    var(--terminal-chrome-neutral) 25%
-  );
+  background: transparent;
   outline: 2px solid
     color-mix(
       in srgb,
       var(--terminal-background, #000000),
-      var(--terminal-foreground, #e6e6e6) 50%
+      var(--terminal-foreground, #e6e6e6) 70%
     );
   outline-offset: -2px;
 }

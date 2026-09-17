@@ -1,0 +1,26 @@
+{
+  "restty": {
+    "version": "0.3.0",
+    "repository": "https://github.com/wiedymi/restty.git",
+    "npm": {
+      "gitHead": "3db45b0e10dbe53c52a77131d366f519546e4f04",
+      "integrity": "sha512-ppNLeZRnJHmGMCJKHYkYzphi1DUSLWqiZbPHOOv0KT1j5wp2yfLDMXjQQmNgqb4evYhItab0D72HpYhdbNY6Fw==",
+      "shasum": "1757b10f354444a5eafafa93106932345454fcc9"
+    },
+    "source": {
+      "commit": "3db45b0e10dbe53c52a77131d366f519546e4f04",
+      "tree": "e0aea43f2afc5c98aa377fee8c2dae6a897d4aeb",
+      "ghosttySubmodule": "0309af1b7f0724105a0805efa88bbee808a616ae",
+      "textShaperSubmodule": "94db4fba9186b99b868b401ce404a9930b93fcbf"
+    }
+  },
+  "textShaper": {
+    "version": "0.1.28",
+    "repository": "https://github.com/wiedymi/text-shaper.git",
+    "npm": {
+      "gitHead": "a23058f475f2b0655b93a89bfce426eecafb9439",
+      "integrity": "sha512-uwm6+tkgYJ4hsTV0wZVHkZeoXR1/mthLxDiJvfU9o/FiibNinpFRC8PAMTNx8SaOjaK/5ZjDG1XAkPbKlIe2Jg==",
+      "shasum": "b783bea9b2dbc318c562cccc500bd57b33d342e4"
+    }
+  }
+}

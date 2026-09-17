@@ -45,9 +45,25 @@ retains all existing behavior. There is no automatic xterm fallback.
 - bundled `JetBrainsMonoNerdFontMono-Regular.ttf`, SHA-256
   `f01031f40e48dc29e1112e6b0b0450a2c6cd097f3f35cfff05c55cb311f8034c`.
 
-The lockfile restores npm inputs. `npm ci` then runs
-`scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed Restty
-runtime SHA-256 and produces corrected SHA-256
+`assets/restty-sources.json` records the npm registry's package-to-commit
+`gitHead`, tarball integrity and SHA-1 metadata together with Restty's source
+tree and exact submodule entries. To audit the mapping independently, compare
+`npm view restty@0.3.0 gitHead dist repository --json` and
+`npm view text-shaper@0.1.28 gitHead dist repository --json` with that tracked
+manifest, then inspect the exact Restty tree with:
+
+```sh
+git clone https://github.com/wiedymi/restty.git
+cd restty
+git checkout 3db45b0e10dbe53c52a77131d366f519546e4f04
+git submodule update --init --recursive
+git rev-parse HEAD^{tree}
+git ls-tree HEAD reference/ghostty reference/text-shaper
+```
+
+The lockfile restores the npm tarballs identified by that manifest. `npm ci`
+then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
+Restty runtime SHA-256 and produces corrected SHA-256
 `8f9620d4c39b9e88bb149010e8aad24b0c35073373c2d8a66d78466ccbafec2a`.
 The narrow correction makes font-load failure reject initialization and disables
 Restty's direct clipboard/OSC 52 and link-opening callbacks. Unknown dependency
@@ -59,6 +75,13 @@ WOFF2 path did not provide equivalent shaping. `assets/fonts/README.md` records
 font provenance and checksums. Runtime loading is memory-only and works under the
 production `connect-src 'none'` CSP without local fonts, user dotfiles or remote
 fetches. Packaged license texts are listed in `THIRD_PARTY_NOTICES.md`.
+
+`test/integration/restty-host-integration.test.ts` runs the real main IPC
+router, preload bridge, Electron Adapter, Restty Surface and owned macOS PTYs in
+one fixture. It covers Unicode input/output, resize, focus return, two isolated
+tabs, Default Shell and explicit-command startup, shell exit, explicit close,
+renderer-process loss, and candidate-route refusal without using a user session
+or clipboard.
 
 Native runtime evidence for this first slice is macOS ARM64. Linux and Windows
 Restty behavior remains unverified; their xterm package contract is unchanged.
