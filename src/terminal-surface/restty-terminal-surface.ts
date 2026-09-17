@@ -9,9 +9,11 @@ import {
 import bundledFontBytes from "../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf";
 import type { TerminalSize } from "../shared/terminal-contract";
 import {
+  DEFAULT_SCROLLBACK_LINES,
   DEFAULT_TERMINAL_FONT_SIZE,
   DEFAULT_TERMINAL_LINE_HEIGHT,
   DEFAULT_TERMINAL_PADDING,
+  MAX_SCROLLBACK_LINES,
   MAX_TERMINAL_LINE_HEIGHT,
   MAX_TERMINAL_PADDING,
   MIN_TERMINAL_LINE_HEIGHT,
@@ -31,6 +33,7 @@ import type {
 } from "./terminal-surface";
 
 const BUNDLED_FONT_NAME = "JetBrainsMono Nerd Font Mono";
+const RESTTY_SCROLLBACK_MAX_BYTES = 10_000_000;
 
 type CandidateRuntime = {
   readonly events: {
@@ -46,11 +49,14 @@ type CandidateRuntime = {
   readonly terminal: {
     applyTheme(theme: GhosttyTheme, sourceLabel?: string): void;
     setFontSize(value: number): void;
+    setScrollbackLines(value: number): void;
   };
 };
 
 type ResttyAppearanceConfig = ResttyTerminalConfig & {
   readonly lineHeight: number;
+  readonly maxScrollbackBytes: number;
+  readonly scrollbackLines: number;
 };
 
 type CandidatePane = {
@@ -76,6 +82,7 @@ export async function mountResttyTerminalSurface(
   const initialLineHeight = resolveLineHeight(options.appearance?.lineHeight);
   let terminalTheme = resolveTheme(options.theme);
   let padding = resolvePadding(options.padding);
+  const scrollbackLines = validateScrollbackLines(options.scrollbackLines);
   const initialFamily = options.appearance?.systemFont?.family;
 
   const applyRuntimeTheme = (theme: TerminalTheme) => {
@@ -91,6 +98,9 @@ export async function mountResttyTerminalSurface(
     resolveLineHeight(configuration.appearance.lineHeight);
     const nextPadding = resolvePadding(configuration.padding);
     const nextTheme = resolveTheme(configuration.theme);
+    const nextScrollbackLines = validateScrollbackLines(
+      configuration.scrollbackLines,
+    );
     if (disposed || !pane) return;
 
     const zoomDelta = currentFontSize - baselineFontSize;
@@ -100,6 +110,7 @@ export async function mountResttyTerminalSurface(
     setContainerAppearance(container, padding, terminalTheme);
     applyRuntimeTheme(terminalTheme);
     applyRuntimeSize(Math.max(1, baselineFontSize + zoomDelta));
+    pane.runtime.terminal.setScrollbackLines(nextScrollbackLines);
     refit();
   };
 
@@ -164,6 +175,8 @@ export async function mountResttyTerminalSurface(
       renderer: "webgl2",
       fontSize: baselineFontSize,
       lineHeight: initialLineHeight,
+      maxScrollbackBytes: RESTTY_SCROLLBACK_MAX_BYTES,
+      scrollbackLines,
       fonts: [
         ...(loadedFonts.configured
           ? [
@@ -280,6 +293,14 @@ export async function mountResttyTerminalSurface(
     fail(`Failed to initialize the Restty Terminal Surface: ${detail}`);
     throw new Error("Failed to mount the Restty Terminal Surface", { cause });
   }
+}
+
+function validateScrollbackLines(value = DEFAULT_SCROLLBACK_LINES): number {
+  if (!Number.isInteger(value) || value < 0 || value > MAX_SCROLLBACK_LINES)
+    throw new TypeError(
+      `scrollback.lines must be an integer from 0 through ${MAX_SCROLLBACK_LINES}`,
+    );
+  return value;
 }
 
 function resolveFontSize(value = DEFAULT_TERMINAL_FONT_SIZE): number {

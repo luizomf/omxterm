@@ -46,9 +46,8 @@ settings and requests restart; a deferred setting clears only when its requested
 value is already active in every existing Surface. Failed lookup, bounded read or font decoding starts no
 invisible shell and an invalid reload commits nothing.
 
-Candidate copy/paste, snippets/path injection, OSC 52, links, titles, bell,
-scrollback and images stay unavailable until
-their owning migration tickets. These gates apply only to Restty. xterm's
+Candidate copy/paste, snippets/path injection, OSC 52, links, titles, bell and
+images stay unavailable until their owning migration tickets. These gates apply only to Restty. xterm's
 existing behavior and security boundaries remain unchanged. Renderer isolation,
 the production CSP, application network boundary and platform sandbox policy
 also remain unchanged.
@@ -58,6 +57,19 @@ The temporary checksum-guarded dependency correction also removes Restty's
 factor into cell height while leaving glyph scale tied to font size. This keeps
 OMXTerm's size and row-spacing contract without CSS scaling, clipping or a
 custom renderer.
+
+The scrollback slice extends that correction with a reproducible pinned WASM
+artifact and a narrow runtime setter over Ghostty's existing byte and physical
+line limits. Positive `scrollback.lines` values are approximate because Ghostty
+prunes only complete historical pages: one minimum boundary page can exceed the
+target. The independent 10,000,000-byte limit remains active and can retain
+fewer rows; no byte-per-line conversion is used. Zero invokes Ghostty's byte-zero
+no-history path, immediately erases history and keeps future scrolling out of
+history until a positive setting restores the byte ceiling and permits new
+retention. Valid reloads mutate the same core and PTY while preserving coherent
+reflow, alternate-screen, selection and viewport state. Invalid values remain
+outside this seam because complete User Configuration validation precedes
+application.
 
 The cost is an intentionally incomplete development candidate and a temporary
 pinned dependency correction. This is preferable to unsafe passthrough, invisible

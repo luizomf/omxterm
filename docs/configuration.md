@@ -165,6 +165,17 @@ unknown keys.
 | `theme.path`              | non-empty filesystem path without NUL   | bundled `omtheme`                    |
 | `keybinds.<action>`       | accelerator with a non-Shift modifier   | built-in shortcut per action         |
 
+`scrollback.lines` is memory-only and independent for every Live Terminal
+Session. Zero disables retention and drops existing history on a valid reload.
+For xterm, positive values use its line setting. In the opt-in Restty candidate,
+positive values are approximate physical history-row targets: Ghostty evicts
+whole pages, so one minimum boundary page may exceed the target. Restty also
+keeps an independent 10,000,000-byte ceiling, which can retain fewer rows than
+the requested target; the value is never converted into an estimated byte
+count. Changing Restty from positive to zero and back keeps the same Surface,
+core, session and PTY; output produced while zero is active cannot be scrolled
+back to, while later output can be retained after a positive value returns.
+
 `keyboard.optionAsAlt` applies only on macOS. `none` preserves the active
 keyboard layout's native Unicode input; `left`, `right`, and `both` select which
 Option keys produce terminal Alt sequences.
@@ -485,8 +496,8 @@ confirmation, logging, keybinds, and the Always-on-Top default. On Windows it
 also selects `windowsShell` for subsequently created Default Shell sessions.
 Existing
 Terminal Surfaces and Live Terminal Sessions remain in place and refit as
-needed. The opt-in Restty candidate updates theme, font size and padding live,
-but an existing Restty Surface retains its initial font family and line height.
+needed. The opt-in Restty candidate updates theme, font size, padding and scrollback
+live, but an existing Restty Surface retains its initial font family and line height.
 A persistent notice names either deferred setting and asks you to restart
 OMXTerm to apply it everywhere. New Restty Surfaces use the latest fully
 validated values; a deferred setting clears only when its requested value is

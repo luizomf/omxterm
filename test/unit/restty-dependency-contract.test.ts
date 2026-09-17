@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { copyFile, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { prepareResttyRuntime } from "../../scripts/prepare-restty-runtime.mjs";
@@ -55,6 +57,18 @@ describe("Restty dependency contract", () => {
           textShaperSubmodule: string;
         };
       };
+      omxtermCore: {
+        sourceCommit: string;
+        ghosttyCommit: string;
+        patch: string;
+        patchSha256: string;
+        artifact: string;
+        artifactSha256: string;
+        zigVersion: string;
+        optimize: string;
+        target: string;
+        cpu: string;
+      };
       textShaper: {
         version: string;
         npm: { gitHead: string; integrity: string };
@@ -79,6 +93,22 @@ describe("Restty dependency contract", () => {
     expect(sources.textShaper.npm.gitHead).toBe(
       "a23058f475f2b0655b93a89bfce426eecafb9439",
     );
+    expect(sources.omxtermCore).toMatchObject({
+      sourceCommit: sources.restty.source.commit,
+      ghosttyCommit: sources.restty.source.ghosttySubmodule,
+      zigVersion: "0.16.0",
+      optimize: "ReleaseSafe",
+      target: "wasm32-freestanding",
+      cpu: "baseline+simd128",
+    });
+    expect(
+      digest(readFileSync(path.join(projectRoot, sources.omxtermCore.patch))),
+    ).toBe(sources.omxtermCore.patchSha256);
+    expect(
+      digest(
+        readFileSync(path.join(projectRoot, sources.omxtermCore.artifact)),
+      ),
+    ).toBe(sources.omxtermCore.artifactSha256);
   });
 
   it("keeps the installed runtime at the reviewed corrected digest", async () => {
@@ -89,8 +119,15 @@ describe("Restty dependency contract", () => {
       path.join(packageRoot, "dist", "chunk-c0rcpsc5.js"),
     );
     expect(digest(runtime)).toBe(
-      "23f4bf4377dfcc34b39f439f2e4865be41a65603e405ec08ebb1f3a467ada867",
+      "c8580ea08273aa17dc3ae1f658aafe8340114a751e2a36e09e933e3bcabb3bad",
     );
+    const core = readFileSync(
+      path.join(packageRoot, "dist", "chunk-6dxqza9q.js"),
+    );
+    expect(digest(core)).toBe(
+      "5a64d5de8f573ac2f392f8863ef6bbeb6228a57d267b8b4d73cf0694e221f56c",
+    );
+    expect(core.toString("utf8")).toContain("restty_set_scrollback_limits");
     const source = runtime.toString("utf8");
     expect(source).toContain("Math.max(1, Math.round(value))");
     expect(source).toContain("lineHeight * fontConfig.lineHeightFactor");
@@ -100,8 +137,65 @@ describe("Restty dependency contract", () => {
     );
     expect(source).toContain("/^(regular|book|roman)$/iu");
     expect(source).toContain("required font decode failed");
+    expect(source).toContain("setScrollbackLines");
+    expect(source).toContain("setScrollbackLimits");
     expect(source).not.toContain(
       "Math.max(10, Math.min(64, Math.round(value)))",
     );
+  });
+
+  it("rejects runtime, embedded-core, and tracked-artifact drift", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "omxterm-restty-drift-"));
+    try {
+      const runtimePath = path.join(root, "runtime.js");
+      const corePath = path.join(root, "core.js");
+      const artifactPath = path.join(root, "core.wasm");
+      const installedRuntime = path.join(
+        packageRoot,
+        "dist",
+        "chunk-c0rcpsc5.js",
+      );
+      const installedCore = path.join(packageRoot, "dist", "chunk-6dxqza9q.js");
+      const trackedCore = path.resolve(
+        import.meta.dirname,
+        "../../assets/restty/omxterm-restty-core.wasm",
+      );
+      await Promise.all([
+        copyFile(installedRuntime, runtimePath),
+        copyFile(installedCore, corePath),
+        copyFile(trackedCore, artifactPath),
+      ]);
+
+      await writeFile(runtimePath, `${readFileSync(runtimePath, "utf8")}\n`);
+      await expect(
+        prepareResttyRuntime({
+          runtimePath,
+          corePath,
+          scrollbackCorePath: artifactPath,
+        }),
+      ).rejects.toThrow(/Unrecognized Restty runtime/u);
+
+      await copyFile(installedRuntime, runtimePath);
+      await writeFile(corePath, `${readFileSync(corePath, "utf8")}\n`);
+      await expect(
+        prepareResttyRuntime({
+          runtimePath,
+          corePath,
+          scrollbackCorePath: artifactPath,
+        }),
+      ).rejects.toThrow(/Unrecognized Restty WASM runtime/u);
+
+      await copyFile(installedCore, corePath);
+      await writeFile(artifactPath, Buffer.from([0, 97, 115, 109]));
+      await expect(
+        prepareResttyRuntime({
+          runtimePath,
+          corePath,
+          scrollbackCorePath: artifactPath,
+        }),
+      ).rejects.toThrow(/artifact failed its checksum/u);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

@@ -215,8 +215,9 @@ applies its configured family and line height when it is created; an existing
 Restty Surface keeps both after User Configuration Reload until OMXTerm is
 restarted, while theme, font size and padding update it in place and refit the
 same PTY. Restty copy, paste, Protected Paste, snippets/path injection, OSC 52,
-links, title, bell, scrollback, Option Key Mode and image routes remain
-unavailable in this slice; xterm retains the complete contract below. Linux and Windows Restty
+links, title, bell, Option Key Mode and image routes remain unavailable in this
+slice; xterm retains the complete contract below. Restty scrollback follows the
+shared contract below through the pinned Ghostty core. Linux and Windows Restty
 behavior is unverified; this slice's native runtime evidence is macOS ARM64.
 Native rasterization can differ between Restty and xterm; pixel-identical glyph
 output is not claimed.
@@ -290,9 +291,21 @@ logging, or application-network capability.
 
 Scrollback is memory-only and per Live Terminal Session. `scrollback.lines`
 defaults to 10,000, accepts 0 through 100,000, and rejects larger values
-rather than clamping them. The scrollback scrollbar shows a thumb only while
-scrollback extends beyond the visible screen; an empty scrollbar track paints
-nothing on any platform.
+rather than clamping them. xterm treats a positive value as its exact retained
+line setting. Restty treats a positive value as an approximate maximum of
+physical history rows, excluding the active screen: Ghostty evicts only whole
+historical pages, so retention may exceed the requested target by one minimum
+boundary page and remains bounded. Restty also enforces its independent
+10,000,000-byte core ceiling for positive history, which may retain fewer rows
+than requested; OMXTerm never estimates bytes per line. For either Surface,
+zero disables history. Restty uses Ghostty's no-history path, immediately drops
+retained history, retains none through sustained output or resize, and can
+retain only new output after a later positive reload. Valid live changes keep
+the same Surface, core, Live Terminal Session and PTY and preserve coherent
+reflow, alternate-screen, selection and viewport state. Each Surface remains
+independent. The scrollback scrollbar shows a thumb only while scrollback
+extends beyond the visible screen; an empty scrollbar track paints nothing on
+any platform.
 
 OSC 0 and OSC 2 titles are display-only and per session: the raw OSC request
 must be no longer than 256 code points, then control and bidi characters are
@@ -510,8 +523,9 @@ is already active in every existing Restty Surface. Theme, configured font-size 
 padding and Window Font Zoom remain live and preserve the existing Surface and
 PTY. Invalid, missing, unreadable, unsupported or corrupt configured font input
 rejects the whole reload. This temporary exception does not affect xterm.
-Runtime scrollback reduction, including zero, uses xterm's in-memory buffer
-behavior; Option Key Mode changes only subsequent keyboard events. OMXTerm never
+Runtime scrollback reduction, including zero, uses the selected Surface's
+in-memory core behavior described above; Option Key Mode changes only
+subsequent keyboard events. OMXTerm never
 migrates, repairs, rewrites, or silently ignores User Configuration. The same surface
 also carries non-fatal warnings for a valid configuration that stays fully
 active — currently a keybind shadowing a PTY control key — which inform without

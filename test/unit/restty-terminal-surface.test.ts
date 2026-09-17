@@ -18,6 +18,7 @@ const harness = vi.hoisted(() => {
     readonly focus = vi.fn();
     readonly sendInput = vi.fn();
     readonly setFontSize = vi.fn();
+    readonly setScrollbackLines = vi.fn();
     readonly applyTheme = vi.fn();
     readonly updateSize = vi.fn();
     backend = "webgl2";
@@ -76,6 +77,7 @@ const harness = vi.hoisted(() => {
         },
         terminal: {
           setFontSize: this.setFontSize,
+          setScrollbackLines: this.setScrollbackLines,
           applyTheme: this.applyTheme,
         },
       },
@@ -370,6 +372,116 @@ describe("Restty Terminal Surface appearance", () => {
     expect(container.style.getPropertyValue("--terminal-background")).toBe(
       DEFAULT_TERMINAL_THEME.colors.background,
     );
+  });
+
+  it.each([undefined, 0, 1, 2_000, 100_000])(
+    "applies scrollback.lines %s at creation through the Restty core",
+    async (scrollbackLines) => {
+      const { adapter } = createAdapter();
+      const { mountResttyTerminalSurface } =
+        await import("../../src/terminal-surface/restty-terminal-surface");
+
+      await mountResttyTerminalSurface(
+        document.createElement("main"),
+        adapter,
+        {
+          ...(scrollbackLines === undefined ? {} : { scrollbackLines }),
+        },
+      );
+
+      expect(
+        (
+          harness.instances[0]!.options.terminal as {
+            scrollbackLines: number;
+            maxScrollbackBytes: number;
+          }
+        ).scrollbackLines,
+      ).toBe(scrollbackLines ?? 10_000);
+      expect(
+        (
+          harness.instances[0]!.options.terminal as {
+            maxScrollbackBytes: number;
+          }
+        ).maxScrollbackBytes,
+      ).toBe(10_000_000);
+    },
+  );
+
+  it("applies valid live scrollback changes without replacing the runtime or PTY", async () => {
+    const container = document.createElement("main");
+    const { adapter } = createAdapter();
+    const { mountResttyTerminalSurface } =
+      await import("../../src/terminal-surface/restty-terminal-surface");
+    const surface = await mountResttyTerminalSurface(container, adapter, {
+      scrollbackLines: 2_000,
+    });
+    const restty = harness.instances[0]!;
+
+    for (const scrollbackLines of [1, 0, 100_000])
+      surface.applyConfiguration({
+        appearance: { fontSize: 16, lineHeight: 1 },
+        padding: { top: 0, right: 8, bottom: 8, left: 8 },
+        scrollbackLines,
+        optionKeyMode: "none",
+        theme: DEFAULT_TERMINAL_THEME,
+      });
+
+    expect(restty.setScrollbackLines.mock.calls).toEqual([[1], [0], [100_000]]);
+    expect(harness.instances).toHaveLength(1);
+    expect(adapter.start).toHaveBeenCalledOnce();
+    expect(adapter.close).not.toHaveBeenCalled();
+  });
+
+  it("keeps live scrollback mutation isolated to its owning Surface", async () => {
+    const firstAdapter = createAdapter();
+    const secondAdapter = createAdapter();
+    const { mountResttyTerminalSurface } =
+      await import("../../src/terminal-surface/restty-terminal-surface");
+    const first = await mountResttyTerminalSurface(
+      document.createElement("main"),
+      firstAdapter.adapter,
+      { scrollbackLines: 2_000 },
+    );
+    await mountResttyTerminalSurface(
+      document.createElement("main"),
+      secondAdapter.adapter,
+      { scrollbackLines: 2_000 },
+    );
+
+    first.applyConfiguration({
+      appearance: { fontSize: 16, lineHeight: 1 },
+      padding: { top: 0, right: 8, bottom: 8, left: 8 },
+      scrollbackLines: 1,
+      optionKeyMode: "none",
+      theme: DEFAULT_TERMINAL_THEME,
+    });
+
+    expect(harness.instances[0]!.setScrollbackLines).toHaveBeenCalledWith(1);
+    expect(harness.instances[1]!.setScrollbackLines).not.toHaveBeenCalled();
+    expect(firstAdapter.adapter.close).not.toHaveBeenCalled();
+    expect(secondAdapter.adapter.close).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid live scrollback value before runtime mutation", async () => {
+    const { adapter } = createAdapter();
+    const { mountResttyTerminalSurface } =
+      await import("../../src/terminal-surface/restty-terminal-surface");
+    const surface = await mountResttyTerminalSurface(
+      document.createElement("main"),
+      adapter,
+    );
+    const restty = harness.instances[0]!;
+
+    expect(() =>
+      surface.applyConfiguration({
+        appearance: { fontSize: 16, lineHeight: 1 },
+        padding: { top: 0, right: 8, bottom: 8, left: 8 },
+        scrollbackLines: 100_001,
+        optionKeyMode: "none",
+        theme: DEFAULT_TERMINAL_THEME,
+      }),
+    ).toThrow(/scrollback\.lines/u);
+    expect(restty.setScrollbackLines).not.toHaveBeenCalled();
   });
 
   it("updates theme, size, zoom, and padding without replacing the runtime", async () => {

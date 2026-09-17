@@ -204,8 +204,10 @@ _Avoid_: image paste payload, terminal image upload, OSC 52 image
 The in-memory lines retained above a Live Terminal Session's visible viewport.
 User Configuration sets `scrollback.lines`; the default is 10,000, zero
 disables retention, and values above 100,000 are rejected rather than silently
-clamped. The buffer is ephemeral and its memory cost is paid independently by
-every Live Terminal Session.
+clamped. For Restty, positive values approximate physical history rows through
+whole-page Ghostty eviction and remain independently capped at 10,000,000
+bytes; zero uses the core's no-history path. The buffer is ephemeral and its
+memory cost is paid independently by every Live Terminal Session.
 _Avoid_: terminal history, persisted output, transcript
 
 **Terminal Title**:
