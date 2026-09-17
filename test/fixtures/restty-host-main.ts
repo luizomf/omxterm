@@ -11,6 +11,10 @@ import {
 import { registerTerminalWindowHost } from "../../src/main/terminal-window-host";
 import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import {
+  installedFallbackFontData,
+  installedFontData,
+} from "../../src/main/installed-font-family";
 
 const prefix = "__OMXTERM_RESTTY_HOST_RESULT__";
 const root = __dirname;
@@ -36,6 +40,12 @@ let navigations = 0;
 let openedWindows = 0;
 let permissionRequests = 0;
 let ptyExits = 0;
+const configuredFontFamily =
+  process.platform === "darwin"
+    ? "Helvetica"
+    : process.platform === "win32"
+      ? "Consolas"
+      : "DejaVu Sans";
 
 async function waitFor(
   predicate: () => boolean | Promise<boolean>,
@@ -84,11 +94,30 @@ app
       event.preventDefault();
     });
 
-    const router = registerTerminalIpcRouter(ipcMain as unknown as IpcMainPort);
+    const router = registerTerminalIpcRouter(
+      ipcMain as unknown as IpcMainPort,
+      undefined,
+      async (family) => {
+        if (family !== configuredFontFamily)
+          throw new Error("Unexpected configured font request");
+        const data = await installedFontData(family);
+        if (!data) throw new Error("Configured native fixture font is missing");
+        return {
+          configured: { family, data },
+          fallbacks: await installedFallbackFontData(),
+        };
+      },
+    );
     let sessionIndex = 0;
     const controller = router.registerController({
       configuration: terminalRendererConfiguration(
-        { configuration: DEFAULT_USER_CONFIGURATION, userFileErrors: [] },
+        {
+          configuration: {
+            ...DEFAULT_USER_CONFIGURATION,
+            fontFamily: configuredFontFamily,
+          },
+          userFileErrors: [],
+        },
         0,
         "restty",
       ),
@@ -258,11 +287,17 @@ app
       "({ canvases: document.querySelectorAll('.restty-terminal-surface canvas').length, tabs: document.querySelectorAll('.terminal-surface').length })",
       true,
     )) as { canvases: number; tabs: number };
+    const renderedFontFamily = (await window.webContents.executeJavaScript(
+      "document.querySelector('.restty-terminal-surface')?.dataset.resttyFont ?? null",
+      true,
+    )) as string | null;
     window.webContents.forcefullyCrashRenderer();
     await waitFor(() => ptyExits === 3, "renderer-loss PTY cleanup");
 
     const result = {
       beforeDestroy,
+      configuredFontFamily,
+      renderedFontFamily,
       clipboardReads,
       clipboardWrites,
       externalLinks,

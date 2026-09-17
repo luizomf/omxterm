@@ -57,9 +57,15 @@ export interface TerminalTabs {
 interface TerminalTab {
   readonly container: HTMLElement;
   readonly adapter: ElectronTerminalAdapter;
+  readonly mountAbort: AbortController;
   surface: TerminalSurface | undefined;
   label: string;
   removed: boolean;
+}
+
+function closePendingTab(tab: TerminalTab): void {
+  tab.mountAbort.abort();
+  tab.adapter.close();
 }
 
 export function createTerminalTabs(
@@ -145,7 +151,7 @@ export function createTerminalTabs(
     // still mounting has no Surface yet, so its adapter is closed directly.
     removeTab(tab);
     if (tab.surface) tab.surface.dispose();
-    else tab.adapter.close();
+    else closePendingTab(tab);
   };
 
   const onSessionEnd = (tab: TerminalTab, exit: { signal: number }) => {
@@ -169,6 +175,7 @@ export function createTerminalTabs(
     const tab: TerminalTab = {
       container,
       adapter,
+      mountAbort: new AbortController(),
       surface: undefined,
       label: "",
       removed: false,
@@ -194,6 +201,7 @@ export function createTerminalTabs(
     // the id is always known by the time they fire.
     const tabSurfaceOptions: TerminalSurfaceOptions = {
       ...activeSurfaceOptions,
+      abortSignal: tab.mountAbort.signal,
       ...(activeSurfaceOptions.onFatalError
         ? {
             onFatalError: (message: string) => {
@@ -326,7 +334,7 @@ export function createTerminalTabs(
       for (const tab of [...tabs]) {
         tab.removed = true;
         if (tab.surface) tab.surface.dispose();
-        else tab.adapter.close();
+        else closePendingTab(tab);
       }
       tabs.length = 0;
     },

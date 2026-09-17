@@ -31,6 +31,7 @@ void window.omxterm.terminal.configuration().then((configuration) => {
       ...(configuration.terminalSurface === "restty"
         ? { mount: mountResttyTerminalSurface }
         : {}),
+      loadFontData: window.omxterm.terminal.fontData,
       onSurfaceFailure(message) {
         surfaceFailure.textContent = message;
         surfaceFailure.hidden = false;

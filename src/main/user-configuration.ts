@@ -18,6 +18,7 @@ import {
   MIN_TERMINAL_FONT_SIZE,
 } from "../shared/user-configuration";
 import type { InstalledFontFamilyMetrics } from "./installed-font-family";
+import { isTerminalFontFamily } from "../shared/terminal-font-data";
 import { DEFAULT_TERMINAL_THEME } from "../shared/terminal-theme";
 import {
   canonicalAccelerator,
@@ -113,8 +114,7 @@ export interface UserConfigurationLoad {
   readonly configuration: LoadedUserConfiguration;
   readonly selectedTerminalThemePath?: string;
   readonly fallback?: UserConfigurationFallback;
-  // Non-fatal load-time notices for a valid configuration that stays active,
-  // e.g. a keybind that shadows a PTY control key on this platform (#102).
+  // Non-fatal notices for a valid configuration that stays active (#102).
   readonly warnings?: readonly string[];
 }
 
@@ -128,10 +128,7 @@ export function userConfigurationFallbackNotice(
   return `${activeDefaults} ${fallback.error.message}`;
 }
 
-// Warn-and-keep: a valid keybind that resolves to a bare Ctrl+<key> shadowing a
-// PTY control key on this platform stays active, but the user is told which
-// control key it swallows so they can rebind it (#102). The message names the
-// action and the well-known control key, never the raw accelerator contents.
+// Warn about the swallowed control key, never the raw accelerator contents.
 export function keybindPortabilityWarnings(
   keybinds: TerminalKeybinds,
   configurationPath: string,
@@ -171,9 +168,7 @@ export async function loadUserConfiguration(
     options.environment,
     options.homeDirectory,
   );
-  // Any config.json failure keeps the application usable: the whole file
-  // (including its theme selection) is replaced by built-in defaults and the
-  // precise diagnostic travels with the result instead of aborting startup.
+  // A config.json failure uses defaults and keeps its precise diagnostic.
   const configurationFallback = (
     location: string | undefined,
     reason: string,
@@ -283,10 +278,14 @@ export async function loadUserConfiguration(
         preliminary.fontFamily,
         preliminary.fontSize,
       );
-    } catch {
+    } catch (cause) {
+      const detail =
+        cause instanceof Error
+          ? cause.message.slice(0, 2_048)
+          : "installed font families could not be discovered";
       return configurationFallback(
         "font.family",
-        "installed font families could not be discovered",
+        `installed font could not be validated: ${detail}`,
       );
     }
     if (configuredFontMetrics === undefined)
@@ -445,8 +444,12 @@ export function validateUserConfiguration(
 
   const fontFamily = font?.family;
   if (fontFamily !== undefined) {
-    if (typeof fontFamily !== "string" || fontFamily.length === 0)
-      fail(configurationPath, "font.family", "must be a non-empty string");
+    if (!isTerminalFontFamily(fontFamily))
+      fail(
+        configurationPath,
+        "font.family",
+        "must be a printable family name of at most 256 characters",
+      );
     if (!installedFontFamilies.has(fontFamily))
       fail(
         configurationPath,
@@ -673,7 +676,10 @@ export function configurationRejectionReason(
   if (failure.reason === "the file could not be read") return "read-failed";
   if (failure.reason === "the file is not valid UTF-8") return "invalid-utf8";
   if (failure.reason === "the file is not valid JSON") return "invalid-json";
-  if (failure.reason === "installed font families could not be discovered")
+  if (
+    failure.reason === "installed font families could not be discovered" ||
+    failure.reason.startsWith("installed font could not be validated:")
+  )
     return "font-discovery-failed";
   return "invalid-schema";
 }

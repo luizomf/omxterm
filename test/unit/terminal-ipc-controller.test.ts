@@ -130,7 +130,7 @@ describe("terminal IPC controller", () => {
     expect(secondSession.write).toHaveBeenCalledWith("second window input");
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();
-    expect(ipc.handlers.size).toBe(6);
+    expect(ipc.handlers.size).toBe(7);
     expect(ipc.listeners.size).toBe(8);
   });
 
@@ -1302,6 +1302,84 @@ describe("terminal IPC controller", () => {
     for (const session of sessions)
       expect(session.close).toHaveBeenCalledOnce();
     expect(() => start(trusted)).toThrow("untrusted sender");
+    router.dispose();
+  });
+});
+
+describe("Terminal Font IPC", () => {
+  it("reads bytes only for the active configured family and a trusted main frame", async () => {
+    const ipc = createIpcHarness();
+    const loadFontData = vi.fn(async (family: string | undefined) => ({
+      ...(family === undefined
+        ? {}
+        : { configured: { family, data: new Uint8Array([0, 1, 0, 0]) } }),
+      fallbacks: [],
+    }));
+    const router = registerTerminalIpcRouter(
+      ipc.ipcMain,
+      undefined,
+      loadFontData,
+    );
+    const mainFrame = {};
+    const webContents: TrustedWebContents = {
+      mainFrame,
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const controller = router.registerController({
+      ...clipboardOptions(),
+      configuration: {
+        ...clipboardOptions().configuration,
+        terminalSurface: "restty",
+        fontFamily: "Exact Família",
+      },
+      webContents,
+      createSession: vi.fn(),
+      onSessionStartError: vi.fn(),
+      onSessionExit: vi.fn(),
+    });
+    const handler = ipc.handlers.get(terminalIpc.fontData)! as unknown as (
+      event: IpcEvent,
+      payload?: unknown,
+    ) => Promise<unknown>;
+    const trusted = { sender: webContents, senderFrame: mainFrame };
+
+    await expect(handler(trusted, "Exact Família")).resolves.toMatchObject({
+      configured: { family: "Exact Família" },
+      fallbacks: [],
+    });
+    await expect(handler(trusted, "/tmp/arbitrary.ttf")).rejects.toThrow(
+      "does not match",
+    );
+    expect(() =>
+      handler({ sender: webContents, senderFrame: {} }, "Exact Família"),
+    ).toThrow("untrusted sender");
+    expect(loadFontData).toHaveBeenCalledExactlyOnceWith("Exact Família");
+
+    let finishLookup: (
+      value: Awaited<ReturnType<typeof loadFontData>>,
+    ) => void = () => {};
+    loadFontData.mockImplementationOnce(
+      (family) =>
+        new Promise((resolve) => {
+          finishLookup = resolve;
+          expect(family).toBe("Exact Família");
+        }),
+    );
+    const superseded = handler(trusted, "Exact Família");
+    controller.applyConfiguration({
+      ...clipboardOptions().configuration,
+      terminalSurface: "restty",
+      fontFamily: "New Family",
+    });
+    finishLookup({
+      configured: {
+        family: "Exact Família",
+        data: new Uint8Array([0, 1, 0, 0]),
+      },
+      fallbacks: [],
+    });
+    await expect(superseded).rejects.toThrow("superseded");
     router.dispose();
   });
 });

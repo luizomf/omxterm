@@ -276,6 +276,32 @@ describe("isolated preload terminal bridge", () => {
     electron.send.mockReset();
   });
 
+  it("exposes only bounded font bytes for an exact family request", async () => {
+    const bridge = electron.bridge!;
+    electron.invoke.mockResolvedValueOnce({
+      configured: {
+        family: "Exact Família",
+        data: new Uint8Array([0, 1, 0, 0]),
+      },
+      fallbacks: [
+        { family: "Local Emoji", data: new Uint8Array([1, 2, 3, 4]) },
+      ],
+    });
+    await expect(bridge.fontData("Exact Família")).resolves.toMatchObject({
+      configured: { family: "Exact Família" },
+    });
+    expect(electron.invoke).toHaveBeenCalledWith(
+      terminalIpc.fontData,
+      "Exact Família",
+    );
+    await expect(bridge.fontData("bad\0family")).rejects.toThrow(TypeError);
+    electron.invoke.mockResolvedValueOnce({
+      configured: { family: "Exact Família", path: "/tmp/font.ttf" },
+      fallbacks: [],
+    });
+    await expect(bridge.fontData("Exact Família")).rejects.toThrow(TypeError);
+  });
+
   it("exposes only a validated Snippets response and a payload-free toggle", async () => {
     const bridge = electron.bridge!;
     const valid = {

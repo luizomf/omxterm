@@ -189,6 +189,46 @@ describe("User Configuration reloader", () => {
     expect(load).toHaveBeenCalledTimes(3);
   });
 
+  it("names changed Restty restart-only settings and clears the notice when reverted", async () => {
+    const initial = configuration("initial", {
+      fontFamily: "Initial Family",
+      fontLineHeight: 1,
+    });
+    const load = vi
+      .fn<() => Promise<UserConfigurationLoad>>()
+      .mockResolvedValueOnce(
+        valid(
+          configuration("changed", {
+            fontFamily: "Changed Family",
+            fontLineHeight: 1.25,
+            fontSize: 24,
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(valid(initial));
+    const apply = vi.fn();
+    const reloader = createUserConfigurationReloader({
+      initial: { configuration: initial, userFileErrors: [] },
+      load,
+      apply,
+      resttyRestartBaseline: {
+        fontFamily: "Initial Family",
+        fontLineHeight: 1,
+      },
+    });
+
+    await reloader.reload();
+    expect(reloader.current().configuration.fontSize).toBe(24);
+    expect(reloader.current().userFileErrors).toEqual([
+      expect.stringContaining("font.family and font.lineHeight"),
+    ]);
+    expect(reloader.current().userFileErrors[0]).toContain("Restart OMXTerm");
+
+    await reloader.reload();
+    expect(reloader.current().userFileErrors).toEqual([]);
+    expect(apply).toHaveBeenCalledTimes(2);
+  });
+
   it("serializes repeated requests so later successful state cannot be lost", async () => {
     const first = deferred<UserConfigurationLoad>();
     const second = deferred<UserConfigurationLoad>();

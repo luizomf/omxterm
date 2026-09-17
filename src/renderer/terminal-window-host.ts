@@ -14,6 +14,7 @@ import type {
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type { TerminalTheme } from "../shared/terminal-theme";
+import type { TerminalFontData } from "../shared/terminal-font-data";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
 import {
   createTerminalTabs,
@@ -46,6 +47,7 @@ interface TerminalWindowPageOptions {
   >;
   readonly mount?: MountTerminalSurface;
   readonly onSurfaceFailure?: (message: string) => void;
+  readonly loadFontData?: (family?: string) => Promise<TerminalFontData>;
   readonly subscribeToFontZoom?: (
     listener: (command: TerminalFontZoom) => void,
   ) => () => void;
@@ -128,6 +130,7 @@ export function mountTerminalWindowPage(
 
   const surfaceOptions: TerminalSurfaceOptions = {
     ...activeSurfaceConfiguration,
+    ...(options.loadFontData ? { loadFontData: options.loadFontData } : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.onExternalLink
       ? { onExternalLink: options.onExternalLink }

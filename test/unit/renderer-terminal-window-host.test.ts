@@ -181,6 +181,7 @@ describe("renderer Terminal Window page host", () => {
       expect.any(HTMLElement),
       expect.any(Object),
       {
+        abortSignal: expect.any(AbortSignal) as AbortSignal,
         appearance: {
           fontSize: 19,
           lineHeight: 1.2,
@@ -282,6 +283,7 @@ describe("renderer Terminal Window page host", () => {
     const second = createSurface();
     const surfaces = [first, second];
     const mountedThemes: unknown[] = [];
+    const mountedAppearances: unknown[] = [];
     let configurationListener:
       ((configuration: TerminalRendererConfiguration) => void) | undefined;
     let commandListener: ((command: { action: "new" }) => void) | undefined;
@@ -289,6 +291,7 @@ describe("renderer Terminal Window page host", () => {
       createAdapter: adapters,
       page: window,
       configuration: {
+        fontFamily: "Initial Family",
         fontSize: 16,
         fontLineHeight: 1,
         terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
@@ -306,6 +309,7 @@ describe("renderer Terminal Window page host", () => {
           options: TerminalSurfaceOptions,
         ) => {
           mountedThemes.push(options.theme);
+          mountedAppearances.push(options.appearance);
           return surfaces.shift()!;
         },
       ),
@@ -321,6 +325,7 @@ describe("renderer Terminal Window page host", () => {
     await host.ready;
 
     configurationListener!({
+      fontFamily: "Changed Family",
       fontSize: 20,
       fontLineHeight: 1.2,
       terminalPadding: { top: 1, right: 2, bottom: 3, left: 4 },
@@ -350,6 +355,18 @@ describe("renderer Terminal Window page host", () => {
     commandListener!({ action: "new" });
     await vi.waitFor(() => expect(mountedThemes).toHaveLength(2));
     expect(mountedThemes).toEqual([initialTheme, updatedTheme]);
+    expect(mountedAppearances).toEqual([
+      {
+        fontSize: 16,
+        lineHeight: 1,
+        systemFont: { family: "Initial Family", available: true },
+      },
+      {
+        fontSize: 20,
+        lineHeight: 1.2,
+        systemFont: { family: "Changed Family", available: true },
+      },
+    ]);
     expect(second.applyConfiguration).toHaveBeenLastCalledWith(
       expect.objectContaining({ theme: updatedTheme }),
     );

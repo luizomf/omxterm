@@ -28,6 +28,10 @@ import {
 import { isTerminalRendererConfiguration } from "../shared/user-configuration";
 import { isTerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
+import {
+  isTerminalFontData,
+  isTerminalFontFamily,
+} from "../shared/terminal-font-data";
 
 let latestConfiguration: TerminalRendererConfiguration | undefined;
 let configurationRevision = 0;
@@ -52,6 +56,17 @@ const terminal: TerminalBridge = {
     return configurationRevision === revisionAtRequest
       ? configuration
       : latestConfiguration!;
+  },
+  async fontData(family) {
+    if (family !== undefined && !isTerminalFontFamily(family))
+      throw new TypeError("Invalid Terminal Font family request");
+    const response: unknown = await ipcRenderer.invoke(
+      terminalIpc.fontData,
+      family,
+    );
+    if (!isTerminalFontData(response))
+      throw new TypeError("Invalid Terminal Font data response");
+    return response;
   },
   async snippets() {
     const response: unknown = await ipcRenderer.invoke(terminalIpc.snippets);

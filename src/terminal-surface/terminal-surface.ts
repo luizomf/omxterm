@@ -10,6 +10,7 @@ import {
   type TerminalFontZoom,
 } from "../shared/terminal-contract";
 import type { TerminalSessionAdapter } from "./terminal-session-adapter";
+import type { TerminalFontData } from "../shared/terminal-font-data";
 import { ChafaKittyImageAddon } from "./chafa-kitty-image-addon";
 import {
   DEFAULT_SCROLLBACK_LINES,
@@ -99,6 +100,8 @@ export interface TerminalSurfaceConfiguration {
 }
 
 export interface TerminalSurfaceOptions {
+  readonly abortSignal?: AbortSignal;
+  readonly loadFontData?: (family?: string) => Promise<TerminalFontData>;
   readonly scrollbackLines?: number;
   readonly optionKeyMode?: OptionKeyMode;
   readonly appearance?: TerminalAppearance;

@@ -1,114 +1,172 @@
-import { describe, expect, it } from "vitest";
-import { installedFontFamilyMetrics } from "../../src/main/installed-font-family";
+import { mkdtemp, rm, truncate, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { describe, expect, it, vi } from "vitest";
+import {
+  installedFontFamilyMetrics,
+  readInstalledFontFace,
+  type InstalledFontFace,
+} from "../../src/main/installed-font-family";
 
-describe("macOS installed font-family availability", () => {
-  it("asks AppKit about only the exact configured family", async () => {
-    const run = async (file: string, arguments_: readonly string[]) => {
+const readableFace = async (_face: InstalledFontFace) =>
+  new Uint8Array([0, 1, 0, 0]);
+
+describe("installed font-family command seams", () => {
+  it("selects one exact regular macOS face without shell interpolation", async () => {
+    const run = vi.fn(async (file: string, arguments_: readonly string[]) => {
       expect(file).toBe("/usr/bin/osascript");
-      expect(arguments_).not.toContain("/usr/sbin/system_profiler");
-      expect(arguments_.at(-2)).toBe("Exact Family");
+      expect(arguments_.at(-2)).toBe("Exact Família");
       expect(arguments_.at(-1)).toBe("72");
       return {
-        stdout:
-          '{"status":"available","cellWidth":135.72,"cellHeight":243.18017578125}\n',
+        stdout: JSON.stringify({
+          status: "available",
+          family: "Exact Família",
+          path: "/Library/Fonts/Directory With Spaces/正規.ttf",
+          cellWidth: 135.72,
+          cellHeight: 243.18,
+        }),
       };
-    };
+    });
+    const read = vi.fn(async (face: InstalledFontFace) => readableFace(face));
 
     await expect(
-      installedFontFamilyMetrics("Exact Family", 72, run, "darwin"),
-    ).resolves.toEqual({ cellWidth: 135.72, cellHeight: 243.18017578125 });
+      installedFontFamilyMetrics("Exact Família", 72, run, "darwin", read),
+    ).resolves.toEqual({ cellWidth: 135.72, cellHeight: 243.18 });
+    expect(read.mock.calls[0]?.[0]).toMatchObject({
+      family: "Exact Família",
+      path: "/Library/Fonts/Directory With Spaces/正規.ttf",
+    });
   });
 
-  it("reports an unavailable exact family without falling back", async () => {
-    const run = async () => ({ stdout: '{"status":"missing"}\n' });
-
-    await expect(
-      installedFontFamilyMetrics("Missing Family", 16, run, "darwin"),
-    ).resolves.toBeUndefined();
-  });
+  it.each(["missing", "missing-regular"])(
+    "does not substitute for macOS status %s",
+    async (status) => {
+      await expect(
+        installedFontFamilyMetrics(
+          "Missing Family",
+          16,
+          async () => ({ stdout: JSON.stringify({ status }) }),
+          "darwin",
+          readableFace,
+        ),
+      ).resolves.toBeUndefined();
+    },
+  );
 
   it.each([
     "available",
-    '{"status":"available","cellWidth":0,"cellHeight":16}',
-    '{"status":"available","cellWidth":8,"cellHeight":null}',
-    '{"status":"available","cellWidth":8,"cellHeight":"16"}',
-    '{"status":"available","cellWidth":8,"cellHeight":16,"extra":true}',
-    '{"status":"missing","cellWidth":8}',
-  ])("rejects an invalid AppKit payload: %s", async (stdout) => {
+    '{"status":"available","family":"Exact","path":"/f","cellWidth":0,"cellHeight":16}',
+    '{"status":"available","family":"Exact","path":"/f","cellWidth":8,"cellHeight":null}',
+    '{"status":"available","family":"Exact","path":"/f","cellWidth":8,"cellHeight":16,"extra":true}',
+    '{"status":"missing","path":"/f"}',
+  ])("rejects invalid native output: %s", async (stdout) => {
     await expect(
       installedFontFamilyMetrics(
-        "Exact Family",
+        "Exact",
         16,
         async () => ({ stdout }),
         "darwin",
+        readableFace,
       ),
-    ).rejects.toThrow("Installed font family metrics returned invalid data");
+    ).rejects.toThrow("Installed font family lookup returned invalid data");
   });
 
-  it("asks GDI+ about only the exact configured family on Windows", async () => {
-    const run = async (
-      file: string,
-      arguments_: readonly string[],
-      options?: {
-        readonly timeoutMs?: number;
-        readonly environment?: Readonly<Record<string, string>>;
+  it("passes a Windows family only through the environment", async () => {
+    const run = vi.fn(
+      async (
+        file: string,
+        arguments_: readonly string[],
+        options?: { readonly environment?: Readonly<Record<string, string>> },
+      ) => {
+        expect(file).toMatch(/[/\\]powershell\.exe$/u);
+        expect(arguments_.at(-1)).not.toContain("Exact Família");
+        expect(options?.environment).toEqual({
+          OMXTERM_FONT_FAMILY: "Exact Família",
+        });
+        return {
+          stdout: JSON.stringify({
+            status: "available",
+            family: "Exact Família",
+            path: "C:\\Windows\\Fonts\\A Space 正規.ttf",
+          }),
+        };
       },
-    ) => {
-      expect(file).toMatch(/[/\\]powershell\.exe$/u);
-      expect(arguments_.slice(0, 3)).toEqual([
-        "-NoProfile",
-        "-NonInteractive",
-        "-Command",
-      ]);
-      // The family reaches PowerShell through the environment, never through
-      // the command line, so no quoting can change or reinterpret it.
-      expect(arguments_.at(-1)).not.toContain("Exact Family");
-      expect(options?.environment).toEqual({
-        OMXTERM_FONT_FAMILY: "Exact Family",
-      });
-      return { stdout: "installed\n" };
-    };
-
+    );
     await expect(
-      installedFontFamilyMetrics("Exact Family", 20, run, "win32"),
+      installedFontFamilyMetrics(
+        "Exact Família",
+        20,
+        run,
+        "win32",
+        readableFace,
+      ),
     ).resolves.toEqual({ cellWidth: 12, cellHeight: 24 });
-    await expect(
-      installedFontFamilyMetrics(
-        "Missing Family",
-        20,
-        async () => ({ stdout: "missing\n" }),
-        "win32",
-      ),
-    ).resolves.toBeUndefined();
-    await expect(
-      installedFontFamilyMetrics(
-        "Exact Family",
-        20,
-        async () => ({ stdout: "Add-Type : failed\n" }),
-        "win32",
-      ),
-    ).rejects.toThrow("Installed font family metrics returned invalid data");
   });
 
-  it("uses fontconfig without accepting a fallback family on Linux", async () => {
-    const exactRun = async (file: string, arguments_: readonly string[]) => {
+  it("bounds reads and rejects unreadable, empty, oversized, and corrupt faces", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "omxterm-font-read-"));
+    const face = (file: string): InstalledFontFace => ({
+      family: "Exact Family",
+      path: path.join(root, file),
+      cellWidth: 8,
+      cellHeight: 16,
+    });
+    try {
+      await writeFile(
+        face("valid.ttf").path,
+        new Uint8Array([0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+      );
+      await expect(
+        readInstalledFontFace(face("valid.ttf")),
+      ).resolves.toHaveLength(12);
+      await expect(readInstalledFontFace(face("missing.ttf"))).rejects.toThrow(
+        "could not be read",
+      );
+      await writeFile(face("corrupt.ttf").path, "not a font");
+      await expect(readInstalledFontFace(face("corrupt.ttf"))).rejects.toThrow(
+        "unsupported or corrupt",
+      );
+      await writeFile(face("oversized.ttf").path, "");
+      await truncate(face("oversized.ttf").path, 268_435_457);
+      await expect(
+        readInstalledFontFace(face("oversized.ttf")),
+      ).rejects.toThrow("268435456-byte limit");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("uses fontconfig exact-family and regular-face output without a shell", async () => {
+    const run = vi.fn(async (file: string, arguments_: readonly string[]) => {
       expect(file).toBe("/usr/bin/fc-match");
       expect(arguments_).toEqual([
-        "--format=%{family}\\n",
+        "--format=%{family}\\0%{weight}\\0%{slant}\\0%{file}\\n",
         "--",
-        "Exact Family",
+        "Exact Família:style=Regular",
       ]);
-      return { stdout: "Exact Family,Exact Family Regular\n" };
-    };
+      return {
+        stdout:
+          "Exact Família,Alias\u000080\u00000\u0000/usr/share/fonts/A Space 正規.ttf\n",
+      };
+    });
     await expect(
-      installedFontFamilyMetrics("Exact Family", 20, exactRun, "linux"),
+      installedFontFamilyMetrics(
+        "Exact Família",
+        20,
+        run,
+        "linux",
+        readableFace,
+      ),
     ).resolves.toEqual({ cellWidth: 12, cellHeight: 24 });
     await expect(
       installedFontFamilyMetrics(
-        "Missing Family",
+        "Missing",
         20,
-        async () => ({ stdout: "Fallback Family\n" }),
+        async () => ({
+          stdout: "Fallback\u000080\u00000\u0000/fallback.ttf\n",
+        }),
         "linux",
+        readableFace,
       ),
     ).resolves.toBeUndefined();
   });

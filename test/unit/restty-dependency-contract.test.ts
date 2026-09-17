@@ -89,12 +89,17 @@ describe("Restty dependency contract", () => {
       path.join(packageRoot, "dist", "chunk-c0rcpsc5.js"),
     );
     expect(digest(runtime)).toBe(
-      "a0cd79e08164bde293ca4ee6b52ab1b71cc8959eb1da646f95dde52015aad270",
+      "23f4bf4377dfcc34b39f439f2e4865be41a65603e405ec08ebb1f3a467ada867",
     );
     const source = runtime.toString("utf8");
     expect(source).toContain("Math.max(1, Math.round(value))");
     expect(source).toContain("lineHeight * fontConfig.lineHeightFactor");
     expect(source).toContain("const BOLD_BRIGHTEN = 0;");
+    expect(source).toContain(
+      "collectionFaces.filter((face) => face.family === source.label)",
+    );
+    expect(source).toContain("/^(regular|book|roman)$/iu");
+    expect(source).toContain("required font decode failed");
     expect(source).not.toContain(
       "Math.max(10, Math.min(64, Math.round(value)))",
     );

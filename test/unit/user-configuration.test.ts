@@ -771,7 +771,7 @@ describe("isolated User Configuration loading", () => {
       error: {
         configurationPath: file,
         location: "font.family",
-        reason: "installed font families could not be discovered",
+        reason: "installed font could not be validated: timed out",
       },
     });
     expect(await readFile(file)).toEqual(original);

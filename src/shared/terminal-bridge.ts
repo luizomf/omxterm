@@ -7,10 +7,12 @@ import type {
   TerminalTabCommand,
 } from "./terminal-contract";
 import type { TerminalRendererConfiguration } from "./user-configuration";
+import type { TerminalFontData } from "./terminal-font-data";
 import type { TerminalSnippetsResponse } from "./terminal-snippets";
 
 export interface TerminalBridge {
   configuration(): Promise<TerminalRendererConfiguration>;
+  fontData(family?: string): Promise<TerminalFontData>;
   snippets(): Promise<TerminalSnippetsResponse>;
   onSnippetsToggle(listener: () => void): () => void;
   onConfigurationUpdate(

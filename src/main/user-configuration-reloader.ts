@@ -19,11 +19,30 @@ interface UserConfigurationReloaderOptions {
   readonly operationalEvents?: Pick<OperationalEventLog, "setLevel" | "write">;
   readonly writeStderr?: (detail: string) => void;
   readonly now?: () => number;
+  readonly resttyRestartBaseline?: Pick<
+    LoadedUserConfiguration,
+    "fontFamily" | "fontLineHeight"
+  >;
 }
 
 export interface UserConfigurationReloader {
   current(): ActiveUserConfiguration;
   reload(): Promise<void>;
+}
+
+export function resttyBaseline(
+  terminalSurface: string,
+  configuration: LoadedUserConfiguration,
+): Pick<UserConfigurationReloaderOptions, "resttyRestartBaseline"> {
+  if (terminalSurface !== "restty") return {};
+  return {
+    resttyRestartBaseline: {
+      ...(configuration.fontFamily === undefined
+        ? {}
+        : { fontFamily: configuration.fontFamily }),
+      fontLineHeight: configuration.fontLineHeight,
+    },
+  };
 }
 
 // Requests are serialized rather than coalesced: every explicit action performs
@@ -53,7 +72,14 @@ export function createUserConfigurationReloader(
         reject(load.fallback, startedAt);
         return;
       }
-      active = freezeState(load.configuration, load.warnings ?? []);
+      active = freezeState(
+        load.configuration,
+        currentNotices(
+          load.configuration,
+          load.warnings ?? [],
+          options.resttyRestartBaseline,
+        ),
+      );
       options.operationalEvents?.setLevel(load.configuration.logLevel);
       options.apply(active, true);
       options.operationalEvents?.write({
@@ -102,6 +128,28 @@ function freezeState(
     configuration,
     userFileErrors: Object.freeze([...userFileErrors]),
   });
+}
+
+function currentNotices(
+  configuration: LoadedUserConfiguration,
+  warnings: readonly string[],
+  baseline:
+    Pick<LoadedUserConfiguration, "fontFamily" | "fontLineHeight"> | undefined,
+): readonly string[] {
+  if (!baseline) return warnings;
+  const deferred = [
+    ...(configuration.fontFamily === baseline.fontFamily
+      ? []
+      : ["font.family"]),
+    ...(configuration.fontLineHeight === baseline.fontLineHeight
+      ? []
+      : ["font.lineHeight"]),
+  ];
+  if (deferred.length === 0) return warnings;
+  return [
+    ...warnings,
+    `Restty kept ${deferred.join(" and ")} in existing Terminal Surfaces. Restart OMXTerm to apply ${deferred.length === 1 ? "it" : "them"} everywhere; new tabs and windows use the latest validated values.`,
+  ];
 }
 
 function boundedReloadNotice(

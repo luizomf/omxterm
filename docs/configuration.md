@@ -172,9 +172,13 @@ Option keys produce terminal Alt sequences.
 On macOS, configured top padding begins below the fixed 30 px native title and
 drag inset. On Linux and Windows, it begins directly below native Window Chrome.
 `font.lineHeight` changes row height independently of glyph size. In the
-opt-in development Restty candidate, line height is applied when a Surface is
-created but an existing Surface keeps that value until OMXTerm restarts; xterm
-continues to apply it live. The native Always on Top menu changes one current
+opt-in development Restty candidate, `font.family` and `font.lineHeight` are
+applied when a Surface is created, but an existing Surface keeps both until
+OMXTerm restarts; xterm continues to apply both live. Restty obtains the exact
+installed regular face through the main process, then uses bundled JetBrainsMono
+and available local operating-system fallback faces. A missing, unreadable,
+oversized, unsupported or corrupt configured face is an actionable error, never
+a similarly named substitute. The native Always on Top menu changes one current
 window; `window.alwaysOnTop` sets the default for new windows.
 
 ### Choose the Windows Default Shell
@@ -482,12 +486,11 @@ also selects `windowsShell` for subsequently created Default Shell sessions.
 Existing
 Terminal Surfaces and Live Terminal Sessions remain in place and refit as
 needed. The opt-in Restty candidate updates theme, font size and padding live,
-but an existing Restty Surface retains its initial font family and line height;
-restart OMXTerm to apply a changed line height everywhere. New Restty Surfaces
-use the latest validated line height; installed configured-family loading, its
-restart notice and its new-Surface behavior remain deferred to the next
-migration slice. Existing
-windows keep their current Always-on-Top state and Window Font Zoom delta;
+but an existing Restty Surface retains its initial font family and line height.
+A persistent notice names either deferred setting and asks you to restart
+OMXTerm to apply it everywhere. New Restty Surfaces use the latest fully
+validated values; reverting to startup-active values clears the applicable
+stale notice. Existing windows keep their current Always-on-Top state and Window Font Zoom delta;
 Actual Size returns to the latest configured baseline.
 
 A rejected reload applies nothing and preserves the complete last valid
@@ -518,7 +521,8 @@ Operational Events are separate bounded JSONL logs under
 capped at 5 MiB. `logLevel` changes verbosity, not the privacy boundary.
 
 No log level records Terminal Payload, PTY input or output, clipboard data,
-environment or configuration contents, Snippet bodies, executable names,
+environment or configuration contents, font families, font paths, font bytes,
+Snippet bodies, executable names,
 command arguments, commands, Terminal Titles, secrets, or transcripts. User
 Configuration Reload events contain only safe outcomes, bounded duration, and a
 normalized failure category—not paths, validation details, or file contents.

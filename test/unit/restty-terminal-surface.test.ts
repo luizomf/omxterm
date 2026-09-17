@@ -171,6 +171,72 @@ describe("Restty Terminal Surface", () => {
     expect(restty.destroy).toHaveBeenCalledOnce();
   });
 
+  it("loads an exact configured face before bundled and local OS fallbacks", async () => {
+    const { adapter } = createAdapter();
+    const loadFontData = vi.fn(async () => ({
+      configured: {
+        family: "Exact Família",
+        data: new Uint8Array([10, 11]),
+      },
+      fallbacks: [{ family: "Local Emoji", data: new Uint8Array([20, 21]) }],
+    }));
+    const { mountResttyTerminalSurface } =
+      await import("../../src/terminal-surface/restty-terminal-surface");
+
+    await mountResttyTerminalSurface(document.createElement("main"), adapter, {
+      appearance: {
+        fontSize: 16,
+        lineHeight: 1,
+        systemFont: { family: "Exact Família", available: true },
+      },
+      loadFontData,
+    });
+
+    expect(loadFontData).toHaveBeenCalledExactlyOnceWith("Exact Família");
+    expect(
+      (harness.instances[0]!.options.terminal as { fonts: unknown }).fonts,
+    ).toEqual([
+      {
+        data: new Uint8Array([10, 11]),
+        name: "Exact Família",
+        weight: 400,
+        style: "normal",
+      },
+      {
+        data: new Uint8Array([0, 1, 2, 3]),
+        name: "JetBrainsMono Nerd Font Mono",
+      },
+      { data: new Uint8Array([20, 21]), name: "Local Emoji" },
+    ]);
+  });
+
+  it("starts no PTY when a font lookup is disposed or fails", async () => {
+    const abort = new AbortController();
+    const { adapter } = createAdapter();
+    const onFatalError = vi.fn();
+    const { mountResttyTerminalSurface } =
+      await import("../../src/terminal-surface/restty-terminal-surface");
+    const pending = mountResttyTerminalSurface(
+      document.createElement("main"),
+      adapter,
+      {
+        abortSignal: abort.signal,
+        loadFontData: async () => {
+          abort.abort();
+          return { fallbacks: [] };
+        },
+        onFatalError,
+      },
+    );
+
+    await expect(pending).rejects.toThrow(/Restty Terminal Surface/u);
+    expect(harness.instances).toHaveLength(0);
+    expect(adapter.start).not.toHaveBeenCalled();
+    expect(onFatalError).toHaveBeenCalledWith(
+      expect.stringContaining("cancelled"),
+    );
+  });
+
   it("releases partial resources and starts no PTY when initialization fails", async () => {
     harness.setInitError(new Error("font unavailable"));
     const { adapter } = createAdapter();

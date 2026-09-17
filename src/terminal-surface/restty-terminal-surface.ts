@@ -76,6 +76,7 @@ export async function mountResttyTerminalSurface(
   const initialLineHeight = resolveLineHeight(options.appearance?.lineHeight);
   let terminalTheme = resolveTheme(options.theme);
   let padding = resolvePadding(options.padding);
+  const initialFamily = options.appearance?.systemFont?.family;
 
   const applyRuntimeTheme = (theme: TerminalTheme) => {
     pane?.runtime.terminal.applyTheme(toGhosttyTheme(theme), "OMXTerm");
@@ -145,6 +146,18 @@ export async function mountResttyTerminalSurface(
   };
 
   try {
+    const loadedFonts = options.loadFontData
+      ? await options.loadFontData(initialFamily)
+      : { fallbacks: [] };
+    if (options.abortSignal?.aborted)
+      throw new Error("Restty initialization was cancelled");
+    if (
+      initialFamily !== undefined &&
+      loadedFonts.configured?.family !== initialFamily
+    )
+      throw new Error(
+        "Configured Terminal Font data did not match the requested family",
+      );
     container.classList.add("restty-terminal-surface");
     setContainerAppearance(container, padding, terminalTheme);
     const terminal: ResttyAppearanceConfig = {
@@ -152,10 +165,24 @@ export async function mountResttyTerminalSurface(
       fontSize: baselineFontSize,
       lineHeight: initialLineHeight,
       fonts: [
+        ...(loadedFonts.configured
+          ? [
+              {
+                data: loadedFonts.configured.data,
+                name: loadedFonts.configured.family,
+                weight: 400,
+                style: "normal" as const,
+              },
+            ]
+          : []),
         {
           data: bundledFontBytes,
           name: BUNDLED_FONT_NAME,
         },
+        ...loadedFonts.fallbacks.map(({ family, data }) => ({
+          data,
+          name: family,
+        })),
       ],
       theme: toGhosttyTheme(terminalTheme),
       showResizeOverlay: false,
@@ -197,7 +224,7 @@ export async function mountResttyTerminalSurface(
     const canvas = pane.container.querySelector("canvas");
     if (!canvas) throw new Error("Restty did not create its rendering canvas");
     container.dataset.resttyBackend = "webgl2";
-    container.dataset.resttyFont = BUNDLED_FONT_NAME;
+    container.dataset.resttyFont = initialFamily ?? BUNDLED_FONT_NAME;
     canvas.addEventListener(
       "webglcontextlost",
       (event) => {

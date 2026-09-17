@@ -14,6 +14,8 @@ const resultPrefix = "__OMXTERM_RESTTY_HOST_RESULT__";
 
 interface HostResult {
   readonly beforeDestroy: { readonly canvases: number; readonly tabs: number };
+  readonly configuredFontFamily: string;
+  readonly renderedFontFamily: string | null;
   readonly clipboardReads: number;
   readonly clipboardWrites: number;
   readonly externalLinks: number;
@@ -57,6 +59,7 @@ describe.skipIf(process.platform !== "darwin")(
         ).toBe(0);
         expect(result).toBeDefined();
         expect(result?.sessionStarts).toBe(3);
+        expect(result?.renderedFontFamily).toBe(result?.configuredFontFamily);
         expect(result?.launchKinds).toEqual([
           "default-shell",
           "explicit-command",

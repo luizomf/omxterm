@@ -27,16 +27,27 @@ installation: font-load errors reject readiness, and Restty's direct clipboard,
 OSC 52 and link-opening callbacks are disabled. Dependency drift requires review.
 The bundled TTF replaces the prototype's non-equivalent WOFF2 shaping input.
 
-The appearance slice maps OMXTerm Terminal Themes into Restty, uses the bundled
-font at the configured size and creation-time line height, applies per-side
-padding, and preserves per-window zoom through runtime operations. Theme, size
-and padding update existing Surfaces without replacing their core or PTY.
-Existing Restty Surfaces keep their initial family and line height until OMXTerm
-restarts. New Surfaces use the latest validated line height; the next font slice
-owns installed-family loading and the persistent restart notice.
+The appearance and font slices map OMXTerm Terminal Themes into Restty, use the
+configured size and creation-time line height, apply per-side padding, and
+preserve per-window zoom through runtime operations. Main resolves an exact
+installed regular face through conventional native platform facilities, bounds
+and validates the read, and exposes only bytes for the active validated family
+and fixed local fallback candidates through sender-validated IPC. Restty orders
+the configured face before licensed bundled JetBrainsMono and available local
+OS emoji/CJK/symbol fallbacks. The renderer cannot provide a path or enumerate
+files; there is no remote fallback, Operational Event font data, or persistent
+byte cache.
+
+Theme, size and padding update existing Surfaces without replacing their core
+or PTY. `font.family` and `font.lineHeight` are the complete restart-only set:
+existing Restty Surfaces keep their creation-time values, while new Surfaces use
+the latest fully validated values. A persistent notice names changed deferred
+settings and requests restart; reverting to startup-active values clears the
+applicable notice. Failed lookup, bounded read or font decoding starts no
+invisible shell and an invalid reload commits nothing.
 
 Candidate copy/paste, snippets/path injection, OSC 52, links, titles, bell,
-installed configured-font loading, scrollback and images stay unavailable until
+scrollback and images stay unavailable until
 their owning migration tickets. These gates apply only to Restty. xterm's
 existing behavior and security boundaries remain unchanged. Renderer isolation,
 the production CSP, application network boundary and platform sandbox policy

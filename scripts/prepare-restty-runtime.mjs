@@ -13,8 +13,12 @@ const priorCorrectedDigest =
   "8f9620d4c39b9e88bb149010e8aad24b0c35073373c2d8a66d78466ccbafec2a";
 const priorAppearanceDigest =
   "8de5f8d9e583852080932c739e6f059dcea01b0d84982d020746fb50636a0cdc";
-const correctedDigest =
+const priorBoldColorDigest =
   "a0cd79e08164bde293ca4ee6b52ab1b71cc8959eb1da646f95dde52015aad270";
+const priorFamilyFilterDigest =
+  "ecba146c51073810b44d469c75a60ce12d62d0e7311b227c6d13d87da86af627";
+const correctedDigest =
+  "23f4bf4377dfcc34b39f439f2e4865be41a65603e405ec08ebb1f3a467ada867";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 
 const securityCorrections = [
@@ -96,6 +100,58 @@ const geometryCorrections = [
   },
 ];
 
+const fontCorrections = [
+  {
+    original: `        parsed.push({
+          font: face,
+          metadataLabel: info.fullName || info.family || info.postScriptName || undefined,
+          index: info.index
+        });`,
+    corrected: `        parsed.push({
+          font: face,
+          metadataLabel: info.fullName || info.family || info.postScriptName || undefined,
+          family: info.family,
+          subfamily: info.subfamily,
+          index: info.index
+        });`,
+  },
+  {
+    original: `      if (!parsedFaces.length)
+        continue;
+      const sourceEntry = sourceCache.get(sourceKey);`,
+    corrected: `      if (!parsedFaces.length) {
+        if (source.kind === "buffer" && source.weight === 400)
+          throw new Error("required font decode failed");
+        continue;
+      }
+      const collectionFaces = parsedFaces.filter((face) => face.family !== undefined);
+      const familyFaces = collectionFaces.filter((face) => face.family === source.label);
+      if (collectionFaces.length && source.kind === "buffer" && source.weight === 400 && !familyFaces.length)
+        throw new Error("required font family mismatch");
+      if (familyFaces.length) {
+        const regularFaces = familyFaces.filter((face) => /^(regular|book|roman)$/iu.test(face.subfamily ?? ""));
+        if (source.kind === "buffer" && source.weight === 400 && !regularFaces.length)
+          throw new Error("required regular font face missing");
+        parsedFaces = regularFaces.length ? regularFaces : familyFaces;
+      }
+      const sourceEntry = sourceCache.get(sourceKey);`,
+  },
+];
+
+const requiredFontCorrections = [
+  {
+    original: `      if (!parsedFaces.length)
+        continue;
+      const familyFaces = parsedFaces.filter((face) => face.family === source.label);
+      if (familyFaces.length) {
+        const regularFaces = familyFaces.filter((face) => /^(regular|book|roman)$/iu.test(face.subfamily ?? ""));
+        parsedFaces = regularFaces.length ? regularFaces : familyFaces;
+      }
+      const sourceEntry = sourceCache.get(sourceKey);`,
+    corrected: fontCorrections[1].corrected,
+  },
+];
+
 const boldColorCorrections = [
   {
     original: "  const BOLD_BRIGHTEN = 0.18;",
@@ -115,25 +171,35 @@ function applyCorrections(source, corrections) {
 
 // Restty 0.3.0 otherwise reports readiness with an unusable font, exposes
 // clipboard/link side effects before OMXTerm owns those routes, clamps live
-// size to 10–64, has no independent row-height input, and brightens bold ANSI
-// colors. Correct only the reviewed npm bytes; dependency drift requires a
+// size to 10–64, has no independent row-height input, brightens bold ANSI
+// colors, and expands every face in a collection without exact family/regular
+// selection. Correct only the reviewed npm bytes; dependency drift requires a
 // fresh review.
 export async function prepareResttyRuntime() {
   let source = await readFile(runtimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest === correctedDigest) return;
-  if (sourceDigest === originalDigest) {
+  if (sourceDigest === priorFamilyFilterDigest) {
+    source = applyCorrections(source, requiredFontCorrections);
+  } else if (sourceDigest === originalDigest) {
     source = applyCorrections(source, securityCorrections);
     source = applyCorrections(source, geometryCorrections);
   } else if (sourceDigest === priorCorrectedDigest) {
     source = applyCorrections(source, geometryCorrections);
-  } else if (sourceDigest !== priorAppearanceDigest) {
+  } else if (
+    sourceDigest !== priorAppearanceDigest &&
+    sourceDigest !== priorBoldColorDigest
+  ) {
     throw new Error(
       "Unrecognized Restty runtime; review the pinned OMXTerm corrections",
     );
   }
 
-  source = applyCorrections(source, boldColorCorrections);
+  if (sourceDigest !== priorFamilyFilterDigest) {
+    if (sourceDigest !== priorBoldColorDigest)
+      source = applyCorrections(source, boldColorCorrections);
+    source = applyCorrections(source, fontCorrections);
+  }
   if (digest(source) !== correctedDigest)
     throw new Error("Restty correction did not produce reviewed bytes");
   await writeFile(runtimePath, source);

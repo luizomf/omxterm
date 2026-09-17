@@ -40,10 +40,6 @@ import {
   terminalApplicationFailure,
   terminalApplicationFailureDisplay,
 } from "./terminal-application-failure";
-import {
-  registerTerminalIpcRouter,
-  type IpcMainPort,
-} from "./terminal-ipc-controller";
 import { terminalSessionFailureDialog } from "./terminal-session-failure";
 import {
   lockTerminalRendererNavigation,
@@ -53,6 +49,7 @@ import {
 import { registerTerminalWindowHost } from "./terminal-window-host";
 import { createTerminalWindowTitleController } from "./terminal-window-title";
 import { installedFontFamilyMetrics } from "./installed-font-family";
+import { fontIpcRouter } from "./terminal-font-data";
 import { loadTerminalSnippets } from "./snippets";
 import {
   configurationRejectionReason,
@@ -60,7 +57,10 @@ import {
   userConfigurationFallbackNotice,
   type UserConfigurationFallback,
 } from "./user-configuration";
-import { createUserConfigurationReloader } from "./user-configuration-reloader";
+import {
+  createUserConfigurationReloader,
+  resttyBaseline,
+} from "./user-configuration-reloader";
 import {
   applyActiveUserConfiguration,
   terminalRendererConfiguration,
@@ -150,10 +150,7 @@ app
           process.stderr.write(`${warning}\n`);
         operationalEvents!.write({ name: "application.started" });
         const startupNotices = startupUserFileNotices(fallback, warnings);
-        const terminalIpcRouter = registerTerminalIpcRouter(
-          ipcMain as unknown as IpcMainPort,
-          operationalEvents!,
-        );
+        const terminalIpcRouter = fontIpcRouter(ipcMain, operationalEvents!);
         let rebuildMenu = () => {};
         const configurationReloader = createUserConfigurationReloader({
           initial: {
@@ -161,6 +158,7 @@ app
             userFileErrors: startupNotices,
           },
           load: () => loadUserConfiguration(configurationLoadOptions),
+          ...resttyBaseline(terminalSurface, userConfiguration),
           operationalEvents: operationalEvents!,
           writeStderr: (detail) => process.stderr.write(detail),
           apply: (state, committed) =>
