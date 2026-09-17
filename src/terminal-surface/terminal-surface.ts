@@ -1,4 +1,5 @@
 import type { TerminalFontZoom } from "../shared/terminal-contract";
+import type { LocalImageActivation } from "../shared/local-image";
 import type { TerminalFontData } from "../shared/terminal-font-data";
 import type {
   OptionKeyMode,
@@ -59,7 +60,7 @@ export interface TerminalSurfaceOptions {
   readonly onTitleRequest?: (request: string) => void;
   readonly onBell?: () => void;
   readonly onExternalLink?: (url: string) => void;
-  readonly onLocalImageLink?: (url: string) => void;
+  readonly onLocalImageActivation?: (source: LocalImageActivation) => void;
   readonly onFatalError?: (message: string) => void;
 }
 

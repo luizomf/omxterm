@@ -6,7 +6,7 @@ import {
   MAX_LOCAL_IMAGE_BYTES,
   MAX_LOCAL_IMAGE_PIXELS,
   MAX_LOCAL_IMAGE_SIDE,
-  MAX_LOCAL_IMAGE_URL_LENGTH,
+  MAX_LOCAL_IMAGE_SOURCE_LENGTH,
   type LocalImageData,
   type LocalImageMime,
   type LocalImageRequest,
@@ -51,7 +51,9 @@ export async function loadLocalImageRequest(
   const filePath =
     request.source === "picker"
       ? await options.chooseFile()
-      : resolveLocalImageFileUrl(request.url, options.platform);
+      : request.source === "file-url"
+        ? resolveLocalImageFileUrl(request.url, options.platform)
+        : localImagePath(request.path, options.platform);
   if (options.abortSignal?.aborted)
     throw new Error("Local image request was superseded");
   if (filePath === null) return null;
@@ -127,7 +129,7 @@ export function resolveLocalImageFileUrl(
   if (
     typeof value !== "string" ||
     value.length === 0 ||
-    value.length > MAX_LOCAL_IMAGE_URL_LENGTH ||
+    value.length > MAX_LOCAL_IMAGE_SOURCE_LENGTH ||
     !value.startsWith("file:///") ||
     value.startsWith("file:////") ||
     /[\p{Cc}\p{Cf}]/u.test(value)
@@ -166,8 +168,8 @@ function localImagePath(
       : path.posix.isAbsolute(filePath) && !filePath.startsWith("//");
   if (
     !localAbsolute ||
-    filePath.includes("\0") ||
-    filePath.length > MAX_LOCAL_IMAGE_URL_LENGTH
+    /[\p{Cc}\p{Cf}]/u.test(filePath) ||
+    filePath.length > MAX_LOCAL_IMAGE_SOURCE_LENGTH
   )
     throw new TypeError("Invalid local image path.");
   return filePath;

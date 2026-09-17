@@ -1,18 +1,23 @@
-import type { LocalImageData } from "../shared/local-image";
+import type {
+  LocalImageActivation,
+  LocalImageData,
+} from "../shared/local-image";
 
 const PREVIEW_ERROR =
   "Could not preview this image. Choose a static PNG/JPEG up to 16 MiB, 8192 per side and 16 million pixels.";
 
 export interface LocalImagePreview {
   isActive(): boolean;
-  open(fileUrl?: string): Promise<void>;
+  open(source?: LocalImageActivation): Promise<void>;
   dispose(): void;
 }
 
 export function createLocalImagePreview(
   document: Document,
   options: {
-    readonly loadImage: (fileUrl?: string) => Promise<LocalImageData | null>;
+    readonly loadImage: (
+      source?: LocalImageActivation,
+    ) => Promise<LocalImageData | null>;
     readonly focusTerminal: () => void;
   },
 ): LocalImagePreview {
@@ -91,11 +96,11 @@ export function createLocalImagePreview(
 
   return {
     isActive: () => !disposed && (opening || dialog.open),
-    async open(fileUrl) {
+    async open(source) {
       if (disposed || opening || dialog.open) return;
       opening = true;
       try {
-        const selected = await options.loadImage(fileUrl);
+        const selected = await options.loadImage(source);
         if (disposed) return;
         if (!selected) {
           options.focusTerminal();

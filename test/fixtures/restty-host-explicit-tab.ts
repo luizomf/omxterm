@@ -1,4 +1,5 @@
 import type { BrowserWindow } from "electron";
+import type { LocalImageRequest } from "../../src/shared/local-image";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { exerciseResttyLinks } from "./restty-link-gestures";
 
@@ -10,6 +11,7 @@ export async function exerciseExplicitResttyTab(options: {
   readonly inputs: string[][];
   readonly deliverOutputs: ReadonlyArray<(data: string) => void>;
   readonly externalLinks: string[];
+  readonly localImageRequests: LocalImageRequest[];
   readonly titleEvents: readonly unknown[];
   readonly bellSessionIds: readonly string[];
   readonly ended: ReadonlyArray<{
@@ -89,6 +91,7 @@ export async function exerciseExplicitResttyTab(options: {
     inputs: options.inputs[1]!,
     resizes: options.resizes[1]!,
     externalLinks: options.externalLinks,
+    localImageRequests: options.localImageRequests,
     waitFor,
   });
   window.blur();

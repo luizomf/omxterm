@@ -141,11 +141,20 @@ function resttyDelivery(
 }
 
 function requestVisibleLink(
-  url: string,
+  destination: string,
   options: TerminalSurfaceOptions,
 ): void {
-  if (url.startsWith("file:///")) options.onLocalImageLink?.(url);
-  else options.onExternalLink?.(url);
+  if (destination.startsWith("file:///"))
+    options.onLocalImageActivation?.({
+      source: "file-url",
+      url: destination,
+    });
+  else if (destination.startsWith("/") || /^[a-z]:[\\/]/iu.test(destination))
+    options.onLocalImageActivation?.({
+      source: "native-path",
+      path: destination,
+    });
+  else options.onExternalLink?.(destination);
 }
 
 async function copyResttySelection(
@@ -351,7 +360,7 @@ export async function mountResttyTerminalSurface(
     container.dataset.resttyBackend = "webgl2";
     container.dataset.resttyFont =
       initialFamily ?? DEFAULT_TERMINAL_FONT_FAMILY;
-    if (options.onExternalLink || options.onLocalImageLink)
+    if (options.onExternalLink || options.onLocalImageActivation)
       removeVisibleLinkListeners = installResttyVisibleLinks(
         canvas,
         pane.runtime.interaction,

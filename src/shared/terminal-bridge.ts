@@ -9,7 +9,7 @@ import type {
 import type { TerminalRendererConfiguration } from "./user-configuration";
 import type { TerminalFontData } from "./terminal-font-data";
 import type { TerminalSnippetsResponse } from "./terminal-snippets";
-import type { LocalImageData } from "./local-image";
+import type { LocalImageActivation, LocalImageData } from "./local-image";
 
 export interface TerminalBridge {
   configuration(): Promise<TerminalRendererConfiguration>;
@@ -26,7 +26,7 @@ export interface TerminalBridge {
   title(sessionId: TerminalSessionId, request: string): void;
   bell(sessionId: TerminalSessionId): void;
   openExternalLink(url: string): void;
-  loadLocalImage(fileUrl?: string): Promise<LocalImageData | null>;
+  loadLocalImage(source?: LocalImageActivation): Promise<LocalImageData | null>;
   onLocalImageOpen(listener: () => void): () => void;
   acknowledgeOutput(sessionId: TerminalSessionId, end: number): void;
   onOutput(

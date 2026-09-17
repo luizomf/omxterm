@@ -11,6 +11,7 @@ import {
 import { registerTerminalWindowHost } from "../../src/main/terminal-window-host";
 import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
 import { createUserConfigurationReloader } from "../../src/main/user-configuration-reloader";
+import type { LocalImageRequest } from "../../src/shared/local-image";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import {
   installedFallbackFontData,
@@ -61,6 +62,7 @@ let selectedUnicodeExactly = false;
 let protectedPasteConfirmations = 0;
 let contextMenus = 0;
 const externalLinks: string[] = [];
+const localImageRequests: LocalImageRequest[] = [];
 const titleEvents: Array<{
   sessionId: string;
   fixture: "first" | "overlong" | "second" | "unexpected";
@@ -220,7 +222,7 @@ function createHost(window: BrowserWindow) {
     },
     onExternalLinkOpenError() {},
     loadSnippets: async () => ({ snippets: [] }),
-    loadLocalImage: async () => null,
+    loadLocalImage: async (request) => (localImageRequests.push(request), null),
   });
   registerTerminalWindowHost(window, controller, () => router.dispose());
   const initialConfiguration = {
@@ -411,6 +413,7 @@ app
       inputs,
       deliverOutputs,
       externalLinks,
+      localImageRequests,
       titleEvents,
       bellSessionIds,
       ended,

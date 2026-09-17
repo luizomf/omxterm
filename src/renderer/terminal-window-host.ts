@@ -30,7 +30,10 @@ import {
   createLocalImagePreview,
   type LocalImagePreview,
 } from "./local-image-preview";
-import type { LocalImageData } from "../shared/local-image";
+import type {
+  LocalImageActivation,
+  LocalImageData,
+} from "../shared/local-image";
 
 type MountTerminalSurface = (
   container: HTMLElement,
@@ -79,7 +82,7 @@ interface TerminalWindowPageOptions {
   readonly onBell?: (sessionId: TerminalSessionId) => void;
   readonly onExternalLink?: (url: string) => void;
   readonly loadLocalImage?: (
-    fileUrl?: string,
+    source?: LocalImageActivation,
   ) => Promise<LocalImageData | null>;
   readonly subscribeToLocalImageOpen?: (listener: () => void) => () => void;
   readonly snippets?: {
@@ -148,7 +151,8 @@ export function mountTerminalWindowPage(
       : {}),
     ...(options.loadLocalImage
       ? {
-          onLocalImageLink: (url: string) => void localImagePreview?.open(url),
+          onLocalImageActivation: (source: LocalImageActivation) =>
+            void localImagePreview?.open(source),
         }
       : {}),
     ...(options.onSurfaceFailure

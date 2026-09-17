@@ -124,7 +124,10 @@ describe("local image preview through the Terminal Window host", () => {
         }),
     );
     try {
-      view.surfaceOptions.onLocalImageLink!("file:///tmp/fixture.png");
+      view.surfaceOptions.onLocalImageActivation!({
+        source: "native-path",
+        path: "/tmp/fixture.png",
+      });
       const interact = () => {
         view.clipboard("paste");
         view.clipboard("copy");
@@ -162,7 +165,10 @@ describe("local image preview through the Terminal Window host", () => {
   it("still delivers confirmed session closure while a preview is open", async () => {
     const view = await setup(async () => image);
     try {
-      view.surfaceOptions.onLocalImageLink!("file:///tmp/fixture.png");
+      view.surfaceOptions.onLocalImageActivation!({
+        source: "file-url",
+        url: "file:///tmp/fixture.png",
+      });
       await vi.waitFor(() =>
         expect(document.querySelector("dialog")!.open).toBe(true),
       );

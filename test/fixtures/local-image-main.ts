@@ -22,20 +22,25 @@ async function run() {
       sandbox: true,
     },
   });
-  const load = (filePath: string) =>
+  const load = (filePath: string, source: "file-url" | "native-path") =>
     loadLocalImageForWindow(
       window,
-      { source: "file-url", url: pathToFileURL(filePath).href },
+      source === "file-url"
+        ? { source, url: pathToFileURL(filePath).href }
+        : { source, path: filePath },
       new AbortController().signal,
     );
-  const loaded = await load(path.join(process.cwd(), "fixture.data"));
+  const loaded = await load(
+    path.join(process.cwd(), "fixture%23#literal.data"),
+    "native-path",
+  );
   if (!loaded) throw new Error("PNG fixture was not loaded");
   const jpegBytes = nativeImage
     .createFromBuffer(Buffer.from(loaded.data))
     .toJPEG(90);
   const jpegPath = path.join(process.cwd(), "fixture-jpeg.data");
   await writeFile(jpegPath, jpegBytes);
-  const jpeg = await load(jpegPath);
+  const jpeg = await load(jpegPath, "file-url");
   if (!jpeg) throw new Error("JPEG fixture was not loaded");
   await window.loadFile(path.join(process.cwd(), "preview.html"));
   const preview = [];

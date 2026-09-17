@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLocalImagePreview } from "../../src/renderer/local-image-preview";
-import type { LocalImageData } from "../../src/shared/local-image";
+import type {
+  LocalImageActivation,
+  LocalImageData,
+} from "../../src/shared/local-image";
 
 const image: LocalImageData = {
   name: "synthetic.png",
@@ -12,8 +15,9 @@ const image: LocalImageData = {
 };
 
 function setup(
-  loadImage: (fileUrl?: string) => Promise<LocalImageData | null> = async () =>
-    image,
+  loadImage: (
+    source?: LocalImageActivation,
+  ) => Promise<LocalImageData | null> = async () => image,
 ) {
   document.body.replaceChildren();
   if (!("decode" in HTMLImageElement.prototype))
@@ -87,7 +91,10 @@ describe("local image preview overlay", () => {
     expect(view.activeUrls.size).toBe(0);
     expect(view.focusTerminal).toHaveBeenCalledOnce();
 
-    await view.preview.open("file:///tmp/second.png");
+    await view.preview.open({
+      source: "native-path",
+      path: "/tmp/second.png",
+    });
     const current = view.element.src;
     for (const dispatch of view.closeEvents) dispatch();
     expect(view.dialog.open).toBe(true);
@@ -95,7 +102,7 @@ describe("local image preview overlay", () => {
     expect(view.activeUrls.has(current)).toBe(true);
     expect(view.loadImage.mock.calls).toEqual([
       [undefined],
-      ["file:///tmp/second.png"],
+      [{ source: "native-path", path: "/tmp/second.png" }],
     ]);
 
     view.preview.dispose();
@@ -113,7 +120,10 @@ describe("local image preview overlay", () => {
     const failed = setup(
       vi.fn(async () => Promise.reject(new Error("private path"))),
     );
-    await failed.preview.open("file:///private/path.png");
+    await failed.preview.open({
+      source: "file-url",
+      url: "file:///private/path.png",
+    });
     expect(failed.dialog.open).toBe(true);
     expect(failed.dialog.textContent).toContain("Could not preview this image");
     expect(failed.dialog.textContent).not.toContain("private path");

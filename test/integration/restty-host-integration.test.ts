@@ -42,6 +42,7 @@ interface HostResult {
   readonly largePasteLength: number;
   readonly externalLinks: readonly string[];
   readonly validLinkMouseReports: string;
+  readonly localPathMouseReports: string;
   readonly ordinaryGestureMouseReports: string;
   readonly wheelMouseReports: string;
   readonly alternateScreenMouseReports: string;
@@ -211,6 +212,7 @@ describe.skipIf(
         contextMenus: 1,
         largePasteLength: 79_000,
         validLinkMouseReports: "",
+        localPathMouseReports: "",
         cancelledGestureMouseReports: "",
         titleQueryReplyBytes: 0,
         navigations: 0,

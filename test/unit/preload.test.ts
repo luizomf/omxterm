@@ -49,11 +49,11 @@ vi.mock("electron", () => ({
   },
 }));
 
-describe("isolated preload terminal bridge", () => {
-  beforeAll(async () => {
-    await import("../../src/preload/index");
-  });
+beforeAll(async () => {
+  await import("../../src/preload/index");
+});
 
+describe("isolated preload terminal bridge requests", () => {
   it("validates outbound session-scoped input, resize, and close shapes", () => {
     const bridge = electron.bridge!;
 
@@ -186,21 +186,40 @@ describe("isolated preload terminal bridge", () => {
       height: 1,
       data: new Uint8Array([1, 2, 3]),
     };
-    electron.invoke.mockResolvedValueOnce(selected);
-    await expect(
-      bridge.loadLocalImage("file:///tmp/image.png"),
-    ).resolves.toEqual(selected);
-    expect(electron.invoke).toHaveBeenCalledWith(terminalIpc.localImage, {
+    const fileUrl = {
       source: "file-url",
       url: "file:///tmp/image.png",
-    });
+    } as const;
+    const nativePath = {
+      source: "native-path",
+      path: "/tmp/image%23#literal.png",
+    } as const;
+    electron.invoke.mockResolvedValueOnce(selected);
+    await expect(bridge.loadLocalImage(fileUrl)).resolves.toEqual(selected);
+    expect(electron.invoke).toHaveBeenLastCalledWith(
+      terminalIpc.localImage,
+      fileUrl,
+    );
+    electron.invoke.mockResolvedValueOnce(selected);
+    await expect(bridge.loadLocalImage(nativePath)).resolves.toEqual(selected);
+    expect(electron.invoke).toHaveBeenLastCalledWith(
+      terminalIpc.localImage,
+      nativePath,
+    );
     electron.invoke.mockResolvedValueOnce(null);
     await expect(bridge.loadLocalImage()).resolves.toBeNull();
     expect(electron.invoke).toHaveBeenCalledWith(terminalIpc.localImage, {
       source: "picker",
     });
-    expect(() => bridge.loadLocalImage("")).toThrow(TypeError);
-    expect(() => bridge.loadLocalImage("x".repeat(32_769))).toThrow(TypeError);
+    expect(() =>
+      bridge.loadLocalImage({ source: "native-path", path: "" }),
+    ).toThrow(TypeError);
+    expect(() =>
+      bridge.loadLocalImage({
+        source: "native-path",
+        path: "x".repeat(32_769),
+      }),
+    ).toThrow(TypeError);
     electron.invoke.mockResolvedValueOnce({
       ...selected,
       mime: "image/svg+xml",
@@ -315,7 +334,9 @@ describe("isolated preload terminal bridge", () => {
     titleController.dispose();
     electron.send.mockReset();
   });
+});
 
+describe("isolated preload terminal bridge responses", () => {
   it("exposes only bounded font bytes for an exact family request", async () => {
     const bridge = electron.bridge!;
     electron.invoke.mockResolvedValueOnce({

@@ -42,8 +42,46 @@ describe("Restty visible-link span contract", () => {
     expect(
       visibleLinkAtOffset("file:////server/share/a.png", 8),
     ).toBeUndefined();
-    expect(visibleLinkAtOffset("/tmp/image.png", 3)).toBeUndefined();
+    expect(visibleLinkAtOffset("/tmp/image.png", 3)?.url).toBe(
+      "/tmp/image.png",
+    );
     expect(visibleLinkAtOffset("image.png", 3)).toBeUndefined();
+  });
+
+  it.each([
+    ["open /tmp/image%23#literal.png now", 10, "/tmp/image%23#literal.png"],
+    [
+      "C:\\Users\\me\\image%23#literal.jpg",
+      20,
+      "C:\\Users\\me\\image%23#literal.jpg",
+    ],
+    ["C:/Users/me/image.png", 4, "C:/Users/me/image.png"],
+    ["(/tmp/wrapped.png)", 5, undefined],
+    ["name=/tmp/assigned.png", 10, undefined],
+    ["../tmp/relative.png", 8, undefined],
+    ["~/tmp/relative.png", 8, undefined],
+    ["\\\\server\\share\\image.png", 10, undefined],
+    ["//server/share/image.png", 10, undefined],
+  ])(
+    "uses conservative native-path token boundaries in %s",
+    (text, offset, expected) => {
+      expect(visibleLinkAtOffset(text, offset)?.url).toBe(expected);
+    },
+  );
+
+  it("preserves native-path punctuation exactly instead of trimming it", () => {
+    expect(visibleLinkAtOffset("/tmp/image.png,", 4)?.url).toBe(
+      "/tmp/image.png,",
+    );
+  });
+
+  it("refuses native paths that may continue beyond the visible viewport", () => {
+    expect(
+      visibleLinkAtOffset("/tmp/image.png", 4, true, false),
+    ).toBeUndefined();
+    expect(
+      visibleLinkAtOffset("/tmp/image.png", 4, false, true),
+    ).toBeUndefined();
   });
 
   it("accepts only visible lowercase supported schemes", () => {

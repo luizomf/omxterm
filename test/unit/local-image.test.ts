@@ -163,6 +163,50 @@ describe("native local image request", () => {
     },
   );
 
+  it.each([
+    ["win32", "\\\\server\\share\\a.png"],
+    ["win32", "\\\\?\\C:\\a.png"],
+    ["win32", "C:relative.png"],
+    ["win32", "/tmp/image.png"],
+    ["linux", "C:\\Users\\me\\image.png"],
+    ["linux", "relative/image.png"],
+    ["linux", "//server/share/a.png"],
+    ["linux", "/tmp/control\nname.png"],
+  ] as const)(
+    "rejects a %s non-local or ambiguous native-path activation %s before reading",
+    async (platform, filePath) => {
+      const read = vi.fn();
+      await expect(
+        loadLocalImageRequest(
+          { source: "native-path", path: filePath },
+          { platform, chooseFile: async () => null, read },
+        ),
+      ).rejects.toThrow("Invalid local image path");
+      expect(read).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["linux", "/tmp/image%23#literal.png"],
+    ["win32", "C:\\Users\\me\\image%23#literal.jpg"],
+  ] as const)(
+    "preserves an exact %s native-path activation without URL decoding",
+    async (platform, filePath) => {
+      const read = vi.fn(async () => ({
+        name: "image.png",
+        mime: "image/png" as const,
+        width: 1,
+        height: 1,
+        data: new Uint8Array(PNG_1X1),
+      }));
+      await loadLocalImageRequest(
+        { source: "native-path", path: filePath },
+        { platform, chooseFile: async () => null, read },
+      );
+      expect(read).toHaveBeenCalledExactlyOnceWith(filePath);
+    },
+  );
+
   it("preserves a drive-qualified local picker path", async () => {
     const read = vi.fn(async () => ({
       name: "image.png",

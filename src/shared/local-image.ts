@@ -1,7 +1,7 @@
 export const MAX_LOCAL_IMAGE_BYTES = 16 * 1024 * 1024;
 export const MAX_LOCAL_IMAGE_SIDE = 8192;
 export const MAX_LOCAL_IMAGE_PIXELS = 16_000_000;
-export const MAX_LOCAL_IMAGE_URL_LENGTH = 32_768;
+export const MAX_LOCAL_IMAGE_SOURCE_LENGTH = 32_768;
 
 export type LocalImageMime = "image/png" | "image/jpeg";
 
@@ -13,21 +13,30 @@ export interface LocalImageData {
   readonly data: Uint8Array;
 }
 
+export type LocalImageActivation =
+  | { readonly source: "file-url"; readonly url: string }
+  | { readonly source: "native-path"; readonly path: string };
+
 export type LocalImageRequest =
-  | { readonly source: "picker" }
-  | { readonly source: "file-url"; readonly url: string };
+  { readonly source: "picker" } | LocalImageActivation;
 
 export function isLocalImageRequest(
   value: unknown,
 ): value is LocalImageRequest {
   if (!isRecord(value)) return false;
   if (value.source === "picker") return Object.keys(value).length === 1;
+  if (Object.keys(value).length !== 2) return false;
+  if (value.source === "file-url")
+    return (
+      typeof value.url === "string" &&
+      value.url.length > 0 &&
+      value.url.length <= MAX_LOCAL_IMAGE_SOURCE_LENGTH
+    );
   return (
-    value.source === "file-url" &&
-    Object.keys(value).length === 2 &&
-    typeof value.url === "string" &&
-    value.url.length > 0 &&
-    value.url.length <= MAX_LOCAL_IMAGE_URL_LENGTH
+    value.source === "native-path" &&
+    typeof value.path === "string" &&
+    value.path.length > 0 &&
+    value.path.length <= MAX_LOCAL_IMAGE_SOURCE_LENGTH
   );
 }
 
@@ -37,7 +46,7 @@ export function isLocalImageData(value: unknown): value is LocalImageData {
   return (
     typeof name === "string" &&
     name.length > 0 &&
-    name.length <= MAX_LOCAL_IMAGE_URL_LENGTH &&
+    name.length <= MAX_LOCAL_IMAGE_SOURCE_LENGTH &&
     (mime === "image/png" || mime === "image/jpeg") &&
     Number.isInteger(width) &&
     Number.isInteger(height) &&

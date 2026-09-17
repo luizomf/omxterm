@@ -32,6 +32,7 @@ import type { TerminalRendererConfiguration } from "../shared/user-configuration
 import {
   isLocalImageData,
   isLocalImageRequest,
+  type LocalImageActivation,
   type LocalImageRequest,
 } from "../shared/local-image";
 import {
@@ -139,11 +140,8 @@ const terminal: TerminalBridge = {
       throw new TypeError("Invalid External Link request");
     ipcRenderer.send(terminalIpc.externalLink, url);
   },
-  loadLocalImage(fileUrl?: string) {
-    const request: LocalImageRequest =
-      fileUrl === undefined
-        ? { source: "picker" }
-        : { source: "file-url", url: fileUrl };
+  loadLocalImage(source?: LocalImageActivation) {
+    const request: LocalImageRequest = source ?? { source: "picker" };
     if (!isLocalImageRequest(request))
       throw new TypeError("Invalid local image request");
     return ipcRenderer

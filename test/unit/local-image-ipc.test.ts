@@ -47,10 +47,13 @@ describe("local image IPC ownership", () => {
       { source: "picker", url: "file:///tmp/a.png" },
       { source: "file-url", url: "" },
       { source: "file-url", url: "x".repeat(32_769) },
+      { source: "native-path", path: "" },
+      { source: "native-path", path: "/tmp/a.png", url: "forged" },
+      { source: "native-path", path: "x".repeat(32_769) },
     ])
       await expect(boundary.request(payload)).rejects.toThrow(TypeError);
     expect(load).not.toHaveBeenCalled();
-    expect(reject).toHaveBeenCalledTimes(4);
+    expect(reject).toHaveBeenCalledTimes(7);
     boundary.dispose();
   });
 });

@@ -59,7 +59,7 @@ describe("local image boundary through native Electron", () => {
           path.join(root, "package.json"),
           `${JSON.stringify({ name: "omxterm-local-image-fixture", main: "main.cjs" })}\n`,
         ),
-        writeFile(path.join(root, "fixture.data"), PNG_1X1),
+        writeFile(path.join(root, "fixture%23#literal.data"), PNG_1X1),
       ]);
       const execution = await runFixture(root);
       const line = execution.stdout
