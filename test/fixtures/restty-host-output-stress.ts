@@ -5,6 +5,7 @@ import { terminalIpc } from "../../src/shared/terminal-ipc";
 
 const RECORDS = 65_536;
 const RECORD_BYTES = 32;
+const READY = "__OMXTERM_OUTPUT_READY__";
 const BEGIN = "__OMXTERM_OUTPUT_BEGIN__";
 const END = "__OMXTERM_OUTPUT_END__";
 const SESSION_INDEX = 2;
@@ -34,7 +35,7 @@ export function outputStressLaunchRequest(
   const executable = process.env["npm_node_execpath"];
   if (!executable)
     throw new Error("Native output fixture requires npm_node_execpath");
-  const producer = `let i=0;const write=()=>{if(i===0)process.stdout.write("__OMXTERM_"+"OUTPUT_BEGIN__");while(i<${RECORDS}){const line=String(i).padStart(8,"0")+":"+"x".repeat(23);i++;if(!process.stdout.write(line)){process.stdout.once("drain",write);return}}process.stdout.write("__OMXTERM_"+"OUTPUT_END__");process.stdin.once("data",()=>process.exit(0))};process.stdin.once("data",write);process.stdin.resume()`;
+  const producer = `let i=0;const write=()=>{if(i===0)process.stdout.write("__OMXTERM_"+"OUTPUT_BEGIN__");while(i<${RECORDS}){const line=String(i).padStart(8,"0")+":"+"x".repeat(23);i++;if(!process.stdout.write(line)){process.stdout.once("drain",write);return}}process.stdout.write("__OMXTERM_"+"OUTPUT_END__");process.stdin.once("data",()=>process.exit(0))};process.stdin.once("data",write);process.stdin.resume();process.stdout.write("${READY}")`;
   return {
     kind: "explicit-command",
     executable,
@@ -46,6 +47,7 @@ export function createOutputStressHarness() {
   let active = false;
   let bytes = 0;
   let began = false;
+  let producerReady = false;
   let nextRecord = 0;
   let remainder = "";
   let endSeen = false;
@@ -55,6 +57,7 @@ export function createOutputStressHarness() {
   const observeOutput = (index: number, data: string): boolean => {
     if (index !== SESSION_INDEX || !active) return false;
     remainder += data;
+    producerReady ||= remainder.includes(READY);
     if (!began) {
       const begin = remainder.indexOf(BEGIN);
       if (begin < 0) remainder = remainder.slice(-BEGIN.length);
@@ -109,6 +112,10 @@ export function createOutputStressHarness() {
           options.resizes[SESSION_INDEX]!.length > 0,
         "output-stress Restty tab",
       );
+      // A mounted tab does not prove its native child has finished startup.
+      // Stall only after the producer can consume the trigger; otherwise slow
+      // startup can use the entire stall window without producing any output.
+      await options.waitFor(() => producerReady, "output producer readiness");
       const terminal = options.terminals[SESSION_INDEX]!;
       const resizesBefore = options.resizes[SESSION_INDEX]!.length;
       const rendererStall = options.window.webContents.executeJavaScript(
