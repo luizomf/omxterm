@@ -63,34 +63,38 @@ but they do not replace the maintained product contract.
 
 ## Release status
 
-### Accepted release awaiting publication: 0.12.0
+### Current published release: 0.12.0 for macOS and Linux
 
-- [0.12.0 prepublication record](releases/0.12.0.md) describes migration,
-  changed-boundary automation and the exact six owner-accepted macOS/Linux file
-  identities.
-- The owner separately authorized manual publication in
-  [issue #311](https://github.com/luizomf/omxterm/issues/311), but 0.12.0 is
-  **not published yet**: there is no tag or GitHub Release, and its filenames
-  are not download links.
+- [0.12.0 release record](releases/0.12.0.md) describes migration,
+  changed-boundary automation, the six owner-accepted macOS/Linux file
+  identities, separate publication authorization, source mapping, and fresh
+  post-publication download verification.
+- The authenticated
+  [v0.12.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.12.0)
+  was published on 2026-09-18 at 23:51:24 UTC with exactly those six files.
 - The 0.12.0 platform exception contains no Windows candidate or qualification.
   Windows ARM64 remains a Supported Platform, and its unchanged latest published
   version is [0.11.0](releases/0.11.0.md) from the existing
   [v0.11.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.11.0).
+  Windows 0.11.0 does not contain the 0.12.0 changes.
 
-### Current published downloads: 0.11.0
+The 0.12.0 tag targets reviewed source
+`1c1ba485da23612bafe44ee19c3b526993dfe841`, which retains artifact build source
+`87aa8eb44ce355c6ae967eee17c2ddb9e1b6762a` in its ancestry. Its tree matches
+PR #312 squash `935d1091743ce457a2b7501da761ad5e409b6345`; see the release record for the
+complete mapping. Repository visibility remains private. Published assets were
+verified through authenticated downloads, and unauthenticated access is not
+claimed.
+
+### Previous immutable published release: 0.11.0
 
 - [0.11.0 release notes](releases/0.11.0.md) describe Chafa support, the Linux
   launch policy, the Windows transport fix, exact accepted artifact identities,
   native verification and remaining limitations.
 - [v0.11.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.11.0)
-  contains the unchanged owner-accepted artifacts and checksums.
+  remains unchanged and supplies the current Windows ARM64 download.
 
-All three 0.11.0 ARM64 builds use source
-`741a1cc67597bfdbe5aacf4933a01760c658f352`. Only eligible non-packaged Markdown
-differs between that commit and the tag; see the release record. Repository
-visibility remains private, and unauthenticated access is not claimed.
-
-### Previous immutable published release: 0.10.0
+### Earlier immutable published release: 0.10.0
 
 - [0.10.0 release notes](releases/0.10.0.md) preserve the exact artifact
   identities and historical evidence.

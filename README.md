@@ -19,68 +19,54 @@ not current support commitments.
 
 ## Release status
 
-### Current published release: 0.11.0
+### Current published release: 0.12.0 for macOS and Linux
 
-The current downloads remain on the authenticated
-[v0.11.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.11.0).
-The [release notes](docs/releases/0.11.0.md) describe changes, exact artifact
-hashes and native verification. All three platforms use the same verified build
-source, `741a1cc67597bfdbe5aacf4933a01760c658f352`.
-
-| Platform                         | Package                                                                                                                 | Checksum                                                                                                                  |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| macOS ARM64                      | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.11.0/OMXTerm-0.11.0-arm64.dmg)                            | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.11.0/OMXTerm-0.11.0-arm64.dmg.sha256)                   |
-| Linux ARM64                      | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.11.0/OMXTerm-0.11.0-arm64.AppImage)                  | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.11.0/OMXTerm-0.11.0-arm64.AppImage.sha256)              |
-| Linux optional desktop installer | [Shell helper](https://github.com/luizomf/omxterm/releases/download/v0.11.0/OMXTerm-0.11.0-arm64.AppImage-installer.sh) | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.11.0/OMXTerm-0.11.0-arm64.AppImage-installer.sh.sha256) |
-| Windows ARM64                    | [NSIS installer](https://github.com/luizomf/omxterm/releases/download/v0.11.0/OMXTerm-0.11.0-arm64.exe)                 | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.11.0/OMXTerm-0.11.0-arm64.exe.sha256)                   |
-
-The packages carry no verified publisher identity. The macOS app has a verified
-ad-hoc integrity seal, but no Apple Developer ID signature or notarization.
-Previous [0.10.0 release notes](docs/releases/0.10.0.md) remain immutable history.
-
-### Accepted 0.12.0 files awaiting publication
-
-The owner has accepted the exact six macOS/Linux 0.12.0 files in the
-[prepublication record](docs/releases/0.12.0.md) and separately authorized their
-manual publication in
-[issue #311](https://github.com/luizomf/omxterm/issues/311). **Publication has
-not happened yet:** there is no `v0.12.0` tag or GitHub Release, and the 0.12.0
-filenames below are not download links. Until the authorized publication is
-completed and verified, the v0.11.0 links above and installation commands below
-remain current.
+The authenticated
+[v0.12.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.12.0)
+was published on 2026-09-18 at 23:51:24 UTC. The
+[release record](docs/releases/0.12.0.md) describes the material changes,
+migration, exact artifact identities, native verification, acceptance,
+separate publication authorization, and post-publication download verification.
 
 There is no Windows 0.12.0 candidate after its native gate failed; diagnosis is
 deferred to [#310](https://github.com/luizomf/omxterm/issues/310). Windows ARM64
 remains a Supported Platform, with the published 0.11.0 installer unchanged and
-no 0.12.0 qualification or feature claim.
+no 0.12.0 qualification or feature claim. Windows 0.11.0 does not include the
+0.12.0 changes.
 
-| Platform                         | Accepted or currently published package                                                                        | Status / checksum                                                                                                          |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| macOS ARM64                      | `OMXTerm-0.12.0-arm64.dmg`                                                                                     | Owner accepted; authorized publication pending; SHA-256 `ed17cba1f77b6d2250f734ef4df4faa4637dc3d74635f1cff4584e3f20fcccb0` |
-| Linux ARM64                      | `OMXTerm-0.12.0-arm64.AppImage`                                                                                | Owner accepted; authorized publication pending; SHA-256 `7dcd33b76495a707918daebae23c1707a90f512af0c18a33b976d4da3116eb4c` |
-| Linux optional desktop installer | `OMXTerm-0.12.0-arm64.AppImage-installer.sh`                                                                   | Owner accepted; authorized publication pending; SHA-256 `181f2c4ff1ba93536328cd026272c64c435f320695aa2cf21f08a28676e5b936` |
-| Windows ARM64                    | [0.11.0 NSIS installer](https://github.com/luizomf/omxterm/releases/download/v0.11.0/OMXTerm-0.11.0-arm64.exe) | [0.11.0 SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.11.0/OMXTerm-0.11.0-arm64.exe.sha256)             |
+| Platform                      | Published package                                                                                                       | Checksum                                                                                                                  |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| macOS ARM64 (0.12.0)          | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.12.0/OMXTerm-0.12.0-arm64.dmg)                            | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.12.0/OMXTerm-0.12.0-arm64.dmg.sha256)                   |
+| Linux ARM64 (0.12.0)          | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.12.0/OMXTerm-0.12.0-arm64.AppImage)                  | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.12.0/OMXTerm-0.12.0-arm64.AppImage.sha256)              |
+| Linux desktop helper (0.12.0) | [Shell helper](https://github.com/luizomf/omxterm/releases/download/v0.12.0/OMXTerm-0.12.0-arm64.AppImage-installer.sh) | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.12.0/OMXTerm-0.12.0-arm64.AppImage-installer.sh.sha256) |
+| Windows ARM64 (0.11.0)        | [NSIS installer](https://github.com/luizomf/omxterm/releases/download/v0.11.0/OMXTerm-0.11.0-arm64.exe)                 | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.11.0/OMXTerm-0.11.0-arm64.exe.sha256)                   |
+
+The packages carry no verified publisher identity. The macOS 0.12.0 app has a
+verified ad-hoc integrity seal, but no Apple Developer ID signature or
+notarization. Previous release records remain immutable history.
 
 ### Publication visibility
 
 The canonical GitHub repository remains **private**. The authenticated
-[v0.11.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.11.0)
-is the canonical publication record. This documentation does not change
-repository visibility. Unauthenticated access to GitHub release and issue links
-has not been validated and is not claimed.
+[v0.12.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.12.0)
+is the current canonical publication record. This documentation does not change
+repository visibility. Post-publication asset verification used authenticated
+downloads; unauthenticated access to GitHub release and issue links has not been
+validated and is not claimed.
 
 ## Installation
 
-The commands below apply to the currently published 0.11.0 assets. Keep each
-package and its matching `.sha256` file in the same directory, verify the checksum before
-opening the package, and do not install an artifact whose check fails.
+The macOS and Linux commands below apply to 0.12.0. Windows remains visibly
+versioned at 0.11.0. Keep each package and its matching `.sha256` file in the
+same directory, verify the checksum before opening the package, and do not
+install an artifact whose check fails.
 
 ### macOS
 
 Verify the Apple Silicon DMG:
 
 ```sh
-shasum -a 256 -c OMXTerm-0.11.0-arm64.dmg.sha256
+shasum -a 256 -c OMXTerm-0.12.0-arm64.dmg.sha256
 ```
 
 Open the DMG, drag `OMXTerm.app` to Applications, eject the DMG, and launch the
@@ -98,21 +84,21 @@ checksum-verified artifact. If you choose to open it, follow Apple's current
 Verify the unsigned AppImage, make it executable, and run it:
 
 ```sh
-sha256sum --check OMXTerm-0.11.0-arm64.AppImage.sha256
-chmod +x OMXTerm-0.11.0-arm64.AppImage
-./OMXTerm-0.11.0-arm64.AppImage
+sha256sum --check OMXTerm-0.12.0-arm64.AppImage.sha256
+chmod +x OMXTerm-0.12.0-arm64.AppImage
+./OMXTerm-0.12.0-arm64.AppImage
 ```
 
 If kernel FUSE mounting is unavailable, use the supported fallback:
 
 ```sh
-./OMXTerm-0.11.0-arm64.AppImage --appimage-extract-and-run
+./OMXTerm-0.12.0-arm64.AppImage --appimage-extract-and-run
 ```
 
 Linux needs the `fontconfig` utilities. OMXTerm defaults to X11, so Wayland
 sessions must provide XWayland; native Wayland rendering is not claimed.
 
-Starting with 0.11.0, OMXTerm runs with `--no-sandbox` on Linux to avoid
+OMXTerm runs with `--no-sandbox` on Linux to avoid
 startup incompatibilities in some environments. Context isolation and the
 minimal preload bridge remain enabled, but do not replace the Chromium sandbox.
 Sandboxed Linux support is outside the current maintenance scope; simple,
@@ -124,10 +110,10 @@ ensure the helper's `file` command prerequisite is installed, then verify the
 optional helper separately before running it:
 
 ```sh
-sha256sum --check OMXTerm-0.11.0-arm64.AppImage.sha256
-sha256sum --check OMXTerm-0.11.0-arm64.AppImage-installer.sh.sha256
-chmod +x OMXTerm-0.11.0-arm64.AppImage OMXTerm-0.11.0-arm64.AppImage-installer.sh
-./OMXTerm-0.11.0-arm64.AppImage-installer.sh install ./OMXTerm-0.11.0-arm64.AppImage
+sha256sum --check OMXTerm-0.12.0-arm64.AppImage.sha256
+sha256sum --check OMXTerm-0.12.0-arm64.AppImage-installer.sh.sha256
+chmod +x OMXTerm-0.12.0-arm64.AppImage OMXTerm-0.12.0-arm64.AppImage-installer.sh
+./OMXTerm-0.12.0-arm64.AppImage-installer.sh install ./OMXTerm-0.12.0-arm64.AppImage
 ```
 
 The helper structurally validates the supplied local Linux ARM64 AppImage, but

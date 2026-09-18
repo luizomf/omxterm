@@ -85,7 +85,7 @@ changes, and the squash-integrated source tree must match the tagged tree.
 
 ## 0.12.0 release-specific platform exception
 
-The maintainer has authorized 0.12.0 preparation with only the macOS ARM64 DMG
+The maintainer authorized and published 0.12.0 with only the macOS ARM64 DMG
 and Linux ARM64 AppImage plus optional installer. Windows ARM64 remains a
 Supported Platform, but there is no Windows 0.12.0 candidate: its native gate
 failed before packaging, and diagnosis is deferred to issue #310. The latest
@@ -98,18 +98,19 @@ macOS and Linux identities still require their complete native commands,
 changed-boundary evidence, exact checksums, cleanup, owner acceptance and
 separate publication authorization. A Windows 0.12.0 file must not be attached,
 and no macOS or Linux result may be presented as Windows qualification. The
-only intended 0.12.0 attachment set is the DMG, AppImage and versioned Linux
-installer plus their three matching checksum files. Until publication actually
-occurs, all available platform downloads remain 0.11.0.
+0.12.0 attachment set is the DMG, AppImage and versioned Linux installer plus
+their three matching checksum files. They were published unchanged; macOS and
+Linux downloads are now 0.12.0, while Windows remains explicitly 0.11.0.
 
-## Accepted 0.12.0 artifacts and publication authority
+## Published 0.12.0 artifacts and authority
 
-The owner has **ACCEPTED** these exact six canonical macOS/Linux identities and,
+The owner **ACCEPTED** these exact six canonical macOS/Linux identities and,
 separately, **AUTHORIZED** their manual publication through
-[issue #311](https://github.com/luizomf/omxterm/issues/311). Publication has not
-yet occurred: `v0.12.0` and its GitHub Release do not exist. Acceptance and
-authorization do not turn local filenames into downloads or permit a rebuild,
-replacement, Windows 0.12.0 attachment, or automatic publication.
+[issue #311](https://github.com/luizomf/omxterm/issues/311). The immutable
+[v0.12.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.12.0)
+(release ID `391846996`) was published on `2026-09-18T23:51:24Z` with exactly
+those six files and no Windows 0.12.0 attachment. Publication did not authorize
+a rebuild, replacement, additional attachment, or automatic publication.
 
 | File                                                |     Bytes | SHA-256                                                            |
 | --------------------------------------------------- | --------: | ------------------------------------------------------------------ |
@@ -120,14 +121,15 @@ replacement, Windows 0.12.0 attachment, or automatic publication.
 | `OMXTerm-0.12.0-arm64.AppImage-installer.sh`        |      6215 | `181f2c4ff1ba93536328cd026272c64c435f320695aa2cf21f08a28676e5b936` |
 | `OMXTerm-0.12.0-arm64.AppImage-installer.sh.sha256` |       109 | `14eb1c670126f1f618f66500acafea3acb3adcf989511de9f33c3dd3ff83ad69` |
 
-The canonical [0.12.0 prepublication record](releases/0.12.0.md) preserves the
-native evidence, migration guidance, limitations, and source mapping. The
-planned tag must point to the final independently reviewed prepublication source
-that retains artifact-build commit
-`87aa8eb44ce355c6ae967eee17c2ddb9e1b6762a` in its ancestry and whose tree is
-identical to the squash-integrated publication-documentation tree. Record the
-exact final tag commit and integrated commit in issue #311 after integration;
-do not predict a future commit ID or tag the squash-only ancestry.
+The canonical [0.12.0 release record](releases/0.12.0.md) preserves the native
+evidence, migration guidance, limitations, source mapping, and post-publication
+verification. Annotated tag `v0.12.0` dereferences to independently reviewed
+source `1c1ba485da23612bafe44ee19c3b526993dfe841`, which retains artifact-build
+commit `87aa8eb44ce355c6ae967eee17c2ddb9e1b6762a` in its ancestry. Its tree
+`f0c2776e239c546340d9db80b71ee6f4a8900589` equals PR #312 squash
+`935d1091743ce457a2b7501da761ad5e409b6345`. Only `README.md`,
+`docs/README.md`, `docs/release.md`, and `docs/releases/0.12.0.md` differ from
+the build source, all eligible non-packaged Markdown.
 
 ## Version selection and consistency
 
