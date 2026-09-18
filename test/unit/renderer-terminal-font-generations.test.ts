@@ -2,6 +2,26 @@ import { describe, expect, it, vi } from "vitest";
 import { createTerminalFontGenerationOwner } from "../../src/renderer/terminal-font-generations";
 
 describe("renderer Terminal Font generations", () => {
+  it.each([false, true])(
+    "removes pending cancellation listeners after settlement (failure: %s)",
+    async (fails) => {
+      const abort = new AbortController();
+      const add = vi.spyOn(abort.signal, "addEventListener");
+      const remove = vi.spyOn(abort.signal, "removeEventListener");
+      const owner = createTerminalFontGenerationOwner(async () => {
+        if (fails) throw new Error("load failed");
+        return { fallbacks: [] };
+      });
+      if (fails)
+        await expect(owner.acquire(undefined, abort.signal)).rejects.toThrow(
+          "load failed",
+        );
+      else (await owner.acquire(undefined, abort.signal)).release();
+      expect(add).toHaveBeenCalledOnce();
+      expect(remove).toHaveBeenCalledWith("abort", add.mock.calls[0]![1]);
+      owner.dispose();
+    },
+  );
   it("shares one caller-isolated native backing across compatible live Surface leases", async () => {
     const callerBytes = new Uint8Array([10, 11, 12]);
     const load = vi.fn(async () => ({

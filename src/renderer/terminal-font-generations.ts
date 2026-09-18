@@ -100,11 +100,11 @@ export function createTerminalFontGenerationOwner(
       releaseReference(generation);
     };
 
+    const pendingCancellation = cancellation([abortSignal, disposal.signal]);
     try {
       const fonts = await Promise.race([
         load(generation),
-        cancellation(abortSignal),
-        cancellation(disposal.signal),
+        pendingCancellation.promise,
       ]);
       if (disposed || abortSignal?.aborted) {
         release();
@@ -114,6 +114,8 @@ export function createTerminalFontGenerationOwner(
     } catch (error) {
       release();
       throw error;
+    } finally {
+      pendingCancellation.dispose();
     }
   };
 
@@ -148,18 +150,21 @@ function createGeneration(family: string | undefined): FontGeneration {
   };
 }
 
-function cancellation(signal: AbortSignal | undefined): Promise<never> {
-  if (!signal) return new Promise<never>(() => undefined);
-  return new Promise<never>((_resolve, reject) => {
-    if (signal.aborted) {
+function cancellation(signals: readonly (AbortSignal | undefined)[]) {
+  let cancel: () => void = () => undefined;
+  const promise = new Promise<never>((_resolve, reject) => {
+    cancel = () =>
       reject(new Error("Terminal Font generation acquisition was cancelled"));
-      return;
+    for (const signal of signals) {
+      if (signal?.aborted) cancel();
+      else signal?.addEventListener("abort", cancel, { once: true });
     }
-    signal.addEventListener(
-      "abort",
-      () =>
-        reject(new Error("Terminal Font generation acquisition was cancelled")),
-      { once: true },
-    );
   });
+  return {
+    promise,
+    dispose() {
+      for (const signal of signals)
+        signal?.removeEventListener("abort", cancel);
+    },
+  };
 }
