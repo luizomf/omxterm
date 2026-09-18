@@ -7,7 +7,6 @@ import {
   type ResttyTerminalConfig,
 } from "restty";
 import type { TerminalSize } from "../shared/terminal-contract";
-import type { TerminalFontData } from "../shared/terminal-font-data";
 import {
   createSemanticInputDelivery,
   type SemanticInputDelivery,
@@ -40,6 +39,7 @@ import {
 import { resttyHostServices } from "./restty-host-services";
 import { toGhosttyTheme } from "./restty-theme";
 import type {
+  TerminalFontInputLease,
   TerminalSurface,
   TerminalSurfaceConfiguration,
   TerminalSurfaceOptions,
@@ -47,6 +47,7 @@ import type {
 import {
   DEFAULT_TERMINAL_FONT_FAMILY,
   terminalFontInputs,
+  type TerminalFontInput,
 } from "./terminal-font-stack";
 const RESTTY_SCROLLBACK_MAX_BYTES = 10_000_000;
 
@@ -94,7 +95,7 @@ type CandidatePane = {
 };
 
 function resttyTerminalConfig(
-  fontData: TerminalFontData,
+  fonts: readonly TerminalFontInput[],
   fontSize: number,
   lineHeight: number,
   scrollbackLines: number,
@@ -108,7 +109,7 @@ function resttyTerminalConfig(
     maxScrollbackBytes: RESTTY_SCROLLBACK_MAX_BYTES,
     scrollbackLines,
     optionKeyMode: optionKeyMode ?? "none",
-    fonts: terminalFontInputs(fontData),
+    fonts: [...fonts],
     theme: toGhosttyTheme(theme),
     showResizeOverlay: false,
   };
@@ -183,6 +184,7 @@ export async function mountResttyTerminalSurface(
   let removeRuntimeListener: (() => void) | undefined;
   let visibleLinkController: ResttyVisibleLinkController | undefined;
   let restty: Restty | undefined;
+  let fontLease: TerminalFontInputLease | undefined;
   let pane: CandidatePane | undefined;
   let baselineFontSize = resolveFontSize(options.appearance?.fontSize);
   let currentFontSize = baselineFontSize;
@@ -251,7 +253,9 @@ export async function mountResttyTerminalSurface(
       () => visibleLinkController?.dispose(),
       () => adapter.close(reason),
       () => restty?.destroy(),
+      () => fontLease?.release(),
     ]);
+    fontLease = undefined;
     removeRuntimeListener = undefined;
     visibleLinkController = undefined;
   };
@@ -293,22 +297,18 @@ export async function mountResttyTerminalSurface(
   };
 
   try {
-    const loadedFonts = options.loadFontData
-      ? await options.loadFontData(initialFamily)
-      : { fallbacks: [] };
+    fontLease = options.acquireFontInputs
+      ? await options.acquireFontInputs(initialFamily, options.abortSignal)
+      : {
+          fonts: terminalFontInputs({ fallbacks: [] }),
+          release: () => undefined,
+        };
     if (options.abortSignal?.aborted)
       throw new Error("Restty initialization was cancelled");
-    if (
-      initialFamily !== undefined &&
-      loadedFonts.configured?.family !== initialFamily
-    )
-      throw new Error(
-        "Configured Terminal Font data did not match the requested family",
-      );
     container.classList.add("restty-terminal-surface");
     setContainerAppearance(container, padding, terminalTheme);
     const terminal = resttyTerminalConfig(
-      loadedFonts,
+      fontLease.fonts,
       baselineFontSize,
       initialLineHeight,
       scrollbackLines,

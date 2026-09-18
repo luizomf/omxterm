@@ -101,21 +101,45 @@ There is no fallback renderer.
 
 ### Font memory ownership
 
-Concurrent tab initialization shares only the pending native font load for the
-same Terminal Window and validated font-family generation. Configuration changes
-invalidate stale results and serialize replacement reads behind the pending load;
-completion or failure releases the transient state rather than caching font bytes.
-The native host fixture holds that read until four tab requests have crossed the
-real preload/main boundary, then verifies Surface readiness without a false error.
+Each renderer Terminal Window owns one active validated font-family generation.
+The first Surface lease in a generation loads native configured and fallback
+bytes through the existing preload/main route, snapshots each external
+`Uint8Array` once into an exact-range owned `ArrayBuffer`, and publishes the
+complete ordered stack only after isolation. Concurrent and later compatible
+live Surfaces borrow the same backing identities. Restty's existing
+identity-keyed source and parsed resource store can therefore share one native
+source and parsed key per face in that window rather than creating both per
+Surface. Bundled inputs remain stable shared views.
 
-Native configured and fallback fonts keep the same coverage and ordering. The
-Surface snapshots each native `Uint8Array` into one exact-range owned
-`ArrayBuffer` before handing it to Restty. Restty borrows ArrayBuffer inputs but
-copies views; using the owned snapshot lets its configuration and parsed
-resources share one backing store without borrowing mutable IPC/caller bytes or
-retaining a second full native font. Bundled inputs remain stable shared views.
-This reduces retained copies, not the transient cost of IPC and snapshotting.
-Large native emoji and CJK fonts still contribute to fresh-tab memory.
+A rejected load publishes nothing and a later acquisition retries. One pending
+lease may be cancelled without invalidating another. A validated configured-
+family change selects a new generation for newly created Surfaces; old live
+Surfaces keep their creation-time generation. Pending old results cannot publish
+into the new generation, and disposal makes late results inert. Closing one tab
+releases only its lease. Final generation release drops the renderer owner's
+font references, and Terminal Window disposal releases every remaining lease and
+the owner; Restty's separately bounded released-resource cache semantics remain
+unchanged. Owners are never shared across Terminal Windows, and there is no
+persistent byte cache, content hashing, lazy coverage or global store.
+
+`ArrayBuffer` is mutable, so ownership alone is not the read-only guarantee. In
+the pinned Restty runtime, buffer sources pass through `toSourceBuffer` without a
+write and `parseFontFacesFromBuffer` passes that same buffer to text-shaper.
+Pinned text-shaper's `Font.loadAsync` uses its `DataView` reader's getter
+methods; source inspection found no write to the borrowed TTF on this path. The
+installed-consumer integration test snapshots a real bundled TTF, parses it through the actual
+Restty resource store, exercises a glyph lookup, releases the lease, and checks
+the complete source before and after. Dependency checksums make drift fail
+preparation instead of silently extending this borrowing assumption.
+
+The native host fixture starts with one ready Surface, creates four tabs
+concurrently, verifies that the live window generation causes zero additional
+renderer font requests or native load batches, then checks real Surface
+readiness and cleanup without a false error. Sharing reduces retained native
+source identities and duplicate parsing; it does not
+remove transient IPC/snapshot costs, Restty's bounded released cache, native
+shaping allocations, browser/WebGL resources or GPU memory. Large native emoji
+and CJK fonts still contribute to the first generation in each window.
 
 The pinned font-resource correction reserves each source before asynchronous
 load/parse, so budget eviction cannot leave parsed faces without their source

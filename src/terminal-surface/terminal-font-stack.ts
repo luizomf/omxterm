@@ -72,8 +72,8 @@ export function terminalFontInputs(
 
 function nativeFontSnapshot(data: Uint8Array): ArrayBuffer {
   // Restty copies views but borrows ArrayBuffers. Own an exact-range snapshot
-  // here so configuration and parsed resources share one immutable input,
-  // without borrowing IPC/caller bytes or retaining a second full native font.
+  // before publication so a generation can share one parser input without
+  // borrowing IPC/caller bytes or retaining a second full native font.
   return new Uint8Array(data).buffer;
 }
 

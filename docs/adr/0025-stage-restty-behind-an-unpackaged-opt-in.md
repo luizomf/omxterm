@@ -55,12 +55,19 @@ configured size and creation-time line height, apply per-side padding, and
 preserve per-window zoom through runtime operations. Main resolves an exact
 installed regular face through conventional native platform facilities, bounds
 and validates the read, and exposes only bytes for the active validated family
-and fixed local fallback candidates through sender-validated IPC. Restty orders
-the configured face before bundled FiraCode Nerd Font Mono regular/bold,
-DejaVu Sans Mono regular/bold, the retained JetBrainsMono Nerd Font Mono face,
-and available local OS emoji/CJK/symbol fallbacks. The renderer cannot provide
-a path or enumerate files; there is no remote fallback, Operational Event font
-data, or persistent byte cache.
+and fixed local fallback candidates through sender-validated IPC. One renderer
+Terminal Window owns an isolated native-font snapshot for each active validated
+family generation. Compatible live Surfaces in that window lease the same exact
+ArrayBuffer backing identities, allowing Restty's existing identity-keyed source
+and parsed resource store to share them. Superseded generations remain alive
+only for their creation-time Surface leases; final release or window disposal
+relinquishes the renderer owner's references. Other windows have independent
+owners. This is a focused lifetime seam, not a global or persistent font cache.
+Restty orders the configured face before bundled FiraCode Nerd Font Mono
+regular/bold, DejaVu Sans Mono regular/bold, the retained JetBrainsMono Nerd
+Font Mono face, and available local OS emoji/CJK/symbol fallbacks. The renderer
+cannot provide a path or enumerate files; there is no remote fallback,
+Operational Event font data, or persistent byte cache.
 
 Theme, size and padding update existing Surfaces without replacing their core
 or PTY. `font.family` and `font.lineHeight` are the complete restart-only set:

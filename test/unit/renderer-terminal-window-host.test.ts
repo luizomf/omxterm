@@ -374,7 +374,86 @@ describe("renderer Terminal Window page host", () => {
     expect(adapterCloses[1]).not.toHaveBeenCalled();
     host.dispose();
   });
+});
 
+describe("renderer Terminal Window font ownership", () => {
+  it("shares a font generation within one window and advances it for new configured-family tabs", async () => {
+    const configuration = {
+      fontFamily: "First Family",
+      fontSize: 16,
+      fontLineHeight: 1,
+      terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
+      scrollbackLines: 10_000,
+      optionKeyMode: "none",
+      nativeTitleInset: 0,
+      terminalTheme: DEFAULT_TERMINAL_THEME,
+      userFileErrors: [],
+    } as const;
+    const loadFontData = vi.fn(async (family: string | undefined) => ({
+      configured: {
+        family: family!,
+        data: new Uint8Array([family === "First Family" ? 1 : 2]),
+      },
+      fallbacks: [],
+    }));
+    const backings: ArrayBuffer[] = [];
+    let commandListener: ((command: { action: "new" }) => void) | undefined;
+    let configurationListener:
+      ((configuration: TerminalRendererConfiguration) => void) | undefined;
+    const host = mountTerminalWindowPage(createPageElements(), {
+      createAdapter: createAdapterFactory(),
+      configuration,
+      page: window,
+      loadFontData,
+      mount: vi.fn(
+        async (
+          _container: HTMLElement,
+          _adapter: TerminalSessionAdapter,
+          options: TerminalSurfaceOptions,
+        ) => {
+          const lease = await options.acquireFontInputs!(
+            options.appearance?.systemFont?.family,
+            options.abortSignal,
+          );
+          backings.push(lease.fonts[0]!.data as ArrayBuffer);
+          return createSurface({ dispose: vi.fn(() => lease.release()) });
+        },
+      ),
+      subscribeToTabCommands(listener) {
+        commandListener = listener as typeof commandListener;
+        return vi.fn();
+      },
+      subscribeToConfigurationUpdates(listener) {
+        configurationListener = listener;
+        return vi.fn();
+      },
+    });
+    await host.ready;
+
+    commandListener!({ action: "new" });
+    commandListener!({ action: "new" });
+    await vi.waitFor(() => expect(backings).toHaveLength(3));
+    expect(backings[1]).toBe(backings[0]);
+    expect(backings[2]).toBe(backings[0]);
+    expect(loadFontData).toHaveBeenCalledOnce();
+
+    configurationListener!({ ...configuration, fontFamily: "Second Family" });
+    commandListener!({ action: "new" });
+    await vi.waitFor(() => expect(backings).toHaveLength(4));
+
+    expect(backings[3]).not.toBe(backings[0]);
+    expect([...new Uint8Array(backings[0]!)]).toEqual([1]);
+    expect([...new Uint8Array(backings[3]!)]).toEqual([2]);
+    expect(loadFontData.mock.calls.map(([family]) => family)).toEqual([
+      "First Family",
+      "Second Family",
+    ]);
+
+    host.dispose();
+  });
+});
+
+describe("renderer Terminal Window page host continued", () => {
   it("updates rejection notices without reapplying the last-valid Surface configuration", async () => {
     const errorBanner = document.createElement("aside");
     const surface = createSurface();

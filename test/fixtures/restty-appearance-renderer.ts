@@ -1,5 +1,6 @@
 import configuredFontBytes from "../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf";
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
+import { terminalFontInputs } from "../../src/terminal-surface/terminal-font-stack";
 import {
   DEFAULT_TERMINAL_THEME,
   type TerminalTheme,
@@ -220,12 +221,15 @@ async function run() {
       },
       ...(document.body.dataset.configuredFont === "true"
         ? {
-            loadFontData: async () => ({
-              configured: {
-                family: "JetBrainsMono Nerd Font Mono",
-                data: configuredFontBytes,
-              },
-              fallbacks: [],
+            acquireFontInputs: async () => ({
+              fonts: terminalFontInputs({
+                configured: {
+                  family: "JetBrainsMono Nerd Font Mono",
+                  data: configuredFontBytes,
+                },
+                fallbacks: [],
+              }),
+              release: () => undefined,
             }),
           }
         : {}),

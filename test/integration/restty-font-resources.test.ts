@@ -50,6 +50,23 @@ describe("Restty font resource lifetime under cache pressure", () => {
     },
   );
 
+  it("does not mutate a borrowed native source while parsing and using it", async () => {
+    const borrowed = new Uint8Array(fontBytes).buffer;
+    const before = Buffer.from(borrowed).toString("base64");
+    const store = createStore({
+      maxSourceCacheBytes: fontBytes.byteLength,
+      loadSourceBuffer: async (input) => input.data,
+    });
+
+    const lease = await store.acquire([
+      { kind: "buffer", data: borrowed, label: "borrowed-native-source" },
+    ]);
+    expect(lease.faces[0]!.font.glyphIdForChar("A")).toBeGreaterThan(0);
+    expect(Buffer.from(borrowed).toString("base64")).toBe(before);
+    lease.release();
+    expect(Buffer.from(borrowed).toString("base64")).toBe(before);
+  });
+
   it("shares concurrent loads and keeps each lease live independently under pressure", async () => {
     const shared = source("shared");
     let finishLoad: () => void = () => undefined;

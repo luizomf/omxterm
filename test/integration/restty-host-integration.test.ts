@@ -24,6 +24,7 @@ interface HostResult {
   readonly concurrentFontInitialization: {
     readonly requestedTabs: number;
     readonly readyTabs: number;
+    readonly rendererFontRequests: number;
     readonly physicalFontLoads: number;
     readonly falseErrorVisible: boolean;
   };
@@ -202,7 +203,8 @@ describe.skipIf(
       expect(result.concurrentFontInitialization).toEqual({
         requestedTabs: 4,
         readyTabs: 4,
-        physicalFontLoads: 1,
+        rendererFontRequests: 0,
+        physicalFontLoads: 0,
         falseErrorVisible: false,
       });
       expect(result.ended.slice(0, 3)).toEqual([

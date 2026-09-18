@@ -74,8 +74,12 @@ export async function exerciseConcurrentResttyTabs(options: {
 
   try {
     await options.waitFor(
-      () => controlledLoad.requests() === 4,
-      "four overlapping font requests through preload/main IPC",
+      () =>
+        options.window.webContents.executeJavaScript(
+          "document.querySelectorAll('.terminal-surface').length === 5",
+          true,
+        ) as Promise<boolean>,
+      "four tabs entering Surface initialization on the live window generation",
     );
   } finally {
     controlledLoad.release();
@@ -118,6 +122,7 @@ export async function exerciseConcurrentResttyTabs(options: {
   return {
     requestedTabs: 4,
     readyTabs: options.sessionStarts() - initialSessions,
+    rendererFontRequests: controlledLoad.requests(),
     physicalFontLoads: controlledLoad.physicalLoads(),
     falseErrorVisible: !failure.hidden || failure.text.length > 0,
   };

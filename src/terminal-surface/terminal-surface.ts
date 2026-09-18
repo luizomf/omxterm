@@ -1,6 +1,6 @@
 import type { TerminalFontZoom } from "../shared/terminal-contract";
 import type { LocalImageActivation } from "../shared/local-image";
-import type { TerminalFontData } from "../shared/terminal-font-data";
+import type { TerminalFontInput } from "./terminal-font-stack";
 import type {
   OptionKeyMode,
   TerminalPadding,
@@ -47,9 +47,17 @@ export interface TerminalSurfaceConfiguration {
   readonly theme: TerminalTheme;
 }
 
+export interface TerminalFontInputLease {
+  readonly fonts: readonly TerminalFontInput[];
+  release(): void;
+}
+
 export interface TerminalSurfaceOptions {
   readonly abortSignal?: AbortSignal;
-  readonly loadFontData?: (family?: string) => Promise<TerminalFontData>;
+  readonly acquireFontInputs?: (
+    family: string | undefined,
+    abortSignal?: AbortSignal,
+  ) => Promise<TerminalFontInputLease>;
   readonly scrollbackLines?: number;
   readonly optionKeyMode?: OptionKeyMode;
   readonly appearance?: TerminalAppearance;

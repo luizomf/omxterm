@@ -34,6 +34,7 @@ import type {
   LocalImageActivation,
   LocalImageData,
 } from "../shared/local-image";
+import { createTerminalFontGenerationOwner } from "./terminal-font-generations";
 
 type MountTerminalSurface = (
   container: HTMLElement,
@@ -114,6 +115,10 @@ export function mountTerminalWindowPage(
   let removeLocalImageOpenListener: (() => void) | undefined;
   let localImagePreview: LocalImagePreview | undefined;
   const hoverAvailabilityListeners = new Set<() => void>();
+  let activeFontFamily = options.configuration?.fontFamily;
+  const fontGenerations = options.loadFontData
+    ? createTerminalFontGenerationOwner(options.loadFontData, activeFontFamily)
+    : undefined;
   let activeSurfaceConfiguration = options.configuration
     ? surfaceConfiguration(options.configuration)
     : undefined;
@@ -145,7 +150,7 @@ export function mountTerminalWindowPage(
 
   const surfaceOptions: TerminalSurfaceOptions = {
     ...activeSurfaceConfiguration,
-    ...(options.loadFontData ? { loadFontData: options.loadFontData } : {}),
+    ...(fontGenerations ? { acquireFontInputs: fontGenerations.acquire } : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.onExternalLink
       ? { onExternalLink: options.onExternalLink }
@@ -245,6 +250,7 @@ export function mountTerminalWindowPage(
     snippetsSidebar?.dispose();
     snippetsSidebar = undefined;
     tabs.dispose();
+    fontGenerations?.dispose();
   };
   const onPageHide = () => dispose();
 
@@ -261,6 +267,10 @@ export function mountTerminalWindowPage(
       );
       applyPageTheme(configuration.terminalTheme);
       const nextSurfaceConfiguration = surfaceConfiguration(configuration);
+      if (configuration.fontFamily !== activeFontFamily) {
+        activeFontFamily = configuration.fontFamily;
+        fontGenerations?.select(activeFontFamily);
+      }
       if (
         !activeSurfaceConfiguration ||
         !sameSurfaceConfiguration(
