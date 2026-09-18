@@ -29,6 +29,10 @@ interface Measurement {
   readonly rows: number;
   readonly cellWidth: number;
   readonly cellHeight: number;
+  readonly canvasCssWidth: number;
+  readonly canvasCssHeight: number;
+  readonly canvasBackingWidth: number;
+  readonly canvasBackingHeight: number;
   readonly imeFontSize: string;
   readonly starts: number;
   readonly closes: number;
@@ -101,20 +105,68 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
     );
     try {
       await buildFixture(root);
-      const execution = await runFixture(root);
-      const line = execution.stdout
-        .split("\n")
-        .find((entry) => entry.startsWith(resultPrefix));
-      const result = line
-        ? (JSON.parse(line.slice(resultPrefix.length)) as Result)
-        : undefined;
+      const runs: Array<{
+        readonly label: string;
+        readonly requestedScaleFactor: number | undefined;
+        readonly result: Result;
+      }> = [];
+      for (const requestedScaleFactor of [undefined, 1, 2] as const) {
+        const execution = await runFixture(root, requestedScaleFactor);
+        const line = execution.stdout
+          .split("\n")
+          .find((entry) => entry.startsWith(resultPrefix));
+        const result = line
+          ? (JSON.parse(line.slice(resultPrefix.length)) as Result)
+          : undefined;
+        const label = requestedScaleFactor
+          ? `forced DPR ${requestedScaleFactor}`
+          : "actual display DPR";
 
-      expect(
-        execution.exitCode,
-        `Appearance fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
-      ).toBe(0);
-      expect(result).toBeDefined();
-      const measurements = result!.measurements;
+        expect(
+          execution.exitCode,
+          `${label} appearance fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
+        ).toBe(0);
+        expect(result, label).toBeDefined();
+        runs.push({ label, requestedScaleFactor, result: result! });
+      }
+      const evidencePath = process.env.OMXTERM_RESTTY_APPEARANCE_EVIDENCE_PATH;
+      if (evidencePath)
+        await writeFile(
+          evidencePath,
+          `${JSON.stringify(
+            {
+              platform: process.platform,
+              architecture: process.arch,
+              runs: runs.map(({ label, requestedScaleFactor, result }) => ({
+                label,
+                requestedScaleFactor,
+                devicePixelRatio: result.devicePixelRatio,
+                measurements: result.measurements,
+                live: result.live,
+              })),
+            },
+            undefined,
+            2,
+          )}\n`,
+        );
+
+      expect(runs[1]!.result.devicePixelRatio).toBeCloseTo(1, 5);
+      expect(runs[2]!.result.devicePixelRatio).toBeCloseTo(2, 5);
+      for (const run of runs) assertFontGeometry(run.result, run.label);
+      for (const size of [1, 8, 10, 16, 64, 72]) {
+        const dpr1 = fontMeasurement(runs[1]!.result, size);
+        const dpr2 = fontMeasurement(runs[2]!.result, size);
+        expect(
+          Math.abs(
+            dpr1.cellWidth / runs[1]!.result.devicePixelRatio -
+              dpr2.cellWidth / runs[2]!.result.devicePixelRatio,
+          ),
+          `normalized CSI width at size ${size}`,
+        ).toBeLessThanOrEqual(0.5);
+      }
+
+      const result = runs[0]!.result;
+      const measurements = result.measurements;
       const size8 = measurements.find((entry) => entry.size === 8)!;
       const size16 = measurements.find(
         (entry) =>
@@ -134,7 +186,6 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
       expect(size8.cols).toBeGreaterThan(size16.cols);
       expect(size16.cols).toBeGreaterThan(size72.cols);
       expect(size1.cols).toBeGreaterThan(size8.cols);
-      expect(size8.cellWidth).toBeLessThan(10);
       expect(size72.cellWidth).toBeGreaterThan(size16.cellWidth);
       expect(line2.cols).toBe(size16.cols);
       expect(line2.cellWidth).toBeCloseTo(size16.cellWidth, 5);
@@ -209,8 +260,88 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
         retryDelay: 100,
       });
     }
-  }, 120_000);
+  }, 240_000);
 });
+
+function fontMeasurement(result: Result, size: number): Measurement {
+  return result.measurements.find(
+    (entry) =>
+      entry.size === size &&
+      entry.lineHeight === 1 &&
+      entry.padding === 0 &&
+      entry.nativeTitleInset === 0,
+  )!;
+}
+
+function assertFontGeometry(result: Result, label: string): void {
+  const size1 = fontMeasurement(result, 1);
+  const size8 = fontMeasurement(result, 8);
+  const size10 = fontMeasurement(result, 10);
+  const size16 = fontMeasurement(result, 16);
+  const size64 = fontMeasurement(result, 64);
+  const size72 = fontMeasurement(result, 72);
+  const cssCellWidth = (entry: Measurement) =>
+    entry.cellWidth / result.devicePixelRatio;
+
+  expect(size1.cols, label).toBeGreaterThan(size8.cols);
+  expect(size8.cols, label).toBeGreaterThan(size10.cols);
+  expect(size10.cols, label).toBeGreaterThan(size16.cols);
+  expect(size16.cols, label).toBeGreaterThan(size64.cols);
+  expect(size64.cols, label).toBeGreaterThan(size72.cols);
+  expect(cssCellWidth(size1), label).toBeLessThan(cssCellWidth(size8));
+  expect(cssCellWidth(size8), label).toBeLessThan(cssCellWidth(size10));
+  expect(cssCellWidth(size10), label).toBeLessThan(cssCellWidth(size16));
+  expect(cssCellWidth(size16), label).toBeLessThan(cssCellWidth(size64));
+  expect(cssCellWidth(size64), label).toBeLessThan(cssCellWidth(size72));
+  for (const entry of result.measurements) {
+    expect(entry.starts, `${label}, size ${entry.size} readiness`).toBe(1);
+    expect(entry.closes, `${label}, size ${entry.size} lifecycle`).toBe(0);
+    expect(
+      entry.cellWidth,
+      `${label}, size ${entry.size} CSI width`,
+    ).toBeGreaterThan(0);
+    expect(
+      entry.cellHeight,
+      `${label}, size ${entry.size} CSI height`,
+    ).toBeGreaterThan(0);
+    const cssCellWidth = entry.cellWidth / result.devicePixelRatio;
+    const cssCellHeight = entry.cellHeight / result.devicePixelRatio;
+    const unusedWidth = entry.canvasCssWidth - entry.cols * cssCellWidth;
+    const unusedHeight = entry.canvasCssHeight - entry.rows * cssCellHeight;
+    expect(
+      unusedWidth,
+      `${label}, size ${entry.size} CSI backing-pixel width`,
+    ).toBeGreaterThanOrEqual(-1);
+    expect(
+      unusedWidth,
+      `${label}, size ${entry.size} CSI backing-pixel width`,
+    ).toBeLessThan(cssCellWidth + 1);
+    expect(
+      unusedHeight,
+      `${label}, size ${entry.size} CSI backing-pixel height`,
+    ).toBeGreaterThanOrEqual(-1);
+    expect(
+      unusedHeight,
+      `${label}, size ${entry.size} CSI backing-pixel height`,
+    ).toBeLessThan(cssCellHeight + 1);
+    expect(
+      entry.canvasCssWidth,
+      `${label}, size ${entry.size} CSS width`,
+    ).toBeGreaterThan(0);
+    expect(
+      entry.canvasCssHeight,
+      `${label}, size ${entry.size} CSS height`,
+    ).toBeGreaterThan(0);
+    expect(
+      entry.canvasBackingWidth,
+      `${label}, size ${entry.size} backing width`,
+    ).toBeCloseTo(entry.canvasCssWidth * result.devicePixelRatio, 0);
+    expect(
+      entry.canvasBackingHeight,
+      `${label}, size ${entry.size} backing height`,
+    ).toBeCloseTo(entry.canvasCssHeight * result.devicePixelRatio, 0);
+  }
+}
 
 async function buildFixture(root: string): Promise<void> {
   await build({
@@ -395,7 +526,10 @@ app.whenReady().then(async () => {
 `;
 }
 
-async function runFixture(root: string): Promise<{
+async function runFixture(
+  root: string,
+  scaleFactor?: number,
+): Promise<{
   readonly exitCode: number | null;
   readonly stderr: string;
   readonly stdout: string;
@@ -406,6 +540,8 @@ async function runFixture(root: string): Promise<{
       chromiumArguments.push(`--${name}`);
     },
   });
+  if (scaleFactor !== undefined)
+    chromiumArguments.push(`--force-device-scale-factor=${scaleFactor}`);
   const child = spawn(electronExecutable, [...chromiumArguments, root], {
     cwd: root,
     detached: process.platform !== "win32",
