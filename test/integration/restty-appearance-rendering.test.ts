@@ -317,12 +317,12 @@ app.whenReady().then(async () => {
   const window = new BrowserWindow({
     width: 800,
     height: 500,
-    show: true,
+    show: false,
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, backgroundThrottling: false },
   });
   await window.loadFile(path.join(__dirname, "index.html"));
+  window.showInactive();
   let result = await waitForResult(window);
-  window.focus();
   let bounds = await window.webContents.executeJavaScript("(() => { const r = document.querySelector('canvas').getBoundingClientRect(); return { x:r.x, y:r.y, width:r.width, height:r.height }; })()", true);
   const cellWidth = result.live.cellWidth / result.devicePixelRatio;
   const cellHeight = result.live.cellHeight / result.devicePixelRatio;

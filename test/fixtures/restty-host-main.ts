@@ -265,7 +265,7 @@ app
     const window = new BrowserWindow({
       width: 900,
       height: 600,
-      show: true,
+      show: false,
       webPreferences: {
         preload: path.join(root, "preload.cjs"),
         sandbox: true,
@@ -287,11 +287,11 @@ app
     const { reloader } = createHost(window);
 
     await window.loadFile(path.join(root, "renderer", "index.html"));
+    window.showInactive();
     await waitFor(
       () => launchKinds.length === 1 && resizes[0]!.length > 0,
       "default Restty session",
     );
-    window.focus();
     await waitFor(
       () =>
         window.webContents.executeJavaScript(
@@ -316,8 +316,6 @@ app
       deliverOutputs[0]!,
     );
 
-    window.focus();
-    window.webContents.focus();
     await window.webContents.executeJavaScript(
       "document.querySelector('.restty-terminal-surface canvas')?.focus()",
       true,

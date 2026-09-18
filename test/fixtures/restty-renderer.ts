@@ -14,6 +14,7 @@ interface ResttyFixtureResult {
   readonly terminalReplies?: number;
   readonly startupReplies?: readonly string[];
   readonly optionInput?: readonly string[];
+  readonly compositionInput?: Readonly<Record<string, readonly string[]>>;
   readonly resize?: { readonly cols: number; readonly rows: number };
 }
 
@@ -170,6 +171,94 @@ void mountResttyTerminalSurface(
     dispatchKey("keydown", "Å", "KeyA", true, true);
     dispatchKey("keyup", "Å", "KeyA", true, true);
     dispatchKey("keyup", "Alt", "AltLeft", false);
+    const optionInput = terminalInput.slice(0, 11);
+
+    const dispatchTextInput = (text: string) => {
+      input.dispatchEvent(
+        new InputEvent("beforeinput", {
+          data: text,
+          inputType: "insertText",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      input.dispatchEvent(
+        new InputEvent("input", {
+          data: text,
+          inputType: "insertText",
+          bubbles: true,
+        }),
+      );
+    };
+    const dispatchComposition = (text: string) => {
+      dispatchKey("keydown", "Dead", "Quote", false);
+      input.dispatchEvent(
+        new CompositionEvent("compositionstart", { data: "", bubbles: true }),
+      );
+      input.dispatchEvent(
+        new CompositionEvent("compositionupdate", {
+          data: text ? "´" : "",
+          bubbles: true,
+        }),
+      );
+      input.dispatchEvent(
+        new CompositionEvent("compositionend", { data: text, bubbles: true }),
+      );
+      if (text)
+        input.dispatchEvent(
+          new InputEvent("input", {
+            data: text,
+            inputType: "insertText",
+            bubbles: true,
+          }),
+        );
+      dispatchKey("keyup", "Dead", "Quote", false);
+    };
+    const captureInput = (exercise: () => void) => {
+      terminalInput.length = 0;
+      exercise();
+      return terminalInput.slice();
+    };
+    const compositionInput: Record<string, readonly string[]> = {};
+    const exerciseCompositionMode = (name: string, mode: string) => {
+      handlers?.onOutput(mode);
+      compositionInput[`${name}Commit`] = captureInput(() => {
+        dispatchTextInput("ser");
+        dispatchComposition("á");
+        dispatchTextInput(" só av");
+        dispatchComposition("ó");
+      });
+      compositionInput[`${name}Cancel`] = captureInput(() =>
+        dispatchComposition(""),
+      );
+      compositionInput[`${name}LiteralApostrophe`] = captureInput(() => {
+        dispatchKey("keydown", "'", "Quote", false);
+        dispatchTextInput("'");
+        dispatchKey("keyup", "'", "Quote", false);
+      });
+    };
+    exerciseCompositionMode("legacy", "\u001b[=0u\u001b[>4;0m");
+    exerciseCompositionMode("modifyOtherKeys", "\u001b[=0u\u001b[>4;2m");
+    exerciseCompositionMode("kitty1", "\u001b[=1u");
+    exerciseCompositionMode("kitty2", "\u001b[=2u");
+    exerciseCompositionMode("kitty4", "\u001b[=4u");
+    exerciseCompositionMode("kitty124", "\u001b[=7u");
+    compositionInput.kitty124Modified = captureInput(() => {
+      for (const [type, key, code] of [
+        ["keydown", "c", "KeyC"],
+        ["keyup", "c", "KeyC"],
+        ["keydown", "ArrowLeft", "ArrowLeft"],
+        ["keyup", "ArrowLeft", "ArrowLeft"],
+      ] as const)
+        input.dispatchEvent(
+          new KeyboardEvent(type, {
+            key,
+            code,
+            ctrlKey: true,
+            bubbles: true,
+          }),
+        );
+    });
 
     handlers?.onOutput(
       "OMXTerm Restty Olá\r\n\u001b]52;c;dW5zYWZl\u0007\u001b]52;c;?\u0007",
@@ -185,9 +274,10 @@ void mountResttyTerminalSurface(
       ptyStarts,
       clipboardReads,
       clipboardWrites,
-      terminalReplies: terminalInput.length,
+      terminalReplies: optionInput.length,
       startupReplies,
-      optionInput: terminalInput.slice(0, 11),
+      optionInput,
+      compositionInput,
       ...(resize ? { resize } : {}),
     };
   })

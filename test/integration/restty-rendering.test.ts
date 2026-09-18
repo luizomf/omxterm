@@ -28,6 +28,7 @@ interface FixtureResult {
     readonly clipboardWrites?: number;
     readonly terminalReplies?: number;
     readonly optionInput?: readonly string[];
+    readonly compositionInput?: Readonly<Record<string, readonly string[]>>;
     readonly resize?: { readonly cols: number; readonly rows: number };
   };
   readonly unavailable: {
@@ -107,6 +108,31 @@ describe("Restty under production Electron policy", () => {
                 "\u001bÅ",
               ],
       });
+      const compositionInput = result?.available.compositionInput;
+      expect(compositionInput).toBeDefined();
+      for (const mode of [
+        "legacy",
+        "modifyOtherKeys",
+        "kitty1",
+        "kitty2",
+        "kitty4",
+        "kitty124",
+      ]) {
+        expect(compositionInput?.[`${mode}Commit`]).toEqual([
+          "ser",
+          "á",
+          " só av",
+          "ó",
+        ]);
+        expect(compositionInput?.[`${mode}Cancel`]).toEqual([]);
+        expect(compositionInput?.[`${mode}LiteralApostrophe`]).toEqual(["'"]);
+      }
+      expect(compositionInput?.kitty124Modified).toEqual([
+        "\u001b[99;5:1u",
+        "\u001b[99;5:3u",
+        "\u001b[1;5:1D",
+        "\u001b[1;5:3D",
+      ]);
       expect(result?.available.resize?.cols).toBeGreaterThan(1);
       expect(result?.available.resize?.rows).toBeGreaterThan(0);
       expect(result?.visibleForegroundPixels).toBeGreaterThan(20);

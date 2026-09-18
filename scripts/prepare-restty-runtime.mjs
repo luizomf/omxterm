@@ -65,8 +65,10 @@ const priorViewportDigest =
   "46031b070690dc8763b38182abe4cf5205e405e3bdeece179fb7fe00d654a344";
 const priorFontMemoryDigest =
   "56dd27c2e2239c3660ccd79c93c3e4a4bfde0bc548ecce09e59c3af00982105c";
-const correctedDigest =
+const priorDeadKeyCompositionDigest =
   "6a7b5297bf4f7a4509c9f64ad22a29c521b0c5f48882a4451872a335e0847ccd";
+const correctedDigest =
+  "f3434c66a9ef1ebe817f9debcb8ecf49f8477c4d481af2d6791c122967b2bee4";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 
 const fontMemoryCorrections = [
@@ -1236,6 +1238,18 @@ const interactionReviewCorrections = [
   },
 ];
 
+const deadKeyCompositionCorrections = [
+  {
+    original: `    if (isNativeOptionText(event))
+      return true;`,
+    corrected: `    if (
+      (event.key === "Dead" && !(event.altKey && optionActsAsAlt())) ||
+      isNativeOptionText(event)
+    )
+      return true;`,
+  },
+];
+
 const parsedEventTypeCorrections = [
   {
     original: `} | {
@@ -1429,9 +1443,10 @@ async function prepareResttyEventTypes(selectedPath) {
 // Restty 0.3.0 otherwise reports readiness with an unusable font, exposes
 // clipboard/link side effects before OMXTerm owns those routes, clamps live
 // size to 10–64, has no independent row-height or live line-limit input,
-// tags DOM paste as ordinary input, and hides current paste mode, selection,
-// parsed OSC, Select All and visible-cell/soft-wrap link lookup. It also
-// brightens bold ANSI colors and expands
+// tags DOM paste as ordinary input, hides current paste mode, selection,
+// parsed OSC, Select All and visible-cell/soft-wrap link lookup, and encodes
+// native dead-key events before their composition commit in extended modes.
+// It also brightens bold ANSI colors and expands
 // every face in a collection without exact family/regular selection. Correct
 // only the reviewed npm bytes;
 // dependency drift requires a fresh review.
@@ -1446,7 +1461,9 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorFontMemoryDigest) {
+    if (sourceDigest === priorDeadKeyCompositionDigest) {
+      source = applyCorrections(source, deadKeyCompositionCorrections);
+    } else if (sourceDigest === priorFontMemoryDigest) {
       // Only font acquisition lifetime remains to be corrected.
     } else if (sourceDigest === priorViewportDigest) {
       source = applyCorrections(source, viewportCorrections);
@@ -1556,6 +1573,8 @@ export async function prepareResttyRuntime(options = {}) {
       source = applyCorrections(source, viewportCorrections);
     if (digest(source) === priorFontMemoryDigest)
       source = applyCorrections(source, fontMemoryCorrections);
+    if (digest(source) === priorDeadKeyCompositionDigest)
+      source = applyCorrections(source, deadKeyCompositionCorrections);
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,

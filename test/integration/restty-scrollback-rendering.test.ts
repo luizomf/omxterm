@@ -235,10 +235,11 @@ app.whenReady().then(async () => {
   const window = new BrowserWindow({
     width: 800,
     height: 500,
-    show: true,
+    show: false,
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, backgroundThrottling: false },
   });
   await window.loadFile(path.join(__dirname, "index.html"));
+  window.showInactive();
   await waitFor(window, "globalThis.__omxtermResttyScrollback?.ready ?? false");
   const resizeAtBottom = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.resizeAtBottom()", true);
   const initial = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.metrics()", true);

@@ -62,8 +62,6 @@ export async function exerciseExplicitResttyTab(options: {
     "document.querySelector('#tab-strip button:last-child')?.click()",
     true,
   );
-  window.focus();
-  window.webContents.focus();
   await waitFor(
     () =>
       window.webContents.executeJavaScript(
@@ -94,8 +92,10 @@ export async function exerciseExplicitResttyTab(options: {
     localImageRequests: options.localImageRequests,
     waitFor,
   });
-  window.blur();
-  window.focus();
+  await window.webContents.executeJavaScript(
+    "window.dispatchEvent(new Event('blur')); window.dispatchEvent(new Event('focus'));",
+    true,
+  );
   await waitFor(
     () =>
       window.webContents.executeJavaScript(
