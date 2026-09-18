@@ -97,10 +97,10 @@ export async function exerciseExplicitResttyTab(options: {
     "window.dispatchEvent(new Event('blur')); document.querySelector('#tab-strip button:last-child').focus();",
     true,
   );
-  const focusMovedAway = await window.webContents.executeJavaScript(
+  const focusMovedAway = (await window.webContents.executeJavaScript(
     "document.activeElement === document.querySelector('#tab-strip button:last-child')",
     true,
-  );
+  )) as boolean;
   if (!focusMovedAway)
     throw new Error(
       "Synthetic focus fixture did not leave the Terminal Surface",
