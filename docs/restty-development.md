@@ -237,7 +237,7 @@ router, preload bridge, Electron Adapter, Restty Surface and owned native PTYs
 under the production CSP. It covers Unicode and bare-control-key
 input, large chunked DOM paste through a real owned PTY, explicit host
 copy/paste, Select All, context menu and OSC 52, parsed title/BEL ownership,
-title-query silence, disposal, resize, focus return, two isolated tabs, Default
+title-query silence, disposal, resize, renderer-event focus restoration, two isolated tabs, Default
 Shell and explicit-command startup, owned session
 termination, explicit close, renderer-process loss, a numbered 2 MiB producer
 through production IPC during a 350 ms renderer stall and resize, cumulative
@@ -250,6 +250,15 @@ producer readiness and holds only its synthetic session's output ACKs until the
 real high-water pause is observed, then releases them and asserts native resume,
 complete ordered content and zero pending bytes. This avoids depending on
 platform throughput during the fixed renderer-stall interval.
+
+Native Electron fixtures run serially and show painting windows without native
+activation. The focus-restoration fixture first moves DOM focus outside the
+selected Surface, then dispatches a renderer focus event and verifies return to
+that Surface. This does not verify native application/window activation. The
+keyboard regression similarly uses synthetic DOM dead-key/composition events
+through installed Restty and captures Surface Adapter writes under legacy,
+modifyOtherKeys and Kitty flags 1, 2, 4 and 1|2|4; it does not establish an
+untested native keyboard layout's event sequence.
 
 The complete native package commands run this host/runtime coverage on macOS,
 Linux and Windows ARM64. Native glyph rasterization and platform security UI

@@ -92,17 +92,30 @@ export async function exerciseExplicitResttyTab(options: {
     localImageRequests: options.localImageRequests,
     waitFor,
   });
+  // Exercise the renderer focus handler without activating a native window.
   await window.webContents.executeJavaScript(
-    "window.dispatchEvent(new Event('blur')); window.dispatchEvent(new Event('focus'));",
+    "window.dispatchEvent(new Event('blur')); document.querySelector('#tab-strip button:last-child').focus();",
+    true,
+  );
+  const focusMovedAway = await window.webContents.executeJavaScript(
+    "document.activeElement === document.querySelector('#tab-strip button:last-child')",
+    true,
+  );
+  if (!focusMovedAway)
+    throw new Error(
+      "Synthetic focus fixture did not leave the Terminal Surface",
+    );
+  await window.webContents.executeJavaScript(
+    "window.dispatchEvent(new Event('focus'));",
     true,
   );
   await waitFor(
     () =>
       window.webContents.executeJavaScript(
-        "document.activeElement?.closest('.restty-terminal-surface') !== null",
+        "document.activeElement?.closest('.terminal-surface')?.hidden === false && document.activeElement?.closest('.restty-terminal-surface') !== null",
         true,
       ),
-    "returned focus",
+    "renderer-event focus restoration to the selected Surface",
   );
   window.webContents.send(terminalIpc.tabCommand, { action: "close" });
   await waitFor(
