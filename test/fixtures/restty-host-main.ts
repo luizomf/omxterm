@@ -451,10 +451,11 @@ app
       ptyExits: () => ptyExits,
       waitFor,
     });
-    const beforeDestroy = (await window.webContents.executeJavaScript(
-      "({ canvases: document.querySelectorAll('.restty-terminal-surface canvas').length, tabs: document.querySelectorAll('.terminal-surface').length })",
-      true,
-    )) as { canvases: number; tabs: number };
+    const { fontMutation, ...beforeDestroy } =
+      (await window.webContents.executeJavaScript(
+        "({ fontMutation: globalThis.__fontMutationResult(), canvases: document.querySelectorAll('.restty-terminal-surface canvas').length, tabs: document.querySelectorAll('.terminal-surface').length })",
+        true,
+      )) as { fontMutation: unknown; canvases: number; tabs: number };
     const renderedFontFamily = (await window.webContents.executeJavaScript(
       "document.querySelector('.restty-terminal-surface')?.dataset.resttyFont ?? null",
       true,
@@ -467,6 +468,7 @@ app
     );
 
     const result = {
+      fontMutation,
       beforeDestroy,
       backendLoss,
       concurrentFontInitialization,

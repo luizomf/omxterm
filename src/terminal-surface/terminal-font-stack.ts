@@ -20,7 +20,12 @@ export interface TerminalFontInput {
  */
 export function terminalFontInputs(
   fontData: TerminalFontData,
+  expectedFamily = fontData.configured?.family,
 ): TerminalFontInput[] {
+  if (fontData.configured?.family !== expectedFamily)
+    throw new Error(
+      "Configured Terminal Font data did not match the requested family",
+    );
   const fonts: TerminalFontInput[] = [
     ...(fontData.configured
       ? [

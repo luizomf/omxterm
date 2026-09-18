@@ -125,12 +125,25 @@ persistent byte cache, content hashing, lazy coverage or global store.
 `ArrayBuffer` is mutable, so ownership alone is not the read-only guarantee. In
 the pinned Restty runtime, buffer sources pass through `toSourceBuffer` without a
 write and `parseFontFacesFromBuffer` passes that same buffer to text-shaper.
-Pinned text-shaper's `Font.loadAsync` uses its `DataView` reader's getter
-methods; source inspection found no write to the borrowed TTF on this path. The
-installed-consumer integration test snapshots a real bundled TTF, parses it through the actual
-Restty resource store, exercises a glyph lookup, releases the lease, and checks
-the complete source before and after. Dependency checksums make drift fail
-preparation instead of silently extending this borrowing assumption.
+The text-shaper implementation embedded in that exact Restty chunk parses
+TTF/OTF and TTC faces through a `DataView` reader. Its `bytes()` method also
+returns mutable zero-copy views: getter-only scalar parsing is not sufficient
+proof. Inspection follows those views into glyph hint instructions, CFF
+charstrings, bitmap tables and SVG decoding. These consumers read source bytes;
+mutation is confined to separate parser caches, hint state, shaped glyphs and
+raster buffers. Restty's color-emoji rendering uses Canvas text rasterization,
+not in-place decoding of the borrowed native bitmap table.
+
+The installed-store test compares a bundled TTF before and after parsing,
+glyph lookup and release. The native host fixture additionally snapshots every
+borrowed native source before parsing and compares every byte after its real
+configured/native glyph rendering, concurrent tabs, configuration changes and
+tab cleanup. Test-only counters establish execution of embedded TTC collection
+parsing, zero-copy reader views, shaping, outline rasterization and, on macOS,
+color-canvas rasterization. The probe retains extra byte copies until comparison
+and therefore is deliberately excluded from memory measurements. It exports only
+numeric results and never ships. Dependency checksums make drift fail preparation
+instead of silently extending this borrowing assumption.
 
 The native host fixture starts with one ready Surface, creates four tabs
 concurrently, verifies that the live window generation causes zero additional

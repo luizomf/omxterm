@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
 import { resttyImageEmitterSource } from "../fixtures/restty-host-images";
+import { resttyFontMutationProbe } from "../fixtures/restty-font-mutation-probe";
 import { createNativeHostPng } from "../fixtures/native-host-png";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
 
@@ -15,6 +16,16 @@ const electronExecutable = createRequire(import.meta.url)("electron") as string;
 const resultPrefix = "__OMXTERM_RESTTY_HOST_RESULT__";
 
 interface HostResult {
+  readonly fontMutation: {
+    readonly sources: number;
+    readonly bytes: number;
+    readonly changedSources: number;
+    readonly collections: number;
+    readonly shapes: number;
+    readonly outlines: number;
+    readonly colors: number;
+    readonly borrowedViews: number;
+  };
   readonly beforeDestroy: { readonly canvases: number; readonly tabs: number };
   readonly backendLoss: {
     readonly message: string;
@@ -154,6 +165,16 @@ describe.skipIf(
         `Host fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
       ).toBe(0);
       if (!result) throw new Error("Host fixture returned no result");
+      expect(result.fontMutation.sources).toBeGreaterThan(0);
+      expect(result.fontMutation.bytes).toBeGreaterThan(0);
+      expect(result.fontMutation.changedSources).toBe(0);
+      expect(result.fontMutation.shapes).toBeGreaterThan(0);
+      expect(result.fontMutation.outlines).toBeGreaterThan(0);
+      expect(result.fontMutation.borrowedViews).toBeGreaterThan(0);
+      if (process.platform === "darwin") {
+        expect(result.fontMutation.collections).toBeGreaterThan(0);
+        expect(result.fontMutation.colors).toBeGreaterThan(0);
+      }
       expect(result.sessionStarts).toBe(9);
       expect(result.renderedFontFamily).toBe(result.configuredFontFamily);
       expect(result.renderedPixels.configured).toBeGreaterThan(
@@ -380,6 +401,7 @@ async function buildHostFixture(root: string): Promise<void> {
       entryPoints: ["src/renderer/index.ts"],
       format: "iife",
       loader: { ".ttf": "binary" },
+      plugins: [resttyFontMutationProbe],
       logLevel: "silent",
       outfile: path.join(root, "renderer", "index.js"),
       platform: "browser",

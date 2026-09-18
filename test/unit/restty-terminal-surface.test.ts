@@ -150,6 +150,19 @@ describe("Restty Terminal Surface", () => {
     harness.setInitError(undefined);
   });
 
+  it("rejects a configured family without a font provider before starting a session", async () => {
+    const { adapter } = createAdapter();
+    await expect(
+      mountResttyTerminalSurface(document.createElement("main"), adapter, {
+        appearance: {
+          systemFont: { family: "Requested Native Family", available: true },
+        },
+      }),
+    ).rejects.toThrow("Failed to mount the Restty Terminal Surface");
+    expect(adapter.start).not.toHaveBeenCalled();
+    expect(harness.instances).toHaveLength(0);
+  });
+
   it("delivers parser replies while the Adapter replays owned startup output", async () => {
     const { adapter } = createAdapter();
     adapter.start.mockImplementation(async (handlers) => {

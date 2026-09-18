@@ -300,7 +300,7 @@ export async function mountResttyTerminalSurface(
     fontLease = options.acquireFontInputs
       ? await options.acquireFontInputs(initialFamily, options.abortSignal)
       : {
-          fonts: terminalFontInputs({ fallbacks: [] }),
+          fonts: terminalFontInputs({ fallbacks: [] }, initialFamily),
           release: () => undefined,
         };
     if (options.abortSignal?.aborted)
