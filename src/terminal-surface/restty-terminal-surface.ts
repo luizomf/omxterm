@@ -361,6 +361,8 @@ export async function mountResttyTerminalSurface(
         canvas,
         pane.runtime.interaction,
         (url) => requestVisibleLink(url, options),
+        navigator.platform,
+        options.linkHoverAvailability,
       );
     container.addEventListener("contextmenu", onContextMenu);
     canvas.addEventListener(

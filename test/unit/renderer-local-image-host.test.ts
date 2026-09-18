@@ -74,6 +74,7 @@ async function setup(loadLocalImage: () => Promise<LocalImageData | null>) {
     paste: vi.fn(async () => {}),
     selectAll: vi.fn(),
   };
+  let openImage!: () => void;
   let clipboard!: (action: "copy" | "paste" | "select-all") => void;
   let zoom!: (command: TerminalFontZoom) => void;
   let tabCommand!: (command: TerminalTabCommand) => void;
@@ -94,6 +95,10 @@ async function setup(loadLocalImage: () => Promise<LocalImageData | null>) {
       },
       page: window,
       loadLocalImage,
+      subscribeToLocalImageOpen(listener) {
+        openImage = listener;
+        return () => {};
+      },
       droppedFilePathInsertion: () => "'fixture.png'",
       subscribeToClipboardActions: (listener) => {
         clipboard = listener;
@@ -111,10 +116,54 @@ async function setup(loadLocalImage: () => Promise<LocalImageData | null>) {
   );
   await host.ready;
   surface.focus.mockClear();
-  return { host, surface, clipboard, zoom, tabCommand, surfaceOptions };
+  return {
+    host,
+    surface,
+    clipboard,
+    zoom,
+    tabCommand,
+    surfaceOptions,
+    openImage,
+  };
 }
 
 describe("local image preview through the Terminal Window host", () => {
+  it.each(["menu", "destination"])(
+    "disables hover throughout %s preview activity",
+    async (route) => {
+      let finish!: (value: LocalImageData | null) => void;
+      const view = await setup(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      );
+      const availability = view.surfaceOptions.linkHoverAvailability!;
+      const changed = vi.fn();
+      const unsubscribe = availability.subscribe(changed);
+      try {
+        expect(availability.isEnabled()).toBe(true);
+        if (route === "menu") view.openImage();
+        else
+          view.surfaceOptions.onLocalImageActivation!({
+            source: "native-path",
+            path: "/tmp/a.png",
+          });
+        expect(changed).toHaveBeenCalledOnce();
+        expect(availability.isEnabled()).toBe(false);
+        finish(image);
+        await vi.waitFor(() =>
+          expect(document.querySelector("dialog")!.open).toBe(true),
+        );
+        expect(availability.isEnabled()).toBe(false);
+        document.querySelector<HTMLButtonElement>("dialog button")!.click();
+        expect(availability.isEnabled()).toBe(true);
+      } finally {
+        unsubscribe();
+        view.host.dispose();
+      }
+    },
+  );
   it("blocks terminal-directed actions while loading/modal and restores them after dismissal", async () => {
     let finish!: (value: LocalImageData) => void;
     const view = await setup(

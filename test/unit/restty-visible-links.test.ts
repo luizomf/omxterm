@@ -3,6 +3,85 @@ import { describe, expect, it, vi } from "vitest";
 import { installResttyVisibleLinks } from "../../src/terminal-surface/restty-visible-links";
 
 describe("Restty visible-link gestures", () => {
+  it("preserves stationary pointer through internal IME focus and clears external focus", () => {
+    const root = document.createElement("main");
+    root.className = "restty-terminal-surface";
+    const canvas = document.createElement("canvas");
+    const input = document.createElement("textarea");
+    const outside = document.createElement("button");
+    canvas.tabIndex = 0;
+    root.append(canvas, input);
+    document.body.append(root, outside);
+    const hover = vi.fn();
+    const controller = installResttyVisibleLinks(
+      canvas,
+      {
+        getVisibleLinkAtClientPoint: () => ({
+          id: "1",
+          url: "/tmp/a.png",
+          cells: [1, 2],
+        }),
+        setVisibleLinkHover: hover,
+      },
+      vi.fn(),
+      "MacIntel",
+    );
+    canvas.focus();
+    canvas.dispatchEvent(pointer("pointermove", {}));
+    input.focus();
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Meta", metaKey: true }),
+    );
+    expect(hover).toHaveBeenLastCalledWith([1, 2]);
+    outside.focus();
+    expect(hover).toHaveBeenLastCalledWith(null);
+    controller.dispose();
+    root.remove();
+    outside.remove();
+  });
+
+  it("suppresses cues during host preview activity and unsubscribes on disposal", () => {
+    const canvas = document.createElement("canvas");
+    let enabled = true;
+    let invalidate = () => {};
+    const unsubscribe = vi.fn();
+    const hover = vi.fn();
+    const controller = installResttyVisibleLinks(
+      canvas,
+      {
+        getVisibleLinkAtClientPoint: () => ({
+          id: "1",
+          url: "/tmp/a.png",
+          cells: [1],
+        }),
+        setVisibleLinkHover: hover,
+      },
+      vi.fn(),
+      "MacIntel",
+      {
+        isEnabled: () => enabled,
+        subscribe(listener) {
+          invalidate = listener;
+          return unsubscribe;
+        },
+      },
+    );
+    canvas.dispatchEvent(pointer("pointermove", { metaKey: true }));
+    expect(hover).toHaveBeenLastCalledWith([1]);
+    enabled = false;
+    invalidate();
+    canvas.dispatchEvent(pointer("pointermove", { metaKey: true }));
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Meta", metaKey: true }),
+    );
+    expect(hover).toHaveBeenLastCalledWith(null);
+    enabled = true;
+    invalidate();
+    canvas.dispatchEvent(pointer("pointermove", { metaKey: true }));
+    expect(hover).toHaveBeenLastCalledWith([1]);
+    controller.dispose();
+    expect(unsubscribe).toHaveBeenCalledOnce();
+  });
   it("underlines only a stationary pointer destination while the platform modifier is held", () => {
     const canvas = document.createElement("canvas");
     document.body.append(canvas);
@@ -82,8 +161,9 @@ describe("Restty visible-link gestures", () => {
     await vi.waitFor(() =>
       expect(setVisibleLinkHover).toHaveBeenLastCalledWith(null),
     );
-    const key = new KeyboardEvent("keydown", { key: "x" });
+    const key = new KeyboardEvent("keydown", { key: "Control", ctrlKey: true });
     window.dispatchEvent(key);
+    expect(setVisibleLinkHover).toHaveBeenLastCalledWith(null);
     expect(keyObserver).toHaveBeenCalledOnce();
     expect(key.defaultPrevented).toBe(false);
     expect(request).not.toHaveBeenCalled();

@@ -50,7 +50,9 @@ async function terminalCellPoint(
   )) as { x: number; y: number };
 }
 
-async function captureTerminalCanvas(window: BrowserWindow): Promise<Buffer> {
+async function captureTerminalCanvas(
+  window: BrowserWindow,
+): Promise<{ bitmap: Buffer; width: number; height: number }> {
   const bounds = (await window.webContents.executeJavaScript(
     `(() => {
       const canvas = [...document.querySelectorAll('.restty-terminal-surface canvas')].find((candidate) => candidate.getBoundingClientRect().width > 0);
@@ -60,7 +62,8 @@ async function captureTerminalCanvas(window: BrowserWindow): Promise<Buffer> {
     })()`,
     true,
   )) as { x: number; y: number; width: number; height: number };
-  return Buffer.from((await window.webContents.capturePage(bounds)).toBitmap());
+  const image = await window.webContents.capturePage(bounds);
+  return { bitmap: Buffer.from(image.toBitmap()), ...image.getSize() };
 }
 
 function changedPixels(first: Buffer, second: Buffer): number {
@@ -82,6 +85,8 @@ function changedPixels(first: Buffer, second: Buffer): number {
 async function captureModifiedHoverEvidence(
   window: BrowserWindow,
   point: { readonly x: number; readonly y: number },
+  size: TerminalSize,
+  destinationColumns: number,
 ): Promise<{
   readonly modifiedHoverChangedPixels: number;
   readonly releasedHoverChangedPixels: number;
@@ -106,10 +111,65 @@ async function captureModifiedHoverEvidence(
   );
   await new Promise((resolve) => setTimeout(resolve, 100));
   const released = await captureTerminalCanvas(window);
+  // Every destination cell, including the wide continuation and soft-wrapped
+  // rows, must gain pixels; prefix and unrelated cells must not change.
+  const checkedCells =
+    Math.ceil((4 + destinationColumns) / size.cols) * size.cols;
+  for (let index = 0; index < checkedCells; index += 1) {
+    const row = Math.floor(index / size.cols);
+    const col = index % size.cols;
+    let count = 0;
+    for (
+      let y = Math.ceil((row * baseline.height) / size.rows);
+      y < Math.floor(((row + 1) * baseline.height) / size.rows);
+      y += 1
+    ) {
+      for (
+        let x = Math.ceil((col * baseline.width) / size.cols);
+        x < Math.floor(((col + 1) * baseline.width) / size.cols);
+        x += 1
+      ) {
+        const offset = (y * baseline.width + x) * 4;
+        if (
+          !baseline.bitmap
+            .subarray(offset, offset + 4)
+            .equals(active.bitmap.subarray(offset, offset + 4))
+        )
+          count += 1;
+      }
+    }
+    if ((index >= 4 && index < 4 + destinationColumns) !== count > 0)
+      throw new Error(`Hover cell geometry mismatch at ${row}:${col}`);
+  }
   return {
-    modifiedHoverChangedPixels: changedPixels(baseline, active),
-    releasedHoverChangedPixels: changedPixels(baseline, released),
+    modifiedHoverChangedPixels: changedPixels(baseline.bitmap, active.bitmap),
+    releasedHoverChangedPixels: changedPixels(baseline.bitmap, released.bitmap),
   };
+}
+
+async function exerciseHoverRecognition(
+  options: ResttyLinkGestureOptions,
+  size: TerminalSize,
+): Promise<void> {
+  const nativePath =
+    process.platform === "win32" ? "C:\\tmp\\漢.png" : "/tmp/漢.png";
+  for (const [text, columns] of [
+    ["file:///tmp/image.png", 21],
+    [nativePath, nativePath.length + 1],
+    ["relative.png", 0],
+    ["HTTPS://example.test", 0],
+    ["mailto:person@example.test", 0],
+    ["\u001b]8;;https://hidden.test\u0007label\u001b]8;;\u0007", 0],
+  ] as const) {
+    options.deliverOutput(`\u001b[2J\u001b[H漢e\u0301 ${text}`);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await captureModifiedHoverEvidence(
+      options.window,
+      await terminalCellPoint(options.window, 0, 4, size),
+      size,
+      columns,
+    );
+  }
 }
 
 async function clickTerminalCell(
@@ -197,7 +257,7 @@ export async function exerciseResttyLinks(
     options;
   const size = resizes.at(-1);
   if (!size) throw new Error("Restty link fixture has no grid size");
-  const visibleUrl = `https://example.test/${"a".repeat(size.cols)}`;
+  const visibleUrl = `https://example.test/漢${"a".repeat(size.cols)}`;
   deliverOutput(
     `\u001b[2J\u001b[H\u001b[?25l\u001b[?1000h\u001b[?1006h漢e\u0301 ${visibleUrl}`,
   );
@@ -214,9 +274,12 @@ export async function exerciseResttyLinks(
   const hoverEvidence = await captureModifiedHoverEvidence(
     window,
     await terminalCellPoint(window, 0, 4, reflowedSize),
+    reflowedSize,
+    visibleUrl.length + 1,
   );
   const { modifiedHoverChangedPixels, releasedHoverChangedPixels } =
     hoverEvidence;
+  await exerciseHoverRecognition(options, reflowedSize);
   const modifiers: Array<"meta" | "control"> =
     process.platform === "darwin" ? ["meta"] : ["control"];
   deliverOutput(

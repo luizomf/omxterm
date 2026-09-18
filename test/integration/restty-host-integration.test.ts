@@ -196,7 +196,7 @@ describe.skipIf(
       ]);
       expect(result.modifiedHoverChangedPixels).toBeGreaterThan(10);
       expect(result.releasedHoverChangedPixels).toBe(0);
-      expect(result.externalLinks[0]).toMatch(/^https:\/\/example\.test\/a+$/u);
+      expect(result.externalLinks[0]).toMatch(/^https:\/\/example\.test\/漢a+$/u);
       expect(result.externalLinks[0]).toBe(result.externalLinks[1]);
       expect(result.externalLinks.slice(2)).toEqual([
         "https://one.test/a",

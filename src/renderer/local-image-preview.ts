@@ -19,6 +19,7 @@ export function createLocalImagePreview(
       source?: LocalImageActivation,
     ) => Promise<LocalImageData | null>;
     readonly focusTerminal: () => void;
+    readonly onActivityChange?: () => void;
   },
 ): LocalImagePreview {
   const dialog = document.createElement("dialog");
@@ -57,6 +58,7 @@ export function createLocalImagePreview(
     error.hidden = true;
     error.textContent = "";
     if (wasOpen) dialog.close();
+    options.onActivityChange?.();
     if (wasOpen && !disposed) options.focusTerminal();
   };
   const show = () => {
@@ -99,6 +101,7 @@ export function createLocalImagePreview(
     async open(source) {
       if (disposed || opening || dialog.open) return;
       opening = true;
+      options.onActivityChange?.();
       try {
         const selected = await options.loadImage(source);
         if (disposed) return;
@@ -126,6 +129,7 @@ export function createLocalImagePreview(
         if (!disposed) showError();
       } finally {
         opening = false;
+        options.onActivityChange?.();
       }
     },
     dispose() {
@@ -134,6 +138,7 @@ export function createLocalImagePreview(
       clear();
       if (dialog.open) dialog.close();
       dialog.remove();
+      options.onActivityChange?.();
     },
   };
 }

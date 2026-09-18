@@ -59,6 +59,10 @@ export interface TerminalSurfaceOptions {
   readonly onClipboardError?: () => void;
   readonly onTitleRequest?: (request: string) => void;
   readonly onBell?: () => void;
+  readonly linkHoverAvailability?: {
+    isEnabled(): boolean;
+    subscribe(listener: () => void): () => void;
+  };
   readonly onExternalLink?: (url: string) => void;
   readonly onLocalImageActivation?: (source: LocalImageActivation) => void;
   readonly onFatalError?: (message: string) => void;

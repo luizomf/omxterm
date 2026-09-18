@@ -70,7 +70,7 @@ const priorDeadKeyCompositionDigest =
 const priorModifiedHoverDigest =
   "f3434c66a9ef1ebe817f9debcb8ecf49f8477c4d481af2d6791c122967b2bee4";
 const correctedDigest =
-  "ed7c7589385bbbd5c3808f67f0a3c1e0f49d9586437d8603025e0f178d497354";
+  "e0d54804ec53ada4692691394852eb1f18e82a223283fe26e3ee2117ccd609ad";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 
 const fontMemoryCorrections = [
@@ -904,9 +904,11 @@ const visibleHoverCorrections = [
     occurrences: 2,
   },
   {
-    original: `        if (linkHovered && !selectionState.active && !selectionState.dragging) {`,
-    corrected: `        if ((linkHovered && !selectionState.active && !selectionState.dragging) ||
-            (visibleLinkHovered && !selectionState.dragging)) {`,
+    original: `      if (!textHidden && !bgOnly) {`,
+    corrected: `      if (visibleLinkHovered && !textHidden && !selectionState.dragging) {
+        drawUnderlineStyle(underlineData, 1, x, rowY, cellW, cellH, baseY, underlineOffsetPx, underlineThicknessPx, fg);
+      }
+      if (!textHidden && !bgOnly) {`,
     occurrences: 2,
   },
   {

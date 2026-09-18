@@ -113,6 +113,7 @@ export function mountTerminalWindowPage(
   let removeSnippetsToggleListener: (() => void) | undefined;
   let removeLocalImageOpenListener: (() => void) | undefined;
   let localImagePreview: LocalImagePreview | undefined;
+  const hoverAvailabilityListeners = new Set<() => void>();
   let activeSurfaceConfiguration = options.configuration
     ? surfaceConfiguration(options.configuration)
     : undefined;
@@ -144,6 +145,15 @@ export function mountTerminalWindowPage(
 
   const surfaceOptions: TerminalSurfaceOptions = {
     ...activeSurfaceConfiguration,
+    linkHoverAvailability: {
+      isEnabled: () => !(localImagePreview?.isActive() ?? false),
+      subscribe(listener) {
+        hoverAvailabilityListeners.add(listener);
+        return () => {
+          hoverAvailabilityListeners.delete(listener);
+        };
+      },
+    },
     ...(options.loadFontData ? { loadFontData: options.loadFontData } : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.onExternalLink
@@ -180,6 +190,9 @@ export function mountTerminalWindowPage(
     localImagePreview = createLocalImagePreview(page.document, {
       loadImage: options.loadLocalImage,
       focusTerminal: () => tabs.focusSelected(),
+      onActivityChange: () => {
+        for (const listener of hoverAvailabilityListeners) listener();
+      },
     });
     removeLocalImageOpenListener = options.subscribeToLocalImageOpen?.(
       () => void localImagePreview?.open(),

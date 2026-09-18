@@ -63,6 +63,7 @@ export function installResttyVisibleLinks(
   interaction: ResttyVisibleLinkInteraction,
   requestActivation: (url: string) => void,
   platform: string = navigator.platform,
+  availability?: TerminalSurfaceOptions["linkHoverAvailability"],
 ): ResttyVisibleLinkController {
   let pending: VisibleLinkPointerGesture | undefined;
   let pointer:
@@ -80,7 +81,13 @@ export function installResttyVisibleLinks(
     interaction.getVisibleLinkAtClientPoint(event.clientX, event.clientY);
   const clearHover = () => interaction.setVisibleLinkHover(null);
   const updateHover = () => {
-    if (!pointer || !modifierHeld) {
+    if (
+      !pointer ||
+      !modifierHeld ||
+      canvas.closest("[hidden]") ||
+      document.hidden ||
+      availability?.isEnabled() === false
+    ) {
       clearHover();
       return;
     }
@@ -166,9 +173,21 @@ export function installResttyVisibleLinks(
     cancelPending();
     clearPointer();
   };
+  const focusRoot =
+    canvas.closest(".restty-terminal-surface") ??
+    canvas.parentElement ??
+    canvas;
+  const onFocusOut = (event: FocusEvent) => {
+    if (
+      !(event.relatedTarget instanceof Node) ||
+      !focusRoot.contains(event.relatedTarget)
+    )
+      clearPointer();
+  };
+  const removeAvailabilityListener = availability?.subscribe(clearPointer);
   const visibilityRoot = canvas.closest(".terminal-surface");
   const visibilityObserver = visibilityRoot
-    ? new MutationObserver(clearHover)
+    ? new MutationObserver(clearPointer)
     : undefined;
   visibilityObserver?.observe(visibilityRoot!, {
     attributes: true,
@@ -181,13 +200,14 @@ export function installResttyVisibleLinks(
   canvas.addEventListener("pointercancel", onPointerCancel, true);
   canvas.addEventListener("lostpointercapture", cancelPending, true);
   canvas.addEventListener("pointerleave", clearPointer);
-  canvas.addEventListener("blur", clearPointer);
+  focusRoot.addEventListener("focusout", onFocusOut as EventListener);
   canvas.addEventListener("wheel", clearHover, { passive: true });
   window.addEventListener("keydown", onKeyChange);
   window.addEventListener("keyup", onKeyChange);
   window.addEventListener("blur", onBlur);
   window.addEventListener("resize", clearHover);
-  document.addEventListener("visibilitychange", clearHover);
+  document.addEventListener("visibilitychange", clearPointer);
+  focusRoot.addEventListener("scroll", clearHover, true);
   return {
     invalidate: clearHover,
     dispose() {
@@ -200,14 +220,16 @@ export function installResttyVisibleLinks(
       canvas.removeEventListener("pointercancel", onPointerCancel, true);
       canvas.removeEventListener("lostpointercapture", cancelPending, true);
       canvas.removeEventListener("pointerleave", clearPointer);
-      canvas.removeEventListener("blur", clearPointer);
+      focusRoot.removeEventListener("focusout", onFocusOut as EventListener);
       canvas.removeEventListener("wheel", clearHover);
       window.removeEventListener("keydown", onKeyChange);
       window.removeEventListener("keyup", onKeyChange);
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("resize", clearHover);
-      document.removeEventListener("visibilitychange", clearHover);
+      document.removeEventListener("visibilitychange", clearPointer);
+      focusRoot.removeEventListener("scroll", clearHover, true);
       visibilityObserver?.disconnect();
+      removeAvailabilityListener?.();
     },
   };
 }
