@@ -21,6 +21,12 @@ interface HostResult {
     readonly ownedSessionExited: boolean;
     readonly unaffectedSessionResponded: boolean;
   };
+  readonly concurrentFontInitialization: {
+    readonly requestedTabs: number;
+    readonly readyTabs: number;
+    readonly physicalFontLoads: number;
+    readonly falseErrorVisible: boolean;
+  };
   readonly configuredFontFamily: string;
   readonly renderedFontFamily: string | null;
   readonly renderedPixels: {
@@ -147,7 +153,7 @@ describe.skipIf(
         `Host fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
       ).toBe(0);
       if (!result) throw new Error("Host fixture returned no result");
-      expect(result.sessionStarts).toBe(5);
+      expect(result.sessionStarts).toBe(9);
       expect(result.renderedFontFamily).toBe(result.configuredFontFamily);
       expect(result.renderedPixels.configured).toBeGreaterThan(
         result.renderedPixels.blank,
@@ -175,8 +181,12 @@ describe.skipIf(
         "explicit-command",
         "default-shell",
         "default-shell",
+        "default-shell",
+        "default-shell",
+        "default-shell",
+        "default-shell",
       ]);
-      expect(result.resizeCounts).toHaveLength(5);
+      expect(result.resizeCounts).toHaveLength(9);
       expect(result.resizeCounts.every((count) => count > 0)).toBe(true);
       expect(result.outputEvidence).toEqual({
         defaultUnicode: true,
@@ -188,6 +198,12 @@ describe.skipIf(
         message: "The Restty rendering backend was lost",
         ownedSessionExited: true,
         unaffectedSessionResponded: true,
+      });
+      expect(result.concurrentFontInitialization).toEqual({
+        requestedTabs: 4,
+        readyTabs: 4,
+        physicalFontLoads: 1,
+        falseErrorVisible: false,
       });
       expect(result.ended.slice(0, 3)).toEqual([
         { closeRequested: true, liveSessions: 1 },
@@ -224,7 +240,7 @@ describe.skipIf(
         navigations: 0,
         openedWindows: 0,
         permissionRequests: 0,
-        ptyExits: 5,
+        ptyExits: 9,
       });
       expect(result.capabilityReplies).toMatch(
         /^\u001b\[\?1;2c\u001b\[>0;0;0c\u001b\[3;5R\u001b\[6;\d+;\d+t$/u,

@@ -1434,22 +1434,45 @@ describe("Terminal Font IPC", () => {
           expect(family).toBe("Exact Família");
         }),
     );
-    const superseded = handler(trusted, "Exact Família");
-    await expect(handler(trusted, "Exact Família")).rejects.toThrow(
-      "already in progress",
-    );
-    controller.applyConfiguration({
-      ...clipboardOptions().configuration,
-      fontFamily: "New Family",
-    });
-    finishLookup({
+    const firstConcurrent = handler(trusted, "Exact Família");
+    const secondConcurrent = handler(trusted, "Exact Família");
+    expect(loadFontData).toHaveBeenCalledTimes(2);
+    const sharedResult = {
       configured: {
         family: "Exact Família",
         data: new Uint8Array([0, 1, 0, 0]),
       },
       fallbacks: [],
+    };
+    finishLookup(sharedResult);
+    await expect(firstConcurrent).resolves.toBe(sharedResult);
+    await expect(secondConcurrent).resolves.toBe(sharedResult);
+    expect(loadFontData).toHaveBeenCalledTimes(2);
+
+    const finishChangedLoads: Array<
+      (value: Awaited<ReturnType<typeof loadFontData>>) => void
+    > = [];
+    loadFontData.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishChangedLoads.push(resolve);
+        }),
+    );
+    const stale = handler(trusted, "Exact Família");
+    controller.applyConfiguration({
+      ...clipboardOptions().configuration,
+      fontFamily: "Other Family",
     });
-    await expect(superseded).rejects.toThrow("superseded");
+    controller.applyConfiguration({
+      ...clipboardOptions().configuration,
+      fontFamily: "Exact Família",
+    });
+    const current = handler(trusted, "Exact Família");
+    expect(loadFontData).toHaveBeenCalledTimes(4);
+    finishChangedLoads[0]!(sharedResult);
+    finishChangedLoads[1]!(sharedResult);
+    await expect(stale).rejects.toThrow("superseded");
+    await expect(current).resolves.toBe(sharedResult);
     router.dispose();
   });
 

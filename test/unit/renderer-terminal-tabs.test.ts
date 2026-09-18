@@ -502,6 +502,43 @@ describe("renderer Terminal Tabs", () => {
   });
 });
 
+describe("renderer Terminal Tabs pending disposal", () => {
+  it("does not resurrect a tab disposed while its Surface is mounting", async () => {
+    const strip = document.createElement("nav");
+    const container = document.createElement("div");
+    document.body.replaceChildren(strip, container);
+    let finishMount: ((surface: TerminalSurface) => void) | undefined;
+    const pendingMount = new Promise<TerminalSurface>((resolve) => {
+      finishMount = resolve;
+    });
+    const adapter: ElectronTerminalAdapter = {
+      sessionId: () => undefined,
+      start: vi.fn(async () => undefined),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    };
+    const surface = createFakeSurface();
+    const tabs = createTerminalTabs(
+      { strip, container },
+      {
+        createAdapter: () => adapter,
+        mount: vi.fn(() => pendingMount),
+        surfaceOptions: {},
+      },
+    );
+
+    tabs.handleCommand({ action: "close" });
+    expect(adapter.close).toHaveBeenCalledOnce();
+    finishMount!(surface);
+    await tabs.ready;
+
+    expect(surface.dispose).toHaveBeenCalledOnce();
+    expect(container.children).toHaveLength(0);
+    tabs.dispose();
+  });
+});
+
 describe("renderer Terminal Tabs fatal Surface isolation", () => {
   it("removes only the Surface that reports a rendering failure", async () => {
     const onFatalError = vi.fn();

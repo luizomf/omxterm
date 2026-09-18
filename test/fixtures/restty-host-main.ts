@@ -18,6 +18,10 @@ import {
   installedFontData,
 } from "../../src/main/installed-font-family";
 import { exerciseExplicitResttyTab } from "./restty-host-explicit-tab";
+import {
+  createControlledFontLoads,
+  exerciseConcurrentResttyTabs,
+} from "./restty-host-concurrent-font";
 import { exerciseResttyEvents } from "./restty-host-events";
 import { exerciseResttyCapabilities } from "./restty-host-capabilities";
 import { exerciseResttyBackendLoss } from "./restty-host-failures";
@@ -37,6 +41,7 @@ import {
   createOutputStressHarness,
   outputStressLaunchRequest,
 } from "./restty-host-output-stress";
+import { createResttyHostWindows } from "./restty-host-window";
 
 const prefix = "__OMXTERM_RESTTY_HOST_RESULT__";
 const root = __dirname;
@@ -74,6 +79,7 @@ let openedWindows = 0;
 let permissionRequests = 0;
 let ptyExits = 0;
 let sessionIndex = 0;
+const fontLoads = createControlledFontLoads();
 const outputStress = createOutputStressHarness();
 const { defaultShell, configuredFontFamily, reloadedFontFamily } =
   nativeFixturePlatform;
@@ -95,6 +101,7 @@ function createHost(window: BrowserWindow) {
     outputStress.ipcPort(ipcMain as unknown as IpcMainPort),
     undefined,
     async (family) => {
+      await fontLoads.beforeLoad();
       if (family !== configuredFontFamily && family !== reloadedFontFamily)
         throw new Error("Unexpected configured font request");
       const data = await installedFontData(family);
@@ -261,28 +268,11 @@ app
       },
     );
 
-    const keeper = new BrowserWindow({ show: false });
-    const window = new BrowserWindow({
-      width: 900,
-      height: 600,
-      show: false,
-      webPreferences: {
-        preload: path.join(root, "preload.cjs"),
-        sandbox: true,
-        contextIsolation: true,
-        nodeIntegration: false,
-        webSecurity: true,
-        backgroundThrottling: false,
-      },
-    });
-    window.webContents.setWindowOpenHandler(() => {
-      openedWindows += 1;
-      return { action: "deny" };
-    });
-    window.webContents.on("will-navigate", (event) => {
-      navigations += 1;
-      event.preventDefault();
-    });
+    const { keeper, window } = createResttyHostWindows(
+      root,
+      () => (openedWindows += 1),
+      () => (navigations += 1),
+    );
 
     const { reloader } = createHost(window);
 
@@ -454,6 +444,13 @@ app
       outputs,
       waitFor,
     });
+    const concurrentFontInitialization = await exerciseConcurrentResttyTabs({
+      window,
+      beginFontLoad: fontLoads.begin,
+      sessionStarts: () => sessionIndex,
+      ptyExits: () => ptyExits,
+      waitFor,
+    });
     const beforeDestroy = (await window.webContents.executeJavaScript(
       "({ canvases: document.querySelectorAll('.restty-terminal-surface canvas').length, tabs: document.querySelectorAll('.terminal-surface').length })",
       true,
@@ -472,6 +469,7 @@ app
     const result = {
       beforeDestroy,
       backendLoss,
+      concurrentFontInitialization,
       configuredFontFamily,
       renderedFontFamily,
       renderedPixels,

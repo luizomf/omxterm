@@ -45,6 +45,7 @@ import type { OperationalEventLog } from "./operational-events";
 import { isTerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalFontData } from "../shared/terminal-font-data";
 import type { LocalImageData } from "../shared/local-image";
+import { createFontDataRequest } from "./terminal-font-data-request";
 import { createLocalImageIpcBoundary } from "./local-image-ipc";
 export { isValidExternalLink } from "./external-link";
 import {
@@ -375,39 +376,6 @@ async function confirmClipboardPaste(
   }
 }
 
-function createFontDataRequest(options: {
-  readonly family: () => string | undefined;
-  readonly isDisposed: () => boolean;
-  readonly load: (family: string | undefined) => Promise<TerminalFontData>;
-  readonly reject: () => void;
-}) {
-  let inFlight = false;
-  return async (payload?: unknown) => {
-    const family = options.family();
-    if (payload !== family) {
-      options.reject();
-      throw new TypeError(
-        "Terminal Font request does not match the active configured family",
-      );
-    }
-    if (options.isDisposed())
-      throw new Error("Terminal IPC controller is disposed");
-    if (inFlight) {
-      options.reject();
-      throw new Error("A Terminal Font request is already in progress");
-    }
-    inFlight = true;
-    try {
-      const loaded = await options.load(family);
-      if (options.isDisposed() || options.family() !== family)
-        throw new Error("Terminal Font request was superseded");
-      return loaded;
-    } finally {
-      inFlight = false;
-    }
-  };
-}
-
 function createTerminalIpcController(
   options: TerminalIpcControllerOptions,
   operationalEvents: Pick<OperationalEventLog, "write"> | undefined,
@@ -418,6 +386,7 @@ function createTerminalIpcController(
 ): RoutedTerminalIpcController {
   let disposed = false;
   let rendererConfiguration = options.configuration;
+  let fontConfigurationGeneration = 0;
   const sessions = new Map<TerminalSessionId, RoutedSessionState>();
   let nextSessionNumber = 1;
   let selectedSessionId: TerminalSessionId | undefined;
@@ -680,6 +649,7 @@ function createTerminalIpcController(
   };
   const fontData = createFontDataRequest({
     family: () => rendererConfiguration.fontFamily,
+    generation: () => fontConfigurationGeneration,
     isDisposed: () => disposed,
     load: loadTerminalFontData,
     reject: () => reject("ipc", "invalid-payload"),
@@ -720,6 +690,8 @@ function createTerminalIpcController(
     configuration,
     applyConfiguration(configuration) {
       if (disposed || options.webContents.isDestroyed()) return;
+      if (rendererConfiguration.fontFamily !== configuration.fontFamily)
+        fontConfigurationGeneration += 1;
       rendererConfiguration = Object.freeze({ ...configuration });
       options.webContents.send(
         terminalIpc.configurationUpdate,
