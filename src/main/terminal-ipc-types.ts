@@ -99,7 +99,7 @@ export interface TerminalIpcController {
   dispose(): void;
 }
 
-export interface ResttySurfaceFontConfiguration {
+export interface TerminalSurfaceFontConfiguration {
   readonly fontFamily?: string;
   readonly fontLineHeight: number;
 }
@@ -109,6 +109,6 @@ export interface TerminalIpcRouter {
     options: TerminalIpcControllerOptions,
   ): TerminalIpcController;
   applyConfiguration(configuration: TerminalRendererConfiguration): void;
-  activeResttySurfaceFontConfigurations(): readonly ResttySurfaceFontConfiguration[];
+  activeTerminalSurfaceFontConfigurations(): readonly TerminalSurfaceFontConfiguration[];
   dispose(): void;
 }

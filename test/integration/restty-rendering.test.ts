@@ -139,7 +139,7 @@ describe("Restty under production Electron policy", () => {
       expect(result?.available.resize?.rows).toBeGreaterThan(0);
       expect(result?.visibleForegroundPixels).toBeGreaterThan(20);
       expect(result?.unavailable.error).toBe(
-        "Failed to mount the Restty Terminal Surface",
+        "Failed to mount the OMXTerm Terminal Surface",
       );
       expect(result?.unavailable.fatal).toContain("rendering backend");
       expect(result?.unavailable.ptyStarts).toBe(0);

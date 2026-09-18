@@ -1479,7 +1479,7 @@ describe("Terminal Font IPC", () => {
     router.dispose();
   });
 
-  it("reports the restart-only font settings of every live Restty Surface", () => {
+  it("reports the restart-only font settings of every live Terminal Surface", () => {
     const ipc = createIpcHarness();
     const router = registerTerminalIpcRouter(ipc.ipcMain);
     const mainFrame = {};
@@ -1520,11 +1520,11 @@ describe("Terminal Font IPC", () => {
     const trusted = { sender: webContents, senderFrame: mainFrame };
     ipc.handlers.get(terminalIpc.start)!(trusted);
 
-    expect(router.activeResttySurfaceFontConfigurations()).toEqual([
+    expect(router.activeTerminalSurfaceFontConfigurations()).toEqual([
       { fontFamily: "Initial Family", fontLineHeight: 1.25 },
     ]);
     onExit?.({ exitCode: 0, signal: 0 });
-    expect(router.activeResttySurfaceFontConfigurations()).toEqual([]);
+    expect(router.activeTerminalSurfaceFontConfigurations()).toEqual([]);
 
     controller.dispose();
     router.dispose();

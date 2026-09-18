@@ -661,13 +661,13 @@ reaches existing and newly created Terminal Surfaces. Font and spacing changes
 recompute the existing native minimum-window bounds, refit the grid with its
 bottom row visible, and resize the same PTY through its existing adapter.
 `font.family` and `font.lineHeight` are the complete restart-only set for
-existing Restty Surfaces; `font.ligatures` applies live. A valid reload applies
-all live-safe settings and host preferences,
-keeps those two creation-time values in every existing Restty Surface, and
-shows a persistent non-blocking notice naming each deferred setting and asking
-the user to restart OMXTerm. New tabs and windows use the latest fully validated
-family and line height. A deferred setting clears only when its requested value
-is already active in every existing Restty Surface. Theme, configured font-size baseline,
+existing Terminal Surfaces; `font.ligatures` applies live. A valid reload applies
+all live-safe settings and host preferences, keeps those two creation-time
+values in every existing Terminal Surface, and shows a persistent non-blocking
+notice naming each deferred setting and asking the user to restart OMXTerm. New
+tabs and windows use the latest fully validated family and line height. A
+deferred setting clears only when its requested value is already active in
+every existing Terminal Surface. Theme, configured font-size baseline,
 padding and Window Font Zoom remain live and preserve the existing Surface and
 PTY. Invalid, missing, unreadable, unsupported or corrupt configured font input
 rejects the whole reload. Runtime scrollback reduction, including zero, uses

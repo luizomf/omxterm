@@ -334,8 +334,8 @@ sends the exact visible URL to the Electron main process, which independently
 validates the sender, URL, HTTP(S) protocol, and host before asking the operating
 system to open it.
 Other protocols and invalid URLs have no external-opening side effect. The
-Restty follows the documented punctuation and lowercase-protocol rules,
-including through fully visible soft wraps. It
+Terminal Surface follows the documented punctuation and lowercase-protocol
+rules, including through fully visible soft wraps. It
 conservatively refuses a destination that may continue above or below the
 visible viewport; scroll until the complete URL is visible before activating
 it. A valid modified click takes precedence while a TUI reports mouse input and

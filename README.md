@@ -186,8 +186,10 @@ The maintained [product contract](docs/spec.md) is authoritative for observable
 behavior and boundaries. OMXTerm Web is a separate browser-based SSH broker,
 not a variant or runtime dependency of OMXTerm.
 
-## License
+## License and acknowledgements
 
-OMXTerm source code is available under the [MIT License](LICENSE). Bundled
+OMXTerm source code is available under the [MIT License](LICENSE). Its Terminal
+Surface is built with [Restty](https://github.com/wiedymi/restty) and Restty's
+pinned [Ghostty](https://github.com/ghostty-org/ghostty) core. Bundled
 third-party components retain their own terms as recorded in
 [Third-Party Notices](THIRD_PARTY_NOTICES.md).

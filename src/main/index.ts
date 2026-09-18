@@ -58,7 +58,7 @@ import {
 } from "./user-configuration";
 import {
   createUserConfigurationReloader,
-  resttyBaseline,
+  terminalSurfaceFontBaseline,
 } from "./user-configuration-reloader";
 import {
   applyActiveUserConfiguration,
@@ -160,9 +160,9 @@ app
             userFileErrors: startupNotices,
           },
           load: () => loadUserConfiguration(configurationLoadOptions),
-          ...resttyBaseline(userConfiguration),
-          activeResttySurfaceFontConfigurations: () =>
-            terminalIpcRouter.activeResttySurfaceFontConfigurations(),
+          ...terminalSurfaceFontBaseline(userConfiguration),
+          activeTerminalSurfaceFontConfigurations: () =>
+            terminalIpcRouter.activeTerminalSurfaceFontConfigurations(),
           operationalEvents: operationalEvents!,
           writeStderr: (detail) => process.stderr.write(detail),
           apply: (state, committed) =>

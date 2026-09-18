@@ -24,21 +24,21 @@ import type {
   IpcHandler,
   IpcListener,
   IpcMainPort,
-  ResttySurfaceFontConfiguration,
   TerminalIpcController,
   TerminalIpcControllerOptions,
   TerminalIpcRouter,
+  TerminalSurfaceFontConfiguration,
   TrustedWebContents,
 } from "./terminal-ipc-types";
 export type {
   IpcEvent,
   IpcMainPort,
-  ResttySurfaceFontConfiguration,
   TerminalIpcController,
   TerminalIpcControllerOptions,
   TerminalIpcRouter,
   TerminalSessionEndContext,
   TerminalSessionStartErrorContext,
+  TerminalSurfaceFontConfiguration,
   TrustedWebContents,
 } from "./terminal-ipc-types";
 import type { OperationalEventLog } from "./operational-events";
@@ -76,7 +76,7 @@ interface RoutedTerminalIpcController extends TerminalIpcController {
   localImage(payload?: unknown): Promise<LocalImageData | null>;
   snippets(payload?: unknown): Promise<TerminalSnippetsResponse>;
   fontData(payload?: unknown): Promise<TerminalFontData>;
-  activeResttySurfaceFontConfigurations(): readonly ResttySurfaceFontConfiguration[];
+  activeTerminalSurfaceFontConfigurations(): readonly TerminalSurfaceFontConfiguration[];
 }
 
 export function registerTerminalIpcRouter(
@@ -279,10 +279,10 @@ export function registerTerminalIpcRouter(
       for (const controller of controllers.values())
         controller.applyConfiguration(configuration);
     },
-    activeResttySurfaceFontConfigurations() {
+    activeTerminalSurfaceFontConfigurations() {
       return Object.freeze(
         [...controllers.values()].flatMap((controller) =>
-          controller.activeResttySurfaceFontConfigurations(),
+          controller.activeTerminalSurfaceFontConfigurations(),
         ),
       );
     },
@@ -316,7 +316,7 @@ export function registerTerminalIpcRouter(
 
 interface RoutedSessionState {
   readonly session: LocalTerminalSession;
-  readonly resttyFontConfiguration?: ResttySurfaceFontConfiguration;
+  readonly terminalSurfaceFontConfiguration?: TerminalSurfaceFontConfiguration;
   readonly outputFlow: TerminalOutputFlow;
   closed: boolean;
   closeReason?: "rendering-failure";
@@ -339,14 +339,14 @@ function sessionEndContext(
   };
 }
 
-function activeResttyFontConfigurations(
+function activeTerminalSurfaceFontConfigurations(
   sessions: ReadonlyMap<TerminalSessionId, RoutedSessionState>,
-): readonly ResttySurfaceFontConfiguration[] {
+): readonly TerminalSurfaceFontConfiguration[] {
   return Object.freeze(
     [...sessions.values()].flatMap((state) =>
-      state.exited || state.resttyFontConfiguration === undefined
+      state.exited || state.terminalSurfaceFontConfiguration === undefined
         ? []
-        : [state.resttyFontConfiguration],
+        : [state.terminalSurfaceFontConfiguration],
     ),
   );
 }
@@ -536,7 +536,7 @@ function createTerminalIpcController(
     sessions.set(sessionId, {
       session: createdSession,
       outputFlow,
-      resttyFontConfiguration: Object.freeze({
+      terminalSurfaceFontConfiguration: Object.freeze({
         ...(rendererConfiguration.fontFamily === undefined
           ? {}
           : { fontFamily: rendererConfiguration.fontFamily }),
@@ -721,8 +721,8 @@ function createTerminalIpcController(
     localImage: localImageBoundary.request,
     snippets,
     fontData,
-    activeResttySurfaceFontConfigurations: () =>
-      activeResttyFontConfigurations(sessions),
+    activeTerminalSurfaceFontConfigurations: () =>
+      activeTerminalSurfaceFontConfigurations(sessions),
     dispose() {
       if (disposed) return;
       disposed = true;

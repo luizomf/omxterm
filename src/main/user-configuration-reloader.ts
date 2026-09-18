@@ -19,11 +19,11 @@ interface UserConfigurationReloaderOptions {
   readonly operationalEvents?: Pick<OperationalEventLog, "setLevel" | "write">;
   readonly writeStderr?: (detail: string) => void;
   readonly now?: () => number;
-  readonly resttyRestartBaseline?: Pick<
+  readonly terminalSurfaceFontBaseline?: Pick<
     LoadedUserConfiguration,
     "fontFamily" | "fontLineHeight"
   >;
-  readonly activeResttySurfaceFontConfigurations?: () => readonly Pick<
+  readonly activeTerminalSurfaceFontConfigurations?: () => readonly Pick<
     LoadedUserConfiguration,
     "fontFamily" | "fontLineHeight"
   >[];
@@ -34,11 +34,11 @@ export interface UserConfigurationReloader {
   reload(): Promise<void>;
 }
 
-export function resttyBaseline(
+export function terminalSurfaceFontBaseline(
   configuration: LoadedUserConfiguration,
-): Pick<UserConfigurationReloaderOptions, "resttyRestartBaseline"> {
+): Pick<UserConfigurationReloaderOptions, "terminalSurfaceFontBaseline"> {
   return {
-    resttyRestartBaseline: {
+    terminalSurfaceFontBaseline: {
       ...(configuration.fontFamily === undefined
         ? {}
         : { fontFamily: configuration.fontFamily }),
@@ -79,8 +79,8 @@ export function createUserConfigurationReloader(
         currentNotices(
           load.configuration,
           load.warnings ?? [],
-          options.resttyRestartBaseline,
-          options.activeResttySurfaceFontConfigurations?.(),
+          options.terminalSurfaceFontBaseline,
+          options.activeTerminalSurfaceFontConfigurations?.(),
         ),
       );
       options.operationalEvents?.setLevel(load.configuration.logLevel);
@@ -160,7 +160,7 @@ function currentNotices(
   if (deferred.length === 0) return warnings;
   return [
     ...warnings,
-    `Restty kept ${deferred.join(" and ")} in existing Terminal Surfaces. Restart OMXTerm to apply ${deferred.length === 1 ? "it" : "them"} everywhere; new tabs and windows use the latest validated values.`,
+    `Existing Terminal Surfaces continue using their previous ${deferred.join(" and ")} ${deferred.length === 1 ? "value" : "values"}. Restart OMXTerm to apply ${deferred.length === 1 ? "it" : "them"} everywhere; new tabs and windows use the latest validated values.`,
   ];
 }
 

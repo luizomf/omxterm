@@ -217,7 +217,7 @@ describe.skipIf(
       });
       expect(result.beforeDestroy).toEqual({ canvases: 1, tabs: 1 });
       expect(result.backendLoss).toEqual({
-        message: "The Restty rendering backend was lost",
+        message: "The OMXTerm Terminal Surface rendering backend was lost",
         ownedSessionExited: true,
         unaffectedSessionResponded: true,
       });

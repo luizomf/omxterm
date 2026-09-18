@@ -309,7 +309,7 @@ export async function mountResttyTerminalSurface(
           release: () => undefined,
         };
     if (options.abortSignal?.aborted)
-      throw new Error("Restty initialization was cancelled");
+      throw new Error("Terminal Surface initialization was cancelled");
     container.classList.add("restty-terminal-surface");
     setContainerAppearance(container, padding, terminalTheme);
     const terminal = resttyTerminalConfig(
@@ -345,7 +345,8 @@ export async function mountResttyTerminalSurface(
       else if (event.type === "bell") options.onBell?.();
     });
     await pane.runtime.lifecycle.init();
-    if (disposed) throw new Error("Restty initialization was cancelled");
+    if (disposed)
+      throw new Error("Terminal Surface initialization was cancelled");
     if (
       pane.runtime.lifecycle.state() !== "ready" ||
       pane.runtime.render.getBackend() !== "webgl2"
@@ -373,7 +374,7 @@ export async function mountResttyTerminalSurface(
       "webglcontextlost",
       (event) => {
         event.preventDefault();
-        fail("The Restty rendering backend was lost");
+        fail("The OMXTerm Terminal Surface rendering backend was lost");
       },
       { once: true },
     );
@@ -488,15 +489,15 @@ function throwInitializationFailure(
 ): never {
   const detail = cause instanceof Error ? cause.message : String(cause);
   try {
-    fail(`Failed to initialize the Restty Terminal Surface: ${detail}`);
+    fail(`Failed to initialize the OMXTerm Terminal Surface: ${detail}`);
   } catch (cleanupError) {
     throw new AggregateError(
       [cause, cleanupError],
-      "Failed to mount and clean the Restty Terminal Surface",
+      "Failed to mount and clean the OMXTerm Terminal Surface",
       { cause },
     );
   }
-  throw new Error("Failed to mount the Restty Terminal Surface", { cause });
+  throw new Error("Failed to mount the OMXTerm Terminal Surface", { cause });
 }
 
 function setContainerAppearance(

@@ -511,13 +511,12 @@ Terminal Theme, close
 confirmation, logging, keybinds, and the Always-on-Top default. On Windows it
 also selects `windowsShell` for subsequently created Default Shell sessions.
 Existing Terminal Surfaces and Live Terminal Sessions remain in place and refit
-as needed. Restty updates theme, font size, programming ligatures, padding and
-scrollback live, but an
-existing Surface retains its initial font family and line height.
-A persistent notice names either deferred setting and asks you to restart
-OMXTerm to apply it everywhere. New Restty Surfaces use the latest fully
-validated values; a deferred setting clears only when its requested value is
-already active in every existing Surface. Existing windows keep their current Always-on-Top state and Window Font Zoom delta;
+as needed. The Terminal Surface updates theme, font size, programming ligatures,
+padding and scrollback live, but an existing Surface retains its initial font
+family and line height. A persistent notice names either deferred setting and
+asks you to restart OMXTerm to apply it everywhere. New Terminal Surfaces use
+the latest fully validated values; a deferred setting clears only when its
+requested value is already active in every existing Surface. Existing windows keep their current Always-on-Top state and Window Font Zoom delta;
 Actual Size returns to the latest configured baseline.
 
 A rejected reload applies nothing and preserves the complete last valid

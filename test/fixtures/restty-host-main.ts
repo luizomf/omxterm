@@ -249,12 +249,12 @@ function createHost(window: BrowserWindow) {
     load: async () => ({ configuration: reloads.shift()! }),
     apply: (state) =>
       controller.applyConfiguration(terminalRendererConfiguration(state, 0)),
-    resttyRestartBaseline: {
+    terminalSurfaceFontBaseline: {
       fontFamily: configuredFontFamily,
       fontLineHeight: 1,
     },
-    activeResttySurfaceFontConfigurations: () =>
-      router.activeResttySurfaceFontConfigurations(),
+    activeTerminalSurfaceFontConfigurations: () =>
+      router.activeTerminalSurfaceFontConfigurations(),
   });
   return { reloader };
 }

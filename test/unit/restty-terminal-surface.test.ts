@@ -160,7 +160,7 @@ describe("Restty Terminal Surface", () => {
           systemFont: { family: "Requested Native Family", available: true },
         },
       }),
-    ).rejects.toThrow("Failed to mount the Restty Terminal Surface");
+    ).rejects.toThrow("Failed to mount the OMXTerm Terminal Surface");
     expect(adapter.start).not.toHaveBeenCalled();
     expect(harness.instances).toHaveLength(0);
   });
@@ -214,6 +214,9 @@ describe("Restty Terminal Surface", () => {
       adapter,
     ).catch((cause: unknown) => cause);
     expect(error).toBeInstanceOf(AggregateError);
+    expect((error as AggregateError).message).toBe(
+      "Failed to mount and clean the OMXTerm Terminal Surface",
+    );
     expect((error as AggregateError).errors).toContain(initial);
     expect((error as AggregateError).errors).toContain(cleanup);
     expect(harness.instances[0]!.destroy).toHaveBeenCalledOnce();
@@ -337,7 +340,7 @@ describe("Restty Terminal Surface", () => {
       },
     );
 
-    await expect(pending).rejects.toThrow(/Restty Terminal Surface/u);
+    await expect(pending).rejects.toThrow(/OMXTerm Terminal Surface/u);
     expect(harness.instances).toHaveLength(0);
     expect(adapter.start).not.toHaveBeenCalled();
     expect(releaseFontInputs).toHaveBeenCalledOnce();
@@ -357,13 +360,13 @@ describe("Restty Terminal Surface", () => {
       mountResttyTerminalSurface(document.createElement("main"), adapter, {
         onFatalError,
       }),
-    ).rejects.toThrow(/Restty Terminal Surface/u);
+    ).rejects.toThrow(/OMXTerm Terminal Surface/u);
 
     expect(adapter.start).not.toHaveBeenCalled();
     expect(adapter.close).toHaveBeenCalledOnce();
     expect(harness.instances[0]!.destroy).toHaveBeenCalledOnce();
     expect(onFatalError).toHaveBeenCalledWith(
-      expect.stringContaining("font unavailable"),
+      "Failed to initialize the OMXTerm Terminal Surface: font unavailable",
     );
   });
 
@@ -384,7 +387,7 @@ describe("Restty Terminal Surface", () => {
 
     expect(loss.defaultPrevented).toBe(true);
     expect(onFatalError).toHaveBeenCalledExactlyOnceWith(
-      "The Restty rendering backend was lost",
+      "The OMXTerm Terminal Surface rendering backend was lost",
     );
     expect(adapter.close).toHaveBeenCalledExactlyOnceWith("rendering-failure");
     expect(restty.destroy).toHaveBeenCalledOnce();

@@ -189,7 +189,7 @@ describe("User Configuration reloader", () => {
     expect(load).toHaveBeenCalledTimes(3);
   });
 
-  it("names changed Restty restart-only settings and clears the notice when reverted", async () => {
+  it("names changed Terminal Surface restart-only settings and clears the notice when reverted", async () => {
     const initial = configuration("initial", {
       fontFamily: "Initial Family",
       fontLineHeight: 1,
@@ -214,7 +214,7 @@ describe("User Configuration reloader", () => {
       initial: { configuration: initial, userFileErrors: [] },
       load,
       apply,
-      resttyRestartBaseline: {
+      terminalSurfaceFontBaseline: {
         fontFamily: "Initial Family",
         fontLineHeight: 1,
       },
@@ -226,7 +226,9 @@ describe("User Configuration reloader", () => {
     expect(reloader.current().userFileErrors).toEqual([
       expect.stringContaining("font.family and font.lineHeight"),
     ]);
-    expect(reloader.current().userFileErrors[0]).toContain("Restart OMXTerm");
+    expect(reloader.current().userFileErrors[0]).toBe(
+      "Existing Terminal Surfaces continue using their previous font.family and font.lineHeight values. Restart OMXTerm to apply them everywhere; new tabs and windows use the latest validated values.",
+    );
 
     await reloader.reload();
     expect(reloader.current().userFileErrors).toEqual([]);
@@ -260,11 +262,11 @@ describe("User Configuration reloader", () => {
       initial: { configuration: initial, userFileErrors: [] },
       load,
       apply: vi.fn(),
-      resttyRestartBaseline: {
+      terminalSurfaceFontBaseline: {
         fontFamily: "Initial Family",
         fontLineHeight: 1,
       },
-      activeResttySurfaceFontConfigurations: () => activeSurfaces,
+      activeTerminalSurfaceFontConfigurations: () => activeSurfaces,
     });
 
     await reloader.reload();
