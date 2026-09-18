@@ -82,6 +82,12 @@ body.tabs-visible .restty-terminal-surface {
   overflow: hidden;
 }
 
+.restty-terminal-surface .restty-native-scroll-host {
+  /* Restty owns the viewport. Browser anchoring on a host/font resize would
+     feed a layout-generated scroll event back into the core as user input. */
+  overflow-anchor: none;
+}
+
 .restty-terminal-surface canvas {
   display: block;
   width: 100%;

@@ -16,6 +16,11 @@ interface ScrollbackFixture {
   reduceHistory(): Promise<ScrollMetrics>;
   disableHistory(): Promise<ScrollMetrics>;
   enableHistory(): Promise<ScrollMetrics>;
+  resizeAtBottom(): Promise<{
+    before: ScrollMetrics;
+    reduced: ScrollMetrics;
+    restored: ScrollMetrics;
+  }>;
   readonly surface: TerminalSurface;
   readonly writes: string[];
   scrollToTop(): Promise<ScrollMetrics>;
@@ -148,6 +153,22 @@ async function run() {
       return result;
     },
     metrics: () => metrics(canvas),
+    async resizeAtBottom() {
+      const before = metrics(canvas);
+      // A reload notice can shrink the host while font metrics also change.
+      // Neither operation is user scroll input; the live viewport must stay live.
+      container.style.maxHeight = `${before.clientHeight - 60}px`;
+      surface.applyConfiguration({
+        ...configuration(3_000),
+        appearance: { fontSize: 18, lineHeight: 1 },
+      });
+      await waitForRender();
+      const reduced = metrics(canvas);
+      container.style.maxHeight = "";
+      surface.applyConfiguration(configuration(3_000));
+      await waitForRender();
+      return { before, reduced, restored: metrics(canvas) };
+    },
     async reduceHistory() {
       surface.applyConfiguration(configuration(1_200));
       await waitForRender();

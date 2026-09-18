@@ -30,7 +30,12 @@ can retain fewer rows. OMXTerm does not estimate bytes per line. Zero selects
 Ghostty's no-history path: it drops existing history, retains none through
 continued output or resize, and a later positive value retains only new output.
 Live changes preserve reflow, alternate-screen state, selection and viewport
-coherence in the same Surface and remain isolated per Surface.
+coherence in the same Surface and remain isolated per Surface. The native scroll
+host disables browser scroll anchoring: Restty owns the terminal viewport, so a
+notice/layout or font-size change must not turn Chromium's anchor adjustment
+into terminal scroll input. Native rendering coverage verifies that shrinking
+and restoring the host with a font-size change preserves the live bottom while
+ordinary output still leaves a deliberately scrolled viewport alone.
 
 Explicit copy/paste, selection, native context actions, Protected Paste,
 snippets, file-path injection and write-only OSC 52 use the existing OMXTerm

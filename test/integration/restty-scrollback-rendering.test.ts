@@ -27,6 +27,11 @@ interface Metrics {
 }
 
 interface Result {
+  readonly resizeAtBottom: {
+    readonly before: Metrics;
+    readonly reduced: Metrics;
+    readonly restored: Metrics;
+  };
   readonly viewport: {
     readonly outputTop: number;
     readonly typed: Metrics;
@@ -77,6 +82,15 @@ describe("Restty scrollback through the production Surface seam", () => {
         `Scrollback fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
       ).toBe(0);
       expect(result).toBeDefined();
+      for (const metrics of Object.values(result!.resizeAtBottom)) {
+        expect
+          .soft(metrics.scrollTop)
+          .toBe(metrics.scrollHeight - metrics.clientHeight);
+        expect.soft(metrics.sameCanvas).toBe(true);
+      }
+      expect
+        .soft(result!.resizeAtBottom.reduced.clientHeight)
+        .toBeLessThan(result!.resizeAtBottom.before.clientHeight);
       expect.soft(result!.viewport.outputTop).toBe(0);
       expect
         .soft(result!.viewport.typed.scrollTop)
@@ -226,6 +240,7 @@ app.whenReady().then(async () => {
   });
   await window.loadFile(path.join(__dirname, "index.html"));
   await waitFor(window, "globalThis.__omxtermResttyScrollback?.ready ?? false");
+  const resizeAtBottom = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.resizeAtBottom()", true);
   const initial = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.metrics()", true);
   const scrolledTop = await window.webContents.executeJavaScript(
     \`(() => {
@@ -280,6 +295,7 @@ app.whenReady().then(async () => {
   const viewport = { geometry, outputTop: outputMetrics.scrollTop, typed, injected, writes };
   const preferences = window.webContents.getLastWebPreferences();
   const result = {
+    resizeAtBottom,
     viewport,
     initial,
     scrolledTop,
