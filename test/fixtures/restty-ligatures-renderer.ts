@@ -1,7 +1,12 @@
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
+import { terminalFontInputs } from "../../src/terminal-surface/terminal-font-stack";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
+import type { TerminalFontData } from "../../src/shared/terminal-font-data";
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
 import type { TerminalSurface } from "../../src/terminal-surface/terminal-surface";
+
+// The isolated native test injects bounded platform fallback bytes at build time.
+declare const ligatureFixtureFallbacks: TerminalFontData["fallbacks"];
 
 interface FixtureState {
   readonly state: "ready";
@@ -11,7 +16,8 @@ interface FixtureState {
   readonly cursorReports: readonly string[];
   readonly starts: number;
   readonly closes: number;
-  readonly canvasIdentity: number;
+  readonly sameCanvas: boolean;
+  readonly fontAcquisitions: number;
 }
 
 declare global {
@@ -23,12 +29,12 @@ declare global {
 const queriedRoot = document.querySelector<HTMLElement>("#terminal-tabs");
 if (!queriedRoot) throw new Error("Ligature fixture container is missing");
 const root: HTMLElement = queriedRoot;
-
 let surface: TerminalSurface | undefined;
 let handlers: TerminalSessionHandlers | undefined;
 let starts = 0;
 let closes = 0;
-let canvasIdentity = 0;
+let fontAcquisitions = 0;
+let initialCanvas: HTMLCanvasElement | null = null;
 let copiedText = "";
 let cellWidth = 0;
 let cellHeight = 0;
@@ -38,35 +44,22 @@ const waitForPaint = () =>
   new Promise<void>((resolve) =>
     requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
   );
-
 const configuration = (ligatures: boolean) => ({
-  appearance: { fontSize: 32, lineHeight: 1, ligatures },
+  appearance: { fontSize: 24, lineHeight: 1, ligatures },
   padding: { top: 0, right: 0, bottom: 0, left: 0 },
   scrollbackLines: 10_000,
   optionKeyMode: "none" as const,
   theme: DEFAULT_TERMINAL_THEME,
 });
 
-async function renderEvidence(): Promise<void> {
+async function observe(): Promise<void> {
   copiedText = "";
   cursorReports.length = 0;
-  handlers?.onOutput(
-    "\u001b[2J\u001b[H\u001b[?25l" +
-      "=>" +
-      "\u001b[2;1H\u001b[1m=>\u001b[22m" +
-      "\u001b[3;1H=" +
-      "\u001b[4;2H>" +
-      "\u001b[5;1H\u001b[1m=\u001b[22m" +
-      "\u001b[6;2H\u001b[1m>\u001b[22m" +
-      "\u001b[7;1H界é🙂 \ue8f0" +
-      "\u001b[8;1Hsource => text" +
-      "\u001b[1;3H\u001b[6n\u001b[16t",
-  );
+  // Queries only: never repair text, cursor or selection after a live toggle.
+  handlers?.onOutput("\u001b[6n\u001b[16t");
   await waitForPaint();
   await new Promise((resolve) => setTimeout(resolve, 100));
-  surface?.selectAll();
   await surface?.copy();
-  await waitForPaint();
   globalThis.__omxtermLigaturesState = {
     state: "ready",
     cellWidth,
@@ -75,11 +68,13 @@ async function renderEvidence(): Promise<void> {
     cursorReports: [...cursorReports],
     starts,
     closes,
-    canvasIdentity,
+    sameCanvas:
+      initialCanvas !== null && root.querySelector("canvas") === initialCanvas,
+    fontAcquisitions,
   };
 }
 
-async function mount(ligatures: boolean): Promise<void> {
+async function mount(ligatures?: boolean): Promise<void> {
   surface?.dispose();
   const container = document.createElement("main");
   container.className = "terminal-surface";
@@ -100,7 +95,7 @@ async function mount(ligatures: boolean): Promise<void> {
           cellHeight = Number(cell[1]);
           cellWidth = Number(cell[2]);
         }
-        if (/\u001b\[1;3R/u.test(data)) cursorReports.push(data);
+        if (/\u001b\[\d+;\d+R/u.test(data)) cursorReports.push(data);
       },
       resize() {},
       close() {
@@ -108,7 +103,19 @@ async function mount(ligatures: boolean): Promise<void> {
       },
     },
     {
-      ...configuration(ligatures),
+      ...configuration(true),
+      appearance: {
+        fontSize: 24,
+        lineHeight: 1,
+        ...(ligatures === undefined ? {} : { ligatures }),
+      },
+      async acquireFontInputs() {
+        fontAcquisitions += 1;
+        return {
+          fonts: terminalFontInputs({ fallbacks: ligatureFixtureFallbacks }),
+          release() {},
+        };
+      },
       clipboard: {
         async writeText(text) {
           copiedText = text;
@@ -123,20 +130,38 @@ async function mount(ligatures: boolean): Promise<void> {
       },
     },
   );
-  canvasIdentity += 1;
-  await renderEvidence();
+  if (initialCanvas === null) initialCanvas = root.querySelector("canvas");
+  seedText();
+  await waitForPaint();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  surface.selectAll();
+  await observe();
+}
+
+function seedText(): void {
+  // One seed per new Surface, never per toggle. Rows 9–14 test cell occupancy
+  // using the same trailing marker, plus bundled/native fallback versus tofu.
+  handlers?.onOutput(
+    "\u001b[2J\u001b[H\u001b[?25l=>" +
+      "\u001b[2;1H\u001b[1m=>\u001b[22m" +
+      "\u001b[3;1H=\u001b[4;2H>" +
+      "\u001b[5;1H\u001b[1m=\u001b[22m\u001b[6;2H\u001b[1m>\u001b[22m" +
+      "\u001b[7;1Hƀ\u001b[8;1H͸" +
+      "\u001b[9;1H界|\u001b[10;1Hé|\u001b[11;1H🙂|" +
+      "\u001b[12;1H👩‍💻|\u001b[13;3H|\u001b[14;2H|" +
+      "\u001b[15;1Hsource => text",
+  );
 }
 
 globalThis.__omxtermSetLigatures = async (enabled) => {
   globalThis.__omxtermLigaturesState = undefined;
   surface?.applyConfiguration(configuration(enabled));
-  await renderEvidence();
+  await observe();
 };
 globalThis.__omxtermMountLigatures = async (enabled) => {
   globalThis.__omxtermLigaturesState = undefined;
   await mount(enabled);
 };
-
-void mount(true).catch((error: unknown) => {
+void mount().catch((error: unknown) => {
   document.body.dataset.fixtureError = String(error);
 });

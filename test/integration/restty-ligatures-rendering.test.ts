@@ -13,6 +13,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
+import { installedFallbackFontData } from "../../src/main/installed-font-family";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
 
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -26,7 +27,8 @@ interface StageResult {
   readonly cursorReports: readonly string[];
   readonly starts: number;
   readonly closes: number;
-  readonly canvasIdentity: number;
+  readonly sameCanvas: boolean;
+  readonly fontAcquisitions: number;
 }
 
 interface Result {
@@ -39,6 +41,9 @@ interface Result {
   readonly newDisabledMatchesLiveDisabled: boolean;
   readonly disabledRegularMatchesIndividualGlyphs: boolean;
   readonly disabledBoldMatchesIndividualGlyphs: boolean;
+  readonly unicodePixelsPreserved: boolean;
+  readonly glyphCoverage: readonly boolean[];
+  readonly cellSpansPreserved: boolean;
   readonly security: {
     readonly contextIsolation: boolean;
     readonly nodeIntegration: boolean;
@@ -80,15 +85,13 @@ describe("Restty programming ligatures under production Electron policy", () => 
         starts: 2,
         closes: 1,
       });
-      expect(result!.liveDisabled.canvasIdentity).toBe(
-        result!.defaultEnabled.canvasIdentity,
-      );
-      expect(result!.liveReenabled.canvasIdentity).toBe(
-        result!.defaultEnabled.canvasIdentity,
-      );
-      expect(result!.newSurfaceDisabled.canvasIdentity).not.toBe(
-        result!.defaultEnabled.canvasIdentity,
-      );
+      expect(result!.defaultEnabled.sameCanvas).toBe(true);
+      expect(result!.liveDisabled.sameCanvas).toBe(true);
+      expect(result!.liveReenabled.sameCanvas).toBe(true);
+      expect(result!.newSurfaceDisabled.sameCanvas).toBe(false);
+      expect(result!.unicodePixelsPreserved).toBe(true);
+      expect(result!.glyphCoverage).toEqual([true, true, true, true, true]);
+      expect(result!.cellSpansPreserved).toBe(true);
 
       for (const stage of [
         result!.defaultEnabled,
@@ -98,9 +101,12 @@ describe("Restty programming ligatures under production Electron policy", () => 
       ]) {
         expect(stage.cellWidth).toBeGreaterThan(0);
         expect(stage.cellHeight).toBeGreaterThan(0);
-        expect(stage.cursorReports.join("")).toContain("\u001b[1;3R");
+        expect(stage.cursorReports.join("")).toBe("\u001b[15;15R");
         expect(stage.copiedText).toContain("source => text");
-        expect(stage.copiedText).toContain("界é🙂");
+        for (const text of ["界|", "é|", "🙂|", "👩‍💻|"])
+          expect(stage.copiedText).toContain(text);
+        expect(stage.copiedText).toBe(result!.defaultEnabled.copiedText);
+        expect(stage.fontAcquisitions).toBe(stage.starts);
       }
       expect(result!.liveDisabled.cellWidth).toBe(
         result!.defaultEnabled.cellWidth,
@@ -126,10 +132,26 @@ describe("Restty programming ligatures under production Electron policy", () => 
 });
 
 async function buildFixture(root: string): Promise<void> {
+  const fallbacks = await installedFallbackFontData();
+  const imports: string[] = [];
+  const entries: string[] = [];
+  for (const [index, font] of fallbacks.entries()) {
+    await writeFile(path.join(root, `fallback-${index}.ttf`), font.data);
+    imports.push(`import data${index} from './fallback-${index}.ttf';`);
+    entries.push(
+      `{ family: ${JSON.stringify(font.family)}, data: data${index} }`,
+    );
+  }
+  const injected = path.join(root, "fallbacks.ts");
+  await writeFile(
+    injected,
+    `${imports.join("\n")}\nexport const ligatureFixtureFallbacks = [${entries.join(",")}];`,
+  );
   await build({
     absWorkingDir: projectRoot,
     bundle: true,
     entryPoints: ["test/fixtures/restty-ligatures-renderer.ts"],
+    inject: [injected],
     format: "iife",
     loader: { ".ttf": "binary" },
     logLevel: "silent",
@@ -208,12 +230,18 @@ async function captureEvidence(window, state) {
     boldSecond: await capture(2, 2),
     boldFirstReference: await capture(5, 1),
     boldSecondReference: await capture(6, 2),
+    unicode: await Promise.all([7, 8, 9, 10, 11, 12].map(row => capture(row, 1, 3))),
+    coverage: await Promise.all([7, 9, 10, 11, 12].map(row => capture(row, 1))),
+    missing: await capture(8, 1),
+    markers: await Promise.all([9, 11, 12, 13].map(row => capture(row, 3))),
+    combiningMarker: await capture(10, 2),
+    singleMarker: await capture(14, 2),
   };
 }
 app.whenReady().then(async () => {
   const window = new BrowserWindow({
     width: 800,
-    height: 500,
+    height: 800,
     show: false,
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, backgroundThrottling: false },
   });
@@ -242,6 +270,9 @@ app.whenReady().then(async () => {
     newDisabledMatchesLiveDisabled: newDisabledPixels.regularRun.equals(disabledPixels.regularRun) && newDisabledPixels.boldRun.equals(disabledPixels.boldRun),
     disabledRegularMatchesIndividualGlyphs: disabledPixels.regularFirst.equals(disabledPixels.regularFirstReference) && disabledPixels.regularSecond.equals(disabledPixels.regularSecondReference),
     disabledBoldMatchesIndividualGlyphs: disabledPixels.boldFirst.equals(disabledPixels.boldFirstReference) && disabledPixels.boldSecond.equals(disabledPixels.boldSecondReference),
+    unicodePixelsPreserved: disabledPixels.unicode.every((pixels, index) => pixels.equals(enabledPixels.unicode[index]) && pixels.equals(reenabledPixels.unicode[index]) && pixels.equals(newDisabledPixels.unicode[index])),
+    glyphCoverage: disabledPixels.coverage.map(pixels => !pixels.equals(disabledPixels.missing) && pixels.some((value, index) => index % 4 !== 3 && value > 180)),
+    cellSpansPreserved: [enabledPixels, disabledPixels, reenabledPixels, newDisabledPixels].every(pixels => pixels.markers.every(marker => marker.equals(pixels.markers[3])) && pixels.combiningMarker.equals(pixels.singleMarker)),
     security: {
       contextIsolation: preferences.contextIsolation,
       nodeIntegration: preferences.nodeIntegration,

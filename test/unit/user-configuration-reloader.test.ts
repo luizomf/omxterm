@@ -207,7 +207,8 @@ describe("User Configuration reloader", () => {
           }),
         ),
       )
-      .mockResolvedValueOnce(valid(initial));
+      .mockResolvedValueOnce(valid(initial))
+      .mockResolvedValueOnce(valid({ ...initial, fontLigatures: false }));
     const apply = vi.fn();
     const reloader = createUserConfigurationReloader({
       initial: { configuration: initial, userFileErrors: [] },
@@ -230,6 +231,11 @@ describe("User Configuration reloader", () => {
     await reloader.reload();
     expect(reloader.current().userFileErrors).toEqual([]);
     expect(apply).toHaveBeenCalledTimes(2);
+
+    await reloader.reload();
+    expect(reloader.current().configuration.fontLigatures).toBe(false);
+    expect(reloader.current().userFileErrors).toEqual([]);
+    expect(apply).toHaveBeenCalledTimes(3);
   });
 
   it("keeps the restart notice when Surfaces from multiple font generations remain live", async () => {
