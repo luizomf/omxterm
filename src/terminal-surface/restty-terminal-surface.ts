@@ -33,6 +33,8 @@ import {
 import type { TerminalSessionAdapter } from "./terminal-session-adapter";
 import {
   installResttyVisibleLinks,
+  requestVisibleLink,
+  type ResttyVisibleLinkController,
   type ResttyVisibleLinkInteraction,
 } from "./restty-visible-links";
 import { resttyHostServices } from "./restty-host-services";
@@ -140,21 +142,18 @@ function resttyDelivery(
   });
 }
 
-function requestVisibleLink(
-  destination: string,
-  options: TerminalSurfaceOptions,
-): void {
-  if (destination.startsWith("file:///"))
-    options.onLocalImageActivation?.({
-      source: "file-url",
-      url: destination,
-    });
-  else if (destination.startsWith("/") || /^[a-z]:[\\/]/iu.test(destination))
-    options.onLocalImageActivation?.({
-      source: "native-path",
-      path: destination,
-    });
-  else options.onExternalLink?.(destination);
+function releaseResttyResources(releases: ReadonlyArray<() => void>): void {
+  const failures: unknown[] = [];
+  for (const release of releases) {
+    try {
+      release();
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+  if (failures.length === 1) throw failures[0];
+  if (failures.length > 1)
+    throw new AggregateError(failures, "Terminal Surface cleanup failed");
 }
 
 async function copyResttySelection(
@@ -182,7 +181,7 @@ export async function mountResttyTerminalSurface(
   let ptyCallbacks: PtyCallbacks | undefined;
   let settledSize: TerminalSize | undefined;
   let removeRuntimeListener: (() => void) | undefined;
-  let removeVisibleLinkListeners: (() => void) | undefined;
+  let visibleLinkController: ResttyVisibleLinkController | undefined;
   let restty: Restty | undefined;
   let pane: CandidatePane | undefined;
   let baselineFontSize = resolveFontSize(options.appearance?.fontSize);
@@ -197,7 +196,10 @@ export async function mountResttyTerminalSurface(
     event.preventDefault();
     options.clipboard.requestContextMenu();
   };
-  const revealInput = () => pane?.runtime.interaction.scrollToBottom();
+  const revealInput = () => {
+    visibleLinkController?.invalidate();
+    pane?.runtime.interaction.scrollToBottom();
+  };
   const delivery = resttyDelivery(
     adapter,
     options,
@@ -213,7 +215,10 @@ export async function mountResttyTerminalSurface(
     currentFontSize = fontSize;
     pane?.runtime.terminal.setFontSize(fontSize);
   };
-  const refit = () => pane?.runtime.interaction.updateSize(true);
+  const refit = () => {
+    visibleLinkController?.invalidate();
+    pane?.runtime.interaction.updateSize(true);
+  };
   const applyConfiguration = (configuration: TerminalSurfaceConfiguration) => {
     const nextBaseline = resolveFontSize(configuration.appearance.fontSize);
     resolveLineHeight(configuration.appearance.lineHeight);
@@ -239,26 +244,16 @@ export async function mountResttyTerminalSurface(
   const dispose = (reason?: "rendering-failure") => {
     if (disposed) return;
     disposed = true;
-    const failures: unknown[] = [];
-    for (const release of [
+    releaseResttyResources([
       () => delivery.dispose(),
       () => container.removeEventListener("contextmenu", onContextMenu),
       () => removeRuntimeListener?.(),
-      () => removeVisibleLinkListeners?.(),
+      () => visibleLinkController?.dispose(),
       () => adapter.close(reason),
       () => restty?.destroy(),
-    ]) {
-      try {
-        release();
-      } catch (error) {
-        failures.push(error);
-      }
-    }
+    ]);
     removeRuntimeListener = undefined;
-    removeVisibleLinkListeners = undefined;
-    if (failures.length === 1) throw failures[0];
-    if (failures.length > 1)
-      throw new AggregateError(failures, "Terminal Surface cleanup failed");
+    visibleLinkController = undefined;
   };
   const fail = (message: string) => {
     if (disposed) return;
@@ -339,9 +334,10 @@ export async function mountResttyTerminalSurface(
 
     removeRuntimeListener = pane.runtime.events.subscribe((event) => {
       if (disposed) return;
-      if (event.type === "term-size")
+      if (event.type === "term-size") {
+        visibleLinkController?.invalidate();
         settledSize = { cols: event.cols, rows: event.rows };
-      else if (event.type === "title") options.onTitleRequest?.(event.title);
+      } else if (event.type === "title") options.onTitleRequest?.(event.title);
       else if (event.type === "bell") options.onBell?.();
     });
     await pane.runtime.lifecycle.init();
@@ -361,7 +357,7 @@ export async function mountResttyTerminalSurface(
     container.dataset.resttyFont =
       initialFamily ?? DEFAULT_TERMINAL_FONT_FAMILY;
     if (options.onExternalLink || options.onLocalImageActivation)
-      removeVisibleLinkListeners = installResttyVisibleLinks(
+      visibleLinkController = installResttyVisibleLinks(
         canvas,
         pane.runtime.interaction,
         (url) => requestVisibleLink(url, options),
@@ -382,7 +378,10 @@ export async function mountResttyTerminalSurface(
     ready = true;
     await adapter.start({
       onOutput(data) {
-        if (!disposed) ptyCallbacks?.onData?.(data);
+        if (!disposed) {
+          visibleLinkController?.invalidate();
+          ptyCallbacks?.onData?.(data);
+        }
       },
       onExit() {
         dispose();

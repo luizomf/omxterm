@@ -41,6 +41,8 @@ interface HostResult {
   readonly contextMenus: number;
   readonly largePasteLength: number;
   readonly externalLinks: readonly string[];
+  readonly modifiedHoverChangedPixels: number;
+  readonly releasedHoverChangedPixels: number;
   readonly validLinkMouseReports: string;
   readonly localPathMouseReports: string;
   readonly ordinaryGestureMouseReports: string;
@@ -192,6 +194,8 @@ describe.skipIf(
         { closeRequested: false, liveSessions: 1 },
         { closeRequested: false, liveSessions: 0 },
       ]);
+      expect(result.modifiedHoverChangedPixels).toBeGreaterThan(10);
+      expect(result.releasedHoverChangedPixels).toBe(0);
       expect(result.externalLinks[0]).toMatch(/^https:\/\/example\.test\/a+$/u);
       expect(result.externalLinks[0]).toBe(result.externalLinks[1]);
       expect(result.externalLinks.slice(2)).toEqual([

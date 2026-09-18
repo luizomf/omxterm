@@ -401,6 +401,12 @@ Only literal visible lowercase `http:`, `https:`, and absolute authority-free
 `file:///` URLs are links. Literal visible native absolute paths are separate
 Local Image Preview destinations: POSIX paths begin with one `/`, and Windows
 paths are drive-qualified with a letter, colon, and slash or backslash.
+While the pointer is over a recognized destination, holding that same platform
+modifier transiently underlines its complete visible span. Pointer movement and
+modifier press or release update the cue without activation; output, scrolling,
+geometry changes, focus loss, tab hiding, and preview or Surface lifecycle
+changes remove stale cues. Recognition alone performs no file read, image
+decode, network access, IPC opening request, or Terminal Payload logging.
 `Cmd+click` on macOS or `Ctrl+click` on Linux and Windows explicitly activates a
 recognized destination. For HTTP(S), the Electron main process parses and
 validates the exact URL before asking the operating system to open it. The valid modified primary

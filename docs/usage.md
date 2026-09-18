@@ -130,8 +130,10 @@ normal menu behavior.
 **Current:** choose `File -> Open Local Image…` to select one local static PNG
 or JPEG, or activate a literal visible absolute `file:///` URL or native
 absolute path with `Cmd+click` on macOS or `Ctrl+click` on Linux and Windows.
-POSIX paths must begin with one `/`; Windows paths must include a drive letter,
-colon, and slash or backslash. The preview appears in a temporary overlay.
+Hold that modifier while pointing at a recognized destination to underline its
+complete visible span before activation. The cue performs no file read or image
+decode. POSIX paths must begin with one `/`; Windows paths must include a drive
+letter, colon, and slash or backslash. The preview appears in a temporary overlay.
 Escape, its close button, or the dark backdrop dismisses it and returns
 focus to the selected Terminal Tab. The action intentionally has no built-in or
 configurable shortcut. While choosing, loading, or viewing an image, terminal
@@ -324,10 +326,13 @@ See the normative [Clipboard contract](spec.md#clipboard).
 Payload becomes an External Link. Hidden OSC 8 link metadata is ignored, even
 when its destination differs from the text on screen.
 
-Activate a link with primary-button `Cmd+click` on macOS or `Ctrl+click` on
-Linux and Windows. The Terminal Surface sends the exact visible URL to the
-Electron main process, which independently validates the sender, URL,
-HTTP(S) protocol, and host before asking the operating system to open it.
+Hold `Cmd` on macOS or `Ctrl` on Linux and Windows while pointing at a
+recognized URL to underline its complete visible span. Releasing the modifier
+or moving away removes the cue without opening anything. Activate the link with
+the primary button while continuing to hold that modifier. The Terminal Surface
+sends the exact visible URL to the Electron main process, which independently
+validates the sender, URL, HTTP(S) protocol, and host before asking the operating
+system to open it.
 Other protocols and invalid URLs have no external-opening side effect. The
 Restty follows the documented punctuation and lowercase-protocol rules,
 including through fully visible soft wraps. It

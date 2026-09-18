@@ -26,6 +26,12 @@ const harness = vi.hoisted(() => {
         interaction: {
           focus: vi.fn(),
           getSelectionText: this.getSelectionText,
+          getVisibleLinkAtClientPoint: vi.fn(() => ({
+            id: "visible-1",
+            url: "https://example.test",
+            cells: [1, 2],
+          })),
+          setVisibleLinkHover: vi.fn(),
           selectAll: this.selectAll,
           scrollToBottom: vi.fn(),
           updateSize: vi.fn(),
@@ -131,6 +137,38 @@ describe("Restty clipboard and Protected Paste", () => {
     await value.surface.inject("accepted");
     expect(reveal).toHaveBeenCalledTimes(2);
     value.surface.dispose();
+  });
+
+  it("clears modified-hover decoration on output, geometry change, and disposal", async () => {
+    const value = await mount(createHarness(), { onExternalLink: vi.fn() });
+    const hover = value.restty.pane.runtime.interaction.setVisibleLinkHover;
+    value.restty.canvas.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        pointerId: 1,
+        clientX: 10,
+        clientY: 10,
+        ctrlKey: true,
+      }),
+    );
+    expect(hover).toHaveBeenLastCalledWith([1, 2]);
+
+    value.handlers().onOutput("changed");
+    expect(hover).toHaveBeenLastCalledWith(null);
+    value.restty.canvas.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        pointerId: 1,
+        clientX: 10,
+        clientY: 10,
+        ctrlKey: true,
+      }),
+    );
+    value.surface.zoom("in");
+    expect(hover).toHaveBeenLastCalledWith(null);
+
+    value.surface.dispose();
+    expect(hover).toHaveBeenLastCalledWith(null);
   });
 
   it("copies only explicit nonempty selection and routes selection/context actions", async () => {

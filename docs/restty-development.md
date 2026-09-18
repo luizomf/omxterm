@@ -42,9 +42,12 @@ snippets, file-path injection and write-only OSC 52 use the existing OMXTerm
 host routes. DOM paste enters the same asynchronous confirmation and ordered
 delivery path without browser clipboard permission; ordinary key input remains
 direct. OSC 52 reads, clears, malformed, cancelled and over-bound requests have
-no clipboard or PTY side effect. Modified primary click activates literal
-lowercase visible HTTP(S) text through the existing host route, including during
-TUI mouse reporting without a duplicate PTY report. Restty joins rows only when
+no clipboard or PTY side effect. Holding the platform activation modifier
+underlines the existing exact visible-destination resolver span under the
+pointer without activation or host I/O. Modified primary click activates
+literal lowercase visible HTTP(S) text through the existing host route,
+including during TUI mouse reporting without a duplicate PTY report. Restty
+joins rows only when
 Ghostty selection text proves a visible soft wrap; hard breaks remain separate,
 OSC 8 destinations are ignored, and a destination that may continue into a
 concealed row is refused. Parsed OSC 0/2 titles and BEL use the existing
@@ -166,7 +169,7 @@ The lockfile restores the npm tarballs identified by that manifest. `npm ci`
 then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
 Restty runtime, declarations and embedded-core SHA-256 values and produces
 corrected runtime SHA-256
-`f3434c66a9ef1ebe817f9debcb8ecf49f8477c4d481af2d6791c122967b2bee4`,
+`ed7c7589385bbbd5c3808f67f0a3c1e0f49d9586437d8603025e0f178d497354`,
 embedded-core chunk SHA-256
 `3b3f4ef21e2fe5d5bfc7d5ad47b2557c1e12cca33619dbd5f15df9572e038f4d`,
 and event declarations SHA-256
@@ -180,7 +183,8 @@ active, leaves all renderer-received Ctrl+C/Ctrl+V events as PTY input, gives DA
 deterministic response, bounds unfinished OSC/CSI control bodies with
 whole-control recovery, and exposes raw paste
 origin, current bracketed mode, selection/Select All, parsed OSC and OSC
-cancellation, visible cell/soft-wrap lookup, and parsed Ghostty title/BEL runtime
+cancellation, visible cell/soft-wrap lookup and transient visible-cell underline
+decoration, and parsed Ghostty title/BEL runtime
 events to OMXTerm's existing host policy. Borrowed render cells are snapshotted
 before selection-text queries can allocate WASM memory. It also removes Restty's 10–64
 live-size clamp in favor of OMXTerm's existing minimum of 1 for Window Font

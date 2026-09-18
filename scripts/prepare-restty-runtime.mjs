@@ -67,8 +67,10 @@ const priorFontMemoryDigest =
   "56dd27c2e2239c3660ccd79c93c3e4a4bfde0bc548ecce09e59c3af00982105c";
 const priorDeadKeyCompositionDigest =
   "6a7b5297bf4f7a4509c9f64ad22a29c521b0c5f48882a4451872a335e0847ccd";
-const correctedDigest =
+const priorModifiedHoverDigest =
   "f3434c66a9ef1ebe817f9debcb8ecf49f8477c4d481af2d6791c122967b2bee4";
+const correctedDigest =
+  "ed7c7589385bbbd5c3808f67f0a3c1e0f49d9586437d8603025e0f178d497354";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 
 const fontMemoryCorrections = [
@@ -835,6 +837,108 @@ const visibleLinkCorrections = [
   },
 ];
 
+const visibleHoverCorrections = [
+  {
+    original: `    const match = resolveVisibleLink({ text, offset, clippedStart, clippedEnd });
+    return match
+      ? {
+          ...match,
+          id: \`\${viewportOffset}:\${firstRow}:\${match.start}:\${match.end}:\${match.url}\`
+        }
+      : null;`,
+    corrected: `    const match = resolveVisibleLink({ text, offset, clippedStart, clippedEnd });
+    if (!match)
+      return null;
+    const cells = [];
+    let textIndex = 0;
+    for (let row = firstRow; row <= lastRow; row += 1) {
+      let rowIndex = 0;
+      for (let col = 0; col < render.cols && rowIndex < rowText[row].length; col += 1) {
+        const cluster = rows[row][col];
+        if (!cluster)
+          continue;
+        const clusterStart = textIndex + rowIndex;
+        const clusterEnd = clusterStart + cluster.length;
+        if (clusterStart < match.end && clusterEnd > match.start) {
+          cells.push(row * render.cols + col);
+          for (let trailing = col + 1; trailing < render.cols && rows[row][trailing] === ""; trailing += 1)
+            cells.push(row * render.cols + trailing);
+        }
+        rowIndex += cluster.length;
+      }
+      textIndex += rowText[row].length;
+    }
+    return {
+      ...match,
+      cells,
+      id: \`\${viewportOffset}:\${firstRow}:\${match.start}:\${match.end}:\${match.url}\`
+    };`,
+  },
+  {
+    original: `  const linkState = {
+    hoverId: 0,
+    hoverUri: ""
+  };`,
+    corrected: `  const linkState = {
+    hoverId: 0,
+    hoverUri: "",
+    visibleHoverCells: new Set()
+  };`,
+  },
+  {
+    original: `  function updateLinkHover(cell) {`,
+    corrected: `  function setVisibleLinkHover(cells) {
+    const next = new Set(cells ?? []);
+    if (next.size === linkState.visibleHoverCells.size &&
+        [...next].every((cell) => linkState.visibleHoverCells.has(cell)))
+      return;
+    linkState.visibleHoverCells = next;
+    needsRender = true;
+  }
+  function updateLinkHover(cell) {`,
+  },
+  {
+    original: `      const linkHovered = linkId && linkId === linkState.hoverId;`,
+    corrected: `      const linkHovered = linkId && linkId === linkState.hoverId;
+      const visibleLinkHovered = linkState.visibleHoverCells.has(idx);`,
+    occurrences: 2,
+  },
+  {
+    original: `        if (linkHovered && !selectionState.active && !selectionState.dragging) {`,
+    corrected: `        if ((linkHovered && !selectionState.active && !selectionState.dragging) ||
+            (visibleLinkHovered && !selectionState.dragging)) {`,
+    occurrences: 2,
+  },
+  {
+    original: `    getVisibleLinkAtClientPoint,
+    selectAll,`,
+    corrected: `    getVisibleLinkAtClientPoint,
+    setVisibleLinkHover,
+    selectAll,`,
+  },
+  {
+    original: `    getVisibleLinkAtClientPoint: interaction.getVisibleLinkAtClientPoint,
+    copySelectionToClipboard,`,
+    corrected: `    getVisibleLinkAtClientPoint: interaction.getVisibleLinkAtClientPoint,
+    setVisibleLinkHover: interaction.setVisibleLinkHover,
+    copySelectionToClipboard,`,
+  },
+  {
+    original: `    resolveVisibleLink,
+    updateLinkHover,`,
+    corrected: `    resolveVisibleLink,
+    setVisibleLinkHover,
+    updateLinkHover,`,
+  },
+  {
+    original: `    resolveVisibleLink: services.resolveVisibleLink,
+    updateLinkHover,`,
+    corrected: `    resolveVisibleLink: services.resolveVisibleLink,
+    setVisibleLinkHover,
+    updateLinkHover,`,
+  },
+];
+
 const parsedEventRuntimeCorrections = [
   {
     original: `    writeToWasm(shared.wasmHandle, normalized);
@@ -1356,12 +1460,13 @@ const parsedEventCoreCorrections = [
 
 function applyCorrections(source, corrections) {
   for (const correction of corrections) {
+    const expectedOccurrences = correction.occurrences ?? 1;
     const occurrences = source.split(correction.original).length - 1;
-    if (occurrences !== 1)
+    if (occurrences !== expectedOccurrences)
       throw new Error(
         `Restty correction did not match reviewed source (${occurrences}): ${correction.original.slice(0, 80)}`,
       );
-    source = source.replace(correction.original, correction.corrected);
+    source = source.replaceAll(correction.original, correction.corrected);
   }
   return source;
 }
@@ -1461,7 +1566,9 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorDeadKeyCompositionDigest) {
+    if (sourceDigest === priorModifiedHoverDigest) {
+      // Only modified-hover rendering remains to be corrected.
+    } else if (sourceDigest === priorDeadKeyCompositionDigest) {
       source = applyCorrections(source, deadKeyCompositionCorrections);
     } else if (sourceDigest === priorFontMemoryDigest) {
       // Only font acquisition lifetime remains to be corrected.
@@ -1575,6 +1682,8 @@ export async function prepareResttyRuntime(options = {}) {
       source = applyCorrections(source, fontMemoryCorrections);
     if (digest(source) === priorDeadKeyCompositionDigest)
       source = applyCorrections(source, deadKeyCompositionCorrections);
+    if (digest(source) === priorModifiedHoverDigest)
+      source = applyCorrections(source, visibleHoverCorrections);
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,
