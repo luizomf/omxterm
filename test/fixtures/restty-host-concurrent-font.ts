@@ -1,38 +1,46 @@
 import type { BrowserWindow } from "electron";
+import type { IpcMainPort } from "../../src/main/terminal-ipc-types";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 
 export function createControlledFontLoads() {
   let total = 0;
-  let control:
-    { readonly started: () => void; readonly wait: Promise<void> } | undefined;
+  let requests = 0;
+  let control: { readonly wait: Promise<void> } | undefined;
   return {
+    ipcPort(port: IpcMainPort): IpcMainPort {
+      return {
+        handle: (channel, handler) =>
+          port.handle(channel, (event, payload) => {
+            if (channel === terminalIpc.fontData) requests += 1;
+            return handler(event, payload);
+          }),
+        removeHandler: (channel) => port.removeHandler(channel),
+        on: (channel, listener) => port.on(channel, listener),
+        removeListener: (channel, listener) =>
+          port.removeListener(channel, listener),
+      };
+    },
     async beforeLoad() {
       total += 1;
       const active = control;
-      if (active) {
-        active.started();
-        await active.wait;
-      }
+      if (active) await active.wait;
     },
     begin() {
       const initial = total;
-      let markStarted: () => void = () => undefined;
+      const initialRequests = requests;
       let releaseLoad: () => void = () => undefined;
-      const started = new Promise<void>((resolve) => {
-        markStarted = resolve;
-      });
       const wait = new Promise<void>((resolve) => {
         releaseLoad = resolve;
       });
-      const active = { started: markStarted, wait };
+      const active = { wait };
       control = active;
       return {
-        started,
         release() {
           if (control === active) control = undefined;
           releaseLoad();
         },
         physicalLoads: () => total - initial,
+        requests: () => requests - initialRequests,
       };
     },
   };
@@ -41,9 +49,9 @@ export function createControlledFontLoads() {
 export async function exerciseConcurrentResttyTabs(options: {
   readonly window: BrowserWindow;
   readonly beginFontLoad: () => {
-    readonly started: Promise<void>;
     readonly release: () => void;
     readonly physicalLoads: () => number;
+    readonly requests: () => number;
   };
   readonly sessionStarts: () => number;
   readonly ptyExits: () => number;
@@ -64,11 +72,14 @@ export async function exerciseConcurrentResttyTabs(options: {
   for (let tab = 0; tab < 4; tab += 1)
     options.window.webContents.send(terminalIpc.tabCommand, { action: "new" });
 
-  await controlledLoad.started;
-  // Keep the first physical read pending long enough for every renderer Surface
-  // to cross the real preload/main IPC boundary deterministically.
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  controlledLoad.release();
+  try {
+    await options.waitFor(
+      () => controlledLoad.requests() === 4,
+      "four overlapping font requests through preload/main IPC",
+    );
+  } finally {
+    controlledLoad.release();
+  }
   await options.waitFor(
     () => options.sessionStarts() === initialSessions + 4,
     "four concurrently initialized Restty tabs",

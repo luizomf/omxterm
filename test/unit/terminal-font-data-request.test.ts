@@ -30,6 +30,46 @@ describe("Terminal Font data request lifetime", () => {
     expect(load).toHaveBeenCalledTimes(2);
   });
 
+  it("skips superseded queued generations and recovers after the active read fails", async () => {
+    let family = "Family A";
+    let generation = 0;
+    let fail: (error: Error) => void = () => undefined;
+    const load = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise((_resolve, reject) => {
+            fail = reject;
+          }),
+      )
+      .mockResolvedValue({ fallbacks: [] });
+    const request = createFontDataRequest({
+      family: () => family,
+      generation: () => generation,
+      isDisposed: () => false,
+      load,
+      reject: vi.fn(),
+    });
+    const first = request(family);
+    const firstFailure = expect(first).rejects.toThrow("controlled failure");
+    family = "Family B";
+    generation += 1;
+    const stale = request(family);
+    const staleFailure = expect(stale).rejects.toThrow("superseded");
+    family = "Family C";
+    generation += 1;
+    const current = request(family);
+    const shared = request(family);
+    expect(load).toHaveBeenCalledTimes(1);
+    fail(new Error("controlled failure"));
+    await Promise.all([firstFailure, staleFailure]);
+    await expect(current).resolves.toEqual({ fallbacks: [] });
+    await expect(shared).resolves.toEqual({ fallbacks: [] });
+    expect(load.mock.calls).toEqual([["Family A"], ["Family C"]]);
+    await request(family);
+    expect(load).toHaveBeenCalledTimes(3);
+  });
+
   it("invalidates pending loads across change-away-and-back and disposal", async () => {
     let family = "Family A";
     let generation = 0;

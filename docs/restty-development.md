@@ -101,6 +101,13 @@ There is no fallback renderer.
 
 ### Font memory ownership
 
+Concurrent tab initialization shares only the pending native font load for the
+same Terminal Window and validated font-family generation. Configuration changes
+invalidate stale results and serialize replacement reads behind the pending load;
+completion or failure releases the transient state rather than caching font bytes.
+The native host fixture holds that read until four tab requests have crossed the
+real preload/main boundary, then verifies Surface readiness without a false error.
+
 Native configured and fallback fonts keep the same coverage and ordering. The
 Surface snapshots each native `Uint8Array` into one exact-range owned
 `ArrayBuffer` before handing it to Restty. Restty borrows ArrayBuffer inputs but

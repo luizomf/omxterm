@@ -98,7 +98,7 @@ async function waitFor(
 
 function createHost(window: BrowserWindow) {
   const router = registerTerminalIpcRouter(
-    outputStress.ipcPort(ipcMain as unknown as IpcMainPort),
+    fontLoads.ipcPort(outputStress.ipcPort(ipcMain as unknown as IpcMainPort)),
     undefined,
     async (family) => {
       await fontLoads.beforeLoad();
