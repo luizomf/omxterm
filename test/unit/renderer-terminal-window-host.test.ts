@@ -155,6 +155,7 @@ describe("renderer Terminal Window page host", () => {
     const configuration = {
       fontSize: 19,
       fontLineHeight: 1.2,
+      fontLigatures: true,
       terminalPadding: { top: 4, right: 12, bottom: 6, left: 14 },
       fontFamily: "SF Mono",
       scrollbackLines: 2_000,
@@ -185,6 +186,7 @@ describe("renderer Terminal Window page host", () => {
         appearance: {
           fontSize: 19,
           lineHeight: 1.2,
+          ligatures: true,
           systemFont: { family: "SF Mono", available: true },
         },
         padding: { top: 4, right: 12, bottom: 6, left: 14 },
@@ -218,6 +220,7 @@ describe("renderer Terminal Window page host", () => {
       configuration: {
         fontSize: 16,
         fontLineHeight: 1,
+        fontLigatures: true,
         terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
         scrollbackLines: 10_000,
         optionKeyMode: "none",
@@ -294,6 +297,7 @@ describe("renderer Terminal Window page host", () => {
         fontFamily: "Initial Family",
         fontSize: 16,
         fontLineHeight: 1,
+        fontLigatures: true,
         terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
         scrollbackLines: 10_000,
         optionKeyMode: "none",
@@ -328,6 +332,7 @@ describe("renderer Terminal Window page host", () => {
       fontFamily: "Changed Family",
       fontSize: 20,
       fontLineHeight: 1.2,
+      fontLigatures: false,
       terminalPadding: { top: 1, right: 2, bottom: 3, left: 4 },
       scrollbackLines: 0,
       optionKeyMode: "both",
@@ -338,6 +343,12 @@ describe("renderer Terminal Window page host", () => {
 
     expect(first.applyConfiguration).toHaveBeenLastCalledWith(
       expect.objectContaining({
+        appearance: {
+          fontSize: 20,
+          lineHeight: 1.2,
+          ligatures: false,
+          systemFont: { family: "Changed Family", available: true },
+        },
         scrollbackLines: 0,
         optionKeyMode: "both",
         theme: updatedTheme,
@@ -359,16 +370,26 @@ describe("renderer Terminal Window page host", () => {
       {
         fontSize: 16,
         lineHeight: 1,
+        ligatures: true,
         systemFont: { family: "Initial Family", available: true },
       },
       {
         fontSize: 20,
         lineHeight: 1.2,
+        ligatures: false,
         systemFont: { family: "Changed Family", available: true },
       },
     ]);
     expect(second.applyConfiguration).toHaveBeenLastCalledWith(
-      expect.objectContaining({ theme: updatedTheme }),
+      expect.objectContaining({
+        appearance: {
+          fontSize: 20,
+          lineHeight: 1.2,
+          ligatures: false,
+          systemFont: { family: "Changed Family", available: true },
+        },
+        theme: updatedTheme,
+      }),
     );
     expect(adapterCloses[0]).not.toHaveBeenCalled();
     expect(adapterCloses[1]).not.toHaveBeenCalled();
@@ -382,6 +403,7 @@ describe("renderer Terminal Window font ownership", () => {
       fontFamily: "First Family",
       fontSize: 16,
       fontLineHeight: 1,
+      fontLigatures: true,
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
       scrollbackLines: 10_000,
       optionKeyMode: "none",
@@ -462,6 +484,7 @@ describe("renderer Terminal Window page host continued", () => {
     const configuration = {
       fontSize: 16,
       fontLineHeight: 1,
+      fontLigatures: true,
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
       scrollbackLines: 10_000,
       optionKeyMode: "none",
@@ -767,6 +790,7 @@ describe("renderer Terminal Window page host continued", () => {
     configurationListener!({
       fontSize: 20,
       fontLineHeight: 1.2,
+      fontLigatures: true,
       terminalPadding: { top: 1, right: 2, bottom: 3, left: 4 },
       scrollbackLines: 0,
       optionKeyMode: "both",

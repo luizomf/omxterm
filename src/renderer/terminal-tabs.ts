@@ -420,6 +420,7 @@ function completeConfiguration(
   if (
     options.appearance?.fontSize === undefined ||
     options.appearance.lineHeight === undefined ||
+    options.appearance.ligatures === undefined ||
     options.padding === undefined ||
     options.scrollbackLines === undefined ||
     options.optionKeyMode === undefined ||
@@ -430,6 +431,7 @@ function completeConfiguration(
     appearance: {
       fontSize: options.appearance.fontSize,
       lineHeight: options.appearance.lineHeight,
+      ligatures: options.appearance.ligatures,
       ...(options.appearance.systemFont
         ? { systemFont: options.appearance.systemFont }
         : {}),

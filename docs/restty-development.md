@@ -17,11 +17,13 @@ A native failure dialog explains recovery and remains until acknowledged, even
 when cleanup ended the window's last session. No terminal state is recreated.
 
 The Surface applies the selected Terminal Theme, configured font family,
-size, independent line height, per-side padding, Window Font Zoom and
-scrollback. Theme, size, padding and scrollback reload live without replacing
-the Surface, core or PTY. A Restty Surface keeps the font family and line height
-it was created with; restart OMXTerm to apply either changed setting to every
-existing Restty Surface. New Surfaces use the latest validated values. Native glyph rasterization can differ across operating systems and GPUs; pixel-identical output is not claimed.
+size, independent line height, programming-ligature setting, per-side padding,
+Window Font Zoom and scrollback. Theme, size, programming ligatures, padding and
+scrollback reload live without replacing the Surface, core, fonts or PTY. A Restty Surface keeps the font family and line height it was created with;
+restart OMXTerm to apply either changed setting to every existing Restty
+Surface. Programming ligatures default to enabled and use Restty's existing
+boolean configuration and `setLigatures` operation. New Surfaces use every
+latest validated value. Native glyph rasterization can differ across operating systems and GPUs; pixel-identical output is not claimed.
 
 Positive `scrollback.lines` values are approximate physical history-row targets
 because Ghostty evicts whole historical pages. Retention can exceed the target
@@ -88,8 +90,9 @@ copy, paste or input limit.
 Restty honors live Option Key Mode changes. On macOS, `none` preserves native
 layout Unicode and composition input; `left`, `right`, and `both` produce
 terminal Alt input only from the configured physical Option key. Application
-keybinds still route through Electron main exactly once. Restty keeps selection,
-copy, wide/combining/emoji graphemes, mouse buttons and wheel input coherent in
+keybinds still route through Electron main exactly once. Restty keeps programming-ligature changes independent from underlying text,
+selection, copy, cells, cursor positions, wide/combining/emoji graphemes and
+fallback or bold face selection. It keeps mouse buttons and wheel input coherent in
 normal and alternate screens; Shift selection and valid modified-link activation
 override application mouse reporting without duplicate PTY input. DA1, DA2,
 cursor-position and cell-size queries have one deterministic parsed-runtime

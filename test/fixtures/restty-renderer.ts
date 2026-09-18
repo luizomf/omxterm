@@ -104,7 +104,7 @@ void mountResttyTerminalSurface(
       );
     const setOptionMode = (optionKeyMode: OptionKeyMode) =>
       surface.applyConfiguration({
-        appearance: { fontSize: 16, lineHeight: 1 },
+        appearance: { fontSize: 16, lineHeight: 1, ligatures: true },
         padding: { top: 0, right: 8, bottom: 8, left: 8 },
         scrollbackLines: 10_000,
         optionKeyMode,

@@ -1,8 +1,21 @@
 import type { PtyTransport } from "restty";
 import { decodeOsc52Write } from "./osc52-clipboard";
 import type { SemanticInputDelivery } from "./semantic-input-delivery";
-import type { TerminalSurfaceOptions } from "./terminal-surface";
+import type {
+  TerminalClipboard,
+  TerminalSurfaceOptions,
+} from "./terminal-surface";
 import { visibleLinkAtOffset } from "./visible-links";
+
+export function resttyContextMenuHandler(
+  clipboard: TerminalClipboard | undefined,
+) {
+  return (event: Event) => {
+    if (!clipboard) return;
+    event.preventDefault();
+    clipboard.requestContextMenu();
+  };
+}
 
 export function resttyHostServices(
   transport: PtyTransport,

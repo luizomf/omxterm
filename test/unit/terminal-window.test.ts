@@ -14,6 +14,7 @@ describe("Terminal Window startup contract", () => {
     ...DEFAULT_USER_CONFIGURATION,
     fontSize: 72,
     fontLineHeight: 2,
+    fontLigatures: true,
     terminalPadding: Object.freeze({
       top: 128,
       right: 128,

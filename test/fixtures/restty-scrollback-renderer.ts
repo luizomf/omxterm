@@ -73,7 +73,7 @@ const metrics = (canvas: HTMLCanvasElement | null): ScrollMetrics => {
   };
 };
 const configuration = (scrollbackLines: number) => ({
-  appearance: { fontSize: 16, lineHeight: 1 },
+  appearance: { fontSize: 16, lineHeight: 1, ligatures: true },
   padding: { top: 0, right: 0, bottom: 0, left: 0 },
   scrollbackLines,
   optionKeyMode: "none" as const,
@@ -96,7 +96,7 @@ async function run() {
       close() {},
     },
     {
-      appearance: { fontSize: 16, lineHeight: 1 },
+      appearance: { fontSize: 16, lineHeight: 1, ligatures: true },
       padding: { top: 0, right: 0, bottom: 0, left: 0 },
       scrollbackLines: 3_000,
       theme: DEFAULT_TERMINAL_THEME,
@@ -160,7 +160,7 @@ async function run() {
       container.style.maxHeight = `${before.clientHeight - 60}px`;
       surface.applyConfiguration({
         ...configuration(3_000),
-        appearance: { fontSize: 18, lineHeight: 1 },
+        appearance: { fontSize: 18, lineHeight: 1, ligatures: true },
       });
       await waitForRender();
       const reduced = metrics(canvas);

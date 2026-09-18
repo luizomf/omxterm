@@ -6,6 +6,7 @@ import type {
 } from "../shared/user-configuration";
 import {
   DEFAULT_SCROLLBACK_LINES,
+  DEFAULT_TERMINAL_FONT_LIGATURES,
   DEFAULT_TERMINAL_LINE_HEIGHT,
   DEFAULT_TERMINAL_PADDING,
   DEFAULT_TERMINAL_FONT_SIZE,
@@ -32,20 +33,6 @@ import {
 } from "../shared/terminal-keybinds";
 import { loadTerminalTheme, TerminalThemeError } from "./terminal-theme";
 
-export {
-  DEFAULT_SCROLLBACK_LINES,
-  DEFAULT_TERMINAL_LINE_HEIGHT,
-  DEFAULT_TERMINAL_PADDING,
-  DEFAULT_TERMINAL_FONT_SIZE,
-  MAX_TERMINAL_LINE_HEIGHT,
-  MAX_TERMINAL_PADDING,
-  MAX_SCROLLBACK_LINES,
-  MAX_TERMINAL_FONT_SIZE,
-  MIN_TERMINAL_LINE_HEIGHT,
-  MIN_TERMINAL_PADDING,
-  MIN_TERMINAL_FONT_SIZE,
-} from "../shared/user-configuration";
-
 export const USER_CONFIGURATION_VERSION = 1;
 
 export const DEFAULT_USER_CONFIGURATION: UserConfiguration = Object.freeze({
@@ -54,6 +41,7 @@ export const DEFAULT_USER_CONFIGURATION: UserConfiguration = Object.freeze({
   logLevel: "info",
   fontSize: DEFAULT_TERMINAL_FONT_SIZE,
   fontLineHeight: DEFAULT_TERMINAL_LINE_HEIGHT,
+  fontLigatures: DEFAULT_TERMINAL_FONT_LIGATURES,
   terminalPadding: DEFAULT_TERMINAL_PADDING,
   scrollbackLines: DEFAULT_SCROLLBACK_LINES,
   optionKeyMode: "none",
@@ -390,6 +378,7 @@ export function validateUserConfiguration(
       "family",
       "size",
       "lineHeight",
+      "ligatures",
     ]);
   if (terminal)
     rejectUnknownKeys(terminal, configurationPath, "terminal", ["padding"]);
@@ -474,6 +463,12 @@ export function validateUserConfiguration(
     MAX_TERMINAL_LINE_HEIGHT,
     DEFAULT_TERMINAL_LINE_HEIGHT,
   );
+  const fontLigatures = optionalBoolean(
+    font?.ligatures,
+    configurationPath,
+    "font.ligatures",
+    DEFAULT_TERMINAL_FONT_LIGATURES,
+  );
   const terminalPadding = Object.freeze({
     top: integerInRange(
       padding?.top,
@@ -551,6 +546,7 @@ export function validateUserConfiguration(
     ...(fontFamily === undefined ? {} : { fontFamily }),
     fontSize,
     fontLineHeight,
+    fontLigatures,
     terminalPadding,
     scrollbackLines,
     optionKeyMode,

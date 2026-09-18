@@ -186,10 +186,10 @@ selector or fallback Surface; rendering initialization failure starts no shell
   `Cmd+Shift+,` on macOS and `Ctrl+Shift+,` on Linux and Windows. It manually
   rereads and validates the complete User Configuration through the startup
   boundary. A valid reload atomically updates configured font-size baseline,
-  per-side padding, scrollback, Option Key Mode, and Terminal Theme across every
-  current and future Terminal Window, Terminal Tab, and Terminal Surface without
-  disturbing a Live Terminal Session. Font family and line height use the
-  restart-only exception defined below. Native
+  per-side padding, scrollback, programming ligatures, Option Key Mode, and
+  Terminal Theme across every current and future Terminal Window, Terminal Tab,
+  and Terminal Surface without disturbing a Live Terminal Session. Font family
+  and line height use the restart-only exception defined below. Native
   backgrounds, Window Chrome, and the Snippets Sidebar follow the theme. It also
   updates close confirmation, logging, the menu, effective keybind delivery,
   and the Always-on-Top default for future windows. On Windows, it also changes
@@ -225,9 +225,9 @@ Ghostty core and an actual WebGL2 backend before a PTY starts. Initialization
 failure releases partial resources and starts no shell. WebGL context loss shows
 a persistent failure and disposes only the owning Surface/session without core
 recreation. Main retains a fixed actionable native failure dialog until
-acknowledgement, including when the failed session was the window's last one. Restty applies the selected Terminal Theme, configured font size,
-per-side padding and Window Font Zoom through its runtime and existing host
-geometry. It resolves an exact configured installed family through the Electron main
+acknowledgement, including when the failed session was the window's last one. Restty applies the selected Terminal Theme, configured font size, programming
+ligature setting, per-side padding and Window Font Zoom through its runtime and
+existing host geometry. It resolves an exact configured installed family through the Electron main
 process and gives Restty only bounded bytes for that validated active family,
 followed by the licensed bundled FiraCode regular/bold, DejaVu Sans Mono
 regular/bold and retained JetBrainsMono Nerd Font Mono faces, then
@@ -237,11 +237,13 @@ regular face keeps precedence for regular and bold text, with Restty's existing
 synthetic bold rendering. Missing glyphs still use the regular fallback faces.
 Native configured-family bold-face resolution is not claimed. Font reads use
 native platform facilities without shell interpolation; no font path, broad filesystem API,
-remote fallback or persistent byte cache crosses the bridge. A Restty Surface
-applies its configured family and line height when it is created; an existing
-Restty Surface keeps both after User Configuration Reload until OMXTerm is
-restarted, while theme, font size and padding update it in place and refit the
-same PTY. Restty explicit copy/paste, selection, context-menu actions, Protected Paste,
+remote fallback or persistent byte cache crosses the bridge. A Restty Surface applies its configured family and line height when it is
+created; an existing Restty Surface keeps both after User Configuration Reload
+until OMXTerm is restarted, while theme, font size, programming ligatures and
+padding update it in place and refit the same PTY. Changing programming
+ligatures preserves source text, selection and copy results, terminal cells and
+cursor positions, and the existing Surface, font generation, Live Terminal
+Session and PTY. Restty explicit copy/paste, selection, context-menu actions, Protected Paste,
 snippets/path injection and write-only OSC 52 follow the shared contract below.
 Its DOM paste source is intercepted synchronously only to enter OMXTerm's
 asynchronous policy and delivery path; ordinary key input remains direct.
@@ -520,7 +522,7 @@ and does not create a file. A present file must contain `"version": 1` and only 
 - `confirmClose`;
 - `logLevel`;
 - `windowsShell`;
-- `font.family`, `font.size`, and `font.lineHeight`;
+- `font.family`, `font.size`, `font.lineHeight`, and `font.ligatures`;
 - `terminal.padding.top`, `terminal.padding.right`,
   `terminal.padding.bottom`, and `terminal.padding.left`;
 - `scrollback.lines`;
@@ -529,8 +531,11 @@ and does not create a file. A present file must contain `"version": 1` and only 
 - `theme.path`;
 - `keybinds.<action>` for the fixed application-shortcut vocabulary below.
 
-The bundled FiraCode Nerd Font Mono regular face at 16 px is the default. Its
-real bold face renders SGR bold without changing the requested ANSI color.
+The bundled FiraCode Nerd Font Mono regular face at 16 px is the default.
+Programming ligatures default to enabled; `font.ligatures` accepts only a
+boolean and can disable them without changing the font or underlying terminal
+text. Its real bold face renders SGR bold without changing the requested ANSI
+color.
 Bundled DejaVu Sans Mono regular/bold and JetBrainsMono Nerd Font Mono follow it
 for coverage before available operating-system emoji, CJK, and symbol faces.
 `font.size` accepts only integral pixel sizes from 8 through 72 inclusive. `font.lineHeight` is an independent
@@ -656,7 +661,8 @@ reaches existing and newly created Terminal Surfaces. Font and spacing changes
 recompute the existing native minimum-window bounds, refit the grid with its
 bottom row visible, and resize the same PTY through its existing adapter.
 `font.family` and `font.lineHeight` are the complete restart-only set for
-existing Restty Surfaces. A valid reload applies all live-safe settings and host preferences,
+existing Restty Surfaces; `font.ligatures` applies live. A valid reload applies
+all live-safe settings and host preferences,
 keeps those two creation-time values in every existing Restty Surface, and
 shows a persistent non-blocking notice naming each deferred setting and asking
 the user to restart OMXTerm. New tabs and windows use the latest fully validated
@@ -664,9 +670,10 @@ family and line height. A deferred setting clears only when its requested value
 is already active in every existing Restty Surface. Theme, configured font-size baseline,
 padding and Window Font Zoom remain live and preserve the existing Surface and
 PTY. Invalid, missing, unreadable, unsupported or corrupt configured font input
-rejects the whole reload. Runtime scrollback reduction, including zero, uses the selected Surface's
-in-memory core behavior described above; Option Key Mode changes only
-subsequent keyboard events. OMXTerm never
+rejects the whole reload. Runtime scrollback reduction, including zero, uses
+the selected Surface's in-memory core behavior described above; programming-
+ligature changes use the existing Restty runtime setter without reloading
+fonts, and Option Key Mode changes only subsequent keyboard events. OMXTerm never
 migrates, repairs, rewrites, or silently ignores User Configuration. The same surface
 also carries non-fatal warnings for a valid configuration that stays fully
 active — currently a keybind shadowing a PTY control key — which inform without

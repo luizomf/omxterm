@@ -332,6 +332,7 @@ function sameSurfaceConfiguration(
   return (
     first.appearance.fontSize === second.appearance.fontSize &&
     first.appearance.lineHeight === second.appearance.lineHeight &&
+    first.appearance.ligatures === second.appearance.ligatures &&
     firstSystemFont?.family === secondSystemFont?.family &&
     firstSystemFont?.available === secondSystemFont?.available &&
     first.scrollbackLines === second.scrollbackLines &&
@@ -355,6 +356,7 @@ function surfaceConfiguration(
     appearance: {
       fontSize: configuration.fontSize,
       lineHeight: configuration.fontLineHeight,
+      ligatures: configuration.fontLigatures,
       ...(configuration.fontFamily
         ? {
             systemFont: {

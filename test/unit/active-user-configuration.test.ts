@@ -18,6 +18,7 @@ function activeConfiguration(): ActiveUserConfiguration {
       confirmClose: false,
       alwaysOnTop: true,
       fontSize: 40,
+      fontLigatures: false,
       terminalTheme: {
         ...DEFAULT_TERMINAL_THEME,
         name: "reloaded",
@@ -64,6 +65,7 @@ it("commits applicable application state and current visual state without touchi
   expect(applyRendererConfiguration).toHaveBeenCalledWith(
     expect.objectContaining({
       fontSize: 40,
+      fontLigatures: false,
       terminalTheme: state.configuration.terminalTheme,
       userFileErrors: ["current warning"],
     }),
@@ -103,6 +105,7 @@ it("keeps the complete last-valid renderer snapshot on rejection", () => {
   expect(rebuildMenu).not.toHaveBeenCalled();
   expect(renderer).toMatchObject({
     fontSize: 40,
+    fontLigatures: false,
     scrollbackLines: 10_000,
     optionKeyMode: "none",
     nativeTitleInset: 30,

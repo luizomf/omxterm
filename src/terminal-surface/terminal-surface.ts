@@ -30,6 +30,7 @@ export interface TerminalClipboard {
 export interface TerminalAppearance {
   readonly fontSize?: number;
   readonly lineHeight?: number;
+  readonly ligatures?: boolean;
   readonly systemFont?: {
     readonly family: string;
     readonly available: boolean;
@@ -42,6 +43,7 @@ export interface TerminalSurfaceConfiguration {
   readonly appearance: TerminalAppearance & {
     readonly fontSize: number;
     readonly lineHeight: number;
+    readonly ligatures: boolean;
   };
   readonly padding: TerminalPadding;
   readonly theme: TerminalTheme;

@@ -39,6 +39,7 @@ function clipboardOptions() {
     configuration: {
       fontSize: 16,
       fontLineHeight: 1,
+      fontLigatures: true,
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
       scrollbackLines: 10_000,
       optionKeyMode: "none" as const,
@@ -310,6 +311,7 @@ describe("terminal IPC controller", () => {
     const configuration = Object.freeze({
       fontSize: 18,
       fontLineHeight: 1.15,
+      fontLigatures: true,
       terminalPadding: Object.freeze({
         top: 4,
         right: 12,
@@ -1494,6 +1496,7 @@ describe("Terminal Font IPC", () => {
         ...clipboardOptions().configuration,
         fontFamily: "Initial Family",
         fontLineHeight: 1.25,
+        fontLigatures: true,
       },
       webContents,
       createSession: vi.fn(

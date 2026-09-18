@@ -38,6 +38,7 @@ function options(): Omit<
     configuration: {
       fontSize: 16,
       fontLineHeight: 1,
+      fontLigatures: true,
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
       scrollbackLines: 10_000,
       optionKeyMode: "none",

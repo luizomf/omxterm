@@ -59,6 +59,7 @@ export function terminalRendererConfiguration(
       : {}),
     fontSize: configuration.fontSize,
     fontLineHeight: configuration.fontLineHeight,
+    fontLigatures: configuration.fontLigatures,
     terminalPadding: configuration.terminalPadding,
     scrollbackLines: configuration.scrollbackLines,
     optionKeyMode: configuration.optionKeyMode,

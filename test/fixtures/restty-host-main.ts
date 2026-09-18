@@ -240,6 +240,7 @@ function createHost(window: BrowserWindow) {
     ...DEFAULT_USER_CONFIGURATION,
     fontFamily: reloadedFontFamily,
     fontLineHeight: 1.25,
+    fontLigatures: true,
     fontSize: 18,
   };
   const reloads = [changedConfiguration, initialConfiguration];

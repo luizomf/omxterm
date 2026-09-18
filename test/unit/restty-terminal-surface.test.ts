@@ -21,6 +21,7 @@ const harness = vi.hoisted(() => {
     readonly focus = vi.fn();
     readonly sendInput = vi.fn();
     readonly setFontSize = vi.fn();
+    readonly setLigatures = vi.fn();
     readonly setOptionKeyMode = vi.fn();
     readonly setScrollbackLines = vi.fn();
     readonly applyTheme = vi.fn();
@@ -81,6 +82,7 @@ const harness = vi.hoisted(() => {
         },
         terminal: {
           setFontSize: this.setFontSize,
+          setLigatures: this.setLigatures,
           setOptionKeyMode: this.setOptionKeyMode,
           setScrollbackLines: this.setScrollbackLines,
           applyTheme: this.applyTheme,
@@ -262,26 +264,27 @@ describe("Restty Terminal Surface", () => {
     expect(restty.destroy).toHaveBeenCalledOnce();
   });
 
-  it("applies Option Key Mode at creation and reload without replacing the PTY", async () => {
+  it("applies live runtime options without replacing the PTY", async () => {
     const { adapter } = createAdapter();
     const surface = await mountResttyTerminalSurface(
       document.createElement("main"),
       adapter,
-      { optionKeyMode: "left" },
+      { appearance: { ligatures: false }, optionKeyMode: "left" },
     );
     const restty = harness.instances[0]!;
 
     expect(restty.options).toMatchObject({
-      terminal: { optionKeyMode: "left" },
+      terminal: { ligatures: false, optionKeyMode: "left" },
     });
     surface.applyConfiguration({
-      appearance: { fontSize: 16, lineHeight: 1 },
+      appearance: { fontSize: 16, lineHeight: 1, ligatures: true },
       padding: { top: 0, right: 8, bottom: 8, left: 8 },
       scrollbackLines: 10_000,
       optionKeyMode: "right",
       theme: DEFAULT_TERMINAL_THEME,
     });
 
+    expect(restty.setLigatures).toHaveBeenCalledExactlyOnceWith(true);
     expect(restty.setOptionKeyMode).toHaveBeenCalledExactlyOnceWith("right");
     expect(harness.instances).toHaveLength(1);
     expect(adapter.start).toHaveBeenCalledOnce();
@@ -442,7 +445,7 @@ describe("Restty Terminal Surface appearance", () => {
       await import("../../src/terminal-surface/restty-terminal-surface");
 
     await mountResttyTerminalSurface(container, adapter, {
-      appearance: { fontSize: 8, lineHeight: 2 },
+      appearance: { fontSize: 8, lineHeight: 2, ligatures: true },
       padding: { top: 0, right: 128, bottom: 128, left: 0 },
       theme: DEFAULT_TERMINAL_THEME,
     });
@@ -451,6 +454,7 @@ describe("Restty Terminal Surface appearance", () => {
       terminal: {
         fontSize: 8,
         lineHeight: 2,
+        ligatures: true,
         theme: expectedTheme(),
       },
     });
@@ -516,7 +520,7 @@ describe("Restty Terminal Surface appearance", () => {
 
     for (const scrollbackLines of [1, 0, 100_000])
       surface.applyConfiguration({
-        appearance: { fontSize: 16, lineHeight: 1 },
+        appearance: { fontSize: 16, lineHeight: 1, ligatures: true },
         padding: { top: 0, right: 8, bottom: 8, left: 8 },
         scrollbackLines,
         optionKeyMode: "none",
@@ -546,7 +550,7 @@ describe("Restty Terminal Surface appearance", () => {
     );
 
     first.applyConfiguration({
-      appearance: { fontSize: 16, lineHeight: 1 },
+      appearance: { fontSize: 16, lineHeight: 1, ligatures: true },
       padding: { top: 0, right: 8, bottom: 8, left: 8 },
       scrollbackLines: 1,
       optionKeyMode: "none",
@@ -571,7 +575,7 @@ describe("Restty Terminal Surface appearance", () => {
 
     expect(() =>
       surface.applyConfiguration({
-        appearance: { fontSize: 16, lineHeight: 1 },
+        appearance: { fontSize: 16, lineHeight: 1, ligatures: true },
         padding: { top: 0, right: 8, bottom: 8, left: 8 },
         scrollbackLines: 100_001,
         optionKeyMode: "none",
@@ -587,7 +591,7 @@ describe("Restty Terminal Surface appearance", () => {
     const { mountResttyTerminalSurface } =
       await import("../../src/terminal-surface/restty-terminal-surface");
     const surface = await mountResttyTerminalSurface(container, adapter, {
-      appearance: { fontSize: 8, lineHeight: 2 },
+      appearance: { fontSize: 8, lineHeight: 2, ligatures: true },
       padding: { top: 0, right: 0, bottom: 0, left: 0 },
       theme: DEFAULT_TERMINAL_THEME,
     });
@@ -611,6 +615,7 @@ describe("Restty Terminal Surface appearance", () => {
       appearance: {
         fontSize: 16,
         lineHeight: 1,
+        ligatures: true,
         systemFont: { family: "Ignored until #255", available: true },
       },
       padding: { top: 128, right: 0, bottom: 0, left: 128 },

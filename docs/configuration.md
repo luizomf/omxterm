@@ -80,17 +80,23 @@ remains selected:
 }
 ```
 
-Next, add line height while keeping the previous change:
+Next, add line height and disable programming ligatures while keeping the
+previous change:
 
 ```json
 {
   "version": 1,
   "font": {
     "size": 18,
-    "lineHeight": 1.1
+    "lineHeight": 1.1,
+    "ligatures": false
   }
 }
 ```
+
+`font.ligatures` defaults to `true`. Setting it to `false` keeps programming
+operators such as `=>` as distinguishable source characters without changing
+the configured font or terminal text.
 
 Then add per-side padding:
 
@@ -99,7 +105,8 @@ Then add per-side padding:
   "version": 1,
   "font": {
     "size": 18,
-    "lineHeight": 1.1
+    "lineHeight": 1.1,
+    "ligatures": false
   },
   "terminal": {
     "padding": {
@@ -155,6 +162,7 @@ unknown keys.
 | `font.family`             | exact installed system font-family name | bundled FiraCode Nerd Font Mono  |
 | `font.size`               | integer from 8 through 72 CSS pixels    | `16`                             |
 | `font.lineHeight`         | number from 1.0 through 2.0             | `1.0`                            |
+| `font.ligatures`          | boolean                                 | `true`                           |
 | `terminal.padding.top`    | integer from 0 through 128 CSS pixels   | `0`                              |
 | `terminal.padding.right`  | integer from 0 through 128 CSS pixels   | `8`                              |
 | `terminal.padding.bottom` | integer from 0 through 128 CSS pixels   | `8`                              |
@@ -182,7 +190,10 @@ Option keys produce terminal Alt sequences.
 On macOS, configured top padding begins below the fixed 30 px native title and
 drag inset. On Linux and Windows, it begins directly below native Window Chrome.
 `font.lineHeight` changes row height independently of glyph size.
-`font.family` and `font.lineHeight` are applied when a Surface is created, but
+`font.ligatures` changes programming-operator shaping live for current and new
+Surfaces. It does not alter source text, selection or copy results, cell widths,
+cursor positions, or font loading. `font.family` and `font.lineHeight` are
+applied when a Surface is created, but
 an existing Surface keeps both until OMXTerm restarts. Restty obtains the exact
 installed regular face through the main process, then uses bundled FiraCode
 regular/bold, DejaVu Sans Mono regular/bold, retained JetBrainsMono Nerd Font
@@ -495,12 +506,13 @@ OMXTerm's normal strict validation remains authoritative.
 is no automatic reload or file watching.
 
 A valid reload atomically applies font family, configured font-size baseline,
-line height, padding, scrollback, Option Key Mode, Terminal Theme, close
+line height, programming ligatures, padding, scrollback, Option Key Mode,
+Terminal Theme, close
 confirmation, logging, keybinds, and the Always-on-Top default. On Windows it
 also selects `windowsShell` for subsequently created Default Shell sessions.
-Existing
-Terminal Surfaces and Live Terminal Sessions remain in place and refit as
-needed. Restty updates theme, font size, padding and scrollback live, but an
+Existing Terminal Surfaces and Live Terminal Sessions remain in place and refit
+as needed. Restty updates theme, font size, programming ligatures, padding and
+scrollback live, but an
 existing Surface retains its initial font family and line height.
 A persistent notice names either deferred setting and asks you to restart
 OMXTerm to apply it everywhere. New Restty Surfaces use the latest fully

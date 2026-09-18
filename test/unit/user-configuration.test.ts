@@ -17,10 +17,12 @@ import {
 } from "../../src/shared/terminal-keybinds";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import {
-  DEFAULT_USER_CONFIGURATION,
-  loadUserConfiguration,
   MAX_TERMINAL_FONT_SIZE,
   MIN_TERMINAL_FONT_SIZE,
+} from "../../src/shared/user-configuration";
+import {
+  DEFAULT_USER_CONFIGURATION,
+  loadUserConfiguration,
   resolveUserConfigurationPath,
   UserConfigurationError,
   userConfigurationFallbackNotice,
@@ -69,6 +71,7 @@ describe("strict version 1 User Configuration", () => {
     );
     expect(configuration).toEqual(DEFAULT_USER_CONFIGURATION);
     expect(configuration.fontLineHeight).toBe(1);
+    expect(configuration.fontLigatures).toBe(true);
     expect(configuration.terminalPadding).toEqual({
       top: 0,
       right: 8,
@@ -87,7 +90,12 @@ describe("strict version 1 User Configuration", () => {
           confirmClose: false,
           logLevel: "debug",
           windowsShell: "C:\\configured\\shell.exe",
-          font: { family: "Exact Family", size: 23, lineHeight: 1.15 },
+          font: {
+            family: "Exact Family",
+            size: 23,
+            lineHeight: 1.15,
+            ligatures: false,
+          },
           terminal: {
             padding: { top: 0, right: 12, bottom: 8, left: 16 },
           },
@@ -107,6 +115,7 @@ describe("strict version 1 User Configuration", () => {
       fontFamily: "Exact Family",
       fontSize: 23,
       fontLineHeight: 1.15,
+      fontLigatures: false,
       terminalPadding: { top: 0, right: 12, bottom: 8, left: 16 },
       scrollbackLines: 0,
       optionKeyMode: "left",
@@ -141,6 +150,29 @@ describe("strict version 1 User Configuration", () => {
         expect(action).toThrow(
           expect.objectContaining({ location: "font.lineHeight" }),
         );
+    },
+  );
+
+  it.each([true, false])("accepts boolean font.ligatures %s", (ligatures) => {
+    expect(
+      validateUserConfiguration(
+        { version: 1, font: { ligatures } },
+        configPath,
+        installedFonts,
+      ).fontLigatures,
+    ).toBe(ligatures);
+  });
+
+  it.each([null, 0, 1, "false", {}])(
+    "rejects non-boolean font.ligatures %j",
+    (ligatures) => {
+      expect(() =>
+        validateUserConfiguration(
+          { version: 1, font: { ligatures } },
+          configPath,
+          installedFonts,
+        ),
+      ).toThrow(expect.objectContaining({ location: "font.ligatures" }));
     },
   );
 

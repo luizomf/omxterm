@@ -609,7 +609,7 @@ describe("renderer Terminal Tabs runtime configuration", () => {
         createAdapter: () => adapter,
         mount: vi.fn(() => pendingMount),
         surfaceOptions: {
-          appearance: { fontSize: 16, lineHeight: 1 },
+          appearance: { fontSize: 16, lineHeight: 1, ligatures: true },
           padding: { top: 0, right: 8, bottom: 8, left: 8 },
           scrollbackLines: 10_000,
           optionKeyMode: "none",
@@ -618,7 +618,7 @@ describe("renderer Terminal Tabs runtime configuration", () => {
       },
     );
     const update = {
-      appearance: { fontSize: 24, lineHeight: 1.25 },
+      appearance: { fontSize: 24, lineHeight: 1.25, ligatures: true },
       padding: { top: 1, right: 2, bottom: 3, left: 4 },
       scrollbackLines: 0,
       optionKeyMode: "both" as const,
@@ -638,7 +638,7 @@ describe("renderer Terminal Tabs runtime configuration", () => {
     const { DEFAULT_TERMINAL_THEME } =
       await import("../../src/shared/terminal-theme");
     const initialConfiguration = {
-      appearance: { fontSize: 8, lineHeight: 1 },
+      appearance: { fontSize: 8, lineHeight: 1, ligatures: true },
       padding: { top: 0, right: 8, bottom: 8, left: 8 },
       scrollbackLines: 10_000,
       optionKeyMode: "none" as const,
@@ -652,7 +652,7 @@ describe("renderer Terminal Tabs runtime configuration", () => {
     for (let index = 0; index < 8; index += 1) harness.tabs.zoom("out");
     harness.tabs.applyConfiguration({
       ...initialConfiguration,
-      appearance: { fontSize: 20, lineHeight: 1 },
+      appearance: { fontSize: 20, lineHeight: 1, ligatures: true },
     });
     harness.tabs.handleCommand({ action: "new" });
     await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
@@ -674,7 +674,7 @@ describe("renderer Terminal Tabs runtime configuration", () => {
     harness.strip.querySelectorAll("button")[0]!.click();
 
     harness.tabs.applyConfiguration({
-      appearance: { fontSize: 20, lineHeight: 1.2 },
+      appearance: { fontSize: 20, lineHeight: 1.2, ligatures: true },
       padding: { top: 1, right: 2, bottom: 3, left: 4 },
       scrollbackLines: 0,
       optionKeyMode: "both",

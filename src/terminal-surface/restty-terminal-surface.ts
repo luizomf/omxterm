@@ -13,6 +13,7 @@ import {
 } from "./semantic-input-delivery";
 import {
   DEFAULT_SCROLLBACK_LINES,
+  DEFAULT_TERMINAL_FONT_LIGATURES,
   DEFAULT_TERMINAL_FONT_SIZE,
   DEFAULT_TERMINAL_LINE_HEIGHT,
   DEFAULT_TERMINAL_PADDING,
@@ -36,7 +37,10 @@ import {
   type ResttyVisibleLinkController,
   type ResttyVisibleLinkInteraction,
 } from "./restty-visible-links";
-import { resttyHostServices } from "./restty-host-services";
+import {
+  resttyContextMenuHandler,
+  resttyHostServices,
+} from "./restty-host-services";
 import { toGhosttyTheme } from "./restty-theme";
 import type {
   TerminalFontInputLease,
@@ -77,6 +81,7 @@ type CandidateRuntime = {
     applyTheme(theme: GhosttyTheme, sourceLabel?: string): void;
     isBracketedPasteEnabled(): boolean;
     setFontSize(value: number): void;
+    setLigatures(value: boolean): void;
     setOptionKeyMode(value: OptionKeyMode): void;
     setScrollbackLines(value: number): void;
   };
@@ -96,8 +101,7 @@ type CandidatePane = {
 
 function resttyTerminalConfig(
   fonts: readonly TerminalFontInput[],
-  fontSize: number,
-  lineHeight: number,
+  [fontSize, lineHeight, ligatures]: readonly [number, number, boolean],
   scrollbackLines: number,
   optionKeyMode: OptionKeyMode | undefined,
   theme: TerminalTheme,
@@ -106,6 +110,7 @@ function resttyTerminalConfig(
     renderer: "webgl2",
     fontSize,
     lineHeight,
+    ligatures,
     maxScrollbackBytes: RESTTY_SCROLLBACK_MAX_BYTES,
     scrollbackLines,
     optionKeyMode: optionKeyMode ?? "none",
@@ -189,15 +194,13 @@ export async function mountResttyTerminalSurface(
   let baselineFontSize = resolveFontSize(options.appearance?.fontSize);
   let currentFontSize = baselineFontSize;
   const initialLineHeight = resolveLineHeight(options.appearance?.lineHeight);
+  const initialLigatures =
+    options.appearance?.ligatures ?? DEFAULT_TERMINAL_FONT_LIGATURES;
   let terminalTheme = resolveTheme(options.theme);
   let padding = resolvePadding(options.padding);
   const scrollbackLines = validateScrollbackLines(options.scrollbackLines);
   const initialFamily = options.appearance?.systemFont?.family;
-  const onContextMenu = (event: Event) => {
-    if (!options.clipboard) return;
-    event.preventDefault();
-    options.clipboard.requestContextMenu();
-  };
+  const onContextMenu = resttyContextMenuHandler(options.clipboard);
   const revealInput = () => {
     visibleLinkController?.invalidate();
     pane?.runtime.interaction.scrollToBottom();
@@ -224,6 +227,7 @@ export async function mountResttyTerminalSurface(
   const applyConfiguration = (configuration: TerminalSurfaceConfiguration) => {
     const nextBaseline = resolveFontSize(configuration.appearance.fontSize);
     resolveLineHeight(configuration.appearance.lineHeight);
+    const nextLigatures = configuration.appearance.ligatures;
     const nextPadding = resolvePadding(configuration.padding);
     const nextTheme = resolveTheme(configuration.theme);
     const nextScrollbackLines = validateScrollbackLines(
@@ -238,6 +242,7 @@ export async function mountResttyTerminalSurface(
     setContainerAppearance(container, padding, terminalTheme);
     applyRuntimeTheme(terminalTheme);
     applyRuntimeSize(Math.max(1, baselineFontSize + zoomDelta));
+    pane.runtime.terminal.setLigatures(nextLigatures);
     pane.runtime.terminal.setOptionKeyMode(configuration.optionKeyMode);
     pane.runtime.terminal.setScrollbackLines(nextScrollbackLines);
     refit();
@@ -309,8 +314,7 @@ export async function mountResttyTerminalSurface(
     setContainerAppearance(container, padding, terminalTheme);
     const terminal = resttyTerminalConfig(
       fontLease.fonts,
-      baselineFontSize,
-      initialLineHeight,
+      [baselineFontSize, initialLineHeight, initialLigatures],
       scrollbackLines,
       options.optionKeyMode,
       terminalTheme,
@@ -374,9 +378,7 @@ export async function mountResttyTerminalSurface(
       { once: true },
     );
 
-    // Backend readiness precedes PTY creation. The Adapter may synchronously
-    // replay owned startup output before start resolves; its parser replies
-    // must already be allowed through the established transport.
+    // Allow parser replies before startup output can replay synchronously.
     ready = true;
     await adapter.start({
       onOutput(data) {

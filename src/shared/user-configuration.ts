@@ -5,6 +5,7 @@ export const MIN_TERMINAL_FONT_SIZE = 8;
 export const MAX_TERMINAL_FONT_SIZE = 72;
 export const DEFAULT_TERMINAL_FONT_SIZE = 16;
 export const DEFAULT_TERMINAL_LINE_HEIGHT = 1;
+export const DEFAULT_TERMINAL_FONT_LIGATURES = true;
 export const MIN_TERMINAL_LINE_HEIGHT = 1;
 export const MAX_TERMINAL_LINE_HEIGHT = 2;
 export const MIN_TERMINAL_PADDING = 0;
@@ -39,6 +40,7 @@ export interface TerminalRendererConfiguration {
   readonly fontFamily?: string;
   readonly fontSize: number;
   readonly fontLineHeight: number;
+  readonly fontLigatures: boolean;
   readonly terminalPadding: TerminalPadding;
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
@@ -55,6 +57,7 @@ export interface UserConfiguration {
   readonly fontFamily?: string;
   readonly fontSize: number;
   readonly fontLineHeight: number;
+  readonly fontLigatures: boolean;
   readonly terminalPadding: TerminalPadding;
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
@@ -74,6 +77,7 @@ export function isTerminalRendererConfiguration(
         "fontFamily",
         "fontSize",
         "fontLineHeight",
+        "fontLigatures",
         "terminalPadding",
         "scrollbackLines",
         "optionKeyMode",
@@ -90,6 +94,7 @@ export function isTerminalRendererConfiguration(
     Number.isFinite(value.fontLineHeight) &&
     (value.fontLineHeight as number) >= MIN_TERMINAL_LINE_HEIGHT &&
     (value.fontLineHeight as number) <= MAX_TERMINAL_LINE_HEIGHT &&
+    typeof value.fontLigatures === "boolean" &&
     isTerminalPadding(value.terminalPadding) &&
     Number.isInteger(value.scrollbackLines) &&
     (value.scrollbackLines as number) >= 0 &&

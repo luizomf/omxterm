@@ -210,6 +210,7 @@ async function run() {
       appearance: {
         fontSize: 8,
         lineHeight: 1,
+        ligatures: true,
         ...(document.body.dataset.configuredFont === "true"
           ? {
               systemFont: {
@@ -242,7 +243,7 @@ async function run() {
   );
   const canvas = container.querySelector("canvas");
   surface.applyConfiguration({
-    appearance: { fontSize: 16, lineHeight: 2 },
+    appearance: { fontSize: 16, lineHeight: 2, ligatures: true },
     padding: { top: 128, right: 128, bottom: 128, left: 128 },
     scrollbackLines: 10_000,
     optionKeyMode: "none",
