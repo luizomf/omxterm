@@ -121,7 +121,9 @@ describe("Restty under production Electron policy", () => {
         expect(compositionInput?.[`${mode}Commit`]).toEqual([
           "ser",
           "á",
-          " só av",
+          " s",
+          "ó",
+          " av",
           "ó",
         ]);
         expect(compositionInput?.[`${mode}Cancel`]).toEqual([]);

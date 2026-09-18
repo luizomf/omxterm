@@ -171,7 +171,8 @@ void mountResttyTerminalSurface(
     dispatchKey("keydown", "Å", "KeyA", true, true);
     dispatchKey("keyup", "Å", "KeyA", true, true);
     dispatchKey("keyup", "Alt", "AltLeft", false);
-    const optionInput = terminalInput.slice(0, 11);
+    const optionInput = terminalInput.slice();
+    setOptionMode("none");
 
     const dispatchTextInput = (text: string) => {
       input.dispatchEvent(
@@ -225,7 +226,9 @@ void mountResttyTerminalSurface(
       compositionInput[`${name}Commit`] = captureInput(() => {
         dispatchTextInput("ser");
         dispatchComposition("á");
-        dispatchTextInput(" só av");
+        dispatchTextInput(" s");
+        dispatchComposition("ó");
+        dispatchTextInput(" av");
         dispatchComposition("ó");
       });
       compositionInput[`${name}Cancel`] = captureInput(() =>
@@ -260,6 +263,7 @@ void mountResttyTerminalSurface(
         );
     });
 
+    terminalInput.length = 0;
     handlers?.onOutput(
       "OMXTerm Restty Olá\r\n\u001b]52;c;dW5zYWZl\u0007\u001b]52;c;?\u0007",
     );
@@ -274,7 +278,7 @@ void mountResttyTerminalSurface(
       ptyStarts,
       clipboardReads,
       clipboardWrites,
-      terminalReplies: optionInput.length,
+      terminalReplies: optionInput.length + terminalInput.length,
       startupReplies,
       optionInput,
       compositionInput,
