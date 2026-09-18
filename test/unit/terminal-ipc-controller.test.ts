@@ -1468,10 +1468,11 @@ describe("Terminal Font IPC", () => {
       fontFamily: "Exact Família",
     });
     const current = handler(trusted, "Exact Família");
-    expect(loadFontData).toHaveBeenCalledTimes(4);
+    expect(loadFontData).toHaveBeenCalledTimes(3);
     finishChangedLoads[0]!(sharedResult);
-    finishChangedLoads[1]!(sharedResult);
     await expect(stale).rejects.toThrow("superseded");
+    await vi.waitFor(() => expect(loadFontData).toHaveBeenCalledTimes(4));
+    finishChangedLoads[1]!(sharedResult);
     await expect(current).resolves.toBe(sharedResult);
     router.dispose();
   });

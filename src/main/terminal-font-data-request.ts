@@ -35,11 +35,20 @@ export function createFontDataRequest(options: {
     )
       return pending.promise;
 
-    const load = options.load(family);
+    const previous = pending?.promise;
     const identity = {};
     const promise = (async () => {
       try {
-        const loaded = await load;
+        // A new configuration waits for the previous bounded read, even when
+        // that read fails. Superseded generations never start another read.
+        if (previous) await previous.catch(() => undefined);
+        if (
+          options.isDisposed() ||
+          options.family() !== family ||
+          options.generation() !== generation
+        )
+          throw new Error("Terminal Font request was superseded");
+        const loaded = await options.load(family);
         if (
           options.isDisposed() ||
           options.family() !== family ||

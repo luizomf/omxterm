@@ -55,9 +55,10 @@ describe("Terminal Font data request lifetime", () => {
     family = "Family A";
     generation += 1;
     const current = request("Family A");
-    expect(load).toHaveBeenCalledTimes(2);
+    expect(load).toHaveBeenCalledTimes(1);
     finishes[0]!({ fallbacks: [] });
     await expect(stale).rejects.toThrow("superseded");
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2));
     disposed = true;
     finishes[1]!({ fallbacks: [] });
     await expect(current).rejects.toThrow("superseded");
