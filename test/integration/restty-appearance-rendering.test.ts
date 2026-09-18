@@ -33,6 +33,10 @@ interface Measurement {
   readonly canvasCssHeight: number;
   readonly canvasBackingWidth: number;
   readonly canvasBackingHeight: number;
+  readonly liveCellWidth: number;
+  readonly liveCellHeight: number;
+  readonly liveCols: number;
+  readonly liveRows: number;
   readonly imeFontSize: string;
   readonly starts: number;
   readonly closes: number;
@@ -294,6 +298,19 @@ function assertFontGeometry(result: Result, label: string): void {
   expect(cssCellWidth(size16), label).toBeLessThan(cssCellWidth(size64));
   expect(cssCellWidth(size64), label).toBeLessThan(cssCellWidth(size72));
   for (const entry of result.measurements) {
+    expect(entry.liveCellWidth, `${label}, size ${entry.size} live width`).toBe(
+      entry.cellWidth,
+    );
+    expect(
+      entry.liveCellHeight,
+      `${label}, size ${entry.size} live height`,
+    ).toBe(entry.cellHeight);
+    expect(entry.liveCols, `${label}, size ${entry.size} live columns`).toBe(
+      entry.cols,
+    );
+    expect(entry.liveRows, `${label}, size ${entry.size} live rows`).toBe(
+      entry.rows,
+    );
     expect(entry.starts, `${label}, size ${entry.size} readiness`).toBe(1);
     expect(entry.closes, `${label}, size ${entry.size} lifecycle`).toBe(0);
     expect(

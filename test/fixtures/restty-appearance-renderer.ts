@@ -21,6 +21,10 @@ interface Measurement {
   readonly canvasCssHeight: number;
   readonly canvasBackingWidth: number;
   readonly canvasBackingHeight: number;
+  readonly liveCellWidth: number;
+  readonly liveCellHeight: number;
+  readonly liveCols: number;
+  readonly liveRows: number;
   readonly imeFontSize: string;
   readonly starts: number;
   readonly closes: number;
@@ -162,8 +166,20 @@ async function measure(
     starts,
     closes,
   };
+  // Exercise the live setter at both endpoints, not only creation-time size.
+  surface.zoom("in");
+  surface.zoom("out");
+  await waitForLayout();
+  handlers?.onOutput("\u001b[16t");
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const live = {
+    liveCellWidth: cellWidth,
+    liveCellHeight: cellHeight,
+    liveCols: latest.cols,
+    liveRows: latest.rows,
+  };
   surface.dispose();
-  return result;
+  return { ...result, ...live };
 }
 
 async function run() {
