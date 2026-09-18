@@ -145,15 +145,6 @@ export function mountTerminalWindowPage(
 
   const surfaceOptions: TerminalSurfaceOptions = {
     ...activeSurfaceConfiguration,
-    linkHoverAvailability: {
-      isEnabled: () => !(localImagePreview?.isActive() ?? false),
-      subscribe(listener) {
-        hoverAvailabilityListeners.add(listener);
-        return () => {
-          hoverAvailabilityListeners.delete(listener);
-        };
-      },
-    },
     ...(options.loadFontData ? { loadFontData: options.loadFontData } : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.onExternalLink
@@ -161,6 +152,15 @@ export function mountTerminalWindowPage(
       : {}),
     ...(options.loadLocalImage
       ? {
+          linkHoverAvailability: {
+            isEnabled: () => !(localImagePreview?.isActive() ?? false),
+            subscribe(listener: () => void) {
+              hoverAvailabilityListeners.add(listener);
+              return () => {
+                hoverAvailabilityListeners.delete(listener);
+              };
+            },
+          },
           onLocalImageActivation: (source: LocalImageActivation) =>
             void localImagePreview?.open(source),
         }
