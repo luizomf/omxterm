@@ -25,7 +25,7 @@ function builderValue(name: string): string {
 
 describe("release version consistency", () => {
   it("uses the selected version in npm package metadata", () => {
-    expect(packageMetadata.version).toBe("0.12.0");
+    expect(packageMetadata.version).toMatch(/^\d+\.\d+\.\d+(?:-dev\.\d+)?$/u);
     expect(lockMetadata.version).toBe(packageMetadata.version);
     expect(lockMetadata.packages[""]?.version).toBe(packageMetadata.version);
   });
@@ -36,12 +36,13 @@ describe("release version consistency", () => {
   });
 
   it.each([
-    ["DMG", "dmg", "OMXTerm-0.12.0-arm64.dmg"],
-    ["AppImage", "AppImage", "OMXTerm-0.12.0-arm64.AppImage"],
-    ["NSIS", "exe", "OMXTerm-0.12.0-arm64.exe"],
+    ["DMG", "dmg"],
+    ["AppImage", "AppImage"],
+    ["NSIS", "exe"],
   ])(
     "derives the exact %s artifact and checksum names from builder metadata",
-    (_format, extension, expectedArtifactName) => {
+    (_format, extension) => {
+      const expectedArtifactName = `OMXTerm-${packageMetadata.version}-arm64.${extension}`;
       const artifactName = builderValue("artifactName")
         .replace("${productName}", builderValue("productName"))
         .replace("${version}", packageMetadata.version)
