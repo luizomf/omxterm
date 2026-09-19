@@ -1,0 +1,245 @@
+{
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) omxterm-restty-scrollback/43.1.1 Chrome/150.0.7871.114 Electron/43.1.1 Safari/537.36",
+    "dpr": 2,
+    "visibility": "visible",
+    "geometry": [
+      {
+        "width": 1400,
+        "height": 816
+      },
+      {
+        "width": 1400,
+        "height": 752
+      }
+    ]
+  },
+  "idle": {
+    "hidden": [true, false],
+    "elapsedMs": 1580.3000000044703,
+    "observerRafCallbacks": 190,
+    "runtimeRafCallbacks": [190, 190],
+    "outputLinesPerSurface": 0,
+    "surfaces": [
+      {
+        "clear": 0,
+        "drawArrays": 0,
+        "drawElements": 0,
+        "drawArraysInstanced": 0,
+        "drawElementsInstanced": 0,
+        "bufferData": 0,
+        "bufferSubData": 0,
+        "texImage2D": 0,
+        "texSubImage2D": 0,
+        "deleteTexture": 0
+      },
+      {
+        "clear": 3,
+        "drawArrays": 0,
+        "drawElements": 0,
+        "drawArraysInstanced": 6,
+        "drawElementsInstanced": 0,
+        "bufferData": 0,
+        "bufferSubData": 6,
+        "texImage2D": 0,
+        "texSubImage2D": 0,
+        "deleteTexture": 0
+      }
+    ],
+    "rendererCpuSeconds": 0.142814
+  },
+  "output": {
+    "hidden": [true, false],
+    "elapsedMs": 1577.1000000014901,
+    "observerRafCallbacks": 189,
+    "runtimeRafCallbacks": [189, 189],
+    "outputLinesPerSurface": 1200,
+    "surfaces": [
+      {
+        "clear": 0,
+        "drawArrays": 0,
+        "drawElements": 0,
+        "drawArraysInstanced": 0,
+        "drawElementsInstanced": 0,
+        "bufferData": 0,
+        "bufferSubData": 0,
+        "texImage2D": 0,
+        "texSubImage2D": 0,
+        "deleteTexture": 0
+      },
+      {
+        "clear": 62,
+        "drawArrays": 0,
+        "drawElements": 0,
+        "drawArraysInstanced": 186,
+        "drawElementsInstanced": 0,
+        "bufferData": 2,
+        "bufferSubData": 186,
+        "texImage2D": 10,
+        "texSubImage2D": 0,
+        "deleteTexture": 9
+      }
+    ],
+    "rendererCpuSeconds": 0.285253
+  },
+  "reveal": {
+    "geometry": {
+      "cursor": {
+        "col": 14,
+        "row": 20,
+        "wideTail": false
+      },
+      "cols": 56,
+      "rows": 22,
+      "cellW": 17,
+      "cellH": 34
+    },
+    "cursorForeground": 578,
+    "foregroundPixels": 1713,
+    "pixel": [12, 34, 56, 255],
+    "elapsedMs": 13.700000002980232,
+    "calls": {
+      "clear": 1,
+      "drawArrays": 0,
+      "drawElements": 0,
+      "drawArraysInstanced": 3,
+      "drawElementsInstanced": 0,
+      "bufferData": 0,
+      "bufferSubData": 3,
+      "texImage2D": 1,
+      "texSubImage2D": 0,
+      "deleteTexture": 0
+    },
+    "baseline": {
+      "cols": 87,
+      "rows": 25
+    },
+    "hiddenSizes": [],
+    "revealedSize": {
+      "cols": 56,
+      "rows": 22
+    },
+    "canvasWidth": 960,
+    "expectedWidth": 960,
+    "visible": true,
+    "sameCanvas": true
+  },
+  "synchronizedReveal": {
+    "before": [12, 34, 56, 255],
+    "selected": [12, 34, 56, 255],
+    "focused": [12, 34, 56, 255],
+    "batchedClears": 0,
+    "completed": [65, 43, 21, 255]
+  },
+  "ingestion": {
+    "acked": true,
+    "titles": ["hidden-title"],
+    "bells": 1,
+    "replies": 1,
+    "retained": true,
+    "ordered": true
+  },
+  "lifecycle": {
+    "rapidRefreshes": 8,
+    "deadRafCallbacks": 0,
+    "mountCalls": {
+      "bufferData": 3
+    },
+    "beforeClose": {
+      "bufferData": 3
+    },
+    "afterClose": {
+      "bufferData": 3
+    },
+    "hiddenClosed": true,
+    "pendingClosed": true,
+    "usable": true
+  },
+  "images": {
+    "retained": {
+      "red": 9600,
+      "green": 3200
+    },
+    "retainedAgain": {
+      "red": 9600,
+      "green": 3200
+    },
+    "deleted": [
+      {
+        "name": "image-id",
+        "acked": true,
+        "visible": {
+          "red": 9600,
+          "green": 0
+        },
+        "revealed": {
+          "red": 0,
+          "green": 0
+        },
+        "hiddenClears": 0,
+        "releasedTextures": 1
+      },
+      {
+        "name": "all-images",
+        "acked": true,
+        "visible": {
+          "red": 9600,
+          "green": 0
+        },
+        "revealed": {
+          "red": 0,
+          "green": 0
+        },
+        "hiddenClears": 0,
+        "releasedTextures": 1
+      },
+      {
+        "name": "all-placements",
+        "acked": true,
+        "visible": {
+          "red": 9600,
+          "green": 0
+        },
+        "revealed": {
+          "red": 0,
+          "green": 0
+        },
+        "hiddenClears": 0,
+        "releasedTextures": 1
+      },
+      {
+        "name": "reset",
+        "acked": true,
+        "visible": {
+          "red": 9600,
+          "green": 0
+        },
+        "revealed": {
+          "red": 0,
+          "green": 0
+        },
+        "hiddenClears": 0,
+        "releasedTextures": 1
+      },
+      {
+        "name": "alternate-exit",
+        "acked": true,
+        "visible": {
+          "red": 9600,
+          "green": 0
+        },
+        "revealed": {
+          "red": 0,
+          "green": 0
+        },
+        "hiddenClears": 0,
+        "releasedTextures": 1
+      }
+    ],
+    "disposal": {
+      "releasedTextures": 1,
+      "hiddenClears": 0,
+      "detached": true
+    }
+  }
+}

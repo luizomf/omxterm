@@ -28,6 +28,13 @@ interface Metrics {
 
 interface Result {
   readonly hidden: {
+    synchronizedReveal: {
+      batchedClears: number;
+      before: number[];
+      selected: number[];
+      focused: number[];
+      completed: number[];
+    };
     ingestion: {
       acked: boolean;
       titles: string[];
@@ -149,6 +156,12 @@ describe("Restty scrollback through the production Surface seam", () => {
             expect.soft(count, `hidden ${name}`).toBe(0);
         expect.soft(measurement.surfaces[1]!.clear).toBeGreaterThan(0);
       }
+      const synchronized = result!.hidden.synchronizedReveal;
+      expect.soft(synchronized.batchedClears).toBe(0);
+      expect.soft(synchronized.before).toEqual([12, 34, 56, 255]);
+      expect.soft(synchronized.selected).toEqual(synchronized.before);
+      expect.soft(synchronized.focused).toEqual(synchronized.before);
+      expect.soft(synchronized.completed).toEqual([65, 43, 21, 255]);
       expect.soft(result!.hidden.reveal.pixel).toEqual([12, 34, 56, 255]);
       expect.soft(result!.hidden.reveal.foregroundPixels).toBeGreaterThan(0);
       expect.soft(result!.hidden.reveal.cursorForeground).toBeGreaterThan(0);
@@ -482,6 +495,7 @@ app.whenReady().then(async () => {
     idle,
     output,
     reveal: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.reveal()', true),
+    synchronizedReveal: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.synchronizedReveal()', true),
     ingestion: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.ingestion()', true),
     lifecycle: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.lifecycle()', true),
     images: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.images()', true),

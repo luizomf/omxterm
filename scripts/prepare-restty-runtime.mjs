@@ -72,9 +72,21 @@ const priorModifiedHoverDigest =
 const priorHiddenRenderingDigest =
   "e0d54804ec53ada4692691394852eb1f18e82a223283fe26e3ee2117ccd609ad";
 const correctedDigest =
-  "17def10ec435cb5ba194b7c142433a1f550d6b9e25cac3d8d16b295c6199d250";
+  "dafd11ff8e1dba44c5d9f1429b895c00cde2cdbe3d6c971db9938c046b18c0be";
 
 const hiddenRenderingCorrections = [
+  {
+    original: `    canvas.width = nextWidth;
+    canvas.height = nextHeight;
+    deps.setCurrentDpr(dpr);`,
+    corrected: `    // Forced grid refits must not reset an unchanged drawing buffer while
+    // synchronized output deliberately retains its previous presentation.
+    if (canvas.width !== nextWidth)
+      canvas.width = nextWidth;
+    if (canvas.height !== nextHeight)
+      canvas.height = nextHeight;
+    deps.setCurrentDpr(dpr);`,
+  },
   {
     original: `  function updateGrid() {
     if (!fontState.fonts.length)`,

@@ -5,7 +5,10 @@ import {
   hiddenGLMethods,
   instrumentHiddenWebGL,
 } from "./restty-hidden-presentation";
-import { exerciseHiddenImages } from "./restty-hidden-images";
+import {
+  exerciseHiddenImages,
+  exerciseSynchronizedReveal,
+} from "./restty-hidden-images";
 import { hiddenFixtureSession } from "./restty-hidden-session";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 
@@ -238,6 +241,13 @@ export async function hiddenRenderingFixture() {
         usable,
       };
     },
+    synchronizedReveal: () =>
+      exerciseSynchronizedReveal({
+        tabs,
+        canvas: canvases[0]!,
+        output: sessions[0]!.output,
+        counts: () => ({ ...calls.get(canvases[0]!) }),
+      }),
     images: () =>
       exerciseHiddenImages({
         tabs,

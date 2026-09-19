@@ -1,5 +1,44 @@
 import type { TerminalTabs } from "../../src/renderer/terminal-tabs";
 
+export function exerciseSynchronizedReveal(options: {
+  tabs: TerminalTabs;
+  canvas: HTMLCanvasElement;
+  output(data: string): boolean;
+  counts(): Record<string, number>;
+}) {
+  const { tabs, canvas, output, counts } = options;
+  const select = (position: number) =>
+    tabs.handleCommand({ action: "select", position });
+  const pixel = () => {
+    const gl = canvas.getContext("webgl2")!;
+    const value = new Uint8Array(4);
+    gl.readPixels(
+      Math.floor(canvas.width / 2),
+      Math.floor(canvas.height / 2),
+      1,
+      1,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      value,
+    );
+    return [...value];
+  };
+  output("\u001bc\u001b[?25l\u001b[48;2;12;34;56m\u001b[2J");
+  select(1);
+  const before = pixel();
+  const beforeCalls = counts();
+  output("\u001b[?2026h\u001b[48;2;65;43;21m\u001b[2J");
+  select(2);
+  select(1);
+  const selected = pixel();
+  tabs.focusSelected();
+  const focused = pixel();
+  const batchedClears = (counts().clear ?? 0) - (beforeCalls.clear ?? 0);
+  output("\u001b[?2026l");
+  select(1);
+  return { before, selected, focused, batchedClears, completed: pixel() };
+}
+
 export function exerciseHiddenImages(options: {
   tabs: TerminalTabs;
   canvas: HTMLCanvasElement;

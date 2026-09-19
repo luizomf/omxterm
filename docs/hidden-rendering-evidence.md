@@ -4,10 +4,15 @@
 
 Baseline: `d884de730bab7cc1a78bb900dfa0a938a89c7fe6`, runtime SHA-256
 `e0d54804ec53ada4692691394852eb1f18e82a223283fe26e3ee2117ccd609ad`.
-Candidate: the source containing this document, corrected runtime SHA-256
+Reviewed candidate: `29e92318509a868ea999ce9339617416de383493`, runtime SHA-256
 `17def10ec435cb5ba194b7c142433a1f550d6b9e25cac3d8d16b295c6199d250`.
-The Ghostty artifact is unchanged. [Machine-readable evidence](evidence/issue-316-hidden-rendering.json)
-records both executions and fixture source digests.
+Final corrected runtime SHA-256:
+`dafd11ff8e1dba44c5d9f1429b895c00cde2cdbe3d6c971db9938c046b18c0be`.
+The Ghostty artifact is unchanged. [Machine-readable comparison](evidence/issue-316-hidden-rendering.json)
+records the baseline and reviewed-candidate executions and fixture source digests.
+The table below refers to that comparison. Separate
+[post-review verification](evidence/issue-316-review-verification.json) records
+the final runtime, including synchronized-output presentation.
 
 The native scrollback fixture now also drives production Terminal Tabs, Surface
 mounting, and the Electron Adapter with a synthetic bridge. It counts real
@@ -107,6 +112,25 @@ its intentional batching. Restty's existing output-filter cursor hint can retain
 a pre-resize row for a subsequent CPR query; this change does not modify that
 separate behavior. Cursor **pixels** and render geometry, not that hint, establish
 first-presentation correctness here.
+
+## Review correction
+
+Independent review identified unconditional canvas dimension assignments during
+forced refitting as a risk to the retained presentation during synchronized
+output. The coordinator added a native regression that begins a batch, switches
+away and back, restores focus, and reads pixels in the same task. It verifies
+zero frame clears during the batch, unchanged prior pixels, and current pixels
+after the batch ends. The reviewed candidate already passed this pixel test on
+this macOS/Chromium backend: blanking was **not reproduced** here, so the
+source-level concern is not reported as an observed failure.
+
+The final correction avoids assigning unchanged canvas dimensions while still
+forcing grid recomputation for font changes. It removes the questionable reset
+side effect without bypassing synchronized-output batching. The same regression
+passes on the final runtime, alongside hidden-rendering and first-presentation
+coverage. Linux/Windows behavior remains unverified rather than inferred from
+this host. Final preparation was restored with a fresh `npm ci` and verified
+byte-idempotent twice.
 
 ## Verification
 
