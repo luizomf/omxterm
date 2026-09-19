@@ -235,7 +235,13 @@ representative locally installed operating-system fallback faces. When a family
 is explicitly configured, the bundled bold faces are omitted: the configured
 regular face keeps precedence for regular and bold text, with Restty's existing
 synthetic bold rendering. Missing glyphs still use the regular fallback faces.
-Native configured-family bold-face resolution is not claimed. Font reads use
+Native configured-family bold-face resolution is not claimed. Apple Color Emoji
+collections use memory-only shaping inputs that omit the unused `sbix` bitmap
+table while retaining every face and other table. Main skips that payload with
+bounded positional reads before validation and IPC; native Canvas still uses the
+unchanged installed font. Other fonts keep their existing input and fallback
+semantics. This reduces font-byte costs, not a guaranteed total RSS or GPU budget.
+Font reads use
 native platform facilities without shell interpolation; no font path, broad filesystem API,
 remote fallback or persistent byte cache crosses the bridge. A Restty Surface applies its configured family and line height when it is
 created; an existing Restty Surface keeps both after User Configuration Reload

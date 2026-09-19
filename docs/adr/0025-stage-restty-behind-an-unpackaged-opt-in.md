@@ -69,6 +69,20 @@ Font Mono face, and available local OS emoji/CJK/symbol fallbacks. The renderer
 cannot provide a path or enumerate files; there is no remote fallback,
 Operational Event font data, or persistent byte cache.
 
+For Apple Color Emoji collections, main now assembles memory-only shaping
+input with every face and non-`sbix` table preserved, sharing duplicate table
+ranges. Bounded positional reads skip the bitmap payload before validation and
+IPC; other families and collections without `sbix` keep the whole-file path.
+The installed font is never modified or replaced. This is specific to the
+pinned Restty behavior: native Canvas uses the original installed font for color
+emoji, and its existing raster/atlas fallback paths produce equivalent results
+without the bitmap table. The measured fallback limitation (blank Apple emoji
+when Canvas is unavailable) already exists with the original input. Dependency
+upgrades must revalidate this assumption using the source-only experiment in
+`docs/emoji-shaping-experiment.md`; do not generalize it to other bitmap fonts.
+There is no derivative on disk in production, new cache, renderer capability,
+or alternate font renderer.
+
 Theme, size and padding update existing Surfaces without replacing their core
 or PTY. `font.family` and `font.lineHeight` are the complete restart-only set:
 existing Restty Surfaces keep their creation-time values, while new Surfaces use

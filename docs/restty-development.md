@@ -154,8 +154,14 @@ renderer font requests or native load batches, then checks real Surface
 readiness and cleanup without a false error. Sharing reduces retained native
 source identities and duplicate parsing; it does not
 remove transient IPC/snapshot costs, Restty's bounded released cache, native
-shaping allocations, browser/WebGL resources or GPU memory. Large native emoji
-and CJK fonts still contribute to the first generation in each window.
+shaping allocations, browser/WebGL resources or GPU memory. Native fonts still contribute to the first generation in each window. Apple
+Color Emoji collections now omit `sbix` from the shaping input: main reads the
+directories and retained table ranges without reading the bitmap payload. It
+preserves all faces and shared tables, then uses the existing exact-family and
+pinned-parser validation. Canvas rasterizes against the unchanged installed
+font. Other families, including CJK, still use whole-file inputs. Validation,
+IPC, preload and renderer snapshots still have transient costs. See the
+[reproducible comparison and limitations](emoji-shaping-experiment.md).
 
 The pinned font-resource correction reserves each source before asynchronous
 load/parse, so budget eviction cannot leave parsed faces without their source

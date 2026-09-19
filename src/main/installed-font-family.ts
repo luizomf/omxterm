@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
-import { open } from "node:fs/promises";
+import { open, type FileHandle } from "node:fs/promises";
+import { readAppleEmojiShapingInput } from "./apple-emoji-shaping-input";
 import path from "node:path";
 import { promisify } from "node:util";
 import {
@@ -289,21 +290,15 @@ async function readInstalledFontFaceData(
       throw new Error(
         `the selected font face exceeds the ${boundedMaximum}-byte limit`,
       );
-    const bytes = new Uint8Array(info.size);
-    let offset = 0;
-    while (offset < bytes.length) {
-      const { bytesRead } = await handle.read(
-        bytes,
-        offset,
-        bytes.length - offset,
-        offset,
-      );
-      if (bytesRead === 0)
-        throw new Error(
-          "the selected font face ended before its declared size",
-        );
-      offset += bytesRead;
-    }
+    const file = handle;
+    const compact =
+      face.family === "Apple Color Emoji"
+        ? await readAppleEmojiShapingInput(
+            (offset, length) => readFontRange(file, offset, length),
+            info.size,
+          )
+        : undefined;
+    const bytes = compact ?? (await readFontRange(file, 0, info.size));
     if (!hasSupportedSfntSignature(bytes))
       throw new Error(
         "the selected font face has an unsupported or corrupt format",
@@ -319,6 +314,27 @@ async function readInstalledFontFaceData(
   } finally {
     await handle?.close();
   }
+}
+
+async function readFontRange(
+  handle: FileHandle,
+  start: number,
+  length: number,
+): Promise<Buffer> {
+  const bytes = Buffer.alloc(length);
+  let offset = 0;
+  while (offset < length) {
+    const { bytesRead } = await handle.read(
+      bytes,
+      offset,
+      length - offset,
+      start + offset,
+    );
+    if (bytesRead === 0)
+      throw new Error("the selected font face ended before its declared size");
+    offset += bytesRead;
+  }
+  return bytes;
 }
 
 function hasSupportedSfntSignature(bytes: Uint8Array): boolean {
