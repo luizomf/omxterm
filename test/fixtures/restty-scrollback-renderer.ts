@@ -1,3 +1,4 @@
+import { hiddenRenderingFixture } from "./restty-hidden-renderer";
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
@@ -12,6 +13,7 @@ interface ScrollMetrics {
 
 interface ScrollbackFixture {
   readonly ready: true;
+  hiddenRenderingFixture: typeof hiddenRenderingFixture;
   metrics(): ScrollMetrics;
   reduceHistory(): Promise<ScrollMetrics>;
   disableHistory(): Promise<ScrollMetrics>;
@@ -108,6 +110,7 @@ async function run() {
 
   globalThis.__omxtermResttyScrollback = {
     ready: true,
+    hiddenRenderingFixture,
     surface,
     writes,
     async scrollToTop() {

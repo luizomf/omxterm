@@ -38,6 +38,7 @@ import {
   type ResttyVisibleLinkInteraction,
 } from "./restty-visible-links";
 import {
+  resttyClipboardActions,
   resttyContextMenuHandler,
   resttyHostServices,
 } from "./restty-host-services";
@@ -68,7 +69,7 @@ type CandidateRuntime = {
     init(): Promise<void>;
     state(): string;
   };
-  readonly render: { getBackend(): string | null };
+  readonly render: { getBackend(): string | null; refresh(): void };
   readonly io: { connectPty(): void };
   readonly interaction: ResttyVisibleLinkInteraction & {
     focus(): void;
@@ -88,6 +89,7 @@ type CandidateRuntime = {
 };
 
 type ResttyAppearanceConfig = ResttyTerminalConfig & {
+  readonly isSurfaceVisible?: () => boolean;
   readonly lineHeight: number;
   readonly maxScrollbackBytes: number;
   readonly optionKeyMode: OptionKeyMode;
@@ -162,20 +164,6 @@ function releaseResttyResources(releases: ReadonlyArray<() => void>): void {
     throw new AggregateError(failures, "Terminal Surface cleanup failed");
 }
 
-async function copyResttySelection(
-  pane: CandidatePane | undefined,
-  options: TerminalSurfaceOptions,
-  disposed: boolean,
-): Promise<void> {
-  const text = pane?.runtime.interaction.getSelectionText() ?? "";
-  if (disposed || text.length === 0) return;
-  try {
-    await options.clipboard?.writeText(text);
-  } catch {
-    options.onClipboardError?.();
-  }
-}
-
 export async function mountResttyTerminalSurface(
   container: HTMLElement,
   adapter: TerminalSessionAdapter,
@@ -216,6 +204,8 @@ export async function mountResttyTerminalSurface(
   const applyRuntimeTheme = (theme: TerminalTheme) => {
     pane?.runtime.terminal.applyTheme(toGhosttyTheme(theme), "OMXTerm");
   };
+  const isSurfaceVisible = () =>
+    !disposed && !container.hidden && container.isConnected;
   const applyRuntimeSize = (fontSize: number) => {
     currentFontSize = fontSize;
     pane?.runtime.terminal.setFontSize(fontSize);
@@ -329,7 +319,7 @@ export async function mountResttyTerminalSurface(
         searchUi: false,
         shortcuts: false,
       },
-      terminal,
+      terminal: { ...terminal, isSurfaceVisible },
       services: resttyHostServices(transport, delivery, options, revealInput),
     } as ConstructorParameters<typeof Restty>[0]);
     pane =
@@ -386,6 +376,9 @@ export async function mountResttyTerminalSurface(
         if (!disposed) {
           visibleLinkController?.invalidate();
           ptyCallbacks?.onData?.(data);
+          // Hidden ingestion still retires renderer copies, including pending
+          // image decodes, even when the document's RAF is throttled.
+          if (!isSurfaceVisible()) pane?.runtime.render.refresh();
         }
       },
       onExit() {
@@ -394,10 +387,15 @@ export async function mountResttyTerminalSurface(
     });
     if (disposed) return createDisposedSurface();
     if (settledSize) adapter.resize(settledSize);
+    pane.runtime.render.refresh();
 
     return {
       focus: () => {
-        if (!disposed) pane?.runtime.interaction.focus();
+        if (disposed) return;
+        refit();
+        pane?.runtime.interaction.focus();
+        // Tab selection calls focus in the switching task, before presentation.
+        pane?.runtime.render.refresh();
       },
       applyConfiguration,
       applyTheme(theme) {
@@ -418,17 +416,9 @@ export async function mountResttyTerminalSurface(
         applyRuntimeSize(nextSize);
         refit();
       },
-      copy: () => copyResttySelection(pane, options, disposed),
-      async paste() {
-        if (!options.clipboard) return;
-        await delivery.deliverFrom(options.clipboard.readText);
-      },
-      async inject(text, injectOptions) {
-        await delivery.deliver(text, injectOptions);
-      },
-      selectAll: () => {
-        if (!disposed) pane?.runtime.interaction.selectAll();
-      },
+      ...resttyClipboardActions(delivery, options, () =>
+        disposed ? undefined : pane?.runtime.interaction,
+      ),
       dispose,
     };
   } catch (cause) {

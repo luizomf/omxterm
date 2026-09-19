@@ -4,8 +4,38 @@ import type { SemanticInputDelivery } from "./semantic-input-delivery";
 import type {
   TerminalClipboard,
   TerminalSurfaceOptions,
+  TerminalSurface,
 } from "./terminal-surface";
 import { visibleLinkAtOffset } from "./visible-links";
+
+export function resttyClipboardActions(
+  delivery: SemanticInputDelivery,
+  options: TerminalSurfaceOptions,
+  liveSelection: () =>
+    { getSelectionText(): string; selectAll(): boolean } | undefined,
+): Pick<TerminalSurface, "copy" | "paste" | "inject" | "selectAll"> {
+  return {
+    async copy() {
+      const text = liveSelection()?.getSelectionText() ?? "";
+      if (!text) return;
+      try {
+        await options.clipboard?.writeText(text);
+      } catch {
+        options.onClipboardError?.();
+      }
+    },
+    async paste() {
+      if (options.clipboard)
+        await delivery.deliverFrom(options.clipboard.readText);
+    },
+    async inject(text, injectOptions) {
+      await delivery.deliver(text, injectOptions);
+    },
+    selectAll: () => {
+      liveSelection()?.selectAll();
+    },
+  };
+}
 
 export function resttyContextMenuHandler(
   clipboard: TerminalClipboard | undefined,

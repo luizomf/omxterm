@@ -51,7 +51,7 @@ const harness = vi.hoisted(() => {
           state: () => this.state,
           destroy: vi.fn(),
         },
-        render: { getBackend: () => this.backend },
+        render: { getBackend: () => this.backend, refresh: vi.fn() },
         io: {
           connectPty: () => {
             const transport = (

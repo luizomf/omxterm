@@ -102,6 +102,25 @@ Queue bytes, JavaScript heap and RSS are separate metrics from Ghostty core,
 browser/WebGL and GPU allocations; no whole-application memory bound is claimed.
 There is no fallback renderer.
 
+### Hidden Surface rendering
+
+Tab hiding suppresses frame clears, draws and render uploads, not synchronous
+output ingestion or Adapter ACKs. The runtime consults its Surface-owned
+visibility callback before frame work; RAF scheduling remains unchanged. Hidden
+font changes retain the last real grid until visible refitting. Selection's
+existing focus operation refits and refreshes in the same task, before Chromium
+can present the revealed canvas, without waiting for the background render budget.
+A mount completing while hidden uses the same visibility rule.
+
+Hidden frames and hidden output discard disposable renderer image copies and
+pending decodes. The core retains valid images, placements and scrollback;
+deletions, reset and alternate-screen exit still execute during ingestion.
+Reveal reconstructs only the needed renderer copies. This deliberately favors
+simple lifetime correctness over retaining hidden image textures and does not
+promise reduced total RAM or GPU capacity. No Surface/core/session is replaced.
+See [native regression and measurement evidence](hidden-rendering-evidence.md)
+for the exact workload, baseline, CPU domains and limitations.
+
 ### Font memory ownership
 
 Each renderer Terminal Window owns one active validated font-family generation.
@@ -236,7 +255,7 @@ The lockfile restores the npm tarballs identified by that manifest. `npm ci`
 then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
 Restty runtime, declarations and embedded-core SHA-256 values and produces
 corrected runtime SHA-256
-`e0d54804ec53ada4692691394852eb1f18e82a223283fe26e3ee2117ccd609ad`,
+`17def10ec435cb5ba194b7c142433a1f550d6b9e25cac3d8d16b295c6199d250`,
 embedded-core chunk SHA-256
 `3b3f4ef21e2fe5d5bfc7d5ad47b2557c1e12cca33619dbd5f15df9572e038f4d`,
 and event declarations SHA-256

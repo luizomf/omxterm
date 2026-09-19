@@ -140,7 +140,13 @@ selector or fallback Surface; rendering initialization failure starts no shell
   after Terminal Window width or height changes, after Window Font Zoom, and
   after tab selection. The grid remains inside the visible content area with
   its bottom row visible. Hiding a Terminal Tab preserves its last real grid;
-  a hidden layout box must not collapse the Surface or PTY to a 1×1 grid.
+  a hidden layout box or hidden font change must not resize the Surface or PTY
+  using concealed geometry. Hidden Terminal Surfaces, including mounts completing
+  while hidden, perform no frame clears, draws or render uploads. They continue
+  synchronous ordered output ingestion, Adapter ACKs, protocol replies, parsed
+  events and Scrollback Buffer retention. Selection refits and redraws current
+  content and cursor before the first visible presentation, without a background
+  render-budget delay or replacing the Surface, core or Live Terminal Session.
 - Native minimum window bounds keep the existing 320 px width and 200 px height
   as floors and grow at startup or after a valid reload when configured font or
   padding needs more room for a visible terminal grid.
@@ -356,7 +362,10 @@ completion, reset, alternate-buffer exit, and Surface disposal release it.
 Each screen stores at most 64,000,000 bytes of completed decoded image data and
 uses Ghostty's native eviction behavior. Deletion by Pi image ID, all-image
 deletion, all-placement deletion and reset release their corresponding native
-resources.
+resources. Hidden deletion, reset, alternate-buffer exit and disposal also
+release applicable cached renderer resources without requiring a visible draw.
+Valid core images and placements survive hiding and render again on reveal;
+disposable renderer copies may be discarded while hidden.
 
 These controls are not a total process-memory limit. Base64 decoding and PNG
 decoding have transient allocations; Restty's JavaScript/WebGL renderer may

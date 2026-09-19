@@ -27,6 +27,62 @@ interface Metrics {
 }
 
 interface Result {
+  readonly hidden: {
+    ingestion: {
+      acked: boolean;
+      titles: string[];
+      bells: number;
+      replies: number;
+      retained: boolean;
+      ordered: boolean;
+    };
+    lifecycle: {
+      rapidRefreshes: number;
+      deadRafCallbacks: number;
+      mountCalls: Record<string, number>;
+      beforeClose: Record<string, number>;
+      afterClose: Record<string, number>;
+      hiddenClosed: boolean;
+      pendingClosed: boolean;
+      usable: boolean;
+    };
+    images: {
+      retained: { red: number; green: number };
+      retainedAgain: { red: number; green: number };
+      deleted: {
+        name: string;
+        acked: boolean;
+        visible: { red: number };
+        revealed: { red: number };
+        hiddenClears: number;
+        releasedTextures: number;
+      }[];
+      disposal: {
+        releasedTextures: number;
+        hiddenClears: number;
+        detached: boolean;
+      };
+    };
+    idle: { surfaces: Record<string, number>[] };
+    output: { surfaces: Record<string, number>[] };
+    reveal: {
+      geometry: {
+        cursor: { row: number; col: number };
+        rows: number;
+        cols: number;
+      };
+      foregroundPixels: number;
+      cursorForeground: number;
+      revealedSize: { rows: number; cols: number };
+      baseline: { rows: number; cols: number };
+      pixel: number[];
+      calls: Record<string, number>;
+      hiddenSizes: unknown[];
+      sameCanvas: boolean;
+      canvasWidth: number;
+      expectedWidth: number;
+    };
+  };
   readonly resizeAtBottom: {
     readonly before: Metrics;
     readonly reduced: Metrics;
@@ -82,6 +138,87 @@ describe("Restty scrollback through the production Surface seam", () => {
         `Scrollback fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
       ).toBe(0);
       expect(result).toBeDefined();
+      if (process.env.OMXTERM_HIDDEN_EVIDENCE)
+        await writeFile(
+          process.env.OMXTERM_HIDDEN_EVIDENCE,
+          JSON.stringify(result!.hidden, null, 2) + "\n",
+        );
+      for (const measurement of [result!.hidden.idle, result!.hidden.output]) {
+        for (const [name, count] of Object.entries(measurement.surfaces[0]!))
+          if (name !== "deleteTexture")
+            expect.soft(count, `hidden ${name}`).toBe(0);
+        expect.soft(measurement.surfaces[1]!.clear).toBeGreaterThan(0);
+      }
+      expect.soft(result!.hidden.reveal.pixel).toEqual([12, 34, 56, 255]);
+      expect.soft(result!.hidden.reveal.foregroundPixels).toBeGreaterThan(0);
+      expect.soft(result!.hidden.reveal.cursorForeground).toBeGreaterThan(0);
+      expect.soft(result!.hidden.reveal.geometry.cursor.col).toBe(14);
+      expect
+        .soft(result!.hidden.reveal.geometry.cursor.row)
+        .toBeLessThan(result!.hidden.reveal.revealedSize.rows);
+      expect
+        .soft(result!.hidden.reveal.geometry.rows)
+        .toBe(result!.hidden.reveal.revealedSize.rows);
+      expect
+        .soft(result!.hidden.reveal.geometry.cols)
+        .toBe(result!.hidden.reveal.revealedSize.cols);
+      expect
+        .soft(result!.hidden.reveal.revealedSize.cols)
+        .toBeLessThan(result!.hidden.reveal.baseline.cols);
+      expect.soft(result!.hidden.reveal.calls.clear).toBeGreaterThan(0);
+      expect.soft(result!.hidden.reveal.hiddenSizes).toEqual([]);
+      expect.soft(result!.hidden.reveal.sameCanvas).toBe(true);
+      expect
+        .soft(result!.hidden.reveal.canvasWidth)
+        .toBe(result!.hidden.reveal.expectedWidth);
+      expect.soft(result!.hidden.ingestion).toEqual({
+        acked: true,
+        titles: ["hidden-title"],
+        bells: 1,
+        replies: 1,
+        retained: true,
+        ordered: true,
+      });
+      const lifetime = result!.hidden.lifecycle;
+      expect.soft(lifetime.rapidRefreshes).toBe(8);
+      expect.soft(lifetime.deadRafCallbacks).toBe(0);
+      for (const name of [
+        "clear",
+        "drawArraysInstanced",
+        "bufferSubData",
+        "texImage2D",
+        "texSubImage2D",
+      ])
+        expect
+          .soft(lifetime.mountCalls[name] ?? 0, `hidden mount ${name}`)
+          .toBe(0);
+      expect
+        .soft(lifetime.afterClose.clear ?? 0)
+        .toBe(lifetime.beforeClose.clear ?? 0);
+      expect
+        .soft(
+          lifetime.hiddenClosed && lifetime.pendingClosed && lifetime.usable,
+        )
+        .toBe(true);
+      expect
+        .soft(result!.hidden.images.retainedAgain)
+        .toEqual(result!.hidden.images.retained);
+      expect.soft(result!.hidden.images.retained.red).toBeGreaterThan(0);
+      expect.soft(result!.hidden.images.retained.green).toBeGreaterThan(0);
+      for (const deletion of result!.hidden.images.deleted) {
+        expect.soft(deletion.acked, deletion.name).toBe(true);
+        expect.soft(deletion.visible.red, deletion.name).toBeGreaterThan(0);
+        expect.soft(deletion.revealed.red, deletion.name).toBe(0);
+        expect.soft(deletion.hiddenClears, deletion.name).toBe(0);
+        expect
+          .soft(deletion.releasedTextures, deletion.name)
+          .toBeGreaterThan(0);
+      }
+      expect.soft(result!.hidden.images.disposal.detached).toBe(true);
+      expect.soft(result!.hidden.images.disposal.hiddenClears).toBe(0);
+      expect
+        .soft(result!.hidden.images.disposal.releasedTextures)
+        .toBeGreaterThan(0);
       for (const metrics of Object.values(result!.resizeAtBottom)) {
         expect
           .soft(metrics.scrollTop)
@@ -176,6 +313,41 @@ async function buildFixture(root: string): Promise<void> {
     logLevel: "silent",
     outfile: path.join(root, "renderer.js"),
     platform: "browser",
+    plugins: [
+      {
+        name: "fixture-only-raf-counts",
+        setup(builder) {
+          builder.onLoad(
+            { filter: /chunk-c0rcpsc5\.js$/ },
+            async ({ path: runtimePath }) => {
+              const source = await readFile(runtimePath, "utf8");
+              const marker = "  function loop(state) {";
+              if (source.split(marker).length !== 2)
+                throw new Error("Restty RAF instrumentation drifted");
+              return {
+                contents: source
+                  .replace(
+                    "  reportCursor(cursorPos);",
+                    `  (globalThis.__hiddenRenderGeometry ??= new WeakMap()).set(canvas, { cursor: cursorPos, cols: gridState.cols, rows: gridState.rows, cellW: gridState.cellW, cellH: gridState.cellH });\n  reportCursor(cursorPos);`,
+                  )
+                  .replace(
+                    marker,
+                    marker +
+                      `
+            const canvas = state.gl?.canvas;
+            if (canvas) {
+              const counts = globalThis.__hiddenRuntimeRaf ??= new WeakMap();
+              counts.set(canvas, (counts.get(canvas) ?? 0) + 1);
+            }
+          `,
+                  ),
+                loader: "js",
+              };
+            },
+          );
+        },
+      },
+    ],
   });
   const productionHtml = await readFile(
     path.join(projectRoot, "src/renderer/index.html"),
@@ -295,7 +467,28 @@ app.whenReady().then(async () => {
   const writes = await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.writes', true);
   const viewport = { geometry, outputTop: outputMetrics.scrollTop, typed, injected, writes };
   const preferences = window.webContents.getLastWebPreferences();
+  await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.surface.dispose(); globalThis.__omxtermResttyScrollback.hiddenRenderingFixture().then(fixture => { globalThis.__hiddenFixture = fixture; return true; })", true);
+  const cpu = () => app.getAppMetrics().filter(metric => metric.type === 'Tab').reduce((sum, metric) => sum + metric.cpu.cumulativeCPUUsage, 0);
+  async function measure(output) {
+    const before = cpu();
+    const measurement = await window.webContents.executeJavaScript('globalThis.__hiddenFixture.measure(' + output + ')', true);
+    return { ...measurement, rendererCpuSeconds: cpu() - before };
+  }
+  const idle = await measure(false);
+  const output = await measure(true);
+  window.setSize(520, 440);
+  const hidden = {
+    environment: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.environment', true),
+    idle,
+    output,
+    reveal: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.reveal()', true),
+    ingestion: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.ingestion()', true),
+    lifecycle: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.lifecycle()', true),
+    images: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.images()', true),
+  };
+  await window.webContents.executeJavaScript('globalThis.__hiddenFixture.dispose()', true);
   const result = {
+    hidden,
     resizeAtBottom,
     viewport,
     initial,
