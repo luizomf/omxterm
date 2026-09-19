@@ -45,6 +45,9 @@ Electron 43.1.1, Chromium 150.0.7871.114, Electron Node 24.18.0, V8
 unchanged lockfile: Restty 0.3.0, text-shaper 0.1.28, and the corrected runtime
 and Ghostty core documented in `restty-development.md`. The runtime probe checks
 the corrected chunk SHA-256 before injecting counters and fails on seam drift.
+The guard now includes the later [depth-only correction](webgl-depth-evidence.md).
+Historical emoji observations below are unchanged; #317 did not rerun unrelated
+emoji trials or change font inputs.
 
 Installed Apple Color Emoji source:
 

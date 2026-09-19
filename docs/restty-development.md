@@ -121,6 +121,15 @@ promise reduced total RAM or GPU capacity. No Surface/core/session is replaced.
 See [native regression and measurement evidence](hidden-rendering-evidence.md)
 for the exact workload, baseline, CPU domains and limitations.
 
+### WebGL depth attachment
+
+The checksum-guarded runtime requests `depth:false` alongside the existing
+`antialias:false, alpha:false`. Restty's 2D path does not enable depth testing.
+The [depth-only native comparison](webgl-depth-evidence.md) confirms removal of
+the default depth attachment with preserved text, cursor, selection, images and
+hidden reveal behavior. It does not establish OS-level RAM savings. This changes
+no Surface ownership, context sharing, DPR, image limits or hidden-rendering rule.
+
 ### Font memory ownership
 
 Each renderer Terminal Window owns one active validated font-family generation.

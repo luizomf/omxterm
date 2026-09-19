@@ -71,8 +71,21 @@ const priorModifiedHoverDigest =
   "f3434c66a9ef1ebe817f9debcb8ecf49f8477c4d481af2d6791c122967b2bee4";
 const priorHiddenRenderingDigest =
   "e0d54804ec53ada4692691394852eb1f18e82a223283fe26e3ee2117ccd609ad";
-const correctedDigest =
+const priorDepthDigest =
   "dafd11ff8e1dba44c5d9f1429b895c00cde2cdbe3d6c971db9938c046b18c0be";
+const correctedDigest =
+  "950e2ae1d104fbaea82189c6d1353bb05d61dbcbfee90a36961ab1287978c78a";
+
+// The 2D renderer never enables depth testing; native evidence confirms that
+// disabling depth removes the attachment without changing rendered pixels.
+const depthCorrections = [
+  {
+    original:
+      '  const gl = canvas.getContext("webgl2", { antialias: false, alpha: false });',
+    corrected:
+      '  const gl = canvas.getContext("webgl2", { antialias: false, alpha: false, depth: false });',
+  },
+];
 
 const hiddenRenderingCorrections = [
   {
@@ -1666,7 +1679,9 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorHiddenRenderingDigest) {
+    if (sourceDigest === priorDepthDigest) {
+      // Only the unused default depth attachment remains to be removed.
+    } else if (sourceDigest === priorHiddenRenderingDigest) {
       // Only Surface visibility and synchronous reveal remain to be corrected.
     } else if (sourceDigest === priorModifiedHoverDigest) {
       // Only modified-hover rendering remains to be corrected.
@@ -1788,6 +1803,8 @@ export async function prepareResttyRuntime(options = {}) {
       source = applyCorrections(source, visibleHoverCorrections);
     if (digest(source) === priorHiddenRenderingDigest)
       source = applyCorrections(source, hiddenRenderingCorrections);
+    if (digest(source) === priorDepthDigest)
+      source = applyCorrections(source, depthCorrections);
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,

@@ -1,4 +1,9 @@
 import { spawn } from "node:child_process";
+import {
+  depthExperimentSource,
+  verifyDepthEvidence,
+  type DepthPhase,
+} from "../fixtures/restty-depth-evidence";
 import { createRequire } from "node:module";
 import {
   copyFile,
@@ -27,6 +32,7 @@ interface Metrics {
 }
 
 interface Result {
+  readonly depth: DepthPhase[];
   readonly hidden: {
     synchronizedReveal: {
       batchedClears: number;
@@ -150,6 +156,7 @@ describe("Restty scrollback through the production Surface seam", () => {
           process.env.OMXTERM_HIDDEN_EVIDENCE,
           JSON.stringify(result!.hidden, null, 2) + "\n",
         );
+      await verifyDepthEvidence(result!);
       for (const measurement of [result!.hidden.idle, result!.hidden.output]) {
         for (const [name, count] of Object.entries(measurement.surfaces[0]!))
           if (name !== "deleteTexture")
@@ -333,7 +340,9 @@ async function buildFixture(root: string): Promise<void> {
           builder.onLoad(
             { filter: /chunk-c0rcpsc5\.js$/ },
             async ({ path: runtimePath }) => {
-              const source = await readFile(runtimePath, "utf8");
+              const source = depthExperimentSource(
+                await readFile(runtimePath, "utf8"),
+              );
               const marker = "  function loop(state) {";
               if (source.split(marker).length !== 2)
                 throw new Error("Restty RAF instrumentation drifted");
@@ -501,7 +510,19 @@ app.whenReady().then(async () => {
     images: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.images()', true),
   };
   await window.webContents.executeJavaScript('globalThis.__hiddenFixture.dispose()', true);
+  await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.depthRenderingFixture().then(fixture => { globalThis.__depthFixture = fixture; return true; })', true);
+  const processMemory = () => app.getAppMetrics().filter(metric => ['GPU', 'Tab'].includes(metric.type)).map(({ type, memory }) => ({ type, memory }));
+  const depth = [];
+  for (const count of [1, 3, 1]) {
+    const phase = await window.webContents.executeJavaScript('globalThis.__depthFixture.phase(' + count + ')', true);
+    const immediate = processMemory();
+    await new Promise(resolve => setTimeout(resolve, 500));
+    depth.push({ ...phase, memoryImmediate: immediate, memoryAfter500ms: processMemory() });
+  }
+  await window.webContents.executeJavaScript('globalThis.__depthFixture.dispose()', true);
   const result = {
+    environment: { versions: process.versions, gpu: await app.getGPUInfo('basic') },
+    depth,
     hidden,
     resizeAtBottom,
     viewport,
