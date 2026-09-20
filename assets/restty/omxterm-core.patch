@@ -1,8 +1,7 @@
 diff --git a/wasm/src/restty.zig b/wasm/src/restty.zig
-index 28bdd04..012b681 100644
 --- a/wasm/src/restty.zig
 +++ b/wasm/src/restty.zig
-@@ -167,14 +167,26 @@ const KittyPlacementAbi = extern struct {
+@@ -167,14 +167,37 @@
      image_revision_high: u32,
  };
 
@@ -16,9 +15,10 @@ index 28bdd04..012b681 100644
  const StreamHandler = struct {
      readonly: ReadonlyHandler,
      output: *std.ArrayListUnmanaged(u8),
-+    events: *std.ArrayListUnmanaged(u8),
-
+-
 -    fn init(term: *ghostty.Terminal, output: *std.ArrayListUnmanaged(u8)) StreamHandler {
++    events: *std.ArrayListUnmanaged(u8),
++
 +    fn init(
 +        term: *ghostty.Terminal,
 +        output: *std.ArrayListUnmanaged(u8),
@@ -27,11 +27,22 @@ index 28bdd04..012b681 100644
          var handler = term.vtHandler();
          handler.effects.write_pty = &writePty;
 -        return .{ .readonly = handler, .output = output };
++        handler.effects.size = &terminalSize;
 +        return .{ .readonly = handler, .output = output, .events = events };
++    }
++    fn terminalSize(handler: *ReadonlyHandler) ?ghostty.size_report.Size {
++        const term = handler.terminal;
++        if (term.width_px == 0 or term.height_px == 0) return null;
++        return .{
++            .columns = term.cols,
++            .rows = term.rows,
++            .cell_width = term.width_px / term.cols,
++            .cell_height = term.height_px / term.rows,
++        };
      }
      fn writePty(handler: *ReadonlyHandler, bytes: []const u8) void {
          const self: *StreamHandler = @fieldParentPtr("readonly", handler);
-@@ -188,7 +200,29 @@ const StreamHandler = struct {
+@@ -188,7 +211,29 @@
          }
          self.output.appendSlice(alloc, kept) catch {};
      }
@@ -61,7 +72,7 @@ index 28bdd04..012b681 100644
          // Keep Restty's device identity while upstream handles protocol behavior.
          if (action == .device_attributes) {
              switch (value) {
-@@ -216,6 +250,7 @@ const Restty = struct {
+@@ -216,6 +261,7 @@
      link_buffer: std.ArrayListUnmanaged(u8) = .empty,
      kitty_placements: std.ArrayListUnmanaged(KittyPlacementAbi) = .empty,
      output: std.ArrayListUnmanaged(u8) = .empty,
@@ -69,7 +80,7 @@ index 28bdd04..012b681 100644
      cursor: CursorInfo = .{
          .row = 0,
          .col = 0,
-@@ -568,6 +603,8 @@ pub export fn restty_create(cols: u16, rows: u16, max_scrollback: u32) ?*Restty
+@@ -568,6 +614,8 @@
          .cols = cols,
          .rows = rows,
          .max_scrollback_bytes = max_scrollback,
@@ -78,7 +89,7 @@ index 28bdd04..012b681 100644
          .colors = colors,
      }) catch return null;
      errdefer term.deinit(alloc);
-@@ -588,7 +624,7 @@ pub export fn restty_create(cols: u16, rows: u16, max_scrollback: u32) ?*Restty
+@@ -588,7 +636,7 @@
          .rows = rows,
          .cols = cols,
      };
@@ -87,7 +98,7 @@ index 28bdd04..012b681 100644
      return handle;
  }
 
-@@ -605,6 +641,7 @@ pub export fn restty_destroy(handle: ?*Restty) void {
+@@ -605,6 +653,7 @@
      h.link_buffer.deinit(h.alloc);
      h.kitty_placements.deinit(h.alloc);
      h.output.deinit(h.alloc);
@@ -95,7 +106,7 @@ index 28bdd04..012b681 100644
      h.alloc.destroy(h);
  }
 
-@@ -749,6 +786,25 @@ pub export fn restty_scrollbar_len(handle: ?*Restty) u32 {
+@@ -749,6 +798,25 @@
      return @intCast(sb.len);
  }
 
@@ -121,7 +132,25 @@ index 28bdd04..012b681 100644
  pub export fn restty_output_ptr(handle: ?*Restty) usize {
      const h = handle orelse return 0;
      return if (h.output.items.len == 0) 0 else @intFromPtr(h.output.items.ptr);
-@@ -1167,6 +1223,26 @@ pub export fn restty_debug_page_rows(handle: ?*Restty) u32 {
+@@ -829,7 +897,16 @@
+ pub export fn restty_resize(handle: ?*Restty, cols: u16, rows: u16) u32 {
+     const h = handle orelse return @intFromEnum(ErrorCode.invalid_handle);
+     if (cols == 0 or rows == 0) return @intFromEnum(ErrorCode.invalid_arg);
+-    h.term.resize(h.alloc, .{ .cols = cols, .rows = rows }) catch return @intFromEnum(ErrorCode.internal);
++    // The stream handler owns negotiated resize effects as well as core state.
++    // Pixel dimensions have already been set for the new grid by the runtime.
++    h.stream.handler.readonly.resize(.{
++        .cols = cols,
++        .rows = rows,
++        .cell_size_px = if (h.term.width_px > 0 and h.term.height_px > 0) .{
++            .width = h.term.width_px / cols,
++            .height = h.term.height_px / rows,
++        } else null,
++    }) catch return @intFromEnum(ErrorCode.internal);
+     ensureScrollingRegion(h);
+     return @intFromEnum(ErrorCode.ok);
+ }
+@@ -1167,6 +1244,26 @@
      return h.term.screens.active.pages.rows;
  }
 
@@ -148,7 +177,7 @@ index 28bdd04..012b681 100644
  pub export fn restty_kitty_placement_stride() u32 {
      return @sizeOf(KittyPlacementAbi);
  }
-@@ -1192,3 +1268,18 @@ pub export fn restty_free(ptr: usize, len: usize) void {
+@@ -1192,3 +1289,18 @@
      const buf = @as([*]u8, @ptrFromInt(ptr));
      std.heap.wasm_allocator.free(buf[0..len]);
  }

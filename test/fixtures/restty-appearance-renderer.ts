@@ -1,4 +1,5 @@
 import configuredFontBytes from "../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf";
+import { verifyInBandResize } from "./restty-resize-regression";
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
 import { terminalFontInputs } from "../../src/terminal-surface/terminal-font-stack";
 import {
@@ -215,6 +216,8 @@ async function measure(
 }
 
 async function run() {
+  if (document.body.dataset.configuredFont !== "true")
+    await verifyInBandResize(root);
   const measurements = [];
   for (const [size, lineHeight, padding, zoom, nativeTitleInset] of [
     [8, 1, 0, false, 0],

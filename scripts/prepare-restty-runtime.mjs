@@ -25,10 +25,12 @@ const priorImageCoreDigest =
   "fb4ff0ec8463a634a54078f3970a3cef86c1be3a880ad1da70f4d9fd3e2b8411";
 const priorInteractionCoreDigest =
   "4c0830a7b5dc3cb986de5c980315fc68d14ef33cc193a479b062fc54a7234159";
-const correctedCoreDigest =
+const priorResizeCoreDigest =
   "3b3f4ef21e2fe5d5bfc7d5ad47b2557c1e12cca33619dbd5f15df9572e038f4d";
+const correctedCoreDigest =
+  "039abfec307ab03015a2ae70b3583e07fcc9e5a70319de1ca055d6168f45af1b";
 const correctedCoreWasmDigest =
-  "1dff2cd4dbd1b0b32bdf88bf75e40d10ad4ec2a0843040495dc479f4d1d8a2a0";
+  "b08dab2ff6194a6b101e79f5eab9282260dcd601321c81ab5272ac101f85f0c4";
 const originalEventTypesDigest =
   "1c9383be2d0377635b3463a5ac2ec31eac3e2b233fc664de751ad3e9f54ea650";
 const correctedEventTypesDigest =
@@ -73,8 +75,82 @@ const priorHiddenRenderingDigest =
   "e0d54804ec53ada4692691394852eb1f18e82a223283fe26e3ee2117ccd609ad";
 const priorDepthDigest =
   "dafd11ff8e1dba44c5d9f1429b895c00cde2cdbe3d6c971db9938c046b18c0be";
-const correctedDigest =
+const priorResizeDigest =
   "950e2ae1d104fbaea82189c6d1353bb05d61dbcbfee90a36961ab1287978c78a";
+const correctedDigest =
+  "b02420bb630dffb1e2b9cfe8bca076bc5eb79084d3c1038521513e2be5d7e06d";
+
+const resizeCorrections = [
+  {
+    original: `  return {
+    clearScreen,
+    sendInput
+  };`,
+    corrected: `  return {
+    clearScreen,
+    sendInput,
+    flushWasmOutputToPty
+  };`,
+  },
+  {
+    original:
+      "  const { sendInput, clearScreen } = createRuntimeControllerInput({",
+    corrected:
+      "  const { sendInput, clearScreen, flushWasmOutputToPty } = createRuntimeControllerInput({",
+  },
+  {
+    original: `  return {
+    sendInput,
+    setOptionKeyMode,`,
+    corrected: `  return {
+    sendInput,
+    flushWasmOutputToPty,
+    setOptionKeyMode,`,
+  },
+  {
+    original: `    ptyTransport,
+    setNeedsRender: () => {
+      needsRender = true;
+    },
+    markSearchDirty:`,
+    corrected: `    ptyTransport,
+    flushTerminalReplies: () => runtimeController.flushWasmOutputToPty(),
+    setNeedsRender: () => {
+      needsRender = true;
+    },
+    markSearchDirty:`,
+  },
+  {
+    original: `    markSearchDirty,
+    shapeClusterWithFont: textHelpers.shapeClusterWithFont`,
+    corrected: `    markSearchDirty,
+    flushTerminalReplies: options.flushTerminalReplies,
+    shapeClusterWithFont: textHelpers.shapeClusterWithFont`,
+  },
+  {
+    original: `    setNeedsRender();
+  }
+  function updateGrid() {`,
+    corrected: `    // Deliver negotiated resize reports without waiting for further PTY output.
+    options.flushTerminalReplies();
+    setNeedsRender();
+  }
+  function updateGrid() {`,
+  },
+  {
+    original:
+      "      wasm.setPixelSize(wasmHandle, canvas.width, canvas.height);",
+    corrected:
+      "      wasm.setPixelSize(wasmHandle, cols * metrics.cellW, rows * metrics.cellH);",
+  },
+  {
+    original: `    const canvas = options.getCanvas();
+    shared.wasm.setPixelSize(shared.wasmHandle, canvas.width, canvas.height);
+    writeToWasm(shared.wasmHandle, normalized);`,
+    corrected: `    // Grid updates own pixel geometry; canvas remainder is not a terminal cell.
+    writeToWasm(shared.wasmHandle, normalized);`,
+  },
+];
 
 // The 2D renderer never enables depth testing; native evidence confirms that
 // disabling depth removes the attachment without changing rendered pixels.
@@ -1614,6 +1690,7 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     sourceDigest !== originalCoreDigest &&
     sourceDigest !== priorCorrectedCoreDigest &&
     sourceDigest !== priorImageCoreDigest &&
+    sourceDigest !== priorResizeCoreDigest &&
     sourceDigest !== priorInteractionCoreDigest
   )
     throw new Error(
@@ -1631,6 +1708,7 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     sourceDigest === originalCoreDigest
       ? coreRuntimeCorrections
       : sourceDigest === priorImageCoreDigest ||
+          sourceDigest === priorResizeCoreDigest ||
           sourceDigest === priorInteractionCoreDigest
         ? []
         : parsedEventCoreCorrections,
@@ -1679,7 +1757,9 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorDepthDigest) {
+    if (sourceDigest === priorResizeDigest) {
+      // Only negotiated in-band resize delivery remains to be corrected.
+    } else if (sourceDigest === priorDepthDigest) {
       // Only the unused default depth attachment remains to be removed.
     } else if (sourceDigest === priorHiddenRenderingDigest) {
       // Only Surface visibility and synchronous reveal remain to be corrected.
@@ -1805,6 +1885,8 @@ export async function prepareResttyRuntime(options = {}) {
       source = applyCorrections(source, hiddenRenderingCorrections);
     if (digest(source) === priorDepthDigest)
       source = applyCorrections(source, depthCorrections);
+    if (digest(source) === priorResizeDigest)
+      source = applyCorrections(source, resizeCorrections);
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,

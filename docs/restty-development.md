@@ -264,9 +264,9 @@ The lockfile restores the npm tarballs identified by that manifest. `npm ci`
 then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
 Restty runtime, declarations and embedded-core SHA-256 values and produces
 corrected runtime SHA-256
-`950e2ae1d104fbaea82189c6d1353bb05d61dbcbfee90a36961ab1287978c78a`,
+`b02420bb630dffb1e2b9cfe8bca076bc5eb79084d3c1038521513e2be5d7e06d`,
 embedded-core chunk SHA-256
-`3b3f4ef21e2fe5d5bfc7d5ad47b2557c1e12cca33619dbd5f15df9572e038f4d`,
+`039abfec307ab03015a2ae70b3583e07fcc9e5a70319de1ca055d6168f45af1b`,
 and event declarations SHA-256
 `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34`.
 The narrow correction preserves font acquisition/lease cleanup under cache
@@ -299,9 +299,15 @@ Ghostty commits above with tracked Restty patch
 `assets/restty/omxterm-core.patch` and Ghostty patch
 `assets/restty/ghostty-title-events.patch`. Their SHA-256 values are recorded in
 `assets/restty-sources.json`. The artifact SHA-256 is
-`1dff2cd4dbd1b0b32bdf88bf75e40d10ad4ec2a0843040495dc479f4d1d8a2a0`.
+`b08dab2ff6194a6b101e79f5eab9282260dcd601321c81ab5272ac101f85f0c4`.
 The Restty patch also enables Ghostty's standard grapheme-cluster mode as a
 reset default so emoji-presentation and ZWJ clusters retain one two-column cell.
+It supplies Ghostty's existing size-report effect and stream-handler resize
+operation so negotiated mode 2048 reports current geometry on enable and resize.
+Restty forwards those replies immediately after PTY resize, without waiting for
+application output. Pixel geometry covers complete terminal cells, excluding
+unused canvas remainder; zoom and configuration reload preserve the same client
+and terminal state.
 To reproduce it in an owned disposable checkout, check out the pinned Restty
 commit and submodules, apply the Restty patch at repository root and the
 Ghostty patch inside `reference/ghostty`, use Zig 0.16.0, and run:
