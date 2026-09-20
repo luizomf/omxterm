@@ -234,16 +234,15 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
       expect(result!.live.cellHeight).toBe(size16.cellHeight);
       expect(result!.live.cellHeight).toBeLessThan(line2.cellHeight);
       expect(result!.live.imeFontSize).toBe(size16.imeFontSize);
-      expect(result!.live.canvasCssWidth).toBeGreaterThan(0);
-      expect(result!.live.canvasCssHeight).toBeGreaterThan(0);
-      expect(result!.devicePixelRatio).toBeGreaterThanOrEqual(1);
-      expect(result!.live.canvasBackingWidth).toBeCloseTo(
-        result!.live.canvasCssWidth * result!.devicePixelRatio,
-        0,
+      const { live, devicePixelRatio } = result!;
+      expect(live.canvasCssWidth).toBeGreaterThan(0);
+      expect(live.canvasCssHeight).toBeGreaterThan(0);
+      expect(devicePixelRatio).toBeGreaterThanOrEqual(1);
+      expect(live.canvasBackingWidth).toBe(
+        Math.max(1, Math.floor(live.canvasCssWidth * devicePixelRatio)),
       );
-      expect(result!.live.canvasBackingHeight).toBeCloseTo(
-        result!.live.canvasCssHeight * result!.devicePixelRatio,
-        0,
+      expect(live.canvasBackingHeight).toBe(
+        Math.max(1, Math.floor(live.canvasCssHeight * devicePixelRatio)),
       );
       for (const color of expectedColors)
         expect(result!.colorCounts[color], color).toBeGreaterThan(0);
@@ -357,14 +356,19 @@ function assertFontGeometry(result: Result, label: string): void {
       entry.canvasCssHeight,
       `${label}, size ${entry.size} CSS height`,
     ).toBeGreaterThan(0);
+    // Match the renderer's floor at fractional display scales.
     expect(
       entry.canvasBackingWidth,
       `${label}, size ${entry.size} backing width`,
-    ).toBeCloseTo(entry.canvasCssWidth * result.devicePixelRatio, 0);
+    ).toBe(
+      Math.max(1, Math.floor(entry.canvasCssWidth * result.devicePixelRatio)),
+    );
     expect(
       entry.canvasBackingHeight,
       `${label}, size ${entry.size} backing height`,
-    ).toBeCloseTo(entry.canvasCssHeight * result.devicePixelRatio, 0);
+    ).toBe(
+      Math.max(1, Math.floor(entry.canvasCssHeight * result.devicePixelRatio)),
+    );
   }
 }
 

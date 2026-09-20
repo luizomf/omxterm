@@ -16,6 +16,8 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
     let grid = { cols: 0, rows: 0 };
     let client = { cols: 0, rows: 0 };
     let reports = 0;
+    let resizes = 0;
+    let redraw: (() => void) | undefined;
     let copied = "";
     let cursor = "";
     let starts = 0;
@@ -27,6 +29,7 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
           starts += 1;
         },
         resize(next) {
+          resizes += 1;
           grid = next;
         },
         write(data) {
@@ -37,6 +40,9 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
             client = { rows: Number(match[1]), cols: Number(match[2]) };
             if (client.rows !== grid.rows || client.cols !== grid.cols)
               throw new Error("Resize report arrived before Adapter resize");
+            // A real TUI reacts to every geometry change, including native
+            // layout changes that arrive after the first zoom frame.
+            queueMicrotask(() => redraw?.());
           }
           const position = /\u001b\[(\d+);(\d+)R/u.exec(data);
           if (position) cursor = `${position[1]},${position[2]}`;
@@ -62,7 +68,9 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
       const output = (text: string) => handlers?.onOutput(text);
       output("\u001b[?1049h\u001b[?7l\u001b[?2048h");
       for (let step = 0; step < 3; step += 1) {
+        redraw = undefined;
         const priorReports = reports;
+        const priorResizes = resizes;
         if (trigger === "zoom") surface.zoom("in");
         else
           surface.applyConfiguration({
@@ -75,25 +83,32 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
         await frame();
         // No application output is supplied to flush a queued resize reply.
         if (
-          reports !== priorReports + 1 ||
+          reports === priorReports ||
+          reports - priorReports !== resizes - priorResizes ||
           client.cols !== grid.cols ||
           client.rows !== grid.rows
         )
           throw new Error(
-            `${trigger}: missing prompt resize notification: ${JSON.stringify({ client, grid, reports, priorReports })}`,
+            `${trigger}: missing prompt resize notification: ${JSON.stringify({ client, grid, reports, priorReports, resizes, priorResizes })}`,
           );
-        const rows = Array.from(
-          { length: client.rows },
-          (_, row) => `row-${row + 1}`,
-        );
-        output(
-          "\u001b[2J" +
-            rows.map((text, row) => `\u001b[${row + 1};1H${text}`).join(""),
-        );
-        // Navigation redraws only changed cells, including the right edge.
-        output(
-          `\u001b[${client.rows};${client.cols}HX\u001b[${client.rows - 1};2HY\u001b[6n`,
-        );
+        redraw = () => {
+          // No application output may be needed to flush a resize notification.
+          if (reports - priorReports !== resizes - priorResizes)
+            throw new Error("A geometry change has no prompt notification");
+          const rows = Array.from(
+            { length: client.rows },
+            (_, row) => `row-${row + 1}`,
+          );
+          output(
+            "\u001b[2J" +
+              rows.map((text, row) => `\u001b[${row + 1};1H${text}`).join(""),
+          );
+          // Navigation redraws only changed cells, including the right edge.
+          output(
+            `\u001b[${client.rows};${client.cols}HX\u001b[${client.rows - 1};2HY\u001b[6n`,
+          );
+        };
+        redraw();
         await frame();
         surface.selectAll();
         await surface.copy();
@@ -111,6 +126,7 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
             `${trigger}: screen/cursor corrupted after resize: ${JSON.stringify({ screen, cursor, grid, starts })}`,
           );
       }
+      redraw = undefined;
       surface.selectAll();
       await surface.copy();
       const preserved = copied;
