@@ -39,11 +39,11 @@ In a substantial-change issue, explain the user-facing problem and desired
 outcome before implementation details. This lets contributors and maintainers
 align on scope, identify dependencies, and prevent duplicate work.
 
-OMXTerm is an open-source personal desktop terminal with a deliberately focused
-product boundary. Splits, saved sessions, AI assistance, SSH brokering, shell
-integration, theme catalogs, and automatic updates remain outside the current
-product contract. The Supported Platforms are ARM64 macOS, Linux, and Windows;
-native DMG, AppImage, and NSIS packaging is implemented for those platforms.
+OMXTerm focuses on local terminal sessions for ARM64 macOS, Linux, and Windows,
+with native DMG, AppImage, and NSIS packages. Splits, saved sessions, AI
+assistance, SSH brokering, shell integration, theme catalogs, and automatic
+updates are outside the current product contract. Discuss proposals for those
+areas before implementing them.
 
 ## Development environment
 
@@ -107,7 +107,7 @@ build. Native packaging and operating-system behavior evidence are
 platform-owned work: macOS uses `npm run check`, a
 native Linux ARM64 clone uses `npm run check:linux`, and a native Windows
 ARM64 clone uses `npm run check:win`. In a pull request, list every check run and state exactly why any
-relevant platform check could not run. Never infer a platform pass from another
+relevant platform check could not run. Report results separately for each
 operating system.
 
 Do not commit local configuration, logs, terminal contents, environment files,
@@ -171,13 +171,12 @@ If a required or platform-specific check cannot run, state exactly which check
 was not run and why in the pull request. Do not report an inferred result as a
 pass.
 
-Release validation is automation-first. Every exact artifact runs the complete
-native command above. Manual testing is optional and never a release gate: the
-maintainer dogfoods macOS during ordinary use rather than replaying a prescribed
-matrix, and does not manually validate Linux or Windows. Contributors are
-welcome to report platform problems whenever they encounter them. A changed
-platform boundary that automation cannot observe is recorded as unverified
-rather than inferred as passing. See
+Release validation combines complete native automated checks for every exact
+artifact with feedback from everyday use. Manual testing is welcome on any
+platform but is optional, not a release gate. Report what you observed and the
+build you used; we use those reports to investigate problems and add regression
+coverage. Record changed platform behavior that automation cannot observe as
+unverified. See
 [automation-first exact-artifact acceptance](docs/release.md#automation-first-exact-artifact-acceptance).
 
 ## Commits and pull requests
@@ -226,6 +225,5 @@ Be direct, respectful, and specific. Critique code and decisions rather than
 people. Assume good intent, provide evidence for technical claims, and make
 room for maintainers and contributors to disagree without hostility.
 
-A well-written contribution may still be declined when it does not fit the
-product, timing, or maintenance budget. That reflects project scope, not the
-contributor's worth.
+Discuss larger ideas early so we can find a scope that fits the project and
+its maintenance capacity.

@@ -176,7 +176,7 @@ They do not rebuild the packages or retarget the tag. The exact identity and
 native verification record remains unchanged; earlier published releases remain
 immutable.
 
-## 0.12.2 candidate artifacts and authority
+## Published 0.12.2 artifacts and authority
 
 The [0.12.2 release notes and record](releases/0.12.2.md) bind all three native
 ARM64 builds to `18ab438a898d246a6eaa197fb4f9b826c3244a7e`. Fresh complete
@@ -184,12 +184,18 @@ native commands passed on macOS, Linux and Windows, including actual packaged
 parsed output and exact Windows installer verification/cleanup. All eight final
 files have matching native/collected sizes and SHA-256 values.
 
-Issue #334 records **OWNER ACCEPTED** status for the eight exact final artifacts
-and separate explicit publication authorization. Independent final Standards and
-Spec review passed without findings. Publication uses these unchanged files,
-retains build ancestry in the tag, and requires tree equality with PR #335 squash
-integration. Post-publication downloads must match all eight recorded identities.
-Existing published releases remain unchanged.
+The owner accepted the eight exact files and separately authorized publication
+in #334. Independent final review passed without findings. The
+[v0.12.2 release](https://github.com/luizomf/omxterm/releases/tag/v0.12.2)
+was published on September 20, 2026. All eight downloaded assets matched the
+accepted sizes and SHA-256 values, including the four checksum records.
+
+Annotated tag `v0.12.2` points to
+`2d6c080e4093cfbcf9a546b24d2dc231af71e3ee`, retaining the build source in its
+ancestry. Its tree matches PR #335 squash
+`1d5ec8d71dd11345faca45eff5466a61cdc9a975`. Only the four eligible release
+Markdown files differ from the build source. The files were published unchanged;
+earlier releases remain available under their original tags.
 
 ## Version selection and consistency
 
@@ -472,12 +478,11 @@ OMXTerm uses native automation as the routine release gate. The exhaustive
 manual exercise completed for the initial three-platform 0.4.0 release is
 baseline evidence, not a script to replay for each version.
 
-Dogfood remains valuable but has a different role. The maintainer continuously
-uses the macOS application and reports problems encountered during ordinary
-work. This is opportunistic feedback, not a prescribed checklist, an
-exact-artifact test, or a release gate. The maintainer does not manually
-validate Linux or Windows; those platforms rely on native automation and later
-contributor or user reports.
+Everyday use complements automation. The maintainer regularly uses OMXTerm on
+macOS; optional testing and reports on Linux and Windows also help uncover
+problems and guide regression coverage. Record those observations against the
+build actually tested. They are useful feedback, not a prescribed checklist or
+a substitute for exact-artifact verification.
 Exact artifact identity, native automated verification, owner acceptance, and
 separate publication authorization remain mandatory.
 
@@ -525,9 +530,8 @@ exercise of every artifact.
 Manual product testing is optional and non-blocking on every platform. Routine
 macOS dogfood may reveal regressions during ordinary use, but no release
 requires a walkthrough, visual matrix, Gatekeeper exercise, or other targeted
-manual check. The maintainer does not manually validate Linux or Windows.
-Community testing and later user reports are welcome but are never scheduled
-release dependencies.
+manual check. Maintainer and community testing on any platform is welcome,
+without becoming a scheduled release dependency.
 
 When automation cannot observe a material changed boundary, record it as
 `UNVERIFIED` instead of manufacturing a pass. Examples include Gatekeeper or
@@ -663,9 +667,8 @@ accepted version and checksum:
 > SHA-256, and proceed only if you trust this exact artifact. If you choose to
 > open it, follow Apple's current [Open Anyway instructions](https://support.apple.com/102445)
 > in System Settings -> Privacy & Security. Do not disable system-wide macOS
-> security protections. This is a maintainer-published open-source build; it is
-> not independently audited, approved by Apple, or guaranteed free of defects in
-> all code and dependencies.
+> security protections. The application has an ad-hoc integrity seal, not a
+> verified publisher identity.
 
 ## SmartScreen and provenance release note
 
@@ -677,10 +680,7 @@ Windows installer, updated only with the accepted version and checksum:
 > from an unknown publisher. Review the source, verify the published SHA-256,
 > and proceed only if you trust this exact artifact. If you choose to install
 > it, use SmartScreen's `More info -> Run anyway` for this one file. Do not
-> disable SmartScreen or other system-wide Windows security protections. This
-> is a maintainer-published open-source build; it is not independently audited,
-> approved by Microsoft, or guaranteed free of defects in all code and
-> dependencies.
+> disable SmartScreen or other system-wide Windows security protections.
 
 ## Later owner-authorized GitHub Release
 

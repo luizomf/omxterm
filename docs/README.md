@@ -17,8 +17,13 @@ project's design and development guides.
 **Current release: [0.12.2](https://github.com/luizomf/omxterm/releases/tag/v0.12.2)**
 for macOS, Linux, and Windows ARM64. Use the
 [download table](../README.md#platforms-and-downloads) to choose your package.
-The [release notes and record](releases/0.12.2.md) cover the Neovim/TUI resize
-correction, compatibility, platform limitations, and verification details.
+Version 0.12.2 fixes Neovim/TUI display corruption after zoom and configuration
+reload. The [release notes and record](releases/0.12.2.md) include the changes,
+package checksums, and verification details.
+
+OMXTerm keeps evolving through everyday use and reported problems. Found
+something unexpected? The [contribution guide](../CONTRIBUTING.md) explains how
+to share a useful report or propose an improvement.
 
 The repository is currently private; GitHub downloads require repository access.
 

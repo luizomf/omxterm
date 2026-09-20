@@ -1,9 +1,9 @@
 # Everyday OMXTerm use
 
-This is a practical, non-normative guide to the OMXTerm behavior available
-today. The [product contract](spec.md) remains the authority for observable
-behavior, and the [User Configuration guide](configuration.md) explains the
-preferences and keybind format.
+Use OMXTerm with your everyday shells and command-line tools. This guide covers
+sessions, shortcuts, images, clipboard actions, and troubleshooting. For fonts,
+themes, and custom shortcuts, see [User Configuration](configuration.md); the
+[product contract](spec.md) provides the full behavior reference.
 
 A quick status key:
 
@@ -21,8 +21,7 @@ renderer or fallback Surface. Initialization failure leaves no invisible shell;
 irrecoverable WebGL context loss reports a persistent failure and closes only
 the affected Surface and Live Terminal Session.
 
-Native glyph rasterization can vary by Supported Platform and GPU. OMXTerm does
-not claim pixel-identical output or a total process-memory ceiling.
+Text rendering can look slightly different across operating systems and GPUs.
 
 ## Windows, tabs, and sessions
 
@@ -197,11 +196,10 @@ Chafa 1.18.2's explicit Kitty output renders its static raw-RGBA image directly:
 chafa -f kitty ~/Desktop/smart.png
 ```
 
-The supported Chafa path is intentionally narrow: an anonymous metadata-only
-`a=T,f=32,...,m=1,q=2` prelude with positive source and cell dimensions,
-followed by anonymous Base64 chunks and a final `m=0`. It supports direct,
-uncompressed RGBA only; this is not a promise of every Chafa output mode or
-Ghostty compatibility.
+The supported Chafa path uses direct, uncompressed RGBA: an anonymous
+metadata-only `a=T,f=32,...,m=1,q=2` prelude with positive source and cell
+dimensions, followed by anonymous Base64 chunks and a final `m=0`. Other Chafa
+output modes are outside the current image support.
 
 Pi 0.84.4 does not yet recognize `TERM_PROGRAM=OMXTerm` automatically. Select
 Kitty explicitly in Pi until that recognition ships:
@@ -214,10 +212,9 @@ Kitty explicitly in Pi until that recognition ships:
 }
 ```
 
-For one run, `PI_IMAGE_PROTOCOL=kitty pi` selects the same protocol. OMXTerm
-keeps its truthful Terminal Capability Identity and does not rewrite Pi
-settings, inject Pi-specific variables, install terminfo, or add Shell
-Integration.
+For one run, `PI_IMAGE_PROTOCOL=kitty pi` selects the same protocol. Set this
+in Pi or your launch command; OMXTerm leaves your Pi settings unchanged and
+continues identifying itself as OMXTerm.
 
 Each Terminal Surface also accepts Pi's direct PNG transmissions and image-ID,
 delete-all, and delete-all-placements commands. It replies to Pi's cell-size
@@ -323,9 +320,8 @@ single-line text does not require this confirmation.
 When the receiver has enabled bracketed paste, OMXTerm does not show that
 warning. It wraps the text in bracketed-paste markers so the receiver gets one
 paste-aware operation even if transport needs multiple chunks. Bracketed paste
-means the receiving program explicitly opted into paste handling; it is not an
-OMXTerm judgment that the contents are safe. Review commands before executing
-them.
+lets the receiving program handle pasted text as a unit. Review commands before
+executing them.
 
 File drops, clipboard paths, and other paste-like injection use this same
 Protected Paste path. Clipboard contents do not become diagnostics.
@@ -353,8 +349,8 @@ visible viewport; scroll until the complete URL is visible before activating
 it. A valid modified click takes precedence while a TUI reports mouse input and
 does not also send that click to the TUI.
 
-Terminal output is untrusted, so the activation gesture is consent, not proof
-that a destination is safe. Check the visible destination before opening it.
+Check the visible destination before opening a link, especially in unfamiliar
+command output.
 
 See the normative [Terminal link behavior](spec.md#terminal-behavior).
 

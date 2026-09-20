@@ -3,10 +3,10 @@
 OMXTerm works without configuration files. Add them only when you want to
 change a default, create Snippets, or use an external Terminal Theme.
 
-User Configuration is strict, versioned JSON. OMXTerm reads it at startup and
-when you choose `View -> Reload User Configuration`; it never creates,
-rewrites, repairs, or migrates the file. The normative behavior remains in the
-[current product contract](spec.md#configuration-and-local-state).
+User Configuration uses strict, versioned JSON. You create and edit the file;
+OMXTerm reads it at startup and when you choose
+`View -> Reload User Configuration`, leaving your file unchanged. See the
+[product contract](spec.md#configuration-and-local-state) for the full reference.
 
 ## Quick start: use the bundled defaults
 
@@ -50,7 +50,7 @@ After saving, choose `View -> Reload User Configuration`. The built-in shortcut
 is `Cmd+Shift+,` on macOS and `Ctrl+Shift+,` on Linux and Windows. A missing
 file also selects all defaults and is not an error.
 
-### Keep every edit strict
+### Writing valid JSON
 
 Each User Configuration example in this section is a complete valid JSON
 document. Copy one, save it as `config.json`, and reload. When combining
@@ -58,8 +58,8 @@ examples, keep exactly one root object and one `"version": 1` property.
 
 JSON comments, trailing commas, unknown or misspelled keys, duplicate
 accelerators, unsupported versions, and values outside the documented ranges
-are errors. OMXTerm does not guess what an invalid value meant or partially
-apply a document.
+are reported as validation errors. The configuration is validated as a whole
+before it is applied.
 
 At startup, invalid `config.json` uses every built-in default and reports the
 exact problem without changing the file. During a manual reload, an invalid
@@ -310,9 +310,9 @@ key when the control key should continue to reach the shell.
 
 ## Snippets
 
-OMXTerm optionally reads `snippets.json` next to `config.json`. It is a separate
-strict JSON file that OMXTerm never creates, edits, rewrites, or migrates. A
-missing file means the Snippets Sidebar is empty.
+Create `snippets.json` beside `config.json` to add your own snippets. Like the
+configuration, it is strict JSON and stays under your control. Without it, the
+Snippets Sidebar is empty.
 
 Start with one generic, single-line snippet that inserts text but does not add
 Enter:
@@ -501,10 +501,10 @@ An optional source-checkout helper can convert a downloaded Ghostty palette:
 node scripts/convert-ghostty-theme.mjs input-theme output-theme.json
 ```
 
-This helper is not an application feature, import format, network service, or
-configuration-schema capability. Conversion changes syntax only; review the
-source, authorship, license, and redistribution rights of third-party themes.
-OMXTerm's normal strict validation remains authoritative.
+Run this helper from a source checkout, then select the generated JSON with
+`theme.path`. It converts palette syntax; the resulting theme follows the same
+validation rules as a handwritten theme. Check the source theme's license
+before redistributing it.
 
 ## Reloading User Configuration
 
@@ -577,4 +577,4 @@ a Live Terminal Session are ordinary local processes: they retain the network
 and filesystem access allowed by your operating system and user account.
 Running a command from a Snippet can therefore read files or contact a network
 just as typing that command can. Child-process activity is not OMXTerm
-telemetry, and OMXTerm does not sandbox or reinterpret it.
+telemetry; it runs with the same permissions as your other terminal commands.

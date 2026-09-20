@@ -16,7 +16,12 @@ Built with [Restty](https://github.com/wiedymi/restty) and its pinned
 - explicit copy and paste, with Protected Paste for multiline or control-character
   input when the receiving program has not enabled bracketed paste;
 - file and folder path insertion by drag and drop;
-- local PNG/JPEG previews and bounded inline images from direct Pi/Chafa sessions.
+- local PNG/JPEG previews and inline images from direct Pi/Chafa sessions.
+
+OMXTerm is actively developed through everyday use, bug reports, and automated
+checks on all three platforms. Version 0.12.2 fixes Neovim/TUI display corruption
+after zoom and configuration reload. We keep improving the terminal as problems
+surface; reproducible reports help us decide what to tackle next.
 
 ## Platforms and downloads
 
@@ -43,8 +48,8 @@ for changes, compatibility, platform limitations, and verification details.
 Download the package and its matching `.sha256` file into the same directory.
 Run the commands below from that directory, and stop if verification fails.
 Checksums detect changed downloads; they do not establish publisher identity.
-These packages have no verified publisher signature, so install only if you
-trust the source and the package.
+The packages are unsigned; the platform instructions below explain what to
+expect when installing them.
 
 ### macOS
 
@@ -98,9 +103,9 @@ sha256sum --check OMXTerm-0.12.2-arm64.AppImage.sha256 &&
   ./OMXTerm-0.12.2-arm64.AppImage-installer.sh install ./OMXTerm-0.12.2-arm64.AppImage
 ```
 
-The helper installs for your user only, using the supplied local files. It does
-not download anything or make system-wide changes. Its package validation does
-not replace either checksum check. See the [local installation details](docs/spec.md#configuration-and-local-state).
+The helper installs the verified local files for your user only, without
+additional downloads or system-wide changes. See the
+[local installation details](docs/spec.md#configuration-and-local-state).
 
 ### Windows
 
@@ -160,9 +165,10 @@ OMXTerm works without configuration files. When you want to customize it:
   keybinds, and reusable snippets.
 - The [documentation map](docs/README.md) links to the rest of the guides.
 
-OMXTerm focuses on the local terminal. It has no built-in AI assistance, SSH
-broker, splits, saved sessions, shell integration, or automatic updates. Shells
-and command-line tools still work as ordinary local processes.
+OMXTerm focuses on local terminal sessions. Use your usual shells and CLI tools,
+including SSH clients and coding agents, directly inside it. Built-in splits,
+session restoration, AI assistance, SSH brokering, shell integration, and
+automatic updates are outside the current feature set.
 
 ## Privacy and security
 
