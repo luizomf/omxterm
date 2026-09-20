@@ -1,145 +1,121 @@
 # OMXTerm
 
-OMXTerm is an open-source personal desktop terminal. Its Terminal Surface is
-powered by [Restty](https://github.com/wiedymi/restty) and Restty's pinned
-[Ghostty](https://github.com/ghostty-org/ghostty) core.
+OMXTerm is an open-source personal desktop terminal for Apple Silicon macOS,
+Linux ARM64, and Windows ARM64. Open your shell, work across tabs and windows,
+and make it your own with fonts, themes, keyboard shortcuts, and snippets.
 
 <p align="center">
   <img src="docs/images/omxterm-hero.png" alt="OMXTerm icon: a light blue terminal prompt on a dark rounded square" width="480" />
 </p>
 
-The Supported Platforms are exactly:
+Built with [Restty](https://github.com/wiedymi/restty) and its pinned
+[Ghostty](https://github.com/ghostty-org/ghostty) core, OMXTerm includes:
 
-- Apple Silicon macOS (ARM64), packaged as a DMG;
-- Linux ARM64, packaged as an AppImage; and
-- Windows ARM64, packaged as an NSIS installer.
+- independent shell sessions in tabs and windows;
+- bundled Nerd Fonts, programming ligatures, and configurable colors;
+- explicit copy and paste, with Protected Paste for multiline or control-character
+  input when the receiving program has not enabled bracketed paste;
+- file and folder path insertion by drag and drop;
+- local PNG/JPEG previews and bounded inline images from direct Pi/Chafa sessions.
 
-x64, Intel macOS, and other operating-system/architecture pairs are deferred,
-not current support commitments.
+## Platforms and downloads
 
-## Release status
+OMXTerm supports ARM64 on all three platforms below. Intel macOS and x64 builds
+are not available. A working **WebGL2** graphics backend is required; there is no
+software-rendering fallback.
 
-### Current published release: 0.12.0 for macOS and Linux
+**0.12.1 publication is pending.** The owner has accepted the packages and
+separately authorized publication. The links and installation commands below
+are prepared for 0.12.1 but will work only after it is published. Until then,
+use [0.12.0 for macOS/Linux](https://github.com/luizomf/omxterm/releases/tag/v0.12.0)
+or [0.11.0 for Windows](https://github.com/luizomf/omxterm/releases/tag/v0.11.0)
+and the instructions in that release's notes.
 
-The authenticated
-[v0.12.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.12.0)
-was published on 2026-09-18 at 23:51:24 UTC. The
-[release record](docs/releases/0.12.0.md) describes the material changes,
-migration, exact artifact identities, native verification, acceptance,
-separate publication authorization, and post-publication download verification.
+| Platform                        | 0.12.1 package (publication pending)                                                                                    | SHA-256 checksum                                                                                                           |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Apple Silicon macOS             | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.12.1/OMXTerm-0.12.1-arm64.dmg)                            | [Checksum](https://github.com/luizomf/omxterm/releases/download/v0.12.1/OMXTerm-0.12.1-arm64.dmg.sha256)                   |
+| Linux ARM64                     | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.12.1/OMXTerm-0.12.1-arm64.AppImage)                  | [Checksum](https://github.com/luizomf/omxterm/releases/download/v0.12.1/OMXTerm-0.12.1-arm64.AppImage.sha256)              |
+| Linux desktop helper (optional) | [Shell helper](https://github.com/luizomf/omxterm/releases/download/v0.12.1/OMXTerm-0.12.1-arm64.AppImage-installer.sh) | [Checksum](https://github.com/luizomf/omxterm/releases/download/v0.12.1/OMXTerm-0.12.1-arm64.AppImage-installer.sh.sha256) |
+| Windows ARM64                   | [NSIS installer](https://github.com/luizomf/omxterm/releases/download/v0.12.1/OMXTerm-0.12.1-arm64.exe)                 | [Checksum](https://github.com/luizomf/omxterm/releases/download/v0.12.1/OMXTerm-0.12.1-arm64.exe.sha256)                   |
 
-There is no Windows 0.12.0 candidate after its native gate failed. The test-only
-selection/capture synchronization correction integrated through
-[#310](https://github.com/luizomf/omxterm/issues/310); the original historical VM
-trigger remains unproven. Windows ARM64 remains a Supported Platform, with the
-published 0.11.0 installer unchanged and no 0.12.0 qualification or feature
-claim. Windows 0.11.0 does not include the 0.12.0 changes.
-
-[0.12.1 local files are prepared](docs/releases/0.12.1.md) for all three ARM64
-platforms: complete native qualification passed from one reviewed common source,
-and all eight files/checksums were collected and verified. Independent final
-review passed; preparation integration is tracked in issue #320. Exact-artifact acceptance is PENDING; publication
-is BLOCKED. The current download links below are unchanged.
-
-| Platform                      | Published package                                                                                                       | Checksum                                                                                                                  |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| macOS ARM64 (0.12.0)          | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.12.0/OMXTerm-0.12.0-arm64.dmg)                            | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.12.0/OMXTerm-0.12.0-arm64.dmg.sha256)                   |
-| Linux ARM64 (0.12.0)          | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.12.0/OMXTerm-0.12.0-arm64.AppImage)                  | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.12.0/OMXTerm-0.12.0-arm64.AppImage.sha256)              |
-| Linux desktop helper (0.12.0) | [Shell helper](https://github.com/luizomf/omxterm/releases/download/v0.12.0/OMXTerm-0.12.0-arm64.AppImage-installer.sh) | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.12.0/OMXTerm-0.12.0-arm64.AppImage-installer.sh.sha256) |
-| Windows ARM64 (0.11.0)        | [NSIS installer](https://github.com/luizomf/omxterm/releases/download/v0.11.0/OMXTerm-0.11.0-arm64.exe)                 | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.11.0/OMXTerm-0.11.0-arm64.exe.sha256)                   |
-
-The packages carry no verified publisher identity. The macOS 0.12.0 app has a
-verified ad-hoc integrity seal, but no Apple Developer ID signature or
-notarization. Previous release records remain immutable history.
-
-### Publication visibility
-
-The canonical GitHub repository remains **private**. The authenticated
-[v0.12.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.12.0)
-is the current canonical publication record. This documentation does not change
-repository visibility. Post-publication asset verification used authenticated
-downloads; unauthenticated access to GitHub release and issue links has not been
-validated and is not claimed.
+The repository is currently private; GitHub downloads require an account with
+repository access. See the [0.12.1 release notes and record](docs/releases/0.12.1.md)
+for changes, compatibility, platform limitations, and verification details.
 
 ## Installation
 
-The macOS and Linux commands below apply to 0.12.0. Windows remains visibly
-versioned at 0.11.0. Keep each package and its matching `.sha256` file in the
-same directory, verify the checksum before opening the package, and do not
-install an artifact whose check fails.
+Download the package and its matching `.sha256` file into the same directory.
+Run the commands below from that directory, and stop if verification fails.
+Checksums detect changed downloads; they do not establish publisher identity.
+These packages have no verified publisher signature, so install only if you
+trust the source and the package.
 
 ### macOS
 
 Verify the Apple Silicon DMG:
 
 ```sh
-shasum -a 256 -c OMXTerm-0.12.0-arm64.dmg.sha256
+shasum -a 256 -c OMXTerm-0.12.1-arm64.dmg.sha256
 ```
 
-Open the DMG, drag `OMXTerm.app` to Applications, eject the DMG, and launch the
-app from Applications.
+After verification succeeds, open the DMG, drag `OMXTerm.app` to Applications,
+eject the DMG, and launch the app from Applications.
 
-Because OMXTerm has no Apple Developer ID signature and is not notarized, macOS
-may warn that it cannot verify the developer or check the app for malicious
-software. Review the source and proceed only if you trust the exact,
-checksum-verified artifact. If you choose to open it, follow Apple's current
+The app has an ad-hoc integrity seal, but no Apple Developer ID signature or
+notarization. macOS may warn that it cannot verify the developer or check for
+malicious software. If you trust the verified package, follow Apple's
 [Open Anyway instructions](https://support.apple.com/102445) in System Settings
 -> Privacy & Security. Do not disable system-wide macOS security protections.
 
 ### Linux
 
-Verify the unsigned AppImage, make it executable, and run it:
+Install the `fontconfig` utilities if needed. OMXTerm uses X11; Wayland sessions
+need XWayland. Native Wayland rendering is not supported.
+
+Verify the AppImage, make it executable, and run it:
 
 ```sh
-sha256sum --check OMXTerm-0.12.0-arm64.AppImage.sha256
-chmod +x OMXTerm-0.12.0-arm64.AppImage
-./OMXTerm-0.12.0-arm64.AppImage
+sha256sum --check OMXTerm-0.12.1-arm64.AppImage.sha256 &&
+  chmod +x OMXTerm-0.12.1-arm64.AppImage &&
+  ./OMXTerm-0.12.1-arm64.AppImage
 ```
 
-If kernel FUSE mounting is unavailable, use the supported fallback:
+If kernel FUSE mounting is unavailable, run the verified AppImage with:
 
 ```sh
-./OMXTerm-0.12.0-arm64.AppImage --appimage-extract-and-run
+./OMXTerm-0.12.1-arm64.AppImage --appimage-extract-and-run
 ```
 
-Linux needs the `fontconfig` utilities. OMXTerm defaults to X11, so Wayland
-sessions must provide XWayland; native Wayland rendering is not claimed.
+**Linux runs without the Chromium sandbox** (`--no-sandbox`) to avoid startup
+incompatibilities. This applies to normal, extraction, and desktop-helper
+launches. Context isolation and the minimal preload bridge remain enabled but
+do not replace that sandbox. Run as an ordinary user; no administrator sandbox
+setup is needed. See the [Linux launch policy](docs/adr/0024-disable-the-chromium-sandbox-on-linux.md).
 
-OMXTerm runs with `--no-sandbox` on Linux to avoid
-startup incompatibilities in some environments. Context isolation and the
-minimal preload bridge remain enabled, but do not replace the Chromium sandbox.
-Sandboxed Linux support is outside the current maintenance scope; simple,
-reproducible contributions are welcome. Run OMXTerm as an ordinary user;
-no administrator sandbox setup is needed. See [the launch policy](docs/adr/0024-disable-the-chromium-sandbox-on-linux.md).
-
-To add the verified AppImage to the desktop without administrator access,
-ensure the helper's `file` command prerequisite is installed, then verify the
-optional helper separately before running it:
+To add OMXTerm to your desktop menu, install the `file` command if needed and
+use the optional helper. Verify both downloads first:
 
 ```sh
-sha256sum --check OMXTerm-0.12.0-arm64.AppImage.sha256
-sha256sum --check OMXTerm-0.12.0-arm64.AppImage-installer.sh.sha256
-chmod +x OMXTerm-0.12.0-arm64.AppImage OMXTerm-0.12.0-arm64.AppImage-installer.sh
-./OMXTerm-0.12.0-arm64.AppImage-installer.sh install ./OMXTerm-0.12.0-arm64.AppImage
+sha256sum --check OMXTerm-0.12.1-arm64.AppImage.sha256 &&
+  sha256sum --check OMXTerm-0.12.1-arm64.AppImage-installer.sh.sha256 &&
+  chmod +x OMXTerm-0.12.1-arm64.AppImage OMXTerm-0.12.1-arm64.AppImage-installer.sh &&
+  ./OMXTerm-0.12.1-arm64.AppImage-installer.sh install ./OMXTerm-0.12.1-arm64.AppImage
 ```
 
-The helper structurally validates the supplied local Linux ARM64 AppImage, but
-does not authenticate a publisher or replace either checksum check. It uses
-only the supplied local files and performs no download or system-wide
-installation. See the
-[product contract](docs/spec.md#configuration-and-local-state) for its ownership
-and transaction guarantees.
+The helper installs for your user only, using the supplied local files. It does
+not download anything or make system-wide changes. Its package validation does
+not replace either checksum check. See the [local installation details](docs/spec.md#configuration-and-local-state).
 
 ### Windows
 
 Install the
 [Microsoft Visual C++ Redistributable for ARM64](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
-if it is not already present. Then verify that the checksum record names and
-matches the exact NSIS installer:
+if it is not already present. In PowerShell, verify the installer and confirm
+that the checksum file names the same package:
 
 ```powershell
-$installerName = "OMXTerm-0.11.0-arm64.exe"
-$checksumRecord = Get-Content -LiteralPath "$installerName.sha256" -Raw
+$installerName = "OMXTerm-0.12.1-arm64.exe"
+$checksumRecord = Get-Content -LiteralPath "$installerName.sha256" -Raw -ErrorAction Stop
 $checksumMatch = [regex]::Match(
   $checksumRecord,
   '\A(?<digest>[0-9A-Fa-f]{64})[ \t]+(?<filename>\*?\S+)(?:\r?\n)?\z'
@@ -149,7 +125,7 @@ if (-not $checksumMatch.Success) { throw "The checksum file is malformed." }
 $recordedName = $checksumMatch.Groups['filename'].Value.TrimStart('*')
 if ($recordedName -cne $installerName) { throw "The checksum names another installer." }
 $expectedHash = $checksumMatch.Groups['digest'].Value
-$actualHash = (Get-FileHash -LiteralPath $installerName -Algorithm SHA256).Hash
+$actualHash = (Get-FileHash -LiteralPath $installerName -Algorithm SHA256 -ErrorAction Stop).Hash
 if (-not [StringComparer]::OrdinalIgnoreCase.Equals($actualHash, $expectedHash)) {
   throw "SHA-256 verification failed."
 }
@@ -157,60 +133,68 @@ if (-not [StringComparer]::OrdinalIgnoreCase.Equals($actualHash, $expectedHash))
 Write-Host "SHA-256 verification succeeded for $installerName"
 ```
 
-Run `OMXTerm-0.11.0-arm64.exe`; it installs per-user without administrator
-elevation. The unsigned installer may trigger a Microsoft Defender SmartScreen
-unknown-publisher warning. Review the source and proceed only if you trust the
-exact, checksum-verified artifact. If you choose to continue, SmartScreen's
-`More info -> Run anyway` applies to that one file. Do not disable SmartScreen
-or other system-wide Windows security protections.
+After verification succeeds, run `OMXTerm-0.12.1-arm64.exe`. It installs for your
+user without administrator elevation.
 
-## Quick start
+The installer is unsigned, so Microsoft Defender SmartScreen may show an
+unknown-publisher warning. If you trust the verified package, use
+`More info -> Run anyway` for that file. Do not disable SmartScreen or other
+system-wide Windows security protections.
 
-Launch OMXTerm to open one Terminal Window and one Terminal Tab running the
-Default Shell in your home directory. New tabs and windows run independent Live
-Terminal Sessions; closing one terminates its session. The Terminal Surface
-requires working WebGL2; there is no software or second-renderer fallback, and a
-Surface initialization failure starts no shell.
+## Everyday use
 
-- Learn tabs, controls, shortcuts, copy and paste, file-path insertion, and
-  privacy-safe local logs in [Everyday OMXTerm use](docs/usage.md).
-- OMXTerm works without configuration. To change defaults or add keybinds,
-  Snippets, or an external Terminal Theme, follow the
-  [User Configuration guide](docs/configuration.md).
-- Browse user, contributor, contract, decision, and release documents in the
-  [documentation map](docs/README.md).
-- To build or contribute, use the single authoritative
-  [contribution and development guide](CONTRIBUTING.md). The
-  [Restty Terminal Surface guide](docs/restty-development.md) records its
-  runtime, failure, resource-limit, and reproducible-source contracts.
+Launch OMXTerm to open your default shell in your home directory. Use
+`File -> New Tab` or `File -> New Window` for another independent session.
+Closing a tab ends its session; sessions are not saved or restored.
 
-## Scope, security, and privacy
+| Action        | macOS             | Linux and Windows   |
+| ------------- | ----------------- | ------------------- |
+| New tab       | `Cmd+T`           | `Ctrl+Shift+T`      |
+| New window    | `Cmd+N`           | `Ctrl+Shift+N`      |
+| Copy          | `Cmd+C`           | `Ctrl+Shift+C`      |
+| Paste         | `Cmd+V`           | `Ctrl+Shift+V`      |
+| Zoom in / out | `Cmd++` / `Cmd+-` | `Ctrl++` / `Ctrl+-` |
 
-The terminal is the product. AI assistance, SSH brokering, splits, saved or
-reconnectable sessions, Shell Integration, automatic updates, and remote
-terminal features are outside the current product contract.
+On Linux and Windows, press and release `Alt` to show the application menu.
+OMXTerm works without configuration files. When you want to customize it:
 
-Privileged capabilities stay in the Electron main process. The renderer uses
-context isolation and no Node integration, and a minimal typed preload bridge
-validates IPC. Chromium sandboxing remains enabled on macOS and Windows;
-Linux uses the launch policy described above. Terminal Payload, clipboard data, configuration
-contents, commands, arguments, titles, and transcripts are excluded from
-Operational Events. OMXTerm itself makes no telemetry, analytics, crash-report,
-update-check, or remote-log network requests; processes launched in a Live
-Terminal Session retain their normal operating-system access.
+- [Everyday OMXTerm use](docs/usage.md) covers tabs, shortcuts, paste, paths,
+  links, images, and troubleshooting through local diagnostics.
+- [User configuration](docs/configuration.md) walks through fonts, themes,
+  keybinds, and reusable snippets.
+- The [documentation map](docs/README.md) links to the rest of the guides.
 
-Report suspected vulnerabilities through the private route in the
-[security policy](SECURITY.md), which also defines the sensitive data that
-reports must exclude.
+OMXTerm focuses on the local terminal. It has no built-in AI assistance, SSH
+broker, splits, saved sessions, shell integration, or automatic updates. Shells
+and command-line tools still work as ordinary local processes.
 
-The maintained [product contract](docs/spec.md) is authoritative for observable
-behavior and boundaries. OMXTerm Web is a separate browser-based SSH broker,
-not a variant or runtime dependency of OMXTerm.
+## Privacy and security
+
+OMXTerm makes no telemetry, analytics, crash-report, update-check, or remote-log
+network requests. Its bounded local operational logs exclude terminal input
+and output, clipboard data, configuration contents, commands, arguments,
+titles, and transcripts. Processes you launch keep their normal filesystem
+and network access.
+
+The renderer uses context isolation and disabled Node integration, with a
+minimal typed bridge to the main process. Chromium sandboxing is enabled on
+macOS and Windows; Linux uses the exception described above. For the complete
+behavior and boundaries, see the [product contract](docs/spec.md).
+
+Please report suspected vulnerabilities through the private route in the
+[security policy](SECURITY.md), and leave sensitive data out of reports.
+
+## Contributing
+
+Contributions and practical bug reports are welcome. Start with the
+[contribution and development guide](CONTRIBUTING.md) for setup and workflow.
+The [Restty development guide](docs/restty-development.md) explains the terminal
+renderer and its pinned dependencies.
 
 ## License and acknowledgements
 
-OMXTerm source code is available under the [MIT License](LICENSE). Its Terminal
-Surface is built with [Restty](https://github.com/wiedymi/restty) and Restty's
-pinned [Ghostty](https://github.com/ghostty-org/ghostty) core. Bundled
-third-party components retain their own terms as recorded in
+OMXTerm source code is available under the [MIT License](LICENSE). Thanks to
+[Restty](https://github.com/wiedymi/restty),
+[Ghostty](https://github.com/ghostty-org/ghostty), and the other projects that
+make it possible. Bundled components retain their own terms in
 [Third-Party Notices](THIRD_PARTY_NOTICES.md).
