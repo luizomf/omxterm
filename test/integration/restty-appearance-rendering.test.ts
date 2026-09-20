@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
+import type { SelectionObservation } from "../fixtures/restty-appearance-renderer";
 
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
 const electronExecutable = createRequire(import.meta.url)("electron") as string;
@@ -43,6 +44,7 @@ interface Measurement {
 }
 
 interface Result {
+  readonly selection: SelectionObservation;
   readonly configuredFont: {
     readonly regularInk: number;
     readonly preservesConfiguredRendering: boolean;
@@ -114,17 +116,28 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
         readonly requestedScaleFactor: number | undefined;
         readonly result: Result;
       }> = [];
-      for (const requestedScaleFactor of [undefined, 1, 2] as const) {
-        const execution = await runFixture(root, requestedScaleFactor);
+      for (const [requestedScaleFactor, deferSelectionFrame] of [
+        [undefined, false],
+        [1, false],
+        [2, false],
+        [undefined, true],
+      ] as const) {
+        const execution = await runFixture(
+          root,
+          requestedScaleFactor,
+          deferSelectionFrame,
+        );
         const line = execution.stdout
           .split("\n")
           .find((entry) => entry.startsWith(resultPrefix));
         const result = line
           ? (JSON.parse(line.slice(resultPrefix.length)) as Result)
           : undefined;
-        const label = requestedScaleFactor
-          ? `forced DPR ${requestedScaleFactor}`
-          : "actual display DPR";
+        const label = deferSelectionFrame
+          ? "delayed selection frame at actual display DPR"
+          : requestedScaleFactor
+            ? `forced DPR ${requestedScaleFactor}`
+            : "actual display DPR";
 
         expect(
           execution.exitCode,
@@ -147,6 +160,8 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
                 devicePixelRatio: result.devicePixelRatio,
                 measurements: result.measurements,
                 live: result.live,
+                selection: result.selection,
+                colorCounts: result.colorCounts,
               })),
             },
             undefined,
@@ -157,6 +172,12 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
       expect(runs[1]!.result.devicePixelRatio).toBeCloseTo(1, 5);
       expect(runs[2]!.result.devicePixelRatio).toBeCloseTo(2, 5);
       for (const run of runs) assertFontGeometry(run.result, run.label);
+      expect(runs[3]!.result.selection.deferredFrame).toBe(true);
+      for (const color of expectedColors)
+        expect(
+          runs[3]!.result.colorCounts[color],
+          `delayed frame ${color}`,
+        ).toBeGreaterThan(0);
       for (const size of [1, 8, 10, 16, 64, 72]) {
         const dpr1 = fontMeasurement(runs[1]!.result, size);
         const dpr2 = fontMeasurement(runs[2]!.result, size);
@@ -468,7 +489,9 @@ app.whenReady().then(async () => {
     show: false,
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, backgroundThrottling: false },
   });
-  await window.loadFile(path.join(__dirname, "index.html"));
+  await window.loadFile(path.join(__dirname, "index.html"), {
+    query: { deferSelectionFrame: String(process.env.OMXTERM_RESTTY_APPEARANCE_DEFER_FRAME === '1') },
+  });
   window.showInactive();
   let result = await waitForResult(window);
   let bounds = await window.webContents.executeJavaScript("(() => { const r = document.querySelector('canvas').getBoundingClientRect(); return { x:r.x, y:r.y, width:r.width, height:r.height }; })()", true);
@@ -477,6 +500,7 @@ app.whenReady().then(async () => {
   const x = Math.round(bounds.x + cellWidth * 0.5);
   const y = Math.round(bounds.y + cellHeight * 2.5);
   await window.webContents.executeJavaScript(\`(() => {
+    globalThis.__omxtermBeginSelection();
     const canvas = document.querySelector('canvas');
     const start = { x: \${x + cellWidth * 8}, y: \${y} };
     const end = { x: \${x + cellWidth * 13}, y: \${y} };
@@ -484,7 +508,9 @@ app.whenReady().then(async () => {
     canvas.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 7, pointerType: 'mouse', button: 0, buttons: 1, clientX: end.x, clientY: end.y }));
     canvas.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 7, pointerType: 'mouse', button: 0, buttons: 0, clientX: end.x, clientY: end.y }));
   })()\`, true);
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  // Elapsed time does not establish that the selection reached a rendered frame.
+  // Observe the public selection and cross real frame boundaries before capture.
+  const selection = await window.webContents.executeJavaScript('globalThis.__omxtermSelectionAfterFrames()', true);
   const image = await window.webContents.capturePage();
   if (process.env.OMXTERM_RESTTY_APPEARANCE_SCREENSHOT_PATH)
     fs.writeFileSync(process.env.OMXTERM_RESTTY_APPEARANCE_SCREENSHOT_PATH, image.toPNG());
@@ -508,6 +534,7 @@ app.whenReady().then(async () => {
   const complete = {
     ...result,
     colorCounts: countColors(image.toBitmap()),
+    selection,
     fontRendering: {
       regularInk: regular.ink,
       boldInk: bold.ink,
@@ -546,6 +573,7 @@ app.whenReady().then(async () => {
 async function runFixture(
   root: string,
   scaleFactor?: number,
+  deferSelectionFrame = false,
 ): Promise<{
   readonly exitCode: number | null;
   readonly stderr: string;
@@ -565,6 +593,7 @@ async function runFixture(
     env: {
       ...process.env,
       ELECTRON_DISABLE_SECURITY_WARNINGS: "true",
+      OMXTERM_RESTTY_APPEARANCE_DEFER_FRAME: deferSelectionFrame ? "1" : "0",
       HOME: path.join(root, "home"),
       XDG_CONFIG_HOME: path.join(root, "config"),
       XDG_STATE_HOME: path.join(root, "state"),

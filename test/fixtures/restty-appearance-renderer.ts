@@ -52,10 +52,41 @@ interface AppearanceResult {
   readonly devicePixelRatio: number;
 }
 
+export interface SelectionObservation {
+  readonly beforeFrame: boolean;
+  readonly afterFrame: boolean;
+  readonly deferredFrame: boolean;
+  readonly visibilityState: DocumentVisibilityState;
+  readonly focused: boolean;
+}
+
 declare global {
   var __omxtermResttyAppearanceResult: AppearanceResult | undefined;
   var __omxtermRenderConfiguredFont: (reference: boolean) => Promise<void>;
+  var __omxtermBeginSelection: () => void;
+  var __omxtermSelectionAfterFrames: () => Promise<SelectionObservation>;
 }
+
+const deferSelectionFrame =
+  new URLSearchParams(location.search).get("deferSelectionFrame") === "true";
+let deferUntil = 0;
+let deferredFrame = false;
+if (deferSelectionFrame) {
+  const nativeFrame = requestAnimationFrame.bind(window);
+  window.requestAnimationFrame = (callback) =>
+    nativeFrame((time) => {
+      const remaining = deferUntil - performance.now();
+      if (remaining > 0) {
+        deferredFrame = true;
+        // Exercise a late frame without blocking input/capture or changing native
+        // focus. This delay is a regression stimulus, never a readiness wait.
+        setTimeout(() => nativeFrame(callback), remaining);
+      } else callback(time);
+    });
+}
+globalThis.__omxtermBeginSelection = () => {
+  if (deferSelectionFrame) deferUntil = performance.now() + 300;
+};
 
 const customTheme: TerminalTheme = {
   version: 1,
@@ -212,6 +243,7 @@ async function run() {
   let cellWidth = 0;
   let cellHeight = 0;
   let externalLinks = 0;
+  let copiedSelection = "";
   const surface = await mountResttyTerminalSurface(
     container,
     {
@@ -264,6 +296,14 @@ async function run() {
         : {}),
       padding: { top: 0, right: 0, bottom: 0, left: 0 },
       theme: DEFAULT_TERMINAL_THEME,
+      clipboard: {
+        readText: async () => "",
+        writeText: async (text) => {
+          copiedSelection = text;
+        },
+        confirmPaste: async () => true,
+        requestContextMenu: () => undefined,
+      },
       onExternalLink() {
         externalLinks += 1;
       },
@@ -306,6 +346,26 @@ async function run() {
     document.body.dataset.referenceFonts = String(reference);
     globalThis.__omxtermResttyAppearanceResult = undefined;
     await run();
+  };
+  globalThis.__omxtermSelectionAfterFrames = async () => {
+    copiedSelection = "";
+    await surface.copy();
+    const beforeFrame = copiedSelection === " https";
+    await waitForLayout();
+    copiedSelection = "";
+    await surface.copy();
+    const afterFrame = copiedSelection === " https";
+    if (!beforeFrame || !afterFrame)
+      throw new Error(
+        "Synthetic pointer selection was absent before or after frames",
+      );
+    return {
+      beforeFrame,
+      afterFrame,
+      deferredFrame,
+      visibilityState: document.visibilityState,
+      focused: document.hasFocus(),
+    };
   };
   globalThis.__omxtermResttyAppearanceResult = {
     measurements,
