@@ -131,7 +131,7 @@ commit `87aa8eb44ce355c6ae967eee17c2ddb9e1b6762a` in its ancestry. Its tree
 `docs/README.md`, `docs/release.md`, and `docs/releases/0.12.0.md` differ from
 the build source, all eligible non-packaged Markdown.
 
-## 0.12.1 accepted files (publication authorized, pending)
+## Published 0.12.1 artifacts and authority
 
 The canonical [0.12.1 release notes and record](releases/0.12.1.md) binds all three
 ARM64 native builds to independently reviewed/refrozen source
@@ -150,7 +150,7 @@ Independent final review passed Standards and Spec with no findings. The
 canonical record identifies the reviewed evidence range and eligible Markdown
 paths. Final preparation source `7c561ad5a10c26d0fe103233bc657b9627d84ec8`
 and integrated main `8fde337e43c3efbe1821e4c1f243edf02ade3954` have identical
-trees. The intended `v0.12.1` tag target is that final preparation source,
+trees. Annotated tag `v0.12.1` points to that final preparation source,
 retaining the common build commit's ancestry. Only `README.md`, `docs/README.md`,
 `docs/release.md`, and `docs/releases/0.12.1.md` differ from build source.
 
@@ -161,12 +161,20 @@ preparation in #320. This authorization covers the annotated tag, GitHub
 Release, eight unchanged uploads, and post-publication download/checksum
 verification; it explicitly excludes rebuilds and repeated test suites.
 
-**Publication is pending.** The #323 documentation polish is limited to those
-same eligible non-packaged Markdown paths and requires independent review.
-The coordinator must confirm the final tag/path/identity mapping, publish the
-accepted bytes, then record the actual release and download-verification result.
-Prepared 0.12.1 links in the entry pages are labeled pending, not evidence of
-completed publication. Existing published assets remain unchanged.
+The [v0.12.1 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.12.1)
+was published on `2026-09-20T08:41:01Z` with exactly the eight accepted files.
+Post-publication authenticated downloads passed byte-size and SHA-256 comparison
+for every file, plus verification of all four checksum records against the
+accepted manifest. Repository visibility remains private; anonymous download
+access is not claimed.
+
+The #323 documentation candidate at
+`5d51084f3869bb6699a638fbed4f298667ab2084` passed independent Standards and
+Spec review with no findings before publication. That polish and subsequent
+publication bookkeeping change only the same four eligible Markdown files.
+They do not rebuild the packages or retarget the tag. The exact identity and
+native verification record remains unchanged; earlier published releases remain
+immutable.
 
 ## Version selection and consistency
 

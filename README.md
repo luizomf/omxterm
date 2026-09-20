@@ -24,14 +24,10 @@ OMXTerm supports ARM64 on all three platforms below. Intel macOS and x64 builds
 are not available. A working **WebGL2** graphics backend is required; there is no
 software-rendering fallback.
 
-**0.12.1 publication is pending.** The owner has accepted the packages and
-separately authorized publication. The links and installation commands below
-are prepared for 0.12.1 but will work only after it is published. Until then,
-use [0.12.0 for macOS/Linux](https://github.com/luizomf/omxterm/releases/tag/v0.12.0)
-or [0.11.0 for Windows](https://github.com/luizomf/omxterm/releases/tag/v0.11.0)
-and the instructions in that release's notes.
+Download [OMXTerm 0.12.1](https://github.com/luizomf/omxterm/releases/tag/v0.12.1)
+for your platform below, along with its checksum file.
 
-| Platform                        | 0.12.1 package (publication pending)                                                                                    | SHA-256 checksum                                                                                                           |
+| Platform                        | 0.12.1 package                                                                                                          | SHA-256 checksum                                                                                                           |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Apple Silicon macOS             | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.12.1/OMXTerm-0.12.1-arm64.dmg)                            | [Checksum](https://github.com/luizomf/omxterm/releases/download/v0.12.1/OMXTerm-0.12.1-arm64.dmg.sha256)                   |
 | Linux ARM64                     | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.12.1/OMXTerm-0.12.1-arm64.AppImage)                  | [Checksum](https://github.com/luizomf/omxterm/releases/download/v0.12.1/OMXTerm-0.12.1-arm64.AppImage.sha256)              |

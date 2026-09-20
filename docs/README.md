@@ -14,19 +14,13 @@ project's design and development guides.
 
 ## Releases
 
-**0.12.1 is accepted and authorized for publication; publication is pending.**
-The [0.12.1 release notes and record](releases/0.12.1.md) cover the corrections,
-Windows catch-up, compatibility, platform limitations, and exact package
-identities. [Issue #323](https://github.com/luizomf/omxterm/issues/323) records
-owner acceptance and separate publication authorization for the unchanged eight
-files. The [download table](../README.md#platforms-and-downloads) is prepared
-for 0.12.1 and labels those links as pending.
+**Current release: [0.12.1](https://github.com/luizomf/omxterm/releases/tag/v0.12.1)**
+for macOS, Linux, and Windows ARM64. Use the
+[download table](../README.md#platforms-and-downloads) to choose your package.
+The [release notes and record](releases/0.12.1.md) cover corrections, Windows
+catch-up, compatibility, platform limitations, and verification details.
 
-Until publication, the available releases remain
-[0.12.0 for macOS/Linux](https://github.com/luizomf/omxterm/releases/tag/v0.12.0)
-and [0.11.0 for Windows](https://github.com/luizomf/omxterm/releases/tag/v0.11.0).
-There was no Windows 0.12.0 package. The repository is currently private;
-GitHub downloads require repository access.
+The repository is currently private; GitHub downloads require repository access.
 
 ### Release history
 
