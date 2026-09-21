@@ -204,6 +204,7 @@ export function isValidAccelerator(value: string): boolean {
 // before-input-event reports it (DOM KeyboardEvent key values).
 export interface AcceleratorKeyboardInput {
   readonly key: string;
+  readonly code?: string;
   readonly control: boolean;
   readonly meta: boolean;
   readonly alt: boolean;
@@ -211,8 +212,8 @@ export interface AcceleratorKeyboardInput {
 }
 
 // Resolves a key event against the effective keybind map with native
-// CommandOrControl semantics. Modifiers must match exactly so a shifted
-// accelerator never resolves to its unshifted counterpart.
+// CommandOrControl semantics. Prefer exact matches before punctuation aliases;
+// a character's implicit Shift must not override an explicit shifted binding.
 export function terminalActionForKeyboardInput(
   keybinds: TerminalKeybinds,
   input: AcceleratorKeyboardInput,
@@ -220,19 +221,34 @@ export function terminalActionForKeyboardInput(
 ): TerminalActionName | undefined {
   const key = acceleratorKeyForInputKey(input.key);
   if (key === undefined) return undefined;
+  let punctuationFallback: TerminalActionName | undefined;
   for (const action of TERMINAL_ACTION_NAMES) {
     const parsed = parseAccelerator(keybinds[action], platform);
     if (
-      parsed !== undefined &&
-      parsed.key === key &&
-      parsed.modifiers.has("cmd") === input.meta &&
-      parsed.modifiers.has("ctrl") === input.control &&
-      parsed.modifiers.has("alt") === input.alt &&
-      parsed.modifiers.has("shift") === input.shift
+      parsed === undefined ||
+      parsed.modifiers.has("cmd") !== input.meta ||
+      parsed.modifiers.has("ctrl") !== input.control ||
+      parsed.modifiers.has("alt") !== input.alt
     )
-      return action;
+      continue;
+    const shifted = parsed.modifiers.has("shift");
+    if (parsed.key === key && shifted === input.shift) return action;
+
+    // Electron reports Plus with Shift on the main keyboard, but without it
+    // on a keypad. Both represent the same logical Plus accelerator.
+    const implicitPlusShift =
+      parsed.key === "+" && key === "+" && input.shift && !shifted;
+    // Recognize the observed shifted comma only when its logical character
+    // AND physical position agree; do not remap arbitrary non-US key positions.
+    const shiftedComma =
+      parsed.key === "," &&
+      key === "<" &&
+      input.code === "Comma" &&
+      input.shift &&
+      shifted;
+    if (implicitPlusShift || shiftedComma) punctuationFallback ??= action;
   }
-  return undefined;
+  return punctuationFallback;
 }
 
 function acceleratorKeyForInputKey(inputKey: string): string | undefined {
