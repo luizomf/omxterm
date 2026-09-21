@@ -7,7 +7,7 @@ import electron from "electron";
 import { expect, it } from "vitest";
 
 it.each(["development", "packaged"])(
-  "configures Linux About before the native menu (%s), preserving other platforms",
+  "configures native About before the menu (%s), preserving macOS defaults",
   async (mode) => {
     await mkdir(".scratch", { recursive: true });
     const root = await mkdtemp(path.resolve(".scratch/about-startup-"));
@@ -72,7 +72,7 @@ it.each(["development", "packaged"])(
         iconEmpty?: boolean;
       };
       expect(result.nativeAboutRole).toBe("about");
-      if (process.platform === "linux") {
+      if (process.platform === "linux" || process.platform === "win32") {
         expect(result.configuredWhileReady).toBe(true);
         expect(result.options).toEqual({
           applicationName: "OMXTerm",

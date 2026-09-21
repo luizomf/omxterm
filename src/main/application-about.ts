@@ -5,9 +5,9 @@ export function configureApplicationAbout(
   iconPath: string,
   platform: string = process.platform,
 ): void {
-  if (platform !== "linux") return;
-  // Linux's native About panel has no metadata defaults. Leave the other
-  // platforms' native panels unchanged instead of overriding their defaults.
+  if (platform !== "linux" && platform !== "win32") return;
+  // Linux has no metadata defaults; Windows otherwise uses executable-resource
+  // version text and a generic information icon. Keep macOS bundle defaults.
   app.setAboutPanelOptions({
     applicationName: "OMXTerm",
     applicationVersion: app.getVersion(),

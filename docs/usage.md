@@ -134,8 +134,9 @@ for accepted accelerators, collision rules, and warnings.
 On Linux and Windows, the native application menu is hidden by default so the
 Terminal Surface gets more room. Press and release `Alt` by itself to reveal
 it temporarily. Using or dismissing the menu hides it again. macOS keeps its
-normal menu behavior. On Linux, the native About action in the application menu
-shows the OMXTerm name, running version, copyright and application icon.
+normal menu behavior. On Linux and Windows, the native About action in the
+application menu shows the OMXTerm name, running version, copyright and
+application icon. Its layout and window caption follow the native platform.
 
 ## Previewing local images
 
