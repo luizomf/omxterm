@@ -212,9 +212,17 @@ investigation remains deferred. These follow-up Markdown changes passed an
 independent Standards and Spec review without findings and do not alter the
 artifact identities. On September 21, 2026, the owner explicitly accepted all
 eight listed files and separately authorized publication. Final documentation
-and GitHub Release notes passed independent review without findings. Tag/source
-reconciliation and post-upload download verification complete the authorized
-release procedure.
+and GitHub Release notes passed independent review without findings.
+
+[OMXTerm 0.13.0](https://github.com/luizomf/omxterm/releases/tag/v0.13.0) was
+published on September 21, 2026. Annotated tag `v0.13.0` points to
+`c16623c265718e5b388c99ec8ad22c902494fb0f`, retaining the artifact build source in
+its ancestry. Its tree equals PR #347 squash
+`2364f14323f983b75c8ea8c5184c43560e25c4b9`; only three eligible non-packaged
+Markdown files differ from the build source. All eight assets were downloaded
+from the published release and matched their accepted sizes and SHA-256,
+including the four checksum records. Published files and the tag remain
+unchanged while `main` resumes development at `0.13.1-dev.0`.
 
 ## Version selection and consistency
 
