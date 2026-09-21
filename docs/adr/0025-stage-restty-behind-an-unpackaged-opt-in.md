@@ -131,6 +131,16 @@ requests have no host or PTY side effect. Candidate External Links use the
 existing exact-URL host route and retained lowercase provider expression over
 visible cell snapshots joined only by Ghostty selection-text proof of a soft
 wrap. Cell text is copied before selection queries can allocate WASM memory.
+A desktop selection press may arrive with a different pointer identity from
+subsequent motion in a virtual input stack (#331: mouse press/release, pen
+motion). The pinned runtime uses the browser's compatibility mouse movement
+only to complete an existing pending primary-button selection press. It keeps
+the original press identity for capture, ignores touch-generated compatibility
+moves and released/other buttons, and does nothing once ordinary pointer
+movement has already started the drag. It does not globally merge pointer IDs
+or replace touch and application mouse reporting. The listener is removed with
+the canvas interaction bindings.
+
 Modified primary click overrides application mouse reporting only for a stable
 valid destination and produces no duplicate PTY report; changed targets return
 to ordinary routing, while cancellation and focus loss produce no spurious

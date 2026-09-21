@@ -270,7 +270,7 @@ The lockfile restores the npm tarballs identified by that manifest. `npm ci`
 then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
 Restty runtime, declarations and embedded-core SHA-256 values and produces
 corrected runtime SHA-256
-`431ea06bb18273e35a5aa15aa56f61e3d27d79a16c36d66e56d73a29b0d6c4a8`,
+`bd1907b75d7517684c128ec4ba6fbc8786e0a5f2960f87b7a8c5f28e09420880`,
 embedded-core chunk SHA-256
 `039abfec307ab03015a2ae70b3583e07fcc9e5a70319de1ca055d6168f45af1b`,
 and event declarations SHA-256
@@ -287,7 +287,10 @@ origin, current bracketed mode, selection/Select All, parsed OSC and OSC
 cancellation, visible cell/soft-wrap lookup and transient visible-cell underline
 decoration, and parsed Ghostty title/BEL runtime
 events to OMXTerm's existing host policy. Borrowed render cells are snapshotted
-before selection-text queries can allocate WASM memory. It also removes Restty's 10–64
+before selection-text queries can allocate WASM memory. Pending desktop drags
+can also start through compatibility mouse movement when a virtual input stack
+changes pointer identity; touch-generated moves and moves without a primary
+press remain excluded. It also removes Restty's 10–64
 live-size clamp in favor of OMXTerm's existing minimum of 1 for Window Font
 Zoom, carries the creation-time line-height factor into cell metrics without
 scaling glyphs, keeps bold ANSI 0–7 colors unchanged, and exposes Ghostty's

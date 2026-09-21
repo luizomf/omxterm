@@ -67,6 +67,7 @@ declare global {
   var __omxtermRenderConfiguredFont: (reference: boolean) => Promise<void>;
   var __omxtermBeginSelection: () => void;
   var __omxtermSelectionAfterFrames: () => Promise<SelectionObservation>;
+  var __omxtermHasNoSelection: () => Promise<boolean>;
 }
 
 const deferFrames =
@@ -359,6 +360,11 @@ async function run() {
     document.body.dataset.referenceFonts = String(reference);
     globalThis.__omxtermResttyAppearanceResult = undefined;
     await run();
+  };
+  globalThis.__omxtermHasNoSelection = async () => {
+    copiedSelection = "";
+    await surface.copy();
+    return copiedSelection === "";
   };
   globalThis.__omxtermSelectionAfterFrames = async () => {
     copiedSelection = "";

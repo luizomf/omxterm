@@ -97,16 +97,18 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
         readonly requestedScaleFactor: number | undefined;
         readonly result: Result;
       }> = [];
-      for (const [requestedScaleFactor, deferFrames] of [
-        [undefined, false],
-        [1, false],
-        [2, false],
-        [undefined, true],
+      for (const [requestedScaleFactor, deferFrames, mixedPointer] of [
+        [undefined, false, false],
+        [1, false, false],
+        [2, false, false],
+        [undefined, true, false],
+        [undefined, false, true],
       ] as const) {
         const execution = await runFixture(
           root,
           requestedScaleFactor,
           deferFrames,
+          mixedPointer,
         );
         const line = execution.stdout
           .split("\n")
@@ -114,11 +116,13 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
         const result = line
           ? (JSON.parse(line.slice(resultPrefix.length)) as Result)
           : undefined;
-        const label = deferFrames
-          ? "delayed selection and configured-font frames at actual display DPR"
-          : requestedScaleFactor
-            ? `forced DPR ${requestedScaleFactor}`
-            : "actual display DPR";
+        const label = mixedPointer
+          ? "mouse press with pen motion and compatibility mouse events"
+          : deferFrames
+            ? "delayed selection and configured-font frames at actual display DPR"
+            : requestedScaleFactor
+              ? `forced DPR ${requestedScaleFactor}`
+              : "actual display DPR";
 
         expect(
           execution.exitCode,
@@ -384,8 +388,7 @@ async function buildFixture(root: string): Promise<void> {
           builder.onLoad(
             { filter: /terminal-font-stack\.ts$/ },
             async ({ path: sourcePath }) => {
-              // Differential rendering reference: the existing configured-family
-              // policy has regular faces only. Keep the production caller/runtime.
+              // Reference omits bold faces but retains the production font pipeline.
               const source = await readFile(sourcePath, "utf8");
               return {
                 loader: "ts",
@@ -420,6 +423,14 @@ export function terminalFontInputs(data: TerminalFontData): TerminalFontInput[] 
   if (!policy) throw new Error("Production renderer CSP is missing");
 
   await Promise.all([
+    build({
+      absWorkingDir: projectRoot,
+      entryPoints: ["test/fixtures/restty-selection-gesture.ts"],
+      bundle: true,
+      platform: "node",
+      format: "cjs",
+      outfile: path.join(root, "selection.cjs"),
+    }),
     writeFile(
       path.join(root, "index.html"),
       `<!doctype html><html style="--native-title-inset:0px"><head><meta http-equiv="Content-Security-Policy" content="${policy}"><link rel="stylesheet" href="./renderer.css"></head><body><div id="terminal-window-content"><div id="terminal-tabs"></div></div><script src="./renderer.js"></script></body></html>`,
@@ -490,18 +501,8 @@ app.whenReady().then(async () => {
   const cellHeight = result.live.cellHeight / result.devicePixelRatio;
   const x = Math.round(bounds.x + cellWidth * 0.5);
   const y = Math.round(bounds.y + cellHeight * 2.5);
-  await window.webContents.executeJavaScript(\`(() => {
-    globalThis.__omxtermBeginSelection();
-    const canvas = document.querySelector('canvas');
-    const start = { x: \${x + cellWidth * 8}, y: \${y} };
-    const end = { x: \${x + cellWidth * 13}, y: \${y} };
-    canvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 7, pointerType: 'mouse', button: 0, buttons: 1, clientX: start.x, clientY: start.y }));
-    canvas.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 7, pointerType: 'mouse', button: 0, buttons: 1, clientX: end.x, clientY: end.y }));
-    canvas.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 7, pointerType: 'mouse', button: 0, buttons: 0, clientX: end.x, clientY: end.y }));
-  })()\`, true);
-  // Elapsed time does not establish that the selection reached a rendered frame.
-  // Observe the public selection and cross real frame boundaries before capture.
-  const selection = await window.webContents.executeJavaScript('globalThis.__omxtermSelectionAfterFrames()', true);
+  const selection = await require('./selection.cjs').exerciseAppearanceSelection(window,
+    { x, y, cellWidth }, process.env.OMXTERM_RESTTY_APPEARANCE_MIXED_POINTER === '1');
   const image = await window.webContents.capturePage();
   if (process.env.OMXTERM_RESTTY_APPEARANCE_SCREENSHOT_PATH)
     fs.writeFileSync(process.env.OMXTERM_RESTTY_APPEARANCE_SCREENSHOT_PATH, image.toPNG());
@@ -570,6 +571,7 @@ async function runFixture(
   root: string,
   scaleFactor?: number,
   deferFrames = false,
+  mixedPointer = false,
 ): Promise<{
   readonly exitCode: number | null;
   readonly stderr: string;
@@ -590,6 +592,7 @@ async function runFixture(
       ...process.env,
       ELECTRON_DISABLE_SECURITY_WARNINGS: "true",
       OMXTERM_RESTTY_APPEARANCE_DEFER_FRAME: deferFrames ? "1" : "0",
+      OMXTERM_RESTTY_APPEARANCE_MIXED_POINTER: mixedPointer ? "1" : "0",
       HOME: path.join(root, "home"),
       XDG_CONFIG_HOME: path.join(root, "config"),
       XDG_STATE_HOME: path.join(root, "state"),

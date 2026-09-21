@@ -5,6 +5,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { fontStyleCorrections } from "./restty-font-style-corrections.mjs";
 import { syntheticBoldCorrections } from "./restty-synthetic-bold-corrections.mjs";
+import { pointerCorrections } from "./restty-pointer-corrections.mjs";
 
 const require = createRequire(import.meta.url);
 const entryPath = require.resolve("restty");
@@ -83,8 +84,10 @@ const priorFontStyleDigest =
   "b02420bb630dffb1e2b9cfe8bca076bc5eb79084d3c1038521513e2be5d7e06d";
 const priorSyntheticBoldDigest =
   "76f43defb727e77a09274bf54bdf1d2473ee41d218fb6aa59bbdc6b165fe22cc";
-const correctedDigest =
+const priorPointerDigest =
   "431ea06bb18273e35a5aa15aa56f61e3d27d79a16c36d66e56d73a29b0d6c4a8";
+const correctedDigest =
+  "bd1907b75d7517684c128ec4ba6fbc8786e0a5f2960f87b7a8c5f28e09420880";
 
 const resizeCorrections = [
   {
@@ -1763,7 +1766,9 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorSyntheticBoldDigest) {
+    if (sourceDigest === priorPointerDigest) {
+      // Only desktop compatibility-mouse drag initiation remains to be corrected.
+    } else if (sourceDigest === priorSyntheticBoldDigest) {
       // Only the bounded synthetic-bold contour remains to be applied.
     } else if (sourceDigest === priorFontStyleDigest) {
       // Only exact configured collection-face selection remains to be applied.
@@ -1901,6 +1906,8 @@ export async function prepareResttyRuntime(options = {}) {
       source = applyCorrections(source, fontStyleCorrections);
     if (digest(source) === priorSyntheticBoldDigest)
       source = applyCorrections(source, syntheticBoldCorrections);
+    if (digest(source) === priorPointerDigest)
+      source = applyCorrections(source, pointerCorrections);
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,
