@@ -16,7 +16,7 @@ export interface TerminalWindowTitleControllerOptions {
   // fallback per ADR 0016. The native window keeps DEFAULT_TERMINAL_TITLE as
   // its final fallback when no session is selected.
   readonly fallbackSessionTitle: string;
-  readonly requestDockAttention: () => void;
+  readonly requestAttention: () => () => void;
   readonly sendSessionTitle: (
     sessionId: TerminalSessionId,
     title: string,
@@ -76,7 +76,7 @@ export function createTerminalWindowTitleController(
 ): TerminalWindowTitleController {
   const sessions = new Map<TerminalSessionId, SessionTitleState>();
   let selectedSessionId: TerminalSessionId | undefined;
-  let dockAttentionPending = false;
+  let cancelAttention: (() => void) | undefined;
   let disposed = false;
   const onRejected = options.onRejected ?? (() => {});
 
@@ -106,9 +106,15 @@ export function createTerminalWindowTitleController(
     if (sessionId === selectedSessionId) updateWindowTitle();
   };
 
+  const cancelPendingAttention = () => {
+    const cancel = cancelAttention;
+    cancelAttention = undefined;
+    cancel?.();
+  };
+
   const resetAttention = () => {
     if (disposed) return;
-    dockAttentionPending = false;
+    cancelPendingAttention();
     clearBell(selectedSessionId);
   };
   const onFocus = () => resetAttention();
@@ -157,21 +163,21 @@ export function createTerminalWindowTitleController(
       if (!state) return;
       // The marker is unconditional: even the tab the user is looking at
       // shows that its session rang, until focus or interaction clears it.
-      // Only the Dock request is reserved for an unfocused window.
+      // Only native platform attention is reserved for an unfocused window.
       if (!state.bellPending) {
         state.bellPending = true;
         pushSessionTitle(sessionId);
         if (sessionId === selectedSessionId) updateWindowTitle();
       }
-      if (!window.isFocused() && !dockAttentionPending) {
-        dockAttentionPending = true;
-        options.requestDockAttention();
+      if (!window.isFocused() && !cancelAttention) {
+        cancelAttention = options.requestAttention();
       }
     },
     resetAttention,
     dispose() {
       if (disposed) return;
       disposed = true;
+      cancelPendingAttention();
       window.removeListener("focus", onFocus);
     },
   };

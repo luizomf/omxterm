@@ -274,7 +274,7 @@ describe("isolated preload terminal bridge requests", () => {
       },
       {
         fallbackSessionTitle: "example-shell",
-        requestDockAttention: vi.fn(),
+        requestAttention: vi.fn(() => vi.fn()),
         sendSessionTitle: (_sessionId, title) => sessionTitles.push(title),
       },
     );

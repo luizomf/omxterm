@@ -47,7 +47,7 @@ import {
   terminalWindowOptions,
 } from "./terminal-window";
 import { registerTerminalWindowHost } from "./terminal-window-host";
-import { createTerminalWindowTitleController } from "./terminal-window-title";
+import { createNativeTerminalWindowTitleController } from "./terminal-window-attention";
 import { installedFontFamilyMetrics } from "./installed-font-family";
 import { fontIpcRouter } from "./terminal-font-data";
 import { loadTerminalSnippets } from "./snippets";
@@ -226,12 +226,10 @@ app
               event.preventDefault();
               void terminalApplication!.requestWindowClose(window);
             });
-            const titleController = createTerminalWindowTitleController(
+            const titleController = createNativeTerminalWindowTitleController(
               window,
               {
                 fallbackSessionTitle: shellName,
-                requestDockAttention: () =>
-                  void app.dock?.bounce("informational"),
                 sendSessionTitle: (sessionId, title) => {
                   if (!window.webContents.isDestroyed())
                     window.webContents.send(terminalIpc.tabTitle, {
@@ -246,6 +244,7 @@ app
                     reason,
                   }),
               },
+              app.dock,
             );
             window.once("closed", () => titleController.dispose());
             const controller = terminalIpcRouter.registerController({

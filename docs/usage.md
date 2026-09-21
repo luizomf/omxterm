@@ -367,11 +367,12 @@ ringing tab while its window is focused, or interacting with that selected
 session, also clears its marker. A marker on another, unselected tab remains
 until that session receives attention.
 
-On macOS, if the ringing session's window is unfocused, OMXTerm requests Dock
-attention once. Further bells do not repeat that request until focus or
-interaction resets the attention state. Linux and Windows retain the title
-marker but currently have no equivalent native attention request; cross-platform
-attention remains tracked in issue #135.
+If the ringing session's window is unfocused, OMXTerm requests native platform
+attention once: an informational Dock bounce on macOS, or per-window attention
+on Linux and Windows. Further bells do not repeat that request until focus or
+terminal interaction resets it. Focus, interaction, or closing the window
+cancels the outstanding native request. Your desktop determines the visual
+attention indicator; OMXTerm keeps BEL silent.
 
 See the normative [window and session behavior](spec.md#window-and-session-behavior).
 

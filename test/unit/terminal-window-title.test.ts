@@ -36,12 +36,12 @@ function createWindow(focused = false) {
 
 function createControllerHarness(focused = false) {
   const fixture = createWindow(focused);
-  const dock = vi.fn();
+  const dock = vi.fn(() => vi.fn());
   const rejected = vi.fn();
   const sessionTitles = vi.fn();
   const controller = createTerminalWindowTitleController(fixture.window, {
     fallbackSessionTitle: "example-shell",
-    requestDockAttention: dock,
+    requestAttention: dock,
     sendSessionTitle: sessionTitles,
     onRejected: rejected,
   });
@@ -162,7 +162,7 @@ describe("native Terminal Title and bell attention", () => {
     expect(JSON.stringify(harness.rejected.mock.calls)).not.toContain("CANARY");
   });
 
-  it("marks every ringing session, selected or not, and reserves the Dock for unfocused windows", () => {
+  it("marks every ringing session, selected or not, and reserves native attention for unfocused windows", () => {
     const harness = createControllerHarness(true);
     harness.controller.sessionStarted("s1");
     harness.controller.sessionStarted("s2");
@@ -204,7 +204,7 @@ describe("native Terminal Title and bell attention", () => {
     expect(harness.window.setTitle).toHaveBeenLastCalledWith("example-shell");
   });
 
-  it("requests Dock attention once for an unfocused window until focus clears it", () => {
+  it("requests native attention once for an unfocused window until focus clears it", () => {
     const harness = createControllerHarness(false);
     harness.controller.sessionStarted("s1");
     harness.controller.selectSession("s1");

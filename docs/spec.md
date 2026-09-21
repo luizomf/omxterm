@@ -220,8 +220,11 @@ selector or fallback Surface; rendering initialization failure starts no shell
   watching, and the sidebar never blocks terminal use.
 - BEL is silent. A bell prepends a marker to the ringing session's title —
   visible on its tab and, while that tab is selected, in the window title —
-  and an unfocused window requests Dock attention once until the user focuses
-  or interacts with it.
+  and an unfocused window requests native platform attention once until the
+  user focuses or interacts with it: an informational Dock bounce on macOS,
+  or per-window attention on Linux and Windows. Focus, terminal interaction,
+  or window disposal cancels the outstanding native request. Native desktop
+  policy determines how attention is presented; BEL remains silent.
 
 OMXTerm does not preserve a session after its tab or window closes. tmux
 remains the user's session manager.

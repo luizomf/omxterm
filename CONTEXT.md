@@ -245,8 +245,11 @@ _Avoid_: trusted link, renderer navigation, arbitrary protocol URL
 **Terminal Bell**:
 A process request for the user's attention using BEL. OMXTerm keeps it silent,
 prepends `🔔` to the ringing session's Terminal Title until the user focuses or
-interacts with it, and requests Dock attention once only when that session's
-window is unfocused.
+interacts with it, and requests native platform attention once only when that
+session's window is unfocused. The native request is an informational Dock
+bounce on macOS and per-window attention on Linux and Windows; focus, terminal
+interaction, or window disposal cancels it. Native desktop policy determines
+its visual presentation.
 _Avoid_: notification, alarm, terminal error
 
 **Release Artifact**:
