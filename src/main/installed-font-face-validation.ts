@@ -18,7 +18,7 @@ export async function validateInstalledFontFace(
       .names()
       .filter(
         (candidate) =>
-          candidate.family === face.family ||
+          hasFamilyName(collection.get(candidate.index).name, face.family) ||
           (face.postScriptName !== undefined &&
             candidate.postScriptName === face.postScriptName),
       );
@@ -53,7 +53,7 @@ export async function validateInstalledFontFace(
   const parsedSubfamily = font.name ? getFontSubfamily(font.name) : null;
   const identityMatches =
     font.name &&
-    (parsedFamily === face.family ||
+    (hasFamilyName(font.name, face.family) ||
       hasPostScriptName(font.name, face.postScriptName));
   // A native named variable instance is not a separate outline face. The pinned
   // loader uses default axes; synthesize the missing style rather than rejecting
@@ -96,6 +96,18 @@ function forceResttyFontTables(font: Font): void {
     !Number.isFinite(font.descender)
   )
     throw new Error("the selected font has invalid shaping metrics");
+}
+
+function hasFamilyName(name: Font["name"], family: string): boolean {
+  // Native APIs may expose the legacy or typographic family, including a
+  // localized record. Require an exact recorded family, never a fuzzy alias.
+  return (
+    name?.records.some(
+      (record) =>
+        (record.nameId === 1 || record.nameId === 16) &&
+        record.value === family,
+    ) ?? false
+  );
 }
 
 function hasPostScriptName(

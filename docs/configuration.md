@@ -130,7 +130,9 @@ Then add per-side padding:
 Choose values for your own display rather than treating these as alternate
 defaults. To select a system font later, add `font.family` with its exact
 installed family name. A missing configured family is an error; omit
-`font.family` to keep using the bundled font.
+`font.family` to keep using the bundled font. Exact native legacy and typographic
+family names are supported, with font metadata checked before loading. Similar
+names and automatic family substitutions are not accepted.
 
 The Terminal Surface is a grid of whole character cells. Cell dimensions depend
 on font family, size, line height, and renderer, so leftover window pixels are

@@ -45,33 +45,24 @@ if (members.isNil()) {
 
 // Family input travels through the environment. The fixed script invokes no
 // shell and never interpolates renderer- or configuration-controlled text.
+// GlyphTypeface identifies the actual regular file, unlike GDI family-level
+// IsStyleAvailable, which can report regular availability for a bold-only file.
+// Enumerate installed faces only: a Typeface constructed from raw family text
+// would interpret WPF URI/fallback syntax before exact-name validation.
 const WINDOWS_FONT_SCRIPT = `
-Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName PresentationCore
 $family = $env:OMXTERM_FONT_FAMILY
-$installed = (New-Object System.Drawing.Text.InstalledFontCollection).Families |
-  Where-Object { $_.Name -ceq $family -and $_.IsStyleAvailable([System.Drawing.FontStyle]::Regular) }
-if (-not $installed) { @{ status = 'missing' } | ConvertTo-Json -Compress; exit }
-$roots = @(
-  @{ Key = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts'; Directory = Join-Path $env:WINDIR 'Fonts' },
-  @{ Key = 'HKCU:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts'; Directory = Join-Path $env:LOCALAPPDATA 'Microsoft\\Windows\\Fonts' }
-)
-foreach ($root in $roots) {
-  if (-not (Test-Path -LiteralPath $root.Key)) { continue }
-  $properties = Get-ItemProperty -LiteralPath $root.Key
-  foreach ($property in $properties.PSObject.Properties) {
-    if ($property.Name -like 'PS*' -or $property.Value -isnot [string]) { continue }
-    $candidate = $property.Value
-    if (-not [IO.Path]::IsPathRooted($candidate)) { $candidate = Join-Path $root.Directory $candidate }
-    $collection = $null
-    try {
-      $collection = New-Object System.Drawing.Text.PrivateFontCollection
-      $collection.AddFontFile($candidate)
-      $match = $collection.Families | Where-Object {
-        $_.Name -ceq $family -and $_.IsStyleAvailable([System.Drawing.FontStyle]::Regular)
-      }
-      if ($match) { @{ status = 'available'; family = $family; path = $candidate } | ConvertTo-Json -Compress; exit }
-    } catch {} finally { if ($collection) { $collection.Dispose() } }
-  }
+$candidates = [Windows.Media.Fonts]::SystemTypefaces | Where-Object {
+  $_.Style -eq [Windows.FontStyles]::Normal -and $_.Weight.ToOpenTypeWeight() -lt 650
+} | Sort-Object @{ Expression = { [Math]::Abs($_.Weight.ToOpenTypeWeight() - 400) } }
+foreach ($candidate in $candidates) {
+  $glyph = $null
+  if (-not $candidate.TryGetGlyphTypeface([ref]$glyph)) { continue }
+  $names = @($glyph.FamilyNames.Values) + @($glyph.Win32FamilyNames.Values)
+  if ($names -cnotcontains $family -or
+      $glyph.StyleSimulations -ne [Windows.Media.StyleSimulations]::None -or
+      -not $glyph.FontUri.IsFile) { continue }
+  @{ status = 'available'; family = $family; path = $glyph.FontUri.LocalPath } | ConvertTo-Json -Compress; exit
 }
 @{ status = 'missing-regular' } | ConvertTo-Json -Compress
 `;

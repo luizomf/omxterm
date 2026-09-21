@@ -152,7 +152,7 @@ describe("installed font-family command seams", () => {
           const isStyle =
             platform === "darwin"
               ? args.at(-1) === "DejaVu Sans Mono"
-              : args.at(-1)!.includes("PresentationCore");
+              : args.at(-1)!.includes("$entry.Weight");
           return {
             stdout: JSON.stringify(
               isStyle

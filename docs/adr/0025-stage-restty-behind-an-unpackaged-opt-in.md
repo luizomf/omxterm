@@ -81,7 +81,15 @@ configured size and creation-time line height, apply per-side padding, and
 preserve per-window zoom through runtime operations. Main resolves exact
 installed regular and available style faces through conventional native platform facilities, bounds
 and validates the read, and exposes only bytes for the active validated family
-and fixed local fallback candidates through sender-validated IPC. One renderer
+and fixed local fallback candidates through sender-validated IPC. On Windows,
+regular-face discovery uses installed WPF GlyphTypefaces, as style discovery
+already does, rather than scanning registry files with GDI+ family-level style
+availability. That GDI+ check can accept a bold file as regular and cannot
+resolve some installed variable fonts. WPF enumeration never interprets user
+family text as a font URI or fallback list. Native selection is still followed
+by bounded file and exact metadata validation, including recorded legacy and
+typographic family names; it does not permit simulated regular faces or loosen
+style checks. One renderer
 Terminal Window owns an isolated native-font snapshot for each active validated
 family generation. Compatible live Surfaces in that window lease the same exact
 ArrayBuffer backing identities, allowing Restty's existing identity-keyed source

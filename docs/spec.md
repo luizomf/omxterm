@@ -241,7 +241,10 @@ representative locally installed operating-system fallback faces. When a family
 is explicitly configured, the bundled bold faces are omitted: the configured
 family keeps precedence for regular, bold, italic and bold-italic text. Main
 loads available real style faces from that same installed family, validates
-their identity and style, and selects exact faces in font collections. Missing
+their identity and style, and selects exact faces in font collections. Exact
+native legacy and typographic family names are accepted when recorded in the
+selected face's metadata; matching remains case-sensitive, without fuzzy names
+or family substitution. Missing
 styles use Restty's synthesis: bold-italic may use a same-family bold or italic
 face for its available trait; regular, bold-only and italic-only text never
 acquire an unrequested trait. Synthetic bold expands monochrome strokes in
