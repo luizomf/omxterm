@@ -37,7 +37,7 @@ async function observe(mode: string): Promise<Observation> {
       "utf8",
     );
     expect(createHash("sha256").update(runtime).digest("hex")).toBe(
-      "4e959f4eb0440f36fbacc813e819fbbc2728da4c068d2901fdab780b078b902f",
+      "76f43defb727e77a09274bf54bdf1d2473ee41d218fb6aa59bbdc6b165fe22cc",
     );
     let probed = runtime;
     const replace = (needle: string, replacement: string) => {

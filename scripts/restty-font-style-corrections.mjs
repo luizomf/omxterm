@@ -2,6 +2,20 @@
 // the source key so multiple styles in one TTC share its bytes and parse result.
 export const fontStyleCorrections = [
   {
+    original: `      const emojiIndex = pickFirstMatch((entry) => isColorEmojiFont(entry), true);
+      const result = tryIndex(emojiIndex);
+      if (result !== null)
+        return result;
+    } else if (presentation === "text") {
+      const textIndex = pickFirstMatch((entry) => !isColorEmojiFont(entry));`,
+    corrected: `      const emojiIndex = pickFirstMatch((entry) => isColorEmojiFont(entry), true);
+      const result = tryIndex(emojiIndex);
+      if (result !== null)
+        return result;
+    } else if (presentation === "text") {
+      const textIndex = pickWithStyle((entry) => !isColorEmojiFont(entry));`,
+  },
+  {
     original:
       "[(entry) => hasBoldHint(entry) && !hasItalicHint(entry), (entry) => hasBoldHint(entry)]",
     corrected: "[(entry) => hasBoldHint(entry) && !hasItalicHint(entry)]",

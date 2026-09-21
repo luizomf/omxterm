@@ -81,7 +81,7 @@ const priorResizeDigest =
 const priorFontStyleDigest =
   "b02420bb630dffb1e2b9cfe8bca076bc5eb79084d3c1038521513e2be5d7e06d";
 const correctedDigest =
-  "4e959f4eb0440f36fbacc813e819fbbc2728da4c068d2901fdab780b078b902f";
+  "76f43defb727e77a09274bf54bdf1d2473ee41d218fb6aa59bbdc6b165fe22cc";
 
 const resizeCorrections = [
   {

@@ -44,7 +44,21 @@ export async function loadFontResourceStore(
   const outfile = path.join(root, "font-resource-store.mjs");
   await build({
     stdin: {
-      contents: `${source}\nexport { createResttyFontResourceStore };`,
+      contents: `${source}
+export { createResttyFontResourceStore };
+export function createFontPicker(faces) {
+  const picker = createFontRuntimeTextHelpers({
+    fontState: {
+      fonts: faces.map(face => ({...face, glyphCache: new Map(), glyphCoverageCache: new Map()})),
+      fontPickCache: new Map(),
+      sizeMode: "em"
+    },
+    fontPickCacheLimit: 100,
+    glyphShapeCacheLimit: 100,
+    rasterizeGlyph: exports_dist.rasterizeGlyph
+  });
+  return (text, style) => faces[picker.pickFontIndexForText(text, 1, style)]?.label;
+}`,
       resolveDir: dist,
       loader: "js",
     },
@@ -68,4 +82,27 @@ export async function loadFontResourceStore(
     createResttyFontResourceStore: CreateFontResourceStore;
   };
   return loaded.createResttyFontResourceStore;
+}
+
+export async function loadFontPicker(
+  root: string,
+): Promise<
+  (
+    faces: FontLease["faces"],
+  ) => (
+    text: string,
+    style: "regular" | "bold" | "italic" | "bold_italic",
+  ) => string
+> {
+  const loaded = (await import(
+    pathToFileURL(path.join(root, "font-resource-store.mjs")).href
+  )) as {
+    createFontPicker: (
+      faces: FontLease["faces"],
+    ) => (
+      text: string,
+      style: "regular" | "bold" | "italic" | "bold_italic",
+    ) => string;
+  };
+  return loaded.createFontPicker;
 }

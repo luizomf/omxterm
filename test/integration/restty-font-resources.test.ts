@@ -6,6 +6,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   loadFontResourceStore,
+  loadFontPicker,
   type FontSource,
 } from "../fixtures/restty-font-resource-store";
 
@@ -31,6 +32,27 @@ function source(label: string): FontSource {
 }
 
 describe("Restty font resource lifetime under cache pressure", () => {
+  it("keeps explicit text presentation on the real requested style", async () => {
+    const store = createStore({ maxSourceCacheBytes: 1_000_000 });
+    const bold = await readFile("assets/fonts/DejaVuSansMono-Bold.ttf");
+    const lease = await store.acquire([
+      { ...source("DejaVu Sans Mono"), weight: 400 },
+      {
+        kind: "buffer",
+        label: "DejaVu Sans Mono Bold",
+        weight: 700,
+        data: new Uint8Array(bold).buffer,
+      },
+    ]);
+    try {
+      const pick = (await loadFontPicker(root))(lease.faces);
+      expect(pick("↔", "bold")).toBe("DejaVu Sans Mono Bold");
+      expect(pick("↔\uFE0E", "bold")).toBe("DejaVu Sans Mono Bold");
+      expect(pick("↔\uFE0E", "regular")).toBe("DejaVu Sans Mono");
+    } finally {
+      lease.release();
+    }
+  });
   it("selects exact collection faces without duplicating their shared parsed resource", async () => {
     const bold = await readFile("assets/fonts/DejaVuSansMono-Bold.ttf");
     const data = fontCollection([fontBytes, bold]).buffer as ArrayBuffer;
