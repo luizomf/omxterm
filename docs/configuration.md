@@ -203,13 +203,18 @@ Surfaces. It does not alter source text, selection or copy results, cell widths,
 cursor positions, or font loading. `font.family` and `font.lineHeight` are
 applied when a Surface is created, but
 an existing Surface keeps both until OMXTerm restarts. Restty obtains the exact
-installed regular face through the main process, then uses bundled FiraCode
+installed regular face and available bold, italic and bold-italic faces through
+the main process, then uses bundled FiraCode
 regular/bold, DejaVu Sans Mono regular/bold, retained JetBrainsMono Nerd Font
 Mono, and available local operating-system fallback faces. With an explicit
 `font.family`, bundled bold faces are omitted so bold text keeps your chosen
-family instead of silently switching to FiraCode. Restty synthesizes bold from
-the configured regular face; OMXTerm does not yet load that family's native
-bold face. Missing glyphs still fall back through regular faces.
+family instead of silently switching to FiraCode. Real italic faces retain their
+designed letterforms rather than merely slanting the regular letters. If a style
+is missing, Restty synthesizes it; a bold-italic request can use an available
+bold or italic face and synthesize the remaining trait. No extra font setting
+is needed. Variable-font styles that require non-default axis values still use
+synthesis; custom variation axes are not supported. Missing glyphs still fall
+back through regular faces.
 A missing, unreadable,
 oversized, unsupported or corrupt configured face is an actionable error, never
 a similarly named substitute. The native Always on Top menu changes one current

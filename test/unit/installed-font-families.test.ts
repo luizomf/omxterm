@@ -5,14 +5,41 @@ import { describe, expect, it, vi } from "vitest";
 import {
   installedFallbackFontData,
   installedFontFamilyMetrics,
+  installedFontDataForRestty,
+  readInstalledFontFaceData,
   readInstalledFontFace,
   type InstalledFontFace,
 } from "../../src/main/installed-font-family";
+
+import { fontCollection } from "../fixtures/font-collection";
+import { fontWeightVariation } from "../fixtures/font-weight-variation";
 
 const readableFace = async (_face: InstalledFontFace) =>
   new Uint8Array([0, 1, 0, 0]);
 
 describe("installed font-family command seams", () => {
+  it("keeps a variable family's regular face usable when native bold needs non-default axes", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "omxterm-variable-font-"));
+    try {
+      const file = path.join(root, "variable.ttf");
+      await writeFile(
+        file,
+        fontWeightVariation(await readFile("assets/fonts/DejaVuSansMono.ttf")),
+      );
+      const run = async (_file: string, args: readonly string[]) => ({
+        stdout: `DejaVu Sans Mono\u001f${args.at(-1)?.endsWith("weight=200:slant=0") ? 200 : 80}\u001f0\u001f${file}\u001fDejaVuSansMono\n`,
+      });
+      const result = await installedFontDataForRestty(
+        "DejaVu Sans Mono",
+        run,
+        "linux",
+      );
+      expect(result?.data.byteLength).toBeGreaterThan(0);
+      expect(result?.styles).toEqual({});
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
   it("selects one exact regular macOS face without shell interpolation", async () => {
     const run = vi.fn(async (file: string, arguments_: readonly string[]) => {
       expect(file).toBe("/usr/bin/osascript");
@@ -102,6 +129,94 @@ describe("installed font-family command seams", () => {
         readableFace,
       ),
     ).resolves.toEqual({ cellWidth: 12, cellHeight: 24 });
+  });
+
+  it.each(["darwin", "win32"])(
+    "shares collection bytes and rejects wrong optional faces on %s",
+    async (platform) => {
+      const root = await mkdtemp(path.join(tmpdir(), "omxterm-style-read-"));
+      const file = path.join(root, "styles.ttc");
+      try {
+        await writeFile(
+          file,
+          fontCollection(
+            await Promise.all(
+              ["DejaVuSansMono.ttf", "DejaVuSansMono-Bold.ttf"].map((name) =>
+                readFile(path.resolve("assets/fonts", name)),
+              ),
+            ),
+          ),
+        );
+        let style = "bold";
+        const run = async (_file: string, args: readonly string[]) => {
+          const isStyle =
+            platform === "darwin"
+              ? args.at(-1) === "DejaVu Sans Mono"
+              : args.at(-1)!.includes("PresentationCore");
+          return {
+            stdout: JSON.stringify(
+              isStyle
+                ? [{ family: "DejaVu Sans Mono", path: file, style }]
+                : {
+                    status: "available",
+                    family: "DejaVu Sans Mono",
+                    path: file,
+                    ...(platform === "darwin"
+                      ? { cellWidth: 8, cellHeight: 16 }
+                      : {}),
+                  },
+            ),
+          };
+        };
+        const result = await installedFontDataForRestty(
+          "DejaVu Sans Mono",
+          run,
+          platform,
+        );
+        expect(result?.styles.bold?.data).toBe(result?.data);
+        expect(result?.faceIndex).toBe(0);
+        expect(result?.styles.bold?.faceIndex).toBe(1);
+        style = "italic";
+        await expect(
+          installedFontDataForRestty("DejaVu Sans Mono", run, platform),
+        ).rejects.toThrow("no exact italic");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("loads real installed styles but does not accept fontconfig's substitute faces", async () => {
+    const run = vi.fn(async (_file: string, args: readonly string[]) => {
+      const bold = args.at(-1)?.endsWith("weight=200:slant=0");
+      return {
+        stdout: `DejaVu Sans Mono\u001f${bold ? 200 : 80}\u001f0\u001f${path.resolve(`assets/fonts/DejaVuSansMono${bold ? "-Bold" : ""}.ttf`)}\u001f${bold ? "DejaVuSansMono-Bold" : "DejaVuSansMono"}\n`,
+      };
+    });
+    const result = await installedFontDataForRestty(
+      "DejaVu Sans Mono",
+      run,
+      "linux",
+    );
+    expect(result?.styles?.bold?.data.byteLength).toBeGreaterThan(0);
+    expect(result?.styles?.italic).toBeUndefined();
+    expect(result?.styles?.boldItalic).toBeUndefined();
+  });
+
+  it("loads the requested real bold face and refuses it as regular", async () => {
+    const face = {
+      family: "DejaVu Sans Mono",
+      path: path.resolve("assets/fonts/DejaVuSansMono-Bold.ttf"),
+      cellWidth: 8,
+      cellHeight: 16,
+    };
+    await expect(
+      readInstalledFontFaceData({ ...face, style: "bold" }),
+    ).resolves.toMatchObject({
+      sourceFamily: "DejaVu Sans Mono",
+      faceIndex: 0,
+    });
+    await expect(readInstalledFontFaceData(face)).rejects.toThrow("regular");
   });
 
   it("bounds reads and rejects unreadable, empty, oversized, and corrupt faces", async () => {

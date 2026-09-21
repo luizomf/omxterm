@@ -46,14 +46,25 @@ renderer filesystem access, network source, or ANSI bold-to-bright color
 mapping. When a family is explicitly configured, OMXTerm omits the bundled
 bold faces: Restty otherwise searches all bold-labelled faces before the
 configured regular face, silently changing families for ordinary bold text.
-The configured face instead retains its existing synthetic-bold rendering and
-regular missing-glyph fallbacks. This preserves configured-family precedence
-without expanding native font resolution or its IPC contract.
+The later configured-style correction resolves available real bold, italic and
+bold-italic faces in the same native family, validates their font metadata,
+and sends bounded bytes plus exact collection-face indices through the existing
+active-family route. Missing styles retain synthetic rendering, but a fallback
+must not introduce an unrequested weight or slant. This expands the typed font
+response, not renderer filesystem access or the set of requestable families.
+
+Files shared by several style faces are read once per load and retain one
+backing identity through the window generation. The pinned Restty correction
+selects a validated collection-face index without making it part of the source
+or parsed-cache key; a collection is not copied and parsed separately for each
+style. The existing bundled stack and regular missing-glyph coverage remain.
+The cost is additional bytes and glyph/atlas work when styles live in separate
+files, not a second renderer or persistent native font cache.
 
 The appearance and font slices map OMXTerm Terminal Themes into Restty, use the
 configured size and creation-time line height, apply per-side padding, and
-preserve per-window zoom through runtime operations. Main resolves an exact
-installed regular face through conventional native platform facilities, bounds
+preserve per-window zoom through runtime operations. Main resolves exact
+installed regular and available style faces through conventional native platform facilities, bounds
 and validates the read, and exposes only bytes for the active validated family
 and fixed local fallback candidates through sender-validated IPC. One renderer
 Terminal Window owns an isolated native-font snapshot for each active validated

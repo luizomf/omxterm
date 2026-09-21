@@ -2,16 +2,16 @@ import { execFile } from "node:child_process";
 import { open, type FileHandle } from "node:fs/promises";
 import { readAppleEmojiShapingInput } from "./apple-emoji-shaping-input";
 import path from "node:path";
+import { installedFontStyleFaces } from "./installed-font-style-faces";
 import { promisify } from "node:util";
 import {
-  Font,
-  getFontFamily,
-  getFontSubfamily,
-  type CollectionFaceName,
-} from "text-shaper";
+  validateInstalledFontFace,
+  UnavailableFontStyle,
+} from "./installed-font-face-validation";
 import {
   MAX_TERMINAL_FONT_BYTES,
   MAX_TERMINAL_FONT_DATA_BYTES,
+  type TerminalFontStyle,
 } from "../shared/terminal-font-data";
 
 const MACOS_FONT_SCRIPT = `
@@ -84,12 +84,18 @@ export interface InstalledFontFamilyMetrics {
 export interface InstalledFontFace extends InstalledFontFamilyMetrics {
   readonly family: string;
   readonly postScriptName?: string;
+  readonly style?: TerminalFontStyle;
   readonly path: string;
 }
 
 export interface InstalledFontData {
   readonly data: Uint8Array;
   readonly sourceFamily: string;
+  readonly faceIndex: number;
+}
+
+export interface InstalledFontFamilyData extends InstalledFontData {
+  readonly styles: Partial<Record<TerminalFontStyle, InstalledFontData>>;
 }
 
 export interface FontMetricsCommandOptions {
@@ -123,9 +129,8 @@ export async function installedFontFamilyMetrics(
   fontSize: number,
   run: FontMetricsCommand = runFontMetricsCommand,
   platform: string = process.platform,
-  readFace: (
-    face: InstalledFontFace,
-  ) => Promise<Uint8Array> = readInstalledFontFace,
+  readFace: (face: InstalledFontFace) => Promise<Uint8Array> = async (face) =>
+    (await readInstalledFontFamilyFaces(face, run, platform)).data,
 ): Promise<InstalledFontFamilyMetrics | undefined> {
   const face = await resolveInstalledFontFace(family, fontSize, run, platform);
   if (!face) return undefined;
@@ -155,9 +160,44 @@ export async function installedFontDataForRestty(
   family: string,
   run: FontMetricsCommand = runFontMetricsCommand,
   platform: string = process.platform,
-): Promise<InstalledFontData | undefined> {
+): Promise<InstalledFontFamilyData | undefined> {
   const face = await resolveInstalledFontFace(family, 16, run, platform);
-  return face ? readInstalledFontFaceData(face) : undefined;
+  return face ? readInstalledFontFamilyFaces(face, run, platform) : undefined;
+}
+
+async function readInstalledFontFamilyFaces(
+  face: InstalledFontFace,
+  run: FontMetricsCommand,
+  platform: string,
+): Promise<InstalledFontFamilyData> {
+  const regular = await readInstalledFontFaceData(face);
+  const sources = new Map([[face.path, regular.data]]);
+  const styles: Partial<Record<TerminalFontStyle, InstalledFontData>> = {};
+  let remaining = MAX_TERMINAL_FONT_DATA_BYTES - regular.data.byteLength;
+  for (const candidate of await installedFontStyleFaces(
+    face.family,
+    run,
+    platform,
+  )) {
+    try {
+      const shared = sources.get(candidate.path);
+      const loaded = shared
+        ? {
+            data: shared,
+            ...(await validateInstalledFontFace(candidate, shared)),
+          }
+        : await readInstalledFontFaceData(candidate, remaining);
+      if (!shared) {
+        sources.set(candidate.path, loaded.data);
+        remaining -= loaded.data.byteLength;
+      }
+      styles[candidate.style!] = Object.freeze(loaded);
+    } catch (error) {
+      if (!(error instanceof UnavailableFontStyle)) throw error;
+      // The pinned shaper cannot materialize non-default variable instances.
+    }
+  }
+  return Object.freeze({ ...regular, styles: Object.freeze(styles) });
 }
 
 export async function installedFallbackFontData(
@@ -275,7 +315,7 @@ export async function readInstalledFontFace(
   return (await readInstalledFontFaceData(face, maxBytes)).data;
 }
 
-async function readInstalledFontFaceData(
+export async function readInstalledFontFaceData(
   face: InstalledFontFace,
   maxBytes: number = MAX_TERMINAL_FONT_BYTES,
 ): Promise<InstalledFontData> {
@@ -303,9 +343,10 @@ async function readInstalledFontFaceData(
       throw new Error(
         "the selected font face has an unsupported or corrupt format",
       );
-    const sourceFamily = await validateInstalledFontFace(face, bytes);
-    return Object.freeze({ data: bytes, sourceFamily });
+    const selection = await validateInstalledFontFace(face, bytes);
+    return Object.freeze({ data: bytes, ...selection });
   } catch (cause) {
+    if (cause instanceof UnavailableFontStyle) throw cause;
     const detail =
       cause instanceof Error ? cause.message : "unknown read failure";
     throw new Error(
@@ -346,88 +387,6 @@ function hasSupportedSfntSignature(bytes: Uint8Array): boolean {
     signature === "true" ||
     (bytes[0] === 0 && bytes[1] === 1 && bytes[2] === 0 && bytes[3] === 0)
   );
-}
-
-async function validateInstalledFontFace(
-  face: InstalledFontFace,
-  bytes: Uint8Array,
-): Promise<string> {
-  const buffer = bytes.buffer.slice(
-    bytes.byteOffset,
-    bytes.byteOffset + bytes.byteLength,
-  ) as ArrayBuffer;
-  const collection = Font.collection(buffer);
-  let font: Font;
-  if (collection) {
-    const selectedFace = collection
-      .names()
-      .find(
-        (candidate) =>
-          (candidate.family === face.family ||
-            candidate.postScriptName === face.postScriptName) &&
-          (isRegularFace(candidate) ||
-            candidate.postScriptName === face.postScriptName),
-      );
-    if (!selectedFace)
-      throw new Error(
-        "the selected font collection has no exact regular family face",
-      );
-    font = collection.get(selectedFace.index);
-    forceResttyFontTables(font);
-    return selectedFace.family ?? face.family;
-  }
-
-  font = await Font.loadAsync(buffer);
-  const parsedFamily = font.name ? getFontFamily(font.name) : null;
-  const parsedSubfamily = font.name ? getFontSubfamily(font.name) : null;
-  if (
-    !font.name ||
-    (parsedFamily !== face.family &&
-      !hasPostScriptName(font.name, face.postScriptName)) ||
-    (!isRegularSubfamily(parsedSubfamily) &&
-      !hasPostScriptName(font.name, face.postScriptName))
-  )
-    throw new Error("the selected font has no exact regular family face");
-  forceResttyFontTables(font);
-  return parsedFamily ?? face.family;
-}
-
-function forceResttyFontTables(font: Font): void {
-  // Restty requires these tables and metrics during shaping/rasterization.
-  // Force their lazy parser now so configuration cannot commit bytes that fail
-  // only after a new Terminal Surface is created.
-  void font.head;
-  void font.maxp;
-  void font.hhea;
-  void font.hmtx;
-  void font.cmap;
-  if (
-    !Number.isFinite(font.unitsPerEm) ||
-    font.unitsPerEm <= 0 ||
-    !Number.isFinite(font.ascender) ||
-    !Number.isFinite(font.descender)
-  )
-    throw new Error("the selected font has invalid shaping metrics");
-}
-
-function hasPostScriptName(
-  name: NonNullable<Font["name"]>,
-  postScriptName: string | undefined,
-): boolean {
-  if (!postScriptName) return false;
-  return name.records.some(
-    (record) => record.nameId === 6 && record.value === postScriptName,
-  );
-}
-
-function isRegularFace(face: CollectionFaceName): boolean {
-  return isRegularSubfamily(face.subfamily);
-}
-
-function isRegularSubfamily(subfamily: string | null | undefined): boolean {
-  // Windows fonts may expose the localized "Normal" name before English
-  // "Regular" in the parsed name table (including Segoe and YaHei faces).
-  return /^(regular|normal|book|roman)$/iu.test(subfamily ?? "");
 }
 
 function isStatus(value: unknown, status: string): boolean {

@@ -54,8 +54,9 @@ bundled regular and bold DejaVu Sans Mono coverage fallback; the retained
 bundled JetBrainsMono Nerd Font Mono coverage face; and representative operating
 system emoji, CJK, and symbol fallbacks last. A configured family that does not
 exist is an error rather than a silent fallback. An explicit configured family
-omits bundled bold faces so its regular face retains priority for both regular
-and synthetically bold text.
+omits bundled bold faces and uses its available real regular, bold, italic and
+bold-italic faces before regular coverage fallbacks. Missing styles are
+synthesized without introducing an unrequested weight or slant.
 _Avoid_: terminal font, webfont, system default font
 
 **Window Font Zoom**:

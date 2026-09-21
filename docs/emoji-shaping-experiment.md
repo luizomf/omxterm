@@ -47,7 +47,9 @@ and Ghostty core documented in `restty-development.md`. The runtime probe checks
 the corrected chunk SHA-256 before injecting counters and fails on seam drift.
 The guard now includes the later [depth-only correction](webgl-depth-evidence.md).
 Historical emoji observations below are unchanged; #317 did not rerun unrelated
-emoji trials or change font inputs.
+emoji trials or change font inputs. The current guard also includes #338's
+configured-style selection correction; its native font tests do not constitute
+a rerun of this historical emoji comparison.
 
 Installed Apple Color Emoji source:
 

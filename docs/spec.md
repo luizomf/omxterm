@@ -239,9 +239,16 @@ followed by the licensed bundled FiraCode regular/bold, DejaVu Sans Mono
 regular/bold and retained JetBrainsMono Nerd Font Mono faces, then
 representative locally installed operating-system fallback faces. When a family
 is explicitly configured, the bundled bold faces are omitted: the configured
-regular face keeps precedence for regular and bold text, with Restty's existing
-synthetic bold rendering. Missing glyphs still use the regular fallback faces.
-Native configured-family bold-face resolution is not claimed. Apple Color Emoji
+family keeps precedence for regular, bold, italic and bold-italic text. Main
+loads available real style faces from that same installed family, validates
+their identity and style, and selects exact faces in font collections. Missing
+styles use Restty's synthesis: bold-italic may use a same-family bold or italic
+face for its available trait; regular, bold-only and italic-only text never
+acquire an unrequested trait. Missing glyphs still use the regular fallback
+faces. Non-default variable-font instances are not materialized; when a native
+style needs those axes, it remains unavailable and synthesis applies without
+rejecting the usable regular family. Style faces share native source bytes and parsed resources across
+compatible tabs; faces in one collection share its backing buffer. Apple Color Emoji
 collections use memory-only shaping inputs that omit the unused `sbix` bitmap
 table while retaining every face and other table. Main skips that payload with
 bounded positional reads before validation and IPC; native Canvas still uses the

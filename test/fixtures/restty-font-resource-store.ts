@@ -9,6 +9,7 @@ export interface FontSource {
   readonly data: ArrayBuffer;
   readonly label: string;
   readonly weight?: number;
+  readonly faceIndex?: number;
 }
 
 interface FontLease {

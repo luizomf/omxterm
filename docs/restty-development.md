@@ -133,6 +133,12 @@ no Surface ownership, context sharing, DPR, image limits or hidden-rendering rul
 ### Font memory ownership
 
 Each renderer Terminal Window owns one active validated font-family generation.
+The configured family includes its real regular and available bold/italic/
+bold-italic faces. Exact validated face indices select collection members while
+sharing the collection's bytes and Restty parsed resource. Missing styles use
+synthesis without introducing an unrequested trait. Native style file reads
+share a per-load source map; there is no persistent main cache.
+
 The first Surface lease in a generation loads native configured and fallback
 bytes through the existing preload/main route, snapshots each external
 `Uint8Array` once into an exact-range owned `ArrayBuffer`, and publishes the
@@ -264,7 +270,7 @@ The lockfile restores the npm tarballs identified by that manifest. `npm ci`
 then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
 Restty runtime, declarations and embedded-core SHA-256 values and produces
 corrected runtime SHA-256
-`b02420bb630dffb1e2b9cfe8bca076bc5eb79084d3c1038521513e2be5d7e06d`,
+`4e959f4eb0440f36fbacc813e819fbbc2728da4c068d2901fdab780b078b902f`,
 embedded-core chunk SHA-256
 `039abfec307ab03015a2ae70b3583e07fcc9e5a70319de1ca055d6168f45af1b`,
 and event declarations SHA-256
@@ -334,8 +340,18 @@ Restty's style-aware face picker plus representative Fira-only and DejaVu-only
 glyphs. A differential configured-family case compares regular and synthetic-bold
 pixels against the regular-only reference stack through the same Surface and
 Restty renderer. Bundled bold faces are omitted for configured families so a
-style match cannot silently override the chosen family. Pixel-identical native
-rasterization remains unclaimed.
+style match cannot silently override the chosen family. The native
+`restty-font-styles-rendering.test.ts` additionally compares regular-only,
+complete and incomplete configured-style inputs through main discovery, a
+sandboxed preload transport, the production font-generation owner and the real
+Surface. It checks unchanged regular pixels and geometry, distinct real-style
+pixels, missing-style synthesis, and one shared source/parsed set with one,
+three and one live Surface. Final disposal releases every lease; bounded Restty
+cache retention is not a leak claim. Test-only picker/store instrumentation and
+diagnostic forced GC do not ship. Optional `OMXTERM_FONT_STYLES_EVIDENCE_PATH`
+retains aggregate measurements; process memory, backing storage and source
+bytes remain distinct domains. Pixel-identical native rasterization remains
+unclaimed.
 
 `test/integration/restty-host-integration.test.ts` runs the real main IPC
 router, preload bridge, Electron Adapter, Restty Surface and owned native PTYs

@@ -3,6 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { fontStyleCorrections } from "./restty-font-style-corrections.mjs";
 
 const require = createRequire(import.meta.url);
 const entryPath = require.resolve("restty");
@@ -77,8 +78,10 @@ const priorDepthDigest =
   "dafd11ff8e1dba44c5d9f1429b895c00cde2cdbe3d6c971db9938c046b18c0be";
 const priorResizeDigest =
   "950e2ae1d104fbaea82189c6d1353bb05d61dbcbfee90a36961ab1287978c78a";
-const correctedDigest =
+const priorFontStyleDigest =
   "b02420bb630dffb1e2b9cfe8bca076bc5eb79084d3c1038521513e2be5d7e06d";
+const correctedDigest =
+  "4e959f4eb0440f36fbacc813e819fbbc2728da4c068d2901fdab780b078b902f";
 
 const resizeCorrections = [
   {
@@ -1757,7 +1760,9 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorResizeDigest) {
+    if (sourceDigest === priorFontStyleDigest) {
+      // Only exact configured collection-face selection remains to be applied.
+    } else if (sourceDigest === priorResizeDigest) {
       // Only negotiated in-band resize delivery remains to be corrected.
     } else if (sourceDigest === priorDepthDigest) {
       // Only the unused default depth attachment remains to be removed.
@@ -1887,6 +1892,8 @@ export async function prepareResttyRuntime(options = {}) {
       source = applyCorrections(source, depthCorrections);
     if (digest(source) === priorResizeDigest)
       source = applyCorrections(source, resizeCorrections);
+    if (digest(source) === priorFontStyleDigest)
+      source = applyCorrections(source, fontStyleCorrections);
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,

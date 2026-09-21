@@ -3,7 +3,10 @@ import dejaVuSansMonoBytes from "../../assets/fonts/DejaVuSansMono.ttf";
 import firaCodeBoldBytes from "../../assets/fonts/FiraCodeNerdFontMono-Bold.ttf";
 import firaCodeRegularBytes from "../../assets/fonts/FiraCodeNerdFontMono-Regular.ttf";
 import jetBrainsNerdFontBytes from "../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf";
-import type { TerminalFontData } from "../shared/terminal-font-data";
+import type {
+  TerminalFontData,
+  TerminalFontFaceData,
+} from "../shared/terminal-font-data";
 
 export const DEFAULT_TERMINAL_FONT_FAMILY = "FiraCode Nerd Font Mono";
 
@@ -11,7 +14,8 @@ export interface TerminalFontInput {
   readonly data: Uint8Array | ArrayBuffer;
   readonly name: string;
   readonly weight?: number;
-  readonly style?: "normal";
+  readonly style?: "normal" | "italic";
+  readonly faceIndex?: number;
 }
 
 /**
@@ -26,17 +30,38 @@ export function terminalFontInputs(
     throw new Error(
       "Configured Terminal Font data did not match the requested family",
     );
+  const snapshots = new Map<Uint8Array, ArrayBuffer>();
+  const snapshot = (data: Uint8Array) => {
+    let buffer = snapshots.get(data);
+    if (!buffer) {
+      buffer = nativeFontSnapshot(data);
+      snapshots.set(data, buffer);
+    }
+    return buffer;
+  };
+  const configured: TerminalFontInput[] = [];
+  const add = (
+    face: TerminalFontFaceData | undefined,
+    weight: number,
+    style: "normal" | "italic",
+    suffix: string,
+  ) => {
+    if (!face) return;
+    if (face.family !== expectedFamily)
+      throw new Error("Configured Terminal Font style family mismatch");
+    configured.push({
+      data: snapshot(face.data),
+      name: `${fontSourceFamily(face)}${suffix}`,
+      weight,
+      style,
+      ...(face.faceIndex === undefined ? {} : { faceIndex: face.faceIndex }),
+    });
+  };
+  add(fontData.configured, 400, "normal", "");
+  add(fontData.configuredStyles?.bold, 700, "normal", " Bold");
+  add(fontData.configuredStyles?.italic, 400, "italic", " Italic");
+  add(fontData.configuredStyles?.boldItalic, 700, "italic", " Bold Italic");
   const fonts: TerminalFontInput[] = [
-    ...(fontData.configured
-      ? [
-          {
-            data: nativeFontSnapshot(fontData.configured.data),
-            name: fontSourceFamily(fontData.configured),
-            weight: 400,
-            style: "normal" as const,
-          },
-        ]
-      : []),
     {
       data: firaCodeRegularBytes,
       name: DEFAULT_TERMINAL_FONT_FAMILY,
@@ -63,16 +88,18 @@ export function terminalFontInputs(
     },
     { data: jetBrainsNerdFontBytes, name: "JetBrainsMono Nerd Font Mono" },
     ...fontData.fallbacks.map((font) => ({
-      data: nativeFontSnapshot(font.data),
+      data: snapshot(font.data),
       name: fontSourceFamily(font),
     })),
   ];
-  // Restty tries all bold-labelled faces before regular faces. Until configured
-  // bold faces have a validated native route, preserve the configured family
-  // for both styles instead of silently replacing its bold text with Fira.
-  return fontData.configured
-    ? fonts.filter((font) => font.weight !== 700)
-    : fonts;
+  // Restty searches styles across the entire stack. Keep bundled bold out of
+  // the configured-family path, including when that family's bold is absent.
+  return [
+    ...configured,
+    ...(fontData.configured
+      ? fonts.filter((font) => font.weight !== 700)
+      : fonts),
+  ];
 }
 
 function nativeFontSnapshot(data: Uint8Array): ArrayBuffer {

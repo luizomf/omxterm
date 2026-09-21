@@ -30,10 +30,22 @@ export async function loadTerminalFontData(
     family === undefined ? undefined : await installedFontDataForRestty(family);
   if (family !== undefined && configuredData === undefined)
     throw new Error("The active configured font family is no longer installed");
+  const configuredStyles = Object.fromEntries(
+    Object.entries(configuredData?.styles ?? {}).map(([style, face]) => [
+      style,
+      { family: family!, ...face },
+    ]),
+  );
+  const configuredBytes = [
+    ...new Set([
+      ...(configuredData ? [configuredData.data] : []),
+      ...Object.values(configuredStyles).map((face) => face.data),
+    ]),
+  ].reduce((sum, data) => sum + data.byteLength, 0);
   const fallbacks = await installedFallbackFontData(
     undefined,
     undefined,
-    MAX_TERMINAL_FONT_DATA_BYTES - (configuredData?.data.byteLength ?? 0),
+    MAX_TERMINAL_FONT_DATA_BYTES - configuredBytes,
   );
   return Object.freeze({
     ...(family === undefined
@@ -42,8 +54,10 @@ export async function loadTerminalFontData(
           configured: Object.freeze({
             family,
             sourceFamily: configuredData!.sourceFamily,
+            faceIndex: configuredData!.faceIndex,
             data: configuredData!.data,
           }),
+          configuredStyles,
         }),
     fallbacks,
   });

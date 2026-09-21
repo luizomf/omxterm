@@ -2,6 +2,35 @@ import { describe, expect, it } from "vitest";
 import { terminalFontInputs } from "../../src/terminal-surface/terminal-font-stack";
 
 describe("Terminal Font Stack", () => {
+  it("supplies configured real styles while sharing one isolated collection snapshot", () => {
+    const data = new Uint8Array([10, 11]);
+    const face = (faceIndex: number) => ({
+      family: "Configured",
+      data,
+      faceIndex,
+    });
+    const fonts = terminalFontInputs({
+      configured: face(0),
+      configuredStyles: { bold: face(1), italic: face(2), boldItalic: face(3) },
+      fallbacks: [],
+    });
+    expect(
+      fonts
+        .slice(0, 4)
+        .map(({ weight, style, faceIndex }) => ({ weight, style, faceIndex })),
+    ).toEqual([
+      { weight: 400, style: "normal", faceIndex: 0 },
+      { weight: 700, style: "normal", faceIndex: 1 },
+      { weight: 400, style: "italic", faceIndex: 2 },
+      { weight: 700, style: "italic", faceIndex: 3 },
+    ]);
+    expect(new Set(fonts.slice(0, 4).map((font) => font.data)).size).toBe(1);
+    expect(
+      fonts.some((font) => font.name === "FiraCode Nerd Font Mono Bold"),
+    ).toBe(false);
+    data.fill(0);
+    expect([...new Uint8Array(fonts[2]!.data)]).toEqual([10, 11]);
+  });
   it("provides real bold faces for the default bundled stack", () => {
     const fonts = terminalFontInputs({ fallbacks: [] });
     expect(
