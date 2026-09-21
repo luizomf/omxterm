@@ -163,6 +163,10 @@ selector or fallback Surface; rendering initialization failure starts no shell
   padding.
 - `Window -> Always on Top` toggles only the selected window at the ordinary
   native floating level. New windows use the configured default.
+- On Linux, the existing native About action shows `OMXTerm`, the running
+  application version, project copyright, and the OMXTerm application icon.
+  Packaged applications use their packaged icon resource; development uses
+  the development asset. macOS and Windows retain their native About behavior.
 - `View -> Toggle Developer Tools` is a menu-only diagnostic action that opens
   or closes Electron's local Developer Tools for only the selected Terminal
   Window in development and packaged applications. It does not open

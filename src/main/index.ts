@@ -18,6 +18,7 @@ import {
   terminalApplicationMenuTemplate,
   terminalClipboardContextMenuTemplate,
 } from "./application-menu";
+import { configureApplicationAbout } from "./application-about";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { createDefaultShellResolver, defaultShellName } from "./default-shell";
 import {
@@ -490,6 +491,12 @@ app
   });
 
 function prepareStartup() {
+  configureApplicationAbout(
+    app,
+    app.isPackaged
+      ? packagedApplicationIconPath
+      : developmentApplicationIconPath,
+  );
   const launch = startupLaunchRequest(process.argv, app.isPackaged);
   if (!app.isPackaged) app.dock?.setIcon(developmentApplicationIconPath);
   return {
