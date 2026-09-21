@@ -61,6 +61,19 @@ style. The existing bundled stack and regular missing-glyph coverage remain.
 The cost is additional bytes and glyph/atlas work when styles live in separate
 files, not a second renderer or persistent native font cache.
 
+For missing bold, a checksum-guarded correction approximates contour expansion
+with up to four cardinal neighbours of the existing monochrome glyph mask.
+Stroke radius scales with cell width rather than individual glyph width or line
+height. Outward placements are bounded by the existing cell space; collapsed
+placements are omitted instead of redrawing the same mask. This strengthens
+horizontal as well as vertical strokes, including on real italic faces, without
+changing real-bold selection, ANSI colors, color emoji or regular rendering.
+It is not native outline stroking or a promise of Ghostty pixel parity. The
+tradeoff is at most five glyph placements instead of two for synthetic bold;
+source, parsed-face and atlas resources remain shared and unchanged. This small
+render-time correction avoids a second rasterizer, extra atlas variants or a
+new shader/vertex interface.
+
 The appearance and font slices map OMXTerm Terminal Themes into Restty, use the
 configured size and creation-time line height, apply per-side padding, and
 preserve per-window zoom through runtime operations. Main resolves exact

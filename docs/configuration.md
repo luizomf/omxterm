@@ -211,8 +211,11 @@ Mono, and available local operating-system fallback faces. With an explicit
 family instead of silently switching to FiraCode. Real italic faces retain their
 designed letterforms rather than merely slanting the regular letters. If a style
 is missing, Restty synthesizes it; a bold-italic request can use an available
-bold or italic face and synthesize the remaining trait. No extra font setting
-is needed. Variable-font styles that require non-default axis values still use
+bold or italic face and synthesize the remaining trait. Synthetic bold thickens
+horizontal and vertical strokes within the available cell space; its appearance
+can differ from a native bold face or another terminal's outline renderer.
+Regular text and real bold faces are not artificially thickened. No extra font
+setting is needed. Variable-font styles that require non-default axis values still use
 synthesis; custom variation axes are not supported. Missing glyphs still fall
 back through regular faces.
 A missing, unreadable,

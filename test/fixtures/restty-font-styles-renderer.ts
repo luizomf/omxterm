@@ -73,6 +73,9 @@ async function run() {
   try {
     await create();
     await phase("one-startup");
+    surfaces[0]!.output("\x1b[0m\x1b[2J\x1b[H\x1b[?25l");
+    await waitForPaint();
+    await phase("blank", true);
     for (const [name, code] of [
       ["regular", "0"],
       ["bold", "1"],

@@ -7,11 +7,13 @@ import { createRequire } from "node:module";
 import { createHash } from "node:crypto";
 import { build } from "esbuild";
 import { describe, it, expect } from "vitest";
+import { syntheticBoldCorrections } from "../../scripts/restty-synthetic-bold-corrections.mjs";
 
 interface Observation {
   phases: {
     name: string;
     hash?: string;
+    ink?: { height: number; coverage: number };
     store: { sources: number; parsed: number; leases: number; bytes: number };
   }[];
   result: {
@@ -29,7 +31,10 @@ const family =
       ? "Consolas"
       : "DejaVu Sans Mono";
 
-async function observe(mode: string): Promise<Observation> {
+async function observe(
+  mode: string,
+  priorSynthesis = false,
+): Promise<Observation> {
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-font-styles-"));
   try {
     const runtime = await readFile(
@@ -37,9 +42,18 @@ async function observe(mode: string): Promise<Observation> {
       "utf8",
     );
     expect(createHash("sha256").update(runtime).digest("hex")).toBe(
-      "76f43defb727e77a09274bf54bdf1d2473ee41d218fb6aa59bbdc6b165fe22cc",
+      "04e13441b65cb33bfd70823f5ff36df6729a332950024c90fddb8f642c68ba47",
     );
     let probed = runtime;
+    if (priorSynthesis) {
+      for (const { original, corrected } of syntheticBoldCorrections) {
+        expect(probed.split(corrected)).toHaveLength(2);
+        probed = probed.replace(corrected, original);
+      }
+      expect(createHash("sha256").update(probed).digest("hex")).toBe(
+        "76f43defb727e77a09274bf54bdf1d2473ee41d218fb6aa59bbdc6b165fe22cc",
+      );
+    }
     const replace = (needle: string, replacement: string) => {
       expect(probed.split(needle)).toHaveLength(2);
       probed = probed.replace(needle, replacement);
@@ -112,18 +126,54 @@ async function observe(mode: string): Promise<Observation> {
 }
 
 describe("native configured font styles", () => {
+  it("emboldens horizontal as well as vertical strokes when real bold is unavailable", async () => {
+    const run = await observe("italicOnly");
+    const regular = run.phases.find((phase) => phase.name === "regular")!.ink!;
+    const bold = run.phases.find((phase) => phase.name === "bold")!.ink!;
+    expect(regular.height).toBeGreaterThan(0);
+    expect(bold.height).toBeGreaterThan(regular.height);
+    expect(bold.coverage).toBeGreaterThan(regular.coverage);
+    const italic = run.phases.find((phase) => phase.name === "italic")!.ink!;
+    const boldItalic = run.phases.find(
+      (phase) => phase.name === "boldItalic",
+    )!.ink!;
+    expect(boldItalic.height).toBeGreaterThan(italic.height);
+    expect(boldItalic.coverage).toBeGreaterThan(italic.coverage);
+  }, 75_000);
+
   it("renders exact styles, preserves regular pixels and shares collection resources across live tabs", async () => {
     const regular = await observe("regular");
     const styled = await observe("styled");
     const partial = await observe("partial");
+    const priorStyled = await observe("styled", true);
+    const priorRegular = await observe("regular", true);
     const evidence = process.env.OMXTERM_FONT_STYLES_EVIDENCE_PATH;
     if (evidence)
       await writeFile(
         evidence,
-        JSON.stringify({ regular, styled, partial }, null, 2) + "\n",
+        JSON.stringify(
+          { regular, styled, partial, priorStyled, priorRegular },
+          null,
+          2,
+        ) + "\n",
       );
     const capture = (run: Observation, name: string) =>
       run.phases.find((phase) => phase.name === name)!.hash;
+    for (const style of ["regular", "bold", "italic", "boldItalic"])
+      expect(capture(styled, style)).toBe(capture(priorStyled, style));
+    for (const style of ["regular", "italic"])
+      expect(capture(regular, style)).toBe(capture(priorRegular, style));
+    for (const style of ["bold", "boldItalic"]) {
+      const currentInk = regular.phases.find(
+        (phase) => phase.name === style,
+      )!.ink!;
+      const priorInk = priorRegular.phases.find(
+        (phase) => phase.name === style,
+      )!.ink!;
+      expect(currentInk.height).toBeGreaterThan(priorInk.height);
+      expect(currentInk.coverage).toBeGreaterThan(priorInk.coverage);
+    }
+    expect(regular.result.replies).toEqual(priorRegular.result.replies);
     expect(capture(styled, "regular")).toBe(capture(regular, "regular"));
     for (const style of ["bold", "italic", "boldItalic"])
       expect(capture(styled, style)).not.toBe(capture(regular, style));

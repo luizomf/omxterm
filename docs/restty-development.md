@@ -270,7 +270,7 @@ The lockfile restores the npm tarballs identified by that manifest. `npm ci`
 then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
 Restty runtime, declarations and embedded-core SHA-256 values and produces
 corrected runtime SHA-256
-`76f43defb727e77a09274bf54bdf1d2473ee41d218fb6aa59bbdc6b165fe22cc`,
+`04e13441b65cb33bfd70823f5ff36df6729a332950024c90fddb8f642c68ba47`,
 embedded-core chunk SHA-256
 `039abfec307ab03015a2ae70b3583e07fcc9e5a70319de1ca055d6168f45af1b`,
 and event declarations SHA-256

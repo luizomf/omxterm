@@ -244,8 +244,12 @@ loads available real style faces from that same installed family, validates
 their identity and style, and selects exact faces in font collections. Missing
 styles use Restty's synthesis: bold-italic may use a same-family bold or italic
 face for its available trait; regular, bold-only and italic-only text never
-acquire an unrequested trait. Missing glyphs still use the regular fallback
-faces. Non-default variable-font instances are not materialized; when a native
+acquire an unrequested trait. Synthetic bold expands monochrome strokes in
+both horizontal and vertical directions within the available cell space,
+including over a real italic face. It does not change cell layout, requested
+ANSI colors, real bold faces, color emoji, or regular and italic-only text;
+exact pixel parity with native outline rasterizers is not promised. Missing
+glyphs still use the regular fallback faces. Non-default variable-font instances are not materialized; when a native
 style needs those axes, it remains unavailable and synthesis applies without
 rejecting the usable regular family. Style faces share native source bytes and parsed resources across
 compatible tabs; faces in one collection share its backing buffer. Apple Color Emoji

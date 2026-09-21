@@ -6,6 +6,24 @@ import { loadTerminalFontData } from "../../src/main/terminal-font-data";
 import { isTerminalFontData } from "../../src/shared/terminal-font-data";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
 
+function inkBounds(bitmap: Buffer, blank: Buffer, width: number) {
+  let top = Infinity;
+  let bottom = -1;
+  let coverage = 0;
+  for (let offset = 0; offset < bitmap.length; offset += 4) {
+    const difference =
+      Math.abs(bitmap[offset]! - blank[offset]!) +
+      Math.abs(bitmap[offset + 1]! - blank[offset + 1]!) +
+      Math.abs(bitmap[offset + 2]! - blank[offset + 2]!);
+    if (difference <= 24) continue;
+    const row = Math.floor(offset / 4 / width);
+    top = Math.min(top, row);
+    bottom = Math.max(bottom, row);
+    coverage += difference;
+  }
+  return { height: bottom < 0 ? 0 : bottom - top + 1, coverage };
+}
+
 const directory = process.argv[2]!;
 const mode = process.argv[3]!;
 const family = process.argv[4]!;
@@ -20,6 +38,11 @@ async function run() {
     if (!isTerminalFontData(data))
       throw new Error("Invalid production font response");
     if (mode === "regular") return { ...data, configuredStyles: {} };
+    if (mode === "italicOnly")
+      return {
+        ...data,
+        configuredStyles: { italic: data.configuredStyles!.italic! },
+      };
     if (mode === "partial")
       return {
         ...data,
@@ -43,6 +66,7 @@ async function run() {
   });
   window.webContents.debugger.attach("1.3");
   const phases: unknown[] = [];
+  let blankBitmap: Buffer | undefined;
   ipcMain.handle(
     "phase",
     async (_event, name: string, capture: boolean, store: unknown) => {
@@ -60,9 +84,15 @@ async function run() {
       const diagnosticMetrics = app
         .getAppMetrics()
         .map(({ type, memory }) => ({ type, memory }));
-      const bitmap = capture
-        ? (await window.webContents.capturePage()).toBitmap()
+      const image = capture
+        ? await window.webContents.capturePage()
         : undefined;
+      const bitmap = image?.toBitmap();
+      if (name === "blank") blankBitmap = bitmap;
+      const ink =
+        bitmap && blankBitmap && image
+          ? inkBounds(bitmap, blankBitmap, image.getSize().width)
+          : undefined;
       phases.push({
         name,
         store,
@@ -71,7 +101,7 @@ async function run() {
         diagnosticHeap,
         diagnosticMetrics,
         ...(bitmap
-          ? { hash: createHash("sha256").update(bitmap).digest("hex") }
+          ? { hash: createHash("sha256").update(bitmap).digest("hex"), ink }
           : {}),
       });
     },

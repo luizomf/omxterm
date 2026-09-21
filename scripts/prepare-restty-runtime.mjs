@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { fontStyleCorrections } from "./restty-font-style-corrections.mjs";
+import { syntheticBoldCorrections } from "./restty-synthetic-bold-corrections.mjs";
 
 const require = createRequire(import.meta.url);
 const entryPath = require.resolve("restty");
@@ -80,8 +81,10 @@ const priorResizeDigest =
   "950e2ae1d104fbaea82189c6d1353bb05d61dbcbfee90a36961ab1287978c78a";
 const priorFontStyleDigest =
   "b02420bb630dffb1e2b9cfe8bca076bc5eb79084d3c1038521513e2be5d7e06d";
-const correctedDigest =
+const priorSyntheticBoldDigest =
   "76f43defb727e77a09274bf54bdf1d2473ee41d218fb6aa59bbdc6b165fe22cc";
+const correctedDigest =
+  "04e13441b65cb33bfd70823f5ff36df6729a332950024c90fddb8f642c68ba47";
 
 const resizeCorrections = [
   {
@@ -1760,7 +1763,9 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorFontStyleDigest) {
+    if (sourceDigest === priorSyntheticBoldDigest) {
+      // Only the bounded synthetic-bold contour remains to be applied.
+    } else if (sourceDigest === priorFontStyleDigest) {
       // Only exact configured collection-face selection remains to be applied.
     } else if (sourceDigest === priorResizeDigest) {
       // Only negotiated in-band resize delivery remains to be corrected.
@@ -1894,6 +1899,8 @@ export async function prepareResttyRuntime(options = {}) {
       source = applyCorrections(source, resizeCorrections);
     if (digest(source) === priorFontStyleDigest)
       source = applyCorrections(source, fontStyleCorrections);
+    if (digest(source) === priorSyntheticBoldDigest)
+      source = applyCorrections(source, syntheticBoldCorrections);
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,
