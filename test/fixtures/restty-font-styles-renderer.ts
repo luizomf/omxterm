@@ -95,9 +95,14 @@ async function run() {
       ["boldItalic", "1;3"],
       ["wideItalic", "3"],
       ["wideBoldItalic", "1;3"],
+      ["strokeRegular", "0"],
+      ["strokeBold", "1"],
     ]) {
+      let sample = "Legal demais. afls";
+      if (name!.startsWith("wide")) sample = "W";
+      if (name!.startsWith("stroke")) sample = "H";
       surfaces[0]!.output(
-        `\x1b[0m\x1b[2J\x1b[H\x1b[?25l\x1b[${code}m${name!.startsWith("wide") ? "W" : "Legal demais. afls"}\x1b[0m\x1b[16t`,
+        `\x1b[0m\x1b[2J\x1b[H\x1b[?25l\x1b[${code}m${sample}\x1b[0m\x1b[16t`,
       );
       await waitForPaint();
       await phase(name!, true);

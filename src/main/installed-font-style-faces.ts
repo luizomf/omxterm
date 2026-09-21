@@ -57,13 +57,20 @@ export async function installedFontStyleFaces(
       const bold = style !== "italic";
       const italic = style !== "bold";
       const { stdout } = await run("/usr/bin/fc-match", [
-        "--format=%{family}\u001f%{weight}\u001f%{slant}\u001f%{file}\u001f%{postscriptname}\\n",
+        "--format=%{family}\u001f%{weight}\u001f%{slant}\u001f%{file}\u001f%{postscriptname}\u001f%{matrix}\u001f%{embolden}\\n",
         "--",
         `${family}:weight=${bold ? 200 : 80}:slant=${italic ? 100 : 0}`,
       ]);
-      const [families, weight, slant, file, postScriptName, extra] = stdout
-        .replace(/\n$/u, "")
-        .split("\u001f");
+      const [
+        families,
+        weight,
+        slant,
+        file,
+        postScriptName,
+        matrix,
+        embolden,
+        extra,
+      ] = stdout.replace(/\n$/u, "").split("\u001f");
       if (
         extra !== undefined ||
         !families
@@ -78,6 +85,13 @@ export async function installedFontStyleFaces(
           ? ["200", "205"].includes(weight ?? "")
           : ["75", "80"].includes(weight ?? "")) ||
         !(italic ? ["100", "110"].includes(slant ?? "") : slant === "0")
+      )
+        continue;
+      // Fontconfig can advertise a style synthesized from an upright file.
+      // Only hand real, untransformed outlines to the strict face validator.
+      if (
+        ![undefined, "", "1 0 0 1"].includes(matrix) ||
+        ![undefined, "", "False", "false"].includes(embolden)
       )
         continue;
       faces.push({

@@ -13,7 +13,12 @@ interface Observation {
   phases: {
     name: string;
     hash?: string;
-    ink?: { width: number; height: number; coverage: number };
+    ink?: {
+      width: number;
+      height: number;
+      coverage: number;
+      centerColumnInk: number;
+    };
     outsideGrowth?: number;
     store: { sources: number; parsed: number; leases: number; bytes: number };
   }[];
@@ -107,7 +112,15 @@ async function observe(
     );
     const { stdout } = await promisify(execFile)(
       electron,
-      [path.join(root, "main.cjs"), root, mode, family],
+      [
+        path.join(root, "main.cjs"),
+        root,
+        mode,
+        family,
+        // Apply Linux policy before Electron bootstrap without shifting the
+        // fixture's positional application arguments.
+        ...(process.platform === "linux" ? ["--no-sandbox"] : []),
+      ],
       {
         timeout: 75_000,
         maxBuffer: 2_000_000,
@@ -180,9 +193,18 @@ describe("native configured font styles", () => {
       const priorInk = priorRegular.phases.find(
         (phase) => phase.name === style,
       )!.ink!;
-      expect(currentInk.height).toBeGreaterThan(priorInk.height);
       expect(currentInk.coverage).toBeGreaterThan(priorInk.coverage);
     }
+    // At DPR1, horizontal duplication can already darken faint outer pixels
+    // past the ink threshold without adding vertical stroke thickness. Measure
+    // the isolated H crossbar instead of requiring whole-text bounds to grow.
+    const stroke = regular.phases.find(
+      (phase) => phase.name === "strokeBold",
+    )!.ink!;
+    const priorStroke = priorRegular.phases.find(
+      (phase) => phase.name === "strokeBold",
+    )!.ink!;
+    expect(stroke.centerColumnInk).toBeGreaterThan(priorStroke.centerColumnInk);
     expect(regular.result.replies).toEqual(priorRegular.result.replies);
     expect(capture(styled, "regular")).toBe(capture(regular, "regular"));
     for (const style of ["bold", "italic", "boldItalic"])

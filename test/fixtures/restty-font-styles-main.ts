@@ -26,7 +26,18 @@ function inkBounds(bitmap: Buffer, blank: Buffer, width: number) {
     left = Math.min(left, column);
     right = Math.max(right, column);
   }
+  let centerColumnInk = 0;
+  const centerX = Math.floor((left + right) / 2);
+  for (let row = top; row <= bottom; row++) {
+    const offset = (row * width + centerX) * 4;
+    const difference =
+      Math.abs(bitmap[offset]! - blank[offset]!) +
+      Math.abs(bitmap[offset + 1]! - blank[offset + 1]!) +
+      Math.abs(bitmap[offset + 2]! - blank[offset + 2]!);
+    if (difference > 24) centerColumnInk++;
+  }
   return {
+    centerColumnInk,
     width: right < 0 ? 0 : right - left + 1,
     height: bottom < 0 ? 0 : bottom - top + 1,
     coverage,

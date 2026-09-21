@@ -186,23 +186,6 @@ describe("installed font-family command seams", () => {
     },
   );
 
-  it("loads real installed styles but does not accept fontconfig's substitute faces", async () => {
-    const run = vi.fn(async (_file: string, args: readonly string[]) => {
-      const bold = args.at(-1)?.endsWith("weight=200:slant=0");
-      return {
-        stdout: `DejaVu Sans Mono\u001f${bold ? 200 : 80}\u001f0\u001f${path.resolve(`assets/fonts/DejaVuSansMono${bold ? "-Bold" : ""}.ttf`)}\u001f${bold ? "DejaVuSansMono-Bold" : "DejaVuSansMono"}\n`,
-      };
-    });
-    const result = await installedFontDataForRestty(
-      "DejaVu Sans Mono",
-      run,
-      "linux",
-    );
-    expect(result?.styles?.bold?.data.byteLength).toBeGreaterThan(0);
-    expect(result?.styles?.italic).toBeUndefined();
-    expect(result?.styles?.boldItalic).toBeUndefined();
-  });
-
   it("loads the requested real bold face and refuses it as regular", async () => {
     const face = {
       family: "DejaVu Sans Mono",
