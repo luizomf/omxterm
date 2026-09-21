@@ -13,7 +13,8 @@ interface Observation {
   phases: {
     name: string;
     hash?: string;
-    ink?: { height: number; coverage: number };
+    ink?: { width: number; height: number; coverage: number };
+    outsideGrowth?: number;
     store: { sources: number; parsed: number; leases: number; bytes: number };
   }[];
   result: {
@@ -42,7 +43,7 @@ async function observe(
       "utf8",
     );
     expect(createHash("sha256").update(runtime).digest("hex")).toBe(
-      "04e13441b65cb33bfd70823f5ff36df6729a332950024c90fddb8f642c68ba47",
+      "431ea06bb18273e35a5aa15aa56f61e3d27d79a16c36d66e56d73a29b0d6c4a8",
     );
     let probed = runtime;
     if (priorSynthesis) {
@@ -95,7 +96,7 @@ async function observe(
     });
     await writeFile(
       path.join(root, "preload.cjs"),
-      `const {contextBridge,ipcRenderer}=require('electron');contextBridge.exposeInMainWorld('fontStyleProbe',{fonts:()=>ipcRenderer.invoke('fonts'),phase:(name,capture,store)=>ipcRenderer.invoke('phase',name,capture,store),report:result=>ipcRenderer.send('report',result)});`,
+      `const {contextBridge,ipcRenderer}=require('electron');contextBridge.exposeInMainWorld('fontStyleProbe',{fonts:()=>ipcRenderer.invoke('fonts'),phase:(name,capture,store,cell)=>ipcRenderer.invoke('phase',name,capture,store,cell),report:result=>ipcRenderer.send('report',result)});`,
     );
     const policy = (await readFile("src/renderer/index.html", "utf8")).match(
       /content="([^"]+)"/u,
@@ -132,6 +133,7 @@ describe("native configured font styles", () => {
     const bold = run.phases.find((phase) => phase.name === "bold")!.ink!;
     expect(regular.height).toBeGreaterThan(0);
     expect(bold.height).toBeGreaterThan(regular.height);
+    expect(bold.width).toBeGreaterThan(regular.width);
     expect(bold.coverage).toBeGreaterThan(regular.coverage);
     const italic = run.phases.find((phase) => phase.name === "italic")!.ink!;
     const boldItalic = run.phases.find(
@@ -139,6 +141,14 @@ describe("native configured font styles", () => {
     )!.ink!;
     expect(boldItalic.height).toBeGreaterThan(italic.height);
     expect(boldItalic.coverage).toBeGreaterThan(italic.coverage);
+  }, 75_000);
+
+  it("keeps additional synthetic italic-bold ink inside the cell", async () => {
+    const run = await observe("regular");
+    const phase = run.phases.find((value) => value.name === "wideBoldItalic")!;
+    const italic = run.phases.find((value) => value.name === "wideItalic")!;
+    expect(phase.ink!.coverage).toBeGreaterThan(italic.ink!.coverage);
+    expect(phase.outsideGrowth).toBe(0);
   }, 75_000);
 
   it("renders exact styles, preserves regular pixels and shares collection resources across live tabs", async () => {

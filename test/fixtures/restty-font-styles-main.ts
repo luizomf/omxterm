@@ -10,6 +10,8 @@ function inkBounds(bitmap: Buffer, blank: Buffer, width: number) {
   let top = Infinity;
   let bottom = -1;
   let coverage = 0;
+  let left = Infinity;
+  let right = -1;
   for (let offset = 0; offset < bitmap.length; offset += 4) {
     const difference =
       Math.abs(bitmap[offset]! - blank[offset]!) +
@@ -20,8 +22,37 @@ function inkBounds(bitmap: Buffer, blank: Buffer, width: number) {
     top = Math.min(top, row);
     bottom = Math.max(bottom, row);
     coverage += difference;
+    const column = (offset / 4) % width;
+    left = Math.min(left, column);
+    right = Math.max(right, column);
   }
-  return { height: bottom < 0 ? 0 : bottom - top + 1, coverage };
+  return {
+    width: right < 0 ? 0 : right - left + 1,
+    height: bottom < 0 ? 0 : bottom - top + 1,
+    coverage,
+  };
+}
+
+function outsideInkGrowth(
+  bitmap: Buffer,
+  prior: Buffer,
+  blank: Buffer,
+  width: number,
+  cell: { right: number; bottom: number },
+) {
+  let growth = 0;
+  for (let offset = 0; offset < bitmap.length; offset += 4) {
+    const x = (offset / 4) % width;
+    const y = Math.floor(offset / 4 / width);
+    if (x < cell.right && y < cell.bottom) continue;
+    let difference = 0;
+    for (let channel = 0; channel < 3; channel++)
+      difference +=
+        Math.abs(bitmap[offset + channel]! - blank[offset + channel]!) -
+        Math.abs(prior[offset + channel]! - blank[offset + channel]!);
+    if (difference > 24) growth += difference;
+  }
+  return growth;
 }
 
 const directory = process.argv[2]!;
@@ -67,9 +98,16 @@ async function run() {
   window.webContents.debugger.attach("1.3");
   const phases: unknown[] = [];
   let blankBitmap: Buffer | undefined;
+  let wideItalicBitmap: Buffer | undefined;
   ipcMain.handle(
     "phase",
-    async (_event, name: string, capture: boolean, store: unknown) => {
+    async (
+      _event,
+      name: string,
+      capture: boolean,
+      store: unknown,
+      cell?: { right: number; bottom: number },
+    ) => {
       const heap: unknown = await window.webContents.debugger.sendCommand(
         "Runtime.getHeapUsage",
       );
@@ -89,6 +127,22 @@ async function run() {
         : undefined;
       const bitmap = image?.toBitmap();
       if (name === "blank") blankBitmap = bitmap;
+      if (name === "wideItalic") wideItalicBitmap = bitmap;
+      const outsideGrowth =
+        name === "wideBoldItalic" &&
+        bitmap &&
+        wideItalicBitmap &&
+        blankBitmap &&
+        image &&
+        cell
+          ? outsideInkGrowth(
+              bitmap,
+              wideItalicBitmap,
+              blankBitmap,
+              image.getSize().width,
+              cell,
+            )
+          : undefined;
       const ink =
         bitmap && blankBitmap && image
           ? inkBounds(bitmap, blankBitmap, image.getSize().width)
@@ -101,7 +155,13 @@ async function run() {
         diagnosticHeap,
         diagnosticMetrics,
         ...(bitmap
-          ? { hash: createHash("sha256").update(bitmap).digest("hex"), ink }
+          ? {
+              hash: createHash("sha256").update(bitmap).digest("hex"),
+              ink,
+              outsideGrowth,
+              pixelSize: image?.getSize(),
+              bitmapBytes: bitmap.byteLength,
+            }
           : {}),
       });
     },

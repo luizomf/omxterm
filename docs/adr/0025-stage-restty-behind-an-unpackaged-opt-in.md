@@ -64,8 +64,10 @@ files, not a second renderer or persistent native font cache.
 For missing bold, a checksum-guarded correction approximates contour expansion
 with up to four cardinal neighbours of the existing monochrome glyph mask.
 Stroke radius scales with cell width rather than individual glyph width or line
-height. Outward placements are bounded by the existing cell space; collapsed
-placements are omitted instead of redrawing the same mask. This strengthens
+height. Additional masks are horizontally clipped with matching texture
+coordinates, accounting for the complete synthetic-italic shear; vertical
+placements stay inside the row. Empty or collapsed placements are omitted.
+The original draw and any pre-existing italic overhang remain unchanged. This strengthens
 horizontal as well as vertical strokes, including on real italic faces, without
 changing real-bold selection, ANSI colors, color emoji or regular rendering.
 It is not native outline stroking or a promise of Ghostty pixel parity. The

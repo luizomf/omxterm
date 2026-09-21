@@ -246,7 +246,8 @@ styles use Restty's synthesis: bold-italic may use a same-family bold or italic
 face for its available trait; regular, bold-only and italic-only text never
 acquire an unrequested trait. Synthetic bold expands monochrome strokes in
 both horizontal and vertical directions within the available cell space,
-including over a real italic face. It does not change cell layout, requested
+including over a real italic face. Additional ink stays inside the cell without
+removing any pre-existing italic overhang. It does not change cell layout, requested
 ANSI colors, real bold faces, color emoji, or regular and italic-only text;
 exact pixel parity with native outline rasterizers is not promised. Missing
 glyphs still use the regular fallback faces. Non-default variable-font instances are not materialized; when a native

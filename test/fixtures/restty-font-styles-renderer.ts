@@ -12,7 +12,12 @@ interface StoreStats {
 declare global {
   var fontStyleProbe: {
     fonts(): Promise<TerminalFontData>;
-    phase(name: string, capture: boolean, store: StoreStats): Promise<void>;
+    phase(
+      name: string,
+      capture: boolean,
+      store: StoreStats,
+      cell?: { right: number; bottom: number },
+    ): Promise<void>;
     report(result: unknown): void;
   };
   var fontStyleStoreStats: () => StoreStats;
@@ -48,6 +53,7 @@ async function run() {
       },
       {
         appearance: { fontSize: 32, systemFont: { family, available: true } },
+        padding: { top: 0, right: 0, bottom: 0, left: 0 },
         acquireFontInputs: (selectedFamily, signal) =>
           owner.acquire(selectedFamily, signal),
       },
@@ -64,12 +70,18 @@ async function run() {
     await waitForPaint();
     if (!first) container.style.visibility = "hidden";
   };
-  const phase = (name: string, capture = false) =>
-    globalThis.fontStyleProbe.phase(
+  const phase = (name: string, capture = false) => {
+    const cell = /\[6;(\d+);(\d+)t/u.exec(replies.at(-1) ?? "");
+    return globalThis.fontStyleProbe.phase(
       name,
       capture,
       globalThis.fontStyleStoreStats(),
+      // CSI rounds physical cell metrics: allow one pixel at its outer edge.
+      cell
+        ? { right: Number(cell[2]) + 1, bottom: Number(cell[1]) + 1 }
+        : undefined,
     );
+  };
   try {
     await create();
     await phase("one-startup");
@@ -81,9 +93,11 @@ async function run() {
       ["bold", "1"],
       ["italic", "3"],
       ["boldItalic", "1;3"],
+      ["wideItalic", "3"],
+      ["wideBoldItalic", "1;3"],
     ]) {
       surfaces[0]!.output(
-        `\x1b[0m\x1b[2J\x1b[H\x1b[?25l\x1b[${code}mLegal demais. afls\x1b[0m\x1b[16t`,
+        `\x1b[0m\x1b[2J\x1b[H\x1b[?25l\x1b[${code}m${name!.startsWith("wide") ? "W" : "Legal demais. afls"}\x1b[0m\x1b[16t`,
       );
       await waitForPaint();
       await phase(name!, true);
