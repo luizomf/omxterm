@@ -162,12 +162,20 @@ The Restty host fixture starts Electron, a native PTY, and helper processes. A
 separate supervisor owns their cleanup, including when the test worker exits
 unexpectedly. It identifies descendants by both PID and process-creation identity,
 which matters when a PID is reused or a PTY leaves Electron's process group.
+Supervised fixtures must create PTYs through `spawnFixturePty` and other owned
+children through `spawnFixtureProcess`. These test-only adapters write a pending
+ownership record before spawning, then atomically register process identities
+while the parent is still alive. The supervisor reads these records as well as
+periodic descendant inventories, so an early parent exit does not erase a
+registered PTY's ownership. An interrupted or invalid registration makes cleanup
+uncertain and retains the profile rather than reporting successful cleanup.
 A timeout, interruption, or worker loss still fails the test; cleanup preserves
 that result rather than turning it into a pass.
 
 When cleanup succeeds, the supervisor removes the fixture profile; on failure,
-it retains the profile for inspection. In either case, it writes the mechanical
-outcome plus synthetic stdout and stderr under `.scratch/native-fixtures/` for
+it retains the profile for inspection. Profile removal happens only after process
+termination and stream closure have both been checked. In either case, it writes
+the mechanical outcome plus synthetic stdout and stderr under `.scratch/native-fixtures/` for
 diagnosis. Those records can contain local paths, so review them before sharing.
 
 Cleanup uses three POSIX freeze/rescan passes and identity checks before each
@@ -186,22 +194,24 @@ without elevation or a policy change. Electron itself stays in the caller's
 interactive desktop, session, and environment. POSIX uses a detached supervisor
 and IPC-disconnect detection. Its process inspection and signaling are separate
 operations, and macOS process-start times have second-level resolution. These
-identity checks support cleanup of the observed fixture tree; arbitrary
-process daemonization and termination of the supervisor itself remain outside
-its coverage.
+identity checks support cleanup of the registered and observed fixture tree;
+unregistered children that escape before observation, arbitrary process
+daemonization and termination of the supervisor itself remain outside its coverage.
 
 The interruption regressions deliberately terminate fixture-owned processes.
 Run them only in an authorized disposable VM with a recovery snapshot:
 
 ```sh
-OMXTERM_TEST_NATIVE_INTERRUPTION=1 npm test -- test/integration/native-fixture-interruption.test.ts
+OMXTERM_TEST_NATIVE_INTERRUPTION=1 npm test -- test/integration/native-fixture-interruption.test.ts test/integration/native-fixture-early-exit.test.ts
 ```
 
 In PowerShell, set
 `$env:OMXTERM_TEST_NATIVE_INTERRUPTION = '1'` before running the same test
 command. Ordinary `npm test` discovers these cases but skips them. The opt-in
-suite covers parent and fixture interruption, deadlines, exit outcomes, profile
-retention/removal, and survival of an unrelated sentinel process.
+suites cover parent and fixture interruption, deadlines, exit outcomes, profile
+retention after interrupted registration, successful profile removal, survival of
+an unrelated sentinel process, and a real PTY whose leader exits early. These
+cases do not claim containment of arbitrary uncooperative process trees.
 
 Before delivery on any Supported Platform, run `npm run check:portable`. On
 macOS, `npm run check` is the full native project command. On Linux ARM64, use

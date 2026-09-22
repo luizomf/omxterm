@@ -5,6 +5,7 @@ import path from "node:path";
 export function nativeFixtureEnvironment(root: string): NodeJS.ProcessEnv {
   return {
     ...process.env,
+    OMXTERM_NATIVE_FIXTURE_ROOT: root,
     ELECTRON_DISABLE_SECURITY_WARNINGS: "true",
     npm_node_execpath: process.execPath,
     HOME: path.join(root, "home"),
@@ -72,13 +73,16 @@ function linuxStartTime(pid: number): string {
 
 export async function terminateFixtureProcesses(
   owned: Map<number, FixtureProcess>,
+  collectRegistered: () => void = () => {},
 ): Promise<void> {
+  collectRegistered();
   // PTYs call setsid(): descend from the owned child, not only its group.
   // Freeze POSIX parents and rescan before killing, closing the spawn race.
   if (process.platform !== "win32") {
     for (let pass = 0; pass < 3; pass += 1) {
       for (const row of owned.values()) signalFixtureProcess(row, "SIGSTOP");
       collectFixtureDescendants(fixtureProcesses(), owned);
+      collectRegistered();
     }
   }
   const targets = [...owned.values()].reverse();
@@ -89,6 +93,7 @@ export async function terminateFixtureProcesses(
   // Freeze/rescan and signal operations above have separate command bounds.
   const deadline = Date.now() + 5_000;
   while (true) {
+    collectRegistered();
     const remaining = fixtureProcesses().filter(
       (row) => owned.get(row.pid)?.identity === row.identity,
     );

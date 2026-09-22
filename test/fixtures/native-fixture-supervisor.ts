@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { lstat, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { collectFixtureRegistrations } from "./native-fixture-ownership";
 import {
   nativeFixtureEnvironment,
   fixtureProcesses,
@@ -75,6 +76,25 @@ if (process.argv[2]) {
 process.on("SIGTERM", () => process.emit("disconnect"));
 process.on("SIGINT", () => process.emit("disconnect"));
 
+async function removeFixtureProfile(
+  root: string,
+  identity: { readonly dev: number; readonly ino: number },
+): Promise<void> {
+  const current = await lstat(root);
+  if (
+    current.dev !== identity.dev ||
+    current.ino !== identity.ino ||
+    current.isSymbolicLink()
+  )
+    throw new Error("Fixture root identity changed; refusing removal");
+  await rm(root, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 100,
+  });
+}
+
 async function supervise(request: Request): Promise<void> {
   const rootIdentity = await lstat(request.root);
   const owned = new Map<number, FixtureProcess>();
@@ -141,6 +161,16 @@ async function supervise(request: Request): Promise<void> {
       resolveEnd();
     });
   }
+  let leaderPid = child?.pid;
+  let pendingRegistrations = 0;
+  const collectRegistered = (rows?: readonly FixtureProcess[]) => {
+    pendingRegistrations = collectFixtureRegistrations(
+      request.root,
+      leaderPid,
+      owned,
+      rows,
+    );
+  };
   const sample = () => {
     const rows = fixtureProcesses();
     if (
@@ -162,7 +192,10 @@ async function supervise(request: Request): Promise<void> {
         request.root,
         "native-process.json",
       );
-      if (leader && owned.size === 0) owned.set(leader.pid, leader);
+      if (leader) {
+        leaderPid = leader.pid;
+        if (owned.size === 0) owned.set(leader.pid, leader);
+      }
       const exit = readRecord<ExternalExit>(request.root, "native-exit.json");
       if (exit) {
         exitCode = exit.exitCode;
@@ -172,6 +205,7 @@ async function supervise(request: Request): Promise<void> {
       }
     }
     collectFixtureDescendants(rows, owned);
+    collectRegistered(rows);
   };
   let inspectionError: string | undefined;
   const inspect = () => {
@@ -200,7 +234,8 @@ async function supervise(request: Request): Promise<void> {
   const cleanupErrors: string[] = inspectionError ? [inspectionError] : [];
   try {
     sample();
-    await terminateFixtureProcesses(owned);
+    await terminateFixtureProcesses(owned, collectRegistered);
+
     if (request.externalChild) {
       stdout = await readNativeOutput(
         request.root,
@@ -218,19 +253,10 @@ async function supervise(request: Request): Promise<void> {
         signal = exit.signal;
       }
     }
-    const currentRoot = await lstat(request.root);
-    if (
-      currentRoot.dev !== rootIdentity.dev ||
-      currentRoot.ino !== rootIdentity.ino ||
-      currentRoot.isSymbolicLink()
-    )
-      throw new Error("Fixture root identity changed; refusing removal");
-    await rm(request.root, {
-      recursive: true,
-      force: true,
-      maxRetries: 10,
-      retryDelay: 100,
-    });
+    if (pendingRegistrations > 0)
+      throw new Error(
+        "Fixture process registration was interrupted; cleanup is uncertain",
+      );
   } catch (error) {
     cleanupErrors.push(String(error));
   }
@@ -249,6 +275,13 @@ async function supervise(request: Request): Promise<void> {
   clearTimeout(closeTimer);
   child?.stdout!.destroy();
   child?.stderr!.destroy();
+  if (cleanupErrors.length === 0) {
+    try {
+      await removeFixtureProfile(request.root, rootIdentity);
+    } catch (error) {
+      cleanupErrors.push(String(error));
+    }
+  }
   const result = {
     exitCode,
     signal,

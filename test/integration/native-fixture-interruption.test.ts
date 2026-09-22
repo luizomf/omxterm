@@ -1,12 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import {
-  mkdtemp,
-  readFile,
-  rm,
-  writeFile,
-  symlink,
-  access,
-} from "node:fs/promises";
+import { mkdtemp, readFile, rm, symlink, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { build } from "esbuild";
@@ -20,11 +13,15 @@ import {
 
 const fixtureSource = `
 const {spawn} = require('node:child_process');
+const {spawnFixtureProcess} = require('./native-fixture-ownership');
 const {writeFileSync} = require('node:fs');
 const path = require('node:path');
 const root = process.argv[2];
 process.on('SIGTERM', () => {});
-const child = spawn(process.execPath, ['-e', "process.on('SIGTERM',()=>{});setInterval(()=>{},1000)"], {detached:true,stdio:'ignore'});
+const child = spawnFixtureProcess(() => {
+  const spawned = spawn(process.execPath, ['-e', "process.on('SIGTERM',()=>{});setInterval(()=>{},1000)"], {detached:true,stdio:'ignore'});
+  return spawned;
+});
 writeFileSync(path.join(root,'ready.json'), JSON.stringify({leader:process.pid,session:child.pid}));
 console.log('fixture diagnostic before interruption');
 setInterval(()=>{},1000);
@@ -85,6 +82,7 @@ describe.skipIf(process.env["OMXTERM_TEST_NATIVE_INTERRUPTION"] !== "1")(
       "timeout",
       "failure",
       "success",
+      "registration-interrupted",
     ] as const)(
       "cleans an owned detached tree after %s, preserving a sentinel and mechanical evidence",
       async (mode) => {
@@ -95,18 +93,31 @@ describe.skipIf(process.env["OMXTERM_TEST_NATIVE_INTERRUPTION"] !== "1")(
         const evidence = path.join(base, "outcome.json");
         const program = path.join(base, "fixture.cjs");
         const parentProgram = path.join(base, "parent.mjs");
-        await writeFile(
-          program,
-          (mode === "fixture-SIGTERM"
-            ? fixtureSource.replace(
-                "process.on('SIGTERM', () => {});",
-                "process.on('SIGTERM', () => process.send({type:'fixture-interrupted',signal:'SIGTERM'}));",
-              )
-            : fixtureSource) +
-            (mode === "failure" || mode === "success"
-              ? `\nsetTimeout(() => process.exit(${mode === "failure" ? 23 : 0}), 1500);\n`
-              : ""),
-        );
+        await build({
+          outfile: program,
+          bundle: true,
+          packages: "external",
+          platform: "node",
+          format: "cjs",
+          stdin: {
+            resolveDir: path.resolve("test/fixtures"),
+            contents:
+              (mode === "fixture-SIGTERM"
+                ? fixtureSource.replace(
+                    "process.on('SIGTERM', () => {});",
+                    "process.on('SIGTERM', () => process.send({type:'fixture-interrupted',signal:'SIGTERM'}));",
+                  )
+                : mode === "registration-interrupted"
+                  ? fixtureSource.replace(
+                      "return spawned;",
+                      "writeFileSync(path.join(root,'ready.json'), JSON.stringify({leader:process.pid,session:spawned.pid})); process.exit(23);",
+                    )
+                  : fixtureSource) +
+              (mode === "failure" || mode === "success"
+                ? `\nsetTimeout(() => process.exit(${mode === "failure" ? 23 : 0}), 1500);\n`
+                : ""),
+          },
+        });
         await symlink(
           path.resolve("node_modules"),
           path.join(base, "node_modules"),
@@ -177,22 +188,29 @@ describe.skipIf(process.env["OMXTERM_TEST_NATIVE_INTERRUPTION"] !== "1")(
                 : "fixture-SIGTERM"
               : mode === "timeout"
                 ? "timeout"
-                : mode === "failure" || mode === "success"
+                : mode === "failure" ||
+                    mode === "success" ||
+                    mode === "registration-interrupted"
                   ? "exit"
                   : "parent-disconnected",
           );
           if (mode === "failure") expect(result.exitCode).toBe(23);
           if (mode === "success") expect(result.exitCode).toBe(0);
-          expect(result.cleanupErrors).toEqual([]);
-          expect(result.stdout).toContain(
-            "fixture diagnostic before interruption",
-          );
-          await expect(access(root)).rejects.toThrow();
-          expect(
-            fixtureProcesses().filter(
-              (row) => row.pid === ready.leader || row.pid === ready.session,
-            ),
-          ).toEqual([]);
+          if (mode === "registration-interrupted") {
+            expect(result.cleanupErrors).not.toEqual([]);
+            await expect(access(root)).resolves.toBeUndefined();
+          } else {
+            expect(result.cleanupErrors).toEqual([]);
+            expect(result.stdout).toContain(
+              "fixture diagnostic before interruption",
+            );
+            await expect(access(root)).rejects.toThrow();
+            expect(
+              fixtureProcesses().filter(
+                (row) => row.pid === ready.leader || row.pid === ready.session,
+              ),
+            ).toEqual([]);
+          }
           expect(sentinel.exitCode).toBeNull();
           expect(sentinel.signalCode).toBeNull();
         } finally {

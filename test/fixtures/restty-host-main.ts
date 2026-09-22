@@ -1,5 +1,5 @@
 import { app, BrowserWindow, ipcMain, session } from "electron";
-import * as nodePty from "node-pty";
+import { spawnFixturePty } from "./native-fixture-pty";
 import { mkdirSync, writeSync } from "node:fs";
 import path from "node:path";
 import { terminalRendererConfiguration } from "../../src/main/active-user-configuration";
@@ -132,7 +132,7 @@ function createHost(window: BrowserWindow) {
       resizes[index] = [];
       const explicit = index === 1;
       const stressLaunchRequest = outputStressLaunchRequest(index);
-      const terminal = createLocalTerminalSession(nodePty.spawn, {
+      const terminal = createLocalTerminalSession(spawnFixturePty, {
         shell: defaultShell,
         ...(stressLaunchRequest
           ? { launchRequest: stressLaunchRequest }

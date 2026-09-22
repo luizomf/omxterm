@@ -6,7 +6,8 @@ import {
   writeFileSync,
   appendFileSync,
 } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { FIXTURE_PROCESS_DIRECTORY } from "./native-fixture-ownership";
 import {
   fixtureProcesses,
   nativeFixtureEnvironment,
@@ -176,6 +177,7 @@ export async function runNativeFixture(options: {
   readonly timeout: number;
   readonly evidencePath?: string;
 }): Promise<NativeFixtureResult> {
+  await mkdir(path.join(options.root, FIXTURE_PROCESS_DIRECTORY));
   const supervisorPath = path.join(
     options.root,
     "native-fixture-supervisor.cjs",
