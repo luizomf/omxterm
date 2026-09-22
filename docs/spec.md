@@ -98,9 +98,10 @@ selector or fallback Surface; rendering initialization failure starts no shell
 - A window with a single tab shows no tab strip and renders exactly like the
   pre-tab contract. With two or more tabs, an OMXTerm-drawn tab strip occupies
   its own full-width row above the Terminal Surface and Snippets Sidebar row.
-  On macOS it sits below the app-controlled 30 px native title inset; on Linux
-  and Windows it starts immediately below the operating system's native Window
-  Chrome, without another inset. Clicking a tab selects it; the selected tab's
+  On macOS it sits below the app-controlled 30 px native title inset except in
+  native fullscreen, where that app-owned inset is zero. On Linux and Windows
+  it starts immediately below the operating system's native Window Chrome,
+  without another inset. Clicking a tab selects it; the selected tab's
   grid refits and receives terminal focus. Dragging a tab horizontally within
   that strip reorders the existing tabs in that window. The reordered positions
   immediately drive visible order, next/previous cycling, and literal positional
@@ -150,10 +151,15 @@ selector or fallback Surface; rendering initialization failure starts no shell
 - Native minimum window bounds keep the existing 320 px width and 200 px height
   as floors and grow at startup or after a valid reload when configured font or
   padding needs more room for a visible terminal grid.
-- On macOS, the Terminal Surface keeps a fixed 30 px native title/drag inset
-  above the configurable top padding. Linux and Windows use their
-  operating-system title and menu outside the app-controlled content and add
-  no duplicate inset. Every Linux and Windows Terminal Window auto-hides the
+- On macOS, the Terminal Surface keeps a 30 px native title/drag inset above
+  the configurable top padding while windowed or maximized. Native fullscreen
+  removes only that app-owned inset; configured padding and the system-provided
+  safe area remain unchanged. Native title and menu chrome may temporarily
+  overlay content when revealed without app-driven padding or PTY resizing.
+  Fullscreen entry and exit refit the selected existing Surface and PTY, while
+  other windows and hidden Surfaces remain unchanged. Linux and Windows use
+  their operating-system title and menu outside the app-controlled content and
+  add no duplicate inset. Every Linux and Windows Terminal Window auto-hides the
   installed native application menu bar by default; pressing and releasing Alt
   alone temporarily reveals it, and using or dismissing the menu returns it to
   hidden. This is fixed Window Chrome behavior rather than User Configuration,
@@ -581,8 +587,10 @@ row-height multiplier from 1.0 through 2.0 inclusive, accepts fractional
 values, does not change glyph size, and defaults to 1.0. Terminal padding uses
 explicit per-side integer CSS pixels from 0 through 128 inclusive and defaults
 to top 0, right 8, bottom 8, and left 8. User top padding is added to the fixed,
-non-configurable 30 px native title inset on macOS; on Linux and Windows it
-begins directly below the native window chrome. `logLevel` defaults to `info`,
+non-configurable 30 px native title inset on macOS while windowed or maximized;
+native fullscreen removes that app-owned inset without changing configured
+padding or the system safe area. On Linux and Windows it begins directly below
+the native window chrome. `logLevel` defaults to `info`,
 `keyboard.optionAsAlt` to `none`, and `window.alwaysOnTop` to `false`.
 
 `windowsShell` is an optional non-empty string without NUL on every Supported

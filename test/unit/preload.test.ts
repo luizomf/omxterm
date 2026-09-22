@@ -535,7 +535,7 @@ describe("isolated preload terminal bridge responses", () => {
     );
   });
 
-  it("reconciles a complete update received while configuration is in flight", async () => {
+  it("reconciles fullscreen and reload updates while configuration is in flight", async () => {
     const bridge = electron.bridge!;
     const configuration = {
       fontSize: 16,
@@ -544,12 +544,13 @@ describe("isolated preload terminal bridge responses", () => {
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
       scrollbackLines: 10_000,
       optionKeyMode: "none",
-      nativeTitleInset: 0,
+      nativeTitleInset: 30,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       userFileErrors: ["startup warning"],
     } as const;
     const update = {
       ...configuration,
+      nativeTitleInset: 0,
       fontSize: 25,
       scrollbackLines: 0,
       optionKeyMode: "both",

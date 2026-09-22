@@ -250,6 +250,7 @@ app
             const controller = terminalIpcRouter.registerController({
               windowId: lifecycle.windowId,
               configuration: rendererConfiguration(),
+              initialFullScreen: window.isFullScreen(),
               webContents: window.webContents,
               createSession(callbacks) {
                 return createLocalTerminalSession(nodePty.spawn, {

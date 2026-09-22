@@ -89,7 +89,13 @@ later. Zoom is ephemeral: it does not edit User Configuration, another window
 keeps its own zoom, and a new window begins at the configured font-size
 baseline. Actual Size returns the selected window to that baseline.
 
-`View -> Toggle Full Screen` toggles only the selected window.
+`View -> Toggle Full Screen` toggles only the selected window. On macOS,
+native fullscreen reclaims the app-owned 30 px title/drag inset while keeping
+configured terminal padding and the system safe area. Leaving fullscreen
+restores the inset. Revealing native title or menu chrome may temporarily
+cover the top of the content; OMXTerm does not resize the terminal merely for
+that transient overlay.
+
 `Window -> Always on Top` likewise toggles only the selected window and does
 not rewrite User Configuration.
 

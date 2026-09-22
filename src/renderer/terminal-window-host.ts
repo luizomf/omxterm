@@ -261,6 +261,7 @@ export function mountTerminalWindowPage(
 
   removeConfigurationUpdateListener = options.subscribeToConfigurationUpdates?.(
     (configuration) => {
+      if (disposed) return;
       page.document.documentElement.style.setProperty(
         "--native-title-inset",
         `${configuration.nativeTitleInset}px`,

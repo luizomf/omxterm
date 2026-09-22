@@ -59,6 +59,7 @@ export interface TerminalIpcControllerOptions {
   readonly windowId?: number;
   readonly configuration: TerminalRendererConfiguration;
   readonly webContents: TrustedWebContents;
+  readonly initialFullScreen?: boolean;
   readonly createSession: (callbacks: SessionCallbacks) => LocalTerminalSession;
   readonly onSessionStartError: (
     context: TerminalSessionStartErrorContext,
@@ -94,6 +95,7 @@ export interface TerminalIpcControllerOptions {
 
 export interface TerminalIpcController {
   applyConfiguration(configuration: TerminalRendererConfiguration): void;
+  applyFullScreen(fullScreen: boolean): void;
   hasBusySelectedSession(): boolean;
   hasBusySession(): boolean;
   dispose(): void;

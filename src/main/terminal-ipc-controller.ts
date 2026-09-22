@@ -385,7 +385,11 @@ function createTerminalIpcController(
   unregister: () => void,
 ): RoutedTerminalIpcController {
   let disposed = false;
-  let rendererConfiguration = options.configuration;
+  const rendererConfiguration = createRendererConfigurationState(
+    options.configuration,
+    options.initialFullScreen ?? false,
+    options.webContents,
+  );
   let fontConfigurationGeneration = 0;
   const sessions = new Map<TerminalSessionId, RoutedSessionState>();
   let nextSessionNumber = 1;
@@ -537,10 +541,10 @@ function createTerminalIpcController(
       session: createdSession,
       outputFlow,
       terminalSurfaceFontConfiguration: Object.freeze({
-        ...(rendererConfiguration.fontFamily === undefined
+        ...(rendererConfiguration.current().fontFamily === undefined
           ? {}
-          : { fontFamily: rendererConfiguration.fontFamily }),
-        fontLineHeight: rendererConfiguration.fontLineHeight,
+          : { fontFamily: rendererConfiguration.current().fontFamily }),
+        fontLineHeight: rendererConfiguration.current().fontLineHeight,
       }),
       closed: false,
       exited: exitedBeforeRegistration,
@@ -565,7 +569,7 @@ function createTerminalIpcController(
       throw new TypeError("Invalid User Configuration payload");
     }
     if (disposed) throw new Error("Terminal IPC controller is disposed");
-    return rendererConfiguration;
+    return rendererConfiguration.effective();
   };
 
   const input = (payload?: unknown) => {
@@ -648,7 +652,7 @@ function createTerminalIpcController(
     else reject("clipboard", "invalid-payload");
   };
   const fontData = createFontDataRequest({
-    family: () => rendererConfiguration.fontFamily,
+    family: () => rendererConfiguration.current().fontFamily,
     generation: () => fontConfigurationGeneration,
     isDisposed: () => disposed,
     load: loadTerminalFontData,
@@ -690,13 +694,15 @@ function createTerminalIpcController(
     configuration,
     applyConfiguration(configuration) {
       if (disposed || options.webContents.isDestroyed()) return;
-      if (rendererConfiguration.fontFamily !== configuration.fontFamily)
+      if (
+        rendererConfiguration.current().fontFamily !== configuration.fontFamily
+      )
         fontConfigurationGeneration += 1;
-      rendererConfiguration = Object.freeze({ ...configuration });
-      options.webContents.send(
-        terminalIpc.configurationUpdate,
-        rendererConfiguration,
-      );
+      rendererConfiguration.apply(configuration);
+    },
+    applyFullScreen(fullScreen) {
+      if (!disposed && !options.webContents.isDestroyed())
+        rendererConfiguration.applyFullScreen(fullScreen);
     },
     start,
     input,
@@ -729,6 +735,34 @@ function createTerminalIpcController(
       localImageBoundary.dispose();
       unregister();
       for (const sessionId of [...sessions.keys()]) closeSession(sessionId);
+    },
+  };
+}
+
+function createRendererConfigurationState(
+  initial: TerminalRendererConfiguration,
+  initialFullScreen: boolean,
+  webContents: TrustedWebContents,
+) {
+  let configuration = initial;
+  let fullScreen = initialFullScreen;
+  const effective = () =>
+    fullScreen && configuration.nativeTitleInset > 0
+      ? Object.freeze({ ...configuration, nativeTitleInset: 0 as const })
+      : configuration;
+  const send = () =>
+    webContents.send(terminalIpc.configurationUpdate, effective());
+  return {
+    current: () => configuration,
+    effective,
+    apply(next: TerminalRendererConfiguration) {
+      configuration = Object.freeze({ ...next });
+      send();
+    },
+    applyFullScreen(next: boolean) {
+      if (fullScreen === next) return;
+      fullScreen = next;
+      send();
     },
   };
 }

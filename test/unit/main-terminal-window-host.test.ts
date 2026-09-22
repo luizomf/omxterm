@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 import {
   registerTerminalWindowHost,
@@ -5,18 +6,12 @@ import {
 } from "../../src/main/terminal-window-host";
 
 function createEventSource() {
-  const listeners = new Map<string, () => void>();
+  const events = new EventEmitter();
   return {
-    once: (event: string, listener: () => void) =>
-      void listeners.set(event, listener),
-    removeListener: (event: string, listener: () => void) => {
-      if (listeners.get(event) === listener) listeners.delete(event);
-    },
-    emit(event: string) {
-      const listener = listeners.get(event);
-      listeners.delete(event);
-      listener?.();
-    },
+    on: events.on.bind(events),
+    once: events.once.bind(events),
+    removeListener: events.removeListener.bind(events),
+    emit: events.emit.bind(events),
   };
 }
 
@@ -24,14 +19,25 @@ function createWindowHarness() {
   const windowEvents = createEventSource();
   const webContents = createEventSource();
   const close = vi.fn();
+  let fullScreen = false;
   const window: HostedTerminalWindow = {
+    on: windowEvents.on,
     once: windowEvents.once,
     removeListener: windowEvents.removeListener,
     webContents,
     isDestroyed: () => false,
+    isFullScreen: () => fullScreen,
     close,
   };
-  return { window, windowEvents, webContents, close };
+  return {
+    window,
+    windowEvents,
+    webContents,
+    close,
+    setFullScreen(value: boolean) {
+      fullScreen = value;
+    },
+  };
 }
 
 describe("main Terminal Window host", () => {
@@ -39,7 +45,7 @@ describe("main Terminal Window host", () => {
     "closes and disposes exactly once when WebContents emits %s",
     (event) => {
       const harness = createWindowHarness();
-      const controller = { dispose: vi.fn() };
+      const controller = { applyFullScreen: vi.fn(), dispose: vi.fn() };
       const onWindowClosed = vi.fn();
       const host = registerTerminalWindowHost(
         harness.window,
@@ -58,9 +64,26 @@ describe("main Terminal Window host", () => {
     },
   );
 
+  it("delivers completed native fullscreen state and removes its listeners", () => {
+    const harness = createWindowHarness();
+    const controller = { applyFullScreen: vi.fn(), dispose: vi.fn() };
+    registerTerminalWindowHost(harness.window, controller, vi.fn());
+
+    harness.setFullScreen(true);
+    harness.windowEvents.emit("enter-full-screen");
+    harness.setFullScreen(false);
+    harness.windowEvents.emit("leave-full-screen");
+
+    expect(controller.applyFullScreen.mock.calls).toEqual([[true], [false]]);
+    harness.windowEvents.emit("closed");
+    harness.setFullScreen(true);
+    harness.windowEvents.emit("enter-full-screen");
+    expect(controller.applyFullScreen).toHaveBeenCalledTimes(2);
+  });
+
   it("disposes on an ordinary closed event without closing again", () => {
     const harness = createWindowHarness();
-    const controller = { dispose: vi.fn() };
+    const controller = { applyFullScreen: vi.fn(), dispose: vi.fn() };
     const onWindowClosed = vi.fn();
     registerTerminalWindowHost(harness.window, controller, onWindowClosed);
 

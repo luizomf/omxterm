@@ -201,6 +201,67 @@ describe("renderer Terminal Window page host", () => {
     expect(removeZoomListener).toHaveBeenCalledOnce();
   });
 
+  it("applies effective fullscreen inset updates without reconfiguring or focusing the Surface", async () => {
+    const configuration = {
+      fontSize: 16,
+      fontLineHeight: 1,
+      fontLigatures: true,
+      terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
+      scrollbackLines: 10_000,
+      optionKeyMode: "none",
+      nativeTitleInset: 0,
+      terminalTheme: DEFAULT_TERMINAL_THEME,
+      userFileErrors: [],
+    } as const;
+    let configurationListener:
+      ((configuration: TerminalRendererConfiguration) => void) | undefined;
+    const removeConfigurationListener = vi.fn();
+    const surface = createSurface();
+    const host = mountTerminalWindowPage(createPageElements(), {
+      createAdapter: createAdapterFactory(),
+      configuration,
+      page: window,
+      mount: vi.fn(async () => surface),
+      subscribeToConfigurationUpdates(listener) {
+        configurationListener = listener;
+        return removeConfigurationListener;
+      },
+    });
+    await host.ready;
+
+    expect(
+      document.documentElement.style.getPropertyValue("--native-title-inset"),
+    ).toBe("0px");
+    surface.applyConfiguration.mockClear();
+    surface.focus.mockClear();
+
+    configurationListener!({ ...configuration, fontSize: 18 });
+    expect(
+      document.documentElement.style.getPropertyValue("--native-title-inset"),
+    ).toBe("0px");
+    expect(surface.applyConfiguration).toHaveBeenCalledOnce();
+    surface.applyConfiguration.mockClear();
+
+    configurationListener!({
+      ...configuration,
+      fontSize: 18,
+      nativeTitleInset: 30,
+    });
+    expect(
+      document.documentElement.style.getPropertyValue("--native-title-inset"),
+    ).toBe("30px");
+    expect(surface.applyConfiguration).not.toHaveBeenCalled();
+    expect(surface.focus).not.toHaveBeenCalled();
+
+    host.dispose();
+    expect(removeConfigurationListener).toHaveBeenCalledOnce();
+    configurationListener!(configuration);
+    expect(
+      document.documentElement.style.getPropertyValue("--native-title-inset"),
+    ).toBe("30px");
+    expect(surface.applyConfiguration).not.toHaveBeenCalled();
+  });
+
   it("applies the native title inset and a non-black theme to the page and mount options", async () => {
     const theme = Object.freeze({
       ...DEFAULT_TERMINAL_THEME,

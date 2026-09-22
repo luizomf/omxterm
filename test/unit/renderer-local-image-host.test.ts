@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";
 import type { TerminalSurfaceOptions } from "../../src/terminal-surface/terminal-surface";
 import type { LocalImageData } from "../../src/shared/local-image";
+import type { TerminalRendererConfiguration } from "../../src/shared/user-configuration";
+import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import type {
   TerminalFontZoom,
   TerminalTabCommand,
@@ -79,6 +81,7 @@ async function setup(loadLocalImage: () => Promise<LocalImageData | null>) {
   let zoom!: (command: TerminalFontZoom) => void;
   let tabCommand!: (command: TerminalTabCommand) => void;
   let surfaceOptions!: TerminalSurfaceOptions;
+  let updateConfiguration!: (value: TerminalRendererConfiguration) => void;
   const host = mountTerminalWindowPage(
     { tabStrip, tabsContainer },
     {
@@ -94,6 +97,10 @@ async function setup(loadLocalImage: () => Promise<LocalImageData | null>) {
         return surface;
       },
       page: window,
+      subscribeToConfigurationUpdates(listener) {
+        updateConfiguration = listener;
+        return () => {};
+      },
       loadLocalImage,
       subscribeToLocalImageOpen(listener) {
         openImage = listener;
@@ -124,6 +131,7 @@ async function setup(loadLocalImage: () => Promise<LocalImageData | null>) {
     tabCommand,
     surfaceOptions,
     openImage,
+    updateConfiguration,
   };
 }
 
@@ -206,6 +214,40 @@ describe("local image preview through the Terminal Window host", () => {
       expect(view.surface.inject).toHaveBeenCalledOnce();
       expect(view.surface.zoom).toHaveBeenCalledOnce();
       expect(view.surface.focus).toHaveBeenCalled();
+    } finally {
+      view.host.dispose();
+    }
+  });
+
+  it("keeps preview focus through fullscreen inset changes and reload", async () => {
+    const view = await setup(async () => image);
+    try {
+      view.openImage();
+      await vi.waitFor(() =>
+        expect(document.querySelector("dialog")!.open).toBe(true),
+      );
+      const focused = document.activeElement;
+      for (const nativeTitleInset of [0, 0, 30, 0] as const) {
+        view.updateConfiguration({
+          fontSize: 18,
+          fontLineHeight: 1,
+          fontLigatures: true,
+          terminalPadding: { top: 7, right: 8, bottom: 8, left: 8 },
+          scrollbackLines: 10_000,
+          optionKeyMode: "none",
+          nativeTitleInset,
+          terminalTheme: DEFAULT_TERMINAL_THEME,
+          userFileErrors: [],
+        });
+        expect(document.activeElement).toBe(focused);
+        expect(document.querySelector("dialog")!.open).toBe(true);
+        expect(view.surface.focus).not.toHaveBeenCalled();
+        expect(
+          document.documentElement.style.getPropertyValue(
+            "--native-title-inset",
+          ),
+        ).toBe(`${nativeTitleInset}px`);
+      }
     } finally {
       view.host.dispose();
     }

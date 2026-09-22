@@ -8,7 +8,7 @@ const frame = () =>
 // A reduced mode-2048 client: like Neovim, it trusts in-band notifications,
 // not PTY resize callbacks, for its screen and cursor coordinates.
 export async function verifyInBandResize(root: HTMLElement): Promise<void> {
-  for (const trigger of ["zoom", "reload"] as const) {
+  for (const trigger of ["zoom", "reload", "fullscreen-inset"] as const) {
     const container = document.createElement("main");
     container.className = "terminal-surface";
     root.replaceChildren(container);
@@ -72,6 +72,11 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
         const priorReports = reports;
         const priorResizes = resizes;
         if (trigger === "zoom") surface.zoom("in");
+        else if (trigger === "fullscreen-inset")
+          document.documentElement.style.setProperty(
+            "--native-title-inset",
+            step % 2 === 0 ? "30px" : "0px",
+          );
         else
           surface.applyConfiguration({
             appearance: { fontSize: 17 + step, lineHeight: 1, ligatures: true },
@@ -133,7 +138,7 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
       const priorCursor = cursor;
       surface.applyConfiguration({
         appearance: {
-          fontSize: trigger === "zoom" ? 16 : 19,
+          fontSize: trigger === "reload" ? 19 : 16,
           lineHeight: 1,
           ligatures: true,
         },
@@ -157,6 +162,7 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
     } finally {
       surface.dispose();
       container.remove();
+      document.documentElement.style.setProperty("--native-title-inset", "0px");
     }
   }
 }

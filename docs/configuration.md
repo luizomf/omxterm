@@ -197,8 +197,10 @@ to, while later output can be retained after a positive value returns.
 keyboard layout's native Unicode input; `left`, `right`, and `both` select which
 Option keys produce terminal Alt sequences.
 
-On macOS, configured top padding begins below the fixed 30 px native title and
-drag inset. On Linux and Windows, it begins directly below native Window Chrome.
+On macOS, configured top padding begins below the 30 px native title and drag
+inset while windowed or maximized. Native fullscreen removes only that
+app-owned inset; configured top padding and the system safe area remain. On
+Linux and Windows, padding begins directly below native Window Chrome.
 `font.lineHeight` changes row height independently of glyph size.
 `font.ligatures` changes programming-operator shaping live for current and new
 Surfaces. It does not alter source text, selection or copy results, cell widths,

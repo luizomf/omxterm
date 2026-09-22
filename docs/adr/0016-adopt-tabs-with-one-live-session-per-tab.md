@@ -15,6 +15,17 @@ sits below the app-controlled 30 px title inset. Linux already places its native
 title and application menu outside the renderer, so its row starts at the top
 of the app-controlled content without a duplicate inset.
 
+A later macOS fullscreen amendment keeps that row below the 30 px inset while
+windowed or maximized, but removes the app-owned inset in native fullscreen.
+Electron's completed enter/leave events drive each window independently. Main
+derives the effective inset from native state and delivers it through the existing
+validated configuration snapshot and subscription, including initialization and
+reload, without another IPC route or recreating a Surface or session. System
+safe-area behavior and configured padding remain unchanged, and transient native
+chrome reveal overlays content instead of
+introducing hover-driven layout changes. Fullscreen remains independent from
+tab visibility.
+
 Native Linux AppImage dogfooding showed why the inset is platform-specific:
 reusing the macOS inset below Linux's existing title and menu produced an empty
 30 px band before the tabs and reduced the Terminal Surface for no native drag
