@@ -19,10 +19,15 @@ Built with [Restty](https://github.com/wiedymi/restty) and its pinned
 - local PNG/JPEG previews and inline images from direct Pi/Chafa sessions.
 
 OMXTerm is actively developed through everyday use, bug reports, and automated
-checks on all three platforms. Version 0.13.0 improves configured fonts: real
-bold and italic faces when available, stronger synthetic bold when needed,
-and shared font resources across tabs. Reproducible reports help us decide
-what to tackle next.
+checks on all three platforms. The latest published download is **0.13.0**,
+which improves configured fonts with real bold and italic faces when available,
+stronger synthetic bold when needed, and shared font resources across tabs.
+
+The documentation follows the **0.14.0-dev.0** source tree. Features added
+since 0.13.0, including the tab-bar toggle and its shortcut, are available when
+building the development version and are not part of the published 0.13.0
+packages. Use the [0.13.0 release notes](docs/releases/0.13.0.md) when you need
+the exact behavior of those downloads.
 
 ## Platforms and downloads
 
@@ -157,8 +162,8 @@ system-wide Windows security protections.
 If pressing Backspace at an empty Bash prompt briefly turns the terminal
 bright, check the shell's visual-bell setting. Some Bash setups, including
 Git Bash, enable Readline's `bell-style visible`, which requests a screen
-color inversion rather than an ordinary Terminal Bell. This is not a general
-Windows shell requirement, and 0.13.0 does not suppress those inversions.
+color inversion. OMXTerm displays this terminal effect; the preference below
+controls when Bash requests it.
 
 To disable Readline's bell in the current Bash session, run:
 
@@ -178,16 +183,30 @@ set bell-style none
 ```
 
 Open a new Bash session afterward, or use the `bind` command above in existing
-sessions. This disables Bash/Readline's bell, not visual effects requested by
-other applications. OMXTerm does not edit shell configuration automatically.
-Product-side investigation continues in
-[#333](https://github.com/luizomf/omxterm/issues/333).
+sessions. This disables Bash/Readline's bell, while programs can still request
+terminal screen inversion when they need it. OMXTerm keeps those terminal
+capabilities available and does not edit shell configuration automatically.
+
+#### Bright flashes in Vim
+
+Vim has its own bell settings, independent of Bash/Readline. If an action in
+Vim briefly flashes the terminal, silence its bell notifications for the current
+editor session with:
+
+```vim
+:set belloff=all
+```
+
+To keep this preference for future Vim sessions, add `set belloff=all` to your
+`.vimrc`, preserving its other settings. Vim documents this option in
+`:help 'belloff'`.
 
 ## Everyday use
 
-Launch OMXTerm to open your default shell in your home directory. Use
+Launch OMXTerm to open your default shell in your home directory. Choose
 `File -> New Tab` or `File -> New Window` for another independent session.
-Closing a tab ends its session; sessions are not saved or restored.
+Each tab runs its own shell. Closing a tab ends that session, so use a tool such
+as tmux when a process needs to outlive the tab.
 
 | Action         | macOS             | Linux and Windows   |
 | -------------- | ----------------- | ------------------- |
@@ -197,6 +216,11 @@ Closing a tab ends its session; sessions are not saved or restored.
 | Copy           | `Cmd+C`           | `Ctrl+Shift+C`      |
 | Paste          | `Cmd+V`           | `Ctrl+Shift+V`      |
 | Zoom in / out  | `Cmd++` / `Cmd+-` | `Ctrl++` / `Ctrl+-` |
+
+`Plus` in the zoom shortcut means the `+` symbol. If `+` shares your `=` key,
+press the Shift required to type it: for example, `Ctrl+Shift+=` on many Linux
+and Windows layouts or `Cmd+Shift+=` on many Mac layouts. A dedicated keypad
+`+` does not need Shift.
 
 On Linux and Windows, press and release `Alt` to show the application menu.
 OMXTerm works without configuration files. When you want to customize it:
