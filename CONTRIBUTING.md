@@ -165,12 +165,18 @@ which matters when a PID is reused or a PTY leaves Electron's process group.
 A timeout, interruption, or worker loss still fails the test; cleanup preserves
 that result rather than turning it into a pass.
 
-When cleanup succeeds, the supervisor removes the fixture profile. Otherwise it
-keeps the profile and writes the mechanical outcome plus synthetic stdout and
-stderr under `.scratch/native-fixtures/` for diagnosis. Those records can contain
-local paths, so review them before sharing. Cleanup is bounded, but its total
-runtime is not a single five-second window: native inspection commands,
-termination, stream draining, and Windows profile retries have separate limits.
+When cleanup succeeds, the supervisor removes the fixture profile; on failure,
+it retains the profile for inspection. In either case, it writes the mechanical
+outcome plus synthetic stdout and stderr under `.scratch/native-fixtures/` for
+diagnosis. Those records can contain local paths, so review them before sharing.
+
+Cleanup uses three POSIX freeze/rescan passes and identity checks before each
+signal. Each native inventory or termination command has a five-second timeout.
+After termination requests, a separate five-second deadline checks that the
+processes disappear. An in-flight inventory can finish beyond that deadline,
+within its own command timeout. Stream draining and Windows profile retries
+have separate bounds, so total cleanup time depends on the process tree and
+command durations rather than a single five-second window.
 
 Windows uses local WMI process creation with
 [`CREATE_BREAKAWAY_FROM_JOB`](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/create-method-in-class-win32-process)
