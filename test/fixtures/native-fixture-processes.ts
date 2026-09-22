@@ -84,6 +84,9 @@ export async function terminateFixtureProcesses(
   const targets = [...owned.values()].reverse();
   if (process.platform === "win32") killWindowsFixtureProcesses(targets);
   else for (const row of targets) signalFixtureProcess(row, "SIGKILL");
+  // This is a post-termination deadline, not a total-cleanup bound. It is
+  // checked after each bounded inventory; an in-flight inventory may overrun it.
+  // Freeze/rescan and signal operations above have separate command bounds.
   const deadline = Date.now() + 5_000;
   while (true) {
     const remaining = fixtureProcesses().filter(
@@ -114,6 +117,16 @@ export function collectFixtureDescendants(
             candidate.pid === parent.pid &&
             candidate.identity === parent.identity,
         )
+      )
+        continue;
+      // Windows retains an orphan's old parent PID after that PID is reused.
+      // A live matching parent is insufficient: its child cannot predate it.
+      // Numeric identities are Windows ticks or Linux start ticks; BigInt keeps
+      // adjacent Windows creation ticks distinct beyond Number's safe range.
+      if (
+        /^\d+$/u.test(row.identity) &&
+        /^\d+$/u.test(parent.identity) &&
+        BigInt(row.identity) < BigInt(parent.identity)
       )
         continue;
       if (owned.get(row.pid)?.identity === row.identity) continue;

@@ -177,7 +177,19 @@ and IPC-disconnect detection. This is bounded test-harness cleanup, not a kernel
 containment mechanism for arbitrary daemonizing programs or protection against
 killing the supervisor itself. Identity checks use Linux process-start ticks,
 Windows creation times and held process handles, and macOS `ps` start times;
-POSIX inspection and signaling are not atomic.
+POSIX inspection and signaling are not atomic. Numeric creation identities also
+reject impossible ancestry: a process older than a reused parent PID is not a
+fixture descendant. Windows creation ticks are compared without floating-point
+rounding.
+
+The five-second disappearance deadline starts after termination requests, not at
+the start of cleanup. Each native inventory/termination command has a separate
+five-second timeout; POSIX cleanup makes three freeze/rescan passes and checks
+identity before each signal. Total cleanup therefore depends on the observed
+tree size and native command durations. An in-flight inventory can finish after
+the disappearance deadline; its own five-second command timeout still applies.
+Stream draining and Windows profile removal retries have separate bounds. There
+is no five-second total-cleanup promise.
 
 Interruption regressions deliberately terminate owned processes and are opt-in
 for an authorized disposable VM with a recovery snapshot:
