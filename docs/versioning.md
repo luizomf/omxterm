@@ -78,13 +78,12 @@ After `X.Y.Z` is published, `main` normally moves to
 Ordinary fixes, maintenance, documentation, and pull requests leave that value
 alone.
 
-A pull request that adds user-visible functionality moves a `0.x` baseline to
-the next minor `-dev.0`. An intentional contract change during `0.x` does the
-same. For example, if `main` is at `0.13.1-dev.0` and accepts a feature, that
+A pull request that adds user-visible functionality moves the development
+baseline to the next minor `-dev.0`. Intentional contract changes during `0.x`
+follow the same rule. For example, if `main` is at `0.13.1-dev.0` and accepts a feature, that
 feature's pull request updates both package files to `0.14.0-dev.0`. A later
 feature in the same cycle sees that the move already happened and makes no
-version change. The pull request also updates the pinned version test required
-by the repository.
+version change.
 
 Release preparation chooses the final version and removes the prerelease
 suffix. Until that separately authorized work happens, a development baseline

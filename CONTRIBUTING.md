@@ -159,8 +159,8 @@ npm run build
 ### Native fixture cleanup
 
 The Restty host fixture starts Electron, a native PTY, and helper processes. A
-small supervisor owns cleanup so a lost test worker cannot leave those processes
-running. It identifies descendants by both PID and process-creation identity,
+separate supervisor owns their cleanup, including when the test worker exits
+unexpectedly. It identifies descendants by both PID and process-creation identity,
 which matters when a PID is reused or a PTY leaves Electron's process group.
 A timeout, interruption, or worker loss still fails the test; cleanup preserves
 that result rather than turning it into a pass.
@@ -178,8 +178,11 @@ for the cleanup supervisor because an ordinary detached child remains in the
 test worker's Job. WMI must be available, and the supervisor runs as the caller
 without elevation or a policy change. Electron itself stays in the caller's
 interactive desktop, session, and environment. POSIX uses a detached supervisor
-and IPC-disconnect detection. In both cases this is fixture-specific cleanup,
-not general process containment.
+and IPC-disconnect detection. Its process inspection and signaling are separate
+operations, and macOS process-start times have second-level resolution. These
+identity checks support cleanup of the observed fixture tree; arbitrary
+process daemonization and termination of the supervisor itself remain outside
+its coverage.
 
 The interruption regressions deliberately terminate fixture-owned processes.
 Run them only in an authorized disposable VM with a recovery snapshot:

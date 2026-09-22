@@ -409,7 +409,8 @@ native filesystem. Prepare the clone before its first checkout with
 `core.autocrlf=false` and `core.symlinks=true`, then confirm that Markdown and
 source files remain LF and repository symlinks are real symlinks. Install a
 supported Node.js version and the ARM64 Visual C++ Redistributable. Developer
-Mode supplies unprivileged symlink creation for the native fixtures. If local
+Mode supplies unprivileged symlink creation for the native fixtures. Arrange
+these development prerequisites with the host owner's approval. If local
 PowerShell scripts need it, owner-approved process-scoped `RemoteSigned` is
 sufficient and leaves the persisted execution policy unchanged. Preserve the
 normal executable search path when adding portable tools.
