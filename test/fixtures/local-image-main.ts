@@ -57,11 +57,16 @@ async function run() {
     preview.push({ opened, dismissed });
   }
   const layouts = await measureLayouts(window);
+  const devicePixelRatio: unknown = await window.webContents.executeJavaScript(
+    "devicePixelRatio",
+    true,
+  );
   window.destroy();
   process.stdout.write(
     `${resultPrefix}${JSON.stringify({
       preview,
       layouts,
+      devicePixelRatio,
       isolatedProfiles: (["userData", "sessionData"] as const).every(
         (name) => path.dirname(app.getPath(name)) === process.cwd(),
       ),

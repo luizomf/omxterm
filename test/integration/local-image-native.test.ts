@@ -17,108 +17,130 @@ const PNG_1X1 = Buffer.from(
 );
 
 describe("local image boundary through native Electron", () => {
-  it("decodes validated extensionless bytes with isolated Electron state", async () => {
-    const root = await mkdtemp(path.join(tmpdir(), "omxterm-local-image-"));
-    try {
-      await build({
-        entryPoints: [
-          path.join(projectRoot, "test", "fixtures", "local-image-main.ts"),
-        ],
-        bundle: true,
-        platform: "node",
-        format: "cjs",
-        outfile: path.join(root, "main.cjs"),
-        external: ["electron"],
-      });
-      await build({
-        entryPoints: [
-          path.join(projectRoot, "test/fixtures/local-image-renderer.ts"),
-        ],
-        bundle: true,
-        platform: "browser",
-        format: "iife",
-        outfile: path.join(root, "preview.js"),
-      });
-      const productionHtml = await readFile(
-        path.join(projectRoot, "src/renderer/index.html"),
-        "utf8",
-      );
-      const policy = productionHtml.match(/content="(?<policy>[^"]+)"/u)?.groups
-        ?.policy;
-      if (!policy) throw new Error("Production renderer CSP is missing");
-      await Promise.all([
-        writeFile(
-          path.join(root, "preview.html"),
-          `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${policy}"><link rel="stylesheet" href="./preview.css"></head><body><textarea aria-label="Terminal input"></textarea><script src="./preview.js"></script></body></html>`,
-        ),
-        copyFile(
-          path.join(projectRoot, "src/renderer/terminal-window.css"),
-          path.join(root, "preview.css"),
-        ),
-        writeFile(
-          path.join(root, "package.json"),
-          `${JSON.stringify({ name: "omxterm-local-image-fixture", main: "main.cjs" })}\n`,
-        ),
-        writeFile(path.join(root, "fixture%23#literal.data"), PNG_1X1),
-      ]);
-      const execution = await runFixture(root);
-      const line = execution.stdout
-        .split("\n")
-        .find((candidate) => candidate.startsWith(resultPrefix));
-      const result = line
-        ? (JSON.parse(line.slice(resultPrefix.length)) as unknown)
-        : undefined;
-      expect(
-        execution.exitCode,
-        `Local image fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
-      ).toBe(0);
-      expect(result).toEqual({
-        preview: [0, 1].map(() => ({
-          opened: {
-            open: true,
-            decoded: true,
-            hasSource: true,
-            terminalFocused: false,
-          },
-          dismissed: {
-            open: false,
-            decoded: false,
-            hasSource: false,
-            terminalFocused: true,
-          },
-        })),
-        layouts: Array.from({ length: 20 }, () => ({
-          contained: true,
-          proportional: true,
-          visible: true,
-        })),
-        isolatedProfiles: true,
-        mime: "image/png",
-        width: 1,
-        height: 1,
-        bytes: PNG_1X1.byteLength,
-        jpegMime: "image/jpeg",
-        jpegWidth: 1,
-        jpegHeight: 1,
-      });
-    } finally {
-      // Windows can retain Chromium profile handles briefly after child exit.
-      await rm(root, {
-        recursive: true,
-        force: true,
-        maxRetries: 10,
-        retryDelay: 100,
-      });
-    }
-  }, 20_000);
+  it.each([
+    { label: "native display scale", scaleFactor: undefined },
+    { label: "fractional display scale", scaleFactor: 2.5 },
+  ])(
+    "decodes validated bytes and keeps previews contained at $label",
+    async ({ scaleFactor }) => {
+      const root = await mkdtemp(path.join(tmpdir(), "omxterm-local-image-"));
+      try {
+        await build({
+          entryPoints: [
+            path.join(projectRoot, "test", "fixtures", "local-image-main.ts"),
+          ],
+          bundle: true,
+          platform: "node",
+          format: "cjs",
+          outfile: path.join(root, "main.cjs"),
+          external: ["electron"],
+        });
+        await build({
+          entryPoints: [
+            path.join(projectRoot, "test/fixtures/local-image-renderer.ts"),
+          ],
+          bundle: true,
+          platform: "browser",
+          format: "iife",
+          outfile: path.join(root, "preview.js"),
+        });
+        const productionHtml = await readFile(
+          path.join(projectRoot, "src/renderer/index.html"),
+          "utf8",
+        );
+        const policy = productionHtml.match(/content="(?<policy>[^"]+)"/u)
+          ?.groups?.policy;
+        if (!policy) throw new Error("Production renderer CSP is missing");
+        await Promise.all([
+          writeFile(
+            path.join(root, "preview.html"),
+            `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${policy}"><link rel="stylesheet" href="./preview.css"></head><body><textarea aria-label="Terminal input"></textarea><script src="./preview.js"></script></body></html>`,
+          ),
+          copyFile(
+            path.join(projectRoot, "src/renderer/terminal-window.css"),
+            path.join(root, "preview.css"),
+          ),
+          writeFile(
+            path.join(root, "package.json"),
+            `${JSON.stringify({ name: "omxterm-local-image-fixture", main: "main.cjs" })}\n`,
+          ),
+          writeFile(path.join(root, "fixture%23#literal.data"), PNG_1X1),
+        ]);
+        const execution = await runFixture(root, scaleFactor);
+        const line = execution.stdout
+          .split("\n")
+          .find((candidate) => candidate.startsWith(resultPrefix));
+        const result = line
+          ? (JSON.parse(line.slice(resultPrefix.length)) as unknown)
+          : undefined;
+        expect(
+          execution.exitCode,
+          `Local image fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
+        ).toBe(0);
+        const devicePixelRatio =
+          typeof result === "object" &&
+          result !== null &&
+          "devicePixelRatio" in result
+            ? result.devicePixelRatio
+            : undefined;
+        expect(devicePixelRatio).toBeTypeOf("number");
+        if (scaleFactor !== undefined)
+          expect(devicePixelRatio).toBe(scaleFactor);
+        expect(result).toEqual({
+          devicePixelRatio,
+          preview: [0, 1].map(() => ({
+            opened: {
+              open: true,
+              decoded: true,
+              hasSource: true,
+              terminalFocused: false,
+            },
+            dismissed: {
+              open: false,
+              decoded: false,
+              hasSource: false,
+              terminalFocused: true,
+            },
+          })),
+          layouts: Array.from({ length: 20 }, () => ({
+            contained: true,
+            proportional: true,
+            visible: true,
+          })),
+          isolatedProfiles: true,
+          mime: "image/png",
+          width: 1,
+          height: 1,
+          bytes: PNG_1X1.byteLength,
+          jpegMime: "image/jpeg",
+          jpegWidth: 1,
+          jpegHeight: 1,
+        });
+      } finally {
+        // Windows can retain Chromium profile handles briefly after child exit.
+        await rm(root, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 100,
+        });
+      }
+    },
+    20_000,
+  );
 });
 
-async function runFixture(root: string): Promise<{
+async function runFixture(
+  root: string,
+  scaleFactor?: number,
+): Promise<{
   readonly exitCode: number | null;
   readonly stderr: string;
   readonly stdout: string;
 }> {
   const chromiumArguments: string[] = [];
+  if (scaleFactor !== undefined)
+    chromiumArguments.push(`--force-device-scale-factor=${scaleFactor}`);
   applyChromiumSandboxPolicy({
     appendSwitch(name) {
       chromiumArguments.push(`--${name}`);

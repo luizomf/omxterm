@@ -70,7 +70,9 @@ Wayland is not currently claimed. Launching OMXTerm — including the packaged l
 inside `npm run package:verify` and `npm run check:linux` — needs a running
 graphical session; a headless or SSH shell without `$DISPLAY` fails with
 `Missing X server or $DISPLAY`. Over SSH, point `DISPLAY` at the machine's
-desktop session (commonly `DISPLAY=:0`). `xvfb-run` can smoke-test a truly
+desktop session (commonly `DISPLAY=:0`) and use that session's X11 authorization
+when required; `DISPLAY` alone does not grant access to another user's desktop.
+Do not disable X server access control to make a test connect. `xvfb-run` can smoke-test a truly
 headless machine but never counts as platform behavior evidence. macOS and
 Windows contributors should install the
 native build toolchain requested by npm if no matching dependency prebuild is
@@ -83,11 +85,37 @@ that must check out as symlinks; enabling Windows Developer Mode allows
 unprivileged symlink creation. Electron's runtime needs the Visual C++
 Redistributable for ARM64 (without it the postinstall fails with
 `ERR_DLOPEN_FAILED`), and npm's `.ps1` shims need a PowerShell execution
-policy that permits local scripts. If `npm ci` fails with `EPERM` file locks,
+policy that permits local scripts. The native installation-inspection tests and
+package verifiers also execute local `.ps1` helpers: using `npm.cmd` bypasses only
+the npm shim, not this prerequisite. Check `Get-ExecutionPolicy -List` in Windows
+PowerShell (`powershell.exe`), which is the interpreter used by those helpers.
+On a developer-controlled environment where organizational policy permits it,
+start a temporary shell with `powershell.exe -NoProfile -ExecutionPolicy RemoteSigned`
+and run `npm.cmd` from that shell. This applies only to that process and inherited
+children, not a persistent CurrentUser or LocalMachine setting. Do not override
+organizational policy, automatically weaken execution policy in project commands,
+or treat a policy refusal as evidence that an installer ownership guard passed.
+If `npm ci` fails with `EPERM` file locks,
 an antivirus scanner racing the extractor is the usual cause; an exclusion
 for the clone directory resolves it. Windows launches — including the
 packaged launch inside `npm run package:verify` and `npm run check:win` —
-need a graphical session.
+need a graphical session. An SSH login as the same user is not sufficient:
+Windows OpenSSH normally runs commands in non-interactive Session 0, independently
+of the user's logged-in desktop. Native graphical tests can fail or appear to
+pass intermittently there, including GPU startup, selection, and pixel capture.
+Run them from a terminal on the interactive desktop, or an explicitly configured
+VM harness that executes as the logged-in desktop user. Compare
+`[System.Diagnostics.Process]::GetCurrentProcess().SessionId` with the intended
+desktop session (for example, `Get-Process explorer | Select-Object SessionId`),
+and still verify the actual renderer/GPU behavior. Do not substitute session
+identity alone for a passing graphics check or add software-renderer flags to
+hide a missing required native path.
+
+Native Electron fixtures share the desktop compositor. The test configuration
+serializes files within one run; do not run multiple native suites or clones
+against the same desktop concurrently. When a graphical failure is intermittent,
+record every failure and rerun condition rather than describing a later isolated
+pass as proof that the original failure was fixed.
 
 The portable development baseline does not require a packaged application:
 

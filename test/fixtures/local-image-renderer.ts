@@ -57,13 +57,31 @@ globalThis.__localImagePreviewProbe = {
     const bounds = dialog.getBoundingClientRect();
     const rect = image.getBoundingClientRect();
     const style = getComputedStyle(dialog);
+    // At fractional DPR, a declared 1px border can resolve to 0.8 CSS pixels.
+    // Measure actual content edges, allowing one Chromium layout unit of rounding.
+    const epsilon = 1 / 64;
     return {
       contained:
-        rect.left >= bounds.left + parseFloat(style.paddingLeft) + 1 &&
-        rect.right <= bounds.right - parseFloat(style.paddingRight) - 1 + 0.1 &&
-        rect.top >= bounds.top + parseFloat(style.paddingTop) + 1 &&
+        rect.left >=
+          bounds.left +
+            parseFloat(style.paddingLeft) +
+            parseFloat(style.borderLeftWidth) -
+            epsilon &&
+        rect.right <=
+          bounds.right -
+            parseFloat(style.paddingRight) -
+            parseFloat(style.borderRightWidth) +
+            epsilon &&
+        rect.top >=
+          bounds.top +
+            parseFloat(style.paddingTop) +
+            parseFloat(style.borderTopWidth) -
+            epsilon &&
         rect.bottom <=
-          bounds.bottom - parseFloat(style.paddingBottom) - 1 + 0.1 &&
+          bounds.bottom -
+            parseFloat(style.paddingBottom) -
+            parseFloat(style.borderBottomWidth) +
+            epsilon &&
         bounds.left >= 0 &&
         bounds.top >= 0 &&
         bounds.right <= innerWidth &&

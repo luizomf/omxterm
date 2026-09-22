@@ -24,14 +24,14 @@ describe.skipIf(process.platform !== "win32")(
   "Windows installation tree refusal",
   () => {
     it.each([
-      "regular",
-      "junction",
-      "file-link",
-      "missing-uninstaller",
-      "unreadable",
+      { conflict: "regular", refusal: /Unexpected installer/i },
+      { conflict: "junction", refusal: /reparse point ownership/i },
+      { conflict: "file-link", refusal: /reparse point ownership/i },
+      { conflict: "missing-uninstaller", refusal: /Uninstall OMXTerm\.exe/i },
+      { conflict: "unreadable", refusal: /Synthetic access denial/ },
     ])(
-      "guards the %s tree at the native-command boundary",
-      async (conflict) => {
+      "guards the $conflict tree at the native-command boundary",
+      async ({ conflict, refusal }) => {
         const root = await mkdtemp(path.join(tmpdir(), "omxterm-tree-"));
         const localAppData = path.join(root, "Local");
         const installation = path.join(localAppData, "Programs", "omxterm");
@@ -73,7 +73,12 @@ describe.skipIf(process.platform !== "win32")(
 $ErrorActionPreference='Stop'
 . $Helper
 ${conflict === "unreadable" ? "function Get-ChildItem { throw 'Synthetic access denial' }" : ""}
-Assert-OmxtermInstallationTree -Root $Root -RequireBinaries
+try {
+  Assert-OmxtermInstallationTree -Root $Root -RequireBinaries
+} catch {
+  [Console]::Error.WriteLine($_.Exception.Message)
+  exit 1
+}
 `,
           );
           const execute = async (file: string, args: string[]) => {
@@ -140,9 +145,9 @@ Assert-OmxtermInstallationTree -Root $Root -RequireBinaries
             temporaryDirectory: root,
             localAppData,
           });
-          if (conflict === "regular")
-            await expect(verification).rejects.toThrow(/Unexpected installer/i);
-          else await expect(verification).rejects.toThrow();
+          // A policy, bootstrap, or unrelated I/O failure must not masquerade
+          // as proof that the intended ownership guard actually ran.
+          await expect(verification).rejects.toThrow(refusal);
           expect(launches).toEqual(conflict === "regular" ? [installer] : []);
           expect(await readFile(marker, "utf8")).toBe(
             "synthetic unrelated bytes",
