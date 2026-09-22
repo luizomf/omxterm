@@ -1766,101 +1766,46 @@ export async function prepareResttyRuntime(options = {}) {
   let source = await readFile(selectedRuntimePath, "utf8");
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
-    if (sourceDigest === priorPointerDigest) {
-      // Only desktop compatibility-mouse drag initiation remains to be corrected.
-    } else if (sourceDigest === priorSyntheticBoldDigest) {
-      // Only the bounded synthetic-bold contour remains to be applied.
-    } else if (sourceDigest === priorFontStyleDigest) {
-      // Only exact configured collection-face selection remains to be applied.
-    } else if (sourceDigest === priorResizeDigest) {
-      // Only negotiated in-band resize delivery remains to be corrected.
-    } else if (sourceDigest === priorDepthDigest) {
-      // Only the unused default depth attachment remains to be removed.
-    } else if (sourceDigest === priorHiddenRenderingDigest) {
-      // Only Surface visibility and synchronous reveal remain to be corrected.
-    } else if (sourceDigest === priorModifiedHoverDigest) {
-      // Only modified-hover rendering remains to be corrected.
-    } else if (sourceDigest === priorDeadKeyCompositionDigest) {
-      source = applyCorrections(source, deadKeyCompositionCorrections);
-    } else if (sourceDigest === priorFontMemoryDigest) {
-      // Only font acquisition lifetime remains to be corrected.
-    } else if (sourceDigest === priorViewportDigest) {
-      source = applyCorrections(source, viewportCorrections);
-    } else if (sourceDigest === reviewedInteractionDigest) {
-      source = applyCorrections(source, interactionReviewCorrections);
-    } else if (sourceDigest === priorInteractionDigest) {
-      source = applyCorrections(source, interactionCorrections);
-    } else if (sourceDigest === splitTerminatorOutputSafetyDigest) {
-      source = applyCorrections(source, splitTerminatorOutputSafetyCorrections);
-    } else if (sourceDigest === priorOutputSafetyDigest) {
-      source = applyCorrections(source, outputSafetyCorrections);
-    } else if (sourceDigest === priorParsedEventsDigest) {
-      source = applyCorrections(source, parsedEventRuntimeCorrections);
-      source = applyCorrections(source, outputSafetyCorrections);
-    } else {
-      if (sourceDigest === priorVisibleLinksDigest) {
-        source = applyCorrections(source, visibleLinkCorrections);
-      } else if (sourceDigest === priorClipboardDigest) {
-        // Only complete-buffer Select All remains to be applied.
-      } else if (sourceDigest === priorScrollbackDigest) {
-        // Clipboard/runtime parser and Select All seams remain to be applied.
-      } else if (sourceDigest === priorFontDigest) {
-        // Scrollback and clipboard/runtime parser seams remain to be applied.
-      } else if (sourceDigest === priorFamilyFilterDigest) {
-        source = applyCorrections(source, requiredFontCorrections);
-      } else if (sourceDigest === originalDigest) {
+    // Intentional fallthrough: each reviewed input enters one ordered suffix.
+    // Historical alternatives are handled at their stage, never in a second tail.
+    switch (sourceDigest) {
+      case originalDigest:
         source = applyCorrections(source, securityCorrections);
+      case priorCorrectedDigest:
         source = applyCorrections(source, geometryCorrections);
-      } else if (sourceDigest === priorCorrectedDigest) {
-        source = applyCorrections(source, geometryCorrections);
-      } else if (
-        sourceDigest !== priorAppearanceDigest &&
-        sourceDigest !== priorBoldColorDigest
-      ) {
-        throw new Error(
-          "Unrecognized Restty runtime; review the pinned OMXTerm corrections",
-        );
-      }
-
-      if (
-        sourceDigest !== priorVisibleLinksDigest &&
-        sourceDigest !== priorFontDigest &&
-        sourceDigest !== priorScrollbackDigest &&
-        sourceDigest !== priorClipboardDigest
-      ) {
-        if (sourceDigest !== priorFamilyFilterDigest) {
-          if (sourceDigest !== priorBoldColorDigest)
-            source = applyCorrections(source, boldColorCorrections);
-          source = applyCorrections(source, fontCorrections);
-        }
-      }
-      if (
-        sourceDigest !== priorVisibleLinksDigest &&
-        sourceDigest !== priorScrollbackDigest &&
-        sourceDigest !== priorClipboardDigest
-      )
+      case priorAppearanceDigest:
+        source = applyCorrections(source, boldColorCorrections);
+      case priorBoldColorDigest:
+        source = applyCorrections(source, fontCorrections);
+      case priorFamilyFilterDigest:
+        if (sourceDigest === priorFamilyFilterDigest)
+          source = applyCorrections(source, requiredFontCorrections);
+      case priorFontDigest:
         source = applyCorrections(source, scrollbackRuntimeCorrections);
-      if (
-        sourceDigest !== priorVisibleLinksDigest &&
-        sourceDigest !== priorClipboardDigest
-      )
+      case priorScrollbackDigest:
         source = applyCorrections(source, clipboardCorrections);
-      else if (sourceDigest === priorClipboardDigest)
-        source = applyCorrections(source, [
-          {
-            original:
-              "    // OMXTerm keeps candidate clipboard and OSC 52 integration disabled.",
-            corrected:
-              "    // OMXTerm keeps direct browser clipboard access disabled.",
-          },
-          {
-            original:
-              "  // OMXTerm exposes no candidate clipboard action before Protected Paste lands.",
-            corrected:
-              "  // OMXTerm owns clipboard actions through its typed host bridge.",
-          },
-          {
-            original: `  const selectAll = () => {
+      case priorClipboardDigest:
+        // Original npm input already receives the current comments. Every older
+        // corrected input through this stage still carries the opt-in wording.
+        if (sourceDigest !== originalDigest)
+          source = applyCorrections(source, [
+            {
+              original:
+                "    // OMXTerm keeps candidate clipboard and OSC 52 integration disabled.",
+              corrected:
+                "    // OMXTerm keeps direct browser clipboard access disabled.",
+            },
+            {
+              original:
+                "  // OMXTerm exposes no candidate clipboard action before Protected Paste lands.",
+              corrected:
+                "  // OMXTerm owns clipboard actions through its typed host bridge.",
+            },
+          ]);
+        if (sourceDigest === priorClipboardDigest)
+          source = applyCorrections(source, [
+            {
+              original: `  const selectAll = () => {
     const renderState = getCurrentRenderState();
     if (!renderState || renderState.rows <= 0 || renderState.cols <= 0)
       return false;
@@ -1874,40 +1819,53 @@ export async function prepareResttyRuntime(options = {}) {
     markNeedsRender();
     return true;
   };`,
-            corrected: clipboardCorrections[10].corrected.split(
-              "\n  const selectWordAtClientPoint",
-            )[0],
-          },
-        ]);
-      if (sourceDigest !== priorVisibleLinksDigest)
+              corrected: clipboardCorrections[10].corrected.split(
+                "\n  const selectWordAtClientPoint",
+              )[0],
+            },
+          ]);
+      case priorVisibleLinksDigest:
         source = applyCorrections(source, visibleLinkCorrections);
-      source = applyCorrections(source, parsedEventRuntimeCorrections);
-      source = applyCorrections(source, outputSafetyCorrections);
+      case priorParsedEventsDigest:
+        source = applyCorrections(source, parsedEventRuntimeCorrections);
+      case priorOutputSafetyDigest:
+        source = applyCorrections(source, outputSafetyCorrections);
+      case splitTerminatorOutputSafetyDigest:
+        if (sourceDigest === splitTerminatorOutputSafetyDigest)
+          source = applyCorrections(
+            source,
+            splitTerminatorOutputSafetyCorrections,
+          );
+      case priorInteractionDigest:
+        source = applyCorrections(source, interactionCorrections);
+      case reviewedInteractionDigest:
+        source = applyCorrections(source, interactionReviewCorrections);
+      case priorViewportDigest:
+        source = applyCorrections(source, viewportCorrections);
+      case priorFontMemoryDigest:
+        source = applyCorrections(source, fontMemoryCorrections);
+      case priorDeadKeyCompositionDigest:
+        source = applyCorrections(source, deadKeyCompositionCorrections);
+      case priorModifiedHoverDigest:
+        source = applyCorrections(source, visibleHoverCorrections);
+      case priorHiddenRenderingDigest:
+        source = applyCorrections(source, hiddenRenderingCorrections);
+      case priorDepthDigest:
+        source = applyCorrections(source, depthCorrections);
+      case priorResizeDigest:
+        source = applyCorrections(source, resizeCorrections);
+      case priorFontStyleDigest:
+        source = applyCorrections(source, fontStyleCorrections);
+      case priorSyntheticBoldDigest:
+        source = applyCorrections(source, syntheticBoldCorrections);
+      case priorPointerDigest:
+        source = applyCorrections(source, pointerCorrections);
+        break;
+      default:
+        throw new Error(
+          "Unrecognized Restty runtime; review the pinned OMXTerm corrections",
+        );
     }
-    if (digest(source) === priorInteractionDigest)
-      source = applyCorrections(source, interactionCorrections);
-    if (digest(source) === reviewedInteractionDigest)
-      source = applyCorrections(source, interactionReviewCorrections);
-    if (digest(source) === priorViewportDigest)
-      source = applyCorrections(source, viewportCorrections);
-    if (digest(source) === priorFontMemoryDigest)
-      source = applyCorrections(source, fontMemoryCorrections);
-    if (digest(source) === priorDeadKeyCompositionDigest)
-      source = applyCorrections(source, deadKeyCompositionCorrections);
-    if (digest(source) === priorModifiedHoverDigest)
-      source = applyCorrections(source, visibleHoverCorrections);
-    if (digest(source) === priorHiddenRenderingDigest)
-      source = applyCorrections(source, hiddenRenderingCorrections);
-    if (digest(source) === priorDepthDigest)
-      source = applyCorrections(source, depthCorrections);
-    if (digest(source) === priorResizeDigest)
-      source = applyCorrections(source, resizeCorrections);
-    if (digest(source) === priorFontStyleDigest)
-      source = applyCorrections(source, fontStyleCorrections);
-    if (digest(source) === priorSyntheticBoldDigest)
-      source = applyCorrections(source, syntheticBoldCorrections);
-    if (digest(source) === priorPointerDigest)
-      source = applyCorrections(source, pointerCorrections);
     if (digest(source) !== correctedDigest)
       throw new Error(
         `Restty correction did not produce reviewed bytes: ${digest(source)}`,

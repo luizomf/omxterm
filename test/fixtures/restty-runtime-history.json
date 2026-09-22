@@ -1,0 +1,1028 @@
+[
+  {
+    "name": "priorPointerDigest",
+    "sha256": "431ea06bb18273e35a5aa15aa56f61e3d27d79a16c36d66e56d73a29b0d6c4a8",
+    "edits": [
+      {
+        "start": 48610,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 48584,
+        "deleteCount": 18,
+        "lines": []
+      }
+    ]
+  },
+  {
+    "name": "priorSyntheticBoldDigest",
+    "sha256": "76f43defb727e77a09274bf54bdf1d2473ee41d218fb6aa59bbdc6b165fe22cc",
+    "edits": [
+      {
+        "start": 55442,
+        "deleteCount": 1,
+        "lines": ["  const BOLD_OFFSET = 0.06;"]
+      },
+      {
+        "start": 52947,
+        "deleteCount": 24,
+        "lines": [
+          "          const minGlyphX = Math.round(item.x);",
+          "          const maxGlyphX = Math.round(item.x + maxWidth - gw);",
+          "          let bx = clamp(px + boldOffset, minGlyphX, maxGlyphX);",
+          "          if (bx === px)",
+          "            bx = clamp(px - boldOffset, minGlyphX, maxGlyphX);",
+          "          if (bx === px)",
+          "            pushGlyph(px);",
+          "          else",
+          "            pushGlyph(bx);"
+        ]
+      },
+      {
+        "start": 52942,
+        "deleteCount": 2,
+        "lines": [
+          "        const pushGlyph = (xPos) => {",
+          "          glyphData.push(xPos, py, gw, gh, u0, v0, u1, v1, item.fg[0], item.fg[1], item.fg[2], item.fg[3], bg[0], bg[1], bg[2], bg[3], slant, renderMode);"
+        ]
+      },
+      {
+        "start": 52940,
+        "deleteCount": 1,
+        "lines": [
+          "        const boldOffset = syntheticBold && !colorGlyph ? Math.max(1, Math.round(gw * BOLD_OFFSET)) : 0;"
+        ]
+      },
+      {
+        "start": 51347,
+        "deleteCount": 24,
+        "lines": [
+          "            const minGlyphX = Math.round(item.x);",
+          "            const maxGlyphX = Math.round(item.x + maxWidth - gw);",
+          "            let bx = clamp(px + boldOffset, minGlyphX, maxGlyphX);",
+          "            if (bx === px)",
+          "              bx = clamp(px - boldOffset, minGlyphX, maxGlyphX);",
+          "            if (bx === px)",
+          "              pushGlyph(px);",
+          "            else",
+          "              pushGlyph(bx);"
+        ]
+      },
+      {
+        "start": 51342,
+        "deleteCount": 2,
+        "lines": [
+          "          const pushGlyph = (xPos) => {",
+          "            glyphData.push(xPos, py, gw, gh, u0, v0, u1, v1, item.fg[0], item.fg[1], item.fg[2], item.fg[3], bg[0], bg[1], bg[2], bg[3], slant, renderMode);"
+        ]
+      },
+      {
+        "start": 51340,
+        "deleteCount": 1,
+        "lines": [
+          "          const boldOffset = syntheticBold && !colorGlyph ? Math.max(1, Math.round(gw * BOLD_OFFSET)) : 0;"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "priorFontStyleDigest",
+    "sha256": "b02420bb630dffb1e2b9cfe8bca076bc5eb79084d3c1038521513e2be5d7e06d",
+    "edits": [
+      {
+        "start": 53941,
+        "deleteCount": 1,
+        "lines": [
+          "      const textIndex = pickFirstMatch((entry) => !isColorEmojiFont(entry));"
+        ]
+      },
+      {
+        "start": 53919,
+        "deleteCount": 3,
+        "lines": [
+          "      return pickFirstMatch(predicate, allowSequenceShapingFallback);"
+        ]
+      },
+      {
+        "start": 53880,
+        "deleteCount": 2,
+        "lines": [
+          "    ] : stylePreference === \"bold\" ? [(entry) => hasBoldHint(entry) && !hasItalicHint(entry), (entry) => hasBoldHint(entry)] : stylePreference === \"italic\" ? [",
+          "      (entry) => hasItalicHint(entry) && !hasBoldHint(entry),",
+          "      (entry) => hasItalicHint(entry)"
+        ]
+      },
+      {
+        "start": 46097,
+        "deleteCount": 5,
+        "lines": []
+      },
+      {
+        "start": 34442,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 34428,
+        "deleteCount": 5,
+        "lines": []
+      }
+    ]
+  },
+  {
+    "name": "priorResizeDigest",
+    "sha256": "950e2ae1d104fbaea82189c6d1353bb05d61dbcbfee90a36961ab1287978c78a",
+    "edits": [
+      {
+        "start": 55738,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 55252,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 55184,
+        "deleteCount": 1,
+        "lines": [
+          "  const { sendInput, clearScreen } = createRuntimeControllerInput({"
+        ]
+      },
+      {
+        "start": 54408,
+        "deleteCount": 2,
+        "lines": ["    sendInput"]
+      },
+      {
+        "start": 54390,
+        "deleteCount": 1,
+        "lines": [
+          "    const canvas = options.getCanvas();",
+          "    shared.wasm.setPixelSize(shared.wasmHandle, canvas.width, canvas.height);"
+        ]
+      },
+      {
+        "start": 54143,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 53751,
+        "deleteCount": 1,
+        "lines": [
+          "      wasm.setPixelSize(wasmHandle, canvas.width, canvas.height);"
+        ]
+      },
+      {
+        "start": 53716,
+        "deleteCount": 2,
+        "lines": []
+      }
+    ]
+  },
+  {
+    "name": "priorDepthDigest",
+    "sha256": "dafd11ff8e1dba44c5d9f1429b895c00cde2cdbe3d6c971db9938c046b18c0be",
+    "edits": [
+      {
+        "start": 8884,
+        "deleteCount": 1,
+        "lines": [
+          "  const gl = canvas.getContext(\"webgl2\", { antialias: false, alpha: false });"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "priorHiddenRenderingDigest",
+    "sha256": "e0d54804ec53ada4692691394852eb1f18e82a223283fe26e3ee2117ccd609ad",
+    "edits": [
+      {
+        "start": 56312,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 56258,
+        "deleteCount": 2,
+        "lines": []
+      },
+      {
+        "start": 55251,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 55167,
+        "deleteCount": 3,
+        "lines": ["  const { loop } = createRuntimeControllerRenderLoop({"]
+      },
+      {
+        "start": 55131,
+        "deleteCount": 6,
+        "lines": ["    loop"]
+      },
+      {
+        "start": 55125,
+        "deleteCount": 3,
+        "lines": []
+      },
+      {
+        "start": 55112,
+        "deleteCount": 1,
+        "lines": [
+          "      if ((shared.needsRender || imageChanged) && renderBudget) {"
+        ]
+      },
+      {
+        "start": 55089,
+        "deleteCount": 7,
+        "lines": ["  function loop(state) {"]
+      },
+      {
+        "start": 55029,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 53719,
+        "deleteCount": 4,
+        "lines": []
+      },
+      {
+        "start": 50052,
+        "deleteCount": 6,
+        "lines": [
+          "    canvas.width = nextWidth;",
+          "    canvas.height = nextHeight;"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "priorModifiedHoverDigest",
+    "sha256": "f3434c66a9ef1ebe817f9debcb8ecf49f8477c4d481af2d6791c122967b2bee4",
+    "edits": [
+      {
+        "start": 55818,
+        "deleteCount": 8,
+        "lines": []
+      },
+      {
+        "start": 55502,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54992,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 52539,
+        "deleteCount": 3,
+        "lines": []
+      },
+      {
+        "start": 52536,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 52008,
+        "deleteCount": 3,
+        "lines": []
+      },
+      {
+        "start": 52005,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 49490,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 49327,
+        "deleteCount": 9,
+        "lines": ["      : null;"]
+      },
+      {
+        "start": 49310,
+        "deleteCount": 16,
+        "lines": [
+          "    return match",
+          "      ? {",
+          "          ...match,",
+          "          id: `${viewportOffset}:${firstRow}:${match.start}:${match.end}:${match.url}`"
+        ]
+      },
+      {
+        "start": 49125,
+        "deleteCount": 2,
+        "lines": ["    hoverUri: \"\""]
+      },
+      {
+        "start": 49098,
+        "deleteCount": 1,
+        "lines": []
+      }
+    ]
+  },
+  {
+    "name": "priorDeadKeyCompositionDigest",
+    "sha256": "6a7b5297bf4f7a4509c9f64ad22a29c521b0c5f48882a4451872a335e0847ccd",
+    "edits": [
+      {
+        "start": 54432,
+        "deleteCount": 4,
+        "lines": ["    if (isNativeOptionText(event))"]
+      }
+    ]
+  },
+  {
+    "name": "priorFontMemoryDigest",
+    "sha256": "56dd27c2e2239c3660ccd79c93c3e4a4bfde0bc548ecce09e59c3af00982105c",
+    "edits": [
+      {
+        "start": 55941,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 55925,
+        "deleteCount": 4,
+        "lines": []
+      },
+      {
+        "start": 55895,
+        "deleteCount": 6,
+        "lines": []
+      },
+      {
+        "start": 55887,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 55839,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 55701,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 34458,
+        "deleteCount": 4,
+        "lines": []
+      },
+      {
+        "start": 34447,
+        "deleteCount": 1,
+        "lines": [
+          "    const leaseId = nextLeaseId;",
+          "    nextLeaseId += 1;",
+          "    leaseSources.set(leaseId, sourceRefs);"
+        ]
+      },
+      {
+        "start": 34438,
+        "deleteCount": 1,
+        "lines": [
+          "      const sourceEntry = sourceCache.get(sourceKey);",
+          "      if (sourceEntry) {",
+          "        sourceEntry.refCount += 1;",
+          "        sourceEntry.lastUsedAt = now();",
+          "      }",
+          "      sourceRefs.set(sourceKey, (sourceRefs.get(sourceKey) ?? 0) + 1);"
+        ]
+      },
+      {
+        "start": 34392,
+        "deleteCount": 12,
+        "lines": []
+      },
+      {
+        "start": 34384,
+        "deleteCount": 4,
+        "lines": []
+      }
+    ]
+  },
+  {
+    "name": "priorViewportDigest",
+    "sha256": "46031b070690dc8763b38182abe4cf5205e405e3bdeece179fb7fe00d654a344",
+    "edits": [
+      {
+        "start": 54949,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 50008,
+        "deleteCount": 3,
+        "lines": []
+      },
+      {
+        "start": 49460,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 49058,
+        "deleteCount": 1,
+        "lines": []
+      }
+    ]
+  },
+  {
+    "name": "reviewedInteractionDigest",
+    "sha256": "1cda40a3b3e5dfbda54a2dd5616277e3d337e6f964639f8edc6e3c0c892011c3",
+    "edits": [
+      {
+        "start": 54444,
+        "deleteCount": 2,
+        "lines": [
+          "    const key = event.key?.toLowerCase?.() ?? \"\";",
+          "    const hasPrimaryShortcutModifier = options.isMacPlatform ? event.metaKey : event.ctrlKey;",
+          "    const wantsCopy = hasPrimaryShortcutModifier && !event.altKey && (key === \"c\" || event.shiftKey && key === \"c\");",
+          "    const wantsPaste = hasPrimaryShortcutModifier && !event.altKey && (key === \"v\" || event.shiftKey && key === \"v\");",
+          "    if (wantsCopy && options.interaction.selectionState.active) {",
+          "      event.preventDefault();",
+          "      options.copySelectionToClipboard();",
+          "      return;",
+          "    }",
+          "    if (wantsPaste) {",
+          "      if (options.imeInput) {",
+          "        ensureImeInputFocus();",
+          "        return;",
+          "      }",
+          "      event.preventDefault();",
+          "      const seq = options.inputHandler.encodeKeyEvent(event);",
+          "      if (seq) {",
+          "        options.ptyInputRuntime.sendKeyInput(seq);",
+          "      }",
+          "      return;",
+          "    }"
+        ]
+      },
+      {
+        "start": 54377,
+        "deleteCount": 3,
+        "lines": [
+          "    const key = shifted || (base > 0 ? String.fromCodePoint(base) : event.key);"
+        ]
+      },
+      {
+        "start": 54375,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54372,
+        "deleteCount": 1,
+        "lines": [
+          "    if (!options.isMacPlatform || !event.altKey || !optionActsAsAlt() || event.key.length !== 1)"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "priorInteractionDigest",
+    "sha256": "ac05624abac2fddea9a38f3e29d26ebbde3f41484b86c0082ce5e3d5cb334e1f",
+    "edits": [
+      {
+        "start": 56205,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 56156,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 55186,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 55143,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 55091,
+        "deleteCount": 6,
+        "lines": []
+      },
+      {
+        "start": 54833,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54504,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54501,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54493,
+        "deleteCount": 1,
+        "lines": ["    const seq = options.inputHandler.encodeKeyEvent(event);"]
+      },
+      {
+        "start": 54476,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54462,
+        "deleteCount": 2,
+        "lines": ["    const seq = options.inputHandler.encodeKeyEvent(event);"]
+      },
+      {
+        "start": 54426,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54416,
+        "deleteCount": 1,
+        "lines": [
+          "      if (!event.ctrlKey && !event.metaKey && event.key.length === 1 && !event.repeat) {"
+        ]
+      },
+      {
+        "start": 54411,
+        "deleteCount": 2,
+        "lines": []
+      },
+      {
+        "start": 54355,
+        "deleteCount": 35,
+        "lines": []
+      },
+      {
+        "start": 915,
+        "deleteCount": 1,
+        "lines": ["    handlers.sendReply(\"\\x1B[?1;2c\");"]
+      }
+    ]
+  },
+  {
+    "name": "splitTerminatorOutputSafetyDigest",
+    "sha256": "cfe2c967cc201689f4e1ca2a9231e9652ff5fce47d7671ab73dba78b2b5fa7ea",
+    "edits": [
+      {
+        "start": 1407,
+        "deleteCount": 4,
+        "lines": []
+      }
+    ]
+  },
+  {
+    "name": "priorOutputSafetyDigest",
+    "sha256": "15ca6dc64c45c1f42a88337aec58367a5e69fc0889dfa92c305aa333cba2a651",
+    "edits": [
+      {
+        "start": 1459,
+        "deleteCount": 4,
+        "lines": []
+      },
+      {
+        "start": 1451,
+        "deleteCount": 4,
+        "lines": []
+      },
+      {
+        "start": 1446,
+        "deleteCount": 4,
+        "lines": []
+      },
+      {
+        "start": 1440,
+        "deleteCount": 4,
+        "lines": []
+      },
+      {
+        "start": 1437,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 1412,
+        "deleteCount": 4,
+        "lines": []
+      },
+      {
+        "start": 1406,
+        "deleteCount": 5,
+        "lines": []
+      },
+      {
+        "start": 1391,
+        "deleteCount": 2,
+        "lines": []
+      },
+      {
+        "start": 1386,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 1354,
+        "deleteCount": 20,
+        "lines": []
+      },
+      {
+        "start": 1247,
+        "deleteCount": 2,
+        "lines": []
+      },
+      {
+        "start": 1244,
+        "deleteCount": 1,
+        "lines": []
+      }
+    ]
+  },
+  {
+    "name": "priorParsedEventsDigest",
+    "sha256": "ed0282ed0062fc23a8ac90d2173633129cdd88d706adabb5f0e06bf3ff73aa11",
+    "edits": [
+      {
+        "start": 55022,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54277,
+        "deleteCount": 2,
+        "lines": []
+      }
+    ]
+  },
+  {
+    "name": "priorVisibleLinksDigest",
+    "sha256": "595f72d3be87f0965dea3733180264768720f7cba0c7c35aad797e2a22689665",
+    "edits": [
+      {
+        "start": 55353,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54854,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 49397,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 49170,
+        "deleteCount": 74,
+        "lines": []
+      },
+      {
+        "start": 49027,
+        "deleteCount": 1,
+        "lines": []
+      }
+    ]
+  },
+  {
+    "name": "priorClipboardDigest",
+    "sha256": "272bfb31f240a8e45ec2c36e85858a0cfadec1e6fc9a7fd8a7efe70a2f350c94",
+    "edits": [
+      {
+        "start": 55366,
+        "deleteCount": 1,
+        "lines": [
+          "    // OMXTerm keeps candidate clipboard and OSC 52 integration disabled."
+        ]
+      },
+      {
+        "start": 54947,
+        "deleteCount": 1,
+        "lines": [
+          "  // OMXTerm exposes no candidate clipboard action before Protected Paste lands."
+        ]
+      },
+      {
+        "start": 49223,
+        "deleteCount": 2,
+        "lines": [
+          "    selectionState.anchor = { row: 0, col: 0 };",
+          "    selectionState.focus = { row: renderState.rows - 1, col: renderState.cols - 1 };"
+        ]
+      },
+      {
+        "start": 49212,
+        "deleteCount": 7,
+        "lines": [
+          "    if (!renderState || renderState.rows <= 0 || renderState.cols <= 0)"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "priorScrollbackDigest",
+    "sha256": "c8580ea08273aa17dc3ae1f658aafe8340114a751e2a36e09e933e3bcabb3bad",
+    "edits": [
+      {
+        "start": 55363,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 55010,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54944,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54840,
+        "deleteCount": 2,
+        "lines": ["      pasteFromClipboard: deps.pasteFromClipboard"]
+      },
+      {
+        "start": 54823,
+        "deleteCount": 2,
+        "lines": [
+          "      terminalCapabilities: deps.publicApiCapabilities.terminal"
+        ]
+      },
+      {
+        "start": 54774,
+        "deleteCount": 2,
+        "lines": []
+      },
+      {
+        "start": 54762,
+        "deleteCount": 2,
+        "lines": ["  pasteFromClipboard"]
+      },
+      {
+        "start": 54652,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54627,
+        "deleteCount": 2,
+        "lines": ["  terminalCapabilities"]
+      },
+      {
+        "start": 49316,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 49210,
+        "deleteCount": 14,
+        "lines": []
+      },
+      {
+        "start": 47798,
+        "deleteCount": 11,
+        "lines": [
+          "    const bracketedPasteEnabled = !!inputHandler.isBracketedPaste();",
+          "    sendKeyInput(formatPasteText(text, bracketedPasteEnabled));"
+        ]
+      },
+      {
+        "start": 1458,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 1386,
+        "deleteCount": 6,
+        "lines": [
+          "        const seq = data.slice(i, j);",
+          "        this.observeOsc(seq);",
+          "        if (!this.handleOsc(seq)) {",
+          "          result += data.slice(i, j + terminatorLen);"
+        ]
+      },
+      {
+        "start": 1369,
+        "deleteCount": 5,
+        "lines": []
+      },
+      {
+        "start": 1364,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 1315,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 1269,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 1257,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 1003,
+        "deleteCount": 5,
+        "lines": []
+      }
+    ]
+  },
+  {
+    "name": "priorFontDigest",
+    "sha256": "23f4bf4377dfcc34b39f439f2e4865be41a65603e405ec08ebb1f3a467ada867",
+    "edits": [
+      {
+        "start": 55959,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 55948,
+        "deleteCount": 2,
+        "lines": ["      maxScrollback: terminal.maxScrollback"]
+      },
+      {
+        "start": 54945,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54940,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54858,
+        "deleteCount": 10,
+        "lines": []
+      },
+      {
+        "start": 54609,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54374,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 54313,
+        "deleteCount": 1,
+        "lines": []
+      }
+    ]
+  },
+  {
+    "name": "priorFamilyFilterDigest",
+    "sha256": "ecba146c51073810b44d469c75a60ce12d62d0e7311b227c6d13d87da86af627",
+    "edits": [
+      {
+        "start": 34345,
+        "deleteCount": 2,
+        "lines": []
+      },
+      {
+        "start": 34338,
+        "deleteCount": 5,
+        "lines": [
+          "      const familyFaces = parsedFaces.filter((face) => face.family === source.label);"
+        ]
+      },
+      {
+        "start": 34334,
+        "deleteCount": 3,
+        "lines": ["      if (!parsedFaces.length)"]
+      }
+    ]
+  },
+  {
+    "name": "priorBoldColorDigest",
+    "sha256": "a0cd79e08164bde293ca4ee6b52ab1b71cc8959eb1da646f95dde52015aad270",
+    "edits": [
+      {
+        "start": 34336,
+        "deleteCount": 5,
+        "lines": []
+      },
+      {
+        "start": 34148,
+        "deleteCount": 2,
+        "lines": []
+      }
+    ]
+  },
+  {
+    "name": "priorAppearanceDigest",
+    "sha256": "8de5f8d9e583852080932c739e6f059dcea01b0d84982d020746fb50636a0cdc",
+    "edits": [
+      {
+        "start": 55058,
+        "deleteCount": 1,
+        "lines": ["  const BOLD_BRIGHTEN = 0.18;"]
+      }
+    ]
+  },
+  {
+    "name": "priorCorrectedDigest",
+    "sha256": "8f9620d4c39b9e88bb149010e8aad24b0c35073373c2d8a66d78466ccbafec2a",
+    "edits": [
+      {
+        "start": 55345,
+        "deleteCount": 1,
+        "lines": [
+          "    const clamped = Math.max(10, Math.min(64, Math.round(value)));"
+        ]
+      },
+      {
+        "start": 55148,
+        "deleteCount": 2,
+        "lines": [
+          "    sizePx: Number.isFinite(terminal.fontSize) ? Math.max(1, Math.round(terminal.fontSize)) : 18"
+        ]
+      },
+      {
+        "start": 53446,
+        "deleteCount": 1,
+        "lines": ["    const cellH = Math.max(1, Math.round(lineHeight));"]
+      },
+      {
+        "start": 9041,
+        "deleteCount": 1,
+        "lines": [
+          "  const size = Number.isFinite(fontSizePt) ? Math.max(10, Math.min(64, Math.round(fontSizePt))) : 18;"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "originalDigest",
+    "sha256": "e07e8d84898917de2b22b858602260a6dd921bbaf924526773f94fc38fbbaf9d",
+    "edits": [
+      {
+        "start": 55643,
+        "deleteCount": 1,
+        "lines": ["        console.error(\"font load error\", err);"]
+      },
+      {
+        "start": 55328,
+        "deleteCount": 2,
+        "lines": ["      openLink"]
+      },
+      {
+        "start": 55279,
+        "deleteCount": 3,
+        "lines": [
+          "    onClipboardWrite: async (text) => {",
+          "      if (!text)",
+          "        return;",
+          "      await copyToClipboard2(text);",
+          "    },",
+          "    onClipboardRead: async () => {",
+          "      return await pasteFromClipboard2() ?? \"\";",
+          "    },"
+        ]
+      },
+      {
+        "start": 54865,
+        "deleteCount": 3,
+        "lines": [
+          "  const { copySelectionToClipboard, pasteFromClipboard } = createRuntimeControllerClipboard({",
+          "    getSelectionText: hooks.getSelectionText,",
+          "    ptyInputRuntime: runtime.ptyInputRuntime",
+          "  });"
+        ]
+      }
+    ]
+  }
+]

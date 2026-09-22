@@ -1,5 +1,10 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ResttyRuntimeEvent, ResttyRuntimeLifecycleState } from "restty";
+import type {
+  PatchedResttyConfig,
+  PatchedResttyPane,
+} from "../../src/terminal-surface/restty-runtime-contract";
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
@@ -7,14 +12,9 @@ import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-te
 const harness = vi.hoisted(() => {
   const instances: FakeRestty[] = [];
   let initError: Error | undefined;
-  type RuntimeEvent =
-    | { type: "state"; state: string }
-    | { type: "backend"; backend: string }
-    | { type: "term-size"; cols: number; rows: number }
-    | { type: "title"; title: string }
-    | { type: "bell" };
+  type RuntimeEvent = ResttyRuntimeEvent;
   class FakeRestty {
-    readonly options: Record<string, unknown>;
+    readonly options: PatchedResttyConfig;
     readonly canvas = document.createElement("canvas");
     readonly listeners = new Set<(event: RuntimeEvent) => void>();
     readonly destroy = vi.fn();
@@ -27,7 +27,7 @@ const harness = vi.hoisted(() => {
     readonly applyTheme = vi.fn();
     readonly updateSize = vi.fn();
     backend = "webgl2";
-    state = "created";
+    state: ResttyRuntimeLifecycleState = "created";
     readonly pane = {
       container: document.createElement("div"),
       runtime: {
@@ -49,23 +49,14 @@ const harness = vi.hoisted(() => {
             this.emit({ type: "state", state: "ready" });
           }),
           state: () => this.state,
-          destroy: vi.fn(),
         },
         render: { getBackend: () => this.backend, refresh: vi.fn() },
         io: {
           connectPty: () => {
-            const transport = (
-              this.options.services as {
-                ptyTransport: {
-                  connect(options: {
-                    callbacks: { onData(data: string): void };
-                  }): void;
-                  isConnected(): boolean;
-                };
-              }
-            ).ptyTransport;
+            const transport = this.options.services.ptyTransport;
             if (!transport.isConnected())
-              transport.connect({
+              void transport.connect({
+                url: "",
                 callbacks: {
                   onData: (data) => {
                     this.sendInput(data, "pty");
@@ -76,11 +67,15 @@ const harness = vi.hoisted(() => {
         },
         interaction: {
           focus: this.focus,
-          blur: vi.fn(),
-          resize: vi.fn(),
+          getSelectionText: vi.fn(() => ""),
+          selectAll: vi.fn(() => false),
+          scrollToBottom: vi.fn(),
+          getVisibleLinkAtClientPoint: vi.fn(() => null),
+          setVisibleLinkHover: vi.fn(),
           updateSize: this.updateSize,
         },
         terminal: {
+          isBracketedPasteEnabled: () => false,
           setFontSize: this.setFontSize,
           setLigatures: this.setLigatures,
           setOptionKeyMode: this.setOptionKeyMode,
@@ -88,12 +83,12 @@ const harness = vi.hoisted(() => {
           applyTheme: this.applyTheme,
         },
       },
-    };
+    } satisfies PatchedResttyPane;
 
-    constructor(options: Record<string, unknown>) {
+    constructor(options: PatchedResttyConfig) {
       this.options = options;
       this.pane.container.append(this.canvas);
-      (options.root as HTMLElement).append(this.pane.container);
+      options.root.append(this.pane.container);
       instances.push(this);
     }
 

@@ -1,5 +1,9 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type {
+  PatchedResttyConfig,
+  PatchedResttyPane,
+} from "../../src/terminal-surface/restty-runtime-contract";
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
 
 const harness = vi.hoisted(() => {
@@ -20,7 +24,7 @@ const harness = vi.hoisted(() => {
         io: {
           connectPty: () => {
             const transport = this.services().ptyTransport;
-            transport.connect({ callbacks: { onData: vi.fn() } });
+            void transport.connect({ url: "", callbacks: { onData: vi.fn() } });
           },
         },
         interaction: {
@@ -40,14 +44,16 @@ const harness = vi.hoisted(() => {
           applyTheme: vi.fn(),
           isBracketedPasteEnabled: () => this.bracketedPaste,
           setFontSize: vi.fn(),
+          setLigatures: vi.fn(),
+          setOptionKeyMode: vi.fn(),
           setScrollbackLines: vi.fn(),
         },
       },
-    };
+    } satisfies PatchedResttyPane;
 
-    constructor(readonly options: Record<string, unknown>) {
+    constructor(readonly options: PatchedResttyConfig) {
       this.pane.container.append(this.canvas);
-      (options.root as HTMLElement).append(this.pane.container);
+      options.root.append(this.pane.container);
       FakeRestty.instances.push(this);
     }
 
@@ -56,17 +62,7 @@ const harness = vi.hoisted(() => {
     }
 
     services() {
-      return this.options.services as {
-        ptyTransport: {
-          connect(value: { callbacks: { onData(data: string): void } }): void;
-          sendInput(data: string): boolean;
-        };
-        beforeInput(payload: {
-          text: string;
-          source: string;
-        }): string | null | undefined;
-        onOsc(command: number, payload: string): void;
-      };
+      return this.options.services;
     }
   }
   return { FakeRestty };

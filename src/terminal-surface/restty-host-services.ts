@@ -1,4 +1,5 @@
 import type { PtyTransport } from "restty";
+import type { PatchedResttyServices } from "./restty-runtime-contract";
 import { decodeOsc52Write } from "./osc52-clipboard";
 import type { SemanticInputDelivery } from "./semantic-input-delivery";
 import type {
@@ -52,10 +53,10 @@ export function resttyHostServices(
   delivery: SemanticInputDelivery,
   options: TerminalSurfaceOptions,
   revealInput: () => void,
-) {
+): PatchedResttyServices {
   return {
     ptyTransport: transport,
-    beforeInput: ({ text, source }: { text: string; source: string }) => {
+    beforeInput: ({ text, source }) => {
       if (source !== "paste") {
         if (source === "key" && text.length > 0) revealInput();
         return text;
@@ -71,12 +72,7 @@ export function resttyHostServices(
         .writeText(text)
         .catch(() => options.onClipboardError?.());
     },
-    resolveVisibleLink: (candidate: {
-      readonly text: string;
-      readonly offset: number;
-      readonly clippedStart: boolean;
-      readonly clippedEnd: boolean;
-    }) =>
+    resolveVisibleLink: (candidate) =>
       visibleLinkAtOffset(
         candidate.text,
         candidate.offset,

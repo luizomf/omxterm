@@ -1,11 +1,9 @@
+import type { PtyCallbacks, PtyTransport } from "restty";
 import {
-  Restty,
-  type GhosttyTheme,
-  type PtyCallbacks,
-  type PtyTransport,
-  type ResttyRuntimeEvent,
-  type ResttyTerminalConfig,
-} from "restty";
+  PatchedRestty,
+  type PatchedResttyPane,
+  type PatchedResttyTerminalConfig,
+} from "./restty-runtime-contract";
 import type { TerminalSize } from "../shared/terminal-contract";
 import {
   createSemanticInputDelivery,
@@ -35,7 +33,6 @@ import {
   installResttyVisibleLinks,
   requestVisibleLink,
   type ResttyVisibleLinkController,
-  type ResttyVisibleLinkInteraction,
 } from "./restty-visible-links";
 import {
   resttyClipboardActions,
@@ -56,58 +53,13 @@ import {
 } from "./terminal-font-stack";
 const RESTTY_SCROLLBACK_MAX_BYTES = 10_000_000;
 
-type CandidateRuntimeEvent =
-  | ResttyRuntimeEvent
-  | { readonly type: "title"; readonly title: string }
-  | { readonly type: "bell" };
-
-type CandidateRuntime = {
-  readonly events: {
-    subscribe(listener: (event: CandidateRuntimeEvent) => void): () => void;
-  };
-  readonly lifecycle: {
-    init(): Promise<void>;
-    state(): string;
-  };
-  readonly render: { getBackend(): string | null; refresh(): void };
-  readonly io: { connectPty(): void };
-  readonly interaction: ResttyVisibleLinkInteraction & {
-    focus(): void;
-    getSelectionText(): string;
-    selectAll(): boolean;
-    scrollToBottom(): void;
-    updateSize(force?: boolean): void;
-  };
-  readonly terminal: {
-    applyTheme(theme: GhosttyTheme, sourceLabel?: string): void;
-    isBracketedPasteEnabled(): boolean;
-    setFontSize(value: number): void;
-    setLigatures(value: boolean): void;
-    setOptionKeyMode(value: OptionKeyMode): void;
-    setScrollbackLines(value: number): void;
-  };
-};
-
-type ResttyAppearanceConfig = ResttyTerminalConfig & {
-  readonly isSurfaceVisible?: () => boolean;
-  readonly lineHeight: number;
-  readonly maxScrollbackBytes: number;
-  readonly optionKeyMode: OptionKeyMode;
-  readonly scrollbackLines: number;
-};
-
-type CandidatePane = {
-  readonly container: HTMLElement;
-  readonly runtime: CandidateRuntime;
-};
-
 function resttyTerminalConfig(
   fonts: readonly TerminalFontInput[],
   [fontSize, lineHeight, ligatures]: readonly [number, number, boolean],
   scrollbackLines: number,
   optionKeyMode: OptionKeyMode | undefined,
   theme: TerminalTheme,
-): ResttyAppearanceConfig {
+): PatchedResttyTerminalConfig {
   return {
     renderer: "webgl2",
     fontSize,
@@ -176,9 +128,9 @@ export async function mountResttyTerminalSurface(
   let settledSize: TerminalSize | undefined;
   let removeRuntimeListener: (() => void) | undefined;
   let visibleLinkController: ResttyVisibleLinkController | undefined;
-  let restty: Restty | undefined;
+  let restty: PatchedRestty | undefined;
   let fontLease: TerminalFontInputLease | undefined;
-  let pane: CandidatePane | undefined;
+  let pane: PatchedResttyPane | undefined;
   let baselineFontSize = resolveFontSize(options.appearance?.fontSize);
   let currentFontSize = baselineFontSize;
   const initialLineHeight = resolveLineHeight(options.appearance?.lineHeight);
@@ -309,7 +261,7 @@ export async function mountResttyTerminalSurface(
       options.optionKeyMode,
       terminalTheme,
     );
-    restty = new Restty({
+    restty = new PatchedRestty({
       root: container,
       surface: {
         autoInit: false,
@@ -321,9 +273,8 @@ export async function mountResttyTerminalSurface(
       },
       terminal: { ...terminal, isSurfaceVisible },
       services: resttyHostServices(transport, delivery, options, revealInput),
-    } as ConstructorParameters<typeof Restty>[0]);
-    pane =
-      (restty.getActivePane() as unknown as CandidatePane | null) ?? undefined;
+    });
+    pane = restty.getActivePane() ?? undefined;
     if (!pane) throw new Error("Restty did not create its terminal pane");
 
     removeRuntimeListener = pane.runtime.events.subscribe((event) => {
