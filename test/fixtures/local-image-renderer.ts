@@ -70,7 +70,10 @@ globalThis.__localImagePreviewProbe = {
         bounds.bottom <= innerHeight,
       proportional:
         Math.abs(
-          rect.width / rect.height - image.naturalWidth / image.naturalHeight,
+          rect.width /
+            rect.height /
+            (image.naturalWidth / image.naturalHeight) -
+            1,
         ) < 0.02,
       visible: rect.width > 0 && rect.height > 0,
     };
