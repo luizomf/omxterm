@@ -24,14 +24,15 @@ export function spawnFixtureProcess<T extends { readonly pid: number }>(
     FIXTURE_PROCESS_DIRECTORY,
     `${randomUUID()}.json`,
   );
-  writeFileSync(record, JSON.stringify({ owner }), { flag: "wx" });
+  const temporary = `${record}.tmp`;
+  writeFileSync(temporary, JSON.stringify({ owner }), { flag: "wx" });
+  renameSync(temporary, record);
   const child = spawn();
   const rows = fixtureProcesses();
   const owned = new Map([[owner.pid, owner]]);
   collectFixtureDescendants(rows, owned);
   if (!owned.has(child.pid))
     throw new Error("Cannot establish ownership of spawned fixture process");
-  const temporary = `${record}.tmp`;
   writeFileSync(
     temporary,
     JSON.stringify({ owner, processes: [...owned.values()] }),
@@ -68,6 +69,12 @@ export function collectFixtureRegistrations(
   const directory = path.join(root, FIXTURE_PROCESS_DIRECTORY);
   for (const name of readdirSync(directory)) {
     if (!name.endsWith(".json")) continue;
+    // The Windows launcher publishes its independently inspected leader after
+    // spawn. A fixture can register first; defer adoption, not the uncertainty.
+    if (leaderPid === undefined) {
+      pending += 1;
+      continue;
+    }
     const record: unknown = JSON.parse(
       readFileSync(path.join(directory, name), "utf8"),
     );

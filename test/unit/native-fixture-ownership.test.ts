@@ -9,10 +9,19 @@ import {
   spawnFixtureProcess,
 } from "../fixtures/native-fixture-ownership";
 
-const { files } = vi.hoisted(() => ({ files: new Map<string, string>() }));
+const io = vi.hoisted(() => ({
+  files: new Map<string, string>(),
+  observeWrite: undefined as (() => void) | undefined,
+}));
+const { files } = io;
 vi.mock("node:fs", () => ({
   writeFileSync: (name: string, text: string) => {
+    files.set(name, "");
+    io.observeWrite?.();
+    files.set(name, text.slice(0, Math.floor(text.length / 2)));
+    io.observeWrite?.();
     files.set(name, text);
+    io.observeWrite?.();
   },
   readFileSync: (name: string) => {
     if (!files.has(name)) throw new Error("Missing ownership record");
@@ -45,6 +54,7 @@ const unrelated: FixtureProcess = {
 
 beforeEach(() => {
   files.clear();
+  io.observeWrite = undefined;
   vi.stubEnv("OMXTERM_NATIVE_FIXTURE_ROOT", root);
   vi.mocked(fixtureProcesses).mockReturnValue([owner, child, unrelated]);
 });
@@ -61,6 +71,38 @@ describe("native fixture spawn ownership", () => {
     const owned = new Map<number, FixtureProcess>();
     expect(collectFixtureRegistrations(root, owner.pid, owned)).toBe(0);
     expect([...owned.values()]).toEqual([owner, child]);
+  });
+
+  it("exposes only complete records while either ownership state is being published", () => {
+    let spawned = false;
+    let observations = 0;
+    io.observeWrite = () => {
+      observations += 1;
+      expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(
+        spawned ? 1 : 0,
+      );
+    };
+    spawnFixtureProcess(() => {
+      expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
+      spawned = true;
+      return { pid: child.pid };
+    });
+    expect(observations).toBeGreaterThan(0);
+    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(0);
+  });
+
+  it("defers Windows ownership until launcher metadata arrives without adopting unverified processes", () => {
+    spawnFixtureProcess(() => ({ pid: child.pid }));
+    const owned = new Map<number, FixtureProcess>();
+    expect(collectFixtureRegistrations(root, undefined, owned)).toBe(1);
+    expect(owned.size).toBe(0);
+    // Unresolved bootstrap must continue to count as uncertainty at cleanup.
+    expect(collectFixtureRegistrations(root, undefined, owned)).toBe(1);
+    expect(collectFixtureRegistrations(root, owner.pid, owned)).toBe(0);
+    expect([...owned.values()]).toEqual([owner, child]);
+    expect(() =>
+      collectFixtureRegistrations(root, unrelated.pid, new Map()),
+    ).toThrow("Invalid native fixture ownership record");
   });
 
   it("publishes uncertainty before invoking spawn and preserves it on a spawn exception", () => {
