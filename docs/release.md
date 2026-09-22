@@ -1,11 +1,29 @@
 # ARM64 release policy and native procedures
 
-The policy below applies to all initial OMXTerm Release Artifacts. This document
-implements the native procedures for the macOS DMG containing an ad-hoc-sealed,
-unnotarized application, Linux ARM64 AppImage, and Windows ARM64 NSIS
-installer. Nothing here authorizes a tag,
-GitHub Release, upload, signing, notarization, or any other publication. Those
-actions require separate maintainer approval.
+This document explains how OMXTerm produces and accepts its ARM64 release
+artifacts: an ad-hoc-sealed, unnotarized macOS DMG, a Linux AppImage, and a
+Windows NSIS installer. It is a procedure, not publication permission. Tags,
+GitHub Releases, uploads, signing, and notarization require separate maintainer
+approval.
+
+For a new candidate, follow this path:
+
+1. choose the version using [the versioning policy](versioning.md);
+2. apply the [cross-platform policy](#cross-platform-release-policy) and record
+   whether every change affects packaged bytes;
+3. run the matching native procedure for [macOS](#macos-arm64),
+   [Linux](#linux-arm64), and [Windows](#windows-arm64);
+4. complete the
+   [exact-artifact acceptance record](#automation-first-exact-artifact-acceptance)
+   and checksums; and
+5. stop after owner acceptance unless publication receives its own explicit
+   authorization.
+
+The historical sections preserve what happened for earlier releases; they do
+not replace the current procedure or authorize repeating a past action. The
+latest published release described here is **0.13.0**. The repository currently
+uses **0.14.0-dev.0** as its development baseline, which is not a published
+release and must not be used as a release identity.
 
 ## Cross-platform release policy
 
@@ -72,6 +90,13 @@ This exception applies only before publication. Published releases are
 immutable: never move their tags, replace their artifacts or checksums, or reuse
 their GitHub Releases. Later documentation corrections ship from `main` or with
 a future release without rewriting the published one.
+
+## Historical release records
+
+The canonical records under [`docs/releases/`](releases/) preserve exact
+artifact identities, evidence, and authority for their original releases. The
+summaries below are navigation and context only. Keep them in the past tense:
+current release work follows the procedures later in this document.
 
 ## Accepted 0.11.0 artifacts
 
@@ -379,33 +404,27 @@ material automation-resistant risk is recorded honestly.
 
 ### Windows arm64
 
-Use a native Windows arm64 clone on the VM's native filesystem, never a
-Parallels shared folder, in a graphical session. Install Node.js 22.13 or later
-in the Node.js 22 line, or Node.js 24 or newer, and the Visual C++ Redistributable for ARM64 (Electron's runtime requires it),
-allow the locally checked-out PowerShell verification scripts to execute, and
-clone with `core.autocrlf=false` and `core.symlinks=true`. Persist both repository
-settings before the first checkout, rather than applying temporary `git -c`
-options only to a preceding clone command. Verify LF worktree bytes and actual
-symlinks before starting the full command.
+Windows packaging runs in a graphical, native Windows ARM64 VM clone on its
+native filesystem. Prepare the clone before its first checkout with
+`core.autocrlf=false` and `core.symlinks=true`, then confirm that Markdown and
+source files remain LF and repository symlinks are real symlinks. Install a
+supported Node.js version and the ARM64 Visual C++ Redistributable. Developer
+Mode supplies unprivileged symlink creation for the native fixtures. Arrange
+these development prerequisites with the host owner's approval. If local
+PowerShell scripts need it, owner-approved process-scoped `RemoteSigned` is
+sufficient and leaves the persisted execution policy unchanged. Preserve the
+normal executable search path when adding portable tools.
 
-Developer Mode enables the unprivileged symlinks required by native fixtures.
-These development prerequisites need separate owner permission if not already
-configured. With that permission, process-scoped RemoteSigned can allow local
-verification scripts and propagate to child PowerShell processes without changing
-the persisted execution policy. Keep the normal Windows executable search path
-when prepending portable tools; do not create competing `Path`/`PATH` entries.
-Neither this procedure nor an installer opt-in authorizes disabling Defender or
-SmartScreen.
-Exact NSIS verification must run only in an explicitly authorized disposable VM
-with a recoverable snapshot. It is **not** isolated by a temporary destination:
-NSIS can uninstall an existing OMXTerm and replace registration and shortcuts.
-Do not run this installation seam on a daily-use machine. Check that no OMXTerm
-sessions or installers are running; the verifier refuses those conflicts even
-with opt-in and never closes them for you. tmux alone is not evidence that
-closing an app preserves its sessions.
+The exact NSIS test has real installer side effects. A temporary `/D=` path
+changes the destination, but the installer can still remove a registered
+per-user OMXTerm installation and replace shared registration and shortcuts.
+For that reason, use an explicitly authorized disposable VM with a recoverable
+snapshot, even if the VM appears clean. Before running the test, close OMXTerm
+sessions and other OMXTerm installers yourself; the verifier reports those
+conflicts and leaves them alone. Defender and SmartScreen stay enabled.
 
-From the accepted source commit in that disposable VM, after separately obtaining
-permission for these install/uninstall effects, run:
+From the accepted source commit, after authorization for replacement and
+install/uninstall effects, run:
 
 ```powershell
 npm ci
