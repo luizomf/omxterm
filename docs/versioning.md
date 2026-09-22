@@ -1,12 +1,18 @@
 # Versioning policy
 
-OMXTerm follows [Semantic Versioning 2.0.0](https://semver.org/) for published
-versions. Version numbers have the form `MAJOR.MINOR.PATCH`; Git tags add the
-conventional `v` prefix, such as `v0.2.1`.
+OMXTerm uses [Semantic Versioning 2.0.0](https://semver.org/) for published
+versions. A release number has the form `MAJOR.MINOR.PATCH`, and its Git tag adds
+`v`; for example, version `0.13.0` has tag `v0.13.0`.
 
-This policy assigns meaning to versions. It does not authorize a release.
-Version changes, tags, artifacts, and GitHub Releases remain deliberate,
-owner-authorized actions governed by the [release procedure](release.md).
+Two identities may be visible at the same time. **0.13.0** is the latest
+published release recorded in this repository, while `main` currently carries
+**0.14.0-dev.0** for ongoing development. The `-dev.0` value names a development
+baseline, not a newer published release.
+
+This policy explains what a version means. It does not grant permission to
+change versions, create tags, build release artifacts, or publish a GitHub
+Release. Those remain deliberate, owner-authorized actions governed by the
+[release procedure](release.md).
 
 ## Public contract
 
@@ -67,24 +73,27 @@ creates permission to publish.
 
 ## Development baseline between releases
 
-After `X.Y.Z` is published, `main` moves to `X.Y.(Z+1)-dev.0` as the default
-next-patch development baseline:
+After `X.Y.Z` is published, `main` normally moves to
+`X.Y.(Z+1)-dev.0`, reserving a next-patch baseline while development continues.
+Ordinary fixes, maintenance, documentation, and pull requests leave that value
+alone.
 
-- ordinary commits and pull requests do not increment the version or the
-  prerelease identifier;
-- when `main` accepts a user-visible feature — or, during `0.x`, an intentional
-  breaking contract change — the baseline moves to the next minor prerelease,
-  such as `0.2.0-dev.0`. The pull request introducing that change owns the
-  move: it updates `package.json` and `package-lock.json` itself, and makes no
-  change when an earlier pull request already moved the baseline to that minor;
-- release preparation removes the prerelease suffix and selects the final
-  version under this policy;
-- development versions are never tagged, attached to a GitHub Release,
-  uploaded, or presented as published releases.
+A pull request that adds user-visible functionality moves a `0.x` baseline to
+the next minor `-dev.0`. An intentional contract change during `0.x` does the
+same. For example, if `main` is at `0.13.1-dev.0` and accepts a feature, that
+feature's pull request updates both package files to `0.14.0-dev.0`. A later
+feature in the same cycle sees that the move already happened and makes no
+version change. The pull request also updates the pinned version test required
+by the repository.
 
-A development build is identified by both its `-dev` version and the exact
-source commit SHA it was built from. The version alone does not identify a
-dogfood build, because the baseline does not change per commit.
+Release preparation chooses the final version and removes the prerelease
+suffix. Until that separately authorized work happens, a development baseline
+is never tagged, uploaded, attached to a GitHub Release, or described as a
+published release.
+
+Because many commits share one baseline, identify a development build with both
+its `-dev` version and exact source commit SHA. `0.14.0-dev.0` alone does not say
+which dogfood build is running.
 
 ## Schema compatibility
 

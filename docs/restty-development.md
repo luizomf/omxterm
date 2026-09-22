@@ -1,9 +1,17 @@
 # Restty Terminal Surface
 
-OMXTerm uses pinned Restty 0.3.0 and its Ghostty WASM core as its sole Terminal
-Surface in development and packaged applications. Restty is not a User
-Configuration choice: there is no migration selector, second renderer or
-fallback Surface.
+OMXTerm uses pinned Restty 0.3.0 and its Ghostty WASM core as the Terminal
+Surface in both development and packaged applications. The application starts a
+PTY only after fonts, the core, and WebGL2 are ready, so a rendering failure
+cannot leave an invisible shell running.
+
+This guide is for contributors changing that integration. Start with the
+[runtime contract](#runtime-contract) to understand host behavior, then use
+[pinned inputs and restoration](#pinned-inputs-and-restoration) when auditing or
+repairing the installed dependency. The product behavior remains normative in
+[`spec.md`](spec.md), while [ADR 0025](adr/0025-stage-restty-behind-an-unpackaged-opt-in.md)
+records why Restty is the sole Surface. Restty is not a User Configuration
+choice, and there is no fallback renderer.
 
 ## Runtime contract
 
@@ -15,6 +23,8 @@ WebGL2 backend before starting a PTY. Initialization failure starts no shell;
 WebGL context loss reports a visible failure and disposes only the owning tab.
 A native failure dialog explains recovery and remains until acknowledged, even
 when cleanup ended the window's last session. No terminal state is recreated.
+
+### Configuration and Surface lifetime
 
 The Surface applies the selected Terminal Theme, configured font family,
 size, independent line height, programming-ligature setting, per-side padding,
@@ -39,6 +49,8 @@ into terminal scroll input. Native rendering coverage verifies that shrinking
 and restoring the host with a font-size change preserves the live bottom while
 ordinary output still leaves a deliberately scrolled viewport alone.
 
+### Input and host-owned policy
+
 Explicit copy/paste, selection, native context actions, Protected Paste,
 snippets, file-path injection and write-only OSC 52 use the existing OMXTerm
 host routes. DOM paste enters the same asynchronous confirmation and ordered
@@ -58,6 +70,8 @@ sanitization and fallback, tab/window ownership, focus/interaction reset and
 platform attention. The Surface sends no title reports; cancelled/malformed
 controls and OSC BEL terminators have no extra title or bell effect.
 
+### Graphics and resource limits
+
 The Surface renders the bounded direct Pi PNG and anonymous metadata-first
 Chafa RGBA Kitty paths. Parsing, decode, placement, deletion and reset remain in
 the pinned Ghostty core. Decoded transport input is
@@ -69,6 +83,8 @@ included in that storage total, and tabs multiply memory. Images remain
 cell-anchored through resize, Window Font Zoom, tab selection and live theme
 reload; `CSI 16 t` reports the current cell size. Pi's default 2,000-by-2,000
 autoresized output is the compatibility target. Unsupported protocol paths remain unclaimed.
+
+### Output flow control
 
 Output uses the shared ordered Adapter/IPC path. Main pauses an owned PTY at
 65,536 unacknowledged UTF-8 bytes and resumes at or below 16,384. Renderer ACKs
@@ -215,6 +231,14 @@ font contents or runtime diagnostic API is needed.
 
 ## Pinned inputs and restoration
 
+Use `npm ci` for normal restoration. It installs the locked packages and runs
+the checksum-guarded preparation scripts automatically. If preparation rejects
+an input, compare the installed package, lockfile, and tracked source manifest
+before changing any digest. A dependency upgrade is review work: establish the
+new source and license identity, reapply the required behavior deliberately,
+refresh regression fixtures, and run the native package checks. Treat a rejected
+input as dependency drift until that review establishes otherwise.
+
 - Restty npm package `0.3.0`, source commit
   `3db45b0e10dbe53c52a77131d366f519546e4f04`;
 - Ghostty submodule commit
@@ -267,9 +291,20 @@ git ls-tree HEAD reference/ghostty reference/text-shaper
 ```
 
 The lockfile restores the npm tarballs identified by that manifest. `npm ci`
-then runs `scripts/prepare-restty-runtime.mjs`, which accepts only the reviewed
-Restty runtime, declarations and embedded-core SHA-256 values and produces
-corrected runtime SHA-256
+then runs `scripts/prepare-restty-runtime.mjs`. The preparation script recognizes
+only reviewed input hashes, applies the complete correction, verifies the final
+bytes, and is safe to run again. Historical accepted inputs are regression-tested
+through `test/fixtures/restty-runtime-history.json`; unknown or modified bytes
+fail without being rewritten.
+
+OMXTerm describes the corrected dependency through the private types in
+`src/terminal-surface/restty-runtime-contract.ts`. Keep dependency-only methods
+there rather than widening the public Terminal Surface interface or asserting
+the full upstream internal runtime. This private contract is the single typed
+boundary used by the host integration; it is not a public API or renderer
+registry.
+
+After preparation, the corrected runtime has SHA-256
 `bd1907b75d7517684c128ec4ba6fbc8786e0a5f2960f87b7a8c5f28e09420880`,
 embedded-core chunk SHA-256
 `039abfec307ab03015a2ae70b3583e07fcc9e5a70319de1ca055d6168f45af1b`,
