@@ -76,6 +76,9 @@ The practical guides summarize the product contract; they do not replace it.
   manual publication.
 - [Versioning](versioning.md) — compatibility, development baselines, tags,
   and immutable published releases.
+- [macOS privacy identity investigation](macos-privacy-identity.md) — measured
+  permission retention across development builds, limitations, and an unadopted
+  private-signing proposal; release signing policy is unchanged.
 
 ## Legal
 

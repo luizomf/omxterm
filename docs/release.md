@@ -32,7 +32,10 @@ arm64 AppImage, and Windows arm64 NSIS. Initial artifacts carry no verified
 publisher identity; publisher signing, Apple notarization, certificates, and
 paid signing services are deferred. The macOS application receives a complete
 ad-hoc code seal for internal bundle integrity without gaining a publisher
-identity.
+identity. Ad-hoc identity changes can require renewed macOS privacy approvals
+when replacing builds. The [privacy identity investigation](macos-privacy-identity.md)
+records measured behavior and a private-development proposal; it does not
+change this release policy or guarantee retention for every permission.
 
 Every release candidate is built and verified natively. macOS builds run on
 Apple Silicon. Linux arm64 and Windows arm64 builds run on native runners or in
