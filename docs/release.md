@@ -21,10 +21,10 @@ For a new candidate, follow this path:
 
 The historical sections preserve what happened for earlier releases; they do
 not replace the current procedure or authorize repeating a past action. The
-latest published release described here is **0.13.0**. This source prepares
-**0.14.0**; its [candidate record](releases/0.14.0.md) identifies the exact files,
-native verification, and remaining acceptance/publication gates. Version
-metadata alone is not publication.
+latest published release described here is **0.14.0**. Its
+[release record](releases/0.14.0.md) identifies the accepted files, native
+verification and completed publication checks. The repository resumes development
+at **0.14.1-dev.0**, which is not a published release.
 
 ## Cross-platform release policy
 
@@ -253,18 +253,27 @@ from the published release and matched their accepted sizes and SHA-256,
 including the four checksum records. Published files and the tag remain
 unchanged while `main` resumes development at `0.13.1-dev.0`.
 
-## 0.14.0 candidate artifacts
+## Published 0.14.0 artifacts
 
 The [0.14.0 record](releases/0.14.0.md) binds all three native ARM64 builds to
 `506aac2b10b493490e0fca3d39567a803eebb773`. Complete native commands passed,
 including packaged parsed output and exact Windows installer verification and
 cleanup. All eight collected files match their native sizes and SHA-256 values.
 The Windows test replaced an existing per-user development installation; its
-pre-existing updater cache was separately preserved. On September 22, 2026, the
-owner accepted all eight exact files and reaffirmed publication authorization.
+pre-existing updater cache was separately preserved. The owner accepted all
+eight exact files and reaffirmed publication authorization on September 22, 2026.
 Final independent Standards/Spec review passed without surviving findings,
-including the exact publication body. Only eligible Markdown review-status
-bookkeeping followed; no tag or assets have been published yet.
+including the exact publication body.
+
+[OMXTerm 0.14.0](https://github.com/luizomf/omxterm/releases/tag/v0.14.0) was
+published at `2026-09-22T23:37:44Z`. Annotated tag `v0.14.0` points to
+`e9f432146e2d93412a7b3fe9952cd6384310cd2c`, retaining the build source in its
+ancestry; its tree equals PR #379 squash
+`b388a17cf12eb4c3afea33abf716571ceb8210b0`. Only five eligible non-packaged
+Markdown files differ from the build source. All eight published assets were
+downloaded and matched their accepted sizes and SHA-256, including all four
+checksum records. The published body matches its reviewed content. No artifact
+or tag is changed by post-publication development-baseline maintenance.
 
 ## Version selection and consistency
 

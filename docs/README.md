@@ -14,16 +14,14 @@ project's design and development guides.
 
 ## Releases
 
-**Latest published release: [0.13.0](https://github.com/luizomf/omxterm/releases/tag/v0.13.0)**
+**Latest published release: [0.14.0](https://github.com/luizomf/omxterm/releases/tag/v0.14.0)**
 for macOS, Linux, and Windows ARM64. Use the
 [download table](../README.md#platforms-and-downloads) to choose your package.
-The [0.13.0 release notes and record](releases/0.13.0.md) describe its font
-improvements, known issues, package checksums, and verification.
+The [0.14.0 release notes and record](releases/0.14.0.md) describe the tab-bar
+toggle, fullscreen and other fixes, limitations, exact checksums and verification.
 
-These guides follow the **0.14.0 candidate** source tree. Its
-[verification and acceptance record](releases/0.14.0.md) does not make it a
-published release. A feature described here may have landed after 0.13.0;
-the release notes are the exact guide to the published packages. The repository is currently private, so GitHub downloads
+These guides follow the **0.14.1-dev.0** source tree. The release notes remain
+the exact guide to the published packages. The repository is currently private, so GitHub downloads
 require repository access.
 
 OMXTerm keeps evolving through everyday use and reported problems. The
@@ -35,6 +33,7 @@ or propose an improvement.
 Published records retain the notes, package identities, and evidence for their
 original release:
 
+- [0.13.0](releases/0.13.0.md) — configured font styles and shared resources;
 - [0.12.2](releases/0.12.2.md) — Neovim/TUI rendering after zoom and reload;
 - [0.12.1](releases/0.12.1.md) — native rendering verification and Windows catch-up;
 - [0.12.0](releases/0.12.0.md) — Restty transition, macOS and Linux;
