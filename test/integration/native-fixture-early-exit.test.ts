@@ -14,7 +14,7 @@ import {
 describe.skipIf(process.env["OMXTERM_TEST_NATIVE_INTERRUPTION"] !== "1")(
   "early native fixture exit",
   () => {
-    it("cleans a real PTY even when its leader exits before periodic discovery", async () => {
+    it("cleans a registered real PTY after its leader exits early", async () => {
       // Keep external dependencies resolvable from the disposable fixture.
       const base = await mkdtemp(path.resolve(".scratch-early-pty-"));
       const root = await mkdtemp(path.join(base, "profile-"));
