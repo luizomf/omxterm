@@ -9,11 +9,25 @@ A Terminal Window holds one or more Terminal Tabs, and each tab owns exactly
 one Live Terminal Session. `Cmd+T` (the `newTab` default) creates a tab in the
 selected window while `Cmd+N` keeps creating independent windows. The tab strip
 is an OMXTerm-drawn full-width row above the Terminal Surface and Snippets
-Sidebar row, and appears only when a window has at least two tabs — a single-tab
-window looks and behaves exactly like the previous contract. On macOS the row
+Sidebar row, and appears only when a window has at least two tabs and its
+window-local tab bar enabled flag is true — a single-tab window looks and behaves
+exactly like the previous contract. On macOS the row
 sits below the app-controlled 30 px title inset. Linux already places its native
 title and application menu outside the renderer, so its row starts at the top
 of the app-controlled content without a duplicate inset.
+
+A later tab bar amendment adds `View -> Toggle Tab Bar` (`toggleTabBar`) beside
+Toggle Snippets, defaulting to Cmd+Shift+B on macOS and Ctrl+Shift+B on Linux and
+Windows. Renderer-owned tab presentation owns the enabled flag, initially true,
+so chrome visibility remains independent of tab/session lifecycle and navigation.
+The toggle changes the flag even with one tab, survives configuration reload,
+and is neither persisted nor shared with another window. Main targets only the
+selected window through a payload-free validated preload subscription; the host
+ignores it throughout Local Image Preview activity and removes it on disposal.
+Removing/restoring the row uses the existing selected-Surface focus/refit path
+without resizing hidden Surfaces or recreating sessions. ADR 0018's shared native
+menu/key-event action delivery remains unchanged; no renderer shortcut system or
+visibility configuration is added.
 
 A later macOS fullscreen amendment keeps that row below the 30 px inset while
 windowed or maximized, but removes the app-owned inset in native fullscreen.

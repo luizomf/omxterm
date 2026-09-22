@@ -77,6 +77,7 @@ async function setup(loadLocalImage: () => Promise<LocalImageData | null>) {
     selectAll: vi.fn(),
   };
   let openImage!: () => void;
+  let toggleTabBar!: () => void;
   let clipboard!: (action: "copy" | "paste" | "select-all") => void;
   let zoom!: (command: TerminalFontZoom) => void;
   let tabCommand!: (command: TerminalTabCommand) => void;
@@ -115,6 +116,10 @@ async function setup(loadLocalImage: () => Promise<LocalImageData | null>) {
         zoom = listener;
         return () => {};
       },
+      subscribeToTabBarToggle(listener) {
+        toggleTabBar = listener;
+        return () => {};
+      },
       subscribeToTabCommands: (listener) => {
         tabCommand = listener;
         return () => {};
@@ -131,6 +136,8 @@ async function setup(loadLocalImage: () => Promise<LocalImageData | null>) {
     tabCommand,
     surfaceOptions,
     openImage,
+    toggleTabBar,
+    tabStrip,
     updateConfiguration,
   };
 }
@@ -172,6 +179,57 @@ describe("local image preview through the Terminal Window host", () => {
       }
     },
   );
+  it.each(["picker", "source"])(
+    "ignores tab bar toggles throughout %s choosing/loading/showing",
+    async (route) => {
+      let finish!: (value: LocalImageData | null) => void;
+      const view = await setup(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      );
+      let decoded!: () => void;
+      vi.spyOn(HTMLImageElement.prototype, "decode").mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            decoded = resolve;
+          }),
+      );
+      try {
+        view.tabCommand({ action: "new" });
+        await vi.waitFor(() => expect(view.tabStrip.hidden).toBe(false));
+        if (route === "picker") view.openImage();
+        else
+          view.surfaceOptions.onLocalImageActivation!({
+            source: "native-path",
+            path: "/tmp/fixture.png",
+          });
+        view.surface.focus.mockClear();
+        view.toggleTabBar();
+        expect(view.tabStrip.hidden).toBe(false);
+        finish(image);
+        await vi.waitFor(() => expect(decoded).toBeDefined());
+        view.toggleTabBar();
+        expect(view.tabStrip.hidden).toBe(false);
+        decoded();
+        await vi.waitFor(() =>
+          expect(document.querySelector("dialog")!.open).toBe(true),
+        );
+        view.toggleTabBar();
+        expect(view.tabStrip.hidden).toBe(false);
+        expect(view.surface.focus).not.toHaveBeenCalled();
+        document.querySelector<HTMLButtonElement>("dialog button")!.click();
+        view.toggleTabBar();
+        expect(view.tabStrip.hidden).toBe(true);
+        view.toggleTabBar();
+        expect(view.tabStrip.hidden).toBe(false);
+      } finally {
+        view.host.dispose();
+      }
+    },
+  );
+
   it("blocks terminal-directed actions while loading/modal and restores them after dismissal", async () => {
     let finish!: (value: LocalImageData) => void;
     const view = await setup(

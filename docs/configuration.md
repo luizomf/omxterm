@@ -290,6 +290,7 @@ strings. Omitted actions keep their defaults:
 | `actualSize`                | `CommandOrControl+0`       | `Control+0`           |
 | `toggleFullScreen`          | `Control+Command+F`        | `Control+Shift+F`     |
 | `toggleSnippets`            | `CommandOrControl+Shift+S` | `Control+Shift+S`     |
+| `toggleTabBar`              | `CommandOrControl+Shift+B` | `Control+Shift+B`     |
 | `reloadConfig`              | `CommandOrControl+Shift+,` | `Control+Shift+,`     |
 
 For example, this changes only New Window:
@@ -319,6 +320,14 @@ bare terminal control key such as `Ctrl+C`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+\`,
 `Ctrl+U`, `Ctrl+W`, `Ctrl+A`, or `Ctrl+E`. OMXTerm keeps a valid binding active
 but warns which action and control key conflict. Add `Shift` or choose another
 key when the control key should continue to reach the shell.
+
+`View -> Toggle Tab Bar` hides or enables the selected window's tab strip.
+The strip appears only when enabled and at least two tabs are open. Toggling with
+one tab still changes whether a later second tab reveals it. Keyboard and native
+Window menu tab navigation keep working while hidden. This memory-only state
+survives configuration reload, but new windows start enabled; there is no
+visibility setting or saved preference. Only its shortcut is configurable through
+`keybinds.toggleTabBar`. Local Image Preview activity temporarily ignores the toggle.
 
 ## Snippets
 

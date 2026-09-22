@@ -100,15 +100,6 @@ const linuxWindowIconPath =
 let terminalApplication: TerminalApplication<BrowserWindow> | undefined;
 let operationalEvents: OperationalEventLog | undefined;
 
-function createConfigurationLoadOptions(homeDirectory: string) {
-  return {
-    environment: process.env,
-    homeDirectory,
-    platform: process.platform,
-    getInstalledFontFamilyMetrics: installedFontFamilyMetrics,
-  };
-}
-
 applyChromiumSandboxPolicy(app.commandLine);
 
 applyLinuxDisplayBackendDefault(app);
@@ -123,14 +114,12 @@ app.on("before-quit", (event) => {
 app
   .whenReady()
   .then(async () => {
-    const { account, consumeLaunchRequest } = prepareStartup();
+    const { account, consumeLaunchRequest, configurationLoadOptions } =
+      prepareStartup();
     operationalEvents = createOperationalEventLog({
       environment: process.env,
       homeDirectory: account.homedir,
     });
-    const configurationLoadOptions = createConfigurationLoadOptions(
-      account.homedir,
-    );
     return startWithUserConfiguration(
       configurationLoadOptions,
       async ({ configuration: userConfiguration, fallback, warnings }) => {
@@ -401,6 +390,8 @@ app
             window.webContents.send(terminalIpc.fontZoom, command),
           sendClipboardAction: (window, action) =>
             window.webContents.send(terminalIpc.clipboardAction, action),
+          sendTabBarToggle: (window) =>
+            window.webContents.send(terminalIpc.tabBarToggle),
           sendSnippetsToggle: (window) =>
             window.webContents.send(terminalIpc.snippetsToggle),
           sendLocalImageOpen: (window) =>
@@ -427,13 +418,12 @@ app
           newWindow: openNewWindow,
           closeSelectedWindow: () =>
             void terminalApplication!.closeSelectedWindow(),
-          newTabInSelectedWindow: () =>
-            terminalApplication!.newTabInSelectedWindow(),
+          newTabInSelectedWindow: terminalApplication.newTabInSelectedWindow,
           closeSelectedTab: () => void terminalApplication!.closeSelectedTab(),
-          selectNextTab: () => terminalApplication!.selectNextTab(),
-          selectPreviousTab: () => terminalApplication!.selectPreviousTab(),
-          selectTabInSelectedWindow: (position: number) =>
-            terminalApplication!.selectTabInSelectedWindow(position),
+          selectNextTab: terminalApplication.selectNextTab,
+          selectPreviousTab: terminalApplication.selectPreviousTab,
+          selectTabInSelectedWindow:
+            terminalApplication.selectTabInSelectedWindow,
           requestQuit: () => void terminalApplication!.requestQuit(),
           toggleSelectedFullScreen:
             terminalApplication.toggleSelectedFullScreen,
@@ -453,9 +443,9 @@ app
           selectAllSelectedTerminal: () =>
             terminalApplication!.clipboardSelectedWindow("select-all"),
           toggleSelectedSnippets: terminalApplication.toggleSelectedSnippets,
+          toggleSelectedTabBar: terminalApplication.toggleSelectedTabBar,
           reloadUserConfiguration: () => void configurationReloader.reload(),
-          openLocalImage: () =>
-            terminalApplication!.openLocalImageInSelectedWindow(),
+          openLocalImage: terminalApplication.openLocalImageInSelectedWindow,
         };
         const keybindActionInvocations = terminalActionInvocations(menuActions);
         rebuildMenu = () => {
@@ -499,9 +489,16 @@ function prepareStartup() {
   );
   const launch = startupLaunchRequest(process.argv, app.isPackaged);
   if (!app.isPackaged) app.dock?.setIcon(developmentApplicationIconPath);
+  const account = userInfo();
   return {
-    account: userInfo(),
+    account,
     consumeLaunchRequest: launch,
+    configurationLoadOptions: {
+      environment: process.env,
+      homeDirectory: account.homedir,
+      platform: process.platform,
+      getInstalledFontFamilyMetrics: installedFontFamilyMetrics,
+    },
   };
 }
 

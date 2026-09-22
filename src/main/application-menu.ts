@@ -23,6 +23,7 @@ interface TerminalApplicationMenuActions {
   readonly pasteSelectedTerminal: () => void;
   readonly selectAllSelectedTerminal: () => void;
   readonly toggleSelectedSnippets: () => void;
+  readonly toggleSelectedTabBar: () => void;
   readonly reloadUserConfiguration: () => void;
   readonly openLocalImage: () => void;
 }
@@ -122,6 +123,11 @@ export function terminalApplicationMenuTemplate(
           click: actions.toggleSelectedSnippets,
         },
         {
+          label: "Toggle Tab Bar",
+          accelerator: keybinds.toggleTabBar,
+          click: actions.toggleSelectedTabBar,
+        },
+        {
           label: "Reload User Configuration",
           accelerator: keybinds.reloadConfig,
           click: actions.reloadUserConfiguration,
@@ -208,6 +214,7 @@ export function terminalActionInvocations(
     actualSize: actions.resetSelectedWindowZoom,
     toggleFullScreen: actions.toggleSelectedFullScreen,
     toggleSnippets: actions.toggleSelectedSnippets,
+    toggleTabBar: actions.toggleSelectedTabBar,
     reloadConfig: actions.reloadUserConfiguration,
   });
 }

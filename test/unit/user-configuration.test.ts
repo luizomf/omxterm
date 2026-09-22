@@ -314,6 +314,42 @@ describe("strict version 1 User Configuration", () => {
     expect(Object.isFrozen(configuration.keybinds)).toBe(true);
   });
 
+  it.each(["darwin", "linux", "win32"])(
+    "remaps toggleTabBar and rejects effective default collisions on %s",
+    (platform) => {
+      const defaults = terminalDefaultKeybinds(platform);
+      const configuration = validateUserConfiguration(
+        { version: 1, keybinds: { toggleTabBar: "Control+Alt+B" } },
+        configPath,
+        installedFonts,
+        defaults,
+        platform,
+      );
+      expect(configuration.keybinds.toggleTabBar).toBe("Control+Alt+B");
+      expect(() =>
+        validateUserConfiguration(
+          {
+            version: 1,
+            keybinds: { toggleTabBar: "CommandOrControl+Shift+S" },
+          },
+          configPath,
+          installedFonts,
+          defaults,
+          platform,
+        ),
+      ).toThrow('conflicts with the "toggleSnippets" keybind');
+      expect(() =>
+        validateUserConfiguration(
+          { version: 1, keybinds: { newWindow: "CommandOrControl+Shift+B" } },
+          configPath,
+          installedFonts,
+          defaults,
+          platform,
+        ),
+      ).toThrow('conflicts with the "toggleTabBar" keybind');
+    },
+  );
+
   it("applies Linux remaps over Linux defaults", () => {
     const configuration = validateUserConfiguration(
       { version: 1, keybinds: { newWindow: "Alt+N" } },

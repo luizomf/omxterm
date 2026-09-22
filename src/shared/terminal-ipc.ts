@@ -22,6 +22,7 @@ export const terminalIpc = {
   clipboardContextMenu: "terminal:clipboard-context-menu",
   snippets: "terminal:snippets",
   snippetsToggle: "terminal:snippets-toggle",
+  tabBarToggle: "terminal:tab-bar-toggle",
   tabCommand: "terminal:tab-command",
   tabSelected: "terminal:tab-selected",
   tabTitle: "terminal:tab-title",

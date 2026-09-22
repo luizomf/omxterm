@@ -16,6 +16,7 @@ export interface TerminalBridge {
   fontData(family?: string): Promise<TerminalFontData>;
   snippets(): Promise<TerminalSnippetsResponse>;
   onSnippetsToggle(listener: () => void): () => void;
+  onTabBarToggle(listener: () => void): () => void;
   onConfigurationUpdate(
     listener: (configuration: TerminalRendererConfiguration) => void,
   ): () => void;

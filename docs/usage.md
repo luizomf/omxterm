@@ -32,7 +32,15 @@ window is independent of every existing window and its tabs.
 
 Use `File -> New Tab` to add a tab to the selected window. Use
 `File -> New Window` to open another window. The tab strip stays hidden with one tab and
-appears when the window has two or more tabs. A newly created tab is selected.
+appears by default when the window has two or more tabs. A newly created tab is selected.
+
+`View -> Toggle Tab Bar` hides or enables the strip for only the selected window.
+It never closes or restarts tabs: their output, order, selection and keyboard/native
+Window menu navigation keep working. Hiding reclaims the strip's row and returns
+terminal focus. Toggling with one tab also changes whether opening a second tab
+reveals the strip; enabling with one tab still leaves it hidden. The choice survives
+User Configuration Reload but is not saved or shared, and every new window starts
+enabled.
 
 To move around:
 
@@ -126,6 +134,7 @@ shortcut.
 | Zoom Out               | `Cmd+-`           | `Ctrl+-`           |
 | Actual Size            | `Cmd+0`           | `Ctrl+0`           |
 | Toggle Full Screen     | `Ctrl+Cmd+F`      | `Ctrl+Shift+F`     |
+| Toggle Tab Bar         | `Cmd+Shift+B`     | `Ctrl+Shift+B`     |
 
 Always on Top has a menu action but no built-in shortcut. `View -> Toggle
 Developer Tools` is likewise menu-only; it opens or closes Developer Tools for
@@ -156,7 +165,7 @@ letter, colon, and slash or backslash. The preview appears in a temporary overla
 Escape, its close button, or the dark backdrop dismisses it and returns
 focus to the selected Terminal Tab. The action intentionally has no built-in or
 configurable shortcut. While choosing, loading, or viewing an image, terminal
-copy/paste/select-all, file drops, font zoom and snippets actions are ignored
+copy/paste/select-all, file drops, font zoom, tab bar toggles and snippets actions are ignored
 rather than sent to the obscured terminal. Closing tabs or windows still works.
 
 OMXTerm reads only after that explicit picker or modified-click activation. The

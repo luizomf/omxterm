@@ -72,6 +72,7 @@ function createApplicationHarness(
   const sendFontZoom = vi.fn();
   const sendClipboardAction = vi.fn();
   const sendSnippetsToggle = vi.fn();
+  const sendTabBarToggle = vi.fn();
   const sendLocalImageOpen = vi.fn();
   const toggleDeveloperTools = vi.fn();
   const sendTabCommand = vi.fn();
@@ -94,6 +95,7 @@ function createApplicationHarness(
     sendFontZoom,
     sendClipboardAction,
     sendSnippetsToggle,
+    sendTabBarToggle,
     sendLocalImageOpen,
     toggleDeveloperTools,
     sendTabCommand,
@@ -111,6 +113,7 @@ function createApplicationHarness(
     sendFontZoom,
     sendClipboardAction,
     sendSnippetsToggle,
+    sendTabBarToggle,
     sendLocalImageOpen,
     toggleDeveloperTools,
     sendTabCommand,
@@ -184,6 +187,21 @@ describe("Terminal application lifecycle", () => {
     expect(harness.sendSnippetsToggle).toHaveBeenCalledExactlyOnceWith(
       harness.windows[1]!.window,
     );
+  });
+
+  it("toggles the tab bar only in the selected Terminal Window", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    await harness.application.newWindow();
+    harness.application.toggleSelectedTabBar();
+    expect(harness.sendTabBarToggle).not.toHaveBeenCalled();
+    harness.select(harness.windows[1]!.window);
+    harness.application.toggleSelectedTabBar();
+    expect(harness.sendTabBarToggle).toHaveBeenCalledExactlyOnceWith(
+      harness.windows[1]!.window,
+    );
+    expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
+    expect(harness.windows[1]!.closeSession).not.toHaveBeenCalled();
   });
 
   it("opens the local image picker only in the selected Terminal Window", async () => {
@@ -311,6 +329,7 @@ describe("Terminal application lifecycle", () => {
       sendFontZoom: vi.fn(),
       sendClipboardAction: vi.fn(),
       sendSnippetsToggle: vi.fn(),
+      sendTabBarToggle: vi.fn(),
       sendLocalImageOpen: vi.fn(),
       toggleDeveloperTools: vi.fn(),
       sendTabCommand: vi.fn(),

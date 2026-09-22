@@ -72,6 +72,7 @@ interface TerminalWindowPageOptions {
   readonly subscribeToTabCommands?: (
     listener: (command: TerminalTabCommand) => void,
   ) => () => void;
+  readonly subscribeToTabBarToggle?: (listener: () => void) => () => void;
   readonly subscribeToTabTitles?: (
     listener: (sessionId: TerminalSessionId, title: string) => void,
   ) => () => void;
@@ -110,6 +111,7 @@ export function mountTerminalWindowPage(
   let removeClipboardActionListener: (() => void) | undefined;
   let removeTabCommandListener: (() => void) | undefined;
   let removeTabTitleListener: (() => void) | undefined;
+  let removeTabBarToggleListener: (() => void) | undefined;
   let snippetsSidebar: SnippetsSidebar | undefined;
   let removeSnippetsToggleListener: (() => void) | undefined;
   let removeLocalImageOpenListener: (() => void) | undefined;
@@ -243,6 +245,7 @@ export function mountTerminalWindowPage(
     removeClipboardActionListener?.();
     removeTabCommandListener?.();
     removeTabTitleListener?.();
+    removeTabBarToggleListener?.();
     removeSnippetsToggleListener?.();
     removeLocalImageOpenListener?.();
     localImagePreview?.dispose();
@@ -302,6 +305,9 @@ export function mountTerminalWindowPage(
     removeTabCommandListener = options.subscribeToTabCommands?.((command) =>
       tabs.handleCommand(command),
     );
+    removeTabBarToggleListener = options.subscribeToTabBarToggle?.(() => {
+      if (!previewActive()) tabs.toggleTabBar();
+    });
     removeTabTitleListener = options.subscribeToTabTitles?.(
       (sessionId, title) => tabs.setSessionTitle(sessionId, title),
     );

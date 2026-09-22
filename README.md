@@ -189,13 +189,14 @@ Launch OMXTerm to open your default shell in your home directory. Use
 `File -> New Tab` or `File -> New Window` for another independent session.
 Closing a tab ends its session; sessions are not saved or restored.
 
-| Action        | macOS             | Linux and Windows   |
-| ------------- | ----------------- | ------------------- |
-| New tab       | `Cmd+T`           | `Ctrl+Shift+T`      |
-| New window    | `Cmd+N`           | `Ctrl+Shift+N`      |
-| Copy          | `Cmd+C`           | `Ctrl+Shift+C`      |
-| Paste         | `Cmd+V`           | `Ctrl+Shift+V`      |
-| Zoom in / out | `Cmd++` / `Cmd+-` | `Ctrl++` / `Ctrl+-` |
+| Action         | macOS             | Linux and Windows   |
+| -------------- | ----------------- | ------------------- |
+| New tab        | `Cmd+T`           | `Ctrl+Shift+T`      |
+| New window     | `Cmd+N`           | `Ctrl+Shift+N`      |
+| Toggle tab bar | `Cmd+Shift+B`     | `Ctrl+Shift+B`      |
+| Copy           | `Cmd+C`           | `Ctrl+Shift+C`      |
+| Paste          | `Cmd+V`           | `Ctrl+Shift+V`      |
+| Zoom in / out  | `Cmd++` / `Cmd+-` | `Ctrl++` / `Ctrl+-` |
 
 On Linux and Windows, press and release `Alt` to show the application menu.
 OMXTerm works without configuration files. When you want to customize it:

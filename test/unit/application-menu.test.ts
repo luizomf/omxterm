@@ -7,6 +7,7 @@ import {
 import {
   DEFAULT_TERMINAL_KEYBINDS,
   TERMINAL_ACTION_NAMES,
+  terminalDefaultKeybinds,
 } from "../../src/shared/terminal-keybinds";
 
 function menuActions() {
@@ -29,6 +30,7 @@ function menuActions() {
     pasteSelectedTerminal: vi.fn(),
     selectAllSelectedTerminal: vi.fn(),
     toggleSelectedSnippets: vi.fn(),
+    toggleSelectedTabBar: vi.fn(),
     reloadUserConfiguration: vi.fn(),
     openLocalImage: vi.fn(),
   };
@@ -142,6 +144,35 @@ describe("native application menu", () => {
       ]),
     );
   });
+
+  it.each([
+    ["darwin", "CommandOrControl+Shift+B"],
+    ["linux", "Control+Shift+B"],
+    ["win32", "Control+Shift+B"],
+  ])(
+    "offers Toggle Tab Bar beside Snippets with shared delivery on %s",
+    (platform, accelerator) => {
+      const actions = menuActions();
+      const template = terminalApplicationMenuTemplate(
+        "OMXTerm",
+        actions,
+        terminalDefaultKeybinds(platform!),
+      );
+      const view = template.find((item) => item.label === "View")!
+        .submenu as MenuTemplate;
+      const index = view.findIndex((item) => item.label === "Toggle Snippets");
+      expect(view[index + 1]).toEqual({
+        label: "Toggle Tab Bar",
+        accelerator,
+        click: actions.toggleSelectedTabBar,
+      });
+      (view[index + 1]!.click as () => void)();
+      expect(actions.toggleSelectedTabBar).toHaveBeenCalledOnce();
+      actions.toggleSelectedTabBar.mockClear();
+      terminalActionInvocations(actions).toggleTabBar();
+      expect(actions.toggleSelectedTabBar).toHaveBeenCalledOnce();
+    },
+  );
 
   it("offers a menu-only local image picker without adding shortcut vocabulary", () => {
     const actions = menuActions();

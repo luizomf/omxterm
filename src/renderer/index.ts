@@ -43,6 +43,7 @@ void window.omxterm.terminal.configuration().then((configuration) => {
       droppedFilePathInsertion:
         window.omxterm.terminal.droppedFilePathInsertion,
       subscribeToTabCommands: window.omxterm.terminal.onTabCommand,
+      subscribeToTabBarToggle: window.omxterm.terminal.onTabBarToggle,
       subscribeToTabTitles: window.omxterm.terminal.onTabTitle,
       notifyTabSelection: window.omxterm.terminal.notifyTabSelection,
       onTitleRequest: window.omxterm.terminal.title,

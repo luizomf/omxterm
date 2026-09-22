@@ -400,6 +400,22 @@ describe("isolated preload terminal bridge responses", () => {
     electron.removeListener.mockClear();
   });
 
+  it("accepts only payload-free tab bar notifications and removes the exact handler", () => {
+    const listener = vi.fn();
+    const remove = electron.bridge!.onTabBarToggle(listener);
+    const handler = electron.listeners.get(terminalIpc.tabBarToggle)!;
+    for (const payload of [null, false, 0, "", {}, []]) handler({}, payload);
+    expect(listener).not.toHaveBeenCalled();
+    handler({}, undefined);
+    expect(listener).toHaveBeenCalledOnce();
+    remove();
+    expect(electron.removeListener).toHaveBeenCalledWith(
+      terminalIpc.tabBarToggle,
+      handler,
+    );
+    electron.removeListener.mockClear();
+  });
+
   it("delivers only valid bounded messages from main and removes subscriptions", () => {
     const bridge = electron.bridge!;
     const onOutput = vi.fn();

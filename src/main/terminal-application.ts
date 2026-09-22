@@ -87,6 +87,7 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
     action: TerminalClipboardAction,
   ) => void;
   readonly sendSnippetsToggle: (window: Window) => void;
+  readonly sendTabBarToggle: (window: Window) => void;
   readonly sendLocalImageOpen: (window: Window) => void;
   readonly toggleDeveloperTools: (window: Window) => void;
   readonly sendTabCommand: (
@@ -117,6 +118,7 @@ export interface TerminalApplication<
   zoomSelectedWindow(command: TerminalFontZoom): void;
   clipboardSelectedWindow(action: TerminalClipboardAction): void;
   toggleSelectedSnippets(): void;
+  toggleSelectedTabBar(): void;
   openLocalImageInSelectedWindow(): void;
   applyConfiguration(configuration: {
     readonly confirmClose: boolean;
@@ -142,6 +144,11 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     return selected && windows.has(selected) && !selected.isDestroyed()
       ? selected
       : undefined;
+  };
+
+  const selectedWindowAction = (action: (window: Window) => void) => () => {
+    const window = selectedWindow();
+    if (window) action(window);
   };
 
   const quit = () => {
@@ -363,10 +370,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       const window = selectedWindow();
       if (window) window.setAlwaysOnTop(!window.isAlwaysOnTop(), "floating");
     },
-    toggleSelectedDevTools() {
-      const window = selectedWindow();
-      if (window) options.toggleDeveloperTools(window);
-    },
+    toggleSelectedDevTools: selectedWindowAction(options.toggleDeveloperTools),
     zoomSelectedWindow(command) {
       const window = selectedWindow();
       if (window) options.sendFontZoom(window, command);
@@ -375,14 +379,11 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       const window = selectedWindow();
       if (window) options.sendClipboardAction(window, action);
     },
-    toggleSelectedSnippets() {
-      const window = selectedWindow();
-      if (window) options.sendSnippetsToggle(window);
-    },
-    openLocalImageInSelectedWindow() {
-      const window = selectedWindow();
-      if (window) options.sendLocalImageOpen(window);
-    },
+    toggleSelectedTabBar: selectedWindowAction(options.sendTabBarToggle),
+    toggleSelectedSnippets: selectedWindowAction(options.sendSnippetsToggle),
+    openLocalImageInSelectedWindow: selectedWindowAction(
+      options.sendLocalImageOpen,
+    ),
     applyConfiguration(configuration) {
       confirmCloseEnabled = configuration.confirmClose;
       alwaysOnTopDefault = configuration.alwaysOnTopDefault;

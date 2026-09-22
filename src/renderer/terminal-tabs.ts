@@ -50,6 +50,7 @@ export interface TerminalTabs {
   clipboardAction(action: TerminalClipboardAction): void;
   injectText(text: string): void;
   injectSnippet(body: string, options: { readonly submit: boolean }): void;
+  toggleTabBar(): void;
   focusSelected(): void;
   dispose(): void;
 }
@@ -74,6 +75,7 @@ export function createTerminalTabs(
 ): TerminalTabs {
   const document = elements.container.ownerDocument;
   const tabs: TerminalTab[] = [];
+  let tabBarEnabled = true;
   let selectedIndex = -1;
   let zoomSteps = 0;
   let activeSurfaceOptions = options.surfaceOptions;
@@ -88,7 +90,7 @@ export function createTerminalTabs(
   });
 
   const renderStrip = () => {
-    const visible = tabs.length >= 2;
+    const visible = tabBarEnabled && tabs.length >= 2;
     elements.strip.hidden = !visible;
     document.body.classList.toggle("tabs-visible", visible);
     if (!visible) {
@@ -183,19 +185,7 @@ export function createTerminalTabs(
     tabs.push(tab);
     select(tabs.length - 1);
 
-    const sessionAdapter: TerminalSessionAdapter = {
-      start: (handlers: TerminalSessionHandlers) =>
-        adapter.start({
-          onOutput: handlers.onOutput,
-          onExit(exit) {
-            handlers.onExit(exit);
-            onSessionEnd(tab, exit);
-          },
-        }),
-      write: (data) => adapter.write(data),
-      resize: (size) => adapter.resize(size),
-      close: (reason) => adapter.close(reason),
-    };
+    const sessionAdapter = tabSessionAdapter(tab, onSessionEnd);
     // Title and BEL events carry the emitting tab's session id; the Surface
     // itself stays tab-unaware. Events can only follow session output, so
     // the id is always known by the time they fire.
@@ -328,6 +318,12 @@ export function createTerminalTabs(
         submit: injectOptions.submit,
       });
     },
+    toggleTabBar() {
+      if (disposed) return;
+      tabBarEnabled = !tabBarEnabled;
+      renderStrip();
+      selectedTab()?.surface?.focus();
+    },
     focusSelected() {
       selectedTab()?.surface?.focus();
     },
@@ -342,6 +338,26 @@ export function createTerminalTabs(
       }
       tabs.length = 0;
     },
+  };
+}
+
+function tabSessionAdapter(
+  tab: TerminalTab,
+  onSessionEnd: (tab: TerminalTab, exit: { signal: number }) => void,
+): TerminalSessionAdapter {
+  const { adapter } = tab;
+  return {
+    start: (handlers: TerminalSessionHandlers) =>
+      adapter.start({
+        onOutput: handlers.onOutput,
+        onExit(exit) {
+          handlers.onExit(exit);
+          onSessionEnd(tab, exit);
+        },
+      }),
+    write: (data) => adapter.write(data),
+    resize: (size) => adapter.resize(size),
+    close: (reason) => adapter.close(reason),
   };
 }
 

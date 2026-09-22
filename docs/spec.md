@@ -96,8 +96,10 @@ selector or fallback Surface; rendering initialization failure starts no shell
 - Every Terminal Window can be repositioned through its visible native title
   area while the Terminal Surface remains fully interactive.
 - A window with a single tab shows no tab strip and renders exactly like the
-  pre-tab contract. With two or more tabs, an OMXTerm-drawn tab strip occupies
-  its own full-width row above the Terminal Surface and Snippets Sidebar row.
+  pre-tab contract. Each window owns an in-memory tab bar enabled flag, initially
+  true. The OMXTerm-drawn tab strip is visible only when that flag is enabled
+  and there are two or more tabs; it occupies its own full-width row above the
+  Terminal Surface and Snippets Sidebar row.
   On macOS it sits below the app-controlled 30 px native title inset except in
   native fullscreen, where that app-owned inset is zero. On Linux and Windows
   it starts immediately below the operating system's native Window Chrome,
@@ -188,8 +190,8 @@ selector or fallback Surface; rendering initialization failure starts no shell
   to the live selected Terminal Tab. Picker cancellation returns terminal focus
   without an error. The picker and visible local-image sources share the bounded
   read and overlay contract below. While choosing, loading, or displaying a
-  preview, terminal clipboard actions, file drops, font zoom, snippet toggles
-  and snippet injection are ignored; page activation does not steal preview
+  preview, terminal clipboard actions, file drops, font zoom, tab bar toggles,
+  snippet toggles and snippet injection are ignored; page activation does not steal preview
   focus. Dismissal restores ordinary routing. Already accepted terminal input
   is not rolled back, and confirmed tab/session/window closure remains active.
 - Dropping one or more native file-manager files or folders anywhere in a
@@ -213,9 +215,22 @@ selector or fallback Surface; rendering initialization failure starts no shell
   the shell selected for every subsequently created Default Shell session,
   including new tabs in existing windows, without restarting existing sessions.
   Existing windows keep their
-  ephemeral Always-on-Top state and independent Window Font Zoom delta over the
+  ephemeral Always-on-Top state, tab bar enabled flag, and independent Window Font Zoom delta over the
   new baseline; Actual Size returns that window to the latest baseline.
   Reconfigured Surfaces refit in place and resize their existing PTYs.
+- `View -> Toggle Tab Bar` (default `Cmd+Shift+B` on macOS and `Ctrl+Shift+B`
+  on Linux and Windows, remappable as `toggleTabBar`) changes only the selected
+  window's tab bar enabled flag, even with one tab; without a selected window
+  it does nothing. Disabling removes the entire strip row, refits the selected
+  existing Surface and PTY, and restores terminal focus. Hidden Surfaces retain
+  their valid geometry and continue ingesting output. Toggling preserves tab
+  identities, order, selection, titles and sessions; keyboard and native Window
+  menu navigation remain available while hidden. Title/BEL updates, tab creation,
+  selection and closure never reveal a disabled strip. Enabling reveals the same
+  live tabs when at least two remain. The flag survives configuration reload but
+  is never persisted or shared: new windows and application restarts start enabled.
+  Local Image Preview choosing/loading/showing suppresses the action without
+  changing the flag or focus. Native chrome and fullscreen inset policy are unchanged.
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and
   `Ctrl+Shift+S` on Linux and Windows, remappable through `keybinds`) shows or hides the
   selected window's Snippets Sidebar beside its
@@ -608,7 +623,7 @@ An optional `keybinds` object remaps application-chrome shortcuts for a fixed
 action vocabulary: `quit`, `copy`, `paste`, `selectAll`, `newWindow`,
 `closeWindow`, `newTab`, `closeTab`, `nextTab`, `previousTab`, `selectTab1`
 through `selectTab9`, `zoomIn`, `zoomOut`, `actualSize`, `toggleFullScreen`,
-`toggleSnippets`, and `reloadConfig`. Each
+`toggleSnippets`, `toggleTabBar`, and `reloadConfig`. Each
 value is a case-insensitive Electron accelerator containing at least one
 non-Shift modifier and exactly one key; bare or Shift-only accelerators are
 rejected so a keybind can never swallow plain typing. Unmapped actions keep

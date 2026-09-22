@@ -89,6 +89,13 @@ const terminal: TerminalBridge = {
     return () =>
       ipcRenderer.removeListener(terminalIpc.snippetsToggle, handler);
   },
+  onTabBarToggle(listener) {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (payload === undefined) listener();
+    };
+    ipcRenderer.on(terminalIpc.tabBarToggle, handler);
+    return () => ipcRenderer.removeListener(terminalIpc.tabBarToggle, handler);
+  },
   onConfigurationUpdate(listener) {
     configurationUpdateListeners.add(listener);
     if (latestConfiguration) listener(latestConfiguration);

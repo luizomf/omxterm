@@ -788,6 +788,43 @@ describe("renderer Terminal Window page host continued", () => {
     expect(removeTabTitleListener).toHaveBeenCalledOnce();
   });
 
+  it("routes tab bar toggles after mount and removes the subscription on disposal", async () => {
+    const elements = createPageElements();
+    let toggle!: () => void;
+    let command!: (value: TerminalTabCommand) => void;
+    const remove = vi.fn();
+    const subscribeToTabBarToggle = vi.fn((listener: () => void) => {
+      toggle = listener;
+      return remove;
+    });
+    const surface = createSurface();
+    const host = mountTerminalWindowPage(elements, {
+      createAdapter: createAdapterFactory(),
+      mount: async () => surface,
+      subscribeToTabBarToggle,
+      subscribeToTabCommands(listener) {
+        command = listener;
+        return vi.fn();
+      },
+    });
+    expect(subscribeToTabBarToggle).not.toHaveBeenCalled();
+    await host.ready;
+    toggle();
+    command({ action: "new" });
+    await vi.waitFor(() =>
+      expect(elements.tabsContainer.children).toHaveLength(2),
+    );
+    expect(elements.tabStrip.hidden).toBe(true);
+    toggle();
+    expect(elements.tabStrip.hidden).toBe(false);
+    host.dispose();
+    surface.focus.mockClear();
+    toggle();
+    expect(remove).toHaveBeenCalledOnce();
+    expect(elements.tabStrip.hidden).toBe(false);
+    expect(surface.focus).not.toHaveBeenCalled();
+  });
+
   it("routes tab commands from main into the Terminal Tabs", async () => {
     let commandListener: ((command: TerminalTabCommand) => void) | undefined;
     const removeTabCommandListener = vi.fn();

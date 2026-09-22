@@ -193,6 +193,33 @@ it("delivers shifted punctuation with macOS Command semantics", () => {
   expect(invoke).toHaveBeenCalledTimes(2);
 });
 
+it.each(["darwin", "linux", "win32"])(
+  "consumes Toggle Tab Bar once and follows its remap on %s",
+  (platform) => {
+    const defaults = terminalDefaultKeybinds(platform);
+    const { invoke, sendKey, setKeybinds } = keybindDeliveryHarness(
+      defaults,
+      platform,
+    );
+    const input = {
+      key: "B",
+      shift: true,
+      meta: platform === "darwin",
+      control: platform !== "darwin",
+    };
+    expect(sendKey(input).preventDefault).toHaveBeenCalledOnce();
+    sendKey({ ...input, type: "keyUp" });
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("toggleTabBar");
+    setKeybinds({ ...defaults, toggleTabBar: "Control+Alt+B" });
+    expect(sendKey(input).preventDefault).not.toHaveBeenCalled();
+    invoke.mockClear();
+    expect(
+      sendKey({ key: "b", control: true, alt: true }).preventDefault,
+    ).toHaveBeenCalledOnce();
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("toggleTabBar");
+  },
+);
+
 it("delivers against the latest effective keybind map in an existing window", () => {
   const { invoke, sendKey, setKeybinds } = keybindDeliveryHarness();
 
