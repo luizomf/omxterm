@@ -273,6 +273,7 @@ app
       root,
       () => (openedWindows += 1),
       () => (navigations += 1),
+      terminals,
     );
 
     const { reloader } = createHost(window);

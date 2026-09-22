@@ -1,4 +1,3 @@
-import { spawn, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { cp, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -10,6 +9,7 @@ import { resttyImageEmitterSource } from "../fixtures/restty-host-images";
 import { resttyFontMutationProbe } from "../fixtures/restty-font-mutation-probe";
 import { createNativeHostPng } from "../fixtures/native-host-png";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
+import { runNativeFixture } from "../fixtures/run-native-fixture";
 
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
 const electronExecutable = createRequire(import.meta.url)("electron") as string;
@@ -147,8 +147,10 @@ describe.skipIf(
 )("Restty through the OMXTerm host and a real native PTY", () => {
   it("preserves session lifecycle, isolation, focus, resize, and disabled routes", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "omxterm-restty-host-"));
+    let supervised = false;
     try {
       await buildHostFixture(root);
+      supervised = true;
       const execution = await runFixture(root);
       const resultLine = execution.stdout
         .split("\n")
@@ -161,9 +163,14 @@ describe.skipIf(
         await writeFile(evidencePath, `${JSON.stringify(result, null, 2)}\n`);
 
       expect(
-        execution.exitCode,
+        execution,
         `Host fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
-      ).toBe(0);
+      ).toMatchObject({
+        exitCode: 0,
+        signal: null,
+        reason: "exit",
+        cleanupErrors: [],
+      });
       if (!result) throw new Error("Host fixture returned no result");
       expect(result.fontMutation.sources).toBeGreaterThan(0);
       expect(result.fontMutation.bytes).toBeGreaterThan(0);
@@ -361,13 +368,15 @@ describe.skipIf(
         result.imageEvidence.afterTabAndThemePixels.greenInBitmap,
       ).toBeGreaterThan(100);
     } finally {
-      // Windows can retain Chromium profile handles briefly after child exit.
-      await rm(root, {
-        recursive: true,
-        force: true,
-        maxRetries: 10,
-        retryDelay: 100,
-      });
+      // Once launched, only the supervisor may remove the owned profile after
+      // checking process cleanup. Retain it if cleanup could not be established.
+      if (!supervised)
+        await rm(root, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 100,
+        });
     }
   }, 270_000);
 });
@@ -427,48 +436,17 @@ async function buildHostFixture(root: string): Promise<void> {
   ]);
 }
 
-async function runFixture(root: string): Promise<{
-  readonly exitCode: number | null;
-  readonly stderr: string;
-  readonly stdout: string;
-}> {
+async function runFixture(root: string) {
   const chromiumArguments: string[] = [];
   applyChromiumSandboxPolicy({
     appendSwitch(name) {
       chromiumArguments.push(`--${name}`);
     },
   });
-  const child = spawn(electronExecutable, [...chromiumArguments, root], {
-    cwd: root,
-    detached: true,
-    env: {
-      ...process.env,
-      ELECTRON_DISABLE_SECURITY_WARNINGS: "true",
-      HOME: path.join(root, "home"),
-      XDG_CONFIG_HOME: path.join(root, "config"),
-      XDG_STATE_HOME: path.join(root, "state"),
-    },
-    stdio: ["ignore", "pipe", "pipe"],
+  return runNativeFixture({
+    executable: electronExecutable,
+    args: [...chromiumArguments, root],
+    root,
+    timeout: 260_000,
   });
-  let stdout = "";
-  let stderr = "";
-  child.stdout.setEncoding("utf8");
-  child.stderr.setEncoding("utf8");
-  child.stdout.on("data", (chunk: string) => (stdout += chunk));
-  child.stderr.on("data", (chunk: string) => (stderr += chunk));
-  const timeout = setTimeout(() => {
-    if (!child.pid) return;
-    if (process.platform === "win32")
-      spawnSync("taskkill.exe", ["/pid", String(child.pid), "/t", "/f"], {
-        stdio: "ignore",
-        windowsHide: true,
-      });
-    else process.kill(-child.pid, "SIGKILL");
-  }, 260_000);
-  const exitCode = await new Promise<number | null>((resolve, reject) => {
-    child.once("error", reject);
-    child.once("close", resolve);
-  });
-  clearTimeout(timeout);
-  return { exitCode, stderr, stdout };
 }
