@@ -87,6 +87,11 @@ describe("local image boundary through native Electron", () => {
             terminalFocused: true,
           },
         })),
+        layouts: Array.from({ length: 20 }, () => ({
+          contained: true,
+          proportional: true,
+          visible: true,
+        })),
         isolatedProfiles: true,
         mime: "image/png",
         width: 1,

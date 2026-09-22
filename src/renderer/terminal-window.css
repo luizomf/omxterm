@@ -370,8 +370,8 @@ body.tabs-visible #snippets-sidebar {
 
 .local-image-preview img {
   display: block;
-  max-width: calc(90vw - 32px);
-  max-height: calc(90vh - 58px);
+  max-width: calc(min(90vw, 1200px) - 34px);
+  max-height: calc(90vh - 60px);
   object-fit: contain;
 }
 

@@ -56,10 +56,12 @@ async function run() {
     );
     preview.push({ opened, dismissed });
   }
+  const layouts = await measureLayouts(window);
   window.destroy();
   process.stdout.write(
     `${resultPrefix}${JSON.stringify({
       preview,
+      layouts,
       isolatedProfiles: (["userData", "sessionData"] as const).every(
         (name) => path.dirname(app.getPath(name)) === process.cwd(),
       ),
@@ -73,6 +75,42 @@ async function run() {
     })}\n`,
   );
   app.exit(0);
+}
+
+async function measureLayouts(window: BrowserWindow) {
+  const layouts: unknown[] = [];
+  for (const [width, height] of [
+    [3172, 1984],
+    [1984, 3172],
+    [8192, 100],
+    [100, 8192],
+    [32, 32],
+  ]) {
+    window.setContentSize(1600, 1000);
+    await window.webContents.executeJavaScript(
+      `globalThis.__localImagePreviewProbe.openGenerated(${width}, ${height})`,
+      true,
+    );
+    for (const [windowWidth, windowHeight] of [
+      [1600, 1000],
+      [640, 480],
+      [320, 200],
+      [1600, 1000],
+    ]) {
+      window.setContentSize(windowWidth!, windowHeight!);
+      layouts.push(
+        await window.webContents.executeJavaScript(
+          "globalThis.__localImagePreviewProbe.layout()",
+          true,
+        ),
+      );
+    }
+    await window.webContents.executeJavaScript(
+      "globalThis.__localImagePreviewProbe.dismiss()",
+      true,
+    );
+  }
+  return layouts;
 }
 
 void run().catch((error: unknown) => {

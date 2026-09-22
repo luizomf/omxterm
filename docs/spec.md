@@ -501,7 +501,9 @@ The renderer receives only bounded validated name, dimensions, media type, and
 bytes, creates a memory-only Blob URL under the production CSP, and synchronously
 removes the image source and revokes that URL on dismissal, replacement failure,
 page teardown, or owner close. It never receives an arbitrary filesystem API or
-path. Failed reads and decode failures show only a fixed non-path error. OMXTerm
+path. The preview fits the complete image proportionally within the overlay's
+content area, including after window resizing, without clipping or stretching it.
+Failed reads and decode failures show only a fixed non-path error. OMXTerm
 never reads on output or hover, infers a relative path, expands `~`, consults
 shell cwd, fetches or transfers a remote image, accepts UNC/file authorities,
 treats OSC 8 metadata as a local source, logs image paths or payload,
