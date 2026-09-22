@@ -162,8 +162,8 @@ system-wide Windows security protections.
 If pressing Backspace at an empty Bash prompt briefly turns the terminal
 bright, check the shell's visual-bell setting. Some Bash setups, including
 Git Bash, enable Readline's `bell-style visible`, which requests a screen
-color inversion rather than an ordinary Terminal Bell. This is not a general
-Windows shell requirement, and 0.13.0 does not suppress those inversions.
+color inversion. OMXTerm displays this terminal effect; the preference below
+controls when Bash requests it.
 
 To disable Readline's bell in the current Bash session, run:
 
@@ -186,6 +186,20 @@ Open a new Bash session afterward, or use the `bind` command above in existing
 sessions. This disables Bash/Readline's bell, while programs can still request
 terminal screen inversion when they need it. OMXTerm keeps those terminal
 capabilities available and does not edit shell configuration automatically.
+
+#### Bright flashes in Vim
+
+Vim has its own bell settings, independent of Bash/Readline. If an action in
+Vim briefly flashes the terminal, silence its bell notifications for the current
+editor session with:
+
+```vim
+:set belloff=all
+```
+
+To keep this preference for future Vim sessions, add `set belloff=all` to your
+`.vimrc`, preserving its other settings. Vim documents this option in
+`:help 'belloff'`.
 
 ## Everyday use
 

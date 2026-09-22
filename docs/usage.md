@@ -52,8 +52,8 @@ A drag changes the visible order, cycling order, and positional shortcuts
 immediately. It does not restart or replace any session. Order is independent
 per window and lasts only until the window closes.
 
-Tab order lasts until the window closes. OMXTerm does not yet save or restore
-tabs, move them between windows, or provide splits and workspaces. Use a session
+OMXTerm does not yet save or restore tabs, move them between windows, or provide
+splits and workspaces. Use a session
 tool such as tmux when a process needs to survive a tab or window closing.
 
 See the normative [window and session behavior](spec.md#window-and-session-behavior).
@@ -396,7 +396,8 @@ A program can separately ask the terminal to invert the screen. Bash Readline's
 Backspace may still produce a bright flash even though BEL itself is silent.
 The [Windows installation guidance](../README.md#bright-flashes-in-bash) shows
 how to disable Readline's bell while leaving screen inversion available to
-other terminal programs.
+other terminal programs. Vim has its own [bell setting](../README.md#bright-flashes-in-vim):
+`:set belloff=all` silences its notifications for the current editor session.
 
 See the normative [window and session behavior](spec.md#window-and-session-behavior).
 
