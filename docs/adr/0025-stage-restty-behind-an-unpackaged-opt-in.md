@@ -6,9 +6,12 @@ Terminal Surface seam remains authoritative; this decision does not introduce a
 renderer registry or promise two permanent engines.
 
 OMXTerm uses pinned Restty 0.3.0 in ordinary development and every packaged
-application. The temporary `OMXTERM_TERMINAL_SURFACE` selector and xterm runtime
-were removed at final cutover. Restty initialization failure never starts an
-invisible shell or falls back to another renderer.
+application. The temporary `OMXTERM_TERMINAL_SURFACE` selector and the former
+xterm renderer were removed at final cutover. Restty is the single Surface
+implementation: initialization must succeed before a shell starts, and failure
+does not switch to another renderer. Standard xterm protocol vocabulary such as
+`TERM=xterm-256color` remains part of terminal compatibility under ADR 0012 and
+is unrelated to the removed renderer.
 
 The first slice reuses the existing Electron host, typed configuration bridge,
 Terminal Tabs, session Adapter and owned local PTYs. Each Restty Surface uses
@@ -30,7 +33,14 @@ link-opening callbacks stay disabled. Narrow reviewed runtime seams expose raw
 DOM-paste origin, current bracketed-paste mode, selection/Select All and parsed
 OSC commands so the OMXTerm host can own asynchronous Protected Paste and
 write-only clipboard policy. OSC cancellation resumes later ordinary output.
-Dependency drift requires review.
+Dependency drift requires review. The correction script recognizes each reviewed
+historical input digest and applies its remaining transformations as one explicit
+ordered suffix. Exact replacement and output checksum guards reject drift. The
+patched constructor, pane, services, runtime view, and input origins are typed in
+one private Surface module; callers and the public Terminal Surface Interface see
+none of these dependency internals. This maintenance structure changes neither
+the accepted dependency inputs nor final runtime behavior.
+
 The bundled TTF inputs replace the prototype's non-equivalent WOFF2 shaping
 input.
 
@@ -230,9 +240,10 @@ reflow, alternate-screen, selection and viewport state. Invalid values remain
 outside this seam because complete User Configuration validation precedes
 application.
 
-The cost is a pinned dependency correction and WebGL2 requirement. This is
-preferable to unsafe passthrough, invisible shells, a permanent fallback or a
-speculative engine abstraction. Queue pending bytes, JavaScript heap and process
-RSS are reported separately; core, browser/WebGL and GPU allocations remain
-separate costs and no total application-memory bound is claimed. Native ARM64
-package checks on macOS, Linux and Windows own final qualification.
+The decision carries the maintenance cost of a pinned dependency correction and
+the runtime cost of requiring WebGL2. In return, OMXTerm avoids unsafe
+passthrough, invisible shells, a permanent fallback renderer, and a speculative
+engine abstraction. Queue pending bytes, JavaScript heap, and process RSS are
+reported separately. Core, browser/WebGL, and GPU allocations remain distinct
+costs, so none of these measurements is a total application-memory bound. Native
+ARM64 package checks on macOS, Linux, and Windows own final qualification.

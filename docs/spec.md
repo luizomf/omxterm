@@ -5,10 +5,11 @@ OMXTerm product behavior.
 
 ## Product
 
-OMXTerm is an open-source personal desktop terminal. It opens a normal
-local shell in a standard native window with a small title bar and gives the
-Terminal Surface all remaining content space. It is not a Ghostty competitor
-claim, an SSH bastion, an AI product, a session manager, or an IDE.
+OMXTerm is an open-source personal desktop terminal. It opens a normal local
+shell in a standard native window with a small title bar and gives the Terminal
+Surface all remaining content space. Its contract centers on that local terminal
+experience. SSH brokering, AI assistance, persistent session management, and IDE
+features are outside the product scope.
 
 The initial Supported Platforms are macOS arm64, Linux arm64, and Windows
 arm64. Linux rendering defaults to X11 and requires XWayland when the desktop
@@ -16,11 +17,11 @@ session is Wayland; native Wayland rendering is not currently claimed. An
 explicit Electron `--ozone-platform` switch overrides the Linux default for
 diagnosis. Linux deliberately uses `--no-sandbox` as an unconditional launch
 policy for ordinary-user runtime, direct AppImage, extraction, desktop entry
-and X11 relaunch. It is not a fallback or configurable mode. OMXTerm does not
-install a privileged sandbox helper or change host security policy. Sandboxed
-Linux support is outside the current maintenance scope (ADR 0024). x64, Intel
-macOS, and other operating systems are deferred rather than current support
-commitments.
+and X11 relaunch. This is a fixed launch policy, not a fallback or configurable mode. OMXTerm
+leaves host security policy unchanged and installs no privileged sandbox helper.
+Sandboxed Linux support is outside the current maintenance scope (ADR 0024).
+x64, Intel macOS, and other operating systems remain possible future work rather
+than current support commitments.
 
 ## Product scope
 
@@ -63,10 +64,10 @@ AI assistance, splits, saved or reconnectable sessions, shell integration,
 profiles, a theme picker or catalog, automatic configuration reload, automatic
 updates, and remote terminal features are outside the current product contract.
 
-Restty 0.3.0 and its pinned Ghostty core are the sole Terminal Surface in
-ordinary development and every packaged application. There is no renderer
-selector or fallback Surface; rendering initialization failure starts no shell
-(ADR 0025).
+Restty 0.3.0 and its pinned Ghostty core provide the sole Terminal Surface in
+ordinary development and every packaged application. OMXTerm has no renderer
+selector or fallback Surface. A shell starts only after rendering initialization
+succeeds (ADR 0025).
 
 ## Window and session behavior
 
@@ -90,9 +91,9 @@ selector or fallback Surface; rendering initialization failure starts no shell
   signal, spawn failure, requested close, tab and window closure, and
   last-window quit use the existing Live Terminal Session lifecycle.
 - After its Terminal Surface mounts, an active Terminal Window gives terminal
-  input DOM focus. Returning from another application or another OMXTerm window
-  restores that focus only in the active Terminal Window without activating,
-  raising, or showing OMXTerm by itself.
+  input DOM focus. When the user returns from another application or OMXTerm
+  window, only the active Terminal Window restores that focus. Focus restoration
+  does not activate, raise, or show OMXTerm by itself.
 - Every Terminal Window can be repositioned through its visible native title
   area while the Terminal Surface remains fully interactive.
 - A window with a single tab shows no tab strip and renders exactly like the
@@ -119,17 +120,16 @@ selector or fallback Surface; rendering initialization failure starts no shell
   Windows. It requests
   one confirmation for all open windows when confirmation is enabled and at
   least one Live Terminal Session is Busy.
-- `confirmClose` defaults to `true` and guards closing a tab, closing a
-  window, and quitting with one confirmation per action — closing a window
-  with several tabs asks once, not per tab. A close action asks only when an
-  affected Live Terminal Session is Busy: its PTY foreground process is not
-  the idle Default Shell. Closing only idle sessions proceeds without
-  confirmation. OMXTerm reads the foreground process name solely for this
-  in-memory decision and never logs, displays, or transmits it; when the name
-  cannot be read, the session counts as Busy. On Windows, ConPTY exposes only
-  a static console title instead of the foreground process name, so every
-  live session counts as Busy and closing it always asks while confirmation
-  is enabled.
+- `confirmClose` defaults to `true` and guards tab close, window close, and
+  quit. Each action can produce at most one confirmation, so closing a window
+  with several tabs asks once for the whole window. OMXTerm asks only when the
+  action affects a Busy Session, defined as a Live Terminal Session whose PTY
+  foreground process differs from the idle Default Shell. Closing only idle
+  sessions proceeds immediately. OMXTerm reads the foreground process name
+  solely for this in-memory decision and never logs, displays, or transmits it.
+  An unreadable name counts as Busy. ConPTY on Windows exposes a static console
+  title in place of the foreground process name, so every live Windows session
+  counts as Busy and asks while confirmation is enabled.
 - After the Default Shell starts successfully, an ordinary shell exit closes
   its tab — and its window when that was the last tab — without confirmation
   or a failure dialog, regardless of its numeric exit code.
@@ -150,9 +150,9 @@ selector or fallback Surface; rendering initialization failure starts no shell
   events and Scrollback Buffer retention. Selection refits and redraws current
   content and cursor before the first visible presentation, without a background
   render-budget delay or replacing the Surface, core or Live Terminal Session.
-- Native minimum window bounds keep the existing 320 px width and 200 px height
-  as floors and grow at startup or after a valid reload when configured font or
-  padding needs more room for a visible terminal grid.
+- Native windows have minimum dimensions of 320 px wide by 200 px high. At
+  startup and after a valid reload, either minimum grows when the configured font
+  or padding requires more room for a visible terminal grid.
 - On macOS, the Terminal Surface keeps a 30 px native title/drag inset above
   the configurable top padding while windowed or maximized. Native fullscreen
   removes only that app-owned inset; configured padding and the system-provided
@@ -176,12 +176,12 @@ selector or fallback Surface; rendering initialization failure starts no shell
   icon. Packaged applications use their packaged icon resource; development
   uses the development asset. Native dialog layout and window captions remain
   platform-owned; macOS retains its bundle-provided About metadata.
-- `View -> Toggle Developer Tools` is a menu-only diagnostic action that opens
-  or closes Electron's local Developer Tools for only the selected Terminal
-  Window in development and packaged applications. It does not open
-  automatically or enable remote debugging. Developer Tools can expose private
-  Terminal Payload and runtime state; users must review and redact diagnostic
-  output, screenshots, traces, and profiles before sharing them.
+- `View -> Toggle Developer Tools` is a menu-only diagnostic action for the
+  selected Terminal Window in development and packaged applications. It opens or
+  closes Electron's local Developer Tools without enabling remote debugging;
+  Developer Tools never open automatically. The tools can expose private
+  Terminal Payload and runtime state, so diagnostic output, screenshots, traces,
+  and profiles require review and redaction before sharing.
 - `File -> Open Local Image…` is a menu-only action for the selected Terminal
   Window. It opens a native picker and previews one validated local static PNG
   or JPEG in a temporary overlay without writing the file or changing User
@@ -247,8 +247,8 @@ selector or fallback Surface; rendering initialization failure starts no shell
   or window disposal cancels the outstanding native request. Native desktop
   policy determines how attention is presented; BEL remains silent.
 
-OMXTerm does not preserve a session after its tab or window closes. tmux
-remains the user's session manager.
+Closing a tab or window ends its sessions. Persistent and reconnectable sessions
+remain the responsibility of a session manager such as tmux.
 
 ## Terminal behavior
 
@@ -773,21 +773,22 @@ no mode discovery.
 
 Electron main owns native windows, PTYs, filesystem access, configuration,
 logs, clipboard capabilities, external-link opening, and bounded Local Image
-Preview reads. The renderer keeps
-context isolation and no Node integration. A minimal typed preload bridge
-validates every IPC message and sender. Its font route accepts no path: it may
-return bounded bytes only for the active validated configured family and fixed
-local fallback candidates. Font paths, family names and bytes never become
-Operational Events. Chromium sandboxing remains enabled on
-macOS and Windows and is disabled on Linux. The retained isolation and bridge
-controls do not provide equivalent protection to the Chromium sandbox.
+Preview reads. The renderer runs with context isolation and without Node
+integration. A minimal typed preload bridge validates every IPC message and its
+sender. The font route accepts no path; it can return only bounded bytes for the
+active validated configured family and fixed local fallback candidates. Font
+paths, family names, and bytes are excluded from Operational Events. Chromium
+sandboxing remains enabled on macOS and Windows and is disabled on Linux. Context
+isolation and the narrow bridge still limit renderer authority on Linux, though
+they do not provide protection equivalent to the Chromium sandbox.
 
-The framework-independent DOM Terminal Surface is the portable deep Module.
-Its small Interface hides Restty setup, Ghostty parsing, text and Kitty image
+The framework-independent DOM Terminal Surface is the portable deep Module. Its
+small Interface hides Restty setup, Ghostty parsing, text and Kitty image
 rendering, input, resize, theme, fonts, clipboard, zoom, and cleanup. Restty is
-the sole implementation; this is not a renderer registry or user setting. It receives a session Adapter rather
-than importing Electron or `node-pty`; OMXTerm provides the local IPC/PTY
-Adapter, while another host could independently provide WebSocket transport.
+the sole implementation, with no renderer registry or user-facing selector. The
+Surface receives a session Adapter instead of importing Electron or `node-pty`.
+OMXTerm supplies the local IPC/PTY Adapter; another host could independently
+supply WebSocket transport.
 
 Electron, window management, and PTY creation are not generalized into a fake
 cross-platform framework. The code remains one package organized by actual

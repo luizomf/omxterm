@@ -1,23 +1,20 @@
 # Keep user configuration strict and non-mutating
 
-OMXTerm will reject missing or unsupported schema versions, unknown keys,
-invalid JSON, and invalid values with precise errors. It will never silently
-ignore configuration input, migrate a configuration, rewrite it, or replace it
-with guessed defaults; the application makes useful noise and leaves the user's
-file untouched.
+OMXTerm rejects missing or unsupported schema versions, unknown keys, invalid
+JSON, and invalid values with precise errors. It leaves the user's file untouched
+and does not ignore input, migrate the document, rewrite it, or invent a repair.
 
-Amended for 0.2.0: rejection no longer blocks startup. The terminal is the tool
-users edit these files with, so an invalid file starts OMXTerm with its
-built-in defaults (never a guessed repair, never a persisted previous
-configuration) behind a persistent, non-blocking error surface that reports the
-precise problem. Strict validation, the useful noise, and the untouched user
-file are unchanged.
+The 0.2.0 amendment allows startup to continue after rejection because OMXTerm
+may be the terminal used to repair the file. In that case, the application uses
+its built-in defaults and presents the precise problem in a persistent,
+non-blocking error surface. The fallback is a clean default configuration, never
+a guessed repair or a previously persisted configuration. Strict validation and
+the non-mutating file boundary remain unchanged.
 
-Amended for manual User Configuration Reload: startup and reload reuse the same
-complete validation boundary, but their fallback state differs because only a
-running application has a last valid configuration. A valid manual reload
-atomically replaces the active configuration; an invalid reload keeps the last
-valid in-memory configuration active and reports the new problem. This is
-runtime state, not a persisted cache. Removing `config.json` remains the valid
-all-defaults state on reload, matching startup, and OMXTerm still never writes,
-repairs, or partially applies the user's document.
+The manual User Configuration Reload amendment reuses the complete startup
+validation boundary. A running application already has a valid in-memory
+configuration, so a rejected reload keeps that configuration active and reports
+the new problem. A valid reload replaces it atomically. This runtime state is not
+a persisted cache. Removing `config.json` selects the valid all-defaults state
+on reload, just as it does at startup. OMXTerm still does not write, repair, or
+partially apply the document.

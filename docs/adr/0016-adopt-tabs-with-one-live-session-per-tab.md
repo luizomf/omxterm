@@ -5,40 +5,39 @@ Amended by [ADR 0017](0017-confirm-close-only-for-busy-sessions.md): the
 `confirmClose` consequence recorded below was later narrowed to ask only for
 Busy Sessions.
 
-A Terminal Window holds one or more Terminal Tabs, and each tab owns exactly
+A Terminal Window holds one or more Terminal Tabs, each of which owns exactly
 one Live Terminal Session. `Cmd+T` (the `newTab` default) creates a tab in the
-selected window while `Cmd+N` keeps creating independent windows. The tab strip
-is an OMXTerm-drawn full-width row above the Terminal Surface and Snippets
-Sidebar row, and appears only when a window has at least two tabs and its
-window-local tab bar enabled flag is true — a single-tab window looks and behaves
-exactly like the previous contract. On macOS the row
-sits below the app-controlled 30 px title inset. Linux already places its native
-title and application menu outside the renderer, so its row starts at the top
-of the app-controlled content without a duplicate inset.
+selected window, while `Cmd+N` continues to create an independent window. The
+OMXTerm-drawn tab strip occupies a full-width row above the Terminal Surface and
+Snippets Sidebar row. It appears when the window has at least two tabs and its
+window-local tab bar enabled flag is true, leaving a single-tab window identical
+to the earlier contract. On macOS the row sits below the app-controlled 30 px
+title inset. Linux and Windows place native title and menu chrome outside the
+renderer, so the row begins at the top of app-controlled content there.
 
 A later tab bar amendment adds `View -> Toggle Tab Bar` (`toggleTabBar`) beside
-Toggle Snippets, defaulting to Cmd+Shift+B on macOS and Ctrl+Shift+B on Linux and
-Windows. Renderer-owned tab presentation owns the enabled flag, initially true,
-so chrome visibility remains independent of tab/session lifecycle and navigation.
-The toggle changes the flag even with one tab, survives configuration reload,
-and is neither persisted nor shared with another window. Main targets only the
-selected window through a payload-free validated preload subscription; the host
-ignores it throughout Local Image Preview activity and removes it on disposal.
-Removing/restoring the row uses the existing selected-Surface focus/refit path
-without resizing hidden Surfaces or recreating sessions. ADR 0018's shared native
-menu/key-event action delivery remains unchanged; no renderer shortcut system or
-visibility configuration is added.
+Toggle Snippets. Its default is `Cmd+Shift+B` on macOS and `Ctrl+Shift+B` on
+Linux and Windows. Renderer-owned tab presentation keeps the enabled flag,
+initially `true`, independent of tab and session lifecycle. The toggle changes
+that flag even with one tab and survives configuration reload. It is scoped to
+one window and kept only in memory. Other windows retain their state, and newly
+created windows start enabled. Main sends a payload-free notification only to the selected window
+through the validated preload bridge. The host ignores the notification while a
+Local Image Preview is active and removes its subscription on disposal. Hiding
+or restoring the row uses the selected Surface's existing focus and refit path,
+preserving hidden-Surface geometry and every live session. ADR 0018 continues to
+own delivery through the shared native-menu and main-process key-event action;
+the amendment adds no renderer shortcut system or visibility setting.
 
-A later macOS fullscreen amendment keeps that row below the 30 px inset while
-windowed or maximized, but removes the app-owned inset in native fullscreen.
-Electron's completed enter/leave events drive each window independently. Main
-derives the effective inset from native state and delivers it through the existing
-validated configuration snapshot and subscription, including initialization and
-reload, without another IPC route or recreating a Surface or session. System
-safe-area behavior and configured padding remain unchanged, and transient native
-chrome reveal overlays content instead of
-introducing hover-driven layout changes. Fullscreen remains independent from
-tab visibility.
+A later macOS fullscreen amendment keeps the row below the 30 px inset while the
+window is windowed or maximized, then sets the app-owned inset to zero in native
+fullscreen. Electron's completed enter and leave events drive each window
+independently. Main derives the effective inset from native state and includes it
+in the existing validated configuration snapshot and subscription during
+initialization and reload. The same Surface and session remain in place. System
+safe-area behavior and configured padding stay unchanged; transient native chrome
+may overlay content when revealed, without causing hover-driven layout changes.
+Fullscreen state and tab-bar visibility remain independent.
 
 Native Linux AppImage dogfooding showed why the inset is platform-specific:
 reusing the macOS inset below Linux's existing title and menu produced an empty
@@ -46,22 +45,22 @@ reusing the macOS inset below Linux's existing title and menu produced an empty
 behavior. The Electron main process therefore owns the platform choice and
 provides zero inset on Linux while preserving the settled macOS chrome.
 
-ADR 0007 recorded no rationale, so the 2026-07-19 design interview with the
-maintainer reconstructed it: the rejection protected first-release scope and
-the one-window–one-renderer–one-session simplicity, and assumed tmux would cover
-multiplexing. Daily dogfooding of v0.1.0 and v0.2.0 invalidated that
-assumption — missing tabs became the single most-felt gap. The rejection was
-never product identity, so tabs enter through this explicit supersession
-rather than a silent override.
+ADR 0007 did not record its rationale. A design interview with the maintainer on
+2026-07-19 reconstructed the original tradeoff: excluding tabs protected the
+first-release scope and the simplicity of one window, renderer, and session,
+while tmux was expected to cover multiplexing. Daily use of v0.1.0 and v0.2.0
+showed that this assumption was wrong; missing tabs became the most significant
+gap. Because the restriction served release scope rather than product identity,
+this ADR supersedes it explicitly.
 
-What ADR 0007 protected survives unchanged: a Live Terminal Session lives and
-dies with exactly one owner — now a Terminal Tab — nothing is preserved or
-reconnectable, and tmux remains the user's session manager. Lifecycle maps the
-old window semantics onto tabs: an ordinary shell exit closes its tab; closing
-a tab terminates only its session under the existing `confirmClose` contract
-without child-process inspection; closing a window closes all of its tabs with
-one confirmation; a window's last tab closing closes the window, and the last
-window closing quits OMXTerm.
+The ownership guarantee from ADR 0007 survives: each Live Terminal Session has
+exactly one lifetime owner, now a Terminal Tab. Sessions are ephemeral, and tmux
+remains the user's session manager. The old window lifecycle maps directly onto
+tabs. An ordinary shell exit closes its tab. Closing a tab terminates its
+session under the `confirmClose` contract. Closing a window closes all of its
+tabs with one confirmation. Closing the last tab closes its window, and closing
+the last window quits OMXTerm. ADR 0017 later narrowed confirmation to Busy
+Sessions using minimal foreground-process inspection.
 
 Terminal titles stay display-only per [ADR 0010](0010-keep-terminal-titles-display-only.md),
 applied per session: a tab shows its own sanitized title, an untitled tab falls

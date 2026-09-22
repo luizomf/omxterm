@@ -28,20 +28,19 @@ one. A release records which product, packaging, security,
 or platform boundaries changed since the previous version and maps each changed
 boundary to that automation.
 
-Manual validation is optional and never a release gate. A changed boundary that
-cannot be observed reliably through an automated seam is recorded as unverified
-rather than silently inferred as passing. This applies to platform security UI,
-native visual output, desktop-shell integration, and every other
-automation-resistant boundary. Missing human coverage does not block an
-otherwise passing exact artifact.
+Manual validation is optional and is not a release gate. When automation cannot
+reliably observe a changed boundary, the release record marks it unverified.
+Platform security UI, native visual output, desktop-shell integration, and other
+automation-resistant boundaries commonly require this treatment. Missing human
+coverage does not block an otherwise passing exact artifact.
 
-The maintainer continuously dogfoods the macOS application during ordinary
-daily use and reports problems when they are encountered. This is opportunistic
-product feedback, not a prescribed checklist, exact-artifact test, or promise of
-manual coverage for each change. The maintainer does not manually validate Linux
-or Windows; those platforms rely on native automation and later contributor or
-user reports.
-Community testing is welcome but is never a scheduled release dependency.
+The maintainer uses the macOS application during ordinary daily work and reports
+problems encountered there. This provides opportunistic product feedback rather
+than a prescribed checklist, exact-artifact test, or promise of manual coverage
+for each change. Linux and Windows rely on native automation followed by
+contributor and user reports; the maintainer does not perform manual validation
+on those platforms. Community testing is welcome, without becoming a scheduled
+release dependency.
 
 The exhaustive native exercise performed for the initial three-platform 0.4.0
 release remains historical baseline evidence, not a script or coverage promise
@@ -56,11 +55,12 @@ contract. Installation resolves kernel-FUSE versus
 `--appimage-extract-and-run` once and commits all three files with rollback;
 uninstall removes only those files. The manual AppImage path remains supported.
 
-Publication remains manual. Native automation and optional dogfood observations
-do not authorize a tag, upload, or GitHub Release. Each exact artifact requires
-owner acceptance, and publication requires separate authorization; acceptance
-is a release decision, not a claim that the artifact was manually exercised.
-Rebuilding an artifact invalidates its identity and automated evidence.
+Publication remains manual. Each exact artifact first requires owner acceptance,
+and a tag, upload, or GitHub Release then requires separate publication
+authorization. Native automation and optional dogfood observations satisfy
+neither authority on their own. Acceptance is a release decision, not a claim
+that someone manually exercised the artifact. Rebuilding changes artifact
+identity and invalidates the previous automated evidence.
 
 The project accepts the cost of maintaining native ARM64 build and automated
 verification environments. x64, Intel macOS, additional package formats,

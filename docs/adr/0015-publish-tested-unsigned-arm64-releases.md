@@ -5,20 +5,21 @@ Supported Platform, native-build, verification, and publication policy is
 recorded in
 [ADR 0019](0019-support-native-arm64-releases-on-macos-linux-and-windows.md).
 
-Each accepted OMXTerm version may be tagged as `v0.x.y` and published as a
-ready-to-run Apple Silicon macOS `.dmg`. The exact artifact is built and
-verified natively before it and a SHA-256 checksum are attached to the canonical
-GitHub Release. Releases remain manual and the application has no automatic
-update mechanism.
+An accepted OMXTerm version may be tagged as `v0.x.y` and published as a
+ready-to-run Apple Silicon macOS `.dmg`. The exact artifact receives a native
+build and verification before the artifact and its SHA-256 checksum are attached
+to the canonical GitHub Release. Owner acceptance and publication authorization
+remain separate manual decisions. The application has no automatic update
+mechanism.
 
-The application is not signed with an Apple Developer ID and is not submitted
-for notarization. This avoids imposing a paid Apple distribution obligation on
-a small open-source project, at the cost of a deliberate one-time Gatekeeper
-review for users. The assembled application still receives a complete ad-hoc
-code seal: Apple Silicon requires internal code integrity even when an
-application has no verified publisher identity. Ad-hoc sealing does not identify
-a publisher, satisfy Gatekeeper trust, or replace Developer ID signing and
-notarization.
+The application uses neither Apple Developer ID signing nor notarization. This
+keeps paid Apple distribution services outside the obligations of a small
+open-source project, with the tradeoff that users must complete a deliberate
+one-time Gatekeeper review. The assembled application still receives a complete
+ad-hoc code seal because Apple Silicon requires internal code integrity even
+without a verified publisher identity. An ad-hoc seal provides bundle integrity;
+it does not identify the publisher, satisfy Gatekeeper trust, or replace
+Developer ID signing and notarization.
 
 Automated package verification must run `codesign --verify --deep --strict`
 against the assembled application and reject both an invalid seal and any

@@ -1,14 +1,15 @@
 # OMXTerm
 
 OMXTerm is an open-source personal desktop terminal built around the Personal
-Terminal concept: an environment deliberately shaped by its user. OMXTerm Web
-is the separate browser-based SSH broker previously named OMXTerm.
+Terminal concept: an environment its user can deliberately shape over time.
+OMXTerm Web is a separate browser-based SSH broker that previously used the
+OMXTerm name.
 
 ## Language
 
 **Personal Terminal**:
-A terminal environment owned and deliberately shaped by its user, where polish,
-customization, and ease of evolution matter more than market differentiation.
+A terminal environment owned and deliberately shaped by its user. Its priorities
+are polish, customization, and the freedom to evolve with that user's needs.
 _Avoid_: AI terminal, Ghostty competitor, terminal MVP
 
 **OMXTerm Web**:
@@ -48,15 +49,15 @@ canonical `omtheme` palette.
 _Avoid_: xterm theme, Ghostty theme, application CSS
 
 **Terminal Font Stack**:
-The ordered faces used by the Terminal Surface: an explicitly configured system
-font when present; bundled regular and bold FiraCode Nerd Font Mono defaults;
-bundled regular and bold DejaVu Sans Mono coverage fallback; the retained
-bundled JetBrainsMono Nerd Font Mono coverage face; and representative operating
-system emoji, CJK, and symbol fallbacks last. A configured family that does not
-exist is an error rather than a silent fallback. An explicit configured family
-omits bundled bold faces and uses its available real regular, bold, italic and
-bold-italic faces before regular coverage fallbacks. Missing styles are
-synthesized without introducing an unrequested weight or slant.
+The ordered faces used by the Terminal Surface. An explicitly configured system
+font comes first when present. Otherwise, bundled regular and bold FiraCode Nerd
+Font Mono are the defaults. Bundled regular and bold DejaVu Sans Mono and the
+retained JetBrainsMono Nerd Font Mono provide further coverage, followed by
+representative operating-system emoji, CJK, and symbol faces. A missing
+configured family is an error. An explicit family uses its available real
+regular, bold, italic, and bold-italic faces before regular coverage fallbacks
+and omits the bundled bold faces. Restty synthesizes missing styles while
+preserving the requested weight and slant.
 _Avoid_: terminal font, webfont, system default font
 
 **Window Font Zoom**:
@@ -115,14 +116,17 @@ Surface, such as a title bar, toolbar, or window controls.
 _Avoid_: Chrome, browser header, terminal UI
 
 **Live Terminal Session**:
-An active shell and its terminal state owned by OMXTerm. It is ephemeral:
-closing it terminates its processes rather than preserving them for reconnection,
-and when its shell exits there is no inactive terminal surface left behind.
+An active shell and its terminal state owned by OMXTerm. The session lasts only
+as long as its owning tab: closing it terminates its processes, and shell exit
+removes the now-inactive Terminal Surface. Reconnection and preservation belong
+to external session managers such as tmux.
 _Avoid_: saved session, persistent session, tmux session
 
 **Default Shell**:
-The user's operating-system-configured interactive shell, launched when no
-explicit command is requested.
+The interactive shell OMXTerm selects when the user has not requested an
+explicit command: the operating-system-configured shell on macOS and Linux, or
+the configured `windowsShell` with the documented PowerShell and ComSpec
+fallbacks on Windows.
 _Avoid_: bundled shell, OMXTerm shell, hard-coded zsh
 
 **Busy Session**:
@@ -141,16 +145,16 @@ _Avoid_: application directory, repository directory, inherited launcher cwd
 
 **User Configuration**:
 The versioned, validated JSON document containing the user's explicit OMXTerm
-preferences. It is the shared configuration source for text editing now
-and a possible graphical preferences interface later.
+preferences. Users edit this document directly; a future graphical preferences
+interface could use the same configuration source.
 _Avoid_: settings database, custom configuration language, application state
 
 **User Configuration Reload**:
 The explicit manual action that rereads and validates the complete User
-Configuration through the same boundary used at startup, then atomically
-applies every valid preference according to its existing ownership semantics.
-A failed reload keeps the last valid in-memory configuration active and reports
-the new error; it never watches files or partially applies a document.
+Configuration through the startup boundary. A valid document is applied
+atomically according to the ownership of each preference. A failed reload keeps
+the last valid in-memory configuration active and reports the new error. OMXTerm
+does not watch the file or apply only part of a document.
 _Avoid_: theme reload, automatic reload, partial configuration reload
 
 **Terminal Payload**:
@@ -253,17 +257,18 @@ its visual presentation.
 _Avoid_: notification, alarm, terminal error
 
 **Release Artifact**:
-A ready-to-run native arm64 package published from an accepted version tag
-alongside the public source code and a reproducible local build path. The
-initial formats are DMG for macOS, AppImage for Linux, and NSIS for Windows.
-Each exact artifact receives separate owner acceptance after native build and
-verification, and any manual publication requires separate maintainer
-authorization with its SHA-256 checksum. Initial artifacts carry no verified
-publisher identity. The macOS application has a complete ad-hoc code seal for
-bundle integrity but no Apple Developer ID
-signature or notarization. macOS release documentation additionally explains
-its Gatekeeper review and links to Apple's current instructions without asking
-users to disable system-wide security protections. A provenance statement is
-not an independent security audit, platform trust decision, or guarantee about
-all code and dependencies.
+A ready-to-run native arm64 package built from an accepted source commit and
+associated with an authorized version tag alongside the public source code and a
+reproducible local build path. The initial formats are DMG for macOS, AppImage
+for Linux, and NSIS for Windows. Each exact artifact
+receives separate owner acceptance after native build and verification. Manual
+publication is a separate maintainer-authorized action and includes the
+artifact's SHA-256 checksum. Initial artifacts carry no verified publisher
+identity. The macOS application has a complete ad-hoc code seal for bundle
+integrity, without an Apple Developer ID signature or notarization. macOS
+release documentation explains the resulting Gatekeeper review and links to
+Apple's current instructions without asking users to disable system-wide
+security protections. Provenance identifies the build and publisher; it does
+not amount to an independent security audit, platform trust decision, or
+guarantee about every dependency.
 _Avoid_: signed release, notarized release, compile-only distribution

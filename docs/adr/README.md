@@ -1,7 +1,9 @@
 # Architecture decision records
 
-This index lists each architecture decision record and its current status. Follow
-the links to the original records for the decisions and their reasoning.
+This index links the durable architecture decisions and shows how later records
+affect them. **Current** decisions stand as written. **Amended** decisions remain
+in force with the listed later changes. **Superseded** decisions are retained as
+history and point to the decision that replaced them.
 
 | ADR  | Decision                                                                                                                           | Status     | Relationship                                                                                                                                 |
 | ---- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -12,7 +14,7 @@ the links to the original records for the decisions and their reasoning.
 | 0005 | [Keep OMXTerm and OMXTerm Web independent](0005-keep-omxterm-and-omxterm-web-independent.md)                                       | Current    | —                                                                                                                                            |
 | 0006 | [Isolate the renderer from local capabilities](0006-isolate-the-renderer-from-local-capabilities.md)                               | Current    | —                                                                                                                                            |
 | 0007 | [Keep one live session per independent window](0007-one-live-session-per-independent-window.md)                                    | Superseded | Superseded by [ADR 0016](0016-adopt-tabs-with-one-live-session-per-tab.md).                                                                  |
-| 0008 | [Make the Terminal Surface the portable module](0008-make-the-terminal-surface-the-portable-module.md)                             | Amended    | Restty implementation recorded by [ADR 0025](0025-stage-restty-behind-an-unpackaged-opt-in.md).                                              |
+| 0008 | [Make the Terminal Surface the portable module](0008-make-the-terminal-surface-the-portable-module.md)                             | Amended    | [ADR 0025](0025-stage-restty-behind-an-unpackaged-opt-in.md) records Restty as the sole implementation while preserving the portable seam.   |
 | 0009 | [Keep clipboard access explicit and one-way](0009-keep-clipboard-access-explicit-and-one-way.md)                                   | Current    | —                                                                                                                                            |
 | 0010 | [Keep terminal titles display-only](0010-keep-terminal-titles-display-only.md)                                                     | Current    | —                                                                                                                                            |
 | 0011 | [Validate external links at the main process](0011-validate-external-links-at-the-main-process.md)                                 | Current    | —                                                                                                                                            |
@@ -29,5 +31,5 @@ the links to the original records for the decisions and their reasoning.
 | 0022 | [Render bounded Kitty images in direct sessions](0022-render-bounded-kitty-images-in-direct-sessions.md)                           | Current    | —                                                                                                                                            |
 | 0023 | [Verify exact NSIS only in authorized disposable VMs](0023-verify-exact-nsis-only-in-authorized-disposable-vms.md)                 | Current    | Refines the Windows verification boundary in ADR 0019.                                                                                       |
 | 0024 | [Disable the Chromium sandbox on Linux](0024-disable-the-chromium-sandbox-on-linux.md)                                             | Current    | Defines the Linux exception to ADR 0006.                                                                                                     |
-| 0025 | [Use Restty as the sole Terminal Surface](0025-stage-restty-behind-an-unpackaged-opt-in.md)                                        | Current    | Records the completed Restty cutover while preserving ADR 0008's portable seam.                                                              |
+| 0025 | [Use Restty as the sole Terminal Surface](0025-stage-restty-behind-an-unpackaged-opt-in.md)                                        | Current    | Completes the Restty cutover and preserves [ADR 0008](0008-make-the-terminal-surface-the-portable-module.md)'s portable seam.                |
 | 0026 | [Preview explicitly activated local images through a bounded main-process read](0026-preview-explicitly-activated-local-images.md) | Current    | Keeps Local Image Preview separate from ADR 0011 External Links and ADR 0022 Inline Terminal Images.                                         |
