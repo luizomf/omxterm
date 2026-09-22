@@ -14,24 +14,27 @@ project's design and development guides.
 
 ## Releases
 
-**Current release: [0.12.2](https://github.com/luizomf/omxterm/releases/tag/v0.12.2)**
+**Latest published release: [0.13.0](https://github.com/luizomf/omxterm/releases/tag/v0.13.0)**
 for macOS, Linux, and Windows ARM64. Use the
 [download table](../README.md#platforms-and-downloads) to choose your package.
-Version 0.12.2 fixes Neovim/TUI display corruption after zoom and configuration
-reload. The [release notes and record](releases/0.12.2.md) include the changes,
-package checksums, and verification details.
+The [0.13.0 release notes and record](releases/0.13.0.md) describe its font
+improvements, known issues, package checksums, and verification.
 
-OMXTerm keeps evolving through everyday use and reported problems. Found
-something unexpected? The [contribution guide](../CONTRIBUTING.md) explains how
-to share a useful report or propose an improvement.
+These guides follow the **0.14.0-dev.0** source tree. A feature described here
+may have landed after 0.13.0; the release notes are the exact guide to the
+published packages. The repository is currently private, so GitHub downloads
+require repository access.
 
-The repository is currently private; GitHub downloads require repository access.
+OMXTerm keeps evolving through everyday use and reported problems. The
+[contribution guide](../CONTRIBUTING.md) explains how to share a useful report
+or propose an improvement.
 
 ### Release history
 
 Published records retain the notes, package identities, and evidence for their
 original release:
 
+- [0.12.2](releases/0.12.2.md) — Neovim/TUI rendering after zoom and reload;
 - [0.12.1](releases/0.12.1.md) — native rendering verification and Windows catch-up;
 - [0.12.0](releases/0.12.0.md) — Restty transition, macOS and Linux;
 - [0.11.0](releases/0.11.0.md) — Chafa support, Linux launch policy, and Windows

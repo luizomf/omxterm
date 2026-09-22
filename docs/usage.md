@@ -1,20 +1,17 @@
 # Everyday OMXTerm use
 
 Use OMXTerm with your everyday shells and command-line tools. This guide covers
-sessions, shortcuts, images, clipboard actions, and troubleshooting. For fonts,
-themes, and custom shortcuts, see [User Configuration](configuration.md); the
-[product contract](spec.md) provides the full behavior reference.
+sessions, shortcuts, images, clipboard actions, and troubleshooting. It follows
+the **0.14.0-dev.0** source tree; for the exact feature set in the published
+0.13.0 packages, see the [0.13.0 release notes](releases/0.13.0.md).
 
-A quick status key:
-
-- **Current** means the behavior is available now.
-- **Configurable** means the behavior is current, but User Configuration can
-  change its default or shortcut.
-- **Deferred** means it is intentionally not a current feature.
+For fonts, themes, and custom shortcuts, see
+[User Configuration](configuration.md). The
+[product contract](spec.md) is the complete behavior reference.
 
 ## Terminal Surface requirements
 
-**Current:** Restty and its pinned Ghostty core are the sole Terminal Surface.
+Restty and its pinned Ghostty core render every Terminal Surface.
 A working WebGL2 backend and the bundled fonts/core must initialize before
 OMXTerm starts that tab's shell. There is no renderer selector, software
 renderer or fallback Surface. Initialization failure leaves no invisible shell;
@@ -25,22 +22,23 @@ Text rendering can look slightly different across operating systems and GPUs.
 
 ## Windows, tabs, and sessions
 
-**Current:** Starting OMXTerm opens one Terminal Window with one selected
+Starting OMXTerm opens one Terminal Window with one selected
 Terminal Tab. Every tab owns a separate Live Terminal Session: a new tab starts
 another shell rather than showing another view of the existing shell. A new
 window is independent of every existing window and its tabs.
 
-Use `File -> New Tab` to add a tab to the selected window. Use
-`File -> New Window` to open another window. The tab strip stays hidden with one tab and
-appears by default when the window has two or more tabs. A newly created tab is selected.
+Choose `File -> New Tab` to add a tab to the current window, or
+`File -> New Window` to start a separate window. The tab strip stays out of the
+way while only one tab is open and appears when a second tab is added. New tabs
+become selected immediately.
 
-`View -> Toggle Tab Bar` hides or enables the strip for only the selected window.
-It never closes or restarts tabs: their output, order, selection and keyboard/native
-Window menu navigation keep working. Hiding reclaims the strip's row and returns
-terminal focus. Toggling with one tab also changes whether opening a second tab
-reveals the strip; enabling with one tab still leaves it hidden. The choice survives
-User Configuration Reload but is not saved or shared, and every new window starts
-enabled.
+`View -> Toggle Tab Bar` changes the strip in the current window. Hiding it gives
+that row back to the terminal without closing, restarting, or reordering any tab.
+Keyboard shortcuts and the native Window menu still switch tabs while the strip
+is hidden. The choice survives a User Configuration Reload for that window, but
+new windows and a new app launch start with the tab bar enabled. With only one
+tab, the strip remains hidden either way; the toggle decides what happens when
+you open the second tab.
 
 To move around:
 
@@ -54,16 +52,15 @@ A drag changes the visible order, cycling order, and positional shortcuts
 immediately. It does not restart or replace any session. Order is independent
 per window and lasts only until the window closes.
 
-**Deferred:** tabs are not saved or restored, and they cannot be moved between
-windows. Saved sessions, reconnectable sessions, splits, and workspaces are not
-current OMXTerm features. If a process must survive a tab or window closing,
-use a session tool such as tmux.
+OMXTerm does not yet save or restore tabs, move them between windows, or provide
+splits and workspaces. Use a session
+tool such as tmux when a process needs to survive a tab or window closing.
 
 See the normative [window and session behavior](spec.md#window-and-session-behavior).
 
 ## Closing tabs, windows, and the app
 
-**Current:** closing a tab terminates only its Live Terminal Session. Closing a
+Closing a tab terminates only its Live Terminal Session. Closing a
 window terminates every session in that window. Closing the last tab also
 closes its window, and closing the last window quits OMXTerm. Sessions are not
 preserved for reconnection.
@@ -85,13 +82,12 @@ this check needs. OMXTerm therefore treats every live Windows session as Busy,
 so closing a live tab, its window, or the app asks while confirmation is
 enabled.
 
-**Configurable:** `confirmClose` defaults to `true`. See the
-[configuration reference](configuration.md#configuration-reference) rather
-than copying a configuration schema from this guide.
+`confirmClose` defaults to `true` and can be changed in the
+[configuration reference](configuration.md#configuration-reference).
 
 ## Window controls
 
-**Current:** Window Font Zoom changes terminal font size for one Terminal
+Window Font Zoom changes terminal font size for one Terminal
 Window. It applies to every current tab in that window and to tabs created there
 later. Zoom is ephemeral: it does not edit User Configuration, another window
 keeps its own zoom, and a new window begins at the configured font-size
@@ -107,9 +103,9 @@ that transient overlay.
 `Window -> Always on Top` likewise toggles only the selected window and does
 not rewrite User Configuration.
 
-**Configurable:** `window.alwaysOnTop` chooses the default for newly created
-windows. Existing windows keep their current runtime toggle. Font size sets the
-baseline; Window Font Zoom remains temporary. Details are in the
+`window.alwaysOnTop` chooses the default for newly created windows. Existing
+windows keep their current runtime toggle. Font size sets the baseline; Window
+Font Zoom remains temporary. Details are in the
 [User Configuration guide](configuration.md).
 
 ## Built-in platform shortcuts
@@ -140,11 +136,17 @@ Always on Top has a menu action but no built-in shortcut. `View -> Toggle
 Developer Tools` is likewise menu-only; it opens or closes Developer Tools for
 the selected Terminal Window.
 
-**Configurable:** application shortcuts can be remapped through `keybinds`.
-Unmapped actions keep these defaults. A remapped application action consumes
-its key instead of sending it to the PTY, so take care not to shadow a shell or
-TUI control key. See the complete [keybind guide](configuration.md#keybinds)
-for accepted accelerators, collision rules, and warnings.
+Application shortcuts can be remapped through `keybinds`; unmapped actions keep
+these defaults. `Plus` means the logical `+` symbol. On a layout where `+`
+shares the `=` key, use the Shift needed to type it—for example,
+`Ctrl+Shift+=` for `Control+Plus`, or `Cmd+Shift+=` for the macOS default. A
+dedicated keypad `+` needs no Shift. The physical gesture depends on the active
+keyboard layout.
+
+A remapped application action consumes its key instead of sending it to the
+PTY, so take care not to shadow a shell or TUI control key. See the complete
+[keybind guide](configuration.md#keybinds) for accelerator names, aliases,
+collision rules, and examples.
 
 On Linux and Windows, the native application menu is hidden by default so the
 Terminal Surface gets more room. Press and release `Alt` by itself to reveal
@@ -155,7 +157,7 @@ application icon. Its layout and window caption follow the native platform.
 
 ## Previewing local images
 
-**Current:** choose `File -> Open Local Image…` to select one local static PNG
+Choose `File -> Open Local Image…` to select one local static PNG
 or JPEG, or activate a literal visible absolute `file:///` URL or native
 absolute path with `Cmd+click` on macOS or `Ctrl+click` on Linux and Windows.
 Hold that modifier while pointing at a recognized destination to underline its
@@ -269,7 +271,7 @@ See the normative [Terminal behavior](spec.md#terminal-behavior) and
 
 ## Copy and paste
 
-**Current:** selection alone never copies. After selecting text, deliberately
+Selection alone never copies. After selecting text, deliberately
 choose `Edit -> Copy`, the Copy shortcut, or Copy in the native context menu.
 Paste is likewise an explicit menu, shortcut, or context-menu action.
 
@@ -292,7 +294,7 @@ See the normative [Clipboard contract](spec.md#clipboard).
 
 ## Inserting file and folder paths
 
-**Current:** drop native file-manager files or folders anywhere in a Terminal
+Drop native file-manager files or folders anywhere in a Terminal
 Window to insert their absolute paths into the selected tab. The same path
 insertion is available through Paste when the clipboard has no plain text and
 exposes a supported native file list. Paths keep the platform-provided order,
@@ -328,7 +330,7 @@ See the normative [drop behavior](spec.md#window-and-session-behavior) and
 
 ## Protected Paste
 
-**Current:** when bracketed paste is not enabled by the receiving process,
+When bracketed paste is not enabled by the receiving process,
 OMXTerm shows a Protected Paste warning before sending text that contains
 multiple lines or control characters. Choose **Paste** to send the complete
 text or **Cancel** to send nothing; Cancel is the default choice. Printable
@@ -347,7 +349,7 @@ See the normative [Clipboard contract](spec.md#clipboard).
 
 ## Opening visible web links
 
-**Current:** only a literal, visible `http://` or `https://` URL in Terminal
+Only a literal, visible `http://` or `https://` URL in Terminal
 Payload becomes an External Link. Hidden OSC 8 link metadata is ignored, even
 when its destination differs from the text on screen.
 
@@ -373,7 +375,7 @@ See the normative [Terminal link behavior](spec.md#terminal-behavior).
 
 ## Bells and attention
 
-**Current:** BEL is silent. Instead, OMXTerm prepends `🔔` to the ringing
+BEL is silent. OMXTerm instead prepends `🔔` to the ringing
 session's Terminal Title. The marker appears on its tab and, when that tab is
 selected, in the native window title.
 
@@ -389,11 +391,19 @@ terminal interaction resets it. Focus, interaction, or closing the window
 cancels the outstanding native request. Your desktop determines the visual
 attention indicator; OMXTerm keeps BEL silent.
 
+A program can separately ask the terminal to invert the screen. Bash Readline's
+`bell-style visible` uses that terminal capability, so an empty-prompt
+Backspace may still produce a bright flash even though BEL itself is silent.
+The [Windows installation guidance](../README.md#bright-flashes-in-bash) shows
+how to disable Readline's bell while leaving screen inversion available to
+other terminal programs. Vim has its own [bell setting](../README.md#bright-flashes-in-vim):
+`:set belloff=all` silences its notifications for the current editor session.
+
 See the normative [window and session behavior](spec.md#window-and-session-behavior).
 
 ## Local diagnostics
 
-**Current:** `View -> Toggle Developer Tools` opens or closes Electron's local
+`View -> Toggle Developer Tools` opens or closes Electron's local
 Developer Tools for only the selected Terminal Window. It works in development
 and packaged applications, has no built-in shortcut, does not open
 automatically, and does not enable a remote-debugging listener.
@@ -403,7 +413,7 @@ Inspectors, console output, memory snapshots, traces, profiles, and screenshots
 can expose private Terminal Payload and runtime state. Review and redact every
 diagnostic before sharing it.
 
-**Current:** OMXTerm writes bounded, local JSONL Operational Events for behavior
+OMXTerm writes bounded, local JSONL Operational Events for behavior
 it owns, such as application and window lifecycle, configuration validation,
 IPC boundary rejections, PTY control and resize, duration, and normalized
 failures.
@@ -421,6 +431,6 @@ secrets, or transcripts. OMXTerm does not send these logs remotely and makes no
 telemetry, analytics, crash-reporting, or update-check requests. Processes
 inside Live Terminal Sessions keep their normal network access.
 
-**Configurable:** only the validated `logLevel` changes event verbosity; it
+Only the validated `logLevel` changes event verbosity; it
 does not relax the privacy boundary. See the normative
 [configuration and local-state contract](spec.md#configuration-and-local-state).

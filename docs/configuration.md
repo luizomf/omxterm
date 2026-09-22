@@ -4,9 +4,14 @@ OMXTerm works without configuration files. Add them only when you want to
 change a default, create Snippets, or use an external Terminal Theme.
 
 User Configuration uses strict, versioned JSON. You create and edit the file;
-OMXTerm reads it at startup and when you choose
-`View -> Reload User Configuration`, leaving your file unchanged. See the
-[product contract](spec.md#configuration-and-local-state) for the full reference.
+OMXTerm reads it at startup and whenever you choose
+`View -> Reload User Configuration`. It never rewrites the file.
+
+This guide follows the **0.14.0-dev.0** source tree. The published 0.13.0
+packages use the same version 1 configuration schema; development-only actions
+are identified where relevant. See the
+[product contract](spec.md#configuration-and-local-state) for the complete
+behavior reference.
 
 ## Quick start: use the bundled defaults
 
@@ -68,11 +73,12 @@ reported problem and reload again.
 
 ### Compatibility with 0.11.0
 
-OMXTerm 0.12.0 keeps User Configuration schema `"version": 1` and Terminal
-Theme schema `"version": 1`. Existing 0.11.0 files remain valid. The optional
-`font.ligatures` key is new in 0.12.0; because 0.11.0 rejects unknown keys,
-remove `font.ligatures` before downgrading. OMXTerm never rewrites or migrates
-the file in either direction.
+The current 0.14.0-dev.0 source, published 0.13.0 packages, and 0.12.x all use
+User Configuration schema `"version": 1` and Terminal Theme schema
+`"version": 1`. Existing 0.11.0 files remain valid in newer versions. The
+optional `font.ligatures` key was added in 0.12.0, so remove it before
+_downgrading_ to 0.11.0, which rejects unknown keys. OMXTerm never rewrites or
+migrates the file in either direction.
 
 ## Add one display change
 
@@ -293,6 +299,9 @@ strings. Omitted actions keep their defaults:
 | `toggleTabBar`              | `CommandOrControl+Shift+B` | `Control+Shift+B`     |
 | `reloadConfig`              | `CommandOrControl+Shift+,` | `Control+Shift+,`     |
 
+`toggleTabBar` belongs to the 0.14.0-dev.0 source tree. Published 0.13.0 builds
+do not know that action and reject it as an unknown configuration key.
+
 For example, this changes only New Window:
 
 ```json
@@ -304,15 +313,35 @@ For example, this changes only New Window:
 }
 ```
 
-Accelerators are case-insensitive and require at least one non-Shift modifier
-(`Command`, `Control`, `CommandOrControl`, `Alt`/`Option`, or `Super`) and
-exactly one key. A bare key or Shift-only accelerator is rejected so it cannot
-swallow plain terminal typing.
+Accelerators are case-insensitive and require exactly one key plus at least one
+modifier other than Shift. Common aliases work: `Ctrl` and `Control` are the
+same modifier, as are `CmdOrCtrl` and `CommandOrControl`, `Cmd` and `Command`,
+and `Alt` and `Option`. `CommandOrControl` follows the platform: Command on
+macOS, Control on Linux and Windows. `Super` and `Meta` use Electron's Command
+accelerator family.
 
-Two actions cannot share one effective accelerator. A remap also cannot collide
-with another action's remaining default. `CommandOrControl` resolves to
-`Command` on macOS and `Control` on Linux and Windows when collisions are
-checked; `Super` and `Meta` use Electron's Command accelerator family.
+Write a printable key as the character itself. For example, the reload shortcut
+ends in the literal comma character: `Control+Shift+,`. `Comma` is not a named
+key in OMXTerm's accelerator grammar. The plus key is the exception because `+`
+separates accelerator parts; write its logical symbol as `Plus`, such as
+`Control+Plus`.
+
+A logical accelerator describes the resulting key, while the physical gesture
+also depends on the keyboard layout. If `+` shares the `=` key, typing
+`Control+Plus` typically means pressing `Ctrl+Shift+=`. The macOS default
+`CommandOrControl+Plus` similarly becomes `Cmd+Shift+=` on that layout. A
+keypad with a dedicated `+` sends the same logical Plus without Shift.
+
+Shift written explicitly remains meaningful. If one action uses
+`Control+Shift+Plus` and another uses `Control+Plus`, a shifted main-keyboard
+`+` matches the explicit Shift binding first; an unshifted keypad `+` can match
+the latter. OMXTerm only treats the Shift needed to produce logical `+` as an
+implicit fallback, so these bindings are not interchangeable remappings.
+
+A bare key or Shift-only accelerator is rejected so it cannot swallow ordinary
+terminal typing. Two actions cannot share one effective accelerator, and a
+remap cannot collide with another action's remaining default. Collisions are
+checked after platform aliases such as `CommandOrControl` are resolved.
 
 A matched application keybind is consumed and does not reach the PTY. On Linux
 and Windows, a macOS-authored `CommandOrControl` binding can therefore shadow a
