@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "snippets": [
+    {
+      "name": "Open current folder",
+      "description": "macOS: open the current directory in Finder.",
+      "body": " open .",
+      "execute": false
+    },
+    {
+      "name": "Go to home directory",
+      "description": "Switch to your home directory.",
+      "body": " cd \"$HOME\"",
+      "execute": false
+    },
+    {
+      "name": "Show network configuration",
+      "description": "macOS: show network interfaces and their addresses.",
+      "body": " ifconfig",
+      "execute": false
+    },
+    {
+      "name": "Look up a domain",
+      "description": "Query DNS for example.com. Replace the domain as needed.",
+      "body": " nslookup example.com",
+      "execute": false
+    },
+    {
+      "name": "Copy current path",
+      "description": "macOS: copy the current directory path to the clipboard.",
+      "body": " printf '%s' \"$PWD\" | pbcopy",
+      "execute": false
+    },
+    {
+      "name": "Show Git working tree changes",
+      "description": "Requires Git: show a short summary of changes in the current Git repository.",
+      "body": " git status --short",
+      "execute": false
+    },
+    {
+      "name": "Show 256-color palette",
+      "description": "Zsh or Bash: clear the screen and display all 256 indexed terminal colors.",
+      "body": " clear ; echo ; for i in {0..255}; do [[ $((i%8)) -eq 0 ]] && echo; printf '\\e[38;5;0m\\e[48;5;%dm  %03d  \\e[0m' \"$i\" \"$i\"; done; echo -e '\\n' ;",
+      "execute": false
+    }
+  ]
+}

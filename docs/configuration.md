@@ -7,9 +7,13 @@ User Configuration uses strict, versioned JSON. You create and edit the file;
 OMXTerm reads it at startup and whenever you choose
 `View -> Reload User Configuration`. It never rewrites the file.
 
-This guide follows the **0.14.0-dev.0** source tree. The published 0.13.0
-packages use the same version 1 configuration schema; development-only actions
-are identified where relevant. See the
+For complete ready-to-copy examples, including an editable theme and Snippets,
+start with the [macOS](quick-start/macos.md), [Linux](quick-start/linux.md), or
+[Windows](quick-start/windows.md) quick start. Optional shell and Vim files are
+separate from OMXTerm's User Configuration.
+
+This guide follows the **0.14.1-dev.0** source tree. The published 0.14.0
+packages use the same version 1 configuration schema. See the
 [product contract](spec.md#configuration-and-local-state) for the complete
 behavior reference.
 
@@ -73,7 +77,7 @@ reported problem and reload again.
 
 ### Compatibility with 0.11.0
 
-The current 0.14.0-dev.0 source, published 0.13.0 packages, and 0.12.x all use
+The current 0.14.1-dev.0 source, published 0.14.0 packages, and 0.12.x all use
 User Configuration schema `"version": 1` and Terminal Theme schema
 `"version": 1`. Existing 0.11.0 files remain valid in newer versions. The
 optional `font.ligatures` key was added in 0.12.0, so remove it before
@@ -298,9 +302,6 @@ strings. Omitted actions keep their defaults:
 | `toggleSnippets`            | `CommandOrControl+Shift+S` | `Control+Shift+S`     |
 | `toggleTabBar`              | `CommandOrControl+Shift+B` | `Control+Shift+B`     |
 | `reloadConfig`              | `CommandOrControl+Shift+,` | `Control+Shift+,`     |
-
-`toggleTabBar` belongs to the 0.14.0-dev.0 source tree. Published 0.13.0 builds
-do not know that action and reject it as an unknown configuration key.
 
 For example, this changes only New Window:
 

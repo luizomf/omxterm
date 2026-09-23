@@ -221,7 +221,11 @@ and Windows layouts or `Cmd+Shift+=` on many Mac layouts. A dedicated keypad
 `+` does not need Shift.
 
 On Linux and Windows, press and release `Alt` to show the application menu.
-OMXTerm works without configuration files. When you want to customize it:
+OMXTerm works without configuration files. For ready-to-copy settings, an editable
+Terminal Theme, and optional personal shell/Vim preferences, start with the
+[macOS](docs/quick-start/macos.md), [Linux](docs/quick-start/linux.md), or
+[Windows](docs/quick-start/windows.md) quick start. No Git command or dotfile
+setup is required to use OMXTerm. When you want to customize it further:
 
 - [Everyday OMXTerm use](docs/usage.md) covers tabs, shortcuts, paste, paths,
   links, images, and troubleshooting through local diagnostics.

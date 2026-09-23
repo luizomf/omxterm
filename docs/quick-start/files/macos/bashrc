@@ -1,0 +1,41 @@
+# Bash interactive configuration for macOS.
+case $- in
+  *i*) ;;
+  *) return ;;
+esac
+
+HISTCONTROL=ignoreboth
+HISTSIZE=1000
+HISTFILESIZE=2000
+shopt -s histappend checkwinsize
+
+# Keep non-printing prompt sequences inside Readline markers.
+PS1='\[\e[01;32m\]\u@\h\[\e[00m\]:\[\e[01;34m\]\w\[\e[00m\]\$ '
+case "$TERM" in
+  xterm*|rxvt*) PS1='\[\e]0;\u@\h: \w\a\]'"$PS1" ;;
+esac
+
+# Use native macOS tools; GNU dircolors/coreutils are not required.
+alias ls='/bin/ls -G'
+alias grep='/usr/bin/grep --color=auto'
+alias fgrep='/usr/bin/grep -F --color=auto'
+alias egrep='/usr/bin/grep -E --color=auto'
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+if [ -f "$HOME/.bash_aliases" ]; then
+  . "$HOME/.bash_aliases"
+fi
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+
+set -o vi
+export EDITOR=vim
+export VISUAL=vim
+bind -m vi-insert '"jj": vi-movement-mode'

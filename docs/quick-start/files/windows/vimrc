@@ -1,0 +1,35 @@
+" Optional Vim preferences; not required by OMXTerm.
+set nocompatible
+syntax on
+set backspace=indent,eol,start
+set expandtab tabstop=2 shiftwidth=2
+set nowrap
+set hlsearch incsearch
+set belloff=all
+set guicursor=n-v-c:block,i-ci-ve:ver25
+inoremap jj <Esc>
+
+" Reopen the last session for this working directory only when Vim has no
+" file arguments. Session files are Vim commands: source only your own files.
+let s:session_dir = expand('~/.vim/sessions')
+function! s:session_file() abort
+  return s:session_dir . '/' . sha256(getcwd()) . '.vim'
+endfunction
+function! s:load_session() abort
+  if argc() == 0 && filereadable(s:session_file())
+    execute 'source' fnameescape(s:session_file())
+  endif
+endfunction
+function! s:save_session() abort
+  if argc() == 0
+    if !isdirectory(s:session_dir)
+      call mkdir(s:session_dir, 'p', 0700)
+    endif
+    execute 'mksession!' fnameescape(s:session_file())
+  endif
+endfunction
+augroup QuickStartSession
+  autocmd!
+  autocmd VimEnter * call s:load_session()
+  autocmd VimLeavePre * call s:save_session()
+augroup END

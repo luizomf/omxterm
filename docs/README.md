@@ -9,6 +9,9 @@ project's design and development guides.
   checksums, prerequisites, and installation instructions.
 - [Everyday use](usage.md) — windows, tabs, shortcuts, copy and paste, file
   paths, links, images, and local diagnostics.
+- Ready-to-copy quick starts: [macOS](quick-start/macos.md),
+  [Linux](quick-start/linux.md), [Windows](quick-start/windows.md) — complete
+  configuration, theme, snippets, and optional personal dotfiles.
 - [User configuration](configuration.md) — fonts, themes, keybinds, snippets,
   examples, and troubleshooting.
 
