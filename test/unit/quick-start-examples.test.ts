@@ -25,6 +25,13 @@ const platforms = [
   { name: "linux", runtime: "linux" },
   { name: "windows", runtime: "win32" },
 ] as const;
+const unixShells = [
+  { platform: "macos", shell: "bash" },
+  { platform: "linux", shell: "bash" },
+  ...(process.platform === "darwin"
+    ? [{ platform: "macos", shell: "/bin/zsh" }]
+    : []),
+];
 
 async function fakeHome() {
   const home = await mkdtemp(path.join(tmpdir(), "omxterm-quick-start-"));
@@ -117,9 +124,9 @@ describe("checked-in platform quick starts", () => {
     },
   );
 
-  it.each(["macos", "linux"])(
-    "copies $name instructions into a fake XDG home with recoverable backups and no directory/symlink clobber",
-    async (platform) => {
+  it.skipIf(process.platform === "win32").each(unixShells)(
+    "copies $platform instructions using $shell into a fake XDG home with recoverable backups and no symlink clobber",
+    async ({ platform, shell }) => {
       const home = await fakeHome();
       const xdg = path.join(home, "xdg space");
       const destination = path.join(xdg, "omxterm");
@@ -133,7 +140,7 @@ describe("checked-in platform quick starts", () => {
         `example="${path.join(root, "files", platform)}"`,
       );
       const env = { ...process.env, HOME: home, XDG_CONFIG_HOME: xdg };
-      const output = execFileSync("bash", ["-c", command], {
+      const output = execFileSync(shell, ["-c", command], {
         env,
         encoding: "utf8",
       });
@@ -156,7 +163,7 @@ describe("checked-in platform quick starts", () => {
         path.join(isolatedHome, "original"),
         path.join(isolatedDestination, "snippets.json"),
       );
-      const refused = spawnSync("bash", ["-c", command], {
+      const refused = spawnSync(shell, ["-c", command], {
         env: {
           ...process.env,
           HOME: isolatedHome,
@@ -172,6 +179,42 @@ describe("checked-in platform quick starts", () => {
       expect(await readFile(path.join(isolatedHome, "original"), "utf8")).toBe(
         "untouched",
       );
+    },
+  );
+
+  it.skipIf(process.platform === "win32").each(unixShells)(
+    "preserves original optional dotfiles on repeated $platform copies using $shell",
+    async ({ platform, shell }) => {
+      const home = await fakeHome();
+      const target = path.join(home, ".vimrc");
+      await writeFile(target, "original Vim preferences");
+      const guide = await readFile(path.join(root, `${platform}.md`), "utf8");
+      const script = guide.match(
+        /```(?:sh|bash)\n(copy_optional_dotfiles\(\).*?)\n```/s,
+      )?.[1];
+      expect(script).toBeDefined();
+      const command = `example="${path.join(root, "files", platform)}"\n${script}`;
+      const options = {
+        env: { ...process.env, HOME: home },
+        encoding: "utf8" as const,
+      };
+      const first = execFileSync(shell, ["-c", command], options);
+      const backup = first.match(/Dotfile backup: (.+)/)?.[1];
+      expect(backup).toBeDefined();
+      const second = execFileSync(shell, ["-c", command], options);
+      expect(second.match(/Dotfile backup: (.+)/)?.[1]).not.toBe(backup);
+      expect(await readFile(path.join(backup!, ".vimrc"), "utf8")).toBe(
+        "original Vim preferences",
+      );
+      expect(await readFile(target, "utf8")).toBe(
+        await readFile(path.join(root, "files", platform, "vimrc"), "utf8"),
+      );
+      await rm(target);
+      await symlink(path.join(backup!, ".vimrc"), target);
+      const refused = spawnSync(shell, ["-c", command], options);
+      expect(refused.status).toBe(1);
+      expect(refused.stdout).toContain("Refusing");
+      expect(await readFile(target, "utf8")).toBe("original Vim preferences");
     },
   );
 });

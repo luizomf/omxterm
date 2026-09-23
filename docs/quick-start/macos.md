@@ -41,18 +41,26 @@ Open **View → Toggle Snippets** (`Cmd+Shift+S`), click “Open current folder,
 
 ## Optional Zsh, Bash, Readline, and Vim preferences
 
-These files are **not required** for OMXTerm: [zshrc](files/macos/zshrc), [bashrc](files/macos/bashrc), [bash_profile](files/macos/bash_profile), [inputrc](files/macos/inputrc), [vimrc](files/macos/vimrc). Review your existing dotfiles first: replacing them loses custom prompt, aliases, plugins, or initialization. Copy only a chosen subset, backing up every existing regular file to the same backup directory (set `example` and `backup` again if in a new shell):
+The Vim preset uses the `slate` syntax colors over the Terminal Theme background, two-space indentation without automatic indentation, no mouse capture, trailing-whitespace highlighting, and cursor-position restoration. Space is the leader: `Space w` saves, `Space h` clears search highlighting, and `Tab`/`Shift+Tab` switch buffers. Clipboard integration depends on the installed Vim build and desktop; `clipboard=unnamed` does not add clipboard support to a build that lacks it.
+
+These files are **not required** for OMXTerm: [zshrc](files/macos/zshrc), [bashrc](files/macos/bashrc), [bash_profile](files/macos/bash_profile), [inputrc](files/macos/inputrc), [vimrc](files/macos/vimrc). Review your existing dotfiles first: replacing them loses custom prompt, aliases, plugins, or initialization. Copy only a chosen subset. This separate step creates a fresh dotfile backup each time, so retrying it cannot overwrite the earlier originals. Set `example` again if in a new shell:
 
 ```sh
-for name in zshrc vimrc; do # Default macOS Zsh; add Bash files only if wanted
-  target="$HOME/.$name"
-  [ ! -L "$target" ] && [ ! -d "$target" ] || { echo "Refusing $target"; break; }
-  if [ -e "$target" ]; then cp -p "$target" "$backup/.$name" || break; fi
-  cp "$example/$name" "$target" || break
-done
+copy_optional_dotfiles() {
+  dot_backup="$(mktemp -d "$HOME/omxterm-dotfiles-backup.XXXXXX")" || return 1
+  printf 'Dotfile backup: %s\n' "$dot_backup"
+  for name in zshrc vimrc; do # Default macOS Zsh; add Bash files only if wanted
+    target="$HOME/.$name"
+    [ -f "$example/$name" ] || { echo "Example missing: $name"; return 1; }
+    [ ! -L "$target" ] && { [ ! -e "$target" ] || [ -f "$target" ]; } || { echo "Refusing $target"; return 1; }
+    if [ -e "$target" ]; then cp -p "$target" "$dot_backup/.$name" || return 1; fi
+    cp "$example/$name" "$target" || return 1
+  done
+}
+copy_optional_dotfiles
 ```
 
-For Bash, use `bashrc bash_profile inputrc vimrc` in place of `zshrc vimrc` (omit anything you don't want). If `INPUTRC` or `ZDOTDIR` is set, adapt the destination; do not overwrite a different location assuming these defaults. Restore a backed-up dotfile with e.g. `cp -p "$backup/.zshrc" "$HOME/.zshrc"`; remove only a newly installed file with no backup after checking it. Start a new shell or Vim session to see changes.
+For Bash, use `bashrc bash_profile inputrc vimrc` in place of `zshrc vimrc` (omit anything you don't want). If `INPUTRC` or `ZDOTDIR` is set, adapt the destination; do not overwrite a different location assuming these defaults. Restore a backed-up dotfile with e.g. `cp -p "$dot_backup/.zshrc" "$HOME/.zshrc"`; remove only a newly installed file with no backup after checking it. Start a new shell or Vim session to see changes.
 
 Zsh's `bindkey -v` and Bash's `set -o vi` enable vi command-line editing: `Esc` or `jj` exits insert mode. Both skip history entries with an initial space; Zsh disables its bell, while `.inputrc` disables Bash/Readline's bell. The Bash aliases use native `/bin/ls -G` and `/usr/bin/grep --color=auto`, and Bash completion is used only where available. Vim maps `jj`, disables its own bell, and auto-saves/loads sessions **only when invoked without file arguments**, by working directory under `~/.vim/sessions/`. These session files are executable Vim commands that may record file paths: keep them private, never source untrusted sessions, or remove the session block if unwanted.
 

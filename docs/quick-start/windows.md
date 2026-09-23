@@ -47,21 +47,26 @@ Open **View → Toggle Snippets** (`Ctrl+Shift+S`), click “Open current folder
 
 ## Optional Git Bash, Readline, and Vim preferences
 
+The Vim preset uses the `slate` syntax colors over the Terminal Theme background, two-space indentation without automatic indentation, no mouse capture, trailing-whitespace highlighting, and cursor-position restoration. Space is the leader: `Space w` saves, `Space h` clears search highlighting, and `Tab`/`Shift+Tab` switch buffers. Clipboard integration depends on the installed Vim build and desktop; `clipboard=unnamed` does not add clipboard support to a build that lacks it.
+
 OMXTerm does **not** require any of these: [bashrc](files/windows/bashrc), [inputrc](files/windows/inputrc), [vimrc](files/windows/vimrc). Inspect any existing dotfiles before replacing them; they may contain important customizations. Git Bash normally uses your Windows home for `$HOME`; verify that `printf '%s\n' "$HOME"` in Git Bash points to the same directory as `$HOME` in PowerShell before installing dotfiles. If not, adjust `$dotHome` below to Git Bash's home directory. `INPUTRC` may select a different Readline file.
 
-This PowerShell block copies only the selected subset, backing up any existing regular files in the same `$backup`. Run it in the same PowerShell session as above or set `$example` and `$backup` again to those exact paths:
+This PowerShell block copies only the selected subset and creates a fresh dotfile backup each time, so retrying cannot overwrite the earlier originals. Run it in the same PowerShell session as above or set `$example` again to the extracted example path:
 
 ```powershell
 $dotHome = $HOME
+$dotBackup = Join-Path $dotHome ('omxterm-dotfiles-backup-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $dotBackup -ErrorAction Stop | Out-Null
+"Dotfile backup: $dotBackup"
 foreach ($name in @('bashrc', 'inputrc', 'vimrc')) { # Edit this list as needed
   $source = Join-Path $example $name
   $target = Join-Path $dotHome ('.' + $name)
   if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Example missing: $source" }
   $existing = Get-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue
   if ($existing -and (($existing.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $existing.PSIsContainer)) { throw "Refusing destination: $target" }
-  if ($existing) { Copy-Item -LiteralPath $target -Destination (Join-Path $backup ('.' + $name)) -ErrorAction Stop }
+  if ($existing) { Copy-Item -LiteralPath $target -Destination (Join-Path $dotBackup ('.' + $name)) -ErrorAction Stop }
   Copy-Item -LiteralPath $source -Destination $target -ErrorAction Stop
 }
 ```
 
-Restore, for example, with `Copy-Item -LiteralPath (Join-Path $backup '.bashrc') -Destination (Join-Path $dotHome '.bashrc')`; remove only newly copied files without backups after checking them. Start a new Git Bash/Vim process to pick up changes. Bash's `set -o vi` enables command-line vi mode (`Esc` or `jj` leaves insert mode); a leading space excludes a command from history. `.inputrc` disables Readline's bell and Vim's `belloff=all` disables Vim's separately. Vim also maps `jj` and auto-loads/saves a session per working directory in `~/.vim/sessions/` **only when launched without file arguments**. Sessions are executable Vim commands and can contain file paths; keep them private and never source someone else's sessions, or remove the session block if this preference is unwanted. [Configuration reference](../configuration.md) has more options.
+Keep the printed backup path; use the earliest backup to recover your original preferences after repeated copies. Restore, for example, with `Copy-Item -LiteralPath (Join-Path $dotBackup '.bashrc') -Destination (Join-Path $dotHome '.bashrc')`; remove only newly copied files without backups after checking them. Start a new Git Bash/Vim process to pick up changes. Bash's `set -o vi` enables command-line vi mode (`Esc` or `jj` leaves insert mode); a leading space excludes a command from history. `.inputrc` disables Readline's bell and Vim's `belloff=all` disables Vim's separately. Vim also maps `jj` and auto-loads/saves a session per working directory in `~/.vim/sessions/` **only when launched without file arguments**. Sessions are executable Vim commands and can contain file paths; keep them private and never source someone else's sessions, or remove the session block if this preference is unwanted. [Configuration reference](../configuration.md) has more options.

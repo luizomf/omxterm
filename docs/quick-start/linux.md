@@ -41,17 +41,25 @@ Open **View → Toggle Snippets** (`Ctrl+Shift+S`), click “Open current folder
 
 ## Optional shell, Readline and Vim preferences
 
-OMXTerm does **not** install or require shell integration or Vim. The files [bashrc](files/linux/bashrc), [inputrc](files/linux/inputrc), and [vimrc](files/linux/vimrc) are personal preferences, not application configuration. Only consider them if you use Bash, Readline, and Vim respectively. Read your existing dotfiles first; replacing them can remove your own aliases, prompt, plugins, and settings. To copy a subset, use the same new backup directory above and this separate command (edit the list to the files you actually want):
+The Vim preset uses the `slate` syntax colors over the Terminal Theme background, two-space indentation without automatic indentation, no mouse capture, trailing-whitespace highlighting, and cursor-position restoration. Space is the leader: `Space w` saves, `Space h` clears search highlighting, and `Tab`/`Shift+Tab` switch buffers. Clipboard integration depends on the installed Vim build and desktop; `clipboard=unnamed` does not add clipboard support to a build that lacks it (and on X11 it selects the primary selection rather than the clipboard selection).
+
+OMXTerm does **not** install or require shell integration or Vim. The files [bashrc](files/linux/bashrc), [inputrc](files/linux/inputrc), and [vimrc](files/linux/vimrc) are personal preferences, not application configuration. Only consider them if you use Bash, Readline, and Vim respectively. Read your existing dotfiles first; replacing them can remove your own aliases, prompt, plugins, and settings. To copy a subset, use this separate command (edit the list to the files you actually want). It creates a fresh dotfile backup each time, so retrying cannot overwrite the earlier originals:
 
 ```bash
-for name in bashrc inputrc vimrc; do
-  target="$HOME/.$name"
-  [ ! -L "$target" ] && [ ! -d "$target" ] || { echo "Refusing $target"; break; }
-  if [ -e "$target" ]; then cp -p "$target" "$backup/.$name" || break; fi
-  cp "$example/$name" "$target" || break
-done
+copy_optional_dotfiles() {
+  dot_backup="$(mktemp -d "$HOME/omxterm-dotfiles-backup.XXXXXX")" || return 1
+  printf 'Dotfile backup: %s\n' "$dot_backup"
+  for name in bashrc inputrc vimrc; do
+    target="$HOME/.$name"
+    [ -f "$example/$name" ] || { echo "Example missing: $name"; return 1; }
+    [ ! -L "$target" ] && { [ ! -e "$target" ] || [ -f "$target" ]; } || { echo "Refusing $target"; return 1; }
+    if [ -e "$target" ]; then cp -p "$target" "$dot_backup/.$name" || return 1; fi
+    cp "$example/$name" "$target" || return 1
+  done
+}
+copy_optional_dotfiles
 ```
 
-If you opened another shell, set `example` and `backup` to the paths printed/used above before running this block. To restore an existing dotfile, `cp -p "$backup/.bashrc" "$HOME/.bashrc"` (substitute its name); remove a newly installed dotfile only if it had no backup and you have checked its contents. A new shell/Vim process reads these preferences; OMXTerm reload does not.
+If you opened another shell, set `example` to the extracted example path before running this block. Keep the printed backup path; use the earliest backup to recover your original preferences after repeated copies. To restore an existing dotfile, `cp -p "$dot_backup/.bashrc" "$HOME/.bashrc"` (substitute its name); remove a newly installed dotfile only if it had no backup and you have checked its contents. A new shell/Vim process reads these preferences; OMXTerm reload does not.
 
 The Bash example enables vi editing (`Esc` or `jj` to leave insert mode), ignores history entries starting with a space, and loads Bash completion only if present. `.inputrc` silences Readline's bell; Vim's `belloff=all` silences Vim separately. The Vim example maps `jj` in insert mode and, when Vim is opened with no file arguments, automatically loads/saves a per-working-directory session under `~/.vim/sessions/`. Session files contain executable Vim commands and may record file paths: keep that directory private and don't source others' sessions. Remove the session block from `vimrc` if you prefer a fresh editor. See the [configuration reference](../configuration.md) for further customization.
