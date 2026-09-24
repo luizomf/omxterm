@@ -1,14 +1,59 @@
-# Windows ARM64 quick start
+# Windows: set up Git Bash, colors, and snippets
 
-[Install OMXTerm](../../README.md#windows) and the Microsoft Visual C++ Redistributable for ARM64 first; keep SmartScreen enabled and follow the unsigned-installer notes there. This example selects **Git Bash** as the Default Shell. Install Git for Windows separately and verify that `C:\Program Files\Git\bin\bash.exe` exists, or edit `windowsShell` in the example to your installed Bash executable before reloading. OMXTerm does not install Git or Bash.
+[Install OMXTerm](../../README.md#windows) first. This optional tutorial selects
+**Git Bash**, adds an editable theme and seven snippets, and keeps the bundled
+fonts and default shortcuts. If you prefer PowerShell, use the
+[minimal configuration tutorial](../configuration.md#quick-start-use-the-bundled-defaults)
+instead; OMXTerm already starts PowerShell by default.
 
-## Get the files
+## 1. Get Git Bash and the examples
 
-Sign in to GitHub with access to this currently private repository, choose the branch you want, and use **Code → Download ZIP**. Extract it (Explorer's **Extract All** works) and find `docs\quick-start\files\windows` inside. No Git CLI or unauthenticated raw download is required. Inspect the complete [config.json](files/windows/config.json), [snippets.json](files/windows/snippets.json), and [themes/omtheme.json](files/windows/themes/omtheme.json) first.
+Install Git for Windows separately. Check that
+`C:\Program Files\Git\bin\bash.exe` exists; if yours is elsewhere, edit
+`windowsShell` in the example to that absolute path. OMXTerm does not install Bash.
 
-## Back up and apply OMXTerm files
+In the repository on GitHub, select **main**, then choose **Code → Download ZIP**.
+Sign in if asked. Use **Extract All** and open `docs\quick-start\files\windows`
+inside the result. These examples are for OMXTerm 0.14.0 or newer.
 
-Run this in **PowerShell**. Change `$example` to the **actual extracted folder**. It saves each existing regular file to a uniquely named backup folder in your home before copying, and refuses a symlink/reparse point or directory at a destination. Stop if it reports an error; don't retry blindly.
+You need three files:
+
+- [config.json](files/windows/config.json) — Git Bash, settings, and shortcuts;
+- [snippets.json](files/windows/snippets.json) — example Bash commands;
+- [themes/omtheme.json](files/windows/themes/omtheme.json) — editable colors.
+
+## 2. Copy the files
+
+Run this in **PowerShell**, not Git Bash, to create and open your configuration folder:
+
+```powershell
+$configRoot = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Path $HOME '.config' }
+$configDir = Join-Path $configRoot 'omxterm'
+New-Item -ItemType Directory -Path (Join-Path $configDir 'themes') -Force -ErrorAction Stop | Out-Null
+Invoke-Item -LiteralPath $configDir
+```
+
+In Explorer, copy the two JSON files into that folder and `omtheme.json` into
+its `themes` subfolder. **Back up existing destination files before replacing
+them.** If you already have settings you like, merge only what you want.
+Ensure the files end in `.json`, not `.json.txt`.
+
+The default layout is below. A non-empty `XDG_CONFIG_HOME` replaces
+`%USERPROFILE%\.config`:
+
+```text
+%USERPROFILE%\.config\omxterm\
+├── config.json
+├── snippets.json
+└── themes\
+    └── omtheme.json
+```
+
+<details>
+<summary>Prefer copying in PowerShell? Use this backup-aware block.</summary>
+
+Set `$example` to the extracted example folder. This backs up existing files
+and refuses symlinks/reparse points at destinations.
 
 ```powershell
 $example = 'C:\path\to\extracted\omxterm\docs\quick-start\files\windows'
@@ -39,19 +84,52 @@ foreach ($name in $names) {
 "Backup (only files that previously existed): $backup"
 ```
 
-If copying fails halfway, inspect the target files and backup before proceeding. Restore a backed-up file individually with e.g. `Copy-Item -LiteralPath (Join-Path $backup 'config.json') -Destination (Join-Path $configDir 'config.json')`. Remove only newly copied files with no corresponding backup after reviewing them; never remove the whole directory. A non-empty `XDG_CONFIG_HOME` changes the config location on Windows too.
+Keep the printed backup path. If copying fails, inspect the files before
+retrying. To restore an original, use, for example,
+`Copy-Item -LiteralPath (Join-Path $backup 'config.json') -Destination (Join-Path $configDir 'config.json')`.
+Remove only newly added files without originals, not the whole folder.
 
-The example explicitly lists the complete Windows shortcut map, omits `font.family` to retain the bundled font, and wires an editable external copy of the [standard palette](../omtheme.json) via `./themes/omtheme.json`. Top padding is **0 px**, the runtime default; the other sides are 8 px. Choose **View → Reload User Configuration** (`Ctrl+Shift+,`); if validation reports the Git Bash path missing or another error, correct the file and reload. Existing sessions retain their original shell; open a new tab for the newly selected shell.
+</details>
 
-Open **View → Toggle Snippets** (`Ctrl+Shift+S`), click “Open current folder in Explorer,” review the inserted ` explorer.exe .`, and press Enter. All seven snippets are JSON with `execute: false`; none submits Enter automatically. Their leading space opts out of Bash history when the optional `HISTCONTROL=ignoreboth` preference is active. Other examples use `ipconfig.exe`, `nslookup.exe`, `clip.exe`, and Git (Git Bash provides Git), and the palette uses Bash syntax. Replace paths/commands for your installation. See [Snippet behavior](../configuration.md#snippets) for paste safety and refresh on opening the sidebar.
+## 3. Reload and try it
 
-## Optional Git Bash, Readline, and Vim preferences
+1. Choose **View → Reload User Configuration** (`Ctrl+Shift+,`). Press and
+   release `Alt` if the menu is hidden. Correct any reported error and reload.
+2. Open a **new tab** (`Ctrl+Shift+T`) to start Git Bash. Existing sessions keep
+   their original shell.
+3. Open **View → Toggle Snippets** (`Ctrl+Shift+S`). Click **Open current folder
+   in Explorer**, review the inserted ` explorer.exe .`, and press Enter.
+   Explorer should open the shell's current folder.
 
-The Vim preset uses the `slate` syntax colors over the Terminal Theme background, two-space indentation without automatic indentation, no mouse capture, trailing-whitespace highlighting, and cursor-position restoration. Space is the leader: `Space w` saves, `Space h` clears search highlighting, and `Tab`/`Shift+Tab` switch buffers. Clipboard integration depends on the installed Vim build and desktop; `clipboard=unnamed` does not add clipboard support to a build that lacks it.
+All seven examples have `execute: false`: OMXTerm does not append Enter. They
+use Bash syntax with Windows tools such as `explorer.exe`, `ipconfig.exe`,
+`nslookup.exe`, and `clip.exe`. They are not PowerShell snippets.
 
-OMXTerm does **not** require any of these: [bashrc](files/windows/bashrc), [inputrc](files/windows/inputrc), [vimrc](files/windows/vimrc). Inspect any existing dotfiles before replacing them; they may contain important customizations. Git Bash normally uses your Windows home for `$HOME`; verify that `printf '%s\n' "$HOME"` in Git Bash points to the same directory as `$HOME` in PowerShell before installing dotfiles. If not, adjust `$dotHome` below to Git Bash's home directory. `INPUTRC` may select a different Readline file.
+To see a visible change, edit `font.size` in `config.json` from `16` to `18` and
+reload. Edit a `#RRGGBB` color in `themes/omtheme.json` to change the palette.
+Restoring `16` or your backed-up files reverses the change. More options:
+[Configuration](../configuration.md).
 
-This PowerShell block copies only the selected subset and creates a fresh dotfile backup each time, so retrying cannot overwrite the earlier originals. Run it in the same PowerShell session as above or set `$example` again to the extracted example path:
+## Optional Git Bash and Vim preferences
+
+OMXTerm does not require dotfiles. The examples [bashrc](files/windows/bashrc),
+[inputrc](files/windows/inputrc), and [vimrc](files/windows/vimrc) are separate
+shell/editor preferences. Prefer copying individual settings into your existing files.
+
+They enable vi-style command-line editing (`Esc` or `jj` leaves insert mode),
+quiet bells, and history that skips leading-space commands. Vim uses the `slate`
+colors, two-space indentation, and `Space w` to save. When started without file
+arguments, it saves/loads a session per directory under `~/.vim/sessions/`.
+Those session files contain executable Vim commands and paths; do not load
+untrusted sessions. Clipboard support depends on your Vim build.
+
+<details>
+<summary>Replace selected dotfiles with backups (optional)</summary>
+
+This replaces the chosen files, including their existing prompt, aliases, and
+plugins. Check that `printf '%s\n' "$HOME"` in Git Bash names the same home as
+PowerShell's `$HOME`; otherwise adjust `$dotHome`. If you use `INPUTRC`, adapt
+its destination. Set `$example` as above, then run in PowerShell:
 
 ```powershell
 $dotHome = $HOME
@@ -69,4 +147,9 @@ foreach ($name in @('bashrc', 'inputrc', 'vimrc')) { # Edit this list as needed
 }
 ```
 
-Keep the printed backup path; use the earliest backup to recover your original preferences after repeated copies. Restore, for example, with `Copy-Item -LiteralPath (Join-Path $dotBackup '.bashrc') -Destination (Join-Path $dotHome '.bashrc')`; remove only newly copied files without backups after checking them. Start a new Git Bash/Vim process to pick up changes. Bash's `set -o vi` enables command-line vi mode (`Esc` or `jj` leaves insert mode); a leading space excludes a command from history. `.inputrc` disables Readline's bell and Vim's `belloff=all` disables Vim's separately. Vim also maps `jj` and auto-loads/saves a session per working directory in `~/.vim/sessions/` **only when launched without file arguments**. Sessions are executable Vim commands and can contain file paths; keep them private and never source someone else's sessions, or remove the session block if this preference is unwanted. [Configuration reference](../configuration.md) has more options.
+Start a new Git Bash or Vim to apply its settings. To restore an original, use,
+for example, `Copy-Item -LiteralPath (Join-Path $dotBackup '.bashrc') -Destination (Join-Path $dotHome '.bashrc')`.
+Keep the earliest backup if you repeat this step; remove only newly added files
+without originals.
+
+</details>

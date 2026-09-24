@@ -18,11 +18,9 @@ shortest path is:
 Suspected vulnerabilities follow the private process in the
 [security policy](SECURITY.md), not the public issue or pull-request workflow.
 
-This guide explains the public contribution workflow. The
-[documentation map](docs/README.md) points to the authoritative product and
-project documents. If a coding agent helps with your contribution, point it at
-[`AGENTS.md`](AGENTS.md) for the repository's engineering, boundary, safety,
-and fork-and-pull instructions.
+Jump to [development setup](#development-environment),
+[verification](#verification), or [pull requests](#commits-and-pull-requests).
+Coding agents should also read [`AGENTS.md`](AGENTS.md).
 
 ## Before proposing a change
 
@@ -31,9 +29,10 @@ Read the relevant sources first:
 - [`docs/spec.md`](docs/spec.md) defines the current observable product contract;
 - [`CONTEXT.md`](CONTEXT.md) defines project vocabulary;
 - [`docs/adr/`](docs/adr/) records durable decisions and tradeoffs;
-- [`docs/configuration.md`](docs/configuration.md) documents user configuration;
-- [`docs/versioning.md`](docs/versioning.md) and
-  [`docs/release.md`](docs/release.md) govern versions and releases.
+- [`docs/configuration.md`](docs/configuration.md) documents user configuration.
+
+Version and release work additionally follows [versioning](docs/versioning.md)
+and [release procedures](docs/release.md).
 
 In a substantial-change issue, explain the user-facing problem and desired
 outcome before implementation details. This lets contributors and maintainers
@@ -47,8 +46,26 @@ areas before implementing them.
 
 ## Development environment
 
-Use an ARM64 machine running macOS, Linux, or Windows with Node.js 22.13 or
-later in the Node.js 22 line, or Node.js 24 or newer, and its bundled npm. Install dependencies from the lockfile with `npm ci`.
+Use an ARM64 machine with Node.js **22.13+ in the 22.x line**, or **24+**, and
+npm. Prepare the platform prerequisites below, then run from your clone:
+
+```sh
+npm ci
+npm run check:portable
+npm run dev
+```
+
+`check:portable` runs formatting, lint, types, tests, and the unpackaged build.
+`dev` opens the application. Graphical tests need a working desktop and WebGL2;
+"portable" does not mean headless. No package or release is needed for ordinary
+development.
+
+### macOS
+
+Use Apple Silicon. Install the native build tools requested by npm if a matching
+dependency prebuild is unavailable.
+
+### Linux
 
 On Linux, `node-pty` builds from source and requires `python3`, `make`, and a C++
 compiler (`build-essential` provides the latter two on Ubuntu). Native package
@@ -65,20 +82,15 @@ Run as an ordinary user. OMXTerm deliberately disables Chromium sandboxing on
 Linux; no administrator sandbox setup is required. See the
 [Linux launch policy](docs/adr/0024-disable-the-chromium-sandbox-on-linux.md).
 Simple, reproducible contributions for sandboxed Linux support are welcome.
-Linux rendering uses X11 and requires XWayland under a Wayland session; native
-Wayland is not currently claimed. Launching OMXTerm — including the packaged launch
-inside `npm run package:verify` and `npm run check:linux` — needs a running
-graphical session; a headless or SSH shell without `$DISPLAY` fails with
-`Missing X server or $DISPLAY`. Over SSH, point `DISPLAY` at the machine's
-desktop session (commonly `DISPLAY=:0`) and use that session's X11 authorization
-when required; `DISPLAY` alone does not grant access to another user's desktop.
-Do not disable X server access control to make a test connect. `xvfb-run` can smoke-test a truly
-headless machine but never counts as platform behavior evidence. macOS and
-Windows contributors should install the
-native build toolchain requested by npm if no matching dependency prebuild is
-available.
+Tests and packaged launches need an authorized X11/XWayland desktop session;
+native Wayland is not currently claimed. Over SSH, set the correct `DISPLAY` and
+use that session's X11 authorization; do not disable X server access control.
+A headless `xvfb-run` smoke test does not establish native platform behavior.
 
-On Windows, clone with `core.autocrlf=false` — a system Git for Windows
+### Windows
+
+Install native build tools if npm cannot find a matching dependency prebuild.
+Clone with `core.autocrlf=false` — a system Git for Windows
 configuration that smudges the tree to CRLF breaks `prettier --check` — and
 with `core.symlinks=true`, because the repository contains symlinked files
 that must check out as symlinks; enabling Windows Developer Mode allows
@@ -95,9 +107,8 @@ and run `npm.cmd` from that shell. This applies only to that process and inherit
 children, not a persistent CurrentUser or LocalMachine setting. Do not override
 organizational policy, automatically weaken execution policy in project commands,
 or treat a policy refusal as evidence that an installer ownership guard passed.
-If `npm ci` fails with `EPERM` file locks,
-an antivirus scanner racing the extractor is the usual cause; an exclusion
-for the clone directory resolves it. Windows launches — including the
+If `npm ci` reports `EPERM`, check for processes holding files open and review
+antivirus events before retrying. Keep security protections enabled. Windows launches — including the
 packaged launch inside `npm run package:verify` and `npm run check:win` —
 need a graphical session. An SSH login as the same user is not sufficient:
 Windows OpenSSH normally runs commands in non-interactive Session 0, independently
@@ -111,32 +122,16 @@ and still verify the actual renderer/GPU behavior. Do not substitute session
 identity alone for a passing graphics check or add software-renderer flags to
 hide a missing required native path.
 
+### Shared desktop constraints
+
 Native Electron fixtures share the desktop compositor. The test configuration
 serializes files within one run; do not run multiple native suites or clones
 against the same desktop concurrently. When a graphical failure is intermittent,
 record every failure and rerun condition rather than describing a later isolated
 pass as proof that the original failure was fixed.
 
-The portable development baseline does not require a packaged application:
-
-```sh
-npm ci
-npm run check:portable
-```
-
-Restty is the sole Terminal Surface in development and packaged builds. See the
-[Restty Terminal Surface guide](docs/restty-development.md) for pinned-source
-restoration, failure behavior, graphics and memory limits. There is no renderer
-selector or fallback Surface.
-
-This command runs formatting checks, type-aware lint with zero accepted warnings,
-strict typechecking, the complete automated test suite, and the unpackaged
-build. Native packaging and operating-system behavior evidence are
-platform-owned work: macOS uses `npm run check`, a
-native Linux ARM64 clone uses `npm run check:linux`, and a native Windows
-ARM64 clone uses `npm run check:win`. In a pull request, list every check run and state exactly why any
-relevant platform check could not run. Report results separately for each
-operating system.
+The [Restty development guide](docs/restty-development.md) covers pinned-source
+restoration, graphics requirements, and renderer changes.
 
 Do not commit local configuration, logs, terminal contents, environment files,
 credentials, release output, or other private data.
@@ -184,7 +179,8 @@ npm test
 npm run build
 ```
 
-### Native fixture cleanup
+<details>
+<summary>Native fixture internals and interruption tests</summary>
 
 The Restty host fixture starts Electron, a native PTY, and helper processes. A
 separate supervisor owns their cleanup, including when the test worker exits
@@ -241,16 +237,23 @@ retention after interrupted registration, successful profile removal, survival o
 an unrelated sentinel process, and a real PTY whose leader exits early. These
 cases do not claim containment of arbitrary uncooperative process trees.
 
-Before delivery on any Supported Platform, run `npm run check:portable`. On
-macOS, `npm run check` is the full native project command. On Linux ARM64, use
-`npm run check:linux`; it formats, lints, and typechecks, runs all tests
-including the real-PTY test, builds the AppImage, extracts and inspects its exact contents,
-and checks its ELF dependencies before launching that exact AppImage through
-both normal FUSE mounting and `--appimage-extract-and-run`, with isolated
-configuration and state for each real-PTY launch. These commands create local
-output under `release/` but never publish it. Use
-`npm run package:linux` for a non-publishing AppImage build alone, followed by
-`npm run package:verify` on the same host.
+</details>
+
+Before delivery, run `npm run check:portable`. Packaging changes also need the
+matching native procedure:
+
+| Platform      | Complete native check                                            |
+| ------------- | ---------------------------------------------------------------- |
+| macOS ARM64   | `npm run check`                                                  |
+| Linux ARM64   | `npm run check:linux`                                            |
+| Windows ARM64 | `npm run check:win -- --disposable-vm-allow-omxterm-replacement` |
+
+These commands build and verify local artifacts under `release/`; they never
+publish. **The Windows command performs real installation and replacement.**
+Use it only in an explicitly authorized disposable VM with a recovery snapshot,
+following the [Windows release procedure](docs/release.md#windows-arm64).
+For non-installing Windows diagnostics, use
+`npm run package:verify -- --windows-unpacked-only` after `npm run package:win`.
 
 If a required or platform-specific check cannot run, state exactly which check
 was not run and why in the pull request. Do not report an inferred result as a

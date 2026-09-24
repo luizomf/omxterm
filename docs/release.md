@@ -19,12 +19,9 @@ For a new candidate, follow this path:
 5. stop after owner acceptance unless publication receives its own explicit
    authorization.
 
-The historical sections preserve what happened for earlier releases; they do
-not replace the current procedure or authorize repeating a past action. The
-latest published release described here is **0.14.0**. Its
-[release record](releases/0.14.0.md) identifies the accepted files, native
-verification and completed publication checks. The repository resumes development
-at **0.14.1-dev.0**, which is not a published release.
+Published artifact identities, acceptance, and verification belong in
+[`docs/releases/`](releases/), not in this procedure. See the
+[README](../README.md#platforms-and-downloads) for the current published version.
 
 ## Cross-platform release policy
 
@@ -94,186 +91,6 @@ This exception applies only before publication. Published releases are
 immutable: never move their tags, replace their artifacts or checksums, or reuse
 their GitHub Releases. Later documentation corrections ship from `main` or with
 a future release without rewriting the published one.
-
-## Historical release records
-
-The canonical records under [`docs/releases/`](releases/) preserve exact
-artifact identities, evidence, and authority for their original releases. The
-summaries below are navigation and context only. Keep them in the past tense:
-current release work follows the procedures later in this document.
-
-## Accepted 0.11.0 artifacts
-
-The [0.11.0 release record](releases/0.11.0.md) binds all three native builds to
-`741a1cc67597bfdbe5aacf4933a01760c658f352`, records passing automated checks,
-exact filenames/sizes/checksums, completed verifier cleanup, remaining platform
-risk, owner acceptance and separate publication authorization. Publish those
-unchanged files; release documentation and squash integration do not rebuild
-them. The tag retains the build commit's ancestry with only eligible Markdown
-changes, and the squash-integrated source tree must match the tagged tree.
-
-## 0.12.0 release-specific platform exception
-
-The maintainer authorized and published 0.12.0 with only the macOS ARM64 DMG
-and Linux ARM64 AppImage plus optional installer. Windows ARM64 remains a
-Supported Platform, but there is no Windows 0.12.0 candidate: its native gate
-failed before packaging, and diagnosis is deferred to issue #310. The latest
-available Windows download therefore remains the unchanged 0.11.0 NSIS
-installer and checksum from the existing `v0.11.0` GitHub Release.
-
-This exception changes neither the general three-platform release policy nor
-the verification requirements for an artifact that is included. The 0.12.0
-macOS and Linux identities still require their complete native commands,
-changed-boundary evidence, exact checksums, cleanup, owner acceptance and
-separate publication authorization. A Windows 0.12.0 file must not be attached,
-and no macOS or Linux result may be presented as Windows qualification. The
-0.12.0 attachment set is the DMG, AppImage and versioned Linux installer plus
-their three matching checksum files. They were published unchanged; macOS and
-Linux downloads are now 0.12.0, while Windows remains explicitly 0.11.0.
-
-## Published 0.12.0 artifacts and authority
-
-The owner **ACCEPTED** these exact six canonical macOS/Linux identities and,
-separately, **AUTHORIZED** their manual publication through
-[issue #311](https://github.com/luizomf/omxterm/issues/311). The immutable
-[v0.12.0 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.12.0)
-(release ID `391846996`) was published on `2026-09-18T23:51:24Z` with exactly
-those six files and no Windows 0.12.0 attachment. Publication did not authorize
-a rebuild, replacement, additional attachment, or automatic publication.
-
-| File                                                |     Bytes | SHA-256                                                            |
-| --------------------------------------------------- | --------: | ------------------------------------------------------------------ |
-| `OMXTerm-0.12.0-arm64.dmg`                          | 127519162 | `ed17cba1f77b6d2250f734ef4df4faa4637dc3d74635f1cff4584e3f20fcccb0` |
-| `OMXTerm-0.12.0-arm64.dmg.sha256`                   |        91 | `464bba3863dad485137c97986a6da7a3b74680900ef5e0736239cf51696c3131` |
-| `OMXTerm-0.12.0-arm64.AppImage`                     | 124262587 | `7dcd33b76495a707918daebae23c1707a90f512af0c18a33b976d4da3116eb4c` |
-| `OMXTerm-0.12.0-arm64.AppImage.sha256`              |        96 | `347ab1f815e31b10b0493000d3da47e97646301acaa08e7b88047a1dc3ca8e11` |
-| `OMXTerm-0.12.0-arm64.AppImage-installer.sh`        |      6215 | `181f2c4ff1ba93536328cd026272c64c435f320695aa2cf21f08a28676e5b936` |
-| `OMXTerm-0.12.0-arm64.AppImage-installer.sh.sha256` |       109 | `14eb1c670126f1f618f66500acafea3acb3adcf989511de9f33c3dd3ff83ad69` |
-
-The canonical [0.12.0 release record](releases/0.12.0.md) preserves the native
-evidence, migration guidance, limitations, source mapping, and post-publication
-verification. Annotated tag `v0.12.0` dereferences to independently reviewed
-source `1c1ba485da23612bafe44ee19c3b526993dfe841`, which retains artifact-build
-commit `87aa8eb44ce355c6ae967eee17c2ddb9e1b6762a` in its ancestry. Its tree
-`f0c2776e239c546340d9db80b71ee6f4a8900589` equals PR #312 squash
-`935d1091743ce457a2b7501da761ad5e409b6345`. Only `README.md`,
-`docs/README.md`, `docs/release.md`, and `docs/releases/0.12.0.md` differ from
-the build source, all eligible non-packaged Markdown.
-
-## Published 0.12.1 artifacts and authority
-
-The canonical [0.12.1 release notes and record](releases/0.12.1.md) binds all three
-ARM64 native builds to independently reviewed/refrozen source
-`34119842ddbb1dbdb496a80a9e316e8695d09c82`. Complete fresh native commands,
-actual packaged parsed-output proof, platform package/installation seams and
-verifier cleanup passed. All eight exact files are collected with native/collected
-size and SHA-256 equality and matching checksum basenames.
-
-The record includes release notes, changed-boundary PASS/UNVERIFIED evidence against
-macOS/Linux 0.12.0 and Windows 0.11.0, #310's source-to-squash mapping and the
-later test-only configured-font capture correction. Earlier candidates were
-superseded and all three platforms rebuilt after refreeze. Original historical
-triggers remain unproven; neither correction is a product-font/color change.
-
-Independent final review passed Standards and Spec with no findings. The
-canonical record identifies the reviewed evidence range and eligible Markdown
-paths. Final preparation source `7c561ad5a10c26d0fe103233bc657b9627d84ec8`
-and integrated main `8fde337e43c3efbe1821e4c1f243edf02ade3954` have identical
-trees. Annotated tag `v0.12.1` points to that final preparation source,
-retaining the common build commit's ancestry. Only `README.md`, `docs/README.md`,
-`docs/release.md`, and `docs/releases/0.12.1.md` differ from build source.
-
-Exact-artifact acceptance is **OWNER ACCEPTED** for the eight recorded files.
-The owner separately **AUTHORIZED** publication through
-[issue #323](https://github.com/luizomf/omxterm/issues/323), following the completed
-preparation in #320. This authorization covers the annotated tag, GitHub
-Release, eight unchanged uploads, and post-publication download/checksum
-verification; it explicitly excludes rebuilds and repeated test suites.
-
-The [v0.12.1 GitHub Release](https://github.com/luizomf/omxterm/releases/tag/v0.12.1)
-was published on `2026-09-20T08:41:01Z` with exactly the eight accepted files.
-Post-publication authenticated downloads passed byte-size and SHA-256 comparison
-for every file, plus verification of all four checksum records against the
-accepted manifest. Repository visibility remains private; anonymous download
-access is not claimed.
-
-The #323 documentation candidate at
-`5d51084f3869bb6699a638fbed4f298667ab2084` passed independent Standards and
-Spec review with no findings before publication. That polish and subsequent
-publication bookkeeping change only the same four eligible Markdown files.
-They do not rebuild the packages or retarget the tag. The exact identity and
-native verification record remains unchanged; earlier published releases remain
-immutable.
-
-## Published 0.12.2 artifacts and authority
-
-The [0.12.2 release notes and record](releases/0.12.2.md) bind all three native
-ARM64 builds to `18ab438a898d246a6eaa197fb4f9b826c3244a7e`. Fresh complete
-native commands passed on macOS, Linux and Windows, including actual packaged
-parsed output and exact Windows installer verification/cleanup. All eight final
-files have matching native/collected sizes and SHA-256 values.
-
-The owner accepted the eight exact files and separately authorized publication
-in #334. Independent final review passed without findings. The
-[v0.12.2 release](https://github.com/luizomf/omxterm/releases/tag/v0.12.2)
-was published on September 20, 2026. All eight downloaded assets matched the
-accepted sizes and SHA-256 values, including the four checksum records.
-
-Annotated tag `v0.12.2` points to
-`2d6c080e4093cfbcf9a546b24d2dc231af71e3ee`, retaining the build source in its
-ancestry. Its tree matches PR #335 squash
-`1d5ec8d71dd11345faca45eff5466a61cdc9a975`. Only the four eligible release
-Markdown files differ from the build source. The files were published unchanged;
-earlier releases remain available under their original tags.
-
-## Accepted 0.13.0 artifacts
-
-The [0.13.0 candidate record](releases/0.13.0.md) binds all three native ARM64
-builds to `f53bff7225d4ac1cab4036853484c261bf3d80da`. Complete native commands
-passed and all eight unchanged files have matching native/collected identities.
-Independent final review passed without findings before the subsequent Windows
-installer report. The same unchanged installer was reported to install and run
-successfully after reboot (#349); its earlier shutdown stall has no confirmed
-root cause or product correction. Windows and Ubuntu use was subsequently
-reported successful. The Bash visual-bell limitation (#333) is documented in
-the installation guide and release notes for this release; product-side
-investigation remains deferred. These follow-up Markdown changes passed an
-independent Standards and Spec review without findings and do not alter the
-artifact identities. On September 21, 2026, the owner explicitly accepted all
-eight listed files and separately authorized publication. Final documentation
-and GitHub Release notes passed independent review without findings.
-
-[OMXTerm 0.13.0](https://github.com/luizomf/omxterm/releases/tag/v0.13.0) was
-published on September 21, 2026. Annotated tag `v0.13.0` points to
-`c16623c265718e5b388c99ec8ad22c902494fb0f`, retaining the artifact build source in
-its ancestry. Its tree equals PR #347 squash
-`2364f14323f983b75c8ea8c5184c43560e25c4b9`; only three eligible non-packaged
-Markdown files differ from the build source. All eight assets were downloaded
-from the published release and matched their accepted sizes and SHA-256,
-including the four checksum records. Published files and the tag remain
-unchanged while `main` resumes development at `0.13.1-dev.0`.
-
-## Published 0.14.0 artifacts
-
-The [0.14.0 record](releases/0.14.0.md) binds all three native ARM64 builds to
-`506aac2b10b493490e0fca3d39567a803eebb773`. Complete native commands passed,
-including packaged parsed output and exact Windows installer verification and
-cleanup. All eight collected files match their native sizes and SHA-256 values.
-The Windows test replaced an existing per-user development installation; its
-pre-existing updater cache was separately preserved. The owner accepted all
-eight exact files and reaffirmed publication authorization on September 22, 2026.
-Final independent Standards/Spec review passed without surviving findings,
-including the exact publication body.
-
-[OMXTerm 0.14.0](https://github.com/luizomf/omxterm/releases/tag/v0.14.0) was
-published at `2026-09-22T23:37:44Z`. Annotated tag `v0.14.0` points to
-`e9f432146e2d93412a7b3fe9952cd6384310cd2c`, retaining the build source in its
-ancestry; its tree equals PR #379 squash
-`b388a17cf12eb4c3afea33abf716571ceb8210b0`. Only five eligible non-packaged
-Markdown files differ from the build source. All eight published assets were
-downloaded and matched their accepted sizes and SHA-256, including all four
-checksum records. The published body matches its reviewed content. No artifact
-or tag is changed by post-publication development-baseline maintenance.
 
 ## Version selection and consistency
 
@@ -605,11 +422,9 @@ licenses, embedded version agreement, package extraction or installation seam,
 startup, PTY readiness, synthetic parsed output from the actual packaged
 Terminal Surface, required Operational Events, and cleanup of verifier state.
 
-No release requires a human replay after every native command required for its
-included artifacts passes. Ordinarily that means all three platform commands;
-the recorded 0.12.0 exception requires macOS and Linux only and makes no Windows
-0.12.0 claim. Owner acceptance remains explicit but does not represent manual
-exercise of every artifact.
+Every included platform must pass its native command. Any platform omission
+requires explicit owner authorization recorded for that release. Owner acceptance
+remains separate from automation and does not imply manual testing.
 
 ### 3. Record optional observations and unverified risk
 
@@ -790,8 +605,8 @@ separately authorizes publication:
    `OMXTerm-<version>-arm64.AppImage-installer.sh`,
    `OMXTerm-<version>-arm64.AppImage-installer.sh.sha256`,
    `OMXTerm-<version>-arm64.exe`, and
-   `OMXTerm-<version>-arm64.exe.sha256` manually. Under the recorded 0.12.0
-   exception, attach only the first six macOS/Linux files and no Windows file;
+   `OMXTerm-<version>-arm64.exe.sha256` manually. A separately authorized
+   platform omission must be reflected in both the record and attachment set;
 4. download every attachment, verify every checksum again on any trustworthy
    byte-verification host, and preserve the final release URL with the accepted
    evidence.

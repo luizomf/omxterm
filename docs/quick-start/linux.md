@@ -1,14 +1,52 @@
-# Linux ARM64 quick start
+# Linux: set up fonts, colors, and snippets
 
-[Install OMXTerm](../../README.md#linux) first. It needs WebGL2, fontconfig and X11 (or XWayland under Wayland). Linux launches without the Chromium sandbox; see the [installation/security notes](../../README.md#linux). This example does not change the shell selected by your account. The Snippets shown here assume Bash; other shells may need edits.
+[Install OMXTerm](../../README.md#linux) first. This optional tutorial gives you
+an editable theme and seven example snippets while keeping the bundled fonts
+and default shortcuts. The snippets assume Bash; your account shell is unchanged.
 
-## Get the files
+## 1. Get the examples
 
-While signed in to GitHub with access to this currently private repository, choose **Code → Download ZIP** on the desired branch. Extract it and find `docs/quick-start/files/linux/` inside the extracted repository. No Git installation is needed. Do not rely on unauthenticated raw-file URLs. The complete files are [config.json](files/linux/config.json), [snippets.json](files/linux/snippets.json), and [themes/omtheme.json](files/linux/themes/omtheme.json); inspect them before copying. They are examples, not executable installers.
+In the repository on GitHub, select **main**, then choose **Code → Download ZIP**
+and extract it. Sign in if GitHub asks. Open `docs/quick-start/files/linux/` in
+the extracted folder. These examples are for OMXTerm 0.14.0 or newer.
 
-## Back up and apply OMXTerm files
+You need three files:
 
-In your Bash shell, change `example` to the **actual extracted directory** (do not type the angle brackets). This backs up each existing regular file into a new directory in your home, refuses a symlink or directory at any destination, and installs the three files together. Keep the backup directory until you're satisfied. If your configuration directory itself is a symlink, stop and resolve its destination manually instead.
+- [config.json](files/linux/config.json) — settings and shortcuts;
+- [snippets.json](files/linux/snippets.json) — example commands;
+- [themes/omtheme.json](files/linux/themes/omtheme.json) — editable colors.
+
+## 2. Copy the files
+
+In Bash, create your configuration folder:
+
+```bash
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omxterm"
+mkdir -p "$config_dir/themes"
+printf '%s\n' "$config_dir"
+```
+
+Open the printed path in your file manager (`Ctrl+L` accepts a path in many
+file managers). Copy the two JSON files into it and `omtheme.json` into its
+`themes` subfolder. **Back up any existing destination files before replacing
+them.** If you already have a configuration you like, merge only the settings
+you want instead of replacing it.
+
+Your files should look like this (a non-empty `XDG_CONFIG_HOME` replaces `~/.config`):
+
+```text
+~/.config/omxterm/
+├── config.json
+├── snippets.json
+└── themes/
+    └── omtheme.json
+```
+
+<details>
+<summary>Prefer copying in the terminal? Use this backup-aware block.</summary>
+
+Set `example` to the extracted example folder. Run in Bash. It backs up existing
+files and refuses symlink destinations rather than overwriting them.
 
 ```bash
 example="/path/to/extracted/omxterm/docs/quick-start/files/linux"
@@ -33,17 +71,51 @@ apply_quick_start() {
 apply_quick_start
 ```
 
-If any command fails, stop; check which files were installed before retrying. To undo, copy each backed-up file from `$backup` to its original matching path under `$config_dir` (for example `cp -p "$backup/config.json" "$config_dir/config.json"`). Delete only newly installed files that had no backup, after checking them. Never delete the whole config directory. `XDG_CONFIG_HOME`, if non-empty, determines the location; do not move files to `~/.config` when your environment selects another root.
+Keep the printed backup path. If copying fails, check the copied files before
+retrying. To undo, restore each original to its matching path, for example
+`cp -p "$backup/config.json" "$config_dir/config.json"`. Remove only files newly
+added by this tutorial, not the whole configuration folder.
 
-The example explicitly sets every supported shortcut, uses bundled fonts (no `font.family`), and selects an editable external copy of the [standard palette](../omtheme.json) at `./themes/omtheme.json`. Its top padding is **0 px**, like the runtime default; the other sides are 8 px. You can edit the theme's colors later. Use **View → Reload User Configuration** (`Ctrl+Shift+,`) after copying; an error notice means you should fix the reported path or JSON and reload again.
+</details>
 
-Open **View → Toggle Snippets** (`Ctrl+Shift+S`), click “Open current folder,” review the inserted ` xdg-open .`, then press Enter yourself. All seven snippets are JSON with `execute: false`, not automatic commands. The initial space avoids shell history when the optional Bash `HISTCONTROL=ignoreboth` preference is active (shell behavior varies). The examples use `xdg-open` (desktop integration), `ip`, `nslookup` (may need a DNS utilities package), `git` (optional), and `base64 -w0` (GNU coreutils) for OSC 52 clipboard writes. Change any command for your distribution/shell. [Snippet behavior and limits](../configuration.md#snippets) explain Protected Paste and how to reopen the sidebar after edits.
+## 3. Reload and try it
 
-## Optional shell, Readline and Vim preferences
+1. Choose **View → Reload User Configuration** (`Ctrl+Shift+,`). If an error
+   appears, correct the named file or field and reload.
+2. Open **View → Toggle Snippets** (`Ctrl+Shift+S`).
+3. Click **Open current folder**, review the inserted ` xdg-open .`, and press
+   Enter. Your desktop file manager should open the shell's current folder.
 
-The Vim preset uses the `slate` syntax colors over the Terminal Theme background, two-space indentation without automatic indentation, no mouse capture, trailing-whitespace highlighting, and cursor-position restoration. Space is the leader: `Space w` saves, `Space h` clears search highlighting, and `Tab`/`Shift+Tab` switch buffers. Clipboard integration depends on the installed Vim build and desktop; `clipboard=unnamed` does not add clipboard support to a build that lacks it (and on X11 it selects the primary selection rather than the clipboard selection).
+All seven example snippets have `execute: false`: OMXTerm does not append Enter.
+The commands use `xdg-open`, `ip`, `nslookup`, `git`, and GNU `base64 -w0`.
+If a tool is missing, install it through your distribution or edit that snippet.
+The palette snippet uses Bash syntax.
 
-OMXTerm does **not** install or require shell integration or Vim. The files [bashrc](files/linux/bashrc), [inputrc](files/linux/inputrc), and [vimrc](files/linux/vimrc) are personal preferences, not application configuration. Only consider them if you use Bash, Readline, and Vim respectively. Read your existing dotfiles first; replacing them can remove your own aliases, prompt, plugins, and settings. To copy a subset, use this separate command (edit the list to the files you actually want). It creates a fresh dotfile backup each time, so retrying cannot overwrite the earlier originals:
+To see a visible setting change, edit `font.size` in `config.json` from `16` to
+`18` and reload. To customize colors, edit a `#RRGGBB` value in
+`themes/omtheme.json` and reload. Restoring `16` or your backed-up files reverses
+the change. More options: [Configuration](../configuration.md).
+
+## Optional Bash and Vim preferences
+
+OMXTerm does not require dotfiles. The examples [bashrc](files/linux/bashrc),
+[inputrc](files/linux/inputrc), and [vimrc](files/linux/vimrc) are separate
+shell/editor preferences. Prefer copying individual settings into your existing files.
+
+They enable vi-style command-line editing (`Esc` or `jj` leaves insert mode),
+quiet bells, and history that skips leading-space commands. Vim uses the `slate`
+colors, two-space indentation, and `Space w` to save. When started without file
+arguments, it saves/loads a session per directory under `~/.vim/sessions/`.
+Those session files contain executable Vim commands and paths; do not load
+untrusted sessions. Clipboard support depends on your Vim build; `unnamed` uses
+the primary selection on X11 rather than the clipboard selection.
+
+<details>
+<summary>Replace selected dotfiles with backups (optional)</summary>
+
+This replaces the chosen files, including their existing prompt, aliases, and
+plugins. Set `example` as above and edit the file list to choose what to copy.
+If you use `INPUTRC`, adapt its destination.
 
 ```bash
 copy_optional_dotfiles() {
@@ -60,6 +132,8 @@ copy_optional_dotfiles() {
 copy_optional_dotfiles
 ```
 
-If you opened another shell, set `example` to the extracted example path before running this block. Keep the printed backup path; use the earliest backup to recover your original preferences after repeated copies. To restore an existing dotfile, `cp -p "$dot_backup/.bashrc" "$HOME/.bashrc"` (substitute its name); remove a newly installed dotfile only if it had no backup and you have checked its contents. A new shell/Vim process reads these preferences; OMXTerm reload does not.
+Start a new shell or Vim to apply its settings. To restore an original, use,
+for example, `cp -p "$dot_backup/.bashrc" "$HOME/.bashrc"`. Keep the earliest
+backup if you repeat this step; remove only newly added files without originals.
 
-The Bash example enables vi editing (`Esc` or `jj` to leave insert mode), ignores history entries starting with a space, and loads Bash completion only if present. `.inputrc` silences Readline's bell; Vim's `belloff=all` silences Vim separately. The Vim example maps `jj` in insert mode and, when Vim is opened with no file arguments, automatically loads/saves a per-working-directory session under `~/.vim/sessions/`. Session files contain executable Vim commands and may record file paths: keep that directory private and don't source others' sessions. Remove the session block from `vimrc` if you prefer a fresh editor. See the [configuration reference](../configuration.md) for further customization.
+</details>

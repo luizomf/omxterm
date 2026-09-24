@@ -3,23 +3,26 @@
 OMXTerm works without configuration files. Add them only when you want to
 change a default, create Snippets, or use an external Terminal Theme.
 
-User Configuration uses strict, versioned JSON. You create and edit the file;
-OMXTerm reads it at startup and whenever you choose
-`View -> Reload User Configuration`. It never rewrites the file.
+You edit strict JSON files; OMXTerm reads them without rewriting them.
 
-For complete ready-to-copy examples, including an editable theme and Snippets,
-start with the [macOS](quick-start/macos.md), [Linux](quick-start/linux.md), or
-[Windows](quick-start/windows.md) quick start. Optional shell and Vim files are
-separate from OMXTerm's User Configuration.
+- [Create a configuration](#quick-start-use-the-bundled-defaults)
+- [Change fonts and spacing](#add-one-display-change)
+- [All settings and defaults](#configuration-reference)
+- [Choose a Windows shell](#choose-the-windows-default-shell)
+- [Remap shortcuts](#keybinds)
+- [Add snippets](#snippets)
+- [Create a theme](#terminal-themes)
+- [Reload and troubleshoot](#reloading-user-configuration)
 
-This guide follows the **0.14.1-dev.0** source tree. The published 0.14.0
-packages use the same version 1 configuration schema. See the
-[product contract](spec.md#configuration-and-local-state) for the complete
-behavior reference.
+Prefer a complete example? Follow the [macOS](quick-start/macos.md),
+[Linux](quick-start/linux.md), or [Windows](quick-start/windows.md) tutorial.
+The [product contract](spec.md#configuration-and-local-state) holds the complete
+technical rules; this guide covers setup and reference.
 
 ## Quick start: use the bundled defaults
 
-Start with the smallest valid `config.json`:
+Start with the smallest valid `config.json`. If you already have one, back it
+up and edit only the settings you want to change:
 
 ```json
 {
@@ -33,15 +36,17 @@ other built-in default. It does not require an installed font or another file.
 
 ### Create the configuration directory
 
-On macOS or Linux, create the directory selected by `XDG_CONFIG_HOME`, or the
-default directory when that variable is unset or empty:
+On macOS or Linux, create the configuration directory and print its path:
 
 ```sh
-mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/omxterm"
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omxterm"
+mkdir -p "$config_dir"
+printf '%s\n' "$config_dir/config.json"
 ```
 
-Save the JSON above as
-`${XDG_CONFIG_HOME:-$HOME/.config}/omxterm/config.json`.
+In a plain-text editor, save the JSON above at that printed path. By default it
+is `~/.config/omxterm/config.json`; a non-empty `XDG_CONFIG_HOME` selects another
+configuration root.
 
 On Windows, the common default path is
 `%USERPROFILE%\.config\omxterm\config.json`. This PowerShell sequence also
@@ -74,15 +79,6 @@ At startup, invalid `config.json` uses every built-in default and reports the
 exact problem without changing the file. During a manual reload, an invalid
 file keeps the complete last valid in-memory configuration active. Fix the
 reported problem and reload again.
-
-### Compatibility with 0.11.0
-
-The current 0.14.1-dev.0 source, published 0.14.0 packages, and 0.12.x all use
-User Configuration schema `"version": 1` and Terminal Theme schema
-`"version": 1`. Existing 0.11.0 files remain valid in newer versions. The
-optional `font.ligatures` key was added in 0.12.0, so remove it before
-_downgrading_ to 0.11.0, which rejects unknown keys. OMXTerm never rewrites or
-migrates the file in either direction.
 
 ## Add one display change
 
@@ -193,49 +189,26 @@ unknown keys.
 | `theme.path`              | non-empty filesystem path without NUL   | bundled `omtheme`                |
 | `keybinds.<action>`       | accelerator with a non-Shift modifier   | built-in shortcut per action     |
 
-`scrollback.lines` is memory-only and independent for every Live Terminal
-Session. Zero disables retention and drops existing history on a valid reload.
-Positive values are approximate physical history-row targets: Ghostty evicts
-whole pages, so one minimum boundary page may exceed the target. Restty also
-keeps an independent 10,000,000-byte ceiling, which can retain fewer rows than
-the requested target; the value is never converted into an estimated byte
-count. Changing from positive to zero and back keeps the same Surface, core,
-session and PTY; output produced while zero is active cannot be scrolled back
-to, while later output can be retained after a positive value returns.
+### Settings that need explanation
 
-`keyboard.optionAsAlt` applies only on macOS. `none` preserves the active
-keyboard layout's native Unicode input; `left`, `right`, and `both` select which
-Option keys produce terminal Alt sequences.
-
-On macOS, configured top padding begins below the 30 px native title and drag
-inset while windowed or maximized. Native fullscreen removes only that
-app-owned inset; configured top padding and the system safe area remain. On
-Linux and Windows, padding begins directly below native Window Chrome.
-`font.lineHeight` changes row height independently of glyph size.
-`font.ligatures` changes programming-operator shaping live for current and new
-Surfaces. It does not alter source text, selection or copy results, cell widths,
-cursor positions, or font loading. `font.family` and `font.lineHeight` are
-applied when a Surface is created, but
-an existing Surface keeps both until OMXTerm restarts. Restty obtains the exact
-installed regular face and available bold, italic and bold-italic faces through
-the main process, then uses bundled FiraCode
-regular/bold, DejaVu Sans Mono regular/bold, retained JetBrainsMono Nerd Font
-Mono, and available local operating-system fallback faces. With an explicit
-`font.family`, bundled bold faces are omitted so bold text keeps your chosen
-family instead of silently switching to FiraCode. Real italic faces retain their
-designed letterforms rather than merely slanting the regular letters. If a style
-is missing, Restty synthesizes it; a bold-italic request can use an available
-bold or italic face and synthesize the remaining trait. Synthetic bold thickens
-horizontal and vertical strokes within the available cell space; its appearance
-can differ from a native bold face or another terminal's outline renderer.
-Regular text and real bold faces are not artificially thickened. No extra font
-setting is needed. Variable-font styles that require non-default axis values still use
-synthesis; custom variation axes are not supported. Missing glyphs still fall
-back through regular faces.
-A missing, unreadable,
-oversized, unsupported or corrupt configured face is an actionable error, never
-a similarly named substitute. The native Always on Top menu changes one current
-window; `window.alwaysOnTop` sets the default for new windows.
+- **Scrollback** is memory-only and separate per tab. Zero immediately clears
+  history and disables retention; restoring a positive value retains only new
+  output. Positive line counts are approximate because the core evicts whole
+  pages and also has a 10,000,000-byte ceiling.
+- **Option keys** apply only on macOS. `none` preserves native Unicode input;
+  `left`, `right`, and `both` choose which Option keys send terminal Alt sequences.
+- **Padding** begins below native window chrome. macOS adds a 30 px title inset
+  while windowed; native fullscreen removes that inset, not your padding or the
+  system safe area.
+- **Font family and line height** apply to new tabs immediately after reload;
+  existing tabs retain their original values until restart. Font size and
+  ligatures apply live. Ligatures do not change copied text or terminal cells.
+- **Font styles** use available bold/italic faces from your selected family,
+  synthesizing missing styles. Missing glyphs use bundled and local fallback
+  fonts. Custom variable-font axes are not supported. An invalid configured
+  family is an error rather than a silent substitution.
+- **Always on Top** sets the default for new windows. The Window menu toggles
+  one current window without changing that default.
 
 ### Choose the Windows Default Shell
 
@@ -249,27 +222,13 @@ sessions. Use an absolute Windows filesystem path:
 }
 ```
 
-The final target must be an existing regular file. Links and reparse points are
-accepted when their final target is a regular file; an inspection failure is an
-error. OMXTerm uses the validated path exactly as written, starts it directly
-with an empty argument vector, and does not expand `~`, environment variables,
-URLs, or shell syntax. It does not add profiles or arguments, identify or
-preflight the shell, or separately check ACL readability or executability.
+The path must resolve to an existing regular file. Write it literally: OMXTerm
+does not expand `~` or environment variables and does not accept arguments in
+this setting. Backslashes must be escaped as `\\` in JSON.
 
-On macOS and Linux, a non-empty NUL-free `windowsShell` string is accepted
-without reading or interpreting the path, produces no warning, and has no
-effect. The operating-system-configured shell remains selected, so one
-`config.json` containing a Windows path can be shared across Supported
-Platforms. Empty and NUL-containing values are invalid everywhere.
-
-A valid reload applies the selection to every Default Shell session created
-after the reload commits, including new tabs in existing windows and tabs in
-new windows. Existing sessions keep running unchanged. A rejected reload keeps
-the complete previous configuration and shell selection; an invalid startup
-selection uses all built-in defaults. Startup `-e` still controls only the first
-tab, and later Default Shell sessions use the current `windowsShell` selection.
-Each session without an accepted process title displays the basename of the
-shell selected when that session started.
+Reload, then open a new tab to use the selected shell. Existing sessions are
+unchanged. macOS and Linux accept this setting but ignore it, continuing to use
+the account shell. You can therefore share the file between platforms.
 
 `wsl.exe` inherits OMXTerm's Windows home as its Initial Working Directory. WSL
 commonly exposes that directory as `/mnt/c/Users/<user>` rather than starting in
@@ -351,13 +310,8 @@ bare terminal control key such as `Ctrl+C`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+\`,
 but warns which action and control key conflict. Add `Shift` or choose another
 key when the control key should continue to reach the shell.
 
-`View -> Toggle Tab Bar` hides or enables the selected window's tab strip.
-The strip appears only when enabled and at least two tabs are open. Toggling with
-one tab still changes whether a later second tab reveals it. Keyboard and native
-Window menu tab navigation keep working while hidden. This memory-only state
-survives configuration reload, but new windows start enabled; there is no
-visibility setting or saved preference. Only its shortcut is configurable through
-`keybinds.toggleTabBar`. Local Image Preview activity temporarily ignores the toggle.
+`keybinds.toggleTabBar` changes the shortcut, not the bar's default visibility.
+The [tab-bar toggle](usage.md#windows-tabs-and-sessions) is temporary per window.
 
 ## Snippets
 
@@ -407,21 +361,11 @@ Next, opt one non-destructive snippet into automatic submission:
 }
 ```
 
-Every snippet body uses the same Protected Paste path as ordinary paste;
-`execute` does not bypass or replace it. The exact sequence is:
-
-1. OMXTerm delivers the body through Protected Paste.
-2. `"execute": false` (the default) appends nothing.
-3. `"execute": true` appends Enter only after body delivery. With bracketed
-   paste, Enter follows the closing bracketed-paste marker.
-
-A paste-aware receiver enables bracketed paste, so OMXTerm sends the body as one
-bracketed paste without a confirmation. When bracketed paste is unavailable, a
-body containing line breaks or control characters requires Protected Paste
-approval. After approval, OMXTerm sends that body unchanged; embedded line
-breaks or controls may execute input even when `execute` is `false`. Therefore,
-`execute: false` means only “do not append Enter,” not “this body can never
-execute.” Keep reusable bodies single-line and inspect unfamiliar content.
+Snippet bodies use [Protected Paste](usage.md#protected-paste), just like ordinary
+paste. `execute: true` appends Enter after the body and any closing bracketed-paste
+marker; `false` appends nothing. Embedded newlines or control characters can still
+execute input when bracketed paste is unavailable, even with `execute: false`.
+Use single-line bodies when you want to review a command before pressing Enter.
 
 The `snippets` array accepts at most 512 entries. Each entry has:
 
@@ -564,68 +508,30 @@ before redistributing it.
 `theme.path`; Snippets are instead reread whenever their sidebar opens. There
 is no automatic reload or file watching.
 
-A valid reload atomically applies font family, configured font-size baseline,
-line height, programming ligatures, padding, scrollback, Option Key Mode,
-Terminal Theme, close
-confirmation, logging, keybinds, and the Always-on-Top default. On Windows it
-also selects `windowsShell` for subsequently created Default Shell sessions.
-Existing Terminal Surfaces and Live Terminal Sessions remain in place and refit
-as needed. The Terminal Surface updates theme, font size, programming ligatures,
-padding and scrollback live, but an existing Surface retains its initial font
-family and line height. A persistent notice names either deferred setting and
-asks you to restart OMXTerm to apply it everywhere. New Terminal Surfaces use
-the latest fully validated values; a deferred setting clears only when its
-requested value is already active in every existing Surface. Existing windows keep their current Always-on-Top state and Window Font Zoom delta;
-Actual Size returns to the latest configured baseline.
+After a successful reload:
+
+| Applies to            | Settings                                                      |
+| --------------------- | ------------------------------------------------------------- |
+| Existing and new tabs | Theme, font size, ligatures, padding, scrollback, Option keys |
+| App actions           | Close confirmation, logging, keybinds                         |
+| New tabs              | Font family, line height, Windows shell                       |
+| New windows           | Always-on-Top default                                         |
+
+Existing sessions keep running. A notice explains when font family or line
+height needs a restart to apply everywhere. Existing windows retain their zoom
+delta, tab-bar choice, and Always-on-Top state. Actual Size returns zoom to the
+latest configured baseline.
 
 A rejected reload applies nothing and preserves the complete last valid
 in-memory configuration. Removing `config.json` and reloading is a valid way to
 select all built-in defaults without creating another file.
 
-## Local files, diagnostics, and privacy
+## Sharing configuration and diagnostics
 
-Treat `config.json`, `snippets.json`, and external Terminal Theme files as local
-user files. OMXTerm reads them from the paths described above and never creates,
-rewrites, repairs, migrates, or uploads them. They are ordinary files protected
-by your operating-system account and filesystem permissions. Avoid putting
-credentials, private hostnames, or sensitive commands in Snippets, and inspect
-files before sharing them or screenshots of them.
+Keep credentials out of snippets. Commands run with your ordinary account's
+permissions, just as if you typed them. Review example commands before using them.
 
-Actionable validation errors are deliberately local and specific.
-Configuration and theme failures appear on the persistent in-app error surface
-and stderr with the relevant configured or resolved path. A Snippet failure
-instead appears in the Snippets Sidebar with the resolved file path and field.
-Those paths can reveal account or directory names, so redact them before
-publishing a screenshot or copied diagnostic.
-
-`View -> Toggle Developer Tools` opens Electron's local Developer Tools for the
-selected Terminal Window. Unlike bounded Operational Events, Developer Tools
-can expose private Terminal Payload and runtime state through inspectors,
-console output, memory snapshots, traces, profiles, and screenshots. Review and
-redact every diagnostic before sharing it. The action is menu-only, does not
-open automatically, and does not enable remote debugging.
-
-Operational Events are separate bounded JSONL logs under
-`$XDG_STATE_HOME/omxterm/logs`, falling back to
-`~/.local/state/omxterm/logs`. On Windows, the fallback is
-`%USERPROFILE%\.local\state\omxterm\logs`. The current file is
-`omxterm.jsonl`; rotation keeps only `omxterm.previous.jsonl`, and each is
-capped at 5 MiB. `logLevel` changes verbosity, not the privacy boundary.
-
-No log level records Terminal Payload, PTY input or output, clipboard data,
-environment or configuration contents, font families, font paths, font bytes,
-Snippet bodies, executable names,
-command arguments, commands, Terminal Titles, secrets, or transcripts. User
-Configuration Reload events contain only safe outcomes, bounded duration, and a
-normalized failure category—not paths, validation details, or file contents.
-Terminal Payload remains opaque transport between the Terminal Surface and the
-processes running in a Live Terminal Session; OMXTerm does not turn it into
-application history or diagnostics.
-
-OMXTerm itself makes no network requests for analytics, telemetry, crash
-reporting, updates, or remote log delivery. Shells and other child processes in
-a Live Terminal Session are ordinary local processes: they retain the network
-and filesystem access allowed by your operating system and user account.
-Running a command from a Snippet can therefore read files or contact a network
-just as typing that command can. Child-process activity is not OMXTerm
-telemetry; it runs with the same permissions as your other terminal commands.
+Validation errors identify the exact file and field locally; redact account
+names, paths, and sensitive contents before sharing screenshots or files.
+See [Local diagnostics](usage.md#local-diagnostics) for log locations and
+Developer Tools guidance.

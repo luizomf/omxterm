@@ -1,14 +1,50 @@
-# Apple Silicon macOS quick start
+# macOS: set up fonts, colors, and snippets
 
-[Install OMXTerm](../../README.md#macos) first; check the unsigned/ad-hoc-sealed app's Gatekeeper instructions there. OMXTerm uses your account's configured shell. The main optional shell example below is for the default macOS Zsh; Bash is a separate choice.
+[Install OMXTerm](../../README.md#macos) first. This optional tutorial gives you
+an editable theme and seven example snippets while keeping the bundled fonts
+and default shortcuts. It does not change your account shell.
 
-## Get the files
+## 1. Get the examples
 
-Sign in to GitHub with access to this currently private repository, select the desired branch, then choose **Code → Download ZIP**. Extract the archive and locate `docs/quick-start/files/macos/`. Git is not needed. Do not assume an unauthenticated raw URL works. Inspect the complete [config.json](files/macos/config.json), [snippets.json](files/macos/snippets.json), and [themes/omtheme.json](files/macos/themes/omtheme.json) before copying.
+In the repository on GitHub, select **main**, then choose **Code → Download ZIP**
+and extract it. Sign in if GitHub asks. Open `docs/quick-start/files/macos/` in
+the extracted folder. These examples are for OMXTerm 0.14.0 or newer.
 
-## Back up and apply OMXTerm files
+You need three files:
 
-In Zsh or Bash, set `example` to the **actual extracted directory**, not the illustrative path below. Each existing regular file gets copied to a unique backup directory. Symlinks and directories at destinations are refused; if your config directory is a symlink, resolve it manually rather than writing through it.
+- [config.json](files/macos/config.json) — settings and shortcuts;
+- [snippets.json](files/macos/snippets.json) — example commands;
+- [themes/omtheme.json](files/macos/themes/omtheme.json) — editable colors.
+
+## 2. Copy the files
+
+In Zsh or Bash, run this to create and open your configuration folder:
+
+```sh
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omxterm"
+mkdir -p "$config_dir/themes" && open "$config_dir"
+```
+
+In Finder, copy the two JSON files into that folder and `omtheme.json` into its
+`themes` subfolder. **Back up any existing destination files before replacing
+them.** If you already have a configuration you like, merge only the settings
+you want instead of replacing it.
+
+Your files should look like this (a non-empty `XDG_CONFIG_HOME` replaces `~/.config`):
+
+```text
+~/.config/omxterm/
+├── config.json
+├── snippets.json
+└── themes/
+    └── omtheme.json
+```
+
+<details>
+<summary>Prefer copying in the terminal? Use this backup-aware block.</summary>
+
+Set `example` to the extracted example folder. Run in Zsh or Bash. It backs up
+existing files and refuses symlink destinations rather than overwriting them.
 
 ```sh
 example="/path/to/extracted/omxterm/docs/quick-start/files/macos"
@@ -33,17 +69,51 @@ apply_quick_start() {
 apply_quick_start
 ```
 
-On failure, stop and check what was copied before retrying. Restore existing files individually from `$backup` to the matching path under `$config_dir` (e.g. `cp -p "$backup/config.json" "$config_dir/config.json"`); remove only newly installed files without a backup after inspecting them. Do not delete your entire configuration directory. A non-empty `XDG_CONFIG_HOME` overrides `~/.config`.
+Keep the printed backup path. If copying fails, check the copied files before
+retrying. To undo, restore each original to its matching path, for example
+`cp -p "$backup/config.json" "$config_dir/config.json"`. Remove only files newly
+added by this tutorial, not the whole configuration folder.
 
-This explicit preference set retains bundled fonts by omitting `font.family`, uses the platform's full default shortcut map, and connects an editable copy of the [standard palette](../omtheme.json) via `./themes/omtheme.json`. Top padding is **0 px** (the runtime default); other sides are 8 px. Select **View → Reload User Configuration** (`Cmd+Shift+,`) after copying. Fix any reported validation error and reload again.
+</details>
 
-Open **View → Toggle Snippets** (`Cmd+Shift+S`), click “Open current folder,” inspect the inserted ` open .`, and press Enter. All seven JSON Snippets have `execute: false`; none automatically appends Enter. Leading spaces opt out of shell history when the optional history preference is enabled. `open`, `ifconfig`, `nslookup`, and `pbcopy` are macOS commands; the Git example requires Git. The palette command works in Zsh or Bash. Change network targets and commands to fit your needs. [Snippet details](../configuration.md#snippets) cover input safety and sidebar refresh.
+## 3. Reload and try it
 
-## Optional Zsh, Bash, Readline, and Vim preferences
+1. Choose **View → Reload User Configuration** (`Cmd+Shift+,`). If an error
+   appears, correct the named file or field and reload.
+2. Open **View → Toggle Snippets** (`Cmd+Shift+S`).
+3. Click **Open current folder**, review the inserted ` open .`, and press Enter.
+   Finder should open the shell's current folder.
 
-The Vim preset uses the `slate` syntax colors over the Terminal Theme background, two-space indentation without automatic indentation, no mouse capture, trailing-whitespace highlighting, and cursor-position restoration. Space is the leader: `Space w` saves, `Space h` clears search highlighting, and `Tab`/`Shift+Tab` switch buffers. Clipboard integration depends on the installed Vim build and desktop; `clipboard=unnamed` does not add clipboard support to a build that lacks it.
+All seven example snippets have `execute: false`: OMXTerm does not append Enter.
+The examples use macOS tools such as `open`, `ifconfig`, `nslookup`, and `pbcopy`;
+the Git command requires Git. The palette snippet uses Zsh/Bash syntax.
 
-These files are **not required** for OMXTerm: [zshrc](files/macos/zshrc), [bashrc](files/macos/bashrc), [bash_profile](files/macos/bash_profile), [inputrc](files/macos/inputrc), [vimrc](files/macos/vimrc). Review your existing dotfiles first: replacing them loses custom prompt, aliases, plugins, or initialization. Copy only a chosen subset. This separate step creates a fresh dotfile backup each time, so retrying it cannot overwrite the earlier originals. Set `example` again if in a new shell:
+To see a visible setting change, edit `font.size` in `config.json` from `16` to
+`18` and reload. To customize colors, edit a `#RRGGBB` value in
+`themes/omtheme.json` and reload. Restoring `16` or your backed-up files reverses
+the change. More options: [Configuration](../configuration.md).
+
+## Optional shell and Vim preferences
+
+OMXTerm does not require dotfiles. The examples
+[zshrc](files/macos/zshrc), [bashrc](files/macos/bashrc),
+[bash_profile](files/macos/bash_profile), [inputrc](files/macos/inputrc), and
+[vimrc](files/macos/vimrc) are separate shell/editor preferences. Prefer copying
+individual settings into your existing files.
+
+They enable vi-style command-line editing (`Esc` or `jj` leaves insert mode),
+quiet bells, and history that skips leading-space commands. Vim uses the `slate`
+colors, two-space indentation, and `Space w` to save. When started without file
+arguments, it saves/loads a session per directory under `~/.vim/sessions/`.
+Those session files contain executable Vim commands and paths; do not load
+untrusted sessions. Clipboard support depends on your Vim build.
+
+<details>
+<summary>Replace selected dotfiles with backups (optional)</summary>
+
+This replaces the chosen files, including their existing prompt, aliases, and
+plugins. Set `example` as above. If you use `ZDOTDIR` or `INPUTRC`, adapt the
+destinations instead of assuming your home directory.
 
 ```sh
 copy_optional_dotfiles() {
@@ -60,17 +130,9 @@ copy_optional_dotfiles() {
 copy_optional_dotfiles
 ```
 
-For Bash, use `bashrc bash_profile inputrc vimrc` in place of `zshrc vimrc` (omit anything you don't want). If `INPUTRC` or `ZDOTDIR` is set, adapt the destination; do not overwrite a different location assuming these defaults. Restore a backed-up dotfile with e.g. `cp -p "$dot_backup/.zshrc" "$HOME/.zshrc"`; remove only a newly installed file with no backup after checking it. Start a new shell or Vim session to see changes.
+For Bash, choose `bashrc bash_profile inputrc vimrc` instead. Start a new shell
+or Vim to apply its settings. To restore an original, use, for example,
+`cp -p "$dot_backup/.zshrc" "$HOME/.zshrc"`. Keep the earliest backup if you
+repeat this step; remove only newly added files without originals.
 
-Zsh's `bindkey -v` and Bash's `set -o vi` enable vi command-line editing: `Esc` or `jj` exits insert mode. Both skip history entries with an initial space; Zsh disables its bell, while `.inputrc` disables Bash/Readline's bell. The Bash aliases use native `/bin/ls -G` and `/usr/bin/grep --color=auto`, and Bash completion is used only where available. Vim maps `jj`, disables its own bell, and auto-saves/loads sessions **only when invoked without file arguments**, by working directory under `~/.vim/sessions/`. These session files are executable Vim commands that may record file paths: keep them private, never source untrusted sessions, or remove the session block if unwanted.
-
-### Optional Homebrew Bash as the account shell
-
-If Homebrew is already installed and you prefer Bash, install it with `brew install bash`. Check that `/opt/homebrew/bin/bash` exists, then **only if you intend to change your account shell**, register it in `/etc/shells` (requires sudo) and select it:
-
-```sh
-grep -qxF /opt/homebrew/bin/bash /etc/shells || echo /opt/homebrew/bin/bash | sudo tee -a /etc/shells
-chsh -s /opt/homebrew/bin/bash
-```
-
-Log out and back in. OMXTerm launches that account shell as an interactive login shell; optional `.bash_profile` sources `.bashrc`, while `.inputrc` configures Readline rather than Zsh. To try it without changing the account: `/opt/homebrew/bin/bash --login` (then `exit`). To switch back to macOS Zsh later: `chsh -s /bin/zsh`, then log out/back in. Changing the account shell is separate from installing the OMXTerm examples and is never done automatically. More settings: [User Configuration reference](../configuration.md).
+</details>

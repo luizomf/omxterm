@@ -45,13 +45,11 @@ reusing the macOS inset below Linux's existing title and menu produced an empty
 behavior. The Electron main process therefore owns the platform choice and
 provides zero inset on Linux while preserving the settled macOS chrome.
 
-ADR 0007 did not record its rationale. A design interview with the maintainer on
-2026-07-19 reconstructed the original tradeoff: excluding tabs protected the
-first-release scope and the simplicity of one window, renderer, and session,
-while tmux was expected to cover multiplexing. Daily use of v0.1.0 and v0.2.0
-showed that this assumption was wrong; missing tabs became the most significant
-gap. Because the restriction served release scope rather than product identity,
-this ADR supersedes it explicitly.
+Excluding tabs protected the first-release scope and the simplicity of one
+window, renderer, and session, with tmux expected to cover multiplexing. Use of
+v0.1.0 and v0.2.0 showed that tmux did not replace native tabs. The restriction
+served release scope rather than product identity, so this ADR supersedes
+ADR 0007 while preserving its session-ownership guarantee.
 
 The ownership guarantee from ADR 0007 survives: each Live Terminal Session has
 exactly one lifetime owner, now a Terminal Tab. Sessions are ephemeral, and tmux
