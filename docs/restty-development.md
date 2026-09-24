@@ -305,7 +305,7 @@ boundary used by the host integration; it is not a public API or renderer
 registry.
 
 After preparation, the corrected runtime has SHA-256
-`bd1907b75d7517684c128ec4ba6fbc8786e0a5f2960f87b7a8c5f28e09420880`,
+`e29dbd7dd4bf559d186cda45629ab9727a43b37dee917eb0137d61e238c1d638`,
 embedded-core chunk SHA-256
 `039abfec307ab03015a2ae70b3583e07fcc9e5a70319de1ca055d6168f45af1b`,
 and event declarations SHA-256
@@ -315,7 +315,9 @@ pressure and late completion, makes font-load failure reject initialization, dis
 Restty's direct browser clipboard and link-opening callbacks, preserves native
 Option Unicode/composition versus configured physical-side Alt input, defers
 bare DOM dead keys to composition even when extended keyboard reporting is
-active, leaves all renderer-received Ctrl+C/Ctrl+V events as PTY input, gives DA2 its own
+active, delivers non-composing Space through the existing key encoder instead
+of waiting for native text insertion, leaves all renderer-received
+Ctrl+C/Ctrl+V events as PTY input, gives DA2 its own
 deterministic response, bounds unfinished OSC/CSI control bodies with
 whole-control recovery, and exposes raw paste
 origin, current bracketed mode, selection/Select All, parsed OSC and OSC
@@ -418,6 +420,18 @@ keyboard regression similarly uses synthetic DOM dead-key/composition events
 through installed Restty and captures Surface Adapter writes under legacy,
 modifyOtherKeys and Kitty flags 1, 2, 4 and 1|2|4; it does not establish an
 untested native keyboard layout's event sequence.
+
+The Space regression replays a captured macOS failure: five separate Space
+press/release pairs reached the DOM, but only the first generated `beforeinput`.
+The original runtime delivered one space; the corrected runtime delivers all
+five through the existing key encoder. The test respects browser cancellation
+and covers normal text events without duplicates, held repeat, composition,
+modifiers, other editable controls, keyboard reporting and reset transitions.
+Synthetic reset tests did not reproduce the native event loss itself: reported
+`modifyOtherKeys` and `pipes.sh`/RIS triggers remain unisolated. The correction
+removes the dependency on that missing text event, not a claimed repair of an
+identified macOS substitution mechanism. It changes no user preference or
+protocol negotiation and adds no timer or text-replacement filtering.
 
 The complete native package commands run this host/runtime coverage on macOS,
 Linux and Windows ARM64. Native glyph rasterization and platform security UI

@@ -2,6 +2,7 @@ import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-te
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import type { OptionKeyMode } from "../../src/shared/user-configuration";
+import { exerciseResttySpaceInput } from "./restty-space-input";
 
 interface ResttyFixtureResult {
   readonly backend?: string;
@@ -15,6 +16,7 @@ interface ResttyFixtureResult {
   readonly startupReplies?: readonly string[];
   readonly optionInput?: readonly string[];
   readonly compositionInput?: Readonly<Record<string, readonly string[]>>;
+  readonly spaceInput?: Readonly<Record<string, readonly string[]>>;
   readonly resize?: { readonly cols: number; readonly rows: number };
 }
 
@@ -263,6 +265,12 @@ void mountResttyTerminalSurface(
         );
     });
 
+    const spaceInput = exerciseResttySpaceInput(
+      input,
+      (data) => handlers?.onOutput(data),
+      captureInput,
+    );
+
     terminalInput.length = 0;
     handlers?.onOutput(
       "OMXTerm Restty Olá\r\n\u001b]52;c;dW5zYWZl\u0007\u001b]52;c;?\u0007",
@@ -282,6 +290,7 @@ void mountResttyTerminalSurface(
       startupReplies,
       optionInput,
       compositionInput,
+      spaceInput,
       ...(resize ? { resize } : {}),
     };
   })

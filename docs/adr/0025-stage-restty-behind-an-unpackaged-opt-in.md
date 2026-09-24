@@ -191,8 +191,13 @@ are left to the browser's native Unicode and composition path, while configured
 left, right or both keys produce terminal Alt input. Bare DOM dead keys also
 remain on that composition path under legacy, modifyOtherKeys and negotiated
 Kitty keyboard reporting instead of being encoded before the composition
-commit. The dependency runtime tracks the physical Option side without
-recording key contents. DA1, DA2,
+commit. Non-composing Space uses the same existing key encoder as held repeat
+and control keys rather than waiting for native text insertion: macOS can
+continue delivering Space press/release events while omitting subsequent text
+events. Composition and native Option text still retain their native path;
+keyboard reporting remains owned by the encoder, with no timer, second shortcut
+system or global protocol change. The dependency runtime tracks the physical
+Option side without recording key contents. DA1, DA2,
 cursor-position and cell-size replies remain owned once by Restty's parsed
 output seam, including split controls; DA2 no longer falls through the generic
 DA1 response. Mouse button, motion and wheel reports remain in Restty's existing

@@ -29,6 +29,7 @@ interface FixtureResult {
     readonly terminalReplies?: number;
     readonly optionInput?: readonly string[];
     readonly compositionInput?: Readonly<Record<string, readonly string[]>>;
+    readonly spaceInput?: Readonly<Record<string, readonly string[]>>;
     readonly resize?: { readonly cols: number; readonly rows: number };
   };
   readonly unavailable: {
@@ -107,6 +108,27 @@ describe("Restty under production Electron policy", () => {
                 "\u001b∫",
                 "\u001bÅ",
               ],
+      });
+      const fiveSpaces = [" ", " ", " ", " ", " "];
+      expect(result?.available.spaceInput).toEqual({
+        legacy: fiveSpaces,
+        modifyOff: fiveSpaces,
+        modifyOn: fiveSpaces,
+        kitty124: fiveSpaces,
+        ris: fiveSpaces,
+        softReset: fiveSpaces,
+        xtermReset: fiveSpaces,
+        tmuxReset: fiveSpaces,
+        normal: fiveSpaces,
+        held: fiveSpaces,
+        shift: [" "],
+        ...(process.platform === "darwin"
+          ? { control: [], nativeOption: [" "] }
+          : { control: ["\u0000"], nativeOption: ["\u001b "] }),
+        composition: ["漢"],
+        composingEvent: [],
+        otherInput: [],
+        kittyAll: ["\u001b[32;1:1u", "\u001b[32;1:2u", "\u001b[32;1:3u"],
       });
       const compositionInput = result?.available.compositionInput;
       expect(compositionInput).toBeDefined();
