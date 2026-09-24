@@ -27,20 +27,22 @@ Theme or User Configuration in your browser. It is an optional, separate editor,
 not a terminal session or a dependency of the desktop application. You can still
 [edit the JSON by hand](#quick-start-use-the-bundled-defaults).
 
-1. **Back up your current files.** In Studio, use **Import config** to preserve
-   your existing preferences and **Import theme** to load your palette. These
-   imports are independent: importing `config.json` never opens its `theme.path`.
-   You can also start a theme from the original `omtheme` or `omtheme-darkice`
-   preset.
-2. **Edit and preview.** Adjust colors in **Theme** while comparing fictional
+1. **Back up your current files and select the target.** In Studio, open
+   **Configuration → Target platform** and choose the system that will use the
+   files. Do this before importing configuration: imports immediately check
+   shortcut conflicts against the selected platform.
+2. **Import your files.** Use **Import config** to preserve your existing
+   preferences and **Import theme** to load your palette. These imports are
+   independent: importing `config.json` never opens its `theme.path`. You can
+   also start a theme from the original `omtheme` or `omtheme-darkice` preset.
+3. **Edit and preview.** Adjust colors in **Theme** while comparing fictional
    terminal text, fastfetch, htop, tmux, tabs, and snippets. In **Configuration**,
-   check **Target platform** for the machine that will use the files, then adjust
-   supported settings. **Keyboard shortcuts** lets you filter actions, type
-   combinations, restore defaults, and check conflicts for that target.
-3. **Apply pending edits before downloading.** Use **Apply shortcuts** or
+   adjust supported settings. **Keyboard shortcuts** lets you filter actions,
+   type combinations, restore defaults, and check conflicts for that target.
+4. **Apply pending edits before downloading.** Use **Apply shortcuts** or
    **Apply JSON** for those editors; unapplied text is not included in downloads.
    Complete any invalid theme name or hex value before exporting a theme.
-4. **Export and review the files.** Choose the workflow you need:
+5. **Export and review the files.** Choose the workflow you need:
    - **Theme JSON** downloads only the palette. Save it in a `themes` directory
      beside your existing `config.json`, and update only `theme.path` to select
      that file; keep your other preferences. The [manual theme example](#terminal-themes)
@@ -50,12 +52,15 @@ not a terminal session or a dependency of the desktop application. You can still
      `./themes/theme.json`. After reviewing both files and backing up anything
      they would replace, copy them together into your
      [configuration directory](#create-the-configuration-directory), retaining
-     that layout. Import your existing configuration in step 1 before using this
+     that layout. Import your existing configuration in step 2 before using this
      option to preserve its settings.
    - **Config JSON** downloads only the applied configuration and leaves its
      existing `theme.path` unchanged; it does not automatically point to the
-     palette being edited.
-5. **Reload in OMXTerm.** Choose `View -> Reload User Configuration`. Theme colors
+     palette being edited. Review the export and, after backing up the existing
+     file, save it as `config.json` in your
+     [configuration directory](#create-the-configuration-directory) before
+     reloading.
+6. **Reload in OMXTerm.** Choose `View -> Reload User Configuration`. Theme colors
    apply live; font family and line height apply to new tabs, while existing
    tabs need a restart. See the [reload reference](#reloading-user-configuration)
    for the other settings.
