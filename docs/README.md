@@ -8,6 +8,7 @@
 | Learn the controls or solve a common problem  | [Everyday use](usage.md)                                                                          |
 | Set up a complete example configuration       | [macOS](quick-start/macos.md) · [Linux](quick-start/linux.md) · [Windows](quick-start/windows.md) |
 | Change a setting, shortcut, theme, or snippet | [Configuration](configuration.md)                                                                 |
+| Edit and preview a theme in the browser       | [OMXTerm Studio workflow](configuration.md#edit-visually-with-omxterm-studio)                     |
 | Report a bug or contribute a change           | [Contributing](../CONTRIBUTING.md)                                                                |
 | Report a vulnerability privately              | [Security policy](../SECURITY.md)                                                                 |
 

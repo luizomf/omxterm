@@ -163,6 +163,10 @@ No configuration is required. When you want more:
   [Linux](docs/quick-start/linux.md), [Windows](docs/quick-start/windows.md).
 - [Configuration reference](docs/configuration.md) — individual settings, themes,
   keybinds, and snippets.
+- [OMXTerm Studio](https://luizomf.github.io/omxterm-studio/) — preview and edit
+  themes, configuration, and keyboard shortcuts in your browser, then
+  [apply the exported files](docs/configuration.md#edit-visually-with-omxterm-studio)
+  in OMXTerm.
 
 OMXTerm focuses on local terminal sessions. Run SSH clients and coding agents as
 ordinary CLI tools inside it. Built-in splits, session restoration, AI assistance,

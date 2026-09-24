@@ -3,8 +3,9 @@
 OMXTerm works without configuration files. Add them only when you want to
 change a default, create Snippets, or use an external Terminal Theme.
 
-You edit strict JSON files; OMXTerm reads them without rewriting them.
+Settings live in strict JSON files; OMXTerm reads them without rewriting them.
 
+- [Edit visually with OMXTerm Studio](#edit-visually-with-omxterm-studio)
 - [Create a configuration](#quick-start-use-the-bundled-defaults)
 - [Change fonts and spacing](#add-one-display-change)
 - [All settings and defaults](#configuration-reference)
@@ -18,6 +19,57 @@ Prefer a complete example? Follow the [macOS](quick-start/macos.md),
 [Linux](quick-start/linux.md), or [Windows](quick-start/windows.md) tutorial.
 The [product contract](spec.md#configuration-and-local-state) holds the complete
 technical rules; this guide covers setup and reference.
+
+## Edit visually with OMXTerm Studio
+
+[Open OMXTerm Studio](https://luizomf.github.io/omxterm-studio/) to edit a Terminal
+Theme or User Configuration in your browser. It is an optional, separate editor,
+not a terminal session or a dependency of the desktop application. You can still
+[edit the JSON by hand](#quick-start-use-the-bundled-defaults).
+
+1. **Back up your current files.** In Studio, use **Import config** to preserve
+   your existing preferences and **Import theme** to load your palette. These
+   imports are independent: importing `config.json` never opens its `theme.path`.
+   You can also start a theme from the original `omtheme` or `omtheme-darkice`
+   preset.
+2. **Edit and preview.** Adjust colors in **Theme** while comparing fictional
+   terminal text, fastfetch, htop, tmux, tabs, and snippets. In **Configuration**,
+   check **Target platform** for the machine that will use the files, then adjust
+   supported settings. **Keyboard shortcuts** lets you filter actions, type
+   combinations, restore defaults, and check conflicts for that target.
+3. **Apply pending edits before downloading.** Use **Apply shortcuts** or
+   **Apply JSON** for those editors; unapplied text is not included in downloads.
+   Complete any invalid theme name or hex value before exporting a theme.
+4. **Export and review the files.** Choose the workflow you need:
+   - **Theme JSON** downloads only the palette. Save it in a `themes` directory
+     beside your existing `config.json`, and update only `theme.path` to select
+     that file; keep your other preferences. The [manual theme example](#terminal-themes)
+     shows the directory and relative-path setup.
+   - **Download edited pair** produces a ZIP containing `config.json` and
+     `themes/theme.json`. Its configuration already points to
+     `./themes/theme.json`. After reviewing both files and backing up anything
+     they would replace, copy them together into your
+     [configuration directory](#create-the-configuration-directory), retaining
+     that layout. Import your existing configuration in step 1 before using this
+     option to preserve its settings.
+   - **Config JSON** downloads only the applied configuration and leaves its
+     existing `theme.path` unchanged; it does not automatically point to the
+     palette being edited.
+5. **Reload in OMXTerm.** Choose `View -> Reload User Configuration`. Theme colors
+   apply live; font family and line height apply to new tabs, while existing
+   tabs need a restart. See the [reload reference](#reloading-user-configuration)
+   for the other settings.
+
+Imported files are not uploaded; editing and exports run locally in the browser.
+**Remember this draft on this device** is optional and stores only validated,
+applied documents. Apply and download unfinished work before closing the page.
+Studio never installs files, reloads OMXTerm, or executes the preview's commands.
+
+The preview uses DOM/CSS, not Restty: fonts, dim text, cell spacing, ligatures,
+and native Window Chrome can differ. Browser font names use a monospace fallback;
+Studio cannot certify installed fonts, filesystem paths, shell executables, or
+operating-system-reserved shortcuts. OMXTerm still performs its own complete
+validation when you load the exported files.
 
 ## Quick start: use the bundled defaults
 
@@ -239,7 +291,9 @@ for WSL.
 
 `keybinds` remaps application-menu shortcuts. The keys are a fixed action
 vocabulary; values are [Electron accelerator](https://www.electronjs.org/docs/latest/tutorial/keyboard-shortcuts#accelerators)
-strings. Omitted actions keep their defaults:
+strings. For a visual editor with per-action restoration and conflict feedback,
+use [OMXTerm Studio](#edit-visually-with-omxterm-studio) → **Configuration → Keyboard
+shortcuts**. Omitted actions keep their defaults:
 
 | Action                      | macOS default              | Linux/Windows default |
 | --------------------------- | -------------------------- | --------------------- |
@@ -386,6 +440,9 @@ continues working. Fix the file and reopen the sidebar.
 A Terminal Theme is a complete OMXTerm palette in another strict JSON file. You
 do not need an external theme: omitting `theme` from `config.json` always uses
 the bundled canonical `omtheme`.
+
+For a visual edit-and-preview workflow, use [OMXTerm Studio](#edit-visually-with-omxterm-studio).
+The following steps show how to create and select the same JSON format by hand.
 
 To make your own theme, first create a `themes` directory beside
 `config.json`.
