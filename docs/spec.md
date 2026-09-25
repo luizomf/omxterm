@@ -577,8 +577,18 @@ OMXTerm reads an optional configuration from
 `$XDG_CONFIG_HOME/omxterm/config.json`, falling back to
 `~/.config/omxterm/config.json`. The same XDG-style resolution applies on
 every Supported Platform, including Windows, where the fallback is
-`%USERPROFILE%\.config\omxterm\config.json` (ADR 0002). Absence uses defaults
-and does not create a file. A present file must contain `"version": 1` and only supported keys:
+`%USERPROFILE%\.config\omxterm\config.json` (ADR 0002). At application startup, an existing `config.json` filesystem entry (including
+an invalid file, directory, or dangling symlink) skips the entire initial kit
+without inspecting snippets or themes. Otherwise, OMXTerm creates the directory,
+`config.json` with common built-in defaults and `theme.path` set to
+`themes/omtheme.json`, one non-executing example in `snippets.json`, and a copy
+of the bundled theme at `themes/omtheme.json`. Existing sibling files are never
+replaced. Files are published complete without overwriting concurrent creations;
+configuration is published last. Shell, font family and shortcuts retain their
+implicit platform defaults. Creation failure produces a non-blocking notice and
+normal configuration loading continues. This runs at application opening, not
+package installation or manual reload. The copied theme belongs to the user and
+does not track subsequent bundled palette changes. A present file must contain `"version": 1` and only supported keys:
 
 - `confirmClose`;
 - `logLevel`;
@@ -653,13 +663,13 @@ can shadow these keys unintentionally.
 Creating new actions, system-global shortcuts, chords or sequences, and
 per-platform alternate maps are unsupported.
 
-An optional read-only `snippets.json` next to `config.json` defines the
+An optional user-owned `snippets.json` next to `config.json` defines the
 Snippets Sidebar contents. The file is strict JSON containing exactly
 `"version": 1` and a `snippets` array of at most 512 entries; each entry has a
 non-empty `name` (the searchable label, at most 128 UTF-16 code units), a
 non-empty `body` (the text to inject, at most 65,536 UTF-16 code units), an
 optional `description` (at most 512 UTF-16 code units), and an optional boolean
-`execute` defaulting to `false`. OMXTerm never creates, rewrites, or migrates
+`execute` defaulting to `false`. Apart from initial kit creation, OMXTerm never creates, rewrites, or migrates
 the file; absence is the clean empty state, and the file is reread each time
 the sidebar opens. Injection uses the same Protected Paste path as a normal
 paste. With bracketed paste disabled, a multiline or control-character body

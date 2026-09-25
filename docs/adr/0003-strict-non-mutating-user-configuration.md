@@ -16,5 +16,20 @@ validation boundary. A running application already has a valid in-memory
 configuration, so a rejected reload keeps that configuration active and reports
 the new problem. A valid reload replaces it atomically. This runtime state is not
 a persisted cache. Removing `config.json` selects the valid all-defaults state
-on reload, just as it does at startup. OMXTerm still does not write, repair, or
-partially apply the document.
+on reload, just as it does at startup. Reload still does not write, repair, or partially apply the document.
+
+## Initial configuration kit amendment
+
+Application startup may seed absent user files with built-in defaults. An
+existing `config.json` entry opts out of the entire kit, even if invalid or a
+dangling symlink. Otherwise startup creates a default configuration, a
+non-executing snippet example and `themes/omtheme.json`, preserving all existing
+files. Complete files are published without replacement, with configuration
+last. Creation errors are non-blocking notices; normal loading continues.
+Manual reload never seeds files. User documents are never repaired or migrated.
+
+This happens on first opening rather than installation: DMG copying and direct
+AppImage use offer no common installer execution point. Runtime creation uses
+the existing XDG resolution under the actual user's account on all platforms.
+The external theme copy becomes user-owned and is not upgraded automatically.
+No theme discovery UI or automatic reload is introduced.

@@ -6,7 +6,7 @@ versions. A release number has the form `MAJOR.MINOR.PATCH`, and its Git tag add
 
 Two identities may be visible at the same time. **0.14.0** is the latest
 published release recorded in this repository, while `main` carries
-**0.14.1-dev.0** for ongoing development. The `-dev.0` value names a development
+**0.15.0-dev.0** for ongoing development. The `-dev.0` value names a development
 baseline, not a newer published release. See the
 [0.14.0 release record](releases/0.14.0.md) for its immutable exact artifacts.
 

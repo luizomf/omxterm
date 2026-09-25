@@ -1,9 +1,32 @@
 # User configuration
 
-OMXTerm works without configuration files. Add them only when you want to
-change a default, create Snippets, or use an external Terminal Theme.
+On first opening, OMXTerm creates a small starter kit in
+`$XDG_CONFIG_HOME/omxterm`, or `~/.config/omxterm` when unset or empty
+(`%USERPROFILE%\\.config\\omxterm` on Windows):
 
-Settings live in strict JSON files; OMXTerm reads them without rewriting them.
+```text
+omxterm/
+├── config.json
+├── snippets.json
+└── themes/
+    └── omtheme.json
+```
+
+The configuration uses OMXTerm defaults and selects `themes/omtheme.json`.
+The snippet is a greeting command with `execute: false`; insertion does not
+append Enter. No external font, Git Bash, or personal dotfiles are required.
+Edit these files and use `View -> Reload User Configuration` for settings and
+theme changes; reopen the sidebar to reread snippets.
+
+**If `config.json` already exists, the entire kit is skipped**, even if that
+configuration is invalid. Existing snippets and themes are never overwritten.
+The theme copy is yours: updates do not replace it. Creation happens when the
+app opens, not when copying/installing the package, and never during reload.
+A creation failure shows a non-blocking notice; the terminal still opens using
+normal configuration loading and its built-in fallbacks.
+
+Settings live in strict JSON files; after initial creation OMXTerm reads them
+without rewriting them.
 
 - [Edit visually with OMXTerm Studio](#edit-visually-with-omxterm-studio)
 - [Create a configuration](#quick-start-use-the-bundled-defaults)
