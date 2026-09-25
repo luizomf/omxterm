@@ -14,7 +14,8 @@ its existing pinned SHA-256 before use. The integration test independently
 checks these hashes and exact corrected output, idempotency, and rejection of
 modified input without rewriting it. The corrected runtime is also an entry. Later corrections prepend reverse
 deltas to retain the preceding final input, including the pre-Space-routing
-runtime; each reconstructed digest is still checked independently.
+runtime and the subsequent native dead-key Space correction; each reconstructed
+digest is still checked independently.
 
 Baseline characterization found six recognized inputs unable to reach the final
 hash: `priorCorrected`, `priorAppearance`, `priorBoldColor`, `priorFamilyFilter`,

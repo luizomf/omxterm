@@ -30,6 +30,7 @@ interface FixtureResult {
     readonly optionInput?: readonly string[];
     readonly compositionInput?: Readonly<Record<string, readonly string[]>>;
     readonly spaceInput?: Readonly<Record<string, readonly string[]>>;
+    readonly deadKeySpaceInput?: Readonly<Record<string, readonly string[]>>;
     readonly resize?: { readonly cols: number; readonly rows: number };
   };
   readonly unavailable: {
@@ -44,6 +45,40 @@ interface FixtureResult {
     readonly sandbox: boolean;
     readonly webSecurity: boolean;
   };
+}
+
+function expectDeadKeySpaceInput(result: FixtureResult | undefined): void {
+  const kittySpace = ["\u001b[32;1:1u", "\u001b[32;1:3u"];
+  const altSpace = process.platform === "darwin" ? [" "] : ["\u001b "];
+  const kittyAltSpace =
+    process.platform === "darwin"
+      ? [" "]
+      : ["\u001b[32;3:1u", "\u001b[32;3:3u"];
+  expect(result?.available.deadKeySpaceInput).toEqual({
+    legacy: ["'", '"', "`", "~"],
+    legacyFollowingSpace: [" "],
+    legacyAlt: altSpace,
+    modifyOtherKeys: ["'", '"', "`", "~"],
+    modifyOtherKeysFollowingSpace: [" "],
+    modifyOtherKeysAlt: altSpace,
+    kitty124: ["'", '"', "`", "~"],
+    kitty124FollowingSpace: [" "],
+    kitty124Alt: kittyAltSpace,
+    kittyAll: ["'", '"', "`", "~"],
+    kittyAllFollowingSpace: kittySpace,
+    kittyAllAlt: kittyAltSpace,
+    modifier: ["'"],
+    letter: ["é", " "],
+    doubleDead: ["´", " "],
+    cancel: ["\u001b", " "],
+    control: process.platform === "darwin" ? [" "] : ["\u0000", " "],
+    focus: [" "],
+    windowBlur: [" "],
+    compositionCancel: [" "],
+    heldCommit: ["'", " "],
+    heldModified: ["'"],
+    afterHeld: kittySpace,
+  });
 }
 
 describe("Restty under production Electron policy", () => {
@@ -130,6 +165,7 @@ describe("Restty under production Electron policy", () => {
         otherInput: [],
         kittyAll: ["\u001b[32;1:1u", "\u001b[32;1:2u", "\u001b[32;1:3u"],
       });
+      expectDeadKeySpaceInput(result);
       const compositionInput = result?.available.compositionInput;
       expect(compositionInput).toBeDefined();
       for (const mode of [

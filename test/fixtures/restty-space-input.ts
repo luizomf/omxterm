@@ -112,3 +112,138 @@ export function exerciseResttySpaceInput(
   output("\u001b[=0u");
   return result;
 }
+
+// Fedora/XWayland commits dead keys through insertText without composition events.
+// Preserve native default-action ordering: cancelling Space prevents the accent.
+export function exerciseResttyDeadKeySpaceInput(
+  input: HTMLTextAreaElement,
+  output: (data: string) => void,
+  capture: (exercise: () => void) => readonly string[],
+): Record<string, readonly string[]> {
+  const result: Record<string, readonly string[]> = {};
+  const key = (
+    type: string,
+    value: string,
+    code: string,
+    modifiers: KeyboardEventInit = {},
+  ) =>
+    input.dispatchEvent(
+      new KeyboardEvent(type, {
+        key: value,
+        code,
+        bubbles: true,
+        cancelable: true,
+        ...modifiers,
+      }),
+    );
+  const text = (data: string) => {
+    const event = { data, inputType: "insertText", bubbles: true };
+    if (
+      input.dispatchEvent(
+        new InputEvent("beforeinput", { ...event, cancelable: true }),
+      )
+    )
+      input.dispatchEvent(new InputEvent("input", event));
+  };
+  const dead = () => {
+    key("keydown", "Dead", "Quote");
+    key("keyup", "Dead", "Quote");
+  };
+  const commit = (data: string) => {
+    if (spaceKey(input, "keydown")) text(data);
+    spaceKey(input, "keyup");
+  };
+  for (const [name, mode] of [
+    ["legacy", "\u001b[=0u\u001b[>4;0m"],
+    ["modifyOtherKeys", "\u001b[=0u\u001b[>4;2m"],
+    ["kitty124", "\u001b[>4;0m\u001b[=7u"],
+    ["kittyAll", "\u001b[=15u"],
+  ] as const) {
+    output(mode);
+    result[name] = capture(() => {
+      for (const accent of ["'", '"', "`", "~"]) {
+        dead();
+        commit(accent);
+      }
+    });
+    result[`${name}FollowingSpace`] = capture(() => pressSpace(input, true));
+    result[`${name}Alt`] = capture(() => {
+      dead();
+      pressSpace(input, true, { altKey: true });
+    });
+  }
+  output("\u001b[=0u");
+  result.modifier = capture(() => {
+    dead();
+    key("keydown", "Shift", "ShiftLeft", { shiftKey: true });
+    key("keyup", "Shift", "ShiftLeft");
+    commit("'");
+  });
+  result.letter = capture(() => {
+    dead();
+    if (key("keydown", "e", "KeyE")) text("é");
+    key("keyup", "e", "KeyE");
+    pressSpace(input, false);
+  });
+  result.doubleDead = capture(() => {
+    dead();
+    if (key("keydown", "Dead", "Quote")) text("´");
+    key("keyup", "Dead", "Quote");
+    pressSpace(input, false);
+  });
+  result.cancel = capture(() => {
+    dead();
+    key("keydown", "Escape", "Escape");
+    key("keyup", "Escape", "Escape");
+    pressSpace(input, false);
+  });
+  result.control = capture(() => {
+    dead();
+    pressSpace(input, false, { ctrlKey: true });
+    pressSpace(input, false);
+  });
+  result.focus = capture(() => {
+    dead();
+    const other = document.createElement("textarea");
+    document.body.append(other);
+    other.focus();
+    // Hidden macOS fixture windows change activeElement without dispatching blur.
+    input.dispatchEvent(new FocusEvent("blur"));
+    other.remove();
+    input.focus();
+    pressSpace(input, false);
+  });
+  result.windowBlur = capture(() => {
+    dead();
+    window.dispatchEvent(new Event("blur"));
+    pressSpace(input, false);
+  });
+  result.compositionCancel = capture(() => {
+    dead();
+    input.dispatchEvent(
+      new CompositionEvent("compositionstart", { bubbles: true }),
+    );
+    input.dispatchEvent(
+      new CompositionEvent("compositionend", { data: "", bubbles: true }),
+    );
+    pressSpace(input, false);
+  });
+  output("\u001b[=15u");
+  result.heldCommit = capture(() => {
+    dead();
+    if (spaceKey(input, "keydown")) text("'");
+    if (spaceKey(input, "keydown", { repeat: true })) text(" ");
+    spaceKey(input, "keyup");
+  });
+  result.heldModified = capture(() => {
+    dead();
+    if (spaceKey(input, "keydown")) text("'");
+    key("keydown", "Control", "ControlLeft", { ctrlKey: true });
+    spaceKey(input, "keydown", { repeat: true, ctrlKey: true });
+    spaceKey(input, "keyup", { ctrlKey: true });
+    key("keyup", "Control", "ControlLeft");
+  });
+  result.afterHeld = capture(() => pressSpace(input, true));
+  output("\u001b[=0u");
+  return result;
+}

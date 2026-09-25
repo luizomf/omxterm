@@ -315,7 +315,12 @@ OSC BEL terminators and cancelled or malformed controls produce no extra title
 or bell event, and title-report queries receive no reply. Restty applies Option
 Key Mode live: `none` preserves macOS native Unicode and composition input,
 while `left`, `right`, and `both` turn only the configured physical Option key
-into terminal Alt input. Restty image rendering and scrollback follow the
+into terminal Alt input. Native dead-key literals completed with Space retain
+the keyboard layout's text, including on X11 paths that emit `insertText`
+without composition events. They produce neither a substituted ASCII space nor
+a duplicate keyboard-protocol release. Ordinary Space input and configured
+terminal modifiers retain their existing encoding.
+Restty image rendering and scrollback follow the
 shared contracts below through the pinned Ghostty core. Native rasterization can
 differ across Supported Platforms and GPUs; pixel-identical glyph output is not
 claimed.

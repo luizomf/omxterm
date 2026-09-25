@@ -189,9 +189,14 @@ no renderer shortcut system. Restty receives the live Option Key Mode through
 its existing runtime configuration: on macOS, unconfigured physical Option keys
 are left to the browser's native Unicode and composition path, while configured
 left, right or both keys produce terminal Alt input. Bare DOM dead keys also
-remain on that composition path under legacy, modifyOtherKeys and negotiated
-Kitty keyboard reporting instead of being encoded before the composition
-commit. Non-composing Space uses the same existing key encoder as held repeat
+remain on the native text path under legacy, modifyOtherKeys and negotiated
+Kitty keyboard reporting instead of being encoded before the native
+commit. X11 can commit dead-key text through `insertText` without any composition
+events. The keyboard controller therefore retains a focused native dead key
+until text commit, cancellation, or focus loss. Its completing Space press,
+repeats and release stay on the native path, avoiding both a substituted ASCII
+space and an orphan Kitty release. No accent is inferred from a physical key.
+Otherwise non-composing Space uses the same existing key encoder as held repeat
 and control keys rather than waiting for native text insertion: macOS can
 continue delivering Space press/release events while omitting subsequent text
 events. Composition and native Option text still retain their native path;

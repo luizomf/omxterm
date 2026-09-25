@@ -305,7 +305,7 @@ boundary used by the host integration; it is not a public API or renderer
 registry.
 
 After preparation, the corrected runtime has SHA-256
-`e29dbd7dd4bf559d186cda45629ab9727a43b37dee917eb0137d61e238c1d638`,
+`8a48d0ba974a4ef26ffcb3b5f2472fbd0cd28b7830d112e218b513014e15d662`,
 embedded-core chunk SHA-256
 `039abfec307ab03015a2ae70b3583e07fcc9e5a70319de1ca055d6168f45af1b`,
 and event declarations SHA-256
@@ -314,9 +314,9 @@ The narrow correction preserves font acquisition/lease cleanup under cache
 pressure and late completion, makes font-load failure reject initialization, disables
 Restty's direct browser clipboard and link-opening callbacks, preserves native
 Option Unicode/composition versus configured physical-side Alt input, defers
-bare DOM dead keys to composition even when extended keyboard reporting is
-active, delivers non-composing Space through the existing key encoder instead
-of waiting for native text insertion, leaves all renderer-received
+bare DOM dead keys to native text (including composition) even when extended
+keyboard reporting is active, delivers ordinary non-composing Space through the
+existing key encoder unless it completes a pending native dead key, leaves all renderer-received
 Ctrl+C/Ctrl+V events as PTY input, gives DA2 its own
 deterministic response, bounds unfinished OSC/CSI control bodies with
 whole-control recovery, and exposes raw paste
@@ -432,6 +432,22 @@ Synthetic reset tests did not reproduce the native event loss itself: reported
 removes the dependency on that missing text event, not a claimed repair of an
 identified macOS substitution mechanism. It changes no user preference or
 protocol negotiation and adds no timer or text-replacement filtering.
+
+The dead-key Space regression additionally replays Fedora 44 KDE/XWayland's
+native sequence: `Dead` down/up, Space down with `isComposing=false`, and
+`beforeinput` carrying the layout's committed text, with no composition events.
+An isolated Electron 43.1.1 Surface and a plain textarea, driven by a temporary
+native keyboard, established the difference: before correction the Surface sent
+ASCII space instead of apostrophe, double quote, grave or tilde; afterwards each
+matched the textarea exactly once. Dead acute + e and ordinary text also passed.
+The controller now retains native dead-key completion through Space release,
+without changing ordinary direct-Space reporting. Mounted regressions cover
+legacy, modifyOtherKeys, Kitty 1|2|4 and report-all, repeat, modifiers,
+cancellation, text completion and focus loss. Hidden macOS fixture windows
+explicitly dispatch textarea blur because changing DOM focus there does not
+produce a native focus event. The owner reported Ubuntu unaffected; attempted
+native automation there did not establish equivalent dead-key event delivery,
+so it is not claimed as a second native layout verification.
 
 The complete native package commands run this host/runtime coverage on macOS,
 Linux and Windows ARM64. Native glyph rasterization and platform security UI
