@@ -4,10 +4,10 @@ OMXTerm uses [Semantic Versioning 2.0.0](https://semver.org/) for published
 versions. A release number has the form `MAJOR.MINOR.PATCH`, and its Git tag adds
 `v`; for example, version `0.13.0` has tag `v0.13.0`.
 
-This source tree prepares **0.15.0**. Its
-[release record](releases/0.15.0.md) tracks exact artifacts and publication
-status. The previous published version is **0.14.0**. A `-dev.0` value names a
-development baseline, not a published release.
+The latest published version is **0.15.0**; its
+[release record](releases/0.15.0.md) identifies the immutable exact artifacts.
+The source tree carries **0.15.1-dev.0** for ongoing development. A `-dev.0`
+value names a development baseline, not a published release.
 
 This policy explains version selection and consistency. An owner request to
 release covers version preparation, builds, verification, tags and publication
