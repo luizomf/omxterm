@@ -172,8 +172,8 @@ function createHost(window: BrowserWindow) {
       terminals[index] = routedTerminal;
       return routedTerminal;
     },
-    onSessionStartError() {
-      throw new Error("Unexpected PTY start failure");
+    onSessionStartError(cause) {
+      throw new Error("Unexpected PTY start failure", { cause });
     },
     onSessionExit(_exit, context) {
       ended.push({
