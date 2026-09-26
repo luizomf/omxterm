@@ -19,8 +19,9 @@ local PNG/JPEG previews, and inline images in direct Pi/Chafa sessions.
 ## Platforms and downloads
 
 The latest published release is **0.15.1**. These docs follow the
-**0.16.0-dev.0** source tree; [release notes](docs/releases/0.15.1.md) record
-the published package identities and verification.
+**0.16.0** release-preparation source tree; publication is pending.
+The [0.15.1 release notes](docs/releases/0.15.1.md) record the currently
+published package identities and verification.
 
 OMXTerm requires **ARM64** and a working **WebGL2** graphics backend. Intel
 macOS, x64 builds, and software rendering are not supported.
