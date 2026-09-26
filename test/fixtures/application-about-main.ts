@@ -46,7 +46,9 @@ Menu.setApplicationMenu = (menu) => {
       iconEmpty: icon?.isEmpty(),
     }),
   );
-  app.exit(0);
+  // Mark production startup as quitting before this menu callback returns.
+  // An immediate exit request alone can still let it create the first window.
+  app.quit();
 };
 
 dialog.showErrorBox = (title, content) => {
