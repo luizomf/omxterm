@@ -162,6 +162,9 @@ export function createLocalTerminalSession(
       explicitCommand ? "explicit-command" : "default-shell",
     );
   });
+  // An exit delivered during subscription cannot dispose the returned handle
+  // until registration finishes.
+  if (exited) releaseSubscriptions();
 
   const shellProcessName = normalizeProcessName(options.shell);
 

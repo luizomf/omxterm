@@ -122,6 +122,13 @@ succeeds (ADR 0025).
   Windows. It requests
   one confirmation for all open windows when confirmation is enabled and at
   least one Live Terminal Session is Busy.
+- An accepted Quit, including automatic last-window quit, stops new session
+  starts and waits for every owned native PTY to report exit before completing
+  normal application quit. This includes sessions whose tabs or windows already
+  closed. Window/controller disposal and a native kill request are not completion
+  signals. Repeated quit requests share one shutdown; pending or denied Busy
+  Session confirmation does not start it. Completion is owned by main independently
+  of disposed renderer/controller callbacks (ADR 0028).
 - `confirmClose` defaults to `true` and guards tab close, window close, and
   quit. Each action can produce at most one confirmation, so closing a window
   with several tabs asks once for the whole window. OMXTerm asks only when the

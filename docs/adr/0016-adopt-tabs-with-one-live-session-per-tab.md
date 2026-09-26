@@ -1,5 +1,9 @@
 # Adopt tabs with one live session per tab
 
+[ADR 0028](0028-wait-for-native-sessions-before-application-quit.md) refines
+application shutdown to await actual native session exits independently of
+closed windows and disposed controllers.
+
 Supersedes [ADR 0007](0007-one-live-session-per-independent-window.md).
 Amended by [ADR 0017](0017-confirm-close-only-for-busy-sessions.md): the
 `confirmClose` consequence recorded below was later narrowed to ask only for

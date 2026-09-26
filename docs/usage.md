@@ -36,6 +36,9 @@ closing a tab or window.
 
 Closing a tab ends its session. Closing a window ends all its sessions; closing
 the last tab closes the window, and closing the last window quits OMXTerm.
+The app waits for its native terminal processes to finish shutting down, so its
+process can briefly remain after the last window closes. Accepted Quit stops
+new session starts; cancelling a confirmation leaves existing sessions running.
 An ordinary shell exit closes its tab without confirmation.
 
 By default, OMXTerm asks before closing running work. It checks the affected

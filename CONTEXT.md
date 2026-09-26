@@ -122,8 +122,10 @@ _Avoid_: Chrome, browser header, terminal UI
 **Live Terminal Session**:
 An active shell and its terminal state owned by OMXTerm. The session lasts only
 as long as its owning tab: closing it terminates its processes, and shell exit
-removes the now-inactive Terminal Surface. Reconnection and preservation belong
-to external session managers such as tmux.
+removes the now-inactive Terminal Surface. Native termination is asynchronous;
+application quit waits for actual owned session exits even after their windows
+or controllers are disposed. Reconnection and preservation belong to external
+session managers such as tmux.
 _Avoid_: saved session, persistent session, tmux session
 
 **Default Shell**:

@@ -26,7 +26,7 @@ import {
   MalformedLaunchRequestError,
   startupLaunchRequest,
 } from "./launch-request";
-import { createLocalTerminalSession } from "./local-terminal-session";
+import { registerTerminalShutdown } from "./terminal-shutdown";
 import { applyLinuxDisplayBackendDefault } from "./linux-display-backend";
 import { applyChromiumSandboxPolicy } from "./chromium-sandbox-policy";
 import {
@@ -104,17 +104,17 @@ const linuxWindowIconPath =
 
 let terminalApplication: TerminalApplication<BrowserWindow> | undefined;
 let operationalEvents: OperationalEventLog | undefined;
+let disposeTerminalSessions = () => {};
+const shutdown = registerTerminalShutdown(app, {
+  application: () => terminalApplication,
+  disposeSessions: () => disposeTerminalSessions(),
+});
 
 applyChromiumSandboxPolicy(app.commandLine);
 
 applyLinuxDisplayBackendDefault(app);
 
-app.on("before-quit", (event) => {
-  operationalEvents?.flush();
-  if (!terminalApplication || terminalApplication.isQuitting()) return;
-  event.preventDefault();
-  void terminalApplication.requestQuit();
-});
+app.on("before-quit", () => operationalEvents?.flush());
 
 app
   .whenReady()
@@ -146,13 +146,13 @@ app
         for (const warning of warnings ?? [])
           process.stderr.write(`${warning}\n`);
         operationalEvents!.write({ name: "application.started" });
-        const startupNotices = startupUserFileNotices(fallback, warnings);
         const terminalIpcRouter = fontIpcRouter(ipcMain, operationalEvents!);
+        disposeTerminalSessions = () => terminalIpcRouter.dispose();
         let rebuildMenu = () => {};
         const configurationReloader = createUserConfigurationReloader({
           initial: {
             configuration: userConfiguration,
-            userFileErrors: startupNotices,
+            userFileErrors: startupUserFileNotices(fallback, warnings),
           },
           load: () => loadUserConfiguration(configurationLoadOptions),
           ...terminalSurfaceFontBaseline(userConfiguration),
@@ -240,7 +240,7 @@ app
               initialFullScreen: window.isFullScreen(),
               webContents: window.webContents,
               createSession(callbacks) {
-                return createLocalTerminalSession(nodePty.spawn, {
+                return shutdown.createSession(nodePty.spawn, {
                   shell: resolveCurrentDefaultShell(),
                   launchRequest: consumeLaunch(),
                   platform: process.platform,
