@@ -23,6 +23,34 @@ function themeDocument() {
 }
 
 describe("strict version 1 Terminal Theme", () => {
+  it("ships the revised canonical palette as ordinary validated theme data", () => {
+    expect(DEFAULT_TERMINAL_THEME.colors).toEqual({
+      background: "#000000",
+      foreground: "#f0f0ff",
+      cursor: "#f0f0ff",
+      selectionBackground: "#505064",
+      selectionForeground: "#f0f0ff",
+      black: "#000000",
+      red: "#ff80aa",
+      green: "#00ffbf",
+      yellow: "#ffd480",
+      blue: "#80aaff",
+      magenta: "#e2a1f7",
+      cyan: "#80d4ff",
+      white: "#f0f0ff",
+      brightBlack: "#505068",
+      brightRed: "#ff99bb",
+      brightGreen: "#66ffd9",
+      brightYellow: "#fee59a",
+      brightBlue: "#99bbff",
+      brightMagenta: "#ebb4fd",
+      brightCyan: "#99ddff",
+      brightWhite: "#ffffff",
+    });
+    expect(validateTerminalTheme(DEFAULT_TERMINAL_THEME, themePath)).toEqual(
+      DEFAULT_TERMINAL_THEME,
+    );
+  });
   it("accepts and freezes the complete public document", () => {
     const document = themeDocument();
     document.colors.background = "#ABCDEF";

@@ -421,7 +421,8 @@ function countSelection(bitmap) {
   for (let offset = 0; offset < bitmap.length; offset += 4) {
     const a = bitmap[offset], b = bitmap[offset + 1], c = bitmap[offset + 2];
     const near = (left, right) => Math.abs(left - right) <= 3;
-    if ((near(a, 59) && near(b, 79) && near(c, 166)) || (near(a, 166) && near(b, 79) && near(c, 59))) count += 1;
+    // Canonical selection background #505064, accepting RGBA or BGRA order.
+    if ((near(a, 80) && near(b, 80) && near(c, 100)) || (near(a, 100) && near(b, 80) && near(c, 80))) count += 1;
   }
   return count;
 }

@@ -500,7 +500,10 @@ continues working. Fix the file and reopen the sidebar.
 
 A Terminal Theme is a complete OMXTerm palette in another strict JSON file. You
 do not need an external theme: omitting `theme` from `config.json` always uses
-the bundled canonical `omtheme`.
+the bundled canonical `omtheme`. The initial kit copies the current palette only
+for new users; existing user-owned theme files are never updated automatically.
+To use a later bundled revision, omit `theme` and reload, or deliberately update
+your own copy from the [canonical palette](omtheme.json).
 
 For a visual edit-and-preview workflow, use [OMXTerm Studio](#edit-visually-with-omxterm-studio).
 The following steps show how to create and select the same JSON format by hand.
@@ -535,23 +538,23 @@ change one `#RRGGBB` color at a time:
     "background": "#000000",
     "foreground": "#f0f0ff",
     "cursor": "#f0f0ff",
-    "selectionBackground": "#3b4fa6",
-    "selectionForeground": "#ffffff",
+    "selectionBackground": "#505064",
+    "selectionForeground": "#f0f0ff",
     "black": "#000000",
-    "red": "#ff7e9a",
-    "green": "#37feb7",
-    "yellow": "#ffda76",
-    "blue": "#88aaf2",
-    "magenta": "#ff87bc",
-    "cyan": "#6bccff",
+    "red": "#ff80aa",
+    "green": "#00ffbf",
+    "yellow": "#ffd480",
+    "blue": "#80aaff",
+    "magenta": "#e2a1f7",
+    "cyan": "#80d4ff",
     "white": "#f0f0ff",
     "brightBlack": "#505068",
-    "brightRed": "#ffa8bb",
-    "brightGreen": "#72ffcd",
-    "brightYellow": "#ffeab2",
-    "brightBlue": "#b2cbff",
-    "brightMagenta": "#ff88ef",
-    "brightCyan": "#77c6ff",
+    "brightRed": "#ff99bb",
+    "brightGreen": "#66ffd9",
+    "brightYellow": "#fee59a",
+    "brightBlue": "#99bbff",
+    "brightMagenta": "#ebb4fd",
+    "brightCyan": "#99ddff",
     "brightWhite": "#ffffff"
   }
 }
