@@ -7,7 +7,9 @@ versions. A release number has the form `MAJOR.MINOR.PATCH`, and its Git tag add
 The latest published version is **0.15.1**; its
 [release record](releases/0.15.1.md) identifies the immutable exact artifacts.
 The source tree carries **0.16.0**; its [preparation record](releases/0.16.0.md)
-identifies the verified local artifacts, with publication held. A `-dev.0` value
+identifies the verified replacement candidates, including the Alt popup and
+revised palette from #409. Earlier unpublished candidates remain preserved;
+publication is held. A `-dev.0` value
 names a development baseline, not a published release.
 
 This policy explains version selection and consistency. An owner request to
