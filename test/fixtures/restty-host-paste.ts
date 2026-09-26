@@ -38,12 +38,18 @@ export function createLargePasteFixture() {
   };
 }
 
-export async function prepareLargePasteShell(options: {
-  readonly write: (data: string) => void;
-  readonly output: () => string;
-  readonly waitFor: (predicate: () => boolean, label: string) => Promise<void>;
-}) {
-  if (process.platform === "win32") {
+export async function prepareLargePasteShell(
+  options: {
+    readonly write: (data: string) => void;
+    readonly output: () => string;
+    readonly waitFor: (
+      predicate: () => boolean,
+      label: string,
+    ) => Promise<void>;
+  },
+  platform: NodeJS.Platform = process.platform,
+) {
+  if (platform === "win32") {
     const interruptStart = options.output().length;
     options.write("\u0003");
     await options.waitFor(
@@ -61,10 +67,9 @@ export async function prepareLargePasteShell(options: {
         "owned PowerShell paste fixture readiness",
       );
     } catch (cause) {
-      throw new Error(
-        `PowerShell paste fixture produced no readiness marker; synthetic PTY tail: ${JSON.stringify(options.output().slice(-2_000))}`,
-        { cause },
-      );
+      throw new Error("PowerShell paste fixture produced no readiness marker", {
+        cause,
+      });
     }
     return;
   }
@@ -91,10 +96,9 @@ export async function exerciseLargePasteThroughPty(options: {
         "owned raw paste receiver",
       );
     } catch (cause) {
-      throw new Error(
-        `Raw paste receiver produced no readiness marker; synthetic PTY tail: ${JSON.stringify(options.output().slice(-2_000))}`,
-        { cause },
-      );
+      throw new Error("Raw paste receiver produced no readiness marker", {
+        cause,
+      });
     }
   }
   await dispatchDomPaste(options.window, fixture.command);

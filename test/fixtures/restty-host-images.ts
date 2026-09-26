@@ -112,10 +112,7 @@ export async function exerciseResttyImages(options: {
       "Pi and Chafa image payload through the owned PTY",
     );
   } catch (cause) {
-    throw new Error(
-      `Image emitter produced no completion marker; synthetic PTY tail: ${JSON.stringify(output().slice(-2_000))}`,
-      { cause },
-    );
+    throw new Error("Image emitter produced no completion marker", { cause });
   }
 
   const waitForImagePixels = async (

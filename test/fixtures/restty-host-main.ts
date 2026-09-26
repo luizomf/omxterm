@@ -3,7 +3,7 @@ import { spawnFixturePty } from "./native-fixture-pty";
 import { mkdirSync, writeSync } from "node:fs";
 import path from "node:path";
 import { terminalRendererConfiguration } from "../../src/main/active-user-configuration";
-import { createLocalTerminalSession } from "../../src/main/local-terminal-session";
+import { createResttyHostSessions } from "./restty-host-sessions";
 import {
   registerTerminalIpcRouter,
   type IpcMainPort,
@@ -33,6 +33,7 @@ import {
   prepareLargePasteShell,
 } from "./restty-host-paste";
 import {
+  defaultInputCommand,
   explicitFixtureLaunchRequest,
   nativeFixturePlatform,
   prepareFixtureShell,
@@ -58,7 +59,14 @@ const inputs: string[][] = [];
 const deliverOutputs: Array<(data: string) => void> = [];
 const resizes: Array<Array<{ cols: number; rows: number }>> = [];
 const launchKinds: string[] = [];
-const terminals: Array<ReturnType<typeof createLocalTerminalSession>> = [];
+const fixtureSessions = createResttyHostSessions({
+  spawn: spawnFixturePty,
+  app,
+  windows: () => BrowserWindow.getAllWindows(),
+  signals: process,
+  reportError: (message) => process.stderr.write(`${message}\n`),
+});
+const terminals: Array<ReturnType<typeof fixtureSessions.createSession>> = [];
 const ended: Array<{ closeRequested: boolean; liveSessions: number }> = [];
 let clipboardReads = 0;
 let clipboardWrites = 0;
@@ -84,17 +92,7 @@ const outputStress = createOutputStressHarness();
 const { defaultShell, configuredFontFamily, reloadedFontFamily } =
   nativeFixturePlatform;
 
-async function waitFor(
-  predicate: () => boolean | Promise<boolean>,
-  label: string,
-) {
-  const deadline = Date.now() + 120_000;
-  while (Date.now() < deadline) {
-    if (await predicate()) return;
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-  throw new Error(`Timed out waiting for ${label}`);
-}
+const { waitFor } = fixtureSessions;
 
 function createHost(window: BrowserWindow) {
   const router = registerTerminalIpcRouter(
@@ -132,7 +130,7 @@ function createHost(window: BrowserWindow) {
       resizes[index] = [];
       const explicit = index === 1;
       const stressLaunchRequest = outputStressLaunchRequest(index);
-      const terminal = createLocalTerminalSession(spawnFixturePty, {
+      const terminal = fixtureSessions.createSession({
         shell: defaultShell,
         ...(stressLaunchRequest
           ? { launchRequest: stressLaunchRequest }
@@ -269,11 +267,10 @@ app
       },
     );
 
-    const { keeper, window } = createResttyHostWindows(
+    const { window } = createResttyHostWindows(
       root,
       () => (openedWindows += 1),
       () => (navigations += 1),
-      terminals,
     );
 
     const { reloader } = createHost(window);
@@ -315,7 +312,7 @@ app
     await window.webContents.executeJavaScript(
       `(() => {
         const input = document.querySelector('.restty-terminal-surface textarea');
-        input.dispatchEvent(new InputEvent('input', { data: ${JSON.stringify(nativeFixturePlatform.defaultInputCommand)}, inputType: 'insertText', bubbles: true }));
+        input.dispatchEvent(new InputEvent('input', { data: ${JSON.stringify(defaultInputCommand())}, inputType: 'insertText', bubbles: true }));
         input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
         input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }));
       })()`,
@@ -510,13 +507,13 @@ app
       sessionStarts: sessionIndex,
     };
     writeSync(1, prefix + JSON.stringify(result) + "\n");
-    keeper.destroy();
-    app.exit(0);
+    await fixtureSessions.complete(0);
   })
-  .catch((error) => {
-    for (const terminal of terminals) terminal.close();
+  .catch(async (error: unknown) => {
     process.stderr.write(
       `${error instanceof Error ? error.stack : String(error)}\n`,
     );
-    app.exit(1);
+    await fixtureSessions.complete(1).catch(() => {
+      process.stderr.write("Restty fixture completion failed\n");
+    });
   });

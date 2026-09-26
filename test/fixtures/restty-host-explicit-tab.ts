@@ -44,10 +44,7 @@ export async function exerciseExplicitResttyTab(options: {
       "explicit command output",
     );
   } catch (cause) {
-    throw new Error(
-      `Explicit command produced no readiness marker; synthetic PTY tail: ${JSON.stringify(options.outputs[1]!.join("").slice(-2_000))}`,
-      { cause },
-    );
+    throw new Error("Explicit command produced no readiness marker", { cause });
   }
   await waitFor(
     () => options.titleEvents.length >= 3 && options.bellSessionIds.length >= 2,

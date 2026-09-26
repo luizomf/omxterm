@@ -24,11 +24,17 @@ export const nativeFixturePlatform = Object.freeze({
       : process.platform === "win32"
         ? "Courier New"
         : "Liberation Mono",
-  defaultInputCommand:
-    process.platform === "win32"
-      ? "Write-Output '__DEFAULT_INPUT__Olá🙂'"
-      : "printf '__DEFAULT_INPUT__Olá🙂\\n'",
 });
+
+export function defaultInputCommand(
+  platform: NodeJS.Platform = process.platform,
+) {
+  // Keep Unicode literal on the input route, but require execution to join the
+  // marker: an echoed command alone must never satisfy the output predicate.
+  return platform === "win32"
+    ? "Write-Output ('__DEFAULT_INPUT__'+'Olá🙂')"
+    : "printf '%s%s\\n' '__DEFAULT_INPUT__' 'Olá🙂'";
+}
 
 export function prepareFixtureShell(root: string) {
   const home = path.join(root, "home");
