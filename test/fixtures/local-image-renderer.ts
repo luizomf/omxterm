@@ -39,15 +39,18 @@ globalThis.__localImagePreviewProbe = {
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
-    const blob = await new Promise<Blob>((resolve) =>
-      canvas.toBlob((value) => resolve(value!)),
+    // Generate fixture bytes synchronously: asynchronous canvas encoding can
+    // consume the native test deadline before preview behavior is exercised.
+    const base64 = canvas.toDataURL("image/png").split(",")[1]!;
+    const data = Uint8Array.from(atob(base64), (character) =>
+      character.charCodeAt(0),
     );
     selected = {
       name: "generated.png",
       mime: "image/png",
       width,
       height,
-      data: new Uint8Array(await blob.arrayBuffer()),
+      data,
     };
     await preview.open();
   },
