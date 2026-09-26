@@ -118,12 +118,12 @@ export function registerWindowChrome(
     const down = input.type === "keyDown" || input.type === "rawKeyDown";
     const alreadyPressed = pressedKeys.has(input.code);
     // Modified action keys may be consumed by keybind delivery, which can also
-    // suppress their release. Track only Alt and ordinary unmodified keys;
-    // modifier flags and intervening events disqualify combinations separately.
+    // suppress their release. Track Alt and ordinary keys, including Shift-only
+    // input: Shift alone cannot bind an application action. Modifier flags and
+    // intervening events disqualify combinations separately.
     if (
       down &&
-      (input.key === "Alt" ||
-        !(input.alt || input.control || input.shift || input.meta))
+      (input.key === "Alt" || !(input.alt || input.control || input.meta))
     )
       pressedKeys.add(input.code);
     else if (input.type === "keyUp") pressedKeys.delete(input.code);

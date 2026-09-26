@@ -213,6 +213,31 @@ describe("standalone Alt opens the native application menu", () => {
     view.chrome.dispose();
   });
 
+  it.each(["linux", "win32"])(
+    "keeps shifted ordinary keys held after Shift release on %s",
+    (platform) => {
+      const view = setup(platform);
+      key(view, "keyDown", {
+        key: "Shift",
+        code: "ShiftLeft",
+        alt: false,
+        shift: true,
+      });
+      key(view, "keyDown", {
+        key: "A",
+        code: "KeyA",
+        alt: false,
+        shift: true,
+      });
+      key(view, "keyUp", { key: "Shift", code: "ShiftLeft", alt: false });
+      expect(alt(view)).not.toHaveBeenCalled();
+      expect(view.popupApplicationMenu).not.toHaveBeenCalled();
+      key(view, "keyUp", { key: "a", code: "KeyA", alt: false });
+      expect(alt(view)).toHaveBeenCalledOnce();
+      view.chrome.dispose();
+    },
+  );
+
   it("handles a missing menu and stale dismissal without blocking later openings", () => {
     const view = setup("linux");
     view.popupApplicationMenu.mockReturnValueOnce(undefined);
