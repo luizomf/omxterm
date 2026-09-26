@@ -34,6 +34,7 @@ for (const name of ["userData", "sessionData"] as const) {
   app.setPath(name, directory);
 }
 const sessions: Array<ReturnType<typeof createLocalTerminalSession>> = [];
+const sessionExits: Promise<void>[] = [];
 const sizes: Array<Array<{ cols: number; rows: number }>> = [];
 const windows: BrowserWindow[] = [];
 let ended = 0;
@@ -71,6 +72,10 @@ for (const [signal, code] of [
     for (const session of sessions) session.close();
     app.exit(code);
   });
+
+// The fixture owns successful completion until all PTYs have exited.
+// Electron's default last-window quit must not bypass the awaited PTY exits.
+app.on("window-all-closed", () => {});
 
 app
   .whenReady()
@@ -124,6 +129,12 @@ app
           createSession(callbacks) {
             const index = sessions.length;
             sizes[index] = [];
+            let resolveExit: () => void = () => {};
+            sessionExits.push(
+              new Promise<void>((resolve) => {
+                resolveExit = resolve;
+              }),
+            );
             const terminal = createLocalTerminalSession(spawnFixturePty, {
               shell: nativeFixturePlatform.defaultShell,
               launchRequest: explicitFixtureLaunchRequest(),
@@ -132,6 +143,10 @@ app
               environment: { ...process.env, HOME: root },
               applicationVersionProvider: app,
               ...callbacks,
+              onExit(exit, launchKind) {
+                resolveExit();
+                callbacks.onExit(exit, launchKind);
+              },
             });
             sessions.push(terminal);
             return {
@@ -241,7 +256,9 @@ app
     });
     for (const window of windows) application.forceCloseWindow(window);
     router.dispose();
+    // Closing requests native termination; wait for every PTY to actually exit.
+    await Promise.all(sessionExits);
     writeSync(1, `__OMXTERM_WINDOW_CHROME_RESULT__${JSON.stringify(result)}\n`);
-    app.exit(0);
+    app.quit();
   })
   .catch(fail);
