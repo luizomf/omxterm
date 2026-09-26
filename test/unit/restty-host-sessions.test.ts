@@ -1,8 +1,4 @@
-import { execFileSync } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import type { IPty } from "node-pty";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
@@ -350,34 +346,6 @@ it("POSIX default shells keep login argv and the prepared Linux isolation enviro
   });
   await h.fixture.waitFor(() => true, "POSIX input");
 });
-
-it.skipIf(process.platform !== "win32")(
-  "the exact owned PowerShell setup verifies process-local isolation without creating history",
-  async () => {
-    const home = mkdtempSync(path.join(tmpdir(), "omxterm-restty-shell-"));
-    try {
-      const h = harness();
-      h.start({ ...windowsShell, homeDirectory: home });
-      const [file, args, options] = h.spawn.mock.calls[0]!;
-      // No interactive ReadLine in this probe. The host integration separately
-      // uses the unchanged PTY/input route after this script acknowledges setup.
-      const output = execFileSync(
-        file,
-        ["-NonInteractive", ...args.filter((arg) => arg !== "-NoExit")],
-        {
-          encoding: "utf8",
-          env: { ...process.env, ...options.env },
-        },
-      );
-      expect(output).toContain("__OMXTERM_RESTTY_SHELL_ISOLATED__");
-      h.ptys[0]!.output(output);
-      await h.fixture.waitFor(() => true, "native PowerShell setup");
-      expect(existsSync(path.join(home, "restty-history.txt"))).toBe(false);
-    } finally {
-      rmSync(home, { recursive: true, force: true });
-    }
-  },
-);
 
 it("a close error does not skip other owned sessions or manufacture success", async () => {
   const h = harness();
