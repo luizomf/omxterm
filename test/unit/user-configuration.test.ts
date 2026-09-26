@@ -120,6 +120,8 @@ describe("strict version 1 User Configuration", () => {
       scrollbackLines: 0,
       optionKeyMode: "left",
       alwaysOnTop: true,
+      showTitleBar: true,
+      showTabBar: true,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       keybinds: {
         ...DEFAULT_TERMINAL_KEYBINDS,

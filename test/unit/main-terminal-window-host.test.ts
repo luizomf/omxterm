@@ -85,9 +85,18 @@ describe("main Terminal Window host", () => {
     const harness = createWindowHarness();
     const controller = { applyFullScreen: vi.fn(), dispose: vi.fn() };
     const onWindowClosed = vi.fn();
-    registerTerminalWindowHost(harness.window, controller, onWindowClosed);
-
-    harness.windowEvents.emit("closed");
+    const host = registerTerminalWindowHost(
+      harness.window,
+      controller,
+      onWindowClosed,
+    );
+    Object.defineProperty(harness.window, "webContents", {
+      get() {
+        throw new TypeError("Object has been destroyed");
+      },
+    });
+    expect(() => harness.windowEvents.emit("closed")).not.toThrow();
+    host.dispose();
 
     expect(controller.dispose).toHaveBeenCalledOnce();
     expect(onWindowClosed).toHaveBeenCalledOnce();

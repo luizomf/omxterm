@@ -33,6 +33,7 @@ export interface TerminalTabsOptions {
   readonly createAdapter: () => ElectronTerminalAdapter;
   readonly mount: MountTerminalSurface;
   readonly surfaceOptions: TerminalSurfaceOptions;
+  readonly showTabBar?: boolean;
   readonly notifySelection?: (sessionId: TerminalSessionId) => void;
   readonly notifyTitle?: (
     sessionId: TerminalSessionId,
@@ -75,7 +76,7 @@ export function createTerminalTabs(
 ): TerminalTabs {
   const document = elements.container.ownerDocument;
   const tabs: TerminalTab[] = [];
-  let tabBarEnabled = true;
+  let tabBarEnabled = options.showTabBar ?? true;
   let selectedIndex = -1;
   let zoomSteps = 0;
   let activeSurfaceOptions = options.surfaceOptions;

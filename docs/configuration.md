@@ -266,6 +266,8 @@ unknown keys.
 | `scrollback.lines`        | integer from 0 through 100,000          | `10000`                          |
 | `keyboard.optionAsAlt`    | `none`, `left`, `right`, or `both`      | `none`                           |
 | `window.alwaysOnTop`      | boolean                                 | `false`                          |
+| `window.showTitleBar`     | boolean                                 | `true`                           |
+| `window.showTabBar`       | boolean                                 | `true`                           |
 | `theme.path`              | non-empty filesystem path without NUL   | bundled `omtheme`                |
 | `keybinds.<action>`       | accelerator with a non-Shift modifier   | built-in shortcut per action     |
 
@@ -277,9 +279,9 @@ unknown keys.
   pages and also has a 10,000,000-byte ceiling.
 - **Option keys** apply only on macOS. `none` preserves native Unicode input;
   `left`, `right`, and `both` choose which Option keys send terminal Alt sequences.
-- **Padding** begins below native window chrome. macOS adds a 30 px title inset
-  while windowed; native fullscreen removes that inset, not your padding or the
-  system safe area.
+- **Padding** begins below visible title chrome: a 30 px inset on macOS or a
+  34 px app-drawn row on Linux/Windows. Hiding the title bar or entering fullscreen
+  removes that title space, not your padding or the macOS system safe area.
 - **Font family and line height** apply to new tabs immediately after reload;
   existing tabs retain their original values until restart. Font size and
   ligatures apply live. Ligatures do not change copied text or terminal cells.
@@ -289,6 +291,35 @@ unknown keys.
   family is an error rather than a silent substitution.
 - **Always on Top** sets the default for new windows. The Window menu toggles
   one current window without changing that default.
+- **Title and tab bars** also set defaults for new windows. Reloading does not
+  override the choices in existing windows. The View menu toggles each bar for
+  the current window without editing the file. An enabled tab bar appears only
+  when there are two or more tabs.
+
+### Start with hidden bars
+
+To open new windows without either bar:
+
+```json
+{
+  "version": 1,
+  "window": {
+    "showTitleBar": false,
+    "showTabBar": false
+  }
+}
+```
+
+Reload, then open a new window. Existing windows keep their current choices;
+use **View → Toggle Title Bar** or **View → Toggle Tab Bar** to change them.
+With the title bar hidden, move the pointer into the upper part of the window
+and drag the three dots that appear at the top center. Other terminal text
+remains selectable. Fullscreen hides the handle as well.
+
+On macOS the visible title area retains native controls on the left and blends
+into the terminal background. Linux and Windows use a compact themed title row
+with controls on the right. Both forms hide and restore without restarting
+sessions. See [window controls](usage.md#window-controls).
 
 ### Choose the Windows Default Shell
 
@@ -342,6 +373,7 @@ shortcuts**. Omitted actions keep their defaults:
 | `toggleFullScreen`          | `Control+Command+F`        | `Control+Shift+F`     |
 | `toggleSnippets`            | `CommandOrControl+Shift+S` | `Control+Shift+S`     |
 | `toggleTabBar`              | `CommandOrControl+Shift+B` | `Control+Shift+B`     |
+| `toggleTitleBar`            | `CommandOrControl+Shift+D` | `Control+Shift+D`     |
 | `reloadConfig`              | `CommandOrControl+Shift+,` | `Control+Shift+,`     |
 
 For example, this changes only New Window:
@@ -392,8 +424,9 @@ bare terminal control key such as `Ctrl+C`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+\`,
 but warns which action and control key conflict. Add `Shift` or choose another
 key when the control key should continue to reach the shell.
 
-`keybinds.toggleTabBar` changes the shortcut, not the bar's default visibility.
-The [tab-bar toggle](usage.md#windows-tabs-and-sessions) is temporary per window.
+`keybinds.toggleTabBar` and `keybinds.toggleTitleBar` change shortcuts, not initial
+visibility. Set `window.showTabBar` and `window.showTitleBar` for new-window
+defaults. Both toggles are temporary per window and survive configuration reload.
 
 ## Snippets
 
@@ -600,11 +633,11 @@ After a successful reload:
 | Existing and new tabs | Theme, font size, ligatures, padding, scrollback, Option keys |
 | App actions           | Close confirmation, logging, keybinds                         |
 | New tabs              | Font family, line height, Windows shell                       |
-| New windows           | Always-on-Top default                                         |
+| New windows           | Always-on-Top, title-bar and tab-bar defaults                 |
 
 Existing sessions keep running. A notice explains when font family or line
 height needs a restart to apply everywhere. Existing windows retain their zoom
-delta, tab-bar choice, and Always-on-Top state. Actual Size returns zoom to the
+delta, title-bar and tab-bar choices, and Always-on-Top state. Actual Size returns zoom to the
 latest configured baseline.
 
 A rejected reload applies nothing and preserves the complete last valid

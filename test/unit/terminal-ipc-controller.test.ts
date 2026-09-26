@@ -44,6 +44,7 @@ function clipboardOptions() {
       scrollbackLines: 10_000,
       optionKeyMode: "none" as const,
       nativeTitleInset: 0 as const,
+      showTabBar: true,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       userFileErrors: [],
     },
@@ -321,6 +322,7 @@ describe("terminal IPC controller", () => {
       scrollbackLines: 500,
       optionKeyMode: "right" as const,
       nativeTitleInset: 30 as const,
+      showTabBar: true,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       userFileErrors: [],
     });

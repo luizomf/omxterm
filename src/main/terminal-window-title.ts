@@ -22,6 +22,7 @@ export interface TerminalWindowTitleControllerOptions {
     title: string,
   ) => void;
   readonly onRejected?: (reason: TerminalTitleRejectionReason) => void;
+  readonly onWindowTitle?: (title: string) => void;
 }
 
 export interface TerminalWindowTitleController {
@@ -95,7 +96,9 @@ export function createTerminalWindowTitleController(
     const selected = selectedSessionId
       ? sessions.get(selectedSessionId)
       : undefined;
-    window.setTitle(selected ? displayTitle(selected) : DEFAULT_TERMINAL_TITLE);
+    const title = selected ? displayTitle(selected) : DEFAULT_TERMINAL_TITLE;
+    window.setTitle(title);
+    options.onWindowTitle?.(title);
   };
 
   const clearBell = (sessionId: TerminalSessionId | undefined) => {

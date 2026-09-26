@@ -20,7 +20,11 @@
   },
   "scrollback": { "lines": 10000 },
   "keyboard": { "optionAsAlt": "none" },
-  "window": { "alwaysOnTop": false },
+  "window": {
+    "alwaysOnTop": false,
+    "showTitleBar": true,
+    "showTabBar": true
+  },
   "keybinds": {
     "quit": "Control+Alt+Shift+Q",
     "copy": "Control+Shift+C",
@@ -47,6 +51,7 @@
     "toggleFullScreen": "Control+Shift+F",
     "toggleSnippets": "Control+Shift+S",
     "toggleTabBar": "Control+Shift+B",
+    "toggleTitleBar": "Control+Shift+D",
     "reloadConfig": "Control+Shift+,"
   }
 }

@@ -153,6 +153,7 @@ describe("renderer Terminal Window page host", () => {
     );
     const mount = vi.fn(async () => createSurface({ zoom }));
     const configuration = {
+      showTabBar: true,
       fontSize: 19,
       fontLineHeight: 1.2,
       fontLigatures: true,
@@ -203,6 +204,7 @@ describe("renderer Terminal Window page host", () => {
 
   it("applies effective fullscreen inset updates without reconfiguring or focusing the Surface", async () => {
     const configuration = {
+      showTabBar: true,
       fontSize: 16,
       fontLineHeight: 1,
       fontLigatures: true,
@@ -287,6 +289,7 @@ describe("renderer Terminal Window page host", () => {
         optionKeyMode: "none",
         nativeTitleInset: 0,
         terminalTheme: theme,
+        showTabBar: true,
         userFileErrors: [],
       },
     });
@@ -355,6 +358,7 @@ describe("renderer Terminal Window page host", () => {
       createAdapter: adapters,
       page: window,
       configuration: {
+        showTabBar: true,
         fontFamily: "Initial Family",
         fontSize: 16,
         fontLineHeight: 1,
@@ -390,6 +394,7 @@ describe("renderer Terminal Window page host", () => {
     await host.ready;
 
     configurationListener!({
+      showTabBar: true,
       fontFamily: "Changed Family",
       fontSize: 20,
       fontLineHeight: 1.2,
@@ -461,6 +466,7 @@ describe("renderer Terminal Window page host", () => {
 describe("renderer Terminal Window font ownership", () => {
   it("shares a font generation within one window and advances it for new configured-family tabs", async () => {
     const configuration = {
+      showTabBar: true,
       fontFamily: "First Family",
       fontSize: 16,
       fontLineHeight: 1,
@@ -543,6 +549,7 @@ describe("renderer Terminal Window page host continued", () => {
     let configurationListener:
       ((configuration: TerminalRendererConfiguration) => void) | undefined;
     const configuration = {
+      showTabBar: true,
       fontSize: 16,
       fontLineHeight: 1,
       fontLigatures: true,
@@ -893,6 +900,7 @@ describe("renderer Terminal Window page host continued", () => {
       scrollbackLines: 0,
       optionKeyMode: "both",
       nativeTitleInset: 0,
+      showTabBar: true,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       userFileErrors: [],
     });

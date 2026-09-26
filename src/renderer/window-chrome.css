@@ -1,0 +1,92 @@
+.window-title-bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  height: 34px;
+  padding-left: 10px;
+  color: var(--terminal-foreground);
+  background: color-mix(
+    in srgb,
+    var(--terminal-background),
+    var(--terminal-foreground) 10%
+  );
+  font:
+    13px system-ui,
+    sans-serif;
+  user-select: none;
+  app-region: drag;
+}
+
+.window-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.window-title-bar nav {
+  display: flex;
+  flex: none;
+  height: 100%;
+  app-region: no-drag;
+}
+
+.window-title-bar button {
+  min-width: 40px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.window-title-bar button:hover {
+  background: color-mix(
+    in srgb,
+    var(--terminal-background),
+    var(--terminal-foreground) 20%
+  );
+}
+
+.window-title-bar button:focus-visible {
+  outline: 1px solid var(--terminal-foreground);
+  outline-offset: -2px;
+}
+
+.window-drag-handle {
+  position: fixed;
+  z-index: 10;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  user-select: none;
+  app-region: drag;
+}
+
+.window-drag-handle i {
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: var(--terminal-foreground);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.window-title-bar[hidden],
+.window-drag-handle[hidden] {
+  display: none;
+}
+
+body.window-preview-active .terminal-surface::before,
+body.window-preview-active .window-title-bar {
+  app-region: no-drag;
+}

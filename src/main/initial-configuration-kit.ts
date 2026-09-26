@@ -55,7 +55,11 @@ export async function createInitialConfigurationKit(
       terminal: { padding: defaults.terminalPadding },
       scrollback: { lines: defaults.scrollbackLines },
       keyboard: { optionAsAlt: defaults.optionKeyMode },
-      window: { alwaysOnTop: defaults.alwaysOnTop },
+      window: {
+        alwaysOnTop: defaults.alwaysOnTop,
+        showTitleBar: defaults.showTitleBar,
+        showTabBar: defaults.showTabBar,
+      },
       theme: { path: "themes/omtheme.json" },
     });
   } catch {

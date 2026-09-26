@@ -32,6 +32,16 @@ import {
   type TerminalKeybinds,
 } from "../shared/terminal-keybinds";
 import { loadTerminalTheme, TerminalThemeError } from "./terminal-theme";
+import {
+  UserConfigurationError,
+  userConfigurationDiagnostic,
+} from "./user-configuration-error";
+export {
+  UserConfigurationError,
+  userConfigurationDiagnostic,
+  configurationRejectionReason,
+  type ConfigurationRejectionReason,
+} from "./user-configuration-error";
 
 export const USER_CONFIGURATION_VERSION = 1;
 
@@ -46,34 +56,11 @@ export const DEFAULT_USER_CONFIGURATION: UserConfiguration = Object.freeze({
   scrollbackLines: DEFAULT_SCROLLBACK_LINES,
   optionKeyMode: "none",
   alwaysOnTop: false,
+  showTitleBar: true,
+  showTabBar: true,
   terminalTheme: DEFAULT_TERMINAL_THEME,
   keybinds: DEFAULT_TERMINAL_KEYBINDS,
 });
-
-export class UserConfigurationError extends Error {
-  constructor(
-    readonly configurationPath: string,
-    readonly location: string | undefined,
-    readonly reason: string,
-  ) {
-    super(userConfigurationDiagnostic(configurationPath, location, reason));
-    this.name = "UserConfigurationError";
-  }
-}
-
-export function userConfigurationDiagnostic(
-  configurationPath: string,
-  location: string | undefined,
-  reason: string,
-): string {
-  const safeLocation = location
-    ? ` at ${JSON.stringify(location.slice(0, 128))}`
-    : "";
-  // The location is file content and stays JSON-escaped; the path is
-  // system-derived and must remain copyable, so Windows backslashes are
-  // never doubled by escaping.
-  return `User Configuration "${configurationPath}"${safeLocation}: ${reason}. Fix the file and restart OMXTerm.`;
-}
 
 export interface LoadUserConfigurationOptions {
   readonly environment: Readonly<Record<string, string | undefined>>;
@@ -394,7 +381,11 @@ export function validateUserConfiguration(
   if (keyboard)
     rejectUnknownKeys(keyboard, configurationPath, "keyboard", ["optionAsAlt"]);
   if (window)
-    rejectUnknownKeys(window, configurationPath, "window", ["alwaysOnTop"]);
+    rejectUnknownKeys(window, configurationPath, "window", [
+      "alwaysOnTop",
+      "showTitleBar",
+      "showTabBar",
+    ]);
   if (theme) rejectUnknownKeys(theme, configurationPath, "theme", ["path"]);
   if (keybinds)
     rejectUnknownKeys(
@@ -517,12 +508,6 @@ export function validateUserConfiguration(
     "confirmClose",
     true,
   );
-  const alwaysOnTop = optionalBoolean(
-    window?.alwaysOnTop,
-    configurationPath,
-    "window.alwaysOnTop",
-    false,
-  );
   const logLevel = optionalEnum(
     root.logLevel,
     configurationPath,
@@ -550,10 +535,28 @@ export function validateUserConfiguration(
     terminalPadding,
     scrollbackLines,
     optionKeyMode,
-    alwaysOnTop,
+    ...windowPreferences(window, configurationPath),
     terminalTheme: DEFAULT_TERMINAL_THEME,
     keybinds: terminalKeybinds,
   });
+}
+
+function windowPreferences(
+  window: Record<string, unknown> | undefined,
+  configurationPath: string,
+) {
+  const read = (key: string, fallback: boolean) =>
+    optionalBoolean(
+      window?.[key],
+      configurationPath,
+      `window.${key}`,
+      fallback,
+    );
+  return {
+    alwaysOnTop: read("alwaysOnTop", false),
+    showTitleBar: read("showTitleBar", true),
+    showTabBar: read("showTabBar", true),
+  };
 }
 
 function windowsShellProperty(windowsShell: string | undefined): {
@@ -649,35 +652,6 @@ function selectedTerminalThemePath(
   return path.isAbsolute(selectedPath)
     ? selectedPath
     : path.resolve(path.dirname(configurationPath), selectedPath);
-}
-
-export type ConfigurationRejectionReason =
-  | "read-failed"
-  | "invalid-utf8"
-  | "invalid-json"
-  | "invalid-schema"
-  | "font-discovery-failed"
-  | "theme-read-failed"
-  | "theme-invalid";
-
-export function configurationRejectionReason(
-  failure: UserConfigurationError,
-  surface: UserConfigurationFallbackSurface = "configuration",
-): ConfigurationRejectionReason {
-  if (surface === "theme")
-    return failure.reason.includes("could not be read") ||
-      failure.reason.includes("does not exist")
-      ? "theme-read-failed"
-      : "theme-invalid";
-  if (failure.reason === "the file could not be read") return "read-failed";
-  if (failure.reason === "the file is not valid UTF-8") return "invalid-utf8";
-  if (failure.reason === "the file is not valid JSON") return "invalid-json";
-  if (
-    failure.reason === "installed font families could not be discovered" ||
-    failure.reason.startsWith("installed font could not be validated:")
-  )
-    return "font-discovery-failed";
-  return "invalid-schema";
 }
 
 function isNotFound(cause: unknown): boolean {

@@ -18,7 +18,7 @@ export interface TrustedWebContents {
 
 export interface IpcEvent {
   readonly sender: TrustedWebContents;
-  readonly senderFrame: object;
+  readonly senderFrame: object | null;
 }
 
 export type IpcListener = (event: IpcEvent, payload?: unknown) => void;

@@ -45,6 +45,7 @@ export interface TerminalRendererConfiguration {
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
   readonly nativeTitleInset: 0 | 30;
+  readonly showTabBar: boolean;
   readonly terminalTheme: TerminalTheme;
   readonly userFileErrors: readonly string[];
 }
@@ -62,6 +63,8 @@ export interface UserConfiguration {
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
   readonly alwaysOnTop: boolean;
+  readonly showTitleBar: boolean;
+  readonly showTabBar: boolean;
   readonly terminalTheme: TerminalTheme;
   readonly keybinds: TerminalKeybinds;
 }
@@ -82,6 +85,7 @@ export function isTerminalRendererConfiguration(
         "scrollbackLines",
         "optionKeyMode",
         "nativeTitleInset",
+        "showTabBar",
         "terminalTheme",
         "userFileErrors",
       ].includes(key),
@@ -101,6 +105,7 @@ export function isTerminalRendererConfiguration(
     (value.scrollbackLines as number) <= MAX_SCROLLBACK_LINES &&
     ["none", "left", "right", "both"].includes(value.optionKeyMode as string) &&
     (value.nativeTitleInset === 0 || value.nativeTitleInset === 30) &&
+    typeof value.showTabBar === "boolean" &&
     isTerminalTheme(value.terminalTheme) &&
     isUserFileErrors(value.userFileErrors)
   );

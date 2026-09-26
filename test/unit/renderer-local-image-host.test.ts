@@ -59,7 +59,10 @@ function fileDrop() {
   expect(event.defaultPrevented).toBe(true);
 }
 
-async function setup(loadLocalImage: () => Promise<LocalImageData | null>) {
+async function setup(
+  loadLocalImage: () => Promise<LocalImageData | null>,
+  withChrome = false,
+) {
   document.body.replaceChildren();
   mockImageDialog();
   const tabStrip = document.createElement("nav");
@@ -78,6 +81,8 @@ async function setup(loadLocalImage: () => Promise<LocalImageData | null>) {
   };
   let openImage!: () => void;
   let toggleTabBar!: () => void;
+  let toggleTitleBar = () => {};
+  const chromeCommand = vi.fn();
   let clipboard!: (action: "copy" | "paste" | "select-all") => void;
   let zoom!: (command: TerminalFontZoom) => void;
   let tabCommand!: (command: TerminalTabCommand) => void;
@@ -98,6 +103,32 @@ async function setup(loadLocalImage: () => Promise<LocalImageData | null>) {
         return surface;
       },
       page: window,
+      ...(withChrome
+        ? {
+            chrome: {
+              windowChrome: chromeCommand,
+              onTitleBarToggle(listener: () => void) {
+                toggleTitleBar = listener;
+                return () => {};
+              },
+              onWindowChrome(
+                listener: (
+                  state: import("../../src/shared/window-chrome").WindowChromeState,
+                ) => void,
+              ) {
+                listener({
+                  style: "native",
+                  titleBarVisible: false,
+                  fullScreen: false,
+                  maximized: false,
+                  handleVisible: true,
+                  title: "fixture",
+                });
+                return () => {};
+              },
+            },
+          }
+        : {}),
       subscribeToConfigurationUpdates(listener) {
         updateConfiguration = listener;
         return () => {};
@@ -137,6 +168,8 @@ async function setup(loadLocalImage: () => Promise<LocalImageData | null>) {
     surfaceOptions,
     openImage,
     toggleTabBar,
+    toggleTitleBar: () => toggleTitleBar(),
+    chromeCommand,
     tabStrip,
     updateConfiguration,
   };
@@ -230,6 +263,65 @@ describe("local image preview through the Terminal Window host", () => {
     },
   );
 
+  it.each(["picker", "source"])(
+    "suppresses title toggle and handle through %s choosing/loading/showing",
+    async (route) => {
+      let finish!: (value: LocalImageData | null) => void;
+      const view = await setup(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+        true,
+      );
+      let decoded!: () => void;
+      vi.spyOn(HTMLImageElement.prototype, "decode").mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            decoded = resolve;
+          }),
+      );
+      const handle = document.querySelector<HTMLElement>(
+        ".window-drag-handle",
+      )!;
+      try {
+        expect(handle.hidden).toBe(false);
+        if (route === "picker") view.openImage();
+        else
+          view.surfaceOptions.onLocalImageActivation!({
+            source: "native-path",
+            path: "/tmp/fixture.png",
+          });
+        view.surface.focus.mockClear();
+        const suppressed = () => {
+          view.toggleTitleBar();
+          expect(handle.hidden).toBe(true);
+          expect(view.chromeCommand).not.toHaveBeenCalledWith(
+            "toggle-title-bar",
+          );
+          expect(view.surface.focus).not.toHaveBeenCalled();
+        };
+        suppressed();
+        expect(view.chromeCommand).toHaveBeenLastCalledWith("preview-active");
+        finish(image);
+        await vi.waitFor(() => expect(decoded).toBeDefined());
+        suppressed();
+        decoded();
+        await vi.waitFor(() =>
+          expect(document.querySelector("dialog")!.open).toBe(true),
+        );
+        suppressed();
+        document.querySelector<HTMLButtonElement>("dialog button")!.click();
+        expect(view.chromeCommand).toHaveBeenLastCalledWith("preview-inactive");
+        expect(handle.hidden).toBe(false);
+        view.toggleTitleBar();
+        expect(view.chromeCommand).toHaveBeenLastCalledWith("toggle-title-bar");
+      } finally {
+        view.host.dispose();
+      }
+    },
+  );
+
   it("blocks terminal-directed actions while loading/modal and restores them after dismissal", async () => {
     let finish!: (value: LocalImageData) => void;
     const view = await setup(
@@ -294,6 +386,7 @@ describe("local image preview through the Terminal Window host", () => {
           scrollbackLines: 10_000,
           optionKeyMode: "none",
           nativeTitleInset,
+          showTabBar: true,
           terminalTheme: DEFAULT_TERMINAL_THEME,
           userFileErrors: [],
         });

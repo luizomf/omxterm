@@ -1,6 +1,10 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import type { TerminalBridge } from "../shared/terminal-bridge";
 import {
+  isWindowChromeCommand,
+  isWindowChromeState,
+} from "../shared/window-chrome";
+import {
   isClipboardText,
   isBoundedTerminalPayload,
   isNonemptyClipboardText,
@@ -95,6 +99,28 @@ const terminal: TerminalBridge = {
     };
     ipcRenderer.on(terminalIpc.tabBarToggle, handler);
     return () => ipcRenderer.removeListener(terminalIpc.tabBarToggle, handler);
+  },
+  onTitleBarToggle(listener) {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (payload === undefined) listener();
+    };
+    ipcRenderer.on(terminalIpc.titleBarToggle, handler);
+    return () =>
+      ipcRenderer.removeListener(terminalIpc.titleBarToggle, handler);
+  },
+  windowChrome(command) {
+    if (!isWindowChromeCommand(command))
+      throw new TypeError("Invalid Window Chrome command");
+    ipcRenderer.send(terminalIpc.windowChromeCommand, command);
+  },
+  onWindowChrome(listener) {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (isWindowChromeState(payload)) listener(payload);
+    };
+    ipcRenderer.on(terminalIpc.windowChromeState, handler);
+    ipcRenderer.send(terminalIpc.windowChromeCommand, "sync");
+    return () =>
+      ipcRenderer.removeListener(terminalIpc.windowChromeState, handler);
   },
   onConfigurationUpdate(listener) {
     configurationUpdateListeners.add(listener);

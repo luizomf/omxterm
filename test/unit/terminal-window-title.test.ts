@@ -39,16 +39,39 @@ function createControllerHarness(focused = false) {
   const dock = vi.fn(() => vi.fn());
   const rejected = vi.fn();
   const sessionTitles = vi.fn();
+  const chromeTitle = vi.fn();
   const controller = createTerminalWindowTitleController(fixture.window, {
     fallbackSessionTitle: "example-shell",
     requestAttention: dock,
     sendSessionTitle: sessionTitles,
     onRejected: rejected,
+    onWindowTitle: chromeTitle,
   });
-  return { ...fixture, dock, rejected, sessionTitles, controller };
+  return { ...fixture, dock, rejected, sessionTitles, chromeTitle, controller };
 }
 
 describe("native Terminal Title and bell attention", () => {
+  it("publishes exactly the native sanitized selected title and fallback to app-drawn chrome", () => {
+    const harness = createControllerHarness();
+    harness.controller.sessionStarted("s1");
+    harness.controller.selectSession("s1");
+    harness.controller.requestTitle("s1", "before\n\u202eafter");
+    expect(harness.chromeTitle).toHaveBeenLastCalledWith("beforeafter");
+    harness.controller.ringBell("s1");
+    expect(harness.chromeTitle).toHaveBeenLastCalledWith("🔔 beforeafter");
+    harness.controller.resetAttention();
+    harness.controller.requestTitle("s1", "x".repeat(257));
+    expect(harness.chromeTitle).toHaveBeenLastCalledWith("example-shell");
+    harness.controller.sessionEnded("s1");
+    expect(harness.chromeTitle).toHaveBeenLastCalledWith("OMXTerm");
+    expect(harness.chromeTitle.mock.calls).toEqual(
+      harness.window.setTitle.mock.calls,
+    );
+    harness.controller.dispose();
+    harness.chromeTitle.mockClear();
+    harness.controller.requestTitle("s1", "late");
+    expect(harness.chromeTitle).not.toHaveBeenCalled();
+  });
   it("enumerates the complete Bidi_Control set supported by the pinned runtime", () => {
     const runtimeSet: number[] = [];
     for (let codePoint = 0; codePoint <= 0x10ffff; codePoint += 1) {

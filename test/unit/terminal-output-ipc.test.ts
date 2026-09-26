@@ -43,6 +43,7 @@ function options(): Omit<
       scrollbackLines: 10_000,
       optionKeyMode: "none",
       nativeTitleInset: 0,
+      showTabBar: true,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       userFileErrors: [],
     },

@@ -38,6 +38,7 @@ function controllerOptions() {
       scrollbackLines: 10_000,
       optionKeyMode: "none" as const,
       nativeTitleInset: 30 as const,
+      showTabBar: true,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       userFileErrors: [],
     },

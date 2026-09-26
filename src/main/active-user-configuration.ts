@@ -63,7 +63,8 @@ export function terminalRendererConfiguration(
     terminalPadding: configuration.terminalPadding,
     scrollbackLines: configuration.scrollbackLines,
     optionKeyMode: configuration.optionKeyMode,
-    nativeTitleInset,
+    nativeTitleInset: configuration.showTitleBar ? nativeTitleInset : 0,
+    showTabBar: configuration.showTabBar,
     terminalTheme: active.configuration.terminalTheme,
     userFileErrors: active.userFileErrors,
   });

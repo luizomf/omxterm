@@ -86,7 +86,7 @@ export function terminalWindowOptions(
     cellWidth * MINIMUM_TERMINAL_COLUMNS;
   const nativeTitleInset = terminalNativeTitleInset(platform);
   const minimumContentHeight =
-    nativeTitleInset +
+    (platform === "darwin" ? nativeTitleInset : 34) +
     terminalPadding.top +
     terminalPadding.bottom +
     // Restty rounds the base character envelope before applying lineHeight.
@@ -107,10 +107,11 @@ export function terminalWindowOptions(
     show: false,
     title: "OMXTerm",
     autoHideMenuBar: platform === "linux" || platform === "win32",
-    // Framed platforms must apply these bounds to renderer content; otherwise
-    // the native title/menu frame consumes part of the promised terminal grid.
-    useContentSize: nativeTitleInset === 0,
-    titleBarStyle: nativeTitleInset > 0 ? "hiddenInset" : "default",
+    // Retain hiddenInset on macOS: live button visibility never recreates the window.
+    // Other platforms keep native resize/snap behavior with app-drawn controls.
+    frame: platform === "darwin",
+    useContentSize: platform !== "darwin",
+    titleBarStyle: platform === "darwin" ? "hiddenInset" : "default",
     backgroundColor: terminalTheme.colors.background,
     // Without a window icon, environments that resolve icons from the window
     // itself (a directly-run Linux AppImage has no registered desktop entry)

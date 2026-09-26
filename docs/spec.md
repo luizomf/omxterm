@@ -6,7 +6,7 @@ OMXTerm product behavior.
 ## Product
 
 OMXTerm is an open-source personal desktop terminal. It opens a normal local
-shell in a standard native window with a small title bar and gives the Terminal
+shell in a native window with a hideable title area and gives the Terminal
 Surface all remaining content space. Its contract centers on that local terminal
 experience. SSH brokering, AI assistance, persistent session management, and IDE
 features are outside the product scope.
@@ -94,17 +94,19 @@ succeeds (ADR 0025).
   input DOM focus. When the user returns from another application or OMXTerm
   window, only the active Terminal Window restores that focus. Focus restoration
   does not activate, raise, or show OMXTerm by itself.
-- Every Terminal Window can be repositioned through its visible native title
-  area while the Terminal Surface remains fully interactive.
-- A window with a single tab shows no tab strip and renders exactly like the
-  pre-tab contract. Each window owns an in-memory tab bar enabled flag, initially
-  true. The OMXTerm-drawn tab strip is visible only when that flag is enabled
+- Every Terminal Window can be repositioned through its visible title area,
+  or its small hover-revealed handle when that area is hidden. Native dragging
+  is confined to these areas; the rest of the Terminal Surface remains interactive.
+- A window with a single tab shows no tab strip. Each window owns independent
+  in-memory title-bar and tab-bar visibility choices, initialized from
+  `window.showTitleBar` and `window.showTabBar`, both defaulting to true.
+  The OMXTerm-drawn tab strip is visible only when its flag is enabled
   and there are two or more tabs; it occupies its own full-width row above the
   Terminal Surface and Snippets Sidebar row.
-  On macOS it sits below the app-controlled 30 px native title inset except in
-  native fullscreen, where that app-owned inset is zero. On Linux and Windows
-  it starts immediately below the operating system's native Window Chrome,
-  without another inset. Clicking a tab selects it; the selected tab's
+  On macOS it sits below the app-controlled 30 px native title inset when the
+  title area is visible and the window is not fullscreen. On Linux and Windows
+  it sits below the visible app-drawn 34 px title row. A hidden title area or
+  fullscreen leaves no title row or duplicate inset. Clicking a tab selects it; the selected tab's
   grid refits and receives terminal focus. Dragging a tab horizontally within
   that strip reorders the existing tabs in that window. The reordered positions
   immediately drive visible order, next/previous cycling, and literal positional
@@ -153,22 +155,43 @@ succeeds (ADR 0025).
 - Native windows have minimum dimensions of 320 px wide by 200 px high. At
   startup and after a valid reload, either minimum grows when the configured font
   or padding requires more room for a visible terminal grid.
-- On macOS, the Terminal Surface keeps a 30 px native title/drag inset above
-  the configurable top padding while windowed or maximized. Native fullscreen
-  removes only that app-owned inset; configured padding and the system-provided
-  safe area remain unchanged. Native title and menu chrome may temporarily
-  overlay content when revealed without app-driven padding or PTY resizing.
-  Fullscreen entry and exit refit the selected existing Surface and PTY, while
-  other windows and hidden Surfaces remain unchanged. Linux and Windows use
-  their operating-system title and menu outside the app-controlled content and
-  add no duplicate inset. Every Linux and Windows Terminal Window auto-hides the
-  installed native application menu bar by default; pressing and releasing Alt
-  alone temporarily reveals it, and using or dismissing the menu returns it to
-  hidden. This is fixed Window Chrome behavior rather than User Configuration,
-  and macOS menu behavior is unchanged. The selected Terminal Theme background
-  fills the complete app-controlled
-  Terminal Window content, including any title inset and all configured
-  padding.
+- On macOS, visible Window Chrome preserves the blended `hiddenInset`
+  appearance, with native traffic-light controls on the left and a 30 px
+  title/drag inset above configured top padding. The Terminal Theme background
+  continues behind the controls; no separately colored title strip is added.
+  Hiding removes the controls and that inset without recreating the native window.
+- Linux and Windows use a frameless native window with a hideable, app-drawn
+  34 px title/drag row. The sanitized selected Terminal Title, with the existing
+  fallback, appears at the left; minimize, maximize/restore, and close controls
+  appear at the right. Colors follow the active Terminal Theme. Controls invoke
+  native actions in main; Close uses the existing guarded Close Window lifecycle.
+  Native resize, maximize/restore, and operating-system edge/corner snapping remain
+  window-manager behavior rather than app-drawn substitutes.
+- `View -> Toggle Title Bar` defaults to `Cmd+Shift+D` on macOS and
+  `Ctrl+Shift+D` on Linux and Windows, remappable as `toggleTitleBar`. It changes
+  only the selected window's title-bar choice, without rewriting configuration
+  or recreating its window, renderer, Terminal Surfaces, or Live Terminal Sessions.
+  A layout change refits the selected existing Surface and PTY and restores
+  terminal focus; hidden Surfaces retain valid geometry. Local Image Preview
+  choosing/loading/showing suppresses the toggle without changing state or focus.
+- When the title area is hidden outside fullscreen, hovering anywhere in the top
+  150 logical px of content reveals three dots at the top center. Only their
+  90 by 14 logical-pixel rectangle is a native drag target. Reveal/hide changes
+  no layout or PTY size; the remaining hover region does not intercept selection,
+  tab interaction, or terminal mouse input. Local Image Preview suppresses this
+  handle while active. No cursor positions or terminal contents become logs.
+- Native fullscreen suppresses app-controlled title chrome and the hover handle
+  without changing the window's chosen visibility. Leaving fullscreen restores
+  that choice. Configured padding and macOS system safe area remain unchanged;
+  transient system chrome may overlay content without hover-driven padding or
+  PTY resizing. Entry and exit refit the selected existing Surface and PTY, while
+  other windows and hidden Surfaces remain unchanged.
+- Every Linux and Windows Terminal Window auto-hides the installed native
+  application menu bar by default; pressing and releasing Alt alone temporarily
+  reveals it, and using or dismissing the menu returns it to hidden. This is
+  fixed Window Chrome behavior rather than User Configuration, and macOS menu
+  behavior is unchanged. The selected Terminal Theme fills the app-controlled
+  content, including title chrome and configured padding.
 - `Window -> Always on Top` toggles only the selected window at the ordinary
   native floating level. New windows use the configured default.
 - On Linux and Windows, the existing native About action shows `OMXTerm`, the
@@ -191,8 +214,8 @@ succeeds (ADR 0025).
   without an error. The picker and visible local-image sources share the bounded
   read and overlay contract below. While choosing, loading, or displaying a
   preview, terminal clipboard actions, file drops, font zoom, tab bar toggles,
-  snippet toggles and snippet injection are ignored; page activation does not steal preview
-  focus. Dismissal restores ordinary routing. Already accepted terminal input
+  snippet toggles, title-bar toggles and snippet injection are ignored; page activation does not steal preview
+  focus. The hover drag handle is suppressed. Dismissal restores ordinary routing. Already accepted terminal input
   is not rolled back, and confirmed tab/session/window closure remains active.
 - Dropping one or more native file-manager files or folders anywhere in a
   Terminal Window without an active Local Image Preview inserts their absolute paths into only the selected Terminal
@@ -211,11 +234,11 @@ succeeds (ADR 0025).
   and line height use the restart-only exception defined below. Native
   backgrounds, Window Chrome, and the Snippets Sidebar follow the theme. It also
   updates close confirmation, logging, the menu, effective keybind delivery,
-  and the Always-on-Top default for future windows. On Windows, it also changes
+  and the Always-on-Top, title-bar and tab-bar defaults for future windows. On Windows, it also changes
   the shell selected for every subsequently created Default Shell session,
   including new tabs in existing windows, without restarting existing sessions.
   Existing windows keep their
-  ephemeral Always-on-Top state, tab bar enabled flag, and independent Window Font Zoom delta over the
+  ephemeral Always-on-Top state, title-bar and tab-bar choices, and independent Window Font Zoom delta over the
   new baseline; Actual Size returns that window to the latest baseline.
   Reconfigured Surfaces refit in place and resize their existing PTYs.
 - `View -> Toggle Tab Bar` (default `Cmd+Shift+B` on macOS and `Ctrl+Shift+B`
@@ -228,9 +251,10 @@ succeeds (ADR 0025).
   menu navigation remain available while hidden. Title/BEL updates, tab creation,
   selection and closure never reveal a disabled strip. Enabling reveals the same
   live tabs when at least two remain. The flag survives configuration reload but
-  is never persisted or shared: new windows and application restarts start enabled.
+  is never persisted or shared: new windows and application restarts use
+  `window.showTabBar`, whose default is enabled.
   Local Image Preview choosing/loading/showing suppresses the action without
-  changing the flag or focus. Native chrome and fullscreen inset policy are unchanged.
+  changing the flag or focus. Title-bar visibility and fullscreen remain independent.
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and
   `Ctrl+Shift+S` on Linux and Windows, remappable through `keybinds`) shows or hides the
   selected window's Snippets Sidebar beside its
@@ -603,7 +627,7 @@ does not track subsequent bundled palette changes. A present file must contain `
   `terminal.padding.bottom`, and `terminal.padding.left`;
 - `scrollback.lines`;
 - `keyboard.optionAsAlt`: `none`, `left`, `right`, or `both`;
-- `window.alwaysOnTop`;
+- `window.alwaysOnTop`, `window.showTitleBar`, and `window.showTabBar`;
 - `theme.path`;
 - `keybinds.<action>` for the fixed application-shortcut vocabulary below.
 
@@ -618,12 +642,18 @@ for coverage before available operating-system emoji, CJK, and symbol faces.
 row-height multiplier from 1.0 through 2.0 inclusive, accepts fractional
 values, does not change glyph size, and defaults to 1.0. Terminal padding uses
 explicit per-side integer CSS pixels from 0 through 128 inclusive and defaults
-to top 0, right 8, bottom 8, and left 8. User top padding is added to the fixed,
-non-configurable 30 px native title inset on macOS while windowed or maximized;
-native fullscreen removes that app-owned inset without changing configured
-padding or the system safe area. On Linux and Windows it begins directly below
-the native window chrome. `logLevel` defaults to `info`,
+to top 0, right 8, bottom 8, and left 8. User top padding is added below the
+30 px native title inset on macOS when that title area is visible, or below the
+34 px app-drawn title row on Linux and Windows. Hiding the title area or entering
+fullscreen removes only the app-owned title space, without changing configured
+padding or the macOS system safe area. `logLevel` defaults to `info`,
 `keyboard.optionAsAlt` to `none`, and `window.alwaysOnTop` to `false`.
+
+`window.showTitleBar` and `window.showTabBar` accept only booleans and default to
+`true`. They choose initial visibility for newly created windows. A successful
+reload updates these defaults for future windows, not existing windows' choices;
+menu/keybind toggles never rewrite the document. An enabled tab bar still needs
+two or more tabs to become visible.
 
 `windowsShell` is an optional non-empty string without NUL on every Supported
 Platform. On Windows it must be an absolute Windows filesystem path whose final
@@ -640,7 +670,7 @@ An optional `keybinds` object remaps application-chrome shortcuts for a fixed
 action vocabulary: `quit`, `copy`, `paste`, `selectAll`, `newWindow`,
 `closeWindow`, `newTab`, `closeTab`, `nextTab`, `previousTab`, `selectTab1`
 through `selectTab9`, `zoomIn`, `zoomOut`, `actualSize`, `toggleFullScreen`,
-`toggleSnippets`, `toggleTabBar`, and `reloadConfig`. Each
+`toggleSnippets`, `toggleTabBar`, `toggleTitleBar`, and `reloadConfig`. Each
 value is a case-insensitive Electron accelerator containing at least one
 non-Shift modifier and exactly one key; bare or Shift-only accelerators are
 rejected so a keybind can never swallow plain typing. Unmapped actions keep

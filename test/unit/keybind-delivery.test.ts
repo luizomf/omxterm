@@ -193,30 +193,39 @@ it("delivers shifted punctuation with macOS Command semantics", () => {
   expect(invoke).toHaveBeenCalledTimes(2);
 });
 
-it.each(["darwin", "linux", "win32"])(
-  "consumes Toggle Tab Bar once and follows its remap on %s",
-  (platform) => {
+it.each(
+  ["darwin", "linux", "win32"].flatMap((platform) =>
+    (["toggleTabBar", "toggleTitleBar"] as const).map((action) => ({
+      platform,
+      action,
+    })),
+  ),
+)(
+  "consumes $action once and follows its remap on $platform",
+  ({ platform, action }) => {
     const defaults = terminalDefaultKeybinds(platform);
     const { invoke, sendKey, setKeybinds } = keybindDeliveryHarness(
       defaults,
       platform,
     );
+    const key = action === "toggleTabBar" ? "B" : "D";
     const input = {
-      key: "B",
+      key,
       shift: true,
       meta: platform === "darwin",
       control: platform !== "darwin",
     };
     expect(sendKey(input).preventDefault).toHaveBeenCalledOnce();
     sendKey({ ...input, type: "keyUp" });
-    expect(invoke).toHaveBeenCalledExactlyOnceWith("toggleTabBar");
-    setKeybinds({ ...defaults, toggleTabBar: "Control+Alt+B" });
+    expect(invoke).toHaveBeenCalledExactlyOnceWith(action);
+    setKeybinds({ ...defaults, [action]: `Control+Alt+${key}` });
     expect(sendKey(input).preventDefault).not.toHaveBeenCalled();
     invoke.mockClear();
     expect(
-      sendKey({ key: "b", control: true, alt: true }).preventDefault,
+      sendKey({ key: key.toLowerCase(), control: true, alt: true })
+        .preventDefault,
     ).toHaveBeenCalledOnce();
-    expect(invoke).toHaveBeenCalledExactlyOnceWith("toggleTabBar");
+    expect(invoke).toHaveBeenCalledExactlyOnceWith(action);
   },
 );
 

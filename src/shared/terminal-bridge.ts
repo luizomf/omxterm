@@ -6,6 +6,7 @@ import type {
   TerminalSize,
   TerminalTabCommand,
 } from "./terminal-contract";
+import type { WindowChromeCommand, WindowChromeState } from "./window-chrome";
 import type { TerminalRendererConfiguration } from "./user-configuration";
 import type { TerminalFontData } from "./terminal-font-data";
 import type { TerminalSnippetsResponse } from "./terminal-snippets";
@@ -17,6 +18,9 @@ export interface TerminalBridge {
   snippets(): Promise<TerminalSnippetsResponse>;
   onSnippetsToggle(listener: () => void): () => void;
   onTabBarToggle(listener: () => void): () => void;
+  onTitleBarToggle(listener: () => void): () => void;
+  windowChrome(command: WindowChromeCommand): void;
+  onWindowChrome(listener: (state: WindowChromeState) => void): () => void;
   onConfigurationUpdate(
     listener: (configuration: TerminalRendererConfiguration) => void,
   ): () => void;

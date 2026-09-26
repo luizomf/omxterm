@@ -19,13 +19,14 @@ the latest download, and [release notes](releases/) describe older versions.
 Choose **File → New Tab** for another session in the current window, or
 **File → New Window** for an independent window. Every tab starts its own shell.
 
-The tab bar appears when a window has at least two tabs. Click a tab to select
+The tab bar appears when enabled and a window has at least two tabs. Click a tab to select
 it, drag it horizontally to reorder it, or use the shortcuts below. Next/previous
 tab wraps around; selecting a position that is not open does nothing.
 
 **View → Toggle Tab Bar** hides or enables the bar for the current window.
 Shortcuts and the native Window menu still switch tabs when it is hidden. The
-choice survives configuration reload, but new windows start with the bar enabled.
+choice survives configuration reload. New windows use `window.showTabBar`, which
+is enabled by default.
 
 Tab order and sessions are not saved between launches. OMXTerm has no splits or
 cross-window tab moves. Use tmux or another session tool when work must survive
@@ -48,9 +49,18 @@ disable these confirmations.
 
 - **Zoom** changes font size for every tab in the current window, including new
   tabs. It is temporary; **Actual Size** returns to the configured baseline.
-- **View → Toggle Full Screen** affects the selected window. On macOS, native
-  fullscreen reclaims the app's title inset while preserving configured padding
-  and the system safe area.
+- **View → Toggle Title Bar** hides or restores the selected window's title area
+  without restarting its sessions. With the bar hidden, move the pointer into
+  the top 150 px and drag the three dots at the top center. Only the small area
+  around the dots moves the window; the rest remains normal terminal input.
+  New windows use `window.showTitleBar`, enabled by default. On macOS the visible
+  area keeps native controls on the left, blended into the terminal background.
+  Linux and Windows have a compact themed row with title on the left and native
+  minimize, maximize/restore, and guarded close actions on the right.
+- **View → Toggle Full Screen** affects the selected window. Fullscreen hides
+  title chrome and the dot handle without changing your visibility choice;
+  leaving fullscreen restores it. Configured padding and the macOS system safe
+  area remain unchanged.
 - **Window → Always on Top** toggles the current window. To choose the default
   for new windows, set `window.alwaysOnTop` in your configuration.
 
@@ -78,6 +88,7 @@ Application menus show the effective shortcuts, including your custom bindings.
 | Actual Size               | `Cmd+0`           | `Ctrl+0`           |
 | Toggle Full Screen        | `Ctrl+Cmd+F`      | `Ctrl+Shift+F`     |
 | Toggle Tab Bar            | `Cmd+Shift+B`     | `Ctrl+Shift+B`     |
+| Toggle Title Bar          | `Cmd+Shift+D`     | `Ctrl+Shift+D`     |
 | Toggle Snippets           | `Cmd+Shift+S`     | `Ctrl+Shift+S`     |
 | Reload User Configuration | `Cmd+Shift+,`     | `Ctrl+Shift+,`     |
 
@@ -142,8 +153,8 @@ visible URL is opened. Modified clicks do not also reach a mouse-aware TUI.
 
 Choose **File → Open Local Image…** and select a PNG or JPEG. A temporary overlay
 shows the image; press **Escape**, click its close button, or click the backdrop
-to return to the terminal. Clipboard, snippets, file drops, zoom, and tab-bar
-actions are paused while the preview is active.
+to return to the terminal. Clipboard, snippets, file drops, zoom, and title/tab-bar
+actions are paused while the preview is active; the dot drag handle is hidden.
 
 You can also use **Cmd+click** (macOS) or **Ctrl+click** (Linux/Windows) on a visible
 absolute path or authority-free `file:///` URL. For native paths, put the path on

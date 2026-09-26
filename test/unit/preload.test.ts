@@ -288,6 +288,7 @@ describe("isolated preload terminal bridge requests", () => {
         scrollbackLines: 10_000,
         optionKeyMode: "none",
         nativeTitleInset: 0,
+        showTabBar: true,
         terminalTheme: DEFAULT_TERMINAL_THEME,
         userFileErrors: [],
       },
@@ -400,17 +401,83 @@ describe("isolated preload terminal bridge responses", () => {
     electron.removeListener.mockClear();
   });
 
-  it("accepts only payload-free tab bar notifications and removes the exact handler", () => {
+  it.each(["tabBarToggle", "titleBarToggle"] as const)(
+    "accepts only payload-free %s notifications and removes the exact handler",
+    (channel) => {
+      const listener = vi.fn();
+      const remove =
+        channel === "tabBarToggle"
+          ? electron.bridge!.onTabBarToggle(listener)
+          : electron.bridge!.onTitleBarToggle(listener);
+      const handler = electron.listeners.get(terminalIpc[channel])!;
+      for (const payload of [null, false, 0, "", {}, []]) handler({}, payload);
+      expect(listener).not.toHaveBeenCalled();
+      handler({}, undefined);
+      expect(listener).toHaveBeenCalledOnce();
+      remove();
+      expect(electron.removeListener).toHaveBeenCalledWith(
+        terminalIpc[channel],
+        handler,
+      );
+      electron.removeListener.mockClear();
+    },
+  );
+
+  it("validates narrow Window Chrome commands and complete bounded snapshots", () => {
+    const bridge = electron.bridge!;
+    electron.send.mockClear();
+    for (const command of [
+      "sync",
+      "toggle-title-bar",
+      "minimize",
+      "maximize",
+      "close",
+      "preview-active",
+      "preview-inactive",
+    ] as const) {
+      bridge.windowChrome(command);
+      expect(electron.send).toHaveBeenLastCalledWith(
+        terminalIpc.windowChromeCommand,
+        command,
+      );
+    }
+    for (const command of [undefined, null, {}, true, "destroy"])
+      expect(() => bridge.windowChrome(command as "close")).toThrow(TypeError);
     const listener = vi.fn();
-    const remove = electron.bridge!.onTabBarToggle(listener);
-    const handler = electron.listeners.get(terminalIpc.tabBarToggle)!;
-    for (const payload of [null, false, 0, "", {}, []]) handler({}, payload);
+    const remove = bridge.onWindowChrome(listener);
+    expect(electron.send).toHaveBeenLastCalledWith(
+      terminalIpc.windowChromeCommand,
+      "sync",
+    );
+    const handler = electron.listeners.get(terminalIpc.windowChromeState)!;
+    const state = {
+      style: "native",
+      titleBarVisible: false,
+      fullScreen: false,
+      maximized: true,
+      handleVisible: true,
+      title: "🔔 accepted title",
+    };
+    for (const payload of [
+      null,
+      {},
+      { ...state, extra: true },
+      { ...state, style: "unknown" },
+      { ...state, handleVisible: 1 },
+      { ...state, fullScreen: "false" },
+      { ...state, titleBarVisible: undefined },
+      { ...state, maximized: null },
+      { ...state, title: "x".repeat(259) },
+      { ...state, title: "bad\nline" },
+      { ...state, title: "bad\u202e" },
+    ])
+      handler({}, payload);
     expect(listener).not.toHaveBeenCalled();
-    handler({}, undefined);
-    expect(listener).toHaveBeenCalledOnce();
+    handler({}, state);
+    expect(listener).toHaveBeenCalledExactlyOnceWith(state);
     remove();
     expect(electron.removeListener).toHaveBeenCalledWith(
-      terminalIpc.tabBarToggle,
+      terminalIpc.windowChromeState,
       handler,
     );
     electron.removeListener.mockClear();
@@ -500,6 +567,7 @@ describe("isolated preload terminal bridge responses", () => {
       scrollbackLines: 500,
       optionKeyMode: "left",
       nativeTitleInset: 30,
+      showTabBar: true,
       terminalTheme: {
         ...DEFAULT_TERMINAL_THEME,
         name: "updated",
@@ -526,6 +594,11 @@ describe("isolated preload terminal bridge responses", () => {
       {},
       { ...valid, fontLigatures: "false" },
     );
+    for (const showTabBar of [undefined, null, "false", 0])
+      electron.listeners.get(terminalIpc.configurationUpdate)?.(
+        {},
+        { ...valid, showTabBar },
+      );
     electron.listeners.get(terminalIpc.configurationUpdate)?.(
       {},
       {
@@ -561,6 +634,7 @@ describe("isolated preload terminal bridge responses", () => {
       scrollbackLines: 10_000,
       optionKeyMode: "none",
       nativeTitleInset: 30,
+      showTabBar: true,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       userFileErrors: ["startup warning"],
     } as const;
@@ -631,6 +705,7 @@ describe("isolated preload terminal bridge responses", () => {
       scrollbackLines: 500,
       optionKeyMode: "right",
       nativeTitleInset: 30,
+      showTabBar: true,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       userFileErrors: [],
     };

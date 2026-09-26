@@ -31,6 +31,7 @@ function menuActions() {
     selectAllSelectedTerminal: vi.fn(),
     toggleSelectedSnippets: vi.fn(),
     toggleSelectedTabBar: vi.fn(),
+    toggleSelectedTitleBar: vi.fn(),
     reloadUserConfiguration: vi.fn(),
     openLocalImage: vi.fn(),
   };
@@ -171,6 +172,17 @@ describe("native application menu", () => {
       actions.toggleSelectedTabBar.mockClear();
       terminalActionInvocations(actions).toggleTabBar();
       expect(actions.toggleSelectedTabBar).toHaveBeenCalledOnce();
+      const title = view.find((item) => item.label === "Toggle Title Bar")!;
+      expect(title).toEqual({
+        label: "Toggle Title Bar",
+        accelerator: terminalDefaultKeybinds(platform!).toggleTitleBar,
+        click: actions.toggleSelectedTitleBar,
+      });
+      (title.click as () => void)();
+      expect(actions.toggleSelectedTitleBar).toHaveBeenCalledOnce();
+      actions.toggleSelectedTitleBar.mockClear();
+      terminalActionInvocations(actions).toggleTitleBar();
+      expect(actions.toggleSelectedTitleBar).toHaveBeenCalledOnce();
     },
   );
 

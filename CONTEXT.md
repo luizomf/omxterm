@@ -112,7 +112,11 @@ _Avoid_: global always-on-top mode, overlay, pinned session
 
 **Window Chrome**:
 Visible application or operating-system controls surrounding the Terminal
-Surface, such as a title bar, toolbar, or window controls.
+Surface. OMXTerm preserves blended native macOS controls on the left and draws
+its own compact themed title row on Linux and Windows with controls on the
+right. The title area may be hidden independently of the tab strip; a small
+hover-revealed drag handle replaces it outside fullscreen. Configuration sets
+initial visibility for new windows, while toggles are ephemeral per window.
 _Avoid_: Chrome, browser header, terminal UI
 
 **Live Terminal Session**:

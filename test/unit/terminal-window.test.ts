@@ -93,6 +93,7 @@ describe("Terminal Window startup contract", () => {
     expect(terminalNativeTitleInset("darwin")).toBe(30);
     expect(options.useContentSize).toBe(false);
     expect(options.titleBarStyle).toBe("hiddenInset");
+    expect(options.frame).toBe(true);
     expect(options.webPreferences).toMatchObject({
       preload: "/application/preload.cjs",
       sandbox: true,
@@ -117,18 +118,22 @@ describe("Terminal Window startup contract", () => {
     expect(options.autoHideMenuBar).toBe(autoHideMenuBar);
   });
 
-  it("uses native Linux chrome without an app-controlled title inset", () => {
-    const options = terminalWindowOptions(
-      "/application/preload.cjs",
-      extremeGeometryConfiguration,
-      "linux",
-    );
+  it.each(["linux", "win32"])(
+    "uses frameless %s chrome and reserves its app-drawn row",
+    (platform) => {
+      const options = terminalWindowOptions(
+        "/application/preload.cjs",
+        extremeGeometryConfiguration,
+        platform,
+      );
 
-    expect(terminalNativeTitleInset("linux")).toBe(0);
-    expect(options.useContentSize).toBe(true);
-    expect(options.titleBarStyle).toBe("default");
-    expect(options.minHeight).toBe(544);
-  });
+      expect(terminalNativeTitleInset("linux")).toBe(0);
+      expect(options.useContentSize).toBe(true);
+      expect(options.titleBarStyle).toBe("default");
+      expect(options.frame).toBe(false);
+      expect(options.minHeight).toBe(578);
+    },
+  );
 
   // A directly-run AppImage has no registered desktop entry, so the window
   // itself must carry the icon or the environment shows a placeholder.

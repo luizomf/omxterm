@@ -2,7 +2,7 @@
 
 OMXTerm is an open-source desktop terminal for Apple Silicon macOS, Linux ARM64,
 and Windows ARM64. Work across tabs and windows, and customize fonts, themes,
-keyboard shortcuts, and snippets.
+keyboard shortcuts, and snippets. Show or hide the title and tab bars independently.
 
 <p align="center">
   <img src="docs/images/omxterm-hero.png" alt="OMXTerm icon: a light blue terminal prompt on a dark rounded square" width="480" />
@@ -19,7 +19,7 @@ local PNG/JPEG previews, and inline images in direct Pi/Chafa sessions.
 ## Platforms and downloads
 
 The latest published release is **0.15.1**. These docs follow the
-**0.15.2-dev.0** source tree; [release notes](docs/releases/0.15.1.md) record
+**0.16.0-dev.0** source tree; [release notes](docs/releases/0.15.1.md) record
 the published package identities and verification.
 
 OMXTerm requires **ARM64** and a working **WebGL2** graphics backend. Intel

@@ -1,3 +1,4 @@
+import { mountWindowChrome, type WindowChromeBridge } from "./window-chrome";
 import type { TerminalSessionAdapter } from "../terminal-surface/terminal-session-adapter";
 import {
   mountTerminalSurface,
@@ -50,6 +51,7 @@ export interface TerminalWindowPageElements {
 interface TerminalWindowPageOptions {
   readonly createAdapter: () => ElectronTerminalAdapter;
   readonly configuration?: TerminalRendererConfiguration;
+  readonly chrome?: WindowChromeBridge;
   readonly page?: Pick<
     Window,
     "addEventListener" | "removeEventListener" | "document"
@@ -183,6 +185,7 @@ export function mountTerminalWindowPage(
       createAdapter: options.createAdapter,
       mount,
       surfaceOptions,
+      showTabBar: options.configuration?.showTabBar ?? true,
       ...(options.notifyTabSelection
         ? { notifySelection: options.notifyTabSelection }
         : {}),
@@ -193,11 +196,18 @@ export function mountTerminalWindowPage(
     },
   );
 
+  const chrome = options.chrome
+    ? mountWindowChrome(page.document, options.chrome, () => {
+        if (!(localImagePreview?.isActive() ?? false)) tabs.focusSelected();
+      })
+    : undefined;
+
   if (options.loadLocalImage) {
     localImagePreview = createLocalImagePreview(page.document, {
       loadImage: options.loadLocalImage,
       focusTerminal: () => tabs.focusSelected(),
       onActivityChange: () => {
+        chrome?.setPreviewActive(localImagePreview?.isActive() ?? false);
         for (const listener of hoverAvailabilityListeners) listener();
       },
     });
@@ -248,6 +258,7 @@ export function mountTerminalWindowPage(
     removeTabBarToggleListener?.();
     removeSnippetsToggleListener?.();
     removeLocalImageOpenListener?.();
+    chrome?.dispose();
     localImagePreview?.dispose();
     localImagePreview = undefined;
     snippetsSidebar?.dispose();
@@ -265,10 +276,11 @@ export function mountTerminalWindowPage(
   removeConfigurationUpdateListener = options.subscribeToConfigurationUpdates?.(
     (configuration) => {
       if (disposed) return;
-      page.document.documentElement.style.setProperty(
-        "--native-title-inset",
-        `${configuration.nativeTitleInset}px`,
-      );
+      if (!chrome)
+        page.document.documentElement.style.setProperty(
+          "--native-title-inset",
+          `${configuration.nativeTitleInset}px`,
+        );
       applyPageTheme(configuration.terminalTheme);
       const nextSurfaceConfiguration = surfaceConfiguration(configuration);
       if (configuration.fontFamily !== activeFontFamily) {
