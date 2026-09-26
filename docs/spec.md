@@ -245,8 +245,9 @@ succeeds (ADR 0025).
   per-side padding, scrollback, programming ligatures, Option Key Mode, and
   Terminal Theme across every current and future Terminal Window, Terminal Tab,
   and Terminal Surface without disturbing a Live Terminal Session. Font family
-  and line height use the restart-only exception defined below. Native
-  backgrounds, Window Chrome, and the Snippets Sidebar follow the theme. It also
+  and line height use the restart-only exception defined below. Window Chrome
+  and the Snippets Sidebar follow the theme. Background transparency and native
+  blur apply live to all current and future windows. It also
   updates close confirmation, logging, the menu, effective keybind delivery,
   and the Always-on-Top, title-bar and tab-bar defaults for future windows. On Windows, it also changes
   the shell selected for every subsequently created Default Shell session,
@@ -641,7 +642,8 @@ does not track subsequent bundled palette changes. A present file must contain `
   `terminal.padding.bottom`, and `terminal.padding.left`;
 - `scrollback.lines`;
 - `keyboard.optionAsAlt`: `none`, `left`, `right`, or `both`;
-- `window.alwaysOnTop`, `window.showTitleBar`, and `window.showTabBar`;
+- `window.alwaysOnTop`, `window.showTitleBar`, `window.showTabBar`,
+  `window.blur`, and `window.transparency`;
 - `theme.path`;
 - `keybinds.<action>` for the fixed application-shortcut vocabulary below.
 
@@ -668,6 +670,42 @@ padding or the macOS system safe area. `logLevel` defaults to `info`,
 reload updates these defaults for future windows, not existing windows' choices;
 menu/keybind toggles never rewrite the document. An enabled tab bar still needs
 two or more tabs to become visible.
+
+`window.blur` accepts only a boolean and defaults to `false`.
+`window.transparency` accepts only a finite number from 0 through 1, including
+fractions, and defaults to 0. Wrong types, unknown keys and out-of-range values
+are rejected, never clamped. Both settings apply on valid manual reload to all
+current and future windows/tabs without replacing native windows, Terminal
+Surfaces or Live Terminal Sessions; rejected reloads keep the entire last
+snapshot.
+
+Zero preserves the opaque appearance. Increasing transparency reduces only the
+OMXTerm background tint, painted once behind terminal content, padding, title
+chrome, tabs and the Snippets Sidebar. One removes that tint completely. Chrome
+neutral overlays also fade; foreground controls and the selected-tab indicator
+remain visible. Glyphs (including their normal antialiasing and SGR faint),
+cursor, selection and Inline Terminal Images are not faded with the window.
+Implicit default cell backgrounds, including SGR 49, expose the shared tint.
+Explicit ANSI palette and RGB backgrounds remain opaque **even when their RGB
+equals the theme background**, including background-color erase and alternate
+screens. Inverse text uses opaque background-color ink and the foreground color
+as its opaque cell background. Consequently a TUI that explicitly fills its
+screen may remain opaque; OMXTerm does not guess which colors the application
+intended to make transparent. Theme colors remain strict `#RRGGBB`.
+
+With positive transparency, `blur: true` requests native macOS `under-window`
+vibrancy, Windows Acrylic, or the per-owned-X11-window KDE blur-region hint on
+Linux when `xprop` is available. Blur is boolean and best effort; with zero
+transparency there is no visible blur. The OS/compositor may ignore the request
+or retain its own material tint even at transparency 1. Missing helpers or
+native API errors are quiet fallbacks, never launch prerequisites. Native
+Wayland blur is not claimed. OMXTerm makes no global compositor, accessibility
+or extension changes. Unsupported composition may leave an opaque usable
+terminal. Native API success is not proof of visible blur, and cross-platform
+pixel parity is not promised. There is no blur strength, material selector,
+extra menu, whole-window opacity, CSS backdrop filter or screen capture.
+[ADR 0029](adr/0029-compose-background-effects-with-explicit-cell-identity.md)
+records paint ownership and native lifetime constraints.
 
 `windowsShell` is an optional non-empty string without NUL on every Supported
 Platform. On Windows it must be an absolute Windows filesystem path whose final
@@ -753,8 +791,9 @@ at most 64 Unicode code points. `colors` contains exactly the foreground,
 background, cursor, selection foreground and background, and all 16 normal and
 bright ANSI fields shown in [`omtheme`](omtheme.json). Every color is an exact,
 case-insensitive hexadecimal `#RRGGBB` value. Alpha colors, partial palettes,
-CSS names, functions or variables, inheritance, imports, transparency, blur,
-opacity, and tint are unsupported.
+CSS names, functions or variables, inheritance and imports are unsupported.
+Transparency and blur are User Configuration window preferences, not theme
+fields; the Terminal Theme schema has no opacity or tint setting.
 
 Invalid JSON or UTF-8, unknown or missing keys, unsupported versions, missing
 configured fonts or theme files, invalid Windows shell paths or final targets,

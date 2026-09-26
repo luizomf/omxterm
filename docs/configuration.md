@@ -31,6 +31,7 @@ without rewriting them.
 - [Edit visually with OMXTerm Studio](#edit-visually-with-omxterm-studio)
 - [Create a configuration](#quick-start-use-the-bundled-defaults)
 - [Change fonts and spacing](#add-one-display-change)
+- [Background transparency and blur](#background-transparency-and-blur)
 - [All settings and defaults](#configuration-reference)
 - [Choose a Windows shell](#choose-the-windows-default-shell)
 - [Remap shortcuts](#keybinds)
@@ -227,6 +228,45 @@ tune each padding side by eye. Window Font Zoom is temporary and does not edit
 configuration; Actual Size (`Cmd+0` on macOS or `Ctrl+0` on Linux and Windows)
 returns to the configured size.
 
+## Background transparency and blur
+
+In `0.17.0-dev.0` source builds (not the published `0.16.0`), merge these optional
+settings into your existing `window` object, then reload:
+
+```json
+{
+  "version": 1,
+  "window": {
+    "blur": true,
+    "transparency": 0.35
+  }
+}
+```
+
+Both settings apply live to every current and future window and tab, without
+restarting shells. Defaults are `blur: false` and `transparency: 0` (opaque).
+Transparency accepts finite fractions from 0 through 1; invalid values reject
+the complete reload rather than being clamped. `1` removes OMXTerm's background
+tint, not text, cursor, selection, images or foreground controls. Theme colors
+stay `#RRGGBB`; do not add alpha to the theme file.
+
+Blur requests macOS under-window vibrancy, Windows Acrylic, or the KDE X11 blur
+hint on Linux. It is best effort, with no strength/radius control. Native
+materials may retain their own tint even at `1`. Desktop policy, accessibility
+settings, compositors and GPUs can change or decline effects. Linux uses an
+optional existing `xprop`; its absence is quiet and never prevents launch.
+OMXTerm installs no compositor extension or global setting. GNOME is not known
+to respond to the KDE hint; that is not a universal claim about GNOME blur.
+Without native support, you may see transparency without blur, or an opaque
+usable fallback. At transparency `0`, blur is not visible.
+
+**Explicit application backgrounds stay opaque**, even if the application picks
+exactly the theme's background RGB. Only implicit terminal default backgrounds
+(including SGR 49) reveal the shared tint. A TUI that fills its screen with
+explicit backgrounds can therefore remain opaque. Inverse, ANSI colors, image
+alpha, selection and normal glyph antialiasing keep their terminal meaning;
+OMXTerm never fades the whole window.
+
 ## Add one behavior change
 
 Preferences can stay small and focused. For example, this document changes only
@@ -266,6 +306,8 @@ unknown keys.
 | `scrollback.lines`        | integer from 0 through 100,000          | `10000`                          |
 | `keyboard.optionAsAlt`    | `none`, `left`, `right`, or `both`      | `none`                           |
 | `window.alwaysOnTop`      | boolean                                 | `false`                          |
+| `window.blur`             | boolean                                 | `false`                          |
+| `window.transparency`     | finite number from 0 through 1          | `0`                              |
 | `window.showTitleBar`     | boolean                                 | `true`                           |
 | `window.showTabBar`       | boolean                                 | `true`                           |
 | `theme.path`              | non-empty filesystem path without NUL   | bundled `omtheme`                |
@@ -584,8 +626,9 @@ A Terminal Theme root contains exactly `version`, `name`, and `colors`.
 `version` is `1`; `name` is one printable non-empty line of at most 64 Unicode
 code points; and `colors` contains every field shown above. Every color is an
 exact, case-insensitive hexadecimal `#RRGGBB` value. Partial palettes, extra
-keys, alpha colors, CSS names, functions, variables, transparency, inheritance,
-imports, and URLs are unsupported.
+keys, alpha colors, CSS names, functions, variables, inheritance, imports, and
+URLs are unsupported. Set transparency and blur in `config.json` under `window`,
+not in the Terminal Theme.
 
 Absolute `theme.path` values are used as written. Relative values resolve from
 the directory containing `config.json`. OMXTerm does not expand `~`,
@@ -638,6 +681,7 @@ After a successful reload:
 | Applies to            | Settings                                                      |
 | --------------------- | ------------------------------------------------------------- |
 | Existing and new tabs | Theme, font size, ligatures, padding, scrollback, Option keys |
+| All windows and tabs  | Background transparency and best-effort native blur           |
 | App actions           | Close confirmation, logging, keybinds                         |
 | New tabs              | Font family, line height, Windows shell                       |
 | New windows           | Always-on-Top, title-bar and tab-bar defaults                 |

@@ -61,6 +61,7 @@ interface Geometry {
   readonly outsideHandle: boolean;
   readonly sameCanvases: boolean;
   readonly theme: string;
+  readonly backgroundOpacity: number;
 }
 const geometryScript = `(() => {
   const row = document.querySelector('.window-title-bar');
@@ -77,7 +78,8 @@ const geometryScript = `(() => {
     handleHeight: handle.getBoundingClientRect().height,
     outsideHandle: !handle.contains(hit),
     sameCanvases: (globalThis.chromeCanvases ?? []).every((canvas, index) => document.querySelectorAll('.terminal-surface canvas')[index] === canvas),
-    theme: getComputedStyle(document.documentElement).getPropertyValue('--terminal-background').trim()
+    theme: getComputedStyle(document.documentElement).getPropertyValue('--terminal-background').trim(),
+    backgroundOpacity: Number(getComputedStyle(document.documentElement).getPropertyValue('--terminal-background-opacity'))
   };
 })()`;
 
@@ -174,6 +176,7 @@ export async function exerciseWindowChrome(options: {
   assert.equal(reloaded.canvasHeight, first.canvasHeight);
   assert.equal(reloaded.tabs, true);
   assert.equal(reloaded.sameCanvases, true);
+  assert.equal(reloaded.backgroundOpacity, 0.5);
   assert.equal(sizes[0]!.length, hiddenSizeCount);
   assert.equal(window.id, windowId);
   assert.equal(window.webContents.id, contentsId);
@@ -197,6 +200,7 @@ export async function exerciseWindowChrome(options: {
   assert.equal(future.inset, 0);
   assert.equal(future.titleHeight, 0);
   assert.equal(future.tabs, false);
+  assert.equal(future.backgroundOpacity, 0.5);
   assert.equal((await geometry()).canvasHeight, first.canvasHeight);
   await exerciseCustomControlFocus(window);
   const menu = await options.exerciseMenu();

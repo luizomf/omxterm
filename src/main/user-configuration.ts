@@ -56,6 +56,8 @@ export const DEFAULT_USER_CONFIGURATION: UserConfiguration = Object.freeze({
   scrollbackLines: DEFAULT_SCROLLBACK_LINES,
   optionKeyMode: "none",
   alwaysOnTop: false,
+  blur: false,
+  transparency: 0,
   showTitleBar: true,
   showTabBar: true,
   terminalTheme: DEFAULT_TERMINAL_THEME,
@@ -101,6 +103,16 @@ export function userConfigurationFallbackNotice(
       ? "OMXTerm opened with the bundled omtheme Terminal Theme instead."
       : "OMXTerm opened with its built-in default settings instead.";
   return `${activeDefaults} ${fallback.error.message}`;
+}
+
+export function startupUserFileNotices(
+  fallback: UserConfigurationFallback | undefined,
+  warnings: readonly string[] | undefined,
+): readonly string[] {
+  return Object.freeze([
+    ...(fallback ? [userConfigurationFallbackNotice(fallback)] : []),
+    ...(warnings ?? []),
+  ]);
 }
 
 // Warn about the swallowed control key, never the raw accelerator contents.
@@ -383,6 +395,8 @@ export function validateUserConfiguration(
   if (window)
     rejectUnknownKeys(window, configurationPath, "window", [
       "alwaysOnTop",
+      "blur",
+      "transparency",
       "showTitleBar",
       "showTabBar",
     ]);
@@ -554,6 +568,15 @@ function windowPreferences(
     );
   return {
     alwaysOnTop: read("alwaysOnTop", false),
+    blur: read("blur", false),
+    transparency: numberInRange(
+      window?.transparency,
+      configurationPath,
+      "window.transparency",
+      0,
+      1,
+      0,
+    ),
     showTitleBar: read("showTitleBar", true),
     showTabBar: read("showTabBar", true),
   };

@@ -139,12 +139,57 @@ for the exact workload, baseline, CPU domains and limitations.
 
 ### WebGL depth attachment
 
-The checksum-guarded runtime requests `depth:false` alongside the existing
-`antialias:false, alpha:false`. Restty's 2D path does not enable depth testing.
+The checksum-guarded runtime requests `depth:false` alongside
+`antialias:false, alpha:true`. Alpha is now required for background composition
+below; the original depth-only comparison used `alpha:false`. Restty's 2D path does not enable depth testing.
 The [depth-only native comparison](webgl-depth-evidence.md) confirms removal of
 the default depth attachment with preserved text, cursor, selection, images and
 hidden reveal behavior. It does not establish OS-level RAM savings. This changes
 no Surface ownership, context sharing, DPR, image limits or hidden-rendering rule.
+
+### Background composition
+
+The real WebGL2 context is alpha-enabled and clears to transparent. The window
+host paints the default theme tint once on body; Surfaces use `background:
+"host"` so neither their padding nor their canvas repeats it. A standalone
+Surface retains its own opaque theme background unless its host takes ownership.
+Transparency reload updates the host tint, not a Surface/core/PTY instance.
+Chrome overlays do not repeat the theme background, and foreground content is
+not globally faded. [ADR 0029](adr/0029-compose-background-effects-with-explicit-cell-identity.md)
+records native effects and ownership.
+
+In pinned Ghostty `src/terminal/style.zig`, `Style.bg` returns an optional color:
+`null` for implicit default, a color for explicit palette/RGB or background-only
+erased cells. The Restty bridge in `wasm/src/restty.zig` formerly discarded that
+identity. The tracked patch now exports it through the existing cell-background
+RGBA alpha (0 implicit, 255 explicit), while retaining RGB for inverse text.
+Runtime inverse swaps restore opaque foreground alpha, and text contrast
+correction uses that RGB without painting implicit cells. Explicit equal-RGB
+backgrounds therefore stay opaque; SGR 49 returns to the implicit default.
+Theme changes, background-color erase and alternate screens preserve that rule.
+No RGB equality heuristic, second parser or new privileged route is involved.
+
+Focused native checks on each ARM64 desktop:
+
+```sh
+npx vitest run test/integration/restty-background-core.test.ts test/integration/restty-background-rendering.test.ts test/integration/window-chrome.test.ts
+```
+
+The core test covers identity, erased cells, reset, alternate screens and changed
+default RGB. The rendering fixture mounts the real host and Surface under the
+production CSP, reads the actual WebGL buffer, and checks implicit alpha,
+explicit equal/different RGB, inverse ink, ANSI glyphs, cursor, selection, Kitty
+images, live changes and tab continuity. `capturePage` verifies page tint alpha
+255/128/0, including that sidebar overlays do not paint the theme a second time.
+The Window Chrome fixture uses actual main/preload/PTY routes and verifies live
+and future-window effects alongside native controls and existing session
+continuity. Linux fixtures explicitly use X11 and the existing no-sandbox policy.
+
+These tests request native effects but do not prove visible behind-window blur.
+macOS runs establish actual integrated WebGL/Chromium behavior, not Windows/Linux
+GPU qualification. Guest-native execution and desktop observation must be reported
+separately; prior standalone Acrylic/KDE probes are not integrated Surface proof.
+No screen capture, diagnostic bridge or synthetic fixture ships in production.
 
 ### Font memory ownership
 
@@ -305,9 +350,9 @@ boundary used by the host integration; it is not a public API or renderer
 registry.
 
 After preparation, the corrected runtime has SHA-256
-`8a48d0ba974a4ef26ffcb3b5f2472fbd0cd28b7830d112e218b513014e15d662`,
+`19ce5c33221a7c77bea9eb83c49d9afb3ccda2a70636598492654db18226d0f2`,
 embedded-core chunk SHA-256
-`039abfec307ab03015a2ae70b3583e07fcc9e5a70319de1ca055d6168f45af1b`,
+`b041f5124ed480d95114142c9103bb83dd3fa747747fde717125b46e0d6b22da`,
 and event declarations SHA-256
 `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34`.
 The narrow correction preserves font acquisition/lease cleanup under cache
@@ -345,7 +390,9 @@ Ghostty commits above with tracked Restty patch
 `assets/restty/omxterm-core.patch` and Ghostty patch
 `assets/restty/ghostty-title-events.patch`. Their SHA-256 values are recorded in
 `assets/restty-sources.json`. The artifact SHA-256 is
-`b08dab2ff6194a6b101e79f5eab9282260dcd601321c81ab5272ac101f85f0c4`.
+`846caf84a489204a919ba697e47c6316919d573a3672f8f401a00e8ce68be935`.
+The background-identity correction changes only the existing cell background
+alpha export; it keeps the original Restty and Ghostty commits pinned.
 The Restty patch also enables Ghostty's standard grapheme-cluster mode as a
 reset default so emoji-presentation and ZWJ clusters retain one two-column cell.
 It supplies Ghostty's existing size-report effect and stream-handler resize

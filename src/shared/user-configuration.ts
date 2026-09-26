@@ -45,6 +45,7 @@ export interface TerminalRendererConfiguration {
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
   readonly nativeTitleInset: 0 | 30;
+  readonly transparency: number;
   readonly showTabBar: boolean;
   readonly terminalTheme: TerminalTheme;
   readonly userFileErrors: readonly string[];
@@ -63,6 +64,8 @@ export interface UserConfiguration {
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
   readonly alwaysOnTop: boolean;
+  readonly blur: boolean;
+  readonly transparency: number;
   readonly showTitleBar: boolean;
   readonly showTabBar: boolean;
   readonly terminalTheme: TerminalTheme;
@@ -85,6 +88,7 @@ export function isTerminalRendererConfiguration(
         "scrollbackLines",
         "optionKeyMode",
         "nativeTitleInset",
+        "transparency",
         "showTabBar",
         "terminalTheme",
         "userFileErrors",
@@ -106,8 +110,18 @@ export function isTerminalRendererConfiguration(
     ["none", "left", "right", "both"].includes(value.optionKeyMode as string) &&
     (value.nativeTitleInset === 0 || value.nativeTitleInset === 30) &&
     typeof value.showTabBar === "boolean" &&
+    isTransparency(value.transparency) &&
     isTerminalTheme(value.terminalTheme) &&
     isUserFileErrors(value.userFileErrors)
+  );
+}
+
+function isTransparency(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= 0 &&
+    value <= 1
   );
 }
 

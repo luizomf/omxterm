@@ -55,6 +55,9 @@ export interface TerminalFontInputLease {
 }
 
 export interface TerminalSurfaceOptions {
+  // A window host may paint one shared tint behind Surface, padding and chrome.
+  // Otherwise the Surface paints its own opaque default background.
+  readonly background?: "surface" | "host";
   readonly abortSignal?: AbortSignal;
   readonly acquireFontInputs?: (
     family: string | undefined,

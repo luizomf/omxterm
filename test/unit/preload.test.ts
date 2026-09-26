@@ -289,6 +289,7 @@ describe("isolated preload terminal bridge requests", () => {
         optionKeyMode: "none",
         nativeTitleInset: 0,
         showTabBar: true,
+        transparency: 0,
         terminalTheme: DEFAULT_TERMINAL_THEME,
         userFileErrors: [],
       },
@@ -566,6 +567,7 @@ describe("isolated preload terminal bridge responses", () => {
       terminalPadding: { top: 1, right: 2, bottom: 3, left: 4 },
       scrollbackLines: 500,
       optionKeyMode: "left",
+      transparency: 0,
       nativeTitleInset: 30,
       showTabBar: true,
       terminalTheme: {
@@ -633,6 +635,7 @@ describe("isolated preload terminal bridge responses", () => {
       terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
       scrollbackLines: 10_000,
       optionKeyMode: "none",
+      transparency: 0,
       nativeTitleInset: 30,
       showTabBar: true,
       terminalTheme: DEFAULT_TERMINAL_THEME,
@@ -704,6 +707,7 @@ describe("isolated preload terminal bridge responses", () => {
       terminalPadding: { top: 0, right: 12, bottom: 8, left: 12 },
       scrollbackLines: 500,
       optionKeyMode: "right",
+      transparency: 0,
       nativeTitleInset: 30,
       showTabBar: true,
       terminalTheme: DEFAULT_TERMINAL_THEME,
@@ -711,6 +715,27 @@ describe("isolated preload terminal bridge responses", () => {
     };
     electron.invoke.mockResolvedValueOnce(configuration);
     await expect(bridge.configuration()).resolves.toEqual(configuration);
+    for (const transparency of [
+      undefined,
+      null,
+      "0.5",
+      true,
+      NaN,
+      Infinity,
+      -0.01,
+      1.01,
+    ]) {
+      electron.invoke.mockResolvedValueOnce({ ...configuration, transparency });
+      await expect(bridge.configuration()).rejects.toThrow(TypeError);
+    }
+    for (const transparency of [0, 0.375, 1]) {
+      electron.invoke.mockResolvedValueOnce({ ...configuration, transparency });
+      await expect(bridge.configuration()).resolves.toMatchObject({
+        transparency,
+      });
+    }
+    electron.invoke.mockResolvedValueOnce({ ...configuration, blurRadius: 10 });
+    await expect(bridge.configuration()).rejects.toThrow(TypeError);
     electron.invoke.mockResolvedValueOnce({
       ...configuration,
       fontLigatures: 0,

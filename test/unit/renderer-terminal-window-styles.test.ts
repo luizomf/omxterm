@@ -87,7 +87,6 @@ describe("Snippets Sidebar theme contrast", () => {
 
     for (const selector of [
       "#snippets-sidebar",
-      '#snippets-sidebar input[type="search"]',
       "#snippets-sidebar li button:hover",
     ]) {
       const background = declaration(ruleBody(selector), "background");
@@ -170,11 +169,8 @@ describe("Snippets Sidebar theme contrast", () => {
         chromeNeutral,
         chromeNeutralMix(declaration(sidebarRule, "background")),
       );
-      const inputBackground = mix(
-        background,
-        chromeNeutral,
-        chromeNeutralMix(declaration(inputRule, "background")),
-      );
+      expect(declaration(inputRule, "background")).toBe("transparent");
+      const inputBackground = sidebarBackground;
       const inputBorder = mix(
         background,
         foreground,
@@ -186,7 +182,7 @@ describe("Snippets Sidebar theme contrast", () => {
         foregroundMix(declaration(inputFocusRule, "border-color")),
       );
       const hoverBackground = mix(
-        background,
+        sidebarBackground,
         chromeNeutral,
         chromeNeutralMix(declaration(buttonHoverRule, "background")),
       );
@@ -267,7 +263,13 @@ function foregroundMix(value: string): number {
 }
 
 function chromeNeutralMix(value: string): number {
-  return variableMix(value, "terminal-chrome-neutral");
+  expect(value).toContain("transparent");
+  expect(value).toContain("--terminal-background-opacity");
+  const match = value.match(
+    /var\(--terminal-chrome-neutral\)\s+calc\((?<percent>[\d.]+)%/u,
+  );
+  expect(match?.groups?.percent).toBeDefined();
+  return Number(match!.groups!.percent) / 100;
 }
 
 function variableMix(value: string, variable: string): number {

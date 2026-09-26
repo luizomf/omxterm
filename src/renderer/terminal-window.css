@@ -1,6 +1,6 @@
 :root {
   color-scheme: dark;
-  background: var(--terminal-background, transparent);
+  background: transparent;
   --native-title-inset: 30px;
   --terminal-chrome-neutral: #808090;
 }
@@ -18,12 +18,17 @@ body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: var(--terminal-background, transparent);
+  background: transparent;
 }
 
 body {
   display: flex;
   flex-direction: column;
+  /* The default Terminal Theme tint has exactly one owner. */
+  background: rgb(
+    from var(--terminal-background, #000000) r g b /
+      var(--terminal-background-opacity, 1)
+  );
 }
 
 #terminal-window-content {
@@ -38,7 +43,7 @@ body {
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
-  background: var(--terminal-background, transparent);
+  background: transparent;
 }
 
 .terminal-surface {
@@ -47,7 +52,7 @@ body {
   min-height: 0;
   min-width: 0;
   overflow: hidden;
-  background: var(--terminal-background, transparent);
+  background: transparent;
 }
 
 .terminal-surface[hidden] {
@@ -111,7 +116,7 @@ body.tabs-visible .restty-terminal-surface {
     12px/1.3 -apple-system,
     BlinkMacSystemFont,
     sans-serif;
-  background: var(--terminal-background, transparent);
+  background: transparent;
   app-region: no-drag;
 }
 
@@ -131,8 +136,9 @@ body.tabs-visible .restty-terminal-surface {
   cursor: grab;
   background: color-mix(
     in srgb,
-    var(--terminal-background, #000000),
-    var(--terminal-chrome-neutral) 10%
+    transparent,
+    var(--terminal-chrome-neutral)
+      calc(10% * var(--terminal-background-opacity, 1))
   );
   border: none;
   border-radius: 6px;
@@ -145,16 +151,24 @@ body.tabs-visible .restty-terminal-surface {
 #tab-strip button:hover {
   background: color-mix(
     in srgb,
-    var(--terminal-background, #000000),
-    var(--terminal-chrome-neutral) 25%
+    transparent,
+    var(--terminal-chrome-neutral)
+      calc(25% * var(--terminal-background-opacity, 1))
   );
 }
 
 #tab-strip button[aria-selected="true"] {
+  /* Keep selection identifiable when its background tint is removed. */
+  box-shadow: inset 0 -1px
+    rgb(
+      from var(--terminal-foreground, #e6e6e6) r g b /
+        calc(1 - var(--terminal-background-opacity, 1))
+    );
   background: color-mix(
     in srgb,
-    var(--terminal-background, #000000),
-    var(--terminal-chrome-neutral) 40%
+    transparent,
+    var(--terminal-chrome-neutral)
+      calc(40% * var(--terminal-background-opacity, 1))
   );
 }
 
@@ -173,8 +187,9 @@ body.tabs-visible .restty-terminal-surface {
   color: var(--terminal-foreground, #e6e6e6);
   background: color-mix(
     in srgb,
-    var(--terminal-background, #000000),
-    var(--terminal-chrome-neutral) 15%
+    transparent,
+    var(--terminal-chrome-neutral)
+      calc(15% * var(--terminal-background-opacity, 1))
   );
 }
 
@@ -188,11 +203,7 @@ body.tabs-visible .restty-terminal-surface {
   padding: 6px 8px;
   font: inherit;
   color: inherit;
-  background: color-mix(
-    in srgb,
-    var(--terminal-background, #000000),
-    var(--terminal-chrome-neutral) 15%
-  );
+  background: transparent;
   border: 1px solid
     color-mix(
       in srgb,
@@ -245,10 +256,12 @@ body.tabs-visible .restty-terminal-surface {
 }
 
 #snippets-sidebar li button:hover {
+  /* Over the sidebar's 15% overlay, this retains the opaque 45% appearance. */
   background: color-mix(
     in srgb,
-    var(--terminal-background, #000000),
-    var(--terminal-chrome-neutral) 45%
+    transparent,
+    var(--terminal-chrome-neutral)
+      calc(35.294118% * var(--terminal-background-opacity, 1))
   );
 }
 

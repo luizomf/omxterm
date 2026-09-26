@@ -19,6 +19,8 @@ function activeConfiguration(): ActiveUserConfiguration {
       alwaysOnTop: true,
       fontSize: 40,
       fontLigatures: false,
+      blur: true,
+      transparency: 0.375,
       terminalTheme: {
         ...DEFAULT_TERMINAL_THEME,
         name: "reloaded",
@@ -32,6 +34,7 @@ function activeConfiguration(): ActiveUserConfiguration {
 it("commits applicable application state and current visual state without touching window toggles", () => {
   const state = activeConfiguration();
   const setBackgroundColor = vi.fn();
+  const applyBackgroundEffects = vi.fn();
   const window = {
     isDestroyed: () => false,
     setBackgroundColor,
@@ -57,6 +60,7 @@ it("commits applicable application state and current visual state without touchi
     { applyConfiguration } as unknown as TerminalApplication<typeof window>,
     {
       rebuildMenu,
+      applyBackgroundEffects,
       nativeTitleInset: 30,
       platform: "darwin",
     },
@@ -66,11 +70,15 @@ it("commits applicable application state and current visual state without touchi
     expect.objectContaining({
       fontSize: 40,
       fontLigatures: false,
+      transparency: 0.375,
       terminalTheme: state.configuration.terminalTheme,
       userFileErrors: ["current warning"],
     }),
   );
-  expect(setBackgroundColor).toHaveBeenCalledWith("#123456");
+  expect(setBackgroundColor).not.toHaveBeenCalled();
+  expect(applyBackgroundEffects).toHaveBeenCalledExactlyOnceWith(
+    state.configuration,
+  );
   expect(window.setMinimumSize).toHaveBeenCalledWith(320, 200);
   expect(applyConfiguration).toHaveBeenCalledWith({
     confirmClose: false,

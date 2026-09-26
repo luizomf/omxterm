@@ -7,7 +7,6 @@ import type {
   TerminalApplication,
 } from "./terminal-application";
 import {
-  applyTerminalThemeToNativeWindows,
   applyTerminalWindowConfiguration,
   type ConfigurableTerminalWindow,
 } from "./terminal-window";
@@ -24,6 +23,9 @@ export function applyActiveUserConfiguration<
     readonly rebuildMenu: () => void;
     readonly nativeTitleInset: 0 | 30;
     readonly platform: string;
+    readonly applyBackgroundEffects?: (
+      configuration: LoadedUserConfiguration,
+    ) => void;
   },
 ): void {
   const rendererConfiguration = terminalRendererConfiguration(
@@ -31,11 +33,8 @@ export function applyActiveUserConfiguration<
     options.nativeTitleInset,
   );
   router.applyConfiguration(rendererConfiguration);
-  applyTerminalThemeToNativeWindows(
-    windows,
-    rendererConfiguration.terminalTheme,
-  );
   if (!committed) return;
+  options.applyBackgroundEffects?.(state.configuration);
   applyTerminalWindowConfiguration(
     windows,
     state.configuration,
@@ -65,6 +64,7 @@ export function terminalRendererConfiguration(
     optionKeyMode: configuration.optionKeyMode,
     nativeTitleInset: configuration.showTitleBar ? nativeTitleInset : 0,
     showTabBar: configuration.showTabBar,
+    transparency: configuration.transparency,
     terminalTheme: active.configuration.terminalTheme,
     userFileErrors: active.userFileErrors,
   });

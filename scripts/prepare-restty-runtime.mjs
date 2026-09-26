@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import { fontStyleCorrections } from "./restty-font-style-corrections.mjs";
 import { syntheticBoldCorrections } from "./restty-synthetic-bold-corrections.mjs";
 import { pointerCorrections } from "./restty-pointer-corrections.mjs";
+import { backgroundCorrections } from "./restty-background-corrections.mjs";
 import {
   nativeDeadKeySpaceCorrections,
   spaceInputCorrections,
@@ -34,10 +35,12 @@ const priorInteractionCoreDigest =
   "4c0830a7b5dc3cb986de5c980315fc68d14ef33cc193a479b062fc54a7234159";
 const priorResizeCoreDigest =
   "3b3f4ef21e2fe5d5bfc7d5ad47b2557c1e12cca33619dbd5f15df9572e038f4d";
-const correctedCoreDigest =
+const priorBackgroundCoreDigest =
   "039abfec307ab03015a2ae70b3583e07fcc9e5a70319de1ca055d6168f45af1b";
+const correctedCoreDigest =
+  "b041f5124ed480d95114142c9103bb83dd3fa747747fde717125b46e0d6b22da";
 const correctedCoreWasmDigest =
-  "b08dab2ff6194a6b101e79f5eab9282260dcd601321c81ab5272ac101f85f0c4";
+  "846caf84a489204a919ba697e47c6316919d573a3672f8f401a00e8ce68be935";
 const originalEventTypesDigest =
   "1c9383be2d0377635b3463a5ac2ec31eac3e2b233fc664de751ad3e9f54ea650";
 const correctedEventTypesDigest =
@@ -94,8 +97,10 @@ const priorSpaceInputDigest =
   "bd1907b75d7517684c128ec4ba6fbc8786e0a5f2960f87b7a8c5f28e09420880";
 const priorNativeDeadKeySpaceDigest =
   "e29dbd7dd4bf559d186cda45629ab9727a43b37dee917eb0137d61e238c1d638";
-const correctedDigest =
+const priorBackgroundDigest =
   "8a48d0ba974a4ef26ffcb3b5f2472fbd0cd28b7830d112e218b513014e15d662";
+const correctedDigest =
+  "19ce5c33221a7c77bea9eb83c49d9afb3ccda2a70636598492654db18226d0f2";
 
 const resizeCorrections = [
   {
@@ -1708,6 +1713,7 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     sourceDigest !== priorCorrectedCoreDigest &&
     sourceDigest !== priorImageCoreDigest &&
     sourceDigest !== priorResizeCoreDigest &&
+    sourceDigest !== priorBackgroundCoreDigest &&
     sourceDigest !== priorInteractionCoreDigest
   )
     throw new Error(
@@ -1726,6 +1732,7 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
       ? coreRuntimeCorrections
       : sourceDigest === priorImageCoreDigest ||
           sourceDigest === priorResizeCoreDigest ||
+          sourceDigest === priorBackgroundCoreDigest ||
           sourceDigest === priorInteractionCoreDigest
         ? []
         : parsedEventCoreCorrections,
@@ -1872,6 +1879,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, spaceInputCorrections);
       case priorNativeDeadKeySpaceDigest:
         source = applyCorrections(source, nativeDeadKeySpaceCorrections);
+      case priorBackgroundDigest:
+        source = applyCorrections(source, backgroundCorrections);
         break;
       default:
         throw new Error(

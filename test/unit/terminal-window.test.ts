@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  applyTerminalThemeToNativeWindows,
   applyTerminalWindowConfiguration,
   lockTerminalRendererNavigation,
   terminalNativeTitleInset,
@@ -32,23 +31,19 @@ describe("Terminal Window startup contract", () => {
     }),
   });
 
-  it("updates every live native window background without recreating it", () => {
-    const first = { isDestroyed: () => false, setBackgroundColor: vi.fn() };
-    const second = { isDestroyed: () => false, setBackgroundColor: vi.fn() };
-    const destroyed = { isDestroyed: () => true, setBackgroundColor: vi.fn() };
-    const theme = {
-      ...DEFAULT_TERMINAL_THEME,
-      colors: { ...DEFAULT_TERMINAL_THEME.colors, background: "#123456" },
-    };
-
-    applyTerminalThemeToNativeWindows([first, second, destroyed], theme);
-
-    expect(first.setBackgroundColor).toHaveBeenCalledExactlyOnceWith("#123456");
-    expect(second.setBackgroundColor).toHaveBeenCalledExactlyOnceWith(
-      "#123456",
-    );
-    expect(destroyed.setBackgroundColor).not.toHaveBeenCalled();
-  });
+  it.each(["darwin", "win32", "linux"])(
+    "creates an alpha-capable %s window even with default opaque appearance",
+    (platform) => {
+      const options = terminalWindowOptions(
+        "/application/preload.cjs",
+        DEFAULT_USER_CONFIGURATION,
+        platform,
+      );
+      expect(options.transparent).toBe(true);
+      expect(options.backgroundColor).toBe("#00000000");
+      expect(options.opacity).toBeUndefined();
+    },
+  );
 
   it("recomputes native minimum bounds for every live window after reload", () => {
     const first = {
@@ -74,9 +69,7 @@ describe("Terminal Window startup contract", () => {
     );
 
     for (const window of [first, second]) {
-      expect(window.setBackgroundColor).toHaveBeenCalledWith(
-        configuredZapfinoGeometry.terminalTheme.colors.background,
-      );
+      expect(window.setBackgroundColor).not.toHaveBeenCalled();
       expect(window.setMinimumSize).toHaveBeenCalledWith(542, 774);
     }
     expect(destroyed.setBackgroundColor).not.toHaveBeenCalled();
@@ -155,8 +148,8 @@ describe("Terminal Window startup contract", () => {
     ).not.toHaveProperty("icon");
   });
 
-  it("uses the resolved Terminal Theme background before renderer startup", () => {
-    const options = terminalWindowOptions("/application/preload.cjs", {
+  it("leaves theme tint to the renderer instead of painting a second native layer", () => {
+    const configuration = {
       ...DEFAULT_USER_CONFIGURATION,
       terminalTheme: Object.freeze({
         ...DEFAULT_TERMINAL_THEME,
@@ -166,9 +159,12 @@ describe("Terminal Window startup contract", () => {
           background: "#1e1e2e",
         }),
       }),
-    });
-
-    expect(options.backgroundColor).toBe("#1e1e2e");
+    };
+    const options = terminalWindowOptions(
+      "/application/preload.cjs",
+      configuration,
+    );
+    expect(options.backgroundColor).toBe("#00000000");
   });
 
   it("keeps the existing native minimums for common configuration", () => {

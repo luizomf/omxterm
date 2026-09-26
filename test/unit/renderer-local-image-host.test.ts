@@ -387,6 +387,7 @@ describe("local image preview through the Terminal Window host", () => {
           optionKeyMode: "none",
           nativeTitleInset,
           showTabBar: true,
+          transparency: 0,
           terminalTheme: DEFAULT_TERMINAL_THEME,
           userFileErrors: [],
         });

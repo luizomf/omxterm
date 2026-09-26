@@ -61,12 +61,13 @@ import {
   configurationRejectionReason,
   loadUserConfiguration,
   userConfigurationFallbackNotice,
-  type UserConfigurationFallback,
+  startupUserFileNotices,
 } from "./user-configuration";
 import {
   createUserConfigurationReloader,
   terminalSurfaceFontBaseline,
 } from "./user-configuration-reloader";
+import { createWindowBackgroundEffectsOwner } from "./window-background-effects";
 import {
   applyActiveUserConfiguration,
   terminalRendererConfiguration,
@@ -150,6 +151,10 @@ app
         const terminalIpcRouter = fontIpcRouter(ipcMain, operationalEvents!);
         disposeTerminalSessions = () => terminalIpcRouter.dispose();
         let rebuildMenu = () => {};
+        const backgroundEffects = createWindowBackgroundEffectsOwner(
+          process.platform,
+          app.commandLine.getSwitchValue("ozone-platform"),
+        );
         const configurationReloader = createUserConfigurationReloader({
           initial: {
             configuration: userConfiguration,
@@ -172,6 +177,7 @@ app
                 rebuildMenu,
                 nativeTitleInset: terminalNativeTitleInset(process.platform),
                 platform: process.platform,
+                applyBackgroundEffects: backgroundEffects.apply,
               },
             ),
         });
@@ -199,6 +205,7 @@ app
                 linuxWindowIconPath,
               ),
             );
+            backgroundEffects.register(window, active.configuration);
             const shellName = defaultShellName(process.platform, initialShell);
             lockTerminalRendererNavigation(window.webContents);
             deliverKeybindsFromKeyEvents(
@@ -500,14 +507,4 @@ function prepareStartup() {
       getInstalledFontFamilyMetrics: installedFontFamilyMetrics,
     },
   };
-}
-
-function startupUserFileNotices(
-  fallback: UserConfigurationFallback | undefined,
-  warnings: readonly string[] | undefined,
-): readonly string[] {
-  return Object.freeze([
-    ...(fallback ? [userConfigurationFallbackNotice(fallback)] : []),
-    ...(warnings ?? []),
-  ]);
 }

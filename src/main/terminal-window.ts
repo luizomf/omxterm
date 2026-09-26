@@ -1,6 +1,5 @@
 import type { BrowserWindowConstructorOptions } from "electron";
 import type { LoadedUserConfiguration } from "./user-configuration";
-import type { TerminalTheme } from "../shared/terminal-theme";
 
 const DEFAULT_MINIMUM_WINDOW_WIDTH = 320;
 const DEFAULT_MINIMUM_WINDOW_HEIGHT = 200;
@@ -20,25 +19,11 @@ type TerminalWindowGeometryConfiguration = Pick<
   | "terminalPadding"
   | "scrollbackLines"
   | "configuredFontMetrics"
-  | "terminalTheme"
 >;
 
 export interface ConfigurableTerminalWindow {
   isDestroyed(): boolean;
-  setBackgroundColor(color: string): void;
   setMinimumSize(width: number, height: number): void;
-}
-
-export function applyTerminalThemeToNativeWindows(
-  windows: readonly Pick<
-    ConfigurableTerminalWindow,
-    "isDestroyed" | "setBackgroundColor"
-  >[],
-  theme: TerminalTheme,
-): void {
-  for (const window of windows)
-    if (!window.isDestroyed())
-      window.setBackgroundColor(theme.colors.background);
 }
 
 export function terminalNativeTitleInset(platform: string): 0 | 30 {
@@ -57,7 +42,6 @@ export function applyTerminalWindowConfiguration(
   );
   for (const window of windows) {
     if (window.isDestroyed()) continue;
-    window.setBackgroundColor(configuration.terminalTheme.colors.background);
     window.setMinimumSize(minWidth!, minHeight!);
   }
 }
@@ -74,7 +58,6 @@ export function terminalWindowOptions(
     terminalPadding,
     scrollbackLines,
     configuredFontMetrics,
-    terminalTheme,
   } = configuration;
   const cellWidth = configuredFontMetrics?.cellWidth ?? fontSize;
   const baseCellHeight =
@@ -112,7 +95,11 @@ export function terminalWindowOptions(
     frame: platform === "darwin",
     useContentSize: platform !== "darwin",
     titleBarStyle: platform === "darwin" ? "hiddenInset" : "default",
-    backgroundColor: terminalTheme.colors.background,
+    // Construction must permit live effects without replacing a window or PTY.
+    // The renderer paints the theme tint exactly once, including opaque defaults.
+    transparent: true,
+    backgroundColor: "#00000000",
+    ...(platform === "darwin" ? { visualEffectState: "active" as const } : {}),
     // Without a window icon, environments that resolve icons from the window
     // itself (a directly-run Linux AppImage has no registered desktop entry)
     // fall back to a generic placeholder.

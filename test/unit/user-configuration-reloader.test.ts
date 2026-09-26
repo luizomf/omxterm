@@ -5,6 +5,7 @@ import {
 } from "../../src/main/user-configuration-reloader";
 import {
   DEFAULT_USER_CONFIGURATION,
+  loadUserConfiguration,
   UserConfigurationError,
   type LoadedUserConfiguration,
   type UserConfigurationLoad,
@@ -50,6 +51,8 @@ function harness(load: () => Promise<UserConfigurationLoad>) {
       confirmClose: true,
       alwaysOnTop: true,
       logLevel: "debug",
+      blur: true,
+      transparency: 0.625,
       windowsShell: "C:\\initial\\shell.exe",
     }),
     userFileErrors: ["stale startup notice"],
@@ -73,11 +76,68 @@ function harness(load: () => Promise<UserConfigurationLoad>) {
 }
 
 describe("User Configuration reloader", () => {
+  it("loads effects resiliently at startup and keeps the whole last snapshot after an invalid effects reload", async () => {
+    let document = {
+      version: 1,
+      font: { size: 24 },
+      window: { blur: true, transparency: 2 },
+    };
+    const load = () =>
+      loadUserConfiguration({
+        environment: {},
+        homeDirectory: "/fixture",
+        getInstalledFontFamilyMetrics: async () => undefined,
+        read: vi
+          .fn()
+          .mockImplementation(async () =>
+            Buffer.from(JSON.stringify(document)),
+          ),
+      });
+    const startup = await load();
+    expect(startup.configuration).toEqual(DEFAULT_USER_CONFIGURATION);
+    expect(startup.fallback?.error.location).toBe("window.transparency");
+    const apply = vi.fn();
+    const reloader = createUserConfigurationReloader({
+      initial: { configuration: startup.configuration, userFileErrors: [] },
+      load,
+      apply,
+    });
+    document.window.transparency = 0.375;
+    await reloader.reload();
+    const accepted = reloader.current().configuration;
+    expect(accepted).toMatchObject({
+      blur: true,
+      transparency: 0.375,
+      fontSize: 24,
+    });
+    document = {
+      version: 1,
+      font: { size: 32 },
+      window: { blur: false, transparency: -1 },
+    };
+    await reloader.reload();
+    expect(reloader.current().configuration).toBe(accepted);
+    expect(reloader.current().userFileErrors[0]).toContain(
+      "window.transparency",
+    );
+    expect(apply).toHaveBeenLastCalledWith(reloader.current(), false);
+    document.window.transparency = 1;
+    await reloader.reload();
+    expect(reloader.current().configuration).toMatchObject({
+      blur: false,
+      transparency: 1,
+      fontSize: 32,
+    });
+    expect(reloader.current().userFileErrors).toEqual([]);
+  });
+
   it("runs exactly one complete supplied load and atomically replaces settings and notices", async () => {
     const next = configuration("next", {
       confirmClose: false,
       alwaysOnTop: false,
       logLevel: "error",
+      blur: false,
+      transparency: 0.25,
       fontSize: 42,
       scrollbackLines: 7,
       windowsShell: "C:\\next\\shell.exe",
@@ -138,6 +198,10 @@ describe("User Configuration reloader", () => {
     expect(reloader.current().configuration.windowsShell).toBe(
       "C:\\initial\\shell.exe",
     );
+    expect(reloader.current().configuration).toMatchObject({
+      blur: true,
+      transparency: 0.625,
+    });
     expect(reloader.current().userFileErrors).toHaveLength(1);
     expect(reloader.current().userFileErrors[0]).toContain(privatePath);
     expect(reloader.current().userFileErrors[0]).toContain("font.size");

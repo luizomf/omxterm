@@ -39,6 +39,7 @@ function controllerOptions() {
       optionKeyMode: "none" as const,
       nativeTitleInset: 30 as const,
       showTabBar: true,
+      transparency: 0,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       userFileErrors: [],
     },

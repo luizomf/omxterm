@@ -154,6 +154,7 @@ describe("renderer Terminal Window page host", () => {
     const mount = vi.fn(async () => createSurface({ zoom }));
     const configuration = {
       showTabBar: true,
+      transparency: 0,
       fontSize: 19,
       fontLineHeight: 1.2,
       fontLigatures: true,
@@ -184,6 +185,7 @@ describe("renderer Terminal Window page host", () => {
       expect.any(Object),
       {
         abortSignal: expect.any(AbortSignal) as AbortSignal,
+        background: "host",
         appearance: {
           fontSize: 19,
           lineHeight: 1.2,
@@ -204,6 +206,7 @@ describe("renderer Terminal Window page host", () => {
 
   it("applies effective fullscreen inset updates without reconfiguring or focusing the Surface", async () => {
     const configuration = {
+      transparency: 0,
       showTabBar: true,
       fontSize: 16,
       fontLineHeight: 1,
@@ -264,60 +267,6 @@ describe("renderer Terminal Window page host", () => {
     expect(surface.applyConfiguration).not.toHaveBeenCalled();
   });
 
-  it("applies the native title inset and a non-black theme to the page and mount options", async () => {
-    const theme = Object.freeze({
-      ...DEFAULT_TERMINAL_THEME,
-      name: "non-black",
-      colors: Object.freeze({
-        ...DEFAULT_TERMINAL_THEME.colors,
-        background: "#1e1e2e",
-        foreground: "#d9e1f2",
-      }),
-    });
-    const elements = createPageElements();
-    const mount = vi.fn(async () => createSurface());
-    const host = mountTerminalWindowPage(elements, {
-      createAdapter: createAdapterFactory(),
-      page: window,
-      mount,
-      configuration: {
-        fontSize: 16,
-        fontLineHeight: 1,
-        fontLigatures: true,
-        terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
-        scrollbackLines: 10_000,
-        optionKeyMode: "none",
-        nativeTitleInset: 0,
-        terminalTheme: theme,
-        showTabBar: true,
-        userFileErrors: [],
-      },
-    });
-    await host.ready;
-
-    expect(
-      document.documentElement.style.getPropertyValue("--native-title-inset"),
-    ).toBe("0px");
-    expect(
-      document.documentElement.style.getPropertyValue("--terminal-background"),
-    ).toBe("#1e1e2e");
-    expect(document.body.style.getPropertyValue("--terminal-background")).toBe(
-      "#1e1e2e",
-    );
-    expect(
-      document.documentElement.style.getPropertyValue("--terminal-foreground"),
-    ).toBe("#d9e1f2");
-    expect(
-      elements.tabsContainer.style.getPropertyValue("--terminal-background"),
-    ).toBe("#1e1e2e");
-    expect(mount).toHaveBeenCalledWith(
-      expect.any(HTMLElement),
-      expect.any(Object),
-      expect.objectContaining({ theme }),
-    );
-    host.dispose();
-  });
-
   it("applies runtime themes and notices to current and later-created tabs without closing sessions", async () => {
     const initialTheme = DEFAULT_TERMINAL_THEME;
     const updatedTheme = Object.freeze({
@@ -359,6 +308,7 @@ describe("renderer Terminal Window page host", () => {
       page: window,
       configuration: {
         showTabBar: true,
+        transparency: 0,
         fontFamily: "Initial Family",
         fontSize: 16,
         fontLineHeight: 1,
@@ -395,6 +345,7 @@ describe("renderer Terminal Window page host", () => {
 
     configurationListener!({
       showTabBar: true,
+      transparency: 0,
       fontFamily: "Changed Family",
       fontSize: 20,
       fontLineHeight: 1.2,
@@ -467,6 +418,7 @@ describe("renderer Terminal Window font ownership", () => {
   it("shares a font generation within one window and advances it for new configured-family tabs", async () => {
     const configuration = {
       showTabBar: true,
+      transparency: 0,
       fontFamily: "First Family",
       fontSize: 16,
       fontLineHeight: 1,
@@ -549,6 +501,7 @@ describe("renderer Terminal Window page host continued", () => {
     let configurationListener:
       ((configuration: TerminalRendererConfiguration) => void) | undefined;
     const configuration = {
+      transparency: 0,
       showTabBar: true,
       fontSize: 16,
       fontLineHeight: 1,
@@ -900,6 +853,7 @@ describe("renderer Terminal Window page host continued", () => {
       scrollbackLines: 0,
       optionKeyMode: "both",
       nativeTitleInset: 0,
+      transparency: 0,
       showTabBar: true,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       userFileErrors: [],

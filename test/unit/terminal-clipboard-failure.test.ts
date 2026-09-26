@@ -41,6 +41,7 @@ it("reports host clipboard failures without exposing payload", async () => {
       optionKeyMode: "none",
       nativeTitleInset: 0,
       showTabBar: true,
+      transparency: 0,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       userFileErrors: [],
     },

@@ -1,5 +1,8 @@
 # Hide Window Chrome without replacing sessions
 
+[ADR 0029](0029-compose-background-effects-with-explicit-cell-identity.md) amends
+native construction and paint ownership to support live background effects.
+
 Amends [ADR 0016](0016-adopt-tabs-with-one-live-session-per-tab.md)'s fixed
 platform title area and initially enabled tab strip. The tab/session ownership
 model, [ADR 0018](0018-deliver-menu-refused-accelerators-in-main.md)'s keybind

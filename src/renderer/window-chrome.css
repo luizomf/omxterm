@@ -8,8 +8,8 @@
   color: var(--terminal-foreground);
   background: color-mix(
     in srgb,
-    var(--terminal-background),
-    var(--terminal-foreground) 10%
+    transparent,
+    var(--terminal-foreground) calc(10% * var(--terminal-background-opacity, 1))
   );
   font:
     13px system-ui,
@@ -46,8 +46,9 @@
 .window-title-bar button:hover {
   background: color-mix(
     in srgb,
-    var(--terminal-background),
-    var(--terminal-foreground) 20%
+    transparent,
+    var(--terminal-foreground)
+      calc(11.111111% * var(--terminal-background-opacity, 1))
   );
 }
 

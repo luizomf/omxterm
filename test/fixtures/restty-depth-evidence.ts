@@ -12,17 +12,17 @@ export type DepthPhase = Awaited<
 export function depthExperimentSource(source: string): string {
   if (
     createHash("sha256").update(source).digest("hex") !==
-    "8a48d0ba974a4ef26ffcb3b5f2472fbd0cd28b7830d112e218b513014e15d662"
+    "19ce5c33221a7c77bea9eb83c49d9afb3ccda2a70636598492654db18226d0f2"
   )
     throw new Error("Unreviewed depth experiment runtime");
   const variant = process.env.OMXTERM_DEPTH_VARIANT;
   if (variant && variant !== "original" && variant !== "disabled")
     throw new Error("Unknown depth variant");
   if (variant !== "original") return source;
-  const options = "{ antialias: false, alpha: false, depth: false }";
+  const options = "{ antialias: false, alpha: true, depth: false }";
   if (source.split(options).length !== 2)
     throw new Error("Depth experiment seam drifted");
-  return source.replace(options, "{ antialias: false, alpha: false }");
+  return source.replace(options, "{ antialias: false, alpha: true }");
 }
 
 export async function verifyDepthEvidence(result: { depth: DepthPhase[] }) {

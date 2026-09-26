@@ -1,5 +1,8 @@
 # Use Restty as the sole Terminal Surface
 
+[ADR 0029](0029-compose-background-effects-with-explicit-cell-identity.md) amends
+background painting with an alpha-enabled buffer and explicit-cell identity.
+
 Amends [ADR 0008](0008-make-the-terminal-surface-the-portable-module.md) and
 records the completed bounded migration tracked by issue 252. The portable
 Terminal Surface seam remains authoritative; this decision does not introduce a

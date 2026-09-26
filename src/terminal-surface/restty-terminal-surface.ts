@@ -153,6 +153,8 @@ export async function mountResttyTerminalSurface(
     revealInput,
   );
 
+  const applyContainerAppearance = () =>
+    paintContainer(container, padding, terminalTheme, options.background);
   const applyRuntimeTheme = (theme: TerminalTheme) => {
     pane?.runtime.terminal.applyTheme(toGhosttyTheme(theme), "OMXTerm");
   };
@@ -181,7 +183,7 @@ export async function mountResttyTerminalSurface(
     baselineFontSize = nextBaseline;
     padding = nextPadding;
     terminalTheme = nextTheme;
-    setContainerAppearance(container, padding, terminalTheme);
+    applyContainerAppearance();
     applyRuntimeTheme(terminalTheme);
     applyRuntimeSize(Math.max(1, baselineFontSize + zoomDelta));
     pane.runtime.terminal.setLigatures(nextLigatures);
@@ -253,7 +255,7 @@ export async function mountResttyTerminalSurface(
     if (options.abortSignal?.aborted)
       throw new Error("Terminal Surface initialization was cancelled");
     container.classList.add("restty-terminal-surface");
-    setContainerAppearance(container, padding, terminalTheme);
+    applyContainerAppearance();
     const terminal = resttyTerminalConfig(
       fontLease.fonts,
       [baselineFontSize, initialLineHeight, initialLigatures],
@@ -352,7 +354,7 @@ export async function mountResttyTerminalSurface(
       applyTheme(theme) {
         terminalTheme = resolveTheme(theme);
         if (disposed) return;
-        setContainerAppearance(container, padding, terminalTheme);
+        applyContainerAppearance();
         applyRuntimeTheme(terminalTheme);
       },
       zoom(command) {
@@ -441,11 +443,14 @@ function throwInitializationFailure(
   throw new Error("Failed to mount the OMXTerm Terminal Surface", { cause });
 }
 
-function setContainerAppearance(
+function paintContainer(
   container: HTMLElement,
   padding: TerminalPadding,
   theme: TerminalTheme,
+  background: TerminalSurfaceOptions["background"],
 ): void {
+  container.style.backgroundColor =
+    background === "host" ? "transparent" : theme.colors.background;
   for (const side of ["top", "right", "bottom", "left"] as const)
     container.style.setProperty(
       `--terminal-padding-${side}`,

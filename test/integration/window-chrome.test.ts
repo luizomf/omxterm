@@ -78,6 +78,7 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
               args.push(`--${name}`);
             },
           });
+          if (process.platform === "linux") args.push("--ozone-platform=x11");
           supervised = true;
           const execution = await runNativeFixture({
             executable,

@@ -127,8 +127,12 @@ export function mountTerminalWindowPage(
     ? surfaceConfiguration(options.configuration)
     : undefined;
 
-  const applyPageTheme = (theme: TerminalTheme) => {
+  const applyPageTheme = (theme: TerminalTheme, transparency: number) => {
     const { background, foreground } = theme.colors;
+    page.document.documentElement.style.setProperty(
+      "--terminal-background-opacity",
+      String(1 - transparency),
+    );
     page.document.documentElement.style.setProperty(
       "--terminal-background",
       background,
@@ -149,11 +153,15 @@ export function mountTerminalWindowPage(
       "--native-title-inset",
       `${options.configuration.nativeTitleInset}px`,
     );
-    applyPageTheme(options.configuration.terminalTheme);
+    applyPageTheme(
+      options.configuration.terminalTheme,
+      options.configuration.transparency,
+    );
   }
 
   const surfaceOptions: TerminalSurfaceOptions = {
     ...activeSurfaceConfiguration,
+    background: "host",
     ...(fontGenerations ? { acquireFontInputs: fontGenerations.acquire } : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.onExternalLink
@@ -281,7 +289,7 @@ export function mountTerminalWindowPage(
           "--native-title-inset",
           `${configuration.nativeTitleInset}px`,
         );
-      applyPageTheme(configuration.terminalTheme);
+      applyPageTheme(configuration.terminalTheme, configuration.transparency);
       const nextSurfaceConfiguration = surfaceConfiguration(configuration);
       if (configuration.fontFamily !== activeFontFamily) {
         activeFontFamily = configuration.fontFamily;
