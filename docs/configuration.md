@@ -255,6 +255,14 @@ hint on Linux. It is best effort, with no strength/radius control. Native
 materials may retain their own tint even at `1`. Desktop policy, accessibility
 settings, compositors and GPUs can change or decline effects. Linux uses an
 optional existing `xprop`; its absence is quiet and never prevents launch.
+**Windows uses Acrylic rather than plain transparency.** To preserve native
+resize, maximize/restore and fullscreen, the window keeps normal nontransparent
+construction. With `blur: false`, requested transparency is accepted but the
+Terminal Theme remains opaque. With blur enabled and positive transparency,
+Windows 11 22H2 or later can show Acrylic through the requested tint. Unsupported
+versions or failed material calls retain the opaque theme; desktop policy can
+also make Acrylic opaque. Your requested configuration is never rewritten.
+
 OMXTerm installs no compositor extension or global setting. GNOME is not known
 to respond to the KDE hint; that is not a universal claim about GNOME blur.
 Without native support, you may see transparency without blur, or an opaque

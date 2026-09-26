@@ -60,6 +60,7 @@ export interface TerminalIpcControllerOptions {
   readonly configuration: TerminalRendererConfiguration;
   readonly webContents: TrustedWebContents;
   readonly initialFullScreen?: boolean;
+  readonly backgroundTransparency?: () => number;
   readonly createSession: (callbacks: SessionCallbacks) => LocalTerminalSession;
   readonly onSessionStartError: (
     context: TerminalSessionStartErrorContext,

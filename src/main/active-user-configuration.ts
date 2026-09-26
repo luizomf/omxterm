@@ -32,9 +32,9 @@ export function applyActiveUserConfiguration<
     state,
     options.nativeTitleInset,
   );
+  if (committed) options.applyBackgroundEffects?.(state.configuration);
   router.applyConfiguration(rendererConfiguration);
   if (!committed) return;
-  options.applyBackgroundEffects?.(state.configuration);
   applyTerminalWindowConfiguration(
     windows,
     state.configuration,

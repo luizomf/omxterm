@@ -13,7 +13,8 @@ remains strict, version 1 and non-mutating under ADR 0003.
 validated snapshot to current and future windows. Invalid reload commits
 nothing. There is no menu, material selector or strength control.
 
-Create alpha-capable native windows once. Electron main requests under-window
+Create alpha-capable native windows once on macOS/Linux, but retain normal
+nontransparent native construction on Windows. Electron main requests under-window
 vibrancy on macOS and Acrylic on Windows only when blur is enabled and
 transparency is positive. Linux retains X11/XWayland and may set
 `_KDE_NET_WM_BLUR_BEHIND_REGION` on its own native XID through an existing `xprop`.
@@ -35,10 +36,44 @@ remain transparent without blur or opaque on unsupported systems. macOS and
 Windows native materials may retain their own tint. We neither modify global
 compositor/extension/accessibility settings nor add a new launch dependency.
 
+### Windows native-control fallback
+
+Production integration found a structural Electron tradeoff, not a terminal
+resize failure. With `transparent: true`, the Windows test window visibly grew
+but `isMaximized()` remained false, so the custom control never changed to
+Restore. A fullscreen request also left `isFullScreen()` false. No crash,
+Surface recreation or PTY loss occurred. Explicit `thickFrame`, `maximizable`
+and `resizable` options did not correct the native state. The observed desktop
+scale was 250%; a specific DPI-rounding cause is not established.
+
+Pinned [Electron source](https://github.com/electron/electron/blob/v43.1.1/shell/browser/native_window_views.cc#L722-L884)
+uses geometry-only maximize and exact bounds comparison for transparent windows,
+and bypasses the widget fullscreen state without a thick frame. Construction
+forces that frame off for transparent windows. The
+[documented limitations](https://github.com/electron/electron/blob/v43.1.1/docs/tutorial/custom-window-styles.md#limitations)
+and [API-only maximize workaround](https://github.com/electron/electron/pull/28207)
+do not promise normal native controls. Material `none`/`auto` provides no supported
+plain-alpha mode with the normal frame. No maintainable recipe satisfying both
+contracts was established within the pinned Electron interface.
+
+The owner accepted the smallest fallback: Windows uses `transparent: false`.
+Acrylic can provide translucency when blur and positive transparency are requested;
+otherwise the theme remains opaque. Main checks only Electron's Windows 11 22H2
+API floor (build 22621), not whether the compositor visibly honors Acrylic.
+Unsupported/unknown versions and throwing material calls keep opaque paint.
+The per-window native owner supplies effective transparency to the existing typed
+renderer snapshot after native application; it does not mutate the requested
+configuration. This also keeps fallback chrome and live theme changes coherent.
+A failed transition is retried only by a later committed reload or cleanup.
+There is no new renderer capability, GPU/DPI switch, native addon, window
+recreation, fabricated native state or geometry emulation.
+
 ## Paint ownership
 
-Electron's background stays transparent. The renderer body paints the theme's
-background once at `1 - transparency`. Root, tab strip, tab containers, Surfaces
+Electron's background stays transparent where effects are supported. Windows
+fallbacks retain the opaque theme in native construction and effective renderer
+paint; equal opaque colors do not accumulate translucent tint. The renderer body
+paints the theme's background once at `1 - transparency`. Root, tab strip, tab containers, Surfaces
 and canvas default backgrounds add no copy of that tint. Chrome draws only its
 neutral/foreground overlays, scaled by the same amount. Nested overlays account
 for their existing parent overlay to preserve the default opaque appearance.

@@ -681,8 +681,9 @@ snapshot.
 
 Zero preserves the opaque appearance. Increasing transparency reduces only the
 OMXTerm background tint, painted once behind terminal content, padding, title
-chrome, tabs and the Snippets Sidebar. One removes that tint completely. Chrome
-neutral overlays also fade; foreground controls and the selected-tab indicator
+chrome, tabs and the Snippets Sidebar. One removes that tint completely where
+native composition supports it; the Windows fallback below remains opaque.
+Chrome neutral overlays also fade; foreground controls and the selected-tab indicator
 remain visible. Glyphs (including their normal antialiasing and SGR faint),
 cursor, selection and Inline Terminal Images are not faded with the window.
 Implicit default cell backgrounds, including SGR 49, expose the shared tint.
@@ -698,7 +699,17 @@ vibrancy, Windows Acrylic, or the per-owned-X11-window KDE blur-region hint on
 Linux when `xprop` is available. Blur is boolean and best effort; with zero
 transparency there is no visible blur. The OS/compositor may ignore the request
 or retain its own material tint even at transparency 1. Missing helpers or
-native API errors are quiet fallbacks, never launch prerequisites. Native
+native API errors are quiet fallbacks, never launch prerequisites.
+
+Windows keeps normal nontransparent native-window construction to preserve native
+resize, maximize/restore, fullscreen, corners and shadow. On Windows, positive
+transparency without blur is accepted but renders the opaque Terminal Theme;
+`blur: true` can reveal the requested tint through Acrylic on Windows 11 22H2
+or later. Earlier/unknown versions and material-call failures keep an opaque
+theme fallback, including after live theme changes. Main publishes effective
+transparency zero for that window's fallback while retaining the complete
+requested User Configuration unchanged. Successful calls do not prove visually
+active Acrylic; OS policy may still make it opaque. Native
 Wayland blur is not claimed. OMXTerm makes no global compositor, accessibility
 or extension changes. Unsupported composition may leave an opaque usable
 terminal. Native API success is not proof of visible blur, and cross-platform

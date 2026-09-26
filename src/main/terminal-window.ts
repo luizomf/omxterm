@@ -19,6 +19,7 @@ type TerminalWindowGeometryConfiguration = Pick<
   | "terminalPadding"
   | "scrollbackLines"
   | "configuredFontMetrics"
+  | "terminalTheme"
 >;
 
 export interface ConfigurableTerminalWindow {
@@ -95,10 +96,13 @@ export function terminalWindowOptions(
     frame: platform === "darwin",
     useContentSize: platform !== "darwin",
     titleBarStyle: platform === "darwin" ? "hiddenInset" : "default",
-    // Construction must permit live effects without replacing a window or PTY.
-    // The renderer paints the theme tint exactly once, including opaque defaults.
-    transparent: true,
-    backgroundColor: "#00000000",
+    // Windows transparent windows lose the normal native control/state path.
+    // Keep it intact; Acrylic supplies translucency, otherwise retain the theme.
+    transparent: platform !== "win32",
+    backgroundColor:
+      platform === "win32"
+        ? configuration.terminalTheme.colors.background
+        : "#00000000",
     ...(platform === "darwin" ? { visualEffectState: "active" as const } : {}),
     // Without a window icon, environments that resolve icons from the window
     // itself (a directly-run Linux AppImage has no registered desktop entry)

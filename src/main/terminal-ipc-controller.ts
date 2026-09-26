@@ -46,6 +46,7 @@ import { isTerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalFontData } from "../shared/terminal-font-data";
 import type { LocalImageData } from "../shared/local-image";
 import { createFontDataRequest } from "./terminal-font-data-request";
+import { createRendererConfigurationState } from "./terminal-renderer-configuration";
 import { createLocalImageIpcBoundary } from "./local-image-ipc";
 export { isValidExternalLink } from "./external-link";
 import {
@@ -389,6 +390,7 @@ function createTerminalIpcController(
     options.configuration,
     options.initialFullScreen ?? false,
     options.webContents,
+    options.backgroundTransparency,
   );
   let fontConfigurationGeneration = 0;
   const sessions = new Map<TerminalSessionId, RoutedSessionState>();
@@ -735,34 +737,6 @@ function createTerminalIpcController(
       localImageBoundary.dispose();
       unregister();
       for (const sessionId of [...sessions.keys()]) closeSession(sessionId);
-    },
-  };
-}
-
-function createRendererConfigurationState(
-  initial: TerminalRendererConfiguration,
-  initialFullScreen: boolean,
-  webContents: TrustedWebContents,
-) {
-  let configuration = initial;
-  let fullScreen = initialFullScreen;
-  const effective = () =>
-    fullScreen && configuration.nativeTitleInset > 0
-      ? Object.freeze({ ...configuration, nativeTitleInset: 0 as const })
-      : configuration;
-  const send = () =>
-    webContents.send(terminalIpc.configurationUpdate, effective());
-  return {
-    current: () => configuration,
-    effective,
-    apply(next: TerminalRendererConfiguration) {
-      configuration = Object.freeze({ ...next });
-      send();
-    },
-    applyFullScreen(next: boolean) {
-      if (fullScreen === next) return;
-      fullScreen = next;
-      send();
     },
   };
 }

@@ -46,11 +46,17 @@ interface Phase {
 app
   .whenReady()
   .then(async () => {
-    const native = terminalWindowOptions(
-      "",
-      DEFAULT_USER_CONFIGURATION,
-      process.platform,
-    );
+    const configuration = {
+      ...DEFAULT_USER_CONFIGURATION,
+      terminalTheme: {
+        ...DEFAULT_USER_CONFIGURATION.terminalTheme,
+        colors: {
+          ...DEFAULT_USER_CONFIGURATION.terminalTheme.colors,
+          background: "#123456",
+        },
+      },
+    };
+    const native = terminalWindowOptions("", configuration, process.platform);
     // This synthetic Adapter fixture has no preload; the companion Window Chrome
     // fixture exercises the production preload/main/PTY route.
     delete native.webPreferences?.preload;
@@ -82,9 +88,9 @@ app
     }
     const phases = [];
     for (const transparency of [0, 0.5, 1]) {
-      effects.apply({ blur: false, transparency });
+      effects.apply({ ...configuration, blur: false, transparency });
       const phase = await evaluate<Phase>(
-        `backgroundFixture.phase(${transparency})`,
+        `backgroundFixture.phase(${effects.transparency()})`,
       );
       assert.equal(phase.alpha, true);
       assert.deepEqual(phase.implicit, [0, 0, 0, 0]);
@@ -114,13 +120,31 @@ app
       const bitmap = image.toBitmap();
       const alpha = bitmap[((size.height - 4) * size.width + 4) * 4 + 3]!;
       assert.ok(
-        Math.abs(alpha - (1 - transparency) * 255) <= 1,
+        Math.abs(
+          alpha -
+            (process.platform === "win32" ? 255 : (1 - transparency) * 255),
+        ) <= 1,
         `single page tint alpha ${alpha} at transparency ${transparency}`,
       );
+      if (process.platform === "win32")
+        assert.deepEqual(
+          [
+            ...bitmap.slice(
+              ((size.height - 4) * size.width + 4) * 4,
+              ((size.height - 4) * size.width + 4) * 4 + 4,
+            ),
+          ],
+          [86, 52, 18, 255],
+          "Windows plain-alpha fallback retains the exact opaque theme",
+        );
       const sidebarAlpha =
         bitmap[((size.height - 4) * size.width + size.width - 4) * 4 + 3]!;
       const expectedSidebarAlpha =
-        transparency === 0 ? 255 : transparency === 0.5 ? 137 : 0;
+        process.platform === "win32" || transparency === 0
+          ? 255
+          : transparency === 0.5
+            ? 137
+            : 0;
       assert.ok(
         Math.abs(sidebarAlpha - expectedSidebarAlpha) <= 1,
         `sidebar paints only its neutral overlay, not a second theme tint: ${sidebarAlpha}`,
@@ -134,7 +158,7 @@ app
         sidebar: phase.sidebarBackground,
       });
     }
-    effects.apply({ blur: true, transparency: 0.5 });
+    effects.apply({ ...configuration, blur: true, transparency: 0.5 });
     const changed = await evaluate<Phase>(
       "backgroundFixture.phase(0.5, '#654321')",
     );
@@ -167,7 +191,31 @@ app
     );
     assert.ok((selection["80,80,100"] ?? 0) > 0, "opaque selection background");
     assert.ok((selection["240,240,255"] ?? 0) > 0, "opaque selection ink");
-    effects.apply({ blur: false, transparency: 0.5 });
+    effects.apply({
+      ...configuration,
+      terminalTheme: {
+        ...configuration.terminalTheme,
+        colors: {
+          ...configuration.terminalTheme.colors,
+          background: "#654321",
+        },
+      },
+      blur: false,
+      transparency: 0.5,
+    });
+    if (process.platform === "win32") {
+      assert.equal(window.getBackgroundColor().toLowerCase(), "#654321");
+      await evaluate(
+        `backgroundFixture.phase(${effects.transparency()}, '#654321')`,
+      );
+      const fallback = await window.webContents.capturePage();
+      const { width, height } = fallback.getSize();
+      const offset = ((height - 4) * width + 4) * 4;
+      assert.deepEqual(
+        [...fallback.toBitmap().slice(offset, offset + 4)],
+        [33, 67, 101, 255],
+      );
+    }
     effects.dispose();
     assert.deepEqual(await evaluate("backgroundFixture.dispose()"), {
       starts: 2,

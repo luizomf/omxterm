@@ -116,7 +116,10 @@ app
           },
         });
         windows.push(window);
-        backgroundEffects.register(window, configuration);
+        const backgroundTransparency = backgroundEffects.register(
+          window,
+          configuration,
+        );
         guardTerminalWindowClose(window, application);
         const chrome = registerWindowChrome(window, ipcMain, {
           platform: process.platform,
@@ -143,6 +146,7 @@ app
         const controller = router.registerController({
           windowId: lifecycle.windowId,
           webContents: window.webContents,
+          backgroundTransparency,
           configuration: terminalRendererConfiguration(
             { configuration, userFileErrors: [] },
             process.platform === "darwin" ? 30 : 0,

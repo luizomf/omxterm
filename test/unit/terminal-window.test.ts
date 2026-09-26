@@ -32,15 +32,19 @@ describe("Terminal Window startup contract", () => {
   });
 
   it.each(["darwin", "win32", "linux"])(
-    "creates an alpha-capable %s window even with default opaque appearance",
+    "preserves native %s construction and its supported background path",
     (platform) => {
       const options = terminalWindowOptions(
         "/application/preload.cjs",
         DEFAULT_USER_CONFIGURATION,
         platform,
       );
-      expect(options.transparent).toBe(true);
-      expect(options.backgroundColor).toBe("#00000000");
+      expect(options.transparent).toBe(platform !== "win32");
+      expect(options.backgroundColor).toBe(
+        platform === "win32"
+          ? DEFAULT_USER_CONFIGURATION.terminalTheme.colors.background
+          : "#00000000",
+      );
       expect(options.opacity).toBeUndefined();
     },
   );

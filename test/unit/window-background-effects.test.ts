@@ -4,7 +4,21 @@ import {
   createWindowBackgroundEffects,
   createWindowBackgroundEffectsOwner,
 } from "../../src/main/window-background-effects";
+import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
 
+function configuration(blur = false, transparency = 0, background = "#123456") {
+  return {
+    blur,
+    transparency,
+    terminalTheme: {
+      ...DEFAULT_USER_CONFIGURATION.terminalTheme,
+      colors: {
+        ...DEFAULT_USER_CONFIGURATION.terminalTheme.colors,
+        background,
+      },
+    },
+  };
+}
 function nativeWindow() {
   const handle = Buffer.alloc(8);
   handle.writeUInt32LE(0x123456);
@@ -13,6 +27,7 @@ function nativeWindow() {
     getNativeWindowHandle: vi.fn(() => handle),
     setVibrancy: vi.fn(),
     setBackgroundMaterial: vi.fn(),
+    setBackgroundColor: vi.fn(),
   };
 }
 
@@ -20,11 +35,14 @@ it.each(["darwin", "win32"])(
   "requests and reverses only the native %s material, preserving the window",
   (platform) => {
     const window = nativeWindow();
-    const effects = createWindowBackgroundEffects(window, { platform });
-    effects.apply({ blur: false, transparency: 0 });
-    effects.apply({ blur: true, transparency: 0.5 });
-    effects.apply({ blur: true, transparency: 1 });
-    effects.apply({ blur: true, transparency: 0 });
+    const effects = createWindowBackgroundEffects(window, {
+      platform,
+      windowsVersion: "10.0.26200",
+    });
+    effects.apply(configuration());
+    effects.apply(configuration(true, 0.5));
+    effects.apply(configuration(true, 1));
+    effects.apply(configuration(true, 0));
     const calls =
       platform === "darwin"
         ? window.setVibrancy.mock.calls
@@ -35,29 +53,98 @@ it.each(["darwin", "win32"])(
         : [["acrylic"], ["none"]],
     );
     expect(window.getNativeWindowHandle).not.toHaveBeenCalled();
+    if (platform === "darwin")
+      expect(window.setBackgroundColor).not.toHaveBeenCalled();
     effects.dispose();
-    effects.apply({ blur: true, transparency: 1 });
+    effects.apply(configuration(true, 1));
     expect(calls).toHaveLength(2);
   },
 );
+
+it("keeps Windows startup, plain transparency and live theme changes coherently opaque without rewriting the request", () => {
+  const window = nativeWindow();
+  const effects = createWindowBackgroundEffects(window, {
+    platform: "win32",
+    windowsVersion: "10.0.26200",
+  });
+  const requested = Object.freeze(configuration(false, 1));
+  effects.apply(configuration());
+  effects.apply(requested);
+  expect(effects.transparency()).toBe(0);
+  expect(window.setBackgroundMaterial).not.toHaveBeenCalled();
+  expect(window.setBackgroundColor).toHaveBeenLastCalledWith("#123456");
+  effects.apply(configuration(false, 0.5, "#abcdef"));
+  expect(window.setBackgroundColor).toHaveBeenLastCalledWith("#abcdef");
+  expect(requested.transparency).toBe(1);
+  effects.apply(configuration(true, 0.5));
+  expect(window.setBackgroundColor).toHaveBeenLastCalledWith("#00000000");
+  expect(effects.transparency()).toBe(0.5);
+  effects.apply(configuration(false, 0.5, "#654321"));
+  expect(effects.transparency()).toBe(0);
+  expect(window.setBackgroundMaterial).toHaveBeenLastCalledWith("none");
+  expect(window.setBackgroundColor).toHaveBeenLastCalledWith("#654321");
+});
+
+it.each(["10.0.19045", "10.0.22000", "unknown"])(
+  "keeps an opaque theme on Windows %s without invoking an unsupported material API",
+  (windowsVersion) => {
+    const window = nativeWindow();
+    const effects = createWindowBackgroundEffects(window, {
+      platform: "win32",
+      windowsVersion,
+    });
+    effects.apply(configuration(true, 1));
+    effects.apply(configuration(true, 0.5, "#abcdef"));
+    expect(window.setBackgroundMaterial).not.toHaveBeenCalled();
+    expect(window.setBackgroundColor).toHaveBeenLastCalledWith("#abcdef");
+  },
+);
+
+it("falls back after Windows material failures and retries only on a later apply, including failed removal", () => {
+  const window = nativeWindow();
+  window.setBackgroundMaterial.mockImplementationOnce(() => {
+    throw new Error("unavailable");
+  });
+  const effects = createWindowBackgroundEffects(window, {
+    platform: "win32",
+    windowsVersion: "10.0.22621",
+  });
+  effects.apply(configuration(true, 1));
+  expect(effects.transparency()).toBe(0);
+  expect(window.setBackgroundColor).toHaveBeenLastCalledWith("#123456");
+  effects.apply(configuration(true, 1));
+  expect(effects.transparency()).toBe(1);
+  expect(window.setBackgroundColor).toHaveBeenLastCalledWith("#00000000");
+  window.setBackgroundMaterial.mockImplementationOnce(() => {
+    throw new Error("removal failed");
+  });
+  effects.apply(configuration(false, 0.5, "#abcdef"));
+  expect(window.setBackgroundColor).toHaveBeenLastCalledWith("#abcdef");
+  effects.apply(configuration(false, 0.5));
+  expect(window.setBackgroundMaterial.mock.calls).toEqual([
+    ["acrylic"],
+    ["acrylic"],
+    ["none"],
+    ["none"],
+  ]);
+});
 
 it("applies commits to independent live windows and current snapshots to future windows, retiring closed owners", () => {
   const owner = createWindowBackgroundEffectsOwner("darwin", "");
   const first = Object.assign(new EventEmitter(), nativeWindow());
   const second = Object.assign(new EventEmitter(), nativeWindow());
-  owner.register(first, { blur: false, transparency: 0 });
-  owner.register(second, { blur: false, transparency: 0 });
-  expect(first.setVibrancy).not.toHaveBeenCalled();
-  owner.apply({ blur: true, transparency: 0.5 });
+  owner.register(first, configuration());
+  owner.register(second, configuration());
+  owner.apply(configuration(true, 0.5));
   expect(first.setVibrancy).toHaveBeenCalledExactlyOnceWith("under-window");
   expect(second.setVibrancy).toHaveBeenCalledExactlyOnceWith("under-window");
   first.isDestroyed.mockReturnValue(true);
   first.emit("closed");
-  owner.apply({ blur: false, transparency: 1 });
+  owner.apply(configuration(false, 1));
   expect(first.setVibrancy).toHaveBeenCalledOnce();
   expect(second.setVibrancy).toHaveBeenLastCalledWith(null);
   const future = Object.assign(new EventEmitter(), nativeWindow());
-  owner.register(future, { blur: true, transparency: 1 });
+  owner.register(future, configuration(true, 1));
   expect(future.setVibrancy).toHaveBeenCalledExactlyOnceWith("under-window");
 });
 
@@ -70,11 +157,11 @@ it("lets a later committed reload retry an unavailable helper without background
     x11: true,
     runXprop,
   });
-  effects.apply({ blur: true, transparency: 0.5 });
+  effects.apply(configuration(true, 0.5));
   expect(runXprop).toHaveBeenCalledOnce();
-  effects.apply({ blur: true, transparency: 0.5 });
+  effects.apply(configuration(true, 0.5));
   expect(runXprop).toHaveBeenCalledTimes(2);
-  effects.apply({ blur: true, transparency: 0.75 });
+  effects.apply(configuration(true, 0.75));
   expect(runXprop).toHaveBeenCalledTimes(2);
   effects.dispose();
   expect(runXprop).toHaveBeenCalledTimes(3);
@@ -87,9 +174,9 @@ it("does not invoke an optional helper for opaque defaults or blur disabled", ()
     x11: true,
     runXprop,
   });
-  effects.apply({ blur: false, transparency: 0 });
-  effects.apply({ blur: true, transparency: 0 });
-  effects.apply({ blur: false, transparency: 1 });
+  effects.apply(configuration());
+  effects.apply(configuration(true, 0));
+  effects.apply(configuration(false, 1));
   effects.dispose();
   expect(runXprop).not.toHaveBeenCalled();
 });
@@ -102,7 +189,7 @@ it("uses a bounded shell-free hint for only the owned XID, removes it and become
     x11: true,
     runXprop,
   });
-  effects.apply({ blur: true, transparency: 0.5 });
+  effects.apply(configuration(true, 0.5));
   expect(runXprop).toHaveBeenCalledExactlyOnceWith(
     "xprop",
     [
@@ -130,8 +217,27 @@ it("uses a bounded shell-free hint for only the owned XID, removes it and become
     "-remove",
     "_KDE_NET_WM_BLUR_BEHIND_REGION",
   ]);
-  effects.apply({ blur: true, transparency: 1 });
+  effects.apply(configuration(true, 1));
   expect(runXprop).toHaveBeenCalledTimes(2);
+});
+
+it("retires even a possibly partially applied hint after a failed enable", () => {
+  const runXprop = vi.fn().mockImplementationOnce(() => {
+    throw new Error("timeout after mutation");
+  });
+  const effects = createWindowBackgroundEffects(nativeWindow(), {
+    platform: "linux",
+    x11: true,
+    runXprop,
+  });
+  effects.apply(configuration(true, 0.5));
+  effects.dispose();
+  expect(runXprop.mock.calls[1]?.[1]).toEqual([
+    "-id",
+    "0x123456",
+    "-remove",
+    "_KDE_NET_WM_BLUR_BEHIND_REGION",
+  ]);
 });
 
 it("quietly tolerates unsupported native APIs, absent helpers, invalid handles and destroyed windows", () => {
@@ -150,8 +256,9 @@ it("quietly tolerates unsupported native APIs, absent helpers, invalid handles a
       platform,
       x11: true,
       runXprop,
+      windowsVersion: "10.0.26200",
     });
-    expect(() => effects.apply({ blur: true, transparency: 1 })).not.toThrow();
+    expect(() => effects.apply(configuration(true, 1))).not.toThrow();
     window.isDestroyed.mockReturnValue(true);
     const calls = runXprop.mock.calls.length;
     expect(() => effects.dispose()).not.toThrow();
@@ -164,11 +271,11 @@ it("quietly tolerates unsupported native APIs, absent helpers, invalid handles a
     platform: "linux",
     x11: true,
     runXprop,
-  }).apply({ blur: true, transparency: 1 });
+  }).apply(configuration(true, 1));
   createWindowBackgroundEffects(nativeWindow(), {
     platform: "linux",
     x11: false,
     runXprop,
-  }).apply({ blur: true, transparency: 1 });
+  }).apply(configuration(true, 1));
   expect(runXprop).not.toHaveBeenCalled();
 });

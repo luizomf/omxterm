@@ -69,6 +69,9 @@ it("composes one live tint beneath real WebGL text, explicit backgrounds, invers
   // macOS/Linux. Keep the same one-byte tolerance as the actual pixel fixture.
   for (const phase of phases)
     expect(
-      Math.abs(phase.pageAlpha - (1 - phase.transparency) * 255),
+      Math.abs(
+        phase.pageAlpha -
+          (process.platform === "win32" ? 255 : (1 - phase.transparency) * 255),
+      ),
     ).toBeLessThanOrEqual(1);
 }, 90_000);

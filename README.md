@@ -5,7 +5,8 @@ and Windows ARM64. Work across tabs and windows, and customize fonts, themes,
 keyboard shortcuts, and snippets. Show or hide the title and tab bars independently.
 The `0.17.0-dev.0` source adds optional [background transparency and best-effort
 native blur](docs/configuration.md#background-transparency-and-blur), without
-fading terminal text.
+fading terminal text. Windows uses Acrylic when blur is enabled; transparency
+without blur falls back to an opaque theme to preserve native window controls.
 
 <p align="center">
   <img src="docs/images/omxterm-hero.png" alt="OMXTerm icon: a light blue terminal prompt on a dark rounded square" width="480" />

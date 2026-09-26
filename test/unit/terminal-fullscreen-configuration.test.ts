@@ -140,4 +140,56 @@ describe("Terminal Window fullscreen configuration", () => {
     expect(first.webContents.send).toHaveBeenCalledTimes(sentBeforeDisposal);
     router.dispose();
   });
+
+  it("keeps requested settings while publishing each window's effective background at startup and reload", () => {
+    const ipc = createIpcHarness();
+    const router = registerTerminalIpcRouter(ipc.ipcMain);
+    const options = controllerOptions();
+    const requested = Object.freeze({
+      ...options.configuration,
+      transparency: 0.5,
+    });
+    let effectiveTransparency = 0;
+    const first = { mainFrame: {}, isDestroyed: () => false, send: vi.fn() };
+    const second = { mainFrame: {}, isDestroyed: () => false, send: vi.fn() };
+    const controller = router.registerController({
+      ...options,
+      configuration: requested,
+      webContents: first,
+      backgroundTransparency: () => effectiveTransparency,
+    });
+    router.registerController({
+      ...options,
+      configuration: requested,
+      webContents: second,
+    });
+    const read = (webContents: TrustedWebContents) =>
+      ipc.handlers.get(terminalIpc.configuration)!({
+        sender: webContents,
+        senderFrame: webContents.mainFrame,
+      });
+    expect(read(first)).toMatchObject({ transparency: 0 });
+    expect(read(second)).toMatchObject({ transparency: 0.5 });
+    effectiveTransparency = 0.5;
+    router.applyConfiguration(requested);
+    expect(first.send).toHaveBeenLastCalledWith(
+      terminalIpc.configurationUpdate,
+      expect.objectContaining({ transparency: 0.5 }),
+    );
+    effectiveTransparency = 0;
+    router.applyConfiguration(requested);
+    expect(first.send).toHaveBeenLastCalledWith(
+      terminalIpc.configurationUpdate,
+      expect.objectContaining({ transparency: 0 }),
+    );
+    expect(second.send).toHaveBeenLastCalledWith(
+      terminalIpc.configurationUpdate,
+      expect.objectContaining({ transparency: 0.5 }),
+    );
+    controller.applyFullScreen(true);
+    expect(read(first)).toMatchObject({ transparency: 0, nativeTitleInset: 0 });
+    expect(requested.transparency).toBe(0.5);
+    expect(options.createSession).not.toHaveBeenCalled();
+    router.dispose();
+  });
 });

@@ -154,6 +154,11 @@ host paints the default theme tint once on body; Surfaces use `background:
 "host"` so neither their padding nor their canvas repeats it. A standalone
 Surface retains its own opaque theme background unless its host takes ownership.
 Transparency reload updates the host tint, not a Surface/core/PTY instance.
+Windows keeps nontransparent native construction for working native controls:
+Acrylic allows tint transparency, while plain-alpha, unavailable API and failed
+material requests use effective renderer transparency zero and the opaque theme.
+The existing per-window configuration snapshot carries that effective value;
+the complete requested configuration remains unchanged.
 Chrome overlays do not repeat the theme background, and foreground content is
 not globally faded. [ADR 0029](adr/0029-compose-background-effects-with-explicit-cell-identity.md)
 records native effects and ownership.
@@ -180,16 +185,32 @@ default RGB. The rendering fixture mounts the real host and Surface under the
 production CSP, reads the actual WebGL buffer, and checks implicit alpha,
 explicit equal/different RGB, inverse ink, ANSI glyphs, cursor, selection, Kitty
 images, live changes and tab continuity. `capturePage` verifies page tint alpha
-255/about 128/0 (one-byte native rounding tolerance), including that sidebar
+255/about 128/0 on macOS/Linux (one-byte native rounding tolerance), with opaque
+Windows plain-alpha fallback and exact fallback theme RGB, including that sidebar
 overlays do not paint the theme a second time.
 The Window Chrome fixture uses actual main/preload/PTY routes and verifies live
 and future-window effects alongside native controls and existing session
 continuity. Linux fixtures explicitly use X11 and the existing no-sandbox policy.
 
 These tests request native effects but do not prove visible behind-window blur.
-macOS runs establish actual integrated WebGL/Chromium behavior, not Windows/Linux
-GPU qualification. Guest-native execution and desktop observation must be reported
-separately; prior standalone Acrylic/KDE probes are not integrated Surface proof.
+For compositor verification on each target desktop:
+
+1. Place the candidate's real host/Surface window above a separately owned window
+   showing synthetic stripes and a checkerboard. Use only synthetic terminal data.
+2. Keep the theme fixed and compare opaque, positive transparency without blur,
+   the same transparency with blur, then blur removed. Capture the actual desktop
+   compositor and retain only the owned scene, not unrelated windows or payloads.
+3. Check reversible pattern softening on macOS/Windows/KDE where supported.
+   Windows must return to the opaque theme without blur, including after a theme
+   reload. GNOME may retain sharp plain transparency throughout. A successful
+   material call or `capturePage` alone proves neither visible blur nor its removal.
+4. Exercise native maximize/restore, resize and fullscreen; inspect actual native
+   state and custom controls while checking unchanged Surface/session identity.
+   In particular, larger Windows bounds alone do not establish maximized state.
+
+Report native desktop results separately from renderer tests, with the source
+revision, OS/compositor and limitations. One platform's GPU results or a standalone
+material probe do not qualify another platform's integrated Surface.
 No screen capture, diagnostic bridge or synthetic fixture ships in production.
 
 ### Font memory ownership
