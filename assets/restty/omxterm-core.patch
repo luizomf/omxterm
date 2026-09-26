@@ -156,9 +156,9 @@ diff --git a/wasm/src/restty.zig b/wasm/src/restty.zig
 +            const bg = explicit_bg orelse default_bg;
 @@ -932,1 +1010,3 @@
 -            h.buffers.bg_rgba[idx] = packRGBA(bg, 0xFF);
-+            // Preserve default-vs-explicit identity, including equal RGB and
-+            // background-only erased cells. RGB stays available for inverse ink.
-+            h.buffers.bg_rgba[idx] = packRGBA(bg, if (explicit_bg != null) 0xFF else 0);
++            // Preserve explicit identity (even equal RGB) and reversed defaults.
++            // DECSCNM swaps render defaults without setting per-cell inverse.
++            h.buffers.bg_rgba[idx] = packRGBA(bg, if (explicit_bg != null or h.term.modes.get(.reverse_colors)) 0xFF else 0);
 @@ -1167,6 +1247,26 @@
      return h.term.screens.active.pages.rows;
  }

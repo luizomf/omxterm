@@ -38,9 +38,9 @@ const priorResizeCoreDigest =
 const priorBackgroundCoreDigest =
   "039abfec307ab03015a2ae70b3583e07fcc9e5a70319de1ca055d6168f45af1b";
 const correctedCoreDigest =
-  "b041f5124ed480d95114142c9103bb83dd3fa747747fde717125b46e0d6b22da";
+  "baa7dd9600c034a77e73ed03864c3e15e02ccdc591d2044479652fef1d9c0900";
 const correctedCoreWasmDigest =
-  "846caf84a489204a919ba697e47c6316919d573a3672f8f401a00e8ce68be935";
+  "55696bf85e65a4602348679b0ee78d1724c805e0422eeebc925822865538d0ac";
 const originalEventTypesDigest =
   "1c9383be2d0377635b3463a5ac2ec31eac3e2b233fc664de751ad3e9f54ea650";
 const correctedEventTypesDigest =

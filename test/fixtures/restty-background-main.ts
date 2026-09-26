@@ -149,6 +149,28 @@ app
         Math.abs(sidebarAlpha - expectedSidebarAlpha) <= 1,
         `sidebar paints only its neutral overlay, not a second theme tint: ${sidebarAlpha}`,
       );
+      type ScreenPixels = Pick<
+        Phase,
+        "implicit" | "equalRgb" | "glyphs" | "inverseBackground"
+      >;
+      const reversed = await evaluate<ScreenPixels>(
+        "backgroundFixture.reverseScreen(true)",
+      );
+      assert.deepEqual(reversed.implicit, [240, 240, 255, 255]);
+      assert.deepEqual(reversed.equalRgb, [18, 52, 86, 255]);
+      assert.deepEqual(reversed.inverseBackground, [18, 52, 86, 255]);
+      assert.ok(
+        (reversed.glyphs["18,52,86"] ?? 0) > 0,
+        "visible reverse-screen ink",
+      );
+      const restored = await evaluate<ScreenPixels>(
+        "backgroundFixture.reverseScreen(false)",
+      );
+      assert.deepEqual(restored.implicit, [0, 0, 0, 0]);
+      assert.ok(
+        (restored.glyphs["240,240,255"] ?? 0) > 0,
+        "restored normal ink",
+      );
       phases.push({
         transparency,
         canvasAlpha: phase.alpha,

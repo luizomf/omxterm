@@ -167,11 +167,14 @@ In pinned Ghostty `src/terminal/style.zig`, `Style.bg` returns an optional color
 `null` for implicit default, a color for explicit palette/RGB or background-only
 erased cells. The Restty bridge in `wasm/src/restty.zig` formerly discarded that
 identity. The tracked patch now exports it through the existing cell-background
-RGBA alpha (0 implicit, 255 explicit), while retaining RGB for inverse text.
+RGBA alpha (0 implicit, 255 explicit or screen-reversed), while retaining RGB for inverse text.
 Runtime inverse swaps restore opaque foreground alpha, and text contrast
 correction uses that RGB without painting implicit cells. Explicit equal-RGB
 backgrounds therefore stay opaque; SGR 49 returns to the implicit default.
 Theme changes, background-color erase and alternate screens preserve that rule.
+DECSCNM reverse-screen mode swaps core default colors without setting per-cell
+inverse; its reversed background remains opaque until the mode is disabled or
+reset. The bridge reads that core mode directly, not an RGB comparison.
 No RGB equality heuristic, second parser or new privileged route is involved.
 
 Focused native checks on each ARM64 desktop:
@@ -374,7 +377,7 @@ registry.
 After preparation, the corrected runtime has SHA-256
 `19ce5c33221a7c77bea9eb83c49d9afb3ccda2a70636598492654db18226d0f2`,
 embedded-core chunk SHA-256
-`b041f5124ed480d95114142c9103bb83dd3fa747747fde717125b46e0d6b22da`,
+`baa7dd9600c034a77e73ed03864c3e15e02ccdc591d2044479652fef1d9c0900`,
 and event declarations SHA-256
 `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34`.
 The narrow correction preserves font acquisition/lease cleanup under cache
@@ -412,7 +415,7 @@ Ghostty commits above with tracked Restty patch
 `assets/restty/omxterm-core.patch` and Ghostty patch
 `assets/restty/ghostty-title-events.patch`. Their SHA-256 values are recorded in
 `assets/restty-sources.json`. The artifact SHA-256 is
-`846caf84a489204a919ba697e47c6316919d573a3672f8f401a00e8ce68be935`.
+`55696bf85e65a4602348679b0ee78d1724c805e0422eeebc925822865538d0ac`.
 The background-identity correction changes only the existing cell background
 alpha export; it keeps the original Restty and Ghostty commits pinned.
 The Restty patch also enables Ghostty's standard grapheme-cluster mode as a

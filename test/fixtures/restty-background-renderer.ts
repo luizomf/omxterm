@@ -211,6 +211,11 @@ function createFixture() {
           .backgroundColor,
       };
     },
+    async reverseScreen(enabled: boolean) {
+      sessions[0]!.handlers!.onOutput(enabled ? "\u001b[?5h" : "\u001b[?5l");
+      await frames();
+      return pixels();
+    },
     async selection() {
       sessions[0]!.surface!.selectAll();
       return pixels().glyphs;

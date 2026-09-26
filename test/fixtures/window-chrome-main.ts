@@ -43,6 +43,7 @@ const sessions: Array<ReturnType<typeof createLocalTerminalSession>> = [];
 const sessionExits: Promise<void>[] = [];
 const sizes: Array<Array<{ cols: number; rows: number }>> = [];
 const windows: BrowserWindow[] = [];
+const backgroundTransparencies = new WeakMap<BrowserWindow, () => number>();
 const backgroundEffects = createWindowBackgroundEffectsOwner(
   process.platform,
   "x11",
@@ -120,6 +121,7 @@ app
           window,
           configuration,
         );
+        backgroundTransparencies.set(window, backgroundTransparency);
         guardTerminalWindowClose(window, application);
         const chrome = registerWindowChrome(window, ipcMain, {
           platform: process.platform,
@@ -281,6 +283,8 @@ app
         );
       },
       second: () => windows[1]!,
+      backgroundOpacity: (window) =>
+        1 - backgroundTransparencies.get(window)!(),
       exerciseMenu: () =>
         exerciseApplicationMenu(windows[0]!, application, menuOpenings),
     });

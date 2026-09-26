@@ -92,7 +92,10 @@ from explicit ANSI/RGB colors, including background-only erased cells, through
 `Style.bg`. Restty's WASM bridge previously flattened that optional value into
 opaque RGB. The narrow source correction retains its RGB and writes alpha 0
 for an implicit default or 255 for an explicit background in the existing cell
-RGBA buffer. There is no RGB-match heuristic, new parser or extra ABI array.
+RGBA buffer. DECSCNM reverse-screen mode also keeps the swapped default background
+opaque: Ghostty swaps render-state defaults without marking cells inverse. The
+bridge reads the core mode directly and restores implicit alpha when it ends.
+There is no RGB-match heuristic, new parser or extra ABI array.
 SGR 49 returns to implicit default. Inverse exchanges colors but explicitly
 restores opaque foreground alpha: background ownership must not make inverse
 ink invisible. Text contrast correction still uses the unmodified background

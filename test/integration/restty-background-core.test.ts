@@ -16,9 +16,10 @@ type Core = WebAssembly.Exports & {
     cursor: number,
   ): number;
   restty_cell_bg_rgba_ptr(handle: number): number;
+  restty_cell_fg_rgba_ptr(handle: number): number;
 };
 
-it("retains explicit background identity independently of RGB, erasure, reset and theme changes", async () => {
+it("retains explicit background identity through RGB matches, reverse-screen mode, erasure, reset and theme changes", async () => {
   const bytes = Uint8Array.from(
     await readFile(
       new URL("../../assets/restty/omxterm-restty-core.wasm", import.meta.url),
@@ -63,6 +64,19 @@ it("retains explicit background identity independently of RGB, erasure, reset an
       0, // SGR 49 restores implicit default.
     ]);
     expect(backgrounds()[15]).toBe(255); // Explicit palette background.
+    write("\u001b[?5h"); // DECSCNM swaps core defaults, not the cell inverse flag.
+    expect(backgrounds().slice(0, 12)).toEqual([
+      255, 255, 255, 255, 0x12, 0x34, 0x56, 255, 255, 255, 255, 255,
+    ]);
+    expect([
+      ...new Uint8Array(
+        core.memory.buffer,
+        core.restty_cell_fg_rgba_ptr(handle),
+        4,
+      ),
+    ]).toEqual([0x12, 0x34, 0x56, 255]);
+    write("\u001b[?5l");
+    expect(backgrounds().slice(0, 4)).toEqual([0x12, 0x34, 0x56, 0]);
     write("\u001b[2;1H\u001b[48;2;18;52;86m\u001b[2K\u001b[0m");
     expect(backgrounds(1)[3]).toBe(255); // Background-color erase.
     core.restty_set_default_colors(handle, 0xffffff, 0x654321, 0xffffff);
@@ -73,6 +87,8 @@ it("retains explicit background identity independently of RGB, erasure, reset an
     expect(backgrounds()[3]).toBe(255);
     write("\u001b[?1049l");
     expect(backgrounds()[7]).toBe(255);
+    write("\u001b[?5h");
+    expect(backgrounds()[3]).toBe(255);
     write("\u001bc");
     expect(backgrounds()[3]).toBe(0);
   } finally {
