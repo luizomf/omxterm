@@ -35,6 +35,7 @@ import {
 import {
   explicitFixtureLaunchRequest,
   nativeFixturePlatform,
+  prepareFixtureShell,
   selectionFixtureCommand,
 } from "./restty-host-platform";
 import {
@@ -45,13 +46,12 @@ import { createResttyHostWindows } from "./restty-host-window";
 
 const prefix = "__OMXTERM_RESTTY_HOST_RESULT__";
 const root = __dirname;
-const home = path.join(root, "home");
+const { home, environment: shellEnvironment } = prepareFixtureShell(root);
 for (const name of ["userData", "sessionData"] as const) {
   const directory = path.join(root, name);
   mkdirSync(directory, { recursive: true });
   app.setPath(name, directory);
 }
-mkdirSync(home, { recursive: true });
 
 const outputs: string[][] = [];
 const inputs: string[][] = [];
@@ -144,7 +144,7 @@ function createHost(window: BrowserWindow) {
         platform: process.platform,
         homeDirectory: home,
         applicationVersionProvider: app,
-        environment: { ...process.env, HOME: home },
+        environment: shellEnvironment,
         onOutput(data) {
           if (!outputStress.observeOutput(index, data))
             outputs[index]!.push(data);

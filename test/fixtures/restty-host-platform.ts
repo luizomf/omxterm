@@ -1,3 +1,4 @@
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { LaunchRequest } from "../../src/main/launch-request";
 
@@ -28,6 +29,20 @@ export const nativeFixturePlatform = Object.freeze({
       ? "Write-Output '__DEFAULT_INPUT__Olá🙂'"
       : "printf '__DEFAULT_INPUT__Olá🙂\\n'",
 });
+
+export function prepareFixtureShell(root: string) {
+  const home = path.join(root, "home");
+  mkdirSync(home, { recursive: true });
+  const environment: NodeJS.ProcessEnv = { ...process.env, HOME: home };
+  if (process.platform === "linux") {
+    // Select this fixture's Protected Paste branch, not Readline bracketed paste.
+    environment.INPUTRC = path.join(home, ".inputrc");
+    writeFileSync(environment.INPUTRC, "set enable-bracketed-paste off\n");
+    // Global login startup can otherwise emit unrelated prompt titles.
+    writeFileSync(path.join(home, ".profile"), "unset PROMPT_COMMAND\n");
+  }
+  return { home, environment };
+}
 
 export function explicitFixtureLaunchRequest(): LaunchRequest {
   const payload =
