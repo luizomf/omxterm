@@ -180,7 +180,8 @@ default RGB. The rendering fixture mounts the real host and Surface under the
 production CSP, reads the actual WebGL buffer, and checks implicit alpha,
 explicit equal/different RGB, inverse ink, ANSI glyphs, cursor, selection, Kitty
 images, live changes and tab continuity. `capturePage` verifies page tint alpha
-255/128/0, including that sidebar overlays do not paint the theme a second time.
+255/about 128/0 (one-byte native rounding tolerance), including that sidebar
+overlays do not paint the theme a second time.
 The Window Chrome fixture uses actual main/preload/PTY routes and verifies live
 and future-window effects alongside native controls and existing session
 continuity. Linux fixtures explicitly use X11 and the existing no-sandbox policy.

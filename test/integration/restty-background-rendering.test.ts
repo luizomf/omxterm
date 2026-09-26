@@ -56,6 +56,19 @@ it("composes one live tint beneath real WebGL text, explicit backgrounds, invers
   });
   expect(result.stdout).toContain('"explicitBackgrounds":true');
   expect(result.stdout).toContain('"opaqueForeground":true');
-  expect(result.stdout).toContain('"pageAlpha":128');
-  expect(result.stdout).toContain('"pageAlpha":0');
+  const prefix = "__OMXTERM_BACKGROUND_RESULT__";
+  const line = result.stdout
+    .split("\n")
+    .find((entry) => entry.startsWith(prefix));
+  expect(line).toBeDefined();
+  const { phases } = JSON.parse(line!.slice(prefix.length)) as {
+    phases: Array<{ transparency: number; pageAlpha: number }>;
+  };
+  expect(phases.map((phase) => phase.transparency)).toEqual([0, 0.5, 1]);
+  // Native premultiplication rounds half alpha to 127 on Windows and 128 on
+  // macOS/Linux. Keep the same one-byte tolerance as the actual pixel fixture.
+  for (const phase of phases)
+    expect(
+      Math.abs(phase.pageAlpha - (1 - phase.transparency) * 255),
+    ).toBeLessThanOrEqual(1);
 }, 90_000);
