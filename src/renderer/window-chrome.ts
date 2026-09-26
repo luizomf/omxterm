@@ -49,7 +49,10 @@ export function mountWindowChrome(
   handle.append(
     ...Array.from({ length: 3 }, () => document.createElement("i")),
   );
-  document.body.prepend(row, handle);
+  document.body.prepend(row);
+  // Later no-drag regions subtract earlier drag regions regardless of z-index.
+  // Keep the fixed handle after the overlapping tab strip in layout order.
+  document.body.append(handle);
   const render = (state: WindowChromeState) => {
     if (disposed) return;
     const toggled =

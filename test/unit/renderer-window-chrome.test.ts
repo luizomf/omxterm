@@ -290,6 +290,24 @@ describe("Window Chrome through the mounted window host", () => {
     expect(inset()).toBe("0px");
   });
 
+  it("keeps the native drag handle after the overlapping no-drag tab strip", async () => {
+    const view = await setup({
+      style: "custom",
+      titleBarVisible: false,
+      handleVisible: true,
+    });
+    view.tab({ action: "new" });
+    await vi.waitFor(() => expect(view.surfaces).toHaveLength(2));
+    expect(view.tabStrip.hidden).toBe(false);
+    expect(handle().hidden).toBe(false);
+    // Native regions are applied in layout order, not visual z-index order.
+    expect(
+      view.tabStrip.compareDocumentPosition(handle()) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    view.host.dispose();
+  });
+
   it.each(["native", "custom"] as const)(
     "suppresses fullscreen chrome and restores the choice on %s",
     async (style) => {
