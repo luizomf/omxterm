@@ -48,10 +48,6 @@ export function createResttyHostSessions(options: {
   readonly windows: () => readonly FixtureWindow[];
   readonly signals: {
     on(signal: "SIGINT" | "SIGTERM", listener: () => void): unknown;
-    send?(
-      message: { type: "fixture-interrupted"; signal: string },
-      callback: (error: Error | null) => void,
-    ): unknown;
   };
   readonly reportError: (message: string) => void;
 }) {
@@ -68,21 +64,10 @@ export function createResttyHostSessions(options: {
     ["SIGINT", 130],
     ["SIGTERM", 143],
   ] as const) {
-    options.signals.on(signal, () => {
-      const reportNotificationFailure = () =>
-        options.reportError("Restty fixture interruption notification failed");
-      try {
-        options.signals.send?.(
-          { type: "fixture-interrupted", signal },
-          (error) => {
-            if (error) reportNotificationFailure();
-          },
-        );
-      } catch {
-        reportNotificationFailure();
-      }
-      finishInBackground(code);
-    });
+    // The supervisor treats fixture-interrupted IPC as immediate forced
+    // cleanup. Let it observe our native exit instead; its original deadline
+    // still owns fallback when an actual PTY exit never arrives.
+    options.signals.on(signal, () => finishInBackground(code));
   }
   const shellsReady = () => [...sessions].every((record) => record.ready);
   const fixture = {

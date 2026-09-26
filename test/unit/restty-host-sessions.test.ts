@@ -147,18 +147,18 @@ it.each([
   ["SIGINT", 130],
   ["SIGTERM", 143],
 ] as const)(
-  "%s drains actual exits and cannot be bypassed by native quit or last-window closure",
+  "%s drains actual exits without requesting immediate supervisor termination",
   async (signal, code) => {
     const h = harness();
     h.start();
+    // The real supervisor treats fixture-interrupted as an immediate forced
+    // cleanup request, not a notification that permits graceful draining.
+    const supervisorCleanup = vi.fn(() => {
+      h.window.destroy();
+    });
+    h.signals.send.mockImplementation(supervisorCleanup);
     h.signals.emit(signal);
-    expect(h.signals.send).toHaveBeenCalledWith(
-      {
-        type: "fixture-interrupted",
-        signal,
-      },
-      expect.any(Function),
-    );
+    expect(supervisorCleanup).not.toHaveBeenCalled();
     expect(h.ptys[0]!.kill).toHaveBeenCalledOnce();
     const event = { preventDefault: vi.fn() };
     h.app.emit("before-quit", event);
@@ -169,26 +169,9 @@ it.each([
     h.ptys[0]!.exit();
     await complete;
     expect(h.app.exit).toHaveBeenCalledExactlyOnceWith(code);
+    expect(supervisorCleanup).not.toHaveBeenCalled();
   },
 );
-
-it("interruption still drains when the supervisor IPC channel is already unavailable", async () => {
-  const h = harness();
-  h.start();
-  h.signals.send.mockImplementation(() => {
-    throw new Error("IPC unavailable");
-  });
-  expect(() => h.signals.emit("SIGTERM")).not.toThrow();
-  expect(h.ptys[0]!.kill).toHaveBeenCalledOnce();
-  expect(h.app.exit).not.toHaveBeenCalled();
-  const complete = h.fixture.complete(0);
-  h.ptys[0]!.exit();
-  await complete;
-  expect(h.app.exit).toHaveBeenCalledExactlyOnceWith(143);
-  expect(h.reportError).toHaveBeenCalledWith(
-    "Restty fixture interruption notification failed",
-  );
-});
 
 it("completion rejects starts immediately and reentrant completion shares one drain", async () => {
   const h = harness();
