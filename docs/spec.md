@@ -193,12 +193,19 @@ succeeds (ADR 0025).
   transient system chrome may overlay content without hover-driven padding or
   PTY resizing. Entry and exit refit the selected existing Surface and PTY, while
   other windows and hidden Surfaces remain unchanged.
-- Every Linux and Windows Terminal Window auto-hides the installed native
-  application menu bar by default; pressing and releasing Alt alone temporarily
-  reveals it, and using or dismissing the menu returns it to hidden. This is
-  fixed Window Chrome behavior rather than User Configuration, and macOS menu
-  behavior is unchanged. The selected Terminal Theme fills the app-controlled
-  content, including title chrome and configured padding.
+- In Linux and Windows Terminal Windows, pressing and releasing Alt alone opens
+  the current native application menu as a popup. It retains the installed menu's
+  hierarchy, actions and effective shortcuts, including after configuration reload.
+  Its top-left anchor is 8 logical px from the content's left edge and 8 px below
+  the visible 34 px title row (`x=8, y=42`), or `x=8, y=8` with the title hidden
+  or in fullscreen. The native OS menu owns styling, keyboard navigation and
+  dismissal; no DOM menu or native menu bar is added to the frameless window.
+  Opening or dismissing it preserves the selected tab, window, Surface and PTY.
+  Alt combinations, AltGr, repeats, intervening input and focus loss do not open
+  it. Local Image Preview suppresses opening without stealing focus. This is
+  fixed Window Chrome behavior, not a configurable shortcut; macOS's native menu
+  and Option input are unchanged. The selected Terminal Theme fills app-controlled
+  content, including title chrome and configured padding, not the native popup.
 - `Window -> Always on Top` toggles only the selected window at the ordinary
   native floating level. New windows use the configured default.
 - On Linux and Windows, the existing native About action shows `OMXTerm`, the

@@ -1,8 +1,9 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, Menu } from "electron";
 import { mkdirSync, writeSync } from "node:fs";
 import path from "node:path";
 import { terminalWindowOptions } from "../../src/main/terminal-window";
 import { registerWindowChrome } from "../../src/main/window-chrome";
+import { applicationMenuForWindow } from "../../src/main/native-application-menu";
 import {
   guardTerminalWindowClose,
   registerTerminalWindowHost,
@@ -26,6 +27,10 @@ import {
 } from "./restty-host-platform";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { exerciseWindowChrome } from "./window-chrome-exercise";
+import {
+  exerciseApplicationMenu,
+  type MenuOpening,
+} from "./application-menu-exercise";
 
 const root = __dirname;
 for (const name of ["userData", "sessionData"] as const) {
@@ -37,6 +42,7 @@ const sessions: Array<ReturnType<typeof createLocalTerminalSession>> = [];
 const sessionExits: Promise<void>[] = [];
 const sizes: Array<Array<{ cols: number; rows: number }>> = [];
 const windows: BrowserWindow[] = [];
+const menuOpenings: MenuOpening[] = [];
 let ended = 0;
 let confirmations = 0;
 let configuration = DEFAULT_USER_CONFIGURATION;
@@ -110,6 +116,15 @@ app
           platform: process.platform,
           showTitleBar: configuration.showTitleBar,
           cursor: () => cursor,
+          popupApplicationMenu(position, callback) {
+            const close = applicationMenuForWindow(window)(position, callback);
+            if (close)
+              menuOpenings.push({
+                menu: Menu.getApplicationMenu()!,
+                ...position,
+              });
+            return close;
+          },
         });
         const title = createTerminalWindowTitleController(window, {
           fallbackSessionTitle: "fixture",
@@ -253,6 +268,8 @@ app
         );
       },
       second: () => windows[1]!,
+      exerciseMenu: () =>
+        exerciseApplicationMenu(windows[0]!, application, menuOpenings),
     });
     for (const window of windows) application.forceCloseWindow(window);
     router.dispose();

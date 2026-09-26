@@ -98,8 +98,14 @@ Application menus show the effective shortcuts, including your custom bindings.
 For `+`, include the Shift needed to type the symbol: often `Ctrl+Shift+=` or
 `Cmd+Shift+=`. A dedicated keypad `+` needs no Shift.
 
-On Linux and Windows, press and release **Alt** to reveal the hidden application
-menu. Always on Top, Open Local Image, and Developer Tools are menu-only actions.
+On Linux and Windows, press and release **Alt alone** to open the native
+application menu popup. It appears with an 8 px inset below the title row, or
+at the content's top-left when the title is hidden or the window is fullscreen.
+Navigate with the native menu keys; Escape or a click outside dismisses it.
+Alt combinations and AltGr keep their normal behavior. An active Local Image
+Preview suppresses opening the popup. macOS keeps its normal native menu and
+Option-key behavior. Always on Top, Open Local Image, and Developer Tools are
+menu-only actions.
 To remap the supported shortcuts, use [keybinds](configuration.md#keybinds).
 Application shortcuts consume their key instead of sending it to the shell.
 

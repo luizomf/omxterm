@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { registerWindowChrome } from "../../src/main/window-chrome";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import type { WindowChromeState } from "../../src/shared/window-chrome";
+import { deliverKeybindsFromKeyEvents } from "../../src/main/keybind-delivery";
+import { terminalDefaultKeybinds } from "../../src/shared/terminal-keybinds";
 
 function setup(
   platform = "darwin",
@@ -39,10 +41,18 @@ function setup(
   });
   let point = { x: 51, y: 61 };
   const cursor = vi.fn(() => point);
+  const closePopup = vi.fn();
+  const popupApplicationMenu = vi.fn(
+    (
+      _position: { x: number; y: number },
+      _onClosed: () => void,
+    ): (() => void) | undefined => closePopup,
+  );
   const chrome = registerWindowChrome(window, ipc, {
     platform,
     showTitleBar,
     cursor,
+    popupApplicationMenu,
   });
   const command = (
     payload: unknown,
@@ -57,6 +67,8 @@ function setup(
     flags,
     ipc,
     chrome,
+    popupApplicationMenu,
+    closePopup,
     command,
     state,
     cursor,
@@ -67,6 +79,234 @@ function setup(
 }
 
 afterEach(() => vi.useRealTimers());
+
+function key(
+  view: ReturnType<typeof setup>,
+  type: string,
+  fields: Record<string, unknown> = {},
+) {
+  const event = { preventDefault: vi.fn() };
+  view.webContents.emit("before-input-event", event, {
+    type,
+    key: "Alt",
+    code: "AltLeft",
+    alt: type !== "keyUp",
+    control: false,
+    shift: false,
+    meta: false,
+    isAutoRepeat: false,
+    isComposing: false,
+    modifiers: [],
+    ...fields,
+  });
+  return event.preventDefault;
+}
+
+const alt = (view: ReturnType<typeof setup>) => {
+  expect(key(view, "keyDown")).not.toHaveBeenCalled();
+  return key(view, "keyUp");
+};
+
+describe("standalone Alt opens the native application menu", () => {
+  it.each(["linux", "win32"])(
+    "uses current main-owned chrome on %s",
+    (platform) => {
+      vi.useFakeTimers();
+      const view = setup(platform);
+      expect(alt(view)).toHaveBeenCalledOnce();
+      expect(view.popupApplicationMenu).toHaveBeenLastCalledWith(
+        { x: 8, y: 42 },
+        expect.any(Function),
+      );
+      const dismiss = () => view.popupApplicationMenu.mock.lastCall![1]();
+      dismiss();
+      view.command("toggle-title-bar");
+      alt(view);
+      expect(view.popupApplicationMenu).toHaveBeenLastCalledWith(
+        { x: 8, y: 8 },
+        expect.any(Function),
+      );
+      dismiss();
+      view.command("toggle-title-bar");
+      view.flags.fullScreen = true;
+      view.window.emit("enter-full-screen");
+      alt(view);
+      expect(view.popupApplicationMenu).toHaveBeenLastCalledWith(
+        { x: 8, y: 8 },
+        expect.any(Function),
+      );
+      dismiss();
+      view.flags.fullScreen = false;
+      view.window.emit("leave-full-screen");
+      alt(view);
+      expect(view.popupApplicationMenu).toHaveBeenLastCalledWith(
+        { x: 8, y: 42 },
+        expect.any(Function),
+      );
+      expect(view.window.close).not.toHaveBeenCalled();
+      view.chrome.dispose();
+    },
+  );
+
+  it.each([
+    { key: "a", code: "KeyA" },
+    { key: "Control", code: "ControlLeft", control: true },
+    { key: "AltGraph", code: "AltRight" },
+    { control: true },
+    { shift: true },
+    { meta: true },
+    { isAutoRepeat: true },
+    { isComposing: true },
+    { modifiers: ["altgr"] },
+    { modifiers: ["leftButtonDown"] },
+    { code: "AltRight" },
+  ])("cancels the candidate on intervening key input %j", (fields) => {
+    const view = setup("linux");
+    key(view, "keyDown");
+    expect(key(view, "keyDown", fields)).not.toHaveBeenCalled();
+    expect(key(view, "keyUp")).not.toHaveBeenCalled();
+    expect(view.popupApplicationMenu).not.toHaveBeenCalled();
+    view.chrome.dispose();
+  });
+
+  it.each(["mouseDown", "mouseUp", "mouseWheel", "char", "touchStart"])(
+    "does not swallow %s or open after Alt+input",
+    (type) => {
+      const view = setup("win32");
+      key(view, "keyDown");
+      const event = { preventDefault: vi.fn() };
+      view.webContents.emit("input-event", event, { type });
+      expect(key(view, "keyUp")).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(view.popupApplicationMenu).not.toHaveBeenCalled();
+      view.chrome.dispose();
+    },
+  );
+
+  it("ignores orphan releases, repeats, mismatched sides and macOS Option", () => {
+    const view = setup("linux");
+    key(view, "keyUp");
+    key(view, "keyDown", { isAutoRepeat: true });
+    key(view, "keyUp");
+    key(view, "keyDown");
+    key(view, "keyUp", { code: "AltRight" });
+    key(view, "keyUp");
+    expect(view.popupApplicationMenu).not.toHaveBeenCalled();
+    key(view, "keyDown", { code: "AltRight" });
+    key(view, "keyUp", { code: "AltRight" });
+    expect(view.popupApplicationMenu).toHaveBeenCalledOnce();
+    view.chrome.dispose();
+    const mac = setup("darwin");
+    expect(alt(mac)).not.toHaveBeenCalled();
+    expect(mac.popupApplicationMenu).not.toHaveBeenCalled();
+    expect(mac.webContents.listenerCount("before-input-event")).toBe(0);
+    mac.chrome.dispose();
+  });
+
+  it("does not treat Alt as standalone while another ordinary key is held", () => {
+    const view = setup("linux");
+    key(view, "keyDown", { key: "a", code: "KeyA", alt: false });
+    expect(alt(view)).not.toHaveBeenCalled();
+    expect(view.popupApplicationMenu).not.toHaveBeenCalled();
+    key(view, "keyUp", { key: "a", code: "KeyA", alt: false });
+    expect(alt(view)).toHaveBeenCalledOnce();
+    view.chrome.dispose();
+  });
+
+  it("handles a missing menu and stale dismissal without blocking later openings", () => {
+    const view = setup("linux");
+    view.popupApplicationMenu.mockReturnValueOnce(undefined);
+    expect(alt(view)).not.toHaveBeenCalled();
+    expect(alt(view)).toHaveBeenCalledOnce();
+    const oldDismissal = view.popupApplicationMenu.mock.lastCall![1];
+    view.command("preview-active");
+    view.command("preview-inactive");
+    expect(alt(view)).toHaveBeenCalledOnce();
+    oldDismissal();
+    expect(alt(view)).not.toHaveBeenCalled();
+    expect(view.popupApplicationMenu).toHaveBeenCalledTimes(3);
+    view.chrome.dispose();
+  });
+
+  it("coexists with current keybind delivery once and leaves typing alone", () => {
+    const view = setup("linux");
+    let bindings = terminalDefaultKeybinds("linux");
+    const invoke = vi.fn();
+    deliverKeybindsFromKeyEvents(
+      view.webContents,
+      () => bindings,
+      invoke,
+      "linux",
+    );
+    key(view, "keyDown");
+    expect(
+      key(view, "keyDown", { key: "1", code: "Digit1", alt: true }),
+    ).toHaveBeenCalledOnce();
+    key(view, "keyUp");
+    expect(invoke.mock.calls).toEqual([["selectTab1"]]);
+    bindings = { ...bindings, newTab: "Alt+X" };
+    key(view, "keyDown");
+    expect(
+      key(view, "keyDown", { key: "x", code: "KeyX", alt: true }),
+    ).toHaveBeenCalledOnce();
+    key(view, "keyUp");
+    expect(invoke.mock.calls).toEqual([["selectTab1"], ["newTab"]]);
+    expect(
+      key(view, "keyDown", { key: "a", code: "KeyA", alt: false }),
+    ).not.toHaveBeenCalled();
+    expect(view.popupApplicationMenu).not.toHaveBeenCalled();
+    key(view, "keyUp", { key: "a", code: "KeyA", alt: false });
+    // Consumed shortcuts need not deliver key-up; they must not poison Alt.
+    expect(alt(view)).toHaveBeenCalledOnce();
+    view.chrome.dispose();
+  });
+
+  it("cancels on blur and preview transitions without stealing focus", () => {
+    const view = setup("win32");
+    for (const owner of [view.window, view.webContents]) {
+      key(view, "keyDown");
+      owner.emit("blur");
+      key(view, "keyUp");
+    }
+    key(view, "keyDown");
+    view.command("preview-active");
+    view.command("preview-inactive");
+    key(view, "keyUp");
+    view.command("preview-active");
+    expect(alt(view)).not.toHaveBeenCalled();
+    view.command("preview-inactive");
+    view.flags.focused = false;
+    expect(alt(view)).not.toHaveBeenCalled();
+    expect(view.popupApplicationMenu).not.toHaveBeenCalled();
+    view.flags.focused = true;
+    alt(view);
+    expect(view.popupApplicationMenu).toHaveBeenCalledOnce();
+    // Native popup owns navigation and restores the previous DOM focus.
+    expect(alt(view)).not.toHaveBeenCalled();
+    expect(view.popupApplicationMenu).toHaveBeenCalledOnce();
+    view.command("preview-active");
+    expect(view.closePopup).toHaveBeenCalledOnce();
+    view.chrome.dispose();
+  });
+
+  it.each(["closed", "destroyed", "render-process-gone"])(
+    "cleans the menu lifecycle on %s",
+    (event) => {
+      const view = setup("linux");
+      alt(view);
+      const onClosed = view.popupApplicationMenu.mock.lastCall![1];
+      (event === "closed" ? view.window : view.webContents).emit(event);
+      expect(view.closePopup).toHaveBeenCalledOnce();
+      expect(view.webContents.eventNames()).toEqual([]);
+      expect(view.window.eventNames()).toEqual([]);
+      expect(alt(view)).not.toHaveBeenCalled();
+      onClosed();
+      view.chrome.dispose();
+      expect(view.closePopup).toHaveBeenCalledOnce();
+      expect(view.popupApplicationMenu).toHaveBeenCalledOnce();
+    },
+  );
+});
 
 describe("native Window Chrome ownership", () => {
   it.each(["darwin", "linux", "win32"])(

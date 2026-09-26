@@ -295,6 +295,10 @@ unknown keys.
   override the choices in existing windows. The View menu toggles each bar for
   the current window without editing the file. An enabled tab bar appears only
   when there are two or more tabs.
+- **Application menu** on Linux and Windows opens as a native popup when you
+  press and release Alt alone, including with hidden title chrome or fullscreen.
+  It uses the current effective shortcuts after reload. This fixed behavior has
+  no configuration key; Alt combinations and macOS Option input are unchanged.
 
 ### Start with hidden bars
 

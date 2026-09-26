@@ -155,7 +155,9 @@ for work that needs to survive closing the terminal.
 | Zoom in / out | `Cmd++` / `Cmd+-` | `Ctrl++` / `Ctrl+-` |
 
 For `+`, include the Shift needed to type that symbol on your keyboard. On Linux
-and Windows, press and release `Alt` to reveal the application menu.
+and Windows, press and release `Alt` alone to open the native application menu
+popup, even with the title bar hidden or in fullscreen. Use its native keyboard
+navigation, Escape, or a click outside to dismiss it. macOS menus are unchanged.
 
 On first opening, OMXTerm creates an editable configuration, a snippet example
 and the default theme in your configuration directory. If `config.json` already

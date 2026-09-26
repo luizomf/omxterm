@@ -91,6 +91,7 @@ export async function exerciseWindowChrome(options: {
   readonly cursor: (point: { x: number; y: number }) => void;
   readonly reload: () => void;
   readonly second: () => BrowserWindow;
+  readonly exerciseMenu: () => Promise<string>;
 }) {
   const { window, application, sizes, sessions } = options;
   const evaluate = async <T>(script: string): Promise<T> =>
@@ -198,6 +199,12 @@ export async function exerciseWindowChrome(options: {
   assert.equal(future.tabs, false);
   assert.equal((await geometry()).canvasHeight, first.canvasHeight);
   await exerciseCustomControlFocus(window);
+  const menu = await options.exerciseMenu();
+  assert.equal(window.id, windowId);
+  assert.equal(window.webContents.id, contentsId);
+  assert.deepEqual(sessions.slice(0, 2), ownedSessions);
+  assert.equal((await geometry()).sameCanvases, true);
+  assert.equal(options.ended(), 0);
   const isolation = await evaluate<{ node: boolean; isolated: boolean }>(
     "({node: typeof require === 'undefined', isolated: typeof process === 'undefined'})",
   );
@@ -205,6 +212,7 @@ export async function exerciseWindowChrome(options: {
   assert.equal(isolation.isolated, true);
   return {
     platform: process.platform,
+    menu,
     titlePixels,
     sameWindowAndContents: true,
     sameCanvasesAndSessions: true,

@@ -114,6 +114,10 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           expect(result).toBeDefined();
           expect(JSON.parse(result!.slice(prefix.length)) as unknown).toEqual({
             platform: process.platform,
+            menu:
+              process.platform === "darwin"
+                ? "unchanged-macos"
+                : "native-popup-reload-and-shortcuts",
             titlePixels: process.platform === "darwin" ? 30 : 34,
             sameWindowAndContents: true,
             sameCanvasesAndSessions: true,

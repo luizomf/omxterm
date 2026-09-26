@@ -52,6 +52,7 @@ import {
   registerTerminalWindowHost,
 } from "./terminal-window-host";
 import { registerWindowChrome } from "./window-chrome";
+import * as nativeMenu from "./native-application-menu";
 import { createNativeTerminalWindowTitleController } from "./terminal-window-attention";
 import { installedFontFamilyMetrics } from "./installed-font-family";
 import { fontIpcRouter } from "./terminal-font-data";
@@ -211,6 +212,7 @@ app
               platform: process.platform,
               showTitleBar: active.configuration.showTitleBar,
               cursor: () => screen.getCursorScreenPoint(),
+              popupApplicationMenu: nativeMenu.applicationMenuForWindow(window),
             });
             const titleController = createNativeTerminalWindowTitleController(
               window,
@@ -449,17 +451,14 @@ app
           openLocalImage: terminalApplication.openLocalImageInSelectedWindow,
         };
         const keybindActionInvocations = terminalActionInvocations(menuActions);
-        rebuildMenu = () => {
-          Menu.setApplicationMenu(
-            Menu.buildFromTemplate(
-              terminalApplicationMenuTemplate(
-                app.name,
-                menuActions,
-                configurationReloader.current().configuration.keybinds,
-              ),
+        rebuildMenu = () =>
+          nativeMenu.installApplicationMenu(
+            terminalApplicationMenuTemplate(
+              app.name,
+              menuActions,
+              configurationReloader.current().configuration.keybinds,
             ),
           );
-        };
         rebuildMenu();
 
         await terminalApplication.newWindow();

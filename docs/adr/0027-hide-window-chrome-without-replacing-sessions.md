@@ -33,6 +33,40 @@ or PTY merely to change its decorations. macOS uses its existing native
 button-visibility capability instead. This preserves the Live Terminal Session
 ownership model rather than introducing renderer reparenting or session migration.
 
+## Native application menu in frameless windows
+
+Issue #408 exposed an incompatible assumption: Electron 43.1.1 registers
+accelerators for frameless Views windows but deliberately never creates their
+native menu bar. `autoHideMenuBar` and `setMenuBarVisibility` cannot reveal a
+nonexistent bar. Native differentials on Windows, Ubuntu and Fedora confirmed
+this; restoring `frame: true` would violate the hideable-title decision above.
+
+The accepted presentation is the current installed application `Menu` as a
+native popup, opened by standalone Alt release on Linux and Windows. It uses
+`Menu.getApplicationMenu()` at opening time, not a cloned template or separate
+action map, so configuration reload keeps hierarchy, actions and effective
+accelerators aligned. Native styling, navigation and dismissal remain OS-owned.
+macOS retains its menu and Option input without this interception.
+
+The Window Chrome owner already knows chosen title visibility, fullscreen,
+preview and lifetime. It owns Alt candidacy and computes the content-relative
+logical-pixel anchor: `(8, 42)` below the visible 34 px row, otherwise `(8, 8)`.
+A narrow native popup callback keeps Electron menu construction in main without
+renderer geometry queries, injected JavaScript, new IPC or configuration keys.
+Alt-down is left untouched because preventing it also suppresses Chromium's
+Alt-up delivery on X11. Only a qualifying opening release is consumed. Other
+keys, repeated/composing/AltGr input, observable mouse/input activity and blur
+cancel candidacy; preview and lifecycle changes also retire the popup. Native
+dismissal restores prior focus without explicitly activating or focusing a
+window. Reload retires the old popup before replacing the installed menu.
+
+This changes presentation, not ADR 0018's single shortcut registration and
+invocation path. It adds no DOM menu, application toolbar, window recreation or
+session migration. Behavioral tests exercise main's input/chrome interface;
+real Electron fixtures cover popup integration and menu replacement. Those are
+not substitutes for native desktop evidence of visible placement, keyboard
+navigation, dismissal and action selection.
+
 ## Hidden-title interaction
 
 Outside fullscreen, the top 150 logical px of content reveal three small dots
