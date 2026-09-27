@@ -4,14 +4,12 @@ OMXTerm uses [Semantic Versioning 2.0.0](https://semver.org/) for published
 versions. A release number has the form `MAJOR.MINOR.PATCH`, and its Git tag adds
 `v`; for example, version `0.13.0` has tag `v0.13.0`.
 
-The latest published version is **0.16.0**; its
-[release record](releases/0.16.0.md) identifies the immutable exact artifacts,
-including the Alt popup and revised palette from #409. The source tree carries
-**0.17.0** for the [qualified release candidate](releases/0.17.0.md), finalizing
-the background-effects development baseline. Native final-artifact verification
-is complete on macOS, Linux and Windows ARM64; publication and post-upload
-verification remain pending. A final source version alone is not a published
-release. After publication, the next development baseline is **0.17.1-dev.0**.
+The latest published version is **0.17.0**; its
+[release record](releases/0.17.0.md) identifies the immutable exact artifacts,
+completed native verification and verified post-upload downloads. The source
+tree now carries **0.17.1-dev.0**, the next-patch development baseline after
+publication. This development version is not a published release and does not
+change the published 0.17.0 tag, assets or release body.
 
 This policy explains version selection and consistency. An owner request to
 release covers version preparation, builds, verification, tags and publication
