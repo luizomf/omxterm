@@ -270,6 +270,7 @@ describe("packaged application verifier", () => {
       inspectAsarEntries(
         [
           ...requiredEntries,
+          "/dist/main/macos-window-blur.node",
           "/node_modules/node-pty/prebuilds/darwin-arm64",
           "/node_modules/node-pty/prebuilds/darwin-arm64/pty.node",
           "/node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper",
@@ -378,6 +379,24 @@ describe("packaged application verifier", () => {
       inspectAsarEntries(requiredEntries.slice(1), "linux").missing,
     ).toEqual(["/dist/main/index.js"]);
   });
+});
+
+it("requires the blur addon only on macOS and rejects its build-only headers", () => {
+  const addon = "/dist/main/macos-window-blur.node";
+  expect(inspectAsarEntries(requiredEntries, "darwin").missing).toEqual([
+    addon,
+  ]);
+  for (const platform of ["linux", "win32"] as const) {
+    expect(
+      inspectAsarEntries([...requiredEntries, addon], platform).forbidden,
+    ).toEqual([addon]);
+  }
+  expect(
+    inspectAsarEntries(
+      [...requiredEntries, "/node_modules/node-api-headers/include/node_api.h"],
+      "darwin",
+    ).forbidden,
+  ).toEqual(["/node_modules/node-api-headers/include/node_api.h"]);
 });
 
 describe("Restty-only packaged runtime", () => {

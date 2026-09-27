@@ -1,6 +1,7 @@
 import { build } from "esbuild";
 import { cp, rm } from "node:fs/promises";
 import path from "node:path";
+import { buildMacOSWindowBlur } from "./scripts/build-macos-window-blur.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname);
 const outputRoot = path.join(projectRoot, "dist");
@@ -13,6 +14,7 @@ if (path.dirname(outputRoot) !== projectRoot) {
 
 await rm(outputRoot, { recursive: true, force: true });
 await Promise.all([
+  buildMacOSWindowBlur(path.join(outputRoot, "main")),
   build({
     entryPoints: ["src/main/index.ts"],
     bundle: true,

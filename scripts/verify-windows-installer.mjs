@@ -20,6 +20,8 @@ export function inspectWindowsInstallerInputs(
   // This safety inspection deliberately supports only the reviewed installer footprint.
   // Revisit identities, registry views, locations, shortcuts and NSIS templates together
   // when changing packaging inputs; an unrecognized footprint must never mean absent.
+  // #415 adds only a macOS unpacked addon and excludes it from Linux/Windows.
+  // NSIS identity, registry/cache paths, shortcuts, templates and options are unchanged.
   const digest = createHash("sha256")
     .update(configuration.replaceAll("\r\n", "\n"))
     .digest("hex");
@@ -27,7 +29,7 @@ export function inspectWindowsInstallerInputs(
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest !==
-      "85d1c1f9e7249565b11ee409bd252586a3f732c0f901b734a5b8fbbfc40b9929"
+      "8c3eb6a18c81281a93f241c93c64c31d9b628997516baf959465e7a9e413a93d"
   )
     throw new Error(
       "Unknown Windows installer footprint; review the pinned packaging inputs before exact installer verification",

@@ -65,6 +65,7 @@ mac:
     - "!node_modules/node-pty/typings/**"
     - "!node_modules/node-pty/lib/**/*.test.js"
   asarUnpack:
+    - dist/main/macos-window-blur.node
     - node_modules/node-pty/prebuilds/darwin-arm64/pty.node
     - node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper
   target:
@@ -83,6 +84,7 @@ linux:
   syncDesktopName: true
   files:
     - dist/**
+    - "!dist/main/macos-window-blur.node"
     - "!dist/**/*.map"
     - "!node_modules/**/*.map"
     - "!node_modules/restty/**"
@@ -114,6 +116,7 @@ win:
   icon: assets/application-icon.png
   files:
     - dist/**
+    - "!dist/main/macos-window-blur.node"
     - "!dist/**/*.map"
     - "!node_modules/**/*.map"
     - "!node_modules/restty/**"

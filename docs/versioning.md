@@ -7,8 +7,10 @@ versions. A release number has the form `MAJOR.MINOR.PATCH`, and its Git tag add
 The latest published version is **0.16.0**; its
 [release record](releases/0.16.0.md) identifies the immutable exact artifacts,
 including the Alt popup and revised palette from #409. The source tree carries
-**0.17.0-dev.0**, the next-minor development baseline for background effects. A `-dev.0` value names
-ongoing development, not a published release.
+**0.17.0** for [release preparation](releases/0.17.0.md), finalizing the
+background-effects development baseline. Native final-artifact verification and
+publication are pending; a final source version alone is not a published release.
+The next development baseline will be selected after publication.
 
 This policy explains version selection and consistency. An owner request to
 release covers version preparation, builds, verification, tags and publication

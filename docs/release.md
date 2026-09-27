@@ -110,7 +110,8 @@ payload or persistent profile; its state is removed after verified termination.
 
 ### macOS arm64
 
-Use Apple Silicon and Node.js 22.13+ in the 22 line, or Node.js 24+:
+Use Apple Silicon, Xcode Command Line Tools (Apple clang and the macOS SDK),
+and Node.js 22.13+ in the 22 line, or Node.js 24+:
 
 ```sh
 npm ci
@@ -124,6 +125,23 @@ verifies the packaged `release/mac-arm64/OMXTerm.app` with isolated state. The
 verifier checks architecture, renderer, Surface, bundled fonts, native PTY helper,
 licenses, startup and parsed output. It rejects source maps, tests, source trees,
 alternate-architecture PTY binaries and common private/secret files.
+
+The build also compiles `native/macos-window-blur.mm` into the generated
+`dist/main/macos-window-blur.node`, using pinned build-only Node-API v8 headers
+and `-mmacosx-version-min=12.0`. It uses no private header path or runtime
+network/download. macOS builds fail on compilation errors; optional runtime
+loading failures still fall back as documented in ADR 0030. Linux and Windows
+do not compile or package this addon.
+
+Packaging explicitly unpacks the addon beside the ESM main bundle and includes
+it in the ad-hoc seal. Verification checks its ARM64 architecture and deployment
+floor, loads it through the packaged runtime's ESM-relative ASAR path, and runs
+the packaged synthetic PTY startup with blur requested. Native operation tests
+use `test/integration/macos-window-blur.test.ts`; an optional bounded HUD/direct
+fullscreen comparison is enabled with `OMXTERM_TEST_MACOS_FULLSCREEN=1` for that
+test alone. It uses only owned synthetic windows, not user shells or captures.
+Record the actual tested macOS version: minimum deployment metadata and a
+successful private call are not proof of visible blur or older-OS compatibility.
 
 The complete ad-hoc seal must pass `codesign --verify --deep --strict`; signature
 metadata alone is insufficient. Unexpected publisher identities are rejected.

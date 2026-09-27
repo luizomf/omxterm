@@ -62,8 +62,12 @@ development.
 
 ### macOS
 
-Use Apple Silicon. Install the native build tools requested by npm if a matching
-dependency prebuild is unavailable.
+Use Apple Silicon with Xcode Command Line Tools (Apple clang and the macOS SDK).
+`npm run build` compiles the optional macOS blur addon locally with pinned
+build-only Node-API headers, targeting macOS 12.0. No runtime download or
+Electron ABI rebuild is needed for that addon. Linux/Windows builds do not use
+Apple tooling. See [ADR 0030](docs/adr/0030-prefer-direct-macos-background-blur.md)
+for the private-API tradeoff and fallback.
 
 ### Linux
 

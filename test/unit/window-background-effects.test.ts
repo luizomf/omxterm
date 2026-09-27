@@ -22,14 +22,258 @@ function configuration(blur = false, transparency = 0, background = "#123456") {
 function nativeWindow() {
   const handle = Buffer.alloc(8);
   handle.writeUInt32LE(0x123456);
-  return {
+  return Object.assign(new EventEmitter(), {
+    show: vi.fn(),
+    isVisible: vi.fn(() => true),
     isDestroyed: vi.fn(() => false),
     getNativeWindowHandle: vi.fn(() => handle),
     setVibrancy: vi.fn(),
     setBackgroundMaterial: vi.fn(),
     setBackgroundColor: vi.fn(),
-  };
+  });
 }
+
+it("prefers direct macOS blur only after show, keeping configured transparency and reversing on disable", () => {
+  const window = nativeWindow();
+  window.isVisible.mockReturnValue(false);
+  const native = { setBlur: vi.fn(() => 0) };
+  const loadMacBlur = vi.fn(() => native);
+  const effects = createWindowBackgroundEffects(window, {
+    platform: "darwin",
+    loadMacBlur,
+  });
+  effects.apply(configuration());
+  effects.apply(configuration(true, 0));
+  effects.apply(configuration(false, 1));
+  expect(loadMacBlur).not.toHaveBeenCalled();
+  effects.apply(configuration(true, 0.15));
+  expect(effects.transparency()).toBe(0.15);
+  expect(native.setBlur).not.toHaveBeenCalled();
+  window.isVisible.mockReturnValue(true);
+  effects.show();
+  expect(window.show).toHaveBeenCalledOnce();
+  expect(window.show.mock.invocationCallOrder[0]).toBeLessThan(
+    native.setBlur.mock.invocationCallOrder[0]!,
+  );
+  expect(native.setBlur).toHaveBeenCalledExactlyOnceWith(
+    window.getNativeWindowHandle(),
+    true,
+  );
+  expect(window.setVibrancy.mock.calls).toEqual([[null]]);
+  effects.apply(configuration(true, 0.75));
+  expect(native.setBlur).toHaveBeenCalledOnce();
+  effects.apply(configuration(true, 0));
+  expect(native.setBlur.mock.calls).toEqual([
+    [window.getNativeWindowHandle(), true],
+    [window.getNativeWindowHandle(), false],
+  ]);
+  effects.dispose();
+  window.emit("show");
+  effects.apply(configuration(true, 1));
+  expect(native.setBlur).toHaveBeenCalledTimes(2);
+});
+
+it("cleans a failed direct apply before HUD fallback and retries only on explicit reload", () => {
+  const window = nativeWindow();
+  const events: string[] = [];
+  window.setVibrancy.mockImplementation((material: unknown) => {
+    events.push(`material:${String(material)}`);
+  });
+  const native = {
+    setBlur: vi.fn((_handle: Buffer, enabled: boolean) => {
+      events.push(`direct:${enabled}`);
+      return enabled ? 5 : 0;
+    }),
+  };
+  const effects = createWindowBackgroundEffects(window, {
+    platform: "darwin",
+    loadMacBlur: () => native,
+  });
+  effects.apply(configuration(true, 0.15));
+  expect(events).toEqual([
+    "material:null",
+    "direct:true",
+    "direct:false",
+    "material:hud",
+  ]);
+  expect(effects.transparency()).toBe(0.15);
+  native.setBlur.mockImplementation((_handle, enabled) => {
+    events.push(`direct:${enabled}`);
+    return 0;
+  });
+  effects.apply(configuration(true, 0.15));
+  expect(events.slice(4)).toEqual(["material:null", "direct:true"]);
+  effects.dispose();
+  expect(events.slice(-2)).toEqual(["direct:false", "material:null"]);
+});
+
+it("reapplies direct blur on show/restore and removes all hooks at the native lifetime boundary", () => {
+  const window = nativeWindow();
+  const native = { setBlur: vi.fn(() => 0) };
+  const effects = createWindowBackgroundEffects(window, {
+    platform: "darwin",
+    loadMacBlur: () => native,
+  });
+  effects.apply(configuration(true, 0.15));
+  for (const event of ["show", "restore"]) {
+    native.setBlur.mockClear();
+    if (event === "show") effects.show();
+    else window.emit(event);
+    expect(native.setBlur.mock.calls).toEqual([
+      [window.getNativeWindowHandle(), false],
+      [window.getNativeWindowHandle(), true],
+    ]);
+  }
+  native.setBlur.mockClear();
+  window.isDestroyed.mockReturnValue(true);
+  window.emit("closed");
+  effects.dispose();
+  effects.apply(configuration(true, 1));
+  window.emit("show");
+  window.emit("restore");
+  expect(native.setBlur).not.toHaveBeenCalled();
+  expect(window.eventNames()).toEqual([]);
+});
+
+it("keeps native ownership independent across reloads, hidden and future windows", () => {
+  const native = { setBlur: vi.fn(() => 0) };
+  const owner = createWindowBackgroundEffectsOwner("darwin", "", {
+    loadMacBlur: () => native,
+  });
+  const first = nativeWindow();
+  const second = nativeWindow();
+  second.getNativeWindowHandle.mockReturnValue(Buffer.alloc(8, 2));
+  second.isVisible.mockReturnValue(false);
+  const firstTransparency = owner.register(first, configuration(true, 0.15));
+  owner.register(second, configuration(true, 0.15));
+  expect(native.setBlur).toHaveBeenCalledExactlyOnceWith(
+    first.getNativeWindowHandle(),
+    true,
+  );
+  owner.apply(configuration(false, 0.35));
+  second.isVisible.mockReturnValue(true);
+  owner.show(second);
+  expect(native.setBlur).toHaveBeenCalledTimes(2);
+  expect(firstTransparency()).toBe(0.35);
+  owner.apply(configuration(true, 0.85));
+  expect(native.setBlur).toHaveBeenLastCalledWith(
+    second.getNativeWindowHandle(),
+    true,
+  );
+  first.isDestroyed.mockReturnValue(true);
+  first.emit("closed");
+  native.setBlur.mockClear();
+  owner.apply(configuration());
+  expect(native.setBlur).toHaveBeenCalledExactlyOnceWith(
+    second.getNativeWindowHandle(),
+    false,
+  );
+  const future = nativeWindow();
+  future.getNativeWindowHandle.mockReturnValue(Buffer.alloc(8, 3));
+  owner.register(future, configuration(true, 1));
+  expect(native.setBlur).toHaveBeenLastCalledWith(
+    future.getNativeWindowHandle(),
+    true,
+  );
+});
+
+it.each(["missing", "load-throws", "symbols", "throws", "nonzero"])(
+  "uses HUD for macOS %s without changing the configuration contract",
+  (failure) => {
+    const window = nativeWindow();
+    const native = {
+      setBlur: vi.fn((_handle: Buffer, enabled: boolean): number | null => {
+        if (!enabled) return 0;
+        if (failure === "throws") throw new Error("native exception");
+        return failure === "symbols" ? null : 7;
+      }),
+    };
+    const effects = createWindowBackgroundEffects(window, {
+      platform: "darwin",
+      loadMacBlur: () => {
+        if (failure === "load-throws") throw new Error("load failed");
+        return failure === "missing" ? undefined : native;
+      },
+    });
+    effects.apply(configuration(true, 0.15));
+    expect(window.setVibrancy).toHaveBeenLastCalledWith("hud");
+    expect(effects.transparency()).toBe(0.15);
+    expect(native.setBlur.mock.calls.map((call) => call[1])).toEqual(
+      ["missing", "load-throws"].includes(failure)
+        ? []
+        : failure === "symbols"
+          ? [true]
+          : [true, false],
+    );
+    effects.apply(configuration(false, 1));
+    expect(window.setVibrancy).toHaveBeenLastCalledWith(null);
+    effects.dispose();
+    expect(window.eventNames()).toEqual([]);
+  },
+);
+
+it("does not stack HUD onto uncertain cleanup and clears before a later retry", () => {
+  const window = nativeWindow();
+  const native = { setBlur: vi.fn(() => 5) };
+  const effects = createWindowBackgroundEffects(window, {
+    platform: "darwin",
+    loadMacBlur: () => native,
+  });
+  effects.apply(configuration(true, 0.15));
+  expect(native.setBlur.mock.calls).toHaveLength(2);
+  expect(window.setVibrancy).not.toHaveBeenCalledWith("hud");
+  native.setBlur.mockClear();
+  effects.apply(configuration(true, 0.15));
+  expect(native.setBlur).toHaveBeenCalledExactlyOnceWith(
+    window.getNativeWindowHandle(),
+    false,
+  );
+  native.setBlur.mockReturnValue(0);
+  window.emit("restore");
+  expect(native.setBlur.mock.calls.slice(-2)).toEqual([
+    [window.getNativeWindowHandle(), false],
+    [window.getNativeWindowHandle(), true],
+  ]);
+  native.setBlur.mockImplementationOnce(() => {
+    throw new Error("reset failed");
+  });
+  effects.apply(configuration(false, 1));
+  expect(window.setVibrancy).toHaveBeenLastCalledWith(null);
+  effects.apply(configuration(false, 1));
+  expect(native.setBlur).toHaveBeenLastCalledWith(
+    window.getNativeWindowHandle(),
+    false,
+  );
+  effects.dispose();
+  const calls = native.setBlur.mock.calls.length;
+  effects.dispose();
+  window.emit("show");
+  expect(native.setBlur).toHaveBeenCalledTimes(calls);
+});
+
+it("keeps a throwing HUD fallback optional and never calls the addon off macOS", () => {
+  const window = nativeWindow();
+  window.setVibrancy.mockImplementation(() => {
+    throw new Error("HUD unavailable");
+  });
+  const loadMacBlur = vi.fn(() => undefined);
+  const mac = createWindowBackgroundEffects(window, {
+    platform: "darwin",
+    loadMacBlur,
+  });
+  expect(() => mac.apply(configuration(true, 1))).not.toThrow();
+  expect(() => mac.dispose()).not.toThrow();
+  loadMacBlur.mockClear();
+  for (const platform of ["win32", "linux"]) {
+    const effects = createWindowBackgroundEffects(nativeWindow(), {
+      platform,
+      loadMacBlur,
+    });
+    effects.apply(configuration(true, 1));
+    effects.dispose();
+  }
+  expect(loadMacBlur).not.toHaveBeenCalled();
+});
 
 it.each(["darwin", "win32"])(
   "requests and reverses only the native %s material, preserving the window",
@@ -48,9 +292,7 @@ it.each(["darwin", "win32"])(
         ? window.setVibrancy.mock.calls
         : window.setBackgroundMaterial.mock.calls;
     expect(calls).toEqual(
-      platform === "darwin"
-        ? [["under-window"], [null]]
-        : [["acrylic"], ["none"]],
+      platform === "darwin" ? [["hud"], [null]] : [["acrylic"], ["none"]],
     );
     expect(window.getNativeWindowHandle).not.toHaveBeenCalled();
     if (platform === "darwin")
@@ -136,8 +378,8 @@ it("applies commits to independent live windows and current snapshots to future 
   owner.register(first, configuration());
   owner.register(second, configuration());
   owner.apply(configuration(true, 0.5));
-  expect(first.setVibrancy).toHaveBeenCalledExactlyOnceWith("under-window");
-  expect(second.setVibrancy).toHaveBeenCalledExactlyOnceWith("under-window");
+  expect(first.setVibrancy).toHaveBeenCalledExactlyOnceWith("hud");
+  expect(second.setVibrancy).toHaveBeenCalledExactlyOnceWith("hud");
   first.isDestroyed.mockReturnValue(true);
   first.emit("closed");
   owner.apply(configuration(false, 1));
@@ -145,7 +387,7 @@ it("applies commits to independent live windows and current snapshots to future 
   expect(second.setVibrancy).toHaveBeenLastCalledWith(null);
   const future = Object.assign(new EventEmitter(), nativeWindow());
   owner.register(future, configuration(true, 1));
-  expect(future.setVibrancy).toHaveBeenCalledExactlyOnceWith("under-window");
+  expect(future.setVibrancy).toHaveBeenCalledExactlyOnceWith("hud");
 });
 
 it("lets a later committed reload retry an unavailable helper without background work", () => {

@@ -59,10 +59,12 @@ const requiredAsarEntries = [
   "/package.json",
 ];
 
+const macBlurEntry = "/dist/main/macos-window-blur.node";
+
 const forbiddenEntryPatterns = [
   /(^|\/)\.(?:env|git|npmrc)(?:\.|\/|$)/iu,
   /(^|\/)(?:src|test|tests|scripts|typings)(?:\/|$)/iu,
-  /(?:^|\/)node_modules\/node-addon-api(?:\/|$)/iu,
+  /(?:^|\/)node_modules\/(?:node-addon-api|node-api-headers)(?:\/|$)/iu,
   /(?:^|\/)node_modules\/node-pty\/deps(?:\/|$)/iu,
   /\.(?:map|pem|p12|key)$/iu,
   /\.test\.js$/iu,
@@ -90,13 +92,16 @@ export function inspectAsarEntries(entries, platform = "darwin") {
   const normalized = entries
     .map((entry) => entry.split("\\").join("/"))
     .map((entry) => (entry.startsWith("/") ? entry : `/${entry}`));
-  const missing = requiredAsarEntries.filter(
-    (entry) => !normalized.includes(entry),
-  );
+  const required = [
+    ...requiredAsarEntries,
+    ...(platform === "darwin" ? [macBlurEntry] : []),
+  ];
+  const missing = required.filter((entry) => !normalized.includes(entry));
   const privateLooking = new Set(inspectForbiddenPackagedEntries(normalized));
   const forbidden = normalized.filter(
     (entry) =>
       privateLooking.has(entry) ||
+      (platform !== "darwin" && entry === macBlurEntry) ||
       entry.includes("/node_modules/@xterm/") ||
       (platform === "linux" &&
         entry.includes("/node_modules/node-pty/prebuilds/")) ||
@@ -720,6 +725,37 @@ export async function verifyPackagedApplication(
         platform,
       );
     if (platform === "darwin") {
+      const blurModule = path.join(
+        resources,
+        "app.asar.unpacked",
+        macBlurEntry,
+      );
+      await inspectArchitecture(blurModule, "macOS blur module", platform);
+      const { stdout: loadCommands } = await execFile("otool", [
+        "-l",
+        blurModule,
+      ]);
+      if (!/\bminos 12\.0\b/u.test(loadCommands))
+        throw new Error(
+          "macOS blur module must target the Electron macOS 12.0 floor",
+        );
+      // Exercise the packaged runtime's ESM-relative loader through ASAR, not a
+      // development Node process or an ancestor node_modules resolution.
+      await execFile(
+        executable,
+        [
+          "--input-type=module",
+          "-e",
+          `
+        import { createRequire } from 'node:module';
+        import assert from 'node:assert/strict';
+        const native = createRequire(${JSON.stringify(path.join(asar, "dist/main/index.js"))})('./macos-window-blur.node');
+        assert.deepEqual(Object.keys(native), ['setBlur']);
+        assert.throws(() => native.setBlur(Buffer.alloc(8, 1), true), /owned|main thread/u);
+      `,
+        ],
+        { env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" }, timeout: 10_000 },
+      );
       await inspectArchitecture(
         path.join(nativeRoot, "spawn-helper"),
         "node-pty spawn helper",
@@ -853,7 +889,7 @@ export async function verifyPackagedApplication(
       ]);
       await writeFile(
         path.join(configurationRoot, "omxterm", "config.json"),
-        `${JSON.stringify({ version: 1, confirmClose: false })}\n`,
+        `${JSON.stringify({ version: 1, confirmClose: false, ...(platform === "darwin" ? { window: { blur: true, transparency: 0.15 } } : {}) })}\n`,
       );
       const canary = `OMXTERM_PACKAGE_SECRET_CANARY_${Date.now()}`;
       const argumentCanary = `OMXTERM_PACKAGE_ARGUMENT_CANARY_${Date.now()}`;

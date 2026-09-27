@@ -317,7 +317,7 @@ app
               },
             });
 
-            window.once("ready-to-show", () => window.show());
+            window.once("ready-to-show", () => backgroundEffects.show(window));
             const windowHost = registerTerminalWindowHost(
               window,
               controller,

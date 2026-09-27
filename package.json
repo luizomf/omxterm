@@ -1,6 +1,6 @@
 {
   "name": "omxterm",
-  "version": "0.17.0-dev.0",
+  "version": "0.17.0",
   "description": "Open-source personal desktop terminal for ARM64 macOS, Linux, and Windows",
   "desktopName": "omxterm.desktop",
   "author": "Luiz Otávio Miranda",
@@ -38,10 +38,11 @@
   "devDependencies": {
     "@electron/asar": "3.4.1",
     "@types/node": "24.0.15",
-    "electron": "43.1.1",
+    "electron": "43.4.1",
     "electron-builder": "26.15.3",
     "esbuild": "0.28.1",
     "jsdom": "29.1.1",
+    "node-api-headers": "1.9.0",
     "oxlint": "1.79.0",
     "oxlint-tsgolint": "7.0.2001",
     "prettier": "3.9.5",

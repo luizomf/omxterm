@@ -3,8 +3,8 @@
 OMXTerm is an open-source desktop terminal for Apple Silicon macOS, Linux ARM64,
 and Windows ARM64. Work across tabs and windows, and customize fonts, themes,
 keyboard shortcuts, and snippets. Show or hide the title and tab bars independently.
-The `0.17.0-dev.0` source adds optional [background transparency and best-effort
-native blur](docs/configuration.md#background-transparency-and-blur), without
+The `0.17.0` release-preparation source adds optional
+[background transparency and best-effort native blur](docs/configuration.md#background-transparency-and-blur), without
 fading terminal text. Windows uses Acrylic when blur is enabled; transparency
 without blur falls back to an opaque theme to preserve native window controls.
 
@@ -23,7 +23,9 @@ local PNG/JPEG previews, and inline images in direct Pi/Chafa sessions.
 ## Platforms and downloads
 
 The latest published release is **0.16.0**. These docs follow the
-**0.17.0-dev.0** development source; background effects are not yet released.
+**0.17.0** release-preparation source; background effects are not yet released.
+The [0.17.0 preparation record](docs/releases/0.17.0.md) separates candidate
+checks from pending final native artifacts and publication.
 The [0.16.0 release notes](docs/releases/0.16.0.md) record the currently
 published package identities and verification.
 

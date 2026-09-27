@@ -694,12 +694,23 @@ as its opaque cell background. Consequently a TUI that explicitly fills its
 screen may remain opaque; OMXTerm does not guess which colors the application
 intended to make transparent. Theme colors remain strict `#RRGGBB`.
 
-With positive transparency, `blur: true` requests native macOS `under-window`
-vibrancy, Windows Acrylic, or the per-owned-X11-window KDE blur-region hint on
-Linux when `xprop` is available. Blur is boolean and best effort; with zero
-transparency there is no visible blur. The OS/compositor may ignore the request
-or retain its own material tint even at transparency 1. Missing helpers or
-native API errors are quiet fallbacks, never launch prerequisites.
+With positive transparency, `blur: true` requests direct native macOS background
+blur (fixed radius 20), Windows Acrylic, or the per-owned-X11-window KDE
+blur-region hint on Linux when `xprop` is available. On macOS, a small main-only
+Node-API addon dynamically resolves private CGS symbols and sets the owned
+NSWindow background to white alpha 0.001; the renderer's configured tint is
+unchanged. Missing modules/symbols or failed application use `hud` vibrancy.
+Before switching or disabling, main resets the private radius and native
+background. If cleanup cannot be confirmed, it avoids stacking HUD onto an
+uncertain private effect; a later manual reload, explicit show or restore may
+retry. There is no background retry. Effects apply after native show, without
+recreating a window, Surface or PTY.
+
+Blur is boolean and best effort; with zero transparency there is no visible
+blur. Private API availability and visual behavior can change with macOS.
+The OS/compositor may ignore the request or retain its own material tint even
+at transparency 1. Missing helpers or native API errors are quiet fallbacks,
+never launch prerequisites.
 
 Windows keeps normal nontransparent native-window construction to preserve native
 resize, maximize/restore, fullscreen, corners and shadow. On Windows, positive
@@ -716,7 +727,9 @@ terminal. Native API success is not proof of visible blur, and cross-platform
 pixel parity is not promised. There is no blur strength, material selector,
 extra menu, whole-window opacity, CSS backdrop filter or screen capture.
 [ADR 0029](adr/0029-compose-background-effects-with-explicit-cell-identity.md)
-records paint ownership and native lifetime constraints.
+records paint ownership and native lifetime constraints;
+[ADR 0030](adr/0030-prefer-direct-macos-background-blur.md) reopens its macOS
+material-only choice and records the private-API maintenance tradeoff.
 
 `windowsShell` is an optional non-empty string without NUL on every Supported
 Platform. On Windows it must be an absolute Windows filesystem path whose final

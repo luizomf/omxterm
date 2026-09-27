@@ -1,5 +1,9 @@
 # Compose background effects without losing explicit cell identity
 
+[ADR 0030](0030-prefer-direct-macos-background-blur.md) supersedes the macOS
+material-only/no-addon choice below. It retains HUD as fallback; the paint,
+configuration, Windows and Linux decisions remain unchanged.
+
 Issue #412 replaces the former prohibition of transparency and blur. It amends
 [ADR 0025](0025-stage-restty-behind-an-unpackaged-opt-in.md)'s paint path and
 [ADR 0027](0027-hide-window-chrome-without-replacing-sessions.md)'s window
@@ -14,7 +18,7 @@ validated snapshot to current and future windows. Invalid reload commits
 nothing. There is no menu, material selector or strength control.
 
 Create alpha-capable native windows once on macOS/Linux, but retain normal
-nontransparent native construction on Windows. Electron main requests under-window
+nontransparent native construction on Windows. Electron main requests HUD
 vibrancy on macOS and Acrylic on Windows only when blur is enabled and
 transparency is positive. Linux retains X11/XWayland and may set
 `_KDE_NET_WM_BLUR_BEHIND_REGION` on its own native XID through an existing `xprop`.
@@ -29,6 +33,10 @@ destruction owns native resource release. No timer, detached helper or renderer
 capability is introduced. A slow helper can briefly delay main (at most the
 per-call timeout per affected window); that bounded cost is preferable here to
 an asynchronous XID-lifetime state machine.
+
+HUD replaces the initial under-window material after a native visual comparison
+at equal background opacity. It is a preferred approximation, not a claim of
+matching another terminal's blur radius, tint or response to maximization.
 
 API/helper errors are quiet. They do not invalidate otherwise valid
 configuration, stop terminal startup or assert visible support. Composition may

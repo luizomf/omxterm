@@ -250,11 +250,21 @@ the complete reload rather than being clamped. `1` removes OMXTerm's background
 tint, not text, cursor, selection, images or foreground controls. Theme colors
 stay `#RRGGBB`; do not add alpha to the theme file.
 
-Blur requests macOS under-window vibrancy, Windows Acrylic, or the KDE X11 blur
-hint on Linux. It is best effort, with no strength/radius control. Native
-materials may retain their own tint even at `1`. Desktop policy, accessibility
-settings, compositors and GPUs can change or decline effects. Linux uses an
-optional existing `xprop`; its absence is quiet and never prevents launch.
+On macOS, blur prefers a direct native background effect at a fixed radius of
+20, preserving more wallpaper detail than material vibrancy. It uses an optional
+main-only native addon and undocumented macOS APIs, with HUD vibrancy as the
+fallback when unavailable or unsuccessful. The configured transparency still
+controls only OMXTerm's background tint. If resetting a failed private effect
+cannot be confirmed, OMXTerm avoids adding another material over it; reload or
+a later show/restore can retry. No background timer retries the effect.
+
+Windows requests Acrylic; Linux requests the KDE X11 blur hint. All effects are
+best effort, with no strength/radius or material control. Native materials may
+retain their own tint even at `1`. Desktop policy, accessibility settings,
+compositors and GPUs can change or decline effects. Linux uses an optional
+existing `xprop`; its absence is quiet and never prevents launch. macOS private
+APIs may change or disappear; the addon targets macOS 12.0 (the pinned Electron
+floor), but direct-blur runtime evidence currently covers only macOS 27 ARM64.
 **Windows uses Acrylic rather than plain transparency.** To preserve native
 resize, maximize/restore and fullscreen, the window keeps normal nontransparent
 construction. With `blur: false`, requested transparency is accepted but the
