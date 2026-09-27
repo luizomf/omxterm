@@ -9,6 +9,8 @@ assignees: ""
 <!--
 Thanks for taking the time to report a problem. Search existing issues first,
 then share the smallest safe example that lets someone reproduce it.
+You do not need to diagnose the cause or know every technical detail. Write
+"I don't know" for details you cannot find; describe what you observed.
 
 Do not report a suspected vulnerability here. Follow the private process in the
 [security policy](../../SECURITY.md) instead.
@@ -16,11 +18,11 @@ Do not report a suspected vulnerability here. Follow the private process in the
 
 ## Version or source commit
 
-<!-- Give the released version or the full source commit SHA used to build OMXTerm. -->
+<!-- Find the version in About OMXTerm in the application menu. On Linux/Windows, press and release Alt alone to open the menu. For a source build, include the commit if known. -->
 
 ## Operating system and architecture
 
-<!-- Name both, for example: macOS 26 arm64. OMXTerm's Supported Platforms are ARM64 macOS, Linux, and Windows. -->
+<!-- Name both, for example: Windows 11 ARM64, or Ubuntu 26.04 ARM64 with GNOME. ARM64 may be shown as aarch64; x64 as x86_64/AMD64. Current downloads are ARM64-only. On Linux, include the desktop (GNOME/KDE/etc.) if known. -->
 
 ## Reproduction steps
 

@@ -23,6 +23,8 @@
   "keyboard": { "optionAsAlt": "none" },
   "window": {
     "alwaysOnTop": false,
+    "blur": false,
+    "transparency": 0,
     "showTitleBar": true,
     "showTabBar": true
   },

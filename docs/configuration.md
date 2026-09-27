@@ -2,7 +2,9 @@
 
 On first opening, OMXTerm creates a small starter kit in
 `$XDG_CONFIG_HOME/omxterm`, or `~/.config/omxterm` when unset or empty
-(`%USERPROFILE%\\.config\\omxterm` on Windows):
+(`%USERPROFILE%\.config\omxterm` on Windows). `~` means your home folder;
+`XDG_CONFIG_HOME` is an optional environment variable that chooses a different
+settings folder. If you have not set it, use the default path:
 
 ```text
 omxterm/
@@ -25,8 +27,13 @@ app opens, not when copying/installing the package, and never during reload.
 A creation failure shows a non-blocking notice; the terminal still opens using
 normal configuration loading and its built-in fallbacks.
 
-Settings live in strict JSON files; after initial creation OMXTerm reads them
-without rewriting them.
+Settings live in **JSON**, a plain-text format of named values. Use a text
+editor, not a word processor, or use Studio below. After initial creation OMXTerm
+reads these files without rewriting them. **Saving a file alone does not apply
+it:** reload settings or reopen the snippets sidebar as appropriate.
+
+On Linux and Windows, press and release **Alt alone** to open the application
+menu. On macOS, use the menu bar at the top of the screen.
 
 - [Edit visually with OMXTerm Studio](#edit-visually-with-omxterm-studio)
 - [Create a configuration](#quick-start-use-the-bundled-defaults)
@@ -95,7 +102,8 @@ applied documents. Apply and download unfinished work before closing the page.
 Studio never installs files, reloads OMXTerm, or executes the preview's commands.
 
 The preview uses DOM/CSS, not Restty: fonts, dim text, cell spacing, ligatures,
-and native Window Chrome can differ. Browser font names use a monospace fallback;
+and native window controls can differ. Desktop transparency and native blur
+must be checked in OMXTerm, not judged from a browser simulation. Browser font names use a monospace fallback;
 Studio cannot certify installed fonts, filesystem paths, shell executables, or
 operating-system-reserved shortcuts. OMXTerm still performs its own complete
 validation when you load the exported files.
@@ -125,9 +133,12 @@ mkdir -p "$config_dir"
 printf '%s\n' "$config_dir/config.json"
 ```
 
-In a plain-text editor, save the JSON above at that printed path. By default it
-is `~/.config/omxterm/config.json`; a non-empty `XDG_CONFIG_HOME` selects another
-configuration root.
+In a plain-text editor, open the existing `config.json` or save the JSON above
+at that printed path. By default it is `~/.config/omxterm/config.json`; a non-empty
+`XDG_CONFIG_HOME` selects another configuration root. Folders beginning with `.`
+are hidden: use **Cmd+Shift+G** in Finder to enter the folder path, or **Ctrl+L**
+in a Linux file manager. macOS TextEdit users should select **Format → Make Plain
+Text**, disable smart quotes, and keep the `.json` filename.
 
 On Windows, the common default path is
 `%USERPROFILE%\.config\omxterm\config.json`. This PowerShell sequence also
@@ -139,7 +150,10 @@ $configDirectory = Join-Path $configRoot "omxterm"
 New-Item -ItemType Directory -Force $configDirectory
 ```
 
-Save the JSON as `config.json` inside `$configDirectory`.
+Open that folder with `Invoke-Item -LiteralPath $configDirectory`, then save the
+JSON as `config.json` inside it. In Notepad's Save As dialog, choose **All files**
+and UTF-8 so the name does not become `config.json.txt`. In Explorer, enable
+**View → Show → File name extensions** to check the real filename.
 
 After saving, choose `View -> Reload User Configuration`. The built-in shortcut
 is `Cmd+Shift+,` on macOS and `Ctrl+Shift+,` on Linux and Windows. A missing
@@ -148,8 +162,16 @@ file also selects all defaults and is not an error.
 ### Writing valid JSON
 
 Each User Configuration example in this section is a complete valid JSON
-document. Copy one, save it as `config.json`, and reload. When combining
-examples, keep exactly one root object and one `"version": 1` property.
+document. Copy one, save it as `config.json`, and reload. **Replacing your file
+with an example resets omitted settings to defaults.** To keep existing choices,
+back up the file and merge only the fields you want into its existing objects.
+Keep one root object, one `"version": 1`, and only one of each named key; do not
+paste a second `window`, `font`, or `keybinds` object beside the first.
+
+Use straight double quotes (`"`) around names and string values, commas between
+properties, and no comma after the last property. Write booleans as `true`/`false`
+and numbers without quotes. `"version": 1` is the configuration format, **not**
+your installed OMXTerm version.
 
 JSON comments, trailing commas, unknown or misspelled keys, duplicate
 accelerators, unsupported versions, and values outside the documented ranges
@@ -230,8 +252,9 @@ returns to the configured size.
 
 ## Background transparency and blur
 
-In `0.17.0-dev.0` source builds (not the published `0.16.0`), merge these optional
-settings into your existing `window` object, then reload:
+Available in **OMXTerm 0.17.0 and newer**. Transparency lets the desktop show
+through the terminal background; blur softens what is behind it. Merge these
+optional settings into your existing `window` object, then reload:
 
 ```json
 {
@@ -250,33 +273,23 @@ the complete reload rather than being clamped. `1` removes OMXTerm's background
 tint, not text, cursor, selection, images or foreground controls. Theme colors
 stay `#RRGGBB`; do not add alpha to the theme file.
 
-On macOS, blur prefers a direct native background effect at a fixed radius of
-20, preserving more wallpaper detail than material vibrancy. It uses an optional
-main-only native addon and undocumented macOS APIs, with HUD vibrancy as the
-fallback when unavailable or unsuccessful. The configured transparency still
-controls only OMXTerm's background tint. If resetting a failed private effect
-cannot be confirmed, OMXTerm avoids adding another material over it; reload or
-a later show/restore can retry. No background timer retries the effect.
+| Platform | What to expect                                                                                                                                                                                                                    |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS    | Native blur with a fixed strength; OMXTerm has no strength slider. A system material is used if the preferred effect is unavailable.                                                                                              |
+| Windows  | **Enable both blur and positive transparency.** Windows 11 22H2 or later can provide Acrylic (Windows' translucent blur material). With blur off, unsupported Windows versions, or failed native effects, the theme stays opaque. |
+| Linux    | Transparency depends on the desktop's compositor (the component that combines windows on screen). KDE Plasma can honor OMXTerm's blur request; GNOME needs a separate extension for this effect. See below.                       |
 
-Windows requests Acrylic; Linux requests the KDE X11 blur hint. All effects are
-best effort, with no strength/radius or material control. Native materials may
-retain their own tint even at `1`. Desktop policy, accessibility settings,
-compositors and GPUs can change or decline effects. Linux uses an optional
-existing `xprop`; its absence is quiet and never prevents launch. macOS private
-APIs may change or disappear; the addon targets macOS 12.0 (the pinned Electron
-floor), but direct-blur runtime evidence currently covers only macOS 27 ARM64.
-**Windows uses Acrylic rather than plain transparency.** To preserve native
-resize, maximize/restore and fullscreen, the window keeps normal nontransparent
-construction. With `blur: false`, requested transparency is accepted but the
-Terminal Theme remains opaque. With blur enabled and positive transparency,
-Windows 11 22H2 or later can show Acrylic through the requested tint. Unsupported
-versions or failed material calls retain the opaque theme; desktop policy can
-also make Acrylic opaque. Your requested configuration is never rewritten.
+Effects are best effort: system policy, accessibility settings, graphics drivers,
+and desktop versions may keep the window opaque. At transparency `0`, blur is
+not visible. OMXTerm does not alter system settings, install extensions, or
+rewrite your requested values when an effect is unavailable. Keep the terminal
+readable; try `0.2` before increasing transparency.
 
-OMXTerm installs no compositor extension or global setting. GNOME is not known
-to respond to the KDE hint; that is not a universal claim about GNOME blur.
-Without native support, you may see transparency without blur, or an opaque
-usable fallback. At transparency `0`, blur is not visible.
+The macOS implementation uses undocumented APIs with a fallback, so OS updates
+may affect it. [ADR 0029](adr/0029-compose-background-effects-with-explicit-cell-identity.md)
+and [ADR 0030](adr/0030-prefer-direct-macos-background-blur.md) explain the technical
+tradeoffs; the [release record](releases/0.17.0.md) distinguishes tested systems
+from unverified appearance.
 
 **Explicit application backgrounds stay opaque**, even if the application picks
 exactly the theme's background RGB. Only implicit terminal default backgrounds
@@ -284,6 +297,62 @@ exactly the theme's background RGB. Only implicit terminal default backgrounds
 explicit backgrounds can therefore remain opaque. Inverse, ANSI colors, image
 alpha, selection and normal glyph antialiasing keep their terminal meaning;
 OMXTerm never fades the whole window.
+
+### Linux desktop tips
+
+These are **optional desktop customizations**, not OMXTerm dependencies or a
+promise of identical results on every system. GNOME and KDE Plasma are desktop
+environments, not processor architectures or distributions: Ubuntu commonly
+uses GNOME, while Fedora has both GNOME and KDE editions. Choose the instructions
+for your desktop, not just the distribution name. OMXTerm still runs through
+X11/XWayland; these tips do not enable native Wayland rendering.
+
+#### Ubuntu with GNOME: Blur my Shell
+
+The following route has worked for OMXTerm on Ubuntu GNOME:
+
+1. Install **Extension Manager**, the application used to manage GNOME extensions:
+
+   ```sh
+   sudo apt install gnome-shell-extension-manager
+   ```
+
+2. Open **Extension Manager**, browse for **Blur my Shell**, and install/enable
+   the extension by **aunetx**. Use a version compatible with your GNOME release.
+3. Open Blur my Shell's preferences and find **Applications**. Enable application
+   blur and add the running **OMXTerm** window to its application list (the
+   allowlist/whitelist). Labels vary between extension versions.
+4. In OMXTerm, set `window.transparency` above `0` and reload. Adjust the blur
+   in the extension's settings to taste. The extension supplies GNOME blur;
+   OMXTerm's `window.blur` switch alone does not configure GNOME.
+
+Keep the extension's whole-window opacity at full opacity if you want text to
+stay solid; use OMXTerm's transparency setting for background-only fading.
+Extension blur can affect desktop performance. To undo it, remove OMXTerm from
+its application list or disable the extension, and restore OMXTerm transparency
+to `0` if desired.
+
+See the [Blur my Shell project](https://github.com/aunetx/blur-my-shell) for
+supported GNOME versions, application blur options, and troubleshooting. OMXTerm
+does not install, maintain, or configure that extension.
+
+#### Fedora with KDE Plasma (and other KDE desktops)
+
+KDE Plasma already includes a **Blur** desktop effect; no GNOME extension is
+needed. Open **System Settings**, search for
+[Desktop Effects](https://docs.kde.org/stable_kf6/en/kwin/kcontrol/kwineffects/index.html),
+enable **Blur**, and open its settings to adjust the available strength options. The location
+and labels depend on your Plasma version.
+
+In OMXTerm, set `window.blur` to `true` and `window.transparency` above `0`, then
+reload. Its KDE request uses `xprop`, a small X11 utility. If the request has no
+effect, check whether it is installed with `command -v xprop`. The package is
+`xprop` on Fedora (`sudo dnf install xprop`) or `x11-utils` on Ubuntu/Kubuntu
+(`sudo apt install x11-utils`). Missing `xprop` never prevents terminal startup.
+
+To undo only OMXTerm's requested effect, set `blur` to `false` and transparency
+to `0`, then reload. Changes made to KDE's desktop effects may also affect other
+applications; those settings remain under your control.
 
 ## Add one behavior change
 
@@ -396,6 +465,12 @@ sessions. Use an absolute Windows filesystem path:
   "windowsShell": "C:\\Program Files\\Git\\bin\\bash.exe"
 }
 ```
+
+This example requires Git for Windows to be installed at that location first.
+For PowerShell 7, a common installed path is
+`C:\\Program Files\\PowerShell\\7\\pwsh.exe` in JSON. Check the actual executable
+on your machine; OMXTerm does not install these shells. To return to Windows
+PowerShell, remove the `windowsShell` property, reload, and open a new tab.
 
 The path must resolve to an existing regular file. Write it literally: OMXTerm
 does not expand `~` or environment variables and does not accept arguments in

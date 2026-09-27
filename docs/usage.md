@@ -1,7 +1,10 @@
 # Everyday OMXTerm use
 
 [Install OMXTerm](../README.md#installation), then launch it to open your shell
-in your home directory. No configuration is required.
+in your home directory. No configuration is required. OMXTerm is the **terminal**
+(the window and display); your **shell** is the program reading commands inside
+it, such as Zsh, Bash, or PowerShell. Changing terminals does not install those
+programs or rewrite their preferences.
 
 - [Tabs and windows](#windows-tabs-and-sessions)
 - [Shortcuts](#built-in-platform-shortcuts)
@@ -125,7 +128,9 @@ Plain text takes priority over clipboard file lists and is pasted unchanged.
 
 ### Protected Paste
 
-If the receiving program has not enabled bracketed paste, OMXTerm asks before
+**Bracketed paste** is a mode in which a program can distinguish pasted text
+from individually typed keys. If the receiving program has not enabled it,
+OMXTerm asks before
 pasting multiple lines or control characters. Choose **Paste** to send the whole
 text or **Cancel** to send nothing.
 
@@ -221,6 +226,33 @@ screen, use the preferences below.
 
 ## Troubleshooting
 
+### The download will not open
+
+First check [processor architecture and installation requirements](../README.md#platforms-and-downloads).
+An ARM64 package cannot run natively on an x64 Intel/AMD PC.
+
+| Symptom                                                      | Next step                                                                                                                                                                                      |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS blocks an unidentified developer                       | Verify the checksum, then use Apple's per-app Open Anyway procedure linked in [macOS installation](../README.md#macos). Do not disable Gatekeeper.                                             |
+| Linux says “Permission denied”                               | In the download folder, use the documented `chmod +x` step. Do not launch with `sudo`. If execution is still denied, the folder may disallow running programs; use a normal local user folder. |
+| Linux reports FUSE or a mount failure                        | Use `--appimage-extract-and-run` after verifying the download. [FUSE explanation](../README.md#linux).                                                                                         |
+| Linux reports `GLIBC_2.42 not found`                         | The system library is too old for this AppImage. See the [distribution requirements](../README.md#linux); manually replacing glibc is not a safe workaround.                                   |
+| Linux reports an executable format error                     | Check `uname -m`: the current package needs `aarch64`.                                                                                                                                         |
+| Windows reports a missing runtime DLL or `ERR_DLOPEN_FAILED` | Check the ARM64 Visual C++ Redistributable in [Windows installation](../README.md#windows). Never download individual DLLs from unofficial sites.                                              |
+| A checksum fails or names a missing file                     | Download the package and its matching checksum from the same release; check filenames and the terminal's current folder. Do not run a mismatched download.                                     |
+
+If these steps do not help, [report what happened](../CONTRIBUTING.md#report-a-problem).
+You do not need to know the cause.
+
+### Background blur or transparency does not appear
+
+Use OMXTerm 0.17.0 or newer, save the settings, and reload. Transparency must
+be greater than `0`. On Windows, blur must also be enabled; plain transparency
+without Acrylic stays opaque. GNOME may need Blur my Shell, and KDE needs its
+Blur desktop effect. A program that fills its own terminal background may stay
+opaque even when the empty shell background is transparent. See
+[background effects and desktop tips](configuration.md#background-transparency-and-blur).
+
 ### Bright flashes in Bash
 
 Some Bash setups enable Readline's visual bell. Disable it for the current session:
@@ -255,8 +287,15 @@ To keep it, add `set belloff=all` to your `.vimrc`. See `:help 'belloff'` for de
 
 Save `config.json`, then choose **View → Reload User Configuration**. Fix any
 reported error and reload again; a failed reload keeps the previous settings.
-Font family and line height require a restart for existing tabs. Snippets are
-reread when their sidebar opens, not by configuration reload.
+Check that you edited the file in the [configuration directory](configuration.md#create-the-configuration-directory),
+not the downloaded example or a file named `config.json.txt`. A non-empty
+`XDG_CONFIG_HOME` changes which directory OMXTerm reads. JSON must have straight
+double quotes, no comments, and no trailing commas.
+
+Font family and line height require a restart for existing tabs. A changed
+Windows shell affects new tabs, not running sessions. Title/tab-bar defaults
+apply to new windows; use the View menu toggles for the current window. Snippets
+are reread when their sidebar opens, not by configuration reload.
 
 See [configuration reload](configuration.md#reloading-user-configuration) and
 [theme troubleshooting](configuration.md#theme-troubleshooting) for details.
@@ -295,5 +334,7 @@ terminal input/output, clipboard data, configuration and environment contents,
 commands, arguments, executable names, and titles. OMXTerm sends no remote logs
 or telemetry. Child programs retain their normal network access.
 
-For a report, include the version or source commit, platform, minimal reproduction,
-expected result, and actual result. See [Contributing](../CONTRIBUTING.md).
+For a report, include the version (**About OMXTerm** in the application menu)
+or source commit, platform, reproduction steps, expected result, and actual result.
+You can report a problem without logs or Developer Tools. See
+[Contributing](../CONTRIBUTING.md#report-a-problem).

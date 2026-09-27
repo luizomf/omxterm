@@ -1,14 +1,20 @@
-# macOS: set up fonts, colors, and snippets
+# macOS: customize OMXTerm
 
-[Install OMXTerm](../../README.md#macos) first. This optional tutorial gives you
-an editable theme and seven example snippets while keeping the bundled fonts
-and default shortcuts. It does not change your account shell.
+[Install OMXTerm](../../README.md#macos) and open it once first. You can already
+use the terminal: it creates a starter configuration automatically. This optional
+tutorial adds a complete editable settings file, a theme, and seven snippets
+(saved commands you can insert). It keeps bundled fonts, all 27 default shortcuts,
+and your account shell.
+
+Want only one change? Edit your existing file using the
+[configuration guide](../configuration.md) instead of replacing the starter kit.
 
 ## 1. Get the examples
 
 In the repository on GitHub, select **main**, then choose **Code → Download ZIP**
-and extract it. Sign in if GitHub asks. Open `docs/quick-start/files/macos/` in
-the extracted folder. These examples are for OMXTerm 0.14.0 or newer.
+and extract it. Open `docs/quick-start/files/macos/` in the extracted folder.
+These examples require **OMXTerm 0.17.0 or newer**; downloading the source ZIP
+here is only a way to get the examples, not an instruction to build the app.
 
 You need three files:
 
@@ -24,6 +30,9 @@ In Zsh or Bash, run this to create and open your configuration folder:
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omxterm"
 mkdir -p "$config_dir/themes" && open "$config_dir"
 ```
+
+Use a plain-text editor for changes; do not let it add `.txt` or curly quotes.
+For TextEdit, select **Format → Make Plain Text** and disable smart quotes.
 
 In Finder, copy the two JSON files into that folder and `omtheme.json` into its
 `themes` subfolder. **Back up any existing destination files before replacing
@@ -91,11 +100,35 @@ the Git command requires Git. The palette snippet uses Zsh/Bash syntax.
 To see a visible setting change, edit `font.size` in `config.json` from `16` to
 `18` and reload. To customize colors, edit a `#RRGGBB` value in
 `themes/omtheme.json` and reload. Restoring `16` or your backed-up files reverses
-the change. More options: [Configuration](../configuration.md).
+the change.
+
+## 4. Make it yours
+
+Edit the existing fields in `config.json`; do not add duplicate objects. JSON
+uses `true`/`false` and numbers without quotes and does not allow comments.
+
+| Preference                                  | Try this                                                                                                                                                  |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `window.blur` / `window.transparency`       | Change `false` / `0` to `true` / `0.35`, save, and reload for background-only blur/transparency. macOS blur strength is fixed.                            |
+| `window.showTitleBar` / `window.showTabBar` | Set the defaults for new windows. Use `Cmd+Shift+D` / `Cmd+Shift+B` to toggle the current window instead.                                                 |
+| `keyboard.optionAsAlt`                      | Keep `none` for normal Option-key characters; select `left`, `right`, or `both` only if you want terminal Alt shortcuts.                                  |
+| `keybinds`                                  | All 27 defaults are included. For example, change `toggleSnippets` to `Command+Alt+Shift+S`, then reload. Remove an override to use its built-in default. |
+
+Blur and transparency apply live; they start **off** in the example. Text stays
+solid, but programs that paint their own background may remain opaque. See
+[background effects](../configuration.md#background-transparency-and-blur).
+
+Font family and line height apply to new tabs after reload; existing tabs need
+a restart. Snippets reload when you close and reopen their sidebar. See
+[all shortcuts](../usage.md#built-in-platform-shortcuts),
+[reload behavior](../configuration.md#reloading-user-configuration), and
+[configuration troubleshooting](../usage.md#configuration-changes-do-not-appear).
 
 ## Optional shell and Vim preferences
 
-OMXTerm does not require dotfiles. The examples
+**Skip this section unless you want to change how your shell/editor works.**
+Dotfiles are hidden preference files for other programs, not OMXTerm settings.
+OMXTerm does not require them. The examples
 [zshrc](files/macos/zshrc), [bashrc](files/macos/bashrc),
 [bash_profile](files/macos/bash_profile), [inputrc](files/macos/inputrc), and
 [vimrc](files/macos/vimrc) are separate shell/editor preferences. Prefer copying

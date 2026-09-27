@@ -1,14 +1,21 @@
-# Linux: set up fonts, colors, and snippets
+# Linux: customize OMXTerm
 
-[Install OMXTerm](../../README.md#linux) first. This optional tutorial gives you
-an editable theme and seven example snippets while keeping the bundled fonts
-and default shortcuts. The snippets assume Bash; your account shell is unchanged.
+[Install OMXTerm](../../README.md#linux) and open it once first. Check the ARM64
+and distribution requirements there before downloading. You can already use the
+terminal: it creates a starter configuration automatically. This optional tutorial
+adds a complete editable settings file, a theme, and seven snippets (saved commands
+you can insert). It keeps bundled fonts and all 27 default shortcuts. The snippets
+assume Bash; your account shell is unchanged.
+
+Want only one change? Edit your existing file using the
+[configuration guide](../configuration.md) instead of replacing the starter kit.
 
 ## 1. Get the examples
 
 In the repository on GitHub, select **main**, then choose **Code → Download ZIP**
-and extract it. Sign in if GitHub asks. Open `docs/quick-start/files/linux/` in
-the extracted folder. These examples are for OMXTerm 0.14.0 or newer.
+and extract it. Open `docs/quick-start/files/linux/` in the extracted folder.
+These examples require **OMXTerm 0.17.0 or newer**; downloading the source ZIP
+here is only a way to get the examples, not an instruction to build the app.
 
 You need three files:
 
@@ -80,8 +87,9 @@ added by this tutorial, not the whole configuration folder.
 
 ## 3. Reload and try it
 
-1. Choose **View → Reload User Configuration** (`Ctrl+Shift+,`). If an error
-   appears, correct the named file or field and reload.
+1. Press and release **Alt alone** to open the application menu. Choose
+   **View → Reload User Configuration** (`Ctrl+Shift+,`). If an error appears,
+   correct the named file or field and reload.
 2. Open **View → Toggle Snippets** (`Ctrl+Shift+S`).
 3. Click **Open current folder**, review the inserted ` xdg-open .`, and press
    Enter. Your desktop file manager should open the shell's current folder.
@@ -94,11 +102,39 @@ The palette snippet uses Bash syntax.
 To see a visible setting change, edit `font.size` in `config.json` from `16` to
 `18` and reload. To customize colors, edit a `#RRGGBB` value in
 `themes/omtheme.json` and reload. Restoring `16` or your backed-up files reverses
-the change. More options: [Configuration](../configuration.md).
+the change.
+
+## 4. Make it yours
+
+Edit existing fields in `config.json` with a plain-text editor; do not add
+comments or duplicate objects. Keep booleans and numbers unquoted.
+
+| Preference                                  | Try this                                                                                                                                                  |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `window.blur` / `window.transparency`       | Change `false` / `0` to `true` / `0.35`, save, and reload. The desktop controls whether blur is available.                                                |
+| `window.showTitleBar` / `window.showTabBar` | Set the defaults for new windows. Use `Ctrl+Shift+D` / `Ctrl+Shift+B` to toggle the current window instead.                                               |
+| `keybinds`                                  | All 27 defaults are included. For example, change `toggleSnippets` to `Control+Alt+Shift+S`, then reload. Remove an override to use its built-in default. |
+
+For **Ubuntu GNOME**, the optional **Blur my Shell** extension can blur OMXTerm;
+for **Fedora KDE Plasma**, use the built-in **Blur** desktop effect. Follow the
+[step-by-step Linux desktop tips](../configuration.md#linux-desktop-tips).
+These are desktop customizations, not required dependencies. KDE/extension settings
+may let you adjust blur strength; OMXTerm itself has no strength setting.
+
+Blur and transparency start **off** in the example and apply live after reload.
+Text stays solid, but programs that paint their own background may remain opaque.
+Font family and line height apply to new tabs after reload; existing tabs need
+a restart. Snippets reload when you close and reopen their sidebar.
+
+See [all shortcuts](../usage.md#built-in-platform-shortcuts),
+[reload behavior](../configuration.md#reloading-user-configuration), and
+[configuration troubleshooting](../usage.md#configuration-changes-do-not-appear).
 
 ## Optional Bash and Vim preferences
 
-OMXTerm does not require dotfiles. The examples [bashrc](files/linux/bashrc),
+**Skip this section unless you want to change how your shell/editor works.**
+Dotfiles are hidden preference files for other programs, not OMXTerm settings.
+OMXTerm does not require them. The examples [bashrc](files/linux/bashrc),
 [inputrc](files/linux/inputrc), and [vimrc](files/linux/vimrc) are separate
 shell/editor preferences. Prefer copying individual settings into your existing files.
 

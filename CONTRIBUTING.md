@@ -1,25 +1,66 @@
 # Contributing to OMXTerm
 
-Thanks for helping improve OMXTerm. Focused bug reports, documentation fixes,
-and code contributions are welcome. If this is your first contribution, the
-shortest path is:
+Thanks for helping improve OMXTerm. **Using it and reporting what you find is
+already a contribution.** You do not need to write code, build the app, or know
+why a problem happens.
 
-1. Search the existing issues for related work.
-2. Open a bug report or feature request with the details requested by the
-   template. A small typo or broken link may go directly to a focused pull
-   request.
-3. For a substantial change, use the issue discussion to align on scope before
-   investing in implementation.
-4. Fork the repository, create a focused branch from current upstream `main`,
-   and make the smallest complete change.
-5. Run `npm run check:portable` and any relevant platform checks.
-6. Open a pull request that links the issue and reports the exact checks run.
+## Help without writing code
+
+- Try the [latest download](README.md#platforms-and-downloads) in your everyday
+  work, especially on Linux and Windows ARM64.
+- Tell us where installation or a guide was confusing. Mention the page and
+  the step you got stuck on; you do not need to supply replacement text.
+- Help reproduce an [existing issue](https://github.com/luizomf/omxterm/issues)
+  and describe your result and platform rather than only adding “same here.”
+- Suggest a focused improvement by describing the problem it would solve.
+
+### Report a problem
+
+1. Search [existing issues](https://github.com/luizomf/omxterm/issues) first.
+2. If there is no matching report, [open a bug report](https://github.com/luizomf/omxterm/issues/new?template=bug-report.md).
+   Include the OMXTerm version (**About OMXTerm** in the application menu),
+   operating system/version, and ARM64 or x64 architecture. The
+   [download guide](README.md#platforms-and-downloads) explains how to check it.
+3. Describe the steps, expected result, and actual result. On Linux, include
+   your desktop (for example, GNOME or KDE Plasma) if known. “I don't know” is
+   fine for details you cannot find.
+4. Share only the relevant error or a carefully reviewed screenshot. Remove
+   secrets, account names, local paths, and terminal contents; do not upload a
+   complete configuration or log. [Local diagnostics](docs/usage.md#local-diagnostics)
+   are optional, not a prerequisite for opening a report.
+
+### Have an x64 Linux or Windows machine?
+
+Current downloads are ARM64-only; they are not x64 test builds. The invitations
+for [Linux x64 (#223)](https://github.com/luizomf/omxterm/issues/223) and
+[Windows x64 (#224)](https://github.com/luizomf/omxterm/issues/224) explain what
+native support needs. Comment with the environment and help you can offer
+before starting implementation. You do not need to own ARM64 hardware to help
+with those x64 efforts; the maintainer handles the ARM64 regression checks.
+
+## Your first documentation or code change
+
+A **fork** is your own GitHub copy of the repository; a **pull request (PR)**
+asks the project to review a change from that copy.
+
+1. Search existing issues and PRs to avoid duplicating work. For a substantial
+   change, discuss its scope in an issue before implementing it.
+2. Fork the repository, create a focused branch from current upstream `main`,
+   and make the smallest complete change. A typo or broken link can go straight
+   to a PR; GitHub's file editor is enough for a small documentation edit.
+3. For code, follow the development setup below, add tests, and run
+   `npm run check:portable` plus relevant platform checks. For documentation-only
+   changes, formatting and `git diff --check` suffice; validate changed examples
+   and links too. Explain any checks you could not run.
+4. Open a PR linking the issue and describing the change and checks. Draft PRs
+   are welcome when you want feedback before finishing.
 
 Suspected vulnerabilities follow the private process in the
 [security policy](SECURITY.md), not the public issue or pull-request workflow.
 
-Jump to [development setup](#development-environment),
-[verification](#verification), or [pull requests](#commits-and-pull-requests).
+The remaining sections are for working on the source. Jump to
+[development setup](#development-environment), [verification](#verification),
+or [pull requests](#commits-and-pull-requests).
 Coding agents should also read [`AGENTS.md`](AGENTS.md).
 
 ## Before proposing a change
@@ -46,14 +87,30 @@ areas before implementing them.
 
 ## Development environment
 
-Use an ARM64 machine with Node.js **22.13+ in the 22.x line**, or **24+**, and
-npm. Prepare the platform prerequisites below, then run from your clone:
+The current development/build path targets **ARM64**. x64 contributors should
+start with the linked platform issue rather than expect the existing native
+checks to pass unchanged.
+
+Install [Git](https://git-scm.com/downloads) and [Node.js](https://nodejs.org/en/download)
+**22.13+ in the 22.x line**, or **24+**, with npm. Check them with `git --version`,
+`node --version`, and `npm --version`. Prepare your platform prerequisites below,
+then use GitHub's **Fork** button and clone your fork. Replace `YOUR-USERNAME`
+with your actual GitHub username:
 
 ```sh
+git clone -c core.autocrlf=false -c core.symlinks=true https://github.com/YOUR-USERNAME/omxterm.git
+cd omxterm
+git remote add upstream https://github.com/luizomf/omxterm.git
+git switch -c docs/my-first-change
 npm ci
 npm run check:portable
 npm run dev
 ```
+
+Choose a branch name that describes your work. `npm ci` installs the exact
+locked dependencies; run project commands inside the `omxterm` folder, where
+`package.json` lives. Development opens a real terminal and uses your ordinary
+OMXTerm configuration, so back up settings before experimenting with them.
 
 `check:portable` runs formatting, lint, types, tests, and the unpackaged build.
 `dev` opens the application. Graphical tests need a working desktop and WebGL2;
@@ -63,6 +120,8 @@ development.
 ### macOS
 
 Use Apple Silicon with Xcode Command Line Tools (Apple clang and the macOS SDK).
+Run `xcode-select --install` if those tools are not already installed, and finish
+the system installer before running `npm ci`.
 `npm run build` compiles the optional macOS blur addon locally with pinned
 build-only Node-API headers, targeting macOS 12.0. No runtime download or
 Electron ABI rebuild is needed for that addon. Linux/Windows builds do not use
@@ -75,7 +134,20 @@ On Linux, `node-pty` builds from source and requires `python3`, `make`, and a C+
 compiler (`build-essential` provides the latter two on Ubuntu). Native package
 verification also uses `readelf` from `binutils`; Ubuntu's build toolchain pulls
 that package in. Install those tools through the distribution's package manager
-before running `npm ci`. OMXTerm's postinstall then rebuilds `node-pty` against
+before running `npm ci`. For example:
+
+```sh
+# Ubuntu
+sudo apt install build-essential python3 binutils fontconfig file xwayland
+```
+
+```sh
+# Fedora
+sudo dnf install gcc-c++ make python3 binutils fontconfig file xorg-x11-server-Xwayland
+```
+
+Run the remaining development commands as your ordinary user, not with `sudo`.
+OMXTerm's postinstall then rebuilds `node-pty` against
 the installed Electron Linux ARM64 runtime; do not use a module copied from
 Node.js, macOS, or another architecture. Linux also needs the `fontconfig`
 utilities for exact configured font-family validation. The statically linked
@@ -243,8 +315,10 @@ cases do not claim containment of arbitrary uncooperative process trees.
 
 </details>
 
-Before delivery, run `npm run check:portable`. Packaging changes also need the
-matching native procedure:
+Before delivering code, run `npm run check:portable`. Documentation-only changes
+need formatting (`npm run format:check`) and `git diff --check`; also verify any
+changed links, JSON, or command examples. Packaging changes need the matching
+native procedure:
 
 | Platform      | Complete native check                                            |
 | ------------- | ---------------------------------------------------------------- |
@@ -297,10 +371,12 @@ existing behavior, or lacks contract-level tests or documentation.
 
 ## Version and release authority
 
-Release work is maintainer-led and explicitly authorized. Each exact Release
-Artifact must pass the [release procedure](docs/release.md) and receive owner
-acceptance; publication requires separate owner authorization. Ordinary
-contributions do not create tags, publish GitHub Releases, or upload artifacts.
+Release work is maintainer-led and explicitly authorized. An owner request to
+prepare and publish a release covers its complete delivery under the
+[release procedure](docs/release.md), including native checks and exact-artifact
+verification; it does not require another per-step approval round. An ordinary
+contribution or PR merge does not authorize tags, GitHub Releases, or artifact
+uploads.
 The maintainer selects release versions under the
 [versioning policy](docs/versioning.md).
 

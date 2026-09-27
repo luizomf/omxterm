@@ -1,20 +1,27 @@
 # Windows: set up Git Bash, colors, and snippets
 
-[Install OMXTerm](../../README.md#windows) first. This optional tutorial selects
-**Git Bash**, adds an editable theme and seven snippets, and keeps the bundled
-fonts and default shortcuts. If you prefer PowerShell, use the
-[minimal configuration tutorial](../configuration.md#quick-start-use-the-bundled-defaults)
-instead; OMXTerm already starts PowerShell by default.
+[Install OMXTerm](../../README.md#windows) and open it once first. You can already
+use the terminal with Windows PowerShell and its automatically created starter kit.
+This optional tutorial selects **Git Bash**, adds an editable theme and seven
+Bash snippets (saved commands you can insert), and keeps bundled fonts and all
+27 default shortcuts. Git Bash is a separate shell supplied with Git for Windows,
+not part of OMXTerm.
+
+**Prefer PowerShell?** Keep your existing files and use the
+[minimal configuration tutorial](../configuration.md#quick-start-use-the-bundled-defaults).
+The [customization section below](#4-make-it-yours) applies to either shell;
+you do not need to install Git Bash just to change colors or blur.
 
 ## 1. Get Git Bash and the examples
 
-Install Git for Windows separately. Check that
+Install [Git for Windows](https://gitforwindows.org/) separately. Check that
 `C:\Program Files\Git\bin\bash.exe` exists; if yours is elsewhere, edit
 `windowsShell` in the example to that absolute path. OMXTerm does not install Bash.
 
 In the repository on GitHub, select **main**, then choose **Code → Download ZIP**.
-Sign in if asked. Use **Extract All** and open `docs\quick-start\files\windows`
-inside the result. These examples are for OMXTerm 0.14.0 or newer.
+Use **Extract All** and open `docs\quick-start\files\windows` inside the result.
+These examples require **OMXTerm 0.17.0 or newer**; downloading the source ZIP
+here is only a way to get the examples, not an instruction to build the app.
 
 You need three files:
 
@@ -36,7 +43,9 @@ Invoke-Item -LiteralPath $configDir
 In Explorer, copy the two JSON files into that folder and `omtheme.json` into
 its `themes` subfolder. **Back up existing destination files before replacing
 them.** If you already have settings you like, merge only what you want.
-Ensure the files end in `.json`, not `.json.txt`.
+Use a plain-text editor such as Notepad. In Save As, choose **All files** and
+UTF-8; in Explorer, enable **View → Show → File name extensions**. Check that the
+files end in `.json`, not `.json.txt`.
 
 The default layout is below. A non-empty `XDG_CONFIG_HOME` replaces
 `%USERPROFILE%\.config`:
@@ -107,12 +116,42 @@ use Bash syntax with Windows tools such as `explorer.exe`, `ipconfig.exe`,
 
 To see a visible change, edit `font.size` in `config.json` from `16` to `18` and
 reload. Edit a `#RRGGBB` color in `themes/omtheme.json` to change the palette.
-Restoring `16` or your backed-up files reverses the change. More options:
-[Configuration](../configuration.md).
+Restoring `16` or your backed-up files reverses the change.
+
+## 4. Make it yours
+
+Edit existing fields in `config.json`; do not add duplicate objects. JSON does
+not accept comments, and numbers and `true`/`false` stay unquoted.
+
+| Preference                                  | Try this                                                                                                                                                                              |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `windowsShell`                              | Keep the actual absolute path to `bash.exe`, choose another installed shell such as PowerShell 7, or remove this property to return to Windows PowerShell. Reload and open a new tab. |
+| `window.blur` / `window.transparency`       | Change `false` / `0` to `true` / `0.35`, save, and reload. **Both** are needed for Acrylic on Windows 11 22H2 or later.                                                               |
+| `window.showTitleBar` / `window.showTabBar` | Set the defaults for new windows. Use `Ctrl+Shift+D` / `Ctrl+Shift+B` to toggle the current window instead.                                                                           |
+| `keybinds`                                  | All 27 defaults are included. For example, change `toggleSnippets` to `Control+Alt+Shift+S`, then reload. Remove an override to use its built-in default.                             |
+
+Write paths with doubled backslashes in JSON, for example
+`"C:\\Program Files\\PowerShell\\7\\pwsh.exe"`. The executable must exist;
+`windowsShell` does not accept arguments or expand environment variables. See
+[Windows shell selection](../configuration.md#choose-the-windows-default-shell).
+File drops and pasted file lists still use **PowerShell quoting**, even in Git
+Bash; review and adjust the inserted command before pressing Enter.
+
+Blur and transparency start **off** in the example. Windows uses Acrylic, a
+system blur material, not plain transparency: with blur off or unsupported native
+effects, the background stays opaque. System settings may also prevent Acrylic;
+the terminal still works. See [background effects](../configuration.md#background-transparency-and-blur).
+
+Font family and line height apply to new tabs after reload; existing tabs need
+a restart. Snippets reload when you close and reopen their sidebar. See
+[all shortcuts](../usage.md#built-in-platform-shortcuts) and
+[reload behavior](../configuration.md#reloading-user-configuration).
 
 ## Optional Git Bash and Vim preferences
 
-OMXTerm does not require dotfiles. The examples [bashrc](files/windows/bashrc),
+**Skip this section unless you want to change how your shell/editor works.**
+Dotfiles are hidden preference files for other programs, not OMXTerm settings.
+OMXTerm does not require them. The examples [bashrc](files/windows/bashrc),
 [inputrc](files/windows/inputrc), and [vimrc](files/windows/vimrc) are separate
 shell/editor preferences. Prefer copying individual settings into your existing files.
 
