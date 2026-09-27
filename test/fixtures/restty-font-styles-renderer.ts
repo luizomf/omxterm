@@ -36,6 +36,7 @@ async function run() {
   const replies: string[] = [];
   const create = async () => {
     const container = document.createElement("div");
+    container.className = "terminal-surface";
     container.style.cssText = "position:absolute;inset:0";
     document.body.append(container);
     let handlers: TerminalSessionHandlers | undefined;

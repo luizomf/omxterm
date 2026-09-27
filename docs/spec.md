@@ -492,7 +492,9 @@ viewport to the live cursor. Output alone, protocol replies, focus, selection,
 and cancelled paste do not force the viewport to the bottom.
 The scrollback scrollbar shows a thumb only while scrollback
 extends beyond the visible screen; an empty scrollbar track paints nothing on
-any platform.
+any platform. Desktops with a fine pointer retain native scrolling even when
+touch capability is also present; touch-only devices keep the existing touch
+scrolling path.
 
 OSC 0 and OSC 2 titles are display-only and per session: the raw OSC request must be no longer than 256 code points, then
 control and bidi characters are

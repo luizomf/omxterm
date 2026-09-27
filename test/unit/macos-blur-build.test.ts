@@ -31,7 +31,9 @@ it("builds a Node-API v8 arm64 addon with the Electron macOS 12 floor, without d
       ]),
     );
     expect(
-      args?.some((arg: string) => arg.endsWith("node-api-headers/include")),
+      args?.some((arg: string) =>
+        arg.endsWith(path.join("node-api-headers", "include")),
+      ),
     ).toBe(true);
     expect(args?.join(" ")).not.toMatch(/node-gyp|electron-rebuild|https?:/u);
   } finally {

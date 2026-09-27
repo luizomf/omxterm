@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdtemp, rm } from "node:fs/promises";
+import { copyFile, readFile, writeFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
@@ -48,7 +48,7 @@ async function observe(
       "utf8",
     );
     expect(createHash("sha256").update(runtime).digest("hex")).toBe(
-      "19ce5c33221a7c77bea9eb83c49d9afb3ccda2a70636598492654db18226d0f2",
+      "940a722fb921e49fa308034002220b4105e5a64a0489e64c6ce2923bcad88f08",
     );
     let probed = runtime;
     if (priorSynthesis) {
@@ -57,7 +57,7 @@ async function observe(
         probed = probed.replace(corrected, original);
       }
       expect(createHash("sha256").update(probed).digest("hex")).toBe(
-        "2994d5417394f8cba2c2599831f552048389a1174943b64ed1b9b396c2d73658",
+        "ff2a78157f6d4c1d46b21d2ecefc0cfaa8e7b53edd3d0fb1b6f003a2d95c58ae",
       );
     }
     const replace = (needle: string, replacement: string) => {
@@ -106,9 +106,15 @@ async function observe(
     const policy = (await readFile("src/renderer/index.html", "utf8")).match(
       /content="([^"]+)"/u,
     )![1];
+    // The production host constrains CSS geometry independently of the DPR-
+    // scaled canvas buffer, including when touch-capable hosts omit its wrapper.
+    await copyFile(
+      "src/renderer/terminal-window.css",
+      path.join(root, "renderer.css"),
+    );
     await writeFile(
       path.join(root, "index.html"),
-      `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${policy}"></head><body data-family="${family}" style="margin:0;background:#101014"><script src="renderer.js"></script></body></html>`,
+      `<!doctype html><html style="--native-title-inset:0px"><head><meta http-equiv="Content-Security-Policy" content="${policy}"><link rel="stylesheet" href="renderer.css"></head><body data-family="${family}" style="margin:0;background:#101014"><script src="renderer.js"></script></body></html>`,
     );
     const { stdout } = await promisify(execFile)(
       electron,

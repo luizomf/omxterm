@@ -251,7 +251,11 @@ history until a positive setting restores the byte ceiling and permits new
 retention. Valid reloads mutate the same core and PTY while preserving coherent
 reflow, alternate-screen, selection and viewport state. Invalid values remain
 outside this seam because complete User Configuration validation precedes
-application.
+application. Hybrid desktop input must not suppress the existing native scroll
+host merely because Chromium also reports touch capability. The pinned selector
+therefore honors an available fine pointer; devices with touch but no fine
+pointer keep the existing touch path. This changes host selection, not scrolling
+mechanics, core state, hardware configuration or platform security.
 
 The decision carries the maintenance cost of a pinned dependency correction and
 the runtime cost of requiring WebGL2. In return, OMXTerm avoids unsafe

@@ -42,8 +42,10 @@ can retain fewer rows. OMXTerm does not estimate bytes per line. Zero selects
 Ghostty's no-history path: it drops existing history, retains none through
 continued output or resize, and a later positive value retains only new output.
 Live changes preserve reflow, alternate-screen state, selection and viewport
-coherence in the same Surface and remain isolated per Surface. The native scroll
-host disables browser scroll anchoring: Restty owns the terminal viewport, so a
+coherence in the same Surface and remain isolated per Surface. A fine pointer
+selects the existing native scroll host even on a hybrid desktop that also
+advertises touch; touch-only devices retain Restty's touch scrolling path. The
+native scroll host disables browser scroll anchoring: Restty owns the terminal viewport, so a
 notice/layout or font-size change must not turn Chromium's anchor adjustment
 into terminal scroll input. Native rendering coverage verifies that shrinking
 and restoring the host with a font-size change preserves the live bottom while
@@ -375,7 +377,7 @@ boundary used by the host integration; it is not a public API or renderer
 registry.
 
 After preparation, the corrected runtime has SHA-256
-`19ce5c33221a7c77bea9eb83c49d9afb3ccda2a70636598492654db18226d0f2`,
+`940a722fb921e49fa308034002220b4105e5a64a0489e64c6ce2923bcad88f08`,
 embedded-core chunk SHA-256
 `baa7dd9600c034a77e73ed03864c3e15e02ccdc591d2044479652fef1d9c0900`,
 and event declarations SHA-256
@@ -456,8 +458,10 @@ style match cannot silently override the chosen family. The native
 `restty-font-styles-rendering.test.ts` additionally compares regular-only,
 complete and incomplete configured-style inputs through main discovery, a
 sandboxed preload transport, the production font-generation owner and the real
-Surface. It checks unchanged regular pixels and geometry, distinct real-style
-pixels, missing-style synthesis, and one shared source/parsed set with one,
+Surface with the production host stylesheet. That stylesheet constrains CSS
+canvas geometry independently of its DPR-scaled drawing buffer, including when
+the native scrollbar wrapper is absent. It checks unchanged regular pixels and
+geometry, distinct real-style pixels, missing-style synthesis, and one shared source/parsed set with one,
 three and one live Surface. Final disposal releases every lease; bounded Restty
 cache retention is not a leak claim. Test-only picker/store instrumentation and
 diagnostic forced GC do not ship. Optional `OMXTERM_FONT_STYLES_EVIDENCE_PATH`
