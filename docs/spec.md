@@ -906,15 +906,14 @@ AppImage extraction arguments precede Electron arguments in either mode.
 
 During installation in an active Hyprland session, bounded optional desktop
 queries may record `--force-device-scale-factor` when XWayland zero-scaling is
-enabled and all reported monitors share one positive numeric scale other than
-
-1. Missing tools, failed/malformed reports, absent sessions and mixed scales
-   leave Electron scaling unchanged. The choice is fixed in the desktop entry,
-   reported to the user and refreshed on reinstall; launch time does not re-detect
-   monitors. Neither this choice nor compatibility mode changes compositor policy,
-   global environment, User Configuration, terminal font zoom, title-bar preferences
-   or the three-file ownership/rollback contract. See
-   [ADR 0031](adr/0031-keep-linux-installer-choices-small-and-local.md).
+enabled and all reported monitors share one positive numeric scale other than `1`.
+Missing tools, failed/malformed reports, absent sessions and mixed scales leave
+Electron scaling unchanged. The choice is fixed in the desktop entry, reported
+to the user and refreshed on reinstall; launch time does not re-detect monitors.
+Neither this choice nor compatibility mode changes compositor policy, global
+environment, User Configuration, terminal font zoom, title-bar preferences or
+the three-file ownership/rollback contract. See
+[ADR 0031](adr/0031-keep-linux-installer-choices-small-and-local.md).
 
 ## Architecture boundaries
 
