@@ -1,12 +1,40 @@
-# OMXTerm
+# <img src="docs/images/omxterm-hero.png" alt="" width="48" /> OMXTerm
 
 OMXTerm is an open-source desktop terminal you can make your own. Open a few tabs,
 choose your colors and shortcuts, and get to work. Available for **Apple Silicon
 macOS, Linux ARM64, and Windows ARM64**.
 
-<p align="center">
-  <img src="docs/images/omxterm-hero.png" alt="OMXTerm icon: a light blue terminal prompt on a dark rounded square" width="480" />
-</p>
+![OMXTerm on Fedora KDE Plasma with two tabs, a transparent background, and fastfetch system information](docs/images/fedora-kde.webp)
+
+_Fedora KDE Plasma, with background transparency and blur._
+
+<details>
+<summary>See macOS, Windows, and more Linux desktops</summary>
+
+**macOS**
+
+![OMXTerm on macOS showing colorful fastfetch output inside tmux](docs/images/macos.webp)
+
+**macOS — background effects**
+
+![OMXTerm on macOS with three tabs and a blurred desktop behind the terminal](docs/images/macos-background.webp)
+
+**Windows**
+
+![OMXTerm on Windows with PowerShell and a hidden title bar](docs/images/windows.webp)
+
+**Ubuntu GNOME**
+
+![OMXTerm on Ubuntu GNOME with fastfetch and htop in two tmux panes](docs/images/ubuntu-gnome.webp)
+
+**Omarchy / Hyprland**
+
+![OMXTerm on Omarchy with a hidden title bar and fastfetch system information](docs/images/omarchy-hyprland.webp)
+
+These setups use custom shell and desktop preferences. Personal details are
+masked; the split panes come from tmux.
+
+</details>
 
 - **Ready to use:** your local shell, bundled Nerd Fonts, and programming ligatures.
 - **Make it yours:** themes, fonts, keyboard shortcuts, and reusable text snippets.
