@@ -14,7 +14,9 @@ you trust the download.
 
 ## macOS
 
-1. Check **Apple menu → About This Mac** for an Apple Silicon chip (M1 or later).
+1. Check **Apple menu → About This Mac** for an **Apple Silicon chip (M1 or
+   later)** and **macOS 12 Monterey or newer**. This is the runtime minimum,
+   not a claim that every compatible macOS version has been tested.
 2. Download the **DMG** and its **.sha256** file into the same folder.
 3. Open **Terminal** from Applications → Utilities. Type `cd ` (including the
    space), drag that folder from Finder into Terminal, and press Enter.

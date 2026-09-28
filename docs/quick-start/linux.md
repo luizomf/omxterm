@@ -155,6 +155,20 @@ copy_optional_dotfiles() {
 copy_optional_dotfiles
 ```
 
+OMXTerm starts Bash as a login shell. Before opening a new terminal, ensure your
+existing login startup file sources `~/.bashrc`: Bash reads the first available
+file among `~/.bash_profile`, `~/.bash_login`, and `~/.profile`. If it does not
+already load `.bashrc`, add this to that existing file:
+
+```sh
+if [ -n "$BASH_VERSION" ] && [ -r "$HOME/.bashrc" ]; then
+  . "$HOME/.bashrc"
+fi
+```
+
+If none exists, create `~/.profile` with that block. Do not create `.bash_profile`
+over an existing `.profile`; doing so would bypass the latter's login setup.
+
 Start a new shell or Vim to apply changes. To restore, use, for example,
 `cp -p "$dot_backup/.bashrc" "$HOME/.bashrc"`. Keep the earliest backup if you
 repeat the copy; remove only newly added files without originals.

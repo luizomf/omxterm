@@ -27,7 +27,7 @@ capture work and evidence; they are not additional permission gates.
 
 The Supported Platforms and application packages are macOS arm64 DMG, Linux
 arm64 AppImage and Windows arm64 NSIS. Linux also provides its per-user AppImage desktop installer, `linux_install.sh`,
-with an embedded release version and checksum. Build natively on each target,
+with an embedded release version and a separate `.sha256` file. Build natively on each target,
 using the VM's native filesystem rather than a host shared folder.
 
 No artifact has a verified publisher identity. macOS uses a complete ad-hoc code
@@ -126,6 +126,34 @@ verifier checks architecture, renderer, Surface, bundled fonts, native PTY helpe
 licenses, startup and parsed output. It rejects source maps, tests, source trees,
 alternate-architecture PTY binaries and common private/secret files.
 
+That staging-app check does not verify the final DMG. Before recording macOS
+acceptance, verify the exact image and run the same verifier against its
+read-only mounted application. From the repository root:
+
+```sh
+(
+  set -eu
+  version="$(node -p 'require("./package.json").version')"
+  dmg="release/OMXTerm-$version-arm64.dmg"
+  hdiutil verify "$dmg"
+  mount_dir="$(mktemp -d "${TMPDIR:-/tmp}/omxterm-dmg.XXXXXX")"
+  cleanup() {
+    verify_status=$?
+    trap - EXIT
+    hdiutil detach "$mount_dir" || exit 1
+    rmdir "$mount_dir" || exit 1
+    exit "$verify_status"
+  }
+  trap cleanup EXIT
+  hdiutil attach -readonly -nobrowse -mountpoint "$mount_dir" "$dmg"
+  npm run package:verify -- "$mount_dir/OMXTerm.app"
+)
+```
+
+The cleanup trap attempts detachment even when verification fails. A failed
+mount or detach is not acceptance: inspect the reported mount point, finish
+cleanup, and record the failure before retrying. Never delete a mounted volume.
+
 The build also compiles `native/macos-window-blur.mm` into the generated
 `dist/main/macos-window-blur.node`, using pinned build-only Node-API v8 headers
 and `-mmacosx-version-min=12.0`. It uses no private header path or runtime
@@ -146,7 +174,8 @@ successful private call are not proof of visible blur or older-OS compatibility.
 The complete ad-hoc seal must pass `codesign --verify --deep --strict`; signature
 metadata alone is insufficient. Unexpected publisher identities are rejected.
 The DMG remains unsigned and unnotarized. Packaging-only commands are
-`npm run package:mac` followed by `npm run package:verify`.
+`npm run package:mac` followed by `npm run package:verify`; release acceptance
+also requires the exact-DMG check above.
 
 ### Linux arm64
 
