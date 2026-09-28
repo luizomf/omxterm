@@ -1,279 +1,160 @@
-# OMXTerm
+# OMXTerm terminology
 
-OMXTerm is an open-source personal desktop terminal built around the Personal
-Terminal concept: an environment its user can deliberately shape over time.
-OMXTerm Web is a separate browser-based SSH broker that previously used the
-OMXTerm name.
+OMXTerm (`luizomf/omxterm`) is an open-source personal desktop terminal: a local
+terminal environment its user can shape over time. **OMXTerm Web**
+(`luizomf/omxterm-web`) is a separate browser-based SSH broker.
 
-## Language
+This glossary explains terms used in the code and documentation. The
+[specification](docs/spec.md) owns the detailed behavior; [ADRs](docs/adr/)
+record architectural decisions.
 
-**Personal Terminal**:
-A terminal environment owned and deliberately shaped by its user. Its priorities
-are polish, customization, and the freedom to evolve with that user's needs.
-_Avoid_: AI terminal, Ghostty competitor, terminal MVP
+## Platform and architecture
 
-**OMXTerm Web**:
-The separate browser-based SSH broker from which selected terminal experience
-may be ported. It is not a runtime dependency or variant of OMXTerm.
-_Avoid_: OMXTerm, bastion, local terminal
+**Supported Platform** — An operating-system/architecture pair deliberately
+built and tested: currently macOS ARM64, Linux ARM64 and Windows ARM64. Linux
+uses X11/XWayland.
 
-**Repository Identity**:
-The canonical one-to-one mapping between product and repository names: the
-desktop terminal is `luizomf/omxterm`, and the browser SSH broker is
-`luizomf/omxterm-web`. During bootstrap the desktop repository temporarily used
-`luizomf/omxterm-local` while the web repository occupied `luizomf/omxterm`;
-ADR 0005 records the ordered rename that established the canonical mapping.
-_Avoid_: permanent omxterm-local, shared omxterm repository, product variant
+**Terminal Surface** — The portable DOM module that renders and operates the
+terminal using Restty and its Ghostty core. It receives a session Adapter rather
+than importing Electron or `node-pty`.
 
-**Terminal Assistance**:
-An optional capability that helps the user prepare or understand terminal input
-without defining the terminal's identity or being required for normal operation.
-_Avoid_: terminal core, autonomous agent, smart terminal
+**PTY Adapter** — OMXTerm's local transport between the Terminal Surface and a
+pseudo-terminal (PTY), through the typed preload bridge and Electron main.
 
-**Supported Platform**:
-An operating-system and architecture pair on which OMXTerm is deliberately
-built, tested, and claimed to work. The initial Supported Platforms are macOS
-arm64, Linux arm64, and Windows arm64. x64 and Intel macOS are deferred rather
-than support commitments.
-_Avoid_: compatible platform, planned platform, support tier
+## Windows and sessions
 
-**Terminal Surface**:
-The full-bleed area in which the terminal is rendered and operated. It is the
-primary visible experience of OMXTerm.
-_Avoid_: terminal page, terminal card, browser terminal
+See [window and session behavior](docs/spec.md#window-and-session-behavior).
 
-**Terminal Theme**:
-The OMXTerm-owned visual palette for the Terminal Surface, including terminal
-foreground, background, cursor, selection, and ANSI colors. Its default is the
-canonical `omtheme` palette.
-_Avoid_: xterm theme, Ghostty theme, application CSS
+**Terminal Window** — An independent native window containing one or more
+Terminal Tabs, with exactly one selected.
 
-**Terminal Font Stack**:
-The ordered faces used by the Terminal Surface. An explicitly configured system
-font comes first when present. Otherwise, bundled regular and bold FiraCode Nerd
-Font Mono are the defaults. Bundled regular and bold DejaVu Sans Mono and the
-retained JetBrainsMono Nerd Font Mono provide further coverage, followed by
-representative operating-system emoji, CJK, and symbol faces. A missing
-configured family is an error. An explicit family uses its available real
-regular, bold, italic, and bold-italic faces before regular coverage fallbacks
-and omits the bundled bold faces. Restty synthesizes missing styles while
-preserving the requested weight and slant.
-_Avoid_: terminal font, webfont, system default font
+**Terminal Tab** — A selectable container owning one Live Terminal Session and
+its Terminal Surface. Tabs can be reordered within their window. Their state
+is temporary; closing the last tab closes the window.
 
-**Window Font Zoom**:
-An ephemeral font-size adjustment for one Terminal Window through `Cmd++`,
-`Cmd+-`, and `Cmd+0`, shared by every Terminal Tab in that window. It never
-rewrites User Configuration, and a new window starts from the configured font
-size rather than inheriting another window's zoom.
-_Avoid_: font configuration, application zoom, persisted zoom
+**Live Terminal Session** — A running shell or explicitly launched program and
+its terminal state. Closing its tab ends its processes; application quit waits
+for owned native sessions to exit. Session persistence belongs to tools such as
+tmux.
 
-**Option Key Mode**:
-The macOS interpretation of the Option keys. By default OMXTerm preserves the
-active keyboard layout's native Unicode input. User Configuration may set
-`keyboard.optionAsAlt` to `none`, `left`, `right`, or `both` when terminal Alt
-sequences are preferred; OMXTerm never guesses or rewrites this choice.
-_Avoid_: Meta key, keyboard remapping, tmux keybinding
+**Default Shell** — The shell used for a new session unless an explicit command
+was requested. macOS and Linux use the OS-configured shell. Windows uses
+`windowsShell` when configured, otherwise PowerShell with a ComSpec fallback.
 
-**Terminal Capability Identity**:
-The standard environment contract advertised to terminal applications:
-`TERM=xterm-256color`, `COLORTERM=truecolor`, `TERM_PROGRAM=OMXTerm`, and the
-installed version in `TERM_PROGRAM_VERSION`. It describes supported behavior
-without requiring an OMXTerm-specific terminfo entry.
-_Avoid_: xterm-omxterm, omxterm terminfo, branded TERM
+**Launch Request** — Startup `-e <program> [arguments...]`, consumed by the first
+tab. The program and literal argument list go directly to the PTY.
 
-**Shell Integration**:
-Optional code injected into a user's shell initialization or environment to
-provide terminal-specific behavior. OMXTerm does not install or inject Shell
-Integration in its first version; the user's shell and dotfiles remain solely
-the user's responsibility.
-_Avoid_: automatic shell setup, managed shell, OMXTerm hooks
+**Initial Working Directory** — The user's home directory, where both the
+Default Shell and an explicit Launch Request start.
 
-**Terminal Window**:
-An independent native window containing one or more Terminal Tabs, exactly one
-of them selected. OMXTerm may own several Terminal Windows without workspaces
-or a user-facing session manager.
-_Avoid_: workspace, application instance, tab group
+**Busy Session** — A session whose PTY foreground process differs from the idle
+Default Shell. An unreadable foreground name, any live explicit command, and
+all live Windows sessions count as busy for close confirmation. Foreground names
+stay in memory and are not displayed or logged.
 
-**Terminal Tab**:
-One selectable container inside a Terminal Window owning exactly one Live
-Terminal Session and its Terminal Surface. Closing a tab terminates only its
-session, and a window's last tab closing closes the window. Tabs are
-ephemeral: their order may be changed by dragging within their current window,
-but they are not saved, restored, or moved between windows — capabilities
-deferred rather than permanently rejected (ADR 0016).
-_Avoid_: saved tab, workspace, split pane
+**Window Chrome** — Controls around the terminal, including the hideable title
+area and tab strip. macOS uses native window buttons; Linux and Windows draw a
+themed title row with native window actions.
 
-**Always-on-Top Window**:
-A Terminal Window temporarily kept above ordinary windows using the native
-macOS floating level. `Window → Always on Top` toggles only the selected window;
-`window.alwaysOnTop` defines the default for newly created windows, and the menu
-never rewrites User Configuration.
-_Avoid_: global always-on-top mode, overlay, pinned session
+**Always-on-Top Window** — A window temporarily kept above ordinary windows by
+its native floating behavior. The menu toggles the selected window; configuration
+sets the default for new windows.
 
-**Window Chrome**:
-Visible application or operating-system controls surrounding the Terminal
-Surface. OMXTerm preserves blended native macOS controls on the left and draws
-its own compact themed title row on Linux and Windows with controls on the
-right. The title area may be hidden independently of the tab strip; a small
-hover-revealed drag handle replaces it outside fullscreen. Configuration sets
-initial visibility for new windows, while toggles are ephemeral per window.
-_Avoid_: Chrome, browser header, terminal UI
+**Window Font Zoom** — A temporary font-size adjustment shared by all tabs in
+one window, relative to its configured baseline.
 
-**Live Terminal Session**:
-An active shell and its terminal state owned by OMXTerm. The session lasts only
-as long as its owning tab: closing it terminates its processes, and shell exit
-removes the now-inactive Terminal Surface. Native termination is asynchronous;
-application quit waits for actual owned session exits even after their windows
-or controllers are disposed. Reconnection and preservation belong to external
-session managers such as tmux.
-_Avoid_: saved session, persistent session, tmux session
+**Terminal Title** — A sanitized, bounded session label from OSC 0/2, shown on
+the tab and selected window. It is untrusted display text, excluded from logs
+and PTY replies.
 
-**Default Shell**:
-The interactive shell OMXTerm selects when the user has not requested an
-explicit command: the operating-system-configured shell on macOS and Linux, or
-the configured `windowsShell` with the documented PowerShell and ComSpec
-fallbacks on Windows.
-_Avoid_: bundled shell, OMXTerm shell, hard-coded zsh
+**Terminal Bell** — A silent BEL request: a title marker and, for an unfocused
+window, one native attention request until focus or interaction clears it.
 
-**Busy Session**:
-A Live Terminal Session whose PTY foreground process is not the idle Default
-Shell — something is running in it. Close confirmations ask only for Busy
-Sessions; the foreground process name is an in-memory detail that is never
-logged, displayed, or transmitted, and an unreadable name counts as Busy
-(ADR 0017).
-_Avoid_: dirty session, active tab, process inspection beyond the foreground
-name
+## Appearance and configuration
 
-**Initial Working Directory**:
-The directory inherited by a newly launched Default Shell. It is the user's home
-directory unless a future explicit launch request says otherwise.
-_Avoid_: application directory, repository directory, inherited launcher cwd
+See [configuration and local state](docs/spec.md#configuration-and-local-state)
+and the [configuration guide](docs/configuration.md).
 
-**User Configuration**:
-The versioned, validated JSON document containing the user's explicit OMXTerm
-preferences. Users edit this document directly; a future graphical preferences
-interface could use the same configuration source.
-_Avoid_: settings database, custom configuration language, application state
+**User Configuration** — The versioned, validated `config.json` containing the
+user's preferences. OMXTerm creates an initial kit when no configuration exists;
+subsequent edits belong to the user.
 
-**User Configuration Reload**:
-The explicit manual action that rereads and validates the complete User
-Configuration through the startup boundary. A valid document is applied
-atomically according to the ownership of each preference. A failed reload keeps
-the last valid in-memory configuration active and reports the new error. OMXTerm
-does not watch the file or apply only part of a document.
-_Avoid_: theme reload, automatic reload, partial configuration reload
+**User Configuration Reload** — A manual, complete validation and atomic update
+of preferences. A failed reload keeps the last valid in-memory configuration.
+Existing Surfaces retain their font family and line height until restart; new
+tabs use the latest values.
 
-**Terminal Payload**:
-The opaque input and output exchanged between the user-facing terminal and its
-processes. It belongs to the user and is transported without becoming
-application history, diagnostics, or persisted state.
-_Avoid_: transcript, application event, diagnostic data
+**Terminal Theme** — The terminal palette: foreground, background, cursor,
+selection and ANSI colors. The bundled default is `omtheme`.
 
-**Inline Terminal Image**:
-A bounded static PNG or raw-RGBA image carried as memory-only Terminal Payload
-through a pinned Kitty graphics protocol subset and rendered on a browser canvas
-owned by a direct Terminal Surface. It remains cell-anchored terminal output
-rather than a file, clipboard transfer, application image viewer, remote
-resource, or persisted attachment. OMXTerm claims only the pinned Pi- and
-Chafa-compatible paths; multiplexer passthrough and other image protocols remain
-unsupported.
-_Avoid_: image upload, clipboard image, terminal attachment, image viewer
+**Terminal Font Stack** — The ordered fonts used to render terminal text.
+An explicitly configured installed family takes precedence; otherwise FiraCode
+Nerd Font Mono is the default, with bundled and OS fallback faces for coverage.
 
-**Local Image Preview**:
-A temporary renderer overlay for one explicitly selected or activated local
-static PNG or JPEG. Activation may use a literal authority-free `file:///` URL
-or an unambiguous native absolute path token visible in Terminal Payload.
-Electron main validates and bounds the regular-file read, while the renderer
-receives only image bytes and releases its Blob source on dismissal. It is
-separate from Terminal Payload and Inline Terminal Images and never infers a
-shell working directory, relative path, remote file, or OSC 8 target. Visible
-path text always names a file on the OMXTerm host, even when SSH produced it.
-_Avoid_: inline image, file browser, remote image, image attachment
+**Option Key Mode** — The macOS `keyboard.optionAsAlt` choice: preserve native
+layout input (`none`), or use `left`, `right` or `both` Option keys as terminal Alt.
 
-**Operational Event**:
-Structured safe metadata about behavior owned by OMXTerm for human and
-automated local diagnosis, such as lifecycle, configuration validation, IPC,
-PTY control, resize, and application failures. Operational Events never include
-Terminal Payload or private input contents.
-_Avoid_: terminal output, command history, session transcript
+**Snippets Sidebar** — A per-window list loaded from the user's `snippets.json`.
+Activating a snippet sends its body through Protected Paste to the selected tab;
+`execute` controls whether Enter is appended.
 
-**Application Network Boundary**:
-OMXTerm itself makes no network requests in its first version: no telemetry,
-analytics, crash reporting, update checks, or remote log delivery. Operational
-Events remain in local JSONL logs. Processes running inside a Live Terminal
-Session retain their ordinary network access, and an External Link may be
-opened only after the user's explicit activation; neither is application
-telemetry.
-_Avoid_: offline shell, network sandbox, anonymous telemetry
+## Terminal data and interaction
 
-**Clipboard Boundary**:
-The explicit exchange between the Terminal Surface and the operating-system
-clipboard. User copy and paste are deliberate actions; text selection alone
-does not copy. Programs may request write-only clipboard access through OSC 52,
-but cannot read or clear the host clipboard.
-_Avoid_: selection clipboard, clipboard synchronization, clipboard history
+See [terminal behavior](docs/spec.md#terminal-behavior) and
+[clipboard behavior](docs/spec.md#clipboard).
 
-**Protected Paste**:
-A paste that requires confirmation because its contents could execute directly
-as multiple commands or contain control characters. Bracketed paste is passed
-through without this confirmation because the receiving process has explicitly
-enabled paste-aware handling. Clipboard contents never become diagnostics.
-_Avoid_: paste filtering, command validation, safe command
+**Terminal Payload** — Private input and output exchanged with terminal
+processes. It is transported without becoming application history, logs or
+persisted state.
 
-**Clipboard Image Input**:
-An image attachment read from the operating-system clipboard by a local
-terminal application after OMXTerm forwards that application's keyboard
-shortcut. Image bytes do not pass through the PTY or become Terminal Payload.
-_Avoid_: image paste payload, terminal image upload, OSC 52 image
+**Scrollback Buffer** — In-memory output retained above a session's visible
+screen. Each session has its own buffer, with an approximate configured line
+target and an independent core byte limit; zero lines disables retention.
 
-**Scrollback Buffer**:
-The in-memory lines retained above a Live Terminal Session's visible viewport.
-User Configuration sets `scrollback.lines`; the default is 10,000, zero
-disables retention, and values above 100,000 are rejected rather than silently
-clamped. For Restty, positive values approximate physical history rows through
-whole-page Ghostty eviction and remain independently capped at 10,000,000
-bytes; zero uses the core's no-history path. The buffer is ephemeral and its
-memory cost is paid independently by every Live Terminal Session.
-_Avoid_: terminal history, persisted output, transcript
+**Terminal Capability Identity** — The environment advertised to programs:
+`TERM=xterm-256color`, `COLORTERM=truecolor`, `TERM_PROGRAM=OMXTerm` and the running
+version in `TERM_PROGRAM_VERSION`.
 
-**Terminal Title**:
-The single-line printable label of a Live Terminal Session, shown on its
-Terminal Tab and mirrored by the Terminal Window while that tab is selected. A
-local process may request it through OSC 0 or OSC 2, but OMXTerm sanitizes and
-bounds the display value, never reports it back to the PTY, and never treats
-it as an Operational Event or trustworthy application metadata.
-_Avoid_: session name, shell identity, logged command
+**Shell Integration** — Terminal-specific shell startup hooks. OMXTerm leaves
+shell initialization to the user and injects no hooks.
 
-**External Link**:
-An HTTP or HTTPS URL whose literal destination is visible in Terminal Payload.
-It remains untrusted process output: activation requires an explicit platform
-gesture and independent validation by the Electron main process before the
-operating system may open it. OSC 8 metadata is not an External Link because it
-can hide a different destination behind arbitrary visible text.
-_Avoid_: trusted link, renderer navigation, arbitrary protocol URL
+**Clipboard Boundary** — Explicit text copy/paste between the terminal and OS
+clipboard. Selection alone does not copy. Programs can request bounded OSC 52
+writes, but cannot read or clear the clipboard.
 
-**Terminal Bell**:
-A process request for the user's attention using BEL. OMXTerm keeps it silent,
-prepends `🔔` to the ringing session's Terminal Title until the user focuses or
-interacts with it, and requests native platform attention once only when that
-session's window is unfocused. The native request is an informational Dock
-bounce on macOS and per-window attention on Linux and Windows; focus, terminal
-interaction, or window disposal cancels it. Native desktop policy determines
-its visual presentation.
-_Avoid_: notification, alarm, terminal error
+**Protected Paste** — Confirmation for multiline or control-character paste when
+the receiving process has not enabled bracketed paste. It is not command
+validation; clipboard contents remain private.
 
-**Release Artifact**:
-A ready-to-run native arm64 package built from an accepted source commit and
-associated with an authorized version tag alongside the public source code and a
-reproducible local build path. The initial formats are DMG for macOS, AppImage
-for Linux, and NSIS for Windows. Each exact artifact receives native build and verification evidence. An
-owner-requested release covers verification and publication without additional
-approval rounds; publication includes the artifact's SHA-256 checksum. Initial artifacts carry no verified publisher
-identity. The macOS application has a complete ad-hoc code seal for bundle
-integrity, without an Apple Developer ID signature or notarization. macOS
-release documentation explains the resulting Gatekeeper review and links to
-Apple's current instructions without asking users to disable system-wide
-security protections. Provenance identifies the build and publisher; it does
-not amount to an independent security audit, platform trust decision, or
-guarantee about every dependency.
-_Avoid_: signed release, notarized release, compile-only distribution
+**Clipboard Image Input** — A local terminal program reading an image from the
+OS clipboard after OMXTerm forwards its shortcut. Image bytes do not pass through
+the PTY.
+
+**Inline Terminal Image** — A bounded, memory-only PNG or raw-RGBA image rendered
+as cell-anchored output through the supported Kitty protocol subset. The claimed
+Pi and Chafa paths require direct sessions rather than multiplexer passthrough.
+
+**Local Image Preview** — A temporary overlay for a local static PNG or JPEG,
+explicitly chosen or activated from a visible absolute path or `file:///` URL.
+Main validates the bounded file read. A path always names a file on the OMXTerm
+host, even when SSH produced the text.
+
+**External Link** — A literal visible HTTP(S) URL in terminal output. Opening it
+requires explicit user activation and validation in main. Hidden OSC 8
+destinations are not used.
+
+## Diagnostics and distribution
+
+**Operational Event** — Safe structured metadata about OMXTerm lifecycle,
+validation, IPC, PTY control or failures. Local logs exclude Terminal Payload,
+clipboard, configuration and environment contents, commands and titles.
+
+**Application Network Boundary** — OMXTerm makes no application network requests.
+Child processes retain normal network access; explicitly activated web links
+open through the OS.
+
+**Release Artifact** — An exact native ARM64 package (DMG, AppImage or NSIS)
+published with its source tag, checksum and native verification evidence.
+Artifacts have no verified publisher identity; the macOS app has an ad-hoc
+integrity seal, not Developer ID signing or notarization. See the
+[release procedure](docs/release.md).

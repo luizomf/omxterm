@@ -1,37 +1,17 @@
-<!--
-Thanks for contributing. Keep this pull request focused and remove credentials,
-private paths, terminal input or output (Terminal Payload), clipboard contents,
-configuration or environment contents, and session transcripts.
--->
+<!-- Thanks for contributing! Use synthetic examples and keep private data out of this PR. -->
 
 ## Summary
 
-<!-- Explain the problem and the material changes in a few sentences. -->
+<!-- What problem does this solve? For an issue with acceptance criteria, explain how the change meets them. -->
 
 ## Related issue
 
-<!-- Use "Closes #<number>" when applicable; otherwise replace the line below with "N/A". -->
+<!-- Use "Closes #123" when applicable, or remove this section. -->
 
-Closes #
+## Verification
 
-## Acceptance-criteria mapping
+<!-- List commands and results, including any relevant checks you could not run and why. -->
 
-<!-- Map each issue criterion to the change, or write "N/A" for an allowed PR without an issue. -->
+## Documentation and concerns
 
-- [ ]
-
-## Verification evidence
-
-<!-- List each exact command and result. State why any relevant check was unavailable; never infer a platform pass. -->
-
-## Security impact
-
-<!-- Describe boundary or threat-model changes. Write "None" when applicable. -->
-
-## Documentation impact
-
-<!-- List updated docs or explain why no documentation change is required. -->
-
-## Deviations and concerns
-
-<!-- Call out intentional deviations, unresolved risk, or unavailable evidence. Write "None" when applicable. -->
+<!-- Link updated guides. Mention any security impact, intentional deviation or unresolved concern. -->

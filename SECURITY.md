@@ -1,39 +1,26 @@
-# Security Policy
+# Security policy
 
-## Supported reports
+## Report a vulnerability privately
 
-Reports affecting either current `main` or the current published release are
-considered. Older releases may not receive security fixes.
+Send suspected vulnerabilities to the email address on the
+[maintainer's GitHub profile](https://github.com/luizomf), rather than opening a
+public issue or PR. Reports affecting current `main` or the latest published
+release are considered; older releases may not receive fixes.
 
-## Private reporting
+Include the affected version or commit, a minimal safe reproduction, the
+security impact, and a possible mitigation if known. Use synthetic data: keep
+real terminal or clipboard contents, session transcripts, command history,
+configuration or environment contents, credentials, and private paths or
+hostnames out of the report.
 
-Do not open a public issue or pull request for a suspected vulnerability. Send
-the report privately to the email address available on the
-[configured maintainer GitHub profile](https://github.com/luizomf).
+Responses are best effort, without a guaranteed acknowledgment or fix timeline.
+Please coordinate public disclosure with the maintainer.
 
-Include only:
+## Destructive native tests
 
-- the affected version or source commit;
-- a minimal, safe reproduction;
-- the security impact; and
-- a proposed mitigation, if known.
-
-Do not include Terminal Payload, terminal or session transcripts, command
-history, clipboard data, configuration or environment contents, credentials or
-secrets, or private paths or hostnames.
-
-Responses are best effort; no acknowledgment, fix, or disclosure timeline is
-guaranteed. Please coordinate public disclosure with the maintainer before
-publishing vulnerability details.
-
-## Native installer verification safety
-
-Exact Windows NSIS verification is a destructive installation test, not a
-sandboxed extraction. A temporary `/D=` destination does not isolate an existing
-OMXTerm installation, registration, shortcuts, or running sessions. The verifier
-refuses installation by default and requires deliberate disposable-VM CLI
-consent; environment variables are not consent. Unknown inspection and live
-process conflicts remain refusals. Follow [the native release procedure](docs/release.md),
-preserve a recoverable snapshot and user data, and never weaken OS protections
-or run the installer test on a daily-use machine. Unpacked diagnostics are
-separate and do not establish exact-installer acceptance.
+Windows installer verification can replace an existing installation, even with
+a temporary destination. It requires an authorized disposable VM, a recovery
+snapshot, and the explicit CLI opt-in in the
+[Windows release procedure](docs/release.md#windows-arm64).
+[Native fixture interruption tests](docs/development.md#interruption-regressions)
+also require an authorized disposable VM and recovery snapshot.

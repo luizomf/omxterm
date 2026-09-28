@@ -1,59 +1,93 @@
-# Linux: customize OMXTerm
+# Linux quick start
 
-[Install OMXTerm](../../README.md#linux) and open it once first. Check the ARM64
-and distribution requirements there before downloading. You can already use the
-terminal: it creates a starter configuration automatically. This optional tutorial
-adds a complete editable settings file, a theme, and seven snippets (saved commands
-you can insert). It keeps bundled fonts and all 27 default shortcuts. The snippets
-assume Bash; your account shell is unchanged.
+[Install OMXTerm](../installation.md#linux) and open it. Your account shell,
+bundled font, and colors are ready to use. This short walkthrough makes one
+setting change and tries a saved command.
 
-Want only one change? Edit your existing file using the
-[configuration guide](../configuration.md) instead of replacing the starter kit.
+## 1. Open your settings folder
 
-## 1. Get the examples
-
-In the repository on GitHub, select **main**, then choose **Code → Download ZIP**
-and extract it. Open `docs/quick-start/files/linux/` in the extracted folder.
-These examples require **OMXTerm 0.17.0 or newer**; downloading the source ZIP
-here is only a way to get the examples, not an instruction to build the app.
-
-You need three files:
-
-- [config.json](files/linux/config.json) — settings and shortcuts;
-- [snippets.json](files/linux/snippets.json) — example commands;
-- [themes/omtheme.json](files/linux/themes/omtheme.json) — editable colors.
-
-## 2. Copy the files
-
-In Bash, create your configuration folder:
+On first launch, OMXTerm creates `config.json`, `snippets.json`, and an editable
+theme. Run this in Bash to print their folder:
 
 ```bash
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omxterm"
-mkdir -p "$config_dir/themes"
+mkdir -p "$config_dir"
 printf '%s\n' "$config_dir"
 ```
 
-Open the printed path in your file manager (`Ctrl+L` accepts a path in many
-file managers). Copy the two JSON files into it and `omtheme.json` into its
-`themes` subfolder. **Back up any existing destination files before replacing
-them.** If you already have a configuration you like, merge only the settings
-you want instead of replacing it.
+Open that path in your file manager; **Ctrl+L** accepts a path in many file
+managers. The default is `~/.config/omxterm`; a non-empty `XDG_CONFIG_HOME`
+selects another root. Back up files before editing them with a plain-text editor.
 
-Your files should look like this (a non-empty `XDG_CONFIG_HOME` replaces `~/.config`):
+If you already had a configuration before installing, OMXTerm keeps it. For
+missing files, use the [minimal examples](../configuration.md#quick-start-use-the-bundled-defaults).
 
-```text
-~/.config/omxterm/
-├── config.json
-├── snippets.json
-└── themes/
-    └── omtheme.json
-```
+## 2. Make the text comfortable
+
+Open `config.json`, find `font.size`, and change `16` to `18`. Save, then press
+and release **Alt alone** to open the application menu. Choose **View → Reload
+User Configuration** (`Ctrl+Shift+,`). The text gets larger; change it back to
+`16` to undo it. If a notice reports an error, fix the named field and reload.
+
+For temporary font zoom, use `Ctrl++` / `Ctrl+-`; `Ctrl+0` returns to your
+configured size. See [fonts and spacing](../configuration.md#add-one-display-change)
+for line height, padding, and installed fonts.
+
+## 3. Try a snippet
+
+Open **View → Toggle Snippets** (`Ctrl+Shift+S`) and click the starter greeting.
+Review the inserted command, then press Enter. Snippets are saved text you can
+insert into the current tab.
+
+Edit `snippets.json` to add your own commands, then close and reopen the sidebar.
+Start with the [single-line snippet example](../configuration.md#snippets).
+Its `execute: false` leaves the final Enter to you.
+
+## 4. Make it yours
+
+- **Colors:** edit a `#RRGGBB` value in `themes/omtheme.json` and reload, or use
+  [OMXTerm Studio](../configuration.md#edit-visually-with-omxterm-studio).
+- **Background:** try [transparency and blur](../configuration.md#background-transparency-and-blur).
+  For GNOME, KDE Plasma, or Hyprland setup, see [Linux desktop tips](linux-desktop.md).
+- **Window bars:** `Ctrl+Shift+D` toggles the title bar; `Ctrl+Shift+B` toggles
+  the tab bar. [Set defaults for new windows](../configuration.md#start-with-hidden-bars).
+- **Small interface or VM graphics trouble:** see [HiDPI scaling](linux-desktop.md#small-interface-text-on-a-hidpi-display)
+  or [Try Omarchy troubleshooting](linux-desktop.md#try-omarchy-vm-graphics-troubleshooting).
+- **Next steps:** [everyday use](../usage.md), [shortcuts](../configuration.md#keybinds),
+  and [when settings take effect](../configuration.md#reloading-user-configuration).
+
+## Optional complete examples
 
 <details>
-<summary>Prefer copying in the terminal? Use this backup-aware block.</summary>
+<summary>Use a full configuration, editable theme, and seven Bash snippets</summary>
 
-Set `example` to the extracted example folder. Run in Bash. It backs up existing
-files and refuses symlink destinations rather than overwriting them.
+These files work with **OMXTerm 0.17.0 or newer** and use bundled fonts and all
+built-in shortcuts. The snippets assume Bash; the configuration keeps your
+account shell:
+
+- [config.json](files/linux/config.json)
+- [snippets.json](files/linux/snippets.json)
+- [themes/omtheme.json](files/linux/themes/omtheme.json)
+
+Download each linked file using GitHub's **Download raw file** button. To get
+all examples together, choose **Code → Download ZIP** on the repository's
+**main** branch, extract it, and open `docs/quick-start/files/linux/`.
+
+Back up the destination files, then copy `config.json` and `snippets.json` into
+your settings folder and `omtheme.json` into its `themes` subfolder. Replacing
+these files replaces your current preferences; merge individual settings to
+keep other choices. Reload configuration and reopen the snippets sidebar.
+
+Try **Open current folder**: it inserts ` xdg-open .`; press Enter to open your
+file manager. All seven snippets are single-line and have `execute: false`.
+They use `xdg-open`, `ip`, `nslookup`, `git`, and GNU `base64 -w0`. Install a
+missing tool through your distribution or edit the snippet. The palette example
+uses Bash syntax.
+
+### Copy from an extracted ZIP in the terminal
+
+Set `example` to your extracted folder. This Bash block backs up existing files
+and stops at symlink destinations so it does not overwrite their targets.
 
 ```bash
 example="/path/to/extracted/omxterm/docs/quick-start/files/linux"
@@ -78,90 +112,33 @@ apply_quick_start() {
 apply_quick_start
 ```
 
-Keep the printed backup path. If copying fails, check the copied files before
-retrying. To undo, restore each original to its matching path, for example
-`cp -p "$backup/config.json" "$config_dir/config.json"`. Remove only files newly
-added by this tutorial, not the whole configuration folder.
+Keep the printed backup path. If copying stops, inspect what was copied before
+retrying. Restore originals to undo, for example
+`cp -p "$backup/config.json" "$config_dir/config.json"`; remove only newly
+added files without originals, not the whole settings folder.
 
 </details>
 
-## 3. Reload and try it
-
-1. Press and release **Alt alone** to open the application menu. Choose
-   **View → Reload User Configuration** (`Ctrl+Shift+,`). If an error appears,
-   correct the named file or field and reload.
-2. Open **View → Toggle Snippets** (`Ctrl+Shift+S`).
-3. Click **Open current folder**, review the inserted ` xdg-open .`, and press
-   Enter. Your desktop file manager should open the shell's current folder.
-
-All seven example snippets have `execute: false`: OMXTerm does not append Enter.
-The commands use `xdg-open`, `ip`, `nslookup`, `git`, and GNU `base64 -w0`.
-If a tool is missing, install it through your distribution or edit that snippet.
-The palette snippet uses Bash syntax.
-
-To see a visible setting change, edit `font.size` in `config.json` from `16` to
-`18` and reload. To customize colors, edit a `#RRGGBB` value in
-`themes/omtheme.json` and reload. Restoring `16` or your backed-up files reverses
-the change.
-
-## 4. Make it yours
-
-Edit existing fields in `config.json` with a plain-text editor; do not add
-comments or duplicate objects. Keep booleans and numbers unquoted.
-
-| Preference                                  | Try this                                                                                                                                                  |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `window.blur` / `window.transparency`       | Change `false` / `0` to `true` / `0.35`, save, and reload. The desktop controls whether blur is available.                                                |
-| `window.showTitleBar` / `window.showTabBar` | Set the defaults for new windows. Use `Ctrl+Shift+D` / `Ctrl+Shift+B` to toggle the current window instead.                                               |
-| `keybinds`                                  | All 27 defaults are included. For example, change `toggleSnippets` to `Control+Alt+Shift+S`, then reload. Remove an override to use its built-in default. |
-
-For **Ubuntu GNOME**, the optional **Blur my Shell** extension can blur OMXTerm;
-for **Fedora KDE Plasma**, use the built-in **Blur** desktop effect; for
-**Hyprland/Omarchy**, enable background blur in the compositor configuration.
-Follow the [step-by-step Linux desktop tips](../configuration.md#linux-desktop-tips).
-These are desktop customizations, not required dependencies. Desktop/extension
-settings may let you adjust blur strength; OMXTerm itself has no strength setting.
-In a tiled layout, hiding the title bar is also optional: set `window.showTitleBar`
-to `false` for new windows, or toggle the current one with `Ctrl+Shift+D`.
-
-Using **Try Omarchy on a Mac**? Its virtual GPU can need separate
-[graphics launch options](../configuration.md#try-omarchy-vm-graphics-troubleshooting).
-Those VM-specific options are not a general Hyprland requirement. The
-[upcoming `linux_install.sh` helper](../linux-installer.md) can save them with one
-explicit compatibility choice; the current 0.17.0 helper still uses the manual
-instructions.
-
-Blur and transparency start **off** in the example and apply live after reload.
-Text stays solid, but programs that paint their own background may remain opaque.
-Font family and line height apply to new tabs after reload; existing tabs need
-a restart. Snippets reload when you close and reopen their sidebar.
-
-See [all shortcuts](../usage.md#built-in-platform-shortcuts),
-[reload behavior](../configuration.md#reloading-user-configuration), and
-[configuration troubleshooting](../usage.md#configuration-changes-do-not-appear).
-
-## Optional Bash and Vim preferences
-
-**Skip this section unless you want to change how your shell/editor works.**
-Dotfiles are hidden preference files for other programs, not OMXTerm settings.
-OMXTerm does not require them. The examples [bashrc](files/linux/bashrc),
-[inputrc](files/linux/inputrc), and [vimrc](files/linux/vimrc) are separate
-shell/editor preferences. Prefer copying individual settings into your existing files.
-
-They enable vi-style command-line editing (`Esc` or `jj` leaves insert mode),
-quiet bells, and history that skips leading-space commands. Vim uses the `slate`
-colors, two-space indentation, and `Space w` to save. When started without file
-arguments, it saves/loads a session per directory under `~/.vim/sessions/`.
-Those session files contain executable Vim commands and paths; do not load
-untrusted sessions. Clipboard support depends on your Vim build; `unnamed` uses
-the primary selection on X11 rather than the clipboard selection.
-
 <details>
-<summary>Replace selected dotfiles with backups (optional)</summary>
+<summary>Optional Bash and Vim preferences</summary>
 
-This replaces the chosen files, including their existing prompt, aliases, and
-plugins. Set `example` as above and edit the file list to choose what to copy.
-If you use `INPUTRC`, adapt its destination.
+The example [bashrc](files/linux/bashrc), [inputrc](files/linux/inputrc), and
+[vimrc](files/linux/vimrc) customize the shell/editor separately from OMXTerm.
+Download them as above and copy individual settings into your existing dotfiles
+(hidden preference files such as `.bashrc`).
+
+These examples enable vi-style editing (`Esc` or `jj` leaves insert mode), quiet
+bells, and history that skips leading-space commands. Vim uses `slate` colors,
+two-space indentation, and `Space w` to save. When started without file arguments,
+it saves/loads per-directory sessions under `~/.vim/sessions/`. Those contain
+executable Vim commands and paths; load only trusted sessions. Clipboard support
+depends on your Vim build; `unnamed` uses the primary selection on X11.
+
+### Replace selected dotfiles with backups
+
+This replaces existing prompts, aliases, and plugins in the selected files.
+Set `example` to the extracted Linux example folder first, as in the block
+above. If you use `INPUTRC`, adapt its destination.
 
 ```bash
 copy_optional_dotfiles() {
@@ -178,8 +155,8 @@ copy_optional_dotfiles() {
 copy_optional_dotfiles
 ```
 
-Start a new shell or Vim to apply its settings. To restore an original, use,
-for example, `cp -p "$dot_backup/.bashrc" "$HOME/.bashrc"`. Keep the earliest
-backup if you repeat this step; remove only newly added files without originals.
+Start a new shell or Vim to apply changes. To restore, use, for example,
+`cp -p "$dot_backup/.bashrc" "$HOME/.bashrc"`. Keep the earliest backup if you
+repeat the copy; remove only newly added files without originals.
 
 </details>

@@ -1,75 +1,47 @@
 # Issue tracker: GitHub
 
-Specs, tickets, and issues for this repository live as GitHub issues in
-`luizomf/omxterm`.
+Specs, tickets and issues live in `luizomf/omxterm`. Contributors use the
+[fork-and-PR workflow](../../CONTRIBUTING.md); maintainers handle labels,
+assignments, dependencies and roadmap updates.
 
-## Contributor path
+## Common operations
 
-Contributors can search public issues, open a bug report or scoped proposal, and
-submit a pull request through fork-and-pull. When a contribution needs a label,
-assignment, dependency, roadmap, or closure update, request it in the issue or
-pull request and a maintainer can apply it.
+Use `gh` with `--repo luizomf/omxterm`, including from a fork checkout:
 
-Those tracker updates and all versioning or release operations require explicit
-maintainer authority. Repository agents use the operations below only when they
-carry that authority in this repository; instructions in an external fork do
-not provide it.
+```sh
+gh issue view <number> --repo luizomf/omxterm --json title,body,labels,comments,state
+gh issue list --repo luizomf/omxterm --state open --json number,title,labels
+gh issue create --repo luizomf/omxterm --title "..." --body-file <file>
+gh issue comment <number> --repo luizomf/omxterm --body-file <file>
+gh issue edit <number> --repo luizomf/omxterm --add-label "..."
+gh issue edit <number> --repo luizomf/omxterm --remove-label "..."
+gh issue close <number> --repo luizomf/omxterm --comment "..."
+```
 
-## Maintainer operations
+Use a body file or `--body-file -` with a quoted heredoc for multiline text.
+See [triage labels](triage-labels.md) for the skill-role mapping.
 
-Use the `gh` CLI for tracker operations:
+GitHub shares one number space across issues and PRs. Resolve an ambiguous
+reference with `gh pr view <number> --repo luizomf/omxterm`, falling back to
+`gh issue view`. Treat an external PR as a contribution to review; a substantial
+feature proposal starts as an issue so scope can be discussed first.
 
-- **Create an issue**: `gh issue create --title "..." --body "..."`. Use a
-  heredoc for multiline bodies.
-- **Read an issue**: `gh issue view <number> --comments`, filtering comments by
-  `jq` and also fetching labels.
-- **List issues**: `gh issue list --state open --json
-  number,title,body,labels,comments` with appropriate label and state filters.
-- **Comment on an issue**: `gh issue comment <number> --body "..."`.
-- **Apply or remove labels**: `gh issue edit <number> --add-label "..."` or
-  `--remove-label "..."`.
-- **Close an issue**: `gh issue close <number> --comment "..."`.
+When a skill says **publish to the issue tracker**, create a GitHub issue.
+**Fetch the ticket** means read its body, comments, labels and current state.
 
-Run commands inside this clone so `gh` resolves the repository from its remote.
+## Wayfinding
 
-## Pull requests and feature proposals
+The `wayfinder` skill uses a map issue and child tickets:
 
-Feature proposals start as issues so scope and dependencies can be evaluated
-before implementation. The triage workflow reviews an external pull request as
-a contribution, not automatically as a feature request.
-
-GitHub shares one number space across issues and pull requests. A bare `#42`
-may be either; resolve it with `gh pr view 42` and fall back to
-`gh issue view 42`.
-
-## Skill vocabulary
-
-- When a skill says **publish to the issue tracker**, create a GitHub issue.
-- When a skill says **fetch the relevant ticket**, run
-  `gh issue view <number> --comments` and fetch its labels.
-
-## Maintainer wayfinding operations
-
-The `wayfinder` skill represents a map as one GitHub issue with child issues as
-tickets. The operations in this section require maintainer authority because
-they mutate repository tracker state.
-
-- **Map**: label it `wayfinder:map` and keep Notes, Decisions-so-far, and Fog in
-  its body.
-- **Child ticket**: use a native GitHub sub-issue. If sub-issues are unavailable,
-  add the child to a task list in the map and put `Part of #<map>` at the top of
-  the child body. Use `wayfinder:<type>` labels for `research`, `prototype`,
-  `grilling`, or `task`.
-- **Blocking**: prefer GitHub's native issue dependencies. The dependency API
-  requires the blocker's numeric database `id`, not its issue number or
-  `node_id`. If native dependencies are unavailable, use a
-  `Blocked by: #<number>` line at the top of the child issue.
-- **Frontier**: the first open, unassigned child in map order with no open
-  blocker is the next claimable ticket.
-- **Claim**: assign the issue to the current authenticated user; this is the
-  session's first tracker write.
-- **Resolve**: record the answer in a comment, close the child, and add a compact
-  decision pointer to the map.
-
-A closed blocker no longer blocks a child. Revalidate live issue and dependency
-state before claiming or advancing work.
+- **Map:** label `wayfinder:map`; keep Notes, Decisions-so-far and Fog in its body.
+- **Child:** use a native GitHub sub-issue and a `wayfinder:<type>` label
+  (`research`, `prototype`, `grilling` or `task`). If sub-issues are unavailable,
+  list the child in the map and put `Part of #<map>` at the top of the child body.
+- **Blocking:** prefer native issue dependencies. The API needs the blocker's
+  numeric database `id`, not its issue number or `node_id`. Fallback: put
+  `Blocked by: #<number>` at the top of the child body.
+- **Frontier:** the first open, unassigned child in map order with no open blocker.
+- **Claim:** assign it to the authenticated user as the session's first tracker
+  write, after checking current issue and dependency state.
+- **Resolve:** comment with the answer, close the child, and add a compact decision
+  pointer to the map. Closed blockers no longer block their children.

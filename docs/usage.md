@@ -1,80 +1,52 @@
 # Everyday OMXTerm use
 
-[Install OMXTerm](../README.md#installation), then launch it to open your shell
-in your home directory. No configuration is required. OMXTerm is the **terminal**
-(the window and display); your **shell** is the program reading commands inside
-it, such as Zsh, Bash, or PowerShell. Changing terminals does not install those
-programs or rewrite their preferences.
+[Install OMXTerm](installation.md), open it, and start typing. It launches your
+usual shell in your home folder; on Windows, the default is Windows PowerShell.
 
-- [Tabs and windows](#windows-tabs-and-sessions)
-- [Shortcuts](#built-in-platform-shortcuts)
-- [Copy, paste, and file paths](#copy-and-paste)
-- [Web links](#opening-visible-web-links)
-- [Local and inline images](#previewing-local-images)
-- [Troubleshooting](#troubleshooting)
+**[Tabs](#windows-tabs-and-sessions)** · **[Shortcuts](#built-in-platform-shortcuts)** ·
+**[Copy and paste](#copy-and-paste)** · **[Images](#previewing-local-images)** ·
+**[Troubleshooting](#troubleshooting)**
 
-For fonts, themes, keybinds, and snippets, see [Configuration](configuration.md).
-These guides follow the current source tree; the [README](../README.md) identifies
-the latest download, and [release notes](releases/) describe older versions.
+For fonts, colors, shortcuts, and snippets, see [Configuration](configuration.md).
 
 ## Windows, tabs, and sessions
 
-Choose **File → New Tab** for another session in the current window, or
-**File → New Window** for an independent window. Every tab starts its own shell.
+Choose **File → New Tab** for another session, or **File → New Window** for a
+separate window. Each tab starts its own shell.
 
-The tab bar appears when enabled and a window has at least two tabs. Click a tab to select
-it, drag it horizontally to reorder it, or use the shortcuts below. Next/previous
-tab wraps around; selecting a position that is not open does nothing.
+The tab bar appears when there are at least two tabs. Click to select a tab,
+drag to reorder it, or use the shortcuts below. **View → Toggle Tab Bar** hides
+or shows the bar; keyboard shortcuts still work while it's hidden.
 
-**View → Toggle Tab Bar** hides or enables the bar for the current window.
-Shortcuts and the native Window menu still switch tabs when it is hidden. The
-choice survives configuration reload. New windows use `window.showTabBar`, which
-is enabled by default.
-
-Tab order and sessions are not saved between launches. OMXTerm has no splits or
-cross-window tab moves. Use tmux or another session tool when work must survive
-closing a tab or window.
+Closing a tab ends its session. Closing a window ends all its sessions; closing
+the last window quits OMXTerm. Tabs and their order aren't saved between launches.
+Use a session manager such as tmux for work that needs to survive closing a tab.
 
 ### Closing tabs, windows, and the app
 
-Closing a tab ends its session. Closing a window ends all its sessions; closing
-the last tab closes the window, and closing the last window quits OMXTerm.
-The app waits for its native terminal processes to finish shutting down, so its
-process can briefly remain after the last window closes. Accepted Quit stops
-new session starts; cancelling a confirmation leaves existing sessions running.
-An ordinary shell exit closes its tab without confirmation.
+By default, OMXTerm asks before closing running work, with one confirmation per
+action. Idle shells close immediately on macOS and Linux. **Windows asks for
+every running session**, because it cannot reliably tell whether a shell is idle.
+You can turn confirmations off with `confirmClose` in your settings.
 
-By default, OMXTerm asks before closing running work. It checks the affected
-sessions and asks at most once per action. On macOS and Linux, an idle shell does
-not need confirmation; an unreadable foreground process counts as Busy.
-**On Windows, every live session counts as Busy** because ConPTY does not expose
-the foreground process name. Set `confirmClose` to `false` only if you want to
-disable these confirmations.
+Typing `exit` closes that shell's tab. The app may take a moment to finish
+shutting down its processes after its last window closes.
 
 ## Window controls
 
-- **Zoom** changes font size for every tab in the current window, including new
-  tabs. It is temporary; **Actual Size** returns to the configured baseline.
-- **View → Toggle Title Bar** hides or restores the selected window's title area
-  without restarting its sessions. With the bar hidden, move the pointer into
-  the top 150 px and drag the three dots at the top center. Only the small area
-  around the dots moves the window; the rest remains normal terminal input.
-  New windows use `window.showTitleBar`, enabled by default. On macOS the visible
-  area keeps native controls on the left, blended into the terminal background.
-  Linux and Windows have a compact themed row with title on the left and native
-  minimize, maximize/restore, and guarded close actions on the right.
-- **View → Toggle Full Screen** affects the selected window. Fullscreen hides
-  title chrome and the dot handle without changing your visibility choice;
-  leaving fullscreen restores it. Configured padding and the macOS system safe
-  area remain unchanged.
-- **Window → Always on Top** toggles the current window. To choose the default
-  for new windows, set `window.alwaysOnTop` in your configuration.
+- **Zoom** changes the font size in the current window. **Actual Size** resets it.
+- **View → Toggle Title Bar** hides or shows the title area. When it's hidden,
+  move your pointer near the top and drag the three dots to move the window.
+- **View → Toggle Full Screen** fills the display and temporarily hides the title
+  area. Leaving fullscreen restores your previous choice.
+- **Window → Always on Top** keeps the current window above ordinary windows.
 
-These window actions do not edit configuration files.
+These choices last for that window. Set defaults for new windows in
+[Configuration](configuration.md).
 
 ## Built-in platform shortcuts
 
-Application menus show the effective shortcuts, including your custom bindings.
+The app menus show your current shortcuts, including any custom bindings.
 
 | Action                    | macOS             | Linux and Windows  |
 | ------------------------- | ----------------- | ------------------ |
@@ -98,94 +70,78 @@ Application menus show the effective shortcuts, including your custom bindings.
 | Toggle Snippets           | `Cmd+Shift+S`     | `Ctrl+Shift+S`     |
 | Reload User Configuration | `Cmd+Shift+,`     | `Ctrl+Shift+,`     |
 
-For `+`, include the Shift needed to type the symbol: often `Ctrl+Shift+=` or
-`Cmd+Shift+=`. A dedicated keypad `+` needs no Shift.
+For `+`, include Shift when needed to type the symbol: often `Ctrl+Shift+=` or
+`Cmd+Shift+=`. A keypad `+` needs no Shift.
 
-On Linux and Windows, press and release **Alt alone** to open the native
-application menu popup. It appears with an 8 px inset below the title row, or
-at the content's top-left when the title is hidden or the window is fullscreen.
-Navigate with the native menu keys; Escape or a click outside dismisses it.
-Alt combinations and AltGr keep their normal behavior. An active Local Image
-Preview suppresses opening the popup. macOS keeps its normal native menu and
-Option-key behavior. Always on Top, Open Local Image, and Developer Tools are
-menu-only actions.
-To remap the supported shortcuts, use [keybinds](configuration.md#keybinds).
-Application shortcuts consume their key instead of sending it to the shell.
+On Linux and Windows, press and release **Alt alone** to open the application
+menu, including when the title bar is hidden. Press Escape to dismiss it.
+On macOS, use the menu bar at the top of the screen.
+
+Always on Top, Open Local Image, and Developer Tools are available through the
+menus. To change keyboard shortcuts, see [keybinds](configuration.md#keybinds).
 
 ## Copy and paste
 
-Select text, then use **Edit → Copy**, its shortcut, or the native context menu.
-Selection alone never copies. In a program that captures the mouse, hold **Shift**
-to select terminal text instead of sending mouse input to that program.
+Select text, then use **Edit → Copy**, its shortcut, or the right-click menu.
+In a program that captures the mouse, hold **Shift** while selecting text.
 
-Paste is also an explicit menu, shortcut, or context-menu action. Under the
-built-in bindings, bare `Ctrl+C` and `Ctrl+V` remain terminal input. This lets
-`Ctrl+C` interrupt a process and lets a child CLI handle `Ctrl+V` itself, for
-example to read an image from the system clipboard. OMXTerm does not send
-clipboard image bytes through the terminal.
-
-Plain text takes priority over clipboard file lists and is pasted unchanged.
+Use the Paste shortcut or menu to paste. **Ctrl+C interrupts a command**, while
+**Ctrl+V goes to the running program**. Some tools use Ctrl+V to attach clipboard
+images themselves. Selecting text alone doesn't copy it.
 
 ### Protected Paste
 
-**Bracketed paste** is a mode in which a program can distinguish pasted text
-from individually typed keys. If the receiving program has not enabled it,
-OMXTerm asks before
-pasting multiple lines or control characters. Choose **Paste** to send the whole
-text or **Cancel** to send nothing.
+OMXTerm asks before pasting multiple lines or control characters when the
+receiving program isn't set up to handle pasted text. Choose **Paste** to send
+the whole text or **Cancel** to send nothing.
 
-With bracketed paste enabled, the text is delivered as one paste-aware operation
-without that prompt. Review commands before executing them. Snippets and file
-path insertion use the same Protected Paste handling.
+Programs that enable **bracketed paste** can distinguish pasted text from typing,
+so they receive it without this prompt. Review commands before running them.
+Snippets and inserted file paths use the same handling.
 
 ## Inserting file and folder paths
 
-Drag files or folders from your file manager into OMXTerm to insert their
-absolute paths in the selected tab. Paste also inserts file paths when the
-clipboard contains a supported native file list and no plain text.
+Drag files or folders into OMXTerm to insert their full paths in the selected
+tab. Copying files in a file manager and using Paste also works when the clipboard
+contains a supported file list. Plain text takes priority if both are present.
 
-OMXTerm quotes each path, separates paths with spaces, and does not press Enter.
-Review the inserted text before running it. Quoting uses POSIX shell syntax on
-macOS/Linux and Windows PowerShell syntax on Windows, even if you selected Git
-Bash. Adjust it when working in another shell, SSH session, REPL, or a partially
-written quoted argument.
+OMXTerm quotes each path and separates them with spaces. You press Enter when
+ready. The quoting is designed for POSIX shells on macOS/Linux and Windows
+PowerShell on Windows. Adjust it if you're using another shell (including Git
+Bash on Windows), a remote session, or an unfinished quoted argument.
 
-On Windows, clipboard Paste currently reads only one Explorer path; dragging
-several files inserts them all. OMXTerm inserts paths without reading their files.
+On Windows, Paste currently inserts only one Explorer path; drag several files
+to insert them all.
 
 ## Opening visible web links
 
-Hold **Cmd** on macOS or **Ctrl** on Linux/Windows while pointing at a visible
-`http://` or `https://` URL. OMXTerm underlines the destination; click with that
-modifier held to open it in your browser. Check the visible destination first.
+Hold **Cmd** on macOS or **Ctrl** on Linux/Windows over an `http://` or `https://`
+URL. It becomes underlined; click while holding the key to open it in your browser.
 
 The whole URL must be visible, including wrapped lines. Scroll it into view if
-it will not activate. Hidden OSC 8 destinations are ignored; only the literal
-visible URL is opened. Modified clicks do not also reach a mouse-aware TUI.
+it won't activate. OMXTerm opens the visible URL rather than hidden link targets.
 
 ## Previewing local images
 
-Choose **File → Open Local Image…** and select a PNG or JPEG. A temporary overlay
-shows the image; press **Escape**, click its close button, or click the backdrop
-to return to the terminal. Clipboard, snippets, file drops, zoom, and title/tab-bar
-actions are paused while the preview is active; the dot drag handle is hidden.
+Choose **File → Open Local Image…** and select a PNG or JPEG. Press **Escape**,
+click the close button, or click outside the image to return to your terminal.
+Close the preview before pasting, zooming, or changing the title or tab bars.
 
-You can also use **Cmd+click** (macOS) or **Ctrl+click** (Linux/Windows) on a visible
-absolute path or authority-free `file:///` URL. For native paths, put the path on
-its own or between whitespace, without quotes or trailing punctuation. Use the
-picker for names containing spaces.
+You can also **Cmd+click** (macOS) or **Ctrl+click** (Linux/Windows) a visible full
+path or `file:///` URL. A plain path should appear without quotes or trailing
+punctuation. Use the file picker for names containing spaces.
 
-Supported previews are static PNG/JPEG files up to **16 MiB**, **8192 pixels per
-side**, and **16 million pixels**. Relative paths, `~`, UNC paths, animated images,
-and other formats are unsupported. Paths always refer to the machine running
-OMXTerm, even when SSH printed them. OMXTerm reads only after activation and does
-not download remote images or save preview copies.
+Previews support static PNG/JPEG files up to **16 MiB**, **8192 pixels per side**,
+and **16 million pixels**. Use a local absolute path: relative paths, `~`, network
+shares, and remote files aren't supported. Even if SSH printed the path, it refers
+to the computer running OMXTerm.
 
 ## Inline terminal images
 
-OMXTerm also renders static images emitted directly by supported Pi and Chafa
-Kitty graphics paths. These are terminal output, separate from local previews.
-They work in direct sessions, **not through tmux or screen**.
+OMXTerm can display images sent by [Chafa](https://hpjansson.org/chafa/) and
+[Pi](https://github.com/badlogic/pi-mono). These appear in terminal output, unlike
+the temporary preview above. Use them directly in OMXTerm; images through tmux
+or screen aren't supported.
 
 For Chafa's tested 1.18.2 Kitty output, replace the example path with your image:
 
@@ -193,7 +149,7 @@ For Chafa's tested 1.18.2 Kitty output, replace the example path with your image
 chafa -f kitty /path/to/image.png
 ```
 
-Pi 0.84.4 needs explicit Kitty selection. Merge this into your Pi settings:
+For Pi 0.84.4, merge this into your Pi settings:
 
 ```json
 {
@@ -203,138 +159,110 @@ Pi 0.84.4 needs explicit Kitty selection. Merge this into your Pi settings:
 }
 ```
 
-Or, for one run in a POSIX shell:
+Or select Kitty images for one run in a POSIX shell:
 
 ```sh
 PI_IMAGE_PROTOCOL=kitty pi
 ```
 
-Keep Pi's default image autoresizing enabled. Images follow terminal scrolling,
-resize, zoom, and tab changes. SIXEL, iTerm2 images, animation, and other Kitty
-paths are unsupported. The [product contract](spec.md#terminal-behavior) records
-the exact protocol and resource limits.
+Keep Pi's default image autoresizing enabled. The [technical reference](spec.md#terminal-behavior)
+records supported image formats and size limits.
 
 ## Bells and attention
 
-BEL is silent. OMXTerm marks the ringing tab with `🔔` and, if its window is
-unfocused, requests native attention once: a Dock bounce on macOS or the
-desktop's attention indicator on Linux/Windows. Focusing or interacting with
-that session clears its marker. Unselected tabs keep their markers until visited.
+Terminal alerts are silent. OMXTerm marks the tab with `🔔` and asks the desktop
+for attention when its window is unfocused (a Dock bounce on macOS). Return to
+and interact with the tab to clear its marker.
 
-Screen inversion is a separate terminal effect. If Bash or Vim flashes the
-screen, use the preferences below.
+If Bash or Vim flashes the whole screen instead, try the fixes below.
 
 ## Troubleshooting
 
 ### The download will not open
 
-First check [processor architecture and installation requirements](../README.md#platforms-and-downloads).
-An ARM64 package cannot run natively on an x64 Intel/AMD PC.
+Start with the [installation guide](installation.md) for your system.
 
-| Symptom                                                      | Next step                                                                                                                                                                                      |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| macOS blocks an unidentified developer                       | Verify the checksum, then use Apple's per-app Open Anyway procedure linked in [macOS installation](../README.md#macos). Do not disable Gatekeeper.                                             |
-| Linux says “Permission denied”                               | In the download folder, use the documented `chmod +x` step. Do not launch with `sudo`. If execution is still denied, the folder may disallow running programs; use a normal local user folder. |
-| Linux reports FUSE or a mount failure                        | Use `--appimage-extract-and-run` after verifying the download. [FUSE explanation](../README.md#linux).                                                                                         |
-| Linux reports `GLIBC_2.42 not found`                         | The system library is too old for this AppImage. See the [distribution requirements](../README.md#linux); manually replacing glibc is not a safe workaround.                                   |
-| Linux reports an executable format error                     | Check `uname -m`: the current package needs `aarch64`.                                                                                                                                         |
-| Windows reports a missing runtime DLL or `ERR_DLOPEN_FAILED` | Check the ARM64 Visual C++ Redistributable in [Windows installation](../README.md#windows). Never download individual DLLs from unofficial sites.                                              |
-| A checksum fails or names a missing file                     | Download the package and its matching checksum from the same release; check filenames and the terminal's current folder. Do not run a mismatched download.                                     |
+| Symptom                                                      | Try this                                                                                                                           |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| macOS warns about an unidentified developer                  | Verify the download and follow the [per-app Open Anyway steps](installation.md#if-macos-blocks-the-first-launch).                  |
+| Linux says “Permission denied”                               | Use the guide's `chmod +x` step as your ordinary user. If that fails, move the app to a local folder that allows running programs. |
+| Linux reports FUSE or a mount failure                        | Use `--appimage-extract-and-run` after verification.                                                                               |
+| Linux reports `GLIBC_2.42 not found`                         | This distribution is too old for the AppImage. Use a compatible distribution; keep its system glibc intact.                        |
+| Linux reports an executable format error                     | Check `uname -m`: the package needs `aarch64`.                                                                                     |
+| Windows reports a missing runtime DLL or `ERR_DLOPEN_FAILED` | Install the [official ARM64 Visual C++ runtime](installation.md#windows).                                                          |
+| A checksum fails or names a missing file                     | Download the package and checksum from the same release, check the filenames, and verify again before running it.                  |
 
-If these steps do not help, [report what happened](../CONTRIBUTING.md#report-a-problem).
-You do not need to know the cause.
+Still stuck? [Tell us what happened](../CONTRIBUTING.md#report-a-problem).
+Include your system, OMXTerm version, and the error you saw.
 
 ### Background blur or transparency does not appear
 
-Use OMXTerm 0.17.0 or newer, save the settings, and reload. Transparency must
-be greater than `0`. On Windows, blur must also be enabled; plain transparency
-without Acrylic stays opaque. GNOME may need Blur my Shell, and KDE needs its
-Blur desktop effect. A program that fills its own terminal background may stay
-opaque even when the empty shell background is transparent. See
-[background effects and desktop tips](configuration.md#background-transparency-and-blur).
+Set transparency above `0`, save, and reload. On Windows, enable blur too.
+Your desktop may need its blur effect enabled, and programs that paint their own
+background can stay opaque. See [background effects and desktop tips](configuration.md#background-transparency-and-blur).
 
 ### Bright flashes in Bash
 
-Some Bash setups enable Readline's visual bell. Disable it for the current session:
+Turn off Bash/Readline's visual bell for the current session:
 
 ```bash
 bind 'set bell-style none'
 ```
 
-For future sessions, add or change `set bell-style none` in your Bash
-`~/.inputrc` (or the file selected by `INPUTRC`). Preserve other settings and put
-it after existing includes. If creating a new file, use:
+For future sessions, add `set bell-style none` after any includes in `~/.inputrc`
+(or the file selected by `INPUTRC`). If you're creating a new file, use:
 
 ```text
 $include /etc/inputrc
 set bell-style none
 ```
 
-Open a new Bash session. This changes Bash/Readline's bell, not other programs'
-screen-inversion behavior.
+Open a new Bash session. Other programs have their own bell preferences.
 
 ### Bright flashes in Vim
 
-In Vim, run:
-
-```vim
-:set belloff=all
-```
-
-To keep it, add `set belloff=all` to your `.vimrc`. See `:help 'belloff'` for details.
+Run `:set belloff=all` in Vim. To keep it, add `set belloff=all` to your `.vimrc`.
 
 ### Configuration changes do not appear
 
-Save `config.json`, then choose **View → Reload User Configuration**. Fix any
-reported error and reload again; a failed reload keeps the previous settings.
-Check that you edited the file in the [configuration directory](configuration.md#create-the-configuration-directory),
-not the downloaded example or a file named `config.json.txt`. A non-empty
-`XDG_CONFIG_HOME` changes which directory OMXTerm reads. JSON must have straight
-double quotes, no comments, and no trailing commas.
+Save `config.json`, then choose **View → Reload User Configuration**. If an error
+appears, fix it and reload; the previous settings stay active until then.
 
-Font family and line height require a restart for existing tabs. A changed
-Windows shell affects new tabs, not running sessions. Title/tab-bar defaults
-apply to new windows; use the View menu toggles for the current window. Snippets
-are reread when their sidebar opens, not by configuration reload.
+- Check the [file location](configuration.md#create-the-configuration-directory)
+  and make sure the filename is `config.json`, not `config.json.txt`.
+- Use straight double quotes and valid JSON, without comments or trailing commas.
+- Restart for font family or line-height changes in existing tabs.
+- Open a new tab for a changed Windows shell, or a new window for title/tab-bar
+  defaults. Use the View menu to change the bars in your current window.
+- Close and reopen the snippets sidebar to load snippet edits.
 
-See [configuration reload](configuration.md#reloading-user-configuration) and
-[theme troubleshooting](configuration.md#theme-troubleshooting) for details.
+See [reload details](configuration.md#reloading-user-configuration) or
+[theme troubleshooting](configuration.md#theme-troubleshooting) for more help.
 
 ### The renderer cannot start
 
-OMXTerm needs WebGL2 and its bundled fonts/core before starting a tab's shell;
-there is no software-rendering fallback. A rendering failure reports an error
-rather than leaving an invisible shell. Irrecoverable graphics-context loss
-closes only the affected session. Include your OS, GPU/environment, OMXTerm
-version, and the error when reporting a problem.
+OMXTerm needs **WebGL2**, the graphics capability that draws the terminal. If
+initialization fails, it shows an error before starting the shell. On Linux,
+try the desktop helper's [graphics compatibility mode](linux-installer.md#only-if-graphics-fail).
+For a report, include your system, GPU or virtual machine if known, and the error.
 
 ### macOS asks for file access again after an update
 
-Ad-hoc-signed builds can need renewed privacy approval after replacement. Quit
-OMXTerm before replacing it, keep one installation in Applications, and approve
-the needed access in **System Settings → Privacy & Security**. Full Disk Access
-is not required for ordinary terminal use.
+Quit OMXTerm before replacing it, keep one installation in Applications, and
+approve the folders you need in **System Settings → Privacy & Security**.
+Ordinary use doesn't require Full Disk Access.
 
 ## Local diagnostics
 
-**View → Toggle Developer Tools** opens local Electron diagnostics for the
-selected window; it does not enable remote debugging. Inspectors, screenshots,
-console output, and profiles can expose terminal content and local paths.
-Review and redact them before sharing.
+A description of the problem is enough to open a report. If you want to dig
+further, **View → Toggle Developer Tools** opens local diagnostics. Review
+screenshots and diagnostic output for private terminal content before sharing.
 
-Operational logs are stored locally:
-
-- with `XDG_STATE_HOME` set: `$XDG_STATE_HOME/omxterm/logs`;
-- otherwise: `~/.local/state/omxterm/logs` (Windows:
-  `%USERPROFILE%\.local\state\omxterm\logs`).
+Logs live in `~/.local/state/omxterm/logs` (Windows:
+`%USERPROFILE%\.local\state\omxterm\logs`). If `XDG_STATE_HOME` is set, use
+`$XDG_STATE_HOME/omxterm/logs` instead.
 
 The files are `omxterm.jsonl` and `omxterm.previous.jsonl`, capped at 5 MiB each.
-`logLevel` selects `error`, `info` (default), or `debug`. Even debug logs exclude
-terminal input/output, clipboard data, configuration and environment contents,
-commands, arguments, executable names, and titles. OMXTerm sends no remote logs
-or telemetry. Child programs retain their normal network access.
-
-For a report, include the version (**About OMXTerm** in the application menu)
-or source commit, platform, reproduction steps, expected result, and actual result.
-You can report a problem without logs or Developer Tools. See
-[Contributing](../CONTRIBUTING.md#report-a-problem).
+Set `logLevel` to `error`, `info` (the default), or `debug`. Logs describe app
+operations and leave out terminal contents, commands, clipboard data, and
+settings. They stay on your computer.

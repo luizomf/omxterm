@@ -1,44 +1,31 @@
 ---
 name: Agent task
-about: Define audited planning or implementation work
+about: Define focused planning or implementation work
 title: ""
 labels: needs-triage
 assignees: ""
 ---
 
-<!--
-Thanks for helping define focused work. Complete each section with the clearest
-evidence available; "None" is useful when a section does not apply.
--->
-
 ## Intent
 
-<!-- What observable outcome should this issue produce, for whom, and why? -->
+<!-- What outcome should this task produce, for whom, and why? -->
 
-## Authoritative sources
+## Relevant sources
 
-<!-- Link the relevant ADRs and exact sections of docs/spec.md. -->
+<!-- Link the issue context, spec sections and ADRs needed for this work. -->
 
 ## Scope
 
-<!-- List the work required to achieve the intent. -->
+<!-- Describe the work and any meaningful scope boundaries. -->
 
-## Non-goals
+## Dependencies
 
-<!-- State nearby work that this issue must not absorb. -->
-
-## Dependencies and blocking edges
-
-<!-- List blockers, blocked issues, and required ordering. Write "None" if empty. -->
+<!-- List blockers and required ordering, or write "None". -->
 
 ## Acceptance criteria
 
-- [ ] <!-- Describe an observable, reviewable outcome. -->
+- [ ] <!-- An observable, reviewable outcome. -->
 
-## Verification
+## Verification and review
 
-<!-- Name the exact checks and evidence that will prove the criteria. Do not include private data, credentials, terminal contents, or session transcripts. -->
-
-## Review policy
-
-<!-- State required human/agent review and any merge boundary. -->
+<!-- Name the checks that demonstrate completion and any task-specific review needs. Use synthetic examples and keep private data out of evidence. -->

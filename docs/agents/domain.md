@@ -1,23 +1,11 @@
 # Domain docs
 
-This is a single-context repository. Engineering skills use the following
-documents when exploring or changing the project:
+OMXTerm has one shared product context:
 
-- `CONTEXT.md` at the repository root defines the shared domain language.
-- `docs/adr/` records durable architectural decisions.
-- `docs/spec.md` owns the current observable product contract.
+- [`CONTEXT.md`](../../CONTEXT.md) explains terminology.
+- [`docs/spec.md`](../spec.md) defines current observable behavior.
+- [`docs/adr/`](../adr/) records durable architectural decisions.
 
-## Consumer rules
-
-Read `CONTEXT.md`, `docs/spec.md`, and the ADRs relevant to the work before
-changing product behavior or architecture. If one of these paths does not exist,
-proceed silently rather than creating an empty placeholder.
-
-Use the glossary's defined terms in issue titles, implementation plans, tests,
-and documentation. Avoid synonyms that the glossary explicitly rejects. If a
-needed concept is absent, reconsider whether the work is inventing unnecessary
-language; record a genuine gap for `grill-with-docs` rather than silently adding
-a competing term.
-
-Surface conflicts with an ADR explicitly. Never override an accepted decision
-without identifying the ADR and explaining why it should be reopened.
+Read the relevant material before changing behavior or architecture. Use the
+shared terms where they clarify the work. When a proposal conflicts with an
+accepted decision, identify the ADR and explain the reason for revisiting it.

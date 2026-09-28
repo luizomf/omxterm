@@ -1,14 +1,14 @@
 # Linux desktop installer
 
-**Availability:** `linux_install.sh` ships starting with **0.18.0**. Get it with
-the matching AppImage from the [release downloads](../README.md#linux).
-Releases through 0.17.0 retain their original version-bearing helper assets.
+Add OMXTerm to your application menu with `linux_install.sh`. Get the helper and
+matching AppImage from the [release downloads](../README.md#platforms-and-downloads).
+For your first install, start with the [Linux installation guide](installation.md#linux).
 
 ## Normal installation
 
 Download the AppImage, helper and both checksums from the **same release**.
-Replace `VERSION` below with the version you downloaded, then run as your normal
-user, **not with sudo**:
+Replace `VERSION` below with the version you downloaded, then run as your
+**ordinary user**:
 
 ```sh
 appimage=./OMXTerm-VERSION-arm64.AppImage
@@ -18,11 +18,9 @@ sha256sum --check "$appimage.sha256" &&
   ./linux_install.sh install "$appimage"
 ```
 
-Open **OMXTerm** from your application menu. There is no desktop/GPU questionnaire:
-the helper installs the local AppImage, icon and menu entry, chooses the available
-FUSE/extraction mode, and selects the supported X11/XWayland backend. It downloads
-nothing, installs no system packages and does not change your terminal preferences.
-Checksums detect changed bytes; they do not establish publisher trust.
+Open **OMXTerm** from your application menu. The helper installs the local app,
+icon, and menu entry in your user folder. It automatically chooses mounting or
+extraction and uses X11/XWayland.
 
 ## Only if graphics fail
 
@@ -34,9 +32,8 @@ incompatible driver, try the one optional installation mode:
 ```
 
 Then open OMXTerm from the application menu again. **Compatibility mode may be
-slower or less stable**; do not enable it merely because you use Hyprland or
-Omarchy. It is not a fix for every startup or configuration error. A normal
-`install` without the option removes it. Already running windows are unchanged.
+slower or less stable**, so start with normal installation. Run `install` without
+the option to return to normal mode. These changes apply on the next launch.
 
 <details>
 <summary>What does compatibility mode change?</summary>
@@ -44,13 +41,11 @@ Omarchy. It is not a fix for every startup or configuration error. A normal
 Only the installed desktop entry gets `env LIBGL_ALWAYS_SOFTWARE=1` and
 `--ignore-gpu-blocklist`, alongside `--ozone-platform=x11`. Mesa then uses CPU
 rendering and Chromium's GPU compatibility blocklist is bypassed for that
-process. OMXTerm still requires a functioning WebGL2 implementation; this is not
-an alternate Surface or a guarantee of graphics support. The AppImage bytes,
-sandbox policy and global environment are unchanged. Extraction mode, if needed,
-remains before the Electron options.
+process. OMXTerm still needs a functioning WebGL2 implementation. These options
+apply only when launched through the installed menu entry.
 
 Launching a bare AppImage or a separately created wrapper bypasses the desktop
-entry and its options. See the [tested Try Omarchy workaround](configuration.md#try-omarchy-vm-graphics-troubleshooting)
+entry and its options. See the [tested Try Omarchy workaround](quick-start/linux-desktop.md#try-omarchy-vm-graphics-troubleshooting)
 for the older 0.17.0 helper and manual launches.
 
 </details>
@@ -60,7 +55,7 @@ for the older 0.17.0 helper and manual launches.
 When installed from an active Hyprland session, the helper can match the interface
 to the monitor scale automatically. It does so only when XWayland zero-scaling is
 enabled and **all reported monitors have the same scale**. It reports the chosen
-scale after installation; it never assumes every display needs 2x.
+scale after installation.
 
 This is an install-time choice, not live monitor detection. Reinstall from your
 current desktop session after changing displays to refresh it. Mixed-scale
@@ -69,11 +64,10 @@ or failed queries leave normal Electron scaling unchanged. Terminal font zoom
 is independent. For a manual adjustment or undo, back up
 `~/.local/share/applications/omxterm.desktop` and edit/remove only its
 `--force-device-scale-factor=...` argument; reinstalling replaces that menu entry.
-See the [HiDPI tips](configuration.md#small-interface-text-on-a-hidpi-display).
+See the [HiDPI tips](quick-start/linux-desktop.md#small-interface-text-on-a-hidpi-display).
 
-The helper never changes your desktop's scale, compositor blur, title bar or
-configuration files. For those preferences, use the optional
-[Hyprland/Omarchy desktop tips](configuration.md#hyprland-including-omarchy).
+For blur and other desktop preferences, see the
+[Hyprland/Omarchy tips](quick-start/linux-desktop.md#hyprland-including-omarchy).
 
 ## Update, help and uninstall
 
@@ -88,9 +82,7 @@ restores the complete previous installation.
 ./linux_install.sh uninstall
 ```
 
-The stable filename does not hide the release identity: `--version`, the versioned
-release URL and its checksum identify the helper. Uninstall removes only these
-three owned files, preserving your settings, other files and parent directories:
+Uninstall removes these three files and keeps your settings:
 
 - `~/.local/opt/omxterm/OMXTerm.AppImage`
 - `~/.local/share/icons/hicolor/1024x1024/apps/omxterm.png`

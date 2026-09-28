@@ -1,52 +1,36 @@
 ---
 name: Bug report
-about: Report a reproducible OMXTerm problem
+about: Tell us about a problem using OMXTerm
 title: "bug: "
 labels: needs-triage
 assignees: ""
 ---
 
 <!--
-Thanks for taking the time to report a problem. Search existing issues first,
-then share the smallest safe example that lets someone reproduce it.
-You do not need to diagnose the cause or know every technical detail. Write
-"I don't know" for details you cannot find; describe what you observed.
+Thanks for reporting a problem. Search existing issues first; if you find a
+match, add your experience there. Unknown details are fine — tell us what you
+observed, even if you cannot reproduce it every time.
 
-Do not report a suspected vulnerability here. Follow the private process in the
-[security policy](../../SECURITY.md) instead.
+For suspected vulnerabilities, follow https://github.com/luizomf/omxterm/blob/main/SECURITY.md.
 -->
 
-## Version or source commit
+## Version and platform
 
-<!-- Find the version in About OMXTerm in the application menu. On Linux/Windows, press and release Alt alone to open the menu. For a source build, include the commit if known. -->
+<!-- Version: About OMXTerm in the application menu (press and release Alt on Linux/Windows). Include your OS/version, ARM64 or x64, and Linux desktop if known. -->
 
-## Operating system and architecture
+## Steps or circumstances
 
-<!-- Name both, for example: Windows 11 ARM64, or Ubuntu 26.04 ARM64 with GNOME. ARM64 may be shown as aarch64; x64 as x86_64/AMD64. Current downloads are ARM64-only. On Linux, include the desktop (GNOME/KDE/etc.) if known. -->
+<!-- What were you doing when it happened? -->
 
-## Reproduction steps
+## Expected result
 
-<!-- Start from a clean launch when possible and include the smallest sequence that reproduces the problem. -->
+## Actual result
 
-1.
-2.
-3.
-
-## Expected behavior
-
-<!-- What should have happened? -->
-
-## Actual behavior
-
-<!-- What happened instead? -->
-
-## Safe diagnostic context
+## Optional context
 
 <!--
-Include only relevant, redacted operational metadata, such as whether this is
-a packaged or development build and which checks fail. Never include terminal
-input or output (Terminal Payload), command history, clipboard contents,
-configuration contents, environment contents, credentials, secrets, private
-paths, or session transcripts. Do not attach a full log; quote only the minimum
-safe, redacted Operational Events needed to explain the problem.
+Relevant error messages or screenshots can help. Use synthetic examples, review
+what you share, and remove private paths and account details. Keep real terminal
+and clipboard contents, credentials, configuration/environment contents and full
+logs out of public reports. Diagnostics are optional.
 -->

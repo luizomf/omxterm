@@ -1,42 +1,21 @@
 ---
 name: Feature request
-about: Propose an improvement or new OMXTerm behavior
+about: Suggest an improvement to OMXTerm
 title: "feat: "
 labels: needs-triage
 assignees: ""
 ---
 
-<!--
-Thanks for sharing an idea. Search existing issues first, then help us understand
-the practical problem and the observable outcome you would find useful. You do
-not need to design the implementation.
--->
+<!-- Thanks for sharing an idea! Search existing issues first. You can describe the problem without designing the implementation. -->
 
 ## Problem or use case
 
-<!-- What are you trying to accomplish, and what currently makes it difficult? -->
+<!-- What are you trying to do, and what makes it difficult today? -->
 
-## Proposed behavior
+## Suggested improvement
 
-<!-- Describe the observable behavior you would like. Focus on the outcome rather than a specific implementation. -->
+<!-- What would you like to happen? -->
 
-## Current alternatives
+## Optional context
 
-<!-- How do you handle this today? Write "None" if there is no practical alternative. -->
-
-## Platform context
-
-<!-- Include the relevant operating system and architecture, if any. -->
-
-## Additional context
-
-<!--
-Add only information needed to evaluate the request. Never include terminal
-input or output (Terminal Payload), command history, clipboard contents,
-configuration contents, environment contents, credentials, secrets, private
-paths, or session transcripts.
-
-Requests are evaluated against the documented product scope, priorities, and
-maintenance cost. A proposal starts a conversation; it is not yet a roadmap
-commitment.
--->
+<!-- Include alternatives you have tried and relevant platforms. Use synthetic examples and keep private data out of the request. -->

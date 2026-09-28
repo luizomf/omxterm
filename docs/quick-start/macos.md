@@ -1,59 +1,90 @@
-# macOS: customize OMXTerm
+# macOS quick start
 
-[Install OMXTerm](../../README.md#macos) and open it once first. You can already
-use the terminal: it creates a starter configuration automatically. This optional
-tutorial adds a complete editable settings file, a theme, and seven snippets
-(saved commands you can insert). It keeps bundled fonts, all 27 default shortcuts,
-and your account shell.
+[Install OMXTerm](../installation.md#macos) and open it. Your account shell,
+bundled font, and colors are ready to use. This short walkthrough makes one
+setting change and tries a saved command.
 
-Want only one change? Edit your existing file using the
-[configuration guide](../configuration.md) instead of replacing the starter kit.
+## 1. Open your settings folder
 
-## 1. Get the examples
-
-In the repository on GitHub, select **main**, then choose **Code → Download ZIP**
-and extract it. Open `docs/quick-start/files/macos/` in the extracted folder.
-These examples require **OMXTerm 0.17.0 or newer**; downloading the source ZIP
-here is only a way to get the examples, not an instruction to build the app.
-
-You need three files:
-
-- [config.json](files/macos/config.json) — settings and shortcuts;
-- [snippets.json](files/macos/snippets.json) — example commands;
-- [themes/omtheme.json](files/macos/themes/omtheme.json) — editable colors.
-
-## 2. Copy the files
-
-In Zsh or Bash, run this to create and open your configuration folder:
+On first launch, OMXTerm creates `config.json`, `snippets.json`, and an editable
+theme. Run this in Zsh or Bash to open their folder in Finder:
 
 ```sh
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omxterm"
-mkdir -p "$config_dir/themes" && open "$config_dir"
+mkdir -p "$config_dir" && open "$config_dir"
 ```
 
-Use a plain-text editor for changes; do not let it add `.txt` or curly quotes.
-For TextEdit, select **Format → Make Plain Text** and disable smart quotes.
+The default is `~/.config/omxterm`; a non-empty `XDG_CONFIG_HOME` selects another
+root. Back up files before editing. Use a plain-text editor; in TextEdit, choose
+**Format → Make Plain Text**, disable smart quotes, and keep the `.json` extension.
 
-In Finder, copy the two JSON files into that folder and `omtheme.json` into its
-`themes` subfolder. **Back up any existing destination files before replacing
-them.** If you already have a configuration you like, merge only the settings
-you want instead of replacing it.
+If you already had a configuration before installing, OMXTerm keeps it. For
+missing files, use the [minimal examples](../configuration.md#quick-start-use-the-bundled-defaults).
 
-Your files should look like this (a non-empty `XDG_CONFIG_HOME` replaces `~/.config`):
+## 2. Make the text comfortable
 
-```text
-~/.config/omxterm/
-├── config.json
-├── snippets.json
-└── themes/
-    └── omtheme.json
-```
+Open `config.json`, find `font.size`, and change `16` to `18`. Save, then choose
+**View → Reload User Configuration** (`Cmd+Shift+,`) in the macOS menu bar.
+The text gets larger; change it back to `16` to undo it. If a notice reports an
+error, fix the named field and reload.
+
+For temporary font zoom, use `Cmd++` / `Cmd+-`; `Cmd+0` returns to your configured
+size. See [fonts and spacing](../configuration.md#add-one-display-change) for
+line height, padding, and installed fonts.
+
+## 3. Try a snippet
+
+Open **View → Toggle Snippets** (`Cmd+Shift+S`) and click the starter greeting.
+Review the inserted command, then press Enter. Snippets are saved text you can
+insert into the current tab.
+
+Edit `snippets.json` to add your own commands, then close and reopen the sidebar.
+Start with the [single-line snippet example](../configuration.md#snippets).
+Its `execute: false` leaves the final Enter to you.
+
+## 4. Make it yours
+
+- **Colors:** edit a `#RRGGBB` value in `themes/omtheme.json` and reload, or use
+  [OMXTerm Studio](../configuration.md#edit-visually-with-omxterm-studio).
+- **Background:** try [transparency and blur](../configuration.md#background-transparency-and-blur).
+  macOS blur has fixed strength; both effects start off.
+- **Window bars:** `Cmd+Shift+D` toggles the title bar; `Cmd+Shift+B` toggles
+  the tab bar. [Set defaults for new windows](../configuration.md#start-with-hidden-bars).
+- **Option keys:** keep `keyboard.optionAsAlt` at `none` for normal Option
+  characters, or choose `left`, `right`, or `both` for terminal Alt shortcuts.
+- **Next steps:** [everyday use](../usage.md), [shortcuts](../configuration.md#keybinds),
+  and [when settings take effect](../configuration.md#reloading-user-configuration).
+
+## Optional complete examples
 
 <details>
-<summary>Prefer copying in the terminal? Use this backup-aware block.</summary>
+<summary>Use a full configuration, editable theme, and seven macOS snippets</summary>
 
-Set `example` to the extracted example folder. Run in Zsh or Bash. It backs up
-existing files and refuses symlink destinations rather than overwriting them.
+These files work with **OMXTerm 0.17.0 or newer** and use bundled fonts and all
+built-in shortcuts:
+
+- [config.json](files/macos/config.json)
+- [snippets.json](files/macos/snippets.json)
+- [themes/omtheme.json](files/macos/themes/omtheme.json)
+
+Download each linked file using GitHub's **Download raw file** button. To get
+all examples together, choose **Code → Download ZIP** on the repository's
+**main** branch, extract it, and open `docs/quick-start/files/macos/`.
+
+Back up the destination files, then copy `config.json` and `snippets.json` into
+your settings folder and `omtheme.json` into its `themes` subfolder. Replacing
+these files replaces your current preferences; merge individual settings to
+keep other choices. Reload configuration and reopen the snippets sidebar.
+
+Try **Open current folder**: it inserts ` open .`; press Enter to open Finder.
+All seven snippets are single-line and have `execute: false`. They use macOS
+tools (`open`, `ifconfig`, `nslookup`, and `pbcopy`); the Git example needs Git
+and the palette example uses Zsh/Bash syntax.
+
+### Copy from an extracted ZIP in the terminal
+
+Set `example` to your extracted folder. This Zsh/Bash block backs up existing
+files and stops at symlink destinations so it does not overwrite their targets.
 
 ```sh
 example="/path/to/extracted/omxterm/docs/quick-start/files/macos"
@@ -78,75 +109,34 @@ apply_quick_start() {
 apply_quick_start
 ```
 
-Keep the printed backup path. If copying fails, check the copied files before
-retrying. To undo, restore each original to its matching path, for example
-`cp -p "$backup/config.json" "$config_dir/config.json"`. Remove only files newly
-added by this tutorial, not the whole configuration folder.
+Keep the printed backup path. If copying stops, inspect what was copied before
+retrying. Restore originals to undo, for example
+`cp -p "$backup/config.json" "$config_dir/config.json"`; remove only newly
+added files without originals, not the whole settings folder.
 
 </details>
 
-## 3. Reload and try it
-
-1. Choose **View → Reload User Configuration** (`Cmd+Shift+,`). If an error
-   appears, correct the named file or field and reload.
-2. Open **View → Toggle Snippets** (`Cmd+Shift+S`).
-3. Click **Open current folder**, review the inserted ` open .`, and press Enter.
-   Finder should open the shell's current folder.
-
-All seven example snippets have `execute: false`: OMXTerm does not append Enter.
-The examples use macOS tools such as `open`, `ifconfig`, `nslookup`, and `pbcopy`;
-the Git command requires Git. The palette snippet uses Zsh/Bash syntax.
-
-To see a visible setting change, edit `font.size` in `config.json` from `16` to
-`18` and reload. To customize colors, edit a `#RRGGBB` value in
-`themes/omtheme.json` and reload. Restoring `16` or your backed-up files reverses
-the change.
-
-## 4. Make it yours
-
-Edit the existing fields in `config.json`; do not add duplicate objects. JSON
-uses `true`/`false` and numbers without quotes and does not allow comments.
-
-| Preference                                  | Try this                                                                                                                                                  |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `window.blur` / `window.transparency`       | Change `false` / `0` to `true` / `0.35`, save, and reload for background-only blur/transparency. macOS blur strength is fixed.                            |
-| `window.showTitleBar` / `window.showTabBar` | Set the defaults for new windows. Use `Cmd+Shift+D` / `Cmd+Shift+B` to toggle the current window instead.                                                 |
-| `keyboard.optionAsAlt`                      | Keep `none` for normal Option-key characters; select `left`, `right`, or `both` only if you want terminal Alt shortcuts.                                  |
-| `keybinds`                                  | All 27 defaults are included. For example, change `toggleSnippets` to `Command+Alt+Shift+S`, then reload. Remove an override to use its built-in default. |
-
-Blur and transparency apply live; they start **off** in the example. Text stays
-solid, but programs that paint their own background may remain opaque. See
-[background effects](../configuration.md#background-transparency-and-blur).
-
-Font family and line height apply to new tabs after reload; existing tabs need
-a restart. Snippets reload when you close and reopen their sidebar. See
-[all shortcuts](../usage.md#built-in-platform-shortcuts),
-[reload behavior](../configuration.md#reloading-user-configuration), and
-[configuration troubleshooting](../usage.md#configuration-changes-do-not-appear).
-
-## Optional shell and Vim preferences
-
-**Skip this section unless you want to change how your shell/editor works.**
-Dotfiles are hidden preference files for other programs, not OMXTerm settings.
-OMXTerm does not require them. The examples
-[zshrc](files/macos/zshrc), [bashrc](files/macos/bashrc),
-[bash_profile](files/macos/bash_profile), [inputrc](files/macos/inputrc), and
-[vimrc](files/macos/vimrc) are separate shell/editor preferences. Prefer copying
-individual settings into your existing files.
-
-They enable vi-style command-line editing (`Esc` or `jj` leaves insert mode),
-quiet bells, and history that skips leading-space commands. Vim uses the `slate`
-colors, two-space indentation, and `Space w` to save. When started without file
-arguments, it saves/loads a session per directory under `~/.vim/sessions/`.
-Those session files contain executable Vim commands and paths; do not load
-untrusted sessions. Clipboard support depends on your Vim build.
-
 <details>
-<summary>Replace selected dotfiles with backups (optional)</summary>
+<summary>Optional shell and Vim preferences</summary>
 
-This replaces the chosen files, including their existing prompt, aliases, and
-plugins. Set `example` as above. If you use `ZDOTDIR` or `INPUTRC`, adapt the
-destinations instead of assuming your home directory.
+The example [zshrc](files/macos/zshrc), [bashrc](files/macos/bashrc),
+[bash_profile](files/macos/bash_profile), [inputrc](files/macos/inputrc), and
+[vimrc](files/macos/vimrc) customize the shell/editor separately from OMXTerm.
+Download them as above and copy individual settings into your existing dotfiles
+(hidden preference files such as `.zshrc`).
+
+These examples enable vi-style editing (`Esc` or `jj` leaves insert mode), quiet
+bells, and history that skips leading-space commands. Vim uses `slate` colors,
+two-space indentation, and `Space w` to save. When started without file arguments,
+it saves/loads per-directory sessions under `~/.vim/sessions/`. Those contain
+executable Vim commands and paths; load only trusted sessions. Clipboard support
+depends on your Vim build.
+
+### Replace selected dotfiles with backups
+
+This replaces existing prompts, aliases, and plugins in the selected files.
+Set `example` to the extracted macOS example folder first, as in the block
+above. If you use `ZDOTDIR` or `INPUTRC`, adapt the destinations.
 
 ```sh
 copy_optional_dotfiles() {
@@ -164,8 +154,8 @@ copy_optional_dotfiles
 ```
 
 For Bash, choose `bashrc bash_profile inputrc vimrc` instead. Start a new shell
-or Vim to apply its settings. To restore an original, use, for example,
+or Vim to apply changes. To restore, use, for example,
 `cp -p "$dot_backup/.zshrc" "$HOME/.zshrc"`. Keep the earliest backup if you
-repeat this step; remove only newly added files without originals.
+repeat the copy; remove only newly added files without originals.
 
 </details>
