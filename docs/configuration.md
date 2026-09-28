@@ -422,6 +422,32 @@ files or syntax. Follow the installed version's
 [Hyprland blur documentation](https://wiki.hypr.land/Configuring/Basics/Variables/#blur)
 rather than mixing older hyprlang snippets with Lua.
 
+##### Small interface text on a HiDPI display
+
+Terminal font zoom (`Ctrl++` / `Ctrl+-`) does not resize the title row, tabs, or
+sidebar. Toolkit text-size preferences are also distinct from Electron's display
+scale. Check the monitor scale and XWayland policy:
+
+```sh
+hyprctl monitors
+hyprctl getoption xwayland:force_zero_scaling
+```
+
+When the monitor uses scale `2` and `force_zero_scaling` is enabled, XWayland
+windows are not enlarged by the compositor. In the tested setup, adding
+`--force-device-scale-factor=2` to the working OMXTerm launch command made the
+whole interface readable while retaining independent terminal font zoom. Add it
+before `-e` if launching an explicit terminal command. This is an Electron launch
+option, not a `config.json` key, and takes effect on the next app launch.
+
+Use the value appropriate to your display; `2` is not a universal default. Test
+without changing the compositor's global scale policy or your preferred text
+size. To keep the result, add the option to your application launcher (the
+wrapper below is one example); launching a bare AppImage still bypasses that
+customization. Remove the option if the interface becomes too large or when
+changing to a display setup where automatic scaling works. See Hyprland's
+[XWayland scaling notes](https://wiki.hypr.land/Configuring/Advanced-and-Cool/XWayland/).
+
 ##### Try Omarchy VM: graphics troubleshooting
 
 [Try Omarchy](https://github.com/omacom/try-omarchy) bundles an ARM64 Linux VM for
@@ -453,7 +479,10 @@ backend and has no automatic fallback Surface.
 If you deliberately keep this workaround in a disposable VM, apply it to the
 launcher too. For an installation made by the optional desktop helper:
 
-1. Back up `~/.local/share/applications/omxterm.desktop`.
+1. Back up `~/.local/share/applications/omxterm.desktop` and inspect its original
+   `Exec=` line. If it contains `--appimage-extract-and-run`, keep that runtime
+   option in the wrapper as described below; the installer selected it because
+   its FUSE mounting probe failed.
 2. Create `~/.local/bin/omxterm` with the script below. If that name already
    exists, preserve it and choose another launcher name rather than overwriting
    unrelated work. Create `~/.local/bin` if necessary.
@@ -469,6 +498,13 @@ exec env LIBGL_ALWAYS_SOFTWARE=1 \
   "$HOME/.local/opt/omxterm/OMXTerm.AppImage" \
   --ozone-platform=x11 --ignore-gpu-blocklist "$@"
 ```
+
+**Preserve extraction mode when present in the original desktop entry.** Insert
+`--appimage-extract-and-run` immediately after the AppImage path in the script,
+before `--ozone-platform=x11`. Do not remove that option merely to add graphics
+flags: doing so can break startup on systems without working FUSE. Keep any
+separately tested UI-scale option in the wrapper too; for a 2x display, add
+`--force-device-scale-factor=2` before `"$@"`.
 
 The application-menu entry and wrapper now use the same options. Launching the
 AppImage file itself still bypasses the wrapper. The `omxterm` command is also
