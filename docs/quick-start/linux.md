@@ -116,10 +116,17 @@ comments or duplicate objects. Keep booleans and numbers unquoted.
 | `keybinds`                                  | All 27 defaults are included. For example, change `toggleSnippets` to `Control+Alt+Shift+S`, then reload. Remove an override to use its built-in default. |
 
 For **Ubuntu GNOME**, the optional **Blur my Shell** extension can blur OMXTerm;
-for **Fedora KDE Plasma**, use the built-in **Blur** desktop effect. Follow the
-[step-by-step Linux desktop tips](../configuration.md#linux-desktop-tips).
-These are desktop customizations, not required dependencies. KDE/extension settings
-may let you adjust blur strength; OMXTerm itself has no strength setting.
+for **Fedora KDE Plasma**, use the built-in **Blur** desktop effect; for
+**Hyprland/Omarchy**, enable background blur in the compositor configuration.
+Follow the [step-by-step Linux desktop tips](../configuration.md#linux-desktop-tips).
+These are desktop customizations, not required dependencies. Desktop/extension
+settings may let you adjust blur strength; OMXTerm itself has no strength setting.
+In a tiled layout, hiding the title bar is also optional: set `window.showTitleBar`
+to `false` for new windows, or toggle the current one with `Ctrl+Shift+D`.
+
+Using **Try Omarchy on a Mac**? Its virtual GPU can need separate
+[graphics launch options](../configuration.md#try-omarchy-vm-graphics-troubleshooting).
+Those VM-specific options are not a general Hyprland requirement.
 
 Blur and transparency start **off** in the example and apply live after reload.
 Text stays solid, but programs that paint their own background may remain opaque.

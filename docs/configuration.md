@@ -273,11 +273,11 @@ the complete reload rather than being clamped. `1` removes OMXTerm's background
 tint, not text, cursor, selection, images or foreground controls. Theme colors
 stay `#RRGGBB`; do not add alpha to the theme file.
 
-| Platform | What to expect                                                                                                                                                                                                                    |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| macOS    | Native blur with a fixed strength; OMXTerm has no strength slider. A system material is used if the preferred effect is unavailable.                                                                                              |
-| Windows  | **Enable both blur and positive transparency.** Windows 11 22H2 or later can provide Acrylic (Windows' translucent blur material). With blur off, unsupported Windows versions, or failed native effects, the theme stays opaque. |
-| Linux    | Transparency depends on the desktop's compositor (the component that combines windows on screen). KDE Plasma can honor OMXTerm's blur request; GNOME needs a separate extension for this effect. See below.                       |
+| Platform | What to expect                                                                                                                                                                                                                         |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS    | Native blur with a fixed strength; OMXTerm has no strength slider. A system material is used if the preferred effect is unavailable.                                                                                                   |
+| Windows  | **Enable both blur and positive transparency.** Windows 11 22H2 or later can provide Acrylic (Windows' translucent blur material). With blur off, unsupported Windows versions, or failed native effects, the theme stays opaque.      |
+| Linux    | Transparency depends on the desktop's compositor (the component that combines windows on screen). KDE Plasma can honor OMXTerm's blur request; GNOME needs an extension; Hyprland controls blur in its compositor settings. See below. |
 
 Effects are best effort: system policy, accessibility settings, graphics drivers,
 and desktop versions may keep the window opaque. At transparency `0`, blur is
@@ -353,6 +353,131 @@ effect, check whether it is installed with `command -v xprop`. The package is
 To undo only OMXTerm's requested effect, set `blur` to `false` and transparency
 to `0`, then reload. Changes made to KDE's desktop effects may also affect other
 applications; those settings remain under your control.
+
+#### Hyprland, including Omarchy
+
+Hyprland is a Wayland compositor, not a distribution or processor architecture.
+Omarchy supplies an Arch-based desktop configured around it. OMXTerm still uses
+**X11 through XWayland** in this environment; this does not establish native
+Wayland support. Published Linux packages are ARM64, not x86_64.
+
+Some desktop configurations export `ELECTRON_OZONE_PLATFORM_HINT=wayland`.
+OMXTerm honors that explicit environment override. Select the supported backend
+for this launch instead:
+
+```sh
+./OMXTerm-0.17.0-arm64.AppImage --ozone-platform=x11
+```
+
+Use your downloaded filename. If using the optional desktop installer, the
+installed executable is `~/.local/opt/omxterm/OMXTerm.AppImage`. An invocation
+in a terminal does not change the application-menu launcher.
+
+**Blur is built into Hyprland; no GNOME extension is needed.** The tested
+Omarchy setup disabled it in its default look-and-feel configuration. Check
+the running session with:
+
+```sh
+hyprctl getoption decoration:blur:enabled
+```
+
+For the **Lua configuration used by Hyprland 0.56.1 / this Omarchy setup**, back
+up `~/.config/hypr/looknfeel.lua` and add the following user override. Keep your
+other settings; do not edit the defaults under `/usr/share/omarchy`:
+
+```lua
+hl.config({
+  decoration = {
+    blur = {
+      enabled = true,
+      size = 8,
+      passes = 1,
+    },
+  },
+})
+```
+
+Reload with `hyprctl reload config-only`, then check `hyprctl configerrors` and
+the blur option again. Keep `window.transparency` above `0` in OMXTerm and reload
+its configuration separately. OMXTerm's `window.blur` switch sends a KDE-specific
+hint on Linux; it does not configure Hyprland or override its blur policy.
+
+This enables compositor blur for transparent windows **in general**, not just
+OMXTerm. Text stays solid when you use OMXTerm's background transparency rather
+than whole-window opacity. Existing per-window rules can still suppress blur.
+Start with one pass, especially in a VM; increasing size/passes can cost graphics
+performance. To undo, restore the backed-up user file, or set this override's
+`enabled` to `false`, and reload Hyprland. Setting only OMXTerm's `blur` to `false`
+does not turn off compositor-managed blur; set its transparency to `0` if you
+want an opaque terminal.
+
+For a cleaner tiled layout, optionally merge `"showTitleBar": false` into
+OMXTerm's existing `window` object. That preference applies to new windows;
+`Ctrl+Shift+D` toggles the current window without restarting its shell. The tab
+bar is independent, and pressing and releasing Alt alone still opens the menu.
+This is a user preference, not automatic Hyprland detection.
+
+Other Hyprland versions and non-Omarchy setups may use different configuration
+files or syntax. Follow the installed version's
+[Hyprland blur documentation](https://wiki.hypr.land/Configuring/Basics/Variables/#blur)
+rather than mixing older hyprlang snippets with Lua.
+
+##### Try Omarchy VM: graphics troubleshooting
+
+[Try Omarchy](https://github.com/omacom/try-omarchy) bundles an ARM64 Linux VM for
+Apple Silicon Macs. Its virtual graphics path is not equivalent to Hyprland on
+physical Linux hardware. A visible window alone does not prove that the Terminal
+Surface or a shell initialized.
+
+In a test of the unchanged **0.17.0 AppImage** with Hyprland **0.56.1**, XWayland
+**24.1.13** and Mesa **26.2.2**, VirGL advertised OpenGL **2.1** / OpenGL ES **3.0**.
+The XWayland window opened, but Chromium failed to create its graphics context
+and the Surface reported a rendering-backend initialization failure. Selecting
+ANGLE GLES explicitly did not resolve it. The same package displayed a shell
+using this **per-process VM workaround**:
+
+```sh
+LIBGL_ALWAYS_SOFTWARE=1 ./OMXTerm-0.17.0-arm64.AppImage \
+  --ozone-platform=x11 --ignore-gpu-blocklist
+```
+
+`LIBGL_ALWAYS_SOFTWARE=1` selects Mesa's CPU renderer; `--ignore-gpu-blocklist`
+opts this process out of Chromium's GPU compatibility blocklist. The CPU driver
+alone was still blocked from WebGL2 in that test. These are diagnostic launch
+options, **not defaults or requirements for every Hyprland installation**.
+Do not export them globally. They can trade performance or stability for
+compatibility; this is not evidence of working GPU acceleration, native Wayland,
+or complete compatibility across VMs. OMXTerm still requires an actual WebGL2
+backend and has no automatic fallback Surface.
+
+If you deliberately keep this workaround in a disposable VM, apply it to the
+launcher too. For an installation made by the optional desktop helper:
+
+1. Back up `~/.local/share/applications/omxterm.desktop`.
+2. Create `~/.local/bin/omxterm` with the script below. If that name already
+   exists, preserve it and choose another launcher name rather than overwriting
+   unrelated work. Create `~/.local/bin` if necessary.
+3. Make it executable with `chmod +x ~/.local/bin/omxterm`.
+4. In the desktop file, replace only its `Exec=` line with the wrapper's
+   **absolute path**, for example `Exec="/home/YOUR_USER/.local/bin/omxterm" %U`.
+   Replace `YOUR_USER`; desktop entries do not expand `~` or `$HOME` like a shell.
+
+```sh
+#!/bin/sh
+# Local Try Omarchy VM workaround, not an OMXTerm runtime default.
+exec env LIBGL_ALWAYS_SOFTWARE=1 \
+  "$HOME/.local/opt/omxterm/OMXTerm.AppImage" \
+  --ozone-platform=x11 --ignore-gpu-blocklist "$@"
+```
+
+The application-menu entry and wrapper now use the same options. Launching the
+AppImage file itself still bypasses the wrapper. The `omxterm` command is also
+available when `~/.local/bin` is on your `PATH`. No AppImage bytes are modified.
+
+To remove the workaround, restore the original desktop entry and remove only
+the wrapper you created. Keep the X11 override separately if your session still
+forces Wayland. Reinstalling/upgrading through the desktop helper can replace
+the customized desktop entry; reapply it only if the VM still needs the workaround.
 
 ## Add one behavior change
 

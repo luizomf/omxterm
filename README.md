@@ -155,8 +155,10 @@ Launch **OMXTerm** from your application menu. The helper copies it into your
 user folder and chooses the FUSE or extraction mode automatically. It does not
 need `sudo` or download anything. Keep the helper if you want to uninstall later.
 
-Want blur on Ubuntu GNOME or Fedora KDE? See the optional
-[Linux desktop tips](docs/configuration.md#linux-desktop-tips); extensions are
+Want blur on GNOME, KDE Plasma, or Hyprland? See the optional
+[Linux desktop tips](docs/configuration.md#linux-desktop-tips), including
+[Try Omarchy VM graphics troubleshooting](docs/configuration.md#try-omarchy-vm-graphics-troubleshooting);
+extensions are
 not required to use OMXTerm.
 
 ### Windows
