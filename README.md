@@ -21,6 +21,7 @@ local PNG/JPEG previews, and inline images in direct Pi/Chafa sessions.
 ## Platforms and downloads
 
 The latest release is **[0.18.0](https://github.com/luizomf/omxterm/releases/tag/v0.18.0)**.
+The source tree is at **0.18.1-dev.0**, a development baseline, not a newer download.
 [Release notes](docs/releases/0.18.0.md) record the changes, tested systems, and known limits.
 
 **Check your processor before downloading.** ARM64 (also called `aarch64`) and
