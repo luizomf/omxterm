@@ -67,6 +67,29 @@ esac
   return appImage;
 }
 
+async function fakeHyprland(bin: string) {
+  await writeFile(
+    path.join(bin, "hyprctl"),
+    `#!/bin/sh
+case "$*" in
+  'getoption xwayland:force_zero_scaling') printf '%s\\n' "$OMXTERM_TEST_ZERO_SCALING" ;;
+  monitors) printf '%s\\n' "$OMXTERM_TEST_MONITORS" ;;
+  *) exit 1 ;;
+esac
+`,
+    { mode: 0o755 },
+  );
+  await writeFile(
+    path.join(bin, "timeout"),
+    `#!/bin/sh
+[ "\${OMXTERM_TEST_QUERY_FAILURE:-false}" = false ] || exit 124
+shift 3
+exec "$@"
+`,
+    { mode: 0o755 },
+  );
+}
+
 function owned(home: string) {
   return {
     app: path.join(home, ".local/opt/omxterm/OMXTerm.AppImage"),
@@ -88,6 +111,7 @@ async function runHelper(
     env: {
       ...process.env,
       HOME: home,
+      HYPRLAND_INSTANCE_SIGNATURE: "",
       PATH: `${bin}:${process.env.PATH ?? ""}`,
       ...extraEnvironment,
     },
@@ -105,6 +129,23 @@ afterEach(async () => {
 describe.skipIf(process.platform === "win32")(
   "Linux AppImage desktop installer",
   () => {
+    it("explains the normal install and the single optional compatibility choice without installing", async () => {
+      const { home, bin } = await fixtureRoot();
+
+      const { stdout, stderr } = await runHelper(home, bin, ["--help"]);
+
+      expect(stdout).toContain(
+        "install [--compatibility] <verified-local-AppImage>",
+      );
+      expect(stdout).toContain("uninstall");
+      expect(stdout).toContain("--version");
+      expect(stdout).toContain("Do not use sudo");
+      expect(stderr).toBe("");
+      await expect(stat(path.join(home, ".local"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    });
+
     it.each([
       ["direct", 'Exec="', " --appimage-extract-and-run"],
       ["fallback", "--appimage-extract-and-run", "never-present-marker"],
@@ -153,6 +194,161 @@ describe.skipIf(process.platform === "win32")(
       expect(desktop).not.toContain("--ignore-gpu-blocklist");
     });
 
+    it("keeps graphics compatibility opt-in and removable by a normal reinstall", async () => {
+      const { root, home, bin } = await fixtureRoot();
+      const appImage = await fakeAppImage(root, "one");
+
+      const { stdout } = await runHelper(home, bin, [
+        "install",
+        "--compatibility",
+        appImage,
+      ]);
+
+      expect(await readFile(owned(home).desktop, "utf8")).toContain(
+        `Exec=env LIBGL_ALWAYS_SOFTWARE=1 "${owned(home).app}" --appimage-extract-and-run --ozone-platform=x11 --ignore-gpu-blocklist %U\n`,
+      );
+      expect(stdout).toContain("Compatibility mode");
+      expect(stdout).toContain("slower");
+
+      await runHelper(home, bin, ["install", appImage]);
+      const normalDesktop = await readFile(owned(home).desktop, "utf8");
+      expect(normalDesktop).not.toContain("LIBGL_ALWAYS_SOFTWARE");
+      expect(normalDesktop).not.toContain("--ignore-gpu-blocklist");
+      expect(normalDesktop).toContain(
+        '" --appimage-extract-and-run --ozone-platform=x11 %U\n',
+      );
+    });
+
+    it("matches a uniform Hyprland monitor scale without changing terminal preferences", async () => {
+      const { root, home, bin } = await fixtureRoot();
+      const appImage = await fakeAppImage(root, "one");
+      await fakeHyprland(bin);
+      const config = path.join(home, ".config/omxterm/config.json");
+      await mkdir(path.dirname(config), { recursive: true });
+      await writeFile(config, '{"version":1,"font":{"size":22}}\n');
+
+      const { stdout } = await runHelper(home, bin, ["install", appImage], {
+        HYPRLAND_INSTANCE_SIGNATURE: "fixture",
+        OMXTERM_TEST_ZERO_SCALING: "bool: true\nset: true",
+        OMXTERM_TEST_MONITORS:
+          "Monitor One (ID 0):\n\tscale: 2.00\nMonitor Two (ID 1):\n\tscale: 2.0",
+      });
+
+      expect(await readFile(owned(home).desktop, "utf8")).toContain(
+        '" --appimage-extract-and-run --ozone-platform=x11 --force-device-scale-factor=2 %U\n',
+      );
+      expect(stdout).toContain("Interface scale: 2x");
+      expect(await readFile(config, "utf8")).toBe(
+        '{"version":1,"font":{"size":22}}\n',
+      );
+    });
+
+    it("refreshes fractional scaling and removes it when the session no longer supplies a scale", async () => {
+      const { root, home, bin } = await fixtureRoot();
+      const appImage = await fakeAppImage(root, "one");
+      await fakeHyprland(bin);
+
+      await runHelper(home, bin, ["install", "--compatibility", appImage], {
+        HYPRLAND_INSTANCE_SIGNATURE: "fixture",
+        OMXTERM_TEST_FUSE_MODE: "direct",
+        OMXTERM_TEST_ZERO_SCALING: "int: 1\nset: true",
+        OMXTERM_TEST_MONITORS: "Monitor One (ID 0):\n\tscale: 1.50",
+      });
+      expect(await readFile(owned(home).desktop, "utf8")).toContain(
+        `Exec=env LIBGL_ALWAYS_SOFTWARE=1 "${owned(home).app}" --ozone-platform=x11 --ignore-gpu-blocklist --force-device-scale-factor=1.5 %U\n`,
+      );
+
+      await runHelper(home, bin, ["install", appImage]);
+      expect(await readFile(owned(home).desktop, "utf8")).not.toContain(
+        "--force-device-scale-factor",
+      );
+    });
+
+    it.each([
+      [
+        "mixed scales",
+        {
+          OMXTERM_TEST_MONITORS:
+            "Monitor One:\n scale: 2\nMonitor Two:\n scale: 1",
+        },
+      ],
+      [
+        "missing monitor scale",
+        { OMXTERM_TEST_MONITORS: "Monitor One:\n scale: 2\nMonitor Two:" },
+      ],
+      [
+        "duplicate monitor scale",
+        { OMXTERM_TEST_MONITORS: "Monitor One:\n scale: 2\n scale: 2" },
+      ],
+      ["missing monitor header", { OMXTERM_TEST_MONITORS: "scale: 2" }],
+      ["empty monitor report", { OMXTERM_TEST_MONITORS: "" }],
+      ["normal scale", { OMXTERM_TEST_MONITORS: "Monitor One:\n scale: 1.00" }],
+      ["negative scale", { OMXTERM_TEST_MONITORS: "Monitor One:\n scale: -2" }],
+      ["zero scale", { OMXTERM_TEST_MONITORS: "Monitor One:\n scale: 0" }],
+      [
+        "nonnumeric scale",
+        { OMXTERM_TEST_MONITORS: "Monitor One:\n scale: NaN" },
+      ],
+      [
+        "argument injection",
+        { OMXTERM_TEST_MONITORS: "Monitor One:\n scale: 2 --disable-gpu" },
+      ],
+      [
+        "desktop scaling enabled",
+        { OMXTERM_TEST_ZERO_SCALING: "bool: false\nset: true" },
+      ],
+      ["malformed policy", { OMXTERM_TEST_ZERO_SCALING: "true" }],
+      ["ambiguous policy", { OMXTERM_TEST_ZERO_SCALING: "bool: true\nint: 0" }],
+      ["query timeout", { OMXTERM_TEST_QUERY_FAILURE: "true" }],
+      ["no active session", { HYPRLAND_INSTANCE_SIGNATURE: "" }],
+    ] satisfies [string, NodeJS.ProcessEnv][])(
+      "leaves Electron scaling unchanged for %s",
+      async (_condition, environment) => {
+        const { root, home, bin } = await fixtureRoot();
+        const appImage = await fakeAppImage(root, "one");
+        await fakeHyprland(bin);
+
+        await runHelper(home, bin, ["install", appImage], {
+          HYPRLAND_INSTANCE_SIGNATURE: "fixture",
+          OMXTERM_TEST_ZERO_SCALING: "bool: true",
+          OMXTERM_TEST_MONITORS: "Monitor One:\n scale: 2",
+          ...environment,
+        });
+
+        const desktop = await readFile(owned(home).desktop, "utf8");
+        expect(desktop).not.toContain("--force-device-scale-factor");
+        expect(desktop).toContain(
+          '" --appimage-extract-and-run --ozone-platform=x11 %U\n',
+        );
+      },
+    );
+
+    it.each([
+      [],
+      ["install"],
+      ["install", "--compatibility"],
+      ["install", "one.AppImage", "two.AppImage"],
+      ["uninstall", "--compatibility"],
+      ["--version", "extra"],
+      ["--help", "extra"],
+    ])(
+      "rejects invalid invocation %j without creating owned directories",
+      async (...arguments_) => {
+        const { home, bin } = await fixtureRoot();
+        const result = runHelper(home, bin, arguments_);
+        await expect(result).rejects.toMatchObject({ code: 2 });
+        await expect(result).rejects.toThrow("Usage:");
+        await expect(stat(path.join(home, ".local"))).rejects.toMatchObject({
+          code: "ENOENT",
+        });
+      },
+    );
+  },
+);
+
+describe.skipIf(process.platform === "win32")(
+  "Linux AppImage installation transactions",
+  () => {
     it("replaces all files repeatedly and uninstalls only the fixed ownership set", async () => {
       const { root, home, bin } = await fixtureRoot();
       const first = await fakeAppImage(root, "one");

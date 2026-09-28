@@ -4,7 +4,13 @@ set -eu
 VERSION='@OMXTERM_VERSION@'
 
 usage() {
-  printf '%s\n' "Usage: $(basename "$0") install <verified-local-AppImage> | uninstall | --version" >&2
+  printf '%s\n' \
+    "Usage: $(basename "$0") install [--compatibility] <verified-local-AppImage>" \
+    "       $(basename "$0") uninstall | --version | --help" \
+    "" \
+    "Verify the downloaded AppImage and helper checksums first. Do not use sudo." \
+    "Install adds OMXTerm to your application menu; no downloads or system changes." \
+    "Use --compatibility only for graphics failures: software graphics may be slower or less stable."
 }
 
 fail() {
@@ -90,8 +96,49 @@ probe_fuse_mode() {
   wait "$mount_pid" 2>/dev/null || true
 }
 
+detect_desktop_scale() {
+  desktop_scale=
+  [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || return 0
+  command -v hyprctl >/dev/null 2>&1 || return 0
+  command -v timeout >/dev/null 2>&1 || return 0
+  command -v awk >/dev/null 2>&1 || return 0
+  zero_scaling=$(timeout -k 1s 2s hyprctl getoption xwayland:force_zero_scaling 2>/dev/null) || return 0
+  printf '%s\n' "$zero_scaling" | LC_ALL=C awk '
+    $1 == "bool:" || $1 == "int:" {
+      fields++
+      enabled = NF == 2 && (($1 == "bool:" && $2 == "true") || ($1 == "int:" && $2 == "1"))
+    }
+    END { exit !(fields == 1 && enabled) }
+  ' || return 0
+  monitors=$(timeout -k 1s 2s hyprctl monitors 2>/dev/null) || return 0
+  desktop_scale=$(printf '%s\n' "$monitors" | LC_ALL=C awk '
+    $1 == "Monitor" {
+      if (count && seen != 1) invalid = 1
+      count++
+      seen = 0
+    }
+    $1 == "scale:" {
+      seen++
+      if (!count || seen != 1 || NF != 2 || $2 !~ /^[0-9]+([.][0-9]+)?$/ || $2 + 0 <= 0) invalid = 1
+      if (scale != "" && scale + 0 != $2 + 0) invalid = 1
+      scale = $2
+    }
+    END {
+      if (count && seen == 1 && !invalid && scale + 0 != 1) printf "%.15g", scale + 0
+    }
+  ') || desktop_scale=
+  case $desktop_scale in
+    ''|*[!0-9.]*) desktop_scale= ;;
+  esac
+}
+
 install_appimage() {
-  [ "$#" -eq 1 ] || { usage; exit 2; }
+  compatibility=false
+  if [ "${1:-}" = --compatibility ]; then
+    compatibility=true
+    shift
+  fi
+  [ "$#" -eq 1 ] || { usage >&2; exit 2; }
   source_app=$1
   [ -n "${HOME:-}" ] && [ "${HOME#/}" != "$HOME" ] ||
     fail "HOME must be an absolute path"
@@ -129,6 +176,16 @@ install_appimage() {
     fail "the AppImage does not contain the required OMXTerm desktop metadata"
 
   probe_fuse_mode
+  launcher_prefix=
+  graphics_suffix=' --ozone-platform=x11'
+  if [ "$compatibility" = true ]; then
+    launcher_prefix='env LIBGL_ALWAYS_SOFTWARE=1 '
+    graphics_suffix="$graphics_suffix --ignore-gpu-blocklist"
+  fi
+  detect_desktop_scale
+  if [ -n "$desktop_scale" ]; then
+    graphics_suffix="$graphics_suffix --force-device-scale-factor=$desktop_scale"
+  fi
   escaped_app=$(printf '%s' "$app" | sed 's/\\/\\\\/g; s/"/\\"/g')
   escaped_icon=$(printf '%s' "$icon" | sed 's/\\/\\\\/g')
   desktop_contents=$work/omxterm.desktop
@@ -136,7 +193,7 @@ install_appimage() {
 [Desktop Entry]
 Name=OMXTerm
 Comment=Personal desktop terminal
-Exec="$escaped_app"$launcher_suffix --ozone-platform=x11 %U
+Exec=$launcher_prefix"$escaped_app"$launcher_suffix$graphics_suffix %U
 Terminal=false
 Type=Application
 Icon=$escaped_icon
@@ -169,12 +226,24 @@ EOF
   trap - EXIT HUP INT TERM
   rm -rf -- "$work" "$backup_app_root" "$backup_icon_root" \
     "$backup_desktop_root"
-  printf '%s\n' "Installed OMXTerm for the current user ($([ -n "$launcher_suffix" ] && printf fallback || printf kernel-FUSE) launcher)."
+  printf '%s\n' "Installed OMXTerm. Open it from your application menu."
+  if [ -n "$desktop_scale" ]; then
+    printf 'Interface scale: %sx (current Hyprland monitors). Reinstall after changing displays to refresh it.\n' "$desktop_scale"
+  fi
+  if [ "$compatibility" = true ]; then
+    printf '%s\n' "Compatibility mode uses software graphics and may be slower or less stable. Reinstall without --compatibility to remove it."
+  else
+    printf '%s\n' "If the window is blank or graphics fail, try installing with --compatibility (software graphics; may be slower or less stable)."
+  fi
 }
 
 case ${1:-} in
+  --help)
+    [ "$#" -eq 1 ] || { usage >&2; exit 2; }
+    usage
+    ;;
   --version)
-    [ "$#" -eq 1 ] || { usage; exit 2; }
+    [ "$#" -eq 1 ] || { usage >&2; exit 2; }
     printf '%s\n' "$VERSION"
     ;;
   install)
@@ -182,13 +251,13 @@ case ${1:-} in
     install_appimage "$@"
     ;;
   uninstall)
-    [ "$#" -eq 1 ] || { usage; exit 2; }
+    [ "$#" -eq 1 ] || { usage >&2; exit 2; }
     [ -n "${HOME:-}" ] && [ "${HOME#/}" != "$HOME" ] ||
       fail "HOME must be an absolute path"
     uninstall
     ;;
   *)
-    usage
+    usage >&2
     exit 2
     ;;
 esac

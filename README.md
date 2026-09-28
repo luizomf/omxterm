@@ -155,6 +155,11 @@ Launch **OMXTerm** from your application menu. The helper copies it into your
 user folder and chooses the FUSE or extraction mode automatically. It does not
 need `sudo` or download anything. Keep the helper if you want to uninstall later.
 
+The development branch prepares a simpler **`linux_install.sh`** for the next
+release, with one optional compatibility mode and conservative Hyprland UI-scale
+setup. See the [upcoming helper guide](docs/linux-installer.md). The 0.17.0
+downloads and commands above remain unchanged.
+
 Want blur on GNOME, KDE Plasma, or Hyprland? See the optional
 [Linux desktop tips](docs/configuration.md#linux-desktop-tips), including
 [Try Omarchy VM graphics troubleshooting](docs/configuration.md#try-omarchy-vm-graphics-troubleshooting);

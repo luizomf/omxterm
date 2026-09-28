@@ -7,9 +7,10 @@ versions. A release number has the form `MAJOR.MINOR.PATCH`, and its Git tag add
 The latest published version is **0.17.0**; its
 [release record](releases/0.17.0.md) identifies the immutable exact artifacts,
 completed native verification and verified post-upload downloads. The source
-tree now carries **0.17.1-dev.0**, the next-patch development baseline after
-publication. This development version is not a published release and does not
-change the published 0.17.0 tag, assets or release body.
+tree now carries **0.18.0-dev.0**, the next-minor development baseline for the
+simplified Linux helper and its installer-selected launch options. This
+development version is not a published release and does not change the published
+0.17.0 tag, assets or release body.
 
 This policy explains version selection and consistency. An owner request to
 release covers version preparation, builds, verification, tags and publication
@@ -61,9 +62,10 @@ commit, all version-bearing surfaces must agree:
   `.sha256`;
 - the AppImage is named `OMXTerm-X.Y.Z-arm64.AppImage` and its checksum file
   adds `.sha256`;
-- the optional Linux desktop installer is named
-  `OMXTerm-X.Y.Z-arm64.AppImage-installer.sh`, reports `X.Y.Z` through
-  `--version`, and its checksum file adds `.sha256`;
+- the optional Linux desktop installer is named `linux_install.sh`, reports
+  `X.Y.Z` through `--version`, and its checksum file is `linux_install.sh.sha256`;
+  the versioned release URL and embedded version identify it. Releases through
+  0.17.0 retain their original `OMXTerm-X.Y.Z-arm64.AppImage-installer.sh` assets;
 - the NSIS installer is named `OMXTerm-X.Y.Z-arm64.exe` and its checksum file
   adds `.sha256`;
 - the GitHub Release targets `vX.Y.Z` and describes each exact artifact.

@@ -598,11 +598,7 @@ export async function verifyPackagedApplication(
   try {
     if (platform === "linux") {
       const version = await sourceVersion();
-      const helper = path.join(
-        projectRoot,
-        "release",
-        linuxHelperName(),
-      );
+      const helper = path.join(projectRoot, "release", linuxHelperName());
       await Promise.all([verifyChecksum(packagedPath), verifyChecksum(helper)]);
       const { stdout: helperVersion } = await execFile(helper, ["--version"]);
       if (helperVersion.trim() !== version)

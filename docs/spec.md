@@ -893,7 +893,28 @@ previous installation. Uninstall removes only those files and preserves
 unrelated files and parent directories. At installation time the helper tests
 actual kernel FUSE mounting and writes one fixed desktop entry that either runs
 the AppImage directly or adds `--appimage-extract-and-run`; launch time performs
-no mode discovery.
+no mode discovery. The installed desktop entry explicitly selects X11/XWayland,
+including when the session exports a Wayland preference. Direct AppImage launches
+retain the rendering override rules above.
+
+The helper accepts `install [--compatibility] <verified-local-AppImage>`,
+`uninstall`, `--version`, and `--help`, without interactive questions. Only the
+explicit compatibility option adds per-process `LIBGL_ALWAYS_SOFTWARE=1` and
+`--ignore-gpu-blocklist`; it is not automatic VM or desktop detection and may
+reduce performance or stability. A normal reinstall removes that opt-in.
+AppImage extraction arguments precede Electron arguments in either mode.
+
+During installation in an active Hyprland session, bounded optional desktop
+queries may record `--force-device-scale-factor` when XWayland zero-scaling is
+enabled and all reported monitors share one positive numeric scale other than
+
+1. Missing tools, failed/malformed reports, absent sessions and mixed scales
+   leave Electron scaling unchanged. The choice is fixed in the desktop entry,
+   reported to the user and refreshed on reinstall; launch time does not re-detect
+   monitors. Neither this choice nor compatibility mode changes compositor policy,
+   global environment, User Configuration, terminal font zoom, title-bar preferences
+   or the three-file ownership/rollback contract. See
+   [ADR 0031](adr/0031-keep-linux-installer-choices-small-and-local.md).
 
 ## Architecture boundaries
 
@@ -930,8 +951,10 @@ natively on each Supported Platform: macOS on the designated Apple Silicon Mac,
 and Linux arm64 and Windows arm64 in native Parallels VM
 clones using the VM's native filesystem, never shared folders. The initial
 application-package formats are DMG, AppImage, and NSIS respectively. A Linux
-release also includes the optional versioned AppImage desktop-installer shell
-asset and its checksum; it is not another application package format.
+release also includes the optional `linux_install.sh` AppImage desktop-installer
+shell asset and `linux_install.sh.sha256`; its embedded `--version` agrees with
+the release. This is not another application package format. Published releases
+through 0.17.0 retain their original version-bearing helper filenames.
 
 Windows exact-installer verification is an installation side-effect boundary:
 `/D=` changes the destination but does not isolate old-version removal,

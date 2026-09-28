@@ -126,7 +126,10 @@ to `false` for new windows, or toggle the current one with `Ctrl+Shift+D`.
 
 Using **Try Omarchy on a Mac**? Its virtual GPU can need separate
 [graphics launch options](../configuration.md#try-omarchy-vm-graphics-troubleshooting).
-Those VM-specific options are not a general Hyprland requirement.
+Those VM-specific options are not a general Hyprland requirement. The
+[upcoming `linux_install.sh` helper](../linux-installer.md) can save them with one
+explicit compatibility choice; the current 0.17.0 helper still uses the manual
+instructions.
 
 Blur and transparency start **off** in the example and apply live after reload.
 Text stays solid, but programs that paint their own background may remain opaque.

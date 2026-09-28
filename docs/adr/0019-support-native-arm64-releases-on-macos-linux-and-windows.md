@@ -1,5 +1,9 @@
 # Support native arm64 releases with automation-first validation
 
+[ADR 0031](0031-keep-linux-installer-choices-small-and-local.md) amends the helper's
+filename and local launch choices beginning after 0.17.0, preserving this record's
+ownership, transaction, trust and native verification requirements.
+
 The initial Supported Platforms are macOS arm64, Linux arm64, and Windows
 arm64. Their initial application-package formats are respectively DMG, AppImage,
 and NSIS. Linux releases also carry an optional, versioned shell helper and
