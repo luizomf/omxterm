@@ -136,7 +136,7 @@ install_appimage() {
 [Desktop Entry]
 Name=OMXTerm
 Comment=Personal desktop terminal
-Exec="$escaped_app"$launcher_suffix %U
+Exec="$escaped_app"$launcher_suffix --ozone-platform=x11 %U
 Terminal=false
 Type=Application
 Icon=$escaped_icon

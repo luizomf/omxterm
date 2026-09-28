@@ -13,13 +13,11 @@ import {
 } from "../../scripts/package-linux-assets.mjs";
 
 describe("Linux release assets", () => {
-  it("derives exact versioned AppImage and helper names", () => {
+  it("keeps the AppImage versioned and the helper filename stable", () => {
     expect(linuxAppImageName("0.11.0-dev.0")).toBe(
       "OMXTerm-0.11.0-dev.0-arm64.AppImage",
     );
-    expect(linuxHelperName("0.11.0-dev.0")).toBe(
-      "OMXTerm-0.11.0-dev.0-arm64.AppImage-installer.sh",
-    );
+    expect(linuxHelperName()).toBe("linux_install.sh");
   });
 
   it("embeds exactly the package version in the helper", () => {
@@ -37,7 +35,7 @@ describe("Linux release assets", () => {
       await readFile(new URL("../../package.json", import.meta.url), "utf8"),
     ) as { version: string };
     const appImageName = linuxAppImageName(version);
-    const helperName = linuxHelperName(version);
+    const helperName = linuxHelperName();
     try {
       await writeFile(path.join(output, appImageName), "appimage");
       await packageLinuxAssets(output);

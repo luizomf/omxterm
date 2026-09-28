@@ -7,8 +7,7 @@ const projectRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
-export const linuxHelperName = (version) =>
-  `OMXTerm-${version}-arm64.AppImage-installer.sh`;
+export const linuxHelperName = () => "linux_install.sh";
 export const linuxAppImageName = (version) =>
   `OMXTerm-${version}-arm64.AppImage`;
 
@@ -47,7 +46,7 @@ export async function packageLinuxAssets(
 ) {
   const version = await packageVersion();
   const appImage = path.join(outputRoot, linuxAppImageName(version));
-  const helper = path.join(outputRoot, linuxHelperName(version));
+  const helper = path.join(outputRoot, linuxHelperName());
   const helperSource = await readFile(
     path.join(projectRoot, "scripts", "install-linux-appimage.sh"),
     "utf8",

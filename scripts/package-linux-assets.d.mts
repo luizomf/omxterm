@@ -1,4 +1,4 @@
-export function linuxHelperName(version: string): string;
+export function linuxHelperName(): string;
 export function linuxAppImageName(version: string): string;
 export function renderLinuxHelper(source: string, version: string): string;
 export function checksumContents(

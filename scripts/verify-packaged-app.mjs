@@ -601,7 +601,7 @@ export async function verifyPackagedApplication(
       const helper = path.join(
         projectRoot,
         "release",
-        linuxHelperName(version),
+        linuxHelperName(),
       );
       await Promise.all([verifyChecksum(packagedPath), verifyChecksum(helper)]);
       const { stdout: helperVersion } = await execFile(helper, ["--version"]);
@@ -648,7 +648,7 @@ export async function verifyPackagedApplication(
           "Linux helper desktop entry does not use the installed icon path",
         );
       linuxDirectLaunchAvailable = !installedDesktop.includes(
-        " --appimage-extract-and-run %U\n",
+        " --appimage-extract-and-run ",
       );
       await inspectArchitecture(
         linuxInstalledApp,

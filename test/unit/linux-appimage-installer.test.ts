@@ -137,6 +137,22 @@ describe.skipIf(process.platform === "win32")(
       },
     );
 
+    it("selects supported X11 even when the desktop exports a Wayland preference", async () => {
+      const { root, home, bin } = await fixtureRoot();
+      const appImage = await fakeAppImage(root, "one");
+
+      await runHelper(home, bin, ["install", appImage], {
+        ELECTRON_OZONE_PLATFORM_HINT: "wayland",
+      });
+
+      const desktop = await readFile(owned(home).desktop, "utf8");
+      expect(desktop).toContain(
+        '" --appimage-extract-and-run --ozone-platform=x11 %U\n',
+      );
+      expect(desktop).not.toContain("LIBGL_ALWAYS_SOFTWARE");
+      expect(desktop).not.toContain("--ignore-gpu-blocklist");
+    });
+
     it("replaces all files repeatedly and uninstalls only the fixed ownership set", async () => {
       const { root, home, bin } = await fixtureRoot();
       const first = await fakeAppImage(root, "one");
