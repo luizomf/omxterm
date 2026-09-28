@@ -57,6 +57,8 @@ export async function createInitialConfigurationKit(
       keyboard: { optionAsAlt: defaults.optionKeyMode },
       window: {
         alwaysOnTop: defaults.alwaysOnTop,
+        blur: defaults.blur,
+        transparency: defaults.transparency,
         showTitleBar: defaults.showTitleBar,
         showTabBar: defaults.showTabBar,
       },

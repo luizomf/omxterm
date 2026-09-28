@@ -15,6 +15,8 @@ omxterm/
 ```
 
 The configuration uses OMXTerm defaults and selects `themes/omtheme.json`.
+It includes `window.blur: false` and `window.transparency: 0` so background
+effects are easy to find, but remain disabled until you change them.
 The snippet is a greeting command with `execute: false`; insertion does not
 append Enter. No external font, Git Bash, or personal dotfiles are required.
 Edit these files and use `View -> Reload User Configuration` for settings and

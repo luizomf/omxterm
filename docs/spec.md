@@ -626,7 +626,8 @@ every Supported Platform, including Windows, where the fallback is
 `%USERPROFILE%\.config\omxterm\config.json` (ADR 0002). At application startup, an existing `config.json` filesystem entry (including
 an invalid file, directory, or dangling symlink) skips the entire initial kit
 without inspecting snippets or themes. Otherwise, OMXTerm creates the directory,
-`config.json` with common built-in defaults and `theme.path` set to
+`config.json` with common built-in defaults (including explicit
+`window.blur: false` and `window.transparency: 0`) and `theme.path` set to
 `themes/omtheme.json`, one non-executing example in `snippets.json`, and a copy
 of the bundled theme at `themes/omtheme.json`. Existing sibling files are never
 replaced. Files are published complete without overwriting concurrent creations;

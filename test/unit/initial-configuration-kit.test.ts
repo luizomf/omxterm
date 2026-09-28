@@ -49,6 +49,18 @@ describe("initial configuration kit", () => {
         { ...options, platform },
         (result) => result,
       );
+      const document: unknown = JSON.parse(
+        await readFile(path.join(directory, "config.json"), "utf8"),
+      );
+      expect(document).toMatchObject({
+        window: {
+          alwaysOnTop: false,
+          blur: false,
+          transparency: 0,
+          showTitleBar: true,
+          showTabBar: true,
+        },
+      });
       expect(load.fallback).toBeUndefined();
       expect(load.warnings).toBeUndefined();
       expect(load.configuration).toEqual({
