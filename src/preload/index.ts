@@ -235,6 +235,11 @@ const terminal: TerminalBridge = {
     ipcRenderer.on(terminalIpc.tabTitle, handler);
     return () => ipcRenderer.removeListener(terminalIpc.tabTitle, handler);
   },
+  notifyTabsEmpty(reason) {
+    if (reason !== undefined && reason !== "rendering-failure")
+      throw new TypeError("Invalid empty Terminal Tabs reason");
+    ipcRenderer.send(terminalIpc.tabsEmpty, reason);
+  },
   notifyTabSelection(sessionId: TerminalSessionId) {
     if (!isTerminalSessionId(sessionId))
       throw new TypeError("Invalid Terminal Tab selection");

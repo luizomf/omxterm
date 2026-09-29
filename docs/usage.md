@@ -36,8 +36,10 @@ A background tab closing or exiting does not change your selected session or
 where typing, Paste and snippets go. Closing the selected tab selects its right
 neighbor, or its left neighbor if it was last.
 
-Typing `exit` closes that shell's tab. The app may take a moment to finish
-shutting down its processes after its last window closes.
+Typing `exit` closes that shell's tab, without closing another tab that is still
+initializing. You can close an initializing tab without starting its shell.
+The app may take a moment to finish shutting down its processes after its last
+window closes.
 
 ## Window controls
 

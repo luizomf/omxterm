@@ -238,7 +238,7 @@ describe.skipIf(
       expect(result.ended.slice(0, 3)).toEqual([
         { closeRequested: true, liveSessions: 1 },
         { closeRequested: false, liveSessions: 1 },
-        { closeRequested: false, liveSessions: 0 },
+        { closeRequested: false, liveSessions: 1 },
       ]);
       expect(result.modifiedHoverChangedPixels).toBeGreaterThan(10);
       expect(result.releasedHoverChangedPixels).toBe(0);

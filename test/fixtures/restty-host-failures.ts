@@ -1,6 +1,19 @@
 import type { BrowserWindow } from "electron";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 
+export async function preparePeer(
+  options: Pick<
+    Parameters<typeof exerciseResttyBackendLoss>[0],
+    "window" | "launchKinds" | "resizes" | "waitFor"
+  >,
+) {
+  options.window.webContents.send(terminalIpc.tabCommand, { action: "new" });
+  await options.waitFor(
+    () => options.launchKinds.length === 4 && options.resizes[3]!.length > 0,
+    "unaffected rendering-loss peer",
+  );
+}
+
 export async function exerciseResttyBackendLoss(options: {
   readonly window: BrowserWindow;
   readonly launchKinds: readonly string[];
@@ -13,11 +26,6 @@ export async function exerciseResttyBackendLoss(options: {
     label: string,
   ) => Promise<void>;
 }) {
-  options.window.webContents.send(terminalIpc.tabCommand, { action: "new" });
-  await options.waitFor(
-    () => options.launchKinds.length === 4 && options.resizes[3]!.length > 0,
-    "unaffected rendering-loss peer",
-  );
   options.window.webContents.send(terminalIpc.tabCommand, { action: "new" });
   await options.waitFor(
     () => options.launchKinds.length === 5 && options.resizes[4]!.length > 0,

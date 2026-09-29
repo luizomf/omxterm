@@ -67,6 +67,18 @@ tabs with one confirmation. Closing the last tab closes its window, and closing
 the last window quits OMXTerm. ADR 0017 later narrowed confirmation to Busy
 Sessions using minimal foreground-process inspection.
 
+A later initialization-lifetime correction makes the renderer's tab owner the
+source of ordinary last-tab closure. Native PTY counts omit tabs waiting for
+fonts and rendering (ADR 0025), so main no longer closes a window merely because
+an ordinary exit leaves zero PTYs. Removing the last tab sends an owned,
+main-frame-validated empty notification through preload and commits that
+renderer owner to closing; queued New Tab commands cannot revive it. Cancelling
+a pending tab uses the same path. A final rendering failure before Adapter start
+uses only a fixed failure reason, retaining main's native acknowledgement before
+closure. Native spawn/signal/runtime-failure reporting remains session-owned;
+application shutdown still waits independently for actual PTY exits (ADR 0028).
+This avoids a mirrored tab registry or an early-shell workaround.
+
 Terminal titles stay display-only per [ADR 0010](0010-keep-terminal-titles-display-only.md),
 applied per session: a tab shows its own sanitized title, an untitled tab falls
 back to the Default Shell's name (known from the spawn, never from process

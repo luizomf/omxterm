@@ -79,6 +79,7 @@ interface TerminalWindowPageOptions {
     listener: (sessionId: TerminalSessionId, title: string) => void,
   ) => () => void;
   readonly notifyTabSelection?: (sessionId: TerminalSessionId) => void;
+  readonly notifyTabsEmpty?: (reason?: "rendering-failure") => void;
   readonly onTitleRequest?: (
     sessionId: TerminalSessionId,
     request: string,
@@ -194,6 +195,9 @@ export function mountTerminalWindowPage(
       mount,
       surfaceOptions,
       showTabBar: options.configuration?.showTabBar ?? true,
+      ...(options.notifyTabsEmpty
+        ? { notifyEmpty: options.notifyTabsEmpty }
+        : {}),
       ...(options.notifyTabSelection
         ? { notifySelection: options.notifyTabSelection }
         : {}),

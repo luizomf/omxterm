@@ -48,6 +48,7 @@ void window.omxterm.terminal.configuration().then((configuration) => {
       subscribeToTabBarToggle: window.omxterm.terminal.onTabBarToggle,
       subscribeToTabTitles: window.omxterm.terminal.onTabTitle,
       notifyTabSelection: window.omxterm.terminal.notifyTabSelection,
+      notifyTabsEmpty: window.omxterm.terminal.notifyTabsEmpty,
       onTitleRequest: window.omxterm.terminal.title,
       onBell: window.omxterm.terminal.bell,
       onExternalLink: window.omxterm.terminal.openExternalLink,

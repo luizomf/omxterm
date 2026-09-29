@@ -67,6 +67,7 @@ interface RoutedTerminalIpcController extends TerminalIpcController {
   acknowledgeOutput(payload?: unknown): void;
   close(payload?: unknown): void;
   tabSelected(payload?: unknown): void;
+  tabsEmpty(payload?: unknown): void;
   writeClipboardText(payload?: unknown): void;
   readClipboardText(payload?: unknown): string;
   confirmPaste(payload?: unknown): Promise<boolean>;
@@ -144,6 +145,8 @@ export function registerTerminalIpcRouter(
     route(event, (controller) => controller.close(payload));
   const tabSelected: IpcListener = (event, payload) =>
     route(event, (controller) => controller.tabSelected(payload));
+  const tabsEmpty: IpcListener = (event, payload) =>
+    route(event, (controller) => controller.tabsEmpty(payload));
   const title: IpcListener = (event, payload) =>
     route(event, (controller) => controller.title(payload));
   const bell: IpcListener = (event, payload) =>
@@ -246,6 +249,7 @@ export function registerTerminalIpcRouter(
   ipcMain.on(terminalIpc.outputAck, acknowledgeOutput);
   ipcMain.on(terminalIpc.close, close);
   ipcMain.on(terminalIpc.tabSelected, tabSelected);
+  ipcMain.on(terminalIpc.tabsEmpty, tabsEmpty);
   ipcMain.on(terminalIpc.title, title);
   ipcMain.on(terminalIpc.bell, bell);
   ipcMain.on(terminalIpc.externalLink, externalLink);
@@ -300,6 +304,7 @@ export function registerTerminalIpcRouter(
       ipcMain.removeListener(terminalIpc.outputAck, acknowledgeOutput);
       ipcMain.removeListener(terminalIpc.close, close);
       ipcMain.removeListener(terminalIpc.tabSelected, tabSelected);
+      ipcMain.removeListener(terminalIpc.tabsEmpty, tabsEmpty);
       ipcMain.removeListener(terminalIpc.title, title);
       ipcMain.removeListener(terminalIpc.bell, bell);
       ipcMain.removeListener(terminalIpc.externalLink, externalLink);
@@ -416,9 +421,6 @@ function createTerminalIpcController(
     state.session.close();
   };
 
-  const countLiveSessions = () =>
-    [...sessions.values()].filter((state) => !state.exited).length;
-
   const isBusy = (state: RoutedSessionState) =>
     !state.closed && !state.exited && state.session.hasForegroundChildProcess();
   const hasBusySession = () => [...sessions.values()].some(isBusy);
@@ -497,7 +499,7 @@ function createTerminalIpcController(
               sessionId,
               state,
               reportedLaunchKind,
-              countLiveSessions(),
+              countLiveSessions(sessions),
             ),
           );
           if (windowId !== undefined) {
@@ -529,7 +531,7 @@ function createTerminalIpcController(
           : "default-shell";
       options.onSessionStartError({
         launchKind,
-        liveSessions: countLiveSessions(),
+        liveSessions: countLiveSessions(sessions),
       });
       throw new Error(
         launchKind === "explicit-command"
@@ -712,6 +714,7 @@ function createTerminalIpcController(
     acknowledgeOutput,
     close,
     tabSelected,
+    tabsEmpty: emptyTabsNotification(options, reject, () => disposed),
     hasBusySelectedSession() {
       const selected = selectedSessionId
         ? sessions.get(selectedSessionId)
@@ -738,6 +741,27 @@ function createTerminalIpcController(
       unregister();
       for (const sessionId of [...sessions.keys()]) closeSession(sessionId);
     },
+  };
+}
+
+function countLiveSessions(
+  sessions: ReadonlyMap<TerminalSessionId, RoutedSessionState>,
+): number {
+  return [...sessions.values()].filter((state) => !state.exited).length;
+}
+
+function emptyTabsNotification(
+  options: TerminalIpcControllerOptions,
+  reject: RejectBoundary,
+  isDisposed: () => boolean,
+): (payload?: unknown) => void {
+  return (payload) => {
+    if (payload !== undefined && payload !== "rendering-failure") {
+      reject("ipc", "invalid-payload");
+      return;
+    }
+    if (!isDisposed() && !options.webContents.isDestroyed())
+      options.onTabsEmpty?.(payload);
   };
 }
 

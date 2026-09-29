@@ -69,6 +69,7 @@ export interface TerminalIpcControllerOptions {
     exit: TerminalExit,
     context: TerminalSessionEndContext,
   ) => void;
+  readonly onTabsEmpty?: (reason?: "rendering-failure") => void;
   readonly onSessionStarted: (
     sessionId: TerminalSessionId,
     fallbackTitle?: string,

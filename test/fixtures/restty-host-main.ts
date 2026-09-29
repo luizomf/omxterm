@@ -24,7 +24,7 @@ import {
 } from "./restty-host-concurrent-font";
 import { exerciseResttyEvents } from "./restty-host-events";
 import { exerciseResttyCapabilities } from "./restty-host-capabilities";
-import { exerciseResttyBackendLoss } from "./restty-host-failures";
+import * as resttyFailures from "./restty-host-failures";
 import { captureResttyFontPaintEvidence } from "./restty-host-paint";
 import * as resttyImages from "./restty-host-images";
 import {
@@ -421,12 +421,15 @@ app
       waitFor,
     });
 
+    // Keep a real tab owner between phases. Last-tab removal now commits
+    // renderer closure; a fixture must not revive an intentionally empty host.
+    await resttyFailures.preparePeer({ window, launchKinds, resizes, waitFor });
     terminals[0]!.close();
     await waitFor(
       () =>
-        ended.some(
-          (entry) => !entry.closeRequested && entry.liveSessions === 0,
-        ),
+        ended.length === 3 &&
+        !ended[2]!.closeRequested &&
+        ended[2]!.liveSessions === 1,
       "owned default-shell termination",
     );
     window.webContents.send(terminalIpc.tabCommand, {
@@ -434,7 +437,7 @@ app
       sessionId: "s1",
     });
 
-    const backendLoss = await exerciseResttyBackendLoss({
+    const backendLoss = await resttyFailures.exerciseResttyBackendLoss({
       window,
       launchKinds,
       resizes,

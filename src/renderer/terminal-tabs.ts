@@ -34,6 +34,7 @@ export interface TerminalTabsOptions {
   readonly mount: MountTerminalSurface;
   readonly surfaceOptions: TerminalSurfaceOptions;
   readonly showTabBar?: boolean;
+  readonly notifyEmpty?: (reason?: "rendering-failure") => void;
   readonly notifySelection?: (sessionId: TerminalSessionId) => void;
   readonly notifyTitle?: (
     sessionId: TerminalSessionId,
@@ -63,6 +64,7 @@ interface TerminalTab {
   surface: TerminalSurface | undefined;
   label: string;
   removed: boolean;
+  startRequested: boolean;
 }
 
 function closePendingTab(tab: TerminalTab): void {
@@ -82,6 +84,14 @@ export function createTerminalTabs(
   let activeSurfaceOptions = options.surfaceOptions;
   let disposed = false;
   let pendingClose: TerminalTab | undefined;
+  let closing = false;
+
+  const notifyEmpty = (reason?: "rendering-failure") => {
+    if (disposed || closing || tabs.length !== 0) return;
+    // Commit last-tab closure: a later queued New Tab cannot resurrect it.
+    closing = true;
+    options.notifyEmpty?.(reason);
+  };
 
   const selectedTab = (): TerminalTab | undefined => tabs[selectedIndex];
   const tabDragging = installTabDragging(elements.strip, (tab, clientX) => {
@@ -134,7 +144,7 @@ export function createTerminalTabs(
     tab.surface?.focus();
   };
 
-  const removeTab = (tab: TerminalTab) => {
+  const removeTab = (tab: TerminalTab, notify = true) => {
     const index = tabs.indexOf(tab);
     if (tab.removed || index < 0) return;
     tab.removed = true;
@@ -143,6 +153,7 @@ export function createTerminalTabs(
     if (tabs.length === 0) {
       selectedIndex = -1;
       renderStrip();
+      if (notify) notifyEmpty();
       return;
     }
     if (index < selectedIndex) selectedIndex -= 1;
@@ -162,19 +173,8 @@ export function createTerminalTabs(
   };
 
   const createTab = async (): Promise<void> => {
-    const container = document.createElement("main");
-    container.className = "terminal-surface";
-    container.setAttribute("aria-label", "Terminal Surface");
-    elements.container.append(container);
-    const adapter = options.createAdapter();
-    const tab: TerminalTab = {
-      container,
-      adapter,
-      mountAbort: new AbortController(),
-      surface: undefined,
-      label: "",
-      removed: false,
-    };
+    const tab = appendTab(elements.container, options.createAdapter);
+    const { container, adapter } = tab;
     tabs.push(tab);
     select(tabs.length - 1);
 
@@ -189,9 +189,9 @@ export function createTerminalTabs(
         ? {
             onFatalError: (message: string) => {
               activeSurfaceOptions.onFatalError?.(message);
-              // The Surface owns failure disposal and reports its close reason
-              // before main decides whether the last window may disappear.
-              removeTab(tab);
+              // A live Surface reports failure through its native session;
+              // pre-start failure is reported after the mount rejects below.
+              removeTab(tab, false);
             },
           }
         : {}),
@@ -224,7 +224,9 @@ export function createTerminalTabs(
         tabSurfaceOptions,
       );
     } catch (error) {
-      removeTab(tab);
+      removeTab(tab, false);
+      if (!tab.startRequested && !tab.mountAbort.signal.aborted)
+        notifyEmpty("rendering-failure");
       throw error;
     }
     if (disposed || tab.removed) {
@@ -260,7 +262,7 @@ export function createTerminalTabs(
       for (const tab of tabs) tab.surface?.applyConfiguration(configuration);
     },
     handleCommand(command) {
-      if (disposed) return;
+      if (disposed || closing) return;
       switch (command.action) {
         case "new":
           // A failed additional spawn already dropped its tab; main shows
@@ -344,6 +346,25 @@ export function createTerminalTabs(
   };
 }
 
+function appendTab(
+  parent: HTMLElement,
+  createAdapter: () => ElectronTerminalAdapter,
+): TerminalTab {
+  const container = parent.ownerDocument.createElement("main");
+  container.className = "terminal-surface";
+  container.setAttribute("aria-label", "Terminal Surface");
+  parent.append(container);
+  return {
+    container,
+    adapter: createAdapter(),
+    mountAbort: new AbortController(),
+    surface: undefined,
+    label: "",
+    removed: false,
+    startRequested: false,
+  };
+}
+
 function closeTab(
   tab: TerminalTab | undefined,
   removeTab: (tab: TerminalTab) => void,
@@ -362,14 +383,16 @@ function tabSessionAdapter(
 ): TerminalSessionAdapter {
   const { adapter } = tab;
   return {
-    start: (handlers: TerminalSessionHandlers) =>
-      adapter.start({
+    start: (handlers: TerminalSessionHandlers) => {
+      tab.startRequested = true;
+      return adapter.start({
         onOutput: handlers.onOutput,
         onExit(exit) {
           handlers.onExit(exit);
           onSessionEnd(tab, exit);
         },
-      }),
+      });
+    },
     write: (data) => adapter.write(data),
     resize: (size) => adapter.resize(size),
     close: (reason) => adapter.close(reason),

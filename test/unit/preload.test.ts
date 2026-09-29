@@ -88,6 +88,24 @@ describe("isolated preload terminal bridge requests", () => {
     });
   });
 
+  it("sends only a fixed empty-tab reason without renderer-supplied dialog content", () => {
+    const bridge = electron.bridge!;
+    bridge.notifyTabsEmpty();
+    bridge.notifyTabsEmpty("rendering-failure");
+    expect(electron.send).toHaveBeenCalledWith(
+      terminalIpc.tabsEmpty,
+      undefined,
+    );
+    expect(electron.send).toHaveBeenCalledWith(
+      terminalIpc.tabsEmpty,
+      "rendering-failure",
+    );
+    for (const reason of [null, "arbitrary", { reason: "rendering-failure" }])
+      expect(() =>
+        bridge.notifyTabsEmpty(reason as "rendering-failure"),
+      ).toThrow(TypeError);
+  });
+
   it("sends only validated tab selection notices", () => {
     const bridge = electron.bridge!;
 

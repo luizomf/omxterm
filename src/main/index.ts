@@ -145,8 +145,7 @@ app
         } else {
           operationalEvents!.write({ name: "configuration.validated" });
         }
-        for (const warning of warnings ?? [])
-          process.stderr.write(`${warning}\n`);
+        warnings?.forEach((warning) => process.stderr.write(`${warning}\n`));
         operationalEvents!.write({ name: "application.started" });
         const terminalIpcRouter = fontIpcRouter(ipcMain, operationalEvents!);
         disposeTerminalSessions = () => terminalIpcRouter.dispose();
@@ -262,6 +261,7 @@ app
                 });
               },
               onSessionStartError: lifecycle.onSessionStartError,
+              onTabsEmpty: lifecycle.onTabsEmpty,
               onSessionExit: (exit, context) => {
                 titleController.sessionEnded(context.sessionId);
                 lifecycle.onSessionExit(exit, context);

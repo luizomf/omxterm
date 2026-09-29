@@ -150,7 +150,15 @@ succeeds (ADR 0025).
   when it was last; removing the only tab retains the last-tab window lifecycle.
 - After the Default Shell starts successfully, an ordinary shell exit closes
   its tab — and its window when that was the last tab — without confirmation
-  or a failure dialog, regardless of its numeric exit code.
+  or a failure dialog, regardless of its numeric exit code. A tab whose fonts
+  or rendering are still initializing remains a window owner even before its
+  PTY starts: another session's ordinary exit cannot close that window. The
+  pending tab may finish and start one session, or be cancelled without starting
+  one. Cancelling the final pending tab closes the window; final pre-start
+  rendering failure retains a native failure dialog until acknowledgement.
+  Last-tab closure is committed by the renderer's tab owner, not inferred from
+  a zero native-PTY count. Queued New Tab commands cannot revive an emptied
+  owner; explicit window closure and Quit still cancel pending initialization.
 - A spawn failure or unexpected signal remains visible in a native error dialog
   and local log until acknowledged; the useless tab then closes.
 - Each window starts at configured font size. Window Font Zoom defaults to

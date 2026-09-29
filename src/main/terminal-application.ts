@@ -25,6 +25,7 @@ export interface NativeTerminalWindow {
 export interface TerminalWindowLifecycle {
   readonly windowId: number;
   onWindowClosed(): void;
+  onTabsEmpty(reason?: "rendering-failure"): void;
   onSessionStartError(context: TerminalSessionStartErrorContext): void;
   onSessionExit(exit: TerminalExit, context: TerminalSessionEndContext): void;
 }
@@ -165,18 +166,12 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     if (!window.isDestroyed()) window.close();
   };
 
-  const closeAfterFailure = (
-    window: Window,
-    failure: TerminalSessionFailure,
-  ) => {
-    const state = windows.get(window);
-    if (!state || state.failurePending) return;
-    state.failurePending = true;
-    const closeWindow = () => forceCloseWindow(window);
-    void options
-      .showSessionFailure(window, failure)
-      .then(closeWindow, closeWindow);
-  };
+  const closeAfterFailure = (window: Window, failure: TerminalSessionFailure) =>
+    retainFailure(
+      windows.get(window),
+      () => options.showSessionFailure(window, failure),
+      () => forceCloseWindow(window),
+    );
 
   const sendToSelected = (command: TerminalTabCommand) => {
     const window = selectedWindow();
@@ -209,6 +204,18 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
             if (windows.size === 0) quit();
           });
         },
+        onTabsEmpty(reason) {
+          dispatch(() => {
+            const state = windows.get(instance.window);
+            if (!state || state.failurePending) return;
+            if (reason === "rendering-failure")
+              closeAfterFailure(instance.window, {
+                reason: "rendering",
+                launchKind: "default-shell",
+              });
+            else forceCloseWindow(instance.window);
+          });
+        },
         onSessionStartError(context) {
           dispatch(() => {
             // The renderer already dropped the tab whose spawn failed; the
@@ -231,12 +238,10 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
               exit.signal !== 0 && !context.closeRequested;
             const renderingFailure =
               context.closeReason === "rendering-failure";
-            if (!unexpectedSignal && !renderingFailure) {
-              // An ordinary end closes only its tab; the window follows when
-              // that was the last Live Terminal Session, without confirmation.
-              if (context.liveSessions === 0) forceCloseWindow(instance.window);
-              return;
-            }
+            // Only the renderer knows whether another tab is still mounting.
+            // Its last-tab notification, not the native PTY count, closes an
+            // ordinarily emptied window. Native shutdown still owns PTY drain.
+            if (!unexpectedSignal && !renderingFailure) return;
             const failure: TerminalSessionFailure = renderingFailure
               ? { reason: "rendering", launchKind: context.launchKind }
               : {
@@ -414,6 +419,16 @@ function confirmTabClose<Window extends NativeTerminalWindow>(
       resolveClose(false);
       throw error;
     });
+}
+
+function retainFailure(
+  state: TerminalWindowState | undefined,
+  show: () => Promise<void>,
+  close: () => void,
+): void {
+  if (!state || state.failurePending) return;
+  state.failurePending = true;
+  void show().then(close, close);
 }
 
 function elapsedMilliseconds(startedAt: number): number {

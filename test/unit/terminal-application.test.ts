@@ -364,6 +364,8 @@ describe("Terminal application lifecycle", () => {
         { exitCode, signal: 0 },
         lastSessionEnd(),
       );
+      expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
+      harness.windows[0]!.lifecycle.onTabsEmpty();
 
       expect(harness.showSessionFailure).not.toHaveBeenCalled();
       expect(harness.showQuitConfirmation).not.toHaveBeenCalled();
@@ -382,6 +384,8 @@ describe("Terminal application lifecycle", () => {
       { exitCode: 1, signal: 0 },
       lastSessionEnd(),
     );
+    expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
+    harness.windows[0]!.lifecycle.onTabsEmpty();
 
     expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
     expect(harness.windows[1]!.closeSession).not.toHaveBeenCalled();
@@ -391,6 +395,8 @@ describe("Terminal application lifecycle", () => {
       { exitCode: 7, signal: 0 },
       lastSessionEnd(),
     );
+    expect(harness.windows[1]!.closeSession).not.toHaveBeenCalled();
+    harness.windows[1]!.lifecycle.onTabsEmpty();
 
     expect(harness.windows[1]!.closeSession).toHaveBeenCalledOnce();
     expect(harness.quit).toHaveBeenCalledOnce();
@@ -477,7 +483,9 @@ describe("Terminal application lifecycle", () => {
     expect(harness.windows[0]!.window.close).toHaveBeenCalledOnce();
     expect(harness.quit).toHaveBeenCalledOnce();
   });
+});
 
+describe("Terminal application window actions", () => {
   it("targets fullscreen and ordinary floating always-on-top at the selected window", async () => {
     const harness = createApplicationHarness();
     await harness.application.newWindow();
@@ -700,6 +708,8 @@ describe("Terminal application lifecycle", () => {
         liveSessions: 0,
       },
     );
+    expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
+    harness.windows[0]!.lifecycle.onTabsEmpty();
     expect(harness.showSessionFailure).not.toHaveBeenCalled();
     expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
   });

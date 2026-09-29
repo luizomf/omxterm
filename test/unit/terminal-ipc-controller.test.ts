@@ -197,7 +197,7 @@ describe("terminal IPC controller", () => {
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();
     expect(ipc.handlers.size).toBe(8);
-    expect(ipc.listeners.size).toBe(9);
+    expect(ipc.listeners.size).toBe(10);
   });
 
   it("associates each started session with its selected shell fallback title", () => {

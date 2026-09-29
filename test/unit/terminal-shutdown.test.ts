@@ -140,6 +140,7 @@ function harness(confirmClose = false) {
         createSession: (callbacks) =>
           shutdown.createSession(spawn, { ...sessionOptions, ...callbacks }),
         onSessionStartError: lifecycle.onSessionStartError,
+        onTabsEmpty: lifecycle.onTabsEmpty,
         onSessionExit(exit, context) {
           forwardedExit(exit, context);
           lifecycle.onSessionExit(exit, context);
@@ -197,6 +198,8 @@ function harness(confirmClose = false) {
     showSessionFailure,
     retainedStart: (index = 0) => startHandler(owner(index)),
     start: (index = 0) => handlers.get(terminalIpc.start)!(owner(index)),
+    notifyTabsEmpty: (index = 0) =>
+      listeners.get(terminalIpc.tabsEmpty)!(owner(index)),
     closeTab: (index = 0, sessionId = "s1") =>
       listeners.get(terminalIpc.close)!(owner(index), { sessionId }),
     createLateSession: () => shutdown.createSession(spawn, sessionOptions),
@@ -298,7 +301,7 @@ describe("application-owned native session shutdown", () => {
     expect(h.quit).not.toHaveBeenCalled();
   });
 
-  it("registers completion before a synchronous native exit can close the last window", async () => {
+  it("registers completion when the renderer closes after a synchronous native exit", async () => {
     const h = harness();
     await h.application.newWindow();
     const pty = nativePty();
@@ -310,6 +313,11 @@ describe("application-owned native session shutdown", () => {
       },
     });
     h.start();
+    expect(h.quit).not.toHaveBeenCalled();
+    expect(h.forwardedExit).toHaveBeenCalledOnce();
+    // The renderer receives the buffered exit after its start response, then
+    // reports last-tab removal. Native completion must already be recorded.
+    h.notifyTabsEmpty();
     await Promise.resolve();
     expect(h.quit).toHaveBeenCalledOnce();
     expect(h.forwardedExit).toHaveBeenCalledOnce();
