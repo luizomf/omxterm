@@ -30,12 +30,12 @@ when using a Wayland desktop. For example:
 
 ```sh
 # Ubuntu
-sudo apt install build-essential python3 binutils fontconfig file xwayland fonts-dejavu-core
+sudo apt install build-essential python3 patch binutils fontconfig file xwayland fonts-dejavu-core
 ```
 
 ```sh
 # Fedora
-sudo dnf install gcc-c++ make python3 binutils fontconfig file xorg-x11-server-Xwayland dejavu-sans-fonts dejavu-sans-mono-fonts
+sudo dnf install gcc-c++ make python3 patch binutils fontconfig file xorg-x11-server-Xwayland dejavu-sans-fonts dejavu-sans-mono-fonts
 ```
 
 Native font fixtures require the exact installed families `DejaVu Sans` and

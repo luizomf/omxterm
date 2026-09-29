@@ -1,185 +1,89 @@
 --- a/pty.cc
 +++ b/pty.cc
-@@ -19,6 +19,7 @@
- 
- #define NODE_ADDON_API_DISABLE_DEPRECATED
- #include <napi.h>
+@@ -21,0 +22 @@
 +#include "node-pty-exec-status.h"
- #include <assert.h>
- #include <errno.h>
- #include <string.h>
-@@ -108,9 +109,10 @@
- 
- struct ExitEvent {
-   int exit_code = 0, signal_code = 0;
+@@ -110,0 +112 @@
 +  bool exec_failed = false;
- };
- 
+@@ -113 +115 @@
 -void SetupExitCallback(Napi::Env env, Napi::Function cb, pid_t pid) {
 +void SetupExitCallback(Napi::Env env, Napi::Function cb, pid_t pid, int exec_status) {
-   std::thread *th = new std::thread;
-   // Don't use Napi::AsyncWorker which is limited by UV_THREADPOOL_SIZE.
-   auto tsfn = Napi::ThreadSafeFunction::New(
-@@ -123,10 +125,11 @@
-         th->join();
-         delete th;
-       });
+@@ -126 +128 @@
 -  *th = std::thread([tsfn = std::move(tsfn), pid] {
 +  *th = std::thread([tsfn = std::move(tsfn), pid, exec_status] {
-     auto callback = [](Napi::Env env, Napi::Function cb, ExitEvent *exit_event) {
-       cb.Call({Napi::Number::New(env, exit_event->exit_code),
+@@ -129 +131,2 @@
 -               Napi::Number::New(env, exit_event->signal_code)});
 +               Napi::Number::New(env, exit_event->signal_code),
 +               Napi::Boolean::New(env, exit_event->exec_failed)});
-       delete exit_event;
-     };
- 
-@@ -186,6 +189,7 @@
-     }
- #endif
-     ExitEvent *exit_event = new ExitEvent;
+@@ -188,0 +192 @@
 +    exit_event->exec_failed = pty_exec_failure(exec_status);
-     if (WIFEXITED(stat_loc)) {
-       exit_event->exit_code = WEXITSTATUS(stat_loc); // errno?
-     }
-@@ -243,7 +247,7 @@
-                 const struct winsize *winp,
-                 int* master,
-                 pid_t* pid,
+@@ -246 +250 @@
 -                int* err);
 +                int* err, int exec_status);
- #endif
- 
- struct DelBuf {
-@@ -351,24 +355,29 @@
-   // helperPath
-   std::string helper_path = info[9].As<Napi::String>();
- 
+@@ -353,0 +358,4 @@
 +  PtyExecStatus exec_status;
 +  if (!exec_status.open()) {
 +    throw Napi::Error::New(napiEnv, "Could not create PTY exec-status channel.");
 +  }
-   pid_t pid;
-   int master;
- #if defined(__APPLE__)
-   int argc = argv_.Length();
+@@ -358 +366 @@
 -  int argl = argc + 4;
 +  int argl = argc + 5;
-   std::unique_ptr<char *, DelBuf> argv_unique_ptr(new char *[argl], DelBuf(argl));
-   char **argv = argv_unique_ptr.get();
-   argv[0] = strdup(helper_path.c_str());
+@@ -362,2 +370,3 @@
 -  argv[1] = strdup(cwd_.c_str());
 -  argv[2] = strdup(file.c_str());
 +  argv[1] = strdup(std::to_string(exec_status.writer).c_str());
 +  argv[2] = strdup(cwd_.c_str());
 +  argv[3] = strdup(file.c_str());
-   argv[argl - 1] = NULL;
-   for (int i = 0; i < argc; i++) {
-     std::string arg = argv_.Get(i).As<Napi::String>();
+@@ -367 +376 @@
 -    argv[i + 3] = strdup(arg.c_str());
 +    argv[i + 4] = strdup(arg.c_str());
-   }
- 
-   int err = -1;
+@@ -371 +380 @@
 -  pty_posix_spawn(argv, env, term, &winp, &master, &pid, &err);
 +  pty_posix_spawn(argv, env, term, &winp, &master, &pid, &err, exec_status.writer);
-   if (err != 0) {
-     throw Napi::Error::New(napiEnv, "posix_spawnp failed.");
-   }
-@@ -417,19 +426,16 @@
-     case 0:
-       if (strlen(cwd_.c_str())) {
-         if (chdir(cwd_.c_str()) == -1) {
+@@ -420,2 +429 @@
 -          perror("chdir(2) failed.");
 -          _exit(1);
 +          pty_exec_failed(exec_status.writer);
-         }
-       }
- 
-       if (uid != -1 && gid != -1) {
-         if (setgid(gid) == -1) {
+@@ -427,2 +435 @@
 -          perror("setgid(2) failed.");
 -          _exit(1);
 +          pty_exec_failed(exec_status.writer);
-         }
-         if (setuid(uid) == -1) {
+@@ -431,2 +438 @@
 -          perror("setuid(2) failed.");
 -          _exit(1);
 +          pty_exec_failed(exec_status.writer);
-         }
-       }
- 
-@@ -438,8 +444,7 @@
-         environ = env;
-         execvp(argv[0], argv);
-         environ = old;
+@@ -441,2 +447 @@
 -        perror("execvp(3) failed.");
 -        _exit(1);
 +        pty_exec_failed(exec_status.writer);
-       }
-     default:
-       if (pty_nonblock(master) == -1) {
-@@ -455,7 +460,8 @@
- 
-   // Set up process exit callback.
-   Napi::Function cb = info[10].As<Napi::Function>();
+@@ -458 +463,2 @@
 -  SetupExitCallback(napiEnv, cb, pid);
 +  exec_status.closeWriter();
 +  SetupExitCallback(napiEnv, cb, pid, exec_status.releaseReader());
-   return obj;
- }
- 
-@@ -690,7 +695,7 @@
-                 const struct winsize *winp,
-                 int* master,
-                 pid_t* pid,
+@@ -693 +699 @@
 -                int* err) {
 +                int* err, int exec_status) {
-   int low_fds[3];
-   size_t count = 0;
- 
-@@ -743,6 +748,8 @@
- 
-   posix_spawn_file_actions_t acts;
-   posix_spawn_file_actions_init(&acts);
+@@ -745,0 +752,2 @@
 +  // Preserve the private status writer through the helper spawn only.
 +  posix_spawn_file_actions_addinherit_np(&acts, exec_status);
-   posix_spawn_file_actions_adddup2(&acts, slave, STDIN_FILENO);
-   posix_spawn_file_actions_adddup2(&acts, slave, STDOUT_FILENO);
-   posix_spawn_file_actions_adddup2(&acts, slave, STDERR_FILENO);
 --- a/spawn-helper.cc
 +++ b/spawn-helper.cc
-@@ -1,23 +1,28 @@
- #include <errno.h>
+@@ -1,0 +2,2 @@
 +#include <stdlib.h>
 +#include "node-pty-exec-status.h"
- #include <fcntl.h>
- #include <string.h>
- #include <unistd.h>
- 
- int main (int argc, char** argv) {
+@@ -6,0 +9,3 @@
 +  if (argc < 4) return 1;
 +  const int exec_status = atoi(argv[1]);
 +  if (fcntl(exec_status, F_SETFD, FD_CLOEXEC) == -1) pty_exec_failed(exec_status);
-   char *slave_path = ttyname(STDIN_FILENO);
-   // open implicit attaches a process to a terminal device if:
-   // - process has no controlling terminal yet
-   // - O_NOCTTY is not set
-   close(open(slave_path, O_RDWR));
- 
+@@ -13,3 +18,3 @@
 -  char *cwd = argv[1];
 -  char *file = argv[2];
 -  argv = &argv[2];
 +  char *cwd = argv[2];
 +  char *file = argv[3];
 +  argv = &argv[3];
- 
-   if (strlen(cwd) && chdir(cwd) == -1) {
+@@ -18 +23 @@
 -    _exit(1);
 +    pty_exec_failed(exec_status);
-   }
- 
-   execvp(file, argv);
+@@ -22 +27 @@
 -  return 1;
 +  pty_exec_failed(exec_status);
- }
