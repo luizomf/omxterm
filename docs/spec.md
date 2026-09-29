@@ -323,7 +323,13 @@ and real PTY lifecycle for ordinary Unicode input/output, grid resize,
 focus, Default Shell and explicit-command startup, shell exit, tab close and
 renderer-loss cleanup. It requires the bundled Terminal Font Stack TTFs,
 Ghostty core and an actual WebGL2 backend before a PTY starts. Initialization
-failure releases partial resources and starts no shell. WebGL context loss shows
+failure releases partial resources and starts no shell. Closing an initializing
+Surface is cancellation, not a rendering failure: font, runtime and session-start
+continuations cannot notify a removed owner or start a session after cancellation.
+An already accepted session start is closed exactly once through its Adapter.
+Late callbacks are inert; pending acquisitions settle before their partial resources
+and font leases are released. Genuine failures of a live owner remain visible.
+WebGL context loss shows
 a persistent failure and disposes only the owning Surface/session without core
 recreation. Main retains a fixed actionable native failure dialog until
 acknowledgement, including when the failed session was the window's last one. Restty applies the selected Terminal Theme, configured font size, programming

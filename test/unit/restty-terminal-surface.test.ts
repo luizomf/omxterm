@@ -1,130 +1,16 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ResttyRuntimeEvent, ResttyRuntimeLifecycleState } from "restty";
-import type {
-  PatchedResttyConfig,
-  PatchedResttyPane,
-} from "../../src/terminal-surface/restty-runtime-contract";
+import { harness } from "../fixtures/restty-surface-harness";
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
-
-const harness = vi.hoisted(() => {
-  const instances: FakeRestty[] = [];
-  let initError: Error | undefined;
-  type RuntimeEvent = ResttyRuntimeEvent;
-  class FakeRestty {
-    readonly options: PatchedResttyConfig;
-    readonly canvas = document.createElement("canvas");
-    readonly listeners = new Set<(event: RuntimeEvent) => void>();
-    readonly destroy = vi.fn();
-    readonly focus = vi.fn();
-    readonly sendInput = vi.fn();
-    readonly setFontSize = vi.fn();
-    readonly setLigatures = vi.fn();
-    readonly setOptionKeyMode = vi.fn();
-    readonly setScrollbackLines = vi.fn();
-    readonly applyTheme = vi.fn();
-    readonly updateSize = vi.fn();
-    backend = "webgl2";
-    state: ResttyRuntimeLifecycleState = "created";
-    readonly pane = {
-      container: document.createElement("div"),
-      runtime: {
-        events: {
-          subscribe: (listener: (event: RuntimeEvent) => void) => {
-            this.listeners.add(listener);
-            listener({ type: "state", state: this.state });
-            return () => this.listeners.delete(listener);
-          },
-        },
-        lifecycle: {
-          init: vi.fn(async () => {
-            this.state = "initializing";
-            this.emit({ type: "state", state: "initializing" });
-            if (initError) throw initError;
-            this.emit({ type: "backend", backend: this.backend });
-            this.emit({ type: "term-size", cols: 96, rows: 31 });
-            this.state = "ready";
-            this.emit({ type: "state", state: "ready" });
-          }),
-          state: () => this.state,
-        },
-        render: { getBackend: () => this.backend, refresh: vi.fn() },
-        io: {
-          connectPty: () => {
-            const transport = this.options.services.ptyTransport;
-            if (!transport.isConnected())
-              void transport.connect({
-                url: "",
-                callbacks: {
-                  onData: (data) => {
-                    this.sendInput(data, "pty");
-                  },
-                },
-              });
-          },
-        },
-        interaction: {
-          focus: this.focus,
-          getSelectionText: vi.fn(() => ""),
-          selectAll: vi.fn(() => false),
-          scrollToBottom: vi.fn(),
-          getVisibleLinkAtClientPoint: vi.fn(() => null),
-          setVisibleLinkHover: vi.fn(),
-          updateSize: this.updateSize,
-        },
-        terminal: {
-          isBracketedPasteEnabled: () => false,
-          setFontSize: this.setFontSize,
-          setLigatures: this.setLigatures,
-          setOptionKeyMode: this.setOptionKeyMode,
-          setScrollbackLines: this.setScrollbackLines,
-          applyTheme: this.applyTheme,
-        },
-      },
-    } satisfies PatchedResttyPane;
-
-    constructor(options: PatchedResttyConfig) {
-      this.options = options;
-      this.pane.container.append(this.canvas);
-      options.root.append(this.pane.container);
-      instances.push(this);
-    }
-
-    getActivePane() {
-      return this.pane;
-    }
-
-    emit(event: RuntimeEvent) {
-      for (const listener of this.listeners) listener(event);
-    }
-  }
-  return {
-    FakeRestty,
-    instances,
-    setInitError: (error: Error | undefined) => {
-      initError = error;
-    },
-  };
-});
-
-vi.mock("restty", () => ({ Restty: harness.FakeRestty }));
-vi.mock("../../assets/fonts/FiraCodeNerdFontMono-Regular.ttf", () => ({
-  default: new Uint8Array([1, 1]),
-}));
-vi.mock("../../assets/fonts/FiraCodeNerdFontMono-Bold.ttf", () => ({
-  default: new Uint8Array([1, 2]),
-}));
-vi.mock("../../assets/fonts/DejaVuSansMono.ttf", () => ({
-  default: new Uint8Array([2, 1]),
-}));
-vi.mock("../../assets/fonts/DejaVuSansMono-Bold.ttf", () => ({
-  default: new Uint8Array([2, 2]),
-}));
-vi.mock("../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf", () => ({
-  default: new Uint8Array([3, 1]),
-}));
+import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";
+import { createElectronTerminalAdapter } from "../../src/renderer/electron-terminal-adapter";
+import {
+  cancellationBridge,
+  deferred,
+} from "../fixtures/initialization-cancellation-harness";
+import type { TerminalTabCommand } from "../../src/shared/terminal-contract";
 
 function createAdapter() {
   let handlers: TerminalSessionHandlers | undefined;
@@ -315,35 +201,6 @@ describe("Restty Terminal Surface", () => {
     expect(onBell).toHaveBeenCalledOnce();
   });
 
-  it("starts no PTY when a font lookup is disposed or fails", async () => {
-    const abort = new AbortController();
-    const { adapter } = createAdapter();
-    const onFatalError = vi.fn();
-    const releaseFontInputs = vi.fn();
-    const { mountResttyTerminalSurface } =
-      await import("../../src/terminal-surface/restty-terminal-surface");
-    const pending = mountResttyTerminalSurface(
-      document.createElement("main"),
-      adapter,
-      {
-        abortSignal: abort.signal,
-        acquireFontInputs: async () => {
-          abort.abort();
-          return { fonts: [], release: releaseFontInputs };
-        },
-        onFatalError,
-      },
-    );
-
-    await expect(pending).rejects.toThrow(/OMXTerm Terminal Surface/u);
-    expect(harness.instances).toHaveLength(0);
-    expect(adapter.start).not.toHaveBeenCalled();
-    expect(releaseFontInputs).toHaveBeenCalledOnce();
-    expect(onFatalError).toHaveBeenCalledWith(
-      expect.stringContaining("cancelled"),
-    );
-  });
-
   it("releases partial resources and starts no PTY when initialization fails", async () => {
     harness.setInitError(new Error("font unavailable"));
     const { adapter } = createAdapter();
@@ -386,6 +243,134 @@ describe("Restty Terminal Surface", () => {
     );
     expect(adapter.close).toHaveBeenCalledExactlyOnceWith("rendering-failure");
     expect(restty.destroy).toHaveBeenCalledOnce();
+  });
+});
+
+describe("cancelled tab initialization through the production host and Adapter", () => {
+  it.each([
+    "fonts",
+    "runtime",
+    "startup",
+    "fonts-rejection",
+    "runtime-rejection",
+    "startup-rejection",
+  ] as const)("keeps A usable after closing B at %s", async (boundary) => {
+    harness.instances.length = 0;
+    harness.setInitError(undefined);
+    harness.setInitGate(undefined);
+    const gate = deferred();
+    const startup = boundary.startsWith("startup");
+    const { bridge, outputs, exits } = cancellationBridge(
+      startup ? gate.promise : undefined,
+    );
+    const onSurfaceFailure = vi.fn();
+    const released = [vi.fn(), vi.fn()];
+    let command!: (value: TerminalTabCommand) => void;
+    let mounts = 0;
+    let settled = 0;
+    const tabStrip = document.createElement("nav");
+    const tabsContainer = document.createElement("div");
+    document.body.replaceChildren(tabStrip, tabsContainer);
+    const page = mountTerminalWindowPage(
+      { tabStrip, tabsContainer },
+      {
+        createAdapter: () => createElectronTerminalAdapter(bridge),
+        onSurfaceFailure,
+        subscribeToTabCommands(listener) {
+          command = listener;
+          return () => {};
+        },
+        async mount(container, adapter, options) {
+          const index = mounts++;
+          try {
+            return await mountResttyTerminalSurface(container, adapter, {
+              ...options,
+              async acquireFontInputs() {
+                if (index === 1 && boundary.startsWith("fonts"))
+                  await gate.promise;
+                return { fonts: [], release: released[index]! };
+              },
+            });
+          } finally {
+            settled += 1;
+          }
+        },
+      },
+    );
+    try {
+      await page.ready;
+      const a = harness.instances[0]!;
+      if (boundary.startsWith("runtime")) harness.setInitGate(gate.promise);
+      command({ action: "new" });
+      await vi.waitFor(() => {
+        if (startup) expect(bridge.start).toHaveBeenCalledTimes(2);
+        else if (boundary.startsWith("runtime"))
+          expect(harness.instances[1]!.state).toBe("initializing");
+        else expect(mounts).toBe(2);
+      });
+      const bBeforeClose = harness.instances[1];
+      const lateListeners = [...(bBeforeClose?.listeners ?? [])];
+      command({ action: "close" });
+      expect(tabsContainer.children).toHaveLength(1);
+      for (const listener of lateListeners) {
+        listener({ type: "title", title: "cancelled owner" });
+        listener({ type: "bell" });
+      }
+      if (bBeforeClose) {
+        expect(
+          bBeforeClose.options.services.ptyTransport.sendInput(
+            "cancelled input",
+          ),
+        ).toBe(false);
+        bBeforeClose.canvas.dispatchEvent(
+          new Event("webglcontextlost", { cancelable: true }),
+        );
+      }
+      expect(onSurfaceFailure).not.toHaveBeenCalled();
+      if (boundary.endsWith("rejection"))
+        gate.reject(new Error("late initialization rejection"));
+      else gate.resolve();
+      await vi.waitFor(() => expect(settled).toBe(2));
+      expect(onSurfaceFailure).not.toHaveBeenCalled();
+      expect(bridge.start).toHaveBeenCalledTimes(startup ? 2 : 1);
+      expect(bridge.close.mock.calls).toEqual(
+        startup && boundary !== "startup-rejection" ? [["s2", undefined]] : [],
+      );
+      expect(released[1]).toHaveBeenCalledTimes(
+        boundary === "fonts-rejection" ? 0 : 1,
+      );
+      expect(released[0]).not.toHaveBeenCalled();
+      const b = harness.instances[1];
+      if (b) {
+        expect(b.destroy).toHaveBeenCalledOnce();
+        expect(b.listeners.size).toBe(0);
+        b.emit({ type: "bell" });
+        b.canvas.dispatchEvent(
+          new Event("webglcontextlost", { cancelable: true }),
+        );
+        expect(b.options.services.ptyTransport.sendInput("late")).toBe(false);
+      }
+      expect(onSurfaceFailure).not.toHaveBeenCalled();
+      expect(outputs.size).toBe(1);
+      expect(exits.size).toBe(1);
+      expect(a.destroy).not.toHaveBeenCalled();
+      expect(
+        a.options.services.ptyTransport.sendInput("A remains usable"),
+      ).toBe(true);
+      expect(bridge.input).toHaveBeenCalledExactlyOnceWith(
+        "s1",
+        "A remains usable",
+      );
+      for (const output of outputs) output("s1", "healthy output", 14);
+      expect(a.sendInput).toHaveBeenCalledWith("healthy output", "pty");
+    } finally {
+      gate.resolve();
+      harness.setInitGate(undefined);
+      page.dispose();
+    }
+    expect(released[0]).toHaveBeenCalledOnce();
+    expect(outputs.size).toBe(0);
+    expect(exits.size).toBe(0);
   });
 });
 

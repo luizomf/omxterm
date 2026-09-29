@@ -23,6 +23,21 @@ WebGL2 backend before starting a PTY. Initialization failure starts no shell;
 WebGL context loss reports a visible failure and disposes only the owning tab.
 A native failure dialog explains recovery and remains until acknowledged, even
 when cleanup ended the window's last session. No terminal state is recreated.
+Closing a tab during font acquisition, runtime initialization or the session-start
+round-trip cancels that Surface without a failure banner or dialog. Every async
+continuation rechecks its lifetime before starting or using the Adapter. Late
+callbacks become inert immediately; the pending operation settles before owned
+resources are released, including a late font lease. An already accepted native
+start still closes once through the existing Adapter. Cleanup errors are not
+silently treated as successful cancellation.
+
+`test/integration/initialization-cancellation.test.ts` holds B at the real font
+lease or Restty WebGL readiness continuation, closes it while A stays live, then
+releases the continuation. It checks no fatal notification/banner or extra PTY,
+released font/runtime subscriptions and continued A Paste/input/output. This is
+a controlled async gate with real rendering and PTYs, not physical Close Tab
+keyboard input. Isolated host/Surface/Adapter tests also cover rejected late
+operations and cancellation racing an accepted start.
 
 ### Configuration and Surface lifetime
 

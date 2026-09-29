@@ -122,6 +122,8 @@ export async function mountResttyTerminalSurface(
   options: TerminalSurfaceOptions = {},
 ): Promise<TerminalSurface> {
   let disposed = false;
+  const isCancelled = () => options.abortSignal?.aborted === true;
+  const isInactive = () => disposed || isCancelled();
   let ready = false;
   let transportConnected = false;
   let ptyCallbacks: PtyCallbacks | undefined;
@@ -148,7 +150,7 @@ export async function mountResttyTerminalSurface(
   const delivery = resttyDelivery(
     adapter,
     options,
-    () => !disposed && ready,
+    () => !isInactive() && ready,
     () => pane?.runtime.terminal.isBracketedPasteEnabled() ?? false,
     revealInput,
   );
@@ -159,7 +161,7 @@ export async function mountResttyTerminalSurface(
     pane?.runtime.terminal.applyTheme(toGhosttyTheme(theme), "OMXTerm");
   };
   const isSurfaceVisible = () =>
-    !disposed && !container.hidden && container.isConnected;
+    !isInactive() && !container.hidden && container.isConnected;
   const applyRuntimeSize = (fontSize: number) => {
     currentFontSize = fontSize;
     pane?.runtime.terminal.setFontSize(fontSize);
@@ -209,7 +211,7 @@ export async function mountResttyTerminalSurface(
     visibleLinkController = undefined;
   };
   const fail = (message: string) => {
-    if (disposed) return;
+    if (isInactive()) return;
     try {
       options.onFatalError?.(message);
     } finally {
@@ -219,7 +221,7 @@ export async function mountResttyTerminalSurface(
 
   const transport: PtyTransport = {
     connect({ callbacks }) {
-      if (disposed) return;
+      if (isInactive()) return;
       ptyCallbacks = callbacks;
       transportConnected = true;
       callbacks.onConnect?.();
@@ -232,28 +234,23 @@ export async function mountResttyTerminalSurface(
       callbacks?.onDisconnect?.();
     },
     sendInput(data) {
-      if (!disposed && ready) adapter.write(data);
-      return !disposed && ready;
+      if (!isInactive() && ready) adapter.write(data);
+      return !isInactive() && ready;
     },
     resize(cols, rows) {
       const size = { cols, rows };
       settledSize = size;
-      if (!disposed && ready) adapter.resize(size);
-      return !disposed && ready;
+      if (!isInactive() && ready) adapter.resize(size);
+      return !isInactive() && ready;
     },
-    isConnected: () => transportConnected && !disposed,
+    isConnected: () => transportConnected && !isInactive(),
     destroy: () => undefined,
   };
 
   try {
-    fontLease = options.acquireFontInputs
-      ? await options.acquireFontInputs(initialFamily, options.abortSignal)
-      : {
-          fonts: terminalFontInputs({ fallbacks: [] }, initialFamily),
-          release: () => undefined,
-        };
-    if (options.abortSignal?.aborted)
-      throw new Error("Terminal Surface initialization was cancelled");
+    if (isInactive()) return createDisposedSurface();
+    fontLease = await acquireSurfaceFonts(options, initialFamily);
+    if (isInactive()) return createDisposedSurface();
     container.classList.add("restty-terminal-surface");
     applyContainerAppearance();
     const terminal = resttyTerminalConfig(
@@ -280,7 +277,7 @@ export async function mountResttyTerminalSurface(
     if (!pane) throw new Error("Restty did not create its terminal pane");
 
     removeRuntimeListener = pane.runtime.events.subscribe((event) => {
-      if (disposed) return;
+      if (isInactive()) return;
       if (event.type === "term-size") {
         visibleLinkController?.invalidate();
         settledSize = { cols: event.cols, rows: event.rows };
@@ -288,8 +285,7 @@ export async function mountResttyTerminalSurface(
       else if (event.type === "bell") options.onBell?.();
     });
     await pane.runtime.lifecycle.init();
-    if (disposed)
-      throw new Error("Terminal Surface initialization was cancelled");
+    if (isInactive()) return createDisposedSurface();
     if (
       pane.runtime.lifecycle.state() !== "ready" ||
       pane.runtime.render.getBackend() !== "webgl2"
@@ -326,7 +322,7 @@ export async function mountResttyTerminalSurface(
     ready = true;
     await adapter.start({
       onOutput(data) {
-        if (!disposed) {
+        if (!isInactive()) {
           visibleLinkController?.invalidate();
           ptyCallbacks?.onData?.(data);
           // Hidden ingestion still retires renderer copies, including pending
@@ -338,7 +334,7 @@ export async function mountResttyTerminalSurface(
         dispose();
       },
     });
-    if (disposed) return createDisposedSurface();
+    if (isInactive()) return createDisposedSurface();
     if (settledSize) adapter.resize(settledSize);
     pane.runtime.render.refresh();
 
@@ -375,8 +371,26 @@ export async function mountResttyTerminalSurface(
       dispose,
     };
   } catch (cause) {
-    throwInitializationFailure(cause, fail);
+    // A removed owner may reject at any pending boundary. It is cancellation,
+    // not evidence of a broken backend; live-owner failures still report.
+    if (!isCancelled()) throwInitializationFailure(cause, fail);
+    return createDisposedSurface();
+  } finally {
+    // Release late resources after settlement; cleanup errors still propagate.
+    if (isCancelled()) dispose();
   }
+}
+
+async function acquireSurfaceFonts(
+  options: TerminalSurfaceOptions,
+  family: string | undefined,
+): Promise<TerminalFontInputLease> {
+  return options.acquireFontInputs
+    ? options.acquireFontInputs(family, options.abortSignal)
+    : {
+        fonts: terminalFontInputs({ fallbacks: [] }, family),
+        release: () => undefined,
+      };
 }
 
 function validateScrollbackLines(value = DEFAULT_SCROLLBACK_LINES): number {
