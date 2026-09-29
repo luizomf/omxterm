@@ -31,6 +31,7 @@ export const terminalIpc = {
   windowChromeState: "terminal:window-chrome-state",
   tabCommand: "terminal:tab-command",
   tabSelected: "terminal:tab-selected",
+  tabTitleSync: "terminal:tab-title-sync",
   tabsEmpty: "terminal:tabs-empty",
   tabTitle: "terminal:tab-title",
 } as const;

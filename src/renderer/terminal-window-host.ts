@@ -81,6 +81,7 @@ interface TerminalWindowPageOptions {
     listener: (sessionId: TerminalSessionId, title: string) => void,
   ) => () => void;
   readonly notifyTabSelection?: (sessionId: TerminalSessionId) => void;
+  readonly syncTabTitle?: (sessionId: TerminalSessionId) => void;
   readonly notifyTabsEmpty?: (reason?: "rendering-failure") => void;
   readonly onTitleRequest?: (
     sessionId: TerminalSessionId,
@@ -208,6 +209,7 @@ export function mountTerminalWindowPage(
         ? { notifyTitle: options.onTitleRequest }
         : {}),
       ...(options.onBell ? { notifyBell: options.onBell } : {}),
+      syncTitle: (sessionId) => options.syncTabTitle?.(sessionId),
     },
   );
 
@@ -320,6 +322,11 @@ export function mountTerminalWindowPage(
     },
   );
 
+  // Startup reconciliation can arrive before the first Surface is ready.
+  removeTabTitleListener = options.subscribeToTabTitles?.((sessionId, title) =>
+    tabs.setSessionTitle(sessionId, title),
+  );
+
   const ready = tabs.ready.then(() => {
     if (disposed) return;
     removeZoomListener = options.subscribeToFontZoom?.((command) => {
@@ -336,9 +343,6 @@ export function mountTerminalWindowPage(
     removeTabBarToggleListener = options.subscribeToTabBarToggle?.(() => {
       if (!previewActive()) tabs.toggleTabBar();
     });
-    removeTabTitleListener = options.subscribeToTabTitles?.(
-      (sessionId, title) => tabs.setSessionTitle(sessionId, title),
-    );
     if (options.snippets) {
       const sidebar = createSnippetsSidebar(options.snippets.element, {
         loadSnippets: options.snippets.load,

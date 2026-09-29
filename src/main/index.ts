@@ -220,13 +220,12 @@ app
               {
                 fallbackSessionTitle: shellName,
                 onWindowTitle: chrome.setTitle,
-                sendSessionTitle: (sessionId, title) => {
-                  if (!window.webContents.isDestroyed())
-                    window.webContents.send(terminalIpc.tabTitle, {
-                      sessionId,
-                      title,
-                    });
-                },
+                sendSessionTitle: (sessionId, title) =>
+                  !window.webContents.isDestroyed() &&
+                  window.webContents.send(terminalIpc.tabTitle, {
+                    sessionId,
+                    title,
+                  }),
                 onRejected: (reason) =>
                   operationalEvents!.write({
                     name: "boundary.rejected",
@@ -268,6 +267,7 @@ app
               },
               onSessionStarted: titleController.sessionStarted,
               onSessionSelected: titleController.selectSession,
+              onSessionTitleSync: titleController.syncSessionTitle,
               onTitleRequest: titleController.requestTitle,
               onBell: titleController.ringBell,
               onUserInteraction: titleController.resetAttention,

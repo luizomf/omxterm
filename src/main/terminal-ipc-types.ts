@@ -75,6 +75,7 @@ export interface TerminalIpcControllerOptions {
     fallbackTitle?: string,
   ) => void;
   readonly onSessionSelected: (sessionId: TerminalSessionId) => void;
+  readonly onSessionTitleSync?: (sessionId: TerminalSessionId) => void;
   readonly writeClipboardText: (text: string) => void;
   readonly readClipboardText: () => string;
   readonly confirmPaste: (text: string) => Promise<boolean>;

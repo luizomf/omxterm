@@ -17,6 +17,14 @@ contents in logs, and will not use them as application identity or authority. A
 rejected request may emit an Operational Event containing only a normalized
 reason such as `too-long` or `invalid-characters`.
 
+Startup title delivery uses an explicit synchronization request after the
+renderer Adapter establishes its session identity. Main validates the owning
+renderer main frame and live session, then republishes its current sanitized
+title and BEL marker on the existing ordered title event stream. This avoids
+stale start-response snapshots and unbounded caches of unknown session titles.
+The tab host subscribes before initial readiness; cancelled owners request no
+synchronization, and reconciliation neither selects a tab nor resets attention.
+
 This boundary requires targeted security review before delivery. Verification
 must cover OSC sequences split across PTY output chunks; C0, C1, DEL, newline,
 and bidirectional formatting characters; empty and oversized titles; repeated

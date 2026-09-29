@@ -106,6 +106,16 @@ describe("isolated preload terminal bridge requests", () => {
       ).toThrow(TypeError);
   });
 
+  it("requests title synchronization using only a validated session identity", () => {
+    const bridge = electron.bridge!;
+    bridge.syncTabTitle("s3");
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.tabTitleSync, {
+      sessionId: "s3",
+    });
+    for (const id of ["", "s0", "session-1"])
+      expect(() => bridge.syncTabTitle(id)).toThrow(TypeError);
+  });
+
   it("sends only validated tab selection notices", () => {
     const bridge = electron.bridge!;
 

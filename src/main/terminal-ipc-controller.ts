@@ -8,7 +8,6 @@ import {
   isTerminalSessionClose,
   isTerminalSessionReference,
   isTerminalSessionResize,
-  isTerminalSessionTitle,
   requiresProtectedPaste,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
@@ -61,6 +60,7 @@ import { createLocalImageIpcBoundary } from "./local-image-ipc";
 export { isValidExternalLink } from "./external-link";
 import {
   acknowledgeTerminalOutput,
+  createTerminalTitleRequests,
   requestExternalLink,
   useClipboard,
   type RejectBoundary,
@@ -79,6 +79,7 @@ interface RoutedTerminalIpcController
   acknowledgeOutput(payload?: unknown): void;
   close(payload?: unknown): void;
   tabSelected(payload?: unknown): void;
+  syncTabTitle(payload?: unknown): void;
   tabsEmpty(payload?: unknown): void;
   writeClipboardText(payload?: unknown): void;
   readClipboardText(payload?: unknown): string;
@@ -157,6 +158,8 @@ export function registerTerminalIpcRouter(
     route(event, (controller) => controller.close(payload));
   const tabSelected: IpcListener = (event, payload) =>
     route(event, (controller) => controller.tabSelected(payload));
+  const syncTabTitle: IpcListener = (event, payload) =>
+    route(event, (controller) => controller.syncTabTitle(payload));
   const tabsEmpty: IpcListener = (event, payload) =>
     route(event, (controller) => controller.tabsEmpty(payload));
   const title: IpcListener = (event, payload) =>
@@ -271,6 +274,7 @@ export function registerTerminalIpcRouter(
   ipcMain.on(terminalIpc.outputAck, acknowledgeOutput);
   ipcMain.on(terminalIpc.close, close);
   ipcMain.on(terminalIpc.tabSelected, tabSelected);
+  ipcMain.on(terminalIpc.tabTitleSync, syncTabTitle);
   ipcMain.on(terminalIpc.tabsEmpty, tabsEmpty);
   ipcMain.on(terminalIpc.title, title);
   ipcMain.on(terminalIpc.bell, bell);
@@ -327,6 +331,7 @@ export function registerTerminalIpcRouter(
       ipcMain.removeListener(terminalIpc.outputAck, acknowledgeOutput);
       ipcMain.removeListener(terminalIpc.close, close);
       ipcMain.removeListener(terminalIpc.tabSelected, tabSelected);
+      ipcMain.removeListener(terminalIpc.tabTitleSync, syncTabTitle);
       ipcMain.removeListener(terminalIpc.tabsEmpty, tabsEmpty);
       ipcMain.removeListener(terminalIpc.title, title);
       ipcMain.removeListener(terminalIpc.bell, bell);
@@ -669,14 +674,6 @@ function createTerminalIpcController(
     if (disposed) throw new Error("Terminal IPC controller is disposed");
     return options.loadSnippets();
   };
-  const title = (payload?: unknown) => {
-    if (!isTerminalSessionTitle(payload)) {
-      reject("title", "invalid-payload");
-      return;
-    }
-    if (!routedSession(payload.sessionId)) return;
-    options.onTitleRequest(payload.sessionId, payload.title);
-  };
   const bell = (payload?: unknown) => {
     if (!isTerminalSessionReference(payload)) {
       reject("ipc", "invalid-payload");
@@ -709,6 +706,7 @@ function createTerminalIpcController(
     acknowledgeOutput,
     close,
     tabSelected,
+    ...createTerminalTitleRequests(routedSession, options, reject),
     tabsEmpty: emptyTabsNotification(options, reject, () => disposed),
     hasBusySelectedSession() {
       const selected = selectedSessionId
@@ -721,7 +719,6 @@ function createTerminalIpcController(
     readClipboardText,
     confirmPaste,
     showClipboardContextMenu,
-    title,
     bell,
     openExternalLink,
     localImage: localImageBoundary.request,

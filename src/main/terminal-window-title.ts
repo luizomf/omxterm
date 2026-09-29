@@ -32,6 +32,7 @@ export interface TerminalWindowTitleController {
   ): void;
   sessionEnded(sessionId: TerminalSessionId): void;
   selectSession(sessionId: TerminalSessionId): void;
+  syncSessionTitle(sessionId: TerminalSessionId): void;
   requestTitle(sessionId: TerminalSessionId, request: string): void;
   ringBell(sessionId: TerminalSessionId): void;
   resetAttention(): void;
@@ -150,6 +151,11 @@ export function createTerminalWindowTitleController(
       if (window.isFocused()) clearBell(sessionId);
       updateWindowTitle();
     },
+    syncSessionTitle(sessionId) {
+      // Publish the current value on the same ordered stream as OSC/BEL updates;
+      // a start-time snapshot could overwrite a newer accepted title.
+      if (!disposed) pushSessionTitle(sessionId);
+    },
     requestTitle(sessionId, request) {
       if (disposed) return;
       const state = sessions.get(sessionId);
@@ -181,6 +187,7 @@ export function createTerminalWindowTitleController(
       if (disposed) return;
       disposed = true;
       cancelPendingAttention();
+      sessions.clear();
       window.removeListener("focus", onFocus);
     },
   };

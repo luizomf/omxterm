@@ -41,6 +41,7 @@ export interface TerminalTabsOptions {
     request: string,
   ) => void;
   readonly notifyBell?: (sessionId: TerminalSessionId) => void;
+  readonly syncTitle?: (sessionId: TerminalSessionId) => void;
 }
 
 export interface TerminalTabs {
@@ -181,7 +182,11 @@ export function createTerminalTabs(
     tabs.push(tab);
     select(tabs.length - 1);
 
-    const sessionAdapter = tabSessionAdapter(tab, onSessionEnd);
+    const sessionAdapter = tabSessionAdapter(tab, onSessionEnd, () => {
+      if (disposed || tab.removed) return;
+      const sessionId = adapter.sessionId();
+      if (sessionId !== undefined) options.syncTitle?.(sessionId);
+    });
     // Title and BEL events carry the emitting tab's session id; the Surface
     // itself stays tab-unaware. Events can only follow session output, so
     // the id is always known by the time they fire.
@@ -382,18 +387,20 @@ function tabSessionAdapter(
     tab: TerminalTab,
     exit: { signal: number; startupFailed?: true },
   ) => void,
+  onStarted: () => void,
 ): TerminalSessionAdapter {
   const { adapter } = tab;
   return {
-    start: (handlers: TerminalSessionHandlers) => {
+    start: async (handlers: TerminalSessionHandlers) => {
       tab.startRequested = true;
-      return adapter.start({
+      await adapter.start({
         onOutput: handlers.onOutput,
         onExit(exit) {
           handlers.onExit(exit);
           onSessionEnd(tab, exit);
         },
       });
+      onStarted();
     },
     write: (data) => adapter.write(data),
     resize: (size) => adapter.resize(size),

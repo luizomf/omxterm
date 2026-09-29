@@ -1,5 +1,7 @@
 import {
   isTerminalSessionOutputAck,
+  isTerminalSessionReference,
+  isTerminalSessionTitle,
   type TerminalSessionId,
 } from "../shared/terminal-contract";
 import { isValidExternalLink } from "./external-link";
@@ -49,6 +51,40 @@ export function acknowledgeTerminalOutput(
     !state.outputFlow.acknowledge(payload.end)
   )
     reject("ipc", "invalid-progress");
+}
+
+export function createTerminalTitleRequests(
+  target: (
+    sessionId: TerminalSessionId,
+  ) => { readonly closed: boolean; readonly exited: boolean } | undefined,
+  options: {
+    readonly onTitleRequest: (
+      sessionId: TerminalSessionId,
+      title: string,
+    ) => void;
+    readonly onSessionTitleSync?: (sessionId: TerminalSessionId) => void;
+  },
+  reject: RejectBoundary,
+) {
+  return {
+    title(payload?: unknown) {
+      if (!isTerminalSessionTitle(payload)) {
+        reject("title", "invalid-payload");
+        return;
+      }
+      if (target(payload.sessionId))
+        options.onTitleRequest(payload.sessionId, payload.title);
+    },
+    syncTabTitle(payload?: unknown) {
+      if (!isTerminalSessionReference(payload)) {
+        reject("ipc", "invalid-payload");
+        return;
+      }
+      const state = target(payload.sessionId);
+      if (state && !state.closed && !state.exited)
+        options.onSessionTitleSync?.(payload.sessionId);
+    },
+  };
 }
 
 export function useClipboard<T>(

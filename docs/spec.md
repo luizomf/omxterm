@@ -533,7 +533,10 @@ OSC 0 and OSC 2 titles are display-only and per session: the raw OSC request mus
 control and bidi characters are
 removed and the result must be one printable line. A tab shows its session's
 accepted title and falls back to the basename of the shell selected when that
-session started; the native window
+session started. Startup reconciles the current main-owned title once the tab's
+session identity is known, including when the initial fallback arrived before
+the start response. It neither overwrites a newer accepted title nor retargets
+a cancelled tab; unknown titles are not retained for future tabs. The native window
 title mirrors the selected tab and falls back to `OMXTerm`. Title contents are
 never logged or reported to the PTY.
 

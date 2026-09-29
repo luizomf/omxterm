@@ -47,6 +47,7 @@ export interface TerminalBridge {
     listener: (sessionId: TerminalSessionId, title: string) => void,
   ): () => void;
   notifyTabSelection(sessionId: TerminalSessionId): void;
+  syncTabTitle(sessionId: TerminalSessionId): void;
   notifyTabsEmpty(reason?: "rendering-failure"): void;
   onFontZoom(listener: (command: TerminalFontZoom) => void): () => void;
   writeClipboardText(text: string): Promise<void>;
