@@ -76,6 +76,20 @@ const metrics = (canvas: HTMLCanvasElement | null): ScrollMetrics => {
     sameCanvas: canvas === initialCanvas(),
   };
 };
+async function liveViewport(
+  canvas: HTMLCanvasElement | null,
+): Promise<ScrollMetrics> {
+  const deadline = performance.now() + 5_000;
+  do {
+    await waitForRender();
+    const current = metrics(canvas);
+    if (current.scrollTop === current.scrollHeight - current.clientHeight)
+      return current;
+  } while (performance.now() < deadline);
+  throw new Error(
+    "Live viewport did not reach the bottom after native layout/rendering settled",
+  );
+}
 const configuration = (scrollbackLines: number) => ({
   appearance: { fontSize: 16, lineHeight: 1, ligatures: true },
   padding: { top: 0, right: 0, bottom: 0, left: 0 },
@@ -160,7 +174,7 @@ async function run() {
     },
     metrics: () => metrics(canvas),
     async resizeAtBottom() {
-      const before = metrics(canvas);
+      const before = await liveViewport(canvas);
       // A reload notice can shrink the host while font metrics also change.
       // Neither operation is user scroll input; the live viewport must stay live.
       container.style.maxHeight = `${before.clientHeight - 60}px`;
@@ -169,11 +183,11 @@ async function run() {
         appearance: { fontSize: 18, lineHeight: 1, ligatures: true },
       });
       await waitForRender();
-      const reduced = metrics(canvas);
+      const reduced = await liveViewport(canvas);
       container.style.maxHeight = "";
       surface.applyConfiguration(configuration(3_000));
       await waitForRender();
-      return { before, reduced, restored: metrics(canvas) };
+      return { before, reduced, restored: await liveViewport(canvas) };
     },
     async reduceHistory() {
       surface.applyConfiguration(configuration(1_200));
