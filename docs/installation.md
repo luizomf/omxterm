@@ -6,7 +6,7 @@ for your system. OMXTerm is ready to run; building from source is for developmen
 **[macOS](#macos)** · **[Linux](#linux)** · **[Windows](#windows)** ·
 **[Update or uninstall](#updating-or-uninstalling)**
 
-The packages below are version **0.18.0**, for **ARM64** processors. A checksum
+The packages below are version **0.19.0**, for **ARM64** processors. A checksum
 is a file's fingerprint: checking it catches incomplete or changed downloads.
 It does not verify the publisher's identity; these packages have no verified
 publisher signature. Continue with installation only if the check succeeds and
@@ -23,7 +23,7 @@ you trust the download.
 4. Paste this command and press Enter. A successful check ends in `OK`:
 
    ```sh
-   shasum -a 256 -c OMXTerm-0.18.0-arm64.dmg.sha256
+   shasum -a 256 -c OMXTerm-0.19.0-arm64.dmg.sha256
    ```
 
 5. Open the DMG, drag **OMXTerm.app** to **Applications**, and eject the DMG.
@@ -54,7 +54,7 @@ getconf GNU_LIBC_VERSION
 
 You need **`aarch64`** and **glibc 2.42 or newer**. Older distributions, including
 Ubuntu 24.04, cannot run this AppImage. Use a compatible distribution rather than
-replacing its system glibc. The [release record](releases/0.18.0.md) lists the
+replacing its system glibc. The [release record](releases/0.19.0.md) lists the
 tested environment.
 
 OMXTerm also needs `fontconfig` for fonts and X11 or **XWayland** for its window.
@@ -85,9 +85,9 @@ Open that folder in your file manager and choose **Open in Terminal** (the label
 varies by desktop), then run:
 
 ```sh
-sha256sum --check OMXTerm-0.18.0-arm64.AppImage.sha256 &&
-  chmod +x OMXTerm-0.18.0-arm64.AppImage &&
-  ./OMXTerm-0.18.0-arm64.AppImage
+sha256sum --check OMXTerm-0.19.0-arm64.AppImage.sha256 &&
+  chmod +x OMXTerm-0.19.0-arm64.AppImage &&
+  ./OMXTerm-0.19.0-arm64.AppImage
 ```
 
 The checksum should print `OK`. `chmod +x` makes the file runnable; `./` means
@@ -96,7 +96,7 @@ The checksum should print `OK`. `chmod +x` makes the file runnable; `./` means
 If you see a **FUSE** or mounting error, use extraction mode after verification:
 
 ```sh
-./OMXTerm-0.18.0-arm64.AppImage --appimage-extract-and-run
+./OMXTerm-0.19.0-arm64.AppImage --appimage-extract-and-run
 ```
 
 This temporarily unpacks the app instead of mounting its bundled filesystem.
@@ -108,10 +108,10 @@ Download **linux_install.sh** and its checksum from the same release, beside
 the AppImage. In that folder, run:
 
 ```sh
-sha256sum --check OMXTerm-0.18.0-arm64.AppImage.sha256 &&
+sha256sum --check OMXTerm-0.19.0-arm64.AppImage.sha256 &&
   sha256sum --check linux_install.sh.sha256 &&
   chmod +x linux_install.sh &&
-  ./linux_install.sh install ./OMXTerm-0.18.0-arm64.AppImage
+  ./linux_install.sh install ./OMXTerm-0.19.0-arm64.AppImage
 ```
 
 Open **OMXTerm** from your application menu. The helper copies it into your user
@@ -133,7 +133,7 @@ for graphics compatibility and Hyprland display scaling.
    <summary>Verify the Windows download</summary>
 
    ```powershell
-   $installerName = "OMXTerm-0.18.0-arm64.exe"
+   $installerName = "OMXTerm-0.19.0-arm64.exe"
    $checksumRecord = Get-Content -LiteralPath "$installerName.sha256" -Raw -ErrorAction Stop
    $checksumMatch = [regex]::Match(
      $checksumRecord,
@@ -155,7 +155,7 @@ for graphics compatibility and Hyprland display scaling.
    </details>
 
 5. After **“SHA-256 verification succeeded”** appears, run
-   **OMXTerm-0.18.0-arm64.exe**. It installs for your user. Open OMXTerm from Start.
+   **OMXTerm-0.19.0-arm64.exe**. It installs for your user. Open OMXTerm from Start.
 
 The installer is unsigned. If SmartScreen warns about an unknown publisher and
 you trust the verified package, choose **More info → Run anyway** for that file.
