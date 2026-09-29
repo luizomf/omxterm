@@ -1,6 +1,10 @@
 import { dialog, nativeImage, type BrowserWindow } from "electron";
 import type { LocalImageData, LocalImageRequest } from "../shared/local-image";
-import { loadLocalImageRequest, readLocalImage } from "./local-image";
+import {
+  loadLocalImageRequest,
+  readLocalImage,
+  UnsupportedLocalImageFormatError,
+} from "./local-image";
 
 export async function loadLocalImageForWindow(
   window: BrowserWindow,
@@ -11,6 +15,16 @@ export async function loadLocalImageForWindow(
     return await loadLocalImageRequest(request, {
       platform: process.platform,
       abortSignal,
+      async chooseDirectory(homeDirectory) {
+        const result = await dialog.showOpenDialog(window, {
+          title: "Choose the local base folder for this image reference",
+          defaultPath: homeDirectory,
+          properties: ["openDirectory", "dontAddToRecent"],
+        });
+        return result.canceled || result.filePaths.length !== 1
+          ? null
+          : result.filePaths[0]!;
+      },
       async chooseFile() {
         const result = await dialog.showOpenDialog(window, {
           title: "Open Local Image",
@@ -43,9 +57,10 @@ export async function loadLocalImageForWindow(
           },
         }),
     });
-  } catch {
+  } catch (error) {
     if (abortSignal.aborted)
       throw new Error("Local image request was superseded");
+    if (error instanceof UnsupportedLocalImageFormatError) throw error;
     // Native filesystem errors often include the selected path. Keep that
     // private value out of the renderer-facing IPC rejection.
     throw new Error("The local image could not be loaded");

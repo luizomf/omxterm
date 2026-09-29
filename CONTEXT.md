@@ -135,8 +135,9 @@ as cell-anchored output through the supported Kitty protocol subset. The claimed
 Pi and Chafa paths require direct sessions rather than multiplexer passthrough.
 
 **Local Image Preview** — A temporary overlay for a local static PNG or JPEG,
-explicitly chosen or activated from a visible absolute path or `file:///` URL.
-Main validates the bounded file read. A path always names a file on the OMXTerm
+explicitly chosen or activated from a visible path reference or `file:///` URL.
+Home shorthand is local; relative references require explicit base-folder selection.
+Main resolves references and validates the bounded file read. A path always names a file on the OMXTerm
 host, even when SSH produced the text.
 
 **External Link** — A literal visible HTTP(S) URL in terminal output. Opening it

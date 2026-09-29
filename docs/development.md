@@ -165,6 +165,18 @@ additionally checks native sheet begin/end events; Windows checks the native
 dialog disables its owner. This is not physical OK-button input or a
 pixel/appearance assertion.
 
+Local-image native fixtures exercise the real recognizer, activation routing,
+main loader, filesystem reads and native PNG/JPEG decoder. Directory-picker
+selection is controlled at Electron's dialog port, with exact owner, home-start
+and directory-only options asserted; this is not physical native-dialog input.
+Actual Chromium-generated RIFF/WEBP bytes must receive the unsupported-format
+error, separately from PNG bytes named `.webp`. Restty host coverage exercises
+quoted/spaced, home and relative references through real visible cells and
+modified native Electron mouse events, including soft wraps and mouse-report
+precedence; that host's image-loading port returns cancellation rather than
+opening a real file. Neither fixture alone is an end-to-end physical click/picker
+acceptance test.
+
 When investigating an intermittent failure, record the failure and rerun
 conditions. A later isolated pass alone does not show that it was fixed.
 

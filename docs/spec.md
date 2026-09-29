@@ -541,9 +541,13 @@ title mirrors the selected tab and falls back to `OMXTerm`. Title contents are
 never logged or reported to the PTY.
 
 Only literal visible lowercase `http:`, `https:`, and absolute authority-free
-`file:///` URLs are links. Literal visible native absolute paths are separate
-Local Image Preview destinations: POSIX paths begin with one `/`, and Windows
-paths are drive-qualified with a letter, colon, and slash or backslash.
+`file:///` URLs are links. Visible native path references are separate
+Local Image Preview destinations. Absolute POSIX paths begin with one `/`; Windows
+paths are drive-qualified with a letter, colon, and slash or backslash. `~` and
+`~/...` name the local OMXTerm user's home, including inside matching quotes.
+Relative references begin `./` or `../` (backslash separators also work on Windows),
+or have a relative image name ending `.png`, `.jpg`, `.jpeg` or `.webp`
+(case-insensitive). Recognition is not format support.
 While the pointer is over a recognized destination, holding that same platform
 modifier transiently underlines its complete visible span. Pointer movement and
 modifier press or release update the cue without activation; output, scrolling,
@@ -563,14 +567,27 @@ Ghostty's grapheme-cluster mode by default so emoji-presentation and ZWJ
 clusters occupy one two-column terminal cell for rendering and selection.
 For `file:///`, main independently requires the literal lowercase scheme, no
 remote or `localhost` authority, no query or fragment, and a platform-absolute
-local path. A native path is sent as a distinct typed source and independently
-must be absolute for the current platform; `%` and `#` remain literal filename
-characters instead of URL escapes or fragments. Native path recognition uses
-the exact non-whitespace token beginning at a line boundary or after whitespace.
-It does not trim or decode quotes, brackets, assignment prefixes, trailing
-punctuation, or any other token content, so paths containing whitespace and
-syntactically wrapped paths are not recognized. It opens no operating-system URL
-handler: after activation only, it reads the selected target through a non-shell
+local path. Exact native paths remain a distinct typed source; visible references
+requiring interpretation use a separate bounded source validated independently
+in main. `%` and `#` remain literal filename characters. References begin at a
+line boundary or after whitespace, as a complete non-whitespace token or a path
+inside one pair of matching single/double quotes (allowing spaces). Quotes do
+not evaluate shell syntax or escapes. Brackets, assignments and trailing
+punctuation are not trimmed. Ambiguous forms may use the native picker instead.
+
+A positive `:line` or `:line:column` outside closing quotes is decoration; a suffix
+inside quotes is part of the literal filename. An unquoted suffix first names
+the exact file and falls back to the unsuffixed target only on ENOENT, never on
+permission, format or decode failure. Exact native sources, picker selections
+and file URLs have no suffix interpretation. Main checks platform locality
+before reads; UNC/device, drive-relative and Windows root-relative paths are
+rejected. Relative activation opens a native directory picker starting at the
+local user's home; only the explicit selection supplies the base. Cancellation
+is inert. Every activation asks anew; no base preference or cwd is retained.
+Normal `..` resolution is allowed, not a filesystem sandbox. Home and absolute
+references need no base picker. Resolved paths must pass the same local absolute
+validation and source-length bound. No source opens an operating-system URL
+handler: after activation only, main reads the target through a non-shell
 regular-file boundary. The content must be a structurally valid, natively decodable static PNG or JPEG of at most
 16 MiB encoded, 8192 pixels per side, and 16 million pixels. APNG and every
 other animated or unsupported format are rejected regardless of extension. The
@@ -585,9 +602,11 @@ removes the image source and revokes that URL on dismissal, replacement failure,
 page teardown, or owner close. It never receives an arbitrary filesystem API or
 path. The preview fits the complete image proportionally within the overlay's
 content area, including after window resizing, without clipping or stretching it.
-Failed reads and decode failures show only a fixed non-path error. OMXTerm
-never reads on output or hover, infers a relative path, expands `~`, consults
-shell cwd, fetches or transfers a remote image, accepts UNC/file authorities,
+Failed reads and decode failures show only a fixed non-path error. Unsupported
+content has a separate fixed non-path format message; actual WebP remains
+unsupported regardless of its extension or successful path recognition. OMXTerm
+never reads on output or hover, infers a relative base, performs shell expansion,
+consults shell/agent cwd, fetches or transfers a remote image, accepts UNC/file authorities,
 treats OSC 8 metadata as a local source, logs image paths or payload,
 writes/downloads image data, or persists the preview. A clicked path always
 addresses the machine running OMXTerm regardless of where its text originated.

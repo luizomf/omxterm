@@ -17,6 +17,41 @@ vi.mock("electron", () => ({
 describe("native local image picker boundary", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("reports actual WebP as unsupported without leaking paths or invoking native decode", async () => {
+    // A real static 2x2 VP8 WebP, not PNG renamed with a .webp extension.
+    const bytes = Buffer.from(
+      "UklGRjQAAABXRUJQVlA4ICgAAACQAQCdASoCAAIAAUAmJYgCdLoAA5gA/vmo7+1Niqnnd+hRsol8wAAA",
+      "base64",
+    );
+    const close = vi.fn(async () => {});
+    let position = 0;
+    electron.open.mockResolvedValue({
+      stat: async () => ({ isFile: () => true, size: bytes.length }),
+      close,
+      read: async (buffer: Uint8Array, offset: number, length: number) => {
+        const chunk = bytes.subarray(position, position + length);
+        buffer.set(chunk, offset);
+        position += chunk.length;
+        return { bytesRead: chunk.length };
+      },
+    });
+    const filePath =
+      process.platform === "win32"
+        ? "C:\\private\\image.webp"
+        : "/private/image.webp";
+    await expect(
+      loadLocalImageForWindow(
+        {} as Electron.BrowserWindow,
+        { source: "native-path", path: filePath },
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow(
+      "Unsupported image format. Choose a static PNG or JPEG; WebP is not supported.",
+    );
+    expect(close).toHaveBeenCalledOnce();
+    expect(electron.createFromBuffer).not.toHaveBeenCalled();
+  });
+
   it("returns cancellation without reading a file", async () => {
     electron.showOpenDialog.mockResolvedValue({
       canceled: true,

@@ -88,6 +88,13 @@ describe("local image boundary through native Electron", () => {
           expect(devicePixelRatio).toBe(scaleFactor);
         expect(result).toEqual({
           devicePixelRatio,
+          references: {
+            loaded: 9,
+            directorySelections: 2,
+            cancellation: true,
+            actualWebpRejected: true,
+            disguisedPngAccepted: true,
+          },
           preview: [0, 1].map(() => ({
             opened: {
               open: true,

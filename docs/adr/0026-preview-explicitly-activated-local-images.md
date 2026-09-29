@@ -2,12 +2,20 @@
 
 OMXTerm provides a Local Image Preview for one native-picker selection, one
 literal visible authority-free absolute `file:///` URL, or one unambiguous
-literal native absolute path activated with the platform's existing
-modified-link gesture. Native path recognition accepts POSIX paths beginning
-with one `/` and Windows drive-qualified paths beginning with a letter, colon,
-and slash or backslash. It does not recognize relative paths, tilde forms,
-UNC/device paths, infer a shell working directory, transfer an SSH path, use OSC
-8 metadata, or read merely because output or hover exposed a path. A visible
+native path reference activated with the platform's existing modified-link
+gesture. Issue #439 deliberately reopens the original absolute-only/unquoted
+choice: absolute POSIX and Windows drive-qualified paths remain supported, with
+matching single/double quote wrappers, local `~`/`~/...`, and explicit relative
+references. This is an expansion of intentional exclusions, not a historical
+regression. Relative references begin `./` or `../` (also backslashes on Windows)
+or end in a `.png`, `.jpg`, `.jpeg` or `.webp` image name. Main opens a native base
+directory picker at local home for every relative activation; only an explicit
+selection is the base, and cancellation is inert. No cwd is inferred from an
+agent, shell, process, startup directory or output. No base is persisted. `..`
+follows normal local resolution, not a new sandbox. Home shorthand always means
+the local user's home, never remote home or general shell expansion.
+OMXTerm does not accept UNC/device paths, transfer an SSH path, use OSC 8
+metadata, or read merely because output or hover exposed a path. A visible
 native path always addresses the OMXTerm host even when its text came from SSH.
 HTTP(S) External Links retain ADR 0011's operating-system browser route; local
 image sources never reach that route.
@@ -29,8 +37,10 @@ Closing the owner aborts picker continuation and makes later read results inert.
 No path or payload enters Operational Events.
 
 The narrow sender-validated preload route accepts only a picker marker, the
-exact bounded file URL, or an exact bounded native absolute path and returns only validated filename, media type,
-dimensions, and bytes. It exposes no path, directory enumeration, generic read,
+exact bounded file URL, an exact bounded native absolute path, or a bounded
+visible path reference, and returns only validated filename, media type,
+dimensions, and bytes. Reference resolution stays in main; a base picker does
+not expose its selected directory to the renderer. It exposes no path, directory enumeration, generic read,
 or arbitrary filesystem capability. The renderer creates one memory-only Blob
 URL under a CSP that permits `blob:` only for images while preserving
 `connect-src 'none'`. Escape, the close button, backdrop dismissal, decode
@@ -47,14 +57,27 @@ adding a general modal framework or cancelling already accepted input.
 Restty's existing visible-destination provider and gesture owner recognize the
 literal `file:///` span and native absolute path token alongside HTTP(S),
 preserving soft-wrap proof and modified-click precedence over application mouse
-reporting. Native paths use deliberately conservative boundaries: the complete
-non-whitespace token must begin at a line boundary or after whitespace, and no
-surrounding quote, bracket, assignment prefix, punctuation, or space is trimmed
-or decoded. Thus paths containing whitespace and syntactically wrapped paths
-are not recognized; punctuation already inside a recognized token remains part
-of the exact requested filename. Main independently validates the complete URL
-or path and content, so renderer recognition is neither authorization nor
-format proof.
+reporting. References begin at a line boundary or after whitespace. A complete
+non-whitespace token or one matching pair of quotes (including spaces) is
+recognized without shell evaluation or escape decoding. Brackets, assignments
+and trailing punctuation are not trimmed. The native picker handles ambiguous
+filenames. A positive `:line` or `:line:column` after closing quotes is tool
+location decoration; inside quotes it is literal. Unquoted references first try
+the exact filename, then the unsuffixed target only when the exact read reports
+ENOENT. This preserves existing valid absolute colon filenames without silently
+retargeting permission, format or decode errors. Quoting the complete filename
+forces literal interpretation even when it is missing; exact native sources,
+picker selections and file URLs always stay literal. Each read keeps the same
+bounds and owner-lifetime checks, including before a fallback read.
+Main independently validates the complete reference, resolved absolute local
+path and content; recognition is neither authorization nor format proof.
+
+Actual WebP support is explicitly deferred by the #439 maintainer decision.
+An extension is not format evidence: PNG bytes named `.webp` remain PNG, while
+actual WebP receives a fixed unsupported-format error distinct from an unavailable
+file. The renderer displays only fixed safe errors, never native error details.
+Adding WebP later requires its own bounded validation/native decode decision;
+allowing an extension alone would not fulfill that contract.
 
 This capability is deliberately separate from ADR 0022. Inline Terminal Images
 remain cell-anchored Terminal Payload parsed by the pinned Ghostty core; Local

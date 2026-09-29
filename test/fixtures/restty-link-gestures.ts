@@ -156,7 +156,9 @@ async function exerciseHoverRecognition(
   for (const [text, columns] of [
     ["file:///tmp/image.png", 21],
     [nativePath, nativePath.length + 1],
-    ["relative.png", 0],
+    ["relative.png", 12],
+    ["'~/a space.png':1", 17],
+    ["'../a space.png'", 16],
     ["HTTPS://example.test", 0],
     ["mailto:person@example.test", 0],
     ["\u001b]8;;https://hidden.test\u0007label\u001b]8;;\u0007", 0],
@@ -238,6 +240,23 @@ async function exerciseLocalPathActivation(
   const request = options.localImageRequests[0];
   if (request?.source !== "native-path" || request.path !== localPath)
     throw new Error("Native-path activation changed the literal destination");
+  for (const reference of [
+    "~/image.png:1",
+    "../image.png",
+    `'${localPath} space.png':12:3`,
+  ]) {
+    options.deliverOutput(`\u001b[2J\u001b[H${reference}`);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const count = options.localImageRequests.length;
+    await clickTerminalCell(options.window, 0, 3, size);
+    await options.waitFor(
+      () => options.localImageRequests.length === count + 1,
+      "visible image reference activation",
+    );
+    const request = options.localImageRequests.at(-1);
+    if (request?.source !== "path-reference" || request.path !== reference)
+      throw new Error("Image reference activation changed its visible text");
+  }
   return gestureInputSince(options.inputs, inputStart);
 }
 

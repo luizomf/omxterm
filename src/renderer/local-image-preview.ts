@@ -1,3 +1,4 @@
+import { UNSUPPORTED_LOCAL_IMAGE_FORMAT } from "../shared/local-image";
 import type {
   LocalImageActivation,
   LocalImageData,
@@ -65,9 +66,13 @@ export function createLocalImagePreview(
     if (!dialog.open) dialog.showModal();
     closeButton.focus();
   };
-  const showError = () => {
+  const showError = (failure: unknown) => {
     clear();
-    error.textContent = PREVIEW_ERROR;
+    error.textContent =
+      failure instanceof Error &&
+      failure.message.includes(UNSUPPORTED_LOCAL_IMAGE_FORMAT)
+        ? UNSUPPORTED_LOCAL_IMAGE_FORMAT
+        : PREVIEW_ERROR;
     error.hidden = false;
     dialog.setAttribute("aria-label", "Local image preview error");
     show();
@@ -125,8 +130,8 @@ export function createLocalImagePreview(
         await image.decode();
         if (disposed) return;
         show();
-      } catch {
-        if (!disposed) showError();
+      } catch (failure) {
+        if (!disposed) showError(failure);
       } finally {
         opening = false;
         options.onActivityChange?.();

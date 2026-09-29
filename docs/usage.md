@@ -149,13 +149,36 @@ click the close button, or click outside the image to return to your terminal.
 Close the preview before pasting, zooming, or changing the title or tab bars.
 
 You can also **Cmd+click** (macOS) or **Ctrl+click** (Linux/Windows) a visible full
-path or `file:///` URL. A plain path should appear without quotes or trailing
-punctuation. Use the file picker for names containing spaces.
+path or `file:///` URL. The complete reference must be visible, including wrapped
+lines. Surround a path containing spaces with matching single or double quotes.
+For example: `'/Users/demo/Pictures/a photo.png'` or `'C:\Pictures\a photo.jpg'`.
+Quotes are literal wrappers, not shell syntax: no variables, escapes or commands
+are evaluated. Brackets, assignment prefixes and trailing punctuation are not
+trimmed; use the native file picker for forms the recognizer cannot express.
+
+`~` and `~/...`, including quoted forms, refer to the local OMXTerm user's home.
+Relative references beginning `./` or `../` (also `.\` or `..\` on Windows),
+and relative names ending `.png`, `.jpg`, `.jpeg` or `.webp`, prompt you to choose
+their **local base folder**. The directory picker starts at home, but home is not
+assumed: choose the intended folder or cancel without opening anything. Each
+activation asks again; OMXTerm never tracks or guesses an agent's/shell's cwd.
+`..` resolves normally against your selected folder, not inside a new sandbox.
+
+Tool locations such as `/tmp/image.png:12` or `~/image.png:12:3` first try the
+literal filename, then remove the positive line/column suffix only if that exact
+file is absent. Existing files are never replaced by this fallback on a format,
+permission or decode failure. Quotes disambiguate: `'/tmp/image.png:12'` means the
+literal colon filename only; `'/tmp/image.png':12` means `image.png` with a tool
+location outside the quotes. The native picker and `file:///` URLs always name
+literal files without tool-suffix interpretation. `%` and `#` in native paths
+remain literal filename characters.
 
 Previews support static PNG/JPEG files up to **16 MiB**, **8192 pixels per side**,
-and **16 million pixels**. Use a local absolute path: relative paths, `~`, network
-shares, and remote files aren't supported. Even if SSH printed the path, it refers
-to the computer running OMXTerm.
+and **16 million pixels**. **Actual WebP is not supported**, even when its path
+is recognized; an unsupported-format message distinguishes it from an unavailable
+file. Content, not the extension, determines format. Network shares, device paths
+and remote files are unsupported. Even if SSH printed the path, it refers to the
+computer running OMXTerm, never the remote host.
 
 ## Inline terminal images
 

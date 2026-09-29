@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { app, BrowserWindow, nativeImage } from "electron";
+import { checkLocalImageReferences } from "./local-image-references";
 import { loadLocalImageForWindow } from "../../src/main/local-image-loader";
 
 const resultPrefix = "__OMXTERM_LOCAL_IMAGE_RESULT__";
@@ -43,6 +44,7 @@ async function run() {
   const jpeg = await load(jpegPath, "file-url");
   if (!jpeg) throw new Error("JPEG fixture was not loaded");
   await window.loadFile(path.join(process.cwd(), "preview.html"));
+  const references = await checkLocalImageReferences(window, loaded.data);
   const preview = [];
   for (const image of [loaded, jpeg]) {
     const payload = JSON.stringify({ ...image, data: [...image.data] });
@@ -65,6 +67,7 @@ async function run() {
   process.stdout.write(
     `${resultPrefix}${JSON.stringify({
       preview,
+      references,
       layouts,
       devicePixelRatio,
       isolatedProfiles: (["userData", "sessionData"] as const).every(

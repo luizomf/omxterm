@@ -79,6 +79,21 @@ function setup(
 afterEach(() => vi.restoreAllMocks());
 
 describe("local image preview overlay", () => {
+  it("distinguishes an unsupported format using only a fixed safe message", async () => {
+    const view = setup(async () => {
+      throw new Error(
+        "Error invoking remote method: Unsupported image format. Choose a static PNG or JPEG; WebP is not supported. /private/never-display",
+      );
+    });
+    await view.preview.open({
+      source: "path-reference",
+      path: "../image.webp",
+    });
+    expect(view.dialog.textContent).toContain("WebP is not supported");
+    expect(view.dialog.textContent).not.toContain("/private");
+    expect(view.activeUrls.size).toBe(0);
+    view.preview.dispose();
+  });
   it("releases bytes synchronously and ignores stale close events after reopening", async () => {
     const view = setup();
     await view.preview.open();

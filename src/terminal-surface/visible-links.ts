@@ -1,3 +1,5 @@
+import { parseLocalImageReference } from "../shared/local-image-reference";
+
 // This is the lowercase-only form of @xterm/addon-web-links 0.12.0's strict
 // URL expression (xterm.js f447274f430fd22513f6adbf9862d19524471c04).
 // Restty uses it only over core-proven visible text; the retained MIT notice is
@@ -20,20 +22,14 @@ export function visibleLinkAtOffset(
   if (!Number.isInteger(offset) || offset < 0 || offset >= text.length)
     return undefined;
 
-  const tokenStart = text.slice(0, offset + 1).search(/\S+$/u);
-  const tokenEndMatch = /\s/u.exec(text.slice(offset));
-  const tokenEnd = tokenEndMatch ? offset + tokenEndMatch.index : text.length;
-  const token = text.slice(tokenStart, tokenEnd);
-  const nativeAbsolute =
-    (token.startsWith("/") && !token.startsWith("//")) ||
-    /^[a-z]:[\\/]/iu.test(token);
-  if (nativeAbsolute) {
+  const reference = referenceAtOffset(text, offset);
+  if (reference) {
     if (
-      (clippedStart && tokenStart === 0) ||
-      (clippedEnd && tokenEnd === text.length)
+      (clippedStart && reference.start === 0) ||
+      (clippedEnd && reference.end === text.length)
     )
       return undefined;
-    return { url: token, start: tokenStart, end: tokenEnd };
+    return reference;
   }
 
   let searched = 0;
@@ -48,6 +44,34 @@ export function visibleLinkAtOffset(
       return { url: match[0], start, end };
     }
     searched = Math.max(end, start + 1);
+  }
+  return undefined;
+}
+
+function referenceAtOffset(
+  text: string,
+  offset: number,
+): VisibleLinkMatch | undefined {
+  let start = 0;
+  while (start < text.length) {
+    if (/\s/u.test(text[start]!)) {
+      start++;
+      continue;
+    }
+    let end = start;
+    if (text[start] === "'" || text[start] === '"') {
+      const close = text.indexOf(text[start]!, start + 1);
+      if (close < 0) return undefined;
+      end = close + 1;
+    }
+    while (end < text.length && !/\s/u.test(text[end]!)) end++;
+    if (offset >= start && offset < end) {
+      const value = text.slice(start, end);
+      return parseLocalImageReference(value)
+        ? { url: value, start, end }
+        : undefined;
+    }
+    start = end;
   }
   return undefined;
 }

@@ -1,3 +1,4 @@
+import { parseLocalImageReference } from "../shared/local-image-reference";
 import type { TerminalSurfaceOptions } from "./terminal-surface";
 
 export interface ResttyVisibleLinkInteraction {
@@ -21,10 +22,22 @@ export function requestVisibleLink(
   destination: string,
   options: TerminalSurfaceOptions,
 ): void {
+  const reference = parseLocalImageReference(destination);
   if (destination.startsWith("file:///"))
     options.onLocalImageActivation?.({
       source: "file-url",
       url: destination,
+    });
+  else if (
+    reference &&
+    (reference.kind !== "absolute" ||
+      reference.fallbackPath ||
+      destination.startsWith("'") ||
+      destination.startsWith('"'))
+  )
+    options.onLocalImageActivation?.({
+      source: "path-reference",
+      path: destination,
     });
   else if (destination.startsWith("/") || /^[a-z]:[\\/]/iu.test(destination))
     options.onLocalImageActivation?.({

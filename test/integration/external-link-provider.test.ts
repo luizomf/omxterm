@@ -31,7 +31,7 @@ describe("Restty visible-link span contract", () => {
     expect(visibleLinkAtOffset(url, 2_050)?.url).toBe(url);
   });
 
-  it("recognizes literal absolute file URLs while excluding authorities and path-like guesses", () => {
+  it("recognizes local references and literal file URLs while excluding authorities", () => {
     expect(
       visibleLinkAtOffset("open file:///tmp/image%20one.png now", 16)?.url,
     ).toBe("file:///tmp/image%20one.png");
@@ -45,7 +45,7 @@ describe("Restty visible-link span contract", () => {
     expect(visibleLinkAtOffset("/tmp/image.png", 3)?.url).toBe(
       "/tmp/image.png",
     );
-    expect(visibleLinkAtOffset("image.png", 3)).toBeUndefined();
+    expect(visibleLinkAtOffset("image.png", 3)?.url).toBe("image.png");
   });
 
   it.each([
@@ -58,8 +58,8 @@ describe("Restty visible-link span contract", () => {
     ["C:/Users/me/image.png", 4, "C:/Users/me/image.png"],
     ["(/tmp/wrapped.png)", 5, undefined],
     ["name=/tmp/assigned.png", 10, undefined],
-    ["../tmp/relative.png", 8, undefined],
-    ["~/tmp/relative.png", 8, undefined],
+    ["../tmp/relative.png", 8, "../tmp/relative.png"],
+    ["~/tmp/relative.png", 8, "~/tmp/relative.png"],
     ["\\\\server\\share\\image.png", 10, undefined],
     ["//server/share/image.png", 10, undefined],
   ])(

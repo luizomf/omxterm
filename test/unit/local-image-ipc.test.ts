@@ -19,8 +19,8 @@ describe("local image IPC ownership", () => {
       reject,
     });
     const first = boundary.request({
-      source: "file-url",
-      url: "file:///tmp/image.png",
+      source: "path-reference",
+      path: "'../image.png'",
     });
     await expect(boundary.request({ source: "picker" })).rejects.toThrow(
       /already in progress/u,
@@ -50,10 +50,13 @@ describe("local image IPC ownership", () => {
       { source: "native-path", path: "" },
       { source: "native-path", path: "/tmp/a.png", url: "forged" },
       { source: "native-path", path: "x".repeat(32_769) },
+      { source: "path-reference", path: "" },
+      { source: "path-reference", path: "x".repeat(32_769) },
+      { source: "path-reference", path: "../a.png", base: "/forged" },
     ])
       await expect(boundary.request(payload)).rejects.toThrow(TypeError);
     expect(load).not.toHaveBeenCalled();
-    expect(reject).toHaveBeenCalledTimes(7);
+    expect(reject).toHaveBeenCalledTimes(10);
     boundary.dispose();
   });
 });

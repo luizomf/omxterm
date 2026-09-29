@@ -7,7 +7,8 @@ versions. A release number has the form `MAJOR.MINOR.PATCH`, and its Git tag add
 The latest published version is **0.18.0**; its
 [release record](releases/0.18.0.md) identifies the immutable exact artifacts,
 completed native verification and verified post-upload downloads. The source
-tree now carries **0.18.1-dev.0**, the next-patch development baseline. This is
+tree now carries **0.19.0-dev.0**, the next-minor development baseline for the
+expanded Local Image Preview path-reference contract (#439). This is
 not a published release and does not change the 0.18.0 tag, assets or release body.
 
 This policy explains version selection and consistency. An owner request to

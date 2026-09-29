@@ -1,8 +1,11 @@
 import { constants } from "node:fs";
 import { open as openFile, type FileHandle } from "node:fs/promises";
 import path from "node:path";
+import { homedir } from "node:os";
+import { parseLocalImageReference } from "../shared/local-image-reference";
 import { fileURLToPath } from "node:url";
 import {
+  UNSUPPORTED_LOCAL_IMAGE_FORMAT,
   MAX_LOCAL_IMAGE_BYTES,
   MAX_LOCAL_IMAGE_PIXELS,
   MAX_LOCAL_IMAGE_SIDE,
@@ -39,15 +42,22 @@ interface LocalImageReadOptions {
   ) => boolean;
 }
 
+interface LocalImageRequestOptions {
+  readonly platform?: NodeJS.Platform;
+  readonly abortSignal?: AbortSignal;
+  readonly homeDirectory?: string;
+  readonly chooseFile: () => Promise<string | null>;
+  readonly chooseDirectory?: (homeDirectory: string) => Promise<string | null>;
+  readonly read: (filePath: string) => Promise<LocalImageData>;
+}
+
 export async function loadLocalImageRequest(
   request: LocalImageRequest,
-  options: {
-    readonly platform?: NodeJS.Platform;
-    readonly abortSignal?: AbortSignal;
-    readonly chooseFile: () => Promise<string | null>;
-    readonly read: (filePath: string) => Promise<LocalImageData>;
-  },
+  options: LocalImageRequestOptions,
 ): Promise<LocalImageData | null> {
+  assertActive(options);
+  if (request.source === "path-reference")
+    return loadReference(request.path, options);
   const filePath =
     request.source === "picker"
       ? await options.chooseFile()
@@ -61,6 +71,71 @@ export async function loadLocalImageRequest(
   if (options.abortSignal?.aborted)
     throw new Error("Local image request was superseded");
   return image;
+}
+
+function assertActive(options: LocalImageRequestOptions): void {
+  if (options.abortSignal?.aborted)
+    throw new Error("Local image request was superseded");
+}
+
+async function loadReference(
+  value: string,
+  options: LocalImageRequestOptions,
+): Promise<LocalImageData | null> {
+  const reference = parseLocalImageReference(value);
+  if (!reference) throw new TypeError("Invalid local image reference.");
+  const platform = options.platform ?? process.platform;
+  const paths = platform === "win32" ? path.win32 : path.posix;
+  let base: string | undefined;
+  if (reference.kind !== "absolute") {
+    if (
+      platform === "win32" &&
+      /:/u.test(reference.path.replace(/:[1-9][0-9]*(?::[1-9][0-9]*)?$/u, ""))
+    )
+      throw new TypeError("Invalid local image reference.");
+    base = localImagePath(options.homeDirectory ?? homedir(), platform);
+    if (reference.kind === "relative") {
+      const selected = await options.chooseDirectory?.(base);
+      assertActive(options);
+      if (selected === null) return null;
+      if (selected === undefined)
+        throw new TypeError("A local base directory is required.");
+      base = localImagePath(selected, platform);
+    }
+  }
+  const resolve = (literal: string) =>
+    localImagePath(
+      reference.kind === "absolute"
+        ? literal
+        : paths.resolve(
+            base!,
+            reference.kind === "home" ? literal.slice(2) || "." : literal,
+          ),
+      platform,
+    );
+  const read = async (literal: string) => {
+    assertActive(options);
+    const image = await options.read(resolve(literal));
+    assertActive(options);
+    return image;
+  };
+  try {
+    return await read(reference.path);
+  } catch (error) {
+    assertActive(options);
+    if (
+      !reference.fallbackPath ||
+      (error as NodeJS.ErrnoException)?.code !== "ENOENT"
+    )
+      throw error;
+    return read(reference.fallbackPath);
+  }
+}
+
+export class UnsupportedLocalImageFormatError extends Error {
+  constructor() {
+    super(UNSUPPORTED_LOCAL_IMAGE_FORMAT);
+  }
 }
 
 export async function readLocalImage(
@@ -184,7 +259,7 @@ function imageDimensions(data: Uint8Array): {
   if (isPng(bytes)) return pngDimensions(bytes);
   if (bytes.length >= 4 && bytes[0] === 0xff && bytes[1] === 0xd8)
     return jpegDimensions(bytes);
-  throw new Error("Choose a valid PNG or JPEG image.");
+  throw new UnsupportedLocalImageFormatError();
 }
 
 function isPng(bytes: Buffer): boolean {

@@ -1,3 +1,6 @@
+export const UNSUPPORTED_LOCAL_IMAGE_FORMAT =
+  "Unsupported image format. Choose a static PNG or JPEG; WebP is not supported.";
+
 export const MAX_LOCAL_IMAGE_BYTES = 16 * 1024 * 1024;
 export const MAX_LOCAL_IMAGE_SIDE = 8192;
 export const MAX_LOCAL_IMAGE_PIXELS = 16_000_000;
@@ -15,7 +18,8 @@ export interface LocalImageData {
 
 export type LocalImageActivation =
   | { readonly source: "file-url"; readonly url: string }
-  | { readonly source: "native-path"; readonly path: string };
+  | { readonly source: "native-path"; readonly path: string }
+  | { readonly source: "path-reference"; readonly path: string };
 
 export type LocalImageRequest =
   { readonly source: "picker" } | LocalImageActivation;
@@ -33,7 +37,7 @@ export function isLocalImageRequest(
       value.url.length <= MAX_LOCAL_IMAGE_SOURCE_LENGTH
     );
   return (
-    value.source === "native-path" &&
+    (value.source === "native-path" || value.source === "path-reference") &&
     typeof value.path === "string" &&
     value.path.length > 0 &&
     value.path.length <= MAX_LOCAL_IMAGE_SOURCE_LENGTH
