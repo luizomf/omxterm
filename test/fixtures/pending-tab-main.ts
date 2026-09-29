@@ -157,12 +157,14 @@ async function run() {
     },
   });
   await application.newWindow();
+  writeSync(2, "[DEBUG-444] window loaded\n");
   window.show();
   window.focus();
   await owner.waitFor(
     () => outputs[0]?.join("").includes("READY") ?? false,
     "A native program ready",
   );
+  writeSync(2, "[DEBUG-444] A ready\n");
   application.newTabInSelectedWindow();
   await owner.waitFor(
     async () =>
@@ -178,6 +180,7 @@ async function run() {
     ),
     2,
   );
+  writeSync(2, "[DEBUG-444] B held, exit A\n");
   sessions[0]!.write("\r");
   await owner.waitFor(() => exited.includes(0), "ordinary A native exit");
   assert.equal(
@@ -191,6 +194,7 @@ async function run() {
     "A exit must not destroy B's owner",
   );
   assert.equal(quits, 0);
+  writeSync(2, "[DEBUG-444] A exited without closing\n");
   await owner.waitFor(
     async () =>
       (await window.webContents.executeJavaScript(
@@ -204,12 +208,14 @@ async function run() {
     "B native program ready",
   );
   assert.equal(sessions.length, 2, "Exactly one B PTY");
+  writeSync(2, "[DEBUG-444] B ready, Paste\n");
   window.webContents.send(terminalIpc.clipboardAction, "paste");
   await owner.waitFor(
     () => outputs[1]!.join("").includes("RECEIVED:usable"),
     "B receives Paste through its real Surface and Adapter",
   );
   assert.equal(window.isDestroyed(), false);
+  writeSync(2, "[DEBUG-444] B received Paste, exit B\n");
   sessions[1]!.write("quit\r");
   await owner.waitFor(() => window.isDestroyed(), "last B exit closes window");
   assert.deepEqual(exited, [0, 1]);
