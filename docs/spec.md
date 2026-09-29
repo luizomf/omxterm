@@ -877,6 +877,10 @@ CSS names, functions or variables, inheritance and imports are unsupported.
 Transparency and blur are User Configuration window preferences, not theme
 fields; the Terminal Theme schema has no opacity or tint setting.
 
+Unknown keys include the empty string (`""`) at every configuration, theme and
+snippet object boundary, regardless of property order. They are rejected rather
+than ignored alongside otherwise valid settings or entries.
+
 Invalid JSON or UTF-8, unknown or missing keys, unsupported versions, missing
 configured fonts or theme files, invalid Windows shell paths or final targets,
 non-regular theme targets, invalid theme

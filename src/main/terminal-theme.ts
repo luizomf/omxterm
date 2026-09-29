@@ -116,7 +116,7 @@ function rejectUnknownKeys(
   allowed: readonly string[],
 ): void {
   const unknown = Object.keys(value).find((key) => !allowed.includes(key));
-  if (unknown)
+  if (unknown !== undefined)
     fail(
       themePath,
       location === "$" ? `$.${unknown}` : `${location}.${unknown}`,

@@ -103,7 +103,7 @@ function validateTerminalSnippets(
   const unknownKey = Object.keys(root).find(
     (key) => !["version", "snippets"].includes(key),
   );
-  if (unknownKey) return failure(`$.${unknownKey}`, "is unknown");
+  if (unknownKey !== undefined) return failure(`$.${unknownKey}`, "is unknown");
   if (!("version" in root)) return failure("version", "is required");
   if (root.version !== TERMINAL_SNIPPETS_VERSION)
     return failure("version", "must be 1");
@@ -128,7 +128,7 @@ function validateTerminalSnippets(
     const unknown = Object.keys(item).find(
       (key) => !["name", "body", "description", "execute"].includes(key),
     );
-    if (unknown) return failure(location(unknown), "is unknown");
+    if (unknown !== undefined) return failure(location(unknown), "is unknown");
     const { name, body, description, execute } = item;
     if (
       typeof name !== "string" ||

@@ -50,6 +50,8 @@ If you are creating a file from scratch, this is a complete example:
 **Examples replace omitted settings with defaults.** Back up an existing file
 and edit its fields to keep your other preferences, rather than replacing it
 with each example. Keep one root object and one of each named key.
+Configuration, theme and snippet objects reject unsupported keys, including an
+empty name (`""`); remove the unsupported property rather than leaving it blank.
 
 For more space between rows, add `"lineHeight": 1.1` inside `font`. It applies
 to new tabs after reload; restart OMXTerm to apply it to existing tabs. To turn
