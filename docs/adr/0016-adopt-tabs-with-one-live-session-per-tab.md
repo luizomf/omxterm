@@ -79,6 +79,17 @@ closure. Native spawn/signal/runtime-failure reporting remains session-owned;
 application shutdown still waits independently for actual PTY exits (ADR 0028).
 This avoids a mirrored tab registry or an early-shell workaround.
 
+Failure acknowledgements are independently counted per window, including failures
+that originated while sibling sessions were live. An empty renderer notification
+is retained until every pending acknowledgement completes; it is not dropped
+while a dialog is open. Acknowledging a session failure requests removal of only
+that session's tab even when it was the last native PTY. Spawn rejection commits
+empty after removing its failed tab; an acknowledged runtime rendering failure
+also checks empty when its Surface already removed the tab. Thus native counts
+cannot discard mounting siblings or earlier unacknowledged failures. Explicit
+window/application closure remains authorized separately, and disposed owners
+make late dialog completion inert.
+
 Terminal titles stay display-only per [ADR 0010](0010-keep-terminal-titles-display-only.md),
 applied per session: a tab shows its own sanitized title, an untitled tab falls
 back to the Default Shell's name (known from the spawn, never from process

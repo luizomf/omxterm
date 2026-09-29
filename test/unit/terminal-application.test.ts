@@ -178,6 +178,14 @@ describe("Terminal application lifecycle", () => {
     acknowledgement.resolve();
     await acknowledgement.promise;
     await Promise.resolve();
+    expect(harness.sendTabCommand).toHaveBeenCalledExactlyOnceWith(
+      owner.window,
+      {
+        action: "close-session",
+        sessionId: "s1",
+      },
+    );
+    owner.lifecycle.onTabsEmpty();
     expect(owner.window.close).toHaveBeenCalledOnce();
     expect(harness.quit).toHaveBeenCalledOnce();
   });
@@ -456,6 +464,9 @@ describe("Terminal application lifecycle", () => {
       await acknowledgement.promise;
       await Promise.resolve();
 
+      // Native counts are not tab ownership: the renderer commits empty
+      // after spawn rejection or the acknowledged close-session command.
+      harness.windows[0]!.lifecycle.onTabsEmpty();
       expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
     },
   );
@@ -476,10 +487,12 @@ describe("Terminal application lifecycle", () => {
       liveSessions: 0,
     });
 
+    harness.windows[0]!.lifecycle.onTabsEmpty();
     await vi.waitFor(() => {
       expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
     });
-    expect(showSessionFailure).toHaveBeenCalledOnce();
+    // Separate failed starts each own an acknowledgement, including rejection.
+    expect(showSessionFailure).toHaveBeenCalledTimes(2);
     expect(harness.windows[0]!.window.close).toHaveBeenCalledOnce();
     expect(harness.quit).toHaveBeenCalledOnce();
   });

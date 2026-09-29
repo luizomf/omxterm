@@ -225,8 +225,8 @@ export function createTerminalTabs(
       );
     } catch (error) {
       removeTab(tab, false);
-      if (!tab.startRequested && !tab.mountAbort.signal.aborted)
-        notifyEmpty("rendering-failure");
+      if (tab.startRequested) notifyEmpty();
+      else if (!tab.mountAbort.signal.aborted) notifyEmpty("rendering-failure");
       throw error;
     }
     if (disposed || tab.removed) {
@@ -293,6 +293,9 @@ export function createTerminalTabs(
           return;
         case "close-session":
           closeTab(findBySession(tabs, command.sessionId), removeTab);
+          // A failed runtime Surface may already have removed its tab. Main
+          // still acknowledges that session before asking us to commit empty.
+          notifyEmpty();
           return;
       }
     },

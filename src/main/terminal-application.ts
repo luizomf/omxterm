@@ -60,7 +60,8 @@ interface TerminalWindowInstance<Window extends NativeTerminalWindow> {
 
 interface TerminalWindowState {
   readonly sessionActivity: TerminalSessionActivity;
-  failurePending: boolean;
+  pendingFailures: number;
+  tabsEmpty: boolean;
   closeConfirmed: boolean;
   closeRequest: Promise<void> | undefined;
   tabCloseRequest: Promise<void> | undefined;
@@ -166,12 +167,31 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     if (!window.isDestroyed()) window.close();
   };
 
-  const closeAfterFailure = (window: Window, failure: TerminalSessionFailure) =>
-    retainFailure(
-      windows.get(window),
-      () => options.showSessionFailure(window, failure),
-      () => forceCloseWindow(window),
-    );
+  const closeIfEmpty = (window: Window) => {
+    const state = windows.get(window);
+    if (state?.tabsEmpty && state.pendingFailures === 0)
+      forceCloseWindow(window);
+  };
+
+  const retainFailure = (
+    window: Window,
+    failure: TerminalSessionFailure,
+    sessionId?: string,
+  ) => {
+    const state = windows.get(window);
+    if (!state || window.isDestroyed()) return;
+    state.pendingFailures += 1;
+    const acknowledged = () => {
+      if (windows.get(window) !== state || window.isDestroyed()) return;
+      state.pendingFailures -= 1;
+      if (sessionId !== undefined)
+        options.sendTabCommand(window, { action: "close-session", sessionId });
+      closeIfEmpty(window);
+    };
+    void options
+      .showSessionFailure(window, failure)
+      .then(acknowledged, acknowledged);
+  };
 
   const sendToSelected = (command: TerminalTabCommand) => {
     const window = selectedWindow();
@@ -207,29 +227,24 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
         onTabsEmpty(reason) {
           dispatch(() => {
             const state = windows.get(instance.window);
-            if (!state || state.failurePending) return;
+            if (!state || state.tabsEmpty) return;
+            state.tabsEmpty = true;
             if (reason === "rendering-failure")
-              closeAfterFailure(instance.window, {
+              retainFailure(instance.window, {
                 reason: "rendering",
                 launchKind: "default-shell",
               });
-            else forceCloseWindow(instance.window);
+            closeIfEmpty(instance.window);
           });
         },
         onSessionStartError(context) {
           dispatch(() => {
-            // The renderer already dropped the tab whose spawn failed; the
-            // window itself is useless only when no session is running in it.
-            const failure = {
-              reason: "spawn" as const,
+            // Spawn rejection drops the renderer tab, but its acknowledgement
+            // remains a window owner independently of every sibling session.
+            retainFailure(instance.window, {
+              reason: "spawn",
               launchKind: context.launchKind,
-            };
-            if (context.liveSessions === 0)
-              closeAfterFailure(instance.window, failure);
-            else
-              void options
-                .showSessionFailure(instance.window, failure)
-                .catch(() => {});
+            });
           });
         },
         onSessionExit(exit, context) {
@@ -249,32 +264,17 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
                   launchKind: context.launchKind,
                   signal: normalizeLifecycleCode(exit.signal),
                 };
-            if (context.liveSessions === 0) {
-              closeAfterFailure(instance.window, failure);
-              return;
-            }
-            // The dead tab stays visible until the failure is acknowledged;
-            // only then is the renderer told to drop it.
-            void options
-              .showSessionFailure(instance.window, failure)
-              .catch(() => {})
-              .then(() => {
-                if (
-                  !instance.window.isDestroyed() &&
-                  windows.has(instance.window)
-                )
-                  options.sendTabCommand(instance.window, {
-                    action: "close-session",
-                    sessionId: context.sessionId,
-                  });
-              });
+            // Even the last native session may have another failed or mounting
+            // tab beside it. Acknowledgement removes only its own dead tab.
+            retainFailure(instance.window, failure, context.sessionId);
           });
         },
       });
       window = instance.window;
       windows.set(window, {
         sessionActivity: instance.sessionActivity,
-        failurePending: false,
+        pendingFailures: 0,
+        tabsEmpty: false,
         closeConfirmed: false,
         closeRequest: undefined,
         tabCloseRequest: undefined,
@@ -419,16 +419,6 @@ function confirmTabClose<Window extends NativeTerminalWindow>(
       resolveClose(false);
       throw error;
     });
-}
-
-function retainFailure(
-  state: TerminalWindowState | undefined,
-  show: () => Promise<void>,
-  close: () => void,
-): void {
-  if (!state || state.failurePending) return;
-  state.failurePending = true;
-  void show().then(close, close);
 }
 
 function elapsedMilliseconds(startedAt: number): number {

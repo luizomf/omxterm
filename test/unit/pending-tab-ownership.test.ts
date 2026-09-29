@@ -52,11 +52,18 @@ async function harness(failure?: "rendering" | "spawn") {
   const ptys: Array<{
     kill: ReturnType<typeof vi.fn>;
     write: ReturnType<typeof vi.fn>;
-    exit(): void;
+    exit(signal?: number): void;
   }> = [];
   const gate = deferred();
   const acknowledgement = deferred();
-  const showSessionFailure = vi.fn(() => acknowledgement.promise);
+  const acknowledgements: ReturnType<typeof deferred>[] = [];
+  const showSessionFailure = vi.fn(() => {
+    const pending =
+      acknowledgements.length === 0 ? acknowledgement : deferred();
+    acknowledgements.push(pending);
+    return pending.promise;
+  });
+  const renderingFailures: Array<() => void> = [];
   const nativeQuitCompleted = vi.fn();
   let beforeQuit: (event: { preventDefault(): void }) => void = () => {};
   const native = {
@@ -154,8 +161,8 @@ async function harness(failure?: "rendering" | "spawn") {
               const pty = {
                 kill: vi.fn(),
                 write: vi.fn(),
-                exit() {
-                  emitExit?.({ exitCode: 7, signal: 0 });
+                exit(signal = 0) {
+                  emitExit?.({ exitCode: 7, signal });
                 },
               };
               ptys.push(pty);
@@ -246,6 +253,10 @@ async function harness(failure?: "rendering" | "spawn") {
                   }),
                 };
                 surface.dispose.mockImplementation(() => adapter.close());
+                renderingFailures.push(() => {
+                  surfaceOptions.onFatalError?.("Controlled runtime failure");
+                  adapter.close("rendering-failure");
+                });
                 await adapter.start({
                   onOutput() {},
                   onExit: () => {
@@ -293,6 +304,8 @@ async function harness(failure?: "rendering" | "spawn") {
     tabs,
     gate,
     acknowledgement,
+    acknowledgements,
+    renderingFailures,
     ptys,
     window,
     container,
@@ -306,6 +319,134 @@ async function harness(failure?: "rendering" | "spawn") {
 
 // Production application/router/LocalTerminalSession/Adapter/tab ownership;
 // native PTYs, Electron transport, dialogs and rendering are isolated adapters.
+describe("failure acknowledgement ownership across sibling exits", () => {
+  it.each(["signal", "spawn", "rendering"] as const)(
+    "retains B's %s failure across ordinary A exit, then cleans up exactly once",
+    async (failure) => {
+      const h = await harness(failure === "spawn" ? "spawn" : undefined);
+      h.gate.resolve();
+      await vi.waitFor(() => expect(h.settledMounts()).toBe(2));
+      if (failure === "signal") h.ptys[1]!.exit(15);
+      if (failure === "rendering") {
+        h.renderingFailures[1]!();
+        h.ptys[1]!.exit();
+      }
+      await vi.waitFor(() =>
+        expect(h.showSessionFailure).toHaveBeenCalledOnce(),
+      );
+      h.ptys[0]!.exit();
+      // Flush the real renderer removal and returned empty-owner notification.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(h.window.isDestroyed()).toBe(false);
+      expect(h.window.close).not.toHaveBeenCalled();
+      expect(h.nativeQuitCompleted).not.toHaveBeenCalled();
+      h.acknowledgement.resolve();
+      await vi.waitFor(() =>
+        expect(h.nativeQuitCompleted).toHaveBeenCalledOnce(),
+      );
+      expect(h.window.close).toHaveBeenCalledOnce();
+      expect(h.quit).toHaveBeenCalledOnce();
+      expect(h.container.children).toHaveLength(0);
+    },
+  );
+
+  it("keeps both signal acknowledgements when the last native session fails too", async () => {
+    const h = await harness();
+    h.gate.resolve();
+    await vi.waitFor(() => expect(h.completed()).toBe(2));
+    h.ptys[1]!.exit(15);
+    h.ptys[0]!.exit(15);
+    await vi.waitFor(() => expect(h.acknowledgements).toHaveLength(2));
+    h.acknowledgements[1]!.resolve();
+    await vi.waitFor(() => expect(h.container.children).toHaveLength(1));
+    expect(h.window.isDestroyed()).toBe(false);
+    expect(h.quit).not.toHaveBeenCalled();
+    h.acknowledgements[0]!.resolve();
+    await vi.waitFor(() =>
+      expect(h.nativeQuitCompleted).toHaveBeenCalledOnce(),
+    );
+    expect(h.window.close).toHaveBeenCalledOnce();
+    expect(h.container.children).toHaveLength(0);
+  });
+
+  it("retains each of multiple spawn failures until every acknowledgement completes", async () => {
+    const h = await harness("spawn");
+    h.gate.resolve();
+    await vi.waitFor(() => expect(h.settledMounts()).toBe(2));
+    h.application.newTabInSelectedWindow();
+    await vi.waitFor(() => expect(h.acknowledgements).toHaveLength(2));
+    h.ptys[0]!.exit();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(h.window.isDestroyed()).toBe(false);
+    h.acknowledgements[1]!.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(h.window.isDestroyed()).toBe(false);
+    h.acknowledgements[0]!.resolve();
+    await vi.waitFor(() =>
+      expect(h.nativeQuitCompleted).toHaveBeenCalledOnce(),
+    );
+    expect(h.window.close).toHaveBeenCalledOnce();
+  });
+
+  it("does not close a still-mounting sibling after last-native-session acknowledgement", async () => {
+    const h = await harness();
+    h.ptys[0]!.exit(15);
+    await vi.waitFor(() => expect(h.showSessionFailure).toHaveBeenCalledOnce());
+    h.acknowledgement.resolve();
+    await vi.waitFor(() => expect(h.container.children).toHaveLength(1));
+    expect(h.window.isDestroyed()).toBe(false);
+    h.gate.resolve();
+    await vi.waitFor(() => expect(h.completed()).toBe(2));
+    h.tabs.injectText("survivor");
+    expect(h.ptys[1]!.write).toHaveBeenCalledExactlyOnceWith("survivor");
+    h.ptys[1]!.exit();
+    await vi.waitFor(() =>
+      expect(h.nativeQuitCompleted).toHaveBeenCalledOnce(),
+    );
+  });
+
+  it.each(["signal", "rendering"] as const)(
+    "retains a last-session %s failure and closes once after acknowledgement",
+    async (failure) => {
+      const h = await harness();
+      h.gate.resolve();
+      await vi.waitFor(() => expect(h.completed()).toBe(2));
+      h.ptys[0]!.exit();
+      await vi.waitFor(() => expect(h.container.children).toHaveLength(1));
+      if (failure === "rendering") h.renderingFailures[1]!();
+      h.ptys[1]!.exit(failure === "signal" ? 15 : 0);
+      await vi.waitFor(() =>
+        expect(h.showSessionFailure).toHaveBeenCalledOnce(),
+      );
+      expect(h.window.isDestroyed()).toBe(false);
+      expect(h.nativeQuitCompleted).not.toHaveBeenCalled();
+      h.acknowledgement.resolve();
+      await vi.waitFor(() =>
+        expect(h.nativeQuitCompleted).toHaveBeenCalledOnce(),
+      );
+      expect(h.window.close).toHaveBeenCalledOnce();
+      expect(h.container.children).toHaveLength(0);
+    },
+  );
+
+  it("ignores late acknowledgements after explicit owner closure", async () => {
+    const h = await harness();
+    h.gate.resolve();
+    await vi.waitFor(() => expect(h.completed()).toBe(2));
+    h.ptys[1]!.exit(15);
+    await vi.waitFor(() => expect(h.showSessionFailure).toHaveBeenCalledOnce());
+    await h.application.closeSelectedWindow();
+    expect(h.window.isDestroyed()).toBe(true);
+    h.acknowledgement.resolve();
+    h.ptys[0]!.exit();
+    await vi.waitFor(() =>
+      expect(h.nativeQuitCompleted).toHaveBeenCalledOnce(),
+    );
+    expect(h.window.close).toHaveBeenCalledOnce();
+    expect(h.quit).toHaveBeenCalledOnce();
+  });
+});
+
 describe("automatic close while a Terminal Tab initializes", () => {
   it("keeps B while A exits ordinarily, then starts exactly one usable B PTY", async () => {
     const h = await harness();

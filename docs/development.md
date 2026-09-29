@@ -152,6 +152,15 @@ desktop idle during the check; the helper releases the button and restores the
 pointer in its cleanup path. Synthetic renderer input alone cannot prove native
 drag hit testing.
 
+The failure-acknowledgement fixture uses a controlled synchronous spawn-adapter
+failure, a real sibling PTY/renderer and Electron's real native failure dialog.
+It retains the dialog while the sibling exits ordinarily, then dismisses it
+through Electron's AbortSignal cancellation API and verifies owner cleanup.
+macOS additionally checks native sheet begin/end events; Windows checks the
+native dialog disables its owner. This is not physical OK-button input or a
+pixel/appearance assertion. A missing executable is not a portable synchronous
+spawn-failure fixture: Unix PTYs may instead report an ordinary code-1 exit.
+
 When investigating an intermittent failure, record the failure and rerun
 conditions. A later isolated pass alone does not show that it was fixed.
 

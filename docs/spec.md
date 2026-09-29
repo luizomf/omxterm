@@ -160,7 +160,12 @@ succeeds (ADR 0025).
   a zero native-PTY count. Queued New Tab commands cannot revive an emptied
   owner; explicit window closure and Quit still cancel pending initialization.
 - A spawn failure or unexpected signal remains visible in a native error dialog
-  and local log until acknowledged; the useless tab then closes.
+  and local log until acknowledged; the useless tab then closes. Each pending
+  failure acknowledgement retains its window even if a sibling exits ordinarily
+  or another failure is acknowledged first. Acknowledgement removes only its
+  failed tab; automatic window closure waits for both an empty renderer tab owner
+  and every pending failure acknowledgement. Explicit authorized window closure
+  and Quit remain separate, and late dialog results cannot act on disposed owners.
 - Each window starts at configured font size. Window Font Zoom defaults to
   `Cmd++`, `Cmd+-`, and `Cmd+0` on macOS and `Ctrl++`, `Ctrl+-`, and `Ctrl+0`
   on Linux and Windows; it affects only that window, applies to every tab in
