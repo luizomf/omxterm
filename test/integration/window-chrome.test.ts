@@ -128,6 +128,9 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
             hiddenGeometryPreserved: true,
             selectedPtyRefitted: true,
             hoverGeometryUnchanged: true,
+            fullscreenHandleRestored: true,
+            nativeHandleDrag:
+              process.platform === "win32" ? "verified" : "not-exercised",
             guardedBusyClose: true,
             reloadPreservedChoices: true,
             futureDefaults: true,

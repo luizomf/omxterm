@@ -144,6 +144,14 @@ session override. Scrollback resize checks wait boundedly for the observed live
 viewport to reach the bottom rather than assuming two frames and 50 ms complete
 native layout/rendering. The exact bottom and geometry assertions remain intact.
 
+Window Chrome fixtures also enter and leave real native fullscreen repeatedly
+with the title hidden. On Windows the fixture temporarily moves the desktop
+pointer and drags the restored handle with native mouse input, checking that
+only its foreground window is under the pointer before pressing. Keep that
+desktop idle during the check; the helper releases the button and restores the
+pointer in its cleanup path. Synthetic renderer input alone cannot prove native
+drag hit testing.
+
 When investigating an intermittent failure, record the failure and rerun
 conditions. A later isolated pass alone does not show that it was fixed.
 

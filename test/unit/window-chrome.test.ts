@@ -497,6 +497,39 @@ describe("native Window Chrome ownership", () => {
     view.chrome.dispose();
   });
 
+  it.each(["darwin", "linux", "win32"])(
+    "honors fullscreen events before the native getter changes on %s",
+    (platform) => {
+      vi.useFakeTimers();
+      const view = setup(platform, false);
+      for (let cycle = 0; cycle < 2; cycle += 1) {
+        expect(view.state().handleVisible).toBe(true);
+        view.window.emit("enter-full-screen");
+        expect(view.state()).toMatchObject({
+          fullScreen: true,
+          handleVisible: false,
+        });
+        expect(vi.getTimerCount()).toBe(0);
+        view.flags.fullScreen = true;
+        view.command("sync");
+        view.window.emit("leave-full-screen");
+        expect(view.state()).toMatchObject({
+          fullScreen: false,
+          handleVisible: true,
+        });
+        expect(vi.getTimerCount()).toBe(1);
+        view.flags.fullScreen = false;
+        view.point({ x: 50, y: 210 });
+        vi.advanceTimersByTime(100);
+        expect(view.state().handleVisible).toBe(false);
+        view.point({ x: 51, y: 61 });
+        vi.advanceTimersByTime(100);
+      }
+      view.chrome.dispose();
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
   it.each(["closed", "destroyed", "render-process-gone"])(
     "disposes subscriptions and late callbacks on %s",
     (event) => {

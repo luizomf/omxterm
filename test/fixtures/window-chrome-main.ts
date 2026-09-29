@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu } from "electron";
+import { app, BrowserWindow, ipcMain, Menu, screen } from "electron";
 import { mkdirSync, writeSync } from "node:fs";
 import path from "node:path";
 import { terminalWindowOptions } from "../../src/main/terminal-window";
@@ -28,6 +28,7 @@ import {
 } from "./restty-host-platform";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { exerciseWindowChrome } from "./window-chrome-exercise";
+import { exerciseWindowsHandleDrag } from "./window-chrome-native-drag";
 import {
   exerciseApplicationMenu,
   type MenuOpening,
@@ -55,6 +56,7 @@ let ended = 0;
 let confirmations = 0;
 let configuration = DEFAULT_USER_CONFIGURATION;
 let cursor = { x: -100_000, y: -100_000 };
+let nativeCursor = false;
 let application: TerminalApplication<BrowserWindow>;
 let failing = false;
 function fail(error: unknown) {
@@ -128,7 +130,7 @@ app
         const chrome = registerWindowChrome(window, ipcMain, {
           platform: process.platform,
           showTitleBar: configuration.showTitleBar,
-          cursor: () => cursor,
+          cursor: () => (nativeCursor ? screen.getCursorScreenPoint() : cursor),
           popupApplicationMenu(position, callback) {
             const close = applicationMenuForWindow(window)(position, callback);
             if (close)
@@ -272,6 +274,15 @@ app
       confirmations: () => confirmations,
       cursor: (point) => {
         cursor = point;
+      },
+      async nativeDrag() {
+        try {
+          return await exerciseWindowsHandleDrag(windows[0]!, () => {
+            nativeCursor = true;
+          });
+        } finally {
+          nativeCursor = false;
+        }
       },
       reload() {
         configuration = {

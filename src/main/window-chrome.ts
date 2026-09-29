@@ -82,6 +82,9 @@ export function registerWindowChrome(
   const webContents = window.webContents;
   let disposed = false;
   let titleBarVisible = options.showTitleBar;
+  // On Windows fullscreen events precede the native getter update. The event
+  // owns the new state; reading the getter there can stop sampling on exit.
+  let fullScreen = window.isFullScreen();
   let previewActive = false;
   let title = "OMXTerm";
   let handleVisible = false;
@@ -147,7 +150,7 @@ export function registerWindowChrome(
     const current: { close: (() => void) | undefined } = { close: undefined };
     popup = current;
     current.close = options.popupApplicationMenu(
-      { x: 8, y: titleBarVisible && !window.isFullScreen() ? 42 : 8 },
+      { x: 8, y: titleBarVisible && !fullScreen ? 42 : 8 },
       () => {
         if (popup === current) {
           popup = undefined;
@@ -169,7 +172,7 @@ export function registerWindowChrome(
   const state = (): WindowChromeState => ({
     style: options.platform === "darwin" ? "native" : "custom",
     titleBarVisible,
-    fullScreen: window.isFullScreen(),
+    fullScreen,
     maximized: window.isMaximized(),
     handleVisible,
     title,
@@ -186,7 +189,7 @@ export function registerWindowChrome(
     alive() &&
     !titleBarVisible &&
     !previewActive &&
-    !window.isFullScreen() &&
+    !fullScreen &&
     window.isVisible() &&
     !window.isMinimized();
   const sample = () => {
@@ -209,9 +212,7 @@ export function registerWindowChrome(
     if (!alive()) return;
     closeMenu();
     if (options.platform === "darwin")
-      window.setWindowButtonVisibility(
-        titleBarVisible && !window.isFullScreen(),
-      );
+      window.setWindowButtonVisibility(titleBarVisible && !fullScreen);
     if (needsSampling()) timer ??= setInterval(sample, 100);
     else if (timer !== undefined) {
       clearInterval(timer);
@@ -249,7 +250,7 @@ export function registerWindowChrome(
         window.minimize();
         return;
       case "maximize":
-        if (window.isFullScreen()) return;
+        if (fullScreen) return;
         if (window.isMaximized()) window.unmaximize();
         else window.maximize();
         return;
@@ -259,9 +260,15 @@ export function registerWindowChrome(
         return;
     }
   };
+  const enterFullScreen = () => {
+    fullScreen = true;
+    refresh();
+  };
+  const leaveFullScreen = () => {
+    fullScreen = false;
+    refresh();
+  };
   const events = [
-    "enter-full-screen",
-    "leave-full-screen",
     "maximize",
     "unmaximize",
     "show",
@@ -277,6 +284,8 @@ export function registerWindowChrome(
     timer = undefined;
     ipc.removeListener(terminalIpc.windowChromeCommand, receive);
     for (const event of events) window.removeListener(event, refresh);
+    window.removeListener("enter-full-screen", enterFullScreen);
+    window.removeListener("leave-full-screen", leaveFullScreen);
     window.removeListener("closed", dispose);
     if (usesAltMenu) {
       window.removeListener("blur", resetInput);
@@ -297,6 +306,8 @@ export function registerWindowChrome(
   }
   ipc.on(terminalIpc.windowChromeCommand, receive);
   for (const event of events) window.on(event, refresh);
+  window.on("enter-full-screen", enterFullScreen);
+  window.on("leave-full-screen", leaveFullScreen);
   window.on("closed", dispose);
   webContents.on("destroyed", dispose);
   webContents.on("render-process-gone", dispose);

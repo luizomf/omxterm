@@ -143,6 +143,7 @@ export async function exerciseWindowChrome(options: {
   readonly confirmations: () => number;
   readonly cursor: (point: { x: number; y: number }) => void;
   readonly reload: () => void;
+  readonly nativeDrag: () => Promise<string>;
   readonly second: () => BrowserWindow;
   readonly backgroundOpacity: (window: BrowserWindow) => number;
   readonly exerciseMenu: () => Promise<string>;
@@ -204,6 +205,42 @@ export async function exerciseWindowChrome(options: {
   options.cursor({ x: bounds.x + bounds.width - 1, y: bounds.y + 150 });
   await waitFor(async () => !(await geometry()).handle, "hover exit");
   assert.equal(sizes[1]!.length, visibleResizeCount);
+  // Exercise real native transitions, not synthetic renderer fullscreen state.
+  for (let cycle = 0; cycle < 2; cycle += 1) {
+    const currentBounds = window.getContentBounds();
+    options.cursor({ x: currentBounds.x + 1, y: currentBounds.y + 149 });
+    await waitFor(
+      async () => (await geometry()).handle,
+      "pre-fullscreen hover",
+    );
+    window.setFullScreen(true);
+    await waitFor(() => window.isFullScreen(), "native fullscreen entry");
+    await waitFor(
+      async () => !(await geometry()).handle,
+      "fullscreen suppresses handle",
+    );
+    assert.equal((await geometry()).titleHeight, 0);
+    assert.equal((await geometry()).inset, 0);
+    window.setFullScreen(false);
+    await waitFor(() => !window.isFullScreen(), "native fullscreen exit");
+    await waitFor(async () => {
+      // Some compositors restore bounds after their fullscreen state changes.
+      // Keep the probe inside the current native content, not stale geometry.
+      const restoredBounds = window.getContentBounds();
+      options.cursor({ x: restoredBounds.x + 1, y: restoredBounds.y + 149 });
+      return (await geometry()).handle;
+    }, "hover handle restored after native fullscreen exit");
+    options.cursor({ x: -100_000, y: -100_000 });
+    await waitFor(
+      async () => !(await geometry()).handle,
+      "post-fullscreen hover exit",
+    );
+    assert.equal(sizes[0]!.length, hiddenSizeCount);
+    assert.equal((await geometry()).sameCanvases, true);
+    assert.deepEqual(sessions, ownedSessions);
+    assert.equal(options.ended(), 0);
+  }
+  const nativeHandleDrag = await options.nativeDrag();
   application.toggleSelectedTabBar();
   await waitFor(
     async () =>
@@ -221,6 +258,23 @@ export async function exerciseWindowChrome(options: {
       (await geometry()).tabs,
     "restored chrome geometry",
   );
+  window.setFullScreen(true);
+  await waitFor(() => window.isFullScreen(), "visible-title fullscreen entry");
+  await waitFor(async () => {
+    const current = await geometry();
+    return current.titleHeight === 0 && current.inset === 0 && !current.handle;
+  }, "fullscreen suppresses chosen visible title");
+  window.setFullScreen(false);
+  await waitFor(() => !window.isFullScreen(), "visible-title fullscreen exit");
+  await waitFor(async () => {
+    const current = await geometry();
+    return (
+      current.titleHeight === first.titleHeight &&
+      current.inset === first.inset &&
+      current.canvasHeight === first.canvasHeight &&
+      !current.handle
+    );
+  }, "fullscreen exit restores chosen visible title and geometry");
   options.reload();
   await waitFor(
     async () => (await geometry()).theme === "#123456",
@@ -316,6 +370,8 @@ export async function exerciseWindowChrome(options: {
     hiddenGeometryPreserved: true,
     selectedPtyRefitted: true,
     hoverGeometryUnchanged: true,
+    fullscreenHandleRestored: true,
+    nativeHandleDrag,
     guardedBusyClose: true,
     reloadPreservedChoices: true,
     futureDefaults: true,

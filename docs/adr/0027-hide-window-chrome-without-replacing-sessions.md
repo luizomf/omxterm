@@ -85,7 +85,11 @@ to the owning window and are disposed with it. This is ordinary application
 code, not injected prototype JavaScript or a development environment flag.
 
 Fullscreen suppresses the title area and handle but preserves the chosen
-visibility for exit. macOS safe-area behavior and configured padding stay
+visibility for exit. Main initializes fullscreen state from the native window,
+then follows its enter/leave events. On Windows, those events can precede the
+`isFullScreen()` getter update: reading that stale value during exit stops the
+hidden-title sampler instead of restarting it (#433). The event's new state
+must drive both presentation and sampler lifetime, without a delayed retry. macOS safe-area behavior and configured padding stay
 unchanged. Local Image Preview suppresses title/tab toggles and the hover handle
 while choosing, loading or displaying an image; it retains focus. Other windows
 and hidden tabs keep their independent state and valid geometry.
