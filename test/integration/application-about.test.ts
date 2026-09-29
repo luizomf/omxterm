@@ -1,16 +1,16 @@
-import { execFile } from "node:child_process";
-import { copyFile, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
+import { runNativeFixture } from "../fixtures/run-native-fixture";
 import { build } from "esbuild";
 import electron from "electron";
 import { expect, it } from "vitest";
 
-it.each(["development", "packaged"])(
+it.each(["development", "packaged", "missing-result"])(
   "configures native About before the menu (%s), preserving macOS defaults",
   async (mode) => {
     await mkdir(".scratch", { recursive: true });
     const root = await mkdtemp(path.resolve(".scratch/about-startup-"));
+    let supervised = false;
     try {
       const entry = path.join(root, "dist/main/index.mjs");
       const fixture = path.join(root, "fixture.mjs");
@@ -38,27 +38,38 @@ it.each(["development", "packaged"])(
           external: ["electron", "node-pty"],
         });
       }
-      const environment = { ...process.env };
-      delete environment.ELECTRON_RUN_AS_NODE;
-      await promisify(execFile)(
-        electron as unknown as string,
-        [
+      supervised = true;
+      const execution = await runNativeFixture({
+        executable: electron as unknown as string,
+        args: [
           ...(process.platform === "linux" ? ["--no-sandbox"] : []),
           fixture,
           entry,
           resultPath,
           mode === "packaged" ? resourcesPath : "development",
+          ...(mode === "missing-result" ? ["--fixture-missing-result"] : []),
         ],
-        {
-          env: {
-            ...environment,
-            XDG_CONFIG_HOME: path.join(root, "config"),
-            XDG_STATE_HOME: path.join(root, "state"),
-          },
-          timeout: 25_000,
-        },
-      );
-      const result = JSON.parse(await readFile(resultPath, "utf8")) as {
+        root,
+        completionFile: "result.json",
+        timeout: mode === "missing-result" ? 8_000 : 25_000,
+      });
+      if (mode === "missing-result") {
+        expect(execution).toMatchObject({
+          reason: "timeout",
+          cleanupErrors: [],
+        });
+        await expect(stat(root)).rejects.toMatchObject({ code: "ENOENT" });
+        return;
+      }
+      expect(execution, JSON.stringify(execution)).toMatchObject({
+        exitCode: 0,
+        signal: null,
+        reason: "exit",
+        cleanupErrors: [],
+      });
+      const result = JSON.parse(execution.stdout) as {
+        backend: string;
+        relaunched: boolean;
         options: {
           applicationName: string;
           applicationVersion: string;
@@ -72,6 +83,17 @@ it.each(["development", "packaged"])(
         iconEmpty?: boolean;
       };
       expect(result.nativeAboutRole).toBe("about");
+      if (
+        process.platform === "linux" &&
+        process.env.XDG_SESSION_TYPE === "wayland" &&
+        !process.env.ELECTRON_OZONE_PLATFORM_HINT
+      )
+        expect(result.relaunched).toBe(true);
+      if (
+        process.platform === "linux" &&
+        !process.env.ELECTRON_OZONE_PLATFORM_HINT
+      )
+        expect(result.backend).toBe("x11");
       if (process.platform === "linux" || process.platform === "win32") {
         expect(result.configuredWhileReady).toBe(true);
         expect(result.options).toEqual({
@@ -87,7 +109,7 @@ it.each(["development", "packaged"])(
         expect(result.options).toBeNull();
       }
     } finally {
-      await rm(root, { recursive: true, force: true });
+      if (!supervised) await rm(root, { recursive: true, force: true });
     }
   },
   35_000,

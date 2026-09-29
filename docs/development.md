@@ -30,13 +30,18 @@ when using a Wayland desktop. For example:
 
 ```sh
 # Ubuntu
-sudo apt install build-essential python3 binutils fontconfig file xwayland
+sudo apt install build-essential python3 binutils fontconfig file xwayland fonts-dejavu-core
 ```
 
 ```sh
 # Fedora
-sudo dnf install gcc-c++ make python3 binutils fontconfig file xorg-x11-server-Xwayland
+sudo dnf install gcc-c++ make python3 binutils fontconfig file xorg-x11-server-Xwayland dejavu-sans-fonts dejavu-sans-mono-fonts
 ```
+
+Native font fixtures require the exact installed families `DejaVu Sans` and
+`DejaVu Sans Mono`, not merely fontconfig substitution. On Arch/Omarchy install
+`ttf-dejavu`; inspect `fc-list : family` to verify both families. Bundled runtime
+fonts do not satisfy tests of an explicitly configured installed font.
 
 Run project commands as your ordinary user. Postinstall rebuilds `node-pty`
 against the installed Electron Linux ARM64 runtime; a module copied from Node.js
@@ -44,7 +49,11 @@ or another platform is not interchangeable.
 
 Graphical tests and packaged launches need an authorized X11/XWayland desktop;
 native Wayland is not currently claimed. Over SSH, use the desktop's `DISPLAY`
-and X11 authorization while keeping X server access control enabled. Keep the
+and X11 authorization while keeping X server access control enabled. Inherit
+`XDG_RUNTIME_DIR`, `WAYLAND_DISPLAY`, `XDG_SESSION_TYPE`, and
+`DBUS_SESSION_BUS_ADDRESS` from the authenticated desktop as applicable; do not
+guess another user's values. Privilege may hold a temporary idle inhibitor, but
+Electron and tests must still run as the ordinary desktop user. Keep the
 desktop unlocked during tests. A headless `xvfb-run` smoke test does not verify
 native desktop behavior.
 
@@ -96,6 +105,38 @@ Software-renderer flags cannot substitute for a required native graphics path.
 desktop with WebGL2. Fixtures share the desktop compositor. Vitest serializes
 files within one run; also keep separate suites and clones from running native
 tests on that same desktop concurrently.
+
+### Deliberate compositor policy
+
+Window Chrome tests require native maximize/restore success by default. A Linux
+Hyprland desktop deliberately suppressing maximize can declare its independently
+verified policy **before** the run:
+
+```sh
+OMXTERM_TEST_WINDOW_POLICY=hyprland-suppress-maximize npm test
+```
+
+First inspect the active Hyprland configuration and its loaded rules to confirm
+that they suppress application maximize requests (Omarchy's default window rules
+use `suppress_event = "maximize"`). An installed configuration file alone is not
+proof that it is loaded. Preserve `HYPRLAND_INSTANCE_SIGNATURE` from that desktop.
+Do not set this declaration merely because a maximize assertion failed, or change
+global rules to obtain a pass. Unknown declarations or missing Hyprland sessions
+fail validation. Other desktops keep the default successful-maximize assertion.
+
+The declared path still clicks the real custom control, observes its native
+request and unchanged native state, checks its label and terminal focus, and
+verifies Surface/PTY continuity and cleanup. Tiling may resize the first window
+when the second opens: its selected Surface and PTY must fit actual native and
+container bounds, while hidden-tab geometry remains untouched. The standard
+path additionally retains the unchanged-height assertion.
+
+About startup tests retain the desktop's Wayland environment and exercise the
+production X11 relaunch. Their supervised completion file belongs to the
+result-producing process, not the original launcher. Missing evidence is a
+bounded failure; registered detached descendants are cleaned before the profile
+is removed. Surface-only appearance fixtures select X11 explicitly because they
+do not import application startup; this is not a global session override.
 
 When investigating an intermittent failure, record the failure and rerun
 conditions. A later isolated pass alone does not show that it was fixed.

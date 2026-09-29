@@ -559,7 +559,8 @@ async function runFixture(root: string): Promise<{
   readonly stderr: string;
   readonly stdout: string;
 }> {
-  const chromiumArguments: string[] = [];
+  const chromiumArguments =
+    process.platform === "linux" ? ["--ozone-platform=x11"] : [];
   applyChromiumSandboxPolicy({
     appendSwitch(name) {
       chromiumArguments.push(`--${name}`);

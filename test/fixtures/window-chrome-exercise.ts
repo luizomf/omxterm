@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import type { BrowserWindow } from "electron";
 import type { TerminalApplication } from "../../src/main/terminal-application";
 import type { LocalTerminalSession } from "../../src/main/local-terminal-session";
+import { fixtureWindowPolicy } from "./window-policy";
 
 async function waitFor(
   predicate: () => boolean | Promise<boolean>,
@@ -22,11 +23,21 @@ async function exerciseCustomControlFocus(window: BrowserWindow) {
     )) as boolean;
   window.focus();
   await waitFor(terminalFocused, "terminal input focus before window controls");
-  for (const label of ["Maximize", "Restore"]) {
+  const denied = fixtureWindowPolicy() === "hyprland-suppress-maximize";
+  assert.equal(window.isMaximized(), false);
+  for (const label of denied
+    ? ["Maximize", "Maximize"]
+    : ["Maximize", "Restore"]) {
     const point = (await window.webContents.executeJavaScript(`(() => {
       const bounds = document.querySelector('[aria-label="${label}"]').getBoundingClientRect();
       return { x: Math.round(bounds.x + bounds.width / 2), y: Math.round(bounds.y + bounds.height / 2) };
     })()`)) as { x: number; y: number };
+    let requests = 0;
+    const nativeMaximize = window.maximize;
+    window.maximize = () => {
+      requests += 1;
+      nativeMaximize.call(window);
+    };
     window.webContents.sendInputEvent({ type: "mouseMove", ...point });
     for (const type of ["mouseDown", "mouseUp"] as const)
       window.webContents.sendInputEvent({
@@ -35,14 +46,36 @@ async function exerciseCustomControlFocus(window: BrowserWindow) {
         clickCount: 1,
         ...point,
       });
-    await waitFor(
-      () => window.isMaximized() === (label === "Maximize"),
-      `native ${label} through the custom control`,
-    );
+    try {
+      if (label === "Maximize")
+        await waitFor(
+          () => requests === 1,
+          "custom control invokes native maximize",
+        );
+      if (denied) {
+        // Observe a complete bounded native-response interval, not immediate
+        // unchanged state before the click has even reached main.
+        const deadline = Date.now() + 750;
+        while (Date.now() < deadline) {
+          assert.equal(
+            window.isMaximized(),
+            false,
+            "compositor denies maximize",
+          );
+          await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+      } else
+        await waitFor(
+          () => window.isMaximized() === (label === "Maximize"),
+          `native ${label} through the custom control`,
+        );
+    } finally {
+      window.maximize = nativeMaximize;
+    }
     await waitFor(
       async () =>
         (await window.webContents.executeJavaScript(
-          `!!document.querySelector('[aria-label="${label === "Maximize" ? "Restore" : "Maximize"}"]')`,
+          `!!document.querySelector('[aria-label="${window.isMaximized() ? "Restore" : "Maximize"}"]')`,
         )) as boolean,
       "native maximize state reaches renderer",
     );
@@ -55,6 +88,12 @@ interface Geometry {
   readonly inset: number;
   readonly tabs: boolean;
   readonly canvasHeight: number;
+  readonly canvasWidth: number;
+  readonly availableHeight: number;
+  readonly availableWidth: number;
+  readonly viewportHeight: number;
+  readonly viewportWidth: number;
+  readonly dpr: number;
   readonly handle: boolean;
   readonly handleWidth: number;
   readonly handleHeight: number;
@@ -68,11 +107,20 @@ const geometryScript = `(() => {
   const handle = document.querySelector('.window-drag-handle');
   const canvas = document.querySelector('.terminal-surface:not([hidden]) canvas');
   const hit = document.elementFromPoint(12, 12);
+  const container = document.querySelector('.terminal-surface:not([hidden])');
+  const bounds = container.getBoundingClientRect();
+  const style = getComputedStyle(container);
   return {
     titleHeight: row.getBoundingClientRect().height,
     inset: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--native-title-inset')),
     tabs: !document.querySelector('#tab-strip').hidden,
     canvasHeight: canvas?.getBoundingClientRect().height ?? 0,
+    canvasWidth: canvas?.getBoundingClientRect().width ?? 0,
+    availableHeight: bounds.height - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom),
+    availableWidth: bounds.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+    viewportHeight: innerHeight,
+    viewportWidth: innerWidth,
+    dpr: devicePixelRatio,
     handle: !handle.hidden,
     handleWidth: handle.getBoundingClientRect().width,
     handleHeight: handle.getBoundingClientRect().height,
@@ -95,6 +143,8 @@ export async function exerciseWindowChrome(options: {
   readonly second: () => BrowserWindow;
   readonly backgroundOpacity: (window: BrowserWindow) => number;
   readonly exerciseMenu: () => Promise<string>;
+  readonly queryCell: (index: number) => void;
+  readonly cells: ReadonlyArray<{ width: number; height: number } | undefined>;
 }) {
   const { window, application, sizes, sessions } = options;
   const evaluate = async <T>(script: string): Promise<T> =>
@@ -205,8 +255,45 @@ export async function exerciseWindowChrome(options: {
     future.backgroundOpacity,
     options.backgroundOpacity(options.second()),
   );
-  assert.equal((await geometry()).canvasHeight, first.canvasHeight);
+  // Tiling may resize the first native window when the second opens. Its
+  // Surface and real PTY must fit the new bounds, not a stale initial height.
+  options.queryCell(1);
+  await waitFor(
+    () => options.cells[1] !== undefined,
+    "native Surface cell report",
+  );
+  const fitsNativeBounds = async () => {
+    const current = await geometry();
+    const cell = options.cells[1]!;
+    const grid = sizes[1]!.at(-1)!;
+    const [width, height] = window.getContentSize();
+    return (
+      Math.abs(current.viewportWidth - width!) <= 1 &&
+      Math.abs(current.viewportHeight - height!) <= 1 &&
+      Math.abs(current.canvasWidth - current.availableWidth) <= 1 &&
+      Math.abs(current.canvasHeight - current.availableHeight) <= 1 &&
+      Math.abs(
+        grid.cols -
+          Math.floor((current.canvasWidth * current.dpr) / cell.width),
+      ) <= 1 &&
+      Math.abs(
+        grid.rows -
+          Math.floor((current.canvasHeight * current.dpr) / cell.height),
+      ) <= 1
+    );
+  };
+  await waitFor(
+    fitsNativeBounds,
+    "Surface and PTY fit actual native bounds after second window",
+  );
+  if (fixtureWindowPolicy() === "standard")
+    assert.equal((await geometry()).canvasHeight, first.canvasHeight);
+  assert.equal(sizes[0]!.length, hiddenSizeCount);
   await exerciseCustomControlFocus(window);
+  await waitFor(
+    fitsNativeBounds,
+    "Surface and PTY fit native bounds after custom controls",
+  );
   const menu = await options.exerciseMenu();
   assert.equal(window.id, windowId);
   assert.equal(window.webContents.id, contentsId);
@@ -220,6 +307,8 @@ export async function exerciseWindowChrome(options: {
   assert.equal(isolation.isolated, true);
   return {
     platform: process.platform,
+    windowPolicy: fixtureWindowPolicy(),
+    nativeGeometryVerified: true,
     menu,
     titlePixels,
     sameWindowAndContents: true,

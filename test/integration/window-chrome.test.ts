@@ -7,6 +7,7 @@ import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
+import { fixtureWindowPolicy } from "../fixtures/window-policy";
 
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
 const executable = createRequire(import.meta.url)("electron") as string;
@@ -115,6 +116,8 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           expect(result).toBeDefined();
           expect(JSON.parse(result!.slice(prefix.length)) as unknown).toEqual({
             platform: process.platform,
+            windowPolicy: fixtureWindowPolicy(),
+            nativeGeometryVerified: true,
             menu:
               process.platform === "darwin"
                 ? "unchanged-macos"

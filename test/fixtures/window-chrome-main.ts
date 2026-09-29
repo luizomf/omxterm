@@ -42,6 +42,8 @@ for (const name of ["userData", "sessionData"] as const) {
 const sessions: Array<ReturnType<typeof createLocalTerminalSession>> = [];
 const sessionExits: Promise<void>[] = [];
 const sizes: Array<Array<{ cols: number; rows: number }>> = [];
+const cells: Array<{ width: number; height: number } | undefined> = [];
+const cellQueries: Array<() => void> = [];
 const windows: BrowserWindow[] = [];
 const backgroundTransparencies = new WeakMap<BrowserWindow, () => number>();
 const backgroundEffects = createWindowBackgroundEffectsOwner(
@@ -156,6 +158,11 @@ app
           createSession(callbacks) {
             const index = sessions.length;
             sizes[index] = [];
+            let queryingCell = false;
+            cellQueries[index] = () => {
+              queryingCell = true;
+              callbacks.onOutput("\u001b[16t");
+            };
             let resolveExit: () => void = () => {};
             sessionExits.push(
               new Promise<void>((resolve) => {
@@ -178,6 +185,17 @@ app
             sessions.push(terminal);
             return {
               ...terminal,
+              write(data) {
+                const cell =
+                  queryingCell && /^\u001b\[6;(\d+);(\d+)t$/u.exec(data);
+                if (cell) {
+                  cells[index] = {
+                    width: Number(cell[2]),
+                    height: Number(cell[1]),
+                  };
+                  queryingCell = false;
+                } else terminal.write(data);
+              },
               resize(size) {
                 sizes[index]!.push(size);
                 terminal.resize(size);
@@ -245,6 +263,8 @@ app
     await application.newWindow();
     const result = await exerciseWindowChrome({
       window: windows[0]!,
+      cells,
+      queryCell: (index) => cellQueries[index]!(),
       application,
       sessions,
       sizes,

@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { lstat, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { collectFixtureRegistrations } from "./native-fixture-ownership";
@@ -19,6 +19,7 @@ interface Request {
   readonly evidencePath: string;
   readonly parent?: FixtureProcess;
   readonly externalChild?: boolean;
+  readonly completionFile?: string;
 }
 
 interface ExternalExit {
@@ -95,6 +96,30 @@ async function removeFixtureProfile(
   });
 }
 
+function completesOnExit(request: Request, exit: ExternalExit): boolean {
+  return exit.exitCode !== 0 || exit.signal !== null || !request.completionFile;
+}
+
+function completionAvailable(
+  request: Request,
+  exitCode: number | null,
+): boolean {
+  return (
+    !!request.completionFile &&
+    exitCode === 0 &&
+    existsSync(path.join(request.root, request.completionFile))
+  );
+}
+
+async function completionOutput(
+  request: Request,
+  exit: ExternalExit,
+): Promise<string> {
+  if (!request.completionFile || exit.reason !== "exit" || exit.exitCode !== 0)
+    return "";
+  return readFile(path.join(request.root, request.completionFile), "utf8");
+}
+
 async function supervise(request: Request): Promise<void> {
   const rootIdentity = await lstat(request.root);
   const owned = new Map<number, FixtureProcess>();
@@ -158,7 +183,14 @@ async function supervise(request: Request): Promise<void> {
     child.once("exit", (code, receivedSignal) => {
       exitCode = code;
       signal = receivedSignal;
-      resolveEnd();
+      if (
+        completesOnExit(request, {
+          exitCode: code,
+          signal: receivedSignal,
+          reason: "exit",
+        })
+      )
+        resolveEnd();
     });
   }
   let leaderPid = child?.pid;
@@ -201,11 +233,12 @@ async function supervise(request: Request): Promise<void> {
         exitCode = exit.exitCode;
         signal = exit.signal;
         if (reason === "exit") reason = exit.reason;
-        resolveEnd();
+        if (completesOnExit(request, exit)) resolveEnd();
       }
     }
     collectFixtureDescendants(rows, owned);
     collectRegistered(rows);
+    if (completionAvailable(request, exitCode)) resolveEnd();
   };
   let inspectionError: string | undefined;
   const inspect = () => {
@@ -253,6 +286,7 @@ async function supervise(request: Request): Promise<void> {
         signal = exit.signal;
       }
     }
+    stdout += await completionOutput(request, { exitCode, signal, reason });
     if (pendingRegistrations > 0)
       throw new Error(
         "Fixture process registration was interrupted; cleanup is uncertain",

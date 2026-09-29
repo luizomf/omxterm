@@ -176,6 +176,9 @@ export async function runNativeFixture(options: {
   readonly root: string;
   readonly timeout: number;
   readonly evidencePath?: string;
+  // Relaunching fixtures publish their final evidence atomically inside root.
+  // The initial process exiting successfully is not their completion signal.
+  readonly completionFile?: string;
 }): Promise<NativeFixtureResult> {
   await mkdir(path.join(options.root, FIXTURE_PROCESS_DIRECTORY));
   const supervisorPath = path.join(

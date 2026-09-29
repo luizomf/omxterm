@@ -184,7 +184,7 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
       }
 
       const result = runs[0]!.result;
-      const measurements = result.measurements;
+      const { measurements, live, devicePixelRatio } = result;
       const size8 = measurements.find((entry) => entry.size === 8)!;
       const size16 = measurements.find(
         (entry) =>
@@ -238,7 +238,6 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
       expect(result!.live.cellHeight).toBe(size16.cellHeight);
       expect(result!.live.cellHeight).toBeLessThan(line2.cellHeight);
       expect(result!.live.imeFontSize).toBe(size16.imeFontSize);
-      const { live, devicePixelRatio } = result!;
       expect(live.canvasCssWidth).toBeGreaterThan(0);
       expect(live.canvasCssHeight).toBeGreaterThan(0);
       expect(devicePixelRatio).toBeGreaterThanOrEqual(1);
@@ -577,7 +576,8 @@ async function runFixture(
   readonly stderr: string;
   readonly stdout: string;
 }> {
-  const chromiumArguments: string[] = [];
+  const chromiumArguments =
+    process.platform === "linux" ? ["--ozone-platform=x11"] : [];
   applyChromiumSandboxPolicy({
     appendSwitch(name) {
       chromiumArguments.push(`--${name}`);
