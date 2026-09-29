@@ -191,18 +191,23 @@ async function exerciseRemoval(window: BrowserWindow) {
       )),
     "ordinary background C exit",
   );
+  // ConPTY exchanges capability/focus replies during startup and tab selection.
+  // Assert new user delivery, not the protocol traffic preceding the action.
+  const inputOffsets = inputs.map((input) => input.length);
+  const received = (index: number) =>
+    inputs[index]!.slice(inputOffsets[index]).join("");
   window.webContents.send(terminalIpc.clipboardAction, "paste");
   await waitFor(
-    () => inputs.some((input) => input.join("").includes("paste")),
+    () => inputs.some((_, index) => received(index).includes("paste")),
     "Paste recipient observed",
   );
   assert.equal(selected, "s1", "background exit preserves selected session A");
   assert.equal(
-    inputs[0]!.join(""),
+    received(0),
     "paste",
     "Paste reaches A's existing Surface/Adapter",
   );
-  assert.equal(inputs[1]!.join(""), "", "Paste never reaches B");
+  assert.equal(received(1), "", "Paste never reaches B");
   assert.deepEqual(
     await evaluate(`({
     same: [...document.querySelectorAll('.terminal-surface canvas')].every((canvas, index) => canvas === globalThis.originalCanvases[index]),
@@ -242,7 +247,7 @@ async function exerciseRemoval(window: BrowserWindow) {
     () => outputs[0]!.join("").includes("RECEIVED:snippet"),
     "Snippet reaches A's real PTY",
   );
-  assert.equal(inputs[1]!.join(""), "");
+  assert.equal(received(1), "");
   assert.equal(selected, "s1");
   assert.deepEqual(exited, [2]);
   assert.equal(sessions.length, 3);
