@@ -51,6 +51,19 @@ export function acknowledgeTerminalOutput(
     reject("ipc", "invalid-progress");
 }
 
+export function useClipboard<T>(
+  operation: () => T,
+  onError: (() => void) | undefined,
+  fallback: T,
+): T {
+  try {
+    return operation();
+  } catch {
+    onError?.();
+    return fallback;
+  }
+}
+
 export function requestExternalLink(
   payload: unknown,
   options: ExternalLinkRequestOptions,

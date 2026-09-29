@@ -18,9 +18,22 @@ export interface ElectronTerminalAdapter extends TerminalSessionAdapter {
 
 export function createElectronTerminalAdapter(
   bridge: TerminalBridge,
+  fontConfigurationId?: string,
 ): ElectronTerminalAdapter {
   let closed = false;
   let started = false;
+  let surfaceId: string | undefined;
+  const retention =
+    fontConfigurationId === undefined
+      ? undefined
+      : bridge.retainSurface(fontConfigurationId).then((id) => {
+          surfaceId = id;
+          if (closed) bridge.releaseSurface(id);
+          return id;
+        });
+  // Initialization can fail before start consumes the registration response.
+  // A rejected registration owns no resources; start still observes its error.
+  void retention?.catch(() => {});
   let closeReason: "rendering-failure" | undefined;
   let sessionId: TerminalSessionId | undefined;
   let removeOutputListener: (() => void) | undefined;
@@ -77,7 +90,11 @@ export function createElectronTerminalAdapter(
         }
         deliverExit(source, exit);
       });
-      const startedSessionId = await bridge.start();
+      const owner = retention ? await retention : undefined;
+      if (closed) throw new Error("Terminal Adapter was closed before start");
+      const startedSessionId = await (owner === undefined
+        ? bridge.start()
+        : bridge.start(owner));
       const closedBeforeStart = closed;
       sessionId = startedSessionId;
       for (const event of pendingEvents) {
@@ -102,6 +119,7 @@ export function createElectronTerminalAdapter(
       if (closed) return;
       closed = true;
       closeReason = reason;
+      if (surfaceId !== undefined) bridge.releaseSurface(surfaceId);
       removeOutputListener?.();
       removeExitListener?.();
       pendingEvents = [];

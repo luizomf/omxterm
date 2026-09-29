@@ -65,6 +65,73 @@ function createBridgeHarness() {
 }
 
 describe("renderer Electron terminal adapter", () => {
+  it("releases a late Surface registration after cancellation without starting a PTY", async () => {
+    const harness = createBridgeHarness();
+    let resolve!: (id: string) => void;
+    const retained = new Promise<string>((finish) => {
+      resolve = finish;
+    });
+    const bridge = {
+      ...harness.bridge,
+      retainSurface: vi.fn(() => retained),
+      releaseSurface: vi.fn(),
+    };
+    const adapter = createElectronTerminalAdapter(bridge, "configuration");
+    const started = adapter.start({ onOutput: vi.fn(), onExit: vi.fn() });
+    const rejected = expect(started).rejects.toThrow("closed before start");
+    adapter.close();
+    resolve("surface");
+    await rejected;
+    adapter.close();
+    expect(bridge.retainSurface).toHaveBeenCalledExactlyOnceWith(
+      "configuration",
+    );
+    expect(bridge.releaseSurface).toHaveBeenCalledExactlyOnceWith("surface");
+    expect(harness.calls.start).not.toHaveBeenCalled();
+    expect(harness.calls.close).not.toHaveBeenCalled();
+  });
+
+  it("retains its issued snapshot and closes one accepted late native session", async () => {
+    const harness = createBridgeHarness();
+    const bridge = {
+      ...harness.bridge,
+      retainSurface: vi.fn(async () => "surface"),
+      releaseSurface: vi.fn(),
+    };
+    const adapter = createElectronTerminalAdapter(bridge, "configuration");
+    const started = adapter.start({ onOutput: vi.fn(), onExit: vi.fn() });
+    await vi.waitFor(() =>
+      expect(harness.calls.start).toHaveBeenCalledExactlyOnceWith("surface"),
+    );
+    adapter.close();
+    harness.startSession("s1");
+    await started;
+    adapter.close();
+    expect(bridge.releaseSurface).toHaveBeenCalledExactlyOnceWith("surface");
+    expect(harness.calls.close).toHaveBeenCalledExactlyOnceWith(
+      "s1",
+      undefined,
+    );
+  });
+
+  it("observes rejected registration without acquiring a PTY or releasing an unknown owner", async () => {
+    const harness = createBridgeHarness();
+    const bridge = {
+      ...harness.bridge,
+      retainSurface: vi.fn(async () => {
+        throw new Error("rejected owner");
+      }),
+      releaseSurface: vi.fn(),
+    };
+    const adapter = createElectronTerminalAdapter(bridge, "configuration");
+    await expect(
+      adapter.start({ onOutput: vi.fn(), onExit: vi.fn() }),
+    ).rejects.toThrow("rejected owner");
+    adapter.close();
+    expect(harness.calls.start).not.toHaveBeenCalled();
+    expect(bridge.releaseSurface).not.toHaveBeenCalled();
+  });
+
   it("routes startup parser replies and a failure close once after establishing ownership", async () => {
     const harness = createBridgeHarness();
     const adapter = createElectronTerminalAdapter(harness.bridge);

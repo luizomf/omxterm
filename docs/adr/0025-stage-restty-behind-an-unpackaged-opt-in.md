@@ -138,6 +138,21 @@ settings and requests restart; a deferred setting clears only when its requested
 value is already active in every existing Surface. Failed lookup, bounded read or font decoding starts no
 invisible shell and an invalid reload commits nothing.
 
+Creation-time font bookkeeping is owned before the PTY starts. Main issues a
+renderer-scoped identity for each accepted restart-only font snapshot; the host
+captures it with the Surface options and its Electron Adapter retains an
+independent Surface owner immediately. Startup consumes that owner once, and
+Adapter disposal releases it even when initialization was cancelled before
+startup. IPC validates both the owning renderer main frame and the issued
+identity; no claimed font values or new filesystem/font-read authority are
+accepted. A configuration-delivery acknowledgement follows renderer callbacks,
+so preceding Surface registrations retain their old snapshots before main drops
+superseded delivery identities. Surviving Surface owners keep only their two
+creation-time values. This avoids an unbounded history of manual reloads and
+keeps pending Surfaces visible to restart-notice calculation without starting a
+shell early. This font-only registry does not replace the renderer's tab/last-tab
+ownership or native session shutdown authority (ADRs 0016 and 0028).
+
 Candidate explicit copy/paste, selection, context-menu actions,
 snippets/path injection and OSC 52 are enabled through OMXTerm's existing host
 capabilities. Restty's synchronous `beforeInput` only tags and diverts raw DOM

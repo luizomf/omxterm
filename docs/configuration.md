@@ -588,7 +588,9 @@ Snippets are read separately when their sidebar opens.
 | New windows           | Always-on-Top, title-bar and tab-bar defaults                 |
 
 Sessions keep running. A notice explains when font family or line height needs
-a restart to apply everywhere. Existing windows keep their zoom adjustment,
+a restart to apply everywhere. Tabs still initializing keep the settings they
+started with too. Reloading the same values again keeps the notice while an older
+tab survives; after closing those tabs, another reload clears it. Existing windows keep their zoom adjustment,
 bar visibility, and Always-on-Top choices. **Actual Size** returns zoom to the
 latest configured size.
 

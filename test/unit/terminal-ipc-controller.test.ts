@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import {
   registerTerminalIpcRouter,
   type IpcEvent,
-  type IpcMainPort,
   type TerminalIpcControllerOptions,
   type TrustedWebContents,
 } from "../../src/main/terminal-ipc-controller";
@@ -14,57 +13,10 @@ import type { OperationalEvent } from "../../src/main/operational-events";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 
-function createIpcHarness() {
-  const handlers = new Map<
-    string,
-    (event: IpcEvent, payload?: unknown) => void
-  >();
-  const listeners = new Map<
-    string,
-    (event: IpcEvent, payload?: unknown) => void
-  >();
-  const ipcMain: IpcMainPort = {
-    handle: (channel, handler) => handlers.set(channel, handler),
-    removeHandler: (channel) => void handlers.delete(channel),
-    on: (channel, listener) => void listeners.set(channel, listener),
-    removeListener: (channel, listener) => {
-      if (listeners.get(channel) === listener) listeners.delete(channel);
-    },
-  };
-  return { ipcMain, handlers, listeners };
-}
-
-function clipboardOptions() {
-  return {
-    configuration: {
-      fontSize: 16,
-      fontLineHeight: 1,
-      fontLigatures: true,
-      terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
-      scrollbackLines: 10_000,
-      optionKeyMode: "none" as const,
-      nativeTitleInset: 0 as const,
-      transparency: 0,
-      showTabBar: true,
-      terminalTheme: DEFAULT_TERMINAL_THEME,
-      userFileErrors: [],
-    },
-    writeClipboardText: vi.fn(),
-    readClipboardText: vi.fn(() => "clipboard text"),
-    confirmPaste: vi.fn(async () => true),
-    onClipboardError: vi.fn(),
-    showClipboardContextMenu: vi.fn(),
-    onTitleRequest: vi.fn(),
-    onBell: vi.fn(),
-    onSessionStarted: vi.fn(),
-    onSessionSelected: vi.fn(),
-    onUserInteraction: vi.fn(),
-    openExternalLink: vi.fn(async () => {}),
-    onExternalLinkOpenError: vi.fn(),
-    loadSnippets: vi.fn(async () => ({ snippets: [] })),
-    loadLocalImage: vi.fn(async () => null),
-  };
-}
+import {
+  createIpcHarness,
+  clipboardOptions,
+} from "../fixtures/terminal-ipc-harness";
 
 describe("rendering failure IPC", () => {
   it("carries only an owned fixed rendering failure through session termination", () => {
@@ -196,8 +148,8 @@ describe("terminal IPC controller", () => {
     expect(secondSession.write).toHaveBeenCalledWith("second window input");
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();
-    expect(ipc.handlers.size).toBe(8);
-    expect(ipc.listeners.size).toBe(10);
+    expect(ipc.handlers.size).toBe(9);
+    expect(ipc.listeners.size).toBe(12);
   });
 
   it("associates each started session with its selected shell fallback title", () => {
@@ -281,7 +233,7 @@ describe("terminal IPC controller", () => {
 
     expect(webContents.send).toHaveBeenCalledExactlyOnceWith(
       terminalIpc.configurationUpdate,
-      update,
+      { ...update, fontConfigurationId: expect.any(String) as unknown },
     );
     expect(
       ipc.handlers.get(terminalIpc.configuration)!({
@@ -348,7 +300,10 @@ describe("terminal IPC controller", () => {
         sender: webContents,
         senderFrame: mainFrame,
       }),
-    ).toBe(configuration);
+    ).toEqual({
+      ...configuration,
+      fontConfigurationId: expect.any(String) as unknown,
+    });
   });
 
   it("serves an on-demand snippets read to its bound renderer and rejects payloads", async () => {

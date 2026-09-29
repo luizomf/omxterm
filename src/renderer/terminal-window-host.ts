@@ -49,7 +49,9 @@ export interface TerminalWindowPageElements {
 }
 
 interface TerminalWindowPageOptions {
-  readonly createAdapter: () => ElectronTerminalAdapter;
+  readonly createAdapter: (
+    fontConfigurationId?: string,
+  ) => ElectronTerminalAdapter;
   readonly configuration?: TerminalRendererConfiguration;
   readonly chrome?: WindowChromeBridge;
   readonly page?: Pick<
@@ -120,6 +122,7 @@ export function mountTerminalWindowPage(
   let removeLocalImageOpenListener: (() => void) | undefined;
   let localImagePreview: LocalImagePreview | undefined;
   const hoverAvailabilityListeners = new Set<() => void>();
+  let fontConfigurationId = options.configuration?.fontConfigurationId;
   let activeFontFamily = options.configuration?.fontFamily;
   const fontGenerations = options.loadFontData
     ? createTerminalFontGenerationOwner(options.loadFontData, activeFontFamily)
@@ -191,7 +194,7 @@ export function mountTerminalWindowPage(
   const tabs: TerminalTabs = createTerminalTabs(
     { strip: elements.tabStrip, container: elements.tabsContainer },
     {
-      createAdapter: options.createAdapter,
+      createAdapter: () => options.createAdapter(fontConfigurationId),
       mount,
       surfaceOptions,
       showTabBar: options.configuration?.showTabBar ?? true,
@@ -288,6 +291,7 @@ export function mountTerminalWindowPage(
   removeConfigurationUpdateListener = options.subscribeToConfigurationUpdates?.(
     (configuration) => {
       if (disposed) return;
+      fontConfigurationId = configuration.fontConfigurationId;
       if (!chrome)
         page.document.documentElement.style.setProperty(
           "--native-title-inset",

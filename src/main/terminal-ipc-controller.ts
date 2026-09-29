@@ -47,12 +47,22 @@ import { isTerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalFontData } from "../shared/terminal-font-data";
 import type { LocalImageData } from "../shared/local-image";
 import { createFontDataRequest } from "./terminal-font-data-request";
+import {
+  createSurfaceFontOwnership,
+  activeSessionFontConfigurations,
+  surfaceFontConfiguration,
+} from "./surface-font-ownership";
+import {
+  registerSurfaceFontIpc,
+  type SurfaceFontRequests,
+} from "./surface-font-ipc";
 import { createRendererConfigurationState } from "./terminal-renderer-configuration";
 import { createLocalImageIpcBoundary } from "./local-image-ipc";
 export { isValidExternalLink } from "./external-link";
 import {
   acknowledgeTerminalOutput,
   requestExternalLink,
+  useClipboard,
   type RejectBoundary,
 } from "./terminal-ipc-boundaries";
 import {
@@ -60,7 +70,8 @@ import {
   type TerminalOutputFlow,
 } from "./terminal-output-flow";
 
-interface RoutedTerminalIpcController extends TerminalIpcController {
+interface RoutedTerminalIpcController
+  extends TerminalIpcController, SurfaceFontRequests {
   configuration(payload?: unknown): TerminalRendererConfiguration;
   start(payload?: unknown): TerminalSessionId;
   input(payload?: unknown): void;
@@ -241,6 +252,16 @@ export function registerTerminalIpcRouter(
     return controller.snippets(payload);
   };
 
+  const removeSurfaceFontIpc = registerSurfaceFontIpc(
+    ipcMain,
+    controllerFor,
+    () =>
+      operationalEvents?.write({
+        name: "boundary.rejected",
+        boundary: "ipc",
+        reason: "untrusted-sender",
+      }),
+  );
   ipcMain.handle(terminalIpc.start, start);
   ipcMain.handle(terminalIpc.configuration, configuration);
   ipcMain.handle(terminalIpc.fontData, fontData);
@@ -296,6 +317,7 @@ export function registerTerminalIpcRouter(
       if (disposed) return;
       disposed = true;
       for (const controller of [...controllers.values()]) controller.dispose();
+      removeSurfaceFontIpc();
       ipcMain.removeHandler(terminalIpc.start);
       ipcMain.removeHandler(terminalIpc.configuration);
       ipcMain.removeHandler(terminalIpc.fontData);
@@ -346,31 +368,6 @@ function sessionEndContext(
   };
 }
 
-function activeTerminalSurfaceFontConfigurations(
-  sessions: ReadonlyMap<TerminalSessionId, RoutedSessionState>,
-): readonly TerminalSurfaceFontConfiguration[] {
-  return Object.freeze(
-    [...sessions.values()].flatMap((state) =>
-      state.exited || state.terminalSurfaceFontConfiguration === undefined
-        ? []
-        : [state.terminalSurfaceFontConfiguration],
-    ),
-  );
-}
-
-function useClipboard<T>(
-  operation: () => T,
-  onError: (() => void) | undefined,
-  fallback: T,
-): T {
-  try {
-    return operation();
-  } catch {
-    onError?.();
-    return fallback;
-  }
-}
-
 async function confirmClipboardPaste(
   options: TerminalIpcControllerOptions,
   text: string,
@@ -392,8 +389,13 @@ function createTerminalIpcController(
   unregister: () => void,
 ): RoutedTerminalIpcController {
   let disposed = false;
+  const reject: RejectBoundary = (boundary, reason) =>
+    operationalEvents?.write({ name: "boundary.rejected", boundary, reason });
+  const surfaceFonts = createSurfaceFontOwnership(() =>
+    reject("ipc", "invalid-payload"),
+  );
   const rendererConfiguration = createRendererConfigurationState(
-    options.configuration,
+    surfaceFonts.configure(options.configuration),
     options.initialFullScreen ?? false,
     options.webContents,
     options.backgroundTransparency,
@@ -408,9 +410,6 @@ function createTerminalIpcController(
   ) => {
     if (windowId !== undefined) operationalEvents?.write(event);
   };
-  const reject: RejectBoundary = (boundary, reason) =>
-    operationalEvents?.write({ name: "boundary.rejected", boundary, reason });
-
   const closeSession = (
     sessionId: TerminalSessionId,
     reason?: "rendering-failure",
@@ -448,11 +447,8 @@ function createTerminalIpcController(
   };
 
   const start = (payload?: unknown): TerminalSessionId => {
-    if (payload !== undefined) {
-      reject("ipc", "invalid-payload");
-      throw new TypeError("Invalid terminal start payload");
-    }
     if (disposed) throw new Error("Terminal IPC controller is disposed");
+    if (payload !== undefined) surfaceFonts.start(payload);
 
     const sessionId: TerminalSessionId = `s${nextSessionNumber}`;
     nextSessionNumber += 1;
@@ -541,12 +537,13 @@ function createTerminalIpcController(
     sessions.set(sessionId, {
       session: createdSession,
       outputFlow,
-      terminalSurfaceFontConfiguration: Object.freeze({
-        ...(rendererConfiguration.current().fontFamily === undefined
-          ? {}
-          : { fontFamily: rendererConfiguration.current().fontFamily }),
-        fontLineHeight: rendererConfiguration.current().fontLineHeight,
-      }),
+      ...(payload === undefined
+        ? {
+            terminalSurfaceFontConfiguration: surfaceFontConfiguration(
+              rendererConfiguration.current(),
+            ),
+          }
+        : {}),
       closed: false,
       exited: exitedBeforeRegistration,
     });
@@ -693,13 +690,14 @@ function createTerminalIpcController(
 
   return {
     configuration,
+    ...surfaceFonts.requests,
     applyConfiguration(configuration) {
       if (disposed || options.webContents.isDestroyed()) return;
       if (
         rendererConfiguration.current().fontFamily !== configuration.fontFamily
       )
         fontConfigurationGeneration += 1;
-      rendererConfiguration.apply(configuration);
+      rendererConfiguration.apply(surfaceFonts.configure(configuration));
     },
     applyFullScreen(fullScreen) {
       if (!disposed && !options.webContents.isDestroyed())
@@ -729,11 +727,14 @@ function createTerminalIpcController(
     localImage: localImageBoundary.request,
     snippets,
     fontData,
-    activeTerminalSurfaceFontConfigurations: () =>
-      activeTerminalSurfaceFontConfigurations(sessions),
+    activeTerminalSurfaceFontConfigurations: () => [
+      ...surfaceFonts.active(),
+      ...activeSessionFontConfigurations(sessions.values()),
+    ],
     dispose() {
       if (disposed) return;
       disposed = true;
+      surfaceFonts.dispose();
       localImageBoundary.dispose();
       unregister();
       for (const sessionId of [...sessions.keys()]) closeSession(sessionId);

@@ -46,9 +46,23 @@ size, independent line height, programming-ligature setting, per-side padding,
 Window Font Zoom and scrollback. Theme, size, programming ligatures, padding and
 scrollback reload live without replacing the Surface, core, fonts or PTY. A Restty Surface keeps the font family and line height it was created with;
 restart OMXTerm to apply either changed setting to every existing Restty
-Surface. Programming ligatures default to enabled and use Restty's existing
+Surface. Initializing Surfaces count too: a reload between font/runtime readiness
+and PTY startup must not relabel their creation-time settings or clear a required
+notice on the next reload. The Electron Adapter retains a main-issued,
+renderer-scoped font configuration identity at creation and releases that owner
+on disposal, including cancellation before startup. It never claims font values.
+Programming ligatures default to enabled and use Restty's existing
 boolean configuration and `setLigatures` operation. New Surfaces use every
 latest validated value. Native glyph rasterization can differ across operating systems and GPUs; pixel-identical output is not claimed.
+
+`test/integration/surface-font-ownership.test.ts` holds the real initial Restty
+readiness continuation, reloads line height from 1 to 1.5, finishes startup and
+reloads 1.5 again. It checks main bookkeeping, the production notice, unchanged
+old row metrics, larger new-tab row metrics, same native PTYs and notice clearing
+after removing the old Surface. Cell measurements are real Restty/core replies
+to a synthetic fixture query, not screenshots or physical keyboard input. The
+matching isolated regression also covers family changes and multiple pending
+owners; its mocked runtime values are not native font measurements.
 
 Positive `scrollback.lines` values are approximate physical history-row targets
 because Ghostty evicts whole historical pages. Retention can exceed the target

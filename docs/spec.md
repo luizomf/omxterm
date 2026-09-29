@@ -888,7 +888,11 @@ values in every existing Terminal Surface, and shows a persistent non-blocking
 notice naming each deferred setting and asking the user to restart OMXTerm. New
 tabs and windows use the latest fully validated family and line height. A
 deferred setting clears only when its requested value is already active in
-every existing Terminal Surface. Theme, configured font-size baseline,
+every existing Terminal Surface, including one still initializing before its PTY
+starts. Main retains the validated font snapshot captured by that Surface rather
+than inferring it from the configuration current at PTY startup. Repeating a
+reload cannot erase a notice while an older Surface survives; removing that
+Surface releases its font bookkeeping. Theme, configured font-size baseline,
 padding and Window Font Zoom remain live and preserve the existing Surface and
 PTY. Invalid, missing, unreadable, unsupported or corrupt configured font input
 rejects the whole reload. Runtime scrollback reduction, including zero, uses

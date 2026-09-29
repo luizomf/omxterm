@@ -1,5 +1,8 @@
 export const terminalIpc = {
   start: "terminal:start",
+  retainSurface: "terminal:retain-surface",
+  releaseSurface: "terminal:release-surface",
+  configurationObserved: "terminal:configuration-observed",
   configuration: "terminal:configuration",
   configurationUpdate: "terminal:configuration-update",
   fontData: "terminal:font-data",

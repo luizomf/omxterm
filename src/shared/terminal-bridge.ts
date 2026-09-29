@@ -24,7 +24,9 @@ export interface TerminalBridge {
   onConfigurationUpdate(
     listener: (configuration: TerminalRendererConfiguration) => void,
   ): () => void;
-  start(): Promise<TerminalSessionId>;
+  retainSurface(configurationId: string): Promise<string>;
+  releaseSurface(surfaceId: string): void;
+  start(surfaceId?: string): Promise<TerminalSessionId>;
   input(sessionId: TerminalSessionId, data: string): void;
   resize(sessionId: TerminalSessionId, size: TerminalSize): void;
   close(sessionId: TerminalSessionId, reason?: "rendering-failure"): void;

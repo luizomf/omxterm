@@ -30,7 +30,10 @@ import {
   isFilePathPlatform,
   MAX_INSERTED_PATHS,
 } from "../shared/file-path-insertion";
-import { isTerminalRendererConfiguration } from "../shared/user-configuration";
+import {
+  isTerminalRendererConfiguration,
+  isSurfaceFontIdentity as isSurfaceIdentity,
+} from "../shared/user-configuration";
 import { isTerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import {
@@ -54,6 +57,11 @@ ipcRenderer.on(terminalIpc.configurationUpdate, (_event, payload: unknown) => {
   latestConfiguration = payload;
   configurationRevision += 1;
   for (const listener of configurationUpdateListeners) listener(payload);
+  if (payload.fontConfigurationId)
+    ipcRenderer.send(
+      terminalIpc.configurationObserved,
+      payload.fontConfigurationId,
+    );
 });
 
 const terminal: TerminalBridge = {
@@ -127,8 +135,28 @@ const terminal: TerminalBridge = {
     if (latestConfiguration) listener(latestConfiguration);
     return () => configurationUpdateListeners.delete(listener);
   },
-  async start() {
-    const sessionId: unknown = await ipcRenderer.invoke(terminalIpc.start);
+  async retainSurface(configurationId) {
+    if (!isSurfaceIdentity(configurationId))
+      throw new TypeError("Invalid Surface configuration identity");
+    const surfaceId: unknown = await ipcRenderer.invoke(
+      terminalIpc.retainSurface,
+      configurationId,
+    );
+    if (!isSurfaceIdentity(surfaceId))
+      throw new TypeError("Invalid Surface identity response");
+    return surfaceId;
+  },
+  releaseSurface(surfaceId) {
+    if (!isSurfaceIdentity(surfaceId))
+      throw new TypeError("Invalid Surface identity");
+    ipcRenderer.send(terminalIpc.releaseSurface, surfaceId);
+  },
+  async start(surfaceId) {
+    if (surfaceId !== undefined && !isSurfaceIdentity(surfaceId))
+      throw new TypeError("Invalid Surface identity");
+    const sessionId: unknown = await (surfaceId === undefined
+      ? ipcRenderer.invoke(terminalIpc.start)
+      : ipcRenderer.invoke(terminalIpc.start, surfaceId));
     if (!isTerminalSessionId(sessionId))
       throw new TypeError("Invalid Live Terminal Session identifier");
     return sessionId;

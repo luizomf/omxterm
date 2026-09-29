@@ -37,6 +37,7 @@ export interface TerminalPadding {
 }
 
 export interface TerminalRendererConfiguration {
+  readonly fontConfigurationId?: string;
   readonly fontFamily?: string;
   readonly fontSize: number;
   readonly fontLineHeight: number;
@@ -80,6 +81,7 @@ export function isTerminalRendererConfiguration(
   return (
     keys.every((key) =>
       [
+        "fontConfigurationId",
         "fontFamily",
         "fontSize",
         "fontLineHeight",
@@ -94,6 +96,7 @@ export function isTerminalRendererConfiguration(
         "userFileErrors",
       ].includes(key),
     ) &&
+    isOptionalSurfaceFontIdentity(value.fontConfigurationId) &&
     (value.fontFamily === undefined || typeof value.fontFamily === "string") &&
     Number.isInteger(value.fontSize) &&
     (value.fontSize as number) >= MIN_TERMINAL_FONT_SIZE &&
@@ -114,6 +117,17 @@ export function isTerminalRendererConfiguration(
     isTerminalTheme(value.terminalTheme) &&
     isUserFileErrors(value.userFileErrors)
   );
+}
+
+export function isSurfaceFontIdentity(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/u.test(value)
+  );
+}
+
+function isOptionalSurfaceFontIdentity(value: unknown): boolean {
+  return value === undefined || isSurfaceFontIdentity(value);
 }
 
 function isTransparency(value: unknown): value is number {

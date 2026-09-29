@@ -130,6 +130,40 @@ describe("isolated preload terminal bridge requests", () => {
     await expect(bridge.start()).rejects.toThrow(TypeError);
   });
 
+  it("validates narrow Surface ownership identities before registration, start and release", async () => {
+    const bridge = electron.bridge!;
+    const configurationId = "11111111-1111-4111-8111-111111111111";
+    const surfaceId = "22222222-2222-4222-8222-222222222222";
+    for (const invalid of ["", "arbitrary family", "-".repeat(36)]) {
+      await expect(bridge.retainSurface(invalid)).rejects.toThrow(TypeError);
+      await expect(bridge.start(invalid)).rejects.toThrow(TypeError);
+      expect(() => bridge.releaseSurface(invalid)).toThrow(TypeError);
+    }
+    electron.invoke.mockResolvedValueOnce(surfaceId);
+    await expect(bridge.retainSurface(configurationId)).resolves.toBe(
+      surfaceId,
+    );
+    expect(electron.invoke).toHaveBeenLastCalledWith(
+      terminalIpc.retainSurface,
+      configurationId,
+    );
+    electron.invoke.mockResolvedValueOnce("s1");
+    await expect(bridge.start(surfaceId)).resolves.toBe("s1");
+    expect(electron.invoke).toHaveBeenLastCalledWith(
+      terminalIpc.start,
+      surfaceId,
+    );
+    bridge.releaseSurface(surfaceId);
+    expect(electron.send).toHaveBeenLastCalledWith(
+      terminalIpc.releaseSurface,
+      surfaceId,
+    );
+    electron.invoke.mockResolvedValueOnce({ fontLineHeight: 1 });
+    await expect(bridge.retainSurface(configurationId)).rejects.toThrow(
+      TypeError,
+    );
+  });
+
   it("exposes one-way session-scoped title and BEL signals", () => {
     const bridge = electron.bridge!;
 
