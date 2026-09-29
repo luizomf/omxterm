@@ -23,6 +23,7 @@ for (const name of ["userData", "sessionData"] as const) {
 const windows: BrowserWindow[] = [];
 const sessions: LocalTerminalSession[] = [];
 const outputs: string[][] = [];
+const inputs: string[][] = [];
 const exited: number[] = [];
 let quits = 0;
 let closeRequests = 0;
@@ -89,6 +90,7 @@ async function run() {
         createSession(callbacks) {
           const index = sessions.length;
           outputs[index] = [];
+          inputs[index] = [];
           const terminal = owner.createSession({
             shell: nativeFixturePlatform.defaultShell,
             launchRequest: launchRequest(index),
@@ -110,7 +112,13 @@ async function run() {
             },
           });
           sessions.push(terminal);
-          return terminal;
+          return {
+            ...terminal,
+            write(data) {
+              inputs[index]!.push(data);
+              terminal.write(data);
+            },
+          };
         },
         onTabsEmpty: lifecycle.onTabsEmpty,
         onSessionStartError: lifecycle.onSessionStartError,
@@ -121,7 +129,7 @@ async function run() {
         onBell() {},
         onUserInteraction() {},
         writeClipboardText() {},
-        readClipboardText: () => "usable\n",
+        readClipboardText: () => "usable",
         confirmPaste: async () => true,
         showClipboardContextMenu() {},
         openExternalLink: async () => {},
@@ -157,14 +165,12 @@ async function run() {
     },
   });
   await application.newWindow();
-  writeSync(2, "[DEBUG-444] window loaded\n");
   window.show();
   window.focus();
   await owner.waitFor(
     () => outputs[0]?.join("").includes("READY") ?? false,
     "A native program ready",
   );
-  writeSync(2, "[DEBUG-444] A ready\n");
   application.newTabInSelectedWindow();
   await owner.waitFor(
     async () =>
@@ -180,7 +186,6 @@ async function run() {
     ),
     2,
   );
-  writeSync(2, "[DEBUG-444] B held, exit A\n");
   sessions[0]!.write("\r");
   await owner.waitFor(() => exited.includes(0), "ordinary A native exit");
   assert.equal(
@@ -194,7 +199,6 @@ async function run() {
     "A exit must not destroy B's owner",
   );
   assert.equal(quits, 0);
-  writeSync(2, "[DEBUG-444] A exited without closing\n");
   await owner.waitFor(
     async () =>
       (await window.webContents.executeJavaScript(
@@ -208,14 +212,21 @@ async function run() {
     "B native program ready",
   );
   assert.equal(sessions.length, 2, "Exactly one B PTY");
-  writeSync(2, "[DEBUG-444] B ready, Paste\n");
+  const inputOffset = inputs[1]!.length;
   window.webContents.send(terminalIpc.clipboardAction, "paste");
+  await owner.waitFor(
+    () => inputs[1]!.slice(inputOffset).join("").includes("usable"),
+    "B receives exact Paste input",
+  );
+  assert.equal(inputs[1]!.slice(inputOffset).join(""), "usable");
+  // Paste is not Enter. In particular, Console.ReadLine on ConPTY does not
+  // submit on a pasted LF. Submit the received text with a separate CR.
+  sessions[1]!.write("\r");
   await owner.waitFor(
     () => outputs[1]!.join("").includes("RECEIVED:usable"),
     "B receives Paste through its real Surface and Adapter",
   );
   assert.equal(window.isDestroyed(), false);
-  writeSync(2, "[DEBUG-444] B received Paste, exit B\n");
   sessions[1]!.write("quit\r");
   await owner.waitFor(() => window.isDestroyed(), "last B exit closes window");
   assert.deepEqual(exited, [0, 1]);
