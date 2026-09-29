@@ -81,6 +81,7 @@ export function createTerminalTabs(
   let zoomSteps = 0;
   let activeSurfaceOptions = options.surfaceOptions;
   let disposed = false;
+  let pendingClose: TerminalTab | undefined;
 
   const selectedTab = (): TerminalTab | undefined => tabs[selectedIndex];
   const tabDragging = installTabDragging(elements.strip, (tab, clientX) => {
@@ -146,15 +147,6 @@ export function createTerminalTabs(
     }
     if (index < selectedIndex) selectedIndex -= 1;
     select(Math.min(Math.max(selectedIndex, index), tabs.length - 1));
-  };
-
-  const closeTab = (tab: TerminalTab | undefined) => {
-    if (!tab || tab.removed) return;
-    // Disposing the Surface closes its Terminal Adapter and session; a tab
-    // still mounting has no Surface yet, so its adapter is closed directly.
-    removeTab(tab);
-    if (tab.surface) tab.surface.dispose();
-    else closePendingTab(tab);
   };
 
   const onSessionEnd = (tab: TerminalTab, exit: { signal: number }) => {
@@ -276,8 +268,17 @@ export function createTerminalTabs(
           void createTab().catch(() => {});
           return;
         case "close":
-          closeTab(selectedTab());
+          closeTab(selectedTab(), removeTab);
           return;
+        case "prepare-close":
+          pendingClose = selectedTab();
+          return;
+        case "resolve-close": {
+          const target = pendingClose;
+          pendingClose = undefined;
+          if (command.confirmed) closeTab(target, removeTab);
+          return;
+        }
         case "next":
         case "previous": {
           if (tabs.length === 0) return;
@@ -289,7 +290,7 @@ export function createTerminalTabs(
           if (command.position <= tabs.length) select(command.position - 1);
           return;
         case "close-session":
-          closeTab(findBySession(tabs, command.sessionId));
+          closeTab(findBySession(tabs, command.sessionId), removeTab);
           return;
       }
     },
@@ -331,6 +332,7 @@ export function createTerminalTabs(
     dispose() {
       if (disposed) return;
       disposed = true;
+      pendingClose = undefined;
       tabDragging.dispose();
       for (const tab of [...tabs]) {
         tab.removed = true;
@@ -340,6 +342,18 @@ export function createTerminalTabs(
       tabs.length = 0;
     },
   };
+}
+
+function closeTab(
+  tab: TerminalTab | undefined,
+  removeTab: (tab: TerminalTab) => void,
+): void {
+  if (!tab || tab.removed) return;
+  // Disposing the Surface closes its Terminal Adapter and session; a tab
+  // still mounting has no Surface yet, so its adapter is closed directly.
+  removeTab(tab);
+  if (tab.surface) tab.surface.dispose();
+  else closePendingTab(tab);
 }
 
 function tabSessionAdapter(

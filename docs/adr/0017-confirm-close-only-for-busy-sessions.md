@@ -24,3 +24,13 @@ polling — the name is read once per close request. An unreadable name counts
 as Busy so a detection failure degrades to asking, never to silently killing
 work. The heuristic accepts known edge cases (a nested idle shell counts as
 idle) as the price of staying name-only.
+
+Close Tab confirmation retains its original renderer-owned tab rather than
+resolving selection again after the asynchronous answer. Main serializes one
+pending tab confirmation per window, sends a preparation command before opening
+the dialog, and sends its decision through the same ordered tab-command channel.
+The renderer consumes that captured tab reference once; denial releases it and
+an already removed tab is inert. This also identifies tabs still mounting,
+without inventing a session ID before the Adapter starts. Window disposal
+invalidates pending decisions. Busy detection, immediate idle-session closure,
+window ownership and native PTY shutdown remain unchanged.

@@ -11,6 +11,58 @@ import {
   dragTabTo,
 } from "../fixtures/terminal-tabs-harness";
 
+describe("renderer retained Close Tab target", () => {
+  it("consumes a prepared close once and never falls back to selection", async () => {
+    const harness = createTabsHarness();
+    await harness.tabs.ready;
+    harness.tabs.handleCommand({ action: "resolve-close", confirmed: true });
+    expect(harness.surfaces[0]!.dispose).not.toHaveBeenCalled();
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+    harness.tabs.handleCommand({ action: "prepare-close" });
+    harness.tabs.handleCommand({ action: "previous" });
+    harness.tabs.handleCommand({ action: "resolve-close", confirmed: true });
+    harness.tabs.handleCommand({ action: "resolve-close", confirmed: true });
+    expect(harness.surfaces[1]!.dispose).toHaveBeenCalledOnce();
+    expect(harness.surfaces[0]!.dispose).not.toHaveBeenCalled();
+    expect(harness.container.children).toHaveLength(1);
+    harness.tabs.dispose();
+  });
+
+  it("captures a mounting tab before it has a session id", async () => {
+    const strip = document.createElement("nav");
+    const container = document.createElement("div");
+    let finishMount!: (surface: TerminalSurface) => void;
+    const adapter: ElectronTerminalAdapter = {
+      sessionId: () => undefined,
+      start: async () => {},
+      write() {},
+      resize() {},
+      close: vi.fn(),
+    };
+    const tabs = createTerminalTabs(
+      { strip, container },
+      {
+        createAdapter: () => adapter,
+        surfaceOptions: {},
+        mount: () =>
+          new Promise((resolve) => {
+            finishMount = resolve;
+          }),
+      },
+    );
+    tabs.handleCommand({ action: "prepare-close" });
+    tabs.handleCommand({ action: "resolve-close", confirmed: true });
+    expect(adapter.close).toHaveBeenCalledOnce();
+    expect(container.children).toHaveLength(0);
+    const surface = createFakeSurface();
+    finishMount(surface);
+    await tabs.ready;
+    expect(surface.dispose).toHaveBeenCalledOnce();
+    tabs.dispose();
+  });
+});
+
 describe("renderer Terminal Tabs", () => {
   it("renders a single tab without a strip, exactly like the pre-tab contract", async () => {
     const harness = createTabsHarness();

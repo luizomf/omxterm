@@ -339,20 +339,18 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       const window = selectedWindow();
       if (!window) return Promise.resolve();
       const state = windows.get(window)!;
+      if (state.tabCloseRequest) return state.tabCloseRequest;
       if (!confirmClose() || !state.sessionActivity.hasBusySelectedSession()) {
         options.sendTabCommand(window, { action: "close" });
         return Promise.resolve();
       }
-      if (state.tabCloseRequest) return state.tabCloseRequest;
-      state.tabCloseRequest = options
-        .showCloseTabConfirmation(window)
-        .then((confirmed) => {
-          if (confirmed && !window.isDestroyed() && windows.has(window))
-            options.sendTabCommand(window, { action: "close" });
-        })
-        .finally(() => {
-          state.tabCloseRequest = undefined;
-        });
+      state.tabCloseRequest = confirmTabClose(
+        window,
+        options,
+        () => !window.isDestroyed() && windows.has(window),
+      ).finally(() => {
+        state.tabCloseRequest = undefined;
+      });
       return state.tabCloseRequest;
     },
     selectNextTab() {
@@ -393,6 +391,29 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     },
     isQuitting: () => quitting,
   };
+}
+
+function confirmTabClose<Window extends NativeTerminalWindow>(
+  window: Window,
+  options: Pick<
+    TerminalApplicationOptions<Window>,
+    "sendTabCommand" | "showCloseTabConfirmation"
+  >,
+  isOwnerAlive: () => boolean,
+): Promise<void> {
+  // Capture in the tab owner before any asynchronous decision. Commands
+  // share an ordered channel, including ordinary session-exit delivery.
+  options.sendTabCommand(window, { action: "prepare-close" });
+  const resolveClose = (confirmed: boolean) => {
+    if (isOwnerAlive())
+      options.sendTabCommand(window, { action: "resolve-close", confirmed });
+  };
+  return options
+    .showCloseTabConfirmation(window)
+    .then(resolveClose, (error: unknown) => {
+      resolveClose(false);
+      throw error;
+    });
 }
 
 function elapsedMilliseconds(startedAt: number): number {

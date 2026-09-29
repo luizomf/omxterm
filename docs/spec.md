@@ -114,7 +114,11 @@ succeeds (ADR 0025).
   Surface remain unchanged. Tab order is ephemeral and is neither shared between
   windows nor persisted or restored.
 - Close Tab defaults to `Cmd+W` on macOS and `Ctrl+Shift+W` on Linux and Windows, and
-  terminates only the selected tab's session. Closing a window's last tab closes
+  terminates only the selected tab's session. A pending confirmation retains its
+  original tab: approval never retargets a later selection, and does nothing
+  if that tab has already ended. Repeated requests during that confirmation
+  share the same decision, even if the selected session becomes idle.
+  Closing a window's last tab closes
   that window. Close Window defaults to `Cmd+Shift+W` on macOS and
   `Ctrl+Shift+Q` on Linux and Windows and closes all of the selected window's tabs. Closing
   the last window quits OMXTerm.

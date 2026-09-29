@@ -570,15 +570,21 @@ describe("Terminal application lifecycle", () => {
     const firstRequest = harness.application.closeSelectedTab();
     const secondRequest = harness.application.closeSelectedTab();
     expect(showCloseTabConfirmation).toHaveBeenCalledOnce();
-    expect(harness.sendTabCommand).not.toHaveBeenCalled();
+    expect(harness.sendTabCommand).toHaveBeenCalledExactlyOnceWith(
+      harness.windows[0]!.window,
+      { action: "prepare-close" },
+    );
 
     answer.resolve(true);
     await Promise.all([firstRequest, secondRequest]);
 
-    expect(harness.sendTabCommand).toHaveBeenCalledExactlyOnceWith(
-      harness.windows[0]!.window,
-      { action: "close" },
-    );
+    expect(harness.sendTabCommand.mock.calls).toEqual([
+      [harness.windows[0]!.window, { action: "prepare-close" }],
+      [
+        harness.windows[0]!.window,
+        { action: "resolve-close", confirmed: true },
+      ],
+    ]);
   });
 
   it("keeps the selected tab when its close confirmation is cancelled", async () => {
@@ -590,7 +596,13 @@ describe("Terminal application lifecycle", () => {
     await harness.application.closeSelectedTab();
 
     expect(showCloseTabConfirmation).toHaveBeenCalledOnce();
-    expect(harness.sendTabCommand).not.toHaveBeenCalled();
+    expect(harness.sendTabCommand.mock.calls).toEqual([
+      [harness.windows[0]!.window, { action: "prepare-close" }],
+      [
+        harness.windows[0]!.window,
+        { action: "resolve-close", confirmed: false },
+      ],
+    ]);
     expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
   });
 

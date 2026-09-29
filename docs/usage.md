@@ -29,6 +29,9 @@ action. Idle shells close immediately on macOS and Linux. **Windows asks for
 every running session**, because it cannot reliably tell whether a shell is idle.
 You can turn confirmations off with `confirmClose` in your settings.
 
+Close Tab confirmation applies only to its original tab. If that session exits
+while the question is open, approving it leaves the surviving tabs alone.
+
 Typing `exit` closes that shell's tab. The app may take a moment to finish
 shutting down its processes after its last window closes.
 

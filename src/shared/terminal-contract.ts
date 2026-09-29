@@ -60,12 +60,16 @@ export interface TerminalSessionTitle {
 export const MAX_TAB_SELECT_POSITION = 9;
 
 // Main-to-renderer instructions for the Terminal Tabs owned by one window.
-// "close" targets the selected tab after main confirmed the action;
-// "close-session" removes the tab of a failed session after its native
-// failure dialog was acknowledged.
+// "close" immediately closes the selected tab when no confirmation is needed.
+// Main serializes each window's confirmation: "prepare-close" retains the
+// renderer-owned tab (even before it has a session id), and "resolve-close"
+// consumes that target, never the later selection. "close-session" removes
+// a failed session's tab after its native failure dialog was acknowledged.
 export type TerminalTabCommand =
   | { readonly action: "new" }
   | { readonly action: "close" }
+  | { readonly action: "prepare-close" }
+  | { readonly action: "resolve-close"; readonly confirmed: boolean }
   | { readonly action: "next" }
   | { readonly action: "previous" }
   | { readonly action: "select"; readonly position: number }
@@ -181,8 +185,13 @@ export function isTerminalTabCommand(
     return (
       value.action === "new" ||
       value.action === "close" ||
+      value.action === "prepare-close" ||
       value.action === "next" ||
       value.action === "previous"
+    );
+  if (isStrictRecord(value, ["action", "confirmed"]))
+    return (
+      value.action === "resolve-close" && typeof value.confirmed === "boolean"
     );
   if (isStrictRecord(value, ["action", "position"]))
     return (
