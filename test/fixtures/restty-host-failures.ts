@@ -48,6 +48,20 @@ export async function exerciseResttyBackendLoss(options: {
     () => options.ptyExits() === exitsBeforeLoss + 1,
     "rendering-loss owned PTY cleanup",
   );
+  // This host-only fixture supplies the application acknowledgement explicitly.
+  // The real dialog lifecycle is exercised by failure-acknowledgement.test.ts.
+  options.window.webContents.send(terminalIpc.tabCommand, {
+    action: "close-session",
+    sessionId: "s5",
+  });
+  await options.waitFor(
+    () =>
+      options.window.webContents.executeJavaScript(
+        "document.querySelectorAll('.terminal-surface').length === 1",
+        true,
+      ) as Promise<boolean>,
+    "acknowledged rendering-loss tab cleanup",
+  );
   await options.window.webContents.executeJavaScript(
     "document.querySelector('#tab-strip button:first-child')?.click()",
     true,

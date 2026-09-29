@@ -40,12 +40,14 @@ export function createTabsHarness(
   const surfaces: ReturnType<typeof createFakeSurface>[] = [];
   let nextSession = 1;
   const createAdapter = vi.fn((): ElectronTerminalAdapter => {
-    const sessionId = `s${nextSession}`;
+    const allocatedSessionId = `s${nextSession}`;
+    let sessionId: string | undefined;
     nextSession += 1;
     const adapter: FakeAdapter = {
       handlers: undefined,
       sessionId: () => sessionId,
       start: vi.fn(async (handlers: TerminalSessionHandlers) => {
+        sessionId = allocatedSessionId;
         adapter.handlers = handlers;
       }),
       write: vi.fn(),

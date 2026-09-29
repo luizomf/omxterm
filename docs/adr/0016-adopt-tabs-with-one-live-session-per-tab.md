@@ -84,9 +84,12 @@ that originated while sibling sessions were live. An empty renderer notification
 is retained until every pending acknowledgement completes; it is not dropped
 while a dialog is open. Acknowledging a session failure requests removal of only
 that session's tab even when it was the last native PTY. Spawn rejection commits
-empty after removing its failed tab; an acknowledged runtime rendering failure
-also checks empty when its Surface already removed the tab. Thus native counts
-cannot discard mounting siblings or earlier unacknowledged failures. Explicit
+empty after removing its failed tab. Runtime rendering failure retains its tab
+even after disposing its Surface: the failed session's asynchronous native exit
+must first reach main and receive acknowledgement. A termination request is not
+an exit, and releasing the tab beforehand would leave an unowned interval.
+Thus native counts cannot discard mounting siblings or earlier unacknowledged
+failures. Explicit
 window/application closure remains authorized separately, and disposed owners
 make late dialog completion inert.
 

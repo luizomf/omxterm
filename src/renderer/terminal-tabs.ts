@@ -185,16 +185,7 @@ export function createTerminalTabs(
     const tabSurfaceOptions: TerminalSurfaceOptions = {
       ...activeSurfaceOptions,
       abortSignal: tab.mountAbort.signal,
-      ...(activeSurfaceOptions.onFatalError
-        ? {
-            onFatalError: (message: string) => {
-              activeSurfaceOptions.onFatalError?.(message);
-              // A live Surface reports failure through its native session;
-              // pre-start failure is reported after the mount rejects below.
-              removeTab(tab, false);
-            },
-          }
-        : {}),
+
       ...(options.notifyTitle
         ? {
             onTitleRequest: (request: string) => {
@@ -224,9 +215,14 @@ export function createTerminalTabs(
         tabSurfaceOptions,
       );
     } catch (error) {
-      removeTab(tab, false);
-      if (tab.startRequested) notifyEmpty();
-      else if (!tab.mountAbort.signal.aborted) notifyEmpty("rendering-failure");
+      // Once a native session exists, retain its failed tab through asynchronous
+      // termination and main's acknowledgement. A close request is not an exit.
+      if (adapter.sessionId() === undefined) {
+        removeTab(tab, false);
+        if (tab.startRequested) notifyEmpty();
+        else if (!tab.mountAbort.signal.aborted)
+          notifyEmpty("rendering-failure");
+      }
       throw error;
     }
     if (disposed || tab.removed) {
@@ -293,9 +289,6 @@ export function createTerminalTabs(
           return;
         case "close-session":
           closeTab(findBySession(tabs, command.sessionId), removeTab);
-          // A failed runtime Surface may already have removed its tab. Main
-          // still acknowledges that session before asking us to commit empty.
-          notifyEmpty();
           return;
       }
     },

@@ -350,6 +350,49 @@ describe("failure acknowledgement ownership across sibling exits", () => {
     },
   );
 
+  it("retains a runtime-failed B before its native exit while A exits ordinarily", async () => {
+    const h = await harness();
+    h.gate.resolve();
+    await vi.waitFor(() => expect(h.completed()).toBe(2));
+    h.renderingFailures[1]!();
+    expect(h.ptys[1]!.kill).toHaveBeenCalledOnce();
+    h.ptys[0]!.exit();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(h.window.isDestroyed()).toBe(false);
+    expect(h.showSessionFailure).not.toHaveBeenCalled();
+    expect(h.nativeQuitCompleted).not.toHaveBeenCalled();
+    h.ptys[1]!.exit();
+    await vi.waitFor(() => expect(h.showSessionFailure).toHaveBeenCalledOnce());
+    expect(h.window.isDestroyed()).toBe(false);
+    h.acknowledgement.resolve();
+    await vi.waitFor(() =>
+      expect(h.nativeQuitCompleted).toHaveBeenCalledOnce(),
+    );
+    expect(h.window.close).toHaveBeenCalledOnce();
+    expect(h.container.children).toHaveLength(0);
+  });
+
+  it("acknowledging A cannot discard runtime-failed B awaiting native exit", async () => {
+    const h = await harness();
+    h.gate.resolve();
+    await vi.waitFor(() => expect(h.completed()).toBe(2));
+    h.renderingFailures[1]!();
+    h.ptys[0]!.exit(15);
+    await vi.waitFor(() => expect(h.showSessionFailure).toHaveBeenCalledOnce());
+    h.acknowledgements[0]!.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(h.window.isDestroyed()).toBe(false);
+    h.ptys[1]!.exit();
+    await vi.waitFor(() =>
+      expect(h.showSessionFailure).toHaveBeenCalledTimes(2),
+    );
+    h.acknowledgements[1]!.resolve();
+    await vi.waitFor(() =>
+      expect(h.nativeQuitCompleted).toHaveBeenCalledOnce(),
+    );
+    expect(h.window.close).toHaveBeenCalledOnce();
+  });
+
   it("keeps both signal acknowledgements when the last native session fails too", async () => {
     const h = await harness();
     h.gate.resolve();

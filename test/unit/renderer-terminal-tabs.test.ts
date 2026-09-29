@@ -457,7 +457,7 @@ describe("renderer Terminal Tabs pending disposal", () => {
 });
 
 describe("renderer Terminal Tabs fatal Surface isolation", () => {
-  it("removes only the Surface that reports a rendering failure", async () => {
+  it("retains a runtime-failed tab until its session acknowledgement, leaving its peer alone", async () => {
     const onFatalError = vi.fn();
     const harness = createTabsHarness({ surfaceOptions: { onFatalError } });
     await harness.tabs.ready;
@@ -472,7 +472,12 @@ describe("renderer Terminal Tabs fatal Surface isolation", () => {
     expect(harness.surfaces[1]!.dispose).not.toHaveBeenCalled();
     expect(harness.adapters[1]!.close).not.toHaveBeenCalled();
     expect(harness.surfaces[0]!.dispose).not.toHaveBeenCalled();
+    expect(harness.container.children).toHaveLength(2);
+    harness.tabs.handleCommand({ action: "close-session", sessionId: "s2" });
     expect(harness.container.children).toHaveLength(1);
+    expect(harness.surfaces[1]!.dispose).toHaveBeenCalledOnce();
+    expect(harness.surfaces[0]!.dispose).not.toHaveBeenCalled();
+    expect(visibleContainers(harness.container)).toEqual([0]);
   });
 
   it("ignores title and BEL callbacks after their owning tab or window closes", async () => {
