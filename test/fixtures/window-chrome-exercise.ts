@@ -3,6 +3,7 @@ import type { BrowserWindow } from "electron";
 import type { TerminalApplication } from "../../src/main/terminal-application";
 import type { LocalTerminalSession } from "../../src/main/local-terminal-session";
 import { fixtureWindowPolicy } from "./window-policy";
+import { windowGridFits } from "./window-grid-fit";
 
 async function waitFor(
   predicate: () => boolean | Promise<boolean>,
@@ -93,7 +94,8 @@ interface Geometry {
   readonly availableWidth: number;
   readonly viewportHeight: number;
   readonly viewportWidth: number;
-  readonly dpr: number;
+  readonly backingWidth: number;
+  readonly backingHeight: number;
   readonly handle: boolean;
   readonly handleWidth: number;
   readonly handleHeight: number;
@@ -120,7 +122,8 @@ const geometryScript = `(() => {
     availableWidth: bounds.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
     viewportHeight: innerHeight,
     viewportWidth: innerWidth,
-    dpr: devicePixelRatio,
+    backingWidth: canvas?.width ?? 0,
+    backingHeight: canvas?.height ?? 0,
     handle: !handle.hidden,
     handleWidth: handle.getBoundingClientRect().width,
     handleHeight: handle.getBoundingClientRect().height,
@@ -272,14 +275,11 @@ export async function exerciseWindowChrome(options: {
       Math.abs(current.viewportHeight - height!) <= 1 &&
       Math.abs(current.canvasWidth - current.availableWidth) <= 1 &&
       Math.abs(current.canvasHeight - current.availableHeight) <= 1 &&
-      Math.abs(
-        grid.cols -
-          Math.floor((current.canvasWidth * current.dpr) / cell.width),
-      ) <= 1 &&
-      Math.abs(
-        grid.rows -
-          Math.floor((current.canvasHeight * current.dpr) / cell.height),
-      ) <= 1
+      windowGridFits(
+        { width: current.backingWidth, height: current.backingHeight },
+        cell,
+        grid,
+      )
     );
   };
   await waitFor(

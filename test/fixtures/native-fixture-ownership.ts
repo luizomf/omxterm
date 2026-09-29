@@ -104,11 +104,12 @@ export function collectFixtureRegistrations(
     )
       throw new Error("Unrelated process in native fixture ownership record");
     for (const row of registered.values()) {
-      // Records are historical: Windows can reuse a PID within one fixture.
-      // Never overwrite a live registered identity with an earlier incarnation.
+      // Keep exited identities too: a short-lived relaunch can finish before
+      // sampling, but its final outcome still needs historical ownership proof.
+      // Never replace a live reused PID with an earlier incarnation.
       if (
-        current.some(
-          (live) => live.pid === row.pid && live.identity === row.identity,
+        !current.some(
+          (live) => live.pid === row.pid && live.identity !== row.identity,
         )
       )
         owned.set(row.pid, row);

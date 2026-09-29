@@ -5,7 +5,13 @@ import { build } from "esbuild";
 import electron from "electron";
 import { expect, it } from "vitest";
 
-it.each(["development", "packaged", "missing-result"])(
+it.each([
+  "development",
+  "packaged",
+  "missing-result",
+  "published-failure",
+  "published-hang",
+])(
   "configures native About before the menu (%s), preserving macOS defaults",
   async (mode) => {
     await mkdir(".scratch", { recursive: true });
@@ -47,15 +53,29 @@ it.each(["development", "packaged", "missing-result"])(
           entry,
           resultPath,
           mode === "packaged" ? resourcesPath : "development",
-          ...(mode === "missing-result" ? ["--fixture-missing-result"] : []),
+          ...(!["development", "packaged"].includes(mode)
+            ? [`--fixture-${mode}`]
+            : []),
         ],
         root,
-        completionFile: "result.json",
-        timeout: mode === "missing-result" ? 8_000 : 25_000,
+        completionFile: "result.json.completion",
+        timeout:
+          mode === "missing-result" || mode === "published-hang"
+            ? 8_000
+            : 25_000,
       });
-      if (mode === "missing-result") {
+      if (mode === "missing-result" || mode === "published-hang") {
         expect(execution).toMatchObject({
           reason: "timeout",
+          cleanupErrors: [],
+        });
+        await expect(stat(root)).rejects.toMatchObject({ code: "ENOENT" });
+        return;
+      }
+      if (mode === "published-failure") {
+        expect(execution).toMatchObject({
+          exitCode: 3,
+          reason: "exit",
           cleanupErrors: [],
         });
         await expect(stat(root)).rejects.toMatchObject({ code: "ENOENT" });
@@ -85,13 +105,18 @@ it.each(["development", "packaged", "missing-result"])(
       expect(result.nativeAboutRole).toBe("about");
       if (
         process.platform === "linux" &&
+        process.env.ELECTRON_OZONE_PLATFORM_HINT !== undefined
+      )
+        expect(result.relaunched).toBe(false);
+      if (
+        process.platform === "linux" &&
         process.env.XDG_SESSION_TYPE === "wayland" &&
-        !process.env.ELECTRON_OZONE_PLATFORM_HINT
+        process.env.ELECTRON_OZONE_PLATFORM_HINT === undefined
       )
         expect(result.relaunched).toBe(true);
       if (
         process.platform === "linux" &&
-        !process.env.ELECTRON_OZONE_PLATFORM_HINT
+        process.env.ELECTRON_OZONE_PLATFORM_HINT === undefined
       )
         expect(result.backend).toBe("x11");
       if (process.platform === "linux" || process.platform === "win32") {

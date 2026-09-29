@@ -59,13 +59,16 @@ describe("Linux display backend", () => {
     },
   );
 
-  it("preserves an ELECTRON_OZONE_PLATFORM_HINT environment choice", () => {
-    expect(
-      planLinuxDisplayBackendDefault("wayland", "linux", PLAIN_ARGV, {
-        ELECTRON_OZONE_PLATFORM_HINT: "auto",
-      }),
-    ).toBe("none");
-  });
+  it.each(["auto", ""])(
+    "preserves a defined ELECTRON_OZONE_PLATFORM_HINT (%j)",
+    (hint) => {
+      expect(
+        planLinuxDisplayBackendDefault("wayland", "linux", PLAIN_ARGV, {
+          ELECTRON_OZONE_PLATFORM_HINT: hint,
+        }),
+      ).toBe("none");
+    },
+  );
 
   it("does not treat unrelated arguments as a backend choice", () => {
     expect(

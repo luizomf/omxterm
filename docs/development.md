@@ -132,10 +132,13 @@ container bounds, while hidden-tab geometry remains untouched. The standard
 path additionally retains the unchanged-height assertion.
 
 About startup tests retain the desktop's Wayland environment and exercise the
-production X11 relaunch. Their supervised completion file belongs to the
-result-producing process, not the original launcher. Missing evidence is a
-bounded failure; registered detached descendants are cleaned before the profile
-is removed. Surface-only appearance, scrollback and ligature fixtures select X11
+production X11 relaunch. Their supervised completion file records the
+result producer's process-exit outcome, not the original launcher's success.
+The supervisor validates registered identity and waits for that producer to
+actually disappear before accepting its outcome. An observation file alone
+cannot pass a hanging or failed replacement. Missing evidence is a bounded
+failure; registered detached descendants are cleaned before the profile is
+removed. Surface-only appearance, scrollback and ligature fixtures select X11
 explicitly because they do not import application startup; this is not a global
 session override. Scrollback resize checks wait boundedly for the observed live
 viewport to reach the bottom rather than assuming two frames and 50 ms complete
