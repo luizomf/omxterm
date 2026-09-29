@@ -9,6 +9,4 @@ export interface PrepareNodePtyRuntimeOptions {
 
 export function prepareNodePtyRuntime(
   options?: PrepareNodePtyRuntimeOptions,
-): Promise<
-  "corrected-and-rebuilt" | "corrected-and-repaired" | "corrected" | "unchanged"
->;
+): Promise<"corrected-and-rebuilt" | "corrected" | "unchanged">;

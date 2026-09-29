@@ -159,6 +159,11 @@ succeeds (ADR 0025).
   Last-tab closure is committed by the renderer's tab owner, not inferred from
   a zero native-PTY count. Queued New Tab commands cannot revive an emptied
   owner; explicit window closure and Quit still cancel pending initialization.
+- Native executable-start failure is distinct from a successfully executed
+  program returning nonzero. Unix reports exec failure through a private native
+  status channel, never by interpreting an exit code or Terminal Payload
+  (ADR 0032). This applies to explicit commands and the Default Shell, with no
+  fallback shell. Safe Operational Events classify it as `spawn-failure`.
 - A spawn failure or unexpected signal remains visible in a native error dialog
   and local log until acknowledged; the useless tab then closes. Each pending
   failure acknowledgement retains its window even if a sibling exits ordinarily

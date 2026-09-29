@@ -1,0 +1,185 @@
+--- a/pty.cc
++++ b/pty.cc
+@@ -19,6 +19,7 @@
+ 
+ #define NODE_ADDON_API_DISABLE_DEPRECATED
+ #include <napi.h>
++#include "node-pty-exec-status.h"
+ #include <assert.h>
+ #include <errno.h>
+ #include <string.h>
+@@ -108,9 +109,10 @@
+ 
+ struct ExitEvent {
+   int exit_code = 0, signal_code = 0;
++  bool exec_failed = false;
+ };
+ 
+-void SetupExitCallback(Napi::Env env, Napi::Function cb, pid_t pid) {
++void SetupExitCallback(Napi::Env env, Napi::Function cb, pid_t pid, int exec_status) {
+   std::thread *th = new std::thread;
+   // Don't use Napi::AsyncWorker which is limited by UV_THREADPOOL_SIZE.
+   auto tsfn = Napi::ThreadSafeFunction::New(
+@@ -123,10 +125,11 @@
+         th->join();
+         delete th;
+       });
+-  *th = std::thread([tsfn = std::move(tsfn), pid] {
++  *th = std::thread([tsfn = std::move(tsfn), pid, exec_status] {
+     auto callback = [](Napi::Env env, Napi::Function cb, ExitEvent *exit_event) {
+       cb.Call({Napi::Number::New(env, exit_event->exit_code),
+-               Napi::Number::New(env, exit_event->signal_code)});
++               Napi::Number::New(env, exit_event->signal_code),
++               Napi::Boolean::New(env, exit_event->exec_failed)});
+       delete exit_event;
+     };
+ 
+@@ -186,6 +189,7 @@
+     }
+ #endif
+     ExitEvent *exit_event = new ExitEvent;
++    exit_event->exec_failed = pty_exec_failure(exec_status);
+     if (WIFEXITED(stat_loc)) {
+       exit_event->exit_code = WEXITSTATUS(stat_loc); // errno?
+     }
+@@ -243,7 +247,7 @@
+                 const struct winsize *winp,
+                 int* master,
+                 pid_t* pid,
+-                int* err);
++                int* err, int exec_status);
+ #endif
+ 
+ struct DelBuf {
+@@ -351,24 +355,29 @@
+   // helperPath
+   std::string helper_path = info[9].As<Napi::String>();
+ 
++  PtyExecStatus exec_status;
++  if (!exec_status.open()) {
++    throw Napi::Error::New(napiEnv, "Could not create PTY exec-status channel.");
++  }
+   pid_t pid;
+   int master;
+ #if defined(__APPLE__)
+   int argc = argv_.Length();
+-  int argl = argc + 4;
++  int argl = argc + 5;
+   std::unique_ptr<char *, DelBuf> argv_unique_ptr(new char *[argl], DelBuf(argl));
+   char **argv = argv_unique_ptr.get();
+   argv[0] = strdup(helper_path.c_str());
+-  argv[1] = strdup(cwd_.c_str());
+-  argv[2] = strdup(file.c_str());
++  argv[1] = strdup(std::to_string(exec_status.writer).c_str());
++  argv[2] = strdup(cwd_.c_str());
++  argv[3] = strdup(file.c_str());
+   argv[argl - 1] = NULL;
+   for (int i = 0; i < argc; i++) {
+     std::string arg = argv_.Get(i).As<Napi::String>();
+-    argv[i + 3] = strdup(arg.c_str());
++    argv[i + 4] = strdup(arg.c_str());
+   }
+ 
+   int err = -1;
+-  pty_posix_spawn(argv, env, term, &winp, &master, &pid, &err);
++  pty_posix_spawn(argv, env, term, &winp, &master, &pid, &err, exec_status.writer);
+   if (err != 0) {
+     throw Napi::Error::New(napiEnv, "posix_spawnp failed.");
+   }
+@@ -417,19 +426,16 @@
+     case 0:
+       if (strlen(cwd_.c_str())) {
+         if (chdir(cwd_.c_str()) == -1) {
+-          perror("chdir(2) failed.");
+-          _exit(1);
++          pty_exec_failed(exec_status.writer);
+         }
+       }
+ 
+       if (uid != -1 && gid != -1) {
+         if (setgid(gid) == -1) {
+-          perror("setgid(2) failed.");
+-          _exit(1);
++          pty_exec_failed(exec_status.writer);
+         }
+         if (setuid(uid) == -1) {
+-          perror("setuid(2) failed.");
+-          _exit(1);
++          pty_exec_failed(exec_status.writer);
+         }
+       }
+ 
+@@ -438,8 +444,7 @@
+         environ = env;
+         execvp(argv[0], argv);
+         environ = old;
+-        perror("execvp(3) failed.");
+-        _exit(1);
++        pty_exec_failed(exec_status.writer);
+       }
+     default:
+       if (pty_nonblock(master) == -1) {
+@@ -455,7 +460,8 @@
+ 
+   // Set up process exit callback.
+   Napi::Function cb = info[10].As<Napi::Function>();
+-  SetupExitCallback(napiEnv, cb, pid);
++  exec_status.closeWriter();
++  SetupExitCallback(napiEnv, cb, pid, exec_status.releaseReader());
+   return obj;
+ }
+ 
+@@ -690,7 +695,7 @@
+                 const struct winsize *winp,
+                 int* master,
+                 pid_t* pid,
+-                int* err) {
++                int* err, int exec_status) {
+   int low_fds[3];
+   size_t count = 0;
+ 
+@@ -743,6 +748,8 @@
+ 
+   posix_spawn_file_actions_t acts;
+   posix_spawn_file_actions_init(&acts);
++  // Preserve the private status writer through the helper spawn only.
++  posix_spawn_file_actions_addinherit_np(&acts, exec_status);
+   posix_spawn_file_actions_adddup2(&acts, slave, STDIN_FILENO);
+   posix_spawn_file_actions_adddup2(&acts, slave, STDOUT_FILENO);
+   posix_spawn_file_actions_adddup2(&acts, slave, STDERR_FILENO);
+--- a/spawn-helper.cc
++++ b/spawn-helper.cc
+@@ -1,23 +1,28 @@
+ #include <errno.h>
++#include <stdlib.h>
++#include "node-pty-exec-status.h"
+ #include <fcntl.h>
+ #include <string.h>
+ #include <unistd.h>
+ 
+ int main (int argc, char** argv) {
++  if (argc < 4) return 1;
++  const int exec_status = atoi(argv[1]);
++  if (fcntl(exec_status, F_SETFD, FD_CLOEXEC) == -1) pty_exec_failed(exec_status);
+   char *slave_path = ttyname(STDIN_FILENO);
+   // open implicit attaches a process to a terminal device if:
+   // - process has no controlling terminal yet
+   // - O_NOCTTY is not set
+   close(open(slave_path, O_RDWR));
+ 
+-  char *cwd = argv[1];
+-  char *file = argv[2];
+-  argv = &argv[2];
++  char *cwd = argv[2];
++  char *file = argv[3];
++  argv = &argv[3];
+ 
+   if (strlen(cwd) && chdir(cwd) == -1) {
+-    _exit(1);
++    pty_exec_failed(exec_status);
+   }
+ 
+   execvp(file, argv);
+-  return 1;
++  pty_exec_failed(exec_status);
+ }

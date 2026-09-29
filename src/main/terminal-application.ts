@@ -9,6 +9,7 @@ import type {
   TerminalSessionStartErrorContext,
 } from "./terminal-ipc-controller";
 import type { OperationalEventLog } from "./operational-events";
+import { terminalSessionExitFailure } from "./terminal-session-failure";
 
 export const DEFAULT_CONFIRM_CLOSE = true;
 export const DEFAULT_ALWAYS_ON_TOP = false;
@@ -249,21 +250,11 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
         },
         onSessionExit(exit, context) {
           dispatch(() => {
-            const unexpectedSignal =
-              exit.signal !== 0 && !context.closeRequested;
-            const renderingFailure =
-              context.closeReason === "rendering-failure";
             // Only the renderer knows whether another tab is still mounting.
             // Its last-tab notification, not the native PTY count, closes an
             // ordinarily emptied window. Native shutdown still owns PTY drain.
-            if (!unexpectedSignal && !renderingFailure) return;
-            const failure: TerminalSessionFailure = renderingFailure
-              ? { reason: "rendering", launchKind: context.launchKind }
-              : {
-                  reason: "signal",
-                  launchKind: context.launchKind,
-                  signal: normalizeLifecycleCode(exit.signal),
-                };
+            const failure = terminalSessionExitFailure(exit, context);
+            if (!failure) return;
             // Even the last native session may have another failed or mounting
             // tab beside it. Acknowledgement removes only its own dead tab.
             retainFailure(instance.window, failure, context.sessionId);
@@ -423,8 +414,4 @@ function confirmTabClose<Window extends NativeTerminalWindow>(
 
 function elapsedMilliseconds(startedAt: number): number {
   return Math.max(0, Math.round(Date.now() - startedAt));
-}
-
-function normalizeLifecycleCode(value: number): number | null {
-  return Number.isSafeInteger(value) && value >= 0 ? value : null;
 }

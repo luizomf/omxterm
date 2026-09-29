@@ -158,7 +158,13 @@ export function createLocalTerminalSession(
     exited = true;
     releaseSubscriptions();
     options.onExit(
-      { exitCode: exit.exitCode, signal: exit.signal ?? 0 },
+      {
+        exitCode: exit.exitCode,
+        signal: exit.signal ?? 0,
+        ...((exit as typeof exit & { execFailed?: boolean }).execFailed === true
+          ? { startupFailed: true as const }
+          : {}),
+      },
       explicitCommand ? "explicit-command" : "default-shell",
     );
   });

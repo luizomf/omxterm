@@ -215,6 +215,7 @@ const terminal: TerminalBridge = {
         listener(payload.sessionId, {
           exitCode: payload.exitCode,
           signal: payload.signal,
+          ...(payload.startupFailed ? { startupFailed: true } : {}),
         });
     };
     ipcRenderer.on(terminalIpc.exit, handler);

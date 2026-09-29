@@ -1,7 +1,50 @@
 import { describe, expect, it } from "vitest";
-import { terminalSessionFailureDialog } from "../../src/main/terminal-session-failure";
+import {
+  terminalExitOutcome,
+  terminalSessionExitFailure,
+  terminalSessionFailureDialog,
+} from "../../src/main/terminal-session-failure";
 
 describe("Terminal Session native failure dialog", () => {
+  it.each(["default-shell", "explicit-command"] as const)(
+    "distinguishes native exec failure from ordinary nonzero %s exit",
+    (launchKind) => {
+      const context = {
+        sessionId: "s2",
+        launchKind,
+        closeRequested: false,
+        liveSessions: 1,
+      };
+      const ordinary = { exitCode: 1, signal: 0 };
+      const failed = { ...ordinary, startupFailed: true as const };
+      expect(terminalSessionExitFailure(ordinary, context)).toBeUndefined();
+      expect(terminalExitOutcome(ordinary)).toEqual({
+        outcome: "clean",
+        code: 1,
+      });
+      expect(terminalSessionExitFailure(failed, context)).toEqual({
+        reason: "spawn",
+        launchKind,
+      });
+      expect(terminalExitOutcome(failed)).toEqual({
+        outcome: "spawn-failure",
+        code: null,
+      });
+      expect(
+        terminalSessionExitFailure(failed, {
+          ...context,
+          closeRequested: true,
+        }),
+      ).toBeUndefined();
+      expect(
+        terminalSessionExitFailure(failed, {
+          ...context,
+          closeRequested: true,
+          closeReason: "rendering-failure",
+        }),
+      ).toEqual({ reason: "rendering", launchKind });
+    },
+  );
   it.each([
     [
       { reason: "spawn", launchKind: "default-shell" } as const,

@@ -41,7 +41,9 @@ initializing. You can close an initializing tab without starting its shell.
 A session failure dialog stays open for acknowledgement even if another shell
 exits meanwhile. Acknowledging one failure leaves other pending failures and
 usable or initializing tabs alone. You can still explicitly close the window
-or quit the app.
+or quit the app. A command or Default Shell that cannot execute shows a startup
+failure; OMXTerm does not substitute another shell. A program that did start
+and returns a nonzero exit code still closes normally without a failure dialog.
 
 The app may take a moment to finish shutting down its processes after its last
 window closes.

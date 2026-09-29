@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
-import { mkdirSync, writeSync } from "node:fs";
+import { existsSync, mkdirSync, writeSync } from "node:fs";
+import { spawn } from "node-pty";
 import path from "node:path";
 import { terminalWindowOptions } from "../../src/main/terminal-window";
 import { registerTerminalWindowHost } from "../../src/main/terminal-window-host";
@@ -10,12 +11,14 @@ import { registerTerminalIpcRouter } from "../../src/main/terminal-ipc-controlle
 import { terminalRendererConfiguration } from "../../src/main/active-user-configuration";
 import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
 import type { LocalTerminalSession } from "../../src/main/local-terminal-session";
+import type { OperationalEvent } from "../../src/main/operational-events";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { spawnFixturePty } from "./native-fixture-pty";
 import { nativeFixturePlatform } from "./restty-host-platform";
 import { createResttyHostSessions } from "./restty-host-sessions";
 
 const root = __dirname;
+const missingDefaultShell = process.argv.includes("--missing-default-shell");
 for (const name of ["userData", "sessionData"] as const) {
   const directory = path.join(root, name);
   mkdirSync(directory, { recursive: true });
@@ -23,13 +26,21 @@ for (const name of ["userData", "sessionData"] as const) {
 }
 const windows: BrowserWindow[] = [];
 let attempts = 0;
+let windowsStartRejected = false;
 const owner = createResttyHostSessions({
   app,
   spawn: (...args) => {
-    // Missing executables can be ordinary code-1 exits on Unix. Inject a
-    // synchronous spawn-adapter failure without changing native exit policy.
-    if (attempts > 1) throw new Error("Controlled fixture spawn failure");
-    return spawnFixturePty(...args);
+    if (process.platform !== "win32" || attempts !== 2)
+      return spawnFixturePty(...args);
+    // Pinned ConPTY startProcess rejects a missing file before allocating its
+    // pseudoconsole or any child. There is no PID to register on this path.
+    assert.equal(existsSync(args[0]), false);
+    try {
+      return spawn(...args);
+    } catch (error) {
+      windowsStartRejected = true;
+      throw error;
+    }
   },
   windows: () => windows,
   signals: process,
@@ -48,11 +59,18 @@ process.on("unhandledRejection", fail);
 
 async function run() {
   await app.whenReady();
-  const router = registerTerminalIpcRouter(ipcMain);
+  const events: OperationalEvent[] = [];
+  const router = registerTerminalIpcRouter(ipcMain, {
+    write: (event) => {
+      events.push(event);
+      return true;
+    },
+  });
   let window!: BrowserWindow;
   let session!: LocalTerminalSession;
   let output = "";
   let exited = false;
+  let nativeFailure = false;
   let failures = 0;
   let acknowledged = false;
   let empty = false;
@@ -87,31 +105,40 @@ async function run() {
       });
       const controller = router.registerController({
         webContents: window.webContents,
+        windowId: 1,
         configuration: terminalRendererConfiguration(
           { configuration: DEFAULT_USER_CONFIGURATION, userFileErrors: [] },
           0,
         ),
         createSession(callbacks) {
           attempts += 1;
+          const attempt = attempts;
           const script =
             process.platform === "win32"
-              ? "[Console]::WriteLine('READY'); [Console]::ReadLine() | Out-Null; exit 7"
-              : "printf 'READY\\n'; IFS= read -r line; exit 7";
+              ? "[Console]::WriteLine('READY'); [Console]::ReadLine() | Out-Null; exit 1"
+              : "printf 'READY\\n'; IFS= read -r line; exit 1";
           const created = owner.createSession({
-            shell: nativeFixturePlatform.defaultShell,
-            launchRequest: {
-              kind: "explicit-command",
-              executable:
-                attempts === 1
-                  ? nativeFixturePlatform.defaultShell
-                  : path.join(root, "missing-fixture-program"),
-              arguments:
-                attempts === 1
-                  ? process.platform === "win32"
-                    ? ["-NoLogo", "-NoProfile", "-Command", script]
-                    : ["-c", script]
-                  : [],
-            },
+            shell:
+              attempt === 2 && missingDefaultShell
+                ? path.join(root, "missing-default-shell")
+                : nativeFixturePlatform.defaultShell,
+            ...(attempt === 2 && missingDefaultShell
+              ? {}
+              : {
+                  launchRequest: {
+                    kind: "explicit-command" as const,
+                    executable:
+                      attempts === 1
+                        ? nativeFixturePlatform.defaultShell
+                        : path.join(root, "missing-fixture-program"),
+                    arguments:
+                      attempts === 1
+                        ? process.platform === "win32"
+                          ? ["-NoLogo", "-NoProfile", "-Command", script]
+                          : ["-c", script]
+                        : [],
+                  },
+                }),
             platform: process.platform,
             homeDirectory: root,
             environment: { ...process.env, HOME: root },
@@ -121,12 +148,21 @@ async function run() {
               callbacks.onOutput(data);
             },
             onExit(exit, kind) {
-              assert.deepEqual(exit, { exitCode: 7, signal: 0 });
-              exited = true;
+              if (attempt === 1) {
+                assert.deepEqual(exit, { exitCode: 1, signal: 0 });
+                exited = true;
+              } else {
+                assert.equal(
+                  exit.startupFailed,
+                  true,
+                  "native exec failure must not be an ordinary code-1 exit",
+                );
+                nativeFailure = true;
+              }
               callbacks.onExit(exit, kind);
             },
           });
-          session = created;
+          if (attempt === 1) session = created;
           return created;
         },
         onTabsEmpty(reason) {
@@ -162,6 +198,10 @@ async function run() {
     showQuitConfirmation: async () => true,
     async showSessionFailure(target, failure) {
       assert.equal(failure.reason, "spawn");
+      assert.equal(
+        failure.launchKind,
+        missingDefaultShell ? "default-shell" : "explicit-command",
+      );
       failures += 1;
       const options = terminalSessionFailureDialog(failure);
       await dialog.showMessageBox(target, {
@@ -201,16 +241,13 @@ async function run() {
   await owner.waitFor(
     async () =>
       (await window.webContents.executeJavaScript(
-        "document.querySelectorAll('.terminal-surface').length === 1",
+        `document.querySelectorAll('.terminal-surface').length === ${process.platform === "win32" ? 1 : 2}`,
       )) as boolean,
-    "failed B removed",
+    "failed B ownership established",
   );
   assert.equal(acknowledged, false);
   session.write("\r");
-  await owner.waitFor(
-    () => exited && empty,
-    "ordinary A exit and renderer empty notification",
-  );
+  await owner.waitFor(() => exited, "ordinary A code-1 exit");
   assert.equal(
     closeRequests,
     0,
@@ -231,15 +268,32 @@ async function run() {
   // disposal and application completion must still each happen exactly once.
   assert.equal(closed, 1, "one completed native owner disposal");
   assert.equal(quits, 1);
+  if (process.platform !== "win32") assert.equal(nativeFailure, true);
+  else assert.equal(windowsStartRejected, true);
   assert.equal(attempts, 2);
   assert.equal(failures, 1);
+  assert.equal(empty, true);
+  const exits = events.filter((event) => event.name === "pty.exit");
+  assert.equal(exits.length, 2);
+  assert.equal(exits[0]?.outcome, "spawn-failure");
+  assert.equal(exits[0]?.code, null);
+  assert.equal(exits[1]?.outcome, "clean");
+  assert.equal(exits[1]?.code, 1);
+  for (const event of exits)
+    assert.deepEqual(Object.keys(event).sort(), [
+      "code",
+      "durationMs",
+      "name",
+      "outcome",
+      "windowId",
+    ]);
   if (process.platform === "darwin") assert.equal(sheetEnded, true);
   router.dispose();
   writeSync(
     1,
     "__OMXTERM_FAILURE_ACK_RESULT__" +
       JSON.stringify({
-        controlledSpawnFailure: true,
+        nativeSpawnFailure: true,
         nativeDialog: true,
         nativeSheet:
           process.platform === "darwin" ? sheetBegan && sheetEnded : null,

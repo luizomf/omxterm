@@ -123,6 +123,42 @@ describe("native fixture spawn ownership", () => {
     expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
   });
 
+  it("retains early-exit uncertainty until the actual native callback and excludes unrelated PIDs", () => {
+    vi.mocked(fixtureProcesses).mockReturnValue([owner, unrelated]);
+    let nativeExit!: () => void;
+    const spawned = { pid: child.pid };
+    expect(
+      spawnFixtureProcess(
+        () => spawned,
+        (_child, completed) => {
+          nativeExit = completed;
+        },
+      ),
+    ).toBe(spawned);
+    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
+    nativeExit();
+    const owned = new Map<number, FixtureProcess>();
+    expect(collectFixtureRegistrations(root, owner.pid, owned)).toBe(0);
+    expect([...owned.values()]).toEqual([owner]);
+  });
+
+  it("does not settle early-exit ownership while that PID is still observable", () => {
+    vi.mocked(fixtureProcesses).mockReturnValue([owner]);
+    let nativeExit!: () => void;
+    spawnFixtureProcess(
+      () => ({ pid: child.pid }),
+      (_child, completed) => {
+        nativeExit = completed;
+      },
+    );
+    vi.mocked(fixtureProcesses).mockReturnValue([
+      owner,
+      { ...child, parent: 1 },
+    ]);
+    expect(nativeExit).toThrow("PID remains observable");
+    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
+  });
+
   it("refuses to spawn without a supervised profile", () => {
     vi.stubEnv("OMXTERM_NATIVE_FIXTURE_ROOT", undefined);
     const spawn = vi.fn(() => ({ pid: child.pid }));

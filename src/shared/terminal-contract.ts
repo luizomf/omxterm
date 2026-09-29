@@ -10,6 +10,7 @@ export interface TerminalSize {
 export interface TerminalExit {
   readonly exitCode: number;
   readonly signal: number;
+  readonly startupFailed?: true;
 }
 
 // The main process allocates ids as `s` plus a positive counter scoped to one
@@ -42,10 +43,8 @@ export interface TerminalSessionOutputAck {
   readonly end: number;
 }
 
-export interface TerminalSessionExit {
+export interface TerminalSessionExit extends TerminalExit {
   readonly sessionId: TerminalSessionId;
-  readonly exitCode: number;
-  readonly signal: number;
 }
 
 // A session-scoped Terminal Title: renderer-to-main it carries the raw OSC
@@ -162,10 +161,22 @@ function isOutputProgress(value: unknown): value is number {
 export function isTerminalSessionExit(
   value: unknown,
 ): value is TerminalSessionExit {
-  if (!isStrictRecord(value, ["sessionId", "exitCode", "signal"])) return false;
+  if (
+    !isStrictRecord(value, ["sessionId", "exitCode", "signal"]) &&
+    !(
+      isStrictRecord(value, [
+        "sessionId",
+        "exitCode",
+        "signal",
+        "startupFailed",
+      ]) && value.startupFailed === true
+    )
+  )
+    return false;
   return (
     isTerminalSessionId(value.sessionId) &&
-    isTerminalExit({ exitCode: value.exitCode, signal: value.signal })
+    Number.isInteger(value.exitCode) &&
+    Number.isInteger(value.signal)
   );
 }
 
@@ -248,7 +259,14 @@ export function isTerminalSize(value: unknown): value is TerminalSize {
 }
 
 export function isTerminalExit(value: unknown): value is TerminalExit {
-  if (!isStrictRecord(value, ["exitCode", "signal"])) return false;
+  if (
+    !isStrictRecord(value, ["exitCode", "signal"]) &&
+    !(
+      isStrictRecord(value, ["exitCode", "signal", "startupFailed"]) &&
+      value.startupFailed === true
+    )
+  )
+    return false;
   return Number.isInteger(value.exitCode) && Number.isInteger(value.signal);
 }
 

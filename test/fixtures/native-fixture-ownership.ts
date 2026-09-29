@@ -14,6 +14,7 @@ export const FIXTURE_PROCESS_DIRECTORY = "native-process-ownership";
 // cooperative test-fixture protocol, not containment for arbitrary programs.
 export function spawnFixtureProcess<T extends { readonly pid: number }>(
   spawn: () => T,
+  observeEarlyExit?: (child: T, completed: () => void) => void,
 ): T {
   const root = process.env["OMXTERM_NATIVE_FIXTURE_ROOT"];
   if (!root) throw new Error("Native fixture ownership root is missing");
@@ -31,8 +32,26 @@ export function spawnFixtureProcess<T extends { readonly pid: number }>(
   const rows = fixtureProcesses();
   const owned = new Map([[owner.pid, owner]]);
   collectFixtureDescendants(rows, owned);
-  if (!owned.has(child.pid))
-    throw new Error("Cannot establish ownership of spawned fixture process");
+  if (!owned.has(child.pid)) {
+    if (!observeEarlyExit)
+      throw new Error("Cannot establish ownership of spawned fixture process");
+    // A real native exit callback can prove that a short-lived PTY was reaped
+    // before the inventory. Keep the write-ahead record pending until then;
+    // absence in one process snapshot alone never completes registration.
+    observeEarlyExit(child, () => {
+      const remaining = fixtureProcesses();
+      if (remaining.some((row) => row.pid === child.pid))
+        throw new Error("Early-exit fixture PID remains observable");
+      collectFixtureDescendants(remaining, owned);
+      writeFileSync(
+        temporary,
+        JSON.stringify({ owner, processes: [...owned.values()] }),
+        { flag: "wx" },
+      );
+      renameSync(temporary, record);
+    });
+    return child;
+  }
   writeFileSync(
     temporary,
     JSON.stringify({ owner, processes: [...owned.values()] }),

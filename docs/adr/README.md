@@ -8,6 +8,10 @@ material-only choice with direct private blur and HUD fallback.
 [ADR 0031](0031-keep-linux-installer-choices-small-and-local.md) amends the Linux
 helper's filename and local launch choices without changing runtime defaults.
 
+[ADR 0032](0032-report-native-exec-failures-outside-terminal-payload.md) records
+native exec-status reporting while preserving ADR 0016 acknowledgement and
+ADR 0028 native shutdown ownership.
+
 This index links the durable architecture decisions and shows how later records
 affect them. **Current** decisions stand as written. **Amended** decisions remain
 in force with the listed later changes. **Superseded** decisions are retained as

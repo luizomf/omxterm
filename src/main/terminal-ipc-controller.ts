@@ -42,6 +42,7 @@ export type {
   TrustedWebContents,
 } from "./terminal-ipc-types";
 import type { OperationalEventLog } from "./operational-events";
+import { terminalExitOutcome } from "./terminal-session-failure";
 import { isTerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalFontData } from "../shared/terminal-font-data";
 import type { LocalImageData } from "../shared/local-image";
@@ -503,14 +504,10 @@ function createTerminalIpcController(
             ),
           );
           if (windowId !== undefined) {
-            const outcome = exit.signal !== 0 ? "signal" : "clean";
             writeWindowEvent({
               name: "pty.exit",
               windowId,
-              outcome,
-              code: normalizeCode(
-                outcome === "signal" ? exit.signal : exit.exitCode,
-              ),
+              ...terminalExitOutcome(exit),
               durationMs: elapsedMilliseconds(startedAt),
             });
           }
@@ -769,8 +766,4 @@ function elapsedMilliseconds(startedAt: number | undefined): number {
   return startedAt === undefined
     ? 0
     : Math.max(0, Math.round(Date.now() - startedAt));
-}
-
-function normalizeCode(value: number): number | null {
-  return Number.isSafeInteger(value) && value >= 0 ? value : null;
 }

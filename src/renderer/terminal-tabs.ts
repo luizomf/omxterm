@@ -160,11 +160,14 @@ export function createTerminalTabs(
     select(Math.min(selectedIndex, tabs.length - 1));
   };
 
-  const onSessionEnd = (tab: TerminalTab, exit: { signal: number }) => {
+  const onSessionEnd = (
+    tab: TerminalTab,
+    exit: { signal: number; startupFailed?: true },
+  ) => {
     if (disposed || tab.removed) return;
     // An ordinary end removes the tab; an unexpected signal keeps the dead
     // tab visible until main acknowledges the failure and orders removal.
-    if (exit.signal === 0) removeTab(tab);
+    if (exit.signal === 0 && !exit.startupFailed) removeTab(tab);
   };
 
   const replayZoom = (surface: TerminalSurface) => {
@@ -375,7 +378,10 @@ function closeTab(
 
 function tabSessionAdapter(
   tab: TerminalTab,
-  onSessionEnd: (tab: TerminalTab, exit: { signal: number }) => void,
+  onSessionEnd: (
+    tab: TerminalTab,
+    exit: { signal: number; startupFailed?: true },
+  ) => void,
 ): TerminalSessionAdapter {
   const { adapter } = tab;
   return {

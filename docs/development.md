@@ -43,9 +43,11 @@ Native font fixtures require the exact installed families `DejaVu Sans` and
 `ttf-dejavu`; inspect `fc-list : family` to verify both families. Bundled runtime
 fonts do not satisfy tests of an explicitly configured installed font.
 
-Run project commands as your ordinary user. Postinstall rebuilds `node-pty`
-against the installed Electron Linux ARM64 runtime; a module copied from Node.js
-or another platform is not interchangeable.
+Run project commands as your ordinary user. Postinstall builds the pinned `node-pty` Node-API runtime with the native
+exec-status correction. It requires `patch` and the C++ compiler on Linux and
+Apple Command Line Tools on macOS; unknown pinned source bytes stop preparation.
+A module copied from another platform is not interchangeable. See
+[ADR 0032](adr/0032-report-native-exec-failures-outside-terminal-payload.md).
 
 Graphical tests and packaged launches need an authorized X11/XWayland desktop;
 native Wayland is not currently claimed. Over SSH, use the desktop's `DISPLAY`
@@ -152,14 +154,16 @@ desktop idle during the check; the helper releases the button and restores the
 pointer in its cleanup path. Synthetic renderer input alone cannot prove native
 drag hit testing.
 
-The failure-acknowledgement fixture uses a controlled synchronous spawn-adapter
-failure, a real sibling PTY/renderer and Electron's real native failure dialog.
-It retains the dialog while the sibling exits ordinarily, then dismisses it
-through Electron's AbortSignal cancellation API and verifies owner cleanup.
-macOS additionally checks native sheet begin/end events; Windows checks the
-native dialog disables its owner. This is not physical OK-button input or a
-pixel/appearance assertion. A missing executable is not a portable synchronous
-spawn-failure fixture: Unix PTYs may instead report an ordinary code-1 exit.
+The failure-acknowledgement fixture uses guaranteed missing explicit executables
+and Default Shells, a real sibling PTY/renderer and Electron's real native failure
+dialog. Unix must report the native exec-status flag, not an ordinary code-1
+exit or a synchronous mock. Windows' pinned missing-file path rejects before
+allocating its pseudoconsole or child. It retains the dialog while the successfully
+executed sibling exits with code 1, then dismisses it through Electron's AbortSignal
+cancellation API and verifies owner cleanup and safe failure metadata. macOS
+additionally checks native sheet begin/end events; Windows checks the native
+dialog disables its owner. This is not physical OK-button input or a
+pixel/appearance assertion.
 
 When investigating an intermittent failure, record the failure and rerun
 conditions. A later isolated pass alone does not show that it was fixed.
@@ -183,7 +187,11 @@ When adding supervised fixtures:
 - Create PTYs through `spawnFixturePty` and other owned children through
   `spawnFixtureProcess`. These adapters write a pending ownership record before
   spawning, then atomically register PID and process-creation identities while
-  the parent is still alive.
+  the parent is still alive. If a PTY exits before its identity can be inventoried,
+  its registration remains pending until the real native exit callback proves
+  completion and a fresh inventory confirms its PID is absent. A missing process
+  snapshot alone never completes ownership; arbitrary synchronous spawn errors
+  still retain uncertainty.
 - Let the supervisor manage the profile. It removes the profile only after
   process termination and stream closure have both been checked. Uncertain
   cleanup or interrupted/invalid registration retains it for diagnosis.

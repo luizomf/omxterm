@@ -12,7 +12,7 @@ const installedUnixRuntime = path.join(
 );
 
 describe("node-pty postinstall preparation", () => {
-  it("rebuilds node-pty for Electron on Linux ARM64", async () => {
+  it("builds node-pty with exec status on Linux ARM64", async () => {
     const rebuild = vi.fn().mockResolvedValue(undefined);
     const chmod = vi.fn().mockResolvedValue(undefined);
 
@@ -28,7 +28,7 @@ describe("node-pty postinstall preparation", () => {
     expect(chmod).not.toHaveBeenCalled();
   });
 
-  it("makes the Darwin ARM64 spawn helper executable without rebuilding", async () => {
+  it("builds the Darwin ARM64 exec-status runtime and makes its helper executable", async () => {
     const rebuild = vi.fn().mockResolvedValue(undefined);
     const chmod = vi.fn().mockResolvedValue(undefined);
 
@@ -40,10 +40,10 @@ describe("node-pty postinstall preparation", () => {
         rebuild,
         chmod,
       }),
-    ).resolves.toBe("corrected-and-repaired");
+    ).resolves.toBe("corrected-and-rebuilt");
     expect(chmod).toHaveBeenCalledOnce();
     expect(chmod).toHaveBeenCalledWith("/node-pty/spawn-helper", 0o755);
-    expect(rebuild).not.toHaveBeenCalled();
+    expect(rebuild).toHaveBeenCalledOnce();
   });
 
   it("rejects unreviewed node-pty Unix runtime bytes", async () => {

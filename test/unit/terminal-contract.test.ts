@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isBoundedTerminalPayload,
+  isTerminalExit,
   isTerminalSessionExit,
   isTerminalSessionId,
   isTerminalSessionInput,
@@ -14,6 +15,29 @@ import {
 } from "../../src/shared/terminal-contract";
 
 describe("terminal IPC payload contract", () => {
+  it("accepts only the fixed native startup-failure flag on exit messages", () => {
+    const exit = { exitCode: 1, signal: 0 };
+    expect(isTerminalExit(exit)).toBe(true);
+    expect(isTerminalSessionExit({ sessionId: "s1", ...exit })).toBe(true);
+    expect(isTerminalExit({ ...exit, startupFailed: true })).toBe(true);
+    expect(
+      isTerminalSessionExit({ sessionId: "s1", ...exit, startupFailed: true }),
+    ).toBe(true);
+    for (const startupFailed of [false, 1, "true", null, undefined]) {
+      expect(isTerminalExit({ ...exit, startupFailed })).toBe(false);
+      expect(
+        isTerminalSessionExit({ sessionId: "s1", ...exit, startupFailed }),
+      ).toBe(false);
+    }
+    expect(
+      isTerminalSessionExit({
+        sessionId: "s1",
+        ...exit,
+        startupFailed: true,
+        executable: "private",
+      }),
+    ).toBe(false);
+  });
   it("emits no chunks for an empty payload", () => {
     expect(splitTerminalPayload("")).toEqual([]);
   });

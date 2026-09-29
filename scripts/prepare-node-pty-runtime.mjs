@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { prepareNodePtyExecStatus } from "./prepare-node-pty-exec-status.mjs";
 import { createHash } from "node:crypto";
 import { chmod as chmodFile, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -20,40 +20,22 @@ const defaultHelperPath = path.resolve(
   import.meta.dirname,
   "../node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper",
 );
-const electronBuilderCli = path.resolve(
-  import.meta.dirname,
-  "../node_modules/electron-builder/cli.js",
-);
-
-function rebuildLinuxArm64Runtime() {
-  return new Promise((resolve, reject) => {
-    const child = spawn(
-      process.execPath,
-      [
-        electronBuilderCli,
-        "install-app-deps",
-        "--platform=linux",
-        "--arch=arm64",
-      ],
-      { stdio: "inherit" },
-    );
-    child.once("error", reject);
-    child.once("exit", (code, signal) => {
-      if (code === 0) resolve();
-      else
-        reject(
-          new Error(
-            `Electron native dependency rebuild failed (${signal ?? code})`,
-          ),
-        );
-    });
-  });
-}
 
 async function preservePausedUnixExitTail(runtimePath) {
-  let source = await readFile(runtimePath, "utf8");
+  let source = (await readFile(runtimePath, "utf8"))
+    .replace(
+      "var onexit = function (code, signal, execFailed)",
+      "var onexit = function (code, signal)",
+    )
+    .replaceAll(
+      "_this.emit('exit', code, signal, execFailed)",
+      "_this.emit('exit', code, signal)",
+    );
   const sourceDigest = digest(source);
-  if (sourceDigest === correctedUnixRuntimeDigest) return;
+  if (sourceDigest === correctedUnixRuntimeDigest) {
+    await writeFile(runtimePath, forwardExecStatus(source));
+    return;
+  }
   if (sourceDigest !== originalUnixRuntimeDigest)
     throw new Error(
       "Unrecognized node-pty Unix runtime; review the pinned output correction",
@@ -83,7 +65,19 @@ async function preservePausedUnixExitTail(runtimePath) {
     throw new Error(
       `node-pty Unix correction did not produce reviewed bytes: ${digest(source)}`,
     );
-  await writeFile(runtimePath, source);
+  await writeFile(runtimePath, forwardExecStatus(source));
+}
+
+function forwardExecStatus(source) {
+  return source
+    .replace(
+      "var onexit = function (code, signal)",
+      "var onexit = function (code, signal, execFailed)",
+    )
+    .replaceAll(
+      "_this.emit('exit', code, signal)",
+      "_this.emit('exit', code, signal, execFailed)",
+    );
 }
 
 export async function prepareNodePtyRuntime({
@@ -91,7 +85,7 @@ export async function prepareNodePtyRuntime({
   arch = process.arch,
   helperPath = defaultHelperPath,
   unixRuntimePath = defaultUnixRuntimePath,
-  rebuild = rebuildLinuxArm64Runtime,
+  rebuild = prepareNodePtyExecStatus,
   chmod = chmodFile,
 } = {}) {
   if (platform !== "win32") await preservePausedUnixExitTail(unixRuntimePath);
@@ -100,8 +94,9 @@ export async function prepareNodePtyRuntime({
     return "corrected-and-rebuilt";
   }
   if (platform === "darwin" && arch === "arm64") {
+    await rebuild();
     await chmod(helperPath, 0o755);
-    return "corrected-and-repaired";
+    return "corrected-and-rebuilt";
   }
   return platform === "win32" ? "unchanged" : "corrected";
 }

@@ -15,50 +15,58 @@ const prefix = "__OMXTERM_FAILURE_ACK_RESULT__";
 describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   "Failure acknowledgement through real Electron, Restty, PTY and native dialog",
   () => {
-    it("retains failed B's native dialog through ordinary A exit and closes once after acknowledgement", async () => {
-      const root = await mkdtemp(path.join(tmpdir(), "omxterm-failure-ack-"));
-      let supervised = false;
-      try {
-        await buildFixture(root);
-        const args: string[] = [];
-        applyChromiumSandboxPolicy({
-          appendSwitch: (name) => {
-            args.push(`--${name}`);
-          },
-        });
-        if (process.platform === "linux") args.push("--ozone-platform=x11");
-        supervised = true;
-        const execution = await runNativeFixture({
-          executable,
-          args: [...args, root],
-          root,
-          timeout: 90_000,
-        });
-        expect(
-          execution,
-          `Failure acknowledgement fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
-        ).toMatchObject({
-          exitCode: 0,
-          signal: null,
-          reason: "exit",
-          cleanupErrors: [],
-        });
-        const result = execution.stdout
-          .split("\n")
-          .find((line) => line.startsWith(prefix));
-        expect(result).toBeDefined();
-        expect(JSON.parse(result!.slice(prefix.length)) as unknown).toEqual({
-          controlledSpawnFailure: true,
-          nativeDialog: true,
-          nativeSheet: process.platform === "darwin" ? true : null,
-          survivedOrdinaryExit: true,
-          acknowledged: true,
-          cleanupExactlyOnce: true,
-        });
-      } finally {
-        if (!supervised) await rm(root, { recursive: true, force: true });
-      }
-    }, 110_000);
+    it.each(["explicit-command", "default-shell"])(
+      "retains failed %s B's native dialog through ordinary code-1 A exit and closes once after acknowledgement",
+      async (kind) => {
+        const root = await mkdtemp(path.join(tmpdir(), "omxterm-failure-ack-"));
+        let supervised = false;
+        try {
+          await buildFixture(root);
+          const args: string[] = [];
+          applyChromiumSandboxPolicy({
+            appendSwitch: (name) => {
+              args.push(`--${name}`);
+            },
+          });
+          if (process.platform === "linux") args.push("--ozone-platform=x11");
+          supervised = true;
+          const execution = await runNativeFixture({
+            executable,
+            args: [
+              ...args,
+              root,
+              ...(kind === "default-shell" ? ["--missing-default-shell"] : []),
+            ],
+            root,
+            timeout: 90_000,
+          });
+          expect(
+            execution,
+            `Failure acknowledgement fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
+          ).toMatchObject({
+            exitCode: 0,
+            signal: null,
+            reason: "exit",
+            cleanupErrors: [],
+          });
+          const result = execution.stdout
+            .split("\n")
+            .find((line) => line.startsWith(prefix));
+          expect(result).toBeDefined();
+          expect(JSON.parse(result!.slice(prefix.length)) as unknown).toEqual({
+            nativeSpawnFailure: true,
+            nativeDialog: true,
+            nativeSheet: process.platform === "darwin" ? true : null,
+            survivedOrdinaryExit: true,
+            acknowledged: true,
+            cleanupExactlyOnce: true,
+          });
+        } finally {
+          if (!supervised) await rm(root, { recursive: true, force: true });
+        }
+      },
+      110_000,
+    );
   },
 );
 
