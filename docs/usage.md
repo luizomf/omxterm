@@ -32,6 +32,10 @@ You can turn confirmations off with `confirmClose` in your settings.
 Close Tab confirmation applies only to its original tab. If that session exits
 while the question is open, approving it leaves the surviving tabs alone.
 
+A background tab closing or exiting does not change your selected session or
+where typing, Paste and snippets go. Closing the selected tab selects its right
+neighbor, or its left neighbor if it was last.
+
 Typing `exit` closes that shell's tab. The app may take a moment to finish
 shutting down its processes after its last window closes.
 

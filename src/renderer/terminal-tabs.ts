@@ -146,7 +146,7 @@ export function createTerminalTabs(
       return;
     }
     if (index < selectedIndex) selectedIndex -= 1;
-    select(Math.min(Math.max(selectedIndex, index), tabs.length - 1));
+    select(Math.min(selectedIndex, tabs.length - 1));
   };
 
   const onSessionEnd = (tab: TerminalTab, exit: { signal: number }) => {

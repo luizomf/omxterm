@@ -143,6 +143,11 @@ succeeds (ADR 0025).
   An unreadable name counts as Busy. ConPTY on Windows exposes a static console
   title in place of the foreground process name, so every live Windows session
   counts as Busy and asks while confirmation is enabled.
+- Closing or ordinarily exiting an unselected tab preserves the selected tab,
+  its Terminal Surface and Live Terminal Session, even when its position changes.
+  Subsequent keyboard, Paste and Snippet input stays with that selected session.
+  Removing the selected tab chooses its right neighbor, or the left neighbor
+  when it was last; removing the only tab retains the last-tab window lifecycle.
 - After the Default Shell starts successfully, an ordinary shell exit closes
   its tab — and its window when that was the last tab — without confirmation
   or a failure dialog, regardless of its numeric exit code.
