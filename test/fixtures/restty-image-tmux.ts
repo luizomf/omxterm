@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
+import { rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnFixtureProcess } from "./native-fixture-ownership";
 import { spawnFixturePty } from "./native-fixture-pty";
@@ -21,28 +22,35 @@ export async function withTmuxImageOutput(options: {
   if (process.platform === "win32") throw new Error("tmux requires POSIX");
   const node = process.env["npm_node_execpath"];
   if (!node) throw new Error("tmux comparison requires npm_node_execpath");
-  const socket = path.join(options.root, "image-tmux.sock");
+  // A disk-backed TMPDIR can make the fixture root exceed sockaddr_un's bound.
+  // This unique local socket stays short and is removed after its owner exits.
+  const socket = path.join("/tmp", `omxterm-image-${randomUUID()}.sock`);
   const producer = path.join(options.root, "image-tmux-producer.cjs");
   await writeFile(
     producer,
     String.raw`process.stdin.setRawMode(true);process.stdin.resume();process.stdout.write('\x1b[2J\x1b[H\x1b[?25l'+process.argv[2]+'\r\n__IMAGE_TMUX_READY__');process.stdin.on('data',()=>process.exit(0));`,
   );
-  const server = spawnFixtureProcess(() => {
-    const child = spawn("tmux", ["-D", "-S", socket, "-f", "/dev/null"], {
-      cwd: options.root,
-      stdio: "ignore",
-    });
-    if (!child.pid) throw new Error("tmux server did not spawn");
-    return Object.assign(child, { pid: child.pid });
-  });
+  const server = spawnFixtureProcess(
+    () => {
+      const child = spawn("tmux", ["-D", "-S", socket, "-f", "/dev/null"], {
+        cwd: options.root,
+        stdio: "ignore",
+      });
+      if (!child.pid) throw new Error("tmux server did not spawn");
+      return Object.assign(child, { pid: child.pid });
+    },
+    (child, completed) => child.once("exit", completed),
+  );
   let serverExited = false;
   server.once("exit", () => {
     serverExited = true;
   });
   await options.waitFor(
-    () => existsSync(socket),
+    () => existsSync(socket) || serverExited,
     "owned foreground tmux server",
   );
+  if (serverExited)
+    throw new Error("tmux server exited before socket readiness");
   const client = spawnFixturePty(
     "tmux",
     [
@@ -94,9 +102,12 @@ export async function withTmuxImageOutput(options: {
     server.kill("SIGTERM");
     await options.waitFor(() => serverExited, "owned tmux server exit");
   } finally {
+    if (!clientExited) client.kill();
+    await options.waitFor(() => clientExited, "tmux client cleanup");
+    if (!serverExited) server.kill("SIGTERM");
+    await options.waitFor(() => serverExited, "tmux server cleanup");
     output.dispose();
     exit.dispose();
-    if (!clientExited) client.kill();
-    if (!serverExited) server.kill("SIGTERM");
+    await rm(socket, { force: true });
   }
 }
