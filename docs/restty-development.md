@@ -435,11 +435,16 @@ scaling glyphs, keeps bold ANSI 0–7 colors unchanged, and exposes Ghostty's
 existing line and byte limit setters through one live Restty operation. Unknown
 dependency or artifact bytes fail instead of receiving a best-effort patch.
 The same install step accepts node-pty 1.1.0 Unix runtime SHA-256
-`a62e3a60c3bc1b0e7261f58284856df748dcee6761a2bc7a5a5ba98b22660473`
-and produces
+`a62e3a60c3bc1b0e7261f58284856df748dcee6761a2bc7a5a5ba98b22660473`.
+The paused-output-tail correction produces the intermediate digest
 `238f993db4aa83d57885832eabe9c1de1ce05b96c84d3270574f26f71f9afcb8`;
-Windows skips that Unix-only correction. Reinstall with `npm ci` to restore and
-reapply the reviewed bytes; do not edit `node_modules` manually.
+forwarding native `execFailed` status produces the final runtime digest
+`cb8b1c30434b2a75271e1a2e48ea0e135eefd82f792f0b0998114d4bdd9a4762`.
+Postinstall also builds the matched Unix ARM64 Node-API addon and macOS helper
+with the native exec-status correction described in
+[ADR 0032](adr/0032-report-native-exec-failures-outside-terminal-payload.md).
+Windows retains its separate ConPTY implementation. Reinstall with `npm ci` to
+restore and reapply the reviewed bytes; do not edit `node_modules` manually.
 
 `assets/restty/omxterm-restty-core.wasm` is built from the pinned Restty and
 Ghostty commits above with tracked Restty patch

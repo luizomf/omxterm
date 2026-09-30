@@ -18,10 +18,9 @@ The tab bar appears when there are at least two tabs. Click to select a tab,
 drag to reorder it, or use the shortcuts below. **View → Toggle Tab Bar** hides
 or shows the bar; keyboard shortcuts still work while it's hidden.
 
-Each started tab shows its shell or explicit program's basename until it supplies
-a valid terminal title, even when the program emits no title at startup. The
-window title follows the selected tab. Titles are display-only and never saved
-or logged.
+Each started tab shows the Default Shell's basename as its initial title,
+including when launched with `-e`. A valid terminal title replaces it. The window
+title follows the selected tab. Titles are display-only and never saved or logged.
 
 Closing a tab ends its session. Closing a window ends all its sessions; closing
 the last window quits OMXTerm. Tabs and their order aren't saved between launches.

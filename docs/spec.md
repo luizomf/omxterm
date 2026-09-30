@@ -14,10 +14,12 @@ features are outside the product scope.
 The initial Supported Platforms are macOS arm64, Linux arm64, and Windows
 arm64. Linux rendering defaults to X11 and requires XWayland when the desktop
 session is Wayland; native Wayland rendering is not currently claimed. An
-explicit Electron `--ozone-platform` switch overrides the Linux default for
-diagnosis. Linux deliberately uses `--no-sandbox` as an unconditional launch
-policy for ordinary-user runtime, direct AppImage, extraction, desktop entry
-and X11 relaunch. This is a fixed launch policy, not a fallback or configurable mode. OMXTerm
+explicit Electron `--ozone-platform` or `--ozone-platform-hint` switch supplied
+before a Launch Request's `-e`, or a defined `ELECTRON_OZONE_PLATFORM_HINT`
+environment variable, takes precedence over the Linux default for diagnosis.
+The environment variable counts as an override even when its value is empty.
+Linux deliberately uses `--no-sandbox` as an unconditional launch policy for
+ordinary-user runtime, direct AppImage, extraction, desktop entry and X11 relaunch. This is a fixed launch policy, not a fallback or configurable mode. OMXTerm
 leaves host security policy unchanged and installs no privileged sandbox helper.
 Sandboxed Linux support is outside the current maintenance scope (ADR 0024).
 x64, Intel macOS, and other operating systems remain possible future work rather

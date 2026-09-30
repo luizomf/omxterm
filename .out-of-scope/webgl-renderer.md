@@ -1,9 +1,12 @@
-# WebGL Drawing Backend
+# Historical xterm.js WebGL experiment
 
-OMXTerm does not load `@xterm/addon-webgl` as its default drawing backend. The
-DOM renderer remains the default.
+This record describes the xterm.js renderer experiment before the Restty
+cutover. At that time, OMXTerm kept the DOM renderer as its default and left
+`@xterm/addon-webgl` out of scope. The current Terminal Surface uses Restty with
+WebGL2, as recorded in
+[ADR 0025](../docs/adr/0025-stage-restty-behind-an-unpackaged-opt-in.md).
 
-## Why this is out of scope
+## Findings from the historical experiment
 
 A same-build benchmark showed that WebGL is dramatically faster for emoji and
 moderately faster for some attribute-heavy output, but it is not a generally
@@ -24,11 +27,11 @@ valid while retained memory grows. Loading WebGL conditionally also does not
 make unsafe output safe, and supported graphics paths vary across macOS,
 Windows, and Linux/XWayland as recorded in ADR 0020.
 
-The decision can be reconsidered if the renderer gains bounded atlas eviction
-or another enforceable memory strategy. Any reconsideration needs sustained
-color-churn regression tests, a memory budget, context-loss verification, and
-coverage of hardware and software rendering paths on the Supported Platforms.
-DOM emoji performance remains a separate optimization problem.
+Reconsidering the xterm.js addon would require bounded atlas eviction or another
+enforceable memory strategy, sustained color-churn regression tests, a memory
+budget, context-loss verification, and coverage of hardware and software rendering
+paths on the Supported Platforms. The DOM emoji performance work belonged to
+that earlier renderer.
 
 ## Prior requests
 

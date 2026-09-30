@@ -1,10 +1,11 @@
 # Do not inject shell integration
 
-OMXTerm will launch the user's Default Shell as an interactive login shell
-without installing startup files, changing `ZDOTDIR`, sourcing project-owned
-scripts, editing dotfiles, or wrapping shell commands. Apart from the Terminal
-Capability Identity required to describe the PTY, the session inherits the
-user's environment and configuration as they exist.
+OMXTerm launches the user's Default Shell as an interactive login shell on macOS
+and Linux. Windows starts its selected shell interactively without a login flag.
+Shell startup remains user-owned: OMXTerm leaves startup files, `ZDOTDIR`,
+dotfiles, and shell commands unchanged and injects no project-owned scripts.
+Apart from the Terminal Capability Identity required to describe the PTY, the
+session inherits the user's environment and configuration as they exist.
 
 Shell Integration can provide richer prompt, working-directory, title, and
 notification behavior, but it also makes OMXTerm participate in shell startup

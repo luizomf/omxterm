@@ -196,9 +196,10 @@ node scripts/prepare-restty-runtime.mjs
 npm run check:linux
 ```
 
-Postinstall rebuilds node-pty against Electron's Linux arm64 runtime. The full
-command runs portable/native checks, packages the AppImage, creates the exact
-`linux_install.sh` desktop helper and both checksums, then verifies them.
+Postinstall builds the pinned node-pty Node-API v8 addon for Linux ARM64 with the
+native exec-status correction. The full command runs portable/native checks,
+packages the AppImage, creates the exact `linux_install.sh` desktop helper and
+both checksums, then verifies them.
 It extracts the exact AppImage and checks architecture, native module, runtime,
 version, icon, licenses and forbidden/private-looking files. It rejects the
 unversioned `libz.so` development dependency. The statically linked runtime

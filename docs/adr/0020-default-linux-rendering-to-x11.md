@@ -1,9 +1,11 @@
 # Default Linux rendering to X11
 
-OMXTerm will start Electron with the X11 Ozone backend on Linux unless the user
-explicitly supplies an `--ozone-platform` command-line switch. Native Wayland
-dogfooding on the supported Ubuntu ARM64 Parallels VM started the application,
-renderer, and PTY but presented no visible window; the same exact AppImage was
+OMXTerm starts Electron with the X11 Ozone backend on Linux unless the user
+supplies an `--ozone-platform` or `--ozone-platform-hint` command-line switch
+before a Launch Request's `-e`, or defines `ELECTRON_OZONE_PLATFORM_HINT`, including
+an empty value. Native Wayland dogfooding on the supported Ubuntu ARM64 Parallels
+VM started the application, renderer, and PTY but presented no visible window;
+the same exact AppImage was
 visible and usable through X11 under XWayland. A terminal that runs invisibly is
 not a viable platform default.
 
