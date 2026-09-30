@@ -265,8 +265,11 @@ seconds is not a total cleanup limit.
 Windows uses WMI with `CREATE_BREAKAWAY_FROM_JOB` for the supervisor: an ordinary
 detached child would remain in the test worker's Job. WMI must be available; the
 supervisor runs as the caller without elevation or a policy change. Electron
-stays in the caller's interactive desktop, session and environment. POSIX uses a
-detached supervisor and IPC-disconnect detection.
+stays in the caller's interactive desktop, session and environment. After
+observing supervisor disappearance, the Windows caller reads its outcome once
+more with the same validation, preserving actual exit and cleanup metadata.
+Missing or invalid evidence still fails; file presence alone is not success.
+POSIX uses a detached supervisor and IPC-disconnect detection.
 
 This is cooperative fixture cleanup, not process containment. POSIX inspection
 and signaling are separate operations, and macOS creation times have second-level
@@ -294,3 +297,15 @@ Remove-Item Env:OMXTERM_TEST_NATIVE_INTERRUPTION
 The suites cover parent/fixture interruption, deadlines, exit outcomes, profile
 retention after interrupted registration, successful removal, survival of an
 unrelated sentinel, and a real PTY whose leader exits early.
+
+Windows outcome-publication regressions use the same disposable-VM opt-in:
+
+```powershell
+$env:OMXTERM_TEST_NATIVE_INTERRUPTION = '1'
+npm test -- test/integration/native-fixture-outcome-windows.test.ts
+Remove-Item Env:OMXTERM_TEST_NATIVE_INTERRUPTION
+```
+
+They delay delivery of a real missing-file read until the WMI supervisor has
+published its outcome and exited, checking success, failure and rejected evidence.
+This controlled interleaving does not measure spontaneous failure frequency.

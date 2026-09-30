@@ -13,6 +13,7 @@ import {
   nativeFixtureEnvironment,
 } from "./native-fixture-processes";
 import { randomUUID } from "node:crypto";
+import { constants } from "node:os";
 import path from "node:path";
 import { build } from "esbuild";
 
@@ -23,6 +24,29 @@ export interface NativeFixtureResult {
   readonly stdout: string;
   readonly stderr: string;
   readonly cleanupErrors: readonly string[];
+}
+
+function isNativeFixtureResult(result: unknown): result is NativeFixtureResult {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "exitCode" in result &&
+    (result.exitCode === null || Number.isSafeInteger(result.exitCode)) &&
+    "signal" in result &&
+    (result.signal === null ||
+      (typeof result.signal === "string" &&
+        Object.hasOwn(constants.signals, result.signal))) &&
+    "reason" in result &&
+    typeof result.reason === "string" &&
+    result.reason.length > 0 &&
+    "stdout" in result &&
+    typeof result.stdout === "string" &&
+    "stderr" in result &&
+    typeof result.stderr === "string" &&
+    "cleanupErrors" in result &&
+    Array.isArray(result.cleanupErrors) &&
+    result.cleanupErrors.every((error: unknown) => typeof error === "string")
+  );
 }
 
 async function runWindowsSupervisor(
@@ -77,45 +101,54 @@ async function runWindowsSupervisor(
   );
   if (!Number.isSafeInteger(supervisorPid) || supervisorPid <= 0)
     throw new Error("WMI returned no supervisor process identity");
+  const readOutcome = async (): Promise<NativeFixtureResult | undefined> => {
+    let result: unknown;
+    try {
+      result = JSON.parse(await readFile(request.evidencePath, "utf8"));
+    } catch (error) {
+      if (
+        (error as NodeJS.ErrnoException).code === "ENOENT" ||
+        error instanceof SyntaxError
+      )
+        return undefined;
+      throw error;
+    }
+    if (typeof result !== "object" || result === null)
+      throw new Error("Invalid native fixture supervisor outcome");
+    if ("reason" in result && result.reason === "supervisor-error")
+      throw new Error(
+        `Native fixture supervisor failed: ${JSON.stringify(result)}`,
+      );
+    if (!isNativeFixtureResult(result))
+      throw new Error("Invalid native fixture supervisor outcome");
+    return result;
+  };
   const deadline = Date.now() + request.timeout + 15_000;
   let launched = false;
   while (true) {
+    const result = await readOutcome();
+    if (result) return result;
     try {
-      const result = JSON.parse(
-        await readFile(request.evidencePath, "utf8"),
-      ) as NativeFixtureResult;
-      if (result.reason === "supervisor-error")
-        throw new Error(
-          `Native fixture supervisor failed: ${JSON.stringify(result)}`,
-        );
-      return result;
-    } catch (error) {
-      if (
-        (error as NodeJS.ErrnoException).code !== "ENOENT" &&
-        !(error instanceof SyntaxError)
-      )
-        throw error;
-      try {
-        process.kill(supervisorPid, 0);
-      } catch (inspectionError) {
-        throw new Error(
-          "Native fixture supervisor disappeared without an outcome; profile retained for inspection",
-          { cause: inspectionError },
-        );
-      }
-      if (Date.now() >= deadline)
-        throw new Error(
-          "Native fixture supervisor returned no outcome; profile retained for inspection",
-        );
-      if (
-        !launched &&
-        existsSync(path.join(request.root, "supervisor-ready"))
-      ) {
-        launched = true;
-        startWindowsFixture(request);
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      process.kill(supervisorPid, 0);
+    } catch (inspectionError) {
+      // Publication and exit may follow the earlier missing/partial read.
+      // Use the same outcome protocol once more before declaring evidence lost.
+      const finalResult = await readOutcome();
+      if (finalResult) return finalResult;
+      throw new Error(
+        "Native fixture supervisor disappeared without an outcome; profile retained for inspection",
+        { cause: inspectionError },
+      );
     }
+    if (Date.now() >= deadline)
+      throw new Error(
+        "Native fixture supervisor returned no outcome; profile retained for inspection",
+      );
+    if (!launched && existsSync(path.join(request.root, "supervisor-ready"))) {
+      launched = true;
+      startWindowsFixture(request);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }
 
