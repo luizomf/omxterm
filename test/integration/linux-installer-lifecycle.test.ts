@@ -1,16 +1,10 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { cleanupInstallerProcess } from "../fixtures/cleanup-installer-process";
 
 const helper = path.resolve(
   import.meta.dirname,
@@ -20,7 +14,7 @@ const helper = path.resolve(
 describe.skipIf(process.platform !== "linux")(
   "native installer mount lifecycle",
   () => {
-    it.each(["shutdown timeout", "TERM interruption"])(
+    it.each(["shutdown timeout", "TERM interruption", "TERM during shutdown"])(
       "%s reaps a real TERM-resistant child without publishing files",
       async (scenario) => {
         const root = await mkdtemp(
@@ -73,7 +67,7 @@ if (process.argv[2] === '--appimage-extract') {
             PATH: `${bin}:${process.env.PATH ?? ""}`,
             PID_FILE: pidFile,
             TERM_MARKER: termMarker,
-            MOUNT_PATH: scenario === "shutdown timeout" ? mount : "",
+            MOUNT_PATH: scenario === "TERM interruption" ? "" : mount,
           },
           stdio: ["ignore", "pipe", "pipe"],
         });
@@ -87,9 +81,10 @@ if (process.argv[2] === '--appimage-extract') {
         });
         let timer: NodeJS.Timeout | undefined;
         try {
-          if (scenario === "TERM interruption") {
+          if (scenario !== "shutdown timeout") {
             const deadline = Date.now() + 3000;
-            while (!(await readdir(root)).includes("pid")) {
+            const marker = scenario === "TERM during shutdown" ? "term" : "pid";
+            while (!(await readdir(root)).includes(marker)) {
               if (Date.now() > deadline)
                 throw new Error("mount child was not started");
               await new Promise((resolve) => setTimeout(resolve, 20));
@@ -108,7 +103,7 @@ if (process.argv[2] === '--appimage-extract') {
               );
             }),
           ]);
-          expect(outcome[0]).toBe(scenario === "TERM interruption" ? 143 : 1);
+          expect(outcome[0]).toBe(scenario !== "shutdown timeout" ? 143 : 1);
           expect(stdout).not.toContain("Installed OMXTerm");
           expect(stderr).toContain("mount probe shutdown timed out");
           expect(await readFile(termMarker, "utf8")).toBe("TERM_OBSERVED");
@@ -132,7 +127,7 @@ if (process.argv[2] === '--appimage-extract') {
             process.kill(-child.pid, "SIGKILL");
             await once(child, "exit");
           }
-          await rm(root, { recursive: true, force: true });
+          await cleanupInstallerProcess(root, pidFile, runtime);
         }
       },
       15_000,

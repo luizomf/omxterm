@@ -107,17 +107,32 @@ mount_child_exited() {
   mount_pid=
 }
 
+on_install_signal() {
+  # Finish the one bounded shutdown already in progress, preserving the signal.
+  if [ "${mount_shutdown_active:-false}" = true ]; then
+    mount_interruption=$1
+  else
+    exit "$1"
+  fi
+}
+
 stop_mount_child() {
   [ -n "${mount_pid:-}" ] || return 0
   [ "${mount_stop_attempted:-false}" = false ] || return 1
+  mount_shutdown_active=true
   mount_stop_attempted=true
+  mount_stop_result=0
   kill -TERM "$mount_pid" 2>/dev/null || true
-  if mount_child_exited; then return 0; fi
-  printf '%s\n' 'OMXTerm installer: mount probe shutdown timed out; escalating to KILL' >&2
-  kill -KILL "$mount_pid" 2>/dev/null || true
-  mount_child_exited || return 1
-  # Escalation cleaned the owned child, but the timeout is still a failure.
-  return 1
+  if ! mount_child_exited; then
+    printf '%s\n' 'OMXTerm installer: mount probe shutdown timed out; escalating to KILL' >&2
+    kill -KILL "$mount_pid" 2>/dev/null || true
+    mount_child_exited || true
+    # Cleanup is not installation success: escalation preserves the timeout.
+    mount_stop_result=1
+  fi
+  mount_shutdown_active=false
+  if [ -n "${mount_interruption:-}" ]; then exit "$mount_interruption"; fi
+  return "$mount_stop_result"
 }
 
 probe_fuse_mode() {
@@ -212,9 +227,9 @@ install_appimage() {
   work=$(mktemp -d "${TMPDIR:-/tmp}/omxterm-installer.XXXXXX") ||
     fail "could not create a temporary directory"
   trap rollback EXIT
-  trap 'exit 129' HUP
-  trap 'exit 130' INT
-  trap 'exit 143' TERM
+  trap 'on_install_signal 129' HUP
+  trap 'on_install_signal 130' INT
+  trap 'on_install_signal 143' TERM
   candidate=$work/OMXTerm.AppImage
   install -m 755 "$source_app" "$candidate"
   extract_root=$work/extract

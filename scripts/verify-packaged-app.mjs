@@ -491,11 +491,17 @@ export async function provisionLinuxHelper(
   let stdout = "";
   let stderr = "";
   let stopAttempted = false;
+  let interruption;
+  let deadlineFailure;
   const signalHandlers = new Map();
   const interrupted = new Promise((_, reject) => {
     for (const signal of ["SIGTERM", "SIGINT", "SIGHUP"]) {
-      const handler = () =>
-        reject(new Error(`Linux helper provisioning interrupted by ${signal}`));
+      const handler = () => {
+        interruption ??= new Error(
+          `Linux helper provisioning interrupted by ${signal}`,
+        );
+        reject(interruption);
+      };
       signalHandlers.set(signal, handler);
       process.on(signal, handler);
     }
@@ -551,17 +557,20 @@ export async function provisionLinuxHelper(
       completed,
       interrupted,
       new Promise((_, reject) => {
-        timer = setTimeout(
-          () =>
-            reject(
-              new Error("Linux helper provisioning outer deadline exceeded"),
-            ),
-          timeoutMs,
-        );
+        timer = setTimeout(() => {
+          deadlineFailure = new Error(
+            "Linux helper provisioning outer deadline exceeded",
+          );
+          reject(deadlineFailure);
+        }, timeoutMs);
       }),
     ]);
     stopAttempted = true;
     await stopProcessGroup(child);
+    // Signals and the outer deadline remain failures even when the helper has
+    // exited and its one bounded cleanup is already in progress.
+    if (interruption) throw interruption;
+    if (deadlineFailure) throw deadlineFailure;
     return result;
   } catch (cause) {
     const failures = [cause];
@@ -571,6 +580,9 @@ export async function provisionLinuxHelper(
       } catch (cleanup) {
         failures.push(cleanup);
       }
+    }
+    for (const failure of [interruption, deadlineFailure]) {
+      if (failure && failure !== cause) failures.push(failure);
     }
     // Release Node handles on unconfirmed termination; retain the failure and
     // received diagnostics rather than making arbitrary kernel tasks killable.
