@@ -53,9 +53,12 @@ Review the inserted command, then press Enter. Snippets are saved text you can
 insert into the current tab.
 
 Edit `snippets.json` to add your own commands, then close and reopen the sidebar.
-If there is no starter greeting, create `snippets.json` with the
-[single-line snippet example](../configuration.md#snippets), reopen the sidebar,
-and try that snippet instead. Its `execute: false` leaves the final Enter to you.
+If `snippets.json` is missing, create it with the
+[single-line snippet example](../configuration.md#snippets). If it already exists,
+preserve its `snippets` array: add the example entry or choose an appropriate
+existing single-line snippet with `execute: false`. Review the body before
+clicking. Reopen the sidebar after edits; `execute: false` leaves the final Enter
+to you.
 
 ## 4. Make it yours
 
