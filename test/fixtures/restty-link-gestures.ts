@@ -205,7 +205,7 @@ export async function clickTerminalCell(
   });
 }
 
-async function scrollTerminal(
+export async function scrollTerminal(
   window: BrowserWindow,
   row: number,
   col: number,

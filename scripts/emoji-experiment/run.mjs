@@ -52,7 +52,7 @@ const runtime = await readFile(
 );
 if (
   hash(runtime) !==
-  "62456e988c176b7a6f2a1ee90498b6f2b6b767d063e63b4826830d4663b771af"
+  "742a6d14c6906d6d4304199889eff69617f6a5ea25aaee788c2a7d6ee4e31dfa"
 )
   throw new Error("Unreviewed Restty runtime");
 const html = await readFile("src/renderer/index.html", "utf8");

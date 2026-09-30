@@ -265,10 +265,12 @@ describe.skipIf(
         "quoted Unicode prefix and location",
       ]);
       expect(
-        result.localImageEvidence.every(({ activations }) => activations >= 2),
+        result.localImageEvidence
+          .slice(0, 5)
+          .every(({ activations }) => activations >= 2),
       ).toBe(true);
       expect(
-        result.localImageEvidence.slice(5).map(({ control }) => control),
+        result.localImageEvidence.slice(8).map(({ control }) => control),
       ).toEqual(
         process.env["OMXTERM_TEST_IMAGE_TMUX"] === "1"
           ? [
@@ -279,6 +281,11 @@ describe.skipIf(
             ]
           : [],
       );
+      expect(result.localImageEvidence.slice(5, 8)).toEqual([
+        { control: "space clipped above viewport", activations: 0 },
+        { control: "space clipped below viewport", activations: 0 },
+        { control: "trailing-space exclusion", activations: 1 },
+      ]);
       expect(result.ordinaryGestureMouseReports).toMatch(/\u001b\[</u);
       expect(result.wheelMouseReports).toMatch(/\u001b\[<65;/u);
       expect(result.alternateScreenMouseReports).toMatch(/\u001b\[<0;/u);

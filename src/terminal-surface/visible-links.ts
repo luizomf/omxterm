@@ -25,6 +25,17 @@ export function visibleLinkAtOffset(
   if (!Number.isInteger(offset) || offset < 0 || offset >= text.length)
     return undefined;
 
+  const isClipped = (start: number, end: number) =>
+    (clippedStart && start === 0) || (clippedEnd && end === text.length);
+
+  // A concealed continuation after literal spaces cannot become a first-token
+  // fallback merely because the complete visible prefix ends in whitespace.
+  if (
+    (clippedStart || clippedEnd) &&
+    isWholeLineAbsoluteImageReference(text.trimEnd())
+  )
+    return undefined;
+
   if (isWholeLineAbsoluteImageReference(text) && parseLocalImageReference(text))
     return clippedStart || clippedEnd
       ? undefined
@@ -32,11 +43,7 @@ export function visibleLinkAtOffset(
 
   const reference = referenceAtOffset(text, offset);
   if (reference) {
-    if (
-      (clippedStart && reference.start === 0) ||
-      (clippedEnd && reference.end === text.length)
-    )
-      return undefined;
+    if (isClipped(reference.start, reference.end)) return undefined;
     return reference;
   }
 
@@ -47,8 +54,7 @@ export function visibleLinkAtOffset(
     const start = searched + match.index;
     const end = start + match[0].length;
     if (offset >= start && offset < end) {
-      if ((clippedStart && start === 0) || (clippedEnd && end === text.length))
-        return undefined;
+      if (isClipped(start, end)) return undefined;
       return { url: match[0], start, end };
     }
     searched = Math.max(end, start + 1);

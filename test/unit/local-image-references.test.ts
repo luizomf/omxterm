@@ -76,6 +76,22 @@ it("retains token/quoted recognition in prose, beside references and across hard
   );
 });
 
+it("does not fall back to a prefix when a spaced line is clipped after literal spaces", () => {
+  expect(
+    visibleLinkAtOffset("/tmp/a photo.png     ", 2, false, true),
+  ).toBeUndefined();
+});
+
+it("keeps neighboring file URLs and bare home references separate", () => {
+  const fileLine = "/tmp/foo file:///tmp/a.png";
+  expect(visibleLinkAtOffset(fileLine, 2)?.url).toBe("/tmp/foo");
+  expect(visibleLinkAtOffset(fileLine, 12)?.url).toBe("file:///tmp/a.png");
+  const homeLine = "/tmp/foo ~ photo.png";
+  expect(visibleLinkAtOffset(homeLine, 2)?.url).toBe("/tmp/foo");
+  expect(visibleLinkAtOffset(homeLine, 9)?.url).toBe("~");
+  expect(visibleLinkAtOffset(homeLine, 12)?.url).toBe("photo.png");
+});
+
 it.each([
   "/tmp/image.png:1",
   "~/image.png",

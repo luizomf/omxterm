@@ -10,6 +10,7 @@ import {
   captureModifiedHoverEvidence,
   clickTerminalCell,
   terminalCellPoint,
+  scrollTerminal,
 } from "./restty-link-gestures";
 
 export function fixtureLocalImageLoader(
@@ -188,6 +189,83 @@ export async function exerciseResttyLocalImageLinks(options: {
       );
     }
   }
+  let size = options.resizes.at(-1)!;
+  deliverOutput(
+    `\u001b[3J\u001b[2J\u001b[H${boundaryPath}\r\n${Array.from({ length: size.rows - 1 }, (_, index) => `neighbor-${index}`).join("\r\n")}`,
+  );
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const beforeTopClip = options.localImageRequests.length;
+  await clickTerminalCell(window, 0, 2, size);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.equal(
+    options.localImageRequests.length,
+    beforeTopClip,
+    "row-end space above viewport must not activate the suffix",
+  );
+  results.push({ control: "space clipped above viewport", activations: 0 });
+
+  const beforeWide = options.resizes.length;
+  window.setSize(1600, 600);
+  await waitFor(
+    () => options.resizes.length > beforeWide,
+    "clipping control wide native refit",
+  );
+  size = options.resizes.at(-1)!;
+  assert.ok(shortPath.length < size.cols);
+  const bottomLine = `${shortPath}${" ".repeat(size.cols - shortPath.length)}continuation.png`;
+  deliverOutput(
+    `\u001b[3J\u001b[2J\u001b[H${Array.from({ length: size.rows - 1 }, (_, index) => `lead-${index}`).join("\r\n")}\r\n${bottomLine}\r\n${Array.from({ length: size.rows }, (_, index) => `trail-${index}`).join("\r\n")}`,
+  );
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  await scrollTerminal(window, 1, 1, size, -1000);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const beforeBottomClip = options.localImageRequests.length;
+  await clickTerminalCell(window, size.rows - 1, 2, size);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.equal(
+    options.localImageRequests.length,
+    beforeBottomClip,
+    "literal spaces at viewport bottom must not activate an incomplete whole line",
+  );
+  results.push({ control: "space clipped below viewport", activations: 0 });
+  const beforeRestore = options.resizes.length;
+  window.setSize(760, 600);
+  await waitFor(
+    () => options.resizes.length > beforeRestore,
+    "clipping control restore/refit",
+  );
+
+  // A printed trailing space is not blank cell padding: keep the old token
+  // grammar here rather than silently opening the existing full spaced file.
+  deliverOutput(`\u001b[3J\u001b[2J\u001b[H${shortPath} `);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const beforeTrailing = options.localImageRequests.length;
+  await clickTerminalCell(window, 0, 2, options.resizes.at(-1)!);
+  await waitFor(
+    () => options.localImageRequests.length === beforeTrailing + 1,
+    "trailing-space token activation",
+  );
+  const trailingRequest = options.localImageRequests.at(-1)!;
+  assert.ok(trailingRequest.source === "native-path");
+  assert.equal(
+    trailingRequest.path,
+    shortPath.split(" ")[0],
+    "trailing space must not expand to the full spaced filename",
+  );
+  await waitFor(
+    () =>
+      window.webContents.executeJavaScript(
+        "document.querySelector('.local-image-preview').open && !document.querySelector('.local-image-preview-error').hidden",
+        true,
+      ),
+    "missing token gets fixed failure rather than a different image",
+  );
+  await window.webContents.executeJavaScript(
+    "document.querySelector('.local-image-preview-close').click()",
+    true,
+  );
+  results.push({ control: "trailing-space exclusion", activations: 1 });
+
   if (process.env["OMXTERM_TEST_IMAGE_TMUX"] === "1") {
     for (const reference of [longPath, boundaryPath])
       await withTmuxImageOutput({

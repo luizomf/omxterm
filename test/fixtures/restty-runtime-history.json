@@ -1,5 +1,33 @@
 [
   {
+    "name": "priorVisiblePathBoundaryDigest",
+    "sha256": "62456e988c176b7a6f2a1ee90498b6f2b6b767d063e63b4826830d4663b771af",
+    "edits": [
+      {
+        "start": 49356,
+        "deleteCount": 1,
+        "lines": ["      (isSoftWrap(render.rows - 1, render.rows) === true ||"]
+      },
+      {
+        "start": 49352,
+        "deleteCount": 1,
+        "lines": [
+          "      firstRow === 0 && viewportOffset > 0 && isSoftWrap(-1, 0) === true;"
+        ]
+      },
+      {
+        "start": 49307,
+        "deleteCount": 2,
+        "lines": []
+      },
+      {
+        "start": 49293,
+        "deleteCount": 8,
+        "lines": []
+      }
+    ]
+  },
+  {
     "name": "priorSoftWrapSpaceDigest",
     "sha256": "3fb1a882bc75ee45e1f53370976d215bca7e1f7ba172696ee1985caa5e93d27b",
     "edits": [

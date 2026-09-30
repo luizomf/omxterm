@@ -66,7 +66,8 @@ and the line must end in `.png`, `.jpg` or `.jpeg` (case-insensitive), optionall
 with the existing positive location suffix. Only ASCII spaces are accepted in
 this new unquoted form, without trailing spaces. An earlier image-extension token
 followed by spaces or a space-separated new absolute, home, dot-relative, quoted
-or HTTP(S) reference prevents the whole-line match. Existing token/quoted
+or HTTP(S)/`file:///` reference prevents the whole-line match (including bare `~`
+followed by another token). Existing token/quoted
 recognition remains in those excluded contexts; broader prose/same-line spaced
 recognition and producer hard-line concatenation are not added. This is a
 conservative lexical cue, not a filesystem search or proof of image format.
@@ -78,7 +79,10 @@ activated reference stopped at that row and the real reader failed on its
 prefix. The checksum-guarded runtime now retains physical-row-end spaces only
 when core selection text proves that those exact cells continue without a hard
 break. The same reconstructed text drives offsets, hover cells and activation;
-no arbitrary line joining or new parser is introduced. Native controls cover
+no arbitrary line joining or new parser is introduced. Literal final-row spaces
+remain distinct from blank cell padding rather than disappearing before the
+whole-line exclusion. Uncertain continuity at a concealed viewport edge is
+refused, including a spaced image prefix ending before literal spaces. Native controls cover
 first/continuation/space activation, real small-image display, Unicode quoted
 prefixes, resize/reflow and actual tmux initial output/refresh-client redraw.
 

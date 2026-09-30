@@ -581,7 +581,7 @@ complete logical line, begins at its first character, and ends in `.png`, `.jpg`
 or `.jpeg` (case-insensitive), optionally with a positive location suffix.
 This conservative whole-line cue excludes tabs, trailing spaces, an earlier
 image-extension token followed by spaces, and a space-separated new absolute,
-home, dot-relative, quoted or HTTP(S) reference. It does not infer boundaries
+home (including bare `~`), dot-relative, quoted or HTTP(S)/`file:///` reference. It does not infer boundaries
 inside prose or between same-line references; existing token/quoted recognition
 remains there. Only core-proven fully visible soft wraps form a logical line,
 including literal spaces at a physical row end; producer hard breaks never join.

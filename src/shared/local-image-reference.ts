@@ -55,7 +55,7 @@ export function isWholeLineAbsoluteImageReference(value: string): boolean {
     !value.endsWith(" ") &&
     !/[^\S ]/u.test(value) &&
     /\.(?:png|jpe?g)(?::[1-9][0-9]*(?::[1-9][0-9]*)?)?$/iu.test(value) &&
-    !/ +(?:\/|[a-z]:[\\/]|~(?:\/|$)|\.{1,2}[\\/]|['"]|https?:\/\/)/iu.test(
+    !/ +(?:\/|[a-z]:[\\/]|~(?:[ /]|$)|\.{1,2}[\\/]|['"]|https?:\/\/|file:\/\/\/)/iu.test(
       value,
     ) &&
     !/\.(?:png|jpe?g|webp)(?::[1-9][0-9]*(?::[1-9][0-9]*)?)? +/iu.test(value)
