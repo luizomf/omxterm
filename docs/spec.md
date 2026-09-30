@@ -602,7 +602,7 @@ references need no base picker. Resolved paths must pass the same local absolute
 validation and source-length bound. No source opens an operating-system URL
 handler: after activation only, main reads the target through a non-shell
 regular-file boundary. The content must be a structurally valid, natively decodable static PNG or JPEG of at most
-16 MiB encoded, 8192 pixels per side, and 16 million pixels. APNG and every
+64 MiB encoded, 8192 pixels per side, and 32 million pixels (inclusive). APNG and every
 other animated or unsupported format are rejected regardless of extension. The
 same Terminal Window permits at most one picker or activated-source read at a time; owner
 closure makes late picker, read, and decode results inert. Both picker and URL
@@ -613,7 +613,10 @@ The renderer receives only bounded validated name, dimensions, media type, and
 bytes, creates a memory-only Blob URL under the production CSP, and synchronously
 removes the image source and revokes that URL on dismissal, replacement failure,
 page teardown, or owner close. It never receives an arbitrary filesystem API or
-path. The preview fits the complete image proportionally within the overlay's
+path. These input bounds are not a total process-memory budget: native validation,
+IPC, browser decode and GPU resources can add transient copies. Dismissal releases
+application ownership, not a promise of immediate RSS or native/GPU reclamation.
+The preview fits the complete image proportionally within the overlay's
 content area, including after window resizing, without clipping or stretching it.
 Failed reads and decode failures show only a fixed non-path error. Unsupported
 content has a separate fixed non-path format message; actual WebP remains

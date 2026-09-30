@@ -179,6 +179,29 @@ full-span hover pixels, first/space/continuation clicks, a literal space at a so
 boundary, resize/reflow, dismissal and focus. Its unrelated gesture-only references
 still return cancellation. No physical click/picker acceptance is claimed.
 
+For explicit high-resolution capacity and resource qualification:
+
+```sh
+OMXTERM_TEST_IMAGE_CAPACITY=1 npx vitest run test/integration/local-image-capacity-native.test.ts
+```
+
+In PowerShell, set `$env:OMXTERM_TEST_IMAGE_CAPACITY = '1'` for the run and remove
+it afterwards. The supervised fixture uses synthetic PNGs matching the reported
+7680 × 3215 / 2,804,358-byte and 7036 × 3960 / 64,398,930-byte cases, a real JPEG,
+and valid byte/pixel-ceiling controls. No source file is changed. It uses the
+production preload, native loader and overlay, captures displayed synthetic
+pixels, checks rejection and late renderer-decode disposal, then records 12
+alternating open/close cycles without forced GC. Evidence is written to
+`.scratch/local-image-capacity.json`; inspect the observations, not just test exit.
+Latency includes the load/IPC/decode/presentation path. Memory entries are
+Electron per-process working sets and lifetime peak working sets in KiB; the
+sampled aggregate may double-count shared pages and is not unique RSS or GPU
+allocation accounting. Native decoder work can block the main sampler, so
+lifetime high-water marks complement its 50 ms samples. The main timer's longest
+gap reports responsiveness rather than enforcing an invented budget. Settled
+cycles and the additional five-second idle observation distinguish warm caches
+from continued accumulation; they do not promise immediate reclamation.
+
 For a real multiplexer comparison on a POSIX desktop with `tmux` installed:
 
 ```sh

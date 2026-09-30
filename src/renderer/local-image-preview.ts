@@ -5,7 +5,7 @@ import type {
 } from "../shared/local-image";
 
 const PREVIEW_ERROR =
-  "Could not preview this image. Choose a static PNG/JPEG up to 16 MiB, 8192 per side and 16 million pixels.";
+  "Could not preview this image. The file may be unavailable, invalid or over the static PNG/JPEG limits (64 MiB, 8192 per side, 32 million pixels).";
 
 export interface LocalImagePreview {
   isActive(): boolean;

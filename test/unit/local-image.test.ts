@@ -61,9 +61,9 @@ describe("bounded local image loader", () => {
     await expect(
       readLocalImage(
         "/fixture/large.png",
-        fileOptions(PNG_1X1, 16 * 1024 * 1024 + 1),
+        fileOptions(PNG_1X1, 64 * 1024 * 1024 + 1),
       ),
-    ).rejects.toThrow(/16 MiB/u);
+    ).rejects.toThrow(/64 MiB/u);
     await expect(
       readLocalImage(
         "/fixture/changing.png",
@@ -96,8 +96,10 @@ describe.each(["png", "jpeg"] as const)(
       [8193, 1, false],
       [1, 8192, true],
       [1, 8193, false],
-      [4000, 4000, true],
-      [4001, 4000, false],
+      [7680, 3215, true],
+      [7036, 3960, true],
+      [8000, 4000, true],
+      [8001, 4000, false],
     ] as const)(
       "checks %i×%i before native allocation (accepted=%s)",
       async (width, height, accepted) => {

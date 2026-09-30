@@ -1,9 +1,9 @@
 export const UNSUPPORTED_LOCAL_IMAGE_FORMAT =
   "Unsupported image format. Choose a static PNG or JPEG; WebP is not supported.";
 
-export const MAX_LOCAL_IMAGE_BYTES = 16 * 1024 * 1024;
+export const MAX_LOCAL_IMAGE_BYTES = 64 * 1024 * 1024;
 export const MAX_LOCAL_IMAGE_SIDE = 8192;
-export const MAX_LOCAL_IMAGE_PIXELS = 16_000_000;
+export const MAX_LOCAL_IMAGE_PIXELS = 32_000_000;
 export const MAX_LOCAL_IMAGE_SOURCE_LENGTH = 32_768;
 
 export type LocalImageMime = "image/png" | "image/jpeg";

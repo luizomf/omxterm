@@ -31,7 +31,14 @@ request opens a non-shell file descriptor, requires a
 bounded regular file, reads one descriptor coherently, rejects an observed size
 change while reading, and accepts only structurally valid, natively decodable
 static PNG or JPEG content. The
-limits are 16 MiB encoded, 8192 pixels per side, and 16 million pixels. PNG
+limits are 64 MiB encoded, 8192 pixels per side, and 32 million pixels, inclusive.
+Issue #494 deliberately expands capacity to cover ordinary high-resolution images
+without changing the loader/bridge/overlay architecture or resizing source files.
+Native validation and renderer decoding remain separate and can add transient
+encoded/decoded copies, IPC and GPU costs; these bounds are not a total RSS budget.
+Native display, latency, peak process-memory and settled repeated-cycle observations
+qualify the policy on Supported Platforms. A reproducible reliability failure calls
+for a concrete blocker and smallest remedy, not silently reduced capacity. PNG
 animation metadata is rejected; filename extension is never evidence of format.
 Closing the owner aborts picker continuation and makes later read results inert.
 No path or payload enters Operational Events.
@@ -45,7 +52,8 @@ or arbitrary filesystem capability. The renderer creates one memory-only Blob
 URL under a CSP that permits `blob:` only for images while preserving
 `connect-src 'none'`. Escape, the close button, backdrop dismissal, decode
 failure, page teardown, and owner close synchronously remove the image source
-and revoke the Blob URL. Focus returns to the live selected Terminal Tab after
+and revoke the Blob URL. This drops application ownership; browser/allocator caches
+and native/GPU reclamation need not produce an immediate RSS drop. Focus returns to the live selected Terminal Tab after
 dismissal or picker cancellation. Late picker/read/decode results cannot reopen
 a disposed overlay. The preview exposes only its active interaction state to
 the Terminal Window host. While choosing, loading, or viewing, that host

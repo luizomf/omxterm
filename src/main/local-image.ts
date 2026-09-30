@@ -155,7 +155,7 @@ export async function readLocalImage(
     );
     const stat = await file.stat();
     if (!stat.isFile() || stat.size <= 0 || stat.size > MAX_LOCAL_IMAGE_BYTES)
-      throw new Error("Choose a regular PNG or JPEG image up to 16 MiB.");
+      throw new Error("Choose a regular PNG or JPEG image up to 64 MiB.");
 
     const allocation = new Uint8Array(stat.size + 1);
     let count = 0;
@@ -180,7 +180,7 @@ export async function readLocalImage(
       dimensions.width * dimensions.height > MAX_LOCAL_IMAGE_PIXELS
     )
       throw new Error(
-        "Image exceeds the preview limit: 8192 per side or 16 million pixels.",
+        "Image exceeds the preview limit: 8192 per side or 32 million pixels.",
       );
     if (!options.validateDecodedImage(data, dimensions))
       throw new Error(
