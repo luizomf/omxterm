@@ -1,11 +1,13 @@
 import { execFile as execFileCallback } from "node:child_process";
 import {
+  lstat,
   mkdir,
   mkdtemp,
   readFile,
   readdir,
   rm,
   stat,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -377,6 +379,100 @@ describe.skipIf(process.platform === "win32")(
       await expect(stat(path.dirname(paths.app))).resolves.toBeDefined();
       await expect(stat(path.dirname(paths.desktop))).resolves.toBeDefined();
     });
+
+    it.each(
+      (["app", "icon", "desktop"] as const).flatMap((name) =>
+        (["directory", "fifo"] as const).map((type) => [name, type] as const),
+      ),
+    )(
+      "refuses a conflicting %s %s without replacing any installed entry",
+      async (name, type) => {
+        const { root, home, bin } = await fixtureRoot();
+        const first = await fakeAppImage(root, "one");
+        const second = await fakeAppImage(root, "two");
+        await runHelper(home, bin, ["install", first]);
+        const paths = owned(home);
+        await rm(paths[name]);
+        const sentinel = path.join(paths[name], "unrelated.txt");
+        if (type === "directory") {
+          await mkdir(paths[name]);
+          await writeFile(sentinel, "keep\n");
+        } else {
+          await execFile("mkfifo", [paths[name]]);
+        }
+        const before = await Promise.all(
+          Object.values(paths).map((file) => lstat(file)),
+        );
+        const previousFiles = await Promise.all(
+          Object.entries(paths)
+            .filter(([key]) => key !== name)
+            .map(async ([, file]) => [file, await readFile(file)] as const),
+        );
+
+        await expect(
+          runHelper(home, bin, ["install", second]),
+        ).rejects.toMatchObject({
+          code: 1,
+          stderr: expect.stringContaining("expected a regular file or symlink"),
+        });
+
+        if (type === "directory")
+          expect(await readFile(sentinel, "utf8")).toBe("keep\n");
+        const after = await Promise.all(
+          Object.values(paths).map((file) => lstat(file)),
+        );
+        expect(
+          after.map(({ ino, mode, mtimeMs }) => ({ ino, mode, mtimeMs })),
+        ).toEqual(
+          before.map(({ ino, mode, mtimeMs }) => ({ ino, mode, mtimeMs })),
+        );
+        for (const [file, contents] of previousFiles)
+          expect(await readFile(file)).toEqual(contents);
+      },
+    );
+
+    it.each(["file", "directory", "dangling"] as const)(
+      "replaces and uninstalls symlink entries without touching their %s referent",
+      async (type) => {
+        const { root, home, bin } = await fixtureRoot();
+        const appImage = await fakeAppImage(root, "one");
+        const referent = path.join(root, "unrelated");
+        const sentinel =
+          type === "directory"
+            ? path.join(referent, "unrelated.txt")
+            : referent;
+        if (type === "directory") await mkdir(referent);
+        if (type !== "dangling") await writeFile(sentinel, "keep\n");
+        const paths = owned(home);
+        for (const file of Object.values(paths)) {
+          await mkdir(path.dirname(file), { recursive: true });
+          await symlink(referent, file);
+        }
+
+        await runHelper(home, bin, ["install", appImage]);
+
+        expect(await readFile(paths.app)).toEqual(await readFile(appImage));
+        expect(await readFile(paths.icon, "utf8")).toBe("icon-one\n");
+        expect(await readFile(paths.desktop, "utf8")).toContain(
+          "Name=OMXTerm\n",
+        );
+        for (const file of Object.values(paths)) {
+          expect((await lstat(file)).isFile()).toBe(true);
+          await rm(file);
+          await symlink(referent, file);
+        }
+        await runHelper(home, bin, ["uninstall"]);
+        for (const file of Object.values(paths))
+          await expect(lstat(file)).rejects.toMatchObject({ code: "ENOENT" });
+        if (type === "dangling") {
+          await expect(lstat(referent)).rejects.toMatchObject({
+            code: "ENOENT",
+          });
+        } else {
+          expect(await readFile(sentinel, "utf8")).toBe("keep\n");
+        }
+      },
+    );
 
     it("rejects invalid input before creating installation directories", async () => {
       const { root, home, bin } = await fixtureRoot();

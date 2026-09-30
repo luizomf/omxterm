@@ -87,3 +87,11 @@ Uninstall removes these three files and keeps your settings:
 - `~/.local/opt/omxterm/OMXTerm.AppImage`
 - `~/.local/share/icons/hicolor/1024x1024/apps/omxterm.png`
 - `~/.local/share/applications/omxterm.desktop`
+
+Install checks all three filenames before replacing anything. If one is a
+directory or another unsupported entry (such as a FIFO), it stops and leaves
+the previous installation and unrelated contents unchanged. Move the conflicting
+entry somewhere safe before retrying; do not delete it just to install OMXTerm.
+Existing regular files and symlinks are replaced. Symlink targets are never
+changed, including when the link is dangling or points to a directory; uninstall
+also removes only the link itself.

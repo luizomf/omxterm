@@ -955,7 +955,12 @@ update. It owns exactly
 `~/.local/share/icons/hicolor/1024x1024/apps/omxterm.png`, and
 `~/.local/share/applications/omxterm.desktop`. Install and update replace all
 three files transactionally; invalid input or failure preserves the complete
-previous installation. Uninstall removes only those files and preserves
+previous installation. Before replacing any file, install checks all three
+owned filenames and refuses existing directories or other non-regular,
+non-symlink entries. Existing regular files and symlinks (including dangling
+links or links to directories) are replaced as entries, without modifying
+symlink referents. Uninstall likewise removes symlink entries, not their
+referents. Uninstall removes only those files and preserves
 unrelated files and parent directories. At installation time the helper tests
 actual kernel FUSE mounting and writes one fixed desktop entry that either runs
 the AppImage directly or adds `--appimage-extract-and-run`; launch time performs

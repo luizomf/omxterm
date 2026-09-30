@@ -152,6 +152,13 @@ install_appimage() {
   esac
 
   owned_paths
+  # Replace symlink entries themselves, never their referents (even directories).
+  # Check the entire ownership set before staging or replacing installed files.
+  for target in "$app" "$icon" "$desktop"; do
+    if [ ! -L "$target" ] && [ -e "$target" ] && [ ! -f "$target" ]; then
+      fail "cannot replace $target: expected a regular file or symlink"
+    fi
+  done
   work=$(mktemp -d "${TMPDIR:-/tmp}/omxterm-installer.XXXXXX") ||
     fail "could not create a temporary directory"
   trap rollback EXIT HUP INT TERM
