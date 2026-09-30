@@ -85,22 +85,9 @@ async function run() {
   const evaluate = (expression: string) =>
     window.webContents.executeJavaScript(expression, true);
   const baseline = observe();
-  const displayed = [];
-  for (const filename of [
-    "sample-a.png",
-    "sample-b.png",
-    "pixel-ceiling.png",
-    "byte-ceiling.png",
-    "sample-a.jpg",
-  ]) {
-    const start = performance.now();
-    const state: unknown = await evaluate(
-      `__capacity.open(${JSON.stringify(path.join(process.cwd(), filename))})`,
-    );
-    const previewReadyMs = performance.now() - start;
+  const observePresentation = async () => {
     // Decode + two frames need not complete GPU image presentation on Windows.
-    // Wait boundedly for actual synthetic green pixels, without weakening the
-    // display assertion. Latency ends at observed presentation, not just decode.
+    // Every open, including repeated cycles, must reach actual captured pixels.
     let greenPixels = 0;
     const deadline = performance.now() + 2000;
     do {
@@ -116,6 +103,22 @@ async function run() {
       if (greenPixels > 1000 || performance.now() >= deadline) break;
       await wait(50);
     } while (true);
+    return greenPixels;
+  };
+  const displayed = [];
+  for (const filename of [
+    "sample-a.png",
+    "sample-b.png",
+    "pixel-ceiling.png",
+    "byte-ceiling.png",
+    "sample-a.jpg",
+  ]) {
+    const start = performance.now();
+    const state: unknown = await evaluate(
+      `__capacity.open(${JSON.stringify(path.join(process.cwd(), filename))})`,
+    );
+    const previewReadyMs = performance.now() - start;
+    const greenPixels = await observePresentation();
     displayed.push({
       filename,
       state,
@@ -135,13 +138,16 @@ async function run() {
     const opened: unknown = await evaluate(
       `__capacity.open(${JSON.stringify(path.join(process.cwd(), filename))})`,
     );
+    const greenPixels = await observePresentation();
+    const latencyMs = performance.now() - start;
     observe();
     const dismissed: unknown = await evaluate("__capacity.dismiss()");
     await wait(1000);
     cycles.push({
       cycle,
       filename,
-      latencyMs: performance.now() - start - 1000,
+      latencyMs,
+      greenPixels,
       opened,
       dismissed,
       settled: observe(),

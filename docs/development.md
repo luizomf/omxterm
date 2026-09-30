@@ -191,7 +191,9 @@ it afterwards. The supervised fixture uses synthetic PNGs matching the reported
 and valid byte/pixel-ceiling controls. No source file is changed. It uses the
 production preload, native loader and overlay, captures displayed synthetic
 pixels, checks rejection and late renderer-decode disposal, then records 12
-alternating open/close cycles without forced GC. Evidence is written to
+alternating open/close cycles without forced GC. Every cycle observes captured
+image pixels before dismissal, then records synchronous source/Blob cleanup and
+settled process memory. Evidence is written to
 `.scratch/local-image-capacity.json`; inspect the observations, not just test exit.
 Latency ends at observed captured image pixels, including load/IPC/decode and
 bounded presentation settling; `previewReadyMs` separately records overlay readiness.

@@ -122,6 +122,7 @@ describe.skipIf(process.env.OMXTERM_TEST_IMAGE_CAPACITY !== "1")(
         }>;
         snapshots: Array<{ dismissed: Record<string, unknown> }>;
         cycles: Array<{
+          greenPixels: number;
           opened: Record<string, unknown>;
           dismissed: Record<string, unknown>;
         }>;
@@ -158,12 +159,14 @@ describe.skipIf(process.env.OMXTERM_TEST_IMAGE_CAPACITY !== "1")(
           terminalFocused: true,
         });
       expect(result.cycles).toHaveLength(12);
-      for (const cycle of result.cycles)
+      for (const cycle of result.cycles) {
+        expect(cycle.greenPixels).toBeGreaterThan(1000);
         expect(cycle.opened).toMatchObject({
           open: true,
           visible: true,
           activeUrls: 1,
         });
+      }
       for (const control of result.errors)
         expect(control.state).toMatchObject({
           open: true,
