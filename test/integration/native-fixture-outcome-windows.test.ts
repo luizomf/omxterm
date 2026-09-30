@@ -54,10 +54,12 @@ describe.skipIf(
       vi.mocked(childProcess.spawn).mockImplementation(
         (file, args, options) => {
           const child = realChildProcess.spawn(file, args, options);
-          const leader = fixtureProcesses().find(
-            (row) => row.pid === child.pid,
-          );
-          if (leader) known.set(leader.pid, leader);
+          if (file === process.execPath && options?.cwd === root) {
+            const leader = fixtureProcesses().find(
+              (row) => row.pid === child.pid,
+            );
+            if (leader) known.set(leader.pid, leader);
+          }
           return child;
         },
       );
