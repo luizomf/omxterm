@@ -409,12 +409,11 @@ describe.skipIf(process.platform === "win32")(
             .map(async ([, file]) => [file, await readFile(file)] as const),
         );
 
-        await expect(
-          runHelper(home, bin, ["install", second]),
-        ).rejects.toMatchObject({
-          code: 1,
-          stderr: expect.stringContaining("expected a regular file or symlink"),
-        });
+        const result = runHelper(home, bin, ["install", second]);
+        await expect(result).rejects.toMatchObject({ code: 1 });
+        await expect(result).rejects.toThrow(
+          "expected a regular file or symlink",
+        );
 
         if (type === "directory")
           expect(await readFile(sentinel, "utf8")).toBe("keep\n");
