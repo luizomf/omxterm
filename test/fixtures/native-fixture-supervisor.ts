@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { lstat, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { collectFixtureRegistrations } from "./native-fixture-ownership";
@@ -187,6 +187,15 @@ async function supervise(request: Request): Promise<void> {
       owned,
       rows,
     );
+    // An empty inventory cannot settle an interrupted Windows bootstrap. The
+    // launcher must have supplied creation identity or an actual native event.
+    if (
+      request.externalChild &&
+      existsSync(path.join(request.root, "native-bootstrap-pending")) &&
+      leaderPid === undefined &&
+      !readRecord<ExternalExit>(request.root, "native-exit.json")
+    )
+      pendingRegistrations += 1;
   };
   const sample = () => {
     const rows = fixtureProcesses();

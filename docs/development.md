@@ -262,6 +262,13 @@ an in-flight inventory may finish beyond that deadline within its own timeout.
 Stream draining and Windows profile retries have separate bounds, so five
 seconds is not a total cleanup limit.
 
+The Windows launcher also publishes pending bootstrap ownership before calling
+native spawn. Its existing creation-identity or native failed/completed-launch
+record settles that pending evidence; an empty inventory or arbitrary synchronous
+spawn exception does not. Interruption before settlement retains cleanup
+uncertainty and the profile even if Windows Job behavior already ended the child.
+This does not claim a surviving orphan or add process containment.
+
 Windows uses WMI with `CREATE_BREAKAWAY_FROM_JOB` for the supervisor: an ordinary
 detached child would remain in the test worker's Job. WMI must be available; the
 supervisor runs as the caller without elevation or a policy change. Electron
@@ -309,3 +316,17 @@ Remove-Item Env:OMXTERM_TEST_NATIVE_INTERRUPTION
 They delay delivery of a real missing-file read until the WMI supervisor has
 published its outcome and exited, checking success, failure and rejected evidence.
 This controlled interleaving does not measure spontaneous failure frequency.
+
+Bootstrap ownership regressions use the same Windows disposable-VM opt-in:
+
+```powershell
+$env:OMXTERM_TEST_NATIVE_INTERRUPTION = '1'
+npm test -- test/integration/native-fixture-bootstrap-windows.test.ts
+Remove-Item Env:OMXTERM_TEST_NATIVE_INTERRUPTION
+```
+
+They interrupt the real launcher after native spawn but before registration,
+checking retained uncertainty, the original worker failure and an unrelated
+sentinel. Ordinary, immediate-exit and missing-executable controls preserve native
+outcomes and successful profile cleanup. An independent exact-identity journal
+outside the profile supports test cleanup even when assertions intentionally fail.

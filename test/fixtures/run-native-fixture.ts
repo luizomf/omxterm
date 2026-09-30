@@ -162,6 +162,15 @@ function startWindowsFixture(request: {
   const stdout = openSync(path.join(request.root, "native-stdout"), "wx");
   const stderr = openSync(path.join(request.root, "native-stderr"), "wx");
   try {
+    // Write ahead of the interruptible native call. Only creation identity or
+    // the child's actual failed/completed launch event settles this evidence.
+    writeFileSync(
+      path.join(request.root, "native-bootstrap-pending"),
+      "pending\n",
+      {
+        flag: "wx",
+      },
+    );
     const child = spawn(request.executable, request.args, {
       cwd: request.root,
       env: nativeFixtureEnvironment(request.root),

@@ -1,5 +1,5 @@
 import * as childProcess from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -57,6 +57,23 @@ function disappear(publish?: string) {
     throw Object.assign(new Error("Supervisor exited"), { code: "ESRCH" });
   });
 }
+
+describe("Windows fixture bootstrap ownership", () => {
+  it("publishes pending ownership before an interruptible spawn, retaining an unproven synchronous failure", async () => {
+    writeFileSync(path.join(root, "supervisor-ready"), "ready\n");
+    vi.spyOn(process, "kill").mockReturnValue(true);
+    vi.mocked(childProcess.spawn).mockImplementation(() => {
+      expect(existsSync(path.join(root, "native-bootstrap-pending"))).toBe(
+        true,
+      );
+      throw new Error("interrupted native spawn");
+    });
+    await expect(run()).rejects.toThrow("interrupted native spawn");
+    expect(existsSync(path.join(root, "native-bootstrap-pending"))).toBe(true);
+    expect(existsSync(path.join(root, "native-process.json"))).toBe(false);
+    expect(existsSync(path.join(root, "native-exit.json"))).toBe(false);
+  });
+});
 
 describe("Windows fixture outcome observation", () => {
   it("returns completed failure and cleanup metadata published after the initial missing read", async () => {
