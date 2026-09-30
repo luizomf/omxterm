@@ -30,7 +30,7 @@ export interface ResttyLinkGestureEvidence {
   readonly cancelledGestureMouseReports: string;
 }
 
-async function terminalCellPoint(
+export async function terminalCellPoint(
   window: BrowserWindow,
   row: number,
   col: number,
@@ -82,11 +82,12 @@ function changedPixels(first: Buffer, second: Buffer): number {
   return changed;
 }
 
-async function captureModifiedHoverEvidence(
+export async function captureModifiedHoverEvidence(
   window: BrowserWindow,
   point: { readonly x: number; readonly y: number },
   size: TerminalSize,
   destinationColumns: number,
+  prefixColumns = 4,
 ): Promise<{
   readonly modifiedHoverChangedPixels: number;
   readonly releasedHoverChangedPixels: number;
@@ -114,7 +115,7 @@ async function captureModifiedHoverEvidence(
   // Every destination cell, including the wide continuation and soft-wrapped
   // rows, must gain pixels; prefix and unrelated cells must not change.
   const checkedCells =
-    Math.ceil((4 + destinationColumns) / size.cols) * size.cols;
+    Math.ceil((prefixColumns + destinationColumns) / size.cols) * size.cols;
   for (let index = 0; index < checkedCells; index += 1) {
     const row = Math.floor(index / size.cols);
     const col = index % size.cols;
@@ -138,7 +139,10 @@ async function captureModifiedHoverEvidence(
           count += 1;
       }
     }
-    if ((index >= 4 && index < 4 + destinationColumns) !== count > 0)
+    if (
+      (index >= prefixColumns && index < prefixColumns + destinationColumns) !==
+      count > 0
+    )
       throw new Error(`Hover cell geometry mismatch at ${row}:${col}`);
   }
   return {
@@ -174,7 +178,7 @@ async function exerciseHoverRecognition(
   }
 }
 
-async function clickTerminalCell(
+export async function clickTerminalCell(
   window: BrowserWindow,
   row: number,
   col: number,

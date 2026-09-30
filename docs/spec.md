@@ -575,8 +575,17 @@ local path. Exact native paths remain a distinct typed source; visible reference
 requiring interpretation use a separate bounded source validated independently
 in main. `%` and `#` remain literal filename characters. References begin at a
 line boundary or after whitespace, as a complete non-whitespace token or a path
-inside one pair of matching single/double quotes (allowing spaces). Quotes do
-not evaluate shell syntax or escapes. Brackets, assignments and trailing
+inside one pair of matching single/double quotes (allowing spaces). An unquoted
+absolute path containing ASCII spaces is also recognized when it occupies the
+complete logical line, begins at its first character, and ends in `.png`, `.jpg`
+or `.jpeg` (case-insensitive), optionally with a positive location suffix.
+This conservative whole-line cue excludes tabs, trailing spaces, an earlier
+image-extension token followed by spaces, and a space-separated new absolute,
+home, dot-relative, quoted or HTTP(S) reference. It does not infer boundaries
+inside prose or between same-line references; existing token/quoted recognition
+remains there. Only core-proven fully visible soft wraps form a logical line,
+including literal spaces at a physical row end; producer hard breaks never join.
+Quotes do not evaluate shell syntax or escapes. Brackets, assignments and trailing
 punctuation are not trimmed. Ambiguous forms may use the native picker instead.
 
 A positive `:line` or `:line:column` outside closing quotes is decoration; a suffix

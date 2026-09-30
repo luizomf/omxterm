@@ -1,5 +1,26 @@
 [
   {
+    "name": "priorSoftWrapSpaceDigest",
+    "sha256": "3fb1a882bc75ee45e1f53370976d215bca7e1f7ba172696ee1985caa5e93d27b",
+    "edits": [
+      {
+        "start": 49319,
+        "deleteCount": 1,
+        "lines": ["      if (pair === first + second)"]
+      },
+      {
+        "start": 49307,
+        "deleteCount": 1,
+        "lines": ["        ? rowText[row]"]
+      },
+      {
+        "start": 49298,
+        "deleteCount": 7,
+        "lines": []
+      }
+    ]
+  },
+  {
     "name": "priorCursorDigest",
     "sha256": "940a722fb921e49fa308034002220b4105e5a64a0489e64c6ce2923bcad88f08",
     "edits": [
@@ -50,7 +71,11 @@
           "      ] : bg;"
         ]
       },
-      { "start": 52537, "deleteCount": 2, "lines": ["        fg = bg;"] },
+      {
+        "start": 52537,
+        "deleteCount": 2,
+        "lines": ["        fg = bg;"]
+      },
       {
         "start": 52045,
         "deleteCount": 2,
@@ -63,7 +88,11 @@
           "      ] : bg;"
         ]
       },
-      { "start": 52009, "deleteCount": 2, "lines": ["        fg = bg;"] },
+      {
+        "start": 52009,
+        "deleteCount": 2,
+        "lines": ["        fg = bg;"]
+      },
       {
         "start": 50787,
         "deleteCount": 1,
@@ -84,10 +113,26 @@
     "name": "priorNativeDeadKeySpaceDigest",
     "sha256": "e29dbd7dd4bf559d186cda45629ab9727a43b37dee917eb0137d61e238c1d638",
     "edits": [
-      { "start": 54640, "deleteCount": 10, "lines": [] },
-      { "start": 54611, "deleteCount": 4, "lines": [] },
-      { "start": 54564, "deleteCount": 16, "lines": [] },
-      { "start": 54476, "deleteCount": 7, "lines": [] }
+      {
+        "start": 54640,
+        "deleteCount": 10,
+        "lines": []
+      },
+      {
+        "start": 54611,
+        "deleteCount": 4,
+        "lines": []
+      },
+      {
+        "start": 54564,
+        "deleteCount": 16,
+        "lines": []
+      },
+      {
+        "start": 54476,
+        "deleteCount": 7,
+        "lines": []
+      }
     ]
   },
   {

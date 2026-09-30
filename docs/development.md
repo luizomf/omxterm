@@ -173,9 +173,22 @@ Actual Chromium-generated RIFF/WEBP bytes must receive the unsupported-format
 error, separately from PNG bytes named `.webp`. Restty host coverage exercises
 quoted/spaced, home and relative references through real visible cells and
 modified native Electron mouse events, including soft wraps and mouse-report
-precedence; that host's image-loading port returns cancellation rather than
-opening a real file. Neither fixture alone is an end-to-end physical click/picker
-acceptance test.
+precedence. The host also activates small synthetic whole-line unquoted PNG/JPEG
+paths through the real main reader/native decoder and production preview, checking
+full-span hover pixels, first/space/continuation clicks, a literal space at a soft-wrap
+boundary, resize/reflow, dismissal and focus. Its unrelated gesture-only references
+still return cancellation. No physical click/picker acceptance is claimed.
+
+For a real multiplexer comparison on a POSIX desktop with `tmux` installed:
+
+```sh
+OMXTERM_TEST_IMAGE_TMUX=1 npx vitest run test/integration/restty-host-integration.test.ts
+```
+
+This opt-in owns a foreground tmux server and pane PTY under the fixture supervisor.
+It feeds actual pane output and `refresh-client` redraw into the same Surface and
+repeats full-destination hover/loading checks for long and wrap-boundary spaced
+paths. It does not generalize arbitrary producer hard breaks into soft wraps.
 
 When investigating an intermittent failure, record the failure and rerun
 conditions. A later isolated pass alone does not show that it was fixed.

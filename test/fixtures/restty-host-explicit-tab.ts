@@ -2,9 +2,11 @@ import type { BrowserWindow } from "electron";
 import type { LocalImageRequest } from "../../src/shared/local-image";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { exerciseResttyLinks } from "./restty-link-gestures";
+import { exerciseResttyLocalImageLinks } from "./restty-local-image-links";
 
 export async function exerciseExplicitResttyTab(options: {
   readonly window: BrowserWindow;
+  readonly root: string;
   readonly launchKinds: readonly string[];
   readonly resizes: Array<Array<{ cols: number; rows: number }>>;
   readonly outputs: string[][];
@@ -89,6 +91,14 @@ export async function exerciseExplicitResttyTab(options: {
     localImageRequests: options.localImageRequests,
     waitFor,
   });
+  const localImageEvidence = await exerciseResttyLocalImageLinks({
+    window,
+    root: options.root,
+    deliverOutput: options.deliverOutputs[1]!,
+    resizes: options.resizes[1]!,
+    localImageRequests: options.localImageRequests,
+    waitFor,
+  });
   // Exercise the renderer focus handler without activating a native window.
   await window.webContents.executeJavaScript(
     "window.dispatchEvent(new Event('blur')); document.querySelector('#tab-strip button:last-child').focus();",
@@ -124,5 +134,5 @@ export async function exerciseExplicitResttyTab(options: {
   );
   options.deliverOutputs[1]!("\u001b]0;late-private-title\u0007\u0007");
   await new Promise((resolve) => setTimeout(resolve, 100));
-  return { reloadState, linkEvidence };
+  return { reloadState, linkEvidence: { ...linkEvidence, localImageEvidence } };
 }

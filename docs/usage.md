@@ -149,8 +149,17 @@ Close the preview before pasting, zooming, or changing the title or tab bars.
 
 You can also **Cmd+click** (macOS) or **Ctrl+click** (Linux/Windows) a visible full
 path or `file:///` URL. The complete reference must be visible, including wrapped
-lines. Surround a path containing spaces with matching single or double quotes.
-For example: `'/Users/demo/Pictures/a photo.png'` or `'C:\Pictures\a photo.jpg'`.
+lines. An absolute path containing spaces can be clicked **without quotes when
+printed alone on its logical line**, for example `/Users/demo/Pictures/a photo.png`
+or `C:\Pictures\a photo.jpg`. It must start at the line's first character and end
+in `.png`, `.jpg` or `.jpeg` (optionally followed by a tool location). Automatic
+soft wrapping is supported; inserted newlines are not joined. This conservative
+cue does not combine surrounding prose or multiple same-line references. Tabs,
+trailing spaces, or an earlier image-name token/new reference separated by spaces
+also require quotes or the picker.
+
+In other output, surround the complete spaced path with matching single or double
+quotes, for example `'/Users/demo/Pictures/a photo.png'` or `'C:\Pictures\a photo.jpg'`.
 Quotes are literal wrappers, not shell syntax: no variables, escapes or commands
 are evaluated. Brackets, assignment prefixes and trailing punctuation are not
 trimmed; use the native file picker for forms the recognizer cannot express.

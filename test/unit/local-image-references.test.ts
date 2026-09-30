@@ -17,6 +17,65 @@ const image: LocalImageData = {
 const request = (path: string) =>
   ({ source: "path-reference", path }) as LocalImageRequest;
 
+it("activates one full unquoted absolute spaced image reference from every cell", () => {
+  const reference = "/tmp/preview/with space.png";
+  for (let offset = 0; offset < reference.length; offset++)
+    expect(visibleLinkAtOffset(reference, offset)).toEqual({
+      url: reference,
+      start: 0,
+      end: reference.length,
+    });
+  const local = vi.fn();
+  const external = vi.fn();
+  requestVisibleLink(reference, {
+    onLocalImageActivation: local,
+    onExternalLink: external,
+  } as Parameters<typeof requestVisibleLink>[1]);
+  expect(local).toHaveBeenCalledExactlyOnceWith({
+    source: "native-path",
+    path: reference,
+  });
+  expect(external).not.toHaveBeenCalled();
+});
+
+it.each([
+  "/tmp/Google Drive/a photo.png",
+  "C:\\Pictures\\a photo.JPG",
+  "/tmp/with space.jpeg:12:3",
+])("keeps the whole-line span and refuses clipped %s", (reference) => {
+  for (let offset = 0; offset < reference.length; offset++)
+    expect(visibleLinkAtOffset(reference, offset)).toEqual({
+      url: reference,
+      start: 0,
+      end: reference.length,
+    });
+  expect(visibleLinkAtOffset(reference, 2, true)).toBeUndefined();
+  expect(visibleLinkAtOffset(reference, 2, false, true)).toBeUndefined();
+});
+
+it("retains token/quoted recognition in prose, beside references and across hard breaks", () => {
+  for (const text of [
+    "read /tmp/with space.png next",
+    "/tmp/with space.png /tmp/other.png",
+    "/tmp/with space.png ~/other.png",
+    "/tmp/with space.png relative.jpg",
+    "/tmp/with space.png\r\n/tmp/other.png",
+  ]) {
+    const start = text.indexOf("/tmp/with");
+    expect(visibleLinkAtOffset(text, start + 2)?.url).toBe("/tmp/with");
+    expect(visibleLinkAtOffset(text, text.indexOf("space.png"))?.url).toBe(
+      "space.png",
+    );
+  }
+  expect(visibleLinkAtOffset("/tmp/one.png /tmp/two.png", 20)?.url).toBe(
+    "/tmp/two.png",
+  );
+  expect(visibleLinkAtOffset("/tmp/with\tspace.png", 2)?.url).toBe("/tmp/with");
+  expect(visibleLinkAtOffset("/tmp/with space.png trailing", 2)?.url).toBe(
+    "/tmp/with",
+  );
+});
+
 it.each([
   "/tmp/image.png:1",
   "~/image.png",

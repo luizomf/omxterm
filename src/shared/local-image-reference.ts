@@ -29,7 +29,8 @@ export function parseLocalImageReference(
       return undefined;
     literal = value.slice(1, end);
     quoted = true;
-  } else if (/\s/u.test(value)) return undefined;
+  } else if (/\s/u.test(value) && !isWholeLineAbsoluteImageReference(value))
+    return undefined;
   const kind = referenceKind(literal);
   if (!kind) return undefined;
   const withoutSuffix = literal.replace(locationSuffix, "");
@@ -43,6 +44,22 @@ export function parseLocalImageReference(
       ? { fallbackPath: withoutSuffix }
       : {}),
   };
+}
+
+// A conservative lexical cue for a path printed alone. This never searches the
+// filesystem to separate prose or neighboring references from a filename.
+export function isWholeLineAbsoluteImageReference(value: string): boolean {
+  return (
+    referenceKind(value) === "absolute" &&
+    value.includes(" ") &&
+    !value.endsWith(" ") &&
+    !/[^\S ]/u.test(value) &&
+    /\.(?:png|jpe?g)(?::[1-9][0-9]*(?::[1-9][0-9]*)?)?$/iu.test(value) &&
+    !/ +(?:\/|[a-z]:[\\/]|~(?:\/|$)|\.{1,2}[\\/]|['"]|https?:\/\/)/iu.test(
+      value,
+    ) &&
+    !/\.(?:png|jpe?g|webp)(?::[1-9][0-9]*(?::[1-9][0-9]*)?)? +/iu.test(value)
+  );
 }
 
 function referenceKind(value: string): LocalImageReference["kind"] | undefined {

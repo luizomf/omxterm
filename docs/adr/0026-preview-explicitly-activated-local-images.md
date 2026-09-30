@@ -59,7 +59,30 @@ literal `file:///` span and native absolute path token alongside HTTP(S),
 preserving soft-wrap proof and modified-click precedence over application mouse
 reporting. References begin at a line boundary or after whitespace. A complete
 non-whitespace token or one matching pair of quotes (including spaces) is
-recognized without shell evaluation or escape decoding. Brackets, assignments
+recognized without shell evaluation or escape decoding. Issue #467 deliberately
+reopens the quoted-only spaces rule for an absolute PNG/JPEG path printed alone
+on its complete logical line. The first character must begin an absolute path,
+and the line must end in `.png`, `.jpg` or `.jpeg` (case-insensitive), optionally
+with the existing positive location suffix. Only ASCII spaces are accepted in
+this new unquoted form, without trailing spaces. An earlier image-extension token
+followed by spaces or a space-separated new absolute, home, dot-relative, quoted
+or HTTP(S) reference prevents the whole-line match. Existing token/quoted
+recognition remains in those excluded contexts; broader prose/same-line spaced
+recognition and producer hard-line concatenation are not added. This is a
+conservative lexical cue, not a filesystem search or proof of image format.
+Use quotes or the picker for filenames that do not fit it.
+
+The native #467 reproduction also found a supported soft-wrap defect: a literal
+space in the last physical column was trimmed before continuity lookup, so the
+activated reference stopped at that row and the real reader failed on its
+prefix. The checksum-guarded runtime now retains physical-row-end spaces only
+when core selection text proves that those exact cells continue without a hard
+break. The same reconstructed text drives offsets, hover cells and activation;
+no arbitrary line joining or new parser is introduced. Native controls cover
+first/continuation/space activation, real small-image display, Unicode quoted
+prefixes, resize/reflow and actual tmux initial output/refresh-client redraw.
+
+Brackets, assignments
 and trailing punctuation are not trimmed. The native picker handles ambiguous
 filenames. A positive `:line` or `:line:column` after closing quotes is tool
 location decoration; inside quotes it is literal. Unquoted references first try

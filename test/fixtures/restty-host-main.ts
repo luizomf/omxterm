@@ -12,6 +12,7 @@ import { registerTerminalWindowHost } from "../../src/main/terminal-window-host"
 import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
 import { createUserConfigurationReloader } from "../../src/main/user-configuration-reloader";
 import type { LocalImageRequest } from "../../src/shared/local-image";
+import { fixtureLocalImageLoader } from "./restty-local-image-links";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import {
   installedFallbackFontData,
@@ -227,7 +228,7 @@ function createHost(window: BrowserWindow) {
     },
     onExternalLinkOpenError() {},
     loadSnippets: async () => ({ snippets: [] }),
-    loadLocalImage: async (request) => (localImageRequests.push(request), null),
+    loadLocalImage: fixtureLocalImageLoader(window, root, localImageRequests),
   });
   registerTerminalWindowHost(window, controller, () => router.dispose());
   const initialConfiguration = {
@@ -394,6 +395,7 @@ app
 
     const { reloadState, linkEvidence } = await exerciseExplicitResttyTab({
       window,
+      root,
       launchKinds,
       resizes,
       outputs,

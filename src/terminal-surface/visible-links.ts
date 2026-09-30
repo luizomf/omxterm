@@ -1,4 +1,7 @@
-import { parseLocalImageReference } from "../shared/local-image-reference";
+import {
+  isWholeLineAbsoluteImageReference,
+  parseLocalImageReference,
+} from "../shared/local-image-reference";
 
 // This is the lowercase-only form of @xterm/addon-web-links 0.12.0's strict
 // URL expression (xterm.js f447274f430fd22513f6adbf9862d19524471c04).
@@ -21,6 +24,11 @@ export function visibleLinkAtOffset(
 ): VisibleLinkMatch | undefined {
   if (!Number.isInteger(offset) || offset < 0 || offset >= text.length)
     return undefined;
+
+  if (isWholeLineAbsoluteImageReference(text) && parseLocalImageReference(text))
+    return clippedStart || clippedEnd
+      ? undefined
+      : { url: text, start: 0, end: text.length };
 
   const reference = referenceAtOffset(text, offset);
   if (reference) {
