@@ -74,7 +74,11 @@ For blur and other desktop preferences, see the
 For an update, verify the new release's two downloads and rerun `install` with its
 AppImage. Repeat `--compatibility` only if you still need it; a normal installation
 resets that choice. Custom desktop-entry edits are replaced. A failed installation
-restores the complete previous installation.
+restores the complete previous installation. If the filesystem also prevents
+restoration, the helper reports **recovery incomplete** and the locations of
+retained original backups. Preserve those backups before retrying or uninstalling;
+resolve the filesystem error and recover the originals from the reported locations.
+The initial installation error remains in the output and exit status.
 
 ```sh
 ./linux_install.sh --help

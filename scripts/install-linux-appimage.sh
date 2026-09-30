@@ -32,27 +32,44 @@ uninstall() {
 }
 
 rollback() {
+  status=$?
+  [ "$status" -ne 0 ] || status=1
   trap - EXIT HUP INT TERM
   set +e
+  recovery_complete=true
   for name in desktop icon app; do
     eval "target=\${$name}"
     eval "backup=\${backup_$name:-}"
+    eval "backup_root=\${backup_${name}_root:-}"
     eval "replaced=\${replaced_$name:-false}"
+    restored=true
     if [ "$replaced" = true ]; then
-      rm -f -- "$target"
-      if [ -n "$backup" ] && { [ -e "$backup" ] || [ -L "$backup" ]; }; then
-        mv -- "$backup" "$target"
+      rm -f -- "$target" || restored=false
+    fi
+    if [ -n "$backup" ] && { [ -e "$backup" ] || [ -L "$backup" ]; }; then
+      if [ "$restored" = true ]; then
+        mv -- "$backup" "$target" || restored=false
       fi
-    elif [ -n "$backup" ] && { [ -e "$backup" ] || [ -L "$backup" ]; }; then
-      mv -- "$backup" "$target"
+      if [ "$restored" = false ]; then
+        printf 'OMXTerm installer: could not restore %s; original retained at %s\n' "$target" "$backup" >&2
+      fi
+    elif [ "$restored" = false ]; then
+      printf 'OMXTerm installer: could not remove partial installation at %s\n' "$target" >&2
+    fi
+    if [ "$restored" = true ]; then
+      rm -rf -- "$backup_root" || recovery_complete=false
+    else
+      recovery_complete=false
     fi
   done
-  rm -rf -- "${work:-}" "${backup_app_root:-}" \
-    "${backup_icon_root:-}" "${backup_desktop_root:-}"
-  rm -f -- "${new_app:-}" "${new_icon:-}" "${new_desktop:-}" \
-    "${backup_app:-}" "${backup_icon:-}" "${backup_desktop:-}"
-  printf '%s\n' "OMXTerm installer: installation failed; the previous installation was restored" >&2
-  exit 1
+  rm -rf -- "${work:-}" || recovery_complete=false
+  rm -f -- "${new_app:-}" "${new_icon:-}" "${new_desktop:-}" || recovery_complete=false
+  if [ "$recovery_complete" = true ]; then
+    printf 'OMXTerm installer: installation failed (exit %s); the previous installation was restored\n' "$status" >&2
+  else
+    printf 'OMXTerm installer: installation failed (exit %s); recovery incomplete; preserve the reported backups before retrying\n' "$status" >&2
+  fi
+  exit "$status"
 }
 
 replace_owned_file() {

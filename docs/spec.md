@@ -969,7 +969,11 @@ update. It owns exactly
 `~/.local/share/icons/hicolor/1024x1024/apps/omxterm.png`, and
 `~/.local/share/applications/omxterm.desktop`. Install and update replace all
 three files transactionally; invalid input or failure preserves the complete
-previous installation. Before replacing any file, install checks all three
+previous installation. If a filesystem error prevents restoration, the helper
+retains each unrestored original in its reported backup location, reports
+incomplete recovery, and preserves the initial operation's failure status and
+diagnostics. It never deletes an original backup that failed restoration.
+Before replacing any file, install checks all three
 owned filenames and refuses existing directories or other non-regular,
 non-symlink entries. Existing regular files and symlinks (including dangling
 links or links to directories) are replaced as entries, without modifying

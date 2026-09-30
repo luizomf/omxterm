@@ -69,6 +69,32 @@ esac
   return appImage;
 }
 
+async function failingMoves(bin: string) {
+  const realMv = process.platform === "darwin" ? "/bin/mv" : "/usr/bin/mv";
+  await writeFile(
+    path.join(bin, "mv"),
+    `#!/bin/sh
+source=$2
+last=
+for argument do last=$argument; done
+case $source in
+  */previous)
+    if [ "$last" = "\${OMXTERM_TEST_FAIL_RESTORE:-}" ]; then
+      printf '%s\\n' 'injected restoration failure' >&2; exit 71
+    fi
+    ;;
+  *)
+    if [ "$last" = "$OMXTERM_TEST_FAIL_TARGET" ]; then
+      printf '%s\\n' 'injected replacement failure' >&2; exit 70
+    fi
+    ;;
+esac
+exec ${realMv} "$@"
+`,
+    { mode: 0o755 },
+  );
+}
+
 async function fakeHyprland(bin: string) {
   await writeFile(
     path.join(bin, "hyprctl"),
@@ -525,17 +551,7 @@ exec /usr/bin/mktemp "$@"
       const { root, home, bin } = await fixtureRoot();
       const appImage = await fakeAppImage(root, "one");
       const paths = owned(home);
-      const realMv = process.platform === "darwin" ? "/bin/mv" : "/usr/bin/mv";
-      await writeFile(
-        path.join(bin, "mv"),
-        `#!/bin/sh
-last=
-for argument do last=$argument; done
-if [ "$last" = "$OMXTERM_TEST_FAIL_TARGET" ]; then exit 70; fi
-exec ${realMv} "$@"
-`,
-        { mode: 0o755 },
-      );
+      await failingMoves(bin);
 
       await expect(
         runHelper(home, bin, ["install", appImage], {
@@ -547,6 +563,57 @@ exec ${realMv} "$@"
         await expect(stat(file)).rejects.toMatchObject({ code: "ENOENT" });
     });
 
+    it.each(["app", "icon", "desktop"] as const)(
+      "retains recoverable %s bytes and reports both failures when restoration fails",
+      async (name) => {
+        const { root, home, bin } = await fixtureRoot();
+        const first = await fakeAppImage(root, "one");
+        const second = await fakeAppImage(root, "two");
+        await runHelper(home, bin, ["install", first]);
+        const paths = owned(home);
+        const before = await Promise.all(
+          Object.values(paths).map((file) => readFile(file)),
+        );
+        await failingMoves(bin);
+
+        const result = runHelper(home, bin, ["install", second], {
+          OMXTERM_TEST_FAIL_TARGET: paths.desktop,
+          OMXTERM_TEST_FAIL_RESTORE: paths[name],
+        });
+        await expect(result).rejects.toThrow("injected replacement failure");
+        await expect(result).rejects.toThrow("injected restoration failure");
+        await expect(stat(paths[name])).rejects.toMatchObject({
+          code: "ENOENT",
+        });
+        for (const [index, file] of Object.values(paths).entries()) {
+          if (file !== paths[name])
+            expect(await readFile(file)).toEqual(before[index]);
+          const backups = (await readdir(path.dirname(file))).filter((entry) =>
+            entry.includes("-backup."),
+          );
+          if (file !== paths[name]) expect(backups).toEqual([]);
+        }
+        const backups = (await readdir(path.dirname(paths[name]))).filter(
+          (entry) => entry.includes("-backup."),
+        );
+        expect(backups).toHaveLength(1);
+        const backup = path.join(
+          path.dirname(paths[name]),
+          backups[0]!,
+          "previous",
+        );
+        expect(await readFile(backup)).toEqual(
+          before[Object.keys(paths).indexOf(name)],
+        );
+        await expect(result).rejects.toThrow(backup);
+        await expect(result).rejects.toMatchObject({ code: 70 });
+        await expect(result).rejects.toThrow("recovery incomplete");
+        await expect(result).rejects.not.toThrow(
+          "previous installation was restored",
+        );
+      },
+    );
+
     it("rolls back every owned file when a replacement fails", async () => {
       const { root, home, bin } = await fixtureRoot();
       const first = await fakeAppImage(root, "one");
@@ -555,17 +622,7 @@ exec ${realMv} "$@"
       const before = await Promise.all(
         Object.values(owned(home)).map((file) => readFile(file, "utf8")),
       );
-      const realMv = process.platform === "darwin" ? "/bin/mv" : "/usr/bin/mv";
-      await writeFile(
-        path.join(bin, "mv"),
-        `#!/bin/sh
-for argument do
-  if [ "$argument" = "$OMXTERM_TEST_FAIL_TARGET" ]; then exit 70; fi
-done
-exec ${realMv} "$@"
-`,
-        { mode: 0o755 },
-      );
+      await failingMoves(bin);
       const paths = owned(home);
 
       await expect(
@@ -578,6 +635,13 @@ exec ${realMv} "$@"
         Object.values(paths).map((file) => readFile(file, "utf8")),
       );
       expect(after).toEqual(before);
+      for (const file of Object.values(paths)) {
+        expect(
+          (await readdir(path.dirname(file))).filter((entry) =>
+            entry.startsWith(".omxterm-"),
+          ),
+        ).toEqual([]);
+      }
     });
   },
 );
