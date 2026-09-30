@@ -480,6 +480,131 @@ async function stopProcessGroup(child) {
     throw new Error(`Packaged process group ${processGroupId} did not exit`);
 }
 
+export async function provisionLinuxHelper(
+  helper,
+  arguments_,
+  installationRoot,
+  { timeoutMs = 60_000 } = {},
+) {
+  let child;
+  let timer;
+  let stdout = "";
+  let stderr = "";
+  let stopAttempted = false;
+  const signalHandlers = new Map();
+  const interrupted = new Promise((_, reject) => {
+    for (const signal of ["SIGTERM", "SIGINT", "SIGHUP"]) {
+      const handler = () =>
+        reject(new Error(`Linux helper provisioning interrupted by ${signal}`));
+      signalHandlers.set(signal, handler);
+      process.on(signal, handler);
+    }
+  });
+  const completed = new Promise((resolve, reject) => {
+    child = spawn(helper, arguments_, {
+      detached: true,
+      env: { ...process.env, HOME: installationRoot, TMPDIR: installationRoot },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    child.on("error", reject);
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    for (const [stream, append] of [
+      [
+        child.stdout,
+        (chunk) => {
+          stdout += chunk;
+        },
+      ],
+      [
+        child.stderr,
+        (chunk) => {
+          stderr += chunk;
+        },
+      ],
+    ]) {
+      stream.on("data", (chunk) => {
+        if (stdout.length + stderr.length < 16 * 1024 * 1024) append(chunk);
+        else
+          reject(
+            new Error("Linux helper provisioning output exceeded its limit"),
+          );
+      });
+    }
+    child.on("close", (code, signal) => {
+      if (code === 0 && signal === null) resolve({ stdout, stderr });
+      else
+        reject(
+          Object.assign(
+            new Error(
+              `Linux helper failed (exit ${code}, signal ${signal}): ${stderr.trim()}`,
+            ),
+            { code, signal },
+          ),
+        );
+    });
+  });
+  // Unlike execFile's timeout, this deadline does not wait indefinitely for
+  // close after a signal. Cleanup has its own bounded TERM/KILL verification.
+  try {
+    const result = await Promise.race([
+      completed,
+      interrupted,
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () =>
+            reject(
+              new Error("Linux helper provisioning outer deadline exceeded"),
+            ),
+          timeoutMs,
+        );
+      }),
+    ]);
+    stopAttempted = true;
+    await stopProcessGroup(child);
+    return result;
+  } catch (cause) {
+    const failures = [cause];
+    if (!stopAttempted) {
+      try {
+        await stopProcessGroup(child);
+      } catch (cleanup) {
+        failures.push(cleanup);
+      }
+    }
+    // Release Node handles on unconfirmed termination; retain the failure and
+    // received diagnostics rather than making arbitrary kernel tasks killable.
+    child.stdout?.destroy();
+    child.stderr?.destroy();
+    child.unref();
+    const message = failures
+      .map((error) => (error instanceof Error ? error.message : String(error)))
+      .join("; ");
+    try {
+      await writeFile(
+        path.join(installationRoot, "helper-provisioning-result.json"),
+        JSON.stringify({
+          message,
+          stdout,
+          stderr,
+          exitCode: child.exitCode,
+          signalCode: child.signalCode,
+        }),
+      );
+    } catch (recording) {
+      failures.push(recording);
+    }
+    throw new AggregateError(
+      failures,
+      `${message}; helper recovery state retained at ${installationRoot}`,
+    );
+  } finally {
+    clearTimeout(timer);
+    for (const [signal, handler] of signalHandlers)
+      process.off(signal, handler);
+  }
+}
+
 export function packagedExplicitCommand(
   platform,
   argumentCanary,
@@ -592,6 +717,7 @@ export async function verifyPackagedApplication(
   let extractionRoot;
   let linuxInstallationRoot;
   let linuxInstalledApp;
+  let linuxProvisioningComplete = false;
   let linuxDirectLaunchAvailable = false;
   let applicationRoot = packagedPath;
 
@@ -600,18 +726,28 @@ export async function verifyPackagedApplication(
       const version = await sourceVersion();
       const helper = path.join(projectRoot, "release", linuxHelperName());
       await Promise.all([verifyChecksum(packagedPath), verifyChecksum(helper)]);
-      const { stdout: helperVersion } = await execFile(helper, ["--version"]);
+      linuxInstallationRoot = await mkdtemp(
+        path.join(tmpdir(), "omxterm-helper-installation-"),
+      );
+      const provisioningDeadline = Date.now() + 60_000;
+      const { stdout: helperVersion } = await provisionLinuxHelper(
+        helper,
+        ["--version"],
+        linuxInstallationRoot,
+      );
       if (helperVersion.trim() !== version)
         throw new Error(
           `Linux helper version ${helperVersion.trim()} differs from source package version ${version}`,
         );
-      linuxInstallationRoot = await mkdtemp(
-        path.join(tmpdir(), "omxterm-helper-installation-"),
+      await provisionLinuxHelper(
+        helper,
+        ["install", packagedPath],
+        linuxInstallationRoot,
+        {
+          timeoutMs: Math.max(1, provisioningDeadline - Date.now()),
+        },
       );
-      await execFile(helper, ["install", packagedPath], {
-        env: { ...process.env, HOME: linuxInstallationRoot },
-        maxBuffer: 16 * 1024 * 1024,
-      });
+      linuxProvisioningComplete = true;
       linuxInstalledApp = path.join(
         linuxInstallationRoot,
         ".local",
@@ -995,7 +1131,7 @@ export async function verifyPackagedApplication(
   } finally {
     if (extractionRoot)
       await rm(extractionRoot, { recursive: true, force: true });
-    if (linuxInstallationRoot)
+    if (linuxInstallationRoot && linuxProvisioningComplete)
       await rm(linuxInstallationRoot, { recursive: true, force: true });
   }
 }

@@ -49,6 +49,13 @@ export function inspectAdHocApplication(
   execute?: ExecuteFile,
 ): Promise<void>;
 
+export function provisionLinuxHelper(
+  helper: string,
+  arguments_: string[],
+  installationRoot: string,
+  options?: { readonly timeoutMs?: number },
+): Promise<{ readonly stdout: string; readonly stderr: string }>;
+
 export function packagedExplicitCommand(
   platform: NodeJS.Platform | string,
   argumentCanary: string,

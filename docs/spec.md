@@ -982,7 +982,15 @@ referents. Uninstall removes only those files and preserves
 unrelated files and parent directories. At installation time the helper tests
 actual kernel FUSE mounting and writes one fixed desktop entry that either runs
 the AppImage directly or adds `--appimage-extract-and-run`; launch time performs
-no mode discovery. The installed desktop entry explicitly selects X11/XWayland,
+no mode discovery. Mount discovery uses at most 50 observations spaced by 0.1 s.
+The owned mount child receives TERM with 20 bounded observations, then KILL with
+20 more if needed; it is reaped only after exit is observed. A shutdown timeout
+fails installation even if escalation succeeds. Failure and handled interruption
+also clean up this child. If termination cannot be confirmed, installation fails
+and reports the child PID and retained staging directory for recovery; arbitrary
+kernel-stuck tasks are not guaranteed killable. Packaged verification separately
+bounds helper provisioning to 60 s, preserves failure/interruption and diagnostics,
+and retains helper recovery state rather than retrying automatically. The installed desktop entry explicitly selects X11/XWayland,
 including when the session exports a Wayland preference. Direct AppImage launches
 retain the rendering override rules above. Desktop Entry encoding preserves literal
 percent signs and double quotes in the installed pathname. A fixed `sh` command

@@ -81,6 +81,14 @@ retained original backups. Preserve those backups before retrying or uninstallin
 resolve the filesystem error and recover the originals from the reported locations.
 The initial installation error remains in the output and exit status.
 
+The install-time mount probe has bounded discovery and TERM/KILL shutdown. A
+shutdown timeout is a failed installation, not a reason to silently install or
+retry. Interruption also cleans up the owned mount child. If the helper cannot
+confirm termination, it reports the child PID and retains its staging directory
+(including `mount-output`); preserve that state and inspect the reported child
+and mount before removing staging or retrying. A kernel-stuck child may require
+OS-level recovery; the helper does not claim that KILL always completes.
+
 ```sh
 ./linux_install.sh --help
 ./linux_install.sh --version

@@ -34,9 +34,15 @@ uninstall() {
 rollback() {
   status=$?
   [ "$status" -ne 0 ] || status=1
-  trap - EXIT HUP INT TERM
+  trap - EXIT
+  trap '' HUP INT TERM
   set +e
   recovery_complete=true
+  stop_mount_child || true
+  if [ -n "${mount_pid:-}" ]; then
+    recovery_complete=false
+    printf 'OMXTerm installer: mount child %s termination is unconfirmed; staging retained at %s; inspect the child and mount-output before recovery\n' "$mount_pid" "$work" >&2
+  fi
   for name in desktop icon app; do
     eval "target=\${$name}"
     eval "backup=\${backup_$name:-}"
@@ -62,7 +68,9 @@ rollback() {
       recovery_complete=false
     fi
   done
-  rm -rf -- "${work:-}" || recovery_complete=false
+  if [ -z "${mount_pid:-}" ]; then
+    rm -rf -- "${work:-}" || recovery_complete=false
+  fi
   rm -f -- "${new_app:-}" "${new_icon:-}" "${new_desktop:-}" || recovery_complete=false
   if [ "$recovery_complete" = true ]; then
     printf 'OMXTerm installer: installation failed (exit %s); the previous installation was restored\n' "$status" >&2
@@ -84,6 +92,32 @@ replace_owned_file() {
   fi
   mv -- "$new" "$target"
   eval "replaced_$name=true"
+}
+
+mount_child_exited() {
+  attempts=0
+  while kill -0 "$mount_pid" 2>/dev/null; do
+    [ "$attempts" -lt 20 ] || return 1
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  # The shell has observed exit. Only now collect its cached child status;
+  # waiting on a live child (even after KILL) would not have a deadline.
+  wait "$mount_pid" 2>/dev/null || true
+  mount_pid=
+}
+
+stop_mount_child() {
+  [ -n "${mount_pid:-}" ] || return 0
+  [ "${mount_stop_attempted:-false}" = false ] || return 1
+  mount_stop_attempted=true
+  kill -TERM "$mount_pid" 2>/dev/null || true
+  if mount_child_exited; then return 0; fi
+  printf '%s\n' 'OMXTerm installer: mount probe shutdown timed out; escalating to KILL' >&2
+  kill -KILL "$mount_pid" 2>/dev/null || true
+  mount_child_exited || return 1
+  # Escalation cleaned the owned child, but the timeout is still a failure.
+  return 1
 }
 
 probe_fuse_mode() {
@@ -109,8 +143,7 @@ probe_fuse_mode() {
   else
     launcher_suffix=' --appimage-extract-and-run'
   fi
-  kill "$mount_pid" 2>/dev/null || true
-  wait "$mount_pid" 2>/dev/null || true
+  stop_mount_child || fail "mount probe shutdown timed out; installation was not published"
 }
 
 detect_desktop_scale() {
@@ -178,7 +211,10 @@ install_appimage() {
   done
   work=$(mktemp -d "${TMPDIR:-/tmp}/omxterm-installer.XXXXXX") ||
     fail "could not create a temporary directory"
-  trap rollback EXIT HUP INT TERM
+  trap rollback EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
   candidate=$work/OMXTerm.AppImage
   install -m 755 "$source_app" "$candidate"
   extract_root=$work/extract
