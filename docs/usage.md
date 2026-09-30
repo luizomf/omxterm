@@ -184,7 +184,8 @@ remain literal filename characters.
 Previews support static PNG/JPEG files up to **64 MiB**, **8192 pixels per side**,
 and **32 million pixels**, including each ceiling. Large images can temporarily
 use substantially more memory than their file size. Closing releases the preview's
-source; browser/native memory need not return immediately to its initial level. **Actual WebP is not supported**, even when its path
+source; browser/native memory need not return immediately to its initial level.
+**Actual WebP is not supported**, even when its path
 is recognized; an unsupported-format message distinguishes it from an unavailable
 file. Content, not the extension, determines format. Network shares, device paths
 and remote files are unsupported. Even if SSH printed the path, it refers to the

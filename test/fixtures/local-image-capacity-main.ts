@@ -97,21 +97,33 @@ async function run() {
     const state: unknown = await evaluate(
       `__capacity.open(${JSON.stringify(path.join(process.cwd(), filename))})`,
     );
-    const latencyMs = performance.now() - start;
-    const memory = observe();
-    const capture = await window.webContents.capturePage();
-    // Synthetic samples have a solid green region on the right. Actual capture proves it
-    // was presented, rather than only decoded into a detached image element.
-    const bitmap = capture.toBitmap();
+    const previewReadyMs = performance.now() - start;
+    // Decode + two frames need not complete GPU image presentation on Windows.
+    // Wait boundedly for actual synthetic green pixels, without weakening the
+    // display assertion. Latency ends at observed presentation, not just decode.
     let greenPixels = 0;
-    for (let offset = 0; offset < bitmap.length; offset += 4)
-      if (
-        bitmap[offset + 1]! > 180 &&
-        bitmap[offset]! < 80 &&
-        bitmap[offset + 2]! < 80
-      )
-        greenPixels += 1;
-    displayed.push({ filename, state, latencyMs, greenPixels, memory });
+    const deadline = performance.now() + 2000;
+    do {
+      const bitmap = (await window.webContents.capturePage()).toBitmap();
+      greenPixels = 0;
+      for (let offset = 0; offset < bitmap.length; offset += 4)
+        if (
+          bitmap[offset + 1]! > 180 &&
+          bitmap[offset]! < 80 &&
+          bitmap[offset + 2]! < 80
+        )
+          greenPixels += 1;
+      if (greenPixels > 1000 || performance.now() >= deadline) break;
+      await wait(50);
+    } while (true);
+    displayed.push({
+      filename,
+      state,
+      previewReadyMs,
+      latencyMs: performance.now() - start,
+      greenPixels,
+      memory: observe(),
+    });
     const dismissed: unknown = await evaluate("__capacity.dismiss()");
     snapshots.push({ filename, dismissed });
     await wait(1000);

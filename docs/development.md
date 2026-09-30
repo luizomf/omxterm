@@ -193,7 +193,9 @@ production preload, native loader and overlay, captures displayed synthetic
 pixels, checks rejection and late renderer-decode disposal, then records 12
 alternating open/close cycles without forced GC. Evidence is written to
 `.scratch/local-image-capacity.json`; inspect the observations, not just test exit.
-Latency includes the load/IPC/decode/presentation path. Memory entries are
+Latency ends at observed captured image pixels, including load/IPC/decode and
+bounded presentation settling; `previewReadyMs` separately records overlay readiness.
+Decode and two animation frames alone need not complete GPU image presentation. Memory entries are
 Electron per-process working sets and lifetime peak working sets in KiB; the
 sampled aggregate may double-count shared pages and is not unique RSS or GPU
 allocation accounting. Native decoder work can block the main sampler, so

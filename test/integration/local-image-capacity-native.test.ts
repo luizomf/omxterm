@@ -24,6 +24,7 @@ describe.skipIf(process.env.OMXTERM_TEST_IMAGE_CAPACITY !== "1")(
   () => {
     it("displays bounded large PNG/JPEG and records settled preview cycles", async () => {
       const root = await mkdtemp(path.join(tmpdir(), "omxterm-capacity-"));
+      await mkdir(".scratch", { recursive: true });
       for (const [entry, output, platform] of [
         ["test/fixtures/local-image-capacity-main.ts", "main.cjs", "node"],
         ["src/preload/index.ts", "preload.cjs", "node"],

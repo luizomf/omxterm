@@ -53,8 +53,8 @@ URL under a CSP that permits `blob:` only for images while preserving
 `connect-src 'none'`. Escape, the close button, backdrop dismissal, decode
 failure, page teardown, and owner close synchronously remove the image source
 and revoke the Blob URL. This drops application ownership; browser/allocator caches
-and native/GPU reclamation need not produce an immediate RSS drop. Focus returns to the live selected Terminal Tab after
-dismissal or picker cancellation. Late picker/read/decode results cannot reopen
+and native/GPU reclamation need not produce an immediate RSS drop. Focus returns
+to the live selected Terminal Tab after dismissal or picker cancellation. Late picker/read/decode results cannot reopen
 a disposed overlay. The preview exposes only its active interaction state to
 the Terminal Window host. While choosing, loading, or viewing, that host
 suppresses terminal clipboard, file-drop, zoom and snippet actions and avoids
