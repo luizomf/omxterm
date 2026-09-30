@@ -395,7 +395,9 @@ without composition events. They produce neither a substituted ASCII space nor
 a duplicate keyboard-protocol release. Ordinary Space input and configured
 terminal modifiers retain their existing encoding.
 Restty image rendering and scrollback follow the
-shared contracts below through the pinned Ghostty core. Native rasterization can
+shared contracts below through the pinned Ghostty core. Bar cursors remain visible inside their addressed cell at the first column,
+independently of terminal padding or font family; block/underline styles and
+focus/blink behavior remain unchanged. Native rasterization can
 differ across Supported Platforms and GPUs; pixel-identical glyph output is not
 claimed.
 

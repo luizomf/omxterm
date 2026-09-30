@@ -101,8 +101,25 @@ const priorBackgroundDigest =
   "8a48d0ba974a4ef26ffcb3b5f2472fbd0cd28b7830d112e218b513014e15d662";
 const priorScrollbarDigest =
   "19ce5c33221a7c77bea9eb83c49d9afb3ccda2a70636598492654db18226d0f2";
-const correctedDigest =
+const priorCursorDigest =
   "940a722fb921e49fa308034002220b4105e5a64a0489e64c6ce2923bcad88f08";
+const correctedDigest =
+  "3fb1a882bc75ee45e1f53370976d215bca7e1f7ba172696ee1985caa5e93d27b";
+
+const cursorCorrections = [
+  {
+    original: `        const offset = Math.floor((cursorThicknessPx + 1) / 2);
+        pushRect(cursorData, x - offset, y, cursorThicknessPx, cellH, cursorColor);`,
+    corrected: `        // Keep the font-derived bar thickness inside its addressed cell.
+        pushRect(cursorData, x, y, cursorThicknessPx, cellH, cursorColor);`,
+  },
+  {
+    original: `        const offset = Math.floor((cursorThicknessPx + 1) / 2);
+        deps.pushRect(frame.cursorData, x - offset, y, cursorThicknessPx, cellH, cursorColor);`,
+    corrected: `        // Keep both renderer emitters consistent at the first-column edge.
+        deps.pushRect(frame.cursorData, x, y, cursorThicknessPx, cellH, cursorColor);`,
+  },
+];
 
 const scrollbarCorrections = [
   {
@@ -1894,6 +1911,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, backgroundCorrections);
       case priorScrollbarDigest:
         source = applyCorrections(source, scrollbarCorrections);
+      case priorCursorDigest:
+        source = applyCorrections(source, cursorCorrections);
         break;
       default:
         throw new Error(

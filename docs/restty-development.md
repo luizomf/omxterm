@@ -55,6 +55,16 @@ Programming ligatures default to enabled and use Restty's existing
 boolean configuration and `setLigatures` operation. New Surfaces use every
 latest validated value. Native glyph rasterization can differ across operating systems and GPUs; pixel-identical output is not claimed.
 
+Bar cursors start inside their addressed cell, including column zero, without
+requiring padding or a different font. The pinned correction retains the
+font-derived thickness and existing block, underline, focus and blink behavior.
+`test/integration/restty-cursor-rendering.test.ts` compares native pixels against
+a hidden-cursor baseline with bundled and natively configured fonts at DPR 1/2,
+zero/nonzero padding, and before/after zoom, refit and live configuration reload.
+Each family is mounted fresh; reload does not pretend to change its active family.
+Focus controls replay DOM focus loss in inactive fixture windows, not physical
+application activation; blink observations use the real clock and native pixels.
+
 `test/integration/surface-font-ownership.test.ts` holds the real initial Restty
 readiness continuation, reloads line height from 1 to 1.5, finishes startup and
 reloads 1.5 again. It checks main bookkeeping, the production notice, unchanged
@@ -406,7 +416,7 @@ boundary used by the host integration; it is not a public API or renderer
 registry.
 
 After preparation, the corrected runtime has SHA-256
-`940a722fb921e49fa308034002220b4105e5a64a0489e64c6ce2923bcad88f08`,
+`3fb1a882bc75ee45e1f53370976d215bca7e1f7ba172696ee1985caa5e93d27b`,
 embedded-core chunk SHA-256
 `baa7dd9600c034a77e73ed03864c3e15e02ccdc591d2044479652fef1d9c0900`,
 and event declarations SHA-256
