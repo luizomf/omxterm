@@ -6,20 +6,27 @@
 2. **[Try your first session](../README.md#first-session)** and learn a few shortcuts.
 3. **[Make it yours](configuration.md)** with fonts, colors, and snippets.
 
+**Prefer a complete ready-to-use setup? Choose
+[macOS](quick-start/macos.md#complete-ready-to-use-setup-optional),
+[Linux](quick-start/linux.md#complete-ready-to-use-setup-optional), or
+[Windows / Git Bash](quick-start/windows.md#complete-ready-to-use-setup-optional).**
+Each set includes coordinated configuration, snippets, and a theme, with file
+links and copy destinations. Back up first: copying a set replaces preferences.
+
 ## Find what you need
 
-| I want to…                                    | Read                                                                                              |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Learn shortcuts, tabs, copy/paste, and images | [Everyday use](usage.md)                                                                          |
-| Fix a problem                                 | [Troubleshooting](usage.md#troubleshooting)                                                       |
-| Try a complete configuration                  | [macOS](quick-start/macos.md) · [Linux](quick-start/linux.md) · [Windows](quick-start/windows.md) |
-| Change a setting or shortcut                  | [Configuration](configuration.md)                                                                 |
-| Edit themes visually                          | [OMXTerm Studio workflow](configuration.md#edit-visually-with-omxterm-studio)                     |
-| Add transparency or blur                      | [Background effects](configuration.md#background-transparency-and-blur)                           |
-| Add OMXTerm to the Linux application menu     | [Desktop helper](linux-installer.md)                                                              |
-| Update or uninstall                           | [Installation guide](installation.md#updating-or-uninstalling)                                    |
-| Give feedback or contribute                   | [Contributing](../CONTRIBUTING.md)                                                                |
-| Report a vulnerability privately              | [Security policy](../SECURITY.md)                                                                 |
+| I want to…                                    | Read                                                                                                                                                                                                                        |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Learn shortcuts, tabs, copy/paste, and images | [Everyday use](usage.md)                                                                                                                                                                                                    |
+| Fix a problem                                 | [Troubleshooting](usage.md#troubleshooting)                                                                                                                                                                                 |
+| Get a complete config/snippets/theme set      | [macOS](quick-start/macos.md#complete-ready-to-use-setup-optional) · [Linux](quick-start/linux.md#complete-ready-to-use-setup-optional) · [Windows / Git Bash](quick-start/windows.md#complete-ready-to-use-setup-optional) |
+| Change a setting or shortcut                  | [Configuration](configuration.md)                                                                                                                                                                                           |
+| Edit themes visually                          | [OMXTerm Studio workflow](configuration.md#edit-visually-with-omxterm-studio)                                                                                                                                               |
+| Add transparency or blur                      | [Background effects](configuration.md#background-transparency-and-blur)                                                                                                                                                     |
+| Add OMXTerm to the Linux application menu     | [Desktop helper](linux-installer.md)                                                                                                                                                                                        |
+| Update or uninstall                           | [Installation guide](installation.md#updating-or-uninstalling)                                                                                                                                                              |
+| Give feedback or contribute                   | [Contributing](../CONTRIBUTING.md)                                                                                                                                                                                          |
+| Report a vulnerability privately              | [Security policy](../SECURITY.md)                                                                                                                                                                                           |
 
 The guides follow the current source. [Release notes](releases/) record what
 shipped in each version; the [README](../README.md#platforms-and-downloads) links

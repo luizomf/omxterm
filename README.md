@@ -113,12 +113,19 @@ if you need sessions that survive closing the terminal.
 ### Make it yours
 
 OMXTerm creates editable settings, a sample snippet, and a theme on first launch.
-Start with one change or try a complete example:
+Start with one change or use a complete ready-to-use setup.
 
-- [Change your first setting](docs/configuration.md) — fonts, colors, shortcuts,
-  and more.
-- Ready-to-use setups: [macOS](docs/quick-start/macos.md),
-  [Linux](docs/quick-start/linux.md), [Windows](docs/quick-start/windows.md).
+**Want all the files together? Choose your platform:**
+[macOS](docs/quick-start/macos.md#complete-ready-to-use-setup-optional) ·
+[Linux](docs/quick-start/linux.md#complete-ready-to-use-setup-optional) ·
+[Windows / Git Bash](docs/quick-start/windows.md#complete-ready-to-use-setup-optional).
+Each guide links a coordinated `config.json`, `snippets.json`, and editable
+theme, with download, copy destination, backup, and reload steps. These optional
+sets replace your current preferences; back up first. Shell/Vim preferences are
+separate and optional.
+
+- [Change your first setting](docs/configuration.md#add-one-display-change) — fonts,
+  colors, shortcuts, and more.
 - [OMXTerm Studio](https://luizomf.github.io/omxterm-studio/) — edit settings and
   themes visually, then [apply your files](docs/configuration.md#edit-visually-with-omxterm-studio).
 - [Everyday use](docs/usage.md) — all shortcuts, images, paste, and troubleshooting.

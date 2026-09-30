@@ -28,15 +28,26 @@ folder is `omxterm` inside that location instead. `~` means your home folder.
 - [All settings](#configuration-reference), [Windows shells](#choose-the-windows-default-shell), and [shortcuts](#keybinds)
 - [Reload behavior and errors](#reloading-user-configuration)
 
-For a guided path, see [macOS](quick-start/macos.md),
-[Linux](quick-start/linux.md), or [Windows](quick-start/windows.md).
+**Want a complete ready-to-use setup instead of assembling settings?** Choose
+[macOS](quick-start/macos.md#complete-ready-to-use-setup-optional),
+[Linux](quick-start/linux.md#complete-ready-to-use-setup-optional), or
+[Windows / Git Bash](quick-start/windows.md#complete-ready-to-use-setup-optional).
+Each guide links a coordinated `config.json`, `snippets.json`, and complete
+theme, with copy destinations and backup/reload steps. Those optional sets
+replace your current preferences; merge individual fields to keep other choices.
+The guides also include a small first-setting walkthrough.
 
 ## Add one display change
 
-Open `config.json` and change `font.size` from `16` to `18`. Save and reload to
-see larger text. Change it back to `16` to undo it.
+Open `config.json` and find `size` inside the `font` object. This is what
+`font.size` means; do not add a key literally named `"font.size"`. Change `size`
+from `16` to `18`, save, and reload to see larger text. Change it back to `16`
+to undo it.
 
-If you are creating a file from scratch, this is a complete example:
+If `size` is missing, add `"size": 18` inside the existing `font` object. If
+`font` is missing, add the `"font": { "size": 18 }` object shown below alongside
+`version`, preserving your other fields and separating properties with commas.
+For a new file, this is a complete example:
 
 ```json
 {
@@ -98,7 +109,10 @@ The smallest valid `config.json` selects all built-in defaults:
 ```
 
 This uses bundled FiraCode Nerd Font Mono, bundled `omtheme`, and the default
-shortcuts. A missing configuration file also selects defaults.
+shortcuts. A missing configuration file also selects defaults. This minimal
+configuration does not create `snippets.json` or an editable theme file. If
+those are missing, create `snippets.json` with the [single-line example](#snippets)
+or create and select a [complete theme](#terminal-themes).
 
 ### Create the configuration directory
 

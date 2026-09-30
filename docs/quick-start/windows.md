@@ -3,7 +3,9 @@
 [Install OMXTerm](../installation.md#windows) and open it. Windows PowerShell,
 bundled fonts, and colors are ready to use. This walkthrough makes one setting
 change and tries a saved command. You can choose Git Bash or another installed
-shell later.
+shell later. Prefer a coordinated set of files? Jump to the
+[complete ready-to-use setup](#complete-ready-to-use-setup-optional) for
+configuration, snippets, and an editable theme; that optional setup uses Git Bash.
 
 ## 1. Open your settings folder
 
@@ -22,13 +24,19 @@ selects another root. Back up files before editing. In Notepad's Save As dialog,
 choose **All files** and UTF-8. Explorer's **View → Show → File name extensions**
 helps check that the name stays `config.json`, not `config.json.txt`.
 
-If you already had a configuration before installing, OMXTerm keeps it. For
-missing files, use the [minimal examples](../configuration.md#quick-start-use-the-bundled-defaults).
+If you already had a configuration before installing, OMXTerm keeps it and
+skips the starter kit. Create a missing `config.json` with the
+[minimal configuration](../configuration.md#quick-start-use-the-bundled-defaults);
+that alone does not create snippets or an editable theme. Steps 3 and 4 cover
+those missing files.
 
 ## 2. Make the text comfortable
 
-Open `config.json`, find `font.size`, and change `16` to `18`. Save, then press
-and release **Alt alone** to open the application menu. Choose **View → Reload
+Open `config.json`, find `size` inside the `font` object (`font.size`), and change
+`16` to `18`. If `font` or `size` is missing, use the
+[complete font example](../configuration.md#add-one-display-change) to add the
+missing fields while preserving your other settings. Save, then press and
+release **Alt alone** to open the application menu. Choose **View → Reload
 User Configuration** (`Ctrl+Shift+,`). The text gets larger; change it back to
 `16` to undo it. If a notice reports an error, fix the named field and reload.
 
@@ -43,13 +51,16 @@ Review the inserted command, then press Enter. Snippets are saved text you can
 insert into the current tab.
 
 Edit `snippets.json` to add your own commands, then close and reopen the sidebar.
-The [single-line snippet example](../configuration.md#snippets) uses `pwd`,
-which works in PowerShell too. Its `execute: false` leaves the final Enter to you.
+If there is no starter greeting, create `snippets.json` with the
+[single-line snippet example](../configuration.md#snippets), reopen the sidebar,
+and try that snippet instead. It uses `pwd`, which works in PowerShell too.
+Its `execute: false` leaves the final Enter to you.
 
 ## 4. Make it yours
 
 - **Colors:** edit a `#RRGGBB` value in `themes/omtheme.json` and reload, or use
   [OMXTerm Studio](../configuration.md#edit-visually-with-omxterm-studio).
+  If the theme file is missing, [create and select a complete theme](../configuration.md#terminal-themes).
 - **Background:** [enable blur and positive transparency together](../configuration.md#background-transparency-and-blur)
   for Acrylic on Windows 11 22H2 or later. If native effects are unavailable or
   disabled by system policy, the background stays opaque.
@@ -60,10 +71,9 @@ which works in PowerShell too. Its `execute: false` leaves the final Enter to yo
 - **Next steps:** [everyday use](../usage.md), [shortcuts](../configuration.md#keybinds),
   and [when settings take effect](../configuration.md#reloading-user-configuration).
 
-## Optional Git Bash examples
+<a id="optional-git-bash-examples"></a>
 
-<details>
-<summary>Use Git Bash, a full configuration, an editable theme, and seven Bash snippets</summary>
+## Complete ready-to-use setup (optional)
 
 Install [Git for Windows](https://gitforwindows.org/) to get Git Bash. The example
 expects `C:\Program Files\Git\bin\bash.exe`; check that it exists, or change
@@ -71,11 +81,16 @@ expects `C:\Program Files\Git\bin\bash.exe`; check that it exists, or change
 in the linked configuration.
 
 These files work with **OMXTerm 0.17.0 or newer** and use bundled fonts and all
-built-in shortcuts:
+built-in shortcuts.
 
-- [config.json](files/windows/config.json) — selects Git Bash
-- [snippets.json](files/windows/snippets.json) — Bash commands
-- [themes/omtheme.json](files/windows/themes/omtheme.json) — colors
+Use these three files together; destinations are inside your
+[settings folder](#1-open-your-settings-folder):
+
+| Download                                                          | Copy to               |
+| ----------------------------------------------------------------- | --------------------- |
+| [config.json](files/windows/config.json) — selects Git Bash       | `config.json`         |
+| [snippets.json](files/windows/snippets.json) — Bash commands      | `snippets.json`       |
+| [themes/omtheme.json](files/windows/themes/omtheme.json) — colors | `themes/omtheme.json` |
 
 Download each linked file using GitHub's **Download raw file** button. To get
 all examples together, choose **Code → Download ZIP** on the repository's
@@ -131,11 +146,23 @@ foreach ($name in $names) {
 ```
 
 Keep the printed backup path. If copying stops, inspect what was copied before
-retrying. Restore originals to undo, for example
-`Copy-Item -LiteralPath (Join-Path $backup 'config.json') -Destination (Join-Path $configDir 'config.json')`;
-remove only newly added files without originals, not the whole settings folder.
+retrying. To undo later, even in a fresh PowerShell session, replace the backup
+path below with the one you saved. Use the same `XDG_CONFIG_HOME` as OMXTerm (or
+set `$configDir` to the original settings folder if that environment has changed).
+Check that destinations are still ordinary files, not symlinks/reparse points,
+before restoring:
 
-</details>
+```powershell
+$backup = 'C:\path\to\saved\omxterm-quick-start-backup-ID'
+$configRoot = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Path $HOME '.config' }
+$configDir = Join-Path $configRoot 'omxterm'
+Copy-Item -LiteralPath (Join-Path $backup 'config.json') -Destination (Join-Path $configDir 'config.json') -ErrorAction Stop
+```
+
+Repeat for `snippets.json` and `themes\omtheme.json` if they have backups. Remove
+only newly added files without originals, not the whole settings folder. Reload
+configuration and reopen the snippets sidebar; open a new tab to use the restored
+shell setting.
 
 <details>
 <summary>Optional Git Bash and Vim preferences</summary>
@@ -175,9 +202,19 @@ foreach ($name in @('bashrc', 'inputrc', 'vimrc')) { # Edit this list as needed
 }
 ```
 
-Start a new Git Bash or Vim to apply changes. To restore, use, for example,
-`Copy-Item -LiteralPath (Join-Path $dotBackup '.bashrc') -Destination (Join-Path $dotHome '.bashrc')`.
-Keep the earliest backup if you repeat the copy; remove only newly added files
-without originals.
+Start a new Git Bash or Vim to apply changes. To restore in a fresh PowerShell
+session, replace the backup path with the one you saved and set `$dotHome` to
+the same home folder you used above. Check that destinations are still ordinary
+files, not symlinks/reparse points, before restoring:
+
+```powershell
+$dotBackup = 'C:\path\to\saved\omxterm-dotfiles-backup-ID'
+$dotHome = $HOME
+Copy-Item -LiteralPath (Join-Path $dotBackup '.bashrc') -Destination (Join-Path $dotHome '.bashrc') -ErrorAction Stop
+```
+
+Repeat for backed-up `.inputrc` and `.vimrc`; adapt destinations if you used
+`INPUTRC`. Keep the earliest backup if you repeat the copy; remove only newly
+added files without originals. Start a new Git Bash or Vim after restoring.
 
 </details>

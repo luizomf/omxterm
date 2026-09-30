@@ -2,7 +2,14 @@
 
 [Install OMXTerm](../installation.md#linux) and open it. Your account shell,
 bundled font, and colors are ready to use. This short walkthrough makes one
-setting change and tries a saved command.
+setting change and tries a saved command. Prefer a coordinated set of files?
+Jump to the [complete ready-to-use setup](#complete-ready-to-use-setup-optional)
+for configuration, snippets, and an editable theme.
+
+The commands and optional snippets below use Bash. If your current shell is
+something else (such as Fish or Zsh), type `bash` and press Enter first. Type
+`exit` when finished to return to that shell. This does not change your account
+shell or the shell started by new OMXTerm tabs.
 
 ## 1. Open your settings folder
 
@@ -19,13 +26,19 @@ Open that path in your file manager; **Ctrl+L** accepts a path in many file
 managers. The default is `~/.config/omxterm`; a non-empty `XDG_CONFIG_HOME`
 selects another root. Back up files before editing them with a plain-text editor.
 
-If you already had a configuration before installing, OMXTerm keeps it. For
-missing files, use the [minimal examples](../configuration.md#quick-start-use-the-bundled-defaults).
+If you already had a configuration before installing, OMXTerm keeps it and
+skips the starter kit. Create a missing `config.json` with the
+[minimal configuration](../configuration.md#quick-start-use-the-bundled-defaults);
+that alone does not create snippets or an editable theme. Steps 3 and 4 cover
+those missing files.
 
 ## 2. Make the text comfortable
 
-Open `config.json`, find `font.size`, and change `16` to `18`. Save, then press
-and release **Alt alone** to open the application menu. Choose **View → Reload
+Open `config.json`, find `size` inside the `font` object (`font.size`), and change
+`16` to `18`. If `font` or `size` is missing, use the
+[complete font example](../configuration.md#add-one-display-change) to add the
+missing fields while preserving your other settings. Save, then press and
+release **Alt alone** to open the application menu. Choose **View → Reload
 User Configuration** (`Ctrl+Shift+,`). The text gets larger; change it back to
 `16` to undo it. If a notice reports an error, fix the named field and reload.
 
@@ -40,13 +53,15 @@ Review the inserted command, then press Enter. Snippets are saved text you can
 insert into the current tab.
 
 Edit `snippets.json` to add your own commands, then close and reopen the sidebar.
-Start with the [single-line snippet example](../configuration.md#snippets).
-Its `execute: false` leaves the final Enter to you.
+If there is no starter greeting, create `snippets.json` with the
+[single-line snippet example](../configuration.md#snippets), reopen the sidebar,
+and try that snippet instead. Its `execute: false` leaves the final Enter to you.
 
 ## 4. Make it yours
 
 - **Colors:** edit a `#RRGGBB` value in `themes/omtheme.json` and reload, or use
   [OMXTerm Studio](../configuration.md#edit-visually-with-omxterm-studio).
+  If the theme file is missing, [create and select a complete theme](../configuration.md#terminal-themes).
 - **Background:** try [transparency and blur](../configuration.md#background-transparency-and-blur).
   For GNOME, KDE Plasma, or Hyprland setup, see [Linux desktop tips](linux-desktop.md).
 - **Window bars:** `Ctrl+Shift+D` toggles the title bar; `Ctrl+Shift+B` toggles
@@ -56,18 +71,22 @@ Its `execute: false` leaves the final Enter to you.
 - **Next steps:** [everyday use](../usage.md), [shortcuts](../configuration.md#keybinds),
   and [when settings take effect](../configuration.md#reloading-user-configuration).
 
-## Optional complete examples
+<a id="optional-complete-examples"></a>
 
-<details>
-<summary>Use a full configuration, editable theme, and seven Bash snippets</summary>
+## Complete ready-to-use setup (optional)
 
 These files work with **OMXTerm 0.17.0 or newer** and use bundled fonts and all
 built-in shortcuts. The snippets assume Bash; the configuration keeps your
-account shell:
+account shell.
 
-- [config.json](files/linux/config.json)
-- [snippets.json](files/linux/snippets.json)
-- [themes/omtheme.json](files/linux/themes/omtheme.json)
+Use these three files together; destinations are inside your
+[settings folder](#1-open-your-settings-folder):
+
+| Download                                               | Copy to               |
+| ------------------------------------------------------ | --------------------- |
+| [config.json](files/linux/config.json)                 | `config.json`         |
+| [snippets.json](files/linux/snippets.json)             | `snippets.json`       |
+| [themes/omtheme.json](files/linux/themes/omtheme.json) | `themes/omtheme.json` |
 
 Download each linked file using GitHub's **Download raw file** button. To get
 all examples together, choose **Code → Download ZIP** on the repository's
@@ -113,11 +132,20 @@ apply_quick_start
 ```
 
 Keep the printed backup path. If copying stops, inspect what was copied before
-retrying. Restore originals to undo, for example
-`cp -p "$backup/config.json" "$config_dir/config.json"`; remove only newly
-added files without originals, not the whole settings folder.
+retrying. To undo later, even in a fresh Bash session, replace the backup path
+below with the one you saved. Use the same `XDG_CONFIG_HOME` as OMXTerm (or set
+`config_dir` to the original settings folder if that environment has changed).
+Check that destinations are still ordinary files, not symlinks, before restoring:
 
-</details>
+```bash
+backup="/path/to/saved/omxterm-quick-start-backup.ABC123"
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omxterm"
+cp -p "$backup/config.json" "$config_dir/config.json"
+```
+
+Repeat for `snippets.json` and `themes/omtheme.json` if they have backups. Remove
+only newly added files without originals, not the whole settings folder. Reload
+configuration and reopen the snippets sidebar.
 
 <details>
 <summary>Optional Bash and Vim preferences</summary>
@@ -155,10 +183,41 @@ copy_optional_dotfiles() {
 copy_optional_dotfiles
 ```
 
-OMXTerm starts Bash as a login shell. Before opening a new terminal, ensure your
-existing login startup file sources `~/.bashrc`: Bash reads the first available
-file among `~/.bash_profile`, `~/.bash_login`, and `~/.profile`. If it does not
-already load `.bashrc`, add this to that existing file:
+When Bash is your account shell, OMXTerm starts it as a login shell. Bash reads
+the first readable file among `~/.bash_profile`, `~/.bash_login`, and
+`~/.profile`. Before opening a new terminal, check that this file sources
+`~/.bashrc`.
+
+If it needs an edit, back it up too. In Bash, replace `dot_backup` below with
+your printed dotfile backup path. This selects the first existing login file
+(or `.profile` if none exists), refuses links/non-files, and saves the original
+before you edit it. If it is unreadable, fix that before continuing rather than
+bypassing its login setup.
+
+```bash
+dot_backup="/path/to/saved/omxterm-dotfiles-backup.ABC123"
+backup_login_startup() {
+  [ -d "$dot_backup" ] || { echo 'Check dotfile backup path'; return 1; }
+  login_file="$HOME/.profile"
+  for name in .bash_profile .bash_login .profile; do
+    if [ -e "$HOME/$name" ] || [ -L "$HOME/$name" ]; then
+      login_file="$HOME/$name"
+      break
+    fi
+  done
+  [ ! -L "$login_file" ] && { [ ! -e "$login_file" ] || { [ -f "$login_file" ] && [ -r "$login_file" ]; }; } || { echo "Refusing $login_file"; return 1; }
+  if [ -e "$login_file" ]; then
+    saved="$dot_backup/$(basename "$login_file")"
+    [ ! -e "$saved" ] && [ ! -L "$saved" ] || { echo 'Backup already exists; keep the original'; return 1; }
+    cp -p "$login_file" "$saved" || return 1
+  fi
+  printf 'Login startup file (record this path): %s\n' "$login_file"
+}
+backup_login_startup
+```
+
+After that block succeeds, if the selected file does not already load `.bashrc`,
+add this in your editor, preserving its other login settings:
 
 ```sh
 if [ -n "$BASH_VERSION" ] && [ -r "$HOME/.bashrc" ]; then
@@ -169,8 +228,21 @@ fi
 If none exists, create `~/.profile` with that block. Do not create `.bash_profile`
 over an existing `.profile`; doing so would bypass the latter's login setup.
 
-Start a new shell or Vim to apply changes. To restore, use, for example,
-`cp -p "$dot_backup/.bashrc" "$HOME/.bashrc"`. Keep the earliest backup if you
-repeat the copy; remove only newly added files without originals.
+Start a new shell or Vim to apply changes. To restore in a fresh Bash session,
+replace this backup path with the one you saved. Check that destinations are
+still ordinary files, not symlinks, before restoring:
+
+```bash
+dot_backup="/path/to/saved/omxterm-dotfiles-backup.ABC123"
+cp -p "$dot_backup/.bashrc" "$HOME/.bashrc"
+```
+
+Repeat for backed-up `.inputrc`, `.vimrc`, and the recorded login startup
+filename. For example, if you edited `.profile`, restore with
+`cp -p "$dot_backup/.profile" "$HOME/.profile"` in the same shell. If you created
+`.profile` because none existed, remove only that new file to undo its addition.
+Adapt destinations if you used `INPUTRC`. Keep the earliest backup if you repeat
+the copy; remove only newly added files without originals. Start a new shell or
+Vim after restoring.
 
 </details>

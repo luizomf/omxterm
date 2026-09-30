@@ -44,14 +44,39 @@ us to review a change from that copy.
 
 1. Check existing issues and pull requests for related work. Discuss substantial
    changes in an issue first; a typo or broken link can go straight to a PR.
-2. Create a focused branch in your fork from current upstream `main`. GitHub's
-   file editor is enough for a small documentation edit.
-3. Make the change, add tests for changed behavior, and update the relevant docs.
-4. Run the [checks below](#verification) and open a PR against `main` with the
-   issue, a short explanation, and the results. Draft PRs are welcome.
+2. On the [project's GitHub page](https://github.com/luizomf/omxterm), click
+   **Fork**, select your account, and choose **Create fork**. If reusing an older
+   fork, update its `main` with **Sync fork → Update branch** first.
+3. Create a focused branch from current upstream `main`. Use the
+   [local setup below](#development-environment), or the
+   [browser-only route](#browser-only-documentation-edits) for a small doc edit.
+4. Make the change, add tests for changed behavior, and update the relevant docs.
+5. Run the [checks below](#verification), then [commit, push, and open a PR](#commits-and-pull-requests)
+   against `main` with the issue, a short explanation, and the results. Draft PRs
+   are welcome.
 
 Write code, documentation and GitHub contributions in English. Be respectful
 and specific when giving feedback; discuss the work rather than the person.
+
+### Browser-only documentation edits
+
+No local build is needed for a small Markdown change:
+
+1. In your fork, select `main`, open the file, and click the pencil (**Edit**).
+2. Edit and preview the Markdown. Choose **Commit changes**, enter a focused
+   message such as `docs: clarify theme setup`, and select **Create a new branch**
+   with a descriptive name such as `docs/my-first-change`.
+3. Open a PR using **Compare & pull request** (or **Contribute → Open pull request**).
+   Choose `luizomf/omxterm` and `main` as the base repository/branch, and your fork
+   and new branch as the head.
+4. Inspect **Files changed** for unrelated edits or private data. Follow changed
+   links and review examples and the rendered Markdown. In the PR, explicitly
+   record unavailable checks, for example: **Not run (browser-only):
+   `npm run format:check` and `git diff --check`.** Do not claim they passed.
+
+The maintainer must verify formatting, links/examples, and `git diff --check`
+before merging a browser-only documentation PR. See the
+[PR description requirements](#commits-and-pull-requests) below.
 
 ## Development environment
 
@@ -68,14 +93,23 @@ cd omxterm
 git remote add upstream https://github.com/luizomf/omxterm.git
 git fetch upstream
 git switch -c docs/my-first-change upstream/main
+```
+
+Choose a branch name that describes your change. For a documentation-only edit,
+you can stop here, edit the Markdown, and follow [verification](#verification)
+and [commit/push steps](#commits-and-pull-requests).
+
+For code development, continue with:
+
+```sh
 npm ci
 npm run dev
 ```
 
-Choose a branch name that describes your change. `npm ci` installs the locked
-dependencies and prepares the native runtime; `npm run dev` builds and opens the
-app. Development uses your ordinary OMXTerm configuration and opens a real shell,
-so back up settings before experimenting with them.
+`npm ci` installs the locked dependencies and prepares the native runtime;
+`npm run dev` builds and opens the app. Development uses your ordinary OMXTerm
+configuration and opens a real shell, so back up settings before experimenting
+with them.
 
 The [native development reference](docs/development.md) covers platform setup,
 graphical tests and fixture cleanup. See the [Restty guide](docs/restty-development.md)
@@ -147,6 +181,22 @@ but optional for releases.
 
 Use focused [Conventional Commit](https://www.conventionalcommits.org/) subjects,
 such as `fix: preserve terminal focus` or `docs: clarify theme setup`.
+
+For a local change, run the applicable [checks](#verification), then commit only
+your intended files and push the branch to your fork (`origin` in the setup
+above). Replace the file path and branch name below with your own:
+
+```sh
+git diff
+git add path/to/changed-file.md
+git commit -m "docs: clarify theme setup"
+git push -u origin docs/my-first-change
+```
+
+On your fork's GitHub page, choose **Compare & pull request** (or
+**Contribute → Open pull request**). Select `luizomf/omxterm` / `main` as the base,
+and your fork / pushed branch as the head. Review **Files changed** before
+submitting.
 
 A PR should explain the problem and solution, link its issue (`Closes #123` when
 applicable), and list verification commands and results. Mention documentation
