@@ -984,7 +984,9 @@ actual kernel FUSE mounting and writes one fixed desktop entry that either runs
 the AppImage directly or adds `--appimage-extract-and-run`; launch time performs
 no mode discovery. The installed desktop entry explicitly selects X11/XWayland,
 including when the session exports a Wayland preference. Direct AppImage launches
-retain the rendering override rules above.
+retain the rendering override rules above. Desktop Entry encoding preserves literal
+percent signs and double quotes in the installed pathname. A fixed `sh` command
+forwards the executable and arguments literally; pathnames are never shell code.
 
 The helper accepts `install [--compatibility] <verified-local-AppImage>`,
 `uninstall`, `--version`, and `--help`, without interactive questions. Only the

@@ -20,7 +20,8 @@ sha256sum --check "$appimage.sha256" &&
 
 Open **OMXTerm** from your application menu. The helper installs the local app,
 icon, and menu entry in your user folder. It automatically chooses mounting or
-extraction and uses X11/XWayland.
+extraction and uses X11/XWayland. Spaces, literal percent signs and double quotes
+in your home folder's path are preserved; no renaming or manual escaping is needed.
 
 ## Only if graphics fail
 

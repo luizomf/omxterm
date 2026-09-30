@@ -200,17 +200,22 @@ install_appimage() {
     fail "the AppImage does not contain the required OMXTerm desktop metadata"
 
   probe_fuse_mode
-  launcher_prefix=
+  # GIO checks the executable before expanding %%: keep the encoded path in
+  # argv, not that first token. This fixed command forwards literal argv only;
+  # no pathname enters shell code (env alone would treat paths with = as assignments).
+  launcher_prefix='sh -c "exec \\"\\$@\\"" sh '
   graphics_suffix=' --ozone-platform=x11'
   if [ "$compatibility" = true ]; then
-    launcher_prefix='env LIBGL_ALWAYS_SOFTWARE=1 '
+    launcher_prefix="env LIBGL_ALWAYS_SOFTWARE=1 $launcher_prefix"
     graphics_suffix="$graphics_suffix --ignore-gpu-blocklist"
   fi
   detect_desktop_scale
   if [ -n "$desktop_scale" ]; then
     graphics_suffix="$graphics_suffix --force-device-scale-factor=$desktop_scale"
   fi
-  escaped_app=$(printf '%s' "$app" | sed 's/\\/\\\\/g; s/"/\\"/g')
+  # Exec quoting is decoded after Desktop Entry string escaping: a literal
+  # backslash needs four backslashes; quote/backtick/dollar need two plus itself.
+  escaped_app=$(printf '%s' "$app" | sed 's/\\/\\\\\\\\/g; s/["`$]/\\\\&/g; s/%/%%/g')
   escaped_icon=$(printf '%s' "$icon" | sed 's/\\/\\\\/g')
   desktop_contents=$work/omxterm.desktop
   cat > "$desktop_contents" <<EOF

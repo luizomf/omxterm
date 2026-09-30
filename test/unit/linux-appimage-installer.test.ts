@@ -175,7 +175,7 @@ describe.skipIf(process.platform === "win32")(
     });
 
     it.each([
-      ["direct", 'Exec="', " --appimage-extract-and-run"],
+      ["direct", 'Exec=sh -c "', " --appimage-extract-and-run"],
       ["fallback", "--appimage-extract-and-run", "never-present-marker"],
     ])(
       "installs all owned files with the %s launcher mode",
@@ -233,7 +233,8 @@ describe.skipIf(process.platform === "win32")(
       ]);
 
       expect(await readFile(owned(home).desktop, "utf8")).toContain(
-        `Exec=env LIBGL_ALWAYS_SOFTWARE=1 "${owned(home).app}" --appimage-extract-and-run --ozone-platform=x11 --ignore-gpu-blocklist %U\n`,
+        String.raw`Exec=env LIBGL_ALWAYS_SOFTWARE=1 sh -c "exec \\"\\$@\\"" sh "${owned(home).app}" --appimage-extract-and-run --ozone-platform=x11 --ignore-gpu-blocklist %U` +
+          "\n",
       );
       expect(stdout).toContain("Compatibility mode");
       expect(stdout).toContain("slower");
@@ -283,7 +284,8 @@ describe.skipIf(process.platform === "win32")(
         OMXTERM_TEST_MONITORS: "Monitor One (ID 0):\n\tscale: 1.50",
       });
       expect(await readFile(owned(home).desktop, "utf8")).toContain(
-        `Exec=env LIBGL_ALWAYS_SOFTWARE=1 "${owned(home).app}" --ozone-platform=x11 --ignore-gpu-blocklist --force-device-scale-factor=1.5 %U\n`,
+        String.raw`Exec=env LIBGL_ALWAYS_SOFTWARE=1 sh -c "exec \\"\\$@\\"" sh "${owned(home).app}" --ozone-platform=x11 --ignore-gpu-blocklist --force-device-scale-factor=1.5 %U` +
+          "\n",
       );
 
       await runHelper(home, bin, ["install", appImage]);
