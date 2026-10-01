@@ -91,7 +91,13 @@ an exit, and releasing the tab beforehand would leave an unowned interval.
 Thus native counts cannot discard mounting siblings or earlier unacknowledged
 failures. Explicit
 window/application closure remains authorized separately, and disposed owners
-make late dialog completion inert.
+make late dialog completion inert. After actual exit, the window controller
+constructs immutable end context, delivers it, and retires its session object
+rather than keeping a closed-state tombstone. Failure acknowledgement retains
+only separate window ownership and the failed identity, not a native wrapper.
+Closed or retired identities cannot route terminal control or display events.
+Controller disposal releases its local session references after requesting close;
+ADR 0028's independent native completion barrier remains authoritative.
 
 Terminal titles stay display-only per [ADR 0010](0010-keep-terminal-titles-display-only.md),
 applied per session: a tab shows its own sanitized title, an untitled tab falls

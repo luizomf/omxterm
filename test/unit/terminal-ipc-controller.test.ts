@@ -840,7 +840,8 @@ describe("terminal IPC controller", () => {
       signal: 0,
     });
     expect(onSessionExit).toHaveBeenCalledOnce();
-    expect(close).toHaveBeenCalledOnce();
+    // Actual exit has retired the session; late close/disposal cannot route it.
+    expect(close).not.toHaveBeenCalled();
     expect(ipc.handlers.size).toBe(0);
     expect(ipc.listeners.size).toBe(0);
   });

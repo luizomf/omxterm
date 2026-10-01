@@ -8,7 +8,6 @@ import {
   isTerminalSessionClose,
   isTerminalSessionReference,
   isTerminalSessionResize,
-  requiresProtectedPaste,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
 import {
@@ -60,6 +59,7 @@ import { createLocalImageIpcBoundary } from "./local-image-ipc";
 export { isValidExternalLink } from "./external-link";
 import {
   acknowledgeTerminalOutput,
+  confirmClipboardPaste,
   createTerminalTitleRequests,
   requestExternalLink,
   useClipboard,
@@ -363,26 +363,14 @@ function sessionEndContext(
   reportedLaunchKind: TerminalSessionLaunchKind | undefined,
   liveSessions: number,
 ) {
-  return {
+  return Object.freeze({
     sessionId,
     launchKind:
       state?.session.launchKind ?? reportedLaunchKind ?? "default-shell",
     closeRequested: state?.closed ?? false,
     ...(state?.closeReason ? { closeReason: state.closeReason } : {}),
     liveSessions,
-  };
-}
-
-async function confirmClipboardPaste(
-  options: TerminalIpcControllerOptions,
-  text: string,
-): Promise<boolean> {
-  try {
-    return await options.confirmPaste(text);
-  } catch {
-    options.onClipboardError?.();
-    return false;
-  }
+  });
 }
 
 function createTerminalIpcController(
@@ -447,7 +435,10 @@ function createTerminalIpcController(
     sessionId: TerminalSessionId,
   ): RoutedSessionState | undefined => {
     const state = sessions.get(sessionId);
-    if (!state) reject("ipc", "unknown-session");
+    if (!state || state.closed || state.exited) {
+      reject("ipc", "unknown-session");
+      return undefined;
+    }
     return state;
   };
 
@@ -496,25 +487,32 @@ function createTerminalIpcController(
           const state = sessions.get(sessionId);
           if (state) state.exited = true;
           else exitedBeforeRegistration = true;
-          if (!options.webContents.isDestroyed()) {
-            options.webContents.send(terminalIpc.exit, { sessionId, ...exit });
-          }
-          options.onSessionExit(
-            exit,
-            sessionEndContext(
-              sessionId,
-              state,
-              reportedLaunchKind,
-              countLiveSessions(sessions),
-            ),
+          const context = sessionEndContext(
+            sessionId,
+            state,
+            reportedLaunchKind,
+            countLiveSessions(sessions),
           );
-          if (windowId !== undefined) {
-            writeWindowEvent({
-              name: "pty.exit",
-              windowId,
-              ...terminalExitOutcome(exit),
-              durationMs: elapsedMilliseconds(startedAt),
-            });
+          try {
+            if (!options.webContents.isDestroyed()) {
+              options.webContents.send(terminalIpc.exit, {
+                sessionId,
+                ...exit,
+              });
+            }
+            options.onSessionExit(exit, context);
+            if (windowId !== undefined) {
+              writeWindowEvent({
+                name: "pty.exit",
+                windowId,
+                ...terminalExitOutcome(exit),
+                durationMs: elapsedMilliseconds(startedAt),
+              });
+            }
+          } finally {
+            // Failure acknowledgement owns only the immutable context, not the
+            // ended session/native wrapper. Native shutdown observes exit first.
+            sessions.delete(sessionId);
           }
         },
       });
@@ -542,20 +540,20 @@ function createTerminalIpcController(
       );
     }
 
-    outputFlow.bind(createdSession);
-    sessions.set(sessionId, {
-      session: createdSession,
-      outputFlow,
-      ...(payload === undefined
-        ? {
-            terminalSurfaceFontConfiguration: surfaceFontConfiguration(
-              rendererConfiguration.current(),
-            ),
-          }
-        : {}),
-      closed: false,
-      exited: exitedBeforeRegistration,
-    });
+    if (!exitedBeforeRegistration && !disposed) {
+      outputFlow.bind(createdSession);
+      sessions.set(sessionId, {
+        session: createdSession,
+        outputFlow,
+        ...(payload === undefined && {
+          terminalSurfaceFontConfiguration: surfaceFontConfiguration(
+            rendererConfiguration.current(),
+          ),
+        }),
+        closed: false,
+        exited: false,
+      });
+    }
     startedAt = Date.now();
     if (windowId !== undefined)
       writeWindowEvent({
@@ -563,11 +561,9 @@ function createTerminalIpcController(
         windowId,
         action: "started",
       });
-    if (disposed || ownerLostBeforeRegistration) {
-      closeSession(sessionId);
-    } else {
-      options.onSessionStarted(sessionId, createdSession.fallbackTitle);
-    }
+    if (disposed) createdSession.close();
+    else if (ownerLostBeforeRegistration) closeSession(sessionId);
+    else options.onSessionStarted(sessionId, createdSession.fallbackTitle);
     return sessionId;
   };
   const configuration = (payload?: unknown) => {
@@ -648,13 +644,8 @@ function createTerminalIpcController(
       "",
     );
   };
-  const confirmPaste = async (payload?: unknown) => {
-    if (!isNonemptyClipboardText(payload) || !requiresProtectedPaste(payload)) {
-      reject("clipboard", "invalid-payload");
-      throw new TypeError("Invalid Protected Paste payload");
-    }
-    return confirmClipboardPaste(options, payload);
-  };
+  const confirmPaste = (payload?: unknown) =>
+    confirmClipboardPaste(payload, options, reject);
   const showClipboardContextMenu = (payload?: unknown) => {
     if (payload === undefined) options.showClipboardContextMenu();
     else reject("clipboard", "invalid-payload");
@@ -740,6 +731,8 @@ function createTerminalIpcController(
       localImageBoundary.dispose();
       unregister();
       for (const sessionId of [...sessions.keys()]) closeSession(sessionId);
+      // Main's native shutdown barrier remains independent of this controller.
+      sessions.clear();
     },
   };
 }

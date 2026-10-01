@@ -1,4 +1,6 @@
 import {
+  isNonemptyClipboardText,
+  requiresProtectedPaste,
   isTerminalSessionOutputAck,
   isTerminalSessionReference,
   isTerminalSessionTitle,
@@ -85,6 +87,26 @@ export function createTerminalTitleRequests(
         options.onSessionTitleSync?.(payload.sessionId);
     },
   };
+}
+
+export async function confirmClipboardPaste(
+  payload: unknown,
+  options: {
+    readonly confirmPaste: (text: string) => Promise<boolean>;
+    readonly onClipboardError?: () => void;
+  },
+  reject: RejectBoundary,
+): Promise<boolean> {
+  if (!isNonemptyClipboardText(payload) || !requiresProtectedPaste(payload)) {
+    reject("clipboard", "invalid-payload");
+    throw new TypeError("Invalid Protected Paste payload");
+  }
+  try {
+    return await options.confirmPaste(payload);
+  } catch {
+    options.onClipboardError?.();
+    return false;
+  }
 }
 
 export function useClipboard<T>(

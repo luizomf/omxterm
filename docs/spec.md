@@ -134,7 +134,10 @@ succeeds (ADR 0025).
   closed. Window/controller disposal and a native kill request are not completion
   signals. Repeated quit requests share one shutdown; pending or denied Busy
   Session confirmation does not start it. Completion is owned by main independently
-  of disposed renderer/controller callbacks (ADR 0028).
+  of disposed renderer/controller callbacks (ADR 0028). After actual exit,
+  the window controller delivers immutable end context and releases the session
+  object. Pending failure acknowledgements retain only their separate ownership
+  metadata; retired identities cannot route input, resize, title, bell or ACKs.
 - `confirmClose` defaults to `true` and guards tab close, window close, and
   quit. Each action can produce at most one confirmation, so closing a window
   with several tabs asks once for the whole window. OMXTerm asks only when the
