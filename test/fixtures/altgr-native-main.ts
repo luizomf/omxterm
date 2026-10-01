@@ -60,12 +60,7 @@ void app.whenReady().then(async () => {
       window.isFocused(),
       "owned native window focused before OS input",
     );
-    const helper = path.join(
-      process.cwd(),
-      "test",
-      "fixtures",
-      "altgr-native-input",
-    );
+    const helper = path.join(__dirname, "altgr-native-input");
     const executable =
       process.platform === "linux" ? "/usr/bin/sudo" : "powershell.exe";
     const args =

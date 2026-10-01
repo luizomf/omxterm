@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,6 +36,11 @@ it.skipIf(
       await writeFile(
         path.join(root, "package.json"),
         JSON.stringify({ name: "omxterm-altgr-fixture", main: "main.cjs" }),
+      );
+      const helper = `altgr-native-input.${process.platform === "linux" ? "py" : "ps1"}`;
+      await copyFile(
+        path.join(projectRoot, "test", "fixtures", helper),
+        path.join(root, helper),
       );
       const args: string[] = [];
       applyChromiumSandboxPolicy({
