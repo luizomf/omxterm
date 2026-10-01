@@ -1,0 +1,46 @@
+import { access, mkdir, mkdtemp, rm } from "node:fs/promises";
+import path from "node:path";
+import { build } from "esbuild";
+import { describe, expect, it } from "vitest";
+import { runNativeFixture } from "../fixtures/run-native-fixture";
+
+const supported = process.platform === "linux" && process.arch === "arm64";
+
+describe.skipIf(!supported)("Linux native foreground Busy detection", () => {
+  it("keeps an ordinary pipeline Busy when its foreground group leader has exited", async () => {
+    await mkdir(path.resolve(".scratch"), { recursive: true });
+    const base = await mkdtemp(path.resolve(".scratch/linux-foreground-"));
+    const root = await mkdtemp(path.join(base, "profile-"));
+    let supervised = false;
+    try {
+      const program = path.join(base, "fixture.mjs");
+      await build({
+        entryPoints: ["test/fixtures/linux-foreground-main.ts"],
+        outfile: program,
+        bundle: true,
+        packages: "external",
+        platform: "node",
+        format: "esm",
+      });
+      supervised = true;
+      const result = await runNativeFixture({
+        executable: process.execPath,
+        args: [program],
+        root,
+        timeout: 15_000,
+      });
+      expect(result, JSON.stringify(result)).toMatchObject({
+        reason: "exit",
+        exitCode: 0,
+        signal: null,
+        cleanupErrors: [],
+      });
+      expect(result.stdout.trim()).toBe("__OMXTERM_FOREGROUND_PASS__");
+      await expect(access(root)).rejects.toThrow();
+      await rm(base, { recursive: true, force: true });
+    } finally {
+      // Preserve supervisor failure evidence rather than erase uncertain ownership.
+      if (!supervised) await rm(base, { recursive: true, force: true });
+    }
+  }, 30_000);
+});

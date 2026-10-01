@@ -25,6 +25,14 @@ as Busy so a detection failure degrades to asking, never to silently killing
 work. The heuristic accepts known edge cases (a nested idle shell counts as
 idle) as the price of staying name-only.
 
+Pinned node-pty 1.1.0's Linux public getter substitutes the spawned shell when
+its native foreground lookup is unavailable. Postinstall removes that fallback
+from the reviewed Unix runtime so the adapter's existing unreadable-name check
+can count it as Busy. The native lookup, macOS getter and Windows policy stay
+unchanged. An ordinary Linux pipeline can reach this state when its short-lived
+foreground group leader exits before another pipeline member. The preparation
+and byte guards are documented in the [native development guide](../development.md).
+
 Close Tab confirmation retains its original renderer-owned tab rather than
 resolving selection again after the asynchronous answer. Main serializes one
 pending tab confirmation per window, sends a preparation command before opening

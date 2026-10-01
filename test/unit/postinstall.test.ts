@@ -3,7 +3,7 @@ import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prepareNodePtyRuntime } from "../../scripts/prepare-node-pty-runtime.mjs";
 
 const require = createRequire(import.meta.url);
@@ -13,6 +13,17 @@ const installedUnixRuntime = path.join(
 );
 
 describe("node-pty postinstall preparation", () => {
+  let root: string;
+  let unixRuntimePath: string;
+  beforeEach(async () => {
+    root = await mkdtemp(path.join(tmpdir(), "omxterm-node-pty-preparation-"));
+    unixRuntimePath = path.join(root, "unixTerminal.js");
+    await copyFile(installedUnixRuntime, unixRuntimePath);
+  });
+  afterEach(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
+
   it("builds node-pty with exec status on Linux ARM64", async () => {
     const rebuild = vi.fn().mockResolvedValue(undefined);
     const chmod = vi.fn().mockResolvedValue(undefined);
@@ -21,6 +32,7 @@ describe("node-pty postinstall preparation", () => {
       prepareNodePtyRuntime({
         platform: "linux",
         arch: "arm64",
+        unixRuntimePath,
         rebuild,
         chmod,
       }),
@@ -38,6 +50,7 @@ describe("node-pty postinstall preparation", () => {
         platform: "darwin",
         arch: "arm64",
         helperPath: "/node-pty/spawn-helper",
+        unixRuntimePath,
         rebuild,
         chmod,
       }),
@@ -115,7 +128,13 @@ describe("node-pty postinstall preparation", () => {
     const chmod = vi.fn().mockResolvedValue(undefined);
 
     await expect(
-      prepareNodePtyRuntime({ platform: "linux", arch: "x64", rebuild, chmod }),
+      prepareNodePtyRuntime({
+        platform: "linux",
+        arch: "x64",
+        unixRuntimePath,
+        rebuild,
+        chmod,
+      }),
     ).resolves.toBe("corrected");
     expect(rebuild).not.toHaveBeenCalled();
     expect(chmod).not.toHaveBeenCalled();

@@ -49,6 +49,32 @@ Apple Command Line Tools on macOS; unknown pinned source bytes stop preparation.
 A module copied from another platform is not interchangeable. See
 [ADR 0032](adr/0032-report-native-exec-failures-outside-terminal-payload.md).
 
+Preparation also removes node-pty 1.1.0's Linux `process` getter fallback to the
+spawned shell. Unavailable native foreground reads remain unavailable and count
+as Busy; macOS and Windows policies are unchanged (ADR 0017). Before writing,
+`scripts/prepare-node-pty-runtime.mjs` checks these exact SHA-256 inputs after
+normalizing its exec-status callback forwarding:
+
+| Unix runtime                             | SHA-256                                                            |
+| ---------------------------------------- | ------------------------------------------------------------------ |
+| Original 1.1.0                           | `a62e3a60c3bc1b0e7261f58284856df748dcee6761a2bc7a5a5ba98b22660473` |
+| Prior paused-exit-tail correction        | `238f993db4aa83d57885832eabe9c1de1ce05b96c84d3270574f26f71f9afcb8` |
+| Paused-exit-tail + foreground correction | `89fafa225fe39a4fc7d2af373cf9381684a3b2bfe7aa5df073247eb3b91040cc` |
+
+Each replacement must match once and produce the reviewed digest; repeated
+preparation preserves corrected bytes and unknown bytes fail without writing.
+Unit tests execute the pinned public getter with an unavailable native result
+using isolated temporary runtime files. On Linux ARM64, the owned native fixture
+checks an idle shell, ordinary `sleep`, and `/bin/true | /bin/sleep 2` with a real
+unavailable lookup, then return to idle and native exit:
+
+```sh
+npx vitest run test/unit/linux-foreground.test.ts test/unit/postinstall.test.ts test/integration/linux-foreground.test.ts
+```
+
+This checks the Busy decision, not physical close-dialog interaction or loss of
+user data. Foreground names remain in memory only.
+
 Graphical tests and packaged launches need an authorized X11/XWayland desktop;
 native Wayland is not currently claimed. Over SSH, use the desktop's `DISPLAY`
 and X11 authorization while keeping X server access control enabled. Inherit

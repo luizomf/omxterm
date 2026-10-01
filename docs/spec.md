@@ -142,7 +142,9 @@ succeeds (ADR 0025).
   foreground process differs from the idle Default Shell. Closing only idle
   sessions proceeds immediately. OMXTerm reads the foreground process name
   solely for this in-memory decision and never logs, displays, or transmits it.
-  An unreadable name counts as Busy. ConPTY on Windows exposes a static console
+  An unreadable name counts as Busy, including unavailable Linux native
+  foreground lookups; the spawned shell is not a substitute for that result.
+  ConPTY on Windows exposes a static console
   title in place of the foreground process name, so every live Windows session
   counts as Busy and asks while confirmation is enabled.
 - Closing or ordinarily exiting an unselected tab preserves the selected tab,

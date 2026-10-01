@@ -22,6 +22,8 @@ const originalUnixRuntimeDigest =
   "a62e3a60c3bc1b0e7261f58284856df748dcee6761a2bc7a5a5ba98b22660473";
 const correctedUnixRuntimeDigest =
   "238f993db4aa83d57885832eabe9c1de1ce05b96c84d3270574f26f71f9afcb8";
+const foregroundUnixRuntimeDigest =
+  "89fafa225fe39a4fc7d2af373cf9381684a3b2bfe7aa5df073247eb3b91040cc";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 
 const defaultHelperPath = path.resolve(
@@ -29,7 +31,7 @@ const defaultHelperPath = path.resolve(
   "../node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper",
 );
 
-async function preservePausedUnixExitTail(runtimePath) {
+async function prepareUnixRuntime(runtimePath) {
   let source = (await readFile(runtimePath, "utf8"))
     .replace(
       "var onexit = function (code, signal, execFailed)",
@@ -40,8 +42,15 @@ async function preservePausedUnixExitTail(runtimePath) {
       "_this.emit('exit', code, signal)",
     );
   const sourceDigest = digest(source);
-  if (sourceDigest === correctedUnixRuntimeDigest) {
+  if (sourceDigest === foregroundUnixRuntimeDigest) {
     await writeFile(runtimePath, forwardExecStatus(source));
+    return;
+  }
+  if (sourceDigest === correctedUnixRuntimeDigest) {
+    await writeFile(
+      runtimePath,
+      forwardExecStatus(preserveUnavailableForeground(source)),
+    );
     return;
   }
   if (sourceDigest !== originalUnixRuntimeDigest)
@@ -73,7 +82,27 @@ async function preservePausedUnixExitTail(runtimePath) {
     throw new Error(
       `node-pty Unix correction did not produce reviewed bytes: ${digest(source)}`,
     );
-  await writeFile(runtimePath, forwardExecStatus(source));
+  await writeFile(
+    runtimePath,
+    forwardExecStatus(preserveUnavailableForeground(source)),
+  );
+}
+
+function preserveUnavailableForeground(source) {
+  const original =
+    "            return pty.process(this._fd, this._pty) || this._file;";
+  const corrected = `            // OMXTerm keeps unavailable Linux foreground reads unavailable (ADR 0017).
+            return pty.process(this._fd, this._pty);`;
+  if (source.split(original).length - 1 !== 1)
+    throw new Error(
+      "node-pty foreground correction did not match reviewed source",
+    );
+  source = source.replace(original, corrected);
+  if (digest(source) !== foregroundUnixRuntimeDigest)
+    throw new Error(
+      "node-pty foreground correction did not produce reviewed bytes",
+    );
+  return source;
 }
 
 async function preserveLiteralWindowsArguments(runtimePath) {
@@ -131,7 +160,7 @@ export async function prepareNodePtyRuntime({
     await preserveLiteralWindowsArguments(windowsRuntimePath);
     return "corrected";
   }
-  await preservePausedUnixExitTail(unixRuntimePath);
+  await prepareUnixRuntime(unixRuntimePath);
   if (platform === "linux" && arch === "arm64") {
     await rebuild();
     return "corrected-and-rebuilt";
