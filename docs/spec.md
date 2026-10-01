@@ -19,7 +19,9 @@ before a Launch Request's `-e`, or a defined `ELECTRON_OZONE_PLATFORM_HINT`
 environment variable, takes precedence over the Linux default for diagnosis.
 The environment variable counts as an override even when its value is empty.
 Linux deliberately uses `--no-sandbox` as an unconditional launch policy for
-ordinary-user runtime, direct AppImage, extraction, desktop entry and X11 relaunch. This is a fixed launch policy, not a fallback or configurable mode. OMXTerm
+ordinary-user runtime, direct AppImage, extraction, desktop entry and X11 relaunch.
+The development launcher (`npm run dev`) supplies it before Electron bootstrap,
+not only after application main starts. This is a fixed launch policy, not a fallback or configurable mode. OMXTerm
 leaves host security policy unchanged and installs no privileged sandbox helper.
 Sandboxed Linux support is outside the current maintenance scope (ADR 0024).
 x64, Intel macOS, and other operating systems remain possible future work rather

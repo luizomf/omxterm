@@ -114,8 +114,14 @@ desktop unlocked during tests. A headless `xvfb-run` smoke test does not verify
 native desktop behavior.
 
 OMXTerm disables Chromium sandboxing on Linux, so no administrator sandbox setup
-is needed. [ADR 0024](adr/0024-disable-the-chromium-sandbox-on-linux.md) documents
-this tradeoff; simple, reproducible contributions for sandboxed support are welcome.
+is needed. `npm run dev` supplies `--no-sandbox` before Electron starts and retains
+it through the X11 relaunch. App main runs too late to establish this policy:
+a bare `electron .` can abort before main or fail to start its renderer. For a
+raw Electron diagnostic launch after building, use `npx electron --no-sandbox .`
+on Linux; do not change sandbox-helper or `/dev/shm` permissions as a workaround.
+macOS and Windows development launches retain their sandbox behavior.
+[ADR 0024](adr/0024-disable-the-chromium-sandbox-on-linux.md) documents this tradeoff;
+simple, reproducible contributions for sandboxed support are welcome.
 
 The statically linked AppImage runtime needs neither zlib development headers
 nor system `libfuse2`. Normal mounting uses kernel FUSE support;

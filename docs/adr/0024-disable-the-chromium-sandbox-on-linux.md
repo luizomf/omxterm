@@ -20,6 +20,11 @@ The pinned packager has no AppRun override, so a checksum-guarded build-input
 patch replaces its namespace probe with the unconditional flag before loading
 electron-builder. A packaging hook rejects unprepared input; verification checks
 the generated launcher. Dependency upgrades require reviewing these pinned
-bytes. Runtime setup applies the same Linux-only policy before Electron
-readiness. Native verification covers ordinary startup, PTYs and graphics,
-without maintaining a separate sandbox-policy lifecycle harness.
+bytes. Development's Node launcher supplies the same Linux-only flag before
+Electron bootstrap, using Electron's existing CLI for process signals and exit
+status. Applying it only in app main, even before readiness, is too late:
+Chromium has already initialized sandbox machinery. The flag remains in literal
+argv through X11 relaunch; main also retains the policy for child processes.
+Native verification covers ordinary startup, PTYs and graphics. A focused
+launcher test observes bootstrap argv at the process-spawn boundary; it does not
+claim to prove a visible or usable terminal.

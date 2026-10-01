@@ -28,7 +28,7 @@
     "check": "npm run check:portable && npm run package-built:mac && npm run package:verify",
     "check:linux": "npm run check:portable && npm run package-built:linux && npm run package:verify",
     "check:win": "node scripts/check-windows.mjs",
-    "dev": "npm run build && electron ."
+    "dev": "npm run build && node scripts/dev.mjs ."
   },
   "engines": {
     "node": "^22.13.0 || >=24.0.0"
