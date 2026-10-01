@@ -4,13 +4,11 @@ OMXTerm uses [Semantic Versioning 2.0.0](https://semver.org/) for published
 versions. A release number has the form `MAJOR.MINOR.PATCH`, and its Git tag adds
 `v`; for example, version `0.13.0` has tag `v0.13.0`.
 
-The latest published version is **0.19.0**; its
-[release record](releases/0.19.0.md) identifies the immutable exact artifacts,
+The latest published version is **0.20.0**; its
+[release record](releases/0.20.0.md) identifies the immutable exact artifacts,
 completed native verification and verified post-upload downloads. The source
-tree now prepares **0.20.0**, the next-minor release after adding whole-line
-unquoted spaced local-image paths and larger static-image previews. The
-[0.20.0 candidate record](releases/0.20.0.md) records native verification;
-publication remains pending. This does not change the 0.19.0 tag, assets or
+tree now carries **0.20.1-dev.0**, the next-patch development baseline.
+This is not a published release and does not change the 0.20.0 tag, assets or
 release body.
 
 This policy explains version selection and consistency. An owner request to
