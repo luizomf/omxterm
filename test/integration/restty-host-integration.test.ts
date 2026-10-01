@@ -112,7 +112,22 @@ interface HostResult {
     readonly gridSize: { readonly cols: number; readonly rows: number };
     readonly pixels: ResttyImagePixelEvidence;
     readonly afterZoomPixels: ResttyImagePixelEvidence;
-    readonly afterResizePixels: ResttyImagePixelEvidence;
+    readonly afterContentShrinkPixels: ResttyImagePixelEvidence;
+    readonly afterContentRestorePixels: ResttyImagePixelEvidence;
+    readonly contentRefit: {
+      readonly before: {
+        readonly width: number;
+        readonly grid: { readonly cols: number; readonly rows: number };
+      };
+      readonly shrunk: {
+        readonly width: number;
+        readonly grid: { readonly cols: number; readonly rows: number };
+      };
+      readonly restored: {
+        readonly width: number;
+        readonly grid: { readonly cols: number; readonly rows: number };
+      };
+    };
     readonly afterTabAndThemePixels: ResttyImagePixelEvidence;
   };
   readonly navigations: number;
@@ -364,10 +379,17 @@ describe.skipIf(
               result.imageEvidence.gridSize.rows,
         ),
       ).toBeLessThan(2);
+      const { before, shrunk, restored } = result.imageEvidence.contentRefit;
+      expect(shrunk.width).toBeLessThan(before.width);
+      expect(shrunk.grid.cols).toBeLessThan(before.grid.cols);
+      expect(restored.width).toBeGreaterThan(shrunk.width);
+      expect(Math.abs(restored.width - before.width)).toBeLessThanOrEqual(1);
+      expect(restored.grid).toEqual(before.grid);
       for (const [operation, evidence] of Object.entries({
         initial: result.imageEvidence.pixels,
         zoom: result.imageEvidence.afterZoomPixels,
-        resize: result.imageEvidence.afterResizePixels,
+        contentShrink: result.imageEvidence.afterContentShrinkPixels,
+        contentRestore: result.imageEvidence.afterContentRestorePixels,
         tabAndTheme: result.imageEvidence.afterTabAndThemePixels,
       })) {
         expect(

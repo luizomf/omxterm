@@ -18,7 +18,10 @@ const encoded = png.toString("base64");
 if (process.stdin.isTTY) process.stdin.setRawMode(true);
 process.stdin.resume();
 process.stdin.on("data", () => {});
-write("\\x1b[2J\\x1b[H\\x1b[?25l");
+// Earlier host phases fill scrollback. Clear it once BEFORE placing images so
+// width reflow does not move this pixel scenario's viewport through old output.
+// Never clear or re-emit images after zoom/refit: those must preserve placement.
+write("\\x1b[3J\\x1b[2J\\x1b[H\\x1b[?25l");
 for (let offset = 0; offset < encoded.length; offset += 4096) {
   const last = offset + 4096 >= encoded.length;
   const controls = offset === 0
@@ -107,7 +110,13 @@ export async function exerciseResttyImages(options: {
   readonly gridSize: { readonly cols: number; readonly rows: number };
   readonly pixels: PixelEvidence;
   readonly afterZoomPixels: PixelEvidence;
-  readonly afterResizePixels: PixelEvidence;
+  readonly afterContentShrinkPixels: PixelEvidence;
+  readonly afterContentRestorePixels: PixelEvidence;
+  readonly contentRefit: {
+    readonly before: ImageContentLayout;
+    readonly shrunk: ImageContentLayout;
+    readonly restored: ImageContentLayout;
+  };
 }> {
   const { window, runEmitter, output, input, size, cellSize, waitFor } =
     options;
@@ -122,56 +131,99 @@ export async function exerciseResttyImages(options: {
     throw new Error("Image emitter produced no completion marker", { cause });
   }
 
-  const waitForImagePixels = async (
+  const waitForGridChange = async (
+    previousGrid: { readonly cols: number; readonly rows: number },
     label: string,
-    previousGrid?: { readonly cols: number; readonly rows: number },
   ) => {
-    let evidence: PixelEvidence | undefined;
-    let gridSize: { readonly cols: number; readonly rows: number } | undefined;
-    await waitFor(async () => {
-      gridSize = size();
-      evidence = await captureResttyImagePixels(window, await cellSize());
-      return (
-        hasResttyImagePlacementEvidence(evidence) &&
-        (previousGrid === undefined ||
-          gridSize.cols !== previousGrid.cols ||
-          gridSize.rows !== previousGrid.rows)
-      );
-    }, label).catch((cause: unknown) => {
+    await waitFor(
+      () =>
+        size().cols !== previousGrid.cols || size().rows !== previousGrid.rows,
+      label,
+    ).catch((cause: unknown) => {
       throw new Error(
-        `Image rendering failed at ${label}: ${JSON.stringify({ gridSize, evidence })}`,
+        `Image PTY grid did not change at ${label}: ${JSON.stringify({ previousGrid, grid: size() })}`,
         { cause },
       );
     });
-    if (!evidence || !gridSize)
+  };
+  const waitForImagePixels = async (label: string) => {
+    let evidence: PixelEvidence | undefined;
+    await waitFor(async () => {
+      evidence = await captureResttyImagePixels(window, await cellSize());
+      return hasResttyImagePlacementEvidence(evidence);
+    }, label).catch((cause: unknown) => {
+      throw new Error(
+        `Image pixels failed at ${label}: ${JSON.stringify({ grid: size(), evidence })}`,
+        { cause },
+      );
+    });
+    if (!evidence)
       throw new Error(`Image rendering produced no ${label} evidence`);
-    return { evidence, gridSize };
+    return { evidence, gridSize: size() };
   };
 
   const initial = await waitForImagePixels(
     "initial Pi and Chafa image rendering",
   );
   window.webContents.send(terminalIpc.fontZoom, "in");
-  const zoom = await waitForImagePixels(
-    "Pi and Chafa images after font zoom",
-    initial.gridSize,
-  );
+  await waitForGridChange(initial.gridSize, "image PTY grid after font zoom");
+  const zoom = await waitForImagePixels("Pi and Chafa images after font zoom");
 
   window.webContents.send(terminalIpc.fontZoom, "reset");
+  await waitForGridChange(zoom.gridSize, "image PTY grid after zoom reset");
   const reset = await waitForImagePixels(
     "Pi and Chafa images after zoom reset",
-    zoom.gridSize,
   );
   const canvasBounds = await readCanvasBounds(window);
   const finalPng = (await window.webContents.capturePage(canvasBounds)).toPNG();
   const screenshotPath = process.env["OMXTERM_RESTTY_IMAGE_SCREENSHOT_PATH"];
   if (screenshotPath) writeFileSync(screenshotPath, finalPng);
 
-  const windowSize = window.getSize();
-  window.setSize(windowSize[0]! + 100, windowSize[1]! + 80);
-  const resized = await waitForImagePixels(
-    "Pi and Chafa images after resize",
-    reset.gridSize,
+  const before = { ...(await readImageContentLayout(window)), grid: size() };
+  if (before.sidebarVisible)
+    throw new Error("Image content refit requires an initially hidden sidebar");
+  const waitForContentRefit = async (restoring: boolean) => {
+    let layout: ImageContentLayout | undefined;
+    await waitFor(
+      async () => {
+        layout = { ...(await readImageContentLayout(window)), grid: size() };
+        if (Math.abs(layout.height - before.height) > 1) return false;
+        return restoring
+          ? !layout.sidebarVisible &&
+              Math.abs(layout.width - before.width) <= 1 &&
+              layout.grid.cols === before.grid.cols &&
+              layout.grid.rows === before.grid.rows
+          : layout.sidebarVisible &&
+              layout.sidebarReady &&
+              layout.width < before.width &&
+              layout.grid.cols < before.grid.cols;
+      },
+      `image content and PTY grid after sidebar ${restoring ? "restore" : "shrink"}`,
+    ).catch((cause: unknown) => {
+      throw new Error(
+        `Image content/PTY refit failed: ${JSON.stringify({ restoring, before, layout })}`,
+        { cause },
+      );
+    });
+    return layout!;
+  };
+  window.webContents.send(terminalIpc.snippetsToggle);
+  let shrunk: ImageContentLayout;
+  let shrinkPixels: Awaited<ReturnType<typeof waitForImagePixels>>;
+  let restored: ImageContentLayout;
+  try {
+    shrunk = await waitForContentRefit(false);
+    shrinkPixels = await waitForImagePixels(
+      "Pi and Chafa images after content shrink",
+    );
+  } finally {
+    // Restore production layout even when the shrink's pixel oracle fails.
+    if ((await readImageContentLayout(window)).sidebarVisible)
+      window.webContents.send(terminalIpc.snippetsToggle);
+    restored = await waitForContentRefit(true);
+  }
+  const restorePixels = await waitForImagePixels(
+    "Pi and Chafa images after content restore",
   );
 
   await waitFor(
@@ -188,7 +240,9 @@ export async function exerciseResttyImages(options: {
     gridSize: reset.gridSize,
     pixels: reset.evidence,
     afterZoomPixels: zoom.evidence,
-    afterResizePixels: resized.evidence,
+    afterContentShrinkPixels: shrinkPixels.evidence,
+    afterContentRestorePixels: restorePixels.evidence,
+    contentRefit: { before, shrunk, restored },
   };
 }
 
@@ -239,6 +293,35 @@ export async function readResttyImageCellSize(
   // canvas by the grid would distribute unused right/bottom space across cells
   // and silently move the expected anchors, especially at fractional DPRs.
   return [Number(width), Number(height)];
+}
+
+interface ImageContentLayout {
+  readonly sidebarVisible: boolean;
+  readonly sidebarReady: boolean;
+  readonly width: number;
+  readonly height: number;
+  readonly grid: { readonly cols: number; readonly rows: number };
+}
+
+async function readImageContentLayout(
+  window: BrowserWindow,
+): Promise<Omit<ImageContentLayout, "grid">> {
+  return window.webContents.executeJavaScript(
+    `(() => {
+      const sidebar = document.querySelector('#snippets-sidebar');
+      const canvas = document.querySelector('.restty-terminal-surface canvas');
+      if (!sidebar || !canvas) throw new Error('Image content layout is unavailable');
+      const bounds = canvas.getBoundingClientRect();
+      return {
+        sidebarVisible: !sidebar.hidden && sidebar.getBoundingClientRect().width > 0,
+        sidebarReady: !!sidebar.querySelector('input[type="search"]') &&
+          !!sidebar.querySelector('.snippets-empty')?.textContent,
+        width: bounds.width,
+        height: bounds.height,
+      };
+    })()`,
+    true,
+  ) as Promise<Omit<ImageContentLayout, "grid">>;
 }
 
 async function captureResttyImagePixels(

@@ -183,8 +183,22 @@ separate expected word regions. Portable controls reject blank, cursor-only,
 unchanged and out-of-region frames; native captures tolerate platform-specific
 glyph rasterization rather than requiring identical bitmaps.
 
+The cursor fixture captures real native WebGL2 pixels at DPR 1 and 2 through
+font zoom, a controlled host-container width shrink, and configuration reload
+with width restoration. Its font/padding matrix, cell bounds, focus/blink and
+Surface/canvas/session continuity checks do not depend on the compositor
+honoring an arbitrary native-window size request. Window Chrome fixtures retain
+real native/content/Surface/PTY bounds and window-manager behavior coverage.
+
 The host's inline-image oracle checks both cell-anchored Pi/Chafa rectangles
-and their full complement after zoom, resize, tab selection and theme reload.
+and their full complement after zoom, content shrink/restore through the
+production Snippets Sidebar toggle, tab selection and configuration reload.
+The sidebar must actually appear with loaded content, shrink the canvas and
+real PTY grid, then disappear and restore both before later host phases.
+The emitter clears unrelated earlier host scrollback once before placing images;
+it never clears or re-emits them after zoom or content refit. Content/grid
+readiness failures are reported separately from image-pixel failures. This is
+content refit coverage, not a native-window sizing assertion.
 It uses current `CSI 16 t` device-pixel cell metrics, not canvas/grid division
 (which includes unused edges). Area/perimeter counts tolerate native DPR and
 edge rasterization without expanding image bounds; portable duplicate/displaced
@@ -253,8 +267,9 @@ The declared path still clicks the real custom control, observes its native
 request and unchanged native state, checks its label and terminal focus, and
 verifies Surface/PTY continuity and cleanup. Tiling may resize the first window
 when the second opens: its selected Surface and PTY must fit actual native and
-container bounds, while hidden-tab geometry remains untouched. The standard
-path additionally retains the unchanged-height assertion.
+container bounds, while hidden-tab geometry remains untouched. Both policies
+check actual bounds rather than requiring a historical height to survive tiling;
+`standard` declares maximize behavior, not an absence of tiling.
 
 About startup tests retain the desktop's Wayland environment and exercise the
 production X11 relaunch. Their supervised completion file records the

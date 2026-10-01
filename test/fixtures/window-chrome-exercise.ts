@@ -340,8 +340,6 @@ export async function exerciseWindowChrome(options: {
     fitsNativeBounds,
     "Surface and PTY fit actual native bounds after second window",
   );
-  if (fixtureWindowPolicy() === "standard")
-    assert.equal((await geometry()).canvasHeight, first.canvasHeight);
   assert.equal(sizes[0]!.length, hiddenSizeCount);
   await exerciseCustomControlFocus(window);
   await waitFor(

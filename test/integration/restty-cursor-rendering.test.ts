@@ -7,7 +7,7 @@ import { expect, it } from "vitest";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
 
 it.each([1, 2])(
-  "keeps native cursor pixels inside the first cell at DPR %i through zoom, refit and reload",
+  "keeps native WebGL cursor pixels inside the first cell at DPR %i through zoom, controlled content refit and reload",
   async (dpr) => {
     const root = await mkdtemp(path.join(tmpdir(), "omxterm-cursor-"));
     await Promise.all([

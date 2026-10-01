@@ -23,6 +23,7 @@ interface Phase {
   closes: number;
   sameCanvas: boolean;
   canvas: { x: number; y: number; width: number; height: number };
+  available: { x: number; y: number; width: number; height: number };
 }
 function ink(bitmap: Buffer, blank: Buffer, width: number) {
   let count = 0,
@@ -93,15 +94,7 @@ async function run() {
     await execute(`mount(${configured}, ${padding})`);
     let initial: Phase | undefined;
     let previous: Phase | undefined;
-    const [windowWidth, windowHeight] = window.getContentSize() as [
-      number,
-      number,
-    ];
     for (const lifecycle of ["initial", "zoom", "refit", "reload"]) {
-      if (lifecycle === "refit")
-        window.setContentSize(Math.floor(windowWidth * 0.75), windowHeight);
-      if (lifecycle === "reload")
-        window.setContentSize(windowWidth, windowHeight);
       // Reload changes padding in place too, without changing creation-time family.
       const phase = await execute<Phase>(
         `phase(${JSON.stringify(lifecycle)}, ${lifecycle === "reload" ? 8 - padding : padding})`,
@@ -109,6 +102,11 @@ async function run() {
       assert.equal(phase.starts, 1);
       assert.equal(phase.closes, 0);
       assert.equal(phase.sameCanvas, true);
+      for (const dimension of ["x", "y", "width", "height"] as const)
+        assert.ok(
+          Math.abs(phase.canvas[dimension] - phase.available[dimension]) <= 1,
+          `cursor canvas ${dimension} must fit available content`,
+        );
       assert.equal(
         phase.padding,
         lifecycle === "reload" ? 8 - padding : padding,
@@ -121,7 +119,7 @@ async function run() {
       if (lifecycle === "refit")
         assert.ok(
           phase.canvas.width < previous!.canvas.width,
-          `native refit did not shrink canvas: ${phase.canvas.width} >= ${previous!.canvas.width}`,
+          `controlled content refit did not shrink canvas: ${phase.canvas.width} >= ${previous!.canvas.width}`,
         );
       if (lifecycle === "reload") {
         assert.equal(phase.cellWidth, initial!.cellWidth);

@@ -103,10 +103,16 @@ function createFixture() {
       if (lifecycle === "zoom")
         for (let i = 0; i < 16; i++) surface!.zoom("in");
       if (lifecycle === "refit") {
+        // Resize content inside the actual native layout. A tiling compositor
+        // need not honor BrowserWindow size requests; pixels still use WebGL2.
+        container.style.width = `${Math.floor(container.getBoundingClientRect().width * 0.75)}px`;
+        container.style.flex = "0 0 auto";
         await frames();
         surface!.focus();
       }
       if (lifecycle === "reload") {
+        container.style.removeProperty("width");
+        container.style.removeProperty("flex");
         surface!.applyConfiguration({
           appearance: { fontSize: 16, lineHeight: 1, ligatures: true },
           padding: paddingValue(padding),
@@ -127,6 +133,20 @@ function createFixture() {
         starts,
         closes,
         sameCanvas: originalCanvas === container.querySelector("canvas"),
+        available: (() => {
+          const r = container.getBoundingClientRect();
+          const style = getComputedStyle(container);
+          const left = Number.parseFloat(style.paddingLeft);
+          const right = Number.parseFloat(style.paddingRight);
+          const top = Number.parseFloat(style.paddingTop);
+          const bottom = Number.parseFloat(style.paddingBottom);
+          return {
+            x: r.x + left,
+            y: r.y + top,
+            width: r.width - left - right,
+            height: r.height - top - bottom,
+          };
+        })(),
         canvas: (() => {
           const r = container.querySelector("canvas")!.getBoundingClientRect();
           return { x: r.x, y: r.y, width: r.width, height: r.height };
