@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const repositoryRoot = path.resolve(import.meta.dirname, "../..");
 const { scripts } = JSON.parse(
@@ -51,8 +51,15 @@ if (process.argv[3] === ${JSON.stringify(failScript)}) process.exit(23);\n`,
 Object.defineProperty(process, "arch", { value: "arm64" });
 await import(${JSON.stringify(new URL("../../scripts/check-windows.mjs", import.meta.url).href)});\n`,
     );
+    const environment = { ...process.env };
+    // Windows deduplicates environment names case-insensitively at spawn. An
+    // inherited NPM_EXECPATH can otherwise win over our fake npm_execpath and
+    // recursively run the real checks or packaging instead of the test stub.
+    for (const key of Object.keys(environment))
+      if (key.toLowerCase() === "npm_execpath") delete environment[key];
+    environment.npm_execpath = npm;
     const result = spawnSync(process.execPath, [driver, ...args], {
-      env: { ...process.env, npm_execpath: npm },
+      env: environment,
       encoding: "utf8",
       timeout: 10_000,
     });
@@ -122,6 +129,21 @@ describe("release script orchestration", () => {
       expect(result.stderr).toMatch(/requires exact installer|Unknown/u);
     },
   );
+
+  it("isolates fake npm from an inherited Windows-cased entrypoint", async () => {
+    vi.stubEnv("NPM_EXECPATH", "__unused-inherited-npm-entrypoint__");
+    try {
+      const result = await runWindowsCheck([]);
+      expect(result.status).toBe(0);
+      expect(result.calls).toEqual([
+        ["run", "check:portable"],
+        ["run", "package-built:win"],
+        ["run", "package:verify"],
+      ]);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 
   it("Windows retains full verification without inventing replacement authorization", async () => {
     const result = await runWindowsCheck([]);
