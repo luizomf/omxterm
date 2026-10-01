@@ -44,6 +44,9 @@ void app.whenReady().then(async () => {
   window.show();
   window.focus();
   await waitFor(() => window.isFocused(), "native window focus");
+  // Injected Electron events exercise native dispatch, not OS layout conversion
+  // or physical keyboards. AppKit does not deliver these synthetic menu keys;
+  // macOS still verifies the production fallback and renderer consumption.
   const send = async (
     keyCode: string,
     modifiers: ("control" | "shift")[] = [],
@@ -85,10 +88,7 @@ void app.whenReady().then(async () => {
         ["control", "shift"],
       );
       native[accelerator] = menuActions.length;
-      if (
-        process.platform !== "darwin" &&
-        (accelerator.includes("!") || accelerator.includes("1"))
-      )
+      if (process.platform !== "darwin")
         assert.equal(menuActions.length, 1, `native menu ${accelerator}`);
     }
     const defaults = terminalDefaultKeybinds(process.platform);
