@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
-import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
+import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
 
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
 const electronExecutable = createRequire(import.meta.url)("electron") as string;
@@ -145,14 +145,9 @@ async function runFixture(
   readonly stderr: string;
   readonly stdout: string;
 }> {
-  const chromiumArguments: string[] = [];
+  const chromiumArguments = supportedFixtureChromiumArguments();
   if (scaleFactor !== undefined)
     chromiumArguments.push(`--force-device-scale-factor=${scaleFactor}`);
-  applyChromiumSandboxPolicy({
-    appendSwitch(name) {
-      chromiumArguments.push(`--${name}`);
-    },
-  });
   const child = spawn(electronExecutable, [...chromiumArguments, root], {
     cwd: root,
     detached: process.platform !== "win32",

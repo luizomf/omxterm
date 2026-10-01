@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { resttyImageEmitterSource } from "../fixtures/restty-host-images";
 import { resttyFontMutationProbe } from "../fixtures/restty-font-mutation-probe";
 import { createNativeHostPng } from "../fixtures/native-host-png";
-import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
+import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
 
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -472,12 +472,7 @@ async function buildHostFixture(root: string): Promise<void> {
 }
 
 async function runFixture(root: string) {
-  const chromiumArguments: string[] = [];
-  applyChromiumSandboxPolicy({
-    appendSwitch(name) {
-      chromiumArguments.push(`--${name}`);
-    },
-  });
+  const chromiumArguments = supportedFixtureChromiumArguments();
   return runNativeFixture({
     executable: electronExecutable,
     args: [...chromiumArguments, root],

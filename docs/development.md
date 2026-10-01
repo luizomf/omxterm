@@ -221,8 +221,10 @@ The supervisor validates registered identity and waits for that producer to
 actually disappear before accepting its outcome. An observation file alone
 cannot pass a hanging or failed replacement. Missing evidence is a bounded
 failure; registered detached descendants are cleaned before the profile is
-removed. Surface-only appearance, scrollback and ligature fixtures select X11
-explicitly because they do not import application startup; this is not a global
+removed. Custom Surface/host fixtures select X11 explicitly before Electron
+bootstrap because they do not import application startup. This includes Restty
+host, standalone rendering, local-image and configured-font-style fixtures, as
+well as appearance, scrollback and ligature coverage; this is not a global
 session override. Scrollback resize checks wait boundedly for the observed live
 viewport to reach the bottom rather than assuming two frames and 50 ms complete
 native layout/rendering. The exact bottom and geometry assertions remain intact.

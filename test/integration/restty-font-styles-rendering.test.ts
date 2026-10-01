@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { build } from "esbuild";
 import { describe, it, expect } from "vitest";
 import { syntheticBoldCorrections } from "../../scripts/restty-synthetic-bold-corrections.mjs";
+import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
 
 interface Observation {
   phases: {
@@ -125,7 +126,7 @@ async function observe(
         family,
         // Apply Linux policy before Electron bootstrap without shifting the
         // fixture's positional application arguments.
-        ...(process.platform === "linux" ? ["--no-sandbox"] : []),
+        ...supportedFixtureChromiumArguments(),
       ],
       {
         timeout: 75_000,
