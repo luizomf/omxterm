@@ -270,6 +270,15 @@ full-span hover pixels, first/space/continuation clicks, a literal space at a so
 boundary, resize/reflow, dismissal and focus. Its unrelated gesture-only references
 still return cancellation. No physical click/picker acceptance is claimed.
 
+The host's link-cancellation checks restore a complete visible URL and application
+mouse reporting after the clipping controls. A modified activation at the same
+coordinates proves recognition, and an ordinary click proves reporting is active.
+Separate synthetic pending pointer gestures then cancel through `pointercancel`
+and window blur, each requiring no activation or PTY mouse input. Two fixture-only
+renderer mutants independently remove those listeners; the same cancellation
+assertions must reject them. This qualifies the evidence, not a new gesture rule
+or physical-pointer input.
+
 For explicit high-resolution capacity and resource qualification:
 
 ```sh

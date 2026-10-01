@@ -1,12 +1,16 @@
 import type { BrowserWindow } from "electron";
 import type { LocalImageRequest } from "../../src/shared/local-image";
+import {
+  exerciseResttyLinkCancellation,
+  type ResttyLinkCancellationEvidence,
+} from "./restty-link-cancellation";
 
 interface TerminalSize {
   readonly cols: number;
   readonly rows: number;
 }
 
-interface ResttyLinkGestureOptions {
+export interface ResttyLinkGestureOptions {
   readonly window: BrowserWindow;
   readonly deliverOutput: (data: string) => void;
   readonly inputs: string[];
@@ -27,7 +31,7 @@ export interface ResttyLinkGestureEvidence {
   readonly ordinaryGestureMouseReports: string;
   readonly wheelMouseReports: string;
   readonly alternateScreenMouseReports: string;
-  readonly cancelledGestureMouseReports: string;
+  readonly linkCancellation: ResttyLinkCancellationEvidence;
 }
 
 export async function terminalCellPoint(
@@ -496,24 +500,9 @@ export async function exerciseResttyLinks(
   if (Number(externalLinks.length) !== 5)
     throw new Error("Destination clipped below the viewport opened a link");
 
-  const cancelledStart = inputs.join("").length;
-  await window.webContents.executeJavaScript(
-    `(() => {
-      const canvas = [...document.querySelectorAll('.restty-terminal-surface canvas')].find((candidate) => candidate.getBoundingClientRect().width > 0);
-      const init = { bubbles: true, cancelable: true, pointerId: 77, pointerType: 'mouse', button: 0, buttons: 1, clientX: ${first.x}, clientY: ${first.y}, metaKey: ${process.platform === "darwin"}, ctrlKey: ${process.platform !== "darwin"} };
-      canvas.dispatchEvent(new PointerEvent('pointerdown', init));
-      canvas.dispatchEvent(new PointerEvent('pointercancel', init));
-      canvas.dispatchEvent(new PointerEvent('pointerup', { ...init, buttons: 0 }));
-      canvas.dispatchEvent(new PointerEvent('pointerdown', { ...init, pointerId: 78 }));
-      window.dispatchEvent(new Event('blur'));
-      canvas.dispatchEvent(new PointerEvent('pointerup', { ...init, pointerId: 78, buttons: 0 }));
-    })()`,
-    true,
-  );
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  const cancelledGestureMouseReports = gestureInputSince(
-    inputs,
-    cancelledStart,
+  const linkCancellation = await exerciseResttyLinkCancellation(
+    options,
+    reflowedSize,
   );
 
   return {
@@ -524,6 +513,6 @@ export async function exerciseResttyLinks(
     ordinaryGestureMouseReports,
     wheelMouseReports,
     alternateScreenMouseReports,
-    cancelledGestureMouseReports,
+    linkCancellation,
   };
 }

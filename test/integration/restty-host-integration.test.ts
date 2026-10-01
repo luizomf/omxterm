@@ -11,6 +11,8 @@ import {
   type ResttyImagePixelEvidence,
 } from "../fixtures/restty-image-evidence";
 import { resttyFontMutationProbe } from "../fixtures/restty-font-mutation-probe";
+import type { ResttyLinkCancellationEvidence } from "../fixtures/restty-link-cancellation";
+import { resttyLinkCancellationMutation } from "../fixtures/restty-link-cancellation-mutation";
 import { createNativeHostPng } from "../fixtures/native-host-png";
 import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
@@ -74,7 +76,7 @@ interface HostResult {
   readonly ordinaryGestureMouseReports: string;
   readonly wheelMouseReports: string;
   readonly alternateScreenMouseReports: string;
-  readonly cancelledGestureMouseReports: string;
+  readonly linkCancellation: ResttyLinkCancellationEvidence;
   readonly titleEvents: ReadonlyArray<{
     readonly sessionId: string;
     readonly fixture: "first" | "overlong" | "second" | "unexpected";
@@ -234,15 +236,7 @@ describe.skipIf(
       ]);
       expect(result.modifiedHoverChangedPixels).toBeGreaterThan(10);
       expect(result.releasedHoverChangedPixels).toBe(0);
-      expect(result.externalLinks[0]).toMatch(
-        /^https:\/\/example\.test\/漢a+$/u,
-      );
-      expect(result.externalLinks[0]).toBe(result.externalLinks[1]);
-      expect(result.externalLinks.slice(2)).toEqual([
-        "https://one.test/a",
-        "https://two.test/b",
-        "https://scroll.test/complete",
-      ]);
+      assertVisibleLinkEvidence(result);
       expect(
         result.localImageEvidence.slice(0, 5).map(({ control }) => control),
       ).toEqual([
@@ -288,7 +282,6 @@ describe.skipIf(
         largePasteLength: 79_000,
         validLinkMouseReports: "",
         localPathMouseReports: "",
-        cancelledGestureMouseReports: "",
         titleQueryReplyBytes: 0,
         navigations: 0,
         openedWindows: 0,
@@ -388,9 +381,104 @@ describe.skipIf(
         });
     }
   }, 270_000);
+
+  it.each(["pointercancel", "blur"] as const)(
+    "detects disabled pending %s cancellation in the real Surface",
+    async (cancellation) => {
+      const root = await mkdtemp(path.join(tmpdir(), "omxterm-restty-mutant-"));
+      let supervised = false;
+      try {
+        await buildHostFixture(root, cancellation);
+        supervised = true;
+        const execution = await runFixture(root);
+        expect(execution, JSON.stringify(execution)).toMatchObject({
+          exitCode: 0,
+          signal: null,
+          reason: "exit",
+          cleanupErrors: [],
+        });
+        const line = execution.stdout
+          .split("\n")
+          .find((entry) => entry.startsWith(resultPrefix));
+        if (!line) throw new Error("Cancellation mutant returned no result");
+        const result = JSON.parse(
+          line.slice(resultPrefix.length),
+        ) as HostResult;
+        const evidencePath = process.env["OMXTERM_RESTTY_HOST_EVIDENCE_PATH"];
+        if (evidencePath)
+          await writeFile(
+            `${evidencePath}.${cancellation}.json`,
+            `${JSON.stringify(result, null, 2)}\n`,
+          );
+        assertLinkCancellationControls(result.linkCancellation);
+        expect(() =>
+          assertLinkCancellationEvidence(result.linkCancellation),
+        ).toThrow();
+        const { pointercancel, blur } = result.linkCancellation;
+        for (const [event, observation] of Object.entries({
+          pointercancel,
+          blur,
+        })) {
+          expect(observation.mouseReports).toBe("");
+          // The same unchanged-count invariant used by the positive suite must
+          // reject ONLY the case whose actual cancellation listener is missing.
+          expect(observation.activationsAfter).toBe(
+            observation.activationsBefore + Number(event === cancellation),
+          );
+        }
+        expect(result.externalLinks.slice(5)).toEqual([
+          "https://cancel.test/visible",
+          "https://cancel.test/visible",
+        ]);
+      } finally {
+        if (!supervised) await rm(root, { recursive: true, force: true });
+      }
+    },
+    270_000,
+  );
 });
 
-async function buildHostFixture(root: string): Promise<void> {
+function assertVisibleLinkEvidence(result: HostResult) {
+  expect(result.externalLinks[0]).toMatch(/^https:\/\/example\.test\/漢a+$/u);
+  expect(result.externalLinks[0]).toBe(result.externalLinks[1]);
+  expect(result.externalLinks.slice(2)).toEqual([
+    "https://one.test/a",
+    "https://two.test/b",
+    "https://scroll.test/complete",
+    "https://cancel.test/visible",
+  ]);
+  assertLinkCancellationEvidence(result.linkCancellation);
+}
+
+function assertLinkCancellationControls(
+  evidence: ResttyLinkCancellationEvidence,
+) {
+  expect(evidence.positive).toEqual({
+    activationsBefore: 5,
+    activationsAfter: 6,
+    mouseReports: "",
+  });
+  expect(evidence.reportingControl).toMatch(
+    /^\u001b\[<0;\d+;\d+M\u001b\[<0;\d+;\d+m$/u,
+  );
+}
+
+function assertLinkCancellationEvidence(
+  evidence: ResttyLinkCancellationEvidence,
+) {
+  assertLinkCancellationControls(evidence);
+  for (const cancellation of ["pointercancel", "blur"] as const)
+    expect(evidence[cancellation], cancellation).toEqual({
+      activationsBefore: 6,
+      activationsAfter: 6,
+      mouseReports: "",
+    });
+}
+
+async function buildHostFixture(
+  root: string,
+  cancellation?: "pointercancel" | "blur",
+): Promise<void> {
   await mkdir(path.join(root, "renderer"), { recursive: true });
   await Promise.all([
     build({
@@ -419,7 +507,10 @@ async function buildHostFixture(root: string): Promise<void> {
       entryPoints: ["src/renderer/index.ts"],
       format: "iife",
       loader: { ".ttf": "binary" },
-      plugins: [resttyFontMutationProbe],
+      plugins: [
+        resttyFontMutationProbe,
+        ...(cancellation ? [resttyLinkCancellationMutation(cancellation)] : []),
+      ],
       logLevel: "silent",
       outfile: path.join(root, "renderer", "index.js"),
       platform: "browser",
