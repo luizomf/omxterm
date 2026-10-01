@@ -59,6 +59,11 @@ export async function exerciseResttyLinkCancellation(
       true,
     );
     await new Promise((resolve) => setTimeout(resolve, 100));
+    if (cancellation === "none" && modified)
+      await waitFor(
+        () => externalLinks.length === activationsBefore + 1,
+        "same-coordinate cancellation link activation control",
+      );
     return {
       activationsBefore,
       activationsAfter: externalLinks.length,
@@ -71,10 +76,6 @@ export async function exerciseResttyLinkCancellation(
   };
   // Use the exact same synthetic sequence and coordinates as the negatives.
   const positive = await observe(77, "none");
-  await waitFor(
-    () => externalLinks.length === positive.activationsBefore + 1,
-    "same-coordinate cancellation link activation control",
-  );
   const reportingControl = (await observe(78, "none", false)).mouseReports;
   const pointercancel = await observe(79, "pointercancel");
   const blur = await observe(80, "blur");
