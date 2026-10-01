@@ -155,7 +155,8 @@ async function observe(predicate: () => boolean) {
 }
 try {
   assert.equal(start(trusted), "s1");
-  nextExecutable = "/bin/true";
+  nextExecutable =
+    process.platform === "darwin" ? "/usr/bin/true" : "/bin/true";
   for (let index = 0; index < 100; index += 1) {
     const sessionId = start(trusted) as string;
     await observe(() => {

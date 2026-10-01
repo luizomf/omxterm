@@ -149,7 +149,8 @@ files within one run; also keep separate suites and clones from running native
 tests on that same desktop concurrently.
 
 The owned Unix resize regression invokes the production IPC listener and Local
-Terminal Session with real `/bin/true` PTYs under Node and Electron's Node
+Terminal Session with real `true` PTYs (`/usr/bin/true` on macOS, `/bin/true`
+on Linux) under Node and Electron's Node
 runtime. It requires observed native descriptor-closure failures before exit
 notification, safe diagnostics, actual exits and a usable sibling; it never
 manually closes a descriptor or injects a native failure:
