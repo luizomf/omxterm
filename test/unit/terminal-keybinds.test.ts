@@ -127,7 +127,6 @@ describe("terminal keybind accelerators", () => {
         ...DEFAULT_TERMINAL_KEYBINDS,
         nextTab: "Ctrl+PageDown",
         previousTab: "Ctrl+Up",
-        newTab: "Cmd+Plus",
         closeTab: "Cmd+Return",
         toggleSnippets: "Cmd+Space",
       };
@@ -139,7 +138,7 @@ describe("terminal keybind accelerators", () => {
       expect(resolveWith(keyInput({ key: "ArrowUp", control: true }))).toBe(
         "previousTab",
       );
-      expect(resolveWith(keyInput({ key: "+", meta: true }))).toBe("newTab");
+      expect(resolveWith(keyInput({ key: "+", meta: true }))).toBe("zoomIn");
       expect(resolveWith(keyInput({ key: "Enter", meta: true }))).toBe(
         "closeTab",
       );

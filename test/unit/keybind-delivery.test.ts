@@ -189,6 +189,62 @@ it("keeps native keypad bindings distinct and gives them precedence over the Plu
   expect(invoke).toHaveBeenCalledTimes(4);
 });
 
+it("preserves logical keypad Multiply while prioritizing its explicit native binding", () => {
+  for (const platform of ["darwin", "linux", "win32"]) {
+    for (const [binding, shift] of [
+      ["Control+*", false],
+      ["Control+Shift+*", true],
+    ] as const) {
+      const bindings = {
+        ...terminalDefaultKeybinds(platform),
+        newTab: binding,
+      };
+      const { invoke, sendKey, setKeybinds } = keybindDeliveryHarness(
+        bindings,
+        platform,
+      );
+      const input = { key: "*", code: "NumpadMultiply", control: true, shift };
+      expect(sendKey(input).preventDefault).toHaveBeenCalledOnce();
+      expect(invoke).toHaveBeenCalledExactlyOnceWith("newTab");
+      setKeybinds({
+        ...bindings,
+        closeTab: shift ? "Control+Shift+nummult" : "Control+nummult",
+      });
+      sendKey(input);
+      expect(invoke).toHaveBeenLastCalledWith("closeTab");
+      expect(
+        sendKey({ ...input, control: false }).preventDefault,
+      ).not.toHaveBeenCalled();
+    }
+  }
+});
+
+it("keeps logical Plus convenience out of literal Equal bindings", () => {
+  const defaults = terminalDefaultKeybinds("linux");
+  const { invoke, sendKey } = keybindDeliveryHarness(
+    { ...defaults, newTab: "Control+=" },
+    "linux",
+  );
+  sendKey({ key: "+", code: "BracketRight", control: true });
+  expect(invoke).toHaveBeenCalledExactlyOnceWith("zoomIn");
+  sendKey({ key: "=", code: "Equal", control: true });
+  expect(invoke).toHaveBeenLastCalledWith("newTab");
+  const explicit = keybindDeliveryHarness(
+    { ...defaults, newTab: "Control+Shift+=", zoomIn: "Alt+G" },
+    "linux",
+  );
+  expect(
+    explicit.sendKey({
+      key: "+",
+      code: "BracketRight",
+      control: true,
+      shift: true,
+    }).preventDefault,
+  ).not.toHaveBeenCalled();
+  explicit.sendKey({ key: "+", code: "Equal", control: true, shift: true });
+  expect(explicit.invoke).toHaveBeenCalledExactlyOnceWith("newTab");
+});
+
 it("distinguishes the Plus fallback policy from an explicit Shift requirement", () => {
   for (const [binding, expected] of [
     ["Control+Plus", true],

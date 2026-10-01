@@ -171,6 +171,34 @@ void app.whenReady().then(async () => {
     await send("numadd", ["control"]);
     await send("numsub", ["control"]);
     assert.deepEqual(fallbackActions, ["newTab", "closeTab", "zoomOut"]);
+    for (const shift of [false, true]) {
+      bindings = validateUserConfiguration(
+        {
+          version: 1,
+          keybinds: { newTab: shift ? "Control+Shift+*" : "Control+*" },
+        },
+        "fixture-config.json",
+        new Set(),
+        defaults,
+        process.platform,
+      ).keybinds;
+      fallbackActions.length = 0;
+      await send("nummult", shift ? ["control", "shift"] : ["control"]);
+      assert.deepEqual(observed.at(-1), {
+        key: "*",
+        code: "NumpadMultiply",
+        control: true,
+        shift,
+      });
+      await send("*", ["control", "shift"]);
+      assert.deepEqual(fallbackActions, ["newTab", "newTab"]);
+      bindings = {
+        ...bindings,
+        closeTab: shift ? "Control+Shift+nummult" : "Control+nummult",
+      };
+      await send("nummult", shift ? ["control", "shift"] : ["control"]);
+      assert.deepEqual(fallbackActions, ["newTab", "newTab", "closeTab"]);
+    }
     console.log(
       `__OMXTERM_INTRINSIC_SHIFT__${JSON.stringify({ platform: process.platform, electron: process.versions.electron, chrome: process.versions.chrome, native, keypad, observed })}`,
     );

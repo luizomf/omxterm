@@ -158,8 +158,8 @@ const NAMED_KEYS = new Set([
 interface ParsedAccelerator {
   readonly modifiers: ReadonlySet<"cmd" | "ctrl" | "alt" | "shift">;
   readonly key: string;
-  readonly logicalPlus: boolean;
-  readonly allowUnshiftedPlus: boolean;
+  readonly logicalKey: string;
+  readonly logicalShift: boolean;
 }
 
 function parseAccelerator(
@@ -201,14 +201,14 @@ function nativeAccelerator(
   key: string,
   modifiers: Set<"cmd" | "ctrl" | "alt" | "shift">,
 ): ParsedAccelerator {
-  const allowUnshiftedPlus = key === "+" && !modifiers.has("shift");
+  const logicalShift = modifiers.has("shift");
   const nativeKey = INTRINSIC_SHIFT_KEYS.get(key);
   if (nativeKey) modifiers.add("shift");
   return {
     modifiers,
     key: nativeKey?.key ?? key,
-    logicalPlus: key === "+",
-    allowUnshiftedPlus,
+    logicalKey: key,
+    logicalShift,
   };
 }
 
@@ -276,9 +276,7 @@ export function terminalActionForKeyboardInput(
   const nativeKey = INTRINSIC_SHIFT_KEYS.get(logicalKey);
   const key =
     keypadKey ??
-    (nativeKey && (input.code === nativeKey.code || logicalKey === "+")
-      ? nativeKey.key
-      : logicalKey);
+    (nativeKey && input.code === nativeKey.code ? nativeKey.key : logicalKey);
   let logicalFallback: TerminalActionName | undefined;
   for (const action of TERMINAL_ACTION_NAMES) {
     const parsed = parseAccelerator(keybinds[action], platform);
@@ -296,15 +294,15 @@ export function terminalActionForKeyboardInput(
     // prefer any specific keypad binding's native identity over this fallback.
     const logicalKeypad =
       keypadKey !== undefined &&
-      parsed.key === logicalKey &&
-      shifted === input.shift;
+      parsed.logicalKey === logicalKey &&
+      parsed.logicalShift === input.shift;
     // Plus is also a deliberate logical-key convenience, not another native
     // accelerator. Without explicit Shift it accepts unshifted +; Ctrl+= is
     // still not an unrequested zoom shortcut.
     const logicalPlus =
-      parsed.logicalPlus &&
+      parsed.logicalKey === "+" &&
       logicalKey === "+" &&
-      (input.shift || parsed.allowUnshiftedPlus);
+      (input.shift || !parsed.logicalShift);
     if (logicalKeypad || logicalPlus) logicalFallback ??= action;
   }
   return logicalFallback;
