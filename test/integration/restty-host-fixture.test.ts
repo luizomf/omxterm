@@ -7,7 +7,9 @@ import type { IPty } from "node-pty";
 import { expect, it, vi } from "vitest";
 import {
   defaultInputCommand,
+  hasSelectionFixtureTranscript,
   nativeFixturePlatform,
+  selectionFixtureCommand,
 } from "../fixtures/restty-host-platform";
 import { createResttyHostSessions } from "../fixtures/restty-host-sessions";
 
@@ -31,6 +33,39 @@ it("executes the typed Unicode command and returns the full acknowledgement", ()
       killSignal: "SIGKILL",
     }).trim(),
   ).toBe("__DEFAULT_INPUT__Olá🙂");
+}, 10_000);
+
+it("executes the selection command into 120 ordered rows and an exact Unicode record", () => {
+  const command = selectionFixtureCommand().trimEnd();
+  const args =
+    process.platform === "win32"
+      ? [
+          "-NoLogo",
+          "-NoProfile",
+          "-NonInteractive",
+          "-Command",
+          "[Console]::OutputEncoding=[Text.UTF8Encoding]::new(); " + command,
+        ]
+      : ["-c", command];
+  const output = execFileSync(nativeFixturePlatform.defaultShell, args, {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 5_000,
+    killSignal: "SIGKILL",
+  });
+  const records = output.trimEnd().split(/\r?\n/u);
+  expect(records).toHaveLength(123);
+  expect(records.slice(0, 2)).toEqual([
+    "__SELECT_ALL_FIRST__",
+    "__UNICODE__A漢e\u0301❤️👩‍💻Z__END__",
+  ]);
+  expect(records.at(-1)).toBe("__SELECT_ALL_LAST__");
+  expect(
+    records
+      .slice(2, -1)
+      .map((record) => Number(/^line-(\d{3})$/u.exec(record)?.[1])),
+  ).toEqual(Array.from({ length: 120 }, (_, row) => row));
+  expect(hasSelectionFixtureTranscript(output)).toBe(true);
 }, 10_000);
 
 it.skipIf(process.platform !== "win32")(

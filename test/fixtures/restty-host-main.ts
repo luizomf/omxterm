@@ -36,6 +36,7 @@ import {
 import {
   defaultInputCommand,
   explicitFixtureLaunchRequest,
+  hasSelectionFixtureTranscript,
   nativeFixturePlatform,
   prepareFixtureShell,
   selectionFixtureCommand,
@@ -187,12 +188,11 @@ function createHost(window: BrowserWindow) {
     writeClipboardText(text) {
       clipboardWrites += 1;
       outputStress.observeClipboard(text);
-      selectAllCoveredScrollback ||=
-        text.includes("__SELECT_ALL_FIRST__") &&
-        text.includes("__SELECT_ALL_LAST__");
-      selectedUnicodeExactly ||= text.includes(
-        "__UNICODE__A漢e\u0301❤️👩‍💻Z__END__",
-      );
+      // Both claims must come from the same complete copy, not separate writes
+      // or marker substrings in the submitted command.
+      const completeSelection = hasSelectionFixtureTranscript(text);
+      selectAllCoveredScrollback ||= completeSelection;
+      selectedUnicodeExactly ||= completeSelection;
     },
     readClipboardText() {
       clipboardReads += 1;
@@ -365,7 +365,7 @@ app
     terminals[0]!.write("\u0003");
     terminals[0]!.write(selectionFixtureCommand());
     await waitFor(
-      () => outputs[0]!.join("").includes("__SELECT_ALL_LAST__"),
+      () => hasSelectionFixtureTranscript(outputs[0]!.join("")),
       "scrollback selection fixture",
     );
     window.webContents.send(terminalIpc.clipboardAction, "select-all");

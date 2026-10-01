@@ -76,12 +76,29 @@ export function explicitFixtureLaunchRequest(): LaunchRequest {
   };
 }
 
-export function selectionFixtureCommand(): string {
-  if (process.platform !== "win32")
-    return `printf '__SELECT_ALL_FIRST__\\n__UNICODE__A漢é❤️👩‍💻Z__END__\\n'; i=0; while [ "$i" -lt 120 ]; do printf 'line-%03d\\n' "$i"; i=$((i+1)); done; printf '__SELECT_ALL_LAST__\\n'\r`;
-  const lines = Array.from(
+const selectionFixtureTranscript = [
+  "__SELECT_ALL_FIRST__",
+  "__UNICODE__A漢e\u0301❤️👩‍💻Z__END__",
+  ...Array.from(
     { length: 120 },
     (_, index) => `line-${index.toString().padStart(3, "0")}`,
+  ),
+  "__SELECT_ALL_LAST__",
+].join("\n");
+
+export function hasSelectionFixtureTranscript(text: string): boolean {
+  // PTYs use CRLF; copied text uses LF. Preserve all other text and require
+  // standalone records, including every numbered row in one ordered block.
+  return `\n${text.replace(/\r\n/gu, "\n")}\n`.includes(
+    `\n${selectionFixtureTranscript}\n`,
   );
-  return `Write-Output '__SELECT_ALL_FIRST__'; Write-Output '__UNICODE__A漢é❤️👩‍💻Z__END__'; ${lines.map((line) => `Write-Output '${line}'`).join("; ")}; Write-Output '__SELECT_ALL_LAST__'\r`;
+}
+
+export function selectionFixtureCommand(
+  platform: NodeJS.Platform = process.platform,
+): string {
+  // Execution joins each record; none occurs contiguously in command echo.
+  if (platform !== "win32")
+    return `printf '%s%s\\n' '__SELECT_ALL_' 'FIRST__'; printf '%s%s%s\\n' '__UNICODE__' 'A漢é❤️👩‍💻Z' '__END__'; i=0; while [ "$i" -lt 120 ]; do printf 'line-%03d\\n' "$i"; i=$((i+1)); done; printf '%s%s\\n' '__SELECT_ALL_' 'LAST__'\r`;
+  return `Write-Output ('__SELECT_ALL_'+'FIRST__'); Write-Output ('__UNICODE__'+'A漢é❤️👩‍💻Z'+'__END__'); for ($i=0; $i -lt 120; $i++) { Write-Output ('line-{0:D3}' -f $i) }; Write-Output ('__SELECT_ALL_'+'LAST__')\r`;
 }
