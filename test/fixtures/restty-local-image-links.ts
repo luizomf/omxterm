@@ -9,6 +9,9 @@ import { withTmuxImageOutput } from "./restty-image-tmux";
 import { localImageFixturePaths } from "./restty-local-image-paths";
 import { withLocalImageFixtureLayout } from "./restty-local-image-layout";
 import { readResttyImageCellSize } from "./restty-host-images";
+import { measureLocalImageRoot } from "./restty-local-image-root";
+import { readLocalImageCoreCells } from "./restty-local-image-core-probe";
+import { exerciseUnicodeLocalImageRoots } from "./restty-local-image-unicode";
 import {
   verifyLocalImageReference,
   type LocalImageLinkEvidence,
@@ -60,25 +63,16 @@ export async function exerciseResttyLocalImageLinks(options: {
     number,
   ];
   return withLocalImageFixtureLayout(
-    { ...options, cellSize },
+    { ...options, cellSize, dpr },
     async (refit) => {
       const baseGrid = await refit("base");
       const rootPrefix = path.join(root, "x").slice(0, -1);
-      const inputStart = options.input().length;
-      // A sentinel resolves pending wrap at the last column before querying the
-      // real core. Count native separators and Unicode cells, not code units.
-      deliverOutput(`\u001b[3J\u001b[2J\u001b[H${rootPrefix}x\u001b[6n`);
-      let position: RegExpMatchArray | null = null;
-      await waitFor(() => {
-        position = options
-          .input()
-          .slice(inputStart)
-          .match(/\u001b\[(\d+);(\d+)R/u);
-        return position !== null;
-      }, "local image root cell width from the real core");
-      const [row, col] = position!.slice(1).map(Number);
-      assert.ok(row! < baseGrid.rows, "fixture root must remain fully visible");
-      const rootPrefixColumns = (row! - 1) * baseGrid.cols + col! - 2;
+      const rootPrefixColumns = await measureLocalImageRoot({
+        ...options,
+        rootPrefix,
+        size: baseGrid,
+        readCells: () => readLocalImageCoreCells(window),
+      });
       const rootCellDelta = rootPrefixColumns - rootPrefix.length;
       const { shortPath, longPath, jpegPath, boundaryPath } =
         localImageFixturePaths(root, baseGrid.cols, rootPrefixColumns);
@@ -214,6 +208,8 @@ export async function exerciseResttyLocalImageLinks(options: {
         true,
       );
       results.push({ control: "trailing-space exclusion", activations: 1 });
+
+      results.push(...(await exerciseUnicodeLocalImageRoots(options, refit)));
 
       if (process.env["OMXTERM_TEST_IMAGE_TMUX"] === "1") {
         for (const reference of [longPath, boundaryPath])

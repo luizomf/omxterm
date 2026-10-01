@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { Plugin } from "esbuild";
+import { instrumentLocalImageCoreCells } from "./restty-local-image-core-probe";
 
 // Test-only retained byte copies deliberately disturb memory accounting. Never
 // use this instrumentation for the separate ordinary/GC memory measurements.
@@ -57,7 +58,10 @@ function toSourceBuffer(source) {
           `${needle.slice(0, brace + 1)}\nfontMutationCalls.${counter} += 1;${needle.slice(brace + 1)}`,
         );
       }
-      return { contents, loader: "js" };
+      return {
+        contents: instrumentLocalImageCoreCells(contents),
+        loader: "js",
+      };
     });
   },
 };
