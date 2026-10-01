@@ -1,5 +1,6 @@
 import type { BrowserWindow, Input, InputEvent } from "electron";
 import { terminalIpc } from "../shared/terminal-ipc";
+import { hasNativeAltGr } from "./keyboard-modifiers";
 import {
   isWindowChromeCommand,
   type WindowChromeState,
@@ -57,6 +58,7 @@ function isUnmodifiedAlt(input: Input): boolean {
     !input.meta &&
     !input.isComposing &&
     !input.isAutoRepeat &&
+    !hasNativeAltGr(input) &&
     !input.modifiers?.some((modifier) => /altgr|buttondown/i.test(modifier))
   );
 }
@@ -126,6 +128,8 @@ export function registerWindowChrome(
     // intervening events disqualify combinations separately.
     if (
       down &&
+      input.key !== "AltGraph" &&
+      !hasNativeAltGr(input) &&
       (input.key === "Alt" || !(input.alt || input.control || input.meta))
     )
       pressedKeys.add(input.code);

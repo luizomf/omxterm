@@ -142,6 +142,16 @@ void app.whenReady().then(async () => {
       (action) => fallbackActions.push(action),
       process.platform,
     );
+    disposeChrome = registerWindowChrome(window, ipcMain, {
+      platform: process.platform,
+      showTitleBar: true,
+      cursor: () => ({ x: -1000, y: -1000 }),
+      popupApplicationMenu(position, onClosed) {
+        popups += 1;
+        menu.popup({ window, ...position, callback: onClosed });
+        return () => menu.closePopup(window);
+      },
+    }).dispose;
     install("F6");
     menuActions.length = 0;
     await window.webContents.executeJavaScript(
@@ -155,6 +165,16 @@ void app.whenReady().then(async () => {
       "keys",
     )) as string[];
     assert.ok(!rendererKeys.includes("F6"));
+    // Consumed keys can suppress native releases. No unrelated input or blur
+    // may clear Chrome's state before this immediate Alt-alone regression.
+    await press("56:1,56:0");
+    assert.equal(
+      popups,
+      1,
+      "Alt alone still opens immediately after consumed AltGr",
+    );
+    menu.closePopup(window);
+    await waitFor(() => window.isFocused(), "focus after popup dismissal");
     bindings = { ...defaults, newTab: "AltGr+F6" };
     // Alt-only negative control on the AltGr-only map, including native menu.
     Menu.setApplicationMenu(
@@ -179,20 +199,10 @@ void app.whenReady().then(async () => {
       "é'",
     );
     assert.deepEqual(fallbackActions, ["closeTab", "newTab"]);
-    disposeChrome = registerWindowChrome(window, ipcMain, {
-      platform: process.platform,
-      showTitleBar: true,
-      cursor: () => ({ x: -1000, y: -1000 }),
-      popupApplicationMenu(position, onClosed) {
-        popups += 1;
-        menu.popup({ window, ...position, callback: onClosed });
-        return () => menu.closePopup(window);
-      },
-    }).dispose;
     await press("100:1,100:0");
-    assert.equal(popups, 0, "AltGr alone must not open the Alt menu");
+    assert.equal(popups, 1, "AltGr alone must not open the Alt menu");
     await press("56:1,56:0");
-    assert.equal(popups, 1, "plain Alt alone retains native menu");
+    assert.equal(popups, 2, "plain Alt alone retains native menu");
     menu.closePopup(window);
     console.log(
       `__OMXTERM_ALTGR__${JSON.stringify({

@@ -281,7 +281,25 @@ describe("standalone Alt opens the native application menu", () => {
     ).not.toHaveBeenCalled();
     expect(view.popupApplicationMenu).not.toHaveBeenCalled();
     key(view, "keyUp", { key: "a", code: "KeyA", alt: false });
-    // Consumed shortcuts need not deliver key-up; they must not poison Alt.
+    // Actual Linux AltGraph-down has only the right-side flag; its action key
+    // has the raw AltGr flag. Consuming that key can suppress both releases.
+    bindings = { ...bindings, newTab: "AltGr+F6" };
+    key(view, "keyDown", {
+      key: "AltGraph",
+      code: "AltRight",
+      alt: false,
+      _modifiers: 4096,
+    });
+    expect(
+      key(view, "keyDown", {
+        key: "F6",
+        code: "F6",
+        alt: false,
+        _modifiers: 32768,
+      }),
+    ).toHaveBeenCalledOnce();
+    expect(invoke).toHaveBeenLastCalledWith("newTab");
+    // No releases, unrelated input or focus reset before standalone Alt.
     expect(alt(view)).toHaveBeenCalledOnce();
     view.chrome.dispose();
   });
