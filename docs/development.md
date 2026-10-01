@@ -49,6 +49,22 @@ Apple Command Line Tools on macOS; unknown pinned source bytes stop preparation.
 A module copied from another platform is not interchangeable. See
 [ADR 0032](adr/0032-report-native-exec-failures-outside-terminal-payload.md).
 
+If `npm ci` or `npm install` fails during `postinstall`, `node_modules` can
+remain partially prepared. For example, missing `patch` stops node-pty
+preparation before the Restty corrections run. Later lint/type errors about
+Restty's `title` or `bell` events can therefore indicate incomplete setup,
+not an application type error. After installing the missing prerequisite, resume
+preparation from the project directory:
+
+```sh
+npm run postinstall && npm run check:portable
+```
+
+The check runs only if preparation succeeds. There is no need to reinstall
+unchanged dependencies or rerun preparation before every check. The DejaVu packages
+above serve installed-font tests; users of packaged OMXTerm do not need these
+build/test prerequisites.
+
 Preparation also removes node-pty 1.1.0's Linux `process` getter fallback to the
 spawned shell. Unavailable native foreground reads remain unavailable and count
 as Busy; macOS and Windows policies are unchanged (ADR 0017). Before writing,
