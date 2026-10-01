@@ -36,6 +36,7 @@ import {
 import {
   defaultInputCommand,
   explicitFixtureLaunchRequest,
+  hasSelectionFixtureOutput,
   hasSelectionFixtureTranscript,
   nativeFixturePlatform,
   prepareFixtureShell,
@@ -365,7 +366,7 @@ app
     terminals[0]!.write("\u0003");
     terminals[0]!.write(selectionFixtureCommand());
     await waitFor(
-      () => hasSelectionFixtureTranscript(outputs[0]!.join("")),
+      () => hasSelectionFixtureOutput(outputs[0]!.join("")),
       "scrollback selection fixture",
     );
     window.webContents.send(terminalIpc.clipboardAction, "select-all");

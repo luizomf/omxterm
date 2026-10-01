@@ -86,6 +86,12 @@ const selectionFixtureTranscript = [
   "__SELECT_ALL_LAST__",
 ].join("\n");
 
+export function hasSelectionFixtureOutput(text: string): boolean {
+  // Raw ConPTY output can carry cursor controls, not copied-text line framing.
+  // The final record is execution-only and follows every generated row.
+  return text.includes("__SELECT_ALL_LAST__");
+}
+
 export function hasSelectionFixtureTranscript(text: string): boolean {
   // PTYs use CRLF; copied text uses LF. Preserve all other text and require
   // standalone records, including every numbered row in one ordered block.

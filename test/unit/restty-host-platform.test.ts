@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import {
   defaultInputCommand,
+  hasSelectionFixtureOutput,
   hasSelectionFixtureTranscript,
   selectionFixtureCommand,
 } from "../fixtures/restty-host-platform";
@@ -25,6 +26,7 @@ it("requires every generated row in order and a standalone exact Unicode record"
     "__SELECT_ALL_LAST__",
   ];
   const complete = records.join("\n");
+  expect(hasSelectionFixtureOutput(`\u001b[1G${complete}`)).toBe(true);
   expect(
     hasSelectionFixtureTranscript(`prompt\n${complete}\nnext prompt`),
   ).toBe(true);
@@ -49,8 +51,15 @@ it("requires every generated row in order and a standalone exact Unicode record"
 it.each(["win32", "darwin", "linux"] as const)(
   "%s command echo alone cannot establish selection readiness or copied transcript",
   (platform) => {
-    expect(
-      hasSelectionFixtureTranscript(selectionFixtureCommand(platform)),
-    ).toBe(false);
+    const echo = selectionFixtureCommand(platform);
+    expect(hasSelectionFixtureOutput(echo)).toBe(false);
+    expect(hasSelectionFixtureTranscript(echo)).toBe(false);
+    for (const record of [
+      "__SELECT_ALL_FIRST__",
+      "__UNICODE__A漢e\u0301❤️👩‍💻Z__END__",
+      "__SELECT_ALL_LAST__",
+    ]) {
+      expect(echo).not.toContain(record);
+    }
   },
 );
