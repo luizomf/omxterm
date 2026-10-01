@@ -5,7 +5,9 @@ import { registerTerminalIpcRouter } from "../../src/main/terminal-ipc-controlle
 import type {
   IpcHandler,
   IpcListener,
+  TerminalSessionEndContext,
 } from "../../src/main/terminal-ipc-types";
+import type { TerminalExit } from "../../src/shared/terminal-contract";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import { spawnFixturePty } from "./native-fixture-pty";
@@ -60,7 +62,10 @@ const webContents = {
   },
 };
 const trusted = { sender: webContents, senderFrame: mainFrame };
-const ended = new Set<string>();
+const ended = new Map<
+  string,
+  { exit: TerminalExit; context: TerminalSessionEndContext }
+>();
 router.registerController({
   windowId: 1,
   configuration: {
@@ -123,10 +128,9 @@ router.registerController({
     throw new Error("Unexpected spawn failure");
   },
   onSessionExit(exit, context) {
-    assert.deepEqual(exit, { exitCode: 0, signal: 0 });
-    assert.equal(context.closeRequested, false);
-    assert.equal(context.liveSessions, context.sessionId === "s1" ? 0 : 1);
-    ended.add(context.sessionId);
+    // Assert outside the Node-API callback: Electron may otherwise swallow a
+    // thrown assertion and leave only an unrelated observation timeout.
+    ended.set(context.sessionId, { exit, context });
     exits += 1;
   },
   onSessionStarted() {},
@@ -170,6 +174,9 @@ try {
       }
       return false;
     });
+    assert.deepEqual(ended.get(sessionId)!.exit, { exitCode: 0, signal: 0 });
+    assert.equal(ended.get(sessionId)!.context.closeRequested, false);
+    assert.equal(ended.get(sessionId)!.context.liveSessions, 1);
   }
   assert.ok(failures > 0, "No native closure race was exercised");
   assert.equal(
@@ -189,10 +196,14 @@ try {
   );
   resize(trusted, { sessionId: "s1", cols: 120, rows: 40 });
   input(trusted, { sessionId: "s1", data: "__SIBLING_USABLE__\n" });
-  await observe(() => siblingOutput.includes("__SIBLING_USABLE__"));
+  // Canonical terminal echo alone is not proof that cat received the input.
+  await observe(() => siblingOutput.split("__SIBLING_USABLE__").length === 3);
   // End the sibling through real terminal EOF rather than synthesizing exit.
   input(trusted, { sessionId: "s1", data: "\u0004" });
   await observe(() => ended.has("s1"));
+  assert.deepEqual(ended.get("s1")!.exit, { exitCode: 0, signal: 0 });
+  assert.equal(ended.get("s1")!.context.closeRequested, false);
+  assert.equal(ended.get("s1")!.context.liveSessions, 0);
   assert.equal(exits, 101);
   process.stdout.write(
     `__OMXTERM_RESIZE_RACE__${JSON.stringify({ sessions: 100, failures, diagnostics, escaped, exits, siblingUsable: true })}\n`,
