@@ -143,6 +143,12 @@ not qualify outer CLI parsing or an exact installer.
 
 ## Running native tests
 
+The standalone Restty rendering test hides the cursor after its input/reset
+exercises, captures a blank baseline, then requires new glyph ink in three
+separate expected word regions. Portable controls reject blank, cursor-only,
+unchanged and out-of-region frames; native captures tolerate platform-specific
+glyph rasterization rather than requiring identical bitmaps.
+
 `npm run check:portable` includes Electron fixtures and requires a working
 desktop with WebGL2. Fixtures share the desktop compositor. Vitest serializes
 files within one run; also keep separate suites and clones from running native

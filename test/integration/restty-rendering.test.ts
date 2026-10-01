@@ -38,7 +38,8 @@ interface FixtureResult {
     readonly fatal?: string;
     readonly ptyStarts: number;
   };
-  readonly visibleForegroundPixels: number;
+  readonly textRenderingEvidence: boolean;
+  readonly textCaptureSize: { readonly width: number; readonly height: number };
   readonly security: {
     readonly contextIsolation: boolean;
     readonly nodeIntegration: boolean;
@@ -195,7 +196,7 @@ describe("Restty under production Electron policy", () => {
       ]);
       expect(result?.available.resize?.cols).toBeGreaterThan(1);
       expect(result?.available.resize?.rows).toBeGreaterThan(0);
-      expect(result?.visibleForegroundPixels).toBeGreaterThan(20);
+      expect(result?.textRenderingEvidence).toBe(true);
       expect(result?.unavailable.error).toBe(
         "Failed to mount the OMXTerm Terminal Surface",
       );
@@ -230,6 +231,15 @@ async function buildFixture(root: string): Promise<void> {
     outfile: path.join(root, "renderer.js"),
     platform: "browser",
   });
+  await build({
+    absWorkingDir: projectRoot,
+    bundle: true,
+    entryPoints: ["test/fixtures/text-rendering-evidence.ts"],
+    format: "cjs",
+    logLevel: "silent",
+    outfile: path.join(root, "text-rendering-evidence.cjs"),
+    platform: "node",
+  });
   const productionHtml = await readFile(
     path.join(projectRoot, "src", "renderer", "index.html"),
     "utf8",
@@ -262,6 +272,7 @@ function electronMainSource(): string {
 const { app, BrowserWindow } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
+const { hasTextRenderingEvidence } = require("./text-rendering-evidence.cjs");
 for (const name of ["userData", "sessionData"]) {
   const directory = path.join(__dirname, name);
   fs.mkdirSync(directory, { recursive: true });
@@ -290,14 +301,25 @@ async function open(search = "") {
 app.whenReady().then(async () => {
   const availableWindow = await open();
   const available = await waitForResult(availableWindow);
-  const image = await availableWindow.webContents.capturePage();
-  const bitmap = image.toBitmap();
-  if (process.env.OMXTERM_RESTTY_SCREENSHOT_PATH)
+  if (!available.textCapture) throw new Error("Text capture region is missing");
+  const blank = await availableWindow.webContents.capturePage(available.textCapture);
+  await availableWindow.webContents.executeJavaScript("globalThis.__omxtermResttyShowText()", true);
+  const image = await availableWindow.webContents.capturePage(available.textCapture);
+  if (process.env.OMXTERM_RESTTY_SCREENSHOT_PATH) {
     fs.writeFileSync(process.env.OMXTERM_RESTTY_SCREENSHOT_PATH, image.toPNG());
-  let visibleForegroundPixels = 0;
-  for (let offset = 0; offset < bitmap.length; offset += 4) {
-    if (Math.max(bitmap[offset], bitmap[offset + 1], bitmap[offset + 2]) > 100) visibleForegroundPixels += 1;
+    fs.writeFileSync(process.env.OMXTERM_RESTTY_SCREENSHOT_PATH + ".blank.png", blank.toPNG());
   }
+  const size = image.getSize();
+  const blankSize = blank.getSize();
+  // Crop spans 18 cells: OMXTerm (7), space, Restty (6), space, Olá (3).
+  // Scale from captured pixels rather than assuming a desktop DPI.
+  const regions = [[0, 7], [8, 14], [15, 18]].map(([start, end]) => ({
+    x: Math.floor(start * size.width / 18), y: 0,
+    width: Math.floor(end * size.width / 18) - Math.floor(start * size.width / 18),
+    height: size.height,
+  }));
+  const textRenderingEvidence = blankSize.width === size.width && blankSize.height === size.height &&
+    hasTextRenderingEvidence(blank.toBitmap(), image.toBitmap(), size.width, size.height, regions);
   const preferences = availableWindow.webContents.getLastWebPreferences();
   const unavailableWindow = await open("unavailable=1");
   const unavailable = await waitForResult(unavailableWindow);
@@ -306,7 +328,8 @@ app.whenReady().then(async () => {
   const result = {
     available,
     unavailable,
-    visibleForegroundPixels,
+    textRenderingEvidence,
+    textCaptureSize: size,
     security: {
       contextIsolation: preferences.contextIsolation,
       nodeIntegration: preferences.nodeIntegration,

@@ -2,6 +2,7 @@ import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-te
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import type { OptionKeyMode } from "../../src/shared/user-configuration";
+import type { PixelRegion } from "./text-rendering-evidence";
 import {
   exerciseResttyDeadKeySpaceInput,
   exerciseResttySpaceInput,
@@ -22,10 +23,12 @@ interface ResttyFixtureResult {
   readonly spaceInput?: Readonly<Record<string, readonly string[]>>;
   readonly deadKeySpaceInput?: Readonly<Record<string, readonly string[]>>;
   readonly resize?: { readonly cols: number; readonly rows: number };
+  readonly textCapture?: PixelRegion;
 }
 
 declare global {
   var __omxtermResttyResult: ResttyFixtureResult | undefined;
+  var __omxtermResttyShowText: (() => Promise<void>) | undefined;
 }
 
 const unavailable = new URLSearchParams(location.search).has("unavailable");
@@ -52,6 +55,8 @@ let resize: { cols: number; rows: number } | undefined;
 let fatal: string | undefined;
 let clipboardReads = 0;
 let clipboardWrites = 0;
+let cellWidth = 0;
+let cellHeight = 0;
 const terminalInput: string[] = [];
 Object.defineProperty(navigator, "clipboard", {
   configurable: true,
@@ -75,6 +80,11 @@ void mountResttyTerminalSurface(
       nextHandlers.onOutput("\u001b[c\u001b[>c");
     },
     write(data) {
+      const cellSize = /\u001b\[6;(\d+);(\d+)t/u.exec(data);
+      if (cellSize) {
+        cellHeight = Number(cellSize[1]);
+        cellWidth = Number(cellSize[2]);
+      }
       terminalInput.push(data);
     },
     resize(size) {
@@ -283,10 +293,32 @@ void mountResttyTerminalSurface(
 
     terminalInput.length = 0;
     handlers?.onOutput(
-      "OMXTerm Restty Olá\r\n\u001b]52;c;dW5zYWZl\u0007\u001b]52;c;?\u0007",
+      "\u001b[?25l\u001b[2J\u001b[H\u001b]52;c;dW5zYWZl\u0007\u001b]52;c;?\u0007",
     );
     await new Promise((resolve) => setTimeout(resolve, 750));
+    const terminalReplies = optionInput.length + terminalInput.length;
+    handlers?.onOutput("\u001b[16t");
+    if (!cellWidth || !cellHeight)
+      throw new Error("Restty cell size is missing");
+    const canvas = container.querySelector("canvas");
+    if (!canvas) throw new Error("Restty canvas is missing");
+    const bounds = canvas.getBoundingClientRect();
+    // CSI 16 t reports device pixels; capturePage takes logical coordinates.
+    const logicalCellWidth = cellWidth / devicePixelRatio;
+    const logicalCellHeight = cellHeight / devicePixelRatio;
+    globalThis.__omxtermResttyShowText = async () => {
+      // Explicit row/column avoids relying on the preceding reset exercises.
+      // Hide again at the actual text boundary, not just at fixture startup.
+      handlers?.onOutput("\u001b[?25l\u001b[2;3HOMXTerm Restty Olá");
+      await new Promise((resolve) => setTimeout(resolve, 750));
+    };
     globalThis.__omxtermResttyResult = {
+      textCapture: {
+        x: Math.round(bounds.x + 2 * logicalCellWidth),
+        y: Math.round(bounds.y + logicalCellHeight),
+        width: Math.round(18 * logicalCellWidth),
+        height: Math.round(logicalCellHeight),
+      },
       ...(container.dataset.resttyBackend
         ? { backend: container.dataset.resttyBackend }
         : {}),
@@ -296,7 +328,7 @@ void mountResttyTerminalSurface(
       ptyStarts,
       clipboardReads,
       clipboardWrites,
-      terminalReplies: optionInput.length + terminalInput.length,
+      terminalReplies,
       startupReplies,
       optionInput,
       compositionInput,
