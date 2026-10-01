@@ -24,24 +24,36 @@ tradeoff and runtime fallback.
 
 ### Linux
 
-Install `python3`, `make`, a C++ compiler, `binutils` for native package
-inspection, `fontconfig` utilities for exact font-family validation, and XWayland
-when using a Wayland desktop. For example:
+Install Python 3, `make`, a C++ compiler, `patch`, `binutils` for native package
+inspection, `fontconfig` utilities and fixture fonts for exact family validation,
+and XWayland when using a Wayland desktop. For example:
 
 ```sh
 # Ubuntu
-sudo apt install build-essential python3 patch binutils fontconfig file xwayland fonts-dejavu-core
+sudo apt install build-essential python3 patch binutils fontconfig file xwayland fonts-dejavu-core fonts-liberation
 ```
 
 ```sh
 # Fedora
-sudo dnf install gcc-c++ make python3 patch binutils fontconfig file xorg-x11-server-Xwayland dejavu-sans-fonts dejavu-sans-mono-fonts
+sudo dnf install gcc-c++ make python3 patch binutils fontconfig file xorg-x11-server-Xwayland dejavu-sans-fonts dejavu-sans-mono-fonts liberation-mono-fonts
 ```
 
+```sh
+# Arch / Omarchy
+sudo pacman -S --needed base-devel python patch binutils fontconfig file xorg-xwayland ttf-dejavu ttf-liberation
+```
+
+These commands install build/test prerequisites, not Node.js/npm. Use a supported
+Node.js version as described above; an existing version-manager installation
+(such as Omarchy's mise-managed Node) does not need a second system installation.
+
 Native font fixtures require the exact installed families `DejaVu Sans` and
-`DejaVu Sans Mono`, not merely fontconfig substitution. On Arch/Omarchy install
-`ttf-dejavu`; inspect `fc-list : family` to verify both families. Bundled runtime
-fonts do not satisfy tests of an explicitly configured installed font.
+`DejaVu Sans Mono`; reload fixtures also use `Liberation Mono`. Inspect
+`fc-list : family` for those exact names, not merely a `fc-match` substitution.
+Bundled runtime fonts do not satisfy tests of an explicitly configured installed
+font, even when the application itself opens successfully. Missing fixture fonts
+can cause `Configured native fixture font is missing` followed by long session
+startup timeouts. Install the font packages before rerunning the native suite.
 
 Run project commands as your ordinary user. Postinstall builds the pinned `node-pty` Node-API runtime with the native
 exec-status correction. It requires `patch` and the C++ compiler on Linux and

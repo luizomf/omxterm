@@ -85,7 +85,12 @@ use ARM64 hardware running macOS, Linux or Windows, Git, and **Node.js 22.13+
 within 22.x, or 24+**, with npm.
 
 Prepare your [platform prerequisites](docs/development.md#platform-prerequisites)
-first. Then clone your fork (replace `YOUR-USERNAME`):
+first. Linux setup includes installed fonts and graphical-test dependencies, not
+just a compiler and Node.js. Follow the Ubuntu, Fedora or Arch/Omarchy commands
+there before `npm ci`: bundled app fonts do not replace the installed families
+used by native tests, and missing fonts can cause long startup timeouts.
+
+Then clone your fork (replace `YOUR-USERNAME`):
 
 ```sh
 git clone -c core.autocrlf=false -c core.symlinks=true https://github.com/YOUR-USERNAME/omxterm.git
