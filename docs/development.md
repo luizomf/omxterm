@@ -101,6 +101,20 @@ Get-Process explorer | Select-Object SessionId
 Matching session IDs are a setup check; actual renderer/GPU tests must still pass.
 Software-renderer flags cannot substitute for a required native graphics path.
 
+Windows postinstall also corrects node-pty 1.1.0's array-argument serializer so
+literal enclosing quotes with spaces or tabs reach the child unchanged. It
+accepts only the reviewed original or corrected runtime digest and refuses
+unknown bytes. Callers still pass literal argv directly, without a shell or
+extra quoting. The native regression uses an argv-echo child through
+`createLocalTerminalSession` and real ConPTY on Windows ARM64:
+
+```sh
+npx vitest run test/integration/literal-argv.test.ts test/unit/postinstall.test.ts
+```
+
+The same argv corpus checks direct executable startup on Unix ARM64. This does
+not qualify outer CLI parsing or an exact installer.
+
 ## Running native tests
 
 `npm run check:portable` includes Electron fixtures and requires a working

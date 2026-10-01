@@ -10,6 +10,14 @@ const defaultUnixRuntimePath = path.join(
   path.dirname(require.resolve("node-pty")),
   "unixTerminal.js",
 );
+const defaultWindowsRuntimePath = path.join(
+  path.dirname(require.resolve("node-pty")),
+  "windowsPtyAgent.js",
+);
+const originalWindowsRuntimeDigest =
+  "8636d16b38266112204061a22b135734177c242837982fd3a4055be726efa64a";
+const correctedWindowsRuntimeDigest =
+  "3f4cf11eaa6cc07bacb34e3693857e123e3e55edfb446d7657d80cf95f9ce244";
 const originalUnixRuntimeDigest =
   "a62e3a60c3bc1b0e7261f58284856df748dcee6761a2bc7a5a5ba98b22660473";
 const correctedUnixRuntimeDigest =
@@ -68,6 +76,36 @@ async function preservePausedUnixExitTail(runtimePath) {
   await writeFile(runtimePath, forwardExecStatus(source));
 }
 
+async function preserveLiteralWindowsArguments(runtimePath) {
+  let source = await readFile(runtimePath, "utf8");
+  const sourceDigest = digest(source);
+  if (sourceDigest === correctedWindowsRuntimeDigest) return;
+  if (sourceDigest !== originalWindowsRuntimeDigest)
+    throw new Error(
+      "Unrecognized node-pty Windows runtime; review the pinned argv correction",
+    );
+  const original = `        // if it is empty or it contains whitespace and is not already quoted
+        var hasLopsidedEnclosingQuote = xOr((arg[0] !== '"'), (arg[arg.length - 1] !== '"'));
+        var hasNoEnclosingQuotes = ((arg[0] !== '"') && (arg[arg.length - 1] !== '"'));
+        var quote = arg === '' ||
+            (arg.indexOf(' ') !== -1 ||
+                arg.indexOf('\\t') !== -1) &&
+                ((arg.length > 1) &&
+                    (hasLopsidedEnclosingQuote || hasNoEnclosingQuotes));`;
+  const corrected = `        // Array entries are literal argv, including any enclosing quotation marks.
+        var quote = arg === '' || arg.indexOf(' ') !== -1 || arg.indexOf('\\t') !== -1;`;
+  if (source.split(original).length - 1 !== 1)
+    throw new Error(
+      "node-pty Windows correction did not match reviewed source",
+    );
+  source = source.replace(original, corrected);
+  if (digest(source) !== correctedWindowsRuntimeDigest)
+    throw new Error(
+      "node-pty Windows correction did not produce reviewed bytes",
+    );
+  await writeFile(runtimePath, source);
+}
+
 function forwardExecStatus(source) {
   return source
     .replace(
@@ -85,10 +123,15 @@ export async function prepareNodePtyRuntime({
   arch = process.arch,
   helperPath = defaultHelperPath,
   unixRuntimePath = defaultUnixRuntimePath,
+  windowsRuntimePath = defaultWindowsRuntimePath,
   rebuild = prepareNodePtyExecStatus,
   chmod = chmodFile,
 } = {}) {
-  if (platform !== "win32") await preservePausedUnixExitTail(unixRuntimePath);
+  if (platform === "win32") {
+    await preserveLiteralWindowsArguments(windowsRuntimePath);
+    return "corrected";
+  }
+  await preservePausedUnixExitTail(unixRuntimePath);
   if (platform === "linux" && arch === "arm64") {
     await rebuild();
     return "corrected-and-rebuilt";
@@ -98,7 +141,7 @@ export async function prepareNodePtyRuntime({
     await chmod(helperPath, 0o755);
     return "corrected-and-rebuilt";
   }
-  return platform === "win32" ? "unchanged" : "corrected";
+  return "corrected";
 }
 
 const isMain =

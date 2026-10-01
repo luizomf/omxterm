@@ -1,4 +1,5 @@
-import { copyFile, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -66,9 +67,46 @@ describe("node-pty postinstall preparation", () => {
     }
   });
 
+  it("prepares reviewed Windows bytes idempotently and refuses dependency drift", async () => {
+    const root = await mkdtemp(
+      path.join(tmpdir(), "omxterm-node-pty-windows-"),
+    );
+    const runtimePath = path.join(root, "windowsPtyAgent.js");
+    const options = {
+      platform: "win32",
+      windowsRuntimePath: runtimePath,
+      // Windows must not touch the separate Unix runtime.
+      unixRuntimePath: path.join(root, "absent-unix.js"),
+    };
+    try {
+      await copyFile(
+        path.join(
+          path.dirname(require.resolve("node-pty")),
+          "windowsPtyAgent.js",
+        ),
+        runtimePath,
+      );
+      await expect(prepareNodePtyRuntime(options)).resolves.toBe("corrected");
+      const corrected = await readFile(runtimePath);
+      expect(createHash("sha256").update(corrected).digest("hex")).toBe(
+        "3f4cf11eaa6cc07bacb34e3693857e123e3e55edfb446d7657d80cf95f9ce244",
+      );
+      await prepareNodePtyRuntime(options);
+      expect(await readFile(runtimePath)).toEqual(corrected);
+      const drifted = Buffer.concat([corrected, Buffer.from("\n// drift\n")]);
+      await writeFile(runtimePath, drifted);
+      await expect(prepareNodePtyRuntime(options)).rejects.toThrow(
+        "Unrecognized node-pty Windows runtime",
+      );
+      expect(await readFile(runtimePath)).toEqual(drifted);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it.each([
     ["linux", "x64", "corrected"],
-    ["win32", "arm64", "unchanged"],
+    ["win32", "arm64", "corrected"],
   ])(
     "uses the reviewed platform preparation on %s %s",
     async (platform, arch, result) => {

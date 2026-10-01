@@ -1,0 +1,18 @@
+export const literalArguments = [
+  '"a b"',
+  '"a\tb"',
+  "",
+  "ordinary spaced text",
+  "ordinary\ttab",
+  'embedded"quote',
+  '"',
+  '"one-sided space',
+  'space one-sided"',
+  "trailing\\",
+  "spaced trailing\\",
+  'backslash\\"quote',
+  '"quoted \\"',
+  "first",
+  "second",
+  "Olá🙂",
+];
