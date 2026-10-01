@@ -158,6 +158,7 @@ const NAMED_KEYS = new Set([
 interface ParsedAccelerator {
   readonly modifiers: ReadonlySet<"cmd" | "ctrl" | "alt" | "shift">;
   readonly key: string;
+  readonly allowUnshiftedPlus: boolean;
 }
 
 function parseAccelerator(
@@ -192,8 +193,49 @@ function parseAccelerator(
   const isSingleCharacter =
     rawKey.length === 1 && rawKey >= "!" && rawKey <= "~";
   if (!isSingleCharacter && !NAMED_KEYS.has(key)) return undefined;
-  return { modifiers, key: canonicalKey(key) };
+  return nativeAccelerator(canonicalKey(key), modifiers);
 }
+
+function nativeAccelerator(
+  key: string,
+  modifiers: Set<"cmd" | "ctrl" | "alt" | "shift">,
+): ParsedAccelerator {
+  const allowUnshiftedPlus = key === "+" && !modifiers.has("shift");
+  const nativeKey = INTRINSIC_SHIFT_KEYS.get(key);
+  if (nativeKey) modifiers.add("shift");
+  return {
+    modifiers,
+    key: nativeKey?.key ?? key,
+    allowUnshiftedPlus,
+  };
+}
+
+// Electron 43.4.1 KeyboardCodeFromCharCode/KeyboardCodeFromKeyIdentifier.
+// This is accelerator identity, not a keyboard-layout translation table.
+const INTRINSIC_SHIFT_KEYS: ReadonlyMap<string, { key: string; code: string }> =
+  new Map([
+    ["!", { key: "1", code: "Digit1" }],
+    ['"', { key: "'", code: "Quote" }],
+    ["#", { key: "3", code: "Digit3" }],
+    ["$", { key: "4", code: "Digit4" }],
+    ["%", { key: "5", code: "Digit5" }],
+    ["&", { key: "7", code: "Digit7" }],
+    ["(", { key: "9", code: "Digit9" }],
+    [")", { key: "0", code: "Digit0" }],
+    ["*", { key: "8", code: "Digit8" }],
+    ["+", { key: "=", code: "Equal" }],
+    [":", { key: ";", code: "Semicolon" }],
+    ["<", { key: ",", code: "Comma" }],
+    [">", { key: ".", code: "Period" }],
+    ["?", { key: "/", code: "Slash" }],
+    ["@", { key: "2", code: "Digit2" }],
+    ["^", { key: "6", code: "Digit6" }],
+    ["_", { key: "-", code: "Minus" }],
+    ["{", { key: "[", code: "BracketLeft" }],
+    ["|", { key: "\\", code: "Backslash" }],
+    ["}", { key: "]", code: "BracketRight" }],
+    ["~", { key: "`", code: "Backquote" }],
+  ]);
 
 function canonicalKey(key: string): string {
   if (key === "return") return "enter";
@@ -217,17 +259,25 @@ export interface AcceleratorKeyboardInput {
   readonly shift: boolean;
 }
 
-// Resolves a key event against the effective keybind map with native
-// CommandOrControl semantics. Prefer exact matches before punctuation aliases;
-// a character's implicit Shift must not override an explicit shifted binding.
+// Resolves the same native identity as duplicate detection. Shifted symbols
+// require their logical character and native position to agree; this does not
+// infer arbitrary layout characters from physical positions. Plus additionally
+// retains the deliberate logical-key convenience of ADR 0018.
 export function terminalActionForKeyboardInput(
   keybinds: TerminalKeybinds,
   input: AcceleratorKeyboardInput,
   platform: string = "darwin",
 ): TerminalActionName | undefined {
-  const key = acceleratorKeyForInputKey(input.key);
-  if (key === undefined) return undefined;
-  let punctuationFallback: TerminalActionName | undefined;
+  const logicalKey = acceleratorKeyForInputKey(input.key);
+  if (logicalKey === undefined) return undefined;
+  const keypadKey = keypadKeyForInput(logicalKey, input.code);
+  const nativeKey = INTRINSIC_SHIFT_KEYS.get(logicalKey);
+  const key =
+    keypadKey ??
+    (nativeKey && (input.code === nativeKey.code || logicalKey === "+")
+      ? nativeKey.key
+      : logicalKey);
+  let plusFallback: TerminalActionName | undefined;
   for (const action of TERMINAL_ACTION_NAMES) {
     const parsed = parseAccelerator(keybinds[action], platform);
     if (
@@ -240,21 +290,29 @@ export function terminalActionForKeyboardInput(
     const shifted = parsed.modifiers.has("shift");
     if (parsed.key === key && shifted === input.shift) return action;
 
-    // Electron reports Plus with Shift on the main keyboard, but without it
-    // on a keypad. Both represent the same logical Plus accelerator.
-    const implicitPlusShift =
-      parsed.key === "+" && key === "+" && input.shift && !shifted;
-    // Recognize the observed shifted comma only when its logical character
-    // AND physical position agree; do not remap arbitrary non-US key positions.
-    const shiftedComma =
-      parsed.key === "," &&
-      key === "<" &&
-      input.code === "Comma" &&
-      input.shift &&
-      shifted;
-    if (implicitPlusShift || shiftedComma) punctuationFallback ??= action;
+    // This is application fallback policy, not another native accelerator:
+    // Plus without explicit Shift also accepts an unshifted logical + (keypad
+    // or layout). Ctrl+= still does not become an unrequested zoom shortcut.
+    if (parsed.allowUnshiftedPlus && logicalKey === "+" && !input.shift)
+      plusFallback ??= action;
   }
-  return punctuationFallback;
+  return plusFallback;
+}
+
+function keypadKeyForInput(
+  key: string,
+  code: string | undefined,
+): string | undefined {
+  if (code === `Numpad${key}` && /^[0-9]$/.test(key)) return `num${key}`;
+  const operators: Readonly<Record<string, readonly [string, string]>> = {
+    NumpadAdd: ["+", "numadd"],
+    NumpadSubtract: ["-", "numsub"],
+    NumpadMultiply: ["*", "nummult"],
+    NumpadDivide: ["/", "numdiv"],
+    NumpadDecimal: [".", "numdec"],
+  };
+  const operator = code === undefined ? undefined : operators[code];
+  return operator?.[0] === key ? operator[1] : undefined;
 }
 
 function acceleratorKeyForInputKey(inputKey: string): string | undefined {

@@ -438,7 +438,9 @@ Command family.
 Use the printable character for punctuation, such as the literal comma in
 `Control+Shift+,`, rather than `Comma`. The exception is `+`, written as `Plus`
 because plus signs separate accelerator parts. A binding cannot duplicate
-another action's effective shortcut, including an unchanged default.
+another action's effective shortcut, including an unchanged default. Shifted
+symbols count as their native key plus Shift: `Control+!` conflicts with
+`Control+Shift+1`, for example.
 
 **Application shortcuts consume the key instead of sending it to the shell.**
 For example, importing a macOS `CommandOrControl+C` binding on Linux/Windows
@@ -454,9 +456,12 @@ Accelerators describe the resulting key. On a layout where `+` shares the `=`
 key, `Control+Plus` usually means `Ctrl+Shift+=`; a keypad `+` needs no Shift.
 The same applies to Command on macOS.
 
-An explicit `Control+Shift+Plus` binding takes precedence for a shifted `+`
-when both it and `Control+Plus` exist. The latter can still match an unshifted
-keypad `+`; the two bindings are not interchangeable.
+`Control+Plus`, `Control+Shift+Plus`, and `Control+Shift+=` have the same
+native identity and cannot be assigned to different actions. As a convenience,
+`Control+Plus` also accepts an unshifted logical `+`; adding explicit Shift
+requires Shift. A specific keypad binding such as `Control+numadd` takes
+precedence over this convenience. Ordinary `Ctrl+=` is not a Plus alias.
+OMXTerm does not translate arbitrary keyboard layouts.
 
 </details>
 

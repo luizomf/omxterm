@@ -451,6 +451,27 @@ describe("strict version 1 User Configuration", () => {
     }
   });
 
+  it("rejects intrinsic-Shift native duplicates across supported platforms", () => {
+    for (const platform of ["darwin", "linux", "win32"]) {
+      for (const [newTab, closeTab] of [
+        ["Control+!", "Control+Shift+1"],
+        ["Control+Shift+<", "Control+Shift+,"],
+        ["Control+Plus", "Control+Shift+Plus"],
+        ["Control+Plus", "Control+Shift+="],
+      ]) {
+        expect(() =>
+          validateUserConfiguration(
+            { version: 1, keybinds: { newTab, closeTab } },
+            configPath,
+            installedFonts,
+            terminalDefaultKeybinds(platform),
+            platform,
+          ),
+        ).toThrow('conflicts with the "newTab" keybind');
+      }
+    }
+  });
+
   it("accepts swapping two defaults through explicit remaps", () => {
     const configuration = validateUserConfiguration(
       {
