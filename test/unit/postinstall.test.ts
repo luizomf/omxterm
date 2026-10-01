@@ -72,9 +72,13 @@ describe("node-pty postinstall preparation", () => {
       path.join(tmpdir(), "omxterm-node-pty-windows-"),
     );
     const runtimePath = path.join(root, "windowsPtyAgent.js");
+    const rebuild = vi.fn().mockResolvedValue(undefined);
+    const chmod = vi.fn().mockResolvedValue(undefined);
     const options = {
       platform: "win32",
       windowsRuntimePath: runtimePath,
+      rebuild,
+      chmod,
       // Windows must not touch the separate Unix runtime.
       unixRuntimePath: path.join(root, "absent-unix.js"),
     };
@@ -99,25 +103,21 @@ describe("node-pty postinstall preparation", () => {
         "Unrecognized node-pty Windows runtime",
       );
       expect(await readFile(runtimePath)).toEqual(drifted);
+      expect(rebuild).not.toHaveBeenCalled();
+      expect(chmod).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it.each([
-    ["linux", "x64", "corrected"],
-    ["win32", "arm64", "corrected"],
-  ])(
-    "uses the reviewed platform preparation on %s %s",
-    async (platform, arch, result) => {
-      const rebuild = vi.fn().mockResolvedValue(undefined);
-      const chmod = vi.fn().mockResolvedValue(undefined);
+  it("corrects the Linux x64 runtime without a supported native rebuild", async () => {
+    const rebuild = vi.fn().mockResolvedValue(undefined);
+    const chmod = vi.fn().mockResolvedValue(undefined);
 
-      await expect(
-        prepareNodePtyRuntime({ platform, arch, rebuild, chmod }),
-      ).resolves.toBe(result);
-      expect(rebuild).not.toHaveBeenCalled();
-      expect(chmod).not.toHaveBeenCalled();
-    },
-  );
+    await expect(
+      prepareNodePtyRuntime({ platform: "linux", arch: "x64", rebuild, chmod }),
+    ).resolves.toBe("corrected");
+    expect(rebuild).not.toHaveBeenCalled();
+    expect(chmod).not.toHaveBeenCalled();
+  });
 });
