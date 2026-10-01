@@ -316,8 +316,18 @@ modified native Electron mouse events, including soft wraps and mouse-report
 precedence. The host also activates small synthetic whole-line unquoted PNG/JPEG
 paths through the real main reader/native decoder and production preview, checking
 full-span hover pixels, first/space/continuation clicks, a literal space at a soft-wrap
-boundary, resize/reflow, dismissal and focus. Its unrelated gesture-only references
-still return cancellation. No physical click/picker acceptance is claimed.
+boundary, resize/reflow, dismissal and focus. These controls temporarily constrain
+content inside the native window, observe the real Surface/PTY grid, and restore
+the original layout in `finally`; they do not require arbitrary native sizes to
+be honored by a tiler. Canvas extents use actual cell pitches so strict hover
+partitions do not distribute unused edges into adjacent cells. Generated paths
+use bounded filesystem components and the real core's Unicode-aware root cell
+width; the long reference must really wrap, and the filename space must occupy
+the observed grid's last column. The same output is checked after both shrinking
+and widening. macOS uses a short owned random `/tmp` profile so the complete path
+prefix fits the viewport-clipping control inside the original window.
+Its unrelated gesture-only references still return cancellation. No physical
+click/picker acceptance is claimed.
 
 The host's focused link-cancellation scenario starts one real Surface/PTY and
 waits for its non-echoing child readiness, then restores a complete visible URL

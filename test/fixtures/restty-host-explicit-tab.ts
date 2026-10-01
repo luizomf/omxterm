@@ -95,6 +95,7 @@ export async function exerciseExplicitResttyTab(options: {
     window,
     root: options.root,
     deliverOutput: options.deliverOutputs[1]!,
+    input: () => options.inputs[1]!.join(""),
     resizes: options.resizes[1]!,
     localImageRequests: options.localImageRequests,
     waitFor,

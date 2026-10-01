@@ -6,12 +6,14 @@ import type { LocalImageRequest } from "../../src/shared/local-image";
 import { loadLocalImageForWindow } from "../../src/main/local-image-loader";
 import { createNativeHostPng } from "./native-host-png";
 import { withTmuxImageOutput } from "./restty-image-tmux";
+import { localImageFixturePaths } from "./restty-local-image-paths";
+import { withLocalImageFixtureLayout } from "./restty-local-image-layout";
+import { readResttyImageCellSize } from "./restty-host-images";
 import {
-  captureModifiedHoverEvidence,
-  clickTerminalCell,
-  terminalCellPoint,
-  scrollTerminal,
-} from "./restty-link-gestures";
+  verifyLocalImageReference,
+  type LocalImageLinkEvidence,
+} from "./restty-local-image-reference";
+import { clickTerminalCell, scrollTerminal } from "./restty-link-gestures";
 
 export function fixtureLocalImageLoader(
   window: BrowserWindow,
@@ -35,6 +37,7 @@ export async function exerciseResttyLocalImageLinks(options: {
   readonly window: BrowserWindow;
   readonly root: string;
   readonly deliverOutput: (data: string) => void;
+  readonly input: () => string;
   readonly resizes: Array<{ cols: number; rows: number }>;
   readonly localImageRequests: LocalImageRequest[];
   readonly waitFor: (
@@ -43,244 +46,192 @@ export async function exerciseResttyLocalImageLinks(options: {
   ) => Promise<void>;
 }) {
   const { window, root, deliverOutput, waitFor } = options;
-  const directory = path.join(root, "preview images", "long".repeat(25));
-  await mkdir(directory, { recursive: true });
-  const png = createNativeHostPng(2, 2);
-  const shortPath = path.join(root, "a photo.png");
-  const longPath = path.join(directory, "a photo.png");
-  const jpegPath = path.join(root, "a photo.jpg");
-  const columns = options.resizes.at(-1)!.cols;
-  const boundaryPath = path.join(
-    root,
-    `${"b".repeat((columns - 2 - (root.length % columns) + columns) % columns)} photo.png`,
+  const deviceCellSize = await readResttyImageCellSize(
+    deliverOutput,
+    options.input,
+    waitFor,
   );
-  await writeFile(boundaryPath, png);
-  await writeFile(shortPath, png);
-  await writeFile(longPath, png);
-  await writeFile(
-    jpegPath,
-    nativeImage.createFromBuffer(Buffer.from(png)).toJPEG(90),
-  );
-  const results: Array<{ control: string; activations: number }> = [];
+  const dpr = (await window.webContents.executeJavaScript(
+    "devicePixelRatio",
+    true,
+  )) as number;
+  const cellSize = deviceCellSize.map((value) => value / dpr) as [
+    number,
+    number,
+  ];
+  return withLocalImageFixtureLayout(
+    { ...options, cellSize },
+    async (refit) => {
+      const baseGrid = await refit("base");
+      const rootPrefix = path.join(root, "x").slice(0, -1);
+      const inputStart = options.input().length;
+      // A sentinel resolves pending wrap at the last column before querying the
+      // real core. Count native separators and Unicode cells, not code units.
+      deliverOutput(`\u001b[3J\u001b[2J\u001b[H${rootPrefix}x\u001b[6n`);
+      let position: RegExpMatchArray | null = null;
+      await waitFor(() => {
+        position = options
+          .input()
+          .slice(inputStart)
+          .match(/\u001b\[(\d+);(\d+)R/u);
+        return position !== null;
+      }, "local image root cell width from the real core");
+      const [row, col] = position!.slice(1).map(Number);
+      assert.ok(row! < baseGrid.rows, "fixture root must remain fully visible");
+      const rootPrefixColumns = (row! - 1) * baseGrid.cols + col! - 2;
+      const rootCellDelta = rootPrefixColumns - rootPrefix.length;
+      const { shortPath, longPath, jpegPath, boundaryPath } =
+        localImageFixturePaths(root, baseGrid.cols, rootPrefixColumns);
+      await mkdir(path.dirname(longPath), { recursive: true });
+      await mkdir(path.dirname(boundaryPath), { recursive: true });
+      const png = createNativeHostPng(2, 2);
+      await writeFile(boundaryPath, png);
+      await writeFile(shortPath, png);
+      await writeFile(longPath, png);
+      await writeFile(
+        jpegPath,
+        nativeImage.createFromBuffer(Buffer.from(png)).toJPEG(90),
+      );
+      const results: LocalImageLinkEvidence[] = [];
+      async function verify(
+        control: string,
+        reference: string,
+        name: string,
+        prefixColumns = 0,
+        afterRestore = false,
+      ) {
+        const evidence = await verifyLocalImageReference({
+          ...options,
+          control,
+          reference,
+          name,
+          prefixColumns,
+          rootCellDelta,
+          size: options.resizes.at(-1)!,
+        });
+        if (afterRestore) {
+          const prior = results.at(-1)!;
+          assert.equal(prior.control, control);
+          prior.activations += evidence.activations;
+          prior.grids!.push(...evidence.grids!);
+        } else results.push(evidence);
+      }
+      for (const [control, reference, name, prefixColumns] of [
+        ["unquoted PNG", shortPath, "a photo.png", 0],
+        ["unquoted JPEG", jpegPath, "a photo.jpg", 0],
+        ["soft-wrapped PNG", longPath, "a photo.png", 0],
+        [
+          "space at soft-wrap boundary",
+          boundaryPath,
+          path.basename(boundaryPath),
+          0,
+        ],
+        [
+          "quoted Unicode prefix and location",
+          `'${longPath}':12:3`,
+          "a photo.png",
+          4,
+        ],
+      ] as const) {
+        const prefix = prefixColumns ? "漢e\u0301 " : "";
+        deliverOutput(
+          `\u001b[?1000l\u001b[?1006l\u001b[3J\u001b[2J\u001b[H\u001b[?25l${prefix}${reference}`,
+        );
+        if (control === "soft-wrapped PNG") await refit("shrunk");
+        await verify(control, reference, name, prefixColumns);
+        if (control === "soft-wrapped PNG") {
+          await refit("base");
+          // Check the same output after widening, without clearing/reprinting.
+          await verify(control, reference, name, prefixColumns, true);
+        }
+      }
+      let size = options.resizes.at(-1)!;
+      deliverOutput(
+        `\u001b[3J\u001b[2J\u001b[H${boundaryPath}\r\n${Array.from({ length: size.rows - 1 }, (_, index) => `neighbor-${index}`).join("\r\n")}`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const beforeTopClip = options.localImageRequests.length;
+      await clickTerminalCell(window, 0, 2, size);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      assert.equal(
+        options.localImageRequests.length,
+        beforeTopClip,
+        "row-end space above viewport must not activate the suffix",
+      );
+      results.push({ control: "space clipped above viewport", activations: 0 });
 
-  async function verify(
-    control: string,
-    reference: string,
-    name: string,
-    prefixColumns = 0,
-  ) {
-    const size = options.resizes.at(-1)!;
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    const beforeHover = options.localImageRequests.length;
-    const hover = await captureModifiedHoverEvidence(
-      window,
-      await terminalCellPoint(window, 0, prefixColumns + 2, size),
-      size,
-      reference.length,
-      prefixColumns,
-    );
-    assert.ok(hover.modifiedHoverChangedPixels > 0, control);
-    assert.equal(hover.releasedHoverChangedPixels, 0, control);
-    assert.equal(
-      options.localImageRequests.length,
-      beforeHover,
-      "hover does not request a read",
-    );
-    const cells = [
-      ...new Set([
-        prefixColumns + 2,
-        prefixColumns + reference.indexOf(" "),
-        prefixColumns + reference.indexOf("photo"),
-        ...(reference.length > size.cols ? [size.cols + 2] : []),
-      ]),
-    ];
-    for (const cell of cells) {
-      const before = options.localImageRequests.length;
-      await clickTerminalCell(
-        window,
-        Math.floor(cell / size.cols),
-        cell % size.cols,
-        size,
-      );
-      await waitFor(
-        () => options.localImageRequests.length === before + 1,
-        `${control} activation`,
-      );
-      const request = options.localImageRequests.at(-1)!;
+      size = await refit("wide");
+      const shortPathColumns = shortPath.length + rootCellDelta;
       assert.ok(
-        request.source === "native-path" || request.source === "path-reference",
+        shortPathColumns < size.cols,
+        "clipping control requires a fully visible spaced path prefix",
       );
-      assert.equal(request.path, reference, `${control} complete destination`);
+      const bottomLine = `${shortPath}${" ".repeat(size.cols - shortPathColumns)}continuation.png`;
+      deliverOutput(
+        `\u001b[3J\u001b[2J\u001b[H${Array.from({ length: size.rows - 1 }, (_, index) => `lead-${index}`).join("\r\n")}\r\n${bottomLine}\r\n${Array.from({ length: size.rows }, (_, index) => `trail-${index}`).join("\r\n")}`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      await scrollTerminal(window, 1, 1, size, -1000);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const beforeBottomClip = options.localImageRequests.length;
+      await clickTerminalCell(window, size.rows - 1, 2, size);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      assert.equal(
+        options.localImageRequests.length,
+        beforeBottomClip,
+        "literal spaces at viewport bottom must not activate an incomplete whole line",
+      );
+      results.push({ control: "space clipped below viewport", activations: 0 });
+      await refit("base");
+
+      // A printed trailing space is not blank cell padding: retain token grammar
+      // rather than silently opening the existing full spaced file.
+      deliverOutput(`\u001b[3J\u001b[2J\u001b[H${shortPath} `);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const beforeTrailing = options.localImageRequests.length;
+      await clickTerminalCell(window, 0, 2, options.resizes.at(-1)!);
+      await waitFor(
+        () => options.localImageRequests.length === beforeTrailing + 1,
+        "trailing-space token activation",
+      );
+      const trailingRequest = options.localImageRequests.at(-1)!;
+      assert.ok(trailingRequest.source === "native-path");
+      assert.equal(
+        trailingRequest.path,
+        shortPath.split(" ")[0],
+        "trailing space must not expand to the full spaced filename",
+      );
       await waitFor(
         () =>
           window.webContents.executeJavaScript(
-            `(() => {
-        const dialog = document.querySelector('.local-image-preview');
-        const image = dialog?.querySelector('img');
-        return dialog?.open && !image?.hidden && image?.naturalWidth === 2 && image?.naturalHeight === 2;
-      })()`,
+            "document.querySelector('.local-image-preview').open && !document.querySelector('.local-image-preview-error').hidden",
             true,
           ),
-        `${control} real loaded and decoded preview`,
-      );
-      assert.equal(
-        await window.webContents.executeJavaScript(
-          `(() => {
-        const image = document.querySelector('.local-image-preview img');
-        const rect = image.getBoundingClientRect();
-        return image.alt === ${JSON.stringify(name)} && rect.width > 0 && rect.height > 0 && getComputedStyle(image).visibility === 'visible';
-      })()`,
-          true,
-        ),
-        true,
-        `${control} visible image`,
+        "missing token gets fixed failure rather than a different image",
       );
       await window.webContents.executeJavaScript(
         "document.querySelector('.local-image-preview-close').click()",
         true,
       );
-      assert.equal(
-        await window.webContents.executeJavaScript(
-          `!document.querySelector('.local-image-preview').open && !document.querySelector('.local-image-preview img').hasAttribute('src') && document.activeElement?.closest('.restty-terminal-surface') !== null`,
-          true,
-        ),
-        true,
-        "dismissal releases source and restores focus",
-      );
-    }
-    results.push({ control, activations: cells.length });
-  }
-  for (const [control, reference, name, prefixColumns] of [
-    ["unquoted PNG", shortPath, "a photo.png", 0],
-    ["unquoted JPEG", jpegPath, "a photo.jpg", 0],
-    ["soft-wrapped PNG", longPath, "a photo.png", 0],
-    [
-      "space at soft-wrap boundary",
-      boundaryPath,
-      path.basename(boundaryPath),
-      0,
-    ],
-    [
-      "quoted Unicode prefix and location",
-      `'${longPath}':12:3`,
-      "a photo.png",
-      4,
-    ],
-  ] as const) {
-    const prefix = prefixColumns ? "漢e\u0301 " : "";
-    deliverOutput(
-      `\u001b[?1000l\u001b[?1006l\u001b[3J\u001b[2J\u001b[H\u001b[?25l${prefix}${reference}`,
-    );
-    if (control === "soft-wrapped PNG") {
-      const before = options.resizes.length;
-      window.setSize(640, 600);
-      await waitFor(
-        () => options.resizes.length > before,
-        "spaced image native resize/reflow",
-      );
-    }
-    await verify(control, reference, name, prefixColumns);
-    if (control === "soft-wrapped PNG") {
-      const before = options.resizes.length;
-      window.setSize(760, 600);
-      await waitFor(
-        () => options.resizes.length > before,
-        "spaced image restore/refit",
-      );
-    }
-  }
-  let size = options.resizes.at(-1)!;
-  deliverOutput(
-    `\u001b[3J\u001b[2J\u001b[H${boundaryPath}\r\n${Array.from({ length: size.rows - 1 }, (_, index) => `neighbor-${index}`).join("\r\n")}`,
-  );
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  const beforeTopClip = options.localImageRequests.length;
-  await clickTerminalCell(window, 0, 2, size);
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  assert.equal(
-    options.localImageRequests.length,
-    beforeTopClip,
-    "row-end space above viewport must not activate the suffix",
-  );
-  results.push({ control: "space clipped above viewport", activations: 0 });
+      results.push({ control: "trailing-space exclusion", activations: 1 });
 
-  const beforeWide = options.resizes.length;
-  window.setSize(1600, 600);
-  await waitFor(
-    () => options.resizes.length > beforeWide,
-    "clipping control wide native refit",
-  );
-  size = options.resizes.at(-1)!;
-  assert.ok(shortPath.length < size.cols);
-  const bottomLine = `${shortPath}${" ".repeat(size.cols - shortPath.length)}continuation.png`;
-  deliverOutput(
-    `\u001b[3J\u001b[2J\u001b[H${Array.from({ length: size.rows - 1 }, (_, index) => `lead-${index}`).join("\r\n")}\r\n${bottomLine}\r\n${Array.from({ length: size.rows }, (_, index) => `trail-${index}`).join("\r\n")}`,
-  );
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  await scrollTerminal(window, 1, 1, size, -1000);
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  const beforeBottomClip = options.localImageRequests.length;
-  await clickTerminalCell(window, size.rows - 1, 2, size);
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  assert.equal(
-    options.localImageRequests.length,
-    beforeBottomClip,
-    "literal spaces at viewport bottom must not activate an incomplete whole line",
-  );
-  results.push({ control: "space clipped below viewport", activations: 0 });
-  const beforeRestore = options.resizes.length;
-  window.setSize(760, 600);
-  await waitFor(
-    () => options.resizes.length > beforeRestore,
-    "clipping control restore/refit",
-  );
-
-  // A printed trailing space is not blank cell padding: keep the old token
-  // grammar here rather than silently opening the existing full spaced file.
-  deliverOutput(`\u001b[3J\u001b[2J\u001b[H${shortPath} `);
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  const beforeTrailing = options.localImageRequests.length;
-  await clickTerminalCell(window, 0, 2, options.resizes.at(-1)!);
-  await waitFor(
-    () => options.localImageRequests.length === beforeTrailing + 1,
-    "trailing-space token activation",
-  );
-  const trailingRequest = options.localImageRequests.at(-1)!;
-  assert.ok(trailingRequest.source === "native-path");
-  assert.equal(
-    trailingRequest.path,
-    shortPath.split(" ")[0],
-    "trailing space must not expand to the full spaced filename",
-  );
-  await waitFor(
-    () =>
-      window.webContents.executeJavaScript(
-        "document.querySelector('.local-image-preview').open && !document.querySelector('.local-image-preview-error').hidden",
-        true,
-      ),
-    "missing token gets fixed failure rather than a different image",
-  );
-  await window.webContents.executeJavaScript(
-    "document.querySelector('.local-image-preview-close').click()",
-    true,
-  );
-  results.push({ control: "trailing-space exclusion", activations: 1 });
-
-  if (process.env["OMXTERM_TEST_IMAGE_TMUX"] === "1") {
-    for (const reference of [longPath, boundaryPath])
-      await withTmuxImageOutput({
-        root,
-        reference,
-        size: options.resizes.at(-1)!,
-        deliverOutput,
-        waitFor,
-        check: (phase) =>
-          verify(
-            `${phase}${reference === boundaryPath ? " boundary" : ""}`,
+      if (process.env["OMXTERM_TEST_IMAGE_TMUX"] === "1") {
+        for (const reference of [longPath, boundaryPath])
+          await withTmuxImageOutput({
+            root,
             reference,
-            path.basename(reference),
-          ),
-      });
-  }
-  return results;
+            size: options.resizes.at(-1)!,
+            deliverOutput,
+            waitFor,
+            check: (phase) =>
+              verify(
+                `${phase}${reference === boundaryPath ? " boundary" : ""}`,
+                reference,
+                path.basename(reference),
+              ),
+          });
+      }
+      return results;
+    },
+  );
 }
