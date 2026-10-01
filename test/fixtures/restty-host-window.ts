@@ -1,6 +1,28 @@
 import { BrowserWindow } from "electron";
 import path from "node:path";
 
+export async function initializeResttyHostWindow(
+  window: BrowserWindow,
+  root: string,
+  sessionReady: () => boolean,
+  waitFor: (
+    predicate: () => boolean | Promise<boolean>,
+    label: string,
+  ) => Promise<void>,
+) {
+  await window.loadFile(path.join(root, "renderer", "index.html"));
+  window.showInactive();
+  await waitFor(sessionReady, "default Restty session");
+  await waitFor(
+    () =>
+      window.webContents.executeJavaScript(
+        "document.activeElement?.closest('.restty-terminal-surface') !== null",
+        true,
+      ),
+    "initial terminal focus",
+  );
+}
+
 export function createResttyHostWindows(
   root: string,
   onWindowOpen: () => void,

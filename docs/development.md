@@ -304,14 +304,25 @@ full-span hover pixels, first/space/continuation clicks, a literal space at a so
 boundary, resize/reflow, dismissal and focus. Its unrelated gesture-only references
 still return cancellation. No physical click/picker acceptance is claimed.
 
-The host's link-cancellation checks restore a complete visible URL and application
-mouse reporting after the clipping controls. A modified activation at the same
-coordinates proves recognition, and an ordinary click proves reporting is active.
-Separate synthetic pending pointer gestures then cancel through `pointercancel`
-and window blur, each requiring no activation or PTY mouse input. Two fixture-only
-renderer mutants independently remove those listeners; the same cancellation
-assertions must reject them. This qualifies the evidence, not a new gesture rule
-or physical-pointer input.
+The host's focused link-cancellation scenario starts one real Surface/PTY and
+waits for its non-echoing child readiness, then restores a complete visible URL
+and application mouse reporting. Non-echoing input prevents the reporting control
+from changing the URL stimulus. It runs separately from the broad host's font,
+clipboard, image/resize, hover, stress and lifecycle exercises, without their
+image artifacts or font-mutation probe. A modified pointer first presents its
+cue; activation at the same coordinates proves recognition, and an ordinary
+click proves reporting is active. Separate synthetic pending pointer gestures then
+cancel through `pointercancel` and window blur, each requiring no activation or
+PTY mouse input. Two fixture-only renderer mutants independently remove those
+listeners; the same cancellation assertions must reject only the missing listener.
+All three focused cases require actual owned native PTY exit and supervised
+cleanup. Run them without the broad scenario using:
+
+```sh
+npx vitest run test/integration/restty-host-integration.test.ts -t 'pending'
+```
+
+This qualifies the evidence, not a new gesture rule or physical-pointer input.
 
 For explicit high-resolution capacity and resource qualification:
 

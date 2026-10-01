@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { LaunchRequest } from "../../src/main/launch-request";
+import type { BrowserWindow } from "electron";
 
 const windowsPowerShell = path.join(
   process.env.SystemRoot ?? "C:\\Windows",
@@ -34,6 +35,30 @@ export function defaultInputCommand(
   return platform === "win32"
     ? "Write-Output ('__DEFAULT_INPUT__'+'Olá🙂')"
     : "printf '%s%s\\n' '__DEFAULT_INPUT__' 'Olá🙂'";
+}
+
+export async function exerciseDefaultResttyInput(
+  window: BrowserWindow,
+  output: () => string,
+  waitFor: (predicate: () => boolean, label: string) => Promise<void>,
+) {
+  await window.webContents.executeJavaScript(
+    "document.querySelector('.restty-terminal-surface canvas')?.focus()",
+    true,
+  );
+  await window.webContents.executeJavaScript(
+    `(() => {
+      const input = document.querySelector('.restty-terminal-surface textarea');
+      input.dispatchEvent(new InputEvent('input', { data: ${JSON.stringify(defaultInputCommand())}, inputType: 'insertText', bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }));
+    })()`,
+    true,
+  );
+  await waitFor(
+    () => output().includes("__DEFAULT_INPUT__Olá🙂"),
+    "default shell Unicode input/output",
+  );
 }
 
 export function prepareFixtureShell(root: string) {

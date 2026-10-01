@@ -1,9 +1,5 @@
 import type { BrowserWindow } from "electron";
 import type { LocalImageRequest } from "../../src/shared/local-image";
-import {
-  exerciseResttyLinkCancellation,
-  type ResttyLinkCancellationEvidence,
-} from "./restty-link-cancellation";
 
 interface TerminalSize {
   readonly cols: number;
@@ -31,7 +27,6 @@ export interface ResttyLinkGestureEvidence {
   readonly ordinaryGestureMouseReports: string;
   readonly wheelMouseReports: string;
   readonly alternateScreenMouseReports: string;
-  readonly linkCancellation: ResttyLinkCancellationEvidence;
 }
 
 export async function terminalCellPoint(
@@ -500,11 +495,6 @@ export async function exerciseResttyLinks(
   if (Number(externalLinks.length) !== 5)
     throw new Error("Destination clipped below the viewport opened a link");
 
-  const linkCancellation = await exerciseResttyLinkCancellation(
-    options,
-    reflowedSize,
-  );
-
   return {
     modifiedHoverChangedPixels,
     releasedHoverChangedPixels,
@@ -513,6 +503,5 @@ export async function exerciseResttyLinks(
     ordinaryGestureMouseReports,
     wheelMouseReports,
     alternateScreenMouseReports,
-    linkCancellation,
   };
 }

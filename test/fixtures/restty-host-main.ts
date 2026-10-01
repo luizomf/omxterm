@@ -34,7 +34,7 @@ import {
   prepareLargePasteShell,
 } from "./restty-host-paste";
 import {
-  defaultInputCommand,
+  exerciseDefaultResttyInput,
   explicitFixtureLaunchRequest,
   hasSelectionFixtureOutput,
   hasSelectionFixtureTranscript,
@@ -47,10 +47,12 @@ import {
   createOutputStressHarness,
   outputStressLaunchRequest,
 } from "./restty-host-output-stress";
-import { createResttyHostWindows } from "./restty-host-window";
+import * as resttyWindows from "./restty-host-window";
+import * as resttyCancellation from "./restty-host-cancellation";
 
 const prefix = "__OMXTERM_RESTTY_HOST_RESULT__";
 const root = __dirname;
+const focusedCancellation = process.argv.includes("--link-cancellation");
 const { home, environment: shellEnvironment } = prepareFixtureShell(root);
 for (const name of ["userData", "sessionData"] as const) {
   const directory = path.join(root, name);
@@ -132,13 +134,14 @@ function createHost(window: BrowserWindow) {
       inputs[index] = [];
       deliverOutputs[index] = callbacks.onOutput;
       resizes[index] = [];
-      const explicit = index === 1;
-      const stressLaunchRequest = outputStressLaunchRequest(index);
+      const fixtureLaunchRequest = focusedCancellation
+        ? resttyCancellation.cancellationFixtureLaunchRequest()
+        : outputStressLaunchRequest(index);
       const terminal = fixtureSessions.createSession({
         shell: defaultShell,
-        ...(stressLaunchRequest
-          ? { launchRequest: stressLaunchRequest }
-          : explicit
+        ...(fixtureLaunchRequest
+          ? { launchRequest: fixtureLaunchRequest }
+          : index === 1
             ? {
                 launchRequest: explicitFixtureLaunchRequest(),
               }
@@ -270,7 +273,7 @@ app
       },
     );
 
-    const { window } = createResttyHostWindows(
+    const { window } = resttyWindows.createResttyHostWindows(
       root,
       () => (openedWindows += 1),
       () => (navigations += 1),
@@ -278,20 +281,29 @@ app
 
     const { reloader } = createHost(window);
 
-    await window.loadFile(path.join(root, "renderer", "index.html"));
-    window.showInactive();
-    await waitFor(
+    await resttyWindows.initializeResttyHostWindow(
+      window,
+      root,
       () => launchKinds.length === 1 && resizes[0]!.length > 0,
-      "default Restty session",
+      waitFor,
     );
-    await waitFor(
-      () =>
-        window.webContents.executeJavaScript(
-          "document.activeElement?.closest('.restty-terminal-surface') !== null",
-          true,
-        ),
-      "initial terminal focus",
-    );
+
+    if (focusedCancellation) {
+      await resttyCancellation.completeResttyLinkCancellationScenario({
+        window,
+        deliverOutput: deliverOutputs[0]!,
+        inputs: inputs[0]!,
+        resizes: resizes[0]!,
+        externalLinks,
+        waitFor,
+        initialOutput: () => outputs[0]!.join(""),
+        closeSession: () => terminals[0]!.close(),
+        ptyExits: () => ptyExits,
+        sessionStarts: () => sessionIndex,
+        complete: fixtureSessions.complete,
+      });
+      return;
+    }
 
     ({ titleQueryReplyBytes } = await exerciseResttyEvents({
       deliverOutput: deliverOutputs[0]!,
@@ -308,22 +320,10 @@ app
       deliverOutputs[0]!,
     );
 
-    await window.webContents.executeJavaScript(
-      "document.querySelector('.restty-terminal-surface canvas')?.focus()",
-      true,
-    );
-    await window.webContents.executeJavaScript(
-      `(() => {
-        const input = document.querySelector('.restty-terminal-surface textarea');
-        input.dispatchEvent(new InputEvent('input', { data: ${JSON.stringify(defaultInputCommand())}, inputType: 'insertText', bubbles: true }));
-        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
-        input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }));
-      })()`,
-      true,
-    );
-    await waitFor(
-      () => outputs[0]!.join("").includes("__DEFAULT_INPUT__Olá🙂"),
-      "default shell Unicode input/output",
+    await exerciseDefaultResttyInput(
+      window,
+      () => outputs[0]!.join(""),
+      waitFor,
     );
 
     const capabilityReplies = await exerciseResttyCapabilities({

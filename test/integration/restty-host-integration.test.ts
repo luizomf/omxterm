@@ -76,7 +76,6 @@ interface HostResult {
   readonly ordinaryGestureMouseReports: string;
   readonly wheelMouseReports: string;
   readonly alternateScreenMouseReports: string;
-  readonly linkCancellation: ResttyLinkCancellationEvidence;
   readonly titleEvents: ReadonlyArray<{
     readonly sessionId: string;
     readonly fixture: "first" | "overlong" | "second" | "unexpected";
@@ -132,6 +131,13 @@ interface HostResult {
     readonly liveSessions: number;
   }>;
   readonly sessionStarts: number;
+}
+
+interface CancellationResult {
+  readonly linkCancellation: ResttyLinkCancellationEvidence;
+  readonly externalLinks: readonly string[];
+  readonly sessionStarts: number;
+  readonly ptyExits: number;
 }
 
 describe.skipIf(
@@ -382,57 +388,36 @@ describe.skipIf(
     }
   }, 270_000);
 
+  it("cancels pending link gestures through pointercancel and blur in the real Surface", async () => {
+    const result = await runCancellationFixture();
+    assertLinkCancellationEvidence(result.linkCancellation);
+    expect(result.externalLinks).toEqual(["https://cancel.test/visible"]);
+  }, 270_000);
+
   it.each(["pointercancel", "blur"] as const)(
     "detects disabled pending %s cancellation in the real Surface",
     async (cancellation) => {
-      const root = await mkdtemp(path.join(tmpdir(), "omxterm-restty-mutant-"));
-      let supervised = false;
-      try {
-        await buildHostFixture(root, cancellation);
-        supervised = true;
-        const execution = await runFixture(root);
-        expect(execution, JSON.stringify(execution)).toMatchObject({
-          exitCode: 0,
-          signal: null,
-          reason: "exit",
-          cleanupErrors: [],
-        });
-        const line = execution.stdout
-          .split("\n")
-          .find((entry) => entry.startsWith(resultPrefix));
-        if (!line) throw new Error("Cancellation mutant returned no result");
-        const result = JSON.parse(
-          line.slice(resultPrefix.length),
-        ) as HostResult;
-        const evidencePath = process.env["OMXTERM_RESTTY_HOST_EVIDENCE_PATH"];
-        if (evidencePath)
-          await writeFile(
-            `${evidencePath}.${cancellation}.json`,
-            `${JSON.stringify(result, null, 2)}\n`,
-          );
-        assertLinkCancellationControls(result.linkCancellation);
-        expect(() =>
-          assertLinkCancellationEvidence(result.linkCancellation),
-        ).toThrow();
-        const { pointercancel, blur } = result.linkCancellation;
-        for (const [event, observation] of Object.entries({
-          pointercancel,
-          blur,
-        })) {
-          expect(observation.mouseReports).toBe("");
-          // The same unchanged-count invariant used by the positive suite must
-          // reject ONLY the case whose actual cancellation listener is missing.
-          expect(observation.activationsAfter).toBe(
-            observation.activationsBefore + Number(event === cancellation),
-          );
-        }
-        expect(result.externalLinks.slice(5)).toEqual([
-          "https://cancel.test/visible",
-          "https://cancel.test/visible",
-        ]);
-      } finally {
-        if (!supervised) await rm(root, { recursive: true, force: true });
+      const result = await runCancellationFixture(cancellation);
+      assertLinkCancellationControls(result.linkCancellation);
+      expect(() =>
+        assertLinkCancellationEvidence(result.linkCancellation),
+      ).toThrow();
+      const { pointercancel, blur } = result.linkCancellation;
+      for (const [event, observation] of Object.entries({
+        pointercancel,
+        blur,
+      })) {
+        expect(observation.mouseReports).toBe("");
+        // The same unchanged-count invariant used by the positive suite must
+        // reject ONLY the case whose actual cancellation listener is missing.
+        expect(observation.activationsAfter).toBe(
+          observation.activationsBefore + Number(event === cancellation),
+        );
       }
+      expect(result.externalLinks).toEqual([
+        "https://cancel.test/visible",
+        "https://cancel.test/visible",
+      ]);
     },
     270_000,
   );
@@ -445,17 +430,15 @@ function assertVisibleLinkEvidence(result: HostResult) {
     "https://one.test/a",
     "https://two.test/b",
     "https://scroll.test/complete",
-    "https://cancel.test/visible",
   ]);
-  assertLinkCancellationEvidence(result.linkCancellation);
 }
 
 function assertLinkCancellationControls(
   evidence: ResttyLinkCancellationEvidence,
 ) {
   expect(evidence.positive).toEqual({
-    activationsBefore: 5,
-    activationsAfter: 6,
+    activationsBefore: 0,
+    activationsAfter: 1,
     mouseReports: "",
   });
   expect(evidence.reportingControl).toMatch(
@@ -469,15 +452,64 @@ function assertLinkCancellationEvidence(
   assertLinkCancellationControls(evidence);
   for (const cancellation of ["pointercancel", "blur"] as const)
     expect(evidence[cancellation], cancellation).toEqual({
-      activationsBefore: 6,
-      activationsAfter: 6,
+      activationsBefore: 1,
+      activationsAfter: 1,
       mouseReports: "",
     });
 }
 
+async function runCancellationFixture(cancellation?: "pointercancel" | "blur") {
+  const root = await mkdtemp(
+    path.join(tmpdir(), "omxterm-restty-cancellation-"),
+  );
+  let supervised = false;
+  try {
+    await buildHostFixture(root, {
+      focusedCancellation: true,
+      ...(cancellation ? { cancellation } : {}),
+    });
+    supervised = true;
+    const execution = await runFixture(root, true);
+    expect(
+      execution,
+      `Cancellation fixture setup/execution failed.\n${JSON.stringify(execution)}`,
+    ).toMatchObject({
+      exitCode: 0,
+      signal: null,
+      reason: "exit",
+      cleanupErrors: [],
+    });
+    const line = execution.stdout
+      .split("\n")
+      .find((entry) => entry.startsWith(resultPrefix));
+    if (!line) throw new Error("Cancellation fixture returned no result");
+    const result = JSON.parse(
+      line.slice(resultPrefix.length),
+    ) as CancellationResult;
+    const evidencePath = process.env["OMXTERM_RESTTY_HOST_EVIDENCE_PATH"];
+    if (evidencePath)
+      await writeFile(
+        `${evidencePath}.${cancellation ?? "cancellation"}.json`,
+        `${JSON.stringify(result, null, 2)}\n`,
+      );
+    expect(result.sessionStarts).toBe(1);
+    expect(result.ptyExits).toBe(1);
+    return result;
+  } finally {
+    // Only the supervisor may remove a launched profile after owned cleanup.
+    if (!supervised) await rm(root, { recursive: true, force: true });
+  }
+}
+
 async function buildHostFixture(
   root: string,
-  cancellation?: "pointercancel" | "blur",
+  {
+    focusedCancellation = false,
+    cancellation,
+  }: {
+    focusedCancellation?: boolean;
+    cancellation?: "pointercancel" | "blur";
+  } = {},
 ): Promise<void> {
   await mkdir(path.join(root, "renderer"), { recursive: true });
   await Promise.all([
@@ -508,7 +540,7 @@ async function buildHostFixture(
       format: "iife",
       loader: { ".ttf": "binary" },
       plugins: [
-        resttyFontMutationProbe,
+        ...(focusedCancellation ? [] : [resttyFontMutationProbe]),
         ...(cancellation ? [resttyLinkCancellationMutation(cancellation)] : []),
       ],
       logLevel: "silent",
@@ -523,11 +555,18 @@ async function buildHostFixture(
       path.join(root, "package.json"),
       `${JSON.stringify({ name: "omxterm-restty-host-fixture", main: "main.cjs" })}\n`,
     ),
-    writeFile(
-      path.join(root, "pi-2000.png"),
-      createNativeHostPng(2_000, 2_000),
-    ),
-    writeFile(path.join(root, "image-emitter.cjs"), resttyImageEmitterSource()),
+    ...(!focusedCancellation
+      ? [
+          writeFile(
+            path.join(root, "pi-2000.png"),
+            createNativeHostPng(2_000, 2_000),
+          ),
+          writeFile(
+            path.join(root, "image-emitter.cjs"),
+            resttyImageEmitterSource(),
+          ),
+        ]
+      : []),
     symlink(
       path.join(projectRoot, "node_modules"),
       path.join(root, "node_modules"),
@@ -536,11 +575,15 @@ async function buildHostFixture(
   ]);
 }
 
-async function runFixture(root: string) {
+async function runFixture(root: string, focusedCancellation = false) {
   const chromiumArguments = supportedFixtureChromiumArguments();
   return runNativeFixture({
     executable: electronExecutable,
-    args: [...chromiumArguments, root],
+    args: [
+      ...chromiumArguments,
+      root,
+      ...(focusedCancellation ? ["--link-cancellation"] : []),
+    ],
     root,
     timeout: 260_000,
   });
