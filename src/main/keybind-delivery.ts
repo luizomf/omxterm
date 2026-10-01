@@ -11,7 +11,14 @@ export interface KeybindKeyEvent {
 
 export interface KeybindKeyboardInput extends AcceleratorKeyboardInput {
   readonly type: string;
+  readonly _modifiers?: number;
 }
+
+// Electron 43.4.1 blink_converter.cc exposes the raw Blink modifier mask but
+// omits AltGr from Input.modifiers. Chromium 150's kAltGrKey is 1 << 15.
+// Read that identity at the native boundary; Alt and Ctrl+Alt are not evidence
+// of AltGr. The portable matcher receives only the explicit boolean.
+const BLINK_ALTGR_KEY = 1 << 15;
 
 export interface KeybindWebContents {
   on(
@@ -37,7 +44,11 @@ export function deliverKeybindsFromKeyEvents(
 ): void {
   webContents.on("before-input-event", (event, input) => {
     if (input.type !== "keyDown" && input.type !== "rawKeyDown") return;
-    const action = terminalActionForKeyboardInput(keybinds(), input, platform);
+    const action = terminalActionForKeyboardInput(
+      keybinds(),
+      { ...input, altGr: ((input._modifiers ?? 0) & BLINK_ALTGR_KEY) !== 0 },
+      platform,
+    );
     if (action === undefined) return;
     // A delivered keybind must never also reach the Terminal Surface or PTY.
     event.preventDefault();

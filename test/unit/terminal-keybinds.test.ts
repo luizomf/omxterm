@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { validateUserConfiguration } from "../../src/main/user-configuration";
 import {
   canonicalAccelerator,
   DEFAULT_TERMINAL_KEYBINDS,
@@ -12,6 +13,23 @@ import {
 } from "../../src/shared/terminal-keybinds";
 
 describe("terminal keybind accelerators", () => {
+  it("accepts distinct Alt and AltGr bindings but rejects an AltGr duplicate", () => {
+    for (const platform of ["darwin", "linux", "win32"]) {
+      const keybinds = { newTab: "AltGr+J", closeTab: "Alt+J" };
+      const validate = (overrides: Partial<TerminalKeybinds>) =>
+        validateUserConfiguration(
+          { version: 1, keybinds: overrides },
+          "fixture-config.json",
+          new Set(),
+          terminalDefaultKeybinds(platform),
+          platform,
+        );
+      expect(validate(keybinds).keybinds).toMatchObject(keybinds);
+      expect(() => validate({ ...keybinds, closeTab: "altgr+j" })).toThrow(
+        'conflicts with the "newTab" keybind',
+      );
+    }
+  });
   it.each([
     "CommandOrControl+Q",
     "CmdOrCtrl+Shift+P",

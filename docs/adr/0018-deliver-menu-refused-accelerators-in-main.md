@@ -47,6 +47,15 @@ Ordinary `Ctrl+=` is not added as an alias for Plus, and unrelated modifiers and
 terminal control keys remain untouched. These are corrections to the existing
 delivery contract, not a new shortcut vocabulary or renderer-side key policy.
 
+AltGr retains its own native modifier identity (#487), separately from Alt and
+Control+Alt. Electron 43.4.1's `blink_converter.cc` omits AltGr from the public
+`Input.modifiers` array, but exports `_modifiers`; pinned Chromium 150 defines
+`kAltGrKey` as `1 << 15`. Main adapts that raw flag into an explicit boolean for
+the shared matcher. No held-key heuristic, Alt alias, renderer shortcut policy,
+or layout translation is added. The opt-in OS-input fixture checks this pinned
+boundary on Linux/Windows AltGr layouts when upgrading Electron, as well as
+native-menu identity, unbound layout text/dead keys and Alt-alone menu behavior.
+
 Changing the tab-cycling defaults would abandon the `Ctrl+Tab` convention shared
 by terminals and browsers and recorded in ADR 0016. Renderer handling would put
 application key policy outside the main-owned effective map and inside the

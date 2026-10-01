@@ -14,6 +14,7 @@ interface KeyboardInputOverrides {
   readonly meta?: boolean;
   readonly alt?: boolean;
   readonly shift?: boolean;
+  readonly _modifiers?: number;
 }
 
 function keybindDeliveryHarness(
@@ -47,6 +48,7 @@ function keybindDeliveryHarness(
       meta: false,
       alt: false,
       shift: false,
+      _modifiers: 0,
       ...overrides,
     });
     return event;
@@ -59,6 +61,42 @@ function keybindDeliveryHarness(
     },
   };
 }
+
+it.each(["linux", "win32"])(
+  "delivers distinct Alt/AltGr actions and leaves ordinary input untouched on %s",
+  (platform) => {
+    const { invoke, sendKey, setKeybinds } = keybindDeliveryHarness(
+      {
+        ...terminalDefaultKeybinds(platform),
+        newTab: "AltGr+J",
+        closeTab: "Alt+J",
+      },
+      platform,
+    );
+    // Real Electron 43 AltGr event: raw Blink flag, neither Alt nor Control,
+    // and no AltGr entry in the public modifier array.
+    expect(
+      sendKey({ key: "j", _modifiers: 32768 }).preventDefault,
+    ).toHaveBeenCalledOnce();
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("newTab");
+    sendKey({ key: "j", alt: true, _modifiers: 4 });
+    expect(invoke).toHaveBeenLastCalledWith("closeTab");
+    for (const input of [
+      { key: "j" },
+      { key: "j", control: true, alt: true, _modifiers: 6 },
+      { key: "é", _modifiers: 32768 },
+      { key: "Dead" },
+      { key: "j", type: "keyUp", _modifiers: 32768 },
+    ])
+      expect(sendKey(input).preventDefault).not.toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledTimes(2);
+    setKeybinds({ ...terminalDefaultKeybinds(platform), newTab: "AltGr+J" });
+    expect(
+      sendKey({ key: "j", alt: true, _modifiers: 4 }).preventDefault,
+    ).not.toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledTimes(2);
+  },
+);
 
 // Electron 43 reports shifted punctuation this way on native Windows and Linux.
 // Delivery must happen before renderer key handling can suppress menu fallback.

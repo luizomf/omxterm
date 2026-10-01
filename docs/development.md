@@ -163,6 +163,26 @@ This verifies the session/IPC boundary, not renderer-originated packets or an
 observed main-process crash. Windows failure classification has controlled unit
 coverage; this Unix check does not qualify ConPTY.
 
+### AltGr layout boundary
+
+On an owned disposable Linux/Windows desktop with an active US International
+AltGr layout, run:
+
+```sh
+OMXTERM_TEST_ALTGR_NATIVE=1 npx vitest run test/integration/altgr-native.test.ts
+```
+
+In PowerShell, set `$env:OMXTERM_TEST_ALTGR_NATIVE = '1'` for the run and remove
+it afterwards. Linux needs `/dev/uinput` and noninteractive `sudo` for the
+short-lived keyboard helper. Windows must run in Explorer's interactive session.
+These helpers send OS key codes through the actual layout, not fabricated
+Electron modifier objects. Do not overlap other graphical input on that desktop.
+The fixture checks distinct native Alt/AltGr menus, main-owned F6 delivery and
+consumption, plain-Alt rejection, unbound `é`, dead-key completion with Space,
+and the native Alt-alone popup. It changes no keyboard layout or persistent OS
+configuration. This is not hardware-key input, arbitrary-layout qualification,
+or a measurement of PTY bytes. Ordinary checks skip this disruptive opt-in.
+
 ### Deliberate compositor policy
 
 Window Chrome tests require native maximize/restore success by default. A Linux

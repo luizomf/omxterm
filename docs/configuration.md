@@ -433,7 +433,9 @@ Accelerators are case-insensitive and need exactly one key plus at least one
 modifier other than Shift. Aliases include `Ctrl`/`Control`, `Cmd`/`Command`,
 `Alt`/`Option`, and `CmdOrCtrl`/`CommandOrControl`. `CommandOrControl` means
 Command on macOS and Control elsewhere; `Super` and `Meta` use Electron's
-Command family.
+Command family. `AltGr` is a separate modifier: `Alt+J` and `AltGr+J` can
+belong to different actions. Plain Alt does not activate an AltGr binding;
+`Control+Alt` is not an AltGr alias.
 
 Use the printable character for punctuation, such as the literal comma in
 `Control+Shift+,`, rather than `Comma`. The exception is `+`, written as `Plus`

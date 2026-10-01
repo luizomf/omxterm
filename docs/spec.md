@@ -847,7 +847,9 @@ Unknown action names, malformed accelerators, and duplicate accelerators are
 errors under the resilient failure contract below. Duplicates are judged on
 the effective native map: `CommandOrControl` resolves to `Command` on macOS and
 `Control` on Linux and Windows, while `Super` and `Meta` use Electron's Command
-accelerator family. Intrinsic Shift and native key identity also count:
+accelerator family. `AltGr` is distinct from `Alt`/`Option` and `Control+Alt`;
+plain Alt never activates an AltGr-only binding. Delivery requires the native
+AltGr identity, not an inference from Alt. Intrinsic Shift and native key identity also count:
 `Control+!` duplicates `Control+Shift+1`, and `Control+Plus` duplicates
 `Control+Shift+Plus` and `Control+Shift+=`. A remap that collides with another
 action's remaining default is the same error as two explicit entries colliding.

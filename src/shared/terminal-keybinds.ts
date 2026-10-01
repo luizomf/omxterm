@@ -113,7 +113,7 @@ export const MAX_ACCELERATOR_LENGTH = 64;
 const COMMAND_MODIFIERS = new Set(["command", "cmd", "super", "meta"]);
 const COMMAND_OR_CONTROL_MODIFIERS = new Set(["commandorcontrol", "cmdorctrl"]);
 const CONTROL_MODIFIERS = new Set(["control", "ctrl"]);
-const ALT_MODIFIERS = new Set(["alt", "option", "altgr"]);
+const ALT_MODIFIERS = new Set(["alt", "option"]);
 const SHIFT_MODIFIERS = new Set(["shift"]);
 
 const NAMED_KEYS = new Set([
@@ -156,7 +156,7 @@ const NAMED_KEYS = new Set([
 ]);
 
 interface ParsedAccelerator {
-  readonly modifiers: ReadonlySet<"cmd" | "ctrl" | "alt" | "shift">;
+  readonly modifiers: ReadonlySet<"cmd" | "ctrl" | "alt" | "altgr" | "shift">;
   readonly key: string;
   readonly logicalKey: string;
   readonly logicalShift: boolean;
@@ -177,7 +177,7 @@ function parseAccelerator(
   // itself was "+", which must be written as "Plus".
   const rawKey = segments.pop();
   if (rawKey === undefined || rawKey.length === 0) return undefined;
-  const modifiers = new Set<"cmd" | "ctrl" | "alt" | "shift">();
+  const modifiers = new Set<"cmd" | "ctrl" | "alt" | "altgr" | "shift">();
   for (const segment of segments) {
     const modifier = segment.toLowerCase();
     if (COMMAND_MODIFIERS.has(modifier)) modifiers.add("cmd");
@@ -185,10 +185,16 @@ function parseAccelerator(
       modifiers.add(platform === "darwin" ? "cmd" : "ctrl");
     else if (CONTROL_MODIFIERS.has(modifier)) modifiers.add("ctrl");
     else if (ALT_MODIFIERS.has(modifier)) modifiers.add("alt");
+    else if (modifier === "altgr") modifiers.add("altgr");
     else if (SHIFT_MODIFIERS.has(modifier)) modifiers.add("shift");
     else return undefined;
   }
-  if (!modifiers.has("cmd") && !modifiers.has("ctrl") && !modifiers.has("alt"))
+  if (
+    !modifiers.has("cmd") &&
+    !modifiers.has("ctrl") &&
+    !modifiers.has("alt") &&
+    !modifiers.has("altgr")
+  )
     return undefined;
   const key = rawKey.toLowerCase();
   const isSingleCharacter =
@@ -199,7 +205,7 @@ function parseAccelerator(
 
 function nativeAccelerator(
   key: string,
-  modifiers: Set<"cmd" | "ctrl" | "alt" | "shift">,
+  modifiers: Set<"cmd" | "ctrl" | "alt" | "altgr" | "shift">,
 ): ParsedAccelerator {
   const logicalShift = modifiers.has("shift");
   const nativeKey = INTRINSIC_SHIFT_KEYS.get(key);
@@ -258,6 +264,7 @@ export interface AcceleratorKeyboardInput {
   readonly control: boolean;
   readonly meta: boolean;
   readonly alt: boolean;
+  readonly altGr?: boolean;
   readonly shift: boolean;
 }
 
@@ -284,7 +291,8 @@ export function terminalActionForKeyboardInput(
       parsed === undefined ||
       parsed.modifiers.has("cmd") !== input.meta ||
       parsed.modifiers.has("ctrl") !== input.control ||
-      parsed.modifiers.has("alt") !== input.alt
+      parsed.modifiers.has("alt") !== input.alt ||
+      parsed.modifiers.has("altgr") !== (input.altGr ?? false)
     )
       continue;
     const shifted = parsed.modifiers.has("shift");
@@ -389,7 +397,7 @@ export function canonicalAccelerator(
 ): string | undefined {
   const parsed = parseAccelerator(value, platform);
   if (!parsed) return undefined;
-  const modifiers = (["cmd", "ctrl", "alt", "shift"] as const).filter(
+  const modifiers = (["cmd", "ctrl", "alt", "altgr", "shift"] as const).filter(
     (modifier) => parsed.modifiers.has(modifier),
   );
   return [...modifiers, parsed.key].join("+");
