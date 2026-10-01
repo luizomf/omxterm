@@ -158,6 +158,7 @@ const NAMED_KEYS = new Set([
 interface ParsedAccelerator {
   readonly modifiers: ReadonlySet<"cmd" | "ctrl" | "alt" | "shift">;
   readonly key: string;
+  readonly logicalPlus: boolean;
   readonly allowUnshiftedPlus: boolean;
 }
 
@@ -206,6 +207,7 @@ function nativeAccelerator(
   return {
     modifiers,
     key: nativeKey?.key ?? key,
+    logicalPlus: key === "+",
     allowUnshiftedPlus,
   };
 }
@@ -277,7 +279,7 @@ export function terminalActionForKeyboardInput(
     (nativeKey && (input.code === nativeKey.code || logicalKey === "+")
       ? nativeKey.key
       : logicalKey);
-  let plusFallback: TerminalActionName | undefined;
+  let logicalFallback: TerminalActionName | undefined;
   for (const action of TERMINAL_ACTION_NAMES) {
     const parsed = parseAccelerator(keybinds[action], platform);
     if (
@@ -290,13 +292,22 @@ export function terminalActionForKeyboardInput(
     const shifted = parsed.modifiers.has("shift");
     if (parsed.key === key && shifted === input.shift) return action;
 
-    // This is application fallback policy, not another native accelerator:
-    // Plus without explicit Shift also accepts an unshifted logical + (keypad
-    // or layout). Ctrl+= still does not become an unrequested zoom shortcut.
-    if (parsed.allowUnshiftedPlus && logicalKey === "+" && !input.shift)
-      plusFallback ??= action;
+    // Preserve logical keypad delivery (e.g. keypad Minus for zoomOut), but
+    // prefer any specific keypad binding's native identity over this fallback.
+    const logicalKeypad =
+      keypadKey !== undefined &&
+      parsed.key === logicalKey &&
+      shifted === input.shift;
+    // Plus is also a deliberate logical-key convenience, not another native
+    // accelerator. Without explicit Shift it accepts unshifted +; Ctrl+= is
+    // still not an unrequested zoom shortcut.
+    const logicalPlus =
+      parsed.logicalPlus &&
+      logicalKey === "+" &&
+      (input.shift || parsed.allowUnshiftedPlus);
+    if (logicalKeypad || logicalPlus) logicalFallback ??= action;
   }
-  return plusFallback;
+  return logicalFallback;
 }
 
 function keypadKeyForInput(

@@ -853,10 +853,11 @@ accelerator family. Intrinsic Shift and native key identity also count:
 action's remaining default is the same error as two explicit entries colliding.
 The main-process matcher uses this identity when the logical shifted character
 and native key position agree; it does not translate arbitrary keyboard layouts.
-As an application fallback convenience, `Plus` without explicit Shift also
-accepts an unshifted logical `+`, including keypad input. A specific keypad
-binding takes precedence over that convenience; ordinary `Control+=` remains
-terminal input unless explicitly remapped. This fallback does not create a
+Separately, application fallback preserves logical keypad delivery (for example,
+keypad Minus for Zoom Out) and logical `Plus` delivery. `Plus` without explicit
+Shift also accepts an unshifted logical `+`. A specific keypad binding takes
+precedence over these conveniences; ordinary `Control+=` remains terminal input
+unless explicitly remapped. This fallback does not create a
 second native identity or permit duplicate registrations.
 A valid keybind that resolves, on the current platform, to a bare `Ctrl+<key>`
 shadowing a PTY control key (`Ctrl+C`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+\`, `Ctrl+U`,

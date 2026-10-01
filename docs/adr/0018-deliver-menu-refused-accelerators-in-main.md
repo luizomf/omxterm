@@ -36,9 +36,11 @@ an accelerator identity table, not a claim that every layout uses those position
 `Control+Plus` and `Control+Shift+Plus` register the same native accelerator,
 so validation rejects them together (also `Control+Shift+=`). The older
 application-level precedence allowance was not a distinct native identity.
-Separately, Plus without explicit Shift retains its logical unshifted `+`
-convenience, including keypad input. Explicit keypad identities remain distinct
-and take precedence over that convenience. This policy is derived from the
+Separately, logical Plus delivery, including keypad input, remains an
+application convenience; without explicit Shift it also accepts unshifted `+`.
+Logical keypad delivery such as keypad Minus for Zoom Out is preserved, while
+explicit keypad identities remain distinct and take precedence over these
+conveniences. This policy is derived from the
 installed menu map, not an additional registration system.
 Ordinary `Ctrl+=` is not added as an alias for Plus, and unrelated modifiers and
 terminal control keys remain untouched. These are corrections to the existing

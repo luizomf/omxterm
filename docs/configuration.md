@@ -459,8 +459,9 @@ The same applies to Command on macOS.
 `Control+Plus`, `Control+Shift+Plus`, and `Control+Shift+=` have the same
 native identity and cannot be assigned to different actions. As a convenience,
 `Control+Plus` also accepts an unshifted logical `+`; adding explicit Shift
-requires Shift. A specific keypad binding such as `Control+numadd` takes
-precedence over this convenience. Ordinary `Ctrl+=` is not a Plus alias.
+requires Shift. Logical keypad input (including keypad Minus for Zoom Out)
+continues to work; a specific keypad binding such as `Control+numadd` takes
+precedence over these conveniences. Ordinary `Ctrl+=` is not a Plus alias.
 OMXTerm does not translate arbitrary keyboard layouts.
 
 </details>

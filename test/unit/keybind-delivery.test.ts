@@ -132,12 +132,16 @@ it("ignores key events that are not key presses", () => {
 it.each(["keyDown", "rawKeyDown"])(
   "delivers main-keyboard and keypad Plus once for a %s event",
   (type) => {
-    for (const shift of [false, true]) {
+    for (const input of [
+      { code: "Equal", shift: true },
+      { code: "NumpadAdd", shift: false },
+      { code: "NumpadAdd", shift: true },
+    ]) {
       const { invoke, sendKey } = keybindDeliveryHarness(
         terminalDefaultKeybinds("win32"),
         "win32",
       );
-      const event = sendKey({ type, key: "+", control: true, shift });
+      const event = sendKey({ type, key: "+", control: true, ...input });
       expect(invoke).toHaveBeenCalledExactlyOnceWith("zoomIn");
       expect(event.preventDefault).toHaveBeenCalledExactlyOnceWith();
     }
@@ -180,7 +184,9 @@ it("keeps native keypad bindings distinct and gives them precedence over the Plu
   expect(invoke).toHaveBeenLastCalledWith("closeTab");
   sendKey({ key: "+", code: "Equal", control: true, shift: true });
   expect(invoke).toHaveBeenLastCalledWith("zoomIn");
-  expect(invoke).toHaveBeenCalledTimes(3);
+  sendKey({ key: "-", code: "NumpadSubtract", control: true });
+  expect(invoke).toHaveBeenLastCalledWith("zoomOut");
+  expect(invoke).toHaveBeenCalledTimes(4);
 });
 
 it("distinguishes the Plus fallback policy from an explicit Shift requirement", () => {

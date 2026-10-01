@@ -148,7 +148,7 @@ void app.whenReady().then(async () => {
         ["!", "1"],
       );
     }
-    bindings = { ...defaults, zoomIn: "Control+Plus" };
+    bindings = { ...defaults, zoomIn: "Control+Plus", zoomOut: "Control+-" };
     fallbackActions.length = 0;
     install(bindings.zoomIn);
     await send("+", ["control", "shift"]);
@@ -157,8 +157,20 @@ void app.whenReady().then(async () => {
     const keypad = observed.at(-1);
     assert.equal(keypad?.key, "+");
     assert.equal(keypad?.shift, false);
+    assert.equal(keypad?.code, "NumpadAdd");
+    await send("numadd", ["control", "shift"]);
     await send("=", ["control"]);
-    assert.deepEqual(fallbackActions, ["zoomIn", "zoomIn"]);
+    assert.deepEqual(fallbackActions, ["zoomIn", "zoomIn", "zoomIn"]);
+    bindings = {
+      ...bindings,
+      newTab: "Control+num1",
+      closeTab: "Control+numadd",
+    };
+    fallbackActions.length = 0;
+    await send("num1", ["control"]);
+    await send("numadd", ["control"]);
+    await send("numsub", ["control"]);
+    assert.deepEqual(fallbackActions, ["newTab", "closeTab", "zoomOut"]);
     console.log(
       `__OMXTERM_INTRINSIC_SHIFT__${JSON.stringify({ platform: process.platform, electron: process.versions.electron, chrome: process.versions.chrome, native, keypad, observed })}`,
     );
