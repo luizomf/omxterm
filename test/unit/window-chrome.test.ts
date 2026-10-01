@@ -281,6 +281,9 @@ describe("standalone Alt opens the native application menu", () => {
     ).not.toHaveBeenCalled();
     expect(view.popupApplicationMenu).not.toHaveBeenCalled();
     key(view, "keyUp", { key: "a", code: "KeyA", alt: false });
+    // A consumed plain-Alt shortcut can suppress Alt's release too.
+    key(view, "keyDown");
+    key(view, "keyDown", { key: "x", code: "KeyX", alt: true });
     // Actual Linux AltGraph-down has only the right-side flag; its action key
     // has the raw AltGr flag. Consuming that key can suppress both releases.
     bindings = { ...bindings, newTab: "AltGr+F6" };
