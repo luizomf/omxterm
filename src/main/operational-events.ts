@@ -72,6 +72,11 @@ export type OperationalEvent =
       readonly rows: number;
     }
   | {
+      readonly name: "pty.resize-failed";
+      readonly windowId: number;
+      readonly reason: "closed-pty" | "native-failure";
+    }
+  | {
       readonly name: "pty.exit";
       readonly windowId: number;
       readonly outcome: "clean" | "spawn-failure" | "signal";
@@ -314,12 +319,25 @@ function eventLevel(event: OperationalEvent): OperationalLogLevel {
     event.name === "application.failure" ||
     event.name === "configuration.rejected" ||
     event.name === "configuration.reload.rejected" ||
-    (event.name === "pty.exit" && event.outcome !== "clean")
+    (event.name === "pty.exit" && event.outcome !== "clean") ||
+    (event.name === "pty.resize-failed" && event.reason === "native-failure")
   )
     return "error";
-  if (event.name === "pty.resize" || event.name === "boundary.rejected")
+  if (
+    event.name === "pty.resize" ||
+    event.name === "pty.resize-failed" ||
+    event.name === "boundary.rejected"
+  )
     return "debug";
   return "info";
+}
+
+function isResizeFailureEvent(value: Record<string, unknown>): boolean {
+  return (
+    hasExactKeys(value, ["name", "windowId", "reason"]) &&
+    isId(value.windowId) &&
+    ["closed-pty", "native-failure"].includes(value.reason as string)
+  );
 }
 
 function isOperationalEvent(value: unknown): value is OperationalEvent {
@@ -363,6 +381,8 @@ function isOperationalEvent(value: unknown): value is OperationalEvent {
         isPositiveSafeInteger(value.rows) &&
         value.rows <= MAX_TERMINAL_ROWS
       );
+    case "pty.resize-failed":
+      return isResizeFailureEvent(value);
     case "pty.exit":
       return (
         hasExactKeys(value, [

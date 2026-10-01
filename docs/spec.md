@@ -179,6 +179,12 @@ succeeds (ADR 0025).
   `Cmd++`, `Cmd+-`, and `Cmd+0` on macOS and `Ctrl++`, `Ctrl+-`, and `Ctrl+0`
   on Linux and Windows; it affects only that window, applies to every tab in
   it, and is not persisted.
+- Native resize failure is contained by the owning Live Terminal Session. The
+  pinned Unix closed-descriptor race is quiet teardown metadata at debug level;
+  other failures record a fixed `native-failure` category at error level, without
+  native error text. The failed request is discarded; later valid resizes may
+  retry. Neither failure closes a tab, terminates siblings, or replaces the
+  actual native exit notification used for session completion.
 - The Terminal Surface and Live Terminal Session grid refit in both directions
   after Terminal Window width or height changes, after Window Font Zoom, and
   after tab selection. The grid remains inside the visible content area with

@@ -126,7 +126,75 @@ describe("local Operational Events", () => {
       },
     ]);
   });
+});
 
+describe("resize failure Operational Events", () => {
+  it("keeps closed-PTY resize races at debug and actionable failures at error without native detail", async () => {
+    const { xdg, home } = await temporaryRoots();
+    const log = createOperationalEventLog({
+      environment: { XDG_STATE_HOME: xdg },
+      homeDirectory: home,
+    });
+    log.setLevel("error");
+    expect(
+      log.write({
+        name: "pty.resize-failed",
+        windowId: 1,
+        reason: "closed-pty",
+      }),
+    ).toBe(false);
+    expect(
+      log.write({
+        name: "pty.resize-failed",
+        windowId: 1,
+        reason: "native-failure",
+      }),
+    ).toBe(true);
+    log.setLevel("debug");
+    expect(
+      log.write({
+        name: "pty.resize-failed",
+        windowId: 1,
+        reason: "closed-pty",
+      }),
+    ).toBe(true);
+    expect(
+      log.write({
+        name: "pty.resize-failed",
+        windowId: 1,
+        reason: "PRIVATE_NATIVE_CANARY",
+      } as never),
+    ).toBe(false);
+    expect(
+      log.write({
+        name: "pty.resize-failed",
+        windowId: 1,
+        reason: "native-failure",
+        message: "PRIVATE_NATIVE_CANARY",
+      } as never),
+    ).toBe(false);
+    const records = await readRecords(
+      path.join(xdg, "omxterm", "logs", CURRENT_OPERATIONAL_LOG_FILE),
+    );
+    expect(records).toMatchObject([
+      {
+        name: "pty.resize-failed",
+        windowId: 1,
+        reason: "native-failure",
+        level: "error",
+      },
+      {
+        name: "pty.resize-failed",
+        windowId: 1,
+        reason: "closed-pty",
+        level: "debug",
+      },
+    ]);
+    expect(JSON.stringify(records)).not.toContain("PRIVATE_NATIVE_CANARY");
+  });
+});
+
+describe("Operational Event persistence boundaries", () => {
   it("rejects malformed and oversized input instead of persisting or truncating it", async () => {
     const { xdg, home } = await temporaryRoots();
     const log = createOperationalEventLog({

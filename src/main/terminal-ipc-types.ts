@@ -8,6 +8,7 @@ import type { LocalImageData, LocalImageRequest } from "../shared/local-image";
 import type {
   LocalTerminalSession,
   TerminalSessionLaunchKind,
+  TerminalResizeFailureReason,
 } from "./local-terminal-session";
 
 export interface TrustedWebContents {
@@ -36,6 +37,7 @@ export interface IpcMainPort {
 
 export interface SessionCallbacks {
   readonly onOutput: (data: string) => void;
+  readonly onResizeFailure?: (reason: TerminalResizeFailureReason) => void;
   readonly onExit: (
     exit: TerminalExit,
     launchKind?: TerminalSessionLaunchKind,

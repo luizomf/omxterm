@@ -12,6 +12,9 @@ helper's filename and local launch choices without changing runtime defaults.
 native exec-status reporting while preserving ADR 0016 acknowledgement and
 ADR 0028 native shutdown ownership.
 
+[ADR 0033](0033-contain-native-resize-failures-without-completing-sessions.md)
+contains native resize failures while preserving ADR 0028 completion ownership.
+
 This index links the durable architecture decisions and shows how later records
 affect them. **Current** decisions stand as written. **Amended** decisions remain
 in force with the listed later changes. **Superseded** decisions are retained as
@@ -51,3 +54,4 @@ history and point to the decision that replaced them.
 | 0030 | [Prefer direct macOS background blur](0030-prefer-direct-macos-background-blur.md)                                                 | Current    | Reopens ADR 0029's macOS material-only/no-addon decision, retaining its paint and platform contracts.                                                                                                                                                                                     |
 | 0031 | [Keep Linux installer choices small and local](0031-keep-linux-installer-choices-small-and-local.md)                               | Current    | Amends ADR 0019 helper presentation; applies ADR 0020 with an explicit installed X11 argument, not a new runtime override rule.                                                                                                                                                           |
 | 0032 | [Report native exec failures outside Terminal Payload](0032-report-native-exec-failures-outside-terminal-payload.md)               | Current    | Refines ADR 0016 failure acknowledgement and preserves ADR 0028 native shutdown ownership.                                                                                                                                                                                                |
+| 0033 | [Contain native resize failures without completing sessions](0033-contain-native-resize-failures-without-completing-sessions.md)   | Current    | Preserves ADR 0028 actual native-exit ownership and ADR 0004 safe diagnostics.                                                                                                                                                                                                            |

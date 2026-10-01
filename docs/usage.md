@@ -320,4 +320,7 @@ Logs live in `~/.local/state/omxterm/logs` (Windows:
 The files are `omxterm.jsonl` and `omxterm.previous.jsonl`, capped at 5 MiB each.
 Set `logLevel` to `error`, `info` (the default), or `debug`. Logs describe app
 operations and leave out terminal contents, commands, clipboard data, and
-settings. They stay on your computer.
+settings. They stay on your computer. A `pty.resize-failed` event with
+`native-failure` at error level means a native resize could not be applied; a
+later window resize may retry. Closed-PTY exit races appear only at debug level
+as `closed-pty`. Neither event means the session has exited.

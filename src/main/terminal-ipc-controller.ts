@@ -464,6 +464,10 @@ function createTerminalIpcController(
     let createdSession: LocalTerminalSession;
     try {
       createdSession = options.createSession({
+        onResizeFailure(reason) {
+          if (windowId !== undefined)
+            writeWindowEvent({ name: "pty.resize-failed", windowId, reason });
+        },
         onOutput(data) {
           if (disposed) return;
           if (options.webContents.isDestroyed()) {
@@ -592,7 +596,7 @@ function createTerminalIpcController(
     }
     const state = routedSession(payload.sessionId);
     if (!state) return;
-    state.session.resize({ cols: payload.cols, rows: payload.rows });
+    // This event records the validated request, not native success.
     if (windowId !== undefined)
       writeWindowEvent({
         name: "pty.resize",
@@ -600,6 +604,7 @@ function createTerminalIpcController(
         cols: payload.cols,
         rows: payload.rows,
       });
+    state.session.resize({ cols: payload.cols, rows: payload.rows });
   };
   const acknowledgeOutput = (payload?: unknown) =>
     acknowledgeTerminalOutput(

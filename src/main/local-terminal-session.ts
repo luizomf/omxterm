@@ -10,6 +10,7 @@ import {
 } from "../shared/terminal-contract";
 
 export type TerminalSessionLaunchKind = LaunchRequest["kind"];
+export type TerminalResizeFailureReason = "closed-pty" | "native-failure";
 
 export const TERMINAL_OUTPUT_PAUSE_BYTES = 64 * 1024;
 export const TERMINAL_OUTPUT_RESUME_BYTES = 16 * 1024;
@@ -59,6 +60,7 @@ export interface LocalTerminalSessionOptions {
   readonly applicationVersionProvider: ApplicationVersionProvider;
   readonly environment: NodeJS.ProcessEnv;
   readonly onOutput: (data: string) => void;
+  readonly onResizeFailure?: (reason: TerminalResizeFailureReason) => void;
   readonly onExit: (
     exit: TerminalExit,
     launchKind: TerminalSessionLaunchKind,
@@ -184,8 +186,19 @@ export function createLocalTerminalSession(
       if (!closed && !exited && isBoundedTerminalPayload(data)) pty.write(data);
     },
     resize(size) {
-      if (!closed && !exited && isTerminalSize(size))
+      if (closed || exited || !isTerminalSize(size)) return;
+      try {
         pty.resize(size.cols, size.rows);
+      } catch (error) {
+        // Pinned Unix node-pty can close its descriptor before delivering exit.
+        // Only that exact native error is an expected teardown race. Neither
+        // failure completes the session: the real exit subscription still owns it.
+        const closedPty =
+          (options.platform === "darwin" || options.platform === "linux") &&
+          error instanceof Error &&
+          error.message === "ioctl(2) failed, EBADF";
+        options.onResizeFailure?.(closedPty ? "closed-pty" : "native-failure");
+      }
     },
     acknowledgeOutput(bytes) {
       if (

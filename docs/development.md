@@ -148,6 +148,20 @@ desktop with WebGL2. Fixtures share the desktop compositor. Vitest serializes
 files within one run; also keep separate suites and clones from running native
 tests on that same desktop concurrently.
 
+The owned Unix resize regression invokes the production IPC listener and Local
+Terminal Session with real `/bin/true` PTYs under Node and Electron's Node
+runtime. It requires observed native descriptor-closure failures before exit
+notification, safe diagnostics, actual exits and a usable sibling; it never
+manually closes a descriptor or injects a native failure:
+
+```sh
+npx vitest run test/integration/terminal-resize-race.test.ts test/unit/terminal-resize-failure.test.ts
+```
+
+This verifies the session/IPC boundary, not renderer-originated packets or an
+observed main-process crash. Windows failure classification has controlled unit
+coverage; this Unix check does not qualify ConPTY.
+
 ### Deliberate compositor policy
 
 Window Chrome tests require native maximize/restore success by default. A Linux
