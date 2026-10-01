@@ -6,6 +6,10 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
 import { resttyImageEmitterSource } from "../fixtures/restty-host-images";
+import {
+  hasResttyImagePlacementEvidence,
+  type ResttyImagePixelEvidence,
+} from "../fixtures/restty-image-evidence";
 import { resttyFontMutationProbe } from "../fixtures/restty-font-mutation-probe";
 import { createNativeHostPng } from "../fixtures/native-host-png";
 import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
@@ -105,26 +109,10 @@ interface HostResult {
   readonly imageEvidence: {
     readonly cellSizeResponse: string;
     readonly gridSize: { readonly cols: number; readonly rows: number };
-    readonly pixels: {
-      readonly bitmapSize: readonly [number, number];
-      readonly changedInPiPlacement: number;
-      readonly changedOutsidePlacements: number;
-      readonly colorBucketsInPiPlacement: number;
-      readonly greenInChafaPlacement: number;
-      readonly greenOutsideChafaPlacement: number;
-    };
-    readonly afterZoomPixels: {
-      readonly changedInPiPlacement: number;
-      readonly greenInChafaPlacement: number;
-    };
-    readonly afterResizePixels: {
-      readonly changedInPiPlacement: number;
-      readonly greenInChafaPlacement: number;
-    };
-    readonly afterTabAndThemePixels: {
-      readonly colorBucketsInBitmap: number;
-      readonly greenInBitmap: number;
-    };
+    readonly pixels: ResttyImagePixelEvidence;
+    readonly afterZoomPixels: ResttyImagePixelEvidence;
+    readonly afterResizePixels: ResttyImagePixelEvidence;
+    readonly afterTabAndThemePixels: ResttyImagePixelEvidence;
   };
   readonly navigations: number;
   readonly openedWindows: number;
@@ -377,31 +365,17 @@ describe.skipIf(
               result.imageEvidence.gridSize.rows,
         ),
       ).toBeLessThan(2);
-      expect(result.imageEvidence.pixels.changedInPiPlacement).toBeGreaterThan(
-        1_000,
-      );
-      expect(result.imageEvidence.pixels.greenInChafaPlacement).toBeGreaterThan(
-        100,
-      );
-      expect(
-        result.imageEvidence.pixels.colorBucketsInPiPlacement,
-      ).toBeGreaterThan(1_000);
-      expect(
-        result.imageEvidence.pixels.greenOutsideChafaPlacement,
-      ).toBeLessThan(200);
-      for (const evidence of [
-        result.imageEvidence.afterZoomPixels,
-        result.imageEvidence.afterResizePixels,
-      ]) {
-        expect(evidence.changedInPiPlacement).toBeGreaterThan(1_000);
-        expect(evidence.greenInChafaPlacement).toBeGreaterThan(100);
+      for (const [operation, evidence] of Object.entries({
+        initial: result.imageEvidence.pixels,
+        zoom: result.imageEvidence.afterZoomPixels,
+        resize: result.imageEvidence.afterResizePixels,
+        tabAndTheme: result.imageEvidence.afterTabAndThemePixels,
+      })) {
+        expect(
+          hasResttyImagePlacementEvidence(evidence),
+          `${operation}: ${JSON.stringify(evidence)}`,
+        ).toBe(true);
       }
-      expect(
-        result.imageEvidence.afterTabAndThemePixels.colorBucketsInBitmap,
-      ).toBeGreaterThan(1_000);
-      expect(
-        result.imageEvidence.afterTabAndThemePixels.greenInBitmap,
-      ).toBeGreaterThan(100);
     } finally {
       // Once launched, only the supervisor may remove the owned profile after
       // checking process cleanup. Retain it if cleanup could not be established.

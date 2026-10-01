@@ -413,7 +413,8 @@ app
     const imageEvidence = await resttyImages.completeResttyImageEvidence(
       window,
       initialImageEvidence,
-      resizes[0]!.at(-1)!,
+      [deliverOutputs[0]!, inputs[0]!],
+      waitFor,
     );
 
     const outputStressEvidence = await outputStress.exercise({

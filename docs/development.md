@@ -149,6 +149,14 @@ separate expected word regions. Portable controls reject blank, cursor-only,
 unchanged and out-of-region frames; native captures tolerate platform-specific
 glyph rasterization rather than requiring identical bitmaps.
 
+The host's inline-image oracle checks both cell-anchored Pi/Chafa rectangles
+and their full complement after zoom, resize, tab selection and theme reload.
+It uses current `CSI 16 t` device-pixel cell metrics, not canvas/grid division
+(which includes unused edges). Area/perimeter counts tolerate native DPR and
+edge rasterization without expanding image bounds; portable duplicate/displaced
+RGBA controls exercise the same inspector and acceptance predicate. This
+strengthens test evidence, not the Kitty protocol or product image contract.
+
 `npm run check:portable` includes Electron fixtures and requires a working
 desktop with WebGL2. Fixtures share the desktop compositor. Vitest serializes
 files within one run; also keep separate suites and clones from running native

@@ -1,6 +1,11 @@
 import type { BrowserWindow } from "electron";
 import { writeFileSync } from "node:fs";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import {
+  inspectResttyImageFrame,
+  hasResttyImagePlacementEvidence,
+  type ResttyImagePixelEvidence as PixelEvidence,
+} from "./restty-image-evidence";
 
 export function resttyImageEmitterSource(): string {
   return `
@@ -8,6 +13,11 @@ const { readFileSync } = require("node:fs");
 const png = readFileSync(process.argv[2]);
 const write = (value) => process.stdout.write(value);
 const encoded = png.toString("base64");
+// Remain the foreground image client until owned PTY teardown. Geometry replies
+// belong to this client, not the idle shell (which may echo them or ring BEL).
+if (process.stdin.isTTY) process.stdin.setRawMode(true);
+process.stdin.resume();
+process.stdin.on("data", () => {});
 write("\\x1b[2J\\x1b[H\\x1b[?25l");
 for (let offset = 0; offset < encoded.length; offset += 4096) {
   const last = offset + 4096 >= encoded.length;
@@ -61,6 +71,12 @@ export async function exerciseResttyImagesThroughPty(options: {
     output: () => outputs[0]!.join(""),
     input: () => inputs[0]!.join(""),
     size: () => resizes[0]!.at(-1)!,
+    cellSize: () =>
+      readResttyImageCellSize(
+        deliverOutputs[0]!,
+        () => inputs[0]!.join(""),
+        waitFor,
+      ),
     waitFor,
   });
   outputs[0] = [
@@ -75,23 +91,13 @@ function shellQuote(value: string): string {
     : `'${value.replaceAll("'", `'\\''`)}'`;
 }
 
-interface PixelEvidence {
-  readonly bitmapSize: readonly [number, number];
-  readonly changedInPiPlacement: number;
-  readonly changedOutsidePlacements: number;
-  readonly colorBucketsInPiPlacement: number;
-  readonly colorBucketsInBitmap: number;
-  readonly greenInChafaPlacement: number;
-  readonly greenInBitmap: number;
-  readonly greenOutsideChafaPlacement: number;
-}
-
 export async function exerciseResttyImages(options: {
   readonly window: BrowserWindow;
   readonly runEmitter: () => void;
   readonly output: () => string;
   readonly input: () => string;
   readonly size: () => { readonly cols: number; readonly rows: number };
+  readonly cellSize: () => Promise<readonly [number, number]>;
   readonly waitFor: (
     predicate: () => boolean | Promise<boolean>,
     label: string,
@@ -103,7 +109,8 @@ export async function exerciseResttyImages(options: {
   readonly afterZoomPixels: PixelEvidence;
   readonly afterResizePixels: PixelEvidence;
 }> {
-  const { window, runEmitter, output, input, size, waitFor } = options;
+  const { window, runEmitter, output, input, size, cellSize, waitFor } =
+    options;
   const inputStart = input().length;
   runEmitter();
   try {
@@ -123,15 +130,9 @@ export async function exerciseResttyImages(options: {
     let gridSize: { readonly cols: number; readonly rows: number } | undefined;
     await waitFor(async () => {
       gridSize = size();
-      evidence = await captureResttyImagePixels(
-        window,
-        gridSize.cols,
-        gridSize.rows,
-      );
+      evidence = await captureResttyImagePixels(window, await cellSize());
       return (
-        evidence.changedInPiPlacement > 1_000 &&
-        evidence.greenInChafaPlacement > 100 &&
-        evidence.colorBucketsInPiPlacement > 1_000 &&
+        hasResttyImagePlacementEvidence(evidence) &&
         (previousGrid === undefined ||
           gridSize.cols !== previousGrid.cols ||
           gridSize.rows !== previousGrid.rows)
@@ -194,27 +195,59 @@ export async function exerciseResttyImages(options: {
 export async function completeResttyImageEvidence<T extends object>(
   window: BrowserWindow,
   initial: T,
-  selectedSize: { readonly cols: number; readonly rows: number },
+  source: readonly [
+    deliverOutput: (data: string) => void,
+    inputs: readonly string[],
+  ],
+  waitFor: (
+    predicate: () => boolean | Promise<boolean>,
+    label: string,
+  ) => Promise<void>,
 ): Promise<T & { readonly afterTabAndThemePixels: PixelEvidence }> {
   await new Promise((resolve) => setTimeout(resolve, 1_000));
   return {
     ...initial,
     afterTabAndThemePixels: await captureResttyImagePixels(
       window,
-      selectedSize.cols,
-      selectedSize.rows,
+      await readResttyImageCellSize(
+        source[0],
+        () => source[1].join(""),
+        waitFor,
+      ),
     ),
   };
 }
 
+export async function readResttyImageCellSize(
+  deliverOutput: (data: string) => void,
+  input: () => string,
+  waitFor: (
+    predicate: () => boolean | Promise<boolean>,
+    label: string,
+  ) => Promise<void>,
+): Promise<readonly [number, number]> {
+  const start = input().length;
+  deliverOutput("\u001b[16t");
+  await waitFor(
+    () => /\u001b\[6;\d+;\d+t/u.test(input().slice(start)),
+    "current image cell geometry",
+  );
+  const [, height, width] = /\u001b\[6;(\d+);(\d+)t/u.exec(
+    input().slice(start),
+  )!;
+  // Restty reports its actual integer device-pixel cell metrics. Dividing the
+  // canvas by the grid would distribute unused right/bottom space across cells
+  // and silently move the expected anchors, especially at fractional DPRs.
+  return [Number(width), Number(height)];
+}
+
 async function captureResttyImagePixels(
   window: BrowserWindow,
-  cols: number,
-  rows: number,
+  cellSize: readonly [number, number],
 ): Promise<PixelEvidence> {
   const canvasBounds = await readCanvasBounds(window);
   const captured = await window.webContents.capturePage(canvasBounds);
-  return inspectScreenshot(window, captured.toPNG(), cols, rows);
+  return inspectScreenshot(window, captured.toPNG(), cellSize);
 }
 
 async function readCanvasBounds(window: BrowserWindow): Promise<{
@@ -234,8 +267,7 @@ async function readCanvasBounds(window: BrowserWindow): Promise<{
 async function inspectScreenshot(
   window: BrowserWindow,
   png: Buffer,
-  cols: number,
-  rows: number,
+  cellSize: readonly [number, number],
 ): Promise<PixelEvidence> {
   const encodedScreenshot = png.toString("base64");
   return (await window.webContents.executeJavaScript(
@@ -250,49 +282,8 @@ async function inspectScreenshot(
       if (!context) throw new Error('Screenshot canvas is unavailable');
       context.drawImage(bitmap, 0, 0);
       bitmap.close();
-      const cellWidth = canvas.width / ${cols};
-      const cellHeight = canvas.height / ${rows};
-      const read = (column, row, columns, rowCount) =>
-        context.getImageData(
-          Math.floor(column * cellWidth),
-          Math.floor(row * cellHeight),
-          Math.max(1, Math.ceil(columns * cellWidth)),
-          Math.max(1, Math.ceil(rowCount * cellHeight)),
-        ).data;
-      const count = (data, predicate) => {
-        let result = 0;
-        for (let offset = 0; offset < data.length; offset += 4)
-          if (predicate(data[offset], data[offset + 1], data[offset + 2], data[offset + 3])) result += 1;
-        return result;
-      };
       const all = context.getImageData(0, 0, canvas.width, canvas.height).data;
-      const pi = read(0, 0, 4, 3);
-      const chafa = read(9, 4, 2, 2);
-      const outside = read(0, 10, ${cols}, Math.max(1, ${rows} - 10));
-      const background = [outside[0], outside[1], outside[2]];
-      const nonBackground = (r, g, b, a) =>
-        a > 0 &&
-        (Math.abs(r - background[0]) > 4 ||
-          Math.abs(g - background[1]) > 4 ||
-          Math.abs(b - background[2]) > 4);
-      const green = (r, g, b, a) => a > 200 && g > 200 && r < 150 && b < 120;
-      const colorBuckets = (data) => {
-        const buckets = new Set();
-        for (let offset = 0; offset < data.length; offset += 4)
-          if (data[offset + 3] > 200)
-            buckets.add((data[offset] >> 4) << 8 | (data[offset + 1] >> 4) << 4 | data[offset + 2] >> 4);
-        return buckets.size;
-      };
-      return {
-        bitmapSize: [canvas.width, canvas.height],
-        changedInPiPlacement: count(pi, nonBackground),
-        changedOutsidePlacements: count(outside, nonBackground),
-        colorBucketsInPiPlacement: colorBuckets(pi),
-        colorBucketsInBitmap: colorBuckets(all),
-        greenInChafaPlacement: count(chafa, green),
-        greenInBitmap: count(all, green),
-        greenOutsideChafaPlacement: count(outside, green),
-      };
+      return (${inspectResttyImageFrame.toString()})(all, canvas.width, canvas.height, ${cellSize[0]}, ${cellSize[1]});
     })()`,
     true,
   )) as PixelEvidence;
