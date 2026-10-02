@@ -1,11 +1,9 @@
 import assert from "node:assert/strict";
 import type { BrowserWindow } from "electron";
 import type { LocalImageRequest } from "../../src/shared/local-image";
-import {
-  captureModifiedHoverEvidence,
-  clickTerminalCell,
-  terminalCellPoint,
-} from "./restty-link-gestures";
+import { clickTerminalCell } from "./restty-link-gestures";
+import { captureModifiedHoverEvidence } from "./restty-hover";
+import { readLocalImageCoreCells } from "./restty-local-image-core-probe";
 
 export interface LocalImageLinkEvidence {
   control: string;
@@ -18,6 +16,9 @@ export interface LocalImageLinkEvidence {
 export async function verifyLocalImageReference(options: {
   readonly window: BrowserWindow;
   readonly localImageRequests: LocalImageRequest[];
+  readonly deliverOutput: (data: string) => void;
+  readonly input: () => string;
+  readonly deviceCellSize: readonly [number, number];
   readonly size: { cols: number; rows: number };
   readonly control: string;
   readonly reference: string;
@@ -61,15 +62,27 @@ export async function verifyLocalImageReference(options: {
       "literal filename space must occupy the final column",
     );
   }
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  let text = `${prefixColumns ? "漢e\u0301 " : ""}${reference}`;
+  if (control.startsWith("tmux ")) {
+    // Preserve tmux's real status row. Independently verify its complete source
+    // reference and marker, then require all observed core text to remain exact.
+    const core = await readLocalImageCoreCells(window);
+    assert.ok(core);
+    assert.ok(core.text.startsWith(`${reference}\n__IMAGE_TMUX_READY__`));
+    text = core.text;
+  }
   const beforeHover = localImageRequests.length;
-  const hover = await captureModifiedHoverEvidence(
+  const hover = await captureModifiedHoverEvidence({
     window,
-    await terminalCellPoint(window, 0, prefixColumns + 2, size),
+    deliverOutput: options.deliverOutput,
+    input: options.input,
+    deviceCellSize: options.deviceCellSize,
     size,
+    text,
     destinationColumns,
     prefixColumns,
-  ).catch((cause: unknown) => {
+    targetColumn: prefixColumns + 2,
+  }).catch((cause: unknown) => {
     throw new Error(
       `Local image hover failed: ${JSON.stringify({ control, size, destinationColumns, rootCellDelta })}: ${String(cause)}`,
       { cause },

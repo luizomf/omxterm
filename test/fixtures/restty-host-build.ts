@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { resttyImageEmitterSource } from "./restty-host-images";
 import { resttyFontMutationProbe } from "./restty-font-mutation-probe";
+import { resttyHoverProbe } from "./restty-hover-observer";
 import { resttyLinkCancellationMutation } from "./restty-link-cancellation-mutation";
 import { createNativeHostPng } from "./native-host-png";
 import {
@@ -64,7 +65,9 @@ export async function buildHostFixture(
         format: "iife",
         loader: { ".ttf": "binary" },
         plugins: [
-          ...(focusedCancellation ? [] : [resttyFontMutationProbe]),
+          ...(focusedCancellation
+            ? [resttyHoverProbe]
+            : [resttyFontMutationProbe]),
           ...(cancellation
             ? [resttyLinkCancellationMutation(cancellation)]
             : []),

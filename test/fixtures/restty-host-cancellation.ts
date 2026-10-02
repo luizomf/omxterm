@@ -1,6 +1,11 @@
 import { writeSync } from "node:fs";
+import {
+  completeHoverControl,
+  selectHoverControl,
+} from "./restty-hover-control";
 import { exerciseResttyLinkCancellation } from "./restty-link-cancellation";
 import type { LaunchRequest } from "../../src/main/launch-request";
+import type { LocalImageRequest } from "../../src/shared/local-image";
 import { nativeFixturePlatform } from "./restty-host-platform";
 
 const readyMarker = "__OMXTERM_CANCELLATION_READY__";
@@ -24,10 +29,18 @@ export function cancellationFixtureLaunchRequest(): LaunchRequest {
   };
 }
 
+export function isFocused(argv: readonly string[]): boolean {
+  return (
+    argv.includes("--link-cancellation") ||
+    selectHoverControl(argv) !== undefined
+  );
+}
+
 type CancellationOptions = Parameters<typeof exerciseResttyLinkCancellation>[0];
 
 export async function completeResttyLinkCancellationScenario(
   options: CancellationOptions & {
+    readonly localImageRequests: LocalImageRequest[];
     readonly resizes: readonly {
       readonly cols: number;
       readonly rows: number;
@@ -39,6 +52,11 @@ export async function completeResttyLinkCancellationScenario(
     readonly complete: (code: number) => Promise<void>;
   },
 ) {
+  const control = selectHoverControl(process.argv);
+  if (control) {
+    await completeHoverControl({ ...options, control });
+    return;
+  }
   // The real child disables echo before readiness. Otherwise ordinary reporting
   // controls can echo into the URL and change later cancellation destinations.
   await options.waitFor(

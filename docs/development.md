@@ -578,6 +578,35 @@ additionally checks native sheet begin/end events; Windows checks the native
 dialog disables its owner. This is not physical OK-button input or a
 pixel/appearance assertion.
 
+The focused hover fixture owns a non-echoing child and waits for exact core
+content, drained renderer/IPC work and current device-cell metrics before pointer
+input. Pointer/keyup dispatch and the immediate observer snapshot share one
+synchronous renderer task; later replacements cannot become that stimulus.
+It observes the actual hover revision and WebGL draw, then crosses two
+native frame continuations before one strict native capture; neither drawing nor
+those frames prove presentation. After-capture identity/geometry is checked
+before bitmap mapping; stable-geometry invalidation retains useful pixel counts.
+CSS/backing/DPR mapping preserves fractional
+bounds and unused edges. Every destination cell needs interior changed pixels;
+only pixels intersecting its exact projected rectangle belong to its raster
+footprint. Prefix, complement and unused-edge changes fail; modifier release
+must restore baseline pixels. The wide/combining URL survives content shrink and
+restore without reprinting. Eligible/refused reference controls retain zero
+opening requests under application mouse reporting. The delayed-frame control
+owns an identified actual native callback tied to the exact stimulus generation,
+without an expiry timer or historical hold counter. GREEN explicitly releases it
+after the post-stimulus checkpoint; RED retains it through completed early native
+capture and releases it in bounded error-preserving cleanup. Queued output and
+native unmodified-pointer invalidation fail distinctly, without repeating the
+stimulus or recapturing for success. Fixed
+`__OMXTERM_HOVER_PHASE__` preparation/geometry/draw/event/count evidence survives
+profile removal in the supervisor journal without terminal text or destinations.
+Run these controls with:
+
+```sh
+npx vitest run test/unit/restty-hover-evidence.test.ts test/unit/restty-hover-readiness.test.ts test/integration/restty-hover-readiness.test.ts
+```
+
 Local-image native fixtures exercise the real recognizer, activation routing,
 main loader, filesystem reads and native PNG/JPEG decoder. Directory-picker
 selection is controlled at Electron's dialog port, with exact owner, home-start
@@ -593,8 +622,8 @@ boundary, resize/reflow, dismissal and focus. These controls temporarily constra
 content inside the native window, observe the real Surface/PTY grid, and restore
 the original layout in `finally`; they do not require arbitrary native sizes to
 be honored by a tiler. Canvas extents target the interior of actual device-cell
-backing buckets, with exact observed backing/grid checks and unchanged strict
-CSS/hover budgets; nominal CSS boundaries can quantize below a backing pixel.
+backing buckets, with exact observed backing/grid checks and strict cell/pixel
+assertions; nominal CSS boundaries can quantize below a backing pixel.
 Generated paths use bounded filesystem components and a fixture-only observation
 of Ghostty cells and selection text for the root's sentinel position. CPR is not
 used for width measurement: Restty's output filter can answer it from a UTF-16
@@ -602,8 +631,11 @@ hint before Ghostty receives the text. The long reference must really wrap, and
 the filename space must occupy the observed grid's last column. Separate wide-only
 and combining-only root controls independently read the actual row-end space and
 next-row filename cells, then check hover, exact activation, native preview and
-both reflow directions without reprinting. The read-only observer exists only in the
-broad-host and focused destination-oracle fixture bundles, not a production Surface API. macOS uses a short owned random `/tmp` profile so the complete path
+both reflow directions without reprinting. Hover reuses their pre-emission
+`CSI 16 t` reply only while it matches current observed device-cell metrics exactly,
+so another query cannot echo into a retained path. The read-only observer exists
+only in host fixture bundles (including focused scenarios), not a production
+Surface API. macOS uses a short owned random `/tmp` profile so the complete path
 prefix fits the viewport-clipping control inside the original window.
 Its unrelated gesture-only references still return cancellation. No physical
 click/picker acceptance is claimed.

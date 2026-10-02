@@ -38,6 +38,7 @@ export async function exerciseUnicodeLocalImageRoots(
   refit: (
     phase: "base" | "shrunk" | "wide",
   ) => Promise<{ cols: number; rows: number }>,
+  deviceCellSize: readonly [number, number],
 ): Promise<LocalImageLinkEvidence[]> {
   const results: LocalImageLinkEvidence[] = [];
   const { window, deliverOutput, waitFor } = options;
@@ -94,6 +95,7 @@ export async function exerciseUnicodeLocalImageRoots(
         name: path.basename(reference),
         prefixColumns: 0,
         rootCellDelta: rootColumns - rootPrefix.length,
+        deviceCellSize,
         size: options.resizes.at(-1)!,
       });
     const evidence = await verify();
