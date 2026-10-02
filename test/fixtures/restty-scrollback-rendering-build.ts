@@ -10,9 +10,14 @@ const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 export const resultPrefix = "__OMXTERM_RESTTY_SCROLLBACK_RESULT__";
 
+export type ScrollbackFixtureMode =
+  | "scrollback"
+  | "native-scroll-feedback"
+  | "native-scroll-feedback-ready-before-map";
+
 export async function buildFixture(
   root: string,
-  mode: "scrollback" | "native-scroll-feedback" = "scrollback",
+  mode: ScrollbackFixtureMode = "scrollback",
 ): Promise<void> {
   return prepareFixture(root, async (start) => {
     await build({
@@ -38,7 +43,7 @@ export async function buildFixture(
                 let source = depthExperimentSource(
                   await readFile(runtimePath, "utf8"),
                 );
-                if (mode === "native-scroll-feedback")
+                if (mode !== "scrollback")
                   source = observeNativeScrollFeedback(source);
                 const marker = "  function loop(state) {";
                 if (source.split(marker).length !== 2)
@@ -103,9 +108,7 @@ export async function buildFixture(
   });
 }
 
-function electronMainSource(
-  mode: "scrollback" | "native-scroll-feedback",
-): string {
+function electronMainSource(mode: ScrollbackFixtureMode): string {
   return `
 const { app, BrowserWindow } = require("electron");
 const fs = require("node:fs");
@@ -135,26 +138,46 @@ function countSelection(bitmap) {
   return count;
 }
 app.whenReady().then(async () => {
+  const readyBeforeMap = ${JSON.stringify(mode === "native-scroll-feedback-ready-before-map")};
+  let peer;
+  if (readyBeforeMap) {
+    // A supervisor-owned tiled peer models an existing desktop terminal. No
+    // compositor rule, window size request or core/scroll event is substituted.
+    peer = new BrowserWindow({ width: 800, height: 500, show: false,
+      webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
+    await peer.loadURL('data:text/html,<title>Scroll feedback fixture peer</title>');
+    peer.showInactive();
+  }
   const window = new BrowserWindow({
     width: 800,
     height: 500,
     show: false,
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, backgroundThrottling: false },
   });
+  const nativeResizes = [];
+  window.on('resize', () => {
+    if (nativeResizes.length < 16) nativeResizes.push(window.getBounds());
+  });
   await window.loadFile(path.join(__dirname, "index.html"));
+  if (readyBeforeMap)
+    await waitFor(window, "globalThis.__nativeScrollFeedback?.ready ?? false");
+  const beforeMap = { visible: window.isVisible(), content: window.getContentBounds(),
+    surfaceReady: readyBeforeMap ? await window.webContents.executeJavaScript('globalThis.__nativeScrollFeedback.ready', true) : null };
   window.showInactive();
-  if (${JSON.stringify(mode)} === "native-scroll-feedback") {
+  if (${JSON.stringify(mode)} !== "scrollback") {
     await waitFor(window, "globalThis.__nativeScrollFeedback?.ready ?? false");
     try {
       const result = await window.webContents.executeJavaScript("globalThis.__nativeScrollFeedback.run()", true);
-      process.stdout.write("__OMXTERM_NATIVE_SCROLL_FEEDBACK__" + JSON.stringify(result) + "\\n");
+      process.stdout.write("__OMXTERM_NATIVE_SCROLL_FEEDBACK__" + JSON.stringify({ ...result,
+        mapping: { readyBeforeMap, beforeMap, nativeResizes, content: window.getContentBounds() } }) + "\\n");
     } catch (error) {
       const observations = await window.webContents.executeJavaScript("({ metrics: globalThis.__nativeScrollFeedback.metrics(), events: globalThis.__scrollFeedbackEvents })", true);
-      process.stderr.write(JSON.stringify(observations) + "\\n");
+      process.stderr.write(JSON.stringify({ ...observations, beforeMap, nativeResizes }) + "\\n");
       throw error;
     }
     await window.webContents.executeJavaScript("globalThis.__nativeScrollFeedback.dispose()", true);
     window.destroy();
+    peer?.destroy();
     app.exit(0);
     return;
   }

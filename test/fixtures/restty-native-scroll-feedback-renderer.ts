@@ -3,6 +3,7 @@ import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
 import { waitForLiveViewport } from "./restty-scrollback-viewport";
 import type { ScrollFeedbackCore } from "./restty-native-scroll-feedback-observer";
+import { waitForScrollFeedbackStartup } from "./restty-scroll-feedback-startup";
 
 const root = document.querySelector<HTMLElement>("#terminal-tabs")!;
 const container = document.createElement("main");
@@ -50,6 +51,10 @@ async function mount() {
     scrollTop: host.scrollTop,
     width: host.clientWidth,
     canvasWidth: canvas.width,
+    canvasHeight: canvas.height,
+    viewportWidth: innerWidth,
+    viewportHeight: innerHeight,
+    dpr: devicePixelRatio,
     sameCanvas: canvas === container.querySelector("canvas"),
     core: core(),
   });
@@ -66,7 +71,8 @@ async function mount() {
     metrics,
     dispose: () => surface.dispose(),
     async run() {
-      const baseline = await live();
+      const startup = metrics();
+      const baseline = await waitForScrollFeedbackStartup(metrics, frame);
       const dpr = devicePixelRatio;
       // One backing pixel above/below a real cell-row boundary, inside the
       // available host. Native tilers need not honor requested window sizes.
@@ -76,26 +82,44 @@ async function mount() {
       const low = (boundary - core().cellH / 2 + 1) / dpr;
       const original = container.style.maxHeight;
       const transitions: ReturnType<typeof metrics>[] = [];
+      const transitionFailure = (
+        message: string,
+        index: number,
+        measurement: ReturnType<typeof metrics>,
+      ) =>
+        new Error(
+          `${message}: ${JSON.stringify({ baseline, index, measurement, dpr, high, low })}`,
+        );
       try {
         for (let index = 0; index < 12; index++) {
           container.style.maxHeight = `${index % 2 ? low : high}px`;
           // The original exact bottom predicate and five-second deadline are
           // unchanged. Do not wait for a guard/event to drain before resizing.
-          const measurement = await live();
+          const measurement = await live().catch((error: unknown) => {
+            throw transitionFailure(
+              `Height transition did not settle (${String(error)})`,
+              index,
+              metrics(),
+            );
+          });
           if (
             measurement.core.offset !==
             measurement.core.total - measurement.core.len
           )
-            throw new Error(
-              `Height transition ${index} left the actual core away from live: ${JSON.stringify(measurement)}`,
+            throw transitionFailure(
+              "Height transition left the actual core away from live",
+              index,
+              measurement,
             );
           if (
             measurement.width !== baseline.width ||
             measurement.canvasWidth !== baseline.canvasWidth ||
             !measurement.sameCanvas
           )
-            throw new Error(
+            throw transitionFailure(
               "Height transition changed width or canvas identity",
+              index,
+              measurement,
             );
           transitions.push(measurement);
         }
@@ -105,7 +129,7 @@ async function mount() {
           lengths[0]! - lengths[1]! !== 1
         )
           throw new Error(
-            `Height constraints did not cross exactly one actual core row: ${JSON.stringify(lengths)}`,
+            `Height constraints did not cross exactly one actual core row: ${JSON.stringify({ baseline, lengths, transitions, dpr, high, low })}`,
           );
       } finally {
         container.style.maxHeight = original;
@@ -154,6 +178,8 @@ async function mount() {
         );
       return {
         dpr,
+        startup,
+        baseline,
         cellHeight: core().cellH,
         availableHeight: baseline.clientHeight,
         high,

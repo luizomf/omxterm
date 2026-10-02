@@ -312,6 +312,8 @@ verified policy **before** the run:
 OMXTERM_TEST_WINDOW_POLICY=hyprland-suppress-maximize npm test
 ```
 
+The same declaration applies to `npm run check:portable`.
+
 First inspect the active Hyprland configuration and its loaded rules to confirm
 that they suppress application maximize requests (Omarchy's default window rules
 use `suppress_event = "maximize"`). An installed configuration file alone is not
@@ -361,7 +363,20 @@ the pending refit and that the sample enters the newly exposed region, including
 DPR scaling. Layout is restored in `finally`; baseline, selected/focused retention,
 zero batched clears and completed-color assertions stay strict.
 
-The native scroll-feedback regression derives high/low host heights from the
+The native scroll-feedback regression first requires coherent host/canvas/core
+geometry, exact DOM bottom and the actual live core offset, unchanged for 100 ms
+within a five-second startup observation budget. Native mapping can update layout
+before the backing canvas and core refit; DOM bottom alone is not readiness.
+The quiet interval is a bounded fixture precondition, not a guarantee that a
+compositor cannot resize later. Later width/identity changes still fail strict
+transition checks; no quiet wait or event-drain step is added between transitions.
+Alongside ordinary startup, a supervised peer models an existing tiled window
+while the Surface becomes ready before its own window maps. The real native
+mapping/refit then passes through the same startup gate and all scroll assertions;
+no compositor rules, resize events or core offsets are substituted. Journals retain
+startup/baseline/native geometry and the failing transition index.
+
+The regression derives high/low host heights from the
 actual available height, backing-pixel cell height and DPR, keeps width stable,
 and crosses one actual core viewport row repeatedly. It uses natural browser
 spacer clamping and queued scroll events, never a fabricated event or core offset,

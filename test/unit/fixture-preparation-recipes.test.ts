@@ -249,6 +249,18 @@ const recipes: readonly Recipe[] = [
     plugins: ["fixture-only-raf-counts"],
   },
   {
+    name: "restty-scroll-feedback-ready-before-map",
+    prepare: (root) =>
+      scrollback(root, "native-scroll-feedback-ready-before-map"),
+    metadataName: "omxterm-restty-scrollback",
+    builds: ["renderer.js"],
+    files: plainFiles,
+    failure: "copy",
+    copyTarget: "renderer.css",
+    lateFile: "main.cjs",
+    plugins: ["fixture-only-raf-counts"],
+  },
+  {
     name: "restty-background-rendering",
     prepare: background,
     metadataName: "omxterm-background-fixture",
