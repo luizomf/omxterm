@@ -205,14 +205,18 @@ separate expected word regions. Portable controls reject blank, cursor-only,
 unchanged and out-of-region frames; native captures tolerate platform-specific
 glyph rasterization rather than requiring identical bitmaps.
 
-The appearance fixture arms its 300 ms selection-frame stimulus until the next
-actual native RAF arrives; late delivery cannot silently consume the stimulus.
-Its regression postpones delivery at that scheduled RAF seam for at least
-350 ms using a timer and another native RAF, without blocking the renderer or
-substituting pixels or copy results. The controlled selection has a three-second
-local deadline and must retain exact copy, painted selection and all palette
-assertions. Configured-font output delay and the independent held-selection-frame
-readiness controls remain separate and unchanged.
+The appearance fixture reserves an already queued Surface callback for its
+300 ms selection-frame stimulus, retaining that ownership across late native
+arrival retries. Later layout waiters cannot consume the stimulus. A stable
+logical request identity cancels the current timer or native RAF through every
+delay stage. Deterministic scheduler controls cover threshold-crossing delivery
+order and cancellation using the same helper as the native fixture. Its native
+regression postpones the owned callback's arrival for at least 350 ms using a
+timer and another native RAF, without blocking the renderer or substituting
+pixels or copy results. The controlled selection has a three-second local
+deadline and must retain exact copy, painted selection and all palette assertions.
+Configured-font output keeps its original delay interval; the independent
+held-selection-frame readiness controls remain unchanged.
 
 The cursor fixture captures real native WebGL2 pixels at DPR 1 and 2 through
 font zoom, a controlled host-container width shrink, and configuration reload

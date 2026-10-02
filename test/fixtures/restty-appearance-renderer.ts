@@ -1,5 +1,6 @@
 import configuredFontBytes from "../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf";
 import { verifyInBandResize } from "./restty-resize-regression";
+import { createAppearanceFrameDelay } from "./restty-appearance-frame-delay";
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
 import { terminalFontInputs } from "../../src/terminal-surface/terminal-font-stack";
 import {
@@ -104,43 +105,24 @@ const deferFrames =
   new URLSearchParams(location.search).get("deferFrames") === "true";
 const lateFrameArrival =
   new URLSearchParams(location.search).get("lateFrameArrival") === "true";
-let deferUntil = 0;
-let deferSelectionFrame = false;
-let deferredFrame = false;
-let selectionArmedAt: number | null = null;
-let lateFrameArrivalMs = 0;
-if (deferFrames) {
-  window.requestAnimationFrame = (callback) => {
-    const arrive = (time: number) => {
-      const now = performance.now();
-      if (lateFrameArrival && selectionArmedAt !== null) {
-        const remainingArrival = selectionArmedAt + 350 - now;
-        if (remainingArrival > 0) {
-          // Delay delivery at the live RAF seam, not the renderer task. Resume
-          // on another actual native frame; input and capture remain unblocked.
-          setTimeout(() => nativeFrame(arrive), remainingArrival);
-          return;
-        }
-        if (lateFrameArrivalMs === 0)
-          lateFrameArrivalMs = now - selectionArmedAt;
-      }
-      // Selection arms an affected frame, not a wall-clock opportunity that can
-      // expire before native delivery. Configured-font output keeps its interval.
-      const remaining = deferSelectionFrame ? 300 : deferUntil - now;
-      deferSelectionFrame = false;
-      if (remaining > 0) {
-        deferredFrame = true;
-        // Exercise a late frame without blocking input/capture or changing native
-        // focus. This delay is a regression stimulus, never a readiness wait.
-        setTimeout(() => nativeFrame(callback), remaining);
-      } else callback(time);
-    };
-    return nativeFrame(arrive);
-  };
+const frameDelay = deferFrames
+  ? createAppearanceFrameDelay(
+      {
+        request: nativeFrame,
+        cancel: window.cancelAnimationFrame.bind(window),
+        now: () => performance.now(),
+        setTimer: (callback, delay) => window.setTimeout(callback, delay),
+        clearTimer: (id) => window.clearTimeout(id),
+      },
+      lateFrameArrival,
+    )
+  : undefined;
+if (frameDelay) {
+  window.requestAnimationFrame = frameDelay.request;
+  window.cancelAnimationFrame = frameDelay.cancel;
 }
 globalThis.__omxtermBeginSelection = () => {
-  selectionArmedAt = performance.now();
-  if (deferFrames) deferSelectionFrame = true;
+  frameDelay?.beginSelection();
   beginSelectionFrameGate();
 };
 
@@ -385,13 +367,10 @@ async function run() {
     { length: 8 },
     (_, index) => `\u001b[${90 + index}m██`,
   ).join("");
-  deferredFrame = false;
-  if (
-    deferFrames &&
+  frameDelay?.beginOutput(
     document.body.dataset.configuredFont === "true" &&
-    document.body.dataset.referenceFonts === "false"
-  )
-    deferUntil = performance.now() + 300;
+      document.body.dataset.referenceFonts === "false",
+  );
   handlers?.onOutput(
     `${normalForeground}\r\n${brightForeground}\r\n\u001b[31m██\u001b[1m██\u001b[22;91m██\u001b[38;2;18;58;188m██ https://example.com\u001b[0m\u001b[4;1HMMMMMMMM\u001b[5;1H\u001b[1mMMMMMMMM\u001b[22m\u001b[6;1H${"\ue8f0".repeat(8)}\u001b[7;1H${"ƀ".repeat(8)}\u001b[8;1H${"͸".repeat(8)}\u001b[${latest.rows};1H\u001b[48;2;171;205;239m  \u001b[0m\u001b[16t`,
   );
@@ -422,7 +401,7 @@ async function run() {
       focused: document.hasFocus(),
       visibilityState: document.visibilityState,
       devicePixelRatio,
-      deferredFrame,
+      deferredFrame: frameDelay?.deferredFrame ?? false,
       ...selectionFrameDiagnostics(),
       observedAt: performance.now(),
     };
@@ -432,6 +411,7 @@ async function run() {
     await surface.copy();
     const beforeFrame = copiedSelection === " https";
     await waitForLayout(true);
+    await frameDelay?.waitForSelectionDelay();
     copiedSelection = "";
     await surface.copy();
     const afterFrame = copiedSelection === " https";
@@ -442,14 +422,14 @@ async function run() {
     return {
       beforeFrame,
       afterFrame,
-      deferredFrame,
-      lateFrameArrivalMs,
+      deferredFrame: frameDelay?.deferredFrame ?? false,
+      lateFrameArrivalMs: frameDelay?.lateFrameArrivalMs ?? 0,
       visibilityState: document.visibilityState,
       focused: document.hasFocus(),
     };
   };
   globalThis.__omxtermResttyAppearanceResult = {
-    deferredOutputFrame: deferredFrame,
+    deferredOutputFrame: frameDelay?.deferredFrame ?? false,
     measurements,
     live: {
       sameCanvas: canvas === liveCanvas,
