@@ -175,6 +175,28 @@ npx vitest run test/integration/literal-argv.test.ts test/unit/postinstall.test.
 The same argv corpus checks direct executable startup on Unix ARM64. This does
 not qualify outer CLI parsing or an exact installer.
 
+## Test discovery
+
+`npm test` discovers Vitest `*.test.*` and `*.spec.*` files only beneath
+`test/unit/` and `test/integration/`. Put new suites in those directories;
+`test/fixtures/` contains support code, not independently discovered suites.
+Retained investigation materials in `.scratch/`, including archived tests and
+renamed dependency directories, stay outside ordinary discovery.
+
+To inventory the selected files without importing tests or launching native
+fixtures:
+
+```sh
+npx vitest list --filesOnly --json
+```
+
+The headless discovery regression checks both retained scratch lookalikes and
+the complete current unit/integration file inventory:
+
+```sh
+npm test -- test/unit/test-discovery.test.ts
+```
+
 ## Running native tests
 
 The standalone Restty rendering test hides the cursor after its input/reset
