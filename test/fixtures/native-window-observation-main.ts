@@ -11,6 +11,7 @@ import {
   NATIVE_SETUP_MS,
   NATIVE_WINDOW_PREFIX,
   type NativeWindowAction,
+  type NativeWindowKind,
 } from "./window-policy";
 
 // Deliberately independent native recipes: no product factory, renderer, PTY,
@@ -60,6 +61,66 @@ function presented(window: BrowserWindow) {
     "Independent native window not presented",
   );
 }
+function neutral(window: BrowserWindow) {
+  presented(window);
+  assert.equal(
+    window.isMaximized(),
+    false,
+    "Independent native window already maximized",
+  );
+}
+function actionStart(
+  window: BrowserWindow,
+  action: NativeWindowAction["action"],
+  kind: NativeWindowKind,
+) {
+  if (action !== "restore") {
+    neutral(window);
+    return;
+  }
+  if (kind === "cursor") {
+    live(window);
+    assert.ok(
+      window.isMinimized() && !window.isMaximized() && !window.isFullScreen(),
+      "Independent native minimize restore starting state invalid",
+    );
+  } else {
+    presented(window);
+    assert.equal(
+      window.isMaximized(),
+      true,
+      "Independent native maximize restore starting state invalid",
+    );
+  }
+}
+function actionCommit(
+  window: BrowserWindow,
+  action: NativeWindowAction["action"],
+  observed: boolean,
+  reached: () => boolean,
+) {
+  live(window);
+  assert.equal(
+    reached(),
+    observed,
+    "Independent native action state changed during health check",
+  );
+  if (!observed || action === "restore") neutral(window);
+  else if (action === "maximize") presented(window);
+  else
+    assert.ok(
+      !window.isMaximized() && !window.isFullScreen(),
+      "Independent native presentation action final state invalid",
+    );
+}
+function observationLine(
+  id: string,
+  kind: NativeWindowKind,
+  dpr: number,
+  observations: readonly NativeWindowAction[],
+) {
+  return `${NATIVE_WINDOW_PREFIX}${JSON.stringify({ version: 1, id, kind, platform: process.platform, dpr, budgetMs: NATIVE_RESPONSE_MS, observations })}\n`;
+}
 async function responsive(window: BrowserWindow) {
   live(window);
   assert.equal(
@@ -98,8 +159,9 @@ function rawWindowOptions(
 async function run() {
   const id = value("observation-id");
   assert.match(id, /^[a-f0-9-]{36}$/);
-  const kind = value("observation-kind");
-  assert.ok(kind === "cursor" || kind === "chrome");
+  const requestedKind = value("observation-kind");
+  assert.ok(requestedKind === "cursor" || requestedKind === "chrome");
+  const kind: NativeWindowKind = requestedKind;
   const dpr = Number(
     app.commandLine.getSwitchValue("force-device-scale-factor"),
   );
@@ -136,6 +198,49 @@ async function run() {
     app.quit();
     return;
   }
+  if (control === "duplicate-report" || control === "nonzero-report") {
+    // Negative-only protocol stimulus: deliberately synthetic complete-looking
+    // reports exercise multiplicity/exit gates, not native capability. Ordinary
+    // observations below still require real native windows and transitions.
+    const synthetic: NativeWindowAction[] =
+      kind === "cursor"
+        ? [
+            {
+              recipe: "framed",
+              action: "minimize",
+              outcome: "not-observed-within-budget",
+              elapsedMs: NATIVE_RESPONSE_MS,
+            },
+            {
+              recipe: "framed",
+              action: "hide",
+              outcome: "observed",
+              elapsedMs: 0,
+            },
+          ]
+        : [
+            {
+              recipe: "framed",
+              action: "maximize",
+              outcome: "not-observed-within-budget",
+              elapsedMs: NATIVE_RESPONSE_MS,
+            },
+            {
+              recipe: "app",
+              action: "maximize",
+              outcome: "not-observed-within-budget",
+              elapsedMs: NATIVE_RESPONSE_MS,
+            },
+          ];
+    controlMarker();
+    const line = observationLine(id, kind, dpr, synthetic);
+    process.stdout.write(line);
+    if (control === "duplicate-report") {
+      process.stdout.write(line);
+      app.quit();
+    } else app.exit(1);
+    return;
+  }
   const observations: NativeWindowAction[] = [];
   const recipes =
     kind === "cursor" ? (["framed"] as const) : (["framed", "app"] as const);
@@ -162,19 +267,16 @@ async function run() {
           new Promise<never>(() => {});
         controlMarker();
       }
-      presented(window);
-      assert.equal(
-        window.isMaximized(),
-        false,
-        "Independent native window already maximized",
-      );
+      neutral(window);
       await responsive(window);
       async function observe(
         action: NativeWindowAction["action"],
         invoke: () => void,
         reached: () => boolean,
       ) {
-        live(window);
+        // Initial health may have changed native state while awaited. Check
+        // action-specific preconditions at the actual synchronous invocation.
+        actionStart(window, action, kind);
         const start = Date.now();
         invoke();
         let observed = reached();
@@ -188,6 +290,8 @@ async function run() {
         }
         const elapsedMs = Date.now() - start;
         await responsive(window);
+        // Do not commit a cached predicate across an asynchronous health check.
+        actionCommit(window, action, observed, reached);
         observations.push({
           recipe,
           action,
@@ -203,11 +307,6 @@ async function run() {
           () => window.isMinimized(),
         );
         if (minimized) {
-          assert.equal(
-            window.isMinimized(),
-            true,
-            "Independent native minimized state lost before restore",
-          );
           assert.ok(
             await observe(
               "restore",
@@ -219,10 +318,7 @@ async function run() {
             ),
             "Independent native minimize restoration failed",
           );
-          presented(window);
         } else {
-          presented(window);
-          assert.equal(window.isMaximized(), false);
           assert.ok(
             await observe(
               "hide",
@@ -238,13 +334,7 @@ async function run() {
           () => window.maximize(),
           () => window.isMaximized(),
         );
-        presented(window);
         if (maximized) {
-          assert.equal(
-            window.isMaximized(),
-            true,
-            "Independent native maximized state lost before restore",
-          );
           assert.ok(
             await observe(
               "restore",
@@ -253,23 +343,14 @@ async function run() {
             ),
             "Independent native maximize restoration failed",
           );
-          presented(window);
         }
       }
     } finally {
       window.destroy();
     }
   }
-  const line = `${NATIVE_WINDOW_PREFIX}${JSON.stringify({ version: 1, id, kind, platform: process.platform, dpr, budgetMs: NATIVE_RESPONSE_MS, observations })}\n`;
-  process.stdout.write(line);
-  if (control === "duplicate-report") {
-    controlMarker();
-    process.stdout.write(line);
-  }
-  if (control === "nonzero-report") {
-    controlMarker();
-    app.exit(1);
-  } else app.quit();
+  process.stdout.write(observationLine(id, kind, dpr, observations));
+  app.quit();
 }
 void run().catch((error: unknown) => {
   console.error(error);

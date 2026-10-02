@@ -97,6 +97,54 @@ it("rejects duplicate output and a complete result from another invocation/DPR/p
       readNativeWindowObservation(result, { ...request, ...change }),
     ).toThrow();
 });
+it("rejects singleton-array enum reports even at elapsed zero", () => {
+  const observations = [
+    {
+      recipe: ["framed"],
+      action: ["minimize"],
+      outcome: ["not-observed-within-budget"],
+      elapsedMs: 0,
+    },
+    {
+      recipe: ["framed"],
+      action: ["hide"],
+      outcome: ["observed"],
+      elapsedMs: 0,
+    },
+  ];
+  expect(() =>
+    readNativeWindowObservation(execution(observations), request),
+  ).toThrow();
+});
+it.each(["recipe", "action", "outcome"])(
+  "requires literal JSON enum type for %s",
+  (key) => {
+    for (const invalid of [
+      [
+        key === "recipe"
+          ? "framed"
+          : key === "action"
+            ? "minimize"
+            : "not-observed-within-budget",
+      ],
+      {},
+      null,
+      0,
+      true,
+    ]) {
+      const first = {
+        ...action("minimize", "not-observed-within-budget"),
+        [key]: invalid,
+      };
+      expect(() =>
+        readNativeWindowObservation(
+          execution([first, action("hide")]),
+          request,
+        ),
+      ).toThrow();
+    }
+  },
+);
 it("requires agreement and real restoration for both independent maximize recipes", () => {
   const chrome = { ...request, kind: "chrome" as const };
   expect(

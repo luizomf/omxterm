@@ -21,6 +21,20 @@ it(
         failure = error;
       }
       expect(failure, control).toBeInstanceOf(Error);
+      if (control === "duplicate-report" || control === "nonzero-report") {
+        expect(failure, control).toMatchObject({
+          message: expect.stringContaining(
+            control === "duplicate-report"
+              ? "Expected one complete native-window observation"
+              : "Independent native-window observation failed",
+          ) as unknown,
+          cause: {
+            stdout: expect.stringContaining(
+              "__OMXTERM_NATIVE_WINDOW__",
+            ) as unknown,
+          },
+        });
+      }
       expect(failure, control).toMatchObject({
         cause: {
           exitCode: ["missing-report", "duplicate-report"].includes(control)

@@ -237,8 +237,10 @@ it is not minimization coverage. Missing, duplicate, invalid, failed or timed-ou
 reference evidence never selects an alternate path. Maximize observations do not
 select the cursor control, and no failed behavior test is retried as hide.
 
-Discovery has its own 90-second supervisor budget, derived from sequential native
-response and bounded load/presentation/renderer-health operations. The behavior
+Discovery has its own 90-second child-execution budget, derived from sequential
+native response and bounded load/presentation/renderer-health operations. This is
+not an end-to-end preparation/cleanup deadline: an enclosing test timeout does not
+prove that native ownership has ended. The behavior
 fixture's five-second guard, under-20-second negative-control measurement,
 90-second supervisor and both complete DPR pixel matrices remain unchanged.
 The minimized-canvas scheduling mechanism remains distinct from the unproven
@@ -412,27 +414,38 @@ Linux's app-shaped reference is frameless/transparent; Windows's is frameless
 and **nontransparent**. The reference never imports production construction,
 Chrome, renderer or PTY code. It retains the consumer's Electron executable,
 backend and requested DPR. Each reference must be initially live, loaded,
-responsive, visible, non-minimized and non-maximized. Successful maximize requires
-observed restoration before proceeding. Both references must agree.
+responsive, visible, non-minimized and non-maximized. Starting state is checked
+again after asynchronous health at the actual native invocation; final
+action-specific state is rechecked after health before committing an observation.
+Successful maximize requires observed restoration before proceeding. Both
+references must agree.
 
 Agreement on successful maximize/restore retains actual custom Maximize/Restore
 transitions. Agreement on healthy `not-observed-within-budget` results selects
 `native-maximize-not-observed`, not an inferred compositor policy. Each raw
 maximize and product unchanged-state observation uses the same existing
-25-second native-response allowance. Discovery's separate 165-second supervisor
-covers sequential reference actions and bounded setup/health work; product
-request delivery and behavior supervision remain separate. A crash, timeout,
+25-second native-response allowance. Discovery's separate 165-second child-execution
+budget covers sequential reference actions and bounded setup/health work, not
+preparation or supervisor settlement; product request delivery and behavior
+supervision remain separate. A crash, timeout,
 failed restoration, differential disagreement, invalid/absent/duplicate report,
 nonzero exit or uncertain cleanup fails rather than selecting unavailability.
 
-The unavailable path still clicks the real custom control twice, requires exactly
-one intended native maximize invocation per click and zero foreign/restore calls,
-and checks unchanged state, label, terminal focus and healthy native presentation.
-Both paths retain native/container/Surface/PTY fit, hidden-tab geometry, identity,
-fullscreen and cleanup assertions. Independent product-construction checks reject
-resizable/maximizable disabling and size traps. Actual native route/configuration
-rejection controls guard the unavailable branch against missing, wrong-owner and
-duplicate routing. Tiling is not required to preserve a historical window height.
+The unavailable path still clicks the real custom control twice. A single scoped
+recorder spans coordinate lookup, click delivery, label and focus awaits, requiring
+exactly one intended native action per click and no foreign or additional window
+control actions. Both paths require action/branch-specific final state and label,
+rechecked after the last observation sleep and renderer/focus awaits, alongside
+healthy native presentation. Native/container/Surface/PTY fit, hidden-tab geometry,
+identity, fullscreen and cleanup assertions remain unchanged. Independent
+product-construction checks reject resizable/maximizable disabling and size traps;
+headless actual-entry tests prove the guard runs before native construction.
+Headless actual Chrome wiring rejects wrong-owner and duplicate routes; a real
+native dropped-route control retains renderer/preload/IPC rejection coverage.
+Negative-only duplicate/nonzero report controls use supervised synthetic protocol
+reports, not extra native-response waits or capability evidence. Real discovery,
+reference-health controls and successful transitions still require native windows.
+Tiling is not required to preserve a historical window height.
 
 This bounded comparison establishes observed native behavior, not permanent
 capability, intentional desktop policy or the cause of a common Electron/backend

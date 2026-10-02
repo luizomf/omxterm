@@ -40,14 +40,7 @@ const routeControl = process.argv
   .find((arg) => arg.startsWith("--fixture-chrome-control="))
   ?.split("=")[1];
 assert.ok(
-  routeControl === undefined ||
-    [
-      "drop-route",
-      "wrong-owner",
-      "duplicate-route",
-      "disabled-maximize",
-      "disabled-resize",
-    ].includes(routeControl),
+  routeControl === undefined || routeControl === "drop-route",
   "Unknown Chrome rejection control",
 );
 const chromeListeners = new Map<IpcListener, IpcListener>();
@@ -61,12 +54,7 @@ const controlledChromeIpc: Pick<IpcMainPort, "on" | "removeListener"> = {
         event.sender === windows[0]?.webContents
       ) {
         process.stdout.write(`__OMXTERM_CHROME_CONTROL__${routeControl}\n`);
-        if (routeControl === "drop-route") return;
-        if (routeControl === "wrong-owner") {
-          windows[1]!.maximize();
-          return;
-        }
-        if (routeControl === "duplicate-route") listener(event, payload);
+        return;
       }
       listener(event, payload);
     };
@@ -164,14 +152,6 @@ app
           configuration,
           process.platform,
         );
-        if (routeControl === "disabled-maximize") {
-          nativeOptions.maximizable = false;
-          process.stdout.write("__OMXTERM_CHROME_CONTROL__disabled-maximize\n");
-        }
-        if (routeControl === "disabled-resize") {
-          nativeOptions.resizable = false;
-          process.stdout.write("__OMXTERM_CHROME_CONTROL__disabled-resize\n");
-        }
         assertNativeChromeConstruction(nativeOptions, process.platform);
         const window = new BrowserWindow({
           ...nativeOptions,

@@ -111,28 +111,28 @@ export function readNativeWindowObservation(
   const actions: NativeWindowAction[] = report.observations.map(
     (value: unknown) => {
       keys(value, ["recipe", "action", "outcome", "elapsedMs"]);
-      assert.ok(["framed", "app"].includes(String(value.recipe)));
+      const { recipe, action, outcome, elapsedMs } = value;
+      assert.ok(recipe === "framed" || recipe === "app");
       assert.ok(
-        ["minimize", "hide", "maximize", "restore"].includes(
-          String(value.action),
-        ),
+        action === "minimize" ||
+          action === "hide" ||
+          action === "maximize" ||
+          action === "restore",
       );
       assert.ok(
-        ["observed", "not-observed-within-budget"].includes(
-          String(value.outcome),
-        ),
+        outcome === "observed" || outcome === "not-observed-within-budget",
       );
       assert.ok(
-        typeof value.elapsedMs === "number" &&
-          Number.isSafeInteger(value.elapsedMs) &&
-          value.elapsedMs >= 0,
+        typeof elapsedMs === "number" &&
+          Number.isSafeInteger(elapsedMs) &&
+          elapsedMs >= 0,
       );
-      if (value.outcome === "not-observed-within-budget")
+      if (outcome === "not-observed-within-budget")
         assert.ok(
-          value.elapsedMs >= NATIVE_RESPONSE_MS,
+          elapsedMs >= NATIVE_RESPONSE_MS,
           "Incomplete native response observation",
         );
-      return value as unknown as NativeWindowAction;
+      return { recipe, action, outcome, elapsedMs };
     },
   );
   const signature = actions.map(

@@ -115,34 +115,32 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
     );
 
     it.skipIf(process.platform === "darwin")(
-      "rejects broken native routing and disabling product construction after valid independent observation",
+      "rejects dropped native routing after valid independent observation",
       async () => {
         const expectation = await observeNativeWindow("chrome");
-        // One fresh comparison is shared only by this sequential test invocation,
-        // not a worker/session cache. Every control still runs a real owned fixture.
-        for (const [control, message] of [
-          ["drop-route", "custom control invokes intended native action"],
-          ["wrong-owner", "Custom control invoked wrong native owner"],
-          ["duplicate-route", "Custom control duplicated native invocation"],
-          ["disabled-maximize", "Native Chrome must remain maximizable"],
-          ["disabled-resize", "Native Chrome must remain resizable"],
-        ]) {
-          const execution = await runChrome("continuity", expectation, control);
-          const evidence = JSON.stringify(execution);
-          expect(execution, evidence).toMatchObject({
-            exitCode: 1,
-            signal: null,
-            reason: "exit",
-            cleanupErrors: [],
-          });
-          expect(execution.stdout, evidence).toContain(
-            `__OMXTERM_CHROME_CONTROL__${control}`,
-          );
-          expect(execution.stdout, evidence).not.toContain(prefix);
-          expect(execution.stderr, evidence).toContain(message);
-        }
+        // Keep one actual renderer/preload/IPC/native rejection. Wrong-owner,
+        // duplicate and construction mutants use the actual headless seams.
+        const execution = await runChrome(
+          "continuity",
+          expectation,
+          "drop-route",
+        );
+        const evidence = JSON.stringify(execution);
+        expect(execution, evidence).toMatchObject({
+          exitCode: 1,
+          signal: null,
+          reason: "exit",
+          cleanupErrors: [],
+        });
+        expect(execution.stdout, evidence).toContain(
+          "__OMXTERM_CHROME_CONTROL__drop-route",
+        );
+        expect(execution.stdout, evidence).not.toContain(prefix);
+        expect(execution.stderr, evidence).toContain(
+          "custom control invokes intended native action",
+        );
       },
-      nativeWindowDiscoveryTimeout("chrome") + 5 * 120_000,
+      nativeWindowDiscoveryTimeout("chrome") + 120_000,
     );
   },
 );

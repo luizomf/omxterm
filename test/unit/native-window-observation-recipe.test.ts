@@ -34,17 +34,35 @@ async function observe(
     stderr = "",
     exitCode: number | undefined;
   const constructions: Record<string, unknown>[] = [];
+  const nativeCalls: string[] = [];
   const require = createRequire(import.meta.url);
   class NativeWindow {
     visible = false;
     minimized = mode === "initial-minimized";
     maximized = mode === "initial-maximized";
     destroyed = mode === "initial-destroyed";
+    healthChecks = 0;
     constructor(options: Record<string, unknown>) {
       constructions.push(options);
     }
     webContents = {
       executeJavaScript: async () => {
+        await Promise.resolve();
+        this.healthChecks += 1;
+        if (this.healthChecks === 1) {
+          if (mode === "initial-health-maximizes") this.maximized = true;
+          if (mode === "initial-health-minimizes") this.minimized = true;
+          if (mode === "initial-health-hides") this.visible = false;
+        }
+        if (
+          this.healthChecks === 2 &&
+          mode === "absent-maximize-health-maximizes"
+        )
+          this.maximized = true;
+        if (this.healthChecks === 3) {
+          if (mode === "restore-health-remaximizes") this.maximized = true;
+          if (mode === "hide-health-reshows") this.visible = true;
+        }
         if (mode === "lost-transition") {
           this.minimized = false;
           this.maximized = false;
@@ -77,21 +95,40 @@ async function observe(
       return { width: mode === "empty-bounds" ? 0 : 900, height: 600 };
     }
     minimize() {
-      if (mode !== "unavailable") this.minimized = true;
+      nativeCalls.push("minimize");
+      if (
+        ![
+          "unavailable",
+          "hide-health-reshows",
+          "initial-health-minimizes",
+        ].includes(mode)
+      )
+        this.minimized = true;
     }
     restore() {
+      nativeCalls.push("restore");
       if (mode !== "failed-restore") this.minimized = false;
     }
     hide() {
+      nativeCalls.push("hide");
       this.visible = false;
     }
     maximize() {
+      nativeCalls.push("maximize");
       if (mode === "action-error")
         throw new Error("controlled native action error");
       if (mode === "hidden-during-action") this.visible = false;
-      else if (mode !== "unavailable") this.maximized = true;
+      else if (
+        ![
+          "unavailable",
+          "initial-health-maximizes",
+          "absent-maximize-health-maximizes",
+        ].includes(mode)
+      )
+        this.maximized = true;
     }
     unmaximize() {
+      nativeCalls.push("unmaximize");
       if (mode !== "failed-restore") this.maximized = false;
     }
     destroy() {
@@ -144,6 +181,7 @@ async function observe(
   return {
     request,
     constructions,
+    nativeCalls,
     result: {
       stdout,
       stderr,
@@ -204,6 +242,33 @@ it.each([
   expect(result.exitCode).toBe(1);
   expect(() => readNativeWindowObservation(result, request)).toThrow();
 });
+it.each([
+  ["initial-health-maximizes", "chrome"],
+  ["initial-health-minimizes", "cursor"],
+  ["restore-health-remaximizes", "chrome"],
+  ["hide-health-reshows", "cursor"],
+  ["absent-maximize-health-maximizes", "chrome"],
+] as const)(
+  "rejects %s at actual raw action/commit boundaries",
+  async (mode, kind) => {
+    const { result, request } = await observe(mode, kind);
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).not.toContain("__OMXTERM_NATIVE_WINDOW__");
+    expect(() => readNativeWindowObservation(result, request)).toThrow();
+  },
+);
+it.each([
+  "initial-health-maximizes",
+  "initial-health-hides",
+  "initial-health-minimizes",
+])(
+  "does not invoke a native action after initial health invalidates starting state: %s",
+  async (mode) => {
+    const { nativeCalls, result } = await observe(mode, "chrome");
+    expect(result.exitCode).toBe(1);
+    expect(nativeCalls).toEqual([]);
+  },
+);
 it("independently specifies Windows frameless nontransparent native construction", async () => {
   const { constructions } = await observe("standard", "chrome", "win32");
   expect(constructions[0]).toMatchObject({
