@@ -36,7 +36,7 @@ import { createHostOracleSourceControl } from "./restty-host-oracle-controls";
 
 const prefix = "__OMXTERM_RESTTY_HOST_RESULT__";
 const root = __dirname;
-const focusedCancellation = process.argv.includes("--link-cancellation");
+const focusedCancellation = resttyCancellation.isFocused(process.argv);
 const oracle = resttyOracles.focusedHostOracle(process.argv);
 const sourceControl = createHostOracleSourceControl(process.argv);
 const checkpointCount = process.argv.includes("--oracle-single-checkpoint")
@@ -241,27 +241,29 @@ async function completeFocusedScenario(
   window: BrowserWindow,
   reload: () => Promise<unknown>,
 ) {
+  const shared = {
+    window,
+    externalLinks,
+    localImageRequests,
+    waitFor,
+    complete: fixtureSessions.complete,
+  };
   if (focusedCancellation) {
     await resttyCancellation.completeResttyLinkCancellationScenario({
-      window,
+      ...shared,
       deliverOutput: deliverOutputs[0]!,
       inputs: inputs[0]!,
       resizes: resizes[0]!,
-      externalLinks,
-      waitFor,
       initialOutput: () => outputs[0]!.join(""),
       closeSession: () => terminals[0]!.close(),
       ptyExits: () => ptyExits,
       sessionStarts: () => sessionIndex,
-      complete: fixtureSessions.complete,
     });
   } else if (oracle) {
     await resttyOracles.runFocusedResttyHostOracle({
+      ...shared,
       oracle,
       root,
-      window,
-      externalLinks,
-      localImageRequests,
       outputStress,
       terminals,
       launchKinds,
@@ -273,11 +275,9 @@ async function completeFocusedScenario(
       sessionStarts: () => sessionIndex,
       sessionExited: (index) => exitedSessionIndices.has(index),
       reload,
-      waitFor,
-      complete: fixtureSessions.complete,
     });
-  } else return false;
-  return true;
+  }
+  return focusedCancellation || Boolean(oracle);
 }
 
 app

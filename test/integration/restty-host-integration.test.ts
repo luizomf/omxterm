@@ -69,8 +69,6 @@ interface HostResult extends ResttyLinkGestureEvidence {
   readonly contextMenus: number;
   readonly largePasteLength: number;
   readonly externalLinks: readonly string[];
-  readonly modifiedHoverChangedPixels: number;
-  readonly releasedHoverChangedPixels: number;
   readonly validLinkMouseReports: string;
   readonly localPathMouseReports: string;
   readonly localImageEvidence: ReadonlyArray<LocalImageLinkEvidence>;
@@ -313,8 +311,6 @@ describe.skipIf(
         { closeRequested: false, liveSessions: 1 },
         { closeRequested: false, liveSessions: 1 },
       ]);
-      expect(result.modifiedHoverChangedPixels).toBeGreaterThan(10);
-      expect(result.releasedHoverChangedPixels).toBe(0);
       assertVisibleLinkEvidence(result);
       expect(
         result.localImageEvidence.slice(0, 5).map(({ control }) => control),

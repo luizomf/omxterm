@@ -101,6 +101,7 @@ export async function exerciseResttyLocalImageLinks(options: {
           name,
           prefixColumns,
           rootCellDelta,
+          deviceCellSize,
           size: options.resizes.at(-1)!,
         });
         if (afterRestore) {
@@ -209,7 +210,13 @@ export async function exerciseResttyLocalImageLinks(options: {
       );
       results.push({ control: "trailing-space exclusion", activations: 1 });
 
-      results.push(...(await exerciseUnicodeLocalImageRoots(options, refit)));
+      results.push(
+        ...(await exerciseUnicodeLocalImageRoots(
+          options,
+          refit,
+          deviceCellSize,
+        )),
+      );
 
       if (process.env["OMXTERM_TEST_IMAGE_TMUX"] === "1") {
         for (const reference of [longPath, boundaryPath])
