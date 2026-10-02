@@ -541,9 +541,23 @@ Run it with the original full scrollback/hidden/image scenario:
 npx vitest run test/integration/restty-native-scroll-feedback.test.ts test/integration/restty-scrollback-rendering.test.ts
 ```
 
+The scrollback fixture owns and boundedly observes native presentation/focus and
+DOM terminal input readiness before its native drag and character input. It
+acknowledges trusted pointer delivery, actual selection dragging and accepted
+character input; the held-left move retains the original edge coordinates and
+500 ms autoscroll observation. A never-ready real Surface regression uses the
+existing native supervisor timeout and checks cleanup before the next GUI launch.
+Fixture preparation and native execution are joined in a test-finished hook so
+Vitest's wrapper deadline cannot release the desktop early. Fixed bounded
+`__OMXTERM_SCROLLBACK_INPUT__` metadata distinguishes unavailable stimulus from
+an acknowledged drag that fails the unchanged strict scrollTop-decrease assertion.
+It contains only input-state booleans, numeric pointer/geometry/viewport data and
+native state, never terminal text. This corrects fixture input ownership; it does
+not establish the cause of the historical intermittent autoscroll failure.
+
 This qualifies the native Surface/browser feedback path, not physical wheel input.
-The correction changes prepared Restty JavaScript package inputs; it does not
-require rebuilding the unchanged core WASM or a known qualified native PTY.
+The scroll-feedback correction changes prepared Restty JavaScript package inputs;
+it does not require rebuilding the unchanged core WASM or a known qualified native PTY.
 
 Window Chrome fixtures also enter and leave real native fullscreen repeatedly
 with the title hidden. On Windows the fixture temporarily moves the desktop
@@ -679,6 +693,15 @@ The [native fixture runner](../test/fixtures/run-native-fixture.ts) uses a separ
 supervisor to clean up Electron, native PTYs and helper processes, including
 after a test worker exits unexpectedly.
 
+Pass the current Vitest `testContext` and file-only `prepare` callback to
+`runNativeFixture` so preparation, launch, cancellation and settlement share one
+owned operation. The runner joins it in a test-finished hook without an independent
+cleanup timeout; the original test deadline still fails. It checks the context
+before preparation and handoff, preventing an expired callback or control loop
+from launching later fixtures. Started preparation writers must settle before
+failure escapes. The runner removes an unchanged unhanded failed profile with the
+existing error-preserving helper; it refuses replaced or already supervised roots.
+
 Before native launch, the Restty host builder settles all started parallel build
 and file operations before reporting a preparation failure. It preserves the
 first failure, including when another builder later fails, so the caller can
@@ -752,7 +775,27 @@ stays in the caller's interactive desktop, session and environment. After
 observing supervisor disappearance, the Windows caller reads its outcome once
 more with the same validation, preserving actual exit and cleanup metadata.
 Missing or invalid evidence still fails; file presence alone is not success.
-POSIX uses a detached supervisor and IPC-disconnect detection.
+The former execution-timeout-plus-15-second caller deadline is not a cleanup
+allowance and no longer releases a live owner. Test cancellation publishes a
+nonce-bound request to the existing Windows supervisor; native bootstrap errors
+also request cancellation and await actual supervisor disappearance. POSIX uses
+its detached supervisor and IPC-disconnect cleanup, then joins actual process exit
+and stderr draining separately from the composite ChildProcess close event.
+
+Uncertain handoff, missing/invalid outcome or nonempty cleanup errors retain
+`ownership-blocked.json` in the receipt directory, preventing later launches in
+that scope across test workers. Ordinary callers share `.scratch/native-fixtures/`;
+isolated negative probes may use their own receipt directories. This is not a
+global desktop lock. Investigate the retained owner and evidence before clearing a
+stop receipt or reclaiming its profile; do not blindly retry or delete uncertainty.
+If a stop receipt cannot be published, the owning operation remains unsettled
+rather than authorizing another native launch. Known clean settlement does not
+hide an earlier transport failure.
+
+The ordinary POSIX lifetime regression requests cooperative cleanup of one owned
+Node child, checks actual child/supervisor exit, and rejects a late start from the
+ended context. It opens no Electron window or PTY and is skipped on Windows;
+headless Windows handoff tests are not native Windows qualification.
 
 This is cooperative fixture cleanup, not process containment. POSIX inspection
 and signaling are separate operations, and macOS creation times have second-level

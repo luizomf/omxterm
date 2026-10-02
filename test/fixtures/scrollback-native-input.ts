@@ -1,0 +1,104 @@
+export interface NativePointerObservation {
+  readonly trusted: boolean;
+  readonly canvas: boolean;
+  readonly id: number;
+  readonly buttons: number;
+  readonly x: number;
+  readonly y: number;
+  readonly dragging: boolean;
+}
+
+export function observeScrollbackNativeInput(
+  canvas: HTMLCanvasElement,
+  input: HTMLTextAreaElement,
+  isDragging: () => boolean,
+  accepted: () => boolean,
+) {
+  let down: NativePointerObservation | null = null;
+  let move: NativePointerObservation | null = null;
+  let up: NativePointerObservation | null = null;
+  let character: { trusted: boolean; input: boolean } | null = null;
+  const pointer = (event: PointerEvent): NativePointerObservation => ({
+    trusted: event.isTrusted,
+    canvas: event.target === canvas,
+    id: event.pointerId,
+    buttons: event.buttons,
+    x: event.clientX,
+    y: event.clientY,
+    dragging: isDragging(),
+  });
+  // Registered after Restty's bound handlers: dragging is observed, never set.
+  canvas.addEventListener("pointerdown", (event) => {
+    down = pointer(event);
+  });
+  canvas.addEventListener("pointermove", (event) => {
+    move = pointer(event);
+  });
+  canvas.addEventListener("pointerup", (event) => {
+    up = pointer(event);
+  });
+  // Restty accepts ordinary character text in beforeinput and prevents default;
+  // a successful native character need not produce a later DOM input event.
+  input.addEventListener("beforeinput", (event) => {
+    character = { trusted: event.isTrusted, input: event.target === input };
+  });
+  return {
+    reset() {
+      down = move = up = null;
+      character = null;
+    },
+    snapshot() {
+      const rect = canvas.getBoundingClientRect();
+      const host = document.querySelector<HTMLElement>(
+        ".restty-native-scroll-host",
+      )!;
+      return {
+        ready:
+          document.hasFocus() &&
+          document.activeElement === input &&
+          !input.disabled,
+        down,
+        move,
+        up,
+        character,
+        accepted: accepted(),
+        geometry: {
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        },
+        viewport: {
+          top: host.scrollTop,
+          height: host.scrollHeight,
+          clientHeight: host.clientHeight,
+        },
+      };
+    },
+  };
+}
+
+export type NativeInputObservation = ReturnType<
+  ReturnType<typeof observeScrollbackNativeInput>["snapshot"]
+>;
+
+export function hasNativeDrag(
+  value: NativeInputObservation,
+  point: { x: number; startY: number; endY: number },
+): boolean {
+  const { down, move } = value;
+  return Boolean(
+    down?.trusted &&
+    down.canvas &&
+    down.buttons === 1 &&
+    down.x === point.x &&
+    down.y === point.startY &&
+    move?.trusted &&
+    move.canvas &&
+    move.buttons === 1 &&
+    move.id === down.id &&
+    move.x === point.x &&
+    move.y === point.endY &&
+    move.dragging,
+  );
+}

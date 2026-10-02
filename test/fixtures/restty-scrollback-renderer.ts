@@ -1,10 +1,16 @@
 import { waitForLiveViewport } from "./restty-scrollback-viewport";
+import {
+  observeScrollbackNativeInput,
+  type NativeInputObservation,
+} from "./scrollback-native-input";
 import { depthRenderingFixture } from "./restty-depth-renderer";
 import { hiddenRenderingFixture } from "./restty-hidden-renderer";
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
 import type { TerminalSurface } from "../../src/terminal-surface/terminal-surface";
+
+declare const __OMXTERM_SCROLLBACK_HOLD_READY__: boolean;
 
 interface ScrollMetrics {
   readonly scrollHeight: number;
@@ -15,6 +21,8 @@ interface ScrollMetrics {
 
 interface ScrollbackFixture {
   readonly ready: true;
+  prepareNativeInput(): void;
+  nativeInput(): NativeInputObservation;
   hiddenRenderingFixture: typeof hiddenRenderingFixture;
   depthRenderingFixture: typeof depthRenderingFixture;
   metrics(): ScrollMetrics;
@@ -42,6 +50,8 @@ interface ScrollbackFixture {
 
 declare global {
   var __omxtermResttyScrollback: ScrollbackFixture | undefined;
+  var __scrollbackIsDragging: (() => boolean) | undefined;
+  var __scrollbackStartupHeld: boolean | undefined;
 }
 
 const root = document.querySelector<HTMLElement>("#terminal-tabs");
@@ -119,11 +129,28 @@ async function run() {
     },
   );
   const canvas = initialCanvas();
+  const nativeInput = observeScrollbackNativeInput(
+    canvas!,
+    container.querySelector<HTMLTextAreaElement>("textarea")!,
+    () => globalThis.__scrollbackIsDragging?.() === true,
+    () => writes.includes("x"),
+  );
   output(0, 5_000);
   await waitForRender();
+  if (__OMXTERM_SCROLLBACK_HOLD_READY__) {
+    globalThis.__scrollbackStartupHeld = true;
+    // Hold the actual Surface-ready continuation; no replacement fixture or
+    // fabricated process/renderer readiness substitutes for this native path.
+    await new Promise<void>(() => {});
+  }
 
   globalThis.__omxtermResttyScrollback = {
     ready: true,
+    prepareNativeInput() {
+      nativeInput.reset();
+      surface.focus();
+    },
+    nativeInput: nativeInput.snapshot,
     hiddenRenderingFixture,
     depthRenderingFixture,
     surface,
