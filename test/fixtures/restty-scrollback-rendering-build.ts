@@ -198,6 +198,7 @@ app.whenReady().then(async () => {
     output,
     reveal: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.reveal()', true),
     synchronizedReveal: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.synchronizedReveal()', true),
+    pendingGeometrySynchronizedReveal: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.pendingGeometrySynchronizedReveal()', true),
     ingestion: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.ingestion()', true),
     lifecycle: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.lifecycle()', true),
     images: await window.webContents.executeJavaScript('globalThis.__hiddenFixture.images()', true),

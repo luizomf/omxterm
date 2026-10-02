@@ -23,6 +23,9 @@ export function exerciseSynchronizedReveal(options: {
     );
     return [...value];
   };
+  // The preceding reveal restores the host width. Fit that geometry before
+  // erasing the baseline, so later refit does not introduce unpainted cells.
+  select(1);
   output("\u001bc\u001b[?25l\u001b[48;2;12;34;56m\u001b[2J");
   select(1);
   const before = pixel();

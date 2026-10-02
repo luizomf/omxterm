@@ -330,6 +330,14 @@ well as appearance, scrollback and ligature coverage; this is not a global
 session override. Scrollback resize checks wait boundedly for the observed live
 viewport to reach the bottom rather than assuming two frames and 50 ms complete
 native layout/rendering. The exact bottom and geometry assertions remain intact.
+The synchronized-reveal fixture fits restored host geometry before erasing its
+explicit-background baseline; an erase at an old narrow grid does not paint
+new cells introduced by a later refit. Alongside the ordinary path, a native
+regression narrows the actual host width, restores it and invokes the same helper
+in one task before ResizeObserver can settle. Observed CSS/backing widths prove
+the pending refit and that the sample enters the newly exposed region, including
+DPR scaling. Layout is restored in `finally`; baseline, selected/focused retention,
+zero batched clears and completed-color assertions stay strict.
 
 Window Chrome fixtures also enter and leave real native fullscreen repeatedly
 with the title hidden. On Windows the fixture temporarily moves the desktop

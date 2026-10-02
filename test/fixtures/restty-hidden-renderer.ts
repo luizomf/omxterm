@@ -241,6 +241,13 @@ export async function hiddenRenderingFixture() {
         usable,
       };
     },
+    pendingGeometrySynchronizedReveal: () =>
+      exercisePendingGeometrySynchronizedReveal(root, {
+        tabs,
+        canvas: canvases[0]!,
+        output: sessions[0]!.output,
+        counts: () => ({ ...calls.get(canvases[0]!) }),
+      }),
     synchronizedReveal: () =>
       exerciseSynchronizedReveal({
         tabs,
@@ -260,4 +267,46 @@ export async function hiddenRenderingFixture() {
       strip.remove();
     },
   };
+}
+
+function exercisePendingGeometrySynchronizedReveal(
+  root: HTMLElement,
+  options: Parameters<typeof exerciseSynchronizedReveal>[0],
+) {
+  const { tabs, canvas } = options;
+  const previousMaxWidth = root.style.maxWidth;
+  const originalHostWidth = root.getBoundingClientRect().width;
+  try {
+    root.style.maxWidth = `${Math.floor(originalHostWidth / 4)}px`;
+    tabs.focusSelected();
+    const narrowHostWidth = root.getBoundingClientRect().width;
+    const narrowCanvasWidth = canvas.width;
+    // Restore and exercise in one task, before ResizeObserver can refit.
+    root.style.maxWidth = previousMaxWidth;
+    const restoredHostWidth = root.getBoundingClientRect().width;
+    const pendingCanvasWidth = canvas.width;
+    if (
+      pendingCanvasWidth !== narrowCanvasWidth ||
+      Math.floor((restoredHostWidth * devicePixelRatio) / 2) <=
+        narrowCanvasWidth
+    )
+      throw new Error(
+        "Pending refit did not move the sample beyond the old grid",
+      );
+    const result = exerciseSynchronizedReveal(options);
+    return {
+      ...result,
+      geometry: {
+        originalHostWidth,
+        narrowHostWidth,
+        narrowCanvasWidth,
+        restoredHostWidth,
+        pendingCanvasWidth,
+        fittedCanvasWidth: canvas.width,
+        dpr: devicePixelRatio,
+      },
+    };
+  } finally {
+    root.style.maxWidth = previousMaxWidth;
+  }
 }

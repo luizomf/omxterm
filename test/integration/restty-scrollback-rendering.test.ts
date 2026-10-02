@@ -34,6 +34,17 @@ interface Result {
       focused: number[];
       completed: number[];
     };
+    pendingGeometrySynchronizedReveal: Result["hidden"]["synchronizedReveal"] & {
+      geometry: {
+        originalHostWidth: number;
+        narrowHostWidth: number;
+        narrowCanvasWidth: number;
+        restoredHostWidth: number;
+        pendingCanvasWidth: number;
+        fittedCanvasWidth: number;
+        dpr: number;
+      };
+    };
     ingestion: {
       acked: boolean;
       titles: string[];
@@ -162,6 +173,22 @@ describe("Restty scrollback through the production Surface seam", () => {
       expect.soft(synchronized.selected).toEqual(synchronized.before);
       expect.soft(synchronized.focused).toEqual(synchronized.before);
       expect.soft(synchronized.completed).toEqual([65, 43, 21, 255]);
+      const pending = result!.hidden.pendingGeometrySynchronizedReveal;
+      const geometry = pending.geometry;
+      expect(geometry.narrowHostWidth).toBeLessThan(geometry.originalHostWidth);
+      expect(geometry.restoredHostWidth).toBe(geometry.originalHostWidth);
+      expect(geometry.pendingCanvasWidth).toBe(geometry.narrowCanvasWidth);
+      expect(
+        Math.floor((geometry.restoredHostWidth * geometry.dpr) / 2),
+      ).toBeGreaterThan(geometry.narrowCanvasWidth);
+      expect(Math.floor(geometry.fittedCanvasWidth / 2)).toBeGreaterThan(
+        geometry.narrowCanvasWidth,
+      );
+      expect.soft(pending.batchedClears).toBe(0);
+      expect.soft(pending.before).toEqual([12, 34, 56, 255]);
+      expect.soft(pending.selected).toEqual(pending.before);
+      expect.soft(pending.focused).toEqual(pending.before);
+      expect.soft(pending.completed).toEqual([65, 43, 21, 255]);
       expect.soft(result!.hidden.reveal.pixel).toEqual([12, 34, 56, 255]);
       expect.soft(result!.hidden.reveal.foregroundPixels).toBeGreaterThan(0);
       expect.soft(result!.hidden.reveal.cursorForeground).toBeGreaterThan(0);
