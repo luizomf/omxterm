@@ -11,6 +11,7 @@ afterEach(() => {
 });
 async function exercise(mode: string, available = false) {
   vi.useFakeTimers();
+  vi.setSystemTime(0);
   vi.stubGlobal("process", { ...process, platform: "linux" });
   const ipc = new EventEmitter();
   function createWindow() {
@@ -100,6 +101,7 @@ it("rejects a duplicate which maximizes then restores on a capable native window
 });
 it("keeps actual routing, healthy presentation and both complete 25-second unavailable intervals", async () => {
   expect(await exercise("ordinary")).toBeUndefined();
+  expect(Date.now()).toBe(50_000);
 });
 it.each([
   ["drop", "custom control invokes intended native action"],
