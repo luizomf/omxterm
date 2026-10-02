@@ -9,6 +9,7 @@ import { expect, it } from "vitest";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
 import {
   CURSOR_PHASE_PREFIX,
+  selectCursorPresentationControl,
   type CursorDiagnostic,
 } from "../fixtures/restty-cursor-readiness";
 
@@ -80,7 +81,11 @@ it.each([1, 2])(
   120_000,
 );
 
-it.each(["early-minimize", "held-execute", "held-capture"])(
+const presentationControl = selectCursorPresentationControl(
+  process.env.OMXTERM_TEST_CURSOR_PRESENTATION_CONTROL,
+);
+
+it.each([presentationControl, "held-execute", "held-capture"])(
   "rejects native cursor readiness control %s with retained phase evidence and supervised cleanup",
   async (control) => {
     const started = Date.now();
@@ -94,6 +99,8 @@ it.each(["early-minimize", "held-execute", "held-capture"])(
     expect(Date.now() - started, evidence).toBeLessThan(20_000);
     expect(result.stdout).not.toContain("__OMXTERM_CURSOR_RESULT__");
     const capture = control === "held-capture";
+    const unavailable =
+      control === "early-minimize" || control === "early-hide";
     const step = {
       dpr: 1,
       font: "bundled",
@@ -110,22 +117,24 @@ it.each(["early-minimize", "held-execute", "held-capture"])(
     expect(phases.at(-1), evidence).toMatchObject({
       step,
       status: "failure",
-      category:
-        control === "early-minimize"
-          ? "presentation-unavailable"
-          : "operation-timeout",
+      category: unavailable ? "presentation-unavailable" : "operation-timeout",
       native: { minimized: control === "early-minimize" },
     });
-    if (control !== "early-minimize") {
+    if (control === "early-hide") {
+      expect(phases.at(-1)?.native, evidence).toMatchObject({
+        visible: false,
+        minimized: false,
+      });
+    } else if (!unavailable) {
       expect(phases.at(-1)?.native?.visible, evidence).toBe(true);
-      // Timeout alone cannot establish that the deliberate hold was reached.
-      expect(
-        result.stdout
-          .split("\n")
-          .filter((line) => line === `__OMXTERM_CURSOR_CONTROL__${control}`),
-        evidence,
-      ).toHaveLength(1);
     }
+    // Neither timeout nor a requested action proves the actual control was reached.
+    expect(
+      result.stdout
+        .split("\n")
+        .filter((line) => line === `__OMXTERM_CURSOR_CONTROL__${control}`),
+      evidence,
+    ).toHaveLength(1);
   },
   120_000,
 );

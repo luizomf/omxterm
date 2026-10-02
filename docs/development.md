@@ -221,16 +221,39 @@ in the existing `.scratch/native-fixtures/` journal. It contains no renderer
 expression or arbitrary error payload and is neither completion nor ownership
 evidence. Missing metadata cannot satisfy the diagnostic assertions.
 
-Native negative controls really minimize the owned window before mount, hold
+Native negative controls make the owned window unavailable before mount, hold
 its actual renderer frame continuation, or withhold delivery of an actual native
 capture. They must exit promptly with the presentation-unavailable or named
 operation-timeout phase and clean supervision, never pass on missing pixels.
-This diagnoses a demonstrated minimized-canvas scheduling mechanism, not the
-unproven historical trigger of an earlier maintainer timeout or a shipping
-Restty/GPU defect. Run the ordinary matrix and these controls together:
+The unavailable-presentation control defaults to real native `early-minimize`;
+`OMXTERM_TEST_CURSOR_PRESENTATION_CONTROL=minimize` declares that same choice.
+On a compositor independently demonstrated not to honor minimize, explicitly
+select `hide` to exercise real native `early-hide` instead. Both start from an
+observed native-visible, non-minimized window and require the selected native
+state before mount: minimized for minimize; hidden **and not minimized** for hide.
+The retained fixed control marker, test name and mount failure distinguish the
+actual action. Neither a request nor an unobserved transition satisfies the test.
+
+This is an independent operator declaration, not compositor detection, a failed
+minimize fallback, or a skip. Unset means minimize; unsupported values (including
+empty) fail. The Window Chrome suppress-maximize declaration does not prove
+minimize support and never selects this control. Keep the default on desktops
+that honor minimize so that actual minimization coverage remains exercised.
+The minimized-canvas scheduling mechanism remains distinct from the unproven
+historical trigger of an earlier timeout or a shipping Restty/GPU defect; native
+hide exercises the same unavailable-presentation guard, not minimization itself.
+Run the ordinary matrix and all three controls together:
 
 ```sh
 npx vitest run test/integration/restty-cursor-rendering.test.ts
+```
+
+For the demonstrated non-minimizing Omarchy Hyprland/XWayland environment:
+
+```sh
+OMXTERM_TEST_CURSOR_PRESENTATION_CONTROL=hide npx vitest run test/integration/restty-cursor-rendering.test.ts
+# The two independent declarations are both needed for its full native suite:
+OMXTERM_TEST_WINDOW_POLICY=hyprland-suppress-maximize OMXTERM_TEST_CURSOR_PRESENTATION_CONTROL=hide npm run check:portable
 ```
 
 Window Chrome fixtures retain real native/content/Surface/PTY bounds and
