@@ -49,7 +49,12 @@ The guard now includes the later [depth-only correction](webgl-depth-evidence.md
 Historical emoji observations below are unchanged; #317 did not rerun unrelated
 emoji trials or change font inputs. The current guard also includes #338's
 configured-style selection correction; its native font tests do not constitute
-a rerun of this historical emoji comparison.
+a rerun of this historical emoji comparison. The active probe guard also includes
+#522's native scrollbar spacer-clamp suppression. A headless regression executes
+the actual driver and all probe transforms against those prepared bytes, with
+external font/parser/filesystem/build/Electron I/O controlled. It checks syntax
+and rejects drift and the previous prepared runtime; it does not rerun this
+historical graphical experiment or change its recorded identities.
 
 Installed Apple Color Emoji source:
 
