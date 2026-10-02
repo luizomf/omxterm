@@ -1,5 +1,7 @@
 import * as childProcess from "node:child_process";
+import * as filesystem from "node:fs/promises";
 import { rm } from "node:fs/promises";
+import { EventEmitter } from "node:events";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -21,9 +23,17 @@ async function observeLaunch(name: string, caseIndex = 0) {
     write: false,
     define: { "import.meta.url": JSON.stringify(pathToFileURL(entry).href) },
   });
+  const controller = new AbortController();
+  const finalizers: (() => Promise<void>)[] = [];
+  const context = {
+    signal: controller.signal,
+    onTestFinished: (finish: () => Promise<void>) => finalizers.push(finish),
+  };
   const cases: (() => Promise<void>)[] = [];
-  const register = (_name: string, test: () => Promise<void>) =>
-    cases.push(test);
+  const register = (
+    _name: string,
+    test: (testContext: typeof context) => Promise<void>,
+  ) => cases.push(() => test(context));
   const suite = (_name: string, tests: () => void) => tests();
   const require = createRequire(import.meta.url);
   const stopped = new Error("Observed launch before native process creation");
@@ -51,6 +61,19 @@ async function observeLaunch(name: string, caseIndex = 0) {
           expect,
           describe: Object.assign(suite, { skipIf: () => suite }),
           it: Object.assign(register, {
+            for:
+              (values: unknown[]) =>
+              (
+                label: string,
+                _options: unknown,
+                test: (
+                  value: unknown,
+                  testContext: typeof context,
+                ) => Promise<void>,
+              ) =>
+                values.forEach((value) =>
+                  register(label, (testContext) => test(value, testContext)),
+                ),
             each:
               (values: unknown[]) =>
               (name: string, test: (value: unknown) => Promise<void>) =>
@@ -58,6 +81,22 @@ async function observeLaunch(name: string, caseIndex = 0) {
           }),
         };
       if (id === "esbuild") return { build: async () => ({}) };
+      if (id === "node:fs/promises")
+        return {
+          ...filesystem,
+          mkdtemp: async (...args: Parameters<typeof filesystem.mkdtemp>) => {
+            root = (await filesystem.mkdtemp(...args)) as string;
+            return root;
+          },
+        };
+      if (id === "node:path")
+        return {
+          ...path,
+          resolve: (...args: string[]) =>
+            args[0] === ".scratch/native-fixtures"
+              ? path.resolve(root!, "synthetic-receipts", ...args.slice(1))
+              : path.resolve(...args),
+        };
       if (id === "node:child_process")
         return {
           ...childProcess,
@@ -71,13 +110,18 @@ async function observeLaunch(name: string, caseIndex = 0) {
           },
           // The supervised caller sends the actual executable/argv request.
           // Do not replace runNativeFixture or reimplement its argv policy.
-          fork: () => ({
-            once() {},
-            send(request: { args: string[]; root: string }) {
-              root = request.root;
-              capture(request.args);
-            },
-          }),
+          fork: () =>
+            Object.assign(new EventEmitter(), {
+              connected: false,
+              send(
+                this: EventEmitter,
+                request: { args: string[]; root: string },
+              ) {
+                root = request.root;
+                queueMicrotask(() => this.emit("close"));
+                capture(request.args);
+              },
+            }),
         };
       return require(id) as unknown;
     },
@@ -88,6 +132,8 @@ async function observeLaunch(name: string, caseIndex = 0) {
     expect(args).toBeDefined();
     return args!;
   } finally {
+    controller.abort();
+    await Promise.all(finalizers.map((finish) => finish()));
     if (root) await rm(root, { recursive: true, force: true });
   }
 }

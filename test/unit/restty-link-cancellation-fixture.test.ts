@@ -16,6 +16,21 @@ function delayedRenderer(externalLinks: string[], inputs: string[]) {
     }
   }
   const canvas = {
+    // The actual cell-targeting helper now reads the fixture observer. Supply
+    // coherent external geometry only; this adapter models no draw or pixels.
+    __resttyHoverFixture: () => ({
+      geometry: {
+        canvas: { x: 0, y: 0, width: 800, height: 400 },
+        backing: { width: 800, height: 400 },
+        viewport: { width: 800, height: 400 },
+        dpr: 1,
+        cols: 80,
+        rows: 20,
+        cellWidth: 10,
+        cellHeight: 20,
+      },
+    }),
+    __localImageFixtureCoreCells: () => ({ cols: 80, rows: 20, text: "" }),
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 400 }),
     dispatchEvent(
       event: FixtureEvent & { metaKey?: boolean; ctrlKey?: boolean },

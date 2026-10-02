@@ -6,7 +6,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { expect, it } from "vitest";
-import { runNativeFixture } from "../fixtures/run-native-fixture";
+import {
+  runNativeFixture,
+  type NativeFixtureTestContext,
+} from "../fixtures/run-native-fixture";
 import {
   CURSOR_PHASE_PREFIX,
   type CursorDiagnostic,
@@ -18,10 +21,13 @@ import {
   rejectLegacyNativeWindowDeclarations,
 } from "../fixtures/window-policy";
 
-async function runCursor(dpr: number, control?: string) {
+async function runCursor(
+  dpr: number,
+  testContext: NativeFixtureTestContext,
+  control?: string,
+) {
   rejectLegacyNativeWindowDeclarations();
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-cursor-"));
-  await buildFixture(root);
   let supervised = false;
   try {
     const executable = createRequire(import.meta.url)("electron") as string;
@@ -38,6 +44,8 @@ async function runCursor(dpr: number, control?: string) {
       ],
       root,
       timeout: 90_000,
+      testContext,
+      prepare: () => buildFixture(root),
     });
     const phases = result.stdout
       .split("\n")
@@ -56,10 +64,11 @@ async function runCursor(dpr: number, control?: string) {
   }
 }
 
-it.each([1, 2])(
+it.for([1, 2])(
   "keeps native WebGL cursor pixels inside the first cell at DPR %i through zoom, controlled content refit and reload",
-  async (dpr) => {
-    const { result, phases } = await runCursor(dpr);
+  { timeout: 120_000 },
+  async (dpr, testContext) => {
+    const { result, phases } = await runCursor(dpr, testContext);
     expect(result, result.stderr).toMatchObject({
       exitCode: 0,
       reason: "exit",
@@ -84,15 +93,15 @@ it.each([1, 2])(
       true,
     );
   },
-  120_000,
 );
 
-it.each(["unavailable-presentation", "held-execute", "held-capture"])(
+it.for(["unavailable-presentation", "held-execute", "held-capture"])(
   "rejects native cursor readiness control %s with retained phase evidence and supervised cleanup",
-  async (scenario) => {
+  { timeout: nativeWindowDiscoveryTimeout("cursor") + 120_000 },
+  async (scenario, testContext) => {
     const control =
       scenario === "unavailable-presentation"
-        ? await observeNativeWindow("cursor", 1)
+        ? await observeNativeWindow("cursor", 1, undefined, testContext)
         : scenario;
     expect([
       "early-minimize",
@@ -102,7 +111,7 @@ it.each(["unavailable-presentation", "held-execute", "held-capture"])(
     ]).toContain(control);
     // Discovery has separate supervision; this still bounds only the behavior guard.
     const started = Date.now();
-    const { result, phases } = await runCursor(1, control);
+    const { result, phases } = await runCursor(1, testContext, control);
     const evidence = JSON.stringify({ result, phases });
     expect(result, evidence).toMatchObject({
       exitCode: 1,
@@ -149,5 +158,4 @@ it.each(["unavailable-presentation", "held-execute", "held-capture"])(
       evidence,
     ).toHaveLength(1);
   },
-  nativeWindowDiscoveryTimeout("cursor") + 120_000,
 );

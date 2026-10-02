@@ -15,7 +15,10 @@ import type { FocusedHostOracle } from "../fixtures/restty-host-oracle-scenarios
 import type { HostOracleRendererControl } from "../fixtures/restty-host-oracle-controls";
 import { assertOutputDropRejection } from "../fixtures/restty-output-drop-evidence";
 import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
-import { runNativeFixture } from "../fixtures/run-native-fixture";
+import {
+  runNativeFixture,
+  type NativeFixtureTestContext,
+} from "../fixtures/run-native-fixture";
 import type { ResttyGestureControl } from "../fixtures/restty-gesture-routing-mutation";
 import type { exerciseResttyOrdinaryGestures } from "../fixtures/restty-link-gestures";
 
@@ -42,6 +45,7 @@ interface FocusedResult {
 
 async function runOracle(
   oracle: FocusedHostOracle,
+  testContext: NativeFixtureTestContext,
   control?: HostOracleRendererControl,
   args: readonly string[] = [],
   gestureControl?: ResttyGestureControl,
@@ -54,10 +58,6 @@ async function runOracle(
   );
   let supervised = false;
   try {
-    await buildHostFixture(root, {
-      ...(control ? { oracleControl: control } : {}),
-      ...(gestureControl ? { gestureControl } : {}),
-    });
     supervised = true;
     const execution = await runNativeFixture({
       executable: electronExecutable,
@@ -69,6 +69,12 @@ async function runOracle(
       ],
       root,
       timeout: 120_000,
+      testContext,
+      prepare: () =>
+        buildHostFixture(root, {
+          ...(control ? { oracleControl: control } : {}),
+          ...(gestureControl ? { gestureControl } : {}),
+        }),
     });
     const evidence = process.env["OMXTERM_RESTTY_HOST_ORACLE_EVIDENCE_PATH"];
     if (evidence)
@@ -83,7 +89,7 @@ async function runOracle(
     });
     return execution;
   } finally {
-    // Preserve the host builder's settle-before-cleanup and launched ownership.
+    // Delegated preparation and uncertain native ownership belong to the runner.
     if (!supervised) await rm(root, { recursive: true, force: true });
   }
 }
@@ -100,8 +106,8 @@ function readResult(execution: Awaited<ReturnType<typeof runOracle>>) {
 describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   "focused actual-destination host oracles",
   () => {
-    it("checks all sixteen paced destination copies under unchanged history and real backpressure", async () => {
-      const execution = await runOracle("output-checkpoints");
+    it("checks all sixteen paced destination copies under unchanged history and real backpressure", async (testContext) => {
+      const execution = await runOracle("output-checkpoints", testContext);
       // Omitting the mutation cannot satisfy the same negative-control consumer.
       expect(() => assertOutputDropRejection(execution.stderr)).toThrow(
         "rejection evidence",
@@ -147,9 +153,9 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
       expect(stress.producerExit).toEqual({ exitCode: 0, signal: 0 });
     }, 130_000);
 
-    it("copies exact output continued from a pending-wrap boundary after native content refit", async () => {
+    it("copies exact output continued from a pending-wrap boundary after native content refit", async (testContext) => {
       const result = readResult(
-        await runOracle("output-checkpoints", undefined, [
+        await runOracle("output-checkpoints", testContext, undefined, [
           "--oracle-row-end-refit",
           "--oracle-single-checkpoint",
         ]),
@@ -204,8 +210,10 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
       expect(stress.producerExit).toEqual({ exitCode: 0, signal: 0 });
     }, 130_000);
 
-    it("observes freshly executed surviving-session response in the same Surface/core after owned backend loss", async () => {
-      const result = readResult(await runOracle("surviving-session"));
+    it("observes freshly executed surviving-session response in the same Surface/core after owned backend loss", async (testContext) => {
+      const result = readResult(
+        await runOracle("surviving-session", testContext),
+      );
       expect(result).toMatchObject({
         sessionStarts: 2,
         ptyExits: 1,
@@ -220,8 +228,8 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
       });
     }, 130_000);
 
-    it("paints retained ANSI palette B-to-A on a hidden/revealed image Surface without replacing session or images", async () => {
-      const result = readResult(await runOracle("image-palette"));
+    it("paints retained ANSI palette B-to-A on a hidden/revealed image Surface without replacing session or images", async (testContext) => {
+      const result = readResult(await runOracle("image-palette", testContext));
       expect(result).toMatchObject({
         sessionStarts: 2,
         ptyExits: 1,
@@ -246,8 +254,10 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
       ).toBe(true);
     }, 130_000);
 
-    it("records exact native per-gesture packets and zero destination activation", async () => {
-      const result = readResult(await runOracle("gesture-routing"));
+    it("records exact native per-gesture packets and zero destination activation", async (testContext) => {
+      const result = readResult(
+        await runOracle("gesture-routing", testContext),
+      );
       expect(result.sessionStarts).toBe(1);
       const evidence = result.gestureEvidence!;
       const modified = process.platform === "darwin" ? 0 : 16;
@@ -287,11 +297,13 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         });
     }, 130_000);
 
-    it.each(["move", "up", "middle"] as const)(
+    it.for(["move", "up", "middle"] as const)(
       "rejects actual native %s report loss in its own named gesture",
-      async (control) => {
+      { timeout: 130_000 },
+      async (control, testContext) => {
         const execution = await runOracle(
           "gesture-routing",
+          testContext,
           undefined,
           [],
           control,
@@ -305,14 +317,15 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         expect(execution.stderr).toContain(`${affected} mouse reports:`);
         expect(execution.stderr).toContain("activationDelta=0");
       },
-      130_000,
     );
 
-    it.each(["reorder", "drop"] as const)(
+    it.for(["reorder", "drop"] as const)(
       "rejects actual %s after valid source while END and original ACK progress survive",
-      async (kind) => {
+      { timeout: 130_000 },
+      async (kind, testContext) => {
         const execution = await runOracle(
           "output-checkpoints",
+          testContext,
           kind === "drop" ? "drop-output" : undefined,
           [
             "--oracle-single-checkpoint",
@@ -335,13 +348,15 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         if (kind === "reorder")
           expect(execution.stderr).toContain('"applied":true');
       },
-      130_000,
     );
 
-    it("rejects omitted real surviving destination response despite fresh raw PTY execution", async () => {
-      const execution = await runOracle("surviving-session", undefined, [
-        "--omit-sibling-response",
-      ]);
+    it("rejects omitted real surviving destination response despite fresh raw PTY execution", async (testContext) => {
+      const execution = await runOracle(
+        "surviving-session",
+        testContext,
+        undefined,
+        ["--omit-sibling-response"],
+      );
       expect(execution.exitCode, execution.stderr).toBe(1);
       expect(execution.stderr).toContain(
         "sibling destination response in surviving Surface core after backend loss (source executed response observed)",
@@ -349,10 +364,15 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
       expect(execution.stderr).toContain('"omit":true,"applied":true');
     }, 130_000);
 
-    it.each(["skip-palette", "delete-images"] as const)(
+    it.for(["skip-palette", "delete-images"] as const)(
       "rejects actual %s during retained image theme reload",
-      async (control) => {
-        const execution = await runOracle("image-palette", control);
+      { timeout: 130_000 },
+      async (control, testContext) => {
+        const execution = await runOracle(
+          "image-palette",
+          testContext,
+          control,
+        );
         expect(execution.exitCode, execution.stderr).toBe(1);
         expect(execution.stderr).toContain(
           "Retained palette/image reload failed:",
@@ -368,7 +388,6 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           expect(execution.stderr).toContain('"greenInChafaPlacement":0');
         }
       },
-      130_000,
     );
   },
 );

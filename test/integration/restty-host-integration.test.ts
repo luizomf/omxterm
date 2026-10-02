@@ -12,7 +12,10 @@ import {
 } from "../fixtures/restty-image-evidence";
 import type { ResttyLinkCancellationEvidence } from "../fixtures/restty-link-cancellation";
 import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
-import { runNativeFixture } from "../fixtures/run-native-fixture";
+import {
+  runNativeFixture,
+  type NativeFixtureTestContext,
+} from "../fixtures/run-native-fixture";
 import type { OutputStressEvidence } from "../fixtures/restty-host-output-stress";
 import type { ResttyLinkGestureEvidence } from "../fixtures/restty-link-gestures";
 import type { ResttyImageThemePixels } from "../fixtures/restty-image-theme";
@@ -203,7 +206,7 @@ describe.skipIf(
     process.platform as "darwin" | "linux" | "win32",
   ),
 )("Restty through the OMXTerm host and a real native PTY", () => {
-  it("preserves session lifecycle, isolation, focus, resize, and disabled routes", async () => {
+  it("preserves session lifecycle, isolation, focus, resize, and disabled routes", async (testContext) => {
     // macOS's per-user tmpdir prefix can exceed the entire native grid. Own a
     // short random profile so the clipping control's complete path prefix fits
     // inside the existing window, without depending on a native resize request.
@@ -215,9 +218,8 @@ describe.skipIf(
     );
     let supervised = false;
     try {
-      await buildHostFixture(root);
       supervised = true;
-      const execution = await runFixture(root);
+      const execution = await runFixture(root, testContext);
       const resultLine = execution.stdout
         .split("\n")
         .find((line) => line.startsWith(resultPrefix));
@@ -456,8 +458,8 @@ describe.skipIf(
         ).toBe(true);
       }
     } finally {
-      // Once launched, only the supervisor may remove the owned profile after
-      // checking process cleanup. Retain it if cleanup could not be established.
+      // After API delegation, its preparation/settlement boundary owns cleanup.
+      // Do not remove a profile on rejection with uncertain native ownership.
       if (!supervised)
         await rm(root, {
           recursive: true,
@@ -468,16 +470,17 @@ describe.skipIf(
     }
   }, 270_000);
 
-  it("cancels pending link gestures through pointercancel and blur in the real Surface", async () => {
-    const result = await runCancellationFixture();
+  it("cancels pending link gestures through pointercancel and blur in the real Surface", async (testContext) => {
+    const result = await runCancellationFixture(testContext);
     assertLinkCancellationEvidence(result.linkCancellation);
     expect(result.externalLinks).toEqual(["https://cancel.test/visible"]);
   }, 270_000);
 
-  it.each(["pointercancel", "blur"] as const)(
+  it.for(["pointercancel", "blur"] as const)(
     "detects disabled pending %s cancellation in the real Surface",
-    async (cancellation) => {
-      const result = await runCancellationFixture(cancellation);
+    { timeout: 270_000 },
+    async (cancellation, testContext) => {
+      const result = await runCancellationFixture(testContext, cancellation);
       assertLinkCancellationControls(result.linkCancellation);
       expect(() =>
         assertLinkCancellationEvidence(result.linkCancellation),
@@ -499,7 +502,6 @@ describe.skipIf(
         "https://cancel.test/visible",
       ]);
     },
-    270_000,
   );
 });
 
@@ -538,18 +540,17 @@ function assertLinkCancellationEvidence(
     });
 }
 
-async function runCancellationFixture(cancellation?: "pointercancel" | "blur") {
+async function runCancellationFixture(
+  testContext: NativeFixtureTestContext,
+  cancellation?: "pointercancel" | "blur",
+) {
   const root = await mkdtemp(
     path.join(tmpdir(), "omxterm-restty-cancellation-"),
   );
   let supervised = false;
   try {
-    await buildHostFixture(root, {
-      focusedCancellation: true,
-      ...(cancellation ? { cancellation } : {}),
-    });
     supervised = true;
-    const execution = await runFixture(root, true);
+    const execution = await runFixture(root, testContext, true, cancellation);
     expect(
       execution,
       `Cancellation fixture setup/execution failed.\n${JSON.stringify(execution)}`,
@@ -576,12 +577,17 @@ async function runCancellationFixture(cancellation?: "pointercancel" | "blur") {
     expect(result.ptyExits).toBe(1);
     return result;
   } finally {
-    // Only the supervisor may remove a launched profile after owned cleanup.
+    // The delegated runner owns preparation cleanup as well as native settlement.
     if (!supervised) await rm(root, { recursive: true, force: true });
   }
 }
 
-async function runFixture(root: string, focusedCancellation = false) {
+async function runFixture(
+  root: string,
+  testContext: NativeFixtureTestContext,
+  focusedCancellation = false,
+  cancellation?: "pointercancel" | "blur",
+) {
   const chromiumArguments = supportedFixtureChromiumArguments();
   return runNativeFixture({
     executable: electronExecutable,
@@ -592,5 +598,11 @@ async function runFixture(root: string, focusedCancellation = false) {
     ],
     root,
     timeout: 260_000,
+    testContext,
+    prepare: () =>
+      buildHostFixture(root, {
+        focusedCancellation,
+        ...(cancellation ? { cancellation } : {}),
+      }),
   });
 }

@@ -733,21 +733,35 @@ before preparation and handoff, preventing an expired callback or control loop
 from launching later fixtures. Started preparation writers must settle before
 failure escapes. The runner removes an unchanged unhanded failed profile with the
 existing error-preserving helper; it refuses replaced or already supervised roots.
+That responsibility continues after supervisor preparation returns and through
+Windows request-file publication until handoff. A context already aborted at API
+entry leaves its unprepared caller-owned root untouched. After delegating to the
+API, callers must not delete profiles on rejection: ownership may be uncertain.
+
+Cursor and Chrome pass the same context through independent observation and the
+subsequent behavior run; discovery controls reuse it for every iteration. Hover,
+broad host, focused cancellation and destination-oracle callers likewise delegate
+their file-only builders to this boundary. Parameterized tests use Vitest's
+`it.for` context callback rather than `it.each`, which supplies only case values.
+Existing native execution and enclosing test budgets remain unchanged. Other
+legacy callers gain test cancellation only when they forward their context.
 
 Before native launch, the Restty host builder settles all started parallel build
 and file operations before reporting a preparation failure. It preserves the
-first failure, including when another builder later fails, so the caller can
-remove the unsupervised profile without late build writes recreating it. This
-covers broad host, focused cancellation and destination-oracle/mutant
-preparation; it does not extend supervisor ownership to the build phase.
+first failure, including when another builder later fails. The shared runner joins
+this file-only preparation and reclaims only known unhanded roots without late
+writes recreating them. This covers broad host, focused cancellation and
+destination-oracle/mutant preparation; the native supervisor starts only after
+the builder settles.
 
 The sibling builders use `prepareFixture` for pre-launch ownership: parallel
 build/file operations register before starting, all started operations settle
 before failure escapes, and only the owned failed root is removed. Serial setup
 failures are covered too. The first error is preserved; a removal failure reports
 both errors rather than hiding cleanup uncertainty. Preparation failure cleanup
-belongs only to the builder; caller launch error handling begins after preparation
-succeeds. Successful preparation leaves the profile with its caller, and
+belongs to the builder while its recipe is running; the shared runner recognizes
+an already removed root without deleting it twice. Successful preparation leaves
+the profile with the delegating runner (or a legacy caller), and
 supervisor-owned profiles are never removed by this helper. Cursor/background and
 macOS blur callers resolve the executable before handing off ownership. Their
 pre-launch failure cleanup uses the same error-preserving removal operation:

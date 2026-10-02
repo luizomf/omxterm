@@ -7,7 +7,10 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { prepareFixture } from "./prepare-fixture";
 import { removeFailedFixture } from "./remove-failed-fixture";
-import { runNativeFixture } from "./run-native-fixture";
+import {
+  runNativeFixture,
+  type NativeFixtureTestContext,
+} from "./run-native-fixture";
 import {
   nativeWindowDiscoveryTimeout,
   readNativeWindowObservation,
@@ -31,51 +34,55 @@ export function observeNativeWindow(
   kind: "cursor",
   dpr?: number,
   control?: NativeObservationControl,
+  testContext?: NativeFixtureTestContext,
 ): Promise<"early-minimize" | "early-hide">;
 export function observeNativeWindow(
   kind: "chrome",
   dpr?: number,
   control?: NativeObservationControl,
+  testContext?: NativeFixtureTestContext,
 ): Promise<ChromeNativeExpectation>;
 export async function observeNativeWindow(
   kind: NativeWindowKind,
   dpr = kind === "cursor" ? 1 : 0,
   control?: NativeObservationControl,
+  testContext?: NativeFixtureTestContext,
 ) {
   rejectLegacyNativeWindowDeclarations();
   const request = { id: randomUUID(), kind, platform: process.platform, dpr };
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-native-window-"));
-  await prepareFixture(root, async (start) => {
-    await Promise.all([
-      start(() =>
-        build({
-          absWorkingDir: projectRoot,
-          bundle: true,
-          entryPoints: ["test/fixtures/native-window-observation-main.ts"],
-          external: ["electron"],
-          format: "cjs",
-          platform: "node",
-          logLevel: "silent",
-          outfile: path.join(root, "main.cjs"),
-        }),
-      ),
-      start(() =>
-        writeFile(
-          path.join(root, "package.json"),
-          JSON.stringify({
-            name: "omxterm-independent-native-window",
-            main: "main.cjs",
+  const prepare = () =>
+    prepareFixture(root, async (start) => {
+      await Promise.all([
+        start(() =>
+          build({
+            absWorkingDir: projectRoot,
+            bundle: true,
+            entryPoints: ["test/fixtures/native-window-observation-main.ts"],
+            external: ["electron"],
+            format: "cjs",
+            platform: "node",
+            logLevel: "silent",
+            outfile: path.join(root, "main.cjs"),
           }),
         ),
-      ),
-      start(() =>
-        writeFile(
-          path.join(root, "index.html"),
-          "<!doctype html><title>Independent native window fixture</title><script>globalThis.fixtureResponsive = true;</script>",
+        start(() =>
+          writeFile(
+            path.join(root, "package.json"),
+            JSON.stringify({
+              name: "omxterm-independent-native-window",
+              main: "main.cjs",
+            }),
+          ),
         ),
-      ),
-    ]);
-  });
+        start(() =>
+          writeFile(
+            path.join(root, "index.html"),
+            "<!doctype html><title>Independent native window fixture</title><script>globalThis.fixtureResponsive = true;</script>",
+          ),
+        ),
+      ]);
+    });
   let supervised = false;
   try {
     const executable = createRequire(import.meta.url)("electron") as string;
@@ -94,6 +101,8 @@ export async function observeNativeWindow(
       ],
       root,
       timeout: nativeWindowDiscoveryTimeout(kind),
+      ...(testContext ? { testContext } : {}),
+      prepare,
     });
     let selected: ReturnType<typeof readNativeWindowObservation>;
     try {

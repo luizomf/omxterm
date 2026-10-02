@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, it } from "vitest";
 import { buildHostFixture } from "../fixtures/restty-host-build";
-import { runNativeFixture } from "../fixtures/run-native-fixture";
+import {
+  runNativeFixture,
+  type NativeFixtureTestContext,
+} from "../fixtures/run-native-fixture";
 import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
 import { removeFailedFixture } from "../fixtures/remove-failed-fixture";
 import { HOVER_PHASE_PREFIX } from "../fixtures/restty-hover";
@@ -70,11 +73,14 @@ function expectHeldFrame(frames: readonly Frame[], phase: Phase): Frame {
   expect(held.drawRevision).toBeLessThan(phase.stimulus.revision);
   return held;
 }
-async function runHover(dpr: number, control: HoverControl) {
+async function runHover(
+  dpr: number,
+  control: HoverControl,
+  testContext: NativeFixtureTestContext,
+) {
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-hover-"));
   let supervised = false;
   try {
-    await buildHostFixture(root, { focusedCancellation: true });
     const executable = createRequire(import.meta.url)("electron") as string;
     supervised = true;
     const result = await runNativeFixture({
@@ -87,6 +93,8 @@ async function runHover(dpr: number, control: HoverControl) {
       ],
       root,
       timeout: 60_000,
+      testContext,
+      prepare: () => buildHostFixture(root, { focusedCancellation: true }),
     });
     await expect(stat(root)).rejects.toMatchObject({ code: "ENOENT" });
     const phases = result.stdout
@@ -108,10 +116,11 @@ async function runHover(dpr: number, control: HoverControl) {
   }
 }
 
-it.each([1, 1.5, 2])(
+it.for([1, 1.5, 2])(
   "checks all native hover cells/complement/unused edges and release at DPR %s with fractional geometry",
-  async (dpr) => {
-    const { result, phases } = await runHover(dpr, "ordinary");
+  { timeout: 90_000 },
+  async (dpr, testContext) => {
+    const { result, phases } = await runHover(dpr, "ordinary", testContext);
     expect(result, result.stderr).toMatchObject({
       exitCode: 0,
       reason: "exit",
@@ -163,11 +172,14 @@ it.each([1, 1.5, 2])(
       expect(phase.pixels!.total).toBe(0);
     expect(result.stdout).toContain("__OMXTERM_HOVER_RESULT__");
   },
-  90_000,
 );
 
-it("waits for the actual late native frame continuation without treating draw as pixel success", async () => {
-  const { result, phases, frames } = await runHover(1, "late-frame");
+it("waits for the actual late native frame continuation without treating draw as pixel success", async (testContext) => {
+  const { result, phases, frames } = await runHover(
+    1,
+    "late-frame",
+    testContext,
+  );
   expect(result, result.stderr).toMatchObject({
     exitCode: 0,
     reason: "exit",
@@ -201,14 +213,15 @@ it("waits for the actual late native frame continuation without treating draw as
   expect(phases[2]!.pixels!.total).toBe(0);
 }, 90_000);
 
-it.each([
+it.for([
   "early-capture",
   "output-invalidation",
   "native-invalidation",
 ] as const)(
   "rejects actual hover control %s with distinct retained metadata",
-  async (control) => {
-    const { result, phases, frames } = await runHover(1, control);
+  { timeout: 90_000 },
+  async (control, testContext) => {
+    const { result, phases, frames } = await runHover(1, control, testContext);
     expect(result, result.stderr).toMatchObject({
       exitCode: 1,
       reason: "exit",
@@ -256,5 +269,4 @@ it.each([
         ),
       ).toBe(true);
   },
-  90_000,
 );

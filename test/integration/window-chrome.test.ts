@@ -5,7 +5,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
-import { runNativeFixture } from "../fixtures/run-native-fixture";
+import {
+  runNativeFixture,
+  type NativeFixtureTestContext,
+} from "../fixtures/run-native-fixture";
 import { observeNativeWindow } from "../fixtures/native-window-observation";
 import {
   nativeWindowDiscoveryTimeout,
@@ -18,10 +21,10 @@ const prefix = "__OMXTERM_WINDOW_CHROME_RESULT__";
 async function runChrome(
   mode: string,
   expectation: ChromeNativeExpectation,
+  testContext: NativeFixtureTestContext,
   control?: string,
 ) {
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-window-chrome-"));
-  await buildFixture(root);
   let supervised = false;
   try {
     const args: string[] = [];
@@ -43,6 +46,8 @@ async function runChrome(
       ],
       root,
       timeout: mode === "fail-fast" ? 10_000 : 100_000,
+      testContext,
+      prepare: () => buildFixture(root),
     });
   } finally {
     if (!supervised) await rm(root, { recursive: true, force: true });
@@ -52,17 +57,23 @@ async function runChrome(
 describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   "Window Chrome through real Electron, Surfaces and PTYs",
   () => {
-    it.each(["continuity", "fail-fast"])(
+    it.for(["continuity", "fail-fast"])(
       "checks %s without leaking a native dialog or process",
-      async (mode) => {
+      { timeout: nativeWindowDiscoveryTimeout("chrome") + 120_000 },
+      async (mode, testContext) => {
         rejectLegacyNativeWindowDeclarations();
         const expectation =
           mode === "continuity" && process.platform !== "darwin"
-            ? await observeNativeWindow("chrome")
+            ? await observeNativeWindow(
+                "chrome",
+                undefined,
+                undefined,
+                testContext,
+              )
             : process.platform === "darwin"
               ? "not-exercised-macos"
               : "native-maximize-observed";
-        const execution = await runChrome(mode, expectation);
+        const execution = await runChrome(mode, expectation, testContext);
         if (mode === "fail-fast") {
           expect(execution).toMatchObject({
             exitCode: 1,
@@ -111,18 +122,23 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           },
         );
       },
-      nativeWindowDiscoveryTimeout("chrome") + 120_000,
     );
 
     it.skipIf(process.platform === "darwin")(
       "rejects dropped native routing after valid independent observation",
-      async () => {
-        const expectation = await observeNativeWindow("chrome");
+      async (testContext) => {
+        const expectation = await observeNativeWindow(
+          "chrome",
+          undefined,
+          undefined,
+          testContext,
+        );
         // Keep one actual renderer/preload/IPC/native rejection. Wrong-owner,
         // duplicate and construction mutants use the actual headless seams.
         const execution = await runChrome(
           "continuity",
           expectation,
+          testContext,
           "drop-route",
         );
         const evidence = JSON.stringify(execution);

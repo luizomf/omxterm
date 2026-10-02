@@ -4,7 +4,7 @@ import { nativeWindowDiscoveryTimeout } from "../fixtures/window-policy";
 
 it(
   "rejects native discovery exceptions, unhealthy initial state, health deadlines and missing/duplicate/nonzero completion",
-  async () => {
+  async (testContext) => {
     for (const control of [
       "error",
       "initial-hidden",
@@ -16,7 +16,7 @@ it(
     ] as const) {
       let failure: unknown;
       try {
-        await observeNativeWindow("cursor", 1, control);
+        await observeNativeWindow("cursor", 1, control, testContext);
       } catch (error) {
         failure = error;
       }
