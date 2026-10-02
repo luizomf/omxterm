@@ -25,8 +25,8 @@ it(
         expect(failure, control).toMatchObject({
           message: expect.stringContaining(
             control === "duplicate-report"
-              ? "Expected one complete native-window observation"
-              : "Independent native-window observation failed",
+              ? "Expected one complete independent native window observation"
+              : "Independent native observation failed",
           ) as unknown,
           cause: {
             stdout: expect.stringContaining(
