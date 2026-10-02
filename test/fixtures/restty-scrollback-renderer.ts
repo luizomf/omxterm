@@ -10,6 +10,8 @@ import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
 import type { TerminalSurface } from "../../src/terminal-surface/terminal-surface";
 
+declare const __OMXTERM_SCROLLBACK_HOLD_READY__: boolean;
+
 interface ScrollMetrics {
   readonly scrollHeight: number;
   readonly clientHeight: number;
@@ -49,6 +51,7 @@ interface ScrollbackFixture {
 declare global {
   var __omxtermResttyScrollback: ScrollbackFixture | undefined;
   var __scrollbackIsDragging: (() => boolean) | undefined;
+  var __scrollbackStartupHeld: boolean | undefined;
 }
 
 const root = document.querySelector<HTMLElement>("#terminal-tabs");
@@ -134,6 +137,12 @@ async function run() {
   );
   output(0, 5_000);
   await waitForRender();
+  if (__OMXTERM_SCROLLBACK_HOLD_READY__) {
+    globalThis.__scrollbackStartupHeld = true;
+    // Hold the actual Surface-ready continuation; no replacement fixture or
+    // fabricated process/renderer readiness substitutes for this native path.
+    await new Promise<void>(() => {});
+  }
 
   globalThis.__omxtermResttyScrollback = {
     ready: true,

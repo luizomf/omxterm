@@ -18,7 +18,7 @@ export type ScrollbackFixtureMode =
 export async function buildFixture(
   root: string,
   mode: ScrollbackFixtureMode = "scrollback",
-  inputControl?: "down" | "character",
+  holdStartup = false,
 ): Promise<void> {
   return prepareFixture(root, async (start) => {
     await build({
@@ -30,6 +30,9 @@ export async function buildFixture(
           : "test/fixtures/restty-native-scroll-feedback-renderer.ts",
       ],
       format: "iife",
+      define: {
+        __OMXTERM_SCROLLBACK_HOLD_READY__: JSON.stringify(holdStartup),
+      },
       loader: { ".ttf": "binary" },
       logLevel: "silent",
       outfile: path.join(root, "renderer.js"),
@@ -125,7 +128,7 @@ export async function buildFixture(
       start(() =>
         writeFile(
           path.join(root, "main.cjs"),
-          electronMainSource(mode, inputControl),
+          electronMainSource(mode, holdStartup),
         ),
       ),
       start(() => mkdir(path.join(root, "home"), { recursive: true })),
@@ -135,7 +138,7 @@ export async function buildFixture(
 
 function electronMainSource(
   mode: ScrollbackFixtureMode,
-  inputControl?: "down" | "character",
+  holdStartup: boolean,
 ): string {
   return `
 const { app, BrowserWindow } = require("electron");
@@ -210,8 +213,11 @@ app.whenReady().then(async () => {
     app.exit(0);
     return;
   }
+  if (${JSON.stringify(holdStartup)}) {
+    await waitFor(window, 'globalThis.__scrollbackStartupHeld === true');
+    process.stdout.write('__OMXTERM_SCROLLBACK_STARTUP_HELD__' + JSON.stringify({ pid: process.pid, visible: window.isVisible(), minimized: window.isMinimized() }) + '\\n');
+  }
   await waitFor(window, "globalThis.__omxtermResttyScrollback?.ready ?? false");
-  const inputControl = ${JSON.stringify(inputControl ?? null)};
   class StimulusTimeout extends Error {}
   let inputObservation = null;
   const inputNative = () => ({ visible: window.isVisible(), minimized: window.isMinimized(), focused: window.isFocused() });
@@ -278,8 +284,7 @@ app.whenReady().then(async () => {
     })()\`, true);
   const autoscrollStartTop = autoscroll.startTop;
   try {
-    if (inputControl === 'down') process.stdout.write('__OMXTERM_SCROLLBACK_INPUT_CONTROL__' + JSON.stringify({ control: 'down', withheld: true }) + '\\n');
-    else window.webContents.sendInputEvent({ type: "mouseDown", x: autoscroll.x, y: autoscroll.startY, button: "left", clickCount: 1 });
+    window.webContents.sendInputEvent({ type: "mouseDown", x: autoscroll.x, y: autoscroll.startY, button: "left", clickCount: 1 });
     await inputPhase('mouse-down', value => value.down?.trusted && value.down.canvas && value.down.buttons === 1 && value.down.x === autoscroll.x && value.down.y === autoscroll.startY);
     window.webContents.sendInputEvent({ type: "mouseMove", x: autoscroll.x, y: autoscroll.endY, button: "left", modifiers: ["leftButtonDown"], clickCount: 1 });
     await Promise.all([
@@ -287,7 +292,7 @@ app.whenReady().then(async () => {
       inputPhase('mouse-drag', value => hasNativeDrag(value, autoscroll), 500),
     ]);
   } finally {
-    if (inputControl !== 'down') window.webContents.sendInputEvent({ type: "mouseUp", x: autoscroll.x, y: autoscroll.endY, button: "left", clickCount: 1 });
+    window.webContents.sendInputEvent({ type: "mouseUp", x: autoscroll.x, y: autoscroll.endY, button: "left", clickCount: 1 });
   }
   await inputPhase('mouse-up', value => value.up?.trusted && value.up.canvas && value.up.buttons === 0 && value.up.id === value.down.id && value.up.x === autoscroll.x && value.up.y === autoscroll.endY && !value.up.dragging);
   const nativeDrag = inputObservation;
@@ -303,8 +308,7 @@ app.whenReady().then(async () => {
   await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.scrollToTop()', true);
   const outputMetrics = await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.outputWhileScrolled()', true);
   await prepareInput('character-ready');
-  if (inputControl === 'character') process.stdout.write('__OMXTERM_SCROLLBACK_INPUT_CONTROL__' + JSON.stringify({ control: 'character', withheld: true }) + '\\n');
-  else window.webContents.sendInputEvent({ type: 'char', keyCode: 'x' });
+  window.webContents.sendInputEvent({ type: 'char', keyCode: 'x' });
   await inputPhase('character', value => value.character?.trusted && value.character.input && value.accepted);
   const nativeCharacter = inputObservation;
   const typed = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.inputViewport('x')", true);

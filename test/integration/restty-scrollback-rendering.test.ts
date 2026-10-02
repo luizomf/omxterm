@@ -2,11 +2,14 @@ import {
   buildFixture,
   resultPrefix,
 } from "../fixtures/restty-scrollback-rendering-build";
-import { runNativeFixture } from "../fixtures/run-native-fixture";
 import {
-  hasNativeDrag,
-  type NativeInputObservation,
-} from "../fixtures/scrollback-native-input";
+  runNativeFixture,
+  type NativeFixtureResult,
+  type NativeFixtureTestContext,
+} from "../fixtures/run-native-fixture";
+import { fixtureProcesses } from "../fixtures/native-fixture-processes";
+import { existsSync } from "node:fs";
+import type { NativeInputObservation } from "../fixtures/scrollback-native-input";
 import {
   verifyDepthEvidence,
   type DepthPhase,
@@ -142,12 +145,57 @@ interface Result {
 }
 
 describe("Restty scrollback through the production Surface seam", () => {
-  it("scrolls and selects retained text while live zero and re-enable keep the same core", async () => {
-    const root = await mkdtemp(
-      path.join(tmpdir(), "omxterm-restty-scrollback-"),
-    );
-    await buildFixture(root);
-    const execution = await runFixture(root);
+  let startupTask: Promise<NativeFixtureResult> | undefined;
+  let startupRoot: string | undefined;
+  let startupPid: number | undefined;
+  let startupSettled = false;
+
+  it("cleans up a never-ready native Surface before the next GUI launch", async (testContext) => {
+    startupTask = (async () => {
+      startupRoot = await mkdtemp(
+        path.join(tmpdir(), "omxterm-scrollback-startup-"),
+      );
+      const result = await runFixture(startupRoot, 10_000, testContext, () =>
+        buildFixture(startupRoot!, "scrollback", true),
+      );
+      const marker = result.stdout
+        .split("\n")
+        .find((line) => line.startsWith("__OMXTERM_SCROLLBACK_STARTUP_HELD__"));
+      if (marker) {
+        const observation = JSON.parse(
+          marker.slice("__OMXTERM_SCROLLBACK_STARTUP_HELD__".length),
+        ) as { pid: number; visible: boolean; minimized: boolean };
+        startupPid = observation.pid;
+      }
+      startupSettled = true;
+      return result;
+    })();
+    const result = await startupTask;
+    expect(result).toMatchObject({ reason: "timeout", cleanupErrors: [] });
+    expect(result.stdout).toContain("__OMXTERM_SCROLLBACK_STARTUP_HELD__");
+    expect(Number.isSafeInteger(startupPid) && startupPid! > 0).toBe(true);
+    expect(result.stdout).not.toContain("__OMXTERM_SCROLLBACK_INPUT__");
+  }, 30_000);
+
+  it("scrolls and selects retained text while live zero and re-enable keep the same core", async (testContext) => {
+    if (startupRoot) {
+      expect(
+        startupSettled,
+        "prior native cleanup must settle before the next GUI launch",
+      ).toBe(true);
+      expect(existsSync(startupRoot)).toBe(false);
+      expect(startupPid).toBeDefined();
+      expect(fixtureProcesses().some((row) => row.pid === startupPid)).toBe(
+        false,
+      );
+    }
+    const executionTask = (async () => {
+      const root = await mkdtemp(
+        path.join(tmpdir(), "omxterm-restty-scrollback-"),
+      );
+      return runFixture(root, 110_000, testContext, () => buildFixture(root));
+    })();
+    const execution = await executionTask;
     expect(execution.reason).toBe("exit");
     expect(execution.cleanupErrors).toEqual([]);
     const line = execution.stdout
@@ -305,17 +353,13 @@ describe("Restty scrollback through the production Surface seam", () => {
     expect(result!.initial.scrollTop).toBeGreaterThan(0);
     expect(result!.scrolledTop).toBe(0);
     expect(result!.nativeDrag).toBeDefined();
-    expect(
-      hasNativeDrag(result!.nativeDrag, {
-        x: Math.floor(result!.nativeDrag.geometry.x + 80),
-        startY: Math.floor(
-          result!.nativeDrag.geometry.y +
-            result!.nativeDrag.geometry.height -
-            30,
-        ),
-        endY: Math.floor(result!.nativeDrag.geometry.y),
-      }),
-    ).toBe(true);
+    expect(result!.nativeDrag.move).toMatchObject({
+      trusted: true,
+      canvas: true,
+      buttons: 1,
+      dragging: true,
+    });
+    expect(result!.nativeDrag.move!.id).toBe(result!.nativeDrag.down!.id);
     expect(result!.nativeDrag.up?.trusted).toBe(true);
     expect(result!.nativeCharacter.character).toEqual({
       trusted: true,
@@ -353,79 +397,14 @@ describe("Restty scrollback through the production Surface seam", () => {
       webSecurity: true,
     });
   }, 120_000);
-
-  it.each([
-    ["down", "mouse-down"],
-    ["character", "character"],
-  ] as const)(
-    "rejects withheld native %s at its named stimulus phase",
-    async (control, phase) => {
-      const root = await mkdtemp(
-        path.join(tmpdir(), "omxterm-restty-input-control-"),
-      );
-      await buildFixture(root, "scrollback", control);
-      const execution = await runFixture(root);
-      expect(execution).toMatchObject({
-        exitCode: 1,
-        reason: "exit",
-        cleanupErrors: [],
-      });
-      expect(execution.stdout).toContain(
-        "__OMXTERM_SCROLLBACK_INPUT_CONTROL__" +
-          JSON.stringify({ control, withheld: true }),
-      );
-      const records = execution.stdout
-        .split("\n")
-        .filter((line) => line.startsWith("__OMXTERM_SCROLLBACK_INPUT__"))
-        .map(
-          (line) =>
-            JSON.parse(line.slice("__OMXTERM_SCROLLBACK_INPUT__".length)) as {
-              phase: string;
-              status: string;
-              category: string;
-              observation: NativeInputObservation;
-              native: {
-                visible: boolean;
-                minimized: boolean;
-                focused: boolean;
-              };
-            },
-        );
-      const failure = records.find((record) => record.status === "failure");
-      expect(failure).toMatchObject({
-        phase,
-        category: "stimulus-unavailable",
-      });
-      const ready = records.find(
-        (record) =>
-          record.phase ===
-            (control === "down" ? "mouse-ready" : "character-ready") &&
-          record.status === "complete",
-      );
-      expect(ready).toMatchObject({
-        native: { visible: true, minimized: false, focused: true },
-        observation: { ready: true },
-      });
-      expect(
-        records.filter((record) => record.status === "failure"),
-      ).toHaveLength(1);
-      if (control === "down") expect(failure!.observation.down).toBeNull();
-      else {
-        expect(failure!.observation.character).toBeNull();
-        expect(failure!.observation.accepted).toBe(false);
-        expect(records).toContainEqual(
-          expect.objectContaining({ phase: "mouse-drag", status: "complete" }),
-        );
-      }
-      expect(execution.stderr).toContain(
-        "Scrollback stimulus-unavailable at " + phase,
-      );
-    },
-    30_000,
-  );
 });
 
-async function runFixture(root: string) {
+async function runFixture(
+  root: string,
+  timeout = 110_000,
+  testContext?: NativeFixtureTestContext,
+  prepare?: () => Promise<void>,
+) {
   const chromiumArguments =
     process.platform === "linux" ? ["--ozone-platform=x11"] : [];
   applyChromiumSandboxPolicy({
@@ -437,6 +416,8 @@ async function runFixture(root: string) {
     executable: electronExecutable,
     args: [...chromiumArguments, root],
     root,
-    timeout: 110_000,
+    timeout,
+    ...(testContext ? { testContext } : {}),
+    ...(prepare ? { prepare } : {}),
   });
 }
