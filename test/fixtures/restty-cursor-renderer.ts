@@ -14,7 +14,15 @@ const root = document.querySelector<HTMLElement>("#terminal-tabs")!;
 const frames = async () => {
   for (let i = 0; i < 3; i++)
     await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => resolve()),
+      requestAnimationFrame(() => {
+        // Hold the actual frame continuation at the normal renderer await seam.
+        if (
+          new URLSearchParams(location.search).get("cursorControl") ===
+          "held-execute"
+        )
+          console.info("__OMXTERM_CURSOR_CONTROL__held-execute");
+        else resolve();
+      }),
     );
 };
 function createFixture() {
