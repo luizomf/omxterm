@@ -1,6 +1,7 @@
 import { copyFile, mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
+import { readAboutDiagnostics } from "../fixtures/application-about-diagnostics";
 import { build } from "esbuild";
 import electron from "electron";
 import { expect, it } from "vitest";
@@ -22,6 +23,12 @@ it.each([
       const fixture = path.join(root, "fixture.mjs");
       const resultPath = path.join(root, "result.json");
       const resourcesPath = path.join(root, "resources");
+      // Persist outside the disposable profile before the supervisor can remove it.
+      const diagnosticsPath = path.resolve(
+        ".scratch/about-diagnostics",
+        `${path.basename(root)}.jsonl`,
+      );
+      await mkdir(path.dirname(diagnosticsPath), { recursive: true });
       // Only the selected source exists, so packaged mode cannot accidentally
       // succeed by reading the development checkout's icon.
       const iconPath = path.join(
@@ -53,6 +60,7 @@ it.each([
           entry,
           resultPath,
           mode === "packaged" ? resourcesPath : "development",
+          `--fixture-about-diagnostics=${diagnosticsPath}`,
           ...(!["development", "packaged"].includes(mode)
             ? [`--fixture-${mode}`]
             : []),
@@ -64,8 +72,14 @@ it.each([
             ? 8_000
             : 25_000,
       });
+      const diagnostics = await readAboutDiagnostics(diagnosticsPath);
+      const evidence = JSON.stringify({
+        execution,
+        diagnostics,
+        diagnosticsPath,
+      });
       if (mode === "missing-result" || mode === "published-hang") {
-        expect(execution).toMatchObject({
+        expect(execution, evidence).toMatchObject({
           reason: "timeout",
           cleanupErrors: [],
         });
@@ -73,7 +87,7 @@ it.each([
         return;
       }
       if (mode === "published-failure") {
-        expect(execution).toMatchObject({
+        expect(execution, evidence).toMatchObject({
           exitCode: 3,
           reason: "exit",
           cleanupErrors: [],
@@ -81,7 +95,7 @@ it.each([
         await expect(stat(root)).rejects.toMatchObject({ code: "ENOENT" });
         return;
       }
-      expect(execution, JSON.stringify(execution)).toMatchObject({
+      expect(execution, evidence).toMatchObject({
         exitCode: 0,
         signal: null,
         reason: "exit",

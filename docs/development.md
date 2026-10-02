@@ -272,8 +272,18 @@ check actual bounds rather than requiring a historical height to survive tiling;
 `standard` declares maximize behavior, not an absence of tiling.
 
 About startup tests retain the desktop's Wayland environment and exercise the
-production X11 relaunch. Their supervised completion file records the
-result producer's process-exit outcome, not the original launcher's success.
+production X11 relaunch. About-specific bounded stage/error-category metadata is
+written before self-inventory and production import to
+`.scratch/about-diagnostics/`, outside the disposable profile. Assertion failures
+include the validated metadata, which survives supervisor profile removal even
+when detached replacement stderr is ignored. It contains no raw error text or
+terminal data and is neither completion nor authenticated ownership evidence.
+Missing/unreadable diagnostics never establish success; inspection, completion,
+producer-death and timeout guards remain unchanged. This improves observability,
+not the diagnosis of historical intermittent Fedora failures.
+
+Their supervised completion file records the result producer's process-exit
+outcome, not the original launcher's success.
 The supervisor validates registered identity and waits for that producer to
 actually disappear before accepting its outcome. An observation file alone
 cannot pass a hanging or failed replacement. Missing evidence is a bounded
