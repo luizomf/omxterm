@@ -256,6 +256,35 @@ OMXTERM_TEST_CURSOR_PRESENTATION_CONTROL=hide npx vitest run test/integration/re
 OMXTERM_TEST_WINDOW_POLICY=hyprland-suppress-maximize OMXTERM_TEST_CURSOR_PRESENTATION_CONTROL=hide npm run check:portable
 ```
 
+The background-tab removal fixture waits for the main process's actual initial
+selection acknowledgement and a renderer task/microtask boundary before sending
+the first new-tab command. A shell's raw `READY` output alone is not Surface or
+host-command subscription readiness. Five-second named operation deadlines and
+abortable condition polling retain the outer 90-second supervisor and every
+ordinary C-exit, selection, Surface identity, Paste, native keyboard, Snippet and
+background-isolation assertion.
+
+Fixture-only mount wiring holds the actual first Surface return. The gated
+positive observes no early new-tab command and then runs all original assertions.
+Its unsafe-ordering control observes the actual early command while held,
+releases the Surface, and requires a `second-program` deadline with only one
+session; a separate actual renderer-boundary hold must fail at
+`initial-renderer-boundary`. Fixed control markers prevent unrelated failures
+from satisfying either control. The original empty-journal timeout's historical
+phase and cause remain unknown; these controls establish a fixture readiness gap,
+not a shipping host or GPU defect.
+
+Fixed `__OMXTERM_TAB_REMOVAL_PHASE__` begin/complete/failure records survive profile
+removal in `.scratch/native-fixtures/`. They contain only named phases, failure
+categories, bounded session counts, selection/background-exit booleans and native
+visible/minimized/focused state. They contain no terminal content, renderer
+expression, arbitrary errors or identifiers and are not completion or ownership
+evidence. Missing metadata cannot satisfy diagnostic assertions.
+
+```sh
+npx vitest run test/unit/tab-removal-readiness.test.ts test/integration/tab-removal.test.ts
+```
+
 Window Chrome fixtures retain real native/content/Surface/PTY bounds and
 window-manager behavior coverage.
 

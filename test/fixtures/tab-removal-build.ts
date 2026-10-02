@@ -42,6 +42,29 @@ export async function buildFixture(root: string) {
           format: "iife",
           platform: "browser",
           loader: { ".ttf": "binary" },
+          plugins: [
+            {
+              name: "hold-real-initial-surface-return",
+              setup(plugin) {
+                plugin.onResolve(
+                  { filter: /restty-terminal-surface$/ },
+                  (args) => {
+                    if (
+                      args.importer ===
+                      path.join(projectRoot, "src/renderer/index.ts")
+                    )
+                      return {
+                        path: path.join(
+                          projectRoot,
+                          "test/fixtures/tab-removal-surface-control.ts",
+                        ),
+                      };
+                    return undefined;
+                  },
+                );
+              },
+            },
+          ],
           logLevel: "silent",
           outfile: path.join(root, "renderer", "index.js"),
         }),

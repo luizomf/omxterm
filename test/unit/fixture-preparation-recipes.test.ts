@@ -136,6 +136,7 @@ const recipes: readonly Recipe[] = [
     builds: standardBuilds,
     files: standardFiles,
     failure: "symlink",
+    plugins: ["hold-real-initial-surface-return"],
   },
   {
     name: "failure-acknowledgement",
