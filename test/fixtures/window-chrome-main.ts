@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, Menu, screen } from "electron";
 import { mkdirSync, writeSync } from "node:fs";
+import assert from "node:assert/strict";
 import path from "node:path";
 import { terminalWindowOptions } from "../../src/main/terminal-window";
 import { createWindowBackgroundEffectsOwner } from "../../src/main/window-background-effects";
@@ -28,6 +29,55 @@ import {
 } from "./restty-host-platform";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { exerciseWindowChrome } from "./window-chrome-exercise";
+import { assertNativeChromeConstruction } from "./window-chrome-construction";
+import { chromeNativeExpectation } from "./window-policy";
+import type {
+  IpcListener,
+  IpcMainPort,
+} from "../../src/main/terminal-ipc-types";
+
+const routeControl = process.argv
+  .find((arg) => arg.startsWith("--fixture-chrome-control="))
+  ?.split("=")[1];
+assert.ok(
+  routeControl === undefined ||
+    [
+      "drop-route",
+      "wrong-owner",
+      "duplicate-route",
+      "disabled-maximize",
+      "disabled-resize",
+    ].includes(routeControl),
+  "Unknown Chrome rejection control",
+);
+const chromeListeners = new Map<IpcListener, IpcListener>();
+const controlledChromeIpc: Pick<IpcMainPort, "on" | "removeListener"> = {
+  on(channel, listener) {
+    const wrapped: IpcListener = (event, payload) => {
+      if (
+        routeControl &&
+        channel === terminalIpc.windowChromeCommand &&
+        payload === "maximize" &&
+        event.sender === windows[0]?.webContents
+      ) {
+        process.stdout.write(`__OMXTERM_CHROME_CONTROL__${routeControl}\n`);
+        if (routeControl === "drop-route") return;
+        if (routeControl === "wrong-owner") {
+          windows[1]!.maximize();
+          return;
+        }
+        if (routeControl === "duplicate-route") listener(event, payload);
+      }
+      listener(event, payload);
+    };
+    chromeListeners.set(listener, wrapped);
+    ipcMain.on(channel, wrapped);
+  },
+  removeListener(channel, listener) {
+    ipcMain.removeListener(channel, chromeListeners.get(listener) ?? listener);
+    chromeListeners.delete(listener);
+  },
+};
 import { exerciseWindowsHandleDrag } from "./window-chrome-native-drag";
 import {
   exerciseApplicationMenu,
@@ -102,15 +152,29 @@ app
       });
       return;
     }
+    const nativeExpectation = chromeNativeExpectation(process.argv);
+    process.stdout.write(
+      `__OMXTERM_CHROME_NATIVE_EXPECTATION__${nativeExpectation}\n`,
+    );
     const router = registerTerminalIpcRouter(ipcMain);
     application = startTerminalApplication<BrowserWindow>({
       createWindow(lifecycle) {
+        const nativeOptions = terminalWindowOptions(
+          path.join(root, "preload.cjs"),
+          configuration,
+          process.platform,
+        );
+        if (routeControl === "disabled-maximize") {
+          nativeOptions.maximizable = false;
+          process.stdout.write("__OMXTERM_CHROME_CONTROL__disabled-maximize\n");
+        }
+        if (routeControl === "disabled-resize") {
+          nativeOptions.resizable = false;
+          process.stdout.write("__OMXTERM_CHROME_CONTROL__disabled-resize\n");
+        }
+        assertNativeChromeConstruction(nativeOptions, process.platform);
         const window = new BrowserWindow({
-          ...terminalWindowOptions(
-            path.join(root, "preload.cjs"),
-            configuration,
-            process.platform,
-          ),
+          ...nativeOptions,
           webPreferences: {
             ...terminalWindowOptions(
               path.join(root, "preload.cjs"),
@@ -127,7 +191,7 @@ app
         );
         backgroundTransparencies.set(window, backgroundTransparency);
         guardTerminalWindowClose(window, application);
-        const chrome = registerWindowChrome(window, ipcMain, {
+        const chrome = registerWindowChrome(window, controlledChromeIpc, {
           platform: process.platform,
           showTitleBar: configuration.showTitleBar,
           cursor: () => (nativeCursor ? screen.getCursorScreenPoint() : cursor),
@@ -264,6 +328,7 @@ app
     });
     await application.newWindow();
     const result = await exerciseWindowChrome({
+      nativeExpectation,
       window: windows[0]!,
       cells,
       queryCell: (index) => cellQueries[index]!(),

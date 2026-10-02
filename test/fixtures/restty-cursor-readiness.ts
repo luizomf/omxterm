@@ -29,20 +29,6 @@ const operations = [
 export const CURSOR_PHASE_PREFIX = "__OMXTERM_CURSOR_PHASE__";
 export const CURSOR_STEP_TIMEOUT = 5000;
 
-export function selectCursorPresentationControl(
-  declaration: string | undefined,
-): "early-minimize" | "early-hide" {
-  if (
-    declaration !== undefined &&
-    declaration !== "minimize" &&
-    declaration !== "hide"
-  )
-    throw new Error(
-      "OMXTERM_TEST_CURSOR_PRESENTATION_CONTROL must be minimize or hide",
-    );
-  return declaration === "hide" ? "early-hide" : "early-minimize";
-}
-
 export interface CursorStep {
   readonly dpr: 1 | 2;
   readonly font: "bundled" | "configured";

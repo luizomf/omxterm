@@ -9,11 +9,17 @@ import { expect, it } from "vitest";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
 import {
   CURSOR_PHASE_PREFIX,
-  selectCursorPresentationControl,
   type CursorDiagnostic,
 } from "../fixtures/restty-cursor-readiness";
 
+import { observeNativeWindow } from "../fixtures/native-window-observation";
+import {
+  nativeWindowDiscoveryTimeout,
+  rejectLegacyNativeWindowDeclarations,
+} from "../fixtures/window-policy";
+
 async function runCursor(dpr: number, control?: string) {
+  rejectLegacyNativeWindowDeclarations();
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-cursor-"));
   await buildFixture(root);
   let supervised = false;
@@ -81,13 +87,20 @@ it.each([1, 2])(
   120_000,
 );
 
-const presentationControl = selectCursorPresentationControl(
-  process.env.OMXTERM_TEST_CURSOR_PRESENTATION_CONTROL,
-);
-
-it.each([presentationControl, "held-execute", "held-capture"])(
+it.each(["unavailable-presentation", "held-execute", "held-capture"])(
   "rejects native cursor readiness control %s with retained phase evidence and supervised cleanup",
-  async (control) => {
+  async (scenario) => {
+    const control =
+      scenario === "unavailable-presentation"
+        ? await observeNativeWindow("cursor", 1)
+        : scenario;
+    expect([
+      "early-minimize",
+      "early-hide",
+      "held-execute",
+      "held-capture",
+    ]).toContain(control);
+    // Discovery has separate supervision; this still bounds only the behavior guard.
     const started = Date.now();
     const { result, phases } = await runCursor(1, control);
     const evidence = JSON.stringify({ result, phases });
@@ -136,5 +149,5 @@ it.each([presentationControl, "held-execute", "held-capture"])(
       evidence,
     ).toHaveLength(1);
   },
-  120_000,
+  nativeWindowDiscoveryTimeout("cursor") + 120_000,
 );

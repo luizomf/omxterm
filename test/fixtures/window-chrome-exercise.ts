@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import type { BrowserWindow } from "electron";
 import type { TerminalApplication } from "../../src/main/terminal-application";
 import type { LocalTerminalSession } from "../../src/main/local-terminal-session";
-import { fixtureWindowPolicy } from "./window-policy";
+import {
+  NATIVE_RESPONSE_MS,
+  type ChromeNativeExpectation,
+} from "./window-policy";
 import { windowGridFits } from "./window-grid-fit";
 
 async function waitFor(
@@ -16,15 +19,34 @@ async function waitFor(
   }
   throw new Error(`Timed out waiting for ${label}`);
 }
-async function exerciseCustomControlFocus(window: BrowserWindow) {
+export async function exerciseCustomControlFocus(
+  window: BrowserWindow,
+  expectation: ChromeNativeExpectation,
+  peer: BrowserWindow,
+) {
   if (process.platform === "darwin") return;
+  assert.notEqual(
+    expectation,
+    "not-exercised-macos",
+    "Missing native comparison for custom controls",
+  );
   const terminalFocused = async () =>
     (await window.webContents.executeJavaScript(
       "document.querySelector('.terminal-surface:not([hidden])').contains(document.activeElement)",
     )) as boolean;
   window.focus();
   await waitFor(terminalFocused, "terminal input focus before window controls");
-  const denied = fixtureWindowPolicy() === "hyprland-suppress-maximize";
+  const denied = expectation === "native-maximize-not-observed";
+  const healthy = () => {
+    assert.ok(
+      !window.isDestroyed() &&
+        window.isVisible() &&
+        !window.isMinimized() &&
+        !window.isFullScreen(),
+      "Custom control target must remain presented",
+    );
+  };
+  healthy();
   assert.equal(window.isMaximized(), false);
   for (const label of denied
     ? ["Maximize", "Maximize"]
@@ -33,11 +55,38 @@ async function exerciseCustomControlFocus(window: BrowserWindow) {
       const bounds = document.querySelector('[aria-label="${label}"]').getBoundingClientRect();
       return { x: Math.round(bounds.x + bounds.width / 2), y: Math.round(bounds.y + bounds.height / 2) };
     })()`)) as { x: number; y: number };
-    let requests = 0;
+    const requests = { maximize: 0, unmaximize: 0, foreign: 0 };
     const nativeMaximize = window.maximize;
+    const nativeRestore = window.unmaximize;
+    const peerMaximize = peer.maximize;
+    const peerRestore = peer.unmaximize;
     window.maximize = () => {
-      requests += 1;
+      requests.maximize += 1;
       nativeMaximize.call(window);
+    };
+    window.unmaximize = () => {
+      requests.unmaximize += 1;
+      nativeRestore.call(window);
+    };
+    peer.maximize = () => {
+      requests.foreign += 1;
+      peerMaximize.call(peer);
+    };
+    peer.unmaximize = () => {
+      requests.foreign += 1;
+      peerRestore.call(peer);
+    };
+    const exactRoute = () => {
+      healthy();
+      assert.equal(
+        requests.foreign,
+        0,
+        "Custom control invoked wrong native owner",
+      );
+      assert.ok(
+        requests.maximize + requests.unmaximize <= 1,
+        "Custom control duplicated native invocation",
+      );
     };
     window.webContents.sendInputEvent({ type: "mouseMove", ...point });
     for (const type of ["mouseDown", "mouseUp"] as const)
@@ -48,30 +97,45 @@ async function exerciseCustomControlFocus(window: BrowserWindow) {
         ...point,
       });
     try {
-      if (label === "Maximize")
-        await waitFor(
-          () => requests === 1,
-          "custom control invokes native maximize",
+      await waitFor(() => {
+        exactRoute();
+        return (
+          (label === "Maximize" ? requests.maximize : requests.unmaximize) > 0
         );
+      }, "custom control invokes intended native action");
       if (denied) {
         // Observe a complete bounded native-response interval, not immediate
         // unchanged state before the click has even reached main.
-        const deadline = Date.now() + 750;
+        const deadline = Date.now() + NATIVE_RESPONSE_MS;
         while (Date.now() < deadline) {
+          exactRoute();
           assert.equal(
             window.isMaximized(),
             false,
-            "compositor denies maximize",
+            "Native maximize must remain unobserved within the response budget",
           );
           await new Promise((resolve) => setTimeout(resolve, 25));
         }
       } else
-        await waitFor(
-          () => window.isMaximized() === (label === "Maximize"),
-          `native ${label} through the custom control`,
-        );
+        await waitFor(() => {
+          exactRoute();
+          return window.isMaximized() === (label === "Maximize");
+        }, `native ${label} through the custom control`);
+      exactRoute();
+      assert.deepEqual(
+        requests,
+        {
+          maximize: label === "Maximize" ? 1 : 0,
+          unmaximize: label === "Restore" ? 1 : 0,
+          foreign: 0,
+        },
+        "Exact native action route count",
+      );
     } finally {
       window.maximize = nativeMaximize;
+      window.unmaximize = nativeRestore;
+      peer.maximize = peerMaximize;
+      peer.unmaximize = peerRestore;
     }
     await waitFor(
       async () =>
@@ -80,6 +144,7 @@ async function exerciseCustomControlFocus(window: BrowserWindow) {
         )) as boolean,
       "native maximize state reaches renderer",
     );
+    healthy();
     assert.equal(await terminalFocused(), true, `${label} retains input focus`);
   }
 }
@@ -136,6 +201,7 @@ const geometryScript = `(() => {
 
 export async function exerciseWindowChrome(options: {
   readonly window: BrowserWindow;
+  readonly nativeExpectation: ChromeNativeExpectation;
   readonly application: TerminalApplication<BrowserWindow>;
   readonly sessions: readonly LocalTerminalSession[];
   readonly sizes: ReadonlyArray<ReadonlyArray<{ cols: number; rows: number }>>;
@@ -341,7 +407,11 @@ export async function exerciseWindowChrome(options: {
     "Surface and PTY fit actual native bounds after second window",
   );
   assert.equal(sizes[0]!.length, hiddenSizeCount);
-  await exerciseCustomControlFocus(window);
+  await exerciseCustomControlFocus(
+    window,
+    options.nativeExpectation,
+    options.second(),
+  );
   await waitFor(
     fitsNativeBounds,
     "Surface and PTY fit native bounds after custom controls",
@@ -359,7 +429,7 @@ export async function exerciseWindowChrome(options: {
   assert.equal(isolation.isolated, true);
   return {
     platform: process.platform,
-    windowPolicy: fixtureWindowPolicy(),
+    nativeExpectation: options.nativeExpectation,
     nativeGeometryVerified: true,
     menu,
     titlePixels,
