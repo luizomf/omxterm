@@ -293,6 +293,17 @@ continuation offsets and clipping. Actual-core regressions distinguish both
 seams from legitimate text reflow. No image-coordinate compensation, forced
 viewport scroll or history deletion is added to the renderer.
 
+The subsequent live pending-wrap correction reconciles the cursor's insertion
+position after its last printed cell is remapped by resize. It mirrors the
+existing saved-cursor adjustment and uses the cursor helper to keep the tracked
+pin and cached position/cell coherent. A cell still at the new right edge keeps
+pending wrap; elsewhere, pending wrap clears and the next insertion column is
+selected. Without this, the next character moves down without a soft-wrap
+marker and actual selection gains an unintended LF. Deliberate producer hard
+breaks, non-reflow alternate screens and wraparound-disabled edge overwrite
+remain distinct. The correction belongs in the pinned core, not clipboard
+normalization, a renderer coordinate adjustment or a resize timing workaround.
+
 The decision carries the maintenance cost of a pinned dependency correction and
 the runtime cost of requiring WebGL2. In return, OMXTerm avoids unsafe
 passthrough, invisible shells, a permanent fallback renderer, and a speculative

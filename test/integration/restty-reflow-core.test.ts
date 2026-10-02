@@ -21,6 +21,15 @@ type Core = WebAssembly.Exports & {
   restty_scrollbar_offset(handle: number): number;
   restty_scrollbar_len(handle: number): number;
   restty_scroll_viewport(handle: number, delta: number): number;
+  restty_selection_text(
+    handle: number,
+    anchorRow: number,
+    anchorCol: number,
+    focusRow: number,
+    focusCol: number,
+    pointerOut: number,
+    lengthOut: number,
+  ): number;
 };
 
 async function terminal(cols: number, rows: number, maxBytes = 10_000_000) {
@@ -95,11 +104,180 @@ async function terminal(cols: number, rows: number, maxBytes = 10_000_000) {
         },
       );
     },
+    copy() {
+      expect(core.restty_render_update(handle)).toBe(0);
+      const offset = core.restty_scrollbar_offset(handle);
+      const result = core.restty_alloc(8);
+      let pointer = 0;
+      let length = 0;
+      try {
+        expect(
+          core.restty_selection_text(
+            handle,
+            -offset,
+            0,
+            core.restty_active_cursor_y(handle),
+            cols - 1,
+            result,
+            result + 4,
+          ),
+        ).toBe(0);
+        const view = new DataView(core.memory.buffer);
+        pointer = view.getUint32(result, true);
+        length = view.getUint32(result + 4, true);
+        return new TextDecoder().decode(
+          new Uint8Array(core.memory.buffer, pointer, length),
+        );
+      } finally {
+        if (pointer && length) core.restty_free(pointer, length);
+        core.restty_free(result, 8);
+      }
+    },
     destroy() {
       core.restty_destroy(handle);
     },
   };
 }
+
+it("continues pending-wrap output without adding a hard break after width growth", async () => {
+  const t = await terminal(5, 3);
+  try {
+    t.write("aaaaa");
+    t.resize(6);
+    t.write("b");
+    expect(t.copy()).toBe("aaaaab");
+    expect(t.snapshot().cursor).toEqual([5, 0]);
+    expect(t.snapshot().text).toEqual(["aaaaab", "......", "......"]);
+  } finally {
+    t.destroy();
+  }
+});
+
+it.each([
+  { label: "shrink", before: "aaaaa", cols: 4, cursor: [2, 1] },
+  {
+    label: "one character before row end",
+    before: "aaaa",
+    cols: 6,
+    cursor: [5, 0],
+  },
+  {
+    label: "one character after row end",
+    before: "aaaaaa",
+    cols: 6,
+    cursor: [1, 1],
+  },
+  { label: "same width", before: "aaaaa", cols: 5, cursor: [1, 1] },
+  {
+    label: "new right edge on growth",
+    before: "aaaaaaaaaa",
+    cols: 10,
+    cursor: [1, 1],
+  },
+  {
+    label: "new right edge on shrink",
+    before: "aaaaaaaaaa",
+    cols: 2,
+    cursor: [1, 2],
+  },
+])(
+  "keeps exact selection and insertion position through $label",
+  async ({ before, cols, cursor }) => {
+    const t = await terminal(5, 3);
+    try {
+      t.write(before);
+      t.resize(cols);
+      t.write("b");
+      expect(t.copy()).toBe(before + "b");
+      expect(t.snapshot().cursor).toEqual(cursor);
+    } finally {
+      t.destroy();
+    }
+  },
+);
+
+it.each([0, 10_000_000])(
+  "continues a row-end insertion with history byte limit %i",
+  async (maxBytes) => {
+    const t = await terminal(5, 3, maxBytes);
+    try {
+      t.write("aaaaa");
+      t.resize(4);
+      t.write("b");
+      expect(t.copy()).toBe("aaaaab");
+      expect(t.snapshot().text).toEqual(["aaaa", "ab..", "...."]);
+    } finally {
+      t.destroy();
+    }
+  },
+);
+
+it("keeps retained hard history separate while continuing pending-wrap output", async () => {
+  const t = await terminal(5, 3);
+  try {
+    t.write("H\r\n".repeat(6) + "aaaaa");
+    t.resize(6);
+    t.write("b");
+    expect(t.copy()).toBe("H\n".repeat(6) + "aaaaab");
+    expect(t.snapshot().text).toEqual(["H.....", "H.....", "aaaaab"]);
+  } finally {
+    t.destroy();
+  }
+});
+
+it("preserves a producer hard break after a full-width row through refit", async () => {
+  const t = await terminal(5, 3);
+  try {
+    t.write("aaaaa\r\n");
+    t.resize(6);
+    t.write("b");
+    expect(t.copy()).toBe("aaaaa\nb");
+    expect(t.snapshot().cursor).toEqual([1, 1]);
+  } finally {
+    t.destroy();
+  }
+});
+
+it.each([
+  { cols: 6, copy: "aaaaab", cursor: [5, 0] },
+  { cols: 5, copy: "aaaab", cursor: [4, 0] },
+  { cols: 4, copy: "aaab", cursor: [3, 0] },
+])(
+  "keeps non-reflow insertion and edge overwrite with wraparound disabled at $cols columns",
+  async ({ cols, copy, cursor }) => {
+    const t = await terminal(5, 3);
+    try {
+      t.write("\u001b[?7laaaaa");
+      t.resize(cols);
+      t.write("b");
+      expect(t.copy()).toBe(copy);
+      expect(t.snapshot().cursor).toEqual(cursor);
+    } finally {
+      t.destroy();
+    }
+  },
+);
+
+it.each([
+  { cols: 6, copy: "aaaaab", cursor: [5, 0] },
+  { cols: 4, copy: "aaaab", cursor: [1, 1] },
+])(
+  "continues pending wrap in the non-reflow alternate screen at $cols columns",
+  async ({ cols, copy, cursor }) => {
+    const t = await terminal(5, 3);
+    try {
+      t.write("P\u001b[?1049h\u001b[Haaaaa");
+      t.resize(cols);
+      t.write("b");
+      expect(t.copy()).toBe(copy);
+      expect(t.snapshot().cursor).toEqual(cursor);
+      t.write("\u001b[?1049lQ");
+      expect(t.copy()).toBe("PQ");
+    } finally {
+      t.destroy();
+    }
+  },
+);
 
 it("keeps wrapping history above a cleared active screen on width refit", async () => {
   const t = await terminal(5, 3);

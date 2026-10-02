@@ -542,8 +542,10 @@ the same Surface, core, Live Terminal Session and PTY and preserve coherent
 reflow, alternate-screen, selection and viewport state. Width reflow of retained
 history does not consume the cleared active screen's trailing blank rows as if
 that history were newly wrapped active text. Genuine active wrapping still moves
-text and cursor normally. Each Surface remains
-independent. Accepted keyboard input and delivered paste, snippet, or path input return the
+text and cursor normally. Resizing at a pending soft-wrap boundary preserves
+its next insertion position and continued output; it does not turn that
+continuation into a hard break in selection or copy. Genuine producer hard
+breaks remain unchanged. Each Surface remains independent. Accepted keyboard input and delivered paste, snippet, or path input return the
 viewport to the live cursor. Output alone, protocol replies, focus, selection,
 and cancelled paste do not force the viewport to the bottom.
 The scrollback scrollbar shows a thumb only while scrollback

@@ -14,6 +14,7 @@ import {
   outputCheckpointProducer,
 } from "./restty-output-checkpoint";
 import { outputCheckpointCopyDiagnostic } from "./restty-output-drop-evidence";
+import { outputRefitProducer, prepareOutputRefit } from "./restty-output-refit";
 
 export interface OutputStressEvidence {
   readonly source: ReturnType<
@@ -38,6 +39,11 @@ export interface OutputStressEvidence {
     NonNullable<LocalTerminalSession["outputFlowMetrics"]>
   >;
   readonly resizeObserved: boolean;
+  readonly controlledRefit?: {
+    readonly original: { readonly cols: number; readonly rows: number };
+    readonly refitted: { readonly cols: number; readonly rows: number };
+    readonly prefixUnits: number;
+  };
   readonly producerExit: { readonly exitCode: number; readonly signal: number };
   readonly memory: {
     readonly mainHeapUsedBytes: number;
@@ -50,6 +56,7 @@ export function outputStressLaunchRequest(
   index: number,
   sessionIndex = 2,
   checkpoints = OUTPUT_CHECKPOINTS,
+  controlledRefit = false,
 ): LaunchRequest | undefined {
   if (index !== sessionIndex) return undefined;
   const executable = process.env["npm_node_execpath"];
@@ -58,13 +65,19 @@ export function outputStressLaunchRequest(
   return {
     kind: "explicit-command",
     executable,
-    arguments: ["-e", outputCheckpointProducer(checkpoints)],
+    arguments: [
+      "-e",
+      controlledRefit
+        ? outputRefitProducer(checkpoints)
+        : outputCheckpointProducer(checkpoints),
+    ],
   };
 }
 
 export function createOutputStressHarness({
   sessionIndex = 2,
   checkpoints = OUTPUT_CHECKPOINTS,
+  controlledRefit = false,
 } = {}) {
   const source = createOutputSourceObserver(checkpoints);
   const destination: ReturnType<typeof assertOutputCheckpoint>[] = [];
@@ -171,6 +184,13 @@ export function createOutputStressHarness({
         throw new Error(
           `Output checkpoint fixture needs at least 20 columns, observed ${columns}`,
         );
+      const refit = controlledRefit
+        ? await prepareOutputRefit({
+            window,
+            sizes: options.resizes[sessionIndex]!,
+            waitFor,
+          })
+        : undefined;
       const resizesBefore = options.resizes[sessionIndex]!.length;
       const rendererStall = window.webContents.executeJavaScript(
         "{ const end = performance.now() + 350; while (performance.now() < end) {} }",
@@ -179,14 +199,16 @@ export function createOutputStressHarness({
       void rendererStall.catch(() => undefined);
       await new Promise((resolve) => setTimeout(resolve, 25));
       holdAcknowledgements = true;
-      terminal.write("g");
-      const resizeTimer = setTimeout(() => {
-        const bounds = window.getBounds();
-        window.setBounds({
-          ...bounds,
-          width: bounds.width === 920 ? 900 : 920,
-        });
-      }, 100);
+      terminal.write(refit ? `g${refit.prefixUnits};` : "g");
+      const resizeTimer = refit
+        ? undefined
+        : setTimeout(() => {
+            const bounds = window.getBounds();
+            window.setBounds({
+              ...bounds,
+              width: bounds.width === 920 ? 900 : 920,
+            });
+          }, 100);
       try {
         await new Promise((resolve) => setTimeout(resolve, 400));
         await waitFor(
@@ -201,24 +223,38 @@ export function createOutputStressHarness({
         () => (terminal.outputFlowMetrics?.().resumeCount ?? 0) > 0,
         "output backpressure resume",
       );
-      for (let batch = 0; batch < checkpoints; batch++) {
-        await waitFor(
-          () => source.checkpoints() === batch + 1,
-          `source checkpoint ${batch}`,
-        );
-        await waitFor(
-          () => terminal.outputFlowMetrics?.().pendingBytes === 0,
-          `checkpoint ${batch} complete original output acknowledgement`,
-        );
-        copyPendingBytes = terminal.outputFlowMetrics!().pendingBytes;
-        expectingCopy = batch;
-        window.webContents.send(terminalIpc.clipboardAction, "select-all");
-        window.webContents.send(terminalIpc.clipboardAction, "copy");
-        await waitFor(() => {
-          if (destinationError) throw destinationError;
-          return destination.length === batch + 1;
-        }, `actual copied destination checkpoint ${batch}`);
-        if (batch + 1 < checkpoints) terminal.write("n");
+      try {
+        if (refit) {
+          await waitFor(
+            () =>
+              source.evidence().bytes === refit.prefixUnits + 30 &&
+              terminal.outputFlowMetrics?.().pendingBytes === 0,
+            "row-end prefix complete original output acknowledgement",
+          );
+          await refit.refit();
+          terminal.write("r");
+        }
+        for (let batch = 0; batch < checkpoints; batch++) {
+          await waitFor(
+            () => source.checkpoints() === batch + 1,
+            `source checkpoint ${batch}`,
+          );
+          await waitFor(
+            () => terminal.outputFlowMetrics?.().pendingBytes === 0,
+            `checkpoint ${batch} complete original output acknowledgement`,
+          );
+          copyPendingBytes = terminal.outputFlowMetrics!().pendingBytes;
+          expectingCopy = batch;
+          window.webContents.send(terminalIpc.clipboardAction, "select-all");
+          window.webContents.send(terminalIpc.clipboardAction, "copy");
+          await waitFor(() => {
+            if (destinationError) throw destinationError;
+            return destination.length === batch + 1;
+          }, `actual copied destination checkpoint ${batch}`);
+          if (batch + 1 < checkpoints) terminal.write("n");
+        }
+      } finally {
+        if (refit) await refit.restore();
       }
       const flow = terminal.outputFlowMetrics?.();
       if (!flow) throw new Error("Output flow metadata is unavailable");
@@ -254,6 +290,15 @@ export function createOutputStressHarness({
         acknowledgements: { count: ackCount, cumulativeEnd },
         flow,
         resizeObserved: options.resizes[sessionIndex]!.length > resizesBefore,
+        ...(refit
+          ? {
+              controlledRefit: {
+                original: refit.original,
+                refitted: refit.refitted,
+                prefixUnits: refit.prefixUnits,
+              },
+            }
+          : {}),
         producerExit: producerExit!,
         memory: {
           mainHeapUsedBytes: memory.heapUsed,

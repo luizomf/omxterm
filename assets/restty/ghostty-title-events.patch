@@ -34,6 +34,19 @@ index 746a6cf8c..a3a0d5d12 100644
 @@ -1667 +1683 @@ const ReflowCursor = struct {
 -                    self.page.size.cols - 1 - self.x,
 +                    self.page.size.cols - 1 - dst_x,
+diff --git a/src/terminal/Screen.zig b/src/terminal/Screen.zig
+index 208e276a2..35d95f718 100644
+--- a/src/terminal/Screen.zig
++++ b/src/terminal/Screen.zig
+@@ -2130,0 +2131,8 @@ pub inline fn resize(
++    // A pending wrap pins the last printed cell, not the next insertion cell.
++    // Reflow may move that cell away from the new right edge. Match the saved
++    // cursor adjustment below, updating the live pin and cached cell together.
++    if (self.cursor.pending_wrap and self.cursor.x != opts.cols - 1) {
++        self.cursor.pending_wrap = false;
++        self.cursorHorizontalAbsolute(self.cursor.x + 1);
++    }
++
 diff --git a/src/terminal/apc.zig b/src/terminal/apc.zig
 index 1ae70f5f1..fdd524e54 100644
 --- a/src/terminal/apc.zig
