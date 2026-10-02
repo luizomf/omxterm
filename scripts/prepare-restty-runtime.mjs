@@ -113,8 +113,19 @@ const priorSoftWrapSpaceDigest =
   "3fb1a882bc75ee45e1f53370976d215bca7e1f7ba172696ee1985caa5e93d27b";
 const priorVisiblePathBoundaryDigest =
   "62456e988c176b7a6f2a1ee90498b6f2b6b767d063e63b4826830d4663b771af";
-const correctedDigest =
+const priorNativeScrollFeedbackDigest =
   "742a6d14c6906d6d4304199889eff69617f6a5ea25aaee788c2a7d6ee4e31dfa";
+const correctedDigest =
+  "a5a31366381972750bf98651ac028e6bbe370e89d5ca5cc3855c141cd1002638";
+
+const nativeScrollFeedbackCorrections = [
+  {
+    original: "      spacer.style.height = `${currentScrollRangePx}px`;",
+    corrected: `      const scrollTopBeforeSpacer = host.scrollTop;
+      spacer.style.height = \`\${currentScrollRangePx}px\`;
+      if (host.scrollTop !== scrollTopBeforeSpacer) ignoreNextScroll = true;`,
+  },
+];
 
 const cursorCorrections = [
   {
@@ -1929,6 +1940,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, softWrapSpaceCorrections);
       case priorVisiblePathBoundaryDigest:
         source = applyCorrections(source, visiblePathBoundaryCorrections);
+      case priorNativeScrollFeedbackDigest:
+        source = applyCorrections(source, nativeScrollFeedbackCorrections);
         break;
       default:
         throw new Error(

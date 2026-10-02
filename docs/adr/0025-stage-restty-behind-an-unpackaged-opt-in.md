@@ -272,6 +272,18 @@ therefore honors an available fine pointer; devices with touch but no fine
 pointer keep the existing touch path. This changes host selection, not scrolling
 mechanics, core state, hardware configuration or platform security.
 
+The native host also suppresses the browser scroll event caused by its own
+spacer-height write when that write actually clamps `scrollTop`. Such trusted
+browser events are not necessarily user intent. Without suppression, a queued
+clamp event can arrive after the next refit and translate the previous mapping
+into a one-row core scroll away from live. The checksum-guarded correction arms
+Restty's existing programmatic-scroll guard only when the owned spacer write
+changes position; explicit top assignments retain their original guard. It adds
+no timer, unconditional bottom snap, event-trust heuristic or Ghostty change.
+Native coverage crosses actual cell-height boundaries and retains intentional
+DOM scrolling, output/focus preservation and accepted-input return to live.
+This preserves the existing viewport contract rather than widening the Surface API.
+
 The later PageList reflow correction keeps those source pins and core ownership.
 It tracks the original active boundary for preserved-cursor wrap accounting,
 excluding newly exposed historical continuations from active trailing-row

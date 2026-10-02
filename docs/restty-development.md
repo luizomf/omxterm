@@ -88,7 +88,14 @@ native scroll host disables browser scroll anchoring: Restty owns the terminal v
 notice/layout or font-size change must not turn Chromium's anchor adjustment
 into terminal scroll input. Native rendering coverage verifies that shrinking
 and restoring the host with a font-size change preserves the live bottom while
-ordinary output still leaves a deliberately scrolled viewport alone.
+ordinary output still leaves a deliberately scrolled viewport alone. Browser
+clamping during the host's own spacer-height write uses the existing
+programmatic-scroll suppression, just like an explicit `scrollTop` assignment.
+A queued clamp event must not translate a previous scrollbar mapping into a
+user scroll after the next refit. `isTrusted` alone does not establish user intent.
+The native feedback regression requires exact DOM bottom and actual core live
+offset through height transitions, while intentional DOM scrolling remains
+accepted and output/focus do not force it back to live.
 
 ### Input and host-owned policy
 
@@ -420,11 +427,17 @@ boundary used by the host integration; it is not a public API or renderer
 registry.
 
 After preparation, the corrected runtime has SHA-256
-`742a6d14c6906d6d4304199889eff69617f6a5ea25aaee788c2a7d6ee4e31dfa`,
-embedded-core chunk SHA-256
-`dbe1edf4897f11d0de24acb4fd83d94646200a87a58317341525dc0a9d613662`,
-and event declarations SHA-256
-`428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34`.
+`a5a31366381972750bf98651ac028e6bbe370e89d5ca5cc3855c141cd1002638`.
+The preceding prepared runtime
+`742a6d14c6906d6d4304199889eff69617f6a5ea25aaee788c2a7d6ee4e31dfa`
+is a reviewed upgrade input: its remaining ordered suffix adds only spacer-clamp
+suppression. Fresh locked npm bytes and that known prepared input produce the
+same exact final bytes; historical-input/idempotency/drift tests retain both.
+This correction changes Restty JavaScript product/package inputs, not the core.
+The embedded-core chunk and event declarations remain at SHA-256
+`dbe1edf4897f11d0de24acb4fd83d94646200a87a58317341525dc0a9d613662` and
+`428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34`,
+respectively.
 The narrow correction preserves font acquisition/lease cleanup under cache
 pressure and late completion, makes font-load failure reject initialization, disables
 Restty's direct browser clipboard and link-opening callbacks, preserves native
@@ -484,8 +497,9 @@ no-history, shrink/restore, real active wrapping, viewport retention, mixed
 dimensions, clipping, continued soft wraps and independent image deletion.
 Preparation accepts the previous grapheme-corrected embedded-core digest
 `baa7dd9600c034a77e73ed03864c3e15e02ccdc591d2044479652fef1d9c0900`
-as a reviewed input and replaces only its embedded artifact. Runtime JavaScript
-and event declaration bytes remain unchanged; fresh installs and repeated
+as a reviewed input and replaces only its embedded artifact. That core correction
+leaves runtime JavaScript and event declaration bytes unchanged; the separate native-scroll feedback
+correction above changes only runtime JavaScript. Fresh installs and repeated
 preparation produce the same corrected core.
 The Restty patch also enables Ghostty's standard grapheme-cluster mode as a
 reset default so emoji-presentation and ZWJ clusters retain one two-column cell.

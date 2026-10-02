@@ -126,7 +126,7 @@ describe("Restty dependency contract", () => {
       path.join(packageRoot, "dist", "chunk-c0rcpsc5.js"),
     );
     expect(digest(runtime)).toBe(
-      "742a6d14c6906d6d4304199889eff69617f6a5ea25aaee788c2a7d6ee4e31dfa",
+      "a5a31366381972750bf98651ac028e6bbe370e89d5ca5cc3855c141cd1002638",
     );
     const core = readFileSync(
       path.join(packageRoot, "dist", "chunk-6dxqza9q.js"),
@@ -148,6 +148,10 @@ describe("Restty dependency contract", () => {
     expect(source).toContain("/^(regular|book|roman)$/iu");
     expect(source).toContain("required font decode failed");
     expect(source).toContain("setScrollbackLines");
+    expect(source).toContain("const scrollTopBeforeSpacer = host.scrollTop;");
+    expect(source).toContain(
+      "if (host.scrollTop !== scrollTopBeforeSpacer) ignoreNextScroll = true;",
+    );
     expect(source).toContain("setScrollbackLimits");
     expect(source).toContain("setOptionKeyMode");
     expect(source).toContain("getOptionKeyMode");

@@ -4,17 +4,25 @@ import path from "node:path";
 import { build } from "esbuild";
 import { fileURLToPath } from "node:url";
 import { depthExperimentSource } from "./restty-depth-evidence";
+import { observeNativeScrollFeedback } from "./restty-native-scroll-feedback-observer";
 
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 export const resultPrefix = "__OMXTERM_RESTTY_SCROLLBACK_RESULT__";
 
-export async function buildFixture(root: string): Promise<void> {
+export async function buildFixture(
+  root: string,
+  mode: "scrollback" | "native-scroll-feedback" = "scrollback",
+): Promise<void> {
   return prepareFixture(root, async (start) => {
     await build({
       absWorkingDir: projectRoot,
       bundle: true,
-      entryPoints: ["test/fixtures/restty-scrollback-renderer.ts"],
+      entryPoints: [
+        mode === "scrollback"
+          ? "test/fixtures/restty-scrollback-renderer.ts"
+          : "test/fixtures/restty-native-scroll-feedback-renderer.ts",
+      ],
       format: "iife",
       loader: { ".ttf": "binary" },
       logLevel: "silent",
@@ -27,9 +35,11 @@ export async function buildFixture(root: string): Promise<void> {
             builder.onLoad(
               { filter: /chunk-c0rcpsc5\.js$/ },
               async ({ path: runtimePath }) => {
-                const source = depthExperimentSource(
+                let source = depthExperimentSource(
                   await readFile(runtimePath, "utf8"),
                 );
+                if (mode === "native-scroll-feedback")
+                  source = observeNativeScrollFeedback(source);
                 const marker = "  function loop(state) {";
                 if (source.split(marker).length !== 2)
                   throw new Error("Restty RAF instrumentation drifted");
@@ -85,13 +95,17 @@ export async function buildFixture(root: string): Promise<void> {
           `${JSON.stringify({ name: "omxterm-restty-scrollback", main: "main.cjs" })}\n`,
         ),
       ),
-      start(() => writeFile(path.join(root, "main.cjs"), electronMainSource())),
+      start(() =>
+        writeFile(path.join(root, "main.cjs"), electronMainSource(mode)),
+      ),
       start(() => mkdir(path.join(root, "home"), { recursive: true })),
     ]);
   });
 }
 
-function electronMainSource(): string {
+function electronMainSource(
+  mode: "scrollback" | "native-scroll-feedback",
+): string {
   return `
 const { app, BrowserWindow } = require("electron");
 const fs = require("node:fs");
@@ -129,6 +143,21 @@ app.whenReady().then(async () => {
   });
   await window.loadFile(path.join(__dirname, "index.html"));
   window.showInactive();
+  if (${JSON.stringify(mode)} === "native-scroll-feedback") {
+    await waitFor(window, "globalThis.__nativeScrollFeedback?.ready ?? false");
+    try {
+      const result = await window.webContents.executeJavaScript("globalThis.__nativeScrollFeedback.run()", true);
+      process.stdout.write("__OMXTERM_NATIVE_SCROLL_FEEDBACK__" + JSON.stringify(result) + "\\n");
+    } catch (error) {
+      const observations = await window.webContents.executeJavaScript("({ metrics: globalThis.__nativeScrollFeedback.metrics(), events: globalThis.__scrollFeedbackEvents })", true);
+      process.stderr.write(JSON.stringify(observations) + "\\n");
+      throw error;
+    }
+    await window.webContents.executeJavaScript("globalThis.__nativeScrollFeedback.dispose()", true);
+    window.destroy();
+    app.exit(0);
+    return;
+  }
   await waitFor(window, "globalThis.__omxtermResttyScrollback?.ready ?? false");
   const resizeAtBottom = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.resizeAtBottom()", true);
   const initial = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.metrics()", true);

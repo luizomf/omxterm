@@ -1,5 +1,21 @@
 [
   {
+    "name": "priorNativeScrollFeedbackDigest",
+    "sha256": "742a6d14c6906d6d4304199889eff69617f6a5ea25aaee788c2a7d6ee4e31dfa",
+    "edits": [
+      {
+        "start": 48914,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 48912,
+        "deleteCount": 1,
+        "lines": []
+      }
+    ]
+  },
+  {
     "name": "priorVisiblePathBoundaryDigest",
     "sha256": "62456e988c176b7a6f2a1ee90498b6f2b6b767d063e63b4826830d4663b771af",
     "edits": [

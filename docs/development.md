@@ -339,6 +339,24 @@ the pending refit and that the sample enters the newly exposed region, including
 DPR scaling. Layout is restored in `finally`; baseline, selected/focused retention,
 zero batched clears and completed-color assertions stay strict.
 
+The native scroll-feedback regression derives high/low host heights from the
+actual available height, backing-pixel cell height and DPR, keeps width stable,
+and crosses one actual core viewport row repeatedly. It uses natural browser
+spacer clamping and queued scroll events, never a fabricated event or core offset,
+and requires exact DOM bottom plus the real core live offset. An intentional DOM
+scroll must still move the core by one row; ordinary output/focus preserve that
+scrolled viewport, and accepted Surface input returns it to live. Read-only
+runtime observations remain fixture-only and do not widen the Surface API.
+Run it with the original full scrollback/hidden/image scenario:
+
+```sh
+npx vitest run test/integration/restty-native-scroll-feedback.test.ts test/integration/restty-scrollback-rendering.test.ts
+```
+
+This qualifies the native Surface/browser feedback path, not physical wheel input.
+The correction changes prepared Restty JavaScript package inputs; it does not
+require rebuilding the unchanged core WASM or a known qualified native PTY.
+
 Window Chrome fixtures also enter and leave real native fullscreen repeatedly
 with the title hidden. On Windows the fixture temporarily moves the desktop
 pointer and drags the restored handle with native mouse input, checking that
