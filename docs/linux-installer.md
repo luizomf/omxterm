@@ -36,6 +36,12 @@ Then open OMXTerm from the application menu again. **Compatibility mode may be
 slower or less stable**, so start with normal installation. Run `install` without
 the option to return to normal mode. These changes apply on the next launch.
 
+In a maintainer's Fedora VM check, normal installation worked in GNOME and the
+standard Cinnamon session. Cinnamon on Wayland (Experimental) failed graphics
+initialization; reinstalling with `--compatibility` and launching from the
+application menu restored rendering. This is an observed workaround, not a
+requirement for every Cinnamon session.
+
 <details>
 <summary>What does compatibility mode change?</summary>
 
