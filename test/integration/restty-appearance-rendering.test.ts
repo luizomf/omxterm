@@ -1,21 +1,18 @@
+import {
+  buildFixture,
+  expectedColors,
+  resultPrefix,
+} from "../fixtures/restty-appearance-rendering-build";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
-import {
-  copyFile,
-  cp,
-  mkdir,
-  mkdtemp,
-  readFile,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { build } from "esbuild";
+
 import { describe, expect, it } from "vitest";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
-import { resttyAppearanceMainSource } from "../fixtures/restty-appearance-main";
+
 import type {
   Measurement,
   SelectionObservation,
@@ -23,7 +20,6 @@ import type {
 
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
 const electronExecutable = createRequire(import.meta.url)("electron") as string;
-const resultPrefix = "__OMXTERM_RESTTY_APPEARANCE_RESULT__";
 
 interface Result {
   readonly selection: SelectionObservation;
@@ -74,38 +70,13 @@ interface Result {
   };
 }
 
-const expectedColors = [
-  "#010203",
-  "#a1b2c3",
-  "#314159",
-  "#fefefe",
-  "#101011",
-  "#201012",
-  "#102013",
-  "#303014",
-  "#101025",
-  "#301026",
-  "#103027",
-  "#d0d0d8",
-  "#505059",
-  "#90105a",
-  "#10905b",
-  "#90905c",
-  "#10109d",
-  "#90109e",
-  "#10909f",
-  "#f0f0f0",
-  "#123abc",
-  "#abcdef",
-] as const;
-
 describe("Restty OMXTerm appearance under production Electron policy", () => {
   it("renders theme colors and preserves configured geometry through live updates", async () => {
     const root = await mkdtemp(
       path.join(tmpdir(), "omxterm-restty-appearance-"),
     );
+    await buildFixture(root);
     try {
-      await buildFixture(root);
       const runs: Array<{
         readonly label: string;
         readonly requestedScaleFactor: number | undefined;
@@ -441,81 +412,6 @@ function assertFontGeometry(result: Result, label: string): void {
       Math.max(1, Math.floor(entry.canvasCssHeight * result.devicePixelRatio)),
     );
   }
-}
-
-async function buildFixture(root: string): Promise<void> {
-  await build({
-    absWorkingDir: projectRoot,
-    bundle: true,
-    entryPoints: ["test/fixtures/restty-appearance-renderer.ts"],
-    plugins: [
-      {
-        name: "configured-font-reference",
-        setup(builder) {
-          builder.onLoad(
-            { filter: /terminal-font-stack\.ts$/ },
-            async ({ path: sourcePath }) => {
-              // Reference omits bold faces but retains the production font pipeline.
-              const source = await readFile(sourcePath, "utf8");
-              return {
-                loader: "ts",
-                contents:
-                  source.replace(
-                    "export function terminalFontInputs",
-                    "function productionTerminalFontInputs",
-                  ) +
-                  `
-export function terminalFontInputs(data: TerminalFontData): TerminalFontInput[] {
-  const fonts = productionTerminalFontInputs(data);
-  return document.body.dataset.referenceFonts === 'true' ? fonts.filter(font => font.weight !== 700) : fonts;
-}`,
-              };
-            },
-          );
-        },
-      },
-    ],
-    format: "iife",
-    loader: { ".ttf": "binary" },
-    logLevel: "silent",
-    outfile: path.join(root, "renderer.js"),
-    platform: "browser",
-  });
-  const productionHtml = await readFile(
-    path.join(projectRoot, "src/renderer/index.html"),
-    "utf8",
-  );
-  const policy = productionHtml.match(/content="(?<policy>[^"]+)"/u)?.groups
-    ?.policy;
-  if (!policy) throw new Error("Production renderer CSP is missing");
-
-  await Promise.all([
-    build({
-      absWorkingDir: projectRoot,
-      entryPoints: ["test/fixtures/restty-selection-gesture.ts"],
-      bundle: true,
-      platform: "node",
-      format: "cjs",
-      outfile: path.join(root, "selection.cjs"),
-    }),
-    writeFile(
-      path.join(root, "index.html"),
-      `<!doctype html><html style="--native-title-inset:0px"><head><meta http-equiv="Content-Security-Policy" content="${policy}"><link rel="stylesheet" href="./renderer.css"></head><body><div id="terminal-window-content"><div id="terminal-tabs"></div></div><script src="./renderer.js"></script></body></html>`,
-    ),
-    copyFile(
-      path.join(projectRoot, "src/renderer/terminal-window.css"),
-      path.join(root, "renderer.css"),
-    ),
-    writeFile(
-      path.join(root, "package.json"),
-      `${JSON.stringify({ name: "omxterm-restty-appearance", main: "main.cjs" })}\n`,
-    ),
-    writeFile(
-      path.join(root, "main.cjs"),
-      resttyAppearanceMainSource(expectedColors, resultPrefix),
-    ),
-    mkdir(path.join(root, "home"), { recursive: true }),
-  ]);
 }
 
 async function runFixture(

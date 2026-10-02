@@ -1,20 +1,15 @@
+import { buildFixture, PNG_1X1 } from "../fixtures/local-image-native-build";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
-import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { build } from "esbuild";
+
 import { describe, expect, it } from "vitest";
 import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
 
-const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
 const electronExecutable = createRequire(import.meta.url)("electron") as string;
 const resultPrefix = "__OMXTERM_LOCAL_IMAGE_RESULT__";
-const PNG_1X1 = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
-  "base64",
-);
 
 describe("local image boundary through native Electron", () => {
   it.each([
@@ -24,48 +19,8 @@ describe("local image boundary through native Electron", () => {
     "decodes validated bytes and keeps previews contained at $label",
     async ({ scaleFactor }) => {
       const root = await mkdtemp(path.join(tmpdir(), "omxterm-local-image-"));
+      await buildFixture(root);
       try {
-        await build({
-          entryPoints: [
-            path.join(projectRoot, "test", "fixtures", "local-image-main.ts"),
-          ],
-          bundle: true,
-          platform: "node",
-          format: "cjs",
-          outfile: path.join(root, "main.cjs"),
-          external: ["electron"],
-        });
-        await build({
-          entryPoints: [
-            path.join(projectRoot, "test/fixtures/local-image-renderer.ts"),
-          ],
-          bundle: true,
-          platform: "browser",
-          format: "iife",
-          outfile: path.join(root, "preview.js"),
-        });
-        const productionHtml = await readFile(
-          path.join(projectRoot, "src/renderer/index.html"),
-          "utf8",
-        );
-        const policy = productionHtml.match(/content="(?<policy>[^"]+)"/u)
-          ?.groups?.policy;
-        if (!policy) throw new Error("Production renderer CSP is missing");
-        await Promise.all([
-          writeFile(
-            path.join(root, "preview.html"),
-            `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${policy}"><link rel="stylesheet" href="./preview.css"></head><body><textarea aria-label="Terminal input"></textarea><script src="./preview.js"></script></body></html>`,
-          ),
-          copyFile(
-            path.join(projectRoot, "src/renderer/terminal-window.css"),
-            path.join(root, "preview.css"),
-          ),
-          writeFile(
-            path.join(root, "package.json"),
-            `${JSON.stringify({ name: "omxterm-local-image-fixture", main: "main.cjs" })}\n`,
-          ),
-          writeFile(path.join(root, "fixture%23#literal.data"), PNG_1X1),
-        ]);
         const execution = await runFixture(root, scaleFactor);
         const line = execution.stdout
           .split("\n")

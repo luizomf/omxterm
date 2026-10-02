@@ -1,50 +1,20 @@
+import { buildFixture } from "../fixtures/macos-window-blur-build";
 import { createRequire } from "node:module";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { build } from "esbuild";
+
 import { expect, it } from "vitest";
-import { buildMacOSWindowBlur } from "../../scripts/build-macos-window-blur.mjs";
+
 import { runNativeFixture } from "../fixtures/run-native-fixture";
 
 it.skipIf(process.platform !== "darwin" || process.arch !== "arm64")(
   "loads the production Node-API addon and validates live owned windows and main-thread calls",
   async () => {
     const root = await mkdtemp(path.join(tmpdir(), "omxterm-macos-blur-"));
+    await buildFixture(root);
     let supervised = false;
     try {
-      await Promise.all([
-        buildMacOSWindowBlur(root),
-        build({
-          entryPoints: ["test/fixtures/restty-background-renderer.ts"],
-          outfile: path.join(root, "index.js"),
-          bundle: true,
-          format: "iife",
-          platform: "browser",
-          loader: { ".ttf": "binary" },
-          logLevel: "silent",
-        }),
-        readFile("src/renderer/index.html", "utf8").then((html) =>
-          writeFile(path.join(root, "index.html"), html),
-        ),
-        build({
-          entryPoints: ["test/fixtures/macos-window-blur-main.ts"],
-          outfile: path.join(root, "main.js"),
-          bundle: true,
-          external: ["electron"],
-          format: "esm",
-          platform: "node",
-          logLevel: "silent",
-        }),
-        writeFile(
-          path.join(root, "package.json"),
-          JSON.stringify({
-            name: "omxterm-macos-blur-fixture",
-            type: "module",
-            main: "main.js",
-          }),
-        ),
-      ]);
       supervised = true;
       const result = await runNativeFixture({
         executable: createRequire(import.meta.url)("electron") as string,

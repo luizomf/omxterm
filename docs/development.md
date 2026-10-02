@@ -427,6 +427,27 @@ remove the unsupervised profile without late build writes recreating it. This
 covers broad host and focused cancellation preparation; it does not extend
 supervisor ownership to the build phase.
 
+The sibling builders use `prepareFixture` for pre-launch ownership: parallel
+build/file operations register before starting, all started operations settle
+before failure escapes, and only the owned failed root is removed. Serial setup
+failures are covered too. The first error is preserved; a removal failure reports
+both errors rather than hiding cleanup uncertainty. Preparation failure cleanup
+belongs only to the builder; caller launch/finally handling begins after preparation
+succeeds. Successful preparation leaves the profile with its caller, and
+supervisor-owned profiles are never removed by this
+helper. Cursor/background callers also guard setup before handing off ownership.
+This covers the initialization/pending-tab/font/title/removal/acknowledgement,
+Window Chrome, macOS blur, production-shutdown, local-image and standalone Restty
+rendering/appearance/ligature/scrollback/background/cursor recipes, not every
+fixture or arbitrary interrupted process. The existing host builder remains
+separate. Headless regressions exercise the actual preparation recipes with
+external builders mocked and real owned filesystem writes; they do not establish
+native rendering, compiler, installed-font or PTY success:
+
+```sh
+npx vitest run test/unit/fixture-preparation.test.ts test/unit/fixture-preparation-recipes.test.ts test/unit/fixture-preparation-callers.test.ts
+```
+
 When adding supervised fixtures:
 
 - Create PTYs through `spawnFixturePty` and other owned children through
