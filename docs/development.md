@@ -283,9 +283,15 @@ limits remain unchanged; original cumulative ACKs and real high-water pause/resu
 are checked separately. A post-source same-length reorder and an Adapter delivery
 drop preserve valid source/END and original ACK progress but fail destination checks.
 The separate row-end refit control pauses the same checkpoint text above high
-water at an observed old-grid pending-wrap boundary. After its complete original
-ACK, it changes actual native content width and waits for the Surface/PTY refit
-before continuing output. Exact Copy must retain all records without inserting
+water at an observed old-grid pending-wrap boundary. It first measures an
+acknowledged native-source baseline after calibration; prefix readiness requires
+exactly the producer's additional ASCII bytes, original source/ACK equality and
+zero pending bytes. Native startup bytes remain in both totals, never replaced
+with a fixed platform allowance. Fixed phase names and numeric baseline/prefix/
+source/ACK/pending evidence survive in the supervisor journal on success or
+prefix failure; no terminal payload is recorded by these observations. After the
+complete prefix ACK, it changes actual native content width and waits for the
+Surface/PTY refit before continuing output. Exact Copy must retain all records without inserting
 an LF. The new right edge must differ from the old insertion boundary; measured
 calibration avoids relying on arbitrary native-window sizing. The temporary
 content constraint is restored, and the broad host's original stress path stays

@@ -33,13 +33,49 @@ process.stdin.resume(); process.stdout.write('\\x1b[?25l__OMXTERM_OUTPUT_READY__
 `;
 }
 
+// Native startup bytes remain in the original source/ACK totals. Measure the
+// acknowledged baseline before starting the producer's identical ASCII prefix.
+export function createOutputRefitPrefix({
+  prefixUnits,
+  readProgress,
+}: {
+  readonly prefixUnits: number;
+  readonly readProgress: () => {
+    readonly sourceBytes: number;
+    readonly cumulativeAck: number;
+    readonly pendingBytes: number;
+  };
+}) {
+  const baselineBytes = readProgress().sourceBytes;
+  return {
+    ready() {
+      const progress = readProgress();
+      return (
+        progress.sourceBytes === baselineBytes + prefixUnits &&
+        progress.cumulativeAck === progress.sourceBytes &&
+        progress.pendingBytes === 0
+      );
+    },
+    evidence: () => ({
+      baselineBytes,
+      prefixUnits,
+      expectedSourceBytes: baselineBytes + prefixUnits,
+      ...readProgress(),
+    }),
+  };
+}
+
 export async function prepareOutputRefit({
   window,
   sizes,
+  readProgress,
   waitFor,
 }: {
   readonly window: BrowserWindow;
   readonly sizes: readonly { cols: number; rows: number }[];
+  readonly readProgress: Parameters<
+    typeof createOutputRefitPrefix
+  >[0]["readProgress"];
   readonly waitFor: (
     predicate: () => boolean | Promise<boolean>,
     label: string,
@@ -90,12 +126,41 @@ export async function prepareOutputRefit({
         "Output refit cannot distinguish the old and new right edges",
       );
     const prefixUnits = visibleUnits - 24;
+    await waitFor(() => {
+      const progress = readProgress();
+      return (
+        progress.cumulativeAck === progress.sourceBytes &&
+        progress.pendingBytes === 0
+      );
+    }, "row-end prefix acknowledged native baseline");
+    const prefix = createOutputRefitPrefix({ prefixUnits, readProgress });
+    const trace = (
+      phase: "baseline" | "prefix-enter" | "prefix-ready" | "prefix-failure",
+    ) =>
+      process.stdout.write(
+        "__OMXTERM_OUTPUT_REFIT_PROGRESS__" +
+          JSON.stringify({ phase, ...prefix.evidence() }) +
+          "\n",
+      );
+    trace("baseline");
     return {
       original,
       refitted,
       prefixUnits,
       restore,
       async refit() {
+        trace("prefix-enter");
+        try {
+          await waitFor(
+            prefix.ready,
+            "row-end prefix complete original output acknowledgement",
+          );
+        } catch (error) {
+          trace("prefix-failure");
+          throw error;
+        }
+        const prefixAcknowledgement = prefix.evidence();
+        trace("prefix-ready");
         const count = sizes.length;
         await setWidth(`${layout.width - 50}px`);
         await waitFor(
@@ -105,6 +170,7 @@ export async function prepareOutputRefit({
             sizes.at(-1)!.rows === original.rows,
           "controlled output native Surface and PTY refit",
         );
+        return prefixAcknowledgement;
       },
     };
   } catch (error) {

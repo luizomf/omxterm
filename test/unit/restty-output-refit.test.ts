@@ -1,9 +1,15 @@
 import { runInNewContext } from "node:vm";
 import { expect, it } from "vitest";
-import { outputRefitProducer } from "../fixtures/restty-output-refit";
-import { assertOutputCheckpoint } from "../fixtures/restty-output-checkpoint";
+import {
+  createOutputRefitPrefix,
+  outputRefitProducer,
+} from "../fixtures/restty-output-refit";
+import {
+  assertOutputCheckpoint,
+  createOutputSourceObserver,
+} from "../fixtures/restty-output-checkpoint";
 
-function producer(checkpoints: number) {
+function producer(checkpoints: number, observe = (_text: string) => {}) {
   let input: (data: Buffer) => void = () => {};
   let output = "";
   const exits: number[] = [];
@@ -21,6 +27,7 @@ function producer(checkpoints: number) {
       stdout: {
         write(text: string, callback?: () => void) {
           output += text;
+          observe(text);
           callback?.();
         },
       },
@@ -35,6 +42,62 @@ function producer(checkpoints: number) {
     exits,
   };
 }
+
+it("accepts only the exact acknowledged producer prefix after measured native startup", () => {
+  const source = createOutputSourceObserver(1);
+  // An external transport prologue: 23 UTF-8 bytes, not producer output.
+  source.observe("\u001b[?9001h\u001b[?1004h\u001b[?25h\r");
+  let holdTail = false;
+  let tail = "";
+  const child = producer(1, (text) => {
+    if (holdTail) {
+      source.observe(text.slice(0, -1));
+      tail = text.slice(-1);
+    } else source.observe(text);
+  });
+  let cumulativeAck = 53;
+  let pendingBytes = 0;
+  const prefix = createOutputRefitPrefix({
+    prefixUnits: 65_613,
+    readProgress: () => ({
+      sourceBytes: source.evidence().bytes,
+      cumulativeAck,
+      pendingBytes,
+    }),
+  });
+  expect(source.ready()).toBe(true);
+  expect(prefix.ready()).toBe(false);
+  holdTail = true;
+  child.send("g65613;");
+  holdTail = false;
+  cumulativeAck = 65_665;
+  expect(prefix.ready()).toBe(false);
+  source.observe(tail);
+  cumulativeAck = 65_666;
+  expect(prefix.ready()).toBe(true);
+  expect(prefix.evidence()).toEqual({
+    baselineBytes: 53,
+    prefixUnits: 65_613,
+    expectedSourceBytes: 65_666,
+    sourceBytes: 65_666,
+    cumulativeAck: 65_666,
+    pendingBytes: 0,
+  });
+  cumulativeAck = 65_665;
+  expect(prefix.ready()).toBe(false);
+  cumulativeAck = 65_666;
+  pendingBytes = 1;
+  expect(prefix.ready()).toBe(false);
+  pendingBytes = 0;
+  expect(prefix.ready()).toBe(true);
+  child.send("r");
+  cumulativeAck = 131_175;
+  expect(source.evidence().bytes).toBe(131_175);
+  expect(prefix.ready()).toBe(false);
+  child.send("x");
+  expect(assertOutputCheckpoint(child.output(), 0).recordBytes).toBe(131_072);
+  expect(child.exits).toEqual([0]);
+});
 
 it("waits for explicit refit phases despite replies, wrong-phase keys and fragmented prefix commands", () => {
   const child = producer(2);
