@@ -163,8 +163,18 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
       expect((refit.prefixUnits + 24) % refit.original.cols).toBe(0);
       expect((refit.prefixUnits + 24) % refit.refitted.cols).not.toBe(0);
       expect(refit.prefixUnits).toBeGreaterThanOrEqual(65_536);
+      const acknowledged = refit.prefixAcknowledgement;
+      expect(acknowledged.prefixUnits).toBe(refit.prefixUnits);
+      expect(acknowledged.sourceBytes - acknowledged.baselineBytes).toBe(
+        refit.prefixUnits,
+      );
+      expect(acknowledged.expectedSourceBytes).toBe(acknowledged.sourceBytes);
+      expect(acknowledged.cumulativeAck).toBe(acknowledged.sourceBytes);
+      expect(acknowledged.pendingBytes).toBe(0);
+      // The producer emits exactly 26 BEGIN + 131072 record + 24 END bytes.
+      // Native startup stays in both original source and ACK totals.
       expect(stress.source).toMatchObject({
-        bytes: 131_152,
+        bytes: acknowledged.baselineBytes + 131_122,
         records: 4_096,
         recordBytes: 131_072,
         checkpoints: 1,
@@ -186,7 +196,7 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         recordBytes: 131_072,
         endSeen: true,
       });
-      expect(stress.acknowledgements.cumulativeEnd).toBe(131_152);
+      expect(stress.acknowledgements.cumulativeEnd).toBe(stress.source.bytes);
       expect(stress.flow.pendingBytes).toBe(0);
       expect(stress.flow.pauseCount).toBeGreaterThan(0);
       expect(stress.flow.resumeCount).toBeGreaterThan(0);

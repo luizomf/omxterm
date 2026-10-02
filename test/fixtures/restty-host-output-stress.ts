@@ -14,7 +14,11 @@ import {
   outputCheckpointProducer,
 } from "./restty-output-checkpoint";
 import { outputCheckpointCopyDiagnostic } from "./restty-output-drop-evidence";
-import { outputRefitProducer, prepareOutputRefit } from "./restty-output-refit";
+import {
+  createOutputRefitPrefix,
+  outputRefitProducer,
+  prepareOutputRefit,
+} from "./restty-output-refit";
 
 export interface OutputStressEvidence {
   readonly source: ReturnType<
@@ -43,6 +47,9 @@ export interface OutputStressEvidence {
     readonly original: { readonly cols: number; readonly rows: number };
     readonly refitted: { readonly cols: number; readonly rows: number };
     readonly prefixUnits: number;
+    readonly prefixAcknowledgement: ReturnType<
+      ReturnType<typeof createOutputRefitPrefix>["evidence"]
+    >;
   };
   readonly producerExit: { readonly exitCode: number; readonly signal: number };
   readonly memory: {
@@ -188,9 +195,19 @@ export function createOutputStressHarness({
         ? await prepareOutputRefit({
             window,
             sizes: options.resizes[sessionIndex]!,
+            readProgress: () => ({
+              sourceBytes: source.evidence().bytes,
+              cumulativeAck: cumulativeEnd,
+              pendingBytes: terminal.outputFlowMetrics?.().pendingBytes ?? -1,
+            }),
             waitFor,
           })
         : undefined;
+      let prefixAcknowledgement:
+        | NonNullable<
+            OutputStressEvidence["controlledRefit"]
+          >["prefixAcknowledgement"]
+        | undefined;
       const resizesBefore = options.resizes[sessionIndex]!.length;
       const rendererStall = window.webContents.executeJavaScript(
         "{ const end = performance.now() + 350; while (performance.now() < end) {} }",
@@ -225,13 +242,7 @@ export function createOutputStressHarness({
       );
       try {
         if (refit) {
-          await waitFor(
-            () =>
-              source.evidence().bytes === refit.prefixUnits + 30 &&
-              terminal.outputFlowMetrics?.().pendingBytes === 0,
-            "row-end prefix complete original output acknowledgement",
-          );
-          await refit.refit();
+          prefixAcknowledgement = await refit.refit();
           terminal.write("r");
         }
         for (let batch = 0; batch < checkpoints; batch++) {
@@ -296,6 +307,7 @@ export function createOutputStressHarness({
                 original: refit.original,
                 refitted: refit.refitted,
                 prefixUnits: refit.prefixUnits,
+                prefixAcknowledgement: prefixAcknowledgement!,
               },
             }
           : {}),
