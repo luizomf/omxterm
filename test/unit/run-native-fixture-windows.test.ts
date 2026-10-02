@@ -149,17 +149,31 @@ describe("Native fixture preparation lifetime", () => {
         signal: controller.signal,
         onTestFinished: vi.fn<NativeFixtureTestContext["onTestFinished"]>(),
       };
+      const actual =
+        await vi.importActual<typeof filesystem>("node:fs/promises");
+      let finalInspection = false;
+      let abortQueued = false;
+      vi.mocked(filesystem.lstat).mockImplementation(async (...args) => {
+        const identity = await actual.lstat(...args);
+        if (
+          args[0] === root &&
+          existsSync(path.join(root, "native-fixture-supervisor.cjs"))
+        )
+          finalInspection = true;
+        return identity;
+      });
       const check = controller.signal.throwIfAborted.bind(controller.signal);
-      let checks = 0;
       vi.spyOn(controller.signal, "throwIfAborted").mockImplementation(() => {
-        checks += 1;
         check();
-        // The eighth check is preparation's final synchronous guard. The queued
-        // abort runs before the caller resumes from that fulfilled preparation.
-        if (checks === 8) queueMicrotask(() => controller.abort(failure));
+        // Queue after the final inspection's synchronous guard, before the
+        // caller resumes. Guard additions do not change this interleaving.
+        if (finalInspection && !abortQueued) {
+          abortQueued = true;
+          queueMicrotask(() => controller.abort(failure));
+        }
       });
       await expect(run(context)).rejects.toBe(failure);
-      expect(checks).toBe(9);
+      expect(abortQueued).toBe(true);
       expect(existsSync(root)).toBe(false);
       expect(vi.mocked(childProcess.execFileSync)).not.toHaveBeenCalled();
       expect(vi.mocked(childProcess.fork)).not.toHaveBeenCalled();
