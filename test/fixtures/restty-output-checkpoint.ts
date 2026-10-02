@@ -30,7 +30,12 @@ const emit=()=>{
   while(index<records){const n=batch*records+index++; if(!process.stdout.write(String(n).padStart(8,'0')+':'+'x'.repeat(23))){process.stdout.once('drain',emit); return;}}
   process.stdout.write(marker(true)); batch++; index=0; waiting=true;
 };
-process.stdin.on('data',()=>{if(!waiting)return; waiting=false; if(batch===${batches})process.exit(0);else emit();});
+// Only the harness's phase commands pace output; numeric DA/CPR/cell replies
+// contain none of these letters, even when split or coalesced with a command.
+process.stdin.on('data',(data)=>{for(const command of data.toString()){
+  if(!waiting||command!==(batch===${batches}?'x':batch===0?'g':'n'))continue;
+  waiting=false; if(batch===${batches})process.exit(0);else emit();
+}});
 process.stdin.resume(); process.stdout.write('\\x1b[?25l__OMXTERM_OUTPUT_READY__');
 `;
 }
