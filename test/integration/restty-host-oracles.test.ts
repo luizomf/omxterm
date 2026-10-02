@@ -13,6 +13,7 @@ import type { OutputStressEvidence } from "../fixtures/restty-host-output-stress
 import type { exerciseResttyBackendLoss } from "../fixtures/restty-host-failures";
 import type { FocusedHostOracle } from "../fixtures/restty-host-oracle-scenarios";
 import type { HostOracleRendererControl } from "../fixtures/restty-host-oracle-controls";
+import { assertOutputDropRejection } from "../fixtures/restty-output-drop-evidence";
 import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
 import type { ResttyGestureControl } from "../fixtures/restty-gesture-routing-mutation";
@@ -100,7 +101,12 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   "focused actual-destination host oracles",
   () => {
     it("checks all sixteen paced destination copies under unchanged history and real backpressure", async () => {
-      const result = readResult(await runOracle("output-checkpoints"));
+      const execution = await runOracle("output-checkpoints");
+      // Omitting the mutation cannot satisfy the same negative-control consumer.
+      expect(() => assertOutputDropRejection(execution.stderr)).toThrow(
+        "rejection evidence",
+      );
+      const result = readResult(execution);
       expect(result.sessionStarts).toBe(1);
       const stress = result.outputStress!;
       expect(stress.source).toMatchObject({
@@ -257,11 +263,11 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           ],
         );
         expect(execution.exitCode, execution.stderr).toBe(1);
-        expect(execution.stderr).toContain(
-          kind === "reorder"
-            ? "Destination checkpoint 0 order at 100"
-            : "Destination checkpoint 0 record length 131040",
-        );
+        if (kind === "reorder")
+          expect(execution.stderr).toContain(
+            "Destination checkpoint 0 order at 100",
+          );
+        else assertOutputDropRejection(execution.stderr);
         expect(execution.stderr).toContain("END present: true");
         expect(execution.stderr).toContain(
           "source checkpoints=1, source records=4096, pending=0",

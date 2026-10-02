@@ -13,6 +13,7 @@ import {
   OUTPUT_CHECKPOINTS,
   outputCheckpointProducer,
 } from "./restty-output-checkpoint";
+import { outputCheckpointCopyDiagnostic } from "./restty-output-drop-evidence";
 
 export interface OutputStressEvidence {
   readonly source: ReturnType<
@@ -126,7 +127,7 @@ export function createOutputStressHarness({
         destination.push(assertOutputCheckpoint(text, expectingCopy));
       } catch (cause) {
         destinationError = new Error(
-          `${cause instanceof Error ? cause.message : String(cause)}; source checkpoints=${source.checkpoints()}, source records=${source.evidence().records}, pending=${copyPendingBytes}, ACK=${cumulativeEnd}/${source.evidence().bytes}`,
+          `${cause instanceof Error ? cause.message : String(cause)}; source checkpoints=${source.checkpoints()}, source records=${source.evidence().records}, pending=${copyPendingBytes}, ACK=${cumulativeEnd}/${source.evidence().bytes}; copied checkpoint=${JSON.stringify(outputCheckpointCopyDiagnostic(text, expectingCopy))}`,
         );
       }
       expectingCopy = undefined;
