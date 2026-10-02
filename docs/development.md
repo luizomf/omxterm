@@ -209,8 +209,32 @@ The cursor fixture captures real native WebGL2 pixels at DPR 1 and 2 through
 font zoom, a controlled host-container width shrink, and configuration reload
 with width restoration. Its font/padding matrix, cell bounds, focus/blink and
 Surface/canvas/session continuity checks do not depend on the compositor
-honoring an arbitrary native-window size request. Window Chrome fixtures retain
-real native/content/Surface/PTY bounds and window-manager behavior coverage.
+honoring an arbitrary native-window size request. Before frame-dependent calls
+and captures, it requires an actually visible, non-minimized native window;
+DOM visibility and disabled background throttling alone do not establish native
+presentation. It preserves `showInactive()` without forcing focus or restoration.
+Each renderer await and capture has a five-second local deadline, while the outer
+90-second supervisor and all 64 captures at each DPR remain unchanged. Fixed
+`__OMXTERM_CURSOR_PHASE__` begin/complete/failure metadata (DPR, font/padding,
+lifecycle, operation category and native state/bounds) survives profile removal
+in the existing `.scratch/native-fixtures/` journal. It contains no renderer
+expression or arbitrary error payload and is neither completion nor ownership
+evidence. Missing metadata cannot satisfy the diagnostic assertions.
+
+Native negative controls really minimize the owned window before mount, hold
+its actual renderer frame continuation, or withhold delivery of an actual native
+capture. They must exit promptly with the presentation-unavailable or named
+operation-timeout phase and clean supervision, never pass on missing pixels.
+This diagnoses a demonstrated minimized-canvas scheduling mechanism, not the
+unproven historical trigger of an earlier maintainer timeout or a shipping
+Restty/GPU defect. Run the ordinary matrix and these controls together:
+
+```sh
+npx vitest run test/integration/restty-cursor-rendering.test.ts
+```
+
+Window Chrome fixtures retain real native/content/Surface/PTY bounds and
+window-manager behavior coverage.
 
 The host's inline-image oracle checks both cell-anchored Pi/Chafa rectangles
 and their full complement after zoom, content shrink/restore through the

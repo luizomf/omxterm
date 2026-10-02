@@ -1,9 +1,14 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, type NativeImage } from "electron";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import assert from "node:assert/strict";
 import { loadTerminalFontData } from "../../src/main/terminal-font-data";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
+import {
+  runCursorStep,
+  CURSOR_STEP_TIMEOUT,
+  type CursorStep,
+} from "./restty-cursor-readiness";
 
 // The bundled fixture lives in its disposable profile directory. Electron
 // command-line switches have platform-dependent argv placement.
@@ -57,6 +62,94 @@ function ink(bitmap: Buffer, blank: Buffer, width: number) {
     height: bottom - top + 1,
   };
 }
+async function prepareWindow(
+  window: BrowserWindow,
+): Promise<{ dpr: 1 | 2; control: string | undefined }> {
+  const dpr = Number(
+    app.commandLine.getSwitchValue("force-device-scale-factor"),
+  );
+  assert.ok(
+    dpr === 1 || dpr === 2,
+    "Cursor fixture requires requested DPR 1 or 2",
+  );
+  const control = process.argv
+    .find((arg) => arg.startsWith("--fixture-cursor-control="))
+    ?.split("=")[1];
+  assert.ok(
+    control === undefined ||
+      ["early-minimize", "held-execute", "held-capture"].includes(control),
+    "Unknown cursor fixture control",
+  );
+  if (control === "held-execute") {
+    window.webContents.on("console-message", (details) => {
+      // Forward only a fixed gate marker, never arbitrary renderer messages.
+      if (details.message === "__OMXTERM_CURSOR_CONTROL__held-execute")
+        process.stdout.write("__OMXTERM_CURSOR_CONTROL__held-execute\n");
+    });
+  }
+  await runCursorStep(
+    window,
+    {
+      dpr,
+      font: "bundled",
+      padding: 0,
+      lifecycle: "load",
+      kind: "execute",
+      operation: "load",
+    },
+    () =>
+      window.loadFile(path.join(root, "index.html"), {
+        query: { cursorControl: control ?? "ordinary" },
+      }),
+  );
+  window.showInactive();
+  if (control === "early-minimize") {
+    // A real native action, not fabricated DOM visibility or synthetic pixels.
+    // Issuing minimize is not observation; wait boundedly for native state below.
+    window.minimize();
+    const deadline = Date.now() + CURSOR_STEP_TIMEOUT;
+    while (!window.isMinimized() && Date.now() < deadline)
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.ok(
+      window.isMinimized(),
+      "Native early-minimize control was not observed",
+    );
+  }
+  return { dpr, control };
+}
+
+async function holdControlledCapture(
+  control: string | undefined,
+  count: number,
+  name: string,
+  captured: NativeImage,
+) {
+  // Prove native capture completed before withholding its delivery.
+  if (control === "held-capture" && count === 0 && name === "hidden") {
+    assert.ok(
+      !captured.isEmpty() &&
+        captured.getSize().width > 0 &&
+        captured.getSize().height > 0,
+    );
+    process.stdout.write("__OMXTERM_CURSOR_CONTROL__held-capture\n");
+    await new Promise<void>(() => {});
+  }
+}
+
+function cursorContext(
+  dpr: 1 | 2,
+  configured: boolean,
+  padding: 0 | 8,
+  lifecycle: CursorStep["lifecycle"],
+): Omit<CursorStep, "kind" | "operation"> {
+  return {
+    dpr,
+    font: configured ? "configured" : "bundled",
+    padding: lifecycle === "reload" ? (padding === 0 ? 8 : 0) : padding,
+    lifecycle,
+  };
+}
+
 async function run() {
   applyChromiumSandboxPolicy(app.commandLine);
   for (const name of ["userData", "sessionData"] as const) {
@@ -78,11 +171,21 @@ async function run() {
       backgroundThrottling: false,
     },
   });
-  await window.loadFile(path.join(root, "index.html"));
-  window.showInactive();
-  const execute = <T>(expression: string): Promise<T> =>
-    window.webContents.executeJavaScript(
-      `globalThis.cursorFixture.${expression}`,
+  const { dpr, control } = await prepareWindow(window);
+  let context: Omit<CursorStep, "kind" | "operation"> = {
+    dpr,
+    font: "bundled",
+    padding: 0,
+    lifecycle: "mount",
+  };
+  const execute = <T>(
+    expression: string,
+    operation: CursorStep["operation"] = "cursor",
+  ): Promise<T> =>
+    runCursorStep(window, { ...context, kind: "execute", operation }, () =>
+      window.webContents.executeJavaScript(
+        `globalThis.cursorFixture.${expression}`,
+      ),
     );
   const captures: unknown[] = [];
   for (const [configured, padding] of [
@@ -91,13 +194,16 @@ async function run() {
     [true, 0],
     [true, 8],
   ] as const) {
-    await execute(`mount(${configured}, ${padding})`);
+    context = cursorContext(dpr, configured, padding, "mount");
+    await execute(`mount(${configured}, ${padding})`, "mount");
     let initial: Phase | undefined;
     let previous: Phase | undefined;
-    for (const lifecycle of ["initial", "zoom", "refit", "reload"]) {
+    for (const lifecycle of ["initial", "zoom", "refit", "reload"] as const) {
+      context = cursorContext(dpr, configured, padding, lifecycle);
       // Reload changes padding in place too, without changing creation-time family.
       const phase = await execute<Phase>(
         `phase(${JSON.stringify(lifecycle)}, ${lifecycle === "reload" ? 8 - padding : padding})`,
+        "phase",
       );
       assert.equal(phase.starts, 1);
       assert.equal(phase.closes, 0);
@@ -127,13 +233,26 @@ async function run() {
         assert.ok(phase.canvas.width > previous!.canvas.width);
       }
       previous = phase;
-      const capture = async (name: string) => {
-        const image = await window.webContents.capturePage({
-          x: Math.round(phase.canvas.x),
-          y: Math.round(phase.canvas.y),
-          width: Math.floor(phase.canvas.width),
-          height: Math.floor(phase.canvas.height),
-        });
+      const capture = async (name: CursorStep["operation"]) => {
+        const image = await runCursorStep(
+          window,
+          { ...context, kind: "capture", operation: name },
+          async () => {
+            const captured = await window.webContents.capturePage({
+              x: Math.round(phase.canvas.x),
+              y: Math.round(phase.canvas.y),
+              width: Math.floor(phase.canvas.width),
+              height: Math.floor(phase.canvas.height),
+            });
+            await holdControlledCapture(
+              control,
+              captures.length,
+              name,
+              captured,
+            );
+            return captured;
+          },
+        );
         if (process.env.OMXTERM_CURSOR_EVIDENCE_PATH) {
           await mkdir(process.env.OMXTERM_CURSOR_EVIDENCE_PATH, {
             recursive: true,
@@ -148,7 +267,7 @@ async function run() {
         }
         return { bitmap: image.toBitmap(), width: image.getSize().width };
       };
-      await execute("cursor(6, 0, false)");
+      await execute("cursor(6, 0, false)", "hidden");
       const blank = await capture("hidden");
       const controls = [];
       for (const [name, style, col] of [
@@ -157,7 +276,7 @@ async function run() {
         ["block0", 2, 0],
         ["underline0", 4, 0],
       ] as const) {
-        await execute(`cursor(${style}, ${col}, true)`);
+        await execute(`cursor(${style}, ${col}, true)`, name);
         const pixels = await capture(name);
         const bounds = ink(pixels.bitmap, blank.bitmap, pixels.width);
         captures.push({
@@ -195,8 +314,8 @@ async function run() {
       assert.equal(block!.count, phase.cellWidth * phase.cellHeight);
       assert.equal(underline!.width, phase.cellWidth);
       if (lifecycle === "initial") {
-        await execute("cursor(6, 0, true)");
-        await execute("blur()");
+        await execute("cursor(6, 0, true)", "bar0");
+        await execute("blur()", "blur");
         const blurred = await capture("unfocused");
         const outline = ink(blurred.bitmap, blank.bitmap, blurred.width);
         assert.equal(outline.width, phase.cellWidth);
@@ -205,19 +324,19 @@ async function run() {
           outline.count > bar0!.count && outline.count < block!.count,
           "unfocused cursor remains a hollow block",
         );
-        await execute("focus()");
+        await execute("focus()", "focus");
         const focused = await capture("refocused");
         assert.deepEqual(
           ink(focused.bitmap, blank.bitmap, focused.width),
           bar0,
           "focus restores the selected bar style",
         );
-        await execute("cursor(5, 0, true)");
+        await execute("cursor(5, 0, true)", "blink");
         let visible = false,
           hidden = false;
         const deadline = Date.now() + 2000;
         while ((!visible || !hidden) && Date.now() < deadline) {
-          await execute("focus()");
+          await execute("focus()", "focus");
           const sample = await capture("blink");
           const count = ink(sample.bitmap, blank.bitmap, sample.width).count;
           assert.ok(
@@ -233,7 +352,11 @@ async function run() {
         );
       }
     }
-    assert.deepEqual(await execute("dispose()"), { starts: 1, closes: 1 });
+    context = { ...context, lifecycle: "dispose" };
+    assert.deepEqual(await execute("dispose()", "dispose"), {
+      starts: 1,
+      closes: 1,
+    });
   }
   process.stdout.write(
     "__OMXTERM_CURSOR_RESULT__" +
