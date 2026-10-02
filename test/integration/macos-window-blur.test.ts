@@ -1,6 +1,7 @@
 import { buildFixture } from "../fixtures/macos-window-blur-build";
 import { createRequire } from "node:module";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp } from "node:fs/promises";
+import { removeFailedFixture } from "../fixtures/remove-failed-fixture";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -15,9 +16,10 @@ it.skipIf(process.platform !== "darwin" || process.arch !== "arm64")(
     await buildFixture(root);
     let supervised = false;
     try {
+      const executable = createRequire(import.meta.url)("electron") as string;
       supervised = true;
       const result = await runNativeFixture({
-        executable: createRequire(import.meta.url)("electron") as string,
+        executable,
         args: [
           root,
           ...(process.env.OMXTERM_TEST_MACOS_FULLSCREEN === "1"
@@ -36,8 +38,9 @@ it.skipIf(process.platform !== "darwin" || process.arch !== "arm64")(
       expect(result.stdout).toContain('"workerRejected":true');
       expect(result.stdout).toContain('"productionLifecycle":true');
       expect(result.stdout).toContain('"sameCanvas":true');
-    } finally {
-      if (!supervised) await rm(root, { recursive: true, force: true });
+    } catch (error) {
+      if (!supervised) await removeFailedFixture(root, error);
+      throw error;
     }
   },
   90_000,

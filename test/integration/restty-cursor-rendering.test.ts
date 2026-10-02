@@ -1,6 +1,7 @@
 import { buildFixture } from "../fixtures/restty-cursor-rendering-build";
 import { createRequire } from "node:module";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp } from "node:fs/promises";
+import { removeFailedFixture } from "../fixtures/remove-failed-fixture";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -45,8 +46,9 @@ it.each([1, 2])(
       expect(observation.captures.every((capture) => capture.dpr === dpr)).toBe(
         true,
       );
-    } finally {
-      if (!supervised) await rm(root, { recursive: true, force: true });
+    } catch (error) {
+      if (!supervised) await removeFailedFixture(root, error);
+      throw error;
     }
   },
   120_000,

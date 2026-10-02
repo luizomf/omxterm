@@ -1,6 +1,7 @@
 import { buildFixture } from "../fixtures/restty-background-rendering-build";
 import { createRequire } from "node:module";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp } from "node:fs/promises";
+import { removeFailedFixture } from "../fixtures/remove-failed-fixture";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -55,7 +56,8 @@ it("composes one live tint beneath real WebGL text, explicit backgrounds, invers
               : (1 - phase.transparency) * 255),
         ),
       ).toBeLessThanOrEqual(1);
-  } finally {
-    if (!supervised) await rm(root, { recursive: true, force: true });
+  } catch (error) {
+    if (!supervised) await removeFailedFixture(root, error);
+    throw error;
   }
 }, 90_000);

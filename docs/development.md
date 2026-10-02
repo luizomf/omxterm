@@ -442,10 +442,13 @@ build/file operations register before starting, all started operations settle
 before failure escapes, and only the owned failed root is removed. Serial setup
 failures are covered too. The first error is preserved; a removal failure reports
 both errors rather than hiding cleanup uncertainty. Preparation failure cleanup
-belongs only to the builder; caller launch/finally handling begins after preparation
+belongs only to the builder; caller launch error handling begins after preparation
 succeeds. Successful preparation leaves the profile with its caller, and
-supervisor-owned profiles are never removed by this
-helper. Cursor/background callers also guard setup before handing off ownership.
+supervisor-owned profiles are never removed by this helper. Cursor/background and
+macOS blur callers resolve the executable before handing off ownership. Their
+pre-launch failure cleanup uses the same error-preserving removal operation:
+removal failure retains both errors and the original setup error as the cause,
+while uncertain supervisor handoff never triggers caller profile removal.
 This covers the initialization/pending-tab/font/title/removal/acknowledgement,
 Window Chrome, macOS blur, production-shutdown, local-image and standalone Restty
 rendering/appearance/ligature/scrollback/background/cursor recipes, not every

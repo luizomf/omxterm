@@ -1,4 +1,4 @@
-import { rm } from "node:fs/promises";
+import { removeFailedFixture } from "./remove-failed-fixture";
 
 type PreparationTask = () => Promise<unknown>;
 type StartPreparationTask = (task: PreparationTask) => Promise<unknown>;
@@ -21,15 +21,6 @@ export async function prepareFixture(
   } catch (error) {
     // A caller's finally must not remove the root while a writer can recreate it.
     await Promise.allSettled(pending);
-    try {
-      await rm(root, { recursive: true, force: true });
-    } catch (cleanupError) {
-      throw new AggregateError(
-        [error, cleanupError],
-        "Fixture preparation and owned profile cleanup failed",
-        { cause: error },
-      );
-    }
-    throw error;
+    return removeFailedFixture(root, error);
   }
 }
