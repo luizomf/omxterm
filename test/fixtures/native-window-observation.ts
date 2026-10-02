@@ -48,44 +48,50 @@ export async function observeNativeWindow(
   control?: NativeObservationControl,
   testContext?: NativeFixtureTestContext,
 ) {
+  testContext?.signal.throwIfAborted();
   rejectLegacyNativeWindowDeclarations();
   const request = { id: randomUUID(), kind, platform: process.platform, dpr };
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-native-window-"));
   const prepare = () =>
-    prepareFixture(root, async (start) => {
-      await Promise.all([
-        start(() =>
-          build({
-            absWorkingDir: projectRoot,
-            bundle: true,
-            entryPoints: ["test/fixtures/native-window-observation-main.ts"],
-            external: ["electron"],
-            format: "cjs",
-            platform: "node",
-            logLevel: "silent",
-            outfile: path.join(root, "main.cjs"),
-          }),
-        ),
-        start(() =>
-          writeFile(
-            path.join(root, "package.json"),
-            JSON.stringify({
-              name: "omxterm-independent-native-window",
-              main: "main.cjs",
+    prepareFixture(
+      root,
+      async (start) => {
+        await Promise.all([
+          start(() =>
+            build({
+              absWorkingDir: projectRoot,
+              bundle: true,
+              entryPoints: ["test/fixtures/native-window-observation-main.ts"],
+              external: ["electron"],
+              format: "cjs",
+              platform: "node",
+              logLevel: "silent",
+              outfile: path.join(root, "main.cjs"),
             }),
           ),
-        ),
-        start(() =>
-          writeFile(
-            path.join(root, "index.html"),
-            "<!doctype html><title>Independent native window fixture</title><script>globalThis.fixtureResponsive = true;</script>",
+          start(() =>
+            writeFile(
+              path.join(root, "package.json"),
+              JSON.stringify({
+                name: "omxterm-independent-native-window",
+                main: "main.cjs",
+              }),
+            ),
           ),
-        ),
-      ]);
-    });
+          start(() =>
+            writeFile(
+              path.join(root, "index.html"),
+              "<!doctype html><title>Independent native window fixture</title><script>globalThis.fixtureResponsive = true;</script>",
+            ),
+          ),
+        ]);
+      },
+      "runner",
+    );
   let supervised = false;
   try {
     const executable = createRequire(import.meta.url)("electron") as string;
+    testContext?.signal.throwIfAborted();
     supervised = true;
     const result = await runNativeFixture({
       executable,

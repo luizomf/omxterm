@@ -113,67 +113,72 @@ it("removes a background root when preparation fails before supervisor ownership
   }
 });
 
-it("joins a started window writer when sibling build setup throws synchronously", async () => {
-  const root = await mkdtemp(path.join(tmpdir(), "omxterm-preparation-sync-"));
-  const release = deferred();
-  const failed = deferred();
-  const cleaned = deferred();
-  const originalFailure = new Error("Synchronous preload setup failure");
-  const writers: Promise<unknown>[] = [];
-  let earlyCleanup = false;
-  let preparation: Promise<unknown> | undefined;
-  const actual =
-    await vi.importActual<typeof import("node:fs/promises")>(
-      "node:fs/promises",
+it.each(["recipe", "runner"] as const)(
+  "joins a started window writer when sibling setup throws with %s cleanup ownership",
+  async (cleanupOwner) => {
+    const root = await mkdtemp(
+      path.join(tmpdir(), "omxterm-preparation-sync-"),
     );
-  vi.mocked(symlink).mockImplementation(actual.symlink);
-  vi.mocked(build).mockImplementation((options) => {
-    if (path.basename(options.outfile!) === "preload.cjs") {
-      failed.resolve();
-      throw originalFailure;
-    }
-    const writer = (async () => {
-      await release.promise;
-      await mkdir(path.dirname(options.outfile!), { recursive: true });
-      await writeFile(options.outfile!, "late real output\n");
-      return {} as Awaited<ReturnType<typeof build>>;
-    })();
-    writers.push(writer);
-    return writer;
-  });
-  try {
-    preparation = (async () => {
-      try {
-        await buildWindowFixture(root);
-      } catch (error) {
-        return error;
-      } finally {
-        earlyCleanup = true;
-        await rm(root, { recursive: true, force: true });
-        cleaned.resolve();
+    const release = deferred();
+    const failed = deferred();
+    const cleaned = deferred();
+    const originalFailure = new Error("Synchronous preload setup failure");
+    const writers: Promise<unknown>[] = [];
+    let earlyCleanup = false;
+    let preparation: Promise<unknown> | undefined;
+    const actual =
+      await vi.importActual<typeof import("node:fs/promises")>(
+        "node:fs/promises",
+      );
+    vi.mocked(symlink).mockImplementation(actual.symlink);
+    vi.mocked(build).mockImplementation((options) => {
+      if (path.basename(options.outfile!) === "preload.cjs") {
+        failed.resolve();
+        throw originalFailure;
       }
-    })();
-    await failed.promise;
-    await setImmediate();
-    const removedEarly = earlyCleanup;
-    if (removedEarly) await cleaned.promise;
-    release.resolve();
-    await Promise.allSettled(writers);
-    expect(await preparation).toBe(originalFailure);
-    expect(
-      existsSync(root),
-      "synchronous setup failure allowed late root recreation",
-    ).toBe(false);
-    expect(removedEarly).toBe(false);
-  } finally {
-    release.resolve();
-    await Promise.allSettled(writers);
-    await preparation;
-    await rm(root, { recursive: true, force: true });
-    vi.mocked(build).mockReset();
-    vi.mocked(symlink).mockReset();
-  }
-});
+      const writer = (async () => {
+        await release.promise;
+        await mkdir(path.dirname(options.outfile!), { recursive: true });
+        await writeFile(options.outfile!, "late real output\n");
+        return {} as Awaited<ReturnType<typeof build>>;
+      })();
+      writers.push(writer);
+      return writer;
+    });
+    try {
+      preparation = (async () => {
+        try {
+          await buildWindowFixture(root, cleanupOwner);
+        } catch (error) {
+          return error;
+        } finally {
+          earlyCleanup = true;
+          await rm(root, { recursive: true, force: true });
+          cleaned.resolve();
+        }
+      })();
+      await failed.promise;
+      await setImmediate();
+      const removedEarly = earlyCleanup;
+      if (removedEarly) await cleaned.promise;
+      release.resolve();
+      await Promise.allSettled(writers);
+      expect(await preparation).toBe(originalFailure);
+      expect(
+        existsSync(root),
+        "synchronous setup failure allowed late root recreation",
+      ).toBe(false);
+      expect(removedEarly).toBe(false);
+    } finally {
+      release.resolve();
+      await Promise.allSettled(writers);
+      await preparation;
+      await rm(root, { recursive: true, force: true });
+      vi.mocked(build).mockReset();
+      vi.mocked(symlink).mockReset();
+    }
+  },
+);
 
 function deferred() {
   let resolve!: () => void;

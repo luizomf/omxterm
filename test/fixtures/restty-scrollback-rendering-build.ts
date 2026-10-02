@@ -1,4 +1,4 @@
-import { prepareFixture } from "./prepare-fixture";
+import { prepareFixture, type FixtureCleanupOwner } from "./prepare-fixture";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { build } from "esbuild";
@@ -19,121 +19,126 @@ export async function buildFixture(
   root: string,
   mode: ScrollbackFixtureMode = "scrollback",
   holdStartup = false,
+  cleanupOwner: FixtureCleanupOwner = "recipe",
 ): Promise<void> {
-  return prepareFixture(root, async (start) => {
-    await build({
-      absWorkingDir: projectRoot,
-      bundle: true,
-      entryPoints: [
-        mode === "scrollback"
-          ? "test/fixtures/restty-scrollback-renderer.ts"
-          : "test/fixtures/restty-native-scroll-feedback-renderer.ts",
-      ],
-      format: "iife",
-      define: {
-        __OMXTERM_SCROLLBACK_HOLD_READY__: JSON.stringify(holdStartup),
-      },
-      loader: { ".ttf": "binary" },
-      logLevel: "silent",
-      outfile: path.join(root, "renderer.js"),
-      platform: "browser",
-      plugins: [
-        {
-          name: "fixture-only-raf-counts",
-          setup(builder) {
-            builder.onLoad(
-              { filter: /chunk-c0rcpsc5\.js$/ },
-              async ({ path: runtimePath }) => {
-                let source = depthExperimentSource(
-                  await readFile(runtimePath, "utf8"),
-                );
-                if (mode !== "scrollback")
-                  source = observeNativeScrollFeedback(source);
-                else {
-                  const dragMarker = "  let selectionAutoScrollTimer = null;";
-                  if (source.split(dragMarker).length !== 2)
-                    throw new Error("Scrollback drag observer drifted");
-                  source = source.replace(
-                    dragMarker,
-                    "  globalThis.__scrollbackIsDragging = () => selectionState.dragging;\n" +
-                      dragMarker,
+  return prepareFixture(
+    root,
+    async (start) => {
+      await build({
+        absWorkingDir: projectRoot,
+        bundle: true,
+        entryPoints: [
+          mode === "scrollback"
+            ? "test/fixtures/restty-scrollback-renderer.ts"
+            : "test/fixtures/restty-native-scroll-feedback-renderer.ts",
+        ],
+        format: "iife",
+        define: {
+          __OMXTERM_SCROLLBACK_HOLD_READY__: JSON.stringify(holdStartup),
+        },
+        loader: { ".ttf": "binary" },
+        logLevel: "silent",
+        outfile: path.join(root, "renderer.js"),
+        platform: "browser",
+        plugins: [
+          {
+            name: "fixture-only-raf-counts",
+            setup(builder) {
+              builder.onLoad(
+                { filter: /chunk-c0rcpsc5\.js$/ },
+                async ({ path: runtimePath }) => {
+                  let source = depthExperimentSource(
+                    await readFile(runtimePath, "utf8"),
                   );
-                }
-                const marker = "  function loop(state) {";
-                if (source.split(marker).length !== 2)
-                  throw new Error("Restty RAF instrumentation drifted");
-                return {
-                  contents: source
-                    .replace(
-                      "  reportCursor(cursorPos);",
-                      `  (globalThis.__hiddenRenderGeometry ??= new WeakMap()).set(canvas, { cursor: cursorPos, cols: gridState.cols, rows: gridState.rows, cellW: gridState.cellW, cellH: gridState.cellH });\n  reportCursor(cursorPos);`,
-                    )
-                    .replace(
-                      marker,
-                      marker +
-                        `
+                  if (mode !== "scrollback")
+                    source = observeNativeScrollFeedback(source);
+                  else {
+                    const dragMarker = "  let selectionAutoScrollTimer = null;";
+                    if (source.split(dragMarker).length !== 2)
+                      throw new Error("Scrollback drag observer drifted");
+                    source = source.replace(
+                      dragMarker,
+                      "  globalThis.__scrollbackIsDragging = () => selectionState.dragging;\n" +
+                        dragMarker,
+                    );
+                  }
+                  const marker = "  function loop(state) {";
+                  if (source.split(marker).length !== 2)
+                    throw new Error("Restty RAF instrumentation drifted");
+                  return {
+                    contents: source
+                      .replace(
+                        "  reportCursor(cursorPos);",
+                        `  (globalThis.__hiddenRenderGeometry ??= new WeakMap()).set(canvas, { cursor: cursorPos, cols: gridState.cols, rows: gridState.rows, cellW: gridState.cellW, cellH: gridState.cellH });\n  reportCursor(cursorPos);`,
+                      )
+                      .replace(
+                        marker,
+                        marker +
+                          `
             const canvas = state.gl?.canvas;
             if (canvas) {
               const counts = globalThis.__hiddenRuntimeRaf ??= new WeakMap();
               counts.set(canvas, (counts.get(canvas) ?? 0) + 1);
             }
           `,
-                    ),
-                  loader: "js",
-                };
-              },
-            );
+                      ),
+                    loader: "js",
+                  };
+                },
+              );
+            },
           },
-        },
-      ],
-    });
-    const productionHtml = await readFile(
-      path.join(projectRoot, "src/renderer/index.html"),
-      "utf8",
-    );
-    const policy = productionHtml.match(/content="(?<policy>[^"]+)"/u)?.groups
-      ?.policy;
-    if (!policy) throw new Error("Production renderer CSP is missing");
+        ],
+      });
+      const productionHtml = await readFile(
+        path.join(projectRoot, "src/renderer/index.html"),
+        "utf8",
+      );
+      const policy = productionHtml.match(/content="(?<policy>[^"]+)"/u)?.groups
+        ?.policy;
+      if (!policy) throw new Error("Production renderer CSP is missing");
 
-    await Promise.all([
-      start(() =>
-        build({
-          absWorkingDir: projectRoot,
-          bundle: true,
-          entryPoints: ["test/fixtures/scrollback-native-input.ts"],
-          format: "cjs",
-          platform: "node",
-          logLevel: "silent",
-          outfile: path.join(root, "native-input.cjs"),
-        }),
-      ),
-      start(() =>
-        writeFile(
-          path.join(root, "index.html"),
-          `<!doctype html><html style="--native-title-inset:0px"><head><meta http-equiv="Content-Security-Policy" content="${policy}"><link rel="stylesheet" href="./renderer.css"></head><body><div id="terminal-window-content"><div id="terminal-tabs"></div></div><script src="./renderer.js"></script></body></html>`,
+      await Promise.all([
+        start(() =>
+          build({
+            absWorkingDir: projectRoot,
+            bundle: true,
+            entryPoints: ["test/fixtures/scrollback-native-input.ts"],
+            format: "cjs",
+            platform: "node",
+            logLevel: "silent",
+            outfile: path.join(root, "native-input.cjs"),
+          }),
         ),
-      ),
-      start(() =>
-        copyFile(
-          path.join(projectRoot, "src/renderer/terminal-window.css"),
-          path.join(root, "renderer.css"),
+        start(() =>
+          writeFile(
+            path.join(root, "index.html"),
+            `<!doctype html><html style="--native-title-inset:0px"><head><meta http-equiv="Content-Security-Policy" content="${policy}"><link rel="stylesheet" href="./renderer.css"></head><body><div id="terminal-window-content"><div id="terminal-tabs"></div></div><script src="./renderer.js"></script></body></html>`,
+          ),
         ),
-      ),
-      start(() =>
-        writeFile(
-          path.join(root, "package.json"),
-          `${JSON.stringify({ name: "omxterm-restty-scrollback", main: "main.cjs" })}\n`,
+        start(() =>
+          copyFile(
+            path.join(projectRoot, "src/renderer/terminal-window.css"),
+            path.join(root, "renderer.css"),
+          ),
         ),
-      ),
-      start(() =>
-        writeFile(
-          path.join(root, "main.cjs"),
-          electronMainSource(mode, holdStartup),
+        start(() =>
+          writeFile(
+            path.join(root, "package.json"),
+            `${JSON.stringify({ name: "omxterm-restty-scrollback", main: "main.cjs" })}\n`,
+          ),
         ),
-      ),
-      start(() => mkdir(path.join(root, "home"), { recursive: true })),
-    ]);
-  });
+        start(() =>
+          writeFile(
+            path.join(root, "main.cjs"),
+            electronMainSource(mode, holdStartup),
+          ),
+        ),
+        start(() => mkdir(path.join(root, "home"), { recursive: true })),
+      ]);
+    },
+    cleanupOwner,
+  );
 }
 
 function electronMainSource(

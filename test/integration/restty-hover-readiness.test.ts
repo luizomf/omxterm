@@ -78,10 +78,12 @@ async function runHover(
   control: HoverControl,
   testContext: NativeFixtureTestContext,
 ) {
+  testContext.signal.throwIfAborted();
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-hover-"));
   let supervised = false;
   try {
     const executable = createRequire(import.meta.url)("electron") as string;
+    testContext.signal.throwIfAborted();
     supervised = true;
     const result = await runNativeFixture({
       executable,

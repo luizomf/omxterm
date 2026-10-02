@@ -13,6 +13,7 @@ import {
 
 vi.mock("node:child_process", { spy: true });
 vi.mock("node:fs/promises", { spy: true });
+vi.mock("esbuild", { spy: true });
 
 const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
 const completed = {
@@ -34,6 +35,11 @@ beforeEach(async () => {
   vi.mocked(filesystem.writeFile).mockImplementation(
     actualFilesystem.writeFile,
   );
+  vi.mocked(filesystem.lstat).mockImplementation(actualFilesystem.lstat);
+  vi.mocked(filesystem.mkdir).mockImplementation(actualFilesystem.mkdir);
+  const actualBuilder =
+    await vi.importActual<typeof import("esbuild")>("esbuild");
+  vi.mocked(build).mockImplementation(actualBuilder.build);
   root = await mkdtemp(path.join(tmpdir(), "omxterm-outcome-"));
   evidencePath = path.join(root, "outcome.json");
   preservedRoots = [];
@@ -80,6 +86,58 @@ function disappear(publish?: string) {
   });
 }
 
+describe("Native preparation prerequisite guards", () => {
+  it.each(["initial inspection", "identity recheck", "ownership directory"])(
+    "does not start a new phase after abort during %s",
+    async (phase) => {
+      const actual =
+        await vi.importActual<typeof filesystem>("node:fs/promises");
+      const controller = new AbortController();
+      const failure = new Error(`Abort at ${phase}`);
+      const prepare = vi.fn(async () => undefined);
+      let reads = 0;
+      vi.mocked(filesystem.lstat).mockImplementation(async (...args) => {
+        const identity = await actual.lstat(...args);
+        if (
+          args[0] === root &&
+          ++reads === (phase === "initial inspection" ? 1 : 2) &&
+          phase !== "ownership directory"
+        )
+          controller.abort(failure);
+        return identity;
+      });
+      vi.mocked(filesystem.mkdir).mockImplementation(async (...args) => {
+        const result = await actual.mkdir(...args);
+        if (
+          phase === "ownership directory" &&
+          args[0] === path.join(root, "native-process-ownership")
+        )
+          controller.abort(failure);
+        return result;
+      });
+      vi.mocked(build).mockClear();
+      await expect(
+        runNativeFixture({
+          executable: process.execPath,
+          args: [],
+          root,
+          evidencePath,
+          timeout: 1000,
+          prepare,
+          testContext: { signal: controller.signal, onTestFinished: vi.fn() },
+        }),
+      ).rejects.toBe(failure);
+      expect(prepare).toHaveBeenCalledTimes(
+        phase === "initial inspection" ? 0 : 1,
+      );
+      expect(build).not.toHaveBeenCalled();
+      expect(existsSync(root)).toBe(false);
+      expect(childProcess.execFileSync).not.toHaveBeenCalled();
+      expect(childProcess.fork).not.toHaveBeenCalled();
+    },
+  );
+});
+
 describe("Native fixture preparation lifetime", () => {
   it.each(["darwin", "win32"])(
     "reclaims preparation aborted between its last guard and %s caller resume",
@@ -96,17 +154,63 @@ describe("Native fixture preparation lifetime", () => {
       vi.spyOn(controller.signal, "throwIfAborted").mockImplementation(() => {
         checks += 1;
         check();
-        // The fifth check is preparation's final synchronous guard. The queued
+        // The eighth check is preparation's final synchronous guard. The queued
         // abort runs before the caller resumes from that fulfilled preparation.
-        if (checks === 5) queueMicrotask(() => controller.abort(failure));
+        if (checks === 8) queueMicrotask(() => controller.abort(failure));
       });
       await expect(run(context)).rejects.toBe(failure);
-      expect(checks).toBe(6);
+      expect(checks).toBe(9);
       expect(existsSync(root)).toBe(false);
       expect(vi.mocked(childProcess.execFileSync)).not.toHaveBeenCalled();
       expect(vi.mocked(childProcess.fork)).not.toHaveBeenCalled();
     },
   );
+
+  it("joins an already started supervisor build after context closure", async () => {
+    const controller = new AbortController();
+    const failure = new Error("Abort during supervisor build");
+    let release!: () => void;
+    let start!: () => void;
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const started = new Promise<void>((resolve) => {
+      start = resolve;
+    });
+    vi.mocked(build).mockImplementation(async (options) => {
+      start();
+      await blocked;
+      writeFileSync(options.outfile!, "settled supervisor writer");
+      return {} as Awaited<ReturnType<typeof build>>;
+    });
+    const operation = run({
+      signal: controller.signal,
+      onTestFinished: vi.fn(),
+    });
+    let settled = false;
+    void operation.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+    try {
+      await started;
+      controller.abort(failure);
+      expect(settled).toBe(false);
+      expect(existsSync(root)).toBe(true);
+      expect(childProcess.execFileSync).not.toHaveBeenCalled();
+    } finally {
+      release();
+      await operation.catch(() => undefined);
+    }
+    await expect(operation).rejects.toBe(failure);
+    expect(existsSync(root)).toBe(false);
+    expect(childProcess.fork).not.toHaveBeenCalled();
+    expect(childProcess.execFileSync).not.toHaveBeenCalled();
+  });
 
   it("reclaims a settled Windows request writer aborted before WMI handoff", async () => {
     const controller = new AbortController();

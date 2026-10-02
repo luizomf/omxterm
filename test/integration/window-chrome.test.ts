@@ -24,6 +24,7 @@ async function runChrome(
   testContext: NativeFixtureTestContext,
   control?: string,
 ) {
+  testContext.signal.throwIfAborted();
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-window-chrome-"));
   let supervised = false;
   try {
@@ -34,6 +35,7 @@ async function runChrome(
       },
     });
     if (process.platform === "linux") args.push("--ozone-platform=x11");
+    testContext.signal.throwIfAborted();
     supervised = true;
     return await runNativeFixture({
       executable,
@@ -47,7 +49,7 @@ async function runChrome(
       root,
       timeout: mode === "fail-fast" ? 10_000 : 100_000,
       testContext,
-      prepare: () => buildFixture(root),
+      prepare: () => buildFixture(root, "runner"),
     });
   } finally {
     if (!supervised) await rm(root, { recursive: true, force: true });

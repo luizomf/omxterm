@@ -729,14 +729,18 @@ Pass the current Vitest `testContext` and file-only `prepare` callback to
 `runNativeFixture` so preparation, launch, cancellation and settlement share one
 owned operation. The runner joins it in a test-finished hook without an independent
 cleanup timeout; the original test deadline still fails. It checks the context
-before preparation and handoff, preventing an expired callback or control loop
-from launching later fixtures. Started preparation writers must settle before
+immediately before each new preparation/build phase after awaited prerequisites
+and before handoff, preventing an expired callback or control loop from starting
+later work. Started preparation writers must settle before
 failure escapes. The runner removes an unchanged unhanded failed profile with the
 existing error-preserving helper; it refuses replaced or already supervised roots.
 That responsibility continues after supervisor preparation returns and through
 Windows request-file publication until handoff. A context already aborted at API
-entry leaves its unprepared caller-owned root untouched. After delegating to the
-API, callers must not delete profiles on rejection: ownership may be uncertain.
+entry leaves its unprepared caller-owned root untouched. Adopted callers check
+before allocating a profile and again inside their cleanup region before API
+delegation; a context ended during allocation therefore releases the caller-owned
+root. After delegating to the API, callers must not delete profiles on rejection:
+ownership may be uncertain.
 
 Cursor and Chrome pass the same context through independent observation and the
 subsequent behavior run; discovery controls reuse it for every iteration. Hover,
@@ -756,13 +760,14 @@ the builder settles.
 
 The sibling builders use `prepareFixture` for pre-launch ownership: parallel
 build/file operations register before starting, all started operations settle
-before failure escapes, and only the owned failed root is removed. Serial setup
-failures are covered too. The first error is preserved; a removal failure reports
-both errors rather than hiding cleanup uncertainty. Preparation failure cleanup
-belongs to the builder while its recipe is running; the shared runner recognizes
-an already removed root without deleting it twice. Successful preparation leaves
-the profile with the delegating runner (or a legacy caller), and
-supervisor-owned profiles are never removed by this helper. Cursor/background and
+before failure escapes. Serial setup failures are covered too. Standalone recipes
+retain the default `recipe` cleanup owner: a removal failure reports both errors
+rather than hiding cleanup uncertainty. Delegated cursor, Chrome and scrollback
+builders and independent native discovery explicitly use the `runner` cleanup
+owner. Their helper joins writers and rethrows the original failure without
+removing the root; the runner alone checks identity and ownership before cleanup,
+preserving replacements and uncertain ownership. Successful preparation leaves
+the profile with the delegating runner (or a legacy caller). Cursor/background and
 macOS blur callers resolve the executable before handing off ownership. Their
 pre-launch failure cleanup uses the same error-preserving removal operation:
 removal failure retains both errors and the original setup error as the cause,
@@ -776,7 +781,7 @@ external builders mocked and real owned filesystem writes; they do not establish
 native rendering, compiler, installed-font or PTY success:
 
 ```sh
-npx vitest run test/unit/fixture-preparation.test.ts test/unit/fixture-preparation-recipes.test.ts test/unit/fixture-preparation-callers.test.ts
+npx vitest run test/unit/fixture-preparation.test.ts test/unit/fixture-preparation-recipes.test.ts test/unit/fixture-preparation-callers.test.ts test/unit/native-preparation-ownership.test.ts test/unit/run-native-fixture-windows.test.ts
 ```
 
 When adding supervised fixtures:

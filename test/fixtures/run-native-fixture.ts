@@ -308,11 +308,14 @@ async function prepareSupervisor(
     return removeFailedFixture(request.root, error);
   };
   try {
+    testContext?.signal.throwIfAborted();
     await prepare?.();
     testContext?.signal.throwIfAborted();
     await unchanged();
+    testContext?.signal.throwIfAborted();
     await mkdir(path.join(request.root, FIXTURE_PROCESS_DIRECTORY));
     registered = true;
+    testContext?.signal.throwIfAborted();
     const supervisorPath = path.join(
       request.root,
       "native-fixture-supervisor.cjs",

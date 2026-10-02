@@ -26,11 +26,13 @@ async function runCursor(
   testContext: NativeFixtureTestContext,
   control?: string,
 ) {
+  testContext.signal.throwIfAborted();
   rejectLegacyNativeWindowDeclarations();
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-cursor-"));
   let supervised = false;
   try {
     const executable = createRequire(import.meta.url)("electron") as string;
+    testContext.signal.throwIfAborted();
     supervised = true;
     const result = await runNativeFixture({
       executable,
@@ -45,7 +47,7 @@ async function runCursor(
       root,
       timeout: 90_000,
       testContext,
-      prepare: () => buildFixture(root),
+      prepare: () => buildFixture(root, "runner"),
     });
     const phases = result.stdout
       .split("\n")

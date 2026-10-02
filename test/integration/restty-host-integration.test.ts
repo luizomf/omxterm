@@ -210,6 +210,7 @@ describe.skipIf(
     // macOS's per-user tmpdir prefix can exceed the entire native grid. Own a
     // short random profile so the clipping control's complete path prefix fits
     // inside the existing window, without depending on a native resize request.
+    testContext.signal.throwIfAborted();
     const root = await mkdtemp(
       path.join(
         process.platform === "darwin" ? "/tmp" : tmpdir(),
@@ -218,6 +219,7 @@ describe.skipIf(
     );
     let supervised = false;
     try {
+      testContext.signal.throwIfAborted();
       supervised = true;
       const execution = await runFixture(root, testContext);
       const resultLine = execution.stdout
@@ -544,11 +546,13 @@ async function runCancellationFixture(
   testContext: NativeFixtureTestContext,
   cancellation?: "pointercancel" | "blur",
 ) {
+  testContext.signal.throwIfAborted();
   const root = await mkdtemp(
     path.join(tmpdir(), "omxterm-restty-cancellation-"),
   );
   let supervised = false;
   try {
+    testContext.signal.throwIfAborted();
     supervised = true;
     const execution = await runFixture(root, testContext, true, cancellation);
     expect(

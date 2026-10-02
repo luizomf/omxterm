@@ -16,6 +16,7 @@ import {
 } from "../fixtures/restty-depth-evidence";
 import { createRequire } from "node:module";
 import { mkdtemp, writeFile } from "node:fs/promises";
+import { removeFailedFixture } from "../fixtures/remove-failed-fixture";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -152,23 +153,34 @@ describe("Restty scrollback through the production Surface seam", () => {
 
   it("cleans up a never-ready native Surface before the next GUI launch", async (testContext) => {
     startupTask = (async () => {
+      testContext.signal.throwIfAborted();
       startupRoot = await mkdtemp(
         path.join(tmpdir(), "omxterm-scrollback-startup-"),
       );
-      const result = await runFixture(startupRoot, 10_000, testContext, () =>
-        buildFixture(startupRoot!, "scrollback", true),
-      );
-      const marker = result.stdout
-        .split("\n")
-        .find((line) => line.startsWith("__OMXTERM_SCROLLBACK_STARTUP_HELD__"));
-      if (marker) {
-        const observation = JSON.parse(
-          marker.slice("__OMXTERM_SCROLLBACK_STARTUP_HELD__".length),
-        ) as { pid: number; visible: boolean; minimized: boolean };
-        startupPid = observation.pid;
+      let supervised = false;
+      try {
+        testContext.signal.throwIfAborted();
+        supervised = true;
+        const result = await runFixture(startupRoot, 10_000, testContext, () =>
+          buildFixture(startupRoot!, "scrollback", true, "runner"),
+        );
+        const marker = result.stdout
+          .split("\n")
+          .find((line) =>
+            line.startsWith("__OMXTERM_SCROLLBACK_STARTUP_HELD__"),
+          );
+        if (marker) {
+          const observation = JSON.parse(
+            marker.slice("__OMXTERM_SCROLLBACK_STARTUP_HELD__".length),
+          ) as { pid: number; visible: boolean; minimized: boolean };
+          startupPid = observation.pid;
+        }
+        startupSettled = true;
+        return result;
+      } catch (error) {
+        if (!supervised) await removeFailedFixture(startupRoot, error);
+        throw error;
       }
-      startupSettled = true;
-      return result;
     })();
     const result = await startupTask;
     expect(result).toMatchObject({ reason: "timeout", cleanupErrors: [] });
@@ -190,10 +202,21 @@ describe("Restty scrollback through the production Surface seam", () => {
       );
     }
     const executionTask = (async () => {
+      testContext.signal.throwIfAborted();
       const root = await mkdtemp(
         path.join(tmpdir(), "omxterm-restty-scrollback-"),
       );
-      return runFixture(root, 110_000, testContext, () => buildFixture(root));
+      let supervised = false;
+      try {
+        testContext.signal.throwIfAborted();
+        supervised = true;
+        return await runFixture(root, 110_000, testContext, () =>
+          buildFixture(root, "scrollback", false, "runner"),
+        );
+      } catch (error) {
+        if (!supervised) await removeFailedFixture(root, error);
+        throw error;
+      }
     })();
     const execution = await executionTask;
     expect(execution.reason).toBe("exit");

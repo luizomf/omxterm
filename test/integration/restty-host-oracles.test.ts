@@ -50,6 +50,7 @@ async function runOracle(
   args: readonly string[] = [],
   gestureControl?: ResttyGestureControl,
 ) {
+  testContext.signal.throwIfAborted();
   const root = await mkdtemp(
     path.join(
       process.platform === "darwin" ? "/tmp" : tmpdir(),
@@ -58,6 +59,7 @@ async function runOracle(
   );
   let supervised = false;
   try {
+    testContext.signal.throwIfAborted();
     supervised = true;
     const execution = await runNativeFixture({
       executable: electronExecutable,

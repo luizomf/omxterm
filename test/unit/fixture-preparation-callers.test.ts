@@ -84,16 +84,34 @@ it.each(["restty-cursor-rendering", "window-chrome"])(
     expect(observed.nativeRequests).toBe(1);
     expect(observed.preparedRoots).toHaveLength(1);
     expect(observed.finishHooks).toBe(1);
-    expect(observed.roots).toHaveLength(2);
+    expect(observed.roots).toHaveLength(1);
     expect(observed.removalAttempts).toBe(0);
   },
 );
 
-it.each([
+const contextualCallers = [
+  "restty-cursor-rendering",
+  "window-chrome",
+  "restty-scrollback-rendering",
   "restty-hover-readiness",
   "restty-host-integration",
   "restty-host-oracles",
-])(
+];
+it.each(contextualCallers)(
+  "%s cleans up its own allocation if context closes before API delegation",
+  async (name) => {
+    const observed = await observeCaller(name, "allocation abort");
+    expect(observed.failure).toBe(observed.setupFailure);
+    expect(observed.nativeRequests).toBe(0);
+    expect(observed.preparedRoots).toHaveLength(0);
+    expect(observed.finishHooks).toBe(0);
+    expect(observed.roots).toHaveLength(1);
+    expect(observed.removalAttempts).toBe(1);
+    expect(observed.removed).toBe(true);
+  },
+);
+
+it.each(contextualCallers)(
   "%s cannot prepare or launch from an already closed context",
   async (name) => {
     const observed = await observeCaller(name, "entry abort");
@@ -101,7 +119,47 @@ it.each([
     expect(observed.nativeRequests).toBe(0);
     expect(observed.preparedRoots).toHaveLength(0);
     expect(observed.finishHooks).toBe(0);
-    expect(observed.roots).toHaveLength(1);
+    expect(observed.roots).toHaveLength(0);
+    expect(observed.removalAttempts).toBe(0);
+  },
+);
+it.each(
+  [
+    { name: "restty-scrollback-rendering", index: 1 },
+    { name: "restty-host-integration", index: 1 },
+    { name: "restty-host-integration", index: 2 },
+    { name: "restty-host-integration", index: 3 },
+  ].flatMap((callback) =>
+    ["entry abort", "allocation abort"].map((mode) => ({
+      ...callback,
+      mode: mode as "entry abort" | "allocation abort",
+    })),
+  ),
+)(
+  "$name callback $index owns its allocation at $mode",
+  async ({ name, index, mode }) => {
+    const observed = await observeCaller(name, mode, false, index);
+    expect(observed.failure).toBe(observed.setupFailure);
+    expect(observed.nativeRequests).toBe(0);
+    expect(observed.preparedRoots).toHaveLength(0);
+    expect(observed.finishHooks).toBe(0);
+    expect(observed.roots).toHaveLength(mode === "entry abort" ? 0 : 1);
+    expect(observed.removalAttempts).toBe(mode === "entry abort" ? 0 : 1);
+    expect(observed.removed).toBe(true);
+  },
+);
+
+it.each([
+  "window-chrome",
+  "restty-scrollback-rendering",
+  "restty-host-integration",
+  "restty-host-oracles",
+])(
+  "%s preserves the handed-off profile after uncertain launch",
+  async (name) => {
+    const observed = await observeCaller(name, "supervisor failure", true);
+    expect(observed.failure).toBe(observed.setupFailure);
+    expect(observed.nativeRequests).toBe(1);
     expect(observed.removalAttempts).toBe(0);
     expect(observed.removed).toBe(false);
   },
@@ -116,7 +174,7 @@ it("native discovery controls cannot launch the next loop iteration after contex
   expect(observed.nativeRequests).toBe(1);
   expect(observed.preparedRoots).toHaveLength(1);
   expect(observed.finishHooks).toBe(1);
-  expect(observed.roots).toHaveLength(2);
+  expect(observed.roots).toHaveLength(1);
   expect(observed.removalAttempts).toBe(0);
 });
 
@@ -128,8 +186,10 @@ async function observeCaller(
     | "build failure"
     | "phase abort"
     | "loop abort"
-    | "entry abort",
+    | "entry abort"
+    | "allocation abort",
   removalFails = false,
+  selectedCase?: number,
 ) {
   const entry = path.resolve(`test/integration/${name}.test.ts`);
   const compiled = await build({
@@ -228,6 +288,7 @@ async function observeCaller(
             mkdtemp: async (...args: Parameters<typeof filesystem.mkdtemp>) => {
               root = (await filesystem.mkdtemp(...args)) as string;
               roots.push(root);
+              if (failure === "allocation abort") controller.abort(stopped);
               return root;
             },
           };
@@ -334,15 +395,15 @@ async function observeCaller(
     expect(cases.length).toBeGreaterThan(0);
     if (failure === "entry abort") controller.abort(stopped);
     const selected =
-      failure === "phase abort" && name === "restty-cursor-rendering" ? 2 : 0;
+      selectedCase ??
+      (failure === "phase abort" && name === "restty-cursor-rendering" ? 2 : 0);
     const observedFailure: unknown = await cases[selected]!().catch(
       (error: unknown) => error,
     );
     if (!removalFails && failure !== "loop abort")
       expect(observedFailure).toBe(stopped);
-    expect(root).toBeDefined();
     return {
-      removed: !existsSync(root!),
+      removed: root === undefined || !existsSync(root),
       roots,
       preparedRoots: [...preparedRoots],
       finishHooks: finalizers.length,
