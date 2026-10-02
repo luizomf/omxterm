@@ -1,4 +1,8 @@
 import { waitForLiveViewport } from "./restty-scrollback-viewport";
+import {
+  observeScrollbackNativeInput,
+  type NativeInputObservation,
+} from "./scrollback-native-input";
 import { depthRenderingFixture } from "./restty-depth-renderer";
 import { hiddenRenderingFixture } from "./restty-hidden-renderer";
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
@@ -15,6 +19,8 @@ interface ScrollMetrics {
 
 interface ScrollbackFixture {
   readonly ready: true;
+  prepareNativeInput(): void;
+  nativeInput(): NativeInputObservation;
   hiddenRenderingFixture: typeof hiddenRenderingFixture;
   depthRenderingFixture: typeof depthRenderingFixture;
   metrics(): ScrollMetrics;
@@ -42,6 +48,7 @@ interface ScrollbackFixture {
 
 declare global {
   var __omxtermResttyScrollback: ScrollbackFixture | undefined;
+  var __scrollbackIsDragging: (() => boolean) | undefined;
 }
 
 const root = document.querySelector<HTMLElement>("#terminal-tabs");
@@ -119,11 +126,22 @@ async function run() {
     },
   );
   const canvas = initialCanvas();
+  const nativeInput = observeScrollbackNativeInput(
+    canvas!,
+    container.querySelector<HTMLTextAreaElement>("textarea")!,
+    () => globalThis.__scrollbackIsDragging?.() === true,
+    () => writes.includes("x"),
+  );
   output(0, 5_000);
   await waitForRender();
 
   globalThis.__omxtermResttyScrollback = {
     ready: true,
+    prepareNativeInput() {
+      nativeInput.reset();
+      surface.focus();
+    },
+    nativeInput: nativeInput.snapshot,
     hiddenRenderingFixture,
     depthRenderingFixture,
     surface,

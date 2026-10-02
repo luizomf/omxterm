@@ -488,9 +488,21 @@ Run it with the original full scrollback/hidden/image scenario:
 npx vitest run test/integration/restty-native-scroll-feedback.test.ts test/integration/restty-scrollback-rendering.test.ts
 ```
 
+The scrollback fixture owns and boundedly observes native presentation/focus and
+DOM terminal input readiness before its native drag and character input. It
+acknowledges trusted pointer delivery, actual selection dragging and accepted
+character input; the held-left move retains the original edge coordinates and
+500 ms autoscroll observation. Withheld native press and character controls must
+fail their named stimulus phases with supervised cleanup. Fixed bounded
+`__OMXTERM_SCROLLBACK_INPUT__` metadata distinguishes unavailable stimulus from
+an acknowledged drag that fails the unchanged strict scrollTop-decrease assertion.
+It contains only input-state booleans, numeric pointer/geometry/viewport data and
+native state, never terminal text. This corrects fixture input ownership; it does
+not establish the cause of the historical intermittent autoscroll failure.
+
 This qualifies the native Surface/browser feedback path, not physical wheel input.
-The correction changes prepared Restty JavaScript package inputs; it does not
-require rebuilding the unchanged core WASM or a known qualified native PTY.
+The scroll-feedback correction changes prepared Restty JavaScript package inputs;
+it does not require rebuilding the unchanged core WASM or a known qualified native PTY.
 
 Window Chrome fixtures also enter and leave real native fullscreen repeatedly
 with the title hidden. On Windows the fixture temporarily moves the desktop

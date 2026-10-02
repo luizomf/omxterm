@@ -18,6 +18,7 @@ export type ScrollbackFixtureMode =
 export async function buildFixture(
   root: string,
   mode: ScrollbackFixtureMode = "scrollback",
+  inputControl?: "down" | "character",
 ): Promise<void> {
   return prepareFixture(root, async (start) => {
     await build({
@@ -45,6 +46,16 @@ export async function buildFixture(
                 );
                 if (mode !== "scrollback")
                   source = observeNativeScrollFeedback(source);
+                else {
+                  const dragMarker = "  let selectionAutoScrollTimer = null;";
+                  if (source.split(dragMarker).length !== 2)
+                    throw new Error("Scrollback drag observer drifted");
+                  source = source.replace(
+                    dragMarker,
+                    "  globalThis.__scrollbackIsDragging = () => selectionState.dragging;\n" +
+                      dragMarker,
+                  );
+                }
                 const marker = "  function loop(state) {";
                 if (source.split(marker).length !== 2)
                   throw new Error("Restty RAF instrumentation drifted");
@@ -83,6 +94,17 @@ export async function buildFixture(
 
     await Promise.all([
       start(() =>
+        build({
+          absWorkingDir: projectRoot,
+          bundle: true,
+          entryPoints: ["test/fixtures/scrollback-native-input.ts"],
+          format: "cjs",
+          platform: "node",
+          logLevel: "silent",
+          outfile: path.join(root, "native-input.cjs"),
+        }),
+      ),
+      start(() =>
         writeFile(
           path.join(root, "index.html"),
           `<!doctype html><html style="--native-title-inset:0px"><head><meta http-equiv="Content-Security-Policy" content="${policy}"><link rel="stylesheet" href="./renderer.css"></head><body><div id="terminal-window-content"><div id="terminal-tabs"></div></div><script src="./renderer.js"></script></body></html>`,
@@ -101,18 +123,25 @@ export async function buildFixture(
         ),
       ),
       start(() =>
-        writeFile(path.join(root, "main.cjs"), electronMainSource(mode)),
+        writeFile(
+          path.join(root, "main.cjs"),
+          electronMainSource(mode, inputControl),
+        ),
       ),
       start(() => mkdir(path.join(root, "home"), { recursive: true })),
     ]);
   });
 }
 
-function electronMainSource(mode: ScrollbackFixtureMode): string {
+function electronMainSource(
+  mode: ScrollbackFixtureMode,
+  inputControl?: "down" | "character",
+): string {
   return `
 const { app, BrowserWindow } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
+const { hasNativeDrag } = require('./native-input.cjs');
 for (const name of ["userData", "sessionData"]) {
   const directory = path.join(__dirname, name);
   fs.mkdirSync(directory, { recursive: true });
@@ -182,6 +211,42 @@ app.whenReady().then(async () => {
     return;
   }
   await waitFor(window, "globalThis.__omxtermResttyScrollback?.ready ?? false");
+  const inputControl = ${JSON.stringify(inputControl ?? null)};
+  class StimulusTimeout extends Error {}
+  let inputObservation = null;
+  const inputNative = () => ({ visible: window.isVisible(), minimized: window.isMinimized(), focused: window.isFocused() });
+  const inputRecord = (phase, status, category = 'none') => process.stdout.write('__OMXTERM_SCROLLBACK_INPUT__' + JSON.stringify({ version: 1, phase, status, category, native: inputNative(), observation: inputObservation }) + '\\n');
+  async function inputPhase(phase, predicate, timeout = 5000, initialize) {
+    let timer;
+    let active = true;
+    inputRecord(phase, 'begin');
+    try {
+      await Promise.race([
+        (async () => {
+          const deadline = Date.now() + timeout;
+          await initialize?.();
+          while (active && Date.now() < deadline) {
+            inputObservation = await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.nativeInput()', true);
+            if (predicate(inputObservation)) return;
+            await new Promise(resolve => setTimeout(resolve, 25));
+          }
+          throw new StimulusTimeout();
+        })(),
+        new Promise((_, reject) => { timer = setTimeout(() => reject(new StimulusTimeout()), timeout); }),
+      ]);
+      inputRecord(phase, 'complete');
+    } catch (error) {
+      const category = error instanceof StimulusTimeout ? 'stimulus-unavailable' : 'operation-error';
+      inputRecord(phase, 'failure', category);
+      throw new Error('Scrollback ' + category + ' at ' + phase);
+    } finally { active = false; clearTimeout(timer); }
+  }
+  async function prepareInput(phase) {
+    await inputPhase(phase, value => { const state = inputNative(); return state.visible && !state.minimized && state.focused && value.ready; }, 5000, async () => {
+      window.show(); window.focus(); window.webContents.focus();
+      await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.prepareNativeInput()', true);
+    });
+  }
   const resizeAtBottom = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.resizeAtBottom()", true);
   const initial = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.metrics()", true);
   const scrolledTop = await window.webContents.executeJavaScript(
@@ -202,6 +267,7 @@ app.whenReady().then(async () => {
       canvas.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 9, pointerType: 'mouse', button: 0, buttons: 0, clientX: bounds.left + 220, clientY: y }));
     })()\`, true);
   await new Promise((resolve) => setTimeout(resolve, 100));
+  await prepareInput('mouse-ready');
   const autoscroll = await window.webContents.executeJavaScript(
     \`(() => {
       const host = document.querySelector('.restty-native-scroll-host');
@@ -211,10 +277,20 @@ app.whenReady().then(async () => {
       return { startTop: host.scrollTop, x: Math.floor(bounds.left + 80), startY: Math.floor(bounds.bottom - 30), endY: Math.floor(bounds.top) };
     })()\`, true);
   const autoscrollStartTop = autoscroll.startTop;
-  window.webContents.sendInputEvent({ type: "mouseDown", x: autoscroll.x, y: autoscroll.startY, button: "left", clickCount: 1 });
-  window.webContents.sendInputEvent({ type: "mouseMove", x: autoscroll.x, y: autoscroll.endY, button: "left", clickCount: 1 });
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  window.webContents.sendInputEvent({ type: "mouseUp", x: autoscroll.x, y: autoscroll.endY, button: "left", clickCount: 1 });
+  try {
+    if (inputControl === 'down') process.stdout.write('__OMXTERM_SCROLLBACK_INPUT_CONTROL__' + JSON.stringify({ control: 'down', withheld: true }) + '\\n');
+    else window.webContents.sendInputEvent({ type: "mouseDown", x: autoscroll.x, y: autoscroll.startY, button: "left", clickCount: 1 });
+    await inputPhase('mouse-down', value => value.down?.trusted && value.down.canvas && value.down.buttons === 1 && value.down.x === autoscroll.x && value.down.y === autoscroll.startY);
+    window.webContents.sendInputEvent({ type: "mouseMove", x: autoscroll.x, y: autoscroll.endY, button: "left", modifiers: ["leftButtonDown"], clickCount: 1 });
+    await Promise.all([
+      new Promise((resolve) => setTimeout(resolve, 500)),
+      inputPhase('mouse-drag', value => hasNativeDrag(value, autoscroll), 500),
+    ]);
+  } finally {
+    if (inputControl !== 'down') window.webContents.sendInputEvent({ type: "mouseUp", x: autoscroll.x, y: autoscroll.endY, button: "left", clickCount: 1 });
+  }
+  await inputPhase('mouse-up', value => value.up?.trusted && value.up.canvas && value.up.buttons === 0 && value.up.id === value.down.id && value.up.x === autoscroll.x && value.up.y === autoscroll.endY && !value.up.dragging);
+  const nativeDrag = inputObservation;
   const autoscrolledTop = await window.webContents.executeJavaScript("document.querySelector('.restty-native-scroll-host').scrollTop", true);
   window.setSize(700, 440);
   await new Promise((resolve) => setTimeout(resolve, 150));
@@ -226,7 +302,11 @@ app.whenReady().then(async () => {
   const geometry = await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.hiddenGeometry()', true);
   await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.scrollToTop()', true);
   const outputMetrics = await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.outputWhileScrolled()', true);
-  window.webContents.sendInputEvent({ type: 'char', keyCode: 'x' });
+  await prepareInput('character-ready');
+  if (inputControl === 'character') process.stdout.write('__OMXTERM_SCROLLBACK_INPUT_CONTROL__' + JSON.stringify({ control: 'character', withheld: true }) + '\\n');
+  else window.webContents.sendInputEvent({ type: 'char', keyCode: 'x' });
+  await inputPhase('character', value => value.character?.trusted && value.character.input && value.accepted);
+  const nativeCharacter = inputObservation;
   const typed = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.inputViewport('x')", true);
   await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.scrollToTop()', true);
   await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.surface.inject('injected')", true);
@@ -276,6 +356,8 @@ app.whenReady().then(async () => {
     scrolledTop,
     autoscrollStartTop,
     autoscrolledTop,
+    nativeDrag,
+    nativeCharacter,
     resized,
     reduced,
     selectedPixels,
