@@ -261,7 +261,7 @@ async function prepareSupervisor(
   request: NativeFixtureRequest,
   testContext: NativeFixtureTestContext | undefined,
   prepare: (() => Promise<void>) | undefined,
-): Promise<string> {
+) {
   testContext?.signal.throwIfAborted();
   const identity = await lstat(request.root);
   if (
@@ -284,6 +284,29 @@ async function prepareSupervisor(
       );
   };
   let registered = false;
+  const cleanup = async (error: unknown): Promise<never> => {
+    // All started file writers have settled. This closure remains responsible
+    // through caller resumption and Windows request publication until handoff.
+    try {
+      await unchanged();
+      if (
+        !registered &&
+        existsSync(path.join(request.root, FIXTURE_PROCESS_DIRECTORY))
+      )
+        throw new Error(
+          "Fixture ownership changed; refusing preparation cleanup",
+        );
+    } catch (inspectionError) {
+      if ((inspectionError as NodeJS.ErrnoException).code === "ENOENT")
+        throw error;
+      throw new AggregateError(
+        [error, inspectionError],
+        "Fixture preparation and profile identity inspection failed",
+        { cause: error },
+      );
+    }
+    return removeFailedFixture(request.root, error);
+  };
   try {
     await prepare?.();
     testContext?.signal.throwIfAborted();
@@ -305,29 +328,9 @@ async function prepareSupervisor(
     testContext?.signal.throwIfAborted();
     await unchanged();
     testContext?.signal.throwIfAborted();
-    return supervisorPath;
+    return { supervisorPath, cleanup };
   } catch (error) {
-    // Callback/build promises must settle their started writers before throwing.
-    // No supervisor exists at this stage; never remove a replaced profile.
-    try {
-      await unchanged();
-      if (
-        !registered &&
-        existsSync(path.join(request.root, FIXTURE_PROCESS_DIRECTORY))
-      )
-        throw new Error(
-          "Fixture ownership changed; refusing preparation cleanup",
-        );
-    } catch (inspectionError) {
-      if ((inspectionError as NodeJS.ErrnoException).code === "ENOENT")
-        throw error;
-      throw new AggregateError(
-        [error, inspectionError],
-        "Fixture preparation and profile identity inspection failed",
-        { cause: error },
-      );
-    }
-    return removeFailedFixture(request.root, error);
+    return cleanup(error);
   }
 }
 
@@ -379,13 +382,10 @@ export function runNativeFixture(
       throw new Error(
         "Native fixture ownership unresolved; inspect retained ownership-blocked.json before another launch",
       );
-    const supervisorPath = await prepareSupervisor(
-      request,
-      testContext,
-      prepare,
-    );
-    testContext?.signal.throwIfAborted();
+    const prepared = await prepareSupervisor(request, testContext, prepare);
     try {
+      testContext?.signal.throwIfAborted();
+      const { supervisorPath } = prepared;
       let result: NativeFixtureResult;
       if (process.platform === "win32")
         result = await runWindowsSupervisor(
@@ -489,8 +489,8 @@ export function runNativeFixture(
       if (result.cleanupErrors.length !== 0) await blockUncertainOwner();
       return result;
     } catch (error) {
-      if (handedOff && !(error instanceof SettledFixtureError))
-        await blockUncertainOwner();
+      if (!handedOff) return prepared.cleanup(error);
+      if (!(error instanceof SettledFixtureError)) await blockUncertainOwner();
       throw error;
     }
   })();

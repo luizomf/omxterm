@@ -1,4 +1,5 @@
 import * as childProcess from "node:child_process";
+import * as filesystem from "node:fs/promises";
 import { existsSync, writeFileSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rename, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -11,6 +12,7 @@ import {
 } from "../fixtures/run-native-fixture";
 
 vi.mock("node:child_process", { spy: true });
+vi.mock("node:fs/promises", { spy: true });
 
 const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
 const completed = {
@@ -26,6 +28,12 @@ let root: string;
 let evidencePath: string;
 let preservedRoots: string[];
 beforeEach(async () => {
+  vi.clearAllMocks();
+  const actualFilesystem =
+    await vi.importActual<typeof filesystem>("node:fs/promises");
+  vi.mocked(filesystem.writeFile).mockImplementation(
+    actualFilesystem.writeFile,
+  );
   root = await mkdtemp(path.join(tmpdir(), "omxterm-outcome-"));
   evidencePath = path.join(root, "outcome.json");
   preservedRoots = [];
@@ -73,6 +81,125 @@ function disappear(publish?: string) {
 }
 
 describe("Native fixture preparation lifetime", () => {
+  it.each(["darwin", "win32"])(
+    "reclaims preparation aborted between its last guard and %s caller resume",
+    async (callerPlatform) => {
+      Object.defineProperty(process, "platform", { value: callerPlatform });
+      const controller = new AbortController();
+      const failure = new Error("abort at preparation return");
+      const context: NativeFixtureTestContext = {
+        signal: controller.signal,
+        onTestFinished: vi.fn<NativeFixtureTestContext["onTestFinished"]>(),
+      };
+      const check = controller.signal.throwIfAborted.bind(controller.signal);
+      let checks = 0;
+      vi.spyOn(controller.signal, "throwIfAborted").mockImplementation(() => {
+        checks += 1;
+        check();
+        // The fifth check is preparation's final synchronous guard. The queued
+        // abort runs before the caller resumes from that fulfilled preparation.
+        if (checks === 5) queueMicrotask(() => controller.abort(failure));
+      });
+      await expect(run(context)).rejects.toBe(failure);
+      expect(checks).toBe(6);
+      expect(existsSync(root)).toBe(false);
+      expect(vi.mocked(childProcess.execFileSync)).not.toHaveBeenCalled();
+      expect(vi.mocked(childProcess.fork)).not.toHaveBeenCalled();
+    },
+  );
+
+  it("reclaims a settled Windows request writer aborted before WMI handoff", async () => {
+    const controller = new AbortController();
+    const failure = new Error("abort at request publication");
+    const context: NativeFixtureTestContext = {
+      signal: controller.signal,
+      onTestFinished: vi.fn<NativeFixtureTestContext["onTestFinished"]>(),
+    };
+    const { writeFile: write } =
+      await vi.importActual<typeof filesystem>("node:fs/promises");
+    let writerSettled = false;
+    vi.spyOn(filesystem, "writeFile").mockImplementation(async (...args) => {
+      await write(...args);
+      if (args[0] === path.join(root, "supervisor-request.json")) {
+        writerSettled = true;
+        controller.abort(failure);
+      }
+    });
+    await expect(run(context)).rejects.toBe(failure);
+    expect(writerSettled).toBe(true);
+    expect(existsSync(root)).toBe(false);
+    expect(
+      vi
+        .mocked(childProcess.execFileSync)
+        .mock.calls.some(([, args]) =>
+          String(args?.at(-1)).includes("Invoke-CimMethod"),
+        ),
+    ).toBe(false);
+    expect(vi.mocked(childProcess.spawn)).not.toHaveBeenCalled();
+  });
+
+  it("preserves a replaced profile on abort after Windows request publication", async () => {
+    const controller = new AbortController();
+    const failure = new Error("abort after profile replacement");
+    const original = root + "-original";
+    preservedRoots.push(original);
+    const context: NativeFixtureTestContext = {
+      signal: controller.signal,
+      onTestFinished: vi.fn<NativeFixtureTestContext["onTestFinished"]>(),
+    };
+    const { writeFile: write } =
+      await vi.importActual<typeof filesystem>("node:fs/promises");
+    vi.spyOn(filesystem, "writeFile").mockImplementation(async (...args) => {
+      await write(...args);
+      if (args[0] === path.join(root, "supervisor-request.json")) {
+        await rename(root, original);
+        await mkdir(root);
+        writeFileSync(path.join(root, "foreign-owned"), "preserve");
+        controller.abort(failure);
+      }
+    });
+    await expect(run(context)).rejects.toMatchObject({
+      cause: failure,
+      errors: [failure, expect.any(Error)],
+    });
+    expect(existsSync(path.join(root, "foreign-owned"))).toBe(true);
+    expect(existsSync(original)).toBe(true);
+    expect(vi.mocked(childProcess.spawn)).not.toHaveBeenCalled();
+    expect(vi.mocked(childProcess.execFileSync)).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains an entry-already-aborted unprepared profile", async () => {
+    const controller = new AbortController();
+    const failure = new Error("already ended");
+    controller.abort(failure);
+    const prepare = vi.fn<() => Promise<void>>();
+    const onTestFinished = vi.fn<NativeFixtureTestContext["onTestFinished"]>();
+    await expect(
+      runNativeFixture({
+        executable: process.execPath,
+        args: [],
+        root,
+        evidencePath,
+        timeout: 1_000,
+        testContext: { signal: controller.signal, onTestFinished },
+        prepare,
+      }),
+    ).rejects.toBe(failure);
+    expect(existsSync(root)).toBe(true);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(onTestFinished).not.toHaveBeenCalled();
+    expect(vi.mocked(childProcess.execFileSync)).not.toHaveBeenCalled();
+  });
+
+  it("reclaims known unhanded preparation when Windows parent identity is absent", async () => {
+    vi.mocked(childProcess.execFileSync).mockReturnValue("[]");
+    await expect(run()).rejects.toThrow(
+      "Cannot establish native fixture parent identity",
+    );
+    expect(existsSync(root)).toBe(false);
+    expect(vi.mocked(childProcess.execFileSync)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(childProcess.spawn)).not.toHaveBeenCalled();
+  });
   it("joins started preparation after context abort and never performs WMI/native launch", async (actualContext) => {
     const controller = new AbortController();
     const context: NativeFixtureTestContext = {
