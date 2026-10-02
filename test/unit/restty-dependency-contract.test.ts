@@ -132,7 +132,7 @@ describe("Restty dependency contract", () => {
       path.join(packageRoot, "dist", "chunk-6dxqza9q.js"),
     );
     expect(digest(core)).toBe(
-      "baa7dd9600c034a77e73ed03864c3e15e02ccdc591d2044479652fef1d9c0900",
+      "dbe1edf4897f11d0de24acb4fd83d94646200a87a58317341525dc0a9d613662",
     );
     expect(core.toString("utf8")).toContain("restty_set_scrollback_limits");
     expect(core.toString("utf8")).toContain("restty_event_consume");
@@ -232,10 +232,12 @@ describe("Restty dependency contract", () => {
       );
 
       await copyFile(installedRuntime, runtimePath);
-      await writeFile(corePath, `${readFileSync(corePath, "utf8")}\n`);
+      const driftedCore = `${readFileSync(corePath, "utf8")}\n`;
+      await writeFile(corePath, driftedCore);
       await expect(prepareResttyRuntime(options)).rejects.toThrow(
         /Unrecognized Restty WASM runtime/u,
       );
+      expect(readFileSync(corePath, "utf8")).toBe(driftedCore);
 
       await copyFile(installedCore, corePath);
       await writeFile(artifactPath, Buffer.from([0, 97, 115, 109]));

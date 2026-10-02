@@ -1,3 +1,39 @@
+diff --git a/src/terminal/PageList.zig b/src/terminal/PageList.zig
+index 746a6cf8c..a3a0d5d12 100644
+--- a/src/terminal/PageList.zig
++++ b/src/terminal/PageList.zig
+@@ -1345,0 +1346 @@ fn resizeCols(
++        active_pin: ?*Pin,
+@@ -1381,0 +1383,10 @@ fn resizeCols(
++        const tracked_pin = c.pin orelse try self.trackPin(p);
++        errdefer if (c.pin == null) self.untrackPin(tracked_pin);
++
++        // Count reflow only within the original active interval. A newly
++        // exposed historical continuation must not consume its trailing rows.
++        const tracked_active = if (active_pin) |ap|
++            if (!p.before(ap)) try self.trackPin(ap) else null
++        else
++            null;
++
+@@ -1383 +1394,2 @@ fn resizeCols(
+-            .tracked_pin = c.pin orelse try self.trackPin(p),
++            .tracked_pin = tracked_pin,
++            .active_pin = tracked_active,
+@@ -1390,0 +1403 @@ fn resizeCols(
++        if (c.active_pin) |p| self.untrackPin(p);
+@@ -1518 +1531 @@ fn resizeCols(
+-        const active_pin = self.pin(.{ .active = .{} });
++        const active_pin = c.active_pin orelse break :cursor;
+@@ -1527 +1540 @@ fn resizeCols(
+-            var row_it = c.tracked_pin.rowIterator(.left_up, active_pin);
++            var row_it = c.tracked_pin.rowIterator(.left_up, active_pin.*);
+@@ -1652,0 +1666,3 @@ const ReflowCursor = struct {
++            // Deferred hard/blank rows and a pending wrap start at column zero,
++            // not at the preceding destination row's final column.
++            const dst_x = if (self.new_rows > 0 or self.pending_wrap) 0 else self.x;
+@@ -1667 +1683 @@ const ReflowCursor = struct {
+-                    self.page.size.cols - 1 - self.x,
++                    self.page.size.cols - 1 - dst_x,
 diff --git a/src/terminal/apc.zig b/src/terminal/apc.zig
 index 1ae70f5f1..fdd524e54 100644
 --- a/src/terminal/apc.zig

@@ -422,7 +422,7 @@ registry.
 After preparation, the corrected runtime has SHA-256
 `742a6d14c6906d6d4304199889eff69617f6a5ea25aaee788c2a7d6ee4e31dfa`,
 embedded-core chunk SHA-256
-`baa7dd9600c034a77e73ed03864c3e15e02ccdc591d2044479652fef1d9c0900`,
+`dbe1edf4897f11d0de24acb4fd83d94646200a87a58317341525dc0a9d613662`,
 and event declarations SHA-256
 `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34`.
 The narrow correction preserves font acquisition/lease cleanup under cache
@@ -465,9 +465,28 @@ Ghostty commits above with tracked Restty patch
 `assets/restty/omxterm-core.patch` and Ghostty patch
 `assets/restty/ghostty-title-events.patch`. Their SHA-256 values are recorded in
 `assets/restty-sources.json`. The artifact SHA-256 is
-`55696bf85e65a4602348679b0ee78d1724c805e0422eeebc925822865538d0ac`.
+`6214a42cc4f69ce60a0864cb67048a0e42fadf0d1bf74f4244bdbdbce529a5a2`.
 The background-identity correction changes only the existing cell background
 alpha export; it keeps the original Restty and Ghostty commits pinned.
+The Ghostty patch also corrects two PageList reflow seams. Cursor preservation
+tracks the original active top through reflow, so newly wrapped historical rows
+do not consume the active screen's trailing blank rows. Non-cursor pins in
+trimmed blank cells clamp against the row that will actually receive them,
+including deferred hard/blank rows and pending wraps, rather than a predecessor's
+final column. Genuine active text wrapping, continuation offsets and narrow-grid
+clipping remain core-owned. There is no renderer coordinate compensation or
+history deletion during refits.
+
+`test/integration/restty-reflow-core.test.ts` executes the tracked WASM directly
+and covers the image-free 5x3 history regression and the 5x4 blank-image-anchor
+regression separately, plus history/active predecessors, text anchors,
+no-history, shrink/restore, real active wrapping, viewport retention, mixed
+dimensions, clipping, continued soft wraps and independent image deletion.
+Preparation accepts the previous grapheme-corrected embedded-core digest
+`baa7dd9600c034a77e73ed03864c3e15e02ccdc591d2044479652fef1d9c0900`
+as a reviewed input and replaces only its embedded artifact. Runtime JavaScript
+and event declaration bytes remain unchanged; fresh installs and repeated
+preparation produce the same corrected core.
 The Restty patch also enables Ghostty's standard grapheme-cluster mode as a
 reset default so emoji-presentation and ZWJ clusters retain one two-column cell.
 It supplies Ghostty's existing size-report effect and stream-handler resize

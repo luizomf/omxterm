@@ -26,11 +26,11 @@
       {
         "repository": "ghostty",
         "path": "assets/restty/ghostty-title-events.patch",
-        "sha256": "90098fa4dc069c4ebf0fcb6ac47b6a9a1018033ca05aa910d805b645123cd449"
+        "sha256": "78cc308184bdc81a2cebdcf49171c39d5ad3a198ac379cf6077847d63f60fe89"
       }
     ],
     "artifact": "assets/restty/omxterm-restty-core.wasm",
-    "artifactSha256": "55696bf85e65a4602348679b0ee78d1724c805e0422eeebc925822865538d0ac",
+    "artifactSha256": "6214a42cc4f69ce60a0864cb67048a0e42fadf0d1bf74f4244bdbdbce529a5a2",
     "zigVersion": "0.16.0",
     "optimize": "ReleaseSafe",
     "target": "wasm32-freestanding",

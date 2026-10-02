@@ -272,6 +272,15 @@ therefore honors an available fine pointer; devices with touch but no fine
 pointer keep the existing touch path. This changes host selection, not scrolling
 mechanics, core state, hardware configuration or platform security.
 
+The later PageList reflow correction keeps those source pins and core ownership.
+It tracks the original active boundary for preserved-cursor wrap accounting,
+excluding newly exposed historical continuations from active trailing-row
+consumption. Blank non-cursor pins use the destination row's starting column,
+including deferred hard rows and pending wraps, while retaining genuine
+continuation offsets and clipping. Actual-core regressions distinguish both
+seams from legitimate text reflow. No image-coordinate compensation, forced
+viewport scroll or history deletion is added to the renderer.
+
 The decision carries the maintenance cost of a pinned dependency correction and
 the runtime cost of requiring WebGL2. In return, OMXTerm avoids unsafe
 passthrough, invisible shells, a permanent fallback renderer, and a speculative

@@ -41,10 +41,12 @@ const priorResizeCoreDigest =
   "3b3f4ef21e2fe5d5bfc7d5ad47b2557c1e12cca33619dbd5f15df9572e038f4d";
 const priorBackgroundCoreDigest =
   "039abfec307ab03015a2ae70b3583e07fcc9e5a70319de1ca055d6168f45af1b";
-const correctedCoreDigest =
+const priorGraphemeCoreDigest =
   "baa7dd9600c034a77e73ed03864c3e15e02ccdc591d2044479652fef1d9c0900";
+const correctedCoreDigest =
+  "dbe1edf4897f11d0de24acb4fd83d94646200a87a58317341525dc0a9d613662";
 const correctedCoreWasmDigest =
-  "55696bf85e65a4602348679b0ee78d1724c805e0422eeebc925822865538d0ac";
+  "6214a42cc4f69ce60a0864cb67048a0e42fadf0d1bf74f4244bdbdbce529a5a2";
 const originalEventTypesDigest =
   "1c9383be2d0377635b3463a5ac2ec31eac3e2b233fc664de751ad3e9f54ea650";
 const correctedEventTypesDigest =
@@ -1750,6 +1752,7 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     sourceDigest !== priorImageCoreDigest &&
     sourceDigest !== priorResizeCoreDigest &&
     sourceDigest !== priorBackgroundCoreDigest &&
+    sourceDigest !== priorGraphemeCoreDigest &&
     sourceDigest !== priorInteractionCoreDigest
   )
     throw new Error(
@@ -1769,6 +1772,7 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
       : sourceDigest === priorImageCoreDigest ||
           sourceDigest === priorResizeCoreDigest ||
           sourceDigest === priorBackgroundCoreDigest ||
+          sourceDigest === priorGraphemeCoreDigest ||
           sourceDigest === priorInteractionCoreDigest
         ? []
         : parsedEventCoreCorrections,

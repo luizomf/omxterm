@@ -480,7 +480,10 @@ uncompressed RGBA with exactly four decoded bytes per source pixel.
 `CSI 16 t` receives the terminal cell-size response after the Surface opens.
 Images stay cell-anchored through direct-session scrolling, Terminal Window
 resizing, Window Font Zoom, tab selection, and valid User Configuration Reload,
-subject to the pinned Ghostty core's placement and scrollback retention. Terminal reset, tab disposal, and leaving the alternate buffer
+subject to the pinned Ghostty core's placement and scrollback retention. Width
+reflow clips a blank-cell anchor to the available destination columns without
+borrowing a preceding hard row's column offset. Genuine wrapped text and viewport
+scrolling may change an image's visible cell coordinates. Terminal reset, tab disposal, and leaving the alternate buffer
 release the applicable image resources.
 
 The Restty Surface uses the pinned Ghostty core as its Kitty parser,
@@ -536,7 +539,10 @@ than requested; OMXTerm never estimates bytes per line. Zero disables history. R
 retained history, retains none through sustained output or resize, and can
 retain only new output after a later positive reload. Valid live changes keep
 the same Surface, core, Live Terminal Session and PTY and preserve coherent
-reflow, alternate-screen, selection and viewport state. Each Surface remains
+reflow, alternate-screen, selection and viewport state. Width reflow of retained
+history does not consume the cleared active screen's trailing blank rows as if
+that history were newly wrapped active text. Genuine active wrapping still moves
+text and cursor normally. Each Surface remains
 independent. Accepted keyboard input and delivered paste, snippet, or path input return the
 viewport to the live cursor. Output alone, protocol replies, focus, selection,
 and cancelled paste do not force the viewport to the bottom.

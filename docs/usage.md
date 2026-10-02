@@ -221,7 +221,10 @@ PI_IMAGE_PROTOCOL=kitty pi
 ```
 
 Keep Pi's default image autoresizing enabled. The [technical reference](spec.md#terminal-behavior)
-records supported image formats and size limits.
+records supported image formats and size limits. Images stay anchored to their
+terminal cells through resizing and zoom. Text reflow and viewport scrolling can
+move those cells on screen; blank anchors clip to the narrower grid rather than
+jumping to a preceding line's column.
 
 ## Bells and attention
 
