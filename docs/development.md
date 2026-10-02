@@ -243,36 +243,46 @@ Native negative controls make the owned window unavailable before mount, hold
 its actual renderer frame continuation, or withhold delivery of an actual native
 capture. They must exit promptly with the presentation-unavailable or named
 operation-timeout phase and clean supervision, never pass on missing pixels.
-The unavailable-presentation control defaults to real native `early-minimize`;
-`OMXTERM_TEST_CURSOR_PRESENTATION_CONTROL=minimize` declares that same choice.
-On a compositor independently demonstrated not to honor minimize, explicitly
-select `hide` to exercise real native `early-hide` instead. Both start from an
-observed native-visible, non-minimized window and require the selected native
-state before mount: minimized for minimize; hidden **and not minimized** for hide.
-The retained fixed control marker, test name and mount failure distinguish the
-actual action. Neither a request nor an unobserved transition satisfies the test.
+Before the unavailable-presentation case, a separate supervised raw Electron
+reference observes native minimize with a full 25-second response allowance.
+Successful minimize and restoration retain the real `early-minimize` control.
+Only a healthy reference that completes that interval without minimization and
+then actually hides selects the separately named real `early-hide` control.
+The behavior fixture still requires initial native-visible, non-minimized state,
+the selected actual transition, exactly one named control marker and the mount
+`presentation-unavailable` failure. Hide requires hidden **and not minimized**;
+it is not minimization coverage. Missing, duplicate, invalid, failed or timed-out
+reference evidence never selects an alternate path. Maximize observations do not
+select the cursor control, and no failed behavior test is retried as hide.
 
-This is an independent operator declaration, not compositor detection, a failed
-minimize fallback, or a skip. Unset means minimize; unsupported values (including
-empty) fail. The Window Chrome suppress-maximize declaration does not prove
-minimize support and never selects this control. Keep the default on desktops
-that honor minimize so that actual minimization coverage remains exercised.
+Discovery has its own 90-second child-execution budget, derived from sequential
+native response and bounded load/presentation/renderer-health operations. This is
+not an end-to-end preparation/cleanup deadline: an enclosing test timeout does not
+prove that native ownership has ended. The behavior
+fixture's five-second guard, under-20-second negative-control measurement,
+90-second supervisor and both complete DPR pixel matrices remain unchanged.
 The minimized-canvas scheduling mechanism remains distinct from the unproven
-historical trigger of an earlier timeout or a shipping Restty/GPU defect; native
-hide exercises the same unavailable-presentation guard, not minimization itself.
-Run the ordinary matrix and all three controls together:
+historical trigger of an earlier timeout or a shipping Restty/GPU defect.
+Run the ordinary matrix and all three controls together without declarations:
 
 ```sh
 npx vitest run test/integration/restty-cursor-rendering.test.ts
 ```
 
-For the demonstrated non-minimizing Omarchy Hyprland/XWayland environment:
+The same command works on the diagnosed Omarchy Hyprland/XWayland desktop.
+`OMXTERM_TEST_CURSOR_PRESENTATION_CONTROL` and `OMXTERM_TEST_WINDOW_POLICY` are
+retired: their presence, including an empty value, produces an actionable error.
+Remove old exports (in PowerShell, remove the corresponding `Env:` entries):
 
 ```sh
-OMXTERM_TEST_CURSOR_PRESENTATION_CONTROL=hide npx vitest run test/integration/restty-cursor-rendering.test.ts
-# The two independent declarations are both needed for its full native suite:
-OMXTERM_TEST_WINDOW_POLICY=hyprland-suppress-maximize OMXTERM_TEST_CURSOR_PRESENTATION_CONTROL=hide npm run check:portable
+unset OMXTERM_TEST_CURSOR_PRESENTATION_CONTROL OMXTERM_TEST_WINDOW_POLICY
+npm run check:portable
 ```
+
+There is no global discovery launcher, installation, persistent capability cache,
+compositor-rule parsing or desktop reconfiguration. Discovery occurs only inside
+the affected native test callbacks; listing tests and unit-only selection launch
+no raw windows.
 
 The background-tab removal fixture waits for the main process's actual initial
 selection acknowledgement and a renderer task/microtask boundary before sending
@@ -414,33 +424,58 @@ and the native Alt-alone popup. It changes no keyboard layout or persistent OS
 configuration. This is not hardware-key input, arbitrary-layout qualification,
 or a measurement of PTY bytes. Ordinary checks skip this disruptive opt-in.
 
-### Deliberate compositor policy
+### Run-local native window observation
 
-Window Chrome tests require native maximize/restore success by default. A Linux
-Hyprland desktop deliberately suppressing maximize can declare its independently
-verified policy **before** the run:
+Window Chrome continuity independently observes ordinary framed and separately
+specified app-shaped raw Electron windows before exercising product behavior.
+Linux's app-shaped reference is frameless/transparent; Windows's is frameless
+and **nontransparent**. The reference never imports production construction,
+Chrome, renderer or PTY code. It retains the consumer's Electron executable,
+backend and requested DPR. Each reference must be initially live, loaded,
+responsive, visible, non-minimized and non-maximized. Starting state is checked
+again after asynchronous health at the actual native invocation; final
+action-specific state is rechecked after health before committing an observation.
+Successful maximize requires observed restoration before proceeding. Both
+references must agree.
+
+Agreement on successful maximize/restore retains actual custom Maximize/Restore
+transitions. Agreement on healthy `not-observed-within-budget` results selects
+`native-maximize-not-observed`, not an inferred compositor policy. Each raw
+maximize and product unchanged-state observation uses the same existing
+25-second native-response allowance. Discovery's separate 165-second child-execution
+budget covers sequential reference actions and bounded setup/health work, not
+preparation or supervisor settlement; product request delivery and behavior
+supervision remain separate. A crash, timeout,
+failed restoration, differential disagreement, invalid/absent/duplicate report,
+nonzero exit or uncertain cleanup fails rather than selecting unavailability.
+
+The unavailable path still clicks the real custom control twice. A single scoped
+recorder spans coordinate lookup, click delivery, label and focus awaits, requiring
+exactly one intended native action per click and no foreign or additional window
+control actions. Both paths require action/branch-specific final state and label,
+rechecked after the last observation sleep and renderer/focus awaits, alongside
+healthy native presentation. Native/container/Surface/PTY fit, hidden-tab geometry,
+identity, fullscreen and cleanup assertions remain unchanged. Independent
+product-construction checks reject resizable/maximizable disabling and size traps;
+headless actual-entry tests prove the guard runs before native construction.
+Headless actual Chrome wiring rejects wrong-owner and duplicate routes; a real
+native dropped-route control retains renderer/preload/IPC rejection coverage.
+Negative-only duplicate/nonzero report controls use supervised synthetic protocol
+reports, not extra native-response waits or capability evidence. Real discovery,
+reference-health controls and successful transitions still require native windows.
+Tiling is not required to preserve a historical window height.
+
+This bounded comparison establishes observed native behavior, not permanent
+capability, intentional desktop policy or the cause of a common Electron/backend
+regression. It cannot exclude every additional defect masked by an incapable
+environment. Actual maximize/restore and minimize qualification on capable
+desktops remains necessary; native hide is not credited as minimize success.
+The retired manual declarations are rejected rather than inherited as evidence.
+Run the affected tests normally:
 
 ```sh
-OMXTERM_TEST_WINDOW_POLICY=hyprland-suppress-maximize npm test
+npx vitest run test/integration/window-chrome.test.ts test/integration/restty-cursor-rendering.test.ts
 ```
-
-The same declaration applies to `npm run check:portable`.
-
-First inspect the active Hyprland configuration and its loaded rules to confirm
-that they suppress application maximize requests (Omarchy's default window rules
-use `suppress_event = "maximize"`). An installed configuration file alone is not
-proof that it is loaded. Preserve `HYPRLAND_INSTANCE_SIGNATURE` from that desktop.
-Do not set this declaration merely because a maximize assertion failed, or change
-global rules to obtain a pass. Unknown declarations or missing Hyprland sessions
-fail validation. Other desktops keep the default successful-maximize assertion.
-
-The declared path still clicks the real custom control, observes its native
-request and unchanged native state, checks its label and terminal focus, and
-verifies Surface/PTY continuity and cleanup. Tiling may resize the first window
-when the second opens: its selected Surface and PTY must fit actual native and
-container bounds, while hidden-tab geometry remains untouched. Both policies
-check actual bounds rather than requiring a historical height to survive tiling;
-`standard` declares maximize behavior, not an absence of tiling.
 
 About startup tests retain the desktop's Wayland environment and exercise the
 production X11 relaunch. About-specific bounded stage/error-category metadata is
