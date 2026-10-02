@@ -106,6 +106,10 @@ export async function exerciseAppearanceSelection(
     typeof observation.afterFrame !== "boolean" ||
     !("deferredFrame" in observation) ||
     typeof observation.deferredFrame !== "boolean" ||
+    !("lateFrameArrivalMs" in observation) ||
+    typeof observation.lateFrameArrivalMs !== "number" ||
+    !Number.isFinite(observation.lateFrameArrivalMs) ||
+    observation.lateFrameArrivalMs < 0 ||
     !("focused" in observation) ||
     typeof observation.focused !== "boolean" ||
     !("visibilityState" in observation) ||
@@ -117,6 +121,7 @@ export async function exerciseAppearanceSelection(
     beforeFrame: observation.beforeFrame,
     afterFrame: observation.afterFrame,
     deferredFrame: observation.deferredFrame,
+    lateFrameArrivalMs: observation.lateFrameArrivalMs,
     focused: observation.focused,
     visibilityState: observation.visibilityState,
   };

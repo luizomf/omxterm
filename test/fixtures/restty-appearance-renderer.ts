@@ -66,6 +66,7 @@ export interface SelectionObservation {
   readonly beforeFrame: boolean;
   readonly afterFrame: boolean;
   readonly deferredFrame: boolean;
+  readonly lateFrameArrivalMs: number;
   readonly visibilityState: DocumentVisibilityState;
   readonly focused: boolean;
 }
@@ -101,22 +102,45 @@ globalThis.__omxtermSelectionFrame = selectionFrame;
 
 const deferFrames =
   new URLSearchParams(location.search).get("deferFrames") === "true";
+const lateFrameArrival =
+  new URLSearchParams(location.search).get("lateFrameArrival") === "true";
 let deferUntil = 0;
+let deferSelectionFrame = false;
 let deferredFrame = false;
+let selectionArmedAt: number | null = null;
+let lateFrameArrivalMs = 0;
 if (deferFrames) {
-  window.requestAnimationFrame = (callback) =>
-    nativeFrame((time) => {
-      const remaining = deferUntil - performance.now();
+  window.requestAnimationFrame = (callback) => {
+    const arrive = (time: number) => {
+      const now = performance.now();
+      if (lateFrameArrival && selectionArmedAt !== null) {
+        const remainingArrival = selectionArmedAt + 350 - now;
+        if (remainingArrival > 0) {
+          // Delay delivery at the live RAF seam, not the renderer task. Resume
+          // on another actual native frame; input and capture remain unblocked.
+          setTimeout(() => nativeFrame(arrive), remainingArrival);
+          return;
+        }
+        if (lateFrameArrivalMs === 0)
+          lateFrameArrivalMs = now - selectionArmedAt;
+      }
+      // Selection arms an affected frame, not a wall-clock opportunity that can
+      // expire before native delivery. Configured-font output keeps its interval.
+      const remaining = deferSelectionFrame ? 300 : deferUntil - now;
+      deferSelectionFrame = false;
       if (remaining > 0) {
         deferredFrame = true;
         // Exercise a late frame without blocking input/capture or changing native
         // focus. This delay is a regression stimulus, never a readiness wait.
         setTimeout(() => nativeFrame(callback), remaining);
       } else callback(time);
-    });
+    };
+    return nativeFrame(arrive);
+  };
 }
 globalThis.__omxtermBeginSelection = () => {
-  if (deferFrames) deferUntil = performance.now() + 300;
+  selectionArmedAt = performance.now();
+  if (deferFrames) deferSelectionFrame = true;
   beginSelectionFrameGate();
 };
 
@@ -419,6 +443,7 @@ async function run() {
       beforeFrame,
       afterFrame,
       deferredFrame,
+      lateFrameArrivalMs,
       visibilityState: document.visibilityState,
       focused: document.hasFocus(),
     };

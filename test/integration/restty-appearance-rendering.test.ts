@@ -87,13 +87,15 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
         deferFrames,
         mixedPointer,
         gateFrames,
+        lateFrameArrival,
       ] of [
-        [undefined, false, false, false],
-        [1, false, false, false],
-        [2, false, false, false],
-        [undefined, true, false, false],
-        [undefined, false, true, false],
-        [undefined, false, false, true],
+        [undefined, false, false, false, false],
+        [1, false, false, false, false],
+        [2, false, false, false, false],
+        [undefined, true, false, false, false],
+        [undefined, false, true, false, false],
+        [undefined, false, false, true, false],
+        [undefined, true, false, false, true],
       ] as const) {
         const execution = await runFixture(
           root,
@@ -101,6 +103,7 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
           deferFrames,
           mixedPointer,
           gateFrames,
+          lateFrameArrival,
         );
         const line = execution.stdout
           .split("\n")
@@ -108,15 +111,17 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
         const result = line
           ? (JSON.parse(line.slice(resultPrefix.length)) as Result)
           : undefined;
-        const label = gateFrames
-          ? "held Surface RAF with independent native fixture frames"
-          : mixedPointer
-            ? "mouse press with pen motion and compatibility mouse events"
-            : deferFrames
-              ? "delayed selection and configured-font frames at actual display DPR"
-              : requestedScaleFactor
-                ? `forced DPR ${requestedScaleFactor}`
-                : "actual display DPR";
+        const label = lateFrameArrival
+          ? "native selection frame arrives after the original delay interval"
+          : gateFrames
+            ? "held Surface RAF with independent native fixture frames"
+            : mixedPointer
+              ? "mouse press with pen motion and compatibility mouse events"
+              : deferFrames
+                ? "delayed selection and configured-font frames at actual display DPR"
+                : requestedScaleFactor
+                  ? `forced DPR ${requestedScaleFactor}`
+                  : "actual display DPR";
 
         expect(
           execution.exitCode,
@@ -183,6 +188,21 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
       }
       expect(runs[3]!.result.configuredFont.deferredFrame).toBe(true);
       expect(runs[3]!.result.selection.deferredFrame).toBe(true);
+      const late = runs[6]!.result;
+      expect(late.selection.lateFrameArrivalMs).toBeGreaterThanOrEqual(350);
+      expect(late.selection.lateFrameArrivalMs).toBeLessThan(3000);
+      expect(late.selection.beforeFrame).toBe(true);
+      expect(late.selection.afterFrame).toBe(true);
+      expect(late.selection.deferredFrame).toBe(true);
+      expect(late.configuredFont.deferredFrame).toBe(true);
+      for (const color of expectedColors)
+        expect(
+          late.colorCounts[color],
+          `late native frame ${color}`,
+        ).toBeGreaterThan(0);
+      expect(late.colorCounts["#201012"]).toBeGreaterThan(
+        late.colorCounts["#90105a"]!,
+      );
       for (const color of expectedColors)
         expect(
           runs[3]!.result.colorCounts[color],
@@ -420,6 +440,7 @@ async function runFixture(
   deferFrames = false,
   mixedPointer = false,
   gateFrames = false,
+  lateFrameArrival = false,
 ): Promise<{
   readonly exitCode: number | null;
   readonly stderr: string;
@@ -443,11 +464,14 @@ async function runFixture(
       OMXTERM_RESTTY_APPEARANCE_DEFER_FRAME: deferFrames ? "1" : "0",
       OMXTERM_RESTTY_APPEARANCE_MIXED_POINTER: mixedPointer ? "1" : "0",
       OMXTERM_RESTTY_APPEARANCE_GATE_FRAMES: gateFrames ? "1" : "0",
+      OMXTERM_RESTTY_APPEARANCE_LATE_FRAME_ARRIVAL: lateFrameArrival
+        ? "1"
+        : "0",
       OMXTERM_RESTTY_APPEARANCE_REQUESTED_DPR: String(scaleFactor ?? "actual"),
       OMXTERM_RESTTY_APPEARANCE_ARTIFACT_DIRECTORY: path.join(
         projectRoot,
         ".scratch",
-        `restty-appearance-${Date.now()}-${process.pid}-${gateFrames ? "gate" : mixedPointer ? "mixed" : deferFrames ? "deferred" : (scaleFactor ?? "actual")}`,
+        `restty-appearance-${Date.now()}-${process.pid}-${lateFrameArrival ? "late-arrival" : gateFrames ? "gate" : mixedPointer ? "mixed" : deferFrames ? "deferred" : (scaleFactor ?? "actual")}`,
       ),
       HOME: path.join(root, "home"),
       XDG_CONFIG_HOME: path.join(root, "config"),
