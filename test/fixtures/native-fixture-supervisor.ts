@@ -24,6 +24,7 @@ interface Request {
   readonly parent?: FixtureProcess;
   readonly externalChild?: boolean;
   readonly completionFile?: string;
+  readonly cancellationToken?: string;
 }
 
 interface ExternalExit {
@@ -198,6 +199,14 @@ async function supervise(request: Request): Promise<void> {
       pendingRegistrations += 1;
   };
   const sample = () => {
+    if (
+      request.cancellationToken &&
+      readRecord<{ token: string }>(request.root, "native-cancel.json")
+        ?.token === request.cancellationToken
+    ) {
+      if (reason === "exit") reason = "caller-cancelled";
+      resolveEnd();
+    }
     const rows = fixtureProcesses();
     if (
       request.parent &&

@@ -1,6 +1,7 @@
 import * as childProcess from "node:child_process";
 import * as filesystem from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { EventEmitter } from "node:events";
 import * as module from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -114,6 +115,14 @@ async function observeCaller(
             return root;
           },
         };
+      if (id === "node:path")
+        return {
+          ...path,
+          resolve: (...args: string[]) =>
+            args[0] === ".scratch/native-fixtures"
+              ? path.resolve(root!, "synthetic-receipts", ...args.slice(1))
+              : path.resolve(...args),
+        };
       if (id === "node:module")
         return {
           ...module,
@@ -132,13 +141,17 @@ async function observeCaller(
           execFile: () => {
             throw new Error("Unexpected native command");
           },
-          fork: () => ({
-            once() {},
-            send() {
-              nativeRequests += 1;
-              throw stopped;
-            },
-          }),
+          fork: () =>
+            Object.assign(new EventEmitter(), {
+              connected: false,
+              send(this: EventEmitter) {
+                nativeRequests += 1;
+                // A send error is not settlement. Model the actual failed owner
+                // closing afterward; no native process was created by this port.
+                queueMicrotask(() => this.emit("close"));
+                throw stopped;
+              },
+            }),
         };
       return require(id) as unknown;
     },
