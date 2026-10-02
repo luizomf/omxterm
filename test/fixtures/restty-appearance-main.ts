@@ -56,7 +56,6 @@ const persistCaptures = (error) => {
     requestedDPR: process.env.OMXTERM_RESTTY_APPEARANCE_REQUESTED_DPR,
     deferFrames: process.env.OMXTERM_RESTTY_APPEARANCE_DEFER_FRAME === '1',
     gateFrames: process.env.OMXTERM_RESTTY_APPEARANCE_GATE_FRAMES === '1',
-    lateFrameArrival: process.env.OMXTERM_RESTTY_APPEARANCE_LATE_FRAME_ARRIVAL === '1',
     samples,
   }, null, 2) + '\\n');
   if (error || process.env.OMXTERM_RESTTY_APPEARANCE_GATE_FRAMES === '1'
@@ -133,7 +132,6 @@ function appearanceRunSource(resultPrefix: string): string {
     query: {
       deferFrames: String(process.env.OMXTERM_RESTTY_APPEARANCE_DEFER_FRAME === '1'),
       gateFrames: String(process.env.OMXTERM_RESTTY_APPEARANCE_GATE_FRAMES === '1'),
-      lateFrameArrival: String(process.env.OMXTERM_RESTTY_APPEARANCE_LATE_FRAME_ARRIVAL === '1'),
     },
   });
   window.showInactive();
@@ -143,11 +141,8 @@ function appearanceRunSource(resultPrefix: string): string {
   const cellHeight = result.live.cellHeight / result.devicePixelRatio;
   const x = Math.round(bounds.x + cellWidth * 0.5);
   const y = Math.round(bounds.y + cellHeight * 2.5);
-  const select = () => require('./selection.cjs').exerciseAppearanceSelection(window,
+  const selection = await require('./selection.cjs').exerciseAppearanceSelection(window,
     { x, y, cellWidth }, process.env.OMXTERM_RESTTY_APPEARANCE_MIXED_POINTER === '1');
-  const selection = process.env.OMXTERM_RESTTY_APPEARANCE_LATE_FRAME_ARRIVAL === '1'
-    ? await beforeDeadline(select, Date.now() + 3000)
-    : await select();
   const first = await captureSample(window, 'first-after-copy-and-two-frames', Date.now() + 3000);
   assertSelection(first);
   const controlled = process.env.OMXTERM_RESTTY_APPEARANCE_GATE_FRAMES === '1';

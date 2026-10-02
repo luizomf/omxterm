@@ -1,6 +1,6 @@
 import configuredFontBytes from "../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf";
 import { verifyInBandResize } from "./restty-resize-regression";
-import { createAppearanceFrameDelay } from "./restty-appearance-frame-delay";
+import { createAppearanceOutputDelay } from "./restty-appearance-output-delay";
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
 import { terminalFontInputs } from "../../src/terminal-surface/terminal-font-stack";
 import {
@@ -66,8 +66,6 @@ interface AppearanceResult {
 export interface SelectionObservation {
   readonly beforeFrame: boolean;
   readonly afterFrame: boolean;
-  readonly deferredFrame: boolean;
-  readonly lateFrameArrivalMs: number;
   readonly visibilityState: DocumentVisibilityState;
   readonly focused: boolean;
 }
@@ -83,7 +81,6 @@ declare global {
     readonly focused: boolean;
     readonly visibilityState: DocumentVisibilityState;
     readonly devicePixelRatio: number;
-    readonly deferredFrame: boolean;
     readonly gateHeld: boolean;
     readonly heldCallbacks: readonly number[];
     readonly queuedCallbacks: readonly number[];
@@ -103,28 +100,20 @@ globalThis.__omxtermSelectionFrame = selectionFrame;
 
 const deferFrames =
   new URLSearchParams(location.search).get("deferFrames") === "true";
-const lateFrameArrival =
-  new URLSearchParams(location.search).get("lateFrameArrival") === "true";
-const frameDelay = deferFrames
-  ? createAppearanceFrameDelay(
-      {
-        request: nativeFrame,
-        cancel: window.cancelAnimationFrame.bind(window),
-        now: () => performance.now(),
-        setTimer: (callback, delay) => window.setTimeout(callback, delay),
-        clearTimer: (id) => window.clearTimeout(id),
-      },
-      lateFrameArrival,
-    )
+const outputDelay = deferFrames
+  ? createAppearanceOutputDelay({
+      request: nativeFrame,
+      cancel: window.cancelAnimationFrame.bind(window),
+      now: () => performance.now(),
+      setTimer: (callback, delay) => window.setTimeout(callback, delay),
+      clearTimer: (id) => window.clearTimeout(id),
+    })
   : undefined;
-if (frameDelay) {
-  window.requestAnimationFrame = frameDelay.request;
-  window.cancelAnimationFrame = frameDelay.cancel;
+if (outputDelay) {
+  window.requestAnimationFrame = outputDelay.request;
+  window.cancelAnimationFrame = outputDelay.cancel;
 }
-globalThis.__omxtermBeginSelection = () => {
-  frameDelay?.beginSelection();
-  beginSelectionFrameGate();
-};
+globalThis.__omxtermBeginSelection = beginSelectionFrameGate;
 
 const customTheme: TerminalTheme = {
   version: 1,
@@ -367,7 +356,7 @@ async function run() {
     { length: 8 },
     (_, index) => `\u001b[${90 + index}m██`,
   ).join("");
-  frameDelay?.beginOutput(
+  outputDelay?.beginOutput(
     document.body.dataset.configuredFont === "true" &&
       document.body.dataset.referenceFonts === "false",
   );
@@ -401,7 +390,6 @@ async function run() {
       focused: document.hasFocus(),
       visibilityState: document.visibilityState,
       devicePixelRatio,
-      deferredFrame: frameDelay?.deferredFrame ?? false,
       ...selectionFrameDiagnostics(),
       observedAt: performance.now(),
     };
@@ -411,7 +399,6 @@ async function run() {
     await surface.copy();
     const beforeFrame = copiedSelection === " https";
     await waitForLayout(true);
-    await frameDelay?.waitForSelectionDelay();
     copiedSelection = "";
     await surface.copy();
     const afterFrame = copiedSelection === " https";
@@ -422,14 +409,12 @@ async function run() {
     return {
       beforeFrame,
       afterFrame,
-      deferredFrame: frameDelay?.deferredFrame ?? false,
-      lateFrameArrivalMs: frameDelay?.lateFrameArrivalMs ?? 0,
       visibilityState: document.visibilityState,
       focused: document.hasFocus(),
     };
   };
   globalThis.__omxtermResttyAppearanceResult = {
-    deferredOutputFrame: frameDelay?.deferredFrame ?? false,
+    deferredOutputFrame: outputDelay?.deferredFrame ?? false,
     measurements,
     live: {
       sameCanvas: canvas === liveCanvas,
