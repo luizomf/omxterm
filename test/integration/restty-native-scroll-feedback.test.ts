@@ -9,11 +9,12 @@ import { removeFailedFixture } from "../fixtures/remove-failed-fixture";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
 import type { ScrollFeedbackEvent } from "../fixtures/restty-native-scroll-feedback-observer";
 
-for (const mode of [
-  "native-scroll-feedback",
-  "native-scroll-feedback-ready-before-map",
+for (const [mode, dpr] of [
+  ["native-scroll-feedback", undefined],
+  ["native-scroll-feedback-ready-before-map", undefined],
+  ["native-scroll-feedback-ready-before-map", 1.5],
 ] as const) {
-  it(`keeps the native viewport live through queued spacer clamps and intentional scrolling (${mode})`, async () => {
+  it(`keeps the native viewport live through queued spacer clamps and intentional scrolling (${mode}, DPR ${dpr ?? "native"})`, async () => {
     const root = await mkdtemp(
       path.join(tmpdir(), "omxterm-native-scroll-feedback-"),
     );
@@ -25,6 +26,7 @@ for (const mode of [
         appendSwitch: (name) => args.push(`--${name}`),
       });
       if (process.platform === "linux") args.push("--ozone-platform=x11");
+      if (dpr !== undefined) args.push(`--force-device-scale-factor=${dpr}`);
       const executable = createRequire(import.meta.url)("electron") as string;
       supervised = true;
       const result = await runNativeFixture({
@@ -57,6 +59,8 @@ for (const mode of [
           clientHeight: number;
           canvasWidth: number;
           canvasHeight: number;
+          canvasCssWidth: number;
+          canvasCssHeight: number;
           core: { len: number; cellH: number };
         };
         mapping: {
@@ -65,6 +69,7 @@ for (const mode of [
           content: { width: number; height: number };
         };
       };
+      if (dpr !== undefined) expect(feedback.dpr).toBe(dpr);
       if (mode === "native-scroll-feedback-ready-before-map") {
         expect(feedback.mapping).toMatchObject({
           readyBeforeMap: true,
@@ -78,10 +83,16 @@ for (const mode of [
         feedback.mapping.content.height,
       );
       expect(feedback.baseline.canvasWidth).toBe(
-        Math.round(feedback.baseline.width * feedback.dpr),
+        Math.max(
+          1,
+          Math.floor(feedback.baseline.canvasCssWidth * feedback.dpr),
+        ),
       );
       expect(feedback.baseline.canvasHeight).toBe(
-        Math.round(feedback.baseline.clientHeight * feedback.dpr),
+        Math.max(
+          1,
+          Math.floor(feedback.baseline.canvasCssHeight * feedback.dpr),
+        ),
       );
       expect(feedback.baseline.core.len).toBe(
         Math.floor(

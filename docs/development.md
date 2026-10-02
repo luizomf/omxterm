@@ -367,6 +367,10 @@ The native scroll-feedback regression first requires coherent host/canvas/core
 geometry, exact DOM bottom and the actual live core offset, unchanged for 100 ms
 within a five-second startup observation budget. Native mapping can update layout
 before the backing canvas and core refit; DOM bottom alone is not readiness.
+Backing dimensions use Restty's `max(1, floor(canvas rectangle × DPR))` sizing,
+not rounded integer host client dimensions. Fractional CSS bounds are retained
+in readiness/stability observations; a native DPR1.5 case checks the same real
+ready-before-map, transition and intentional-scroll path.
 The quiet interval is a bounded fixture precondition, not a guarantee that a
 compositor cannot resize later. Later width/identity changes still fail strict
 transition checks; no quiet wait or event-drain step is added between transitions.

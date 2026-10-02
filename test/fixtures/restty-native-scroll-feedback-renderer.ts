@@ -45,19 +45,25 @@ async function mount() {
   )!;
   const core = (): ScrollFeedbackCore =>
     globalThis.__scrollFeedbackCore.get(canvas)!();
-  const metrics = () => ({
-    scrollHeight: host.scrollHeight,
-    clientHeight: host.clientHeight,
-    scrollTop: host.scrollTop,
-    width: host.clientWidth,
-    canvasWidth: canvas.width,
-    canvasHeight: canvas.height,
-    viewportWidth: innerWidth,
-    viewportHeight: innerHeight,
-    dpr: devicePixelRatio,
-    sameCanvas: canvas === container.querySelector("canvas"),
-    core: core(),
-  });
+  const metrics = () => {
+    // Restty updateSize quantizes this rectangle, not integer client dimensions.
+    const bounds = canvas.getBoundingClientRect();
+    return {
+      scrollHeight: host.scrollHeight,
+      clientHeight: host.clientHeight,
+      scrollTop: host.scrollTop,
+      width: host.clientWidth,
+      canvasWidth: canvas.width,
+      canvasHeight: canvas.height,
+      canvasCssWidth: bounds.width,
+      canvasCssHeight: bounds.height,
+      viewportWidth: innerWidth,
+      viewportHeight: innerHeight,
+      dpr: devicePixelRatio,
+      sameCanvas: canvas === container.querySelector("canvas"),
+      core: core(),
+    };
+  };
   handlers.onOutput(
     Array.from(
       { length: 5_000 },
@@ -113,6 +119,7 @@ async function mount() {
             );
           if (
             measurement.width !== baseline.width ||
+            measurement.canvasCssWidth !== baseline.canvasCssWidth ||
             measurement.canvasWidth !== baseline.canvasWidth ||
             !measurement.sameCanvas
           )

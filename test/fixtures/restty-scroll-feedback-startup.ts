@@ -5,6 +5,8 @@ export interface ScrollFeedbackStartupGeometry {
   readonly clientHeight: number;
   readonly canvasWidth: number;
   readonly canvasHeight: number;
+  readonly canvasCssWidth: number;
+  readonly canvasCssHeight: number;
   readonly sameCanvas: boolean;
   readonly viewportWidth: number;
   readonly viewportHeight: number;
@@ -37,6 +39,8 @@ export async function waitForScrollFeedbackStartup<
       current.clientHeight,
       current.canvasWidth,
       current.canvasHeight,
+      current.canvasCssWidth,
+      current.canvasCssHeight,
       current.viewportWidth,
       current.viewportHeight,
       current.dpr,
@@ -47,10 +51,19 @@ export async function waitForScrollFeedbackStartup<
       current.sameCanvas &&
       current.width > 0 &&
       current.clientHeight > 0 &&
+      current.canvasCssWidth > 0 &&
+      current.canvasCssHeight > 0 &&
+      // This fixture's borderless, 100%-sized canvas fills the scroll host.
+      // Keep integer host metrics for DOM scrolling, but do not quantize the
+      // backing buffer from them: Restty floors its actual canvas rectangle.
+      Math.round(current.canvasCssWidth) === current.width &&
+      Math.round(current.canvasCssHeight) === current.clientHeight &&
       current.dpr > 0 &&
       current.core.cellH > 0 &&
-      current.canvasWidth === Math.round(current.width * current.dpr) &&
-      current.canvasHeight === Math.round(current.clientHeight * current.dpr) &&
+      current.canvasWidth ===
+        Math.max(1, Math.floor(current.canvasCssWidth * current.dpr)) &&
+      current.canvasHeight ===
+        Math.max(1, Math.floor(current.canvasCssHeight * current.dpr)) &&
       current.core.len ===
         Math.floor(current.canvasHeight / current.core.cellH) &&
       current.scrollTop === current.scrollHeight - current.clientHeight &&
