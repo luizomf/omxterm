@@ -10,6 +10,7 @@ import { removeFailedFixture } from "../fixtures/remove-failed-fixture";
 import { HOVER_PHASE_PREFIX } from "../fixtures/restty-hover";
 import {
   HOVER_CONTROL_PREFIX,
+  HOVER_FRAME_PREFIX,
   type HoverControl,
 } from "../fixtures/restty-hover-control";
 import type {
@@ -21,6 +22,11 @@ import type {
 interface Phase {
   readonly phase: string;
   readonly category: string;
+  readonly stimulus: {
+    readonly canvasId: number;
+    readonly revision: number;
+    readonly cells: number;
+  };
   readonly preparation: {
     readonly exactContent: boolean;
     readonly gridMatches: boolean;
@@ -38,11 +44,37 @@ interface Phase {
   };
   readonly pixels?: HoverPixels;
 }
+interface Frame {
+  readonly stage: string;
+  readonly active: boolean;
+  readonly canvasId?: number;
+  readonly revision?: number;
+  readonly callbackId?: number;
+  readonly releasedCallbackId?: number;
+  readonly pending: number;
+  readonly currentCanvasId: number;
+  readonly currentRevision: number;
+  readonly drawRevision: number;
+}
+function expectHeldFrame(frames: readonly Frame[], phase: Phase): Frame {
+  const held = frames.find((frame) => frame.stage === "held")!;
+  expect(held).toMatchObject({
+    active: true,
+    canvasId: phase.stimulus.canvasId,
+    revision: phase.stimulus.revision,
+    currentCanvasId: phase.stimulus.canvasId,
+    currentRevision: phase.stimulus.revision,
+  });
+  expect(held.pending).toBeGreaterThan(0);
+  expect(Number.isSafeInteger(held.callbackId)).toBe(true);
+  expect(held.drawRevision).toBeLessThan(phase.stimulus.revision);
+  return held;
+}
 async function runHover(dpr: number, control: HoverControl) {
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-hover-"));
-  await buildHostFixture(root, { focusedCancellation: true });
   let supervised = false;
   try {
+    await buildHostFixture(root, { focusedCancellation: true });
     const executable = createRequire(import.meta.url)("electron") as string;
     supervised = true;
     const result = await runNativeFixture({
@@ -63,7 +95,13 @@ async function runHover(dpr: number, control: HoverControl) {
       .map(
         (line) => JSON.parse(line.slice(HOVER_PHASE_PREFIX.length)) as Phase,
       );
-    return { result, phases };
+    const frames = result.stdout
+      .split("\n")
+      .filter((line) => line.startsWith(HOVER_FRAME_PREFIX))
+      .map(
+        (line) => JSON.parse(line.slice(HOVER_FRAME_PREFIX.length)) as Frame,
+      );
+    return { result, phases, frames };
   } catch (error) {
     if (!supervised) await removeFailedFixture(root, error);
     throw error;
@@ -88,6 +126,7 @@ it.each([1, 1.5, 2])(
     ]);
     const modified = phases[1]!;
     expect(modified.latest.geometry.dpr).toBe(dpr);
+    expect(modified.stimulus.revision).toBe(modified.latest.draw.revision);
     expect(modified.preparation).toEqual({
       exactContent: true,
       gridMatches: true,
@@ -128,7 +167,7 @@ it.each([1, 1.5, 2])(
 );
 
 it("waits for the actual late native frame continuation without treating draw as pixel success", async () => {
-  const { result, phases } = await runHover(1, "late-frame");
+  const { result, phases, frames } = await runHover(1, "late-frame");
   expect(result, result.stderr).toMatchObject({
     exitCode: 0,
     reason: "exit",
@@ -143,6 +182,22 @@ it("waits for the actual late native frame continuation without treating draw as
   expect(
     phases[1]!.latest.draw.drawAt - phases[1]!.latest.draw.setAt,
   ).toBeGreaterThan(100);
+  const held = expectHeldFrame(frames, phases[1]!);
+  expect(frames.find((frame) => frame.stage === "checkpoint")).toMatchObject({
+    active: true,
+    callbackId: held.callbackId,
+    revision: held.revision,
+  });
+  expect(frames.find((frame) => frame.stage === "released")).toMatchObject({
+    active: false,
+    pending: 0,
+    releasedCallbackId: held.callbackId,
+  });
+  expect(frames.at(-1)).toMatchObject({
+    stage: "cleanup",
+    active: false,
+    pending: 0,
+  });
   expect(phases[2]!.pixels!.total).toBe(0);
 }, 90_000);
 
@@ -153,7 +208,7 @@ it.each([
 ] as const)(
   "rejects actual hover control %s with distinct retained metadata",
   async (control) => {
-    const { result, phases } = await runHover(1, control);
+    const { result, phases, frames } = await runHover(1, control);
     expect(result, result.stderr).toMatchObject({
       exitCode: 1,
       reason: "exit",
@@ -170,11 +225,29 @@ it.each([
     });
     expect(failed.pixels!.missingCells).toBe(failed.pixels!.expectedCells);
     if (control === "early-capture") {
+      const held = expectHeldFrame(frames, failed);
+      expect(frames.find((frame) => frame.stage === "captured")).toMatchObject({
+        active: true,
+        callbackId: held.callbackId,
+        revision: held.revision,
+        currentRevision: held.revision,
+      });
+      expect(frames.at(-1)).toMatchObject({
+        stage: "cleanup",
+        active: false,
+        pending: 0,
+        releasedCallbackId: held.callbackId,
+      });
       expect(failed.latest.draw.cells).toBeGreaterThan(0);
       expect(failed.latest.draw.drawRevision).toBeLessThan(
         failed.latest.draw.revision,
       );
-    } else expect(failed.latest.draw).toMatchObject({ cells: 0, drawCells: 0 });
+    } else {
+      expect(failed.latest.draw).toMatchObject({ cells: 0, drawCells: 0 });
+      expect(failed.latest.draw.revision).toBeGreaterThan(
+        failed.stimulus.revision,
+      );
+    }
     if (control === "native-invalidation")
       expect(
         failed.latest.events.some(

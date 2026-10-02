@@ -30,17 +30,18 @@ export interface HoverSnapshot {
     readonly text: string;
   };
 }
-export async function readHoverSnapshot(
-  window: BrowserWindow,
-): Promise<HoverSnapshot> {
-  return window.webContents.executeJavaScript(
-    `(() => {
+const hoverSnapshotSource = `(() => {
     const canvas = [...document.querySelectorAll('.restty-terminal-surface canvas')].find(c => c.getBoundingClientRect().width > 0);
     if (!canvas?.__resttyHoverFixture || !canvas.__localImageFixtureCoreCells) throw new Error('Hover fixture observer is missing');
     const core = canvas.__localImageFixtureCoreCells();
     if (!core) throw new Error('Hover fixture core is unavailable');
     return {...canvas.__resttyHoverFixture(), core:{cols:core.cols,rows:core.rows,text:core.text}};
-  })()`,
+  })()`;
+export async function readHoverSnapshot(
+  window: BrowserWindow,
+): Promise<HoverSnapshot> {
+  return window.webContents.executeJavaScript(
+    hoverSnapshotSource,
     true,
   ) as Promise<HoverSnapshot>;
 }
@@ -58,8 +59,10 @@ interface HoverOptions {
   // Reuse only while the observed current device metrics still match exactly.
   readonly deviceCellSize?: readonly [number, number];
   // Native controls act at actual callers; never replace observation or pixels.
-  readonly beforeStimulus?: () => Promise<void>;
+  readonly beforeStimulus?: (prepared: HoverSnapshot) => Promise<void>;
+  readonly afterStimulus?: (stimulus: HoverSnapshot) => Promise<void>;
   readonly beforeCapture?: () => Promise<void>;
+  readonly afterCapture?: (stimulus: HoverSnapshot) => Promise<void>;
   readonly control?: "early-capture";
 }
 
@@ -81,6 +84,19 @@ async function bounded<T>(
   } finally {
     clearTimeout(timer);
   }
+}
+
+export { bounded as boundedHoverStep };
+
+async function dispatchHoverEvent(window: BrowserWindow, event: string) {
+  return bounded(
+    () =>
+      window.webContents.executeJavaScript(
+        `(() => { const beforeRevision = (${hoverSnapshotSource}).draw.revision; ${event} return {beforeRevision, snapshot: ${hoverSnapshotSource}}; })()`,
+        true,
+      ) as Promise<{ beforeRevision: number; snapshot: HoverSnapshot }>,
+    "cue-not-drawn",
+  );
 }
 
 async function poll(
@@ -116,6 +132,7 @@ function recordHoverPhase(
     category: "none" | HoverEvidenceError["category"];
     expectedCells: number;
     prefixColumns: number;
+    stimulus: { canvasId: number; revision: number; cells: number } | undefined;
     preparation: {
       readonly exactContent: boolean;
       readonly gridMatches: boolean;
@@ -142,6 +159,7 @@ function recordHoverPhase(
         category: input.category,
         expectedCells: input.expectedCells,
         prefixColumns: input.prefixColumns,
+        stimulus: input.stimulus,
         preparation: input.preparation,
         before: safeSnapshot(input.before),
         after: safeSnapshot(input.after),
@@ -171,12 +189,18 @@ export async function captureModifiedHoverEvidence(
   let after: HoverSnapshot | undefined;
   let pixels: HoverPixels | undefined;
   let deviceCellSize: readonly [number, number] | undefined;
+  let stimulus: HoverSnapshot | undefined;
   const record = (category: "none" | HoverEvidenceError["category"]) =>
     recordHoverPhase(window, {
       phase,
       category,
       expectedCells: options.destinationColumns,
       prefixColumns: prefix,
+      stimulus: stimulus && {
+        canvasId: stimulus.canvasId,
+        revision: stimulus.draw.revision,
+        cells: stimulus.draw.cells,
+      },
       preparation: {
         exactContent: latest?.core.text === text,
         gridMatches:
@@ -196,8 +220,7 @@ export async function captureModifiedHoverEvidence(
     return latest;
   };
   let prepared: HoverSnapshot;
-  const current = (snapshot: HoverSnapshot) => {
-    validateHoverGeometry(snapshot.geometry);
+  const currentGeometry = (snapshot: HoverSnapshot) => {
     if (
       !Number.isSafeInteger(snapshot.canvasId) ||
       snapshot.canvasId <= 0 ||
@@ -205,6 +228,10 @@ export async function captureModifiedHoverEvidence(
       !sameHoverGeometry(prepared.geometry, snapshot.geometry)
     )
       throw new HoverEvidenceError("geometry-changed");
+    validateHoverGeometry(snapshot.geometry);
+  };
+  const current = (snapshot: HoverSnapshot) => {
+    currentGeometry(snapshot);
     if (
       snapshot.core.cols !== size.cols ||
       snapshot.core.rows !== size.rows ||
@@ -240,7 +267,7 @@ export async function captureModifiedHoverEvidence(
       }
     }, "cue-not-drawn");
   };
-  const dispatch = async (modified: boolean) => {
+  const dispatch = async (modified?: boolean) => {
     const prior = await read();
     current(prior);
     const point = hoverCellPoint(
@@ -248,20 +275,20 @@ export async function captureModifiedHoverEvidence(
       0,
       options.targetColumn ?? prefix,
     );
-    await bounded(
-      () =>
-        window.webContents.executeJavaScript(
-          `(() => {
-      const canvas = [...document.querySelectorAll('.restty-terminal-surface canvas')].find(c => c.getBoundingClientRect().width > 0);
-      canvas.dispatchEvent(new PointerEvent('pointermove', {bubbles:true,pointerId:91,pointerType:'mouse',clientX:${point.x},clientY:${point.y},metaKey:${modified && process.platform === "darwin"},ctrlKey:${modified && process.platform !== "darwin"}}));
-    })()`,
-          true,
-        ),
-      "cue-not-drawn",
-    );
-    const snapshot = await read();
+    const event =
+      modified === undefined
+        ? `window.dispatchEvent(new KeyboardEvent('keyup', {key:'${process.platform === "darwin" ? "Meta" : "Control"}'}));`
+        : `const canvas = [...document.querySelectorAll('.restty-terminal-surface canvas')].find(c => c.getBoundingClientRect().width > 0);
+      canvas.dispatchEvent(new PointerEvent('pointermove', {bubbles:true,pointerId:91,pointerType:'mouse',clientX:${point.x},clientY:${point.y},metaKey:${modified && process.platform === "darwin"},ctrlKey:${modified && process.platform !== "darwin"}}));`;
+    // Dispatch and freeze its actual observer result in ONE synchronous task.
+    const result = await dispatchHoverEvent(window, event);
+    const snapshot = result.snapshot;
+    latest = stimulus = snapshot;
     current(snapshot);
-    if (snapshot.draw.revision <= prior.draw.revision)
+    if (
+      !Number.isSafeInteger(result.beforeRevision) ||
+      snapshot.draw.revision <= result.beforeRevision
+    )
       throw new HoverEvidenceError("cue-not-drawn");
     return snapshot;
   };
@@ -287,6 +314,7 @@ export async function captureModifiedHoverEvidence(
       "cue-not-drawn",
     );
     after = await read();
+    currentGeometry(after);
     const captured = {
       bitmap: Buffer.from(image.toBitmap()),
       ...image.getSize(),
@@ -312,6 +340,8 @@ export async function captureModifiedHoverEvidence(
         prepared.geometry,
         { prefix: 0, destinations: 0 },
       );
+    if (phase === "modified" && options.afterCapture)
+      await bounded(() => options.afterCapture!(stimulus), "cue-not-drawn");
     current(after);
     // Draw completion is not presentation: validate before/after, then pixels.
     for (const snapshot of [before, after])
@@ -363,36 +393,27 @@ export async function captureModifiedHoverEvidence(
     await draw(unmodified);
     const baseline = await capture(unmodified);
     phase = "modified";
+    stimulus = undefined;
     before = undefined;
     after = undefined;
     pixels = undefined;
-    await options.beforeStimulus?.();
+    if (options.beforeStimulus)
+      await bounded(() => options.beforeStimulus!(prepared), "cue-not-drawn");
     const modified = await dispatch(true);
-    if (options.control === "early-capture")
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    else await draw(modified);
+    if (options.afterStimulus)
+      await bounded(() => options.afterStimulus!(modified), "cue-not-drawn");
+    if (options.control !== "early-capture") await draw(modified);
     await options.beforeCapture?.();
     await capture(modified, baseline);
     const modifiedHoverChangedPixels = pixels!.total;
     phase = "released";
+    stimulus = undefined;
     before = undefined;
     after = undefined;
     pixels = undefined;
-    const prior = await read();
-    await bounded(
-      () =>
-        window.webContents.executeJavaScript(
-          `window.dispatchEvent(new KeyboardEvent('keyup', {key:'${process.platform === "darwin" ? "Meta" : "Control"}'}))`,
-          true,
-        ),
-      "cue-not-drawn",
-    );
-    const released = await read();
-    current(released);
+    const released = await dispatch();
     if (released.draw.cells !== 0)
       throw new HoverEvidenceError("stimulus-invalidated");
-    if (released.draw.revision <= prior.draw.revision)
-      throw new HoverEvidenceError("cue-not-drawn");
     await draw(released);
     await capture(released, baseline);
     return {

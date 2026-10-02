@@ -13,6 +13,7 @@ import { expect, it } from "vitest";
 const callers = [
   "restty-background-rendering",
   "restty-cursor-rendering",
+  "restty-hover-readiness",
   "macos-window-blur",
 ];
 it.each(callers)(
@@ -52,9 +53,31 @@ it.each(callers)(
   },
 );
 
+it.each([false, true])(
+  "hover preserves a failed builder and cleanup uncertainty (removal failure: %s)",
+  async (removalFails) => {
+    const observed = await observeCaller(
+      "restty-hover-readiness",
+      "build failure",
+      removalFails,
+    );
+    expect(observed.nativeRequests).toBe(0);
+    expect(observed.removalAttempts).toBe(1);
+    expect(observed.removed).toBe(!removalFails);
+    if (removalFails) {
+      const aggregate = observed.failure as AggregateError;
+      expect(aggregate.cause).toBe(observed.setupFailure);
+      expect(aggregate.errors).toEqual([
+        observed.setupFailure,
+        observed.cleanupFailure,
+      ]);
+    } else expect(observed.failure).toBe(observed.setupFailure);
+  },
+);
+
 async function observeCaller(
   name: string,
-  failure: "setup failure" | "supervisor failure",
+  failure: "setup failure" | "supervisor failure" | "build failure",
   removalFails = false,
 ) {
   const entry = path.resolve(`test/integration/${name}.test.ts`);
@@ -98,7 +121,13 @@ async function observeCaller(
                 values.forEach((value) => register(label, () => test(value))),
           }),
         };
-      if (id === "esbuild") return { build: async () => ({}) };
+      if (id === "esbuild")
+        return {
+          build: async () => {
+            if (failure === "build failure") throw stopped;
+            return {};
+          },
+        };
       if (id === "node:fs/promises")
         return {
           ...filesystem,

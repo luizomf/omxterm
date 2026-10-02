@@ -513,24 +513,31 @@ pixel/appearance assertion.
 
 The focused hover fixture owns a non-echoing child and waits for exact core
 content, drained renderer/IPC work and current device-cell metrics before pointer
-input. It observes the actual hover revision and WebGL draw, then crosses two
+input. Pointer/keyup dispatch and the immediate observer snapshot share one
+synchronous renderer task; later replacements cannot become that stimulus.
+It observes the actual hover revision and WebGL draw, then crosses two
 native frame continuations before one strict native capture; neither drawing nor
-those frames prove presentation. CSS/backing/DPR mapping preserves fractional
+those frames prove presentation. After-capture identity/geometry is checked
+before bitmap mapping; stable-geometry invalidation retains useful pixel counts.
+CSS/backing/DPR mapping preserves fractional
 bounds and unused edges. Every destination cell needs interior changed pixels;
 only pixels intersecting its exact projected rectangle belong to its raster
 footprint. Prefix, complement and unused-edge changes fail; modifier release
 must restore baseline pixels. The wide/combining URL survives content shrink and
 restore without reprinting. Eligible/refused reference controls retain zero
-opening requests under application mouse reporting. Late actual frame
-continuation passes; deliberately early
-capture, queued output and native unmodified-pointer invalidation fail distinctly,
-without repeating the stimulus or recapturing for success. Fixed
+opening requests under application mouse reporting. The delayed-frame control
+owns an identified actual native callback tied to the exact stimulus generation,
+without an expiry timer or historical hold counter. GREEN explicitly releases it
+after the post-stimulus checkpoint; RED retains it through completed early native
+capture and releases it in bounded error-preserving cleanup. Queued output and
+native unmodified-pointer invalidation fail distinctly, without repeating the
+stimulus or recapturing for success. Fixed
 `__OMXTERM_HOVER_PHASE__` preparation/geometry/draw/event/count evidence survives
 profile removal in the supervisor journal without terminal text or destinations.
 Run these controls with:
 
 ```sh
-npx vitest run test/unit/restty-hover-evidence.test.ts test/integration/restty-hover-readiness.test.ts
+npx vitest run test/unit/restty-hover-evidence.test.ts test/unit/restty-hover-readiness.test.ts test/integration/restty-hover-readiness.test.ts
 ```
 
 Local-image native fixtures exercise the real recognizer, activation routing,
