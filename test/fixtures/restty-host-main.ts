@@ -87,6 +87,7 @@ const fontLoads = createControlledFontLoads();
 const outputStress = createOutputStressHarness({
   sessionIndex: oracle === "output-checkpoints" ? 0 : 2,
   checkpoints: checkpointCount,
+  controlledRefit: process.argv.includes("--oracle-row-end-refit"),
 });
 const exitedSessionIndices = new Set<number>();
 const { defaultShell, configuredFontFamily, reloadedFontFamily } =
@@ -125,6 +126,7 @@ function createHost(window: BrowserWindow) {
               index,
               oracle === "output-checkpoints" ? 0 : 2,
               checkpointCount,
+              process.argv.includes("--oracle-row-end-refit"),
             );
       const terminal = fixtureSessions.createSession({
         shell: defaultShell,

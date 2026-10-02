@@ -235,6 +235,18 @@ record before the producer may continue. The ordinary 10,000-line/10 MB history
 limits remain unchanged; original cumulative ACKs and real high-water pause/resume
 are checked separately. A post-source same-length reorder and an Adapter delivery
 drop preserve valid source/END and original ACK progress but fail destination checks.
+The separate row-end refit control pauses the same checkpoint text above high
+water at an observed old-grid pending-wrap boundary. After its complete original
+ACK, it changes actual native content width and waits for the Surface/PTY refit
+before continuing output. Exact Copy must retain all records without inserting
+an LF. The new right edge must differ from the old insertion boundary; measured
+calibration avoids relying on arbitrary native-window sizing. The temporary
+content constraint is restored, and the broad host's original stress path stays
+unchanged. Run the control alone with:
+
+```sh
+npx vitest run test/integration/restty-host-oracles.test.ts -t 'pending-wrap boundary'
+```
 
 After sibling backend loss, the selected surviving Surface submits a split-token
 shell command through textarea input and Enter. Command echo cannot contain the

@@ -104,6 +104,8 @@ menus. To change keyboard shortcuts, see [keybinds](configuration.md#keybinds).
 
 Select text, then use **Edit → Copy**, its shortcut, or the right-click menu.
 In a program that captures the mouse, hold **Shift** while selecting text.
+Soft-wrapped output stays joined when copied, including continued output after
+resizing at a row end. Line breaks printed by the program remain line breaks.
 
 Use the Paste shortcut or menu to paste. **Ctrl+C interrupts a command**, while
 **Ctrl+V goes to the running program**. Some tools use Ctrl+V to attach clipboard

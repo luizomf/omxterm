@@ -435,7 +435,7 @@ suppression. Fresh locked npm bytes and that known prepared input produce the
 same exact final bytes; historical-input/idempotency/drift tests retain both.
 This correction changes Restty JavaScript product/package inputs, not the core.
 The embedded-core chunk and event declarations remain at SHA-256
-`dbe1edf4897f11d0de24acb4fd83d94646200a87a58317341525dc0a9d613662` and
+`1fb03cc8360942c613ca98973658de362852a60d88942c482de4b0dc429660fa` and
 `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34`,
 respectively.
 The narrow correction preserves font acquisition/lease cleanup under cache
@@ -478,7 +478,7 @@ Ghostty commits above with tracked Restty patch
 `assets/restty/omxterm-core.patch` and Ghostty patch
 `assets/restty/ghostty-title-events.patch`. Their SHA-256 values are recorded in
 `assets/restty-sources.json`. The artifact SHA-256 is
-`6214a42cc4f69ce60a0864cb67048a0e42fadf0d1bf74f4244bdbdbce529a5a2`.
+`92aa781340d4bd87f8028c17534fe720bd47e87dd34786d149811923e4e389ec`.
 The background-identity correction changes only the existing cell background
 alpha export; it keeps the original Restty and Ghostty commits pinned.
 The Ghostty patch also corrects two PageList reflow seams. Cursor preservation
@@ -490,12 +490,28 @@ final column. Genuine active text wrapping, continuation offsets and narrow-grid
 clipping remain core-owned. There is no renderer coordinate compensation or
 history deletion during refits.
 
+The live cursor also reconciles pending wrap after resize, as saved cursors
+already do: if its remapped last printed cell is no longer at the new right
+edge, the cursor advances to the next insertion column and clears pending wrap.
+The cursor helper updates its tracked pin and cached cell/position together.
+Otherwise the next character would advance a row without a soft-wrap marker,
+creating an unintended hard break in actual selection/copy. A mapped new right
+edge retains pending wrap; deliberate producer hard breaks remain unchanged.
+This applies to non-reflow screens too without enabling alternate-screen reflow
+or changing wraparound-disabled edge overwrite behavior.
+
 `test/integration/restty-reflow-core.test.ts` executes the tracked WASM directly
 and covers the image-free 5x3 history regression and the 5x4 blank-image-anchor
 regression separately, plus history/active predecessors, text anchors,
 no-history, shrink/restore, real active wrapping, viewport retention, mixed
 dimensions, clipping, continued soft wraps and independent image deletion.
-Preparation accepts the previous grapheme-corrected embedded-core digest
+It also checks exact selection, cells and insertion position for pending-wrap
+growth/shrink, adjacent offsets, unchanged width, mapped new right edges,
+history/no-history, producer hard breaks, disabled wraparound and alternate
+screens. These use the tracked actual WASM, not a cursor or copy mock.
+Preparation accepts the preceding reflow-corrected embedded-core digest
+`dbe1edf4897f11d0de24acb4fd83d94646200a87a58317341525dc0a9d613662`
+and the previous grapheme-corrected embedded-core digest
 `baa7dd9600c034a77e73ed03864c3e15e02ccdc591d2044479652fef1d9c0900`
 as a reviewed input and replaces only its embedded artifact. That core correction
 leaves runtime JavaScript and event declaration bytes unchanged; the separate native-scroll feedback
@@ -568,6 +584,14 @@ producer readiness and holds only its synthetic session's output ACKs until the
 real high-water pause is observed, then releases them and asserts native resume,
 complete ordered content and zero pending bytes. This avoids depending on
 platform throughput during the fixed renderer-stall interval.
+A separate focused output control pauses the same checkpoint text above high
+water at an observed old-grid right edge, waits for its complete original ACK,
+refits real native content/Surface/PTY geometry, then resumes that producer.
+It must copy all 4096 ordered records and exact framing without an extra LF.
+Observed old/new grids make the old pending-wrap boundary distinct from the
+new right edge; calibration and restored layout do not depend on a compositor
+honoring arbitrary native-window bounds. The ordinary stress producer and broad
+host remain separate. No destination normalization or ACK relaxation is used.
 
 Native Electron fixtures run serially and show painting windows without native
 activation. The focus-restoration fixture first moves DOM focus outside the

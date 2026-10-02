@@ -147,6 +147,53 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
       expect(stress.producerExit).toEqual({ exitCode: 0, signal: 0 });
     }, 130_000);
 
+    it("copies exact output continued from a pending-wrap boundary after native content refit", async () => {
+      const result = readResult(
+        await runOracle("output-checkpoints", undefined, [
+          "--oracle-row-end-refit",
+          "--oracle-single-checkpoint",
+        ]),
+      );
+      expect(result.sessionStarts).toBe(1);
+      expect(result.ptyExits).toBe(1);
+      const stress = result.outputStress!;
+      const refit = stress.controlledRefit!;
+      expect(refit.refitted.cols).toBeLessThan(refit.original.cols);
+      expect(refit.refitted.rows).toBe(refit.original.rows);
+      expect((refit.prefixUnits + 24) % refit.original.cols).toBe(0);
+      expect((refit.prefixUnits + 24) % refit.refitted.cols).not.toBe(0);
+      expect(refit.prefixUnits).toBeGreaterThanOrEqual(65_536);
+      expect(stress.source).toMatchObject({
+        bytes: 131_152,
+        records: 4_096,
+        recordBytes: 131_072,
+        checkpoints: 1,
+        endSeen: true,
+        remainderCodeUnits: 0,
+      });
+      expect(stress.destination.checkpoints).toEqual([
+        {
+          batch: 0,
+          first: 0,
+          last: 4_095,
+          records: 4_096,
+          recordBytes: 131_072,
+          endSeen: true,
+        },
+      ]);
+      expect(stress.destination).toMatchObject({
+        records: 4_096,
+        recordBytes: 131_072,
+        endSeen: true,
+      });
+      expect(stress.acknowledgements.cumulativeEnd).toBe(131_152);
+      expect(stress.flow.pendingBytes).toBe(0);
+      expect(stress.flow.pauseCount).toBeGreaterThan(0);
+      expect(stress.flow.resumeCount).toBeGreaterThan(0);
+      expect(stress.resizeObserved).toBe(true);
+      expect(stress.producerExit).toEqual({ exitCode: 0, signal: 0 });
+    }, 130_000);
+
     it("observes freshly executed surviving-session response in the same Surface/core after owned backend loss", async () => {
       const result = readResult(await runOracle("surviving-session"));
       expect(result).toMatchObject({
