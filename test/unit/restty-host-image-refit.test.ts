@@ -22,7 +22,10 @@ it("starts image placement in a clean viewport/history independent of earlier ho
     },
   });
   expect(output[0]).toBe("\u001b[3J\u001b[2J\u001b[H\u001b[?25l");
-  expect(output.at(-1)).toBe("\u001b[16t__RESTTY_IMAGES_SENT__\n");
+  expect(output.at(-1)).toBe("\u001b[5;12H\u001b[16t__RESTTY_IMAGES_SENT__\n");
+  expect(output.filter((part) => part.includes("\u001b[41m"))).toEqual([
+    "\u001b[10;16H\u001b[41m  \u001b[0m",
+  ]);
 });
 
 const pixels: ResttyImagePixelEvidence = {

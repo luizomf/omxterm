@@ -6,6 +6,15 @@ import { resttyImageEmitterSource } from "./restty-host-images";
 import { resttyFontMutationProbe } from "./restty-font-mutation-probe";
 import { resttyLinkCancellationMutation } from "./restty-link-cancellation-mutation";
 import { createNativeHostPng } from "./native-host-png";
+import {
+  resttyHostOracleRendererControl,
+  type HostOracleRendererControl,
+} from "./restty-host-oracle-controls";
+
+import {
+  resttyGestureRoutingMutation,
+  type ResttyGestureControl,
+} from "./restty-gesture-routing-mutation";
 
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -14,9 +23,13 @@ export async function buildHostFixture(
   {
     focusedCancellation = false,
     cancellation,
+    oracleControl,
+    gestureControl,
   }: {
     focusedCancellation?: boolean;
     cancellation?: "pointercancel" | "blur";
+    oracleControl?: HostOracleRendererControl;
+    gestureControl?: ResttyGestureControl;
   } = {},
 ): Promise<void> {
   await mkdir(path.join(root, "renderer"), { recursive: true });
@@ -54,6 +67,12 @@ export async function buildHostFixture(
           ...(focusedCancellation ? [] : [resttyFontMutationProbe]),
           ...(cancellation
             ? [resttyLinkCancellationMutation(cancellation)]
+            : []),
+          ...(oracleControl
+            ? [resttyHostOracleRendererControl(oracleControl)]
+            : []),
+          ...(gestureControl
+            ? [resttyGestureRoutingMutation(gestureControl)]
             : []),
         ],
         logLevel: "silent",

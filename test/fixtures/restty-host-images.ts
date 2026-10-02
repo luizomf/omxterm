@@ -1,6 +1,13 @@
 import type { BrowserWindow } from "electron";
 import { writeFileSync } from "node:fs";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
+import {
+  HOST_IMAGE_THEME_B,
+  hasResttyThemePalette,
+  inspectResttyThemePixels,
+  type ResttyImageThemePixels,
+} from "./restty-image-theme";
 import {
   inspectResttyImageFrame,
   hasResttyImagePlacementEvidence,
@@ -33,7 +40,9 @@ write("\\x1b[5;10H");
 write("\\x1b_Ga=T,t=d,f=32,s=1,v=1,c=2,r=2,m=1,q=2\\x1b\\\\");
 write("\\x1b_Gm=1;AP8A/w==\\x1b\\\\");
 write("\\x1b_Gm=0\\x1b\\\\");
-write("\\x1b[16t__RESTTY_IMAGES_SENT__\\n");
+// Emit a retained ANSI41 swatch ONCE outside both image placements.
+write("\\x1b[10;16H\\x1b[41m  \\x1b[0m");
+write("\\x1b[5;12H\\x1b[16t__RESTTY_IMAGES_SENT__\\n");
 `;
 }
 
@@ -63,8 +72,37 @@ export async function exerciseResttyImagesThroughPty(options: {
   const nodeExecutable = process.env["npm_node_execpath"];
   if (!nodeExecutable)
     throw new Error("Native image fixture requires npm_node_execpath");
+  // The preceding clipboard phase leaves a live Select All highlight. Clear
+  // that owned transient selection through ordinary pointer input BEFORE
+  // placing images; selection paint must not masquerade as a stale palette.
+  const point = (await window.webContents.executeJavaScript(
+    `(() => {
+    const canvas = document.querySelector('.restty-terminal-surface canvas');
+    if (!canvas) throw new Error('Image selection reset canvas is unavailable');
+    const bounds = canvas.getBoundingClientRect();
+    return { x: Math.floor(bounds.left + bounds.width / 2), y: Math.floor(bounds.top + bounds.height / 2) };
+  })()`,
+    true,
+  )) as { x: number; y: number };
+  for (const type of ["mouseDown", "mouseUp"] as const)
+    window.webContents.sendInputEvent({
+      type,
+      ...point,
+      button: "left",
+      clickCount: 1,
+      modifiers: [],
+    });
   deliverOutputs[0]!("\u001b[2J\u001b[H\u001b[?25l");
   await new Promise((resolve) => setTimeout(resolve, 100));
+  await window.webContents.executeJavaScript(
+    `(() => {
+    const surface = document.querySelector('.restty-terminal-surface');
+    const canvas = surface?.querySelector('canvas');
+    if (!surface || !canvas) throw new Error('Image Surface identity is unavailable');
+    globalThis.__fixtureRetainedImage = { surface, canvas };
+  })()`,
+    true,
+  );
   const evidence = await exerciseResttyImages({
     window,
     runEmitter: () =>
@@ -85,7 +123,19 @@ export async function exerciseResttyImagesThroughPty(options: {
   outputs[0] = [
     "__DEFAULT_INPUT__Olá🙂\n__SELECT_ALL_FIRST__\n__SELECT_ALL_LAST__\n__RESTTY_IMAGE_OUTPUT_OMITTED__",
   ];
-  return evidence;
+  const frame = await captureResttyImageTheme(
+    window,
+    await readResttyImageCellSize(
+      deliverOutputs[0]!,
+      () => inputs[0]!.join(""),
+      waitFor,
+    ),
+  );
+  if (!hasResttyThemePalette(frame.palette, HOST_IMAGE_THEME_B))
+    throw new Error(
+      `Initial retained palette B was not painted: ${JSON.stringify(frame.palette)}`,
+    );
+  return { ...evidence, themeBefore: frame.palette };
 }
 
 function shellQuote(value: string): string {
@@ -257,18 +307,42 @@ export async function completeResttyImageEvidence<T extends object>(
     predicate: () => boolean | Promise<boolean>,
     label: string,
   ) => Promise<void>,
-): Promise<T & { readonly afterTabAndThemePixels: PixelEvidence }> {
-  await new Promise((resolve) => setTimeout(resolve, 1_000));
+) {
+  const cellSize = await readResttyImageCellSize(
+    source[0],
+    () => source[1].join(""),
+    waitFor,
+  );
+  let observed: Awaited<ReturnType<typeof captureResttyImageTheme>> | undefined;
+  try {
+    await waitFor(async () => {
+      observed = await captureResttyImageTheme(window, cellSize);
+      return (
+        hasResttyThemePalette(observed.palette, DEFAULT_TERMINAL_THEME) &&
+        hasResttyImagePlacementEvidence(observed.pixels)
+      );
+    }, "real retained ANSI palette B-to-A with both original images");
+  } catch (cause) {
+    throw new Error(
+      `Retained palette/image reload failed: ${JSON.stringify(observed)}; ${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
+  const identity = (await window.webContents.executeJavaScript(
+    `(() => {
+    const before = globalThis.__fixtureRetainedImage;
+    const surface = document.querySelector('.restty-terminal-surface');
+    const canvas = surface?.querySelector('canvas');
+    return { surfaceRetained: !!before && surface === before.surface, canvasRetained: !!before && canvas === before.canvas };
+  })()`,
+    true,
+  )) as { surfaceRetained: boolean; canvasRetained: boolean };
+  if (!identity.surfaceRetained || !identity.canvasRetained)
+    throw new Error("Retained theme/image Surface or canvas was replaced");
   return {
     ...initial,
-    afterTabAndThemePixels: await captureResttyImagePixels(
-      window,
-      await readResttyImageCellSize(
-        source[0],
-        () => source[1].join(""),
-        waitFor,
-      ),
-    ),
+    afterTabAndThemePixels: observed!.pixels,
+    themeAfter: observed!.palette,
+    ...identity,
   };
 }
 
@@ -333,6 +407,25 @@ async function captureResttyImagePixels(
   return inspectScreenshot(window, captured.toPNG(), cellSize);
 }
 
+async function captureResttyImageTheme(
+  window: BrowserWindow,
+  cellSize: readonly [number, number],
+) {
+  const captured = await window.webContents.capturePage(
+    await readCanvasBounds(window),
+  );
+  const frame = await inspectScreenshot(
+    window,
+    captured.toPNG(),
+    cellSize,
+    true,
+  );
+  if (!frame.palette)
+    throw new Error("Retained palette screenshot is unavailable");
+  const { palette, ...pixels } = frame;
+  return { pixels, palette };
+}
+
 async function readCanvasBounds(window: BrowserWindow): Promise<{
   x: number;
   y: number;
@@ -351,7 +444,8 @@ async function inspectScreenshot(
   window: BrowserWindow,
   png: Buffer,
   cellSize: readonly [number, number],
-): Promise<PixelEvidence> {
+  includeTheme = false,
+): Promise<PixelEvidence & { readonly palette?: ResttyImageThemePixels }> {
   const encodedScreenshot = png.toString("base64");
   return (await window.webContents.executeJavaScript(
     `(async () => {
@@ -366,8 +460,9 @@ async function inspectScreenshot(
       context.drawImage(bitmap, 0, 0);
       bitmap.close();
       const all = context.getImageData(0, 0, canvas.width, canvas.height).data;
-      return (${inspectResttyImageFrame.toString()})(all, canvas.width, canvas.height, ${cellSize[0]}, ${cellSize[1]});
+      const pixels = (${inspectResttyImageFrame.toString()})(all, canvas.width, canvas.height, ${cellSize[0]}, ${cellSize[1]});
+      return ${includeTheme ? `{ ...pixels, palette: (${inspectResttyThemePixels.toString()})(all, canvas.width, canvas.height, ${cellSize[0]}, ${cellSize[1]}) }` : "pixels"};
     })()`,
     true,
-  )) as PixelEvidence;
+  )) as PixelEvidence & { readonly palette?: ResttyImageThemePixels };
 }

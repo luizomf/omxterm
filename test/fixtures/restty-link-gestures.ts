@@ -1,5 +1,11 @@
 import type { BrowserWindow } from "electron";
 import type { LocalImageRequest } from "../../src/shared/local-image";
+import {
+  createResttyGestureRecorder,
+  gestureInputSince,
+  type ResttyGestureEvidence,
+} from "./restty-gesture-evidence";
+import { readLocalImageCoreCells } from "./restty-local-image-core-probe";
 
 interface TerminalSize {
   readonly cols: number;
@@ -24,9 +30,18 @@ export interface ResttyLinkGestureEvidence {
   readonly releasedHoverChangedPixels: number;
   readonly validLinkMouseReports: string;
   readonly localPathMouseReports: string;
-  readonly ordinaryGestureMouseReports: string;
-  readonly wheelMouseReports: string;
-  readonly alternateScreenMouseReports: string;
+  readonly ordinaryGestures: {
+    readonly modifiedDrag: ResttyGestureEvidence;
+    readonly plainPrimary: ResttyGestureEvidence;
+    readonly modifiedMiddle: ResttyGestureEvidence;
+    readonly changedUrl: ResttyGestureEvidence;
+    readonly releasedModifier: ResttyGestureEvidence;
+  };
+  readonly wheel: ResttyGestureEvidence;
+  readonly alternateScreen: {
+    readonly primaryClick: ResttyGestureEvidence;
+    readonly wheel: ResttyGestureEvidence;
+  };
 }
 
 export async function terminalCellPoint(
@@ -263,13 +278,18 @@ async function exerciseLocalPathActivation(
   return gestureInputSince(options.inputs, inputStart);
 }
 
-function gestureInputSince(inputs: readonly string[], start: number): string {
-  // Concurrent native fixtures may change window focus. Ignore only focus
-  // reports; duplicate mouse or other unexpected input still fails assertions.
-  return inputs
-    .join("")
-    .slice(start)
-    .replaceAll(/\u001b\[[IO]/gu, "");
+async function drainGestureInput(window: BrowserWindow): Promise<void> {
+  // Present queued native events in the renderer, then cross the real preload
+  // invoke route. Main has received preceding input/external-link sends when
+  // this FIFO renderer/main round trip resolves. No PTY sentinel is injected.
+  await window.webContents.executeJavaScript(
+    `new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))`,
+    true,
+  );
+  await window.webContents.executeJavaScript(
+    `window.omxterm.terminal.configuration().then(() => undefined)`,
+    true,
+  );
 }
 
 export async function exerciseResttyLinks(
@@ -302,8 +322,6 @@ export async function exerciseResttyLinks(
   const { modifiedHoverChangedPixels, releasedHoverChangedPixels } =
     hoverEvidence;
   await exerciseHoverRecognition(options, reflowedSize);
-  const modifiers: Array<"meta" | "control"> =
-    process.platform === "darwin" ? ["meta"] : ["control"];
   deliverOutput(
     `\u001b[2J\u001b[H漢e\u0301 \u001b]8;;https://hidden.test/different\u0007${visibleUrl}\u001b]8;;\u0007`,
   );
@@ -332,131 +350,129 @@ export async function exerciseResttyLinks(
   await clickTerminalCell(window, 1, 3, reflowedSize);
   await waitFor(() => externalLinks.length === 4, "hard-break link separation");
 
-  const ordinaryStart = inputs.join("").length;
+  const named = await exerciseResttyOrdinaryGestures(options, reflowedSize);
+  await exerciseScrollbackLinkControls(options, reflowedSize);
+  return {
+    modifiedHoverChangedPixels,
+    releasedHoverChangedPixels,
+    validLinkMouseReports,
+    localPathMouseReports,
+    ...named,
+  };
+}
+
+export async function exerciseResttyOrdinaryGestures(
+  options: ResttyLinkGestureOptions,
+  reflowedSize: TerminalSize,
+) {
+  const { window, deliverOutput, inputs, externalLinks, waitFor } = options;
+  const modifiers: Array<"meta" | "control"> =
+    process.platform === "darwin" ? ["meta"] : ["control"];
+  deliverOutput("\u001b[?25l\u001b[?1000h\u001b[?1006h");
+  const waitForText = async (text: string) => {
+    await waitFor(
+      async () =>
+        (await readLocalImageCoreCells(window))?.text.startsWith(text) === true,
+      `gesture destination core readiness: ${text}`,
+    );
+    await drainGestureInput(window);
+  };
+  const ordinaryText = "https://one.test/a\r\nhttps://two.test/b";
+  const showOrdinaryDestinations = async () => {
+    deliverOutput(`\u001b[2J\u001b[H${ordinaryText}`);
+    await waitForText("https://one.test/a\nhttps://two.test/b");
+  };
+  await showOrdinaryDestinations();
+  const record = createResttyGestureRecorder({
+    inputs,
+    activations: () => externalLinks.length + options.localImageRequests.length,
+    drain: () => drainGestureInput(window),
+    platform: process.platform,
+  });
   const first = await terminalCellPoint(window, 0, 3, reflowedSize);
   const second = await terminalCellPoint(window, 1, 3, reflowedSize);
-  for (const event of [
-    {
-      type: "mouseDown" as const,
-      point: first,
-      button: "left" as const,
-      modified: true,
-    },
-    {
-      type: "mouseMove" as const,
-      point: second,
-      button: "left" as const,
-      modified: true,
-    },
-    {
-      type: "mouseUp" as const,
-      point: second,
-      button: "left" as const,
-      modified: true,
-    },
-    {
-      type: "mouseDown" as const,
-      point: first,
-      button: "left" as const,
-      modified: false,
-    },
-    {
-      type: "mouseUp" as const,
-      point: first,
-      button: "left" as const,
-      modified: false,
-    },
-    {
-      type: "mouseDown" as const,
-      point: first,
-      button: "middle" as const,
-      modified: true,
-    },
-    {
-      type: "mouseUp" as const,
-      point: first,
-      button: "middle" as const,
-      modified: true,
-    },
-  ])
+  const send = (
+    type: "mouseDown" | "mouseMove" | "mouseUp",
+    point = first,
+    modified = true,
+    button: "left" | "middle" = "left",
+  ) =>
     window.webContents.sendInputEvent({
-      type: event.type,
-      x: event.point.x,
-      y: event.point.y,
-      button: event.button,
+      type,
+      x: point.x,
+      y: point.y,
+      button,
       clickCount: 1,
-      ...(event.modified ? { modifiers } : {}),
+      modifiers: modified ? modifiers : [],
     });
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  const modifiedDrag = await record("modifiedDrag", async () => {
+    send("mouseDown");
+    send("mouseMove", second);
+    send("mouseUp", second);
+  });
+  await showOrdinaryDestinations();
+  const plainPrimary = await record("plainPrimary", async () => {
+    send("mouseDown", first, false);
+    send("mouseUp", first, false);
+  });
+  await showOrdinaryDestinations();
+  const modifiedMiddle = await record("modifiedMiddle", async () => {
+    send("mouseDown", first, true, "middle");
+    send("mouseUp", first, true, "middle");
+  });
+  await showOrdinaryDestinations();
+  const changedUrl = await record("changedUrl", async () => {
+    send("mouseDown");
+    // Establish the consumed original press before replacing its same-span URL.
+    await drainGestureInput(window);
+    deliverOutput("\u001b[Hhttps://new.test/b");
+    await waitForText("https://new.test/b");
+    send("mouseUp");
+  });
+  await showOrdinaryDestinations();
+  const releasedModifier = await record("releasedModifier", async () => {
+    send("mouseDown");
+    send("mouseUp", first, false);
+  });
+  const wheel = await record("wheel", () =>
+    scrollTerminal(window, 0, 3, reflowedSize, 2),
+  );
 
-  const sameSpanPoint = await terminalCellPoint(window, 0, 3, reflowedSize);
-  window.webContents.sendInputEvent({
-    type: "mouseDown",
-    x: sameSpanPoint.x,
-    y: sameSpanPoint.y,
-    button: "left",
-    clickCount: 1,
-    modifiers,
+  deliverOutput("\u001b[?1049h\u001b[2J\u001b[Halternate-mouse");
+  await waitForText("alternate-mouse");
+  const alternatePrimary = await record("alternatePrimary", async () => {
+    send("mouseDown", first, false);
+    send("mouseUp", first, false);
   });
-  deliverOutput("\u001b[Hhttps://new.test/b");
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  window.webContents.sendInputEvent({
-    type: "mouseUp",
-    x: sameSpanPoint.x,
-    y: sameSpanPoint.y,
-    button: "left",
-    clickCount: 1,
-    modifiers,
-  });
-  window.webContents.sendInputEvent({
-    type: "mouseDown",
-    x: sameSpanPoint.x,
-    y: sameSpanPoint.y,
-    button: "left",
-    clickCount: 1,
-    modifiers,
-  });
-  window.webContents.sendInputEvent({
-    type: "mouseUp",
-    x: sameSpanPoint.x,
-    y: sameSpanPoint.y,
-    button: "left",
-    clickCount: 1,
-  });
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  if (externalLinks.length !== 4)
-    throw new Error(
-      "Changed-target or released-modifier gesture opened a link",
-    );
-  const ordinaryGestureMouseReports = inputs.join("").slice(ordinaryStart);
-
-  const wheelStart = inputs.join("").length;
-  await scrollTerminal(window, 0, 3, reflowedSize, 2);
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  const wheelMouseReports = inputs.join("").slice(wheelStart);
-
-  const alternateStart = inputs.join("").length;
-  deliverOutput("\u001b[?1049h");
-  const alternatePoint = await terminalCellPoint(window, 0, 3, reflowedSize);
-  window.webContents.sendInputEvent({
-    type: "mouseDown",
-    x: alternatePoint.x,
-    y: alternatePoint.y,
-    button: "left",
-    clickCount: 1,
-  });
-  window.webContents.sendInputEvent({
-    type: "mouseUp",
-    x: alternatePoint.x,
-    y: alternatePoint.y,
-    button: "left",
-    clickCount: 1,
-  });
-  await scrollTerminal(window, 0, 3, reflowedSize, -1);
+  const alternateWheel = await record("alternateWheel", () =>
+    scrollTerminal(window, 0, 3, reflowedSize, -1),
+  );
   deliverOutput("\u001b[?1049l");
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  const alternateScreenMouseReports = inputs.join("").slice(alternateStart);
+  await waitForText("https://one.test/a");
+  // Returning from alternate screen cannot leave an unowned report either.
+  if (gestureInputSince(inputs, alternateWheel.inputEnd) !== "")
+    throw new Error(
+      "Unexpected mouse input after alternate-screen gesture drain",
+    );
 
+  return {
+    ordinaryGestures: {
+      modifiedDrag,
+      plainPrimary,
+      modifiedMiddle,
+      changedUrl,
+      releasedModifier,
+    },
+    wheel,
+    alternateScreen: { primaryClick: alternatePrimary, wheel: alternateWheel },
+  };
+}
+
+async function exerciseScrollbackLinkControls(
+  options: ResttyLinkGestureOptions,
+  reflowedSize: TerminalSize,
+) {
+  const { window, deliverOutput, externalLinks, waitFor } = options;
   deliverOutput("\u001b[?1000l\u001b[?1006l\u001b[3J\u001b[2J\u001b[H");
   const scrollbackUrl = "https://scroll.test/complete";
   deliverOutput(
@@ -494,14 +510,4 @@ export async function exerciseResttyLinks(
   await new Promise((resolve) => setTimeout(resolve, 100));
   if (Number(externalLinks.length) !== 5)
     throw new Error("Destination clipped below the viewport opened a link");
-
-  return {
-    modifiedHoverChangedPixels,
-    releasedHoverChangedPixels,
-    validLinkMouseReports,
-    localPathMouseReports,
-    ordinaryGestureMouseReports,
-    wheelMouseReports,
-    alternateScreenMouseReports,
-  };
 }

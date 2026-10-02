@@ -205,6 +205,41 @@ edge rasterization without expanding image bounds; portable duplicate/displaced
 RGBA controls exercise the same inspector and acceptance predicate. This
 strengthens test evidence, not the Kitty protocol or product image contract.
 
+The host's destination oracles distinguish raw PTY evidence from what reaches
+an existing real Restty core. Output stress is **paced**, not a continuous 2 MiB
+burst: sixteen 128 KiB checkpoints contain 65,536 ordered 32-byte records. Each
+real Select All/Copy must retain its unique BEGIN/END and every expected global
+record before the producer may continue. The ordinary 10,000-line/10 MB history
+limits remain unchanged; original cumulative ACKs and real high-water pause/resume
+are checked separately. A post-source same-length reorder and an Adapter delivery
+drop preserve valid source/END and original ACK progress but fail destination checks.
+
+After sibling backend loss, the selected surviving Surface submits a split-token
+shell command through textarea input and Enter. Command echo cannot contain the
+complete response. Fresh source execution and the response in that same retained
+Surface/core are required separately, with exactly one owned failed-session exit.
+Each ordinary, wheel and alternate-screen gesture records its own exact button,
+modifier and coordinates, zero activation delta, and drained input boundary.
+Fixture-only replay loss and actual encoder-report loss at the Adapter sink must
+fail the affected named gesture rather than an aggregate packet count.
+
+For theme reload, a retained ANSI41 swatch and both images are emitted once under
+palette B. Reload to distinct palette A while the image tab is hidden must repaint
+that swatch and background after reveal, without replacing its session, Surface or
+canvas or moving/re-emitting either image. Palette and both original placement
+pixels must be observed together. The preceding clipboard selection is reset by
+ordinary pointer input **before** image emission, not by accepting selection colors
+as palette evidence. Ignoring runtime palette reload and deleting actual placements
+at the reload seam are separate negative controls. Run the bounded scenarios and
+controls independently of the nine-session host:
+
+```sh
+npx vitest run test/integration/restty-host-oracles.test.ts
+```
+
+These use real native PTYs/core/WebGL and Electron-internal input APIs; they do not
+claim physical-pointer input, OS remote-control consent or persistence settings.
+
 `npm run check:portable` includes Electron fixtures and requires a working
 desktop with WebGL2. Fixtures share the desktop compositor. Vitest serializes
 files within one run; also keep separate suites and clones from running native
@@ -339,8 +374,8 @@ hint before Ghostty receives the text. The long reference must really wrap, and
 the filename space must occupy the observed grid's last column. Separate wide-only
 and combining-only root controls independently read the actual row-end space and
 next-row filename cells, then check hover, exact activation, native preview and
-both reflow directions without reprinting. The observer exists only in the
-broad-host fixture bundle, not a production Surface API. macOS uses a short owned random `/tmp` profile so the complete path
+both reflow directions without reprinting. The read-only observer exists only in the
+broad-host and focused destination-oracle fixture bundles, not a production Surface API. macOS uses a short owned random `/tmp` profile so the complete path
 prefix fits the viewport-clipping control inside the original window.
 Its unrelated gesture-only references still return cancellation. No physical
 click/picker acceptance is claimed.
@@ -434,8 +469,8 @@ Before native launch, the Restty host builder settles all started parallel build
 and file operations before reporting a preparation failure. It preserves the
 first failure, including when another builder later fails, so the caller can
 remove the unsupervised profile without late build writes recreating it. This
-covers broad host and focused cancellation preparation; it does not extend
-supervisor ownership to the build phase.
+covers broad host, focused cancellation and destination-oracle/mutant
+preparation; it does not extend supervisor ownership to the build phase.
 
 The sibling builders use `prepareFixture` for pre-launch ownership: parallel
 build/file operations register before starting, all started operations settle

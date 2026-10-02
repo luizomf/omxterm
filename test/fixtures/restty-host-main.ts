@@ -9,15 +9,10 @@ import {
   type IpcMainPort,
 } from "../../src/main/terminal-ipc-controller";
 import { registerTerminalWindowHost } from "../../src/main/terminal-window-host";
-import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
-import { createUserConfigurationReloader } from "../../src/main/user-configuration-reloader";
+import * as resttyConfiguration from "./restty-host-configuration";
 import type { LocalImageRequest } from "../../src/shared/local-image";
 import { fixtureLocalImageLoader } from "./restty-local-image-links";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
-import {
-  installedFallbackFontData,
-  installedFontData,
-} from "../../src/main/installed-font-family";
 import { exerciseExplicitResttyTab } from "./restty-host-explicit-tab";
 import {
   createControlledFontLoads,
@@ -28,32 +23,30 @@ import { exerciseResttyCapabilities } from "./restty-host-capabilities";
 import * as resttyFailures from "./restty-host-failures";
 import { captureResttyFontPaintEvidence } from "./restty-host-paint";
 import * as resttyImages from "./restty-host-images";
-import {
-  dispatchDomPaste,
-  exerciseLargePasteThroughPty,
-  prepareLargePasteShell,
-} from "./restty-host-paste";
-import {
-  exerciseDefaultResttyInput,
-  explicitFixtureLaunchRequest,
-  hasSelectionFixtureOutput,
-  hasSelectionFixtureTranscript,
-  nativeFixturePlatform,
-  prepareFixtureShell,
-  selectionFixtureCommand,
-  selectionFixtureReset,
-} from "./restty-host-platform";
+import * as resttyPaste from "./restty-host-paste";
+import * as resttyPlatform from "./restty-host-platform";
 import {
   createOutputStressHarness,
   outputStressLaunchRequest,
 } from "./restty-host-output-stress";
 import * as resttyWindows from "./restty-host-window";
 import * as resttyCancellation from "./restty-host-cancellation";
+import {
+  focusedHostOracle,
+  runFocusedResttyHostOracle,
+} from "./restty-host-oracle-scenarios";
+import { createHostOracleSourceControl } from "./restty-host-oracle-controls";
 
 const prefix = "__OMXTERM_RESTTY_HOST_RESULT__";
 const root = __dirname;
 const focusedCancellation = process.argv.includes("--link-cancellation");
-const { home, environment: shellEnvironment } = prepareFixtureShell(root);
+const oracle = focusedHostOracle(process.argv);
+const sourceControl = createHostOracleSourceControl(process.argv);
+const checkpointCount = process.argv.includes("--oracle-single-checkpoint")
+  ? 1
+  : 16;
+const { home, environment: shellEnvironment } =
+  resttyPlatform.prepareFixtureShell(root);
 for (const name of ["userData", "sessionData"] as const) {
   const directory = path.join(root, name);
   mkdirSync(directory, { recursive: true });
@@ -94,9 +87,13 @@ let permissionRequests = 0;
 let ptyExits = 0;
 let sessionIndex = 0;
 const fontLoads = createControlledFontLoads();
-const outputStress = createOutputStressHarness();
+const outputStress = createOutputStressHarness({
+  sessionIndex: oracle === "output-checkpoints" ? 0 : 2,
+  checkpoints: checkpointCount,
+});
+const exitedSessionIndices = new Set<number>();
 const { defaultShell, configuredFontFamily, reloadedFontFamily } =
-  nativeFixturePlatform;
+  resttyPlatform.nativeFixturePlatform;
 
 const { waitFor } = fixtureSessions;
 
@@ -104,25 +101,13 @@ function createHost(window: BrowserWindow) {
   const router = registerTerminalIpcRouter(
     fontLoads.ipcPort(outputStress.ipcPort(ipcMain as unknown as IpcMainPort)),
     undefined,
-    async (family) => {
-      await fontLoads.beforeLoad();
-      if (family !== configuredFontFamily && family !== reloadedFontFamily)
-        throw new Error("Unexpected configured font request");
-      const data = await installedFontData(family);
-      if (!data) throw new Error("Configured native fixture font is missing");
-      return {
-        configured: { family, data },
-        fallbacks: await installedFallbackFontData(),
-      };
-    },
+    (family) =>
+      resttyConfiguration.loadResttyHostFont(family, fontLoads.beforeLoad),
   );
   const controller = router.registerController({
     configuration: terminalRendererConfiguration(
       {
-        configuration: {
-          ...DEFAULT_USER_CONFIGURATION,
-          fontFamily: configuredFontFamily,
-        },
+        configuration: resttyConfiguration.initialResttyHostConfiguration(),
         userFileErrors: [],
       },
       0,
@@ -134,16 +119,21 @@ function createHost(window: BrowserWindow) {
       inputs[index] = [];
       deliverOutputs[index] = callbacks.onOutput;
       resizes[index] = [];
-      const fixtureLaunchRequest = focusedCancellation
-        ? resttyCancellation.cancellationFixtureLaunchRequest()
-        : outputStressLaunchRequest(index);
+      const fixtureLaunchRequest =
+        focusedCancellation || oracle === "gesture-routing"
+          ? resttyCancellation.cancellationFixtureLaunchRequest()
+          : outputStressLaunchRequest(
+              index,
+              oracle === "output-checkpoints" ? 0 : 2,
+              checkpointCount,
+            );
       const terminal = fixtureSessions.createSession({
         shell: defaultShell,
         ...(fixtureLaunchRequest
           ? { launchRequest: fixtureLaunchRequest }
           : index === 1
             ? {
-                launchRequest: explicitFixtureLaunchRequest(),
+                launchRequest: resttyPlatform.explicitFixtureLaunchRequest(),
               }
             : {}),
         platform: process.platform,
@@ -153,9 +143,10 @@ function createHost(window: BrowserWindow) {
         onOutput(data) {
           if (!outputStress.observeOutput(index, data))
             outputs[index]!.push(data);
-          callbacks.onOutput(data);
+          callbacks.onOutput(sourceControl.transform(index, data));
         },
         onExit(exit, launchKind) {
+          exitedSessionIndices.add(index);
           outputStress.observeExit(index, exit);
           ptyExits += 1;
           callbacks.onExit(exit, launchKind);
@@ -195,7 +186,8 @@ function createHost(window: BrowserWindow) {
       outputStress.observeClipboard(text);
       // Both claims must come from the same complete copy, not separate writes
       // or marker substrings in the submitted command.
-      const completeSelection = hasSelectionFixtureTranscript(text);
+      const completeSelection =
+        resttyPlatform.hasSelectionFixtureTranscript(text);
       selectAllCoveredScrollback ||= completeSelection;
       selectedUnicodeExactly ||= completeSelection;
     },
@@ -236,31 +228,55 @@ function createHost(window: BrowserWindow) {
     loadLocalImage: fixtureLocalImageLoader(window, root, localImageRequests),
   });
   registerTerminalWindowHost(window, controller, () => router.dispose());
-  const initialConfiguration = {
-    ...DEFAULT_USER_CONFIGURATION,
-    fontFamily: configuredFontFamily,
-  };
-  const changedConfiguration = {
-    ...DEFAULT_USER_CONFIGURATION,
-    fontFamily: reloadedFontFamily,
-    fontLineHeight: 1.25,
-    fontLigatures: false,
-    fontSize: 18,
-  };
-  const reloads = [changedConfiguration, initialConfiguration];
-  const reloader = createUserConfigurationReloader({
-    initial: { configuration: initialConfiguration, userFileErrors: [] },
-    load: async () => ({ configuration: reloads.shift()! }),
-    apply: (state) =>
-      controller.applyConfiguration(terminalRendererConfiguration(state, 0)),
-    terminalSurfaceFontBaseline: {
-      fontFamily: configuredFontFamily,
-      fontLineHeight: 1,
-    },
-    activeTerminalSurfaceFontConfigurations: () =>
-      router.activeTerminalSurfaceFontConfigurations(),
-  });
+  const reloader = resttyConfiguration.createResttyHostConfigurationReloader(
+    router,
+    controller,
+    oracle === "image-palette",
+  );
   return { reloader };
+}
+
+async function completeFocusedScenario(
+  window: BrowserWindow,
+  reload: () => Promise<unknown>,
+) {
+  if (focusedCancellation) {
+    await resttyCancellation.completeResttyLinkCancellationScenario({
+      window,
+      deliverOutput: deliverOutputs[0]!,
+      inputs: inputs[0]!,
+      resizes: resizes[0]!,
+      externalLinks,
+      waitFor,
+      initialOutput: () => outputs[0]!.join(""),
+      closeSession: () => terminals[0]!.close(),
+      ptyExits: () => ptyExits,
+      sessionStarts: () => sessionIndex,
+      complete: fixtureSessions.complete,
+    });
+  } else if (oracle) {
+    await runFocusedResttyHostOracle({
+      oracle,
+      root,
+      window,
+      externalLinks,
+      localImageRequests,
+      outputStress,
+      terminals,
+      launchKinds,
+      outputs,
+      inputs,
+      deliverOutputs,
+      resizes,
+      ptyExits: () => ptyExits,
+      sessionStarts: () => sessionIndex,
+      sessionExited: (index) => exitedSessionIndices.has(index),
+      reload,
+      waitFor,
+      complete: fixtureSessions.complete,
+    });
+  } else return false;
+  return true;
 }
 
 app
@@ -288,22 +304,7 @@ app
       waitFor,
     );
 
-    if (focusedCancellation) {
-      await resttyCancellation.completeResttyLinkCancellationScenario({
-        window,
-        deliverOutput: deliverOutputs[0]!,
-        inputs: inputs[0]!,
-        resizes: resizes[0]!,
-        externalLinks,
-        waitFor,
-        initialOutput: () => outputs[0]!.join(""),
-        closeSession: () => terminals[0]!.close(),
-        ptyExits: () => ptyExits,
-        sessionStarts: () => sessionIndex,
-        complete: fixtureSessions.complete,
-      });
-      return;
-    }
+    if (await completeFocusedScenario(window, () => reloader.reload())) return;
 
     ({ titleQueryReplyBytes } = await exerciseResttyEvents({
       deliverOutput: deliverOutputs[0]!,
@@ -320,7 +321,7 @@ app
       deliverOutputs[0]!,
     );
 
-    await exerciseDefaultResttyInput(
+    await resttyPlatform.exerciseDefaultResttyInput(
       window,
       () => outputs[0]!.join(""),
       waitFor,
@@ -347,12 +348,12 @@ app
       () => inputs[0]!.join("").includes("\u0016"),
       "bare Ctrl+V terminal input",
     );
-    await prepareLargePasteShell({
+    await resttyPaste.prepareLargePasteShell({
       write: (data) => terminals[0]!.write(data),
       output: () => outputs[0]!.join(""),
       waitFor,
     });
-    const largePaste = await exerciseLargePasteThroughPty({
+    const largePaste = await resttyPaste.exerciseLargePasteThroughPty({
       window,
       write: (data) => terminals[0]!.write(data),
       output: () => outputs[0]!.join(""),
@@ -364,9 +365,12 @@ app
       () => inputs[0]!.join("").includes("private"),
       "native Paste host route",
     );
-    terminals[0]!.write(selectionFixtureReset() + selectionFixtureCommand());
+    terminals[0]!.write(
+      resttyPlatform.selectionFixtureReset() +
+        resttyPlatform.selectionFixtureCommand(),
+    );
     await waitFor(
-      () => hasSelectionFixtureOutput(outputs[0]!.join("")),
+      () => resttyPlatform.hasSelectionFixtureOutput(outputs[0]!.join("")),
       "scrollback selection fixture",
     );
     window.webContents.send(terminalIpc.clipboardAction, "select-all");
@@ -382,6 +386,7 @@ app
     await waitFor(() => contextMenus === 1, "native context menu route");
 
     await reloader.reload();
+    const originalImageSession = terminals[0]!;
     const initialImageEvidence =
       await resttyImages.exerciseResttyImagesThroughPty({
         window,
@@ -410,12 +415,17 @@ app
       reload: () => reloader.reload(),
       waitFor,
     });
-    const imageEvidence = await resttyImages.completeResttyImageEvidence(
+    const completedImages = await resttyImages.completeResttyImageEvidence(
       window,
       initialImageEvidence,
       [deliverOutputs[0]!, inputs[0]!],
       waitFor,
     );
+    const sessionRetained =
+      originalImageSession === terminals[0] && !exitedSessionIndices.has(0);
+    if (!sessionRetained)
+      throw new Error("Original image session changed during theme reload");
+    const imageEvidence = { ...completedImages, sessionRetained };
 
     const outputStressEvidence = await outputStress.exercise({
       window,
@@ -446,7 +456,7 @@ app
       launchKinds,
       resizes,
       ptyExits: () => ptyExits,
-      terminals,
+      inputs,
       outputs,
       waitFor,
     });
@@ -457,21 +467,12 @@ app
       ptyExits: () => ptyExits,
       waitFor,
     });
-    const { fontMutation, ...beforeDestroy } =
-      (await window.webContents.executeJavaScript(
-        "({ fontMutation: globalThis.__fontMutationResult(), canvases: document.querySelectorAll('.restty-terminal-surface canvas').length, tabs: document.querySelectorAll('.terminal-surface').length })",
-        true,
-      )) as { fontMutation: unknown; canvases: number; tabs: number };
-    const renderedFontFamily = (await window.webContents.executeJavaScript(
-      "document.querySelector('.restty-terminal-surface')?.dataset.resttyFont ?? null",
-      true,
-    )) as string | null;
-    const exitsBeforeRendererLoss = ptyExits;
-    window.webContents.forcefullyCrashRenderer();
-    await waitFor(
-      () => ptyExits === exitsBeforeRendererLoss + 1,
-      "renderer-loss PTY cleanup",
-    );
+    const { fontMutation, beforeDestroy, renderedFontFamily } =
+      await resttyFailures.exerciseResttyRendererLoss({
+        window,
+        ptyExits: () => ptyExits,
+        waitFor,
+      });
 
     const result = {
       fontMutation,
@@ -518,7 +519,7 @@ app
   })
   .catch(async (error: unknown) => {
     process.stderr.write(
-      `${error instanceof Error ? error.stack : String(error)}\n`,
+      `${error instanceof Error ? error.stack : String(error)}\nSource control: ${JSON.stringify(sourceControl.evidence())}\n`,
     );
     await fixtureSessions.complete(1).catch(() => {
       process.stderr.write("Restty fixture completion failed\n");

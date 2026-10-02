@@ -13,11 +13,14 @@ import {
 import type { ResttyLinkCancellationEvidence } from "../fixtures/restty-link-cancellation";
 import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
+import type { OutputStressEvidence } from "../fixtures/restty-host-output-stress";
+import type { ResttyLinkGestureEvidence } from "../fixtures/restty-link-gestures";
+import type { ResttyImageThemePixels } from "../fixtures/restty-image-theme";
 
 const electronExecutable = createRequire(import.meta.url)("electron") as string;
 const resultPrefix = "__OMXTERM_RESTTY_HOST_RESULT__";
 
-interface HostResult {
+interface HostResult extends ResttyLinkGestureEvidence {
   readonly fontMutation: {
     readonly sources: number;
     readonly bytes: number;
@@ -33,6 +36,11 @@ interface HostResult {
     readonly message: string;
     readonly ownedSessionExited: boolean;
     readonly unaffectedSessionResponded: boolean;
+    readonly executedResponse: boolean;
+    readonly responseInSurvivingSurface: boolean;
+    readonly surfaceRetained: boolean;
+    readonly canvasRetained: boolean;
+    readonly ownedExitDelta: number;
   };
   readonly concurrentFontInitialization: {
     readonly requestedTabs: number;
@@ -66,9 +74,6 @@ interface HostResult {
   readonly validLinkMouseReports: string;
   readonly localPathMouseReports: string;
   readonly localImageEvidence: ReadonlyArray<LocalImageLinkEvidence>;
-  readonly ordinaryGestureMouseReports: string;
-  readonly wheelMouseReports: string;
-  readonly alternateScreenMouseReports: string;
   readonly titleEvents: ReadonlyArray<{
     readonly sessionId: string;
     readonly fixture: "first" | "overlong" | "second" | "unexpected";
@@ -76,30 +81,7 @@ interface HostResult {
   readonly bellSessionIds: readonly string[];
   readonly titleQueryReplyBytes: number;
   readonly capabilityReplies: string;
-  readonly outputStress: {
-    readonly bytes: number;
-    readonly records: number;
-    readonly endSeen: boolean;
-    readonly markerVisible: boolean;
-    readonly remainderCodeUnits: number;
-    readonly resizeObserved: boolean;
-    readonly producerExit: {
-      readonly exitCode: number;
-      readonly signal: number;
-    };
-    readonly flow: {
-      readonly pendingBytes: number;
-      readonly maxPendingBytes: number;
-      readonly largestNativeReadBytes: number;
-      readonly pauseCount: number;
-      readonly resumeCount: number;
-    };
-    readonly memory: {
-      readonly mainHeapUsedBytes: number;
-      readonly mainRssBytes: number;
-      readonly rendererHeapUsedBytes: number | null;
-    };
-  };
+  readonly outputStress: OutputStressEvidence;
   readonly imageEvidence: {
     readonly cellSizeResponse: string;
     readonly gridSize: { readonly cols: number; readonly rows: number };
@@ -122,6 +104,11 @@ interface HostResult {
       };
     };
     readonly afterTabAndThemePixels: ResttyImagePixelEvidence;
+    readonly themeBefore: ResttyImageThemePixels;
+    readonly themeAfter: ResttyImageThemePixels;
+    readonly surfaceRetained: boolean;
+    readonly canvasRetained: boolean;
+    readonly sessionRetained: boolean;
   };
   readonly navigations: number;
   readonly openedWindows: number;
@@ -146,6 +133,71 @@ interface CancellationResult {
   readonly externalLinks: readonly string[];
   readonly sessionStarts: number;
   readonly ptyExits: number;
+}
+
+function assertNamedGestureEvidence(result: ResttyLinkGestureEvidence) {
+  const modified = process.platform === "darwin" ? 0 : 16;
+  const reports = result.ordinaryGestures;
+  expect(reports.modifiedDrag.mouseReports).toBe(
+    `\u001b[<${modified};4;1M\u001b[<${modified};4;2m`,
+  );
+  expect(reports.plainPrimary.mouseReports).toBe(
+    "\u001b[<0;4;1M\u001b[<0;4;1m",
+  );
+  expect(reports.modifiedMiddle.mouseReports).toBe(
+    `\u001b[<${modified + 1};4;1M\u001b[<${modified + 1};4;1m`,
+  );
+  expect(reports.changedUrl.mouseReports).toBe(
+    `\u001b[<${modified};4;1M\u001b[<${modified};4;1m`,
+  );
+  expect(reports.releasedModifier.mouseReports).toBe(
+    `\u001b[<${modified};4;1M\u001b[<0;4;1m`,
+  );
+  expect(result.wheel.mouseReports).toBe("\u001b[<65;4;1M\u001b[<65;4;1M");
+  expect(result.alternateScreen.primaryClick.mouseReports).toBe(
+    "\u001b[<0;4;1M\u001b[<0;4;1m",
+  );
+  expect(result.alternateScreen.wheel.mouseReports).toBe("\u001b[<64;4;1M");
+  for (const gesture of [
+    ...Object.values(reports),
+    result.wheel,
+    ...Object.values(result.alternateScreen),
+  ]) {
+    expect(gesture.activationsAfter).toBe(gesture.activationsBefore);
+    expect(gesture.unattributedInput).toBe("");
+  }
+}
+
+function assertDestinationOutputEvidence(stress: OutputStressEvidence) {
+  expect(stress.source.bytes).toBeGreaterThanOrEqual(2 * 1024 * 1024);
+  expect(stress.source).toMatchObject({
+    records: 65_536,
+    recordBytes: 2_097_152,
+    checkpoints: 16,
+    endSeen: true,
+    remainderCodeUnits: 0,
+  });
+  expect(stress.destination).toMatchObject({
+    records: 65_536,
+    recordBytes: 2_097_152,
+    endSeen: true,
+  });
+  expect(stress.destination.checkpoints).toHaveLength(16);
+  for (const [batch, checkpoint] of stress.destination.checkpoints.entries())
+    expect(checkpoint).toEqual({
+      batch,
+      first: batch * 4_096,
+      last: (batch + 1) * 4_096 - 1,
+      records: 4_096,
+      recordBytes: 131_072,
+      endSeen: true,
+    });
+  expect(stress.load).toBe("paced-128KiB-checkpoints");
+  expect(stress.gridColumns).toBeGreaterThanOrEqual(20);
+  expect(stress.scrollbackLines).toBe(10_000);
+  expect(stress.pinnedCoreByteLimit).toBe(10_000_000);
+  expect(stress.acknowledgements.count).toBeGreaterThan(0);
+  expect(stress.acknowledgements.cumulativeEnd).toBe(stress.source.bytes);
 }
 
 describe.skipIf(
@@ -239,10 +291,15 @@ describe.skipIf(
         explicitInput: true,
       });
       expect(result.beforeDestroy).toEqual({ canvases: 1, tabs: 1 });
-      expect(result.backendLoss).toEqual({
+      expect(result.backendLoss).toMatchObject({
         message: "The OMXTerm Terminal Surface rendering backend was lost",
         ownedSessionExited: true,
         unaffectedSessionResponded: true,
+        executedResponse: true,
+        responseInSurvivingSurface: true,
+        surfaceRetained: true,
+        canvasRetained: true,
+        ownedExitDelta: 1,
       });
       expect(result.concurrentFontInitialization).toEqual({
         requestedTabs: 4,
@@ -291,13 +348,10 @@ describe.skipIf(
         { control: "space clipped below viewport", activations: 0 },
         { control: "trailing-space exclusion", activations: 1 },
       ]);
-      expect(result.ordinaryGestureMouseReports).toMatch(/\u001b\[</u);
-      expect(result.wheelMouseReports).toMatch(/\u001b\[<65;/u);
-      expect(result.alternateScreenMouseReports).toMatch(/\u001b\[<0;/u);
-      expect(result.alternateScreenMouseReports).toMatch(/\u001b\[<64;/u);
+      assertNamedGestureEvidence(result);
       expect(result).toMatchObject({
         clipboardReads: 1,
-        clipboardWrites: 3,
+        clipboardWrites: 18,
         selectAllCoveredScrollback: true,
         selectedUnicodeExactly: true,
         protectedPasteConfirmations: 1,
@@ -315,18 +369,11 @@ describe.skipIf(
         /^\u001b\[\?1;2c\u001b\[>0;0;0c\u001b\[3;5R\u001b\[6;\d+;\d+t$/u,
       );
       expect(result.outputStress).toMatchObject({
-        records: 65_536,
-        endSeen: true,
-        markerVisible: true,
         resizeObserved: true,
         producerExit: { exitCode: 0, signal: 0 },
-        flow: {
-          pendingBytes: 0,
-        },
+        flow: { pendingBytes: 0 },
       });
-      expect(result.outputStress.bytes).toBeGreaterThanOrEqual(
-        2 * 1024 * 1024 + "__OMXTERM_OUTPUT_END__".length,
-      );
+      assertDestinationOutputEvidence(result.outputStress);
       expect(result.outputStress.flow.pauseCount).toBeGreaterThan(0);
       expect(result.outputStress.flow.resumeCount).toBeGreaterThan(0);
       expect(result.outputStress.flow.maxPendingBytes).toBeLessThanOrEqual(
@@ -360,6 +407,19 @@ describe.skipIf(
             sessionId === result.titleEvents[2]?.sessionId,
         ),
       ).toBe(true);
+      expect(result.imageEvidence).toMatchObject({
+        themeBefore: {
+          background: [25, 34, 53, 255],
+          retainedAnsiRed: [192, 71, 131, 255],
+        },
+        themeAfter: {
+          background: [0, 0, 0, 255],
+          retainedAnsiRed: [255, 128, 170, 255],
+        },
+        surfaceRetained: true,
+        canvasRetained: true,
+        sessionRetained: true,
+      });
       expect(result.imageEvidence.cellSizeResponse).toMatch(
         /^\u001b\[6;\d+;\d+t$/u,
       );
