@@ -77,7 +77,9 @@ async function prepareWindow(
     ?.split("=")[1];
   assert.ok(
     control === undefined ||
-      ["early-minimize", "held-execute", "held-capture"].includes(control),
+      ["early-minimize", "early-hide", "held-execute", "held-capture"].includes(
+        control,
+      ),
     "Unknown cursor fixture control",
   );
   if (control === "held-execute") {
@@ -103,17 +105,23 @@ async function prepareWindow(
       }),
   );
   window.showInactive();
-  if (control === "early-minimize") {
-    // A real native action, not fabricated DOM visibility or synthetic pixels.
-    // Issuing minimize is not observation; wait boundedly for native state below.
-    window.minimize();
-    const deadline = Date.now() + CURSOR_STEP_TIMEOUT;
-    while (!window.isMinimized() && Date.now() < deadline)
-      await new Promise((resolve) => setTimeout(resolve, 10));
+  if (control === "early-minimize" || control === "early-hide") {
     assert.ok(
-      window.isMinimized(),
-      "Native early-minimize control was not observed",
+      window.isVisible() && !window.isMinimized(),
+      "Native cursor control requires an initially presented window",
     );
+    // Explicit real native actions, never a failed-minimize fallback or DOM state.
+    const observed =
+      control === "early-hide"
+        ? () => !window.isVisible() && !window.isMinimized()
+        : () => window.isMinimized();
+    if (control === "early-hide") window.hide();
+    else window.minimize();
+    const deadline = Date.now() + CURSOR_STEP_TIMEOUT;
+    while (!observed() && Date.now() < deadline)
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.ok(observed(), `Native ${control} control was not observed`);
+    process.stdout.write(`__OMXTERM_CURSOR_CONTROL__${control}\n`);
   }
   return { dpr, control };
 }

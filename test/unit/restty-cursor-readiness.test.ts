@@ -8,6 +8,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 import {
+  selectCursorPresentationControl,
   runCursorStep,
   type CursorStep,
   type CursorWindow,
@@ -27,6 +28,29 @@ const visibleWindow = (): CursorWindow => ({
   isFocused: () => false,
   getBounds: () => ({ x: 20, y: 30, width: 900, height: 600 }),
 });
+
+it("selects the native hide control only by explicit declaration", () => {
+  expect(selectCursorPresentationControl("hide")).toBe("early-hide");
+  expect(selectCursorPresentationControl(undefined)).toBe("early-minimize");
+  expect(selectCursorPresentationControl("minimize")).toBe("early-minimize");
+});
+
+it.each([
+  "",
+  "auto",
+  "hyprland-suppress-maximize",
+  "early-hide",
+  "private declaration",
+])(
+  "rejects unsupported cursor control declarations without guessing or exposing them: %s",
+  (declaration) => {
+    expect(() => selectCursorPresentationControl(declaration)).toThrow(
+      new Error(
+        "OMXTERM_TEST_CURSOR_PRESENTATION_CONTROL must be minimize or hide",
+      ),
+    );
+  },
+);
 
 it("rejects a native minimized window before invoking its cursor operation", async () => {
   const operation = vi.fn(async () => "should not run");
