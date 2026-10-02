@@ -420,6 +420,13 @@ The [native fixture runner](../test/fixtures/run-native-fixture.ts) uses a separ
 supervisor to clean up Electron, native PTYs and helper processes, including
 after a test worker exits unexpectedly.
 
+Before native launch, the Restty host builder settles all started parallel build
+and file operations before reporting a preparation failure. It preserves the
+first failure, including when another builder later fails, so the caller can
+remove the unsupervised profile without late build writes recreating it. This
+covers broad host and focused cancellation preparation; it does not extend
+supervisor ownership to the build phase.
+
 When adding supervised fixtures:
 
 - Create PTYs through `spawnFixturePty` and other owned children through

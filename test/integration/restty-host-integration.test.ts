@@ -1,25 +1,19 @@
 import { createRequire } from "node:module";
-import { cp, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
-import { resttyImageEmitterSource } from "../fixtures/restty-host-images";
+import { buildHostFixture } from "../fixtures/restty-host-build";
 import type { LocalImageLinkEvidence } from "../fixtures/restty-local-image-reference";
 import { assertLocalImageRefitEvidence } from "../fixtures/restty-local-image-unicode";
 import {
   hasResttyImagePlacementEvidence,
   type ResttyImagePixelEvidence,
 } from "../fixtures/restty-image-evidence";
-import { resttyFontMutationProbe } from "../fixtures/restty-font-mutation-probe";
 import type { ResttyLinkCancellationEvidence } from "../fixtures/restty-link-cancellation";
-import { resttyLinkCancellationMutation } from "../fixtures/restty-link-cancellation-mutation";
-import { createNativeHostPng } from "../fixtures/native-host-png";
 import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
 
-const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
 const electronExecutable = createRequire(import.meta.url)("electron") as string;
 const resultPrefix = "__OMXTERM_RESTTY_HOST_RESULT__";
 
@@ -529,80 +523,6 @@ async function runCancellationFixture(cancellation?: "pointercancel" | "blur") {
     // Only the supervisor may remove a launched profile after owned cleanup.
     if (!supervised) await rm(root, { recursive: true, force: true });
   }
-}
-
-async function buildHostFixture(
-  root: string,
-  {
-    focusedCancellation = false,
-    cancellation,
-  }: {
-    focusedCancellation?: boolean;
-    cancellation?: "pointercancel" | "blur";
-  } = {},
-): Promise<void> {
-  await mkdir(path.join(root, "renderer"), { recursive: true });
-  await Promise.all([
-    build({
-      absWorkingDir: projectRoot,
-      bundle: true,
-      entryPoints: ["test/fixtures/restty-host-main.ts"],
-      external: ["electron", "node-pty"],
-      format: "cjs",
-      logLevel: "silent",
-      outfile: path.join(root, "main.cjs"),
-      platform: "node",
-    }),
-    build({
-      absWorkingDir: projectRoot,
-      bundle: true,
-      entryPoints: ["src/preload/index.ts"],
-      external: ["electron"],
-      format: "cjs",
-      logLevel: "silent",
-      outfile: path.join(root, "preload.cjs"),
-      platform: "node",
-    }),
-    build({
-      absWorkingDir: projectRoot,
-      bundle: true,
-      entryPoints: ["src/renderer/index.ts"],
-      format: "iife",
-      loader: { ".ttf": "binary" },
-      plugins: [
-        ...(focusedCancellation ? [] : [resttyFontMutationProbe]),
-        ...(cancellation ? [resttyLinkCancellationMutation(cancellation)] : []),
-      ],
-      logLevel: "silent",
-      outfile: path.join(root, "renderer", "index.js"),
-      platform: "browser",
-    }),
-    cp(
-      path.join(projectRoot, "src", "renderer", "index.html"),
-      path.join(root, "renderer", "index.html"),
-    ),
-    writeFile(
-      path.join(root, "package.json"),
-      `${JSON.stringify({ name: "omxterm-restty-host-fixture", main: "main.cjs" })}\n`,
-    ),
-    ...(!focusedCancellation
-      ? [
-          writeFile(
-            path.join(root, "pi-2000.png"),
-            createNativeHostPng(2_000, 2_000),
-          ),
-          writeFile(
-            path.join(root, "image-emitter.cjs"),
-            resttyImageEmitterSource(),
-          ),
-        ]
-      : []),
-    symlink(
-      path.join(projectRoot, "node_modules"),
-      path.join(root, "node_modules"),
-      "dir",
-    ),
-  ]);
 }
 
 async function runFixture(root: string, focusedCancellation = false) {
