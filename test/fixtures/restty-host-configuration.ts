@@ -25,11 +25,13 @@ export async function loadResttyHostFont(
   };
 }
 
-export function initialResttyHostConfiguration() {
+export function initialResttyHostConfiguration(focusedImage = false) {
   return {
     ...DEFAULT_USER_CONFIGURATION,
     fontFamily: nativeFixturePlatform.configuredFontFamily,
-    terminalTheme: HOST_IMAGE_THEME_B,
+    terminalTheme: focusedImage
+      ? HOST_IMAGE_THEME_B
+      : DEFAULT_USER_CONFIGURATION.terminalTheme,
   };
 }
 
@@ -39,13 +41,14 @@ export function createResttyHostConfigurationReloader(
   focusedImage: boolean,
 ) {
   const { configuredFontFamily, reloadedFontFamily } = nativeFixturePlatform;
-  const initial = initialResttyHostConfiguration();
+  const initial = initialResttyHostConfiguration(focusedImage);
   const changed = {
     ...initial,
     fontFamily: reloadedFontFamily,
     fontLineHeight: 1.25,
     fontLigatures: false,
     fontSize: 18,
+    terminalTheme: HOST_IMAGE_THEME_B,
   };
   const restored = {
     ...DEFAULT_USER_CONFIGURATION,

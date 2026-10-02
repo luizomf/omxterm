@@ -31,16 +31,13 @@ import {
 } from "./restty-host-output-stress";
 import * as resttyWindows from "./restty-host-window";
 import * as resttyCancellation from "./restty-host-cancellation";
-import {
-  focusedHostOracle,
-  runFocusedResttyHostOracle,
-} from "./restty-host-oracle-scenarios";
+import * as resttyOracles from "./restty-host-oracle-scenarios";
 import { createHostOracleSourceControl } from "./restty-host-oracle-controls";
 
 const prefix = "__OMXTERM_RESTTY_HOST_RESULT__";
 const root = __dirname;
 const focusedCancellation = process.argv.includes("--link-cancellation");
-const oracle = focusedHostOracle(process.argv);
+const oracle = resttyOracles.focusedHostOracle(process.argv);
 const sourceControl = createHostOracleSourceControl(process.argv);
 const checkpointCount = process.argv.includes("--oracle-single-checkpoint")
   ? 1
@@ -107,7 +104,9 @@ function createHost(window: BrowserWindow) {
   const controller = router.registerController({
     configuration: terminalRendererConfiguration(
       {
-        configuration: resttyConfiguration.initialResttyHostConfiguration(),
+        configuration: resttyConfiguration.initialResttyHostConfiguration(
+          oracle === "image-palette",
+        ),
         userFileErrors: [],
       },
       0,
@@ -255,7 +254,7 @@ async function completeFocusedScenario(
       complete: fixtureSessions.complete,
     });
   } else if (oracle) {
-    await runFocusedResttyHostOracle({
+    await resttyOracles.runFocusedResttyHostOracle({
       oracle,
       root,
       window,
