@@ -98,14 +98,13 @@ let nativeCursor = false;
 let application: TerminalApplication<BrowserWindow>;
 let failing = false;
 function fail(error: unknown) {
-  if (failing) process.exit(1);
+  if (failing) return;
   failing = true;
   process.stderr.write(
     `${error instanceof Error ? error.stack : String(error)}\n`,
   );
-  // Own exceptions before Electron can show a modal uncaughtException dialog.
-  // The external supervisor remains the final process/profile cleanup owner.
-  setTimeout(() => process.exit(1), 1_000).unref();
+  // Close only requests termination. Reuse the same actual PTY acknowledgments
+  // as successful completion; the external supervisor owns a stuck native exit.
   for (const session of sessions) {
     try {
       session.close();
@@ -113,7 +112,11 @@ function fail(error: unknown) {
       /* Keep the original failure and exit. */
     }
   }
-  app.exit(1);
+  void Promise.all(sessionExits)
+    .then(() => app.exit(1))
+    .catch(() => {
+      process.stderr.write("Chrome fixture completion failed\n");
+    });
 }
 process.on("uncaughtException", fail);
 process.on("unhandledRejection", fail);
@@ -202,6 +205,7 @@ app
             process.platform === "darwin" ? 30 : 0,
           ),
           createSession(callbacks) {
+            if (failing) throw new Error("Chrome fixture is completing");
             const index = sessions.length;
             sizes[index] = [];
             let queryingCell = false;
@@ -215,19 +219,26 @@ app
                 resolveExit = resolve;
               }),
             );
-            const terminal = createLocalTerminalSession(spawnFixturePty, {
-              shell: nativeFixturePlatform.defaultShell,
-              launchRequest: explicitFixtureLaunchRequest(),
-              platform: process.platform,
-              homeDirectory: root,
-              environment: { ...process.env, HOME: root },
-              applicationVersionProvider: app,
-              ...callbacks,
-              onExit(exit, launchKind) {
-                resolveExit();
-                callbacks.onExit(exit, launchKind);
-              },
-            });
+            let terminal: ReturnType<typeof createLocalTerminalSession>;
+            try {
+              terminal = createLocalTerminalSession(spawnFixturePty, {
+                shell: nativeFixturePlatform.defaultShell,
+                launchRequest: explicitFixtureLaunchRequest(),
+                platform: process.platform,
+                homeDirectory: root,
+                environment: { ...process.env, HOME: root },
+                applicationVersionProvider: app,
+                ...callbacks,
+                onExit(exit, launchKind) {
+                  resolveExit();
+                  callbacks.onExit(exit, launchKind);
+                },
+              });
+            } catch (error) {
+              // No session was returned; do not leave an unowned pending slot.
+              resolveExit();
+              throw error;
+            }
             sessions.push(terminal);
             return {
               ...terminal,
