@@ -4,6 +4,7 @@ import { mkdirSync, writeSync } from "node:fs";
 import path from "node:path";
 import { terminalRendererConfiguration } from "../../src/main/active-user-configuration";
 import { createResttyHostSessions } from "./restty-host-sessions";
+import { createFixtureMetricReplyRouter } from "./restty-host-metric-replies";
 import {
   registerTerminalIpcRouter,
   type IpcMainPort,
@@ -117,7 +118,6 @@ function createHost(window: BrowserWindow) {
       const index = sessionIndex++;
       outputs[index] = [];
       inputs[index] = [];
-      deliverOutputs[index] = callbacks.onOutput;
       resizes[index] = [];
       const fixtureLaunchRequest =
         focusedCancellation || oracle === "gesture-routing"
@@ -153,19 +153,12 @@ function createHost(window: BrowserWindow) {
           callbacks.onExit(exit, launchKind);
         },
       });
-      const resize = terminal.resize.bind(terminal);
-      const write = terminal.write.bind(terminal);
-      const routedTerminal = {
-        ...terminal,
-        write(data: string) {
-          inputs[index]!.push(data);
-          write(data);
-        },
-        resize(size: { cols: number; rows: number }) {
-          resizes[index]!.push(size);
-          resize(size);
-        },
-      };
+      const { deliverOutput, terminal: routedTerminal } =
+        createFixtureMetricReplyRouter(terminal, callbacks.onOutput, {
+          inputs: inputs[index]!,
+          resizes: resizes[index]!,
+        });
+      deliverOutputs[index] = deliverOutput;
       terminals[index] = routedTerminal;
       return routedTerminal;
     },
