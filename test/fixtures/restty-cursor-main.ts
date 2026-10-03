@@ -6,7 +6,9 @@ import { loadTerminalFontData } from "../../src/main/terminal-font-data";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
 import {
   runCursorStep,
+  recordCursorBlinkFailure,
   CURSOR_STEP_TIMEOUT,
+  type CursorBlinkSample,
   type CursorStep,
 } from "./restty-cursor-readiness";
 
@@ -158,6 +160,16 @@ function cursorContext(
   };
 }
 
+let blinkFailure:
+  | {
+      context: Omit<CursorStep, "kind" | "operation">;
+      deadline: number;
+      fullBar: number;
+      sampleCount: number;
+      samples: CursorBlinkSample[];
+    }
+  | undefined;
+
 async function run() {
   applyChromiumSandboxPolicy(app.commandLine);
   for (const name of ["userData", "sessionData"] as const) {
@@ -196,6 +208,7 @@ async function run() {
       ),
     );
   const captures: unknown[] = [];
+  let blinkSample: CursorBlinkSample | undefined;
   for (const [configured, padding] of [
     [false, 0],
     [false, 8],
@@ -246,12 +259,16 @@ async function run() {
           window,
           { ...context, kind: "capture", operation: name },
           async () => {
+            if (name === "blink" && blinkSample)
+              blinkSample.captureBegin = Date.now();
             const captured = await window.webContents.capturePage({
               x: Math.round(phase.canvas.x),
               y: Math.round(phase.canvas.y),
               width: Math.floor(phase.canvas.width),
               height: Math.floor(phase.canvas.height),
             });
+            if (name === "blink" && blinkSample)
+              blinkSample.captureEnd = Date.now();
             await holdControlledCapture(
               control,
               captures.length,
@@ -343,10 +360,25 @@ async function run() {
         let visible = false,
           hidden = false;
         const deadline = Date.now() + 2000;
+        const samples: CursorBlinkSample[] = [];
+        blinkFailure = {
+          context,
+          deadline,
+          fullBar: bar0!.count,
+          sampleCount: 0,
+          samples,
+        };
         while ((!visible || !hidden) && Date.now() < deadline) {
+          blinkSample = { focusBegin: Date.now() };
+          samples.push(blinkSample);
+          samples.splice(0, Math.max(0, samples.length - 32));
+          blinkFailure.sampleCount++;
           await execute("focus()", "focus");
+          blinkSample.focusEnd = Date.now();
           const sample = await capture("blink");
           const count = ink(sample.bitmap, blank.bitmap, sample.width).count;
+          blinkSample.count = count;
+          blinkSample.remainingMs = deadline - Date.now();
           assert.ok(
             count === 0 || count === bar0!.count,
             "blink paints either the full bar or no cursor",
@@ -358,6 +390,8 @@ async function run() {
           visible && hidden,
           "blinking bar retains both native pixel phases",
         );
+        blinkFailure = undefined;
+        blinkSample = undefined;
       }
     }
     context = { ...context, lifecycle: "dispose" };
@@ -379,6 +413,10 @@ async function run() {
   app.exit(0);
 }
 void run().catch((error: unknown) => {
+  if (blinkFailure) {
+    const { context, deadline, fullBar, sampleCount, samples } = blinkFailure;
+    recordCursorBlinkFailure(context, deadline, fullBar, sampleCount, samples);
+  }
   console.error(error);
   app.exit(1);
 });

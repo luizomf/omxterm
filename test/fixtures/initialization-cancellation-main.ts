@@ -13,11 +13,17 @@ import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { spawnFixturePty } from "./native-fixture-pty";
 import { nativeFixturePlatform } from "./restty-host-platform";
 import { createResttyHostSessions } from "./restty-host-sessions";
+import { recordInitializationStage } from "./initialization-cancellation-diagnostics";
 
 const root = __dirname;
 const boundary = process.argv.includes("--fixture-boundary=fonts")
   ? "fonts"
   : "runtime";
+const stage = (
+  name: Parameters<typeof recordInitializationStage>[1],
+  status: "begin" | "complete",
+) => recordInitializationStage(boundary, name, status);
+stage("entry", "begin");
 for (const name of ["userData", "sessionData"] as const) {
   const directory = path.join(root, name);
   mkdirSync(directory, { recursive: true });
@@ -64,7 +70,9 @@ function launchRequest() {
 }
 
 async function run() {
+  stage("app-ready", "begin");
   await app.whenReady();
+  stage("app-ready", "complete");
   const router = registerTerminalIpcRouter(ipcMain);
   let window!: BrowserWindow;
   const application = startTerminalApplication({
@@ -169,14 +177,19 @@ async function run() {
       quits += 1;
     },
   });
+  stage("window-load", "begin");
   await application.newWindow();
+  stage("window-load", "complete");
   window.show();
   window.focus();
+  stage("a-ready", "begin");
   await owner.waitFor(
     () => outputs[0]?.join("").includes("READY") ?? false,
     "A native program ready",
   );
+  stage("a-ready", "complete");
   application.newTabInSelectedWindow();
+  stage("b-held", "begin");
   await owner.waitFor(
     async () =>
       (await window.webContents.executeJavaScript(
@@ -184,16 +197,22 @@ async function run() {
       )) as boolean,
     "B held at real initialization boundary",
   );
+  stage("b-held", "complete");
   assert.equal(sessions.length, 1, "No early B PTY");
+  stage("surface-count", "begin");
   assert.equal(
     await window.webContents.executeJavaScript(
       "document.querySelectorAll('.terminal-surface').length",
     ),
     2,
   );
+  stage("surface-count", "complete");
+  stage("b-close", "begin");
   await application.closeSelectedTab();
+  stage("b-close", "complete");
   assert.equal(closeRequests, 0, "Closing B preserves A's window");
   assert.equal(quits, 0);
+  stage("b-removed", "begin");
   await owner.waitFor(
     async () =>
       (await window.webContents.executeJavaScript(
@@ -201,9 +220,13 @@ async function run() {
       )) as boolean,
     "B removed, healthy A retained",
   );
+  stage("b-removed", "complete");
+  stage("b-release", "begin");
   await window.webContents.executeJavaScript(
     "globalThis.releaseCancelledInitialization()",
   );
+  stage("b-release", "complete");
+  stage("b-settled", "begin");
   await owner.waitFor(
     async () =>
       (await window.webContents.executeJavaScript(
@@ -211,9 +234,12 @@ async function run() {
       )) as boolean,
     "B cancellation settled",
   );
+  stage("b-settled", "complete");
+  stage("evidence", "begin");
   const evidence: unknown = await window.webContents.executeJavaScript(
     "globalThis.cancellationEvidence",
   );
+  stage("evidence", "complete");
   assert.equal(
     (evidence as { fatals: number }).fatals,
     0,
@@ -227,6 +253,7 @@ async function run() {
     leases: 0,
     fatals: 0,
   });
+  stage("failure-banner", "begin");
   assert.equal(
     await window.webContents.executeJavaScript(
       "document.querySelector('#terminal-surface-failure')?.hidden",
@@ -234,24 +261,31 @@ async function run() {
     true,
     "No stale persistent failure banner",
   );
+  stage("failure-banner", "complete");
   assert.equal(sessions.length, 1, "No B PTY after cancellation");
   const inputOffset = inputs[0]!.length;
   window.webContents.send(terminalIpc.clipboardAction, "paste");
+  stage("paste-input", "begin");
   await owner.waitFor(
     () => inputs[0]!.slice(inputOffset).join("").includes("usable"),
     "A receives exact Paste input",
   );
+  stage("paste-input", "complete");
   assert.equal(inputs[0]!.slice(inputOffset).join(""), "usable");
   // Paste is not Enter. In particular, Console.ReadLine on ConPTY does not
   // submit on a pasted LF. Submit the received text with a separate CR.
   sessions[0]!.write("\r");
+  stage("paste-response", "begin");
   await owner.waitFor(
     () => outputs[0]!.join("").includes("RECEIVED:usable"),
     "A receives Paste through its real Surface and Adapter",
   );
+  stage("paste-response", "complete");
   assert.equal(window.isDestroyed(), false);
   sessions[0]!.write("quit\r");
+  stage("last-close", "begin");
   await owner.waitFor(() => window.isDestroyed(), "last A exit closes window");
+  stage("last-close", "complete");
   assert.deepEqual(exited, [0]);
   assert.equal(quits, 1);
   router.dispose();
@@ -267,6 +301,7 @@ async function run() {
       }) +
       "\n",
   );
+  stage("complete", "begin");
   await owner.complete(0);
 }
 void run().catch(fail);

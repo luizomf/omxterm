@@ -254,6 +254,23 @@ in the existing `.scratch/native-fixtures/` journal. It contains no renderer
 expression or arbitrary error payload and is neither completion nor ownership
 evidence. Missing metadata cannot satisfy the diagnostic assertions.
 
+If the native blink loop fails, `__OMXTERM_CURSOR_BLINK_FAILURE__` retains its
+attempt count and last 32 numeric samples: focus/capture begin/end timestamps,
+actual native ink count, full-bar reference and original deadline/remaining
+exposure. Missing observations are `null`, never a zero-pixel phase. Successful
+loops emit no extra record. Sampling adds no renderer IPC, RAF, core query or
+capture and does not change the two-second exposure or exact pixel assertions.
+These intervals do not identify a renderer draw phase or compositor frame.
+
+Initialization cancellation emits fixed `__OMXTERM_INITIALIZATION_STAGE__`
+begin/complete markers around its existing main-process awaits, plus entry and
+completion-entry checkpoints. The supervisor retains these on a timeout even
+without a result packet. A begun stage without completion localizes the pending
+operation; it does not prove why it stalled or that the renderer finished. Only
+fixed boundary/stage/status names and timestamps are recorded, never terminal,
+clipboard, configuration or font payloads. No wait or deadline is added. Both
+diagnostics have small observation overhead and are not evidence of a repair.
+
 Native negative controls make the owned window unavailable before mount, hold
 its actual renderer frame continuation, or withhold delivery of an actual native
 capture. They must exit promptly with the presentation-unavailable or named
