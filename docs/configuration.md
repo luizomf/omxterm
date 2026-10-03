@@ -496,11 +496,12 @@ Here is a complete single-line example:
 Click the snippet, review the inserted command, and press Enter. To submit a
 snippet automatically, set its `execute` field to `true`.
 
-**`execute` controls only the final Enter.** Embedded newlines or control
-characters can still execute input when bracketed paste is unavailable, even
-with `execute: false`. Snippets use the same
-[Protected Paste](usage.md#protected-paste) checks as ordinary paste. Use
-single-line bodies for commands you want to review first.
+**`execute` controls only the appended Enter; it does not make a snippet safe.**
+Embedded newlines or controls may execute input, especially without bracketed
+paste, even with `execute: false`. Control characters can also end bracketed paste
+early. Snippets use the same [Protected Paste](usage.md#protected-paste) checks as
+ordinary paste. Use single-line bodies without control characters for commands
+you want to review first.
 
 The file contains `"version": 1` and a `snippets` array of at most 512 entries:
 
@@ -612,11 +613,12 @@ Snippets are read separately when their sidebar opens.
 | New windows           | Always-on-Top, title-bar and tab-bar defaults                 |
 
 Sessions keep running. A notice explains when font family or line height needs
-a restart to apply everywhere. Tabs still initializing keep the settings they
-started with too. Reloading the same values again keeps the notice while an older
-tab survives; after closing those tabs, another reload clears it. Existing windows keep their zoom adjustment,
-bar visibility, and Always-on-Top choices. **Actual Size** returns zoom to the
-latest configured size.
+a restart to apply everywhere. Tabs still initializing also retain their
+creation-time font family and line height; live-safe settings update when
+initialization finishes. Reloading the same values again keeps the notice while
+an older tab survives; after closing those tabs, another reload clears it.
+Existing windows keep their zoom adjustment, bar visibility, and Always-on-Top
+choices. **Actual Size** returns zoom to the latest configured size.
 
 If validation fails:
 

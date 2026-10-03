@@ -256,10 +256,11 @@ also requires the exact-DMG check above.
 
 ### Linux arm64
 
-Use native Linux arm64, a supported Node.js version, `python3`, `make`, a C++
-compiler (`build-essential` on Ubuntu), `readelf` (`binutils`), `fontconfig`
-utilities and an authenticated X11/XWayland session. Native Wayland is not
-claimed. GUI tests need an unlocked desktop; arrange the session and a bounded
+Use native Linux arm64 and a supported Node.js version. Before `npm ci`, complete
+[the Linux platform prerequisites](development.md#linux), including `patch`,
+process-inspection tools and installed fixture fonts. Use an authenticated
+X11/XWayland session; native Wayland is not claimed.
+GUI tests need an unlocked desktop; arrange the session and a bounded
 idle inhibitor as part of test setup rather than treating locking as a product
 failure. Preserve unrelated user activity.
 

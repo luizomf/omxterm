@@ -18,9 +18,10 @@ The tab bar appears when there are at least two tabs. Click to select a tab,
 drag to reorder it, or use the shortcuts below. **View → Toggle Tab Bar** hides
 or shows the bar; keyboard shortcuts still work while it's hidden.
 
-Each started tab shows the Default Shell's basename as its initial title,
-including when launched with `-e`. A valid terminal title replaces it. The window
-title follows the selected tab. Titles are display-only and never saved or logged.
+Each started tab initially shows the default shell's filename, such as `zsh`
+or `powershell.exe`, even when launched with `-e`. A valid terminal title replaces
+it. The window title follows the selected tab. Titles are display-only and never
+saved or logged.
 
 Closing a tab ends its session. Closing a window ends all its sessions; closing
 the last window quits OMXTerm. Tabs and their order aren't saved between launches.
@@ -33,24 +34,31 @@ action. Idle shells close immediately on macOS and Linux. **Windows asks for
 every running session**, because it cannot reliably tell whether a shell is idle.
 You can turn confirmations off with `confirmClose` in your settings.
 
-Close Tab confirmation applies only to its original tab. If that session exits
-while the question is open, approving it leaves the surviving tabs alone.
-
 A background tab closing or exiting does not change your selected session or
 where typing, Paste and snippets go. Closing the selected tab selects its right
 neighbor, or its left neighbor if it was last.
 
-Typing `exit` closes that shell's tab, without closing another tab that is still
-initializing. You can close an initializing tab without starting its shell.
-A session failure dialog stays open for acknowledgement even if another shell
-exits meanwhile. Acknowledging one failure leaves other pending failures and
-usable or initializing tabs alone. You can still explicitly close the window
-or quit the app. A command or Default Shell that cannot execute shows a startup
-failure; OMXTerm does not substitute another shell. A program that did start
-and returns a nonzero exit code still closes normally without a failure dialog.
+Typing `exit` closes that shell's tab. A command or default shell that cannot
+execute shows a startup failure; OMXTerm does not substitute another shell.
+A program that did start and returns a nonzero exit code still closes normally
+without a failure dialog.
 
 The app may take a moment to finish shutting down its processes after its last
 window closes.
+
+<details>
+<summary>Closing while a tab is starting or a dialog is open</summary>
+
+Close Tab confirmation applies only to its original tab. If that session exits
+while the question is open, approving it leaves the surviving tabs alone.
+
+Typing `exit` does not close another tab that is still initializing. You can
+close an initializing tab without starting its shell. A session failure dialog
+stays open for acknowledgement even if another shell exits meanwhile.
+Acknowledging one failure leaves other pending failures and usable or initializing
+tabs alone. You can still explicitly close the window or quit the app.
+
+</details>
 
 ## Window controls
 
@@ -118,7 +126,8 @@ receiving program isn't set up to handle pasted text. Choose **Paste** to send
 the whole text or **Cancel** to send nothing.
 
 Programs that enable **bracketed paste** can distinguish pasted text from typing,
-so they receive it without this prompt. Review commands before running them.
+so they receive it without this prompt. Bracketed paste is not command validation;
+embedded control characters can end it early. Review commands before running them.
 Snippets and inserted file paths use the same handling.
 
 ## Inserting file and folder paths
@@ -146,25 +155,15 @@ it won't activate. OMXTerm opens the visible URL rather than hidden link targets
 ## Previewing local images
 
 Choose **File → Open Local Image…** and select a PNG or JPEG. Press **Escape**,
-click the close button, or click outside the image to return to your terminal.
-Close the preview before pasting, zooming, or changing the title or tab bars.
+click the close button, or click the dark backdrop outside the preview panel to
+return to your terminal. Close the preview before pasting, zooming, or changing
+the title or tab bars.
 
 You can also **Cmd+click** (macOS) or **Ctrl+click** (Linux/Windows) a visible full
 path or `file:///` URL. The complete reference must be visible, including wrapped
-lines. An absolute path containing spaces can be clicked **without quotes when
-printed alone on its logical line**, for example `/Users/demo/Pictures/a photo.png`
-or `C:\Pictures\a photo.jpg`. It must start at the line's first character and end
-in `.png`, `.jpg` or `.jpeg` (optionally followed by a tool location). Automatic
-soft wrapping is supported; inserted newlines are not joined. This conservative
-cue does not combine surrounding prose or multiple same-line references. Tabs,
-trailing spaces, or an earlier image-name token/new reference separated by spaces
-also require quotes or the picker.
-
-In other output, surround the complete spaced path with matching single or double
-quotes, for example `'/Users/demo/Pictures/a photo.png'` or `'C:\Pictures\a photo.jpg'`.
-Quotes are literal wrappers, not shell syntax: no variables, escapes or commands
-are evaluated. Brackets, assignment prefixes and trailing punctuation are not
-trimmed; use the native file picker for forms the recognizer cannot express.
+lines. For paths with spaces, use the picker or surround the complete path with
+matching single or double quotes. Quotes are literal wrappers, not shell syntax:
+no variables, escapes or commands are evaluated.
 
 `~` and `~/...`, including quoted forms, refer to the local OMXTerm user's home.
 Relative references beginning `./` or `../` (also `.\` or `..\` on Windows),
@@ -173,15 +172,6 @@ their **local base folder**. The directory picker starts at home, but home is no
 assumed: choose the intended folder or cancel without opening anything. Each
 activation asks again; OMXTerm never tracks or guesses an agent's/shell's cwd.
 `..` resolves normally against your selected folder, not inside a new sandbox.
-
-Tool locations such as `/tmp/image.png:12` or `~/image.png:12:3` first try the
-literal filename, then remove the positive line/column suffix only if that exact
-file is absent. Existing files are never replaced by this fallback on a format,
-permission or decode failure. Quotes disambiguate: `'/tmp/image.png:12'` means the
-literal colon filename only; `'/tmp/image.png':12` means `image.png` with a tool
-location outside the quotes. The native picker and `file:///` URLs always name
-literal files without tool-suffix interpretation. `%` and `#` in native paths
-remain literal filename characters.
 
 Previews support static PNG/JPEG files up to **64 MiB**, **8192 pixels per side**,
 and **32 million pixels**, including each ceiling. Large images can temporarily
@@ -192,6 +182,34 @@ is recognized; an unsupported-format message distinguishes it from an unavailabl
 file. Content, not the extension, determines format. Network shares, device paths
 and remote files are unsupported. Even if SSH printed the path, it refers to the
 computer running OMXTerm, never the remote host.
+
+<details>
+<summary>Paths with spaces, wrapped output, and tool locations</summary>
+
+An absolute path containing spaces can be clicked **without quotes when
+printed alone on its logical line**, for example `/Users/demo/Pictures/a photo.png`
+or `C:\Pictures\a photo.jpg`. It must start at the line's first character and end
+in `.png`, `.jpg` or `.jpeg` (optionally followed by a tool location). Automatic
+soft wrapping is supported; inserted newlines are not joined. This conservative
+cue does not combine surrounding prose or multiple same-line references. Tabs,
+trailing spaces, or an earlier image-name token/new reference separated by spaces
+also require quotes or the picker.
+
+In other output, surround the complete spaced path with matching single or double
+quotes, for example `'/Users/demo/Pictures/a photo.png'` or `'C:\Pictures\a photo.jpg'`.
+Brackets, assignment prefixes and trailing punctuation are not trimmed; use the
+native file picker for forms the recognizer cannot express.
+
+Tool locations such as `/tmp/image.png:12` or `~/image.png:12:3` first try the
+literal filename, then remove the positive line/column suffix only if that exact
+file is absent. Existing files are never replaced by this fallback on a format,
+permission or decode failure. Quotes disambiguate: `'/tmp/image.png:12'` means the
+literal colon filename only; `'/tmp/image.png':12` means `image.png` with a tool
+location outside the quotes. The native picker and `file:///` URLs always name
+literal files without tool-suffix interpretation. `%` and `#` in native paths
+remain literal filename characters.
+
+</details>
 
 ## Inline terminal images
 
@@ -231,8 +249,9 @@ jumping to a preceding line's column.
 ## Bells and attention
 
 Terminal alerts are silent. OMXTerm marks the tab with `🔔` and asks the desktop
-for attention when its window is unfocused (a Dock bounce on macOS). Return to
-and interact with the tab to clear its marker.
+for attention when its window is unfocused (a Dock bounce on macOS). Focusing
+the window clears the selected tab's marker. Selecting another ringing tab while
+the window is focused, or interacting with the selected tab, clears its marker too.
 
 If Bash or Vim flashes the whole screen instead, try the fixes below.
 

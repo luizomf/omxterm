@@ -10,7 +10,12 @@ configuration, snippets, and an editable theme; that optional setup uses Git Bas
 ## 1. Open your settings folder
 
 On first launch, OMXTerm creates `config.json`, `snippets.json`, and an editable
-theme. Run this in **PowerShell** to open their folder:
+theme. OMXTerm uses `XDG_CONFIG_HOME` from its application startup environment;
+changes in a PowerShell profile do not change it. If this shell uses another root,
+replace `$configDir = ...` in each folder/copy/restore block with
+`$configDir = 'C:\actual\settings\folder\omxterm'`.
+
+Run this in **PowerShell** to open the folder:
 
 ```powershell
 $configRoot = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Path $HOME '.config' }
@@ -46,23 +51,25 @@ for line height, padding, and installed fonts.
 
 ## 3. Try a snippet
 
-Open **View → Toggle Snippets** (`Ctrl+Shift+S`) and click the starter greeting.
-Review the inserted command, then press Enter. Snippets are saved text you can
-insert into the current tab.
+Snippets are saved text you can insert into the current tab. If `snippets.json`
+is missing, create it with the [single-line snippet example](../configuration.md#snippets),
+which uses `pwd` and works in PowerShell too. If the file already exists,
+preserve its `snippets` array: add the example entry or choose an appropriate
+existing single-line snippet with `execute: false`.
+
+Open **View → Toggle Snippets** (`Ctrl+Shift+S`). Review the body, then click
+**Hello from OMXTerm** if present, or your chosen single-line snippet. Review
+the inserted command, then press Enter.
 
 Edit `snippets.json` to add your own commands, then close and reopen the sidebar.
-If `snippets.json` is missing, create it with the
-[single-line snippet example](../configuration.md#snippets), which uses `pwd`
-and works in PowerShell too. If the file already exists, preserve its `snippets`
-array: add the example entry or choose an appropriate existing single-line
-snippet with `execute: false`. Review the body before clicking. Reopen the
-sidebar after edits; `execute: false` leaves the final Enter to you.
+Reopen it after every edit; `execute: false` leaves the final Enter to you.
 
 ## 4. Make it yours
 
-- **Colors:** edit a `#RRGGBB` value in `themes/omtheme.json` and reload, or use
+- **Colors:** edit a `#RRGGBB` value in the file selected by `theme.path`
+  (`themes/omtheme.json` in the starter kit), then reload, or use
   [OMXTerm Studio](../configuration.md#edit-visually-with-omxterm-studio).
-  If the theme file is missing, [create and select a complete theme](../configuration.md#terminal-themes).
+  If the setting or file is missing, [create and select a complete theme](../configuration.md#terminal-themes).
 - **Background:** [enable blur and positive transparency together](../configuration.md#background-transparency-and-blur)
   for Acrylic on Windows 11 22H2 or later. If native effects are unavailable or
   disabled by system policy, the background stays opaque.
@@ -104,16 +111,19 @@ these files replaces your current preferences; merge individual settings to
 keep other choices.
 
 Reload configuration, open a **new tab** (`Ctrl+Shift+T`) to start Git Bash,
-and reopen the snippets sidebar. Try **Open current folder in Explorer**: it
-inserts ` explorer.exe .`; press Enter to open Explorer. All seven snippets
-are single-line and have `execute: false`. They use Bash syntax and Windows
-tools such as `ipconfig.exe`, `nslookup.exe`, and `clip.exe`.
+and reopen the snippets sidebar. Try **Go to home directory**: it inserts
+` cd "$HOME"`; press Enter to return home. All seven snippets are single-line
+and have `execute: false`. They use Bash syntax; other snippets use Windows
+tools such as `explorer.exe`, `ipconfig.exe`, `nslookup.exe`, and `clip.exe`.
 
 File drops and pasted file lists still use **PowerShell quoting** in Git Bash;
 review and adjust them before pressing Enter. To return to Windows PowerShell,
 remove `windowsShell`, reload, and open a new tab.
 
 ### Copy from an extracted ZIP in PowerShell
+
+<details>
+<summary>Show copy and restore steps</summary>
 
 Set `$example` to your extracted folder. This backs up existing files and stops
 at symlinks/reparse points so it does not overwrite their targets.
@@ -133,6 +143,7 @@ foreach ($dir in @($configDir, (Join-Path $configDir 'themes'))) {
 }
 New-Item -ItemType Directory -Path (Join-Path $configDir 'themes') -Force -ErrorAction Stop | Out-Null
 New-Item -ItemType Directory -Path $backup -ErrorAction Stop | Out-Null
+"Backup (only files that previously existed): $backup"
 foreach ($name in $names) {
   $target = Join-Path $configDir $name
   $existing = Get-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue
@@ -144,7 +155,6 @@ foreach ($name in $names) {
   }
   Copy-Item -LiteralPath (Join-Path $example $name) -Destination $target -ErrorAction Stop
 }
-"Backup (only files that previously existed): $backup"
 ```
 
 Keep the printed backup path. If copying stops, inspect what was copied before
@@ -165,6 +175,8 @@ Repeat for `snippets.json` and `themes\omtheme.json` if they have backups. Remov
 only newly added files without originals, not the whole settings folder. Reload
 configuration and reopen the snippets sidebar; open a new tab to use the restored
 shell setting.
+
+</details>
 
 <details>
 <summary>Optional Git Bash and Vim preferences</summary>

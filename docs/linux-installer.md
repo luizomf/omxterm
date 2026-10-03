@@ -23,6 +23,16 @@ icon, and menu entry in your user folder. It automatically chooses mounting or
 extraction and uses X11/XWayland. Spaces, literal percent signs and double quotes
 in your home folder's path are preserved; no renaming or manual escaping is needed.
 
+For a blank window, go to [graphics troubleshooting](#only-if-graphics-fail).
+Blur depends on your desktop compositor; it is not required to use OMXTerm.
+
+<details>
+<summary>Recorded Cinnamon, Xfce and MATE compatibility checks</summary>
+
+These are reports from specific development environments, not a promise for all
+Linux desktops. The records below do not identify full source commits, so the
+shared development version cannot establish exact-build equivalence.
+
 ## Additional verified compatibility: Cinnamon (X11)
 
 A maintainer verified OMXTerm `0.20.1-dev.0` on **Fedora 44 ARM64 with
@@ -83,6 +93,8 @@ passed, as did the remaining tests in the run. The underlying error was not
 captured in the supplied test summary, so it is not established as the same
 failure as Cinnamon's. This is verified compatibility with a known test failure,
 not a full-suite pass or qualification of a minimal MATE-only installation.
+
+</details>
 
 ## Only if graphics fail
 

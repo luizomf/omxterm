@@ -14,7 +14,12 @@ shell or the shell started by new OMXTerm tabs.
 ## 1. Open your settings folder
 
 On first launch, OMXTerm creates `config.json`, `snippets.json`, and an editable
-theme. Run this in Bash to print their folder:
+theme. OMXTerm uses `XDG_CONFIG_HOME` from its application startup environment;
+exports in shell startup files do not change it. If this shell uses another root,
+replace `config_dir=...` in each folder/copy/restore block with
+`config_dir="/actual/settings/folder/omxterm"`.
+
+Run this in Bash to print the folder:
 
 ```bash
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omxterm"
@@ -48,23 +53,24 @@ for line height, padding, and installed fonts.
 
 ## 3. Try a snippet
 
-Open **View → Toggle Snippets** (`Ctrl+Shift+S`) and click the starter greeting.
-Review the inserted command, then press Enter. Snippets are saved text you can
-insert into the current tab.
+Snippets are saved text you can insert into the current tab. If `snippets.json`
+is missing, create it with the [single-line snippet example](../configuration.md#snippets).
+If it already exists, preserve its `snippets` array: add the example entry or
+choose an appropriate existing single-line snippet with `execute: false`.
+
+Open **View → Toggle Snippets** (`Ctrl+Shift+S`). Review the body, then click
+**Hello from OMXTerm** if present, or your chosen single-line snippet. Review
+the inserted command, then press Enter.
 
 Edit `snippets.json` to add your own commands, then close and reopen the sidebar.
-If `snippets.json` is missing, create it with the
-[single-line snippet example](../configuration.md#snippets). If it already exists,
-preserve its `snippets` array: add the example entry or choose an appropriate
-existing single-line snippet with `execute: false`. Review the body before
-clicking. Reopen the sidebar after edits; `execute: false` leaves the final Enter
-to you.
+Reopen it after every edit; `execute: false` leaves the final Enter to you.
 
 ## 4. Make it yours
 
-- **Colors:** edit a `#RRGGBB` value in `themes/omtheme.json` and reload, or use
+- **Colors:** edit a `#RRGGBB` value in the file selected by `theme.path`
+  (`themes/omtheme.json` in the starter kit), then reload, or use
   [OMXTerm Studio](../configuration.md#edit-visually-with-omxterm-studio).
-  If the theme file is missing, [create and select a complete theme](../configuration.md#terminal-themes).
+  If the setting or file is missing, [create and select a complete theme](../configuration.md#terminal-themes).
 - **Background:** try [transparency and blur](../configuration.md#background-transparency-and-blur).
   For GNOME, KDE Plasma, or Hyprland setup, see [Linux desktop tips](linux-desktop.md).
 - **Window bars:** `Ctrl+Shift+D` toggles the title bar; `Ctrl+Shift+B` toggles
@@ -100,13 +106,16 @@ your settings folder and `omtheme.json` into its `themes` subfolder. Replacing
 these files replaces your current preferences; merge individual settings to
 keep other choices. Reload configuration and reopen the snippets sidebar.
 
-Try **Open current folder**: it inserts ` xdg-open .`; press Enter to open your
-file manager. All seven snippets are single-line and have `execute: false`.
-They use `xdg-open`, `ip`, `nslookup`, `git`, and GNU `base64 -w0`. Install a
+Try **Go to home directory**: it inserts ` cd "$HOME"`; press Enter to return
+home. All seven snippets are single-line and have `execute: false`. Other
+snippets use `xdg-open`, `ip`, `nslookup`, `git`, and GNU `base64 -w0`. Install a
 missing tool through your distribution or edit the snippet. The palette example
 uses Bash syntax.
 
 ### Copy from an extracted ZIP in the terminal
+
+<details>
+<summary>Show copy and restore steps</summary>
 
 Set `example` to your extracted folder. This Bash block backs up existing files
 and stops at symlink destinations so it does not overwrite their targets.
@@ -117,6 +126,7 @@ config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omxterm"
 backup="$(mktemp -d "$HOME/omxterm-quick-start-backup.XXXXXX")"
 apply_quick_start() {
   [ -n "$backup" ] && [ -d "$example/themes" ] && [ -f "$example/config.json" ] && [ -f "$example/snippets.json" ] && [ -f "$example/themes/omtheme.json" ] || { echo 'Check backup or example path'; return 1; }
+  printf 'Backup (including only files that already existed): %s\n' "$backup"
   [ ! -L "$config_dir" ] && { [ ! -e "$config_dir" ] || [ -d "$config_dir" ]; } || { echo 'Configuration directory is not a plain directory'; return 1; }
   mkdir -p "$config_dir/themes" || return 1
   [ ! -L "$config_dir/themes" ] && [ -d "$config_dir/themes" ] || { echo 'Theme directory is not a plain directory'; return 1; }
@@ -129,7 +139,6 @@ apply_quick_start() {
     fi
     cp "$example/$name" "$target" || return 1
   done
-  printf 'Backup (including only files that already existed): %s\n' "$backup"
 }
 apply_quick_start
 ```
@@ -149,6 +158,8 @@ cp -p "$backup/config.json" "$config_dir/config.json"
 Repeat for `snippets.json` and `themes/omtheme.json` if they have backups. Remove
 only newly added files without originals, not the whole settings folder. Reload
 configuration and reopen the snippets sidebar.
+
+</details>
 
 <details>
 <summary>Optional Bash and Vim preferences</summary>

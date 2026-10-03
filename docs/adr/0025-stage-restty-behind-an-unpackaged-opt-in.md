@@ -8,6 +8,23 @@ records the completed bounded migration tracked by issue 252. The portable
 Terminal Surface seam remains authoritative; this decision does not introduce a
 renderer registry or promise two permanent engines.
 
+## Navigation
+
+- [Sole Surface and initialization](#decision-and-initialization)
+- [Dependency pins and corrections](#dependency-pins-and-corrections)
+- [Font stack, appearance and lifetime](#font-stack-appearance-and-lifetime),
+  including [creation-time settings](#creation-time-settings-and-restart-notices)
+- [Clipboard, links, events and output](#clipboard-links-events-and-output-delivery)
+- [Keyboard input and terminal controls](#keyboard-input-and-terminal-controls)
+- [Scrollback and reflow](#scrollback-and-reflow)
+- [Maintenance and qualification](#consequences-and-qualification)
+
+The sections retain the migration and later correction history. For current
+maintenance commands, use the [Restty development guide](../restty-development.md);
+for accepted behavior, use the [product contract](../spec.md).
+
+## Decision and initialization
+
 OMXTerm uses pinned Restty 0.3.0 in ordinary development and every packaged
 application. The temporary `OMXTERM_TERMINAL_SURFACE` selector and the former
 xterm renderer were removed at final cutover. Restty is the single Surface
@@ -27,6 +44,8 @@ existing sender/session-validated close route carries only a fixed rendering
 failure reason, never renderer-supplied dialog text. Main retains its actionable
 native failure dialog through last-session cleanup until acknowledgement.
 
+## Dependency pins and corrections
+
 Restty 0.3.0 is pinned to
 `3db45b0e10dbe53c52a77131d366f519546e4f04`, including Ghostty
 `0309af1b7f0724105a0805efa88bbee808a616ae`, with `text-shaper` 0.1.28.
@@ -43,6 +62,8 @@ patched constructor, pane, services, runtime view, and input origins are typed i
 one private Surface module; callers and the public Terminal Surface Interface see
 none of these dependency internals. This maintenance structure changes neither
 the accepted dependency inputs nor final runtime behavior.
+
+## Font stack, appearance and lifetime
 
 The bundled TTF inputs replace the prototype's non-equivalent WOFF2 shaping
 input.
@@ -89,6 +110,8 @@ source, parsed-face and atlas resources remain shared and unchanged. This small
 render-time correction avoids a second rasterizer, extra atlas variants or a
 new shader/vertex interface.
 
+### Native font snapshots and sharing
+
 The appearance and font slices map OMXTerm Terminal Themes into Restty, use the
 configured size and creation-time line height, apply per-side padding, and
 preserve per-window zoom through runtime operations. Main resolves exact
@@ -130,6 +153,8 @@ upgrades must revalidate this assumption using the source-only experiment in
 There is no derivative on disk in production, new cache, renderer capability,
 or alternate font renderer.
 
+### Creation-time settings and restart notices
+
 Theme, size and padding update existing Surfaces without replacing their core
 or PTY. `font.family` and `font.lineHeight` are the complete restart-only set:
 existing Restty Surfaces keep their creation-time values, while new Surfaces use
@@ -152,6 +177,8 @@ creation-time values. This avoids an unbounded history of manual reloads and
 keeps pending Surfaces visible to restart-notice calculation without starting a
 shell early. This font-only registry does not replace the renderer's tab/last-tab
 ownership or native session shutdown authority (ADRs 0016 and 0028).
+
+## Clipboard, links, events and output delivery
 
 Candidate explicit copy/paste, selection, context-menu actions,
 snippets/path injection and OSC 52 are enabled through OMXTerm's existing host
@@ -201,6 +228,8 @@ terminate only the owned PTY. A checksum-guarded pinned node-pty 1.1.0 Unix
 runtime correction defers its 200 ms stuck-close socket destruction while the
 stream is paused, preserving the readable exit tail; it does not alter the
 Windows ConPTY path.
+
+## Keyboard input and terminal controls
 
 The interaction slice keeps application accelerators in Electron main and adds
 no renderer shortcut system. Restty receives the live Option Key Mode through
@@ -254,6 +283,8 @@ factor into cell height while leaving glyph scale tied to font size. This keeps
 OMXTerm's size and row-spacing contract without CSS scaling, clipping or a
 custom renderer.
 
+## Scrollback and reflow
+
 The scrollback and parsed-event slices extend that correction with a
 reproducible pinned WASM artifact. The artifact exposes a narrow runtime setter
 over Ghostty's existing byte and physical line limits plus parsed title/BEL
@@ -303,6 +334,8 @@ marker and actual selection gains an unintended LF. Deliberate producer hard
 breaks, non-reflow alternate screens and wraparound-disabled edge overwrite
 remain distinct. The correction belongs in the pinned core, not clipboard
 normalization, a renderer coordinate adjustment or a resize timing workaround.
+
+## Consequences and qualification
 
 The decision carries the maintenance cost of a pinned dependency correction and
 the runtime cost of requiring WebGL2. In return, OMXTerm avoids unsafe

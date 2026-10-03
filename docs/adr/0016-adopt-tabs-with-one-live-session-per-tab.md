@@ -14,8 +14,17 @@ platform-specific Window Chrome replaces the fixed title-area policy below.
 
 A Terminal Window holds one or more Terminal Tabs, each of which owns exactly
 one Live Terminal Session. `Cmd+T` (the `newTab` default) creates a tab in the
-selected window, while `Cmd+N` continues to create an independent window. The
-OMXTerm-drawn tab strip occupies a full-width row above the Terminal Surface and
+selected window, while `Cmd+N` continues to create an independent window.
+
+## Historical presentation policy
+
+The fixed chrome geometry, initially enabled new-window tab bar and absence of
+visibility settings recorded below are superseded by
+[ADR 0027](0027-hide-window-chrome-without-replacing-sessions.md). That decision
+owns current title/tab defaults and hideable Window Chrome; tab/session ownership
+and toggle routing remain unchanged.
+
+The OMXTerm-drawn tab strip occupies a full-width row above the Terminal Surface and
 Snippets Sidebar row. It appears when the window has at least two tabs and its
 window-local tab bar enabled flag is true, leaving a single-tab window identical
 to the earlier contract. On macOS the row sits below the app-controlled 30 px
@@ -51,6 +60,8 @@ reusing the macOS inset below Linux's existing title and menu produced an empty
 30 px band before the tabs and reduced the Terminal Surface for no native drag
 behavior. The Electron main process therefore owns the platform choice and
 provides zero inset on Linux while preserving the settled macOS chrome.
+
+## Session ownership and lifecycle
 
 Excluding tabs protected the first-release scope and the simplicity of one
 window, renderer, and session, with tmux expected to cover multiplexing. Use of

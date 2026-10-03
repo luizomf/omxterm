@@ -8,7 +8,13 @@ GPU-process working-set differences are small, order-dependent observations, not
 an attribution of physical storage to the attachment. No arithmetic allocation
 estimate is used to justify adoption.
 
-Base: `b68e249f9fee3e558198382da4147ef8481522f5` (integrated #316).
+The recorded observations below describe the **historical #317 candidate with
+`alpha:false`**, not the current renderer. Background composition later enabled
+alpha under [ADR 0029](adr/0029-compose-background-effects-with-explicit-cell-identity.md).
+Current depth re-evaluation uses that alpha-enabled runtime; it does not recreate
+the historical experiment.
+
+Historical base: `b68e249f9fee3e558198382da4147ef8481522f5` (integrated #316).
 The comparison reverses only the context option in a fixture-only bundle;
 production CSP, sandbox policy, Surface/Adapter ownership, DPR and integrated
 hidden rendering remain identical. Original runtime SHA-256:
@@ -23,28 +29,52 @@ observable behavior and architecture are preserved.
 
 ## Reproduction and source identity
 
-Run these finite commands **serially** from the candidate checkout:
+### Current depth re-evaluation
+
+With dependencies prepared and the [native prerequisites](development.md#platform-prerequisites)
+satisfied, run these finite commands **serially** from the current checkout:
 
 ```sh
-npm ci
 mkdir -p .scratch
 OMXTERM_DEPTH_VARIANT=original \
-  OMXTERM_DEPTH_EVIDENCE="$PWD/.scratch/depth-original.json" \
+  OMXTERM_DEPTH_EVIDENCE="$PWD/.scratch/depth-current-original.json" \
   npx vitest run test/integration/restty-scrollback-rendering.test.ts
 OMXTERM_DEPTH_VARIANT=disabled \
-  OMXTERM_DEPTH_EVIDENCE="$PWD/.scratch/depth-disabled.json" \
+  OMXTERM_DEPTH_EVIDENCE="$PWD/.scratch/depth-current-disabled.json" \
   npx vitest run test/integration/restty-scrollback-rendering.test.ts
-npm run lint
-npm run check:portable
-npm run package:mac
-npm run package:verify
 ```
+
+The current [fixture-only reversal](../test/fixtures/restty-depth-evidence.ts)
+keeps `alpha:true` in both variants. `original` removes only `depth:false`,
+restoring the default depth request; it does not restore the original #317
+runtime. The fixture's runtime-digest guard must match the prepared dependency.
+Keep the new evidence's source, file/runtime hashes and native environment
+separate from the historical pair; historical pixel hashes and memory samples
+are not expected results for today's runtime.
 
 Each integration execution builds into a fresh temporary directory and launches
 its own Electron process with isolated home, config, state, userData and
 sessionData. No installed app, private image, user configuration or user session
 is inspected. Inputs are generated text, PNG and RGBA only. No shell is launched
 by this rendering fixture; existing native host tests separately cover real PTYs.
+
+### Historical candidate and source identity
+
+Reconstructing the `alpha:false` experiment requires the recorded source base
+and matching candidate fixture, lockfile and runtime hashes, not just running
+current commands. The original macOS validation workflow included `npm ci`
+before the two integration runs, then:
+
+```sh
+npm run lint
+npm run check:portable
+npm run package:mac
+npm run package:verify
+```
+
+These are historical candidate checks, not prerequisites for the bounded current
+depth comparison. Current packaging and platform qualification follow the
+[release procedure](release.md).
 
 [Original raw evidence](evidence/issue-317-depth-original.json) and
 [disabled raw evidence](evidence/issue-317-depth-disabled.json) contain exact
@@ -157,7 +187,7 @@ failed on actual depth attributes/bits/attachment presence, then passed after
 preparation applied the single-option correction. Fresh installation and two
 subsequent preparations produced identical corrected bytes.
 
-Final candidate checks on this host passed:
+Historical #317 candidate checks on the recorded host passed:
 
 - `npm run lint` and `npm run check:portable`: formatting, type-aware lint,
   typecheck, 81 test files passed / 3 skipped, 813 tests passed / 12 skipped,

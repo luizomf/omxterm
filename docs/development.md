@@ -6,6 +6,32 @@ setup needed for Electron, native PTYs and graphics. Release builds follow the
 [release procedure](release.md); Terminal Surface changes also use the
 [Restty guide](restty-development.md).
 
+## Navigation and command index
+
+Prepare the [platform prerequisites](#platform-prerequisites) before running
+checks. Commands below are entry points, not substitutes for each section's
+setup, evidence limits or opt-in safety guidance. Native suites share a desktop;
+run only one at a time, including across clones.
+
+| Task                                                     | Command                                                           | Details                                                                        |
+| -------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Inventory tests without launching fixtures               | `npx vitest list --filesOnly --json`                              | [Test discovery](#test-discovery)                                              |
+| Full portable check (includes native graphics and build) | `npm run check:portable`                                          | [Running native tests](#running-native-tests)                                  |
+| Cursor matrix and native controls                        | `npx vitest run test/integration/restty-cursor-rendering.test.ts` | [Rendering, appearance and cursor](#rendering-appearance-and-cursor)           |
+| Focused host destination/reload controls                 | `npx vitest run test/integration/restty-host-oracles.test.ts`     | [Host image, output and reload oracles](#host-image-output-and-reload-oracles) |
+
+Other targeted paths:
+
+- [Tab removal readiness](#tab-removal-readiness) and [PTY resize](#suite-scheduling-and-pty-resize)
+- [AltGr opt-in](#altgr-layout-boundary) and [native window observation](#run-local-native-window-observation)
+- [About startup and background presentation](#about-startup-and-background-presentation)
+- [Scrollback readiness and input](#scrollback-readiness-and-input)
+- [Hover and local-image activation](#hover-and-local-image-activation),
+  [image capacity opt-in](#local-image-preview-capacity) and [tmux opt-in](#multiplexer-comparison)
+- [Evidence reuse and packaging](#evidence-reuse-and-packaging)
+- [Fixture ownership and cleanup](#fixture-ownership-and-cleanup), including
+  [destructive interruption opt-ins](#interruption-regressions)
+
 ## Platform prerequisites
 
 Build on the target ARM64 platform with Node.js 22.13+ within 22.x, or 24+.
@@ -279,6 +305,8 @@ npm test -- test/unit/test-discovery.test.ts
 
 ## Running native tests
 
+### Rendering, appearance and cursor
+
 The standalone Restty rendering test hides the cursor after its input/reset
 exercises, captures a blank baseline, then requires new glyph ink in three
 separate expected word regions. Portable controls reject blank, cursor-only,
@@ -386,6 +414,8 @@ compositor-rule parsing or desktop reconfiguration. Discovery occurs only inside
 the affected native test callbacks; listing tests and unit-only selection launch
 no raw windows.
 
+### Tab removal readiness
+
 The background-tab removal fixture waits for the main process's actual initial
 selection acknowledgement and a renderer task/microtask boundary before sending
 the first new-tab command. A shell's raw `READY` output alone is not Surface or
@@ -417,6 +447,8 @@ npx vitest run test/unit/tab-removal-readiness.test.ts test/integration/tab-remo
 
 Window Chrome fixtures retain real native/content/Surface/PTY bounds and
 window-manager behavior coverage.
+
+### Host image, output and reload oracles
 
 The host's inline-image oracle checks both cell-anchored Pi/Chafa rectangles
 and their full complement after zoom, content shrink/restore through the
@@ -485,6 +517,8 @@ npx vitest run test/integration/restty-host-oracles.test.ts
 
 These use real native PTYs/core/WebGL and Electron-internal input APIs; they do not
 claim physical-pointer input, OS remote-control consent or persistence settings.
+
+### Suite scheduling and PTY resize
 
 `npm run check:portable` includes Electron fixtures and requires a working
 desktop with WebGL2. Fixtures share the desktop compositor. Vitest serializes
@@ -579,6 +613,8 @@ Run the affected tests normally:
 npx vitest run test/integration/window-chrome.test.ts test/integration/restty-cursor-rendering.test.ts
 ```
 
+### About startup and background presentation
+
 About startup tests retain the desktop's Wayland environment and exercise the
 production X11 relaunch. About-specific bounded stage/error-category metadata is
 written before self-inventory and production import to
@@ -611,6 +647,8 @@ in one task before ResizeObserver can settle. Observed CSS/backing widths prove
 the pending refit and that the sample enters the newly exposed region, including
 DPR scaling. Layout is restored in `finally`; baseline, selected/focused retention,
 zero batched clears and completed-color assertions stay strict.
+
+### Scrollback readiness and input
 
 The native scroll-feedback regression first requires coherent host/canvas/core
 geometry, exact DOM bottom and the actual live core offset, unchanged for 100 ms
@@ -681,6 +719,8 @@ This qualifies the native Surface/browser feedback path, not physical wheel inpu
 The scroll-feedback correction changes prepared Restty JavaScript package inputs;
 it does not require rebuilding the unchanged core WASM or a known qualified native PTY.
 
+### Native drag and failure acknowledgement
+
 Window Chrome fixtures also enter and leave real native fullscreen repeatedly
 with the title hidden. On Windows the fixture temporarily moves the desktop
 pointer and drags the restored handle with native mouse input, checking that
@@ -699,6 +739,8 @@ cancellation API and verifies owner cleanup and safe failure metadata. macOS
 additionally checks native sheet begin/end events; Windows checks the native
 dialog disables its owner. This is not physical OK-button input or a
 pixel/appearance assertion.
+
+### Hover and local-image activation
 
 The focused hover fixture owns a non-echoing child and waits for exact core
 content, drained renderer/IPC work and current device-cell metrics before pointer
@@ -782,6 +824,8 @@ npx vitest run test/integration/restty-host-integration.test.ts -t 'pending'
 
 This qualifies the evidence, not a new gesture rule or physical-pointer input.
 
+### Local-image preview capacity
+
 For explicit high-resolution capacity and resource qualification:
 
 ```sh
@@ -809,6 +853,8 @@ gap reports responsiveness rather than enforcing an invented budget. Settled
 cycles and the additional five-second idle observation distinguish warm caches
 from continued accumulation; they do not promise immediate reclamation.
 
+### Multiplexer comparison
+
 For a real multiplexer comparison on a POSIX desktop with `tmux` installed:
 
 ```sh
@@ -819,6 +865,8 @@ This opt-in owns a foreground tmux server and pane PTY under the fixture supervi
 It feeds actual pane output and `refresh-client` redraw into the same Surface and
 repeats full-destination hover/loading checks for long and wrap-boundary spaced
 paths. It does not generalize arbitrary producer hard breaks into soft wraps.
+
+### Evidence reuse and packaging
 
 When investigating an intermittent failure, record the failure and rerun
 conditions. A later isolated pass alone does not show that it was fixed.

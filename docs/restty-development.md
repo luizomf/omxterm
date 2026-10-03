@@ -461,12 +461,18 @@ Zoom, carries the creation-time line-height factor into cell metrics without
 scaling glyphs, keeps bold ANSI 0–7 colors unchanged, and exposes Ghostty's
 existing line and byte limit setters through one live Restty operation. Unknown
 dependency or artifact bytes fail instead of receiving a best-effort patch.
-The same install step accepts node-pty 1.1.0 Unix runtime SHA-256
-`a62e3a60c3bc1b0e7261f58284856df748dcee6761a2bc7a5a5ba98b22660473`.
-The paused-output-tail correction produces the intermediate digest
-`238f993db4aa83d57885832eabe9c1de1ce05b96c84d3270574f26f71f9afcb8`;
-forwarding native `execFailed` status produces the final runtime digest
-`cb8b1c30434b2a75271e1a2e48ea0e135eefd82f792f0b0998114d4bdd9a4762`.
+The same install step prepares the node-pty 1.1.0 Unix runtime through
+`scripts/prepare-node-pty-runtime.mjs`. It normalizes native `execFailed` callback
+forwarding before checking the reviewed input digests. Original runtime SHA-256
+`a62e3a60c3bc1b0e7261f58284856df748dcee6761a2bc7a5a5ba98b22660473`
+receives the paused-output-tail correction, producing intermediate digest
+`238f993db4aa83d57885832eabe9c1de1ce05b96c84d3270574f26f71f9afcb8`.
+Removing the Linux `process` getter's spawned-shell fallback then produces
+`89fafa225fe39a4fc7d2af373cf9381684a3b2bfe7aa5df073247eb3b91040cc`;
+macOS foreground policy is unchanged. Finally, forwarding native `execFailed`
+status produces the final runtime digest
+`e1cd61e52f681871c401ca54a21382173281532e8eaa9f679bfe549be9a427b1`.
+Known intermediate inputs receive only their remaining corrections.
 Postinstall also builds the matched Unix ARM64 Node-API addon and macOS helper
 with the native exec-status correction described in
 [ADR 0032](adr/0032-report-native-exec-failures-outside-terminal-payload.md).
