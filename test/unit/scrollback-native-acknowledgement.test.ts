@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { runInNewContext } from "node:vm";
@@ -19,6 +19,8 @@ beforeAll(async () => {
   try {
     await buildFixture(root);
     const source = await readFile(path.join(root, "main.cjs"), "utf8");
+    await mkdir(".scratch", { recursive: true });
+    await writeFile(".scratch/scrollback-native-caller.generated.cjs", source);
     const section = (start: string, end: string) => {
       expect(source.split(start)).toHaveLength(2);
       expect(source.split(end)).toHaveLength(2);
@@ -41,6 +43,7 @@ afterEach(() => {
 interface InputOptions {
   invalid?:
     | "absent"
+    | "malformed"
     | "untrusted"
     | "coordinates"
     | "identity"
@@ -48,7 +51,9 @@ interface InputOptions {
     | "target"
     | "not-dragging";
   registerAfterDelivery?: boolean;
-  lateConsumption?: boolean;
+  deliveryDelayMs?: number;
+  consumptionDelayMs?: number;
+  delayInputDeadline?: boolean;
   cancelled?: boolean;
 }
 
@@ -86,7 +91,10 @@ function rendererInput(options: InputOptions) {
       clientY: moved && options.invalid === "coordinates" ? y + 1 : y,
       buttons: moved && options.invalid === "buttons" ? 0 : buttons,
       pointerId: moved && options.invalid === "identity" ? 2 : 1,
-      isTrusted: !(moved && options.invalid === "untrusted"),
+      isTrusted:
+        moved && options.invalid === "malformed"
+          ? undefined
+          : !(moved && options.invalid === "untrusted"),
       target: moved && options.invalid === "target" ? input : canvas,
     } as unknown as PointerEvent;
     for (const listener of listeners.get(type) ?? []) listener(event);
@@ -100,6 +108,9 @@ async function exercise(withholdPoll: boolean, options: InputOptions = {}) {
   let released = false;
   let releasedAt: number | undefined;
   let pendingEvaluations = 0;
+  let acknowledgedAt: number | undefined;
+  const exposure: { start: number; end?: number }[] = [];
+  const viewportReads: { at: number; released: boolean }[] = [];
   const startedAt = Date.now();
   let moveSent = false;
   const records: string[] = [];
@@ -116,8 +127,14 @@ async function exercise(withholdPoll: boolean, options: InputOptions = {}) {
     isFocused: () => true,
     webContents: {
       executeJavaScript: async (source: string): Promise<unknown> => {
-        if (!source.includes("waitForNativeDrag"))
+        if (!source.includes("waitForNativeDrag")) {
+          if (
+            source ===
+            "document.querySelector('.restty-native-scroll-host').scrollTop"
+          )
+            viewportReads.push({ at: Date.now() - startedAt, released });
           return runInNewContext(source, context);
+        }
         if (options.registerAfterDelivery)
           await new Promise<void>((resolve) => setTimeout(resolve, 10));
         pendingEvaluations += 1;
@@ -134,8 +151,11 @@ async function exercise(withholdPoll: boolean, options: InputOptions = {}) {
             ),
           ]);
         const value = await evaluation;
-        if (options.lateConsumption)
-          await new Promise<void>((resolve) => setTimeout(resolve, 550));
+        if (options.consumptionDelayMs)
+          await new Promise<void>((resolve) =>
+            setTimeout(resolve, options.consumptionDelayMs),
+          );
+        acknowledgedAt = Date.now() - startedAt;
         return value;
       },
       sendInputEvent(event: { type: string; x: number; y: number }) {
@@ -146,7 +166,7 @@ async function exercise(withholdPoll: boolean, options: InputOptions = {}) {
           if (options.invalid !== "absent")
             setTimeout(
               () => renderer.deliver("pointermove", event.x, event.y, 1),
-              5,
+              options.deliveryDelayMs ?? 5,
             );
         }
         if (event.type === "mouseUp") {
@@ -164,22 +184,37 @@ async function exercise(withholdPoll: boolean, options: InputOptions = {}) {
     clearTimeout,
     setTimeout: (callback: () => void, delay: number) => {
       const withheld = withholdPoll && moveSent && delay === 25;
-      const lateDeadline = options.lateConsumption && delay === 500;
-      return setTimeout(callback, withheld || lateDeadline ? 600 : delay);
+      const lateDeadline = options.delayInputDeadline && delay === 5000;
+      const held =
+        delay === 500 ? { start: Date.now() - startedAt } : undefined;
+      if (held) exposure.push(held);
+      return setTimeout(
+        () => {
+          if (held) Object.assign(held, { end: Date.now() - startedAt });
+          callback();
+        },
+        lateDeadline ? 6000 : withheld ? 600 : delay,
+      );
     },
     process: { stdout: { write: (text: string) => records.push(text) } },
     autoscroll: { startTop: 39368, x: 80, startY: 438, endY: 0 },
-  }) as Promise<{ nativeDrag: NativeInputObservation }>;
+  }) as Promise<{
+    nativeDrag: NativeInputObservation;
+    autoscrolledTop: number;
+  }>;
   const outcome = operation.then(
     (value) => ({ value, error: null }),
     (error: unknown) => ({ value: null, error: String(error) }),
   );
-  await vi.advanceTimersByTimeAsync(options.lateConsumption ? 601 : 501);
+  await vi.advanceTimersByTimeAsync(7000);
   return {
     ...(await outcome),
     released,
     releasedAt,
     pendingEvaluations,
+    acknowledgedAt,
+    exposure,
+    viewportReads,
     observed: renderer.observer.snapshot(),
     records,
   };
@@ -197,7 +232,9 @@ it.each([false, true])(
     });
     expect(result.released).toBe(true);
     expect(result.error).toBeNull();
-    expect(result.releasedAt).toBe(500);
+    expect(result.acknowledgedAt).toBe(5);
+    expect(result.exposure).toEqual([{ start: 5, end: 505 }]);
+    expect(result.releasedAt).toBe(505);
     expect(result.pendingEvaluations).toBe(0);
     expect(result.value?.nativeDrag.move).toMatchObject({
       x: 80,
@@ -211,11 +248,38 @@ it("acknowledges matching input delivered before renderer registration", async (
   const result = await exercise(true, { registerAfterDelivery: true });
   expect(result.error).toBeNull();
   expect(result.value?.nativeDrag.move?.dragging).toBe(true);
-  expect(result.released).toBe(true);
+  expect(result.exposure).toEqual([{ start: 10, end: 510 }]);
+  expect(result.releasedAt).toBe(510);
 });
+
+it.each([
+  { deliveryDelayMs: 600, consumptionDelayMs: 0, acknowledgedAt: 600 },
+  { deliveryDelayMs: 5, consumptionDelayMs: 550, acknowledgedAt: 555 },
+])(
+  "holds for 500ms after bounded acknowledgment beyond the former 500ms gate: %j",
+  async (options) => {
+    const result = await exercise(true, options);
+    expect(result.observed.move).toMatchObject({
+      trusted: true,
+      canvas: true,
+      dragging: true,
+    });
+    expect(result.error).toBeNull();
+    expect(result.acknowledgedAt).toBe(options.acknowledgedAt);
+    expect(result.exposure).toEqual([
+      { start: options.acknowledgedAt, end: options.acknowledgedAt + 500 },
+    ]);
+    expect(result.releasedAt).toBe(options.acknowledgedAt + 500);
+    expect(result.viewportReads).toEqual([
+      { at: result.releasedAt, released: true },
+    ]);
+    expect(result.value?.autoscrolledTop).toBe(39368);
+  },
+);
 
 it.each<NonNullable<InputOptions["invalid"]>>([
   "absent",
+  "malformed",
   "untrusted",
   "coordinates",
   "identity",
@@ -231,24 +295,58 @@ it.each<NonNullable<InputOptions["invalid"]>>([
     );
     expect(result.value).toBeNull();
     expect(result.released).toBe(true);
-    expect(result.releasedAt).toBe(500);
+    expect(result.releasedAt).toBe(5000);
+    expect(result.exposure).toEqual([]);
+    expect(result.viewportReads).toEqual([]);
     expect(result.pendingEvaluations).toBe(0);
   },
 );
 
-it("rejects late consumption even when the deadline callback is delayed", async () => {
-  const result = await exercise(true, { lateConsumption: true });
-  expect(result.observed.move?.dragging).toBe(true);
+it.each([false, true])(
+  "rejects consumption beyond the ordinary bound without reviving an ended phase (deadline delayed=%s)",
+  async (delayInputDeadline) => {
+    const result = await exercise(true, {
+      consumptionDelayMs: 5100,
+      delayInputDeadline,
+    });
+    expect(result.observed.move?.dragging).toBe(true);
+    expect(result.error).toBe(
+      "Error: Scrollback stimulus-unavailable at mouse-drag",
+    );
+    expect(result.releasedAt).toBe(delayInputDeadline ? 5105 : 5000);
+    expect(result.exposure).toEqual([]);
+    expect(result.viewportReads).toEqual([]);
+    const phases = result.records.map(
+      (line) =>
+        JSON.parse(line.slice("__OMXTERM_SCROLLBACK_INPUT__".length)) as {
+          phase: string;
+          status: string;
+        },
+    );
+    expect(phases).not.toContainEqual(
+      expect.objectContaining({ phase: "mouse-drag", status: "complete" }),
+    );
+  },
+);
+
+it("does not restart exposure when matching delivery arrives after the phase ended", async () => {
+  const result = await exercise(true, { deliveryDelayMs: 5100 });
   expect(result.error).toBe(
     "Error: Scrollback stimulus-unavailable at mouse-drag",
   );
-  expect(result.released).toBe(true);
+  expect(result.value).toBeNull();
+  expect(result.releasedAt).toBe(5000);
+  expect(result.exposure).toEqual([]);
+  expect(result.viewportReads).toEqual([]);
+  expect(result.pendingEvaluations).toBe(0);
 });
 
 it("releases the held button when the renderer evaluation is cancelled", async () => {
   const result = await exercise(true, { invalid: "absent", cancelled: true });
   expect(result.error).toBe("Error: Scrollback operation-error at mouse-drag");
-  expect(result.released).toBe(true);
+  expect(result.releasedAt).toBe(10);
+  expect(result.exposure).toEqual([]);
+  expect(result.viewportReads).toEqual([]);
   expect(result.pendingEvaluations).toBe(0);
   expect(result.observed.up).toMatchObject({ buttons: 0, dragging: false });
 });

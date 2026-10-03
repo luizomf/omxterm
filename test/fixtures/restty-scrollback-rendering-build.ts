@@ -293,11 +293,9 @@ app.whenReady().then(async () => {
     window.webContents.sendInputEvent({ type: "mouseDown", x: autoscroll.x, y: autoscroll.startY, button: "left", clickCount: 1 });
     await inputPhase('mouse-down', value => value.down?.trusted && value.down.canvas && value.down.buttons === 1 && value.down.x === autoscroll.x && value.down.y === autoscroll.startY);
     window.webContents.sendInputEvent({ type: "mouseMove", x: autoscroll.x, y: autoscroll.endY, button: "left", modifiers: ["leftButtonDown"], clickCount: 1 });
-    await Promise.all([
-      new Promise((resolve) => setTimeout(resolve, 500)),
-      inputPhase('mouse-drag', value => hasNativeDrag(value, autoscroll), 500, undefined,
-        () => window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.waitForNativeDrag(' + JSON.stringify(autoscroll) + ')', true)),
-    ]);
+    await inputPhase('mouse-drag', value => hasNativeDrag(value, autoscroll), undefined, undefined,
+      () => window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.waitForNativeDrag(' + JSON.stringify(autoscroll) + ')', true));
+    await new Promise((resolve) => setTimeout(resolve, 500));
   } finally {
     window.webContents.sendInputEvent({ type: "mouseUp", x: autoscroll.x, y: autoscroll.endY, button: "left", clickCount: 1 });
   }

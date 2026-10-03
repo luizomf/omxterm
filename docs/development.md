@@ -576,14 +576,27 @@ npx vitest run test/integration/restty-native-scroll-feedback.test.ts test/integ
 The scrollback fixture owns and boundedly observes native presentation/focus and
 DOM terminal input readiness before its native drag and character input. It
 acknowledges trusted pointer delivery, actual selection dragging and accepted
-character input; the held-left move retains the original edge coordinates and
-500 ms autoscroll observation. The drag phase awaits the renderer observer's
-matching input event (including input already observed before registration), not
-a subsequent main-process polling timer. The existing main deadline still rejects
-late consumption; the original finally releases the button on failure. A headless
-regression executes the generated caller and real observer with controlled input
-transport/timer scheduling, including invalid input and renderer teardown; it is
-not native rendering evidence or a diagnosis of earlier failures.
+character input; the held-left move retains the original edge coordinates.
+The drag phase first awaits the renderer observer's matching input event under
+the existing ordinary 5-second input-operation bound (including input already
+observed before registration), not a subsequent main-process polling timer.
+Only after that acknowledgment is consumed does the nominal 500 ms held exposure
+start. The original finally releases the button, including on failure; normal
+release acknowledgment precedes the actual scrollTop read and strict decrease
+assertion. Missing/malformed input and consumption after the input operation ends
+still fail. The overall native/Vitest limits remain unchanged.
+
+This explicitly revises the former policy that raced acknowledgment against a
+500 ms exposure timer: physical hold can now grow by acknowledgment latency.
+It is not an identical timing acceptance set, a calibrated performance benchmark,
+or a 500 ms product-response SLA. No wait-until-scroll, repeated stimulus or
+synthetic viewport change substitutes for the actual decrease assertion. A
+headless regression executes the generated caller and real observer with
+controlled input transport/timer scheduling, including delayed admission,
+invalid input, ended phases and bridge rejection. It preserves the emitted main
+source in `.scratch/scrollback-native-caller.generated.cjs`; its modeled results
+are not native rendering/renderer-death evidence or a diagnosis of earlier
+failures.
 A never-ready real Surface regression uses the
 existing native supervisor timeout and checks cleanup before the next GUI launch.
 Fixture preparation and native execution are joined in a test-finished hook so
