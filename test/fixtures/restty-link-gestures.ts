@@ -6,18 +6,36 @@ import {
   type ResttyGestureEvidence,
 } from "./restty-gesture-evidence";
 import { readLocalImageCoreCells } from "./restty-local-image-core-probe";
-import { readHoverSnapshot, type HoverSnapshot } from "./restty-hover";
 import {
   hoverCellPoint,
   HoverEvidenceError,
   sameHoverGeometry,
   validateHoverGeometry,
+  type HoverGeometry,
 } from "./restty-hover-evidence";
 
+interface CellSnapshot {
+  readonly canvasId: number;
+  readonly geometry: HoverGeometry;
+}
 interface TerminalSize {
   readonly cols: number;
   readonly rows: number;
-  readonly snapshot?: Pick<HoverSnapshot, "canvasId" | "geometry">;
+  readonly snapshot?: CellSnapshot;
+}
+
+async function readCellSnapshot(window: BrowserWindow): Promise<CellSnapshot> {
+  // Geometry must not inspect the core: an allocating selection query can
+  // detach the renderer's borrowed WASM views before its legitimate lookup.
+  return window.webContents.executeJavaScript(
+    `(() => {
+      const canvas = [...document.querySelectorAll('.restty-terminal-surface canvas')].find(c => c.getBoundingClientRect().width > 0);
+      if (!canvas?.__resttyHoverFixture) throw new Error('Cell geometry observer is missing');
+      const {canvasId, geometry} = canvas.__resttyHoverFixture();
+      return {canvasId, geometry};
+    })()`,
+    true,
+  ) as Promise<CellSnapshot>;
 }
 
 export interface ResttyLinkGestureOptions {
@@ -56,7 +74,7 @@ export async function terminalCellPoint(
   col: number,
   size: TerminalSize,
 ) {
-  const snapshot = await readHoverSnapshot(window);
+  const snapshot = await readCellSnapshot(window);
   const { geometry } = snapshot;
   if (
     geometry.cols !== size.cols ||
@@ -185,22 +203,24 @@ export async function exerciseResttyLinks(
     options;
   const size = resizes.at(-1);
   if (!size) throw new Error("Restty link fixture has no grid size");
-  const initial = await readHoverSnapshot(window);
+  const initial = await readCellSnapshot(window);
   const visibleUrl = `https://example.test/漢${"a".repeat(size.cols)}`;
-  const visibleText = `漢e\u0301 ${visibleUrl}`;
   // Both wide characters occupy two cells; the combining mark adds no column.
   const destinationColumns = Array.from(visibleUrl).length + 1;
   deliverOutput(
     `\u001b[2J\u001b[H\u001b[?25l\u001b[?1000h\u001b[?1006h漢e\u0301 ${visibleUrl}`,
   );
   deliverOutput("\u001b[?1049halternate\u001b[?1049l");
-  // Actual retained-output shrink/widen reflow is covered by the following
-  // local-image scenario and pending-wrap oracle. An arbitrary native size
-  // request here only observed one possibly transient PTY notification.
+  // The former native resize was followed by clearing and reprinting this URL,
+  // so it did not verify retained-output reflow. The local-image layout scenario
+  // covers actual shrink/widen of retained output without that reprint.
   deliverOutput(
     `\u001b[2J\u001b[H漢e\u0301 \u001b]8;;https://hidden.test/different\u0007${visibleUrl}\u001b]8;;\u0007`,
   );
-  const current = (snapshot: HoverSnapshot) => {
+  // Retain the original output-presentation opportunity, not a stability test.
+  // No geometry is frozen before it; the actual click still validates afresh.
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const current = (snapshot: CellSnapshot) => {
     if (
       !Number.isSafeInteger(initial.canvasId) ||
       initial.canvasId <= 0 ||
@@ -209,20 +229,17 @@ export async function exerciseResttyLinks(
       throw new HoverEvidenceError("geometry-changed");
     const grid = resizes.at(-1);
     return (
-      snapshot.core.text === visibleText &&
-      snapshot.core.cols === snapshot.geometry.cols &&
-      snapshot.core.rows === snapshot.geometry.rows &&
       grid?.cols === snapshot.geometry.cols &&
       grid.rows === snapshot.geometry.rows
     );
   };
   await waitFor(
-    async () => current(await readHoverSnapshot(window)),
-    "Restty link content and current grid",
+    async () => current(await readCellSnapshot(window)),
+    "Restty link current grid",
   );
 
   const inputBeforeLinks = inputs.join("");
-  let prepared: HoverSnapshot | undefined;
+  let prepared: CellSnapshot | undefined;
   for (const [row, col] of [
     [0, 4],
     [1, 2],
@@ -230,7 +247,7 @@ export async function exerciseResttyLinks(
     // The readiness observation is not the gesture's geometry. Read again at
     // the actual input boundary, freeze the first click, and reject subsequent
     // changes. No output, sleep or IPC await separates validation and sending.
-    const snapshot = await readHoverSnapshot(window);
+    const snapshot = await readCellSnapshot(window);
     if (!current(snapshot))
       throw new HoverEvidenceError("stimulus-invalidated");
     if (prepared && !sameHoverGeometry(prepared.geometry, snapshot.geometry))
@@ -255,6 +272,8 @@ export async function exerciseResttyLinks(
     () => externalLinks.length === 2,
     "repeated visible link activation",
   );
+  if (externalLinks[0] !== visibleUrl || externalLinks[1] !== visibleUrl)
+    throw new Error("Restty link activation changed the literal destination");
   const validLinkMouseReports = gestureInputSince(
     inputs,
     inputBeforeLinks.length,

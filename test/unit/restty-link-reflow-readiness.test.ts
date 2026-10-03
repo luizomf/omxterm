@@ -1,7 +1,12 @@
 import { runInNewContext } from "node:vm";
 import type { BrowserWindow, MouseInputEvent } from "electron";
 import { afterEach, expect, it, vi } from "vitest";
-import { exerciseResttyLinks } from "../fixtures/restty-link-gestures";
+import { loadResttyWasm } from "restty/internal";
+import {
+  exerciseResttyLinks,
+  terminalCellPoint,
+} from "../fixtures/restty-link-gestures";
+import { snapshotLocalImageCoreCells } from "../fixtures/restty-local-image-core-probe";
 
 // Only the Electron/renderer/PTY ports are modeled. Run the real caller and its
 // real renderer observer snippets; no fixture or point helper is mocked.
@@ -9,7 +14,10 @@ import { exerciseResttyLinks } from "../fixtures/restty-link-gestures";
 // parsing, native layout, pixels or link recognition.
 function retilingRenderer(
   mutation?:
-    "replacement" | "after-first-click" | "invalid-backing" | "changed-content",
+    | "replacement"
+    | "after-first-click"
+    | "invalid-backing"
+    | "wrong-destination",
 ) {
   const finalGeometry = {
     canvas: { x: 8, y: 31.59375, width: 1656, height: 828.90625 },
@@ -32,7 +40,7 @@ function retilingRenderer(
   let canvasId = 2;
   let text = "";
   let emitted = false;
-  let reads = 0;
+  let rendererReturnQueued = false;
   let returned = false;
   const resizes = [
     { cols: 174, rows: 36 },
@@ -50,7 +58,6 @@ function retilingRenderer(
     if (mutation === "replacement") canvasId = 3;
     if (mutation === "invalid-backing")
       geometry = { ...finalGeometry, backing: { width: 3311, height: 1657 } };
-    if (mutation === "changed-content") text = "foreign output";
   };
   const canvas = {
     getBoundingClientRect: () => geometry.canvas,
@@ -64,14 +71,15 @@ function retilingRenderer(
   const window = {
     setSize() {
       resizes.push({ cols: 87, rows: 23 });
+      setTimeout(returnToTile, 1);
     },
     webContents: {
       async executeJavaScript(script: string) {
-        // A matching transient observation is delivered first. The queued
-        // compositor return is processed before the next renderer operation,
-        // not by waiting for a guessed quiet interval. It can also arrive during
-        // the predecessor's 100 ms output sleep, as in the retained native FAIL.
-        if (emitted && ++reads > 1) returnToTile();
+        // Readiness can complete on a matching transient packet. The queued
+        // compositor return is serviced by the next renderer operation, before
+        // actual input. This models external event ordering, not private call
+        // counts or a guessed quiet interval.
+        if (rendererReturnQueued) returnToTile();
         return runInNewContext(script, {
           document: { querySelectorAll: () => [canvas] },
         }) as unknown;
@@ -85,7 +93,11 @@ function retilingRenderer(
             process.platform === "darwin" ? "meta" : "control",
           )
         )
-          externalLinks.push(`https://example.test/漢${"a".repeat(194)}`);
+          externalLinks.push(
+            mutation === "wrong-destination"
+              ? "https://wrong.test/destination"
+              : `https://example.test/漢${"a".repeat(194)}`,
+          );
         else inputs.push("unexpected native mouse report");
         if (mutation === "after-first-click") {
           geometry = {
@@ -120,7 +132,6 @@ function retilingRenderer(
         emitted = true;
         geometry = intermediate;
         resizes.push({ cols: 87, rows: 23 });
-        setTimeout(returnToTile, 1);
       },
       async waitFor(predicate: () => boolean | Promise<boolean>) {
         const deadline = Date.now() + 1000;
@@ -128,6 +139,7 @@ function retilingRenderer(
           if (Date.now() >= deadline) throw new Error("Readiness exhausted");
           await new Promise((resolve) => setTimeout(resolve, 10));
         }
+        if (emitted) rendererReturnQueued = true;
       },
     },
   };
@@ -158,11 +170,84 @@ it("activates both soft-wrapped URL rows using the current grid after a transien
   expect(fixture.options.inputs).toEqual([]);
 });
 
+it("rejects a changed literal destination despite two activation acknowledgements", async () => {
+  vi.useFakeTimers();
+  const fixture = retilingRenderer("wrong-destination");
+  const outcome = exerciseResttyLinks(fixture.options).catch(
+    (error: unknown) => error,
+  );
+  await vi.runAllTimersAsync();
+  expect(await outcome).toMatchObject({
+    message: "Restty link activation changed the literal destination",
+  });
+  expect(fixture.events).toHaveLength(4);
+  expect(fixture.externalLinks).toEqual([
+    "https://wrong.test/destination",
+    "https://wrong.test/destination",
+  ]);
+  expect(fixture.options.inputs).toEqual([]);
+});
+
+it("preserves real borrowed WASM views under a selection-allocation trap", async () => {
+  const wasm = await loadResttyWasm();
+  const handle = wasm.create(80, 20, 10_000_000);
+  try {
+    wasm.write(handle, "https://cancel.test/visible");
+    wasm.renderUpdate(handle);
+    const cached = wasm.getRenderState(handle);
+    if (!cached?.codepoints) throw new Error("Real render views unavailable");
+    const beforeBytes = cached.codepoints.byteLength;
+    const memoryBytes = wasm.memory.buffer.byteLength;
+    const original = wasm.getSelectionText.bind(wasm);
+    let queries = 0;
+    // A controlled legal allocation boundary, NOT natural Windows occurrence.
+    // The predecessor's actual fixture query detaches the already-borrowed view.
+    wasm.getSelectionText = (...args) => {
+      if (queries++ === 0) wasm.memory.grow(1);
+      return original(...args);
+    };
+    const canvas = {
+      getBoundingClientRect: () => ({ width: 800 }),
+      __resttyHoverFixture: () => ({
+        canvasId: 1,
+        geometry: {
+          canvas: { x: 0, y: 0, width: 800, height: 400 },
+          backing: { width: 800, height: 400 },
+          viewport: { width: 800, height: 400 },
+          dpr: 1,
+          cols: 80,
+          rows: 20,
+          cellWidth: 10,
+          cellHeight: 20,
+        },
+      }),
+      __localImageFixtureCoreCells: () =>
+        snapshotLocalImageCoreCells(wasm, handle),
+    };
+    const window = {
+      webContents: {
+        executeJavaScript: async (script: string) =>
+          runInNewContext(script, {
+            document: { querySelectorAll: () => [canvas] },
+          }) as unknown,
+      },
+    } as unknown as BrowserWindow;
+    expect(
+      await terminalCellPoint(window, 0, 3, { cols: 80, rows: 20 }),
+    ).toEqual({ x: 35, y: 10 });
+    expect(beforeBytes).toBeGreaterThan(0);
+    expect(cached.codepoints.byteLength).toBe(beforeBytes);
+    expect(wasm.memory.buffer.byteLength).toBe(memoryBytes);
+    expect(queries).toBe(0);
+  } finally {
+    wasm.destroy(handle);
+  }
+});
+
 it.each([
   ["replacement", "geometry-changed", 0],
   ["after-first-click", "geometry-changed", 2],
   ["invalid-backing", "preparation", 0],
-  ["changed-content", "stimulus-invalidated", 0],
 ] as const)(
   "rejects %s at the actual gesture boundary",
   async (mutation, category, events) => {
