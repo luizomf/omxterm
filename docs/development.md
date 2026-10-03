@@ -214,7 +214,12 @@ remain zero; permanently held Surface callbacks reject readiness within one
 second; releasing those actual callbacks produces the unchanged native palette
 and color precedence within the existing three-second capture-readiness budget,
 without reselection or focus forcing. This replaces the redundant artificial
-selection-delay timer, not the native rendering assertions.
+selection-delay timer, not the native rendering assertions. The first completed
+native capture counts toward held-frame exposure; the one-second negative control
+does not require an additional capture to complete inside that shorter deadline.
+Any observed selection pixels while held still fail, and live exact-copy/gate
+state must survive the deadline before release. A missing initial capture,
+renderer failure or absent painted release is not accepted as exposure.
 
 The fourth case separately retains [#320's configured-font output regression](https://github.com/luizomf/omxterm/issues/320):
 the 300 ms output interval, deferred-output evidence and exact regular/bold

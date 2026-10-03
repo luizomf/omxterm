@@ -160,7 +160,9 @@ function appearanceRunSource(resultPrefix: string): string {
       heldDeadlineRejected = true;
     }
     if (!heldDeadlineRejected) throw new Error('Permanently held frames incorrectly became capture-ready');
-    const heldSamples = samples.filter(sample => sample.phase === 'permanently-held');
+    // The completed first capture already proves unpainted held exposure.
+    // A later capture need not finish inside the shorter negative deadline.
+    const heldSamples = [first.sample, ...samples.filter(sample => sample.phase === 'permanently-held')];
     if (!heldSamples.some(sample => sample.after)
         || heldSamples.some(sample => sample.counts && sample.counts['#314159'] !== 0))
       throw new Error('Held-frame deadline control lacked an unpainted captured frame');
@@ -203,7 +205,7 @@ function appearanceRunSource(resultPrefix: string): string {
       firstFrameCount: first.sample.after.frameCount,
       heldCallbacks: first.sample.after.heldCallbacks.length,
       heldDeadlineRejected,
-      heldCaptures: samples.filter(sample => sample.phase === 'permanently-held' && sample.after).length,
+      heldCaptures: 1 + samples.filter(sample => sample.phase === 'permanently-held' && sample.after).length,
       releasedCallbacks: ready.sample.after.releasedCallbacks,
       completedCallbacks: ready.sample.after.releasedFrameTimes.length,
       finalExactCopy: ready.sample.before.exactCopy && ready.sample.after.exactCopy,
