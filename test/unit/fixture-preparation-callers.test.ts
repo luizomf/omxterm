@@ -554,10 +554,8 @@ async function observeCaller(
   } finally {
     controller.abort();
     await Promise.all(finalizers.map((finish) => finish()));
-    await Promise.all(
-      roots.map((profile) =>
-        filesystem.rm(profile, { recursive: true, force: true }),
-      ),
-    );
+    // Allocations may be nested; finish child removal before removing its parent.
+    for (const profile of roots.toReversed())
+      await filesystem.rm(profile, { recursive: true, force: true });
   }
 }
