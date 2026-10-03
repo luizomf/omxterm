@@ -14,11 +14,12 @@ const prefix = "__OMXTERM_PENDING_TAB_RESULT__";
 describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   "Pending tab ownership through real Electron, Restty and native PTYs",
   () => {
-    it("keeps B's held initialization alive through ordinary A exit and starts exactly one usable PTY", async () => {
+    it("keeps B's held initialization alive through ordinary A exit and starts exactly one usable PTY", async (testContext) => {
+      testContext.signal.throwIfAborted();
       const root = await mkdtemp(path.join(tmpdir(), "omxterm-pending-tab-"));
-      await buildFixture(root);
       let supervised = false;
       try {
+        testContext.signal.throwIfAborted();
         const args: string[] = [];
         applyChromiumSandboxPolicy({
           appendSwitch: (name) => {
@@ -32,6 +33,8 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           args: [...args, root],
           root,
           timeout: 90_000,
+          testContext,
+          prepare: () => buildFixture(root, "runner"),
         });
         expect(
           execution,

@@ -9,11 +9,12 @@ import { expect, it } from "vitest";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
 
-it("composes one live tint beneath real WebGL text, explicit backgrounds, inverse, cursor, selection and images", async () => {
+it("composes one live tint beneath real WebGL text, explicit backgrounds, inverse, cursor, selection and images", async (testContext) => {
+  testContext.signal.throwIfAborted();
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-background-"));
-  await buildFixture(root);
   let supervised = false;
   try {
+    testContext.signal.throwIfAborted();
     const args: string[] = [];
     applyChromiumSandboxPolicy({
       appendSwitch: (name) => {
@@ -28,6 +29,8 @@ it("composes one live tint beneath real WebGL text, explicit backgrounds, invers
       args: [...args, root],
       root,
       timeout: 60_000,
+      testContext,
+      prepare: () => buildFixture(root, "runner"),
     });
     expect(result, result.stderr).toMatchObject({
       exitCode: 0,

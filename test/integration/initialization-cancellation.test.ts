@@ -14,15 +14,17 @@ const prefix = "__OMXTERM_CANCELLATION_RESULT__";
 describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   "Initialization cancellation through real Electron, Restty and native PTYs",
   () => {
-    it.each(["fonts", "runtime"])(
+    it.for(["fonts", "runtime"])(
       "closes B at real %s readiness without a failure or PTY and keeps A usable",
-      async (boundary) => {
+      { timeout: 110_000 },
+      async (boundary, testContext) => {
+        testContext.signal.throwIfAborted();
         const root = await mkdtemp(
           path.join(tmpdir(), "omxterm-initialization-cancellation-"),
         );
-        await buildFixture(root);
         let supervised = false;
         try {
+          testContext.signal.throwIfAborted();
           const args: string[] = [];
           applyChromiumSandboxPolicy({
             appendSwitch: (name) => {
@@ -36,6 +38,8 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
             args: [...args, root, `--fixture-boundary=${boundary}`],
             root,
             timeout: 90_000,
+            testContext,
+            prepare: () => buildFixture(root, "runner"),
           });
           expect(
             execution,
@@ -61,7 +65,6 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           if (!supervised) await rm(root, { recursive: true, force: true });
         }
       },
-      110_000,
     );
   },
 );

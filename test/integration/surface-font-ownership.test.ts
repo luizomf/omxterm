@@ -13,11 +13,12 @@ const prefix = "__OMXTERM_FONT_OWNERSHIP_RESULT__";
 
 it.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   "retains creation-time native row geometry and notice across initialization/reload",
-  async () => {
+  async (testContext) => {
+    testContext.signal.throwIfAborted();
     const root = await mkdtemp(path.join(tmpdir(), "omxterm-font-ownership-"));
-    await buildFixture(root);
     let supervised = false;
     try {
+      testContext.signal.throwIfAborted();
       const args: string[] = [];
       applyChromiumSandboxPolicy({
         appendSwitch: (name) => {
@@ -31,6 +32,8 @@ it.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         args: [...args, root],
         root,
         timeout: 90_000,
+        testContext,
+        prepare: () => buildFixture(root, "runner"),
       });
       expect(
         execution,

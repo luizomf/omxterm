@@ -799,8 +799,26 @@ subsequent behavior run; discovery controls reuse it for every iteration. Hover,
 broad host, focused cancellation and destination-oracle callers likewise delegate
 their file-only builders to this boundary. Parameterized tests use Vitest's
 `it.for` context callback rather than `it.each`, which supplies only case values.
-Existing native execution and enclosing test budgets remain unchanged. Other
-legacy callers gain test cancellation only when they forward their context.
+Existing native execution and enclosing test budgets remain unchanged.
+
+The ordinary in-process callers also forward actual context and joined file-only
+preparation: `application-about`, `failure-acknowledgement`,
+`initialization-cancellation`, `intrinsic-shift`, `literal-argv`,
+`pending-tab-ownership`, `production-shutdown`, `restty-background-rendering`,
+`restty-native-scroll-feedback`, `startup-tab-titles`, `surface-font-ownership`,
+`tab-removal`, `macos-window-blur`, `linux-foreground`, `terminal-resize-race` and
+`terminal-session-retirement` (under `test/integration/`). Local helpers retain
+that same context. Callers with a separate base directory keep its cleanup
+separate from the supervised profile and preserve it after uncertain handoff.
+
+This is not universal caller adoption. The opt-in `altgr-native` and
+`local-image-capacity-native` callers, and the direct recovery calls in
+`native-fixture-early-exit`, `native-fixture-interruption` and
+`native-fixture-outcome-windows`, still lack this outer lifetime join when enabled.
+Standalone interruption/bootstrap workers intentionally do not receive a Vitest
+context; their outer worker-control tests likewise remain outside this adoption.
+Do not change their worker-loss protocol or mistake recipe writer settlement,
+serial test configuration, or a private diagnostic guard for an outer finish join.
 
 Before native launch, the Restty host builder settles all started parallel build
 and file operations before reporting a preparation failure. It preserves the
@@ -814,9 +832,9 @@ The sibling builders use `prepareFixture` for pre-launch ownership: parallel
 build/file operations register before starting, all started operations settle
 before failure escapes. Serial setup failures are covered too. Standalone recipes
 retain the default `recipe` cleanup owner: a removal failure reports both errors
-rather than hiding cleanup uncertainty. Delegated cursor, Chrome and scrollback
-builders and independent native discovery explicitly use the `runner` cleanup
-owner. Their helper joins writers and rethrows the original failure without
+rather than hiding cleanup uncertainty. Delegated cursor, Chrome, scrollback,
+ordinary-caller recipe builders and independent native discovery explicitly use
+the `runner` cleanup owner. Their helper joins writers and rethrows the original failure without
 removing the root; the runner alone checks identity and ownership before cleanup,
 preserving replacements and uncertain ownership. Successful preparation leaves
 the profile with the delegating runner (or a legacy caller). Cursor/background and

@@ -14,13 +14,15 @@ const prefix = "__OMXTERM_FAILURE_ACK_RESULT__";
 describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   "Failure acknowledgement through real Electron, Restty, PTY and native dialog",
   () => {
-    it.each(["explicit-command", "default-shell"])(
+    it.for(["explicit-command", "default-shell"])(
       "retains failed %s B's native dialog through ordinary code-1 A exit and closes once after acknowledgement",
-      async (kind) => {
+      { timeout: 110_000 },
+      async (kind, testContext) => {
+        testContext.signal.throwIfAborted();
         const root = await mkdtemp(path.join(tmpdir(), "omxterm-failure-ack-"));
-        await buildFixture(root);
         let supervised = false;
         try {
+          testContext.signal.throwIfAborted();
           const args: string[] = [];
           applyChromiumSandboxPolicy({
             appendSwitch: (name) => {
@@ -38,6 +40,8 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
             ],
             root,
             timeout: 90_000,
+            testContext,
+            prepare: () => buildFixture(root, "runner"),
           });
           expect(
             execution,
@@ -64,7 +68,6 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           if (!supervised) await rm(root, { recursive: true, force: true });
         }
       },
-      110_000,
     );
   },
 );

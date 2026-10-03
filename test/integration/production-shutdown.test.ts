@@ -17,20 +17,22 @@ const prefix = "__OMXTERM_PRODUCTION_SHUTDOWN_RESULT__";
 describe.skipIf(process.platform !== "win32")(
   "production Windows native shutdown",
   () => {
-    it.each([
+    it.for([
       { action: "close", readiness: "started" },
       { action: "quit", readiness: "started" },
       { action: "close", readiness: "prompt" },
       { action: "quit", readiness: "prompt" },
     ])(
       "waits for native exits on $action at $readiness readiness",
-      async ({ action, readiness }) => {
+      { timeout: 60_000 },
+      async ({ action, readiness }, testContext) => {
+        testContext.signal.throwIfAborted();
         const root = await mkdtemp(
           path.join(tmpdir(), "omxterm-production-shutdown-"),
         );
-        await buildFixture(root);
         let supervised = false;
         try {
+          testContext.signal.throwIfAborted();
           supervised = true;
           const execution = await runNativeFixture({
             executable,
@@ -47,6 +49,8 @@ describe.skipIf(process.platform !== "win32")(
             ],
             root,
             timeout: 40_000,
+            testContext,
+            prepare: () => buildFixture(root, "runner"),
           });
           expect(
             execution,
@@ -75,7 +79,6 @@ describe.skipIf(process.platform !== "win32")(
           if (!supervised) await rm(root, { recursive: true, force: true });
         }
       },
-      60_000,
     );
   },
 );

@@ -7,27 +7,34 @@ import { runNativeFixture } from "../fixtures/run-native-fixture";
 const supported = process.platform === "linux" && process.arch === "arm64";
 
 describe.skipIf(!supported)("Linux native foreground Busy detection", () => {
-  it("keeps an ordinary pipeline Busy when its foreground group leader has exited", async () => {
+  it("keeps an ordinary pipeline Busy when its foreground group leader has exited", async (testContext) => {
+    testContext.signal.throwIfAborted();
     await mkdir(path.resolve(".scratch"), { recursive: true });
+    testContext.signal.throwIfAborted();
     const base = await mkdtemp(path.resolve(".scratch/linux-foreground-"));
-    const root = await mkdtemp(path.join(base, "profile-"));
     let supervised = false;
     try {
+      testContext.signal.throwIfAborted();
+      const root = await mkdtemp(path.join(base, "profile-"));
+      testContext.signal.throwIfAborted();
       const program = path.join(base, "fixture.mjs");
-      await build({
-        entryPoints: ["test/fixtures/linux-foreground-main.ts"],
-        outfile: program,
-        bundle: true,
-        packages: "external",
-        platform: "node",
-        format: "esm",
-      });
       supervised = true;
       const result = await runNativeFixture({
         executable: process.execPath,
         args: [program],
         root,
         timeout: 15_000,
+        testContext,
+        prepare: async () => {
+          await build({
+            entryPoints: ["test/fixtures/linux-foreground-main.ts"],
+            outfile: program,
+            bundle: true,
+            packages: "external",
+            platform: "node",
+            format: "esm",
+          });
+        },
       });
       expect(result, JSON.stringify(result)).toMatchObject({
         reason: "exit",

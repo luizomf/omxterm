@@ -5,7 +5,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
-import { runNativeFixture } from "../fixtures/run-native-fixture";
+import {
+  runNativeFixture,
+  type NativeFixtureTestContext,
+} from "../fixtures/run-native-fixture";
 import {
   TAB_REMOVAL_PHASE_PREFIX,
   TAB_REMOVAL_CONTROL_PREFIX,
@@ -14,11 +17,15 @@ import {
 
 const executable = createRequire(import.meta.url)("electron") as string;
 const prefix = "__OMXTERM_TAB_REMOVAL_RESULT__";
-async function runRemoval(control?: string) {
+async function runRemoval(
+  testContext: NativeFixtureTestContext,
+  control?: string,
+) {
+  testContext.signal.throwIfAborted();
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-tab-removal-"));
-  await buildFixture(root);
   let supervised = false;
   try {
+    testContext.signal.throwIfAborted();
     const args: string[] = [];
     applyChromiumSandboxPolicy({
       appendSwitch: (name) => {
@@ -36,6 +43,8 @@ async function runRemoval(control?: string) {
       ],
       root,
       timeout: 90_000,
+      testContext,
+      prepare: () => buildFixture(root, "runner"),
     });
     await expect(stat(root)).rejects.toMatchObject({ code: "ENOENT" });
     const phases = execution.stdout
@@ -59,10 +68,16 @@ async function runRemoval(control?: string) {
 describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   "Background tab removal through real Electron, Surfaces and PTYs",
   () => {
-    it.each([undefined, "held-surface"])(
+    // A tuple keeps the undefined case's original %s title: it.for treats a
+    // bare undefined row as an empty list of formatting arguments.
+    it.for([[undefined], ["held-surface"]] as const)(
       "keeps A selected and receiving Paste, native keyboard and Snippet after ordinary C exit (%s)",
-      async (control) => {
-        const { execution, phases, controls } = await runRemoval(control);
+      { timeout: 110_000 },
+      async ([control], testContext) => {
+        const { execution, phases, controls } = await runRemoval(
+          testContext,
+          control,
+        );
         expect(
           execution,
           `Tab removal fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,
@@ -114,9 +129,8 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           );
         }
       },
-      110_000,
     );
-    it.each([
+    it.for([
       {
         control: "early-command",
         phase: "second-program",
@@ -133,8 +147,12 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
       },
     ])(
       "bounds the faithful $control failure at $phase",
-      async ({ control, phase, markers }) => {
-        const { execution, phases, controls } = await runRemoval(control);
+      { timeout: 110_000 },
+      async ({ control, phase, markers }, testContext) => {
+        const { execution, phases, controls } = await runRemoval(
+          testContext,
+          control,
+        );
         expect(execution).toMatchObject({
           exitCode: 1,
           reason: "exit",
@@ -159,7 +177,6 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         });
         expect(execution.stderr).toContain(`operation-timeout at ${phase}`);
       },
-      110_000,
     );
   },
 );

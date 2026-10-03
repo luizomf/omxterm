@@ -11,25 +11,22 @@ const electron = createRequire(import.meta.url)("electron") as string;
 const prefix = "__OMXTERM_RESIZE_RACE__";
 
 describe.skipIf(!supported)("owned Unix native resize/exit race", () => {
-  it.each(["Node", "Electron"])(
+  it.for(["Node", "Electron"])(
     "contains genuine closure failures through production IPC under %s",
-    async (runtime) => {
+    { timeout: 45_000 },
+    async (runtime, testContext) => {
+      testContext.signal.throwIfAborted();
       await mkdir(path.resolve(".scratch"), { recursive: true });
+      testContext.signal.throwIfAborted();
       const base = await mkdtemp(
         path.resolve(".scratch/terminal-resize-race-"),
       );
-      const root = await mkdtemp(path.join(base, "profile-"));
       let supervised = false;
       try {
+        testContext.signal.throwIfAborted();
+        const root = await mkdtemp(path.join(base, "profile-"));
+        testContext.signal.throwIfAborted();
         const program = path.join(base, "fixture.mjs");
-        await build({
-          entryPoints: ["test/fixtures/terminal-resize-race-main.ts"],
-          outfile: program,
-          bundle: true,
-          packages: "external",
-          platform: "node",
-          format: "esm",
-        });
         supervised = true;
         const result = await runNativeFixture({
           executable: runtime === "Node" ? process.execPath : "/usr/bin/env",
@@ -39,6 +36,17 @@ describe.skipIf(!supported)("owned Unix native resize/exit race", () => {
               : ["ELECTRON_RUN_AS_NODE=1", electron, program],
           root,
           timeout: 25_000,
+          testContext,
+          prepare: async () => {
+            await build({
+              entryPoints: ["test/fixtures/terminal-resize-race-main.ts"],
+              outfile: program,
+              bundle: true,
+              packages: "external",
+              platform: "node",
+              format: "esm",
+            });
+          },
         });
         expect(result, JSON.stringify(result)).toMatchObject({
           reason: "exit",
@@ -68,6 +76,5 @@ describe.skipIf(!supported)("owned Unix native resize/exit race", () => {
         if (!supervised) await rm(base, { recursive: true, force: true });
       }
     },
-    45_000,
   );
 });

@@ -11,11 +11,12 @@ import { runNativeFixture } from "../fixtures/run-native-fixture";
 
 it.skipIf(process.platform !== "darwin" || process.arch !== "arm64")(
   "loads the production Node-API addon and validates live owned windows and main-thread calls",
-  async () => {
+  async (testContext) => {
+    testContext.signal.throwIfAborted();
     const root = await mkdtemp(path.join(tmpdir(), "omxterm-macos-blur-"));
-    await buildFixture(root);
     let supervised = false;
     try {
+      testContext.signal.throwIfAborted();
       const executable = createRequire(import.meta.url)("electron") as string;
       supervised = true;
       const result = await runNativeFixture({
@@ -28,6 +29,8 @@ it.skipIf(process.platform !== "darwin" || process.arch !== "arm64")(
         ],
         root,
         timeout: 60_000,
+        testContext,
+        prepare: () => buildFixture(root, "runner"),
       });
       expect(result, result.stderr).toMatchObject({
         exitCode: 0,

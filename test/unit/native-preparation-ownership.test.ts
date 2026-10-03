@@ -1,5 +1,5 @@
 import * as filesystem from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { build } from "esbuild";
@@ -7,6 +7,15 @@ import { expect, it, vi } from "vitest";
 import { buildFixture as cursor } from "../fixtures/restty-cursor-rendering-build";
 import { buildFixture as chrome } from "../fixtures/window-chrome-build";
 import { buildFixture as scrollback } from "../fixtures/restty-scrollback-rendering-build";
+import { buildFixture as acknowledgement } from "../fixtures/failure-acknowledgement-build";
+import { buildFixture as initialization } from "../fixtures/initialization-cancellation-build";
+import { buildFixture as pending } from "../fixtures/pending-tab-ownership-build";
+import { buildFixture as shutdown } from "../fixtures/production-shutdown-build";
+import { buildFixture as background } from "../fixtures/restty-background-rendering-build";
+import { buildFixture as titles } from "../fixtures/startup-tab-titles-build";
+import { buildFixture as fonts } from "../fixtures/surface-font-ownership-build";
+import { buildFixture as removal } from "../fixtures/tab-removal-build";
+import { buildFixture as blur } from "../fixtures/macos-window-blur-build";
 import { observeNativeWindow } from "../fixtures/native-window-observation";
 import { FIXTURE_PROCESS_DIRECTORY } from "../fixtures/native-fixture-ownership";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
@@ -20,8 +29,12 @@ vi.mock("node:child_process", () => ({
   spawn: () => {
     throw new Error("Native launch is forbidden");
   },
-  execFileSync: () => {
-    throw new Error("Native commands are forbidden");
+  execFileSync: (executable: string, args: string[]) => {
+    // Model only the external blur compiler, as in preparation-recipe tests.
+    if (executable !== "/usr/bin/xcrun")
+      throw new Error("Native commands are forbidden");
+    writeFileSync(args[args.indexOf("-o") + 1]!, "external compiler output");
+    return Buffer.alloc(0);
   },
 }));
 const actual = await vi.importActual<typeof filesystem>("node:fs/promises");
@@ -42,6 +55,21 @@ const recipes = [
     prepare: (root: string) => scrollback(root, "scrollback", false, "runner"),
   },
   { name: "discovery", writers: 2, prepare: undefined },
+  ...[
+    { name: "acknowledgement", writers: 3, build: acknowledgement },
+    { name: "initialization", writers: 3, build: initialization },
+    { name: "pending", writers: 3, build: pending },
+    { name: "shutdown", writers: 4, build: shutdown },
+    { name: "background", writers: 2, build: background },
+    { name: "titles", writers: 3, build: titles },
+    { name: "fonts", writers: 3, build: fonts },
+    { name: "removal", writers: 3, build: removal },
+    { name: "blur", writers: 2, build: blur },
+  ].map(({ name, writers, build: prepare }) => ({
+    name,
+    writers,
+    prepare: (root: string) => prepare(root, "runner"),
+  })),
 ];
 it.each(
   recipes.flatMap((recipe) =>

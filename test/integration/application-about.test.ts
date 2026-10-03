@@ -6,7 +6,7 @@ import { build } from "esbuild";
 import electron from "electron";
 import { expect, it } from "vitest";
 
-it.each([
+it.for([
   "development",
   "packaged",
   "missing-result",
@@ -14,11 +14,15 @@ it.each([
   "published-hang",
 ])(
   "configures native About before the menu (%s), preserving macOS defaults",
-  async (mode) => {
+  { timeout: 35_000 },
+  async (mode, testContext) => {
+    testContext.signal.throwIfAborted();
     await mkdir(".scratch", { recursive: true });
+    testContext.signal.throwIfAborted();
     const root = await mkdtemp(path.resolve(".scratch/about-startup-"));
     let supervised = false;
     try {
+      testContext.signal.throwIfAborted();
       const entry = path.join(root, "dist/main/index.mjs");
       const fixture = path.join(root, "fixture.mjs");
       const resultPath = path.join(root, "result.json");
@@ -28,7 +32,6 @@ it.each([
         ".scratch/about-diagnostics",
         `${path.basename(root)}.jsonl`,
       );
-      await mkdir(path.dirname(diagnosticsPath), { recursive: true });
       // Only the selected source exists, so packaged mode cannot accidentally
       // succeed by reading the development checkout's icon.
       const iconPath = path.join(
@@ -36,21 +39,6 @@ it.each([
         mode === "packaged" ? "resources" : "assets",
         "application-icon.png",
       );
-      await mkdir(path.dirname(iconPath), { recursive: true });
-      await copyFile("assets/application-icon.png", iconPath);
-      for (const [input, output] of [
-        ["src/main/index.ts", entry],
-        ["test/fixtures/application-about-main.ts", fixture],
-      ] as const) {
-        await build({
-          entryPoints: [input],
-          outfile: output,
-          bundle: true,
-          platform: "node",
-          format: "esm",
-          external: ["electron", "node-pty"],
-        });
-      }
       supervised = true;
       const execution = await runNativeFixture({
         executable: electron as unknown as string,
@@ -67,6 +55,25 @@ it.each([
         ],
         root,
         completionFile: "result.json.completion",
+        testContext,
+        prepare: async () => {
+          await mkdir(path.dirname(diagnosticsPath), { recursive: true });
+          await mkdir(path.dirname(iconPath), { recursive: true });
+          await copyFile("assets/application-icon.png", iconPath);
+          for (const [input, output] of [
+            ["src/main/index.ts", entry],
+            ["test/fixtures/application-about-main.ts", fixture],
+          ] as const) {
+            await build({
+              entryPoints: [input],
+              outfile: output,
+              bundle: true,
+              platform: "node",
+              format: "esm",
+              external: ["electron", "node-pty"],
+            });
+          }
+        },
         timeout:
           mode === "missing-result" || mode === "published-hang"
             ? 8_000
@@ -151,5 +158,4 @@ it.each([
       if (!supervised) await rm(root, { recursive: true, force: true });
     }
   },
-  35_000,
 );

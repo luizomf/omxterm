@@ -11,28 +11,35 @@ const supported =
 const prefix = "__OMXTERM_LITERAL_ARGV__";
 
 describe.skipIf(!supported)("literal explicit-command native argv", () => {
-  it("round-trips quotes, whitespace, empty arguments and backslashes to a real child", async () => {
+  it("round-trips quotes, whitespace, empty arguments and backslashes to a real child", async (testContext) => {
+    testContext.signal.throwIfAborted();
     // Keep node-pty resolvable on the native filesystem, under supervision.
     await mkdir(path.resolve(".scratch"), { recursive: true });
+    testContext.signal.throwIfAborted();
     const base = await mkdtemp(path.resolve(".scratch/literal-argv-"));
-    const root = await mkdtemp(path.join(base, "profile-"));
     let supervised = false;
     try {
+      testContext.signal.throwIfAborted();
+      const root = await mkdtemp(path.join(base, "profile-"));
+      testContext.signal.throwIfAborted();
       const program = path.join(base, "fixture.mjs");
-      await build({
-        entryPoints: ["test/fixtures/literal-argv-main.ts"],
-        outfile: program,
-        bundle: true,
-        packages: "external",
-        platform: "node",
-        format: "esm",
-      });
       supervised = true;
       const result = await runNativeFixture({
         executable: process.execPath,
         args: [program, path.join(root, "echo.cjs")],
         root,
         timeout: 20_000,
+        testContext,
+        prepare: async () => {
+          await build({
+            entryPoints: ["test/fixtures/literal-argv-main.ts"],
+            outfile: program,
+            bundle: true,
+            packages: "external",
+            platform: "node",
+            format: "esm",
+          });
+        },
       });
       expect(result, JSON.stringify(result)).toMatchObject({
         reason: "exit",

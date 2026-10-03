@@ -6,7 +6,7 @@ import * as module from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { runInNewContext } from "node:vm";
-import { build } from "esbuild";
+import { build, type BuildOptions } from "esbuild";
 import { expect, it } from "vitest";
 
 // As in supported-fixture-launch.test.ts, execute the actual entry/callback;
@@ -178,6 +178,99 @@ it("native discovery controls cannot launch the next loop iteration after contex
   expect(observed.removalAttempts).toBe(0);
 });
 
+const ordinaryCallers = [
+  { name: "application-about", cases: 5 },
+  { name: "failure-acknowledgement", cases: 2 },
+  { name: "initialization-cancellation", cases: 2 },
+  { name: "intrinsic-shift", cases: 1 },
+  { name: "literal-argv", cases: 1, allocations: 2 },
+  { name: "pending-tab-ownership", cases: 1 },
+  { name: "production-shutdown", cases: 4 },
+  { name: "restty-background-rendering", cases: 1 },
+  { name: "restty-native-scroll-feedback", cases: 3 },
+  { name: "startup-tab-titles", cases: 1 },
+  { name: "surface-font-ownership", cases: 1 },
+  { name: "tab-removal", cases: 4 },
+  { name: "macos-window-blur", cases: 1 },
+  { name: "linux-foreground", cases: 1, allocations: 2 },
+  { name: "terminal-resize-race", cases: 2, allocations: 2 },
+  { name: "terminal-session-retirement", cases: 2, allocations: 2 },
+];
+const ordinaryCases = ordinaryCallers.flatMap((caller) =>
+  Array.from({ length: caller.cases }, (_, index) => ({ ...caller, index })),
+);
+it.each(ordinaryCases)(
+  "$name callback $index joins preparation and actual context before native handoff",
+  async ({ name, cases, index }) => {
+    const observed = await observeCaller(
+      name,
+      "supervisor failure",
+      false,
+      index,
+    );
+    expect(observed.caseCount).toBe(cases);
+    // The runner's own supervisor build cannot substitute for fixture preparation.
+    expect(observed.fixtureBuilds).toBeGreaterThan(0);
+    expect(observed.outsidePreparation).toBe(0);
+    expect(observed.finishHooks).toBe(1);
+    expect(observed.nativeRequests).toBe(1);
+    expect(observed.removalAttempts).toBe(0);
+    expect(observed.removed).toBe(false);
+  },
+);
+it.each(ordinaryCases)(
+  "$name callback $index refuses preparation and native launch after entry abort",
+  async ({ name, index }) => {
+    const observed = await observeCaller(name, "entry abort", false, index);
+    expect(observed.roots).toHaveLength(0);
+    expect(observed.preparedRoots).toHaveLength(0);
+    expect(observed.nativeRequests).toBe(0);
+    expect(observed.finishHooks).toBe(0);
+  },
+);
+it.each(
+  ordinaryCases.flatMap((caller) =>
+    Array.from({ length: caller.allocations ?? 1 }, (_, allocation) => ({
+      ...caller,
+      allocation,
+    })),
+  ),
+)(
+  "$name callback $index reclaims unhanded allocation $allocation without late preparation",
+  async ({ name, index, allocation }) => {
+    const observed = await observeCaller(
+      name,
+      "allocation abort",
+      false,
+      index,
+      allocation,
+    );
+    expect(observed.roots).toHaveLength(allocation + 1);
+    expect(observed.preparedRoots).toHaveLength(0);
+    expect(observed.nativeRequests).toBe(0);
+    expect(observed.finishHooks).toBe(0);
+    expect(observed.removalAttempts).toBe(1);
+    expect(observed.removed).toBe(true);
+  },
+);
+it.each(ordinaryCases)(
+  "$name callback $index joins an aborted builder without native handoff",
+  async ({ name, index }) => {
+    const observed = await observeCaller(
+      name,
+      "preparation abort",
+      false,
+      index,
+    );
+    expect(observed.outsidePreparation).toBe(0);
+    expect(observed.finishHooks).toBe(1);
+    expect(observed.preparedRoots).toHaveLength(1);
+    expect(observed.nativeRequests).toBe(0);
+    expect(observed.removalAttempts).toBe(1);
+    expect(observed.removed).toBe(true);
+  },
+);
+
 async function observeCaller(
   name: string,
   failure:
@@ -187,9 +280,11 @@ async function observeCaller(
     | "phase abort"
     | "loop abort"
     | "entry abort"
-    | "allocation abort",
+    | "allocation abort"
+    | "preparation abort",
   removalFails = false,
   selectedCase?: number,
+  allocationIndex = 0,
 ) {
   const entry = path.resolve(`test/integration/${name}.test.ts`);
   const compiled = await build({
@@ -220,6 +315,12 @@ async function observeCaller(
   const preparedRoots = new Set<string>();
   let nativeRequests = 0;
   let removalAttempts = 0;
+  let outsidePreparation = 0;
+  let fixtureBuilds = 0;
+  const recordPreparation = () => {
+    if (finalizers.length === 0) outsidePreparation += 1;
+    if (failure === "preparation abort") controller.abort(stopped);
+  };
   let decodePortResult!: (serialized: string) => unknown;
   runInNewContext(
     compiled.outputFiles[0]!.text + "\nreceiveDecoder(JSON.parse);",
@@ -263,13 +364,27 @@ async function observeCaller(
                   ),
               each:
                 (values: unknown[]) =>
-                (label: string, test: (value: unknown) => Promise<void>) =>
-                  values.forEach((value) => register(label, () => test(value))),
+                (
+                  label: string,
+                  test: (...values: unknown[]) => Promise<void>,
+                ) =>
+                  values.forEach((value) =>
+                    register(label, () =>
+                      test(
+                        ...(values.every(Array.isArray)
+                          ? (value as unknown[])
+                          : [value]),
+                      ),
+                    ),
+                  ),
             }),
           };
         if (id === "esbuild")
           return {
-            build: async () => {
+            build: async (options: BuildOptions) => {
+              if (!options.outfile?.endsWith("native-fixture-supervisor.cjs"))
+                fixtureBuilds += 1;
+              recordPreparation();
               preparedRoots.add(root!);
               if (failure === "build failure") throw stopped;
               return {};
@@ -278,8 +393,24 @@ async function observeCaller(
         if (id === "node:fs/promises")
           return {
             ...filesystem,
+            writeFile: (...args: Parameters<typeof filesystem.writeFile>) => {
+              recordPreparation();
+              return filesystem.writeFile(...args);
+            },
+            copyFile: (...args: Parameters<typeof filesystem.copyFile>) => {
+              recordPreparation();
+              return filesystem.copyFile(...args);
+            },
+            cp: (...args: Parameters<typeof filesystem.cp>) => {
+              recordPreparation();
+              return filesystem.cp(...args);
+            },
+            symlink: (...args: Parameters<typeof filesystem.symlink>) => {
+              recordPreparation();
+              return filesystem.symlink(...args);
+            },
             rm: async (...args: Parameters<typeof filesystem.rm>) => {
-              if (args[0] === root) {
+              if (roots.includes(String(args[0]))) {
                 removalAttempts += 1;
                 if (removalFails) throw cleanupFailure;
               }
@@ -288,7 +419,11 @@ async function observeCaller(
             mkdtemp: async (...args: Parameters<typeof filesystem.mkdtemp>) => {
               root = (await filesystem.mkdtemp(...args)) as string;
               roots.push(root);
-              if (failure === "allocation abort") controller.abort(stopped);
+              if (
+                failure === "allocation abort" &&
+                roots.length === allocationIndex + 1
+              )
+                controller.abort(stopped);
               return root;
             },
           };
@@ -403,6 +538,9 @@ async function observeCaller(
     if (!removalFails && failure !== "loop abort")
       expect(observedFailure).toBe(stopped);
     return {
+      caseCount: cases.length,
+      fixtureBuilds,
+      outsidePreparation,
       removed: root === undefined || !existsSync(root),
       roots,
       preparedRoots: [...preparedRoots],

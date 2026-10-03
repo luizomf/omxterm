@@ -14,13 +14,14 @@ const prefix = "__OMXTERM_STARTUP_TITLES_RESULT__";
 describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   "Startup titles through real Electron, Surfaces and PTYs",
   () => {
-    it("displays first and additional silent-program fallback labels without OSC repair", async () => {
+    it("displays first and additional silent-program fallback labels without OSC repair", async (testContext) => {
+      testContext.signal.throwIfAborted();
       const root = await mkdtemp(
         path.join(tmpdir(), "omxterm-startup-tab-titles-"),
       );
-      await buildFixture(root);
       let supervised = false;
       try {
+        testContext.signal.throwIfAborted();
         const args: string[] = [];
         applyChromiumSandboxPolicy({
           appendSwitch(name) {
@@ -34,6 +35,8 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           args: [...args, root],
           root,
           timeout: 90_000,
+          testContext,
+          prepare: () => buildFixture(root, "runner"),
         });
         expect(
           execution,

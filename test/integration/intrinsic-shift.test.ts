@@ -11,27 +11,12 @@ import { runNativeFixture } from "../fixtures/run-native-fixture";
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
 const executable = createRequire(import.meta.url)("electron") as string;
 
-it("registers intrinsic-Shift native menus and consumes the shared fallback action exactly once", async () => {
+it("registers intrinsic-Shift native menus and consumes the shared fallback action exactly once", async (testContext) => {
+  testContext.signal.throwIfAborted();
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-intrinsic-shift-"));
   let supervised = false;
   try {
-    await build({
-      absWorkingDir: projectRoot,
-      bundle: true,
-      entryPoints: ["test/fixtures/intrinsic-shift-main.ts"],
-      external: ["electron"],
-      format: "cjs",
-      platform: "node",
-      logLevel: "silent",
-      outfile: path.join(root, "main.cjs"),
-    });
-    await writeFile(
-      path.join(root, "package.json"),
-      JSON.stringify({
-        name: "omxterm-intrinsic-shift-fixture",
-        main: "main.cjs",
-      }),
-    );
+    testContext.signal.throwIfAborted();
     const args: string[] = [];
     applyChromiumSandboxPolicy({
       appendSwitch(name) {
@@ -45,6 +30,26 @@ it("registers intrinsic-Shift native menus and consumes the shared fallback acti
       args: [...args, root],
       root,
       timeout: 30_000,
+      testContext,
+      prepare: async () => {
+        await build({
+          absWorkingDir: projectRoot,
+          bundle: true,
+          entryPoints: ["test/fixtures/intrinsic-shift-main.ts"],
+          external: ["electron"],
+          format: "cjs",
+          platform: "node",
+          logLevel: "silent",
+          outfile: path.join(root, "main.cjs"),
+        });
+        await writeFile(
+          path.join(root, "package.json"),
+          JSON.stringify({
+            name: "omxterm-intrinsic-shift-fixture",
+            main: "main.cjs",
+          }),
+        );
+      },
     });
     expect(
       execution,

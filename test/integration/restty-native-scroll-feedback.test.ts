@@ -14,13 +14,14 @@ for (const [mode, dpr] of [
   ["native-scroll-feedback-ready-before-map", undefined],
   ["native-scroll-feedback-ready-before-map", 1.5],
 ] as const) {
-  it(`keeps the native viewport live through queued spacer clamps and intentional scrolling (${mode}, DPR ${dpr ?? "native"})`, async () => {
+  it(`keeps the native viewport live through queued spacer clamps and intentional scrolling (${mode}, DPR ${dpr ?? "native"})`, async (testContext) => {
+    testContext.signal.throwIfAborted();
     const root = await mkdtemp(
       path.join(tmpdir(), "omxterm-native-scroll-feedback-"),
     );
-    await buildFixture(root, mode);
     let supervised = false;
     try {
+      testContext.signal.throwIfAborted();
       const args: string[] = [];
       applyChromiumSandboxPolicy({
         appendSwitch: (name) => args.push(`--${name}`),
@@ -34,6 +35,8 @@ for (const [mode, dpr] of [
         args: [...args, root],
         root,
         timeout: 60_000,
+        testContext,
+        prepare: () => buildFixture(root, mode, false, "runner"),
       });
       expect(result, result.stderr).toMatchObject({
         exitCode: 0,
