@@ -379,6 +379,7 @@ app
     router.dispose();
     // Closing requests native termination; wait for every PTY to actually exit.
     await Promise.all(sessionExits);
+    if (failing) return;
     writeSync(1, `__OMXTERM_WINDOW_CHROME_RESULT__${JSON.stringify(result)}\n`);
     app.quit();
   })

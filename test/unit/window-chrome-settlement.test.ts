@@ -20,7 +20,11 @@ afterEach(() => vi.useRealTimers());
 
 function harness(
   count = 3,
-  options: { failSpawnAt?: number; closeThrows?: boolean } = {},
+  options: {
+    failSpawnAt?: number;
+    closeThrows?: boolean;
+    exerciseSucceeds?: boolean;
+  } = {},
 ) {
   const require = createRequire(import.meta.url);
   const original = new Error("controlled native route failure");
@@ -47,7 +51,12 @@ function harness(
     onSessionStartError() {},
     onSessionExit() {},
   };
-  const application = { newWindow: async () => {}, forceCloseWindow() {} };
+  const application = {
+    newWindow: async () => {},
+    forceCloseWindow: vi.fn(),
+  };
+  const dispose = vi.fn();
+  const writeSync = vi.fn();
   const ports: Record<string, unknown> = {
     electron: {
       app,
@@ -56,7 +65,7 @@ function harness(
       },
       ipcMain: {},
     },
-    "node:fs": { mkdirSync() {}, writeSync() {} },
+    "node:fs": { mkdirSync() {}, writeSync },
     "../../src/main/terminal-window": {
       terminalWindowOptions: () => ({ webPreferences: {} }),
     },
@@ -75,6 +84,7 @@ function harness(
     },
     "../../src/main/terminal-ipc-controller": {
       registerTerminalIpcRouter: () => ({
+        dispose,
         registerController(options: { createSession: typeof createSession }) {
           createSession = options.createSession;
           for (let index = 0; index < count; index++) createSession!(callbacks);
@@ -117,7 +127,10 @@ function harness(
     },
     "../../src/shared/terminal-ipc": { terminalIpc: {} },
     "./window-chrome-exercise": {
-      exerciseWindowChrome: () => Promise.reject(original),
+      exerciseWindowChrome: () =>
+        options.exerciseSucceeds
+          ? Promise.resolve({ controlled: true })
+          : Promise.reject(original),
     },
     "./window-chrome-construction": { assertNativeChromeConstruction() {} },
     "./window-policy": {
@@ -150,6 +163,9 @@ function harness(
     sessions,
     original,
     callbacks,
+    application,
+    dispose,
+    writeSync,
     createLate: () => createSession!(callbacks),
   };
 }
@@ -229,6 +245,53 @@ it("close errors preserve the original failure but do not substitute for exit ac
   expect(h.processPort.stderr.write).toHaveBeenCalledExactlyOnceWith(
     `${h.original.stack}\n`,
   );
+});
+
+it.each(["uncaughtException", "unhandledRejection"])(
+  "%s during the already-pending success join forbids success publication and quit",
+  async (event) => {
+    const h = harness(3, { exerciseSucceeds: true });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.application.forceCloseWindow).toHaveBeenCalledOnce();
+    expect(h.dispose).toHaveBeenCalledOnce();
+    expect(h.writeSync).not.toHaveBeenCalled();
+    expect(h.app.quit).not.toHaveBeenCalled();
+    expect(h.processPort.stderr.write).not.toHaveBeenCalled();
+    h.processPort.emit(event, h.original);
+    expect(
+      h.sessions.every((session) => session.close.mock.calls.length === 1),
+    ).toBe(true);
+    expect(h.app.exit).not.toHaveBeenCalled();
+    for (const session of h.sessions) session.exit();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.callbacks.onExit).toHaveBeenCalledTimes(3);
+    expect(h.app.exit).toHaveBeenCalledExactlyOnceWith(1);
+    expect(h.processPort.stderr.write).toHaveBeenCalledExactlyOnceWith(
+      `${h.original.stack}\n`,
+    );
+    expect(h.writeSync).not.toHaveBeenCalled();
+    expect(h.app.quit).not.toHaveBeenCalled();
+  },
+);
+
+it("successful completion still publishes its result and quits after all acknowledgments", async () => {
+  const h = harness(3, { exerciseSucceeds: true });
+  await vi.advanceTimersByTimeAsync(0);
+  expect(h.dispose).toHaveBeenCalledOnce();
+  h.sessions[0]!.exit();
+  h.sessions[1]!.exit();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(h.writeSync).not.toHaveBeenCalled();
+  expect(h.app.quit).not.toHaveBeenCalled();
+  h.sessions[2]!.exit();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(h.writeSync).toHaveBeenCalledExactlyOnceWith(
+    1,
+    '__OMXTERM_WINDOW_CHROME_RESULT__{"controlled":true}\n',
+  );
+  expect(h.app.quit).toHaveBeenCalledOnce();
+  expect(h.app.exit).not.toHaveBeenCalled();
+  expect(h.processPort.stderr.write).not.toHaveBeenCalled();
 });
 
 it("a zero-session failure exits1 without needing a fabricated PTY event", async () => {
