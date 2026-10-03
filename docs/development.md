@@ -186,6 +186,13 @@ not qualify outer CLI parsing or an exact installer.
 Retained investigation materials in `.scratch/`, including archived tests and
 renamed dependency directories, stay outside ordinary discovery.
 
+The default reporters retain console output and write per-test results to
+`.scratch/vitest-results.json`, including when tests run through
+`npm run check:portable`. Each invocation replaces that report; copy it before
+another run when retaining investigation evidence. An interrupted run may not
+finish writing it: retain the actual command exit and native journals too.
+Review reports for local paths and failure details before sharing.
+
 To inventory the selected files without importing tests or launching native
 fixtures:
 
