@@ -22,6 +22,7 @@ interface TerminalSize {
   readonly cols: number;
   readonly rows: number;
   readonly snapshot?: CellSnapshot;
+  readonly allowCanvasTranslation?: true;
 }
 
 async function readCellSnapshot(window: BrowserWindow): Promise<CellSnapshot> {
@@ -75,13 +76,34 @@ export async function terminalCellPoint(
   size: TerminalSize,
 ) {
   const snapshot = await readCellSnapshot(window);
+  return cellPoint(snapshot, row, col, size);
+}
+
+function cellPoint(
+  snapshot: CellSnapshot,
+  row: number,
+  col: number,
+  size: TerminalSize,
+) {
   const { geometry } = snapshot;
   if (
     geometry.cols !== size.cols ||
     geometry.rows !== size.rows ||
     (size.snapshot &&
       (snapshot.canvasId !== size.snapshot.canvasId ||
-        !sameHoverGeometry(geometry, size.snapshot.geometry)))
+        !sameHoverGeometry(
+          size.allowCanvasTranslation
+            ? {
+                ...geometry,
+                canvas: {
+                  ...geometry.canvas,
+                  x: size.snapshot.geometry.canvas.x,
+                  y: size.snapshot.geometry.canvas.y,
+                },
+              }
+            : geometry,
+          size.snapshot.geometry,
+        )))
   )
     throw new HoverEvidenceError("geometry-changed");
   return hoverCellPoint(geometry, row, col);
@@ -130,10 +152,18 @@ export async function scrollTerminal(
   size: TerminalSize,
   deltaY: number,
 ): Promise<void> {
-  const point = await terminalCellPoint(window, row, col, size);
+  const snapshot = await readCellSnapshot(window);
+  const point = cellPoint(snapshot, row, col, size);
+  // Revalidate in the dispatch operation itself: another renderer crossing can
+  // expose a replacement canvas or different geometry after point calculation.
   await window.webContents.executeJavaScript(
     `(() => {
       const canvas = [...document.querySelectorAll('.restty-terminal-surface canvas')].find((candidate) => candidate.getBoundingClientRect().width > 0);
+      const observed = canvas?.__resttyHoverFixture?.();
+      if (
+        observed?.canvasId !== ${snapshot.canvasId} ||
+        JSON.stringify(observed.geometry) !== ${JSON.stringify(JSON.stringify(snapshot.geometry))}
+      ) throw new Error('Restty hover geometry-changed');
       canvas.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, clientX: ${point.x}, clientY: ${point.y}, deltaMode: 1, deltaY: ${deltaY} }));
     })()`,
     true,
@@ -291,7 +321,13 @@ export async function exerciseResttyLinks(
   await waitFor(() => externalLinks.length === 4, "hard-break link separation");
 
   const named = await exerciseResttyOrdinaryGestures(options, reflowedSize);
-  await exerciseScrollbackLinkControls(options, reflowedSize);
+  // Scrollback still uses the frozen grid for filler/wrap/clipping, but its
+  // inputs target the current origin of that same owned canvas. Reporting and
+  // the preceding URL/path controls retain their full historical geometry.
+  await exerciseScrollbackLinkControls(options, {
+    ...reflowedSize,
+    allowCanvasTranslation: true,
+  });
   return {
     validLinkMouseReports,
     localPathMouseReports,
