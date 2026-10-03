@@ -52,8 +52,8 @@ SSH clients, and coding agents inside it.
 
 ## Platforms and downloads
 
-**Latest release: [0.20.0](https://github.com/luizomf/omxterm/releases/tag/v0.20.0)**
-— [what changed](docs/releases/0.20.0.md).
+**Latest release: [0.20.1](https://github.com/luizomf/omxterm/releases/tag/v0.20.1)**
+— [what changed](docs/releases/0.20.1.md).
 
 Downloads are **ARM64 only**. Check your processor in **About This Mac**, with
 `uname -m` on Linux (`aarch64`), or under **Settings → System → About** on Windows
@@ -61,10 +61,10 @@ Downloads are **ARM64 only**. Check your processor in **About This Mac**, with
 
 | Platform                                 | Download                                                                                               | Checksum                                                                                                     |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Apple Silicon macOS                      | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.20.0/OMXTerm-0.20.0-arm64.dmg)           | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.0/OMXTerm-0.20.0-arm64.dmg.sha256)      |
-| Linux ARM64                              | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.20.0/OMXTerm-0.20.0-arm64.AppImage) | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.0/OMXTerm-0.20.0-arm64.AppImage.sha256) |
-| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/luizomf/omxterm/releases/download/v0.20.0/linux_install.sh)      | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.0/linux_install.sh.sha256)              |
-| Windows ARM64                            | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.20.0/OMXTerm-0.20.0-arm64.exe)     | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.0/OMXTerm-0.20.0-arm64.exe.sha256)      |
+| Apple Silicon macOS                      | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.20.1/OMXTerm-0.20.1-arm64.dmg)           | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.1/OMXTerm-0.20.1-arm64.dmg.sha256)      |
+| Linux ARM64                              | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.20.1/OMXTerm-0.20.1-arm64.AppImage) | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.1/OMXTerm-0.20.1-arm64.AppImage.sha256) |
+| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/luizomf/omxterm/releases/download/v0.20.1/linux_install.sh)      | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.1/linux_install.sh.sha256)              |
+| Windows ARM64                            | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.20.1/OMXTerm-0.20.1-arm64.exe)     | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.1/OMXTerm-0.20.1-arm64.exe.sha256)      |
 
 Linux needs **glibc 2.42+** and X11/XWayland; Ubuntu 24.04 is too old for this
 AppImage. macOS and Windows may show an unknown-developer warning because the
