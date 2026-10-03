@@ -23,6 +23,9 @@ interface ScrollbackFixture {
   readonly ready: true;
   prepareNativeInput(): void;
   nativeInput(): NativeInputObservation;
+  waitForNativeDrag: ReturnType<
+    typeof observeScrollbackNativeInput
+  >["waitForDrag"];
   hiddenRenderingFixture: typeof hiddenRenderingFixture;
   depthRenderingFixture: typeof depthRenderingFixture;
   metrics(): ScrollMetrics;
@@ -151,6 +154,7 @@ async function run() {
       surface.focus();
     },
     nativeInput: nativeInput.snapshot,
+    waitForNativeDrag: nativeInput.waitForDrag,
     hiddenRenderingFixture,
     depthRenderingFixture,
     surface,

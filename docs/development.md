@@ -577,7 +577,14 @@ The scrollback fixture owns and boundedly observes native presentation/focus and
 DOM terminal input readiness before its native drag and character input. It
 acknowledges trusted pointer delivery, actual selection dragging and accepted
 character input; the held-left move retains the original edge coordinates and
-500 ms autoscroll observation. A never-ready real Surface regression uses the
+500 ms autoscroll observation. The drag phase awaits the renderer observer's
+matching input event (including input already observed before registration), not
+a subsequent main-process polling timer. The existing main deadline still rejects
+late consumption; the original finally releases the button on failure. A headless
+regression executes the generated caller and real observer with controlled input
+transport/timer scheduling, including invalid input and renderer teardown; it is
+not native rendering evidence or a diagnosis of earlier failures.
+A never-ready real Surface regression uses the
 existing native supervisor timeout and checks cleanup before the next GUI launch.
 Fixture preparation and native execution are joined in a test-finished hook so
 Vitest's wrapper deadline cannot release the desktop early. Fixed bounded

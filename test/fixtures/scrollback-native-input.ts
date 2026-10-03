@@ -18,6 +18,7 @@ export function observeScrollbackNativeInput(
   let move: NativePointerObservation | null = null;
   let up: NativePointerObservation | null = null;
   let character: { trusted: boolean; input: boolean } | null = null;
+  let notifyDrag: (() => void) | undefined;
   const pointer = (event: PointerEvent): NativePointerObservation => ({
     trusted: event.isTrusted,
     canvas: event.target === canvas,
@@ -33,47 +34,63 @@ export function observeScrollbackNativeInput(
   });
   canvas.addEventListener("pointermove", (event) => {
     move = pointer(event);
+    notifyDrag?.();
   });
   canvas.addEventListener("pointerup", (event) => {
     up = pointer(event);
+    notifyDrag?.();
   });
   // Restty accepts ordinary character text in beforeinput and prevents default;
   // a successful native character need not produce a later DOM input event.
   input.addEventListener("beforeinput", (event) => {
     character = { trusted: event.isTrusted, input: event.target === input };
   });
+  const snapshot = () => {
+    const rect = canvas.getBoundingClientRect();
+    const host = document.querySelector<HTMLElement>(
+      ".restty-native-scroll-host",
+    )!;
+    return {
+      ready:
+        document.hasFocus() &&
+        document.activeElement === input &&
+        !input.disabled,
+      down,
+      move,
+      up,
+      character,
+      accepted: accepted(),
+      geometry: {
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+      },
+      viewport: {
+        top: host.scrollTop,
+        height: host.scrollHeight,
+        clientHeight: host.clientHeight,
+      },
+    };
+  };
   return {
     reset() {
       down = move = up = null;
       character = null;
     },
-    snapshot() {
-      const rect = canvas.getBoundingClientRect();
-      const host = document.querySelector<HTMLElement>(
-        ".restty-native-scroll-host",
-      )!;
-      return {
-        ready:
-          document.hasFocus() &&
-          document.activeElement === input &&
-          !input.disabled,
-        down,
-        move,
-        up,
-        character,
-        accepted: accepted(),
-        geometry: {
-          x: rect.x,
-          y: rect.y,
-          width: rect.width,
-          height: rect.height,
-        },
-        viewport: {
-          top: host.scrollTop,
-          height: host.scrollHeight,
-          clientHeight: host.clientHeight,
-        },
-      };
+    snapshot,
+    waitForDrag(point: { x: number; startY: number; endY: number }) {
+      return new Promise<ReturnType<typeof snapshot>>((resolve) => {
+        // One drag per fixture. Register before checking already-observed input;
+        // the main phase owns the deadline and always releases in its finally.
+        notifyDrag = () => {
+          const value = snapshot();
+          if (!hasNativeDrag(value, point) && !value.up) return;
+          notifyDrag = undefined;
+          resolve(value);
+        };
+        notifyDrag();
+      });
     },
   };
 }

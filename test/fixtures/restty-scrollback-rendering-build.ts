@@ -227,7 +227,7 @@ app.whenReady().then(async () => {
   let inputObservation = null;
   const inputNative = () => ({ visible: window.isVisible(), minimized: window.isMinimized(), focused: window.isFocused() });
   const inputRecord = (phase, status, category = 'none') => process.stdout.write('__OMXTERM_SCROLLBACK_INPUT__' + JSON.stringify({ version: 1, phase, status, category, native: inputNative(), observation: inputObservation }) + '\\n');
-  async function inputPhase(phase, predicate, timeout = 5000, initialize) {
+  async function inputPhase(phase, predicate, timeout = 5000, initialize, observe) {
     let timer;
     let active = true;
     inputRecord(phase, 'begin');
@@ -237,7 +237,8 @@ app.whenReady().then(async () => {
           const deadline = Date.now() + timeout;
           await initialize?.();
           while (active && Date.now() < deadline) {
-            inputObservation = await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.nativeInput()', true);
+            inputObservation = await (observe ? observe() : window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.nativeInput()', true));
+            if (observe && (!active || Date.now() >= deadline)) throw new StimulusTimeout(); // Reject late consumption, even of a timely event.
             if (predicate(inputObservation)) return;
             await new Promise(resolve => setTimeout(resolve, 25));
           }
@@ -294,7 +295,8 @@ app.whenReady().then(async () => {
     window.webContents.sendInputEvent({ type: "mouseMove", x: autoscroll.x, y: autoscroll.endY, button: "left", modifiers: ["leftButtonDown"], clickCount: 1 });
     await Promise.all([
       new Promise((resolve) => setTimeout(resolve, 500)),
-      inputPhase('mouse-drag', value => hasNativeDrag(value, autoscroll), 500),
+      inputPhase('mouse-drag', value => hasNativeDrag(value, autoscroll), 500, undefined,
+        () => window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.waitForNativeDrag(' + JSON.stringify(autoscroll) + ')', true)),
     ]);
   } finally {
     window.webContents.sendInputEvent({ type: "mouseUp", x: autoscroll.x, y: autoscroll.endY, button: "left", clickCount: 1 });
