@@ -4,8 +4,10 @@ import { expect, it } from "vitest";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import {
   exerciseResttyImages,
+  readResttyImageCellSize,
   resttyImageEmitterSource,
 } from "../fixtures/restty-host-images";
+import { createFixtureMetricReplyRouter } from "../fixtures/restty-host-metric-replies";
 import type { ResttyImagePixelEvidence } from "../fixtures/restty-image-evidence";
 
 it("starts image placement in a clean viewport/history independent of earlier host output", () => {
@@ -26,6 +28,104 @@ it("starts image placement in a clean viewport/history independent of earlier ho
   expect(output.filter((part) => part.includes("\u001b[41m"))).toEqual([
     "\u001b[10;16H\u001b[41m  \u001b[0m",
   ]);
+});
+
+it("forwards the native image reply before issuing a synthetic cell query after the raw marker", async () => {
+  const reply = "\u001b[6;20;20t";
+  const priorReply = "\u001b[6;99;99t";
+  const evidence = { inputs: [priorReply], resizes: [] };
+  const output: string[] = [];
+  const pending: Array<"native" | "fixture"> = [];
+  const events: string[] = [];
+  const nativeWrites: Array<{ producer: string; data: string }> = [];
+  let producer = "";
+  const router = createFixtureMetricReplyRouter(
+    {
+      write(data: string) {
+        nativeWrites.push({ producer, data });
+        events.push(`${producer} forwarded`);
+      },
+      resize() {},
+    },
+    (data) => {
+      expect(data).toBe("\u001b[16t");
+      events.push("synthetic query");
+      pending.push("fixture");
+    },
+    evidence,
+  );
+  const waitFor: Parameters<typeof exerciseResttyImages>[0]["waitFor"] = async (
+    predicate,
+    label,
+  ) => {
+    if (await predicate()) return;
+    // The external transport releases replies FIFO only after the caller
+    // observes the raw marker. Producer tags never enter terminal bytes.
+    expect(output.join("")).toContain("__RESTTY_IMAGES_SENT__");
+    while (pending.length) {
+      producer = pending.shift()!;
+      events.push(`${producer} reply`);
+      router.terminal.write(reply);
+    }
+    if (!(await predicate())) throw new Error(`Not ready: ${label}`);
+  };
+  const stopped = new Error("Stop at unsupported native pixel capture");
+  const window = {
+    webContents: {
+      async executeJavaScript() {
+        return { x: 0, y: 0, width: 800, height: 400 };
+      },
+      async capturePage() {
+        events.push("capture");
+        throw stopped;
+      },
+    },
+  } as unknown as BrowserWindow;
+  const run = exerciseResttyImages({
+    window,
+    runEmitter() {
+      runInNewContext(resttyImageEmitterSource(), {
+        process: {
+          argv: ["node", "image-emitter.cjs", "fixture.png"],
+          stdout: {
+            write(data: string) {
+              output.push(data);
+              if (data.includes("\u001b[16t")) pending.push("native");
+              if (data.includes("__RESTTY_IMAGES_SENT__"))
+                events.push("raw marker");
+            },
+          },
+          stdin: { isTTY: false, resume() {}, on() {} },
+        },
+        require(name: string) {
+          if (name !== "node:fs") throw new Error("Unexpected emitter I/O");
+          return { readFileSync: () => Buffer.from("synthetic PNG bytes") };
+        },
+      });
+    },
+    output: () => output.join(""),
+    input: () => evidence.inputs.join(""),
+    size: () => ({ cols: 40, rows: 20 }),
+    cellSize: () =>
+      readResttyImageCellSize(
+        router.deliverOutput,
+        () => evidence.inputs.join(""),
+        waitFor,
+      ),
+    waitFor,
+  });
+  await expect(run).rejects.toMatchObject({ cause: stopped });
+  expect(events).toEqual([
+    "raw marker",
+    "native reply",
+    "native forwarded",
+    "synthetic query",
+    "fixture reply",
+    "capture",
+  ]);
+  expect(nativeWrites).toEqual([{ producer: "native", data: reply }]);
+  expect(evidence.inputs).toEqual([priorReply, reply, reply]);
+  expect(pending).toEqual([]);
 });
 
 const pixels: ResttyImagePixelEvidence = {

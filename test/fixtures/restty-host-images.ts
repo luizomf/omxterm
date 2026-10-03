@@ -181,6 +181,17 @@ export async function exerciseResttyImages(options: {
     throw new Error("Image emitter produced no completion marker", { cause });
   }
 
+  // The raw marker can precede the renderer's native-client reply. Settle it
+  // before a synthetic cell query can claim that reply as its own.
+  await waitFor(
+    () => /\u001b\[6;\d+;\d+t/u.test(input().slice(inputStart)),
+    "CSI 16 t cell-size reply",
+  );
+  const cellSizeResponse = input()
+    .slice(inputStart)
+    .match(/\u001b\[6;\d+;\d+t/u)?.[0];
+  if (!cellSizeResponse) throw new Error("Restty returned no cell-size reply");
+
   const waitForGridChange = async (
     previousGrid: { readonly cols: number; readonly rows: number },
     label: string,
@@ -275,15 +286,6 @@ export async function exerciseResttyImages(options: {
   const restorePixels = await waitForImagePixels(
     "Pi and Chafa images after content restore",
   );
-
-  await waitFor(
-    () => /\u001b\[6;\d+;\d+t/u.test(input().slice(inputStart)),
-    "CSI 16 t cell-size reply",
-  );
-  const cellSizeResponse = input()
-    .slice(inputStart)
-    .match(/\u001b\[6;\d+;\d+t/u)?.[0];
-  if (!cellSizeResponse) throw new Error("Restty returned no cell-size reply");
 
   return {
     cellSizeResponse,
