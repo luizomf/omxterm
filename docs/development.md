@@ -25,22 +25,23 @@ tradeoff and runtime fallback.
 ### Linux
 
 Install Python 3, `make`, a C++ compiler, `patch`, `binutils` for native package
-inspection, `fontconfig` utilities and fixture fonts for exact family validation,
-and XWayland when using a Wayland desktop. For example:
+inspection, `ps` for native fixture process ownership, `fontconfig` utilities
+and fixture fonts for exact family validation, and XWayland when using a Wayland
+desktop. For example:
 
 ```sh
 # Ubuntu
-sudo apt install build-essential python3 patch binutils fontconfig file xwayland fonts-dejavu-core fonts-liberation
+sudo apt install build-essential python3 patch binutils procps fontconfig file xwayland fonts-dejavu-core fonts-liberation
 ```
 
 ```sh
 # Fedora
-sudo dnf install gcc-c++ make python3 patch binutils fontconfig file xorg-x11-server-Xwayland dejavu-sans-fonts dejavu-sans-mono-fonts liberation-mono-fonts
+sudo dnf install gcc-c++ make python3 patch binutils procps-ng fontconfig file xorg-x11-server-Xwayland dejavu-sans-fonts dejavu-sans-mono-fonts liberation-mono-fonts
 ```
 
 ```sh
 # Arch / Omarchy
-sudo pacman -S --needed base-devel python patch binutils fontconfig file xorg-xwayland ttf-dejavu ttf-liberation
+sudo pacman -S --needed base-devel python patch binutils procps-ng fontconfig file xorg-xwayland ttf-dejavu ttf-liberation
 ```
 
 These commands install build/test prerequisites, not Node.js/npm. Use a supported
@@ -131,7 +132,9 @@ nor system `libfuse2`. Normal mounting uses kernel FUSE support;
 
 - Clone with `core.autocrlf=false` to preserve LF formatting and
   `core.symlinks=true` to preserve repository symlinks. Windows Developer Mode
-  enables unprivileged symlink creation.
+  enables unprivileged symlink creation. Enable it before cloning or running the
+  suite as an ordinary user; restoring a clean VM can revert this setting.
+  An elevated test run does not verify the ordinary-user development setup.
 - Install the Visual C++ Redistributable for ARM64. Without it, Electron's
   postinstall can fail with `ERR_DLOPEN_FAILED`. Install native build tools if
   npm cannot find a matching dependency prebuild.
