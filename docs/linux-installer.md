@@ -156,12 +156,25 @@ For blur and other desktop preferences, see the
 
 For an update, verify the new release's two downloads and rerun `install` with its
 AppImage. Repeat `--compatibility` only if you still need it; a normal installation
-resets that choice. Custom desktop-entry edits are replaced. A failed installation
-restores the complete previous installation. If the filesystem also prevents
-restoration, the helper reports **recovery incomplete** and the locations of
-retained original backups. Preserve those backups before retrying or uninstalling;
-resolve the filesystem error and recover the originals from the reported locations.
-The initial installation error remains in the output and exit status.
+resets that choice. Custom desktop-entry edits are replaced.
+
+Once staging begins, failures before replacement completes trigger rollback.
+Invalid input is rejected before replacing installed files. If restoration
+succeeds, the previous installation is restored. If the
+filesystem prevents restoration, the helper reports **recovery incomplete** and
+the locations of retained originals. Preserve those backups before retrying or
+uninstalling; resolve the filesystem error and recover the originals from the
+reported locations. The initial installation error remains in the output and
+exit status.
+
+**Cleanup limitation:** after all three replacements succeed, the helper disables
+rollback and removes staging and old backups. A failure in this final cleanup
+can return a nonzero status even though the new app, icon, and desktop entry are
+already installed. It does not restore the previous installation or provide the
+structured recovery report above; some old backups may already be gone. Check
+the three installed files and the error output before retrying or removing any
+remaining `.omxterm-*-backup.*` directories. Keep a separate copy of the old
+AppImage if you want to be able to return to it.
 
 The install-time mount probe has bounded discovery and TERM/KILL shutdown. A
 shutdown timeout is a failed installation, not a reason to silently install or

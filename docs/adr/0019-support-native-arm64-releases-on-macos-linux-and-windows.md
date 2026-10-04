@@ -1,94 +1,101 @@
 # Support native arm64 releases with automation-first validation
 
-[ADR 0031](0031-keep-linux-installer-choices-small-and-local.md) amends the helper's
-filename and local launch choices beginning after 0.17.0, preserving this record's
-ownership, transaction, trust and native verification requirements.
+## Platforms and artifacts
 
-The initial Supported Platforms are macOS arm64, Linux arm64, and Windows
-arm64. Their initial application-package formats are respectively DMG, AppImage,
-and NSIS. Linux releases also carry an optional, versioned shell helper and
-checksum that install a user-supplied verified AppImage into the current user's
-desktop; this does not add another application-package format. Initial artifacts carry no verified publisher identity: Developer ID
-or equivalent publisher signing, Apple notarization, certificates, and other
-paid signing services are deferred. The macOS application still receives the
-ad-hoc code seal required for internal bundle integrity. Its distribution and
-Gatekeeper policy remains in
-[ADR 0015](0015-publish-tested-unsigned-arm64-releases.md).
+The Supported Platforms are macOS ARM64, Linux ARM64 and Windows ARM64. Native
+package formats are DMG, AppImage and NSIS. Linux releases also provide the
+optional `linux_install.sh` per-user helper and checksum under
+[ADR 0031](0031-keep-linux-installer-choices-small-and-local.md). Direct AppImage
+use remains supported; the helper is not a fourth package format.
 
-Every target is built and verified natively: macOS on Apple Silicon, and Linux
-arm64 and Windows arm64 on native runners or native Parallels VM filesystems,
-never host shared folders. Cross-compilation and build-only evidence do not
-establish Supported Platform behavior.
+Artifacts carry no verified publisher identity. The macOS ad-hoc code seal
+provides bundle integrity, not Developer ID signing or notarization
+([ADR 0015](0015-publish-tested-unsigned-arm64-releases.md)). Windows release
+notes explain SmartScreen's unknown-publisher warning without recommending
+system-wide security changes.
 
-Release validation is automation-first and risk-based. Every exact artifact
-must have passing native package construction, architecture and content
-inspection, version agreement, packaged startup, PTY readiness, and applicable
-behavioral-test evidence. These are separate evidence identities, not a demand
-to replay the entire suite for every release request. Linux automation additionally
-binds the exact helper
-and AppImage to their checksums, exercises transactional per-user install and
-uninstall behavior, and launches the installed result through the extraction
-fallback and through direct kernel-FUSE mounting when that seam is actually
-available. It does not infer a direct-mount pass when the host cannot provide
-one. A release records which product, packaging, security,
-or platform boundaries changed since the previous version and maps each changed
-boundary to that automation.
+Build and verify each target natively: Apple Silicon for macOS, native ARM64
+Linux/Windows runners or VM-native filesystems, not shared folders. A
+cross-build or build-only result does not establish native behavior. x64,
+Intel macOS, additional formats, paid signing and automatic updates remain
+outside current support, not permanently forbidden directions.
 
-Manual validation is optional and is not a release gate. When automation cannot
-reliably observe a changed boundary, the release record marks it unverified.
-Platform security UI, native visual output, desktop-shell integration, and other
-automation-resistant boundaries commonly require this treatment. Missing human
-coverage does not block an otherwise passing exact artifact.
+## Verification and evidence reuse
 
-The maintainer uses the macOS application during ordinary daily work and reports
-problems encountered there. This provides opportunistic product feedback rather
-than a prescribed checklist, exact-artifact test, or promise of manual coverage
-for each change. Linux and Windows rely on native automation followed by
-contributor and user reports; the maintainer does not perform manual validation
-on those platforms. Community testing is welcome, without becoming a scheduled
-release dependency.
+Validation is automation-first and risk-based. Separate behavioral tests,
+native package construction, exact-artifact verification and publication. Each
+artifact needs its own architecture/content/version/startup/PTY evidence and
+checksum identity. Applicable behavioral PASS evidence can be reused only when
+its relevant inputs are known equivalent. Missing provenance prevents reuse,
+not all future release work. The
+[release procedure](../release.md) owns commands and evidence records.
 
-The exhaustive native exercise performed for the initial three-platform 0.4.0
-release remains historical baseline evidence, not a script or coverage promise
-for later versions. This policy accepts unobserved platform-specific risk to
-keep maintenance proportionate for a small, free project without changing the
-three-platform product contract or claiming an independent audit.
+Version-only metadata needs new packages and package/version verification,
+not wholesale behavioral reruns. Non-packaged docs or test/fixture-only changes
+need their affected checks, not native rebuilds of unchanged product bytes.
+Product, dependency and build-input changes invalidate affected steps/platforms;
+unclear impact is handled conservatively. Proven non-artifact changes can
+separate build and tag commits while retaining the original full build SHA and
+digest; retained metadata or changed build recipes are not exempt without proof.
 
-The Linux helper is deliberately narrow: it performs no network or release
-discovery, establishes no trust in downloaded content, and owns only the
-per-user AppImage, hicolor icon, and desktop entry recorded in the product
-contract. Installation resolves kernel-FUSE versus
-`--appimage-extract-and-run` once and commits all three files with rollback;
-uninstall removes only those files. The manual AppImage path remains supported.
+A known FAIL needs diagnosis-supported disposition. A later PASS does not explain
+a historical failure. Disposition can document bounded unresolved risk rather
+than claim a cause that was not established. An audit discrepancy or old evidence
+gap is not automatically a release blocker: establish its relevance to the
+candidate, record the limitation and make the release decision explicitly.
 
-An owner request to prepare and publish a release covers its complete delivery,
-including environment preparation, native verification, tags and uploads. There
-is no separate per-step approval or exact-artifact acceptance interview. The
-agent records the exact artifact identities, verifies them and publishes within
-that scope. Rebuilding changes artifact identity and invalidates previous
-exact-artifact verification, not behavioral PASS evidence whose relevant inputs
-remain identical.
+Manual testing is optional, not a gate. Unobservable boundaries are marked
+unverified: native appearance, desktop/security UI and desktop-shell integration
+commonly fall here. Maintainer macOS dogfooding supplies opportunistic feedback,
+not an exact-artifact checklist. Linux and Windows use native automation and
+subsequent contributor/user reports. Historical initial-release exercises do not
+promise that every later release replayed them.
 
-## Amendment: reuse evidence by relevant inputs (#515)
+### Current Linux verifier coverage
 
-Separate behavioral tests, native package builds, exact-artifact verification
-and publication. Reuse recorded PASS evidence with known equivalent relevant
-inputs; missing provenance fails reuse. Version-only metadata requires fresh
-packages and version/package checks, not wholesale behavioral reruns. Non-packaged
-docs and test-only/fixture-only changes require affected verification, not native
-rebuilds of unchanged product bytes. Product, dependency and build changes
-invalidate affected steps/platforms; unclear impact uses conservative invalidation.
+The package verifier binds the exact helper/AppImage to checksums, installs into
+a fixture home and runs packaged startup through extraction and direct kernel
+FUSE when available. It does not infer direct-mount success when FUSE is absent.
+The verifier removes the fixture installation root recursively after success;
+it **does not invoke the exact helper's `uninstall`**. Source/helper tests cover
+uninstall separately, but this is not exact published-helper uninstall evidence
+(#566). “Full” verifier output must not be read as proof of that absent seam.
 
-Build-to-tag comparison may admit verified non-artifact changes beyond Markdown,
-including proven stripped orchestration metadata, while retaining each artifact's
-original full build SHA and digest. Never treat retained package metadata or
-changed build recipes as non-artifact without proof. A known FAIL still needs a
-diagnosis-supported disposition; later diagnostic passes alone cannot erase it.
-Exact native installer checks, security assertions and cleanup stay mandatory.
-The [release procedure](../release.md) owns the concise commands and record.
+### Historical evidence limitations
 
-The project accepts the cost of maintaining native ARM64 build and automated
-verification environments. x64, Intel macOS, additional package formats,
-publisher signing, notarization, paid CI, and automatic publication are deferred
-rather than rejected. The non-publishing multi-platform automation work is
-tracked separately and must reflect the current ARM64 product contract.
+#566 identifies an unexplained historical Windows Chrome crash and Linux desktop
+records without full tested source SHAs. Those records support only their bounded
+observations. A development version string cannot recover source identity, and
+a later passing run cannot retroactively diagnose the crash. Do not reuse the
+records as exact-build qualification without provenance and relevant disposition;
+this ADR neither claims a fresh failure nor imposes blanket publication blocking.
+
+## Installation and delivery ownership
+
+The Linux helper performs no network discovery or trust establishment. It owns
+only the per-user AppImage, hicolor icon and desktop entry. Staging/replacement
+failures attempt rollback, preserving unrestored originals and reporting recovery
+locations. After all replacements, recovery traps are disabled before cleanup.
+Cleanup failure can return nonzero with the new installation committed and
+without structured recovery reporting; no complete-preservation promise covers
+that post-commit phase. [ADR 0031](0031-keep-linux-installer-choices-small-and-local.md)
+details the current limitation. Uninstall removes only the owned entries and
+preserves unrelated data; removal is not an all-or-nothing transaction.
+
+Windows exact NSIS verification requires an authorized disposable VM, explicit
+CLI opt-in, inspected ownership and cleanup under
+[ADR 0023](0023-verify-exact-nsis-only-in-authorized-disposable-vms.md).
+Unpacked diagnostics remain partial, not an installer substitute.
+
+An owner release request covers environment preparation, native checks, tags,
+uploads and download verification without per-step acceptance interviews.
+Rebuilding creates a new artifact identity and invalidates its exact-artifact
+checks, not unchanged behavioral evidence. Public evidence records the exact
+bytes and limitations; it does not claim independent audit or vendor approval.
+
+## Consequences
+
+Native environments and pinned package/runtime adapters cost maintenance. The
+project accepts bounded platform-specific risk to keep a small free project
+maintainable, without claiming coverage that automation did not execute or
+requiring every historical promise to become future code.

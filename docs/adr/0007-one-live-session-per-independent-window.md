@@ -1,11 +1,10 @@
-# Keep one live session per independent window
+# One live session per window: superseded by tabs
 
-Superseded by [ADR 0016](0016-adopt-tabs-with-one-live-session-per-tab.md):
-after dogfooding invalidated the assumption that tmux would cover
-multiplexing, tabs were adopted with one live session per tab.
+[ADR 0016](0016-adopt-tabs-with-one-live-session-per-tab.md) owns the current
+model: independent windows contain one or more tabs, with one session per tab.
 
-One OMXTerm application process may own several independent Terminal Windows,
-each with exactly one Live Terminal Session. `Cmd+N` creates another window and
-shell, closing a window terminates only its session, and closing the last window
-quits the application; OMXTerm will not add tabs, workspaces, session restoration,
-or a user-facing window manager to this model.
+The earlier one-session-per-window restriction kept the initial release small
+and expected tmux to cover multiplexing. Dogfooding showed that tmux did not
+replace native tabs. The single lifetime-owner principle survives, now at the
+tab boundary. The old prohibition of tabs and other future capabilities is not
+current guidance; Git retains the original decision.

@@ -1,5 +1,14 @@
 # #416: Linux transparent-window native resizing
 
+## Status
+
+Historical #416 candidate qualification. Electron 43.4.1 was subsequently
+integrated and shipped in [0.17.0](../releases/0.17.0.md); the current dependency
+is Electron 43.7.7. The results below apply to the recorded runtime pair and
+candidate, not a new run or exact-current-build qualification. Current
+platform/release guidance lives in the [spec](../spec.md) and
+[release procedure](../release.md).
+
 ## Candidate and upstream correction
 
 This dependency-only candidate starts from
@@ -164,5 +173,7 @@ excluded. Before/after-resize and hide/show pairs are valid, and state guards we
 qualified separately without the backdrop. Existing context isolation and disabled
 Node integration were observed; OS sandbox enforcement is not claimed on Linux.
 
-This is not a shipped fix, release, macOS/Windows qualification, or integration of
-#415. Cross-platform qualification and independent review remain separate.
+This experiment itself was not a release, macOS/Windows qualification, or
+integration of #415. Subsequent shipping and cross-platform release evidence are
+recorded separately in [0.17.0](../releases/0.17.0.md); these candidate observations
+are not substituted for that evidence.

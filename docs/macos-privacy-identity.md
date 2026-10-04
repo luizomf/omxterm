@@ -1,9 +1,11 @@
 # macOS privacy permissions across development builds
 
 Investigation and proposal for [#286](https://github.com/luizomf/omxterm/issues/286).
-This is not an adopted signing policy or a promise of permission retention.
-Packaging remains ad-hoc, without Developer ID signing or notarization, under
-[ADR 0015](adr/0015-publish-tested-unsigned-arm64-releases.md).
+The observations below are historical experiments, not current-build
+qualification, an adopted signing policy or a promise of permission retention.
+There is no supported private-certificate build mode in the current packaging
+configuration. Packaging remains ad-hoc, without Developer ID signing or
+notarization, under [ADR 0015](adr/0015-publish-tested-unsigned-arm64-releases.md).
 
 ## Finding and recommendation
 

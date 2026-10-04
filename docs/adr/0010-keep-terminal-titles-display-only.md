@@ -6,7 +6,7 @@ requested title is untrusted Terminal Payload: OMXTerm accepts only printable
 single-line text, removes control and invisible bidirectional formatting
 characters, and rejects a request longer than 256 Unicode code points instead
 of truncating it. This bound is applied to the raw parsed request before
-sanitization. Under the later tab decision in ADR 0016, an empty or invalid
+sanitization. Under the tab model in ADR 0016, an empty or invalid
 request restores that Live Terminal Session's starting-shell basename; the
 native Terminal Window uses `OMXTerm` only as its final fallback when no session
 is selected.

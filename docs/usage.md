@@ -52,8 +52,12 @@ window closes.
 Close Tab confirmation applies only to its original tab. If that session exits
 while the question is open, approving it leaves the surviving tabs alone.
 
-Typing `exit` does not close another tab that is still initializing. You can
-close an initializing tab without starting its shell. A session failure dialog
+Typing `exit` does not close another tab that is still initializing. After the
+window's first tab is ready, Close Tab can cancel a later initializing tab
+without starting its shell. **During the first tab's initialization, Close Tab
+can be lost**, and the shell may still start. Use **Close Window** or **Quit**
+to cancel that first startup, or wait for readiness and close the tab again.
+A session failure dialog
 stays open for acknowledgement even if another shell exits meanwhile.
 Acknowledging one failure leaves other pending failures and usable or initializing
 tabs alone. You can still explicitly close the window or quit the app.
@@ -305,7 +309,10 @@ Run `:set belloff=all` in Vim. To keep it, add `set belloff=all` to your `.vimrc
 ### Configuration changes do not appear
 
 Save `config.json`, then choose **View → Reload User Configuration**. If an error
-appears, fix it and reload; the previous settings stay active until then.
+identifies invalid JSON or a setting, fix it and reload; validation rejection
+keeps the previous settings active. An unexpected failure while applying valid
+settings can leave changes partly applied despite a retained-settings notice.
+Save work and restart in that case. See the [reload limitations](configuration.md#reloading-user-configuration).
 
 - Check the [file location](configuration.md#create-the-configuration-directory)
   and make sure the filename is `config.json`, not `config.json.txt`.
@@ -318,12 +325,31 @@ appears, fix it and reload; the previous settings stay active until then.
 See [reload details](configuration.md#reloading-user-configuration) or
 [theme troubleshooting](configuration.md#theme-troubleshooting) for more help.
 
+### The snippets sidebar hides the terminal
+
+The sidebar takes a fixed 280 px of width; the minimum window size does not
+account for it. Enlarge the window or use **View → Toggle Snippets** to hide it.
+Large left/right padding makes this more noticeable; reduce it in your settings
+if needed. The sidebar does not intentionally close your session.
+
+### A terminal program misplaces output
+
+Cursor-position replies can disagree with the rendered cursor after wide or
+combining characters, or after resizing at a wrap boundary. Programs that query
+the position may therefore lay out output incorrectly. This is a known terminal
+compatibility limitation, not a font-setting error. Include a small synthetic
+example and whether resizing was involved when reporting it.
+
 ### The renderer cannot start
 
 OMXTerm needs **WebGL2**, the graphics capability that draws the terminal. If
 initialization fails, it shows an error before starting the shell. On Linux,
 try the desktop helper's [graphics compatibility mode](linux-installer.md#only-if-graphics-fail).
+If it happened during a font-family reload, see the
+[pending-font limitation](configuration.md#reloading-user-configuration) instead.
 For a report, include your system, GPU or virtual machine if known, and the error.
+Font read errors can include local filesystem paths in diagnostics; redact them
+before sharing.
 
 ### macOS asks for file access again after an update
 

@@ -1,35 +1,49 @@
 # Keep user configuration strict and non-mutating
 
 OMXTerm rejects missing or unsupported schema versions, unknown keys, invalid
-JSON, and invalid values with precise errors. It leaves the user's file untouched
-and does not ignore input, migrate the document, rewrite it, or invent a repair.
+JSON and invalid values with precise errors. It does not migrate, repair,
+rewrite or silently ignore an existing user document.
 
-The 0.2.0 amendment allows startup to continue after rejection because OMXTerm
-may be the terminal used to repair the file. In that case, the application uses
-its built-in defaults and presents the precise problem in a persistent,
-non-blocking error surface. The fallback is a clean default configuration, never
-a guessed repair or a previously persisted configuration. Strict validation and
-the non-mutating file boundary remain unchanged.
+## Startup and manual reload
 
-The manual User Configuration Reload amendment reuses the complete startup
-validation boundary. A running application already has a valid in-memory
-configuration, so a rejected reload keeps that configuration active and reports
-the new problem. A valid reload replaces it atomically. This runtime state is not
-a persisted cache. Removing `config.json` selects the valid all-defaults state
-on reload, just as it does at startup. Reload still does not write, repair, or partially apply the document.
+Startup continues after configuration rejection because OMXTerm may be the
+terminal used to repair the file. Invalid configuration selects clean built-in
+defaults; an invalid selected theme uses bundled `omtheme` while retaining the
+other validated preferences. The persistent non-blocking error surface reports
+the problem. This is not a guessed repair or persisted last-good cache.
 
-## Initial configuration kit amendment
+Manual User Configuration Reload reuses complete startup validation and
+serializes requests. Validation/load rejection before application retains the
+last valid in-memory settings and reports the current problem. A successful
+load publishes a whole snapshot, then applies consumers synchronously. Removing
+`config.json` selects defaults; manual reload does not seed files.
 
-Application startup may seed absent user files with built-in defaults. An
-existing `config.json` entry opts out of the entire kit, even if invalid or a
-dangling symlink. Otherwise startup creates a default configuration, a
-non-executing snippet example and `themes/omtheme.json`, preserving all existing
-files. Complete files are published without replacement, with configuration
-last. Creation errors are non-blocking notices; normal loading continues.
-Manual reload never seeds files. User documents are never repaired or migrated.
+**Current application-failure limitation:** publication and log-level change
+precede consumer application, whose steps run sequentially. If a consumer
+throws, the rejection path keeps the newly published configuration and does not
+undo already applied native/renderer/menu effects. The displayed claim that the
+last configuration was retained can be false (#566). Complete validation is not
+transactional rollback of side effects. An injected consumer exception confirms
+this conditional incoherence, but #566 established no ordinary production throw
+trigger. It is not an intentional partial-configuration mode or a commitment to
+implement distributed rollback. Restart after fixing the cause reestablishes a
+startup snapshot; application-time exceptions have no rollback guarantee.
 
-This happens on first opening rather than installation: DMG copying and direct
-AppImage use offer no common installer execution point. Runtime creation uses
-the existing XDG resolution under the actual user's account on all platforms.
-The external theme copy becomes user-owned and is not upgraded automatically.
-No theme discovery UI or automatic reload is introduced.
+Creation-time family and line-height behavior and the pending font-acquisition
+race are described in
+[ADR 0025](0025-stage-restty-behind-an-unpackaged-opt-in.md).
+
+## Initial configuration kit
+
+Startup may seed absent files with built-in defaults. An existing `config.json`
+entry opts out of the entire kit, even if invalid or a dangling symlink.
+Otherwise startup creates configuration, a non-executing snippet example and
+`themes/omtheme.json`, preserving existing siblings. Complete files are published
+without replacement, configuration last. Creation errors are non-blocking
+notices; normal loading continues. Documents are never repaired or migrated.
+
+Creation happens at application opening, not installation: DMG copying and
+direct AppImage use have no common installer execution point. The same XDG
+resolution runs as the actual user on all platforms. The theme copy becomes
+user-owned and is not upgraded automatically. No theme discovery UI or file
+watching is introduced.

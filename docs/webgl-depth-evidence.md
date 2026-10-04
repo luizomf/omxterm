@@ -2,8 +2,9 @@
 
 ## Conclusion and scope
 
-**Adopt `depth:false`**, based on observed removal of an unused default depth
-attachment with preserved real rendering. **No measured RAM-saving claim.**
+Production retains `depth:false`, adopted after this historical comparison
+observed removal of an unused default depth attachment with preserved real
+rendering. **No measured RAM-saving claim.**
 GPU-process working-set differences are small, order-dependent observations, not
 an attribution of physical storage to the attachment. No arithmetic allocation
 estimate is used to justify adoption.
@@ -203,8 +204,9 @@ Historical #317 candidate checks on the recorded host passed:
   mounted-DMG verification, owner acceptance, publication or Linux/Windows
   native qualification.
 
-Logs are retained in `.scratch/`: `lint-final.log`, `check-portable.log`,
+The historical candidate recorded local logs in `.scratch/`: `lint-final.log`, `check-portable.log`,
 `npm-ci-final.log`, `idempotence-first.log`, `idempotence-second.log`,
 `package-mac.log`, `package-verify.log`, `issue-317-original.log`,
-`issue-317-disabled.log`, `depth-red.log` and `depth-green.log`. The coordinator
-owns artifact collection, independent review, delivery and cleanup.
+`issue-317-disabled.log`, `depth-red.log` and `depth-green.log`. Those paths are
+historical retention locations, not a claim that they exist in a fresh checkout
+or that delivery remains pending.

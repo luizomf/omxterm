@@ -27,8 +27,11 @@ PTY ownership remain unchanged. No new shell or executable wrapper is inserted.
 
 Main translates only that boolean into a fixed optional `startupFailed: true`
 exit field. Strict preload validation preserves it; renderer tab ownership waits
-for the native failure acknowledgement just as for unexpected signals. Main
-classifies the Operational Event as `spawn-failure` with null code and uses the
+for the native failure acknowledgement just as for unexpected signals. The
+conditional exit-send notification gap is described in
+[ADR 0016](0016-adopt-tabs-with-one-live-session-per-tab.md#session-ownership-and-lifecycle);
+it has no established native production trigger. Main classifies the Operational
+Event as `spawn-failure` with null code and uses the
 existing fixed spawn dialog. Successfully executed programs returning nonzero
 retain ordinary exit semantics. Requested close and rendering-failure precedence
 remain unchanged. Native exit, not the status byte or kill request, still releases

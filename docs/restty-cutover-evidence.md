@@ -1,8 +1,12 @@
 # Restty cutover evidence map
 
-This map records the regression ownership retained at the final Restty-only
-cutover. It is not a release-acceptance record; native artifact identities and
-results belong to the final verification report for their exact source commit.
+This historical map records regression ownership at the final Restty-only
+cutover. Restty remains the sole Surface; the temporary selector and xterm
+renderer are not supported modes. The map identifies regression seams, not
+proof that every contract edge is covered or a current release-acceptance record.
+Native artifact identities and results belong to the release record for their
+exact source commit. Use the [spec](spec.md) and
+[Restty development guide](restty-development.md) for current behavior and commands.
 
 ## Integrated migration slices
 

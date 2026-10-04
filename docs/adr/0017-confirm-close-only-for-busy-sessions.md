@@ -1,12 +1,16 @@
 # Confirm close only for Busy Sessions
 
-Amends the `confirmClose` consequence of [ADR 0016](0016-adopt-tabs-with-one-live-session-per-tab.md).
+Defines close confirmation for the tab lifecycle in
+[ADR 0016](0016-adopt-tabs-with-one-live-session-per-tab.md).
 
 `confirmClose` keeps guarding closing a tab, closing a window, and quitting
 with one confirmation per action, but a close action now asks only when an
-affected Live Terminal Session is a Busy Session: its PTY foreground process
-is not the idle Default Shell. Closing only idle sessions proceeds without a
-dialog. Quit asks when any open session is Busy.
+affected Live Terminal Session is a Busy Session: an explicit command, any live
+Windows session, or a Unix session whose PTY foreground name differs from the
+idle Default Shell or cannot be read. ConPTY reports a static console title,
+not a foreground name, so Windows deliberately asks for all live sessions.
+Closing only idle Unix Default Shell sessions proceeds without a dialog. Quit
+asks when any open session is Busy.
 
 The pre-tab contract said OMXTerm "does not inspect child processes to guess
 whether closing is safe" and asked every time. With one session per window

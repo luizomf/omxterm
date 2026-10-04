@@ -5,7 +5,10 @@ are distributed in the application resources directory:
 `OMXTerm.app/Contents/Resources` on macOS and `resources` in the packaged Linux
 and Windows application layouts. Direct dependency versions are locked in
 `package-lock.json`; exact versions of code bundled inside a dependency are
-identified below.
+identified below. Restty and its Ghostty core include OMXTerm's local runtime
+and core corrections; upstream pins and tracked patch provenance are recorded
+in the repository's `assets/restty-sources.json`. Those corrections
+do not remove the upstream attribution.
 
 | Component                                              | License                         | Packaged notice                    |
 | ------------------------------------------------------ | ------------------------------- | ---------------------------------- |

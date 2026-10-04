@@ -1,6 +1,6 @@
 # Prefer direct macOS background blur with a bounded native adapter
 
-Issue #415 explicitly reopens the macOS material-only/no-addon choice in
+The macOS effect adapter implements the background ownership in
 [ADR 0029](0029-compose-background-effects-with-explicit-cell-identity.md).
 The owner preferred an isolated direct-blur prototype over material vibrancy:
 wallpaper's pink/purple detail survived better at equal renderer opacity.

@@ -128,7 +128,8 @@ separate and optional.
   colors, shortcuts, and more.
 - [OMXTerm Studio](https://luizomf.github.io/omxterm-studio/) — edit settings and
   themes visually, then [apply your files](docs/configuration.md#edit-visually-with-omxterm-studio).
-- [Everyday use](docs/usage.md) — all shortcuts, images, paste, and troubleshooting.
+- [Everyday use](docs/usage.md) — all shortcuts, images, paste, and troubleshooting,
+  including current startup, sidebar, and terminal-compatibility limitations.
 
 ## Updating or uninstalling
 

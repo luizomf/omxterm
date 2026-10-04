@@ -3,12 +3,11 @@
 OMXTerm provides a Local Image Preview for one native-picker selection, one
 literal visible authority-free absolute `file:///` URL, or one unambiguous
 native path reference activated with the platform's existing modified-link
-gesture. Issue #439 deliberately reopens the original absolute-only/unquoted
-choice: absolute POSIX and Windows drive-qualified paths remain supported, with
-matching single/double quote wrappers, local `~`/`~/...`, and explicit relative
-references. This is an expansion of intentional exclusions, not a historical
-regression. Relative references begin `./` or `../` (also backslashes on Windows)
-or end in a `.png`, `.jpg`, `.jpeg` or `.webp` image name. Main opens a native base
+gesture. Supported references include absolute POSIX and Windows
+drive-qualified paths, matching single/double quote wrappers, local `~`/`~/...`
+and explicit relative references. Relative references begin `./` or `../`
+(also backslashes on Windows) or end in a `.png`, `.jpg`, `.jpeg` or `.webp`
+image name. Main opens a native base
 directory picker at local home for every relative activation; only an explicit
 selection is the base, and cancellation is inert. No cwd is inferred from an
 agent, shell, process, startup directory or output. No base is persisted. `..`
@@ -31,14 +30,13 @@ request opens a non-shell file descriptor, requires a
 bounded regular file, reads one descriptor coherently, rejects an observed size
 change while reading, and accepts only structurally valid, natively decodable
 static PNG or JPEG content. The
-limits are 64 MiB encoded, 8192 pixels per side, and 32 million pixels, inclusive.
-Issue #494 deliberately expands capacity to cover ordinary high-resolution images
-without changing the loader/bridge/overlay architecture or resizing source files.
-Native validation and renderer decoding remain separate and can add transient
-encoded/decoded copies, IPC and GPU costs; these bounds are not a total RSS budget.
-Native display, latency, peak process-memory and settled repeated-cycle observations
-qualify the policy on Supported Platforms. A reproducible reliability failure calls
-for a concrete blocker and smallest remedy, not silently reduced capacity. PNG
+limits are 64 MiB encoded, 8192 pixels per side, and 32 million pixels, inclusive,
+covering ordinary high-resolution images without resizing source files. Native
+validation and renderer decoding remain separate and can add transient
+encoded/decoded copies, IPC and GPU costs; these bounds are not a total RSS
+budget. Native display, latency and repeated-cycle observations are bounded
+evidence, not a guarantee for every accepted file, GPU or desktop. Reproducible
+reliability failures need focused diagnosis, not silently reduced limits. PNG
 animation metadata is rejected; filename extension is never evidence of format.
 Closing the owner aborts picker continuation and makes later read results inert.
 No path or payload enters Operational Events.
@@ -67,12 +65,12 @@ literal `file:///` span and native absolute path token alongside HTTP(S),
 preserving soft-wrap proof and modified-click precedence over application mouse
 reporting. References begin at a line boundary or after whitespace. A complete
 non-whitespace token or one matching pair of quotes (including spaces) is
-recognized without shell evaluation or escape decoding. Issue #467 deliberately
-reopens the quoted-only spaces rule for an absolute PNG/JPEG path printed alone
-on its complete logical line. The first character must begin an absolute path,
+recognized without shell evaluation or escape decoding. An unquoted absolute
+PNG/JPEG path with spaces is also recognized when printed alone on its complete
+logical line. The first character must begin an absolute path,
 and the line must end in `.png`, `.jpg` or `.jpeg` (case-insensitive), optionally
 with the existing positive location suffix. Only ASCII spaces are accepted in
-this new unquoted form, without trailing spaces. An earlier image-extension token
+this unquoted form, without trailing spaces. An earlier image-extension token
 followed by spaces or a space-separated new absolute, home, dot-relative, quoted
 or HTTP(S)/`file:///` reference prevents the whole-line match (including bare `~`
 followed by another token). Existing token/quoted
@@ -81,12 +79,11 @@ recognition and producer hard-line concatenation are not added. This is a
 conservative lexical cue, not a filesystem search or proof of image format.
 Use quotes or the picker for filenames that do not fit it.
 
-The native #467 reproduction also found a supported soft-wrap defect: a literal
-space in the last physical column was trimmed before continuity lookup, so the
-activated reference stopped at that row and the real reader failed on its
-prefix. The checksum-guarded runtime now retains physical-row-end spaces only
-when core selection text proves that those exact cells continue without a hard
-break. The same reconstructed text drives offsets, hover cells and activation;
+The checksum-guarded runtime retains physical-row-end spaces only when core
+selection text proves that those exact cells continue without a hard break. This
+prevents activation of a truncated prefix when a literal space ends a physical
+row (#467). The same reconstructed text drives offsets, hover cells and
+activation;
 no arbitrary line joining or new parser is introduced. Literal final-row spaces
 remain distinct from blank cell padding rather than disappearing before the
 whole-line exclusion. Uncertain continuity at a concealed viewport edge is
@@ -107,7 +104,7 @@ bounds and owner-lifetime checks, including before a fallback read.
 Main independently validates the complete reference, resolved absolute local
 path and content; recognition is neither authorization nor format proof.
 
-Actual WebP support is explicitly deferred by the #439 maintainer decision.
+Actual WebP content is currently unsupported.
 An extension is not format evidence: PNG bytes named `.webp` remain PNG, while
 actual WebP receives a fixed unsupported-format error distinct from an unavailable
 file. The renderer displays only fixed safe errors, never native error details.

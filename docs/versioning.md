@@ -6,7 +6,7 @@ versions. A release number has the form `MAJOR.MINOR.PATCH`, and its Git tag add
 
 The latest published version is **0.20.1**; its
 [release record](releases/0.20.1.md) identifies the immutable exact artifacts,
-completed native verification and verified post-upload downloads. The source
+recorded native verification results and limits, and verified post-upload downloads. The source
 tree now carries **0.20.2-dev.0**, the next-patch development baseline.
 This is not a published release and does not change the 0.20.1 tag, assets or
 release body.
@@ -24,6 +24,11 @@ behavior defined by [`docs/spec.md`](spec.md), including:
 - User Configuration and Terminal Theme schemas;
 - security, privacy, IPC, filesystem, clipboard, and network boundaries;
 - supported platform and published Release Artifact expectations.
+
+The spec and ADRs evolve with the product; earlier text remains in Git. Correcting
+an inaccurate description of unchanged code is documentation maintenance, not an
+intentional compatibility break or a requirement to implement the former text.
+An actual user-visible behavior change still follows the version rules below.
 
 Implementation details that do not change this contract are not public API.
 The configuration and theme schema versions are independent data-format
@@ -109,10 +114,13 @@ release in the same minor series.
 
 ## Release integrity
 
-Published versions are immutable. Never move an existing release tag, replace
-an attachment under the same version, or silently edit the meaning of a
-published version. A correction requires a new version and new exact-artifact
-verification.
+Published tags and artifact bytes are immutable. Never move an existing release
+tag or replace an attachment under the same version. A product/artifact correction
+requires a new version and new exact-artifact verification. Documentation, ADRs
+and release evidence can be corrected without rebuilding unchanged artifacts or
+publishing a new version. State what was corrected and retain the actual artifact
+identities, failures and evidence limits; a prose correction is not a retrospective
+verification pass.
 
 Release notes must identify:
 

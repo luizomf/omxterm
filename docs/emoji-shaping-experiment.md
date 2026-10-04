@@ -1,5 +1,13 @@
 # Apple emoji shaping-input comparison (#314)
 
+## Status
+
+Historical macOS comparison for #314; the measurements below are unchanged.
+The compact Apple emoji shaping-input reader remains in production. Current
+experiment commands collect new evidence with today's inputs, not a replay or
+qualification of the recorded candidate. Current product and release guidance
+live in the [spec](spec.md) and [release procedure](release.md).
+
 ## Conclusion
 
 The compact-input hypothesis is supported on the measured macOS host. Removing
@@ -45,12 +53,10 @@ Electron 43.1.1, Chromium 150.0.7871.114, Electron Node 24.18.0, V8
 unchanged lockfile: Restty 0.3.0, text-shaper 0.1.28, and the corrected runtime
 and Ghostty core documented in `restty-development.md`. The runtime probe checks
 the corrected chunk SHA-256 before injecting counters and fails on seam drift.
-The guard now includes the later [depth-only correction](webgl-depth-evidence.md).
-Historical emoji observations below are unchanged; #317 did not rerun unrelated
-emoji trials or change font inputs. The current guard also includes #338's
-configured-style selection correction; its native font tests do not constitute
-a rerun of this historical emoji comparison. The active probe guard also includes
-#522's native scrollbar spacer-clamp suppression. A headless regression executes
+The current runtime guard follows the checksum-guarded preparation in
+`scripts/prepare-restty-runtime.mjs`, including corrections made after this
+comparison. Updating that guard and passing later native font tests do not
+constitute a rerun of the historical emoji trials. A headless regression executes
 the actual driver and all probe transforms against those prepared bytes, with
 external font/parser/filesystem/build/Electron I/O controlled. It checks syntax
 and rejects drift and the previous prepared runtime; it does not rerun this
@@ -211,8 +217,9 @@ retained locally; no test or lint rule was disabled.
 
 This is a macOS native experiment, not exact-package acceptance. Linux/Windows
 native packaging and other Apple font versions were not run. A non-collection
-or no-`sbix` Apple font keeps the whole-file path. Future parser/renderer changes
-must rerun this comparison before extending the omission assumption. The
-fixture does not measure a shell, multi-window totals, user sessions, exhaustive
-fonts/emoji, GPU/IOSurface memory, or a release artifact. Independent review,
-PR, squash integration and issue closure remain coordinator-owned gates.
+or no-`sbix` Apple font keeps the whole-file path. Relevant parser/renderer or
+Apple font-input changes need new evidence before extending this omission
+assumption; the historical pair does not qualify them. The fixture does not
+measure a shell, multi-window totals, user sessions, exhaustive
+fonts/emoji, GPU/IOSurface memory, or a release artifact. This record does not
+establish any outstanding delivery or release gate.

@@ -28,9 +28,13 @@ links and copy destinations. Back up first: copying a set replaces preferences.
 | Give feedback or contribute                   | [Contributing](../CONTRIBUTING.md)                                                                                                                                                                                          |
 | Report a vulnerability privately              | [Security policy](../SECURITY.md)                                                                                                                                                                                           |
 
-The guides follow the current source. [Release notes](releases/) record what
-shipped in each version; the [README](../README.md#platforms-and-downloads) links
-to the latest download.
+The guides describe current source behavior, including practical limitations in
+[troubleshooting](usage.md#troubleshooting), [configuration reload](configuration.md#reloading-user-configuration),
+and [Linux installer recovery](linux-installer.md#update-help-and-uninstall).
+Specifications, contracts, and ADRs are maintained alongside the product, not
+immutable promises of future implementation. [Release notes](releases/README.md) record
+what shipped in each version; the [README](../README.md#platforms-and-downloads)
+links to the latest download.
 
 For GNOME, KDE Plasma, Hyprland, and VM graphics setup, see
 [Linux desktop tips](quick-start/linux-desktop.md).
@@ -48,7 +52,8 @@ For GNOME, KDE Plasma, Hyprland, and VM graphics setup, see
 <details>
 <summary>Past technical investigations</summary>
 
-Measurements here describe the recorded builds and environments:
+Measurements here describe the recorded builds and environments; the
+[evidence inventory](evidence/README.md) explains their provenance and limits.
 
 - [Restty migration](restty-cutover-evidence.md)
 - [Emoji shaping and memory](emoji-shaping-experiment.md)

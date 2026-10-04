@@ -12,13 +12,23 @@ PTY Adapter.
   progress or a destructive consequence needs authorization.
 - Prefer the smallest complete solution and existing tools. Inspect repository
   state yourself and report blockers with evidence and a recommended next step.
+- Carry the maintainer's actual request into plans, issues and delegated prompts.
+  Do not add unrequested restrictions, work or approval gates.
 
 ## Context
 
-- Before changing behavior, read `docs/spec.md`, `CONTEXT.md`, relevant
-  `docs/adr/` decisions and the issue. Keep the spec and user guides current;
-  record durable architectural decisions in an ADR and explain conflicts with
-  accepted decisions.
+- Read `docs/spec.md`, `CONTEXT.md`, relevant `docs/adr/` decisions and the issue
+  for context. Documentation, specs, ADRs and contracts evolve with the product;
+  none is immutable. A documentation reconciliation request includes correcting
+  those documents, not only user guides. Replace obsolete or contradictory
+  guidance with the current decision and rationale; Git preserves prior text.
+- Describe implemented behavior and limitations accurately. Separate supported
+  code bugs from documentation drift into focused follow-up issues, with affected
+  platforms and evidence limits. An old promise, audit finding or historical
+  evidence gap is not automatically a requirement to change code or block a
+  release. State a concrete impact and relevance when recommending a blocker.
+- Keep code fixes bounded to one problem and its affected platform(s), rather
+  than turning a broad documentation audit into a single implementation task.
 - GitHub: `luizomf/omxterm`. Tracker operations, labels and domain references live
   in `docs/agents/`; read them when needed.
 - `CONTRIBUTING.md` covers contribution and checks. `docs/development.md` covers
@@ -57,8 +67,10 @@ PTY Adapter.
   native/packaging evidence; reuse recorded PASS steps with unchanged relevant
   inputs under `docs/release.md`. Run affected tests for test/fixture changes,
   not unrelated native rebuilds. For docs, formatting and diff checks suffice;
-  verify changed links and examples. State unavailable checks. A known FAIL needs
-  diagnosis-supported disposition, not merely a later pass or weaker assertion.
+  verify changed links and examples. State unavailable checks. Retain observed
+  failures and assess their relevance to the current candidate. An applicable
+  FAIL needs a diagnosis-supported disposition; a later pass does not erase it,
+  and a historical failure is not automatically a blocker for unrelated work.
 - Review the final diff for unrelated changes, generated files and private data.
   Keep credentials, local configuration, terminal/clipboard contents and session
   transcripts out of commits and public evidence.

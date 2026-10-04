@@ -1,7 +1,10 @@
 # OMXTerm product contract
 
-This document is the maintained normative contract for current observable
-OMXTerm product behavior.
+This document describes current observable OMXTerm product behavior and its
+known limitations. It evolves with the implementation; earlier specification
+text is not an immutable promise of future work. A documented defect remains a
+defect, not a desirable behavior. Native execution and release qualification
+claims require separate evidence; this contract alone supplies none.
 
 ## Product
 
@@ -29,37 +32,38 @@ than current support commitments.
 
 ## Product scope
 
-OMXTerm must:
+OMXTerm:
 
-- open the Default Shell in the user's home directory: on macOS and Linux the
+- opens the Default Shell in the user's home directory: on macOS and Linux the
   operating-system-configured shell as an interactive login shell; on Windows,
   which has no login-shell concept, a configured `windowsShell` executable when
   present, otherwise Windows PowerShell — falling back to the ComSpec command
   processor — started interactively without a login flag; or,
-  when startup includes `-e <program> [arguments...]`, run that executable and
+  when startup includes `-e <program> [arguments...]`, runs that executable and
   literal argument vector directly in the first Terminal Tab without an
   implicit shell;
-- remain compatible with ordinary shells, SSH started by the user, tmux, TUIs,
-  REPLs, alternate-screen applications, Unicode, and bracketed paste, rendering
-  emoji-presentation and ZWJ grapheme clusters as single two-column cells that
-  do not overlap neighboring cells;
-- use one independent shell session per Terminal Tab, with one or more tabs
+- provides a terminal targeting ordinary shells, SSH started by the user, tmux,
+  TUIs, REPLs, alternate-screen applications, Unicode, and bracketed paste, with
+  the protocol limitations documented below; it renders emoji-presentation and
+  ZWJ grapheme clusters as single two-column cells that do not overlap neighboring
+  cells;
+- uses one independent shell session per Terminal Tab, with one or more tabs
   per native Terminal Window;
-- provide native new-window, new-tab, close, copy, paste, select-all, zoom,
+- provides native new-window, new-tab, close, copy, paste, select-all, zoom,
   fullscreen, always-on-top, bounded local-image preview, and quit actions
   without an in-window toolbar;
-- render the bundled [`omtheme`](omtheme.json) palette by default, allow one
-  explicitly configured external Terminal Theme, keep SGR bold text on its
+- renders the bundled [`omtheme`](omtheme.json) palette by default, allows one
+  explicitly configured external Terminal Theme, keeps SGR bold text on its
   requested ANSI `0–7` color without remapping it to bright `8–15` (applications
-  may request bright colors explicitly), and use bundled regular and bold
+  may request bright colors explicitly), and uses bundled regular and bold
   FiraCode Nerd Font Mono as the default, followed by bundled regular and bold
   DejaVu Sans Mono, the retained JetBrainsMono Nerd Font Mono, and representative
   operating-system emoji/CJK/symbol faces for missing-glyph coverage;
-- use the accepted black-and-blue OMXTerm application icon in development and
+- uses the accepted black-and-blue OMXTerm application icon in development and
   on the packaged macOS Dock, Finder, application-switcher, and DMG surfaces;
-- read strict, versioned JSON configuration and write bounded local JSONL
+- reads strict, versioned JSON configuration and writes bounded local JSONL
   operational logs;
-- package ready-to-run arm64 artifacts from an accepted version: DMG for
+- packages ready-to-run arm64 artifacts from an accepted version: DMG for
   macOS, AppImage for Linux, and NSIS for Windows. Linux releases additionally
   provide an optional versioned per-user AppImage desktop installer and its
   checksum; running the AppImage directly remains supported.
@@ -123,7 +127,13 @@ succeeds (ADR 0025).
   if that tab has already ended. Repeated requests during that confirmation
   share the same decision, even if the selected session becomes idle.
   Closing a window's last tab closes
-  that window. Close Window defaults to `Cmd+Shift+W` on macOS and
+  that window. During the first tab's initialization, however, the renderer has
+  not yet subscribed to tab commands: an early Close Tab or New Tab command can
+  be lost rather than queued. Clipboard, zoom, tab-bar and snippets actions also
+  subscribe only after that readiness; earlier notifications are not buffered.
+  Close Window and Quit use separate main-owned paths and can still cancel
+  initialization. Close Window defaults to
+  `Cmd+Shift+W` on macOS and
   `Ctrl+Shift+Q` on Linux and Windows and closes all of the selected window's tabs. Closing
   the last window quits OMXTerm.
 - Quit defaults to `Cmd+Q` on macOS and `Ctrl+Alt+Shift+Q` on Linux and
@@ -180,6 +190,12 @@ succeeds (ADR 0025).
   failed tab; automatic window closure waits for both an empty renderer tab owner
   and every pending failure acknowledgement. Explicit authorized window closure
   and Quit remain separate, and late dialog results cannot act on disposed owners.
+  A source-level exception path remains: the controller sends the exit IPC event
+  before notifying main's failure lifecycle and recording `pty.exit`. If that
+  send throws for a live controller, those later notifications are skipped while
+  the session reference is retired. No native transport trigger for this path
+  has been established; it is not evidence of a broken native shutdown drain,
+  whose completion is recorded independently before the controller callback.
 - Each window starts at configured font size. Window Font Zoom defaults to
   `Cmd++`, `Cmd+-`, and `Cmd+0` on macOS and `Ctrl++`, `Ctrl+-`, and `Ctrl+0`
   on Linux and Windows; it affects only that window, applies to every tab in
@@ -192,8 +208,9 @@ succeeds (ADR 0025).
   actual native exit notification used for session completion.
 - The Terminal Surface and Live Terminal Session grid refit in both directions
   after Terminal Window width or height changes, after Window Font Zoom, and
-  after tab selection. The grid remains inside the visible content area with
-  its bottom row visible. Hiding a Terminal Tab preserves its last real grid;
+  after tab selection. With sufficient content space, the grid fits inside the
+  visible content area with its bottom row visible. Hiding a Terminal Tab
+  preserves its last real grid;
   a hidden layout box or hidden font change must not resize the Surface or PTY
   using concealed geometry. Hidden Terminal Surfaces, including mounts completing
   while hidden, perform no frame clears, draws or render uploads. They continue
@@ -202,8 +219,14 @@ succeeds (ADR 0025).
   content and cursor before the first visible presentation, without a background
   render-budget delay or replacing the Surface, core or Live Terminal Session.
 - Native windows have minimum dimensions of 320 px wide by 200 px high. At
-  startup and after a valid reload, either minimum grows when the configured font
-  or padding requires more room for a visible terminal grid.
+  startup and after a valid reload, main grows those bounds using configured
+  font metrics, line height, padding, a scrollbar allowance, and title space.
+  The calculation reserves two columns and one row but does not include the
+  Snippets Sidebar or tab-strip space, creation-time fonts retained by older
+  Surfaces, or ephemeral Window Font Zoom. It therefore does not guarantee a
+  visible grid at the native minimum in every layout. In particular, the
+  nonshrinking 280 px sidebar can leave less space than accepted horizontal
+  padding alone. Widen the window or hide the sidebar to recover terminal space.
 - On macOS, visible Window Chrome preserves the blended `hiddenInset`
   appearance, with native traffic-light controls on the left and a 30 px
   title/drag inset above configured top padding. The Terminal Theme background
@@ -283,8 +306,10 @@ succeeds (ADR 0025).
 - `View -> Reload User Configuration` is always available and defaults to
   `Cmd+Shift+,` on macOS and `Ctrl+Shift+,` on Linux and Windows. It manually
   rereads and validates the complete User Configuration through the startup
-  boundary. A valid reload atomically updates configured font-size baseline,
-  per-side padding, scrollback, programming ligatures, Option Key Mode, and
+  boundary. After validation, a reload replaces the active snapshot and applies
+  settings to consumers sequentially, without transactional rollback if
+  application fails. In the successful path it updates configured font-size
+  baseline, per-side padding, scrollback, programming ligatures, Option Key Mode, and
   Terminal Theme across every current and future Terminal Window, Terminal Tab,
   and Terminal Surface without disturbing a Live Terminal Session. Font family
   and line height use the restart-only exception defined below. Window Chrome
@@ -319,7 +344,8 @@ succeeds (ADR 0025).
   filters them by name and description as the user types, and a click injects
   the snippet into the selected tab's Live Terminal Session and returns focus to
   the terminal. Opening the sidebar rereads the file; there is no file
-  watching, and the sidebar never blocks terminal use.
+  watching. The sidebar does not suspend terminal input, but its fixed width can
+  crowd out the visible grid in a narrow window.
 - BEL is silent. A bell prepends a marker to the ringing session's title —
   visible on its tab and, while that tab is selected, in the window title —
   and an unfocused window requests native platform attention once until the
@@ -379,11 +405,19 @@ bounded positional reads before validation and IPC; native Canvas still uses the
 unchanged installed font. Other fonts keep their existing input and fallback
 semantics. This reduces font-byte costs, not a guaranteed total RSS or GPU budget.
 Font reads use
-native platform facilities without shell interpolation; no font path, broad filesystem API,
-remote fallback or persistent byte cache crosses the bridge. A Restty Surface applies its configured family and line height when it is
-created; an existing Restty Surface keeps both after User Configuration Reload
-until OMXTerm is restarted, while theme, font size, programming ligatures and
-padding update it in place and refit the same PTY. Changing programming
+native platform facilities without shell interpolation. Successful font responses
+contain bounded bytes and face metadata, not paths; the bridge exposes no broad
+filesystem API, remote fallback or persistent byte cache. A current error-path
+limitation can expose a native font path in an IPC rejection when an on-demand read
+fails after validation. That is renderer-visible error detail, not evidence of
+remote transfer or arbitrary filesystem access. A Restty Surface applies its
+configured family and line height when it is created; a surviving Restty Surface keeps both after User Configuration Reload,
+while theme, font size, programming ligatures and padding update it in place
+and refit the same PTY. New Surfaces use the latest values, so restarting applies
+them everywhere. A family reload during a pending native font-data acquisition
+can instead reject the initializing Surface's old-generation request and fail
+that tab before its PTY starts; retained creation-time ownership does not
+protect this acquisition boundary. Changing programming
 ligatures preserves source text, selection and copy results, terminal cells and
 cursor positions, and the existing Surface, font generation, Live Terminal
 Session and PTY. Restty explicit copy/paste, selection, context-menu actions, Protected Paste,
@@ -454,9 +488,13 @@ costs.
 OMXTerm advertises `TERM=xterm-256color`, `COLORTERM=truecolor`,
 `TERM_PROGRAM=OMXTerm`, and its installed version in `TERM_PROGRAM_VERSION`.
 Restty answers DA1 as `CSI ? 1 ; 2 c` and DA2 as `CSI > 0 ; 0 ; 0 c` once per
-query, and owns cursor-position and cell-size replies once at its existing
-parsed runtime seam; split input and alternate-screen transitions do not add a
-second reply path.
+query, and owns cursor-position and cell-size replies at its existing parsed
+runtime seam rather than adding a second reply path. Cursor-position reports
+currently use Restty's retained JavaScript cursor hint, not the actual Ghostty
+cursor for every query. That hint advances by UTF-16 code units and can disagree
+with wide or combining text, pending wrap, or resized core state. Correct cursor
+rendering and ordinary Unicode output do not establish correct CPR replies;
+applications relying on those reports may misposition content.
 It installs no custom terminfo and does not edit or inject shell startup files.
 Inline-image support does not impersonate another terminal or inject
 application-specific capability variables.
@@ -707,8 +745,8 @@ PTY mouse input. OSC 8 destinations and all other schemes are ignored.
 
 ## Configuration and local state
 
-This section is the normative configuration contract. The
-[User Configuration guide](configuration.md) provides non-normative examples,
+This section describes the current configuration boundary. The
+[User Configuration guide](configuration.md) provides examples,
 field reference, theme conversion guidance, and troubleshooting.
 
 OMXTerm reads an optional configuration from
@@ -771,8 +809,9 @@ two or more tabs to become visible.
 fractions, and defaults to 0. Wrong types, unknown keys and out-of-range values
 are rejected, never clamped. Both settings apply on valid manual reload to all
 current and future windows/tabs without replacing native windows, Terminal
-Surfaces or Live Terminal Sessions; rejected reloads keep the entire last
-snapshot.
+Surfaces or Live Terminal Sessions in the successful application path. Reloads
+rejected before application keep the last snapshot; application-time failures
+have the partial-update limitation described below.
 
 Zero preserves the opaque appearance. Increasing transparency reduces only the
 OMXTerm background tint, painted once behind terminal content, padding, title
@@ -945,18 +984,23 @@ the configured or resolved path when relevant — through stderr and a persisten
 in-app error surface that states which defaults are active and never blocks
 typing into the Terminal Surface, so the file can be fixed inside OMXTerm
 itself. Both files stay unchanged. `View -> Reload User Configuration` performs
-one complete startup-equivalent load. A valid reload atomically replaces the
-active application configuration and current notices; on Windows its shell
-selection applies to every subsequently created Default Shell session while
-existing sessions retain the shell they started with. Absence successfully
-selects all defaults without creating a file. A rejected reload changes no
-active setting, keeps the complete last valid in-memory configuration, and
-replaces the non-blocking notice with the current actionable failure. A later
-valid reload replaces resolved startup or reload errors and stale warnings with
-notices from the current validation. The complete committed renderer snapshot
-reaches existing and newly created Terminal Surfaces. Font and spacing changes
-recompute the existing native minimum-window bounds, refit the grid with its
-bottom row visible, and resize the same PTY through its existing adapter.
+one complete startup-equivalent load, serialized in request order. After
+successful validation it replaces the active application snapshot and notices,
+changes the log level, and applies settings to consumers sequentially. On
+Windows its shell selection applies to every subsequently created Default Shell
+session while existing sessions retain the shell they started with. Absence
+successfully selects all defaults without creating a file. A load or validation
+rejection before application keeps the last configuration and replaces the
+non-blocking notice with the current actionable failure. Application-time
+exceptions are different: there is no rollback of the active snapshot, log
+level, or already-applied consumer effects. Such a failure can leave new or
+partially applied settings even though the rejection notice says the last valid
+configuration was kept. That notice is not reliable evidence of rollback. A
+later successful reload replaces resolved errors and stale warnings with notices
+from the current validation. Configuration delivery sends complete snapshots,
+but does not make every consumer update atomic. Font and spacing changes
+recompute native minimum-window bounds and refit the same Surface and PTY,
+subject to the layout limitations above.
 `font.family` and `font.lineHeight` are the complete restart-only set for
 existing Terminal Surfaces; `font.ligatures` applies live. A valid reload applies
 all live-safe settings and host preferences, keeps those two creation-time
@@ -965,9 +1009,12 @@ notice naming each deferred setting and asking the user to restart OMXTerm. New
 tabs and windows use the latest fully validated family and line height. A
 deferred setting clears only when its requested value is already active in
 every existing Terminal Surface, including one still initializing before its PTY
-starts. Main retains the validated font snapshot captured by that Surface rather
-than inferring it from the configuration current at PTY startup. Repeating a
-reload cannot erase a notice while an older Surface survives; removing that
+starts. Main retains that Surface's creation-time family and line-height values
+rather than inferring them from the configuration current at PTY startup. This
+bookkeeping is distinct from native font-byte acquisition: changing the active
+family invalidates outstanding old-generation reads, including an accepted
+request for a still-initializing Surface. It can fail that tab instead of letting
+it finish with its original family. Repeating a reload cannot erase a notice while an older Surface survives; removing that
 Surface releases its font bookkeeping. Theme, configured font-size baseline,
 padding and Window Font Zoom remain live and preserve the existing Surface and
 PTY. Invalid, missing, unreadable, unsupported or corrupt configured font input
@@ -1002,11 +1049,17 @@ update. It owns exactly
 `~/.local/opt/omxterm/OMXTerm.AppImage`,
 `~/.local/share/icons/hicolor/1024x1024/apps/omxterm.png`, and
 `~/.local/share/applications/omxterm.desktop`. Install and update replace all
-three files transactionally; invalid input or failure preserves the complete
-previous installation. If a filesystem error prevents restoration, the helper
-retains each unrestored original in its reported backup location, reports
-incomplete recovery, and preserves the initial operation's failure status and
-diagnostics. It never deletes an original backup that failed restoration.
+three files sequentially under rollback traps, not as one filesystem-atomic
+operation. Invalid input leaves the previous installation unchanged; a failure
+before all three replacements finish attempts restoration. If a filesystem
+error prevents restoration, the rollback path retains each unrestored original
+in its reported backup location, reports incomplete recovery, and preserves the
+initial operation's failure status and diagnostics. That path never deletes an
+original backup that failed restoration. After the third replacement, however,
+the helper disables rollback traps before removing staging and backups. Cleanup
+failure can then return a failing status with the new installation already
+committed and some originals removed, without structured recovery reporting.
+A nonzero exit therefore does not always mean the old installation survived.
 Before replacing any file, install checks all three
 owned filenames and refuses existing directories or other non-regular,
 non-symlink entries. Existing regular files and symlinks (including dangling
@@ -1053,11 +1106,13 @@ the three-file ownership/rollback contract. See
 Electron main owns native windows, PTYs, filesystem access, configuration,
 logs, clipboard capabilities, external-link opening, and bounded Local Image
 Preview reads. The renderer runs with context isolation and without Node
-integration. A minimal typed preload bridge validates every IPC message and its
-sender. The font route accepts no path; it can return only bounded bytes for the
-active validated configured family and fixed local fallback candidates. Font
-paths, family names, and bytes are excluded from Operational Events. Chromium
-sandboxing remains enabled on macOS and Windows and is disabled on Linux. Context
+integration. Main validates IPC request senders and payloads; preload validates
+response and event payloads exposed by its minimal typed bridge. The font route
+accepts no path; it can return only bounded bytes for the active validated
+configured family and fixed local fallback candidates. Font
+paths, family names, and bytes are excluded from Operational Events, but native
+read-error text is not consistently redacted from font IPC rejections, as noted
+above. Chromium sandboxing remains enabled on macOS and Windows and is disabled on Linux. Context
 isolation and the narrow bridge still limit renderer authority on Linux, though
 they do not provide protection equivalent to the Chromium sandbox.
 
@@ -1127,9 +1182,10 @@ rendering, deletion, resource limits and cleanup under the production renderer
 CSP, bounded local-image reads and overlay cleanup, local and web link gesture
 precedence, bracketed and protected paste, title sanitization, URL validation, OSC 52
 restrictions, log redaction/rotation, renderer IPC boundaries, and packaged
-startup. Every exact
-release candidate receives native automated package, architecture, content,
-version, startup, PTY, and applicable contract verification on its target.
+startup. Release procedures call for native automated package, architecture,
+content, version, startup, PTY, and applicable contract verification for each exact
+candidate on its target. This describes the verification process, not proof
+that every historical candidate or current source revision passed it.
 Linux package verification rejects unexpected AppRun bytes before startup and
 exercises the explicit no-sandbox policy through every available installed
 launch mode. Launcher regressions preserve literal command arguments and prove
@@ -1146,8 +1202,19 @@ non-packaged docs or tests) may separate build and tag commits while preserving
 the artifact's original full build SHA and digest; affected tests still require
 honest evidence. Changed product/dependency/build inputs invalidate affected
 steps/platforms, conservatively when impact is unclear. A known failure needs
-a diagnosis-supported disposition, not just a later passing rerun. See the
-[release procedure](release.md) and ADR 0019.
+a diagnosis-supported disposition before it is reused as passing qualification,
+not just a later passing rerun. A historical evidence gap or audit discrepancy
+alone does not establish a current product failure or an automatic release
+blocker. See the [release procedure](release.md) and ADR 0019.
+
+Current coverage limits include exact Linux helper cleanup: packaged verification
+installs the helper but removes its fixture home recursively rather than invoking
+that helper's `uninstall`. Separate lifecycle tests cover uninstall behavior;
+they are not an exact-release-helper uninstall result. Historical Windows Chrome
+crash observations remain unexplained in the available records, and some Linux
+desktop observations omit full tested source SHAs. Those observations remain
+bounded evidence, not inferred exact-build qualification or newly reproduced
+failures.
 
 Release evidence is risk-based. Each release records the boundaries changed
 since the previous version and maps each to existing automation. A material

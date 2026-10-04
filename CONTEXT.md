@@ -5,14 +5,16 @@ terminal environment its user can shape over time. **OMXTerm Web**
 (`luizomf/omxterm-web`) is a separate browser-based SSH broker.
 
 This glossary explains terms used in the code and documentation. The
-[specification](docs/spec.md) owns the detailed behavior; [ADRs](docs/adr/)
-record architectural decisions.
+[specification](docs/spec.md) describes detailed current behavior and limitations;
+[ADRs](docs/adr/) record architectural decisions. Both evolve with the product,
+not as immutable implementation promises or execution evidence.
 
 ## Platform and architecture
 
-**Supported Platform** — An operating-system/architecture pair deliberately
-built and tested: currently macOS ARM64, Linux ARM64 and Windows ARM64. Linux
-uses X11/XWayland.
+**Supported Platform** — An operating-system/architecture target with maintained
+native packages and tests: currently macOS ARM64, Linux ARM64 and Windows ARM64.
+Linux uses X11/XWayland. Support names the target, not a claim that every current
+revision or native desktop behavior has been verified.
 
 **Terminal Surface** — The portable DOM module that renders and operates the
 terminal using Restty and its Ghostty core. It receives a session Adapter rather
@@ -28,9 +30,11 @@ See [window and session behavior](docs/spec.md#window-and-session-behavior).
 **Terminal Window** — An independent native window containing one or more
 Terminal Tabs, with exactly one selected.
 
-**Terminal Tab** — A selectable container owning one Live Terminal Session and
-its Terminal Surface. Tabs can be reordered within their window. Their state
-is temporary; closing the last tab closes the window.
+**Terminal Tab** — A selectable container owning a Terminal Surface and, after
+initialization succeeds, one Live Terminal Session. Pending initialization and
+failure acknowledgement also retain window ownership. Tabs can be reordered
+within their window. Their state is temporary; removing the last tab follows
+the window-close lifecycle, including pending failure acknowledgement.
 
 **Live Terminal Session** — A running shell or explicitly launched program and
 its terminal state. Closing its tab ends its processes; application quit waits
@@ -79,10 +83,14 @@ and the [configuration guide](docs/configuration.md).
 user's preferences. OMXTerm creates an initial kit when no configuration exists;
 subsequent edits belong to the user.
 
-**User Configuration Reload** — A manual, complete validation and atomic update
-of preferences. A failed reload keeps the last valid in-memory configuration.
-Existing Surfaces retain their font family and line height until restart; new
-tabs use the latest values.
+**User Configuration Reload** — A manual, serialized complete load and validation
+of preferences, followed by active-snapshot replacement and sequential consumer
+updates. Load/validation rejection keeps the previous configuration;
+application-time failure has no transactional rollback and may leave new or
+partially applied settings despite a retained-configuration notice. Surviving
+Surfaces retain their creation-time font family and line height; new tabs use
+the latest values. Changing family during a pending native font read can fail
+an initializing tab instead of preserving its old-family acquisition.
 
 **Terminal Theme** — The terminal palette: foreground, background, cursor,
 selection and ANSI colors. The bundled default is `omtheme`.
@@ -96,7 +104,8 @@ layout input (`none`), or use `left`, `right` or `both` Option keys as terminal 
 
 **Snippets Sidebar** — A per-window list loaded from the user's `snippets.json`.
 Activating a snippet sends its body through Protected Paste to the selected tab;
-`execute` controls whether Enter is appended.
+`execute` controls whether Enter is appended. Its fixed 280 px width is not
+included in native minimum-window sizing and can crowd out the visible grid.
 
 ## Terminal data and interaction
 
@@ -113,7 +122,9 @@ target and an independent core byte limit; zero lines disables retention.
 
 **Terminal Capability Identity** — The environment advertised to programs:
 `TERM=xterm-256color`, `COLORTERM=truecolor`, `TERM_PROGRAM=OMXTerm` and the running
-version in `TERM_PROGRAM_VERSION`.
+version in `TERM_PROGRAM_VERSION`. This identity is not proof of complete xterm
+compatibility; current cursor-position replies can disagree with Ghostty's
+cursor after Unicode output or resize.
 
 **Shell Integration** — Terminal-specific shell startup hooks. OMXTerm leaves
 shell initialization to the user and injects no hooks.

@@ -1,7 +1,8 @@
 # Validate external links at the main process
 
-OMXTerm will recognize as External Links only literal HTTP and HTTPS URLs
-visible in Terminal Payload, and activation on macOS requires `Cmd+click`. The exact visible string
+OMXTerm recognizes as External Links only literal HTTP and HTTPS URLs
+visible in Terminal Payload. Activation requires `Cmd+click` on macOS or
+`Ctrl+click` on Linux and Windows. The exact visible string
 is the activation request; OMXTerm will consume OSC 8 control sequences but
 ignore their semantic-link metadata because it can hide a destination behind
 unrelated text. Text carried by OSC 8 still renders normally, and a literal URL

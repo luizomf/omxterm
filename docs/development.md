@@ -305,6 +305,35 @@ npm test -- test/unit/test-discovery.test.ts
 
 ## Running native tests
 
+### Qualification scope
+
+`npm run check:portable` runs the default Vitest suite and an unpackaged build;
+it does not package, install or publish OMXTerm. `npm run test:integration` runs
+only `test/integration/local-shell.test.ts`. Platform guards skip inapplicable
+cases; AltGr, image capacity, tmux, destructive interruption and the optional
+macOS fullscreen comparison require their explicit opt-ins. A passing run does
+not mean those skipped paths passed.
+
+Read each fixture's actual assertions before extending its qualification claim.
+Controlled renderer events, injected I/O and held continuations establish their
+modeled boundaries, not physical input or every production interleaving. Native
+captures establish the observed fixture pixels, not identical rasterization on
+another GPU or compositor. API success and page captures do not establish visible
+behind-window blur. These limits are coverage descriptions, not extra mandatory
+manual-test gates.
+
+Configuration validation rejects invalid input before applying it and retains
+the previous active settings on reload. Runtime application is a different
+boundary: `user-configuration-reloader.ts` assigns the new snapshot and log level
+before applying consumers, and `active-user-configuration.ts` applies them
+sequentially. An exception there has no rollback and can leave new/partially
+applied settings despite the retained-configuration notice. Validation-only tests
+do not qualify transactional recovery from that failure. See the
+[Restty runtime limitations](restty-development.md#current-runtime-limitations)
+and [audit #566](https://github.com/luizomf/omxterm/issues/566) for the source-backed
+follow-ups; current docs do not claim that this documentation correction fixed
+them.
+
 ### Rendering, appearance and cursor
 
 The standalone Restty rendering test hides the cursor after its input/reset
@@ -604,8 +633,9 @@ Tiling is not required to preserve a historical window height.
 This bounded comparison establishes observed native behavior, not permanent
 capability, intentional desktop policy or the cause of a common Electron/backend
 regression. It cannot exclude every additional defect masked by an incapable
-environment. Actual maximize/restore and minimize qualification on capable
-desktops remains necessary; native hide is not credited as minimize success.
+environment. Only actual transitions on capable desktops establish maximize/restore or
+minimize coverage; the unavailable branch does not. This limitation is not an
+additional manual release gate. Native hide is not credited as minimize success.
 The retired manual declarations are rejected rather than inherited as evidence.
 Run the affected tests normally:
 
@@ -869,7 +899,11 @@ paths. It does not generalize arbitrary producer hard breaks into soft wraps.
 ### Evidence reuse and packaging
 
 When investigating an intermittent failure, record the failure and rerun
-conditions. A later isolated pass alone does not show that it was fixed.
+conditions. A later isolated pass alone does not show that it was fixed. Assess
+whether the failure still applies to the current source, fixture and environment;
+keep unresolved findings separate from documentation corrections. Missing old
+provenance prevents reuse of that evidence, not all future work. Do not manufacture
+a historical pass or turn an observed FAIL into missing/UNVERIFIED coverage.
 
 Keep successful evidence with its full source SHA, commands, relevant prepared
 dependencies and native environment. Release work resumes missing/invalidated

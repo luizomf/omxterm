@@ -1,42 +1,42 @@
 # Compose background effects without losing explicit cell identity
 
-[ADR 0030](0030-prefer-direct-macos-background-blur.md) supersedes the macOS
-material-only/no-addon choice below. It retains HUD as fallback; the paint,
-configuration, Windows and Linux decisions remain unchanged.
-
-Issue #412 replaces the former prohibition of transparency and blur. It amends
-[ADR 0025](0025-stage-restty-behind-an-unpackaged-opt-in.md)'s paint path and
-[ADR 0027](0027-hide-window-chrome-without-replacing-sessions.md)'s window
-construction, not their Surface, session, input or chrome ownership. Configuration
-remains strict, version 1 and non-mutating under ADR 0003.
+Background effects share one tint owner and preserve explicit terminal-cell
+identity. [ADR 0030](0030-prefer-direct-macos-background-blur.md) details the
+current direct macOS blur adapter and HUD fallback. The paint path complements
+[ADR 0025](0025-stage-restty-behind-an-unpackaged-opt-in.md) and the window owner in
+[ADR 0027](0027-hide-window-chrome-without-replacing-sessions.md), without replacing
+Surface, session, input or chrome ownership. Configuration remains strict,
+version 1 and non-mutating under ADR 0003.
 
 ## Decision
 
 `window.transparency` is a finite fraction from 0 through 1, default 0;
-`window.blur` is a boolean, default false. Manual reload commits the whole
-validated snapshot to current and future windows. Invalid reload commits
-nothing. There is no menu, material selector or strength control.
+`window.blur` is a boolean, default false. Manual reload applies the validated
+snapshot to current and future windows. Validation rejection retains prior
+settings; application-time exceptions do not guarantee rollback
+([ADR 0003](0003-strict-non-mutating-user-configuration.md)). There is no menu,
+material selector or strength control.
 
 Create alpha-capable native windows once on macOS/Linux, but retain normal
-nontransparent native construction on Windows. Electron main requests HUD
-vibrancy on macOS and Acrylic on Windows only when blur is enabled and
-transparency is positive. Linux retains X11/XWayland and may set
+nontransparent native construction on Windows. With blur enabled and positive
+transparency, Electron main prefers direct macOS blur and falls back to HUD
+under ADR 0030; Windows requests Acrylic. Linux retains X11/XWayland and may set
 `_KDE_NET_WM_BLUR_BEHIND_REGION` on its own native XID through an existing `xprop`.
 The helper uses literal arguments, no shell, a 500 ms timeout with SIGKILL,
 discarded stdout/stderr and a 1 KiB buffer bound. It never runs for the default
 off state or native Wayland. Calls are synchronous and bounded so pending work
 cannot outlive closure, overwrite a newer reload, or target a recycled XID.
-Only effect transitions invoke native work; a later manual reload may retry a
-failed transition, never a background timer. Disable removes the hint/material;
-disposal removes it if the native window still exists, otherwise window
-destruction owns native resource release. No timer, detached helper or renderer
+Effect transitions and explicit lifecycle/reload retries invoke native work,
+never a background timer. Disable/disposal attempts to remove the hint/material
+while the native window exists; errors remain best effort. Once destroyed, the
+native window owns resource release. No timer, detached helper or renderer
 capability is introduced. A slow helper can briefly delay main (at most the
 per-call timeout per affected window); that bounded cost is preferable here to
 an asynchronous XID-lifetime state machine.
 
-HUD replaces the initial under-window material after a native visual comparison
-at equal background opacity. It is a preferred approximation, not a claim of
-matching another terminal's blur radius, tint or response to maximization.
+HUD remains the macOS fallback after visual comparisons at equal background
+opacity. Direct blur uses the fixed radius and bounded cleanup in ADR 0030;
+neither mode promises another terminal's tint or maximization behavior.
 
 API/helper errors are quiet. They do not invalidate otherwise valid
 configuration, stop terminal startup or assert visible support. Composition may
@@ -72,9 +72,9 @@ Unsupported/unknown versions and throwing material calls keep opaque paint.
 The per-window native owner supplies effective transparency to the existing typed
 renderer snapshot after native application; it does not mutate the requested
 configuration. This also keeps fallback chrome and live theme changes coherent.
-A failed transition is retried only by a later committed reload or cleanup.
-There is no new renderer capability, GPU/DPI switch, native addon, window
-recreation, fabricated native state or geometry emulation.
+A failed Windows transition is retried only by a later committed reload or
+cleanup. This Windows fallback adds no renderer capability, GPU/DPI switch,
+Windows native addon, window recreation, fabricated state or geometry emulation.
 
 ## Paint ownership
 

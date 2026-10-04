@@ -1,5 +1,14 @@
 # Hidden Terminal Surface rendering — issue 316
 
+## Status
+
+Historical #316 comparison and post-review verification, not current release
+qualification. The hidden-rendering correction remains in production, while
+runtime, fixtures and package inputs have evolved. Measurements, failures and
+PASS results below retain their original scope. Current guidance lives in the
+[spec](spec.md), [development guide](development.md) and
+[release procedure](release.md).
+
 ## Reproduction and correction
 
 Baseline: `d884de730bab7cc1a78bb900dfa0a938a89c7fe6`, runtime SHA-256
@@ -108,10 +117,15 @@ claim, performance quota, fixed CPU target or reason here to suspend RAF.
 The fixture measures drawing-buffer correctness before Chromium can present,
 not a physical display scanout or native focus transition. It does not validate
 Linux/Windows native GPU behavior. Existing synchronous-output mode still owns
-its intentional batching. Restty's existing output-filter cursor hint can retain
-a pre-resize row for a subsequent CPR query; this change does not modify that
-separate behavior. Cursor **pixels** and render geometry, not that hint, establish
-first-presentation correctness here.
+its intentional batching. The recorded Restty output-filter cursor hint could
+retain a pre-resize row for a subsequent CPR query; #316 did not modify that
+separate behavior. Audit
+[#566](https://github.com/luizomf/omxterm/issues/566) subsequently recorded
+actual-core/reply disagreement for Unicode and resize sequences in the prepared
+runtime. This is a separate current limitation, not proof of a hidden-rendering
+failure or a reason to reinterpret this experiment's results. Cursor **pixels**
+and render geometry, not CPR accuracy, establish first-presentation correctness
+here.
 
 ## Review correction
 
@@ -150,26 +164,27 @@ claim of owner acceptance or additional mounted-DMG testing. Linux/Windows nativ
 checks were not run on this macOS host. No publication, release version, tag or
 owner acceptance is implied.
 
-## Reproduce
+## Current re-evaluation
+
+With the [native prerequisites](development.md#platform-prerequisites) satisfied,
+run from the current checkout, serially with other native fixtures:
 
 ```sh
 npm ci
-OMXTERM_HIDDEN_EVIDENCE=/absolute/path/after.json \
+mkdir -p .scratch
+OMXTERM_HIDDEN_EVIDENCE="$PWD/.scratch/hidden-current.json" \
   npx vitest run test/integration/restty-scrollback-rendering.test.ts
-npm run lint
-npm run check:portable
-npm run package:mac
-npm run package:verify
 ```
 
-For the baseline, extract the exact base with `git archive` into an owned
-operating-system temporary directory (not a new worktree). Copy the current
-`restty-hidden-*.ts`, `restty-scrollback-renderer.ts` and
-`restty-scrollback-rendering.test.ts` fixtures into that copy, install its own
-lockfile dependencies, and run the same evidence command. New assertions are
-expected to fail; JSON is written before assertions. Do not run another native
-fixture concurrently. Use only generated fixtures and isolated profiles; never
-point this procedure at an installed user application or private Terminal Payload.
+Use a fresh evidence filename and retain the new source/runtime identities
+separately. This collects current fixture evidence, not the historical before/
+after comparison or package qualification. Use only generated fixtures and
+isolated profiles, never an installed user application or private Terminal Payload.
+
+Reconstructing the historical baseline requires the recorded base and matching
+candidate fixture bytes identified in the comparison JSON. Current fixtures have
+evolved; copying them into the old baseline is not the recorded experiment.
+Historical failing assertions remain failures; JSON was written before assertions.
 
 Dependency preparation accepts only reviewed original/prior/current digests,
 checks every replacement and verifies the final digest before writing. Running

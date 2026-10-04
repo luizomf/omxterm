@@ -117,7 +117,10 @@ sha256sum --check OMXTerm-0.20.1-arm64.AppImage.sha256 &&
 Open **OMXTerm** from your application menu. The helper copies it into your user
 folder and chooses mounting or extraction automatically. Keep the helper for
 updates and uninstalling. See the [desktop helper guide](linux-installer.md)
-for graphics compatibility and Hyprland display scaling.
+for graphics compatibility, Hyprland display scaling, and
+[failure/recovery limits](linux-installer.md#update-help-and-uninstall). A failure
+in final cleanup can leave the new installation in place; inspect the reported
+error before retrying.
 
 ## Windows
 

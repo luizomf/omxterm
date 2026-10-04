@@ -20,6 +20,8 @@ folder is `omxterm` inside that location instead. `~` means your home folder.
 **View → Reload User Configuration** (`Cmd+Shift+,` on macOS,
 `Ctrl+Shift+,` on Linux/Windows). On Linux and Windows, press and release
 **Alt alone** to open the menu. Snippets are reread when you reopen their sidebar.
+See [reload limitations](#reloading-user-configuration) before changing font
+families while a tab is starting.
 
 - [Make a first change](#add-one-display-change)
 - [Find or create your configuration file](#create-the-configuration-directory)
@@ -109,7 +111,8 @@ The smallest valid `config.json` selects all built-in defaults:
 ```
 
 This uses bundled FiraCode Nerd Font Mono, bundled `omtheme`, and the default
-shortcuts. A missing configuration file also selects defaults. This minimal
+shortcuts. Reloading with a missing configuration file also selects defaults;
+opening the app without one first attempts to create the starter kit. This minimal
 configuration does not create `snippets.json` or an editable theme file. If
 those are missing, create `snippets.json` with the [single-line example](#snippets)
 or create and select a [complete theme](#terminal-themes).
@@ -124,6 +127,10 @@ config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omxterm"
 mkdir -p "$config_dir"
 printf '%s\n' "$config_dir/config.json"
 ```
+
+OMXTerm uses the environment it had when the app started. Setting
+`XDG_CONFIG_HOME` inside a terminal shell does not move the app's settings; use
+the app's original location if the shell's value differs.
 
 Open the printed path in a plain-text editor. To reach the hidden `.config`
 folder, use **Cmd+Shift+G** in Finder or **Ctrl+L** in a Linux file manager.
@@ -514,7 +521,10 @@ The file contains `"version": 1` and a `snippets` array of at most 512 entries:
 
 The sidebar filters by name and description. A missing file gives an empty
 sidebar; an invalid file shows its path and field error instead of the list.
-The terminal keeps working. Fix the file and reopen the sidebar.
+Fix the file and reopen the sidebar. The sidebar is 280 px wide and does not
+shrink; the window's minimum width does not reserve that space. In a narrow
+window, especially with large padding, it can hide the terminal grid. Enlarge
+the window or hide the sidebar with **View → Toggle Snippets**.
 
 ## Terminal Themes
 
@@ -584,9 +594,10 @@ Check the filename, all 21 color fields, exact `#RRGGBB` values, and JSON syntax
 For a relative path, the starting folder is the one containing `config.json`.
 
 At startup, an invalid selected theme falls back to bundled `omtheme` while
-other validated settings remain active. A failed manual reload keeps the
-complete previous configuration and theme. Fix the file and reload; neither
-file is rewritten.
+other validated settings remain active. A manual reload rejected by theme
+validation keeps the previous configuration and theme. Fix the file and reload;
+neither file is rewritten. Unexpected failures while applying valid settings
+have a separate [reload limitation](#reloading-user-configuration).
 
 The [canonical palette](omtheme.json) is another complete example. With a source
 checkout, you can also convert a downloaded Ghostty palette:
@@ -612,13 +623,18 @@ Snippets are read separately when their sidebar opens.
 | New tabs              | Font family, line height, Windows shell                       |
 | New windows           | Always-on-Top, title-bar and tab-bar defaults                 |
 
-Sessions keep running. A notice explains when font family or line height needs
-a restart to apply everywhere. Tabs still initializing also retain their
-creation-time font family and line height; live-safe settings update when
-initialization finishes. Reloading the same values again keeps the notice while
-an older tab survives; after closing those tabs, another reload clears it.
+A successful reload updates existing sessions in place. A notice explains when
+font family or line height needs a restart to apply everywhere. Existing tabs
+keep their creation-time values; live-safe settings update initializing tabs
+when initialization finishes. Reloading the same values again keeps the notice
+while an older tab survives; after closing those tabs, another reload clears it.
 Existing windows keep their zoom adjustment, bar visibility, and Always-on-Top
 choices. **Actual Size** returns zoom to the latest configured size.
+
+**Font-family timing limitation:** changing `font.family` while a tab is still
+acquiring its fonts can reject that pending acquisition and close the tab before
+its shell starts. Wait until tabs have finished starting before reloading a
+family change, or save your work and restart to apply it everywhere.
 
 If validation fails:
 
@@ -627,8 +643,15 @@ If validation fails:
 - **During reload:** no settings change; the complete last valid in-memory
   configuration stays active.
 
-Correct the reported file or field, save, and reload again. Removing
-`config.json` and reloading also selects defaults, without recreating the file.
+Correct the reported file or field, save, and reload again. The validation
+rejection above happens before settings are applied. **Unexpected application
+failures during application are not rolled back:** new settings can remain
+active or be only partly applied, even if the notice says the previous
+configuration was kept. If that happens, save your work and restart OMXTerm to
+load one consistent configuration; report the error and affected settings.
+
+Removing `config.json` and reloading also selects defaults, without recreating
+the file.
 The [product contract](spec.md#configuration-and-local-state) has the full
 validation rules.
 

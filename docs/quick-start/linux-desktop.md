@@ -23,6 +23,10 @@ and graphics performance.
 
 ## Ubuntu with GNOME: Blur my Shell
 
+First check the [AppImage's glibc requirement](../installation.md#check-requirements).
+These desktop preferences do not make an older distribution such as Ubuntu
+24.04 compatible with the current package.
+
 1. Install **Extension Manager**:
 
    ```sh

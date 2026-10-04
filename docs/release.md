@@ -7,8 +7,10 @@ subagents. Do not add per-step approval requests or a separate exact-artifact
 acceptance round. Ask only when missing information blocks progress or a
 necessary destructive consequence is outside the scope already given.
 
-The technical checks below still apply. A failed check is a problem to diagnose,
-not permission to weaken verification. Manual testing is optional.
+The technical checks below describe the current release workflow, not a frozen
+set of historical promises. Update this guide and the related spec/ADRs when the
+workflow changes; Git retains earlier text. A failed check must be reported and
+assessed, not silently turned into a pass. Manual testing is optional.
 
 ## Release path
 
@@ -56,11 +58,17 @@ separates four steps:
 | Publication                 | Intended tag SHA, build-to-tag comparison, exact asset identities and download checks                        | Missing publication/download evidence; never rebuild just to publish                    |
 
 Keep a compact record of prior PASS evidence and why inputs remain equivalent.
-Unknown/missing source, dependency or artifact provenance fails reuse. A known
-FAIL remains a blocker until a diagnosis-supported disposition explains the
-failure and the applicable check is satisfied; a later pass alone, or relabeling
-it UNVERIFIED, does not erase it. Resume the failed/missing step, not `npm ci`,
-`check` and `build` from the beginning merely because the request says release.
+Unknown/missing source, dependency or artifact provenance fails reuse for that
+evidence, not every other recorded step. A current applicable check that fails
+needs diagnosis and a recorded disposition before publication. Retain the
+original FAIL even after a later pass; explain changed inputs, an identified
+fixture/environment failure, a fix, or the remaining risk. Do not relabel an
+observed failure as UNVERIFIED. Historical failures and missing old evidence are
+not automatically blockers for every future release or documentation correction:
+establish their relevance to the candidate, track supported bugs separately,
+and record unavailable coverage honestly. Resume the failed/missing applicable
+step, not `npm ci`, `check` and `build` from the beginning merely because the
+request says release.
 
 ### Changed inputs and build-to-tag comparison
 
@@ -81,8 +89,10 @@ Classify by inputs, not file extensions or a blanket directory allowlist:
 - Non-packaged docs (including contracts/ADRs) and test-only/fixture-only changes
   leave product artifacts valid when they are not consumed by the build. Run
   affected changed tests and record their actual results; reuse unaffected PASS
-  evidence. New verification requirements must still be satisfied by the preserved
-  artifact. Packaged notices/licenses are not documentation-only inputs.
+  evidence. If the task changes applicable verification requirements, assess the
+  preserved artifact against those requirements; correcting a description alone
+  does not create a new check or historical rerun requirement. Packaged
+  notices/licenses are not documentation-only inputs.
 - Version-only package metadata changes require a native build and version/package
   verification for each affected artifact, not wholesale behavioral reruns when
   their other inputs are identical. Never reuse an old-version package.
@@ -104,9 +114,10 @@ comparison alongside the original build SHA and digest. If equivalence cannot
 be established, rebuild the affected artifact from the intended source; never
 silently accept stale product bytes.
 
-Published releases are immutable: do not move published tags, replace assets
-or reuse a published version. Later documentation corrections do not rewrite
-published artifact identities.
+Published tags and artifact bytes are immutable: do not move published tags,
+replace assets or reuse a published version. Documentation and evidence records
+can be corrected, explicitly preserving actual results and artifact identities;
+old prose remains in Git.
 
 ## Version consistency
 
@@ -121,9 +132,11 @@ release record and notes.
 
 ## Build and automated verification
 
-For an unprepared checkout or changed dependency/preparation inputs, use a fresh
-`npm ci` and explicitly run the checksum-guarded node-pty and Restty preparation
-scripts. Unknown dependency bytes fail preparation rather than silently reusing
+For an unprepared checkout or changed locked dependency inputs, use `npm ci`;
+its `postinstall` runs Electron installation and the checksum-guarded node-pty
+and Restty preparation scripts. If only preparation inputs changed, rerun
+`npm run postinstall` against the locked installed dependencies. Unknown
+dependency bytes fail preparation rather than silently reusing
 a stale patched runtime. An already prepared checkout with recorded matching
 locked dependencies, corrections, native runtime and environment needs no new
 `npm ci` merely for version-only metadata, tests/docs or publication. Worktrees
@@ -135,11 +148,16 @@ hidden windows can stall actual frames. Production CSP, renderer isolation,
 real animation frames, deadlines and exact bitmap comparisons remain required.
 Elapsed time alone is not frame readiness.
 
-Native checks exercise Restty through actual WebGL2 and owned PTYs: Default
-Shell and explicit-command startup, input/output, resize, shutdown and renderer
-loss; bundled and installed fonts; configuration/restart notices; and Pi/Chafa
-images. Missing WebGL2 or irrecoverable context loss must fail visibly and clean
-only the affected session. Synthetic DOM coverage is not a substitute.
+The default suite includes native Restty WebGL2 and owned-PTY fixtures for
+Default Shell and explicit-command startup, input/output, resize, shutdown,
+renderer loss, fonts, configuration notices and Pi/Chafa images. Platform guards
+and opt-in tests limit the actual run; see
+[qualification scope](development.md#qualification-scope). A green aggregate
+command establishes its executed assertions, not every behavior mentioned in an
+old spec/ADR. Unit mocks, controlled failure injection and synthetic DOM input do
+not establish physical keyboard/pointer, native dialog interaction or visible
+behind-window blur. Missing WebGL2 must fail initialization; irrecoverable
+context loss must fail the affected session visibly without a fallback renderer.
 
 Packaged verification launches the actual package with a synthetic owned PTY
 command. A visible marker and `CSI 16 t` must produce a positive cell-size reply
@@ -192,8 +210,6 @@ and Node.js 22.13+ in the 22 line, or Node.js 24+:
 
 ```sh
 npm ci
-node scripts/prepare-node-pty-runtime.mjs
-node scripts/prepare-restty-runtime.mjs
 npm run check
 ```
 
@@ -269,8 +285,6 @@ Run as an ordinary user. The shipped Linux-only `--no-sandbox` policy is fixed
 
 ```sh
 npm ci
-node scripts/prepare-node-pty-runtime.mjs
-node scripts/prepare-restty-runtime.mjs
 npm run check:linux
 ```
 
@@ -289,6 +303,11 @@ and launches the installed app through extraction and normal kernel-FUSE
 mounting when the installation probe establishes that direct mounting is
 available. Each available path must reach a PTY and parsed-output proof without
 logging the environment canary. An unavailable FUSE seam is not a passing test.
+The verifier removes its isolated installation home after successful provisioning;
+it does not invoke the exact helper's `uninstall` command. Source-helper tests
+with synthetic AppImages cover uninstall separately. Neither coverage should be
+reported as exact published-helper uninstall qualification. Packaged startup pins
+`--ozone-platform=x11`; it does not prove the default-backend relaunch path.
 
 Packaging applies a checksum-guarded correction to the pinned packager's launcher
 generator before loading electron-builder. Unknown bytes or unprepared direct
@@ -333,8 +352,6 @@ supplies it within the owner's existing disposable-VM task scope:
 
 ```powershell
 npm ci
-node scripts/prepare-node-pty-runtime.mjs
-node scripts/prepare-restty-runtime.mjs
 npm run check:win -- --disposable-vm-allow-omxterm-replacement
 ```
 
@@ -418,9 +435,11 @@ Publication: <PENDING/PUBLISHED with URL>
 ```
 
 Do not put private paths, credentials, configuration contents, Terminal Payload,
-clipboard data or transcripts in public evidence. Technical failures, missing
-identity proof or incomplete cleanup block publication. No owner sign-off is
-added after these checks pass within the requested release scope.
+clipboard data or transcripts in public evidence. Failed applicable candidate
+checks, missing exact-artifact identity proof or incomplete owned cleanup prevent
+claiming completed verification and publication under this procedure. An unrelated
+historical gap does not by itself invalidate a verified candidate. No owner
+sign-off is added after these checks pass within the requested release scope.
 
 ### Checksums
 

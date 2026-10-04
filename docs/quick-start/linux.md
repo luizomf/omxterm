@@ -118,7 +118,8 @@ uses Bash syntax.
 <summary>Show copy and restore steps</summary>
 
 Set `example` to your extracted folder. This Bash block backs up existing files
-and stops at symlink destinations so it does not overwrite their targets.
+and refuses symlinks or non-regular destination files (including named pipes)
+so it does not overwrite their targets or hang copying into them.
 
 ```bash
 example="/path/to/extracted/omxterm/docs/quick-start/files/linux"
@@ -128,11 +129,11 @@ apply_quick_start() {
   [ -n "$backup" ] && [ -d "$example/themes" ] && [ -f "$example/config.json" ] && [ -f "$example/snippets.json" ] && [ -f "$example/themes/omtheme.json" ] || { echo 'Check backup or example path'; return 1; }
   printf 'Backup (including only files that already existed): %s\n' "$backup"
   [ ! -L "$config_dir" ] && { [ ! -e "$config_dir" ] || [ -d "$config_dir" ]; } || { echo 'Configuration directory is not a plain directory'; return 1; }
+  [ ! -L "$config_dir/themes" ] && { [ ! -e "$config_dir/themes" ] || [ -d "$config_dir/themes" ]; } || { echo 'Theme directory is not a plain directory'; return 1; }
   mkdir -p "$config_dir/themes" || return 1
-  [ ! -L "$config_dir/themes" ] && [ -d "$config_dir/themes" ] || { echo 'Theme directory is not a plain directory'; return 1; }
   for name in config.json snippets.json themes/omtheme.json; do
     target="$config_dir/$name"
-    [ ! -L "$target" ] && [ ! -d "$target" ] || { echo "Refusing $target"; return 1; }
+    [ ! -L "$target" ] && { [ ! -e "$target" ] || [ -f "$target" ]; } || { echo "Refusing $target"; return 1; }
     if [ -e "$target" ]; then
       mkdir -p "$backup/$(dirname "$name")" || return 1
       cp -p "$target" "$backup/$name" || return 1

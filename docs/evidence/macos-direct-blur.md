@@ -1,9 +1,11 @@
 # macOS direct-blur integration evidence
 
-Issue #415; uncommitted candidate based on `bec1ee6734c50f5725a148af58e68cdb4dfefd87`.
-This is integration evidence, not a release, installation or cross-version
-compatibility claim. [ADR 0030](../adr/0030-prefer-direct-macos-background-blur.md)
-records the production decision.
+Historical issue #415 evidence from an uncommitted candidate based on
+`bec1ee6734c50f5725a148af58e68cdb4dfefd87`. Direct blur was subsequently shipped in
+[0.17.0](../releases/0.17.0.md). This record is candidate integration evidence,
+not a current release, installation or cross-version compatibility claim.
+[ADR 0030](../adr/0030-prefer-direct-macos-background-blur.md) records the production
+decision.
 
 ## Environment and scope
 
@@ -72,7 +74,8 @@ Both focused runs passed; supervised fixture cleanup reported no errors.
 - `codesign --verify --deep --strict`: **PASS**. The unpacked addon itself also
   reports an ARM64 ad-hoc signature, no Team ID. No signing entitlement changed.
 
-Preserved local app: `release/mac-arm64/OMXTerm.app`. Exact packaged identities:
+Historical local app location: `release/mac-arm64/OMXTerm.app` (not a guaranteed
+retained path in today's checkout). Exact candidate packaged identities:
 
 | File within `Contents/Resources`                     | SHA-256                                                            |
 | ---------------------------------------------------- | ------------------------------------------------------------------ |

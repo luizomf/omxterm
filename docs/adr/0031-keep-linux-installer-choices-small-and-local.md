@@ -2,7 +2,7 @@
 
 ## Context
 
-The published 0.17.0 helper installs a verified local AppImage transactionally,
+The helper installs a verified local AppImage with staged three-file replacement,
 but users still need to understand launch flags when a desktop exports Wayland,
 a virtual GPU cannot initialize Chromium's WebGL2 context, or XWayland leaves a
 HiDPI interface too small. The Try Omarchy investigation in #425 reproduced these
@@ -11,17 +11,33 @@ user choices, not automatic global desktop repair (#426).
 
 ## Decision
 
-The next release names the helper `linux_install.sh` and its checksum
-`linux_install.sh.sha256`. The embedded `--version`, release URL and checksum
-retain its exact release identity. Published assets and release records remain
-immutable. This amends ADR 0019's helper presentation, not supported platforms,
-package formats, artifact trust or native release-verification requirements.
+The helper is published as `linux_install.sh` with
+`linux_install.sh.sha256`. Its embedded `--version`, release URL and checksum
+retain exact release identity. Assets through 0.17.0 keep their original names;
+documentation and evidence corrections do not change those published bytes.
+This is the current helper presentation under ADR 0019, not a change to
+supported platforms, package formats or artifact trust.
 
 Keep `install [--compatibility] <verified-local-AppImage>`, `uninstall`,
 `--version`, and `--help` as a non-interactive interface. The fixed ownership set
 remains the AppImage, icon and desktop entry; no launcher service, manifest,
 configuration migration, dependency installer or network discovery is added.
-All three files retain transactional replacement and rollback.
+All three replacements are staged and protected by recovery traps until the
+replacement phase completes. A staging/replacement failure attempts rollback;
+if restoration fails, unrestored originals remain at reported backup locations.
+
+**Current post-commit limitation:** after replacing all three files the helper
+disables recovery traps, then deletes staging/backups under `set -e`. A cleanup
+error can return nonzero with the new installation already committed, originals
+partly removed and no structured cleanup/recovery status (#566). A nonzero result
+therefore does not always mean the old installation survived. Post-commit cleanup
+reporting could be improved separately; this is not a failed replacement,
+destructive rollback or evidence that recovery deletes unrestored backups. Inspect the installed
+entries and any remaining staging/backups before retrying.
+
+Uninstall removes only the three owned entries, including symlinks themselves,
+not their referents. It preserves unrelated files and parent directories. A
+removal failure can leave partial removal; uninstall is not transactional.
 
 The installed desktop entry explicitly selects `--ozone-platform=x11`, the
 supported Linux path under ADR 0020. An ambient Wayland preference no longer

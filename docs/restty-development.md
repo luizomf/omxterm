@@ -8,9 +8,11 @@ cannot leave an invisible shell running.
 This guide is for contributors changing that integration. Start with the
 [runtime contract](#runtime-contract) to understand host behavior, then use
 [pinned inputs and restoration](#pinned-inputs-and-restoration) when auditing or
-repairing the installed dependency. The product behavior remains normative in
-[`spec.md`](spec.md), while [ADR 0025](adr/0025-stage-restty-behind-an-unpackaged-opt-in.md)
-records why Restty is the sole Surface. Restty is not a User Configuration
+repairing the installed dependency. The maintained
+[`spec.md`](spec.md) describes current product behavior, while
+[ADR 0025](adr/0025-stage-restty-behind-an-unpackaged-opt-in.md) records why Restty
+is the sole Surface. Both evolve with the product; Git retains old text. Restty
+is not a User Configuration
 choice, and there is no fallback renderer.
 
 ## Runtime contract
@@ -23,8 +25,10 @@ WebGL2 backend before starting a PTY. Initialization failure starts no shell;
 WebGL context loss reports a visible failure and disposes only the owning tab.
 A native failure dialog explains recovery and remains until acknowledged, even
 when cleanup ended the window's last session. No terminal state is recreated.
-Closing a tab during font acquisition, runtime initialization or the session-start
-round-trip cancels that Surface without a failure banner or dialog. Every async
+Once the host receives a tab-close command, closing a tab during font acquisition,
+runtime initialization or the session-start round-trip cancels that Surface
+without a failure banner or dialog. The first tab's command subscription has a
+startup limitation described below. Every async
 continuation rechecks its lifetime before starting or using the Adapter. Late
 callbacks become inert immediately; the pending operation settles before owned
 resources are released, including a late font lease. An already accepted native
@@ -46,9 +50,11 @@ size, independent line height, programming-ligature setting, per-side padding,
 Window Font Zoom and scrollback. Theme, size, programming ligatures, padding and
 scrollback reload live without replacing the Surface, core, fonts or PTY. A Restty Surface keeps the font family and line height it was created with;
 restart OMXTerm to apply either changed setting to every existing Restty
-Surface. Initializing Surfaces count too: a reload between font/runtime readiness
-and PTY startup must not relabel their creation-time settings or clear a required
-notice on the next reload. The Electron Adapter retains a main-issued,
+Surface. Initializing Surfaces count too: bookkeeping retains their creation-time
+settings and notices between font/runtime readiness and PTY startup. This does
+not guarantee completion of a pending native font read across a family reload;
+see [current runtime limitations](#current-runtime-limitations). The Electron
+Adapter retains a main-issued,
 renderer-scoped font configuration identity at creation and releases that owner
 on disposal, including cancellation before startup. It never claims font values.
 Programming ligatures default to enabled and use Restty's existing
@@ -72,7 +78,44 @@ old row metrics, larger new-tab row metrics, same native PTYs and notice clearin
 after removing the old Surface. Cell measurements are real Restty/core replies
 to a synthetic fixture query, not screenshots or physical keyboard input. The
 matching isolated regression also covers family changes and multiple pending
-owners; its mocked runtime values are not native font measurements.
+owners; its mocked runtime values are not native font measurements. The native
+fixture holds runtime readiness after font acquisition, not the main font-data
+read across a family change.
+
+### Current runtime limitations
+
+These source-backed limits were reviewed in
+[audit #566](https://github.com/luizomf/omxterm/issues/566). They describe unchanged
+code, not fixes delivered by documentation or a requirement to preserve old
+promises. Track independently supported bugs as focused follow-ups.
+
+- **Cursor-position reports:** Restty's OutputFilter replies before core write
+  using a persistent UTF-16 cursor hint. It can disagree with Ghostty's actual
+  wide/combining cells, pending wrap and resize position. Exactly one reply does
+  not establish a correct position. The preparation correction does not replace
+  that tracker with core-owned CPR.
+- **Reload application failures:** validation rejection keeps the previous
+  configuration, but a runtime consumer exception after validation has no
+  transactional rollback. Main has already assigned the new snapshot and log
+  level; settings can remain new or partially applied despite the failure notice.
+- **Pending native fonts:** main accepts font-data requests only for its current
+  family/generation. Changing family while an earlier native read is outstanding
+  rejects its completion as superseded; the still-initializing old Surface may
+  fail. Renderer generation/lease ownership does not override this main check.
+- **Font read errors:** a successful response contains bounded font data, not a
+  path API. A subsequent on-demand read failure can nevertheless carry native
+  filesystem detail, including a path, in the IPC rejection. This is renderer
+  error disclosure, not evidence of network exfiltration or Operational Event
+  logging. Do not share raw rejection text without review.
+- **First-tab commands:** the host subscribes to tab commands only after
+  `tabs.ready`. Close Tab sent before the first Surface is ready can be dropped;
+  later-tab cancellation coverage does not qualify this startup interval. Close
+  Window and Quit use separate main-owned lifecycle routes.
+
+The CPR, reload, font-read and command-order findings have source/module evidence;
+this guide does not claim fresh native GUI reproduction on every platform.
+
+### Scrollback and viewport
 
 Positive `scrollback.lines` values are approximate physical history-row targets
 because Ghostty evicts whole historical pages. Retention can exceed the target
@@ -163,8 +206,10 @@ selection, copy, cells, cursor positions, wide/combining/emoji graphemes and
 fallback or bold face selection. It keeps mouse buttons and wheel input coherent in
 normal and alternate screens; Shift selection and valid modified-link activation
 override application mouse reporting without duplicate PTY input. DA1, DA2,
-cursor-position and cell-size queries have one deterministic parsed-runtime
-reply path, including controls split across output messages.
+cursor-position and cell-size queries have one parsed-runtime reply path,
+including controls split across output messages. CPR accuracy has the
+[UTF-16 tracker limitation](#current-runtime-limitations) above; cell-size replies
+and actual core cursor observations are separate evidence.
 
 Queue bytes, JavaScript heap and RSS are separate metrics from Ghostty core,
 browser/WebGL and GPU allocations; no whole-application memory bound is claimed.
@@ -289,7 +334,9 @@ Surface. Bundled inputs remain stable shared views.
 A rejected load publishes nothing and a later acquisition retries. One pending
 lease may be cancelled without invalidating another. A validated configured-
 family change selects a new generation for newly created Surfaces; old live
-Surfaces keep their creation-time generation. Pending old results cannot publish
+Surfaces keep their creation-time generation. An outstanding main font-data read
+can be rejected as superseded, as described above; an already acquired font
+stack remains leased by its old Surfaces. Pending old results cannot publish
 into the new generation, and disposal makes late results inert. Closing one tab
 releases only its lease. Final generation release drops the renderer owner's
 font references, and Terminal Window disposal releases every remaining lease and
@@ -636,6 +683,10 @@ produce a native focus event. The owner reported Ubuntu unaffected; attempted
 native automation there did not establish equivalent dead-key event delivery,
 so it is not claimed as a second native layout verification.
 
-The complete native package commands run this host/runtime coverage on macOS,
-Linux and Windows ARM64. Native glyph rasterization and platform security UI
-remain automation-resistant risks rather than pixel-identical claims.
+The complete native package commands include the default host/runtime suite on
+the target ARM64 desktop. Platform guards and explicit opt-ins still determine
+which assertions execute; see [qualification scope](development.md#qualification-scope).
+A successful package startup probe is not a replay of every host scenario, and
+neither establishes the absence of the runtime limitations above. Native glyph
+rasterization and platform security UI remain environment-specific risks rather
+than pixel-identical or universal qualification claims.

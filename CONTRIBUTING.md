@@ -133,7 +133,11 @@ when changing the Terminal Surface or its pinned dependencies.
 OMXTerm focuses on local terminal sessions. For behavior changes, read the
 relevant [product contract](docs/spec.md), [terminology](CONTEXT.md) and
 [architecture decisions](docs/adr/). They explain current behavior and the
-tradeoffs behind it.
+tradeoffs behind it. These are maintained descriptions, not immutable promises:
+correct stale text to match the current product and revise decisions when the
+product evolves. Git retains earlier versions. Separate supported code bugs from
+documentation corrections rather than treating every discrepancy as a demand to
+implement an old promise.
 
 - Keep the change focused, with clear modules, strict types and dependencies
   that serve a concrete need.
@@ -165,10 +169,14 @@ For code, run:
 npm run check:portable
 ```
 
-This runs formatting, lint, type checking, tests and the unpackaged build. You
-can run `npm run lint`, `npm run typecheck`, `npm test` or `npm run build`
-separately while developing. Graphical tests need a working desktop and WebGL2;
-“portable” does not mean headless. Run one native suite at a time per desktop.
+This runs formatting, lint, type checking, the default Vitest suite and the
+unpackaged build. You can run `npm run lint`, `npm run typecheck`, `npm test` or
+`npm run build` separately while developing. `npm run test:integration` runs only
+`test/integration/local-shell.test.ts`, not the full integration directory.
+Graphical tests need a working desktop and WebGL2; “portable” does not mean
+headless. Run one native suite at a time per desktop. Platform skips and explicit
+opt-in tests are not passes on those boundaries; see the
+[qualification scope](docs/development.md#qualification-scope).
 
 Product packaging changes also need matching native evidence. Use the full
 check when evidence is missing; reuse recorded PASS steps with unchanged relevant
@@ -197,8 +205,11 @@ run `npm run package:win`, then
 `npm run package:verify -- --windows-unpacked-only`.
 
 List checks you could not run and why. Report each platform's actual results;
-a pass on one platform does not establish another. Everyday testing is welcome
-but optional for releases.
+a pass on one platform does not establish another. Preserve observed failures
+and explain their relevance rather than claiming that a later pass erased them.
+A historical evidence gap alone does not block a documentation correction or
+prove a current product bug. Everyday testing is welcome but optional for
+releases.
 
 ## Commits and pull requests
 
