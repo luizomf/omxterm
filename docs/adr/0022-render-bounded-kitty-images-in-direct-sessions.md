@@ -1,6 +1,6 @@
 # Render bounded Kitty images in direct sessions
 
-OMXTerm will render bounded static images carried as Terminal Payload through
+OMXTerm renders bounded static images carried as Terminal Payload through
 two pinned Kitty graphics protocol paths in a direct Live Terminal Session. The
 first is the direct PNG subset emitted by Pi 0.84.4 at commit
 `b79e4cc834970cca69daebffab7df1da7d1e52c4`: transmit-and-display,
@@ -27,8 +27,8 @@ The portable Terminal Surface owns protocol parsing, browser/WebGL rendering,
 cell anchoring, resize, font-rescaling behavior and cleanup. Restty implements
 the claimed Pi and Chafa paths inside its pinned Ghostty core. Cell-size reports
 remain enabled so `CSI 16 t` returns the dimensions image-producing applications
-need. JavaScript eval, remote scripts or images, object sources, connections,
-renderer Node access, and new preload or IPC capabilities remain forbidden.
+need. Image rendering uses no JavaScript eval, remote fetch, object source,
+renderer Node access or image-specific preload/IPC capability.
 Image bytes stay opaque, memory-only Terminal Payload on the existing
 PTY-to-Terminal-Surface path and never become Operational Events, clipboard
 transport, files, or application network traffic.

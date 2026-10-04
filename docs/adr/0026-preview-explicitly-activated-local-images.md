@@ -82,14 +82,14 @@ Use quotes or the picker for filenames that do not fit it.
 The checksum-guarded runtime retains physical-row-end spaces only when core
 selection text proves that those exact cells continue without a hard break. This
 prevents activation of a truncated prefix when a literal space ends a physical
-row (#467). The same reconstructed text drives offsets, hover cells and
-activation;
-no arbitrary line joining or new parser is introduced. Literal final-row spaces
+row. The same reconstructed text drives offsets, hover cells and activation;
+no arbitrary line joining or second parser is used. Literal final-row spaces
 remain distinct from blank cell padding rather than disappearing before the
 whole-line exclusion. Uncertain continuity at a concealed viewport edge is
-refused, including a spaced image prefix ending before literal spaces. Native controls cover
-first/continuation/space activation, real small-image display, Unicode quoted
-prefixes, resize/reflow and actual tmux initial output/refresh-client redraw.
+refused, including a spaced image prefix ending before literal spaces. Tests
+cover activation across wrapped cells, actual image display, Unicode quoted
+prefixes, resize/reflow and tmux redraw. Parser-only tests do not establish
+native display or owner-lifetime cleanup.
 
 Brackets, assignments
 and trailing punctuation are not trimmed. The native picker handles ambiguous
@@ -108,8 +108,7 @@ Actual WebP content is currently unsupported.
 An extension is not format evidence: PNG bytes named `.webp` remain PNG, while
 actual WebP receives a fixed unsupported-format error distinct from an unavailable
 file. The renderer displays only fixed safe errors, never native error details.
-Adding WebP later requires its own bounded validation/native decode decision;
-allowing an extension alone would not fulfill that contract.
+Recognizing an extension is not format support.
 
 This capability is deliberately separate from ADR 0022. Inline Terminal Images
 remain cell-anchored Terminal Payload parsed by the pinned Ghostty core; Local

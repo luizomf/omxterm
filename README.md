@@ -52,8 +52,7 @@ SSH clients, and coding agents inside it.
 
 ## Platforms and downloads
 
-**Latest release: [0.20.1](https://github.com/luizomf/omxterm/releases/tag/v0.20.1)**
-— [what changed](docs/releases/0.20.1.md).
+**Latest release: [0.20.1 — downloads and release notes](https://github.com/luizomf/omxterm/releases/tag/v0.20.1)**
 
 Downloads are **ARM64 only**. Check your processor in **About This Mac**, with
 `uname -m` on Linux (`aarch64`), or under **Settings → System → About** on Windows

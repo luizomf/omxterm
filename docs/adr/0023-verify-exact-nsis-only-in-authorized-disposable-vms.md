@@ -1,9 +1,8 @@
 # Verify exact NSIS only in authorized disposable VMs
 
-Windows release automation must exercise the exact NSIS installation seam: the
-historical extraction-plugin bug dropped PE files even though the unpacked tree
-was complete. Unpacked startup or archive extraction cannot substitute for that
-proof.
+Windows release verification exercises the exact NSIS installation seam:
+unpacked startup or archive extraction cannot establish the installed payload,
+registration, startup or cleanup behavior.
 
 A temporary `/D=` destination does not isolate NSIS application identity.
 The pinned installer can remove a registered old version and change shared
@@ -37,14 +36,9 @@ inspection. User data is never selected for deletion. The old application is
 not restored by this test; snapshot recovery is a separate environment action.
 
 Safe unpacked diagnostics remain available and explicitly partial. Full native
-Windows verification still requires this exact-installer seam. These technical
-modes do not define additional owner approval rounds.
-
-An owner-authorized release in disposable VMs covers prerequisite provisioning
-and installer verification. The agent supplies the CLI opt-in for that work;
-consent is not requested again for each invocation. Live-process conflicts,
-unknown ownership and failed verification remain technical blockers, not
-reasons to bypass inspection. The cost is a disposable native VM and
+Windows verification requires this exact-installer seam. Live-process conflicts
+and unknown ownership are refusals, not reasons to bypass inspection. The cost
+is a disposable native VM and
 re-reviewing the inspection footprint when packaging inputs change. This
 is preferable to changing the tested installer identity, hiding registry state,
 repacking the artifact, or claiming non-mutating extraction without evidence.

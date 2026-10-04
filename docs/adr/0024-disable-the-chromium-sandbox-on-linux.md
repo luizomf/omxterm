@@ -2,8 +2,7 @@
 
 OMXTerm deliberately uses `--no-sandbox` on Linux so ordinary users can launch
 it without administrator sandbox setup. Supporting distribution-specific
-sandbox prerequisites exceeds the project's current maintenance scope. Simple,
-reproducible contributions for sandboxed Linux support are welcome.
+sandbox prerequisites exceeds the project's current maintenance scope.
 
 This is an unconditional Linux launch policy, not a probe-driven fallback or
 configuration option. Direct AppImage, extraction, the optional per-user desktop
@@ -12,9 +11,9 @@ Windows keep their existing sandbox behavior. Kitty/Chafa graphics remain
 supported on all three ARM64 platforms.
 
 Context isolation, disabled Node integration, the minimal typed preload bridge
-and the production CSP remain unchanged. They do not replace Chromium sandboxing
-or provide equivalent protection. OMXTerm does not run as root, install setuid
-helpers, manage AppArmor policy or relax global operating-system protections.
+and the production CSP limit renderer authority. They do not replace Chromium
+sandboxing or provide equivalent protection. Ordinary-user launch needs no
+elevation, setuid helper, AppArmor management or global security-policy change.
 
 The pinned packager has no AppRun override, so a checksum-guarded build-input
 patch replaces its namespace probe with the unconditional flag before loading

@@ -3,8 +3,7 @@
 OMXTerm uses pinned Restty and Ghostty behind the portable
 [Terminal Surface seam](0008-make-the-terminal-surface-the-portable-module.md).
 There is one implementation, not an engine registry, renderer selector or
-fallback. The migration in #252 is complete. The historical filename is retained
-for links; Git holds the staging history.
+fallback.
 
 ## Navigation
 
@@ -23,8 +22,7 @@ The [product contract](../spec.md) describes current behavior; the
 ## Decision and initialization
 
 Restty 0.3.0 is the Surface in ordinary development and packaged applications.
-The former xterm renderer and temporary `OMXTERM_TERMINAL_SURFACE` selector are
-removed. `TERM=xterm-256color` remains protocol vocabulary, not a renderer choice.
+`TERM=xterm-256color` is protocol vocabulary, not a renderer choice.
 
 Each Surface reuses the Electron host, typed configuration bridge, Terminal Tab,
 session Adapter and owned local PTY. Bundled TTFs, Ghostty core and an actual
@@ -46,8 +44,8 @@ Restty 0.3.0 is pinned to `3db45b0e10dbe53c52a77131d366f519546e4f04`,
 including Ghostty `0309af1b7f0724105a0805efa88bbee808a616ae`, with
 `text-shaper` 0.1.28. OMXTerm prepares reviewed checksum-guarded JavaScript and
 reproducible WASM build inputs after lockfile installation. Exact replacements
-and final checksums reject dependency drift. Reviewed historical input digests
-permit an ordered suffix of the same preparation, not approximate patching.
+and final checksums reject dependency drift. Recognized input digests select
+the remaining ordered preparation steps, not approximate patching.
 
 Private typed runtime seams expose readiness, raw DOM-paste origin,
 bracketed-paste mode, selection, parsed events and rendering controls. Direct
@@ -105,14 +103,14 @@ bytes stay out of Operational Events.
 read-error detail, and the font IPC/preload route does not translate that
 rejection into a fixed renderer-facing error. A failed on-demand read can expose
 a native path to the renderer. This limits error redaction; it is not a broad
-filesystem capability or demonstrated remote exfiltration (#566).
+filesystem capability or demonstrated remote exfiltration.
 
 For Apple Color Emoji, bounded positional reads assemble memory-only shaping
 input without the unused `sbix` bitmap table, retaining all faces and other
 tables. Native Canvas still uses the unchanged installed font. This reduces font
 bytes, not total RSS/GPU memory. The pinned fallback already renders blank Apple
 emoji if Canvas is unavailable. Upgrades must revalidate the assumption using
-[the shaping experiment](../emoji-shaping-experiment.md); it is not a general
+[the shaping diagnostics](../emoji-shaping-diagnostics.md); it is not a general
 policy for bitmap fonts or an on-disk derivative.
 
 ### Creation-time settings and restart notices
@@ -140,7 +138,7 @@ That tab can fail initialization and close without starting a PTY. Already
 acquired font bytes survive through their leases; line-height-only reload does
 not invalidate the family-data generation. The integrated ownership fixture
 holds runtime initialization after font acquisition and does not test this race
-(#566). This is an initialization defect, not the intended restart-only behavior.
+([#569](https://github.com/luizomf/omxterm/issues/569)).
 
 Complete validation rejects invalid configured font inputs before application;
 application-time exceptions are not an atomic rollback guarantee. See
@@ -242,9 +240,8 @@ Pending IPC bytes, JavaScript heap, RSS, core storage, browser/WebGL resources
 and GPU allocations are separate domains; none is a total memory bound and tabs
 multiply costs.
 
-Source and tests support bounded behaviors, not universal correctness or fresh
-native qualification. [#566](https://github.com/luizomf/omxterm/issues/566)
-separates supported code bugs, conditional investigations and optional hardening;
-this ADR does not turn every limitation into required future work. Native ARM64
-package evidence belongs to each exact artifact
+Source and tests support bounded behaviors, not universal correctness or native
+qualification on every desktop. Limits and conditional error paths do not imply
+mandatory hardening work. Native ARM64 package evidence belongs to each exact
+artifact
 under [ADR 0019](0019-support-native-arm64-releases-on-macos-linux-and-windows.md).

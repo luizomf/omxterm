@@ -1,692 +1,273 @@
 # Restty Terminal Surface
 
-OMXTerm uses pinned Restty 0.3.0 and its Ghostty WASM core as the Terminal
-Surface in both development and packaged applications. The application starts a
-PTY only after fonts, the core, and WebGL2 are ready, so a rendering failure
-cannot leave an invisible shell running.
-
-This guide is for contributors changing that integration. Start with the
-[runtime contract](#runtime-contract) to understand host behavior, then use
-[pinned inputs and restoration](#pinned-inputs-and-restoration) when auditing or
-repairing the installed dependency. The maintained
-[`spec.md`](spec.md) describes current product behavior, while
-[ADR 0025](adr/0025-stage-restty-behind-an-unpackaged-opt-in.md) records why Restty
-is the sole Surface. Both evolve with the product; Git retains old text. Restty
-is not a User Configuration
-choice, and there is no fallback renderer.
+OMXTerm uses pinned Restty 0.3.0 and its Ghostty WASM core in development and
+packaged applications. There is no Surface selector or fallback renderer. This
+page covers integration maintenance; [spec.md](spec.md) describes the product and
+[ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md) explains the architecture.
+Use [native development](development.md) for platform setup and fixture ownership.
 
 ## Runtime contract
 
-The Surface uses the existing tabs, Electron Adapter and owned local PTYs. It
-supports ordinary Unicode shell input/output, grid resize, focus, independent
-tabs, Default Shell and `-e` command startup, shell exit, explicit close and
-renderer-loss cleanup. It requires the bundled TTF, Ghostty WASM core and a real
-WebGL2 backend before starting a PTY. Initialization failure starts no shell;
-WebGL context loss reports a visible failure and disposes only the owning tab.
-A native failure dialog explains recovery and remains until acknowledged, even
-when cleanup ended the window's last session. No terminal state is recreated.
-Once the host receives a tab-close command, closing a tab during font acquisition,
-runtime initialization or the session-start round-trip cancels that Surface
-without a failure banner or dialog. The first tab's command subscription has a
-startup limitation described below. Every async
-continuation rechecks its lifetime before starting or using the Adapter. Late
-callbacks become inert immediately; the pending operation settles before owned
-resources are released, including a late font lease. An already accepted native
-start still closes once through the existing Adapter. Cleanup errors are not
-silently treated as successful cancellation.
+The portable Surface receives an Adapter and imports neither Electron nor
+node-pty. Electron main owns local PTYs and privileged capabilities; preload
+exposes typed, sender-validated routes. Fonts, Ghostty core and WebGL2 readiness
+precede PTY startup. Initialization failure starts no invisible shell. Context
+loss reports a visible failure and disposes the affected tab/session without
+recreating its core or affecting siblings.
 
-`test/integration/initialization-cancellation.test.ts` holds B at the real font
-lease or Restty WebGL readiness continuation, closes it while A stays live, then
-releases the continuation. It checks no fatal notification/banner or extra PTY,
-released font/runtime subscriptions and continued A Paste/input/output. This is
-a controlled async gate with real rendering and PTYs, not physical Close Tab
-keyboard input. Isolated host/Surface/Adapter tests also cover rejected late
-operations and cancellation racing an accepted start.
+Once a tab-close command reaches the host, cancellation makes late callbacks
+inert, waits for pending acquisitions to settle and releases partial resources.
+An already accepted session start is closed once through the Adapter. Main retains
+a native failure dialog until acknowledgement for genuine failures, including
+when the failed session was the last one. Cleanup uncertainty is not success.
 
 ### Configuration and Surface lifetime
 
-The Surface applies the selected Terminal Theme, configured font family,
-size, independent line height, programming-ligature setting, per-side padding,
-Window Font Zoom and scrollback. Theme, size, programming ligatures, padding and
-scrollback reload live without replacing the Surface, core, fonts or PTY. A Restty Surface keeps the font family and line height it was created with;
-restart OMXTerm to apply either changed setting to every existing Restty
-Surface. Initializing Surfaces count too: bookkeeping retains their creation-time
-settings and notices between font/runtime readiness and PTY startup. This does
-not guarantee completion of a pending native font read across a family reload;
-see [current runtime limitations](#current-runtime-limitations). The Electron
-Adapter retains a main-issued,
-renderer-scoped font configuration identity at creation and releases that owner
-on disposal, including cancellation before startup. It never claims font values.
-Programming ligatures default to enabled and use Restty's existing
-boolean configuration and `setLigatures` operation. New Surfaces use every
-latest validated value. Native glyph rasterization can differ across operating systems and GPUs; pixel-identical output is not claimed.
+Theme, font size, programming ligatures, padding, scrollback and Option Key Mode
+apply live in the same Surface/core/PTY. Existing Surfaces keep creation-time
+font family and line height; restart to change those everywhere. New Surfaces use
+the current validated settings. Main-issued renderer-scoped identities retain
+creation-time font bookkeeping before PTY startup and release it on disposal.
+Restart notices account for surviving initializing Surfaces, not just live PTYs.
 
-Bar cursors start inside their addressed cell, including column zero, without
-requiring padding or a different font. The pinned correction retains the
-font-derived thickness and existing block, underline, focus and blink behavior.
-`test/integration/restty-cursor-rendering.test.ts` compares native pixels against
-a hidden-cursor baseline with bundled and natively configured fonts at DPR 1/2,
-zero/nonzero padding, and before/after zoom, refit and live configuration reload.
-Each family is mounted fresh; reload does not pretend to change its active family.
-Focus controls replay DOM focus loss in inactive fixture windows, not physical
-application activation; blink observations use the real clock and native pixels.
-
-`test/integration/surface-font-ownership.test.ts` holds the real initial Restty
-readiness continuation, reloads line height from 1 to 1.5, finishes startup and
-reloads 1.5 again. It checks main bookkeeping, the production notice, unchanged
-old row metrics, larger new-tab row metrics, same native PTYs and notice clearing
-after removing the old Surface. Cell measurements are real Restty/core replies
-to a synthetic fixture query, not screenshots or physical keyboard input. The
-matching isolated regression also covers family changes and multiple pending
-owners; its mocked runtime values are not native font measurements. The native
-fixture holds runtime readiness after font acquisition, not the main font-data
-read across a family change.
+Reload validation precedes application. Runtime application is sequential, not a
+rollback transaction; see [current runtime limitations](#current-runtime-limitations).
 
 ### Current runtime limitations
 
-These source-backed limits were reviewed in
-[audit #566](https://github.com/luizomf/omxterm/issues/566). They describe unchanged
-code, not fixes delivered by documentation or a requirement to preserve old
-promises. Track independently supported bugs as focused follow-ups.
+- **CPR:** the OutputFilter answers cursor-position queries before core write
+  using a persistent UTF-16 cursor hint. Wide/combining text, pending wrap and
+  resize can make the reply disagree with Ghostty's actual cursor. A single reply
+  path does not establish correct coordinates.
+- **Reload exceptions:** `user-configuration-reloader.ts` assigns the new active
+  snapshot and log level before applying consumers. A runtime exception can leave
+  new or partially applied settings despite the retained-configuration notice.
+  Ordinary validation rejection retains the previous settings.
+- **Pending fonts:** main accepts requests only for its active family/generation.
+  A family change while an old native font read is pending rejects that read's
+  completion as superseded; the old initializing Surface can fail even though its
+  renderer lease still exists. Already acquired stacks remain leased.
+- **Font errors:** successful font responses contain bounded bytes and face
+  metadata, not paths or a filesystem API. An on-demand read failure can carry a
+  native filesystem path in the IPC rejection. Review raw errors before sharing;
+  this is renderer disclosure, not demonstrated network exfiltration or logging.
+- **First-tab commands:** `terminal-window-host.ts` subscribes to tab commands
+  only after `tabs.ready`. Close Tab sent before the first Surface is ready can
+  be dropped. Close Window and Quit have separate main-owned routes.
 
-- **Cursor-position reports:** Restty's OutputFilter replies before core write
-  using a persistent UTF-16 cursor hint. It can disagree with Ghostty's actual
-  wide/combining cells, pending wrap and resize position. Exactly one reply does
-  not establish a correct position. The preparation correction does not replace
-  that tracker with core-owned CPR.
-- **Reload application failures:** validation rejection keeps the previous
-  configuration, but a runtime consumer exception after validation has no
-  transactional rollback. Main has already assigned the new snapshot and log
-  level; settings can remain new or partially applied despite the failure notice.
-- **Pending native fonts:** main accepts font-data requests only for its current
-  family/generation. Changing family while an earlier native read is outstanding
-  rejects its completion as superseded; the still-initializing old Surface may
-  fail. Renderer generation/lease ownership does not override this main check.
-- **Font read errors:** a successful response contains bounded font data, not a
-  path API. A subsequent on-demand read failure can nevertheless carry native
-  filesystem detail, including a path, in the IPC rejection. This is renderer
-  error disclosure, not evidence of network exfiltration or Operational Event
-  logging. Do not share raw rejection text without review.
-- **First-tab commands:** the host subscribes to tab commands only after
-  `tabs.ready`. Close Tab sent before the first Surface is ready can be dropped;
-  later-tab cancellation coverage does not qualify this startup interval. Close
-  Window and Quit use separate main-owned lifecycle routes.
-
-The CPR, reload, font-read and command-order findings have source/module evidence;
-this guide does not claim fresh native GUI reproduction on every platform.
+These constraints are supported by the current source and the module-level
+findings in [#566](https://github.com/luizomf/omxterm/issues/566), not universal
+native GUI reproduction. The font-ownership fixture holds runtime readiness
+**after** font acquisition; it does not qualify an outstanding main font read
+across a family change.
 
 ### Scrollback and viewport
 
-Positive `scrollback.lines` values are approximate physical history-row targets
-because Ghostty evicts whole historical pages. Retention can exceed the target
-by one minimum boundary page, while the independent 10,000,000-byte core ceiling
-can retain fewer rows. OMXTerm does not estimate bytes per line. Zero selects
-Ghostty's no-history path: it drops existing history, retains none through
-continued output or resize, and a later positive value retains only new output.
-Live changes preserve reflow, alternate-screen state, selection and viewport
-coherence in the same Surface and remain isolated per Surface. A fine pointer
-selects the existing native scroll host even on a hybrid desktop that also
-advertises touch; touch-only devices retain Restty's touch scrolling path. The
-native scroll host disables browser scroll anchoring: Restty owns the terminal viewport, so a
-notice/layout or font-size change must not turn Chromium's anchor adjustment
-into terminal scroll input. Native rendering coverage verifies that shrinking
-and restoring the host with a font-size change preserves the live bottom while
-ordinary output still leaves a deliberately scrolled viewport alone. Browser
-clamping during the host's own spacer-height write uses the existing
-programmatic-scroll suppression, just like an explicit `scrollTop` assignment.
-A queued clamp event must not translate a previous scrollbar mapping into a
-user scroll after the next refit. `isTrusted` alone does not establish user intent.
-The native feedback regression requires exact DOM bottom and actual core live
-offset through height transitions, while intentional DOM scrolling remains
-accepted and output/focus do not force it back to live.
+Positive `scrollback.lines` is an approximate physical history-row target:
+Ghostty evicts whole pages, so retention can exceed it by one minimum boundary
+page. The independent 10,000,000-byte core ceiling can retain fewer rows. Zero
+uses the core's no-history path and drops existing history; restoring a positive
+value retains only new output. Each Surface has independent history.
+
+Accepted input returns the viewport to live; output, focus and selection do not.
+Fine-pointer desktops use Restty's native scroll host even with touch capability;
+touch-only devices retain its touch path. Browser scroll anchoring is disabled,
+and spacer-height clamping uses programmatic-scroll suppression so queued browser
+events do not become terminal scroll input. `isTrusted` alone is not user intent.
 
 ### Input and host-owned policy
 
-Explicit copy/paste, selection, native context actions, Protected Paste,
-snippets, file-path injection and write-only OSC 52 use the existing OMXTerm
-host routes. DOM paste enters the same asynchronous confirmation and ordered
-delivery path without browser clipboard permission; ordinary key input remains
-direct. OSC 52 reads, clears, malformed, cancelled and over-bound requests have
-no clipboard or PTY side effect. Holding the platform activation modifier
-underlines the existing exact visible-destination resolver span under the
-pointer without activation or host I/O. Modified primary click activates
-literal lowercase visible HTTP(S) text through the existing host route,
-including during TUI mouse reporting without a duplicate PTY report. Restty
-joins rows only when
-Ghostty selection text proves a visible soft wrap; literal spaces at a physical
-row end are retained only when that same proof includes them. Final-row literal
-spaces remain distinct from codepoint-zero blank padding, so the recognizer can
-exclude trailing-space whole-line paths. Uncertain viewport-edge continuity is
-refused, never used to activate a clipped prefix. Hard breaks remain separate,
-OSC 8 destinations are ignored, and a destination that may continue into a
-concealed row is refused. Parsed OSC 0/2 titles and BEL use the existing
-per-session title and silent-bell host controller, including raw title bounds,
-sanitization and fallback, tab/window ownership, focus/interaction reset and
-platform attention. The Surface sends no title reports; cancelled/malformed
-controls and OSC BEL terminators have no extra title or bell effect.
+Explicit copy/paste, Protected Paste, snippets, file-path insertion, local-image
+activation and write-only OSC 52 use OMXTerm host routes. DOM paste enters the
+ordered asynchronous confirmation/delivery path; ordinary keyboard input stays
+direct. Closing the owner stops future chunks and optional Enter, without
+recalling bytes already sent. Restty's direct browser clipboard and opening
+callbacks are disabled.
+
+Visible destination recognition uses cell snapshots and Ghostty selection proof
+of fully visible soft wraps. Hard breaks remain separate, uncertain clipped
+continuations are refused, and OSC 8 destinations are ignored. Modified primary
+click overrides application mouse reporting only for a valid destination without
+a duplicate PTY report. Pointer cancellation and blur end pending gestures.
+
+Parsed OSC 0/2 and BEL flow through existing title/silent-bell controllers rather
+than an OMXTerm payload scanner. Cancelled/malformed controls and OSC BEL
+terminators have no extra title/bell effect; title reports receive no reply.
+
+Option Key Mode applies live. On macOS, `none` keeps native layout Unicode and
+composition; configured physical Option sides generate terminal Alt input.
+Native dead-key completion retains layout text, including Space completion that
+arrives as `insertText` without composition events. Ordinary non-composing Space
+uses the existing key encoder. Main owns application accelerators exactly once.
+Synthetic DOM keyboard tests do not qualify every OS layout or hardware sequence.
 
 ### Graphics and resource limits
 
-The Surface renders the bounded direct Pi PNG and anonymous metadata-first
-Chafa RGBA Kitty paths. Parsing, decode, placement, deletion and reset remain in
-the pinned Ghostty core. Decoded transport input is
-limited to 33,554,432 bytes, source dimensions to 4,194,304 pixels, and completed
-decoded image storage to 64,000,000 bytes per screen. Ghostty retains at most one
-unfinished image per screen and uses its native completed-image eviction policy.
-The JavaScript/WebGL rendering copies and transient decoder allocations are not
-included in that storage total, and tabs multiply memory. Images remain
-cell-anchored through resize, Window Font Zoom, tab selection and live theme
-reload; `CSI 16 t` reports the current cell size. Pi's default 2,000-by-2,000
-autoresized output is the compatibility target. Unsupported protocol paths remain unclaimed.
+The pinned core owns Kitty parsing, decode, placement, deletion and reset for the
+claimed direct Pi PNG and anonymous metadata-first Chafa RGBA paths. Decoded
+transport input is limited to 33,554,432 bytes, dimensions to 4,194,304 source
+pixels and completed image storage to 64,000,000 bytes per screen. There is at
+most one unfinished image per screen. Pi's default 2,000-by-2,000 autoresized
+output is the compatibility target; other protocol/multiplexer paths are unclaimed.
+
+Images remain cell-anchored through refit, zoom, tab selection and theme reload.
+`CSI 16 t` reports current device-pixel cell metrics. Core storage does not include
+JavaScript/WebGL copies or transient decoder allocations, and tabs multiply costs.
+Flow-control, heap, RSS, core storage and GPU measurements are separate domains;
+none is a whole-application memory bound.
 
 ### Output flow control
 
-Output uses the shared ordered Adapter/IPC path. Main pauses an owned PTY at
-65,536 unacknowledged UTF-8 bytes and resumes at or below 16,384. Renderer ACKs
-are cumulative, sender/session validated, and mean only that output was
-submitted synchronously to the Surface—not rendered or released by Restty,
-Ghostty, WebGL, Chromium or the GPU. The crossing native read may raise measured
-pending bytes above 65,536. Owner loss resumes and terminates only that PTY; the
-pinned node-pty Unix correction prevents its 200 ms exit guard from destroying
-a deliberately paused readable tail. Windows ConPTY is not modified by that
-correction.
+Main pauses an owned PTY at 65,536 unacknowledged UTF-8 bytes and resumes at or
+below 16,384. ACKs are cumulative and sender/session validated. They mean
+synchronous submission to the Surface, not rendering or parser/GPU resource
+release. The crossing native read can raise pending bytes above the high-water
+threshold. Owner loss resumes and terminates only that PTY. The prepared Unix
+node-pty exit guard preserves a deliberately paused readable tail; ConPTY is a
+separate implementation.
 
-Restty's existing OutputFilter retains at most 10,000,000 UTF-16 code units for
-one unfinished OSC or CSI body. An oversized control is discarded whole through
-termination or CAN/SUB cancellation, has no partial clipboard, title, reply or
-mode side effect, and does not block later ordinary text. The established valid
-large OSC 52 request remains accepted. This scanner rule is not a general text,
-copy, paste or input limit.
-
-Restty honors live Option Key Mode changes. On macOS, `none` preserves native
-layout Unicode and composition input; `left`, `right`, and `both` produce
-terminal Alt input only from the configured physical Option key. Application
-keybinds still route through Electron main exactly once. Restty keeps programming-ligature changes independent from underlying text,
-selection, copy, cells, cursor positions, wide/combining/emoji graphemes and
-fallback or bold face selection. It keeps mouse buttons and wheel input coherent in
-normal and alternate screens; Shift selection and valid modified-link activation
-override application mouse reporting without duplicate PTY input. DA1, DA2,
-cursor-position and cell-size queries have one parsed-runtime reply path,
-including controls split across output messages. CPR accuracy has the
-[UTF-16 tracker limitation](#current-runtime-limitations) above; cell-size replies
-and actual core cursor observations are separate evidence.
-
-Queue bytes, JavaScript heap and RSS are separate metrics from Ghostty core,
-browser/WebGL and GPU allocations; no whole-application memory bound is claimed.
-There is no fallback renderer.
+Restty's OutputFilter bounds one unfinished OSC/CSI body to 10,000,000 UTF-16 code
+units. Over-bound controls are discarded whole through termination or CAN/SUB,
+without partial clipboard, title, mode or reply effects. Later text can continue.
+This is not a general output, copy, paste or keyboard-input limit.
 
 ### Hidden Surface rendering
 
-Tab hiding suppresses frame clears, draws and render uploads, not synchronous
-output ingestion or Adapter ACKs. The runtime consults its Surface-owned
-visibility callback before frame work; RAF scheduling remains unchanged. Hidden
-font changes retain the last real grid until visible refitting. Selection's
-existing focus operation refits and refreshes in the same task, before Chromium
-can present the revealed canvas, without waiting for the background render budget.
-A mount completing while hidden uses the same visibility rule.
+Hiding suppresses frame clears, draws and render uploads, not synchronous
+output ingestion, protocol replies or Adapter ACKs. Hidden font changes retain
+the last real grid. Selection refits and refreshes in the switching task without
+waiting for a background render budget or replacing Surface/core/session.
 
-Hidden frames and hidden output discard disposable renderer image copies and
-pending decodes. The core retains valid images, placements and scrollback;
-deletions, reset and alternate-screen exit still execute during ingestion.
-Reveal reconstructs only the needed renderer copies. This deliberately favors
-simple lifetime correctness over retaining hidden image textures and does not
-promise reduced total RAM or GPU capacity. No Surface/core/session is replaced.
-See [native regression and measurement evidence](hidden-rendering-evidence.md)
-for the exact workload, baseline, CPU domains and limitations.
-
-### WebGL depth attachment
-
-The checksum-guarded runtime requests `depth:false` alongside
-`antialias:false, alpha:true`. Alpha is now required for background composition
-below; the original depth-only comparison used `alpha:false`. Restty's 2D path does not enable depth testing.
-The [depth-only native comparison](webgl-depth-evidence.md) confirms removal of
-the default depth attachment with preserved text, cursor, selection, images and
-hidden reveal behavior. It does not establish OS-level RAM savings. This changes
-no Surface ownership, context sharing, DPR, image limits or hidden-rendering rule.
+Hidden output discards disposable renderer image copies and pending decodes.
+Valid core images and placements survive; deletion, reset and alternate-screen
+exit still execute. Reveal rebuilds needed renderer copies. This lifetime policy
+does not promise reduced total RAM or GPU allocation.
 
 ### Background composition
 
-The real WebGL2 context is alpha-enabled and clears to transparent. The window
-host paints the default theme tint once on body; Surfaces use `background:
-"host"` so neither their padding nor their canvas repeats it. A standalone
-Surface retains its own opaque theme background unless its host takes ownership.
-Transparency reload updates the host tint, not a Surface/core/PTY instance.
-Windows keeps nontransparent native construction for working native controls:
-Acrylic allows tint transparency, while plain-alpha, unavailable API and failed
-material requests use effective renderer transparency zero and the opaque theme.
-The existing per-window configuration snapshot carries that effective value;
-the complete requested configuration remains unchanged.
-Chrome overlays do not repeat the theme background, and foreground content is
-not globally faded. [ADR 0029](adr/0029-compose-background-effects-with-explicit-cell-identity.md)
-records native effects and ownership.
+The WebGL2 context requests `alpha:true`, `depth:false` and `antialias:false`.
+It clears to transparent, and the host paints the theme tint once. Surfaces use
+`background: "host"`; standalone Surfaces retain their own opaque background.
+Explicit core cell backgrounds use RGBA alpha 255, implicit defaults alpha 0.
+Explicit equal-RGB fills remain opaque; SGR 49 restores the implicit background.
+Inverse text and reverse-screen mode retain opaque explicit background behavior.
 
-In pinned Ghostty `src/terminal/style.zig`, `Style.bg` returns an optional color:
-`null` for implicit default, a color for explicit palette/RGB or background-only
-erased cells. The Restty bridge in `wasm/src/restty.zig` formerly discarded that
-identity. The tracked patch now exports it through the existing cell-background
-RGBA alpha (0 implicit, 255 explicit or screen-reversed), while retaining RGB for inverse text.
-Runtime inverse swaps restore opaque foreground alpha, and text contrast
-correction uses that RGB without painting implicit cells. Explicit equal-RGB
-backgrounds therefore stay opaque; SGR 49 returns to the implicit default.
-Theme changes, background-color erase and alternate screens preserve that rule.
-DECSCNM reverse-screen mode swaps core default colors without setting per-cell
-inverse; its reversed background remains opaque until the mode is disabled or
-reset. The bridge reads that core mode directly, not an RGB comparison.
-No RGB equality heuristic, second parser or new privileged route is involved.
+Transparency changes host tint rather than Surface/core/session identity.
+Windows uses nontransparent native construction: Acrylic can reveal the requested
+tint, while plain-alpha or failed/unavailable material requests use effective
+transparency zero. The requested configuration remains unchanged. Native blur is
+best effort; neither API success nor a page capture proves visible compositor
+blur. See [ADR 0029](adr/0029-compose-background-effects-with-explicit-cell-identity.md)
+and [ADR 0030](adr/0030-prefer-direct-macos-background-blur.md).
 
-Focused native checks on each ARM64 desktop:
+Focused checks:
 
 ```sh
 npx vitest run test/integration/restty-background-core.test.ts test/integration/restty-background-rendering.test.ts test/integration/window-chrome.test.ts
 ```
 
-The core test covers identity, erased cells, reset, alternate screens and changed
-default RGB. The rendering fixture mounts the real host and Surface under the
-production CSP, reads the actual WebGL buffer, and checks implicit alpha,
-explicit equal/different RGB, inverse ink, ANSI glyphs, cursor, selection, Kitty
-images, live changes and tab continuity. `capturePage` verifies page tint alpha
-255/about 128/0 on macOS/Linux (one-byte native rounding tolerance), with opaque
-Windows plain-alpha fallback and exact fallback theme RGB, including that sidebar
-overlays do not paint the theme a second time.
-The Window Chrome fixture uses actual main/preload/PTY routes and verifies live
-and future-window effects alongside native controls and existing session
-continuity. Linux fixtures explicitly use X11 and the existing no-sandbox policy.
-
-These tests request native effects but do not prove visible behind-window blur.
-For compositor verification on each target desktop:
-
-1. Place the candidate's real host/Surface window above a separately owned window
-   showing synthetic stripes and a checkerboard. Use only synthetic terminal data.
-2. Keep the theme fixed and compare opaque, positive transparency without blur,
-   the same transparency with blur, then blur removed. Capture the actual desktop
-   compositor and retain only the owned scene, not unrelated windows or payloads.
-3. Check reversible pattern softening on macOS/Windows/KDE where supported.
-   Windows must return to the opaque theme without blur, including after a theme
-   reload. GNOME may retain sharp plain transparency throughout. A successful
-   material call or `capturePage` alone proves neither visible blur nor its removal.
-4. Exercise native maximize/restore, resize and fullscreen; inspect actual native
-   state and custom controls while checking unchanged Surface/session identity.
-   In particular, larger Windows bounds alone do not establish maximized state.
-
-Report native desktop results separately from renderer tests, with the source
-revision, OS/compositor and limitations. One platform's GPU results or a standalone
-material probe do not qualify another platform's integrated Surface.
-No screen capture, diagnostic bridge or synthetic fixture ships in production.
+For optional compositor observation, place the app over a separately owned
+synthetic pattern window. Compare opaque, positive transparency without blur,
+blur enabled and blur removed at a fixed theme; exercise resize, maximize/restore
+and fullscreen while checking native state and unchanged Surface/session identity.
+Capture only owned synthetic scenes. Windows should use the opaque fallback when
+blur is absent; unsupported Linux composition may ignore blur. Record the actual
+OS/compositor and observation limits in the task issue/PR, not a repository report.
 
 ### Font memory ownership
 
-Each renderer Terminal Window owns one active validated font-family generation.
-The configured family includes its real regular and available bold/italic/
-bold-italic faces. Exact validated face indices select collection members while
-sharing the collection's bytes and Restty parsed resource. Missing styles use
-synthesis without introducing an unrequested trait. Native style file reads
-share a per-load source map; there is no persistent main cache.
+Each renderer window owns validated font-family generations. Compatible Surface
+leases share exact-range native byte snapshots and Restty's identity-keyed parsed
+resources. Collections share backing bytes while selecting exact face indices.
+Missing styles synthesize the requested trait; bundled bold faces are omitted
+for configured families so style selection cannot override the chosen family.
 
-The first Surface lease in a generation loads native configured and fallback
-bytes through the existing preload/main route, snapshots each external
-`Uint8Array` once into an exact-range owned `ArrayBuffer`, and publishes the
-complete ordered stack only after isolation. Concurrent and later compatible
-live Surfaces borrow the same backing identities. Restty's existing
-identity-keyed source and parsed resource store can therefore share one native
-source and parsed key per face in that window rather than creating both per
-Surface. Bundled inputs remain stable shared views.
+New-family generations serve new Surfaces; old acquired stacks remain with their
+creation-time owners. Rejected loads publish nothing, and cancellation of one
+lease does not cancel another. Final release/window disposal drops owner references;
+Restty's bounded released-resource cache is separate. Live fonts may exceed that
+cache budget. There is no persistent main byte cache or cross-window owner.
 
-A rejected load publishes nothing and a later acquisition retries. One pending
-lease may be cancelled without invalidating another. A validated configured-
-family change selects a new generation for newly created Surfaces; old live
-Surfaces keep their creation-time generation. An outstanding main font-data read
-can be rejected as superseded, as described above; an already acquired font
-stack remains leased by its old Surfaces. Pending old results cannot publish
-into the new generation, and disposal makes late results inert. Closing one tab
-releases only its lease. Final generation release drops the renderer owner's
-font references, and Terminal Window disposal releases every remaining lease and
-the owner; Restty's separately bounded released-resource cache semantics remain
-unchanged. Owners are never shared across Terminal Windows, and there is no
-persistent byte cache, content hashing, lazy coverage or global store.
+Borrowed ArrayBuffers are mutable. The pinned parser/shaper reads source bytes
+and writes separate caches/raster buffers; font-resource and native style tests
+check source preservation. Dependency upgrades must revalidate this assumption.
+Apple Color Emoji shaping input omits the unused `sbix` bitmap payload using
+bounded main-process reads, while Canvas uses the unchanged installed font.
+Other families retain whole-file inputs. IPC, snapshots, shaping, browser and GPU
+resources still have transient costs.
 
-`ArrayBuffer` is mutable, so ownership alone is not the read-only guarantee. In
-the pinned Restty runtime, buffer sources pass through `toSourceBuffer` without a
-write and `parseFontFacesFromBuffer` passes that same buffer to text-shaper.
-The text-shaper implementation embedded in that exact Restty chunk parses
-TTF/OTF and TTC faces through a `DataView` reader. Its `bytes()` method also
-returns mutable zero-copy views: getter-only scalar parsing is not sufficient
-proof. Inspection follows those views into glyph hint instructions, CFF
-charstrings, bitmap tables and SVG decoding. These consumers read source bytes;
-mutation is confined to separate parser caches, hint state, shaped glyphs and
-raster buffers. Restty's color-emoji rendering uses Canvas text rasterization,
-not in-place decoding of the borrowed native bitmap table.
+```sh
+npx vitest run test/integration/restty-font-resources.test.ts test/integration/restty-font-styles-rendering.test.ts test/integration/apple-emoji-shaping-input.test.ts
+```
 
-The installed-store test compares a bundled TTF before and after parsing,
-glyph lookup and release. The native host fixture additionally snapshots every
-borrowed native source before parsing and compares every byte after its real
-configured/native glyph rendering, concurrent tabs, configuration changes and
-tab cleanup. Test-only counters establish execution of embedded TTC collection
-parsing, zero-copy reader views, shaping, outline rasterization and, on macOS,
-color-canvas rasterization. The probe retains extra byte copies until comparison
-and therefore is deliberately excluded from memory measurements. It exports only
-numeric results and never ships. Dependency checksums make drift fail preparation
-instead of silently extending this borrowing assumption.
-
-The native host fixture starts with one ready Surface, creates four tabs
-concurrently, verifies that the live window generation causes zero additional
-renderer font requests or native load batches, then checks real Surface
-readiness and cleanup without a false error. Sharing reduces retained native
-source identities and duplicate parsing; it does not
-remove transient IPC/snapshot costs, Restty's bounded released cache, native
-shaping allocations, browser/WebGL resources or GPU memory. Native fonts still contribute to the first generation in each window. Apple
-Color Emoji collections now omit `sbix` from the shaping input: main reads the
-directories and retained table ranges without reading the bitmap payload. It
-preserves all faces and shared tables, then uses the existing exact-family and
-pinned-parser validation. Canvas rasterizes against the unchanged installed
-font. Other families, including CJK, still use whole-file inputs. Validation,
-IPC, preload and renderer snapshots still have transient costs. See the
-[reproducible comparison and limitations](emoji-shaping-experiment.md).
-
-The pinned font-resource correction reserves each source before asynchronous
-load/parse, so budget eviction cannot leave parsed faces without their source
-entry. Successful leases preserve live fonts even above the cache budget;
-release and failed acquisition release reservations and prune source/parsed
-resources together. Concurrent acquisitions share loads without releasing each
-other's ownership. Runtime destruction or replacement invalidates pending font
-loads and releases late leases instead of resurrecting disposed resources. The
-source-cache budget is not a total memory limit or a limit on live fonts.
-
-`test/integration/restty-font-resources.test.ts` exercises the installed resource
-store with a small bundled font and controlled cache pressure, including
-concurrent acquisition and required-font failure. A bounded child process with
-explicit GC proves released parsed resources are collectible while a live font
-remains usable. A runtime test covers destruction during loading. No heap dump,
-font contents or runtime diagnostic API is needed.
+The style fixture can retain aggregate measurements with
+`OMXTERM_FONT_STYLES_EVIDENCE_PATH`. Its byte-comparison probe retains extra copies
+and must not be treated as an uninstrumented memory measurement. Diagnostic forced
+GC and test-only counters do not ship.
 
 ## Pinned inputs and restoration
 
-Use `npm ci` for normal restoration. It installs the locked packages and runs
-the checksum-guarded preparation scripts automatically. If preparation rejects
-an input, compare the installed package, lockfile, and tracked source manifest
-before changing any digest. A dependency upgrade is review work: establish the
-new source and license identity, reapply the required behavior deliberately,
-refresh regression fixtures, and run the native package checks. Treat a rejected
-input as dependency drift until that review establishes otherwise.
+`npm ci` installs the lockfile and automatically runs checksum-guarded node-pty
+and Restty preparation. For an already installed lockfile with changed preparation
+inputs, use `npm run postinstall`. Do not edit `node_modules` manually or change a
+digest to bypass drift. Review upgrades against source/license identity, required
+behavior, regressions and affected native package checks.
 
-- Restty npm package `0.3.0`, source commit
-  `3db45b0e10dbe53c52a77131d366f519546e4f04`;
-- Ghostty submodule commit
-  `0309af1b7f0724105a0805efa88bbee808a616ae`;
-- `text-shaper` `0.1.28`, source commit
-  `a23058f475f2b0655b93a89bfce426eecafb9439` (Restty's source submodule at
-  `94db4fba9186b99b868b401ce404a9930b93fcbf` is upstream prior art, not the
-  installed npm artifact identity);
-- Nerd Fonts `v3.5.1` FiraCode distribution, with bundled regular SHA-256
-  `53eebbaaa09c483ebb27fdd5cf21073cc4b760308e5d666728e9db2f41616c00`
-  and bold SHA-256
-  `7435c06ecc46dc975d2c356bf9bf1d8bc2226fdb1a877e6e9580193aae429519`;
-- DejaVu Fonts `2.37`, with bundled DejaVu Sans Mono regular SHA-256
-  `b4a6c3e4faab8773f4ff761d56451646409f29abedd68f05d38c2df667d3c582`
-  and bold SHA-256
-  `bce60f1b4421acd9ea51ba6623d7024ecbe6817a953e3654df62a5e6bdf8f769`;
-- retained Nerd Fonts `v3.4.0` `JetBrainsMono.zip`, archive SHA-256
-  `76f05ff3ace48a464a6ca57977998784ff7bdbb65a6d915d7e401cd3927c493c`,
-  and bundled regular-face SHA-256
-  `f01031f40e48dc29e1112e6b0b0450a2c6cd097f3f35cfff05c55cb311f8034c`.
+Current inputs are recorded in `assets/restty-sources.json`:
 
-The retained lowercase visible-link expression derives from
-`@xterm/addon-web-links` 0.12.0 at xterm.js commit
-`f447274f430fd22513f6adbf9862d19524471c04`; its primary
-`addons/addon-web-links/src/WebLinkProvider.ts` SHA-256 is
-`5cf83214d2bd19dd06a2492eefe7686d1bd66cbe61fea490513335f630bb8b8a`,
-and the packaged source-repository MIT notice SHA-256 is
-`b569f629d00f2626a8100df2a1798210535621e42164dfd426a6fe5aac7b0ccd`.
-The exact `text-shaper` 0.1.28 source/npm license SHA-256 is
-`bc88ce083d2187e9577451f5d38a36227c05e3069f9320320c3d2282249a8f87`;
-it includes the FreeType-derived rasterizer copyright. The bundled Nerd Fonts
-release archives, extracted faces and glyph-license sources are recorded in
-`assets/fonts/README.md`. Packaging preserves all three notice groups and the
-package verifier compares their bytes with the tracked sources.
+- Restty `0.3.0`: `3db45b0e10dbe53c52a77131d366f519546e4f04`;
+- Ghostty: `0309af1b7f0724105a0805efa88bbee808a616ae`;
+- installed text-shaper `0.1.28`: `a23058f475f2b0655b93a89bfce426eecafb9439`;
+- tracked core and patches: `assets/restty/omxterm-restty-core.wasm`,
+  `assets/restty/omxterm-core.patch` and `assets/restty/ghostty-title-events.patch`.
 
-`assets/restty-sources.json` records the npm registry's package-to-commit
-`gitHead`, tarball integrity and SHA-1 metadata together with Restty's source
-tree and exact submodule entries. To audit the mapping independently, compare
-`npm view restty@0.3.0 gitHead dist repository --json` and
-`npm view text-shaper@0.1.28 gitHead dist repository --json` with that tracked
-manifest, then inspect the exact Restty tree with:
+The manifest records package integrity, source trees/submodules, patch digests
+and build inputs. `assets/fonts/README.md` owns font provenance;
+`THIRD_PARTY_NOTICES.md` identifies the packaged licenses. Runtime fonts/core load
+from bundled bytes under `connect-src 'none'`, without a source build or remote
+fetch during installation.
+
+Current prepared SHA-256 values:
+
+| Input                         | SHA-256                                                            |
+| ----------------------------- | ------------------------------------------------------------------ |
+| Restty JavaScript runtime     | `a5a31366381972750bf98651ac028e6bbe370e89d5ca5cc3855c141cd1002638` |
+| Embedded-core chunk           | `1fb03cc8360942c613ca98973658de362852a60d88942c482de4b0dc429660fa` |
+| Event declarations            | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
+| Tracked WASM core             | `92aa781340d4bd87f8028c17534fe720bd47e87dd34786d149811923e4e389ec` |
+| Unix node-pty runtime         | `e1cd61e52f681871c401ca54a21382173281532e8eaa9f679bfe549be9a427b1` |
+| Windows node-pty argv runtime | `3f4cf11eaa6cc07bacb34e3693857e123e3e55edfb446d7657d80cf95f9ce244` |
+
+The private types in `src/terminal-surface/restty-runtime-contract.ts` describe
+only the corrected dependency seam. Keep dependency-only methods there rather
+than widening the public Surface interface or exposing upstream internals.
+
+### Rebuild the tracked core
+
+Use an owned disposable checkout of the pinned Restty source and submodules,
+Zig 0.16.0 and Bun. Substitute this checkout's absolute patch paths:
 
 ```sh
 git clone https://github.com/wiedymi/restty.git
 cd restty
 git checkout 3db45b0e10dbe53c52a77131d366f519546e4f04
 git submodule update --init --recursive
-git rev-parse HEAD^{tree}
-git ls-tree HEAD reference/ghostty reference/text-shaper
-```
-
-The lockfile restores the npm tarballs identified by that manifest. `npm ci`
-then runs `scripts/prepare-restty-runtime.mjs`. The preparation script recognizes
-only reviewed input hashes, applies the complete correction, verifies the final
-bytes, and is safe to run again. Historical accepted inputs are regression-tested
-through `test/fixtures/restty-runtime-history.json`; unknown or modified bytes
-fail without being rewritten.
-
-OMXTerm describes the corrected dependency through the private types in
-`src/terminal-surface/restty-runtime-contract.ts`. Keep dependency-only methods
-there rather than widening the public Terminal Surface interface or asserting
-the full upstream internal runtime. This private contract is the single typed
-boundary used by the host integration; it is not a public API or renderer
-registry.
-
-After preparation, the corrected runtime has SHA-256
-`a5a31366381972750bf98651ac028e6bbe370e89d5ca5cc3855c141cd1002638`.
-The preceding prepared runtime
-`742a6d14c6906d6d4304199889eff69617f6a5ea25aaee788c2a7d6ee4e31dfa`
-is a reviewed upgrade input: its remaining ordered suffix adds only spacer-clamp
-suppression. Fresh locked npm bytes and that known prepared input produce the
-same exact final bytes; historical-input/idempotency/drift tests retain both.
-This correction changes Restty JavaScript product/package inputs, not the core.
-The embedded-core chunk and event declarations remain at SHA-256
-`1fb03cc8360942c613ca98973658de362852a60d88942c482de4b0dc429660fa` and
-`428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34`,
-respectively.
-The narrow correction preserves font acquisition/lease cleanup under cache
-pressure and late completion, makes font-load failure reject initialization, disables
-Restty's direct browser clipboard and link-opening callbacks, preserves native
-Option Unicode/composition versus configured physical-side Alt input, defers
-bare DOM dead keys to native text (including composition) even when extended
-keyboard reporting is active, delivers ordinary non-composing Space through the
-existing key encoder unless it completes a pending native dead key, leaves all renderer-received
-Ctrl+C/Ctrl+V events as PTY input, gives DA2 its own
-deterministic response, bounds unfinished OSC/CSI control bodies with
-whole-control recovery, and exposes raw paste
-origin, current bracketed mode, selection/Select All, parsed OSC and OSC
-cancellation, visible cell/soft-wrap lookup and transient visible-cell underline
-decoration, and parsed Ghostty title/BEL runtime
-events to OMXTerm's existing host policy. Borrowed render cells are snapshotted
-before selection-text queries can allocate WASM memory. Pending desktop drags
-can also start through compatibility mouse movement when a virtual input stack
-changes pointer identity; touch-generated moves and moves without a primary
-press remain excluded. It also removes Restty's 10–64
-live-size clamp in favor of OMXTerm's existing minimum of 1 for Window Font
-Zoom, carries the creation-time line-height factor into cell metrics without
-scaling glyphs, keeps bold ANSI 0–7 colors unchanged, and exposes Ghostty's
-existing line and byte limit setters through one live Restty operation. Unknown
-dependency or artifact bytes fail instead of receiving a best-effort patch.
-The same install step prepares the node-pty 1.1.0 Unix runtime through
-`scripts/prepare-node-pty-runtime.mjs`. It normalizes native `execFailed` callback
-forwarding before checking the reviewed input digests. Original runtime SHA-256
-`a62e3a60c3bc1b0e7261f58284856df748dcee6761a2bc7a5a5ba98b22660473`
-receives the paused-output-tail correction, producing intermediate digest
-`238f993db4aa83d57885832eabe9c1de1ce05b96c84d3270574f26f71f9afcb8`.
-Removing the Linux `process` getter's spawned-shell fallback then produces
-`89fafa225fe39a4fc7d2af373cf9381684a3b2bfe7aa5df073247eb3b91040cc`;
-macOS foreground policy is unchanged. Finally, forwarding native `execFailed`
-status produces the final runtime digest
-`e1cd61e52f681871c401ca54a21382173281532e8eaa9f679bfe549be9a427b1`.
-Known intermediate inputs receive only their remaining corrections.
-Postinstall also builds the matched Unix ARM64 Node-API addon and macOS helper
-with the native exec-status correction described in
-[ADR 0032](adr/0032-report-native-exec-failures-outside-terminal-payload.md).
-Windows retains its separate ConPTY implementation. Reinstall with `npm ci` to
-restore and reapply the reviewed bytes; do not edit `node_modules` manually.
-
-`assets/restty/omxterm-restty-core.wasm` is built from the pinned Restty and
-Ghostty commits above with tracked Restty patch
-`assets/restty/omxterm-core.patch` and Ghostty patch
-`assets/restty/ghostty-title-events.patch`. Their SHA-256 values are recorded in
-`assets/restty-sources.json`. The artifact SHA-256 is
-`92aa781340d4bd87f8028c17534fe720bd47e87dd34786d149811923e4e389ec`.
-The background-identity correction changes only the existing cell background
-alpha export; it keeps the original Restty and Ghostty commits pinned.
-The Ghostty patch also corrects two PageList reflow seams. Cursor preservation
-tracks the original active top through reflow, so newly wrapped historical rows
-do not consume the active screen's trailing blank rows. Non-cursor pins in
-trimmed blank cells clamp against the row that will actually receive them,
-including deferred hard/blank rows and pending wraps, rather than a predecessor's
-final column. Genuine active text wrapping, continuation offsets and narrow-grid
-clipping remain core-owned. There is no renderer coordinate compensation or
-history deletion during refits.
-
-The live cursor also reconciles pending wrap after resize, as saved cursors
-already do: if its remapped last printed cell is no longer at the new right
-edge, the cursor advances to the next insertion column and clears pending wrap.
-The cursor helper updates its tracked pin and cached cell/position together.
-Otherwise the next character would advance a row without a soft-wrap marker,
-creating an unintended hard break in actual selection/copy. A mapped new right
-edge retains pending wrap; deliberate producer hard breaks remain unchanged.
-This applies to non-reflow screens too without enabling alternate-screen reflow
-or changing wraparound-disabled edge overwrite behavior.
-
-`test/integration/restty-reflow-core.test.ts` executes the tracked WASM directly
-and covers the image-free 5x3 history regression and the 5x4 blank-image-anchor
-regression separately, plus history/active predecessors, text anchors,
-no-history, shrink/restore, real active wrapping, viewport retention, mixed
-dimensions, clipping, continued soft wraps and independent image deletion.
-It also checks exact selection, cells and insertion position for pending-wrap
-growth/shrink, adjacent offsets, unchanged width, mapped new right edges,
-history/no-history, producer hard breaks, disabled wraparound and alternate
-screens. These use the tracked actual WASM, not a cursor or copy mock.
-Preparation accepts the preceding reflow-corrected embedded-core digest
-`dbe1edf4897f11d0de24acb4fd83d94646200a87a58317341525dc0a9d613662`
-and the previous grapheme-corrected embedded-core digest
-`baa7dd9600c034a77e73ed03864c3e15e02ccdc591d2044479652fef1d9c0900`
-as a reviewed input and replaces only its embedded artifact. That core correction
-leaves runtime JavaScript and event declaration bytes unchanged; the separate native-scroll feedback
-correction above changes only runtime JavaScript. Fresh installs and repeated
-preparation produce the same corrected core.
-The Restty patch also enables Ghostty's standard grapheme-cluster mode as a
-reset default so emoji-presentation and ZWJ clusters retain one two-column cell.
-It supplies Ghostty's existing size-report effect and stream-handler resize
-operation so negotiated mode 2048 reports current geometry on enable and resize.
-Restty forwards those replies immediately after PTY resize, without waiting for
-application output. Pixel geometry covers complete terminal cells, excluding
-unused canvas remainder; zoom and configuration reload preserve the same client
-and terminal state.
-To reproduce it in an owned disposable checkout, check out the pinned Restty
-commit and submodules, apply the Restty patch at repository root and the
-Ghostty patch inside `reference/ghostty`, use Zig 0.16.0, and run:
-
-```sh
-git apply --unidiff-zero /path/to/assets/restty/omxterm-core.patch
-git -C reference/ghostty apply --unidiff-zero /path/to/assets/restty/ghostty-title-events.patch
+git apply --unidiff-zero /path/to/omxterm/assets/restty/omxterm-core.patch
+git -C reference/ghostty apply --unidiff-zero /path/to/omxterm/assets/restty/ghostty-title-events.patch
 RESTTY_WASM_OPTIMIZE=ReleaseSafe bun run scripts/build-wasm.ts
 shasum -a 256 wasm/zig-out/bin/restty.wasm
 ```
 
-The build target is `wasm32-freestanding` with `baseline+simd128` as declared by
-the pinned Restty build. `assets/restty-sources.json` records both patches,
-artifact and build-input checksums. The tracked core is used at runtime; no
-network access or source build occurs during `npm ci`.
+The target is `wasm32-freestanding`, `baseline+simd128`. Compare the output digest
+with the manifest before replacing a tracked artifact. The patches keep parsing,
+grapheme cells, image/resource limits, title/BEL events, scrollback, reflow,
+pending-wrap cursor reconciliation and negotiated geometry replies core-owned.
 
-The TTFs are tracked because Restty/text-shaper consumes font bytes and the
-prior WOFF2 path did not provide equivalent shaping. `assets/fonts/README.md`
-records font provenance and checksums. Runtime loading is memory-only and works
-under the production `connect-src 'none'` CSP without local fonts, user dotfiles
-or remote fetches. Packaged license texts are listed in
-`THIRD_PARTY_NOTICES.md`. The real regular/bold Electron fixture exercises
-Restty's style-aware face picker plus representative Fira-only and DejaVu-only
-glyphs. A differential configured-family case compares regular and synthetic-bold
-pixels against the regular-only reference stack through the same Surface and
-Restty renderer. Bundled bold faces are omitted for configured families so a
-style match cannot silently override the chosen family. The native
-`restty-font-styles-rendering.test.ts` additionally compares regular-only,
-complete and incomplete configured-style inputs through main discovery, a
-sandboxed preload transport, the production font-generation owner and the real
-Surface with the production host stylesheet. That stylesheet constrains CSS
-canvas geometry independently of its DPR-scaled drawing buffer, including when
-the native scrollbar wrapper is absent. It checks unchanged regular pixels and
-geometry, distinct real-style pixels, missing-style synthesis, and one shared source/parsed set with one,
-three and one live Surface. Final disposal releases every lease; bounded Restty
-cache retention is not a leak claim. Test-only picker/store instrumentation and
-diagnostic forced GC do not ship. Optional `OMXTERM_FONT_STYLES_EVIDENCE_PATH`
-retains aggregate measurements; process memory, backing storage and source
-bytes remain distinct domains. Pixel-identical native rasterization remains
-unclaimed.
+```sh
+npx vitest run test/integration/restty-reflow-core.test.ts test/integration/restty-resize-core.test.ts test/integration/restty-scrollback-core.test.ts test/integration/restty-images-core.test.ts test/integration/restty-events-core.test.ts
+```
 
-`test/integration/restty-host-integration.test.ts` runs the real main IPC
-router, preload bridge, Electron Adapter, Restty Surface and owned native PTYs
-under the production CSP. It covers Unicode and bare-control-key
-input, large chunked DOM paste through a real owned PTY, explicit host
-copy/paste, Select All, context menu and OSC 52, parsed title/BEL ownership,
-title-query silence, disposal, resize, renderer-event focus restoration, two isolated tabs, Default
-Shell and explicit-command startup, owned session
-termination, explicit close, renderer-process loss, a numbered 2 MiB producer
-through production IPC during a 350 ms renderer stall and resize, cumulative
-flow control, clean producer exit, direct Pi and Chafa Terminal Payload through
-the PTY, rendered image content and placement, live image geometry, and
-privileged-route refusal without using a user session or real
-clipboard. Its result contains only synthetic outcome and queue/heap/RSS
-metadata, not captured Terminal Payload. The stress fixture waits for native
-producer readiness and holds only its synthetic session's output ACKs until the
-real high-water pause is observed, then releases them and asserts native resume,
-complete ordered content and zero pending bytes. This avoids depending on
-platform throughput during the fixed renderer-stall interval.
-A separate focused output control pauses the same checkpoint text above high
-water at an observed old-grid right edge, waits for its complete original ACK,
-refits real native content/Surface/PTY geometry, then resumes that producer.
-It must copy all 4096 ordered records and exact framing without an extra LF.
-Observed old/new grids make the old pending-wrap boundary distinct from the
-new right edge; calibration and restored layout do not depend on a compositor
-honoring arbitrary native-window bounds. The ordinary stress producer and broad
-host remain separate. No destination normalization or ACK relaxation is used.
-
-Native Electron fixtures run serially and show painting windows without native
-activation. The focus-restoration fixture first moves DOM focus outside the
-selected Surface, then dispatches a renderer focus event and verifies return to
-that Surface. This does not verify native application/window activation. The
-keyboard regression similarly uses synthetic DOM dead-key/composition events
-through installed Restty and captures Surface Adapter writes under legacy,
-modifyOtherKeys and Kitty flags 1, 2, 4 and 1|2|4; it does not establish an
-untested native keyboard layout's event sequence.
-
-The Space regression replays a captured macOS failure: five separate Space
-press/release pairs reached the DOM, but only the first generated `beforeinput`.
-The original runtime delivered one space; the corrected runtime delivers all
-five through the existing key encoder. The test respects browser cancellation
-and covers normal text events without duplicates, held repeat, composition,
-modifiers, other editable controls, keyboard reporting and reset transitions.
-Synthetic reset tests did not reproduce the native event loss itself: reported
-`modifyOtherKeys` and `pipes.sh`/RIS triggers remain unisolated. The correction
-removes the dependency on that missing text event, not a claimed repair of an
-identified macOS substitution mechanism. It changes no user preference or
-protocol negotiation and adds no timer or text-replacement filtering.
-
-The dead-key Space regression additionally replays Fedora 44 KDE/XWayland's
-native sequence: `Dead` down/up, Space down with `isComposing=false`, and
-`beforeinput` carrying the layout's committed text, with no composition events.
-An isolated Electron 43.1.1 Surface and a plain textarea, driven by a temporary
-native keyboard, established the difference: before correction the Surface sent
-ASCII space instead of apostrophe, double quote, grave or tilde; afterwards each
-matched the textarea exactly once. Dead acute + e and ordinary text also passed.
-The controller now retains native dead-key completion through Space release,
-without changing ordinary direct-Space reporting. Mounted regressions cover
-legacy, modifyOtherKeys, Kitty 1|2|4 and report-all, repeat, modifiers,
-cancellation, text completion and focus loss. Hidden macOS fixture windows
-explicitly dispatch textarea blur because changing DOM focus there does not
-produce a native focus event. The owner reported Ubuntu unaffected; attempted
-native automation there did not establish equivalent dead-key event delivery,
-so it is not claimed as a second native layout verification.
-
-The complete native package commands include the default host/runtime suite on
-the target ARM64 desktop. Platform guards and explicit opt-ins still determine
-which assertions execute; see [qualification scope](development.md#qualification-scope).
-A successful package startup probe is not a replay of every host scenario, and
-neither establishes the absence of the runtime limitations above. Native glyph
-rasterization and platform security UI remain environment-specific risks rather
-than pixel-identical or universal qualification claims.
+These tests execute the tracked WASM directly. Native Surface/host checks are
+still needed for rendering and IPC behavior; use the
+[focused test commands](development.md#focused-checks) and
+[release procedures](release.md) for affected package inputs.

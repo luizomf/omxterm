@@ -1,138 +1,93 @@
 # Versioning policy
 
-OMXTerm uses [Semantic Versioning 2.0.0](https://semver.org/) for published
-versions. A release number has the form `MAJOR.MINOR.PATCH`, and its Git tag adds
-`v`; for example, version `0.13.0` has tag `v0.13.0`.
+OMXTerm uses [Semantic Versioning 2.0.0](https://semver.org/). Published versions
+are `MAJOR.MINOR.PATCH`, tagged `vMAJOR.MINOR.PATCH`.
 
-The latest published version is **0.20.1**; its
-[release record](releases/0.20.1.md) identifies the immutable exact artifacts,
-recorded native verification results and limits, and verified post-upload downloads. The source
-tree now carries **0.20.2-dev.0**, the next-patch development baseline.
-This is not a published release and does not change the 0.20.1 tag, assets or
-release body.
-
-This policy explains version selection and consistency. An owner request to
-release covers version preparation, builds, verification, tags and publication
-through the [release procedure](release.md), without extra approval rounds.
+The current published release is
+[0.20.1](https://github.com/luizomf/omxterm/releases/tag/v0.20.1). The source carries
+**0.20.2-dev.0**, a development baseline, not a published release.
+`package.json` is the application-version source; `package-lock.json` must agree.
+Release preparation and publication follow [release.md](release.md).
 
 ## Public contract
 
-For this desktop application, the SemVer public contract is the observable
-behavior defined by [`docs/spec.md`](spec.md), including:
+The SemVer public contract is observable behavior described by [spec.md](spec.md):
+user interactions and terminal behavior, configuration/theme schemas,
+security/privacy/capability boundaries, supported platforms and artifact formats.
+Implementation details are not public API. Specs and ADRs evolve with the product;
+correcting inaccurate documentation of unchanged code is not a compatibility
+break or a demand to implement the former description.
 
-- supported user interactions and terminal behavior;
-- User Configuration and Terminal Theme schemas;
-- security, privacy, IPC, filesystem, clipboard, and network boundaries;
-- supported platform and published Release Artifact expectations.
-
-The spec and ADRs evolve with the product; earlier text remains in Git. Correcting
-an inaccurate description of unchanged code is documentation maintenance, not an
-intentional compatibility break or a requirement to implement the former text.
-An actual user-visible behavior change still follows the version rules below.
-
-Implementation details that do not change this contract are not public API.
-The configuration and theme schema versions are independent data-format
-versions; they are not the OMXTerm application version.
+Configuration and theme schema versions are independent of the app version.
 
 ## Initial development: `0.y.z`
 
-OMXTerm remains in initial development while its major version is zero. The
-project uses a stronger compatibility rule than SemVer requires for `0.y.z`:
+While the major version is zero:
 
-- `PATCH` releases contain backward-compatible bug fixes, security fixes,
-  documentation corrections, dependency maintenance, or internal changes. They
-  do not intentionally break the published contract.
-- `MINOR` releases add user-visible functionality or intentionally change the
-  published contract. Any incompatible change must be called out prominently
-  in release notes with the required user action or migration.
-- `1.0.0` will mark a deliberately reviewed, stable public contract. After
-  `1.0.0`, incompatible contract changes require a `MAJOR` release,
-  backward-compatible functionality requires a `MINOR` release, and
-  backward-compatible fixes require a `PATCH` release.
+- **PATCH:** compatible bug/security fixes, documentation corrections, dependency
+  maintenance and internal changes.
+- **MINOR:** user-visible functionality or intentional contract changes. Describe
+  incompatible changes and required user action/migration prominently in notes.
+- **1.0.0:** a deliberately reviewed stable public contract. Afterward, breaking
+  changes require MAJOR, compatible functionality MINOR and compatible fixes PATCH.
 
-Documentation-only changes do not require an immediate release and do not by
-themselves determine a version increment. They ship with the next accepted
-version.
+Documentation-only changes do not require an immediate release or version bump.
+Ordinary fixes and maintenance leave the current development baseline unchanged.
 
 ## Version sources and identifiers
 
-`package.json` is the source of the application version. On an accepted release
-commit, all version-bearing surfaces must agree:
+On a release commit, these agree on final `X.Y.Z`:
 
-- `package.json` and `package-lock.json` contain `X.Y.Z`;
-- the application reports `X.Y.Z` through `TERM_PROGRAM_VERSION`;
-- the source tag is `vX.Y.Z`;
-- the DMG is named `OMXTerm-X.Y.Z-arm64.dmg` and its checksum file adds
-  `.sha256`;
-- the AppImage is named `OMXTerm-X.Y.Z-arm64.AppImage` and its checksum file
-  adds `.sha256`;
-- the optional Linux desktop installer is named `linux_install.sh`, reports
-  `X.Y.Z` through `--version`, and its checksum file is `linux_install.sh.sha256`;
-  the versioned release URL and embedded version identify it. Releases through
-  0.17.0 retain their original `OMXTerm-X.Y.Z-arm64.AppImage-installer.sh` assets;
-- the NSIS installer is named `OMXTerm-X.Y.Z-arm64.exe` and its checksum file
-  adds `.sha256`;
-- the GitHub Release targets `vX.Y.Z` and describes each exact artifact.
+- `package.json` and `package-lock.json`;
+- the app version and `TERM_PROGRAM_VERSION`;
+- tag `vX.Y.Z` and its GitHub Release;
+- `OMXTerm-X.Y.Z-arm64.dmg`, `OMXTerm-X.Y.Z-arm64.AppImage` and
+  `OMXTerm-X.Y.Z-arm64.exe`, each with a same-basename `.sha256` file;
+- `linux_install.sh --version`, with `linux_install.sh.sha256` and an exact
+  versioned release URL identifying the helper.
 
-Pre-release identifiers such as `0.2.0-rc.1` may be used when there is a
-concrete testing need. Build metadata is not currently used.
+Pre-release identifiers may serve a concrete testing need. Build metadata is not
+used. A `-dev` baseline is never tagged or uploaded as a published release.
 
 ## Development baseline between releases
 
-After `X.Y.Z` is published, `main` normally moves to
-`X.Y.(Z+1)-dev.0`, reserving a next-patch baseline while development continues.
-Ordinary fixes, maintenance, documentation, and pull requests leave that value
-alone.
+After publishing `X.Y.Z`, `main` normally moves to `X.Y.(Z+1)-dev.0`. A PR adding
+user-visible functionality or intentionally changing the contract moves it to
+the next minor `-dev.0` unless that move already happened in the same cycle.
+Update both package files together. Release preparation selects the final version
+and removes the prerelease suffix.
 
-A pull request that adds user-visible functionality moves the development
-baseline to the next minor `-dev.0`. Intentional contract changes during `0.x`
-follow the same rule. For example, if `main` is at `0.13.1-dev.0` and accepts a feature, that
-feature's pull request updates both package files to `0.14.0-dev.0`. A later
-feature in the same cycle sees that the move already happened and makes no
-version change.
-
-Release preparation chooses the final version and removes the prerelease
-suffix. A development baseline is never tagged, uploaded, attached to a GitHub
-Release, or described as a published release.
-
-Because many commits share one baseline, identify a development build with both
-its `-dev` version and exact source commit SHA. `0.14.0-dev.0` alone does not say
-which dogfood build is running.
+Identify development builds by both `-dev` version and full source SHA: the
+baseline alone does not identify the running code.
 
 ## Schema compatibility
 
-User Configuration `"version": 1` and Terminal Theme `"version": 1` identify
-their respective JSON schemas. Adding an optional compatible field may retain
-the schema version while requiring an application `MINOR` release. A breaking
-format change requires a new schema version and an application version selected
-under this policy.
+User Configuration and Terminal Theme each use `"version": 1`. A compatible
+optional field can retain the schema version while requiring an application
+MINOR release. A breaking format change needs a new schema version and app
+version selected under this policy.
 
-Because OMXTerm deliberately does not rewrite or migrate user files, release
-notes for a schema change must explain exact manual changes. A `PATCH` release
-must continue accepting configuration and theme files accepted by the previous
-release in the same minor series.
+OMXTerm does not rewrite or migrate user files. Schema-change notes must explain
+manual changes; a PATCH release continues accepting files accepted by the
+previous release in the same minor series.
 
 ## Release integrity
 
-Published tags and artifact bytes are immutable. Never move an existing release
-tag or replace an attachment under the same version. A product/artifact correction
-requires a new version and new exact-artifact verification. Documentation, ADRs
-and release evidence can be corrected without rebuilding unchanged artifacts or
-publishing a new version. State what was corrected and retain the actual artifact
-identities, failures and evidence limits; a prose correction is not a retrospective
-verification pass.
+Published tags and artifact bytes are immutable. Do not move an existing tag,
+replace an attachment or reuse a version. Changed product/artifact bytes need a
+new release and exact-artifact verification. Documentation corrections do not
+require rebuilding unchanged packages or publishing a new version.
 
-Release notes must identify:
+GitHub release notes identify:
 
-- material user-visible changes and fixes;
-- incompatible changes and manual migration, or explicitly state that there
-  are none;
-- supported platforms and verified-publisher status; for macOS, state whether
-  the application has its required ad-hoc integrity seal, Developer ID
-  signature, and notarization;
-- the exact artifact filename and SHA-256;
-- known limitations relevant to users.
+- material changes and fixes;
+- incompatible changes/manual migration, or their absence;
+- platforms, unsigned-publisher status and the Linux sandbox exception;
+- macOS ad-hoc integrity seal, lack of Developer ID signing and notarization;
+- exact artifact filenames, SHA-256 and verification scope;
+- known user-facing limitations.
 
-The [local arm64 release procedure](release.md) defines the required automated
-checks, changed-boundary evidence, provenance language, and separate
-publication steps.
+Keep execution results and evidence in GitHub release/issue/PR records, with exact
+local artifacts in the primary checkout's ignored `release/` directory. Current
+docs contain operating procedures, not a per-release history. Evidence reuse
+follows [release.md](release.md#changed-inputs-and-build-to-tag-comparison).

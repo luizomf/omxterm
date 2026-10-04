@@ -220,8 +220,8 @@ Copying the exports and reloading remain your final steps.
 
 ## Background transparency and blur
 
-Available since **OMXTerm 0.17.0**. Transparency reveals the desktop behind the
-terminal background; blur softens it. Try a modest value such as `0.2` first:
+Transparency reveals the desktop behind the terminal background; blur softens
+it. Try a modest value such as `0.2` first:
 
 ```json
 {
@@ -254,14 +254,13 @@ color matches the theme. Implicit terminal backgrounds, including a reset to
 the default background (SGR 49), reveal the tint. Theme colors remain
 `#RRGGBB`; set transparency here rather than adding alpha to the palette.
 
-For implementation details and tested coverage, see
-[ADR 0029](adr/0029-compose-background-effects-with-explicit-cell-identity.md),
-[ADR 0030](adr/0030-prefer-direct-macos-background-blur.md), and the
-[0.17.0 release record](releases/0.17.0.md).
+For implementation details, see
+[ADR 0029](adr/0029-compose-background-effects-with-explicit-cell-identity.md) and
+[ADR 0030](adr/0030-prefer-direct-macos-background-blur.md).
 
 ### Linux desktop tips
 
-Optional desktop setup now has its own [Linux desktop guide](quick-start/linux-desktop.md):
+For optional desktop setup, use the [Linux desktop guide](quick-start/linux-desktop.md):
 
 <a id="ubuntu-with-gnome-blur-my-shell"></a>
 
@@ -279,9 +278,9 @@ Optional desktop setup now has its own [Linux desktop guide](quick-start/linux-d
 
 - [HiDPI interface size](quick-start/linux-desktop.md#small-interface-text-on-a-hidpi-display)
 
-<a id="try-omarchy-vm-graphics-troubleshooting"></a>
+<a id="graphics-troubleshooting"></a>
 
-- [Try Omarchy VM graphics troubleshooting](quick-start/linux-desktop.md#try-omarchy-vm-graphics-troubleshooting)
+- [VM and driver graphics troubleshooting](quick-start/linux-desktop.md#graphics-troubleshooting)
 
 ## Add one behavior change
 

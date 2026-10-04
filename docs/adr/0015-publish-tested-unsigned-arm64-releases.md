@@ -5,12 +5,10 @@ Supported Platform, native-build, verification, and publication policy is
 recorded in
 [ADR 0019](0019-support-native-arm64-releases-on-macos-linux-and-windows.md).
 
-An accepted OMXTerm version may be tagged as `v0.x.y` and published as a
-ready-to-run Apple Silicon macOS `.dmg`. The exact artifact receives a native
-build and verification before the artifact and its SHA-256 checksum are attached
-to the canonical GitHub Release. An owner-requested release can be carried
-through verification and publication without another approval round. The
-application has no automatic update mechanism.
+OMXTerm publishes ready-to-run Apple Silicon macOS `.dmg` artifacts with source
+tags and SHA-256 checksums. Native build and exact-artifact verification are
+separate from behavioral evidence; the [release procedure](../release.md) owns
+those checks and publication. The application has no automatic update mechanism.
 
 The application uses neither Apple Developer ID signing nor notarization. This
 keeps paid Apple distribution services outside the obligations of a small

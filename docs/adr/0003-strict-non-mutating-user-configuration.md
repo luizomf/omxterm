@@ -22,16 +22,15 @@ load publishes a whole snapshot, then applies consumers synchronously. Removing
 precede consumer application, whose steps run sequentially. If a consumer
 throws, the rejection path keeps the newly published configuration and does not
 undo already applied native/renderer/menu effects. The displayed claim that the
-last configuration was retained can be false (#566). Complete validation is not
+last configuration was retained can be false. Complete validation is not
 transactional rollback of side effects. An injected consumer exception confirms
-this conditional incoherence, but #566 established no ordinary production throw
-trigger. It is not an intentional partial-configuration mode or a commitment to
-implement distributed rollback. Restart after fixing the cause reestablishes a
+this conditional incoherence; an ordinary production throw trigger is not
+established. This boundary does not imply a distributed rollback requirement. Restart after fixing the cause reestablishes a
 startup snapshot; application-time exceptions have no rollback guarantee.
 
 Creation-time family and line-height behavior and the pending font-acquisition
 race are described in
-[ADR 0025](0025-stage-restty-behind-an-unpackaged-opt-in.md).
+[ADR 0025](0025-use-restty-as-the-terminal-surface.md).
 
 ## Initial configuration kit
 

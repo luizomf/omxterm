@@ -20,8 +20,11 @@ PTY Adapter.
 - Read `docs/spec.md`, `CONTEXT.md`, relevant `docs/adr/` decisions and the issue
   for context. Documentation, specs, ADRs and contracts evolve with the product;
   none is immutable. A documentation reconciliation request includes correcting
-  those documents, not only user guides. Replace obsolete or contradictory
-  guidance with the current decision and rationale; Git preserves prior text.
+  those documents, not only user guides. Write the current tree as guidance for
+  today's product, not a chronicle of how it evolved. Replace obsolete decisions
+  and remove superseded documents, old release reports and experiment results
+  instead of keeping historical banners or archives in the tree. Preserve useful
+  current rationale and procedures; history remains in commits, issues and PRs.
 - Describe implemented behavior and limitations accurately. Separate supported
   code bugs from documentation drift into focused follow-up issues, with affected
   platforms and evidence limits. An old promise, audit finding or historical

@@ -12,7 +12,7 @@ semantic paste; everything else keeps the multiline confirmation. Both entry
 points reuse the Terminal Surface's existing injection seam, so the Surface
 stays free of Electron, filesystem, and platform shell policy; the renderer
 gains only the narrow preload capability that maps a dropped `File` to its
-path (`webUtils.getPathForFile`), because Electron 43 removed `File.path`.
+path (`webUtils.getPathForFile`).
 
 Paths are lexical only: OMXTerm never reads, resolves, normalizes, or stats a
 target. Probing the filesystem from drop or clipboard data would turn
@@ -36,15 +36,12 @@ variable or subexpression expansion. The encoding assumes insertion at a
 fresh ordinary argument-token boundary in the initial Default Shell. Without
 Shell Integration ([ADR 0013](0013-do-not-inject-shell-integration.md)),
 OMXTerm cannot see shell state, so it does not promise correct syntax inside
-a partial quote, nested shell, SSH session, REPL, or TUI; stating that
-limitation honestly was preferred over injecting integration to detect
-context. Windows encoding waited for the Windows Default Shell decision
-(issue #89) rather than guessing.
+a partial quote, nested shell, SSH session, REPL or TUI. Lexical insertion avoids
+shell integration and context guessing.
 
 Electron 43's public Windows clipboard API exposes only one Explorer
 `FileNameW` path, so Windows clipboard Paste inserts that single path while
 multi-file Windows insertion remains complete and ordered through drag and
-drop. Parsing the raw `CF_HDROP` structure ourselves was rejected as an
-unsupported-API risk; the limitation is accepted as possibly temporary and is
-re-evaluated with the Windows packaged target (issue #61). A future supported
-file-list API may remove it without changing the insertion syntax.
+drop. OMXTerm uses the supported Electron API rather than parsing raw
+`CF_HDROP`; clipboard Paste does not claim complete multi-file insertion on
+Windows.

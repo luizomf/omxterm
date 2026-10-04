@@ -11,6 +11,5 @@ Shell Integration can provide richer prompt, working-directory, title, and
 notification behavior, but it also makes OMXTerm participate in shell startup
 and creates failure modes outside the application Boundary. The current
 architecture prefers a predictable PTY over convenience that modifies or
-interposes on the user's shell. A future opt-in integration would require its own spec, visible
-installation/removal behavior, and compatibility tests; it must never arrive as
-an implicit implementation detail.
+interposes on the user's shell. OMXTerm does not infer shell cwd or prompt
+state; richer shell-aware behavior remains outside its current boundary.

@@ -20,7 +20,8 @@ at error level. Native error text never becomes diagnostics. The existing
 Discard the failed request without closing the session, suppressing subsequent
 valid resizes, or synthesizing an exit. Actual native exit retains completion
 ownership under [ADR 0028](0028-wait-for-native-sessions-before-application-quit.md).
-Size/sender/session validation and sibling sessions remain unchanged.
+Existing size/sender/session validation limits the route to its owner; sibling
+sessions are unaffected.
 
 ## Consequences
 

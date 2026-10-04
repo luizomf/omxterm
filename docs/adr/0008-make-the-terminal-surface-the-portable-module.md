@@ -2,11 +2,10 @@
 
 The Terminal Surface is a deep Module whose small Interface hides Restty and
 Ghostty setup, rendering, input, resize, appearance, clipboard, zoom, and
-cleanup. It receives a terminal-session Adapter at a real Seam: OMXTerm supplies
-an Electron IPC Adapter backed by a local PTY, while a web application can
-supply a WebSocket Adapter; Electron, native windows, and local PTY ownership
-remain desktop implementation details and are not generalized into a portable
-application framework.
+cleanup. It receives a terminal-session Adapter: OMXTerm supplies Electron IPC
+backed by a local PTY without importing Electron or `node-pty` into the Surface.
+Electron, native windows and local PTY ownership stay in the desktop host rather
+than a generalized portable application framework.
 
 The Terminal Surface owns the lifecycle of the session Adapter it receives:
 mounting starts and subscribes only after rendering readiness, disposal closes

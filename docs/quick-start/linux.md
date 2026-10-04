@@ -76,7 +76,7 @@ Reopen it after every edit; `execute: false` leaves the final Enter to you.
 - **Window bars:** `Ctrl+Shift+D` toggles the title bar; `Ctrl+Shift+B` toggles
   the tab bar. [Set defaults for new windows](../configuration.md#start-with-hidden-bars).
 - **Small interface or VM graphics trouble:** see [HiDPI scaling](linux-desktop.md#small-interface-text-on-a-hidpi-display)
-  or [Try Omarchy troubleshooting](linux-desktop.md#try-omarchy-vm-graphics-troubleshooting).
+  or [graphics troubleshooting](linux-desktop.md#graphics-troubleshooting).
 - **Next steps:** [everyday use](../usage.md), [shortcuts](../configuration.md#keybinds),
   and [when settings take effect](../configuration.md#reloading-user-configuration).
 
@@ -84,9 +84,8 @@ Reopen it after every edit; `execute: false` leaves the final Enter to you.
 
 ## Complete ready-to-use setup (optional)
 
-These files work with **OMXTerm 0.17.0 or newer** and use bundled fonts and all
-built-in shortcuts. The snippets assume Bash; the configuration keeps your
-account shell.
+These files use bundled fonts and all built-in shortcuts. The snippets assume
+Bash; the configuration keeps your account shell.
 
 Use these three files together; destinations are inside your
 [settings folder](#1-open-your-settings-folder):

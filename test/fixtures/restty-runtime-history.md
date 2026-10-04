@@ -1,27 +1,23 @@
-# Restty runtime history fixture
+# Restty preparation input fixture
 
-`restty-runtime-history.json` preserves the 24 pre-final runtime inputs recognized
-by `prepareResttyRuntime` at `c8da1adee9cedaa0fe1b104b57a59116a6874428`.
-Each record contains reverse line edits from the preceding state, starting at
-the installed corrected runtime. Indices address `source.split("\n")`; edits
-are applied in descending order. This keeps snapshots small without importing
-production correction arrays into the test.
+`restty-runtime-history.json` contains reverse line deltas for the prior runtime
+inputs currently accepted by `prepareResttyRuntime`. It is active test data, not
+product guidance or a record of release qualification.
 
-Inputs were recovered from the locked Restty 0.3.0 npm runtime and baseline
-corrections, including superseded clipboard comments, Select All, required-font
-selection and split-OSC-terminator variants. Every reconstructed input matched
-its existing pinned SHA-256 before use. The integration test independently
-checks these hashes and exact corrected output, idempotency, and rejection of
-modified input without rewriting it. The corrected runtime is also an entry. Later corrections prepend reverse
-deltas to retain the preceding final input, including the pre-Space-routing
-runtime and the subsequent native dead-key Space correction; each reconstructed
-digest is still checked independently. The native-scroll feedback correction
-prepends the exact preceding final runtime (`742a6d14…`), so both a fresh locked
-npm runtime and a known prepared installation must reach identical corrected
-bytes, with no changes to core WASM or event declarations.
+Reconstruction starts with the installed corrected runtime. Each record has a
+name, expected SHA-256 and edits applied to `source.split("\n")`. An edit gives
+`start`, `deleteCount` and replacement `lines`; edits within a record run in
+descending line order. The resulting state becomes the next record's input.
+This keeps the fixture small without importing production correction arrays
+into the test.
 
-Baseline characterization found six recognized inputs unable to reach the final
-hash: `priorCorrected`, `priorAppearance`, `priorBoldColor`, `priorFamilyFilter`,
-`priorFont`, and `priorScrollback`. Their two obsolete clipboard comments were
-not normalized. The consolidated path normalizes them at the clipboard stage;
-it does not change any final runtime bytes or accepted digest identities.
+[`restty-runtime-history.test.ts`](../integration/restty-runtime-history.test.ts)
+checks each reconstructed input against its pinned digest, prepares it to the
+same reviewed output, checks idempotency and rejects modified input without
+rewriting it. The current corrected runtime is tested as an additional state.
+The [emoji experiment runtime test](../unit/emoji-experiment-runtime.test.ts)
+also uses a prior state to verify rejection of stale probe inputs.
+
+When accepted preparation inputs change, keep the reverse deltas and expected
+hashes consistent with the actual prepared bytes. These checks establish runtime
+preparation behavior; they do not rerun native rendering or package qualification.

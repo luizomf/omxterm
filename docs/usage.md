@@ -222,7 +222,7 @@ OMXTerm can display images sent by [Chafa](https://hpjansson.org/chafa/) and
 the temporary preview above. Use them directly in OMXTerm; images through tmux
 or screen aren't supported.
 
-For Chafa's tested 1.18.2 Kitty output, replace the example path with your image:
+Use Chafa's supported Kitty output (`-f kitty`); replace the path with your image:
 
 ```sh
 chafa -f kitty /path/to/image.png
@@ -245,7 +245,7 @@ PI_IMAGE_PROTOCOL=kitty pi
 ```
 
 Keep Pi's default image autoresizing enabled. The [technical reference](spec.md#terminal-behavior)
-records supported image formats and size limits. Images stay anchored to their
+describes supported image formats and size limits. Images stay anchored to their
 terminal cells through resizing and zoom. Text reflow and viewport scrolling can
 move those cells on screen; blank anchors clip to the narrower grid rather than
 jumping to a preceding line's column.

@@ -5,7 +5,7 @@ policy and recorded in
 [ADR 0021](0021-insert-lexical-shell-quoted-paths-through-protected-paste.md);
 it does not change the one-way stance below.
 
-OMXTerm will not copy terminal selections automatically. On macOS, `Ctrl+C`
+OMXTerm does not copy terminal selections automatically. On macOS, `Ctrl+C`
 remains terminal input, while `Cmd+C`, `Cmd+V`, and the contextual menu provide
 explicit text copy and paste actions. `Ctrl+V` also remains terminal input so a
 local application such as an AI CLI can handle the shortcut and read image data
@@ -15,10 +15,9 @@ application text copy/paste, keeping bare `Ctrl+C`/`Ctrl+V` as terminal input.
 
 OSC 52 may write to the host clipboard so tmux and terminal applications can
 copy naturally, but clipboard read requests, empty writes, and malformed
-payloads are consumed without changing the clipboard. OMXTerm will not inherit
-the 64 KiB project limit from OMXTerm Web: local processes have a different
-trust and transport boundary, and large valid copies and text pastes must not be
-truncated by an arbitrary SSH-oriented limit. Runtime dependencies may still enforce their safety bounds. Restty's pinned
+payloads are consumed without changing the clipboard. Text copy/paste is not
+subject to an application-level size cutoff; Restty enforces its parser safety
+bounds. Restty's pinned
 OutputFilter retains at most 10,000,000 UTF-16 code units for an unfinished OSC
 handler body and consumes an oversized OSC 52 request without a clipboard or PTY
 side effect. Because an OSC 52 write includes the `c;` target and Base64 advances in

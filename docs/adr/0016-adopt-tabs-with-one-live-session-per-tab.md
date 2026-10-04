@@ -1,10 +1,9 @@
 # Adopt tabs with one live session per tab
 
 A Terminal Window holds one or more Terminal Tabs. Each tab owns one ephemeral
-Live Terminal Session and its Terminal Surface. This replaces
-[ADR 0007](0007-one-live-session-per-independent-window.md): dogfooding showed
-that tmux did not replace native tabs. tmux remains the user's persistence and
-reconnection tool; tabs do not imply saved sessions or workspaces.
+Live Terminal Session and its Terminal Surface. Native tabs provide selectable
+independent local sessions; tmux remains the user's persistence and reconnection
+tool. Tabs do not imply saved sessions or workspaces.
 
 ## Window presentation
 
@@ -53,8 +52,8 @@ pending initialization through owner disposal.
 commands only after `tabs.ready`. Main's immediate idle/no-session Close Tab
 command can arrive before that subscription and is not buffered by preload.
 The first pending tab can therefore ignore Close Tab and later start its shell.
-This is a command-registration defect (#566), not a deliberate uncancellable
-initialization phase. Later-tab cancellation and native Close Window/Quit use
+[#571](https://github.com/luizomf/omxterm/issues/571) tracks this
+command-registration bug. Later-tab cancellation and native Close Window/Quit use
 separate paths and are not generally broken by it.
 
 Main counts failure acknowledgements independently per window, including
@@ -75,8 +74,8 @@ native completion.
 
 **Conditional notification limitation:** exit IPC sending precedes
 `onSessionExit` and `pty.exit` logging. A throwing send skips both while `finally`
-still retires the session. Injected throws show this ordering, but #566 has no
-established live, non-destroyed transport trigger. Native shutdown completion is
+still retires the session. Injected throws show this ordering; a live,
+non-destroyed transport trigger is not established. Native shutdown completion is
 recorded before forwarding, so this does not establish a broken shutdown drain.
 
 ## Titles and commands

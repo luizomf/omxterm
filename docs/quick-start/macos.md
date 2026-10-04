@@ -78,8 +78,7 @@ Reopen it after every edit; `execute: false` leaves the final Enter to you.
 
 ## Complete ready-to-use setup (optional)
 
-These files work with **OMXTerm 0.17.0 or newer** and use bundled fonts and all
-built-in shortcuts.
+These files use bundled fonts and all built-in shortcuts.
 
 Use these three files together; destinations are inside your
 [settings folder](#1-open-your-settings-folder):

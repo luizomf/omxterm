@@ -89,8 +89,7 @@ expects `C:\Program Files\Git\bin\bash.exe`; check that it exists, or change
 `windowsShell` to your actual path. Use doubled backslashes in JSON, as shown
 in the linked configuration.
 
-These files work with **OMXTerm 0.17.0 or newer** and use bundled fonts and all
-built-in shortcuts.
+These files use bundled fonts and all built-in shortcuts.
 
 Use these three files together; destinations are inside your
 [settings folder](#1-open-your-settings-folder):
