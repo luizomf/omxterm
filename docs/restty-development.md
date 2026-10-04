@@ -189,8 +189,11 @@ Restty's bounded released-resource cache is separate. Live fonts may exceed that
 cache budget. There is no persistent main byte cache or cross-window owner.
 
 Borrowed ArrayBuffers are mutable. The pinned parser/shaper reads source bytes
-and writes separate caches/raster buffers; font-resource and native style tests
-check source preservation. Dependency upgrades must revalidate this assumption.
+and writes separate caches/raster buffers. Font-resource tests and the
+[native host integration fixture](../test/integration/restty-host-integration.test.ts)
+check source preservation. The host fixture's byte-comparison probe retains extra
+copies, so its memory observations are not uninstrumented measurements.
+Dependency upgrades must revalidate source preservation.
 Apple Color Emoji shaping input omits the unused `sbix` bitmap payload using
 bounded main-process reads, while Canvas uses the unchanged installed font.
 Other families retain whole-file inputs. IPC, snapshots, shaping, browser and GPU
@@ -198,12 +201,13 @@ resources still have transient costs.
 
 ```sh
 npx vitest run test/integration/restty-font-resources.test.ts test/integration/restty-font-styles-rendering.test.ts test/integration/apple-emoji-shaping-input.test.ts
+npx vitest run test/integration/restty-host-integration.test.ts
 ```
 
-The style fixture can retain aggregate measurements with
-`OMXTERM_FONT_STYLES_EVIDENCE_PATH`. Its byte-comparison probe retains extra copies
-and must not be treated as an uninstrumented memory measurement. Diagnostic forced
-GC and test-only counters do not ship.
+The separate style fixture checks rendering, style selection, resource sharing
+and leases. It can retain aggregate measurements with
+`OMXTERM_FONT_STYLES_EVIDENCE_PATH`. Diagnostic forced GC and test-only counters
+do not ship.
 
 ## Pinned inputs and restoration
 

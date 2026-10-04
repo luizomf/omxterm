@@ -228,6 +228,19 @@ Cursor fixtures reject `OMXTERM_TEST_CURSOR_PRESENTATION_CONTROL` and
 `OMXTERM_TEST_WINDOW_POLICY` if defined, even as empty strings. Remove those
 variables from the shell instead of declaring compositor capabilities.
 
+### macOS fullscreen comparison
+
+For an optional HUD/direct-blur fullscreen comparison on an Apple Silicon desktop:
+
+```sh
+OMXTERM_TEST_MACOS_FULLSCREEN=1 npx vitest run test/integration/macos-window-blur.test.ts
+```
+
+This exercises native enter/leave transitions for both modes and records their
+state. The ordinary test run leaves this comparison disabled. It is a focused
+diagnostic, not a release gate or proof of visible compositor blur; run it
+serially with other native fixtures.
+
 ### AltGr layout boundary
 
 On an owned disposable Linux/Windows desktop with an active US International

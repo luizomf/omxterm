@@ -64,7 +64,8 @@ The combined notice was reconciled against these exact primary tag sources:
 - `https://raw.githubusercontent.com/ryanoasis/nerd-fonts/v3.5.1/LICENSE`
 - `https://raw.githubusercontent.com/ryanoasis/nerd-fonts/v3.5.1/license-audit.md`
 - `https://raw.githubusercontent.com/ryanoasis/nerd-fonts/v3.5.1/src/glyphs/README.md`
-- the seven top-level license files under that tag's `src/glyphs/`, plus
+- the seven license files in glyph-set subdirectories under that tag's
+  `src/glyphs/`, plus
   `src/glyphs/weather-icons/OFL.txt` (including its upstream placeholders),
   reconciled with `v3.4.0`;
 - Devicon's MIT notice at
