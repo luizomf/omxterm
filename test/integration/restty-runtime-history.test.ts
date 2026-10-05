@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -9,9 +9,37 @@ import { prepareResttyRuntime } from "../../scripts/prepare-restty-runtime.mjs";
 import history from "../fixtures/restty-runtime-history.json";
 
 const dist = path.dirname(createRequire(import.meta.url).resolve("restty"));
-const corrected = readFileSync(path.join(dist, "chunk-c0rcpsc5.js"), "utf8");
 const correctedDigest =
-  "a5a31366381972750bf98651ac028e6bbe370e89d5ca5cc3855c141cd1002638";
+  "8ebccc2aa81d37266bbf4642e3e07e8c0b17e39935a97d8c3703eb9ac5e72649";
+
+// Prepare only task-owned copies, including core and types: other fixtures may
+// still be exercising the installed prior runtime during a correction review.
+async function copyInputs(root: string) {
+  const options = {
+    runtimePath: path.join(root, "runtime.js"),
+    corePath: path.join(root, "core.js"),
+    eventTypesPath: path.join(root, "events.d.ts"),
+  };
+  await Promise.all([
+    copyFile(path.join(dist, "chunk-c0rcpsc5.js"), options.runtimePath),
+    copyFile(path.join(dist, "chunk-6dxqza9q.js"), options.corePath),
+    copyFile(
+      path.join(dist, "runtime/core/runtime-events.d.ts"),
+      options.eventTypesPath,
+    ),
+  ]);
+  return options;
+}
+
+const seedRoot = await mkdtemp(path.join(tmpdir(), "omxterm-restty-seed-"));
+let corrected: string;
+try {
+  const options = await copyInputs(seedRoot);
+  await prepareResttyRuntime(options);
+  corrected = readFileSync(options.runtimePath, "utf8");
+} finally {
+  await rm(seedRoot, { recursive: true, force: true });
+}
 const digest = (source: string) =>
   createHash("sha256").update(source).digest("hex");
 
@@ -41,13 +69,9 @@ describe("Restty installation history", () => {
       const root = await mkdtemp(
         path.join(tmpdir(), "omxterm-restty-history-"),
       );
-      const runtimePath = path.join(root, "runtime.js");
-      const options = {
-        runtimePath,
-        corePath: path.join(dist, "chunk-6dxqza9q.js"),
-        eventTypesPath: path.join(dist, "runtime/core/runtime-events.d.ts"),
-      };
       try {
+        const options = await copyInputs(root);
+        const { runtimePath } = options;
         await writeFile(runtimePath, source);
         await prepareResttyRuntime(options);
         expect(await readFile(runtimePath, "utf8")).toBe(corrected);

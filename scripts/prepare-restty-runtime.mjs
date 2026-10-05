@@ -7,6 +7,7 @@ import { fontStyleCorrections } from "./restty-font-style-corrections.mjs";
 import { syntheticBoldCorrections } from "./restty-synthetic-bold-corrections.mjs";
 import { pointerCorrections } from "./restty-pointer-corrections.mjs";
 import { backgroundCorrections } from "./restty-background-corrections.mjs";
+import { blinkCorrections } from "./restty-blink-corrections.mjs";
 import {
   softWrapSpaceCorrections,
   visiblePathBoundaryCorrections,
@@ -117,8 +118,10 @@ const priorVisiblePathBoundaryDigest =
   "62456e988c176b7a6f2a1ee90498b6f2b6b767d063e63b4826830d4663b771af";
 const priorNativeScrollFeedbackDigest =
   "742a6d14c6906d6d4304199889eff69617f6a5ea25aaee788c2a7d6ee4e31dfa";
-const correctedDigest =
+const priorBlinkDigest =
   "a5a31366381972750bf98651ac028e6bbe370e89d5ca5cc3855c141cd1002638";
+const correctedDigest =
+  "8ebccc2aa81d37266bbf4642e3e07e8c0b17e39935a97d8c3703eb9ac5e72649";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -1946,6 +1949,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, visiblePathBoundaryCorrections);
       case priorNativeScrollFeedbackDigest:
         source = applyCorrections(source, nativeScrollFeedbackCorrections);
+      case priorBlinkDigest:
+        source = applyCorrections(source, blinkCorrections);
         break;
       default:
         throw new Error(
