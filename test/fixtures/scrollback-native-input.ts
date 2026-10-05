@@ -23,6 +23,7 @@ export function observeScrollbackNativeInput(
   let character: { trusted: boolean; input: boolean } | null = null;
   let notifyDrag: (() => void) | undefined;
   let unexpectedCharacters = 0;
+  evidence?.onUnexpectedWrite(() => notifyDrag?.());
   const pointer = (event: PointerEvent): NativePointerObservation => ({
     trusted: event.isTrusted,
     canvas: event.target === canvas,

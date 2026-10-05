@@ -56,7 +56,7 @@ interface InputOptions {
   consumptionDelayMs?: number;
   delayInputDeadline?: boolean;
   cancelled?: boolean;
-  unexpectedWrite?: boolean;
+  unexpectedWrite?: "before-move" | "after-wait";
 }
 
 function rendererInput(options: InputOptions) {
@@ -88,7 +88,8 @@ function rendererInput(options: InputOptions) {
     // This port models browser-trusted delivery and live product drag state;
     // it does not synthesize native/rendering qualification or a scroll result.
     const moved = type === "pointermove";
-    if (moved && options.unexpectedWrite) evidence.write("private input");
+    if (moved && options.unexpectedWrite === "before-move")
+      evidence.write("private input");
     dragging = moved && options.invalid !== "not-dragging";
     const event = {
       type,
@@ -104,7 +105,7 @@ function rendererInput(options: InputOptions) {
     } as unknown as PointerEvent;
     for (const listener of listeners.get(type) ?? []) listener(event);
   };
-  return { observer, document, deliver };
+  return { observer, document, deliver, write: evidence.write };
 }
 
 async function exercise(withholdPoll: boolean, options: InputOptions = {}) {
@@ -114,6 +115,7 @@ async function exercise(withholdPoll: boolean, options: InputOptions = {}) {
   let releasedAt: number | undefined;
   let pendingEvaluations = 0;
   let acknowledgedAt: number | undefined;
+  let unexpectedWriteWaiters: number | undefined;
   const exposure: { start: number; end?: number }[] = [];
   const viewportReads: { at: number; released: boolean }[] = [];
   const startedAt = Date.now();
@@ -148,6 +150,13 @@ async function exercise(withholdPoll: boolean, options: InputOptions = {}) {
         ).finally(() => {
           pendingEvaluations -= 1;
         });
+        if (options.unexpectedWrite === "after-wait")
+          setTimeout(() => {
+            unexpectedWriteWaiters = pendingEvaluations;
+            // An arrow-key Adapter write need not produce beforeinput. Deliver
+            // after registration without any later move/character stimulus.
+            renderer.write("\u001b[A");
+          }, 5);
         if (options.cancelled)
           return Promise.race([
             evaluation,
@@ -218,6 +227,7 @@ async function exercise(withholdPoll: boolean, options: InputOptions = {}) {
     releasedAt,
     pendingEvaluations,
     acknowledgedAt,
+    unexpectedWriteWaiters,
     exposure,
     viewportReads,
     observed: renderer.observer.snapshot(),
@@ -347,7 +357,7 @@ it("does not restart exposure when matching delivery arrives after the phase end
 });
 
 it("classifies unexpected Adapter input as an invalidated stimulus without retaining its contents", async () => {
-  const result = await exercise(true, { unexpectedWrite: true });
+  const result = await exercise(true, { unexpectedWrite: "before-move" });
   expect(result.error).toBe(
     "Error: Scrollback stimulus-invalidated at mouse-drag",
   );
@@ -355,6 +365,40 @@ it("classifies unexpected Adapter input as an invalidated stimulus without retai
   expect(result.exposure).toEqual([]);
   expect(result.records.join("")).toContain('"writes":1');
   expect(result.records.join("")).not.toContain("private input");
+});
+
+it("invalidates a registered drag waiter on Adapter-only input without a later DOM stimulus", async () => {
+  const result = await exercise(true, {
+    invalid: "absent",
+    unexpectedWrite: "after-wait",
+  });
+  expect(result.unexpectedWriteWaiters).toBe(1);
+  expect(result.error).toBe(
+    "Error: Scrollback stimulus-invalidated at mouse-drag",
+  );
+  expect(result.value).toBeNull();
+  expect(result.acknowledgedAt).toBe(5);
+  expect(result.released).toBe(true);
+  expect(result.releasedAt).toBe(5);
+  expect(result.pendingEvaluations).toBe(0);
+  expect(result.exposure).toEqual([]);
+  expect(result.viewportReads).toEqual([]);
+  expect(result.observed.move).toBeNull();
+  expect(result.observed.character).toBeNull();
+  const failure = JSON.parse(
+    result.records.at(-1)!.slice("__OMXTERM_SCROLLBACK_INPUT__".length),
+  ) as unknown;
+  expect(failure).toMatchObject({
+    phase: "mouse-drag",
+    status: "failure",
+    category: "stimulus-invalidated",
+    observation: {
+      move: null,
+      character: null,
+      unexpected: { characters: 0, writes: 1 },
+    },
+  });
+  expect(result.records.join("")).not.toContain("\\u001b[A");
 });
 
 it("releases the held button when the renderer evaluation is cancelled", async () => {

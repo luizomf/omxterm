@@ -4,6 +4,7 @@ type Stimulus = "character" | "injection";
 // arbitrary Adapter input, even in a failed native fixture's receipt.
 export function scrollbackInputEvidence() {
   let expected: Stimulus | undefined;
+  let notifyUnexpectedWrite: (() => void) | undefined;
   const counts = {
     character: 0,
     injection: 0,
@@ -18,6 +19,10 @@ export function scrollbackInputEvidence() {
       expected = stimulus;
     },
     expectingCharacter: () => expected === "character",
+    // The fixture has one native input observer; notifications carry no text.
+    onUnexpectedWrite(listener: () => void) {
+      notifyUnexpectedWrite = listener;
+    },
     write(text: string) {
       if (expected === "character" && text === "x" && counts.character === 0)
         increment("character");
@@ -28,7 +33,10 @@ export function scrollbackInputEvidence() {
       )
         increment("injection");
       else if (/^\u001b\[\d+;\d+R$/u.test(text)) increment("replies");
-      else increment("unexpectedWrites");
+      else {
+        increment("unexpectedWrites");
+        notifyUnexpectedWrite?.();
+      }
     },
     accepted: (stimulus: Stimulus) => counts[stimulus] === 1,
     snapshot: () => ({ ...counts }),
