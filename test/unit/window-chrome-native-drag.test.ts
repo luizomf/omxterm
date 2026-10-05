@@ -237,6 +237,11 @@ it("keeps native guards before mouse-down after the stdin handshake", async () =
     "if ([Pointer]::GetAncestor([Pointer]::WindowFromPoint($point), 2).ToInt64() -ne $handle)",
   );
   const mouseDown = script.indexOf("[Pointer]::mouse_event(2,");
+  const progressPolicy = script.indexOf(
+    "$ProgressPreference = 'SilentlyContinue'",
+  );
+  expect(progressPolicy).toBeGreaterThanOrEqual(0);
+  expect(progressPolicy).toBeLessThan(script.indexOf("Add-Type"));
   expect(command).toBeGreaterThan(script.indexOf("Add-Type"));
   expect(foreground).toBeGreaterThan(command);
   expect(underPointer).toBeGreaterThan(foreground);

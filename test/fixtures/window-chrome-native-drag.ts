@@ -12,6 +12,9 @@ export async function exerciseWindowsHandleDrag(
   if (process.platform !== "win32") return "not-exercised";
   const script = `
 $ErrorActionPreference = 'Stop'
+# Windows PowerShell serializes module-load progress to stderr under redirection.
+# Keep genuine preparation errors fatal without treating progress as an error.
+$ProgressPreference = 'SilentlyContinue'
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
