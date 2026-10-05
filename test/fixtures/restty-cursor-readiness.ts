@@ -49,7 +49,8 @@ export interface CursorDiagnostic {
     | "none"
     | "presentation-unavailable"
     | "operation-timeout"
-    | "operation-error";
+    | "operation-error"
+    | "input-interference";
   readonly native: {
     readonly visible: boolean;
     readonly minimized: boolean;
@@ -121,7 +122,8 @@ export function recordCursorBlinkFailure(
 
 class CursorReadinessError extends Error {
   constructor(
-    readonly category: "presentation-unavailable" | "operation-timeout",
+    readonly category:
+      "presentation-unavailable" | "operation-timeout" | "input-interference",
     step: CursorStep,
   ) {
     super(
@@ -158,6 +160,7 @@ export async function runCursorStep<T>(
   window: CursorWindow,
   input: CursorStep,
   operation: () => Promise<T>,
+  inputInterfered: () => boolean = () => false,
 ): Promise<T> {
   // Project a fixed vocabulary, even if a caller supplies additional properties.
   if (
@@ -204,6 +207,8 @@ export async function runCursorStep<T>(
   let timer: ReturnType<typeof setTimeout> | undefined;
   record("begin", "none");
   try {
+    if (inputInterfered())
+      throw new CursorReadinessError("input-interference", step);
     if (!presented())
       throw new CursorReadinessError("presentation-unavailable", step);
     // Same local Promise.race/finally-clear pattern as the appearance fixture.
@@ -214,7 +219,11 @@ export async function runCursorStep<T>(
           () =>
             reject(
               new CursorReadinessError(
-                presented() ? "operation-timeout" : "presentation-unavailable",
+                inputInterfered()
+                  ? "input-interference"
+                  : presented()
+                    ? "operation-timeout"
+                    : "presentation-unavailable",
                 step,
               ),
             ),
@@ -222,6 +231,8 @@ export async function runCursorStep<T>(
         );
       }),
     ]);
+    if (inputInterfered())
+      throw new CursorReadinessError("input-interference", step);
     if (!presented())
       throw new CursorReadinessError("presentation-unavailable", step);
     record("complete", "none");

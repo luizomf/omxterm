@@ -28,6 +28,47 @@ const visibleWindow = (): CursorWindow => ({
   getBounds: () => ({ x: 20, y: 30, width: 900, height: 600 }),
 });
 
+it("reports input interference distinctly instead of accepting a completed capture", async () => {
+  let interfered = false;
+  await expect(
+    runCursorStep(
+      visibleWindow(),
+      step,
+      async () => {
+        interfered = true;
+        return 42;
+      },
+      () => interfered,
+    ),
+  ).rejects.toMatchObject({ category: "input-interference" });
+});
+
+it("does not start another operation after input interference", async () => {
+  const operation = vi.fn(async () => 42);
+  await expect(
+    runCursorStep(visibleWindow(), step, operation, () => true),
+  ).rejects.toMatchObject({ category: "input-interference" });
+  expect(operation).not.toHaveBeenCalled();
+});
+
+it("retains input interference when a renderer await does not settle", async () => {
+  vi.useFakeTimers();
+  let interfered = false;
+  const outcome = expect(
+    runCursorStep(
+      visibleWindow(),
+      step,
+      () => new Promise<never>(() => {}),
+      () => interfered,
+    ),
+  ).rejects.toMatchObject({ category: "input-interference" });
+  await vi.advanceTimersByTimeAsync(1);
+  interfered = true;
+  await vi.advanceTimersByTimeAsync(5000);
+  await outcome;
+  expect(vi.getTimerCount()).toBe(0);
+});
+
 it("rejects a native minimized window before invoking its cursor operation", async () => {
   const operation = vi.fn(async () => "should not run");
   await expect(

@@ -2,6 +2,7 @@ import { prepareFixture, type FixtureCleanupOwner } from "./prepare-fixture";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { build } from "esbuild";
+import { cursorRuntimeProbe } from "./restty-cursor-runtime-probe";
 
 export async function buildFixture(
   root: string,
@@ -30,6 +31,22 @@ export async function buildFixture(
             format: "iife",
             platform: "browser",
             loader: { ".ttf": "binary" },
+            plugins: [
+              {
+                name: "cursor-runtime-probe",
+                setup(builder) {
+                  builder.onLoad(
+                    { filter: /chunk-c0rcpsc5\.js$/ },
+                    async ({ path: file }) => ({
+                      contents: cursorRuntimeProbe(
+                        await readFile(file, "utf8"),
+                      ),
+                      loader: "js",
+                    }),
+                  );
+                },
+              },
+            ],
             logLevel: "silent",
           }),
         ),
@@ -41,7 +58,7 @@ export async function buildFixture(
         start(() =>
           writeFile(
             path.join(root, "preload.cjs"),
-            `const {contextBridge,ipcRenderer}=require('electron');contextBridge.exposeInMainWorld('cursorFonts',{load:()=>ipcRenderer.invoke('fonts')});`,
+            `const {contextBridge,ipcRenderer}=require('electron');contextBridge.exposeInMainWorld('cursorFonts',{load:()=>ipcRenderer.invoke('fonts'),interference:(kind,moving)=>ipcRenderer.send('cursor-input-interference',kind,moving)});`,
           ),
         ),
         start(() =>

@@ -89,11 +89,86 @@ it.for([1, 2])(
     expect(line).toBeDefined();
     const observation = JSON.parse(line!.slice(prefix.length)) as {
       captures: { dpr: number }[];
+      blinkCaptures: { clock: number; count: number; fullBar: number }[];
     };
+    expect(observation.blinkCaptures.map((sample) => sample.clock)).toEqual([
+      0, 600, 1200, 0, 600, 1200, 0, 600, 1200, 0, 600, 1200,
+    ]);
+    for (const sample of observation.blinkCaptures) {
+      expect(sample.fullBar).toBeGreaterThan(0);
+      expect(sample.count).toBe(sample.clock === 600 ? 0 : sample.fullBar);
+    }
     expect(observation.captures).toHaveLength(64);
     expect(observation.captures.every((capture) => capture.dpr === dpr)).toBe(
       true,
     );
+  },
+);
+
+it.for(["held-refit-frames", "held-blink-clock"])(
+  "captures the complete cursor matrix with controlled %s",
+  { timeout: 120_000 },
+  async (control, testContext) => {
+    const { result, phases } = await runCursor(1, testContext, control);
+    expect(result, result.stderr).toMatchObject({
+      exitCode: 0,
+      reason: "exit",
+      cleanupErrors: [],
+    });
+    expect(phases.at(-1)).toMatchObject({
+      status: "complete",
+      step: { lifecycle: "dispose" },
+    });
+    if (control === "held-refit-frames")
+      expect(
+        result.stdout
+          .split("\n")
+          .filter(
+            (line) => line === "__OMXTERM_CURSOR_CONTROL__held-refit-frames",
+          ),
+      ).toHaveLength(4);
+    const line = result.stdout
+      .split("\n")
+      .find((entry) => entry.startsWith("__OMXTERM_CURSOR_RESULT__"));
+    const observation = JSON.parse(
+      line!.slice("__OMXTERM_CURSOR_RESULT__".length),
+    ) as { captures: unknown[] };
+    expect(observation.captures).toHaveLength(64);
+  },
+);
+
+it(
+  "rejects observed trusted native mouse movement as input interference",
+  { timeout: 120_000 },
+  async (testContext) => {
+    const { result, phases } = await runCursor(1, testContext, "native-input");
+    expect(result, result.stderr).toMatchObject({
+      exitCode: 1,
+      reason: "exit",
+      cleanupErrors: [],
+    });
+    expect(phases.at(-1)).toMatchObject({
+      status: "failure",
+      category: "input-interference",
+      step: { lifecycle: "mount", operation: "cursor" },
+    });
+    expect(
+      result.stdout
+        .split("\n")
+        .filter((line) => line === "__OMXTERM_CURSOR_CONTROL__native-input"),
+    ).toHaveLength(1);
+    const pointerEvents = result.stdout
+      .split("\n")
+      .filter((line) => line.startsWith("__OMXTERM_CURSOR_INPUT__"))
+      .map(
+        (line) =>
+          JSON.parse(line.slice("__OMXTERM_CURSOR_INPUT__".length)) as {
+            moving: boolean;
+          },
+      );
+    expect(pointerEvents).toHaveLength(2);
+    expect(pointerEvents[1]).toEqual({ moving: true });
+    expect(result.stdout).not.toContain("__OMXTERM_CURSOR_RESULT__");
   },
 );
 

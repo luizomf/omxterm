@@ -6,9 +6,7 @@ import { loadTerminalFontData } from "../../src/main/terminal-font-data";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
 import {
   runCursorStep,
-  recordCursorBlinkFailure,
   CURSOR_STEP_TIMEOUT,
-  type CursorBlinkSample,
   type CursorStep,
 } from "./restty-cursor-readiness";
 
@@ -79,16 +77,22 @@ async function prepareWindow(
     ?.split("=")[1];
   assert.ok(
     control === undefined ||
-      ["early-minimize", "early-hide", "held-execute", "held-capture"].includes(
-        control,
-      ),
+      [
+        "early-minimize",
+        "early-hide",
+        "held-execute",
+        "held-capture",
+        "held-refit-frames",
+        "held-blink-clock",
+        "native-input",
+      ].includes(control),
     "Unknown cursor fixture control",
   );
-  if (control === "held-execute") {
+  if (control === "held-execute" || control === "held-refit-frames") {
     window.webContents.on("console-message", (details) => {
       // Forward only a fixed gate marker, never arbitrary renderer messages.
-      if (details.message === "__OMXTERM_CURSOR_CONTROL__held-execute")
-        process.stdout.write("__OMXTERM_CURSOR_CONTROL__held-execute\n");
+      if (details.message === `__OMXTERM_CURSOR_CONTROL__${control}`)
+        process.stdout.write(`__OMXTERM_CURSOR_CONTROL__${control}\n`);
     });
   }
   await runCursorStep(
@@ -160,15 +164,56 @@ function cursorContext(
   };
 }
 
-let blinkFailure:
-  | {
-      context: Omit<CursorStep, "kind" | "operation">;
-      deadline: number;
-      fullBar: number;
-      sampleCount: number;
-      samples: CursorBlinkSample[];
-    }
-  | undefined;
+function watchCursorInput(window: BrowserWindow) {
+  let interfered = false;
+  let observedPointer: (() => void) | undefined;
+  ipcMain.on(
+    "cursor-input-interference",
+    (event, kind: unknown, moving: unknown) => {
+      if (
+        event.sender !== window.webContents ||
+        typeof kind !== "string" ||
+        typeof moving !== "boolean" ||
+        !["pointermove", "pointerdown", "keydown", "wheel"].includes(kind)
+      )
+        return;
+      if (kind !== "pointermove" || moving) interfered = true;
+      if (kind === "pointermove" && observedPointer) {
+        process.stdout.write(
+          `__OMXTERM_CURSOR_INPUT__${JSON.stringify({ moving })}\n`,
+        );
+        const complete = observedPointer;
+        observedPointer = undefined;
+        complete();
+      }
+    },
+  );
+  const move = (x: number, movementX: number) =>
+    new Promise<void>((resolve) => {
+      observedPointer = resolve;
+      window.webContents.sendInputEvent({
+        type: "mouseMove",
+        x,
+        y: 50,
+        movementX,
+        movementY: 0,
+      });
+    });
+  return {
+    interfered: () => interfered,
+    async inject() {
+      // A first injected event can establish hover with zero movement. Observe
+      // it before the second distinct position; never retry an unobserved move.
+      await move(25, 0);
+      await move(75, 50);
+      assert.ok(
+        interfered,
+        "Distinct trusted pointer positions did not report movement",
+      );
+      process.stdout.write("__OMXTERM_CURSOR_CONTROL__native-input\n");
+    },
+  };
+}
 
 async function run() {
   applyChromiumSandboxPolicy(app.commandLine);
@@ -191,6 +236,7 @@ async function run() {
       backgroundThrottling: false,
     },
   });
+  const input = watchCursorInput(window);
   const { dpr, control } = await prepareWindow(window);
   let context: Omit<CursorStep, "kind" | "operation"> = {
     dpr,
@@ -202,13 +248,17 @@ async function run() {
     expression: string,
     operation: CursorStep["operation"] = "cursor",
   ): Promise<T> =>
-    runCursorStep(window, { ...context, kind: "execute", operation }, () =>
-      window.webContents.executeJavaScript(
-        `globalThis.cursorFixture.${expression}`,
-      ),
+    runCursorStep(
+      window,
+      { ...context, kind: "execute", operation },
+      () =>
+        window.webContents.executeJavaScript(
+          `globalThis.cursorFixture.${expression}`,
+        ),
+      input.interfered,
     );
   const captures: unknown[] = [];
-  let blinkSample: CursorBlinkSample | undefined;
+  const blinkCaptures: { clock: number; count: number; fullBar: number }[] = [];
   for (const [configured, padding] of [
     [false, 0],
     [false, 8],
@@ -217,6 +267,14 @@ async function run() {
   ] as const) {
     context = cursorContext(dpr, configured, padding, "mount");
     await execute(`mount(${configured}, ${padding})`, "mount");
+    if (control === "native-input") {
+      await runCursorStep(
+        window,
+        { ...context, kind: "execute", operation: "cursor" },
+        input.inject,
+        input.interfered,
+      );
+    }
     let initial: Phase | undefined;
     let previous: Phase | undefined;
     for (const lifecycle of ["initial", "zoom", "refit", "reload"] as const) {
@@ -259,16 +317,12 @@ async function run() {
           window,
           { ...context, kind: "capture", operation: name },
           async () => {
-            if (name === "blink" && blinkSample)
-              blinkSample.captureBegin = Date.now();
             const captured = await window.webContents.capturePage({
               x: Math.round(phase.canvas.x),
               y: Math.round(phase.canvas.y),
               width: Math.floor(phase.canvas.width),
               height: Math.floor(phase.canvas.height),
             });
-            if (name === "blink" && blinkSample)
-              blinkSample.captureEnd = Date.now();
             await holdControlledCapture(
               control,
               captures.length,
@@ -277,6 +331,7 @@ async function run() {
             );
             return captured;
           },
+          input.interfered,
         );
         if (process.env.OMXTERM_CURSOR_EVIDENCE_PATH) {
           await mkdir(process.env.OMXTERM_CURSOR_EVIDENCE_PATH, {
@@ -359,29 +414,26 @@ async function run() {
         await execute("cursor(5, 0, true)", "blink");
         let visible = false,
           hidden = false;
-        const deadline = Date.now() + 2000;
-        const samples: CursorBlinkSample[] = [];
-        blinkFailure = {
-          context,
-          deadline,
-          fullBar: bar0!.count,
-          sampleCount: 0,
-          samples,
-        };
-        while ((!visible || !hidden) && Date.now() < deadline) {
-          blinkSample = { focusBegin: Date.now() };
-          samples.push(blinkSample);
-          samples.splice(0, Math.max(0, samples.length - 32));
-          blinkFailure.sampleCount++;
-          await execute("focus()", "focus");
-          blinkSample.focusEnd = Date.now();
+        // Hold the real blink calculation's clock through each native capture.
+        // Do not repeatedly focus/refit while trying to observe a free-running phase.
+        // Production scheduler timing is qualified separately from these pixels.
+        for (const time of [0, 600, 1200]) {
+          await execute(`blinkAt(${time})`, "blink");
           const sample = await capture("blink");
           const count = ink(sample.bitmap, blank.bitmap, sample.width).count;
-          blinkSample.count = count;
-          blinkSample.remainingMs = deadline - Date.now();
+          const evidence = { clock: time, count, fullBar: bar0!.count };
+          blinkCaptures.push(evidence);
+          process.stdout.write(
+            `__OMXTERM_CURSOR_BLINK_SAMPLE__${JSON.stringify({ ...context, ...evidence })}\n`,
+          );
           assert.ok(
             count === 0 || count === bar0!.count,
             "blink paints either the full bar or no cursor",
+          );
+          assert.equal(
+            count,
+            time === 600 ? 0 : bar0!.count,
+            "controlled clock must paint the complete expected blink phase",
           );
           visible ||= count > 0;
           hidden ||= count === 0;
@@ -390,8 +442,6 @@ async function run() {
           visible && hidden,
           "blinking bar retains both native pixel phases",
         );
-        blinkFailure = undefined;
-        blinkSample = undefined;
       }
     }
     context = { ...context, lifecycle: "dispose" };
@@ -406,6 +456,7 @@ async function run() {
         family,
         webgl: app.getGPUFeatureStatus().webgl,
         captures,
+        blinkCaptures,
       }) +
       "\n",
   );
@@ -413,10 +464,6 @@ async function run() {
   app.exit(0);
 }
 void run().catch((error: unknown) => {
-  if (blinkFailure) {
-    const { context, deadline, fullBar, sampleCount, samples } = blinkFailure;
-    recordCursorBlinkFailure(context, deadline, fullBar, sampleCount, samples);
-  }
   console.error(error);
   app.exit(1);
 });
