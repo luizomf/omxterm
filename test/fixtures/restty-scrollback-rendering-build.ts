@@ -141,6 +141,50 @@ export async function buildFixture(
   );
 }
 
+function nativeInputMainSource(): string {
+  return `class StimulusTimeout extends Error {}
+  class StimulusInvalidated extends Error {}
+  function requireValidInput(value) {
+    if (value.unexpected.characters > 0 || value.unexpected.writes > 0) throw new StimulusInvalidated();
+  }
+  let inputObservation = null;
+  const inputNative = () => ({ visible: window.isVisible(), minimized: window.isMinimized(), focused: window.isFocused() });
+  const inputRecord = (phase, status, category = 'none') => process.stdout.write('__OMXTERM_SCROLLBACK_INPUT__' + JSON.stringify({ version: 1, phase, status, category, native: inputNative(), observation: inputObservation }) + '\\n');
+  async function inputPhase(phase, predicate, timeout = 5000, initialize, observe) {
+    let timer;
+    let active = true;
+    inputRecord(phase, 'begin');
+    try {
+      await Promise.race([
+        (async () => {
+          const deadline = Date.now() + timeout;
+          await initialize?.();
+          while (active && Date.now() < deadline) {
+            inputObservation = await (observe ? observe() : window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.nativeInput()', true));
+            if (observe && (!active || Date.now() >= deadline)) throw new StimulusTimeout(); // Reject late consumption, even of a timely event.
+            requireValidInput(inputObservation);
+            if (predicate(inputObservation)) return;
+            await new Promise(resolve => setTimeout(resolve, 25));
+          }
+          throw new StimulusTimeout();
+        })(),
+        new Promise((_, reject) => { timer = setTimeout(() => reject(new StimulusTimeout()), timeout); }),
+      ]);
+      inputRecord(phase, 'complete');
+    } catch (error) {
+      const category = error instanceof StimulusInvalidated ? 'stimulus-invalidated' : error instanceof StimulusTimeout ? 'stimulus-unavailable' : 'operation-error';
+      inputRecord(phase, 'failure', category);
+      throw new Error('Scrollback ' + category + ' at ' + phase);
+    } finally { active = false; clearTimeout(timer); }
+  }
+  async function prepareInput(phase) {
+    await inputPhase(phase, value => { const state = inputNative(); return state.visible && !state.minimized && state.focused && value.ready; }, 5000, async () => {
+      window.show(); window.focus(); window.webContents.focus();
+      await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.prepareNativeInput()', true);
+    });
+  }`;
+}
+
 function electronMainSource(
   mode: ScrollbackFixtureMode,
   holdStartup: boolean,
@@ -223,42 +267,7 @@ app.whenReady().then(async () => {
     process.stdout.write('__OMXTERM_SCROLLBACK_STARTUP_HELD__' + JSON.stringify({ pid: process.pid, visible: window.isVisible(), minimized: window.isMinimized() }) + '\\n');
   }
   await waitFor(window, "globalThis.__omxtermResttyScrollback?.ready ?? false");
-  class StimulusTimeout extends Error {}
-  let inputObservation = null;
-  const inputNative = () => ({ visible: window.isVisible(), minimized: window.isMinimized(), focused: window.isFocused() });
-  const inputRecord = (phase, status, category = 'none') => process.stdout.write('__OMXTERM_SCROLLBACK_INPUT__' + JSON.stringify({ version: 1, phase, status, category, native: inputNative(), observation: inputObservation }) + '\\n');
-  async function inputPhase(phase, predicate, timeout = 5000, initialize, observe) {
-    let timer;
-    let active = true;
-    inputRecord(phase, 'begin');
-    try {
-      await Promise.race([
-        (async () => {
-          const deadline = Date.now() + timeout;
-          await initialize?.();
-          while (active && Date.now() < deadline) {
-            inputObservation = await (observe ? observe() : window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.nativeInput()', true));
-            if (observe && (!active || Date.now() >= deadline)) throw new StimulusTimeout(); // Reject late consumption, even of a timely event.
-            if (predicate(inputObservation)) return;
-            await new Promise(resolve => setTimeout(resolve, 25));
-          }
-          throw new StimulusTimeout();
-        })(),
-        new Promise((_, reject) => { timer = setTimeout(() => reject(new StimulusTimeout()), timeout); }),
-      ]);
-      inputRecord(phase, 'complete');
-    } catch (error) {
-      const category = error instanceof StimulusTimeout ? 'stimulus-unavailable' : 'operation-error';
-      inputRecord(phase, 'failure', category);
-      throw new Error('Scrollback ' + category + ' at ' + phase);
-    } finally { active = false; clearTimeout(timer); }
-  }
-  async function prepareInput(phase) {
-    await inputPhase(phase, value => { const state = inputNative(); return state.visible && !state.minimized && state.focused && value.ready; }, 5000, async () => {
-      window.show(); window.focus(); window.webContents.focus();
-      await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.prepareNativeInput()', true);
-    });
-  }
+  ${nativeInputMainSource()}
   const resizeAtBottom = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.resizeAtBottom()", true);
   const initial = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.metrics()", true);
   const scrolledTop = await window.webContents.executeJavaScript(
@@ -313,15 +322,17 @@ app.whenReady().then(async () => {
   await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.scrollToTop()', true);
   const outputMetrics = await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.outputWhileScrolled()', true);
   await prepareInput('character-ready');
+  await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.expectInput('character')", true);
   window.webContents.sendInputEvent({ type: 'char', keyCode: 'x' });
   await inputPhase('character', value => value.character?.trusted && value.character.input && value.accepted);
   const nativeCharacter = inputObservation;
   const typed = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.inputViewport('x')", true);
   await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.scrollToTop()', true);
-  await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.surface.inject('injected')", true);
+  await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.expectInput('injection'); globalThis.__omxtermResttyScrollback.surface.inject('injected')", true);
   const injected = await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.inputViewport('injected')", true);
-  const writes = await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.writes', true);
-  const viewport = { geometry, outputTop: outputMetrics.scrollTop, typed, injected, writes };
+  await inputPhase('viewport-complete', () => true);
+  const inputEvidence = await window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.inputEvidence()', true);
+  const viewport = { geometry, outputTop: outputMetrics.scrollTop, typed, injected, inputEvidence };
   const preferences = window.webContents.getLastWebPreferences();
   await window.webContents.executeJavaScript("globalThis.__omxtermResttyScrollback.surface.dispose(); globalThis.__omxtermResttyScrollback.hiddenRenderingFixture().then(fixture => { globalThis.__hiddenFixture = fixture; return true; })", true);
   const cpu = () => app.getAppMetrics().filter(metric => metric.type === 'Tab').reduce((sum, metric) => sum + metric.cpu.cumulativeCPUUsage, 0);

@@ -1,3 +1,5 @@
+import type { scrollbackInputEvidence } from "./scrollback-input-evidence";
+
 export interface NativePointerObservation {
   readonly trusted: boolean;
   readonly canvas: boolean;
@@ -13,12 +15,14 @@ export function observeScrollbackNativeInput(
   input: HTMLTextAreaElement,
   isDragging: () => boolean,
   accepted: () => boolean,
+  evidence?: ReturnType<typeof scrollbackInputEvidence>,
 ) {
   let down: NativePointerObservation | null = null;
   let move: NativePointerObservation | null = null;
   let up: NativePointerObservation | null = null;
   let character: { trusted: boolean; input: boolean } | null = null;
   let notifyDrag: (() => void) | undefined;
+  let unexpectedCharacters = 0;
   const pointer = (event: PointerEvent): NativePointerObservation => ({
     trusted: event.isTrusted,
     canvas: event.target === canvas,
@@ -44,6 +48,18 @@ export function observeScrollbackNativeInput(
   // a successful native character need not produce a later DOM input event.
   input.addEventListener("beforeinput", (event) => {
     character = { trusted: event.isTrusted, input: event.target === input };
+    if (
+      evidence &&
+      (!evidence.expectingCharacter() ||
+        event.data !== "x" ||
+        event.inputType !== "insertText")
+    ) {
+      unexpectedCharacters = Math.min(
+        Number.MAX_SAFE_INTEGER,
+        unexpectedCharacters + 1,
+      );
+      notifyDrag?.();
+    }
   });
   const snapshot = () => {
     const rect = canvas.getBoundingClientRect();
@@ -60,6 +76,10 @@ export function observeScrollbackNativeInput(
       up,
       character,
       accepted: accepted(),
+      unexpected: {
+        characters: unexpectedCharacters,
+        writes: evidence?.snapshot().unexpectedWrites ?? 0,
+      },
       geometry: {
         x: rect.x,
         y: rect.y,
@@ -85,7 +105,13 @@ export function observeScrollbackNativeInput(
         // the main phase owns the deadline and always releases in its finally.
         notifyDrag = () => {
           const value = snapshot();
-          if (!hasNativeDrag(value, point) && !value.up) return;
+          if (
+            !hasNativeDrag(value, point) &&
+            !value.up &&
+            value.unexpected.characters === 0 &&
+            value.unexpected.writes === 0
+          )
+            return;
           notifyDrag = undefined;
           resolve(value);
         };

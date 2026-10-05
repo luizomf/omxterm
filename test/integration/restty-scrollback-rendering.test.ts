@@ -119,7 +119,12 @@ interface Result {
     readonly outputTop: number;
     readonly typed: Metrics;
     readonly injected: Metrics;
-    readonly writes: string[];
+    readonly inputEvidence: {
+      character: number;
+      injection: number;
+      replies: number;
+      unexpectedWrites: number;
+    };
     readonly geometry: {
       sizes: { cols: number; rows: number }[];
       baseline: { cols: number; rows: number };
@@ -355,8 +360,9 @@ describe("Restty scrollback through the production Surface seam", () => {
         result!.viewport.injected.scrollHeight -
           result!.viewport.injected.clientHeight,
       );
-    expect.soft(result!.viewport.writes).toContain("x");
-    expect.soft(result!.viewport.writes).toContain("injected");
+    expect
+      .soft(result!.viewport.inputEvidence)
+      .toEqual({ character: 1, injection: 1, replies: 1, unexpectedWrites: 0 });
     expect.soft(result!.viewport.geometry.sameCanvas).toBe(true);
     expect.soft(result!.viewport.geometry.hiddenSizes).toEqual([]);
     expect.soft(result!.viewport.geometry.hiddenCanvasUnchanged).toBe(true);

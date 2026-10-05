@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { runInNewContext } from "node:vm";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
+import { scrollbackInputEvidence } from "../fixtures/scrollback-input-evidence";
 import { buildFixture } from "../fixtures/restty-scrollback-rendering-build";
 import {
   hasNativeDrag,
@@ -55,6 +56,7 @@ interface InputOptions {
   consumptionDelayMs?: number;
   delayInputDeadline?: boolean;
   cancelled?: boolean;
+  unexpectedWrite?: boolean;
 }
 
 function rendererInput(options: InputOptions) {
@@ -74,16 +76,19 @@ function rendererInput(options: InputOptions) {
     querySelector: () => host,
   };
   vi.stubGlobal("document", document);
+  const evidence = scrollbackInputEvidence();
   const observer = observeScrollbackNativeInput(
     canvas as unknown as HTMLCanvasElement,
     input as unknown as HTMLTextAreaElement,
     () => dragging,
     () => false,
+    evidence,
   );
   const deliver = (type: string, x: number, y: number, buttons: number) => {
     // This port models browser-trusted delivery and live product drag state;
     // it does not synthesize native/rendering qualification or a scroll result.
     const moved = type === "pointermove";
+    if (moved && options.unexpectedWrite) evidence.write("private input");
     dragging = moved && options.invalid !== "not-dragging";
     const event = {
       type,
@@ -339,6 +344,17 @@ it("does not restart exposure when matching delivery arrives after the phase end
   expect(result.exposure).toEqual([]);
   expect(result.viewportReads).toEqual([]);
   expect(result.pendingEvaluations).toBe(0);
+});
+
+it("classifies unexpected Adapter input as an invalidated stimulus without retaining its contents", async () => {
+  const result = await exercise(true, { unexpectedWrite: true });
+  expect(result.error).toBe(
+    "Error: Scrollback stimulus-invalidated at mouse-drag",
+  );
+  expect(result.released).toBe(true);
+  expect(result.exposure).toEqual([]);
+  expect(result.records.join("")).toContain('"writes":1');
+  expect(result.records.join("")).not.toContain("private input");
 });
 
 it("releases the held button when the renderer evaluation is cancelled", async () => {

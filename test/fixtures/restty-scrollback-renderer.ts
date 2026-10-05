@@ -1,3 +1,4 @@
+import { scrollbackInputEvidence } from "./scrollback-input-evidence";
 import { waitForLiveViewport } from "./restty-scrollback-viewport";
 import {
   observeScrollbackNativeInput,
@@ -39,7 +40,10 @@ interface ScrollbackFixture {
     restored: ScrollMetrics;
   }>;
   readonly surface: TerminalSurface;
-  readonly writes: string[];
+  expectInput(stimulus: "character" | "injection"): void;
+  inputEvidence(): ReturnType<
+    ReturnType<typeof scrollbackInputEvidence>["snapshot"]
+  >;
   scrollToTop(): Promise<ScrollMetrics>;
   outputWhileScrolled(): Promise<ScrollMetrics>;
   hiddenGeometry(): Promise<{
@@ -63,7 +67,7 @@ const container = document.createElement("main");
 container.className = "terminal-surface";
 root.append(container);
 let handlers: TerminalSessionHandlers | undefined;
-const writes: string[] = [];
+const inputEvidence = scrollbackInputEvidence();
 const sizes: { cols: number; rows: number }[] = [];
 const initialCanvas = () => container.querySelector("canvas");
 const waitForRender = () =>
@@ -117,7 +121,7 @@ async function run() {
         handlers = nextHandlers;
       },
       write(text) {
-        writes.push(text);
+        inputEvidence.write(text);
       },
       resize(size) {
         sizes.push(size);
@@ -136,7 +140,8 @@ async function run() {
     canvas!,
     container.querySelector<HTMLTextAreaElement>("textarea")!,
     () => globalThis.__scrollbackIsDragging?.() === true,
-    () => writes.includes("x"),
+    () => inputEvidence.accepted("character"),
+    inputEvidence,
   );
   output(0, 5_000);
   await waitForRender();
@@ -158,7 +163,8 @@ async function run() {
     hiddenRenderingFixture,
     depthRenderingFixture,
     surface,
-    writes,
+    expectInput: inputEvidence.expect,
+    inputEvidence: inputEvidence.snapshot,
     async scrollToTop() {
       const host = container.querySelector<HTMLElement>(
         ".restty-native-scroll-host",
@@ -202,7 +208,10 @@ async function run() {
       return result;
     },
     metrics: () => metrics(canvas),
-    inputViewport: (text) => liveViewport(canvas, () => writes.includes(text)),
+    inputViewport: (text) =>
+      liveViewport(canvas, () =>
+        inputEvidence.accepted(text === "x" ? "character" : "injection"),
+      ),
     async resizeAtBottom() {
       const before = await liveViewport(canvas);
       // A reload notice can shrink the host while font metrics also change.
