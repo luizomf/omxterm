@@ -163,16 +163,18 @@ describe("native configured font styles", () => {
     expect(boldItalic.coverage).toBeGreaterThan(italic.coverage);
   }, 75_000);
 
-  it("keeps additional synthetic italic-bold ink inside the cell", async () => {
-    const run = await observe("regular");
-    const phase = run.phases.find((value) => value.name === "wideBoldItalic")!;
-    const italic = run.phases.find((value) => value.name === "wideItalic")!;
-    expect(phase.ink!.coverage).toBeGreaterThan(italic.ink!.coverage);
-    expect(phase.outsideGrowth).toBe(0);
-  }, 75_000);
-
   it("renders exact styles, preserves regular pixels and shares collection resources across live tabs", async () => {
     const regular = await observe("regular");
+    const wideBoldItalic = regular.phases.find(
+      (phase) => phase.name === "wideBoldItalic",
+    )!;
+    const wideItalic = regular.phases.find(
+      (phase) => phase.name === "wideItalic",
+    )!;
+    expect(wideBoldItalic.ink!.coverage).toBeGreaterThan(
+      wideItalic.ink!.coverage,
+    );
+    expect(wideBoldItalic.outsideGrowth).toBe(0);
     const styled = await observe("styled");
     const partial = await observe("partial");
     const priorStyled = await observe("styled", true);
