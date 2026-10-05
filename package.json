@@ -39,17 +39,17 @@
     "text-shaper": "0.1.28"
   },
   "devDependencies": {
-    "@electron/asar": "3.4.1",
-    "@types/node": "24.0.15",
+    "@electron/asar": "4.3.1",
+    "@types/node": "24.19.1",
     "electron": "43.7.7",
     "electron-builder": "26.15.3",
-    "esbuild": "0.28.1",
+    "esbuild": "0.28.2",
     "jsdom": "29.1.1",
     "node-api-headers": "1.9.0",
-    "oxlint": "1.79.0",
-    "oxlint-tsgolint": "7.0.2001",
-    "prettier": "3.9.5",
+    "oxlint": "1.87.0",
+    "oxlint-tsgolint": "7.0.2003",
+    "prettier": "3.9.9",
     "typescript": "7.0.2",
-    "vitest": "4.1.11"
+    "vitest": "5.0.3"
   }
 }

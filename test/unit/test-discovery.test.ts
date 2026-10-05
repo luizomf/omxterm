@@ -1,5 +1,12 @@
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, it } from "vitest";
@@ -32,7 +39,10 @@ function discoveredFiles(root: string): string[] {
 }
 
 it("selects only project suites while retaining archived and third-party tests", async () => {
-  const root = await mkdtemp(path.join(tmpdir(), "omxterm-test-discovery-"));
+  // Vitest resolves symlinks in discovered paths, including macOS /var -> /private/var.
+  const root = await realpath(
+    await mkdtemp(path.join(tmpdir(), "omxterm-test-discovery-")),
+  );
   const intended = [
     "test/unit/nested/example.test.ts",
     "test/integration/native.test.ts",
