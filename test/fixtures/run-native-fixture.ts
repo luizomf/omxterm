@@ -125,6 +125,8 @@ async function runWindowsSupervisor(
   // WMI launches under the caller's identity but outside the inherited Node Job.
   // A detached fork alone remains in that Job and dies with the test worker.
   // CREATE_BREAKAWAY_FROM_JOB also avoids inheriting WMI provider Job quotas.
+  // Hide this separately created console too: hiding PowerShell alone lets the
+  // supervisor activate Windows Terminal and steal the native fixture's focus.
   await writeFile(
     requestPath,
     JSON.stringify({ ...request, parent, externalChild: true }),
@@ -151,7 +153,7 @@ async function runWindowsSupervisor(
         `
     $ErrorActionPreference = 'Stop'
     $command = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}'))
-    $startup = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ CreateFlags = [uint32]16777216 }
+    $startup = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ CreateFlags = [uint32]16777216; ShowWindow = [uint16]0 }
     $result = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $command; ProcessStartupInformation = $startup }
     if ($result.ReturnValue -ne 0) { throw ('Native fixture supervisor creation failed: ' + $result.ReturnValue) }
     $result.ProcessId

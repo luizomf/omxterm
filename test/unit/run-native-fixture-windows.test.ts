@@ -419,6 +419,21 @@ describe("Native fixture preparation lifetime", () => {
 });
 
 describe("Windows fixture bootstrap ownership", () => {
+  it("hides the WMI cleanup supervisor while retaining Job breakaway", async () => {
+    disappear(JSON.stringify(completed));
+    await expect(run()).resolves.toEqual(completed);
+    const launch = vi
+      .mocked(childProcess.execFileSync)
+      .mock.calls.find(([, args]) =>
+        String(args?.at(-1)).includes("Invoke-CimMethod"),
+      );
+    expect(launch).toBeDefined();
+    const script = String(launch![1]!.at(-1));
+    expect(script).toMatch(/CreateFlags\s*=\s*\[uint32\]16777216/);
+    expect(script).toMatch(/ShowWindow\s*=\s*\[uint16\]0/);
+    expect(script).toContain("ProcessStartupInformation = $startup");
+  });
+
   it("publishes pending ownership before an interruptible spawn, retaining an unproven synchronous failure", async () => {
     writeFileSync(path.join(root, "supervisor-ready"), "ready\n");
     vi.spyOn(process, "kill").mockImplementation(() => {
