@@ -24,7 +24,10 @@ const draw: HoverDraw = {
   revision: 3,
   cells: 4,
   setAt: 10,
+  cellRevision: 3,
+  cellSetAt: 10,
   drawRevision: 3,
+  drawCellRevision: 3,
   drawCells: 4,
   drawAt: 11,
   draws: 2,
@@ -260,6 +263,12 @@ describe("current-stimulus draw evidence", () => {
   it("does not equate elapsed 100ms, an older draw or missing metadata with readiness", () => {
     for (const change of [
       { drawRevision: 2 },
+      { drawCellRevision: 2 },
+      { drawCellRevision: NaN },
+      { cellSetAt: NaN },
+      { cellSetAt: -1 },
+      { cellSetAt: 12 },
+      { drawRevision: 4 },
       { drawCells: 3 },
       { drawAt: 9 },
       { drawAt: NaN },

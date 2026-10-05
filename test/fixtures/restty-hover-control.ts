@@ -30,7 +30,8 @@ export const HOVER_FRAME_HOLD_SOURCE = `(() => {
     const current = canvas.__resttyHoverFixture();
     return { active: Boolean(owner), canvasId: owner?.canvasId, revision: owner?.revision,
       callbackId: pending[0]?.id, pending: pending.length,
-      currentCanvasId: current.canvasId, currentRevision: current.draw.revision, drawRevision: current.draw.drawRevision };
+      currentCanvasId: current.canvasId, currentRevision: current.draw.revision, drawRevision: current.draw.drawRevision,
+      cellRevision: current.draw.cellRevision, drawCellRevision: current.draw.drawCellRevision };
   };
   globalThis.__hoverFrame = {
     arm(canvasId) { if (owner) throw new Error('Hover frame already owned'); owner = {canvasId}; },
@@ -58,6 +59,8 @@ interface HoverFrameState {
   readonly currentCanvasId: number;
   readonly currentRevision: number;
   readonly drawRevision: number;
+  readonly cellRevision: number;
+  readonly drawCellRevision: number;
 }
 async function frameOperation(
   window: ResttyLinkGestureOptions["window"],
@@ -78,7 +81,7 @@ function requireHeldFrame(
 ): boolean {
   if (state.currentCanvasId !== stimulus.canvasId)
     throw new HoverEvidenceError("geometry-changed");
-  if (state.currentRevision !== stimulus.draw.revision)
+  if (state.cellRevision !== stimulus.draw.cellRevision)
     throw new HoverEvidenceError("stimulus-invalidated");
   if (
     !state.active ||
@@ -90,7 +93,7 @@ function requireHeldFrame(
     state.pending > 0 &&
     state.callbackId !== undefined &&
     Number.isSafeInteger(state.callbackId) &&
-    state.drawRevision < stimulus.draw.revision
+    state.drawCellRevision < stimulus.draw.cellRevision
   );
 }
 function recordFrame(
@@ -314,9 +317,9 @@ export async function completeHoverControl(
         await waitFor(async () => {
           const current = await readHoverSnapshot(window);
           return (
-            current.draw.revision > prior.draw.revision &&
+            current.draw.cellRevision > prior.draw.cellRevision &&
             current.draw.cells === 0 &&
-            current.draw.drawRevision === current.draw.revision &&
+            current.draw.drawCellRevision === current.draw.cellRevision &&
             current.draw.drawCells === 0 &&
             (control === "output-invalidation" ||
               current.events.some(

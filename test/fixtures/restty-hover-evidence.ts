@@ -18,7 +18,11 @@ export interface HoverDraw {
   readonly revision: number;
   readonly cells: number;
   readonly setAt: number;
+  // Request provenance stays separate from the latest cell-identity transition.
+  readonly cellRevision: number;
+  readonly cellSetAt: number;
   readonly drawRevision: number;
+  readonly drawCellRevision: number;
   readonly drawCells: number;
   readonly drawAt: number;
   readonly draws: number;
@@ -77,26 +81,34 @@ export function sameHoverGeometry(
 
 export function requireHoverDraw(
   draw: HoverDraw,
-  revision: number,
+  cellRevision: number,
   cells: number,
 ): void {
   if (
-    !Number.isSafeInteger(revision) ||
-    revision <= 0 ||
-    draw.revision !== revision ||
+    !Number.isSafeInteger(cellRevision) ||
+    cellRevision < 0 ||
+    !Number.isSafeInteger(draw.revision) ||
+    draw.revision < cellRevision ||
+    draw.cellRevision !== cellRevision ||
     draw.cells !== cells
   )
     throw new HoverEvidenceError("stimulus-invalidated");
   if (
     !Number.isSafeInteger(draw.drawRevision) ||
+    !Number.isSafeInteger(draw.drawCellRevision) ||
     !Number.isSafeInteger(draw.drawCells) ||
     !Number.isSafeInteger(draw.draws) ||
     !Number.isFinite(draw.setAt) ||
     draw.setAt < 0 ||
-    draw.drawRevision !== revision ||
+    !Number.isFinite(draw.cellSetAt) ||
+    draw.cellSetAt < 0 ||
+    draw.cellSetAt > draw.setAt ||
+    draw.drawCellRevision !== cellRevision ||
+    draw.drawRevision < cellRevision ||
+    draw.drawRevision > draw.revision ||
     draw.drawCells !== cells ||
     !Number.isFinite(draw.drawAt) ||
-    draw.drawAt < draw.setAt ||
+    draw.drawAt < draw.cellSetAt ||
     draw.draws <= 0
   )
     throw new HoverEvidenceError("cue-not-drawn");

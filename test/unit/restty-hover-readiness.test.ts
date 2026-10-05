@@ -16,7 +16,10 @@ afterEach(() => {
 });
 function fixture(
   options: {
-    replacement?: "pointer-clear" | "pointer-same-span" | "keyup-clear";
+    replacement?:
+      | "pointer-clear"
+      | "pointer-same-count-different-cells"
+      | "keyup-replaced-empty";
     captureChange?: "viewport" | "identity" | "clear";
     beforeNoopKeyup?: boolean;
   } = {},
@@ -37,7 +40,10 @@ function fixture(
       revision: 1,
       cells: 0,
       setAt: 1,
+      cellRevision: 1,
+      cellSetAt: 1,
       drawRevision: 1,
+      drawCellRevision: 1,
       drawCells: 0,
       drawAt: 2,
       draws: 1,
@@ -53,7 +59,10 @@ function fixture(
         revision,
         cells,
         setAt: revision,
+        cellRevision: revision,
+        cellSetAt: revision,
         drawRevision: revision,
+        drawCellRevision: revision,
         drawCells: cells,
         drawAt: revision + 1,
         draws: revision,
@@ -112,12 +121,21 @@ function fixture(
           snapshot.draw.cells === 1 &&
           options.replacement?.startsWith("pointer")
         )
-          replace(Number(options.replacement === "pointer-same-span"));
+          // Same count denotes a different cell identity, not an equal set.
+          replace(
+            Number(
+              options.replacement === "pointer-same-count-different-cells",
+            ),
+          );
         if (
           source.includes("new KeyboardEvent") &&
-          options.replacement === "keyup-clear"
-        )
+          options.replacement === "keyup-replaced-empty"
+        ) {
+          // A real empty -> nonempty -> empty transition must invalidate even
+          // though the final count matches the keyup's original release.
+          replace(1);
           replace(0);
+        }
         return value;
       },
       capturePage: async () => {
@@ -193,7 +211,11 @@ it("a queued clear before the keyup task cannot stand in for a no-op keyup", asy
   await expect(f.run()).rejects.toMatchObject({ category: "cue-not-drawn" });
   expect(f.counts().captures).toBe(2);
 });
-it.each(["pointer-clear", "pointer-same-span", "keyup-clear"] as const)(
+it.each([
+  "pointer-clear",
+  "pointer-same-count-different-cells",
+  "keyup-replaced-empty",
+] as const)(
   "rejects %s queued between dispatch return and main resumption",
   async (replacement) => {
     const f = fixture({ replacement });
@@ -203,9 +225,12 @@ it.each(["pointer-clear", "pointer-same-span", "keyup-clear"] as const)(
     const failed = f.records().at(-1)!;
     expect(failed.category).toBe("stimulus-invalidated");
     expect(failed.stimulus!.revision).toBe(
-      replacement === "keyup-clear" ? 4 : 3,
+      replacement === "keyup-replaced-empty" ? 4 : 3,
     );
-    expect(failed.latest.draw.revision).toBe(failed.stimulus!.revision + 1);
+    expect(failed.latest.draw.revision).toBe(
+      failed.stimulus!.revision +
+        (replacement === "keyup-replaced-empty" ? 2 : 1),
+    );
   },
 );
 it.each(["viewport", "identity"] as const)(
@@ -244,7 +269,12 @@ function frameFixture() {
     getBoundingClientRect: () => ({ width: 24 }),
     __resttyHoverFixture: () => ({
       canvasId: 1,
-      draw: { revision, drawRevision: revision - 1 },
+      draw: {
+        revision,
+        cellRevision: revision,
+        drawRevision: revision - 1,
+        drawCellRevision: revision - 1,
+      },
     }),
   };
   interface State {

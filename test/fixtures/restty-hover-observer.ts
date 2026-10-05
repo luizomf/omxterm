@@ -13,7 +13,7 @@ export function instrumentResttyHover(source: string): string {
   replace(
     "  function setVisibleLinkHover(cells) {",
     `  const hoverCanvasId = (globalThis.__resttyHoverCanvasId = (globalThis.__resttyHoverCanvasId ?? 0) + 1);
-  const hoverDraw = { revision: 0, cells: 0, setAt: 0, drawRevision: -1, drawCells: 0, drawAt: 0, draws: 0 };
+  const hoverDraw = { revision: 0, cells: 0, setAt: 0, cellRevision: 0, cellSetAt: 0, drawRevision: -1, drawCellRevision: -1, drawCells: 0, drawAt: 0, draws: 0 };
   const hoverEvents = [];
   const observeHoverEvent = event => {
     hoverEvents.push({ type: event.type, trusted: event.isTrusted, modified: Boolean(event.ctrlKey || event.metaKey), at: performance.now() });
@@ -34,6 +34,7 @@ export function instrumentResttyHover(source: string): string {
   };
   canvas.__resttyHoverFixture.didDraw = cells => {
     hoverDraw.drawRevision = hoverDraw.revision;
+    hoverDraw.drawCellRevision = hoverDraw.cellRevision;
     hoverDraw.drawCells = cells;
     hoverDraw.drawAt = performance.now();
     hoverDraw.draws++;
@@ -49,6 +50,14 @@ export function instrumentResttyHover(source: string): string {
     hoverDraw.revision++;
     hoverDraw.cells = cells?.length ?? 0;
     hoverDraw.setAt = performance.now();`,
+  );
+  // This seam is AFTER the prepared setter's full cell-identity equality guard.
+  // Keep every request above, but only actual transitions need a new draw.
+  replace(
+    "    linkState.visibleHoverCells = next;",
+    `    hoverDraw.cellRevision = hoverDraw.revision;
+    hoverDraw.cellSetAt = hoverDraw.setAt;
+    linkState.visibleHoverCells = next;`,
   );
   replace(
     "  renderWebGLGlyphPipeline(ctx);\n}",

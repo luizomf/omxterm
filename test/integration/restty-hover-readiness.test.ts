@@ -28,6 +28,7 @@ interface Phase {
   readonly stimulus: {
     readonly canvasId: number;
     readonly revision: number;
+    readonly cellRevision: number;
     readonly cells: number;
   };
   readonly preparation: {
@@ -58,6 +59,8 @@ interface Frame {
   readonly currentCanvasId: number;
   readonly currentRevision: number;
   readonly drawRevision: number;
+  readonly cellRevision: number;
+  readonly drawCellRevision: number;
 }
 function expectHeldFrame(frames: readonly Frame[], phase: Phase): Frame {
   const held = frames.find((frame) => frame.stage === "held")!;
@@ -66,11 +69,12 @@ function expectHeldFrame(frames: readonly Frame[], phase: Phase): Frame {
     canvasId: phase.stimulus.canvasId,
     revision: phase.stimulus.revision,
     currentCanvasId: phase.stimulus.canvasId,
-    currentRevision: phase.stimulus.revision,
+    cellRevision: phase.stimulus.cellRevision,
   });
   expect(held.pending).toBeGreaterThan(0);
   expect(Number.isSafeInteger(held.callbackId)).toBe(true);
-  expect(held.drawRevision).toBeLessThan(phase.stimulus.revision);
+  expect(held.currentRevision).toBeGreaterThanOrEqual(phase.stimulus.revision);
+  expect(held.drawCellRevision).toBeLessThan(phase.stimulus.cellRevision);
   return held;
 }
 async function runHover(
@@ -137,7 +141,12 @@ it.for([1, 1.5, 2])(
     ]);
     const modified = phases[1]!;
     expect(modified.latest.geometry.dpr).toBe(dpr);
-    expect(modified.stimulus.revision).toBe(modified.latest.draw.revision);
+    expect(modified.stimulus.cellRevision).toBe(
+      modified.latest.draw.cellRevision,
+    );
+    expect(modified.latest.draw.revision).toBeGreaterThanOrEqual(
+      modified.stimulus.revision,
+    );
     expect(modified.preparation).toEqual({
       exactContent: true,
       gridMatches: true,
@@ -194,7 +203,7 @@ it("waits for the actual late native frame continuation without treating draw as
     pixels: { missingCells: 0, complement: 0, unusedEdges: 0 },
   });
   expect(
-    phases[1]!.latest.draw.drawAt - phases[1]!.latest.draw.setAt,
+    phases[1]!.latest.draw.drawAt - phases[1]!.latest.draw.cellSetAt,
   ).toBeGreaterThan(100);
   const held = expectHeldFrame(frames, phases[1]!);
   expect(frames.find((frame) => frame.stage === "checkpoint")).toMatchObject({
@@ -245,7 +254,7 @@ it.for([
         active: true,
         callbackId: held.callbackId,
         revision: held.revision,
-        currentRevision: held.revision,
+        cellRevision: held.cellRevision,
       });
       expect(frames.at(-1)).toMatchObject({
         stage: "cleanup",
@@ -254,13 +263,13 @@ it.for([
         releasedCallbackId: held.callbackId,
       });
       expect(failed.latest.draw.cells).toBeGreaterThan(0);
-      expect(failed.latest.draw.drawRevision).toBeLessThan(
-        failed.latest.draw.revision,
+      expect(failed.latest.draw.drawCellRevision).toBeLessThan(
+        failed.latest.draw.cellRevision,
       );
     } else {
       expect(failed.latest.draw).toMatchObject({ cells: 0, drawCells: 0 });
-      expect(failed.latest.draw.revision).toBeGreaterThan(
-        failed.stimulus.revision,
+      expect(failed.latest.draw.cellRevision).toBeGreaterThan(
+        failed.stimulus.cellRevision,
       );
     }
     if (control === "native-invalidation")

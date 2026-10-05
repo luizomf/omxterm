@@ -183,10 +183,17 @@ Platform guards and opt-ins determine which tests execute; a skip is not a pass.
 
 Keep the tested desktop unlocked and idle while graphical fixtures run. Real
 pointer movement, modifier keys and window activation can replace a fixture's
-controlled hover, selection or focus state. A `stimulus-invalidated` failure
-means that the measured state changed; inspect retained events before attributing
-it to terminal rendering. Do not retry until green or discard the original
-failure. A later pass alone does not identify its cause.
+controlled hover, selection or focus state. Hover evidence retains every setter
+request's revision/time separately from the revision/time of actual cell-set
+transitions, observed after the prepared setter's full identity equality guard.
+Draw readiness and capture stability require the intended cell-set transition
+(including equal-count different cells), not a redraw for an equivalent request.
+Dispatch still requires its own setter request; a no-op keyup cannot claim a
+positive cue's release cleared before that dispatch. An initially drawn empty
+set can serve the baseline and no-link cases. A `stimulus-invalidated` failure
+means that the measured cell set or content changed; inspect retained requests
+and events before attributing it to terminal rendering. Do not retry until green
+or discard the original failure. A later pass alone does not identify its cause.
 
 For a graphical test run:
 

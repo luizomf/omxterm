@@ -88,15 +88,36 @@ async function bounded<T>(
 
 export { bounded as boundedHoverStep };
 
+interface HoverDispatch {
+  readonly beforeRevision: number;
+  readonly beforeCellRevision: number;
+  readonly snapshot: HoverSnapshot;
+}
 async function dispatchHoverEvent(window: BrowserWindow, event: string) {
   return bounded(
     () =>
       window.webContents.executeJavaScript(
-        `(() => { const beforeRevision = (${hoverSnapshotSource}).draw.revision; ${event} return {beforeRevision, snapshot: ${hoverSnapshotSource}}; })()`,
+        `(() => { const before = (${hoverSnapshotSource}).draw; ${event} return {beforeRevision: before.revision, beforeCellRevision: before.cellRevision, snapshot: ${hoverSnapshotSource}}; })()`,
         true,
-      ) as Promise<{ beforeRevision: number; snapshot: HoverSnapshot }>,
+      ) as Promise<HoverDispatch>,
     "cue-not-drawn",
   );
+}
+function requireHoverDispatch(
+  result: HoverDispatch,
+  needsCellTransition: boolean,
+): void {
+  const snapshot = result.snapshot;
+  // Every dispatch owns a request. Positive cue/release dispatches also own
+  // their transition: a queued pre-dispatch clear cannot stand in for keyup.
+  if (
+    !Number.isSafeInteger(result.beforeRevision) ||
+    snapshot.draw.revision <= result.beforeRevision ||
+    !Number.isSafeInteger(result.beforeCellRevision) ||
+    (needsCellTransition &&
+      snapshot.draw.cellRevision <= result.beforeCellRevision)
+  )
+    throw new HoverEvidenceError("cue-not-drawn");
 }
 
 async function poll(
@@ -132,7 +153,14 @@ function recordHoverPhase(
     category: "none" | HoverEvidenceError["category"];
     expectedCells: number;
     prefixColumns: number;
-    stimulus: { canvasId: number; revision: number; cells: number } | undefined;
+    stimulus:
+      | {
+          canvasId: number;
+          revision: number;
+          cellRevision: number;
+          cells: number;
+        }
+      | undefined;
     preparation: {
       readonly exactContent: boolean;
       readonly gridMatches: boolean;
@@ -199,6 +227,7 @@ export async function captureModifiedHoverEvidence(
       stimulus: stimulus && {
         canvasId: stimulus.canvasId,
         revision: stimulus.draw.revision,
+        cellRevision: stimulus.draw.cellRevision,
         cells: stimulus.draw.cells,
       },
       preparation: {
@@ -246,14 +275,14 @@ export async function captureModifiedHoverEvidence(
       const snapshot = await read();
       current(snapshot);
       if (
-        snapshot.draw.revision !== stimulus.draw.revision ||
+        snapshot.draw.cellRevision !== stimulus.draw.cellRevision ||
         snapshot.draw.cells !== stimulus.draw.cells
       )
         throw new HoverEvidenceError("stimulus-invalidated");
       try {
         requireHoverDraw(
           snapshot.draw,
-          stimulus.draw.revision,
+          stimulus.draw.cellRevision,
           stimulus.draw.cells,
         );
         return true;
@@ -285,11 +314,10 @@ export async function captureModifiedHoverEvidence(
     const snapshot = result.snapshot;
     latest = stimulus = snapshot;
     current(snapshot);
-    if (
-      !Number.isSafeInteger(result.beforeRevision) ||
-      snapshot.draw.revision <= result.beforeRevision
-    )
-      throw new HoverEvidenceError("cue-not-drawn");
+    requireHoverDispatch(
+      result,
+      modified !== false && options.destinationColumns > 0,
+    );
     return snapshot;
   };
   const capture = async (
@@ -347,7 +375,7 @@ export async function captureModifiedHoverEvidence(
     for (const snapshot of [before, after])
       requireHoverDraw(
         snapshot.draw,
-        stimulus.draw.revision,
+        stimulus.draw.cellRevision,
         stimulus.draw.cells,
       );
     if (pixels) requireHoverPixels(pixels);
