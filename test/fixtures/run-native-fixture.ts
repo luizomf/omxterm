@@ -14,6 +14,10 @@ import {
 } from "./native-fixture-outcome";
 export type { NativeFixtureResult } from "./native-fixture-outcome";
 import { removeFailedFixture } from "./remove-failed-fixture";
+import {
+  nativeFixtureRecoveryRefusal,
+  recoverNativeFixtureReceipt,
+} from "./native-fixture-recovery";
 import { FIXTURE_PROCESS_DIRECTORY } from "./native-fixture-ownership";
 import {
   fixtureProcesses,
@@ -53,6 +57,40 @@ type NativeFixtureRequest = Omit<
 // The receipt directory is the existing runner's coordination scope. Keep the
 // first uncertain owner visible across Vitest workers, not only in module state.
 const blockedReceipts = new Set<string>();
+const scopeInspections = new Map<string, Promise<void>>();
+
+async function inspectReceiptScope(
+  blockedPath: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  const previous = scopeInspections.get(blockedPath) ?? Promise.resolve();
+  const inspection = previous
+    .catch(() => undefined)
+    .then(async () => {
+      signal?.throwIfAborted();
+      const present = await lstat(blockedPath).then(
+        () => true,
+        (error: unknown) => {
+          if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+          throw nativeFixtureRecoveryRefusal(
+            "stop receipt inspection unavailable",
+            blockedPath,
+          );
+        },
+      );
+      if (blockedReceipts.has(blockedPath) || present) {
+        await recoverNativeFixtureReceipt(blockedPath, signal);
+        blockedReceipts.delete(blockedPath);
+      }
+    });
+  scopeInspections.set(blockedPath, inspection);
+  try {
+    await inspection;
+  } finally {
+    if (scopeInspections.get(blockedPath) === inspection)
+      scopeInspections.delete(blockedPath);
+  }
+}
 
 class SettledFixtureError extends Error {
   constructor(cause: unknown) {
@@ -351,7 +389,7 @@ export function runNativeFixture(
       path.resolve(".scratch/native-fixtures", `${randomUUID()}.json`),
     cancellationToken: randomUUID(),
   };
-  const blockedPath = path.join(
+  const blockedPath = path.resolve(
     path.dirname(request.evidencePath),
     "ownership-blocked.json",
   );
@@ -380,19 +418,15 @@ export function runNativeFixture(
     }
   };
   const operation = (async () => {
+    await inspectReceiptScope(blockedPath, testContext?.signal);
     testContext?.signal.throwIfAborted();
-    if (blockedReceipts.has(blockedPath) || existsSync(blockedPath))
-      throw new Error(
-        "Native fixture ownership unresolved; inspect retained ownership-blocked.json before another launch",
-      );
     const prepared = await prepareSupervisor(request, testContext, prepare);
     try {
       testContext?.signal.throwIfAborted();
-      const { supervisorPath } = prepared;
       let result: NativeFixtureResult;
       if (process.platform === "win32")
         result = await runWindowsSupervisor(
-          supervisorPath,
+          prepared.supervisorPath,
           request,
           testContext?.signal,
           () => {
@@ -401,7 +435,7 @@ export function runNativeFixture(
         );
       else {
         handedOff = true;
-        const supervisor = fork(supervisorPath, [], {
+        const supervisor = fork(prepared.supervisorPath, [], {
           detached: true,
           stdio: ["ignore", "ignore", "pipe", "ipc"],
           execArgv: [],
