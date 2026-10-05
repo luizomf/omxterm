@@ -188,6 +188,23 @@ means that the measured state changed; inspect retained events before attributin
 it to terminal rendering. Do not retry until green or discard the original
 failure. A later pass alone does not identify its cause.
 
+For a graphical test run:
+
+- Leave the VM logged in and unlocked, and do not minimize or suspend it.
+- Do not click, drag-select on the desktop, type, or move the pointer across
+  fixture windows. Desktop clicks can steal focus from native menu/key tests.
+- Run only one graphical suite per desktop. When diagnosing shared-host
+  contention, run one VM's suite at a time against the same source candidate.
+- If a run fails, preserve `.scratch/vitest-results.json` and
+  `.scratch/native-fixtures/` before another run overwrites evidence. An
+  `ownership-blocked.json` file requires the ownership inspection described
+  below; do not clear the directory indiscriminately.
+
+Input interference is not proof of an application defect. Conversely, application
+failure on ordinary focus loss is a defect, not something to excuse as test
+interference. The default `check:portable` includes graphical tests; it is not a
+headless-only check.
+
 Controlled renderer input, injected I/O and held continuations establish the
 asserted boundaries, not physical input or every production interleaving.
 Native captures establish fixture pixels on the tested GPU, not cross-platform
