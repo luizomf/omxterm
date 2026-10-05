@@ -15,6 +15,7 @@ export type FocusedHostOracle =
   | "output-checkpoints"
   | "surviving-session"
   | "image-palette"
+  | "image-palette-reload"
   | "gesture-routing";
 
 export function focusedHostOracle(
@@ -24,6 +25,7 @@ export function focusedHostOracle(
     "output-checkpoints",
     "surviving-session",
     "image-palette",
+    "image-palette-reload",
     "gesture-routing",
   ] as const)
     if (arguments_.includes(`--oracle-${oracle}`)) return oracle;
@@ -113,8 +115,10 @@ export async function runFocusedResttyHostOracle(options: {
     const initial = await exerciseResttyImagesThroughPty({
       ...options,
       terminal: original,
+      reloadOnly: oracle === "image-palette-reload",
       waitFor,
     });
+    writeSync(1, `__OMXTERM_IMAGE_SCENARIO__${initial.geometryScenario}\n`);
     window.webContents.send(terminalIpc.tabCommand, { action: "new" });
     await waitFor(
       () =>

@@ -34,6 +34,9 @@ interface FocusedResult {
     ReturnType<typeof exerciseResttyOrdinaryGestures>
   >;
   readonly imageEvidence?: {
+    readonly geometryScenario: "full" | "reload-only";
+    readonly pixels: ResttyImagePixelEvidence;
+    readonly contentRefit?: unknown;
     readonly themeBefore: ResttyImageThemePixels;
     readonly themeAfter: ResttyImageThemePixels;
     readonly surfaceRetained: boolean;
@@ -230,31 +233,43 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
       });
     }, 130_000);
 
-    it("paints retained ANSI palette B-to-A on a hidden/revealed image Surface without replacing session or images", async (testContext) => {
-      const result = readResult(await runOracle("image-palette", testContext));
-      expect(result).toMatchObject({
-        sessionStarts: 2,
-        ptyExits: 1,
-        imageEvidence: {
-          themeBefore: {
-            background: [25, 34, 53, 255],
-            retainedAnsiRed: [192, 71, 131, 255],
+    it.for(["image-palette", "image-palette-reload"] as const)(
+      "paints retained ANSI palette B-to-A with %s without replacing the hidden/revealed session or images",
+      { timeout: 130_000 },
+      async (oracle, testContext) => {
+        const result = readResult(await runOracle(oracle, testContext));
+        expect(result.imageEvidence!.geometryScenario).toBe(
+          oracle === "image-palette" ? "full" : "reload-only",
+        );
+        expect(
+          hasResttyImagePlacementEvidence(result.imageEvidence!.pixels),
+        ).toBe(true);
+        if (oracle === "image-palette-reload")
+          expect(result.imageEvidence!.contentRefit).toBeUndefined();
+        expect(result).toMatchObject({
+          sessionStarts: 2,
+          ptyExits: 1,
+          imageEvidence: {
+            themeBefore: {
+              background: [25, 34, 53, 255],
+              retainedAnsiRed: [192, 71, 131, 255],
+            },
+            themeAfter: {
+              background: [0, 0, 0, 255],
+              retainedAnsiRed: [255, 128, 170, 255],
+            },
+            surfaceRetained: true,
+            canvasRetained: true,
+            sessionRetained: true,
           },
-          themeAfter: {
-            background: [0, 0, 0, 255],
-            retainedAnsiRed: [255, 128, 170, 255],
-          },
-          surfaceRetained: true,
-          canvasRetained: true,
-          sessionRetained: true,
-        },
-      });
-      expect(
-        hasResttyImagePlacementEvidence(
-          result.imageEvidence!.afterTabAndThemePixels,
-        ),
-      ).toBe(true);
-    }, 130_000);
+        });
+        expect(
+          hasResttyImagePlacementEvidence(
+            result.imageEvidence!.afterTabAndThemePixels,
+          ),
+        ).toBe(true);
+      },
+    );
 
     it("records exact native per-gesture packets and zero destination activation", async (testContext) => {
       const result = readResult(
@@ -371,11 +386,14 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
       { timeout: 130_000 },
       async (control, testContext) => {
         const execution = await runOracle(
-          "image-palette",
+          "image-palette-reload",
           testContext,
           control,
         );
         expect(execution.exitCode, execution.stderr).toBe(1);
+        expect(execution.stdout).toContain(
+          "__OMXTERM_IMAGE_SCENARIO__reload-only",
+        );
         expect(execution.stderr).toContain(
           "Retained palette/image reload failed:",
         );

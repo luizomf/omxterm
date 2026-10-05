@@ -107,7 +107,7 @@ function createHost(window: BrowserWindow) {
     configuration: terminalRendererConfiguration(
       {
         configuration: resttyConfiguration.initialResttyHostConfiguration(
-          oracle === "image-palette",
+          oracle === "image-palette" || oracle === "image-palette-reload",
         ),
         userFileErrors: [],
       },
@@ -225,7 +225,7 @@ function createHost(window: BrowserWindow) {
   const reloader = resttyConfiguration.createResttyHostConfigurationReloader(
     router,
     controller,
-    oracle === "image-palette",
+    oracle === "image-palette" || oracle === "image-palette-reload",
   );
   return { reloader };
 }

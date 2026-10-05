@@ -147,6 +147,7 @@ function fixture(stuckGrid = false, missingPixels = false) {
   let width = 800;
   let input = "";
   const toggles: boolean[] = [];
+  const zooms: string[] = [];
   const window = {
     getSize: () => [800, 400],
     setSize() {
@@ -154,7 +155,10 @@ function fixture(stuckGrid = false, missingPixels = false) {
     },
     webContents: {
       send(channel: string, action?: string) {
-        if (channel === terminalIpc.fontZoom) cols = action === "in" ? 38 : 40;
+        if (channel === terminalIpc.fontZoom) {
+          zooms.push(action!);
+          cols = action === "in" ? 38 : 40;
+        }
         if (channel === terminalIpc.snippetsToggle) {
           sidebarVisible = !sidebarVisible;
           toggles.push(sidebarVisible);
@@ -176,9 +180,10 @@ function fixture(stuckGrid = false, missingPixels = false) {
       },
     },
   } as unknown as BrowserWindow;
-  const run = () =>
+  const run = (reloadOnly = false) =>
     exerciseResttyImages({
       window,
+      reloadOnly,
       runEmitter() {
         input += "\u001b[6;20;20t";
       },
@@ -190,8 +195,21 @@ function fixture(stuckGrid = false, missingPixels = false) {
         if (!(await predicate())) throw new Error(`Not ready: ${label}`);
       },
     });
-  return { run, toggles };
+  return { run, toggles, zooms };
 }
+
+it("prepares native-client reply and both placement pixels without unrelated zoom/refit for reload-only controls", async () => {
+  const { run, toggles, zooms } = fixture();
+  const evidence = await run(true);
+  expect(evidence).toEqual({
+    cellSizeResponse: "\u001b[6;20;20t",
+    gridSize: { cols: 40, rows: 20 },
+    pixels,
+    geometryScenario: "reload-only",
+  });
+  expect(toggles).toEqual([]);
+  expect(zooms).toEqual([]);
+});
 
 it("shrinks and restores image content through the production sidebar route without native size requests", async () => {
   const { run, toggles } = fixture();

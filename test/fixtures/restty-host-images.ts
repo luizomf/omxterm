@@ -49,6 +49,7 @@ write("\\x1b[5;12H\\x1b[16t__RESTTY_IMAGES_SENT__\\n");
 export async function exerciseResttyImagesThroughPty(options: {
   readonly window: BrowserWindow;
   readonly terminal: { write(data: string): void };
+  readonly reloadOnly?: boolean;
   readonly root: string;
   readonly outputs: string[][];
   readonly inputs: string[][];
@@ -105,6 +106,7 @@ export async function exerciseResttyImagesThroughPty(options: {
   );
   const evidence = await exerciseResttyImages({
     window,
+    reloadOnly: options.reloadOnly ?? false,
     runEmitter: () =>
       terminal.write(
         `${process.platform === "win32" ? "& " : ""}${shellQuote(nodeExecutable)} ${shellQuote(`${root}/image-emitter.cjs`)} ${shellQuote(`${root}/pi-2000.png`)}\r`,
@@ -147,6 +149,7 @@ function shellQuote(value: string): string {
 export async function exerciseResttyImages(options: {
   readonly window: BrowserWindow;
   readonly runEmitter: () => void;
+  readonly reloadOnly?: boolean;
   readonly output: () => string;
   readonly input: () => string;
   readonly size: () => { readonly cols: number; readonly rows: number };
@@ -159,10 +162,11 @@ export async function exerciseResttyImages(options: {
   readonly cellSizeResponse: string;
   readonly gridSize: { readonly cols: number; readonly rows: number };
   readonly pixels: PixelEvidence;
-  readonly afterZoomPixels: PixelEvidence;
-  readonly afterContentShrinkPixels: PixelEvidence;
-  readonly afterContentRestorePixels: PixelEvidence;
-  readonly contentRefit: {
+  readonly geometryScenario: "full" | "reload-only";
+  readonly afterZoomPixels?: PixelEvidence;
+  readonly afterContentShrinkPixels?: PixelEvidence;
+  readonly afterContentRestorePixels?: PixelEvidence;
+  readonly contentRefit?: {
     readonly before: ImageContentLayout;
     readonly shrunk: ImageContentLayout;
     readonly restored: ImageContentLayout;
@@ -226,6 +230,13 @@ export async function exerciseResttyImages(options: {
   const initial = await waitForImagePixels(
     "initial Pi and Chafa image rendering",
   );
+  if (options.reloadOnly)
+    return {
+      cellSizeResponse,
+      gridSize: initial.gridSize,
+      pixels: initial.evidence,
+      geometryScenario: "reload-only",
+    };
   window.webContents.send(terminalIpc.fontZoom, "in");
   await waitForGridChange(initial.gridSize, "image PTY grid after font zoom");
   const zoom = await waitForImagePixels("Pi and Chafa images after font zoom");
@@ -289,6 +300,7 @@ export async function exerciseResttyImages(options: {
 
   return {
     cellSizeResponse,
+    geometryScenario: "full",
     gridSize: reset.gridSize,
     pixels: reset.evidence,
     afterZoomPixels: zoom.evidence,
