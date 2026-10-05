@@ -143,6 +143,14 @@ Valid core images and placements survive; deletion, reset and alternate-screen
 exit still execute. Reveal rebuilds needed renderer copies. This lifetime policy
 does not promise reduced total RAM or GPU allocation.
 
+### Cursor blink scheduling
+
+Blink invalidation follows the same absolute 600 ms phase boundaries as cursor
+rendering. Late animation-frame callbacks schedule the next boundary rather than
+starting a new relative interval that could skip an available phase. Hidden
+Surfaces, paused rendering, synchronized output and background budgets retain
+their existing behavior; unavailable native frames cannot be manufactured.
+
 ### Background composition
 
 The WebGL2 context requests `alpha:true`, `depth:false` and `antialias:false`.
@@ -235,7 +243,7 @@ Current prepared SHA-256 values:
 
 | Input                         | SHA-256                                                            |
 | ----------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime     | `a5a31366381972750bf98651ac028e6bbe370e89d5ca5cc3855c141cd1002638` |
+| Restty JavaScript runtime     | `8ebccc2aa81d37266bbf4642e3e07e8c0b17e39935a97d8c3703eb9ac5e72649` |
 | Embedded-core chunk           | `1fb03cc8360942c613ca98973658de362852a60d88942c482de4b0dc429660fa` |
 | Event declarations            | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core             | `92aa781340d4bd87f8028c17534fe720bd47e87dd34786d149811923e4e389ec` |
