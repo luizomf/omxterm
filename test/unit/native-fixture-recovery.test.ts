@@ -342,37 +342,64 @@ it.each(["rename", "mkdtemp"] as const)(
   },
 );
 
-it.each(["receipt", "profile", "request", "bootstrap"])(
+it.each(["receipt", "profile", "request"])(
   "refuses %s replacement during recovery",
   async (target) => {
     const mkdir = vi.spyOn(files, "mkdtemp");
     mkdir.mockImplementation(async (...args) => {
       const result = await actual.mkdtemp(...args);
       if (String(args[0]).includes("ownership-blocked-recovered-")) {
-        if (target === "bootstrap")
+        const source =
+          target === "receipt"
+            ? blocked
+            : target === "profile"
+              ? oldRoot
+              : path.join(oldRoot, "supervisor-request.json");
+        await actual.rename(source, source + ".preserved");
+        if (target === "profile") await actual.mkdir(source);
+        else
           await actual.writeFile(
-            path.join(oldRoot, "native-bootstrap-pending"),
-            "pending",
+            source,
+            target === "receipt" ? receipt : JSON.stringify(request),
           );
-        else {
-          const source =
-            target === "receipt"
-              ? blocked
-              : target === "profile"
-                ? oldRoot
-                : path.join(oldRoot, "supervisor-request.json");
-          await actual.rename(source, source + ".preserved");
-          if (target === "profile") await actual.mkdir(source);
-          else
-            await actual.writeFile(
-              source,
-              target === "receipt" ? receipt : JSON.stringify(request),
-            );
-        }
       }
       return result;
     });
     await refused("retained evidence changed during inspection");
+  },
+);
+
+it.each([false, true])(
+  "refuses bootstrap progress during recovery with changed directory metadata: %s",
+  async (metadataChanged) => {
+    const original = await actual.lstat(oldRoot);
+    let markerAdded = false;
+    vi.spyOn(files, "lstat").mockImplementation(async (...args) => {
+      const stat = await actual.lstat(...args);
+      if (String(args[0]) === oldRoot)
+        // Exercise both guards without relying on filesystem timestamp updates.
+        Object.assign(stat, original, {
+          mtimeMs: original.mtimeMs + (markerAdded && metadataChanged ? 1 : 0),
+        });
+      return stat;
+    });
+    vi.spyOn(files, "mkdtemp").mockImplementation(async (...args) => {
+      const result = await actual.mkdtemp(...args);
+      if (String(args[0]).includes("ownership-blocked-recovered-")) {
+        await actual.writeFile(
+          path.join(oldRoot, "native-bootstrap-pending"),
+          "pending",
+        );
+        markerAdded = true;
+      }
+      return result;
+    });
+    await refused(
+      metadataChanged
+        ? "retained evidence changed during inspection"
+        : "bootstrap, supervisor progress or outcome evidence exists",
+    );
+    expect(markerAdded).toBe(true);
   },
 );
 
