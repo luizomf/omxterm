@@ -138,6 +138,13 @@ async function exercise(mode: string, available = false) {
 it("retains actual maximize/restore when native transitions are available", async () => {
   expect(await exercise("ordinary", true)).toBeUndefined();
 });
+it("rejects dropped routing on a capable native window", async () => {
+  expect(await exercise("drop", true)).toMatchObject({
+    message: expect.stringContaining(
+      "custom control invokes intended native action",
+    ) as unknown,
+  });
+});
 it("rejects a duplicate which maximizes then restores on a capable native window", async () => {
   expect(await exercise("duplicate", true)).toMatchObject({
     message: expect.stringContaining(

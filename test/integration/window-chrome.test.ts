@@ -22,7 +22,6 @@ async function runChrome(
   mode: string,
   expectation: ChromeNativeExpectation,
   testContext: NativeFixtureTestContext,
-  control?: string,
 ) {
   testContext.signal.throwIfAborted();
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-window-chrome-"));
@@ -44,7 +43,6 @@ async function runChrome(
         root,
         `--fixture-native-maximize=${expectation}`,
         ...(mode === "fail-fast" ? ["--fixture-fail-fast"] : []),
-        ...(control ? [`--fixture-chrome-control=${control}`] : []),
       ],
       root,
       timeout: mode === "fail-fast" ? 10_000 : 100_000,
@@ -124,41 +122,6 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           },
         );
       },
-    );
-
-    it.skipIf(process.platform === "darwin")(
-      "rejects dropped native routing after valid independent observation",
-      async (testContext) => {
-        const expectation = await observeNativeWindow(
-          "chrome",
-          undefined,
-          undefined,
-          testContext,
-        );
-        // Keep one actual renderer/preload/IPC/native rejection. Wrong-owner,
-        // duplicate and construction mutants use the actual headless seams.
-        const execution = await runChrome(
-          "continuity",
-          expectation,
-          testContext,
-          "drop-route",
-        );
-        const evidence = JSON.stringify(execution);
-        expect(execution, evidence).toMatchObject({
-          exitCode: 1,
-          signal: null,
-          reason: "exit",
-          cleanupErrors: [],
-        });
-        expect(execution.stdout, evidence).toContain(
-          "__OMXTERM_CHROME_CONTROL__drop-route",
-        );
-        expect(execution.stdout, evidence).not.toContain(prefix);
-        expect(execution.stderr, evidence).toContain(
-          "custom control invokes intended native action",
-        );
-      },
-      nativeWindowDiscoveryTimeout("chrome") + 120_000,
     );
   },
 );

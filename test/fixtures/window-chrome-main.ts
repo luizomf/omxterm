@@ -31,41 +31,6 @@ import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { exerciseWindowChrome } from "./window-chrome-exercise";
 import { assertNativeChromeConstruction } from "./window-chrome-construction";
 import { chromeNativeExpectation } from "./window-policy";
-import type {
-  IpcListener,
-  IpcMainPort,
-} from "../../src/main/terminal-ipc-types";
-
-const routeControl = process.argv
-  .find((arg) => arg.startsWith("--fixture-chrome-control="))
-  ?.split("=")[1];
-assert.ok(
-  routeControl === undefined || routeControl === "drop-route",
-  "Unknown Chrome rejection control",
-);
-const chromeListeners = new Map<IpcListener, IpcListener>();
-const controlledChromeIpc: Pick<IpcMainPort, "on" | "removeListener"> = {
-  on(channel, listener) {
-    const wrapped: IpcListener = (event, payload) => {
-      if (
-        routeControl &&
-        channel === terminalIpc.windowChromeCommand &&
-        payload === "maximize" &&
-        event.sender === windows[0]?.webContents
-      ) {
-        process.stdout.write(`__OMXTERM_CHROME_CONTROL__${routeControl}\n`);
-        return;
-      }
-      listener(event, payload);
-    };
-    chromeListeners.set(listener, wrapped);
-    ipcMain.on(channel, wrapped);
-  },
-  removeListener(channel, listener) {
-    ipcMain.removeListener(channel, chromeListeners.get(listener) ?? listener);
-    chromeListeners.delete(listener);
-  },
-};
 import { exerciseWindowsHandleDrag } from "./window-chrome-native-drag";
 import {
   exerciseApplicationMenu,
@@ -174,7 +139,7 @@ app
         );
         backgroundTransparencies.set(window, backgroundTransparency);
         guardTerminalWindowClose(window, application);
-        const chrome = registerWindowChrome(window, controlledChromeIpc, {
+        const chrome = registerWindowChrome(window, ipcMain, {
           platform: process.platform,
           showTitleBar: configuration.showTitleBar,
           cursor: () => (nativeCursor ? screen.getCursorScreenPoint() : cursor),

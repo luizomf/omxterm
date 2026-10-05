@@ -243,6 +243,14 @@ choosing actual native transitions or an unavailable branch. Hide is not minimiz
 coverage, and a healthy unchanged maximize result is not a maximize/restore pass.
 Do not run them concurrently with another native suite.
 
+Window Chrome runs one native continuity scenario and an early-failure cleanup
+check. Dropped, wrong-owner and duplicate routing are rejected by focused tests
+using the real exercise and main-process routing functions with native ports
+simulated. The suite does not repeat the full native scenario with a deliberately
+broken route; native rejection of that mutation and populated fixture-error
+teardown are not claimed by those headless checks. Production close/quit and
+fixture settlement have separate coverage.
+
 On Windows, the window fixture moves the desktop pointer for native drag checks;
 keep the desktop idle. Failure acknowledgement uses controlled cancellation of
 Electron's native dialog, not physical OK-button input. Local-image picker tests
