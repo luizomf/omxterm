@@ -106,7 +106,7 @@ it.for([1, 2])(
 );
 
 it.for(["held-refit-frames", "held-blink-clock"])(
-  "captures the complete cursor matrix with controlled %s",
+  "captures only the transitions perturbed by controlled %s",
   { timeout: 120_000 },
   async (control, testContext) => {
     const { result, phases } = await runCursor(1, testContext, control);
@@ -126,14 +126,49 @@ it.for(["held-refit-frames", "held-blink-clock"])(
           .filter(
             (line) => line === "__OMXTERM_CURSOR_CONTROL__held-refit-frames",
           ),
-      ).toHaveLength(4);
+      ).toHaveLength(1);
     const line = result.stdout
       .split("\n")
       .find((entry) => entry.startsWith("__OMXTERM_CURSOR_RESULT__"));
     const observation = JSON.parse(
       line!.slice("__OMXTERM_CURSOR_RESULT__".length),
-    ) as { captures: unknown[] };
-    expect(observation.captures).toHaveLength(64);
+    ) as {
+      captures: {
+        configured: boolean;
+        initialPadding: number;
+        lifecycle: string;
+        name: string;
+        dpr: number;
+      }[];
+      blinkCaptures: { clock: number; count: number; fullBar: number }[];
+    };
+    const lifecycles =
+      control === "held-refit-frames" ? ["initial", "refit"] : ["initial"];
+    expect(observation.captures).toHaveLength(
+      control === "held-refit-frames" ? 8 : 4,
+    );
+    expect(
+      observation.captures.map(({ lifecycle, name }) => `${lifecycle}:${name}`),
+    ).toEqual(
+      lifecycles.flatMap((lifecycle) =>
+        ["bar0", "bar1", "block0", "underline0"].map(
+          (name) => `${lifecycle}:${name}`,
+        ),
+      ),
+    );
+    for (const capture of observation.captures)
+      expect(capture).toMatchObject({
+        configured: false,
+        initialPadding: 0,
+        dpr: 1,
+      });
+    expect(observation.blinkCaptures.map((sample) => sample.clock)).toEqual(
+      control === "held-blink-clock" ? [0, 600, 1200] : [],
+    );
+    for (const sample of observation.blinkCaptures) {
+      expect(sample.fullBar).toBeGreaterThan(0);
+      expect(sample.count).toBe(sample.clock === 600 ? 0 : sample.fullBar);
+    }
   },
 );
 

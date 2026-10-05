@@ -165,6 +165,27 @@ function cursorContext(
   };
 }
 
+function cursorScenario(control: string | undefined) {
+  const focused =
+    control === "held-refit-frames" || control === "held-blink-clock";
+  return {
+    combinations: focused
+      ? [[false, 0] as const]
+      : ([
+          [false, 0],
+          [false, 8],
+          [true, 0],
+          [true, 8],
+        ] as const),
+    lifecycles:
+      control === "held-refit-frames"
+        ? (["initial", "refit"] as const)
+        : control === "held-blink-clock"
+          ? (["initial"] as const)
+          : (["initial", "zoom", "refit", "reload"] as const),
+  };
+}
+
 function watchCursorInput(window: BrowserWindow) {
   let interfered = false;
   let observedPointer: (() => void) | undefined;
@@ -265,12 +286,8 @@ async function run() {
     );
   const captures: unknown[] = [];
   const blinkCaptures: { clock: number; count: number; fullBar: number }[] = [];
-  for (const [configured, padding] of [
-    [false, 0],
-    [false, 8],
-    [true, 0],
-    [true, 8],
-  ] as const) {
+  const { combinations, lifecycles } = cursorScenario(control);
+  for (const [configured, padding] of combinations) {
     context = cursorContext(dpr, configured, padding, "mount");
     await execute(`mount(${configured}, ${padding})`, "mount");
     if (control === "native-input") {
@@ -283,7 +300,7 @@ async function run() {
     }
     let initial: Phase | undefined;
     let previous: Phase | undefined;
-    for (const lifecycle of ["initial", "zoom", "refit", "reload"] as const) {
+    for (const lifecycle of lifecycles) {
       context = cursorContext(dpr, configured, padding, lifecycle);
       // Reload changes padding in place too, without changing creation-time family.
       const phase = await execute<Phase>(
@@ -399,7 +416,7 @@ async function run() {
       assert.equal(bar1!.left, phase.cellWidth);
       assert.equal(block!.count, phase.cellWidth * phase.cellHeight);
       assert.equal(underline!.width, phase.cellWidth);
-      if (lifecycle === "initial") {
+      if (lifecycle === "initial" && control !== "held-refit-frames") {
         await execute("cursor(6, 0, true)", "bar0");
         await execute("blur()", "blur");
         const blurred = await capture("unfocused");
