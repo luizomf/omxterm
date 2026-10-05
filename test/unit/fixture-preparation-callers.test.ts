@@ -187,6 +187,7 @@ const ordinaryCallers = [
   { name: "pending-tab-ownership", cases: 1 },
   { name: "production-shutdown", cases: 4 },
   { name: "restty-background-rendering", cases: 1 },
+  { name: "restty-appearance-rendering", cases: 1 },
   { name: "restty-native-scroll-feedback", cases: 3 },
   { name: "startup-tab-titles", cases: 1 },
   { name: "surface-font-ownership", cases: 1 },

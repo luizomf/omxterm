@@ -1,6 +1,15 @@
+export interface AppearanceScenario {
+  readonly requestedDPR: number | "actual";
+  readonly deferFrames: boolean;
+  readonly mixedPointer: boolean;
+  readonly gateFrames: boolean;
+  readonly artifactDirectory: string;
+}
+
 export function resttyAppearanceMainSource(
   expectedColors: readonly string[],
   resultPrefix: string,
+  scenario?: AppearanceScenario,
 ): string {
   return (
     `
@@ -12,6 +21,13 @@ for (const name of ["userData", "sessionData"]) {
   fs.mkdirSync(directory, { recursive: true });
   app.setPath(name, directory);
 }
+const scenario = ${JSON.stringify(scenario ?? null)} ?? {
+  requestedDPR: process.env.OMXTERM_RESTTY_APPEARANCE_REQUESTED_DPR ?? 'actual',
+  deferFrames: process.env.OMXTERM_RESTTY_APPEARANCE_DEFER_FRAME === '1',
+  mixedPointer: process.env.OMXTERM_RESTTY_APPEARANCE_MIXED_POINTER === '1',
+  gateFrames: process.env.OMXTERM_RESTTY_APPEARANCE_GATE_FRAMES === '1',
+  artifactDirectory: process.env.OMXTERM_RESTTY_APPEARANCE_ARTIFACT_DIRECTORY ?? path.join(__dirname, 'appearance-artifacts'),
+};
 const expectedColors = ${JSON.stringify(expectedColors)};
 const palette = expectedColors.map(color => ({
   color,
@@ -45,7 +61,7 @@ let fixtureWindow;
 let firstCapture;
 let lastCapture;
 const samples = [];
-const artifactDirectory = process.env.OMXTERM_RESTTY_APPEARANCE_ARTIFACT_DIRECTORY;
+const artifactDirectory = scenario.artifactDirectory;
 const persistCaptures = (error) => {
   const stagingDirectory = path.join(__dirname, 'captures', path.basename(artifactDirectory));
   fs.mkdirSync(stagingDirectory, { recursive: true });
@@ -53,17 +69,15 @@ const persistCaptures = (error) => {
   if (lastCapture) fs.writeFileSync(path.join(stagingDirectory, 'last.png'), lastCapture.image.toPNG());
   fs.writeFileSync(path.join(stagingDirectory, 'state.json'), JSON.stringify({
     error: error ? String(error && error.stack ? error.stack : error) : null,
-    requestedDPR: process.env.OMXTERM_RESTTY_APPEARANCE_REQUESTED_DPR,
-    deferFrames: process.env.OMXTERM_RESTTY_APPEARANCE_DEFER_FRAME === '1',
-    gateFrames: process.env.OMXTERM_RESTTY_APPEARANCE_GATE_FRAMES === '1',
+    requestedDPR: scenario.requestedDPR,
+    deferFrames: scenario.deferFrames,
+    gateFrames: scenario.gateFrames,
     samples,
   }, null, 2) + '\\n');
-  if (error || process.env.OMXTERM_RESTTY_APPEARANCE_GATE_FRAMES === '1'
-      || process.env.OMXTERM_RESTTY_APPEARANCE_EVIDENCE_PATH
-      || process.env.OMXTERM_RESTTY_APPEARANCE_SCREENSHOT_PATH) {
-    fs.cpSync(stagingDirectory, artifactDirectory, { recursive: true });
-    process.stderr.write('Synthetic capture artifacts: ' + artifactDirectory + '\\n');
-  }
+  // Retain synthetic captures before supervised profile deletion, including
+  // successful children whose later parent-side assertions might fail.
+  fs.cpSync(stagingDirectory, artifactDirectory, { recursive: true });
+  process.stderr.write('Synthetic capture artifacts: ' + artifactDirectory + '\\n');
 };
 const beforeDeadline = async (operation, deadline) => {
   const remaining = deadline - Date.now();
@@ -130,8 +144,8 @@ function appearanceRunSource(resultPrefix: string): string {
   });
   await window.loadFile(path.join(__dirname, "index.html"), {
     query: {
-      deferFrames: String(process.env.OMXTERM_RESTTY_APPEARANCE_DEFER_FRAME === '1'),
-      gateFrames: String(process.env.OMXTERM_RESTTY_APPEARANCE_GATE_FRAMES === '1'),
+      deferFrames: String(scenario.deferFrames),
+      gateFrames: String(scenario.gateFrames),
     },
   });
   window.showInactive();
@@ -142,10 +156,10 @@ function appearanceRunSource(resultPrefix: string): string {
   const x = Math.round(bounds.x + cellWidth * 0.5);
   const y = Math.round(bounds.y + cellHeight * 2.5);
   const selection = await require('./selection.cjs').exerciseAppearanceSelection(window,
-    { x, y, cellWidth }, process.env.OMXTERM_RESTTY_APPEARANCE_MIXED_POINTER === '1');
+    { x, y, cellWidth }, scenario.mixedPointer);
   const first = await captureSample(window, 'first-after-copy-and-two-frames', Date.now() + 3000);
   assertSelection(first);
-  const controlled = process.env.OMXTERM_RESTTY_APPEARANCE_GATE_FRAMES === '1';
+  const controlled = scenario.gateFrames;
   let heldDeadlineRejected = false;
   if (controlled) {
     if (!selection.beforeFrame || !selection.afterFrame || !first.sample.after.gateHeld
