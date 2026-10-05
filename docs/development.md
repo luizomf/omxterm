@@ -181,6 +181,13 @@ journals, and review local paths and failure details before sharing.
 suite and an unpackaged build. It does not package, install or publish.
 Platform guards and opt-ins determine which tests execute; a skip is not a pass.
 
+Keep the tested desktop unlocked and idle while graphical fixtures run. Real
+pointer movement, modifier keys and window activation can replace a fixture's
+controlled hover, selection or focus state. A `stimulus-invalidated` failure
+means that the measured state changed; inspect retained events before attributing
+it to terminal rendering. Do not retry until green or discard the original
+failure. A later pass alone does not identify its cause.
+
 Controlled renderer input, injected I/O and held continuations establish the
 asserted boundaries, not physical input or every production interleaving.
 Native captures establish fixture pixels on the tested GPU, not cross-platform
