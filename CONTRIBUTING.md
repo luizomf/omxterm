@@ -133,8 +133,10 @@ when changing the Terminal Surface or its pinned dependencies.
 OMXTerm focuses on local terminal sessions. For behavior changes, read the
 relevant [product contract](docs/spec.md), [terminology](CONTEXT.md) and
 [architecture decisions](docs/adr/). They explain current behavior and its
-tradeoffs. Update outdated guidance when you change it; Git preserves previous versions. Track code bugs separately from
-documentation corrections.
+tradeoffs. Replace obsolete guidance rather than retaining chronology in active
+files; Git preserves previous versions. Track supported code bugs separately from
+documentation corrections, without expanding them into unrequested implementation
+work.
 
 - Keep the change focused, with clear modules, strict types and dependencies
   that serve a concrete need.

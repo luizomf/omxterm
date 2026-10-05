@@ -1,9 +1,11 @@
 # Architecture decision records
 
-These records explain the current architecture and its tradeoffs. Update them
-when decisions change; Git preserves earlier versions.
+These records explain the current architecture and its tradeoffs. Replace obsolete
+guidance when decisions change; Git preserves earlier versions.
 
-The [specification](../spec.md) describes behavior and known limitations.
+The [specification](../spec.md) owns observable behavior. Relevant ADRs explain
+source/test boundaries and known limitations; these do not automatically require
+code changes or block releases.
 [Development](../development.md) covers setup and tests;
 [release procedures](../release.md) cover package verification and publication.
 

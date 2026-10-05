@@ -36,12 +36,12 @@ Omarchy screenshot are arranged by Hyprland.
 
 </details>
 
-OMXTerm includes tabs, bundled Nerd Fonts with programming ligatures, themes,
-custom shortcuts, and reusable snippets. You can hide the title and tab bars,
-adjust background transparency and blur, drag files to insert their paths, and
-preview local images. [Protected Paste](docs/usage.md#protected-paste) asks you
-to confirm multiline or control-character text when the receiving program has
-not enabled bracketed paste.
+- **Ready to use:** your local shell, bundled Nerd Fonts, and programming ligatures.
+- **Make it yours:** themes, fonts, keyboard shortcuts, and reusable text snippets.
+- **Room for your work:** tabs, windows, hideable title and tab bars, optional
+  background transparency and blur.
+- **Everyday conveniences:** drag files to insert their paths, preview local images,
+  and use [Protected Paste](docs/usage.md#protected-paste) in apps that need it.
 
 Built with [Restty](https://github.com/wiedymi/restty) and
 [Ghostty](https://github.com/ghostty-org/ghostty), it runs your usual command-line
