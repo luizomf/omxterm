@@ -91,7 +91,11 @@ beforeEach(async () => {
       // The new fixture completes without starting a real process.
       return "987654\n";
     }
-    return JSON.stringify([current]);
+    // Real Windows CIM inventories include the System Idle Process (PID 0).
+    return JSON.stringify([
+      { pid: 0, parent: 0, identity: "639000000000000001" },
+      current,
+    ]);
   });
   vi.spyOn(process, "kill").mockImplementation(() => {
     throw Object.assign(new Error("Supervisor exited"), { code: "ESRCH" });
@@ -168,6 +172,15 @@ it("serializes concurrent receipt inspections without archiving twice", async ()
       name.startsWith("ownership-blocked-recovered-"),
     ),
   ).toHaveLength(1);
+});
+
+it("refuses PID zero as an authorizing parent", async () => {
+  request.parent = { ...parent, pid: 0 };
+  await actual.writeFile(
+    path.join(oldRoot, "supervisor-request.json"),
+    JSON.stringify(request),
+  );
+  await refused("unrecognized or mismatched external-child request");
 });
 
 it("refuses a still-live authorizing parent", async () => {

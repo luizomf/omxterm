@@ -32,7 +32,8 @@ function processIdentity(
   return (
     object(value) &&
     Number.isSafeInteger(value.pid) &&
-    Number(value.pid) > 0 &&
+    // CIM includes the System Idle Process; it is valid inventory, not a caller.
+    Number(value.pid) >= 0 &&
     Number.isSafeInteger(value.parent) &&
     Number(value.parent) >= 0 &&
     typeof value.identity === "string" &&
@@ -58,6 +59,7 @@ function recognizedRequest(
     object(request) &&
     request.externalChild === true &&
     processIdentity(request.parent) &&
+    request.parent.pid > 0 &&
     localAbsolute(request.root) &&
     path.resolve(request.root) === root &&
     localAbsolute(request.evidencePath) &&
