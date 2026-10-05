@@ -243,6 +243,31 @@ choosing actual native transitions or an unavailable branch. Hide is not minimiz
 coverage, and a healthy unchanged maximize result is not a maximize/restore pass.
 Do not run them concurrently with another native suite.
 
+Scrollback retains fixed input classifications/counts, not arbitrary Adapter
+writes. Unexpected character events or unrecognized writes invalidate the
+stimulus and fail with `stimulus-invalidated`, rather than reporting a viewport
+regression. This does not identify a physical input source, excuse a valid
+behavior failure, or turn interference into a pass.
+
+Cursor positives retain 64 records at each of DPR 1 and 2. The artificial
+controls use bundled fonts and zero padding: eight style records across
+initial/refit with held RAF, and four initial records plus three native blink
+pixel samples with a held clock. Configured fonts, alternate padding, zoom and
+reload remain in the positive matrices, not in those focused controls.
+
+Appearance runs six unchanged scenarios in fresh profiles through the supervised
+runner and the current test context. Per-run settings are prepared into the
+fixture, not shared mutable environment state. Synthetic captures are retained
+under `.scratch/restty-appearance-*` before profile cleanup, including successful
+children whose later parent-side assertions may fail.
+
+Palette/image mutation controls use a reload-only scenario with a matching
+native positive. Real PTY image emission, initial Pi/Chafa placement and palette
+pixels, hidden theme reload, peer cleanup/reveal and the existing rejection
+oracle remain. They omit preliminary zoom/sidebar refits; the full positive
+scenario still covers those transitions. Output drop/reordering controls remain
+unchanged because source completion and ACK progress alone can miss data loss.
+
 Window Chrome runs one native continuity scenario and an early-failure cleanup
 check. Dropped, wrong-owner and duplicate routing are rejected by focused tests
 using the real exercise and main-process routing functions with native ports
