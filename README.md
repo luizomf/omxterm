@@ -36,16 +36,16 @@ Omarchy screenshot are arranged by Hyprland.
 
 </details>
 
-- **Ready to use:** your local shell, bundled Nerd Fonts, and programming ligatures.
-- **Make it yours:** themes, fonts, keyboard shortcuts, and reusable text snippets.
-- **Room for your work:** tabs, windows, hideable title and tab bars, optional
-  background transparency and blur.
-- **Everyday conveniences:** drag files to insert their paths, preview local images,
-  and use [Protected Paste](docs/usage.md#protected-paste) in apps that need it.
+OMXTerm includes tabs, bundled Nerd Fonts with programming ligatures, themes,
+custom shortcuts, and reusable snippets. You can hide the title and tab bars,
+adjust background transparency and blur, drag files to insert their paths, and
+preview local images. [Protected Paste](docs/usage.md#protected-paste) asks you
+to confirm multiline or control-character text when the receiving program has
+not enabled bracketed paste.
 
 Built with [Restty](https://github.com/wiedymi/restty) and
-[Ghostty](https://github.com/ghostty-org/ghostty). Run your usual command-line tools,
-SSH clients, and coding agents inside it.
+[Ghostty](https://github.com/ghostty-org/ghostty), it runs your usual command-line
+tools, SSH clients, and coding agents.
 
 **[Install](#installation)** · **[First session](#first-session)** ·
 **[Customize](docs/configuration.md)** · **[Get help](#help-improve-omxterm)**
@@ -74,20 +74,12 @@ through verification and first launch.
 
 Download the package and checksum for your system, then follow its guide:
 
-### macOS
-
-[Verify the download and install →](docs/installation.md#macos)
-Drag OMXTerm to Applications; the guide also explains macOS's first-open warning.
-
-### Linux
-
-[Verify and run the AppImage →](docs/installation.md#linux)
-Optionally add OMXTerm to your application menu with the desktop helper.
-
-### Windows
-
-[Verify and run the installer →](docs/installation.md#windows)
-The guide includes the required ARM64 Microsoft runtime and SmartScreen steps.
+- [macOS](docs/installation.md#macos): verify the DMG, drag OMXTerm to
+  Applications, and follow the first-open instructions.
+- [Linux](docs/installation.md#linux): verify and run the AppImage. The optional
+  helper adds it to your application menu.
+- [Windows](docs/installation.md#windows): install the required ARM64 Microsoft
+  runtime, verify the installer, and follow the SmartScreen instructions.
 
 ## First session
 
@@ -111,24 +103,19 @@ if you need sessions that survive closing the terminal.
 
 ### Make it yours
 
-OMXTerm creates editable settings, a sample snippet, and a theme on first launch.
-Start with one change or use a complete ready-to-use setup.
-
-**Want all the files together? Choose your platform:**
-[macOS](docs/quick-start/macos.md#complete-ready-to-use-setup-optional) ·
-[Linux](docs/quick-start/linux.md#complete-ready-to-use-setup-optional) ·
+OMXTerm creates settings, a sample snippet, and a theme on first launch.
+[Change one setting](docs/configuration.md#add-one-display-change), or use a
+complete setup for [macOS](docs/quick-start/macos.md#complete-ready-to-use-setup-optional),
+[Linux](docs/quick-start/linux.md#complete-ready-to-use-setup-optional), or
 [Windows / Git Bash](docs/quick-start/windows.md#complete-ready-to-use-setup-optional).
-Each guide links a coordinated `config.json`, `snippets.json`, and editable
-theme, with download, copy destination, backup, and reload steps. These optional
-sets replace your current preferences; back up first. Shell/Vim preferences are
-separate and optional.
+The setup guides include files, destinations, and reload steps. Back up your
+preferences before replacing them; shell and Vim settings are optional.
 
-- [Change your first setting](docs/configuration.md#add-one-display-change) — fonts,
-  colors, shortcuts, and more.
-- [OMXTerm Studio](https://luizomf.github.io/omxterm-studio/) — edit settings and
-  themes visually, then [apply your files](docs/configuration.md#edit-visually-with-omxterm-studio).
-- [Everyday use](docs/usage.md) — all shortcuts, images, paste, and troubleshooting,
-  including current startup, sidebar, and terminal-compatibility limitations.
+You can also edit settings and themes in
+[OMXTerm Studio](https://luizomf.github.io/omxterm-studio/), then
+[apply the files](docs/configuration.md#edit-visually-with-omxterm-studio).
+[Everyday use](docs/usage.md) covers shortcuts, images, paste, troubleshooting,
+and current limitations.
 
 ## Updating or uninstalling
 
@@ -151,7 +138,7 @@ Report vulnerabilities privately through the [security policy](SECURITY.md).
 Found a confusing instruction or something that doesn't work?
 [Tell us about it](https://github.com/luizomf/omxterm/issues/new?template=bug-report.md).
 Your version, system, and what happened are enough to start. Everyday feedback,
-documentation fixes, and code contributions are all welcome — especially reports
+documentation fixes, and code contributions are all welcome, especially reports
 from Linux and Windows users.
 
 See [Contributing](CONTRIBUTING.md) to get involved, including efforts to add

@@ -6,13 +6,6 @@
 2. **[Try your first session](../README.md#first-session)** and learn a few shortcuts.
 3. **[Make it yours](configuration.md)** with fonts, colors, and snippets.
 
-**Prefer a complete ready-to-use setup? Choose
-[macOS](quick-start/macos.md#complete-ready-to-use-setup-optional),
-[Linux](quick-start/linux.md#complete-ready-to-use-setup-optional), or
-[Windows / Git Bash](quick-start/windows.md#complete-ready-to-use-setup-optional).**
-Each set includes coordinated configuration, snippets, and a theme, with file
-links and copy destinations. Back up first: copying a set replaces preferences.
-
 ## Find what you need
 
 | I want to…                                    | Read                                                                                                                                                                                                                        |
@@ -28,14 +21,10 @@ links and copy destinations. Back up first: copying a set replaces preferences.
 | Give feedback or contribute                   | [Contributing](../CONTRIBUTING.md)                                                                                                                                                                                          |
 | Report a vulnerability privately              | [Security policy](../SECURITY.md)                                                                                                                                                                                           |
 
-The guides describe current source behavior, including practical limitations in
-[troubleshooting](usage.md#troubleshooting), [configuration reload](configuration.md#reloading-user-configuration),
-and [Linux installer recovery](linux-installer.md#update-help-and-uninstall).
-Specifications, contracts, and ADRs are maintained alongside the product, not
-immutable promises of future implementation. This tree contains current guidance;
-commits, issues and PRs retain earlier decisions and observations.
-[GitHub releases](https://github.com/luizomf/omxterm/releases) describe published
-versions; the [README](../README.md#platforms-and-downloads) links to the latest download.
+These guides describe current source behavior.
+[Release notes](https://github.com/luizomf/omxterm/releases) describe published
+versions; the [README](../README.md#platforms-and-downloads) links the latest download.
+Back up your preferences before copying a complete setup over them.
 
 For GNOME, KDE Plasma, Hyprland, and VM graphics setup, see
 [Linux desktop tips](quick-start/linux-desktop.md).

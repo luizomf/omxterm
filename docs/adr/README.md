@@ -1,15 +1,11 @@
 # Architecture decision records
 
-These records explain OMXTerm's current architecture, rationale and limits.
-They evolve with the product, as do the [specification](../spec.md), contracts
-and guides. Replace obsolete guidance rather than accumulating amendments;
-Git, issues and PRs preserve decision history. A distinct architectural decision
-can have its own ADR without keeping competing guidance active.
+These records explain the current architecture and its tradeoffs. Update them
+when decisions change; Git preserves earlier versions.
 
-The specification owns observable behavior. Source/test boundaries and known
-limitations belong with the relevant decision; they do not automatically imply
-required code changes or release blockers. [Development](../development.md)
-owns maintenance commands and [release](../release.md) owns qualification.
+The [specification](../spec.md) describes behavior and known limitations.
+[Development](../development.md) covers setup and tests;
+[release procedures](../release.md) cover package verification and publication.
 
 | ADR  | Decision                                                                                                                       |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------ |

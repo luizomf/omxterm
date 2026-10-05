@@ -7,9 +7,8 @@ The [user guides](README.md) explain setup and everyday use.
 
 OMXTerm is an open-source personal desktop terminal. It opens a normal local
 shell in a native window with a hideable title area and gives the Terminal
-Surface all remaining content space. Its contract centers on that local terminal
-experience. SSH brokering, AI assistance, persistent session management, and IDE
-features are outside the product scope.
+Surface all remaining content space. SSH brokering, AI assistance, persistent
+session management, and IDE features are outside the product scope.
 
 The Supported Platforms are macOS arm64, Linux arm64, and Windows arm64. Linux
 rendering defaults to X11 and requires XWayland when the desktop session is
