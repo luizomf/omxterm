@@ -5,11 +5,12 @@ import type { TerminalFontData } from "../../src/shared/terminal-font-data";
 import type { TerminalSurface } from "../../src/terminal-surface/terminal-surface";
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
+import type { CursorInputObservation } from "./restty-cursor-readiness";
 
 declare global {
   var cursorFonts: {
     load(): Promise<TerminalFontData>;
-    interference(kind: string, moving: boolean): void;
+    interference(observation: CursorInputObservation): void;
   };
   var cursorFixture: ReturnType<typeof createFixture>;
   var cursorProbe: { painted(): void; blinkNow(): number; refresh(): void };
@@ -50,28 +51,63 @@ const frames = async () => {
 };
 // A trusted moving pointer or other real input can change focus/selection while
 // pixels are under test. Retain only the fixed event kind, never input contents.
-let lastPointer: { x: number; y: number } | undefined;
+let lastPointer:
+  | (Pick<PointerEvent, "clientX" | "clientY" | "screenX" | "screenY"> & {
+      originX: number;
+      originY: number;
+      offsetX: number;
+      offsetY: number;
+    })
+  | undefined;
 for (const kind of ["pointermove", "pointerdown", "keydown", "wheel"] as const)
   document.addEventListener(
     kind,
     (event) => {
       if (!event.isTrusted) return;
-      // Layout-induced stationary hover is not evidence of physical movement.
-      let moving = false;
+      let nonzeroDelta = false,
+        clientChanged = false,
+        screenChanged = false,
+        viewportOriginChanged = false;
       if (event instanceof PointerEvent && kind === "pointermove") {
-        // Electron-injected trusted moves can have zero movementX/Y even at
-        // distinct positions. Keep coordinates local; publish only this boolean.
-        moving =
-          event.movementX !== 0 ||
-          event.movementY !== 0 ||
-          Boolean(
-            lastPointer &&
-            (lastPointer.x !== event.clientX ||
-              lastPointer.y !== event.clientY),
-          );
-        lastPointer = { x: event.clientX, y: event.clientY };
+        // These extra coordinates diagnose origin changes only. They never
+        // alter classification and never cross the renderer boundary.
+        const pointer = {
+          clientX: event.clientX,
+          clientY: event.clientY,
+          screenX: event.screenX,
+          screenY: event.screenY,
+          originX: window.screenX,
+          originY: window.screenY,
+          offsetX: window.visualViewport?.offsetLeft ?? 0,
+          offsetY: window.visualViewport?.offsetTop ?? 0,
+        };
+        nonzeroDelta = event.movementX !== 0 || event.movementY !== 0;
+        clientChanged = Boolean(
+          lastPointer &&
+          (lastPointer.clientX !== pointer.clientX ||
+            lastPointer.clientY !== pointer.clientY),
+        );
+        screenChanged = Boolean(
+          lastPointer &&
+          (lastPointer.screenX !== pointer.screenX ||
+            lastPointer.screenY !== pointer.screenY),
+        );
+        viewportOriginChanged = Boolean(
+          lastPointer &&
+          (lastPointer.originX !== pointer.originX ||
+            lastPointer.originY !== pointer.originY ||
+            lastPointer.offsetX !== pointer.offsetX ||
+            lastPointer.offsetY !== pointer.offsetY),
+        );
+        lastPointer = pointer;
       }
-      globalThis.cursorFonts.interference(kind, moving);
+      globalThis.cursorFonts.interference({
+        kind,
+        nonzeroDelta,
+        clientChanged,
+        screenChanged,
+        viewportOriginChanged,
+      });
     },
     { capture: true },
   );

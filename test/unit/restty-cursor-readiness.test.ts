@@ -9,9 +9,36 @@ afterEach(() => {
 });
 import {
   runCursorStep,
+  parseCursorInputObservation,
   type CursorStep,
   type CursorWindow,
 } from "../fixtures/restty-cursor-readiness";
+
+it("accepts only bounded cursor input observations without contents or coordinates", () => {
+  const observation = {
+    kind: "pointermove",
+    nonzeroDelta: false,
+    clientChanged: true,
+    screenChanged: false,
+    viewportOriginChanged: true,
+  };
+  expect(parseCursorInputObservation(observation)).toEqual(observation);
+  for (const kind of ["pointermove", "pointerdown", "keydown", "wheel"]) {
+    const parsed = parseCursorInputObservation({ ...observation, kind });
+    expect(parsed).toEqual({ ...observation, kind });
+    expect(Buffer.byteLength(JSON.stringify(parsed))).toBeLessThan(200);
+  }
+  for (const invalid of [
+    null,
+    [],
+    {},
+    { ...observation, kind: "private input" },
+    { ...observation, clientChanged: 1 },
+    { ...observation, clientX: 75 },
+    { ...observation, contents: "private contents" },
+  ])
+    expect(parseCursorInputObservation(invalid)).toBeUndefined();
+});
 
 const step: CursorStep = {
   dpr: 1,

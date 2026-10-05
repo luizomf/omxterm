@@ -273,6 +273,7 @@ const recipes: readonly Recipe[] = [
     name: "restty-cursor-rendering",
     prepare: cursor,
     metadataName: "omxterm-cursor-fixture",
+    plugins: ["cursor-runtime-probe"],
     builds: ["main.cjs", "index.js"],
     files: [
       "main.cjs",

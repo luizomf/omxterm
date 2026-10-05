@@ -58,7 +58,7 @@ export async function buildFixture(
         start(() =>
           writeFile(
             path.join(root, "preload.cjs"),
-            `const {contextBridge,ipcRenderer}=require('electron');contextBridge.exposeInMainWorld('cursorFonts',{load:()=>ipcRenderer.invoke('fonts'),interference:(kind,moving)=>ipcRenderer.send('cursor-input-interference',kind,moving)});`,
+            `const {contextBridge,ipcRenderer}=require('electron');contextBridge.exposeInMainWorld('cursorFonts',{load:()=>ipcRenderer.invoke('fonts'),interference:(observation)=>ipcRenderer.send('cursor-input-interference',observation)});`,
           ),
         ),
         start(() =>

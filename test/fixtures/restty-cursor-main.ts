@@ -6,6 +6,7 @@ import { loadTerminalFontData } from "../../src/main/terminal-font-data";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
 import {
   runCursorStep,
+  parseCursorInputObservation,
   CURSOR_STEP_TIMEOUT,
   type CursorStep,
 } from "./restty-cursor-readiness";
@@ -167,27 +168,32 @@ function cursorContext(
 function watchCursorInput(window: BrowserWindow) {
   let interfered = false;
   let observedPointer: (() => void) | undefined;
-  ipcMain.on(
-    "cursor-input-interference",
-    (event, kind: unknown, moving: unknown) => {
-      if (
-        event.sender !== window.webContents ||
-        typeof kind !== "string" ||
-        typeof moving !== "boolean" ||
-        !["pointermove", "pointerdown", "keydown", "wheel"].includes(kind)
-      )
-        return;
-      if (kind !== "pointermove" || moving) interfered = true;
-      if (kind === "pointermove" && observedPointer) {
+  ipcMain.on("cursor-input-interference", (event, value: unknown) => {
+    if (event.sender !== window.webContents) return;
+    const observation = parseCursorInputObservation(value);
+    if (!observation) return;
+    const { kind, nonzeroDelta, clientChanged } = observation;
+    // Preserve the existing rule. Screen/origin changes are evidence only.
+    const moving = kind === "pointermove" && (nonzeroDelta || clientChanged);
+    if (!interfered && (kind !== "pointermove" || moving)) {
+      interfered = true;
+      try {
         process.stdout.write(
-          `__OMXTERM_CURSOR_INPUT__${JSON.stringify({ moving })}\n`,
+          `__OMXTERM_CURSOR_INTERFERENCE__${JSON.stringify({ version: 1, ...observation })}\n`,
         );
-        const complete = observedPointer;
-        observedPointer = undefined;
-        complete();
+      } catch {
+        // Missing diagnostics must not erase the interference or alter failure.
       }
-    },
-  );
+    }
+    if (kind === "pointermove" && observedPointer) {
+      process.stdout.write(
+        `__OMXTERM_CURSOR_INPUT__${JSON.stringify({ moving })}\n`,
+      );
+      const complete = observedPointer;
+      observedPointer = undefined;
+      complete();
+    }
+  });
   const move = (x: number, movementX: number) =>
     new Promise<void>((resolve) => {
       observedPointer = resolve;

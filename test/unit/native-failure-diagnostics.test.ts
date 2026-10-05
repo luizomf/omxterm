@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { recordCursorBlinkFailure } from "../fixtures/restty-cursor-readiness";
 import { recordInitializationStage } from "../fixtures/initialization-cancellation-diagnostics";
 
 let output: string[];
@@ -11,103 +10,6 @@ beforeEach(() => {
   });
 });
 afterEach(() => vi.restoreAllMocks());
-
-const context = {
-  dpr: 1,
-  font: "bundled",
-  padding: 0,
-  lifecycle: "initial",
-} as const;
-const blinkRecord = () =>
-  JSON.parse(output[0]!.slice("__OMXTERM_CURSOR_BLINK_FAILURE__".length)) as {
-    sampleCount: number;
-    samples: Record<string, number | null>[];
-  };
-
-it("retains actual capture intervals/counts and negative remaining exposure without substituting a phase", () => {
-  recordCursorBlinkFailure(context, 2100, 16, 2, [
-    {
-      focusBegin: 100,
-      focusEnd: 140,
-      captureBegin: 141,
-      captureEnd: 180,
-      count: 0,
-      remainingMs: 1920,
-    },
-    {
-      focusBegin: 2000,
-      focusEnd: 2050,
-      captureBegin: 2051,
-      captureEnd: 2110,
-      count: 16,
-      remainingMs: -10,
-    },
-  ]);
-  expect(blinkRecord()).toEqual({
-    version: 1,
-    context,
-    deadline: 2100,
-    fullBar: 16,
-    sampleCount: 2,
-    samples: [
-      {
-        focusBegin: 100,
-        focusEnd: 140,
-        captureBegin: 141,
-        captureEnd: 180,
-        count: 0,
-        remainingMs: 1920,
-      },
-      {
-        focusBegin: 2000,
-        focusEnd: 2050,
-        captureBegin: 2051,
-        captureEnd: 2110,
-        count: 16,
-        remainingMs: -10,
-      },
-    ],
-  });
-});
-
-it("does not invent a zero-pixel capture or successful result when native evidence is missing", () => {
-  recordCursorBlinkFailure(context, 2100, 16, 1, [{ focusBegin: 100 }]);
-  expect(blinkRecord().samples).toEqual([
-    {
-      focusBegin: 100,
-      focusEnd: null,
-      captureBegin: null,
-      captureEnd: null,
-      count: null,
-      remainingMs: null,
-    },
-  ]);
-  expect(output.join("")).not.toContain("__OMXTERM_CURSOR_RESULT__");
-  expect(blinkRecord()).not.toHaveProperty("success");
-});
-
-it("bounds failure history to 32 numeric samples and excludes additional payload fields", () => {
-  const secret = "terminal clipboard font config /private/path";
-  const extraContext = { ...context, secret };
-  recordCursorBlinkFailure(
-    extraContext,
-    2100,
-    16,
-    100,
-    Array.from({ length: 100 }, (_, i) => ({
-      focusBegin: i,
-      count: Number.NaN,
-      secret,
-    })),
-  );
-  const record = blinkRecord();
-  expect(record.sampleCount).toBe(100);
-  expect(record.samples).toHaveLength(32);
-  expect(record.samples[0]!.focusBegin).toBe(68);
-  expect(record.samples[31]!.count).toBeNull();
-  expect(output.join("")).not.toContain(secret);
-  expect(output[0]!.length).toBeLessThan(6000);
-});
 
 it("retains fixed initialization boundaries/timestamps without claiming completion of a begun operation", () => {
   vi.spyOn(Date, "now")
@@ -163,13 +65,6 @@ it("rejects arbitrary stage/context strings without logging user data", () => {
     "app-ready",
     "private clipboard" as never,
   );
-  recordCursorBlinkFailure(
-    { ...context, font: "private config" as never },
-    1,
-    1,
-    0,
-    [],
-  );
   expect(output).toEqual([]);
 });
 
@@ -179,8 +74,5 @@ it("diagnostic sink failures cannot replace an original failure or prevent the n
   });
   expect(() =>
     recordInitializationStage("runtime", "b-held", "begin"),
-  ).not.toThrow();
-  expect(() =>
-    recordCursorBlinkFailure(context, 2000, 16, 0, []),
   ).not.toThrow();
 });

@@ -58,7 +58,7 @@ async function observe(
         probed = probed.replace(corrected, original);
       }
       expect(createHash("sha256").update(probed).digest("hex")).toBe(
-        "02fdcc3899957f7296324cb73e452947e4b13a8495dd8c0ce680ca2b8dad4287",
+        "e45b848b0edea99ac8a501f6347c6fff35cdd9af4a9d47b8d245b6d3722e54c1",
       );
     }
     const replace = (needle: string, replacement: string) => {
