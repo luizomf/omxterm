@@ -351,7 +351,8 @@ child's final phase report, before it exits and its profile is removed. The
 comparison JSON is written at the existing pre-assertion location, preserving
 it on a failing stroke comparison. Earlier assertions/child errors can leave an
 empty reserved JSON and only one variant or partial captures (`complete:false`);
-missing files or manifests are missing evidence, not successful captures. Retain
+missing files or manifests are missing evidence, not successful captures.
+`complete` describes the three-image set, not a passing child or test. Retain
 partial output and the command outcome instead of retrying automatically.
 
 Opt-in source/bundle hashing and file reservation add startup work. Holding
