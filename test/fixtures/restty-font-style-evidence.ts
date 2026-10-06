@@ -76,6 +76,69 @@ export interface FontStyleCaptureMetadata {
   dpr?: number | undefined;
 }
 
+export interface FontStyleRetentionFailure {
+  operation:
+    | "retain-captures"
+    | "create-directory"
+    | "encode-image"
+    | "write-image"
+    | "write-manifest"
+    | "write-observations";
+  code: string;
+  phase?: string;
+}
+export type FontStyleRetentionStatus =
+  | { status: "written" }
+  | { status: "failed"; error: FontStyleRetentionFailure };
+
+class CaptureRetentionError extends Error {
+  readonly code: string;
+  constructor(readonly failure: FontStyleRetentionFailure) {
+    super(`Font style evidence retention failed: ${JSON.stringify(failure)}`);
+    this.code = failure.code;
+  }
+}
+
+/** Exclude arbitrary native messages, paths and payloads from failure metadata. */
+export function describeFontStyleRetentionFailure(
+  error: unknown,
+  operation: FontStyleRetentionFailure["operation"],
+): FontStyleRetentionFailure {
+  if (error instanceof CaptureRetentionError) return error.failure;
+  const code =
+    error && typeof error === "object" && "code" in error
+      ? error.code
+      : undefined;
+  return {
+    operation,
+    code:
+      typeof code === "string" &&
+      [
+        "EACCES",
+        "EPERM",
+        "EEXIST",
+        "ENOENT",
+        "ENOSPC",
+        "EDQUOT",
+        "EROFS",
+        "EIO",
+        "EMFILE",
+        "ENFILE",
+      ].includes(code)
+        ? code
+        : "UNKNOWN",
+  };
+}
+
+/** Call only after the original renderer/pixel assertions have succeeded. */
+export function assertFontStyleRetentionSucceeded(
+  statuses: readonly (FontStyleRetentionStatus | undefined)[],
+): void {
+  const failure = statuses.find((status) => status?.status === "failed");
+  if (failure?.status === "failed")
+    throw new CaptureRetentionError(failure.error);
+}
+
 /** Encode only retained original images, after the child's final phase report. */
 export async function writeFontStyleCaptures(
   directory: string | undefined,
@@ -96,38 +159,52 @@ export async function writeFontStyleCaptures(
     )
   )
     throw new Error("Invalid font capture provenance");
-  await mkdir(directory);
-  const phases = [];
-  for (const { image, phase } of captures) {
-    const png = image.toPNG();
-    const file = `${phase.name}.png`;
-    await writeFile(path.join(directory, file), png, {
-      flag: "wx",
-      mode: 0o600,
-    });
-    phases.push({
-      name: phase.name,
-      file,
-      pngSha256: createHash("sha256").update(png).digest("hex"),
-      hash: phase.hash,
-      ink: phase.ink,
-      pixelSize: phase.pixelSize,
-      bitmapBytes: phase.bitmapBytes,
+  let operation: FontStyleRetentionFailure["operation"] = "create-directory";
+  let phaseName: string | undefined;
+  try {
+    await mkdir(directory);
+    const phases = [];
+    for (const { image, phase } of captures) {
+      phaseName = phase.name;
+      operation = "encode-image";
+      const png = image.toPNG();
+      const file = `${phase.name}.png`;
+      operation = "write-image";
+      await writeFile(path.join(directory, file), png, {
+        flag: "wx",
+        mode: 0o600,
+      });
+      phases.push({
+        name: phase.name,
+        file,
+        pngSha256: createHash("sha256").update(png).digest("hex"),
+        hash: phase.hash,
+        ink: phase.ink,
+        pixelSize: phase.pixelSize,
+        bitmapBytes: phase.bitmapBytes,
+      });
+    }
+    phaseName = undefined;
+    operation = "write-manifest";
+    await writeFile(
+      path.join(directory, "manifest.json"),
+      JSON.stringify(
+        {
+          variant: metadata.variant,
+          provenance: metadata.provenance,
+          dpr: metadata.dpr,
+          complete: captures.length === 3,
+          phases,
+        },
+        null,
+        2,
+      ) + "\n",
+      { flag: "wx", mode: 0o600 },
+    );
+  } catch (error) {
+    throw new CaptureRetentionError({
+      ...describeFontStyleRetentionFailure(error, operation),
+      ...(phaseName ? { phase: phaseName } : {}),
     });
   }
-  await writeFile(
-    path.join(directory, "manifest.json"),
-    JSON.stringify(
-      {
-        variant: metadata.variant,
-        provenance: metadata.provenance,
-        dpr: metadata.dpr,
-        complete: captures.length === 3,
-        phases,
-      },
-      null,
-      2,
-    ) + "\n",
-    { flag: "wx", mode: 0o600 },
-  );
 }

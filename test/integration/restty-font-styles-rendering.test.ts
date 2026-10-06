@@ -11,10 +11,14 @@ import { syntheticBoldCorrections } from "../../scripts/restty-synthetic-bold-co
 import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
 import {
   createFontStyleEvidence,
+  describeFontStyleRetentionFailure,
+  assertFontStyleRetentionSucceeded,
   type FontStyleVariant,
+  type FontStyleRetentionStatus,
 } from "../fixtures/restty-font-style-evidence";
 
 interface Observation {
+  retention?: FontStyleRetentionStatus;
   phases: {
     name: string;
     hash?: string;
@@ -45,7 +49,11 @@ const family =
 async function observe(
   mode: string,
   priorSynthesis = false,
-  capture?: { directory: string; variant: FontStyleVariant },
+  capture?: {
+    directory: string;
+    variant: FontStyleVariant;
+    saveRendererFailure?(observation: Observation): Promise<void>;
+  },
 ): Promise<Observation> {
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-font-styles-"));
   try {
@@ -186,6 +194,23 @@ async function observe(
       },
     );
     const result = JSON.parse(stdout.trim().split("\n").at(-1)!) as Observation;
+    if (result.retention?.status === "failed")
+      console.error(
+        "Font style evidence retention failed",
+        capture?.variant,
+        result.retention.error,
+      );
+    if (result.result.error !== undefined && capture?.saveRendererFailure) {
+      try {
+        await capture.saveRendererFailure(result);
+      } catch (error) {
+        console.error(
+          "Font style evidence retention failed",
+          describeFontStyleRetentionFailure(error, "write-observations"),
+        );
+      }
+    }
+    // Original renderer failures keep priority over optional artifact failures.
     expect(result.result.error).toBeUndefined();
     return result;
   } finally {
@@ -224,6 +249,8 @@ describe("native configured font styles", () => {
         ? {
             directory: path.join(evidence.directory, "current-regular"),
             variant: "current-regular",
+            saveRendererFailure: (observation) =>
+              evidence.write({ regular: observation }),
           }
         : undefined,
     );
@@ -247,17 +274,38 @@ describe("native configured font styles", () => {
         ? {
             directory: path.join(evidence.directory, "prior-regular"),
             variant: "prior-regular",
+            saveRendererFailure: (observation) =>
+              evidence.write({
+                regular,
+                styled,
+                partial,
+                priorStyled,
+                priorRegular: observation,
+              }),
           }
         : undefined,
     );
-    if (evidence)
-      await evidence.write({
-        regular,
-        styled,
-        partial,
-        priorStyled,
-        priorRegular,
-      });
+    let observationRetention: FontStyleRetentionStatus | undefined;
+    if (evidence) {
+      try {
+        await evidence.write({
+          regular,
+          styled,
+          partial,
+          priorStyled,
+          priorRegular,
+        });
+      } catch (error) {
+        observationRetention = {
+          status: "failed",
+          error: describeFontStyleRetentionFailure(error, "write-observations"),
+        };
+        console.error(
+          "Font style evidence retention failed",
+          observationRetention.error,
+        );
+      }
+    }
     const capture = (run: Observation, name: string) =>
       run.phases.find((phase) => phase.name === name)!.hash;
     for (const style of ["regular", "bold", "italic", "boldItalic"])
@@ -312,5 +360,10 @@ describe("native configured font styles", () => {
         run.phases.find((phase) => phase.name === "disposed")!.store.leases,
       ).toBe(0);
     }
+    assertFontStyleRetentionSucceeded([
+      regular.retention,
+      priorRegular.retention,
+      observationRetention,
+    ]);
   }, 120_000);
 });

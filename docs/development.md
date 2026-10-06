@@ -349,11 +349,24 @@ The fixture reuses the assertion's existing children and exact original phase
 images, not additional capture calls. PNG encoding and writes happen after each
 child's final phase report, before it exits and its profile is removed. The
 comparison JSON is written at the existing pre-assertion location, preserving
-it on a failing stroke comparison. Earlier assertions/child errors can leave an
-empty reserved JSON and only one variant or partial captures (`complete:false`);
-missing files or manifests are missing evidence, not successful captures.
-`complete` describes the three-image set, not a passing child or test. Retain
-partial output and the command outcome instead of retrying automatically.
+it on a failing stroke comparison. A reported renderer error saves the available
+Observation(s) before the original error assertion. Earlier containment
+assertions, child crashes or JSON-write errors can still leave an empty reserved
+JSON and only one variant or partial captures (`complete:false`); missing files
+or manifests are missing evidence, not successful captures. `complete` describes
+the three-image set, not a passing child or test. Retain partial output and the
+command outcome instead of retrying automatically.
+
+Opt-in child Observations add `retention.status` (`written` or `failed`). A failed
+status identifies the operation, a fixed native error code (or `UNKNOWN`) and,
+when applicable, the synthetic phase; it excludes exception messages, paths and
+payloads. Encoding/write failures do not discard the original Observation or
+change transport exit into a substitute renderer failure. The parent logs the
+safe retention diagnostic separately, preserves original renderer/pixel failure
+priority and fails for retention alone only after all original assertions pass.
+JSON-write failures follow the same priority; already written PNGs/manifests
+remain useful even if the JSON cannot be saved. A normal child exit means report
+transport completed, not that its renderer, assertions or retention passed.
 
 Opt-in source/bundle hashing and file reservation add startup work. Holding
 three images until report changes memory/GC pressure; final encoding/I/O adds

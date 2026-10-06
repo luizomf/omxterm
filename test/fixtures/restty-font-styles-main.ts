@@ -7,9 +7,11 @@ import { isTerminalFontData } from "../../src/shared/terminal-font-data";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
 import {
   fontStyleCaptureNames,
+  describeFontStyleRetentionFailure,
   writeFontStyleCaptures,
   type FontStyleCapture,
   type FontStyleCaptureMetadata,
+  type FontStyleRetentionStatus,
 } from "./restty-font-style-evidence";
 
 function inkBounds(bitmap: Buffer, blank: Buffer, width: number) {
@@ -206,6 +208,7 @@ async function run() {
   );
   ipcMain.on("report", (_event, result: unknown) => {
     void (async () => {
+      let retention: FontStyleRetentionStatus | undefined;
       if (captureDirectory && captureMetadata) {
         const dpr =
           result &&
@@ -214,11 +217,19 @@ async function run() {
           typeof result.dpr === "number"
             ? result.dpr
             : undefined;
-        await writeFontStyleCaptures(
-          captureDirectory,
-          { ...captureMetadata, dpr },
-          retainedCaptures,
-        );
+        try {
+          await writeFontStyleCaptures(
+            captureDirectory,
+            { ...captureMetadata, dpr },
+            retainedCaptures,
+          );
+          retention = { status: "written" };
+        } catch (error) {
+          retention = {
+            status: "failed",
+            error: describeFontStyleRetentionFailure(error, "retain-captures"),
+          };
+        }
       }
       process.stdout.write(
         JSON.stringify({
@@ -227,14 +238,13 @@ async function run() {
           versions: process.versions,
           phases,
           result,
+          ...(retention ? { retention } : {}),
         }) + "\n",
       );
       window.destroy();
       app.exit(0);
     })().catch(() => {
-      console.error(
-        "Font style evidence retention failed; partial artifacts preserved",
-      );
+      console.error("Font style Observation publication failed");
       window.destroy();
       app.exit(1);
     });
