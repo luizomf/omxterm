@@ -175,6 +175,23 @@ journals, and review local paths and failure details before sharing.
 
 ## Running native tests
 
+> **Warning: graphical integration tests open and focus real windows.** Run them
+> unattended on an ordinary-user, logged-in, unlocked desktop. Do not type,
+> click, move the pointer over fixture windows, change window/display geometry,
+> or switch Parallels VM tabs during the run. Run one graphical suite at a time.
+> Desktop interference can invalidate results; a later PASS alone does not prove
+> the cause of a failure.
+
+For headless, unit-only feedback with prepared dependencies:
+
+```sh
+npm test -- test/unit
+```
+
+This selects only `test/unit/`; it does not qualify native integration or replace
+`check:portable`. See the [exercised desktop table](../README.md#exercised-desktops)
+for recorded platform coverage.
+
 ### Qualification scope
 
 `npm run check:portable` runs formatting, lint, type checking, the default Vitest
@@ -200,6 +217,8 @@ For a graphical test run:
 - Leave the VM logged in and unlocked, and do not minimize or suspend it.
 - Do not click, drag-select on the desktop, type, or move the pointer across
   fixture windows. Desktop clicks can steal focus from native menu/key tests.
+- Keep window/display geometry unchanged and do not switch Parallels VM tabs;
+  switching can change a guest's resolution, even without dragging a window.
 - Run only one graphical suite per desktop. When diagnosing shared-host
   contention, run one VM's suite at a time against the same source candidate.
 - If a run fails, preserve `.scratch/vitest-results.json` and
@@ -211,6 +230,12 @@ Input interference is not proof of an application defect. Conversely, applicatio
 failure on ordinary focus loss is a defect, not something to excuse as test
 interference. The default `check:portable` includes graphical tests; it is not a
 headless-only check.
+
+Maintainer test invocations inside OMXTerm failed on Debian KDE and Fedora GNOME,
+with and without personal shell settings; their cause remains unresolved. Use a
+separate terminal for Linux qualification while this self-hosted invocation is
+under investigation. This observation does not identify the desktop or shell as
+the cause, or imply the same limitation on macOS/Windows.
 
 Controlled renderer input, injected I/O and held continuations establish the
 asserted boundaries, not physical input or every production interleaving.

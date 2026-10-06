@@ -162,6 +162,13 @@ npm run format:check
 git diff --check
 ```
 
+> **Warning: graphical integration tests open and focus real windows.** Run them
+> unattended on an ordinary-user, logged-in, unlocked desktop. Do not type,
+> click, move the pointer over fixture windows, change window/display geometry,
+> or switch Parallels VM tabs during the run. Run one graphical suite at a time.
+> Desktop interference can invalidate results; a later PASS alone does not prove
+> the cause of a failure.
+
 For code, run:
 
 ```sh
@@ -173,9 +180,11 @@ unpackaged build. You can run `npm run lint`, `npm run typecheck`, `npm test` or
 `npm run build` separately while developing. `npm run test:integration` runs only
 `test/integration/local-shell.test.ts`, not the full integration directory.
 Graphical tests need a working desktop and WebGL2; “portable” does not mean
-headless. Run one native suite at a time per desktop. Platform skips and explicit
-opt-in tests are not passes on those boundaries; see the
-[qualification scope](docs/development.md#qualification-scope).
+headless. For headless, unit-only feedback, use `npm test -- test/unit`; it omits
+native integration and does not replace `check:portable`. Platform skips and
+explicit opt-in tests are not passes on those boundaries; see the
+[qualification scope](docs/development.md#qualification-scope) and
+[exercised desktops](README.md#exercised-desktops).
 
 Product packaging changes also need matching native evidence. Reuse recorded
 PASS steps from Git or previous issues/PRs when relevant inputs are unchanged;

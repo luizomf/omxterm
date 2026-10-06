@@ -70,6 +70,38 @@ AppImage. macOS and Windows may show an unknown-developer warning because the
 packages have no verified publisher signature. The installation guide walks you
 through verification and first launch.
 
+### Exercised desktops
+
+All rows below are **ARM64**. Automated results cover `check:portable` (tests and
+unpackaged build), **not release/package qualification**. Baseline source:
+[`96ef089`](https://github.com/luizomf/omxterm/commit/96ef08933a987fad12ed2461f973985aa1902c04).
+Later main adds failure-only fixture diagnostics; the full matrix was not rerun.
+Detailed evidence and retained failures: [#586](https://github.com/luizomf/omxterm/issues/586).
+
+| OS                      | Desktop          | Automated baseline result                                                                                      |
+| ----------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| Ubuntu 26.04.1          | GNOME 50.1       | Prepared + CLEAN-restored: **PASS**                                                                            |
+| Fedora 44               | KDE Plasma 6.7.5 | Prepared + CLEAN-restored: **PASS**                                                                            |
+| Omarchy                 | Hyprland 0.56.2  | Prepared + CLEAN-restored: **PASS**                                                                            |
+| macOS 27.0.1            | macOS desktop    | Prepared + maintainer-recreated: **PASS**; earlier CLEAN incomplete **FAIL**                                   |
+| Windows 11, build 26200 | Windows desktop  | Maintainer-reported CLEAN: **PASS**; prepared **FAIL** ([#605](https://github.com/luizomf/omxterm/issues/605)) |
+
+macOS/Windows later passes have retained test reports and verified baseline source;
+final builds and recreation/restoration provenance are maintainer-reported, not a
+controlled clean pair. The earlier macOS GPU-hang trigger and Windows
+publication-failure cause remain unknown; later passes do not erase those failures.
+
+Additional maintainer-reported checks: setup, `check:portable`, dev,
+package/install, configuration, themes and keybinds. Exact source SHA unrecorded:
+
+| OS                   | Desktop                | Maintainer-reported result |
+| -------------------- | ---------------------- | -------------------------- |
+| Debian 13.4 (Trixie) | KDE Plasma 6 / Wayland | **PASS**                   |
+| Fedora 44            | GNOME Shell 50.5       | **PASS**                   |
+
+For downloads, use the [published release above](#platforms-and-downloads), not
+the development validation baseline. See [test scope and precautions](docs/development.md#running-native-tests).
+
 ## Installation
 
 Download the package and checksum for your system, then follow its guide:
