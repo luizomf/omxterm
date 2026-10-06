@@ -77,15 +77,18 @@ export function createLinkDestinationObserver(
             text === web.text &&
             web.points.length === 2 &&
             web.points.every(([row, col]) => {
-              const index = row * render.cols + col;
               if (
                 row < 0 ||
                 col < 0 ||
                 col >= render.cols ||
-                row >= render.rows ||
-                !cells[index]
+                row >= render.rows
               )
                 return false;
+              let index = row * render.cols + col;
+              // Match normalizeSelectionCell2: a wide tail targets its leading
+              // cell, not an empty cluster. Wide-wrap spacers remain refused.
+              if (col > 0 && render.wide?.[index] === 2) index--;
+              if (!cells[index]) return false;
               return (
                 resolve({
                   text,
