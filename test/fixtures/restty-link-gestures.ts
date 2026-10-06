@@ -181,35 +181,91 @@ async function exerciseLocalPathActivation(
     process.platform === "win32"
       ? `C:\\tmp\\${"local".repeat(size.cols)}%23#fixture.data`
       : `/tmp/${"local".repeat(size.cols)}%23#fixture.data`;
-  options.deliverOutput(`\u001b[2J\u001b[H${localPath}`);
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  const inputStart = options.inputs.join("").length;
-  await clickTerminalCell(options.window, 0, 3, size);
-  await options.waitFor(
-    () => options.localImageRequests.length === 1,
-    "soft-wrapped native-path activation",
-  );
-  const request = options.localImageRequests[0];
-  if (request?.source !== "native-path" || request.path !== localPath)
-    throw new Error("Native-path activation changed the literal destination");
-  for (const reference of [
-    "~/image.png:1",
-    "../image.png",
-    `'${localPath} space.png':12:3`,
-  ]) {
-    options.deliverOutput(`\u001b[2J\u001b[H${reference}`);
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    const count = options.localImageRequests.length;
-    await clickTerminalCell(options.window, 0, 3, size);
-    await options.waitFor(
-      () => options.localImageRequests.length === count + 1,
-      "visible image reference activation",
+  const { window, waitFor, localImageRequests } = options;
+  const canvasExpression = `[...document.querySelectorAll('.restty-terminal-surface canvas')].find(c => c.getBoundingClientRect().width > 0)`;
+  const observe = () =>
+    window.webContents.executeJavaScript(
+      `(() => {
+      const canvas = ${canvasExpression};
+      if (!canvas?.__resttyLinkDestinationFixture || !canvas.__resttyHoverFixture || !document.__resttyLinkPreviewFixture)
+        throw new Error('Link activation observer is missing');
+      const { canvasId, geometry } = canvas.__resttyHoverFixture();
+      return { canvasId, geometry, destination: canvas.__resttyLinkDestinationFixture.snapshot(), previewActive: document.__resttyLinkPreviewFixture() };
+    })()`,
+      true,
+    ) as Promise<
+      CellSnapshot & {
+        readonly destination?: {
+          readonly cols: number;
+          readonly rows: number;
+          readonly matches: boolean;
+        };
+        readonly previewActive: boolean;
+      }
+    >;
+  const waitForCancellation = (variant: number) =>
+    waitFor(
+      async () => (await observe()).previewActive === false,
+      `local-image variant ${variant} preview cancellation (count ${localImageRequests.length})`,
     );
-    const request = options.localImageRequests.at(-1);
-    if (request?.source !== "path-reference" || request.path !== reference)
-      throw new Error("Image reference activation changed its visible text");
+  const ready = (snapshot: Awaited<ReturnType<typeof observe>>) =>
+    snapshot.previewActive === false &&
+    snapshot.destination?.matches === true &&
+    snapshot.destination.cols === size.cols &&
+    snapshot.destination.rows === size.rows;
+  const inputStart = options.inputs.join("").length;
+  if (localImageRequests.length !== 0)
+    throw new Error("Unexpected prior local-image request");
+  try {
+    for (const [variant, destination] of [
+      localPath,
+      "~/image.png:1",
+      "../image.png",
+      `'${localPath} space.png':12:3`,
+    ].entries()) {
+      await waitForCancellation(variant);
+      await window.webContents.executeJavaScript(
+        `(() => {
+          const observer = (${canvasExpression})?.__resttyLinkDestinationFixture;
+          if (!observer) throw new Error('Link destination observer is missing');
+          observer.prepare(${JSON.stringify(destination)});
+        })()`,
+        true,
+      );
+      options.deliverOutput(`\u001b[2J\u001b[H${destination}`);
+      const count: number = localImageRequests.length;
+      await waitFor(
+        async () => ready(await observe()),
+        `local-image variant ${variant} current destination (count ${count})`,
+      );
+      // Revalidate without await before the frozen-grid check and single input.
+      const snapshot = await observe();
+      if (!ready(snapshot))
+        throw new Error(`Variant ${variant} preparation invalidated`);
+      sendTerminalCellClick(window, cellPoint(snapshot, 0, 3, size));
+      await waitFor(
+        () => localImageRequests.length === count + 1,
+        `local-image variant ${variant} activation (count ${count})`,
+      );
+      const request = localImageRequests.at(-1);
+      if (
+        request?.source !==
+          (variant === 0 ? "native-path" : "path-reference") ||
+        request.path !== destination
+      )
+        throw new Error(`Variant ${variant} changed the literal destination`);
+      // Receipt precedes null cancellation; settle it before advancing.
+      await waitForCancellation(variant);
+      if (localImageRequests.length !== count + 1)
+        throw new Error(`Local-image variant ${variant} excess requests`);
+    }
+    return gestureInputSince(options.inputs, inputStart);
+  } finally {
+    await window.webContents.executeJavaScript(
+      `(${canvasExpression})?.__resttyLinkDestinationFixture?.clear()`,
+      true,
+    );
   }
-  return gestureInputSince(options.inputs, inputStart);
 }
 
 async function drainGestureInput(window: BrowserWindow): Promise<void> {

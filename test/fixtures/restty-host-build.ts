@@ -5,6 +5,7 @@ import { build } from "esbuild";
 import { resttyImageEmitterSource } from "./restty-host-images";
 import { resttyFontMutationProbe } from "./restty-font-mutation-probe";
 import { resttyHoverProbe } from "./restty-hover-observer";
+import { resttyLinkReadinessProbe } from "./restty-link-readiness-probe";
 import { resttyLinkCancellationMutation } from "./restty-link-cancellation-mutation";
 import { createNativeHostPng } from "./native-host-png";
 import {
@@ -65,6 +66,7 @@ export async function buildHostFixture(
         format: "iife",
         loader: { ".ttf": "binary" },
         plugins: [
+          resttyLinkReadinessProbe,
           ...(focusedCancellation
             ? [resttyHoverProbe]
             : [resttyFontMutationProbe]),

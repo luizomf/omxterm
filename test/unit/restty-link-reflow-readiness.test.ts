@@ -1,4 +1,11 @@
+// @vitest-environment jsdom
 import { runInNewContext } from "node:vm";
+import { createLocalImagePreview } from "../../src/renderer/local-image-preview";
+import {
+  installResttyVisibleLinks,
+  requestVisibleLink,
+} from "../../src/terminal-surface/restty-visible-links";
+import type { LocalImageRequest } from "../../src/shared/local-image";
 import type { BrowserWindow, MouseInputEvent } from "electron";
 import { afterEach, expect, it, vi } from "vitest";
 import { loadResttyWasm } from "restty/internal";
@@ -7,6 +14,7 @@ import {
   terminalCellPoint,
 } from "../fixtures/restty-link-gestures";
 import { snapshotLocalImageCoreCells } from "../fixtures/restty-local-image-core-probe";
+import { createLinkDestinationObserver } from "../fixtures/restty-link-readiness-probe";
 
 // Only the Electron/renderer/PTY ports are modeled. Run the real caller and its
 // real renderer observer snippets; no fixture or point helper is mocked.
@@ -62,6 +70,7 @@ function retilingRenderer(
   const canvas = {
     getBoundingClientRect: () => geometry.canvas,
     __resttyHoverFixture: () => ({ canvasId, geometry }),
+    __resttyLinkDestinationFixture: createLinkDestinationObserver(),
     __localImageFixtureCoreCells: () => ({
       cols: geometry.cols,
       rows: geometry.rows,
@@ -81,7 +90,10 @@ function retilingRenderer(
         // counts or a guessed quiet interval.
         if (rendererReturnQueued) returnToTile();
         return runInNewContext(script, {
-          document: { querySelectorAll: () => [canvas] },
+          document: {
+            querySelectorAll: () => [canvas],
+            __resttyLinkPreviewFixture: () => false,
+          },
         }) as unknown;
       },
       sendInputEvent(event: MouseInputEvent) {
@@ -145,7 +157,10 @@ function retilingRenderer(
   };
 }
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 it("activates both soft-wrapped URL rows using the current grid after a transient matching resize", async () => {
   vi.useFakeTimers();
@@ -263,3 +278,341 @@ it.each([
     expect(fixture.options.inputs).toEqual([]);
   },
 );
+
+// Real gesture controller, destination routing and preview owner; only drawing,
+// Electron transport and the image-loader reply are controlled. No native proof.
+function cancellingPreviewRenderer(
+  options: {
+    priorReplyDelay?: number;
+    destinationDelay?: number;
+    mutation?:
+      | "never-current"
+      | "stale-current"
+      | "late-invalidation"
+      | "extra-request"
+      | "late-extra-request"
+      | "local-geometry"
+      | "wrong-literal";
+  } = {},
+) {
+  document.body.replaceChildren();
+  const root = document.createElement("main");
+  root.className = "restty-terminal-surface";
+  const canvas = document.createElement("canvas");
+  const input = document.createElement("textarea");
+  root.append(canvas, input);
+  document.body.append(root);
+  const geometry = {
+    canvas: { x: 0, y: 0, width: 800, height: 400 },
+    backing: { width: 800, height: 400 },
+    viewport: { width: 800, height: 400 },
+    dpr: 1,
+    cols: 80,
+    rows: 20,
+    cellWidth: 10,
+    cellHeight: 20,
+  };
+  let canvasId = 1;
+  const destinationObserver = createLinkDestinationObserver();
+  Object.assign(canvas, {
+    __resttyLinkDestinationFixture: destinationObserver,
+    getBoundingClientRect: () => geometry.canvas,
+    __resttyHoverFixture: () => ({ canvasId, geometry }),
+  });
+  const localImageRequests: LocalImageRequest[] = [];
+  const externalLinks: string[] = [];
+  const inputs: string[] = [];
+  const events: MouseInputEvent[] = [];
+  const openings: Promise<void>[] = [];
+  let destination = "";
+  let expectedDestination = "";
+  let clickedBeforeDestination = false;
+  let invalidateBeforeNextOperation = false;
+  const presentDestination = (next: string) => {
+    destination = next;
+    const codepoints = new Uint32Array(80 * 20);
+    codepoints.set(Array.from(next, (char) => char.codePointAt(0)!));
+    destinationObserver.present(
+      destinationObserver.capture({ cols: 80, rows: 20, codepoints }),
+    );
+  };
+  let firstReplyCompleted = false;
+  let clickedWhileOpening = false;
+  const preview = createLocalImagePreview(document, {
+    async loadImage(source) {
+      localImageRequests.push(
+        options.mutation === "wrong-literal"
+          ? { source: "native-path", path: "/tmp/wrong.png" }
+          : source!,
+      );
+      if (options.mutation === "extra-request")
+        localImageRequests.push(source!);
+      if (localImageRequests.length === 1) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, options.priorReplyDelay ?? 0),
+        );
+        firstReplyCompleted = true;
+        if (options.mutation === "late-extra-request")
+          localImageRequests.push(source!);
+      }
+      return null;
+    },
+    focusTerminal: () => input.focus(),
+  });
+  Object.assign(document, {
+    __resttyLinkPreviewFixture: () => preview.isActive(),
+  });
+  const controller = installResttyVisibleLinks(
+    canvas,
+    {
+      getVisibleLinkAtClientPoint: () => ({
+        id: destination,
+        url: destination,
+        cells: [3],
+      }),
+      setVisibleLinkHover() {},
+    },
+    (url) =>
+      requestVisibleLink(url, {
+        onExternalLink: (link) => externalLinks.push(link),
+        onLocalImageActivation: (source) => openings.push(preview.open(source)),
+      }),
+    process.platform === "darwin" ? "MacIntel" : "Windows",
+  );
+  for (const type of ["pointerdown", "pointerup"])
+    canvas.addEventListener(type, () => inputs.push("unowned mouse report"));
+  const downstream = new Error(
+    "Post-local-path scenario is outside this probe",
+  );
+  const window = {
+    webContents: {
+      async executeJavaScript(script: string) {
+        if (invalidateBeforeNextOperation) {
+          destinationObserver.invalidate();
+          invalidateBeforeNextOperation = false;
+        }
+        return runInNewContext(script, { document }) as unknown;
+      },
+      sendInputEvent(event: MouseInputEvent) {
+        events.push(event);
+        if (preview.isActive()) clickedWhileOpening = true;
+        if (destination !== expectedDestination)
+          clickedBeforeDestination = true;
+        canvas.dispatchEvent(
+          new PointerEvent(
+            event.type === "mouseDown" ? "pointerdown" : "pointerup",
+            {
+              bubbles: true,
+              cancelable: true,
+              pointerId: 1,
+              pointerType: "mouse",
+              isPrimary: true,
+              clientX: event.x,
+              clientY: event.y,
+              button: 0,
+              buttons: event.type === "mouseDown" ? 1 : 0,
+              metaKey: event.modifiers?.includes("meta") ?? false,
+              ctrlKey: event.modifiers?.includes("control") ?? false,
+            },
+          ),
+        );
+      },
+    },
+  } as unknown as BrowserWindow;
+  return {
+    downstream,
+    events,
+    localImageRequests,
+    clickedWhileOpening: () => clickedWhileOpening,
+    firstReplyCompleted: () => firstReplyCompleted,
+    clickedBeforeDestination: () => clickedBeforeDestination,
+    destinationObserver,
+    options: {
+      window,
+      resizes: [{ cols: 80, rows: 20 }],
+      externalLinks,
+      inputs,
+      localImageRequests,
+      deliverOutput(data: string) {
+        if (data.includes("https://one.test")) throw downstream;
+        expectedDestination = data
+          .replace(/\u001b\][^\u0007]*\u0007/gu, "")
+          .replace(/\u001b\[[?\d;]*[A-Za-z]/gu, "")
+          .replace(/^漢e\u0301 /u, "");
+        const local =
+          !expectedDestination.startsWith("https://") &&
+          !expectedDestination.startsWith("alternate");
+        if (local && options.mutation === "local-geometry") canvasId = 2;
+        if (local && options.mutation === "never-current") {
+          destinationObserver.invalidate();
+          return;
+        }
+        if (local && options.mutation === "stale-current") {
+          presentDestination(destination);
+          return;
+        }
+        if (options.destinationDelay && local) {
+          const next = expectedDestination;
+          destinationObserver.invalidate();
+          setTimeout(() => {
+            presentDestination(next);
+          }, options.destinationDelay);
+        } else presentDestination(expectedDestination);
+      },
+      async waitFor(
+        predicate: () => boolean | Promise<boolean>,
+        label: string,
+      ) {
+        const deadline = Date.now() + 1000;
+        while (!(await predicate())) {
+          if (Date.now() >= deadline)
+            throw new Error(`Readiness exhausted: ${label}`);
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        if (
+          options.mutation === "late-invalidation" &&
+          label.includes("current destination")
+        )
+          invalidateBeforeNextOperation = true;
+      },
+    },
+    async dispose() {
+      controller.dispose();
+      preview.dispose();
+      await Promise.all(openings);
+      delete (document as Document & { __resttyLinkPreviewFixture?: unknown })
+        .__resttyLinkPreviewFixture;
+      root.remove();
+    },
+  };
+}
+
+it("waits for prior preview cancellation before each single local-image gesture", async () => {
+  vi.useFakeTimers();
+  const fixture = cancellingPreviewRenderer({ priorReplyDelay: 350 });
+  try {
+    const outcome = exerciseResttyLinks(fixture.options).catch(
+      (error: unknown) => error,
+    );
+    await vi.runAllTimersAsync();
+    expect(await outcome).toBe(fixture.downstream);
+    expect(fixture.firstReplyCompleted()).toBe(true);
+    expect(fixture.clickedWhileOpening()).toBe(false);
+    expect(fixture.localImageRequests).toHaveLength(4);
+    expect(fixture.events).toHaveLength(12); // two web + four local, one down/up each
+    const modifiers = process.platform === "darwin" ? ["meta"] : ["control"];
+    expect(fixture.events.slice(4)).toEqual(
+      Array.from({ length: 4 }, () => [
+        {
+          type: "mouseDown",
+          x: 35,
+          y: 10,
+          button: "left",
+          clickCount: 1,
+          modifiers,
+        },
+        {
+          type: "mouseUp",
+          x: 35,
+          y: 10,
+          button: "left",
+          clickCount: 1,
+          modifiers,
+        },
+      ]).flat(),
+    );
+    const path =
+      process.platform === "win32"
+        ? `C:\\tmp\\${"local".repeat(80)}%23#fixture.data`
+        : `/tmp/${"local".repeat(80)}%23#fixture.data`;
+    expect(fixture.localImageRequests).toEqual([
+      { source: "native-path", path },
+      { source: "path-reference", path: "~/image.png:1" },
+      { source: "path-reference", path: "../image.png" },
+      { source: "path-reference", path: `'${path} space.png':12:3` },
+    ]);
+    expect(fixture.options.inputs).toEqual([]);
+  } finally {
+    await fixture.dispose();
+  }
+});
+
+it("waits for the expected CURRENT destination rather than a previous recognized destination", async () => {
+  vi.useFakeTimers();
+  const fixture = cancellingPreviewRenderer({ destinationDelay: 250 });
+  try {
+    const outcome = exerciseResttyLinks(fixture.options).catch(
+      (error: unknown) => error,
+    );
+    await vi.runAllTimersAsync();
+    expect(await outcome).toBe(fixture.downstream);
+    expect(fixture.clickedBeforeDestination()).toBe(false);
+    expect(fixture.localImageRequests).toHaveLength(4);
+    expect(fixture.events).toHaveLength(12);
+    expect(fixture.options.externalLinks).toHaveLength(2);
+    expect(fixture.options.inputs).toEqual([]);
+  } finally {
+    await fixture.dispose();
+  }
+});
+
+it.each([
+  ["never-current", "current destination", 4, 0],
+  ["stale-current", "current destination", 4, 0],
+  ["late-invalidation", "preparation invalidated", 4, 0],
+  ["extra-request", "activation", 6, 2],
+  ["late-extra-request", "excess requests", 6, 2],
+  ["local-geometry", "geometry-changed", 4, 0],
+  ["wrong-literal", "changed the literal destination", 6, 1],
+] as const)(
+  "fails boundedly on %s without another gesture and clears its expectation",
+  async (mutation, phase, eventCount, requestCount) => {
+    vi.useFakeTimers();
+    const fixture = cancellingPreviewRenderer({ mutation });
+    try {
+      const outcome = exerciseResttyLinks(fixture.options).catch(
+        (error: unknown) => error,
+      );
+      await vi.runAllTimersAsync();
+      const failure = await outcome;
+      expect(failure instanceof Error && failure.message).toContain(phase);
+      expect(fixture.events).toHaveLength(eventCount);
+      expect(fixture.localImageRequests).toHaveLength(requestCount);
+      expect(fixture.destinationObserver.snapshot()).toBeUndefined();
+      // A cleared expectation cannot match a later frame after failure.
+      expect(
+        fixture.destinationObserver.capture({
+          cols: 80,
+          rows: 20,
+          codepoints: new Uint32Array(1600),
+        }).matches,
+      ).toBe(false);
+      expect(fixture.options.inputs).toEqual([]);
+    } finally {
+      await fixture.dispose();
+    }
+  },
+);
+
+it("times out a pending preview without replacing output or sending the next gesture", async () => {
+  vi.useFakeTimers();
+  const fixture = cancellingPreviewRenderer({ priorReplyDelay: 1500 });
+  try {
+    const outcome = exerciseResttyLinks(fixture.options).catch(
+      (error: unknown) => error,
+    );
+    await vi.runAllTimersAsync();
+    const failure = await outcome;
+    expect(failure instanceof Error && failure.message).toContain(
+      "variant 0 preview cancellation (count 1)",
+    );
+    expect(fixture.events).toHaveLength(6);
+    expect(fixture.localImageRequests).toHaveLength(1);
+    expect(fixture.firstReplyCompleted()).toBe(true);
+    expect(fixture.clickedWhileOpening()).toBe(false);
+    expect(fixture.destinationObserver.snapshot()).toBeUndefined();
+    expect(fixture.options.inputs).toEqual([]);
+  } finally {
+    await fixture.dispose();
+  }
+});
