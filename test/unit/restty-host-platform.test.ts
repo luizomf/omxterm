@@ -1,11 +1,54 @@
-import { expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import {
   defaultInputCommand,
+  explicitFixtureLaunchRequest,
   hasSelectionFixtureOutput,
   hasSelectionFixtureTranscript,
   selectionFixtureCommand,
   selectionFixtureReset,
 } from "../fixtures/restty-host-platform";
+
+afterEach(() => vi.unstubAllGlobals());
+
+it.each(["darwin", "linux"] as const)(
+  "%s owned explicit child disables echo before readiness and retains its Unicode read/ack",
+  (platform) => {
+    vi.stubGlobal("process", { ...process, platform });
+    const request = explicitFixtureLaunchRequest();
+    if (request.kind !== "explicit-command")
+      throw new Error("Expected owned explicit child");
+    expect(request.executable).toBe("/bin/sh");
+    expect(request.arguments[0]).toBe("-c");
+    const script = request.arguments[1]!;
+    expect(script).toMatch(
+      /^stty -echo \|\| exit 1; printf '__EXPLICIT_READY__/u,
+    );
+    expect(script).toContain(
+      "IFS= read -r line; printf '__EXPLICIT_INPUT__%s\\n' \"$line\"; IFS= read -r keepAlive",
+    );
+  },
+);
+
+it("Windows preserves its Unicode line acknowledgement then owns an intercepting key consumer", () => {
+  vi.stubGlobal("process", { ...process, platform: "win32" });
+  const request = explicitFixtureLaunchRequest();
+  if (request.kind !== "explicit-command")
+    throw new Error("Expected owned explicit child");
+  expect(request.arguments.slice(0, 3)).toEqual([
+    "-NoLogo",
+    "-NoProfile",
+    "-Command",
+  ]);
+  const script = request.arguments[3]!;
+  expect(script).toContain(
+    "$line=[Console]::ReadLine(); [Console]::WriteLine('__EXPLICIT_INPUT__'+$line);",
+  );
+  expect(script).toMatch(
+    /while \(\$true\) \{ \[Console\]::ReadKey\(\$true\) \| Out-Null \}$/u,
+  );
+  expect(script.split("__EXPLICIT_INPUT__")[1]).not.toContain("ReadLine");
+  expect(script).not.toContain("stty");
+});
 
 it.each(["win32", "darwin", "linux"] as const)(
   "%s Unicode execution acknowledgement cannot be satisfied by command echo",

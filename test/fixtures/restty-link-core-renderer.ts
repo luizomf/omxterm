@@ -11,6 +11,18 @@ import {
 export interface LinkCoreRendererOptions {
   readonly wasm: Awaited<ReturnType<typeof loadResttyWasm>>;
   readonly delay: number;
+  readonly feedback?:
+    | "mouse-echo"
+    | "cursor-hide"
+    | "cursor-hide-delayed"
+    | "cursor-hide-unsubmitted"
+    | "cursor-hide-stale"
+    | "cursor-hide-geometry"
+    | "cursor-hide-origin"
+    | "cursor-hide-grid"
+    | "mouse-off"
+    | "scroll-feedback"
+    | "expectation-reset";
   readonly stopAfterHardBreak?: boolean;
   readonly mutation?:
     | "hard-break-missing"
@@ -139,10 +151,9 @@ export function createLinkCoreRenderer(
     // WASM views; core updates without submission cannot advance this frame.
     submitted = structuredClone(frame);
   };
-  const schedule = () => {
+  const schedule = (delay = hardBreakDelivered ? options.delay : 0) => {
     if (pending) clearTimeout(pending);
-    if (!suppressFrame)
-      pending = setTimeout(produce, hardBreakDelivered ? options.delay : 0);
+    if (!suppressFrame) pending = setTimeout(produce, delay);
   };
   const scroll = runInNewContext(
     slice(
@@ -177,6 +188,9 @@ export function createLinkCoreRenderer(
       mouseActive: handler.isMouseActive(),
     }),
     lookup: (x: number, y: number) => lookup(x / 10, y / 20),
+    resizeForFeedback() {
+      wasm.resize(handle, 79, 20);
+    },
     nativeDown() {
       originalPressInputStart = inputs.join("").length;
     },
@@ -199,13 +213,13 @@ export function createLinkCoreRenderer(
         suppressFrame = true;
       scroll.scrollViewportByWheel(event);
     },
-    deliver(data: string) {
+    deliver(data: string, submissionDelay?: number | false) {
       if (data.includes("https://one.test")) {
         if (hardBreakDelivered && options.stopAfterHardBreak) return false;
         hardBreakDelivered = true;
       }
       handler.filterOutput(data);
-      observer.invalidate();
+      observer.invalidate("output");
       if (data.includes("https://new.test/b"))
         consumedOriginal = inputs.join("").length === originalPressInputStart;
       if (data.includes("https://clipped-end.test"))
@@ -224,7 +238,9 @@ export function createLinkCoreRenderer(
       )
         wasm.write(handle, "");
       else wasm.write(handle, data);
-      schedule();
+      if (submissionDelay === false) {
+        if (pending) clearTimeout(pending);
+      } else schedule(submissionDelay);
       return true;
     },
     dispose() {

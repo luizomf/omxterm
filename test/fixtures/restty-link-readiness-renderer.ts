@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { createInputHandler } from "restty/internal";
+import { createFixtureMetricReplyRouter } from "./restty-host-metric-replies";
+import { hardRows } from "./restty-link-flow-readiness";
 import type { BrowserWindow, MouseInputEvent } from "electron";
 import type { LocalImageRequest } from "../../src/shared/local-image";
 import { visibleLinkAtOffset } from "../../src/terminal-surface/visible-links";
@@ -34,6 +36,74 @@ export const observer = (
       visibleLinkAtOffset(text, offset, clippedStart, clippedEnd),
     readViewport,
   );
+
+// Real routing with a controlled external consumer. Faults are test-only, not
+// a model of native causality. Keep this feedback adapter outside the DOM owner.
+function modeledReplyRoute(
+  options: PreviewRendererOptions,
+  inputs: string[],
+  fixture: {
+    observer: () => ReturnType<typeof observer>;
+    core: () => ReturnType<typeof createLinkCoreRenderer> | undefined;
+    replaceCanvas: () => void;
+    translateCanvas: () => void;
+    deliverOutput: (data: string) => void;
+  },
+) {
+  let armed = false;
+  const replies: string[] = [];
+  const route = createFixtureMetricReplyRouter(
+    {
+      write(data: string) {
+        if (!armed || !options.flow?.feedback) return;
+        replies.push(data);
+        if (replies.length !== 2) return;
+        armed = false;
+        const feedback = options.flow.feedback;
+        const destination = fixture.observer();
+        const retained = destination.snapshot();
+        const output =
+          feedback === "mouse-echo"
+            ? replies.join("").replaceAll("\u001b", "^[")
+            : feedback === "mouse-off"
+              ? "\u001b[?1000l"
+              : feedback === "scroll-feedback"
+                ? "\u001b[20;1H\r\n"
+                : "\u001b[?25l";
+        if (feedback === "cursor-hide-geometry") fixture.replaceCanvas();
+        if (feedback === "cursor-hide-origin") fixture.translateCanvas();
+        if (feedback === "cursor-hide-grid")
+          fixture.core()!.resizeForFeedback();
+        if (feedback === "expectation-reset")
+          destination.prepareFrame(
+            hardRows(["https://one.test/a", "https://two.test/b"]),
+          );
+        fixture
+          .core()!
+          .deliver(
+            output,
+            feedback === "cursor-hide-delayed"
+              ? 100
+              : feedback === "cursor-hide-unsubmitted" ||
+                  feedback === "cursor-hide-stale"
+                ? false
+                : 0,
+          );
+        if (feedback === "cursor-hide-stale" && retained)
+          destination.present(retained);
+      },
+      resize() {},
+    },
+    fixture.deliverOutput,
+    { inputs, resizes: [] },
+  );
+  return {
+    ...route,
+    armFeedback() {
+      armed = true;
+    },
+  };
+}
 
 // Explicit modeled cell production, not a Unicode renderer. Actual WASM and
 // prepared-runtime recognition are checked separately in the probe tests.
@@ -183,8 +253,25 @@ export function cancellingPreviewRenderer(
   const inputs: string[] = [];
   const events: MouseInputEvent[] = [];
   const openings: Promise<void>[] = [];
+  const route = modeledReplyRoute(options, inputs, {
+    observer: () => destinationObserver,
+    core: () => core,
+    replaceCanvas: () => replaceCanvas(),
+    translateCanvas() {
+      geometry.canvas.x = 10;
+      geometry.viewport.width = 810;
+    },
+    deliverOutput(data) {
+      if (core) {
+        if (!core.deliver(data)) throw downstream;
+      } else {
+        handler.filterOutput(data);
+        modeled.deliver(data);
+      }
+    },
+  });
   const handler = createInputHandler({
-    sendReply: (data) => inputs.push(data),
+    sendReply: (data) => route.terminal.write(data),
     getWheelCellMetrics: () => ({
       cellWidth: 10,
       cellHeight: 20,
@@ -289,7 +376,7 @@ export function cancellingPreviewRenderer(
           destinationObserver.invalidate();
           invalidateBeforeNextOperation = false;
         }
-        return runInNewContext(script, {
+        const result = await (runInNewContext(script, {
           document,
           WheelEvent,
           requestAnimationFrame: (callback: () => void) =>
@@ -297,7 +384,10 @@ export function cancellingPreviewRenderer(
           window: {
             omxterm: { terminal: { configuration: async () => undefined } },
           },
-        }) as unknown;
+        }) as unknown);
+        // Electron serializes bridge results. Do not alias mutable geometry or
+        // observer metadata between this controlled renderer and its caller.
+        return structuredClone(result);
       },
       sendInputEvent(event: MouseInputEvent) {
         events.push(event);
@@ -350,14 +440,7 @@ export function cancellingPreviewRenderer(
       externalLinks,
       inputs,
       localImageRequests,
-      deliverOutput(data: string) {
-        if (core) {
-          if (!core.deliver(data)) throw downstream;
-        } else {
-          handler.filterOutput(data);
-          modeled.deliver(data);
-        }
-      },
+      deliverOutput: route.deliverOutput,
       async waitFor(
         predicate: () => boolean | Promise<boolean>,
         label: string,
@@ -368,6 +451,7 @@ export function cancellingPreviewRenderer(
             throw new Error(`Readiness exhausted: ${label}`);
           await new Promise((resolve) => setTimeout(resolve, 10));
         }
+        if (label === "released-modifier current frame") route.armFeedback();
         if (
           (options.flow?.mutation === "hard-break-invalidation" &&
             label === "hard-break current frame") ||

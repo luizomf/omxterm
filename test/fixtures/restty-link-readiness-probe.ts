@@ -30,12 +30,22 @@ export interface LinkFixtureFrame {
   }>;
 }
 
+export type LinkInvalidationOrigin =
+  | "prepare"
+  | "clear"
+  | "output"
+  | "viewport-scroll"
+  | "viewport-scalar"
+  | "manual";
+
 interface RenderedDestination {
   readonly cols: number;
   readonly rows: number;
   readonly matches: boolean;
   readonly frameId?: number;
+  readonly expectationId?: number;
   readonly viewport?: LinkFixtureViewport | undefined;
+  readonly viewportMatches?: boolean;
 }
 
 interface DestinationCells {
@@ -70,6 +80,8 @@ export function createLinkDestinationObserver(
     | undefined;
   let frame: LinkFixtureFrame | undefined;
   let frameId = 0;
+  let expectationId = 0;
+  let origin: LinkInvalidationOrigin = "clear";
   let presented: RenderedDestination | undefined;
   function matchesAsciiRows(
     render: DestinationCells,
@@ -99,10 +111,8 @@ export function createLinkDestinationObserver(
     expectation: LinkFixtureFrame,
   ): RenderedDestination {
     const viewport = readViewport?.();
-    const matches = Boolean(
-      resolve &&
+    const viewportMatches = Boolean(
       viewport &&
-      matchesAsciiRows(render, expectation.lines) &&
       viewport.length === render.rows &&
       viewport.alternate === expectation.viewport.alternate &&
       viewport.mouseActive === expectation.viewport.mouseActive &&
@@ -110,7 +120,12 @@ export function createLinkDestinationObserver(
         ? viewport.offset + viewport.length === viewport.total
         : viewport.offset === expectation.viewport.offset) &&
       (expectation.viewport.total === undefined ||
-        viewport.total === expectation.viewport.total) &&
+        viewport.total === expectation.viewport.total),
+    );
+    const matches = Boolean(
+      resolve &&
+      viewportMatches &&
+      matchesAsciiRows(render, expectation.lines) &&
       expectation.targets.every(
         ({ row, col, firstRow, lastRow, clippedStart, clippedEnd, url }) => {
           if (
@@ -132,13 +147,23 @@ export function createLinkDestinationObserver(
         },
       ),
     );
-    return { cols: render.cols, rows: render.rows, matches, frameId, viewport };
+    return {
+      cols: render.cols,
+      rows: render.rows,
+      matches,
+      frameId,
+      expectationId,
+      viewport,
+      viewportMatches,
+    };
   }
   return {
     // The local gesture-only paths are ASCII and start at cell zero.
     prepare(destination: string) {
       frame = undefined;
       frameId++;
+      origin = "prepare";
+      expectationId++;
       expected = Array.from(destination, (char) => char.codePointAt(0)!);
       web = undefined;
       presented = undefined;
@@ -152,6 +177,8 @@ export function createLinkDestinationObserver(
     ) {
       frame = undefined;
       frameId++;
+      origin = "prepare";
+      expectationId++;
       expected = undefined;
       web = { destination, text: prefix + destination, points };
       presented = undefined;
@@ -161,6 +188,8 @@ export function createLinkDestinationObserver(
       web = undefined;
       frame = expectation;
       frameId++;
+      origin = "prepare";
+      expectationId++;
       presented = undefined;
     },
     capture(render: DestinationCells): RenderedDestination {
@@ -243,17 +272,24 @@ export function createLinkDestinationObserver(
         JSON.stringify(presented.viewport) !== JSON.stringify(readViewport?.())
       ) {
         frameId++;
+        origin = "viewport-scalar";
         presented = undefined;
       }
       return presented;
     },
-    invalidate() {
+    status() {
+      return { frameId, expectationId, origin, viewport: readViewport?.() };
+    },
+    invalidate(reason: LinkInvalidationOrigin = "manual") {
       frameId++;
+      origin = reason;
       presented = undefined;
     },
     clear() {
       frame = undefined;
       frameId++;
+      origin = "clear";
+      expectationId++;
       expected = undefined;
       web = undefined;
       presented = undefined;
@@ -288,7 +324,7 @@ export function instrumentResttyLinkDestination(source: string): string {
   );
   replace(
     "    shared.wasm.write(handle, text);",
-    `    options.getCanvas().__resttyLinkDestinationFixture?.invalidate();
+    `    options.getCanvas().__resttyLinkDestinationFixture?.invalidate('output');
     shared.wasm.write(handle, text);`,
   );
   const scroll = "    wasm.scrollViewport(wasmHandle, delta);";
@@ -296,7 +332,7 @@ export function instrumentResttyLinkDestination(source: string): string {
     throw new Error("Pinned link viewport observation seam drift");
   source = source.replaceAll(
     scroll,
-    `    getCanvas().__resttyLinkDestinationFixture?.invalidate();\n${scroll}`,
+    `    getCanvas().__resttyLinkDestinationFixture?.invalidate('viewport-scroll');\n${scroll}`,
   );
   replace(
     "  populateWebGLSceneData(ctx);",

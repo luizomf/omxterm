@@ -87,7 +87,9 @@ export function explicitFixtureLaunchRequest(): LaunchRequest {
         "-NoLogo",
         "-NoProfile",
         "-Command",
-        `[Console]::InputEncoding=[Text.UTF8Encoding]::new(); [Console]::OutputEncoding=[Text.UTF8Encoding]::new(); $bytes=[Convert]::FromBase64String('${encoded}'); [Console]::OpenStandardOutput().Write($bytes,0,$bytes.Length); $line=[Console]::ReadLine(); [Console]::WriteLine('__EXPLICIT_INPUT__'+$line); [Console]::ReadLine() | Out-Null`,
+        // Keep the one Unicode line/ACK; subsequent gestures use the focused
+        // child's intercepting ReadKey owner, not another echoing ReadLine.
+        `[Console]::InputEncoding=[Text.UTF8Encoding]::new(); [Console]::OutputEncoding=[Text.UTF8Encoding]::new(); $bytes=[Convert]::FromBase64String('${encoded}'); [Console]::OpenStandardOutput().Write($bytes,0,$bytes.Length); $line=[Console]::ReadLine(); [Console]::WriteLine('__EXPLICIT_INPUT__'+$line); while ($true) { [Console]::ReadKey($true) | Out-Null }`,
       ],
     };
   }
@@ -96,7 +98,8 @@ export function explicitFixtureLaunchRequest(): LaunchRequest {
     executable: "/bin/sh",
     arguments: [
       "-c",
-      "printf '__EXPLICIT_READY__Olá🙂\\n\\033]2;second-title\\007\\007\\033]52;c;dW5zYWZl\\007\\033]8;;https://example.com\\007https://example.com\\033]8;;\\007'; IFS= read -r line; printf '__EXPLICIT_INPUT__%s\\n' \"$line\"; IFS= read -r keepAlive",
+      // Like the focused cancellation child, own echo suppression before ACK.
+      "stty -echo || exit 1; printf '__EXPLICIT_READY__Olá🙂\\n\\033]2;second-title\\007\\007\\033]52;c;dW5zYWZl\\007\\033]8;;https://example.com\\007https://example.com\\033]8;;\\007'; IFS= read -r line; printf '__EXPLICIT_INPUT__%s\\n' \"$line\"; IFS= read -r keepAlive",
     ],
   };
 }

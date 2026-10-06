@@ -185,6 +185,129 @@ it("completes delayed scrollback and purposeful negative transitions without los
   }
 });
 
+it("refuses the wheel after released-modifier mouse replies echo through the real router into core cells", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("process", { ...process, platform: "linux" });
+  const fixture = cancellingPreviewRenderer({
+    flow: { wasm: await loadResttyWasm(), delay: 250, feedback: "mouse-echo" },
+  });
+  try {
+    const outcome = exerciseResttyLinks(fixture.options).catch(
+      (error: unknown) => error,
+    );
+    await vi.runAllTimersAsync();
+    const failure = await outcome;
+    expect(failure instanceof Error && failure.message).toContain(
+      "preparation invalidated (phase wheel, requests 4, sent input events 11",
+    );
+    expect(failure instanceof Error && failure.message).toContain(
+      "content-mismatch",
+    );
+    expect(failure instanceof Error && failure.message).toContain(
+      "origin output, matched false",
+    );
+    expect(fixture.options.externalLinks).toHaveLength(4);
+    expect(fixture.events).toHaveLength(27);
+    expect(fixture.wheelCount()).toBe(0);
+    expect(fixture.options.inputs.slice(-2)).toEqual([
+      "\u001b[<16;4;1M",
+      "\u001b[<0;4;1m",
+    ]);
+  } finally {
+    await fixture.dispose();
+  }
+});
+
+it.each(["cursor-hide", "cursor-hide-delayed"] as const)(
+  "continues once from newly submitted equal cells after %s released-modifier control feedback",
+  async (feedback) => {
+    vi.useFakeTimers();
+    vi.stubGlobal("process", { ...process, platform: "linux" });
+    const fixture = cancellingPreviewRenderer({
+      flow: { wasm: await loadResttyWasm(), delay: 250, feedback },
+    });
+    try {
+      const outcome = exerciseResttyLinks(fixture.options).catch(
+        (error: unknown) => error,
+      );
+      await vi.runAllTimersAsync();
+      const result = await outcome;
+      if (result instanceof Error) throw result;
+      expect(fixture.options.externalLinks).toEqual([
+        `https://example.test/漢${"a".repeat(80)}`,
+        `https://example.test/漢${"a".repeat(80)}`,
+        "https://one.test/a",
+        "https://two.test/b",
+        "https://scroll.test/complete",
+      ]);
+      expect(fixture.events).toHaveLength(35);
+      expect(fixture.wheelCount()).toBe(4);
+      expect(result).toMatchObject({
+        ordinaryGestures: {
+          releasedModifier: {
+            mouseReports: "\u001b[<16;4;1M\u001b[<0;4;1m",
+            activationsBefore: 8,
+            activationsAfter: 8,
+          },
+        },
+      });
+    } finally {
+      await fixture.dispose();
+    }
+  },
+);
+
+it.each([
+  ["cursor-hide-unsubmitted", "absent-snapshot", "none"],
+  ["cursor-hide-stale", "absent-snapshot", "none"],
+  ["cursor-hide-geometry", "geometry-changed", "true"],
+  ["cursor-hide-origin", "geometry-changed", "true"],
+  ["cursor-hide-grid", "grid-difference", "true"],
+  ["mouse-off", "viewport-mode-difference", "false"],
+  ["scroll-feedback", "viewport-mode-difference", "false"],
+  ["expectation-reset", "expectation-changed", "true"],
+] as const)(
+  "refuses %s feedback without reusing a match, sending a wheel or changing replay",
+  async (feedback, reason, matched) => {
+    vi.useFakeTimers();
+    vi.stubGlobal("process", { ...process, platform: "linux" });
+    const fixture = cancellingPreviewRenderer({
+      flow: { wasm: await loadResttyWasm(), delay: 250, feedback },
+    });
+    try {
+      const outcome = exerciseResttyLinks(fixture.options).catch(
+        (error: unknown) => error,
+      );
+      await vi.runAllTimersAsync();
+      const failure = await outcome;
+      expect(failure instanceof Error && failure.message).toContain(
+        "preparation invalidated (phase wheel, requests 4, sent input events 11",
+      );
+      expect(failure instanceof Error && failure.message).toContain(
+        `reason ${reason}`,
+      );
+      expect(failure instanceof Error && failure.message).toContain(
+        `origin output, matched ${matched}`,
+      );
+      expect(failure instanceof Error && failure.message).not.toMatch(
+        /https:|\u001b|\^\[|one\.test/u,
+      );
+      expect(fixture.options.externalLinks).toHaveLength(4);
+      expect(fixture.events).toHaveLength(27);
+      expect(fixture.wheelCount()).toBe(0);
+      expect(fixture.options.inputs.join("")).toBe(
+        "\u001b[<16;4;1M\u001b[<16;4;2m" +
+          "\u001b[<0;4;1M\u001b[<0;4;1m" +
+          "\u001b[<17;4;1M\u001b[<17;4;1m" +
+          "\u001b[<16;4;1M\u001b[<16;4;1m" +
+          "\u001b[<16;4;1M\u001b[<0;4;1m",
+      );
+    } finally {
+      await fixture.dispose();
+    }
+  },
+);
+
 it.each([
   ["hard-break-missing", "readiness exhausted (phase hard-break", 12, 2],
   ["hard-break-stale", "readiness exhausted (phase hard-break", 12, 2],

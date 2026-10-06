@@ -291,7 +291,7 @@ export async function exerciseResttyOrdinaryGestures(
       send("mouseUp", first, false);
     });
     const wheel = await record("wheel", async () => {
-      await flow.points([[0, 3]]);
+      await flow.points([[0, 3]], "wheel");
       await scrollTerminal(window, 0, 3, reflowedSize, 2);
     });
 
@@ -311,7 +311,7 @@ export async function exerciseResttyOrdinaryGestures(
       send("mouseUp", first, false);
     });
     const alternateWheel = await record("alternateWheel", async () => {
-      await flow.points([[0, 3]]);
+      await flow.points([[0, 3]], "alternate-wheel");
       await scrollTerminal(window, 0, 3, reflowedSize, -1);
     });
     await flow.prepare(
@@ -395,7 +395,7 @@ async function exerciseScrollbackLinkControls(
     );
     await flow.wait();
     // Prepare the post-scroll expectation before the one viewport mutation.
-    await flow.points([[1, 1]]);
+    await flow.points([[1, 1]], "scrollback-wheel");
     await flow.prepare(
       "scrollback-visible",
       frame(
@@ -443,7 +443,7 @@ async function exerciseScrollbackLinkControls(
       `${reset}${lead.join("\r\n")}\r\n${clippedEndUrl}\r\n${trail.join("\r\n")}`,
     );
     await flow.wait();
-    await flow.points([[1, 1]]);
+    await flow.points([[1, 1]], "clipped-below-wheel");
     await flow.prepare(
       "clipped-below",
       frame([...lead, clippedEndParts[0]!], 0, rows + history, [
