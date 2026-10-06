@@ -7,22 +7,97 @@ interface RenderedDestination {
   readonly matches: boolean;
 }
 
-// The gesture-only paths are ASCII and start at cell zero on a cleared grid.
+interface DestinationCells {
+  readonly cols: number;
+  readonly rows: number;
+  readonly codepoints?: ArrayLike<number>;
+  readonly wide?: ArrayLike<number>;
+  readonly graphemeLen?: ArrayLike<number>;
+  readonly graphemeOffset?: ArrayLike<number>;
+  readonly graphemeBuffer?: ArrayLike<number>;
+}
+
 // Copy only a match bit before shaping can allocate; never retain borrowed WASM
 // views or terminal text. This is submitted-frame readiness, not pixel proof.
-export function createLinkDestinationObserver() {
+export function createLinkDestinationObserver(
+  readCluster?: (render: DestinationCells, index: number) => string,
+  resolve?: (input: {
+    text: string;
+    offset: number;
+    clippedStart: boolean;
+    clippedEnd: boolean;
+  }) => { readonly url: string } | null | undefined,
+) {
   let expected: number[] | undefined;
+  let web:
+    | {
+        destination: string;
+        text: string;
+        points: ReadonlyArray<readonly [number, number]>;
+      }
+    | undefined;
   let presented: RenderedDestination | undefined;
   return {
+    // The local gesture-only paths are ASCII and start at cell zero.
     prepare(destination: string) {
       expected = Array.from(destination, (char) => char.codePointAt(0)!);
+      web = undefined;
       presented = undefined;
     },
-    capture(render: {
-      cols: number;
-      rows: number;
-      codepoints?: ArrayLike<number>;
-    }): RenderedDestination {
+    // This fixture emits exactly one hard-break-free logical line at cell zero
+    // on a cleared grid. Do not use this observation to join arbitrary output.
+    prepareWeb(
+      destination: string,
+      prefix: string,
+      points: ReadonlyArray<readonly [number, number]>,
+    ) {
+      expected = undefined;
+      web = { destination, text: prefix + destination, points };
+      presented = undefined;
+    },
+    capture(render: DestinationCells): RenderedDestination {
+      if (web) {
+        let matches = false;
+        if (render.codepoints && readCluster && resolve) {
+          let end = render.cols * render.rows;
+          while (end > 0 && !(render.codepoints[end - 1] ?? 0)) end--;
+          let wideWrapSpacer = false;
+          const cells = Array.from({ length: end }, (_, index) => {
+            const wide = render.wide?.[index] ?? 0;
+            if (wide === 3) wideWrapSpacer = true;
+            return wide === 2 || wide === 3 ? "" : readCluster(render, index);
+          });
+          const text = cells.join("");
+          // Both value and cell offsets come from the submitted runtime cells,
+          // not code-point counts (wide tails and combining clusters differ).
+          // Current full-row selection includes the next row's wide glyph at
+          // a wide-wrap spacer, so the actual interaction refuses that frame.
+          matches =
+            !wideWrapSpacer &&
+            text === web.text &&
+            web.points.length === 2 &&
+            web.points.every(([row, col]) => {
+              const index = row * render.cols + col;
+              if (
+                row < 0 ||
+                col < 0 ||
+                col >= render.cols ||
+                row >= render.rows ||
+                !cells[index]
+              )
+                return false;
+              return (
+                resolve({
+                  text,
+                  offset: cells.slice(0, index).join("").length,
+                  clippedStart: false,
+                  clippedEnd: false,
+                })?.url === web!.destination
+              );
+            });
+        }
+        return { cols: render.cols, rows: render.rows, matches };
+      }
       let matches = Boolean(
         expected &&
         render.codepoints &&
@@ -54,6 +129,7 @@ export function createLinkDestinationObserver() {
     },
     clear() {
       expected = undefined;
+      web = undefined;
       presented = undefined;
     },
   };
@@ -69,7 +145,7 @@ export function instrumentResttyLinkDestination(source: string): string {
   replace(
     needle,
     `${needle}
-  canvas.__resttyLinkDestinationFixture = (${createLinkDestinationObserver.toString()})();
+  canvas.__resttyLinkDestinationFixture = (${createLinkDestinationObserver.toString()})(readClusterText, services.resolveVisibleLink);
   cleanupFns.push(() => {
     canvas.__resttyLinkDestinationFixture?.clear();
     delete canvas.__resttyLinkDestinationFixture;

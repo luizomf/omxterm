@@ -1,3 +1,10 @@
+import {
+  readCellSnapshot,
+  sendTerminalCellClick,
+  type CellSnapshot,
+  type TerminalSize,
+} from "./restty-link-input";
+import { exerciseInitialWebActivation } from "./restty-web-link-activation";
 import type { BrowserWindow } from "electron";
 import type { LocalImageRequest } from "../../src/shared/local-image";
 import {
@@ -10,34 +17,7 @@ import {
   hoverCellPoint,
   HoverEvidenceError,
   sameHoverGeometry,
-  validateHoverGeometry,
-  type HoverGeometry,
 } from "./restty-hover-evidence";
-
-interface CellSnapshot {
-  readonly canvasId: number;
-  readonly geometry: HoverGeometry;
-}
-interface TerminalSize {
-  readonly cols: number;
-  readonly rows: number;
-  readonly snapshot?: CellSnapshot;
-  readonly allowCanvasTranslation?: true;
-}
-
-async function readCellSnapshot(window: BrowserWindow): Promise<CellSnapshot> {
-  // Geometry must not inspect the core: an allocating selection query can
-  // detach the renderer's borrowed WASM views before its legitimate lookup.
-  return window.webContents.executeJavaScript(
-    `(() => {
-      const canvas = [...document.querySelectorAll('.restty-terminal-surface canvas')].find(c => c.getBoundingClientRect().width > 0);
-      if (!canvas?.__resttyHoverFixture) throw new Error('Cell geometry observer is missing');
-      const {canvasId, geometry} = canvas.__resttyHoverFixture();
-      return {canvasId, geometry};
-    })()`,
-    true,
-  ) as Promise<CellSnapshot>;
-}
 
 export interface ResttyLinkGestureOptions {
   readonly window: BrowserWindow;
@@ -119,30 +99,6 @@ export async function clickTerminalCell(
     window,
     await terminalCellPoint(window, row, col, size),
   );
-}
-
-function sendTerminalCellClick(
-  window: BrowserWindow,
-  point: { readonly x: number; readonly y: number },
-) {
-  const modifiers: Array<"meta" | "control"> =
-    process.platform === "darwin" ? ["meta"] : ["control"];
-  window.webContents.sendInputEvent({
-    type: "mouseDown",
-    x: point.x,
-    y: point.y,
-    button: "left",
-    clickCount: 1,
-    modifiers,
-  });
-  window.webContents.sendInputEvent({
-    type: "mouseUp",
-    x: point.x,
-    y: point.y,
-    button: "left",
-    clickCount: 1,
-    modifiers,
-  });
 }
 
 export async function scrollTerminal(
@@ -285,86 +241,9 @@ async function drainGestureInput(window: BrowserWindow): Promise<void> {
 export async function exerciseResttyLinks(
   options: ResttyLinkGestureOptions,
 ): Promise<ResttyLinkGestureEvidence> {
-  const { window, deliverOutput, inputs, resizes, externalLinks, waitFor } =
-    options;
-  const size = resizes.at(-1);
-  if (!size) throw new Error("Restty link fixture has no grid size");
-  const initial = await readCellSnapshot(window);
-  const visibleUrl = `https://example.test/漢${"a".repeat(size.cols)}`;
-  // Both wide characters occupy two cells; the combining mark adds no column.
-  const destinationColumns = Array.from(visibleUrl).length + 1;
-  deliverOutput(
-    `\u001b[2J\u001b[H\u001b[?25l\u001b[?1000h\u001b[?1006h漢e\u0301 ${visibleUrl}`,
-  );
-  deliverOutput("\u001b[?1049halternate\u001b[?1049l");
-  // The former native resize was followed by clearing and reprinting this URL,
-  // so it did not verify retained-output reflow. The local-image layout scenario
-  // covers actual shrink/widen of retained output without that reprint.
-  deliverOutput(
-    `\u001b[2J\u001b[H漢e\u0301 \u001b]8;;https://hidden.test/different\u0007${visibleUrl}\u001b]8;;\u0007`,
-  );
-  // Retain the original output-presentation opportunity, not a stability test.
-  // No geometry is frozen before it; the actual click still validates afresh.
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  const current = (snapshot: CellSnapshot) => {
-    if (
-      !Number.isSafeInteger(initial.canvasId) ||
-      initial.canvasId <= 0 ||
-      snapshot.canvasId !== initial.canvasId
-    )
-      throw new HoverEvidenceError("geometry-changed");
-    const grid = resizes.at(-1);
-    return (
-      grid?.cols === snapshot.geometry.cols &&
-      grid.rows === snapshot.geometry.rows
-    );
-  };
-  await waitFor(
-    async () => current(await readCellSnapshot(window)),
-    "Restty link current grid",
-  );
-
-  const inputBeforeLinks = inputs.join("");
-  let prepared: CellSnapshot | undefined;
-  for (const [row, col] of [
-    [0, 4],
-    [1, 2],
-  ] as const) {
-    // The readiness observation is not the gesture's geometry. Read again at
-    // the actual input boundary, freeze the first click, and reject subsequent
-    // changes. No output, sleep or IPC await separates validation and sending.
-    const snapshot = await readCellSnapshot(window);
-    if (!current(snapshot))
-      throw new HoverEvidenceError("stimulus-invalidated");
-    if (prepared && !sameHoverGeometry(prepared.geometry, snapshot.geometry))
-      throw new HoverEvidenceError("geometry-changed");
-    validateHoverGeometry(snapshot.geometry);
-    const { cols, rows } = snapshot.geometry;
-    if (
-      4 + destinationColumns <= cols + 2 ||
-      4 + destinationColumns > cols * rows
-    )
-      throw new HoverEvidenceError("preparation");
-    prepared ??= snapshot;
-    sendTerminalCellClick(window, hoverCellPoint(snapshot.geometry, row, col));
-  }
-  if (!prepared) throw new HoverEvidenceError("preparation");
-  const reflowedSize: TerminalSize = {
-    cols: prepared.geometry.cols,
-    rows: prepared.geometry.rows,
-    snapshot: { canvasId: prepared.canvasId, geometry: prepared.geometry },
-  };
-  await waitFor(
-    () => externalLinks.length === 2,
-    "repeated visible link activation",
-  );
-  if (externalLinks[0] !== visibleUrl || externalLinks[1] !== visibleUrl)
-    throw new Error("Restty link activation changed the literal destination");
-  const validLinkMouseReports = gestureInputSince(
-    inputs,
-    inputBeforeLinks.length,
-  );
-
+  const { window, deliverOutput, externalLinks, waitFor } = options;
+  const { reflowedSize, validLinkMouseReports } =
+    await exerciseInitialWebActivation(options);
   const localPathMouseReports = await exerciseLocalPathActivation(
     options,
     reflowedSize,
@@ -375,6 +254,13 @@ export async function exerciseResttyLinks(
   await clickTerminalCell(window, 0, 3, reflowedSize);
   await clickTerminalCell(window, 1, 3, reflowedSize);
   await waitFor(() => externalLinks.length === 4, "hard-break link separation");
+  if (
+    externalLinks[2] !== "https://one.test/a" ||
+    externalLinks[3] !== "https://two.test/b"
+  )
+    throw new Error(
+      "Hard-break link activation changed the literal destinations",
+    );
 
   const named = await exerciseResttyOrdinaryGestures(options, reflowedSize);
   // Scrollback still uses the frozen grid for filler/wrap/clipping, but its
@@ -516,6 +402,10 @@ async function exerciseScrollbackLinkControls(
     () => externalLinks.length === 5,
     "fully visible scrollback link activation",
   );
+  if (externalLinks[4] !== scrollbackUrl)
+    throw new Error(
+      "Scrollback link activation changed the literal destination",
+    );
 
   deliverOutput("\u001b[3J\u001b[2J\u001b[H");
   const clippedUrl = `https://clipped.test/${"z".repeat(reflowedSize.cols)}`;
