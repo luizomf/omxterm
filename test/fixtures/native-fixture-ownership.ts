@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { recordFixtureRegistrationFailure } from "./native-fixture-registration-diagnostics";
 import {
   collectFixtureDescendants,
   fixtureProcesses,
@@ -8,6 +9,29 @@ import {
 } from "./native-fixture-processes";
 
 export const FIXTURE_PROCESS_DIRECTORY = "native-process-ownership";
+
+function publishRegistration(
+  record: string,
+  branch: "normal" | "early-exit",
+  data: {
+    readonly owner: FixtureProcess;
+    readonly processes?: readonly FixtureProcess[];
+  },
+): void {
+  const temporary = `${record}.tmp`;
+  const completed = data.processes !== undefined;
+  let phase: Parameters<typeof recordFixtureRegistrationFailure>[1] = completed
+    ? "completed-write"
+    : "pending-write";
+  try {
+    writeFileSync(temporary, JSON.stringify(data), { flag: "wx" });
+    phase = completed ? "completed-replacement" : "pending-replacement";
+    renameSync(temporary, record);
+  } catch (error) {
+    recordFixtureRegistrationFailure(branch, phase, error);
+    throw error;
+  }
+}
 
 // A write-ahead record makes interruption during spawn/registration observable.
 // The completed snapshot survives leader exit and POSIX reparenting. This is a
@@ -25,9 +49,7 @@ export function spawnFixtureProcess<T extends { readonly pid: number }>(
     FIXTURE_PROCESS_DIRECTORY,
     `${randomUUID()}.json`,
   );
-  const temporary = `${record}.tmp`;
-  writeFileSync(temporary, JSON.stringify({ owner }), { flag: "wx" });
-  renameSync(temporary, record);
+  publishRegistration(record, "normal", { owner });
   const child = spawn();
   const rows = fixtureProcesses();
   const owned = new Map([[owner.pid, owner]]);
@@ -43,23 +65,17 @@ export function spawnFixtureProcess<T extends { readonly pid: number }>(
       if (remaining.some((row) => row.pid === child.pid))
         throw new Error("Early-exit fixture PID remains observable");
       collectFixtureDescendants(remaining, owned);
-      writeFileSync(
-        temporary,
-        JSON.stringify({ owner, processes: [...owned.values()] }),
-        { flag: "wx" },
-      );
-      renameSync(temporary, record);
+      publishRegistration(record, "early-exit", {
+        owner,
+        processes: [...owned.values()],
+      });
     });
     return child;
   }
-  writeFileSync(
-    temporary,
-    JSON.stringify({ owner, processes: [...owned.values()] }),
-    {
-      flag: "wx",
-    },
-  );
-  renameSync(temporary, record);
+  publishRegistration(record, "normal", {
+    owner,
+    processes: [...owned.values()],
+  });
   return child;
 }
 
