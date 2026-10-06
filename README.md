@@ -91,13 +91,16 @@ final builds and recreation/restoration provenance are maintainer-reported, not 
 controlled clean pair. The earlier macOS GPU-hang trigger and Windows
 publication-failure cause remain unknown; later passes do not erase those failures.
 
-Additional maintainer-reported checks: setup, `check:portable`, dev,
-package/install, configuration, themes and keybinds. Exact source SHA unrecorded:
+Additional maintainer-reported manual checks (exact source SHA unrecorded).
+Linux checks include setup, `check:portable`, dev, package/install,
+configuration, themes and keybinds:
 
-| OS                   | Desktop                | Maintainer-reported result |
-| -------------------- | ---------------------- | -------------------------- |
-| Debian 13.4 (Trixie) | KDE Plasma 6 / Wayland | **PASS**                   |
-| Fedora 44            | GNOME Shell 50.5       | **PASS**                   |
+| OS                   | Desktop                | Maintainer-reported result             |
+| -------------------- | ---------------------- | -------------------------------------- |
+| Debian 13.4 (Trixie) | KDE Plasma 6 / Wayland | **PASS**, except tests inside OMXTerm  |
+| Fedora 44            | GNOME Shell 50.5       | **PASS**, except tests inside OMXTerm  |
+| macOS                | macOS desktop          | **PASS**                               |
+| Windows 11           | Windows desktop        | **PASS**, including tests via Git Bash |
 
 For downloads, use the [published release above](#platforms-and-downloads), not
 the development validation baseline. See [test scope and precautions](docs/development.md#running-native-tests).
