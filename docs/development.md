@@ -319,6 +319,54 @@ helper. Windows needs Explorer's interactive session. The helper sends OS key
 codes through the current layout without changing it; it is not hardware-key or
 arbitrary-layout qualification. Do not overlap other graphical input.
 
+### Opt-in font stroke evidence
+
+To retain the configured-font fixture's existing comparison JSON and six
+synthetic blank/H-regular/H-bold PNGs in a full matrix run:
+
+```sh
+out=$(mktemp -d "$PWD/.scratch/font-evidence-prepared.XXXXXX")
+OMXTERM_FONT_STYLES_EVIDENCE_PATH="$out/font-observations.json" npm run check:portable
+```
+
+Use the same retention setting for prepared and CLEAN conditions, with a fresh
+owned destination for each invocation. The JSON path must not already exist;
+collisions fail before launching this test's children rather than overwriting
+another candidate. Without the variable, no extra image encoding, retention,
+provenance hashing or artifact writes occur.
+
+The existing five observation keys remain; `captureEvidence` adds a relative
+index to a unique sibling `font-style-captures-*` directory. Its
+`current-regular/` and `prior-regular/` variants each contain `blank.png`,
+`strokeRegular.png`, `strokeBold.png` and `manifest.json`. Manifests record exact
+phase/variant identity, PNG and original bitmap hashes, existing ink/pixel-size
+metrics, reported DPR, and fixture-source/runtime/generated-bundle SHA-256s.
+Only those synthetic images are retained; no font bytes, terminal text or native
+paths enter manifest metadata. Bounds can be reconstructed from the raw PNGs;
+this does not add font-face probes, neighbor metrics or renderer instrumentation.
+
+The fixture reuses the assertion's existing children and exact original phase
+images, not additional capture calls. PNG encoding and writes happen after each
+child's final phase report, before it exits and its profile is removed. The
+comparison JSON is written at the existing pre-assertion location, preserving
+it on a failing stroke comparison. Earlier assertions/child errors can leave an
+empty reserved JSON and only one variant or partial captures (`complete:false`);
+missing files or manifests are missing evidence, not successful captures. Retain
+partial output and the command outcome instead of retrying automatically.
+
+Opt-in source/bundle hashing and file reservation add startup work. Holding
+three images until report changes memory/GC pressure; final encoding/I/O adds
+latency before the next observation. Original capture order, GC, runtime guards,
+180ms delay, metrics and assertions remain, but **unmodified timing and a fixture
+fix are not claimed**. The delay/GC is not presentation acknowledgement.
+
+Keep the complete unique directory with the matrix outcome, exact tested source
+SHA/source manifest and runtime identities. The artifact hashes identify fixture
+inputs, not the entire candidate; archived guest trees need the matrix owner's
+source verification, not a guessed Git HEAD. Review JSON/logs before publication.
+A retained later PASS does not resolve an earlier FAIL without its raw evidence
+or establish historical causality (#597).
+
 ### Local-image preview capacity
 
 For explicit resource qualification:

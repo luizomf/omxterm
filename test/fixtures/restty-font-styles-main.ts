@@ -5,6 +5,12 @@ import { createHash } from "node:crypto";
 import { loadTerminalFontData } from "../../src/main/terminal-font-data";
 import { isTerminalFontData } from "../../src/shared/terminal-font-data";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
+import {
+  fontStyleCaptureNames,
+  writeFontStyleCaptures,
+  type FontStyleCapture,
+  type FontStyleCaptureMetadata,
+} from "./restty-font-style-evidence";
 
 function inkBounds(bitmap: Buffer, blank: Buffer, width: number) {
   let top = Infinity;
@@ -70,6 +76,18 @@ const directory = process.argv[2]!;
 const mode = process.argv[3]!;
 const family = process.argv[4]!;
 async function run() {
+  const captureDirectory = process.env.OMXTERM_FONT_STYLES_CAPTURE_DIRECTORY;
+  const captureMetadata = captureDirectory
+    ? (JSON.parse(
+        process.env.OMXTERM_FONT_STYLES_CAPTURE_METADATA!,
+      ) as FontStyleCaptureMetadata)
+    : undefined;
+  if (
+    captureMetadata &&
+    (mode !== "regular" ||
+      !["current-regular", "prior-regular"].includes(captureMetadata.variant))
+  )
+    throw new Error("Invalid font capture variant");
   applyChromiumSandboxPolicy(app.commandLine);
   for (const name of ["userData", "sessionData"] as const) {
     await mkdir(path.join(directory, name), { recursive: true });
@@ -108,6 +126,7 @@ async function run() {
   });
   window.webContents.debugger.attach("1.3");
   const phases: unknown[] = [];
+  const retainedCaptures: FontStyleCapture[] = [];
   let blankBitmap: Buffer | undefined;
   let wideItalicBitmap: Buffer | undefined;
   ipcMain.handle(
@@ -158,7 +177,7 @@ async function run() {
         bitmap && blankBitmap && image
           ? inkBounds(bitmap, blankBitmap, image.getSize().width)
           : undefined;
-      phases.push({
+      const phase = {
         name,
         store,
         heap,
@@ -174,21 +193,51 @@ async function run() {
               bitmapBytes: bitmap.byteLength,
             }
           : {}),
-      });
+      };
+      phases.push(phase);
+      // Opt-in only: keep the exact original images, not new capturePage calls.
+      if (
+        captureDirectory &&
+        image &&
+        fontStyleCaptureNames.some((value) => value === name)
+      )
+        retainedCaptures.push({ image, phase });
     },
   );
   ipcMain.on("report", (_event, result: unknown) => {
-    process.stdout.write(
-      JSON.stringify({
-        mode,
-        family,
-        versions: process.versions,
-        phases,
-        result,
-      }) + "\n",
-    );
-    window.destroy();
-    app.exit(0);
+    void (async () => {
+      if (captureDirectory && captureMetadata) {
+        const dpr =
+          result &&
+          typeof result === "object" &&
+          "dpr" in result &&
+          typeof result.dpr === "number"
+            ? result.dpr
+            : undefined;
+        await writeFontStyleCaptures(
+          captureDirectory,
+          { ...captureMetadata, dpr },
+          retainedCaptures,
+        );
+      }
+      process.stdout.write(
+        JSON.stringify({
+          mode,
+          family,
+          versions: process.versions,
+          phases,
+          result,
+        }) + "\n",
+      );
+      window.destroy();
+      app.exit(0);
+    })().catch(() => {
+      console.error(
+        "Font style evidence retention failed; partial artifacts preserved",
+      );
+      window.destroy();
+      app.exit(1);
+    });
   });
   await window.loadFile(path.join(directory, "index.html"));
   window.showInactive();

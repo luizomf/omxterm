@@ -9,6 +9,10 @@ import { build } from "esbuild";
 import { describe, it, expect } from "vitest";
 import { syntheticBoldCorrections } from "../../scripts/restty-synthetic-bold-corrections.mjs";
 import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
+import {
+  createFontStyleEvidence,
+  type FontStyleVariant,
+} from "../fixtures/restty-font-style-evidence";
 
 interface Observation {
   phases: {
@@ -41,6 +45,7 @@ const family =
 async function observe(
   mode: string,
   priorSynthesis = false,
+  capture?: { directory: string; variant: FontStyleVariant },
 ): Promise<Observation> {
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-font-styles-"));
   try {
@@ -61,6 +66,9 @@ async function observe(
         "e45b848b0edea99ac8a501f6347c6fff35cdd9af4a9d47b8d245b6d3722e54c1",
       );
     }
+    const synthesisRuntimeSha256 = capture
+      ? createHash("sha256").update(probed).digest("hex")
+      : undefined;
     const replace = (needle: string, replacement: string) => {
       expect(probed.split(needle)).toHaveLength(2);
       probed = probed.replace(needle, replacement);
@@ -117,6 +125,40 @@ async function observe(
       path.join(root, "index.html"),
       `<!doctype html><html style="--native-title-inset:0px"><head><meta http-equiv="Content-Security-Policy" content="${policy}"><link rel="stylesheet" href="renderer.css"></head><body data-family="${family}" style="margin:0;background:#101014"><script src="renderer.js"></script></body></html>`,
     );
+    const fileSha256 = async (file: string) =>
+      createHash("sha256")
+        .update(await readFile(file))
+        .digest("hex");
+    const captureMetadata = capture
+      ? {
+          variant: capture.variant,
+          provenance: {
+            preparedRuntimeSha256: createHash("sha256")
+              .update(runtime)
+              .digest("hex"),
+            synthesisRuntimeSha256,
+            instrumentedRuntimeSha256: createHash("sha256")
+              .update(probed)
+              .digest("hex"),
+            testSourceSha256: await fileSha256(
+              "test/integration/restty-font-styles-rendering.test.ts",
+            ),
+            mainSourceSha256: await fileSha256(
+              "test/fixtures/restty-font-styles-main.ts",
+            ),
+            rendererSourceSha256: await fileSha256(
+              "test/fixtures/restty-font-styles-renderer.ts",
+            ),
+            evidenceSourceSha256: await fileSha256(
+              "test/fixtures/restty-font-style-evidence.ts",
+            ),
+            mainBundleSha256: await fileSha256(path.join(root, "main.cjs")),
+            rendererBundleSha256: await fileSha256(
+              path.join(root, "renderer.js"),
+            ),
+          },
+        }
+      : undefined;
     const { stdout } = await promisify(execFile)(
       electron,
       [
@@ -133,6 +175,11 @@ async function observe(
         maxBuffer: 2_000_000,
         env: {
           ...process.env,
+          // These child-only values cannot enable captures in other observations.
+          OMXTERM_FONT_STYLES_CAPTURE_DIRECTORY: capture?.directory ?? "",
+          OMXTERM_FONT_STYLES_CAPTURE_METADATA: captureMetadata
+            ? JSON.stringify(captureMetadata)
+            : "",
           XDG_CONFIG_HOME: path.join(root, "config"),
           XDG_STATE_HOME: path.join(root, "state"),
         },
@@ -163,8 +210,23 @@ describe("native configured font styles", () => {
     expect(boldItalic.coverage).toBeGreaterThan(italic.coverage);
   }, 75_000);
 
-  it("renders exact styles, preserves regular pixels and shares collection resources across live tabs", async () => {
-    const regular = await observe("regular");
+  it("renders exact styles, preserves regular pixels and shares collection resources across live tabs", async ({
+    onTestFinished,
+  }) => {
+    const evidence = await createFontStyleEvidence(
+      process.env.OMXTERM_FONT_STYLES_EVIDENCE_PATH,
+    );
+    if (evidence) onTestFinished(() => evidence.close());
+    const regular = await observe(
+      "regular",
+      false,
+      evidence
+        ? {
+            directory: path.join(evidence.directory, "current-regular"),
+            variant: "current-regular",
+          }
+        : undefined,
+    );
     const wideBoldItalic = regular.phases.find(
       (phase) => phase.name === "wideBoldItalic",
     )!;
@@ -178,17 +240,24 @@ describe("native configured font styles", () => {
     const styled = await observe("styled");
     const partial = await observe("partial");
     const priorStyled = await observe("styled", true);
-    const priorRegular = await observe("regular", true);
-    const evidence = process.env.OMXTERM_FONT_STYLES_EVIDENCE_PATH;
+    const priorRegular = await observe(
+      "regular",
+      true,
+      evidence
+        ? {
+            directory: path.join(evidence.directory, "prior-regular"),
+            variant: "prior-regular",
+          }
+        : undefined,
+    );
     if (evidence)
-      await writeFile(
-        evidence,
-        JSON.stringify(
-          { regular, styled, partial, priorStyled, priorRegular },
-          null,
-          2,
-        ) + "\n",
-      );
+      await evidence.write({
+        regular,
+        styled,
+        partial,
+        priorStyled,
+        priorRegular,
+      });
     const capture = (run: Observation, name: string) =>
       run.phases.find((phase) => phase.name === name)!.hash;
     for (const style of ["regular", "bold", "italic", "boldItalic"])
