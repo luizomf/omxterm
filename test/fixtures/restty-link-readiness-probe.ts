@@ -1,20 +1,51 @@
 import { readFile } from "node:fs/promises";
 import type { Plugin } from "esbuild";
 
+export interface LinkFixtureViewport {
+  readonly offset: number;
+  readonly total: number;
+  readonly length: number;
+  readonly alternate: boolean;
+  readonly mouseActive: boolean;
+}
+
+// Only the known ASCII fixtures below the initial Unicode/wrapped phase use
+// this contract. Row boundaries/clipping are fixture facts, not a wrap oracle.
+export interface LinkFixtureFrame {
+  readonly lines: readonly string[];
+  readonly viewport: {
+    readonly offset: number | "bottom";
+    readonly total?: number;
+    readonly alternate: boolean;
+    readonly mouseActive: boolean;
+  };
+  readonly targets: ReadonlyArray<{
+    readonly row: number;
+    readonly col: number;
+    readonly firstRow: number;
+    readonly lastRow: number;
+    readonly clippedStart: boolean;
+    readonly clippedEnd: boolean;
+    readonly url: string | null;
+  }>;
+}
+
 interface RenderedDestination {
   readonly cols: number;
   readonly rows: number;
   readonly matches: boolean;
+  readonly frameId?: number;
+  readonly viewport?: LinkFixtureViewport | undefined;
 }
 
 interface DestinationCells {
   readonly cols: number;
   readonly rows: number;
-  readonly codepoints?: ArrayLike<number>;
-  readonly wide?: ArrayLike<number>;
-  readonly graphemeLen?: ArrayLike<number>;
-  readonly graphemeOffset?: ArrayLike<number>;
-  readonly graphemeBuffer?: ArrayLike<number>;
+  readonly codepoints?: ArrayLike<number> | null;
+  readonly wide?: ArrayLike<number> | null;
+  readonly graphemeLen?: ArrayLike<number> | null;
+  readonly graphemeOffset?: ArrayLike<number> | null;
+  readonly graphemeBuffer?: ArrayLike<number> | null;
 }
 
 // Copy only a match bit before shaping can allocate; never retain borrowed WASM
@@ -27,6 +58,7 @@ export function createLinkDestinationObserver(
     clippedStart: boolean;
     clippedEnd: boolean;
   }) => { readonly url: string } | null | undefined,
+  readViewport?: () => LinkFixtureViewport | undefined,
 ) {
   let expected: number[] | undefined;
   let web:
@@ -36,10 +68,77 @@ export function createLinkDestinationObserver(
         points: ReadonlyArray<readonly [number, number]>;
       }
     | undefined;
+  let frame: LinkFixtureFrame | undefined;
+  let frameId = 0;
   let presented: RenderedDestination | undefined;
+  function matchesAsciiRows(
+    render: DestinationCells,
+    lines: readonly string[],
+  ) {
+    if (!render.codepoints || lines.length > render.rows) return false;
+    for (let row = 0; row < render.rows; row++) {
+      const line = lines[row] ?? "";
+      if (line.length > render.cols) return false;
+      for (let col = 0; col < render.cols; col++) {
+        const index = row * render.cols + col;
+        const cp = render.codepoints[index] ?? 0;
+        if (
+          (render.wide?.[index] ?? 0) !== 0 ||
+          (render.graphemeLen?.[index] ?? 0) !== 0 ||
+          (col < line.length
+            ? cp !== line.charCodeAt(col)
+            : cp !== 0 && cp !== 32)
+        )
+          return false;
+      }
+    }
+    return true;
+  }
+  function captureKnownFrame(
+    render: DestinationCells,
+    expectation: LinkFixtureFrame,
+  ): RenderedDestination {
+    const viewport = readViewport?.();
+    const matches = Boolean(
+      resolve &&
+      viewport &&
+      matchesAsciiRows(render, expectation.lines) &&
+      viewport.length === render.rows &&
+      viewport.alternate === expectation.viewport.alternate &&
+      viewport.mouseActive === expectation.viewport.mouseActive &&
+      (expectation.viewport.offset === "bottom"
+        ? viewport.offset + viewport.length === viewport.total
+        : viewport.offset === expectation.viewport.offset) &&
+      (expectation.viewport.total === undefined ||
+        viewport.total === expectation.viewport.total) &&
+      expectation.targets.every(
+        ({ row, col, firstRow, lastRow, clippedStart, clippedEnd, url }) => {
+          if (
+            firstRow < 0 ||
+            firstRow > row ||
+            row > lastRow ||
+            lastRow >= render.rows ||
+            col < 0 ||
+            col >= render.cols
+          )
+            return false;
+          const text = expectation.lines.slice(firstRow, lastRow + 1).join("");
+          const offset =
+            expectation.lines.slice(firstRow, row).join("").length + col;
+          return (
+            (resolve!({ text, offset, clippedStart, clippedEnd })?.url ??
+              null) === url
+          );
+        },
+      ),
+    );
+    return { cols: render.cols, rows: render.rows, matches, frameId, viewport };
+  }
   return {
     // The local gesture-only paths are ASCII and start at cell zero.
     prepare(destination: string) {
+      frame = undefined;
+      frameId++;
       expected = Array.from(destination, (char) => char.codePointAt(0)!);
       web = undefined;
       presented = undefined;
@@ -51,11 +150,21 @@ export function createLinkDestinationObserver(
       prefix: string,
       points: ReadonlyArray<readonly [number, number]>,
     ) {
+      frame = undefined;
+      frameId++;
       expected = undefined;
       web = { destination, text: prefix + destination, points };
       presented = undefined;
     },
+    prepareFrame(expectation: LinkFixtureFrame) {
+      expected = undefined;
+      web = undefined;
+      frame = expectation;
+      frameId++;
+      presented = undefined;
+    },
     capture(render: DestinationCells): RenderedDestination {
+      if (frame) return captureKnownFrame(render, frame);
       if (web) {
         let matches = false;
         if (render.codepoints && readCluster && resolve) {
@@ -122,15 +231,29 @@ export function createLinkDestinationObserver(
       return { cols: render.cols, rows: render.rows, matches };
     },
     present(snapshot: RenderedDestination) {
+      if (snapshot.frameId !== undefined && snapshot.frameId !== frameId)
+        return;
       presented = snapshot;
     },
     snapshot() {
+      // Scalar reads cannot allocate/prepare cells. This also catches viewport
+      // movement outside the two pinned scroll calls before dispatch.
+      if (
+        presented?.viewport &&
+        JSON.stringify(presented.viewport) !== JSON.stringify(readViewport?.())
+      ) {
+        frameId++;
+        presented = undefined;
+      }
       return presented;
     },
     invalidate() {
+      frameId++;
       presented = undefined;
     },
     clear() {
+      frame = undefined;
+      frameId++;
       expected = undefined;
       web = undefined;
       presented = undefined;
@@ -148,7 +271,16 @@ export function instrumentResttyLinkDestination(source: string): string {
   replace(
     needle,
     `${needle}
-  canvas.__resttyLinkDestinationFixture = (${createLinkDestinationObserver.toString()})(readClusterText, services.resolveVisibleLink);
+  canvas.__resttyLinkDestinationFixture = (${createLinkDestinationObserver.toString()})(readClusterText, services.resolveVisibleLink, () => {
+    if (!wasmHandle || !wasmExports) return undefined;
+    return {
+      offset: wasmExports.restty_scrollbar_offset(wasmHandle),
+      total: wasmExports.restty_scrollbar_total(wasmHandle),
+      length: wasmExports.restty_scrollbar_len(wasmHandle),
+      alternate: inputHandler.isAltScreen(),
+      mouseActive: inputHandler.isMouseActive(),
+    };
+  });
   cleanupFns.push(() => {
     canvas.__resttyLinkDestinationFixture?.clear();
     delete canvas.__resttyLinkDestinationFixture;
@@ -158,6 +290,13 @@ export function instrumentResttyLinkDestination(source: string): string {
     "    shared.wasm.write(handle, text);",
     `    options.getCanvas().__resttyLinkDestinationFixture?.invalidate();
     shared.wasm.write(handle, text);`,
+  );
+  const scroll = "    wasm.scrollViewport(wasmHandle, delta);";
+  if (source.split(scroll).length !== 3)
+    throw new Error("Pinned link viewport observation seam drift");
+  source = source.replaceAll(
+    scroll,
+    `    getCanvas().__resttyLinkDestinationFixture?.invalidate();\n${scroll}`,
   );
   replace(
     "  populateWebGLSceneData(ctx);",

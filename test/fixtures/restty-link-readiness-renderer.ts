@@ -9,7 +9,14 @@ import {
   installResttyVisibleLinks,
   requestVisibleLink,
 } from "../../src/terminal-surface/restty-visible-links";
-import { createLinkDestinationObserver } from "./restty-link-readiness-probe";
+import {
+  createLinkDestinationObserver,
+  type LinkFixtureViewport,
+} from "./restty-link-readiness-probe";
+import {
+  createLinkCoreRenderer,
+  type LinkCoreRendererOptions,
+} from "./restty-link-core-renderer";
 
 const preparedRuntime = readFileSync(
   "node_modules/restty/dist/chunk-c0rcpsc5.js",
@@ -18,11 +25,14 @@ const preparedRuntime = readFileSync(
 const readRuntimeCluster = runInNewContext(
   `${preparedRuntime.slice(preparedRuntime.indexOf("function readClusterText("), preparedRuntime.indexOf("function classifyCluster("))}\nreadClusterText`,
 ) as NonNullable<Parameters<typeof createLinkDestinationObserver>[0]>;
-export const observer = () =>
+export const observer = (
+  readViewport?: () => LinkFixtureViewport | undefined,
+) =>
   createLinkDestinationObserver(
     readRuntimeCluster,
     ({ text, offset, clippedStart, clippedEnd }) =>
       visibleLinkAtOffset(text, offset, clippedStart, clippedEnd),
+    readViewport,
   );
 
 // Explicit modeled cell production, not a Unicode renderer. Actual WASM and
@@ -57,25 +67,98 @@ export function modeledFrame(text: string, cols: number, rows: number) {
   };
 }
 
+interface PreviewRendererOptions {
+  priorReplyDelay?: number;
+  destinationDelay?: number;
+  webDestinationDelay?: number;
+  stopAfterWeb?: boolean;
+  flow?: LinkCoreRendererOptions;
+  webMutation?:
+    "never-current" | "stale-current" | "late-invalidation" | "extra-request";
+  mutation?:
+    | "never-current"
+    | "stale-current"
+    | "late-invalidation"
+    | "extra-request"
+    | "late-extra-request"
+    | "local-geometry"
+    | "wrong-literal";
+}
+
+// Preserve the existing bounded Unicode/local-preview model. The optional core
+// adapter below replaces this producer, not the caller/controller/routing seam.
+function modeledProducer(
+  options: PreviewRendererOptions,
+  destinationObserver: ReturnType<typeof observer>,
+  downstream: Error,
+  replaceCanvas: () => void,
+) {
+  let destination = "";
+  let expected = "";
+  let clickedEarly = false;
+  let pending: ReturnType<typeof setTimeout> | undefined;
+  const present = (next: string) => {
+    destination = next;
+    const text = next.startsWith("https://example.test/")
+      ? `漢e\u0301 ${next}`
+      : next;
+    destinationObserver.present(
+      destinationObserver.capture(modeledFrame(text, 80, 20)),
+    );
+  };
+  return {
+    clickedEarly: () => clickedEarly,
+    beforeInput() {
+      if (destination !== expected) clickedEarly = true;
+    },
+    lookup: () =>
+      destination ? { id: destination, url: destination, cells: [3] } : null,
+    deliver(data: string) {
+      if (data.includes("https://one.test")) throw downstream;
+      if (pending) clearTimeout(pending);
+      expected = data
+        .replace(/\u001b\][^\u0007]*\u0007/gu, "")
+        .replace(/\u001b\[[?\d;]*[A-Za-z]/gu, "")
+        .replace(/^漢e\u0301 /u, "");
+      const local =
+        !expected.startsWith("https://") && !expected.startsWith("alternate");
+      if (local && options.stopAfterWeb) throw downstream;
+      if (local && options.mutation === "local-geometry") replaceCanvas();
+      if (
+        (local ? options.mutation : options.webMutation) === "never-current"
+      ) {
+        if (!local) destination = "";
+        destinationObserver.invalidate();
+        return;
+      }
+      if (
+        (local ? options.mutation : options.webMutation) === "stale-current"
+      ) {
+        present(
+          local ? destination : `https://example.test/漢${"b".repeat(80)}`,
+        );
+        return;
+      }
+      const delay = local
+        ? options.destinationDelay
+        : options.webDestinationDelay;
+      if (delay) {
+        const next = expected;
+        destination = "";
+        destinationObserver.invalidate();
+        pending = setTimeout(() => present(next), delay);
+      } else present(expected);
+    },
+    dispose() {
+      if (pending) clearTimeout(pending);
+    },
+  };
+}
+
 // Real gesture controller, destination routing and preview owner; only drawing,
 // Electron transport and the image-loader reply are controlled. No native proof.
 export function cancellingPreviewRenderer(
-  options: {
-    priorReplyDelay?: number;
-    destinationDelay?: number;
-    webDestinationDelay?: number;
-    stopAfterWeb?: boolean;
-    webMutation?:
-      "never-current" | "stale-current" | "late-invalidation" | "extra-request";
-    mutation?:
-      | "never-current"
-      | "stale-current"
-      | "late-invalidation"
-      | "extra-request"
-      | "late-extra-request"
-      | "local-geometry"
-      | "wrong-literal";
-  } = {},
+  options: PreviewRendererOptions = {},
 ) {
   document.body.replaceChildren();
   const root = document.createElement("main");
@@ -95,32 +178,55 @@ export function cancellingPreviewRenderer(
     cellHeight: 20,
   };
   let canvasId = 1;
-  const destinationObserver = observer();
-  Object.assign(canvas, {
-    __resttyLinkDestinationFixture: destinationObserver,
-    getBoundingClientRect: () => geometry.canvas,
-    __resttyHoverFixture: () => ({ canvasId, geometry }),
-  });
   const localImageRequests: LocalImageRequest[] = [];
   const externalLinks: string[] = [];
   const inputs: string[] = [];
   const events: MouseInputEvent[] = [];
   const openings: Promise<void>[] = [];
-  let destination = "";
-  let expectedDestination = "";
-  let clickedBeforeDestination = false;
-  let invalidateBeforeNextOperation = false;
-  const presentDestination = (next: string) => {
-    destination = next;
-    const text = next.startsWith("https://example.test/")
-      ? `漢e\u0301 ${next}`
-      : next;
-    destinationObserver.present(
-      destinationObserver.capture(modeledFrame(text, 80, 20)),
-    );
+  const handler = createInputHandler({
+    sendReply: (data) => inputs.push(data),
+    getWheelCellMetrics: () => ({
+      cellWidth: 10,
+      cellHeight: 20,
+      rows: 20,
+      cols: 80,
+    }),
+    positionToCell: (event) => ({
+      col: Math.floor(event.clientX / 10),
+      row: Math.floor(event.clientY / 20),
+    }),
+  });
+  let core: ReturnType<typeof createLinkCoreRenderer> | undefined;
+  const destinationObserver = observer(() => core?.viewport());
+  Object.assign(canvas, {
+    __resttyLinkDestinationFixture: destinationObserver,
+    getBoundingClientRect: () => geometry.canvas,
+    __resttyHoverFixture: () => ({ canvasId, geometry }),
+  });
+  const downstream = new Error(
+    "Post-local-path scenario is outside this probe",
+  );
+  const replaceCanvas = () => {
+    canvasId++;
   };
+  const modeled = modeledProducer(
+    options,
+    destinationObserver,
+    downstream,
+    replaceCanvas,
+  );
+  if (options.flow)
+    core = createLinkCoreRenderer(
+      options.flow,
+      canvas,
+      { inputs, events },
+      handler,
+      destinationObserver,
+      replaceCanvas,
+    );
   let firstReplyCompleted = false;
   let clickedWhileOpening = false;
+  let invalidateBeforeNextOperation = false;
   const preview = createLocalImagePreview(document, {
     async loadImage(source) {
       localImageRequests.push(
@@ -148,38 +254,34 @@ export function cancellingPreviewRenderer(
   const controller = installResttyVisibleLinks(
     canvas,
     {
-      getVisibleLinkAtClientPoint: () =>
-        destination ? { id: destination, url: destination, cells: [3] } : null,
+      getVisibleLinkAtClientPoint: (x, y) =>
+        core ? core.lookup(x, y) : modeled.lookup(),
       setVisibleLinkHover() {},
     },
     (url) =>
       requestVisibleLink(url, {
         onExternalLink: (link) => {
-          externalLinks.push(link);
+          externalLinks.push(...(core?.activations(link) ?? [link]));
           if (options.webMutation === "extra-request") externalLinks.push(link);
         },
         onLocalImageActivation: (source) => openings.push(preview.open(source)),
       }),
     process.platform === "darwin" ? "MacIntel" : "Linux aarch64",
   );
-  const handler = createInputHandler({
-    sendReply: (data) => inputs.push(data),
-    positionToCell: (event) => ({
-      col: Math.floor(event.clientX / 10),
-      row: Math.floor(event.clientY / 20),
-    }),
-  });
   for (const [type, kind] of [
     ["pointerdown", "down"],
+    ["pointermove", "move"],
     ["pointerup", "up"],
   ] as const)
-    canvas.addEventListener(type, (event) =>
-      handler.sendMouseEvent(kind, event),
-    );
-  let pendingFrame: ReturnType<typeof setTimeout> | undefined;
-  const downstream = new Error(
-    "Post-local-path scenario is outside this probe",
-  );
+    canvas.addEventListener(type, (event) => {
+      if (kind === "down" && core?.loseReplay(event)) return;
+      handler.sendMouseEvent(kind, event);
+    });
+  let wheels = 0;
+  canvas.addEventListener("wheel", (event) => {
+    wheels++;
+    if (!handler.sendMouseEvent("wheel", event)) core?.scroll(event);
+  });
   const window = {
     webContents: {
       async executeJavaScript(script: string) {
@@ -187,16 +289,28 @@ export function cancellingPreviewRenderer(
           destinationObserver.invalidate();
           invalidateBeforeNextOperation = false;
         }
-        return runInNewContext(script, { document }) as unknown;
+        return runInNewContext(script, {
+          document,
+          WheelEvent,
+          requestAnimationFrame: (callback: () => void) =>
+            setTimeout(callback, 0),
+          window: {
+            omxterm: { terminal: { configuration: async () => undefined } },
+          },
+        }) as unknown;
       },
       sendInputEvent(event: MouseInputEvent) {
         events.push(event);
+        if (event.type === "mouseDown") core?.nativeDown();
         if (preview.isActive()) clickedWhileOpening = true;
-        if (destination !== expectedDestination)
-          clickedBeforeDestination = true;
+        modeled.beforeInput();
         canvas.dispatchEvent(
           new PointerEvent(
-            event.type === "mouseDown" ? "pointerdown" : "pointerup",
+            event.type === "mouseDown"
+              ? "pointerdown"
+              : event.type === "mouseMove"
+                ? "pointermove"
+                : "pointerup",
             {
               bubbles: true,
               cancelable: true,
@@ -205,8 +319,13 @@ export function cancellingPreviewRenderer(
               isPrimary: true,
               clientX: event.x,
               clientY: event.y,
-              button: 0,
-              buttons: event.type === "mouseDown" ? 1 : 0,
+              button: event.button === "middle" ? 1 : 0,
+              buttons:
+                event.type === "mouseUp"
+                  ? 0
+                  : event.button === "middle"
+                    ? 4
+                    : 1,
               metaKey: event.modifiers?.includes("meta") ?? false,
               ctrlKey: event.modifiers?.includes("control") ?? false,
             },
@@ -219,10 +338,12 @@ export function cancellingPreviewRenderer(
     downstream,
     events,
     localImageRequests,
+    destinationObserver,
+    wheelCount: () => wheels,
+    consumedOriginalBeforeReplacement: () => core?.consumedOriginal() ?? false,
     clickedWhileOpening: () => clickedWhileOpening,
     firstReplyCompleted: () => firstReplyCompleted,
-    clickedBeforeDestination: () => clickedBeforeDestination,
-    destinationObserver,
+    clickedBeforeDestination: modeled.clickedEarly,
     options: {
       window,
       resizes: [{ cols: 80, rows: 20 }],
@@ -230,46 +351,12 @@ export function cancellingPreviewRenderer(
       inputs,
       localImageRequests,
       deliverOutput(data: string) {
-        if (data.includes("https://one.test")) throw downstream;
-        handler.filterOutput(data);
-        if (pendingFrame) clearTimeout(pendingFrame);
-        expectedDestination = data
-          .replace(/\u001b\][^\u0007]*\u0007/gu, "")
-          .replace(/\u001b\[[?\d;]*[A-Za-z]/gu, "")
-          .replace(/^漢e\u0301 /u, "");
-        const local =
-          !expectedDestination.startsWith("https://") &&
-          !expectedDestination.startsWith("alternate");
-        if (local && options.stopAfterWeb) throw downstream;
-        if (local && options.mutation === "local-geometry") canvasId = 2;
-        if (local && options.mutation === "never-current") {
-          destinationObserver.invalidate();
-          return;
+        if (core) {
+          if (!core.deliver(data)) throw downstream;
+        } else {
+          handler.filterOutput(data);
+          modeled.deliver(data);
         }
-        if (local && options.mutation === "stale-current") {
-          presentDestination(destination);
-          return;
-        }
-        if (!local && options.webMutation === "never-current") {
-          destination = "";
-          destinationObserver.invalidate();
-          return;
-        }
-        if (!local && options.webMutation === "stale-current") {
-          presentDestination(`https://example.test/漢${"b".repeat(80)}`);
-          return;
-        }
-        const delay = local
-          ? options.destinationDelay
-          : options.webDestinationDelay;
-        if (delay) {
-          const next = expectedDestination;
-          destination = "";
-          destinationObserver.invalidate();
-          pendingFrame = setTimeout(() => {
-            presentDestination(next);
-          }, delay);
-        } else presentDestination(expectedDestination);
       },
       async waitFor(
         predicate: () => boolean | Promise<boolean>,
@@ -282,21 +369,21 @@ export function cancellingPreviewRenderer(
           await new Promise((resolve) => setTimeout(resolve, 10));
         }
         if (
-          options.webMutation === "late-invalidation" &&
-          label === "initial web current destination"
-        )
-          invalidateBeforeNextOperation = true;
-        if (
-          options.mutation === "late-invalidation" &&
-          label.startsWith("local-image") &&
-          label.includes("current destination")
+          (options.flow?.mutation === "hard-break-invalidation" &&
+            label === "hard-break current frame") ||
+          (options.webMutation === "late-invalidation" &&
+            label === "initial web current destination") ||
+          (options.mutation === "late-invalidation" &&
+            label.startsWith("local-image") &&
+            label.includes("current destination"))
         )
           invalidateBeforeNextOperation = true;
       },
     },
     async dispose() {
-      if (pendingFrame) clearTimeout(pendingFrame);
       controller.dispose();
+      core?.dispose();
+      modeled.dispose();
       preview.dispose();
       await Promise.all(openings);
       delete (document as Document & { __resttyLinkPreviewFixture?: unknown })

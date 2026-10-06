@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { visibleLinkAtOffset } from "../../src/terminal-surface/visible-links";
 import { runInNewContext } from "node:vm";
 import { loadResttyWasm } from "restty/internal";
+import { realFrameFixture } from "../fixtures/restty-link-core-probe";
 import { build } from "esbuild";
 import { fileURLToPath } from "node:url";
 import { resttyFontMutationProbe } from "../fixtures/restty-font-mutation-probe";
@@ -11,6 +12,7 @@ import {
   instrumentResttyLinkPreview,
   resttyLinkReadinessProbe,
   type createLinkDestinationObserver,
+  type LinkFixtureFrame,
 } from "../fixtures/restty-link-readiness-probe";
 
 // Run the actual injected runtime hooks against real core-produced cells.
@@ -44,7 +46,10 @@ const lookup = source.slice(
 );
 const start = source.indexOf("  canvas.__resttyLinkDestinationFixture =");
 // Keep only the observation initializer/cleanup, not adjacent runtime code.
-const initializer = source.slice(start, source.indexOf("\n  });", start) + 7);
+const initializer = source.slice(
+  start,
+  source.indexOf("\n  });", source.indexOf("  cleanupFns.push(", start)) + 7,
+);
 const write = source.slice(
   source.indexOf("  function writeToWasm(handle, text) {"),
   source.indexOf("  function flushWasmOutputToPty() {"),
@@ -321,6 +326,230 @@ it.each([
     }
   },
 );
+
+it.each([
+  {
+    name: "hard-break separation",
+    output:
+      "\u001b[3J\u001b[2J\u001b[Hhttps://one.test/a,\r\nhttps://two.test/b",
+    scroll: 0,
+    lines: ["https://one.test/a,", "https://two.test/b"],
+    offset: 0,
+    total: 6,
+    points: [
+      [0, 3, "https://one.test/a"],
+      [1, 3, "https://two.test/b"],
+    ] as const,
+    targets: [
+      {
+        row: 0,
+        col: 3,
+        firstRow: 0,
+        lastRow: 0,
+        clippedStart: false,
+        clippedEnd: false,
+        url: "https://one.test/a",
+      },
+      {
+        row: 1,
+        col: 3,
+        firstRow: 1,
+        lastRow: 1,
+        clippedStart: false,
+        clippedEnd: false,
+        url: "https://two.test/b",
+      },
+    ],
+  },
+  {
+    name: "fully visible retained link",
+    output:
+      "\u001b[3J\u001b[2J\u001b[Hhttps://scroll.test/complete\r\nscroll-0\r\nscroll-1\r\nscroll-2\r\nscroll-3\r\nscroll-4\r\nscroll-5",
+    scroll: -3,
+    lines: [
+      "https://scroll.test/complete",
+      "scroll-0",
+      "scroll-1",
+      "scroll-2",
+      "scroll-3",
+      "scroll-4",
+    ],
+    offset: 0,
+    total: 7,
+    points: [[0, 3, "https://scroll.test/complete"]] as const,
+    targets: [
+      {
+        row: 0,
+        col: 3,
+        firstRow: 0,
+        lastRow: 0,
+        clippedStart: false,
+        clippedEnd: false,
+        url: "https://scroll.test/complete",
+      },
+    ],
+  },
+  {
+    name: "continuation clipped above",
+    output: `\u001b[3J\u001b[2J\u001b[Hhttps://clipped.test/${"z".repeat(80)}\r\nclip-0\r\nclip-1\r\nclip-2\r\nclip-3\r\nclip-4`,
+    scroll: 0,
+    lines: ["z".repeat(21), "clip-0", "clip-1", "clip-2", "clip-3", "clip-4"],
+    offset: 1,
+    total: 7,
+    points: [[0, 3, null]] as const,
+    targets: [
+      {
+        row: 0,
+        col: 3,
+        firstRow: 0,
+        lastRow: 0,
+        clippedStart: true,
+        clippedEnd: false,
+        url: null,
+      },
+    ],
+  },
+  {
+    name: "destination clipped below",
+    output: `\u001b[3J\u001b[2J\u001b[Hlead-0\r\nlead-1\r\nlead-2\r\nlead-3\r\nlead-4\r\nhttps://clipped-end.test/${"q".repeat(80)}\r\ntrail-0\r\ntrail-1\r\ntrail-2\r\ntrail-3\r\ntrail-4\r\ntrail-5`,
+    scroll: -3000,
+    lines: [
+      "lead-0",
+      "lead-1",
+      "lead-2",
+      "lead-3",
+      "lead-4",
+      `https://clipped-end.test/${"q".repeat(55)}`,
+    ],
+    offset: 0,
+    total: 13,
+    points: [[5, 3, null]] as const,
+    targets: [
+      {
+        row: 5,
+        col: 3,
+        firstRow: 5,
+        lastRow: 5,
+        clippedStart: false,
+        clippedEnd: true,
+        url: null,
+      },
+    ],
+  },
+])(
+  "matches known $name cells only when actual core/runtime recognition agrees",
+  async ({ output, scroll, lines, offset, total, points, targets }) => {
+    const fixture = await realFrameFixture();
+    try {
+      fixture.observer.prepareFrame({
+        lines,
+        viewport: { offset, total, alternate: false, mouseActive: false },
+        targets,
+      });
+      fixture.write(output);
+      if (scroll) fixture.runtime.scroll.scrollViewportByLines(scroll);
+      for (const [row, col, url] of points) {
+        fixture.produce();
+        expect(
+          fixture.runtime.getVisibleLinkAtClientPoint(col, row)?.url ?? null,
+        ).toBe(url);
+      }
+      fixture.produce();
+      const beforeBytes = fixture.frame().codepoints!.byteLength;
+      const selection = fixture.wasm.getSelectionText;
+      const update = fixture.wasm.renderUpdate;
+      fixture.wasm.getSelectionText = () => {
+        throw new Error("Passive observer allocated selection");
+      };
+      fixture.wasm.renderUpdate = () => {
+        throw new Error("Passive observer prepared cells");
+      };
+      try {
+        // A legal shaping allocation detaches borrowed views after capture. The
+        // submitted match bit must survive; no view is retained by the observer.
+        fixture.pipeline(() => fixture.wasm.memory.grow(1));
+        fixture.submit();
+        expect(beforeBytes).toBeGreaterThan(0);
+        expect(fixture.frame().codepoints!.byteLength).toBe(0);
+        expect(fixture.observer.snapshot()).toMatchObject({
+          matches: true,
+          viewport: { offset, total },
+        });
+      } finally {
+        fixture.wasm.getSelectionText = selection;
+        fixture.wasm.renderUpdate = update;
+      }
+    } finally {
+      fixture.dispose();
+    }
+  },
+);
+
+it("rejects stale frame publication after output and viewport invalidation without forcing a render", async () => {
+  const fixture = await realFrameFixture();
+  const expected: LinkFixtureFrame = {
+    lines: [
+      "https://scroll.test/complete",
+      "scroll-0",
+      "scroll-1",
+      "scroll-2",
+      "scroll-3",
+      "scroll-4",
+    ],
+    viewport: { offset: 0, total: 7, alternate: false, mouseActive: false },
+    targets: [
+      {
+        row: 0,
+        col: 3,
+        firstRow: 0,
+        lastRow: 0,
+        clippedStart: false,
+        clippedEnd: false,
+        url: "https://scroll.test/complete",
+      },
+    ],
+  };
+  try {
+    fixture.observer.prepareFrame(expected);
+    fixture.write(
+      "\u001b[3J\u001b[2J\u001b[Hhttps://scroll.test/complete\r\nscroll-0\r\nscroll-1\r\nscroll-2\r\nscroll-3\r\nscroll-4\r\nscroll-5",
+    );
+    fixture.runtime.scroll.scrollViewportByLines(-3);
+    fixture.produce();
+    fixture.submit();
+    const old = fixture.observer.snapshot()!;
+    expect(old.matches).toBe(true);
+    fixture.write("\u001b[H\u001b[2Kchanged");
+    fixture.observer.present(old);
+    expect(fixture.observer.snapshot()).toBeUndefined();
+    // Restore a matching producer frame before the independent scroll case.
+    fixture.write("\u001b[H\u001b[2Kscroll-0");
+    fixture.produce();
+    fixture.submit();
+    const beforeScroll = fixture.observer.snapshot()!;
+    expect(beforeScroll.matches).toBe(true);
+    fixture.runtime.scroll.scrollViewportByLines(1);
+    fixture.observer.present(beforeScroll);
+    expect(fixture.observer.snapshot()).toBeUndefined();
+    fixture.produce();
+    fixture.submit();
+    expect(fixture.observer.snapshot()?.matches).toBe(false);
+    // A viewport mutation outside the pinned wrapper is also rejected by the
+    // scalar-only snapshot guard; it never calls renderUpdate or selection.
+    fixture.wasm.scrollViewport(fixture.handle, -1);
+    const update = fixture.wasm.renderUpdate;
+    fixture.wasm.renderUpdate = () => {
+      throw new Error("Snapshot forced a render");
+    };
+    try {
+      expect(fixture.observer.snapshot()).toBeUndefined();
+    } finally {
+      fixture.wasm.renderUpdate = update;
+    }
+  } finally {
+    fixture.dispose();
+  }
+});
 
 it("guards the public preview lifetime seam and removes the fixture getter on disposal", () => {
   const host = readFileSync("src/renderer/terminal-window-host.ts", "utf8");
