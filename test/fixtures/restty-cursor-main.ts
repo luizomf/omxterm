@@ -14,6 +14,8 @@ import {
 // The bundled fixture lives in its disposable profile directory. Electron
 // command-line switches have platform-dependent argv placement.
 const root = __dirname;
+// Match Linux product framing; native decorations can shift mount coordinates.
+const nativeFrameOptions = process.platform === "linux" ? { frame: false } : {};
 const family =
   process.platform === "darwin"
     ? "Menlo"
@@ -254,6 +256,7 @@ async function run() {
     width: 900,
     height: 600,
     show: false,
+    ...nativeFrameOptions,
     backgroundColor: "#101014",
     webPreferences: {
       preload: path.join(root, "preload.cjs"),
