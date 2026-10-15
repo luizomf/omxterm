@@ -103,16 +103,10 @@ Each tab runs an independent session, letting you organize different tasks side 
 
 ### Make it yours
 
-OMXTerm creates settings, a sample snippet, and a theme on first launch.
-[Change one setting](docs/configuration.md#add-one-display-change), or use a
-complete setup for [macOS](docs/quick-start/macos.md#complete-ready-to-use-setup-optional),
-[Linux](docs/quick-start/linux.md#complete-ready-to-use-setup-optional), or
-[Windows / Git Bash](docs/quick-start/windows.md#complete-ready-to-use-setup-optional).
-The setup guides include files, destinations, and reload steps.
-
-You can also customize settings and themes visually in
-[OMXTerm Studio](https://luizomf.github.io/omxterm-studio/), then
-[apply the files](docs/configuration.md#edit-visually-with-omxterm-studio).
+OMXTerm creates settings, a sample snippet, and a theme on first launch when no
+configuration exists. Keep those defaults, [change one setting](docs/configuration.md#add-one-display-change),
+or use [OMXTerm Studio](docs/configuration.md#edit-visually-with-omxterm-studio)
+to edit settings and themes visually, export them, and reload in OMXTerm.
 [Everyday use](docs/usage.md) covers shortcuts, images, paste, and tips.
 
 ## Updating or uninstalling
@@ -139,7 +133,7 @@ See [Contributing](CONTRIBUTING.md) to get involved, including efforts to add
 [Linux x64](https://github.com/luizomf/omxterm/issues/223) and
 [Windows x64](https://github.com/luizomf/omxterm/issues/224).
 The [documentation map](docs/README.md) separates user guides, contribution
-instructions, and maintainer/agent references.
+instructions, shared technical references, and maintainer procedures.
 
 ## License
 

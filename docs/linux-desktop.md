@@ -2,7 +2,7 @@
 
 Use this guide for background blur, a larger interface on a HiDPI display, or
 VM and driver graphics troubleshooting. For ordinary setup, start with
-[Linux installation](../installation.md#linux) and the [Linux quick start](linux.md).
+[Linux installation](installation.md#linux) and [configuration](configuration.md).
 
 OMXTerm uses X11, or XWayland in a Wayland desktop session. Published Linux
 packages are ARM64. The desktop controls transparency and blur; choose the
@@ -16,13 +16,13 @@ section for your desktop rather than just your distribution:
 
 For background-only transparency, keep whole-window opacity at full strength
 in your desktop's settings and use OMXTerm's
-[`window.transparency`](../configuration.md#background-transparency-and-blur).
+[`window.transparency`](configuration.md#background-transparency-and-blur).
 That keeps text solid. Desktop-wide blur settings can affect other applications
 and graphics performance.
 
 ## Ubuntu with GNOME: Blur my Shell
 
-First check the [AppImage's glibc requirement](../installation.md#check-requirements).
+First check the [AppImage's glibc requirement](installation.md#requirements).
 These desktop preferences do not make an older distribution such as Ubuntu
 24.04 compatible with the current package.
 
@@ -77,7 +77,7 @@ select X11 if needed. Replace `VERSION` with your downloaded version:
 ```
 
 The desktop installer places the executable at
-`~/.local/opt/omxterm/OMXTerm.AppImage`. The [helper](../linux-installer.md)
+`~/.local/opt/omxterm/OMXTerm.AppImage`. The [helper](linux-installer.md)
 records X11 in its desktop entry; a command typed in a terminal only affects
 that launch.
 
@@ -130,7 +130,7 @@ Press and release Alt alone to open the menu with the title bar hidden.
 Terminal font zoom (`Ctrl++` / `Ctrl+-`) changes terminal text, while Electron's
 display scale also affects the title row, tabs, and sidebar.
 
-The [Linux helper](../linux-installer.md#interface-size-on-hyprland) can record a
+The [Linux helper](linux-installer.md#interface-size-on-hyprland) can record a
 uniform Hyprland monitor scale at installation time. For direct AppImage
 launches or manual adjustments, inspect:
 
@@ -155,7 +155,7 @@ Hyprland's [XWayland scaling notes](https://wiki.hypr.land/Configuring/Advanced-
 OMXTerm needs a working **WebGL2** backend before its shell can start. A VM's
 virtual GPU or an incompatible driver can prevent initialization. Start with
 normal installation; if the window is blank or reports a rendering-backend
-failure, try the [helper's compatibility mode](../linux-installer.md#only-if-graphics-fail).
+failure, try the [helper's compatibility mode](linux-installer.md#only-if-graphics-fail).
 
 For a direct AppImage launch, replace `VERSION` with your downloaded version:
 
@@ -168,7 +168,7 @@ LIBGL_ALWAYS_SOFTWARE=1 ./OMXTerm-VERSION-arm64.AppImage \
 bypasses Chromium's GPU compatibility blocklist for this process. Use these
 options only for a graphics failure: they can reduce performance or stability. Keep them local to this launch rather than exporting them globally.
 If initialization still fails, include the error and your GPU or VM details in
-a [problem report](../../CONTRIBUTING.md#report-a-problem).
+a [problem report](../CONTRIBUTING.md#report-a-problem).
 
 For a FUSE mounting error, add `--appimage-extract-and-run` immediately after
 the AppImage path, before the Electron options. The helper chooses this mode

@@ -40,9 +40,10 @@ OMXTerm acts as your unified, responsive workbench for all of them.
    account's login shell. On Windows, it is Windows PowerShell by default, or
    the installed executable selected by `windowsShell`.
 
-Your shell loads its own startup preferences automatically. OMXTerm works
-seamlessly with your existing environment, honoring your `.zshrc`, `.bashrc`,
-or PowerShell profile.
+Your shell decides which startup files to read; OMXTerm does not edit or inject
+them. In particular, a Bash login shell does not automatically read `.bashrc`.
+See [shell startup preferences](usage.md#shell-preferences-do-not-load) if your
+prompt or aliases differ from another terminal.
 
 ## The round trip behind each command
 
@@ -92,26 +93,17 @@ A few useful boundaries:
 
 See [Everyday use](usage.md#windows-tabs-and-sessions) for controls and shortcuts.
 
-## Customization is three small files
+## Customization belongs to you
 
-In the [settings folder](configuration.md#create-the-configuration-directory):
+OMXTerm separates application preferences (`config.json`), terminal colors (a
+selected theme file), and reusable text (`snippets.json`). Its first-launch
+starter files are editable defaults, not an ongoing synchronization service.
+Your shell's prompt, aliases, and editor settings remain separate.
 
-| File                                     | What you change                                                      | How to apply it                       |
-| ---------------------------------------- | -------------------------------------------------------------------- | ------------------------------------- |
-| `config.json`                            | Font size, spacing, window effects, shortcuts, and other preferences | **View → Reload User Configuration**  |
-| `themes/omtheme.json` in the starter kit | Foreground, background, cursor, selection, and ANSI colors           | Reload configuration                  |
-| `snippets.json`                          | Named text you can insert into the selected tab                      | Close and reopen the snippets sidebar |
-
-Most appearance settings update existing sessions. Font family and line height
-apply to new tabs; restart to apply them everywhere. Window-bar defaults apply
-to new windows, while menu toggles change the current one. Theme selection is a
-path in `config.json`, so you can keep several files and choose one explicitly.
-
-OMXTerm validates the files and shows actionable errors without rewriting your
+OMXTerm validates these files and shows actionable errors without rewriting your
 preferences. Saving alone does not reload them. The [configuration guide](configuration.md)
-explains examples, reload behavior, and errors. [OMXTerm Studio](configuration.md#edit-visually-with-omxterm-studio)
-is an optional visual editor: export its files, place them in the settings
-folder, and reload.
+owns file locations, examples, [Studio's visual editing workflow](configuration.md#edit-visually-with-omxterm-studio),
+and [when changes take effect](configuration.md#reloading-user-configuration).
 
 Transparency affects the terminal background rather than fading the entire
 window. Text, selection, and inline images keep their normal opacity. Blur comes
@@ -120,31 +112,19 @@ background can remain opaque.
 
 ## Conveniences around the session
 
-**Copy and paste:** selecting text does not copy it automatically. Use the Copy
-shortcut or menu. Paste, snippets, and dropped-file paths share Protected Paste:
-multiline or control-character input asks for confirmation when the receiving
-program has not enabled bracketed paste. Review commands before running them.
+**Input is not command validation.** Paste, snippets, and dropped-file paths
+send text to the selected program. Protected Paste can ask about multiline or
+control-character input, but cannot decide whether a command is safe. A snippet
+is reusable text, not a separate task runner. See [copy and paste](usage.md#copy-and-paste),
+[file paths](usage.md#inserting-file-and-folder-paths), and [snippets](configuration.md#snippets)
+for controls and precautions.
 
-**Snippets:** click a saved entry to send its body to the selected tab. For
-commands you want to review first, use a single-line body without control
-characters and `execute: false`, then press Enter yourself. Setting
-`execute: true` appends Enter automatically. Newlines inside the body still
-matter; that flag controls only the extra Enter.
-
-**File drops:** drop a file or folder to insert its quoted absolute path, without
-appending Enter. Quoting follows the platform: POSIX shells on macOS/Linux,
-PowerShell on Windows. Check it if you are using a different shell.
-
-**Links and images:** Cmd+click on macOS or Ctrl+click on Linux/Windows opens a
-visible web URL in your browser. A local PNG/JPEG path opens a temporary image
-preview; **File → Open Local Image…** opens the same preview through a picker.
-Relative paths ask you to choose a base folder. These paths refer to the computer
-running OMXTerm, even when SSH printed them.
-
-Inline images are different: programs such as Chafa or Pi send supported Kitty
-image sequences as terminal output. They stay in the terminal grid rather than
-opening a preview. Use a direct session for these images; multiplexer image
-passthrough is not supported. See [image setup](usage.md#inline-terminal-images).
+**Local previews and inline images are different.** An explicitly opened local
+PNG/JPEG appears in a temporary overlay; its path always names the computer
+running OMXTerm, even when SSH printed it. Inline images arrive as terminal
+output from programs such as Chafa or Pi and stay in the terminal grid. See
+[local previews](usage.md#previewing-local-images) and
+[inline image setup](usage.md#inline-terminal-images) for the supported paths.
 
 ## What stays on your computer
 

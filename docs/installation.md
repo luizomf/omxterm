@@ -87,6 +87,8 @@ chmod +x linux_install.sh
 ```
 
 OMXTerm will appear in your desktop application launcher. See the [desktop helper guide](linux-installer.md) for details.
+For optional blur, HiDPI scaling, or VM graphics help, use
+[Linux desktop tips](linux-desktop.md).
 
 <details>
 <summary>Optional: Verify download checksum</summary>

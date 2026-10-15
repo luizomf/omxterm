@@ -232,7 +232,7 @@ Start with the [installation guide](installation.md) for your system.
 
 | Symptom                                                      | Try this                                                                                                                           |
 | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| macOS warns about an unidentified developer                  | Verify the download and follow the [per-app Open Anyway steps](installation.md#if-macos-blocks-the-first-launch).                  |
+| macOS warns about an unidentified developer                  | Verify the download and follow the [per-app Open Anyway steps](installation.md#first-launch-on-macos).                             |
 | Linux says “Permission denied”                               | Use the guide's `chmod +x` step as your ordinary user. If that fails, move the app to a local folder that allows running programs. |
 | Linux reports FUSE or a mount failure                        | Use `--appimage-extract-and-run` after verification.                                                                               |
 | Linux reports `GLIBC_2.42 not found`                         | This distribution is too old for the AppImage. Use a compatible distribution; keep its system glibc intact.                        |
@@ -270,6 +270,20 @@ Open a new Bash session. Other programs have their own bell preferences.
 ### Bright flashes in Vim
 
 Run `:set belloff=all` in Vim. To keep it, add `set belloff=all` to your `.vimrc`.
+
+### Shell preferences do not load
+
+OMXTerm does not edit shell startup files or inject shell integration. On macOS
+and Linux, it starts your account shell as an interactive **login shell**.
+Bash reads the first readable file among `~/.bash_profile`, `~/.bash_login`, and
+`~/.profile`; it reads `~/.bashrc` only if that login setup sources it. Back up
+and edit the login file already in use rather than creating `.bash_profile`
+that would bypass an existing `.profile`.
+
+Zsh reads its interactive `.zshrc` (under `ZDOTDIR` when set). Windows starts its
+selected shell without a login flag; startup preferences depend on that shell.
+Open a new tab after changing startup files. Prompts, aliases, command history,
+and Vim preferences belong to those programs, not OMXTerm configuration.
 
 ### Configuration changes do not appear
 

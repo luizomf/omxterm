@@ -19,19 +19,20 @@ gh issue close <number> --repo luizomf/omxterm --comment "..."
 ```
 
 Use a body file or `--body-file -` with a quoted heredoc for multiline text.
-See [triage labels](triage-labels.md) for the skill-role mapping.
+See [triage labels](triage-labels.md) for the repository's state labels.
 
 GitHub shares one number space across issues and PRs. Resolve an ambiguous
 reference with `gh pr view <number> --repo luizomf/omxterm`, falling back to
 `gh issue view`. Treat an external PR as a contribution to review; a substantial
 feature proposal starts as an issue so scope can be discussed first.
 
-When a skill says **publish to the issue tracker**, create a GitHub issue.
-**Fetch the ticket** means read its body, comments, labels and current state.
+Read an issue's body, comments, labels and current state before acting. These
+operations can be used with any contributor's tools; no agent skill is required.
 
-## Wayfinding
+## Multi-issue investigations
 
-The `wayfinder` skill uses a map issue and child tickets:
+For investigations using the repository's `wayfinder:*` labels, coordinate a
+map issue and child tickets:
 
 - **Map:** label `wayfinder:map`; keep Notes, Decisions-so-far and Fog in its body.
 - **Child:** use a native GitHub sub-issue and a `wayfinder:<type>` label

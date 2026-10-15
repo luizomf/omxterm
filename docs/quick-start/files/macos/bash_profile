@@ -1,4 +1,0 @@
-# Reuse interactive Bash preferences in login shells.
-if [ -r "$HOME/.bashrc" ]; then
-  . "$HOME/.bashrc"
-fi

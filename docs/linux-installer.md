@@ -51,7 +51,7 @@ apply only when launched through the installed menu entry.
 Launching a bare AppImage or a separately created wrapper bypasses the desktop
 entry and its options. Compatibility installation also does not change
 `npm run dev`. For a direct AppImage launch, see
-[graphics troubleshooting](quick-start/linux-desktop.md#graphics-troubleshooting).
+[graphics troubleshooting](linux-desktop.md#graphics-troubleshooting).
 
 </details>
 
@@ -69,10 +69,10 @@ or failed queries leave normal Electron scaling unchanged. Terminal font zoom
 is independent. For a manual adjustment or undo, back up
 `~/.local/share/applications/omxterm.desktop` and edit/remove only its
 `--force-device-scale-factor=...` argument; reinstalling replaces that menu entry.
-See the [HiDPI tips](quick-start/linux-desktop.md#small-interface-text-on-a-hidpi-display).
+See the [HiDPI tips](linux-desktop.md#small-interface-text-on-a-hidpi-display).
 
 For blur and other desktop preferences, see the
-[Hyprland/Omarchy tips](quick-start/linux-desktop.md#hyprland-including-omarchy).
+[Hyprland/Omarchy tips](linux-desktop.md#hyprland-including-omarchy).
 
 ## Update, help and uninstall
 

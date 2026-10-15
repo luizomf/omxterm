@@ -1,11 +1,12 @@
 # User configuration
 
 > [!TIP]
-> **Prefer visual editing?** Use [OMXTerm Studio](https://luizomf.github.io/omxterm-studio/) to customize your colors and settings in your browser without touching JSON files!
-> **Want a preconfigured setup?** Jump to our ready-to-use quick start guides for [macOS](quick-start/macos.md), [Linux](quick-start/linux.md), or [Windows](quick-start/windows.md).
+> **Prefer visual editing?** [OMXTerm Studio](#edit-visually-with-omxterm-studio)
+> lets you import, edit, and export settings and themes in your browser.
 
 OMXTerm is ready to use with its bundled font, colors, and your default shell.
-When you first open it, it creates three editable starter files:
+When you open it without an existing configuration, it creates three editable
+starter files:
 
 ```text
 omxterm/
@@ -17,6 +18,9 @@ omxterm/
 
 Find them in `~/.config/omxterm` on macOS and Linux, or
 `%USERPROFILE%\.config\omxterm` on Windows.
+
+Keep these defaults to start; no separate preset download is needed. Back up
+existing files before replacing them, or merge only the settings you want.
 
 **The basic workflow: edit, save, reload.** Use a plain-text editor or
 [OMXTerm Studio](#edit-visually-with-omxterm-studio), then choose
@@ -238,27 +242,27 @@ the default background (SGR 49), reveal the tint. Theme colors remain
 
 ### Linux desktop tips
 
-For optional desktop setup, use the [Linux desktop guide](quick-start/linux-desktop.md):
+For optional desktop setup, use the [Linux desktop guide](linux-desktop.md):
 
 <a id="ubuntu-with-gnome-blur-my-shell"></a>
 
-- [GNOME: Blur my Shell](quick-start/linux-desktop.md#ubuntu-with-gnome-blur-my-shell)
+- [GNOME: Blur my Shell](linux-desktop.md#ubuntu-with-gnome-blur-my-shell)
 
 <a id="fedora-with-kde-plasma-and-other-kde-desktops"></a>
 
-- [KDE Plasma: Blur desktop effect](quick-start/linux-desktop.md#fedora-with-kde-plasma-and-other-kde-desktops)
+- [KDE Plasma: Blur desktop effect](linux-desktop.md#fedora-with-kde-plasma-and-other-kde-desktops)
 
 <a id="hyprland-including-omarchy"></a>
 
-- [Hyprland and Omarchy](quick-start/linux-desktop.md#hyprland-including-omarchy)
+- [Hyprland and Omarchy](linux-desktop.md#hyprland-including-omarchy)
 
 <a id="small-interface-text-on-a-hidpi-display"></a>
 
-- [HiDPI interface size](quick-start/linux-desktop.md#small-interface-text-on-a-hidpi-display)
+- [HiDPI interface size](linux-desktop.md#small-interface-text-on-a-hidpi-display)
 
 <a id="graphics-troubleshooting"></a>
 
-- [VM and driver graphics troubleshooting](quick-start/linux-desktop.md#graphics-troubleshooting)
+- [VM and driver graphics troubleshooting](linux-desktop.md#graphics-troubleshooting)
 
 ## Add one behavior change
 

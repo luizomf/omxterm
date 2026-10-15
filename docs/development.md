@@ -452,6 +452,25 @@ Remove-Item Env:OMXTERM_TEST_IMAGE_CAPACITY
 
 ### Evidence reuse and packaging
 
+Full native checks build once through `check:portable`, then package and verify
+local artifacts in `release/`; they do not publish:
+
+| Platform      | Complete native check                                            |
+| ------------- | ---------------------------------------------------------------- |
+| macOS ARM64   | `npm run check`                                                  |
+| Linux ARM64   | `npm run check:linux`                                            |
+| Windows ARM64 | `npm run check:win -- --disposable-vm-allow-omxterm-replacement` |
+
+**The Windows check performs real installation and replacement.** Follow the
+[Windows release procedure](release.md#windows-arm64) in an authorized disposable
+VM with a recovery snapshot. A temporary install path does not protect an
+existing installation. For non-installing diagnostics, run `npm run package:win`,
+then `npm run package:verify -- --windows-unpacked-only`.
+
+Standalone `package:*` builds fresh; explicit `package-built:*` packages a
+previously established current native build without repeating it. See
+[resume commands](release.md#resume-and-version-only-commands).
+
 Record commands, full tested SHA, prepared dependencies, environment, outcomes
 and coverage limits in the task's issue/PR. Reuse a recorded PASS from Git or a
 previous issue/PR only with equivalent relevant inputs. An isolated later pass

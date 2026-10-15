@@ -4,101 +4,40 @@ OMXTerm is a personal desktop terminal for ARM64 macOS, Linux and Windows,
 using Electron, TypeScript, a portable DOM+Restty Terminal Surface and a local
 PTY Adapter.
 
-## Working style
+## Shared contributor guidance
+
+[CONTRIBUTING.md](CONTRIBUTING.md) is the contribution guide for humans and
+agents alike: setup, engineering and security standards, verification, commits
+and PRs. Use [docs/development.md](docs/development.md) for platform prerequisites,
+native tests and fixture safety. No particular agent harness, skill collection,
+private tooling or worktree location is required.
+
+For the task's context, read its issue, [docs/spec.md](docs/spec.md),
+[CONTEXT.md](CONTEXT.md) and relevant [ADRs](docs/adr/README.md). These are shared
+technical references, not agent-only requirements. Update affected contracts
+alongside behavior changes; documentation corrections alone do not authorize
+code changes. The [documentation map](docs/README.md) identifies each subject's
+home.
+
+## Agent working guidance
 
 - Chat in the user's language; write code, docs and GitHub artifacts in English.
-- Keep going while the next step is clear and in scope. Make routine engineering
-  decisions yourself, including in delegated work. Ask when information blocks
-  progress or a destructive consequence needs authorization.
-- Prefer the smallest complete solution and existing tools. Inspect repository
-  state yourself and report blockers with evidence and a recommended next step.
-- Carry the maintainer's actual request into plans, issues and delegated prompts.
-  Do not add unrequested restrictions, work or approval gates.
+- Inspect working-tree changes and related issues/branches/PRs before editing.
+  Preserve unrelated work and coordinate with active writers. Check current
+  tracker state; completed work stays closed unless the task calls for reopening.
+- Carry the actual request and delivery boundary into plans and delegations.
+  Prefer the smallest complete solution and existing tools; do not add
+  unrequested work, approval gates or implementation to a documentation task.
+- Continue while the next step is clear and in scope. Ask when missing information
+  blocks progress or a destructive consequence needs authorization. Report
+  blockers with evidence and a recommended next step.
+- Apply the shared [engineering standards](CONTRIBUTING.md#making-a-change) and
+  [verification guidance](CONTRIBUTING.md#verification). Inspect the final diff;
+  report actual checks, unavailable checks and retained failures, not inferred
+  passes. Keep private data out of commits and public evidence.
+- Leave integration and releases to the authorized maintainer workflow under
+  [maintainer responsibilities](CONTRIBUTING.md#maintainer-integration-and-releases).
+  Do not treat a contribution request as permission to publish or release.
 
-## Context
-
-- Read `docs/spec.md`, `CONTEXT.md`, relevant `docs/adr/` decisions and the issue
-  for context. Documentation, specs, ADRs and contracts evolve with the product;
-  none is immutable. A documentation reconciliation request includes correcting
-  those documents, not only user guides. Write the current tree as guidance for
-  today's product, not a chronicle of how it evolved. Replace obsolete decisions
-  and remove superseded documents, old release reports and experiment results
-  instead of keeping historical banners or archives in the tree. Preserve useful
-  current rationale and procedures; history remains in commits, issues and PRs.
-- Keep documentation matched to its reader: `README.md` and the user guides
-  answer everyday tasks; `CONTRIBUTING.md` and development references cover
-  contributions; this file, `CONTEXT.md`, the spec and ADRs give agents the deeper
-  working context. Link to the relevant reference instead of repeating it.
-- Update affected product contracts in the same commit as a behavior change:
-  `docs/spec.md`, relevant ADRs and `CONTEXT.md`, plus user guides when affected.
-  Review those documents against the changed implementation before delivery;
-  when none needs an update, explain why in the PR. Documentation-only corrections
-  describe the existing code and do not authorize changing it.
-- Describe implemented behavior and limitations accurately. Separate supported
-  code bugs from documentation drift into focused follow-up issues, with affected
-  platforms and evidence limits. An old promise, audit finding or historical
-  evidence gap is not automatically a requirement to change code or block a
-  release. State a concrete impact and relevance when recommending a blocker.
-- Keep code fixes bounded to one problem and its affected platform(s), rather
-  than turning a broad documentation audit into a single implementation task.
-- GitHub: `luizomf/omxterm`. Tracker operations, labels and domain references live
-  in `docs/agents/`; read them when needed.
-- `CONTRIBUTING.md` covers contribution and checks. `docs/development.md` covers
-  native setup, graphical tests and destructive fixture prerequisites.
-
-## Changes and delivery
-
-- Check working-tree changes and active branches/PRs before editing. Preserve
-  unrelated work and coordinate with active writers.
-- Default to issue → branch → PR → squash merge. Small documentation or agent
-  guidance maintenance may go directly to `main` with maintainer approval.
-  Fork contributions follow `CONTRIBUTING.md`.
-- Create worktrees under `~/sannux-data/worktrees/<repo>/<worktree_name>`.
-- Use focused conventional commits. PRs explain intent, link the issue, and
-  record verification and documentation impact. Get independent review and
-  passing required checks before merging.
-- Check current issue/PR state before acting; completed work stays closed unless
-  the task calls for reopening it. After integration, clean up task-owned
-  branches, worktrees and temporary resources while preserving uncommitted work
-  and artifacts still in use.
-
-## Engineering and verification
-
-- Keep modules focused, interfaces small and types strict. Add dependencies or
-  abstractions for a concrete need in the current change.
-- Privileged operations belong in Electron main; preload exposes a minimal
-  typed bridge. Preserve renderer isolation, disabled Node integration and
-  sandboxing (Linux exception: ADR 0024). The Terminal Surface receives an
-  Adapter and imports neither Electron nor `node-pty`.
-- Validate external input at IPC and PTY boundaries. Pass untrusted values as
-  literal arguments rather than interpolating shell commands. Logs follow the
-  safe-metadata contract in `docs/spec.md`.
-- Prefer test-first changes covering observable behavior. Mock external I/O in
-  unit tests; use scoped integration tests for real PTYs, filesystems and GUI.
-- Format changed files. For code, establish `npm run check:portable` plus relevant
-  native/packaging evidence; reuse recorded PASS steps with unchanged relevant
-  inputs under `docs/release.md`. Run affected tests for test/fixture changes,
-  not unrelated native rebuilds. For docs, formatting and diff checks suffice;
-  verify changed links and examples. State unavailable checks. Retain observed
-  failures and assess their relevance to the current candidate. An applicable
-  FAIL needs a diagnosis-supported disposition; a later pass does not erase it,
-  and a historical failure is not automatically a blocker for unrelated work.
-- Review the final diff for unrelated changes, generated files and private data.
-  Keep credentials, local configuration, terminal/clipboard contents and session
-  transcripts out of commits and public evidence.
-
-## Versions and releases
-
-Follow `docs/versioning.md` for the development baseline and `docs/release.md`
-for releases. Ordinary changes leave versions unchanged; feature/contract
-changes may advance the `-dev` baseline as documented.
-
-A release request covers preparation, native verification, tags, uploads and
-download verification. Carry that scope through delegations. Manual testing is
-optional; record unverified risk alongside checks and checksums. Build natively
-when package inputs change; preserve verified packages otherwise. Separate
-behavioral, build, exact-artifact and publication evidence;
-a version-only edit requires new packages, not wholesale behavioral reruns.
-Collect exact artifacts and evidence in the primary checkout's ignored
-`release/` directory. Identify development builds by full source SHA and preserve
-candidates through verification and publication.
+GitHub: `luizomf/omxterm`. Maintainer tracker operations and label meanings are in
+[docs/agents/](docs/agents/issue-tracker.md); consult them when doing tracker work.

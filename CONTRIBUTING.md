@@ -1,7 +1,8 @@
 # Contributing to OMXTerm
 
 Thanks for helping improve OMXTerm. Bug reports, everyday testing, documentation
-fixes and code contributions are all welcome.
+fixes and code contributions are all welcome. Humans and coding agents use the
+same engineering standards and technical references below.
 
 ## Help without writing code
 
@@ -86,18 +87,10 @@ use ARM64 hardware running macOS, Linux or Windows, Git, and **Node.js 22.13+
 within 22.x, or 24+**, with npm.
 
 Prepare your [platform prerequisites](docs/development.md#platform-prerequisites)
-first. Linux setup includes installed fonts and graphical-test dependencies, not
-just a compiler and Node.js. Follow the Ubuntu, Fedora or Arch/Omarchy commands
-there before `npm ci`: bundled app fonts do not replace the installed families
-used by native tests, and missing fonts can cause long startup timeouts.
-
-**On Windows, enable Developer Mode before cloning or testing.** Tests create real
-symlinks as an ordinary user; missing symlink privileges can cause many failures
-across unrelated suites. Git's `core.symlinks=true` is not a permission grant.
-The [Windows setup guide](docs/development.md#windows) covers enabling Developer
-Mode, a quick symlink check, temporary PowerShell execution policy and running
-GUI tests in the signed-in desktop session. Do not run the suite as administrator
-to hide a missing prerequisite.
+before cloning and running `npm ci`: macOS needs native build tools, Linux needs
+installed fixture fonts and graphical dependencies, and Windows development/tests
+need ordinary-user symlink access through Developer Mode. These are development
+requirements, not extra steps for people installing the packaged app.
 
 Then clone your fork (replace `YOUR-USERNAME`):
 
@@ -141,7 +134,9 @@ work.
 
 - Keep the change focused, with clear modules, strict types and dependencies
   that serve a concrete need.
-- Test observable behavior, including a regression test for a bug fix.
+- Prefer test-first changes covering observable behavior, including a regression
+  test for a bug fix. Mock external I/O in unit tests; use scoped integration tests
+  for real PTYs, filesystems and GUI.
 - In the same commit as a behavior change, update the affected user guides,
   `docs/spec.md`, architecture decisions and `CONTEXT.md` terminology. Check them
   against the implementation, not just the intended design. If none is affected,
@@ -155,13 +150,19 @@ work.
   [ADR 0024](docs/adr/0024-disable-the-chromium-sandbox-on-linux.md).
   The portable Terminal Surface receives an Adapter rather than importing
   Electron or `node-pty`.
+- Validate external input at IPC and PTY boundaries. Pass untrusted values as
+  literal arguments, not interpolated shell commands. Logs follow the
+  [safe-metadata contract](docs/spec.md#configuration-and-local-state).
 - Review the final diff for unrelated changes and private data. Local settings,
   logs, terminal contents, credentials and generated release files stay out of Git.
 
 ## Verification
 
-For documentation-only changes, check formatting, changed links and examples,
-and run `git diff --check`. With dependencies installed:
+For documentation-only changes, check formatting, changed relative links and
+anchors, and examples; run `git diff --check`. No native build or test suite is
+needed. Product tests should exercise loaders and initial starter-file creation,
+not parse shell commands from editorial Markdown or require a particular guide's
+wording. With dependencies installed:
 
 ```sh
 npm run format:check
@@ -202,24 +203,10 @@ Test-only/fixture-only changes need affected tests and honest results, not packa
 rebuilds everywhere. Proven orchestration-only changes need orchestration tests;
 retained metadata or changed build recipes are not automatically exempt.
 
-Full native commands:
-
-| Platform      | Complete native check                                            |
-| ------------- | ---------------------------------------------------------------- |
-| macOS ARM64   | `npm run check`                                                  |
-| Linux ARM64   | `npm run check:linux`                                            |
-| Windows ARM64 | `npm run check:win -- --disposable-vm-allow-omxterm-replacement` |
-
-These commands build once through `check:portable`, then package and verify
-local artifacts in `release/`; they do not publish. Standalone `package:*` builds
-fresh; explicit `package-built:*` packages a previously established current
-native build without repeating it (see [resume commands](docs/release.md#resume-and-version-only-commands)).
-**The Windows check performs real installation and replacement.** Use
-an authorized disposable VM with a recovery snapshot and follow the
-[Windows release procedure](docs/release.md#windows-arm64). A temporary install
-path does not protect an existing installation. For non-installing diagnostics,
-run `npm run package:win`, then
-`npm run package:verify -- --windows-unpacked-only`.
+Native packaging commands and their safety prerequisites are in
+[Development](docs/development.md#evidence-reuse-and-packaging).
+**Windows exact-installer checks perform real installation and replacement**;
+use only an authorized disposable VM with a recovery snapshot.
 
 List unavailable checks and reasons. Report actual platform results and coverage
 limits; one platform's pass does not qualify another. Preserve failures and
@@ -254,9 +241,36 @@ contracts updated alongside changed behavior, or explain why none is affected.
 Mention security impact and any unresolved concern. For an issue with acceptance
 criteria, explain how the change meets them. Keep unrelated work in separate PRs.
 
-Maintainers handle tracker organization and releases. Ordinary fixes and docs
-leave versions unchanged; a feature or contract change may advance the `-dev`
-baseline under the [versioning policy](docs/versioning.md). Release preparation
-and publication follow the [release procedure](docs/release.md).
+Ordinary fixes and docs leave versions unchanged; a feature or contract change
+may advance the `-dev` baseline under the [versioning policy](docs/versioning.md).
+Coding agents should also read [AGENTS.md](AGENTS.md); no particular agent tool or
+skill collection is required to contribute.
 
-Coding agents should also read [AGENTS.md](AGENTS.md).
+## Maintainer integration and releases
+
+Submitting a PR does not require tracker administration, publishing packages, or
+qualifying every platform yourself. Maintainers coordinate missing checks and
+own integration and releases:
+
+- Check current issues, PRs and active writers. Default to issue → branch → PR →
+  squash merge, with independent review and passing required checks before merge.
+  Small documentation or agent-guidance maintenance may go directly to `main`
+  with maintainer approval; this does not replace the public fork-and-PR route.
+- Assess failures against the candidate with diagnosis-supported dispositions.
+  An old promise, historical evidence gap or unrelated failure is not by itself
+  a release blocker; explain concrete impact and affected platforms.
+- Follow the [release procedure](docs/release.md) for preparation, native
+  verification, tags, uploads and download verification. An authorized release
+  request covers that full scope, including delegated work. Manual testing is
+  optional; record unverified risks rather than inventing passes.
+- Preserve verified packages when relevant inputs are unchanged. Separate
+  behavioral, build, exact-artifact and publication evidence; version-only changes
+  need new packages, not wholesale behavioral reruns. Collect exact artifacts
+  and evidence in the primary checkout's ignored `release/` directory, identify
+  development builds by full source SHA, and retain candidates through publication.
+- After integration, clean up task-owned branches, worktrees and temporary
+  resources only when no consumer still needs them. Preserve unrelated or
+  uncommitted work and retained failure evidence.
+
+[Tracker operations](docs/agents/issue-tracker.md) document repository labels and
+coordination for maintainers.
