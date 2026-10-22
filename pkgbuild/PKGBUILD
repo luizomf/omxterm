@@ -104,6 +104,9 @@ package() {
 #!/bin/sh
 # OMXTerm disables the Chromium sandbox on Linux (ADR 0024). Chromium decides
 # during bootstrap, before application code runs, so the flag comes first.
+# A parent Electron application (an editor's terminal, for example) may export
+# ELECTRON_RUN_AS_NODE, which would start the binary as plain Node.js.
+unset ELECTRON_RUN_AS_NODE
 exec /usr/lib/omxterm/omxterm --no-sandbox "$@"
 EOF
 
@@ -111,7 +114,7 @@ EOF
 [Desktop Entry]
 Name=OMXTerm
 Comment=Open-source personal desktop terminal
-Exec=/usr/lib/omxterm/omxterm --no-sandbox %U
+Exec=/usr/bin/omxterm %U
 Terminal=false
 Type=Application
 Icon=omxterm
