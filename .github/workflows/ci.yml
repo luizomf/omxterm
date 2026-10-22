@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Electron's own download and npm's caches; nothing else is fetched.
+  ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
+  npm_config_fund: "false"
+  npm_config_audit: "false"
+
+jobs:
+  static:
+    name: Format, lint and types
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+
+  unit:
+    # Native runners for every target: unit tests and an unpackaged build.
+    name: Unit tests and build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x64, os: ubuntu-24.04 }
+          - { target: linux-arm64, os: ubuntu-24.04-arm }
+          - { target: windows-x64, os: windows-2025 }
+          - { target: windows-arm64, os: windows-11-arm }
+          - { target: macos-arm64, os: macos-15 }
+          - { target: macos-x64, os: macos-15-intel }
+    steps:
+      - name: Preserve LF endings and repository symlinks
+        if: runner.os == 'Windows'
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.symlinks true
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Unit tests
+        run: npm test -- test/unit
+      - name: Build
+        run: npm run build
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-report-${{ matrix.target }}
+          path: .scratch/vitest-results.json
+          if-no-files-found: ignore
+
+  native-pty:
+    # Real PTYs, literal argv and process lifecycle on Linux. These suites
+    # start Electron's main process but draw no GPU content, so a virtual X
+    # server is enough; WebGL rendering suites need a real desktop.
+    name: Native PTY suites (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x64, os: ubuntu-24.04 }
+          - { target: linux-arm64, os: ubuntu-24.04-arm }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb procps fontconfig fonts-dejavu-core fonts-liberation
+      - run: npm ci
+      - name: Native PTY suites
+        run: >-
+          xvfb-run --auto-servernum npx vitest run
+          test/integration/local-shell.test.ts
+          test/integration/literal-argv.test.ts
+          test/integration/linux-foreground.test.ts
+          test/integration/terminal-resize-race.test.ts
+          test/integration/terminal-session-retirement.test.ts
