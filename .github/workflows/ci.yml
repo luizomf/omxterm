@@ -125,6 +125,10 @@ jobs:
     env:
       # Never pick up a signing identity from the runner keychain.
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      # electron-builder skips signing on pull request builds, which would
+      # drop the macOS ad-hoc seal (identity "-", no secret involved) that
+      # package:verify checks.
+      CSC_FOR_PULL_REQUEST: "true"
     steps:
       - name: Preserve LF endings and repository symlinks
         if: runner.os == 'Windows'
