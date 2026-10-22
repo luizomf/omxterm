@@ -1,5 +1,9 @@
 import { vi } from "vitest";
-import { createTerminalTabs } from "../../src/renderer/terminal-tabs";
+import {
+  createTerminalTabs,
+  type PaneLaunch,
+  type TerminalTabsOptions,
+} from "../../src/renderer/terminal-tabs";
 import type { ElectronTerminalAdapter } from "../../src/renderer/electron-terminal-adapter";
 import type {
   TerminalSessionAdapter,
@@ -17,6 +21,7 @@ export function createFakeSurface() {
     paste: vi.fn(async () => undefined),
     inject: vi.fn(async () => {}),
     selectAll: vi.fn(),
+    toggleSearch: vi.fn(),
     dispose: vi.fn(),
   };
 }
@@ -27,6 +32,11 @@ export function createTabsHarness(
   options: {
     failMountAt?: number;
     surfaceOptions?: TerminalSurfaceOptions;
+    confirmBroadcast?: (targetCount: number) => Promise<boolean>;
+    onBroadcastChange?: (targetCount: number) => void;
+    initialLaunch?: PaneLaunch;
+    initialWorkspace?: TerminalTabsOptions["initialWorkspace"];
+    onWorkspaceChange?: TerminalTabsOptions["onWorkspaceChange"];
   } = {},
 ) {
   document.body.innerHTML = "";
@@ -87,10 +97,26 @@ export function createTabsHarness(
       notifySelection,
       notifyTitle,
       notifyBell,
+      ...(options.confirmBroadcast
+        ? { confirmBroadcast: options.confirmBroadcast }
+        : {}),
+      ...(options.onBroadcastChange
+        ? { onBroadcastChange: options.onBroadcastChange }
+        : {}),
+      ...(options.initialLaunch
+        ? { initialLaunch: options.initialLaunch }
+        : {}),
+      ...(options.initialWorkspace
+        ? { initialWorkspace: options.initialWorkspace }
+        : {}),
+      ...(options.onWorkspaceChange
+        ? { onWorkspaceChange: options.onWorkspaceChange }
+        : {}),
     },
   );
   return {
     tabs,
+    createAdapter,
     strip,
     container,
     adapters,

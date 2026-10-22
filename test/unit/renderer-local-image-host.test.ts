@@ -78,6 +78,7 @@ async function setup(
     copy: vi.fn(async () => {}),
     paste: vi.fn(async () => {}),
     selectAll: vi.fn(),
+    toggleSearch: vi.fn(),
   };
   let openImage!: () => void;
   let toggleTabBar!: () => void;

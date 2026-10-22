@@ -21,18 +21,12 @@ function commands(script: string): string[] {
   });
 }
 
+// The per-platform packager selects the host architecture itself; its exact
+// electron-builder argv is pinned in package-release-plan.test.ts.
 const packagerCommands = {
-  mac: [
-    "electron-builder --config electron-builder.yml --mac dmg --arm64 --publish never",
-  ],
-  linux: [
-    "node scripts/prepare-linux-launcher.mjs",
-    "electron-builder --config electron-builder.yml --linux AppImage --arm64 --publish never",
-    "node scripts/package-linux-assets.mjs",
-  ],
-  win: [
-    "electron-builder --config electron-builder.yml --win nsis --arm64 --publish never",
-  ],
+  mac: ["node scripts/package.mjs mac"],
+  linux: ["node scripts/package.mjs linux"],
+  win: ["node scripts/package.mjs win"],
 };
 
 async function runWindowsCheck(args: string[], failScript = "") {

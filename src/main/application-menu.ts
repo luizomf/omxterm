@@ -1,10 +1,14 @@
 import type { MenuItemConstructorOptions } from "electron";
 import type {
+  TerminalPaneTarget,
+  TerminalSplitDirection,
+} from "../shared/terminal-contract";
+import type {
   TerminalActionName,
   TerminalKeybinds,
 } from "../shared/terminal-keybinds";
 
-interface TerminalApplicationMenuActions {
+export interface TerminalApplicationMenuActions {
   readonly newWindow: () => void;
   readonly closeSelectedWindow: () => void;
   readonly newTabInSelectedWindow: () => void;
@@ -27,18 +31,50 @@ interface TerminalApplicationMenuActions {
   readonly toggleSelectedTitleBar: () => void;
   readonly reloadUserConfiguration: () => void;
   readonly openLocalImage: () => void;
+  readonly splitSelectedPane: (direction: TerminalSplitDirection) => void;
+  readonly closeSelectedPane: () => void;
+  readonly focusPaneInSelectedWindow: (target: TerminalPaneTarget) => void;
+  readonly toggleSelectedPaneMaximized: () => void;
+  readonly equalizeSelectedPanes: () => void;
+  readonly toggleSelectedBroadcast: () => void;
+  readonly toggleSelectedSessions: () => void;
+  readonly toggleSelectedCommands: () => void;
+  readonly toggleSelectedCommandPalette: () => void;
+  readonly findInSelectedWindow: () => void;
+  readonly backUpSettings: () => void;
+  readonly restoreSettings: () => void;
+  readonly toggleOutputHighlighting?: () => void;
+  readonly toggleRestoreWorkspace?: () => void;
+  readonly openHighlightRules?: () => void;
+}
+
+export interface TerminalApplicationMenuState {
+  readonly outputHighlighting?: boolean;
+  readonly restoreWorkspace?: boolean;
 }
 
 export function terminalApplicationMenuTemplate(
   applicationName: string,
   actions: TerminalApplicationMenuActions,
   keybinds: TerminalKeybinds,
+  state: TerminalApplicationMenuState = {},
 ): MenuItemConstructorOptions[] {
   return [
     {
       label: applicationName,
       submenu: [
         { role: "about" },
+        ...(actions.toggleRestoreWorkspace
+          ? [
+              { type: "separator" as const },
+              {
+                label: "Restore Windows at Startup",
+                type: "checkbox" as const,
+                checked: state.restoreWorkspace ?? false,
+                click: actions.toggleRestoreWorkspace,
+              },
+            ]
+          : []),
         { type: "separator" },
         {
           label: `Quit ${applicationName}`,
@@ -66,6 +102,12 @@ export function terminalApplicationMenuTemplate(
           accelerator: keybinds.selectAll,
           click: actions.selectAllSelectedTerminal,
         },
+        { type: "separator" },
+        {
+          label: "Find…",
+          accelerator: keybinds.find,
+          click: actions.findInSelectedWindow,
+        },
       ],
     },
     {
@@ -86,6 +128,9 @@ export function terminalApplicationMenuTemplate(
           label: "Open Local Image…",
           click: actions.openLocalImage,
         },
+        { type: "separator" },
+        { label: "Back Up Settings…", click: actions.backUpSettings },
+        { label: "Restore Settings…", click: actions.restoreSettings },
         { type: "separator" },
         {
           label: "Close Tab",
@@ -119,10 +164,43 @@ export function terminalApplicationMenuTemplate(
         },
         { type: "separator" },
         {
+          label: "Command Palette…",
+          accelerator: keybinds.commandPalette,
+          click: actions.toggleSelectedCommandPalette,
+        },
+        {
+          label: "Toggle Sessions",
+          accelerator: keybinds.toggleSessions,
+          click: actions.toggleSelectedSessions,
+        },
+        {
+          label: "Toggle Commands",
+          accelerator: keybinds.toggleCommands,
+          click: actions.toggleSelectedCommands,
+        },
+        {
           label: "Toggle Snippets",
           accelerator: keybinds.toggleSnippets,
           click: actions.toggleSelectedSnippets,
         },
+        ...(actions.toggleOutputHighlighting
+          ? [
+              {
+                label: "Highlight Output",
+                type: "checkbox" as const,
+                checked: state.outputHighlighting ?? false,
+                click: actions.toggleOutputHighlighting,
+              },
+            ]
+          : []),
+        ...(actions.openHighlightRules
+          ? [
+              {
+                label: "Highlight Rules…",
+                click: actions.openHighlightRules,
+              },
+            ]
+          : []),
         {
           label: "Toggle Tab Bar",
           accelerator: keybinds.toggleTabBar,
@@ -150,6 +228,7 @@ export function terminalApplicationMenuTemplate(
         },
       ],
     },
+    terminalMenu(actions, keybinds),
     {
       label: "Window",
       submenu: [
@@ -187,6 +266,70 @@ export function terminalApplicationMenuTemplate(
 
 type SelectTabAction = keyof TerminalKeybinds & `selectTab${number}`;
 
+function terminalMenu(
+  actions: TerminalApplicationMenuActions,
+  keybinds: TerminalKeybinds,
+): MenuItemConstructorOptions {
+  const focus = (
+    label: string,
+    action: keyof TerminalKeybinds,
+    target: TerminalPaneTarget,
+  ): MenuItemConstructorOptions => ({
+    label,
+    accelerator: keybinds[action],
+    click: () => actions.focusPaneInSelectedWindow(target),
+  });
+  return {
+    label: "Terminal",
+    submenu: [
+      {
+        label: "Split Right",
+        accelerator: keybinds.splitRight,
+        click: () => actions.splitSelectedPane("right"),
+      },
+      {
+        label: "Split Down",
+        accelerator: keybinds.splitDown,
+        click: () => actions.splitSelectedPane("down"),
+      },
+      {
+        label: "Close Pane",
+        accelerator: keybinds.closePane,
+        click: actions.closeSelectedPane,
+      },
+      { type: "separator" },
+      {
+        label: "Maximize or Restore Pane",
+        accelerator: keybinds.toggleMaximizePane,
+        click: actions.toggleSelectedPaneMaximized,
+      },
+      {
+        label: "Equalize Panes",
+        accelerator: keybinds.equalizePanes,
+        click: actions.equalizeSelectedPanes,
+      },
+      {
+        label: "Focus Pane",
+        submenu: [
+          focus("Next Pane", "focusNextPane", "next"),
+          focus("Previous Pane", "focusPreviousPane", "previous"),
+          { type: "separator" },
+          focus("Left", "focusPaneLeft", "left"),
+          focus("Right", "focusPaneRight", "right"),
+          focus("Up", "focusPaneUp", "up"),
+          focus("Down", "focusPaneDown", "down"),
+        ],
+      },
+      { type: "separator" },
+      {
+        label: "Broadcast Input to Panes",
+        accelerator: keybinds.toggleBroadcast,
+        click: actions.toggleSelectedBroadcast,
+      },
+    ],
+  };
+}
+
 // The keybind vocabulary keyed by action name, invoking the same application
 // actions as the menu items above. The main-process key-event delivery path
 // (see keybind-delivery.ts) calls these so a keybind works even when the
@@ -223,6 +366,22 @@ export function terminalActionInvocations(
     toggleTabBar: actions.toggleSelectedTabBar,
     toggleTitleBar: actions.toggleSelectedTitleBar,
     reloadConfig: actions.reloadUserConfiguration,
+    splitRight: () => actions.splitSelectedPane("right"),
+    splitDown: () => actions.splitSelectedPane("down"),
+    closePane: actions.closeSelectedPane,
+    focusNextPane: () => actions.focusPaneInSelectedWindow("next"),
+    focusPreviousPane: () => actions.focusPaneInSelectedWindow("previous"),
+    focusPaneLeft: () => actions.focusPaneInSelectedWindow("left"),
+    focusPaneRight: () => actions.focusPaneInSelectedWindow("right"),
+    focusPaneUp: () => actions.focusPaneInSelectedWindow("up"),
+    focusPaneDown: () => actions.focusPaneInSelectedWindow("down"),
+    toggleMaximizePane: actions.toggleSelectedPaneMaximized,
+    equalizePanes: actions.equalizeSelectedPanes,
+    toggleBroadcast: actions.toggleSelectedBroadcast,
+    toggleSessions: actions.toggleSelectedSessions,
+    toggleCommands: actions.toggleSelectedCommands,
+    commandPalette: actions.toggleSelectedCommandPalette,
+    find: actions.findInSelectedWindow,
   });
 }
 

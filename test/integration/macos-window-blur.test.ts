@@ -8,8 +8,9 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { runNativeFixture } from "../fixtures/run-native-fixture";
+import { isNativeTestArchitecture } from "../fixtures/native-architecture";
 
-it.skipIf(process.platform !== "darwin" || process.arch !== "arm64")(
+it.skipIf(process.platform !== "darwin" || !isNativeTestArchitecture())(
   "loads the production Node-API addon and validates live owned windows and main-thread calls",
   async (testContext) => {
     testContext.signal.throwIfAborted();

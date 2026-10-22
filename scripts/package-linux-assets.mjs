@@ -8,8 +8,26 @@ const projectRoot = path.resolve(
   "..",
 );
 export const linuxHelperName = () => "linux_install.sh";
-export const linuxAppImageName = (version) =>
-  `OMXTerm-${version}-arm64.AppImage`;
+
+// Mirrors the pinned electron-builder's per-format architecture names for the
+// configured artifactName (${productName}-${version}-${arch}.${ext}).
+const linuxArtifactArchitectures = {
+  AppImage: { arm64: "arm64", x64: "x86_64" },
+  deb: { arm64: "arm64", x64: "amd64" },
+  rpm: { arm64: "aarch64", x64: "x86_64" },
+};
+
+export function linuxArtifactName(version, arch, extension) {
+  const names = linuxArtifactArchitectures[extension];
+  if (!names) throw new Error(`Unsupported Linux package format: ${extension}`);
+  const architecture = names[arch];
+  if (!architecture)
+    throw new Error(`Linux packages require arm64 or x64, not ${arch}`);
+  return `OMXTerm-${version}-${architecture}.${extension}`;
+}
+
+export const linuxAppImageName = (version, arch) =>
+  linuxArtifactName(version, arch, "AppImage");
 
 export function renderLinuxHelper(source, version) {
   const marker = "@OMXTERM_VERSION@";
@@ -33,7 +51,7 @@ async function packageVersion() {
   return metadata.version;
 }
 
-async function writeChecksum(file) {
+export async function writeChecksum(file) {
   const contents = await readFile(file);
   await writeFile(
     `${file}.sha256`,
@@ -43,9 +61,10 @@ async function writeChecksum(file) {
 
 export async function packageLinuxAssets(
   outputRoot = path.join(projectRoot, "release"),
+  arch = process.arch,
 ) {
   const version = await packageVersion();
-  const appImage = path.join(outputRoot, linuxAppImageName(version));
+  const appImage = path.join(outputRoot, linuxAppImageName(version, arch));
   const helper = path.join(outputRoot, linuxHelperName());
   const helperSource = await readFile(
     path.join(projectRoot, "scripts", "install-linux-appimage.sh"),

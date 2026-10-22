@@ -244,27 +244,40 @@ Reload your configuration and open a new tab to start the new shell. Only the ex
 
 Customize application shortcuts under `keybinds` using [Electron accelerator](https://www.electronjs.org/docs/latest/tutorial/keyboard-shortcuts#accelerators) syntax (or edit them with conflict checking in [OMXTerm Studio](#edit-visually-with-omxterm-studio)):
 
-| Action                      | macOS default              | Linux/Windows default |
-| --------------------------- | -------------------------- | --------------------- |
-| `quit`                      | `CommandOrControl+Q`       | `Control+Alt+Shift+Q` |
-| `copy`                      | `CommandOrControl+C`       | `Control+Shift+C`     |
-| `paste`                     | `CommandOrControl+V`       | `Control+Shift+V`     |
-| `selectAll`                 | `CommandOrControl+A`       | `Control+Shift+A`     |
-| `newWindow`                 | `CommandOrControl+N`       | `Control+Shift+N`     |
-| `newTab`                    | `CommandOrControl+T`       | `Control+Shift+T`     |
-| `closeTab`                  | `CommandOrControl+W`       | `Control+Shift+W`     |
-| `closeWindow`               | `CommandOrControl+Shift+W` | `Control+Shift+Q`     |
-| `nextTab`                   | `Control+Tab`              | `Control+PageDown`    |
-| `previousTab`               | `Control+Shift+Tab`        | `Control+PageUp`      |
-| `selectTab1` … `selectTab9` | `CommandOrControl+1` … `9` | `Alt+1` … `9`         |
-| `zoomIn`                    | `CommandOrControl+Plus`    | `Control+Plus`        |
-| `zoomOut`                   | `CommandOrControl+-`       | `Control+-`           |
-| `actualSize`                | `CommandOrControl+0`       | `Control+0`           |
-| `toggleFullScreen`          | `Control+Command+F`        | `Control+Shift+F`     |
-| `toggleSnippets`            | `CommandOrControl+Shift+S` | `Control+Shift+S`     |
-| `toggleTabBar`              | `CommandOrControl+Shift+B` | `Control+Shift+B`     |
-| `toggleTitleBar`            | `CommandOrControl+Shift+D` | `Control+Shift+D`     |
-| `reloadConfig`              | `CommandOrControl+Shift+,` | `Control+Shift+,`     |
+| Action                      | macOS default               | Linux/Windows default     |
+| --------------------------- | --------------------------- | ------------------------- |
+| `quit`                      | `CommandOrControl+Q`        | `Control+Alt+Shift+Q`     |
+| `copy`                      | `CommandOrControl+C`        | `Control+Shift+C`         |
+| `paste`                     | `CommandOrControl+V`        | `Control+Shift+V`         |
+| `selectAll`                 | `CommandOrControl+A`        | `Control+Shift+A`         |
+| `newWindow`                 | `CommandOrControl+N`        | `Control+Shift+N`         |
+| `newTab`                    | `CommandOrControl+T`        | `Control+Shift+T`         |
+| `closeTab`                  | `CommandOrControl+W`        | `Control+Shift+W`         |
+| `closeWindow`               | `CommandOrControl+Shift+W`  | `Control+Shift+Q`         |
+| `nextTab`                   | `Control+Tab`               | `Control+PageDown`        |
+| `previousTab`               | `Control+Shift+Tab`         | `Control+PageUp`          |
+| `selectTab1` … `selectTab9` | `CommandOrControl+1` … `9`  | `Alt+1` … `9`             |
+| `zoomIn`                    | `CommandOrControl+Plus`     | `Control+Plus`            |
+| `zoomOut`                   | `CommandOrControl+-`        | `Control+-`               |
+| `actualSize`                | `CommandOrControl+0`        | `Control+0`               |
+| `toggleFullScreen`          | `Control+Command+F`         | `Control+Shift+F`         |
+| `toggleSnippets`            | `CommandOrControl+Shift+S`  | `Control+Shift+S`         |
+| `toggleTabBar`              | `CommandOrControl+Shift+B`  | `Control+Shift+B`         |
+| `toggleTitleBar`            | `CommandOrControl+Shift+D`  | `Control+Shift+D`         |
+| `reloadConfig`              | `CommandOrControl+Shift+,`  | `Control+Shift+,`         |
+| `splitRight`                | `Command+D`                 | `Control+Shift+O`         |
+| `splitDown`                 | `Command+Shift+E`           | `Control+Shift+E`         |
+| `closePane`                 | `Command+Alt+W`             | `Control+Shift+K`         |
+| `focusNextPane`             | `Command+]`                 | `Control+Shift+]`         |
+| `focusPreviousPane`         | `Command+[`                 | `Control+Shift+[`         |
+| `focusPaneLeft` … `Down`    | `Command+Alt+Left` … `Down` | `Alt+Shift+Left` … `Down` |
+| `toggleMaximizePane`        | `Command+Shift+Enter`       | `Control+Shift+Z`         |
+| `equalizePanes`             | `Command+Alt+0`             | `Control+Shift+0`         |
+| `toggleBroadcast`           | `Command+Alt+I`             | `Control+Shift+I`         |
+| `toggleSessions`            | `Command+Shift+J`           | `Control+Shift+H`         |
+| `toggleCommands`            | `Command+Shift+M`           | `Control+Shift+M`         |
+| `commandPalette`            | `Command+Shift+P`           | `Control+Shift+P`         |
+| `find`                      | `Command+F`                 | `Control+Shift+G`         |
 
 Example overriding a single shortcut:
 
@@ -280,6 +293,14 @@ Example overriding a single shortcut:
 - Every shortcut needs one key plus at least one modifier other than Shift (such as `CommandOrControl`, `Control`, `Alt`, or `AltGr`), so a shortcut can never swallow normal typing.
 - Use literal punctuation characters (such as `Control+Shift+,`), except for `+`, which is written as `Plus`.
 - Each action needs its own shortcut. If you bind an action on Linux or Windows to a bare `Ctrl+<key>` that terminal programs use (like `Ctrl+C` or `Ctrl+D`), OMXTerm keeps the binding but shows a warning, since that key no longer reaches your shell.
+
+## Saved sessions file
+
+Saved sessions live in `sessions.json` next to `config.json`. OMXTerm writes this file itself; edit sessions in the Sessions sidebar rather than by hand. If the file is damaged, OMXTerm renames it to `sessions.json.corrupt-<time>` and starts with an empty list, so nothing is silently lost. Secrets are never stored in it.
+
+## Commands file
+
+The Command Manager keeps your own commands, favorites and hidden built-in commands in `commands.json` next to `config.json`. OMXTerm writes this file itself; create and edit commands in the Commands sidebar. A damaged file is renamed to `commands.json.corrupt-<time>` and OMXTerm starts with only the built-in commands.
 
 ## Snippets
 
@@ -362,6 +383,12 @@ node scripts/convert-ghostty-theme.mjs input-theme output-theme.json
 ```
 
 </details>
+
+## Backing up and restoring settings
+
+**File → Back Up Settings…** saves your `config.json`, `snippets.json`, themes, saved sessions, highlight rules and commands in one `.omxbackup` file, encrypted with a passphrase of at least 8 characters. Keep the passphrase: without it the backup cannot be opened. Passwords and keys are never stored in a backup.
+
+**File → Restore Settings…** asks for the file and its passphrase, then replaces those settings in every open window. Files that are not in the backup, such as an extra theme, are kept. If any part of the backup is invalid, nothing is changed.
 
 ## Reloading user configuration
 

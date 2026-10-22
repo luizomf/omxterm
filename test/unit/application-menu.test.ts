@@ -34,6 +34,18 @@ function menuActions() {
     toggleSelectedTitleBar: vi.fn(),
     reloadUserConfiguration: vi.fn(),
     openLocalImage: vi.fn(),
+    splitSelectedPane: vi.fn(),
+    closeSelectedPane: vi.fn(),
+    focusPaneInSelectedWindow: vi.fn(),
+    toggleSelectedPaneMaximized: vi.fn(),
+    equalizeSelectedPanes: vi.fn(),
+    toggleSelectedBroadcast: vi.fn(),
+    toggleSelectedSessions: vi.fn(),
+    toggleSelectedCommands: vi.fn(),
+    toggleSelectedCommandPalette: vi.fn(),
+    findInSelectedWindow: vi.fn(),
+    backUpSettings: vi.fn(),
+    restoreSettings: vi.fn(),
   };
 }
 

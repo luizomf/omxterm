@@ -3,10 +3,65 @@ export interface AsarInspection {
   readonly forbidden: string[];
 }
 
+export type PackagedArchitecture = "arm64" | "x64";
+
+export function packagedArchitecture(arch?: string): PackagedArchitecture;
+
+export function unpackedDirectoryName(platform: string, arch: string): string;
+
 export function inspectAsarEntries(
   entries: string[],
   platform?: "darwin" | "linux" | "win32",
+  arch?: string,
 ): AsarInspection;
+
+export function inspectPeMachine(
+  machine: number,
+  label: string,
+  arch: string,
+): void;
+
+export function inspectArchitectureDescription(
+  description: string,
+  label: string,
+  platform: string,
+  arch: string,
+): void;
+
+export function nativeBinaryKind(header: Buffer): string | undefined;
+
+export function inspectLinuxNativeBinaries(
+  binaries: readonly { readonly entry: string; readonly kind?: string }[],
+  arch: string,
+): string[];
+
+export function verifyLinuxNativeTree(
+  root: string,
+  arch: string,
+): Promise<void>;
+
+export function verifyLicenseResources(resources: string): Promise<void>;
+
+export function verifyChecksum(file: string): Promise<void>;
+
+export function assertNoUpdateMetadata(resources: string): Promise<void>;
+
+export function assertSameFile(source: string, packaged: string): Promise<void>;
+
+export function sourceVersion(): Promise<string>;
+
+export const staticOnlyFlag: string;
+export const softwareGlFlag: string;
+
+export function packageVerificationOptions(
+  args: readonly string[],
+  platform?: string,
+): {
+  windowsUnpackedOnly: boolean;
+  disposableVm: boolean;
+  staticOnly: boolean;
+  softwareGl: boolean;
+};
 
 export function inspectForbiddenPackagedEntries(entries: string[]): string[];
 
@@ -81,9 +136,11 @@ export function verifyPackagedApplication(
   options?: {
     readonly windowsUnpackedOnly?: boolean;
     readonly disposableVm?: boolean;
+    readonly staticOnly?: boolean;
   },
 ): Promise<{
   readonly applicationPath: string;
+  readonly arch: PackagedArchitecture;
   readonly records: number;
   readonly verification: string;
   readonly installerVerification?: {

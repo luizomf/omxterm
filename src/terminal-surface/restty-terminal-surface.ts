@@ -125,6 +125,9 @@ export async function mountResttyTerminalSurface(
   const isCancelled = () => options.abortSignal?.aborted === true;
   const isInactive = () => disposed || isCancelled();
   let ready = false;
+  // A retained Surface outlives its session's exit but refuses input.
+  let ended = false;
+  const canSend = () => !isInactive() && ready && !ended;
   let transportConnected = false;
   let ptyCallbacks: PtyCallbacks | undefined;
   let settledSize: TerminalSize | undefined;
@@ -150,7 +153,7 @@ export async function mountResttyTerminalSurface(
   const delivery = resttyDelivery(
     adapter,
     options,
-    () => !isInactive() && ready,
+    canSend,
     () => pane?.runtime.terminal.isBracketedPasteEnabled() ?? false,
     revealInput,
   );
@@ -234,14 +237,13 @@ export async function mountResttyTerminalSurface(
       callbacks?.onDisconnect?.();
     },
     sendInput(data) {
-      if (!isInactive() && ready) adapter.write(data);
-      return !isInactive() && ready;
+      if (canSend()) adapter.write(data);
+      return canSend();
     },
     resize(cols, rows) {
-      const size = { cols, rows };
-      settledSize = size;
-      if (!isInactive() && ready) adapter.resize(size);
-      return !isInactive() && ready;
+      settledSize = { cols, rows };
+      if (canSend()) adapter.resize(settledSize);
+      return canSend();
     },
     isConnected: () => transportConnected && !isInactive(),
     destroy: () => undefined,
@@ -262,14 +264,7 @@ export async function mountResttyTerminalSurface(
     );
     restty = new PatchedRestty({
       root: container,
-      surface: {
-        autoInit: false,
-        createInitialPane: true,
-        defaultContextMenu: false,
-        paneStyles: false,
-        searchUi: false,
-        shortcuts: false,
-      },
+      surface: resttySurfaceConfig(options.searchLabels),
       terminal: { ...terminal, isSurfaceVisible },
       services: resttyHostServices(transport, delivery, options, revealInput),
     });
@@ -324,14 +319,15 @@ export async function mountResttyTerminalSurface(
       onOutput(data) {
         if (!isInactive()) {
           visibleLinkController?.invalidate();
-          ptyCallbacks?.onData?.(data);
+          ptyCallbacks?.onData?.(transformed(options.transformOutput, data));
           // Hidden ingestion still retires renderer copies, including pending
           // image decodes, even when the document's RAF is throttled.
           if (!isSurfaceVisible()) pane?.runtime.render.refresh();
         }
       },
-      onExit() {
-        dispose();
+      onExit(exit) {
+        if (retainsExit(options, exit)) ended = true;
+        else dispose();
       },
     });
     if (isInactive()) return createDisposedSurface();
@@ -368,6 +364,9 @@ export async function mountResttyTerminalSurface(
       ...resttyClipboardActions(delivery, options, () =>
         disposed ? undefined : pane?.runtime.interaction,
       ),
+      toggleSearch: () => {
+        if (!disposed) restty?.toggleSearch();
+      },
       dispose,
     };
   } catch (cause) {
@@ -473,6 +472,57 @@ function paintContainer(
   container.style.setProperty("--terminal-background", theme.colors.background);
 }
 
+// Highlighting must never cost output: a failing transform passes data raw.
+function transformed(
+  transform: ((data: string) => string) | undefined,
+  data: string,
+): string {
+  if (!transform) return data;
+  try {
+    return transform(data);
+  } catch {
+    return data;
+  }
+}
+
+function retainsExit(
+  options: TerminalSurfaceOptions,
+  exit: { readonly exitCode: number; readonly signal: number },
+): boolean {
+  return (
+    options.retainOnExit === true && (exit.exitCode !== 0 || exit.signal !== 0)
+  );
+}
+
+// OMXTerm owns panes, styles, menus and shortcuts; search opens through its
+// own keybind, never Restty's shortcut.
+function resttySurfaceConfig(labels: TerminalSurfaceOptions["searchLabels"]) {
+  return {
+    autoInit: false,
+    createInitialPane: true,
+    defaultContextMenu: false,
+    paneStyles: false,
+    shortcuts: false,
+    searchUi: resttySearchUi(labels),
+  };
+}
+
+function resttySearchUi(labels: TerminalSurfaceOptions["searchLabels"]) {
+  return {
+    enabled: true,
+    shortcut: false,
+    ...(labels
+      ? {
+          placeholder: labels.placeholder,
+          previousButtonText: labels.previous,
+          nextButtonText: labels.next,
+          clearButtonText: labels.clear,
+          closeButtonText: labels.close,
+        }
+      : {}),
+  };
+}
+
 function createDisposedSurface(): TerminalSurface {
   return {
     focus: () => undefined,
@@ -483,6 +533,7 @@ function createDisposedSurface(): TerminalSurface {
     paste: async () => undefined,
     inject: async () => undefined,
     selectAll: () => undefined,
+    toggleSearch: () => undefined,
     dispose: () => undefined,
   };
 }

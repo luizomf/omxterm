@@ -14,9 +14,27 @@ Choose **File → New Tab** for another session in the same window, or **File �
 - **Tab titles:** each tab starts with your active shell or program name (such as `zsh` or `powershell.exe`) and updates automatically when a program sets a terminal title.
 - **Closing:** closing a tab ends its session, and closing the last window exits the app. Typing `exit` in your shell closes that tab immediately.
 
+### Tab menu and groups
+
+Right-click a tab (or press `Shift+F10` on it) to rename it, give it a color, duplicate it, or put it in a group. Grouped tabs stay together behind a colored chip; click the chip to collapse or expand the group, or right-click it to rename, recolor or ungroup. A duplicated tab opens the same saved session or SSH target, or a shell in the same folder.
+
 ### Close confirmation
 
 To protect active work, OMXTerm asks for confirmation before closing a tab or window with a running command. On Windows, confirmation is shown for all live sessions. You can disable this prompt anytime by setting `"confirmClose": false` in `config.json`.
+
+## Starting from a terminal
+
+OMXTerm accepts a few options when you start it from a shell (`omxterm`, or the full path to the app):
+
+| Option                                        | What it does                                                                                        |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `-w <dir>`, `--working-directory <dir>`       | Starts the first tab in `<dir>`.                                                                    |
+| `--ssh <[user@]host[:port]>`                  | Opens the first tab as an SSH connection, like Quick Connect. A failed connection offers Reconnect. |
+| `-e <program> [arguments...]`                 | Runs `<program>` in the first tab instead of your shell. Everything after `-e` goes to the program. |
+| `--log-level <error\|info\|debug>`, `--debug` | Changes how much OMXTerm writes to its [diagnostics log](#local-diagnostics) for this run.          |
+| `--version`, `--help`                         | Prints the version or this list and exits.                                                          |
+
+Each launch opens a new window in a new OMXTerm process.
 
 ## Window controls
 
@@ -31,31 +49,105 @@ These toggles apply to the current window. To change the defaults for new window
 
 The application menu displays your active shortcuts, including any custom bindings from `config.json`.
 
-| Action                    | macOS             | Linux and Windows  |
-| ------------------------- | ----------------- | ------------------ |
-| New Window                | `Cmd+N`           | `Ctrl+Shift+N`     |
-| New Tab                   | `Cmd+T`           | `Ctrl+Shift+T`     |
-| Close Tab                 | `Cmd+W`           | `Ctrl+Shift+W`     |
-| Close Window              | `Cmd+Shift+W`     | `Ctrl+Shift+Q`     |
-| Quit                      | `Cmd+Q`           | `Ctrl+Alt+Shift+Q` |
-| Next Tab                  | `Ctrl+Tab`        | `Ctrl+PageDown`    |
-| Previous Tab              | `Ctrl+Shift+Tab`  | `Ctrl+PageUp`      |
-| Select Tab 1 through 9    | `Cmd+1` … `Cmd+9` | `Alt+1` … `Alt+9`  |
-| Copy                      | `Cmd+C`           | `Ctrl+Shift+C`     |
-| Paste                     | `Cmd+V`           | `Ctrl+Shift+V`     |
-| Select All                | `Cmd+A`           | `Ctrl+Shift+A`     |
-| Zoom In                   | `Cmd++`           | `Ctrl++`           |
-| Zoom Out                  | `Cmd+-`           | `Ctrl+-`           |
-| Actual Size               | `Cmd+0`           | `Ctrl+0`           |
-| Toggle Full Screen        | `Ctrl+Cmd+F`      | `Ctrl+Shift+F`     |
-| Toggle Tab Bar            | `Cmd+Shift+B`     | `Ctrl+Shift+B`     |
-| Toggle Title Bar          | `Cmd+Shift+D`     | `Ctrl+Shift+D`     |
-| Toggle Snippets           | `Cmd+Shift+S`     | `Ctrl+Shift+S`     |
-| Reload User Configuration | `Cmd+Shift+,`     | `Ctrl+Shift+,`     |
+| Action                    | macOS             | Linux and Windows               |
+| ------------------------- | ----------------- | ------------------------------- |
+| New Window                | `Cmd+N`           | `Ctrl+Shift+N`                  |
+| New Tab                   | `Cmd+T`           | `Ctrl+Shift+T`                  |
+| Close Tab                 | `Cmd+W`           | `Ctrl+Shift+W`                  |
+| Close Window              | `Cmd+Shift+W`     | `Ctrl+Shift+Q`                  |
+| Quit                      | `Cmd+Q`           | `Ctrl+Alt+Shift+Q`              |
+| Next Tab                  | `Ctrl+Tab`        | `Ctrl+PageDown`                 |
+| Previous Tab              | `Ctrl+Shift+Tab`  | `Ctrl+PageUp`                   |
+| Select Tab 1 through 9    | `Cmd+1` … `Cmd+9` | `Alt+1` … `Alt+9`               |
+| Copy                      | `Cmd+C`           | `Ctrl+Shift+C`                  |
+| Paste                     | `Cmd+V`           | `Ctrl+Shift+V`                  |
+| Select All                | `Cmd+A`           | `Ctrl+Shift+A`                  |
+| Zoom In                   | `Cmd++`           | `Ctrl++`                        |
+| Zoom Out                  | `Cmd+-`           | `Ctrl+-`                        |
+| Actual Size               | `Cmd+0`           | `Ctrl+0`                        |
+| Toggle Full Screen        | `Ctrl+Cmd+F`      | `Ctrl+Shift+F`                  |
+| Toggle Tab Bar            | `Cmd+Shift+B`     | `Ctrl+Shift+B`                  |
+| Toggle Title Bar          | `Cmd+Shift+D`     | `Ctrl+Shift+D`                  |
+| Toggle Snippets           | `Cmd+Shift+S`     | `Ctrl+Shift+S`                  |
+| Reload User Configuration | `Cmd+Shift+,`     | `Ctrl+Shift+,`                  |
+| Split Right               | `Cmd+D`           | `Ctrl+Shift+O`                  |
+| Split Down                | `Cmd+Shift+E`     | `Ctrl+Shift+E`                  |
+| Close Pane                | `Cmd+Alt+W`       | `Ctrl+Shift+K`                  |
+| Next / Previous Pane      | `Cmd+]` / `Cmd+[` | `Ctrl+Shift+]` / `Ctrl+Shift+[` |
+| Focus Pane by Direction   | `Cmd+Alt+Arrow`   | `Alt+Shift+Arrow`               |
+| Maximize or Restore Pane  | `Cmd+Shift+Enter` | `Ctrl+Shift+Z`                  |
+| Equalize Panes            | `Cmd+Alt+0`       | `Ctrl+Shift+0`                  |
+| Broadcast Input to Panes  | `Cmd+Alt+I`       | `Ctrl+Shift+I`                  |
 
 On keyboards where `+` shares the `=` key, include `Shift` (`Cmd+Shift+=` or `Ctrl+Shift+=`).
 
 On Linux and Windows, press and release **Alt** to open the application menu (even when the title bar is hidden), and press `Escape` to close it. On macOS, use the system menu bar. To customize shortcuts, see [keybinds](configuration.md#keybinds).
+
+## Saved sessions and SSH
+
+Press `Cmd+Shift+J` / `Ctrl+Shift+H` (**View → Toggle Sessions**) to open the Sessions sidebar. It stays closed until you open it.
+
+- **Quick Connect:** type `user@host:port` (user and port are optional) and press **Connect** to open an SSH tab without saving anything.
+- **Saved sessions:** use **+** to create a session or folder. A _local_ session can start in a chosen directory, run a specific program with literal arguments (one per line), and type an initial command once the shell is ready. An _SSH_ session stores the host, port, user, authentication method, an optional key file, a jump host, agent/X11 forwarding, compression, connection reuse, port forwards (`L 8080:localhost:80`, `R …`, `D 1080`), a command to run after login and extra `-o` options.
+- **Opening:** double-click a session or press `Enter` to open it in a new tab; `Shift+Enter`, or the context menu, opens it in a split. The tab takes the session's color.
+- **Organizing:** right-click (or use the context-menu key) to edit, duplicate, favorite, move or delete. Drag a session onto a folder to move it. Search matches names, hosts and directories. Favorites and recently used sessions appear at the top.
+- **Import and export:** the **⋯** menu imports hosts from `~/.ssh/config` and imports or exports sessions as JSON. Exports never contain passwords or keys.
+
+OMXTerm runs your system's OpenSSH client (`ssh`, or `ssh.exe` on Windows), so `~/.ssh/config`, your SSH agent and `known_hosts` all apply. Unknown host keys are confirmed in the terminal as usual. Passwords are typed at ssh's own prompt; OMXTerm never stores them or puts them on a command line. Settings that make ssh run local programs, such as `ProxyCommand`, belong in `~/.ssh/config` and are refused as extra options.
+
+When a saved or Quick Connect session fails (for example, `Connection refused`), its tab stays open with the error visible and offers **Reconnect** and **Close**.
+
+## Searching the terminal
+
+Press `Cmd+F` / `Ctrl+Shift+G` (**Edit → Find…**) and type to highlight every match in the focused pane, including its scrollback. Use **Previous** and **Next** to move between matches, and **Close** or the same shortcut to hide the search bar.
+
+## Command palette
+
+Press `Cmd+Shift+P` / `Ctrl+Shift+P` (**View → Command Palette…**) and type part of what you want, such as `split` or the name of a saved session, then press `Enter`. Every menu action with a shortcut is listed, so you can run it without remembering the keys.
+
+## Reopening windows at startup
+
+Turn on **Restore Windows at Startup** in the application menu (the **OMXTerm** menu, or the menu that opens when you press and release `Alt` on Linux and Windows). When you quit, OMXTerm remembers its windows, tabs and split panes. Shells reopen in the folders they were in, and saved sessions and Quick Connect tabs reconnect. Closing a window while others stay open forgets that window. Turning the option off erases what was saved.
+
+Starting OMXTerm with `-e`, `-w` or `--ssh` opens just what you asked for.
+
+## Running commands from the Command Manager
+
+Press `Cmd+Shift+M` / `Ctrl+Shift+M` (**View → Toggle Commands**) to open the Commands sidebar. It lists ready-made commands for the system you are on: files and archives, processes, memory and disk, services and logs, packages (`apt`, `dnf`, `pacman`, Homebrew or `winget`), network checks, SSH keys, Git and Docker. Windows shows PowerShell versions of the same tasks.
+
+- **Running:** click a command (or press `Enter`) to open its form. Fill in the fields and check the **Command preview**, which shows exactly what will be typed. **Insert in Terminal** types it into the focused pane without running it; **Run in Terminal** also presses `Enter`. Nothing runs until you choose one.
+- **Safe values:** text you type in a field is quoted for the shell (POSIX shells or PowerShell), so a host name such as `example.com; reboot` stays a single argument.
+- **Missing tools:** a command whose program is not installed is dimmed and says which program is missing.
+- **Your own commands:** use **+** to create one. Write the command with `{name}` placeholders, for example `rsync -av {source} {destination}`, and choose a label and type (text, number, switch, list, file or folder) for each placeholder. Right-click a built-in command to duplicate it as a starting point, to mark it as a favorite, or to hide it; **⋯** shows hidden commands again.
+
+## Highlighting command output
+
+Turn on **View → Highlight Output** to color common patterns in command output: errors, warnings, success and state words, IP and MAC addresses, URLs and quoted strings. When you run a known command, including one started from the Command Manager or a snippet, OMXTerm switches to rules made for it, for example `ping`, `df`, `free`, `ip`, `systemctl`, `docker`, `kubectl`, `journalctl` and about 45 more. The rule sets come from AshyTerm.
+
+Highlighting is off by default and stays out of the way:
+
+- Full-screen programs (Vim, htop, less, tmux), pasted text, images and lines that a program already colored are never changed.
+- Tools that color their own output or draw a full-screen interface (`ls`, `git`, `grep`, `vim`, `htop`, `ssh` and others) are skipped.
+- Very fast output, such as a large file printed with `cat`, passes through unchanged.
+- Colors come from your terminal theme's palette.
+
+**View → Highlight Rules…** lets you turn rule sets on or off, choose which commands are never changed, and add your own rules: a name, a regular expression and a color. Patterns that could slow the terminal down are refused.
+
+The choice and any custom rules are saved in `highlights.json` next to `config.json`.
+
+## Split panes
+
+Use **Terminal → Split Right** or **Split Down** to divide the focused pane. Each pane is an independent terminal with its own shell, scrollback and selection; a new pane starts in the focused pane's current directory when OMXTerm can determine it (from the shell's OSC 7 report, or on Linux from the shell process), and in your home directory otherwise.
+
+- Click a pane, or use the pane focus shortcuts, to move focus. The focused pane of a split shows a thin accent edge.
+- Drag a divider to resize, or focus a divider with `Tab` and use the arrow keys. **Equalize Panes** gives every pane the same share.
+- **Maximize or Restore Pane** temporarily shows only the focused pane; the others keep running.
+- **Close Pane** ends only the focused pane's session (it asks first when a program is running, like Close Tab). Closing a tab closes all of its panes, and when a pane's shell exits, its neighbor takes its place.
+- A tab holds up to 16 panes. Tab labels show the focused pane's title and the pane count, for example `vim (3)`.
+
+### Broadcasting input
+
+**Terminal → Broadcast Input to Panes** mirrors what you type in the focused pane to every other pane in the same tab, after a confirmation. While it is active, every receiving pane has an orange edge and a **Broadcasting** indicator with a **Stop** button stays visible. Only keystrokes are mirrored: pastes, snippets and terminal replies are not. OMXTerm cannot tell when a remote program is asking for a password, so stop broadcasting before typing secrets.
 
 ## Copy and paste
 

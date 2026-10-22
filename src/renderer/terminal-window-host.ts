@@ -15,11 +15,13 @@ import type {
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type { TerminalTheme } from "../shared/terminal-theme";
+import type { TerminalLaunchSpec } from "../shared/terminal-launch";
 import type { TerminalFontData } from "../shared/terminal-font-data";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
 import {
   createTerminalTabs,
   TERMINAL_TAB_DRAG_DATA_TYPE,
+  type PaneLaunch,
   type TerminalTabs,
 } from "./terminal-tabs";
 import {
@@ -36,6 +38,20 @@ import type {
   LocalImageData,
 } from "../shared/local-image";
 import { createTerminalFontGenerationOwner } from "./terminal-font-generations";
+import type { Translator } from "../shared/i18n";
+import type { WorkspacePlan, WorkspaceSnapshot } from "../shared/workspace";
+import type { TerminalActionName } from "../shared/terminal-keybinds";
+import type {
+  CommandsBridge,
+  HighlightsBridge,
+  SessionsBridge,
+  BackupBridge,
+} from "../shared/terminal-bridge";
+import {
+  mountWorkspace,
+  windowServices,
+  windowTabsOptions,
+} from "./terminal-window-workspace";
 
 type MountTerminalSurface = (
   container: HTMLElement,
@@ -48,9 +64,10 @@ export interface TerminalWindowPageElements {
   readonly tabsContainer: HTMLElement;
 }
 
-interface TerminalWindowPageOptions {
+export interface TerminalWindowPageOptions {
   readonly createAdapter: (
     fontConfigurationId?: string,
+    launch?: TerminalLaunchSpec,
   ) => ElectronTerminalAdapter;
   readonly configuration?: TerminalRendererConfiguration;
   readonly chrome?: WindowChromeBridge;
@@ -93,6 +110,29 @@ interface TerminalWindowPageOptions {
     source?: LocalImageActivation,
   ) => Promise<LocalImageData | null>;
   readonly subscribeToLocalImageOpen?: (listener: () => void) => () => void;
+  readonly translator?: Translator;
+  readonly confirmBroadcast?: (targetCount: number) => Promise<boolean>;
+  readonly reportWorkingDirectory?: (
+    sessionId: TerminalSessionId,
+    uri: string,
+  ) => void;
+  readonly highlights?: HighlightsBridge;
+  // How the first tab opens, for example the SSH target given with --ssh.
+  readonly initialLaunch?: PaneLaunch;
+  // A saved workspace to reopen instead of the first tab.
+  readonly initialWorkspace?: WorkspacePlan;
+  readonly reportWorkspace?: (snapshot: WorkspaceSnapshot) => void;
+  readonly workspace?: {
+    readonly element: HTMLElement;
+    readonly sessions: SessionsBridge;
+    readonly commands?: CommandsBridge;
+    readonly backup?: BackupBridge;
+    readonly highlights?: HighlightsBridge;
+    readonly palette?: {
+      readonly onToggle: (listener: () => void) => () => void;
+      readonly runAction: (action: TerminalActionName) => void;
+    };
+  };
   readonly snippets?: {
     readonly element: HTMLElement;
     readonly load: () => Promise<TerminalSnippetsResponse>;
@@ -119,6 +159,7 @@ export function mountTerminalWindowPage(
   let removeTabTitleListener: (() => void) | undefined;
   let removeTabBarToggleListener: (() => void) | undefined;
   let snippetsSidebar: SnippetsSidebar | undefined;
+  let disposeWorkspace: (() => void) | undefined;
   let removeSnippetsToggleListener: (() => void) | undefined;
   let removeLocalImageOpenListener: (() => void) | undefined;
   let localImagePreview: LocalImagePreview | undefined;
@@ -132,26 +173,8 @@ export function mountTerminalWindowPage(
     ? surfaceConfiguration(options.configuration)
     : undefined;
 
-  const applyPageTheme = (theme: TerminalTheme, transparency: number) => {
-    const { background, foreground } = theme.colors;
-    page.document.documentElement.style.setProperty(
-      "--terminal-background-opacity",
-      String(1 - transparency),
-    );
-    page.document.documentElement.style.setProperty(
-      "--terminal-background",
-      background,
-    );
-    page.document.documentElement.style.setProperty(
-      "--terminal-foreground",
-      foreground,
-    );
-    page.document.body.style.setProperty("--terminal-background", background);
-    elements.tabsContainer.style.setProperty(
-      "--terminal-background",
-      background,
-    );
-  };
+  const applyPageTheme = (theme: TerminalTheme, transparency: number) =>
+    paintPageTheme(page.document, elements.tabsContainer, theme, transparency);
 
   if (options.configuration) {
     page.document.documentElement.style.setProperty(
@@ -167,6 +190,17 @@ export function mountTerminalWindowPage(
   const surfaceOptions: TerminalSurfaceOptions = {
     ...activeSurfaceConfiguration,
     background: "host",
+    ...(options.translator
+      ? {
+          searchLabels: {
+            placeholder: options.translator.t("search.placeholder"),
+            previous: options.translator.t("search.previous"),
+            next: options.translator.t("search.next"),
+            clear: options.translator.t("search.clear"),
+            close: options.translator.t("search.close"),
+          },
+        }
+      : {}),
     ...(fontGenerations ? { acquireFontInputs: fontGenerations.acquire } : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.onExternalLink
@@ -192,24 +226,26 @@ export function mountTerminalWindowPage(
       : {}),
   };
 
+  const { translator, broadcastIndicator, highlighting } = windowServices(
+    page.document,
+    options,
+    () => tabs,
+  );
   const tabs: TerminalTabs = createTerminalTabs(
     { strip: elements.tabStrip, container: elements.tabsContainer },
     {
-      createAdapter: () => options.createAdapter(fontConfigurationId),
+      ...windowTabsOptions(
+        options,
+        translator,
+        broadcastIndicator,
+        highlighting,
+      ),
+      createAdapter: (launch) =>
+        launch === undefined
+          ? options.createAdapter(fontConfigurationId)
+          : options.createAdapter(fontConfigurationId, launch),
       mount,
       surfaceOptions,
-      showTabBar: options.configuration?.showTabBar ?? true,
-      ...(options.notifyTabsEmpty
-        ? { notifyEmpty: options.notifyTabsEmpty }
-        : {}),
-      ...(options.notifyTabSelection
-        ? { notifySelection: options.notifyTabSelection }
-        : {}),
-      ...(options.onTitleRequest
-        ? { notifyTitle: options.onTitleRequest }
-        : {}),
-      ...(options.onBell ? { notifyBell: options.onBell } : {}),
-      syncTitle: (sessionId) => options.syncTabTitle?.(sessionId),
     },
   );
 
@@ -280,7 +316,10 @@ export function mountTerminalWindowPage(
     localImagePreview = undefined;
     snippetsSidebar?.dispose();
     snippetsSidebar = undefined;
+    disposeWorkspace?.();
     tabs.dispose();
+    broadcastIndicator.dispose();
+    highlighting?.dispose();
     fontGenerations?.dispose();
   };
   const onPageHide = () => dispose();
@@ -357,9 +396,32 @@ export function mountTerminalWindowPage(
         if (!previewActive()) void sidebar.toggle();
       });
     }
+    if (options.workspace)
+      disposeWorkspace = mountWorkspace(options.workspace, {
+        translator,
+        tabs,
+        isBlocked: previewActive,
+        focusTerminal: onPageFocus,
+      });
   });
 
   return { ready, dispose };
+}
+
+// The Terminal Theme tints the page, chrome and every tab container.
+function paintPageTheme(
+  document: Document,
+  tabsContainer: HTMLElement,
+  theme: TerminalTheme,
+  transparency: number,
+): void {
+  const { background, foreground } = theme.colors;
+  const root = document.documentElement.style;
+  root.setProperty("--terminal-background-opacity", String(1 - transparency));
+  root.setProperty("--terminal-background", background);
+  root.setProperty("--terminal-foreground", foreground);
+  document.body.style.setProperty("--terminal-background", background);
+  tabsContainer.style.setProperty("--terminal-background", background);
 }
 
 function sameSurfaceConfiguration(

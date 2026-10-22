@@ -1,0 +1,915 @@
+/* Workspace design tokens. Chrome derives from the active Terminal Theme so
+   panels, dividers and dialogs follow light, dark and custom palettes. */
+:root {
+  --omx-space-1: 4px;
+  --omx-space-2: 8px;
+  --omx-space-3: 12px;
+  --omx-space-4: 16px;
+  --omx-radius: 6px;
+  --omx-radius-large: 10px;
+  --omx-font:
+    13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
+    "Cantarell", sans-serif;
+  --omx-foreground: var(--terminal-foreground, #e6e6e6);
+  --omx-muted: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 68%
+  );
+  --omx-surface: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-chrome-neutral) 14%
+  );
+  --omx-surface-raised: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-chrome-neutral) 24%
+  );
+  --omx-border: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 22%
+  );
+  --omx-accent: #4f8ff7;
+  --omx-warning: #f5a524;
+  --omx-danger: #e5484d;
+  --omx-focus-ring: 2px solid var(--omx-accent);
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --omx-border: var(--terminal-foreground, #e6e6e6);
+    --omx-muted: var(--terminal-foreground, #e6e6e6);
+  }
+}
+
+/* A Terminal Tab hosts one pane or a split layout of panes. */
+.terminal-tab {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.terminal-tab[hidden] {
+  display: none;
+}
+
+.terminal-tab .terminal-surface {
+  position: relative;
+}
+
+.terminal-pane-split {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.terminal-pane-split[data-direction="column"] {
+  flex-direction: column;
+}
+
+.terminal-pane-split > * {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* With a split, the macOS title inset belongs to the tab, not to every pane. */
+.terminal-tab.split {
+  padding-top: var(--native-title-inset);
+}
+
+.terminal-tab.split .restty-terminal-surface {
+  padding-top: var(--terminal-padding-top, 0px);
+}
+
+body.tabs-visible .terminal-tab.split {
+  padding-top: 0;
+}
+
+.terminal-pane-divider {
+  position: relative;
+  flex: 0 0 5px;
+  cursor: col-resize;
+  background: transparent;
+  outline: none;
+  app-region: no-drag;
+}
+
+.terminal-pane-split[data-direction="column"] > .terminal-pane-divider {
+  cursor: row-resize;
+}
+
+.terminal-pane-divider::after {
+  content: "";
+  position: absolute;
+  inset: 0 2px;
+  background: var(--omx-border);
+}
+
+.terminal-pane-split[data-direction="column"] > .terminal-pane-divider::after {
+  inset: 2px 0;
+}
+
+.terminal-pane-divider:hover::after,
+.terminal-pane-divider.dragging::after,
+.terminal-pane-divider:focus-visible::after {
+  background: var(--omx-accent);
+}
+
+/* The focused pane of a split shows a subtle accent edge; maximized and
+   single panes show none. Painted over the canvas without taking input. */
+.terminal-tab.split:not(.maximized) .terminal-surface.focused-pane::after,
+.terminal-tab.broadcasting .terminal-surface::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, transparent, var(--omx-accent) 70%);
+}
+
+.terminal-tab.split:not(.maximized) .terminal-surface:not(.focused-pane) {
+  opacity: 0.86;
+}
+
+/* Broadcasting is unmistakable: every receiving pane carries a warning edge. */
+.terminal-tab.broadcasting .terminal-surface::after {
+  box-shadow: inset 0 0 0 2px var(--omx-warning);
+}
+
+#tab-strip button.tab-colored {
+  box-shadow: inset 0 -2px var(--tab-color);
+}
+
+#tab-strip button.tab-broadcasting::before {
+  content: "⇶ ";
+  color: var(--omx-warning);
+}
+
+/* Tab groups: a colored chip leads each group and its tabs carry the color
+   on their top edge; a collapsed group shows only its chip and the selected
+   tab. */
+#tab-strip button.tab-group-chip {
+  flex: 0 0 auto;
+  max-width: 160px;
+  font-weight: 600;
+  color: #111;
+  cursor: pointer;
+  background: var(--group-color);
+}
+
+#tab-strip button.tab-group-chip[aria-expanded="false"]::after {
+  content: " ▸";
+}
+
+#tab-strip button.tab-grouped {
+  border-top: 2px solid var(--group-color);
+  border-radius: 0 0 6px 6px;
+}
+
+#tab-strip button.tab-grouped.tab-colored {
+  box-shadow:
+    inset 0 -2px var(--tab-color),
+    inset 0 0 0 1px color-mix(in srgb, transparent, var(--group-color) 30%);
+}
+
+.tab-color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--omx-space-2);
+}
+
+.tab-color-swatch {
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  background: var(--swatch);
+  border: 2px solid transparent;
+  border-radius: 50%;
+}
+
+.tab-color-swatch.none {
+  background: linear-gradient(
+    135deg,
+    transparent 45%,
+    var(--omx-danger) 45% 55%,
+    transparent 55%
+  );
+  border-color: var(--omx-border);
+}
+
+.tab-color-swatch[aria-checked="true"] {
+  outline: var(--omx-focus-ring);
+  outline-offset: 2px;
+}
+
+.tab-color-swatch:focus-visible {
+  outline: var(--omx-focus-ring);
+  outline-offset: 2px;
+}
+
+.broadcast-indicator {
+  position: fixed;
+  z-index: 20;
+  top: calc(var(--native-title-inset) + var(--omx-space-2));
+  right: var(--omx-space-3);
+  display: flex;
+  gap: var(--omx-space-2);
+  align-items: center;
+  padding: var(--omx-space-1) var(--omx-space-1) var(--omx-space-1)
+    var(--omx-space-3);
+  font: var(--omx-font);
+  color: #1a1300;
+  background: var(--omx-warning);
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 35%);
+  app-region: no-drag;
+}
+
+.broadcast-indicator[hidden] {
+  display: none;
+}
+
+.broadcast-indicator button,
+.pane-ended-banner button {
+  padding: 2px 10px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: rgb(0 0 0 / 14%);
+  border: none;
+  border-radius: 999px;
+}
+
+.broadcast-indicator button:focus-visible,
+.pane-ended-banner button:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 1px;
+}
+
+/* A retained session that failed keeps its last screen under this bar. */
+.pane-ended-banner {
+  position: absolute;
+  z-index: 3;
+  right: var(--omx-space-2);
+  bottom: var(--omx-space-2);
+  left: var(--omx-space-2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--omx-space-2);
+  align-items: center;
+  padding: var(--omx-space-2) var(--omx-space-3);
+  font: var(--omx-font);
+  color: #ffffff;
+  background: color-mix(in srgb, #8c1d18 92%, transparent);
+  border-radius: var(--omx-radius);
+}
+
+.pane-ended-banner span {
+  flex: 1 1 200px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .terminal-pane-divider::after {
+    transition: background-color 120ms ease;
+  }
+}
+
+/* A maximized pane hides its siblings, so their dividers go too. */
+.terminal-tab.maximized .terminal-pane-divider {
+  display: none;
+}
+
+/* Workspace sidebar: optional, hidden by default, never covers the grid. */
+#workspace-sidebar {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 300px;
+  min-height: 0;
+  padding-top: var(--native-title-inset);
+  font: var(--omx-font);
+  color: var(--omx-foreground);
+  background: color-mix(
+    in srgb,
+    transparent,
+    var(--terminal-chrome-neutral)
+      calc(15% * var(--terminal-background-opacity, 1))
+  );
+  border-right: 1px solid var(--omx-border);
+  app-region: no-drag;
+}
+
+#workspace-sidebar[hidden] {
+  display: none;
+}
+
+body.tabs-visible #workspace-sidebar {
+  padding-top: 0;
+}
+
+.workspace-sidebar-header {
+  display: flex;
+  gap: var(--omx-space-1);
+  align-items: center;
+  padding: var(--omx-space-2) var(--omx-space-2) 0;
+}
+
+.workspace-sidebar-tabs {
+  display: flex;
+  flex: 1;
+  gap: 2px;
+}
+
+.workspace-sidebar-title {
+  flex: 1;
+  margin: 0;
+  padding: 0 var(--omx-space-1);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.workspace-sidebar-tabs button,
+.omx-icon-button {
+  padding: var(--omx-space-1) var(--omx-space-2);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: var(--omx-radius);
+}
+
+.workspace-sidebar-tabs button[aria-selected="true"] {
+  background: var(--omx-surface-raised);
+}
+
+.omx-icon-button {
+  min-width: 28px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.workspace-sidebar-tabs button:hover,
+.omx-icon-button:hover {
+  background: var(--omx-surface-raised);
+}
+
+.workspace-sidebar-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sessions-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--omx-space-2);
+  min-height: 0;
+  padding: var(--omx-space-2);
+}
+
+.sessions-panel[hidden] {
+  display: none;
+}
+
+.sessions-quick-connect,
+.sessions-toolbar {
+  display: flex;
+  gap: var(--omx-space-1);
+}
+
+.sessions-panel input,
+.omx-modal input,
+.omx-modal select,
+.omx-modal textarea {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 5px var(--omx-space-2);
+  font: inherit;
+  color: inherit;
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    transparent 40%
+  );
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+  outline: none;
+}
+
+.sessions-panel input {
+  flex: 1;
+}
+
+.sessions-panel input:focus-visible,
+.omx-modal input:focus-visible,
+.omx-modal select:focus-visible,
+.omx-modal textarea:focus-visible {
+  border-color: var(--omx-accent);
+  box-shadow: 0 0 0 1px var(--omx-accent);
+}
+
+[aria-invalid="true"] {
+  border-color: var(--omx-danger) !important;
+}
+
+.sessions-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sessions-heading {
+  margin: var(--omx-space-2) var(--omx-space-1) 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--omx-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sessions-row {
+  display: flex;
+  gap: var(--omx-space-2);
+  align-items: center;
+  padding: var(--omx-space-1) var(--omx-space-2);
+  padding-left: calc(var(--omx-space-2) + var(--depth, 0) * 14px);
+  cursor: default;
+  border-radius: var(--omx-radius);
+  outline: none;
+}
+
+.sessions-row:hover {
+  background: var(--omx-surface);
+}
+
+.sessions-row:focus-visible {
+  outline: var(--omx-focus-ring);
+  outline-offset: -2px;
+}
+
+.sessions-row.drop-target {
+  background: color-mix(in srgb, transparent, var(--omx-accent) 25%);
+}
+
+.sessions-icon {
+  flex: none;
+  width: 18px;
+  font-family: monospace;
+  color: var(--omx-muted);
+  text-align: center;
+}
+
+.sessions-chevron {
+  flex: none;
+  width: 18px;
+  color: var(--omx-muted);
+  text-align: center;
+}
+
+.sessions-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sessions-name,
+.sessions-subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sessions-row.folder .sessions-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.sessions-subtitle,
+.sessions-count {
+  font-size: 11px;
+  color: var(--omx-muted);
+}
+
+.sessions-empty {
+  margin: var(--omx-space-2);
+  color: var(--omx-muted);
+}
+
+.sessions-empty[hidden] {
+  display: none;
+}
+
+/* Buttons */
+.omx-button {
+  padding: 5px var(--omx-space-3);
+  font: inherit;
+  color: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--omx-surface-raised);
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.omx-button:hover {
+  border-color: var(--omx-muted);
+}
+
+.omx-button-primary {
+  color: #ffffff;
+  background: var(--omx-accent);
+  border-color: var(--omx-accent);
+}
+
+.omx-button-danger {
+  color: #ffffff;
+  background: var(--omx-danger);
+  border-color: var(--omx-danger);
+}
+
+.omx-button:focus-visible,
+.omx-icon-button:focus-visible,
+.workspace-sidebar-tabs button:focus-visible {
+  outline: var(--omx-focus-ring);
+  outline-offset: 1px;
+}
+
+/* Modal dialogs */
+.omx-modal {
+  box-sizing: border-box;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  overflow: hidden;
+  font: var(--omx-font);
+  color: var(--omx-foreground);
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-chrome-neutral) 16%
+  );
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius-large);
+  box-shadow: 0 18px 60px rgb(0 0 0 / 55%);
+  app-region: no-drag;
+}
+
+.omx-modal[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.omx-modal::backdrop {
+  background: rgb(0 0 0 / 55%);
+}
+
+.omx-modal h2 {
+  margin: 0;
+  padding: var(--omx-space-4) var(--omx-space-4) var(--omx-space-2);
+  font-size: 15px;
+}
+
+.omx-modal-body {
+  flex: 1;
+  min-height: 0;
+  padding: 0 var(--omx-space-4);
+  overflow-y: auto;
+}
+
+.omx-modal-body p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.omx-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--omx-space-2);
+  justify-content: flex-end;
+  padding: var(--omx-space-3) var(--omx-space-4) var(--omx-space-4);
+}
+
+.omx-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--omx-space-2);
+}
+
+.omx-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.omx-field[hidden],
+.omx-section[hidden] {
+  display: none;
+}
+
+.omx-field > label {
+  font-weight: 600;
+}
+
+.omx-field-hint {
+  font-size: 11px;
+  color: var(--omx-muted);
+}
+
+.omx-field-error {
+  font-size: 12px;
+  color: var(--omx-danger);
+}
+
+.omx-field-error:empty {
+  display: none;
+}
+
+.omx-checkbox,
+.omx-inline {
+  display: flex;
+  gap: var(--omx-space-2);
+  align-items: center;
+}
+
+.omx-inline input[type="color"] {
+  width: 44px;
+  height: 26px;
+  padding: 1px;
+}
+
+.omx-path-input {
+  display: flex;
+  gap: var(--omx-space-1);
+}
+
+.omx-path-input input {
+  flex: 1;
+}
+
+.omx-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--omx-space-2);
+  margin: var(--omx-space-1) 0 0;
+  padding: var(--omx-space-2) var(--omx-space-3) var(--omx-space-3);
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.omx-section legend {
+  padding: 0 var(--omx-space-1);
+  color: var(--omx-muted);
+}
+
+/* Context menus */
+.omx-context-menu {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  max-width: min(360px, calc(100vw - 8px));
+  padding: var(--omx-space-1);
+  font: var(--omx-font);
+  color: var(--omx-foreground);
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-chrome-neutral) 22%
+  );
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 45%);
+  app-region: no-drag;
+}
+
+.omx-context-menu button {
+  padding: 5px var(--omx-space-3);
+  overflow: hidden;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  outline: none;
+}
+
+.omx-context-menu button:hover,
+.omx-context-menu button:focus-visible {
+  color: #ffffff;
+  background: var(--omx-accent);
+}
+
+.omx-context-menu button.danger {
+  color: var(--omx-danger);
+}
+
+.omx-context-menu button.danger:hover,
+.omx-context-menu button.danger:focus-visible {
+  color: #ffffff;
+  background: var(--omx-danger);
+}
+
+.omx-context-menu button:disabled {
+  opacity: 0.5;
+}
+
+.omx-context-menu-separator {
+  height: 1px;
+  margin: var(--omx-space-1) 0;
+  background: var(--omx-border);
+}
+
+/* Toasts */
+.omx-toasts {
+  position: fixed;
+  z-index: 45;
+  bottom: var(--omx-space-4);
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--omx-space-2);
+  align-items: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.omx-toast {
+  max-width: min(520px, calc(100vw - 32px));
+  padding: var(--omx-space-2) var(--omx-space-3);
+  font: var(--omx-font);
+  color: var(--omx-foreground);
+  background: var(--omx-surface-raised);
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 40%);
+}
+
+/* Command Manager */
+.commands-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--omx-space-2);
+  min-height: 0;
+  padding: var(--omx-space-2);
+}
+
+.commands-panel[hidden] {
+  display: none;
+}
+
+.commands-panel input,
+.commands-filter {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 5px var(--omx-space-2);
+  font: inherit;
+  color: inherit;
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    transparent 40%
+  );
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.commands-panel input {
+  flex: 1;
+}
+
+.sessions-row.command {
+  cursor: pointer;
+}
+
+.sessions-row.command.unavailable .sessions-text {
+  opacity: 0.6;
+}
+
+.commands-star {
+  flex: none;
+  width: 14px;
+  color: var(--omx-warning);
+}
+
+.command-preview,
+.command-editor textarea {
+  font-family: "FiraCode Nerd Font Mono", ui-monospace, monospace;
+}
+
+.command-description {
+  margin: 0;
+  color: var(--omx-muted);
+}
+
+.command-warning {
+  margin: 0;
+  padding: var(--omx-space-2);
+  color: var(--omx-foreground);
+  background: color-mix(in srgb, transparent, var(--omx-warning) 22%);
+  border-radius: var(--omx-radius);
+}
+
+.omx-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--omx-space-1) var(--omx-space-3);
+}
+
+.command-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--omx-space-2);
+  padding-bottom: var(--omx-space-2);
+  border-bottom: 1px solid var(--omx-border);
+}
+
+/* Command palette: a search field over a list of actions and launches. */
+.omx-modal.command-palette {
+  width: min(560px, calc(100vw - 32px));
+  margin-top: 12vh;
+  padding: var(--omx-space-2);
+}
+
+.command-palette input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--omx-space-2) var(--omx-space-3);
+  font: var(--omx-font);
+  color: var(--omx-foreground);
+  background: var(--omx-surface);
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.command-palette input:focus {
+  outline: var(--omx-focus-ring);
+}
+
+.command-palette ul {
+  max-height: 50vh;
+  margin: var(--omx-space-2) 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.command-palette li {
+  display: flex;
+  gap: var(--omx-space-3);
+  justify-content: space-between;
+  padding: var(--omx-space-2) var(--omx-space-3);
+  cursor: pointer;
+  border-radius: var(--omx-radius);
+}
+
+.command-palette li[aria-selected="true"] {
+  color: #fff;
+  background: var(--omx-accent);
+}
+
+.command-palette-section {
+  font-size: 0.85em;
+  opacity: 0.7;
+}
+
+/* Highlight rule editor: a grid of rule sets and one row per custom rule. */
+.highlight-editor-dialog {
+  width: min(720px, calc(100vw - 32px));
+}
+
+.highlight-rule-sets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: var(--omx-space-1) var(--omx-space-3);
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
+.highlight-custom-rule {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto auto auto;
+  gap: var(--omx-space-2);
+  align-items: end;
+  margin-bottom: var(--omx-space-2);
+}
+
+@media (width <= 560px) {
+  .highlight-custom-rule {
+    grid-template-columns: 1fr 1fr;
+  }
+}

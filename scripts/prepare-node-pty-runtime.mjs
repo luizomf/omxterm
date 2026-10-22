@@ -26,10 +26,12 @@ const foregroundUnixRuntimeDigest =
   "89fafa225fe39a4fc7d2af373cf9381684a3b2bfe7aa5df073247eb3b91040cc";
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 
-const defaultHelperPath = path.resolve(
-  import.meta.dirname,
-  "../node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper",
-);
+const SUPPORTED_UNIX_ARCHITECTURES = ["arm64", "x64"];
+const darwinHelperPath = (arch) =>
+  path.resolve(
+    import.meta.dirname,
+    `../node_modules/node-pty/prebuilds/darwin-${arch}/spawn-helper`,
+  );
 
 async function prepareUnixRuntime(runtimePath) {
   let source = (await readFile(runtimePath, "utf8"))
@@ -150,7 +152,7 @@ function forwardExecStatus(source) {
 export async function prepareNodePtyRuntime({
   platform = process.platform,
   arch = process.arch,
-  helperPath = defaultHelperPath,
+  helperPath,
   unixRuntimePath = defaultUnixRuntimePath,
   windowsRuntimePath = defaultWindowsRuntimePath,
   rebuild = prepareNodePtyExecStatus,
@@ -161,13 +163,16 @@ export async function prepareNodePtyRuntime({
     return "corrected";
   }
   await prepareUnixRuntime(unixRuntimePath);
-  if (platform === "linux" && arch === "arm64") {
+  // Both 64-bit architectures need the exec-status build: without it a native
+  // exec failure would look like an ordinary exit code 1 (ADR 0032).
+  if (!SUPPORTED_UNIX_ARCHITECTURES.includes(arch)) return "corrected";
+  if (platform === "linux") {
     await rebuild();
     return "corrected-and-rebuilt";
   }
-  if (platform === "darwin" && arch === "arm64") {
+  if (platform === "darwin") {
     await rebuild();
-    await chmod(helperPath, 0o755);
+    await chmod(helperPath ?? darwinHelperPath(arch), 0o755);
     return "corrected-and-rebuilt";
   }
   return "corrected";

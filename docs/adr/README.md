@@ -42,10 +42,14 @@ source/test boundaries and known limitations.
 | 0031 | [Keep Linux installer choices small and local](0031-keep-linux-installer-choices-small-and-local.md)                           |
 | 0032 | [Report native exec failures outside Terminal Payload](0032-report-native-exec-failures-outside-terminal-payload.md)           |
 | 0033 | [Contain native resize failures](0033-contain-native-resize-failures-without-completing-sessions.md)                           |
+| 0034 | [Store application data beside user configuration](0034-store-application-data-beside-user-configuration.md)                   |
+| 0035 | [Split tabs into independent terminal panes](0035-split-tabs-into-independent-terminal-panes.md)                               |
+| 0036 | [Run saved SSH sessions through the system OpenSSH client](0036-run-saved-ssh-sessions-through-the-system-openssh-client.md)   |
 
 ## Related boundaries
 
-- Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033.
+- Tabs/panes/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033, 0035.
+- Saved Sessions, SSH and OMXTerm-owned data: 0006, 0034, 0036.
 - Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025.
 - User-owned configuration and live application: 0002, 0003, 0025, 0029, 0030.
 - Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026.

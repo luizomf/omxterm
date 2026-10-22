@@ -1,0 +1,3333 @@
+{
+  "source": "CommunityBigLinux/ashyterm (MIT)",
+  "contexts": [
+    {
+      "name": "blkid",
+      "triggers": ["blkid"],
+      "description": "Highlights for blkid block device attributes output",
+      "rules": [
+        {
+          "name": "Device Path",
+          "pattern": "^(/dev/)([\\w/-]+):",
+          "colors": ["green", "bright_green"],
+          "description": "Highlights device path"
+        },
+        {
+          "name": "Device Mapper",
+          "pattern": "^/dev/(mapper/)([\\w/-]+):",
+          "colors": ["underline green", "bright_green"],
+          "description": "Highlights device mapper paths"
+        },
+        {
+          "name": "UUID",
+          "pattern": "(UUID)=\"([^\"]+)\"",
+          "colors": ["bold yellow", "blue"],
+          "description": "Highlights UUID values"
+        },
+        {
+          "name": "UUID_SUB",
+          "pattern": "(UUID_SUB)=\"([^\"]+)\"",
+          "colors": ["green", "bright_green"],
+          "description": "Highlights sub-UUID values"
+        },
+        {
+          "name": "LinuxFS",
+          "pattern": "\\b(ext4|btrfs|xfs)\\b",
+          "colors": ["bright_yellow"]
+        },
+        {
+          "name": "Swap",
+          "pattern": ".*(swap).*",
+          "colors": ["bright_red"]
+        },
+        {
+          "name": "TYPE",
+          "pattern": "(TYPE)=\"([^\"]+)\"",
+          "colors": ["bold cyan", "cyan"],
+          "description": "Highlights filesystem type"
+        },
+        {
+          "name": "LABEL",
+          "pattern": "(LABEL)=\"([^\"]+)\"",
+          "colors": ["bold bright_cyan", "bright_cyan"],
+          "description": "Highlights partition label"
+        },
+        {
+          "name": "PARTLABEL",
+          "pattern": "(PARTLABEL)=\"([^\"]+)\"",
+          "colors": ["bold green", "red"],
+          "description": "Highlights partition label (GPT)"
+        },
+        {
+          "name": "PARTUUID",
+          "pattern": "(PARTUUID)=\"([^\"]+)\"",
+          "colors": ["green", "magenta"],
+          "description": "Highlights partition UUID"
+        },
+        {
+          "name": "PTTYPE",
+          "pattern": "(PTTYPE)=\"([^\"]+)\"",
+          "colors": [null, "yellow"],
+          "description": "Highlights partition table type"
+        }
+      ]
+    },
+    {
+      "name": "cargo",
+      "triggers": ["cargo"],
+      "description": "Highlights for cargo (Rust) output",
+      "rules": [
+        {
+          "name": "Compiling",
+          "pattern": "\\s*(Compiling)\\s+([\\w-]+)\\s+(v[\\d.]+)",
+          "colors": ["bold green", "cyan", null],
+          "description": "Highlights compiling crates"
+        },
+        {
+          "name": "Finished",
+          "pattern": "\\s*(Finished)\\s+(\\w+)\\s+",
+          "colors": ["bold green", "cyan"],
+          "description": "Highlights finished compilation"
+        },
+        {
+          "name": "Running",
+          "pattern": "\\s*(Running)\\s+(.+)",
+          "colors": ["magenta", null],
+          "description": "Highlights running binaries"
+        },
+        {
+          "name": "Warning",
+          "pattern": "(warning)(\\[.+?\\])?(:)",
+          "colors": ["bold yellow", null, "yellow"],
+          "description": "Highlights compiler warnings"
+        },
+        {
+          "name": "Error",
+          "pattern": "(error)(\\[.+?\\])?(:)",
+          "colors": ["bold red", null, "red"],
+          "description": "Highlights compiler errors"
+        },
+        {
+          "name": "Downloading/Updating",
+          "pattern": "\\s*(Downloading|Updating)\\s+(.+)",
+          "colors": ["cyan", null],
+          "description": "Highlights downloading/updating crates"
+        },
+        {
+          "name": "File Location",
+          "pattern": "-->\\s+([^:]+):(\\d+):(\\d+)",
+          "colors": ["magenta", "yellow", "yellow"],
+          "description": "Highlights file location in errors"
+        }
+      ]
+    },
+    {
+      "name": "curl",
+      "triggers": ["curl", "wget", "wget2", "httpie", "http"],
+      "description": "Highlights for curl output including HTTP headers and status codes",
+      "rules": [
+        {
+          "name": "HTTP Status 2xx",
+          "pattern": "(HTTP/[\\d.]+)\\s+(2\\d{2})\\s*(\\w*)",
+          "colors": ["bold green", "bold green", "green"],
+          "description": "Highlights successful HTTP status codes"
+        },
+        {
+          "name": "HTTP Status 3xx",
+          "pattern": "(HTTP/[\\d.]+)\\s+(3\\d{2})\\s*(\\w*)",
+          "colors": ["bold yellow", "bold yellow", "yellow"],
+          "description": "Highlights redirect HTTP status codes"
+        },
+        {
+          "name": "HTTP Status 4xx",
+          "pattern": "(HTTP/[\\d.]+)\\s+(4\\d{2})\\s*(\\w*)",
+          "colors": ["bold red", "bold red", "red"],
+          "description": "Highlights client error HTTP status codes"
+        },
+        {
+          "name": "HTTP Status 5xx",
+          "pattern": "(HTTP/[\\d.]+)\\s+(5\\d{2})\\s*(\\w*)",
+          "colors": ["bold cyan", "bold red", "red"],
+          "description": "Highlights server error HTTP status codes"
+        },
+        {
+          "name": "Cache-Control Header",
+          "pattern": ".*cache[^:].*(.hit.)",
+          "colors": ["bold green"],
+          "description": "Highlights Cache-Control header with cache directives"
+        },
+        {
+          "name": "Cache",
+          "pattern": "(?:^|\\x1b\\[[0-9;]*m)(\\D*Cache\\D*)(?:\\x1b\\[[0-9;]*m)?(:)\\s+(.+)$",
+          "colors": ["bold yellow", "blue", "cyan"],
+          "description": "Highlights CDN/Cloudflare specific headers"
+        },
+        {
+          "name": "Generic Header (fallback)",
+          "pattern": "(?:^|\\x1b\\[[0-9;]*m)([A-Za-z][A-Za-z0-9-]*)(?:\\x1b\\[[0-9;]*m)?(:)\\s+(.+)$",
+          "colors": ["bold magenta", null, "bright_white"],
+          "description": "Highlights generic HTTP header names with bright white values"
+        },
+        {
+          "name": "Progress",
+          "pattern": "(\\d+(?:\\.\\d+)?)(%)\\b",
+          "colors": ["green", "green"],
+          "description": "Highlights progress percentages"
+        },
+        {
+          "name": "Speed",
+          "pattern": "(\\d+(?:\\.\\d+)?)\\s*([KMG]?B/s)",
+          "colors": ["cyan", "cyan"],
+          "description": "Highlights transfer speed"
+        },
+        {
+          "name": "200 OK",
+          "pattern": "\\b(200)\\s+(OK)\\b",
+          "colors": ["bold green", "green"],
+          "description": "Highlights successful wget response"
+        }
+      ]
+    },
+    {
+      "name": "dd",
+      "triggers": ["dd"],
+      "description": "Highlights for dd (disk dump) output",
+      "rules": [
+        {
+          "name": "Records In/Out",
+          "pattern": "(\\d+)\\+(\\d+)\\s+(records)\\s+(in|out)",
+          "colors": ["cyan", "yellow", null, null],
+          "description": "Highlights record counts"
+        },
+        {
+          "name": "Bytes Transferred",
+          "pattern": "(\\d+(?:\\.\\d+)?)\\s*([KMGT]?i?B)\\s*(?:\\((\\d+(?:\\.\\d+)?)\\s*([KMGT]?B)\\))?",
+          "colors": ["green", "green", "green", "green"],
+          "description": "Highlights bytes transferred"
+        },
+        {
+          "name": "Transfer Speed",
+          "pattern": "(\\d+(?:\\.\\d+)?)\\s*([KMGT]?i?B/s)",
+          "colors": ["magenta", "magenta"],
+          "description": "Highlights transfer speed"
+        },
+        {
+          "name": "Time Elapsed",
+          "pattern": "(\\d+(?:\\.\\d+)?)\\s*(s(?:econds)?)",
+          "colors": ["yellow", "yellow"],
+          "description": "Highlights time elapsed"
+        },
+        {
+          "name": "Copied",
+          "pattern": "(copied)",
+          "colors": ["green"],
+          "description": "Highlights copied status"
+        },
+        {
+          "name": "Truncated Records",
+          "pattern": "(\\d+)\\s+(truncated)\\s+(records?)",
+          "colors": ["red", "red", "red"],
+          "description": "Highlights truncated records warning"
+        }
+      ]
+    },
+    {
+      "name": "df",
+      "triggers": ["df", "duf"],
+      "description": "Highlights for df (disk free) command output",
+      "rules": [
+        {
+          "name": "Filesystem Path",
+          "pattern": "^(?!Filesystem)(\\/[-\\w\\d.]+)+\\s",
+          "colors": ["blue"],
+          "description": "Highlights filesystem device path at line start"
+        },
+        {
+          "name": "Size KB (suffix)",
+          "pattern": "\\s(\\d*[.,]?\\d)(K|B)i?\\s",
+          "colors": ["green", "green"],
+          "description": "Highlights kilobyte sizes with K/B suffix (human-readable)"
+        },
+        {
+          "name": "Size KB (raw 1-3 digits)",
+          "pattern": "\\s(\\d{1,3})(?=\\s)",
+          "colors": ["green"],
+          "description": "Highlights small raw block counts (1-3 digits = under 1MB)"
+        },
+        {
+          "name": "Size MB (suffix)",
+          "pattern": "\\s(\\d*[.,]?\\d)(M)i?\\s",
+          "colors": ["yellow", "yellow"],
+          "description": "Highlights megabyte sizes with M suffix (human-readable)"
+        },
+        {
+          "name": "Size MB (raw 4-6 digits)",
+          "pattern": "\\s(\\d{4,6})(?=\\s)",
+          "colors": ["yellow"],
+          "description": "Highlights medium raw block counts (4-6 digits = 1MB-999MB)"
+        },
+        {
+          "name": "Size GB (suffix)",
+          "pattern": "\\s(\\d*[.,]?\\d)(G)i?\\s",
+          "colors": ["red", "red"],
+          "description": "Highlights gigabyte sizes with G suffix (human-readable)"
+        },
+        {
+          "name": "Size GB (raw 7-9 digits)",
+          "pattern": "\\s(\\d{7,9})(?=\\s)",
+          "colors": ["red"],
+          "description": "Highlights large raw block counts (7-9 digits = 1GB-999GB)"
+        },
+        {
+          "name": "Size TB (suffix)",
+          "pattern": "\\s(\\d*[.,]?\\d)(T)i?\\s",
+          "colors": ["bold red", "bold red"],
+          "description": "Highlights terabyte sizes with T suffix (human-readable)"
+        },
+        {
+          "name": "Size TB (raw 10-12 digits)",
+          "pattern": "\\s(\\d{10,12})(?=\\s)",
+          "colors": ["bold red"],
+          "description": "Highlights huge raw block counts (10-12 digits = 1TB+)"
+        },
+        {
+          "name": "Mount Point",
+          "pattern": "\\/$|(\\/[-\\w\\d. ]+)+$",
+          "colors": ["bold green"],
+          "description": "Highlights mount point paths at line end"
+        },
+        {
+          "name": "Usage OK (0-69%)",
+          "pattern": "\\s([1-6]?[0-9])(%)",
+          "colors": ["green", "green"],
+          "description": "Highlights disk usage under 70%"
+        },
+        {
+          "name": "Usage Warning (70-89%)",
+          "pattern": "\\s([78][0-9])(%)",
+          "colors": ["yellow", "yellow"],
+          "description": "Highlights disk usage 70-89%"
+        },
+        {
+          "name": "Usage High (90-97%)",
+          "pattern": "\\s(9[0-7])(%)",
+          "colors": ["red", "red"],
+          "description": "Highlights disk usage 90-97%"
+        },
+        {
+          "name": "Usage Critical (98-100%)",
+          "pattern": "\\s(9[89]|100)(%)",
+          "colors": ["bold red", "bold red"],
+          "description": "Highlights disk usage 98-100%"
+        },
+        {
+          "name": "Tmpfs Lines",
+          "pattern": "^tmpfs.*",
+          "colors": ["magenta"],
+          "description": "Dims tmpfs (virtual) filesystems"
+        }
+      ]
+    },
+    {
+      "name": "dig",
+      "triggers": ["dig"],
+      "description": "Highlights for dig DNS lookup output",
+      "rules": [
+        {
+          "name": "Title Line",
+          "pattern": "^(; <<>>)\\s+(DiG[^<]+)(<<>>)\\s+(\\S+)",
+          "colors": ["yellow", "cyan", "yellow", "bold magenta"],
+          "description": "Highlights DiG title line with version and queried domain"
+        },
+        {
+          "name": "Section Headers",
+          "pattern": "^;;\\s+(QUESTION|ANSWER|AUTHORITY|ADDITIONAL|OPT PSEUDOSECTION)\\s*(SECTION)?:?",
+          "colors": ["bold magenta", "bold magenta"],
+          "description": "Highlights section headers including OPT PSEUDOSECTION"
+        },
+        {
+          "name": "Comment Lines",
+          "pattern": "^(;;)\\s+(.+)$",
+          "colors": ["yellow", null],
+          "description": "Highlights comment lines starting with ;;"
+        },
+        {
+          "name": "Status NOERROR",
+          "pattern": "(status:)\\s*(NOERROR)",
+          "colors": [null, "bold green"],
+          "description": "Highlights successful query status"
+        },
+        {
+          "name": "Status Error",
+          "pattern": "(status:)\\s*(NXDOMAIN|SERVFAIL|REFUSED|FORMERR)",
+          "colors": [null, "bold red"],
+          "description": "Highlights error query status"
+        },
+        {
+          "name": "IPv4 Address",
+          "pattern": "(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})",
+          "colors": ["bold magenta"],
+          "description": "Highlights IPv4 addresses"
+        },
+        {
+          "name": "IPv6 Address",
+          "pattern": "((?:[0-9a-fA-F]{1,4})?::?[0-9a-fA-F:]+)",
+          "colors": ["green"],
+          "description": "Highlights IPv6 addresses"
+        },
+        {
+          "name": "Domain Names",
+          "pattern": "([a-zA-Z0-9][-a-zA-Z0-9]*\\.)+[a-zA-Z]+\\.?",
+          "colors": ["bright_magenta"],
+          "description": "Highlights domain names"
+        },
+        {
+          "name": "Record Types",
+          "pattern": "\\b(A|AAAA|CNAME|MX|NS|TXT|SOA|PTR|SRV|CAA|DNSKEY|DS|NSEC|RRSIG|OPT)\\b",
+          "colors": ["cyan"],
+          "description": "Highlights DNS record types"
+        },
+        {
+          "name": "TTL Values",
+          "pattern": "\\s(\\d+)\\s+(IN)\\b",
+          "colors": ["yellow", null],
+          "description": "Highlights TTL and class"
+        },
+        {
+          "name": "Query Time",
+          "pattern": "(Query time:)\\s*(\\d+)\\s*(msec)",
+          "colors": [null, "bold yellow", null],
+          "description": "Highlights query time"
+        },
+        {
+          "name": "Server",
+          "pattern": "(SERVER:)\\s*(\\S+)",
+          "colors": [null, "cyan"],
+          "description": "Highlights DNS server"
+        },
+        {
+          "name": "When",
+          "pattern": "(WHEN:)\\s*(.+)$",
+          "colors": [null, "magenta"],
+          "description": "Highlights query timestamp"
+        },
+        {
+          "name": "Flags",
+          "pattern": "(flags:)\\s*([^;]+)",
+          "colors": [null, "magenta"],
+          "description": "Highlights query flags"
+        },
+        {
+          "name": "MSG SIZE",
+          "pattern": "(MSG SIZE)\\s+(rcvd|sent):?\\s*(\\d+)",
+          "colors": [null, null, "yellow"],
+          "description": "Highlights message size"
+        },
+        {
+          "name": "EDNS Options",
+          "pattern": "^(;)\\s+(EDNS:.+)$",
+          "colors": ["yellow", null],
+          "description": "Highlights EDNS options line"
+        }
+      ]
+    },
+    {
+      "name": "dmesg",
+      "triggers": ["dmesg"],
+      "description": "Highlights for dmesg (kernel messages) output",
+      "rules": [
+        {
+          "name": "Errors",
+          "pattern": "\\b(error|failed|failure)\\b",
+          "colors": ["bold red"],
+          "description": "Highlights kernel error messages"
+        },
+        {
+          "name": "Warnings",
+          "pattern": "\\b(warning|warn)\\b",
+          "colors": ["yellow"],
+          "description": "Highlights kernel warnings"
+        },
+        {
+          "name": "Device Names",
+          "pattern": "\\b(sd[a-z]\\d*|nvme\\d+n\\d+p?\\d*|loop\\d+|dm-\\d+)\\b",
+          "colors": ["cyan"],
+          "description": "Highlights block device names"
+        },
+        {
+          "name": "Network Interfaces",
+          "pattern": "\\b(eth\\d+|enp\\d+s\\d+|wlan\\d+|wlp\\d+s\\d+)\\b",
+          "colors": ["magenta"],
+          "description": "Highlights network interface names"
+        },
+        {
+          "name": "Memory Addresses",
+          "pattern": "\\b(0x[0-9a-fA-F]+)\\b",
+          "colors": ["yellow"],
+          "description": "Highlights memory addresses"
+        },
+        {
+          "name": "USB Devices",
+          "pattern": "(usb)\\s+(\\d+-\\d+(?:\\.\\d+)?)",
+          "colors": ["cyan", "yellow"],
+          "description": "Highlights USB device identifiers"
+        }
+      ]
+    },
+    {
+      "name": "docker",
+      "triggers": [
+        "docker",
+        "podman",
+        "nerdctl",
+        "docker-compose",
+        "podman-compose"
+      ],
+      "description": "Highlights for docker command output",
+      "rules": [
+        {
+          "name": "Headers",
+          "pattern": "(?:\\s|^)(CONTAINER ID|IMAGE|COMMAND|CREATED|STATUS|PORTS|NAMES|REPOSITORY|TAG|SIZE)(?:\\s|$)",
+          "colors": ["underline white"],
+          "description": "Highlights column headers"
+        },
+        {
+          "name": "Container ID",
+          "pattern": "\\b([0-9a-f]{12})\\b",
+          "colors": ["magenta"],
+          "description": "Highlights short container IDs"
+        },
+        {
+          "name": "Image Name",
+          "pattern": "(\\S+?)/(\\S+?)\\s",
+          "colors": ["yellow", "bright_white"],
+          "description": "Highlights image names"
+        },
+        {
+          "name": "Tag Latest",
+          "pattern": "(?<=\\s)latest(?=\\s)",
+          "colors": ["cyan"],
+          "description": "Highlights latest tag"
+        },
+        {
+          "name": "Status Up",
+          "pattern": "(?:\\s{2}|^)(?:Up|Restarting)(?:(?:\\s[\\w,\\d]+)+)?",
+          "colors": ["bold green"],
+          "description": "Highlights running container status"
+        },
+        {
+          "name": "Health Healthy",
+          "pattern": "\\(healthy\\)",
+          "colors": ["bold green"],
+          "description": "Highlights healthy status"
+        },
+        {
+          "name": "Health Starting",
+          "pattern": "\\(health: starting\\)",
+          "colors": ["bold yellow"],
+          "description": "Highlights starting health"
+        },
+        {
+          "name": "Health Unhealthy",
+          "pattern": "\\(unhealthy\\)",
+          "colors": ["bold red"],
+          "description": "Highlights unhealthy status"
+        },
+        {
+          "name": "Status Exited",
+          "pattern": "(Exited)\\s*\\((\\d+)\\)",
+          "colors": ["bold red", "red"],
+          "description": "Highlights exited container status"
+        },
+        {
+          "name": "Status Created",
+          "pattern": "\\sCreated\\s",
+          "colors": ["blue"],
+          "description": "Highlights created container status"
+        },
+        {
+          "name": "None",
+          "pattern": "<none>",
+          "colors": ["bold red"],
+          "description": "Highlights missing image/tag"
+        },
+        {
+          "name": "IP Address",
+          "pattern": "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}",
+          "colors": ["blue"],
+          "description": "Highlights IP addresses"
+        },
+        {
+          "name": "Port Numbers",
+          "pattern": "(\\d{1,5})(-\\d{1,5})?(->)(\\d{1,5})(-\\d{1,5})?(/)(tcp|udp)",
+          "colors": [
+            "bright_green",
+            "bright_green",
+            null,
+            "bright_green",
+            "bright_green",
+            null,
+            "cyan"
+          ],
+          "description": "Highlights port mappings"
+        },
+        {
+          "name": "Size KB",
+          "pattern": "(?<=\\s)\\d+[.,]?\\d*\\s?KB?",
+          "colors": ["green"],
+          "description": "Highlights kilobyte sizes"
+        },
+        {
+          "name": "Size MB Small",
+          "pattern": "(?<=\\s)\\d{1,2}[.,]?\\d*\\s?MB?",
+          "colors": ["green"],
+          "description": "Highlights small megabyte sizes"
+        },
+        {
+          "name": "Size MB Large",
+          "pattern": "(?<=\\s)\\d{3,}[.,]?\\d*\\s?MB?",
+          "colors": ["yellow"],
+          "description": "Highlights large megabyte sizes"
+        },
+        {
+          "name": "Size GB",
+          "pattern": "(?<=\\s)\\d+[.,]?\\d*\\s?GB?",
+          "colors": ["red"],
+          "description": "Highlights gigabyte sizes"
+        },
+        {
+          "name": "Created Recently",
+          "pattern": "(?:About a|\\d+) (?:seconds?|minutes?) ago",
+          "colors": ["bright_green"],
+          "description": "Highlights recently created"
+        },
+        {
+          "name": "Created Hours",
+          "pattern": "\\d+\\s+hours\\s+ago",
+          "colors": ["green"],
+          "description": "Highlights hours ago"
+        },
+        {
+          "name": "Created Days",
+          "pattern": "\\d+\\s+days\\s+ago",
+          "colors": ["green"],
+          "description": "Highlights days ago"
+        },
+        {
+          "name": "Created Weeks",
+          "pattern": "\\d+\\s+weeks\\s+ago",
+          "colors": ["yellow"],
+          "description": "Highlights weeks ago"
+        },
+        {
+          "name": "Created Months",
+          "pattern": "\\d+\\s+months\\s+ago",
+          "colors": ["red"],
+          "description": "Highlights months ago"
+        }
+      ]
+    },
+    {
+      "name": "du",
+      "triggers": ["du", "ncdu", "dust"],
+      "description": "Highlights for du (disk usage) command output",
+      "rules": [
+        {
+          "name": "TB Sizes (Huge)",
+          "pattern": "^\\s*(\\d*[.,]?\\d)(T)i?\\s",
+          "colors": ["bold red", "bold red"],
+          "description": "Highlights sizes in terabytes (huge)"
+        },
+        {
+          "name": "GB Sizes (Large)",
+          "pattern": "^\\s*(\\d*[.,]?\\d)(G)i?\\s",
+          "colors": ["red", "red"],
+          "description": "Highlights sizes in gigabytes (large)"
+        },
+        {
+          "name": "MB Sizes (Medium)",
+          "pattern": "^\\s*(\\d*[.,]?\\d)(M)i?\\s",
+          "colors": ["yellow", "yellow"],
+          "description": "Highlights sizes in megabytes (medium)"
+        },
+        {
+          "name": "KB Sizes (Small)",
+          "pattern": "^\\s*(\\d*[.,]?\\d)(K)i?\\s",
+          "colors": ["green", "green"],
+          "description": "Highlights sizes in kilobytes (small)"
+        },
+        {
+          "name": "Total Line",
+          "pattern": "(.+)\\s+(total)$",
+          "colors": ["bold yellow", "bold yellow"],
+          "description": "Highlights total summary line"
+        },
+        {
+          "name": "Paths",
+          "pattern": "\\s+([\\.\\/]+)([\\w\\s\\-\\_\\.]+)(\\/.*)?$",
+          "colors": [null, "bold blue", "blue"],
+          "description": "Highlights file/directory paths"
+        }
+      ]
+    },
+    {
+      "name": "find",
+      "triggers": ["find"],
+      "description": "Highlights for find command output",
+      "rules": [
+        {
+          "name": "Directories",
+          "pattern": "^(.*/)?([^/]+/)$",
+          "colors": [null, "cyan"],
+          "description": "Highlights directory paths"
+        },
+        {
+          "name": "Permission Denied",
+          "pattern": "(Permission denied)",
+          "colors": ["bold red"],
+          "description": "Highlights permission errors"
+        }
+      ]
+    },
+    {
+      "name": "findmnt",
+      "triggers": ["findmnt"],
+      "description": "Highlights for findmnt mount listing output",
+      "rules": [
+        {
+          "name": "Device Path",
+          "pattern": "(/dev/[\\w/-]+)",
+          "colors": ["green"],
+          "description": "Highlights device paths"
+        },
+        {
+          "name": "Mount Target",
+          "pattern": "(?:─|^)(/[\\w/.-]*)",
+          "colors": ["bold yellow"],
+          "description": "Highlights mount target paths"
+        },
+        {
+          "name": "Read-Write",
+          "pattern": "\\brw\\b",
+          "colors": ["bold red"],
+          "description": "Highlights read-write mounts"
+        },
+        {
+          "name": "Read-Only",
+          "pattern": "\\bro\\b",
+          "colors": ["bold green"],
+          "description": "Highlights read-only mounts"
+        },
+        {
+          "name": "Linux FS Types",
+          "pattern": "\\b(ext[234]|xfs|btrfs|nfs\\d?)\\b",
+          "colors": ["cyan"],
+          "description": "Highlights Linux filesystem types"
+        },
+        {
+          "name": "Windows FS Types",
+          "pattern": "\\b(fat|vfat|ntfs|msdos|fuseblk)\\b",
+          "colors": ["on_cyan white"],
+          "description": "Highlights Windows/FAT filesystem types"
+        },
+        {
+          "name": "Headers",
+          "pattern": "\\b(TARGET|SOURCE|FSTYPE|OPTIONS)\\b",
+          "colors": ["bold magenta"],
+          "description": "Highlights column headers"
+        },
+        {
+          "name": "SWAP",
+          "pattern": "\\[(SWAP)\\]",
+          "colors": ["bright_magenta"],
+          "description": "Highlights swap entries"
+        }
+      ]
+    },
+    {
+      "name": "free",
+      "triggers": ["free"],
+      "description": "Highlights for free (memory usage) output",
+      "rules": [
+        {
+          "name": "Mem Row",
+          "pattern": "^(Mem:.*)",
+          "colors": ["cyan"],
+          "description": "Highlights Mem row label"
+        },
+        {
+          "name": "Swap Row",
+          "pattern": "^(Swap:.*)",
+          "colors": ["magenta"],
+          "description": "Highlights Swap row label"
+        },
+        {
+          "name": "Column Headers",
+          "pattern": "\\b(total|used|free|shared|buff/cache|available)\\b",
+          "colors": ["bold white"],
+          "description": "Highlights column headers"
+        }
+      ]
+    },
+    {
+      "name": "gcc",
+      "triggers": ["gcc", "g++", "clang", "clang++", "cc"],
+      "description": "Highlights for gcc/g++ compiler output",
+      "rules": [
+        {
+          "name": "Error",
+          "pattern": "(:\\s*)(error)(:\\s*)",
+          "colors": [null, "bold red", null],
+          "description": "Highlights compilation errors"
+        },
+        {
+          "name": "Warning",
+          "pattern": "(:\\s*)(warning)(:\\s*)",
+          "colors": [null, "yellow", null],
+          "description": "Highlights compilation warnings"
+        },
+        {
+          "name": "Note",
+          "pattern": "(:\\s*)(note)(:\\s*)",
+          "colors": [null, "cyan", null],
+          "description": "Highlights compiler notes"
+        },
+        {
+          "name": "File Location",
+          "pattern": "(\\S+?):(\\d+):(\\d+):",
+          "colors": ["magenta", "cyan", "cyan"],
+          "description": "Highlights file:line:column locations"
+        },
+        {
+          "name": "In Function",
+          "pattern": "(In function)\\s+['‘]([\\w:~<>,\\s*&]+)['’]",
+          "colors": [null, "yellow"],
+          "description": "Highlights function context"
+        },
+        {
+          "name": "In File Included",
+          "pattern": "(In file included from)\\s+(.+)",
+          "colors": [null, "magenta"],
+          "description": "Highlights include chain"
+        },
+        {
+          "name": "Undefined Reference",
+          "pattern": "(undefined reference to)\\s+[`'‘]([^'`’]+)[`'’]",
+          "colors": ["red", "bold yellow"],
+          "description": "Highlights undefined references"
+        },
+        {
+          "name": "Fatal Error",
+          "pattern": "(fatal error)(:\\s*)",
+          "colors": ["bold red", null],
+          "description": "Highlights fatal errors"
+        },
+        {
+          "name": "Caret Pointer",
+          "pattern": "(\\s*)(\\^)(~*)",
+          "colors": [null, "bold green", "green"],
+          "description": "Highlights error position pointer"
+        }
+      ]
+    },
+    {
+      "name": "git",
+      "triggers": ["git", "hub", "gh"],
+      "description": "Highlights for git command output",
+      "rules": [
+        {
+          "name": "Added/New",
+          "pattern": "^\\s*(new file|added|create mode)(.*)$",
+          "colors": ["green", "bright_green"],
+          "description": "Highlights added files"
+        },
+        {
+          "name": "Diff Added Line",
+          "pattern": "^(\\+{3})\\s*(.*)$",
+          "colors": ["bold green", "green"],
+          "description": "Highlights diff added file header"
+        },
+        {
+          "name": "Deleted/Removed",
+          "pattern": "^\\s*(deleted|removed)(.*)$",
+          "colors": ["red", "bright_red"],
+          "description": "Highlights deleted files"
+        },
+        {
+          "name": "Diff Removed Line",
+          "pattern": "^(-{3})\\s*(.*)$",
+          "colors": ["bold red", "red"],
+          "description": "Highlights diff removed file header"
+        },
+        {
+          "name": "Modified",
+          "pattern": "^\\s*(modified):(.*)$",
+          "colors": ["yellow", "bright_yellow"],
+          "description": "Highlights modified files"
+        },
+        {
+          "name": "Branch Names",
+          "pattern": "\\b(main|master|develop|feature/[\\w/-]+|bugfix/[\\w/-]+|hotfix/[\\w/-]+|release/[\\w/-]+)\\b",
+          "colors": ["magenta"],
+          "description": "Highlights branch names"
+        },
+        {
+          "name": "Commit Hash",
+          "pattern": "\\b([0-9a-f]{7,40})\\b",
+          "colors": ["yellow"],
+          "description": "Highlights commit hashes"
+        },
+        {
+          "name": "Diff Header",
+          "pattern": "^(@@)(.+)(@@)",
+          "colors": ["cyan", "bright_cyan", "cyan"],
+          "description": "Highlights diff chunk headers"
+        },
+        {
+          "name": "Author",
+          "pattern": "^(Author:)\\s+(.+)$",
+          "colors": ["cyan", null],
+          "description": "Highlights commit author"
+        },
+        {
+          "name": "Date",
+          "pattern": "^(Date:)\\s+(.+)$",
+          "colors": ["cyan", null],
+          "description": "Highlights commit date"
+        }
+      ]
+    },
+    {
+      "name": "global",
+      "triggers": [],
+      "description": "Global highlight rules applied to all terminal output",
+      "rules": [
+        {
+          "name": "Critical/Error",
+          "pattern": "\\b(error|fail(?:ure|ed)?|fatal|critical|exception|crash)\\b",
+          "colors": ["bold red"],
+          "description": "Highlights error messages and critical failures"
+        },
+        {
+          "name": "Warning",
+          "pattern": "\\b(warn(?:ing)?|deprecated|alert|caution)\\b",
+          "colors": ["bold yellow"],
+          "description": "Highlights warnings and deprecation notices"
+        },
+        {
+          "name": "Success",
+          "pattern": "\\b(success|ok|passed|complete(?:d)?|done)\\b",
+          "colors": ["bold green"],
+          "description": "Highlights success messages and completion notices"
+        },
+        {
+          "name": "State (Active)",
+          "pattern": "\\b(enable(?:d)?|active|online|up|connected|true)\\b",
+          "colors": ["green"],
+          "description": "Highlights active/enabled states"
+        },
+        {
+          "name": "State (Inactive)",
+          "pattern": "\\b(disable(?:d)?|inactive|offline|down|disconnected|false)\\b",
+          "colors": ["red"],
+          "description": "Highlights inactive/disabled states"
+        },
+        {
+          "name": "IPv4 Address",
+          "pattern": "\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b",
+          "colors": ["bold magenta"],
+          "description": "Highlights IPv4 addresses"
+        },
+        {
+          "name": "IPv6 and MAC Address",
+          "pattern": "\\b[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){2,}:[a-f0-9:]{1,}\\b|\\b.*::.*",
+          "colors": ["yellow"],
+          "description": "Highlights IPv6 and MAC addresses (colon-separated hex values)"
+        },
+        {
+          "name": "URL (HTTP/S)",
+          "pattern": "https?://[^\\s]+",
+          "colors": ["underline cyan"],
+          "description": "Highlights HTTP and HTTPS URLs"
+        },
+        {
+          "name": "Strings (Quotes)",
+          "pattern": "\"[^\"]*\"|'[^']*'",
+          "colors": ["yellow"],
+          "description": "Highlights quoted strings"
+        }
+      ]
+    },
+    {
+      "name": "help",
+      "triggers": ["--help", "-h", "help", "man"],
+      "description": "Syntax highlighting rules for help output (--help, man pages)",
+      "useGlobalRules": true,
+      "rules": [
+        {
+          "name": "Usage Header",
+          "pattern": "^(Usage:|USAGE:|Synopsis:|SYNOPSIS:)\\s*",
+          "colors": ["bold cyan"],
+          "description": "Highlights usage/synopsis headers"
+        },
+        {
+          "name": "Section Header",
+          "pattern": "^([A-Z][A-Z ]+:?|[A-Z][a-z]+:)\\s*$",
+          "colors": ["bold yellow"],
+          "description": "Highlights section headers like OPTIONS, DESCRIPTION, etc."
+        },
+        {
+          "name": "Section Header Underlined",
+          "pattern": "^(OPTIONS|DESCRIPTION|COMMANDS|ARGUMENTS|EXAMPLES|ENVIRONMENT|FILES|SEE ALSO|BUGS|AUTHOR|COPYRIGHT|EXIT STATUS|NOTES|HISTORY|NAME)\\s*$",
+          "colors": ["bold underline magenta"],
+          "description": "Highlights common uppercase section headers"
+        },
+        {
+          "name": "Long Option with Value",
+          "pattern": "--[a-z][a-z0-9-]*(=|\\s+)[<\\[][A-Za-z0-9_-]+[>\\]]",
+          "colors": ["bold green"],
+          "description": "Highlights long options with value placeholders like --option=<value>"
+        },
+        {
+          "name": "Long Option",
+          "pattern": "--[a-z][a-z0-9-]*",
+          "colors": ["bold green"],
+          "description": "Highlights long options like --help, --version"
+        },
+        {
+          "name": "Short Option",
+          "pattern": "(?:^|\\s)-[a-zA-Z0-9](?=\\s|,|$|\\]|\\))",
+          "colors": ["green"],
+          "description": "Highlights short options like -h, -v"
+        },
+        {
+          "name": "Argument Placeholder Angle",
+          "pattern": "<[A-Za-z][A-Za-z0-9_-]*>",
+          "colors": ["cyan"],
+          "description": "Highlights argument placeholders in angle brackets like <file>"
+        },
+        {
+          "name": "Argument Placeholder Square",
+          "pattern": "\\[[A-Za-z][A-Za-z0-9_|-]*\\]",
+          "colors": ["cyan"],
+          "description": "Highlights optional arguments in square brackets like [option]"
+        },
+        {
+          "name": "Ellipsis",
+          "pattern": "\\.\\.\\.",
+          "colors": ["dim white"],
+          "description": "Highlights ellipsis indicating multiple values"
+        },
+        {
+          "name": "Default Value",
+          "pattern": "\\(default:?\\s*[^)]+\\)|\\[default:?\\s*[^\\]]+\\]",
+          "colors": ["dim yellow"],
+          "description": "Highlights default value indicators"
+        },
+        {
+          "name": "Required",
+          "pattern": "\\b(required|mandatory)\\b",
+          "colors": ["bold red"],
+          "description": "Highlights required indicators"
+        },
+        {
+          "name": "Optional",
+          "pattern": "\\b(optional)\\b",
+          "colors": ["dim cyan"],
+          "description": "Highlights optional indicators"
+        },
+        {
+          "name": "URL",
+          "pattern": "https?://[^\\s<>]+",
+          "colors": ["underline blue"],
+          "description": "Highlights URLs"
+        },
+        {
+          "name": "Email",
+          "pattern": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}",
+          "colors": ["underline blue"],
+          "description": "Highlights email addresses"
+        },
+        {
+          "name": "Command Example",
+          "pattern": "^\\s{2,}\\$\\s+.+$",
+          "colors": ["yellow"],
+          "description": "Highlights command examples starting with $"
+        },
+        {
+          "name": "Environment Variable",
+          "pattern": "\\$[A-Z_][A-Z0-9_]*|\\b[A-Z_][A-Z0-9_]{2,}\\b(?=\\s*=|\\s+is|\\s+specifies)",
+          "colors": ["magenta"],
+          "description": "Highlights environment variables"
+        },
+        {
+          "name": "File Path",
+          "pattern": "(?:^|\\s)(/[a-zA-Z0-9._/-]+|~[a-zA-Z0-9._/-]*)",
+          "colors": ["cyan"],
+          "description": "Highlights file paths"
+        },
+        {
+          "name": "Subcommand",
+          "pattern": "^\\s{2,}[a-z][a-z0-9-]+(?=\\s{2,})",
+          "colors": ["bold white"],
+          "description": "Highlights subcommands in command lists"
+        }
+      ]
+    },
+    {
+      "name": "ifconfig",
+      "triggers": ["ifconfig"],
+      "description": "Highlights for ifconfig network interface output",
+      "rules": [
+        {
+          "name": "Interface Name",
+          "pattern": "^([a-z0-9.]{2,}\\d*):?\\s",
+          "colors": ["bold green"],
+          "description": "Highlights interface names"
+        },
+        {
+          "name": "IPv4 Address",
+          "pattern": "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}",
+          "colors": ["bold magenta"],
+          "description": "Highlights IPv4 addresses"
+        },
+        {
+          "name": "IPv6 Address",
+          "pattern": "\\b[0-9a-fA-F]{1,4}(::?[0-9a-fA-F]{1,4})+",
+          "colors": ["yellow"],
+          "description": "Highlights IPv6 addresses"
+        },
+        {
+          "name": "MAC Address",
+          "pattern": "([0-9a-f]{2}:){5}[0-9a-f]{2}",
+          "colors": ["blue"],
+          "description": "Highlights MAC addresses"
+        },
+        {
+          "name": "IP Labels",
+          "pattern": "(inet6?|netmask|broadcast)",
+          "colors": ["cyan"],
+          "description": "Highlights IP-related labels"
+        },
+        {
+          "name": "Flags",
+          "pattern": "(?<=[,<])[^,]+?(?=[,>])",
+          "colors": ["blue"],
+          "description": "Highlights interface flags"
+        },
+        {
+          "name": "MTU",
+          "pattern": "(mtu)(\\s|:)(\\d+)",
+          "colors": ["cyan", null, "green"],
+          "description": "Highlights MTU value"
+        },
+        {
+          "name": "Errors",
+          "pattern": "(errors)(\\s|:)(\\d+)",
+          "colors": ["bold red", null, "bold red"],
+          "description": "Highlights error counts"
+        },
+        {
+          "name": "Dropped",
+          "pattern": "(dropped)(\\s|:)(\\d+)",
+          "colors": ["bold yellow", null, "bold yellow"],
+          "description": "Highlights dropped packet counts"
+        },
+        {
+          "name": "Overruns",
+          "pattern": "(overruns)(\\s|:)(\\d+)",
+          "colors": ["bold yellow", null, "bold yellow"],
+          "description": "Highlights overrun counts"
+        },
+        {
+          "name": "Collisions",
+          "pattern": "(collisions)(\\s|:)(\\d+)",
+          "colors": ["bold red", null, "bold red"],
+          "description": "Highlights collision counts"
+        },
+        {
+          "name": "Carrier",
+          "pattern": "(carrier)(\\s|:)(\\d+)",
+          "colors": ["cyan", null, "cyan"],
+          "description": "Highlights carrier counts"
+        },
+        {
+          "name": "Size Values",
+          "pattern": "(\\d+(?:\\.\\d+)?)\\s*(T|G|M|K)?i?B",
+          "colors": ["yellow", "yellow"],
+          "description": "Highlights size values"
+        }
+      ]
+    },
+    {
+      "name": "ip",
+      "triggers": ["ip"],
+      "description": "Highlights for ip command output",
+      "rules": [
+        {
+          "name": "IPv4 Address",
+          "pattern": "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}",
+          "colors": ["bold magenta"],
+          "description": "Highlights IPv4 addresses"
+        },
+        {
+          "name": "IPv6 Address",
+          "pattern": "(?:(?=.*[a-f])|(?=.*::)|(?=(?:.*:){3}))(?:[a-f0-9]{1,4}:|:)+[a-f0-9]{1,4}",
+          "colors": ["yellow"],
+          "description": "Highlights IPv6 addresses"
+        },
+        {
+          "name": "CIDR Range",
+          "pattern": "\\/\\d{1,3}",
+          "colors": ["magenta"],
+          "description": "Highlights IP range size"
+        },
+        {
+          "name": "Device",
+          "pattern": "(dev) (\\w+)",
+          "colors": [null, "cyan"],
+          "description": "Highlights device names"
+        },
+        {
+          "name": "Default Route",
+          "pattern": "default",
+          "colors": ["bold blue"],
+          "description": "Highlights default route"
+        },
+        {
+          "name": "Source",
+          "pattern": "(src) (\\S+)",
+          "colors": [null, "magenta"],
+          "description": "Highlights source address"
+        },
+        {
+          "name": "Link Down",
+          "pattern": "linkdown",
+          "colors": ["bold red"],
+          "description": "Highlights linkdown status"
+        },
+        {
+          "name": "State UP",
+          "pattern": "(state)\\s+(UP)|<[^>]*(UP)[^>]*>",
+          "colors": [null, "bold green", "bold green"],
+          "description": "Highlights UP state"
+        },
+        {
+          "name": "State DOWN",
+          "pattern": "(state)\\s+(DOWN)|<[^>]*(DOWN)[^>]*>",
+          "colors": [null, "bold red", "bold red"],
+          "description": "Highlights DOWN state"
+        },
+        {
+          "name": "Scope",
+          "pattern": "(scope) (global|link|host)",
+          "colors": [null, "yellow"],
+          "description": "Highlights scope info"
+        },
+        {
+          "name": "Broadcast",
+          "pattern": "(brd) ([\\d.]+)",
+          "colors": [null, "cyan"],
+          "description": "Highlights broadcast address"
+        }
+      ]
+    },
+    {
+      "name": "journalctl",
+      "triggers": ["journalctl", "journald", "syslog"],
+      "description": "Highlights for journalctl (systemd logs) output",
+      "rules": [
+        {
+          "name": "Emergency/Alert",
+          "pattern": "\\b(emerg|alert)\\b",
+          "colors": ["bold red"],
+          "description": "Highlights emergency and alert log levels"
+        },
+        {
+          "name": "Critical/Error",
+          "pattern": "\\b(crit|err)\\b",
+          "colors": ["red"],
+          "description": "Highlights critical and error log levels"
+        },
+        {
+          "name": "Warning",
+          "pattern": "\\b(warning)\\b",
+          "colors": ["yellow"],
+          "description": "Highlights warning log level"
+        },
+        {
+          "name": "Notice/Info",
+          "pattern": "\\b(notice|info)\\b",
+          "colors": ["cyan"],
+          "description": "Highlights notice and info log levels"
+        },
+        {
+          "name": "Unit Names",
+          "pattern": "([\\w@-]+)\\.(service|socket|target|timer|mount|device|swap|scope|slice)",
+          "colors": ["magenta", null],
+          "description": "Highlights systemd unit names"
+        },
+        {
+          "name": "Hostname",
+          "pattern": "^([A-Z][a-z]{2}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}:\\d{2})\\s+([\\w.-]+)",
+          "colors": [null, "cyan"],
+          "description": "Highlights hostname in logs"
+        }
+      ]
+    },
+    {
+      "name": "kubectl",
+      "triggers": ["kubectl", "k", "oc"],
+      "description": "Highlights for kubectl (Kubernetes) output",
+      "rules": [
+        {
+          "name": "Green States",
+          "pattern": "\\b(Ready|Running|True|Active|Available|Approved|created)\\b",
+          "colors": ["green"],
+          "description": "Highlights positive states"
+        },
+        {
+          "name": "Red States",
+          "pattern": "\\b(Disabled?|Errors?|Stopped|False|ErrImagePull|[a-zA-Z]+BackOff|OOMKilled|Terminated|Failed?)\\b",
+          "colors": ["red"],
+          "description": "Highlights error states"
+        },
+        {
+          "name": "Yellow States",
+          "pattern": "\\b(Warning|Pending|Waiting|ContainerCreating|Released|Bound|already exists)\\b",
+          "colors": ["yellow"],
+          "description": "Highlights warning/pending states"
+        },
+        {
+          "name": "Completed",
+          "pattern": "\\b(Completed|Succeeded)\\b",
+          "colors": ["cyan"],
+          "description": "Highlights completed jobs"
+        },
+        {
+          "name": "Master Node",
+          "pattern": "\\smaster\\s",
+          "colors": ["bold green"],
+          "description": "Highlights master node"
+        },
+        {
+          "name": "IP Address",
+          "pattern": "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}(/\\d{1,2})?",
+          "colors": ["cyan"],
+          "description": "Highlights IP addresses"
+        },
+        {
+          "name": "Ports",
+          "pattern": "(\\d+)(:\\d+)?/(TCP|UDP)",
+          "colors": ["yellow", "bold green", "magenta"],
+          "description": "Highlights port mappings"
+        },
+        {
+          "name": "Type/Name",
+          "pattern": "^([^/ ]+)/(\\S+)",
+          "colors": ["yellow", "bright_white"],
+          "description": "Highlights resource type/name"
+        },
+        {
+          "name": "No Running Instances",
+          "pattern": "\\s(0/[1-9]+)\\b",
+          "colors": ["bold red"],
+          "description": "Highlights zero ready pods"
+        },
+        {
+          "name": "Ready Status",
+          "pattern": "([1-9]\\d*)/(\\d+)",
+          "colors": ["green", null],
+          "description": "Highlights ready/total count"
+        },
+        {
+          "name": "Labels",
+          "pattern": "([\\w\\d\\-_/.]+)=([\\w\\d\\-_./]+)",
+          "colors": ["blue", "bright_yellow"],
+          "description": "Highlights labels"
+        },
+        {
+          "name": "None/Null",
+          "pattern": "(<none>|\\bnone\\b|null)",
+          "colors": ["magenta"],
+          "description": "Highlights empty values"
+        },
+        {
+          "name": "YAML Key",
+          "pattern": "^([\\w\\d \\-]+):",
+          "colors": ["bright_blue"],
+          "description": "Highlights YAML keys"
+        },
+        {
+          "name": "Help Options",
+          "pattern": "( --[^= ]+| -[a-zA-Z]( |,))",
+          "colors": ["bright_green"],
+          "description": "Highlights CLI options in help"
+        },
+        {
+          "name": "Current Context",
+          "pattern": "^\\*.+$",
+          "colors": ["bold white"],
+          "description": "Highlights current context marker"
+        }
+      ]
+    },
+    {
+      "name": "last",
+      "triggers": ["last", "lastb", "lastlog"],
+      "description": "Highlights for last login history output",
+      "rules": [
+        {
+          "name": "Reboot",
+          "pattern": "^reboot\\s+system boot",
+          "colors": ["red"],
+          "description": "Highlights reboot entries"
+        },
+        {
+          "name": "Still Logged In",
+          "pattern": "(still logged in)",
+          "colors": ["on_cyan bold white"],
+          "description": "Highlights active sessions"
+        },
+        {
+          "name": "Still Running",
+          "pattern": "(still running)",
+          "colors": ["bright_green"],
+          "description": "Highlights still running entries"
+        },
+        {
+          "name": "Down/Crash",
+          "pattern": "-\\s+(down|crash)",
+          "colors": [null, "on_red white"],
+          "description": "Highlights down/crash events"
+        },
+        {
+          "name": "Duration",
+          "pattern": "\\(((\\d+\\+)?(\\d+):(\\d+))\\)",
+          "colors": [null, "bright_red", "yellow", "green"],
+          "description": "Highlights session duration"
+        },
+        {
+          "name": "PTS Session",
+          "pattern": "\\s(pts/\\d+)",
+          "colors": ["green"],
+          "description": "Highlights pseudo-terminal sessions"
+        },
+        {
+          "name": "TTY Session",
+          "pattern": "\\s(tty\\d+)",
+          "colors": ["blue"],
+          "description": "Highlights TTY sessions"
+        },
+        {
+          "name": "End Time",
+          "pattern": "-\\s+(\\d+:\\d+)",
+          "colors": [null, "magenta"],
+          "description": "Highlights logout/end time"
+        },
+        {
+          "name": "IP Address",
+          "pattern": "(?:\\s|\\()(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})(?:\\s|\\))",
+          "colors": ["bold red"],
+          "description": "Highlights remote IP addresses"
+        },
+        {
+          "name": "Local Session",
+          "pattern": "(?:\\s|\\()(:0(?:\\.\\d+)?)(?:\\s|\\))",
+          "colors": ["dim cyan"],
+          "description": "Highlights local X sessions"
+        },
+        {
+          "name": "Time",
+          "pattern": "\\s(\\d+:\\d+)\\s",
+          "colors": ["cyan"],
+          "description": "Highlights login time"
+        }
+      ]
+    },
+    {
+      "name": "ls",
+      "triggers": ["ls", "ll", "la", "l"],
+      "description": "Highlights for ls file listing output",
+      "rules": [
+        {
+          "name": "File Type Directory",
+          "pattern": "^d(?=[-r][-w][-xsStT])",
+          "colors": ["bold white"],
+          "description": "Highlights directory file type"
+        },
+        {
+          "name": "File Type Link",
+          "pattern": "^l(?=[-r][-w][-xsStT])",
+          "colors": ["bold cyan"],
+          "description": "Highlights symbolic link file type"
+        },
+        {
+          "name": "File Type Block/Char",
+          "pattern": "^[bc](?=[-r][-w][-xsStT])",
+          "colors": ["bold yellow"],
+          "description": "Highlights block/character device file type"
+        },
+        {
+          "name": "Owner Permissions",
+          "pattern": "(?<=[-dlbcps])(-|r)(-|w)(-|[xsStT])",
+          "colors": ["bright_green", "bright_green", "bright_green"],
+          "description": "Highlights owner permissions"
+        },
+        {
+          "name": "Group Permissions",
+          "pattern": "(?<=[-dlbcps][-r][-w][-xsStT])(-|r)(-|w)(-|[xsStT])",
+          "colors": ["yellow", "yellow", "yellow"],
+          "description": "Highlights group permissions"
+        },
+        {
+          "name": "Other Permissions",
+          "pattern": "(?<=[-dlbcps][-r][-w][-xsStT][-r][-w][-xsStT])(-|r)(-|w)(-|[xsStT])",
+          "colors": ["bright_red", "bright_red", "bright_red"],
+          "description": "Highlights other permissions"
+        },
+        {
+          "name": "SUID/SGID/Sticky",
+          "pattern": "[-dlbcps][-r][-w]([sStT])[-r][-w]([sStT])[-r][-w]([sStT])",
+          "colors": [null, "bold green", "bold yellow", "bold red"],
+          "description": "Highlights special permission bits"
+        },
+        {
+          "name": "ACL Indicator",
+          "pattern": "^\\S{10}(\\+)",
+          "colors": [null, "on_cyan bold white"],
+          "description": "Highlights ACL indicator"
+        },
+        {
+          "name": "Root Owner",
+          "pattern": "\\s(root|wheel)(?=\\s)",
+          "colors": ["bold white on_red"],
+          "description": "Highlights root ownership"
+        },
+        {
+          "name": "Device Numbers",
+          "pattern": "\\s(\\d+),\\s*(\\d+)\\s",
+          "colors": [null, "bright_yellow", "yellow"],
+          "description": "Highlights device major,minor numbers"
+        },
+        {
+          "name": "Size KB",
+          "pattern": "\\s(\\d{4,6}|\\d+(?:[,.]?\\d+)?K)(?=\\s[A-Z][a-z]{2}\\s)",
+          "colors": ["green"],
+          "description": "Highlights KB-sized files"
+        },
+        {
+          "name": "Size MB",
+          "pattern": "\\s(\\d{7,8}|\\d+(?:[,.]?\\d+)?M)(?=\\s[A-Z][a-z]{2}\\s)",
+          "colors": ["yellow"],
+          "description": "Highlights MB-sized files"
+        },
+        {
+          "name": "Size GB+",
+          "pattern": "\\s(\\d{9,}|\\d+(?:[,.]?\\d+)?[GT])(?=\\s[A-Z][a-z]{2}\\s)",
+          "colors": ["bold red"],
+          "description": "Highlights GB+ sized files"
+        },
+        {
+          "name": "Date Time",
+          "pattern": "([A-Z][a-z]{2})\\s([ 1-3]?\\d)\\s(?:(\\d{1,2}):(\\d{2})|\\s*(\\d{4}))",
+          "colors": ["cyan", "cyan", "cyan", "cyan", "bold magenta"],
+          "description": "Highlights date and time"
+        },
+        {
+          "name": "SELinux Context",
+          "pattern": "(\\w+_u):(\\w+_r):(\\w+_t):(\\w\\d)",
+          "colors": ["green", "yellow", "cyan", "magenta"],
+          "description": "Highlights SELinux context"
+        }
+      ]
+    },
+    {
+      "name": "lsblk",
+      "triggers": ["lsblk"],
+      "description": "Highlights for lsblk (block devices) output",
+      "rules": [
+        {
+          "name": "Main Drive",
+          "pattern": "^([a-z]+\\d?)\\s",
+          "colors": ["bold white"],
+          "description": "Highlights main disk device name"
+        },
+        {
+          "name": "Tree Structure",
+          "pattern": "([├└─│]+|[|`\\-]+)",
+          "colors": ["bright_green"],
+          "description": "Highlights tree structure characters"
+        },
+        {
+          "name": "Partition Name",
+          "pattern": "(?:[├└─│]+|[|`\\-]+)(\\S+)",
+          "colors": [null, "bright_cyan"],
+          "description": "Highlights partition names after tree chars"
+        },
+        {
+          "name": "Type Crypt",
+          "pattern": "(?<=\\s)(crypt)\\b",
+          "colors": ["on_magenta white"],
+          "description": "Highlights encrypted devices"
+        },
+        {
+          "name": "Type Disk",
+          "pattern": "(?<=\\s)(disk)\\b",
+          "colors": ["magenta"],
+          "description": "Highlights disk type"
+        },
+        {
+          "name": "Type LVM",
+          "pattern": "(?<=\\s)(lvm)\\b",
+          "colors": ["bold cyan"],
+          "description": "Highlights LVM type"
+        },
+        {
+          "name": "Type Part",
+          "pattern": "(?<=\\s)(part)\\b",
+          "colors": ["cyan"],
+          "description": "Highlights partition type"
+        },
+        {
+          "name": "Type Loop",
+          "pattern": "(?<=\\s)(loop)\\b",
+          "colors": ["bright_red"],
+          "description": "Highlights loop device type"
+        },
+        {
+          "name": "Type ROM",
+          "pattern": "(?<=\\s)(rom)\\b",
+          "colors": ["yellow"],
+          "description": "Highlights ROM type"
+        },
+        {
+          "name": "Size KB",
+          "pattern": "\\s(\\d*[.,]?\\d)Ki?\\s",
+          "colors": ["green"],
+          "description": "Highlights KB sizes"
+        },
+        {
+          "name": "Size MB",
+          "pattern": "\\s(\\d*[.,]?\\d)Mi?\\s",
+          "colors": ["yellow"],
+          "description": "Highlights MB sizes"
+        },
+        {
+          "name": "Size GB",
+          "pattern": "\\s(\\d*[.,]?\\d)Gi?\\s",
+          "colors": ["red"],
+          "description": "Highlights GB sizes"
+        },
+        {
+          "name": "Size TB",
+          "pattern": "\\s(\\d*[.,]?\\d)Ti?\\s",
+          "colors": ["bold red"],
+          "description": "Highlights TB sizes"
+        },
+        {
+          "name": "Mount Path",
+          "pattern": "(?<=\\s)(/[^\\s]+)+$",
+          "colors": ["bold yellow"],
+          "description": "Highlights mount paths"
+        },
+        {
+          "name": "SWAP",
+          "pattern": "\\[(SWAP)\\]",
+          "colors": ["bright_magenta"],
+          "description": "Highlights swap entries"
+        },
+        {
+          "name": "UUID",
+          "pattern": "\\s([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\b",
+          "colors": ["dim cyan"],
+          "description": "Highlights UUIDs"
+        }
+      ]
+    },
+    {
+      "name": "lsmod",
+      "triggers": ["lsmod"],
+      "description": "Highlights for lsmod kernel modules listing output",
+      "rules": [
+        {
+          "name": "Video Modules",
+          "pattern": "^(\\S*drm\\S*|\\S*modeset\\$*|\\S*gpu\\$*|nvidia|nouveau|radeon|i915)",
+          "colors": ["magenta"],
+          "description": "Highlights video driver modules"
+        },
+        {
+          "name": "Sound Modules",
+          "pattern": "^(snd\\S*|sof_\\S*|soundcore)",
+          "colors": ["yellow"],
+          "description": "Highlights sound modules"
+        },
+        {
+          "name": "Network Modules",
+          "pattern": "^(\\S*wifi\\S*|ath\\S*|rtl\\S*|e1000|r8169|mt76)",
+          "colors": ["cyan"],
+          "description": "Highlights network driver modules"
+        },
+        {
+          "name": "Module Entry",
+          "pattern": "^(\\S+)\\s+(\\d+)\\s+(\\d+)",
+          "colors": ["bright_green", "cyan", "yellow", "magenta"],
+          "description": "Highlights module name, size, and usage count"
+        },
+        {
+          "name": "Separator",
+          "pattern": "\\,",
+          "colors": ["bold red"]
+        }
+      ]
+    },
+    {
+      "name": "lsof",
+      "triggers": ["lsof"],
+      "description": "Highlights for lsof (list open files) output",
+      "rules": [
+        {
+          "name": "Command and PID",
+          "pattern": "^(\\S+)\\s+(\\d+)\\s",
+          "colors": ["bold cyan", "cyan"],
+          "description": "Highlights command and process ID"
+        },
+        {
+          "name": "Root User",
+          "pattern": "\\b(root)\\b",
+          "colors": ["bold red"],
+          "description": "Highlights root user"
+        },
+        {
+          "name": "File Types",
+          "pattern": "\\b(REG|DIR|CHR|BLK|FIFO|LINK|SOCK|unix|IPv4|IPv6)\\b",
+          "colors": ["bold magenta"],
+          "description": "Highlights file types"
+        },
+        {
+          "name": "Network State",
+          "pattern": "\\((LISTEN|ESTABLISHED|CLOSE_WAIT|TIME_WAIT|SYN_SENT)\\)",
+          "colors": ["green"],
+          "description": "Highlights network states"
+        },
+        {
+          "name": "Path",
+          "pattern": "\\s(/\\S+)",
+          "colors": ["cyan"],
+          "description": "Highlights file paths"
+        },
+        {
+          "name": "Deleted Files",
+          "pattern": "(\\(deleted\\))",
+          "colors": ["red"],
+          "description": "Highlights deleted files"
+        }
+      ]
+    },
+    {
+      "name": "lspci",
+      "triggers": ["lspci"],
+      "description": "Highlights for lspci PCI device listing output",
+      "rules": [
+        {
+          "name": "PCI Address",
+          "pattern": "^([0-9a-f]{2,4}):([0-9a-f]{2})\\.([0-9a-f])",
+          "colors": ["bright_green", "bright_yellow", "red"],
+          "description": "Highlights PCI slot ID (bus:device.function)"
+        },
+        {
+          "name": "Ethernet Controller",
+          "pattern": "(Ethernet|Network) controller:",
+          "colors": ["cyan"],
+          "description": "Highlights Ethernet/Network controllers"
+        },
+        {
+          "name": "Wireless",
+          "pattern": "Wireless",
+          "colors": ["bright_cyan"],
+          "description": "Highlights Wireless devices"
+        },
+        {
+          "name": "SATA Controller",
+          "pattern": "SATA controller:",
+          "colors": ["green"],
+          "description": "Highlights SATA controllers"
+        },
+        {
+          "name": "Audio Device",
+          "pattern": "Audio device:",
+          "colors": ["blue"],
+          "description": "Highlights Audio devices"
+        },
+        {
+          "name": "VGA Controller",
+          "pattern": "VGA compatible controller:",
+          "colors": ["magenta"],
+          "description": "Highlights VGA controllers"
+        },
+        {
+          "name": "USB Controller",
+          "pattern": "USB controller:",
+          "colors": ["yellow"],
+          "description": "Highlights USB controllers"
+        },
+        {
+          "name": "Bridge",
+          "pattern": "(PCI|ISA|Host) bridge:",
+          "colors": ["red"],
+          "description": "Highlights PCI/ISA/Host bridges"
+        },
+        {
+          "name": "Other Controller",
+          "pattern": "([A-Z].+?) controller:",
+          "colors": ["blue"],
+          "description": "Highlights other unspecified controllers"
+        },
+        {
+          "name": "Kernel Info",
+          "pattern": "(Kernel (?:modules|driver in use):) (.+)",
+          "colors": [null, "bright_red"],
+          "description": "Highlights kernel driver and modules info"
+        }
+      ]
+    },
+    {
+      "name": "lsusb",
+      "triggers": ["lsusb"],
+      "description": "Highlights for lsusb USB device listing output",
+      "rules": [
+        {
+          "name": "Bus and Device",
+          "pattern": "(Bus)\\s+(\\d{3})\\s+(Device)\\s+(\\d{3}):",
+          "colors": [null, "cyan", null, "cyan"],
+          "description": "Highlights bus and device numbers"
+        },
+        {
+          "name": "USB ID",
+          "pattern": "(ID)\\s+([0-9a-f]{4}):([0-9a-f]{4})",
+          "colors": [null, "magenta", "magenta"],
+          "description": "Highlights USB vendor:product IDs"
+        },
+        {
+          "name": "Hub",
+          "pattern": "\\b(Hub)\\b",
+          "colors": ["yellow"],
+          "description": "Highlights USB hubs"
+        },
+        {
+          "name": "Mass Storage",
+          "pattern": "(Mass Storage)",
+          "colors": ["green"],
+          "description": "Highlights mass storage devices"
+        },
+        {
+          "name": "Keyboard/Mouse",
+          "pattern": "(Keyboard|Mouse)",
+          "colors": ["cyan"],
+          "description": "Highlights input devices"
+        },
+        {
+          "name": "Audio",
+          "pattern": "(Audio|Sound)",
+          "colors": ["blue"],
+          "description": "Highlights audio devices"
+        },
+        {
+          "name": "Webcam/Camera",
+          "pattern": "(Webcam|Camera|Video)",
+          "colors": ["magenta"],
+          "description": "Highlights video/camera devices"
+        }
+      ]
+    },
+    {
+      "name": "make",
+      "triggers": [
+        "make",
+        "gmake",
+        "ninja",
+        "cmake",
+        "gcc",
+        "g++",
+        "cc",
+        "c++",
+        "clang",
+        "clang++"
+      ],
+      "description": "Highlights for make and gcc/g++ compiler output",
+      "rules": [
+        {
+          "name": "Entering/Leaving Directory",
+          "pattern": "(make\\[\\d+\\]:)\\s+(Entering|Leaving)\\s+(directory)\\s+'([^']+)'",
+          "colors": [null, "cyan", null, "magenta"],
+          "description": "Highlights directory changes"
+        },
+        {
+          "name": "Compiling (CC/CXX)",
+          "pattern": "^\\s*(CC|CXX|LD|AR)\\s+(.+)",
+          "colors": ["cyan", null],
+          "description": "Highlights compilation steps"
+        },
+        {
+          "name": "Make Error",
+          "pattern": "(\\*\\*\\*)\\s+(.*)\\s+(Error)\\s+(\\d+)",
+          "colors": ["red", "red", "bold red", "red"],
+          "description": "Highlights make errors"
+        },
+        {
+          "name": "Compiler Error",
+          "pattern": "(:)\\s*(error)(:)",
+          "colors": [null, "bold red", null],
+          "description": "Highlights compilation errors"
+        },
+        {
+          "name": "Compiler Warning",
+          "pattern": "(:)\\s*(warning)(:)",
+          "colors": [null, "bold yellow", null],
+          "description": "Highlights compilation warnings"
+        },
+        {
+          "name": "Compiler Note",
+          "pattern": "(:)\\s*(note)(:)",
+          "colors": [null, "cyan", null],
+          "description": "Highlights compiler notes"
+        },
+        {
+          "name": "File:Line:Col",
+          "pattern": "(\\S+?):(\\d+):(\\d+):",
+          "colors": ["magenta", "yellow", "yellow"],
+          "description": "Highlights file locations"
+        },
+        {
+          "name": "In function",
+          "pattern": "(In function)\\s+['\\u2018]([\\w:~]+)['\\u2019]",
+          "colors": [null, "cyan"],
+          "description": "Highlights function context"
+        },
+        {
+          "name": "Nothing to do",
+          "pattern": "(Nothing to be done for)\\s+'([^']+)'",
+          "colors": ["green", null],
+          "description": "Highlights up-to-date targets"
+        }
+      ]
+    },
+    {
+      "name": "mount",
+      "triggers": ["mount"],
+      "description": "Highlights for mount command output",
+      "rules": [
+        {
+          "name": "Full Mount Line",
+          "pattern": "^(\\S+)\\s+(on)\\s+(\\S+)\\s+(type)\\s+(\\S+)\\s+\\(([^)]+)\\)",
+          "colors": ["green", null, "yellow", null, "blue", "magenta"],
+          "description": "Highlights full mount line structure"
+        },
+        {
+          "name": "Device Path",
+          "pattern": "^(/[^\\s]+)",
+          "colors": ["bold green"],
+          "description": "Highlights source device"
+        },
+        {
+          "name": "Mount Point",
+          "pattern": "(?<=on\\s)(/[^\\s]+)",
+          "colors": ["underline yellow"],
+          "description": "Highlights mount point"
+        },
+        {
+          "name": "Read-Write",
+          "pattern": "(?<=\\()rw",
+          "colors": ["bold red"],
+          "description": "Highlights read-write mount"
+        },
+        {
+          "name": "Read-Only",
+          "pattern": "(?<=\\()ro",
+          "colors": ["bold green"],
+          "description": "Highlights read-only mount"
+        },
+        {
+          "name": "FS Types",
+          "pattern": "type\\s+(ext[234]|xfs|btrfs|ntfs|vfat|fuseblk|nfs\\d?|cifs|overlay)",
+          "colors": [null, "cyan"],
+          "description": "Highlights common filesystem types"
+        }
+      ]
+    },
+    {
+      "name": "mtr",
+      "triggers": ["mtr"],
+      "description": "Highlights for mtr network diagnostic output",
+      "rules": [
+        {
+          "name": "IPv4 Address",
+          "pattern": "(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})",
+          "colors": ["bold magenta"],
+          "description": "Highlights IP addresses"
+        },
+        {
+          "name": "Statistics Line",
+          "pattern": "(\\d+\\.\\d%)\\s+(\\d+)\\s+(\\d+\\.\\d)\\s+(\\d+\\.\\d)\\s+(\\d+\\.\\d)\\s+(\\d+\\.\\d)\\s+(\\d+\\.\\d)$",
+          "colors": ["yellow", null, null, "blue", "green", "red", null],
+          "description": "Highlights statistics: Loss%, Snt, Last, Avg, Best, Worst, StDev"
+        },
+        {
+          "name": "Unknown Host",
+          "pattern": "(\\?\\?\\?)",
+          "colors": ["red"],
+          "description": "Highlights unknown hosts"
+        },
+        {
+          "name": "Headers",
+          "pattern": "(Packets|Pings|Host|Loss%|Snt|Last|Avg|Best|Wrst|StDev)",
+          "colors": ["bold green"],
+          "description": "Highlights column headers"
+        },
+        {
+          "name": "Hop Number",
+          "pattern": "^\\s*(\\d+)\\.",
+          "colors": ["cyan"],
+          "description": "Highlights hop numbers"
+        },
+        {
+          "name": "High Loss",
+          "pattern": "([5-9]\\d\\.\\d%|100\\.0%)",
+          "colors": ["bold red"],
+          "description": "Highlights high packet loss (50%+)"
+        }
+      ]
+    },
+    {
+      "name": "nc",
+      "triggers": ["nc", "netcat", "ncat"],
+      "description": "Highlights for nc/netcat network utility output",
+      "rules": [
+        {
+          "name": "Connection Success",
+          "pattern": "(Connection to)\\s+(\\S+)\\s+(\\S+)\\s+port\\s+(\\[\\S+\\])\\s+(succeeded!)",
+          "colors": [null, "cyan", null, "magenta", "bold green"],
+          "description": "Highlights successful connections"
+        },
+        {
+          "name": "Connection Refused",
+          "pattern": "(Connection refused|Connection timed out)",
+          "colors": ["bold red"],
+          "description": "Highlights connection failures"
+        },
+        {
+          "name": "Open Port",
+          "pattern": "\\b(open)\\b",
+          "colors": ["green"],
+          "description": "Highlights open ports"
+        },
+        {
+          "name": "Listening",
+          "pattern": "(Listening on)\\s+(\\S+)\\s+(\\d+)",
+          "colors": [null, "cyan", "magenta"],
+          "description": "Highlights listening state"
+        },
+        {
+          "name": "Received Connection",
+          "pattern": "(Connection received on)\\s+(\\S+)\\s+(\\d+)",
+          "colors": ["green", "cyan", "magenta"],
+          "description": "Highlights incoming connections"
+        }
+      ]
+    },
+    {
+      "name": "netstat",
+      "triggers": ["netstat"],
+      "description": "Highlights for netstat network statistics output",
+      "rules": [
+        {
+          "name": "Protocol",
+          "pattern": "^(tcp6?|udp6?|unix|raw)\\s",
+          "colors": ["bold blue"],
+          "description": "Highlights protocol types"
+        },
+        {
+          "name": "LISTEN",
+          "pattern": "\\b(LISTEN(?:ING)?)\\b",
+          "colors": ["bold blue"],
+          "description": "Highlights listening connections"
+        },
+        {
+          "name": "ESTABLISHED",
+          "pattern": "\\b(ESTABLISHED|CONNECTED)\\b",
+          "colors": ["bold yellow"],
+          "description": "Highlights established connections"
+        },
+        {
+          "name": "TIME_WAIT",
+          "pattern": "\\b(TIME_WAIT|WAIT)\\b",
+          "colors": ["bold red"],
+          "description": "Highlights time wait states"
+        },
+        {
+          "name": "CLOSE States",
+          "pattern": "\\b(CLOS(?:E(?:_WAIT)?|ING)|LAST_ACK)\\b",
+          "colors": ["red"],
+          "description": "Highlights closing states"
+        },
+        {
+          "name": "SYN States",
+          "pattern": "\\b(SYN_(?:SENT|RECV|RECEIVED))\\b",
+          "colors": ["bold red"],
+          "description": "Highlights SYN states"
+        },
+        {
+          "name": "FIN_WAIT",
+          "pattern": "\\b(FIN_WAIT\\d?)\\b",
+          "colors": ["red"],
+          "description": "Highlights FIN wait states"
+        },
+        {
+          "name": "Host Port",
+          "pattern": "(\\S+?):(\\d+|\\S+?)\\b",
+          "colors": ["bold green", "bold red"],
+          "description": "Highlights hostname:port combinations"
+        },
+        {
+          "name": "Wildcard",
+          "pattern": "(\\*):(\\d+|[\\w-]+)\\b",
+          "colors": ["blue", "bold yellow"],
+          "description": "Highlights wildcard listeners"
+        },
+        {
+          "name": "IPv4 Address",
+          "pattern": "(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})",
+          "colors": ["bold magenta"],
+          "description": "Highlights IPv4 addresses"
+        },
+        {
+          "name": "Stream/Dgram",
+          "pattern": "\\b(STREAM|DGRAM)\\b",
+          "colors": ["bold blue"],
+          "description": "Highlights socket types"
+        }
+      ]
+    },
+    {
+      "name": "nmap",
+      "triggers": ["nmap"],
+      "description": "Highlights for nmap network scanner output",
+      "rules": [
+        {
+          "name": "Scan Report Header",
+          "pattern": "(Nmap scan report for)\\s+(\\S+)\\s*(\\(([^)]+)\\))?",
+          "colors": [null, "bold green", null, "bold magenta"],
+          "description": "Highlights scan report header"
+        },
+        {
+          "name": "Host Up",
+          "pattern": "(Host is)\\s+(up)",
+          "colors": [null, "bold green"],
+          "description": "Highlights host up status"
+        },
+        {
+          "name": "Host Down",
+          "pattern": "(Host is)\\s+(down)",
+          "colors": [null, "bold red"],
+          "description": "Highlights host down status"
+        },
+        {
+          "name": "Open Port",
+          "pattern": "^(\\d+)/(tcp|udp)\\s+(open)\\s+(\\S+)",
+          "colors": ["bold green", "magenta", "bold green", "bold yellow"],
+          "description": "Highlights open ports"
+        },
+        {
+          "name": "Closed Port",
+          "pattern": "^(\\d+)/(tcp|udp)\\s+(closed)\\s+(\\S+)",
+          "colors": ["red", "magenta", "red", null],
+          "description": "Highlights closed ports"
+        },
+        {
+          "name": "Filtered Port",
+          "pattern": "^(\\d+)/(tcp|udp)\\s+(filtered)\\s+(\\S+)",
+          "colors": ["yellow", "magenta", "yellow", null],
+          "description": "Highlights filtered ports"
+        },
+        {
+          "name": "Not Shown",
+          "pattern": "(Not shown:)\\s+(\\d+)\\s+(closed|filtered)\\s+(ports?)",
+          "colors": [null, "bright_red", "red", null],
+          "description": "Highlights hidden ports summary"
+        },
+        {
+          "name": "Failed to Resolve",
+          "pattern": "(Failed to resolve)\\s+\"([^\"]+)\"",
+          "colors": ["red", "bold red"],
+          "description": "Highlights DNS resolution failures"
+        },
+        {
+          "name": "Column Headers",
+          "pattern": "^(PORT\\s+STATE\\s+SERVICE|HOP\\s+RTT\\s+ADDRESS)",
+          "colors": ["bold white"],
+          "description": "Highlights table headers"
+        },
+        {
+          "name": "Network Distance",
+          "pattern": "(Network Distance:)\\s+(\\d+)\\s+(hops?)",
+          "colors": [null, "bold green", null],
+          "description": "Highlights network distance"
+        },
+        {
+          "name": "Traceroute",
+          "pattern": "^(\\d+)\\s+(\\d+\\.\\d+)\\s*(ms)\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)",
+          "colors": ["cyan", "green", null, "magenta"],
+          "description": "Highlights traceroute hops"
+        }
+      ]
+    },
+    {
+      "name": "npm",
+      "triggers": ["npm", "pnpm", "yarn", "bun"],
+      "description": "Highlights for npm output",
+      "rules": [
+        {
+          "name": "NPM WARN",
+          "pattern": "(npm)\\s+(WARN)\\b",
+          "colors": [null, "yellow"],
+          "description": "Highlights npm warnings"
+        },
+        {
+          "name": "NPM ERR!",
+          "pattern": "(npm)\\s+(ERR!)\\b",
+          "colors": [null, "bold red"],
+          "description": "Highlights npm errors"
+        },
+        {
+          "name": "Added Packages",
+          "pattern": "(added)\\s+(\\d+)\\s+(packages?)",
+          "colors": ["green", "bold green", "green"],
+          "description": "Highlights added packages count"
+        },
+        {
+          "name": "Package Names",
+          "pattern": "(@[\\w-]+/)?([\\w.-]+)@(\\d+\\.\\d+\\.\\d+)",
+          "colors": [null, "cyan", "yellow"],
+          "description": "Highlights package names with versions"
+        },
+        {
+          "name": "Vulnerabilities High/Critical",
+          "pattern": "(\\d+)\\s+(high|critical)",
+          "colors": ["bold red", "red"],
+          "description": "Highlights high/critical vulnerabilities"
+        },
+        {
+          "name": "Vulnerabilities Moderate",
+          "pattern": "(\\d+)\\s+(moderate)",
+          "colors": ["yellow", "yellow"],
+          "description": "Highlights moderate vulnerabilities"
+        },
+        {
+          "name": "Success",
+          "pattern": "✨\\s+(Done)\\b|(success)\\b",
+          "colors": ["bold green", "green"],
+          "description": "Highlights success messages"
+        }
+      ]
+    },
+    {
+      "name": "nslookup",
+      "triggers": ["nslookup"],
+      "description": "Highlights for nslookup DNS lookup output",
+      "rules": [
+        {
+          "name": "Server",
+          "pattern": "^(Server:)\\s*(\\S+)",
+          "colors": ["magenta", "cyan"],
+          "description": "Highlights DNS server line"
+        },
+        {
+          "name": "Address",
+          "pattern": "^(Address:)\\s*(\\S+)",
+          "colors": ["magenta", "cyan"],
+          "description": "Highlights address lines"
+        },
+        {
+          "name": "Name",
+          "pattern": "^(Name:)\\s*(\\S+)",
+          "colors": ["magenta", "green"],
+          "description": "Highlights name lines"
+        },
+        {
+          "name": "Non-authoritative",
+          "pattern": "(Non-authoritative answer:)",
+          "colors": ["yellow"],
+          "description": "Highlights non-authoritative answers"
+        },
+        {
+          "name": "Can't Find Error",
+          "pattern": "(\\*\\*\\*.+can't find.+)",
+          "colors": ["red"],
+          "description": "Highlights lookup errors"
+        },
+        {
+          "name": "SERVFAIL",
+          "pattern": "\\b(SERVFAIL|NXDOMAIN|REFUSED)\\b",
+          "colors": ["bold red"],
+          "description": "Highlights error responses"
+        },
+        {
+          "name": "Aliases",
+          "pattern": "^(Aliases:)\\s*(\\S+)",
+          "colors": ["magenta", "yellow"],
+          "description": "Highlights alias entries"
+        }
+      ]
+    },
+    {
+      "name": "ping",
+      "triggers": ["ping", "ping6", "fping", "nping"],
+      "description": "Highlights for ping command output",
+      "rules": [
+        {
+          "name": "Target Host",
+          "pattern": "(?:from|PING)\\s+(\\S+)\\s",
+          "colors": ["blue"],
+          "description": "Highlights target hostname"
+        },
+        {
+          "name": "Sequence Number",
+          "pattern": "(icmp_seq=)(\\d+)",
+          "colors": [null, "yellow"],
+          "description": "Highlights ICMP sequence number"
+        },
+        {
+          "name": "TTL",
+          "pattern": "(ttl=)(\\d+)",
+          "colors": [null, "magenta"],
+          "description": "Highlights TTL values"
+        },
+        {
+          "name": "Instant Response (<3ms)",
+          "pattern": "([0-2]\\.\\d?\\d?\\d?) ms$",
+          "colors": ["bold green"],
+          "description": "Highlights fast ping responses under 50ms"
+        },
+        {
+          "name": "Very Fast Response (3-9ms)",
+          "pattern": "([3-9]\\.\\d?\\d?\\d?) ms$",
+          "colors": ["green"],
+          "description": "Highlights medium ping responses 50-200ms"
+        },
+        {
+          "name": "Fast Response (10-59ms)",
+          "pattern": "([1-5]\\d\\.\\d?\\d?\\d?) ms$",
+          "colors": ["cyan"],
+          "description": "Highlights slow ping responses over 200ms"
+        },
+        {
+          "name": "Medium Response (60-99ms)",
+          "pattern": "([6-9]\\d\\.\\d?\\d?\\d?) ms$",
+          "colors": ["blue"]
+        },
+        {
+          "name": "Slow Response (100-200ms)",
+          "pattern": "([1-2]\\d\\d\\.\\d?\\d?\\d?) ms$",
+          "colors": ["yellow"],
+          "description": "Highlights zero packet loss"
+        },
+        {
+          "name": "Slowest Response (300-999ms)",
+          "pattern": "([3-9]\\d\\d\\.\\d?\\d?\\d?) ms$",
+          "colors": ["red"],
+          "description": "Highlights packet loss percentage"
+        },
+        {
+          "name": "Very Slow Response (300-999ms)",
+          "pattern": "(\\d?\\d\\d\\d\\d\\.\\d?\\d?\\d?) ms$",
+          "colors": ["bold red"],
+          "description": "Highlights statistics section header"
+        },
+        {
+          "name": "RTT Values",
+          "pattern": "=\\s*([\\d.]+)/([\\d.]+)/([\\d.]+)/([\\d.]+)",
+          "colors": [
+            "bright_yellow",
+            "bright_blue",
+            "bright_red",
+            "bright_magenta"
+          ],
+          "description": "Highlights RTT min/avg/max/mdev values"
+        },
+        {
+          "name": "DUP",
+          "pattern": "(DUP!)",
+          "colors": ["red"],
+          "description": "Highlights duplicate packets"
+        },
+        {
+          "name": "Errors",
+          "pattern": "(Destination Host Unreachable|Network is unreachable)",
+          "colors": ["bold red"],
+          "description": "Highlights error messages"
+        },
+        {
+          "name": "Unknown Host",
+          "pattern": "(unknown host)\\s+(\\S+)",
+          "colors": ["red", "bold red"],
+          "description": "Highlights unknown host errors"
+        },
+        {
+          "name": "SENT/RCVD",
+          "pattern": "(SENT|RCVD)",
+          "colors": ["red"],
+          "description": "Highlights nping SENT/RCVD labels"
+        }
+      ]
+    },
+    {
+      "name": "pip",
+      "triggers": ["pip", "pip3", "pip2"],
+      "description": "Highlights for pip output",
+      "rules": [
+        {
+          "name": "Successfully Installed",
+          "pattern": "(Successfully installed)\\s+(.+)",
+          "colors": ["bold green", "cyan"],
+          "description": "Highlights successful installations"
+        },
+        {
+          "name": "Requirement Satisfied",
+          "pattern": "(Requirement already satisfied):\\s+(.+)",
+          "colors": ["cyan", null],
+          "description": "Highlights already satisfied requirements"
+        },
+        {
+          "name": "WARNING",
+          "pattern": "(WARNING:)\\s+(.+)",
+          "colors": ["bold yellow", "yellow"],
+          "description": "Highlights pip warnings"
+        },
+        {
+          "name": "ERROR",
+          "pattern": "(ERROR:)\\s+(.+)",
+          "colors": ["bold red", "red"],
+          "description": "Highlights pip errors"
+        },
+        {
+          "name": "Package Versions",
+          "pattern": "(\\S+?)-(\\d[\\d.]*)",
+          "colors": ["cyan", "yellow"],
+          "description": "Highlights package names with versions"
+        },
+        {
+          "name": "Downloading",
+          "pattern": "(Downloading)\\s+(\\S+)",
+          "colors": ["cyan", null],
+          "description": "Highlights downloading progress"
+        },
+        {
+          "name": "Collecting",
+          "pattern": "(Collecting)\\s+(\\S+)",
+          "colors": ["cyan", null],
+          "description": "Highlights package collection"
+        }
+      ]
+    },
+    {
+      "name": "ps",
+      "triggers": ["ps", "pgrep", "pidof"],
+      "description": "Highlights for ps command output",
+      "rules": [
+        {
+          "name": "Header",
+          "pattern": "^[A-Z\\s%]*([A-Z]{3})[A-Z\\s%]*$",
+          "colors": ["underline white"],
+          "description": "Highlights column headers"
+        },
+        {
+          "name": "PID",
+          "pattern": "^\\s*(\\d+)",
+          "colors": ["bold magenta"],
+          "description": "Highlights process IDs"
+        },
+        {
+          "name": "Full Path",
+          "pattern": "(\\s|^)/[-\\w\\d.]+/[-\\w\\d./]+",
+          "colors": ["bold white"],
+          "description": "Highlights full command paths"
+        },
+        {
+          "name": "Root User",
+          "pattern": "\\broot\\b|\\bwheel\\b",
+          "colors": ["bold red"],
+          "description": "Highlights root processes"
+        },
+        {
+          "name": "Running State",
+          "pattern": "\\b([Rr][s+<l]*)\\b",
+          "colors": ["bold green"],
+          "description": "Highlights running process state"
+        },
+        {
+          "name": "Zombie State",
+          "pattern": "\\b([Zz][s+<l]*)\\b",
+          "colors": ["bold red"],
+          "description": "Highlights zombie process state"
+        },
+        {
+          "name": "PTS Terminal",
+          "pattern": "(\\s|^)pts/\\d+",
+          "colors": ["bright_yellow"],
+          "description": "Highlights pts terminals"
+        },
+        {
+          "name": "TTY Terminal",
+          "pattern": "(\\s|^)tty\\d+",
+          "colors": ["bright_cyan"],
+          "description": "Highlights tty terminals"
+        },
+        {
+          "name": "Short Option",
+          "pattern": "(?<=\\s)-[\\w\\d]+(?=\\s|$)",
+          "colors": ["yellow"],
+          "description": "Highlights short options"
+        },
+        {
+          "name": "Long Option",
+          "pattern": "(?<=\\s)--[-\\w\\d]+",
+          "colors": ["cyan"],
+          "description": "Highlights long options"
+        },
+        {
+          "name": "Bracket Info",
+          "pattern": "\\[[-\\w\\d:/]+\\]",
+          "colors": ["cyan"],
+          "description": "Highlights bracketed info"
+        },
+        {
+          "name": "CPU/MEM Usage High",
+          "pattern": "\\b([5-9]\\d\\.\\d|100\\.0)\\b",
+          "colors": ["bold red"],
+          "description": "Highlights high CPU/MEM usage (50%+)"
+        }
+      ]
+    },
+    {
+      "name": "python",
+      "triggers": [
+        "python",
+        "python3",
+        "python2",
+        "ipython",
+        "ipython3",
+        "bpython",
+        "pypy",
+        "pypy3"
+      ],
+      "description": "Highlights for python/python3 interpreter output",
+      "rules": [
+        {
+          "name": "Traceback",
+          "pattern": "(Traceback \\(most recent call last\\):)",
+          "colors": ["bold red"],
+          "description": "Highlights traceback header"
+        },
+        {
+          "name": "Exception Types",
+          "pattern": "\\b(Exception|Error|Warning|TypeError|ValueError|KeyError|IndexError|AttributeError|ImportError|RuntimeError|NameError|SyntaxError|ZeroDivisionError|FileNotFoundError|OSError|IOError)\\b",
+          "colors": ["red"],
+          "description": "Highlights exception type names"
+        },
+        {
+          "name": "File Line",
+          "pattern": "(File)\\s+\"([^\"]+)\",\\s+(line)\\s+(\\d+)",
+          "colors": [null, "magenta", null, "yellow"],
+          "description": "Highlights file and line references"
+        },
+        {
+          "name": "In Module/Function",
+          "pattern": "(in)\\s+(<\\w+>|\\w+)",
+          "colors": [null, "cyan"],
+          "description": "Highlights module/function context"
+        },
+        {
+          "name": "DeprecationWarning",
+          "pattern": "\\b(DeprecationWarning|PendingDeprecationWarning)\\b",
+          "colors": ["yellow"],
+          "description": "Highlights deprecation warnings"
+        },
+        {
+          "name": "Error Message",
+          "pattern": "^([A-Za-z]+Error|[A-Za-z]+Exception):\\s+(.+)$",
+          "colors": ["bold red", "red"],
+          "description": "Highlights error messages"
+        }
+      ]
+    },
+    {
+      "name": "rsync",
+      "triggers": ["rsync", "scp", "sftp"],
+      "description": "Highlights for rsync output",
+      "rules": [
+        {
+          "name": "Sent/Received",
+          "pattern": "(sent|received)\\s+([\\d,]+)\\s+(bytes)",
+          "colors": ["cyan", "yellow", null],
+          "description": "Highlights transfer statistics"
+        },
+        {
+          "name": "Speed",
+          "pattern": "([\\d.]+)\\s*([KMG]?B/s)",
+          "colors": ["magenta", "magenta"],
+          "description": "Highlights transfer speed"
+        },
+        {
+          "name": "Progress",
+          "pattern": "(\\d+)(%)\\b",
+          "colors": ["green", "green"],
+          "description": "Highlights progress percentage"
+        },
+        {
+          "name": "Error",
+          "pattern": "(rsync error:|failed:)",
+          "colors": ["bold red"],
+          "description": "Highlights rsync errors"
+        },
+        {
+          "name": "Deleting",
+          "pattern": "(deleting)\\s+(\\S+)",
+          "colors": ["yellow", "yellow"],
+          "description": "Highlights deleted files"
+        },
+        {
+          "name": "Total Size",
+          "pattern": "(total size is)\\s+([\\d,]+)",
+          "colors": [null, "cyan"],
+          "description": "Highlights total size"
+        }
+      ]
+    },
+    {
+      "name": "sensors",
+      "triggers": ["sensors"],
+      "description": "Highlights for sensors hardware monitoring output",
+      "rules": [
+        {
+          "name": "Sensor Name",
+          "pattern": "^([a-z\\-0-9]+)$",
+          "colors": ["underline yellow"],
+          "description": "Highlights sensor chip name"
+        },
+        {
+          "name": "Adapter",
+          "pattern": "(Adapter:)(\\s.+)",
+          "colors": [null, "yellow"],
+          "description": "Highlights adapter name"
+        },
+        {
+          "name": "Data Label",
+          "pattern": "^([^:]+):",
+          "colors": ["bright_cyan"],
+          "description": "Highlights data labels"
+        },
+        {
+          "name": "Extra Info",
+          "pattern": "(\\([^)]+\\))",
+          "colors": ["magenta"],
+          "description": "Dims extra info in parentheses (high/crit values)"
+        },
+        {
+          "name": "Low Temperature (<60°C)",
+          "pattern": ":\\s+(\\+[2-5]\\d\\.\\d°C)",
+          "colors": ["green"],
+          "description": "Highlights normal temperatures"
+        },
+        {
+          "name": "High Temperature (60-79°C)",
+          "pattern": ":\\s+(\\+[67]\\d\\.\\d°C)",
+          "colors": ["bright_yellow"],
+          "description": "Highlights warm temperatures"
+        },
+        {
+          "name": "Critical Temperature (80+°C)",
+          "pattern": ":\\s+(\\+[89]\\d\\.\\d°C)",
+          "colors": ["bright_red"],
+          "description": "Highlights hot temperatures"
+        },
+        {
+          "name": "Very Critical Temperature (100+°C)",
+          "pattern": ":\\s+(\\+1\\d{2}\\.\\d°C)",
+          "colors": ["bold red"],
+          "description": "Highlights critical temperatures"
+        },
+        {
+          "name": "Fan Speed",
+          "pattern": "(\\d+) (RPM)",
+          "colors": ["cyan", "cyan"],
+          "description": "Highlights fan speeds"
+        },
+        {
+          "name": "Voltage",
+          "pattern": "(\\+?\\d+\\.\\d+) (V)",
+          "colors": ["yellow", "yellow"],
+          "description": "Highlights voltage readings"
+        },
+        {
+          "name": "Power",
+          "pattern": "(\\d+\\.\\d+) (W)",
+          "colors": ["magenta", "magenta"],
+          "description": "Highlights power readings"
+        }
+      ]
+    },
+    {
+      "name": "ss",
+      "triggers": ["ss", "netstat"],
+      "description": "Highlights for ss (socket statistics) output",
+      "rules": [
+        {
+          "name": "LISTEN State",
+          "pattern": "\\bLISTEN(ING)?\\b",
+          "colors": ["bold blue"],
+          "description": "Highlights listening sockets"
+        },
+        {
+          "name": "ESTAB State",
+          "pattern": "\\b(ESTAB|ESTABLISHED|CONNECTED)\\b",
+          "colors": ["bold yellow"],
+          "description": "Highlights established connections"
+        },
+        {
+          "name": "TIME-WAIT State",
+          "pattern": "\\bTIME[_-]WAIT\\b",
+          "colors": ["bold red"],
+          "description": "Highlights time-wait state"
+        },
+        {
+          "name": "CLOSE States",
+          "pattern": "\\bCLOS(E(_WAIT)?|ING)\\b",
+          "colors": ["red"],
+          "description": "Highlights closing states"
+        },
+        {
+          "name": "FIN-WAIT State",
+          "pattern": "\\bFIN[_-]WAIT.*\\b",
+          "colors": ["red"],
+          "description": "Highlights fin-wait states"
+        },
+        {
+          "name": "SYN States",
+          "pattern": "\\bSYN.*?\\b",
+          "colors": ["bold red"],
+          "description": "Highlights syn states"
+        },
+        {
+          "name": "UNCONN State",
+          "pattern": "\\bUNCONN\\b",
+          "colors": ["red"],
+          "description": "Highlights unconnected sockets"
+        },
+        {
+          "name": "FREE State",
+          "pattern": "\\bFREE\\b",
+          "colors": ["bold green"],
+          "description": "Highlights free sockets"
+        },
+        {
+          "name": "LAST_ACK State",
+          "pattern": "\\bLAST_ACK\\b",
+          "colors": ["red"],
+          "description": "Highlights last-ack state"
+        },
+        {
+          "name": "UNKNOWN State",
+          "pattern": "\\bUNKNOWN\\b",
+          "colors": ["bold red"],
+          "description": "Highlights unknown state"
+        },
+        {
+          "name": "Protocol TCP",
+          "pattern": "^tcp",
+          "colors": ["blue"],
+          "description": "Highlights TCP protocol"
+        },
+        {
+          "name": "Protocol UDP",
+          "pattern": "^udp",
+          "colors": ["yellow"],
+          "description": "Highlights UDP protocol"
+        },
+        {
+          "name": "Protocol Unix",
+          "pattern": "^unix|STREAM|DGRAM",
+          "colors": ["magenta"],
+          "description": "Highlights Unix sockets"
+        },
+        {
+          "name": "Local Address",
+          "pattern": "\\s(\\S+?):(\\S+?)\\s",
+          "colors": ["bright_green", "bright_cyan"],
+          "description": "Highlights local address and port"
+        },
+        {
+          "name": "Process Name",
+          "pattern": "\\(\"([^\"]+)\",",
+          "colors": ["blue"],
+          "description": "Highlights process name"
+        },
+        {
+          "name": "Timer",
+          "pattern": "\\d+sec",
+          "colors": ["yellow"],
+          "description": "Highlights timer values"
+        },
+        {
+          "name": "Status Bracket",
+          "pattern": "\\[.*\\]",
+          "colors": ["green"],
+          "description": "Highlights status in brackets"
+        }
+      ]
+    },
+    {
+      "name": "sysctl",
+      "triggers": ["sysctl"],
+      "description": "Highlights for sysctl kernel parameters output",
+      "rules": [
+        {
+          "name": "Full Parameter Line",
+          "pattern": "^(\\w+)\\.(\\S+) = ?(.+)?$",
+          "colors": ["green", "cyan", "yellow"],
+          "description": "Highlights parameter category, key and value"
+        },
+        {
+          "name": "Subcategory",
+          "pattern": "\\w+\\.(\\S+(?=\\.))\\.",
+          "colors": ["magenta"],
+          "description": "Highlights subcategory in parameter path"
+        },
+        {
+          "name": "Permission Error",
+          "pattern": "sysctl: permission denied on key '([^']+)'",
+          "colors": ["red", "bold red"],
+          "description": "Highlights permission errors"
+        },
+        {
+          "name": "Boolean True",
+          "pattern": "= (1)$",
+          "colors": [null, "bold green"],
+          "description": "Highlights enabled boolean values"
+        },
+        {
+          "name": "Boolean False",
+          "pattern": "= (0)$",
+          "colors": [null, "bold yellow"],
+          "description": "Highlights disabled boolean values"
+        }
+      ]
+    },
+    {
+      "name": "systemctl",
+      "triggers": ["systemctl"],
+      "description": "Highlights for systemctl command output",
+      "rules": [
+        {
+          "name": "Service Unit",
+          "pattern": "\\.service\\s",
+          "colors": ["bright_white"],
+          "description": "Highlights service units"
+        },
+        {
+          "name": "Mount Unit",
+          "pattern": "\\.mount\\s",
+          "colors": ["magenta"],
+          "description": "Highlights mount units"
+        },
+        {
+          "name": "Device Unit",
+          "pattern": "\\.device\\s",
+          "colors": ["blue"],
+          "description": "Highlights device units"
+        },
+        {
+          "name": "Socket Unit",
+          "pattern": "\\.socket\\s",
+          "colors": ["cyan"],
+          "description": "Highlights socket units"
+        },
+        {
+          "name": "Slice Unit",
+          "pattern": "\\.slice\\s",
+          "colors": ["red"],
+          "description": "Highlights slice units"
+        },
+        {
+          "name": "Path Unit",
+          "pattern": "\\.path\\s",
+          "colors": ["green"],
+          "description": "Highlights path units"
+        },
+        {
+          "name": "Target Unit",
+          "pattern": "\\.target\\s",
+          "colors": ["magenta"],
+          "description": "Highlights target units"
+        },
+        {
+          "name": "Timer Unit",
+          "pattern": "\\.timer\\s",
+          "colors": ["cyan"],
+          "description": "Highlights timer units"
+        },
+        {
+          "name": "Swap Unit",
+          "pattern": "\\.swap\\s",
+          "colors": ["bright_magenta"],
+          "description": "Highlights swap units"
+        },
+        {
+          "name": "Scope Unit",
+          "pattern": "\\.scope\\s",
+          "colors": ["yellow"],
+          "description": "Highlights scope units"
+        },
+        {
+          "name": "Loaded Status",
+          "pattern": "\\sloaded\\s",
+          "colors": ["cyan"],
+          "description": "Highlights loaded status"
+        },
+        {
+          "name": "Active State",
+          "pattern": "\\sactive\\s",
+          "colors": ["green"],
+          "description": "Highlights active state"
+        },
+        {
+          "name": "Running",
+          "pattern": "running",
+          "colors": ["bold green"],
+          "description": "Highlights running state"
+        },
+        {
+          "name": "Exited",
+          "pattern": "exited",
+          "colors": ["red"],
+          "description": "Highlights exited state"
+        },
+        {
+          "name": "Failed State",
+          "pattern": "\\bfailed\\b",
+          "colors": ["bold red"],
+          "description": "Highlights failed state"
+        },
+        {
+          "name": "Inactive State",
+          "pattern": "\\binactive\\b",
+          "colors": ["yellow"],
+          "description": "Highlights inactive state"
+        },
+        {
+          "name": "Enabled/Disabled",
+          "pattern": "\\b(enabled|disabled|static|masked|generated|indirect)\\b",
+          "colors": ["magenta"],
+          "description": "Highlights enable/disable states"
+        },
+        {
+          "name": "Waiting",
+          "pattern": "waiting",
+          "colors": ["yellow"],
+          "description": "Highlights waiting state"
+        }
+      ]
+    },
+    {
+      "name": "tar",
+      "triggers": ["tar"],
+      "description": "Highlights for tar archive command output",
+      "rules": [
+        {
+          "name": "Extracting",
+          "pattern": "^x\\s+(.+)",
+          "colors": ["green"],
+          "description": "Highlights extracted files"
+        },
+        {
+          "name": "Adding",
+          "pattern": "^a\\s+(.+)",
+          "colors": ["cyan"],
+          "description": "Highlights added files"
+        },
+        {
+          "name": "Error",
+          "pattern": "(tar:.*Error|Cannot)(.+)",
+          "colors": ["bold red", "bold red"],
+          "description": "Highlights tar errors"
+        },
+        {
+          "name": "Warning",
+          "pattern": "(tar:.*Warning|warning):?\\s*(.+)",
+          "colors": ["bold yellow", "bold yellow"],
+          "description": "Highlights tar warnings"
+        },
+        {
+          "name": "Permission Denied",
+          "pattern": "(Permission denied|Cannot open)",
+          "colors": ["bold red"],
+          "description": "Highlights permission errors"
+        },
+        {
+          "name": "Removing Leading Slash",
+          "pattern": "(Removing leading)\\s+([`'\"][^`'\"]+[`'\"])\\s+(from)",
+          "colors": ["yellow", "cyan", "yellow"],
+          "description": "Highlights leading slash removal warning"
+        }
+      ]
+    },
+    {
+      "name": "terraform",
+      "triggers": ["terraform"],
+      "description": "Highlights for terraform output",
+      "rules": [
+        {
+          "name": "Create",
+          "pattern": "(\\+)\\s+(\\S+)\\s+(will be created)",
+          "colors": ["bold green", "green", "green"],
+          "description": "Highlights resources to be created"
+        },
+        {
+          "name": "Destroy",
+          "pattern": "(-)\\s+(\\S+)\\s+(will be destroyed)",
+          "colors": ["bold red", "red", "red"],
+          "description": "Highlights resources to be destroyed"
+        },
+        {
+          "name": "Update/Change",
+          "pattern": "(~)\\s+(\\S+)\\s+(will be updated)",
+          "colors": ["bold yellow", "yellow", "yellow"],
+          "description": "Highlights resources to be updated"
+        },
+        {
+          "name": "Plan Summary",
+          "pattern": "(Plan:)\\s+(\\d+)\\s+(to add),\\s+(\\d+)\\s+(to change),\\s+(\\d+)\\s+(to destroy)",
+          "colors": [
+            "cyan",
+            "green",
+            "green",
+            "yellow",
+            "yellow",
+            "red",
+            "red"
+          ],
+          "description": "Highlights plan summary"
+        },
+        {
+          "name": "Apply Complete",
+          "pattern": "(Apply complete!)\\s+(Resources:)\\s+(\\d+)\\s+(added)",
+          "colors": ["bold green", null, "green", "green"],
+          "description": "Highlights successful apply"
+        },
+        {
+          "name": "Error",
+          "pattern": "(Error:)\\s+(.+)",
+          "colors": ["bold red", "red"],
+          "description": "Highlights terraform errors"
+        },
+        {
+          "name": "Resource Address",
+          "pattern": "([a-z_]+\\.[a-z_]+)(\\[\"?[^\\]]+\"?\\])?",
+          "colors": ["magenta", "cyan"],
+          "description": "Highlights resource addresses"
+        }
+      ]
+    },
+    {
+      "name": "traceroute",
+      "triggers": ["traceroute", "traceroute6", "tracepath"],
+      "description": "Highlights for traceroute network path output",
+      "rules": [
+        {
+          "name": "Hop Number",
+          "pattern": "^\\s*(\\d+)\\s",
+          "colors": ["cyan"],
+          "description": "Highlights hop numbers"
+        },
+        {
+          "name": "Hostname",
+          "pattern": "\\s(\\S+?)\\s",
+          "colors": ["bold white"],
+          "description": "Highlights hostnames"
+        },
+        {
+          "name": "IPv4 Address",
+          "pattern": "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}",
+          "colors": ["bold magenta"],
+          "description": "Highlights IP addresses"
+        },
+        {
+          "name": "IPv6 Address",
+          "pattern": "(([0-9a-fA-F]{1,4})?::?[0-9a-fA-F]{1,4})+",
+          "colors": ["yellow"],
+          "description": "Highlights IPv6 addresses"
+        },
+        {
+          "name": "Response Time",
+          "pattern": "\\d+\\.?\\d*(?=\\s*ms)",
+          "colors": ["green"],
+          "description": "Highlights response times"
+        },
+        {
+          "name": "Time Unit",
+          "pattern": "\\bms\\b",
+          "colors": ["yellow"],
+          "description": "Highlights ms unit"
+        },
+        {
+          "name": "No Response",
+          "pattern": "\\*",
+          "colors": ["bold red"],
+          "description": "Highlights unreachable hops"
+        },
+        {
+          "name": "DUP",
+          "pattern": "\\bDUP\\b",
+          "colors": ["bold red"],
+          "description": "Highlights duplicate packets"
+        },
+        {
+          "name": "TTL Exceeded",
+          "pattern": "ttl=\\d+!",
+          "colors": ["cyan"],
+          "description": "Highlights TTL exceeded"
+        },
+        {
+          "name": "Host Unreachable",
+          "pattern": "\\s!([HNPSFXVC]|\\d+)",
+          "colors": ["bold red"],
+          "description": "Highlights unreachable codes"
+        },
+        {
+          "name": "Parentheses",
+          "pattern": "\\(|\\)",
+          "colors": ["yellow"],
+          "description": "Highlights parentheses"
+        }
+      ]
+    },
+    {
+      "name": "uptime",
+      "triggers": ["uptime", "w"],
+      "description": "Highlights for uptime command output",
+      "rules": [
+        {
+          "name": "Uptime Days",
+          "pattern": "(up)\\s+(\\d+)\\s+(days?)",
+          "colors": ["green", "bold green", "green"],
+          "description": "Highlights uptime in days"
+        },
+        {
+          "name": "Uptime Hours",
+          "pattern": "(up)\\s+(\\d+:\\d+|\\d+\\s+min)",
+          "colors": ["green", "bold green"],
+          "description": "Highlights uptime duration"
+        },
+        {
+          "name": "Users",
+          "pattern": "(\\d+)\\s+(users?)",
+          "colors": ["bold yellow", "yellow"],
+          "description": "Highlights user count"
+        },
+        {
+          "name": "Load Average Values",
+          "pattern": "load average:\\s*([\\d.,]+),\\s*([\\d.,]+),\\s*([\\d.,]+)",
+          "colors": ["bright_cyan", "cyan", "dim cyan"],
+          "description": "Highlights 1, 5, 15 minute load averages"
+        },
+        {
+          "name": "High Load (>4.0)",
+          "pattern": "load average:\\s*([4-9]\\d*[.,]\\d+|\\d{2,}[.,]\\d+)",
+          "colors": [null, "red"],
+          "description": "Highlights high load average"
+        },
+        {
+          "name": "W Command Header",
+          "pattern": "^USER.*",
+          "colors": ["yellow"],
+          "description": "Highlights w command header"
+        }
+      ]
+    },
+    {
+      "name": "vmstat",
+      "triggers": ["vmstat"],
+      "description": "Highlights for vmstat virtual memory statistics output",
+      "rules": [
+        {
+          "name": "Main Headers",
+          "pattern": "^(procs)\\s+(-+memory-+)\\s+(-+swap-+)\\s+(-+io-+)\\s+(-+system-+)\\s+(-+cpu-+)",
+          "colors": [
+            "bold white",
+            "bold cyan",
+            "bold magenta",
+            "bold blue",
+            "bold green",
+            "bold red"
+          ],
+          "description": "Highlights main column headers"
+        },
+        {
+          "name": "Sub Headers",
+          "pattern": "^\\s*(r\\s+b)\\s+(swpd\\s+free\\s+buff\\s+cache)\\s+(si\\s+so)\\s+(bi\\s+bo)\\s+(in\\s+cs)\\s+(us\\s+sy\\s+id\\s+wa\\s+st)",
+          "colors": [
+            null,
+            "bright_cyan",
+            "bright_magenta",
+            "bright_blue",
+            "bright_green",
+            "bright_red"
+          ],
+          "description": "Highlights sub-column headers"
+        },
+        {
+          "name": "Disk Mode Headers",
+          "pattern": "^(disk-)\\s+(-+reads-+)\\s+(-+writes-+)\\s+(-+IO-+)",
+          "colors": ["bold white", "bold green", "bold magenta", "bold blue"],
+          "description": "Highlights disk mode headers"
+        },
+        {
+          "name": "High CPU User",
+          "pattern": "\\s+([5-9]\\d|100)\\s+\\d+\\s+\\d+\\s+\\d+\\s+\\d+\\s*$",
+          "colors": ["yellow"],
+          "description": "Highlights high CPU user usage (50%+)"
+        },
+        {
+          "name": "High Wait",
+          "pattern": "\\s+\\d+\\s+\\d+\\s+\\d+\\s+([1-9]\\d+)\\s+\\d+\\s*$",
+          "colors": [null, null, null, null, "red"],
+          "description": "Highlights high I/O wait"
+        },
+        {
+          "name": "High Swap In/Out",
+          "pattern": "\\s+([1-9]\\d*)\\s+([1-9]\\d*)\\s+\\d+\\s+\\d+\\s+\\d+\\s+\\d+",
+          "colors": [null, "red", "red"],
+          "description": "Highlights active swapping"
+        },
+        {
+          "name": "Processes Blocked",
+          "pattern": "^\\s+\\d+\\s+([1-9]\\d*)\\s",
+          "colors": [null, "red"],
+          "description": "Highlights blocked processes"
+        }
+      ]
+    },
+    {
+      "name": "wget",
+      "triggers": ["wget"],
+      "description": "Highlights for wget download output",
+      "useGlobalRules": true,
+      "rules": [
+        {
+          "name": "Progress Percentage",
+          "pattern": "(\\d+)(%)",
+          "colors": ["cyan", "cyan"],
+          "description": "Highlights download progress"
+        },
+        {
+          "name": "Download Speed",
+          "pattern": "(\\d+[.,]\\d+)\\s*([KMG]?B/s)",
+          "colors": ["yellow", "yellow"],
+          "description": "Highlights download speed"
+        },
+        {
+          "name": "File Saved",
+          "pattern": "['`](.+)['’]\\s+(saved)",
+          "colors": ["cyan", "green"],
+          "description": "Highlights saved file messages"
+        },
+        {
+          "name": "Connecting",
+          "pattern": "(Connecting to)\\s+(\\S+)",
+          "colors": [null, "cyan"],
+          "description": "Highlights connection target"
+        },
+        {
+          "name": "Resolving",
+          "pattern": "(Resolving)\\s+(\\S+)",
+          "colors": [null, "cyan"],
+          "description": "Highlights DNS resolution"
+        },
+        {
+          "name": "Length",
+          "pattern": "(Length:)\\s+(\\d+)\\s*(\\([^)]+\\))?",
+          "colors": [null, "yellow", null],
+          "description": "Highlights file length"
+        },
+        {
+          "name": "403",
+          "pattern": "\\b(4\\d\\d):?\\b\\s+(\\w+)",
+          "colors": ["red"]
+        },
+        {
+          "name": "200",
+          "pattern": "\\b(2\\d\\d):?\\b\\s+(\\w+)",
+          "colors": ["green", "green"]
+        },
+        {
+          "name": "300",
+          "pattern": "\\b(3\\d\\d):?\\b\\s+(\\w+)",
+          "colors": ["yellow", "yellow"]
+        },
+        {
+          "name": "500",
+          "pattern": "\\b(5\\d\\d):?\\b\\s+(\\w+)",
+          "colors": ["bold red", "bold red"]
+        }
+      ]
+    },
+    {
+      "name": "yarn",
+      "triggers": ["yarn"],
+      "description": "Highlights for yarn package manager output",
+      "rules": [
+        {
+          "name": "Success Done",
+          "pattern": "(✨|✓)\\s*(Done\\b|success\\b)",
+          "colors": ["green", "bold green"],
+          "description": "Highlights success messages"
+        },
+        {
+          "name": "Warning",
+          "pattern": "(warning)\\s+(.+)",
+          "colors": ["bold yellow", "bold yellow"],
+          "description": "Highlights warnings"
+        },
+        {
+          "name": "Error",
+          "pattern": "(error)\\s+(.+)",
+          "colors": ["bold red", "bold red"],
+          "description": "Highlights errors"
+        },
+        {
+          "name": "Package Names",
+          "pattern": "((@[\\w-]+/)?[\\w.-]+)@(\\d+\\.\\d+\\.\\d+[\\w.-]*)",
+          "colors": ["cyan", null, "magenta"],
+          "description": "Highlights package names with versions"
+        },
+        {
+          "name": "Info Label",
+          "pattern": "(info)\\s+",
+          "colors": ["cyan"],
+          "description": "Highlights info labels"
+        },
+        {
+          "name": "Adding Packages",
+          "pattern": "(Adding)\\s+(\\S+)\\s+to",
+          "colors": ["green", "cyan"],
+          "description": "Highlights packages being added"
+        },
+        {
+          "name": "Fetching",
+          "pattern": "(Fetching)\\s+(\\S+)",
+          "colors": [null, "cyan"],
+          "description": "Highlights packages being fetched"
+        }
+      ]
+    }
+  ]
+}

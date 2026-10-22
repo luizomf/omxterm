@@ -1,10 +1,11 @@
 import * as nodePty from "node-pty";
 import { describe, expect, it } from "vitest";
 import { createLocalTerminalSession } from "../../src/main/local-terminal-session";
+import { isNativeTestArchitecture } from "../fixtures/native-architecture";
 
 // The renderer fixture cannot detect a ConPTY implementation dropping APCs
 // before the Terminal Surface receives them. Exercise the real Adapter too.
-describe.skipIf(process.platform !== "win32" || process.arch !== "arm64")(
+describe.skipIf(process.platform !== "win32" || !isNativeTestArchitecture())(
   "Kitty image transport through Windows ConPTY",
   () => {
     it("delivers a complete Kitty image sequence without consuming it", async () => {

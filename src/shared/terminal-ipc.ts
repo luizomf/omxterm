@@ -34,4 +34,10 @@ export const terminalIpc = {
   tabTitleSync: "terminal:tab-title-sync",
   tabsEmpty: "terminal:tabs-empty",
   tabTitle: "terminal:tab-title",
+  confirmBroadcast: "terminal:confirm-broadcast",
+  workingDirectory: "terminal:working-directory",
+  workspace: "terminal:workspace",
+  workspacePlan: "terminal:workspace-plan",
+  commandPalette: "terminal:command-palette",
+  runAction: "terminal:run-action",
 } as const;

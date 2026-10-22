@@ -62,8 +62,9 @@ describe("Terminal Tab removal preserves selected identity", () => {
     // Route before asserting so a failure reports both identity and recipient.
     expectRouting(harness, 0);
     expect(selectedStates(harness.strip)).toEqual(["A:true", "B:false"]);
+    // A Terminal Tab wraps its pane Surfaces; only the selected one is shown.
     expect(harness.container.querySelector("main:not([hidden])")).toBe(
-      selectedContainer,
+      selectedContainer!.querySelector("main"),
     );
   });
 

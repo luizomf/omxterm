@@ -58,13 +58,21 @@ export function resttyHostServices(
     ptyTransport: transport,
     beforeInput: ({ text, source }) => {
       if (source !== "paste") {
-        if (source === "key" && text.length > 0) revealInput();
+        if (source === "key" && text.length > 0) {
+          revealInput();
+          options.onUserInput?.(text);
+        }
         return text;
       }
       void delivery.deliver(text);
       return null;
     },
     onOsc: (command: number, payload: string) => {
+      if (command === 7) {
+        if (isWorkingDirectoryReport(payload))
+          options.onWorkingDirectory?.(payload);
+        return;
+      }
       if (command !== 52 || !options.clipboard) return;
       const text = decodeOsc52Write(payload);
       if (text === undefined) return;
@@ -80,4 +88,15 @@ export function resttyHostServices(
         candidate.clippedEnd,
       ) ?? null,
   };
+}
+
+// OSC 7 reports "file://host/path". Only bounded, control-free file URIs are
+// forwarded; main resolves and validates the path before using it.
+export const MAX_WORKING_DIRECTORY_REPORT_LENGTH = 4096;
+export function isWorkingDirectoryReport(payload: string): boolean {
+  return (
+    payload.length <= MAX_WORKING_DIRECTORY_REPORT_LENGTH &&
+    /^file:\/\/[^/]*\//u.test(payload) &&
+    !/\p{Cc}/u.test(payload)
+  );
 }

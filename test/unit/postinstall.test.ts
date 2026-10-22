@@ -41,6 +41,46 @@ describe("node-pty postinstall preparation", () => {
     expect(chmod).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["linux", "x64"],
+    ["darwin", "x64"],
+  ] as const)(
+    "builds node-pty with exec status on %s %s",
+    async (platform, arch) => {
+      const rebuild = vi.fn().mockResolvedValue(undefined);
+      const chmod = vi.fn().mockResolvedValue(undefined);
+      await expect(
+        prepareNodePtyRuntime({
+          platform,
+          arch,
+          unixRuntimePath,
+          rebuild,
+          chmod,
+        }),
+      ).resolves.toBe("corrected-and-rebuilt");
+      expect(rebuild).toHaveBeenCalledOnce();
+      if (platform === "darwin")
+        expect(chmod).toHaveBeenCalledWith(
+          expect.stringMatching(/prebuilds[\\/]darwin-x64[\\/]spawn-helper$/u),
+          0o755,
+        );
+    },
+  );
+
+  it("leaves unsupported Unix architectures unbuilt", async () => {
+    const rebuild = vi.fn().mockResolvedValue(undefined);
+    await expect(
+      prepareNodePtyRuntime({
+        platform: "linux",
+        arch: "ia32",
+        unixRuntimePath,
+        rebuild,
+        chmod: vi.fn(),
+      }),
+    ).resolves.toBe("corrected");
+    expect(rebuild).not.toHaveBeenCalled();
+  });
+
   it("builds the Darwin ARM64 exec-status runtime and makes its helper executable", async () => {
     const rebuild = vi.fn().mockResolvedValue(undefined);
     const chmod = vi.fn().mockResolvedValue(undefined);
@@ -121,22 +161,5 @@ describe("node-pty postinstall preparation", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
-  });
-
-  it("corrects the Linux x64 runtime without a supported native rebuild", async () => {
-    const rebuild = vi.fn().mockResolvedValue(undefined);
-    const chmod = vi.fn().mockResolvedValue(undefined);
-
-    await expect(
-      prepareNodePtyRuntime({
-        platform: "linux",
-        arch: "x64",
-        unixRuntimePath,
-        rebuild,
-        chmod,
-      }),
-    ).resolves.toBe("corrected");
-    expect(rebuild).not.toHaveBeenCalled();
-    expect(chmod).not.toHaveBeenCalled();
   });
 });

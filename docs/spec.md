@@ -16,8 +16,11 @@ The [user guides](README.md) explain setup and everyday use.
 
 OMXTerm is an open-source personal desktop terminal. It opens a normal local
 shell in a native window with a hideable title area and gives the Terminal
-Surface all remaining content space. SSH brokering, AI assistance, persistent
-session management, and IDE features are outside the product scope.
+Surface all remaining content space. Tabs can be split into independent panes.
+Advanced workspace features (split panes, broadcast input and Saved Sessions
+including SSH) stay out of the way until requested; IDE features remain outside
+the product scope. Expanded scope is tracked in
+[the implementation records](implementation/01-feature-parity.md).
 
 The Supported Platforms are macOS arm64, Linux arm64, and Windows arm64. Linux
 rendering defaults to X11 and requires XWayland when the desktop session is
@@ -72,9 +75,10 @@ OMXTerm:
   an optional versioned per-user AppImage desktop installer and its checksum;
   running the AppImage directly remains supported.
 
-AI assistance, splits, saved or reconnectable sessions, shell integration,
-profiles, a theme picker or catalog, automatic configuration reload, automatic
-updates, and remote terminal features are outside the current product contract.
+Shell integration, automatic configuration reload and automatic updates are
+outside the current product contract. Features still in progress under the
+expanded scope (command manager, file manager, assistant, preferences
+window) are not part of this contract until they are described here.
 
 Restty 0.3.0 and its pinned Ghostty core provide the sole Terminal Surface in
 ordinary development and every packaged application. OMXTerm has no renderer
@@ -97,7 +101,18 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Window in that application process; all later tabs and windows use the Default
   Shell. A trailing `-e` with no program is an actionable startup failure and
   never falls back to the Default Shell.
-- An explicit command starts in the user's home directory, inherits the normal
+- Options before `-e` are OMXTerm's own: `-w`/`--working-directory <dir>`
+  starts the first tab of the first window in an existing directory (with or
+  without `-e`); `--ssh <[user@]host[:port]>` opens that first tab as a Quick
+  Connect session, validated in main and again in the renderer, and cannot be
+  combined with `-e` or `-w`; `--log-level <error|info|debug>` (or `--debug`)
+  overrides `logLevel` for the run, including after a configuration reload.
+  `--help` and `--version` print to standard output and exit with status 0
+  without opening a window. An invalid option is written to standard error,
+  shown in a dialog with a fixed message, and exits with status 2. Unknown
+  arguments are left to Electron and Chromium.
+- An explicit command starts in the user's home directory (or the `-w`
+  directory), inherits the normal
   process environment, and receives the Terminal Capability Identity. It is a
   Busy Session for its complete live lifetime. Its clean exit, unexpected
   signal, spawn failure, requested close, tab and window closure, and
@@ -352,6 +367,120 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 
 Closing a tab or window ends its sessions. Persistent and reconnectable sessions
 remain the responsibility of a session manager such as tmux.
+
+## Split panes
+
+A Terminal Tab holds one or more Terminal Panes in a split layout
+([ADR 0035](adr/0035-split-tabs-into-independent-terminal-panes.md)). Each pane
+is an independent Terminal Surface and Live Terminal Session.
+
+- Split Right and Split Down divide the focused pane and focus the new one. The
+  new pane runs the Default Shell in the focused pane's working directory when
+  known: from a local OSC 7 report, or on Linux from the shell process. A
+  missing or remote directory falls back to the home directory. An explicit
+  Launch Request is never repeated in a split.
+- Splits in the same direction share one row or column. Dividers resize by
+  pointer or keyboard (arrow keys, 2% steps) with each pane keeping at least 5%.
+  Equalize Panes gives every pane an equal share. Resizing refits each grid and
+  PTY through the Surface's own size observer.
+- Maximize or Restore Pane shows only the focused pane. The other panes keep
+  their sessions, output ingestion and last valid grid, and draw nothing while
+  hidden.
+- Pane focus follows clicks and the next/previous and directional commands.
+  The focused pane supplies the tab label (with a `(N)` pane count), the window
+  title, clipboard actions, paste, snippets and dropped paths.
+- An ordinary pane exit removes that pane and focuses its neighbor; the last
+  pane follows the existing tab and window lifecycle. Signal exits keep their
+  native failure acknowledgement. Close Pane ends only the focused pane and asks
+  first only when that pane's session is Busy. Close Tab asks when any pane of
+  the tab is Busy.
+- A tab holds at most 16 panes.
+- Broadcast Input mirrors keyboard input typed into the focused pane to the
+  tab's other live panes after a native confirmation, until stopped or until
+  the tab has a single pane. Paste, snippets and terminal protocol replies are
+  never mirrored. Receiving panes show a warning edge, and a persistent
+  indicator offers Stop. OMXTerm does not detect password prompts.
+
+## Saved Sessions
+
+Saved Sessions are launch definitions kept in Application Data
+(`sessions.json`, [ADR 0034](adr/0034-store-application-data-beside-user-configuration.md)).
+Opening one always starts a new process.
+
+- The Sessions sidebar is per window and hidden by default. Toggle Sessions
+  (`Cmd+Shift+J` on macOS, `Ctrl+Shift+H` on Linux and Windows, remappable as
+  `toggleSessions`) shows or hides it. It lists favorites, up to five recently
+  used sessions, and the folder tree, and searches names, targets and
+  directories. Changes from any window appear in every window.
+- Opening a session sends main only its identifier. Main resolves the
+  definition, checks that a local working directory still exists, and starts it
+  with the Default Shell or a literal program and argument vector. An initial
+  command is typed once, after the program's first output. SSH sessions run the
+  system OpenSSH client with a literal argument vector
+  ([ADR 0036](adr/0036-run-saved-ssh-sessions-through-the-system-openssh-client.md)).
+- Quick Connect accepts `[user@]host[:port]`, validated in the renderer and
+  again in main, and starts an unsaved SSH session.
+- Saved and Quick Connect sessions that exit with a non-zero code or fail keep
+  their final screen with Reconnect and Close actions. Reconnect starts a new
+  session in the same pane position. Ordinary zero exits close like any other
+  session.
+- Exports contain definitions only. Passwords are typed at ssh's prompt and
+  are never stored; options that execute local programs are rejected.
+
+## Output highlighting
+
+Output highlighting is an optional transform of PTY output, applied before
+the Ghostty core parses it ([design](implementation/07-smart-highlighting.md)).
+It is off by default; **View → Highlight Output** turns it on for every pane,
+and the choice is kept in Application Data (`highlights.json`).
+
+- The transform only inserts SGR color sequences. It never removes, reorders
+  or delays bytes, and a failing transform passes the output unchanged.
+- It colors only complete lines that began at column 0 within the same chunk,
+  while attributes are at their defaults, outside the alternate screen and
+  bracketed paste, and without cursor-moving controls in the line. Text after
+  neutral controls (SGR, private mode switches, OSC other than OSC 8
+  hyperlinks, carriage returns) still counts as column 0.
+- More than eight consecutive large chunks, or a chunk that took longer than
+  12 ms to process, bypass highlighting for a while.
+- Attributes are tracked per SGR attribute, so a partial reset such as
+  readline's `ESC[27m` after a highlighted paste returns to default
+  attributes.
+- Rules are the 51 AshyTerm rule sets (486 rules). When the user presses
+  Enter, the command typed into that pane selects its rule set; a command
+  that OMXTerm submits for the user (a snippet or a Command Manager command)
+  selects it from the submitted text; unknown
+  commands use the global rules, and ignored commands (tools that color their
+  own output or draw full screens) are left untouched. The command line is
+  read from the pane's own echo and is never stored, logged or sent.
+- Colors use the 16-color palette, so they follow the Terminal Theme.
+- **View → Highlight Rules…** edits the switches, the commands left
+  untouched, which rule sets are active, and custom rules (name, pattern,
+  palette color, bold). Patterns that fail `checkPattern` are refused in the
+  form, and main validates the whole document again before saving.
+
+## Command Manager
+
+The Command Manager is a per-window sidebar panel of command templates that
+are typed into the focused pane on request.
+
+- Toggle Commands (`Cmd+Shift+M` on macOS, `Ctrl+Shift+M` on Linux and
+  Windows, remappable as `toggleCommands`) shows or hides it. Like the
+  Sessions panel, it creates no DOM until first opened.
+- Built-in commands declare their platforms and the programs they need; only
+  the current platform's commands are listed, and main reports whether each
+  program is on `PATH` (a lookup without a shell, cached and refreshed
+  whenever the panel lists commands). Missing programs are shown, not hidden.
+- Templates use `{field}` placeholders. Free text is quoted for the target
+  shell (POSIX single quotes, or PowerShell single quotes on Windows); choice
+  fields only ever insert values authored in the definition. Required fields
+  and numeric ranges are checked before anything is typed.
+- A form always shows the exact command before **Insert in Terminal** (no
+  Enter) or **Run in Terminal** (with Enter). Commands without fields marked
+  for direct execution run on click.
+- Custom commands, favorites and hidden built-ins are kept in Application
+  Data (`commands.json`) and validated in main. Built-in names and labels are
+  localized; command text and option values never are.
 
 ## Terminal behavior
 
@@ -1097,6 +1226,104 @@ monitors. Neither this choice nor compatibility mode changes compositor policy,
 global environment, User Configuration, terminal font zoom, title-bar
 preferences or the three-file ownership/rollback contract. See
 [ADR 0031](adr/0031-keep-linux-installer-choices-small-and-local.md).
+
+## Terminal search
+
+**Edit → Find…** (`Cmd+F` on macOS, `Ctrl+Shift+G` on Linux and Windows,
+because `Ctrl+Shift+F` toggles full screen there; remappable as `find`) opens
+Restty's search bar over the focused pane. It searches the pane's
+scrollback, highlights every match, shows the count, and steps with
+Previous/Next. Its labels are translated. Restty's own search shortcut stays
+off, so only OMXTerm's keybind opens it, and each pane searches only its own
+buffer.
+
+## Command palette
+
+**View → Command Palette…** (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Linux
+and Windows, remappable as `commandPalette`) opens a searchable list.
+
+- It lists every application action that has a keybind, except tab
+  numbers, under translated names. It also lists every Saved Session, which
+  opens in a new tab.
+- Typing filters by characters in order, preferring consecutive characters
+  and word starts. Arrow keys move, Enter or a click runs, Escape closes.
+- An action runs after the palette closes. The renderer sends only the
+  action's name; main accepts it from a trusted window only if it is a known
+  action, and invokes the same function as its keyboard shortcut.
+
+## Tab menu and tab groups
+
+When the tab bar is visible, each tab has a menu: right-click, or the context
+menu key or `Shift+F10` while the tab has focus.
+
+- **Rename Tab…:** sets a name that replaces the program's title; an empty
+  name restores the title.
+- **Tab Color…:** picks one of eight palette colors or none, overriding a
+  Saved Session's color.
+- **Duplicate Tab:** opens, right after the tab and in its group, what its
+  focused pane opened. That is the same Saved Session or Quick Connect
+  target, or a Default Shell in the same working directory.
+- **Groups:** New Group from Tab… names a group and gives it the next unused
+  palette color. Add to and Remove from Group change membership.
+
+A group's tabs are always adjacent, and a colored chip leads them.
+
+- **Chip:** clicking it collapses or expands the group. Its menu renames,
+  recolors, collapses or ungroups.
+- **Collapsed:** only the chip and the selected tab stay visible.
+- **Adjacency:** a tab dragged away from its group leaves it.
+- **Persistence:** names, colors and groups live in the window and are saved
+  with the workspace when restore is on.
+
+## Workspace restore
+
+**Restore Windows at Startup** (application menu) is off by default. While it
+is on, OMXTerm reopens the windows that were open when it last quit, with
+their tabs, split layouts and selected tab and pane.
+
+- Each window's renderer reports its layout, a serialized pane tree with the
+  session id of each pane, 250 ms after changes settle and immediately when
+  its last tab closes. Saved Session and Quick Connect panes also report
+  their launch. Main validates the report and records shells by working
+  directory (OSC 7, else the platform's process directory). It records the
+  window again just before its sessions close.
+- A window closed while others stay open is forgotten. The last window, or
+  every window when a quit is confirmed, is kept. `workspace.json`
+  (Application Data) is written once, synchronously and atomically, when the
+  application exits. Turning the option off erases the saved windows.
+- At startup, each window asks once for its plan. Shell panes receive opaque
+  tokens (`restored` launches) that main maps to directories, so paths never
+  reach the renderer. A missing directory starts in the home directory, and
+  a deleted Saved Session becomes a plain shell. Reconnect on a restored
+  pane reuses its launch.
+- `-e`, `-w` or `--ssh` on the command line start normally and do not
+  reopen saved windows. Window positions are not restored.
+
+## Settings backup
+
+**File → Back Up Settings…** and **File → Restore Settings…** save and apply
+one passphrase-encrypted `.omxbackup` file.
+
+- A backup holds, as text, `config.json`, `snippets.json`, every
+  `themes/*.json` file (at most 64) and the Application Data documents
+  `sessions.json`, `highlights.json` and `commands.json`. Nothing else in the
+  configuration directory (which Electron also uses for its own state) is
+  read. Credentials are never included: the Credential Store is bound to the
+  device's keychain.
+- The file is JSON: format `omxterm-settings-backup`, version 1, scrypt
+  parameters (N = 2^17, r = 8, p = 1, 16-byte salt) and AES-256-GCM (12-byte
+  IV, 16-byte tag) over the contents. The format, version and key parameters
+  are authenticated with the data. Opening accepts only bounded key
+  parameters, files up to 48 MiB and entries whose names match the list
+  above. Passphrases need at least 8 characters.
+- The renderer collects the passphrase. Main chooses files with native
+  dialogs and never returns their paths or contents to the renderer; error
+  messages are fixed and never include paths.
+- Restore decodes every Application Data document before changing anything,
+  so an invalid one leaves all files as they were. User files are then written
+  atomically, documents are replaced through their services in mutation order
+  (every window updates), and the User Configuration reloads. Files missing
+  from the backup are kept.
 
 ## Architecture boundaries
 

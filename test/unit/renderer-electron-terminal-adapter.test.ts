@@ -169,9 +169,13 @@ describe("renderer Electron terminal adapter", () => {
     harness.output("s2", "own output");
     harness.output("s1", "foreign output");
     harness.exit("s3", { exitCode: 0, signal: 0 });
-    harness.exit("s2", { exitCode: 0, signal: 15 });
     adapter.write("typed input");
     adapter.resize({ cols: 120, rows: 40 });
+    harness.exit("s2", { exitCode: 0, signal: 15 });
+    // After its own exit the adapter no longer addresses the retired id.
+    adapter.write("late input");
+    adapter.resize({ cols: 90, rows: 30 });
+    adapter.close();
 
     expect(onOutput).toHaveBeenCalledOnce();
     expect(onOutput).toHaveBeenCalledWith("own output");
@@ -186,6 +190,9 @@ describe("renderer Electron terminal adapter", () => {
       cols: 120,
       rows: 40,
     });
+    expect(harness.calls.input).toHaveBeenCalledOnce();
+    expect(harness.calls.resize).toHaveBeenCalledOnce();
+    expect(harness.calls.close).not.toHaveBeenCalled();
   });
 
   it("buffers early output until the session id is known without accepting early input", async () => {

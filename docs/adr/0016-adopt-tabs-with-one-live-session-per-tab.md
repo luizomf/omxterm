@@ -98,9 +98,9 @@ removal chooses its right neighbor or, at the end, its left neighbor.
 ## Consequences and verification
 
 IPC gains per-session identity beneath each window controller, and selection
-refits the active grid. Tab order and visibility are in-memory presentation;
-restoration, workspaces, splits and inter-window moves are outside current
-scope.
+refits the active grid. Tab order and visibility are in-memory presentation.
+[ADR 0035](0035-split-tabs-into-independent-terminal-panes.md) extends a tab to
+several pane sessions; inter-window moves remain out of scope.
 
 Production ownership tests cover mounting siblings, ordinary exits, failure
 acknowledgement, tab removal, selection and native shutdown. Exact native

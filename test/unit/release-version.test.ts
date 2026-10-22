@@ -35,18 +35,22 @@ describe("release version consistency", () => {
     expect(builderConfiguration).toMatch(/^  hardenedRuntime: false$/mu);
   });
 
+  // x64 AppImage, DEB and RPM names use distribution architecture names; see
+  // linux-package-assets.test.ts for those.
   it.each([
-    ["DMG", "dmg"],
-    ["AppImage", "AppImage"],
-    ["NSIS", "exe"],
+    ["DMG", "dmg", "arm64"],
+    ["DMG", "dmg", "x64"],
+    ["AppImage", "AppImage", "arm64"],
+    ["NSIS", "exe", "arm64"],
+    ["NSIS", "exe", "x64"],
   ])(
-    "derives the exact %s artifact and checksum names from builder metadata",
-    (_format, extension) => {
-      const expectedArtifactName = `OMXTerm-${packageMetadata.version}-arm64.${extension}`;
+    "derives the exact %s %s artifact and checksum names for %s from builder metadata",
+    (_format, extension, arch) => {
+      const expectedArtifactName = `OMXTerm-${packageMetadata.version}-${arch}.${extension}`;
       const artifactName = builderValue("artifactName")
         .replace("${productName}", builderValue("productName"))
         .replace("${version}", packageMetadata.version)
-        .replace("${arch}", "arm64")
+        .replace("${arch}", arch)
         .replace("${ext}", extension);
 
       expect(packageMetadata.name).toBe("omxterm");

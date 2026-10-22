@@ -1,3 +1,5 @@
+import type { WorkspacePlan } from "../shared/workspace";
+import type { PersistedWorkspaceWindow } from "./terminal-ipc-workspace";
 import type {
   TerminalExit,
   TerminalSessionId,
@@ -26,7 +28,15 @@ export type IpcListener = (event: IpcEvent, payload?: unknown) => void;
 export type IpcHandler = (
   event: IpcEvent,
   payload?: unknown,
+  ...rest: unknown[]
 ) => Promise<unknown> | unknown;
+
+// Main's resolution of a renderer TerminalLaunchSpec (shared/terminal-launch).
+export type TerminalSessionLaunch =
+  | { readonly kind: "default" }
+  | { readonly kind: "inherit"; readonly workingDirectory?: string }
+  | { readonly kind: "saved-session"; readonly id: string }
+  | { readonly kind: "quick-ssh"; readonly target: string };
 
 export interface IpcMainPort {
   handle(channel: string, handler: IpcHandler): void;
@@ -63,7 +73,21 @@ export interface TerminalIpcControllerOptions {
   readonly webContents: TrustedWebContents;
   readonly initialFullScreen?: boolean;
   readonly backgroundTransparency?: () => number;
-  readonly createSession: (callbacks: SessionCallbacks) => LocalTerminalSession;
+  readonly createSession: (
+    callbacks: SessionCallbacks,
+    launch: TerminalSessionLaunch,
+  ) => LocalTerminalSession;
+  readonly localHostNames?: readonly string[];
+  readonly onWorkingDirectory?: (
+    sessionId: TerminalSessionId,
+    directory: string,
+  ) => void;
+  readonly confirmBroadcast?: (targetCount: number) => Promise<boolean>;
+  // Workspace restore: the window's latest layout, the plan this window
+  // opens with (asked once), and the directories behind restore tokens.
+  readonly onWorkspace?: (window: PersistedWorkspaceWindow) => void;
+  readonly workspacePlan?: () => WorkspacePlan | null;
+  readonly resolveRestoredDirectory?: (token: string) => string | undefined;
   readonly onSessionStartError: (
     context: TerminalSessionStartErrorContext,
   ) => void;
@@ -102,6 +126,7 @@ export interface TerminalIpcController {
   applyConfiguration(configuration: TerminalRendererConfiguration): void;
   applyFullScreen(fullScreen: boolean): void;
   hasBusySelectedSession(): boolean;
+  hasBusyFocusedSession(): boolean;
   hasBusySession(): boolean;
   dispose(): void;
 }
@@ -117,5 +142,7 @@ export interface TerminalIpcRouter {
   ): TerminalIpcController;
   applyConfiguration(configuration: TerminalRendererConfiguration): void;
   activeTerminalSurfaceFontConfigurations(): readonly TerminalSurfaceFontConfiguration[];
+  // Whether an IPC event comes from the main frame of a registered window.
+  isTrustedSender(event: IpcEvent): boolean;
   dispose(): void;
 }
