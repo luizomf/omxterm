@@ -18,6 +18,13 @@ import type {
   SessionFolder,
 } from "./saved-sessions";
 import type { SessionFileChoice } from "./session-ipc";
+import type { HighlightSettings } from "./highlight-settings";
+
+export interface HighlightsBridge {
+  get(): Promise<HighlightSettings>;
+  save(settings: HighlightSettings): Promise<HighlightSettings>;
+  onChanged(listener: (settings: HighlightSettings) => void): () => void;
+}
 
 export interface SessionsBridge {
   list(): Promise<SavedSessionsDocument>;
@@ -94,6 +101,7 @@ declare global {
     readonly omxterm: {
       readonly terminal: TerminalBridge;
       readonly sessions: SessionsBridge;
+      readonly highlights: HighlightsBridge;
     };
   }
 }

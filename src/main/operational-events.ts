@@ -1,6 +1,5 @@
 import { hasExactKeys, isNonnegativeSafeInteger } from "./event-validation";
 import {
-  configurationFailureReasons,
   isConfigurationEvent,
   type ConfigurationFailureReason,
 } from "./configuration-events";

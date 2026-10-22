@@ -9,10 +9,7 @@ import {
   shell,
 } from "electron";
 import * as nodePty from "node-pty";
-import { existsSync } from "node:fs";
 import { hostname, userInfo } from "node:os";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { terminalIpc } from "../shared/terminal-ipc";
 import {
   terminalActionInvocations,
@@ -79,8 +76,16 @@ import {
   type OperationalEventLog,
 } from "./operational-events";
 import { startSavedSessions } from "./saved-session-wiring";
+import { startHighlightSettings } from "./highlight-wiring";
 import { sessionIpc } from "../shared/session-ipc";
 import { launchTerminalSession } from "./session-launch";
+import {
+  developmentApplicationIconPath,
+  linuxWindowIconPath,
+  packagedApplicationIconPath,
+  preloadPath,
+  rendererPath,
+} from "./application-paths";
 import {
   confirmBroadcast,
   confirmClosePane,
@@ -92,29 +97,6 @@ import {
 
 const showClipboardError = () =>
   dialog.showErrorBox("Clipboard Error", "Clipboard operation failed.");
-const mainDirectory = path.dirname(fileURLToPath(import.meta.url));
-const applicationRoot = path.resolve(mainDirectory, "..");
-const preloadPath = path.join(applicationRoot, "preload", "index.cjs");
-const rendererPath = path.join(applicationRoot, "renderer", "index.html");
-const developmentApplicationIconPath = path.resolve(
-  applicationRoot,
-  "..",
-  "assets",
-  "application-icon.png",
-);
-const packagedApplicationIconPath = path.join(
-  process.resourcesPath,
-  "application-icon.png",
-);
-// Linux windows must carry their own icon: a directly-run AppImage has no
-// registered desktop entry for the environment to resolve one from.
-const linuxWindowIconPath =
-  process.platform === "linux"
-    ? existsSync(packagedApplicationIconPath)
-      ? packagedApplicationIconPath
-      : developmentApplicationIconPath
-    : undefined;
-
 let terminalApplication: TerminalApplication<BrowserWindow> | undefined;
 let operationalEvents: OperationalEventLog | undefined;
 let disposeTerminalSessions = () => {};
@@ -166,7 +148,14 @@ app
           isTrustedSender: terminalIpcRouter.isTrustedSender,
           operationalEvents: operationalEvents!,
         });
+        const highlightSettings = await startHighlightSettings({
+          ipcMain,
+          homeDirectory: account.homedir,
+          isTrustedSender: terminalIpcRouter.isTrustedSender,
+          operationalEvents: operationalEvents!,
+        });
         let rebuildMenu = () => {};
+        highlightSettings.subscribe(() => rebuildMenu());
         const nativeTitleInset = terminalNativeTitleInset(process.platform);
         const backgroundEffects = createWindowBackgroundEffectsOwner(
           process.platform,
@@ -445,6 +434,12 @@ app
           equalizeSelectedPanes: terminalApplication.equalizeSelectedPanes,
           toggleSelectedBroadcast: terminalApplication.toggleSelectedBroadcast,
           toggleSelectedSessions: terminalApplication.toggleSelectedSessions,
+          toggleOutputHighlighting: () => {
+            const current = highlightSettings.current();
+            void highlightSettings
+              .save({ ...current, enabled: !current.enabled })
+              .catch(() => rebuildMenu());
+          },
         };
         const keybindActionInvocations = terminalActionInvocations(menuActions);
         rebuildMenu = () =>
@@ -453,6 +448,7 @@ app
               app.name,
               menuActions,
               configurationReloader.current().configuration.keybinds,
+              { outputHighlighting: highlightSettings.current().enabled },
             ),
           );
         rebuildMenu();

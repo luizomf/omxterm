@@ -38,12 +38,18 @@ interface TerminalApplicationMenuActions {
   readonly equalizeSelectedPanes: () => void;
   readonly toggleSelectedBroadcast: () => void;
   readonly toggleSelectedSessions: () => void;
+  readonly toggleOutputHighlighting?: () => void;
+}
+
+export interface TerminalApplicationMenuState {
+  readonly outputHighlighting?: boolean;
 }
 
 export function terminalApplicationMenuTemplate(
   applicationName: string,
   actions: TerminalApplicationMenuActions,
   keybinds: TerminalKeybinds,
+  state: TerminalApplicationMenuState = {},
 ): MenuItemConstructorOptions[] {
   return [
     {
@@ -139,6 +145,16 @@ export function terminalApplicationMenuTemplate(
           accelerator: keybinds.toggleSnippets,
           click: actions.toggleSelectedSnippets,
         },
+        ...(actions.toggleOutputHighlighting
+          ? [
+              {
+                label: "Highlight Output",
+                type: "checkbox" as const,
+                checked: state.outputHighlighting ?? false,
+                click: actions.toggleOutputHighlighting,
+              },
+            ]
+          : []),
         {
           label: "Toggle Tab Bar",
           accelerator: keybinds.toggleTabBar,

@@ -173,11 +173,16 @@ function paneSurfaceOptions(
       if (sessionId !== undefined) callback(sessionId, ...rest);
     };
   const { options } = ctx;
+  const highlighter = options.createHighlighter?.();
   return {
     ...ctx.activeSurfaceOptions,
     abortSignal: pane.mountAbort.signal,
     ...(pane.launch.retainOnExit ? { retainOnExit: true } : {}),
-    onUserInput: (text: string) => broadcastFrom(ctx, pane, text),
+    ...(highlighter ? { transformOutput: highlighter.transform } : {}),
+    onUserInput: (text: string) => {
+      highlighter?.userInput(text);
+      broadcastFrom(ctx, pane, text);
+    },
     ...(options.notifyTitle
       ? { onTitleRequest: withSession(options.notifyTitle) }
       : {}),

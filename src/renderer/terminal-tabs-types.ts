@@ -13,6 +13,7 @@ import type {
 } from "../terminal-surface/terminal-surface";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
 import type { TabStrip } from "./tab-strip";
+import type { OutputHighlighter } from "./highlighting/output-highlighter";
 import type {
   EndedBannerStrings,
   PaneLaunch,
@@ -62,6 +63,8 @@ export interface TerminalTabsOptions {
   // Broadcasting starts only after this resolves true (see toggleBroadcast).
   readonly confirmBroadcast?: (targetCount: number) => Promise<boolean>;
   readonly onBroadcastChange?: (targetCount: number) => void;
+  // One output highlighter per pane; undefined leaves output untouched.
+  readonly createHighlighter?: () => OutputHighlighter;
 }
 
 export interface TerminalTabs {

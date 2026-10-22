@@ -74,6 +74,9 @@ export interface TerminalSurfaceOptions {
   readonly onBell?: () => void;
   // Keyboard input typed into this Surface (never parser replies or paste).
   readonly onUserInput?: (text: string) => void;
+  // A pure, order-preserving transform of PTY output before parsing, used for
+  // output highlighting. It must only insert SGR sequences.
+  readonly transformOutput?: (data: string) => string;
   // A program reported its working directory through OSC 7 (file:// URI).
   readonly onWorkingDirectory?: (uri: string) => void;
   readonly linkHoverAvailability?: {

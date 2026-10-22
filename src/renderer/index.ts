@@ -77,6 +77,7 @@ void window.omxterm.terminal.configuration().then((configuration) => {
         confirmPaste: window.omxterm.terminal.confirmPaste,
         requestContextMenu: window.omxterm.terminal.requestClipboardContextMenu,
       },
+      highlights: window.omxterm.highlights,
       workspace: {
         element: workspaceElement,
         sessions: window.omxterm.sessions,

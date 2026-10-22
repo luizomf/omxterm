@@ -326,7 +326,7 @@ export async function mountResttyTerminalSurface(
       onOutput(data) {
         if (!isInactive()) {
           visibleLinkController?.invalidate();
-          ptyCallbacks?.onData?.(data);
+          ptyCallbacks?.onData?.(transformed(options.transformOutput, data));
           // Hidden ingestion still retires renderer copies, including pending
           // image decodes, even when the document's RAF is throttled.
           if (!isSurfaceVisible()) pane?.runtime.render.refresh();
@@ -474,6 +474,19 @@ function paintContainer(
       `${padding[side]}px`,
     );
   container.style.setProperty("--terminal-background", theme.colors.background);
+}
+
+// Highlighting must never cost output: a failing transform passes data raw.
+function transformed(
+  transform: ((data: string) => string) | undefined,
+  data: string,
+): string {
+  if (!transform) return data;
+  try {
+    return transform(data);
+  } catch {
+    return data;
+  }
 }
 
 function retainsExit(

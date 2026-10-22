@@ -77,9 +77,8 @@ OMXTerm:
 
 Shell integration, automatic configuration reload and automatic updates are
 outside the current product contract. Features still in progress under the
-expanded scope (Saved Session sidebar, highlighting, command manager, file
-manager, assistant) are not part of this contract until they are described
-here.
+expanded scope (command manager, file manager, assistant, preferences
+window) are not part of this contract until they are described here.
 
 Restty 0.3.0 and its pinned Ghostty core provide the sole Terminal Surface in
 ordinary development and every packaged application. OMXTerm has no renderer
@@ -416,6 +415,29 @@ Opening one always starts a new process.
   session.
 - Exports contain definitions only. Passwords are typed at ssh's prompt and
   are never stored; options that execute local programs are rejected.
+
+## Output highlighting
+
+Output highlighting is an optional transform of PTY output, applied before
+the Ghostty core parses it ([design](implementation/07-smart-highlighting.md)).
+It is off by default; **View → Highlight Output** turns it on for every pane,
+and the choice is kept in Application Data (`highlights.json`).
+
+- The transform only inserts SGR color sequences. It never removes, reorders
+  or delays bytes, and a failing transform passes the output unchanged.
+- It colors only complete lines that began at column 0 within the same chunk,
+  while attributes are at their defaults, outside the alternate screen and
+  bracketed paste, and without cursor-moving controls in the line. Text after
+  neutral controls (SGR, private mode switches, OSC other than OSC 8
+  hyperlinks, carriage returns) still counts as column 0.
+- More than eight consecutive large chunks, or a chunk that took longer than
+  12 ms to process, bypass highlighting for a while.
+- Rules are the 51 AshyTerm rule sets (486 rules). When the user presses
+  Enter, the command typed into that pane selects its rule set; unknown
+  commands use the global rules, and ignored commands (tools that color their
+  own output or draw full screens) are left untouched. The command line is
+  read from the pane's own echo and is never stored, logged or sent.
+- Colors use the 16-color palette, so they follow the Terminal Theme.
 
 ## Terminal behavior
 

@@ -994,6 +994,10 @@ export async function verifyPackagedApplication(
         path.join(resources, "licenses", "restty.txt"),
       ),
       assertSameFile(
+        path.join(projectRoot, "assets", "licenses", "ashyterm-MIT.txt"),
+        path.join(resources, "licenses", "ashyterm.txt"),
+      ),
+      assertSameFile(
         path.join(projectRoot, "assets", "licenses", "text-shaper-MIT.txt"),
         path.join(resources, "licenses", "text-shaper.txt"),
       ),

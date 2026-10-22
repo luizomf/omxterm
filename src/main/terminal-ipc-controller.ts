@@ -27,7 +27,6 @@ import type {
   TerminalIpcController,
   TerminalIpcControllerOptions,
   TerminalIpcRouter,
-  TerminalSessionLaunch,
   TerminalSurfaceFontConfiguration,
   TrustedWebContents,
 } from "./terminal-ipc-types";

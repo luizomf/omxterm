@@ -31,6 +31,8 @@ extraResources:
     to: licenses/NerdFonts-glyphs.txt
   - from: assets/licenses/xterm-visible-links-MIT.txt
     to: licenses/xterm-visible-links.txt
+  - from: assets/licenses/ashyterm-MIT.txt
+    to: licenses/ashyterm.txt
   - from: node_modules/node-pty/LICENSE
     to: licenses/node-pty.txt
   - from: assets/licenses/restty-MIT.txt

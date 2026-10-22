@@ -22,7 +22,6 @@ import {
   createTerminalTabs,
   TERMINAL_TAB_DRAG_DATA_TYPE,
   type TerminalTabs,
-  type TerminalTabsOptions,
 } from "./terminal-tabs";
 import {
   createSnippetsSidebar,
@@ -38,14 +37,16 @@ import type {
   LocalImageData,
 } from "../shared/local-image";
 import { createTerminalFontGenerationOwner } from "./terminal-font-generations";
-import { createTranslator, type Translator } from "../shared/i18n";
-import type { SessionsBridge } from "../shared/terminal-bridge";
-import { createToaster, createWorkspaceSidebar } from "./workspace-sidebar";
-import { createSessionsPanel } from "./sessions/sessions-panel";
+import type { Translator } from "../shared/i18n";
+import type {
+  HighlightsBridge,
+  SessionsBridge,
+} from "../shared/terminal-bridge";
 import {
-  createBroadcastIndicator,
-  type BroadcastIndicator,
-} from "./broadcast-indicator";
+  mountWorkspace,
+  windowServices,
+  windowTabsOptions,
+} from "./terminal-window-workspace";
 
 type MountTerminalSurface = (
   container: HTMLElement,
@@ -58,7 +59,7 @@ export interface TerminalWindowPageElements {
   readonly tabsContainer: HTMLElement;
 }
 
-interface TerminalWindowPageOptions {
+export interface TerminalWindowPageOptions {
   readonly createAdapter: (
     fontConfigurationId?: string,
     launch?: TerminalLaunchSpec,
@@ -110,6 +111,7 @@ interface TerminalWindowPageOptions {
     sessionId: TerminalSessionId,
     uri: string,
   ) => void;
+  readonly highlights?: HighlightsBridge;
   readonly workspace?: {
     readonly element: HTMLElement;
     readonly sessions: SessionsBridge;
@@ -154,26 +156,8 @@ export function mountTerminalWindowPage(
     ? surfaceConfiguration(options.configuration)
     : undefined;
 
-  const applyPageTheme = (theme: TerminalTheme, transparency: number) => {
-    const { background, foreground } = theme.colors;
-    page.document.documentElement.style.setProperty(
-      "--terminal-background-opacity",
-      String(1 - transparency),
-    );
-    page.document.documentElement.style.setProperty(
-      "--terminal-background",
-      background,
-    );
-    page.document.documentElement.style.setProperty(
-      "--terminal-foreground",
-      foreground,
-    );
-    page.document.body.style.setProperty("--terminal-background", background);
-    elements.tabsContainer.style.setProperty(
-      "--terminal-background",
-      background,
-    );
-  };
+  const applyPageTheme = (theme: TerminalTheme, transparency: number) =>
+    paintPageTheme(page.document, elements.tabsContainer, theme, transparency);
 
   if (options.configuration) {
     page.document.documentElement.style.setProperty(
@@ -214,15 +198,20 @@ export function mountTerminalWindowPage(
       : {}),
   };
 
-  const translator = options.translator ?? createTranslator("en");
-  const broadcastIndicator = createBroadcastIndicator(page.document, {
-    translator,
-    stop: () => tabs.handleCommand({ action: "toggle-broadcast" }),
-  });
+  const { translator, broadcastIndicator, highlighting } = windowServices(
+    page.document,
+    options,
+    () => tabs,
+  );
   const tabs: TerminalTabs = createTerminalTabs(
     { strip: elements.tabStrip, container: elements.tabsContainer },
     {
-      ...windowTabsOptions(options, translator, broadcastIndicator),
+      ...windowTabsOptions(
+        options,
+        translator,
+        broadcastIndicator,
+        highlighting,
+      ),
       createAdapter: (launch) =>
         launch === undefined
           ? options.createAdapter(fontConfigurationId)
@@ -302,6 +291,7 @@ export function mountTerminalWindowPage(
     disposeWorkspace?.();
     tabs.dispose();
     broadcastIndicator.dispose();
+    highlighting?.dispose();
     fontGenerations?.dispose();
   };
   const onPageHide = () => dispose();
@@ -390,80 +380,20 @@ export function mountTerminalWindowPage(
   return { ready, dispose };
 }
 
-// The optional left sidebar with Saved Sessions. Opening a session is ignored
-// while a Local Image Preview owns the window, like every other injection.
-function mountWorkspace(
-  workspace: NonNullable<TerminalWindowPageOptions["workspace"]>,
-  context: {
-    readonly translator: Translator;
-    readonly tabs: TerminalTabs;
-    readonly isBlocked: () => boolean;
-    readonly focusTerminal: () => void;
-  },
-): () => void {
-  const document = workspace.element.ownerDocument;
-  const toaster = createToaster(document);
-  const sidebar = createWorkspaceSidebar(workspace.element, {
-    translator: context.translator,
-    focusTerminal: context.focusTerminal,
-    panels: [
-      {
-        id: "sessions",
-        label: "sidebar.sessions",
-        create: () =>
-          createSessionsPanel(document, {
-            translator: context.translator,
-            bridge: workspace.sessions,
-            notify: toaster.notify,
-            open: (launch, placement) => {
-              if (!context.isBlocked())
-                context.tabs.openLaunch(launch, placement);
-            },
-          }),
-      },
-    ],
-  });
-  const removeToggle = workspace.sessions.onToggleSidebar(() => {
-    if (!context.isBlocked()) sidebar.toggle("sessions");
-  });
-  return () => {
-    removeToggle();
-    sidebar.dispose();
-    toaster.dispose();
-  };
-}
-
-// Window-level callbacks and translated strings for the Terminal Tabs.
-function windowTabsOptions(
-  options: TerminalWindowPageOptions,
-  translator: Translator,
-  broadcastIndicator: BroadcastIndicator,
-): Omit<TerminalTabsOptions, "createAdapter" | "mount" | "surfaceOptions"> {
-  return {
-    showTabBar: options.configuration?.showTabBar ?? true,
-    dividerLabel: translator.t("pane.divider"),
-    endedBanner: {
-      ended: (exitCode) => translator.t("sessions.ended", { code: exitCode }),
-      reconnect: translator.t("sessions.reconnect"),
-      close: translator.t("common.close"),
-    },
-    onBroadcastChange: (targetCount) => broadcastIndicator.show(targetCount),
-    ...(options.confirmBroadcast
-      ? { confirmBroadcast: options.confirmBroadcast }
-      : {}),
-    ...(options.reportWorkingDirectory
-      ? { onWorkingDirectory: options.reportWorkingDirectory }
-      : {}),
-    ...(options.notifyTabsEmpty
-      ? { notifyEmpty: options.notifyTabsEmpty }
-      : {}),
-    ...(options.notifyTabSelection
-      ? { notifySelection: options.notifyTabSelection }
-      : {}),
-    ...(options.onTitleRequest ? { notifyTitle: options.onTitleRequest } : {}),
-    ...(options.onBell ? { notifyBell: options.onBell } : {}),
-    syncTitle: (sessionId) => options.syncTabTitle?.(sessionId),
-  };
+// The Terminal Theme tints the page, chrome and every tab container.
+function paintPageTheme(
+  document: Document,
+  tabsContainer: HTMLElement,
+  theme: TerminalTheme,
+  transparency: number,
+): void {
+  const { background, foreground } = theme.colors;
+  const root = document.documentElement.style;
+  root.setProperty("--terminal-background-opacity", String(1 - transparency));
+  root.setProperty("--terminal-background", background);
+  root.setProperty("--terminal-foreground", foreground);
+  document.body.style.setProperty("--terminal-background", background);
+  tabsContainer.style.setProperty("--terminal-background", background);
 }
 
 function sameSurfaceConfiguration(

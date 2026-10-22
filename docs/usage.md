@@ -79,6 +79,19 @@ OMXTerm runs your system's OpenSSH client (`ssh`, or `ssh.exe` on Windows), so `
 
 When a saved or Quick Connect session fails (for example, `Connection refused`), its tab stays open with the error visible and offers **Reconnect** and **Close**.
 
+## Highlighting command output
+
+Turn on **View → Highlight Output** to color common patterns in command output: errors, warnings, success and state words, IP and MAC addresses, URLs and quoted strings. When you run a known command, OMXTerm switches to rules made for it, for example `ping`, `df`, `free`, `ip`, `systemctl`, `docker`, `kubectl`, `journalctl` and about 45 more. The rule sets come from AshyTerm.
+
+Highlighting is off by default and stays out of the way:
+
+- Full-screen programs (Vim, htop, less, tmux), pasted text, images and lines that a program already colored are never changed.
+- Tools that color their own output or draw a full-screen interface (`ls`, `git`, `grep`, `vim`, `htop`, `ssh` and others) are skipped.
+- Very fast output, such as a large file printed with `cat`, passes through unchanged.
+- Colors come from your terminal theme's palette.
+
+The choice and any custom rules are saved in `highlights.json` next to `config.json`.
+
 ## Split panes
 
 Use **Terminal → Split Right** or **Split Down** to divide the focused pane. Each pane is an independent terminal with its own shell, scrollback and selection; a new pane starts in the focused pane's current directory when OMXTerm can determine it (from the shell's OSC 7 report, or on Linux from the shell process), and in your home directory otherwise.
