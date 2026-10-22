@@ -129,10 +129,9 @@ export function createWorkspaceService(options: {
   };
   const plan = (window: PersistedWorkspaceWindow): WorkspacePlan => ({
     selected: window.selected,
-    tabs: window.tabs.map((tab) => ({
-      layout: tab.layout,
-      focused: tab.focused,
-      panes: tab.panes.map(restoredPane),
+    tabs: window.tabs.map(({ panes, ...tab }) => ({
+      ...tab,
+      panes: panes.map(restoredPane),
     })),
   });
 

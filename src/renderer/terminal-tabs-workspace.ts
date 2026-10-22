@@ -16,6 +16,17 @@ export function workspaceSnapshot(ctx: TabsContext): WorkspaceSnapshot {
       layout: serializeLayout(tab.layout, (pane) => panes.indexOf(pane)),
       focused: Math.max(0, panes.indexOf(tab.focused)),
       panes: panes.map(paneSnapshot),
+      ...(tab.title ? { title: tab.title } : {}),
+      ...(tab.color ? { color: tab.color } : {}),
+      ...(tab.group
+        ? {
+            group: {
+              name: tab.group.name,
+              color: tab.group.color,
+              collapsed: tab.group.collapsed,
+            },
+          }
+        : {}),
     };
   });
   return {

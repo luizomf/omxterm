@@ -5,6 +5,8 @@ import { closePendingPane, type TerminalTab } from "./terminal-tab-model";
 import { handleTabCommand } from "./terminal-tabs-commands";
 import { createTab, restoreTabs, split } from "./terminal-pane-lifecycle";
 import { cancelWorkspaceReport } from "./terminal-tabs-workspace";
+import { normalizeGroups } from "./tab-groups";
+import { openGroupMenu, openTabMenu, toggleGroup } from "./terminal-tab-menu";
 import type {
   TabsContext,
   TerminalTabs,
@@ -39,14 +41,26 @@ export function createTerminalTabs(
     options,
     tabs: [],
     strip: createTabStrip<TerminalTab>(elements.strip, {
-      describe: (tab) => {
+      describe: (tab, index) => {
         const panes = layoutPanes(tab.layout);
-        const color = panes.find((pane) => pane.launch.color)?.launch.color;
+        const color =
+          tab.color ?? panes.find((pane) => pane.launch.color)?.launch.color;
+        const group = tab.group;
         return {
-          label: tab.focused.label,
+          label: tab.title ?? tab.focused.label,
           paneCount: panes.length,
           broadcasting: tab === ctx.broadcastTab,
           ...(color ? { color } : {}),
+          ...(group
+            ? {
+                group: {
+                  name: group.name,
+                  color: group.color,
+                  collapsed: group.collapsed,
+                  first: ctx.tabs[index - 1]?.group !== group,
+                },
+              }
+            : {}),
         };
       },
       onSelect: (tab) => select(ctx, ctx.tabs.indexOf(tab)),
@@ -54,8 +68,16 @@ export function createTerminalTabs(
         const selected = selectedTab(ctx);
         if (!moveTabToHorizontalDrop(ctx.tabs, tab, elements.strip, clientX))
           return;
+        normalizeGroups(ctx.tabs);
         ctx.selectedIndex = selected ? ctx.tabs.indexOf(selected) : -1;
         renderStrip(ctx);
+      },
+      onContextMenu: (tab, position) => openTabMenu(ctx, tab, position),
+      onGroupToggle: (tab) => {
+        if (tab.group) toggleGroup(ctx, tab.group);
+      },
+      onGroupContextMenu: (tab, position) => {
+        if (tab.group) openGroupMenu(ctx, tab.group, position);
       },
     }),
     selectedIndex: -1,

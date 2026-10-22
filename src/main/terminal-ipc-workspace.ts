@@ -3,6 +3,7 @@ import {
   isWorkspaceSnapshot,
   type SerializedPaneLayout,
   type WorkspacePaneLaunch,
+  type WorkspaceTabLook,
   type WorkspacePlan,
   type WorkspaceSnapshot,
 } from "../shared/workspace";
@@ -15,11 +16,11 @@ export type PersistedPane =
 
 export interface PersistedWorkspaceWindow {
   readonly selected: number;
-  readonly tabs: readonly {
+  readonly tabs: readonly (WorkspaceTabLook & {
     readonly layout: SerializedPaneLayout;
     readonly focused: number;
     readonly panes: readonly PersistedPane[];
-  }[];
+  })[];
 }
 
 export function persistWindow(
@@ -28,10 +29,9 @@ export function persistWindow(
 ): PersistedWorkspaceWindow {
   return {
     selected: snapshot.selected,
-    tabs: snapshot.tabs.map((tab) => ({
-      layout: tab.layout,
-      focused: tab.focused,
-      panes: tab.panes.map((pane): PersistedPane => {
+    tabs: snapshot.tabs.map(({ panes, ...tab }) => ({
+      ...tab,
+      panes: panes.map((pane): PersistedPane => {
         if (pane.launch) return pane.launch;
         const directory =
           pane.sessionId === null ? undefined : directoryOf(pane.sessionId);

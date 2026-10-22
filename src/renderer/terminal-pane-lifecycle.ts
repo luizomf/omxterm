@@ -30,6 +30,7 @@ import {
 } from "./terminal-tab-model";
 import type { TabsContext } from "./terminal-tabs-types";
 import type { RestoredPane, WorkspacePlan } from "../shared/workspace";
+import { normalizeGroups, type TabGroup } from "./tab-groups";
 import { scheduleWorkspaceReport } from "./terminal-tabs-workspace";
 import {
   applyVisibility,
@@ -288,6 +289,8 @@ export async function restoreTabs(
   ctx: TabsContext,
   plan: WorkspacePlan,
 ): Promise<void> {
+  // Tabs that were in one group share it again (same name and color).
+  const groups = new Map<string, TabGroup>();
   const restored = plan.tabs.map((shape) => {
     const tab: TerminalTab = {
       container: ctx.document.createElement("div"),
@@ -295,7 +298,14 @@ export async function restoreTabs(
       focused: undefined!,
       maximized: undefined,
       removed: false,
+      title: shape.title,
+      color: shape.color,
     };
+    if (shape.group) {
+      const key = `${shape.group.color}\n${shape.group.name}`;
+      if (!groups.has(key)) groups.set(key, { ...shape.group });
+      tab.group = groups.get(key);
+    }
     tab.container.className = "terminal-tab";
     const panes = shape.panes.map((pane) =>
       createPane(
@@ -313,6 +323,7 @@ export async function restoreTabs(
     ctx.tabs.push(tab);
     return panes;
   });
+  normalizeGroups(ctx.tabs);
   select(ctx, plan.selected);
   const selected = restored[plan.selected] ?? [];
   const ready = selected.map((pane) => mountPane(ctx, pane));

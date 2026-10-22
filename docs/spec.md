@@ -1223,6 +1223,30 @@ global environment, User Configuration, terminal font zoom, title-bar
 preferences or the three-file ownership/rollback contract. See
 [ADR 0031](adr/0031-keep-linux-installer-choices-small-and-local.md).
 
+## Tab menu and tab groups
+
+When the tab bar is visible, each tab has a menu: right-click, or the context
+menu key or `Shift+F10` while the tab has focus.
+
+- **Rename Tab…:** sets a name that replaces the program's title; an empty
+  name restores the title.
+- **Tab Color…:** picks one of eight palette colors or none, overriding a
+  Saved Session's color.
+- **Duplicate Tab:** opens, right after the tab and in its group, what its
+  focused pane opened. That is the same Saved Session or Quick Connect
+  target, or a Default Shell in the same working directory.
+- **Groups:** New Group from Tab… names a group and gives it the next unused
+  palette color. Add to and Remove from Group change membership.
+
+A group's tabs are always adjacent, and a colored chip leads them.
+
+- **Chip:** clicking it collapses or expands the group. Its menu renames,
+  recolors, collapses or ungroups.
+- **Collapsed:** only the chip and the selected tab stay visible.
+- **Adjacency:** a tab dragged away from its group leaves it.
+- **Persistence:** names, colors and groups live in the window and are saved
+  with the workspace when restore is on.
+
 ## Workspace restore
 
 **Restore Windows at Startup** (application menu) is off by default. While it

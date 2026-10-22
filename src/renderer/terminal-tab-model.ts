@@ -10,6 +10,7 @@ import type {
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
 import type { OutputHighlighter } from "./highlighting/output-highlighter";
 import type { PaneLayout } from "./pane-layout";
+import type { TabGroup } from "./tab-groups";
 import type { TerminalLaunchSpec } from "../shared/terminal-launch";
 import type { TerminalExit } from "../shared/terminal-contract";
 
@@ -39,6 +40,11 @@ export interface TerminalPane {
 
 export interface TerminalTab {
   readonly container: HTMLElement;
+  // Set from the tab menu: a name that replaces the program's title, a
+  // color, and a tab group.
+  title?: string | undefined;
+  color?: string | undefined;
+  group?: TabGroup | undefined;
   layout: PaneLayout<TerminalPane>;
   focused: TerminalPane;
   maximized: TerminalPane | undefined;

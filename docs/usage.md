@@ -14,6 +14,10 @@ Choose **File â†’ New Tab** for another session in the same window, or **File â†
 - **Tab titles:** each tab starts with your active shell or program name (such as `zsh` or `powershell.exe`) and updates automatically when a program sets a terminal title.
 - **Closing:** closing a tab ends its session, and closing the last window exits the app. Typing `exit` in your shell closes that tab immediately.
 
+### Tab menu and groups
+
+Right-click a tab (or press `Shift+F10` on it) to rename it, give it a color, duplicate it, or put it in a group. Grouped tabs stay together behind a colored chip; click the chip to collapse or expand the group, or right-click it to rename, recolor or ungroup. A duplicated tab opens the same saved session or SSH target, or a shell in the same folder.
+
 ### Close confirmation
 
 To protect active work, OMXTerm asks for confirmation before closing a tab or window with a running command. On Windows, confirmation is shown for all live sessions. You can disable this prompt anytime by setting `"confirmClose": false` in `config.json`.

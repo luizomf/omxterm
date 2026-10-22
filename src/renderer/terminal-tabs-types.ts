@@ -1,3 +1,4 @@
+import type { Translator } from "../shared/i18n";
 import type { WorkspacePlan, WorkspaceSnapshot } from "../shared/workspace";
 import type {
   TerminalClipboardAction,
@@ -49,6 +50,8 @@ export interface TerminalTabsOptions {
   // The window's layout, after changes settle, for workspace restore.
   readonly onWorkspaceChange?: (snapshot: WorkspaceSnapshot) => void;
   readonly dividerLabel?: string;
+  // Labels for the tab and group menus; English when absent.
+  readonly translator?: Translator;
   readonly endedBanner?: EndedBannerStrings;
   readonly notifyEmpty?: (reason?: "rendering-failure") => void;
   // tabSessionIds is supplied only for split tabs; a single-pane tab keeps

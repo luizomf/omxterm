@@ -33,14 +33,35 @@ n-ary layout tree (`pane-layout.ts`) of rows and columns with weights.
 Tests: `pane-layout`, `renderer-terminal-panes`, `terminal-ipc-panes`, the
 native tab suites.
 
-## Tab groups (planned)
+## Tab groups and the tab menu (implemented)
 
-AshyTerm groups tabs by name and color. The planned OMXTerm design:
+Right-click a tab, or press the context menu key or `Shift+F10` on it
+(`terminal-tab-menu.ts`). The menu offers:
 
-- the group is a tab property in the renderer (`groupId`, name, color);
-- a tab context menu offers rename, color, move to group, and duplicate;
-- groups drag together in the strip;
-- workspace restore will persist group membership.
+- **Rename Tab…:** a name that replaces the program's title; empty restores
+  it.
+- **Tab Color…:** AshyTerm's eight-color palette, or no color. A Saved
+  Session's color applies until a tab color is chosen.
+- **Duplicate Tab:** a new tab right after this one, in its group. It opens
+  the focused pane's Saved Session or Quick Connect target, or a shell in the
+  same directory (`inherit`).
+- **Groups:** New Group from Tab…, Add to “name” for each group in the
+  window, Remove from Group.
 
-None of this is implemented yet; see `G` rows in
-[01-feature-parity.md](01-feature-parity.md).
+A group (`tab-groups.ts`) is a name, a palette color and a collapsed flag
+shared by adjacent tabs.
+
+- **Chip:** a colored chip leads each group. Clicking it collapses or
+  expands the group; its menu renames, recolors, collapses or ungroups.
+- **Collapsed:** only the chip and the selected tab stay visible.
+- **Adjacency:** after a drag, a tab that is no longer next to the rest of
+  its group leaves it (`normalizeGroups`).
+- **Restore:** names, colors and groups are part of the workspace snapshot,
+  so they come back with a restored workspace.
+
+**Not ported:** AshyTerm's Detach Tab moves a live terminal widget to another
+window. OMXTerm sessions belong to their window's IPC controller, so moving
+one would mean re-parenting a PTY across windows. Duplicate Tab covers the
+common case.
+
+Tests: `renderer-tab-groups`, `workspace-restore`.

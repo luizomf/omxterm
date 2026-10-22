@@ -5,6 +5,18 @@ export interface TabStripItem {
   readonly paneCount: number;
   readonly color?: string;
   readonly broadcasting?: boolean;
+  // Membership in a tab group; `first` marks where its chip goes.
+  readonly group?: {
+    readonly name: string;
+    readonly color: string;
+    readonly collapsed: boolean;
+    readonly first: boolean;
+  };
+}
+
+export interface MenuPosition {
+  readonly x: number;
+  readonly y: number;
 }
 
 export interface TabStrip<Tab> {
@@ -16,7 +28,10 @@ export interface TabStripOptions<Tab> {
   readonly describe: (tab: Tab, index: number) => TabStripItem;
   readonly onSelect: (tab: Tab) => void;
   readonly onReorder: (tab: Tab, clientX: number) => void;
-  readonly onContextMenu?: (tab: Tab, event: MouseEvent) => void;
+  readonly onContextMenu?: (tab: Tab, position: MenuPosition) => void;
+  // Group chips act on the group of the tab given.
+  readonly onGroupToggle?: (tab: Tab) => void;
+  readonly onGroupContextMenu?: (tab: Tab, position: MenuPosition) => void;
 }
 
 export function createTabStrip<Tab>(
@@ -37,8 +52,11 @@ export function createTabStrip<Tab>(
         return;
       }
       strip.replaceChildren(
-        ...tabs.map((tab, index) => {
+        ...tabs.flatMap((tab, index) => {
           const item = options.describe(tab, index);
+          const chip = item.group?.first
+            ? groupChip(document, tab, item.group, options, () => disposed)
+            : undefined;
           const button = document.createElement("button");
           button.type = "button";
           dragging.bind(button, tab);
@@ -58,15 +76,18 @@ export function createTabStrip<Tab>(
             button.style.setProperty("--tab-color", item.color);
           }
           if (item.broadcasting) button.classList.add("tab-broadcasting");
+          if (item.group) {
+            button.classList.add("tab-grouped");
+            button.style.setProperty("--group-color", item.group.color);
+            button.hidden = item.group.collapsed && index !== selectedIndex;
+          }
           button.addEventListener("click", () => {
             if (!disposed) options.onSelect(tab);
           });
-          if (options.onContextMenu)
-            button.addEventListener("contextmenu", (event) => {
-              event.preventDefault();
-              if (!disposed) options.onContextMenu?.(tab, event);
-            });
-          return button;
+          onMenu(button, (position) => {
+            if (!disposed) options.onContextMenu?.(tab, position);
+          });
+          return chip ? [chip, button] : [button];
         }),
       );
     },
@@ -75,6 +96,58 @@ export function createTabStrip<Tab>(
       dragging.dispose();
     },
   };
+}
+
+function groupChip<Tab>(
+  document: Document,
+  tab: Tab,
+  group: NonNullable<TabStripItem["group"]>,
+  options: TabStripOptions<Tab>,
+  isDisposed: () => boolean,
+): HTMLButtonElement {
+  const chip = document.createElement("button");
+  chip.type = "button";
+  chip.className = "tab-group-chip";
+  chip.textContent = group.name || "•";
+  chip.title = group.name;
+  chip.style.setProperty("--group-color", group.color);
+  chip.setAttribute("aria-expanded", String(!group.collapsed));
+  chip.addEventListener("click", () => {
+    if (!isDisposed()) options.onGroupToggle?.(tab);
+  });
+  onMenu(chip, (position) => {
+    if (!isDisposed()) options.onGroupContextMenu?.(tab, position);
+  });
+  return chip;
+}
+
+// Right click, the context menu key or Shift+F10; keyboard menus open under
+// the element.
+function onMenu(
+  element: HTMLElement,
+  open: (position: MenuPosition) => void,
+): void {
+  const below = () => {
+    const rectangle = element.getBoundingClientRect();
+    return { x: rectangle.left, y: rectangle.bottom };
+  };
+  element.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+    open(
+      event.clientX === 0 && event.clientY === 0
+        ? below()
+        : { x: event.clientX, y: event.clientY },
+    );
+  });
+  element.addEventListener("keydown", (event) => {
+    if (
+      event.key === "ContextMenu" ||
+      (event.shiftKey && event.key === "F10")
+    ) {
+      event.preventDefault();
+      open(below());
+    }
+  });
 }
 
 function installTabDragging<Tab>(

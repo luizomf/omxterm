@@ -110,6 +110,7 @@ export function windowTabsOptions(
       ? { onWorkspaceChange: options.reportWorkspace }
       : {}),
     dividerLabel: translator.t("pane.divider"),
+    translator,
     endedBanner: {
       ended: (exitCode) => translator.t("sessions.ended", { code: exitCode }),
       reconnect: translator.t("sessions.reconnect"),

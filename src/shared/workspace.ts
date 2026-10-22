@@ -68,6 +68,41 @@ export function layoutCoversPanes(
   );
 }
 
+// A tab's own name, color and group, set from its menu.
+export interface WorkspaceTabLook {
+  readonly title?: string;
+  readonly color?: string;
+  readonly group?: {
+    readonly name: string;
+    readonly color: string;
+    readonly collapsed: boolean;
+  };
+}
+
+const COLOR = /^#[0-9a-fA-F]{6}$/u;
+const isColor = (value: unknown): value is string =>
+  typeof value === "string" && COLOR.test(value);
+
+function isTabLook(record: Record<string, unknown>): boolean {
+  const { title, color, group } = record;
+  if (
+    title !== undefined &&
+    !(typeof title === "string" && title.length > 0 && title.length <= 200)
+  )
+    return false;
+  if (color !== undefined && !isColor(color)) return false;
+  if (group === undefined) return true;
+  if (!isRecord(group) || !keysAre(group, "name", "color", "collapsed"))
+    return false;
+  return (
+    typeof group.name === "string" &&
+    group.name.length > 0 &&
+    group.name.length <= 64 &&
+    isColor(group.color) &&
+    typeof group.collapsed === "boolean"
+  );
+}
+
 // What a pane was opened as, when the renderer knows more than main can
 // infer from its session: a Saved Session or a Quick Connect target.
 export type WorkspacePaneLaunch =
@@ -78,14 +113,14 @@ export type WorkspacePaneLaunch =
 // tabs have all closed reports no tabs.
 export interface WorkspaceSnapshot {
   readonly selected: number;
-  readonly tabs: readonly {
+  readonly tabs: readonly (WorkspaceTabLook & {
     readonly layout: SerializedPaneLayout;
     readonly focused: number;
     readonly panes: readonly {
       readonly sessionId: TerminalSessionId | null;
       readonly launch?: WorkspacePaneLaunch;
     }[];
-  }[];
+  })[];
 }
 
 // Main to renderer: how to reopen one window. Shell panes carry an opaque
@@ -102,11 +137,11 @@ export type RestoredPane =
 
 export interface WorkspacePlan {
   readonly selected: number;
-  readonly tabs: readonly {
+  readonly tabs: readonly (WorkspaceTabLook & {
     readonly layout: SerializedPaneLayout;
     readonly focused: number;
     readonly panes: readonly RestoredPane[];
-  }[];
+  })[];
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -135,7 +170,12 @@ function isTabShape<Pane>(
   value: unknown,
   isPane: (pane: unknown) => pane is Pane,
 ): boolean {
-  if (!isRecord(value) || !keysAre(value, "layout", "focused", "panes"))
+  const allowed = ["layout", "focused", "panes", "title", "color", "group"];
+  if (
+    !isRecord(value) ||
+    !Object.keys(value).every((key) => allowed.includes(key)) ||
+    !isTabLook(value)
+  )
     return false;
   const { layout, focused, panes } = value;
   return (
