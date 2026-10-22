@@ -74,7 +74,9 @@ agents.
 [0.20.2 — downloads and release notes](https://github.com/luizomf/omxterm/releases/tag/v0.20.2)**
 
 Prebuilt packages are currently **ARM64 only** (Apple Silicon on macOS,
-`aarch64` on Linux, and ARM64 on Windows 11).
+`aarch64` on Linux, and ARM64 on Windows 11). The packaging scripts also
+build x64 (Intel and AMD) packages, and Linux DEB, RPM and Arch `PKGBUILD`
+packages, from source; see the [installation guide](docs/installation.md).
 
 | Platform                                 | Download                                                                                               | Checksum                                                                                                     |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
