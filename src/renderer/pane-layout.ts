@@ -1,3 +1,5 @@
+import type { SerializedPaneLayout } from "../shared/workspace";
+
 // A Terminal Tab's split layout: an n-ary tree whose leaves are panes. Splits in
 // the same direction as their parent join it as siblings, so three side-by-side
 // panes are one row with three weights rather than nested halves.
@@ -219,16 +221,11 @@ function normalize(weights: readonly number[]): number[] {
     : weights.map(() => 1 / weights.length);
 }
 
-// A serializable description of a layout's shape, used to save and restore
-// workspace layouts without process state: each leaf is an index into the
-// caller's own list of pane descriptions.
-export type SerializedPaneLayout =
-  | { readonly pane: number }
-  | {
-      readonly direction: SplitDirection;
-      readonly children: readonly SerializedPaneLayout[];
-      readonly weights: readonly number[];
-    };
+export {
+  isSerializedPaneLayout,
+  MAX_SERIALIZED_PANES,
+  type SerializedPaneLayout,
+} from "../shared/workspace";
 
 export function serializeLayout<Pane>(
   layout: PaneLayout<Pane>,
@@ -245,33 +242,17 @@ export function serializeLayout<Pane>(
       };
 }
 
-export const MAX_SERIALIZED_PANES = 16;
-
-export function isSerializedPaneLayout(
-  value: unknown,
-  depth = 0,
-): value is SerializedPaneLayout {
-  if (depth > 8 || typeof value !== "object" || value === null) return false;
-  const record = value as Record<string, unknown>;
-  if ("pane" in record)
-    return (
-      Object.keys(record).length === 1 &&
-      Number.isInteger(record.pane) &&
-      (record.pane as number) >= 0 &&
-      (record.pane as number) < MAX_SERIALIZED_PANES
-    );
-  const { direction, children, weights } = record;
-  return (
-    Object.keys(record).length === 3 &&
-    (direction === "row" || direction === "column") &&
-    Array.isArray(children) &&
-    Array.isArray(weights) &&
-    children.length >= 2 &&
-    children.length <= MAX_SERIALIZED_PANES &&
-    weights.length === children.length &&
-    weights.every(
-      (weight) => typeof weight === "number" && weight > 0 && weight <= 1,
-    ) &&
-    children.every((child) => isSerializedPaneLayout(child, depth + 1))
-  );
+// Rebuilds a layout from its shape; leaves take the caller's panes by index.
+export function deserializeLayout<Pane>(
+  shape: SerializedPaneLayout,
+  paneAt: (index: number) => Pane,
+): PaneLayout<Pane> {
+  if ("pane" in shape) return leaf(paneAt(shape.pane));
+  const total = shape.weights.reduce((sum, weight) => sum + weight, 0);
+  return {
+    kind: "split",
+    direction: shape.direction,
+    children: shape.children.map((child) => deserializeLayout(child, paneAt)),
+    weights: shape.weights.map((weight) => weight / total),
+  };
 }

@@ -10,6 +10,8 @@ export interface CommandLineOptions {
   readonly action: "run" | "help" | "version";
   // The first tab of the first window only, like the Launch Request.
   readonly startup: StartupOptions;
+  // -e was given, so the first tab runs a program.
+  readonly explicitCommand: boolean;
   readonly logLevel?: OperationalLogLevel;
 }
 
@@ -34,6 +36,16 @@ const VALUE_OPTIONS: Readonly<Record<string, string>> = {
   "--ssh": "ssh",
   "--log-level": "logLevel",
 };
+
+// -e, -w or --ssh: the first tab is not an ordinary shell, so a saved
+// workspace is not reopened.
+export function requestsStartupLaunch(options: CommandLineOptions): boolean {
+  return (
+    options.explicitCommand ||
+    options.startup.ssh !== undefined ||
+    options.startup.workingDirectory !== undefined
+  );
+}
 
 export function commandLineUsage(executable = "omxterm"): string {
   return [
@@ -81,10 +93,11 @@ export function parseCommandLineOptions(
       values[VALUE_OPTIONS[name]] = value;
     }
   }
-  if (action !== "run") return { action, startup: {} };
+  if (action !== "run") return { action, startup: {}, explicitCommand: false };
   return {
     action,
     startup: startupOptions(values, marker !== -1, context),
+    explicitCommand: marker !== -1,
     ...(values.logLevel === undefined
       ? {}
       : { logLevel: logLevel(values.logLevel) }),

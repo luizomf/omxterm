@@ -9,6 +9,7 @@ import {
 import { isValidExternalLink } from "./external-link";
 import type { OperationalEventLog } from "./operational-events";
 import type { TerminalOutputFlow } from "./terminal-output-flow";
+import type { TerminalIpcControllerOptions } from "./terminal-ipc-types";
 
 export type RejectBoundary = (
   boundary: "ipc" | "title" | "external-link" | "clipboard",
@@ -139,4 +140,52 @@ export function requestExternalLink(
     });
     options.onExternalLinkOpenError();
   });
+}
+
+// The renderer's clipboard requests for one Terminal Window.
+export function createClipboardRequests(
+  options: Pick<
+    TerminalIpcControllerOptions,
+    | "writeClipboardText"
+    | "readClipboardText"
+    | "onClipboardError"
+    | "showClipboardContextMenu"
+    | "confirmPaste"
+  >,
+  reject: RejectBoundary,
+) {
+  const writeClipboardText = (payload?: unknown) => {
+    if (!isNonemptyClipboardText(payload)) {
+      reject("clipboard", "invalid-payload");
+      throw new TypeError("Invalid clipboard write payload");
+    }
+    useClipboard(
+      () => options.writeClipboardText(payload),
+      options.onClipboardError,
+      undefined,
+    );
+  };
+  const readClipboardText = (payload?: unknown) => {
+    if (payload !== undefined) {
+      reject("clipboard", "invalid-payload");
+      throw new TypeError("Invalid clipboard read payload");
+    }
+    return useClipboard(
+      options.readClipboardText,
+      options.onClipboardError,
+      "",
+    );
+  };
+  const confirmPaste = (payload?: unknown) =>
+    confirmClipboardPaste(payload, options, reject);
+  const showClipboardContextMenu = (payload?: unknown) => {
+    if (payload === undefined) options.showClipboardContextMenu();
+    else reject("clipboard", "invalid-payload");
+  };
+  return {
+    writeClipboardText,
+    readClipboardText,
+    confirmPaste,
+    showClipboardContextMenu,
+  };
 }

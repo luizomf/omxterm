@@ -1,3 +1,5 @@
+import type { WorkspacePlan } from "../shared/workspace";
+import type { PersistedWorkspaceWindow } from "./terminal-ipc-workspace";
 import type {
   TerminalExit,
   TerminalSessionId,
@@ -81,6 +83,11 @@ export interface TerminalIpcControllerOptions {
     directory: string,
   ) => void;
   readonly confirmBroadcast?: (targetCount: number) => Promise<boolean>;
+  // Workspace restore: the window's latest layout, the plan this window
+  // opens with (asked once), and the directories behind restore tokens.
+  readonly onWorkspace?: (window: PersistedWorkspaceWindow) => void;
+  readonly workspacePlan?: () => WorkspacePlan | null;
+  readonly resolveRestoredDirectory?: (token: string) => string | undefined;
   readonly onSessionStartError: (
     context: TerminalSessionStartErrorContext,
   ) => void;

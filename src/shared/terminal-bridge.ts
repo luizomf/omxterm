@@ -21,6 +21,7 @@ import type { SessionFileChoice } from "./session-ipc";
 import type { HighlightSettings } from "./highlight-settings";
 import type { CommandDefinition, CommandLibraryDocument } from "./commands";
 import type { BackupRequest } from "./backup-ipc";
+import type { WorkspacePlan, WorkspaceSnapshot } from "./workspace";
 
 export interface CommandsBridge {
   list(): Promise<CommandLibraryDocument>;
@@ -99,6 +100,10 @@ export interface TerminalBridge {
   ): void;
   confirmBroadcast(targetCount: number): Promise<boolean>;
   reportWorkingDirectory(sessionId: TerminalSessionId, uri: string): void;
+  // Workspace restore: this window's layout for main to save, and the plan
+  // it opens with (null for an ordinary start).
+  reportWorkspace(snapshot: WorkspaceSnapshot): void;
+  workspacePlan(): Promise<WorkspacePlan | null>;
   syncTabTitle(sessionId: TerminalSessionId): void;
   notifyTabsEmpty(reason?: "rendering-failure"): void;
   onFontZoom(listener: (command: TerminalFontZoom) => void): () => void;

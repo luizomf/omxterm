@@ -39,6 +39,7 @@ import type {
 } from "../shared/local-image";
 import { createTerminalFontGenerationOwner } from "./terminal-font-generations";
 import type { Translator } from "../shared/i18n";
+import type { WorkspacePlan, WorkspaceSnapshot } from "../shared/workspace";
 import type {
   CommandsBridge,
   HighlightsBridge,
@@ -117,6 +118,9 @@ export interface TerminalWindowPageOptions {
   readonly highlights?: HighlightsBridge;
   // How the first tab opens, for example the SSH target given with --ssh.
   readonly initialLaunch?: PaneLaunch;
+  // A saved workspace to reopen instead of the first tab.
+  readonly initialWorkspace?: WorkspacePlan;
+  readonly reportWorkspace?: (snapshot: WorkspaceSnapshot) => void;
   readonly workspace?: {
     readonly element: HTMLElement;
     readonly sessions: SessionsBridge;

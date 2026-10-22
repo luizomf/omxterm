@@ -34,10 +34,14 @@ const parse = (...args: string[]) => parseCommandLineOptions(args, context);
 
 describe("command-line options", () => {
   it("leaves an ordinary launch, Chromium switches and -e argv alone", () => {
-    expect(parse()).toEqual({ action: "run", startup: {} });
+    expect(parse()).toEqual({
+      action: "run",
+      startup: {},
+      explicitCommand: false,
+    });
     expect(
       parse("--no-sandbox", "--ozone-platform=x11", "-e", "vim", "--help"),
-    ).toEqual({ action: "run", startup: {} });
+    ).toEqual({ action: "run", startup: {}, explicitCommand: true });
   });
 
   it("prints help or the version instead of starting", () => {

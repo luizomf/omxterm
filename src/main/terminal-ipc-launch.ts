@@ -15,7 +15,10 @@ import type {
 export function createLaunchRequests(
   options: Pick<
     TerminalIpcControllerOptions,
-    "localHostNames" | "onWorkingDirectory" | "confirmBroadcast"
+    | "localHostNames"
+    | "onWorkingDirectory"
+    | "confirmBroadcast"
+    | "resolveRestoredDirectory"
   >,
   reject: RejectBoundary,
   sessions: ReadonlyMap<
@@ -25,20 +28,28 @@ export function createLaunchRequests(
   isDisposed: () => boolean,
 ) {
   const workingDirectories = new Map<TerminalSessionId, string>();
+  // The last OSC 7 report, else what the platform can read from the process.
+  const directoryOf = (sessionId: TerminalSessionId): string | undefined =>
+    workingDirectories.get(sessionId) ??
+    sessions.get(sessionId)?.session.workingDirectory?.();
+  const inherit = (directory: string | undefined): TerminalSessionLaunch =>
+    directory === undefined
+      ? { kind: "inherit" }
+      : { kind: "inherit", workingDirectory: directory };
   return {
+    directoryOf,
     resolve(launch: unknown): TerminalSessionLaunch {
       if (launch === undefined) return { kind: "default" };
       if (!isTerminalLaunchSpec(launch)) {
         reject("ipc", "invalid-payload");
         throw new TypeError("Invalid terminal launch request");
       }
-      if (launch.kind !== "inherit") return launch;
-      const directory =
-        workingDirectories.get(launch.sessionId) ??
-        sessions.get(launch.sessionId)?.session.workingDirectory?.();
-      return directory === undefined
-        ? { kind: "inherit" }
-        : { kind: "inherit", workingDirectory: directory };
+      if (launch.kind === "inherit")
+        return inherit(directoryOf(launch.sessionId));
+      // An unknown or spent token starts the Default Shell as usual.
+      if (launch.kind === "restored")
+        return inherit(options.resolveRestoredDirectory?.(launch.token));
+      return launch;
     },
     forget(sessionId: TerminalSessionId) {
       workingDirectories.delete(sessionId);

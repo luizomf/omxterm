@@ -3,7 +3,6 @@ import type {
   TerminalSessionId,
 } from "../shared/terminal-contract";
 import {
-  isNonemptyClipboardText,
   isTerminalSessionInput,
   isTerminalSessionClose,
   isTerminalSessionReference,
@@ -61,22 +60,25 @@ import { createLocalImageIpcBoundary } from "./local-image-ipc";
 export { isValidExternalLink } from "./external-link";
 import {
   acknowledgeTerminalOutput,
-  confirmClipboardPaste,
+  createClipboardRequests,
   createTerminalTitleRequests,
   requestExternalLink,
-  useClipboard,
   type RejectBoundary,
 } from "./terminal-ipc-boundaries";
 import {
   createTerminalOutputFlow,
   type TerminalOutputFlow,
 } from "./terminal-output-flow";
+import { createWorkspaceRequests } from "./terminal-ipc-workspace";
+import type { WorkspacePlan } from "../shared/workspace";
 
 interface RoutedTerminalIpcController
   extends TerminalIpcController, SurfaceFontRequests {
   configuration(payload?: unknown): TerminalRendererConfiguration;
   start(payload?: unknown, launch?: unknown): TerminalSessionId;
   reportWorkingDirectory(payload?: unknown): void;
+  reportWorkspace(payload?: unknown): void;
+  workspacePlan(payload?: unknown): WorkspacePlan | null;
   confirmBroadcast(payload?: unknown): Promise<boolean>;
   input(payload?: unknown): void;
   resize(payload?: unknown): void;
@@ -145,6 +147,9 @@ export function registerTerminalIpcRouter(
   const configuration = trusted("configuration", (controller, payload) =>
     controller.configuration(payload),
   );
+  const workspacePlan = trusted("workspace", (controller, payload) =>
+    controller.workspacePlan(payload),
+  );
   const route = (
     event: IpcEvent,
     action: (controller: RoutedTerminalIpcController) => void,
@@ -172,6 +177,8 @@ export function registerTerminalIpcRouter(
     route(event, (controller) => controller.syncTabTitle(payload));
   const tabsEmpty: IpcListener = (event, payload) =>
     route(event, (controller) => controller.tabsEmpty(payload));
+  const workspace: IpcListener = (event, payload) =>
+    route(event, (controller) => controller.reportWorkspace(payload));
   const title: IpcListener = (event, payload) =>
     route(event, (controller) => controller.title(payload));
   const bell: IpcListener = (event, payload) =>
@@ -237,6 +244,7 @@ export function registerTerminalIpcRouter(
   );
   ipcMain.handle(terminalIpc.start, start);
   ipcMain.handle(terminalIpc.configuration, configuration);
+  ipcMain.handle(terminalIpc.workspacePlan, workspacePlan);
   ipcMain.handle(terminalIpc.fontData, fontData);
   ipcMain.handle(terminalIpc.snippets, snippets);
   ipcMain.on(terminalIpc.input, input);
@@ -246,6 +254,7 @@ export function registerTerminalIpcRouter(
   ipcMain.on(terminalIpc.tabSelected, tabSelected);
   ipcMain.on(terminalIpc.tabTitleSync, syncTabTitle);
   ipcMain.on(terminalIpc.tabsEmpty, tabsEmpty);
+  ipcMain.on(terminalIpc.workspace, workspace);
   ipcMain.on(terminalIpc.title, title);
   ipcMain.on(terminalIpc.bell, bell);
   ipcMain.on(terminalIpc.externalLink, externalLink);
@@ -297,6 +306,7 @@ export function registerTerminalIpcRouter(
       removeSurfaceFontIpc();
       ipcMain.removeHandler(terminalIpc.start);
       ipcMain.removeHandler(terminalIpc.configuration);
+      ipcMain.removeHandler(terminalIpc.workspacePlan);
       ipcMain.removeHandler(terminalIpc.fontData);
       ipcMain.removeHandler(terminalIpc.snippets);
       ipcMain.removeListener(terminalIpc.input, input);
@@ -306,6 +316,7 @@ export function registerTerminalIpcRouter(
       ipcMain.removeListener(terminalIpc.tabSelected, tabSelected);
       ipcMain.removeListener(terminalIpc.tabTitleSync, syncTabTitle);
       ipcMain.removeListener(terminalIpc.tabsEmpty, tabsEmpty);
+      ipcMain.removeListener(terminalIpc.workspace, workspace);
       ipcMain.removeListener(terminalIpc.title, title);
       ipcMain.removeListener(terminalIpc.bell, bell);
       ipcMain.removeListener(terminalIpc.externalLink, externalLink);
@@ -411,6 +422,11 @@ function createTerminalIpcController(
     reject,
     sessions,
     () => disposed,
+  );
+  const workspace = createWorkspaceRequests(
+    options,
+    reject,
+    launches.directoryOf,
   );
 
   const start = (
@@ -601,34 +617,12 @@ function createTerminalIpcController(
       });
     closeSession(payload.sessionId, payload.reason);
   };
-  const writeClipboardText = (payload?: unknown) => {
-    if (!isNonemptyClipboardText(payload)) {
-      reject("clipboard", "invalid-payload");
-      throw new TypeError("Invalid clipboard write payload");
-    }
-    useClipboard(
-      () => options.writeClipboardText(payload),
-      options.onClipboardError,
-      undefined,
-    );
-  };
-  const readClipboardText = (payload?: unknown) => {
-    if (payload !== undefined) {
-      reject("clipboard", "invalid-payload");
-      throw new TypeError("Invalid clipboard read payload");
-    }
-    return useClipboard(
-      options.readClipboardText,
-      options.onClipboardError,
-      "",
-    );
-  };
-  const confirmPaste = (payload?: unknown) =>
-    confirmClipboardPaste(payload, options, reject);
-  const showClipboardContextMenu = (payload?: unknown) => {
-    if (payload === undefined) options.showClipboardContextMenu();
-    else reject("clipboard", "invalid-payload");
-  };
+  const {
+    writeClipboardText,
+    readClipboardText,
+    confirmPaste,
+    showClipboardContextMenu,
+  } = createClipboardRequests(options, reject);
   const fontData = createFontDataRequest({
     family: () => rendererConfiguration.current().fontFamily,
     generation: () => fontConfigurationGeneration,
@@ -682,6 +676,8 @@ function createTerminalIpcController(
     close,
     tabSelected: selection.tabSelected,
     reportWorkingDirectory: launches.reportWorkingDirectory,
+    reportWorkspace: workspace.report,
+    workspacePlan: workspace.plan,
     confirmBroadcast: launches.confirmBroadcast,
     ...createTerminalTitleRequests(routedSession, options, reject),
     tabsEmpty: emptyTabsNotification(options, reject, () => disposed),
@@ -704,6 +700,7 @@ function createTerminalIpcController(
     dispose() {
       if (disposed) return;
       disposed = true;
+      workspace.flush();
       surfaceFonts.dispose();
       localImageBoundary.dispose();
       unregister();

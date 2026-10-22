@@ -93,6 +93,12 @@ OMXTerm runs your system's OpenSSH client (`ssh`, or `ssh.exe` on Windows), so `
 
 When a saved or Quick Connect session fails (for example, `Connection refused`), its tab stays open with the error visible and offers **Reconnect** and **Close**.
 
+## Reopening windows at startup
+
+Turn on **Restore Windows at Startup** in the application menu (the **OMXTerm** menu, or the menu that opens when you press and release `Alt` on Linux and Windows). When you quit, OMXTerm remembers its windows, tabs and split panes. Shells reopen in the folders they were in, and saved sessions and Quick Connect tabs reconnect. Closing a window while others stay open forgets that window. Turning the option off erases what was saved.
+
+Starting OMXTerm with `-e`, `-w` or `--ssh` opens just what you asked for.
+
 ## Running commands from the Command Manager
 
 Press `Cmd+Shift+M` / `Ctrl+Shift+M` (**View → Toggle Commands**) to open the Commands sidebar. It lists ready-made commands for the system you are on: files and archives, processes, memory and disk, services and logs, packages (`apt`, `dnf`, `pacman`, Homebrew or `winget`), network checks, SSH keys, Git and Docker. Windows shows PowerShell versions of the same tasks.

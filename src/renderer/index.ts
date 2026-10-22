@@ -32,7 +32,8 @@ if (!surfaceFailure)
 void Promise.all([
   window.omxterm.terminal.configuration(),
   window.omxterm.sessions.startupConnection().catch(() => null),
-]).then(([configuration, startupConnection]) => {
+  window.omxterm.terminal.workspacePlan().catch(() => null),
+]).then(([configuration, startupConnection, workspacePlan]) => {
   // Render before mounting so the Terminal Surface measures the space the
   // banner leaves, instead of resizing right after it appears.
   renderUserFileErrorBanner(errorBanner, configuration.userFileErrors);
@@ -81,6 +82,8 @@ void Promise.all([
         requestContextMenu: window.omxterm.terminal.requestClipboardContextMenu,
       },
       highlights: window.omxterm.highlights,
+      ...(workspacePlan ? { initialWorkspace: workspacePlan } : {}),
+      reportWorkspace: window.omxterm.terminal.reportWorkspace,
       ...(startupConnection
         ? {
             initialLaunch: {

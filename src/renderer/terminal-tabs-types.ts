@@ -1,3 +1,4 @@
+import type { WorkspacePlan, WorkspaceSnapshot } from "../shared/workspace";
 import type {
   TerminalClipboardAction,
   TerminalFontZoom,
@@ -43,6 +44,10 @@ export interface TerminalTabsOptions {
   readonly showTabBar?: boolean;
   // How the first tab opens; the Default Shell when absent.
   readonly initialLaunch?: PaneLaunch;
+  // A restored workspace replaces the first tab with these tabs.
+  readonly initialWorkspace?: WorkspacePlan;
+  // The window's layout, after changes settle, for workspace restore.
+  readonly onWorkspaceChange?: (snapshot: WorkspaceSnapshot) => void;
   readonly dividerLabel?: string;
   readonly endedBanner?: EndedBannerStrings;
   readonly notifyEmpty?: (reason?: "rendering-failure") => void;

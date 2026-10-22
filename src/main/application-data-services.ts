@@ -1,4 +1,6 @@
-import type { IpcMain } from "electron";
+import { app, type IpcMain } from "electron";
+import { statSync } from "node:fs";
+import { parseSshTarget } from "../shared/saved-session-primitives";
 import { resolveApplicationDataDirectory } from "./application-data";
 import { startSettingsBackup } from "./backup-wiring";
 import { startCommandLibrary } from "./command-wiring";
@@ -6,6 +8,7 @@ import { startHighlightSettings } from "./highlight-wiring";
 import type { OperationalEventLog } from "./operational-events";
 import { startSavedSessions } from "./saved-session-wiring";
 import type { IpcEvent } from "./terminal-ipc-types";
+import { createWorkspaceService } from "./workspace-service";
 
 // Loads the Application Data documents (sessions, highlighting, commands),
 // serves their IPC to trusted windows, and backs them up and restores them
@@ -17,13 +20,23 @@ export async function startApplicationDataServices(options: {
   readonly operationalEvents: Pick<OperationalEventLog, "write">;
   readonly startupConnection: string | undefined;
   readonly reloadConfiguration: () => Promise<unknown>;
+  readonly isQuitting: () => boolean;
+  // The highlighting or restore checkbox changed.
+  readonly onMenuStateChange: () => void;
 }) {
-  const { startupConnection, reloadConfiguration, ...shared } = options;
+  const {
+    startupConnection,
+    reloadConfiguration,
+    isQuitting,
+    onMenuStateChange,
+    ...shared
+  } = options;
   const savedSessions = await startSavedSessions({
     ...shared,
     ...(startupConnection === undefined ? {} : { startupConnection }),
   });
   const highlightSettings = await startHighlightSettings(shared);
+  highlightSettings.subscribe(onMenuStateChange);
   const commandLibrary = await startCommandLibrary(shared);
   const backup = startSettingsBackup({
     ipcMain: options.ipcMain,
@@ -40,6 +53,33 @@ export async function startApplicationDataServices(options: {
     },
     reloadConfiguration,
   });
+  const workspace = createWorkspaceService({
+    directory: resolveApplicationDataDirectory(
+      process.env,
+      options.homeDirectory,
+    ),
+    isDirectory: (directory) => {
+      try {
+        return statSync(directory).isDirectory();
+      } catch {
+        return false;
+      }
+    },
+    savedSession: (id) =>
+      savedSessions.current().sessions.find((session) => session.id === id),
+    isQuickTarget: (target) => parseSshTarget(target) !== undefined,
+    isQuitting,
+  });
+  await workspace.load();
+  // Windows are closed by now; the final layouts are written synchronously.
+  app.on("will-quit", () => {
+    try {
+      workspace.saveOnExit();
+    } catch {
+      // A failed write keeps the previous workspace.json.
+    }
+  });
+
   // Menu actions for these documents; a failed toggle restores the menu.
   const menuActions = (rebuildMenu: () => void) => ({
     toggleOutputHighlighting: () => {
@@ -50,6 +90,15 @@ export async function startApplicationDataServices(options: {
     },
     backUpSettings: () => backup.request("create"),
     restoreSettings: () => backup.request("restore"),
+    toggleRestoreWorkspace: () => {
+      void workspace
+        .setRestore(!workspace.restoreEnabled())
+        .finally(rebuildMenu);
+    },
   });
-  return { savedSessions, highlightSettings, menuActions };
+  const menuState = () => ({
+    outputHighlighting: highlightSettings.current().enabled,
+    restoreWorkspace: workspace.restoreEnabled(),
+  });
+  return { savedSessions, workspace, menuActions, menuState };
 }

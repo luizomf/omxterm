@@ -11,11 +11,14 @@ export type TerminalLaunchSpec =
   | { readonly kind: "inherit"; readonly sessionId: TerminalSessionId }
   | { readonly kind: "saved-session"; readonly id: string }
   // Quick Connect: "[user@]host[:port]", validated again in main.
-  | { readonly kind: "quick-ssh"; readonly target: string };
+  | { readonly kind: "quick-ssh"; readonly target: string }
+  // A restored workspace pane: an opaque token main maps to a directory.
+  | { readonly kind: "restored"; readonly token: string };
 
 export const MAX_QUICK_CONNECT_TARGET_LENGTH = 300;
 
 export const SAVED_SESSION_ID = /^[A-Za-z0-9_-]{1,64}$/u;
+export const RESTORE_TOKEN = /^r[0-9a-f]{16}$/u;
 
 export function isSavedSessionId(value: unknown): value is string {
   return typeof value === "string" && SAVED_SESSION_ID.test(value);
@@ -32,6 +35,12 @@ export function isTerminalLaunchSpec(
     return keys === "kind,sessionId" && isTerminalSessionId(record.sessionId);
   if (record.kind === "saved-session")
     return keys === "id,kind" && isSavedSessionId(record.id);
+  if (record.kind === "restored")
+    return (
+      keys === "kind,token" &&
+      typeof record.token === "string" &&
+      RESTORE_TOKEN.test(record.token)
+    );
   if (record.kind === "quick-ssh")
     return (
       keys === "kind,target" &&

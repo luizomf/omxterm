@@ -9,24 +9,22 @@ import {
   shell,
 } from "electron";
 import * as nodePty from "node-pty";
-import { hostname, userInfo } from "node:os";
+import { hostname } from "node:os";
 import { terminalIpc } from "../shared/terminal-ipc";
 import {
   terminalActionInvocations,
   terminalApplicationMenuTemplate,
   terminalClipboardContextMenuTemplate,
 } from "./application-menu";
-import { configureApplicationAbout } from "./application-about";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { createDefaultShellResolver, defaultShellName } from "./default-shell";
-import { startupLaunchRequest } from "./launch-request";
 import { registerTerminalShutdown } from "./terminal-shutdown";
+import { prepareStartup } from "./startup-preparation";
 import { readStartupCommandLine } from "./command-line-startup";
 import {
+  requestsStartupLaunch,
   startupOptionsForWindow,
-  withLogLevelOverride,
 } from "./command-line-options";
-import type { OperationalLogLevel } from "../shared/user-configuration";
 import { applyLinuxDisplayBackendDefault } from "./linux-display-backend";
 import { applyChromiumSandboxPolicy } from "./chromium-sandbox-policy";
 import {
@@ -55,7 +53,6 @@ import {
 import { registerWindowChrome } from "./window-chrome";
 import * as nativeMenu from "./native-application-menu";
 import { createNativeTerminalWindowTitleController } from "./terminal-window-attention";
-import { installedFontFamilyMetrics } from "./installed-font-family";
 import { fontIpcRouter } from "./terminal-font-data";
 import { loadTerminalSnippets } from "./snippets";
 import {
@@ -75,18 +72,13 @@ import {
 } from "./active-user-configuration";
 import { startWithUserConfiguration } from "./configured-startup";
 import { loadLocalImageForWindow } from "./local-image-loader";
-import {
-  createOperationalEventLog,
-  type OperationalEventLog,
-} from "./operational-events";
+import type { OperationalEventLog } from "./operational-events";
 import { startApplicationDataServices } from "./application-data-services";
 import { commandIpc } from "../shared/command-ipc";
 import { sessionIpc } from "../shared/session-ipc";
 import { launchTerminalSession } from "./session-launch";
 import {
-  developmentApplicationIconPath,
   linuxWindowIconPath,
-  packagedApplicationIconPath,
   preloadPath,
   rendererPath,
 } from "./application-paths";
@@ -124,8 +116,9 @@ app
   .then(async () => {
     if (commandLine.action === "invalid") throw commandLine.error;
     if (commandLine.action !== "run") return;
-    const { account, consumeLaunchRequest, configurationLoadOptions } =
-      prepareStartup(commandLine.logLevel);
+    const startup = prepareStartup(app, commandLine.logLevel);
+    const { account, consumeLaunchRequest, configurationLoadOptions } = startup;
+    operationalEvents = startup.operationalEvents;
     return startWithUserConfiguration(
       configurationLoadOptions,
       async ({ configuration: userConfiguration, fallback, warnings }) => {
@@ -150,8 +143,9 @@ app
         disposeTerminalSessions = () => terminalIpcRouter.dispose();
         const {
           savedSessions,
-          highlightSettings,
+          workspace,
           menuActions: dataActions,
+          menuState: dataMenuState,
         } = await startApplicationDataServices({
           ipcMain,
           homeDirectory: account.homedir,
@@ -159,9 +153,10 @@ app
           operationalEvents: operationalEvents!,
           startupConnection: commandLine.startup.ssh,
           reloadConfiguration: () => configurationReloader.reload(),
+          isQuitting: () => terminalApplication?.isQuitting() ?? false,
+          onMenuStateChange: () => rebuildMenu(),
         });
         let rebuildMenu = () => {};
-        highlightSettings.subscribe(() => rebuildMenu());
         const nativeTitleInset = terminalNativeTitleInset(process.platform);
         const backgroundEffects = createWindowBackgroundEffectsOwner(
           process.platform,
@@ -254,6 +249,9 @@ app
             window.once("closed", () => titleController.dispose());
             const controller = terminalIpcRouter.registerController({
               windowId: lifecycle.windowId,
+              ...workspace.windowOptions(lifecycle.windowId, (listener) =>
+                window.once("closed", listener),
+              ),
               configuration: terminalRendererConfiguration(
                 active,
                 nativeTitleInset,
@@ -457,12 +455,14 @@ app
               app.name,
               menuActions,
               configurationReloader.current().configuration.keybinds,
-              { outputHighlighting: highlightSettings.current().enabled },
+              dataMenuState(),
             ),
           );
         rebuildMenu();
 
-        await terminalApplication.newWindow();
+        const restore = !requestsStartupLaunch(commandLine);
+        for (let left = workspace.startupWindowCount(restore); left > 0; left--)
+          await terminalApplication.newWindow();
       },
     );
   })
@@ -481,32 +481,3 @@ app
     if (failure.stage === "command-line") app.exit(2);
     else app.quit();
   });
-
-function prepareStartup(logLevel: OperationalLogLevel | undefined) {
-  configureApplicationAbout(
-    app,
-    app.isPackaged
-      ? packagedApplicationIconPath
-      : developmentApplicationIconPath,
-  );
-  const launch = startupLaunchRequest(process.argv, app.isPackaged);
-  if (!app.isPackaged) app.dock?.setIcon(developmentApplicationIconPath);
-  const account = userInfo();
-  operationalEvents = withLogLevelOverride(
-    createOperationalEventLog({
-      environment: process.env,
-      homeDirectory: account.homedir,
-    }),
-    logLevel,
-  );
-  return {
-    account,
-    consumeLaunchRequest: launch,
-    configurationLoadOptions: {
-      environment: process.env,
-      homeDirectory: account.homedir,
-      platform: process.platform,
-      getInstalledFontFamilyMetrics: installedFontFamilyMetrics,
-    },
-  };
-}

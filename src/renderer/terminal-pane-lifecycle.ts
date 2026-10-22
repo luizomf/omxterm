@@ -10,6 +10,7 @@ import type {
 } from "../terminal-surface/terminal-surface";
 import {
   adjacentPane,
+  deserializeLayout,
   layoutPanes,
   leaf,
   removePane as removeLayoutPane,
@@ -28,6 +29,8 @@ import {
   type TerminalTab,
 } from "./terminal-tab-model";
 import type { TabsContext } from "./terminal-tabs-types";
+import type { RestoredPane, WorkspacePlan } from "../shared/workspace";
+import { scheduleWorkspaceReport } from "./terminal-tabs-workspace";
 import {
   applyVisibility,
   focusPane,
@@ -239,6 +242,8 @@ async function mountPane(ctx: TabsContext, pane: TerminalPane): Promise<void> {
     return;
   }
   pane.surface = surface;
+  // The pane's session id is known now; main needs it for its directory.
+  scheduleWorkspaceReport(ctx);
   const latestConfiguration = completeConfiguration(ctx.activeSurfaceOptions);
   if (latestConfiguration) surface.applyConfiguration(latestConfiguration);
   replayZoom(ctx, surface);
@@ -275,6 +280,63 @@ export async function createTab(
   ctx.tabs.push(tab);
   select(ctx, ctx.tabs.length - 1);
   await mountPane(ctx, pane);
+}
+
+// Reopens a saved window: every tab with its layout, the saved tab
+// selected. The selected tab's panes decide readiness, like a first tab.
+export async function restoreTabs(
+  ctx: TabsContext,
+  plan: WorkspacePlan,
+): Promise<void> {
+  const restored = plan.tabs.map((shape) => {
+    const tab: TerminalTab = {
+      container: ctx.document.createElement("div"),
+      layout: undefined!,
+      focused: undefined!,
+      maximized: undefined,
+      removed: false,
+    };
+    tab.container.className = "terminal-tab";
+    const panes = shape.panes.map((pane) =>
+      createPane(
+        tab,
+        ctx.document,
+        ctx.options.createAdapter,
+        restoredLaunch(pane),
+      ),
+    );
+    tab.layout = deserializeLayout(shape.layout, (index) => panes[index]!);
+    tab.focused = panes[shape.focused] ?? panes[0]!;
+    ctx.elements.container.append(tab.container);
+    renderLayout(ctx, tab);
+    for (const pane of panes) trackPaneFocus(ctx, pane);
+    ctx.tabs.push(tab);
+    return panes;
+  });
+  select(ctx, plan.selected);
+  const selected = restored[plan.selected] ?? [];
+  const ready = selected.map((pane) => mountPane(ctx, pane));
+  for (const panes of restored)
+    if (panes !== selected)
+      for (const pane of panes) void mountPane(ctx, pane).catch(() => {});
+  await Promise.all(ready);
+}
+
+function restoredLaunch(pane: RestoredPane): PaneLaunch {
+  if (pane.kind === "saved-session")
+    return {
+      spec: { kind: "saved-session", id: pane.id },
+      label: pane.label,
+      ...(pane.color ? { color: pane.color } : {}),
+      retainOnExit: true,
+    };
+  if (pane.kind === "quick-ssh")
+    return {
+      spec: { kind: "quick-ssh", target: pane.target },
+      label: pane.target,
+      retainOnExit: true,
+    };
+  return pane.token ? { spec: { kind: "restored", token: pane.token } } : {};
 }
 
 function attachPane(

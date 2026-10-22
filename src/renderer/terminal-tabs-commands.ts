@@ -9,6 +9,7 @@ import {
   layoutPanes,
 } from "./pane-layout";
 import { applyPaneWeights } from "./pane-view";
+import { scheduleWorkspaceReport } from "./terminal-tabs-workspace";
 import {
   closePane,
   closeTab,
@@ -79,6 +80,7 @@ export function handleTabCommand(
       if (!tab) return;
       tab.layout = equalizeLayout(tab.layout);
       applyPaneWeights(tab.container, tab.layout);
+      scheduleWorkspaceReport(ctx);
       return;
     }
     case "toggle-broadcast":

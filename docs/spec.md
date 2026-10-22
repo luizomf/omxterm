@@ -1223,6 +1223,30 @@ global environment, User Configuration, terminal font zoom, title-bar
 preferences or the three-file ownership/rollback contract. See
 [ADR 0031](adr/0031-keep-linux-installer-choices-small-and-local.md).
 
+## Workspace restore
+
+**Restore Windows at Startup** (application menu) is off by default. While it
+is on, OMXTerm reopens the windows that were open when it last quit, with
+their tabs, split layouts and selected tab and pane.
+
+- Each window's renderer reports its layout, a serialized pane tree with the
+  session id of each pane, 250 ms after changes settle and immediately when
+  its last tab closes. Saved Session and Quick Connect panes also report
+  their launch. Main validates the report and records shells by working
+  directory (OSC 7, else the platform's process directory). It records the
+  window again just before its sessions close.
+- A window closed while others stay open is forgotten. The last window, or
+  every window when a quit is confirmed, is kept. `workspace.json`
+  (Application Data) is written once, synchronously and atomically, when the
+  application exits. Turning the option off erases the saved windows.
+- At startup, each window asks once for its plan. Shell panes receive opaque
+  tokens (`restored` launches) that main maps to directories, so paths never
+  reach the renderer. A missing directory starts in the home directory, and
+  a deleted Saved Session becomes a plain shell. Reconnect on a restored
+  pane reuses its launch.
+- `-e`, `-w` or `--ssh` on the command line start normally and do not
+  reopen saved windows. Window positions are not restored.
+
 ## Settings backup
 
 **File → Back Up Settings…** and **File → Restore Settings…** save and apply

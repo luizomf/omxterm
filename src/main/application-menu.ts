@@ -42,10 +42,12 @@ interface TerminalApplicationMenuActions {
   readonly backUpSettings: () => void;
   readonly restoreSettings: () => void;
   readonly toggleOutputHighlighting?: () => void;
+  readonly toggleRestoreWorkspace?: () => void;
 }
 
 export interface TerminalApplicationMenuState {
   readonly outputHighlighting?: boolean;
+  readonly restoreWorkspace?: boolean;
 }
 
 export function terminalApplicationMenuTemplate(
@@ -59,6 +61,17 @@ export function terminalApplicationMenuTemplate(
       label: applicationName,
       submenu: [
         { role: "about" },
+        ...(actions.toggleRestoreWorkspace
+          ? [
+              { type: "separator" as const },
+              {
+                label: "Restore Windows at Startup",
+                type: "checkbox" as const,
+                checked: state.restoreWorkspace ?? false,
+                click: actions.toggleRestoreWorkspace,
+              },
+            ]
+          : []),
         { type: "separator" },
         {
           label: `Quit ${applicationName}`,

@@ -2,6 +2,7 @@ import { vi } from "vitest";
 import {
   createTerminalTabs,
   type PaneLaunch,
+  type TerminalTabsOptions,
 } from "../../src/renderer/terminal-tabs";
 import type { ElectronTerminalAdapter } from "../../src/renderer/electron-terminal-adapter";
 import type {
@@ -33,6 +34,8 @@ export function createTabsHarness(
     confirmBroadcast?: (targetCount: number) => Promise<boolean>;
     onBroadcastChange?: (targetCount: number) => void;
     initialLaunch?: PaneLaunch;
+    initialWorkspace?: TerminalTabsOptions["initialWorkspace"];
+    onWorkspaceChange?: TerminalTabsOptions["onWorkspaceChange"];
   } = {},
 ) {
   document.body.innerHTML = "";
@@ -101,6 +104,12 @@ export function createTabsHarness(
         : {}),
       ...(options.initialLaunch
         ? { initialLaunch: options.initialLaunch }
+        : {}),
+      ...(options.initialWorkspace
+        ? { initialWorkspace: options.initialWorkspace }
+        : {}),
+      ...(options.onWorkspaceChange
+        ? { onWorkspaceChange: options.onWorkspaceChange }
         : {}),
     },
   );

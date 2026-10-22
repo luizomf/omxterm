@@ -36,4 +36,6 @@ export const terminalIpc = {
   tabTitle: "terminal:tab-title",
   confirmBroadcast: "terminal:confirm-broadcast",
   workingDirectory: "terminal:working-directory",
+  workspace: "terminal:workspace",
+  workspacePlan: "terminal:workspace-plan",
 } as const;

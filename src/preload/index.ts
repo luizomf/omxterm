@@ -32,6 +32,7 @@ import { createSessionsBridge } from "./sessions-bridge";
 import { createHighlightsBridge } from "./highlights-bridge";
 import { createCommandsBridge } from "./commands-bridge";
 import { createBackupBridge } from "./backup-bridge";
+import { isWorkspacePlan, isWorkspaceSnapshot } from "../shared/workspace";
 import {
   formatFilePathInsertion,
   isFilePathPlatform,
@@ -308,6 +309,15 @@ const terminal: TerminalBridge = {
     if (typeof confirmed !== "boolean")
       throw new TypeError("Invalid broadcast confirmation response");
     return confirmed;
+  },
+  reportWorkspace(snapshot) {
+    if (!isWorkspaceSnapshot(snapshot))
+      throw new TypeError("Invalid workspace snapshot");
+    ipcRenderer.send(terminalIpc.workspace, snapshot);
+  },
+  async workspacePlan() {
+    const plan: unknown = await ipcRenderer.invoke(terminalIpc.workspacePlan);
+    return isWorkspacePlan(plan) ? plan : null;
   },
   reportWorkingDirectory(sessionId, uri) {
     if (

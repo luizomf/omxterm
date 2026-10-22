@@ -3,7 +3,8 @@ import { layoutPanes } from "./pane-layout";
 import { createTabStrip, moveTabToHorizontalDrop } from "./tab-strip";
 import { closePendingPane, type TerminalTab } from "./terminal-tab-model";
 import { handleTabCommand } from "./terminal-tabs-commands";
-import { createTab, split } from "./terminal-pane-lifecycle";
+import { createTab, restoreTabs, split } from "./terminal-pane-lifecycle";
+import { cancelWorkspaceReport } from "./terminal-tabs-workspace";
 import type {
   TabsContext,
   TerminalTabs,
@@ -67,7 +68,9 @@ export function createTerminalTabs(
     broadcastTab: undefined,
   };
 
-  const ready = createTab(ctx, options.initialLaunch);
+  const ready = options.initialWorkspace
+    ? restoreTabs(ctx, options.initialWorkspace)
+    : createTab(ctx, options.initialLaunch);
   const focusedSurface = () => selectedTab(ctx)?.focused.surface;
 
   return {
@@ -143,6 +146,7 @@ export function createTerminalTabs(
       ctx.disposed = true;
       ctx.pendingClose = undefined;
       ctx.broadcastTab = undefined;
+      cancelWorkspaceReport(ctx);
       ctx.strip.dispose();
       for (const tab of [...ctx.tabs]) {
         tab.removed = true;

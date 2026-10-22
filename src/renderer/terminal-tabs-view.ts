@@ -3,6 +3,10 @@ import { layoutPanes, resizeSplit } from "./pane-layout";
 import { applyPaneWeights, renderPaneLayout } from "./pane-view";
 import type { TerminalPane, TerminalTab } from "./terminal-tab-model";
 import type { TabsContext } from "./terminal-tabs-types";
+import {
+  flushWorkspaceReport,
+  scheduleWorkspaceReport,
+} from "./terminal-tabs-workspace";
 
 export const selectedTab = (ctx: TabsContext): TerminalTab | undefined =>
   ctx.tabs[ctx.selectedIndex];
@@ -19,6 +23,7 @@ export function findBySession(
 }
 
 export function renderStrip(ctx: TabsContext): void {
+  scheduleWorkspaceReport(ctx);
   ctx.strip.render(
     ctx.tabs,
     ctx.selectedIndex,
@@ -44,11 +49,13 @@ export function applyVisibility(ctx: TabsContext): void {
 }
 
 export function renderLayout(ctx: TabsContext, tab: TerminalTab): void {
+  scheduleWorkspaceReport(ctx);
   renderPaneLayout(tab.container, tab.layout, {
     dividerLabel: ctx.options.dividerLabel ?? "Resize panes",
     onResize: (path, index, delta) => {
       tab.layout = resizeSplit(tab.layout, path, index, delta);
       applyPaneWeights(tab.container, tab.layout);
+      scheduleWorkspaceReport(ctx);
     },
   });
 }
@@ -101,6 +108,7 @@ export function notifyEmpty(
   if (ctx.disposed || ctx.closing || ctx.tabs.length !== 0) return;
   // Commit last-tab closure: a later queued New Tab cannot resurrect it.
   ctx.closing = true;
+  flushWorkspaceReport(ctx);
   ctx.options.notifyEmpty?.(reason);
 }
 

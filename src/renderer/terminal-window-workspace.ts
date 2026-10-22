@@ -103,6 +103,12 @@ export function windowTabsOptions(
       : {}),
     showTabBar: options.configuration?.showTabBar ?? true,
     ...(options.initialLaunch ? { initialLaunch: options.initialLaunch } : {}),
+    ...(options.initialWorkspace
+      ? { initialWorkspace: options.initialWorkspace }
+      : {}),
+    ...(options.reportWorkspace
+      ? { onWorkspaceChange: options.reportWorkspace }
+      : {}),
     dividerLabel: translator.t("pane.divider"),
     endedBanner: {
       ended: (exitCode) => translator.t("sessions.ended", { code: exitCode }),

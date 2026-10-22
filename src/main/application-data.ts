@@ -7,6 +7,15 @@ import {
   rm,
   type FileHandle,
 } from "node:fs/promises";
+import {
+  closeSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 
 // Application Data is state that OMXTerm itself owns and writes (saved
@@ -56,6 +65,9 @@ export interface ApplicationDocumentStore<T> {
   readonly path: string;
   load(): Promise<ApplicationDocumentLoad<T>>;
   save(value: T): Promise<void>;
+  // For the last write while the application exits, when no promise can be
+  // awaited: the same validation and atomic replace, synchronously.
+  saveSync(value: T): void;
   // Reads a document in this store's file format, such as one from a
   // backup, without touching the stored file. Throws ApplicationDataError.
   decode(bytes: Uint8Array): T;
@@ -129,27 +141,54 @@ export function createApplicationDocumentStore<T>(
     },
     decode: (bytes) => decodeDocument(bytes, schema),
     save(value: T) {
-      const validated = schema.validate(
-        JSON.parse(JSON.stringify(value)) as unknown,
-      );
-      const text = `${JSON.stringify(
-        { version: schema.version, data: validated },
-        null,
-        2,
-      )}\n`;
+      // Validation throws synchronously; only an oversized document rejects.
+      const text = encodeDocument(value, schema);
       if (Buffer.byteLength(text, "utf8") > MAX_APPLICATION_DATA_BYTES)
-        return Promise.reject(
-          new ApplicationDataError(
-            "too-large",
-            "Application data is too large",
-          ),
-        );
+        return Promise.reject(tooLarge());
       const write = queue.then(() => writeAtomically(fs, documentPath, text));
       queue = write.catch(() => undefined);
       return write;
     },
+    saveSync(value: T) {
+      const text = encodeDocument(value, schema);
+      if (Buffer.byteLength(text, "utf8") > MAX_APPLICATION_DATA_BYTES)
+        throw tooLarge();
+      mkdirSync(path.dirname(documentPath), { recursive: true, mode: 0o700 });
+      const temporary = `${documentPath}.${randomBytes(6).toString("hex")}.tmp`;
+      try {
+        const descriptor = openSync(temporary, "wx", 0o600);
+        try {
+          writeFileSync(descriptor, text, "utf8");
+          fsyncSync(descriptor);
+        } finally {
+          closeSync(descriptor);
+        }
+        renameSync(temporary, documentPath);
+      } catch (cause) {
+        rmSync(temporary, { force: true });
+        throw cause;
+      }
+    },
   };
 }
+
+function encodeDocument<T>(
+  value: T,
+  schema: ApplicationDocumentSchema<T>,
+): string {
+  const validated = schema.validate(
+    JSON.parse(JSON.stringify(value)) as unknown,
+  );
+  const text = `${JSON.stringify(
+    { version: schema.version, data: validated },
+    null,
+    2,
+  )}\n`;
+  return text;
+}
+
+const tooLarge = () =>
+  new ApplicationDataError("too-large", "Application data is too large");
 
 function decodeDocument<T>(
   bytes: Uint8Array,
