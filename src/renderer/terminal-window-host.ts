@@ -190,6 +190,17 @@ export function mountTerminalWindowPage(
   const surfaceOptions: TerminalSurfaceOptions = {
     ...activeSurfaceConfiguration,
     background: "host",
+    ...(options.translator
+      ? {
+          searchLabels: {
+            placeholder: options.translator.t("search.placeholder"),
+            previous: options.translator.t("search.previous"),
+            next: options.translator.t("search.next"),
+            clear: options.translator.t("search.clear"),
+            close: options.translator.t("search.close"),
+          },
+        }
+      : {}),
     ...(fontGenerations ? { acquireFontInputs: fontGenerations.acquire } : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.onExternalLink

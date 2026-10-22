@@ -21,6 +21,7 @@ export function createFakeSurface() {
     paste: vi.fn(async () => undefined),
     inject: vi.fn(async () => {}),
     selectAll: vi.fn(),
+    toggleSearch: vi.fn(),
     dispose: vi.fn(),
   };
 }

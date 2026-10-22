@@ -277,6 +277,7 @@ Customize application shortcuts under `keybinds` using [Electron accelerator](ht
 | `toggleSessions`            | `Command+Shift+J`           | `Control+Shift+H`         |
 | `toggleCommands`            | `Command+Shift+M`           | `Control+Shift+M`         |
 | `commandPalette`            | `Command+Shift+P`           | `Control+Shift+P`         |
+| `find`                      | `Command+F`                 | `Control+Shift+G`         |
 
 Example overriding a single shortcut:
 

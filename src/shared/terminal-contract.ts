@@ -79,6 +79,7 @@ export type TerminalTabCommand =
   | { readonly action: "focus-pane"; readonly target: TerminalPaneTarget }
   | { readonly action: "toggle-maximize-pane" }
   | { readonly action: "equalize-panes" }
+  | { readonly action: "find" }
   | { readonly action: "toggle-broadcast" };
 
 // "right" places the new pane beside the focused one, "down" below it.
@@ -235,22 +236,26 @@ export function isTerminalSessionTitle(
   );
 }
 
+// Tab commands that carry nothing but their action.
+const BARE_TAB_ACTIONS: ReadonlySet<unknown> = new Set([
+  "new",
+  "close",
+  "prepare-close",
+  "next",
+  "previous",
+  "close-pane",
+  "prepare-close-pane",
+  "toggle-maximize-pane",
+  "equalize-panes",
+  "find",
+  "toggle-broadcast",
+]);
+
 export function isTerminalTabCommand(
   value: unknown,
 ): value is TerminalTabCommand {
   if (isStrictRecord(value, ["action"]))
-    return (
-      value.action === "new" ||
-      value.action === "close" ||
-      value.action === "prepare-close" ||
-      value.action === "next" ||
-      value.action === "previous" ||
-      value.action === "close-pane" ||
-      value.action === "prepare-close-pane" ||
-      value.action === "toggle-maximize-pane" ||
-      value.action === "equalize-panes" ||
-      value.action === "toggle-broadcast"
-    );
+    return BARE_TAB_ACTIONS.has(value.action);
   if (isStrictRecord(value, ["action", "direction"]))
     return (
       value.action === "split" &&

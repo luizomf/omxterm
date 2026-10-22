@@ -1227,6 +1227,16 @@ global environment, User Configuration, terminal font zoom, title-bar
 preferences or the three-file ownership/rollback contract. See
 [ADR 0031](adr/0031-keep-linux-installer-choices-small-and-local.md).
 
+## Terminal search
+
+**Edit → Find…** (`Cmd+F` on macOS, `Ctrl+Shift+G` on Linux and Windows,
+because `Ctrl+Shift+F` toggles full screen there; remappable as `find`) opens
+Restty's search bar over the focused pane. It searches the pane's
+scrollback, highlights every match, shows the count, and steps with
+Previous/Next. Its labels are translated. Restty's own search shortcut stays
+off, so only OMXTerm's keybind opens it, and each pane searches only its own
+buffer.
+
 ## Command palette
 
 **View → Command Palette…** (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Linux

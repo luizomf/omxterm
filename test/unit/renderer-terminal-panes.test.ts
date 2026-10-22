@@ -74,6 +74,13 @@ describe("split Terminal Panes", () => {
     expect(harness.container.querySelector(".pane-ended-banner")).toBeNull();
   });
 
+  it("opens search in the focused pane only", async () => {
+    const harness = await splitHarness();
+    harness.tabs.handleCommand({ action: "find" });
+    expect(harness.surfaces[1]!.toggleSearch).toHaveBeenCalledOnce();
+    expect(harness.surfaces[0]!.toggleSearch).not.toHaveBeenCalled();
+  });
+
   it("keeps a signalled pane until main acknowledges it", async () => {
     const harness = await splitHarness();
     harness.adapters[0]!.handlers!.onExit({ exitCode: 0, signal: 9 });

@@ -44,6 +44,7 @@ export const TERMINAL_ACTION_NAMES = [
   "toggleSessions",
   "toggleCommands",
   "commandPalette",
+  "find",
 ] as const;
 
 export type TerminalActionName = (typeof TERMINAL_ACTION_NAMES)[number];
@@ -95,6 +96,7 @@ export const DEFAULT_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   toggleSessions: "Command+Shift+J",
   toggleCommands: "Command+Shift+M",
   commandPalette: "Command+Shift+P",
+  find: "Command+F",
 });
 
 // Linux and Windows share the conventional shifted terminal shortcuts so
@@ -148,6 +150,8 @@ const SHIFTED_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   toggleCommands: "Control+Shift+M",
   // AshyTerm's command palette shortcut.
   commandPalette: "Control+Shift+P",
+  // Ctrl+Shift+F is Toggle Full Screen here.
+  find: "Control+Shift+G",
 });
 
 export function terminalDefaultKeybinds(platform: string): TerminalKeybinds {

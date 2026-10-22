@@ -41,6 +41,7 @@ export function applicationMenuActions(
     focusPaneInSelectedWindow: application.focusPaneInSelectedWindow,
     toggleSelectedPaneMaximized: application.toggleSelectedPaneMaximized,
     equalizeSelectedPanes: application.equalizeSelectedPanes,
+    findInSelectedWindow: application.findInSelectedWindow,
     toggleSelectedBroadcast: application.toggleSelectedBroadcast,
     toggleSelectedSessions: application.toggleSelectedSessions,
     toggleSelectedCommands: application.toggleSelectedCommands,

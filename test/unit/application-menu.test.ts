@@ -43,6 +43,7 @@ function menuActions() {
     toggleSelectedSessions: vi.fn(),
     toggleSelectedCommands: vi.fn(),
     toggleSelectedCommandPalette: vi.fn(),
+    findInSelectedWindow: vi.fn(),
     backUpSettings: vi.fn(),
     restoreSettings: vi.fn(),
   };

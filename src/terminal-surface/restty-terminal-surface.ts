@@ -264,14 +264,7 @@ export async function mountResttyTerminalSurface(
     );
     restty = new PatchedRestty({
       root: container,
-      surface: {
-        autoInit: false,
-        createInitialPane: true,
-        defaultContextMenu: false,
-        paneStyles: false,
-        searchUi: false,
-        shortcuts: false,
-      },
+      surface: resttySurfaceConfig(options.searchLabels),
       terminal: { ...terminal, isSurfaceVisible },
       services: resttyHostServices(transport, delivery, options, revealInput),
     });
@@ -371,6 +364,9 @@ export async function mountResttyTerminalSurface(
       ...resttyClipboardActions(delivery, options, () =>
         disposed ? undefined : pane?.runtime.interaction,
       ),
+      toggleSearch: () => {
+        if (!disposed) restty?.toggleSearch();
+      },
       dispose,
     };
   } catch (cause) {
@@ -498,6 +494,35 @@ function retainsExit(
   );
 }
 
+// OMXTerm owns panes, styles, menus and shortcuts; search opens through its
+// own keybind, never Restty's shortcut.
+function resttySurfaceConfig(labels: TerminalSurfaceOptions["searchLabels"]) {
+  return {
+    autoInit: false,
+    createInitialPane: true,
+    defaultContextMenu: false,
+    paneStyles: false,
+    shortcuts: false,
+    searchUi: resttySearchUi(labels),
+  };
+}
+
+function resttySearchUi(labels: TerminalSurfaceOptions["searchLabels"]) {
+  return {
+    enabled: true,
+    shortcut: false,
+    ...(labels
+      ? {
+          placeholder: labels.placeholder,
+          previousButtonText: labels.previous,
+          nextButtonText: labels.next,
+          clearButtonText: labels.clear,
+          closeButtonText: labels.close,
+        }
+      : {}),
+  };
+}
+
 function createDisposedSurface(): TerminalSurface {
   return {
     focus: () => undefined,
@@ -508,6 +533,7 @@ function createDisposedSurface(): TerminalSurface {
     paste: async () => undefined,
     inject: async () => undefined,
     selectAll: () => undefined,
+    toggleSearch: () => undefined,
     dispose: () => undefined,
   };
 }

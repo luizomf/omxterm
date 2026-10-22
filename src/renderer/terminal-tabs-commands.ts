@@ -75,17 +75,26 @@ export function handleTabCommand(
     case "toggle-maximize-pane":
       toggleMaximize(ctx);
       return;
-    case "equalize-panes": {
-      const tab = selectedTab(ctx);
-      if (!tab) return;
-      tab.layout = equalizeLayout(tab.layout);
-      applyPaneWeights(tab.container, tab.layout);
-      scheduleWorkspaceReport(ctx);
-      return;
-    }
+    case "find":
+    case "equalize-panes":
     case "toggle-broadcast":
-      toggleBroadcast(ctx);
+      handlePaneCommand(ctx, command.action);
       return;
+  }
+}
+
+// Commands that act on the selected tab's panes.
+function handlePaneCommand(
+  ctx: TabsContext,
+  action: "find" | "equalize-panes" | "toggle-broadcast",
+): void {
+  const tab = selectedTab(ctx);
+  if (action === "toggle-broadcast") toggleBroadcast(ctx);
+  else if (action === "find") tab?.focused.surface?.toggleSearch();
+  else if (tab) {
+    tab.layout = equalizeLayout(tab.layout);
+    applyPaneWeights(tab.container, tab.layout);
+    scheduleWorkspaceReport(ctx);
   }
 }
 

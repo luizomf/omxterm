@@ -40,6 +40,7 @@ export interface TerminalApplicationMenuActions {
   readonly toggleSelectedSessions: () => void;
   readonly toggleSelectedCommands: () => void;
   readonly toggleSelectedCommandPalette: () => void;
+  readonly findInSelectedWindow: () => void;
   readonly backUpSettings: () => void;
   readonly restoreSettings: () => void;
   readonly toggleOutputHighlighting?: () => void;
@@ -100,6 +101,12 @@ export function terminalApplicationMenuTemplate(
           label: "Select All",
           accelerator: keybinds.selectAll,
           click: actions.selectAllSelectedTerminal,
+        },
+        { type: "separator" },
+        {
+          label: "Find…",
+          accelerator: keybinds.find,
+          click: actions.findInSelectedWindow,
         },
       ],
     },
@@ -374,6 +381,7 @@ export function terminalActionInvocations(
     toggleSessions: actions.toggleSelectedSessions,
     toggleCommands: actions.toggleSelectedCommands,
     commandPalette: actions.toggleSelectedCommandPalette,
+    find: actions.findInSelectedWindow,
   });
 }
 

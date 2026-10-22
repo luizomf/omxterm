@@ -128,6 +128,7 @@ export interface TerminalApplication<
   focusPaneInSelectedWindow(target: TerminalPaneTarget): void;
   toggleSelectedPaneMaximized(): void;
   equalizeSelectedPanes(): void;
+  findInSelectedWindow(): void;
   toggleSelectedBroadcast(): void;
   selectNextTab(): void;
   selectPreviousTab(): void;
@@ -427,16 +428,14 @@ function sidebarToggles<Window extends NativeTerminalWindow>(
   | "toggleSelectedCommands"
   | "toggleSelectedCommandPalette"
 > {
+  const send = (
+    toggle:
+      "sendSessionsToggle" | "sendCommandsToggle" | "sendCommandPaletteToggle",
+  ) => forSelected((window) => options[toggle]?.(window));
   return {
-    toggleSelectedSessions: forSelected((window) =>
-      options.sendSessionsToggle?.(window),
-    ),
-    toggleSelectedCommands: forSelected((window) =>
-      options.sendCommandsToggle?.(window),
-    ),
-    toggleSelectedCommandPalette: forSelected((window) =>
-      options.sendCommandPaletteToggle?.(window),
-    ),
+    toggleSelectedSessions: send("sendSessionsToggle"),
+    toggleSelectedCommands: send("sendCommandsToggle"),
+    toggleSelectedCommandPalette: send("sendCommandPaletteToggle"),
   };
 }
 
@@ -479,6 +478,7 @@ function paneActions<Window extends NativeTerminalWindow>(
   | "toggleSelectedPaneMaximized"
   | "equalizeSelectedPanes"
   | "toggleSelectedBroadcast"
+  | "findInSelectedWindow"
 > {
   return {
     closeSelectedPane() {
@@ -510,6 +510,7 @@ function paneActions<Window extends NativeTerminalWindow>(
     toggleSelectedPaneMaximized: () =>
       sendToSelected({ action: "toggle-maximize-pane" }),
     equalizeSelectedPanes: () => sendToSelected({ action: "equalize-panes" }),
+    findInSelectedWindow: () => sendToSelected({ action: "find" }),
     toggleSelectedBroadcast: () =>
       sendToSelected({ action: "toggle-broadcast" }),
   };

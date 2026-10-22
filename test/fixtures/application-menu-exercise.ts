@@ -74,6 +74,7 @@ export async function exerciseApplicationMenu(
     toggleSelectedSessions: unexpected,
     toggleSelectedCommands: unexpected,
     toggleSelectedCommandPalette: unexpected,
+    findInSelectedWindow: unexpected,
     backUpSettings: unexpected,
     restoreSettings: unexpected,
   };

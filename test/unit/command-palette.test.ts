@@ -111,5 +111,7 @@ describe("command palette", () => {
     expect(terminalDefaultKeybinds("darwin").commandPalette).toBe(
       "Command+Shift+P",
     );
+    expect(terminalDefaultKeybinds("linux").find).toBe("Control+Shift+G");
+    expect(terminalDefaultKeybinds("darwin").find).toBe("Command+F");
   });
 });

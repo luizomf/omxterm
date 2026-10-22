@@ -97,6 +97,10 @@ OMXTerm runs your system's OpenSSH client (`ssh`, or `ssh.exe` on Windows), so `
 
 When a saved or Quick Connect session fails (for example, `Connection refused`), its tab stays open with the error visible and offers **Reconnect** and **Close**.
 
+## Searching the terminal
+
+Press `Cmd+F` / `Ctrl+Shift+G` (**Edit → Find…**) and type to highlight every match in the focused pane, including its scrollback. Use **Previous** and **Next** to move between matches, and **Close** or the same shortcut to hide the search bar.
+
 ## Command palette
 
 Press `Cmd+Shift+P` / `Ctrl+Shift+P` (**View → Command Palette…**) and type part of what you want, such as `split` or the name of a saved session, then press `Enter`. Every menu action with a shortcut is listed, so you can run it without remembering the keys.

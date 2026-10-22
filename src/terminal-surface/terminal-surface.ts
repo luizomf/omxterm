@@ -17,6 +17,8 @@ export interface TerminalSurface {
   paste(): Promise<void>;
   inject(text: string, options?: { readonly submit?: boolean }): Promise<void>;
   selectAll(): void;
+  // Opens or closes the in-terminal search bar over the scrollback.
+  toggleSearch(): void;
   dispose(): void;
 }
 
@@ -89,6 +91,14 @@ export interface TerminalSurfaceOptions {
   // Keep the final screen after a non-zero exit instead of disposing, so a
   // failed connection's error stays readable. Input is refused afterwards.
   readonly retainOnExit?: boolean;
+  // Labels for the search bar; English when absent.
+  readonly searchLabels?: {
+    readonly placeholder: string;
+    readonly previous: string;
+    readonly next: string;
+    readonly clear: string;
+    readonly close: string;
+  };
 }
 
 export { mountResttyTerminalSurface as mountTerminalSurface } from "./restty-terminal-surface";
