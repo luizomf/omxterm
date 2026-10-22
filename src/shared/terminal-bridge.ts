@@ -40,6 +40,7 @@ export interface HighlightsBridge {
   get(): Promise<HighlightSettings>;
   save(settings: HighlightSettings): Promise<HighlightSettings>;
   onChanged(listener: (settings: HighlightSettings) => void): () => void;
+  onOpenEditor(listener: () => void): () => void;
 }
 
 export interface SessionsBridge {

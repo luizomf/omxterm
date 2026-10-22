@@ -28,5 +28,12 @@ export function createHighlightsBridge(ipc: IpcRenderer): HighlightsBridge {
       ipc.on(highlightIpc.changed, handler);
       return () => ipc.removeListener(highlightIpc.changed, handler);
     },
+    onOpenEditor(listener) {
+      const handler = (_event: IpcRendererEvent, payload: unknown) => {
+        if (payload === undefined) listener();
+      };
+      ipc.on(highlightIpc.openEditor, handler);
+      return () => ipc.removeListener(highlightIpc.openEditor, handler);
+    },
   };
 }

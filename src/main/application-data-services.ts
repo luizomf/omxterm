@@ -1,4 +1,5 @@
-import { app, type IpcMain } from "electron";
+import { app, BrowserWindow, type IpcMain } from "electron";
+import { highlightIpc } from "../shared/highlight-ipc";
 import { statSync } from "node:fs";
 import { parseSshTarget } from "../shared/saved-session-primitives";
 import { resolveApplicationDataDirectory } from "./application-data";
@@ -90,6 +91,12 @@ export async function startApplicationDataServices(options: {
     },
     backUpSettings: () => backup.request("create"),
     restoreSettings: () => backup.request("restore"),
+    openHighlightRules: () => {
+      const window =
+        BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+      if (window && !window.webContents.isDestroyed())
+        window.webContents.send(highlightIpc.openEditor);
+    },
     toggleRestoreWorkspace: () => {
       void workspace
         .setRestore(!workspace.restoreEnabled())

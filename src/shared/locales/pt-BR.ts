@@ -287,6 +287,17 @@ export const brazilianPortugueseMessages: EnglishMessages = {
   },
 
   "highlight.title": "Destaque de Saída",
+  "highlight.ignored": "Comandos ignorados",
+  "highlight.ignoredHint":
+    "Um comando por linha. A saída deles nunca é alterada, por exemplo ferramentas que já colorem a própria saída.",
+  "highlight.ruleSetsHint":
+    "Conjuntos de regras escolhidos pelo comando executado.",
+  "highlight.addRule": "Adicionar Regra",
+  "highlight.removeRule": "Remover Regra",
+  "highlight.ruleName": "Nome",
+  "highlight.bold": "Negrito",
+  "highlight.noCustomRules": "Nenhuma regra personalizada ainda.",
+  "highlight.editorTitle": "Regras de Destaque",
   "highlight.enabled": "Destacar a saída do terminal",
   "highlight.rules": "Regras",
   "highlight.ruleSets": "Conjuntos de regras",

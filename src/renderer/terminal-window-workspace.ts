@@ -13,6 +13,7 @@ import type { TerminalTabs, TerminalTabsOptions } from "./terminal-tabs";
 import type { TerminalWindowPageOptions } from "./terminal-window-host";
 import { createToaster, createWorkspaceSidebar } from "./workspace-sidebar";
 import { installBackupDialogs } from "./backup/backup-dialogs";
+import { openHighlightEditor } from "./highlighting/highlight-editor";
 import { createCommandPalette, type PaletteEntry } from "./command-palette";
 import { sessionLaunch } from "./sessions/session-actions";
 import { TERMINAL_ACTION_NAMES } from "../shared/terminal-keybinds";
@@ -87,6 +88,14 @@ export function mountWorkspace(
   const removePaletteToggle = workspace.palette?.onToggle(() => {
     if (!context.isBlocked()) palette?.toggle();
   });
+  const removeHighlightEditor = workspace.highlights?.onOpenEditor(() => {
+    if (context.isBlocked() || document.querySelector(".highlight-editor"))
+      return;
+    void openHighlightEditor(document, {
+      translator: context.translator,
+      bridge: workspace.highlights!,
+    }).catch((cause: unknown) => toaster.notify(String(cause)));
+  });
   const removeBackup = workspace.backup
     ? installBackupDialogs(document, {
         bridge: workspace.backup,
@@ -97,6 +106,7 @@ export function mountWorkspace(
   return () => {
     removeToggle();
     removeBackup?.();
+    removeHighlightEditor?.();
     removePaletteToggle?.();
     palette?.dispose();
     removeCommandsToggle?.();

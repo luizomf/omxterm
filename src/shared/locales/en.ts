@@ -284,6 +284,16 @@ export const englishMessages = {
   },
 
   "highlight.title": "Output Highlighting",
+  "highlight.ignored": "Commands left untouched",
+  "highlight.ignoredHint":
+    "One command per line. Their output is never changed, for example tools that color their own output.",
+  "highlight.ruleSetsHint": "Rule sets chosen by the command you run.",
+  "highlight.addRule": "Add Rule",
+  "highlight.removeRule": "Remove Rule",
+  "highlight.ruleName": "Name",
+  "highlight.bold": "Bold",
+  "highlight.noCustomRules": "No custom rules yet.",
+  "highlight.editorTitle": "Highlight Rules",
   "highlight.enabled": "Highlight terminal output",
   "highlight.rules": "Rules",
   "highlight.ruleSets": "Rule sets",

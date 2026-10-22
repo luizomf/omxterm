@@ -454,6 +454,10 @@ and the choice is kept in Application Data (`highlights.json`).
   own output or draw full screens) are left untouched. The command line is
   read from the pane's own echo and is never stored, logged or sent.
 - Colors use the 16-color palette, so they follow the Terminal Theme.
+- **View → Highlight Rules…** edits the switches, the commands left
+  untouched, which rule sets are active, and custom rules (name, pattern,
+  palette color, bold). Patterns that fail `checkPattern` are refused in the
+  form, and main validates the whole document again before saving.
 
 ## Command Manager
 

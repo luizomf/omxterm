@@ -44,6 +44,7 @@ export interface TerminalApplicationMenuActions {
   readonly restoreSettings: () => void;
   readonly toggleOutputHighlighting?: () => void;
   readonly toggleRestoreWorkspace?: () => void;
+  readonly openHighlightRules?: () => void;
 }
 
 export interface TerminalApplicationMenuState {
@@ -182,6 +183,14 @@ export function terminalApplicationMenuTemplate(
                 type: "checkbox" as const,
                 checked: state.outputHighlighting ?? false,
                 click: actions.toggleOutputHighlighting,
+              },
+            ]
+          : []),
+        ...(actions.openHighlightRules
+          ? [
+              {
+                label: "Highlight Rules…",
+                click: actions.openHighlightRules,
               },
             ]
           : []),

@@ -127,6 +127,7 @@ export interface TerminalWindowPageOptions {
     readonly sessions: SessionsBridge;
     readonly commands?: CommandsBridge;
     readonly backup?: BackupBridge;
+    readonly highlights?: HighlightsBridge;
     readonly palette?: {
       readonly onToggle: (listener: () => void) => () => void;
       readonly runAction: (action: TerminalActionName) => void;

@@ -127,6 +127,8 @@ Highlighting is off by default and stays out of the way:
 - Very fast output, such as a large file printed with `cat`, passes through unchanged.
 - Colors come from your terminal theme's palette.
 
+**View → Highlight Rules…** lets you turn rule sets on or off, choose which commands are never changed, and add your own rules: a name, a regular expression and a color. Patterns that could slow the terminal down are refused.
+
 The choice and any custom rules are saved in `highlights.json` next to `config.json`.
 
 ## Split panes
