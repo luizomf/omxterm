@@ -51,6 +51,7 @@ export function assertSameFile(source: string, packaged: string): Promise<void>;
 export function sourceVersion(): Promise<string>;
 
 export const staticOnlyFlag: string;
+export const softwareGlFlag: string;
 
 export function packageVerificationOptions(
   args: readonly string[],
@@ -59,6 +60,7 @@ export function packageVerificationOptions(
   windowsUnpackedOnly: boolean;
   disposableVm: boolean;
   staticOnly: boolean;
+  softwareGl: boolean;
 };
 
 export function inspectForbiddenPackagedEntries(entries: string[]): string[];

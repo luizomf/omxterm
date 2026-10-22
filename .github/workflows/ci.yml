@@ -141,7 +141,7 @@ jobs:
         # rpm provides rpmbuild and rpm2cpio; xvfb runs the packaged app.
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xvfb procps file binutils cpio rpm fontconfig fonts-dejavu-core fonts-liberation
+          sudo apt-get install -y --no-install-recommends xvfb procps file binutils cpio rpm fontconfig fonts-dejavu-core fonts-liberation libgl1-mesa-dri libegl1 libgles2
       - name: System fpm (Linux ARM64)
         if: matrix.target == 'linux-arm64'
         run: |
@@ -153,7 +153,11 @@ jobs:
         run: npm run package:${{ matrix.platform }}
       - name: Verify packaged startup and contents
         if: runner.os == 'Linux'
-        run: xvfb-run --auto-servernum npm run package:verify
+        # Hosted runners have no GPU: Chromium blocklists Mesa's software
+        # renderer, and Restty needs WebGL2. --software-gl uses the
+        # installer's compatibility mode and reports that GPU rendering was
+        # not verified.
+        run: xvfb-run --auto-servernum npm run package:verify -- --software-gl
       - name: Verify packaged contents without launching
         # Hosted macOS and Windows runners have no desktop this suite may
         # use, and exact NSIS verification requires an authorized disposable

@@ -892,22 +892,33 @@ export async function verifyPackagedStartupWithCleanup({
 }
 
 export const staticOnlyFlag = "--static-only";
+export const softwareGlFlag = "--software-gl";
 
 // --static-only checks package contents without launching the application
 // (for CI runners without a usable desktop); it authorizes nothing else.
+// --software-gl launches Linux packages with Mesa's software renderer and
+// Chromium's GPU blocklist ignored, the installer's compatibility mode (ADR
+// 0031), for runners with a virtual X server but no GPU. It proves packaged
+// startup, not GPU rendering, and the result says so.
 export function packageVerificationOptions(args, platform = process.platform) {
-  const staticOnly = args.includes(staticOnlyFlag);
-  if (args.filter((argument) => argument === staticOnlyFlag).length > 1)
+  const count = (flag) => args.filter((argument) => argument === flag).length;
+  if (count(staticOnlyFlag) > 1 || count(softwareGlFlag) > 1)
     throw new Error("Unknown or duplicate package verification option");
+  const staticOnly = count(staticOnlyFlag) === 1;
+  const softwareGl = count(softwareGlFlag) === 1;
+  if (softwareGl && (platform !== "linux" || staticOnly))
+    throw new Error("Software GL applies only to a Linux startup verification");
   const options = windowsVerificationOptions(
-    args.filter((argument) => argument !== staticOnlyFlag),
+    args.filter(
+      (argument) => argument !== staticOnlyFlag && argument !== softwareGlFlag,
+    ),
     platform,
   );
   if (staticOnly && (options.disposableVm || options.windowsUnpackedOnly))
     throw new Error(
       "Static-only verification cannot be combined with Windows launch options",
     );
-  return { ...options, staticOnly };
+  return { ...options, staticOnly, softwareGl };
 }
 
 export async function verifyPackagedApplication(
@@ -916,6 +927,7 @@ export async function verifyPackagedApplication(
     windowsUnpackedOnly = false,
     disposableVm = false,
     staticOnly = false,
+    softwareGl = false,
   } = {},
 ) {
   if (
@@ -1214,6 +1226,7 @@ export async function verifyPackagedApplication(
         ...runtimeArguments,
         `--user-data-dir=${userDataRoot}`,
         ...(platform === "linux" ? ["--ozone-platform=x11"] : []),
+        ...(softwareGl ? ["--ignore-gpu-blocklist"] : []),
         "-e",
         explicitCommand.executable,
         ...explicitCommand.arguments,
@@ -1233,6 +1246,7 @@ export async function verifyPackagedApplication(
           OMXTERM_PACKAGE_ARGUMENT_CANARY: argumentCanary,
           OMXTERM_PACKAGE_EXPECTED_HOME: userInfo().homedir,
           OMXTERM_PACKAGE_READINESS_FILE: readinessFile,
+          ...(softwareGl ? { LIBGL_ALWAYS_SOFTWARE: "1" } : {}),
         },
         stdio: ["ignore", "ignore", "pipe"],
       });
@@ -1308,7 +1322,9 @@ export async function verifyPackagedApplication(
         ? `STATIC ONLY (startup${platform === "win32" ? " and exact installer" : ""} NOT verified)`
         : platform === "win32" && windowsUnpackedOnly
           ? "UNPACKED DIAGNOSTIC ONLY (exact installer NOT verified)"
-          : "FULL",
+          : softwareGl
+            ? "FULL (software GL; GPU rendering NOT verified)"
+            : "FULL",
       installerVerification,
     };
   } finally {

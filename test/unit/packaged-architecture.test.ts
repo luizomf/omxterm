@@ -277,14 +277,31 @@ describe("package verification options", () => {
         windowsUnpackedOnly: false,
         disposableVm: false,
         staticOnly: true,
+        softwareGl: false,
       });
       expect(packageVerificationOptions([], platform)).toEqual({
         windowsUnpackedOnly: false,
         disposableVm: false,
         staticOnly: false,
+        softwareGl: false,
       });
     },
   );
+
+  it("accepts software GL only for a Linux startup verification", () => {
+    expect(packageVerificationOptions(["--software-gl"], "linux")).toEqual({
+      windowsUnpackedOnly: false,
+      disposableVm: false,
+      staticOnly: false,
+      softwareGl: true,
+    });
+    expect(() =>
+      packageVerificationOptions(["--software-gl"], "darwin"),
+    ).toThrow(/only to a Linux startup/u);
+    expect(() =>
+      packageVerificationOptions(["--software-gl", "--static-only"], "linux"),
+    ).toThrow(/only to a Linux startup/u);
+  });
 
   it.each([
     [["--static-only", "--static-only"], "linux", "duplicate"],
