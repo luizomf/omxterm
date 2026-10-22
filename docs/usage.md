@@ -97,6 +97,10 @@ OMXTerm runs your system's OpenSSH client (`ssh`, or `ssh.exe` on Windows), so `
 
 When a saved or Quick Connect session fails (for example, `Connection refused`), its tab stays open with the error visible and offers **Reconnect** and **Close**.
 
+## Command palette
+
+Press `Cmd+Shift+P` / `Ctrl+Shift+P` (**View → Command Palette…**) and type part of what you want, such as `split` or the name of a saved session, then press `Enter`. Every menu action with a shortcut is listed, so you can run it without remembering the keys.
+
 ## Reopening windows at startup
 
 Turn on **Restore Windows at Startup** in the application menu (the **OMXTerm** menu, or the menu that opens when you press and release `Alt` on Linux and Windows). When you quit, OMXTerm remembers its windows, tabs and split panes. Shells reopen in the folders they were in, and saved sessions and Quick Connect tabs reconnect. Closing a window while others stay open forgets that window. Turning the option off erases what was saved.

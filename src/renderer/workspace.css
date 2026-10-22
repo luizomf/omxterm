@@ -837,3 +837,52 @@ body.tabs-visible #workspace-sidebar {
   padding-bottom: var(--omx-space-2);
   border-bottom: 1px solid var(--omx-border);
 }
+
+/* Command palette: a search field over a list of actions and launches. */
+.omx-modal.command-palette {
+  width: min(560px, calc(100vw - 32px));
+  margin-top: 12vh;
+  padding: var(--omx-space-2);
+}
+
+.command-palette input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--omx-space-2) var(--omx-space-3);
+  font: var(--omx-font);
+  color: var(--omx-foreground);
+  background: var(--omx-surface);
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.command-palette input:focus {
+  outline: var(--omx-focus-ring);
+}
+
+.command-palette ul {
+  max-height: 50vh;
+  margin: var(--omx-space-2) 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.command-palette li {
+  display: flex;
+  gap: var(--omx-space-3);
+  justify-content: space-between;
+  padding: var(--omx-space-2) var(--omx-space-3);
+  cursor: pointer;
+  border-radius: var(--omx-radius);
+}
+
+.command-palette li[aria-selected="true"] {
+  color: #fff;
+  background: var(--omx-accent);
+}
+
+.command-palette-section {
+  font-size: 0.85em;
+  opacity: 0.7;
+}

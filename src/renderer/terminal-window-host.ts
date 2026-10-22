@@ -40,6 +40,7 @@ import type {
 import { createTerminalFontGenerationOwner } from "./terminal-font-generations";
 import type { Translator } from "../shared/i18n";
 import type { WorkspacePlan, WorkspaceSnapshot } from "../shared/workspace";
+import type { TerminalActionName } from "../shared/terminal-keybinds";
 import type {
   CommandsBridge,
   HighlightsBridge,
@@ -126,6 +127,10 @@ export interface TerminalWindowPageOptions {
     readonly sessions: SessionsBridge;
     readonly commands?: CommandsBridge;
     readonly backup?: BackupBridge;
+    readonly palette?: {
+      readonly onToggle: (listener: () => void) => () => void;
+      readonly runAction: (action: TerminalActionName) => void;
+    };
   };
   readonly snippets?: {
     readonly element: HTMLElement;

@@ -276,6 +276,7 @@ Customize application shortcuts under `keybinds` using [Electron accelerator](ht
 | `toggleBroadcast`           | `Command+Alt+I`             | `Control+Shift+I`         |
 | `toggleSessions`            | `Command+Shift+J`           | `Control+Shift+H`         |
 | `toggleCommands`            | `Command+Shift+M`           | `Control+Shift+M`         |
+| `commandPalette`            | `Command+Shift+P`           | `Control+Shift+P`         |
 
 Example overriding a single shortcut:
 

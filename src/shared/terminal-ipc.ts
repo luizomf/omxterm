@@ -38,4 +38,6 @@ export const terminalIpc = {
   workingDirectory: "terminal:working-directory",
   workspace: "terminal:workspace",
   workspacePlan: "terminal:workspace-plan",
+  commandPalette: "terminal:command-palette",
+  runAction: "terminal:run-action",
 } as const;

@@ -98,6 +98,10 @@ void Promise.all([
         sessions: window.omxterm.sessions,
         commands: window.omxterm.commands,
         backup: window.omxterm.backup,
+        palette: {
+          onToggle: window.omxterm.terminal.onCommandPalette,
+          runAction: window.omxterm.terminal.runAction,
+        },
       },
       snippets: {
         element: snippetsElement,

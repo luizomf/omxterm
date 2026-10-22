@@ -99,6 +99,7 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
   readonly sendSnippetsToggle: (window: Window) => void;
   readonly sendSessionsToggle?: (window: Window) => void;
   readonly sendCommandsToggle?: (window: Window) => void;
+  readonly sendCommandPaletteToggle?: (window: Window) => void;
   readonly sendTabBarToggle: (window: Window) => void;
   readonly sendTitleBarToggle: (window: Window) => void;
   readonly sendLocalImageOpen: (window: Window) => void;
@@ -139,6 +140,7 @@ export interface TerminalApplication<
   toggleSelectedSnippets(): void;
   toggleSelectedSessions(): void;
   toggleSelectedCommands(): void;
+  toggleSelectedCommandPalette(): void;
   toggleSelectedTabBar(): void;
   toggleSelectedTitleBar(): void;
   openLocalImageInSelectedWindow(): void;
@@ -421,7 +423,9 @@ function sidebarToggles<Window extends NativeTerminalWindow>(
   forSelected: (action: (window: Window) => void) => () => void,
 ): Pick<
   TerminalApplication<Window>,
-  "toggleSelectedSessions" | "toggleSelectedCommands"
+  | "toggleSelectedSessions"
+  | "toggleSelectedCommands"
+  | "toggleSelectedCommandPalette"
 > {
   return {
     toggleSelectedSessions: forSelected((window) =>
@@ -429,6 +433,9 @@ function sidebarToggles<Window extends NativeTerminalWindow>(
     ),
     toggleSelectedCommands: forSelected((window) =>
       options.sendCommandsToggle?.(window),
+    ),
+    toggleSelectedCommandPalette: forSelected((window) =>
+      options.sendCommandPaletteToggle?.(window),
     ),
   };
 }

@@ -33,6 +33,7 @@ import { createHighlightsBridge } from "./highlights-bridge";
 import { createCommandsBridge } from "./commands-bridge";
 import { createBackupBridge } from "./backup-bridge";
 import { isWorkspacePlan, isWorkspaceSnapshot } from "../shared/workspace";
+import { TERMINAL_ACTION_NAMES } from "../shared/terminal-keybinds";
 import {
   formatFilePathInsertion,
   isFilePathPlatform,
@@ -100,6 +101,19 @@ const terminal: TerminalBridge = {
     if (!isTerminalSnippetsResponse(response))
       throw new TypeError("Invalid Snippets response");
     return response;
+  },
+  onCommandPalette(listener: () => void) {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (payload === undefined) listener();
+    };
+    ipcRenderer.on(terminalIpc.commandPalette, handler);
+    return () =>
+      ipcRenderer.removeListener(terminalIpc.commandPalette, handler);
+  },
+  runAction(action) {
+    if (!(TERMINAL_ACTION_NAMES as readonly unknown[]).includes(action))
+      throw new TypeError("Invalid application action");
+    ipcRenderer.send(terminalIpc.runAction, action);
   },
   onSnippetsToggle(listener: () => void) {
     const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {

@@ -42,6 +42,7 @@ function menuActions() {
     toggleSelectedBroadcast: vi.fn(),
     toggleSelectedSessions: vi.fn(),
     toggleSelectedCommands: vi.fn(),
+    toggleSelectedCommandPalette: vi.fn(),
     backUpSettings: vi.fn(),
     restoreSettings: vi.fn(),
   };

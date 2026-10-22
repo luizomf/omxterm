@@ -13,6 +13,10 @@ import type { TerminalTabs, TerminalTabsOptions } from "./terminal-tabs";
 import type { TerminalWindowPageOptions } from "./terminal-window-host";
 import { createToaster, createWorkspaceSidebar } from "./workspace-sidebar";
 import { installBackupDialogs } from "./backup/backup-dialogs";
+import { createCommandPalette, type PaletteEntry } from "./command-palette";
+import { sessionLaunch } from "./sessions/session-actions";
+import { TERMINAL_ACTION_NAMES } from "../shared/terminal-keybinds";
+import type { MessageKey } from "../shared/locales/en";
 
 // The optional left sidebar with Saved Sessions and the Command Manager.
 // Opening a session or typing a command is ignored while a Local Image
@@ -74,6 +78,15 @@ export function mountWorkspace(
   const removeCommandsToggle = workspace.commands?.onToggleSidebar(() => {
     if (!context.isBlocked()) sidebar.toggle("commands");
   });
+  const palette = workspace.palette
+    ? createCommandPalette(document, {
+        translator: context.translator,
+        entries: () => paletteEntries(workspace, context),
+      })
+    : undefined;
+  const removePaletteToggle = workspace.palette?.onToggle(() => {
+    if (!context.isBlocked()) palette?.toggle();
+  });
   const removeBackup = workspace.backup
     ? installBackupDialogs(document, {
         bridge: workspace.backup,
@@ -84,10 +97,43 @@ export function mountWorkspace(
   return () => {
     removeToggle();
     removeBackup?.();
+    removePaletteToggle?.();
+    palette?.dispose();
     removeCommandsToggle?.();
     sidebar.dispose();
     toaster.dispose();
   };
+}
+
+// Application actions (except tab numbers and the palette itself), then
+// Saved Sessions, which open in a new tab.
+async function paletteEntries(
+  workspace: NonNullable<TerminalWindowPageOptions["workspace"]>,
+  context: Parameters<typeof mountWorkspace>[1],
+): Promise<PaletteEntry[]> {
+  const t = context.translator.t.bind(context.translator);
+  const actions = TERMINAL_ACTION_NAMES.filter(
+    (name) => !name.startsWith("selectTab") && name !== "commandPalette",
+  ).map((name) => ({
+    label: t(`action.${name}` as MessageKey),
+    section: t("palette.actions"),
+    run: () => workspace.palette!.runAction(name),
+  }));
+  const sessions = await workspace.sessions
+    .list()
+    .then((document) => document.sessions)
+    .catch(() => []);
+  return [
+    ...actions,
+    ...sessions.map((session) => ({
+      label: t("palette.openSession", { name: session.name }),
+      section: t("palette.sessions"),
+      run: () => {
+        if (!context.isBlocked())
+          context.tabs.openLaunch(sessionLaunch(session), "tab");
+      },
+    })),
+  ];
 }
 
 // Window-level callbacks and translated strings for the Terminal Tabs.

@@ -1,3 +1,4 @@
+import type { TerminalActionName } from "./terminal-keybinds";
 import type {
   TerminalExit,
   TerminalClipboardAction,
@@ -62,6 +63,9 @@ export interface TerminalBridge {
   fontData(family?: string): Promise<TerminalFontData>;
   snippets(): Promise<TerminalSnippetsResponse>;
   onSnippetsToggle(listener: () => void): () => void;
+  onCommandPalette(listener: () => void): () => void;
+  // Runs an application action, as its keyboard shortcut would.
+  runAction(action: TerminalActionName): void;
   onTabBarToggle(listener: () => void): () => void;
   onTitleBarToggle(listener: () => void): () => void;
   windowChrome(command: WindowChromeCommand): void;

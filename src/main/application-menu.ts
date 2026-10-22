@@ -8,7 +8,7 @@ import type {
   TerminalKeybinds,
 } from "../shared/terminal-keybinds";
 
-interface TerminalApplicationMenuActions {
+export interface TerminalApplicationMenuActions {
   readonly newWindow: () => void;
   readonly closeSelectedWindow: () => void;
   readonly newTabInSelectedWindow: () => void;
@@ -39,6 +39,7 @@ interface TerminalApplicationMenuActions {
   readonly toggleSelectedBroadcast: () => void;
   readonly toggleSelectedSessions: () => void;
   readonly toggleSelectedCommands: () => void;
+  readonly toggleSelectedCommandPalette: () => void;
   readonly backUpSettings: () => void;
   readonly restoreSettings: () => void;
   readonly toggleOutputHighlighting?: () => void;
@@ -154,6 +155,11 @@ export function terminalApplicationMenuTemplate(
           click: actions.resetSelectedWindowZoom,
         },
         { type: "separator" },
+        {
+          label: "Command Palette…",
+          accelerator: keybinds.commandPalette,
+          click: actions.toggleSelectedCommandPalette,
+        },
         {
           label: "Toggle Sessions",
           accelerator: keybinds.toggleSessions,
@@ -358,6 +364,7 @@ export function terminalActionInvocations(
     toggleBroadcast: actions.toggleSelectedBroadcast,
     toggleSessions: actions.toggleSelectedSessions,
     toggleCommands: actions.toggleSelectedCommands,
+    commandPalette: actions.toggleSelectedCommandPalette,
   });
 }
 

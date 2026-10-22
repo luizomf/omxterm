@@ -1223,6 +1223,20 @@ global environment, User Configuration, terminal font zoom, title-bar
 preferences or the three-file ownership/rollback contract. See
 [ADR 0031](adr/0031-keep-linux-installer-choices-small-and-local.md).
 
+## Command palette
+
+**View → Command Palette…** (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Linux
+and Windows, remappable as `commandPalette`) opens a searchable list.
+
+- It lists every application action that has a keybind, except tab
+  numbers, under translated names. It also lists every Saved Session, which
+  opens in a new tab.
+- Typing filters by characters in order, preferring consecutive characters
+  and word starts. Arrow keys move, Enter or a click runs, Escape closes.
+- An action runs after the palette closes. The renderer sends only the
+  action's name; main accepts it from a trusted window only if it is a known
+  action, and invokes the same function as its keyboard shortcut.
+
 ## Tab menu and tab groups
 
 When the tab bar is visible, each tab has a menu: right-click, or the context

@@ -74,6 +74,8 @@ import { startWithUserConfiguration } from "./configured-startup";
 import { loadLocalImageForWindow } from "./local-image-loader";
 import type { OperationalEventLog } from "./operational-events";
 import { startApplicationDataServices } from "./application-data-services";
+import { applicationMenuActions } from "./application-menu-actions";
+import { registerCommandPaletteActions } from "./command-palette-actions";
 import { commandIpc } from "../shared/command-ipc";
 import { sessionIpc } from "../shared/session-ipc";
 import { launchTerminalSession } from "./session-launch";
@@ -382,6 +384,8 @@ app
             window.webContents.send(sessionIpc.toggleSidebar),
           sendCommandsToggle: (window) =>
             window.webContents.send(commandIpc.toggleSidebar),
+          sendCommandPaletteToggle: (window) =>
+            window.webContents.send(terminalIpc.commandPalette),
           sendLocalImageOpen: (window) =>
             window.webContents.send(terminalIpc.localImageOpen),
           toggleDeveloperTools: (window) => window.webContents.toggleDevTools(),
@@ -402,53 +406,17 @@ app
             dialog.showErrorBox(display.title, display.message);
           });
         };
-        const menuActions = {
+        const menuActions = applicationMenuActions(terminalApplication, {
           newWindow: openNewWindow,
-          closeSelectedWindow: () =>
-            void terminalApplication!.closeSelectedWindow(),
-          newTabInSelectedWindow: terminalApplication.newTabInSelectedWindow,
-          closeSelectedTab: () => void terminalApplication!.closeSelectedTab(),
-          selectNextTab: terminalApplication.selectNextTab,
-          selectPreviousTab: terminalApplication.selectPreviousTab,
-          selectTabInSelectedWindow:
-            terminalApplication.selectTabInSelectedWindow,
-          requestQuit: () => void terminalApplication!.requestQuit(),
-          toggleSelectedFullScreen:
-            terminalApplication.toggleSelectedFullScreen,
-          toggleSelectedAlwaysOnTop:
-            terminalApplication.toggleSelectedAlwaysOnTop,
-          toggleSelectedDevTools: terminalApplication.toggleSelectedDevTools,
-          zoomInSelectedWindow: () =>
-            terminalApplication!.zoomSelectedWindow("in"),
-          zoomOutSelectedWindow: () =>
-            terminalApplication!.zoomSelectedWindow("out"),
-          resetSelectedWindowZoom: () =>
-            terminalApplication!.zoomSelectedWindow("reset"),
-          copySelectedTerminal: () =>
-            terminalApplication!.clipboardSelectedWindow("copy"),
-          pasteSelectedTerminal: () =>
-            terminalApplication!.clipboardSelectedWindow("paste"),
-          selectAllSelectedTerminal: () =>
-            terminalApplication!.clipboardSelectedWindow("select-all"),
-          toggleSelectedSnippets: terminalApplication.toggleSelectedSnippets,
-          toggleSelectedTabBar: terminalApplication.toggleSelectedTabBar,
-          toggleSelectedTitleBar: terminalApplication.toggleSelectedTitleBar,
           reloadUserConfiguration: () => void configurationReloader.reload(),
-          openLocalImage: terminalApplication.openLocalImageInSelectedWindow,
-          splitSelectedPane: terminalApplication.splitSelectedPane,
-          closeSelectedPane: () =>
-            void terminalApplication!.closeSelectedPane(),
-          focusPaneInSelectedWindow:
-            terminalApplication.focusPaneInSelectedWindow,
-          toggleSelectedPaneMaximized:
-            terminalApplication.toggleSelectedPaneMaximized,
-          equalizeSelectedPanes: terminalApplication.equalizeSelectedPanes,
-          toggleSelectedBroadcast: terminalApplication.toggleSelectedBroadcast,
-          toggleSelectedSessions: terminalApplication.toggleSelectedSessions,
-          toggleSelectedCommands: terminalApplication.toggleSelectedCommands,
           ...dataActions(() => rebuildMenu()),
-        };
+        });
         const keybindActionInvocations = terminalActionInvocations(menuActions);
+        registerCommandPaletteActions(
+          ipcMain,
+          terminalIpcRouter.isTrustedSender,
+          keybindActionInvocations,
+        );
         rebuildMenu = () =>
           nativeMenu.installApplicationMenu(
             terminalApplicationMenuTemplate(

@@ -43,6 +43,7 @@ export const TERMINAL_ACTION_NAMES = [
   "toggleBroadcast",
   "toggleSessions",
   "toggleCommands",
+  "commandPalette",
 ] as const;
 
 export type TerminalActionName = (typeof TERMINAL_ACTION_NAMES)[number];
@@ -93,6 +94,7 @@ export const DEFAULT_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   toggleBroadcast: "Command+Alt+I",
   toggleSessions: "Command+Shift+J",
   toggleCommands: "Command+Shift+M",
+  commandPalette: "Command+Shift+P",
 });
 
 // Linux and Windows share the conventional shifted terminal shortcuts so
@@ -144,6 +146,8 @@ const SHIFTED_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   toggleSessions: "Control+Shift+H",
   // AshyTerm's Command Manager shortcut.
   toggleCommands: "Control+Shift+M",
+  // AshyTerm's command palette shortcut.
+  commandPalette: "Control+Shift+P",
 });
 
 export function terminalDefaultKeybinds(platform: string): TerminalKeybinds {
