@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import {
   mkdir,
   mkdtemp,
+  open,
   readFile,
   readdir,
   rm,
@@ -14,7 +15,7 @@ import { tmpdir, userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { linuxHelperName } from "./package-linux-assets.mjs";
+import { linuxAppImageName, linuxHelperName } from "./package-linux-assets.mjs";
 import { verifyExactWindowsInstaller } from "./windows-installer-transaction.mjs";
 import { windowsVerificationOptions } from "./windows-verification-options.mjs";
 import { inspectLinuxAppRun } from "./verify-linux-launcher.mjs";
@@ -24,12 +25,26 @@ const projectRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
-const defaultMacApplicationPath = path.join(
-  projectRoot,
-  "release",
-  "mac-arm64",
-  "OMXTerm.app",
-);
+
+// Packages are built and verified on their own architecture only: native
+// modules are never cross-compiled, so the host architecture is the target.
+const supportedArchitectures = ["arm64", "x64"];
+
+export function packagedArchitecture(arch = process.arch) {
+  if (!supportedArchitectures.includes(arch))
+    throw new Error(`Packaged applications require arm64 or x64, not ${arch}`);
+  return arch;
+}
+
+// electron-builder omits the suffix for its default (x64) architecture.
+export function unpackedDirectoryName(platform, arch) {
+  const prefix = { darwin: "mac", linux: "linux", win32: "win" }[platform];
+  if (!prefix) throw new Error(`Unsupported packaged platform: ${platform}`);
+  const suffix = packagedArchitecture(arch) === "x64" ? "" : `-${arch}`;
+  return platform === "darwin"
+    ? `${prefix}${suffix}`
+    : `${prefix}${suffix}-unpacked`;
+}
 const applicationIconPath = path.join(
   projectRoot,
   "assets",
@@ -85,9 +100,15 @@ const allowedLinuxNodePtyBuildEntries = new Set([
   "/node_modules/node-pty/build/Release/pty.node",
 ]);
 
-export function inspectAsarEntries(entries, platform = "darwin") {
+export function inspectAsarEntries(
+  entries,
+  platform = "darwin",
+  arch = "arm64",
+) {
   if (platform !== "darwin" && platform !== "linux" && platform !== "win32")
     throw new Error(`Unsupported packaged platform: ${platform}`);
+  packagedArchitecture(arch);
+  const prebuild = `/node_modules/node-pty/prebuilds/${platform}-${arch}`;
   // @electron/asar lists entries with the host separator on Windows.
   const normalized = entries
     .map((entry) => entry.split("\\").join("/"))
@@ -112,15 +133,15 @@ export function inspectAsarEntries(entries, platform = "darwin") {
         entry.includes("/node_modules/node-pty/build/")) ||
       (platform === "darwin" &&
         entry.includes("/node_modules/node-pty/prebuilds/") &&
-        entry !== "/node_modules/node-pty/prebuilds/darwin-arm64" &&
-        !entry.startsWith("/node_modules/node-pty/prebuilds/darwin-arm64/")) ||
+        entry !== prebuild &&
+        !entry.startsWith(`${prebuild}/`)) ||
       (platform === "win32" &&
         entry.includes("/node_modules/node-pty/build/")) ||
       (platform === "win32" && entry.endsWith(".pdb")) ||
       (platform === "win32" &&
         entry.includes("/node_modules/node-pty/prebuilds/") &&
-        entry !== "/node_modules/node-pty/prebuilds/win32-arm64" &&
-        !entry.startsWith("/node_modules/node-pty/prebuilds/win32-arm64/")),
+        entry !== prebuild &&
+        !entry.startsWith(`${prebuild}/`)),
   );
   return { missing, forbidden };
 }
@@ -179,7 +200,7 @@ export function inspectChecksumRecord(contents, filename, digest) {
     );
 }
 
-async function verifyChecksum(file) {
+export async function verifyChecksum(file) {
   const checksum = `${file}.sha256`;
   inspectChecksumRecord(
     await readFile(checksum, "utf8"),
@@ -188,7 +209,20 @@ async function verifyChecksum(file) {
   );
 }
 
-async function assertSameFile(source, packaged) {
+// OMXTerm has no automatic updates; Linux packages carry no updater metadata.
+export async function assertNoUpdateMetadata(resources) {
+  for (const name of ["app-update.yml", "package-type"]) {
+    try {
+      await stat(path.join(resources, name));
+    } catch (cause) {
+      if (cause?.code === "ENOENT") continue;
+      throw cause;
+    }
+    throw new Error(`Packaged automatic-update metadata found: ${name}`);
+  }
+}
+
+export async function assertSameFile(source, packaged) {
   await stat(packaged);
   if ((await sha256(source)) !== (await sha256(packaged)))
     throw new Error(
@@ -196,18 +230,114 @@ async function assertSameFile(source, packaged) {
     );
 }
 
-const PE_MACHINE_ARM64 = 0xaa64;
-
 // Windows has no `file` command; the PE COFF header states the machine
-// type directly (IMAGE_FILE_MACHINE_ARM64 = 0xAA64).
+// type directly (IMAGE_FILE_MACHINE_ARM64 = 0xAA64, AMD64 = 0x8664).
+const peMachines = { arm64: 0xaa64, x64: 0x8664 };
+// ELF e_machine values (EM_AARCH64 = 183, EM_X86_64 = 62).
+const elfMachines = { arm64: 183, x64: 62 };
+
+function peMachine(data) {
+  if (data.length < 0x40 || data.readUInt16LE(0) !== 0x5a4d) return undefined;
+  const peOffset = data.readUInt32LE(0x3c);
+  if (data.length < peOffset + 6 || data.readUInt32LE(peOffset) !== 0x00004550)
+    return undefined;
+  return data.readUInt16LE(peOffset + 4);
+}
+
 async function readPeMachine(file) {
   const data = await readFile(file);
   if (data.length < 0x40 || data.readUInt16LE(0) !== 0x5a4d)
     throw new Error(`${file} is not a PE executable`);
-  const peOffset = data.readUInt32LE(0x3c);
-  if (data.length < peOffset + 6 || data.readUInt32LE(peOffset) !== 0x00004550)
-    throw new Error(`${file} has no PE signature`);
-  return data.readUInt16LE(peOffset + 4);
+  const machine = peMachine(data);
+  if (machine === undefined) throw new Error(`${file} has no PE signature`);
+  return machine;
+}
+
+export function inspectPeMachine(machine, label, arch) {
+  if (machine !== peMachines[packagedArchitecture(arch)])
+    throw new Error(
+      `${label} is not an ${arch}-only PE: machine 0x${machine.toString(16)}`,
+    );
+}
+
+// `file -b` descriptions, without the inspected path that could itself name
+// an architecture.
+export function inspectArchitectureDescription(
+  description,
+  label,
+  platform,
+  arch,
+) {
+  packagedArchitecture(arch);
+  const [expected, other] =
+    platform === "darwin"
+      ? arch === "arm64"
+        ? ["arm64", "x86_64"]
+        : ["x86_64", "arm64"]
+      : arch === "arm64"
+        ? ["ARM aarch64", "x86-64"]
+        : ["x86-64", "aarch64"];
+  if (!description.includes(expected) || description.includes(other))
+    throw new Error(
+      `${label} is not an ${arch}-only ${platform === "darwin" ? "Mach-O" : "ELF"}: ${description.trim()}`,
+    );
+}
+
+// Classifies a file's leading bytes: an ELF machine, or a foreign executable
+// format that a Linux package must never carry.
+export function nativeBinaryKind(header) {
+  if (header.length >= 20 && header.readUInt32BE(0) === 0x7f454c46) {
+    const machine =
+      header[5] === 2 ? header.readUInt16BE(18) : header.readUInt16LE(18);
+    const arch = Object.keys(elfMachines).find(
+      (name) => elfMachines[name] === machine,
+    );
+    return arch ? `elf-${arch}` : `elf-machine-${machine}`;
+  }
+  if (
+    header.length >= 4 &&
+    [0xfeedfacf, 0xcffaedfe, 0xfeedface, 0xcefaedfe, 0xcafebabe].includes(
+      header.readUInt32BE(0),
+    )
+  )
+    return "mach-o";
+  if (peMachine(header) !== undefined) return "pe";
+  return undefined;
+}
+
+export function inspectLinuxNativeBinaries(binaries, arch) {
+  const expected = `elf-${packagedArchitecture(arch)}`;
+  return binaries
+    .filter(({ kind }) => kind !== undefined && kind !== expected)
+    .map(({ entry, kind }) => `${entry} (${kind})`);
+}
+
+// Every native file in a Linux package must be an ELF for the target
+// architecture: no other architecture's prebuilds or foreign formats.
+export async function verifyLinuxNativeTree(root, arch) {
+  const binaries = [];
+  for (const entry of await listTreeEntries(root)) {
+    const file = path.join(root, ...entry.split("/"));
+    if (!(await stat(file)).isFile()) continue;
+    const handle = await open(file, "r");
+    try {
+      const header = Buffer.alloc(4096);
+      const { bytesRead } = await handle.read(header, 0, header.length, 0);
+      binaries.push({
+        entry,
+        kind: nativeBinaryKind(header.subarray(0, bytesRead)),
+      });
+    } finally {
+      await handle.close();
+    }
+  }
+  const problems = inspectLinuxNativeBinaries(binaries, arch);
+  if (problems.length > 0)
+    throw new Error(
+      `Linux package carries non-${arch} native files: ${problems.join(", ")}`,
+    );
+  if (!binaries.some(({ kind }) => kind === `elf-${arch}`))
+    throw new Error(`Linux package carries no ${arch} ELF files`);
 }
 
 export function inspectElfDynamicDependencies(dynamicSection) {
@@ -226,24 +356,13 @@ async function inspectLinuxAppImageDependencies(appImagePath) {
   inspectElfDynamicDependencies(stdout);
 }
 
-async function inspectArchitecture(file, label, platform) {
+async function inspectArchitecture(file, label, platform, arch) {
   if (platform === "win32") {
-    const machine = await readPeMachine(file);
-    if (machine !== PE_MACHINE_ARM64)
-      throw new Error(
-        `${label} is not an arm64-only PE: machine 0x${machine.toString(16)}`,
-      );
+    inspectPeMachine(await readPeMachine(file), label, arch);
     return;
   }
-  const { stdout } = await execFile("file", [file]);
-  const isArm64 =
-    platform === "darwin"
-      ? stdout.includes("arm64") && !stdout.includes("x86_64")
-      : stdout.includes("ARM aarch64") && !stdout.includes("x86-64");
-  if (!isArm64)
-    throw new Error(
-      `${label} is not an arm64-only ${platform === "darwin" ? "Mach-O" : "ELF"}: ${stdout.trim()}`,
-    );
+  const { stdout } = await execFile("file", ["-b", file]);
+  inspectArchitectureDescription(stdout, label, platform, arch);
 }
 
 export async function inspectAdHocApplication(
@@ -343,7 +462,7 @@ function parsePackageVersion(contents, label) {
   return metadata.version;
 }
 
-async function sourceVersion() {
+export async function sourceVersion() {
   const sourcePackagePath = path.join(projectRoot, "package.json");
   return parsePackageVersion(
     await readFile(sourcePackagePath, "utf8"),
@@ -355,6 +474,7 @@ async function inspectApplicationVersion({
   applicationRoot,
   asar,
   platform,
+  arch,
   artifactPath,
 }) {
   const expectedVersion = await sourceVersion();
@@ -395,12 +515,12 @@ async function inspectApplicationVersion({
     const installer = path.join(
       projectRoot,
       "release",
-      `OMXTerm-${expectedVersion}-arm64.exe`,
+      `OMXTerm-${expectedVersion}-${arch}.exe`,
     );
     await stat(installer);
     return;
   }
-  const expectedName = `OMXTerm-${expectedVersion}-arm64.AppImage`;
+  const expectedName = linuxAppImageName(expectedVersion, arch);
   if (path.basename(artifactPath) !== expectedName)
     throw new Error(
       `Linux artifact filename ${path.basename(artifactPath)} differs from ${expectedName}`,
@@ -413,15 +533,17 @@ async function inspectApplicationVersion({
     );
 }
 
-async function defaultApplicationPath() {
-  if (process.platform === "darwin") return defaultMacApplicationPath;
-  if (process.platform === "win32")
-    return path.join(projectRoot, "release", "win-arm64-unpacked");
-  return path.join(
-    projectRoot,
-    "release",
-    `OMXTerm-${await sourceVersion()}-arm64.AppImage`,
-  );
+async function defaultApplicationPath(platform, arch) {
+  const release = path.join(projectRoot, "release");
+  if (platform === "darwin")
+    return path.join(
+      release,
+      unpackedDirectoryName(platform, arch),
+      "OMXTerm.app",
+    );
+  if (platform === "win32")
+    return path.join(release, unpackedDirectoryName(platform, arch));
+  return path.join(release, linuxAppImageName(await sourceVersion(), arch));
 }
 
 async function listTreeEntries(root, directory = root) {
@@ -434,6 +556,67 @@ async function listTreeEntries(root, directory = root) {
       entries.push(...(await listTreeEntries(root, absolute)));
   }
   return entries;
+}
+
+// Release license and notice resources must be the exact source files.
+export async function verifyLicenseResources(resources) {
+  await Promise.all([
+    assertSameFile(
+      path.join(projectRoot, "LICENSE"),
+      path.join(resources, "LICENSE.txt"),
+    ),
+    assertSameFile(
+      path.join(projectRoot, "THIRD_PARTY_NOTICES.md"),
+      path.join(resources, "THIRD_PARTY_NOTICES.md"),
+    ),
+    assertSameFile(
+      path.join(projectRoot, "assets", "fonts", "FiraCode-OFL.txt"),
+      path.join(resources, "licenses", "FiraCode-OFL.txt"),
+    ),
+    assertSameFile(
+      path.join(projectRoot, "assets", "fonts", "DejaVu-LICENSE.txt"),
+      path.join(resources, "licenses", "DejaVu.txt"),
+    ),
+    assertSameFile(
+      path.join(projectRoot, "assets", "fonts", "JetBrainsMono-OFL.txt"),
+      path.join(resources, "licenses", "JetBrainsMono-OFL.txt"),
+    ),
+    assertSameFile(
+      path.join(projectRoot, "assets", "fonts", "NerdFonts-glyphs.txt"),
+      path.join(resources, "licenses", "NerdFonts-glyphs.txt"),
+    ),
+    assertSameFile(
+      path.join(
+        projectRoot,
+        "assets",
+        "licenses",
+        "xterm-visible-links-MIT.txt",
+      ),
+      path.join(resources, "licenses", "xterm-visible-links.txt"),
+    ),
+    assertSameFile(
+      path.join(projectRoot, "node_modules", "node-pty", "LICENSE"),
+      path.join(resources, "licenses", "node-pty.txt"),
+    ),
+    assertSameFile(
+      path.join(projectRoot, "assets", "licenses", "restty-MIT.txt"),
+      path.join(resources, "licenses", "restty.txt"),
+    ),
+    assertSameFile(
+      path.join(projectRoot, "assets", "licenses", "ashyterm-MIT.txt"),
+      path.join(resources, "licenses", "ashyterm.txt"),
+    ),
+    assertSameFile(
+      path.join(projectRoot, "assets", "licenses", "text-shaper-MIT.txt"),
+      path.join(resources, "licenses", "text-shaper.txt"),
+    ),
+    assertSameFile(
+      path.join(projectRoot, "assets", "licenses", "ghostty-MIT.txt"),
+      path.join(resources, "licenses", "ghostty.txt"),
+    ),
+    stat(path.join(resources, "LICENSE.electron.txt")),
+    stat(path.join(resources, "LICENSES.chromium.html")),
+  ]);
 }
 
 export function signalProcessGroup(processGroupId, signal) {
@@ -708,23 +891,47 @@ export async function verifyPackagedStartupWithCleanup({
   return result;
 }
 
+export const staticOnlyFlag = "--static-only";
+
+// --static-only checks package contents without launching the application
+// (for CI runners without a usable desktop); it authorizes nothing else.
+export function packageVerificationOptions(args, platform = process.platform) {
+  const staticOnly = args.includes(staticOnlyFlag);
+  if (args.filter((argument) => argument === staticOnlyFlag).length > 1)
+    throw new Error("Unknown or duplicate package verification option");
+  const options = windowsVerificationOptions(
+    args.filter((argument) => argument !== staticOnlyFlag),
+    platform,
+  );
+  if (staticOnly && (options.disposableVm || options.windowsUnpackedOnly))
+    throw new Error(
+      "Static-only verification cannot be combined with Windows launch options",
+    );
+  return { ...options, staticOnly };
+}
+
 export async function verifyPackagedApplication(
   applicationPath,
-  { windowsUnpackedOnly = false, disposableVm = false } = {},
+  {
+    windowsUnpackedOnly = false,
+    disposableVm = false,
+    staticOnly = false,
+  } = {},
 ) {
   if (
     (process.platform !== "darwin" &&
       process.platform !== "linux" &&
       process.platform !== "win32") ||
-    process.arch !== "arm64"
+    !supportedArchitectures.includes(process.arch)
   )
     throw new Error(
-      "Packaged startup verification requires arm64 macOS, Linux, or Windows",
+      "Packaged startup verification requires arm64 or x64 macOS, Linux, or Windows",
     );
 
   const platform = process.platform;
+  const arch = process.arch;
   const packagedPath = path.resolve(
-    applicationPath ?? (await defaultApplicationPath()),
+    applicationPath ?? (await defaultApplicationPath(platform, arch)),
   );
   let extractionRoot;
   let linuxInstallationRoot;
@@ -798,8 +1005,9 @@ export async function verifyPackagedApplication(
         linuxInstalledApp,
         "installed AppImage",
         platform,
+        arch,
       );
-      await inspectArchitecture(packagedPath, "AppImage", platform);
+      await inspectArchitecture(packagedPath, "AppImage", platform, arch);
       await inspectLinuxAppImageDependencies(packagedPath);
       const { stdout: signature } = await execFile(packagedPath, [
         "--appimage-signature",
@@ -822,6 +1030,8 @@ export async function verifyPackagedApplication(
         throw new Error(
           `Development/private-looking files were packaged outside app.asar: ${forbidden.join(", ")}`,
         );
+      await verifyLinuxNativeTree(applicationRoot, arch);
+      await assertNoUpdateMetadata(path.join(applicationRoot, "resources"));
     }
 
     if (
@@ -849,24 +1059,24 @@ export async function verifyPackagedApplication(
       "app.asar.unpacked",
       "node_modules",
       "node-pty",
-      ...(platform === "darwin"
-        ? ["prebuilds", "darwin-arm64"]
-        : platform === "win32"
-          ? ["prebuilds", "win32-arm64"]
-          : ["build", "Release"]),
+      ...(platform === "linux"
+        ? ["build", "Release"]
+        : ["prebuilds", `${platform}-${arch}`]),
     );
 
-    await inspectArchitecture(executable, "OMXTerm executable", platform);
+    await inspectArchitecture(executable, "OMXTerm executable", platform, arch);
     await inspectArchitecture(
       path.join(nativeRoot, "pty.node"),
       "node-pty module",
       platform,
+      arch,
     );
     if (platform === "win32")
       await inspectArchitecture(
         path.join(nativeRoot, "conpty.node"),
         "node-pty ConPTY module",
         platform,
+        arch,
       );
     if (platform === "darwin") {
       const blurModule = path.join(
@@ -874,7 +1084,12 @@ export async function verifyPackagedApplication(
         "app.asar.unpacked",
         macBlurEntry,
       );
-      await inspectArchitecture(blurModule, "macOS blur module", platform);
+      await inspectArchitecture(
+        blurModule,
+        "macOS blur module",
+        platform,
+        arch,
+      );
       const { stdout: loadCommands } = await execFile("otool", [
         "-l",
         blurModule,
@@ -904,6 +1119,7 @@ export async function verifyPackagedApplication(
         path.join(nativeRoot, "spawn-helper"),
         "node-pty spawn helper",
         platform,
+        arch,
       );
       await inspectApplicationIcon(applicationRoot);
       await inspectAdHocApplication(applicationRoot);
@@ -935,12 +1151,14 @@ export async function verifyPackagedApplication(
       applicationRoot,
       asar,
       platform,
+      arch,
       artifactPath: packagedPath,
     });
 
     const asarInspection = inspectAsarEntries(
       await listPackage(asar),
       platform,
+      arch,
     );
     if (asarInspection.missing.length > 0)
       throw new Error(
@@ -951,63 +1169,7 @@ export async function verifyPackagedApplication(
         `Development/private-looking files were packaged: ${asarInspection.forbidden.join(", ")}`,
       );
 
-    await Promise.all([
-      assertSameFile(
-        path.join(projectRoot, "LICENSE"),
-        path.join(resources, "LICENSE.txt"),
-      ),
-      assertSameFile(
-        path.join(projectRoot, "THIRD_PARTY_NOTICES.md"),
-        path.join(resources, "THIRD_PARTY_NOTICES.md"),
-      ),
-      assertSameFile(
-        path.join(projectRoot, "assets", "fonts", "FiraCode-OFL.txt"),
-        path.join(resources, "licenses", "FiraCode-OFL.txt"),
-      ),
-      assertSameFile(
-        path.join(projectRoot, "assets", "fonts", "DejaVu-LICENSE.txt"),
-        path.join(resources, "licenses", "DejaVu.txt"),
-      ),
-      assertSameFile(
-        path.join(projectRoot, "assets", "fonts", "JetBrainsMono-OFL.txt"),
-        path.join(resources, "licenses", "JetBrainsMono-OFL.txt"),
-      ),
-      assertSameFile(
-        path.join(projectRoot, "assets", "fonts", "NerdFonts-glyphs.txt"),
-        path.join(resources, "licenses", "NerdFonts-glyphs.txt"),
-      ),
-      assertSameFile(
-        path.join(
-          projectRoot,
-          "assets",
-          "licenses",
-          "xterm-visible-links-MIT.txt",
-        ),
-        path.join(resources, "licenses", "xterm-visible-links.txt"),
-      ),
-      assertSameFile(
-        path.join(projectRoot, "node_modules", "node-pty", "LICENSE"),
-        path.join(resources, "licenses", "node-pty.txt"),
-      ),
-      assertSameFile(
-        path.join(projectRoot, "assets", "licenses", "restty-MIT.txt"),
-        path.join(resources, "licenses", "restty.txt"),
-      ),
-      assertSameFile(
-        path.join(projectRoot, "assets", "licenses", "ashyterm-MIT.txt"),
-        path.join(resources, "licenses", "ashyterm.txt"),
-      ),
-      assertSameFile(
-        path.join(projectRoot, "assets", "licenses", "text-shaper-MIT.txt"),
-        path.join(resources, "licenses", "text-shaper.txt"),
-      ),
-      assertSameFile(
-        path.join(projectRoot, "assets", "licenses", "ghostty-MIT.txt"),
-        path.join(resources, "licenses", "ghostty.txt"),
-      ),
-      stat(path.join(resources, "LICENSE.electron.txt")),
-      stat(path.join(resources, "LICENSES.chromium.html")),
-    ]);
+    await verifyLicenseResources(resources);
     try {
       await stat(path.join(resources, "default_app.asar"));
       throw new Error("Electron's development default_app.asar was packaged");
@@ -1015,8 +1177,11 @@ export async function verifyPackagedApplication(
       if (cause?.code !== "ENOENT") throw cause;
     }
 
-    const linuxLaunchModes =
-      platform === "linux"
+    // Static-only verification (CI runners without a usable desktop) stops
+    // before any packaged launch and never claims startup evidence.
+    const linuxLaunchModes = staticOnly
+      ? []
+      : platform === "linux"
         ? [
             ...(linuxDirectLaunchAvailable ? [[]] : []),
             ["--appimage-extract-and-run"],
@@ -1116,12 +1281,12 @@ export async function verifyPackagedApplication(
       });
     }
     let installerVerification;
-    if (platform === "win32" && !windowsUnpackedOnly) {
+    if (platform === "win32" && !windowsUnpackedOnly && !staticOnly) {
       installerVerification = await verifyExactWindowsInstaller({
         installer: path.join(
           projectRoot,
           "release",
-          `OMXTerm-${await sourceVersion()}-arm64.exe`,
+          `OMXTerm-${await sourceVersion()}-${arch}.exe`,
         ),
         unpackedRoot: applicationRoot,
         projectRoot,
@@ -1137,9 +1302,11 @@ export async function verifyPackagedApplication(
     }
     return {
       applicationPath: packagedPath,
+      arch,
       records: verifiedRecords,
-      verification:
-        platform === "win32" && windowsUnpackedOnly
+      verification: staticOnly
+        ? `STATIC ONLY (startup${platform === "win32" ? " and exact installer" : ""} NOT verified)`
+        : platform === "win32" && windowsUnpackedOnly
           ? "UNPACKED DIAGNOSTIC ONLY (exact installer NOT verified)"
           : "FULL",
       installerVerification,
@@ -1160,16 +1327,22 @@ if (
   const applicationPath =
     args[0] && !args[0].startsWith("--") ? args.shift() : undefined;
   Promise.resolve()
-    .then(() =>
-      verifyPackagedApplication(
+    .then(async () => {
+      const result = await verifyPackagedApplication(
         applicationPath,
-        windowsVerificationOptions(args),
-      ),
-    )
-    .then(({ applicationPath, records, verification }) => {
-      console.log(
-        `${verification}: verified packaged arm64 startup: ${applicationPath} (${records} operational events)`,
+        packageVerificationOptions(args),
       );
+      console.log(
+        `${result.verification}: verified packaged ${result.arch} ${result.records > 0 ? "startup" : "contents"}: ${result.applicationPath} (${result.records} operational events)`,
+      );
+      // The default Linux release also carries DEB and RPM packages built
+      // from the same unpacked application.
+      if (process.platform === "linux" && applicationPath === undefined) {
+        const { verifyLinuxSystemPackages } =
+          await import("./verify-linux-packages.mjs");
+        for (const verified of await verifyLinuxSystemPackages())
+          console.log(`Verified Linux system package contents: ${verified}`);
+      }
     })
     .catch((cause) => {
       console.error(cause instanceof Error ? cause.message : cause);
