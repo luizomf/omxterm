@@ -20,6 +20,7 @@ import type {
 import type { SessionFileChoice } from "./session-ipc";
 import type { HighlightSettings } from "./highlight-settings";
 import type { CommandDefinition, CommandLibraryDocument } from "./commands";
+import type { BackupRequest } from "./backup-ipc";
 
 export interface CommandsBridge {
   list(): Promise<CommandLibraryDocument>;
@@ -111,6 +112,15 @@ export interface TerminalBridge {
   ): () => void;
 }
 
+// Settings backup: the renderer supplies passphrases; main chooses the
+// files and never returns their paths or contents.
+export interface BackupBridge {
+  create(passphrase: string): Promise<boolean>;
+  choose(): Promise<boolean>;
+  restore(passphrase: string): Promise<{ readonly restored: number }>;
+  onRequest(listener: (kind: BackupRequest) => void): () => void;
+}
+
 declare global {
   interface Window {
     readonly omxterm: {
@@ -118,6 +128,7 @@ declare global {
       readonly sessions: SessionsBridge;
       readonly highlights: HighlightsBridge;
       readonly commands: CommandsBridge;
+      readonly backup: BackupBridge;
     };
   }
 }

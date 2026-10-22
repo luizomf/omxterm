@@ -43,6 +43,7 @@ import type {
   CommandsBridge,
   HighlightsBridge,
   SessionsBridge,
+  BackupBridge,
 } from "../shared/terminal-bridge";
 import {
   mountWorkspace,
@@ -120,6 +121,7 @@ export interface TerminalWindowPageOptions {
     readonly element: HTMLElement;
     readonly sessions: SessionsBridge;
     readonly commands?: CommandsBridge;
+    readonly backup?: BackupBridge;
   };
   readonly snippets?: {
     readonly element: HTMLElement;

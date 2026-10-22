@@ -203,6 +203,26 @@ export const englishMessages = {
   "commands.deleteConfirm": "Delete the command “{name}”?",
   "commands.noTerminal": "Select a terminal first.",
 
+  "backup.createTitle": "Back Up Settings",
+  "backup.createIntro":
+    "Saves your configuration, snippets, themes, saved sessions, highlight rules and commands in one file, encrypted with a passphrase. Passwords and keys are not included.",
+  "backup.passphrase": "Passphrase",
+  "backup.confirmPassphrase": "Repeat passphrase",
+  "backup.passphraseHint":
+    "At least 8 characters. Without it the backup cannot be opened, so keep it safe.",
+  "backup.tooShort": "Use at least 8 characters.",
+  "backup.mismatch": "The passphrases do not match.",
+  "backup.save": "Save Backup…",
+  "backup.saved": "Backup saved.",
+  "backup.restoreTitle": "Restore Settings",
+  "backup.restoreIntro":
+    "Replaces your configuration, snippets, themes, saved sessions, highlight rules and commands with the ones in this backup. Files that are not in the backup are kept.",
+  "backup.restore": "Restore",
+  "backup.restored": {
+    one: "Settings restored ({count} file).",
+    other: "Settings restored ({count} files).",
+  },
+
   "highlight.title": "Output Highlighting",
   "highlight.enabled": "Highlight terminal output",
   "highlight.rules": "Rules",

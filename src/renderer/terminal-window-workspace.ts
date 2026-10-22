@@ -12,6 +12,7 @@ import { createCommandsPanel } from "./commands/commands-panel";
 import type { TerminalTabs, TerminalTabsOptions } from "./terminal-tabs";
 import type { TerminalWindowPageOptions } from "./terminal-window-host";
 import { createToaster, createWorkspaceSidebar } from "./workspace-sidebar";
+import { installBackupDialogs } from "./backup/backup-dialogs";
 
 // The optional left sidebar with Saved Sessions and the Command Manager.
 // Opening a session or typing a command is ignored while a Local Image
@@ -73,8 +74,16 @@ export function mountWorkspace(
   const removeCommandsToggle = workspace.commands?.onToggleSidebar(() => {
     if (!context.isBlocked()) sidebar.toggle("commands");
   });
+  const removeBackup = workspace.backup
+    ? installBackupDialogs(document, {
+        bridge: workspace.backup,
+        translator: context.translator,
+        notify: toaster.notify,
+      })
+    : undefined;
   return () => {
     removeToggle();
+    removeBackup?.();
     removeCommandsToggle?.();
     sidebar.dispose();
     toaster.dispose();

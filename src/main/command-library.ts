@@ -21,6 +21,9 @@ export interface CommandLibraryService {
   // Forget cached PATH lookups so newly installed programs are found.
   refreshTools(): void;
   subscribe(listener: (document: CommandLibraryDocument) => void): () => void;
+  // Decodes a backup's document now (throwing if it is invalid) and returns
+  // the commit that replaces the current one, run in mutation order.
+  prepareRestore(bytes: Uint8Array): () => Promise<void>;
 }
 
 const EMPTY: CommandLibraryDocument = { custom: [], favorites: [], hidden: [] };
@@ -130,6 +133,10 @@ export function createCommandLibraryService(options: {
     },
     refreshTools() {
       tools.clear();
+    },
+    prepareRestore(bytes) {
+      const next = store.decode(bytes);
+      return () => commit(() => ({ next, result: undefined }));
     },
     subscribe(listener) {
       listeners.add(listener);

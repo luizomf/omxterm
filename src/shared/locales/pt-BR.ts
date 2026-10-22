@@ -206,6 +206,26 @@ export const brazilianPortugueseMessages: EnglishMessages = {
   "commands.deleteConfirm": "Excluir o comando “{name}”?",
   "commands.noTerminal": "Selecione um terminal primeiro.",
 
+  "backup.createTitle": "Fazer Backup das Configurações",
+  "backup.createIntro":
+    "Salva sua configuração, snippets, temas, sessões salvas, regras de destaque e comandos em um arquivo, criptografado com uma frase secreta. Senhas e chaves não são incluídas.",
+  "backup.passphrase": "Frase secreta",
+  "backup.confirmPassphrase": "Repita a frase secreta",
+  "backup.passphraseHint":
+    "Pelo menos 8 caracteres. Sem ela o backup não pode ser aberto, então guarde-a com cuidado.",
+  "backup.tooShort": "Use pelo menos 8 caracteres.",
+  "backup.mismatch": "As frases secretas não coincidem.",
+  "backup.save": "Salvar Backup…",
+  "backup.saved": "Backup salvo.",
+  "backup.restoreTitle": "Restaurar Configurações",
+  "backup.restoreIntro":
+    "Substitui sua configuração, snippets, temas, sessões salvas, regras de destaque e comandos pelos deste backup. Arquivos que não estão no backup são mantidos.",
+  "backup.restore": "Restaurar",
+  "backup.restored": {
+    one: "Configurações restauradas ({count} arquivo).",
+    other: "Configurações restauradas ({count} arquivos).",
+  },
+
   "highlight.title": "Destaque de Saída",
   "highlight.enabled": "Destacar a saída do terminal",
   "highlight.rules": "Regras",

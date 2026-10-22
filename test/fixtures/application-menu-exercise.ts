@@ -73,6 +73,8 @@ export async function exerciseApplicationMenu(
     toggleSelectedBroadcast: unexpected,
     toggleSelectedSessions: unexpected,
     toggleSelectedCommands: unexpected,
+    backUpSettings: unexpected,
+    restoreSettings: unexpected,
   };
   const invocations = terminalActionInvocations(actions);
   deliverKeybindsFromKeyEvents(

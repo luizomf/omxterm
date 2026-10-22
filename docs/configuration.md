@@ -382,6 +382,12 @@ node scripts/convert-ghostty-theme.mjs input-theme output-theme.json
 
 </details>
 
+## Backing up and restoring settings
+
+**File → Back Up Settings…** saves your `config.json`, `snippets.json`, themes, saved sessions, highlight rules and commands in one `.omxbackup` file, encrypted with a passphrase of at least 8 characters. Keep the passphrase: without it the backup cannot be opened. Passwords and keys are never stored in a backup.
+
+**File → Restore Settings…** asks for the file and its passphrase, then replaces those settings in every open window. Files that are not in the backup, such as an extra theme, are kept. If any part of the backup is invalid, nothing is changed.
+
 ## Reloading user configuration
 
 Choose **View → Reload User Configuration** (`Cmd+Shift+,` / `Ctrl+Shift+,`) after saving edits to `config.json` or your theme file:

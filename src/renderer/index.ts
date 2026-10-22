@@ -94,6 +94,7 @@ void Promise.all([
         element: workspaceElement,
         sessions: window.omxterm.sessions,
         commands: window.omxterm.commands,
+        backup: window.omxterm.backup,
       },
       snippets: {
         element: snippetsElement,

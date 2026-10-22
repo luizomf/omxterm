@@ -39,6 +39,8 @@ interface TerminalApplicationMenuActions {
   readonly toggleSelectedBroadcast: () => void;
   readonly toggleSelectedSessions: () => void;
   readonly toggleSelectedCommands: () => void;
+  readonly backUpSettings: () => void;
+  readonly restoreSettings: () => void;
   readonly toggleOutputHighlighting?: () => void;
 }
 
@@ -104,6 +106,9 @@ export function terminalApplicationMenuTemplate(
           label: "Open Local Image…",
           click: actions.openLocalImage,
         },
+        { type: "separator" },
+        { label: "Back Up Settings…", click: actions.backUpSettings },
+        { label: "Restore Settings…", click: actions.restoreSettings },
         { type: "separator" },
         {
           label: "Close Tab",

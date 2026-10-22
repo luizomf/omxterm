@@ -44,6 +44,9 @@ export interface SavedSessionService {
     base: SessionLaunchBase,
   ): LocalTerminalSessionOptions;
   subscribe(listener: (document: SavedSessionsDocument) => void): () => void;
+  // Decodes a backup's document now (throwing if it is invalid) and returns
+  // the commit that replaces the current one, run in mutation order.
+  prepareRestore(bytes: Uint8Array): () => Promise<void>;
 }
 
 export interface SavedSessionServiceOptions {
@@ -286,6 +289,10 @@ export function createSavedSessionService(
           arguments: command.arguments,
         },
       };
+    },
+    prepareRestore(bytes) {
+      const next = store.decode(bytes);
+      return () => commit(() => ({ next, result: undefined }));
     },
     subscribe(listener) {
       listeners.add(listener);

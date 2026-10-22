@@ -1223,6 +1223,32 @@ global environment, User Configuration, terminal font zoom, title-bar
 preferences or the three-file ownership/rollback contract. See
 [ADR 0031](adr/0031-keep-linux-installer-choices-small-and-local.md).
 
+## Settings backup
+
+**File → Back Up Settings…** and **File → Restore Settings…** save and apply
+one passphrase-encrypted `.omxbackup` file.
+
+- A backup holds, as text, `config.json`, `snippets.json`, every
+  `themes/*.json` file (at most 64) and the Application Data documents
+  `sessions.json`, `highlights.json` and `commands.json`. Nothing else in the
+  configuration directory (which Electron also uses for its own state) is
+  read. Credentials are never included: the Credential Store is bound to the
+  device's keychain.
+- The file is JSON: format `omxterm-settings-backup`, version 1, scrypt
+  parameters (N = 2^17, r = 8, p = 1, 16-byte salt) and AES-256-GCM (12-byte
+  IV, 16-byte tag) over the contents. The format, version and key parameters
+  are authenticated with the data. Opening accepts only bounded key
+  parameters, files up to 48 MiB and entries whose names match the list
+  above. Passphrases need at least 8 characters.
+- The renderer collects the passphrase. Main chooses files with native
+  dialogs and never returns their paths or contents to the renderer; error
+  messages are fixed and never include paths.
+- Restore decodes every Application Data document before changing anything,
+  so an invalid one leaves all files as they were. User files are then written
+  atomically, documents are replaced through their services in mutation order
+  (every window updates), and the User Configuration reloads. Files missing
+  from the backup are kept.
+
 ## Architecture boundaries
 
 Electron main owns native windows, PTYs, filesystem access, configuration, logs,

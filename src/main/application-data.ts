@@ -56,6 +56,9 @@ export interface ApplicationDocumentStore<T> {
   readonly path: string;
   load(): Promise<ApplicationDocumentLoad<T>>;
   save(value: T): Promise<void>;
+  // Reads a document in this store's file format, such as one from a
+  // backup, without touching the stored file. Throws ApplicationDataError.
+  decode(bytes: Uint8Array): T;
 }
 
 export interface ApplicationDocumentStoreOptions {
@@ -124,6 +127,7 @@ export function createApplicationDocumentStore<T>(
         };
       }
     },
+    decode: (bytes) => decodeDocument(bytes, schema),
     save(value: T) {
       const validated = schema.validate(
         JSON.parse(JSON.stringify(value)) as unknown,
@@ -199,8 +203,8 @@ function decodeDocument<T>(
 
 // Write to a private sibling, flush it, then rename over the target so a crash
 // leaves either the old or the new document, never a truncated one.
-async function writeAtomically(
-  fs: ApplicationDataFileSystem,
+export async function writeAtomically(
+  fs: Pick<ApplicationDataFileSystem, "mkdir" | "open" | "rename" | "rm">,
   documentPath: string,
   text: string,
 ): Promise<void> {

@@ -148,14 +148,18 @@ app
         operationalEvents!.write({ name: "application.started" });
         const terminalIpcRouter = fontIpcRouter(ipcMain, operationalEvents!);
         disposeTerminalSessions = () => terminalIpcRouter.dispose();
-        const { savedSessions, highlightSettings } =
-          await startApplicationDataServices({
-            ipcMain,
-            homeDirectory: account.homedir,
-            isTrustedSender: terminalIpcRouter.isTrustedSender,
-            operationalEvents: operationalEvents!,
-            startupConnection: commandLine.startup.ssh,
-          });
+        const {
+          savedSessions,
+          highlightSettings,
+          menuActions: dataActions,
+        } = await startApplicationDataServices({
+          ipcMain,
+          homeDirectory: account.homedir,
+          isTrustedSender: terminalIpcRouter.isTrustedSender,
+          operationalEvents: operationalEvents!,
+          startupConnection: commandLine.startup.ssh,
+          reloadConfiguration: () => configurationReloader.reload(),
+        });
         let rebuildMenu = () => {};
         highlightSettings.subscribe(() => rebuildMenu());
         const nativeTitleInset = terminalNativeTitleInset(process.platform);
@@ -444,12 +448,7 @@ app
           toggleSelectedBroadcast: terminalApplication.toggleSelectedBroadcast,
           toggleSelectedSessions: terminalApplication.toggleSelectedSessions,
           toggleSelectedCommands: terminalApplication.toggleSelectedCommands,
-          toggleOutputHighlighting: () => {
-            const current = highlightSettings.current();
-            void highlightSettings
-              .save({ ...current, enabled: !current.enabled })
-              .catch(() => rebuildMenu());
-          },
+          ...dataActions(() => rebuildMenu()),
         };
         const keybindActionInvocations = terminalActionInvocations(menuActions);
         rebuildMenu = () =>

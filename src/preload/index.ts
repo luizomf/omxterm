@@ -31,6 +31,7 @@ import { isTerminalLaunchSpec } from "../shared/terminal-launch";
 import { createSessionsBridge } from "./sessions-bridge";
 import { createHighlightsBridge } from "./highlights-bridge";
 import { createCommandsBridge } from "./commands-bridge";
+import { createBackupBridge } from "./backup-bridge";
 import {
   formatFilePathInsertion,
   isFilePathPlatform,
@@ -385,5 +386,6 @@ contextBridge.exposeInMainWorld(
     sessions: Object.freeze(createSessionsBridge(ipcRenderer)),
     highlights: Object.freeze(createHighlightsBridge(ipcRenderer)),
     commands: Object.freeze(createCommandsBridge(ipcRenderer)),
+    backup: Object.freeze(createBackupBridge(ipcRenderer)),
   }),
 );
