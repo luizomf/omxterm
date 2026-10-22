@@ -61,7 +61,7 @@ describe("node-pty postinstall preparation", () => {
       expect(rebuild).toHaveBeenCalledOnce();
       if (platform === "darwin")
         expect(chmod).toHaveBeenCalledWith(
-          expect.stringContaining("prebuilds/darwin-x64/spawn-helper"),
+          expect.stringMatching(/prebuilds[\\/]darwin-x64[\\/]spawn-helper$/u),
           0o755,
         );
     },

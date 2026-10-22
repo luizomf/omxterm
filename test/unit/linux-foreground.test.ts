@@ -88,6 +88,8 @@ it("keeps unavailable Linux native foreground reads Busy through the pinned publ
       platform: "linux",
       arch: "x64",
       unixRuntimePath: isolatedRuntime,
+      // The runtime correction is under test; never compile node-pty here.
+      rebuild: async () => {},
     });
     const corrected = await readFile(isolatedRuntime, "utf8");
     expect(
@@ -126,6 +128,8 @@ it("keeps unavailable Linux native foreground reads Busy through the pinned publ
       platform: "linux",
       arch: "x64",
       unixRuntimePath: isolatedRuntime,
+      // The runtime correction is under test; never compile node-pty here.
+      rebuild: async () => {},
     });
     expect(await readFile(isolatedRuntime, "utf8")).toBe(corrected);
     await writeFile(isolatedRuntime, corrected + "\n// drift\n");
@@ -134,6 +138,7 @@ it("keeps unavailable Linux native foreground reads Busy through the pinned publ
         platform: "linux",
         arch: "x64",
         unixRuntimePath: isolatedRuntime,
+        rebuild: async () => {},
       }),
     ).rejects.toThrow("Unrecognized node-pty Unix runtime");
     expect(await readFile(isolatedRuntime, "utf8")).toBe(

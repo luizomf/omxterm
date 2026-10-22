@@ -49,7 +49,11 @@ export function sshArguments(
   const multiplexed = canMultiplex(session, options);
   const argv = [
     ...connectionOptions(session, options, multiplexed),
-    ...authenticationArguments(session, options.homeDirectory),
+    ...authenticationArguments(
+      session,
+      options.homeDirectory,
+      options.platform,
+    ),
     ...featureArguments(session),
     ...destinationArguments(session),
   ];
@@ -93,7 +97,7 @@ function connectionOptions(
       "ControlMaster=auto",
       // %C is OpenSSH's hash of the connection tuple: short, and never
       // derived from untrusted text by OMXTerm.
-      `ControlPath=${path.join(options.controlDirectory!, "%C")}`,
+      `ControlPath=${pathFor(options.platform).join(options.controlDirectory!, "%C")}`,
       `ControlPersist=${SSH_CONTROL_PERSIST_SECONDS}`,
     );
   if ((session.forwards ?? []).length > 0)
@@ -105,11 +109,12 @@ function connectionOptions(
 function authenticationArguments(
   session: SshCommandSession,
   homeDirectory: string,
+  platform: string,
 ): string[] {
   if (session.authentication === "key" && session.identityFile)
     return [
       "-i",
-      expandHome(session.identityFile, homeDirectory),
+      expandHome(session.identityFile, homeDirectory, platform),
       "-o",
       "IdentitiesOnly=yes",
     ];
@@ -157,10 +162,18 @@ function forwardArguments(forward: PortForward): string[] {
   ];
 }
 
-export function expandHome(value: string, homeDirectory: string): string {
+// Paths follow the conventions of the platform ssh runs on.
+const pathFor = (platform: string) =>
+  platform === "win32" ? path.win32 : path.posix;
+
+export function expandHome(
+  value: string,
+  homeDirectory: string,
+  platform: string = process.platform,
+): string {
   if (value === "~") return homeDirectory;
   if (value.startsWith("~/") || value.startsWith("~\\"))
-    return path.join(homeDirectory, value.slice(2));
+    return pathFor(platform).join(homeDirectory, value.slice(2));
   return value;
 }
 

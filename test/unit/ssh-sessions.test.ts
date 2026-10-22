@@ -1,3 +1,4 @@
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   formatForward,
@@ -272,8 +273,11 @@ describe("ssh argument vector", () => {
 });
 
 describe("ssh_config import", () => {
+  // Real separators for the host OS: the importer resolves paths natively.
+  const home = path.resolve("/home/me");
+  const config = path.join(home, ".ssh", "config");
   const files: Record<string, string> = {
-    "/home/me/.ssh/config": [
+    [config]: [
       "# comment",
       "Host web prod-*",
       "  HostName web.example.com",
@@ -290,9 +294,9 @@ describe("ssh_config import", () => {
       "Match host other",
       "Host after-match",
     ].join("\n"),
-    "/home/me/.ssh/conf.d/a.conf":
+    [path.join(home, ".ssh", "conf.d", "a.conf")]:
       'Host "quoted alias" extra\n  HostName extra.example.com',
-    "/home/me/.ssh/conf.d/loop.conf": "Include ~/.ssh/config",
+    [path.join(home, ".ssh", "conf.d", "loop.conf")]: "Include ~/.ssh/config",
   };
   const reader: SshConfigReader = {
     async readFile(file) {
@@ -305,11 +309,7 @@ describe("ssh_config import", () => {
   };
 
   it("imports concrete hosts, follows includes once and stops at Match", async () => {
-    const hosts = await readSshConfigHosts(
-      "/home/me/.ssh/config",
-      "/home/me",
-      reader,
-    );
+    const hosts = await readSshConfigHosts(config, home, reader);
     expect(hosts.map((host) => host.alias).sort()).toEqual([
       "db",
       "extra",

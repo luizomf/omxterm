@@ -242,7 +242,11 @@ export function createSavedSessionService(
         void markUsed(reference).catch(() => {});
       if (session.kind === "local") {
         const workingDirectory = session.workingDirectory
-          ? expandHome(session.workingDirectory, options.homeDirectory)
+          ? expandHome(
+              session.workingDirectory,
+              options.homeDirectory,
+              options.platform,
+            )
           : undefined;
         if (workingDirectory !== undefined && !isDirectory(workingDirectory))
           throw new SavedSessionError(
