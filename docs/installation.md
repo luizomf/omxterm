@@ -109,6 +109,14 @@ makepkg -si
 
 It installs OMXTerm in `/usr/lib/omxterm` with the `omxterm` command, an application menu entry, and its licenses in `/usr/share/licenses/omxterm`.
 
+On **BigLinux**, [`pkgbuild/PKGBUILD`](../pkgbuild/PKGBUILD) follows BigLinux's packaging conventions: it clones the repository's default branch and versions the package by build date (`YY.MM.DD-HHMM`). It installs the same files:
+
+```sh
+mkdir omxterm-pkg && cd omxterm-pkg
+curl -fLO https://raw.githubusercontent.com/ruscher/omxterm/main/pkgbuild/PKGBUILD
+makepkg -si
+```
+
 ### Run the AppImage
 
 The AppImage runs on any distribution without installation. Make it executable and run it:
