@@ -114,8 +114,11 @@ Categories=System;TerminalEmulator;
 Keywords=terminal;shell;ssh;console;
 EOF
 
-    install -Dm644 assets/application-icon.png \
-        "${pkgdir}/usr/share/icons/hicolor/1024x1024/apps/${pkgname}.png"
+    # Theme icons at every size, so menus and panels never scale one bitmap.
+    install -d "${pkgdir}/usr/share/icons"
+    cp -a assets/icons/hicolor "${pkgdir}/usr/share/icons/"
+    find "${pkgdir}/usr/share/icons/hicolor" -type d -exec chmod 755 {} +
+    find "${pkgdir}/usr/share/icons/hicolor" -type f -exec chmod 644 {} +
 
     local _licenses="${pkgdir}/usr/share/licenses/${pkgname}"
     install -Dm644 LICENSE "${_licenses}/LICENSE"

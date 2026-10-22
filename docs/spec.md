@@ -117,6 +117,10 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Busy Session for its complete live lifetime. Its clean exit, unexpected
   signal, spawn failure, requested close, tab and window closure, and
   last-window quit use the existing Live Terminal Session lifecycle.
+- While its first Terminal Surface starts, a Terminal Window shows the
+  application icon centered on the theme background. The icon takes no input
+  and fades out (instantly with reduced motion) once the Surface is ready or
+  its start fails.
 - After its Terminal Surface mounts, an active Terminal Window gives terminal
   input DOM focus. When the user returns from another application or OMXTerm
   window, only the active Terminal Window restores that focus. Focus restoration

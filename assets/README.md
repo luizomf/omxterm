@@ -1,16 +1,20 @@
 # Application assets
 
-`application-icon.svg` is the OMXTerm-owned scalable source for the application
-icon. It was imported byte-for-byte from
-`luizomf/omxterm-web/apps/web/public/favicon.svg` at commit
-`f3ad6addd6e0eba7acdf40a4d31484e65b253291` (Git blob
-`9c1673b934821cb83ace4f18291d8015e5b0c1fb`, SHA-256
-`3c078dfc92467afa0ebb065aeaeb7c84f4442757d5ca831f028d16c39e9d8905`).
+The application icon has one scalable source:
+[`src/shared/icons/hicolor/scalable/apps/omxterm-hero.svg`](../src/shared/icons/hicolor/scalable/apps/omxterm-hero.svg).
+Every derivative below is generated from it by
+`node scripts/generate-application-icons.mjs` (needs `rsvg-convert` from
+librsvg). The derivatives are committed so packaging stays self-contained and
+does not depend on image tooling.
 
-`application-icon-macos.svg` places the accepted artwork on the transparent,
-rounded 1024 px macOS canvas without changing its prompt or colors.
-`application-icon.png` is the matching 1024 px development Dock icon, and
-`application-icon.icns` contains standard and Retina representations from 16
-through 512 logical pixels for packaged builds. The raster derivatives are
-committed so packaging stays self-contained and does not depend on image tooling
-or an OMXTerm Web checkout.
+- `application-icon.svg`: a byte-for-byte copy of the source.
+- `application-icon.png`: 1024 px; the Linux window icon, the About panel, the
+  development Dock icon, and the input electron-builder converts for Windows
+  and Linux packages.
+- `application-icon-macos.svg`: the artwork inside the 824 px square of the
+  1024 px macOS icon grid, on a transparent canvas.
+- `application-icon.icns`: macOS representations from 16 to 512 points, at
+  standard and Retina resolution.
+- `icons/hicolor/<size>/apps/omxterm.png` (16 to 512 px) and
+  `icons/hicolor/scalable/apps/omxterm.svg`: freedesktop theme icons installed
+  by the Arch, Manjaro and BigLinux `PKGBUILD`s.

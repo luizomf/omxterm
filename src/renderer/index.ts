@@ -6,8 +6,10 @@ import { mountTerminalWindowPage } from "./terminal-window-host";
 import { renderUserFileErrorBanner } from "./user-file-error-banner";
 import { mountResttyTerminalSurface } from "../terminal-surface/restty-terminal-surface";
 import { createTranslator, resolveLocale } from "../shared/i18n";
+import { showStartupSplash } from "./startup-splash";
 
 const translator = createTranslator(resolveLocale([...navigator.languages]));
+const hideStartupSplash = showStartupSplash(document);
 document.documentElement.lang = translator.locale;
 
 const tabStrip = document.querySelector<HTMLElement>("#tab-strip");
@@ -45,6 +47,7 @@ void Promise.all([
       mount: mountResttyTerminalSurface,
       loadFontData: window.omxterm.terminal.fontData,
       onSurfaceFailure(message) {
+        hideStartupSplash();
         surfaceFailure.textContent = message;
         surfaceFailure.hidden = false;
       },
@@ -111,7 +114,8 @@ void Promise.all([
       },
     },
   );
-  void host.ready.catch((error: unknown) => {
+  void host.ready.then(hideStartupSplash, (error: unknown) => {
+    hideStartupSplash();
     host.dispose();
     throw new Error("Failed to mount the Terminal Surface", { cause: error });
   });
