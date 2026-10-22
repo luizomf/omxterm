@@ -70,23 +70,31 @@ agents.
 
 ## Platforms and downloads
 
-**Latest release:
-[0.20.2 — downloads and release notes](https://github.com/luizomf/omxterm/releases/tag/v0.20.2)**
+**Latest pre-release:
+[0.21.0 — downloads and release notes](https://github.com/ruscher/omxterm/releases/tag/v0.21.0)**
 
-Prebuilt packages are currently **ARM64 only** (Apple Silicon on macOS,
-`aarch64` on Linux, and ARM64 on Windows 11). The packaging scripts also
-build x64 (Intel and AMD) packages, and Linux DEB, RPM and Arch `PKGBUILD`
-packages, from source; see the [installation guide](docs/installation.md).
+Packages are built for **ARM64 and x64** on macOS, Linux and Windows. They are
+unsigned (macOS has only an ad-hoc signature); see the release notes for what
+was verified on each platform. Arch Linux, Manjaro and BigLinux users can build
+a native package with the included `PKGBUILD`; see the
+[installation guide](docs/installation.md).
 
-| Platform                                 | Download                                                                                               | Checksum                                                                                                     |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Apple Silicon macOS                      | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.20.2/OMXTerm-0.20.2-arm64.dmg)           | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.2/OMXTerm-0.20.2-arm64.dmg.sha256)      |
-| Linux ARM64                              | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.20.2/OMXTerm-0.20.2-arm64.AppImage) | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.2/OMXTerm-0.20.2-arm64.AppImage.sha256) |
-| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/luizomf/omxterm/releases/download/v0.20.2/linux_install.sh)      | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.2/linux_install.sh.sha256)              |
-| Windows ARM64                            | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.20.2/OMXTerm-0.20.2-arm64.exe)     | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.2/OMXTerm-0.20.2-arm64.exe.sha256)      |
+| Platform                                 | Download                                                                                                | Checksum                                                                                                      |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Apple Silicon macOS                      | [DMG](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.dmg)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.dmg.sha256)       |
+| Intel macOS                              | [DMG](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x64.dmg)              | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x64.dmg.sha256)         |
+| Linux ARM64                              | [AppImage](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.AppImage)  | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.AppImage.sha256)  |
+| Linux ARM64 (Debian, Ubuntu)             | [DEB](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.deb)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.deb.sha256)       |
+| Linux ARM64 (Fedora, openSUSE)           | [RPM](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-aarch64.rpm)          | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-aarch64.rpm.sha256)     |
+| Linux x64                                | [AppImage](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x86_64.AppImage) | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x86_64.AppImage.sha256) |
+| Linux x64 (Debian, Ubuntu)               | [DEB](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-amd64.deb)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-amd64.deb.sha256)       |
+| Linux x64 (Fedora, openSUSE)             | [RPM](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x86_64.rpm)           | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x86_64.rpm.sha256)      |
+| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/ruscher/omxterm/releases/download/v0.21.0/linux_install.sh)       | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/linux_install.sh.sha256)               |
+| Windows ARM64                            | [Installer](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.exe)      | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.exe.sha256)       |
+| Windows x64                              | [Installer](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x64.exe)        | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x64.exe.sha256)         |
 
-Linux requires **glibc 2.42+** and X11/XWayland (for example Fedora 43+, Ubuntu
-25.10+, or Arch). First-launch notes for macOS Gatekeeper and Windows
+Linux requires **glibc 2.34+** and X11/XWayland (for example Ubuntu 22.04+,
+Debian 12+, Fedora 35+, or Arch). First-launch notes for macOS Gatekeeper and Windows
 SmartScreen are in the [installation guide](docs/installation.md).
 
 <a id="exercised-desktops"></a>

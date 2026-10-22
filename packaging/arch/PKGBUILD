@@ -10,7 +10,7 @@
 # "0.1.0").
 
 pkgname=omxterm
-pkgver=0.20.3dev.0
+pkgver=0.21.0
 pkgrel=1
 pkgdesc='Open-source personal desktop terminal'
 arch=('x86_64' 'aarch64')

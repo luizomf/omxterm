@@ -2,7 +2,7 @@
 
 OMXTerm packages are built for **ARM64** and **x64** computers: Apple Silicon and Intel Macs, Linux, and Windows 11. Grab the file for your system from the [downloads table](../README.md#platforms-and-downloads) and follow the steps below.
 
-> Releases up to 0.20.2 ship ARM64 packages only (DMG, AppImage, and Windows installer). x64 packages and the Linux DEB and RPM packages are available from the releases that list them.
+> Releases up to 0.20.2 ship ARM64 packages only (DMG, AppImage, and Windows installer). From 0.21.0, every release has ARM64 and x64 packages, plus Linux DEB and RPM packages.
 
 **[Pick a file](#pick-the-right-file)** · **[macOS](#macos)** · **[Linux](#linux)** · **[Windows](#windows)** · **[Update or uninstall](#updating-or-uninstalling)**
 
@@ -60,14 +60,14 @@ A valid file prints `OK`.
 
 ### Requirements
 
-OMXTerm needs an `aarch64` (ARM64) or `x86_64` (x64) processor and a recent glibc (**2.42 or newer** for the current releases; the minimum follows the system the release was built on). Check both with:
+OMXTerm needs an `aarch64` (ARM64) or `x86_64` (x64) processor and glibc **2.34 or newer** (from 0.21.0; the minimum follows the system the release was built on, and 0.20.2 needed 2.42). Check both with:
 
 ```sh
 uname -m
 getconf GNU_LIBC_VERSION
 ```
 
-Recent releases such as Fedora 43, Ubuntu 25.10, and Arch meet this requirement. Ubuntu 24.04 LTS and other older releases ship an older glibc and cannot run the current package.
+Ubuntu 22.04 LTS and newer, Debian 12 and newer, Fedora 35 and newer, and Arch meet this requirement.
 
 Then install the few desktop packages OMXTerm relies on (most desktops already have them):
 
@@ -108,6 +108,14 @@ makepkg -si
 ```
 
 It installs OMXTerm in `/usr/lib/omxterm` with the `omxterm` command, an application menu entry, and its licenses in `/usr/share/licenses/omxterm`.
+
+On **BigLinux**, [`pkgbuild/PKGBUILD`](../pkgbuild/PKGBUILD) follows BigLinux's packaging conventions: it clones the repository's default branch and versions the package by build date (`YY.MM.DD-HHMM`). It installs the same files:
+
+```sh
+mkdir omxterm-pkg && cd omxterm-pkg
+curl -fLO https://raw.githubusercontent.com/ruscher/omxterm/main/pkgbuild/PKGBUILD
+makepkg -si
+```
 
 ### Run the AppImage
 
