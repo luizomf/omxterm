@@ -391,6 +391,32 @@ is an independent Terminal Surface and Live Terminal Session.
   never mirrored. Receiving panes show a warning edge, and a persistent
   indicator offers Stop. OMXTerm does not detect password prompts.
 
+## Saved Sessions
+
+Saved Sessions are launch definitions kept in Application Data
+(`sessions.json`, [ADR 0034](adr/0034-store-application-data-beside-user-configuration.md)).
+Opening one always starts a new process.
+
+- The Sessions sidebar is per window and hidden by default. Toggle Sessions
+  (`Cmd+Shift+J` on macOS, `Ctrl+Shift+H` on Linux and Windows, remappable as
+  `toggleSessions`) shows or hides it. It lists favorites, up to five recently
+  used sessions, and the folder tree, and searches names, targets and
+  directories. Changes from any window appear in every window.
+- Opening a session sends main only its identifier. Main resolves the
+  definition, checks that a local working directory still exists, and starts it
+  with the Default Shell or a literal program and argument vector. An initial
+  command is typed once, after the program's first output. SSH sessions run the
+  system OpenSSH client with a literal argument vector
+  ([ADR 0036](adr/0036-run-saved-ssh-sessions-through-the-system-openssh-client.md)).
+- Quick Connect accepts `[user@]host[:port]`, validated in the renderer and
+  again in main, and starts an unsaved SSH session.
+- Saved and Quick Connect sessions that exit with a non-zero code or fail keep
+  their final screen with Reconnect and Close actions. Reconnect starts a new
+  session in the same pane position. Ordinary zero exits close like any other
+  session.
+- Exports contain definitions only. Passwords are typed at ssh's prompt and
+  are never stored; options that execute local programs are rejected.
+
 ## Terminal behavior
 
 The Restty Terminal Surface uses the existing Terminal Tabs, session Adapter and

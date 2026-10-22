@@ -65,6 +65,20 @@ On keyboards where `+` shares the `=` key, include `Shift` (`Cmd+Shift+=` or `Ct
 
 On Linux and Windows, press and release **Alt** to open the application menu (even when the title bar is hidden), and press `Escape` to close it. On macOS, use the system menu bar. To customize shortcuts, see [keybinds](configuration.md#keybinds).
 
+## Saved sessions and SSH
+
+Press `Cmd+Shift+J` / `Ctrl+Shift+H` (**View → Toggle Sessions**) to open the Sessions sidebar. It stays closed until you open it.
+
+- **Quick Connect:** type `user@host:port` (user and port are optional) and press **Connect** to open an SSH tab without saving anything.
+- **Saved sessions:** use **+** to create a session or folder. A _local_ session can start in a chosen directory, run a specific program with literal arguments (one per line), and type an initial command once the shell is ready. An _SSH_ session stores the host, port, user, authentication method, an optional key file, a jump host, agent/X11 forwarding, compression, connection reuse, port forwards (`L 8080:localhost:80`, `R …`, `D 1080`), a command to run after login and extra `-o` options.
+- **Opening:** double-click a session or press `Enter` to open it in a new tab; `Shift+Enter`, or the context menu, opens it in a split. The tab takes the session's color.
+- **Organizing:** right-click (or use the context-menu key) to edit, duplicate, favorite, move or delete. Drag a session onto a folder to move it. Search matches names, hosts and directories. Favorites and recently used sessions appear at the top.
+- **Import and export:** the **⋯** menu imports hosts from `~/.ssh/config` and imports or exports sessions as JSON. Exports never contain passwords or keys.
+
+OMXTerm runs your system's OpenSSH client (`ssh`, or `ssh.exe` on Windows), so `~/.ssh/config`, your SSH agent and `known_hosts` all apply. Unknown host keys are confirmed in the terminal as usual. Passwords are typed at ssh's own prompt; OMXTerm never stores them or puts them on a command line. Settings that make ssh run local programs, such as `ProxyCommand`, belong in `~/.ssh/config` and are refused as extra options.
+
+When a saved or Quick Connect session fails (for example, `Connection refused`), its tab stays open with the error visible and offers **Reconnect** and **Close**.
+
 ## Split panes
 
 Use **Terminal → Split Right** or **Split Down** to divide the focused pane. Each pane is an independent terminal with its own shell, scrollback and selection; a new pane starts in the focused pane's current directory when OMXTerm can determine it (from the shell's OSC 7 report, or on Linux from the shell process), and in your home directory otherwise.

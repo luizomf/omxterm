@@ -37,6 +37,7 @@ interface TerminalApplicationMenuActions {
   readonly toggleSelectedPaneMaximized: () => void;
   readonly equalizeSelectedPanes: () => void;
   readonly toggleSelectedBroadcast: () => void;
+  readonly toggleSelectedSessions: () => void;
 }
 
 export function terminalApplicationMenuTemplate(
@@ -128,6 +129,11 @@ export function terminalApplicationMenuTemplate(
           click: actions.resetSelectedWindowZoom,
         },
         { type: "separator" },
+        {
+          label: "Toggle Sessions",
+          accelerator: keybinds.toggleSessions,
+          click: actions.toggleSelectedSessions,
+        },
         {
           label: "Toggle Snippets",
           accelerator: keybinds.toggleSnippets,
@@ -310,6 +316,7 @@ export function terminalActionInvocations(
     toggleMaximizePane: actions.toggleSelectedPaneMaximized,
     equalizePanes: actions.equalizeSelectedPanes,
     toggleBroadcast: actions.toggleSelectedBroadcast,
+    toggleSessions: actions.toggleSelectedSessions,
   });
 }
 

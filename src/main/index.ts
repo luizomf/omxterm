@@ -79,6 +79,7 @@ import {
   type OperationalEventLog,
 } from "./operational-events";
 import { startSavedSessions } from "./saved-session-wiring";
+import { sessionIpc } from "../shared/session-ipc";
 import { launchTerminalSession } from "./session-launch";
 import {
   confirmBroadcast,
@@ -379,6 +380,8 @@ app
             window.webContents.send(terminalIpc.tabBarToggle),
           sendSnippetsToggle: (window) =>
             window.webContents.send(terminalIpc.snippetsToggle),
+          sendSessionsToggle: (window) =>
+            window.webContents.send(sessionIpc.toggleSidebar),
           sendLocalImageOpen: (window) =>
             window.webContents.send(terminalIpc.localImageOpen),
           toggleDeveloperTools: (window) => window.webContents.toggleDevTools(),
@@ -441,6 +444,7 @@ app
             terminalApplication.toggleSelectedPaneMaximized,
           equalizeSelectedPanes: terminalApplication.equalizeSelectedPanes,
           toggleSelectedBroadcast: terminalApplication.toggleSelectedBroadcast,
+          toggleSelectedSessions: terminalApplication.toggleSelectedSessions,
         };
         const keybindActionInvocations = terminalActionInvocations(menuActions);
         rebuildMenu = () =>

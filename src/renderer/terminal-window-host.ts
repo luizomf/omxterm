@@ -39,6 +39,9 @@ import type {
 } from "../shared/local-image";
 import { createTerminalFontGenerationOwner } from "./terminal-font-generations";
 import { createTranslator, type Translator } from "../shared/i18n";
+import type { SessionsBridge } from "../shared/terminal-bridge";
+import { createToaster, createWorkspaceSidebar } from "./workspace-sidebar";
+import { createSessionsPanel } from "./sessions/sessions-panel";
 import {
   createBroadcastIndicator,
   type BroadcastIndicator,
@@ -107,6 +110,10 @@ interface TerminalWindowPageOptions {
     sessionId: TerminalSessionId,
     uri: string,
   ) => void;
+  readonly workspace?: {
+    readonly element: HTMLElement;
+    readonly sessions: SessionsBridge;
+  };
   readonly snippets?: {
     readonly element: HTMLElement;
     readonly load: () => Promise<TerminalSnippetsResponse>;
@@ -133,6 +140,7 @@ export function mountTerminalWindowPage(
   let removeTabTitleListener: (() => void) | undefined;
   let removeTabBarToggleListener: (() => void) | undefined;
   let snippetsSidebar: SnippetsSidebar | undefined;
+  let disposeWorkspace: (() => void) | undefined;
   let removeSnippetsToggleListener: (() => void) | undefined;
   let removeLocalImageOpenListener: (() => void) | undefined;
   let localImagePreview: LocalImagePreview | undefined;
@@ -291,6 +299,7 @@ export function mountTerminalWindowPage(
     localImagePreview = undefined;
     snippetsSidebar?.dispose();
     snippetsSidebar = undefined;
+    disposeWorkspace?.();
     tabs.dispose();
     broadcastIndicator.dispose();
     fontGenerations?.dispose();
@@ -369,9 +378,59 @@ export function mountTerminalWindowPage(
         if (!previewActive()) void sidebar.toggle();
       });
     }
+    if (options.workspace)
+      disposeWorkspace = mountWorkspace(options.workspace, {
+        translator,
+        tabs,
+        isBlocked: previewActive,
+        focusTerminal: onPageFocus,
+      });
   });
 
   return { ready, dispose };
+}
+
+// The optional left sidebar with Saved Sessions. Opening a session is ignored
+// while a Local Image Preview owns the window, like every other injection.
+function mountWorkspace(
+  workspace: NonNullable<TerminalWindowPageOptions["workspace"]>,
+  context: {
+    readonly translator: Translator;
+    readonly tabs: TerminalTabs;
+    readonly isBlocked: () => boolean;
+    readonly focusTerminal: () => void;
+  },
+): () => void {
+  const document = workspace.element.ownerDocument;
+  const toaster = createToaster(document);
+  const sidebar = createWorkspaceSidebar(workspace.element, {
+    translator: context.translator,
+    focusTerminal: context.focusTerminal,
+    panels: [
+      {
+        id: "sessions",
+        label: "sidebar.sessions",
+        create: () =>
+          createSessionsPanel(document, {
+            translator: context.translator,
+            bridge: workspace.sessions,
+            notify: toaster.notify,
+            open: (launch, placement) => {
+              if (!context.isBlocked())
+                context.tabs.openLaunch(launch, placement);
+            },
+          }),
+      },
+    ],
+  });
+  const removeToggle = workspace.sessions.onToggleSidebar(() => {
+    if (!context.isBlocked()) sidebar.toggle("sessions");
+  });
+  return () => {
+    removeToggle();
+    sidebar.dispose();
+    toaster.dispose();
+  };
 }
 
 // Window-level callbacks and translated strings for the Terminal Tabs.

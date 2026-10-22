@@ -71,6 +71,7 @@ export async function exerciseApplicationMenu(
     toggleSelectedPaneMaximized: unexpected,
     equalizeSelectedPanes: unexpected,
     toggleSelectedBroadcast: unexpected,
+    toggleSelectedSessions: unexpected,
   };
   const invocations = terminalActionInvocations(actions);
   deliverKeybindsFromKeyEvents(

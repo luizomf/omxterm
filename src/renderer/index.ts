@@ -19,6 +19,10 @@ if (!errorBanner) throw new Error("User File Error banner is missing");
 const snippetsElement =
   document.querySelector<HTMLElement>("#snippets-sidebar");
 if (!snippetsElement) throw new Error("Snippets Sidebar container is missing");
+const workspaceElement =
+  document.querySelector<HTMLElement>("#workspace-sidebar");
+if (!workspaceElement)
+  throw new Error("Workspace Sidebar container is missing");
 const surfaceFailure = document.querySelector<HTMLElement>(
   "#terminal-surface-failure",
 );
@@ -72,6 +76,10 @@ void window.omxterm.terminal.configuration().then((configuration) => {
         readText: window.omxterm.terminal.readClipboardText,
         confirmPaste: window.omxterm.terminal.confirmPaste,
         requestContextMenu: window.omxterm.terminal.requestClipboardContextMenu,
+      },
+      workspace: {
+        element: workspaceElement,
+        sessions: window.omxterm.sessions,
       },
       snippets: {
         element: snippetsElement,

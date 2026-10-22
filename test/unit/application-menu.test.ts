@@ -40,6 +40,7 @@ function menuActions() {
     toggleSelectedPaneMaximized: vi.fn(),
     equalizeSelectedPanes: vi.fn(),
     toggleSelectedBroadcast: vi.fn(),
+    toggleSelectedSessions: vi.fn(),
   };
 }
 

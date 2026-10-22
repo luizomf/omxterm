@@ -290,6 +290,10 @@ Example overriding a single shortcut:
 - Use literal punctuation characters (such as `Control+Shift+,`), except for `+`, which is written as `Plus`.
 - Each action needs its own shortcut. If you bind an action on Linux or Windows to a bare `Ctrl+<key>` that terminal programs use (like `Ctrl+C` or `Ctrl+D`), OMXTerm keeps the binding but shows a warning, since that key no longer reaches your shell.
 
+## Saved sessions file
+
+Saved sessions live in `sessions.json` next to `config.json`. OMXTerm writes this file itself; edit sessions in the Sessions sidebar rather than by hand. If the file is damaged, OMXTerm renames it to `sessions.json.corrupt-<time>` and starts with an empty list, so nothing is silently lost. Secrets are never stored in it.
+
 ## Snippets
 
 Snippets let you save commonly used commands or text in `snippets.json` (next to `config.json`) and insert them from the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`).

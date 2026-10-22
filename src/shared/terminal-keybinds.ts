@@ -41,6 +41,7 @@ export const TERMINAL_ACTION_NAMES = [
   "toggleMaximizePane",
   "equalizePanes",
   "toggleBroadcast",
+  "toggleSessions",
 ] as const;
 
 export type TerminalActionName = (typeof TERMINAL_ACTION_NAMES)[number];
@@ -89,6 +90,7 @@ export const DEFAULT_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   toggleMaximizePane: "Command+Shift+Enter",
   equalizePanes: "Command+Alt+0",
   toggleBroadcast: "Command+Alt+I",
+  toggleSessions: "Command+Shift+J",
 });
 
 // Linux and Windows share the conventional shifted terminal shortcuts so
@@ -136,6 +138,8 @@ const SHIFTED_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   toggleMaximizePane: "Control+Shift+Z",
   equalizePanes: "Control+Shift+0",
   toggleBroadcast: "Control+Shift+I",
+  // AshyTerm's Sessions sidebar shortcut.
+  toggleSessions: "Control+Shift+H",
 });
 
 export function terminalDefaultKeybinds(platform: string): TerminalKeybinds {

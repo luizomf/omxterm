@@ -15,6 +15,7 @@ export type TerminalResizeFailureReason = "closed-pty" | "native-failure";
 
 export const TERMINAL_OUTPUT_PAUSE_BYTES = 64 * 1024;
 export const TERMINAL_OUTPUT_RESUME_BYTES = 16 * 1024;
+export const INITIAL_INPUT_SETTLE_MS = 50;
 
 export interface TerminalOutputFlowMetrics {
   readonly pendingBytes: number;
@@ -71,6 +72,7 @@ export interface LocalTerminalSessionOptions {
   readonly initialInput?: string;
   readonly title?: string;
   readonly readLink?: (path: string) => string;
+  readonly schedule?: (callback: () => void, milliseconds: number) => unknown;
   readonly onOutput: (data: string) => void;
   readonly onResizeFailure?: (reason: TerminalResizeFailureReason) => void;
   readonly onExit: (
@@ -148,8 +150,22 @@ export function createLocalTerminalSession(
     exitSubscription = undefined;
   };
 
+  // A Saved Session's initial command is typed once the program has drawn
+  // its first output (normally the prompt), so the line editor reads it
+  // instead of the terminal driver echoing it a second time.
+  let pendingInitialInput = options.initialInput || undefined;
+  const typeInitialInput = () => {
+    const text = pendingInitialInput;
+    pendingInitialInput = undefined;
+    if (!text) return;
+    (options.schedule ?? setTimeout)(() => {
+      if (closed || exited) return;
+      for (const chunk of splitTerminalPayload(text)) pty.write(chunk);
+    }, INITIAL_INPUT_SETTLE_MS);
+  };
   dataSubscription = pty.onData((data) => {
     if (closed) return;
+    typeInitialInput();
     largestNativeReadBytes = Math.max(
       largestNativeReadBytes,
       Buffer.byteLength(data, "utf8"),
@@ -188,12 +204,6 @@ export function createLocalTerminalSession(
   if (exited) releaseSubscriptions();
 
   const shellProcessName = normalizeProcessName(options.shell);
-  if (options.initialInput && !exited) {
-    // Typed-ahead input is buffered by the terminal driver until the shell
-    // reads it, so it runs once the shell's line editor is ready.
-    for (const chunk of splitTerminalPayload(options.initialInput))
-      pty.write(chunk);
-  }
 
   return {
     launchKind: explicitCommand ? "explicit-command" : "default-shell",
