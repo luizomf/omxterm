@@ -226,6 +226,20 @@ describe("rule semantics", () => {
     ).toContain(`icmp_seq=${ESC}[33m2${ESC}[0m`);
   });
 
+  it("keeps reading commands after very long lines", () => {
+    const transform = highlighter();
+    for (let index = 0; index < 5; index += 1)
+      transform.transform("y".repeat(4_000));
+    transform.transform("\r\n$ ");
+    for (const key of "ping h") transform.userInput(key);
+    transform.transform("ping h");
+    transform.userInput("\r");
+    transform.transform("\r\n");
+    expect(
+      transform.transform("64 bytes from h: icmp_seq=3 ttl=1 time=1.1 ms\r\n"),
+    ).toContain(`icmp_seq=${ESC}[33m3${ESC}[0m`);
+  });
+
   it("tracks each SGR attribute so only a line in default attributes is colored", () => {
     const partial = highlighter();
     partial.transform(`${ESC}[1;7mbold${ESC}[27m\r\n`);

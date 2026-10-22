@@ -19,12 +19,17 @@ export function createLineModel(): LineModel {
   let line = "";
   let cursor = 0;
   let commandColumn: number | undefined;
+  // Appending is the common case and stays linear; a redraw in the middle of
+  // the line rebuilds it. Long lines are trimmed in batches, not per write.
   const write = (character: string) => {
-    line = `${line.slice(0, cursor).padEnd(cursor)}${character}${line.slice(cursor + 1)}`;
+    if (cursor === line.length) line += character;
+    else
+      line = `${line.slice(0, cursor).padEnd(cursor)}${character}${line.slice(cursor + 1)}`;
     cursor += 1;
-    if (line.length > MAX_LINE) {
-      line = line.slice(-MAX_LINE);
-      cursor = Math.min(cursor, line.length);
+    if (line.length > 2 * MAX_LINE) {
+      const removed = line.length - MAX_LINE;
+      line = line.slice(removed);
+      cursor = Math.max(0, cursor - removed);
       commandColumn = undefined;
     }
   };

@@ -465,8 +465,8 @@ are typed into the focused pane on request.
   Sessions panel, it creates no DOM until first opened.
 - Built-in commands declare their platforms and the programs they need; only
   the current platform's commands are listed, and main reports whether each
-  program is on `PATH` (a lookup without a shell, cached until the library
-  changes). Missing programs are shown, not hidden.
+  program is on `PATH` (a lookup without a shell, cached and refreshed
+  whenever the panel lists commands). Missing programs are shown, not hidden.
 - Templates use `{field}` placeholders. Free text is quoted for the target
   shell (POSIX single quotes, or PowerShell single quotes on Windows); choice
   fields only ever insert values authored in the definition. Required fields

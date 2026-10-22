@@ -40,9 +40,14 @@ completed lines and never rewrites or drops existing bytes.
   text runs are candidates.
 - **Bypass states.** The transform is disabled while:
   - the alternate screen is active (tracked from `?1049h/l`, `?1047`, `?47`);
-  - a line already contains SGR color or carries cursor movement;
+  - bracketed paste is active;
+  - any SGR attribute differs from the default. Each attribute is tracked
+    with its own on and off codes, so readline's `ESC[27m` after a
+    highlighted paste counts as a return to default (R18);
+  - a line carries cursor movement or other non-neutral controls;
   - the data is inside a DCS, APC or OSC sequence;
-  - output exceeds the rate budget (burst detection, as in AshyTerm).
+  - output exceeds the rate budget: more than 8 consecutive chunks over
+    4096 characters, or a chunk that took over 12 ms (1 s backoff).
 - **Line completion.** Only text followed by a newline is colored. A trailing
   partial line passes through unchanged, because prompts and readline redraws
   live there. OMXTerm never holds bytes back, so latency is unchanged.
@@ -50,10 +55,13 @@ completed lines and never rewrites or drops existing bytes.
   compiled once, rejected when patterns risk catastrophic backtracking, and
   bounded per line by length.
 - **Context.** Command-aware rule sets are selected from the command line the
-  user submitted. The Surface reports the line typed before Enter; nothing is
-  read from screen contents and nothing is logged.
-- **Default.** Off, as in AshyTerm. It is enabled per user setting, with
-  per-session overrides.
+  user submitted. When Enter is pressed, the command is read from the pane's
+  own echo (a small line model fed by the same output stream), starting at
+  the column where typing began. A command that OMXTerm submits (a snippet or
+  a Command Manager command) selects its rule set from the submitted text
+  (R19). The text is never stored, logged or sent.
+- **Default.** Off, as in AshyTerm. **View → Highlight Output** turns it on
+  for every pane. Per-session overrides are not implemented.
 
 Deterministic tests feed recorded VT streams (vim, htop, tmux, Kitty images,
 bracketed paste, Unicode wide and combining characters) and assert byte
