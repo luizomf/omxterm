@@ -116,7 +116,10 @@ export function createTerminalTabs(
       void focusedSurface()?.inject(text);
     },
     injectSnippet(body, injectOptions) {
-      void focusedSurface()?.inject(body, { submit: injectOptions.submit });
+      const pane = selectedTab(ctx)?.focused;
+      if (!pane?.surface) return;
+      pane.highlighter?.injected(body, injectOptions.submit);
+      void pane.surface.inject(body, { submit: injectOptions.submit });
     },
     toggleTabBar() {
       if (ctx.disposed) return;

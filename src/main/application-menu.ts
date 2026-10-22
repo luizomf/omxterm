@@ -38,6 +38,7 @@ interface TerminalApplicationMenuActions {
   readonly equalizeSelectedPanes: () => void;
   readonly toggleSelectedBroadcast: () => void;
   readonly toggleSelectedSessions: () => void;
+  readonly toggleSelectedCommands: () => void;
   readonly toggleOutputHighlighting?: () => void;
 }
 
@@ -139,6 +140,11 @@ export function terminalApplicationMenuTemplate(
           label: "Toggle Sessions",
           accelerator: keybinds.toggleSessions,
           click: actions.toggleSelectedSessions,
+        },
+        {
+          label: "Toggle Commands",
+          accelerator: keybinds.toggleCommands,
+          click: actions.toggleSelectedCommands,
         },
         {
           label: "Toggle Snippets",
@@ -333,6 +339,7 @@ export function terminalActionInvocations(
     equalizePanes: actions.equalizeSelectedPanes,
     toggleBroadcast: actions.toggleSelectedBroadcast,
     toggleSessions: actions.toggleSelectedSessions,
+    toggleCommands: actions.toggleSelectedCommands,
   });
 }
 

@@ -432,12 +432,40 @@ and the choice is kept in Application Data (`highlights.json`).
   hyperlinks, carriage returns) still counts as column 0.
 - More than eight consecutive large chunks, or a chunk that took longer than
   12 ms to process, bypass highlighting for a while.
+- Attributes are tracked per SGR attribute, so a partial reset such as
+  readline's `ESC[27m` after a highlighted paste returns to default
+  attributes.
 - Rules are the 51 AshyTerm rule sets (486 rules). When the user presses
-  Enter, the command typed into that pane selects its rule set; unknown
+  Enter, the command typed into that pane selects its rule set; a command
+  that OMXTerm submits for the user (a snippet or a Command Manager command)
+  selects it from the submitted text; unknown
   commands use the global rules, and ignored commands (tools that color their
   own output or draw full screens) are left untouched. The command line is
   read from the pane's own echo and is never stored, logged or sent.
 - Colors use the 16-color palette, so they follow the Terminal Theme.
+
+## Command Manager
+
+The Command Manager is a per-window sidebar panel of command templates that
+are typed into the focused pane on request.
+
+- Toggle Commands (`Cmd+Shift+M` on macOS, `Ctrl+Shift+M` on Linux and
+  Windows, remappable as `toggleCommands`) shows or hides it. Like the
+  Sessions panel, it creates no DOM until first opened.
+- Built-in commands declare their platforms and the programs they need; only
+  the current platform's commands are listed, and main reports whether each
+  program is on `PATH` (a lookup without a shell, cached until the library
+  changes). Missing programs are shown, not hidden.
+- Templates use `{field}` placeholders. Free text is quoted for the target
+  shell (POSIX single quotes, or PowerShell single quotes on Windows); choice
+  fields only ever insert values authored in the definition. Required fields
+  and numeric ranges are checked before anything is typed.
+- A form always shows the exact command before **Insert in Terminal** (no
+  Enter) or **Run in Terminal** (with Enter). Commands without fields marked
+  for direct execution run on click.
+- Custom commands, favorites and hidden built-ins are kept in Application
+  Data (`commands.json`) and validated in main. Built-in names and labels are
+  localized; command text and option values never are.
 
 ## Terminal behavior
 

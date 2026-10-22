@@ -199,6 +199,46 @@ describe("rule semantics", () => {
     ]);
   });
 
+  it("selects rules for a command OMXTerm types and resumes after readline's paste mark", () => {
+    const transform = highlighter();
+    transform.transform(`${ESC}[?2004h$ `);
+    transform.injected("ping -c 1 10.0.0.1", true);
+    // bash 5.2 as captured: the pasted command in reverse video, ended by
+    // ESC[27m rather than a full reset.
+    transform.transform(
+      `${ESC}[7mping -c 1 10.0.0.1${ESC}[27m\r${ESC}[C${ESC}[Cping -c 1 10.0.0.1\r\n${ESC}[?2004l\r`,
+    );
+    const line = transform.transform(
+      "64 bytes from 10.0.0.1: icmp_seq=1 ttl=64 time=0.05 ms\r\n",
+    );
+    expect(line).toContain(`icmp_seq=${ESC}[33m1${ESC}[0m`);
+    // Typing after an inserted (not submitted) command keeps its start.
+    const inserted = highlighter();
+    inserted.transform("$ ");
+    inserted.injected("ping example.com", false);
+    inserted.transform("ping example.com");
+    inserted.userInput(" ");
+    inserted.transform(" ");
+    inserted.userInput("\r");
+    inserted.transform("\r\n");
+    expect(
+      inserted.transform("64 bytes from h: icmp_seq=2 ttl=1 time=1.1 ms\r\n"),
+    ).toContain(`icmp_seq=${ESC}[33m2${ESC}[0m`);
+  });
+
+  it("tracks each SGR attribute so only a line in default attributes is colored", () => {
+    const partial = highlighter();
+    partial.transform(`${ESC}[1;7mbold${ESC}[27m\r\n`);
+    expect(partial.transform("error\r\n")).toBe("error\r\n");
+    partial.transform(`${ESC}[22m`);
+    expect(partial.transform("\r\nerror\r\n")).toContain(`${ESC}[1;31merror`);
+    const extended = highlighter();
+    extended.transform(`${ESC}[38;2;1;2;3m${ESC}[22;27m\r\n`);
+    expect(extended.transform("error\r\n")).toBe("error\r\n");
+    extended.transform(`${ESC}[39m\r\n`);
+    expect(extended.transform("error\r\n")).toContain(`${ESC}[1;31merror`);
+  });
+
   it("selects command rules on Enter and returns to global rules for unknown commands", () => {
     const transform = highlighter();
     transform.transform("user@host:~$ ");

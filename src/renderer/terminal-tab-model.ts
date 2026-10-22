@@ -8,6 +8,7 @@ import type {
   TerminalSurfaceOptions,
 } from "../terminal-surface/terminal-surface";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
+import type { OutputHighlighter } from "./highlighting/output-highlighter";
 import type { PaneLayout } from "./pane-layout";
 import type { TerminalLaunchSpec } from "../shared/terminal-launch";
 import type { TerminalExit } from "../shared/terminal-contract";
@@ -29,6 +30,7 @@ export interface TerminalPane {
   readonly mountAbort: AbortController;
   readonly launch: PaneLaunch;
   surface: TerminalSurface | undefined;
+  highlighter: OutputHighlighter | undefined;
   label: string;
   removed: boolean;
   startRequested: boolean;
@@ -59,6 +61,7 @@ export function createPane(
     mountAbort: new AbortController(),
     launch,
     surface: undefined,
+    highlighter: undefined,
     label: launch.label ?? "",
     removed: false,
     startRequested: false,

@@ -30,6 +30,7 @@ import { terminalIpc } from "../shared/terminal-ipc";
 import { isTerminalLaunchSpec } from "../shared/terminal-launch";
 import { createSessionsBridge } from "./sessions-bridge";
 import { createHighlightsBridge } from "./highlights-bridge";
+import { createCommandsBridge } from "./commands-bridge";
 import {
   formatFilePathInsertion,
   isFilePathPlatform,
@@ -383,5 +384,6 @@ contextBridge.exposeInMainWorld(
     terminal: Object.freeze(terminal),
     sessions: Object.freeze(createSessionsBridge(ipcRenderer)),
     highlights: Object.freeze(createHighlightsBridge(ipcRenderer)),
+    commands: Object.freeze(createCommandsBridge(ipcRenderer)),
   }),
 );

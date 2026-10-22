@@ -81,6 +81,7 @@ void window.omxterm.terminal.configuration().then((configuration) => {
       workspace: {
         element: workspaceElement,
         sessions: window.omxterm.sessions,
+        commands: window.omxterm.commands,
       },
       snippets: {
         element: snippetsElement,

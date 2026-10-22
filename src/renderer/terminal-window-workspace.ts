@@ -8,12 +8,14 @@ import {
   type HighlightingController,
 } from "./highlighting/highlighting-controller";
 import { createSessionsPanel } from "./sessions/sessions-panel";
+import { createCommandsPanel } from "./commands/commands-panel";
 import type { TerminalTabs, TerminalTabsOptions } from "./terminal-tabs";
 import type { TerminalWindowPageOptions } from "./terminal-window-host";
 import { createToaster, createWorkspaceSidebar } from "./workspace-sidebar";
 
-// The optional left sidebar with Saved Sessions. Opening a session is ignored
-// while a Local Image Preview owns the window, like every other injection.
+// The optional left sidebar with Saved Sessions and the Command Manager.
+// Opening a session or typing a command is ignored while a Local Image
+// Preview owns the window, like every other injection.
 export function mountWorkspace(
   workspace: NonNullable<TerminalWindowPageOptions["workspace"]>,
   context: {
@@ -43,13 +45,37 @@ export function mountWorkspace(
             },
           }),
       },
+      ...(workspace.commands
+        ? [
+            {
+              id: "commands",
+              label: "sidebar.commands" as const,
+              create: () =>
+                createCommandsPanel(document, {
+                  translator: context.translator,
+                  bridge: workspace.commands!,
+                  chooseFile: workspace.sessions.chooseFile,
+                  notify: toaster.notify,
+                  run: ({ text, submit }) => {
+                    if (context.isBlocked()) return;
+                    context.tabs.injectSnippet(text, { submit });
+                    context.focusTerminal();
+                  },
+                }),
+            },
+          ]
+        : []),
     ],
   });
   const removeToggle = workspace.sessions.onToggleSidebar(() => {
     if (!context.isBlocked()) sidebar.toggle("sessions");
   });
+  const removeCommandsToggle = workspace.commands?.onToggleSidebar(() => {
+    if (!context.isBlocked()) sidebar.toggle("commands");
+  });
   return () => {
     removeToggle();
+    removeCommandsToggle?.();
     sidebar.dispose();
     toaster.dispose();
   };

@@ -98,6 +98,7 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
   ) => void;
   readonly sendSnippetsToggle: (window: Window) => void;
   readonly sendSessionsToggle?: (window: Window) => void;
+  readonly sendCommandsToggle?: (window: Window) => void;
   readonly sendTabBarToggle: (window: Window) => void;
   readonly sendTitleBarToggle: (window: Window) => void;
   readonly sendLocalImageOpen: (window: Window) => void;
@@ -137,6 +138,7 @@ export interface TerminalApplication<
   clipboardSelectedWindow(action: TerminalClipboardAction): void;
   toggleSelectedSnippets(): void;
   toggleSelectedSessions(): void;
+  toggleSelectedCommands(): void;
   toggleSelectedTabBar(): void;
   toggleSelectedTitleBar(): void;
   openLocalImageInSelectedWindow(): void;
@@ -401,9 +403,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     toggleSelectedTabBar: selectedWindowAction(options.sendTabBarToggle),
     toggleSelectedTitleBar: selectedWindowAction(options.sendTitleBarToggle),
     toggleSelectedSnippets: selectedWindowAction(options.sendSnippetsToggle),
-    toggleSelectedSessions: selectedWindowAction((window) =>
-      options.sendSessionsToggle?.(window),
-    ),
+    ...sidebarToggles(options, selectedWindowAction),
     openLocalImageInSelectedWindow: selectedWindowAction(
       options.sendLocalImageOpen,
     ),
@@ -412,6 +412,24 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       alwaysOnTopDefault = configuration.alwaysOnTopDefault;
     },
     isQuitting: () => quitting,
+  };
+}
+
+// Workspace sidebar panels shown in the selected window.
+function sidebarToggles<Window extends NativeTerminalWindow>(
+  options: TerminalApplicationOptions<Window>,
+  forSelected: (action: (window: Window) => void) => () => void,
+): Pick<
+  TerminalApplication<Window>,
+  "toggleSelectedSessions" | "toggleSelectedCommands"
+> {
+  return {
+    toggleSelectedSessions: forSelected((window) =>
+      options.sendSessionsToggle?.(window),
+    ),
+    toggleSelectedCommands: forSelected((window) =>
+      options.sendCommandsToggle?.(window),
+    ),
   };
 }
 

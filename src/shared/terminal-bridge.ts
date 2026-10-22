@@ -19,6 +19,19 @@ import type {
 } from "./saved-sessions";
 import type { SessionFileChoice } from "./session-ipc";
 import type { HighlightSettings } from "./highlight-settings";
+import type { CommandDefinition, CommandLibraryDocument } from "./commands";
+
+export interface CommandsBridge {
+  list(): Promise<CommandLibraryDocument>;
+  save(command: CommandDefinition): Promise<CommandDefinition>;
+  delete(id: string): Promise<void>;
+  setFavorite(id: string, on: boolean): Promise<void>;
+  setHidden(id: string, on: boolean): Promise<void>;
+  availability(tools: readonly string[]): Promise<Record<string, boolean>>;
+  platform(): Promise<string>;
+  onChanged(listener: (document: CommandLibraryDocument) => void): () => void;
+  onToggleSidebar(listener: () => void): () => void;
+}
 
 export interface HighlightsBridge {
   get(): Promise<HighlightSettings>;
@@ -102,6 +115,7 @@ declare global {
       readonly terminal: TerminalBridge;
       readonly sessions: SessionsBridge;
       readonly highlights: HighlightsBridge;
+      readonly commands: CommandsBridge;
     };
   }
 }

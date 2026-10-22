@@ -77,6 +77,8 @@ import {
 } from "./operational-events";
 import { startSavedSessions } from "./saved-session-wiring";
 import { startHighlightSettings } from "./highlight-wiring";
+import { startCommandLibrary } from "./command-wiring";
+import { commandIpc } from "../shared/command-ipc";
 import { sessionIpc } from "../shared/session-ipc";
 import { launchTerminalSession } from "./session-launch";
 import {
@@ -149,6 +151,12 @@ app
           operationalEvents: operationalEvents!,
         });
         const highlightSettings = await startHighlightSettings({
+          ipcMain,
+          homeDirectory: account.homedir,
+          isTrustedSender: terminalIpcRouter.isTrustedSender,
+          operationalEvents: operationalEvents!,
+        });
+        await startCommandLibrary({
           ipcMain,
           homeDirectory: account.homedir,
           isTrustedSender: terminalIpcRouter.isTrustedSender,
@@ -371,6 +379,8 @@ app
             window.webContents.send(terminalIpc.snippetsToggle),
           sendSessionsToggle: (window) =>
             window.webContents.send(sessionIpc.toggleSidebar),
+          sendCommandsToggle: (window) =>
+            window.webContents.send(commandIpc.toggleSidebar),
           sendLocalImageOpen: (window) =>
             window.webContents.send(terminalIpc.localImageOpen),
           toggleDeveloperTools: (window) => window.webContents.toggleDevTools(),
@@ -434,6 +444,7 @@ app
           equalizeSelectedPanes: terminalApplication.equalizeSelectedPanes,
           toggleSelectedBroadcast: terminalApplication.toggleSelectedBroadcast,
           toggleSelectedSessions: terminalApplication.toggleSelectedSessions,
+          toggleSelectedCommands: terminalApplication.toggleSelectedCommands,
           toggleOutputHighlighting: () => {
             const current = highlightSettings.current();
             void highlightSettings

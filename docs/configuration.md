@@ -274,6 +274,8 @@ Customize application shortcuts under `keybinds` using [Electron accelerator](ht
 | `toggleMaximizePane`        | `Command+Shift+Enter`       | `Control+Shift+Z`         |
 | `equalizePanes`             | `Command+Alt+0`             | `Control+Shift+0`         |
 | `toggleBroadcast`           | `Command+Alt+I`             | `Control+Shift+I`         |
+| `toggleSessions`            | `Command+Shift+J`           | `Control+Shift+H`         |
+| `toggleCommands`            | `Command+Shift+M`           | `Control+Shift+M`         |
 
 Example overriding a single shortcut:
 
@@ -293,6 +295,10 @@ Example overriding a single shortcut:
 ## Saved sessions file
 
 Saved sessions live in `sessions.json` next to `config.json`. OMXTerm writes this file itself; edit sessions in the Sessions sidebar rather than by hand. If the file is damaged, OMXTerm renames it to `sessions.json.corrupt-<time>` and starts with an empty list, so nothing is silently lost. Secrets are never stored in it.
+
+## Commands file
+
+The Command Manager keeps your own commands, favorites and hidden built-in commands in `commands.json` next to `config.json`. OMXTerm writes this file itself; create and edit commands in the Commands sidebar. A damaged file is renamed to `commands.json.corrupt-<time>` and OMXTerm starts with only the built-in commands.
 
 ## Snippets
 

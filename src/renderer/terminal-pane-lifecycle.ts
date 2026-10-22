@@ -174,6 +174,7 @@ function paneSurfaceOptions(
     };
   const { options } = ctx;
   const highlighter = options.createHighlighter?.();
+  pane.highlighter = highlighter;
   return {
     ...ctx.activeSurfaceOptions,
     abortSignal: pane.mountAbort.signal,

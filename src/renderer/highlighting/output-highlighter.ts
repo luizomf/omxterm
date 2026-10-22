@@ -5,6 +5,7 @@ import {
 } from "./highlight-rules";
 import { createVtTokenizer, type VtToken } from "./vt-tokenizer";
 import { createLineModel } from "./line-model";
+import { createSgrState } from "./sgr-state";
 
 export interface OutputHighlighter {
   // Returns the chunk with SGR inserted around matches in complete lines.
@@ -12,6 +13,10 @@ export interface OutputHighlighter {
   transform(chunk: string): string;
   // Keyboard input typed into the same pane; Enter selects command rules.
   userInput(text: string): void;
+  // Text OMXTerm types for the user, such as a snippet or a Command Manager
+  // command. Its echo arrives later, so a submitted command selects its
+  // rules from the text itself.
+  injected(text: string, submit: boolean): void;
 }
 
 export const MAX_HIGHLIGHT_LINE_LENGTH = 2_048;
@@ -70,7 +75,7 @@ export function createOutputHighlighter(options: {
   const screen = createLineModel();
   let alternateScreen = false;
   let bracketedPaste = false;
-  let defaultAttributes = true;
+  const attributes = createSgrState();
   let atLineStart = true;
   let consecutiveLarge = 0;
   let backoffUntil = 0;
@@ -82,7 +87,7 @@ export function createOutputHighlighter(options: {
     const csi = token.csi;
     if (!csi) return;
     if (csi.final === "m") {
-      defaultAttributes = /^(?:0*|0*(?:;0*)*)$/u.test(csi.parameters);
+      attributes.apply(csi.parameters);
       return;
     }
     if (csi.prefix === "?" && (csi.final === "h" || csi.final === "l")) {
@@ -95,7 +100,7 @@ export function createOutputHighlighter(options: {
     if (csi.final === "~" && csi.parameters === "201") bracketedPaste = false;
   };
   const plainState = () =>
-    defaultAttributes && !alternateScreen && !bracketedPaste;
+    attributes.isDefault() && !alternateScreen && !bracketedPaste;
   const freshLine = (eligible: boolean): LineRecord => ({
     raw: "",
     prefix: "",
@@ -196,6 +201,15 @@ export function createOutputHighlighter(options: {
       }
       if (input === "\u0003") screen.commandSubmitted();
       else screen.typing();
+    },
+    injected(text, submit) {
+      if (!submit) {
+        screen.typing();
+        return;
+      }
+      const lines = text.split(/\r?\n/u).filter((line) => line.trim());
+      command = commandName(lines.at(-1) ?? "", true);
+      screen.commandSubmitted();
     },
   };
 }

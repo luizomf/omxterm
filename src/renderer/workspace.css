@@ -695,3 +695,83 @@ body.tabs-visible #workspace-sidebar {
   border-radius: var(--omx-radius);
   box-shadow: 0 6px 20px rgb(0 0 0 / 40%);
 }
+
+/* Command Manager */
+.commands-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--omx-space-2);
+  min-height: 0;
+  padding: var(--omx-space-2);
+}
+
+.commands-panel[hidden] {
+  display: none;
+}
+
+.commands-panel input,
+.commands-filter {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 5px var(--omx-space-2);
+  font: inherit;
+  color: inherit;
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    transparent 40%
+  );
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.commands-panel input {
+  flex: 1;
+}
+
+.sessions-row.command {
+  cursor: pointer;
+}
+
+.sessions-row.command.unavailable .sessions-text {
+  opacity: 0.6;
+}
+
+.commands-star {
+  flex: none;
+  width: 14px;
+  color: var(--omx-warning);
+}
+
+.command-preview,
+.command-editor textarea {
+  font-family: "FiraCode Nerd Font Mono", ui-monospace, monospace;
+}
+
+.command-description {
+  margin: 0;
+  color: var(--omx-muted);
+}
+
+.command-warning {
+  margin: 0;
+  padding: var(--omx-space-2);
+  color: var(--omx-foreground);
+  background: color-mix(in srgb, transparent, var(--omx-warning) 22%);
+  border-radius: var(--omx-radius);
+}
+
+.omx-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--omx-space-1) var(--omx-space-3);
+}
+
+.command-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--omx-space-2);
+  padding-bottom: var(--omx-space-2);
+  border-bottom: 1px solid var(--omx-border);
+}

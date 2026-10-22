@@ -72,6 +72,7 @@ export async function exerciseApplicationMenu(
     equalizeSelectedPanes: unexpected,
     toggleSelectedBroadcast: unexpected,
     toggleSelectedSessions: unexpected,
+    toggleSelectedCommands: unexpected,
   };
   const invocations = terminalActionInvocations(actions);
   deliverKeybindsFromKeyEvents(

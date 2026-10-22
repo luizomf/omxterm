@@ -39,6 +39,7 @@ import type {
 import { createTerminalFontGenerationOwner } from "./terminal-font-generations";
 import type { Translator } from "../shared/i18n";
 import type {
+  CommandsBridge,
   HighlightsBridge,
   SessionsBridge,
 } from "../shared/terminal-bridge";
@@ -115,6 +116,7 @@ export interface TerminalWindowPageOptions {
   readonly workspace?: {
     readonly element: HTMLElement;
     readonly sessions: SessionsBridge;
+    readonly commands?: CommandsBridge;
   };
   readonly snippets?: {
     readonly element: HTMLElement;

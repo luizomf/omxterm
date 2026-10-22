@@ -41,6 +41,7 @@ function menuActions() {
     equalizeSelectedPanes: vi.fn(),
     toggleSelectedBroadcast: vi.fn(),
     toggleSelectedSessions: vi.fn(),
+    toggleSelectedCommands: vi.fn(),
   };
 }
 

@@ -79,9 +79,18 @@ OMXTerm runs your system's OpenSSH client (`ssh`, or `ssh.exe` on Windows), so `
 
 When a saved or Quick Connect session fails (for example, `Connection refused`), its tab stays open with the error visible and offers **Reconnect** and **Close**.
 
+## Running commands from the Command Manager
+
+Press `Cmd+Shift+M` / `Ctrl+Shift+M` (**View → Toggle Commands**) to open the Commands sidebar. It lists ready-made commands for the system you are on: files and archives, processes, memory and disk, services and logs, packages (`apt`, `dnf`, `pacman`, Homebrew or `winget`), network checks, SSH keys, Git and Docker. Windows shows PowerShell versions of the same tasks.
+
+- **Running:** click a command (or press `Enter`) to open its form. Fill in the fields and check the **Command preview**, which shows exactly what will be typed. **Insert in Terminal** types it into the focused pane without running it; **Run in Terminal** also presses `Enter`. Nothing runs until you choose one.
+- **Safe values:** text you type in a field is quoted for the shell (POSIX shells or PowerShell), so a host name such as `example.com; reboot` stays a single argument.
+- **Missing tools:** a command whose program is not installed is dimmed and says which program is missing.
+- **Your own commands:** use **+** to create one. Write the command with `{name}` placeholders, for example `rsync -av {source} {destination}`, and choose a label and type (text, number, switch, list, file or folder) for each placeholder. Right-click a built-in command to duplicate it as a starting point, to mark it as a favorite, or to hide it; **⋯** shows hidden commands again.
+
 ## Highlighting command output
 
-Turn on **View → Highlight Output** to color common patterns in command output: errors, warnings, success and state words, IP and MAC addresses, URLs and quoted strings. When you run a known command, OMXTerm switches to rules made for it, for example `ping`, `df`, `free`, `ip`, `systemctl`, `docker`, `kubectl`, `journalctl` and about 45 more. The rule sets come from AshyTerm.
+Turn on **View → Highlight Output** to color common patterns in command output: errors, warnings, success and state words, IP and MAC addresses, URLs and quoted strings. When you run a known command, including one started from the Command Manager or a snippet, OMXTerm switches to rules made for it, for example `ping`, `df`, `free`, `ip`, `systemctl`, `docker`, `kubectl`, `journalctl` and about 45 more. The rule sets come from AshyTerm.
 
 Highlighting is off by default and stays out of the way:
 
