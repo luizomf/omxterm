@@ -204,6 +204,10 @@ rpm:
     # Own the application directory so removal leaves nothing behind.
     - --directories
     - /opt/OMXTerm
+    # Distributions differ on rpmbuild's /usr/lib/.build-id links; without
+    # them the package installs exactly the same files on every build host.
+    - --rpm-rpmbuild-define
+    - _build_id_links none
     - packaging/linux/omxterm=/usr/bin/omxterm
 nsis:
   oneClick: true

@@ -180,6 +180,12 @@ describe("Linux system package configuration", () => {
     );
   });
 
+  it("builds RPMs without host-dependent build-id links", async () => {
+    expect((await builderConfig())["rpm"]?.["fpm"]).toEqual(
+      expect.arrayContaining(["--rpm-rpmbuild-define", "_build_id_links none"]),
+    );
+  });
+
   it("embeds no automatic-update metadata in Linux packages", async () => {
     const linux = (await builderConfig())["linux"] ?? {};
     expect(Object.hasOwn(linux, "publish")).toBe(true);
