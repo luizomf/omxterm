@@ -17,7 +17,9 @@ import {
   isTerminalSessionTitle,
   isTerminalSize,
   isTerminalTabCommand,
+  isTerminalTabSelection,
   isTerminalTitleRequest,
+  MAX_PANES_PER_TAB,
   type TerminalExit,
   type TerminalFontZoom,
   type TerminalSessionId,
@@ -25,6 +27,8 @@ import {
   type TerminalTabCommand,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
+import { isTerminalLaunchSpec } from "../shared/terminal-launch";
+import { createSessionsBridge } from "./sessions-bridge";
 import {
   formatFilePathInsertion,
   isFilePathPlatform,
@@ -151,12 +155,16 @@ const terminal: TerminalBridge = {
       throw new TypeError("Invalid Surface identity");
     ipcRenderer.send(terminalIpc.releaseSurface, surfaceId);
   },
-  async start(surfaceId) {
+  async start(surfaceId, launch) {
     if (surfaceId !== undefined && !isSurfaceIdentity(surfaceId))
       throw new TypeError("Invalid Surface identity");
-    const sessionId: unknown = await (surfaceId === undefined
-      ? ipcRenderer.invoke(terminalIpc.start)
-      : ipcRenderer.invoke(terminalIpc.start, surfaceId));
+    if (launch !== undefined && !isTerminalLaunchSpec(launch))
+      throw new TypeError("Invalid terminal launch request");
+    const sessionId: unknown = await (launch !== undefined
+      ? ipcRenderer.invoke(terminalIpc.start, surfaceId, launch)
+      : surfaceId === undefined
+        ? ipcRenderer.invoke(terminalIpc.start)
+        : ipcRenderer.invoke(terminalIpc.start, surfaceId));
     if (!isTerminalSessionId(sessionId))
       throw new TypeError("Invalid Live Terminal Session identifier");
     return sessionId;
@@ -274,10 +282,39 @@ const terminal: TerminalBridge = {
       throw new TypeError("Invalid empty Terminal Tabs reason");
     ipcRenderer.send(terminalIpc.tabsEmpty, reason);
   },
-  notifyTabSelection(sessionId: TerminalSessionId) {
-    if (!isTerminalSessionId(sessionId))
+  notifyTabSelection(sessionId: TerminalSessionId, tabSessionIds) {
+    const payload =
+      tabSessionIds === undefined
+        ? { sessionId }
+        : { sessionId, tabSessionIds: [...tabSessionIds] };
+    if (!isTerminalTabSelection(payload))
       throw new TypeError("Invalid Terminal Tab selection");
-    ipcRenderer.send(terminalIpc.tabSelected, { sessionId });
+    ipcRenderer.send(terminalIpc.tabSelected, payload);
+  },
+  async confirmBroadcast(targetCount) {
+    if (
+      !Number.isInteger(targetCount) ||
+      targetCount < 1 ||
+      targetCount >= MAX_PANES_PER_TAB
+    )
+      throw new TypeError("Invalid broadcast target count");
+    const confirmed: unknown = await ipcRenderer.invoke(
+      terminalIpc.confirmBroadcast,
+      targetCount,
+    );
+    if (typeof confirmed !== "boolean")
+      throw new TypeError("Invalid broadcast confirmation response");
+    return confirmed;
+  },
+  reportWorkingDirectory(sessionId, uri) {
+    if (
+      !isTerminalSessionId(sessionId) ||
+      typeof uri !== "string" ||
+      uri.length === 0 ||
+      uri.length > 4096
+    )
+      throw new TypeError("Invalid working directory report");
+    ipcRenderer.send(terminalIpc.workingDirectory, { sessionId, uri });
   },
   onFontZoom(listener: (command: TerminalFontZoom) => void) {
     const handler = (_event: Electron.IpcRendererEvent, command: unknown) => {
@@ -341,5 +378,8 @@ const terminal: TerminalBridge = {
 
 contextBridge.exposeInMainWorld(
   "omxterm",
-  Object.freeze({ terminal: Object.freeze(terminal) }),
+  Object.freeze({
+    terminal: Object.freeze(terminal),
+    sessions: Object.freeze(createSessionsBridge(ipcRenderer)),
+  }),
 );

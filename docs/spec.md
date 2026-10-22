@@ -16,8 +16,11 @@ The [user guides](README.md) explain setup and everyday use.
 
 OMXTerm is an open-source personal desktop terminal. It opens a normal local
 shell in a native window with a hideable title area and gives the Terminal
-Surface all remaining content space. SSH brokering, AI assistance, persistent
-session management, and IDE features are outside the product scope.
+Surface all remaining content space. Tabs can be split into independent panes.
+Advanced workspace features (split panes, broadcast input and Saved Sessions
+including SSH) stay out of the way until requested; IDE features remain outside
+the product scope. Expanded scope is tracked in
+[the implementation records](implementation/01-feature-parity.md).
 
 The Supported Platforms are macOS arm64, Linux arm64, and Windows arm64. Linux
 rendering defaults to X11 and requires XWayland when the desktop session is
@@ -72,9 +75,11 @@ OMXTerm:
   an optional versioned per-user AppImage desktop installer and its checksum;
   running the AppImage directly remains supported.
 
-AI assistance, splits, saved or reconnectable sessions, shell integration,
-profiles, a theme picker or catalog, automatic configuration reload, automatic
-updates, and remote terminal features are outside the current product contract.
+Shell integration, automatic configuration reload and automatic updates are
+outside the current product contract. Features still in progress under the
+expanded scope (Saved Session sidebar, highlighting, command manager, file
+manager, assistant) are not part of this contract until they are described
+here.
 
 Restty 0.3.0 and its pinned Ghostty core provide the sole Terminal Surface in
 ordinary development and every packaged application. OMXTerm has no renderer
@@ -352,6 +357,39 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 
 Closing a tab or window ends its sessions. Persistent and reconnectable sessions
 remain the responsibility of a session manager such as tmux.
+
+## Split panes
+
+A Terminal Tab holds one or more Terminal Panes in a split layout
+([ADR 0035](adr/0035-split-tabs-into-independent-terminal-panes.md)). Each pane
+is an independent Terminal Surface and Live Terminal Session.
+
+- Split Right and Split Down divide the focused pane and focus the new one. The
+  new pane runs the Default Shell in the focused pane's working directory when
+  known: from a local OSC 7 report, or on Linux from the shell process. A
+  missing or remote directory falls back to the home directory. An explicit
+  Launch Request is never repeated in a split.
+- Splits in the same direction share one row or column. Dividers resize by
+  pointer or keyboard (arrow keys, 2% steps) with each pane keeping at least 5%.
+  Equalize Panes gives every pane an equal share. Resizing refits each grid and
+  PTY through the Surface's own size observer.
+- Maximize or Restore Pane shows only the focused pane. The other panes keep
+  their sessions, output ingestion and last valid grid, and draw nothing while
+  hidden.
+- Pane focus follows clicks and the next/previous and directional commands.
+  The focused pane supplies the tab label (with a `(N)` pane count), the window
+  title, clipboard actions, paste, snippets and dropped paths.
+- An ordinary pane exit removes that pane and focuses its neighbor; the last
+  pane follows the existing tab and window lifecycle. Signal exits keep their
+  native failure acknowledgement. Close Pane ends only the focused pane and asks
+  first only when that pane's session is Busy. Close Tab asks when any pane of
+  the tab is Busy.
+- A tab holds at most 16 panes.
+- Broadcast Input mirrors keyboard input typed into the focused pane to the
+  tab's other live panes after a native confirmation, until stopped or until
+  the tab has a single pane. Paste, snippets and terminal protocol replies are
+  never mirrored. Receiving panes show a warning edge, and a persistent
+  indicator offers Stop. OMXTerm does not detect password prompts.
 
 ## Terminal behavior
 

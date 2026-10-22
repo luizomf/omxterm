@@ -15,12 +15,14 @@ import type {
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type { TerminalTheme } from "../shared/terminal-theme";
+import type { TerminalLaunchSpec } from "../shared/terminal-launch";
 import type { TerminalFontData } from "../shared/terminal-font-data";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
 import {
   createTerminalTabs,
   TERMINAL_TAB_DRAG_DATA_TYPE,
   type TerminalTabs,
+  type TerminalTabsOptions,
 } from "./terminal-tabs";
 import {
   createSnippetsSidebar,
@@ -36,6 +38,11 @@ import type {
   LocalImageData,
 } from "../shared/local-image";
 import { createTerminalFontGenerationOwner } from "./terminal-font-generations";
+import { createTranslator, type Translator } from "../shared/i18n";
+import {
+  createBroadcastIndicator,
+  type BroadcastIndicator,
+} from "./broadcast-indicator";
 
 type MountTerminalSurface = (
   container: HTMLElement,
@@ -51,6 +58,7 @@ export interface TerminalWindowPageElements {
 interface TerminalWindowPageOptions {
   readonly createAdapter: (
     fontConfigurationId?: string,
+    launch?: TerminalLaunchSpec,
   ) => ElectronTerminalAdapter;
   readonly configuration?: TerminalRendererConfiguration;
   readonly chrome?: WindowChromeBridge;
@@ -93,6 +101,12 @@ interface TerminalWindowPageOptions {
     source?: LocalImageActivation,
   ) => Promise<LocalImageData | null>;
   readonly subscribeToLocalImageOpen?: (listener: () => void) => () => void;
+  readonly translator?: Translator;
+  readonly confirmBroadcast?: (targetCount: number) => Promise<boolean>;
+  readonly reportWorkingDirectory?: (
+    sessionId: TerminalSessionId,
+    uri: string,
+  ) => void;
   readonly snippets?: {
     readonly element: HTMLElement;
     readonly load: () => Promise<TerminalSnippetsResponse>;
@@ -192,24 +206,21 @@ export function mountTerminalWindowPage(
       : {}),
   };
 
+  const translator = options.translator ?? createTranslator("en");
+  const broadcastIndicator = createBroadcastIndicator(page.document, {
+    translator,
+    stop: () => tabs.handleCommand({ action: "toggle-broadcast" }),
+  });
   const tabs: TerminalTabs = createTerminalTabs(
     { strip: elements.tabStrip, container: elements.tabsContainer },
     {
-      createAdapter: () => options.createAdapter(fontConfigurationId),
+      ...windowTabsOptions(options, translator, broadcastIndicator),
+      createAdapter: (launch) =>
+        launch === undefined
+          ? options.createAdapter(fontConfigurationId)
+          : options.createAdapter(fontConfigurationId, launch),
       mount,
       surfaceOptions,
-      showTabBar: options.configuration?.showTabBar ?? true,
-      ...(options.notifyTabsEmpty
-        ? { notifyEmpty: options.notifyTabsEmpty }
-        : {}),
-      ...(options.notifyTabSelection
-        ? { notifySelection: options.notifyTabSelection }
-        : {}),
-      ...(options.onTitleRequest
-        ? { notifyTitle: options.onTitleRequest }
-        : {}),
-      ...(options.onBell ? { notifyBell: options.onBell } : {}),
-      syncTitle: (sessionId) => options.syncTabTitle?.(sessionId),
     },
   );
 
@@ -281,6 +292,7 @@ export function mountTerminalWindowPage(
     snippetsSidebar?.dispose();
     snippetsSidebar = undefined;
     tabs.dispose();
+    broadcastIndicator.dispose();
     fontGenerations?.dispose();
   };
   const onPageHide = () => dispose();
@@ -360,6 +372,39 @@ export function mountTerminalWindowPage(
   });
 
   return { ready, dispose };
+}
+
+// Window-level callbacks and translated strings for the Terminal Tabs.
+function windowTabsOptions(
+  options: TerminalWindowPageOptions,
+  translator: Translator,
+  broadcastIndicator: BroadcastIndicator,
+): Omit<TerminalTabsOptions, "createAdapter" | "mount" | "surfaceOptions"> {
+  return {
+    showTabBar: options.configuration?.showTabBar ?? true,
+    dividerLabel: translator.t("pane.divider"),
+    endedBanner: {
+      ended: (exitCode) => translator.t("sessions.ended", { code: exitCode }),
+      reconnect: translator.t("sessions.reconnect"),
+      close: translator.t("common.close"),
+    },
+    onBroadcastChange: (targetCount) => broadcastIndicator.show(targetCount),
+    ...(options.confirmBroadcast
+      ? { confirmBroadcast: options.confirmBroadcast }
+      : {}),
+    ...(options.reportWorkingDirectory
+      ? { onWorkingDirectory: options.reportWorkingDirectory }
+      : {}),
+    ...(options.notifyTabsEmpty
+      ? { notifyEmpty: options.notifyTabsEmpty }
+      : {}),
+    ...(options.notifyTabSelection
+      ? { notifySelection: options.notifyTabSelection }
+      : {}),
+    ...(options.onTitleRequest ? { notifyTitle: options.onTitleRequest } : {}),
+    ...(options.onBell ? { notifyBell: options.onBell } : {}),
+    syncTitle: (sessionId) => options.syncTabTitle?.(sessionId),
+  };
 }
 
 function sameSurfaceConfiguration(

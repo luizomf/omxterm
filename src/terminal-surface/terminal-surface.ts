@@ -72,6 +72,10 @@ export interface TerminalSurfaceOptions {
   readonly onClipboardError?: () => void;
   readonly onTitleRequest?: (request: string) => void;
   readonly onBell?: () => void;
+  // Keyboard input typed into this Surface (never parser replies or paste).
+  readonly onUserInput?: (text: string) => void;
+  // A program reported its working directory through OSC 7 (file:// URI).
+  readonly onWorkingDirectory?: (uri: string) => void;
   readonly linkHoverAvailability?: {
     isEnabled(): boolean;
     subscribe(listener: () => void): () => void;
@@ -79,6 +83,9 @@ export interface TerminalSurfaceOptions {
   readonly onExternalLink?: (url: string) => void;
   readonly onLocalImageActivation?: (source: LocalImageActivation) => void;
   readonly onFatalError?: (message: string) => void;
+  // Keep the final screen after a non-zero exit instead of disposing, so a
+  // failed connection's error stays readable. Input is refused afterwards.
+  readonly retainOnExit?: boolean;
 }
 
 export { mountResttyTerminalSurface as mountTerminalSurface } from "./restty-terminal-surface";

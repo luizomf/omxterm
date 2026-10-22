@@ -1,0 +1,26 @@
+# Regressions, defects and known limits
+
+Defects found during the parity work. Each fix lands with a regression test.
+
+| ID  | Finding                                                                                                                                | Area                    | Status                                                               | Regression test                                                                                                   |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| R1  | Installer tests fail when `/tmp` is mounted `noexec`; the test's fake `file` binary is skipped by the shell                            | test environment        | documented; run with an executable `TMPDIR`                          | —                                                                                                                 |
+| R2  | Electron launched from VS Code inherits `ELECTRON_RUN_AS_NODE=1` and refuses `--no-sandbox`                                            | development environment | documented in [00-project-audit.md](00-project-audit.md)             | —                                                                                                                 |
+| R3  | `saveSession`/`saveFolder` threw synchronously on invalid input instead of rejecting                                                   | Saved Session service   | fixed (async API)                                                    | `saved-session-service`: "assigns ids…"                                                                           |
+| R4  | A retained, ended Surface could still send input and resize requests for a retired session id                                          | renderer adapter        | fixed: the adapter stops at its own exit                             | `renderer-electron-terminal-adapter`: "binds to the started session id…"                                          |
+| R5  | The split-container class `pane-split` collided with Restty's internal pane class                                                      | renderer CSS            | fixed: renamed to `terminal-pane-*`                                  | `renderer-terminal-panes`                                                                                         |
+| R6  | Dividers stayed visible while a pane was maximized                                                                                     | renderer CSS            | fixed                                                                | RA screenshot check                                                                                               |
+| R7  | Pane sessions reported a tab selection when the session started, before the Surface mount returned, which broke the readiness contract | renderer panes          | fixed: selection is reported only after mount                        | `test/integration/tab-removal.test.ts` (native, 4/4)                                                              |
+| R8  | On x64 hosts postinstall skipped node-pty's exec-status build, so a native exec failure looked like an ordinary exit code 1 (ADR 0032) | x64 enablement          | fixed: x64 is rebuilt on Linux and macOS                             | `postinstall`; `test/integration/failure-acknowledgement.test.ts` (native)                                        |
+| R9  | Native PTY suites were gated to ARM64 and never ran on x64                                                                             | test coverage           | fixed: shared `native-architecture` gate                             | local-shell, literal-argv, linux-foreground, resize-race and session-retirement suites pass natively on Linux x64 |
+| R10 | `npm run build` threw on Intel macOS (blur addon was ARM64-only)                                                                       | x64 enablement          | fixed: builds `x86_64` on x64                                        | `macos-blur-build`                                                                                                |
+| R11 | AppImage installer accepted only ARM64 AppImages and never compared with the host                                                      | Linux installer         | fixed: accepts ARM64 and x86-64 and rejects a mismatch with the host | `linux-appimage-installer-architecture`                                                                           |
+
+## Known limits
+
+- **WebGL contexts.** Every pane and tab Surface holds a WebGL2 context, and
+  Chromium evicts the oldest context beyond its per-process limit. The Surface
+  reports context loss as a rendering failure. A tab is capped at 16 panes, but
+  many tabs × panes can still reach the limit.
+- **Broadcast secrets.** Broadcasting cannot detect password prompts. Users are
+  told to stop broadcasting before typing secrets.

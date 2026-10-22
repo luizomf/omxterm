@@ -27,6 +27,8 @@ export function createTabsHarness(
   options: {
     failMountAt?: number;
     surfaceOptions?: TerminalSurfaceOptions;
+    confirmBroadcast?: (targetCount: number) => Promise<boolean>;
+    onBroadcastChange?: (targetCount: number) => void;
   } = {},
 ) {
   document.body.innerHTML = "";
@@ -87,6 +89,12 @@ export function createTabsHarness(
       notifySelection,
       notifyTitle,
       notifyBell,
+      ...(options.confirmBroadcast
+        ? { confirmBroadcast: options.confirmBroadcast }
+        : {}),
+      ...(options.onBroadcastChange
+        ? { onBroadcastChange: options.onBroadcastChange }
+        : {}),
     },
   );
   return {

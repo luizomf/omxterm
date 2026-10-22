@@ -4,9 +4,10 @@ import path from "node:path";
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
+import { isNativeTestArchitecture } from "../fixtures/native-architecture";
 
 const supported =
-  ["darwin", "linux"].includes(process.platform) && process.arch === "arm64";
+  ["darwin", "linux"].includes(process.platform) && isNativeTestArchitecture();
 const electron = createRequire(import.meta.url)("electron") as string;
 const prefix = "__OMXTERM_RESIZE_RACE__";
 

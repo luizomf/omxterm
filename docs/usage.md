@@ -31,31 +31,53 @@ These toggles apply to the current window. To change the defaults for new window
 
 The application menu displays your active shortcuts, including any custom bindings from `config.json`.
 
-| Action                    | macOS             | Linux and Windows  |
-| ------------------------- | ----------------- | ------------------ |
-| New Window                | `Cmd+N`           | `Ctrl+Shift+N`     |
-| New Tab                   | `Cmd+T`           | `Ctrl+Shift+T`     |
-| Close Tab                 | `Cmd+W`           | `Ctrl+Shift+W`     |
-| Close Window              | `Cmd+Shift+W`     | `Ctrl+Shift+Q`     |
-| Quit                      | `Cmd+Q`           | `Ctrl+Alt+Shift+Q` |
-| Next Tab                  | `Ctrl+Tab`        | `Ctrl+PageDown`    |
-| Previous Tab              | `Ctrl+Shift+Tab`  | `Ctrl+PageUp`      |
-| Select Tab 1 through 9    | `Cmd+1` … `Cmd+9` | `Alt+1` … `Alt+9`  |
-| Copy                      | `Cmd+C`           | `Ctrl+Shift+C`     |
-| Paste                     | `Cmd+V`           | `Ctrl+Shift+V`     |
-| Select All                | `Cmd+A`           | `Ctrl+Shift+A`     |
-| Zoom In                   | `Cmd++`           | `Ctrl++`           |
-| Zoom Out                  | `Cmd+-`           | `Ctrl+-`           |
-| Actual Size               | `Cmd+0`           | `Ctrl+0`           |
-| Toggle Full Screen        | `Ctrl+Cmd+F`      | `Ctrl+Shift+F`     |
-| Toggle Tab Bar            | `Cmd+Shift+B`     | `Ctrl+Shift+B`     |
-| Toggle Title Bar          | `Cmd+Shift+D`     | `Ctrl+Shift+D`     |
-| Toggle Snippets           | `Cmd+Shift+S`     | `Ctrl+Shift+S`     |
-| Reload User Configuration | `Cmd+Shift+,`     | `Ctrl+Shift+,`     |
+| Action                    | macOS             | Linux and Windows               |
+| ------------------------- | ----------------- | ------------------------------- |
+| New Window                | `Cmd+N`           | `Ctrl+Shift+N`                  |
+| New Tab                   | `Cmd+T`           | `Ctrl+Shift+T`                  |
+| Close Tab                 | `Cmd+W`           | `Ctrl+Shift+W`                  |
+| Close Window              | `Cmd+Shift+W`     | `Ctrl+Shift+Q`                  |
+| Quit                      | `Cmd+Q`           | `Ctrl+Alt+Shift+Q`              |
+| Next Tab                  | `Ctrl+Tab`        | `Ctrl+PageDown`                 |
+| Previous Tab              | `Ctrl+Shift+Tab`  | `Ctrl+PageUp`                   |
+| Select Tab 1 through 9    | `Cmd+1` … `Cmd+9` | `Alt+1` … `Alt+9`               |
+| Copy                      | `Cmd+C`           | `Ctrl+Shift+C`                  |
+| Paste                     | `Cmd+V`           | `Ctrl+Shift+V`                  |
+| Select All                | `Cmd+A`           | `Ctrl+Shift+A`                  |
+| Zoom In                   | `Cmd++`           | `Ctrl++`                        |
+| Zoom Out                  | `Cmd+-`           | `Ctrl+-`                        |
+| Actual Size               | `Cmd+0`           | `Ctrl+0`                        |
+| Toggle Full Screen        | `Ctrl+Cmd+F`      | `Ctrl+Shift+F`                  |
+| Toggle Tab Bar            | `Cmd+Shift+B`     | `Ctrl+Shift+B`                  |
+| Toggle Title Bar          | `Cmd+Shift+D`     | `Ctrl+Shift+D`                  |
+| Toggle Snippets           | `Cmd+Shift+S`     | `Ctrl+Shift+S`                  |
+| Reload User Configuration | `Cmd+Shift+,`     | `Ctrl+Shift+,`                  |
+| Split Right               | `Cmd+D`           | `Ctrl+Shift+O`                  |
+| Split Down                | `Cmd+Shift+E`     | `Ctrl+Shift+E`                  |
+| Close Pane                | `Cmd+Alt+W`       | `Ctrl+Shift+K`                  |
+| Next / Previous Pane      | `Cmd+]` / `Cmd+[` | `Ctrl+Shift+]` / `Ctrl+Shift+[` |
+| Focus Pane by Direction   | `Cmd+Alt+Arrow`   | `Alt+Shift+Arrow`               |
+| Maximize or Restore Pane  | `Cmd+Shift+Enter` | `Ctrl+Shift+Z`                  |
+| Equalize Panes            | `Cmd+Alt+0`       | `Ctrl+Shift+0`                  |
+| Broadcast Input to Panes  | `Cmd+Alt+I`       | `Ctrl+Shift+I`                  |
 
 On keyboards where `+` shares the `=` key, include `Shift` (`Cmd+Shift+=` or `Ctrl+Shift+=`).
 
 On Linux and Windows, press and release **Alt** to open the application menu (even when the title bar is hidden), and press `Escape` to close it. On macOS, use the system menu bar. To customize shortcuts, see [keybinds](configuration.md#keybinds).
+
+## Split panes
+
+Use **Terminal → Split Right** or **Split Down** to divide the focused pane. Each pane is an independent terminal with its own shell, scrollback and selection; a new pane starts in the focused pane's current directory when OMXTerm can determine it (from the shell's OSC 7 report, or on Linux from the shell process), and in your home directory otherwise.
+
+- Click a pane, or use the pane focus shortcuts, to move focus. The focused pane of a split shows a thin accent edge.
+- Drag a divider to resize, or focus a divider with `Tab` and use the arrow keys. **Equalize Panes** gives every pane the same share.
+- **Maximize or Restore Pane** temporarily shows only the focused pane; the others keep running.
+- **Close Pane** ends only the focused pane's session (it asks first when a program is running, like Close Tab). Closing a tab closes all of its panes, and when a pane's shell exits, its neighbor takes its place.
+- A tab holds up to 16 panes. Tab labels show the focused pane's title and the pane count, for example `vim (3)`.
+
+### Broadcasting input
+
+**Terminal → Broadcast Input to Panes** mirrors what you type in the focused pane to every other pane in the same tab, after a confirmation. While it is active, every receiving pane has an orange edge and a **Broadcasting** indicator with a **Stop** button stays visible. Only keystrokes are mirrored: pastes, snippets and terminal replies are not. OMXTerm cannot tell when a remote program is asking for a password, so stop broadcasting before typing secrets.
 
 ## Copy and paste
 

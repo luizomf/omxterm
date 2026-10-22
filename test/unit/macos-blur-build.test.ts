@@ -66,3 +66,23 @@ it("fails a macOS compiler error rather than silently packaging without the addo
     await rm(root, { recursive: true, force: true });
   }
 });
+
+it("builds the Intel addon for x64 and rejects other architectures", async () => {
+  const execute = vi.fn();
+  const root = await mkdtemp(path.join(tmpdir(), "omxterm-blur-build-"));
+  try {
+    await buildMacOSWindowBlur(root, {
+      platform: "darwin",
+      arch: "x64",
+      execute,
+    });
+    expect(execute.mock.calls[0]![1]).toEqual(
+      expect.arrayContaining(["-arch", "x86_64"]),
+    );
+    await expect(
+      buildMacOSWindowBlur(root, { platform: "darwin", arch: "ia32", execute }),
+    ).rejects.toThrow("ARM64 or x64");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

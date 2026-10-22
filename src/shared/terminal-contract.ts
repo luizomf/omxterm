@@ -72,7 +72,27 @@ export type TerminalTabCommand =
   | { readonly action: "next" }
   | { readonly action: "previous" }
   | { readonly action: "select"; readonly position: number }
-  | { readonly action: "close-session"; readonly sessionId: TerminalSessionId };
+  | { readonly action: "close-session"; readonly sessionId: TerminalSessionId }
+  | { readonly action: "split"; readonly direction: TerminalSplitDirection }
+  | { readonly action: "close-pane" }
+  | { readonly action: "prepare-close-pane" }
+  | { readonly action: "focus-pane"; readonly target: TerminalPaneTarget }
+  | { readonly action: "toggle-maximize-pane" }
+  | { readonly action: "equalize-panes" }
+  | { readonly action: "toggle-broadcast" };
+
+// "right" places the new pane beside the focused one, "down" below it.
+export type TerminalSplitDirection = "right" | "down";
+export type TerminalPaneTarget =
+  "next" | "previous" | "left" | "right" | "up" | "down";
+export const TERMINAL_PANE_TARGETS: readonly TerminalPaneTarget[] = [
+  "next",
+  "previous",
+  "left",
+  "right",
+  "up",
+  "down",
+];
 
 export type TerminalFontZoom = "in" | "out" | "reset";
 export type TerminalClipboardAction = "copy" | "paste" | "select-all";
@@ -121,6 +141,32 @@ export function isTerminalSessionReference(
 ): value is TerminalSessionReference {
   if (!isStrictRecord(value, ["sessionId"])) return false;
   return isTerminalSessionId(value.sessionId);
+}
+
+// Split Terminal Tabs own several sessions. The focused pane's session drives
+// the window title; Close Tab considers every session in the selected tab.
+export const MAX_PANES_PER_TAB = 16;
+
+export interface TerminalTabSelection {
+  readonly sessionId: TerminalSessionId;
+  readonly tabSessionIds?: readonly TerminalSessionId[];
+}
+
+export function isTerminalTabSelection(
+  value: unknown,
+): value is TerminalTabSelection {
+  if (isTerminalSessionReference(value)) return true;
+  if (!isStrictRecord(value, ["sessionId", "tabSessionIds"])) return false;
+  const { sessionId, tabSessionIds } = value;
+  return (
+    isTerminalSessionId(sessionId) &&
+    Array.isArray(tabSessionIds) &&
+    tabSessionIds.length >= 1 &&
+    tabSessionIds.length <= MAX_PANES_PER_TAB &&
+    tabSessionIds.every(isTerminalSessionId) &&
+    new Set(tabSessionIds).size === tabSessionIds.length &&
+    tabSessionIds.includes(sessionId)
+  );
 }
 
 export function isTerminalSessionClose(
@@ -198,7 +244,22 @@ export function isTerminalTabCommand(
       value.action === "close" ||
       value.action === "prepare-close" ||
       value.action === "next" ||
-      value.action === "previous"
+      value.action === "previous" ||
+      value.action === "close-pane" ||
+      value.action === "prepare-close-pane" ||
+      value.action === "toggle-maximize-pane" ||
+      value.action === "equalize-panes" ||
+      value.action === "toggle-broadcast"
+    );
+  if (isStrictRecord(value, ["action", "direction"]))
+    return (
+      value.action === "split" &&
+      (value.direction === "right" || value.direction === "down")
+    );
+  if (isStrictRecord(value, ["action", "target"]))
+    return (
+      value.action === "focus-pane" &&
+      TERMINAL_PANE_TARGETS.includes(value.target as TerminalPaneTarget)
     );
   if (isStrictRecord(value, ["action", "confirmed"]))
     return (

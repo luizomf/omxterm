@@ -4,10 +4,11 @@ import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
 import { literalArguments } from "../fixtures/literal-argv";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
+import { isNativeTestArchitecture } from "../fixtures/native-architecture";
 
 const supported =
   ["darwin", "linux", "win32"].includes(process.platform) &&
-  process.arch === "arm64";
+  isNativeTestArchitecture();
 const prefix = "__OMXTERM_LITERAL_ARGV__";
 
 describe.skipIf(!supported)("literal explicit-command native argv", () => {

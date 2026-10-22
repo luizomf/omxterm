@@ -11,6 +11,27 @@ import type { TerminalRendererConfiguration } from "./user-configuration";
 import type { TerminalFontData } from "./terminal-font-data";
 import type { TerminalSnippetsResponse } from "./terminal-snippets";
 import type { LocalImageActivation, LocalImageData } from "./local-image";
+import type { TerminalLaunchSpec } from "./terminal-launch";
+import type {
+  SavedSessionsDocument,
+  SessionDefinition,
+  SessionFolder,
+} from "./saved-sessions";
+import type { SessionFileChoice } from "./session-ipc";
+
+export interface SessionsBridge {
+  list(): Promise<SavedSessionsDocument>;
+  saveSession(session: unknown): Promise<SessionDefinition>;
+  deleteSession(id: string): Promise<void>;
+  saveFolder(folder: unknown): Promise<SessionFolder>;
+  deleteFolder(id: string): Promise<void>;
+  importSshConfig(): Promise<{ readonly added: number }>;
+  importFile(): Promise<{ readonly added: number } | null>;
+  exportFile(): Promise<boolean>;
+  chooseFile(kind: SessionFileChoice): Promise<string | null>;
+  onChanged(listener: (document: SavedSessionsDocument) => void): () => void;
+  onToggleSidebar(listener: () => void): () => void;
+}
 
 export interface TerminalBridge {
   configuration(): Promise<TerminalRendererConfiguration>;
@@ -26,7 +47,10 @@ export interface TerminalBridge {
   ): () => void;
   retainSurface(configurationId: string): Promise<string>;
   releaseSurface(surfaceId: string): void;
-  start(surfaceId?: string): Promise<TerminalSessionId>;
+  start(
+    surfaceId?: string,
+    launch?: TerminalLaunchSpec,
+  ): Promise<TerminalSessionId>;
   input(sessionId: TerminalSessionId, data: string): void;
   resize(sessionId: TerminalSessionId, size: TerminalSize): void;
   close(sessionId: TerminalSessionId, reason?: "rendering-failure"): void;
@@ -46,7 +70,12 @@ export interface TerminalBridge {
   onTabTitle(
     listener: (sessionId: TerminalSessionId, title: string) => void,
   ): () => void;
-  notifyTabSelection(sessionId: TerminalSessionId): void;
+  notifyTabSelection(
+    sessionId: TerminalSessionId,
+    tabSessionIds?: readonly TerminalSessionId[],
+  ): void;
+  confirmBroadcast(targetCount: number): Promise<boolean>;
+  reportWorkingDirectory(sessionId: TerminalSessionId, uri: string): void;
   syncTabTitle(sessionId: TerminalSessionId): void;
   notifyTabsEmpty(reason?: "rendering-failure"): void;
   onFontZoom(listener: (command: TerminalFontZoom) => void): () => void;
@@ -64,6 +93,7 @@ declare global {
   interface Window {
     readonly omxterm: {
       readonly terminal: TerminalBridge;
+      readonly sessions: SessionsBridge;
     };
   }
 }

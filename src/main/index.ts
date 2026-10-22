@@ -10,7 +10,7 @@ import {
 } from "electron";
 import * as nodePty from "node-pty";
 import { existsSync } from "node:fs";
-import { userInfo } from "node:os";
+import { hostname, userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { terminalIpc } from "../shared/terminal-ipc";
@@ -78,6 +78,16 @@ import {
   createOperationalEventLog,
   type OperationalEventLog,
 } from "./operational-events";
+import { startSavedSessions } from "./saved-session-wiring";
+import { launchTerminalSession } from "./session-launch";
+import {
+  confirmBroadcast,
+  confirmClosePane,
+  confirmCloseTab,
+  confirmCloseWindow,
+  confirmProtectedPaste,
+  confirmQuit,
+} from "./native-confirmations";
 
 const showClipboardError = () =>
   dialog.showErrorBox("Clipboard Error", "Clipboard operation failed.");
@@ -149,6 +159,12 @@ app
         operationalEvents!.write({ name: "application.started" });
         const terminalIpcRouter = fontIpcRouter(ipcMain, operationalEvents!);
         disposeTerminalSessions = () => terminalIpcRouter.dispose();
+        const savedSessions = await startSavedSessions({
+          ipcMain,
+          homeDirectory: account.homedir,
+          isTrustedSender: terminalIpcRouter.isTrustedSender,
+          operationalEvents: operationalEvents!,
+        });
         let rebuildMenu = () => {};
         const nativeTitleInset = terminalNativeTitleInset(process.platform);
         const backgroundEffects = createWindowBackgroundEffectsOwner(
@@ -248,17 +264,27 @@ app
                 active.configuration,
               ),
               webContents: window.webContents,
-              createSession(callbacks) {
-                return shutdown.createSession(nodePty.spawn, {
-                  shell: resolveCurrentDefaultShell(),
-                  launchRequest: consumeLaunch(),
-                  platform: process.platform,
-                  homeDirectory: account.homedir,
-                  applicationVersionProvider: app,
-                  environment: process.env,
-                  ...callbacks,
-                });
-              },
+              localHostNames: [hostname()],
+              createSession: (callbacks, launch) =>
+                launchTerminalSession(
+                  launch,
+                  {
+                    shell: resolveCurrentDefaultShell(),
+                    platform: process.platform,
+                    homeDirectory: account.homedir,
+                    applicationVersionProvider: app,
+                    environment: process.env,
+                    ...callbacks,
+                  },
+                  {
+                    consumeLaunchRequest: consumeLaunch,
+                    savedSessions,
+                    start: (sessionOptions) =>
+                      shutdown.createSession(nodePty.spawn, sessionOptions),
+                  },
+                ),
+              confirmBroadcast: (targetCount) =>
+                confirmBroadcast(window, targetCount),
               onSessionStartError: lifecycle.onSessionStartError,
               onTabsEmpty: lifecycle.onTabsEmpty,
               onSessionExit: (exit, context) => {
@@ -290,20 +316,7 @@ app
                 }),
               loadLocalImage: (request, abortSignal) =>
                 loadLocalImageForWindow(window, request, abortSignal),
-              async confirmPaste() {
-                const result = await dialog.showMessageBox(window, {
-                  type: "warning",
-                  title: "Protected Paste",
-                  message: "Paste text that may contain multiple commands?",
-                  detail:
-                    "The paste contains multiple lines or control characters.",
-                  buttons: ["Paste", "Cancel"],
-                  defaultId: 1,
-                  cancelId: 1,
-                  noLink: true,
-                });
-                return result.response === 0;
-              },
+              confirmPaste: () => confirmProtectedPaste(window),
               showClipboardContextMenu() {
                 const send = (action: "copy" | "paste" | "select-all") =>
                   window.webContents.send(terminalIpc.clipboardAction, action);
@@ -344,49 +357,10 @@ app
           },
           getSelectedWindow: () =>
             BrowserWindow.getFocusedWindow() ?? undefined,
-          async showQuitConfirmation(window) {
-            const options = {
-              type: "question" as const,
-              title: "Quit OMXTerm",
-              message: "Quit OMXTerm and close all Terminal Windows?",
-              detail: "All open Live Terminal Sessions will end.",
-              buttons: ["Quit", "Cancel"],
-              defaultId: 1,
-              cancelId: 1,
-              noLink: true,
-            };
-            const result =
-              window && !window.isDestroyed()
-                ? await dialog.showMessageBox(window, options)
-                : await dialog.showMessageBox(options);
-            return result.response === 0;
-          },
-          async showCloseWindowConfirmation(window) {
-            const result = await dialog.showMessageBox(window, {
-              type: "question",
-              title: "Close Window",
-              message: "Close this Terminal Window and all of its tabs?",
-              detail: "All of its Live Terminal Sessions will end.",
-              buttons: ["Close", "Cancel"],
-              defaultId: 1,
-              cancelId: 1,
-              noLink: true,
-            });
-            return result.response === 0;
-          },
-          async showCloseTabConfirmation(window) {
-            const result = await dialog.showMessageBox(window, {
-              type: "question",
-              title: "Close Tab",
-              message: "Close this Terminal Tab?",
-              detail: "Its Live Terminal Session will end.",
-              buttons: ["Close", "Cancel"],
-              defaultId: 1,
-              cancelId: 1,
-              noLink: true,
-            });
-            return result.response === 0;
-          },
+          showQuitConfirmation: confirmQuit,
+          showCloseWindowConfirmation: confirmCloseWindow,
+          showCloseTabConfirmation: confirmCloseTab,
+          showClosePaneConfirmation: confirmClosePane,
           async showSessionFailure(window, failure) {
             const failureDialog = terminalSessionFailureDialog(failure);
             await dialog.showMessageBox(window, {
@@ -458,6 +432,15 @@ app
           toggleSelectedTitleBar: terminalApplication.toggleSelectedTitleBar,
           reloadUserConfiguration: () => void configurationReloader.reload(),
           openLocalImage: terminalApplication.openLocalImageInSelectedWindow,
+          splitSelectedPane: terminalApplication.splitSelectedPane,
+          closeSelectedPane: () =>
+            void terminalApplication!.closeSelectedPane(),
+          focusPaneInSelectedWindow:
+            terminalApplication.focusPaneInSelectedWindow,
+          toggleSelectedPaneMaximized:
+            terminalApplication.toggleSelectedPaneMaximized,
+          equalizeSelectedPanes: terminalApplication.equalizeSelectedPanes,
+          toggleSelectedBroadcast: terminalApplication.toggleSelectedBroadcast,
         };
         const keybindActionInvocations = terminalActionInvocations(menuActions);
         rebuildMenu = () =>

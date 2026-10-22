@@ -29,6 +29,18 @@ export const TERMINAL_ACTION_NAMES = [
   "toggleTabBar",
   "toggleTitleBar",
   "reloadConfig",
+  "splitRight",
+  "splitDown",
+  "closePane",
+  "focusNextPane",
+  "focusPreviousPane",
+  "focusPaneLeft",
+  "focusPaneRight",
+  "focusPaneUp",
+  "focusPaneDown",
+  "toggleMaximizePane",
+  "equalizePanes",
+  "toggleBroadcast",
 ] as const;
 
 export type TerminalActionName = (typeof TERMINAL_ACTION_NAMES)[number];
@@ -65,6 +77,18 @@ export const DEFAULT_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   toggleTabBar: "CommandOrControl+Shift+B",
   toggleTitleBar: "CommandOrControl+Shift+D",
   reloadConfig: "CommandOrControl+Shift+,",
+  splitRight: "Command+D",
+  splitDown: "Command+Shift+E",
+  closePane: "Command+Alt+W",
+  focusNextPane: "Command+]",
+  focusPreviousPane: "Command+[",
+  focusPaneLeft: "Command+Alt+Left",
+  focusPaneRight: "Command+Alt+Right",
+  focusPaneUp: "Command+Alt+Up",
+  focusPaneDown: "Command+Alt+Down",
+  toggleMaximizePane: "Command+Shift+Enter",
+  equalizePanes: "Command+Alt+0",
+  toggleBroadcast: "Command+Alt+I",
 });
 
 // Linux and Windows share the conventional shifted terminal shortcuts so
@@ -97,6 +121,21 @@ const SHIFTED_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   toggleTabBar: "Control+Shift+B",
   toggleTitleBar: "Control+Shift+D",
   reloadConfig: "Control+Shift+,",
+  // Pane shortcuts follow AshyTerm where they do not collide with OMXTerm's
+  // own defaults, and avoid Alt+Arrow (fish word movement) and Ctrl+Alt+Arrow
+  // (GNOME workspace switching).
+  splitRight: "Control+Shift+O",
+  splitDown: "Control+Shift+E",
+  closePane: "Control+Shift+K",
+  focusNextPane: "Control+Shift+]",
+  focusPreviousPane: "Control+Shift+[",
+  focusPaneLeft: "Alt+Shift+Left",
+  focusPaneRight: "Alt+Shift+Right",
+  focusPaneUp: "Alt+Shift+Up",
+  focusPaneDown: "Alt+Shift+Down",
+  toggleMaximizePane: "Control+Shift+Z",
+  equalizePanes: "Control+Shift+0",
+  toggleBroadcast: "Control+Shift+I",
 });
 
 export function terminalDefaultKeybinds(platform: string): TerminalKeybinds {

@@ -34,4 +34,6 @@ export const terminalIpc = {
   tabTitleSync: "terminal:tab-title-sync",
   tabsEmpty: "terminal:tabs-empty",
   tabTitle: "terminal:tab-title",
+  confirmBroadcast: "terminal:confirm-broadcast",
+  workingDirectory: "terminal:working-directory",
 } as const;

@@ -125,6 +125,9 @@ export async function mountResttyTerminalSurface(
   const isCancelled = () => options.abortSignal?.aborted === true;
   const isInactive = () => disposed || isCancelled();
   let ready = false;
+  // A retained Surface outlives its session's exit but refuses input.
+  let ended = false;
+  const canSend = () => !isInactive() && ready && !ended;
   let transportConnected = false;
   let ptyCallbacks: PtyCallbacks | undefined;
   let settledSize: TerminalSize | undefined;
@@ -150,7 +153,7 @@ export async function mountResttyTerminalSurface(
   const delivery = resttyDelivery(
     adapter,
     options,
-    () => !isInactive() && ready,
+    canSend,
     () => pane?.runtime.terminal.isBracketedPasteEnabled() ?? false,
     revealInput,
   );
@@ -234,14 +237,13 @@ export async function mountResttyTerminalSurface(
       callbacks?.onDisconnect?.();
     },
     sendInput(data) {
-      if (!isInactive() && ready) adapter.write(data);
-      return !isInactive() && ready;
+      if (canSend()) adapter.write(data);
+      return canSend();
     },
     resize(cols, rows) {
-      const size = { cols, rows };
-      settledSize = size;
-      if (!isInactive() && ready) adapter.resize(size);
-      return !isInactive() && ready;
+      settledSize = { cols, rows };
+      if (canSend()) adapter.resize(settledSize);
+      return canSend();
     },
     isConnected: () => transportConnected && !isInactive(),
     destroy: () => undefined,
@@ -330,8 +332,9 @@ export async function mountResttyTerminalSurface(
           if (!isSurfaceVisible()) pane?.runtime.render.refresh();
         }
       },
-      onExit() {
-        dispose();
+      onExit(exit) {
+        if (retainsExit(options, exit)) ended = true;
+        else dispose();
       },
     });
     if (isInactive()) return createDisposedSurface();
@@ -471,6 +474,15 @@ function paintContainer(
       `${padding[side]}px`,
     );
   container.style.setProperty("--terminal-background", theme.colors.background);
+}
+
+function retainsExit(
+  options: TerminalSurfaceOptions,
+  exit: { readonly exitCode: number; readonly signal: number },
+): boolean {
+  return (
+    options.retainOnExit === true && (exit.exitCode !== 0 || exit.signal !== 0)
+  );
 }
 
 function createDisposedSurface(): TerminalSurface {

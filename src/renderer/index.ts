@@ -1,9 +1,14 @@
 import "./terminal-window.css";
 import "./window-chrome.css";
+import "./workspace.css";
 import { createElectronTerminalAdapter } from "./electron-terminal-adapter";
 import { mountTerminalWindowPage } from "./terminal-window-host";
 import { renderUserFileErrorBanner } from "./user-file-error-banner";
 import { mountResttyTerminalSurface } from "../terminal-surface/restty-terminal-surface";
+import { createTranslator, resolveLocale } from "../shared/i18n";
+
+const translator = createTranslator(resolveLocale([...navigator.languages]));
+document.documentElement.lang = translator.locale;
 
 const tabStrip = document.querySelector<HTMLElement>("#tab-strip");
 if (!tabStrip) throw new Error("Terminal Tab strip container is missing");
@@ -35,8 +40,12 @@ void window.omxterm.terminal.configuration().then((configuration) => {
         surfaceFailure.textContent = message;
         surfaceFailure.hidden = false;
       },
-      createAdapter: (configurationId) =>
-        createElectronTerminalAdapter(window.omxterm.terminal, configurationId),
+      createAdapter: (configurationId, launch) =>
+        createElectronTerminalAdapter(
+          window.omxterm.terminal,
+          configurationId,
+          launch,
+        ),
       subscribeToFontZoom: window.omxterm.terminal.onFontZoom,
       subscribeToConfigurationUpdates:
         window.omxterm.terminal.onConfigurationUpdate,
@@ -52,6 +61,9 @@ void window.omxterm.terminal.configuration().then((configuration) => {
       notifyTabsEmpty: window.omxterm.terminal.notifyTabsEmpty,
       onTitleRequest: window.omxterm.terminal.title,
       onBell: window.omxterm.terminal.bell,
+      translator,
+      confirmBroadcast: window.omxterm.terminal.confirmBroadcast,
+      reportWorkingDirectory: window.omxterm.terminal.reportWorkingDirectory,
       onExternalLink: window.omxterm.terminal.openExternalLink,
       loadLocalImage: window.omxterm.terminal.loadLocalImage,
       subscribeToLocalImageOpen: window.omxterm.terminal.onLocalImageOpen,

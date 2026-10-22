@@ -15,7 +15,9 @@ export async function buildMacOSWindowBlur(
   } = {},
 ) {
   if (platform !== "darwin") return;
-  if (arch !== "arm64") throw new Error("macOS blur builds require ARM64");
+  const clangArchitecture = { arm64: "arm64", x64: "x86_64" }[arch];
+  if (!clangArchitecture)
+    throw new Error("macOS blur builds require ARM64 or x64");
   // Small, pinned build-only headers. No Node/V8 headers, ABI rebuild tool or
   // network access is needed, and non-macOS builds never load them.
   const { include_dir } = createRequire(import.meta.url)("node-api-headers");
@@ -26,7 +28,7 @@ export async function buildMacOSWindowBlur(
       "clang++",
       "-std=c++17",
       "-arch",
-      "arm64",
+      clangArchitecture,
       "-mmacosx-version-min=12.0",
       "-fobjc-arc",
       "-fvisibility=hidden",

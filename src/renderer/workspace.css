@@ -1,0 +1,223 @@
+/* Workspace design tokens. Chrome derives from the active Terminal Theme so
+   panels, dividers and dialogs follow light, dark and custom palettes. */
+:root {
+  --omx-space-1: 4px;
+  --omx-space-2: 8px;
+  --omx-space-3: 12px;
+  --omx-space-4: 16px;
+  --omx-radius: 6px;
+  --omx-radius-large: 10px;
+  --omx-font:
+    13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
+    "Cantarell", sans-serif;
+  --omx-foreground: var(--terminal-foreground, #e6e6e6);
+  --omx-muted: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 68%
+  );
+  --omx-surface: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-chrome-neutral) 14%
+  );
+  --omx-surface-raised: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-chrome-neutral) 24%
+  );
+  --omx-border: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 22%
+  );
+  --omx-accent: #4f8ff7;
+  --omx-warning: #f5a524;
+  --omx-danger: #e5484d;
+  --omx-focus-ring: 2px solid var(--omx-accent);
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --omx-border: var(--terminal-foreground, #e6e6e6);
+    --omx-muted: var(--terminal-foreground, #e6e6e6);
+  }
+}
+
+/* A Terminal Tab hosts one pane or a split layout of panes. */
+.terminal-tab {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.terminal-tab[hidden] {
+  display: none;
+}
+
+.terminal-tab .terminal-surface {
+  position: relative;
+}
+
+.terminal-pane-split {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.terminal-pane-split[data-direction="column"] {
+  flex-direction: column;
+}
+
+.terminal-pane-split > * {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* With a split, the macOS title inset belongs to the tab, not to every pane. */
+.terminal-tab.split {
+  padding-top: var(--native-title-inset);
+}
+
+.terminal-tab.split .restty-terminal-surface {
+  padding-top: var(--terminal-padding-top, 0px);
+}
+
+body.tabs-visible .terminal-tab.split {
+  padding-top: 0;
+}
+
+.terminal-pane-divider {
+  position: relative;
+  flex: 0 0 5px;
+  cursor: col-resize;
+  background: transparent;
+  outline: none;
+  app-region: no-drag;
+}
+
+.terminal-pane-split[data-direction="column"] > .terminal-pane-divider {
+  cursor: row-resize;
+}
+
+.terminal-pane-divider::after {
+  content: "";
+  position: absolute;
+  inset: 0 2px;
+  background: var(--omx-border);
+}
+
+.terminal-pane-split[data-direction="column"] > .terminal-pane-divider::after {
+  inset: 2px 0;
+}
+
+.terminal-pane-divider:hover::after,
+.terminal-pane-divider.dragging::after,
+.terminal-pane-divider:focus-visible::after {
+  background: var(--omx-accent);
+}
+
+/* The focused pane of a split shows a subtle accent edge; maximized and
+   single panes show none. Painted over the canvas without taking input. */
+.terminal-tab.split:not(.maximized) .terminal-surface.focused-pane::after,
+.terminal-tab.broadcasting .terminal-surface::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, transparent, var(--omx-accent) 70%);
+}
+
+.terminal-tab.split:not(.maximized) .terminal-surface:not(.focused-pane) {
+  opacity: 0.86;
+}
+
+/* Broadcasting is unmistakable: every receiving pane carries a warning edge. */
+.terminal-tab.broadcasting .terminal-surface::after {
+  box-shadow: inset 0 0 0 2px var(--omx-warning);
+}
+
+#tab-strip button.tab-colored {
+  box-shadow: inset 0 -2px var(--tab-color);
+}
+
+#tab-strip button.tab-broadcasting::before {
+  content: "⇶ ";
+  color: var(--omx-warning);
+}
+
+.broadcast-indicator {
+  position: fixed;
+  z-index: 20;
+  top: calc(var(--native-title-inset) + var(--omx-space-2));
+  right: var(--omx-space-3);
+  display: flex;
+  gap: var(--omx-space-2);
+  align-items: center;
+  padding: var(--omx-space-1) var(--omx-space-1) var(--omx-space-1)
+    var(--omx-space-3);
+  font: var(--omx-font);
+  color: #1a1300;
+  background: var(--omx-warning);
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 35%);
+  app-region: no-drag;
+}
+
+.broadcast-indicator[hidden] {
+  display: none;
+}
+
+.broadcast-indicator button,
+.pane-ended-banner button {
+  padding: 2px 10px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: rgb(0 0 0 / 14%);
+  border: none;
+  border-radius: 999px;
+}
+
+.broadcast-indicator button:focus-visible,
+.pane-ended-banner button:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 1px;
+}
+
+/* A retained session that failed keeps its last screen under this bar. */
+.pane-ended-banner {
+  position: absolute;
+  z-index: 3;
+  right: var(--omx-space-2);
+  bottom: var(--omx-space-2);
+  left: var(--omx-space-2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--omx-space-2);
+  align-items: center;
+  padding: var(--omx-space-2) var(--omx-space-3);
+  font: var(--omx-font);
+  color: #ffffff;
+  background: color-mix(in srgb, #8c1d18 92%, transparent);
+  border-radius: var(--omx-radius);
+}
+
+.pane-ended-banner span {
+  flex: 1 1 200px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .terminal-pane-divider::after {
+    transition: background-color 120ms ease;
+  }
+}
+
+/* A maximized pane hides its siblings, so their dividers go too. */
+.terminal-tab.maximized .terminal-pane-divider {
+  display: none;
+}

@@ -212,9 +212,13 @@ install_appimage() {
   command -v file >/dev/null 2>&1 || fail "the 'file' command is required to validate the AppImage"
   file_description=$(file -Lb -- "$source_app") || fail "could not inspect the AppImage"
   case $file_description in
-    *ELF*64-bit*ARM\ aarch64*) ;;
-    *) fail "input is not a Linux ARM64 ELF AppImage" ;;
+    *ELF*64-bit*ARM\ aarch64*) appimage_arch=aarch64 ;;
+    *ELF*64-bit*x86-64*) appimage_arch=x86_64 ;;
+    *) fail "input is not a Linux ARM64 or x86-64 ELF AppImage" ;;
   esac
+  host_arch=$(uname -m) || fail "could not determine this computer's architecture"
+  [ "$appimage_arch" = "$host_arch" ] ||
+    fail "the AppImage is built for $appimage_arch, but this computer is $host_arch"
 
   owned_paths
   # Replace symlink entries themselves, never their referents (even directories).
