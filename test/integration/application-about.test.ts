@@ -116,6 +116,9 @@ it.for([
           applicationVersion: string;
           copyright: string;
           iconPath: string;
+          authors?: string[];
+          website?: string;
+          credits?: string;
         } | null;
         configuredWhileReady: boolean;
         version: string;
@@ -147,6 +150,18 @@ it.for([
           applicationVersion: result.version,
           copyright: "Copyright © 2026 Luiz Otávio Miranda",
           iconPath,
+          ...(process.platform === "linux"
+            ? {
+                authors: [
+                  "Luiz Otávio Miranda",
+                  "Rafael Ruscher <rruscher@gmail.com>",
+                ],
+                website: "https://github.com/ruscher/omxterm",
+              }
+            : {
+                credits:
+                  "Contributors: Luiz Otávio Miranda, Rafael Ruscher <rruscher@gmail.com>",
+              }),
         });
         expect(result.iconEmpty).toBe(false);
         expect(result.iconSize?.width).toBeGreaterThan(0);

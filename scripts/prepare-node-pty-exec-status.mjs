@@ -75,7 +75,15 @@ export async function prepareNodePtyExecStatus() {
           process.arch === "x64" ? "x86_64" : "arm64",
           "-mmacosx-version-min=12.0",
         ]
-      : ["-fPIC", "-pthread"];
+      : [
+          "-fPIC",
+          "-pthread",
+          // The hardening Linux distributions build their own packages with.
+          "-fstack-protector-strong",
+          "-D_FORTIFY_SOURCE=2",
+        ];
+    // Full RELRO and a symbol-stripped module on Linux.
+    const linuxLinkFlags = mac ? [] : ["-Wl,-z,relro", "-Wl,-z,now", "-s"];
     execFileSync(
       compiler,
       [
@@ -88,6 +96,7 @@ export async function prepareNodePtyExecStatus() {
         `-I${addonHeaders}`,
         ...targetFlags,
         ...(mac ? ["-bundle", "-undefined", "dynamic_lookup"] : ["-shared"]),
+        ...linuxLinkFlags,
         path.join(root, "pty.cc"),
         ...(mac ? [] : ["-lutil"]),
         "-o",

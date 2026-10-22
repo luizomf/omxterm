@@ -913,3 +913,30 @@ body.tabs-visible #workspace-sidebar {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* The application icon while a window's first terminal starts. */
+#startup-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: var(--terminal-background, #000000);
+  opacity: 1;
+}
+
+#startup-splash svg {
+  width: min(128px, 30vmin);
+  height: auto;
+}
+
+#startup-splash.done {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #startup-splash {
+    transition: opacity 180ms ease-out;
+  }
+}
