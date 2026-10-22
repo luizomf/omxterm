@@ -18,6 +18,20 @@ Choose **File â†’ New Tab** for another session in the same window, or **File â†
 
 To protect active work, OMXTerm asks for confirmation before closing a tab or window with a running command. On Windows, confirmation is shown for all live sessions. You can disable this prompt anytime by setting `"confirmClose": false` in `config.json`.
 
+## Starting from a terminal
+
+OMXTerm accepts a few options when you start it from a shell (`omxterm`, or the full path to the app):
+
+| Option                                        | What it does                                                                                        |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `-w <dir>`, `--working-directory <dir>`       | Starts the first tab in `<dir>`.                                                                    |
+| `--ssh <[user@]host[:port]>`                  | Opens the first tab as an SSH connection, like Quick Connect. A failed connection offers Reconnect. |
+| `-e <program> [arguments...]`                 | Runs `<program>` in the first tab instead of your shell. Everything after `-e` goes to the program. |
+| `--log-level <error\|info\|debug>`, `--debug` | Changes how much OMXTerm writes to its [diagnostics log](#local-diagnostics) for this run.          |
+| `--version`, `--help`                         | Prints the version or this list and exits.                                                          |
+
+Each launch opens a new window in a new OMXTerm process.
+
 ## Window controls
 
 - **Zoom:** changes the font size in the current window (`Cmd++` / `Cmd+-` on macOS, `Ctrl++` / `Ctrl+-` on Linux/Windows). **Actual Size** (`Cmd+0` / `Ctrl+0`) resets to your configured size.

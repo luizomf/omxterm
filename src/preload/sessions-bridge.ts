@@ -2,6 +2,7 @@ import type { IpcRenderer, IpcRendererEvent } from "electron";
 import type { SessionsBridge } from "../shared/terminal-bridge";
 import { isSessionFileChoice, sessionIpc } from "../shared/session-ipc";
 import { isSavedSessionId } from "../shared/terminal-launch";
+import { parseSshTarget } from "../shared/saved-session-primitives";
 import {
   validateFolder,
   validateSession,
@@ -75,6 +76,13 @@ export function createSessionsBridge(ipc: IpcRenderer): SessionsBridge {
       };
       ipc.on(sessionIpc.toggleSidebar, handler);
       return () => ipc.removeListener(sessionIpc.toggleSidebar, handler);
+    },
+    async startupConnection() {
+      const response: unknown = await ipc.invoke(sessionIpc.startupConnection);
+      return typeof response === "string" &&
+        parseSshTarget(response) !== undefined
+        ? response
+        : null;
     },
   };
 }

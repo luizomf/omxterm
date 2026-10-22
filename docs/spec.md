@@ -101,7 +101,18 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Window in that application process; all later tabs and windows use the Default
   Shell. A trailing `-e` with no program is an actionable startup failure and
   never falls back to the Default Shell.
-- An explicit command starts in the user's home directory, inherits the normal
+- Options before `-e` are OMXTerm's own: `-w`/`--working-directory <dir>`
+  starts the first tab of the first window in an existing directory (with or
+  without `-e`); `--ssh <[user@]host[:port]>` opens that first tab as a Quick
+  Connect session, validated in main and again in the renderer, and cannot be
+  combined with `-e` or `-w`; `--log-level <error|info|debug>` (or `--debug`)
+  overrides `logLevel` for the run, including after a configuration reload.
+  `--help` and `--version` print to standard output and exit with status 0
+  without opening a window. An invalid option is written to standard error,
+  shown in a dialog with a fixed message, and exits with status 2. Unknown
+  arguments are left to Electron and Chromium.
+- An explicit command starts in the user's home directory (or the `-w`
+  directory), inherits the normal
   process environment, and receives the Terminal Capability Identity. It is a
   Busy Session for its complete live lifetime. Its clean exit, unexpected
   signal, spawn failure, requested close, tab and window closure, and

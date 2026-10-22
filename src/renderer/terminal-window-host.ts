@@ -21,6 +21,7 @@ import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
 import {
   createTerminalTabs,
   TERMINAL_TAB_DRAG_DATA_TYPE,
+  type PaneLaunch,
   type TerminalTabs,
 } from "./terminal-tabs";
 import {
@@ -113,6 +114,8 @@ export interface TerminalWindowPageOptions {
     uri: string,
   ) => void;
   readonly highlights?: HighlightsBridge;
+  // How the first tab opens, for example the SSH target given with --ssh.
+  readonly initialLaunch?: PaneLaunch;
   readonly workspace?: {
     readonly element: HTMLElement;
     readonly sessions: SessionsBridge;

@@ -56,6 +56,7 @@ function fakeBridge(initial = document_) {
       };
     },
     onToggleSidebar: () => () => {},
+    startupConnection: vi.fn(async () => null),
   };
   return {
     bridge,

@@ -10,6 +10,7 @@ export const sessionIpc = {
   chooseFile: "sessions:choose-file",
   changed: "sessions:changed",
   toggleSidebar: "sessions:toggle-sidebar",
+  startupConnection: "sessions:startup-connection",
 } as const;
 
 export type SessionFileChoice = "identity-file" | "directory" | "program";

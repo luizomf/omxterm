@@ -29,7 +29,10 @@ const surfaceFailure = document.querySelector<HTMLElement>(
 if (!surfaceFailure)
   throw new Error("Terminal Surface failure banner is missing");
 
-void window.omxterm.terminal.configuration().then((configuration) => {
+void Promise.all([
+  window.omxterm.terminal.configuration(),
+  window.omxterm.sessions.startupConnection().catch(() => null),
+]).then(([configuration, startupConnection]) => {
   // Render before mounting so the Terminal Surface measures the space the
   // banner leaves, instead of resizing right after it appears.
   renderUserFileErrorBanner(errorBanner, configuration.userFileErrors);
@@ -78,6 +81,15 @@ void window.omxterm.terminal.configuration().then((configuration) => {
         requestContextMenu: window.omxterm.terminal.requestClipboardContextMenu,
       },
       highlights: window.omxterm.highlights,
+      ...(startupConnection
+        ? {
+            initialLaunch: {
+              spec: { kind: "quick-ssh", target: startupConnection },
+              label: startupConnection,
+              retainOnExit: true,
+            },
+          }
+        : {}),
       workspace: {
         element: workspaceElement,
         sessions: window.omxterm.sessions,

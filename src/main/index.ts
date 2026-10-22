@@ -19,11 +19,14 @@ import {
 import { configureApplicationAbout } from "./application-about";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { createDefaultShellResolver, defaultShellName } from "./default-shell";
-import {
-  MalformedLaunchRequestError,
-  startupLaunchRequest,
-} from "./launch-request";
+import { startupLaunchRequest } from "./launch-request";
 import { registerTerminalShutdown } from "./terminal-shutdown";
+import { readStartupCommandLine } from "./command-line-startup";
+import {
+  startupOptionsForWindow,
+  withLogLevelOverride,
+} from "./command-line-options";
+import type { OperationalLogLevel } from "../shared/user-configuration";
 import { applyLinuxDisplayBackendDefault } from "./linux-display-backend";
 import { applyChromiumSandboxPolicy } from "./chromium-sandbox-policy";
 import {
@@ -35,6 +38,7 @@ import {
   type TerminalApplication,
 } from "./terminal-application";
 import {
+  startupFailureStage,
   terminalApplicationFailure,
   terminalApplicationFailureDisplay,
 } from "./terminal-application-failure";
@@ -75,9 +79,7 @@ import {
   createOperationalEventLog,
   type OperationalEventLog,
 } from "./operational-events";
-import { startSavedSessions } from "./saved-session-wiring";
-import { startHighlightSettings } from "./highlight-wiring";
-import { startCommandLibrary } from "./command-wiring";
+import { startApplicationDataServices } from "./application-data-services";
 import { commandIpc } from "../shared/command-ipc";
 import { sessionIpc } from "../shared/session-ipc";
 import { launchTerminalSession } from "./session-launch";
@@ -107,21 +109,23 @@ const shutdown = registerTerminalShutdown(app, {
   disposeSessions: () => disposeTerminalSessions(),
 });
 
+const commandLine = readStartupCommandLine(app);
+
 applyChromiumSandboxPolicy(app.commandLine);
 
-applyLinuxDisplayBackendDefault(app);
+// --help and --version exit without a window and an invalid option is
+// reported by this process, so neither relaunches for the display backend.
+if (commandLine.action === "run") applyLinuxDisplayBackendDefault(app);
 
 app.on("before-quit", () => operationalEvents?.flush());
 
 app
   .whenReady()
   .then(async () => {
+    if (commandLine.action === "invalid") throw commandLine.error;
+    if (commandLine.action !== "run") return;
     const { account, consumeLaunchRequest, configurationLoadOptions } =
-      prepareStartup();
-    operationalEvents = createOperationalEventLog({
-      environment: process.env,
-      homeDirectory: account.homedir,
-    });
+      prepareStartup(commandLine.logLevel);
     return startWithUserConfiguration(
       configurationLoadOptions,
       async ({ configuration: userConfiguration, fallback, warnings }) => {
@@ -144,24 +148,14 @@ app
         operationalEvents!.write({ name: "application.started" });
         const terminalIpcRouter = fontIpcRouter(ipcMain, operationalEvents!);
         disposeTerminalSessions = () => terminalIpcRouter.dispose();
-        const savedSessions = await startSavedSessions({
-          ipcMain,
-          homeDirectory: account.homedir,
-          isTrustedSender: terminalIpcRouter.isTrustedSender,
-          operationalEvents: operationalEvents!,
-        });
-        const highlightSettings = await startHighlightSettings({
-          ipcMain,
-          homeDirectory: account.homedir,
-          isTrustedSender: terminalIpcRouter.isTrustedSender,
-          operationalEvents: operationalEvents!,
-        });
-        await startCommandLibrary({
-          ipcMain,
-          homeDirectory: account.homedir,
-          isTrustedSender: terminalIpcRouter.isTrustedSender,
-          operationalEvents: operationalEvents!,
-        });
+        const { savedSessions, highlightSettings } =
+          await startApplicationDataServices({
+            ipcMain,
+            homeDirectory: account.homedir,
+            isTrustedSender: terminalIpcRouter.isTrustedSender,
+            operationalEvents: operationalEvents!,
+            startupConnection: commandLine.startup.ssh,
+          });
         let rebuildMenu = () => {};
         highlightSettings.subscribe(() => rebuildMenu());
         const nativeTitleInset = terminalNativeTitleInset(process.platform);
@@ -204,6 +198,10 @@ app
           alwaysOnTopDefault: userConfiguration.alwaysOnTop,
           createWindow(lifecycle) {
             const consumeLaunch = consumeLaunchRequest(lifecycle.windowId);
+            const consumeStartup = startupOptionsForWindow(
+              lifecycle.windowId,
+              commandLine.startup,
+            );
             const active = configurationReloader.current();
             const initialShell = resolveCurrentDefaultShell();
             const window = new BrowserWindow(
@@ -276,6 +274,7 @@ app
                   },
                   {
                     consumeLaunchRequest: consumeLaunch,
+                    consumeStartupOptions: consumeStartup,
                     savedSessions,
                     start: (sessionOptions) =>
                       shutdown.createSession(nodePty.spawn, sessionOptions),
@@ -469,21 +468,22 @@ app
     );
   })
   .catch((cause) => {
-    const stage =
-      cause instanceof MalformedLaunchRequestError
-        ? "launch-request"
-        : "startup";
-    const failure = terminalApplicationFailure(stage, cause);
+    const failure = terminalApplicationFailure(
+      startupFailureStage(cause),
+      cause,
+    );
     operationalEvents?.write({
       name: "application.failure",
       stage: failure.stage,
     });
     const display = terminalApplicationFailureDisplay(failure);
     dialog.showErrorBox(display.title, display.message);
-    app.quit();
+    // An invalid option exits with the conventional usage status.
+    if (failure.stage === "command-line") app.exit(2);
+    else app.quit();
   });
 
-function prepareStartup() {
+function prepareStartup(logLevel: OperationalLogLevel | undefined) {
   configureApplicationAbout(
     app,
     app.isPackaged
@@ -493,6 +493,13 @@ function prepareStartup() {
   const launch = startupLaunchRequest(process.argv, app.isPackaged);
   if (!app.isPackaged) app.dock?.setIcon(developmentApplicationIconPath);
   const account = userInfo();
+  operationalEvents = withLogLevelOverride(
+    createOperationalEventLog({
+      environment: process.env,
+      homeDirectory: account.homedir,
+    }),
+    logLevel,
+  );
   return {
     account,
     consumeLaunchRequest: launch,

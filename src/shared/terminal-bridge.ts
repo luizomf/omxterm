@@ -51,6 +51,8 @@ export interface SessionsBridge {
   chooseFile(kind: SessionFileChoice): Promise<string | null>;
   onChanged(listener: (document: SavedSessionsDocument) => void): () => void;
   onToggleSidebar(listener: () => void): () => void;
+  // The SSH target passed with --ssh, once, to the first window that asks.
+  startupConnection(): Promise<string | null>;
 }
 
 export interface TerminalBridge {

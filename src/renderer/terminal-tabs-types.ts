@@ -41,6 +41,8 @@ export interface TerminalTabsOptions {
   readonly mount: MountTerminalSurface;
   readonly surfaceOptions: TerminalSurfaceOptions;
   readonly showTabBar?: boolean;
+  // How the first tab opens; the Default Shell when absent.
+  readonly initialLaunch?: PaneLaunch;
   readonly dividerLabel?: string;
   readonly endedBanner?: EndedBannerStrings;
   readonly notifyEmpty?: (reason?: "rendering-failure") => void;

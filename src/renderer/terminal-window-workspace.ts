@@ -93,6 +93,7 @@ export function windowTabsOptions(
       ? { createHighlighter: () => highlighting.createHighlighter() }
       : {}),
     showTabBar: options.configuration?.showTabBar ?? true,
+    ...(options.initialLaunch ? { initialLaunch: options.initialLaunch } : {}),
     dividerLabel: translator.t("pane.divider"),
     endedBanner: {
       ended: (exitCode) => translator.t("sessions.ended", { code: exitCode }),

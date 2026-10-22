@@ -57,6 +57,23 @@ describe("split Terminal Panes", () => {
     expect(harness.surfaces[0]!.inject).toHaveBeenCalledWith("x");
   });
 
+  it("opens the first tab with a startup launch that keeps a failed screen and reconnects", async () => {
+    const spec = { kind: "quick-ssh", target: "admin@example.com" } as const;
+    const harness = createTabsHarness({
+      initialLaunch: { spec, label: "admin@example.com", retainOnExit: true },
+    });
+    await harness.tabs.ready;
+    expect(harness.createAdapter).toHaveBeenLastCalledWith(spec);
+    expect(harness.mountedSurfaceOptions[0]!.retainOnExit).toBe(true);
+    harness.adapters[0]!.handlers!.onExit({ exitCode: 255, signal: 0 });
+    const banner = harness.container.querySelector(".pane-ended-banner")!;
+    expect(banner).not.toBeNull();
+    banner.querySelector("button")!.click();
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+    expect(harness.createAdapter).toHaveBeenLastCalledWith(spec);
+    expect(harness.container.querySelector(".pane-ended-banner")).toBeNull();
+  });
+
   it("keeps a signalled pane until main acknowledges it", async () => {
     const harness = await splitHarness();
     harness.adapters[0]!.handlers!.onExit({ exitCode: 0, signal: 9 });

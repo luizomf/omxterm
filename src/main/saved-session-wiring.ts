@@ -19,8 +19,10 @@ export async function startSavedSessions(options: {
   readonly homeDirectory: string;
   readonly isTrustedSender: (event: IpcEvent) => boolean;
   readonly operationalEvents: Pick<OperationalEventLog, "write">;
+  readonly startupConnection?: string;
 }): Promise<SavedSessionService> {
   const { homeDirectory, operationalEvents } = options;
+  let startupConnection = options.startupConnection;
   const service = createSavedSessionService({
     directory: resolveApplicationDataDirectory(process.env, homeDirectory),
     homeDirectory,
@@ -92,6 +94,11 @@ export async function startSavedSessions(options: {
         boundary: "ipc",
         reason: "untrusted-sender",
       }),
+    () => {
+      const target = startupConnection;
+      startupConnection = undefined;
+      return target;
+    },
   );
   return service;
 }

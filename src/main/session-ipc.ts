@@ -33,6 +33,8 @@ export function registerSessionIpc(
   service: SavedSessionService,
   dialogs: SessionIpcDialogs,
   onRejected?: () => void,
+  // The --ssh target, handed to the first renderer that asks.
+  consumeStartupConnection: () => string | undefined = () => undefined,
 ): () => void {
   const guard = async <T>(action: () => Promise<T>): Promise<T> => {
     try {
@@ -55,6 +57,7 @@ export function registerSessionIpc(
     isTrusted,
     {
       [sessionIpc.list]: () => service.current(),
+      [sessionIpc.startupConnection]: () => consumeStartupConnection() ?? null,
       [sessionIpc.saveSession]: (_event, payload) =>
         guard(() => service.saveSession(payload)),
       [sessionIpc.deleteSession]: (_event, payload) =>

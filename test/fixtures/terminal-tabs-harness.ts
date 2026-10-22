@@ -1,5 +1,8 @@
 import { vi } from "vitest";
-import { createTerminalTabs } from "../../src/renderer/terminal-tabs";
+import {
+  createTerminalTabs,
+  type PaneLaunch,
+} from "../../src/renderer/terminal-tabs";
 import type { ElectronTerminalAdapter } from "../../src/renderer/electron-terminal-adapter";
 import type {
   TerminalSessionAdapter,
@@ -29,6 +32,7 @@ export function createTabsHarness(
     surfaceOptions?: TerminalSurfaceOptions;
     confirmBroadcast?: (targetCount: number) => Promise<boolean>;
     onBroadcastChange?: (targetCount: number) => void;
+    initialLaunch?: PaneLaunch;
   } = {},
 ) {
   document.body.innerHTML = "";
@@ -95,10 +99,14 @@ export function createTabsHarness(
       ...(options.onBroadcastChange
         ? { onBroadcastChange: options.onBroadcastChange }
         : {}),
+      ...(options.initialLaunch
+        ? { initialLaunch: options.initialLaunch }
+        : {}),
     },
   );
   return {
     tabs,
+    createAdapter,
     strip,
     container,
     adapters,

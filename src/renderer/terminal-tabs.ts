@@ -67,7 +67,7 @@ export function createTerminalTabs(
     broadcastTab: undefined,
   };
 
-  const ready = createTab(ctx);
+  const ready = createTab(ctx, options.initialLaunch);
   const focusedSurface = () => selectedTab(ctx)?.focused.surface;
 
   return {

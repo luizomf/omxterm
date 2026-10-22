@@ -1,4 +1,5 @@
 import { statSync } from "node:fs";
+import type { StartupOptions } from "./command-line-options";
 import type { LaunchRequest } from "./launch-request";
 import type {
   LocalTerminalSession,
@@ -8,13 +9,15 @@ import type { SavedSessionService, SessionLaunchBase } from "./saved-sessions";
 import type { TerminalSessionLaunch } from "./terminal-ipc-types";
 
 // Turns main's resolved launch into session options and starts it: the
-// window's Default Shell (consuming the startup Launch Request once), a shell
-// in an inherited directory, a Saved Session, or a Quick Connect target.
+// window's Default Shell (consuming the startup Launch Request and working
+// directory once), a shell in an inherited directory, a Saved Session, or a
+// Quick Connect target.
 export function launchTerminalSession(
   launch: TerminalSessionLaunch,
   base: SessionLaunchBase,
   context: {
     readonly consumeLaunchRequest: () => LaunchRequest;
+    readonly consumeStartupOptions?: () => StartupOptions;
     readonly savedSessions: Pick<
       SavedSessionService,
       "launchOptions" | "quickConnect"
@@ -24,11 +27,15 @@ export function launchTerminalSession(
     ) => LocalTerminalSession;
   },
 ): LocalTerminalSession {
-  if (launch.kind === "default")
+  if (launch.kind === "default") {
+    const launchRequest = context.consumeLaunchRequest();
+    const startup = context.consumeStartupOptions?.() ?? {};
     return context.start({
       ...base,
-      launchRequest: context.consumeLaunchRequest(),
+      launchRequest,
+      ...existingDirectory(startup.workingDirectory),
     });
+  }
   if (launch.kind === "inherit")
     return context.start({
       ...base,

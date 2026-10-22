@@ -41,6 +41,7 @@ export type OperationalEvent =
       readonly name: "application.failure";
       readonly stage:
         | "launch-request"
+        | "command-line"
         | "startup"
         | "new-window"
         | "renderer-load"
@@ -354,6 +355,7 @@ function isOperationalEvent(value: unknown): value is OperationalEvent {
         hasExactKeys(value, ["name", "stage"]) &&
         [
           "launch-request",
+          "command-line",
           "startup",
           "new-window",
           "renderer-load",
