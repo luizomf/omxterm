@@ -37,6 +37,7 @@ depends=(
     'pango'
     'systemd-libs'
     'xdg-utils'
+    'bash' # /usr/bin/sh for the /usr/bin/omxterm launcher
 )
 optdepends=(
     'openssh: saved SSH sessions and Quick Connect'
@@ -93,6 +94,11 @@ package() {
     cp -a "${_unpacked}/." "${pkgdir}/usr/lib/${pkgname}/"
     # The Chromium sandbox is disabled on Linux (ADR 0024); never setuid.
     chmod 0755 "${pkgdir}/usr/lib/${pkgname}/chrome-sandbox"
+    # Electron ships its Vulkan loader with symbols; options=('!strip')
+    # leaves the prestripped Electron binaries alone, so strip it here.
+    if [[ -f "${pkgdir}/usr/lib/${pkgname}/libvulkan.so.1" ]]; then
+        strip --strip-unneeded "${pkgdir}/usr/lib/${pkgname}/libvulkan.so.1"
+    fi
 
     install -Dm755 /dev/stdin "${pkgdir}/usr/bin/${pkgname}" <<'EOF'
 #!/bin/sh

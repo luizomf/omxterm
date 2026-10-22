@@ -22,7 +22,7 @@ depends=(
   'alsa-lib' 'at-spi2-core' 'cairo' 'dbus' 'expat' 'fontconfig' 'glib2'
   'glibc' 'gtk3' 'hicolor-icon-theme' 'libcups' 'libgcc' 'libstdc++' 'libx11'
   'libxcb' 'libxcomposite' 'libxdamage' 'libxext' 'libxfixes' 'libxkbcommon'
-  'libxrandr' 'mesa' 'nspr' 'nss' 'pango' 'systemd-libs' 'xdg-utils'
+  'libxrandr' 'mesa' 'nspr' 'nss' 'pango' 'systemd-libs' 'xdg-utils' 'bash'
 )
 optdepends=('openssh: SSH sessions')
 # node-pty's own node-gyp install script is skipped (see build()), so neither
@@ -83,6 +83,11 @@ package() {
   cp -a "${_unpacked}/." "${pkgdir}/usr/lib/omxterm/"
   # The Chromium sandbox is disabled on Linux (ADR 0024); never setuid.
   chmod 0755 "${pkgdir}/usr/lib/omxterm/chrome-sandbox"
+  # Electron ships its Vulkan loader with symbols; options=('!strip')
+  # leaves the prestripped Electron binaries alone, so strip it here.
+  if [[ -f "${pkgdir}/usr/lib/omxterm/libvulkan.so.1" ]]; then
+    strip --strip-unneeded "${pkgdir}/usr/lib/omxterm/libvulkan.so.1"
+  fi
 
   install -Dm755 /dev/stdin "${pkgdir}/usr/bin/omxterm" <<'EOF'
 #!/bin/sh
