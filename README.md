@@ -300,6 +300,10 @@ Optional packages:
   Files panel;
 - `ollama`: local models for the AI assistant (any OpenAI-compatible server,
   such as LM Studio, also works).
+- `poppler`: first-page previews, page counts and titles of PDF files when
+  hovering their names;
+- `xorg-xrandr`: opening new windows on the active monitor under KDE Plasma
+  Wayland (otherwise the monitor under the pointer is used).
 
 The package installs:
 

@@ -11,8 +11,8 @@
 
 pkgname=omxterm
 pkgver=0.21.1dev.0
-pkgrel=1
-pkgdesc='Open-source terminal with split panes, SSH sessions, an SFTP file manager, output highlighting, a command manager and an optional AI assistant'
+pkgrel=2
+pkgdesc='Open-source terminal with split panes, SSH sessions, an SFTP file manager, file hover previews, output highlighting, a command manager and an optional AI assistant'
 arch=('x86_64' 'aarch64')
 url='https://github.com/ruscher/omxterm'
 license=('MIT')
@@ -27,6 +27,8 @@ depends=(
 optdepends=(
   'openssh: SSH sessions, Quick Connect and remote files over SFTP'
   'ollama: local models for the AI assistant'
+  'poppler: first-page previews, page counts and titles of PDF files'
+  'xorg-xrandr: new windows open on the active monitor under KDE Plasma Wayland'
 )
 # node-pty's own node-gyp install script is skipped (see build()), so neither
 # python nor make is needed: the project's postinstall compiles pty.node with

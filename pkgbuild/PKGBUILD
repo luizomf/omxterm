@@ -10,7 +10,7 @@
 #   OMXTERM_BRANCH=feature/ashyterm-ui-parity makepkg -si
 
 pkgname=omxterm
-pkgdesc="Open-source terminal with split panes, SSH sessions, an SFTP file manager, output highlighting, a command manager and an optional AI assistant"
+pkgdesc="Open-source terminal with split panes, SSH sessions, an SFTP file manager, file hover previews, output highlighting, a command manager and an optional AI assistant"
 
 depends=(
     'alsa-lib'
@@ -45,6 +45,8 @@ depends=(
 optdepends=(
     'openssh: SSH sessions, Quick Connect and remote files over SFTP'
     'ollama: local models for the AI assistant'
+    'poppler: first-page previews, page counts and titles of PDF files'
+    'xorg-xrandr: new windows open on the active monitor under KDE Plasma Wayland'
 )
 # node-pty's own node-gyp install script is skipped (see build()): the
 # project's postinstall compiles pty.node with the C++ compiler and pinned
