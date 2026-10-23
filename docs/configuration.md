@@ -281,6 +281,7 @@ Customize application shortcuts under `keybinds` using [Electron accelerator](ht
 | `commandPalette`            | `Command+Shift+P`           | `Control+Shift+P`         |
 | `find`                      | `Command+F`                 | `Control+Shift+G`         |
 | `preferences`               | `Command+,`                 | `Control+Shift+X`         |
+| `toggleFiles`               | `Command+Shift+L`           | `Control+Shift+L`         |
 
 Example overriding a single shortcut:
 

@@ -46,6 +46,7 @@ export const TERMINAL_ACTION_NAMES = [
   "commandPalette",
   "find",
   "preferences",
+  "toggleFiles",
 ] as const;
 
 export type TerminalActionName = (typeof TERMINAL_ACTION_NAMES)[number];
@@ -99,6 +100,7 @@ export const DEFAULT_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   commandPalette: "Command+Shift+P",
   find: "Command+F",
   preferences: "Command+,",
+  toggleFiles: "Command+Shift+L",
 });
 
 // Linux and Windows share the conventional shifted terminal shortcuts so
@@ -157,6 +159,8 @@ const SHIFTED_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   // Ctrl+, would take the physical comma key from some keyboard layouts and
   // Ctrl+Shift+, is Reload Configuration here.
   preferences: "Control+Shift+X",
+  // AshyTerm's Ctrl+Shift+E is Split Down here.
+  toggleFiles: "Control+Shift+L",
 });
 
 export function terminalDefaultKeybinds(platform: string): TerminalKeybinds {

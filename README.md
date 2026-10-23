@@ -77,7 +77,7 @@ Omarchy screenshot are arranged by Hyprland.
 
 ### Workspace
 
-- **Header toolbar** in the title bar: Sessions, Commands, Find, Split Right,
+- **Header toolbar** in the title bar: Sessions, Commands, Files, Find, Split Right,
   Split Down and Broadcast before the title; New Tab and a **main menu**
   (☰) with every action after it.
 - Tabs and multiple windows, with hideable title and tab bars, background
@@ -107,6 +107,17 @@ Omarchy screenshot are arranged by Hyprland.
   import and export.
 - A failed connection keeps its screen with **Reconnect** and **Close**.
 - Passwords are typed at ssh's own prompt and are never stored.
+
+### Integrated file manager
+
+- **Files sidebar** that follows the focused terminal's folder: browse,
+  filter, open with the default app, show in the system file manager, create,
+  rename, copy, move and move to the trash.
+- **Remote files over SFTP** for SSH sessions, through your OpenSSH and the
+  terminal's shared connection: browse, edit a remote file in a local app
+  (each save is uploaded), download, upload, move and delete, with progress
+  and cancel.
+- Open a folder in the terminal or insert quoted paths with one click.
 
 ### Productivity
 
@@ -296,6 +307,7 @@ the menus always show the active ones.
 | Full screen             | `toggleFullScreen`                   | `Ctrl+Cmd+F`                 | `Ctrl+Shift+F`                 |
 | Reload configuration    | `reloadConfig`                       | `Cmd+Shift+,`                | `Ctrl+Shift+,`                 |
 | Preferences             | `preferences`                        | `Cmd+,`                      | `Ctrl+Shift+X`                 |
+| Files sidebar           | `toggleFiles`                        | `Cmd+Shift+L`                | `Ctrl+Shift+L`                 |
 
 Without a shortcut: **File → Open Local Image…**, **Back Up Settings…**,
 **Restore Settings…**; **View → Highlight Output**, **Highlight Rules…**,

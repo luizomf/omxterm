@@ -19,7 +19,13 @@ import { createCommandPalette, type PaletteEntry } from "./command-palette";
 import { sessionLaunch } from "./sessions/session-actions";
 import { TERMINAL_ACTION_NAMES } from "../shared/terminal-keybinds";
 import type { MessageKey } from "../shared/locales/en";
+import type { TerminalClipboard } from "../terminal-surface/terminal-surface";
 import { createHeaderToolbar, type HeaderToolbar } from "./header-toolbar";
+import { createFilesPanel } from "./files/files-panel";
+import {
+  createDirectoryTracker,
+  type DirectoryTracker,
+} from "./files/directory-tracker";
 
 // The optional left sidebar with Saved Sessions and the Command Manager.
 // Opening a session or typing a command is ignored while a Local Image
@@ -33,6 +39,8 @@ export function mountWorkspace(
     readonly focusTerminal: () => void;
     // Its panel buttons show which sidebar panel is open.
     readonly toolbar?: HeaderToolbar | undefined;
+    readonly directories: DirectoryTracker;
+    readonly clipboard?: Pick<TerminalClipboard, "writeText"> | undefined;
   },
 ): () => void {
   const document = workspace.element.ownerDocument;
@@ -43,6 +51,7 @@ export function mountWorkspace(
     onChange(panelId) {
       context.toolbar?.setPressed("sessions", panelId === "sessions");
       context.toolbar?.setPressed("commands", panelId === "commands");
+      context.toolbar?.setPressed("files", panelId === "files");
     },
     panels: [
       {
@@ -79,6 +88,34 @@ export function mountWorkspace(
             },
           ]
         : []),
+      ...(workspace.files
+        ? [
+            {
+              id: "files",
+              label: "sidebar.files" as const,
+              create: () =>
+                createFilesPanel(document, {
+                  translator: context.translator,
+                  bridge: workspace.files!,
+                  directories: context.directories,
+                  focusedSessionId: () => context.tabs.focusedSessionId(),
+                  focusedDirectory: async () => {
+                    const id = context.tabs.focusedSessionId();
+                    return id === undefined || !workspace.sessionDirectory
+                      ? null
+                      : workspace.sessionDirectory(id);
+                  },
+                  notify: toaster.notify,
+                  copyText: (text) => void context.clipboard?.writeText(text),
+                  typeInTerminal: (text, submit) => {
+                    if (context.isBlocked()) return;
+                    context.tabs.injectSnippet(text, { submit });
+                    if (submit) context.focusTerminal();
+                  },
+                }),
+            },
+          ]
+        : []),
     ],
   });
   const removeToggle = workspace.sessions.onToggleSidebar(() => {
@@ -86,6 +123,9 @@ export function mountWorkspace(
   });
   const removeCommandsToggle = workspace.commands?.onToggleSidebar(() => {
     if (!context.isBlocked()) sidebar.toggle("commands");
+  });
+  const removeFilesToggle = workspace.files?.onToggle(() => {
+    if (!context.isBlocked()) sidebar.toggle("files");
   });
   const palette = workspace.palette
     ? createCommandPalette(document, {
@@ -130,6 +170,7 @@ export function mountWorkspace(
     removePaletteToggle?.();
     palette?.dispose();
     removeCommandsToggle?.();
+    removeFilesToggle?.();
     sidebar.dispose();
     toaster.dispose();
   };
@@ -172,6 +213,7 @@ export function windowTabsOptions(
   translator: Translator,
   broadcastIndicator: BroadcastIndicator,
   highlighting: HighlightingController | undefined,
+  directories: DirectoryTracker,
 ): Omit<TerminalTabsOptions, "createAdapter" | "mount" | "surfaceOptions"> {
   return {
     ...(highlighting
@@ -196,15 +238,18 @@ export function windowTabsOptions(
     ...(options.confirmBroadcast
       ? { confirmBroadcast: options.confirmBroadcast }
       : {}),
-    ...(options.reportWorkingDirectory
-      ? { onWorkingDirectory: options.reportWorkingDirectory }
-      : {}),
+    // The Files panel follows the focused pane's directory.
+    onWorkingDirectory(sessionId, uri) {
+      directories.report(sessionId, uri);
+      options.reportWorkingDirectory?.(sessionId, uri);
+    },
     ...(options.notifyTabsEmpty
       ? { notifyEmpty: options.notifyTabsEmpty }
       : {}),
-    ...(options.notifyTabSelection
-      ? { notifySelection: options.notifyTabSelection }
-      : {}),
+    notifySelection(sessionId, siblings) {
+      directories.focus(sessionId);
+      options.notifyTabSelection?.(sessionId, siblings);
+    },
     ...(options.onTitleRequest ? { notifyTitle: options.onTitleRequest } : {}),
     ...(options.onBell ? { notifyBell: options.onBell } : {}),
     syncTitle: (sessionId) => options.syncTabTitle?.(sessionId),
@@ -221,6 +266,7 @@ export function windowServices(
 ): {
   readonly translator: Translator;
   readonly toolbar: HeaderToolbar | undefined;
+  readonly directories: DirectoryTracker;
   readonly broadcastIndicator: BroadcastIndicator;
   readonly highlighting: HighlightingController | undefined;
 } {
@@ -231,11 +277,13 @@ export function windowServices(
           translator,
           ...options.toolbar,
           hasCommands: options.workspace?.commands !== undefined,
+          hasFiles: options.workspace?.files !== undefined,
         })
       : undefined;
   return {
     translator,
     toolbar,
+    directories: createDirectoryTracker(() => tabs().focusedSessionId()),
     broadcastIndicator: createBroadcastIndicator(document, {
       translator,
       stop: () => tabs().handleCommand({ action: "toggle-broadcast" }),

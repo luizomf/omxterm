@@ -1,5 +1,6 @@
 import { app, BrowserWindow, type IpcMain } from "electron";
 import { highlightIpc } from "../shared/highlight-ipc";
+import { fileBrowserIpc } from "../shared/file-browser";
 import { statSync } from "node:fs";
 import { parseSshTarget } from "../shared/saved-session-primitives";
 import { resolveApplicationDataDirectory } from "./application-data";
@@ -11,6 +12,9 @@ import { startSavedSessions } from "./saved-session-wiring";
 import type { IpcEvent } from "./terminal-ipc-types";
 import { createWorkspaceService } from "./workspace-service";
 import { startPreferences } from "./preferences-wiring";
+import { startFileBrowser } from "./file-browser-wiring";
+import { startRemoteFiles } from "./remote-files-wiring";
+import type { TerminalIpcRouter } from "./terminal-ipc-types";
 import type { PreferencesServiceOptions } from "./preferences-service";
 
 // Loads the Application Data documents (sessions, highlighting, commands),
@@ -26,6 +30,8 @@ export async function startApplicationDataServices(options: {
   readonly isQuitting: () => boolean;
   // The highlighting or restore checkbox changed.
   readonly onMenuStateChange: () => void;
+  // How each pane started, for remote browsing in the Files panel.
+  readonly sessionLaunch: TerminalIpcRouter["sessionLaunch"];
   // config.json access for the Preferences dialog.
   readonly configuration: Pick<
     PreferencesServiceOptions,
@@ -38,6 +44,7 @@ export async function startApplicationDataServices(options: {
     isQuitting,
     onMenuStateChange,
     configuration,
+    sessionLaunch,
     ...shared
   } = options;
   const savedSessions = await startSavedSessions({
@@ -45,8 +52,10 @@ export async function startApplicationDataServices(options: {
     ...(startupConnection === undefined ? {} : { startupConnection }),
   });
   const highlightSettings = await startHighlightSettings(shared);
+  startRemoteFiles({ ...shared, sessionLaunch, savedSessions });
   highlightSettings.subscribe(onMenuStateChange);
   const commandLibrary = await startCommandLibrary(shared);
+  startFileBrowser(shared);
   const backup = startSettingsBackup({
     ipcMain: options.ipcMain,
     isTrustedSender: options.isTrustedSender,
@@ -113,6 +122,13 @@ export async function startApplicationDataServices(options: {
     },
   });
 
+  const sendToFocused = (channel: string) => {
+    const window =
+      BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+    if (window && !window.webContents.isDestroyed())
+      window.webContents.send(channel);
+  };
+
   // Menu actions for these documents; a failed toggle restores the menu.
   const menuActions = (rebuildMenu: () => void) => ({
     toggleOutputHighlighting: () => {
@@ -123,13 +139,9 @@ export async function startApplicationDataServices(options: {
     },
     backUpSettings: () => backup.request("create"),
     restoreSettings: () => backup.request("restore"),
-    openHighlightRules: () => {
-      const window =
-        BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
-      if (window && !window.webContents.isDestroyed())
-        window.webContents.send(highlightIpc.openEditor);
-    },
+    openHighlightRules: () => sendToFocused(highlightIpc.openEditor),
     openPreferences: preferences.open,
+    toggleSelectedFiles: () => sendToFocused(fileBrowserIpc.toggle),
     toggleRestoreWorkspace: () => {
       void workspace
         .setRestore(!workspace.restoreEnabled())

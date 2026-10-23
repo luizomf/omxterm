@@ -31,6 +31,7 @@ import { isTerminalLaunchSpec } from "../shared/terminal-launch";
 import { createSessionsBridge } from "./sessions-bridge";
 import { createHighlightsBridge } from "./highlights-bridge";
 import { createPreferencesBridge } from "./preferences-bridge";
+import { createFilesBridge } from "./files-bridge";
 import { createCommandsBridge } from "./commands-bridge";
 import { createBackupBridge } from "./backup-bridge";
 import { isWorkspacePlan, isWorkspaceSnapshot } from "../shared/workspace";
@@ -101,6 +102,20 @@ const terminal: TerminalBridge = {
     const response: unknown = await ipcRenderer.invoke(terminalIpc.snippets);
     if (!isTerminalSnippetsResponse(response))
       throw new TypeError("Invalid Snippets response");
+    return response;
+  },
+  async sessionDirectory(sessionId) {
+    if (!isTerminalSessionId(sessionId))
+      throw new TypeError("Invalid terminal session");
+    const response: unknown = await ipcRenderer.invoke(
+      terminalIpc.sessionDirectory,
+      sessionId,
+    );
+    if (
+      response !== null &&
+      (typeof response !== "string" || response.length > 4_096)
+    )
+      throw new TypeError("Invalid working directory response");
     return response;
   },
   onCommandPalette(listener: () => void) {
@@ -421,6 +436,7 @@ contextBridge.exposeInMainWorld(
     sessions: Object.freeze(createSessionsBridge(ipcRenderer)),
     highlights: Object.freeze(createHighlightsBridge(ipcRenderer)),
     preferences: Object.freeze(createPreferencesBridge(ipcRenderer)),
+    files: Object.freeze(createFilesBridge(ipcRenderer)),
     commands: Object.freeze(createCommandsBridge(ipcRenderer)),
     backup: Object.freeze(createBackupBridge(ipcRenderer)),
   }),

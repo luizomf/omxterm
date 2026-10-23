@@ -20,7 +20,7 @@ the advertised behavior works), **missing** (nothing user-visible yet).
 | Smart output highlighting  | partial        | `cat` syntax colors, live input highlighting, per-rule editor and styles   |
 | Split panes and tab groups | partial        | named layouts, auto-join groups, cwd tab titles, move/detach tabs          |
 | Input broadcasting         | partial        | choosing target tabs/panes across the window                               |
-| Integrated file manager    | missing        | whole feature: local and SFTP browsing, transfers, remote editing          |
+| Integrated file manager    | partial        | drag-and-drop upload onto the terminal, rsync, transfer history            |
 | Command manager            | done           | pinned command toolbar, send to several terminals                          |
 | Optional AI assistant      | missing        | whole feature, opt-in, with providers and secret storage                   |
 | Deep customization         | partial        | custom scheme editor, cursor and scrolling options, header transparency    |
@@ -78,7 +78,11 @@ the advertised behavior works), **missing** (nothing user-visible yet).
 
 ### 2.5 Integrated file manager (README "Integrated file manager")
 
-All **missing**. AshyTerm offers:
+**Partial** since the Files panel landed: local browsing that follows the
+terminal, SFTP browsing for SSH panes, remote editing, downloads and uploads
+with progress are done (see `docs/spec.md`, Files panel). Still missing: drag
+and drop onto the terminal to upload, rsync, and a transfer history. AshyTerm
+offers:
 
 - a side panel that follows the shell's current directory (OSC 7), for local
   and remote (SFTP) file systems, with breadcrumbs, search, hidden files and a
@@ -150,7 +154,8 @@ Linux before the next phase starts.
 3. **Stored SSH passwords** — wire `credential-store.ts` into the session
    editor and the SSH launch path (passed through `SSH_ASKPASS`, never on the
    command line), plus auto-reconnect and host-key repair.
-4. **File manager** — local browsing panel that follows OSC 7, then SFTP
+4. **File manager** — done except drag-and-drop upload, rsync and transfer
+   history — local browsing panel that follows OSC 7, then SFTP
    browsing over the user's OpenSSH (ControlMaster reuse, existing host-key
    policy), transfers with progress and cancel, remote editing with change
    detection, drag-and-drop upload, and SFTP saved sessions.

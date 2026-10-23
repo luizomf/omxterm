@@ -93,14 +93,14 @@ Linux x86_64 under KDE Plasma (Wayland with XWayland), driven by `xdotool`.
 
 ## 4. Files and transfers
 
-| ID  | Feature                                                         | AshyTerm source                                                  | OMXTerm before       | Status                               |
-| --- | --------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------- | ------------------------------------ |
-| F1  | File manager panel following the terminal directory (OSC 7)     | `filemanager/manager.py`, `osc7_tracker.py`                      | none                 | planned (OSC 7 tracking implemented) |
-| F2  | Local browsing, breadcrumbs, search, context menu, hidden files | `fm_column_view.py`, `fm_context_menu.py`, `search.py`           | none                 | planned                              |
-| F3  | Remote SFTP browsing                                            | `filemanager/manager.py` (ssh/sftp commands)                     | none                 | planned                              |
-| F4  | Upload/download, progress, cancel, history, conflicts, rsync    | `transfers.py`, `transfer_manager.py`, `accelerated_download.py` | none                 | planned                              |
-| F5  | Remote editing with change detection and upload                 | `transfers.py:369-1029`                                          | none                 | planned                              |
-| F6  | Drag files onto SSH/SFTP tab to upload                          | `terminal_drag_drop.py`                                          | local path insertion | planned                              |
+| ID  | Feature                                                         | AshyTerm source                                                  | OMXTerm before       | Status                                                                                                                                                      |
+| --- | --------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F1  | File manager panel following the terminal directory (OSC 7)     | `filemanager/manager.py`, `osc7_tracker.py`                      | none                 | verified (L): follows OSC 7, else the pane's process directory (Linux); `renderer-files-panel`, `file-browser`; RA: `cd` followed live                      |
+| F2  | Local browsing, breadcrumbs, search, context menu, hidden files | `fm_column_view.py`, `fm_context_menu.py`, `search.py`           | none                 | verified (L): breadcrumbs, filter, hidden files, keyboard, context menu, trash, copy/move without replacing; RA on KDE                                      |
+| F3  | Remote SFTP browsing                                            | `filemanager/manager.py` (ssh/sftp commands)                     | none                 | verified (L): own SFTP v3 client over `ssh -s host sftp` (ControlMaster reuse, BatchMode); `sftp-client`, `remote-files`; RA against a local OpenSSH server |
+| F4  | Upload/download, progress, cancel, history, conflicts, rsync    | `transfers.py`, `transfer_manager.py`, `accelerated_download.py` | none                 | partial: download/upload with progress, cancel and no-overwrite (unit tests at 1 MB); no rsync, no transfer history                                         |
+| F5  | Remote editing with change detection and upload                 | `transfers.py:369-1029`                                          | none                 | implemented: private temporary copy, default app, upload on save; unit-tested transfer path, not exercised in RA                                            |
+| F6  | Drag files onto SSH/SFTP tab to upload                          | `terminal_drag_drop.py`                                          | local path insertion | planned                                                                                                                                                     |
 
 ## 5. Preferences, appearance, data
 

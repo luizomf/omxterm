@@ -78,6 +78,15 @@ export function terminalMainMenuTemplate(
       accelerator: keybinds.toggleCommands,
       click: actions.toggleSelectedCommands,
     },
+    ...(actions.toggleSelectedFiles
+      ? [
+          {
+            label: t("sidebar.files"),
+            accelerator: keybinds.toggleFiles,
+            click: actions.toggleSelectedFiles,
+          },
+        ]
+      : []),
     {
       label: t("menu.snippets"),
       accelerator: keybinds.toggleSnippets,

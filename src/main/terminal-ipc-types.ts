@@ -144,5 +144,10 @@ export interface TerminalIpcRouter {
   activeTerminalSurfaceFontConfigurations(): readonly TerminalSurfaceFontConfiguration[];
   // Whether an IPC event comes from the main frame of a registered window.
   isTrustedSender(event: IpcEvent): boolean;
+  // How a live pane of the sender's window was started, for the Files panel.
+  sessionLaunch(
+    event: IpcEvent,
+    sessionId: unknown,
+  ): TerminalSessionLaunch | undefined;
   dispose(): void;
 }

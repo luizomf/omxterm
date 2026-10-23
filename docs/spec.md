@@ -1250,7 +1250,7 @@ app-drawn title row; on macOS it overlays the native title inset beside the
 traffic lights. Hiding the title bar (`toggleTitleBar`) hides the toolbar too.
 
 - Before the title: **Sessions**, **Commands** (when the Command Manager is
-  available), **Find in Terminal**, then **Split Right**, **Split Down** and
+  available), **Files**, **Find in Terminal**, then **Split Right**, **Split Down** and
   **Broadcast Input to Panes**. After the title: **New Tab** and the **Main
   Menu**.
 - Each button sends only the name of a keybind action, which main validates
@@ -1268,6 +1268,52 @@ traffic lights. Hiding the title bar (`toggleTitleBar`) hides the toolbar too.
   Settings submenu
   (Back Up, Restore, Restore Windows at Startup, Reload Configuration),
   About and Quit. Accelerators shown are the configured keybinds.
+
+## Files panel
+
+**Files** in the header toolbar, **☰ → Files**, **View → Toggle Files**, or
+`toggleFiles` (`Cmd+Shift+L` on macOS, `Ctrl+Shift+L` on Linux and Windows)
+shows the Files panel in the sidebar, beside Sessions and Commands. It is
+AshyTerm's integrated file manager.
+
+- **Following the terminal.** With a local pane focused the panel shows that
+  pane's directory: the last OSC 7 report, else (Linux) the directory of the
+  pane's process, which main reads. It checks again when focus moves, when
+  OSC 7 arrives, and every 1.5 seconds while the panel is visible and
+  **Follow Terminal Folder** is on. With an SSH pane focused (a Saved SSH
+  Session or Quick Connect) it shows that host over SFTP, starting at the
+  remote home and returning to the last remote folder for that pane.
+- **Browsing.** Breadcrumb, Parent and Home buttons, Refresh, Show Hidden
+  Files, a filter, folders first. Keyboard: arrows, Shift and Ctrl/Cmd
+  selection, Enter opens, Backspace goes up, F2 renames, Delete deletes,
+  Ctrl/Cmd+A, C, X and V, the context-menu key or Shift+F10, and typing
+  starts the filter. A listing shows at most 5,000 entries and says so.
+- **Local items** open with the default application, can be shown in the
+  system file manager, created, renamed, copied and moved (never replacing an
+  existing item) and moved to the system **trash** after confirmation.
+- **Remote items** (SFTP): files open for **editing** — main downloads a
+  private temporary copy (mode 0700 folder), opens it in the default
+  application, and uploads each save over the remote file; copies are removed
+  when OMXTerm quits. Folders and files can be created, renamed, moved within
+  the host, **downloaded** to a folder chosen in a native dialog (never
+  replacing a local file: "name (1).ext"), **uploaded** from files chosen in a
+  native dialog (never replacing a remote file) and deleted **permanently**
+  after a confirmation that says so. Transfers show progress and can be
+  cancelled; a failed or cancelled transfer leaves no partial file.
+- **Terminal actions.** Open in Terminal and Change Terminal to This Folder
+  type `cd -- '<path>'` (PowerShell: `Set-Location -LiteralPath '<path>'`)
+  into the focused pane and press Enter; Insert Path types quoted paths
+  without Enter; Copy Path copies them.
+- **Boundaries.** Every operation runs in main with Node file APIs or the SFTP
+  protocol, never a shell. Paths must be absolute and names single path
+  components without control characters. Remote requests name a pane by
+  session id; main looks up how that pane of the sender's window started, so
+  the renderer can reach only hosts the user opened a session to. SFTP runs
+  `ssh -s <host> sftp` with the session's host, user, port, key, jump host
+  and options, plus `BatchMode=yes`, reusing the terminal's shared connection
+  (ControlMaster) when the session enables it — which is how password
+  sessions are browsed while connected, without OMXTerm handling the
+  password. Replies are bounded to 256 KiB per packet.
 
 ## Preferences
 

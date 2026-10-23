@@ -48,6 +48,7 @@ import type {
   SessionsBridge,
   BackupBridge,
   PreferencesBridge,
+  FilesBridge,
 } from "../shared/terminal-bridge";
 import {
   mountWorkspace,
@@ -101,7 +102,10 @@ export interface TerminalWindowPageOptions {
   readonly subscribeToTabTitles?: (
     listener: (sessionId: TerminalSessionId, title: string) => void,
   ) => () => void;
-  readonly notifyTabSelection?: (sessionId: TerminalSessionId) => void;
+  readonly notifyTabSelection?: (
+    sessionId: TerminalSessionId,
+    tabSessionIds?: readonly TerminalSessionId[],
+  ) => void;
   readonly syncTabTitle?: (sessionId: TerminalSessionId) => void;
   readonly notifyTabsEmpty?: (reason?: "rendering-failure") => void;
   readonly onTitleRequest?: (
@@ -133,6 +137,10 @@ export interface TerminalWindowPageOptions {
     readonly backup?: BackupBridge;
     readonly highlights?: HighlightsBridge;
     readonly preferences?: PreferencesBridge;
+    readonly files?: FilesBridge;
+    readonly sessionDirectory?: (
+      sessionId: TerminalSessionId,
+    ) => Promise<string | null>;
     readonly palette?: {
       readonly onToggle: (listener: () => void) => () => void;
       readonly runAction: (action: TerminalActionName) => void;
@@ -223,7 +231,7 @@ export function mountTerminalWindowPage(
       : {}),
   };
 
-  const { translator, toolbar, broadcastIndicator, highlighting } =
+  const { translator, toolbar, broadcastIndicator, highlighting, directories } =
     windowServices(page.document, options, () => tabs);
   const tabs: TerminalTabs = createTerminalTabs(
     { strip: elements.tabStrip, container: elements.tabsContainer },
@@ -233,6 +241,7 @@ export function mountTerminalWindowPage(
         translator,
         broadcastIndicator,
         highlighting,
+        directories,
       ),
       createAdapter: (launch) =>
         launch === undefined
@@ -403,6 +412,8 @@ export function mountTerminalWindowPage(
         isBlocked: previewActive,
         focusTerminal: onPageFocus,
         toolbar,
+        directories,
+        clipboard: options.clipboard,
       });
   });
 

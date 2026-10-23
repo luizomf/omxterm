@@ -1,4 +1,12 @@
 import type {
+  DirectoryListing,
+  FileBrowserHome,
+  FileOperationResult,
+  FileTransfer,
+  PaneLocation,
+  TransferEvent,
+} from "./file-browser";
+import type {
   CapturedKeyPress,
   PreferencesPatch,
   PreferencesSaveResult,
@@ -42,6 +50,71 @@ export interface CommandsBridge {
   onToggleSidebar(listener: () => void): () => void;
 }
 
+export interface FilesBridge {
+  home(): Promise<FileBrowserHome>;
+  list(directory: string): Promise<DirectoryListing>;
+  // A local directory for an OSC 7 file:// URI, or null.
+  resolve(uri: string): Promise<string | null>;
+  open(filePath: string): Promise<FileOperationResult>;
+  reveal(filePath: string): Promise<FileOperationResult>;
+  createFolder(parent: string, name: string): Promise<FileOperationResult>;
+  createFile(parent: string, name: string): Promise<FileOperationResult>;
+  rename(filePath: string, name: string): Promise<FileOperationResult>;
+  trash(paths: readonly string[]): Promise<FileOperationResult>;
+  transfer(
+    mode: FileTransfer,
+    sources: readonly string[],
+    destination: string,
+  ): Promise<FileOperationResult>;
+  onToggle(listener: () => void): () => void;
+  // Remote (SFTP) files of an SSH pane, named by its session id.
+  location(sessionId: TerminalSessionId): Promise<PaneLocation>;
+  remoteHome(sessionId: TerminalSessionId): Promise<string>;
+  remoteList(
+    sessionId: TerminalSessionId,
+    directory: string,
+  ): Promise<DirectoryListing>;
+  remoteCreateFolder(
+    sessionId: TerminalSessionId,
+    parent: string,
+    name: string,
+  ): Promise<FileOperationResult>;
+  remoteCreateFile(
+    sessionId: TerminalSessionId,
+    parent: string,
+    name: string,
+  ): Promise<FileOperationResult>;
+  remoteRename(
+    sessionId: TerminalSessionId,
+    filePath: string,
+    name: string,
+  ): Promise<FileOperationResult>;
+  remoteMove(
+    sessionId: TerminalSessionId,
+    paths: readonly string[],
+    directory: string,
+  ): Promise<FileOperationResult>;
+  remoteDelete(
+    sessionId: TerminalSessionId,
+    paths: readonly string[],
+  ): Promise<FileOperationResult>;
+  // These ask for a local folder or files in a native dialog.
+  remoteDownload(
+    sessionId: TerminalSessionId,
+    paths: readonly string[],
+  ): Promise<FileOperationResult>;
+  remoteUpload(
+    sessionId: TerminalSessionId,
+    directory: string,
+  ): Promise<FileOperationResult>;
+  remoteEdit(
+    sessionId: TerminalSessionId,
+    filePath: string,
+  ): Promise<FileOperationResult>;
+  cancelTransfer(id: string): Promise<void>;
+  onTransfer(listener: (event: TransferEvent) => void): () => void;
+}
+
 export interface PreferencesBridge {
   get(): Promise<PreferencesSnapshot>;
   save(patch: PreferencesPatch): Promise<PreferencesSaveResult>;
@@ -80,6 +153,8 @@ export interface TerminalBridge {
   configuration(): Promise<TerminalRendererConfiguration>;
   fontData(family?: string): Promise<TerminalFontData>;
   snippets(): Promise<TerminalSnippetsResponse>;
+  // A local pane's current directory (OSC 7, else the process), or null.
+  sessionDirectory(sessionId: TerminalSessionId): Promise<string | null>;
   onSnippetsToggle(listener: () => void): () => void;
   onCommandPalette(listener: () => void): () => void;
   // Runs an application action, as its keyboard shortcut would.
@@ -157,6 +232,7 @@ declare global {
       readonly sessions: SessionsBridge;
       readonly highlights: HighlightsBridge;
       readonly preferences: PreferencesBridge;
+      readonly files: FilesBridge;
       readonly commands: CommandsBridge;
       readonly backup: BackupBridge;
     };

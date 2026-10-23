@@ -107,6 +107,8 @@ void Promise.all([
         backup: window.omxterm.backup,
         highlights: window.omxterm.highlights,
         preferences: window.omxterm.preferences,
+        files: window.omxterm.files,
+        sessionDirectory: window.omxterm.terminal.sessionDirectory,
         palette: {
           onToggle: window.omxterm.terminal.onCommandPalette,
           runAction: window.omxterm.terminal.runAction,

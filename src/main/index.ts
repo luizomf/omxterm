@@ -161,6 +161,7 @@ app
           reloadConfiguration: () => configurationReloader.reload(),
           isQuitting: () => terminalApplication?.isQuitting() ?? false,
           onMenuStateChange: () => rebuildMenu(),
+          sessionLaunch: terminalIpcRouter.sessionLaunch,
           configuration: preferencesConfiguration(
             configurationLoadOptions,
             () => configurationReloader.current(),

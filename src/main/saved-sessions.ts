@@ -17,7 +17,12 @@ import {
   type ApplicationDocumentStore,
 } from "./application-data";
 import type { LocalTerminalSessionOptions } from "./local-terminal-session";
-import { expandHome, sshArguments, sshDisplayTarget } from "./ssh-command";
+import {
+  expandHome,
+  sftpSubsystemArguments,
+  sshArguments,
+  sshDisplayTarget,
+} from "./ssh-command";
 import { readSshConfigHosts, type SshConfigHost } from "./ssh-config-import";
 
 export type SessionLaunchBase = Omit<
@@ -43,6 +48,16 @@ export interface SavedSessionService {
     id: string | SessionDefinition,
     base: SessionLaunchBase,
   ): LocalTerminalSessionOptions;
+  // How the Files panel reaches an SSH session's files: the ssh executable
+  // and arguments for its SFTP subsystem, with a label for the panel.
+  // undefined for a local session or one that no longer exists.
+  sftpCommand(reference: string | SshSessionDefinition):
+    | {
+        readonly executable: string;
+        readonly arguments: readonly string[];
+        readonly label: string;
+      }
+    | undefined;
   subscribe(listener: (document: SavedSessionsDocument) => void): () => void;
   // Decodes a backup's document now (throwing if it is invalid) and returns
   // the commit that replaces the current one, run in mutation order.
@@ -288,6 +303,22 @@ export function createSavedSessionService(
           executable: options.sshExecutable(),
           arguments: command.arguments,
         },
+      };
+    },
+    sftpCommand(reference) {
+      const session =
+        typeof reference === "string" ? find(reference) : reference;
+      if (!session || session.kind !== "ssh") return undefined;
+      return {
+        executable: options.sshExecutable(),
+        arguments: sftpSubsystemArguments(session, {
+          platform: options.platform,
+          homeDirectory: options.homeDirectory,
+          ...(options.controlDirectory
+            ? { controlDirectory: options.controlDirectory }
+            : {}),
+        }),
+        label: sshDisplayTarget(session),
       };
     },
     prepareRestore(bytes) {

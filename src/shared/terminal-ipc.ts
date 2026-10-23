@@ -36,6 +36,7 @@ export const terminalIpc = {
   tabTitle: "terminal:tab-title",
   confirmBroadcast: "terminal:confirm-broadcast",
   workingDirectory: "terminal:working-directory",
+  sessionDirectory: "terminal:session-directory",
   workspace: "terminal:workspace",
   workspacePlan: "terminal:workspace-plan",
   commandPalette: "terminal:command-palette",

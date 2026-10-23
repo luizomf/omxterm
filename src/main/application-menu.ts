@@ -47,6 +47,7 @@ export interface TerminalApplicationMenuActions {
   readonly toggleRestoreWorkspace?: () => void;
   readonly openHighlightRules?: () => void;
   readonly openPreferences?: () => void;
+  readonly toggleSelectedFiles?: () => void;
 }
 
 export interface TerminalApplicationMenuState {
@@ -189,6 +190,15 @@ export function terminalApplicationMenuTemplate(
           accelerator: keybinds.toggleCommands,
           click: actions.toggleSelectedCommands,
         },
+        ...(actions.toggleSelectedFiles
+          ? [
+              {
+                label: "Toggle Files",
+                accelerator: keybinds.toggleFiles,
+                click: actions.toggleSelectedFiles,
+              },
+            ]
+          : []),
         {
           label: "Toggle Snippets",
           accelerator: keybinds.toggleSnippets,
@@ -394,6 +404,7 @@ export function terminalActionInvocations(
     commandPalette: actions.toggleSelectedCommandPalette,
     find: actions.findInSelectedWindow,
     preferences: actions.openPreferences ?? (() => {}),
+    toggleFiles: actions.toggleSelectedFiles ?? (() => {}),
   });
 }
 
