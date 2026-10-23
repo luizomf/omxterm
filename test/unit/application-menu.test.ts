@@ -198,7 +198,7 @@ describe("native application menu", () => {
     },
   );
 
-  it("offers a menu-only local image picker without adding shortcut vocabulary", () => {
+  it("offers a local image picker with its own shortcut", () => {
     const actions = menuActions();
     const item = flattenMenuItems(
       terminalApplicationMenuTemplate(
@@ -210,14 +210,15 @@ describe("native application menu", () => {
 
     expect(item).toEqual({
       label: "Open Local Image…",
+      accelerator: DEFAULT_TERMINAL_KEYBINDS.openLocalImage,
       click: actions.openLocalImage,
     });
     (item?.click as () => void)();
     expect(actions.openLocalImage).toHaveBeenCalledOnce();
-    expect(TERMINAL_ACTION_NAMES).not.toContain("openLocalImage");
+    expect(TERMINAL_ACTION_NAMES).toContain("openLocalImage");
   });
 
-  it("offers a menu-only Developer Tools toggle for the selected Terminal Window", () => {
+  it("offers a Developer Tools toggle for the selected Terminal Window", () => {
     const actions = menuActions();
     const item = flattenMenuItems(
       terminalApplicationMenuTemplate(
@@ -229,6 +230,7 @@ describe("native application menu", () => {
 
     expect(item).toEqual({
       label: "Toggle Developer Tools",
+      accelerator: DEFAULT_TERMINAL_KEYBINDS.toggleDevTools,
       click: actions.toggleSelectedDevTools,
     });
     (item?.click as () => void)();

@@ -43,6 +43,19 @@ export function createTabStrip<Tab>(
   const dragging = installTabDragging<Tab>(strip, (tab, clientX) => {
     if (!disposed) options.onReorder(tab, clientX);
   });
+  // Many tabs scroll sideways; a vertical wheel scrolls the strip too.
+  const onWheel = (event: WheelEvent) => {
+    if (event.ctrlKey || event.metaKey) return;
+    if (strip.scrollWidth <= strip.clientWidth) return;
+    const delta =
+      Math.abs(event.deltaX) > Math.abs(event.deltaY)
+        ? event.deltaX
+        : event.deltaY;
+    if (delta === 0) return;
+    event.preventDefault();
+    strip.scrollLeft += delta;
+  };
+  strip.addEventListener("wheel", onWheel, { passive: false });
   return {
     render(tabs, selectedIndex, visible) {
       strip.hidden = !visible;
@@ -90,9 +103,13 @@ export function createTabStrip<Tab>(
           return chip ? [chip, button] : [button];
         }),
       );
+      strip
+        .querySelector('[aria-selected="true"]')
+        ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
     },
     dispose() {
       disposed = true;
+      strip.removeEventListener("wheel", onWheel);
       dragging.dispose();
     },
   };

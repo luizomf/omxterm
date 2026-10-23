@@ -128,6 +128,8 @@ describe("Linux system package launchers", () => {
     expect(launcher).toMatch(
       /^exec \/opt\/OMXTerm\/omxterm --no-sandbox "\$@"$/mu,
     );
+    // An inherited ELECTRON_RUN_AS_NODE would start Electron as Node.js.
+    expect(launcher).toMatch(/^unset ELECTRON_RUN_AS_NODE$/mu);
     // Executable in the checkout, so fpm installs it as 0755.
     const { mode } = await stat(
       path.join(repositoryRoot, "packaging/linux/omxterm"),

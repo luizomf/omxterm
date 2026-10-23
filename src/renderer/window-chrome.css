@@ -91,3 +91,145 @@ body.window-preview-active .terminal-surface::before,
 body.window-preview-active .window-title-bar {
   app-region: no-drag;
 }
+
+/* Header toolbar: panel toggles and terminal actions before the title, new
+   tab and the main menu after it. */
+.window-title-bar.with-toolbar {
+  gap: 6px;
+  padding-left: 6px;
+}
+
+.window-title-bar.with-toolbar .window-title {
+  flex: 1 1 auto;
+  text-align: center;
+  opacity: 0.85;
+}
+
+.window-toolbar-overlay {
+  position: fixed;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--native-title-inset);
+  /* Space for the macOS traffic lights. */
+  padding: 0 8px 0 78px;
+  color: var(--terminal-foreground);
+  pointer-events: none;
+}
+
+.window-toolbar-overlay[hidden] {
+  display: none;
+}
+
+.header-toolbar-group {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+  pointer-events: auto;
+  app-region: no-drag;
+}
+
+.window-title-bar .header-toolbar-button,
+.header-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-width: 28px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.header-toolbar-button svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.window-title-bar .header-toolbar-button:hover,
+.header-toolbar-button:hover {
+  opacity: 1;
+  background: color-mix(
+    in srgb,
+    transparent,
+    var(--terminal-foreground) calc(12% * var(--terminal-background-opacity, 1))
+  );
+}
+
+.header-toolbar-button[aria-pressed="true"] {
+  opacity: 1;
+  background: color-mix(
+    in srgb,
+    transparent,
+    var(--terminal-foreground) calc(18% * var(--terminal-background-opacity, 1))
+  );
+  box-shadow: inset 0 -2px var(--omx-accent, #4f8ff7);
+}
+
+.header-toolbar-button:focus-visible {
+  outline: 2px solid var(--omx-accent, #4f8ff7);
+  outline-offset: -2px;
+}
+
+.header-toolbar-separator {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: currentcolor;
+  opacity: 0.25;
+}
+
+/* Rounded corners: the window is transparent, so clipping the page rounds
+   it. clip-path also clips fixed-position layers (canvases, overlays), which
+   overflow would not. Maximized and full-screen windows keep square corners. */
+body {
+  clip-path: inset(0 round var(--window-radius, 0px));
+}
+
+body.window-filled {
+  clip-path: none;
+}
+
+/* Auto-hiding title bar: it collapses to nothing and opens in place, pushing
+   the tab strip and the terminal down rather than covering them. */
+:root[data-title-bar-autohide] .window-title-bar {
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+}
+
+/* Drag regions ignore height animations: a closed bar keeps no drag area,
+   or the top edge would never receive the pointer that opens it. */
+:root[data-title-bar-autohide] .window-title-bar:not(.revealed),
+:root[data-title-bar-autohide] .window-title-bar:not(.revealed) * {
+  app-region: no-drag;
+}
+
+:root[data-title-bar-autohide] .window-title-bar.revealed {
+  height: 34px;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-title-bar-autohide] .window-title-bar {
+    transition:
+      height 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      opacity 160ms ease-out;
+  }
+}

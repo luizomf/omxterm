@@ -148,7 +148,7 @@ describe("terminal IPC controller", () => {
     expect(secondSession.write).toHaveBeenCalledWith("second window input");
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();
-    expect(ipc.handlers.size).toBe(11);
+    expect(ipc.handlers.size).toBe(13);
     expect(ipc.listeners.size).toBe(15);
   });
 

@@ -37,6 +37,8 @@ export function createTabsHarness(
     initialLaunch?: PaneLaunch;
     initialWorkspace?: TerminalTabsOptions["initialWorkspace"];
     onWorkspaceChange?: TerminalTabsOptions["onWorkspaceChange"];
+    paneBusy?: TerminalTabsOptions["paneBusy"];
+    detachTab?: TerminalTabsOptions["detachTab"];
   } = {},
 ) {
   document.body.innerHTML = "";
@@ -109,6 +111,8 @@ export function createTabsHarness(
       ...(options.initialWorkspace
         ? { initialWorkspace: options.initialWorkspace }
         : {}),
+      ...(options.paneBusy ? { paneBusy: options.paneBusy } : {}),
+      ...(options.detachTab ? { detachTab: options.detachTab } : {}),
       ...(options.onWorkspaceChange
         ? { onWorkspaceChange: options.onWorkspaceChange }
         : {}),

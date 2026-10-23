@@ -58,7 +58,7 @@ export function validateWorkspaceDocument(value: unknown): WorkspaceDocument {
 
 export type WorkspaceWindowOptions = Pick<
   TerminalIpcControllerOptions,
-  "onWorkspace" | "workspacePlan" | "resolveRestoredDirectory"
+  "onWorkspace" | "workspacePlan" | "resolveRestoredDirectory" | "onDetachTab"
 >;
 
 export interface WorkspaceService {
@@ -74,6 +74,8 @@ export interface WorkspaceService {
   ): WorkspaceWindowOptions;
   // Writes the final state while the application exits.
   saveOnExit(): void;
+  // How Detach Tab opens the window that restores the tab.
+  setWindowOpener(open: () => void): void;
 }
 
 export function createWorkspaceService(options: {
@@ -104,6 +106,7 @@ export function createWorkspaceService(options: {
   const kept = new Set<number>();
   // Restore tokens stay valid for the process, so Reconnect reuses them.
   const directories = new Map<string, string>();
+  let openWindow: (() => void) | undefined;
 
   const restoredPane = (pane: PersistedPane): RestoredPane => {
     if (pane.kind === "saved-session") {
@@ -170,7 +173,16 @@ export function createWorkspaceService(options: {
           return current;
         },
         resolveRestoredDirectory: (token) => directories.get(token),
+        // The next window to open takes the detached tab's plan.
+        onDetachTab(window) {
+          if (!openWindow) return;
+          queue.push(window);
+          openWindow();
+        },
       };
+    },
+    setWindowOpener(open) {
+      openWindow = open;
     },
     saveOnExit() {
       const next: WorkspaceDocument = {

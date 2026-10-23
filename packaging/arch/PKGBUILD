@@ -10,11 +10,11 @@
 # "0.1.0").
 
 pkgname=omxterm
-pkgver=0.21.1dev.0
+pkgver=0.22.0
 pkgrel=1
-pkgdesc='Open-source personal desktop terminal'
+pkgdesc='Open-source terminal with split panes, SSH sessions, an SFTP file manager, file hover previews, output highlighting, a command manager and an optional AI assistant'
 arch=('x86_64' 'aarch64')
-url='https://github.com/luizomf/omxterm'
+url='https://github.com/ruscher/omxterm'
 license=('MIT')
 # Shared libraries of the packaged Electron runtime and node-pty module, plus
 # fontconfig (fc-match) and xdg-utils (external links).
@@ -24,7 +24,12 @@ depends=(
   'libxcb' 'libxcomposite' 'libxdamage' 'libxext' 'libxfixes' 'libxkbcommon'
   'libxrandr' 'mesa' 'nspr' 'nss' 'pango' 'systemd-libs' 'xdg-utils' 'bash'
 )
-optdepends=('openssh: SSH sessions')
+optdepends=(
+  'openssh: SSH sessions, Quick Connect and remote files over SFTP'
+  'ollama: local models for the AI assistant'
+  'poppler: first-page previews, page counts and titles of PDF files'
+  'xorg-xrandr: new windows open on the active monitor under KDE Plasma Wayland'
+)
 # node-pty's own node-gyp install script is skipped (see build()), so neither
 # python nor make is needed: the project's postinstall compiles pty.node with
 # the C++ compiler and pinned Node-API headers, without network access.
@@ -93,6 +98,9 @@ package() {
 #!/bin/sh
 # OMXTerm disables the Chromium sandbox on Linux (ADR 0024). Chromium decides
 # during bootstrap, before application code runs, so the flag comes first.
+# A parent Electron application (an editor's terminal, for example) may export
+# ELECTRON_RUN_AS_NODE, which would start the binary as plain Node.js.
+unset ELECTRON_RUN_AS_NODE
 exec /usr/lib/omxterm/omxterm --no-sandbox "$@"
 EOF
 
@@ -100,12 +108,13 @@ EOF
 [Desktop Entry]
 Name=OMXTerm
 Comment=Open-source personal desktop terminal
-Exec=/usr/lib/omxterm/omxterm --no-sandbox %U
+Exec=/usr/bin/omxterm %U
 Terminal=false
 Type=Application
 Icon=omxterm
 StartupWMClass=omxterm
-Categories=Utility;TerminalEmulator;
+Categories=System;TerminalEmulator;
+Keywords=terminal;shell;ssh;sftp;console;command;prompt;
 EOF
 
   # Theme icons at every size, so menus and panels never scale one bitmap.
@@ -122,4 +131,6 @@ EOF
     "${_licenses}/LICENSE.electron.txt"
   install -Dm644 "${_unpacked}/LICENSES.chromium.html" \
     "${_licenses}/LICENSES.chromium.html"
+
+  install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
 }

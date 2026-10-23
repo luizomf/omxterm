@@ -272,7 +272,13 @@ export async function createTab(
     removed: false,
   };
   tab.container.className = "terminal-tab";
-  const pane = createPane(tab, ctx.document, ctx.options.createAdapter, launch);
+  const pane = createPane(
+    tab,
+    ctx.document,
+    ctx.options.createAdapter,
+    launch,
+    ctx.options.surfaceLabel,
+  );
   tab.layout = leaf(pane);
   tab.focused = pane;
   ctx.elements.container.append(tab.container);
@@ -313,6 +319,7 @@ export async function restoreTabs(
         ctx.document,
         ctx.options.createAdapter,
         restoredLaunch(pane),
+        ctx.options.surfaceLabel,
       ),
     );
     tab.layout = deserializeLayout(shape.layout, (index) => panes[index]!);
@@ -383,6 +390,7 @@ export function split(
     ctx.document,
     ctx.options.createAdapter,
     paneLaunch,
+    ctx.options.surfaceLabel,
   );
   tab.layout = splitPane(
     tab.layout,

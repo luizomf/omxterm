@@ -103,7 +103,7 @@ describe("Snippets Sidebar", () => {
     });
     await sidebar.toggle();
 
-    root.querySelectorAll("button")[1]!.click();
+    root.querySelectorAll<HTMLButtonElement>("li button")[1]!.click();
 
     expect(inject).toHaveBeenCalledExactlyOnceWith(twoSnippets.snippets[1]);
     expect(focusTerminal).toHaveBeenCalledOnce();
@@ -146,5 +146,30 @@ describe("Snippets Sidebar", () => {
     expect(root.childElementCount).toBe(0);
     await sidebar.toggle();
     expect(root.hidden).toBe(true);
+  });
+
+  it("closes from the header button and returns focus to the terminal", async () => {
+    const root = createRoot();
+    const focusTerminal = vi.fn();
+    const sidebar = createSnippetsSidebar(root, {
+      loadSnippets: vi.fn(async () => twoSnippets),
+      inject: vi.fn(),
+      focusTerminal,
+      labels: {
+        title: "Snippets",
+        close: "Fechar Barra Lateral",
+        search: "Buscar snippets",
+        empty: "Nenhum",
+        noMatch: "Nada",
+      },
+    });
+    await sidebar.toggle();
+    const close = root.querySelector<HTMLButtonElement>(
+      '.snippets-header [aria-label="Fechar Barra Lateral"]',
+    )!;
+    expect(root.querySelector("h2")?.textContent).toBe("Snippets");
+    close.click();
+    expect(sidebar.isOpen()).toBe(false);
+    expect(focusTerminal).toHaveBeenCalledOnce();
   });
 });

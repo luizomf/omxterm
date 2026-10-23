@@ -1,10 +1,15 @@
 import type { App } from "electron";
 
 export const APPLICATION_AUTHORS = [
-  "Luiz Otávio Miranda",
+  "Luiz Otávio Miranda <luizomf@gmail.com>",
   "Rafael Ruscher <rruscher@gmail.com>",
 ] as const;
-export const APPLICATION_WEBSITE = "https://github.com/ruscher/omxterm";
+export const APPLICATION_WEBSITE = "https://github.com/luizomf/omxterm";
+// The reversed C of copyleft (U+1F12F). A display text only: the license is
+// still MIT (see LICENSE).
+export const APPLICATION_COPYLEFT = "Copyleft 🄯 2026";
+export const APPLICATION_ISSUES = "https://github.com/luizomf/omxterm/issues";
+export const MIT_LICENSE_URL = "https://opensource.org/license/mit";
 
 export function configureApplicationAbout(
   app: Pick<App, "getVersion" | "setAboutPanelOptions">,
@@ -18,7 +23,7 @@ export function configureApplicationAbout(
   app.setAboutPanelOptions({
     applicationName: "OMXTerm",
     applicationVersion: app.getVersion(),
-    copyright: "Copyright © 2026 Luiz Otávio Miranda",
+    copyright: APPLICATION_COPYLEFT,
     iconPath,
     ...(platform === "linux"
       ? { authors: [...APPLICATION_AUTHORS], website: APPLICATION_WEBSITE }

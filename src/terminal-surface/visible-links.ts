@@ -89,3 +89,56 @@ function referenceAtOffset(
   }
   return undefined;
 }
+
+const MAX_FILE_TOKEN_LENGTH = 4096;
+
+// The inside of the quoted name ('My File.pdf') around an offset.
+function quotedSpanAt(
+  text: string,
+  offset: number,
+): { start: number; end: number } | undefined {
+  for (const match of text.matchAll(/(['"])((?:(?!\1).)+)\1/gu)) {
+    const from = match.index;
+    const to = from + match[0].length;
+    if (from > offset) return undefined;
+    if (offset < to) return { start: from + 1, end: to - 1 };
+  }
+  return undefined;
+}
+
+// The run of non-blank text around an offset, without stray quotes, an
+// `ls -F` type marker or trailing punctuation ("file.txt:", "a.png,").
+function bareSpanAt(text: string, offset: number) {
+  let start = offset;
+  let end = offset + 1;
+  while (start > 0 && !/\s/u.test(text[start - 1]!)) start--;
+  while (end < text.length && !/\s/u.test(text[end]!)) end++;
+  if (/['"]/u.test(text[start]!)) start++;
+  if (end - start > 1 && /['"]/u.test(text[end - 1]!)) end--;
+  if (end - start > 1 && /[*@=|/]/u.test(text[end - 1]!)) end--;
+  while (end - start > 1 && /[:,;)\]]/u.test(text[end - 1]!)) end--;
+  return { start, end };
+}
+
+const isFileToken = (token: string) =>
+  token.length > 0 &&
+  token.length <= MAX_FILE_TOKEN_LENGTH &&
+  token !== "." &&
+  token !== ".." &&
+  !/[\p{Cc}\p{Cf}]/u.test(token) &&
+  !/^[a-z][a-z0-9+.-]*:\/\//iu.test(token);
+
+// The file name around an offset, as `ls` and most tools print it: a quoted
+// name, else the run of non-blank text. This is a lexical guess; the caller
+// checks that the file exists.
+export function fileTokenAtOffset(
+  text: string,
+  offset: number,
+): VisibleLinkMatch | undefined {
+  if (!Number.isInteger(offset) || offset < 0 || offset >= text.length)
+    return undefined;
+  if (/\s/u.test(text[offset]!)) return undefined;
+  const { start, end } = quotedSpanAt(text, offset) ?? bareSpanAt(text, offset);
+  const token = text.slice(start, end);
+  return isFileToken(token) ? { url: token, start, end } : undefined;
+}

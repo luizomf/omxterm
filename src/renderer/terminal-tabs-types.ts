@@ -50,6 +50,8 @@ export interface TerminalTabsOptions {
   // The window's layout, after changes settle, for workspace restore.
   readonly onWorkspaceChange?: (snapshot: WorkspaceSnapshot) => void;
   readonly dividerLabel?: string;
+  // The accessible name of each terminal area.
+  readonly surfaceLabel?: string;
   // Labels for the tab and group menus; English when absent.
   readonly translator?: Translator;
   readonly endedBanner?: EndedBannerStrings;
@@ -75,6 +77,10 @@ export interface TerminalTabsOptions {
   readonly onBroadcastChange?: (targetCount: number) => void;
   // One output highlighter per pane; undefined leaves output untouched.
   readonly createHighlighter?: () => OutputHighlighter;
+  // Whether a program runs in any of these sessions (closing asks first).
+  readonly paneBusy?: (sessionIds: readonly string[]) => Promise<boolean>;
+  // Reopens one tab in a new window (Detach Tab).
+  readonly detachTab?: (snapshot: WorkspaceSnapshot) => Promise<boolean>;
 }
 
 export interface TerminalTabs {
@@ -89,8 +95,40 @@ export interface TerminalTabs {
   toggleTabBar(): void;
   focusSelected(): void;
   focusedSessionId(): TerminalSessionId | undefined;
+  // The focused pane's selected text, or "".
+  focusedSelection(): string;
+  // Raw input to the focused pane, as if typed (control keys included).
+  sendKeys(keys: string): void;
+  // The focused pane's whole buffer as text, for Save Output to File.
+  focusedOutput(): string;
+  // Every tab's label in order, for the Open Tabs list.
+  tabList(): { readonly label: string; readonly selected: boolean }[];
+  selectTab(index: number): void;
+  // Every live pane of every tab, for running a command in several.
+  paneTargets(): PaneTarget[];
+  // The file name printed under a window point in the selected tab.
+  fileAtPoint(
+    clientX: number,
+    clientY: number,
+  ): { readonly sessionId: TerminalSessionId; readonly token: string } | null;
   openLaunch(launch: PaneLaunch, placement: TerminalLaunchPlacement): void;
   dispose(): void;
+}
+
+export interface PaneTarget {
+  readonly tabLabel: string;
+  readonly paneLabel: string;
+  // 1-based positions, and how many panes the tab has.
+  readonly tabNumber: number;
+  readonly paneNumber: number;
+  readonly paneCount: number;
+  readonly sessionId?: TerminalSessionId;
+  // Set by the caller when a program (an editor, a pager) runs in the pane.
+  readonly busy?: boolean;
+  // The focused pane of the selected tab.
+  readonly current: boolean;
+  // Types and submits into this pane; false once it has closed.
+  run(command: string): boolean;
 }
 
 export type PendingClose =

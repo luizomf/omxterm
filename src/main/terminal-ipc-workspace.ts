@@ -48,6 +48,7 @@ export function createWorkspaceRequests(
   options: {
     readonly onWorkspace?: (window: PersistedWorkspaceWindow) => void;
     readonly workspacePlan?: () => WorkspacePlan | null;
+    readonly onDetachTab?: (window: PersistedWorkspaceWindow) => void;
   },
   reject: RejectBoundary,
   directoryOf: (sessionId: TerminalSessionId) => string | undefined,
@@ -71,6 +72,20 @@ export function createWorkspaceRequests(
         throw new TypeError("Invalid workspace plan request");
       }
       return options.workspacePlan?.() ?? null;
+    },
+    // Detach Tab: the renderer sends that tab alone; its shells reopen in
+    // the directories they were in, connections reconnect.
+    detach(payload?: unknown): boolean {
+      if (
+        !isWorkspaceSnapshot(payload) ||
+        payload.tabs.length !== 1 ||
+        !options.onDetachTab
+      ) {
+        reject("ipc", "invalid-payload");
+        return false;
+      }
+      options.onDetachTab(persistWindow(payload, directoryOf));
+      return true;
     },
     // Runs before the window's sessions close, so shells that changed
     // directory without a layout change are saved where they are.

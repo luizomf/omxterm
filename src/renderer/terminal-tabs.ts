@@ -1,6 +1,7 @@
 import { DEFAULT_TERMINAL_FONT_SIZE } from "../shared/user-configuration";
 import { layoutPanes } from "./pane-layout";
 import { createTabStrip, moveTabToHorizontalDrop } from "./tab-strip";
+import { installWheelZoom } from "./wheel-zoom";
 import { closePendingPane, type TerminalTab } from "./terminal-tab-model";
 import { handleTabCommand } from "./terminal-tabs-commands";
 import { createTab, restoreTabs, split } from "./terminal-pane-lifecycle";
@@ -25,6 +26,7 @@ export { TERMINAL_TAB_DRAG_DATA_TYPE } from "./tab-strip";
 export type { PaneLaunch } from "./terminal-tab-model";
 export type {
   MountTerminalSurface,
+  PaneTarget,
   TerminalLaunchPlacement,
   TerminalTabs,
   TerminalTabsElements,
@@ -95,7 +97,7 @@ export function createTerminalTabs(
     : createTab(ctx, options.initialLaunch);
   const focusedSurface = () => selectedTab(ctx)?.focused.surface;
 
-  return {
+  const api: TerminalTabs = {
     ready,
     setSessionTitle(sessionId, title) {
       if (ctx.disposed) return;
@@ -158,6 +160,66 @@ export function createTerminalTabs(
     focusedSessionId() {
       return selectedTab(ctx)?.focused.adapter.sessionId();
     },
+    focusedOutput() {
+      return focusedSurface()?.outputText?.() ?? "";
+    },
+    tabList() {
+      return ctx.tabs.map((tab, index) => ({
+        label: tab.title ?? (tab.focused.label || String(index + 1)),
+        selected: index === ctx.selectedIndex,
+      }));
+    },
+    fileAtPoint(clientX, clientY) {
+      const tab = selectedTab(ctx);
+      if (!tab) return null;
+      const pane = layoutPanes(tab.layout).find((candidate) => {
+        const bounds = candidate.container.getBoundingClientRect();
+        return (
+          clientX >= bounds.left &&
+          clientX < bounds.right &&
+          clientY >= bounds.top &&
+          clientY < bounds.bottom
+        );
+      });
+      const sessionId = pane?.adapter.sessionId();
+      const token = pane?.surface?.fileTokenAt?.(clientX, clientY);
+      return sessionId && token ? { sessionId, token } : null;
+    },
+    paneTargets() {
+      return ctx.tabs.flatMap((tab, index) => {
+        const panes = layoutPanes(tab.layout).filter(
+          (pane) => pane.surface && !pane.ended && !pane.removed,
+        );
+        return panes.map((pane, paneIndex) => ({
+          tabLabel: tab.title ?? (tab.focused.label || String(index + 1)),
+          paneLabel: pane.label,
+          tabNumber: index + 1,
+          paneNumber: paneIndex + 1,
+          paneCount: panes.length,
+          ...(pane.adapter.sessionId()
+            ? { sessionId: pane.adapter.sessionId()! }
+            : {}),
+          current: index === ctx.selectedIndex && pane === tab.focused,
+          run(command: string) {
+            if (pane.removed || pane.ended || !pane.surface) return false;
+            pane.highlighter?.injected(command, true);
+            void pane.surface.inject(command, { submit: true });
+            return true;
+          },
+        }));
+      });
+    },
+    selectTab(index) {
+      if (index < 0 || index >= ctx.tabs.length) return;
+      select(ctx, index);
+      focusedSurface()?.focus();
+    },
+    sendKeys(keys) {
+      selectedTab(ctx)?.focused.adapter.write(keys);
+    },
+    focusedSelection() {
+      return focusedSurface()?.selectionText?.() ?? "";
+    },
     openLaunch(launch, placement) {
       if (ctx.disposed || ctx.closing) return;
       if (placement === "tab") void createTab(ctx, launch).catch(() => {});
@@ -165,6 +227,7 @@ export function createTerminalTabs(
     },
     dispose() {
       if (ctx.disposed) return;
+      removeWheelZoom();
       ctx.disposed = true;
       ctx.pendingClose = undefined;
       ctx.broadcastTab = undefined;
@@ -181,4 +244,8 @@ export function createTerminalTabs(
       ctx.tabs.length = 0;
     },
   };
+  const removeWheelZoom = installWheelZoom(elements.container, (command) =>
+    api.zoom(command),
+  );
+  return api;
 }

@@ -13,6 +13,7 @@ import {
   MAX_TERMINAL_LINE_HEIGHT,
   MAX_TERMINAL_PADDING,
   MAX_SCROLLBACK_LINES,
+  MAX_WINDOW_CORNER_RADIUS,
   MAX_TERMINAL_FONT_SIZE,
   MIN_TERMINAL_LINE_HEIGHT,
   MIN_TERMINAL_PADDING,
@@ -32,6 +33,16 @@ import {
   type TerminalKeybinds,
 } from "../shared/terminal-keybinds";
 import { loadTerminalTheme, TerminalThemeError } from "./terminal-theme";
+import {
+  fail,
+  integerInRange,
+  numberInRange,
+  optionalBoolean,
+  optionalEnum,
+  optionalObject,
+  rejectUnknownKeys,
+  requireObject,
+} from "./user-configuration-values";
 import {
   UserConfigurationError,
   userConfigurationDiagnostic,
@@ -53,6 +64,7 @@ export const DEFAULT_USER_CONFIGURATION: UserConfiguration = Object.freeze({
   fontLineHeight: DEFAULT_TERMINAL_LINE_HEIGHT,
   fontLigatures: DEFAULT_TERMINAL_FONT_LIGATURES,
   terminalPadding: DEFAULT_TERMINAL_PADDING,
+  filePreview: true,
   scrollbackLines: DEFAULT_SCROLLBACK_LINES,
   optionKeyMode: "none",
   alwaysOnTop: false,
@@ -60,6 +72,8 @@ export const DEFAULT_USER_CONFIGURATION: UserConfiguration = Object.freeze({
   transparency: 0,
   showTitleBar: true,
   showTabBar: true,
+  cornerRadius: 0,
+  autoHideTitleBar: false,
   terminalTheme: DEFAULT_TERMINAL_THEME,
   keybinds: DEFAULT_TERMINAL_KEYBINDS,
 });
@@ -380,7 +394,10 @@ export function validateUserConfiguration(
       "ligatures",
     ]);
   if (terminal)
-    rejectUnknownKeys(terminal, configurationPath, "terminal", ["padding"]);
+    rejectUnknownKeys(terminal, configurationPath, "terminal", [
+      "padding",
+      "filePreview",
+    ]);
   if (padding)
     rejectUnknownKeys(padding, configurationPath, "terminal.padding", [
       "top",
@@ -399,6 +416,8 @@ export function validateUserConfiguration(
       "transparency",
       "showTitleBar",
       "showTabBar",
+      "cornerRadius",
+      "autoHideTitleBar",
     ]);
   if (theme) rejectUnknownKeys(theme, configurationPath, "theme", ["path"]);
   if (keybinds)
@@ -547,6 +566,12 @@ export function validateUserConfiguration(
     fontLineHeight,
     fontLigatures,
     terminalPadding,
+    filePreview: optionalBoolean(
+      terminal?.filePreview,
+      configurationPath,
+      "terminal.filePreview",
+      true,
+    ),
     scrollbackLines,
     optionKeyMode,
     ...windowPreferences(window, configurationPath),
@@ -579,6 +604,15 @@ function windowPreferences(
     ),
     showTitleBar: read("showTitleBar", true),
     showTabBar: read("showTabBar", true),
+    cornerRadius: integerInRange(
+      window?.cornerRadius,
+      configurationPath,
+      "window.cornerRadius",
+      0,
+      MAX_WINDOW_CORNER_RADIUS,
+      0,
+    ),
+    autoHideTitleBar: read("autoHideTitleBar", false),
   };
 }
 
@@ -684,109 +718,4 @@ function isNotFound(cause: unknown): boolean {
     "code" in cause &&
     cause.code === "ENOENT"
   );
-}
-
-function requireObject(
-  value: unknown,
-  configurationPath: string,
-  location: string,
-  expected: string,
-): Record<string, unknown> {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    fail(configurationPath, location, `must be ${expected}`);
-  return value as Record<string, unknown>;
-}
-
-function optionalObject(
-  value: unknown,
-  configurationPath: string,
-  location: string,
-): Record<string, unknown> | undefined {
-  return value === undefined
-    ? undefined
-    : requireObject(value, configurationPath, location, "an object");
-}
-
-function rejectUnknownKeys(
-  value: Record<string, unknown>,
-  configurationPath: string,
-  location: string,
-  allowed: readonly string[],
-): void {
-  const unknown = Object.keys(value).find((key) => !allowed.includes(key));
-  if (unknown !== undefined)
-    fail(configurationPath, `${location}.${unknown}`, "is unknown");
-}
-
-function integerInRange(
-  value: unknown,
-  configurationPath: string,
-  location: string,
-  minimum: number,
-  maximum: number,
-  defaultValue: number,
-): number {
-  if (value === undefined) return defaultValue;
-  if (!Number.isFinite(value) || !Number.isInteger(value))
-    fail(configurationPath, location, "must be a finite integer");
-  if ((value as number) < minimum || (value as number) > maximum)
-    fail(
-      configurationPath,
-      location,
-      `must be from ${minimum} through ${maximum}`,
-    );
-  return value as number;
-}
-
-function numberInRange(
-  value: unknown,
-  configurationPath: string,
-  location: string,
-  minimum: number,
-  maximum: number,
-  defaultValue: number,
-): number {
-  if (value === undefined) return defaultValue;
-  if (typeof value !== "number" || !Number.isFinite(value))
-    fail(configurationPath, location, "must be a finite number");
-  if (value < minimum || value > maximum)
-    fail(
-      configurationPath,
-      location,
-      `must be from ${minimum} through ${maximum}`,
-    );
-  return value;
-}
-
-function optionalBoolean(
-  value: unknown,
-  configurationPath: string,
-  location: string,
-  defaultValue: boolean,
-): boolean {
-  if (value === undefined) return defaultValue;
-  if (typeof value !== "boolean")
-    fail(configurationPath, location, "must be a boolean");
-  return value;
-}
-
-function optionalEnum<const Values extends readonly string[]>(
-  value: unknown,
-  configurationPath: string,
-  location: string,
-  values: Values,
-  defaultValue: Values[number],
-): Values[number] {
-  if (value === undefined) return defaultValue;
-  if (typeof value !== "string" || !values.includes(value))
-    fail(configurationPath, location, `must be ${values.join(", ")}`);
-  return value as Values[number];
-}
-
-function fail(
-  configurationPath: string,
-  location: string | undefined,
-  reason: string,
-): never {
-  throw new UserConfigurationError(configurationPath, location, reason);
 }

@@ -56,10 +56,12 @@ export function createPane(
   document: Document,
   createAdapter: (launch?: TerminalLaunchSpec) => ElectronTerminalAdapter,
   launch: PaneLaunch = {},
+  // The accessible name of the terminal area, in the window's language.
+  label = "Terminal Surface",
 ): TerminalPane {
   const container = document.createElement("main");
   container.className = "terminal-surface";
-  container.setAttribute("aria-label", "Terminal Surface");
+  container.setAttribute("aria-label", label);
   return {
     tab,
     container,

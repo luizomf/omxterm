@@ -5,4 +5,7 @@
 # Chromium initializes its sandbox during bootstrap, before application code
 # runs, so the flag must precede every user argument here. No setuid
 # chrome-sandbox helper or AppArmor user-namespace profile is installed.
+# A parent Electron application (an editor's terminal, for example) may export
+# ELECTRON_RUN_AS_NODE, which would start the binary as plain Node.js.
+unset ELECTRON_RUN_AS_NODE
 exec /opt/OMXTerm/omxterm --no-sandbox "$@"

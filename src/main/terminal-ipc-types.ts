@@ -87,6 +87,8 @@ export interface TerminalIpcControllerOptions {
   // opens with (asked once), and the directories behind restore tokens.
   readonly onWorkspace?: (window: PersistedWorkspaceWindow) => void;
   readonly workspacePlan?: () => WorkspacePlan | null;
+  // Opens a new window restoring one tab (Detach Tab).
+  readonly onDetachTab?: (window: PersistedWorkspaceWindow) => void;
   readonly resolveRestoredDirectory?: (token: string) => string | undefined;
   readonly onSessionStartError: (
     context: TerminalSessionStartErrorContext,
@@ -144,5 +146,10 @@ export interface TerminalIpcRouter {
   activeTerminalSurfaceFontConfigurations(): readonly TerminalSurfaceFontConfiguration[];
   // Whether an IPC event comes from the main frame of a registered window.
   isTrustedSender(event: IpcEvent): boolean;
+  // How a live pane of the sender's window was started, for the Files panel.
+  sessionLaunch(
+    event: IpcEvent,
+    sessionId: unknown,
+  ): TerminalSessionLaunch | undefined;
   dispose(): void;
 }

@@ -27,6 +27,8 @@ export function createWorkspaceSidebar(
     readonly translator: Translator;
     readonly panels: readonly WorkspacePanelDefinition[];
     readonly focusTerminal: () => void;
+    // The visible panel, or undefined once the sidebar hides.
+    readonly onChange?: (panelId: string | undefined) => void;
   },
 ): WorkspaceSidebar {
   const document = root.ownerDocument;
@@ -102,11 +104,13 @@ export function createWorkspaceSidebar(
     root.setAttribute("aria-label", t(definition.label));
     root.hidden = false;
     document.body.classList.add("workspace-sidebar-open");
+    options.onChange?.(id);
     panel.activate();
   };
   const hide = () => {
     root.hidden = true;
     document.body.classList.remove("workspace-sidebar-open");
+    options.onChange?.(undefined);
     options.focusTerminal();
   };
   root.addEventListener("keydown", (event) => {

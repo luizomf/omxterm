@@ -102,20 +102,23 @@ The RPM is not GPG-signed. On openSUSE, use `sudo zypper install --allow-unsigne
 OMXTerm is not in the AUR. Build a native package from the source tree with the included `PKGBUILD` (needs `base-devel`, `git`, `nodejs`, and `npm`; the build downloads npm dependencies and Electron):
 
 ```sh
-git clone https://github.com/luizomf/omxterm.git
+git clone https://github.com/ruscher/omxterm.git
 cd omxterm/packaging/arch
 makepkg -si
 ```
 
-It installs OMXTerm in `/usr/lib/omxterm` with the `omxterm` command, an application menu entry, and its licenses in `/usr/share/licenses/omxterm`.
+It builds your local tree, committed or not, versioned from `package.json`, and installs OMXTerm in `/usr/lib/omxterm` with the `omxterm` command, an application menu entry, theme icons, the README in `/usr/share/doc/omxterm`, and its licenses in `/usr/share/licenses/omxterm`. Optional packages: `openssh` (SSH sessions, Quick Connect, remote files over SFTP) and `ollama` (local models for the AI assistant).
 
-On **BigLinux**, [`pkgbuild/PKGBUILD`](../pkgbuild/PKGBUILD) follows BigLinux's packaging conventions: it clones the repository's default branch and versions the package by build date (`YY.MM.DD-HHMM`). It installs the same files:
+On **BigLinux**, [`pkgbuild/PKGBUILD`](../pkgbuild/PKGBUILD) follows BigLinux's packaging conventions: it clones the repository's `main` branch (or the branch in `OMXTERM_BRANCH`) and versions the package by build date (`YY.MM.DD-HHMM`). It installs the same files:
 
 ```sh
 mkdir omxterm-pkg && cd omxterm-pkg
 curl -fLO https://raw.githubusercontent.com/ruscher/omxterm/main/pkgbuild/PKGBUILD
-makepkg -si
+makepkg -si                                          # main
+OMXTERM_BRANCH=feature/ashyterm-ui-parity makepkg -si  # another branch
 ```
+
+Switching from a date-versioned package to a checkout build, pacman reports a downgrade (`0.22.0` sorts before `26.10.22`) and installs normally.
 
 ### Run the AppImage
 

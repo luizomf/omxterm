@@ -3,7 +3,8 @@
 OMXTerm is a fast, open-source desktop terminal for **macOS, Linux and Windows,
 on ARM64 and x64**. It starts your shell in tabs and split panes, keeps your SSH
 servers one click away, colors command output, and can be customized in plain
-JSON, without sending anything over the network.
+JSON, without sending anything over the network unless you turn on its
+optional AI assistant.
 
 It is built with Electron and TypeScript on the
 [Restty](https://github.com/wiedymi/restty) renderer and
@@ -26,6 +27,10 @@ for 10% discount:
 ![OMXTerm on macOS with colorful fastfetch output and a blurred desktop behind the terminal](docs/images/macos.webp)
 
 _macOS, with background transparency and blur._
+
+![OMXTerm on Linux with three tabs: Vim, a file listing and a Git log in split panes](docs/images/linux-split-panes.webp)
+
+_Linux (KDE Plasma), with tabs and split panes._
 
 <details>
 <summary>More screenshots: macOS, Windows, and Linux</summary>
@@ -55,7 +60,7 @@ Omarchy screenshot are arranged by Hyprland.
 
 </details>
 
-**[Features](#features)** · **[Download](#platforms-and-downloads)** ·
+**[Features](#features)** · **[Tour](#tour)** · **[Download](#platforms-and-downloads)** ·
 **[Install](#installation)** · **[Shortcuts](#keyboard-shortcuts)** ·
 **[Command line](#command-line)** · **[Configuration](#configuration)** ·
 **[Build from source](#building-from-source)** ·
@@ -70,22 +75,36 @@ Omarchy screenshot are arranged by Hyprland.
 - Bundled Nerd Fonts (FiraCode, JetBrains Mono, DejaVu Sans Mono), or any
   installed font.
 - Scrollback up to 100,000 lines and search through it (**Edit → Find…**).
-- Clickable web links, previews of local PNG/JPEG images, and quoted file
-  paths when you drop files on the window.
+- Clickable web links, previews of local PNG/JPEG images with their details
+  and path, and quoted file paths when you drop files on the window.
+- **File hover previews:** rest the pointer on a file name printed by `ls`
+  (or any path) to see the image, the first PDF page, the first lines of a
+  text file or a folder's contents, with size, date and path, and buttons to
+  view, open, copy or insert the path.
 - **Protected Paste:** pasting multiple lines or control characters asks
   first.
 
 ### Workspace
 
-- Tabs and multiple windows, with hideable title and tab bars, background
-  transparency and blur, and always-on-top.
+- **Header toolbar** in the title bar: Sessions, Commands, Files, Assistant, Find, Split Right,
+  Split Down and Broadcast before the title; New Tab and a **main menu**
+  (☰) with every action after it.
+- New windows open on the monitor you are working on, at the size and
+  position last used on that monitor (each monitor remembers its own).
+- Tabs and multiple windows, with hideable title and tab bars, an
+  auto-hiding title bar that slides in from the top edge, rounded window
+  corners, background transparency and blur, and always-on-top.
 - **Split panes:** split right or down (up to 16 panes per tab), move focus by
   direction, maximize, equalize, and drag dividers. New panes open in the
   current pane's folder.
 - **Broadcast input:** type into every pane of a tab at once, after a
   confirmation, with a visible indicator.
-- **Tab menu:** rename, color, duplicate, and group tabs into named groups
-  that collapse behind a colored chip.
+- **Tab menu:** rename, color, duplicate, move, detach to a new window, close
+  others or those to the right, and group tabs into named groups that
+  collapse behind a colored chip. Many tabs scroll sideways with the mouse
+  wheel, and the ⌄ button lists every open tab.
+- **Ctrl+wheel** zooms the terminal font; the right-click menu can **save the
+  output to a file**.
 - **Restore Windows at Startup** (off by default): reopens your windows, tabs,
   splits, folders, connections and groups.
 - **Command palette** to run any action by name.
@@ -98,12 +117,37 @@ Omarchy screenshot are arranged by Hyprland.
 - **SSH sessions** through your system OpenSSH client, which supports:
   - user, port, key file and agent forwarding;
   - jump hosts and port forwards (`L`, `R`, `D`);
-  - X11 forwarding, compression, and connection reuse;
+  - X11 forwarding, compression, and connection reuse (on by default, so
+    the Files panel browses a connected session without asking again);
   - a remote command and extra options.
 - **Quick Connect** (`user@host:port`), import from `~/.ssh/config`, and JSON
   import and export.
 - A failed connection keeps its screen with **Reconnect** and **Close**.
 - Passwords are typed at ssh's own prompt and are never stored.
+
+### Integrated file manager
+
+- **Files sidebar** in step with the focused terminal: it follows the
+  shell's folder, and browsing a folder in the panel moves the shell there. Browse,
+  filter, open with the default app, show in the system file manager, create,
+  rename, copy, move and move to the trash.
+- **Remote files over SFTP** for SSH sessions, through your OpenSSH and the
+  terminal's shared connection: browse, edit a remote file in a local app
+  (each save is uploaded), download, upload, move and delete, with progress
+  and cancel.
+- Open a folder in the terminal or insert quoted paths with one click.
+
+### Optional AI assistant
+
+- **Off until you turn it on** in Preferences → Assistant. Providers: Groq,
+  Google Gemini, OpenRouter, Mistral, Cerebras, GitHub Models, and Ollama or
+  LM Studio servers on this computer, your network or your own domain.
+- **Get API Key** opens each provider's key page; **Browse Models…** searches
+  the provider's models, with a free-only filter where prices are published.
+- A sidebar panel with streamed answers; suggested commands can be inserted,
+  run (after confirmation) or copied. The conversation is kept between
+  sessions until you clear it.
+- Nothing is sent until you press Send; API keys live in the system keychain.
 
 ### Productivity
 
@@ -115,38 +159,62 @@ Omarchy screenshot are arranged by Hyprland.
   (files, archives, processes, services, packages, network, SSH, Git,
   Docker), plus your own templates.
   - Every command is previewed before it is inserted or run.
+  - **Run in Multiple Terminals…** lists every terminal of the window, all
+    checked; uncheck the ones to skip and the same command runs in the rest.
   - Programs that are not installed are flagged.
 - **Snippets:** reusable text from `snippets.json`, inserted or run from a
   sidebar.
 
 ### Settings and data
 
+- **Preferences window** (☰ → Preferences…, `Ctrl+Shift+X` / `Cmd+,`):
+  14 color schemes (OMXTerm's own plus AshyTerm's BigLinux, Solarized,
+  Monokai, Dracula, Nord, Tokyo Night, Catppuccin, Rosé Pine and more), font,
+  size, line height, ligatures, transparency, blur, rounded corners, padding,
+  scrollback, window and tab options (including the auto-hiding title bar),
+  a shortcut recorder with conflict checks, file previews, the AI assistant,
+  a built-in **config.json editor**, and Restore Defaults. Every change is
+  validated, saved to `config.json` and applied to all windows at once.
 - Plain-JSON configuration with hot reload, themes, and remappable shortcuts,
   or edit visually with [OMXTerm Studio](https://luizomf.github.io/omxterm-studio/).
 - **Back Up / Restore Settings:** one passphrase-encrypted `.omxbackup` file
   (scrypt and AES-256-GCM). Passwords and keys are never included.
 - English and Brazilian Portuguese interface.
-- No telemetry and no network requests of its own; see
-  [Privacy and security](#privacy-and-security).
+- No telemetry, and no network requests of its own unless you enable the
+  assistant; see [Privacy and security](#privacy-and-security).
+
+## Tour
+
+These screenshots were taken on Linux (KDE Plasma) with OMXTerm 0.22.0.
+
+| Hover a file name to preview it                                                                                                      | View local images with their details                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| ![A preview card with the first page of a PDF, its size, page count and path, over a file listing](docs/images/linux-hover-pdf.webp) | ![The local image preview showing a wallpaper with its type, dimensions, size, date and path](docs/images/linux-image-preview.webp) |
+| **Run one command in several terminals**                                                                                             | **Files beside the terminal**                                                                                                       |
+| ![The Run in Multiple Terminals dialog listing every tab and pane with check boxes](docs/images/linux-run-multiple.webp)             | ![The Files sidebar showing the folder of the focused terminal](docs/images/linux-files.webp)                                       |
+| **Preferences with 14 color schemes**                                                                                                | **Every setting as JSON, validated before saving**                                                                                  |
+| ![The Preferences window with the color scheme cards](docs/images/linux-preferences.webp)                                            | ![The config.json editor in Preferences with Format, Reload and Save](docs/images/linux-config-editor.webp)                         |
+| **Light themes**                                                                                                                     | **About**                                                                                                                           |
+| ![OMXTerm with the Solarized Light scheme, a file listing and Vim](docs/images/linux-light-theme.webp)                               | ![The About dialog with the version, authors, copyleft and Report an Issue](docs/images/linux-about.webp)                           |
 
 ## Platforms and downloads
 
-**Latest pre-release:
-[0.21.0 — downloads and release notes](https://github.com/ruscher/omxterm/releases/tag/v0.21.0)**
+**Latest release:
+[0.22.0 — downloads and release notes](https://github.com/ruscher/omxterm/releases/tag/v0.22.0)**
 
 | Platform                                 | Download                                                                                                | Checksum                                                                                                      |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Apple Silicon macOS                      | [DMG](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.dmg)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.dmg.sha256)       |
-| Intel macOS                              | [DMG](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x64.dmg)              | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x64.dmg.sha256)         |
-| Linux ARM64                              | [AppImage](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.AppImage)  | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.AppImage.sha256)  |
-| Linux ARM64 (Debian, Ubuntu)             | [DEB](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.deb)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.deb.sha256)       |
-| Linux ARM64 (Fedora, openSUSE)           | [RPM](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-aarch64.rpm)          | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-aarch64.rpm.sha256)     |
-| Linux x64                                | [AppImage](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x86_64.AppImage) | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x86_64.AppImage.sha256) |
-| Linux x64 (Debian, Ubuntu)               | [DEB](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-amd64.deb)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-amd64.deb.sha256)       |
-| Linux x64 (Fedora, openSUSE)             | [RPM](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x86_64.rpm)           | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x86_64.rpm.sha256)      |
-| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/ruscher/omxterm/releases/download/v0.21.0/linux_install.sh)       | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/linux_install.sh.sha256)               |
-| Windows ARM64                            | [Installer](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.exe)      | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.exe.sha256)       |
-| Windows x64                              | [Installer](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x64.exe)        | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x64.exe.sha256)         |
+| Apple Silicon macOS                      | [DMG](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.dmg)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.dmg.sha256)       |
+| Intel macOS                              | [DMG](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x64.dmg)              | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x64.dmg.sha256)         |
+| Linux ARM64                              | [AppImage](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.AppImage)  | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.AppImage.sha256)  |
+| Linux ARM64 (Debian, Ubuntu)             | [DEB](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.deb)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.deb.sha256)       |
+| Linux ARM64 (Fedora, openSUSE)           | [RPM](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-aarch64.rpm)          | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-aarch64.rpm.sha256)     |
+| Linux x64                                | [AppImage](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x86_64.AppImage) | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x86_64.AppImage.sha256) |
+| Linux x64 (Debian, Ubuntu)               | [DEB](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-amd64.deb)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-amd64.deb.sha256)       |
+| Linux x64 (Fedora, openSUSE)             | [RPM](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x86_64.rpm)           | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x86_64.rpm.sha256)      |
+| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/ruscher/omxterm/releases/download/v0.22.0/linux_install.sh)       | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/linux_install.sh.sha256)               |
+| Windows ARM64                            | [Installer](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.exe)      | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.exe.sha256)       |
+| Windows x64                              | [Installer](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x64.exe)        | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x64.exe.sha256)         |
 
 Arch Linux, Manjaro and BigLinux build a native package with the included
 `PKGBUILD` ([below](#arch-linux-manjaro-and-biglinux)).
@@ -194,30 +262,32 @@ Run the installer and start OMXTerm from the Start menu.
 ### Debian and Ubuntu
 
 ```sh
-sudo apt install ./OMXTerm-0.21.0-amd64.deb    # arm64: OMXTerm-0.21.0-arm64.deb
+sudo apt install ./OMXTerm-0.22.0-amd64.deb    # arm64: OMXTerm-0.22.0-arm64.deb
 ```
 
 ### Fedora, openSUSE and other RPM systems
 
 ```sh
-sudo dnf install ./OMXTerm-0.21.0-x86_64.rpm   # arm64: OMXTerm-0.21.0-aarch64.rpm
-# openSUSE: sudo zypper install --allow-unsigned-rpm ./OMXTerm-0.21.0-x86_64.rpm
+sudo dnf install ./OMXTerm-0.22.0-x86_64.rpm   # arm64: OMXTerm-0.22.0-aarch64.rpm
+# openSUSE: sudo zypper install --allow-unsigned-rpm ./OMXTerm-0.22.0-x86_64.rpm
 ```
 
 ### AppImage (any Linux)
 
 ```sh
-chmod +x OMXTerm-0.21.0-x86_64.AppImage
-./OMXTerm-0.21.0-x86_64.AppImage
+chmod +x OMXTerm-0.22.0-x86_64.AppImage
+./OMXTerm-0.22.0-x86_64.AppImage
 # Optional: add it to your application menu
-sh linux_install.sh install OMXTerm-0.21.0-x86_64.AppImage
+sh linux_install.sh install OMXTerm-0.22.0-x86_64.AppImage
 ```
 
 ### Arch Linux, Manjaro and BigLinux
 
-`pkgbuild/PKGBUILD` follows BigLinux's packaging layout. It clones this
-repository, builds for your architecture (x86_64 or aarch64), and versions
-the package by build date. The build downloads npm packages and Electron.
+Two PKGBUILDs build the same package for x86_64 or aarch64. Both download npm
+packages and Electron during the build.
+
+**From GitHub (BigLinux layout).** `pkgbuild/PKGBUILD` clones this
+repository and versions the package by build date (`YY.MM.DD-HHMM`):
 
 ```sh
 sudo pacman -S --needed base-devel git nodejs npm
@@ -226,14 +296,38 @@ curl -fLO https://raw.githubusercontent.com/ruscher/omxterm/main/pkgbuild/PKGBUI
 makepkg -si
 ```
 
-From a checkout, `packaging/arch/PKGBUILD` builds the same package from your
-local source tree (`cd packaging/arch && makepkg -si`).
+It builds the `main` branch; set `OMXTERM_BRANCH` to build another one, for
+example `OMXTERM_BRANCH=feature/ashyterm-ui-parity makepkg -si`.
+
+**From a checkout.** `packaging/arch/PKGBUILD` builds whatever is in your
+local tree, committed or not, with the version from `package.json`:
+
+```sh
+git clone https://github.com/ruscher/omxterm.git
+cd omxterm/packaging/arch
+makepkg -si
+```
+
+Moving from a date-versioned build to a checkout build, pacman reports a
+"downgrade" because `0.22.0` sorts before `26.10.22`; it installs normally.
+
+Optional packages:
+
+- `openssh`: SSH sessions, Quick Connect, and remote files over SFTP in the
+  Files panel;
+- `ollama`: local models for the AI assistant (any OpenAI-compatible server,
+  such as LM Studio, also works).
+- `poppler`: first-page previews, page counts and titles of PDF files when
+  hovering their names;
+- `xorg-xrandr`: opening new windows on the active monitor under KDE Plasma
+  Wayland (otherwise the monitor under the pointer is used).
 
 The package installs:
 
 - `/usr/lib/omxterm`: the application;
 - `/usr/bin/omxterm`: the launcher;
-- the menu entry, theme icons from 16 px to scalable, and licenses.
+- the menu entry (found by "terminal", "ssh" or "sftp"), theme icons from
+  16 px to scalable, this README in `/usr/share/doc/omxterm`, and licenses.
 
 Remove it with `sudo pacman -R omxterm`.
 
@@ -243,51 +337,63 @@ OMXTerm starts your default shell (Zsh, Bash, Fish, PowerShell, …) in your
 home folder. Each tab and pane runs its own session. `Ctrl+C` interrupts the
 running command.
 
-On Linux and Windows, press and release **Alt** to open the application menu.
-On macOS, use the menu bar.
+The toolbar in the title bar opens the sidebars and splits panes, and the
+**☰** button opens the main menu with everything else, including
+**Preferences…**. On Linux and Windows, pressing and releasing **Alt** also
+opens the application menu; on macOS, use the menu bar.
 
 On first launch OMXTerm creates `config.json`, `snippets.json` and
 `themes/omtheme.json` in its [configuration folder](#configuration).
 
 ## Keyboard shortcuts
 
-Every shortcut can be changed under `keybinds` in `config.json` (the action
-names are in the first column), and the menus always show the active ones.
+Every shortcut can be changed in **Preferences → Shortcuts**, or under
+`keybinds` in `config.json` (the action names are in the second column), and
+the menus always show the active ones.
 
-| Action                  | `keybinds` name                      | macOS                        | Linux and Windows              |
-| ----------------------- | ------------------------------------ | ---------------------------- | ------------------------------ |
-| New window              | `newWindow`                          | `Cmd+N`                      | `Ctrl+Shift+N`                 |
-| New tab                 | `newTab`                             | `Cmd+T`                      | `Ctrl+Shift+T`                 |
-| Close tab               | `closeTab`                           | `Cmd+W`                      | `Ctrl+Shift+W`                 |
-| Close window            | `closeWindow`                        | `Cmd+Shift+W`                | `Ctrl+Shift+Q`                 |
-| Quit                    | `quit`                               | `Cmd+Q`                      | `Ctrl+Alt+Shift+Q`             |
-| Next / previous tab     | `nextTab`, `previousTab`             | `Ctrl+Tab`, `Ctrl+Shift+Tab` | `Ctrl+PageDown`, `Ctrl+PageUp` |
-| Tab 1 … 9               | `selectTab1` … `selectTab9`          | `Cmd+1` … `Cmd+9`            | `Alt+1` … `Alt+9`              |
-| Copy / paste            | `copy`, `paste`                      | `Cmd+C`, `Cmd+V`             | `Ctrl+Shift+C`, `Ctrl+Shift+V` |
-| Select all              | `selectAll`                          | `Cmd+A`                      | `Ctrl+Shift+A`                 |
-| Find in terminal        | `find`                               | `Cmd+F`                      | `Ctrl+Shift+G`                 |
-| Command palette         | `commandPalette`                     | `Cmd+Shift+P`                | `Ctrl+Shift+P`                 |
-| Zoom in / out / reset   | `zoomIn`, `zoomOut`, `actualSize`    | `Cmd++`, `Cmd+-`, `Cmd+0`    | `Ctrl++`, `Ctrl+-`, `Ctrl+0`   |
-| Split right             | `splitRight`                         | `Cmd+D`                      | `Ctrl+Shift+O`                 |
-| Split down              | `splitDown`                          | `Cmd+Shift+E`                | `Ctrl+Shift+E`                 |
-| Close pane              | `closePane`                          | `Cmd+Alt+W`                  | `Ctrl+Shift+K`                 |
-| Next / previous pane    | `focusNextPane`, `focusPreviousPane` | `Cmd+]`, `Cmd+[`             | `Ctrl+Shift+]`, `Ctrl+Shift+[` |
-| Pane left/right/up/down | `focusPaneLeft` … `focusPaneDown`    | `Cmd+Alt+Arrow`              | `Alt+Shift+Arrow`              |
-| Maximize / restore pane | `toggleMaximizePane`                 | `Cmd+Shift+Enter`            | `Ctrl+Shift+Z`                 |
-| Equalize panes          | `equalizePanes`                      | `Cmd+Alt+0`                  | `Ctrl+Shift+0`                 |
-| Broadcast input         | `toggleBroadcast`                    | `Cmd+Alt+I`                  | `Ctrl+Shift+I`                 |
-| Sessions sidebar        | `toggleSessions`                     | `Cmd+Shift+J`                | `Ctrl+Shift+H`                 |
-| Commands sidebar        | `toggleCommands`                     | `Cmd+Shift+M`                | `Ctrl+Shift+M`                 |
-| Snippets sidebar        | `toggleSnippets`                     | `Cmd+Shift+S`                | `Ctrl+Shift+S`                 |
-| Tab bar / title bar     | `toggleTabBar`, `toggleTitleBar`     | `Cmd+Shift+B`, `Cmd+Shift+D` | `Ctrl+Shift+B`, `Ctrl+Shift+D` |
-| Full screen             | `toggleFullScreen`                   | `Ctrl+Cmd+F`                 | `Ctrl+Shift+F`                 |
-| Reload configuration    | `reloadConfig`                       | `Cmd+Shift+,`                | `Ctrl+Shift+,`                 |
+| Action                     | `keybinds` name                          | macOS                        | Linux and Windows              |
+| -------------------------- | ---------------------------------------- | ---------------------------- | ------------------------------ |
+| New window                 | `newWindow`                              | `Cmd+N`                      | `Ctrl+Shift+N`                 |
+| New tab                    | `newTab`                                 | `Cmd+T`                      | `Ctrl+Shift+T`                 |
+| Close tab                  | `closeTab`                               | `Cmd+W`                      | `Ctrl+Shift+W`                 |
+| Close window               | `closeWindow`                            | `Cmd+Shift+W`                | `Ctrl+Shift+Q`                 |
+| Quit                       | `quit`                                   | `Cmd+Q`                      | `Ctrl+Alt+Shift+Q`             |
+| Next / previous tab        | `nextTab`, `previousTab`                 | `Ctrl+Tab`, `Ctrl+Shift+Tab` | `Ctrl+PageDown`, `Ctrl+PageUp` |
+| Tab 1 … 9                  | `selectTab1` … `selectTab9`              | `Cmd+1` … `Cmd+9`            | `Alt+1` … `Alt+9`              |
+| Copy / paste               | `copy`, `paste`                          | `Cmd+C`, `Cmd+V`             | `Ctrl+Shift+C`, `Ctrl+Shift+V` |
+| Select all                 | `selectAll`                              | `Cmd+A`                      | `Ctrl+Shift+A`                 |
+| Find in terminal           | `find`                                   | `Cmd+F`                      | `Ctrl+Shift+G`                 |
+| Command palette            | `commandPalette`                         | `Cmd+Shift+P`                | `Ctrl+Shift+P`                 |
+| Zoom in / out / reset      | `zoomIn`, `zoomOut`, `actualSize`        | `Cmd++`, `Cmd+-`, `Cmd+0`    | `Ctrl++`, `Ctrl+-`, `Ctrl+0`   |
+| Split right                | `splitRight`                             | `Cmd+D`                      | `Ctrl+Shift+O`                 |
+| Split down                 | `splitDown`                              | `Cmd+Shift+E`                | `Ctrl+Shift+E`                 |
+| Close pane                 | `closePane`                              | `Cmd+Alt+W`                  | `Ctrl+Shift+K`                 |
+| Next / previous pane       | `focusNextPane`, `focusPreviousPane`     | `Cmd+]`, `Cmd+[`             | `Ctrl+Shift+]`, `Ctrl+Shift+[` |
+| Pane left/right/up/down    | `focusPaneLeft` … `focusPaneDown`        | `Cmd+Alt+Arrow`              | `Alt+Shift+Arrow`              |
+| Maximize / restore pane    | `toggleMaximizePane`                     | `Cmd+Shift+Enter`            | `Ctrl+Shift+Z`                 |
+| Equalize panes             | `equalizePanes`                          | `Cmd+Alt+0`                  | `Ctrl+Shift+0`                 |
+| Broadcast input            | `toggleBroadcast`                        | `Cmd+Alt+I`                  | `Ctrl+Shift+I`                 |
+| Sessions sidebar           | `toggleSessions`                         | `Cmd+Shift+J`                | `Ctrl+Shift+H`                 |
+| Commands sidebar           | `toggleCommands`                         | `Cmd+Shift+M`                | `Ctrl+Shift+M`                 |
+| Snippets sidebar           | `toggleSnippets`                         | `Cmd+Shift+S`                | `Ctrl+Shift+S`                 |
+| Tab bar / title bar        | `toggleTabBar`, `toggleTitleBar`         | `Cmd+Shift+B`, `Cmd+Shift+D` | `Ctrl+Shift+B`, `Ctrl+Shift+D` |
+| Full screen                | `toggleFullScreen`                       | `Ctrl+Cmd+F`                 | `Ctrl+Shift+F`                 |
+| Reload configuration       | `reloadConfig`                           | `Cmd+Shift+,`                | `Ctrl+Shift+,`                 |
+| Preferences                | `preferences`                            | `Cmd+,`                      | `Ctrl+Shift+X`                 |
+| Files sidebar              | `toggleFiles`                            | `Cmd+Shift+L`                | `Ctrl+Shift+L`                 |
+| Assistant sidebar          | `toggleAssistant`                        | `Cmd+Shift+Y`                | `Ctrl+Shift+Y`                 |
+| Rounder / less rounded     | `roundMore`, `roundLess`                 | `Cmd+Alt+Shift+R`, `…+E`     | `Ctrl+Alt+Shift+R`, `…+E`      |
+| Auto-hide / show title     | `autoHideTitleBar`, `alwaysShowTitleBar` | `Cmd+Alt+Shift+H`, `…+V`     | `Ctrl+Alt+Shift+H`, `…+V`      |
+| Always on top              | `toggleAlwaysOnTop`                      | `Cmd+Alt+Shift+T`            | `Ctrl+Alt+Shift+T`             |
+| Developer tools            | `toggleDevTools`                         | `Cmd+Alt+Shift+I`            | `Ctrl+Alt+Shift+I`             |
+| Open local image           | `openLocalImage`                         | `Cmd+Alt+Shift+O`            | `Ctrl+Alt+Shift+O`             |
+| Highlight output / rules   | `toggleHighlighting`, `highlightRules`   | `Cmd+Alt+Shift+C`, `…+G`     | `Ctrl+Alt+Shift+C`, `…+G`      |
+| Back up / restore          | `backUpSettings`, `restoreSettings`      | `Cmd+Alt+Shift+B`, `…+U`     | `Ctrl+Alt+Shift+B`, `…+U`      |
+| Restore windows at startup | `toggleRestoreWindows`                   | `Cmd+Alt+Shift+W`            | `Ctrl+Alt+Shift+W`             |
+| About OMXTerm              | `about`                                  | `Cmd+Alt+Shift+A`            | `Ctrl+Alt+Shift+A`             |
 
-Without a shortcut: **File → Open Local Image…**, **Back Up Settings…**,
-**Restore Settings…**; **View → Highlight Output**, **Highlight Rules…**,
-**Toggle Developer Tools**; **Window → Always on Top**; and **Restore Windows
-at Startup** in the application menu. Right-click a tab (or `Shift+F10`) for
-its menu.
+Every menu item has a shortcut. Right-click a tab (or `Shift+F10`) for its
+menu.
 
 ## Command line
 
@@ -316,25 +422,36 @@ OMXTerm reads its files from `$XDG_CONFIG_HOME/omxterm` (by default
 `~/.config/omxterm` on macOS and Linux, and `%USERPROFILE%\.config\omxterm` on
 Windows).
 
-| File               | Written by | Contents                                                     |
-| ------------------ | ---------- | ------------------------------------------------------------ |
-| `config.json`      | you        | Fonts, padding, scrollback, window options, theme, shortcuts |
-| `snippets.json`    | you        | Snippets for the Snippets sidebar                            |
-| `themes/*.json`    | you        | Terminal color themes                                        |
-| `sessions.json`    | OMXTerm    | Saved sessions and folders                                   |
-| `highlights.json`  | OMXTerm    | Output highlighting switches and rules                       |
-| `commands.json`    | OMXTerm    | Custom commands, favorites, hidden built-ins                 |
-| `workspace.json`   | OMXTerm    | Windows to restore at startup (only when enabled)            |
-| `credentials.json` | OMXTerm    | Encrypted secrets, protected by the system keychain          |
+| File                     | Written by          | Contents                                                              |
+| ------------------------ | ------------------- | --------------------------------------------------------------------- |
+| `config.json`            | you, or Preferences | Fonts, padding, scrollback, window options, theme, shortcuts          |
+| `snippets.json`          | you                 | Snippets for the Snippets sidebar                                     |
+| `themes/*.json`          | you, or Preferences | Terminal color themes (built-in schemes are written here when chosen) |
+| `sessions.json`          | OMXTerm             | Saved sessions and folders                                            |
+| `highlights.json`        | OMXTerm             | Output highlighting switches and rules                                |
+| `commands.json`          | OMXTerm             | Custom commands, favorites, hidden built-ins                          |
+| `workspace.json`         | OMXTerm             | Windows to restore at startup (only when enabled)                     |
+| `credentials.json`       | OMXTerm             | Encrypted secrets (AI API keys), protected by the system keychain     |
+| `assistant.json`         | OMXTerm             | AI assistant on/off, provider, models and server address (no keys)    |
+| `assistant-history.json` | OMXTerm             | The assistant conversation, until you clear it                        |
 
-Every `config.json` key is optional except `"version": 1`:
+Every `config.json` key is optional except `"version": 1`. OMXTerm adds the
+settings your file does not list yet (with their current values) when it
+starts, so the file always shows every option; values you wrote stay as you
+wrote them. **Preferences → config.json** edits the file in place. A short
+example:
 
 ```json
 {
   "version": 1,
   "font": { "family": "JetBrainsMono Nerd Font Mono", "size": 15 },
   "scrollback": { "lines": 20000 },
-  "window": { "transparency": 0.1, "blur": true, "showTabBar": true },
+  "window": {
+    "transparency": 0.1,
+    "blur": true,
+    "cornerRadius": 12,
+    "autoHideTitleBar": true
+  },
   "theme": { "path": "themes/omtheme.json" },
   "keybinds": { "splitRight": "Control+Shift+D" }
 }
@@ -351,10 +468,23 @@ Every `config.json` key is optional except `"version": 1`:
 Diagnostic logs (two files of at most 5 MiB) are in
 `$XDG_STATE_HOME/omxterm/logs` (by default `~/.local/state/omxterm/logs`).
 
+## Languages
+
+The interface is available in **English** and **Brazilian Portuguese**,
+including menus, dialogs and messages from the main process. OMXTerm follows
+the system's preferred languages and falls back to English. Translations live
+in [`src/shared/locales/`](src/shared/locales/); a test checks that every
+message exists in both catalogs with the same placeholders.
+
 ## Privacy and security
 
-- OMXTerm makes no network requests of its own and collects no telemetry. SSH
-  connections start only when you open one.
+- OMXTerm collects no telemetry. It makes no network requests of its own
+  except, when you turn the assistant on, the chat requests you send to the
+  provider you chose. SSH connections start only when you open one.
+- The assistant is off by default. It sends only what you type (and the
+  terminal selection when you tick the option) with your operating system and
+  shell names, never terminal output on its own. API keys are kept in the
+  system keychain; suggested commands run only after you confirm.
 - Logs record application events only: never terminal output, commands,
   clipboard data, paths or configuration values.
 - Passwords and keys are never written to disk in plain text and never
@@ -367,6 +497,26 @@ Diagnostic logs (two files of at most 5 MiB) are in
 To report a vulnerability privately, see [SECURITY.md](SECURITY.md). The
 detailed model is in
 [docs/implementation/03-security-and-privacy.md](docs/implementation/03-security-and-privacy.md).
+
+## Troubleshooting
+
+- **Blank or black window on Linux:** OMXTerm needs WebGL2. In virtual
+  machines or with blocklisted drivers, try `omxterm --ignore-gpu-blocklist`
+  (see [graphics troubleshooting](docs/linux-desktop.md#graphics-troubleshooting)).
+- **Wayland:** OMXTerm runs through XWayland by default; pass
+  `--ozone-platform=wayland` to try native Wayland.
+- **AppImage does not start:** install FUSE 2 (`libfuse2`) or run it with
+  `--appimage-extract-and-run`.
+- **A setting has no effect:** a banner at the top of the window explains
+  why `config.json` was rejected; the last valid configuration stays active.
+- **No PDF thumbnails when hovering file names:** install `poppler`
+  (`pdftoppm` and `pdfinfo`). Previews can be turned off in
+  **Preferences → Terminal**.
+- **macOS "cannot be opened" or Windows SmartScreen:** the packages are not
+  signed; see [Signing](#signing).
+
+More answers are in [Everyday use](docs/usage.md) and the
+[Linux desktop guide](docs/linux-desktop.md).
 
 ## Building from source
 
@@ -429,7 +579,7 @@ because native modules are never cross-compiled. The release procedure is in
 - **Design records:**
   - [docs/spec.md](docs/spec.md): product specification.
   - [CONTEXT.md](CONTEXT.md): domain vocabulary.
-  - [docs/adr/](docs/adr/README.md): 36 architecture decision records.
+  - [docs/adr/](docs/adr/README.md): 35 architecture decision records.
   - [docs/implementation/](docs/implementation/): engineering records,
     including the AshyTerm parity matrix.
 
@@ -446,18 +596,18 @@ because native modules are never cross-compiled. The release procedure is in
 
 Bug reports, feedback, translations, documentation and code are welcome.
 
-- [Open an issue](https://github.com/ruscher/omxterm/issues/new) for bugs or
-  confusing steps.
+- [Open an issue](https://github.com/luizomf/omxterm/issues) for bugs or
+  confusing steps (also **About → Report an Issue** in the app).
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) before sending code. It covers the
   engineering standards, tests and pull request workflow.
 
-### Contributors
+### Authors
 
-- **Luiz Otávio Miranda**: creator and maintainer of OMXTerm.
+- **Luiz Otávio Miranda** ([luizomf@gmail.com](mailto:luizomf@gmail.com)):
+  creator and maintainer of OMXTerm.
 - **Rafael Ruscher** ([rruscher@gmail.com](mailto:rruscher@gmail.com)):
-  collaborator. Brought
-  AshyTerm's feature set, x64 and native Linux packages, and the BigLinux
-  package.
+  brought AshyTerm's feature set, x64 and native Linux packages, and the
+  BigLinux package.
 
 ## License
 

@@ -30,6 +30,10 @@ import { terminalIpc } from "../shared/terminal-ipc";
 import { isTerminalLaunchSpec } from "../shared/terminal-launch";
 import { createSessionsBridge } from "./sessions-bridge";
 import { createHighlightsBridge } from "./highlights-bridge";
+import { createPreferencesBridge } from "./preferences-bridge";
+import { createFilesBridge } from "./files-bridge";
+import { createAssistantBridge } from "./assistant-bridge";
+import { createAboutBridge } from "./about-bridge";
 import { createCommandsBridge } from "./commands-bridge";
 import { createBackupBridge } from "./backup-bridge";
 import { isWorkspacePlan, isWorkspaceSnapshot } from "../shared/workspace";
@@ -102,6 +106,23 @@ const terminal: TerminalBridge = {
       throw new TypeError("Invalid Snippets response");
     return response;
   },
+  async sessionDirectory(sessionId) {
+    if (!isTerminalSessionId(sessionId))
+      throw new TypeError("Invalid terminal session");
+    const response: unknown = await ipcRenderer.invoke(
+      terminalIpc.sessionDirectory,
+      sessionId,
+    );
+    if (response === null) return null;
+    const { directory, busy } = (response ?? {}) as Record<string, unknown>;
+    if (
+      typeof busy !== "boolean" ||
+      (directory !== null &&
+        (typeof directory !== "string" || directory.length > 4_096))
+    )
+      throw new TypeError("Invalid working directory response");
+    return { directory, busy };
+  },
   onCommandPalette(listener: () => void) {
     const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
       if (payload === undefined) listener();
@@ -114,6 +135,40 @@ const terminal: TerminalBridge = {
     if (!(TERMINAL_ACTION_NAMES as readonly unknown[]).includes(action))
       throw new TypeError("Invalid application action");
     ipcRenderer.send(terminalIpc.runAction, action);
+  },
+  onSaveOutputRequest(listener: () => void) {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (payload === undefined) listener();
+    };
+    ipcRenderer.on(terminalIpc.saveOutputRequest, handler);
+    return () =>
+      ipcRenderer.removeListener(terminalIpc.saveOutputRequest, handler);
+  },
+  async detachTab(snapshot) {
+    if (!isWorkspaceSnapshot(snapshot) || snapshot.tabs.length !== 1)
+      throw new TypeError("Invalid tab");
+    return (await ipcRenderer.invoke(terminalIpc.detachTab, snapshot)) === true;
+  },
+  async saveOutput(text) {
+    if (typeof text !== "string" || text.length === 0)
+      throw new TypeError("Invalid terminal output");
+    const name: unknown = await ipcRenderer.invoke(
+      terminalIpc.saveOutput,
+      text,
+    );
+    if (name !== null && (typeof name !== "string" || name.length > 1_024))
+      throw new TypeError("Invalid save response");
+    return name;
+  },
+  openMainMenu(position) {
+    const coordinates = [position?.x, position?.y];
+    if (
+      !coordinates.every(
+        (value) => Number.isInteger(value) && (value as number) >= 0,
+      )
+    )
+      throw new TypeError("Invalid main menu position");
+    ipcRenderer.send(terminalIpc.mainMenu, { x: position.x, y: position.y });
   },
   onSnippetsToggle(listener: () => void) {
     const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
@@ -409,7 +464,11 @@ contextBridge.exposeInMainWorld(
     terminal: Object.freeze(terminal),
     sessions: Object.freeze(createSessionsBridge(ipcRenderer)),
     highlights: Object.freeze(createHighlightsBridge(ipcRenderer)),
+    preferences: Object.freeze(createPreferencesBridge(ipcRenderer)),
+    files: Object.freeze(createFilesBridge(ipcRenderer)),
+    assistant: Object.freeze(createAssistantBridge(ipcRenderer)),
     commands: Object.freeze(createCommandsBridge(ipcRenderer)),
     backup: Object.freeze(createBackupBridge(ipcRenderer)),
+    about: Object.freeze(createAboutBridge(ipcRenderer)),
   }),
 );

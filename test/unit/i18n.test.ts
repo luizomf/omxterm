@@ -27,6 +27,39 @@ describe("internationalization", () => {
     );
   });
 
+  it("has no empty message and translates everything not shared by both languages", () => {
+    // Words Brazilian Portuguese uses as they are.
+    const shared = new Set([
+      "menu.snippets",
+      "menu.terminal",
+      "sessions.kind.local",
+      "sessions.kind.ssh",
+      "sessions.field.host",
+      "preferences.section.terminal",
+      "files.remote",
+      "prefs.terminal",
+      "prefs.shell",
+      "prefs.configFile",
+      "appMenu.terminal",
+    ]);
+    const texts = (message: unknown): string[] =>
+      typeof message === "string"
+        ? [message]
+        : Object.values(message as Record<string, string>);
+    for (const key of Object.keys(englishMessages) as Array<
+      keyof typeof englishMessages
+    >) {
+      const english = englishMessages[key];
+      const portuguese = brazilianPortugueseMessages[key];
+      for (const text of [...texts(english), ...texts(portuguese)])
+        expect(text.trim(), key).not.toBe("");
+      if (!shared.has(key))
+        expect(JSON.stringify(portuguese), key).not.toBe(
+          JSON.stringify(english),
+        );
+    }
+  });
+
   it("keeps the same placeholders in every translation", () => {
     const placeholders = (message: unknown): string[] => {
       const text =

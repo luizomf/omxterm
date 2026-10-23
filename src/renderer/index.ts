@@ -44,6 +44,10 @@ void Promise.all([
     {
       configuration,
       chrome: window.omxterm.terminal,
+      toolbar: {
+        runAction: window.omxterm.terminal.runAction,
+        openMainMenu: window.omxterm.terminal.openMainMenu,
+      },
       mount: mountResttyTerminalSurface,
       loadFontData: window.omxterm.terminal.fontData,
       onSurfaceFailure(message) {
@@ -87,6 +91,7 @@ void Promise.all([
       highlights: window.omxterm.highlights,
       ...(workspacePlan ? { initialWorkspace: workspacePlan } : {}),
       reportWorkspace: window.omxterm.terminal.reportWorkspace,
+      detachTab: window.omxterm.terminal.detachTab,
       ...(startupConnection
         ? {
             initialLaunch: {
@@ -102,6 +107,15 @@ void Promise.all([
         commands: window.omxterm.commands,
         backup: window.omxterm.backup,
         highlights: window.omxterm.highlights,
+        preferences: window.omxterm.preferences,
+        files: window.omxterm.files,
+        assistant: window.omxterm.assistant,
+        about: window.omxterm.about,
+        saveOutput: {
+          onRequest: window.omxterm.terminal.onSaveOutputRequest,
+          save: window.omxterm.terminal.saveOutput,
+        },
+        sessionDirectory: window.omxterm.terminal.sessionDirectory,
         palette: {
           onToggle: window.omxterm.terminal.onCommandPalette,
           runAction: window.omxterm.terminal.runAction,

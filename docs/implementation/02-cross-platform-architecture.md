@@ -52,7 +52,7 @@ resolves programs, arguments, directories and environment
 Platform values are injected (`platform`, `homeDirectory`, `env`) so every
 adapter is unit-tested for all three systems on any host. Native suites gate
 on the host architecture through `isNativeTestArchitecture`, so x64 and arm64
-runners execute the same tests ([13-github-actions-matrix.md](13-github-actions-matrix.md)).
+runners execute the same tests ([`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)).
 
 ## Startup
 

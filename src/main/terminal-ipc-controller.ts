@@ -26,6 +26,7 @@ import type {
   TerminalIpcController,
   TerminalIpcControllerOptions,
   TerminalIpcRouter,
+  TerminalSessionLaunch,
   TerminalSurfaceFontConfiguration,
   TrustedWebContents,
 } from "./terminal-ipc-types";
@@ -79,6 +80,7 @@ interface RoutedTerminalIpcController
   reportWorkingDirectory(payload?: unknown): void;
   reportWorkspace(payload?: unknown): void;
   workspacePlan(payload?: unknown): WorkspacePlan | null;
+  detachTab(payload?: unknown): boolean;
   confirmBroadcast(payload?: unknown): Promise<boolean>;
   input(payload?: unknown): void;
   resize(payload?: unknown): void;
@@ -97,6 +99,11 @@ interface RoutedTerminalIpcController
   localImage(payload?: unknown): Promise<LocalImageData | null>;
   snippets(payload?: unknown): Promise<TerminalSnippetsResponse>;
   fontData(payload?: unknown): Promise<TerminalFontData>;
+  sessionDirectory(payload?: unknown): {
+    readonly directory: string | null;
+    readonly busy: boolean;
+  } | null;
+  sessionLaunch(payload?: unknown): TerminalSessionLaunch | undefined;
   activeTerminalSurfaceFontConfigurations(): readonly TerminalSurfaceFontConfiguration[];
 }
 
@@ -149,6 +156,9 @@ export function registerTerminalIpcRouter(
   );
   const workspacePlan = trusted("workspace", (controller, payload) =>
     controller.workspacePlan(payload),
+  );
+  const detachTab = trusted("workspace", (controller, payload) =>
+    controller.detachTab(payload),
   );
   const route = (
     event: IpcEvent,
@@ -231,6 +241,9 @@ export function registerTerminalIpcRouter(
   const snippets = trusted("snippets", (controller, payload) =>
     controller.snippets(payload),
   );
+  const sessionDirectory = trusted("working directory", (controller, payload) =>
+    controller.sessionDirectory(payload),
+  );
 
   const removeSurfaceFontIpc = registerSurfaceFontIpc(
     ipcMain,
@@ -245,8 +258,10 @@ export function registerTerminalIpcRouter(
   ipcMain.handle(terminalIpc.start, start);
   ipcMain.handle(terminalIpc.configuration, configuration);
   ipcMain.handle(terminalIpc.workspacePlan, workspacePlan);
+  ipcMain.handle(terminalIpc.detachTab, detachTab);
   ipcMain.handle(terminalIpc.fontData, fontData);
   ipcMain.handle(terminalIpc.snippets, snippets);
+  ipcMain.handle(terminalIpc.sessionDirectory, sessionDirectory);
   ipcMain.on(terminalIpc.input, input);
   ipcMain.on(terminalIpc.resize, resize);
   ipcMain.on(terminalIpc.outputAck, acknowledgeOutput);
@@ -292,6 +307,8 @@ export function registerTerminalIpcRouter(
         controller.applyConfiguration(configuration);
     },
     isTrustedSender: (event) => controllerFor(event) !== undefined,
+    sessionLaunch: (event, sessionId) =>
+      controllerFor(event)?.sessionLaunch(sessionId),
     activeTerminalSurfaceFontConfigurations() {
       return Object.freeze(
         [...controllers.values()].flatMap((controller) =>
@@ -307,8 +324,10 @@ export function registerTerminalIpcRouter(
       ipcMain.removeHandler(terminalIpc.start);
       ipcMain.removeHandler(terminalIpc.configuration);
       ipcMain.removeHandler(terminalIpc.workspacePlan);
+      ipcMain.removeHandler(terminalIpc.detachTab);
       ipcMain.removeHandler(terminalIpc.fontData);
       ipcMain.removeHandler(terminalIpc.snippets);
+      ipcMain.removeHandler(terminalIpc.sessionDirectory);
       ipcMain.removeListener(terminalIpc.input, input);
       ipcMain.removeListener(terminalIpc.resize, resize);
       ipcMain.removeListener(terminalIpc.outputAck, acknowledgeOutput);
@@ -338,6 +357,7 @@ interface RoutedSessionState {
   readonly session: LocalTerminalSession;
   readonly terminalSurfaceFontConfiguration?: TerminalSurfaceFontConfiguration;
   readonly outputFlow: TerminalOutputFlow;
+  readonly launch?: TerminalSessionLaunch;
   closed: boolean;
   closeReason?: "rendering-failure";
   exited: boolean;
@@ -540,6 +560,7 @@ function createTerminalIpcController(
       sessions.set(sessionId, {
         session: createdSession,
         outputFlow,
+        launch,
         ...(payload === undefined && {
           terminalSurfaceFontConfiguration: surfaceFontConfiguration(
             rendererConfiguration.current(),
@@ -678,6 +699,7 @@ function createTerminalIpcController(
     reportWorkingDirectory: launches.reportWorkingDirectory,
     reportWorkspace: workspace.report,
     workspacePlan: workspace.plan,
+    detachTab: workspace.detach,
     confirmBroadcast: launches.confirmBroadcast,
     ...createTerminalTitleRequests(routedSession, options, reject),
     tabsEmpty: emptyTabsNotification(options, reject, () => disposed),
@@ -693,6 +715,19 @@ function createTerminalIpcController(
     localImage: localImageBoundary.request,
     snippets,
     fontData,
+    // The Files panel follows a pane: its OSC 7 directory, else /proc, and
+    // whether a program runs in it (then nothing is typed into it).
+    sessionDirectory(payload) {
+      const state =
+        typeof payload === "string" ? sessions.get(payload) : undefined;
+      if (!state || state.closed || state.exited) return null;
+      return {
+        directory: launches.directoryOf(payload as string) ?? null,
+        busy: state.session.hasForegroundChildProcess(),
+      };
+    },
+    sessionLaunch: (payload) =>
+      typeof payload === "string" ? sessions.get(payload)?.launch : undefined,
     activeTerminalSurfaceFontConfigurations: () => [
       ...surfaceFonts.active(),
       ...activeSessionFontConfigurations(sessions.values()),

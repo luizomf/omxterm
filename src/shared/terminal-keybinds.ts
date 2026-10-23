@@ -45,6 +45,22 @@ export const TERMINAL_ACTION_NAMES = [
   "toggleCommands",
   "commandPalette",
   "find",
+  "preferences",
+  "toggleFiles",
+  "toggleAssistant",
+  "roundMore",
+  "roundLess",
+  "autoHideTitleBar",
+  "alwaysShowTitleBar",
+  "toggleAlwaysOnTop",
+  "toggleDevTools",
+  "openLocalImage",
+  "toggleHighlighting",
+  "highlightRules",
+  "backUpSettings",
+  "restoreSettings",
+  "toggleRestoreWindows",
+  "about",
 ] as const;
 
 export type TerminalActionName = (typeof TERMINAL_ACTION_NAMES)[number];
@@ -97,6 +113,23 @@ export const DEFAULT_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   toggleCommands: "Command+Shift+M",
   commandPalette: "Command+Shift+P",
   find: "Command+F",
+  preferences: "Command+,",
+  toggleFiles: "Command+Shift+L",
+  toggleAssistant: "Command+Shift+Y",
+  // Every menu item has a shortcut; the rarer ones use Cmd+Option+Shift.
+  roundMore: "Command+Alt+Shift+R",
+  roundLess: "Command+Alt+Shift+E",
+  autoHideTitleBar: "Command+Alt+Shift+H",
+  alwaysShowTitleBar: "Command+Alt+Shift+V",
+  toggleAlwaysOnTop: "Command+Alt+Shift+T",
+  toggleDevTools: "Command+Alt+Shift+I",
+  openLocalImage: "Command+Alt+Shift+O",
+  toggleHighlighting: "Command+Alt+Shift+C",
+  highlightRules: "Command+Alt+Shift+G",
+  backUpSettings: "Command+Alt+Shift+B",
+  restoreSettings: "Command+Alt+Shift+U",
+  toggleRestoreWindows: "Command+Alt+Shift+W",
+  about: "Command+Alt+Shift+A",
 });
 
 // Linux and Windows share the conventional shifted terminal shortcuts so
@@ -152,6 +185,27 @@ const SHIFTED_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   commandPalette: "Control+Shift+P",
   // Ctrl+Shift+F is Toggle Full Screen here.
   find: "Control+Shift+G",
+  // Ctrl+, would take the physical comma key from some keyboard layouts and
+  // Ctrl+Shift+, is Reload Configuration here.
+  preferences: "Control+Shift+X",
+  // AshyTerm's Ctrl+Shift+E is Split Down here.
+  toggleFiles: "Control+Shift+L",
+  toggleAssistant: "Control+Shift+Y",
+  // Every menu item has a shortcut; the rarer ones use Ctrl+Alt+Shift, which
+  // no terminal program reads.
+  roundMore: "Control+Alt+Shift+R",
+  roundLess: "Control+Alt+Shift+E",
+  autoHideTitleBar: "Control+Alt+Shift+H",
+  alwaysShowTitleBar: "Control+Alt+Shift+V",
+  toggleAlwaysOnTop: "Control+Alt+Shift+T",
+  toggleDevTools: "Control+Alt+Shift+I",
+  openLocalImage: "Control+Alt+Shift+O",
+  toggleHighlighting: "Control+Alt+Shift+C",
+  highlightRules: "Control+Alt+Shift+G",
+  backUpSettings: "Control+Alt+Shift+B",
+  restoreSettings: "Control+Alt+Shift+U",
+  toggleRestoreWindows: "Control+Alt+Shift+W",
+  about: "Control+Alt+Shift+A",
 });
 
 export function terminalDefaultKeybinds(platform: string): TerminalKeybinds {

@@ -187,6 +187,8 @@ describe("renderer Terminal Window page host", () => {
       {
         abortSignal: expect.any(AbortSignal) as AbortSignal,
         onUserInput: expect.any(Function) as () => void,
+        // OSC 7 always reaches the tabs: the Files panel follows it.
+        onWorkingDirectory: expect.any(Function) as () => void,
         background: "host",
         appearance: {
           fontSize: 19,

@@ -82,7 +82,7 @@
 }
 
 .terminal-tab.split .restty-terminal-surface {
-  padding-top: var(--terminal-padding-top, 0px);
+  padding-top: var(--terminal-padding-top, 6px);
 }
 
 body.tabs-visible .terminal-tab.split {
@@ -155,6 +155,7 @@ body.tabs-visible .terminal-tab.split {
    tab. */
 #tab-strip button.tab-group-chip {
   flex: 0 0 auto;
+  min-width: 36px;
   max-width: 160px;
   font-weight: 600;
   color: #111;
@@ -289,7 +290,7 @@ body.tabs-visible .terminal-tab.split {
   display: flex;
   flex: none;
   flex-direction: column;
-  width: 300px;
+  width: 340px;
   min-height: 0;
   padding-top: var(--native-title-inset);
   font: var(--omx-font);
@@ -322,7 +323,22 @@ body.tabs-visible #workspace-sidebar {
 .workspace-sidebar-tabs {
   display: flex;
   flex: 1;
-  gap: 2px;
+  gap: 0;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+/* Four panels fit beside the close button at the default width. */
+.workspace-sidebar-tabs button {
+  flex: none;
+  padding-inline: 5px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.workspace-sidebar-header .omx-icon-button {
+  flex: none;
 }
 
 .workspace-sidebar-title {
@@ -386,6 +402,7 @@ body.tabs-visible #workspace-sidebar {
 }
 
 .sessions-panel input,
+.files-panel input,
 .omx-modal input,
 .omx-modal select,
 .omx-modal textarea {
@@ -939,4 +956,915 @@ body.tabs-visible #workspace-sidebar {
   #startup-splash {
     transition: opacity 180ms ease-out;
   }
+}
+
+/* Preferences: a vertical page list beside the selected page. */
+.omx-modal.preferences-dialog {
+  width: min(820px, calc(100vw - 32px));
+  height: min(640px, calc(100vh - 48px));
+}
+
+.preferences-dialog .omx-modal-body {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.preferences-dialog .omx-modal-body > div {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.preferences-layout {
+  display: flex;
+  flex: 1;
+  gap: var(--omx-space-4);
+  min-height: 0;
+}
+
+.preferences-nav {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  width: 170px;
+}
+
+.preferences-nav button {
+  padding: var(--omx-space-2) var(--omx-space-3);
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: var(--omx-radius);
+}
+
+.preferences-nav button:hover {
+  background: var(--omx-surface-raised);
+}
+
+.preferences-nav button[aria-selected="true"] {
+  font-weight: 600;
+  background: var(--omx-surface-raised);
+  box-shadow: inset 3px 0 var(--omx-accent);
+}
+
+.preferences-nav button:focus-visible {
+  outline: var(--omx-focus-ring);
+  outline-offset: -2px;
+}
+
+.preferences-content {
+  flex: 1;
+  min-width: 0;
+  padding-right: var(--omx-space-2);
+  overflow-y: auto;
+}
+
+.preferences-page[hidden] {
+  display: none;
+}
+
+.preferences-heading {
+  margin: var(--omx-space-3) 0 var(--omx-space-1);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--omx-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.preferences-page > .preferences-heading:first-child {
+  margin-top: 0;
+}
+
+.preferences-schemes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--omx-space-2);
+}
+
+.preferences-scheme {
+  display: flex;
+  flex-direction: column;
+  gap: var(--omx-space-1);
+  padding: var(--omx-space-1);
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.preferences-scheme[aria-checked="true"] {
+  border-color: var(--omx-accent);
+  box-shadow: 0 0 0 1px var(--omx-accent);
+}
+
+.preferences-scheme:focus-visible {
+  outline: var(--omx-focus-ring);
+  outline-offset: 1px;
+}
+
+.preferences-scheme-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  font:
+    12px ui-monospace,
+    monospace;
+  border-radius: 4px;
+}
+
+.preferences-scheme-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.preferences-scheme-dots i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.preferences-scheme-name {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preferences-padding {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--omx-space-2);
+}
+
+.preferences-page input[type="range"] {
+  flex: 1;
+}
+
+.preferences-shortcuts {
+  display: flex;
+  flex-direction: column;
+}
+
+.preferences-shortcut {
+  display: grid;
+  grid-template-columns: 1fr minmax(150px, auto) 28px;
+  gap: var(--omx-space-2);
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--omx-border);
+}
+
+.preferences-accelerator {
+  padding: 3px var(--omx-space-2);
+  font:
+    12px ui-monospace,
+    monospace;
+  color: inherit;
+  cursor: pointer;
+  background: var(--omx-surface-raised);
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.preferences-accelerator.recording {
+  border-color: var(--omx-accent);
+  box-shadow: 0 0 0 1px var(--omx-accent);
+}
+
+.preferences-status {
+  min-height: 1.4em;
+  margin: var(--omx-space-2) 0 0;
+  font-size: 12px;
+  color: var(--omx-muted);
+}
+
+.preferences-status.error,
+.preferences-problem {
+  color: var(--omx-danger);
+}
+
+.preferences-problem {
+  margin: 0 0 var(--omx-space-2);
+}
+
+.preferences-problem[hidden] {
+  display: none;
+}
+
+@media (width <= 600px) {
+  .preferences-layout {
+    flex-direction: column;
+  }
+
+  .preferences-nav {
+    flex-direction: row;
+    width: auto;
+    overflow-x: auto;
+  }
+
+  .preferences-padding {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.preferences-page > .omx-button {
+  align-self: flex-start;
+}
+
+/* Files panel: toolbar, breadcrumb, filter and a list of entries. */
+.files-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--omx-space-2);
+  min-height: 0;
+  padding: var(--omx-space-2);
+}
+
+.files-panel[hidden] {
+  display: none;
+}
+
+.files-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.files-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  padding: 0;
+}
+
+.files-tool[aria-pressed="true"] {
+  background: var(--omx-surface-raised);
+  box-shadow: inset 0 -2px var(--omx-accent);
+}
+
+.omx-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.files-crumbs {
+  display: flex;
+  gap: 1px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.files-crumbs button {
+  flex: none;
+  padding: 2px 6px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--omx-muted);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: var(--omx-radius);
+}
+
+.files-crumbs button + button::before {
+  content: "›";
+  margin-right: 6px;
+  opacity: 0.6;
+}
+
+.files-crumbs button:hover,
+.files-crumbs button[aria-current="location"] {
+  color: var(--omx-foreground);
+}
+
+.files-crumbs button:focus-visible,
+.files-list:focus-visible {
+  outline: var(--omx-focus-ring);
+  outline-offset: -1px;
+}
+
+.files-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border-radius: var(--omx-radius);
+}
+
+.files-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  gap: var(--omx-space-2);
+  align-items: center;
+  padding: 3px var(--omx-space-1);
+  font-size: 12.5px;
+  cursor: default;
+  user-select: none;
+  border-radius: 4px;
+}
+
+.files-row .files-modified {
+  display: none;
+}
+
+.files-row .files-size {
+  font-size: 11px;
+  color: var(--omx-muted);
+}
+
+.files-row .files-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.files-row.directory .omx-icon {
+  color: var(--omx-accent);
+}
+
+.files-row.hidden-file {
+  opacity: 0.65;
+}
+
+.files-row:hover {
+  background: var(--omx-surface);
+}
+
+.files-row[aria-selected="true"] {
+  background: color-mix(in srgb, var(--omx-accent) 28%, transparent);
+}
+
+.files-list:focus .files-row.cursor {
+  box-shadow: inset 0 0 0 1px var(--omx-accent);
+}
+
+.files-empty,
+.files-status {
+  margin: 0;
+  font-size: 12px;
+  color: var(--omx-muted);
+}
+
+.files-empty {
+  padding: var(--omx-space-3) var(--omx-space-1);
+}
+
+.files-place {
+  margin: 0;
+  padding: 2px var(--omx-space-2);
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--omx-accent) 20%, transparent);
+  border-radius: var(--omx-radius);
+}
+
+.files-place[hidden],
+.files-transfers[hidden],
+.files-tool[hidden] {
+  display: none;
+}
+
+.files-transfers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--omx-space-1);
+  max-height: 30%;
+  overflow-y: auto;
+}
+
+.files-transfer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px var(--omx-space-1);
+  align-items: center;
+  font-size: 11.5px;
+}
+
+.files-transfer-label {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.files-transfer progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--omx-accent);
+}
+
+.files-transfer.failed .files-transfer-label {
+  color: var(--omx-danger);
+}
+
+/* Assistant panel: notice, conversation log, and the message box. */
+.assistant-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--omx-space-2);
+}
+
+.assistant-panel[hidden],
+.assistant-off[hidden],
+.assistant-on[hidden] {
+  display: none;
+}
+
+.assistant-off {
+  display: flex;
+  flex-direction: column;
+  gap: var(--omx-space-3);
+  align-items: flex-start;
+  padding: var(--omx-space-2);
+  color: var(--omx-muted);
+}
+
+.assistant-on {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--omx-space-2);
+  min-height: 0;
+}
+
+.assistant-notice {
+  margin: 0;
+  padding: 2px var(--omx-space-2);
+  font-size: 11.5px;
+  color: var(--omx-muted);
+  background: var(--omx-surface);
+  border-radius: var(--omx-radius);
+}
+
+.assistant-log {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--omx-space-2);
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.assistant-message {
+  max-width: 100%;
+  padding: var(--omx-space-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-radius: var(--omx-radius-large);
+}
+
+.assistant-message.user {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--omx-accent) 26%, transparent);
+}
+
+.assistant-message.assistant {
+  background: var(--omx-surface);
+}
+
+.assistant-message.error {
+  color: var(--omx-danger);
+  background: color-mix(in srgb, var(--omx-danger) 12%, transparent);
+}
+
+.assistant-message p {
+  margin: 0 0 var(--omx-space-2);
+}
+
+.assistant-message p:last-child {
+  margin-bottom: 0;
+}
+
+.assistant-code {
+  margin: var(--omx-space-1) 0 var(--omx-space-2);
+  overflow: hidden;
+  background: var(--terminal-background, #000000);
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.assistant-code pre {
+  margin: 0;
+  padding: var(--omx-space-2);
+  overflow-x: auto;
+  font:
+    12px ui-monospace,
+    monospace;
+  white-space: pre;
+}
+
+.assistant-command-actions {
+  display: flex;
+  gap: var(--omx-space-1);
+  padding: var(--omx-space-1);
+  border-top: 1px solid var(--omx-border);
+}
+
+.assistant-command-actions .omx-button {
+  padding: 2px var(--omx-space-2);
+  font-size: 11.5px;
+}
+
+.assistant-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 3.5em;
+  padding: var(--omx-space-2);
+  font: inherit;
+  font-size: 12.5px;
+  color: inherit;
+  resize: vertical;
+  background: var(--omx-surface);
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.assistant-input:focus-visible {
+  outline: var(--omx-focus-ring);
+  outline-offset: -1px;
+}
+
+.assistant-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--omx-space-2);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.assistant-actions .omx-checkbox {
+  flex: 1 1 100%;
+  font-size: 12px;
+}
+
+.assistant-send {
+  display: inline-flex;
+  gap: var(--omx-space-1);
+  align-items: center;
+}
+
+.preferences-page-status {
+  min-height: 1.4em;
+  margin: 0;
+  font-size: 12px;
+  color: var(--omx-muted);
+}
+
+.preferences-page-status.error {
+  color: var(--omx-danger);
+}
+
+/* Model browser: a searchable list of the provider's models. */
+.omx-modal.model-browser-dialog {
+  width: min(640px, calc(100vw - 32px));
+  height: min(560px, calc(100vh - 48px));
+}
+
+.model-browser {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.model-browser-dialog .omx-modal-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.model-browser-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 160px;
+  overflow-y: auto;
+}
+
+.model-browser-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px var(--omx-space-2);
+  padding: var(--omx-space-1) var(--omx-space-2);
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--omx-radius);
+}
+
+.model-browser-row:hover {
+  background: var(--omx-surface-raised);
+}
+
+.model-browser-row[aria-selected="true"] {
+  background: color-mix(in srgb, var(--omx-accent) 22%, transparent);
+  border-color: var(--omx-accent);
+}
+
+.model-browser-row:focus-visible {
+  outline: var(--omx-focus-ring);
+  outline-offset: -1px;
+}
+
+.model-browser-id {
+  overflow: hidden;
+  font:
+    12.5px ui-monospace,
+    monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-browser-details {
+  grid-column: 1;
+  overflow: hidden;
+  font-size: 11.5px;
+  color: var(--omx-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-browser-free {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: center;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0b2e1a;
+  background: #3ddc84;
+  border-radius: 999px;
+}
+
+.omx-modal.about-dialog {
+  width: min(420px, calc(100vw - 32px));
+}
+
+.about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--omx-space-1);
+  text-align: center;
+}
+
+.about p,
+.about h3,
+.about ul {
+  margin: 0;
+}
+
+.about h3 {
+  margin-top: var(--omx-space-2);
+  font-size: 0.95em;
+}
+
+.about-icon svg {
+  width: 72px;
+  height: 72px;
+}
+
+.about-name {
+  font-size: 1.4em;
+  font-weight: 700;
+}
+
+.about-version,
+.about-warranty {
+  color: var(--omx-muted);
+}
+
+.about-authors {
+  display: flex;
+  flex-direction: column;
+  gap: var(--omx-space-1);
+  padding: 0;
+  list-style: none;
+}
+
+.about-authors li {
+  display: flex;
+  flex-direction: column;
+}
+
+.about-author-email {
+  font-size: 0.92em;
+  color: var(--omx-muted);
+  user-select: text;
+}
+
+.about-link {
+  padding: 0;
+  font: inherit;
+  color: var(--omx-accent);
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+.omx-modal.terminal-picker-dialog {
+  width: min(480px, calc(100vw - 32px));
+}
+
+.terminal-picker-command {
+  display: block;
+  padding: var(--omx-space-1) var(--omx-space-2);
+  overflow-x: auto;
+  white-space: pre;
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.terminal-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--omx-space-1);
+  max-height: 280px;
+  padding-left: var(--omx-space-3);
+  overflow-y: auto;
+}
+
+.terminal-picker-list .current {
+  font-weight: 600;
+}
+
+/* Hover preview of a file name printed in the terminal. */
+.file-peek-card {
+  position: fixed;
+  z-index: 44;
+  display: flex;
+  flex-direction: column;
+  gap: var(--omx-space-2);
+  box-sizing: border-box;
+  width: min(380px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px);
+  padding: var(--omx-space-3);
+  overflow: auto;
+  font: var(--omx-font);
+  color: var(--omx-foreground);
+  background: var(--omx-surface);
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius-large);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 40%);
+}
+
+.file-peek-name {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.file-peek-image {
+  align-self: center;
+  max-width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  background: repeating-conic-gradient(
+      rgb(128 128 128 / 18%) 0 25%,
+      transparent 0 50%
+    )
+    0 0 / 16px 16px;
+  border-radius: var(--omx-radius);
+}
+
+.file-peek-text {
+  max-height: 220px;
+  margin: 0;
+  padding: var(--omx-space-2);
+  overflow: auto;
+  font:
+    12px/1.4 ui-monospace,
+    "FiraCode Nerd Font Mono",
+    monospace;
+  white-space: pre;
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    transparent 30%
+  );
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.file-peek-entries {
+  max-height: 200px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  font:
+    12px/1.5 ui-monospace,
+    "FiraCode Nerd Font Mono",
+    monospace;
+  list-style: none;
+}
+
+.file-peek-more {
+  color: var(--omx-muted);
+}
+
+.file-details {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px var(--omx-space-3);
+  margin: 0;
+}
+
+.file-details dt {
+  color: var(--omx-muted);
+}
+
+.file-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.file-details-path {
+  font-family: ui-monospace, "FiraCode Nerd Font Mono", monospace;
+  font-size: 12px;
+  user-select: text;
+}
+
+.file-peek-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--omx-space-1);
+}
+
+.file-peek-actions .omx-button {
+  padding: 3px var(--omx-space-2);
+  font-size: 12px;
+}
+
+/* Preferences → config.json: the whole file as text. */
+.preferences-config-path {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  user-select: text;
+}
+
+.omx-modal textarea.preferences-config-editor {
+  width: 100%;
+  min-height: 240px;
+  font:
+    12px/1.5 ui-monospace,
+    "FiraCode Nerd Font Mono",
+    monospace;
+  white-space: pre;
+  tab-size: 2;
+  resize: vertical;
+}
+
+.preferences-config-check {
+  flex: 1;
+  min-height: 1.45em;
+  margin: 0;
+  color: var(--omx-muted);
+}
+
+.preferences-config-check.error {
+  color: var(--omx-danger);
+}
+
+.preferences-config-actions {
+  display: flex;
+  gap: var(--omx-space-2);
+  align-items: center;
+}
+
+.preferences-config-save:not(:disabled) {
+  color: #ffffff;
+  background: var(--omx-accent);
+  border-color: var(--omx-accent);
 }

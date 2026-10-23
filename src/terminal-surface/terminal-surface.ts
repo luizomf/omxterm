@@ -17,8 +17,16 @@ export interface TerminalSurface {
   paste(): Promise<void>;
   inject(text: string, options?: { readonly submit?: boolean }): Promise<void>;
   selectAll(): void;
+  // The selected text, read without touching the clipboard.
+  selectionText?(): string;
+  // The whole buffer, scrollback included, as text. It selects everything to
+  // read it; the selection clears at the next key press, as usual.
+  outputText?(): string;
   // Opens or closes the in-terminal search bar over the scrollback.
   toggleSearch(): void;
+  // The file name printed under a window point (an `ls` entry, a path), or
+  // null over blank cells.
+  fileTokenAt?(clientX: number, clientY: number): string | null;
   dispose(): void;
 }
 

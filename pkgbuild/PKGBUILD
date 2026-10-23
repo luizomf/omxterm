@@ -5,9 +5,12 @@
 # compiled on the build host for x86_64 or aarch64; npm and Electron downloads
 # need network access during build(). packaging/arch/PKGBUILD builds the same
 # package from a local checkout instead.
+#
+# The default branch is built; another one with, for example:
+#   OMXTERM_BRANCH=feature/ashyterm-ui-parity makepkg -si
 
 pkgname=omxterm
-pkgdesc="Open-source personal desktop terminal with split panes, saved SSH sessions, output highlighting and a command manager"
+pkgdesc="Open-source terminal with split panes, SSH sessions, an SFTP file manager, file hover previews, output highlighting, a command manager and an optional AI assistant"
 
 depends=(
     'alsa-lib'
@@ -40,7 +43,10 @@ depends=(
     'bash' # /usr/bin/sh for the /usr/bin/omxterm launcher
 )
 optdepends=(
-    'openssh: saved SSH sessions and Quick Connect'
+    'openssh: SSH sessions, Quick Connect and remote files over SFTP'
+    'ollama: local models for the AI assistant'
+    'poppler: first-page previews, page counts and titles of PDF files'
+    'xorg-xrandr: new windows open on the active monitor under KDE Plasma Wayland'
 )
 # node-pty's own node-gyp install script is skipped (see build()): the
 # project's postinstall compiles pty.node with the C++ compiler and pinned
@@ -55,13 +61,18 @@ makedepends=(
 # Electron ships prebuilt, already-stripped binaries.
 options=('!strip' '!debug')
 
-pkgver=$(date +%y.%m.%d)
-pkgrel=$(date +%H%M)
+# makepkg reads this file more than once (again under fakeroot); one build
+# time keeps pkgver, pkgrel and the package file name in step even when the
+# build crosses a minute. The exported value reaches the fakeroot pass.
+export OMXTERM_BUILD_TIME="${OMXTERM_BUILD_TIME:-$(date +%s)}"
+pkgver=$(date -d "@${OMXTERM_BUILD_TIME}" +%y.%m.%d)
+pkgrel=$(date -d "@${OMXTERM_BUILD_TIME}" +%H%M)
 
 arch=('x86_64' 'aarch64')
 license=('MIT')
 url="https://github.com/ruscher/${pkgname}"
-source=("git+${url}.git")
+_branch="${OMXTERM_BRANCH:-main}"
+source=("git+${url}.git#branch=${_branch}")
 md5sums=('SKIP')
 
 build() {
@@ -104,6 +115,9 @@ package() {
 #!/bin/sh
 # OMXTerm disables the Chromium sandbox on Linux (ADR 0024). Chromium decides
 # during bootstrap, before application code runs, so the flag comes first.
+# A parent Electron application (an editor's terminal, for example) may export
+# ELECTRON_RUN_AS_NODE, which would start the binary as plain Node.js.
+unset ELECTRON_RUN_AS_NODE
 exec /usr/lib/omxterm/omxterm --no-sandbox "$@"
 EOF
 
@@ -111,13 +125,13 @@ EOF
 [Desktop Entry]
 Name=OMXTerm
 Comment=Open-source personal desktop terminal
-Exec=/usr/lib/omxterm/omxterm --no-sandbox %U
+Exec=/usr/bin/omxterm %U
 Terminal=false
 Type=Application
 Icon=omxterm
 StartupWMClass=omxterm
 Categories=System;TerminalEmulator;
-Keywords=terminal;shell;ssh;console;
+Keywords=terminal;shell;ssh;sftp;console;command;prompt;
 EOF
 
     # Theme icons at every size, so menus and panels never scale one bitmap.

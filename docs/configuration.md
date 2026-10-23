@@ -1,6 +1,8 @@
 # User configuration
 
 > [!TIP]
+> **Prefer a settings window?** Open **☰ → Preferences…** (`Ctrl+Shift+X` on Linux and Windows, `Cmd+,` on macOS). It edits the settings below, offers 14 built-in color schemes, records shortcuts with conflict checks, and applies every change to all windows at once. It writes the same `config.json` described here and keeps settings it does not manage, such as `windowsShell`.
+>
 > **Prefer visual editing?** [OMXTerm Studio](#edit-visually-with-omxterm-studio) lets you import, customize, and export your settings, themes, and shortcuts in the browser.
 
 OMXTerm works out of the box with its bundled font, theme, and default shortcuts. On your first launch, it creates three editable starter files:
@@ -170,7 +172,7 @@ See the [Linux desktop guide](linux-desktop.md) for compositor-specific setup:
 
 ## Configuration reference
 
-Every field except `version` is optional and falls back to its default when omitted:
+Every field except `version` is optional and falls back to its default when omitted. At startup OMXTerm adds the settings a valid `config.json` does not list yet, with their current values, so the file always shows every option; values you wrote are kept as written. Only `font.family` (absent means the bundled font) and `windowsShell` (Windows) stay out until you set them:
 
 | Preference                | Accepted value                          | Default                          |
 | ------------------------- | --------------------------------------- | -------------------------------- |
@@ -182,10 +184,11 @@ Every field except `version` is optional and falls back to its default when omit
 | `font.size`               | integer `8` – `72` (CSS px)             | `16`                             |
 | `font.lineHeight`         | number `1.0` – `2.0`                    | `1.0`                            |
 | `font.ligatures`          | boolean                                 | `true`                           |
-| `terminal.padding.top`    | integer `0` – `128` (CSS px)            | `0`                              |
-| `terminal.padding.right`  | integer `0` – `128` (CSS px)            | `8`                              |
+| `terminal.padding.top`    | integer `0` – `128` (CSS px)            | `6`                              |
+| `terminal.padding.right`  | integer `0` – `128` (CSS px)            | `12`                             |
 | `terminal.padding.bottom` | integer `0` – `128` (CSS px)            | `8`                              |
-| `terminal.padding.left`   | integer `0` – `128` (CSS px)            | `8`                              |
+| `terminal.padding.left`   | integer `0` – `128` (CSS px)            | `12`                             |
+| `terminal.filePreview`    | boolean                                 | `true`                           |
 | `scrollback.lines`        | integer `0` – `100000`                  | `10000`                          |
 | `keyboard.optionAsAlt`    | `"none"`, `"left"`, `"right"`, `"both"` | `"none"`                         |
 | `window.alwaysOnTop`      | boolean                                 | `false`                          |
@@ -193,11 +196,15 @@ Every field except `version` is optional and falls back to its default when omit
 | `window.transparency`     | number `0` – `1`                        | `0`                              |
 | `window.showTitleBar`     | boolean                                 | `true`                           |
 | `window.showTabBar`       | boolean                                 | `true`                           |
+| `window.cornerRadius`     | integer `0` – `24` (CSS px)             | `0`                              |
+| `window.autoHideTitleBar` | boolean                                 | `false`                          |
 | `theme.path`              | relative or absolute file path          | bundled `omtheme`                |
 | `keybinds.<action>`       | Electron accelerator string             | built-in shortcut per action     |
 
 ### Notes on specific settings
 
+- **`terminal.filePreview`:** hovering a file name printed in a local terminal shows a preview card (picture, first page or first lines, and details). Turn it off in Preferences → Terminal.
+- **Preferences → config.json** edits this file as text; saving validates it like a reload and keeps the previous version as `config.json.bak`.
 - **`scrollback.lines`:** kept in memory per tab (up to a 10 MB per-screen core ceiling). Setting `0` clears and disables scrollback history.
 - **`keyboard.optionAsAlt` (macOS only):** `"none"` keeps standard macOS Option character input (like accented letters or symbols); `"left"`, `"right"`, or `"both"` sends terminal `Alt` sequences instead.
 - **`window.showTitleBar`, `window.showTabBar`, and `window.alwaysOnTop`:** set the initial state for new windows. Use the **View** and **Window** menus to toggle them in your current window.
@@ -278,6 +285,22 @@ Customize application shortcuts under `keybinds` using [Electron accelerator](ht
 | `toggleCommands`            | `Command+Shift+M`           | `Control+Shift+M`         |
 | `commandPalette`            | `Command+Shift+P`           | `Control+Shift+P`         |
 | `find`                      | `Command+F`                 | `Control+Shift+G`         |
+| `preferences`               | `Command+,`                 | `Control+Shift+X`         |
+| `toggleFiles`               | `Command+Shift+L`           | `Control+Shift+L`         |
+| `toggleAssistant`           | `Command+Shift+Y`           | `Control+Shift+Y`         |
+| `roundMore`                 | `Command+Alt+Shift+R`       | `Control+Alt+Shift+R`     |
+| `roundLess`                 | `Command+Alt+Shift+E`       | `Control+Alt+Shift+E`     |
+| `autoHideTitleBar`          | `Command+Alt+Shift+H`       | `Control+Alt+Shift+H`     |
+| `alwaysShowTitleBar`        | `Command+Alt+Shift+V`       | `Control+Alt+Shift+V`     |
+| `toggleAlwaysOnTop`         | `Command+Alt+Shift+T`       | `Control+Alt+Shift+T`     |
+| `toggleDevTools`            | `Command+Alt+Shift+I`       | `Control+Alt+Shift+I`     |
+| `openLocalImage`            | `Command+Alt+Shift+O`       | `Control+Alt+Shift+O`     |
+| `toggleHighlighting`        | `Command+Alt+Shift+C`       | `Control+Alt+Shift+C`     |
+| `highlightRules`            | `Command+Alt+Shift+G`       | `Control+Alt+Shift+G`     |
+| `backUpSettings`            | `Command+Alt+Shift+B`       | `Control+Alt+Shift+B`     |
+| `restoreSettings`           | `Command+Alt+Shift+U`       | `Control+Alt+Shift+U`     |
+| `toggleRestoreWindows`      | `Command+Alt+Shift+W`       | `Control+Alt+Shift+W`     |
+| `about`                     | `Command+Alt+Shift+A`       | `Control+Alt+Shift+A`     |
 
 Example overriding a single shortcut:
 

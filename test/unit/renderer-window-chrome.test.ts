@@ -327,4 +327,30 @@ describe("Window Chrome through the mounted window host", () => {
       view.host.dispose();
     },
   );
+  it("keeps the auto-hiding title bar in full screen and opens it in flow", async () => {
+    const view = await setup({ style: "custom" });
+    document.documentElement.setAttribute("data-title-bar-autohide", "");
+    try {
+      await vi.waitFor(() => expect(row().hidden).toBe(false));
+      view.chrome.update({ fullScreen: true });
+      expect(row().hidden).toBe(false);
+      expect(document.body.classList.contains("window-filled")).toBe(true);
+      expect(row().classList.contains("revealed")).toBe(false);
+      document.dispatchEvent(
+        new MouseEvent("mousemove", { clientX: 200, clientY: 4 }),
+      );
+      expect(row().classList.contains("revealed")).toBe(true);
+      // The row stays in the body's flow, ahead of the tab strip.
+      expect(getComputedStyle(row()).position).not.toBe("fixed");
+      expect(
+        row().compareDocumentPosition(view.tabStrip) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      view.chrome.update({ fullScreen: false });
+      expect(document.body.classList.contains("window-filled")).toBe(false);
+    } finally {
+      document.documentElement.removeAttribute("data-title-bar-autohide");
+      view.host.dispose();
+    }
+  });
 });

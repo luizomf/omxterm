@@ -21,6 +21,22 @@ export interface KeybindWebContents {
   ): unknown;
 }
 
+export interface CapturedKey {
+  readonly key: string;
+  readonly code: string;
+  readonly control: boolean;
+  readonly meta: boolean;
+  readonly alt: boolean;
+  readonly shift: boolean;
+}
+
+// While the Preferences shortcut recorder listens, every key goes to it
+// instead of running a keybind, a menu shortcut or reaching the terminal.
+export interface KeyCapture {
+  active(): boolean;
+  send(key: CapturedKey): void;
+}
+
 // macOS AppKit refuses to fire some registered menu key equivalents —
 // Control+Tab is reserved for key-view loop navigation — so those keybinds
 // shipped inert and the key fell through to the PTY (#82). before-input-event
@@ -35,9 +51,22 @@ export function deliverKeybindsFromKeyEvents(
   keybinds: () => TerminalKeybinds,
   invokeAction: (action: TerminalActionName) => void,
   platform: string = "darwin",
+  capture?: KeyCapture,
 ): void {
   webContents.on("before-input-event", (event, input) => {
     if (input.type !== "keyDown" && input.type !== "rawKeyDown") return;
+    if (capture?.active()) {
+      event.preventDefault();
+      capture.send({
+        key: input.key,
+        code: input.code ?? "",
+        control: input.control,
+        meta: input.meta,
+        alt: input.alt,
+        shift: input.shift,
+      });
+      return;
+    }
     const action = terminalActionForKeyboardInput(
       keybinds(),
       { ...input, altGr: hasNativeAltGr(input) },

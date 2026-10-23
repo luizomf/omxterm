@@ -254,7 +254,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   window.
 - Linux and Windows use a frameless native window with a hideable, app-drawn 34
   px title/drag row. The sanitized selected Terminal Title, with the existing
-  fallback, appears at the left; minimize, maximize/restore, and close controls
+  fallback, appears centered between the header toolbar groups (see Header
+  toolbar and main menu); minimize, maximize/restore, and close controls
   appear at the right. Colors follow the active Terminal Theme. Controls invoke
   native actions in main; Close uses the existing guarded Close Window
   lifecycle. Native resize, maximize/restore, and operating-system edge/corner
@@ -295,21 +296,28 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   and configured padding, not the native popup.
 - `Window -> Always on Top` toggles only the selected window at the ordinary
   native floating level. New windows use the configured default.
-- On Linux and Windows, the existing native About action shows `OMXTerm`, the
-  running application version, project copyright, and the OMXTerm application
-  icon. Packaged applications use their packaged icon resource; development uses
-  the development asset. Native dialog layout and window captions remain
-  platform-owned; macOS retains its bundle-provided About metadata.
+- **About OMXTerm** (application menu and ☰ menu, `about`) opens an in-window
+  dialog with the application icon, name, running version, website, authors,
+  the copyleft notice (`Copyleft 🄯`), the statement that the application comes
+  with absolutely no warranty with a link to the MIT License, and **Report an
+  Issue**. Main supplies the facts and opens only its own fixed links (website,
+  issue tracker, MIT License); the renderer names a link, never an address.
+  The native About panel metadata (Linux and Windows) carries the same
+  copyleft and authors.
 - `View -> Toggle Developer Tools` is a menu-only diagnostic action for the
   selected Terminal Window in development and packaged applications. It opens or
   closes Electron's local Developer Tools without enabling remote debugging;
   Developer Tools never open automatically. The tools can expose private
   Terminal Payload and runtime state, so diagnostic output, screenshots, traces,
   and profiles require review and redaction before sharing.
-- `File -> Open Local Image…` is a menu-only action for the selected Terminal
-  Window. It opens a native picker and previews one validated local static PNG
-  or JPEG in a temporary overlay without writing the file or changing User
-  Configuration. Escape, the close button, or the backdrop dismisses the
+- `File -> Open Local Image…` opens a native picker and previews one
+  validated local static PNG or JPEG in a temporary overlay without writing
+  the file or changing User Configuration. Below the image the overlay shows
+  the name, type, dimensions, size, modification date and full path, with
+  **Copy Path**, **Insert Path**, **Open** and **Show in File Manager**;
+  clicking the image switches between fitting the window and its actual
+  size. Main adds the chosen file's path, size and modification time to the
+  image data; error messages still never carry the path. Escape, the close button, or the backdrop dismisses the
   overlay, releases its renderer Blob source synchronously, and returns focus to
   the live selected Terminal Tab. Picker cancellation returns terminal focus
   without an error. The picker and visible local-image sources share the bounded
@@ -482,6 +490,11 @@ are typed into the focused pane on request.
 - A form always shows the exact command before **Insert in Terminal** (no
   Enter) or **Run in Terminal** (with Enter). Commands without fields marked
   for direct execution run on click.
+- **Run in Multiple Terminals…** (form button and command menu) opens a list of
+  every live pane in the window's tabs, all checked, with **Select All**; the
+  exact command is shown again, and **Run** types and submits it into each
+  checked pane. Panes that closed meanwhile are skipped; a notice says how
+  many received it.
 - Custom commands, favorites and hidden built-ins are kept in Application
   Data (`commands.json`) and validated in main. Built-in names and labels are
   localized; command text and option values never are.
@@ -891,9 +904,16 @@ common built-in defaults (including explicit `window.blur: false` and
 non-executing example in `snippets.json`, and a copy of the bundled theme at
 `themes/omtheme.json`. Existing sibling files are never replaced. Files are
 published complete without overwriting concurrent creations; configuration is
-published last. Shell, font family and shortcuts retain their implicit platform
-defaults. Creation failure produces a non-blocking notice and normal
-configuration loading continues. This runs at application opening, not package
+published last. Creation failure produces a non-blocking notice and normal
+configuration loading continues. After a successful load at startup, a valid
+`config.json` that does not list every setting is rewritten atomically with
+all of them: every value already written (and any unknown key) is kept
+exactly as written, missing settings get their effective value in reference
+order, and every keybind action is listed with its shortcut. The bundled font
+keeps an absent `font.family`, and `windowsShell` appears only when set.
+Without a `theme`, the bundled theme is named as `themes/omtheme.json`, which
+is created when absent; a changed `themes/omtheme.json` is never replaced, and
+then no theme is named. An invalid or unreadable file is never rewritten. This runs at application opening, not package
 installation or manual reload. The copied theme belongs to the user and does not
 track subsequent bundled palette changes. A present file must contain
 `"version": 1` and only supported keys:
@@ -921,8 +941,8 @@ faces. `font.size` accepts only integral pixel sizes from 8 through 72
 inclusive. `font.lineHeight` is an independent row-height multiplier from 1.0
 through 2.0 inclusive, accepts fractional values, does not change glyph size,
 and defaults to 1.0. Terminal padding uses explicit per-side integer CSS pixels
-from 0 through 128 inclusive and defaults to top 0, right 8, bottom 8, and
-left 8. User top padding is added below the 30 px native title inset on macOS
+from 0 through 128 inclusive and defaults to top 6, right 12, bottom 8, and
+left 12. User top padding is added below the 30 px native title inset on macOS
 when that title area is visible, or below the 34 px app-drawn title row on Linux
 and Windows. Hiding the title area or entering fullscreen removes only the
 app-owned title space, without changing configured padding or the macOS system
@@ -1168,9 +1188,11 @@ IPC, PTY control, resize, duration, and failures; they must never contain PTY
 input/output, clipboard data, environment contents, configuration contents,
 executable names, command arguments, commands, titles, secrets, or transcripts.
 
-The application performs no network requests: no analytics, telemetry, crash
-reporting, update check, or remote log delivery. Child processes retain their
-normal network access.
+The application performs no network requests of its own — no analytics,
+telemetry, crash reporting, update check, or remote log delivery — with one
+opt-in exception: while the AI assistant is enabled, main sends the chat
+requests and model listings the user starts to the chosen provider (see AI
+assistant). Child processes retain their normal network access.
 
 The optional Linux AppImage desktop installer accepts only a user-supplied,
 previously verified local Linux ARM64 OMXTerm AppImage and performs no download,
@@ -1241,6 +1263,247 @@ Previous/Next. Its labels are translated. Restty's own search shortcut stays
 off, so only OMXTerm's keybind opens it, and each pane searches only its own
 buffer.
 
+## Header toolbar and main menu
+
+The title area carries an AshyTerm-style toolbar so panels and common actions
+are visible without knowing shortcuts. On Linux and Windows it shares the
+app-drawn title row; on macOS it overlays the native title inset beside the
+traffic lights. Hiding the title bar (`toggleTitleBar`) hides the toolbar too.
+
+- Before the title: **Sessions**, **Commands** (when the Command Manager is
+  available), **Files**, **Assistant**, **Find in Terminal**, then **Split Right**, **Split Down** and
+  **Broadcast Input to Panes**. After the title: **New Tab** and the **Main
+  Menu**.
+- Each button sends only the name of a keybind action, which main validates
+  and runs exactly as the shortcut would. Sessions, Commands and Broadcast
+  show a pressed state while their panel is open or input is mirrored.
+  Pointer presses keep keyboard focus in the terminal; every button has a
+  translated accessible name and tooltip and is reachable with Tab.
+- The **Main Menu** button asks main for the menu at the button's window
+  position (validated as two integers inside the window range). Main builds a
+  translated native menu from the same actions as the application menu: New
+  Window, New Tab, Command Palette, Find, Sessions, Commands, Snippets, a
+  Terminal submenu (splits, panes, broadcast, clipboard, Open Local Image), a
+  View submenu (zoom, tab bar, title bar, Always on Top, full screen,
+  Developer Tools), Highlight Output and Highlight Rules, Preferences, a
+  Settings submenu
+  (Back Up, Restore, Restore Windows at Startup, Reload Configuration),
+  About and Quit. Accelerators shown are the configured keybinds.
+
+## Files panel
+
+**Files** in the header toolbar, **☰ → Files**, **View → Toggle Files**, or
+`toggleFiles` (`Cmd+Shift+L` on macOS, `Ctrl+Shift+L` on Linux and Windows)
+shows the Files panel in the sidebar, beside Sessions and Commands. It is
+AshyTerm's integrated file manager.
+
+- **Following the terminal, both ways.** With a local pane focused the panel
+  shows that pane's directory: the last OSC 7 report, else (Linux) the
+  directory of the pane's process, which main reads. It checks again when
+  focus moves, when OSC 7 arrives, and every 1.5 seconds while the panel is
+  visible and **Follow Terminal Folder** is on. Browsing in the panel (a
+  folder, the breadcrumb, Parent, Home) moves the shell too: when no program
+  runs in the pane, the panel sends Ctrl+E Ctrl+U (the cleared line stays in
+  the shell's kill ring) and types ` cd -- '<path>'` (leading space so shells
+  that ignore such lines keep it out of history; PowerShell: Escape, then
+  `Set-Location -LiteralPath`). For four seconds after that, the panel waits
+  for the shell to arrive instead of jumping back. With an SSH pane focused
+  (a Saved SSH Session or Quick Connect) it shows that host over SFTP and
+  follows the remote shell through its OSC 7 reports; **Follow This Shell's
+  Folder** in the folder menu types a one-line bash/zsh hook that makes the
+  remote shell send them for the rest of the session. Browsing types the `cd`
+  into the remote shell.
+- **Browsing.** Breadcrumb, Parent and Home buttons, Refresh, Show Hidden
+  Files, a filter, folders first. Keyboard: arrows, Shift and Ctrl/Cmd
+  selection, Enter opens, Backspace goes up, F2 renames, Delete deletes,
+  Ctrl/Cmd+A, C, X and V, the context-menu key or Shift+F10, and typing
+  starts the filter. A listing shows at most 5,000 entries and says so.
+- **Local items** open with the default application, can be shown in the
+  system file manager, created, renamed, copied and moved (never replacing an
+  existing item) and moved to the system **trash** after confirmation.
+- **Remote items** (SFTP): files open for **editing** — main downloads a
+  private temporary copy (mode 0700 folder), opens it in the default
+  application, and uploads each save over the remote file; copies are removed
+  when OMXTerm quits. Folders and files can be created, renamed, moved within
+  the host, **downloaded** to a folder chosen in a native dialog (never
+  replacing a local file: "name (1).ext"), **uploaded** from files chosen in a
+  native dialog (never replacing a remote file) and deleted **permanently**
+  after a confirmation that says so. Transfers show progress and can be
+  cancelled; a failed or cancelled transfer leaves no partial file.
+- **Terminal actions.** Open in Terminal and Change Terminal to This Folder
+  type `cd -- '<path>'` (PowerShell: `Set-Location -LiteralPath '<path>'`)
+  into the focused pane and press Enter; Insert Path types quoted paths
+  without Enter; Copy Path copies them.
+- **Boundaries.** Every operation runs in main with Node file APIs or the SFTP
+  protocol, never a shell. Paths must be absolute and names single path
+  components without control characters. Remote requests name a pane by
+  session id; main looks up how that pane of the sender's window started, so
+  the renderer can reach only hosts the user opened a session to. SFTP runs
+  `ssh -s <host> sftp` with the session's host, user, port, key, jump host
+  and options, plus `BatchMode=yes`, reusing the terminal's shared connection
+  (ControlMaster, on by default for Saved Sessions and Quick Connect on
+  macOS and Linux unless a session turns it off) — which is how password
+  sessions are browsed while connected, without OMXTerm handling the
+  password. Replies are bounded to 256 KiB per packet.
+
+## AI assistant
+
+AshyTerm's optional assistant, in the sidebar (**Assistant** in the header
+toolbar, **☰ → Assistant**, **View → Toggle Assistant**, or `toggleAssistant`:
+`Cmd+Shift+Y` on macOS, `Ctrl+Shift+Y` on Linux and Windows).
+
+- **Off by default.** While off, the panel only explains that and opens
+  **Preferences → Assistant**; main refuses chat requests, and turning it off
+  cancels requests in flight. Settings live in Application Data
+  `assistant.json` (enabled, provider, model per provider, local server
+  address); the conversation in `assistant-history.json` (at most 80
+  messages) until **Clear Conversation**.
+- **Providers:** Groq, Google Gemini (OpenAI-compatible endpoint),
+  OpenRouter, Mistral AI, Cerebras, GitHub Models, and an Ollama, LM Studio
+  or other OpenAI-compatible server, local or self-hosted. Its address may
+  omit `/v1` (as Ollama clients usually write it); a bare address gets `/v1`,
+  and model listing falls back to Ollama's `/api/tags`. It must be https, or
+  http to this computer or the local network (127/8, 10/8, 172.16/12,
+  192.168/16, `[::1]`, `.local` and `.lan` names), without credentials, query
+  or fragment. Unreachable servers are reported with the reason (refused,
+  unknown host, TLS problem).
+- **Keys:** entered in Preferences and stored with Electron safeStorage in
+  `credentials.json` (macOS Keychain, Windows DPAPI, Linux Secret Service);
+  where only Chromium's plaintext backend exists, keys cannot be saved. Keys
+  never return to the renderer and are removed from provider error messages.
+- **What is sent, and when:** only after **Send**: a system prompt naming the
+  operating system (from `/etc/os-release` on Linux) and shell basename,
+  sanitized, and the answer language; then the most recent 40 messages, each
+  at most 50,000 characters. The terminal selection is added only when
+  **Include terminal selection** is ticked, and shown in the message. Terminal
+  output, paths and environment values are never sent on their own.
+- **Answers** stream into the panel as text (no markup is interpreted), with
+  fenced code blocks shown as commands offering **Insert** (typed without
+  Enter), **Run** (after a confirmation that shows the command) and **Copy**.
+  Requests time out after 60 seconds (120 for local servers); answers are
+  bounded to 200,000 characters. **Stop** cancels.
+- Preferences → Assistant offers **Get API Key** (opens the provider's own
+  key page in the browser; the address is fixed per provider in main),
+  **Browse Models…** (a searchable list with each model's context size and,
+  where the provider publishes prices, a **Free** badge and a **Free models
+  only** filter) and **Test Connection**.
+
+## Preferences
+
+**☰ → Preferences…**, the application menu, or `preferences` (`Cmd+,` on
+macOS, `Ctrl+Shift+X` on Linux and Windows) opens the Preferences dialog in
+the focused window. It is a graphical editor for `config.json` plus two
+Application Data switches.
+
+- Pages: **Appearance** (color scheme, font family with installed monospace
+  suggestions on Linux, size, line height, ligatures, background
+  transparency, blur, padding), **Terminal** (scrollback, macOS Option as
+  Alt, Highlight Output, Highlight Rules…), **Window and Tabs** (title bar,
+  tab bar and always-on-top for new windows, confirm close, Restore Windows
+  at Startup), **Shortcuts** (every keybind action), **Assistant** (see AI
+  assistant), **Advanced** (log level; the Windows shell on Windows) and
+  **config.json**. The Terminal page also turns file hover previews
+  (`terminal.filePreview`) on or off.
+- **config.json page:** the whole file as text, with its path, a live JSON
+  check, Format, Reload from Disk and Save (also `Ctrl+S`/`Cmd+S` in the
+  editor). Save is enabled only for a changed JSON object; main validates
+  the text with the same loader a reload uses, refuses it with the field and
+  reason when invalid, otherwise copies the previous file to
+  `config.json.bak`, writes the text with every setting it does not list
+  added (written values stay as typed) and reloads every window; the editor
+  then shows the file as written. A clean editor rereads the file after any other
+  page saves; an edited one keeps the user's text.
+- Each change is saved when it is made. The renderer sends only a patch of
+  known settings with in-range values; main merges it into the current
+  `config.json` document, validates the result with the same loader a reload
+  uses (including installed fonts, accelerator syntax and conflicts), writes
+  it atomically and reloads, so every window applies it. A refused change is
+  not written: the dialog shows the field and reason and restores the saved
+  value. A `config.json` that is not JSON is never rewritten by a change;
+  Restore Defaults replaces it.
+- Keys the dialog does not manage are kept. An empty Windows shell removes
+  `windowsShell`. Every save writes the complete file: every setting and every
+  keybind, including those equal to the platform default.
+- **Color schemes:** OMXTerm's `omtheme` (the bundled default, selected by
+  naming `themes/omtheme.json`) and 13 AshyTerm schemes. Choosing one writes
+  `themes/<id>.json` and points `theme.path` at it; if a different theme
+  already uses that file name it is kept and `themes/<id>.builtin.json` is
+  used instead. Other valid themes in `themes/` are offered by file name.
+- **Shortcut recorder:** activating a shortcut asks main to route every key
+  press of that window to the recorder instead of keybinds, menu shortcuts
+  or the terminal, until a combination is chosen, Escape cancels, focus
+  leaves, the dialog closes, or 30 seconds pass. Main still validates the
+  accelerator.
+- **Restore Defaults** asks for confirmation, copies the current file to
+  `config.json.bak`, and writes every setting with its default value plus
+  unmanaged keys.
+
+## Window frame
+
+- `window.cornerRadius` (0–24 CSS px, default 0) rounds the window corners
+  on Linux and Windows' custom title bar windows by clipping the transparent
+  page (`clip-path`, which also clips canvases and overlays). The theme tint
+  is painted by a layer of the body rather than the body background, which
+  would spread to the unclipped page canvas. Maximized and full-screen windows
+  keep square corners. **View → Rounder Corners / Less
+  Rounded Corners** (also in ☰ → View) change it by 2 px and save it to
+  `config.json`; Preferences → Appearance edits it directly.
+- `window.autoHideTitleBar` (default off) collapses the custom title bar to
+  zero height: moving the pointer to the top 12 px (the outermost pixels are
+  the resize border), or focus entering the bar, opens it; it closes 2
+  seconds after the pointer leaves and focus is elsewhere. The open bar never
+  covers the tabs: it takes its row and pushes the tab bar and terminal down.
+  It also works in full screen, where the title bar is otherwise hidden.
+  While hidden, the bar keeps no drag region. **View → Auto-Hide Title Bar /
+  Always Show Title Bar** choose between the two; motion is dropped under
+  reduced-motion preferences.
+
+## Window placement
+
+A new window opens on the display the user is working on: on KDE Plasma
+under Wayland, the display KWin reports as active (`dbus-send` to
+`org.kde.KWin.activeOutputName`, mapped to its geometry with `xrandr
+--listmonitors`, both run without a shell and with a short timeout), else the
+display under the pointer. Each display remembers the last normal size and
+position of a window on it, and whether it was maximized, in
+`window-placement.json` (Application Data, keyed by the display's geometry,
+positions relative to the display). The remembered bounds are kept inside the
+display's work area; without a memory the default size is centered. A window
+that would open exactly on top of another one is stepped 32 px down and
+right. Moving, resizing, maximizing and closing update the memory (writes are
+debounced and flushed when OMXTerm quits); full-screen bounds are never
+remembered.
+
+## File hover preview
+
+Resting the pointer for about half a second on a file or folder name printed
+in a local terminal (an `ls` listing, a path, a quoted `'My File.pdf'`) shows
+a card next to it, when `terminal.filePreview` is on (the default):
+
+- The name under the pointer comes from Restty's visible-link lookup, asked
+  for the run of non-blank text (or the quoted name) instead of a link; `ls
+-F` markers and trailing punctuation are dropped. Relative names resolve
+  against the pane's folder, `~/` against the home folder.
+- Nothing is read for remote (SSH) panes, while a program runs in the pane
+  (the shell may be on another computer), while the window is unfocused, or
+  while a Local Image Preview is open.
+- Main checks that the absolute path exists and reads a bounded sample: PNG
+  and JPEG images are decoded and scaled (up to 32 MiB), other image formats
+  are passed to the image element (up to 8 MiB); text shows its first 40
+  lines when the first 32 KiB contain no NUL byte; a folder lists up to 40
+  entries and its count. PDFs, videos and documents use the thumbnail a file
+  manager already saved (freedesktop thumbnail cache) or, for a PDF, the
+  first page rendered by poppler's `pdftoppm`, with the page count and title
+  from `pdfinfo`, when installed. macOS and Windows use the system
+  thumbnailer. Nothing is written except a temporary folder for `pdftoppm`,
+  which is removed.
+- The card lists type, size, dimensions, pages, modification date,
+  permissions and the full path, with **View** (PNG/JPEG in the Local Image
+  Preview), **Open** (not for executables), **Copy Path**, **Insert Path**
+  (quoted, without Enter) and **Show in File Manager**. It stays while the
+  pointer is over it and closes on a key press, click, scroll or when the
+  pointer leaves.
+
 ## Command palette
 
 **View → Command Palette…** (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Linux
@@ -1278,6 +1541,34 @@ A group's tabs are always adjacent, and a colored chip leads them.
 - **Adjacency:** a tab dragged away from its group leaves it.
 - **Persistence:** names, colors and groups live in the window and are saved
   with the workspace when restore is on.
+
+**Arranging and closing.** The tab menu also offers **Move Tab Left / Right**,
+**Detach Tab to New Window**, **Close Tab**, **Close Other Tabs** and **Close
+Tabs to the Right**. Closing several tabs asks once, listing how many, when
+main reports a program running in any of their panes (the Busy Session check
+of ADR 0017). A live process cannot move between windows, so Detach Tab
+sends that tab's workspace snapshot to main, which opens a new window that
+restores it (shells in the directories they were in, Saved Sessions and
+Quick Connect reconnected) and then closes the tab here, after the same
+confirmation when a program runs in it.
+
+**Many tabs.** Tabs keep at least 110 px; when they no longer fit, the strip
+scrolls sideways with the mouse wheel (vertical or horizontal), shows no
+scrollbar, so its height never changes, and keeps the selected tab in view.
+**Open Tabs** (the ⌄ button beside New Tab in the header toolbar) lists every
+tab, numbered, with the selected one marked; choosing one selects it.
+
+**Zoom with the wheel.** Ctrl+wheel (Cmd+wheel on macOS) over the terminal
+zooms its font one step per wheel notch, like `zoomIn` and `zoomOut`; the
+terminal does not scroll for that wheel event.
+
+**Save Output to File.** The terminal's right-click menu (now translated)
+adds **Save Output to File…**: the renderer reads the focused pane's whole
+buffer, scrollback included, as text (this selects everything; the selection
+clears at the next key press), and main asks where to save it in a native
+dialog (suggesting `omxterm-output-<date>-<time>.txt` in Documents) and
+writes a private 0600 file of at most 64 MiB. Nothing is written without that
+choice.
 
 ## Workspace restore
 

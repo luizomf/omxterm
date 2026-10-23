@@ -10,6 +10,8 @@ import {
 } from "electron";
 import * as nodePty from "node-pty";
 import { hostname } from "node:os";
+import { startWindowPlacement } from "./window-placement-wiring";
+import { mainTranslator, useSystemLanguages } from "./main-translator";
 import { terminalIpc } from "../shared/terminal-ipc";
 import {
   terminalActionInvocations,
@@ -74,8 +76,11 @@ import { startWithUserConfiguration } from "./configured-startup";
 import { loadLocalImageForWindow } from "./local-image-loader";
 import type { OperationalEventLog } from "./operational-events";
 import { startApplicationDataServices } from "./application-data-services";
+import { preferencesConfiguration } from "./preferences-configuration";
 import { applicationMenuActions } from "./application-menu-actions";
 import { registerCommandPaletteActions } from "./command-palette-actions";
+import { registerMainMenu, terminalMainMenuTemplate } from "./main-menu";
+import { showTerminalContextMenu } from "./terminal-context-menu";
 import { commandIpc } from "../shared/command-ipc";
 import { sessionIpc } from "../shared/session-ipc";
 import { launchTerminalSession } from "./session-launch";
@@ -94,7 +99,10 @@ import {
 } from "./native-confirmations";
 
 const showClipboardError = () =>
-  dialog.showErrorBox("Clipboard Error", "Clipboard operation failed.");
+  dialog.showErrorBox(
+    mainTranslator().t("failure.clipboard.title"),
+    mainTranslator().t("failure.clipboard.message"),
+  );
 let terminalApplication: TerminalApplication<BrowserWindow> | undefined;
 let operationalEvents: OperationalEventLog | undefined;
 let disposeTerminalSessions = () => {};
@@ -116,6 +124,7 @@ app.on("before-quit", () => operationalEvents?.flush());
 app
   .whenReady()
   .then(async () => {
+    useSystemLanguages(app.getPreferredSystemLanguages());
     if (commandLine.action === "invalid") throw commandLine.error;
     if (commandLine.action !== "run") return;
     const startup = prepareStartup(app, commandLine.logLevel);
@@ -146,6 +155,7 @@ app
         const {
           savedSessions,
           workspace,
+          preferences,
           menuActions: dataActions,
           menuState: dataMenuState,
         } = await startApplicationDataServices({
@@ -157,6 +167,12 @@ app
           reloadConfiguration: () => configurationReloader.reload(),
           isQuitting: () => terminalApplication?.isQuitting() ?? false,
           onMenuStateChange: () => rebuildMenu(),
+          sessionLaunch: terminalIpcRouter.sessionLaunch,
+          shell: account.shell ?? "",
+          configuration: preferencesConfiguration(
+            configurationLoadOptions,
+            () => configurationReloader.current(),
+          ),
         });
         let rebuildMenu = () => {};
         const nativeTitleInset = terminalNativeTitleInset(process.platform);
@@ -194,206 +210,207 @@ app
           account.shell,
           () => configurationReloader.current().configuration.windowsShell,
         );
-        terminalApplication = startTerminalApplication<BrowserWindow>({
-          confirmClose: userConfiguration.confirmClose,
-          alwaysOnTopDefault: userConfiguration.alwaysOnTop,
-          createWindow(lifecycle) {
-            const consumeLaunch = consumeLaunchRequest(lifecycle.windowId);
-            const consumeStartup = startupOptionsForWindow(
-              lifecycle.windowId,
-              commandLine.startup,
-            );
-            const active = configurationReloader.current();
-            const initialShell = resolveCurrentDefaultShell();
-            const window = new BrowserWindow(
-              terminalWindowOptions(
-                preloadPath,
-                active.configuration,
+        const windowPlacement = await startWindowPlacement(account.homedir);
+        terminalApplication = windowPlacement.preparing(
+          startTerminalApplication<BrowserWindow>({
+            confirmClose: userConfiguration.confirmClose,
+            alwaysOnTopDefault: userConfiguration.alwaysOnTop,
+            createWindow(lifecycle) {
+              const consumeLaunch = consumeLaunchRequest(lifecycle.windowId);
+              const consumeStartup = startupOptionsForWindow(
+                lifecycle.windowId,
+                commandLine.startup,
+              );
+              const active = configurationReloader.current();
+              const initialShell = resolveCurrentDefaultShell();
+              const window = windowPlacement.create(
+                terminalWindowOptions(
+                  preloadPath,
+                  active.configuration,
+                  process.platform,
+                  linuxWindowIconPath,
+                ),
+              );
+              const shellName = defaultShellName(
                 process.platform,
-                linuxWindowIconPath,
-              ),
-            );
-            const shellName = defaultShellName(process.platform, initialShell);
-            lockTerminalRendererNavigation(window.webContents);
-            deliverKeybindsFromKeyEvents(
-              window.webContents,
-              () => configurationReloader.current().configuration.keybinds,
-              (action) => keybindActionInvocations[action](),
-              process.platform,
-            );
-            guardTerminalWindowClose(window, terminalApplication!);
-            const chrome = registerWindowChrome(window, ipcMain, {
-              platform: process.platform,
-              showTitleBar: active.configuration.showTitleBar,
-              cursor: () => screen.getCursorScreenPoint(),
-              popupApplicationMenu: nativeMenu.applicationMenuForWindow(window),
-            });
-            const titleController = createNativeTerminalWindowTitleController(
-              window,
-              {
-                fallbackSessionTitle: shellName,
-                onWindowTitle: chrome.setTitle,
-                sendSessionTitle: (sessionId, title) =>
-                  !window.webContents.isDestroyed() &&
-                  window.webContents.send(terminalIpc.tabTitle, {
-                    sessionId,
-                    title,
-                  }),
-                onRejected: (reason) =>
-                  operationalEvents!.write({
-                    name: "boundary.rejected",
-                    boundary: "title",
-                    reason,
-                  }),
-              },
-              app.dock,
-            );
-            window.once("closed", () => titleController.dispose());
-            const controller = terminalIpcRouter.registerController({
-              windowId: lifecycle.windowId,
-              ...workspace.windowOptions(lifecycle.windowId, (listener) =>
-                window.once("closed", listener),
-              ),
-              configuration: terminalRendererConfiguration(
-                active,
-                nativeTitleInset,
-              ),
-              initialFullScreen: window.isFullScreen(),
-              backgroundTransparency: backgroundEffects.register(
+                initialShell,
+              );
+              lockTerminalRendererNavigation(window.webContents);
+              deliverKeybindsFromKeyEvents(
+                window.webContents,
+                () => configurationReloader.current().configuration.keybinds,
+                (action) => keybindActionInvocations[action](),
+                process.platform,
+                preferences.keyCapture(window.webContents),
+              );
+              guardTerminalWindowClose(window, terminalApplication!);
+              const chrome = registerWindowChrome(window, ipcMain, {
+                platform: process.platform,
+                showTitleBar: active.configuration.showTitleBar,
+                cursor: () => screen.getCursorScreenPoint(),
+                popupApplicationMenu:
+                  nativeMenu.applicationMenuForWindow(window),
+              });
+              const titleController = createNativeTerminalWindowTitleController(
                 window,
-                active.configuration,
-              ),
-              webContents: window.webContents,
-              localHostNames: [hostname()],
-              createSession: (callbacks, launch) =>
-                launchTerminalSession(
-                  launch,
-                  {
-                    shell: resolveCurrentDefaultShell(),
-                    platform: process.platform,
-                    homeDirectory: account.homedir,
-                    applicationVersionProvider: app,
+                {
+                  fallbackSessionTitle: shellName,
+                  onWindowTitle: chrome.setTitle,
+                  sendSessionTitle: (sessionId, title) =>
+                    !window.webContents.isDestroyed() &&
+                    window.webContents.send(terminalIpc.tabTitle, {
+                      sessionId,
+                      title,
+                    }),
+                  onRejected: (reason) =>
+                    operationalEvents!.write({
+                      name: "boundary.rejected",
+                      boundary: "title",
+                      reason,
+                    }),
+                },
+                app.dock,
+              );
+              window.once("closed", () => titleController.dispose());
+              const controller = terminalIpcRouter.registerController({
+                windowId: lifecycle.windowId,
+                ...workspace.windowOptions(lifecycle.windowId, (listener) =>
+                  window.once("closed", listener),
+                ),
+                configuration: terminalRendererConfiguration(
+                  active,
+                  nativeTitleInset,
+                ),
+                initialFullScreen: window.isFullScreen(),
+                backgroundTransparency: backgroundEffects.register(
+                  window,
+                  active.configuration,
+                ),
+                webContents: window.webContents,
+                localHostNames: [hostname()],
+                createSession: (callbacks, launch) =>
+                  launchTerminalSession(
+                    launch,
+                    {
+                      shell: resolveCurrentDefaultShell(),
+                      platform: process.platform,
+                      homeDirectory: account.homedir,
+                      applicationVersionProvider: app,
+                      environment: process.env,
+                      ...callbacks,
+                    },
+                    {
+                      consumeLaunchRequest: consumeLaunch,
+                      consumeStartupOptions: consumeStartup,
+                      savedSessions,
+                      start: (sessionOptions) =>
+                        shutdown.createSession(nodePty.spawn, sessionOptions),
+                    },
+                  ),
+                confirmBroadcast: (targetCount) =>
+                  confirmBroadcast(window, targetCount),
+                onSessionStartError: lifecycle.onSessionStartError,
+                onTabsEmpty: lifecycle.onTabsEmpty,
+                onSessionExit: (exit, context) => {
+                  titleController.sessionEnded(context.sessionId);
+                  lifecycle.onSessionExit(exit, context);
+                },
+                onSessionStarted: titleController.sessionStarted,
+                onSessionSelected: titleController.selectSession,
+                onSessionTitleSync: titleController.syncSessionTitle,
+                onTitleRequest: titleController.requestTitle,
+                onBell: titleController.ringBell,
+                onUserInteraction: titleController.resetAttention,
+                openExternalLink: (url) => shell.openExternal(url),
+                onExternalLinkOpenError: () =>
+                  dialog.showErrorBox(
+                    mainTranslator().t("failure.externalLink.title"),
+                    mainTranslator().t("failure.externalLink.message"),
+                  ),
+                writeClipboardText: (text) => clipboard.writeText(text),
+                readClipboardText: () =>
+                  isFilePathPlatform(process.platform)
+                    ? readClipboardPathInsertion(clipboard, process.platform)
+                    : clipboard.readText(),
+                onClipboardError: showClipboardError,
+                loadSnippets: () =>
+                  loadTerminalSnippets({
                     environment: process.env,
-                    ...callbacks,
-                  },
-                  {
-                    consumeLaunchRequest: consumeLaunch,
-                    consumeStartupOptions: consumeStartup,
-                    savedSessions,
-                    start: (sessionOptions) =>
-                      shutdown.createSession(nodePty.spawn, sessionOptions),
-                  },
-                ),
-              confirmBroadcast: (targetCount) =>
-                confirmBroadcast(window, targetCount),
-              onSessionStartError: lifecycle.onSessionStartError,
-              onTabsEmpty: lifecycle.onTabsEmpty,
-              onSessionExit: (exit, context) => {
-                titleController.sessionEnded(context.sessionId);
-                lifecycle.onSessionExit(exit, context);
-              },
-              onSessionStarted: titleController.sessionStarted,
-              onSessionSelected: titleController.selectSession,
-              onSessionTitleSync: titleController.syncSessionTitle,
-              onTitleRequest: titleController.requestTitle,
-              onBell: titleController.ringBell,
-              onUserInteraction: titleController.resetAttention,
-              openExternalLink: (url) => shell.openExternal(url),
-              onExternalLinkOpenError: () =>
-                dialog.showErrorBox(
-                  "External Link Error",
-                  "The External Link could not be opened.",
-                ),
-              writeClipboardText: (text) => clipboard.writeText(text),
-              readClipboardText: () =>
-                isFilePathPlatform(process.platform)
-                  ? readClipboardPathInsertion(clipboard, process.platform)
-                  : clipboard.readText(),
-              onClipboardError: showClipboardError,
-              loadSnippets: () =>
-                loadTerminalSnippets({
-                  environment: process.env,
-                  homeDirectory: account.homedir,
-                }),
-              loadLocalImage: (request, abortSignal) =>
-                loadLocalImageForWindow(window, request, abortSignal),
-              confirmPaste: () => confirmProtectedPaste(window),
-              showClipboardContextMenu() {
-                const send = (action: "copy" | "paste" | "select-all") =>
-                  window.webContents.send(terminalIpc.clipboardAction, action);
-                Menu.buildFromTemplate(
-                  terminalClipboardContextMenuTemplate({
-                    copy: () => send("copy"),
-                    paste: () => send("paste"),
-                    selectAll: () => send("select-all"),
+                    homeDirectory: account.homedir,
                   }),
-                ).popup({ window });
-              },
-            });
+                loadLocalImage: (request, abortSignal) =>
+                  loadLocalImageForWindow(window, request, abortSignal),
+                confirmPaste: () => confirmProtectedPaste(window),
+                showClipboardContextMenu: () => showTerminalContextMenu(window),
+              });
 
-            window.once("ready-to-show", () => backgroundEffects.show(window));
-            const windowHost = registerTerminalWindowHost(
-              window,
-              controller,
-              lifecycle.onWindowClosed,
-            );
+              window.once("ready-to-show", () =>
+                backgroundEffects.show(window),
+              );
+              const windowHost = registerTerminalWindowHost(
+                window,
+                controller,
+                lifecycle.onWindowClosed,
+              );
 
-            return {
-              window,
-              sessionActivity: controller,
-              async load() {
-                try {
-                  await window.loadFile(rendererPath);
-                } catch (cause) {
-                  windowHost.dispose();
-                  terminalApplication!.forceCloseWindow(window);
-                  operationalEvents!.write({
-                    name: "application.failure",
-                    stage: "renderer-load",
-                  });
-                  throw terminalApplicationFailure("renderer-load", cause);
-                }
-              },
-            };
-          },
-          getSelectedWindow: () =>
-            BrowserWindow.getFocusedWindow() ?? undefined,
-          showQuitConfirmation: confirmQuit,
-          showCloseWindowConfirmation: confirmCloseWindow,
-          showCloseTabConfirmation: confirmCloseTab,
-          showClosePaneConfirmation: confirmClosePane,
-          async showSessionFailure(window, failure) {
-            const failureDialog = terminalSessionFailureDialog(failure);
-            await dialog.showMessageBox(window, {
-              ...failureDialog,
-              buttons: [...failureDialog.buttons],
-              noLink: true,
-            });
-          },
-          sendFontZoom: (window, command) =>
-            window.webContents.send(terminalIpc.fontZoom, command),
-          sendClipboardAction: (window, action) =>
-            window.webContents.send(terminalIpc.clipboardAction, action),
-          sendTitleBarToggle: (window) =>
-            window.webContents.send(terminalIpc.titleBarToggle),
-          sendTabBarToggle: (window) =>
-            window.webContents.send(terminalIpc.tabBarToggle),
-          sendSnippetsToggle: (window) =>
-            window.webContents.send(terminalIpc.snippetsToggle),
-          sendSessionsToggle: (window) =>
-            window.webContents.send(sessionIpc.toggleSidebar),
-          sendCommandsToggle: (window) =>
-            window.webContents.send(commandIpc.toggleSidebar),
-          sendCommandPaletteToggle: (window) =>
-            window.webContents.send(terminalIpc.commandPalette),
-          sendLocalImageOpen: (window) =>
-            window.webContents.send(terminalIpc.localImageOpen),
-          toggleDeveloperTools: (window) => window.webContents.toggleDevTools(),
-          sendTabCommand: (window, command) =>
-            window.webContents.send(terminalIpc.tabCommand, command),
-          quit: () => app.quit(),
-          operationalEvents: operationalEvents!,
-        });
+              return {
+                window,
+                sessionActivity: controller,
+                async load() {
+                  try {
+                    await window.loadFile(rendererPath);
+                  } catch (cause) {
+                    windowHost.dispose();
+                    terminalApplication!.forceCloseWindow(window);
+                    operationalEvents!.write({
+                      name: "application.failure",
+                      stage: "renderer-load",
+                    });
+                    throw terminalApplicationFailure("renderer-load", cause);
+                  }
+                },
+              };
+            },
+            getSelectedWindow: () =>
+              BrowserWindow.getFocusedWindow() ?? undefined,
+            showQuitConfirmation: confirmQuit,
+            showCloseWindowConfirmation: confirmCloseWindow,
+            showCloseTabConfirmation: confirmCloseTab,
+            showClosePaneConfirmation: confirmClosePane,
+            async showSessionFailure(window, failure) {
+              const failureDialog = terminalSessionFailureDialog(failure);
+              await dialog.showMessageBox(window, {
+                ...failureDialog,
+                buttons: [...failureDialog.buttons],
+                noLink: true,
+              });
+            },
+            sendFontZoom: (window, command) =>
+              window.webContents.send(terminalIpc.fontZoom, command),
+            sendClipboardAction: (window, action) =>
+              window.webContents.send(terminalIpc.clipboardAction, action),
+            sendTitleBarToggle: (window) =>
+              window.webContents.send(terminalIpc.titleBarToggle),
+            sendTabBarToggle: (window) =>
+              window.webContents.send(terminalIpc.tabBarToggle),
+            sendSnippetsToggle: (window) =>
+              window.webContents.send(terminalIpc.snippetsToggle),
+            sendSessionsToggle: (window) =>
+              window.webContents.send(sessionIpc.toggleSidebar),
+            sendCommandsToggle: (window) =>
+              window.webContents.send(commandIpc.toggleSidebar),
+            sendCommandPaletteToggle: (window) =>
+              window.webContents.send(terminalIpc.commandPalette),
+            sendLocalImageOpen: (window) =>
+              window.webContents.send(terminalIpc.localImageOpen),
+            toggleDeveloperTools: (window) =>
+              window.webContents.toggleDevTools(),
+            sendTabCommand: (window, command) =>
+              window.webContents.send(terminalIpc.tabCommand, command),
+            quit: () => app.quit(),
+            operationalEvents: operationalEvents!,
+          }),
+        );
 
         const openNewWindow = () => {
           void terminalApplication!.newWindow().catch((cause) => {
@@ -406,6 +423,7 @@ app
             dialog.showErrorBox(display.title, display.message);
           });
         };
+        workspace.setWindowOpener(openNewWindow);
         const menuActions = applicationMenuActions(terminalApplication, {
           newWindow: openNewWindow,
           reloadUserConfiguration: () => void configurationReloader.reload(),
@@ -416,6 +434,25 @@ app
           ipcMain,
           terminalIpcRouter.isTrustedSender,
           keybindActionInvocations,
+        );
+        const menuTranslator = mainTranslator();
+        registerMainMenu(
+          ipcMain,
+          terminalIpcRouter.isTrustedSender,
+          (sender, { x, y }) => {
+            const window = BrowserWindow.getAllWindows().find(
+              (candidate) => candidate.webContents === sender,
+            );
+            if (!window) return;
+            Menu.buildFromTemplate(
+              terminalMainMenuTemplate(
+                menuTranslator,
+                menuActions,
+                configurationReloader.current().configuration.keybinds,
+                dataMenuState(),
+              ),
+            ).popup({ window, x, y });
+          },
         );
         rebuildMenu = () =>
           nativeMenu.installApplicationMenu(

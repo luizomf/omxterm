@@ -60,15 +60,51 @@ export function sshArguments(
   return { arguments: argv, multiplexed };
 }
 
-// Forwards, X11 and jump hosts need a fresh connection: a shared master would
-// silently ignore them (AshyTerm made the same choice). Windows' OpenSSH has
-// no ControlMaster support.
+// The ssh arguments that open the SFTP subsystem for the Files panel, with
+// the session's own host, user, port, key, jump host and options. A shared
+// connection the terminal already authenticated (ControlMaster) is reused,
+// which is how password sessions can be browsed without OMXTerm ever
+// handling the password. BatchMode keeps ssh from prompting where nobody
+// can answer; forwards, X11, agent forwarding and remote commands are left
+// out because a file transfer channel needs none of them.
+export function sftpSubsystemArguments(
+  session: SshCommandSession,
+  options: SshCommandOptions,
+): readonly string[] {
+  const forFiles = { ...session, forwards: [], x11: false };
+  const multiplexed = canMultiplex(forFiles, options);
+  return [
+    ...connectionOptions(forFiles, options, multiplexed),
+    "-o",
+    "BatchMode=yes",
+    ...authenticationArguments(
+      session,
+      options.homeDirectory,
+      options.platform,
+    ),
+    ...(session.proxyJump ? ["-J", session.proxyJump] : []),
+    ...(session.compression ? ["-C"] : []),
+    ...(session.port !== undefined && session.port !== 22
+      ? ["-p", String(session.port)]
+      : []),
+    ...(session.user ? ["-l", session.user] : []),
+    "-s",
+    session.host.replace(/^\[(.*)\]$/u, "$1"),
+    "sftp",
+  ];
+}
+
+// Connection sharing is on unless a session turns it off, as AshyTerm always
+// shares: it is what lets the Files panel browse a password session without
+// asking again. Forwards, X11 and jump hosts need a fresh connection: a
+// shared master would silently ignore them. Windows' OpenSSH has no
+// ControlMaster support.
 function canMultiplex(
   session: SshCommandSession,
   options: SshCommandOptions,
 ): boolean {
   return (
-    session.multiplex === true &&
+    session.multiplex !== false &&
     options.platform !== "win32" &&
     options.controlDirectory !== undefined &&
     (session.forwards ?? []).length === 0 &&

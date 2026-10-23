@@ -293,6 +293,8 @@ function validateSsh(
       "compression",
       "multiplex",
     ]),
+    // Sharing is on unless turned off, so an explicit false is kept.
+    ...(record.multiplex === false ? { multiplex: false } : {}),
     ...(record.hostKeyPolicy === undefined
       ? {}
       : { hostKeyPolicy: record.hostKeyPolicy as HostKeyPolicy }),
