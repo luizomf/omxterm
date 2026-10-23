@@ -118,7 +118,7 @@ makepkg -si                                          # main
 OMXTERM_BRANCH=feature/ashyterm-ui-parity makepkg -si  # another branch
 ```
 
-Switching from a date-versioned package to a checkout build, pacman reports a downgrade (`0.22.0` sorts before `26.10.22`) and installs normally.
+Switching from a date-versioned package to a checkout build, pacman reports a downgrade (`0.22.1dev.0` sorts before `26.10.22`) and installs normally.
 
 ### Run the AppImage
 

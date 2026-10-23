@@ -309,7 +309,7 @@ makepkg -si
 ```
 
 Moving from a date-versioned build to a checkout build, pacman reports a
-"downgrade" because `0.22.0` sorts before `26.10.22`; it installs normally.
+"downgrade" because `0.22.1dev.0` sorts before `26.10.22`; it installs normally.
 
 Optional packages:
 
