@@ -872,39 +872,4 @@ describe("isolated User Configuration loading", () => {
     });
     expect(await readFile(file)).toEqual(original);
   });
-
-  it("hands the complete validated contract to startup once without changing the file", async () => {
-    const { xdg, home } = await roots();
-    const directory = path.join(xdg, "omxterm");
-    const file = path.join(directory, "config.json");
-    await mkdir(directory, { recursive: true });
-    const original = Buffer.from(
-      '{\n  "version": 1, "confirmClose": false, "logLevel": "error", "window": { "alwaysOnTop": true }\n}\n',
-    );
-    await writeFile(file, original);
-    const start = vi.fn((load: UserConfigurationLoad) => load);
-    const getMetrics = vi.fn(getInstalledFontFamilyMetrics);
-
-    const result = await startWithUserConfiguration(
-      {
-        environment: { XDG_CONFIG_HOME: xdg },
-        homeDirectory: home,
-        getInstalledFontFamilyMetrics: getMetrics,
-      },
-      start,
-    );
-
-    expect(start).toHaveBeenCalledOnce();
-    expect(result.fallback).toBeUndefined();
-    expect(result.configuration).toMatchObject({
-      confirmClose: false,
-      logLevel: "error",
-      alwaysOnTop: true,
-      fontSize: 16,
-      scrollbackLines: 10_000,
-      optionKeyMode: "none",
-    });
-    expect(getMetrics).not.toHaveBeenCalled();
-    expect(await readFile(file)).toEqual(original);
-  });
 });

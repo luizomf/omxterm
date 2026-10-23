@@ -19,6 +19,7 @@ import {
 } from "./user-configuration";
 import type { UserConfiguration } from "../shared/user-configuration";
 import { validateTerminalTheme } from "./terminal-theme";
+import { completeConfigurationText } from "./complete-configuration";
 import {
   applyPreferencesPatch,
   defaultPreferencesDocument,
@@ -92,6 +93,23 @@ function schemeOption(
       colors.cyan,
     ].map((color) => color.slice(0, 7)),
   };
+}
+
+// config.json always lists every setting; written values stay as written.
+async function writeCompleteConfiguration(
+  options: Pick<PreferencesServiceOptions, "configurationPath" | "files">,
+  document: Record<string, unknown>,
+  configuration: UserConfiguration,
+): Promise<void> {
+  await options.files.write(
+    options.configurationPath,
+    await completeConfigurationText(
+      options.configurationPath,
+      document,
+      configuration,
+      options.files,
+    ),
+  );
 }
 
 // Edits config.json for the Preferences dialog: every change is validated as
@@ -227,6 +245,11 @@ export function createPreferencesService(
     throw new Error("Unreachable");
   };
 
+  const writeComplete = (
+    document: Record<string, unknown>,
+    configuration: UserConfiguration,
+  ) => writeCompleteConfiguration(options, document, configuration);
+
   const commit = async (
     document: Record<string, unknown>,
   ): Promise<string | undefined> => {
@@ -237,7 +260,7 @@ export function createPreferencesService(
       const { location, reason } = load.fallback.error;
       return location ? `${location}: ${reason}` : reason;
     }
-    await options.files.write(options.configurationPath, text);
+    await writeComplete(document, load.configuration);
     await options.reload();
     return undefined;
   };
@@ -273,7 +296,7 @@ export function createPreferencesService(
         `${options.configurationPath}.bak`,
         new TextDecoder().decode(previous),
       );
-    await options.files.write(options.configurationPath, finalText);
+    await writeComplete(parsed as Record<string, unknown>, load.configuration);
     await options.reload();
     return result();
   };

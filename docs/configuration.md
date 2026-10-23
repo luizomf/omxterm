@@ -172,7 +172,7 @@ See the [Linux desktop guide](linux-desktop.md) for compositor-specific setup:
 
 ## Configuration reference
 
-Every field except `version` is optional and falls back to its default when omitted:
+Every field except `version` is optional and falls back to its default when omitted. At startup OMXTerm adds the settings a valid `config.json` does not list yet, with their current values, so the file always shows every option; values you wrote are kept as written. Only `font.family` (absent means the bundled font) and `windowsShell` (Windows) stay out until you set them:
 
 | Preference                | Accepted value                          | Default                          |
 | ------------------------- | --------------------------------------- | -------------------------------- |

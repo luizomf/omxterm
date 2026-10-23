@@ -904,9 +904,16 @@ common built-in defaults (including explicit `window.blur: false` and
 non-executing example in `snippets.json`, and a copy of the bundled theme at
 `themes/omtheme.json`. Existing sibling files are never replaced. Files are
 published complete without overwriting concurrent creations; configuration is
-published last. Shell, font family and shortcuts retain their implicit platform
-defaults. Creation failure produces a non-blocking notice and normal
-configuration loading continues. This runs at application opening, not package
+published last. Creation failure produces a non-blocking notice and normal
+configuration loading continues. After a successful load at startup, a valid
+`config.json` that does not list every setting is rewritten atomically with
+all of them: every value already written (and any unknown key) is kept
+exactly as written, missing settings get their effective value in reference
+order, and every keybind action is listed with its shortcut. The bundled font
+keeps an absent `font.family`, and `windowsShell` appears only when set.
+Without a `theme`, the bundled theme is named as `themes/omtheme.json`, which
+is created when absent; a changed `themes/omtheme.json` is never replaced, and
+then no theme is named. An invalid or unreadable file is never rewritten. This runs at application opening, not package
 installation or manual reload. The copied theme belongs to the user and does not
 track subsequent bundled palette changes. A present file must contain
 `"version": 1` and only supported keys:
@@ -1402,8 +1409,9 @@ Application Data switches.
   editor). Save is enabled only for a changed JSON object; main validates
   the text with the same loader a reload uses, refuses it with the field and
   reason when invalid, otherwise copies the previous file to
-  `config.json.bak`, writes the text as typed (plus a final newline) and
-  reloads every window. A clean editor rereads the file after any other
+  `config.json.bak`, writes the text with every setting it does not list
+  added (written values stay as typed) and reloads every window; the editor
+  then shows the file as written. A clean editor rereads the file after any other
   page saves; an edited one keeps the user's text.
 - Each change is saved when it is made. The renderer sends only a patch of
   known settings with in-range values; main merges it into the current
@@ -1414,10 +1422,10 @@ Application Data switches.
   value. A `config.json` that is not JSON is never rewritten by a change;
   Restore Defaults replaces it.
 - Keys the dialog does not manage are kept. An empty Windows shell removes
-  `windowsShell`. Keybinds equal to the platform default are removed from
-  `keybinds` rather than written.
+  `windowsShell`. Every save writes the complete file: every setting and every
+  keybind, including those equal to the platform default.
 - **Color schemes:** OMXTerm's `omtheme` (the bundled default, selected by
-  removing `theme`) and 13 AshyTerm schemes. Choosing one writes
+  naming `themes/omtheme.json`) and 13 AshyTerm schemes. Choosing one writes
   `themes/<id>.json` and points `theme.path` at it; if a different theme
   already uses that file name it is kept and `themes/<id>.builtin.json` is
   used instead. Other valid themes in `themes/` are offered by file name.
@@ -1427,7 +1435,8 @@ Application Data switches.
   leaves, the dialog closes, or 30 seconds pass. Main still validates the
   accelerator.
 - **Restore Defaults** asks for confirmation, copies the current file to
-  `config.json.bak`, and writes `{"version": 1}` plus unmanaged keys.
+  `config.json.bak`, and writes every setting with its default value plus
+  unmanaged keys.
 
 ## Window frame
 

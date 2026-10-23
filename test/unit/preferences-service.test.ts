@@ -21,6 +21,8 @@ import {
 import { isPreferencesSnapshot } from "../../src/shared/preferences";
 import { terminalDefaultKeybinds } from "../../src/shared/terminal-keybinds";
 import { terminalScheme } from "../../src/shared/terminal-schemes";
+import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
+import { expectCompleteConfiguration } from "../fixtures/complete-configuration";
 
 const roots: string[] = [];
 
@@ -106,20 +108,28 @@ describe("Preferences service", () => {
     expect(snapshot.fontFamilies).toEqual(["Mono Test"]);
   });
 
-  it("writes a valid change and reloads it", async () => {
-    const { service, reload, config } = await setup();
+  it("writes a valid change with every other setting and reloads it", async () => {
+    const { service, reload, config, directory } = await setup();
     const result = await service.save({
       fontSize: 18,
       padding: { top: 4 },
       showTabBar: false,
     });
     expect(result.ok).toBe(true);
-    expect(await config()).toEqual({
-      version: 1,
-      font: { size: 18 },
-      terminal: { padding: { top: 4 } },
-      window: { showTabBar: false },
+    const written = await config();
+    expect(written).toMatchObject({
+      font: { size: 18, lineHeight: 1, ligatures: true },
+      terminal: { padding: { top: 4, right: 8, bottom: 8, left: 8 } },
+      window: { showTabBar: false, showTitleBar: true },
+      theme: { path: "themes/omtheme.json" },
+      keybinds: terminalDefaultKeybinds("linux"),
     });
+    expectCompleteConfiguration(written);
+    expect(
+      JSON.parse(
+        await readFile(path.join(directory, "themes/omtheme.json"), "utf8"),
+      ),
+    ).toEqual(DEFAULT_TERMINAL_THEME);
     expect(reload).toHaveBeenCalledOnce();
     expect(result.snapshot.values.fontSize).toBe(18);
   });
@@ -152,7 +162,9 @@ describe("Preferences service", () => {
     ).toEqual(terminalScheme("dracula")!.theme);
     expect(result.snapshot.values.scheme).toBe("dracula");
     expect((await service.save({ scheme: "omtheme" })).ok).toBe(true);
-    expect(await config()).not.toHaveProperty("theme");
+    expect(await config()).toMatchObject({
+      theme: { path: "themes/omtheme.json" },
+    });
   });
 
   it("keeps a user theme that has a built-in scheme's file name", async () => {
@@ -183,7 +195,7 @@ describe("Preferences service", () => {
     expect(selected.snapshot.values.scheme).toBe("file:dracula.json");
   });
 
-  it("stores only keybinds that differ from the platform default", async () => {
+  it("writes every keybind, changed or default", async () => {
     const { service, config } = await setup();
     expect(
       (await service.save({ keybinds: { copy: "Control+Shift+J" } })).ok,
@@ -199,7 +211,9 @@ describe("Preferences service", () => {
     await service.save({
       keybinds: { copy: terminalDefaultKeybinds("linux").copy },
     });
-    expect(await config()).not.toHaveProperty("keybinds");
+    expect(await config()).toMatchObject({
+      keybinds: terminalDefaultKeybinds("linux"),
+    });
   });
 
   it("keeps settings it does not manage and backs up on reset", async () => {
@@ -217,10 +231,13 @@ describe("Preferences service", () => {
     });
     const reset = await service.reset();
     expect(reset.ok).toBe(true);
-    expect(await config()).toEqual({
-      version: 1,
+    const defaults = await config();
+    expect(defaults).toMatchObject({
       windowsShell: "C:\\Windows\\System32\\cmd.exe",
+      font: { size: 16 },
+      window: { blur: false },
     });
+    expectCompleteConfiguration(defaults);
     expect(
       JSON.parse(await readFile(`${configurationPath}.bak`, "utf8")),
     ).toMatchObject({ window: { blur: true } });
@@ -232,9 +249,11 @@ describe("Preferences service", () => {
     expect(result.ok).toBe(false);
     expect(await readFile(configurationPath, "utf8")).toBe("{ broken");
     expect((await service.reset()).ok).toBe(true);
-    expect(JSON.parse(await readFile(configurationPath, "utf8"))).toEqual({
-      version: 1,
-    });
+    const defaults: unknown = JSON.parse(
+      await readFile(configurationPath, "utf8"),
+    );
+    expect(defaults).toMatchObject({ font: { size: 16 } });
+    expectCompleteConfiguration(defaults);
     expect(await readFile(`${configurationPath}.bak`, "utf8")).toBe("{ broken");
   });
 
@@ -256,8 +275,7 @@ describe("Preferences service", () => {
     expect((await service.snapshot()).values.filePreview).toBe(true);
     const result = await service.save({ filePreview: false });
     expect(result.ok).toBe(true);
-    expect(await config()).toEqual({
-      version: 1,
+    expect(await config()).toMatchObject({
       terminal: { filePreview: false },
     });
     expect(result.snapshot.values.filePreview).toBe(false);
@@ -288,7 +306,9 @@ describe("Preferences service", () => {
     const saved = await service.writeFile(text);
     expect(saved.ok).toBe(true);
     expect(reload).toHaveBeenCalledOnce();
-    expect(await readFile(configurationPath, "utf8")).toBe(`${text}\n`);
+    const written = await config();
+    expect(written).toMatchObject({ font: { size: 22 } });
+    expectCompleteConfiguration(written);
     expect(await readFile(`${configurationPath}.bak`, "utf8")).toBe(
       '{"version":1,"font":{"size":20}}',
     );

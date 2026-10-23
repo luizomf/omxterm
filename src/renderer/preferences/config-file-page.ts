@@ -107,10 +107,9 @@ export function configFilePage(
     try {
       const result = await access.save(text);
       if (result.ok) {
-        saved = text.endsWith("\n") ? text : `${text}\n`;
-        editor.value = saved;
+        // Main completed the file with every setting; show what it wrote.
         busy = false;
-        validate();
+        await load();
         check.textContent = t("prefs.configSaved");
       } else {
         busy = false;
