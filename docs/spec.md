@@ -1461,6 +1461,34 @@ A group's tabs are always adjacent, and a colored chip leads them.
 - **Persistence:** names, colors and groups live in the window and are saved
   with the workspace when restore is on.
 
+**Arranging and closing.** The tab menu also offers **Move Tab Left / Right**,
+**Detach Tab to New Window**, **Close Tab**, **Close Other Tabs** and **Close
+Tabs to the Right**. Closing several tabs asks once, listing how many, when
+main reports a program running in any of their panes (the Busy Session check
+of ADR 0017). A live process cannot move between windows, so Detach Tab
+sends that tab's workspace snapshot to main, which opens a new window that
+restores it (shells in the directories they were in, Saved Sessions and
+Quick Connect reconnected) and then closes the tab here, after the same
+confirmation when a program runs in it.
+
+**Many tabs.** Tabs keep at least 110 px; when they no longer fit, the strip
+scrolls sideways with the mouse wheel (vertical or horizontal), shows no
+scrollbar, so its height never changes, and keeps the selected tab in view.
+**Open Tabs** (the ⌄ button beside New Tab in the header toolbar) lists every
+tab, numbered, with the selected one marked; choosing one selects it.
+
+**Zoom with the wheel.** Ctrl+wheel (Cmd+wheel on macOS) over the terminal
+zooms its font one step per wheel notch, like `zoomIn` and `zoomOut`; the
+terminal does not scroll for that wheel event.
+
+**Save Output to File.** The terminal's right-click menu (now translated)
+adds **Save Output to File…**: the renderer reads the focused pane's whole
+buffer, scrollback included, as text (this selects everything; the selection
+clears at the next key press), and main asks where to save it in a native
+dialog (suggesting `omxterm-output-<date>-<time>.txt` in Documents) and
+writes a private 0600 file of at most 64 MiB. Nothing is written without that
+choice.
+
 ## Workspace restore
 
 **Restore Windows at Startup** (application menu) is off by default. While it

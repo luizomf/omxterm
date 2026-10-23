@@ -194,6 +194,12 @@ export interface TerminalBridge {
   onCommandPalette(listener: () => void): () => void;
   // Runs an application action, as its keyboard shortcut would.
   runAction(action: TerminalActionName): void;
+  // Save Output to File: main's request, and the text to save (the answer
+  // is the chosen file's name, or null when cancelled).
+  onSaveOutputRequest(listener: () => void): () => void;
+  // Reopens one tab (its workspace snapshot) in a new window.
+  detachTab(snapshot: WorkspaceSnapshot): Promise<boolean>;
+  saveOutput(text: string): Promise<string | null>;
   // Shows the main menu at a window position, below the toolbar button.
   openMainMenu(position: { readonly x: number; readonly y: number }): void;
   onTabBarToggle(listener: () => void): () => void;

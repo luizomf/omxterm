@@ -13,6 +13,8 @@ export interface HeaderToolbarOptions {
   // what each does, so the toolbar gains nothing a key press could not do.
   readonly runAction: (action: TerminalActionName) => void;
   readonly openMainMenu: (position: MenuPosition) => void;
+  // Lists every tab below the button; absent hides the button.
+  readonly openTabs?: (position: MenuPosition) => void;
   readonly hasCommands: boolean;
   readonly hasFiles?: boolean;
   readonly hasAssistant?: boolean;
@@ -112,9 +114,20 @@ export function createHeaderToolbar(
     });
   });
   menu.setAttribute("aria-haspopup", "menu");
+  const below = (element: HTMLElement) => {
+    const rectangle = element.getBoundingClientRect();
+    return { x: Math.round(rectangle.left), y: Math.round(rectangle.bottom) };
+  };
+  const tabsButton = options.openTabs
+    ? button("openTabs", "toolbar.openTabs", (element) =>
+        options.openTabs?.(below(element)),
+      )
+    : undefined;
+  tabsButton?.setAttribute("aria-haspopup", "menu");
   const trailing = group(
     "toolbar.window",
     action("newTab", "action.newTab", "newTab"),
+    ...(tabsButton ? [tabsButton] : []),
     menu,
   );
 

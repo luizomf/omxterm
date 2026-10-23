@@ -111,7 +111,11 @@ body.tabs-visible .restty-terminal-surface {
   width: 100%;
   margin-top: var(--native-title-inset);
   padding: 4px 8px;
-  overflow: hidden;
+  /* Scrolls sideways when the tabs no longer fit; no visible scrollbar, so
+     the strip keeps its height. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
   font:
     12px/1.3 -apple-system,
     BlinkMacSystemFont,
@@ -126,7 +130,7 @@ body.tabs-visible .restty-terminal-surface {
 
 #tab-strip button {
   flex: 1 1 0;
-  min-width: 36px;
+  min-width: 110px;
   padding: 4px 12px;
   overflow: hidden;
   font: inherit;

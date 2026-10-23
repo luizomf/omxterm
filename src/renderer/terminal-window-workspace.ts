@@ -21,6 +21,7 @@ import { TERMINAL_ACTION_NAMES } from "../shared/terminal-keybinds";
 import type { MessageKey } from "../shared/locales/en";
 import type { TerminalClipboard } from "../terminal-surface/terminal-surface";
 import { createHeaderToolbar, type HeaderToolbar } from "./header-toolbar";
+import { showContextMenu } from "./ui/context-menu";
 import { createFilesPanel } from "./files/files-panel";
 import { createAssistantPanel } from "./assistant/assistant-panel";
 import {
@@ -195,6 +196,22 @@ export function mountWorkspace(
   const removePreferences = workspace.preferences?.onOpen(() =>
     openPreferences(),
   );
+  // Save Output to File, from the terminal's right-click menu.
+  const removeSaveOutput = workspace.saveOutput?.onRequest(() => {
+    if (context.isBlocked()) return;
+    const text = context.tabs.focusedOutput();
+    if (text.trim() === "") {
+      toaster.notify(context.translator.t("output.empty"));
+      return;
+    }
+    void workspace
+      .saveOutput!.save(text)
+      .then((name) => {
+        if (name)
+          toaster.notify(context.translator.t("output.saved", { name }));
+      })
+      .catch((cause: unknown) => toaster.notify(String(cause)));
+  });
   const removeAssistantToggle = workspace.assistant?.onToggle(() => {
     if (!context.isBlocked()) sidebar.toggle("assistant");
   });
@@ -211,6 +228,7 @@ export function mountWorkspace(
     removeHighlightEditor?.();
     removePreferences?.();
     removeAssistantToggle?.();
+    removeSaveOutput?.();
     removePaletteToggle?.();
     palette?.dispose();
     removeCommandsToggle?.();
@@ -272,6 +290,10 @@ export function windowTabsOptions(
       ? { onWorkspaceChange: options.reportWorkspace }
       : {}),
     dividerLabel: translator.t("pane.divider"),
+    ...(options.workspace?.sessionDirectory
+      ? { paneBusy: paneBusy(options.workspace.sessionDirectory) }
+      : {}),
+    ...(options.detachTab ? { detachTab: options.detachTab } : {}),
     translator,
     endedBanner: {
       ended: (exitCode) => translator.t("sessions.ended", { code: exitCode }),
@@ -300,6 +322,18 @@ export function windowTabsOptions(
   };
 }
 
+// Whether a program runs in any of the given panes, as main sees them.
+function paneBusy(
+  state: NonNullable<
+    NonNullable<TerminalWindowPageOptions["workspace"]>["sessionDirectory"]
+  >,
+) {
+  return async (sessionIds: readonly string[]) =>
+    (
+      await Promise.all(sessionIds.map((id) => state(id).catch(() => null)))
+    ).some((pane) => pane?.busy === true);
+}
+
 // Per-window helpers created before the tabs: translations, the header
 // toolbar, the broadcast indicator (which stops broadcasting through the
 // tabs) and highlighting.
@@ -323,6 +357,17 @@ export function windowServices(
           hasCommands: options.workspace?.commands !== undefined,
           hasFiles: options.workspace?.files !== undefined,
           hasAssistant: options.workspace?.assistant !== undefined,
+          openTabs: (position) =>
+            showContextMenu(
+              document,
+              position,
+              tabs()
+                .tabList()
+                .map((tab, index) => ({
+                  label: `${tab.selected ? "● " : ""}${index + 1}. ${tab.label}`,
+                  action: () => tabs().selectTab(index),
+                })),
+            ),
         })
       : undefined;
   return {

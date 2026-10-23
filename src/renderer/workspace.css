@@ -155,6 +155,7 @@ body.tabs-visible .terminal-tab.split {
    tab. */
 #tab-strip button.tab-group-chip {
   flex: 0 0 auto;
+  min-width: 36px;
   max-width: 160px;
   font-weight: 600;
   color: #111;

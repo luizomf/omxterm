@@ -80,6 +80,7 @@ interface RoutedTerminalIpcController
   reportWorkingDirectory(payload?: unknown): void;
   reportWorkspace(payload?: unknown): void;
   workspacePlan(payload?: unknown): WorkspacePlan | null;
+  detachTab(payload?: unknown): boolean;
   confirmBroadcast(payload?: unknown): Promise<boolean>;
   input(payload?: unknown): void;
   resize(payload?: unknown): void;
@@ -155,6 +156,9 @@ export function registerTerminalIpcRouter(
   );
   const workspacePlan = trusted("workspace", (controller, payload) =>
     controller.workspacePlan(payload),
+  );
+  const detachTab = trusted("workspace", (controller, payload) =>
+    controller.detachTab(payload),
   );
   const route = (
     event: IpcEvent,
@@ -254,6 +258,7 @@ export function registerTerminalIpcRouter(
   ipcMain.handle(terminalIpc.start, start);
   ipcMain.handle(terminalIpc.configuration, configuration);
   ipcMain.handle(terminalIpc.workspacePlan, workspacePlan);
+  ipcMain.handle(terminalIpc.detachTab, detachTab);
   ipcMain.handle(terminalIpc.fontData, fontData);
   ipcMain.handle(terminalIpc.snippets, snippets);
   ipcMain.handle(terminalIpc.sessionDirectory, sessionDirectory);
@@ -319,6 +324,7 @@ export function registerTerminalIpcRouter(
       ipcMain.removeHandler(terminalIpc.start);
       ipcMain.removeHandler(terminalIpc.configuration);
       ipcMain.removeHandler(terminalIpc.workspacePlan);
+      ipcMain.removeHandler(terminalIpc.detachTab);
       ipcMain.removeHandler(terminalIpc.fontData);
       ipcMain.removeHandler(terminalIpc.snippets);
       ipcMain.removeHandler(terminalIpc.sessionDirectory);
@@ -693,6 +699,7 @@ function createTerminalIpcController(
     reportWorkingDirectory: launches.reportWorkingDirectory,
     reportWorkspace: workspace.report,
     workspacePlan: workspace.plan,
+    detachTab: workspace.detach,
     confirmBroadcast: launches.confirmBroadcast,
     ...createTerminalTitleRequests(routedSession, options, reject),
     tabsEmpty: emptyTabsNotification(options, reject, () => disposed),

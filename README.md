@@ -89,8 +89,12 @@ Omarchy screenshot are arranged by Hyprland.
   current pane's folder.
 - **Broadcast input:** type into every pane of a tab at once, after a
   confirmation, with a visible indicator.
-- **Tab menu:** rename, color, duplicate, and group tabs into named groups
-  that collapse behind a colored chip.
+- **Tab menu:** rename, color, duplicate, move, detach to a new window, close
+  others or those to the right, and group tabs into named groups that
+  collapse behind a colored chip. Many tabs scroll sideways with the mouse
+  wheel, and the ⌄ button lists every open tab.
+- **Ctrl+wheel** zooms the terminal font; the right-click menu can **save the
+  output to a file**.
 - **Restore Windows at Startup** (off by default): reopens your windows, tabs,
   splits, folders, connections and groups.
 - **Command palette** to run any action by name.

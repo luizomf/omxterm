@@ -178,3 +178,61 @@ describe("restoring tab looks", () => {
     expect(tabs[2]).not.toHaveProperty("group");
   });
 });
+
+describe("arranging and closing tabs", () => {
+  async function fourTabs(options: Parameters<typeof createTabsHarness>[0]) {
+    const harness = createTabsHarness(options);
+    await harness.tabs.ready;
+    for (let count = 0; count < 3; count += 1)
+      harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(4));
+    return harness;
+  }
+  const labels = (strip: HTMLElement) =>
+    tabButtons(strip).map((button) => button.textContent);
+
+  it("moves a tab left and right", async () => {
+    const harness = await fourTabs({});
+    harness.tabs.setSessionTitle("s1", "one");
+    openMenu(tabButtons(harness.strip)[0]!);
+    expect(menuItem("Move Tab Left").disabled).toBe(true);
+    menuItem("Move Tab Right").click();
+    expect(labels(harness.strip)[1]).toBe("one");
+  });
+
+  it("closes tabs to the right and others, asking when a program runs", async () => {
+    const paneBusy = vi.fn(async (ids: readonly string[]) =>
+      ids.includes("s4"),
+    );
+    const harness = await fourTabs({ paneBusy });
+    openMenu(tabButtons(harness.strip)[1]!);
+    menuItem("Close Tabs to the Right").click();
+    const element = await dialog();
+    expect(element.textContent).toContain("Close them anyway?");
+    expect(paneBusy).toHaveBeenCalledWith(["s3", "s4"]);
+    confirm(element);
+    await vi.waitFor(() => expect(tabButtons(harness.strip)).toHaveLength(2));
+
+    openMenu(tabButtons(harness.strip)[0]!);
+    menuItem("Close Other Tabs").click();
+    // One tab left: the strip hides (it shows only with two or more).
+    await vi.waitFor(() => expect(harness.strip.hidden).toBe(true));
+    expect(document.querySelector("dialog[open]")).toBeNull();
+  });
+
+  it("detaches a tab into a new window and closes it here", async () => {
+    const detachTab = vi.fn(async () => true);
+    const harness = await fourTabs({ detachTab });
+    openMenu(tabButtons(harness.strip)[2]!);
+    menuItem("Detach Tab to New Window").click();
+    await vi.waitFor(() => expect(tabButtons(harness.strip)).toHaveLength(3));
+    expect(detachTab).toHaveBeenCalledWith({
+      selected: 0,
+      tabs: [
+        expect.objectContaining({
+          panes: [{ sessionId: "s3" }],
+        }) as unknown,
+      ],
+    });
+  });
+});

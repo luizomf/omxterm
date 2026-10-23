@@ -78,6 +78,7 @@ import { preferencesConfiguration } from "./preferences-configuration";
 import { applicationMenuActions } from "./application-menu-actions";
 import { registerCommandPaletteActions } from "./command-palette-actions";
 import { registerMainMenu, terminalMainMenuTemplate } from "./main-menu";
+import { showTerminalContextMenu } from "./terminal-context-menu";
 import { createTranslator, resolveLocale } from "../shared/i18n";
 import { commandIpc } from "../shared/command-ipc";
 import { sessionIpc } from "../shared/session-ipc";
@@ -329,17 +330,7 @@ app
               loadLocalImage: (request, abortSignal) =>
                 loadLocalImageForWindow(window, request, abortSignal),
               confirmPaste: () => confirmProtectedPaste(window),
-              showClipboardContextMenu() {
-                const send = (action: "copy" | "paste" | "select-all") =>
-                  window.webContents.send(terminalIpc.clipboardAction, action);
-                Menu.buildFromTemplate(
-                  terminalClipboardContextMenuTemplate({
-                    copy: () => send("copy"),
-                    paste: () => send("paste"),
-                    selectAll: () => send("select-all"),
-                  }),
-                ).popup({ window });
-              },
+              showClipboardContextMenu: () => showTerminalContextMenu(window),
             });
 
             window.once("ready-to-show", () => backgroundEffects.show(window));
@@ -417,6 +408,7 @@ app
             dialog.showErrorBox(display.title, display.message);
           });
         };
+        workspace.setWindowOpener(openNewWindow);
         const menuActions = applicationMenuActions(terminalApplication, {
           newWindow: openNewWindow,
           reloadUserConfiguration: () => void configurationReloader.reload(),

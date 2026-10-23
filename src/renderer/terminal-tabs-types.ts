@@ -75,6 +75,10 @@ export interface TerminalTabsOptions {
   readonly onBroadcastChange?: (targetCount: number) => void;
   // One output highlighter per pane; undefined leaves output untouched.
   readonly createHighlighter?: () => OutputHighlighter;
+  // Whether a program runs in any of these sessions (closing asks first).
+  readonly paneBusy?: (sessionIds: readonly string[]) => Promise<boolean>;
+  // Reopens one tab in a new window (Detach Tab).
+  readonly detachTab?: (snapshot: WorkspaceSnapshot) => Promise<boolean>;
 }
 
 export interface TerminalTabs {
@@ -93,6 +97,11 @@ export interface TerminalTabs {
   focusedSelection(): string;
   // Raw input to the focused pane, as if typed (control keys included).
   sendKeys(keys: string): void;
+  // The focused pane's whole buffer as text, for Save Output to File.
+  focusedOutput(): string;
+  // Every tab's label in order, for the Open Tabs list.
+  tabList(): { readonly label: string; readonly selected: boolean }[];
+  selectTab(index: number): void;
   openLaunch(launch: PaneLaunch, placement: TerminalLaunchPlacement): void;
   dispose(): void;
 }

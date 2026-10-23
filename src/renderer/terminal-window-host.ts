@@ -135,6 +135,7 @@ export interface TerminalWindowPageOptions {
   // A saved workspace to reopen instead of the first tab.
   readonly initialWorkspace?: WorkspacePlan;
   readonly reportWorkspace?: (snapshot: WorkspaceSnapshot) => void;
+  readonly detachTab?: (snapshot: WorkspaceSnapshot) => Promise<boolean>;
   readonly workspace?: {
     readonly element: HTMLElement;
     readonly sessions: SessionsBridge;
@@ -144,6 +145,10 @@ export interface TerminalWindowPageOptions {
     readonly preferences?: PreferencesBridge;
     readonly files?: FilesBridge;
     readonly assistant?: AssistantBridge;
+    readonly saveOutput?: {
+      readonly onRequest: (listener: () => void) => () => void;
+      readonly save: (text: string) => Promise<string | null>;
+    };
     readonly sessionDirectory?: (sessionId: TerminalSessionId) => Promise<{
       readonly directory: string | null;
       readonly busy: boolean;

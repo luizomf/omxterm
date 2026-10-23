@@ -135,6 +135,30 @@ const terminal: TerminalBridge = {
       throw new TypeError("Invalid application action");
     ipcRenderer.send(terminalIpc.runAction, action);
   },
+  onSaveOutputRequest(listener: () => void) {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (payload === undefined) listener();
+    };
+    ipcRenderer.on(terminalIpc.saveOutputRequest, handler);
+    return () =>
+      ipcRenderer.removeListener(terminalIpc.saveOutputRequest, handler);
+  },
+  async detachTab(snapshot) {
+    if (!isWorkspaceSnapshot(snapshot) || snapshot.tabs.length !== 1)
+      throw new TypeError("Invalid tab");
+    return (await ipcRenderer.invoke(terminalIpc.detachTab, snapshot)) === true;
+  },
+  async saveOutput(text) {
+    if (typeof text !== "string" || text.length === 0)
+      throw new TypeError("Invalid terminal output");
+    const name: unknown = await ipcRenderer.invoke(
+      terminalIpc.saveOutput,
+      text,
+    );
+    if (name !== null && (typeof name !== "string" || name.length > 1_024))
+      throw new TypeError("Invalid save response");
+    return name;
+  },
   openMainMenu(position) {
     const coordinates = [position?.x, position?.y];
     if (

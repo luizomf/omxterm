@@ -472,15 +472,35 @@ export function terminalActionInvocations(
   });
 }
 
-export function terminalClipboardContextMenuTemplate(actions: {
-  readonly copy: () => void;
-  readonly paste: () => void;
-  readonly selectAll: () => void;
-}): MenuItemConstructorOptions[] {
+export function terminalClipboardContextMenuTemplate(
+  actions: {
+    readonly copy: () => void;
+    readonly paste: () => void;
+    readonly selectAll: () => void;
+    readonly saveOutput?: () => void;
+  },
+  labels: {
+    readonly copy: string;
+    readonly paste: string;
+    readonly selectAll: string;
+    readonly saveOutput: string;
+  } = {
+    copy: "Copy",
+    paste: "Paste",
+    selectAll: "Select All",
+    saveOutput: "Save Output to File…",
+  },
+): MenuItemConstructorOptions[] {
   return [
-    { label: "Copy", click: actions.copy },
-    { label: "Paste", click: actions.paste },
+    { label: labels.copy, click: actions.copy },
+    { label: labels.paste, click: actions.paste },
     { type: "separator" },
-    { label: "Select All", click: actions.selectAll },
+    { label: labels.selectAll, click: actions.selectAll },
+    ...(actions.saveOutput
+      ? [
+          { type: "separator" as const },
+          { label: labels.saveOutput, click: actions.saveOutput },
+        ]
+      : []),
   ];
 }

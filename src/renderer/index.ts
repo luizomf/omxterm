@@ -91,6 +91,7 @@ void Promise.all([
       highlights: window.omxterm.highlights,
       ...(workspacePlan ? { initialWorkspace: workspacePlan } : {}),
       reportWorkspace: window.omxterm.terminal.reportWorkspace,
+      detachTab: window.omxterm.terminal.detachTab,
       ...(startupConnection
         ? {
             initialLaunch: {
@@ -109,6 +110,10 @@ void Promise.all([
         preferences: window.omxterm.preferences,
         files: window.omxterm.files,
         assistant: window.omxterm.assistant,
+        saveOutput: {
+          onRequest: window.omxterm.terminal.onSaveOutputRequest,
+          save: window.omxterm.terminal.saveOutput,
+        },
         sessionDirectory: window.omxterm.terminal.sessionDirectory,
         palette: {
           onToggle: window.omxterm.terminal.onCommandPalette,

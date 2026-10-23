@@ -27,6 +27,7 @@ export const ICONS = {
   ],
   newTab: ["M12 5v14", "M5 12h14"],
   menu: ["M4 7h16", "M4 12h16", "M4 17h16"],
+  openTabs: ["M6 9l6 6 6-6"],
   up: ["M12 19V5", "M5 12l7-7 7 7"],
   home: ["M3 11l9-7 9 7", "M5 10v10h14V10"],
   refresh: ["M20 11a8 8 0 1 0-2.3 5.7", "M20 4v7h-7"],

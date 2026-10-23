@@ -16,6 +16,7 @@ import { createTab } from "./terminal-pane-lifecycle";
 import { renderStrip, select, selectedTab } from "./terminal-tabs-view";
 import { showContextMenu, type ContextMenuItem } from "./ui/context-menu";
 import { openModal, promptText } from "./ui/modal";
+import { tabArrangeItems } from "./terminal-tab-actions";
 
 const MAX_TAB_TITLE_LENGTH = 200;
 let english: Translator | undefined;
@@ -71,6 +72,7 @@ export function openTabMenu(
         }),
     },
     { label: t("tabs.duplicate"), action: () => duplicateTab(ctx, tab) },
+    ...tabArrangeItems(ctx, t, tab),
     { separator: true },
     {
       label: t("tabs.newGroup"),

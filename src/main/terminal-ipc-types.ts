@@ -87,6 +87,8 @@ export interface TerminalIpcControllerOptions {
   // opens with (asked once), and the directories behind restore tokens.
   readonly onWorkspace?: (window: PersistedWorkspaceWindow) => void;
   readonly workspacePlan?: () => WorkspacePlan | null;
+  // Opens a new window restoring one tab (Detach Tab).
+  readonly onDetachTab?: (window: PersistedWorkspaceWindow) => void;
   readonly resolveRestoredDirectory?: (token: string) => string | undefined;
   readonly onSessionStartError: (
     context: TerminalSessionStartErrorContext,

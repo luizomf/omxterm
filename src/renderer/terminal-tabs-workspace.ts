@@ -1,6 +1,6 @@
 import type { WorkspaceSnapshot } from "../shared/workspace";
 import { layoutPanes, serializeLayout } from "./pane-layout";
-import type { TerminalPane } from "./terminal-tab-model";
+import type { TerminalPane, TerminalTab } from "./terminal-tab-model";
 import type { TabsContext } from "./terminal-tabs-types";
 
 const REPORT_DELAY_MS = 250;
@@ -10,28 +10,33 @@ const timers = new WeakMap<TabsContext, ReturnType<typeof setTimeout>>();
 // session (main knows their directories); Saved Session and Quick Connect
 // panes also carry their launch, so a failed connection still restores.
 export function workspaceSnapshot(ctx: TabsContext): WorkspaceSnapshot {
-  const tabs = ctx.tabs.map((tab) => {
-    const panes = layoutPanes(tab.layout);
-    return {
-      layout: serializeLayout(tab.layout, (pane) => panes.indexOf(pane)),
-      focused: Math.max(0, panes.indexOf(tab.focused)),
-      panes: panes.map(paneSnapshot),
-      ...(tab.title ? { title: tab.title } : {}),
-      ...(tab.color ? { color: tab.color } : {}),
-      ...(tab.group
-        ? {
-            group: {
-              name: tab.group.name,
-              color: tab.group.color,
-              collapsed: tab.group.collapsed,
-            },
-          }
-        : {}),
-    };
-  });
+  const tabs = ctx.tabs.map(tabSnapshot);
   return {
     selected: tabs.length === 0 ? 0 : Math.max(0, ctx.selectedIndex),
     tabs,
+  };
+}
+
+// One tab as workspace restore describes it (also used by Detach Tab).
+export function tabSnapshot(
+  tab: TerminalTab,
+): WorkspaceSnapshot["tabs"][number] {
+  const panes = layoutPanes(tab.layout);
+  return {
+    layout: serializeLayout(tab.layout, (pane) => panes.indexOf(pane)),
+    focused: Math.max(0, panes.indexOf(tab.focused)),
+    panes: panes.map(paneSnapshot),
+    ...(tab.title ? { title: tab.title } : {}),
+    ...(tab.color ? { color: tab.color } : {}),
+    ...(tab.group
+      ? {
+          group: {
+            name: tab.group.name,
+            color: tab.group.color,
+            collapsed: tab.group.collapsed,
+          },
+        }
+      : {}),
   };
 }
 

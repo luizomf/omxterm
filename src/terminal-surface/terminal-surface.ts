@@ -19,6 +19,9 @@ export interface TerminalSurface {
   selectAll(): void;
   // The selected text, read without touching the clipboard.
   selectionText?(): string;
+  // The whole buffer, scrollback included, as text. It selects everything to
+  // read it; the selection clears at the next key press, as usual.
+  outputText?(): string;
   // Opens or closes the in-terminal search bar over the scrollback.
   toggleSearch(): void;
   dispose(): void;

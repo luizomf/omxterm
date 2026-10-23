@@ -16,7 +16,7 @@ export function resttyClipboardActions(
     { getSelectionText(): string; selectAll(): boolean } | undefined,
 ): Pick<
   TerminalSurface,
-  "copy" | "paste" | "inject" | "selectAll" | "selectionText"
+  "copy" | "paste" | "inject" | "selectAll" | "selectionText" | "outputText"
 > {
   return {
     async copy() {
@@ -39,6 +39,10 @@ export function resttyClipboardActions(
       liveSelection()?.selectAll();
     },
     selectionText: () => liveSelection()?.getSelectionText() ?? "",
+    outputText() {
+      const interaction = liveSelection();
+      return interaction?.selectAll() ? interaction.getSelectionText() : "";
+    },
   };
 }
 

@@ -13,6 +13,7 @@ import type { IpcEvent } from "./terminal-ipc-types";
 import { createWorkspaceService } from "./workspace-service";
 import { startPreferences } from "./preferences-wiring";
 import { startFileBrowser } from "./file-browser-wiring";
+import { startOutputFiles } from "./output-file-wiring";
 import { startRemoteFiles } from "./remote-files-wiring";
 import { startAssistant } from "./assistant-wiring";
 import { MAX_WINDOW_CORNER_RADIUS } from "../shared/user-configuration";
@@ -69,6 +70,7 @@ export async function startApplicationDataServices(options: {
   highlightSettings.subscribe(onMenuStateChange);
   const commandLibrary = await startCommandLibrary(shared);
   startFileBrowser(shared);
+  startOutputFiles(shared);
   const backup = startSettingsBackup({
     ipcMain: options.ipcMain,
     isTrustedSender: options.isTrustedSender,
