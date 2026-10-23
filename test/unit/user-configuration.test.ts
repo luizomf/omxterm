@@ -124,6 +124,8 @@ describe("strict version 1 User Configuration", () => {
       transparency: 0,
       showTitleBar: true,
       showTabBar: true,
+      cornerRadius: 0,
+      autoHideTitleBar: false,
       terminalTheme: DEFAULT_TERMINAL_THEME,
       keybinds: {
         ...DEFAULT_TERMINAL_KEYBINDS,

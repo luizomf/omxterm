@@ -17,6 +17,7 @@ import {
   MAX_TERMINAL_FONT_SIZE,
   MAX_TERMINAL_LINE_HEIGHT,
   MAX_TERMINAL_PADDING,
+  MAX_WINDOW_CORNER_RADIUS,
   MIN_TERMINAL_FONT_SIZE,
   MIN_TERMINAL_LINE_HEIGHT,
 } from "../../shared/user-configuration";
@@ -295,6 +296,14 @@ export function appearancePage(context: PreferencesContext): HTMLElement {
     heading(context, "prefs.window"),
     field(document, context.t("prefs.transparency"), transparencyRow).element,
     toggle(context, "blur", "prefs.blur"),
+    numberField(
+      context,
+      "prefs.cornerRadius",
+      (values) => values.cornerRadius,
+      (value) => ({ cornerRadius: value }),
+      { min: 0, max: MAX_WINDOW_CORNER_RADIUS, step: 1 },
+      "prefs.cornerRadiusHint",
+    ),
     heading(context, "prefs.padding"),
     padding,
   );
@@ -340,6 +349,7 @@ export function windowPage(context: PreferencesContext): HTMLElement {
     context,
     heading(context, "prefs.newWindows"),
     toggle(context, "showTitleBar", "prefs.showTitleBar"),
+    toggle(context, "autoHideTitleBar", "prefs.autoHideTitleBar"),
     toggle(context, "showTabBar", "prefs.showTabBar"),
     toggle(context, "alwaysOnTop", "menu.alwaysOnTop"),
     heading(context, "prefs.behavior"),

@@ -4,6 +4,7 @@ export const assistantIpc = {
   setKey: "assistant:set-key",
   models: "assistant:models",
   test: "assistant:test",
+  openKeyPage: "assistant:open-key-page",
   chat: "assistant:chat",
   cancel: "assistant:cancel",
   history: "assistant:history",
@@ -22,42 +23,49 @@ export const ASSISTANT_PROVIDERS = {
     baseUrl: "https://api.groq.com/openai/v1",
     model: "llama-3.1-8b-instant",
     needsKey: true,
+    keyUrl: "https://console.groq.com/keys",
   },
   gemini: {
     name: "Google Gemini",
     baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
     model: "gemini-2.5-flash",
     needsKey: true,
+    keyUrl: "https://aistudio.google.com/apikey",
   },
   openrouter: {
     name: "OpenRouter",
     baseUrl: "https://openrouter.ai/api/v1",
     model: "openrouter/auto",
     needsKey: true,
+    keyUrl: "https://openrouter.ai/settings/keys",
   },
   mistral: {
     name: "Mistral AI",
     baseUrl: "https://api.mistral.ai/v1",
     model: "mistral-small-latest",
     needsKey: true,
+    keyUrl: "https://console.mistral.ai/api-keys",
   },
   cerebras: {
     name: "Cerebras",
     baseUrl: "https://api.cerebras.ai/v1",
     model: "llama-3.3-70b",
     needsKey: true,
+    keyUrl: "https://cloud.cerebras.ai/platform",
   },
   github: {
     name: "GitHub Models",
     baseUrl: "https://models.github.ai/inference",
     model: "openai/gpt-4o-mini",
     needsKey: true,
+    keyUrl: "https://github.com/settings/personal-access-tokens",
   },
   local: {
-    name: "Local (Ollama, LM Studio)",
+    name: "Ollama / LM Studio (local or own server)",
     baseUrl: "http://localhost:11434/v1",
     model: "llama3.2",
     needsKey: false,
+    keyUrl: undefined,
   },
 } as const;
 
@@ -134,8 +142,24 @@ const isModel = (value: unknown) =>
   value.length <= MAX_MODEL_LENGTH &&
   !/[\p{Cc}]/u.test(value);
 
-// A local server must be reached over http(s); plain http only on this
-// computer, so a key or a conversation never crosses a network unencrypted.
+// Plain http only reaches this computer or the local network (private
+// addresses and .local names); anything else must use https.
+function isPrivateHost(hostname: string): boolean {
+  if (["localhost", "[::1]"].includes(hostname)) return true;
+  if (hostname.endsWith(".local") || hostname.endsWith(".lan")) return true;
+  const parts = hostname.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part)))
+    return false;
+  const [first, second] = parts as [number, number, number, number];
+  return (
+    first === 127 ||
+    first === 10 ||
+    (first === 192 && second === 168) ||
+    (first === 172 && second >= 16 && second <= 31)
+  );
+}
+
+// An Ollama or OpenAI-compatible server address, with or without /v1.
 export function isAssistantBaseUrl(value: unknown): value is string {
   if (typeof value !== "string" || value.length > MAX_URL_LENGTH) return false;
   let url: URL;
@@ -146,9 +170,43 @@ export function isAssistantBaseUrl(value: unknown): value is string {
   }
   if (url.username || url.password || url.search || url.hash) return false;
   if (url.protocol === "https:") return true;
+  return url.protocol === "http:" && isPrivateHost(url.hostname);
+}
+
+// Ollama is often given as http://host:11434/ without the OpenAI /v1 path.
+export function assistantApiBase(value: string): string {
+  const url = new URL(value);
+  if (url.pathname === "" || url.pathname === "/") url.pathname = "/v1";
+  return url.href.replace(/\/+$/u, "");
+}
+
+export interface AssistantModelInfo {
+  readonly id: string;
+  readonly name?: string;
+  // Known only where the provider publishes prices (OpenRouter) or marks
+  // free models.
+  readonly free?: boolean;
+  readonly context?: number;
+}
+
+export function isAssistantModelList(
+  value: unknown,
+): value is readonly AssistantModelInfo[] {
   return (
-    url.protocol === "http:" &&
-    ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
+    Array.isArray(value) &&
+    value.length <= 2_000 &&
+    value.every(
+      (item) =>
+        isRecord(item) &&
+        typeof item.id === "string" &&
+        item.id.length > 0 &&
+        item.id.length <= 200 &&
+        (item.name === undefined ||
+          (typeof item.name === "string" && item.name.length <= 200)) &&
+        (item.free === undefined || typeof item.free === "boolean") &&
+        (item.context === undefined ||
+          (typeof item.context === "number" && Number.isFinite(item.context))),
+    )
   );
 }
 

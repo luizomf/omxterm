@@ -63,6 +63,29 @@ export function createFilesChrome(
       button.setAttribute("aria-pressed", String(pressed));
       return button;
     },
+    // The panel's toolbar; returns the Upload button, shown for remote
+    // folders only.
+    addTools(run: {
+      readonly up: () => unknown;
+      readonly home: () => unknown;
+      readonly refresh: () => unknown;
+      readonly follow: (pressed: boolean) => void;
+      readonly hidden: (pressed: boolean) => void;
+      readonly newFolder: () => void;
+      readonly newFile: () => void;
+      readonly upload: () => void;
+    }) {
+      this.tool("up", "files.up", () => void run.up());
+      this.tool("home", "files.home", () => void run.home());
+      this.tool("refresh", "common.refresh", () => void run.refresh());
+      this.toggle("follow", "files.follow", true, run.follow);
+      this.toggle("hidden", "files.showHidden", false, run.hidden);
+      this.tool("newFolder", "files.newFolder", run.newFolder);
+      this.tool("newFile", "files.newFile", run.newFile);
+      const upload = this.tool("send", "files.upload", run.upload);
+      upload.hidden = true;
+      return upload;
+    },
     // Typing filters; Down or Enter moves to the list; Escape clears.
     bindFilter(render: () => void, focusList: () => void) {
       filter.addEventListener("input", render);

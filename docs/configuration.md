@@ -195,6 +195,8 @@ Every field except `version` is optional and falls back to its default when omit
 | `window.transparency`     | number `0` – `1`                        | `0`                              |
 | `window.showTitleBar`     | boolean                                 | `true`                           |
 | `window.showTabBar`       | boolean                                 | `true`                           |
+| `window.cornerRadius`     | integer `0` – `24` (CSS px)             | `0`                              |
+| `window.autoHideTitleBar` | boolean                                 | `false`                          |
 | `theme.path`              | relative or absolute file path          | bundled `omtheme`                |
 | `keybinds.<action>`       | Electron accelerator string             | built-in shortcut per action     |
 

@@ -10,14 +10,16 @@ import {
 import type { Translator } from "../../shared/i18n";
 import type { AssistantBridge } from "../../shared/terminal-bridge";
 import { checkbox, field, selectInput, textInput } from "../ui/form";
+import { openModelBrowser } from "./model-browser";
 
 // Preferences → Assistant. Settings save as they change; the API key goes to
 // the system keychain through main and is never shown again.
 export function assistantPage(
   document: Document,
-  t: Translator["t"],
+  translator: Translator,
   bridge: AssistantBridge,
 ): HTMLElement {
+  const t = translator.t.bind(translator);
   const element = document.createElement("div");
   element.className = "omx-form preferences-page";
   const status = document.createElement("p");
@@ -62,7 +64,7 @@ export function assistantPage(
   const loadModels = document.createElement("button");
   loadModels.type = "button";
   loadModels.className = "omx-button omx-button-default";
-  loadModels.textContent = t("assistant.loadModels");
+  loadModels.textContent = t("assistant.browseModels");
   const modelRow = document.createElement("div");
   modelRow.className = "omx-inline";
   modelRow.append(model, loadModels, models);
@@ -85,9 +87,13 @@ export function assistantPage(
   removeKey.type = "button";
   removeKey.className = "omx-button omx-button-danger";
   removeKey.textContent = t("assistant.removeKey");
+  const keyPage = document.createElement("button");
+  keyPage.type = "button";
+  keyPage.className = "omx-button omx-button-default";
+  keyPage.textContent = t("assistant.getKey");
   const keyRow = document.createElement("div");
   keyRow.className = "omx-inline";
-  keyRow.append(key, saveKey, removeKey);
+  keyRow.append(key, saveKey, removeKey, keyPage);
   const keyField = field(document, t("assistant.apiKey"), keyRow);
   const keyState = document.createElement("p");
   keyState.className = "omx-field-hint";
@@ -112,6 +118,8 @@ export function assistantPage(
     key.disabled = !next.keyStorage;
     saveKey.disabled = !next.keyStorage;
     removeKey.hidden = !stored;
+    keyPage.hidden =
+      ASSISTANT_PROVIDERS[settings.provider].keyUrl === undefined;
     keyState.textContent = !next.keyStorage
       ? t("assistant.keyStorageUnavailable")
       : stored
@@ -172,21 +180,34 @@ export function assistantPage(
       })
       .catch(failure);
   });
+  keyPage.addEventListener("click", () => {
+    const settings = current();
+    if (settings) void bridge.openKeyPage(settings.provider).catch(failure);
+  });
   loadModels.addEventListener("click", () => {
     const settings = current();
     if (!settings) return;
     say(t("assistant.loading"));
     void bridge
       .models(settings.provider)
-      .then((list) => {
+      .then(async (list) => {
         models.replaceChildren(
-          ...list.map((id) => {
+          ...list.map(({ id }) => {
             const option = document.createElement("option");
             option.value = id;
             return option;
           }),
         );
         say(t("assistant.connectionOk", { count: list.length }));
+        if (list.length === 0) return;
+        const picked = await openModelBrowser(
+          document,
+          translator,
+          list,
+          assistantModel(settings),
+        );
+        if (picked)
+          save({ models: { ...settings.models, [settings.provider]: picked } });
       })
       .catch(failure);
   });

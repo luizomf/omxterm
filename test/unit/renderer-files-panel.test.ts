@@ -101,6 +101,7 @@ function mount(
   focused: { id: string | undefined; directory: string | null },
 ) {
   const typed: [string, boolean][] = [];
+  const keys_: string[] = [];
   const panel = createFilesPanel(document, {
     translator: createTranslator("en"),
     bridge: fake,
@@ -109,11 +110,13 @@ function mount(
     typeInTerminal: (text, submit) => typed.push([text, submit]),
     copyText: vi.fn(),
     focusedSessionId: () => focused.id,
-    focusedDirectory: async () => focused.directory,
+    focusedPane: async () => ({ directory: focused.directory, busy: false }),
+    sendKeys: (keys) => keys_.push(keys),
+    runCommand: (command) => typed.push([command, true]),
   });
   document.body.append(panel.element);
   panel.activate();
-  return { panel, typed };
+  return { panel, typed, keys: keys_ };
 }
 
 const names = () =>

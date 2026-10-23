@@ -81,8 +81,9 @@ Omarchy screenshot are arranged by Hyprland.
 - **Header toolbar** in the title bar: Sessions, Commands, Files, Assistant, Find, Split Right,
   Split Down and Broadcast before the title; New Tab and a **main menu**
   (☰) with every action after it.
-- Tabs and multiple windows, with hideable title and tab bars, background
-  transparency and blur, and always-on-top.
+- Tabs and multiple windows, with hideable title and tab bars, an
+  auto-hiding title bar that slides in from the top edge, rounded window
+  corners, background transparency and blur, and always-on-top.
 - **Split panes:** split right or down (up to 16 panes per tab), move focus by
   direction, maximize, equalize, and drag dividers. New panes open in the
   current pane's folder.
@@ -111,7 +112,8 @@ Omarchy screenshot are arranged by Hyprland.
 
 ### Integrated file manager
 
-- **Files sidebar** that follows the focused terminal's folder: browse,
+- **Files sidebar** in step with the focused terminal: it follows the
+  shell's folder, and browsing a folder in the panel moves the shell there. Browse,
   filter, open with the default app, show in the system file manager, create,
   rename, copy, move and move to the trash.
 - **Remote files over SFTP** for SSH sessions, through your OpenSSH and the
@@ -123,8 +125,10 @@ Omarchy screenshot are arranged by Hyprland.
 ### Optional AI assistant
 
 - **Off until you turn it on** in Preferences → Assistant. Providers: Groq,
-  Google Gemini, OpenRouter, Mistral, Cerebras, GitHub Models, and local
-  servers (Ollama, LM Studio).
+  Google Gemini, OpenRouter, Mistral, Cerebras, GitHub Models, and Ollama or
+  LM Studio servers on this computer, your network or your own domain.
+- **Get API Key** opens each provider's key page; **Browse Models…** searches
+  the provider's models, with a free-only filter where prices are published.
 - A sidebar panel with streamed answers; suggested commands can be inserted,
   run (after confirmation) or copied. The conversation is kept between
   sessions until you clear it.

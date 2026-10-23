@@ -91,6 +91,8 @@ export interface TerminalTabs {
   focusedSessionId(): TerminalSessionId | undefined;
   // The focused pane's selected text, or "".
   focusedSelection(): string;
+  // Raw input to the focused pane, as if typed (control keys included).
+  sendKeys(keys: string): void;
   openLaunch(launch: PaneLaunch, placement: TerminalLaunchPlacement): void;
   dispose(): void;
 }

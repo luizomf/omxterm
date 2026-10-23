@@ -25,6 +25,8 @@ export interface FilesActionsContext {
   refresh(): Promise<void>;
   activate(entry: FileEntry): void;
   focusList(): void;
+  // Remote panes: make the shell report its folder (OSC 7).
+  trackRemote(): void;
 }
 
 export interface FilesActions {
@@ -241,6 +243,9 @@ export function createFilesActions(
         disabled: directory === undefined,
         action: () => directory !== undefined && terminalHere(directory),
       },
+      ...(source?.kind === "remote"
+        ? [{ label: t("files.trackRemote"), action: context.trackRemote }]
+        : []),
     ];
   };
   return actions;

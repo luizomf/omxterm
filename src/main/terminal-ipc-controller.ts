@@ -98,7 +98,10 @@ interface RoutedTerminalIpcController
   localImage(payload?: unknown): Promise<LocalImageData | null>;
   snippets(payload?: unknown): Promise<TerminalSnippetsResponse>;
   fontData(payload?: unknown): Promise<TerminalFontData>;
-  sessionDirectory(payload?: unknown): string | null;
+  sessionDirectory(payload?: unknown): {
+    readonly directory: string | null;
+    readonly busy: boolean;
+  } | null;
   sessionLaunch(payload?: unknown): TerminalSessionLaunch | undefined;
   activeTerminalSurfaceFontConfigurations(): readonly TerminalSurfaceFontConfiguration[];
 }
@@ -705,11 +708,17 @@ function createTerminalIpcController(
     localImage: localImageBoundary.request,
     snippets,
     fontData,
-    // The Files panel follows a pane: its OSC 7 directory, else /proc.
-    sessionDirectory: (payload) =>
-      typeof payload === "string" && sessions.has(payload)
-        ? (launches.directoryOf(payload) ?? null)
-        : null,
+    // The Files panel follows a pane: its OSC 7 directory, else /proc, and
+    // whether a program runs in it (then nothing is typed into it).
+    sessionDirectory(payload) {
+      const state =
+        typeof payload === "string" ? sessions.get(payload) : undefined;
+      if (!state || state.closed || state.exited) return null;
+      return {
+        directory: launches.directoryOf(payload as string) ?? null,
+        busy: state.session.hasForegroundChildProcess(),
+      };
+    },
     sessionLaunch: (payload) =>
       typeof payload === "string" ? sessions.get(payload)?.launch : undefined,
     activeTerminalSurfaceFontConfigurations: () => [

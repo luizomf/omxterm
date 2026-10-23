@@ -31,6 +31,8 @@ export function preferencesValues(
     optionKeyMode: configuration.optionKeyMode,
     showTitleBar: configuration.showTitleBar,
     showTabBar: configuration.showTabBar,
+    cornerRadius: configuration.cornerRadius,
+    autoHideTitleBar: configuration.autoHideTitleBar,
     alwaysOnTop: configuration.alwaysOnTop,
     confirmClose: configuration.confirmClose,
     logLevel: configuration.logLevel,
@@ -93,6 +95,8 @@ export function applyPreferencesPatch(
     "transparency",
     "showTitleBar",
     "showTabBar",
+    "cornerRadius",
+    "autoHideTitleBar",
   ] as const)
     if (patch[field] !== undefined) set("window", field, patch[field]);
   if (patch.keybinds !== undefined) {

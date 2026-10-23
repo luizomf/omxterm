@@ -49,11 +49,54 @@ export interface TerminalApplicationMenuActions {
   readonly openPreferences?: () => void;
   readonly toggleSelectedFiles?: () => void;
   readonly toggleSelectedAssistant?: () => void;
+  readonly adjustCornerRadius?: (delta: number) => void;
+  readonly setAutoHideTitleBar?: (enabled: boolean) => void;
 }
 
 export interface TerminalApplicationMenuState {
   readonly outputHighlighting?: boolean;
   readonly restoreWorkspace?: boolean;
+  readonly autoHideTitleBar?: boolean;
+}
+
+// View items for the window frame: rounder or squarer corners and whether
+// the title bar hides itself. Shared by the application and main menus.
+export function windowFrameMenuItems(
+  labels: {
+    readonly roundMore: string;
+    readonly roundLess: string;
+    readonly autoHide: string;
+    readonly alwaysShow: string;
+  },
+  actions: TerminalApplicationMenuActions,
+  state: TerminalApplicationMenuState,
+): MenuItemConstructorOptions[] {
+  const adjust = actions.adjustCornerRadius;
+  const autoHide = actions.setAutoHideTitleBar;
+  return [
+    ...(adjust
+      ? [
+          { label: labels.roundMore, click: () => adjust(2) },
+          { label: labels.roundLess, click: () => adjust(-2) },
+        ]
+      : []),
+    ...(autoHide
+      ? [
+          {
+            label: labels.autoHide,
+            type: "radio" as const,
+            checked: state.autoHideTitleBar === true,
+            click: () => autoHide(true),
+          },
+          {
+            label: labels.alwaysShow,
+            type: "radio" as const,
+            checked: state.autoHideTitleBar !== true,
+            click: () => autoHide(false),
+          },
+        ]
+      : []),
+  ];
 }
 
 export function terminalApplicationMenuTemplate(
@@ -242,6 +285,16 @@ export function terminalApplicationMenuTemplate(
           accelerator: keybinds.toggleTitleBar,
           click: actions.toggleSelectedTitleBar,
         },
+        ...windowFrameMenuItems(
+          {
+            roundMore: "Rounder Corners",
+            roundLess: "Less Rounded Corners",
+            autoHide: "Auto-Hide Title Bar",
+            alwaysShow: "Always Show Title Bar",
+          },
+          actions,
+          state,
+        ),
         {
           label: "Reload User Configuration",
           accelerator: keybinds.reloadConfig,

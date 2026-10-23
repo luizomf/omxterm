@@ -112,12 +112,15 @@ const terminal: TerminalBridge = {
       terminalIpc.sessionDirectory,
       sessionId,
     );
+    if (response === null) return null;
+    const { directory, busy } = (response ?? {}) as Record<string, unknown>;
     if (
-      response !== null &&
-      (typeof response !== "string" || response.length > 4_096)
+      typeof busy !== "boolean" ||
+      (directory !== null &&
+        (typeof directory !== "string" || directory.length > 4_096))
     )
       throw new TypeError("Invalid working directory response");
-    return response;
+    return { directory, busy };
   },
   onCommandPalette(listener: () => void) {
     const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {

@@ -1,6 +1,7 @@
 import type {
   AssistantEvent,
   AssistantMessage,
+  AssistantModelInfo,
   AssistantProvider,
   AssistantSettings,
   AssistantState,
@@ -130,7 +131,9 @@ export interface AssistantBridge {
     provider: AssistantProvider,
     key: string | null,
   ): Promise<AssistantState>;
-  models(provider: AssistantProvider): Promise<string[]>;
+  models(provider: AssistantProvider): Promise<readonly AssistantModelInfo[]>;
+  // Opens the provider's API key page in the default browser.
+  openKeyPage(provider: AssistantProvider): Promise<void>;
   // The number of models the provider lists, proving the connection works.
   test(provider: AssistantProvider): Promise<number>;
   // Resolves when the answer ends; its text arrives through onEvent.
@@ -181,8 +184,12 @@ export interface TerminalBridge {
   configuration(): Promise<TerminalRendererConfiguration>;
   fontData(family?: string): Promise<TerminalFontData>;
   snippets(): Promise<TerminalSnippetsResponse>;
-  // A local pane's current directory (OSC 7, else the process), or null.
-  sessionDirectory(sessionId: TerminalSessionId): Promise<string | null>;
+  // A live pane's current local directory (OSC 7, else the process) and
+  // whether a program runs in its shell; null for an ended pane.
+  sessionDirectory(sessionId: TerminalSessionId): Promise<{
+    readonly directory: string | null;
+    readonly busy: boolean;
+  } | null>;
   onSnippetsToggle(listener: () => void): () => void;
   onCommandPalette(listener: () => void): () => void;
   // Runs an application action, as its keyboard shortcut would.

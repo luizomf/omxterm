@@ -3,6 +3,7 @@ import {
   assistantIpc,
   isAssistantEvent,
   isAssistantMessages,
+  isAssistantModelList,
   isAssistantProvider,
   isAssistantSettings,
   isAssistantState,
@@ -57,13 +58,11 @@ export function createAssistantBridge(ipc: IpcRenderer): AssistantBridge {
         assistantIpc.models,
         provider(name),
       );
-      if (
-        !Array.isArray(value) ||
-        value.length > 1_000 ||
-        !value.every((item) => typeof item === "string" && item.length <= 200)
-      )
-        throw new TypeError("Invalid response");
-      return value as string[];
+      if (!isAssistantModelList(value)) throw new TypeError("Invalid response");
+      return value;
+    },
+    async openKeyPage(name) {
+      await ipc.invoke(assistantIpc.openKeyPage, provider(name));
     },
     async test(name) {
       const value: unknown = await ipc.invoke(

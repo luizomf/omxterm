@@ -1,4 +1,8 @@
-import { mountWindowChrome, type WindowChromeBridge } from "./window-chrome";
+import {
+  applyWindowFrame,
+  mountWindowChrome,
+  type WindowChromeBridge,
+} from "./window-chrome";
 import type { TerminalSessionAdapter } from "../terminal-surface/terminal-session-adapter";
 import {
   mountTerminalSurface,
@@ -140,9 +144,10 @@ export interface TerminalWindowPageOptions {
     readonly preferences?: PreferencesBridge;
     readonly files?: FilesBridge;
     readonly assistant?: AssistantBridge;
-    readonly sessionDirectory?: (
-      sessionId: TerminalSessionId,
-    ) => Promise<string | null>;
+    readonly sessionDirectory?: (sessionId: TerminalSessionId) => Promise<{
+      readonly directory: string | null;
+      readonly busy: boolean;
+    } | null>;
     readonly palette?: {
       readonly onToggle: (listener: () => void) => () => void;
       readonly runAction: (action: TerminalActionName) => void;
@@ -188,18 +193,16 @@ export function mountTerminalWindowPage(
     ? surfaceConfiguration(options.configuration)
     : undefined;
 
-  const applyPageTheme = (theme: TerminalTheme, transparency: number) =>
-    paintPageTheme(page.document, elements.tabsContainer, theme, transparency);
+  // Theme tint, then the window frame (corner radius, auto-hiding bar).
+  const applyPageTheme = (configuration: TerminalRendererConfiguration) =>
+    paintPage(page.document, elements.tabsContainer, configuration);
 
   if (options.configuration) {
     page.document.documentElement.style.setProperty(
       "--native-title-inset",
       `${options.configuration.nativeTitleInset}px`,
     );
-    applyPageTheme(
-      options.configuration.terminalTheme,
-      options.configuration.transparency,
-    );
+    applyPageTheme(options.configuration);
   }
 
   const surfaceOptions: TerminalSurfaceOptions = {
@@ -349,7 +352,7 @@ export function mountTerminalWindowPage(
           "--native-title-inset",
           `${configuration.nativeTitleInset}px`,
         );
-      applyPageTheme(configuration.terminalTheme, configuration.transparency);
+      applyPageTheme(configuration);
       const nextSurfaceConfiguration = surfaceConfiguration(configuration);
       if (configuration.fontFamily !== activeFontFamily) {
         activeFontFamily = configuration.fontFamily;
@@ -432,6 +435,20 @@ function searchLabels(
     clear: translator.t("search.clear"),
     close: translator.t("search.close"),
   };
+}
+
+function paintPage(
+  document: Document,
+  tabsContainer: HTMLElement,
+  configuration: TerminalRendererConfiguration,
+): void {
+  paintPageTheme(
+    document,
+    tabsContainer,
+    configuration.terminalTheme,
+    configuration.transparency,
+  );
+  applyWindowFrame(document, configuration);
 }
 
 // The Terminal Theme tints the page, chrome and every tab container.

@@ -159,6 +159,7 @@ describe("ssh argument vector", () => {
         identityFile: "~/.ssh/id_ed25519",
         compression: true,
         options: ["ServerAliveCountMax=5"],
+        multiplex: false,
       }) as never,
       options,
     );
@@ -183,6 +184,13 @@ describe("ssh argument vector", () => {
       "deploy",
       "example.com",
     ]);
+  });
+
+  it("shares connections unless a session turns it off", () => {
+    expect(sshArguments(ssh({}) as never, options).multiplexed).toBe(true);
+    expect(
+      sshArguments(ssh({ multiplex: false }) as never, options).multiplexed,
+    ).toBe(false);
   });
 
   it("multiplexes only when no forward, X11 or jump host needs a fresh connection", () => {

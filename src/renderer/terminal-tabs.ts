@@ -158,6 +158,9 @@ export function createTerminalTabs(
     focusedSessionId() {
       return selectedTab(ctx)?.focused.adapter.sessionId();
     },
+    sendKeys(keys) {
+      selectedTab(ctx)?.focused.adapter.write(keys);
+    },
     focusedSelection() {
       return focusedSurface()?.selectionText?.() ?? "";
     },

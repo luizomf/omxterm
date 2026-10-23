@@ -12,6 +12,11 @@ import {
 } from "./files-source";
 import { createTransfersView } from "./files-transfers";
 import { createFilesChrome } from "./files-chrome";
+import {
+  createTerminalSync,
+  REMOTE_TRACKING_COMMAND,
+  type TerminalSyncOptions,
+} from "./files-sync";
 
 export interface FilesPanelOptions {
   readonly translator: Translator;
@@ -22,8 +27,9 @@ export interface FilesPanelOptions {
   readonly typeInTerminal: (text: string, submit: boolean) => void;
   readonly copyText: (text: string) => void;
   readonly focusedSessionId: () => TerminalSessionId | undefined;
-  // The focused pane's local directory, when it can be known.
-  readonly focusedDirectory: () => Promise<string | null>;
+  readonly focusedPane: TerminalSyncOptions["focusedPane"];
+  readonly sendKeys: TerminalSyncOptions["sendKeys"];
+  readonly runCommand: TerminalSyncOptions["runCommand"];
 }
 
 export interface FilesPanel {
@@ -41,6 +47,24 @@ function mainMessage(cause: unknown, fallback: string): string {
   return cause.message.replace(
     /^Error invoking remote method '[^']+': (?:\w*Error: )?/u,
     "",
+  );
+}
+
+// Entries shown: dotfiles only on request, then the filter, folders first.
+function visibleEntries(
+  listing: DirectoryListing | undefined,
+  showHidden: boolean,
+  filter: string,
+  compare: (first: string, second: string) => number,
+): FileEntry[] {
+  const query = filter.trim().toLocaleLowerCase();
+  return sortEntries(
+    (listing?.entries ?? []).filter(
+      (entry) =>
+        (showHidden || !entry.name.startsWith(".")) &&
+        (query === "" || entry.name.toLocaleLowerCase().includes(query)),
+    ),
+    compare,
   );
 }
 
@@ -84,17 +108,10 @@ export function createFilesPanel(
   };
   const pathOf = (entry: FileEntry) => join(listing?.path ?? "/", entry.name);
 
-  const visible = () => {
-    const query = filter.value.trim().toLocaleLowerCase();
-    return sortEntries(
-      (listing?.entries ?? []).filter(
-        (entry) =>
-          (showHidden || !entry.name.startsWith(".")) &&
-          (query === "" || entry.name.toLocaleLowerCase().includes(query)),
-      ),
-      translator.compare.bind(translator),
+  const visible = () =>
+    visibleEntries(listing, showHidden, filter.value, (first, second) =>
+      translator.compare(first, second),
     );
-  };
   const render = () => {
     const entries = visible();
     list.render(entries);
@@ -102,7 +119,7 @@ export function createFilesPanel(
       listing?.path,
       source?.separator ?? "/",
       join,
-      (target) => void navigate(target),
+      (target) => go(target),
     );
     const label = source?.kind === "remote" ? source.label : undefined;
     place.hidden = label === undefined;
@@ -115,25 +132,46 @@ export function createFilesPanel(
 
   const navigate = async (directory: string, quiet = false) => {
     const current = source;
-    if (!current) return;
+    if (!current) return false;
     const request = (loading += 1);
     try {
       const next = await current.list(directory);
-      if (disposed || request !== loading || current !== source) return;
+      if (disposed || request !== loading || current !== source) return false;
       const changed = next.path !== listing?.path;
       listing = next;
       if (current.sessionId)
         remoteDirectories.set(current.sessionId, next.path);
       if (changed) filter.value = "";
       render();
+      return true;
     } catch (cause) {
-      if (quiet || disposed) return;
+      if (quiet || disposed) return false;
       options.notify(
         current.kind === "remote"
           ? mainMessage(cause, t("files.cannotOpen"))
           : t("files.cannotOpen"),
       );
+      return false;
     }
+  };
+  const sync = createTerminalSync({
+    focusedPane: options.focusedPane,
+    reportedUri: () => options.directories.current(),
+    sendKeys: options.sendKeys,
+    runCommand: options.runCommand,
+  });
+  let busyNoticeShown = false;
+  // Browsing in the panel moves the terminal along when Follow is on.
+  const go = (target: string) => {
+    void navigate(target).then(async (moved) => {
+      const current = source;
+      if (!moved || !follow || !current || !listing) return;
+      const result = await sync.push(current, listing.path);
+      if (result === "busy" && !busyNoticeShown) {
+        busyNoticeShown = true;
+        options.notify(t("files.terminalBusy"));
+      }
+    });
   };
   // Shows another source, at its last or home directory.
   const switchTo = async (next: FilesSource) => {
@@ -172,14 +210,13 @@ export function createFilesPanel(
       ? await sourceFor(sessionId).catch(() => local!)
       : local;
     if (await switchTo(next)) return;
-    if (next.kind !== "local") return;
-    const directory = await options.focusedDirectory().catch(() => null);
+    const directory = await sync.pull(next);
     if (directory && directory !== listing?.path)
       await navigate(directory, true);
   };
 
   const activate = (entry: FileEntry) => {
-    if (isDirectoryLike(entry)) void navigate(pathOf(entry));
+    if (isDirectoryLike(entry)) go(pathOf(entry));
     else
       void source?.open(pathOf(entry)).then((result) => {
         if (!result.ok) options.notify(result.error);
@@ -198,10 +235,11 @@ export function createFilesPanel(
     },
     activate,
     focusList: () => list.focus(),
+    trackRemote: () => options.runCommand(REMOTE_TRACKING_COMMAND),
   });
   const list = createFilesList(document, translator, {
     activate,
-    goUp: () => listing?.parent && void navigate(listing.parent),
+    goUp: () => listing?.parent && go(listing.parent),
     trash: (entries) => void actions.remove(entries),
     rename: (entry) => void actions.rename(entry),
     clipboard(action) {
@@ -221,37 +259,22 @@ export function createFilesPanel(
     actions.menu([], { x: event.clientX, y: event.clientY });
   });
 
-  chrome.tool(
-    "up",
-    "files.up",
-    () => listing?.parent && void navigate(listing.parent),
-  );
-  chrome.tool("home", "files.home", () => {
-    void source?.home().then((home) => navigate(home));
+  const uploadButton = chrome.addTools({
+    up: () => listing?.parent && go(listing.parent),
+    home: () => void source?.home().then(go),
+    refresh: () => listing && void navigate(listing.path),
+    follow(pressed) {
+      follow = pressed;
+      if (follow) void followTerminal();
+    },
+    hidden(pressed) {
+      showHidden = pressed;
+      render();
+    },
+    newFolder: () => void actions.create("folder"),
+    newFile: () => void actions.create("file"),
+    upload: () => void actions.upload(),
   });
-  chrome.tool("refresh", "common.refresh", () => {
-    if (listing) void navigate(listing.path);
-  });
-  chrome.toggle("follow", "files.follow", true, (pressed) => {
-    follow = pressed;
-    if (follow) void followTerminal();
-  });
-  chrome.toggle("hidden", "files.showHidden", false, (pressed) => {
-    showHidden = pressed;
-    render();
-  });
-  chrome.tool(
-    "newFolder",
-    "files.newFolder",
-    () => void actions.create("folder"),
-  );
-  chrome.tool("newFile", "files.newFile", () => void actions.create("file"));
-  const uploadButton = chrome.tool(
-    "send",
-    "files.upload",
-    () => void actions.upload(),
-  );
-  uploadButton.hidden = true;
 
   chrome.bindFilter(render, () => list.focus());
   element.append(
@@ -287,8 +310,8 @@ export function createFilesPanel(
       return;
     }
     source = local;
-    const directory = await options.focusedDirectory().catch(() => null);
-    await navigate(directory ?? (await local.home()));
+    const pane = await options.focusedPane().catch(() => null);
+    await navigate(pane?.directory ?? (await local.home()));
   };
 
   return {

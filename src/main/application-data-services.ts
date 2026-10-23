@@ -15,6 +15,7 @@ import { startPreferences } from "./preferences-wiring";
 import { startFileBrowser } from "./file-browser-wiring";
 import { startRemoteFiles } from "./remote-files-wiring";
 import { startAssistant } from "./assistant-wiring";
+import { MAX_WINDOW_CORNER_RADIUS } from "../shared/user-configuration";
 import type { TerminalIpcRouter } from "./terminal-ipc-types";
 import type { PreferencesServiceOptions } from "./preferences-service";
 
@@ -155,6 +156,19 @@ export async function startApplicationDataServices(options: {
     openPreferences: preferences.open,
     toggleSelectedFiles: () => sendToFocused(fileBrowserIpc.toggle),
     toggleSelectedAssistant: assistant.toggle,
+    adjustCornerRadius(delta: number) {
+      const current = configuration.active().configuration.cornerRadius;
+      const next = Math.max(
+        0,
+        Math.min(MAX_WINDOW_CORNER_RADIUS, current + delta),
+      );
+      if (next !== current) void preferences.save({ cornerRadius: next });
+    },
+    setAutoHideTitleBar(enabled: boolean) {
+      void preferences
+        .save({ autoHideTitleBar: enabled })
+        .finally(onMenuStateChange);
+    },
     toggleRestoreWorkspace: () => {
       void workspace
         .setRestore(!workspace.restoreEnabled())
@@ -164,6 +178,7 @@ export async function startApplicationDataServices(options: {
   const menuState = () => ({
     outputHighlighting: highlightSettings.current().enabled,
     restoreWorkspace: workspace.restoreEnabled(),
+    autoHideTitleBar: configuration.active().configuration.autoHideTitleBar,
   });
   return { savedSessions, workspace, preferences, menuActions, menuState };
 }

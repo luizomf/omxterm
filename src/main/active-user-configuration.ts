@@ -64,6 +64,10 @@ export function terminalRendererConfiguration(
     optionKeyMode: configuration.optionKeyMode,
     nativeTitleInset: configuration.showTitleBar ? nativeTitleInset : 0,
     showTabBar: configuration.showTabBar,
+    ...(configuration.cornerRadius > 0
+      ? { cornerRadius: configuration.cornerRadius }
+      : {}),
+    ...(configuration.autoHideTitleBar ? { autoHideTitleBar: true } : {}),
     transparency: configuration.transparency,
     terminalTheme: active.configuration.terminalTheme,
     userFileErrors: active.userFileErrors,

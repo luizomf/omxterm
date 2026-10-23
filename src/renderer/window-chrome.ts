@@ -1,6 +1,33 @@
 import type { TerminalBridge } from "../shared/terminal-bridge";
 import type { WindowChromeState } from "../shared/window-chrome";
 import type { HeaderToolbar } from "./header-toolbar";
+import type { TerminalRendererConfiguration } from "../shared/user-configuration";
+
+// How long a revealed auto-hiding title bar stays after the pointer leaves.
+const AUTO_HIDE_DELAY_MS = 2_000;
+// The strip along the top edge that reveals it. The outermost pixels of a
+// frameless window belong to its resize border and never see the pointer.
+const REVEAL_EDGE_PX = 12;
+
+// The window frame settings the page applies itself: rounded corners (a CSS
+// clip of the transparent window) and whether the title bar auto-hides.
+export function applyWindowFrame(
+  document: Document,
+  configuration: Pick<
+    TerminalRendererConfiguration,
+    "cornerRadius" | "autoHideTitleBar"
+  >,
+): void {
+  const root = document.documentElement;
+  root.style.setProperty(
+    "--window-radius",
+    `${configuration.cornerRadius ?? 0}px`,
+  );
+  root.toggleAttribute(
+    "data-title-bar-autohide",
+    configuration.autoHideTitleBar === true,
+  );
+}
 
 export type WindowChromeBridge = Pick<
   TerminalBridge,
@@ -77,6 +104,11 @@ export function mountWindowChrome(
       visible && state.style === "native" ? "30px" : "0px",
     );
     row.hidden = !visible || state.style === "native";
+    // Square corners where the window fills the screen.
+    document.body.classList.toggle(
+      "window-filled",
+      state.maximized || state.fullScreen,
+    );
     if (toolbar) {
       const native = visible && state.style === "native";
       if (native && overlay.childElementCount === 0) {
@@ -101,6 +133,7 @@ export function mountWindowChrome(
       !state.handleVisible;
     if (toggled && !previewActive) focusTerminal();
   };
+  const autoHide = installAutoHide(document, row);
   const removeState = bridge.onWindowChrome(render);
   const removeToggle = bridge.onTitleBarToggle(() => {
     if (!disposed && !previewActive) bridge.windowChrome("toggle-title-bar");
@@ -119,10 +152,48 @@ export function mountWindowChrome(
       removeToggle();
       removeState();
       toolbar?.dispose();
+      autoHide();
       row.remove();
       overlay.remove();
       handle.remove();
       document.body.classList.remove("window-preview-active");
     },
+  };
+}
+
+// With data-title-bar-autohide on the root, the custom title bar overlays the
+// page: the pointer at the top edge (or focus inside it) slides it in, and it
+// slides out a moment after the pointer leaves. The terminal keeps its size.
+function installAutoHide(document: Document, row: HTMLElement): () => void {
+  const view = document.defaultView;
+  let timer: number | undefined;
+  const enabled = () =>
+    document.documentElement.hasAttribute("data-title-bar-autohide");
+  const reveal = () => {
+    if (!enabled() || row.hidden) return;
+    if (timer !== undefined) view?.clearTimeout(timer);
+    timer = undefined;
+    row.classList.add("revealed");
+  };
+  const scheduleHide = () => {
+    if (!enabled()) return;
+    if (timer !== undefined) view?.clearTimeout(timer);
+    timer = view?.setTimeout(() => {
+      timer = undefined;
+      if (!row.matches(":hover") && !row.contains(document.activeElement))
+        row.classList.remove("revealed");
+    }, AUTO_HIDE_DELAY_MS);
+  };
+  const onMove = (event: MouseEvent) => {
+    if (event.clientY <= REVEAL_EDGE_PX) reveal();
+  };
+  document.addEventListener("mousemove", onMove, { passive: true });
+  row.addEventListener("mouseenter", reveal);
+  row.addEventListener("mouseleave", scheduleHide);
+  row.addEventListener("focusin", reveal);
+  row.addEventListener("focusout", scheduleHide);
+  return () => {
+    if (timer !== undefined) view?.clearTimeout(timer);
+    document.removeEventListener("mousemove", onMove);
   };
 }

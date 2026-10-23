@@ -1278,13 +1278,22 @@ traffic lights. Hiding the title bar (`toggleTitleBar`) hides the toolbar too.
 shows the Files panel in the sidebar, beside Sessions and Commands. It is
 AshyTerm's integrated file manager.
 
-- **Following the terminal.** With a local pane focused the panel shows that
-  pane's directory: the last OSC 7 report, else (Linux) the directory of the
-  pane's process, which main reads. It checks again when focus moves, when
-  OSC 7 arrives, and every 1.5 seconds while the panel is visible and
-  **Follow Terminal Folder** is on. With an SSH pane focused (a Saved SSH
-  Session or Quick Connect) it shows that host over SFTP, starting at the
-  remote home and returning to the last remote folder for that pane.
+- **Following the terminal, both ways.** With a local pane focused the panel
+  shows that pane's directory: the last OSC 7 report, else (Linux) the
+  directory of the pane's process, which main reads. It checks again when
+  focus moves, when OSC 7 arrives, and every 1.5 seconds while the panel is
+  visible and **Follow Terminal Folder** is on. Browsing in the panel (a
+  folder, the breadcrumb, Parent, Home) moves the shell too: when no program
+  runs in the pane, the panel sends Ctrl+E Ctrl+U (the cleared line stays in
+  the shell's kill ring) and types ` cd -- '<path>'` (leading space so shells
+  that ignore such lines keep it out of history; PowerShell: Escape, then
+  `Set-Location -LiteralPath`). For four seconds after that, the panel waits
+  for the shell to arrive instead of jumping back. With an SSH pane focused
+  (a Saved SSH Session or Quick Connect) it shows that host over SFTP and
+  follows the remote shell through its OSC 7 reports; **Follow This Shell's
+  Folder** in the folder menu types a one-line bash/zsh hook that makes the
+  remote shell send them for the rest of the session. Browsing types the `cd`
+  into the remote shell.
 - **Browsing.** Breadcrumb, Parent and Home buttons, Refresh, Show Hidden
   Files, a filter, folders first. Keyboard: arrows, Shift and Ctrl/Cmd
   selection, Enter opens, Backspace goes up, F2 renames, Delete deletes,
@@ -1313,7 +1322,8 @@ AshyTerm's integrated file manager.
   the renderer can reach only hosts the user opened a session to. SFTP runs
   `ssh -s <host> sftp` with the session's host, user, port, key, jump host
   and options, plus `BatchMode=yes`, reusing the terminal's shared connection
-  (ControlMaster) when the session enables it — which is how password
+  (ControlMaster, on by default for Saved Sessions and Quick Connect on
+  macOS and Linux unless a session turns it off) — which is how password
   sessions are browsed while connected, without OMXTerm handling the
   password. Replies are bounded to 256 KiB per packet.
 
@@ -1330,10 +1340,14 @@ toolbar, **☰ → Assistant**, **View → Toggle Assistant**, or `toggleAssista
   address); the conversation in `assistant-history.json` (at most 80
   messages) until **Clear Conversation**.
 - **Providers:** Groq, Google Gemini (OpenAI-compatible endpoint),
-  OpenRouter, Mistral AI, Cerebras, GitHub Models, and a local
-  OpenAI-compatible server (Ollama, LM Studio). A local address must be https,
-  or http on `localhost`, `127.0.0.1` or `[::1]`, without credentials, query
-  or fragment.
+  OpenRouter, Mistral AI, Cerebras, GitHub Models, and an Ollama, LM Studio
+  or other OpenAI-compatible server, local or self-hosted. Its address may
+  omit `/v1` (as Ollama clients usually write it); a bare address gets `/v1`,
+  and model listing falls back to Ollama's `/api/tags`. It must be https, or
+  http to this computer or the local network (127/8, 10/8, 172.16/12,
+  192.168/16, `[::1]`, `.local` and `.lan` names), without credentials, query
+  or fragment. Unreachable servers are reported with the reason (refused,
+  unknown host, TLS problem).
 - **Keys:** entered in Preferences and stored with Electron safeStorage in
   `credentials.json` (macOS Keychain, Windows DPAPI, Linux Secret Service);
   where only Chromium's plaintext backend exists, keys cannot be saved. Keys
@@ -1349,8 +1363,11 @@ toolbar, **☰ → Assistant**, **View → Toggle Assistant**, or `toggleAssista
   Enter), **Run** (after a confirmation that shows the command) and **Copy**.
   Requests time out after 60 seconds (120 for local servers); answers are
   bounded to 200,000 characters. **Stop** cancels.
-- Preferences → Assistant offers **Load Models** and **Test Connection**,
-  which list the provider's models with the stored key.
+- Preferences → Assistant offers **Get API Key** (opens the provider's own
+  key page in the browser; the address is fixed per provider in main),
+  **Browse Models…** (a searchable list with each model's context size and,
+  where the provider publishes prices, a **Free** badge and a **Free models
+  only** filter) and **Test Connection**.
 
 ## Preferences
 
@@ -1388,6 +1405,23 @@ Application Data switches.
   accelerator.
 - **Restore Defaults** asks for confirmation, copies the current file to
   `config.json.bak`, and writes `{"version": 1}` plus unmanaged keys.
+
+## Window frame
+
+- `window.cornerRadius` (0–24 CSS px, default 0) rounds the window corners
+  on Linux and Windows' custom title bar windows by clipping the transparent
+  page (`clip-path`, which also clips canvases and overlays). Maximized and
+  full-screen windows keep square corners. **View → Rounder Corners / Less
+  Rounded Corners** (also in ☰ → View) change it by 2 px and save it to
+  `config.json`; Preferences → Appearance edits it directly.
+- `window.autoHideTitleBar` (default off) turns the custom title bar into an
+  overlay hidden above the window: moving the pointer to the top 12 px (the
+  outermost pixels are the resize border), or focus entering the bar, slides
+  it down; it slides away 2 seconds after the pointer leaves and focus is
+  elsewhere. The terminal keeps its full height, so nothing is resized.
+  While hidden, the bar keeps no drag region. **View → Auto-Hide Title Bar /
+  Always Show Title Bar** choose between the two; motion is dropped under
+  reduced-motion preferences.
 
 ## Command palette
 

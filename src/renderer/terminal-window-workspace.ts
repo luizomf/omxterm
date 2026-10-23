@@ -116,11 +116,18 @@ export function mountWorkspace(
                   bridge: workspace.files!,
                   directories: context.directories,
                   focusedSessionId: () => context.tabs.focusedSessionId(),
-                  focusedDirectory: async () => {
+                  focusedPane: async () => {
                     const id = context.tabs.focusedSessionId();
                     return id === undefined || !workspace.sessionDirectory
                       ? null
                       : workspace.sessionDirectory(id);
+                  },
+                  sendKeys: (keys) => {
+                    if (!context.isBlocked()) context.tabs.sendKeys(keys);
+                  },
+                  runCommand: (command) => {
+                    if (!context.isBlocked())
+                      context.tabs.injectSnippet(command, { submit: true });
                   },
                   notify: toaster.notify,
                   copyText: (text) => void context.clipboard?.writeText(text),

@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import {
   assistantSystemPrompt,
   createAssistantService,
+  modelList,
   type Fetch,
 } from "../../src/main/assistant-service";
 import {
+  assistantApiBase,
   isAssistantBaseUrl,
   isAssistantSettings,
   suggestedCommands,
@@ -155,7 +157,7 @@ describe("assistant service", () => {
         text: '{"data":[{"id":"b"},{"id":"a"},{"id":"a"},{"id":7}]}',
       }),
     ).models(endpoint);
-    expect(models).toEqual(["a", "b"]);
+    expect(models.map((model) => model.id)).toEqual(["a", "b"]);
   });
 });
 
@@ -165,7 +167,6 @@ describe("assistant contract", () => {
     expect(isAssistantBaseUrl("http://localhost:11434/v1")).toBe(true);
     expect(isAssistantBaseUrl("http://127.0.0.1:1234/v1")).toBe(true);
     for (const url of [
-      "http://192.168.0.10:11434/v1",
       "ftp://localhost/v1",
       "https://user:pass@example.com/v1",
       "https://example.com/v1?key=1",
@@ -194,5 +195,88 @@ describe("assistant contract", () => {
     expect(prompt).not.toContain("\nIgnore");
     expect(prompt).not.toContain("~");
     expect(prompt).toContain("Answer in Brazilian Portuguese.");
+  });
+});
+
+describe("assistant servers and models", () => {
+  it("reaches Ollama with or without /v1 and on the local network", () => {
+    expect(assistantApiBase("http://localhost:11434/")).toBe(
+      "http://localhost:11434/v1",
+    );
+    expect(assistantApiBase("http://localhost:1234/v1")).toBe(
+      "http://localhost:1234/v1",
+    );
+    expect(assistantApiBase("https://ollama.example.org")).toBe(
+      "https://ollama.example.org/v1",
+    );
+    for (const url of [
+      "http://192.168.1.20:11434",
+      "http://10.0.0.5:11434/v1",
+      "http://172.20.1.1:11434",
+      "http://nas.local:11434",
+    ])
+      expect(isAssistantBaseUrl(url), url).toBe(true);
+    expect(isAssistantBaseUrl("http://172.40.1.1:11434")).toBe(false);
+    expect(isAssistantBaseUrl("http://example.com:11434")).toBe(false);
+  });
+
+  it("marks free models and keeps context sizes", () => {
+    expect(
+      modelList({
+        data: [
+          { id: "b:free", context_length: 8192 },
+          {
+            id: "a",
+            name: "Model A",
+            pricing: { prompt: "0", completion: "0" },
+          },
+          { id: "c", pricing: { prompt: "0.000001", completion: "0" } },
+          { id: "d", context_window: 32768 },
+        ],
+      }),
+    ).toEqual([
+      { id: "a", name: "Model A", free: true },
+      { id: "b:free", free: true, context: 8192 },
+      { id: "c", free: false },
+      { id: "d", context: 32768 },
+    ]);
+    expect(modelList({ models: [{ name: "llama3.2:latest" }] })).toEqual([
+      { id: "llama3.2:latest" },
+    ]);
+  });
+
+  it("falls back to Ollama's own model list", async () => {
+    const fetch = vi.fn<Fetch>(async (url) =>
+      url.endsWith("/v1/models")
+        ? reply({ status: 404, type: "application/json", text: "{}" })
+        : reply({
+            type: "application/json",
+            text: '{"models":[{"name":"qwen3:8b"}]}',
+          }),
+    );
+    const models = await createAssistantService(fetch).models({
+      provider: "local",
+      baseUrl: "http://localhost:11434/v1",
+      model: "x",
+    });
+    expect(models).toEqual([{ id: "qwen3:8b" }]);
+    expect(fetch.mock.calls[1]![0]).toBe("http://localhost:11434/api/tags");
+  });
+
+  it("says why a server could not be reached", async () => {
+    const refused = Object.assign(new TypeError("fetch failed"), {
+      cause: { code: "ECONNREFUSED" },
+    });
+    await expect(
+      createAssistantService(async () => {
+        throw refused;
+      }).models({
+        provider: "local",
+        baseUrl: "http://localhost:11434/v1",
+        model: "x",
+      }),
+    ).rejects.toThrow(
+      "could not be reached at localhost:11434: connection refused; is the server running?",
+    );
   });
 });

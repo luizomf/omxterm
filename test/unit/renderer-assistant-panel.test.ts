@@ -28,6 +28,7 @@ function bridge(enabled: boolean, saved: AssistantMessage[] = []) {
     setKey: vi.fn(async () => state),
     models: vi.fn(async () => []),
     test: vi.fn(async () => 0),
+    openKeyPage: vi.fn(async () => {}),
     chat: vi.fn(async () => {}),
     cancel: vi.fn(async () => {}),
     history: vi.fn(async () => saved),

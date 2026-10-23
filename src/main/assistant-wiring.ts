@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { app, BrowserWindow, safeStorage, type IpcMain } from "electron";
+import { app, BrowserWindow, safeStorage, shell, type IpcMain } from "electron";
 import {
   ASSISTANT_PROVIDERS,
   ASSISTANT_PROVIDER_IDS,
@@ -8,6 +8,7 @@ import {
   MAX_ASSISTANT_KEY_LENGTH,
   MAX_ASSISTANT_MESSAGES,
   assistantIpc,
+  assistantApiBase,
   assistantModel,
   isAssistantMessages,
   isAssistantProvider,
@@ -137,7 +138,9 @@ export async function startAssistant(options: {
     return {
       provider,
       baseUrl:
-        provider === "local" ? settings.localBaseUrl : definition.baseUrl,
+        provider === "local"
+          ? assistantApiBase(settings.localBaseUrl)
+          : definition.baseUrl,
       model: assistantModel(settings, provider),
       ...(apiKey ? { apiKey } : {}),
     };
@@ -187,6 +190,12 @@ export async function startAssistant(options: {
       },
       [assistantIpc.models]: async (_event, payload) =>
         service.models(await endpoint(provider(payload))),
+      // Opens the provider's own page for creating API keys; the address is
+      // fixed per provider, never taken from the renderer.
+      [assistantIpc.openKeyPage]: async (_event, payload) => {
+        const url = ASSISTANT_PROVIDERS[provider(payload)].keyUrl;
+        if (url) await shell.openExternal(url);
+      },
       [assistantIpc.test]: async (_event, payload) => ({
         count: (await service.models(await endpoint(provider(payload)))).length,
       }),

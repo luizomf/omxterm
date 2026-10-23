@@ -114,7 +114,8 @@ export async function openPreferencesDialog(
       ? [
           [
             "prefs.assistant",
-            () => assistantPage(document, t, options.assistant!),
+            () =>
+              assistantPage(document, options.translator, options.assistant!),
           ] as const,
         ]
       : []),

@@ -251,7 +251,7 @@ function sshAdvancedFields(
     multiplex: checkbox(
       document,
       t("sessions.field.multiplex"),
-      ssh.multiplex ?? false,
+      ssh.multiplex ?? true,
     ),
   };
   flags.multiplex.element.title = t("sessions.field.multiplexHint");
@@ -358,9 +358,11 @@ function sshAdvancedFields(
         }),
         ...Object.fromEntries(
           Object.entries(flags)
-            .filter(([, flag]) => flag.input.checked)
+            .filter(([key, flag]) => key !== "multiplex" && flag.input.checked)
             .map(([key]) => [key, true]),
         ),
+        // Connection sharing defaults to on, so only "off" is written.
+        ...(flags.multiplex.input.checked ? {} : { multiplex: false }),
         ...(parsed.length > 0 ? { forwards: parsed } : {}),
         ...(extra.length > 0 ? { options: extra } : {}),
       };

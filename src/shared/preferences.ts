@@ -3,6 +3,7 @@ import {
   MAX_TERMINAL_FONT_SIZE,
   MAX_TERMINAL_LINE_HEIGHT,
   MAX_TERMINAL_PADDING,
+  MAX_WINDOW_CORNER_RADIUS,
   MIN_TERMINAL_FONT_SIZE,
   MIN_TERMINAL_LINE_HEIGHT,
   MIN_TERMINAL_PADDING,
@@ -47,6 +48,8 @@ export interface PreferencesValues {
   readonly optionKeyMode: OptionKeyMode;
   readonly showTitleBar: boolean;
   readonly showTabBar: boolean;
+  readonly cornerRadius: number;
+  readonly autoHideTitleBar: boolean;
   readonly alwaysOnTop: boolean;
   readonly confirmClose: boolean;
   readonly logLevel: OperationalLogLevel;
@@ -137,6 +140,8 @@ const SCALAR_CHECKS: Readonly<
   optionKeyMode: oneOf(OPTION_KEY_MODES),
   showTitleBar: isBoolean,
   showTabBar: isBoolean,
+  cornerRadius: integerIn(0, MAX_WINDOW_CORNER_RADIUS),
+  autoHideTitleBar: isBoolean,
   alwaysOnTop: isBoolean,
   confirmClose: isBoolean,
   logLevel: oneOf(LOG_LEVELS),

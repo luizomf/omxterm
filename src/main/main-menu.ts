@@ -2,9 +2,10 @@ import type { IpcMain, MenuItemConstructorOptions } from "electron";
 import type { Translator } from "../shared/i18n";
 import type { TerminalKeybinds } from "../shared/terminal-keybinds";
 import { terminalIpc } from "../shared/terminal-ipc";
-import type {
-  TerminalApplicationMenuActions,
-  TerminalApplicationMenuState,
+import {
+  windowFrameMenuItems,
+  type TerminalApplicationMenuActions,
+  type TerminalApplicationMenuState,
 } from "./application-menu";
 import type {
   IpcEvent,
@@ -106,7 +107,23 @@ export function terminalMainMenuTemplate(
       label: t("menu.terminal"),
       submenu: terminalSubmenu(t, actions, keybinds),
     },
-    { label: t("menu.view"), submenu: viewSubmenu(t, actions, keybinds) },
+    {
+      label: t("menu.view"),
+      submenu: [
+        ...viewSubmenu(t, actions, keybinds),
+        { type: "separator" },
+        ...windowFrameMenuItems(
+          {
+            roundMore: t("menu.roundMore"),
+            roundLess: t("menu.roundLess"),
+            autoHide: t("menu.autoHideTitleBar"),
+            alwaysShow: t("menu.alwaysShowTitleBar"),
+          },
+          actions,
+          state,
+        ),
+      ],
+    },
     ...highlightItems(t, actions, state),
     { type: "separator" },
     ...(actions.openPreferences

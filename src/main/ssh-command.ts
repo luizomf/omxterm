@@ -94,15 +94,17 @@ export function sftpSubsystemArguments(
   ];
 }
 
-// Forwards, X11 and jump hosts need a fresh connection: a shared master would
-// silently ignore them (AshyTerm made the same choice). Windows' OpenSSH has
-// no ControlMaster support.
+// Connection sharing is on unless a session turns it off, as AshyTerm always
+// shares: it is what lets the Files panel browse a password session without
+// asking again. Forwards, X11 and jump hosts need a fresh connection: a
+// shared master would silently ignore them. Windows' OpenSSH has no
+// ControlMaster support.
 function canMultiplex(
   session: SshCommandSession,
   options: SshCommandOptions,
 ): boolean {
   return (
-    session.multiplex === true &&
+    session.multiplex !== false &&
     options.platform !== "win32" &&
     options.controlDirectory !== undefined &&
     (session.forwards ?? []).length === 0 &&
