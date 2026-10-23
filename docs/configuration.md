@@ -1,6 +1,8 @@
 # User configuration
 
 > [!TIP]
+> **Prefer a settings window?** Open **☰ → Preferences…** (`Ctrl+Shift+X` on Linux and Windows, `Cmd+,` on macOS). It edits the settings below, offers 14 built-in color schemes, records shortcuts with conflict checks, and applies every change to all windows at once. It writes the same `config.json` described here and keeps settings it does not manage, such as `windowsShell`.
+>
 > **Prefer visual editing?** [OMXTerm Studio](#edit-visually-with-omxterm-studio) lets you import, customize, and export your settings, themes, and shortcuts in the browser.
 
 OMXTerm works out of the box with its bundled font, theme, and default shortcuts. On your first launch, it creates three editable starter files:
@@ -170,7 +172,7 @@ See the [Linux desktop guide](linux-desktop.md) for compositor-specific setup:
 
 ## Configuration reference
 
-Every field except `version` is optional and falls back to its default when omitted:
+Every field except `version` is optional and falls back to its default when omitted. At startup OMXTerm adds the settings a valid `config.json` does not list yet, with their current values, so the file always shows every option; values you wrote are kept as written. Only `font.family` (absent means the bundled font) and `windowsShell` (Windows) stay out until you set them:
 
 | Preference                | Accepted value                          | Default                          |
 | ------------------------- | --------------------------------------- | -------------------------------- |
@@ -182,10 +184,11 @@ Every field except `version` is optional and falls back to its default when omit
 | `font.size`               | integer `8` – `72` (CSS px)             | `16`                             |
 | `font.lineHeight`         | number `1.0` – `2.0`                    | `1.0`                            |
 | `font.ligatures`          | boolean                                 | `true`                           |
-| `terminal.padding.top`    | integer `0` – `128` (CSS px)            | `0`                              |
-| `terminal.padding.right`  | integer `0` – `128` (CSS px)            | `8`                              |
+| `terminal.padding.top`    | integer `0` – `128` (CSS px)            | `6`                              |
+| `terminal.padding.right`  | integer `0` – `128` (CSS px)            | `12`                             |
 | `terminal.padding.bottom` | integer `0` – `128` (CSS px)            | `8`                              |
-| `terminal.padding.left`   | integer `0` – `128` (CSS px)            | `8`                              |
+| `terminal.padding.left`   | integer `0` – `128` (CSS px)            | `12`                             |
+| `terminal.filePreview`    | boolean                                 | `true`                           |
 | `scrollback.lines`        | integer `0` – `100000`                  | `10000`                          |
 | `keyboard.optionAsAlt`    | `"none"`, `"left"`, `"right"`, `"both"` | `"none"`                         |
 | `window.alwaysOnTop`      | boolean                                 | `false`                          |
@@ -193,11 +196,15 @@ Every field except `version` is optional and falls back to its default when omit
 | `window.transparency`     | number `0` – `1`                        | `0`                              |
 | `window.showTitleBar`     | boolean                                 | `true`                           |
 | `window.showTabBar`       | boolean                                 | `true`                           |
+| `window.cornerRadius`     | integer `0` – `24` (CSS px)             | `0`                              |
+| `window.autoHideTitleBar` | boolean                                 | `false`                          |
 | `theme.path`              | relative or absolute file path          | bundled `omtheme`                |
 | `keybinds.<action>`       | Electron accelerator string             | built-in shortcut per action     |
 
 ### Notes on specific settings
 
+- **`terminal.filePreview`:** hovering a file name printed in a local terminal shows a preview card (picture, first page or first lines, and details). Turn it off in Preferences → Terminal.
+- **Preferences → config.json** edits this file as text; saving validates it like a reload and keeps the previous version as `config.json.bak`.
 - **`scrollback.lines`:** kept in memory per tab (up to a 10 MB per-screen core ceiling). Setting `0` clears and disables scrollback history.
 - **`keyboard.optionAsAlt` (macOS only):** `"none"` keeps standard macOS Option character input (like accented letters or symbols); `"left"`, `"right"`, or `"both"` sends terminal `Alt` sequences instead.
 - **`window.showTitleBar`, `window.showTabBar`, and `window.alwaysOnTop`:** set the initial state for new windows. Use the **View** and **Window** menus to toggle them in your current window.
@@ -244,27 +251,56 @@ Reload your configuration and open a new tab to start the new shell. Only the ex
 
 Customize application shortcuts under `keybinds` using [Electron accelerator](https://www.electronjs.org/docs/latest/tutorial/keyboard-shortcuts#accelerators) syntax (or edit them with conflict checking in [OMXTerm Studio](#edit-visually-with-omxterm-studio)):
 
-| Action                      | macOS default              | Linux/Windows default |
-| --------------------------- | -------------------------- | --------------------- |
-| `quit`                      | `CommandOrControl+Q`       | `Control+Alt+Shift+Q` |
-| `copy`                      | `CommandOrControl+C`       | `Control+Shift+C`     |
-| `paste`                     | `CommandOrControl+V`       | `Control+Shift+V`     |
-| `selectAll`                 | `CommandOrControl+A`       | `Control+Shift+A`     |
-| `newWindow`                 | `CommandOrControl+N`       | `Control+Shift+N`     |
-| `newTab`                    | `CommandOrControl+T`       | `Control+Shift+T`     |
-| `closeTab`                  | `CommandOrControl+W`       | `Control+Shift+W`     |
-| `closeWindow`               | `CommandOrControl+Shift+W` | `Control+Shift+Q`     |
-| `nextTab`                   | `Control+Tab`              | `Control+PageDown`    |
-| `previousTab`               | `Control+Shift+Tab`        | `Control+PageUp`      |
-| `selectTab1` … `selectTab9` | `CommandOrControl+1` … `9` | `Alt+1` … `9`         |
-| `zoomIn`                    | `CommandOrControl+Plus`    | `Control+Plus`        |
-| `zoomOut`                   | `CommandOrControl+-`       | `Control+-`           |
-| `actualSize`                | `CommandOrControl+0`       | `Control+0`           |
-| `toggleFullScreen`          | `Control+Command+F`        | `Control+Shift+F`     |
-| `toggleSnippets`            | `CommandOrControl+Shift+S` | `Control+Shift+S`     |
-| `toggleTabBar`              | `CommandOrControl+Shift+B` | `Control+Shift+B`     |
-| `toggleTitleBar`            | `CommandOrControl+Shift+D` | `Control+Shift+D`     |
-| `reloadConfig`              | `CommandOrControl+Shift+,` | `Control+Shift+,`     |
+| Action                      | macOS default               | Linux/Windows default     |
+| --------------------------- | --------------------------- | ------------------------- |
+| `quit`                      | `CommandOrControl+Q`        | `Control+Alt+Shift+Q`     |
+| `copy`                      | `CommandOrControl+C`        | `Control+Shift+C`         |
+| `paste`                     | `CommandOrControl+V`        | `Control+Shift+V`         |
+| `selectAll`                 | `CommandOrControl+A`        | `Control+Shift+A`         |
+| `newWindow`                 | `CommandOrControl+N`        | `Control+Shift+N`         |
+| `newTab`                    | `CommandOrControl+T`        | `Control+Shift+T`         |
+| `closeTab`                  | `CommandOrControl+W`        | `Control+Shift+W`         |
+| `closeWindow`               | `CommandOrControl+Shift+W`  | `Control+Shift+Q`         |
+| `nextTab`                   | `Control+Tab`               | `Control+PageDown`        |
+| `previousTab`               | `Control+Shift+Tab`         | `Control+PageUp`          |
+| `selectTab1` … `selectTab9` | `CommandOrControl+1` … `9`  | `Alt+1` … `9`             |
+| `zoomIn`                    | `CommandOrControl+Plus`     | `Control+Plus`            |
+| `zoomOut`                   | `CommandOrControl+-`        | `Control+-`               |
+| `actualSize`                | `CommandOrControl+0`        | `Control+0`               |
+| `toggleFullScreen`          | `Control+Command+F`         | `Control+Shift+F`         |
+| `toggleSnippets`            | `CommandOrControl+Shift+S`  | `Control+Shift+S`         |
+| `toggleTabBar`              | `CommandOrControl+Shift+B`  | `Control+Shift+B`         |
+| `toggleTitleBar`            | `CommandOrControl+Shift+D`  | `Control+Shift+D`         |
+| `reloadConfig`              | `CommandOrControl+Shift+,`  | `Control+Shift+,`         |
+| `splitRight`                | `Command+D`                 | `Control+Shift+O`         |
+| `splitDown`                 | `Command+Shift+E`           | `Control+Shift+E`         |
+| `closePane`                 | `Command+Alt+W`             | `Control+Shift+K`         |
+| `focusNextPane`             | `Command+]`                 | `Control+Shift+]`         |
+| `focusPreviousPane`         | `Command+[`                 | `Control+Shift+[`         |
+| `focusPaneLeft` … `Down`    | `Command+Alt+Left` … `Down` | `Alt+Shift+Left` … `Down` |
+| `toggleMaximizePane`        | `Command+Shift+Enter`       | `Control+Shift+Z`         |
+| `equalizePanes`             | `Command+Alt+0`             | `Control+Shift+0`         |
+| `toggleBroadcast`           | `Command+Alt+I`             | `Control+Shift+I`         |
+| `toggleSessions`            | `Command+Shift+J`           | `Control+Shift+H`         |
+| `toggleCommands`            | `Command+Shift+M`           | `Control+Shift+M`         |
+| `commandPalette`            | `Command+Shift+P`           | `Control+Shift+P`         |
+| `find`                      | `Command+F`                 | `Control+Shift+G`         |
+| `preferences`               | `Command+,`                 | `Control+Shift+X`         |
+| `toggleFiles`               | `Command+Shift+L`           | `Control+Shift+L`         |
+| `toggleAssistant`           | `Command+Shift+Y`           | `Control+Shift+Y`         |
+| `roundMore`                 | `Command+Alt+Shift+R`       | `Control+Alt+Shift+R`     |
+| `roundLess`                 | `Command+Alt+Shift+E`       | `Control+Alt+Shift+E`     |
+| `autoHideTitleBar`          | `Command+Alt+Shift+H`       | `Control+Alt+Shift+H`     |
+| `alwaysShowTitleBar`        | `Command+Alt+Shift+V`       | `Control+Alt+Shift+V`     |
+| `toggleAlwaysOnTop`         | `Command+Alt+Shift+T`       | `Control+Alt+Shift+T`     |
+| `toggleDevTools`            | `Command+Alt+Shift+I`       | `Control+Alt+Shift+I`     |
+| `openLocalImage`            | `Command+Alt+Shift+O`       | `Control+Alt+Shift+O`     |
+| `toggleHighlighting`        | `Command+Alt+Shift+C`       | `Control+Alt+Shift+C`     |
+| `highlightRules`            | `Command+Alt+Shift+G`       | `Control+Alt+Shift+G`     |
+| `backUpSettings`            | `Command+Alt+Shift+B`       | `Control+Alt+Shift+B`     |
+| `restoreSettings`           | `Command+Alt+Shift+U`       | `Control+Alt+Shift+U`     |
+| `toggleRestoreWindows`      | `Command+Alt+Shift+W`       | `Control+Alt+Shift+W`     |
+| `about`                     | `Command+Alt+Shift+A`       | `Control+Alt+Shift+A`     |
 
 Example overriding a single shortcut:
 
@@ -280,6 +316,14 @@ Example overriding a single shortcut:
 - Every shortcut needs one key plus at least one modifier other than Shift (such as `CommandOrControl`, `Control`, `Alt`, or `AltGr`), so a shortcut can never swallow normal typing.
 - Use literal punctuation characters (such as `Control+Shift+,`), except for `+`, which is written as `Plus`.
 - Each action needs its own shortcut. If you bind an action on Linux or Windows to a bare `Ctrl+<key>` that terminal programs use (like `Ctrl+C` or `Ctrl+D`), OMXTerm keeps the binding but shows a warning, since that key no longer reaches your shell.
+
+## Saved sessions file
+
+Saved sessions live in `sessions.json` next to `config.json`. OMXTerm writes this file itself; edit sessions in the Sessions sidebar rather than by hand. If the file is damaged, OMXTerm renames it to `sessions.json.corrupt-<time>` and starts with an empty list, so nothing is silently lost. Secrets are never stored in it.
+
+## Commands file
+
+The Command Manager keeps your own commands, favorites and hidden built-in commands in `commands.json` next to `config.json`. OMXTerm writes this file itself; create and edit commands in the Commands sidebar. A damaged file is renamed to `commands.json.corrupt-<time>` and OMXTerm starts with only the built-in commands.
 
 ## Snippets
 
@@ -362,6 +406,12 @@ node scripts/convert-ghostty-theme.mjs input-theme output-theme.json
 ```
 
 </details>
+
+## Backing up and restoring settings
+
+**File → Back Up Settings…** saves your `config.json`, `snippets.json`, themes, saved sessions, highlight rules and commands in one `.omxbackup` file, encrypted with a passphrase of at least 8 characters. Keep the passphrase: without it the backup cannot be opened. Passwords and keys are never stored in a backup.
+
+**File → Restore Settings…** asks for the file and its passphrase, then replaces those settings in every open window. Files that are not in the backup, such as an extra theme, are kept. If any part of the backup is invalid, nothing is changed.
 
 ## Reloading user configuration
 

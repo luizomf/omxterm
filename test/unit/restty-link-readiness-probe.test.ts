@@ -568,6 +568,8 @@ it("guards the public preview lifetime seam and removes the fixture getter on di
   );
 });
 
+// Bundles the whole renderer with esbuild; on slower CI hosts that alone can
+// take several seconds, so this content check gets its own time limit.
 it("composes both readiness observers with the actual broad-host renderer bundle", async () => {
   const result = await build({
     absWorkingDir: fileURLToPath(new URL("../..", import.meta.url)),
@@ -585,4 +587,4 @@ it("composes both readiness observers with the actual broad-host renderer bundle
     "__resttyLinkDestinationFixture",
   );
   expect(result.outputFiles[0]!.text).toContain("__resttyLinkPreviewFixture");
-});
+}, 30_000);

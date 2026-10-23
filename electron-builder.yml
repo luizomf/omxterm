@@ -1,6 +1,6 @@
 appId: com.otaviomiranda.omxterm
 productName: OMXTerm
-copyright: Copyright © 2026 Luiz Otávio Miranda
+copyright: Copyleft 🄯 2026
 asar:
   smartUnpack: false
 npmRebuild: false
@@ -31,6 +31,8 @@ extraResources:
     to: licenses/NerdFonts-glyphs.txt
   - from: assets/licenses/xterm-visible-links-MIT.txt
     to: licenses/xterm-visible-links.txt
+  - from: assets/licenses/ashyterm-MIT.txt
+    to: licenses/ashyterm.txt
   - from: node_modules/node-pty/LICENSE
     to: licenses/node-pty.txt
   - from: assets/licenses/restty-MIT.txt
@@ -43,6 +45,9 @@ extraResources:
     to: LICENSE.electron.txt
   - from: node_modules/electron/dist/LICENSES.chromium.html
     to: LICENSES.chromium.html
+# Each host packages its own architecture (x64 or arm64, chosen by
+# scripts/package.mjs from process.arch); native modules are never
+# cross-compiled. ${arch} in file patterns is the architecture being packaged.
 artifactName: ${productName}-${version}-${arch}.${ext}
 mac:
   icon: assets/application-icon.icns
@@ -58,20 +63,18 @@ mac:
     - "!node_modules/node-pty/node-addon-api/**"
     - "!node_modules/node-pty/build/**"
     - "!node_modules/node-pty/deps/**"
-    - "!node_modules/node-pty/prebuilds/darwin-x64/**"
-    - "!node_modules/node-pty/prebuilds/win32-*/**"
+    # Keep only this architecture's macOS prebuild.
+    - "!node_modules/node-pty/prebuilds/!(darwin-${arch})/**"
     - "!node_modules/node-pty/scripts/**"
     - "!node_modules/node-pty/src/**"
     - "!node_modules/node-pty/typings/**"
     - "!node_modules/node-pty/lib/**/*.test.js"
   asarUnpack:
     - dist/main/macos-window-blur.node
-    - node_modules/node-pty/prebuilds/darwin-arm64/pty.node
-    - node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper
+    - node_modules/node-pty/prebuilds/darwin-${arch}/pty.node
+    - node_modules/node-pty/prebuilds/darwin-${arch}/spawn-helper
   target:
-    - target: dmg
-      arch:
-        - arm64
+    - dmg
   # Apple Silicon requires a complete code seal even when no Developer ID is
   # used. Explicit ad-hoc signing keeps the bundle internally valid while the
   # release remains unnotarized and carries no verified publisher identity.
@@ -82,6 +85,11 @@ linux:
   category: Utility
   executableName: omxterm
   syncDesktopName: true
+  # OMXTerm has no automatic updates (docs/spec.md). Without this the packager
+  # derives GitHub update metadata from the checkout's git remote and writes
+  # app-update.yml (and, for DEB/RPM, a racy package-type file) into the
+  # unpacked application that every Linux package is built from.
+  publish: null
   files:
     - dist/**
     - "!dist/main/macos-window-blur.node"
@@ -108,10 +116,12 @@ linux:
     - "!node_modules/node-pty/lib/**/*.test.js"
   asarUnpack:
     - node_modules/node-pty/build/Release/pty.node
+  # scripts/package.mjs builds the AppImage first, then DEB and RPM from the
+  # same unpacked application (--prepackaged).
   target:
-    - target: AppImage
-      arch:
-        - arm64
+    - AppImage
+    - deb
+    - rpm
 win:
   icon: assets/application-icon.png
   files:
@@ -126,20 +136,79 @@ win:
     - "!node_modules/node-pty/node-addon-api/**"
     - "!node_modules/node-pty/build/**"
     - "!node_modules/node-pty/deps/**"
-    - "!node_modules/node-pty/prebuilds/darwin-arm64/**"
-    - "!node_modules/node-pty/prebuilds/darwin-x64/**"
-    - "!node_modules/node-pty/prebuilds/win32-x64/**"
-    - "!node_modules/node-pty/prebuilds/win32-arm64/*.pdb"
+    # Keep only this architecture's Windows prebuild, without debug symbols.
+    - "!node_modules/node-pty/prebuilds/!(win32-${arch})/**"
+    - "!node_modules/node-pty/prebuilds/win32-${arch}/*.pdb"
     - "!node_modules/node-pty/scripts/**"
     - "!node_modules/node-pty/src/**"
     - "!node_modules/node-pty/typings/**"
     - "!node_modules/node-pty/lib/**/*.test.js"
   asarUnpack:
-    - node_modules/node-pty/prebuilds/win32-arm64/**
+    - node_modules/node-pty/prebuilds/win32-${arch}/**
   target:
-    - target: nsis
-      arch:
-        - arm64
+    - nsis
+# DEB and RPM install the unpacked application under /opt/OMXTerm. Linux
+# disables the Chromium sandbox before Electron bootstrap (ADR 0024), so both
+# the /usr/bin/omxterm launcher and the desktop entry pass --no-sandbox, and the
+# maintainer scripts replace the packager defaults that would make
+# chrome-sandbox setuid root or install an AppArmor user-namespace profile.
+deb:
+  maintainer: Rafael Ruscher <rruscher@gmail.com>
+  packageCategory: x11
+  synopsis: Open-source personal desktop terminal
+  description: Open-source personal desktop terminal
+  category: Utility;TerminalEmulator
+  executableArgs:
+    - --no-sandbox
+  # electron-builder's default dependencies, plus fontconfig for fc-match.
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libuuid1
+    - libsecret-1-0
+    - fontconfig
+  recommends:
+    - openssh-client
+  afterInstall: packaging/linux/after-install.tpl
+  afterRemove: packaging/linux/after-remove.tpl
+  fpm:
+    - packaging/linux/omxterm=/usr/bin/omxterm
+rpm:
+  maintainer: Rafael Ruscher <rruscher@gmail.com>
+  synopsis: Open-source personal desktop terminal
+  description: Open-source personal desktop terminal
+  category: Utility;TerminalEmulator
+  executableArgs:
+    - --no-sandbox
+  # electron-builder's default dependencies, plus fontconfig for fc-match.
+  depends:
+    - gtk3
+    - libnotify
+    - nss
+    - libXScrnSaver
+    - (libXtst or libXtst6)
+    - xdg-utils
+    - at-spi2-core
+    - (libuuid or libuuid1)
+    - fontconfig
+  afterInstall: packaging/linux/after-install.tpl
+  afterRemove: packaging/linux/after-remove.tpl
+  fpm:
+    - --rpm-tag
+    - "Recommends: openssh-clients"
+    # Own the application directory so removal leaves nothing behind.
+    - --directories
+    - /opt/OMXTerm
+    # Distributions differ on rpmbuild's /usr/lib/.build-id links; without
+    # them the package installs exactly the same files on every build host.
+    - --rpm-rpmbuild-define
+    - _build_id_links none
+    - packaging/linux/omxterm=/usr/bin/omxterm
 nsis:
   oneClick: true
   perMachine: false

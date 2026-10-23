@@ -31,9 +31,30 @@ describe("Application Network Boundary", () => {
     ];
 
     for (const file of sources) {
+      // The opt-in AI assistant is the one documented exception (docs/spec.md,
+      // AI assistant); it is checked separately below.
+      if (file === path.join(root, "main", "assistant-service.ts")) continue;
       const source = await readFile(file, "utf8");
       for (const pattern of forbidden) expect(source).not.toMatch(pattern);
+      expect(source).not.toMatch(/=\s*fetch\b/u);
     }
+  });
+
+  it("confines network access to the opt-in assistant service in main", async () => {
+    const root = path.resolve(import.meta.dirname, "../../src");
+    const users: string[] = [];
+    for (const file of await sourceFiles(root)) {
+      const source = await readFile(file, "utf8");
+      if (/(?:=\s*fetch\b|\bfetch\s*\()/u.test(source))
+        users.push(path.relative(root, file).split(path.sep).join("/"));
+    }
+    expect(users).toEqual(["main/assistant-service.ts"]);
+    const wiring = await readFile(
+      path.join(root, "main", "assistant-wiring.ts"),
+      "utf8",
+    );
+    // Requests run only while the user has the assistant enabled.
+    expect(wiring).toMatch(/if \(!settings\.enabled\)/u);
   });
 
   it("keeps the sole operating-system External Link capability at the validated main-process call site", async () => {
@@ -45,6 +66,12 @@ describe("Application Network Boundary", () => {
         matches.push(path.relative(root, file).split(path.sep).join("/"));
     }
 
-    expect(matches).toEqual(["main/index.ts"]);
+    // The assistant opens only its providers' fixed API key pages, and the
+    // About dialog only the application's own fixed links.
+    expect(matches.sort()).toEqual([
+      "main/about-wiring.ts",
+      "main/assistant-wiring.ts",
+      "main/index.ts",
+    ]);
   });
 });

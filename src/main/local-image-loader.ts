@@ -1,4 +1,6 @@
 import { dialog, nativeImage, type BrowserWindow } from "electron";
+import { stat } from "node:fs/promises";
+import { mainTranslator } from "./main-translator";
 import type { LocalImageData, LocalImageRequest } from "../shared/local-image";
 import {
   loadLocalImageRequest,
@@ -17,7 +19,7 @@ export async function loadLocalImageForWindow(
       abortSignal,
       async chooseDirectory(homeDirectory) {
         const result = await dialog.showOpenDialog(window, {
-          title: "Choose the local base folder for this image reference",
+          title: mainTranslator().t("dialog.imageBaseFolder"),
           defaultPath: homeDirectory,
           properties: ["openDirectory", "dontAddToRecent"],
         });
@@ -27,35 +29,24 @@ export async function loadLocalImageForWindow(
       },
       async chooseFile() {
         const result = await dialog.showOpenDialog(window, {
-          title: "Open Local Image",
+          title: mainTranslator().t("dialog.openLocalImage"),
           properties: ["openFile", "dontAddToRecent"],
           filters: [
             {
-              name: "PNG and JPEG Images",
+              name: mainTranslator().t("dialog.imageFilter"),
               extensions: ["png", "jpg", "jpeg"],
             },
-            { name: "All Files", extensions: ["*"] },
+            { name: mainTranslator().t("dialog.allFiles"), extensions: ["*"] },
           ],
         });
         return result.canceled || result.filePaths.length !== 1
           ? null
           : result.filePaths[0]!;
       },
-      read: (filePath) =>
-        readLocalImage(filePath, {
-          platform: process.platform,
-          validateDecodedImage(bytes, expected) {
-            const decoded = nativeImage.createFromBuffer(
-              Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength),
-            );
-            const size = decoded.getSize();
-            return (
-              !decoded.isEmpty() &&
-              size.width === expected.width &&
-              size.height === expected.height
-            );
-          },
-        }),
+      read: async (filePath) => ({
+        ...(await readImage(filePath)),
+        ...(await fileFacts(filePath)),
+      }),
     });
   } catch (error) {
     if (abortSignal.aborted)
@@ -66,3 +57,33 @@ export async function loadLocalImageForWindow(
     throw new Error("The local image could not be loaded");
   }
 }
+
+// The path, size and modification time the preview shows the user.
+async function fileFacts(filePath: string) {
+  try {
+    const info = await stat(filePath);
+    return {
+      path: filePath,
+      size: info.size,
+      modified: Math.round(info.mtimeMs),
+    };
+  } catch {
+    return {};
+  }
+}
+
+const readImage = (filePath: string) =>
+  readLocalImage(filePath, {
+    platform: process.platform,
+    validateDecodedImage(bytes, expected) {
+      const decoded = nativeImage.createFromBuffer(
+        Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength),
+      );
+      const size = decoded.getSize();
+      return (
+        !decoded.isEmpty() &&
+        size.width === expected.width &&
+        size.height === expected.height
+      );
+    },
+  });

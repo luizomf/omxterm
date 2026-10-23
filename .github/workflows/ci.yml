@@ -1,0 +1,201 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Electron's own download and npm's caches; nothing else is fetched.
+  ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
+  npm_config_fund: "false"
+  npm_config_audit: "false"
+
+jobs:
+  static:
+    name: Format, lint and types
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+
+  unit:
+    # Native runners for every target: unit tests and an unpackaged build.
+    name: Unit tests and build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x64, os: ubuntu-24.04 }
+          - { target: linux-arm64, os: ubuntu-24.04-arm }
+          - { target: windows-x64, os: windows-2025 }
+          - { target: windows-arm64, os: windows-11-arm }
+          - { target: macos-arm64, os: macos-15 }
+          - { target: macos-x64, os: macos-15-intel }
+    steps:
+      - name: Preserve LF endings and repository symlinks
+        if: runner.os == 'Windows'
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.symlinks true
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Unit tests
+        run: npm test -- test/unit
+      - name: Build
+        run: npm run build
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-report-${{ matrix.target }}
+          path: .scratch/vitest-results.json
+          if-no-files-found: ignore
+
+  native-pty:
+    # Real PTYs, literal argv and process lifecycle on Linux. These suites
+    # start Electron's main process but draw no GPU content, so a virtual X
+    # server is enough; WebGL rendering suites need a real desktop.
+    name: Native PTY suites (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x64, os: ubuntu-24.04 }
+          - { target: linux-arm64, os: ubuntu-24.04-arm }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb procps fontconfig fonts-dejavu-core fonts-liberation
+      - run: npm ci
+      - name: Native PTY suites
+        run: >-
+          xvfb-run --auto-servernum npx vitest run
+          test/integration/local-shell.test.ts
+          test/integration/literal-argv.test.ts
+          test/integration/linux-foreground.test.ts
+          test/integration/terminal-resize-race.test.ts
+          test/integration/terminal-session-retirement.test.ts
+
+  package:
+    # Unsigned native packages for every target, built on the target's own
+    # architecture (scripts/package.mjs picks --x64 or --arm64 from the host).
+    # Nothing is signed beyond the existing macOS ad-hoc seal, published,
+    # tagged or versioned here; artifacts are short-lived review downloads.
+    name: Package (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x64, os: ubuntu-24.04, platform: linux }
+          - { target: linux-arm64, os: ubuntu-24.04-arm, platform: linux }
+          - { target: windows-x64, os: windows-2025, platform: win }
+          - { target: windows-arm64, os: windows-11-arm, platform: win }
+          - { target: macos-arm64, os: macos-15, platform: mac }
+          - { target: macos-x64, os: macos-15-intel, platform: mac }
+    env:
+      # Never pick up a signing identity from the runner keychain.
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      # electron-builder skips signing on pull request builds, which would
+      # drop the macOS ad-hoc seal (identity "-", no secret involved) that
+      # package:verify checks.
+      CSC_FOR_PULL_REQUEST: "true"
+    steps:
+      - name: Preserve LF endings and repository symlinks
+        if: runner.os == 'Windows'
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.symlinks true
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Linux packaging and verification tools
+        if: runner.os == 'Linux'
+        # rpm provides rpmbuild and rpm2cpio; xvfb runs the packaged app.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb procps file binutils cpio rpm fontconfig fonts-dejavu-core fonts-liberation libgl1-mesa-dri libegl1 libgles2
+      - name: System fpm (Linux ARM64)
+        if: matrix.target == 'linux-arm64'
+        run: |
+          sudo apt-get install -y --no-install-recommends ruby ruby-dev
+          sudo gem install --no-document fpm -v 1.17.0
+          echo "USE_SYSTEM_FPM=true" >> "$GITHUB_ENV"
+      - run: npm ci
+      - name: Build and package
+        run: npm run package:${{ matrix.platform }}
+      - name: Verify packaged startup and contents
+        if: runner.os == 'Linux'
+        # Hosted runners have no GPU: Chromium blocklists Mesa's software
+        # renderer, and Restty needs WebGL2. --software-gl uses the
+        # installer's compatibility mode and reports that GPU rendering was
+        # not verified.
+        run: xvfb-run --auto-servernum npm run package:verify -- --software-gl
+      - name: Verify packaged contents without launching
+        # Hosted macOS and Windows runners have no desktop this suite may
+        # use, and exact NSIS verification requires an authorized disposable
+        # VM (ADR 0023). Startup is not claimed here.
+        if: runner.os != 'Linux'
+        # bash keeps PowerShell's npm shim from consuming the "--" separator.
+        shell: bash
+        run: npm run package:verify -- --static-only
+      - name: Verify the DMG image
+        if: runner.os == 'macOS'
+        run: hdiutil verify release/OMXTerm-*.dmg
+      - name: Verify checksums
+        shell: bash
+        working-directory: release
+        run: |
+          list="SHA256SUMS-${{ matrix.platform }}-$(node -p process.arch).txt"
+          cat "$list"
+          if command -v sha256sum >/dev/null; then
+            sha256sum --check "$list"
+          else
+            shasum -a 256 --check "$list"
+          fi
+      - name: Upload packages and checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.target }}
+          path: |
+            release/SHA256SUMS-*.txt
+            release/*.sha256
+            release/*.dmg
+            release/*.AppImage
+            release/*.deb
+            release/*.rpm
+            release/*.exe
+            release/linux_install.sh
+          if-no-files-found: error
+          retention-days: 7

@@ -10,13 +10,16 @@ export const MIN_TERMINAL_LINE_HEIGHT = 1;
 export const MAX_TERMINAL_LINE_HEIGHT = 2;
 export const MIN_TERMINAL_PADDING = 0;
 export const MAX_TERMINAL_PADDING = 128;
+// A little room around the text: wider at the sides, where glyphs otherwise
+// touch the window edge.
 export const DEFAULT_TERMINAL_PADDING: TerminalPadding = Object.freeze({
-  top: 0,
-  right: 8,
+  top: 6,
+  right: 12,
   bottom: 8,
-  left: 8,
+  left: 12,
 });
 export const DEFAULT_SCROLLBACK_LINES = 10_000;
+export const MAX_WINDOW_CORNER_RADIUS = 24;
 export const MAX_SCROLLBACK_LINES = 100_000;
 // One startup fallback, every distinct PTY-control shadow warning, and one
 // runtime Terminal Theme reload failure can coexist without dropping an
@@ -48,6 +51,12 @@ export interface TerminalRendererConfiguration {
   readonly nativeTitleInset: 0 | 30;
   readonly transparency: number;
   readonly showTabBar: boolean;
+  // Rounded window corners in CSS px (custom title bar windows); absent is 0.
+  readonly cornerRadius?: number;
+  // The title bar slides in near the top edge and hides again.
+  readonly autoHideTitleBar?: boolean;
+  // Hovering a file name shows no preview card; absent means previews on.
+  readonly filePreview?: false;
   readonly terminalTheme: TerminalTheme;
   readonly userFileErrors: readonly string[];
 }
@@ -62,6 +71,7 @@ export interface UserConfiguration {
   readonly fontLineHeight: number;
   readonly fontLigatures: boolean;
   readonly terminalPadding: TerminalPadding;
+  readonly filePreview: boolean;
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
   readonly alwaysOnTop: boolean;
@@ -69,6 +79,8 @@ export interface UserConfiguration {
   readonly transparency: number;
   readonly showTitleBar: boolean;
   readonly showTabBar: boolean;
+  readonly cornerRadius: number;
+  readonly autoHideTitleBar: boolean;
   readonly terminalTheme: TerminalTheme;
   readonly keybinds: TerminalKeybinds;
 }
@@ -92,6 +104,9 @@ export function isTerminalRendererConfiguration(
         "nativeTitleInset",
         "transparency",
         "showTabBar",
+        "cornerRadius",
+        "autoHideTitleBar",
+        "filePreview",
         "terminalTheme",
         "userFileErrors",
       ].includes(key),
@@ -101,10 +116,7 @@ export function isTerminalRendererConfiguration(
     Number.isInteger(value.fontSize) &&
     (value.fontSize as number) >= MIN_TERMINAL_FONT_SIZE &&
     (value.fontSize as number) <= MAX_TERMINAL_FONT_SIZE &&
-    typeof value.fontLineHeight === "number" &&
-    Number.isFinite(value.fontLineHeight) &&
-    (value.fontLineHeight as number) >= MIN_TERMINAL_LINE_HEIGHT &&
-    (value.fontLineHeight as number) <= MAX_TERMINAL_LINE_HEIGHT &&
+    isLineHeight(value.fontLineHeight) &&
     typeof value.fontLigatures === "boolean" &&
     isTerminalPadding(value.terminalPadding) &&
     Number.isInteger(value.scrollbackLines) &&
@@ -113,9 +125,31 @@ export function isTerminalRendererConfiguration(
     ["none", "left", "right", "both"].includes(value.optionKeyMode as string) &&
     (value.nativeTitleInset === 0 || value.nativeTitleInset === 30) &&
     typeof value.showTabBar === "boolean" &&
+    isWindowFrame(value) &&
     isTransparency(value.transparency) &&
     isTerminalTheme(value.terminalTheme) &&
     isUserFileErrors(value.userFileErrors)
+  );
+}
+
+function isLineHeight(value: unknown): boolean {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= MIN_TERMINAL_LINE_HEIGHT &&
+    value <= MAX_TERMINAL_LINE_HEIGHT
+  );
+}
+
+function isWindowFrame(value: Record<string, unknown>): boolean {
+  return (
+    (value.cornerRadius === undefined ||
+      (Number.isInteger(value.cornerRadius) &&
+        (value.cornerRadius as number) >= 0 &&
+        (value.cornerRadius as number) <= MAX_WINDOW_CORNER_RADIUS)) &&
+    (value.autoHideTitleBar === undefined ||
+      typeof value.autoHideTitleBar === "boolean") &&
+    (value.filePreview === undefined || value.filePreview === false)
   );
 }
 

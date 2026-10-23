@@ -28,10 +28,10 @@ export async function prepareNodePtyExecStatus() {
   if (process.platform === "win32") return;
   if (
     !["darwin", "linux"].includes(process.platform) ||
-    process.arch !== "arm64"
+    !["arm64", "x64"].includes(process.arch)
   )
     throw new Error(
-      "PTY exec-status builds require a supported ARM64 platform",
+      "PTY exec-status builds require a supported 64-bit ARM or x64 platform",
     );
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-pty-build-"));
   try {
@@ -59,7 +59,7 @@ export async function prepareNodePtyExecStatus() {
     const mac = process.platform === "darwin";
     const output = path.join(
       ptyRoot,
-      mac ? "prebuilds/darwin-arm64" : "build/Release",
+      mac ? `prebuilds/darwin-${process.arch}` : "build/Release",
     );
     await mkdir(output, { recursive: true });
     const { include_dir: apiHeaders } = require("node-api-headers");
@@ -70,8 +70,20 @@ export async function prepareNodePtyExecStatus() {
     );
     const compiler = mac ? "/usr/bin/clang++" : "c++";
     const targetFlags = mac
-      ? ["-arch", "arm64", "-mmacosx-version-min=12.0"]
-      : ["-fPIC", "-pthread"];
+      ? [
+          "-arch",
+          process.arch === "x64" ? "x86_64" : "arm64",
+          "-mmacosx-version-min=12.0",
+        ]
+      : [
+          "-fPIC",
+          "-pthread",
+          // The hardening Linux distributions build their own packages with.
+          "-fstack-protector-strong",
+          "-D_FORTIFY_SOURCE=2",
+        ];
+    // Full RELRO and a symbol-stripped module on Linux.
+    const linuxLinkFlags = mac ? [] : ["-Wl,-z,relro", "-Wl,-z,now", "-s"];
     execFileSync(
       compiler,
       [
@@ -84,6 +96,7 @@ export async function prepareNodePtyExecStatus() {
         `-I${addonHeaders}`,
         ...targetFlags,
         ...(mac ? ["-bundle", "-undefined", "dynamic_lookup"] : ["-shared"]),
+        ...linuxLinkFlags,
         path.join(root, "pty.cc"),
         ...(mac ? [] : ["-lutil"]),
         "-o",

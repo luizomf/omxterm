@@ -47,6 +47,23 @@ export function requestVisibleLink(
   else options.onExternalLink?.(destination);
 }
 
+// Ctrl/Cmd-click links when the Surface opens links or local images.
+export function installSurfaceVisibleLinks(
+  canvas: HTMLCanvasElement,
+  interaction: ResttyVisibleLinkInteraction,
+  options: TerminalSurfaceOptions,
+): ResttyVisibleLinkController | undefined {
+  if (!options.onExternalLink && !options.onLocalImageActivation)
+    return undefined;
+  return installResttyVisibleLinks(
+    canvas,
+    interaction,
+    (url) => requestVisibleLink(url, options),
+    navigator.platform,
+    options.linkHoverAvailability,
+  );
+}
+
 interface VisibleLinkPointerGesture {
   readonly pointerId: number;
   readonly link: { readonly id: string; readonly url: string };

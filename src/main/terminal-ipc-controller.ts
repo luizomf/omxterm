@@ -3,13 +3,14 @@ import type {
   TerminalSessionId,
 } from "../shared/terminal-contract";
 import {
-  isNonemptyClipboardText,
   isTerminalSessionInput,
   isTerminalSessionClose,
   isTerminalSessionReference,
   isTerminalSessionResize,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
+import { createLaunchRequests } from "./terminal-ipc-launch";
+import { createSessionSelection } from "./terminal-session-selection";
 import {
   LocalTerminalSessionStartError,
   type LocalTerminalSession,
@@ -25,6 +26,7 @@ import type {
   TerminalIpcController,
   TerminalIpcControllerOptions,
   TerminalIpcRouter,
+  TerminalSessionLaunch,
   TerminalSurfaceFontConfiguration,
   TrustedWebContents,
 } from "./terminal-ipc-types";
@@ -59,21 +61,27 @@ import { createLocalImageIpcBoundary } from "./local-image-ipc";
 export { isValidExternalLink } from "./external-link";
 import {
   acknowledgeTerminalOutput,
-  confirmClipboardPaste,
+  createClipboardRequests,
   createTerminalTitleRequests,
   requestExternalLink,
-  useClipboard,
   type RejectBoundary,
 } from "./terminal-ipc-boundaries";
 import {
   createTerminalOutputFlow,
   type TerminalOutputFlow,
 } from "./terminal-output-flow";
+import { createWorkspaceRequests } from "./terminal-ipc-workspace";
+import type { WorkspacePlan } from "../shared/workspace";
 
 interface RoutedTerminalIpcController
   extends TerminalIpcController, SurfaceFontRequests {
   configuration(payload?: unknown): TerminalRendererConfiguration;
-  start(payload?: unknown): TerminalSessionId;
+  start(payload?: unknown, launch?: unknown): TerminalSessionId;
+  reportWorkingDirectory(payload?: unknown): void;
+  reportWorkspace(payload?: unknown): void;
+  workspacePlan(payload?: unknown): WorkspacePlan | null;
+  detachTab(payload?: unknown): boolean;
+  confirmBroadcast(payload?: unknown): Promise<boolean>;
   input(payload?: unknown): void;
   resize(payload?: unknown): void;
   acknowledgeOutput(payload?: unknown): void;
@@ -91,6 +99,11 @@ interface RoutedTerminalIpcController
   localImage(payload?: unknown): Promise<LocalImageData | null>;
   snippets(payload?: unknown): Promise<TerminalSnippetsResponse>;
   fontData(payload?: unknown): Promise<TerminalFontData>;
+  sessionDirectory(payload?: unknown): {
+    readonly directory: string | null;
+    readonly busy: boolean;
+  } | null;
+  sessionLaunch(payload?: unknown): TerminalSessionLaunch | undefined;
   activeTerminalSurfaceFontConfigurations(): readonly TerminalSurfaceFontConfiguration[];
 }
 
@@ -111,30 +124,42 @@ export function registerTerminalIpcRouter(
     event.senderFrame === event.sender.mainFrame
       ? controllers.get(event.sender)
       : undefined;
-  const start: IpcHandler = (event, payload) => {
-    const controller = controllerFor(event);
-    if (!controller) {
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "ipc",
-        reason: "untrusted-sender",
-      });
-      throw new Error("Rejected terminal IPC from an untrusted sender");
-    }
-    return controller.start(payload);
-  };
-  const configuration: IpcHandler = (event, payload) => {
-    const controller = controllerFor(event);
-    if (!controller) {
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "ipc",
-        reason: "untrusted-sender",
-      });
-      throw new Error("Rejected configuration IPC from an untrusted sender");
-    }
-    return controller.configuration(payload);
-  };
+  // An invoke handler answers only its window's main frame; anything else is
+  // recorded as a boundary rejection and refused before any work happens.
+  const trusted =
+    (
+      subject: string,
+      action: (
+        controller: RoutedTerminalIpcController,
+        payload: unknown,
+        rest: readonly unknown[],
+      ) => unknown,
+      boundary: "ipc" | "clipboard" = "ipc",
+    ): IpcHandler =>
+    (event, payload, ...rest) => {
+      const controller = controllerFor(event);
+      if (!controller) {
+        operationalEvents?.write({
+          name: "boundary.rejected",
+          boundary,
+          reason: "untrusted-sender",
+        });
+        throw new Error(`Rejected ${subject} IPC from an untrusted sender`);
+      }
+      return action(controller, payload, rest);
+    };
+  const start = trusted("terminal", (controller, payload, rest) =>
+    controller.start(payload, rest[0]),
+  );
+  const configuration = trusted("configuration", (controller, payload) =>
+    controller.configuration(payload),
+  );
+  const workspacePlan = trusted("workspace", (controller, payload) =>
+    controller.workspacePlan(payload),
+  );
+  const detachTab = trusted("workspace", (controller, payload) =>
+    controller.detachTab(payload),
+  );
   const route = (
     event: IpcEvent,
     action: (controller: RoutedTerminalIpcController) => void,
@@ -162,60 +187,40 @@ export function registerTerminalIpcRouter(
     route(event, (controller) => controller.syncTabTitle(payload));
   const tabsEmpty: IpcListener = (event, payload) =>
     route(event, (controller) => controller.tabsEmpty(payload));
+  const workspace: IpcListener = (event, payload) =>
+    route(event, (controller) => controller.reportWorkspace(payload));
   const title: IpcListener = (event, payload) =>
     route(event, (controller) => controller.title(payload));
   const bell: IpcListener = (event, payload) =>
     route(event, (controller) => controller.bell(payload));
   const externalLink: IpcListener = (event, payload) =>
     route(event, (controller) => controller.openExternalLink(payload));
-  const localImage: IpcHandler = async (event, payload) => {
-    const controller = controllerFor(event);
-    if (!controller) {
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "ipc",
-        reason: "untrusted-sender",
-      });
-      throw new Error("Rejected local image IPC from an untrusted sender");
-    }
-    return controller.localImage(payload);
-  };
-  const writeClipboardText: IpcHandler = (event, payload) => {
-    const controller = controllerFor(event);
-    if (!controller) {
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "clipboard",
-        reason: "untrusted-sender",
-      });
-      throw new Error("Rejected clipboard IPC from an untrusted sender");
-    }
-    controller.writeClipboardText(payload);
-  };
-  const readClipboardText: IpcHandler = (event, payload) => {
-    const controller = controllerFor(event);
-    if (!controller) {
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "clipboard",
-        reason: "untrusted-sender",
-      });
-      throw new Error("Rejected clipboard IPC from an untrusted sender");
-    }
-    return controller.readClipboardText(payload);
-  };
-  const confirmPaste: IpcHandler = (event, payload) => {
-    const controller = controllerFor(event);
-    if (!controller) {
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "clipboard",
-        reason: "untrusted-sender",
-      });
-      throw new Error("Rejected clipboard IPC from an untrusted sender");
-    }
-    return controller.confirmPaste(payload);
-  };
+  const workingDirectory: IpcListener = (event, payload) =>
+    route(event, (controller) => controller.reportWorkingDirectory(payload));
+  const confirmBroadcast = trusted("broadcast", (controller, payload) =>
+    controller.confirmBroadcast(payload),
+  );
+  const trustedLocalImage = trusted("local image", (controller, payload) =>
+    controller.localImage(payload),
+  );
+  // Local image requests have always rejected asynchronously.
+  const localImage: IpcHandler = async (event, payload) =>
+    trustedLocalImage(event, payload);
+  const writeClipboardText = trusted(
+    "clipboard",
+    (controller, payload) => controller.writeClipboardText(payload),
+    "clipboard",
+  );
+  const readClipboardText = trusted(
+    "clipboard",
+    (controller, payload) => controller.readClipboardText(payload),
+    "clipboard",
+  );
+  const confirmPaste = trusted(
+    "clipboard",
+    (controller, payload) => controller.confirmPaste(payload),
+    "clipboard",
+  );
   const showClipboardContextMenu: IpcListener = (event, payload) => {
     const controller = controllerFor(event);
     if (!controller) {
@@ -229,31 +234,16 @@ export function registerTerminalIpcRouter(
     controller.showClipboardContextMenu(payload);
   };
 
-  const fontData: IpcHandler = (event, payload) => {
-    const controller = controllerFor(event);
-    if (!controller) {
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "ipc",
-        reason: "untrusted-sender",
-      });
-      throw new Error("Rejected Terminal Font IPC from an untrusted sender");
-    }
-    return controller.fontData(payload);
-  };
+  const fontData = trusted("Terminal Font", (controller, payload) =>
+    controller.fontData(payload),
+  );
 
-  const snippets: IpcHandler = (event, payload) => {
-    const controller = controllerFor(event);
-    if (!controller) {
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "ipc",
-        reason: "untrusted-sender",
-      });
-      throw new Error("Rejected snippets IPC from an untrusted sender");
-    }
-    return controller.snippets(payload);
-  };
+  const snippets = trusted("snippets", (controller, payload) =>
+    controller.snippets(payload),
+  );
+  const sessionDirectory = trusted("working directory", (controller, payload) =>
+    controller.sessionDirectory(payload),
+  );
 
   const removeSurfaceFontIpc = registerSurfaceFontIpc(
     ipcMain,
@@ -267,8 +257,11 @@ export function registerTerminalIpcRouter(
   );
   ipcMain.handle(terminalIpc.start, start);
   ipcMain.handle(terminalIpc.configuration, configuration);
+  ipcMain.handle(terminalIpc.workspacePlan, workspacePlan);
+  ipcMain.handle(terminalIpc.detachTab, detachTab);
   ipcMain.handle(terminalIpc.fontData, fontData);
   ipcMain.handle(terminalIpc.snippets, snippets);
+  ipcMain.handle(terminalIpc.sessionDirectory, sessionDirectory);
   ipcMain.on(terminalIpc.input, input);
   ipcMain.on(terminalIpc.resize, resize);
   ipcMain.on(terminalIpc.outputAck, acknowledgeOutput);
@@ -276,9 +269,12 @@ export function registerTerminalIpcRouter(
   ipcMain.on(terminalIpc.tabSelected, tabSelected);
   ipcMain.on(terminalIpc.tabTitleSync, syncTabTitle);
   ipcMain.on(terminalIpc.tabsEmpty, tabsEmpty);
+  ipcMain.on(terminalIpc.workspace, workspace);
   ipcMain.on(terminalIpc.title, title);
   ipcMain.on(terminalIpc.bell, bell);
   ipcMain.on(terminalIpc.externalLink, externalLink);
+  ipcMain.on(terminalIpc.workingDirectory, workingDirectory);
+  ipcMain.handle(terminalIpc.confirmBroadcast, confirmBroadcast);
   ipcMain.handle(terminalIpc.localImage, localImage);
   ipcMain.handle(terminalIpc.clipboardWrite, writeClipboardText);
   ipcMain.handle(terminalIpc.clipboardRead, readClipboardText);
@@ -310,6 +306,9 @@ export function registerTerminalIpcRouter(
       for (const controller of controllers.values())
         controller.applyConfiguration(configuration);
     },
+    isTrustedSender: (event) => controllerFor(event) !== undefined,
+    sessionLaunch: (event, sessionId) =>
+      controllerFor(event)?.sessionLaunch(sessionId),
     activeTerminalSurfaceFontConfigurations() {
       return Object.freeze(
         [...controllers.values()].flatMap((controller) =>
@@ -324,8 +323,11 @@ export function registerTerminalIpcRouter(
       removeSurfaceFontIpc();
       ipcMain.removeHandler(terminalIpc.start);
       ipcMain.removeHandler(terminalIpc.configuration);
+      ipcMain.removeHandler(terminalIpc.workspacePlan);
+      ipcMain.removeHandler(terminalIpc.detachTab);
       ipcMain.removeHandler(terminalIpc.fontData);
       ipcMain.removeHandler(terminalIpc.snippets);
+      ipcMain.removeHandler(terminalIpc.sessionDirectory);
       ipcMain.removeListener(terminalIpc.input, input);
       ipcMain.removeListener(terminalIpc.resize, resize);
       ipcMain.removeListener(terminalIpc.outputAck, acknowledgeOutput);
@@ -333,9 +335,12 @@ export function registerTerminalIpcRouter(
       ipcMain.removeListener(terminalIpc.tabSelected, tabSelected);
       ipcMain.removeListener(terminalIpc.tabTitleSync, syncTabTitle);
       ipcMain.removeListener(terminalIpc.tabsEmpty, tabsEmpty);
+      ipcMain.removeListener(terminalIpc.workspace, workspace);
       ipcMain.removeListener(terminalIpc.title, title);
       ipcMain.removeListener(terminalIpc.bell, bell);
       ipcMain.removeListener(terminalIpc.externalLink, externalLink);
+      ipcMain.removeListener(terminalIpc.workingDirectory, workingDirectory);
+      ipcMain.removeHandler(terminalIpc.confirmBroadcast);
       ipcMain.removeHandler(terminalIpc.localImage);
       ipcMain.removeHandler(terminalIpc.clipboardWrite);
       ipcMain.removeHandler(terminalIpc.clipboardRead);
@@ -352,6 +357,7 @@ interface RoutedSessionState {
   readonly session: LocalTerminalSession;
   readonly terminalSurfaceFontConfiguration?: TerminalSurfaceFontConfiguration;
   readonly outputFlow: TerminalOutputFlow;
+  readonly launch?: TerminalSessionLaunch;
   closed: boolean;
   closeReason?: "rendering-failure";
   exited: boolean;
@@ -396,7 +402,6 @@ function createTerminalIpcController(
   let fontConfigurationGeneration = 0;
   const sessions = new Map<TerminalSessionId, RoutedSessionState>();
   let nextSessionNumber = 1;
-  let selectedSessionId: TerminalSessionId | undefined;
   const windowId = options.windowId;
   const writeWindowEvent = (
     event: Parameters<OperationalEventLog["write"]>[0],
@@ -414,19 +419,9 @@ function createTerminalIpcController(
     state.session.close();
   };
 
-  const isBusy = (state: RoutedSessionState) =>
-    !state.closed && !state.exited && state.session.hasForegroundChildProcess();
-  const hasBusySession = () => [...sessions.values()].some(isBusy);
-
-  const tabSelected = (payload?: unknown) => {
-    if (!isTerminalSessionReference(payload)) {
-      reject("ipc", "invalid-payload");
-      return;
-    }
-    if (!routedSession(payload.sessionId)) return;
-    selectedSessionId = payload.sessionId;
-    options.onSessionSelected(payload.sessionId);
-  };
+  const selection = createSessionSelection(sessions, reject, options, (id) =>
+    Boolean(routedSession(id)),
+  );
 
   // A session-scoped payload is rejected before it is routed: an invalid shape
   // never reaches a session, and a well-formed message may only address a
@@ -442,8 +437,24 @@ function createTerminalIpcController(
     return state;
   };
 
-  const start = (payload?: unknown): TerminalSessionId => {
+  const launches = createLaunchRequests(
+    options,
+    reject,
+    sessions,
+    () => disposed,
+  );
+  const workspace = createWorkspaceRequests(
+    options,
+    reject,
+    launches.directoryOf,
+  );
+
+  const start = (
+    payload?: unknown,
+    launchRequest?: unknown,
+  ): TerminalSessionId => {
     if (disposed) throw new Error("Terminal IPC controller is disposed");
+    const launch = launches.resolve(launchRequest);
     if (payload !== undefined) surfaceFonts.start(payload);
 
     const sessionId: TerminalSessionId = `s${nextSessionNumber}`;
@@ -454,68 +465,72 @@ function createTerminalIpcController(
     const outputFlow = createTerminalOutputFlow();
     let createdSession: LocalTerminalSession;
     try {
-      createdSession = options.createSession({
-        onResizeFailure(reason) {
-          if (windowId !== undefined)
-            writeWindowEvent({ name: "pty.resize-failed", windowId, reason });
-        },
-        onOutput(data) {
-          if (disposed) return;
-          if (options.webContents.isDestroyed()) {
-            if (sessions.has(sessionId)) closeSession(sessionId);
-            else ownerLostBeforeRegistration = true;
-            return;
-          }
-          const outputEnd = outputFlow.record(data);
-          if (outputEnd === undefined) {
-            closeSession(sessionId);
-            return;
-          }
-          try {
-            options.webContents.send(terminalIpc.output, {
-              sessionId,
-              data,
-              end: outputEnd,
-            });
-          } catch {
-            if (sessions.has(sessionId)) closeSession(sessionId);
-            else ownerLostBeforeRegistration = true;
-          }
-        },
-        onExit(exit, reportedLaunchKind) {
-          if (disposed) return;
-          const state = sessions.get(sessionId);
-          if (state) state.exited = true;
-          else exitedBeforeRegistration = true;
-          const context = sessionEndContext(
-            sessionId,
-            state,
-            reportedLaunchKind,
-            countLiveSessions(sessions),
-          );
-          try {
-            if (!options.webContents.isDestroyed()) {
-              options.webContents.send(terminalIpc.exit, {
+      createdSession = options.createSession(
+        {
+          onResizeFailure(reason) {
+            if (windowId !== undefined)
+              writeWindowEvent({ name: "pty.resize-failed", windowId, reason });
+          },
+          onOutput(data) {
+            if (disposed) return;
+            if (options.webContents.isDestroyed()) {
+              if (sessions.has(sessionId)) closeSession(sessionId);
+              else ownerLostBeforeRegistration = true;
+              return;
+            }
+            const outputEnd = outputFlow.record(data);
+            if (outputEnd === undefined) {
+              closeSession(sessionId);
+              return;
+            }
+            try {
+              options.webContents.send(terminalIpc.output, {
                 sessionId,
-                ...exit,
+                data,
+                end: outputEnd,
               });
+            } catch {
+              if (sessions.has(sessionId)) closeSession(sessionId);
+              else ownerLostBeforeRegistration = true;
             }
-            options.onSessionExit(exit, context);
-            if (windowId !== undefined) {
-              writeWindowEvent({
-                name: "pty.exit",
-                windowId,
-                ...terminalExitOutcome(exit),
-                durationMs: elapsedMilliseconds(startedAt),
-              });
+          },
+          onExit(exit, reportedLaunchKind) {
+            if (disposed) return;
+            const state = sessions.get(sessionId);
+            if (state) state.exited = true;
+            else exitedBeforeRegistration = true;
+            const context = sessionEndContext(
+              sessionId,
+              state,
+              reportedLaunchKind,
+              countLiveSessions(sessions),
+            );
+            try {
+              if (!options.webContents.isDestroyed()) {
+                options.webContents.send(terminalIpc.exit, {
+                  sessionId,
+                  ...exit,
+                });
+              }
+              options.onSessionExit(exit, context);
+              if (windowId !== undefined) {
+                writeWindowEvent({
+                  name: "pty.exit",
+                  windowId,
+                  ...terminalExitOutcome(exit),
+                  durationMs: elapsedMilliseconds(startedAt),
+                });
+              }
+            } finally {
+              // Failure acknowledgement owns only the immutable context, not the
+              // ended session/native wrapper. Native shutdown observes exit first.
+              sessions.delete(sessionId);
+              launches.forget(sessionId);
             }
-          } finally {
-            // Failure acknowledgement owns only the immutable context, not the
-            // ended session/native wrapper. Native shutdown observes exit first.
-            sessions.delete(sessionId);
-          }
+          },
         },
-      });
+        launch,
+      );
     } catch (cause) {
       if (windowId !== undefined)
         writeWindowEvent({
@@ -545,6 +560,7 @@ function createTerminalIpcController(
       sessions.set(sessionId, {
         session: createdSession,
         outputFlow,
+        launch,
         ...(payload === undefined && {
           terminalSurfaceFontConfiguration: surfaceFontConfiguration(
             rendererConfiguration.current(),
@@ -622,34 +638,12 @@ function createTerminalIpcController(
       });
     closeSession(payload.sessionId, payload.reason);
   };
-  const writeClipboardText = (payload?: unknown) => {
-    if (!isNonemptyClipboardText(payload)) {
-      reject("clipboard", "invalid-payload");
-      throw new TypeError("Invalid clipboard write payload");
-    }
-    useClipboard(
-      () => options.writeClipboardText(payload),
-      options.onClipboardError,
-      undefined,
-    );
-  };
-  const readClipboardText = (payload?: unknown) => {
-    if (payload !== undefined) {
-      reject("clipboard", "invalid-payload");
-      throw new TypeError("Invalid clipboard read payload");
-    }
-    return useClipboard(
-      options.readClipboardText,
-      options.onClipboardError,
-      "",
-    );
-  };
-  const confirmPaste = (payload?: unknown) =>
-    confirmClipboardPaste(payload, options, reject);
-  const showClipboardContextMenu = (payload?: unknown) => {
-    if (payload === undefined) options.showClipboardContextMenu();
-    else reject("clipboard", "invalid-payload");
-  };
+  const {
+    writeClipboardText,
+    readClipboardText,
+    confirmPaste,
+    showClipboardContextMenu,
+  } = createClipboardRequests(options, reject);
   const fontData = createFontDataRequest({
     family: () => rendererConfiguration.current().fontFamily,
     generation: () => fontConfigurationGeneration,
@@ -701,16 +695,17 @@ function createTerminalIpcController(
     resize,
     acknowledgeOutput,
     close,
-    tabSelected,
+    tabSelected: selection.tabSelected,
+    reportWorkingDirectory: launches.reportWorkingDirectory,
+    reportWorkspace: workspace.report,
+    workspacePlan: workspace.plan,
+    detachTab: workspace.detach,
+    confirmBroadcast: launches.confirmBroadcast,
     ...createTerminalTitleRequests(routedSession, options, reject),
     tabsEmpty: emptyTabsNotification(options, reject, () => disposed),
-    hasBusySelectedSession() {
-      const selected = selectedSessionId
-        ? sessions.get(selectedSessionId)
-        : undefined;
-      return selected ? isBusy(selected) : hasBusySession();
-    },
-    hasBusySession,
+    hasBusySelectedSession: selection.hasBusySelectedSession,
+    hasBusyFocusedSession: selection.hasBusyFocusedSession,
+    hasBusySession: selection.hasBusySession,
     writeClipboardText,
     readClipboardText,
     confirmPaste,
@@ -720,6 +715,19 @@ function createTerminalIpcController(
     localImage: localImageBoundary.request,
     snippets,
     fontData,
+    // The Files panel follows a pane: its OSC 7 directory, else /proc, and
+    // whether a program runs in it (then nothing is typed into it).
+    sessionDirectory(payload) {
+      const state =
+        typeof payload === "string" ? sessions.get(payload) : undefined;
+      if (!state || state.closed || state.exited) return null;
+      return {
+        directory: launches.directoryOf(payload as string) ?? null,
+        busy: state.session.hasForegroundChildProcess(),
+      };
+    },
+    sessionLaunch: (payload) =>
+      typeof payload === "string" ? sessions.get(payload)?.launch : undefined,
     activeTerminalSurfaceFontConfigurations: () => [
       ...surfaceFonts.active(),
       ...activeSessionFontConfigurations(sessions.values()),
@@ -727,6 +735,7 @@ function createTerminalIpcController(
     dispose() {
       if (disposed) return;
       disposed = true;
+      workspace.flush();
       surfaceFonts.dispose();
       localImageBoundary.dispose();
       unregister();

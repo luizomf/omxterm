@@ -34,4 +34,17 @@ export const terminalIpc = {
   tabTitleSync: "terminal:tab-title-sync",
   tabsEmpty: "terminal:tabs-empty",
   tabTitle: "terminal:tab-title",
+  confirmBroadcast: "terminal:confirm-broadcast",
+  workingDirectory: "terminal:working-directory",
+  sessionDirectory: "terminal:session-directory",
+  workspace: "terminal:workspace",
+  workspacePlan: "terminal:workspace-plan",
+  commandPalette: "terminal:command-palette",
+  runAction: "terminal:run-action",
+  mainMenu: "terminal:main-menu",
+  // Main asks for the focused pane's text; the renderer sends it to save.
+  saveOutputRequest: "terminal:save-output-request",
+  saveOutput: "terminal:save-output",
+  // A tab reopened in a new window from its workspace snapshot.
+  detachTab: "terminal:detach-tab",
 } as const;

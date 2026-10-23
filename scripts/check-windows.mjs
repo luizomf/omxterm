@@ -3,8 +3,11 @@ import { windowsVerificationOptions } from "./windows-verification-options.mjs";
 
 const args = process.argv.slice(2);
 const options = windowsVerificationOptions(args);
-if (process.platform !== "win32" || process.arch !== "arm64")
-  throw new Error("check:win requires native Windows arm64");
+if (
+  process.platform !== "win32" ||
+  (process.arch !== "arm64" && process.arch !== "x64")
+)
+  throw new Error("check:win requires native Windows arm64 or x64");
 if (options.windowsUnpackedOnly)
   throw new Error(
     "check:win requires exact installer verification; use package:verify -- --windows-unpacked-only for partial diagnostics",

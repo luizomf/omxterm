@@ -1,4 +1,8 @@
-import { mountWindowChrome, type WindowChromeBridge } from "./window-chrome";
+import {
+  applyWindowFrame,
+  mountWindowChrome,
+  type WindowChromeBridge,
+} from "./window-chrome";
 import type { TerminalSessionAdapter } from "../terminal-surface/terminal-session-adapter";
 import {
   mountTerminalSurface,
@@ -15,11 +19,13 @@ import type {
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type { TerminalTheme } from "../shared/terminal-theme";
+import type { TerminalLaunchSpec } from "../shared/terminal-launch";
 import type { TerminalFontData } from "../shared/terminal-font-data";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
 import {
   createTerminalTabs,
   TERMINAL_TAB_DRAG_DATA_TYPE,
+  type PaneLaunch,
   type TerminalTabs,
 } from "./terminal-tabs";
 import {
@@ -27,15 +33,37 @@ import {
   type SnippetsSidebar,
 } from "./snippets-sidebar";
 import { renderUserFileErrorBanner } from "./user-file-error-banner";
-import {
-  createLocalImagePreview,
-  type LocalImagePreview,
-} from "./local-image-preview";
+import type { LocalImagePreview } from "./local-image-preview";
 import type {
   LocalImageActivation,
   LocalImageData,
 } from "../shared/local-image";
 import { createTerminalFontGenerationOwner } from "./terminal-font-generations";
+import type { Translator } from "../shared/i18n";
+import {
+  createWindowImagePreview,
+  searchLabels,
+  snippetsLabels,
+  windowChromeLabels,
+} from "./terminal-window-parts";
+import type { WorkspacePlan, WorkspaceSnapshot } from "../shared/workspace";
+import type { TerminalActionName } from "../shared/terminal-keybinds";
+import type { HeaderToolbarOptions } from "./header-toolbar";
+import type {
+  CommandsBridge,
+  HighlightsBridge,
+  SessionsBridge,
+  BackupBridge,
+  PreferencesBridge,
+  FilesBridge,
+  AboutBridge,
+  AssistantBridge,
+} from "../shared/terminal-bridge";
+import {
+  mountWorkspace,
+  windowServices,
+  windowTabsOptions,
+} from "./terminal-window-workspace";
 
 type MountTerminalSurface = (
   container: HTMLElement,
@@ -48,12 +76,15 @@ export interface TerminalWindowPageElements {
   readonly tabsContainer: HTMLElement;
 }
 
-interface TerminalWindowPageOptions {
+export interface TerminalWindowPageOptions {
   readonly createAdapter: (
     fontConfigurationId?: string,
+    launch?: TerminalLaunchSpec,
   ) => ElectronTerminalAdapter;
   readonly configuration?: TerminalRendererConfiguration;
   readonly chrome?: WindowChromeBridge;
+  // Header toolbar actions; the toolbar needs the window chrome to host it.
+  readonly toolbar?: Pick<HeaderToolbarOptions, "runAction" | "openMainMenu">;
   readonly page?: Pick<
     Window,
     "addEventListener" | "removeEventListener" | "document"
@@ -80,7 +111,10 @@ interface TerminalWindowPageOptions {
   readonly subscribeToTabTitles?: (
     listener: (sessionId: TerminalSessionId, title: string) => void,
   ) => () => void;
-  readonly notifyTabSelection?: (sessionId: TerminalSessionId) => void;
+  readonly notifyTabSelection?: (
+    sessionId: TerminalSessionId,
+    tabSessionIds?: readonly TerminalSessionId[],
+  ) => void;
   readonly syncTabTitle?: (sessionId: TerminalSessionId) => void;
   readonly notifyTabsEmpty?: (reason?: "rendering-failure") => void;
   readonly onTitleRequest?: (
@@ -93,6 +127,42 @@ interface TerminalWindowPageOptions {
     source?: LocalImageActivation,
   ) => Promise<LocalImageData | null>;
   readonly subscribeToLocalImageOpen?: (listener: () => void) => () => void;
+  readonly translator?: Translator;
+  readonly confirmBroadcast?: (targetCount: number) => Promise<boolean>;
+  readonly reportWorkingDirectory?: (
+    sessionId: TerminalSessionId,
+    uri: string,
+  ) => void;
+  readonly highlights?: HighlightsBridge;
+  // How the first tab opens, for example the SSH target given with --ssh.
+  readonly initialLaunch?: PaneLaunch;
+  // A saved workspace to reopen instead of the first tab.
+  readonly initialWorkspace?: WorkspacePlan;
+  readonly reportWorkspace?: (snapshot: WorkspaceSnapshot) => void;
+  readonly detachTab?: (snapshot: WorkspaceSnapshot) => Promise<boolean>;
+  readonly workspace?: {
+    readonly element: HTMLElement;
+    readonly sessions: SessionsBridge;
+    readonly commands?: CommandsBridge;
+    readonly backup?: BackupBridge;
+    readonly highlights?: HighlightsBridge;
+    readonly preferences?: PreferencesBridge;
+    readonly files?: FilesBridge;
+    readonly assistant?: AssistantBridge;
+    readonly about?: AboutBridge;
+    readonly saveOutput?: {
+      readonly onRequest: (listener: () => void) => () => void;
+      readonly save: (text: string) => Promise<string | null>;
+    };
+    readonly sessionDirectory?: (sessionId: TerminalSessionId) => Promise<{
+      readonly directory: string | null;
+      readonly busy: boolean;
+    } | null>;
+    readonly palette?: {
+      readonly onToggle: (listener: () => void) => () => void;
+      readonly runAction: (action: TerminalActionName) => void;
+    };
+  };
   readonly snippets?: {
     readonly element: HTMLElement;
     readonly load: () => Promise<TerminalSnippetsResponse>;
@@ -119,6 +189,7 @@ export function mountTerminalWindowPage(
   let removeTabTitleListener: (() => void) | undefined;
   let removeTabBarToggleListener: (() => void) | undefined;
   let snippetsSidebar: SnippetsSidebar | undefined;
+  let disposeWorkspace: (() => void) | undefined;
   let removeSnippetsToggleListener: (() => void) | undefined;
   let removeLocalImageOpenListener: (() => void) | undefined;
   let localImagePreview: LocalImagePreview | undefined;
@@ -132,41 +203,24 @@ export function mountTerminalWindowPage(
     ? surfaceConfiguration(options.configuration)
     : undefined;
 
-  const applyPageTheme = (theme: TerminalTheme, transparency: number) => {
-    const { background, foreground } = theme.colors;
-    page.document.documentElement.style.setProperty(
-      "--terminal-background-opacity",
-      String(1 - transparency),
-    );
-    page.document.documentElement.style.setProperty(
-      "--terminal-background",
-      background,
-    );
-    page.document.documentElement.style.setProperty(
-      "--terminal-foreground",
-      foreground,
-    );
-    page.document.body.style.setProperty("--terminal-background", background);
-    elements.tabsContainer.style.setProperty(
-      "--terminal-background",
-      background,
-    );
-  };
+  // Theme tint, then the window frame (corner radius, auto-hiding bar).
+  const applyPageTheme = (configuration: TerminalRendererConfiguration) =>
+    paintPage(page.document, elements.tabsContainer, configuration);
 
   if (options.configuration) {
     page.document.documentElement.style.setProperty(
       "--native-title-inset",
       `${options.configuration.nativeTitleInset}px`,
     );
-    applyPageTheme(
-      options.configuration.terminalTheme,
-      options.configuration.transparency,
-    );
+    applyPageTheme(options.configuration);
   }
 
   const surfaceOptions: TerminalSurfaceOptions = {
     ...activeSurfaceConfiguration,
     background: "host",
+    ...(options.translator
+      ? { searchLabels: searchLabels(options.translator) }
+      : {}),
     ...(fontGenerations ? { acquireFontInputs: fontGenerations.acquire } : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.onExternalLink
@@ -192,51 +246,57 @@ export function mountTerminalWindowPage(
       : {}),
   };
 
+  const { translator, toolbar, broadcastIndicator, highlighting, directories } =
+    windowServices(page.document, options, () => tabs);
   const tabs: TerminalTabs = createTerminalTabs(
     { strip: elements.tabStrip, container: elements.tabsContainer },
     {
-      createAdapter: () => options.createAdapter(fontConfigurationId),
+      ...windowTabsOptions(
+        options,
+        translator,
+        broadcastIndicator,
+        highlighting,
+        directories,
+      ),
+      createAdapter: (launch) =>
+        launch === undefined
+          ? options.createAdapter(fontConfigurationId)
+          : options.createAdapter(fontConfigurationId, launch),
       mount,
       surfaceOptions,
-      showTabBar: options.configuration?.showTabBar ?? true,
-      ...(options.notifyTabsEmpty
-        ? { notifyEmpty: options.notifyTabsEmpty }
-        : {}),
-      ...(options.notifyTabSelection
-        ? { notifySelection: options.notifyTabSelection }
-        : {}),
-      ...(options.onTitleRequest
-        ? { notifyTitle: options.onTitleRequest }
-        : {}),
-      ...(options.onBell ? { notifyBell: options.onBell } : {}),
-      syncTitle: (sessionId) => options.syncTabTitle?.(sessionId),
     },
   );
-
-  const chrome = options.chrome
-    ? mountWindowChrome(page.document, options.chrome, () => {
-        if (!(localImagePreview?.isActive() ?? false)) tabs.focusSelected();
-      })
-    : undefined;
-
-  if (options.loadLocalImage) {
-    localImagePreview = createLocalImagePreview(page.document, {
-      loadImage: options.loadLocalImage,
-      focusTerminal: () => tabs.focusSelected(),
-      onActivityChange: () => {
-        chrome?.setPreviewActive(localImagePreview?.isActive() ?? false);
-        for (const listener of hoverAvailabilityListeners) listener();
-      },
-    });
-    removeLocalImageOpenListener = options.subscribeToLocalImageOpen?.(
-      () => void localImagePreview?.open(),
-    );
-  }
 
   const previewActive = () => localImagePreview?.isActive() ?? false;
   const onPageFocus = () => {
     if (!previewActive()) tabs.focusSelected();
   };
+  const chrome = options.chrome
+    ? mountWindowChrome(
+        page.document,
+        options.chrome,
+        onPageFocus,
+        toolbar,
+        translator ? windowChromeLabels(translator) : undefined,
+      )
+    : undefined;
+
+  if (options.loadLocalImage) {
+    localImagePreview = createWindowImagePreview(
+      page.document,
+      options,
+      translator,
+      () => tabs,
+      () => {
+        chrome?.setPreviewActive(localImagePreview?.isActive() ?? false);
+        for (const listener of hoverAvailabilityListeners) listener();
+      },
+    );
+    removeLocalImageOpenListener = options.subscribeToLocalImageOpen?.(
+      () => void localImagePreview?.open(),
+    );
+  }
+
   const isInternalTabDrag = (event: DragEvent) =>
     [...(event.dataTransfer?.types ?? [])].includes(
       TERMINAL_TAB_DRAG_DATA_TYPE,
@@ -280,7 +340,10 @@ export function mountTerminalWindowPage(
     localImagePreview = undefined;
     snippetsSidebar?.dispose();
     snippetsSidebar = undefined;
+    disposeWorkspace?.();
     tabs.dispose();
+    broadcastIndicator.dispose();
+    highlighting?.dispose();
     fontGenerations?.dispose();
   };
   const onPageHide = () => dispose();
@@ -299,7 +362,7 @@ export function mountTerminalWindowPage(
           "--native-title-inset",
           `${configuration.nativeTitleInset}px`,
         );
-      applyPageTheme(configuration.terminalTheme, configuration.transparency);
+      applyPageTheme(configuration);
       const nextSurfaceConfiguration = surfaceConfiguration(configuration);
       if (configuration.fontFamily !== activeFontFamily) {
         activeFontFamily = configuration.fontFamily;
@@ -351,15 +414,59 @@ export function mountTerminalWindowPage(
             tabs.injectSnippet(snippet.body, { submit: snippet.execute });
         },
         focusTerminal: onPageFocus,
+        labels: snippetsLabels(options.translator),
       });
       snippetsSidebar = sidebar;
       removeSnippetsToggleListener = options.snippets.subscribeToToggle(() => {
         if (!previewActive()) void sidebar.toggle();
       });
     }
+    if (options.workspace)
+      disposeWorkspace = mountWorkspace(options.workspace, {
+        translator,
+        tabs,
+        isBlocked: previewActive,
+        focusTerminal: onPageFocus,
+        toolbar,
+        directories,
+        clipboard: options.clipboard,
+        terminalArea: elements.tabsContainer,
+        viewImage: (path) =>
+          void localImagePreview?.open({ source: "native-path", path }),
+      });
   });
 
   return { ready, dispose };
+}
+
+function paintPage(
+  document: Document,
+  tabsContainer: HTMLElement,
+  configuration: TerminalRendererConfiguration,
+): void {
+  paintPageTheme(
+    document,
+    tabsContainer,
+    configuration.terminalTheme,
+    configuration.transparency,
+  );
+  applyWindowFrame(document, configuration);
+}
+
+// The Terminal Theme tints the page, chrome and every tab container.
+function paintPageTheme(
+  document: Document,
+  tabsContainer: HTMLElement,
+  theme: TerminalTheme,
+  transparency: number,
+): void {
+  const { background, foreground } = theme.colors;
+  const root = document.documentElement.style;
+  root.setProperty("--terminal-background-opacity", String(1 - transparency));
+  root.setProperty("--terminal-background", background);
+  root.setProperty("--terminal-foreground", foreground);
+  document.body.style.setProperty("--terminal-background", background);
+  tabsContainer.style.setProperty("--terminal-background", background);
 }
 
 function sameSurfaceConfiguration(

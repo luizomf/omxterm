@@ -65,6 +65,18 @@ export async function exerciseApplicationMenu(
     },
     reloadUserConfiguration: unexpected,
     openLocalImage: unexpected,
+    splitSelectedPane: unexpected,
+    closeSelectedPane: unexpected,
+    focusPaneInSelectedWindow: unexpected,
+    toggleSelectedPaneMaximized: unexpected,
+    equalizeSelectedPanes: unexpected,
+    toggleSelectedBroadcast: unexpected,
+    toggleSelectedSessions: unexpected,
+    toggleSelectedCommands: unexpected,
+    toggleSelectedCommandPalette: unexpected,
+    findInSelectedWindow: unexpected,
+    backUpSettings: unexpected,
+    restoreSettings: unexpected,
   };
   const invocations = terminalActionInvocations(actions);
   deliverKeybindsFromKeyEvents(
@@ -116,7 +128,7 @@ export async function exerciseApplicationMenu(
     assert.deepEqual(openings.at(-1), { menu, x: 8, y });
     assert.deepEqual(
       menu.items.map((item) => item.label),
-      ["OMXTerm", "Edit", "File", "View", "Window"],
+      ["OMXTerm", "Edit", "File", "View", "Terminal", "Window"],
     );
   };
   const dismiss = async (menu: Menu) => {

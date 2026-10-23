@@ -14,6 +14,10 @@ const applicationIconSource = path.join(
   "assets",
   "application-icon.svg",
 );
+const scalableIconSource = path.join(
+  projectRoot,
+  "src/shared/icons/hicolor/scalable/apps/omxterm-hero.svg",
+);
 
 const expectedAssets = {
   "DejaVu-LICENSE.txt":
@@ -40,8 +44,10 @@ describe("Terminal appearance build", () => {
   it("owns the accepted OMXTerm application icon source byte-for-byte", async () => {
     const source = await readFile(applicationIconSource);
     expect(createHash("sha256").update(source).digest("hex")).toBe(
-      "3c078dfc92467afa0ebb065aeaeb7c84f4442757d5ca831f028d16c39e9d8905",
+      "7fc8183cc57f67152ae19c57ca53dc8ef2bb64c5136f8c60aa1c96e526c5463b",
     );
+    // assets/ carries a copy of the scalable source the derivatives come from.
+    expect(source.equals(await readFile(scalableIconSource))).toBe(true);
   });
 
   it("bundles the accepted regular and bold Terminal Font Stack assets", async () => {

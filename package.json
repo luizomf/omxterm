@@ -1,9 +1,13 @@
 {
   "name": "omxterm",
-  "version": "0.20.3-dev.0",
+  "version": "0.22.1-dev.0",
   "description": "Open-source personal desktop terminal for ARM64 macOS, Linux, and Windows",
   "desktopName": "omxterm.desktop",
-  "author": "Luiz Otávio Miranda",
+  "author": "Luiz Otávio Miranda <luizomf@gmail.com>",
+  "contributors": [
+    "Rafael Ruscher <rruscher@gmail.com>"
+  ],
+  "homepage": "https://github.com/luizomf/omxterm",
   "license": "MIT",
   "private": true,
   "type": "module",
@@ -21,9 +25,9 @@
     "package:mac": "npm run build && npm run package-built:mac",
     "package:linux": "npm run build && npm run package-built:linux",
     "package:win": "npm run build && npm run package-built:win",
-    "package-built:mac": "electron-builder --config electron-builder.yml --mac dmg --arm64 --publish never",
-    "package-built:linux": "node scripts/prepare-linux-launcher.mjs && electron-builder --config electron-builder.yml --linux AppImage --arm64 --publish never && node scripts/package-linux-assets.mjs",
-    "package-built:win": "electron-builder --config electron-builder.yml --win nsis --arm64 --publish never",
+    "package-built:mac": "node scripts/package.mjs mac",
+    "package-built:linux": "node scripts/package.mjs linux",
+    "package-built:win": "node scripts/package.mjs win",
     "package:verify": "node scripts/verify-packaged-app.mjs",
     "check": "npm run check:portable && npm run package-built:mac && npm run package:verify",
     "check:linux": "npm run check:portable && npm run package-built:linux && npm run package:verify",

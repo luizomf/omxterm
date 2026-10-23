@@ -29,6 +29,7 @@ function harness(initial = configuration) {
     applyTheme: vi.fn(),
     zoom: vi.fn(),
     selectAll: vi.fn(),
+    toggleSearch: vi.fn(),
     copy: vi.fn(async () => {}),
     paste: vi.fn(async () => {}),
     inject: vi.fn(async () => {}),

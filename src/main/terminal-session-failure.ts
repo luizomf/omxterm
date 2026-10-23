@@ -1,4 +1,5 @@
 import type { TerminalSessionFailure } from "./terminal-application";
+import { mainTranslator } from "./main-translator";
 import type { TerminalExit } from "../shared/terminal-contract";
 import type { TerminalSessionEndContext } from "./terminal-ipc-types";
 
@@ -46,14 +47,13 @@ interface TerminalSessionFailureDialog {
 export function terminalSessionFailureDialog(
   failure: TerminalSessionFailure,
 ): TerminalSessionFailureDialog {
+  const t = mainTranslator().t.bind(mainTranslator());
   if (failure.reason === "rendering") {
     return {
       type: "error",
-      title: "Terminal rendering failed",
-      message:
-        "The rendering backend was lost. Its terminal session has been closed.",
-      detail:
-        "Restart OMXTerm to create a new session. Other sessions are unaffected.",
+      title: t("failure.rendering.title"),
+      message: t("failure.rendering.message"),
+      detail: t("failure.rendering.detail"),
       buttons: ["OK"],
     };
   }
@@ -61,26 +61,34 @@ export function terminalSessionFailureDialog(
   if (failure.reason === "spawn") {
     return {
       type: "error",
-      title: explicitCommand
-        ? "Command could not start"
-        : "Shell could not start",
-      message: explicitCommand
-        ? "The requested command could not be started."
-        : "The Default Shell could not be started.",
-      detail: "Lifecycle failure: spawn.",
+      title: t(
+        explicitCommand
+          ? "failure.commandStart.title"
+          : "failure.shellStart.title",
+      ),
+      message: t(
+        explicitCommand
+          ? "failure.commandStart.message"
+          : "failure.shellStart.message",
+      ),
+      detail: t("failure.spawnDetail"),
       buttons: ["OK"],
     };
   }
 
   return {
     type: "error",
-    title: explicitCommand
-      ? "Command exited unexpectedly"
-      : "Shell exited unexpectedly",
-    message: explicitCommand
-      ? "The requested command exited unexpectedly."
-      : "The Default Shell exited unexpectedly.",
-    detail: `Signal: ${failure.signal ?? "unknown"}.`,
+    title: t(
+      explicitCommand ? "failure.commandExit.title" : "failure.shellExit.title",
+    ),
+    message: t(
+      explicitCommand
+        ? "failure.commandExit.message"
+        : "failure.shellExit.message",
+    ),
+    detail: t("failure.signalDetail", {
+      signal: failure.signal ?? t("failure.unknownSignal"),
+    }),
     buttons: ["OK"],
   };
 }

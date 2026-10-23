@@ -1,3 +1,4 @@
+import { readlinkSync } from "node:fs";
 import path from "node:path";
 import type { IPty, IPtyForkOptions, IDisposable } from "node-pty";
 import type { LaunchRequest } from "./launch-request";
@@ -14,6 +15,7 @@ export type TerminalResizeFailureReason = "closed-pty" | "native-failure";
 
 export const TERMINAL_OUTPUT_PAUSE_BYTES = 64 * 1024;
 export const TERMINAL_OUTPUT_RESUME_BYTES = 16 * 1024;
+export const INITIAL_INPUT_SETTLE_MS = 50;
 
 export interface TerminalOutputFlowMetrics {
   readonly pendingBytes: number;
@@ -31,6 +33,8 @@ export interface LocalTerminalSession {
   acknowledgeOutput?(bytes: number): boolean;
   outputFlowMetrics?(): TerminalOutputFlowMetrics;
   hasForegroundChildProcess(): boolean;
+  // The shell's current directory when the platform exposes it (Linux /proc).
+  workingDirectory?(): string | undefined;
   close(): void;
 }
 
@@ -59,6 +63,16 @@ export interface LocalTerminalSessionOptions {
   readonly homeDirectory: string;
   readonly applicationVersionProvider: ApplicationVersionProvider;
   readonly environment: NodeJS.ProcessEnv;
+  // A validated existing directory; defaults to the account home directory.
+  readonly workingDirectory?: string;
+  // Variables added for a Saved Session (never overriding the capability
+  // identity below).
+  readonly extraEnvironment?: Readonly<Record<string, string>>;
+  // Typed into the PTY once after spawn, exactly as if the user typed it.
+  readonly initialInput?: string;
+  readonly title?: string;
+  readonly readLink?: (path: string) => string;
+  readonly schedule?: (callback: () => void, milliseconds: number) => unknown;
   readonly onOutput: (data: string) => void;
   readonly onResizeFailure?: (reason: TerminalResizeFailureReason) => void;
   readonly onExit: (
@@ -90,9 +104,10 @@ export function createLocalTerminalSession(
   let pty: IPty;
   try {
     pty = spawnPty(executable, arguments_, {
-      cwd: options.homeDirectory,
+      cwd: options.workingDirectory ?? options.homeDirectory,
       env: {
         ...options.environment,
+        ...options.extraEnvironment,
         TERM: "xterm-256color",
         COLORTERM: "truecolor",
         TERM_PROGRAM: "OMXTerm",
@@ -135,8 +150,22 @@ export function createLocalTerminalSession(
     exitSubscription = undefined;
   };
 
+  // A Saved Session's initial command is typed once the program has drawn
+  // its first output (normally the prompt), so the line editor reads it
+  // instead of the terminal driver echoing it a second time.
+  let pendingInitialInput = options.initialInput || undefined;
+  const typeInitialInput = () => {
+    const text = pendingInitialInput;
+    pendingInitialInput = undefined;
+    if (!text) return;
+    (options.schedule ?? setTimeout)(() => {
+      if (closed || exited) return;
+      for (const chunk of splitTerminalPayload(text)) pty.write(chunk);
+    }, INITIAL_INPUT_SETTLE_MS);
+  };
   dataSubscription = pty.onData((data) => {
     if (closed) return;
+    typeInitialInput();
     largestNativeReadBytes = Math.max(
       largestNativeReadBytes,
       Buffer.byteLength(data, "utf8"),
@@ -179,9 +208,21 @@ export function createLocalTerminalSession(
   return {
     launchKind: explicitCommand ? "explicit-command" : "default-shell",
     fallbackTitle:
-      options.platform === "win32"
+      options.title ??
+      (options.platform === "win32"
         ? path.win32.basename(options.shell)
-        : path.posix.basename(options.shell),
+        : path.posix.basename(options.shell)),
+    workingDirectory() {
+      if (closed || exited || options.platform !== "linux") return undefined;
+      try {
+        const directory = (options.readLink ?? readlinkSync)(
+          `/proc/${pty.pid}/cwd`,
+        );
+        return path.posix.isAbsolute(directory) ? directory : undefined;
+      } catch {
+        return undefined;
+      }
+    },
     write(data) {
       if (!closed && !exited && isBoundedTerminalPayload(data)) pty.write(data);
     },

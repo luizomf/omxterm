@@ -1,0 +1,136 @@
+# Arch Linux / Manjaro package for OMXTerm, built from this source tree.
+#
+#   cd packaging/arch && makepkg -si
+#
+# Builds the checkout's tracked and untracked (non-ignored) files for the host
+# architecture (x86_64 or aarch64); native modules are never cross-compiled.
+# npm and Electron downloads need network access during build(). This file is
+# not published to the AUR. Keep pkgver equal to package.json's version with
+# "-" removed (pacman versions cannot contain "-"; "0.1.0dev.0" sorts before
+# "0.1.0").
+
+pkgname=omxterm
+pkgver=0.22.1dev.0
+pkgrel=1
+pkgdesc='Open-source terminal with split panes, SSH sessions, an SFTP file manager, file hover previews, output highlighting, a command manager and an optional AI assistant'
+arch=('x86_64' 'aarch64')
+url='https://github.com/ruscher/omxterm'
+license=('MIT')
+# Shared libraries of the packaged Electron runtime and node-pty module, plus
+# fontconfig (fc-match) and xdg-utils (external links).
+depends=(
+  'alsa-lib' 'at-spi2-core' 'cairo' 'dbus' 'expat' 'fontconfig' 'glib2'
+  'glibc' 'gtk3' 'hicolor-icon-theme' 'libcups' 'libgcc' 'libstdc++' 'libx11'
+  'libxcb' 'libxcomposite' 'libxdamage' 'libxext' 'libxfixes' 'libxkbcommon'
+  'libxrandr' 'mesa' 'nspr' 'nss' 'pango' 'systemd-libs' 'xdg-utils' 'bash'
+)
+optdepends=(
+  'openssh: SSH sessions, Quick Connect and remote files over SFTP'
+  'ollama: local models for the AI assistant'
+  'poppler: first-page previews, page counts and titles of PDF files'
+  'xorg-xrandr: new windows open on the active monitor under KDE Plasma Wayland'
+)
+# node-pty's own node-gyp install script is skipped (see build()), so neither
+# python nor make is needed: the project's postinstall compiles pty.node with
+# the C++ compiler and pinned Node-API headers, without network access.
+makedepends=('git' 'nodejs' 'npm' 'gcc' 'patch')
+# Electron ships prebuilt, already-stripped binaries.
+options=('!strip' '!debug')
+
+_repository="$(cd "${startdir}/../.." && pwd)"
+
+prepare() {
+  rm -rf "${srcdir}/omxterm"
+  mkdir -p "${srcdir}/omxterm"
+  git -C "${_repository}" ls-files -z --cached --others --exclude-standard |
+    (cd "${_repository}" && tar --null --files-from=- --create --file=- \
+      --ignore-failed-read) |
+    tar --extract --file=- --directory="${srcdir}/omxterm"
+
+  local _version
+  _version="$(node -p 'require(process.argv[1]).version' \
+    "${srcdir}/omxterm/package.json")"
+  if [[ "${_version//-/}" != "${pkgver}" ]]; then
+    printf 'PKGBUILD pkgver %s does not match package.json %s\n' \
+      "${pkgver}" "${_version}" >&2
+    return 1
+  fi
+}
+
+build() {
+  cd "${srcdir}/omxterm"
+  local _arch
+  case "${CARCH}" in
+    x86_64) _arch=x64 ;;
+    aarch64) _arch=arm64 ;;
+    *) printf 'Unsupported architecture: %s\n' "${CARCH}" >&2; return 1 ;;
+  esac
+
+  # Dependency install scripts are skipped; the project's own postinstall
+  # installs Electron and builds the node-pty exec-status module from source
+  # for this host (build/Release/pty.node).
+  npm ci --ignore-scripts --no-audit --no-fund
+  npm run postinstall
+  npm run build
+  node scripts/prepare-linux-launcher.mjs
+  node node_modules/electron-builder/cli.js --config electron-builder.yml \
+    --linux dir "--${_arch}" --publish never
+}
+
+package() {
+  cd "${srcdir}/omxterm"
+  local _unpacked=release/linux-unpacked
+  if [[ "${CARCH}" == aarch64 ]]; then
+    _unpacked=release/linux-arm64-unpacked
+  fi
+
+  install -d "${pkgdir}/usr/lib/omxterm"
+  cp -a "${_unpacked}/." "${pkgdir}/usr/lib/omxterm/"
+  # The Chromium sandbox is disabled on Linux (ADR 0024); never setuid.
+  chmod 0755 "${pkgdir}/usr/lib/omxterm/chrome-sandbox"
+  # Electron ships its Vulkan loader with symbols; options=('!strip')
+  # leaves the prestripped Electron binaries alone, so strip it here.
+  if [[ -f "${pkgdir}/usr/lib/omxterm/libvulkan.so.1" ]]; then
+    strip --strip-unneeded "${pkgdir}/usr/lib/omxterm/libvulkan.so.1"
+  fi
+
+  install -Dm755 /dev/stdin "${pkgdir}/usr/bin/omxterm" <<'EOF'
+#!/bin/sh
+# OMXTerm disables the Chromium sandbox on Linux (ADR 0024). Chromium decides
+# during bootstrap, before application code runs, so the flag comes first.
+# A parent Electron application (an editor's terminal, for example) may export
+# ELECTRON_RUN_AS_NODE, which would start the binary as plain Node.js.
+unset ELECTRON_RUN_AS_NODE
+exec /usr/lib/omxterm/omxterm --no-sandbox "$@"
+EOF
+
+  install -Dm644 /dev/stdin "${pkgdir}/usr/share/applications/omxterm.desktop" <<'EOF'
+[Desktop Entry]
+Name=OMXTerm
+Comment=Open-source personal desktop terminal
+Exec=/usr/bin/omxterm %U
+Terminal=false
+Type=Application
+Icon=omxterm
+StartupWMClass=omxterm
+Categories=System;TerminalEmulator;
+Keywords=terminal;shell;ssh;sftp;console;command;prompt;
+EOF
+
+  # Theme icons at every size, so menus and panels never scale one bitmap.
+  install -d "${pkgdir}/usr/share/icons"
+  cp -a assets/icons/hicolor "${pkgdir}/usr/share/icons/"
+  find "${pkgdir}/usr/share/icons/hicolor" -type d -exec chmod 755 {} +
+  find "${pkgdir}/usr/share/icons/hicolor" -type f -exec chmod 644 {} +
+
+  local _licenses="${pkgdir}/usr/share/licenses/${pkgname}"
+  install -Dm644 LICENSE "${_licenses}/LICENSE"
+  install -Dm644 THIRD_PARTY_NOTICES.md "${_licenses}/THIRD_PARTY_NOTICES.md"
+  cp -a "${_unpacked}/resources/licenses" "${_licenses}/licenses"
+  install -Dm644 "${_unpacked}/LICENSE.electron.txt" \
+    "${_licenses}/LICENSE.electron.txt"
+  install -Dm644 "${_unpacked}/LICENSES.chromium.html" \
+    "${_licenses}/LICENSES.chromium.html"
+
+  install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+}

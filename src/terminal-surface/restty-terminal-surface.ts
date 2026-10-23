@@ -30,14 +30,14 @@ import {
 } from "../shared/terminal-theme";
 import type { TerminalSessionAdapter } from "./terminal-session-adapter";
 import {
-  installResttyVisibleLinks,
-  requestVisibleLink,
+  installSurfaceVisibleLinks,
   type ResttyVisibleLinkController,
 } from "./restty-visible-links";
 import {
   resttyClipboardActions,
   resttyContextMenuHandler,
-  resttyHostServices,
+  resttyFileProbe,
+  onContextLost,
 } from "./restty-host-services";
 import { toGhosttyTheme } from "./restty-theme";
 import type {
@@ -125,6 +125,9 @@ export async function mountResttyTerminalSurface(
   const isCancelled = () => options.abortSignal?.aborted === true;
   const isInactive = () => disposed || isCancelled();
   let ready = false;
+  // A retained Surface outlives its session's exit but refuses input.
+  let ended = false;
+  const canSend = () => !isInactive() && ready && !ended;
   let transportConnected = false;
   let ptyCallbacks: PtyCallbacks | undefined;
   let settledSize: TerminalSize | undefined;
@@ -133,6 +136,7 @@ export async function mountResttyTerminalSurface(
   let restty: PatchedRestty | undefined;
   let fontLease: TerminalFontInputLease | undefined;
   let pane: PatchedResttyPane | undefined;
+  const fileProbe = resttyFileProbe(() => pane?.runtime.interaction);
   let baselineFontSize = resolveFontSize(options.appearance?.fontSize);
   let currentFontSize = baselineFontSize;
   const initialLineHeight = resolveLineHeight(options.appearance?.lineHeight);
@@ -150,7 +154,7 @@ export async function mountResttyTerminalSurface(
   const delivery = resttyDelivery(
     adapter,
     options,
-    () => !isInactive() && ready,
+    canSend,
     () => pane?.runtime.terminal.isBracketedPasteEnabled() ?? false,
     revealInput,
   );
@@ -234,14 +238,13 @@ export async function mountResttyTerminalSurface(
       callbacks?.onDisconnect?.();
     },
     sendInput(data) {
-      if (!isInactive() && ready) adapter.write(data);
-      return !isInactive() && ready;
+      if (canSend()) adapter.write(data);
+      return canSend();
     },
     resize(cols, rows) {
-      const size = { cols, rows };
-      settledSize = size;
-      if (!isInactive() && ready) adapter.resize(size);
-      return !isInactive() && ready;
+      settledSize = { cols, rows };
+      if (canSend()) adapter.resize(settledSize);
+      return canSend();
     },
     isConnected: () => transportConnected && !isInactive(),
     destroy: () => undefined,
@@ -262,16 +265,9 @@ export async function mountResttyTerminalSurface(
     );
     restty = new PatchedRestty({
       root: container,
-      surface: {
-        autoInit: false,
-        createInitialPane: true,
-        defaultContextMenu: false,
-        paneStyles: false,
-        searchUi: false,
-        shortcuts: false,
-      },
+      surface: resttySurfaceConfig(options.searchLabels),
       terminal: { ...terminal, isSurfaceVisible },
-      services: resttyHostServices(transport, delivery, options, revealInput),
+      services: fileProbe.services(transport, delivery, options, revealInput),
     });
     pane = restty.getActivePane() ?? undefined;
     if (!pane) throw new Error("Restty did not create its terminal pane");
@@ -300,22 +296,14 @@ export async function mountResttyTerminalSurface(
     container.dataset.resttyBackend = "webgl2";
     container.dataset.resttyFont =
       initialFamily ?? DEFAULT_TERMINAL_FONT_FAMILY;
-    if (options.onExternalLink || options.onLocalImageActivation)
-      visibleLinkController = installResttyVisibleLinks(
-        canvas,
-        pane.runtime.interaction,
-        (url) => requestVisibleLink(url, options),
-        navigator.platform,
-        options.linkHoverAvailability,
-      );
+    visibleLinkController = installSurfaceVisibleLinks(
+      canvas,
+      pane.runtime.interaction,
+      options,
+    );
     container.addEventListener("contextmenu", onContextMenu);
-    canvas.addEventListener(
-      "webglcontextlost",
-      (event) => {
-        event.preventDefault();
-        fail("The OMXTerm Terminal Surface rendering backend was lost");
-      },
-      { once: true },
+    onContextLost(canvas, () =>
+      fail("The OMXTerm Terminal Surface rendering backend was lost"),
     );
 
     // Allow parser replies before startup output can replay synchronously.
@@ -324,14 +312,15 @@ export async function mountResttyTerminalSurface(
       onOutput(data) {
         if (!isInactive()) {
           visibleLinkController?.invalidate();
-          ptyCallbacks?.onData?.(data);
+          ptyCallbacks?.onData?.(transformed(options.transformOutput, data));
           // Hidden ingestion still retires renderer copies, including pending
           // image decodes, even when the document's RAF is throttled.
           if (!isSurfaceVisible()) pane?.runtime.render.refresh();
         }
       },
-      onExit() {
-        dispose();
+      onExit(exit) {
+        if (retainsExit(options, exit)) ended = true;
+        else dispose();
       },
     });
     if (isInactive()) return createDisposedSurface();
@@ -368,6 +357,10 @@ export async function mountResttyTerminalSurface(
       ...resttyClipboardActions(delivery, options, () =>
         disposed ? undefined : pane?.runtime.interaction,
       ),
+      toggleSearch: () => {
+        if (!disposed) restty?.toggleSearch();
+      },
+      fileTokenAt: fileProbe.tokenAt,
       dispose,
     };
   } catch (cause) {
@@ -473,6 +466,57 @@ function paintContainer(
   container.style.setProperty("--terminal-background", theme.colors.background);
 }
 
+// Highlighting must never cost output: a failing transform passes data raw.
+function transformed(
+  transform: ((data: string) => string) | undefined,
+  data: string,
+): string {
+  if (!transform) return data;
+  try {
+    return transform(data);
+  } catch {
+    return data;
+  }
+}
+
+function retainsExit(
+  options: TerminalSurfaceOptions,
+  exit: { readonly exitCode: number; readonly signal: number },
+): boolean {
+  return (
+    options.retainOnExit === true && (exit.exitCode !== 0 || exit.signal !== 0)
+  );
+}
+
+// OMXTerm owns panes, styles, menus and shortcuts; search opens through its
+// own keybind, never Restty's shortcut.
+function resttySurfaceConfig(labels: TerminalSurfaceOptions["searchLabels"]) {
+  return {
+    autoInit: false,
+    createInitialPane: true,
+    defaultContextMenu: false,
+    paneStyles: false,
+    shortcuts: false,
+    searchUi: resttySearchUi(labels),
+  };
+}
+
+function resttySearchUi(labels: TerminalSurfaceOptions["searchLabels"]) {
+  return {
+    enabled: true,
+    shortcut: false,
+    ...(labels
+      ? {
+          placeholder: labels.placeholder,
+          previousButtonText: labels.previous,
+          nextButtonText: labels.next,
+          clearButtonText: labels.clear,
+          closeButtonText: labels.close,
+        }
+      : {}),
+  };
+}
+
 function createDisposedSurface(): TerminalSurface {
   return {
     focus: () => undefined,
@@ -483,6 +527,7 @@ function createDisposedSurface(): TerminalSurface {
     paste: async () => undefined,
     inject: async () => undefined,
     selectAll: () => undefined,
+    toggleSearch: () => undefined,
     dispose: () => undefined,
   };
 }

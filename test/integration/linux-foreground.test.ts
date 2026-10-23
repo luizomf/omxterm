@@ -3,8 +3,9 @@ import path from "node:path";
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
+import { isNativeTestArchitecture } from "../fixtures/native-architecture";
 
-const supported = process.platform === "linux" && process.arch === "arm64";
+const supported = process.platform === "linux" && isNativeTestArchitecture();
 
 describe.skipIf(!supported)("Linux native foreground Busy detection", () => {
   it("keeps an ordinary pipeline Busy when its foreground group leader has exited", async (testContext) => {

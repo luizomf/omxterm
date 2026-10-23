@@ -1,3 +1,12 @@
+import { hasExactKeys, isNonnegativeSafeInteger } from "./event-validation";
+import {
+  isConfigurationEvent,
+  type ConfigurationFailureReason,
+} from "./configuration-events";
+import {
+  isApplicationDataEvent,
+  type ApplicationDataRecoveredEvent,
+} from "./application-data-events";
 import {
   appendFileSync,
   lstatSync,
@@ -32,6 +41,7 @@ export type OperationalEvent =
       readonly name: "application.failure";
       readonly stage:
         | "launch-request"
+        | "command-line"
         | "startup"
         | "new-window"
         | "renderer-load"
@@ -83,6 +93,7 @@ export type OperationalEvent =
       readonly code: number | null;
       readonly durationMs: number;
     }
+  | ApplicationDataRecoveredEvent
   | {
       readonly name: "boundary.rejected";
       readonly boundary: "ipc" | "title" | "external-link" | "clipboard";
@@ -95,25 +106,6 @@ export type OperationalEvent =
         | "unknown-session"
         | "invalid-progress";
     };
-
-type ConfigurationFailureReason =
-  | "read-failed"
-  | "invalid-utf8"
-  | "invalid-json"
-  | "invalid-schema"
-  | "font-discovery-failed"
-  | "theme-read-failed"
-  | "theme-invalid";
-
-const configurationFailureReasons: readonly ConfigurationFailureReason[] = [
-  "read-failed",
-  "invalid-utf8",
-  "invalid-json",
-  "invalid-schema",
-  "font-discovery-failed",
-  "theme-read-failed",
-  "theme-invalid",
-];
 
 export interface OperationalEventLog {
   setLevel(level: OperationalLogLevel): void;
@@ -319,6 +311,7 @@ function eventLevel(event: OperationalEvent): OperationalLogLevel {
     event.name === "application.failure" ||
     event.name === "configuration.rejected" ||
     event.name === "configuration.reload.rejected" ||
+    event.name === "application-data.recovered" ||
     (event.name === "pty.exit" && event.outcome !== "clean") ||
     (event.name === "pty.resize-failed" && event.reason === "native-failure")
   )
@@ -340,10 +333,20 @@ function isResizeFailureEvent(value: Record<string, unknown>): boolean {
   );
 }
 
+// Event families validated by their own functions.
+function eventFamilyValidator(
+  name: string,
+): ((value: Record<string, unknown>) => boolean) | undefined {
+  if (name.startsWith("configuration.")) return isConfigurationEvent;
+  return name.startsWith("application-data.")
+    ? isApplicationDataEvent
+    : undefined;
+}
+
 function isOperationalEvent(value: unknown): value is OperationalEvent {
   if (!isRecord(value) || typeof value.name !== "string") return false;
-  if (value.name.startsWith("configuration."))
-    return isConfigurationEvent(value);
+  const family = eventFamilyValidator(value.name);
+  if (family) return family(value);
   switch (value.name) {
     case "application.started":
       return hasExactKeys(value, ["name"]);
@@ -352,6 +355,7 @@ function isOperationalEvent(value: unknown): value is OperationalEvent {
         hasExactKeys(value, ["name", "stage"]) &&
         [
           "launch-request",
+          "command-line",
           "startup",
           "new-window",
           "renderer-load",
@@ -420,39 +424,6 @@ function isOperationalEvent(value: unknown): value is OperationalEvent {
   }
 }
 
-function isConfigurationEvent(
-  value: Record<string, unknown>,
-): value is Extract<OperationalEvent, { name: `configuration.${string}` }> {
-  if (value.name === "configuration.validated")
-    return hasExactKeys(value, ["name"]);
-  if (value.name === "configuration.rejected")
-    return (
-      hasExactKeys(value, ["name", "reason"]) &&
-      configurationFailureReasons.includes(
-        value.reason as ConfigurationFailureReason,
-      )
-    );
-  if (
-    value.name === "configuration.reload.requested" ||
-    value.name === "configuration.reload.succeeded"
-  )
-    return (
-      hasExactKeys(value, ["name", "trigger", "durationMs"]) &&
-      value.trigger === "manual" &&
-      isReloadDuration(value.durationMs)
-    );
-  return (
-    value.name === "configuration.reload.rejected" &&
-    hasExactKeys(value, ["name", "trigger", "durationMs", "reason"]) &&
-    value.trigger === "manual" &&
-    isReloadDuration(value.durationMs) &&
-    (configurationFailureReasons.includes(
-      value.reason as ConfigurationFailureReason,
-    ) ||
-      value.reason === "unexpected-failure")
-  );
-}
-
 function isPersistedOperationalEvent(
   value: unknown,
 ): value is PersistedOperationalEvent {
@@ -476,17 +447,6 @@ function isTimestamp(value: unknown): value is string {
   }
 }
 
-function hasExactKeys(
-  value: Record<string, unknown>,
-  expected: readonly string[],
-): boolean {
-  const keys = Object.keys(value);
-  return (
-    keys.length === expected.length &&
-    keys.every((key) => expected.includes(key))
-  );
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -497,14 +457,6 @@ function isId(value: unknown): value is number {
 
 function isPositiveSafeInteger(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) > 0;
-}
-
-function isNonnegativeSafeInteger(value: unknown): value is number {
-  return Number.isSafeInteger(value) && (value as number) >= 0;
-}
-
-function isReloadDuration(value: unknown): value is number {
-  return isNonnegativeSafeInteger(value) && value <= 86_400_000;
 }
 
 function existingFileSize(file: string): number {

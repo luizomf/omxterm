@@ -51,6 +51,7 @@ function createSurface(overrides: Record<string, unknown> = {}) {
     copy: vi.fn(async () => undefined),
     paste: vi.fn(async () => undefined),
     selectAll: vi.fn(),
+    toggleSearch: vi.fn(),
     ...overrides,
   };
 }
@@ -185,6 +186,9 @@ describe("renderer Terminal Window page host", () => {
       expect.any(Object),
       {
         abortSignal: expect.any(AbortSignal) as AbortSignal,
+        onUserInput: expect.any(Function) as () => void,
+        // OSC 7 always reaches the tabs: the Files panel follows it.
+        onWorkingDirectory: expect.any(Function) as () => void,
         background: "host",
         appearance: {
           fontSize: 19,

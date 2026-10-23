@@ -7,13 +7,14 @@ import {
   createLocalTerminalSession,
   TERMINAL_OUTPUT_PAUSE_BYTES,
 } from "../../src/main/local-terminal-session";
+import { isNativeTestArchitecture } from "../fixtures/native-architecture";
 
 const supportedEnvironment =
   (process.platform === "darwin" || process.platform === "linux") &&
-  process.arch === "arm64";
+  isNativeTestArchitecture();
 
 const windowsEnvironment =
-  process.platform === "win32" && process.arch === "arm64";
+  process.platform === "win32" && isNativeTestArchitecture();
 
 describe.skipIf(!supportedEnvironment)("real local PTY", () => {
   it("starts the OS-configured interactive login shell in home and carries input/output", async () => {
