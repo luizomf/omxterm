@@ -54,10 +54,14 @@ hidden ids. Main validates everything (`validateCommandLibrary`). Built-in
 names, descriptions, categories and field labels are translated
 (`command-builtins/pt-BR.ts`); command text and option values never are.
 
+## Related features
+
+- **View → Command Palette…** runs any action by name (C3).
+- **Run in Multiple Terminals…** sends a command to the checked terminals of
+  the window (B3).
+
 ## Not yet ported
 
 - A pinned command toolbar (C2).
-- A command palette (C3).
-- Sending a command to many terminals (B3).
 
 Tests: `command-manager`, `renderer-commands-panel`.
