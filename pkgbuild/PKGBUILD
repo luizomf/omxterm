@@ -61,8 +61,12 @@ makedepends=(
 # Electron ships prebuilt, already-stripped binaries.
 options=('!strip' '!debug')
 
-pkgver=$(date +%y.%m.%d)
-pkgrel=$(date +%H%M)
+# makepkg reads this file more than once (again under fakeroot); one build
+# time keeps pkgver, pkgrel and the package file name in step even when the
+# build crosses a minute. The exported value reaches the fakeroot pass.
+export OMXTERM_BUILD_TIME="${OMXTERM_BUILD_TIME:-$(date +%s)}"
+pkgver=$(date -d "@${OMXTERM_BUILD_TIME}" +%y.%m.%d)
+pkgrel=$(date -d "@${OMXTERM_BUILD_TIME}" +%H%M)
 
 arch=('x86_64' 'aarch64')
 license=('MIT')
