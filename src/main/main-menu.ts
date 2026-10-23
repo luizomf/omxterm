@@ -95,6 +95,7 @@ export function terminalMainMenuTemplate(
       ? [
           {
             label: t("menu.preferences"),
+            accelerator: keybinds.preferences,
             click: actions.openPreferences,
           },
         ]

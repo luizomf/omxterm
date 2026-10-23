@@ -65,6 +65,16 @@ export function terminalApplicationMenuTemplate(
       label: applicationName,
       submenu: [
         { role: "about" },
+        ...(actions.openPreferences
+          ? [
+              { type: "separator" as const },
+              {
+                label: "Preferences…",
+                accelerator: keybinds.preferences,
+                click: actions.openPreferences,
+              },
+            ]
+          : []),
         ...(actions.toggleRestoreWorkspace
           ? [
               { type: "separator" as const },
@@ -383,6 +393,7 @@ export function terminalActionInvocations(
     toggleCommands: actions.toggleSelectedCommands,
     commandPalette: actions.toggleSelectedCommandPalette,
     find: actions.findInSelectedWindow,
+    preferences: actions.openPreferences ?? (() => {}),
   });
 }
 

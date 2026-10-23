@@ -1,3 +1,9 @@
+import type {
+  CapturedKeyPress,
+  PreferencesPatch,
+  PreferencesSaveResult,
+  PreferencesSnapshot,
+} from "./preferences";
 import type { TerminalActionName } from "./terminal-keybinds";
 import type {
   TerminalExit,
@@ -34,6 +40,17 @@ export interface CommandsBridge {
   platform(): Promise<string>;
   onChanged(listener: (document: CommandLibraryDocument) => void): () => void;
   onToggleSidebar(listener: () => void): () => void;
+}
+
+export interface PreferencesBridge {
+  get(): Promise<PreferencesSnapshot>;
+  save(patch: PreferencesPatch): Promise<PreferencesSaveResult>;
+  reset(): Promise<PreferencesSaveResult>;
+  // While on, every key press goes to onCapturedKey listeners instead of
+  // keybinds, menus or the terminal (main ends it after 30 seconds).
+  captureShortcut(active: boolean): Promise<void>;
+  onCapturedKey(listener: (key: CapturedKeyPress) => void): () => void;
+  onOpen(listener: () => void): () => void;
 }
 
 export interface HighlightsBridge {
@@ -139,6 +156,7 @@ declare global {
       readonly terminal: TerminalBridge;
       readonly sessions: SessionsBridge;
       readonly highlights: HighlightsBridge;
+      readonly preferences: PreferencesBridge;
       readonly commands: CommandsBridge;
       readonly backup: BackupBridge;
     };

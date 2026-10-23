@@ -1264,9 +1264,47 @@ traffic lights. Hiding the title bar (`toggleTitleBar`) hides the toolbar too.
   Window, New Tab, Command Palette, Find, Sessions, Commands, Snippets, a
   Terminal submenu (splits, panes, broadcast, clipboard, Open Local Image), a
   View submenu (zoom, tab bar, title bar, Always on Top, full screen,
-  Developer Tools), Highlight Output and Highlight Rules, a Settings submenu
+  Developer Tools), Highlight Output and Highlight Rules, Preferences, a
+  Settings submenu
   (Back Up, Restore, Restore Windows at Startup, Reload Configuration),
   About and Quit. Accelerators shown are the configured keybinds.
+
+## Preferences
+
+**☰ → Preferences…**, the application menu, or `preferences` (`Cmd+,` on
+macOS, `Ctrl+Shift+X` on Linux and Windows) opens the Preferences dialog in
+the focused window. It is a graphical editor for `config.json` plus two
+Application Data switches.
+
+- Pages: **Appearance** (color scheme, font family with installed monospace
+  suggestions on Linux, size, line height, ligatures, background
+  transparency, blur, padding), **Terminal** (scrollback, macOS Option as
+  Alt, Highlight Output, Highlight Rules…), **Window and Tabs** (title bar,
+  tab bar and always-on-top for new windows, confirm close, Restore Windows
+  at Startup), **Shortcuts** (every keybind action) and **Advanced** (log
+  level).
+- Each change is saved when it is made. The renderer sends only a patch of
+  known settings with in-range values; main merges it into the current
+  `config.json` document, validates the result with the same loader a reload
+  uses (including installed fonts, accelerator syntax and conflicts), writes
+  it atomically and reloads, so every window applies it. A refused change is
+  not written: the dialog shows the field and reason and restores the saved
+  value. A `config.json` that is not JSON is never rewritten by a change;
+  Restore Defaults replaces it.
+- Keys the dialog does not manage (`windowsShell`) are kept. Keybinds equal
+  to the platform default are removed from `keybinds` rather than written.
+- **Color schemes:** OMXTerm's `omtheme` (the bundled default, selected by
+  removing `theme`) and 13 AshyTerm schemes. Choosing one writes
+  `themes/<id>.json` and points `theme.path` at it; if a different theme
+  already uses that file name it is kept and `themes/<id>.builtin.json` is
+  used instead. Other valid themes in `themes/` are offered by file name.
+- **Shortcut recorder:** activating a shortcut asks main to route every key
+  press of that window to the recorder instead of keybinds, menu shortcuts
+  or the terminal, until a combination is chosen, Escape cancels, focus
+  leaves, the dialog closes, or 30 seconds pass. Main still validates the
+  accelerator.
+- **Restore Defaults** asks for confirmation, copies the current file to
+  `config.json.bak`, and writes `{"version": 1}` plus unmanaged keys.
 
 ## Command palette
 

@@ -23,7 +23,7 @@ the advertised behavior works), **missing** (nothing user-visible yet).
 | Integrated file manager    | missing        | whole feature: local and SFTP browsing, transfers, remote editing          |
 | Command manager            | done           | pinned command toolbar, send to several terminals                          |
 | Optional AI assistant      | missing        | whole feature, opt-in, with providers and secret storage                   |
-| Deep customization         | partial        | graphical Preferences window, color schemes, shortcut editor               |
+| Deep customization         | partial        | custom scheme editor, cursor and scrolling options, header transparency    |
 | Backup and restore         | done           | (OMXTerm uses `.omxbackup`, scrypt + AES-256-GCM, instead of 7z)           |
 | Command-line usage         | partial        | `--new-window`, `--close-after-execute`, `--ssh …:/path`, single instance  |
 | Configuration files        | done           | (OMXTerm keeps its own layout; documented in `docs/configuration.md`)      |
@@ -36,7 +36,7 @@ the advertised behavior works), **missing** (nothing user-visible yet).
 | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | Header buttons: sessions, file manager, command manager, search, AI, temp-file cleanup, main menu, new tab       | **done** for sessions, commands, search, split, broadcast, new tab, main menu |
 | Main menu: theme selector (system/light/dark/terminal), font size − / + / reset                                  | **missing**: menu has zoom items, no inline controls; needs Preferences store |
-| Main menu items: New Window, Command Palette, Preferences, Colors, AI Assistant, Keyboard Shortcuts, About, Quit | **partial**: all present except Preferences, AI and Keyboard Shortcuts        |
+| Main menu items: New Window, Command Palette, Preferences, Colors, AI Assistant, Keyboard Shortcuts, About, Quit | **partial**: all present except AI Assistant (shortcuts live in Preferences)  |
 | Open-tabs dropdown at the end of the tab strip                                                                   | **missing**                                                                   |
 | Buttons mirrored when window controls are on the left (KDE)                                                      | **missing** (Linux custom title row always puts controls on the right)        |
 
@@ -111,14 +111,14 @@ without confirmation.
 
 | AshyTerm preference                                                           | OMXTerm                                                                           |
 | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Preferences window                                                            | **missing**: everything is in `config.json`                                       |
+| Preferences window                                                            | **done**: Appearance, Terminal, Window and Tabs, Shortcuts, Advanced              |
 | Fonts, line spacing                                                           | **done** in configuration, no GUI                                                 |
 | Terminal transparency; header bar transparency                                | **partial**: terminal transparency and blur; no separate header transparency      |
 | Cursor shape and blink                                                        | **partial**: from the theme only                                                  |
 | Scrollback, scroll sensitivity, kinetic scrolling, scroll on output/keystroke | **partial**: scrollback only                                                      |
-| Color schemes (15 built-in) and custom scheme editor                          | **missing**                                                                       |
+| Color schemes (13 built-in) and custom scheme editor                          | **partial**: the 13 AshyTerm schemes plus omtheme; no custom scheme editor        |
 | Tab appearance, icon theme                                                    | **missing**                                                                       |
-| Keyboard shortcut editor                                                      | **missing**: `keybinds` in configuration                                          |
+| Keyboard shortcut editor                                                      | **done**: shortcut recorder with conflict checks                                  |
 | Copy on select, risky-paste warning, OSC 52 toggle                            | **partial**: protected paste and OSC 52 write exist; no copy on select or toggles |
 | Encrypted backup of settings and sessions                                     | **done**                                                                          |
 
@@ -138,7 +138,8 @@ Each phase ships tests, documentation updates and a real-application check on
 Linux before the next phase starts.
 
 1. **Header toolbar and main menu** — done in `a353880`.
-2. **Preferences window** — a graphical editor over `config.json` with
+2. **Preferences window** — done (custom scheme editor and the main-menu
+   theme and font-size controls remain) — a graphical editor over `config.json` with
    validation, reset to defaults and live application: Appearance (color
    scheme, font, size, line height, transparency, padding), Terminal (cursor,
    scrollback, scrolling, copy on select, paste warning), Tabs and window

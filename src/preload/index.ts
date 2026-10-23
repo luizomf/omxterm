@@ -30,6 +30,7 @@ import { terminalIpc } from "../shared/terminal-ipc";
 import { isTerminalLaunchSpec } from "../shared/terminal-launch";
 import { createSessionsBridge } from "./sessions-bridge";
 import { createHighlightsBridge } from "./highlights-bridge";
+import { createPreferencesBridge } from "./preferences-bridge";
 import { createCommandsBridge } from "./commands-bridge";
 import { createBackupBridge } from "./backup-bridge";
 import { isWorkspacePlan, isWorkspaceSnapshot } from "../shared/workspace";
@@ -419,6 +420,7 @@ contextBridge.exposeInMainWorld(
     terminal: Object.freeze(terminal),
     sessions: Object.freeze(createSessionsBridge(ipcRenderer)),
     highlights: Object.freeze(createHighlightsBridge(ipcRenderer)),
+    preferences: Object.freeze(createPreferencesBridge(ipcRenderer)),
     commands: Object.freeze(createCommandsBridge(ipcRenderer)),
     backup: Object.freeze(createBackupBridge(ipcRenderer)),
   }),

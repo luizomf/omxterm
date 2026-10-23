@@ -940,3 +940,228 @@ body.tabs-visible #workspace-sidebar {
     transition: opacity 180ms ease-out;
   }
 }
+
+/* Preferences: a vertical page list beside the selected page. */
+.omx-modal.preferences-dialog {
+  width: min(820px, calc(100vw - 32px));
+  height: min(640px, calc(100vh - 48px));
+}
+
+.preferences-dialog .omx-modal-body {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.preferences-dialog .omx-modal-body > div {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.preferences-layout {
+  display: flex;
+  flex: 1;
+  gap: var(--omx-space-4);
+  min-height: 0;
+}
+
+.preferences-nav {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  width: 170px;
+}
+
+.preferences-nav button {
+  padding: var(--omx-space-2) var(--omx-space-3);
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: var(--omx-radius);
+}
+
+.preferences-nav button:hover {
+  background: var(--omx-surface-raised);
+}
+
+.preferences-nav button[aria-selected="true"] {
+  font-weight: 600;
+  background: var(--omx-surface-raised);
+  box-shadow: inset 3px 0 var(--omx-accent);
+}
+
+.preferences-nav button:focus-visible {
+  outline: var(--omx-focus-ring);
+  outline-offset: -2px;
+}
+
+.preferences-content {
+  flex: 1;
+  min-width: 0;
+  padding-right: var(--omx-space-2);
+  overflow-y: auto;
+}
+
+.preferences-page[hidden] {
+  display: none;
+}
+
+.preferences-heading {
+  margin: var(--omx-space-3) 0 var(--omx-space-1);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--omx-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.preferences-page > .preferences-heading:first-child {
+  margin-top: 0;
+}
+
+.preferences-schemes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--omx-space-2);
+}
+
+.preferences-scheme {
+  display: flex;
+  flex-direction: column;
+  gap: var(--omx-space-1);
+  padding: var(--omx-space-1);
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.preferences-scheme[aria-checked="true"] {
+  border-color: var(--omx-accent);
+  box-shadow: 0 0 0 1px var(--omx-accent);
+}
+
+.preferences-scheme:focus-visible {
+  outline: var(--omx-focus-ring);
+  outline-offset: 1px;
+}
+
+.preferences-scheme-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  font:
+    12px ui-monospace,
+    monospace;
+  border-radius: 4px;
+}
+
+.preferences-scheme-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.preferences-scheme-dots i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.preferences-scheme-name {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preferences-padding {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--omx-space-2);
+}
+
+.preferences-page input[type="range"] {
+  flex: 1;
+}
+
+.preferences-shortcuts {
+  display: flex;
+  flex-direction: column;
+}
+
+.preferences-shortcut {
+  display: grid;
+  grid-template-columns: 1fr minmax(150px, auto) 28px;
+  gap: var(--omx-space-2);
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--omx-border);
+}
+
+.preferences-accelerator {
+  padding: 3px var(--omx-space-2);
+  font:
+    12px ui-monospace,
+    monospace;
+  color: inherit;
+  cursor: pointer;
+  background: var(--omx-surface-raised);
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.preferences-accelerator.recording {
+  border-color: var(--omx-accent);
+  box-shadow: 0 0 0 1px var(--omx-accent);
+}
+
+.preferences-status {
+  min-height: 1.4em;
+  margin: var(--omx-space-2) 0 0;
+  font-size: 12px;
+  color: var(--omx-muted);
+}
+
+.preferences-status.error,
+.preferences-problem {
+  color: var(--omx-danger);
+}
+
+.preferences-problem {
+  margin: 0 0 var(--omx-space-2);
+}
+
+.preferences-problem[hidden] {
+  display: none;
+}
+
+@media (width <= 600px) {
+  .preferences-layout {
+    flex-direction: column;
+  }
+
+  .preferences-nav {
+    flex-direction: row;
+    width: auto;
+    overflow-x: auto;
+  }
+
+  .preferences-padding {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.preferences-page > .omx-button {
+  align-self: flex-start;
+}

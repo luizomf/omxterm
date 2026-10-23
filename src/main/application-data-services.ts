@@ -10,6 +10,8 @@ import type { OperationalEventLog } from "./operational-events";
 import { startSavedSessions } from "./saved-session-wiring";
 import type { IpcEvent } from "./terminal-ipc-types";
 import { createWorkspaceService } from "./workspace-service";
+import { startPreferences } from "./preferences-wiring";
+import type { PreferencesServiceOptions } from "./preferences-service";
 
 // Loads the Application Data documents (sessions, highlighting, commands),
 // serves their IPC to trusted windows, and backs them up and restores them
@@ -24,12 +26,18 @@ export async function startApplicationDataServices(options: {
   readonly isQuitting: () => boolean;
   // The highlighting or restore checkbox changed.
   readonly onMenuStateChange: () => void;
+  // config.json access for the Preferences dialog.
+  readonly configuration: Pick<
+    PreferencesServiceOptions,
+    "configurationPath" | "platform" | "validate" | "active"
+  >;
 }) {
   const {
     startupConnection,
     reloadConfiguration,
     isQuitting,
     onMenuStateChange,
+    configuration,
     ...shared
   } = options;
   const savedSessions = await startSavedSessions({
@@ -81,6 +89,30 @@ export async function startApplicationDataServices(options: {
     }
   });
 
+  const preferences = startPreferences({
+    ...shared,
+    ...configuration,
+    reload: async () => {
+      await reloadConfiguration();
+    },
+    extras: {
+      get: () => ({
+        restoreWindows: workspace.restoreEnabled(),
+        highlightOutput: highlightSettings.current().enabled,
+      }),
+      async setRestoreWindows(enabled) {
+        if (workspace.restoreEnabled() !== enabled)
+          await workspace.setRestore(enabled);
+        onMenuStateChange();
+      },
+      async setHighlightOutput(enabled) {
+        const current = highlightSettings.current();
+        if (current.enabled !== enabled)
+          await highlightSettings.save({ ...current, enabled });
+      },
+    },
+  });
+
   // Menu actions for these documents; a failed toggle restores the menu.
   const menuActions = (rebuildMenu: () => void) => ({
     toggleOutputHighlighting: () => {
@@ -97,6 +129,7 @@ export async function startApplicationDataServices(options: {
       if (window && !window.webContents.isDestroyed())
         window.webContents.send(highlightIpc.openEditor);
     },
+    openPreferences: preferences.open,
     toggleRestoreWorkspace: () => {
       void workspace
         .setRestore(!workspace.restoreEnabled())
@@ -107,5 +140,5 @@ export async function startApplicationDataServices(options: {
     outputHighlighting: highlightSettings.current().enabled,
     restoreWorkspace: workspace.restoreEnabled(),
   });
-  return { savedSessions, workspace, menuActions, menuState };
+  return { savedSessions, workspace, preferences, menuActions, menuState };
 }

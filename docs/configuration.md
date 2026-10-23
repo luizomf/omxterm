@@ -1,6 +1,8 @@
 # User configuration
 
 > [!TIP]
+> **Prefer a settings window?** Open **☰ → Preferences…** (`Ctrl+Shift+X` on Linux and Windows, `Cmd+,` on macOS). It edits the settings below, offers 14 built-in color schemes, records shortcuts with conflict checks, and applies every change to all windows at once. It writes the same `config.json` described here and keeps settings it does not manage, such as `windowsShell`.
+>
 > **Prefer visual editing?** [OMXTerm Studio](#edit-visually-with-omxterm-studio) lets you import, customize, and export your settings, themes, and shortcuts in the browser.
 
 OMXTerm works out of the box with its bundled font, theme, and default shortcuts. On your first launch, it creates three editable starter files:
@@ -278,6 +280,7 @@ Customize application shortcuts under `keybinds` using [Electron accelerator](ht
 | `toggleCommands`            | `Command+Shift+M`           | `Control+Shift+M`         |
 | `commandPalette`            | `Command+Shift+P`           | `Control+Shift+P`         |
 | `find`                      | `Command+F`                 | `Control+Shift+G`         |
+| `preferences`               | `Command+,`                 | `Control+Shift+X`         |
 
 Example overriding a single shortcut:
 

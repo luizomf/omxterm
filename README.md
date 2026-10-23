@@ -77,6 +77,9 @@ Omarchy screenshot are arranged by Hyprland.
 
 ### Workspace
 
+- **Header toolbar** in the title bar: Sessions, Commands, Find, Split Right,
+  Split Down and Broadcast before the title; New Tab and a **main menu**
+  (☰) with every action after it.
 - Tabs and multiple windows, with hideable title and tab bars, background
   transparency and blur, and always-on-top.
 - **Split panes:** split right or down (up to 16 panes per tab), move focus by
@@ -121,6 +124,13 @@ Omarchy screenshot are arranged by Hyprland.
 
 ### Settings and data
 
+- **Preferences window** (☰ → Preferences…, `Ctrl+Shift+X` / `Cmd+,`):
+  14 color schemes (OMXTerm's own plus AshyTerm's BigLinux, Solarized,
+  Monokai, Dracula, Nord, Tokyo Night, Catppuccin, Rosé Pine and more), font,
+  size, line height, ligatures, transparency, blur, padding, scrollback,
+  window and tab options, a shortcut recorder with conflict checks, and
+  Restore Defaults. Every change is validated, saved to `config.json` and
+  applied to all windows at once.
 - Plain-JSON configuration with hot reload, themes, and remappable shortcuts,
   or edit visually with [OMXTerm Studio](https://luizomf.github.io/omxterm-studio/).
 - **Back Up / Restore Settings:** one passphrase-encrypted `.omxbackup` file
@@ -243,16 +253,19 @@ OMXTerm starts your default shell (Zsh, Bash, Fish, PowerShell, …) in your
 home folder. Each tab and pane runs its own session. `Ctrl+C` interrupts the
 running command.
 
-On Linux and Windows, press and release **Alt** to open the application menu.
-On macOS, use the menu bar.
+The toolbar in the title bar opens the sidebars and splits panes, and the
+**☰** button opens the main menu with everything else, including
+**Preferences…**. On Linux and Windows, pressing and releasing **Alt** also
+opens the application menu; on macOS, use the menu bar.
 
 On first launch OMXTerm creates `config.json`, `snippets.json` and
 `themes/omtheme.json` in its [configuration folder](#configuration).
 
 ## Keyboard shortcuts
 
-Every shortcut can be changed under `keybinds` in `config.json` (the action
-names are in the first column), and the menus always show the active ones.
+Every shortcut can be changed in **Preferences → Shortcuts**, or under
+`keybinds` in `config.json` (the action names are in the second column), and
+the menus always show the active ones.
 
 | Action                  | `keybinds` name                      | macOS                        | Linux and Windows              |
 | ----------------------- | ------------------------------------ | ---------------------------- | ------------------------------ |
@@ -282,6 +295,7 @@ names are in the first column), and the menus always show the active ones.
 | Tab bar / title bar     | `toggleTabBar`, `toggleTitleBar`     | `Cmd+Shift+B`, `Cmd+Shift+D` | `Ctrl+Shift+B`, `Ctrl+Shift+D` |
 | Full screen             | `toggleFullScreen`                   | `Ctrl+Cmd+F`                 | `Ctrl+Shift+F`                 |
 | Reload configuration    | `reloadConfig`                       | `Cmd+Shift+,`                | `Ctrl+Shift+,`                 |
+| Preferences             | `preferences`                        | `Cmd+,`                      | `Ctrl+Shift+X`                 |
 
 Without a shortcut: **File → Open Local Image…**, **Back Up Settings…**,
 **Restore Settings…**; **View → Highlight Output**, **Highlight Rules…**,
@@ -316,16 +330,16 @@ OMXTerm reads its files from `$XDG_CONFIG_HOME/omxterm` (by default
 `~/.config/omxterm` on macOS and Linux, and `%USERPROFILE%\.config\omxterm` on
 Windows).
 
-| File               | Written by | Contents                                                     |
-| ------------------ | ---------- | ------------------------------------------------------------ |
-| `config.json`      | you        | Fonts, padding, scrollback, window options, theme, shortcuts |
-| `snippets.json`    | you        | Snippets for the Snippets sidebar                            |
-| `themes/*.json`    | you        | Terminal color themes                                        |
-| `sessions.json`    | OMXTerm    | Saved sessions and folders                                   |
-| `highlights.json`  | OMXTerm    | Output highlighting switches and rules                       |
-| `commands.json`    | OMXTerm    | Custom commands, favorites, hidden built-ins                 |
-| `workspace.json`   | OMXTerm    | Windows to restore at startup (only when enabled)            |
-| `credentials.json` | OMXTerm    | Encrypted secrets, protected by the system keychain          |
+| File               | Written by          | Contents                                                              |
+| ------------------ | ------------------- | --------------------------------------------------------------------- |
+| `config.json`      | you, or Preferences | Fonts, padding, scrollback, window options, theme, shortcuts          |
+| `snippets.json`    | you                 | Snippets for the Snippets sidebar                                     |
+| `themes/*.json`    | you, or Preferences | Terminal color themes (built-in schemes are written here when chosen) |
+| `sessions.json`    | OMXTerm             | Saved sessions and folders                                            |
+| `highlights.json`  | OMXTerm             | Output highlighting switches and rules                                |
+| `commands.json`    | OMXTerm             | Custom commands, favorites, hidden built-ins                          |
+| `workspace.json`   | OMXTerm             | Windows to restore at startup (only when enabled)                     |
+| `credentials.json` | OMXTerm             | Encrypted secrets, protected by the system keychain                   |
 
 Every `config.json` key is optional except `"version": 1`:
 

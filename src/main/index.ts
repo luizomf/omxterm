@@ -74,6 +74,7 @@ import { startWithUserConfiguration } from "./configured-startup";
 import { loadLocalImageForWindow } from "./local-image-loader";
 import type { OperationalEventLog } from "./operational-events";
 import { startApplicationDataServices } from "./application-data-services";
+import { preferencesConfiguration } from "./preferences-configuration";
 import { applicationMenuActions } from "./application-menu-actions";
 import { registerCommandPaletteActions } from "./command-palette-actions";
 import { registerMainMenu, terminalMainMenuTemplate } from "./main-menu";
@@ -148,6 +149,7 @@ app
         const {
           savedSessions,
           workspace,
+          preferences,
           menuActions: dataActions,
           menuState: dataMenuState,
         } = await startApplicationDataServices({
@@ -159,6 +161,10 @@ app
           reloadConfiguration: () => configurationReloader.reload(),
           isQuitting: () => terminalApplication?.isQuitting() ?? false,
           onMenuStateChange: () => rebuildMenu(),
+          configuration: preferencesConfiguration(
+            configurationLoadOptions,
+            () => configurationReloader.current(),
+          ),
         });
         let rebuildMenu = () => {};
         const nativeTitleInset = terminalNativeTitleInset(process.platform);
@@ -222,6 +228,7 @@ app
               () => configurationReloader.current().configuration.keybinds,
               (action) => keybindActionInvocations[action](),
               process.platform,
+              preferences.keyCapture(window.webContents),
             );
             guardTerminalWindowClose(window, terminalApplication!);
             const chrome = registerWindowChrome(window, ipcMain, {

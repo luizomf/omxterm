@@ -47,6 +47,7 @@ import type {
   HighlightsBridge,
   SessionsBridge,
   BackupBridge,
+  PreferencesBridge,
 } from "../shared/terminal-bridge";
 import {
   mountWorkspace,
@@ -131,6 +132,7 @@ export interface TerminalWindowPageOptions {
     readonly commands?: CommandsBridge;
     readonly backup?: BackupBridge;
     readonly highlights?: HighlightsBridge;
+    readonly preferences?: PreferencesBridge;
     readonly palette?: {
       readonly onToggle: (listener: () => void) => () => void;
       readonly runAction: (action: TerminalActionName) => void;
