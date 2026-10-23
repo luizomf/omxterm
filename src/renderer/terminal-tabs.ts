@@ -26,6 +26,7 @@ export { TERMINAL_TAB_DRAG_DATA_TYPE } from "./tab-strip";
 export type { PaneLaunch } from "./terminal-tab-model";
 export type {
   MountTerminalSurface,
+  PaneTarget,
   TerminalLaunchPlacement,
   TerminalTabs,
   TerminalTabsElements,
@@ -167,6 +168,23 @@ export function createTerminalTabs(
         label: tab.title ?? (tab.focused.label || String(index + 1)),
         selected: index === ctx.selectedIndex,
       }));
+    },
+    paneTargets() {
+      return ctx.tabs.flatMap((tab, index) =>
+        layoutPanes(tab.layout)
+          .filter((pane) => pane.surface && !pane.ended && !pane.removed)
+          .map((pane) => ({
+            tabLabel: tab.title ?? (tab.focused.label || String(index + 1)),
+            paneLabel: pane.label,
+            current: index === ctx.selectedIndex && pane === tab.focused,
+            run(command: string) {
+              if (pane.removed || pane.ended || !pane.surface) return false;
+              pane.highlighter?.injected(command, true);
+              void pane.surface.inject(command, { submit: true });
+              return true;
+            },
+          })),
+      );
     },
     selectTab(index) {
       if (index < 0 || index >= ctx.tabs.length) return;

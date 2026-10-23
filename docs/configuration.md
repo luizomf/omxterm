@@ -285,6 +285,19 @@ Customize application shortcuts under `keybinds` using [Electron accelerator](ht
 | `preferences`               | `Command+,`                 | `Control+Shift+X`         |
 | `toggleFiles`               | `Command+Shift+L`           | `Control+Shift+L`         |
 | `toggleAssistant`           | `Command+Shift+Y`           | `Control+Shift+Y`         |
+| `roundMore`                 | `Command+Alt+Shift+R`       | `Control+Alt+Shift+R`     |
+| `roundLess`                 | `Command+Alt+Shift+E`       | `Control+Alt+Shift+E`     |
+| `autoHideTitleBar`          | `Command+Alt+Shift+H`       | `Control+Alt+Shift+H`     |
+| `alwaysShowTitleBar`        | `Command+Alt+Shift+V`       | `Control+Alt+Shift+V`     |
+| `toggleAlwaysOnTop`         | `Command+Alt+Shift+T`       | `Control+Alt+Shift+T`     |
+| `toggleDevTools`            | `Command+Alt+Shift+I`       | `Control+Alt+Shift+I`     |
+| `openLocalImage`            | `Command+Alt+Shift+O`       | `Control+Alt+Shift+O`     |
+| `toggleHighlighting`        | `Command+Alt+Shift+C`       | `Control+Alt+Shift+C`     |
+| `highlightRules`            | `Command+Alt+Shift+G`       | `Control+Alt+Shift+G`     |
+| `backUpSettings`            | `Command+Alt+Shift+B`       | `Control+Alt+Shift+B`     |
+| `restoreSettings`           | `Command+Alt+Shift+U`       | `Control+Alt+Shift+U`     |
+| `toggleRestoreWindows`      | `Command+Alt+Shift+W`       | `Control+Alt+Shift+W`     |
+| `about`                     | `Command+Alt+Shift+A`       | `Control+Alt+Shift+A`     |
 
 Example overriding a single shortcut:
 

@@ -51,6 +51,7 @@ export interface TerminalApplicationMenuActions {
   readonly toggleSelectedAssistant?: () => void;
   readonly adjustCornerRadius?: (delta: number) => void;
   readonly setAutoHideTitleBar?: (enabled: boolean) => void;
+  readonly showAbout?: () => void;
 }
 
 export interface TerminalApplicationMenuState {
@@ -70,26 +71,37 @@ export function windowFrameMenuItems(
   },
   actions: TerminalApplicationMenuActions,
   state: TerminalApplicationMenuState,
+  keybinds: TerminalKeybinds,
 ): MenuItemConstructorOptions[] {
   const adjust = actions.adjustCornerRadius;
   const autoHide = actions.setAutoHideTitleBar;
   return [
     ...(adjust
       ? [
-          { label: labels.roundMore, click: () => adjust(2) },
-          { label: labels.roundLess, click: () => adjust(-2) },
+          {
+            label: labels.roundMore,
+            accelerator: keybinds.roundMore,
+            click: () => adjust(2),
+          },
+          {
+            label: labels.roundLess,
+            accelerator: keybinds.roundLess,
+            click: () => adjust(-2),
+          },
         ]
       : []),
     ...(autoHide
       ? [
           {
             label: labels.autoHide,
+            accelerator: keybinds.autoHideTitleBar,
             type: "radio" as const,
             checked: state.autoHideTitleBar === true,
             click: () => autoHide(true),
           },
           {
             label: labels.alwaysShow,
+            accelerator: keybinds.alwaysShowTitleBar,
             type: "radio" as const,
             checked: state.autoHideTitleBar !== true,
             click: () => autoHide(false),
@@ -99,6 +111,55 @@ export function windowFrameMenuItems(
   ];
 }
 
+// The application's own menu: About, Preferences, restore and Quit.
+function applicationSubmenu(
+  applicationName: string,
+  actions: TerminalApplicationMenuActions,
+  keybinds: TerminalKeybinds,
+  state: TerminalApplicationMenuState,
+): MenuItemConstructorOptions {
+  return {
+    label: applicationName,
+    submenu: [
+      actions.showAbout
+        ? {
+            label: `About ${applicationName}`,
+            accelerator: keybinds.about,
+            click: actions.showAbout,
+          }
+        : { role: "about" as const },
+      ...(actions.openPreferences
+        ? [
+            { type: "separator" as const },
+            {
+              label: "Preferences…",
+              accelerator: keybinds.preferences,
+              click: actions.openPreferences,
+            },
+          ]
+        : []),
+      ...(actions.toggleRestoreWorkspace
+        ? [
+            { type: "separator" as const },
+            {
+              label: "Restore Windows at Startup",
+              accelerator: keybinds.toggleRestoreWindows,
+              type: "checkbox" as const,
+              checked: state.restoreWorkspace ?? false,
+              click: actions.toggleRestoreWorkspace,
+            },
+          ]
+        : []),
+      { type: "separator" },
+      {
+        label: `Quit ${applicationName}`,
+        accelerator: keybinds.quit,
+        click: actions.requestQuit,
+      },
+    ],
+  };
+}
+
 export function terminalApplicationMenuTemplate(
   applicationName: string,
   actions: TerminalApplicationMenuActions,
@@ -106,39 +167,7 @@ export function terminalApplicationMenuTemplate(
   state: TerminalApplicationMenuState = {},
 ): MenuItemConstructorOptions[] {
   return [
-    {
-      label: applicationName,
-      submenu: [
-        { role: "about" },
-        ...(actions.openPreferences
-          ? [
-              { type: "separator" as const },
-              {
-                label: "Preferences…",
-                accelerator: keybinds.preferences,
-                click: actions.openPreferences,
-              },
-            ]
-          : []),
-        ...(actions.toggleRestoreWorkspace
-          ? [
-              { type: "separator" as const },
-              {
-                label: "Restore Windows at Startup",
-                type: "checkbox" as const,
-                checked: state.restoreWorkspace ?? false,
-                click: actions.toggleRestoreWorkspace,
-              },
-            ]
-          : []),
-        { type: "separator" },
-        {
-          label: `Quit ${applicationName}`,
-          accelerator: keybinds.quit,
-          click: actions.requestQuit,
-        },
-      ],
-    },
+    applicationSubmenu(applicationName, actions, keybinds, state),
     {
       label: "Edit",
       submenu: [
@@ -182,11 +211,20 @@ export function terminalApplicationMenuTemplate(
         { type: "separator" },
         {
           label: "Open Local Image…",
+          accelerator: keybinds.openLocalImage,
           click: actions.openLocalImage,
         },
         { type: "separator" },
-        { label: "Back Up Settings…", click: actions.backUpSettings },
-        { label: "Restore Settings…", click: actions.restoreSettings },
+        {
+          label: "Back Up Settings…",
+          accelerator: keybinds.backUpSettings,
+          click: actions.backUpSettings,
+        },
+        {
+          label: "Restore Settings…",
+          accelerator: keybinds.restoreSettings,
+          click: actions.restoreSettings,
+        },
         { type: "separator" },
         {
           label: "Close Tab",
@@ -261,6 +299,7 @@ export function terminalApplicationMenuTemplate(
           ? [
               {
                 label: "Highlight Output",
+                accelerator: keybinds.toggleHighlighting,
                 type: "checkbox" as const,
                 checked: state.outputHighlighting ?? false,
                 click: actions.toggleOutputHighlighting,
@@ -271,6 +310,7 @@ export function terminalApplicationMenuTemplate(
           ? [
               {
                 label: "Highlight Rules…",
+                accelerator: keybinds.highlightRules,
                 click: actions.openHighlightRules,
               },
             ]
@@ -294,6 +334,7 @@ export function terminalApplicationMenuTemplate(
           },
           actions,
           state,
+          keybinds,
         ),
         {
           label: "Reload User Configuration",
@@ -302,6 +343,7 @@ export function terminalApplicationMenuTemplate(
         },
         {
           label: "Toggle Developer Tools",
+          accelerator: keybinds.toggleDevTools,
           click: actions.toggleSelectedDevTools,
         },
         { type: "separator" },
@@ -319,6 +361,7 @@ export function terminalApplicationMenuTemplate(
         { role: "minimize" },
         {
           label: "Always on Top",
+          accelerator: keybinds.toggleAlwaysOnTop,
           click: actions.toggleSelectedAlwaysOnTop,
         },
         { type: "separator" },
@@ -414,63 +457,7 @@ function terminalMenu(
   };
 }
 
-// The keybind vocabulary keyed by action name, invoking the same application
-// actions as the menu items above. The main-process key-event delivery path
-// (see keybind-delivery.ts) calls these so a keybind works even when the
-// platform refuses to fire its registered menu accelerator, keeping the menu
-// the single behavior definition.
-export function terminalActionInvocations(
-  actions: TerminalApplicationMenuActions,
-): Readonly<Record<TerminalActionName, () => void>> {
-  return Object.freeze({
-    quit: actions.requestQuit,
-    copy: actions.copySelectedTerminal,
-    paste: actions.pasteSelectedTerminal,
-    selectAll: actions.selectAllSelectedTerminal,
-    newWindow: actions.newWindow,
-    closeWindow: actions.closeSelectedWindow,
-    newTab: actions.newTabInSelectedWindow,
-    closeTab: actions.closeSelectedTab,
-    nextTab: actions.selectNextTab,
-    previousTab: actions.selectPreviousTab,
-    ...(Object.fromEntries(
-      Array.from({ length: 9 }, (_, index) => {
-        const position = index + 1;
-        return [
-          `selectTab${position}`,
-          () => actions.selectTabInSelectedWindow(position),
-        ];
-      }),
-    ) as Record<SelectTabAction, () => void>),
-    zoomIn: actions.zoomInSelectedWindow,
-    zoomOut: actions.zoomOutSelectedWindow,
-    actualSize: actions.resetSelectedWindowZoom,
-    toggleFullScreen: actions.toggleSelectedFullScreen,
-    toggleSnippets: actions.toggleSelectedSnippets,
-    toggleTabBar: actions.toggleSelectedTabBar,
-    toggleTitleBar: actions.toggleSelectedTitleBar,
-    reloadConfig: actions.reloadUserConfiguration,
-    splitRight: () => actions.splitSelectedPane("right"),
-    splitDown: () => actions.splitSelectedPane("down"),
-    closePane: actions.closeSelectedPane,
-    focusNextPane: () => actions.focusPaneInSelectedWindow("next"),
-    focusPreviousPane: () => actions.focusPaneInSelectedWindow("previous"),
-    focusPaneLeft: () => actions.focusPaneInSelectedWindow("left"),
-    focusPaneRight: () => actions.focusPaneInSelectedWindow("right"),
-    focusPaneUp: () => actions.focusPaneInSelectedWindow("up"),
-    focusPaneDown: () => actions.focusPaneInSelectedWindow("down"),
-    toggleMaximizePane: actions.toggleSelectedPaneMaximized,
-    equalizePanes: actions.equalizeSelectedPanes,
-    toggleBroadcast: actions.toggleSelectedBroadcast,
-    toggleSessions: actions.toggleSelectedSessions,
-    toggleCommands: actions.toggleSelectedCommands,
-    commandPalette: actions.toggleSelectedCommandPalette,
-    find: actions.findInSelectedWindow,
-    preferences: actions.openPreferences ?? (() => {}),
-    toggleFiles: actions.toggleSelectedFiles ?? (() => {}),
-    toggleAssistant: actions.toggleSelectedAssistant ?? (() => {}),
-  });
-}
+export { terminalActionInvocations } from "./terminal-action-invocations";
 
 export function terminalClipboardContextMenuTemplate(
   actions: {

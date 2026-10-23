@@ -66,8 +66,8 @@ Names come from the pinned electron-builder (26.15.3) for
   normal 0755 file.
 - `homepage` was added to `package.json`: DEB/RPM require a project URL, which
   otherwise came from the local git remote (a fork's URL on a fork).
-- Maintainer field is `Luiz Otávio Miranda` without an e-mail address
-  (`package.json` has none). Debian policy expects one; the maintainer decides.
+- Maintainer field is `Rafael Ruscher <rruscher@gmail.com>`, matching the
+  `package.json` author, as Debian policy expects.
 
 ## Checksums
 

@@ -24,7 +24,19 @@ body {
 body {
   display: flex;
   flex-direction: column;
-  /* The default Terminal Theme tint has exactly one owner. */
+  /* A body background would propagate to the page canvas, which clip-path
+     (rounded corners) cannot clip, so the tint lives on body::before. */
+  background: transparent;
+  isolation: isolate;
+}
+
+/* The default Terminal Theme tint has exactly one owner. */
+body::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
   background: rgb(
     from var(--terminal-background, #000000) r g b /
       var(--terminal-background-opacity, 1)

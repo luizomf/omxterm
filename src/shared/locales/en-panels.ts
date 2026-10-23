@@ -169,4 +169,14 @@ export const englishPanelMessages = {
   "assistant.keySaved": "Key saved in the system keychain.",
   "assistant.keyRemoved": "Key removed.",
   "assistant.loading": "Contacting the provider…",
+  "about.version": "Version {version}",
+  "about.summary": "A terminal for macOS, Linux, and Windows.",
+  "about.authors": "Authors",
+  "about.website": "Website",
+  "about.license": "License",
+  "about.warrantyBefore":
+    "This application comes with absolutely no warranty. See the ",
+  "about.mitLicense": "MIT License",
+  "about.warrantyAfter": " for details.",
+  "about.reportIssue": "Report an Issue",
 } as const;

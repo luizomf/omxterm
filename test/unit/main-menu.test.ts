@@ -63,7 +63,11 @@ describe("header main menu", () => {
     expect(byLabel(template, "Restaurar Janelas ao Iniciar").checked).toBe(
       false,
     );
-    expect(byLabel(template, "Sobre o OMXTerm").role).toBe("about");
+    click("Sobre o OMXTerm");
+    expect(actions.showAbout).toHaveBeenCalledOnce();
+    expect(byLabel(template, "Sobre o OMXTerm").accelerator).toBe(
+      DEFAULT_TERMINAL_KEYBINDS.about,
+    );
     expect(byLabel(template, "Nova Aba").accelerator).toBe(
       DEFAULT_TERMINAL_KEYBINDS.newTab,
     );

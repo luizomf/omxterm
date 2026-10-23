@@ -53,6 +53,7 @@ import type {
   BackupBridge,
   PreferencesBridge,
   FilesBridge,
+  AboutBridge,
   AssistantBridge,
 } from "../shared/terminal-bridge";
 import {
@@ -145,6 +146,7 @@ export interface TerminalWindowPageOptions {
     readonly preferences?: PreferencesBridge;
     readonly files?: FilesBridge;
     readonly assistant?: AssistantBridge;
+    readonly about?: AboutBridge;
     readonly saveOutput?: {
       readonly onRequest: (listener: () => void) => () => void;
       readonly save: (text: string) => Promise<string | null>;

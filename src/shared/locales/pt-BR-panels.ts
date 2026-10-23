@@ -177,4 +177,14 @@ export const brazilianPortuguesePanelMessages: Pick<
   "assistant.keySaved": "Chave salva no chaveiro do sistema.",
   "assistant.keyRemoved": "Chave removida.",
   "assistant.loading": "Contatando o provedor…",
+  "about.version": "Versão {version}",
+  "about.summary": "Um terminal para macOS, Linux e Windows.",
+  "about.authors": "Autores",
+  "about.website": "Site",
+  "about.license": "Licença",
+  "about.warrantyBefore":
+    "Este aplicativo vem sem absolutamente nenhuma garantia. Consulte a ",
+  "about.mitLicense": "Licença MIT",
+  "about.warrantyAfter": " para mais detalhes.",
+  "about.reportIssue": "Relatar um Problema",
 };

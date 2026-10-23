@@ -9,6 +9,7 @@ import {
 } from "./highlighting/highlighting-controller";
 import { createSessionsPanel } from "./sessions/sessions-panel";
 import { createCommandsPanel } from "./commands/commands-panel";
+import { chooseTerminals } from "./commands/terminal-picker";
 import type { TerminalTabs, TerminalTabsOptions } from "./terminal-tabs";
 import type { TerminalWindowPageOptions } from "./terminal-window-host";
 import { createToaster, createWorkspaceSidebar } from "./workspace-sidebar";
@@ -24,6 +25,7 @@ import { createHeaderToolbar, type HeaderToolbar } from "./header-toolbar";
 import { showContextMenu } from "./ui/context-menu";
 import { createFilesPanel } from "./files/files-panel";
 import { createAssistantPanel } from "./assistant/assistant-panel";
+import { openAboutDialog } from "./about/about-dialog";
 import {
   createDirectoryTracker,
   type DirectoryTracker,
@@ -47,6 +49,18 @@ export function mountWorkspace(
 ): () => void {
   const document = workspace.element.ownerDocument;
   const toaster = createToaster(document);
+  async function runInTerminals(command: string) {
+    const chosen = await chooseTerminals(
+      document,
+      context.translator,
+      command,
+      context.tabs.paneTargets(),
+    );
+    if (!chosen || context.isBlocked()) return;
+    const count = chosen.filter((target) => target.run(command)).length;
+    toaster.notify(context.translator.t("commands.sentTo", { count }));
+    context.focusTerminal();
+  }
   function openPreferences(page?: MessageKey) {
     if (
       !workspace.preferences ||
@@ -97,8 +111,12 @@ export function mountWorkspace(
                   bridge: workspace.commands!,
                   chooseFile: workspace.sessions.chooseFile,
                   notify: toaster.notify,
-                  run: ({ text, submit }) => {
+                  run: ({ text, submit, multiple }) => {
                     if (context.isBlocked()) return;
+                    if (multiple) {
+                      void runInTerminals(text);
+                      return;
+                    }
                     context.tabs.injectSnippet(text, { submit });
                     context.focusTerminal();
                   },
@@ -215,6 +233,15 @@ export function mountWorkspace(
   const removeAssistantToggle = workspace.assistant?.onToggle(() => {
     if (!context.isBlocked()) sidebar.toggle("assistant");
   });
+  const removeAbout = workspace.about?.onOpen(() => {
+    if (context.isBlocked() || document.querySelector(".about-dialog")) return;
+    void openAboutDialog(
+      document,
+      context.translator,
+      workspace.about!,
+      toaster.notify,
+    ).catch((cause: unknown) => toaster.notify(String(cause)));
+  });
   const removeBackup = workspace.backup
     ? installBackupDialogs(document, {
         bridge: workspace.backup,
@@ -228,6 +255,7 @@ export function mountWorkspace(
     removeHighlightEditor?.();
     removePreferences?.();
     removeAssistantToggle?.();
+    removeAbout?.();
     removeSaveOutput?.();
     removePaletteToggle?.();
     palette?.dispose();

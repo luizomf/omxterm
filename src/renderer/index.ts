@@ -110,6 +110,7 @@ void Promise.all([
         preferences: window.omxterm.preferences,
         files: window.omxterm.files,
         assistant: window.omxterm.assistant,
+        about: window.omxterm.about,
         saveOutput: {
           onRequest: window.omxterm.terminal.onSaveOutputRequest,
           save: window.omxterm.terminal.saveOutput,

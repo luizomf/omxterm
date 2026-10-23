@@ -1626,3 +1626,82 @@ body.tabs-visible #workspace-sidebar {
   background: #3ddc84;
   border-radius: 999px;
 }
+
+.omx-modal.about-dialog {
+  width: min(420px, calc(100vw - 32px));
+}
+
+.about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--omx-space-1);
+  text-align: center;
+}
+
+.about p,
+.about h3,
+.about ul {
+  margin: 0;
+}
+
+.about h3 {
+  margin-top: var(--omx-space-2);
+  font-size: 0.95em;
+}
+
+.about-icon svg {
+  width: 72px;
+  height: 72px;
+}
+
+.about-name {
+  font-size: 1.4em;
+  font-weight: 700;
+}
+
+.about-version,
+.about-warranty {
+  color: var(--omx-muted);
+}
+
+.about-authors {
+  padding: 0;
+  list-style: none;
+}
+
+.about-link {
+  padding: 0;
+  font: inherit;
+  color: var(--omx-accent);
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+.omx-modal.terminal-picker-dialog {
+  width: min(480px, calc(100vw - 32px));
+}
+
+.terminal-picker-command {
+  display: block;
+  padding: var(--omx-space-1) var(--omx-space-2);
+  overflow-x: auto;
+  white-space: pre;
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.terminal-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--omx-space-1);
+  max-height: 280px;
+  padding-left: var(--omx-space-3);
+  overflow-y: auto;
+}
+
+.terminal-picker-list .current {
+  font-weight: 600;
+}

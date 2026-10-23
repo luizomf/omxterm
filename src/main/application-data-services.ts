@@ -16,6 +16,7 @@ import { startFileBrowser } from "./file-browser-wiring";
 import { startOutputFiles } from "./output-file-wiring";
 import { startRemoteFiles } from "./remote-files-wiring";
 import { startAssistant } from "./assistant-wiring";
+import { startAbout } from "./about-wiring";
 import { MAX_WINDOW_CORNER_RADIUS } from "../shared/user-configuration";
 import type { TerminalIpcRouter } from "./terminal-ipc-types";
 import type { PreferencesServiceOptions } from "./preferences-service";
@@ -71,6 +72,7 @@ export async function startApplicationDataServices(options: {
   const commandLibrary = await startCommandLibrary(shared);
   startFileBrowser(shared);
   startOutputFiles(shared);
+  const about = startAbout(shared);
   const backup = startSettingsBackup({
     ipcMain: options.ipcMain,
     isTrustedSender: options.isTrustedSender,
@@ -158,6 +160,7 @@ export async function startApplicationDataServices(options: {
     openPreferences: preferences.open,
     toggleSelectedFiles: () => sendToFocused(fileBrowserIpc.toggle),
     toggleSelectedAssistant: assistant.toggle,
+    showAbout: about.show,
     adjustCornerRadius(delta: number) {
       const current = configuration.active().configuration.cornerRadius;
       const next = Math.max(

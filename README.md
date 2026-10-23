@@ -149,6 +149,8 @@ Omarchy screenshot are arranged by Hyprland.
   (files, archives, processes, services, packages, network, SSH, Git,
   Docker), plus your own templates.
   - Every command is previewed before it is inserted or run.
+  - **Run in Multiple Terminals…** lists every terminal of the window, all
+    checked; uncheck the ones to skip and the same command runs in the rest.
   - Programs that are not installed are flagged.
 - **Snippets:** reusable text from `snippets.json`, inserted or run from a
   sidebar.
@@ -322,43 +324,49 @@ Every shortcut can be changed in **Preferences → Shortcuts**, or under
 `keybinds` in `config.json` (the action names are in the second column), and
 the menus always show the active ones.
 
-| Action                  | `keybinds` name                      | macOS                        | Linux and Windows              |
-| ----------------------- | ------------------------------------ | ---------------------------- | ------------------------------ |
-| New window              | `newWindow`                          | `Cmd+N`                      | `Ctrl+Shift+N`                 |
-| New tab                 | `newTab`                             | `Cmd+T`                      | `Ctrl+Shift+T`                 |
-| Close tab               | `closeTab`                           | `Cmd+W`                      | `Ctrl+Shift+W`                 |
-| Close window            | `closeWindow`                        | `Cmd+Shift+W`                | `Ctrl+Shift+Q`                 |
-| Quit                    | `quit`                               | `Cmd+Q`                      | `Ctrl+Alt+Shift+Q`             |
-| Next / previous tab     | `nextTab`, `previousTab`             | `Ctrl+Tab`, `Ctrl+Shift+Tab` | `Ctrl+PageDown`, `Ctrl+PageUp` |
-| Tab 1 … 9               | `selectTab1` … `selectTab9`          | `Cmd+1` … `Cmd+9`            | `Alt+1` … `Alt+9`              |
-| Copy / paste            | `copy`, `paste`                      | `Cmd+C`, `Cmd+V`             | `Ctrl+Shift+C`, `Ctrl+Shift+V` |
-| Select all              | `selectAll`                          | `Cmd+A`                      | `Ctrl+Shift+A`                 |
-| Find in terminal        | `find`                               | `Cmd+F`                      | `Ctrl+Shift+G`                 |
-| Command palette         | `commandPalette`                     | `Cmd+Shift+P`                | `Ctrl+Shift+P`                 |
-| Zoom in / out / reset   | `zoomIn`, `zoomOut`, `actualSize`    | `Cmd++`, `Cmd+-`, `Cmd+0`    | `Ctrl++`, `Ctrl+-`, `Ctrl+0`   |
-| Split right             | `splitRight`                         | `Cmd+D`                      | `Ctrl+Shift+O`                 |
-| Split down              | `splitDown`                          | `Cmd+Shift+E`                | `Ctrl+Shift+E`                 |
-| Close pane              | `closePane`                          | `Cmd+Alt+W`                  | `Ctrl+Shift+K`                 |
-| Next / previous pane    | `focusNextPane`, `focusPreviousPane` | `Cmd+]`, `Cmd+[`             | `Ctrl+Shift+]`, `Ctrl+Shift+[` |
-| Pane left/right/up/down | `focusPaneLeft` … `focusPaneDown`    | `Cmd+Alt+Arrow`              | `Alt+Shift+Arrow`              |
-| Maximize / restore pane | `toggleMaximizePane`                 | `Cmd+Shift+Enter`            | `Ctrl+Shift+Z`                 |
-| Equalize panes          | `equalizePanes`                      | `Cmd+Alt+0`                  | `Ctrl+Shift+0`                 |
-| Broadcast input         | `toggleBroadcast`                    | `Cmd+Alt+I`                  | `Ctrl+Shift+I`                 |
-| Sessions sidebar        | `toggleSessions`                     | `Cmd+Shift+J`                | `Ctrl+Shift+H`                 |
-| Commands sidebar        | `toggleCommands`                     | `Cmd+Shift+M`                | `Ctrl+Shift+M`                 |
-| Snippets sidebar        | `toggleSnippets`                     | `Cmd+Shift+S`                | `Ctrl+Shift+S`                 |
-| Tab bar / title bar     | `toggleTabBar`, `toggleTitleBar`     | `Cmd+Shift+B`, `Cmd+Shift+D` | `Ctrl+Shift+B`, `Ctrl+Shift+D` |
-| Full screen             | `toggleFullScreen`                   | `Ctrl+Cmd+F`                 | `Ctrl+Shift+F`                 |
-| Reload configuration    | `reloadConfig`                       | `Cmd+Shift+,`                | `Ctrl+Shift+,`                 |
-| Preferences             | `preferences`                        | `Cmd+,`                      | `Ctrl+Shift+X`                 |
-| Files sidebar           | `toggleFiles`                        | `Cmd+Shift+L`                | `Ctrl+Shift+L`                 |
-| Assistant sidebar       | `toggleAssistant`                    | `Cmd+Shift+Y`                | `Ctrl+Shift+Y`                 |
+| Action                     | `keybinds` name                          | macOS                        | Linux and Windows              |
+| -------------------------- | ---------------------------------------- | ---------------------------- | ------------------------------ |
+| New window                 | `newWindow`                              | `Cmd+N`                      | `Ctrl+Shift+N`                 |
+| New tab                    | `newTab`                                 | `Cmd+T`                      | `Ctrl+Shift+T`                 |
+| Close tab                  | `closeTab`                               | `Cmd+W`                      | `Ctrl+Shift+W`                 |
+| Close window               | `closeWindow`                            | `Cmd+Shift+W`                | `Ctrl+Shift+Q`                 |
+| Quit                       | `quit`                                   | `Cmd+Q`                      | `Ctrl+Alt+Shift+Q`             |
+| Next / previous tab        | `nextTab`, `previousTab`                 | `Ctrl+Tab`, `Ctrl+Shift+Tab` | `Ctrl+PageDown`, `Ctrl+PageUp` |
+| Tab 1 … 9                  | `selectTab1` … `selectTab9`              | `Cmd+1` … `Cmd+9`            | `Alt+1` … `Alt+9`              |
+| Copy / paste               | `copy`, `paste`                          | `Cmd+C`, `Cmd+V`             | `Ctrl+Shift+C`, `Ctrl+Shift+V` |
+| Select all                 | `selectAll`                              | `Cmd+A`                      | `Ctrl+Shift+A`                 |
+| Find in terminal           | `find`                                   | `Cmd+F`                      | `Ctrl+Shift+G`                 |
+| Command palette            | `commandPalette`                         | `Cmd+Shift+P`                | `Ctrl+Shift+P`                 |
+| Zoom in / out / reset      | `zoomIn`, `zoomOut`, `actualSize`        | `Cmd++`, `Cmd+-`, `Cmd+0`    | `Ctrl++`, `Ctrl+-`, `Ctrl+0`   |
+| Split right                | `splitRight`                             | `Cmd+D`                      | `Ctrl+Shift+O`                 |
+| Split down                 | `splitDown`                              | `Cmd+Shift+E`                | `Ctrl+Shift+E`                 |
+| Close pane                 | `closePane`                              | `Cmd+Alt+W`                  | `Ctrl+Shift+K`                 |
+| Next / previous pane       | `focusNextPane`, `focusPreviousPane`     | `Cmd+]`, `Cmd+[`             | `Ctrl+Shift+]`, `Ctrl+Shift+[` |
+| Pane left/right/up/down    | `focusPaneLeft` … `focusPaneDown`        | `Cmd+Alt+Arrow`              | `Alt+Shift+Arrow`              |
+| Maximize / restore pane    | `toggleMaximizePane`                     | `Cmd+Shift+Enter`            | `Ctrl+Shift+Z`                 |
+| Equalize panes             | `equalizePanes`                          | `Cmd+Alt+0`                  | `Ctrl+Shift+0`                 |
+| Broadcast input            | `toggleBroadcast`                        | `Cmd+Alt+I`                  | `Ctrl+Shift+I`                 |
+| Sessions sidebar           | `toggleSessions`                         | `Cmd+Shift+J`                | `Ctrl+Shift+H`                 |
+| Commands sidebar           | `toggleCommands`                         | `Cmd+Shift+M`                | `Ctrl+Shift+M`                 |
+| Snippets sidebar           | `toggleSnippets`                         | `Cmd+Shift+S`                | `Ctrl+Shift+S`                 |
+| Tab bar / title bar        | `toggleTabBar`, `toggleTitleBar`         | `Cmd+Shift+B`, `Cmd+Shift+D` | `Ctrl+Shift+B`, `Ctrl+Shift+D` |
+| Full screen                | `toggleFullScreen`                       | `Ctrl+Cmd+F`                 | `Ctrl+Shift+F`                 |
+| Reload configuration       | `reloadConfig`                           | `Cmd+Shift+,`                | `Ctrl+Shift+,`                 |
+| Preferences                | `preferences`                            | `Cmd+,`                      | `Ctrl+Shift+X`                 |
+| Files sidebar              | `toggleFiles`                            | `Cmd+Shift+L`                | `Ctrl+Shift+L`                 |
+| Assistant sidebar          | `toggleAssistant`                        | `Cmd+Shift+Y`                | `Ctrl+Shift+Y`                 |
+| Rounder / less rounded     | `roundMore`, `roundLess`                 | `Cmd+Alt+Shift+R`, `…+E`     | `Ctrl+Alt+Shift+R`, `…+E`      |
+| Auto-hide / show title     | `autoHideTitleBar`, `alwaysShowTitleBar` | `Cmd+Alt+Shift+H`, `…+V`     | `Ctrl+Alt+Shift+H`, `…+V`      |
+| Always on top              | `toggleAlwaysOnTop`                      | `Cmd+Alt+Shift+T`            | `Ctrl+Alt+Shift+T`             |
+| Developer tools            | `toggleDevTools`                         | `Cmd+Alt+Shift+I`            | `Ctrl+Alt+Shift+I`             |
+| Open local image           | `openLocalImage`                         | `Cmd+Alt+Shift+O`            | `Ctrl+Alt+Shift+O`             |
+| Highlight output / rules   | `toggleHighlighting`, `highlightRules`   | `Cmd+Alt+Shift+C`, `…+G`     | `Ctrl+Alt+Shift+C`, `…+G`      |
+| Back up / restore          | `backUpSettings`, `restoreSettings`      | `Cmd+Alt+Shift+B`, `…+U`     | `Ctrl+Alt+Shift+B`, `…+U`      |
+| Restore windows at startup | `toggleRestoreWindows`                   | `Cmd+Alt+Shift+W`            | `Ctrl+Alt+Shift+W`             |
+| About OMXTerm              | `about`                                  | `Cmd+Alt+Shift+A`            | `Ctrl+Alt+Shift+A`             |
 
-Without a shortcut: **File → Open Local Image…**, **Back Up Settings…**,
-**Restore Settings…**; **View → Highlight Output**, **Highlight Rules…**,
-**Toggle Developer Tools**; **Window → Always on Top**; and **Restore Windows
-at Startup** in the application menu. Right-click a tab (or `Shift+F10`) for
-its menu.
+Every menu item has a shortcut. Right-click a tab (or `Shift+F10`) for its
+menu.
 
 ## Command line
 

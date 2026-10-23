@@ -1,3 +1,4 @@
+import type { AboutInfo, AboutLink } from "./about";
 import type {
   AssistantEvent,
   AssistantMessage,
@@ -266,6 +267,13 @@ export interface BackupBridge {
   onRequest(listener: (kind: BackupRequest) => void): () => void;
 }
 
+// The About dialog: application facts and main's own fixed links.
+export interface AboutBridge {
+  info(): Promise<AboutInfo>;
+  openLink(link: AboutLink): Promise<void>;
+  onOpen(listener: () => void): () => void;
+}
+
 declare global {
   interface Window {
     readonly omxterm: {
@@ -277,6 +285,7 @@ declare global {
       readonly assistant: AssistantBridge;
       readonly commands: CommandsBridge;
       readonly backup: BackupBridge;
+      readonly about: AboutBridge;
     };
   }
 }

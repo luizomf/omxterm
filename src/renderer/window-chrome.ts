@@ -98,7 +98,12 @@ export function mountWindowChrome(
       current !== undefined &&
       state.titleBarVisible !== current.titleBarVisible;
     current = state;
-    const visible = state.titleBarVisible && !state.fullScreen;
+    // An auto-hiding bar stays available in full screen, where it is the
+    // only way to reach the toolbar with the pointer.
+    const autoHide =
+      document.documentElement.hasAttribute("data-title-bar-autohide") &&
+      state.style === "custom";
+    const visible = state.titleBarVisible && (!state.fullScreen || autoHide);
     document.documentElement.style.setProperty(
       "--native-title-inset",
       visible && state.style === "native" ? "30px" : "0px",
@@ -133,7 +138,9 @@ export function mountWindowChrome(
       !state.handleVisible;
     if (toggled && !previewActive) focusTerminal();
   };
-  const autoHide = installAutoHide(document, row);
+  const autoHide = installAutoHide(document, row, () => {
+    if (current) render(current);
+  });
   const removeState = bridge.onWindowChrome(render);
   const removeToggle = bridge.onTitleBarToggle(() => {
     if (!disposed && !previewActive) bridge.windowChrome("toggle-title-bar");
@@ -161,11 +168,25 @@ export function mountWindowChrome(
   };
 }
 
-// With data-title-bar-autohide on the root, the custom title bar overlays the
-// page: the pointer at the top edge (or focus inside it) slides it in, and it
-// slides out a moment after the pointer leaves. The terminal keeps its size.
-function installAutoHide(document: Document, row: HTMLElement): () => void {
+// With data-title-bar-autohide on the root, the custom title bar collapses to
+// nothing: the pointer at the top edge (or focus inside it) opens it, pushing
+// the tabs and terminal down, and it closes a moment after the pointer
+// leaves.
+function installAutoHide(
+  document: Document,
+  row: HTMLElement,
+  changed: () => void,
+): () => void {
   const view = document.defaultView;
+  // Turning the setting on or off re-renders (full screen depends on it).
+  const observer = new MutationObserver(() => {
+    if (!enabled()) row.classList.remove("revealed");
+    changed();
+  });
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-title-bar-autohide"],
+  });
   let timer: number | undefined;
   const enabled = () =>
     document.documentElement.hasAttribute("data-title-bar-autohide");
@@ -195,5 +216,6 @@ function installAutoHide(document: Document, row: HTMLElement): () => void {
   return () => {
     if (timer !== undefined) view?.clearTimeout(timer);
     document.removeEventListener("mousemove", onMove);
+    observer.disconnect();
   };
 }

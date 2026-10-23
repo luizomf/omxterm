@@ -121,10 +121,11 @@ export function terminalMainMenuTemplate(
           },
           actions,
           state,
+          keybinds,
         ),
       ],
     },
-    ...highlightItems(t, actions, state),
+    ...highlightItems(t, actions, state, keybinds),
     { type: "separator" },
     ...(actions.openPreferences
       ? [
@@ -140,7 +141,13 @@ export function terminalMainMenuTemplate(
       submenu: settingsSubmenu(t, actions, keybinds, state),
     },
     { type: "separator" },
-    { role: "about", label: t("menu.about") },
+    actions.showAbout
+      ? {
+          label: t("menu.about"),
+          accelerator: keybinds.about,
+          click: actions.showAbout,
+        }
+      : { role: "about", label: t("menu.about") },
     {
       label: t("action.quit"),
       accelerator: keybinds.quit,
@@ -205,7 +212,11 @@ function terminalSubmenu(
       click: actions.selectAllSelectedTerminal,
     },
     { type: "separator" },
-    { label: t("menu.openLocalImage"), click: actions.openLocalImage },
+    {
+      label: t("menu.openLocalImage"),
+      accelerator: keybinds.openLocalImage,
+      click: actions.openLocalImage,
+    },
   ];
 }
 
@@ -241,14 +252,22 @@ function viewSubmenu(
       accelerator: keybinds.toggleTitleBar,
       click: actions.toggleSelectedTitleBar,
     },
-    { label: t("menu.alwaysOnTop"), click: actions.toggleSelectedAlwaysOnTop },
+    {
+      label: t("menu.alwaysOnTop"),
+      accelerator: keybinds.toggleAlwaysOnTop,
+      click: actions.toggleSelectedAlwaysOnTop,
+    },
     {
       label: t("action.toggleFullScreen"),
       accelerator: keybinds.toggleFullScreen,
       click: actions.toggleSelectedFullScreen,
     },
     { type: "separator" },
-    { label: t("menu.developerTools"), click: actions.toggleSelectedDevTools },
+    {
+      label: t("menu.developerTools"),
+      accelerator: keybinds.toggleDevTools,
+      click: actions.toggleSelectedDevTools,
+    },
   ];
 }
 
@@ -256,12 +275,14 @@ function highlightItems(
   t: Translate,
   actions: TerminalApplicationMenuActions,
   state: TerminalApplicationMenuState,
+  keybinds: TerminalKeybinds,
 ): MenuItemConstructorOptions[] {
   return [
     ...(actions.toggleOutputHighlighting
       ? [
           {
             label: t("menu.highlightOutput"),
+            accelerator: keybinds.toggleHighlighting,
             type: "checkbox" as const,
             checked: state.outputHighlighting ?? false,
             click: actions.toggleOutputHighlighting,
@@ -269,7 +290,13 @@ function highlightItems(
         ]
       : []),
     ...(actions.openHighlightRules
-      ? [{ label: t("menu.highlightRules"), click: actions.openHighlightRules }]
+      ? [
+          {
+            label: t("menu.highlightRules"),
+            accelerator: keybinds.highlightRules,
+            click: actions.openHighlightRules,
+          },
+        ]
       : []),
   ];
 }
@@ -281,13 +308,22 @@ function settingsSubmenu(
   state: TerminalApplicationMenuState,
 ): MenuItemConstructorOptions[] {
   return [
-    { label: t("menu.backUpSettings"), click: actions.backUpSettings },
-    { label: t("menu.restoreSettings"), click: actions.restoreSettings },
+    {
+      label: t("menu.backUpSettings"),
+      accelerator: keybinds.backUpSettings,
+      click: actions.backUpSettings,
+    },
+    {
+      label: t("menu.restoreSettings"),
+      accelerator: keybinds.restoreSettings,
+      click: actions.restoreSettings,
+    },
     ...(actions.toggleRestoreWorkspace
       ? [
           { type: "separator" as const },
           {
             label: t("menu.restoreWindows"),
+            accelerator: keybinds.toggleRestoreWindows,
             type: "checkbox" as const,
             checked: state.restoreWorkspace ?? false,
             click: actions.toggleRestoreWorkspace,

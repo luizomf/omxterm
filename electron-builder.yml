@@ -1,6 +1,6 @@
 appId: com.otaviomiranda.omxterm
 productName: OMXTerm
-copyright: Copyright © 2026 Luiz Otávio Miranda
+copyright: Copyleft 🄯 2026 Rafael Ruscher
 asar:
   smartUnpack: false
 npmRebuild: false
@@ -153,7 +153,7 @@ win:
 # maintainer scripts replace the packager defaults that would make
 # chrome-sandbox setuid root or install an AppArmor user-namespace profile.
 deb:
-  maintainer: Luiz Otávio Miranda
+  maintainer: Rafael Ruscher <rruscher@gmail.com>
   packageCategory: x11
   synopsis: Open-source personal desktop terminal
   description: Open-source personal desktop terminal
@@ -179,7 +179,7 @@ deb:
   fpm:
     - packaging/linux/omxterm=/usr/bin/omxterm
 rpm:
-  maintainer: Luiz Otávio Miranda
+  maintainer: Rafael Ruscher <rruscher@gmail.com>
   synopsis: Open-source personal desktop terminal
   description: Open-source personal desktop terminal
   category: Utility;TerminalEmulator

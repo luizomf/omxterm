@@ -296,11 +296,14 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   and configured padding, not the native popup.
 - `Window -> Always on Top` toggles only the selected window at the ordinary
   native floating level. New windows use the configured default.
-- On Linux and Windows, the existing native About action shows `OMXTerm`, the
-  running application version, project copyright, and the OMXTerm application
-  icon. Packaged applications use their packaged icon resource; development uses
-  the development asset. Native dialog layout and window captions remain
-  platform-owned; macOS retains its bundle-provided About metadata.
+- **About OMXTerm** (application menu and ☰ menu, `about`) opens an in-window
+  dialog with the application icon, name, running version, website, authors,
+  the copyleft notice (`Copyleft 🄯`), the statement that the application comes
+  with absolutely no warranty with a link to the MIT License, and **Report an
+  Issue**. Main supplies the facts and opens only its own fixed links (website,
+  issue tracker, MIT License); the renderer names a link, never an address.
+  The native About panel metadata (Linux and Windows) carries the same
+  copyleft and authors.
 - `View -> Toggle Developer Tools` is a menu-only diagnostic action for the
   selected Terminal Window in development and packaged applications. It opens or
   closes Electron's local Developer Tools without enabling remote debugging;
@@ -483,6 +486,11 @@ are typed into the focused pane on request.
 - A form always shows the exact command before **Insert in Terminal** (no
   Enter) or **Run in Terminal** (with Enter). Commands without fields marked
   for direct execution run on click.
+- **Run in Multiple Terminals…** (form button and command menu) opens a list of
+  every live pane in the window's tabs, all checked, with **Select All**; the
+  exact command is shown again, and **Run** types and submits it into each
+  checked pane. Panes that closed meanwhile are skipped; a notice says how
+  many received it.
 - Custom commands, favorites and hidden built-ins are kept in Application
   Data (`commands.json`) and validated in main. Built-in names and labels are
   localized; command text and option values never are.
@@ -1410,15 +1418,18 @@ Application Data switches.
 
 - `window.cornerRadius` (0–24 CSS px, default 0) rounds the window corners
   on Linux and Windows' custom title bar windows by clipping the transparent
-  page (`clip-path`, which also clips canvases and overlays). Maximized and
-  full-screen windows keep square corners. **View → Rounder Corners / Less
+  page (`clip-path`, which also clips canvases and overlays). The theme tint
+  is painted by a layer of the body rather than the body background, which
+  would spread to the unclipped page canvas. Maximized and full-screen windows
+  keep square corners. **View → Rounder Corners / Less
   Rounded Corners** (also in ☰ → View) change it by 2 px and save it to
   `config.json`; Preferences → Appearance edits it directly.
-- `window.autoHideTitleBar` (default off) turns the custom title bar into an
-  overlay hidden above the window: moving the pointer to the top 12 px (the
-  outermost pixels are the resize border), or focus entering the bar, slides
-  it down; it slides away 2 seconds after the pointer leaves and focus is
-  elsewhere. The terminal keeps its full height, so nothing is resized.
+- `window.autoHideTitleBar` (default off) collapses the custom title bar to
+  zero height: moving the pointer to the top 12 px (the outermost pixels are
+  the resize border), or focus entering the bar, opens it; it closes 2
+  seconds after the pointer leaves and focus is elsewhere. The open bar never
+  covers the tabs: it takes its row and pushes the tab bar and terminal down.
+  It also works in full screen, where the title bar is otherwise hidden.
   While hidden, the bar keeps no drag region. **View → Auto-Hide Title Bar /
   Always Show Title Bar** choose between the two; motion is dropped under
   reduced-motion preferences.

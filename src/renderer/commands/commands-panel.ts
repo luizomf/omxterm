@@ -20,6 +20,9 @@ import {
 import { editCommand } from "./command-editor";
 import { openCommandForm, type CommandRun } from "./command-form";
 
+// How a menu item runs a command, overriding the form's own buttons.
+type CommandDirect = "insert" | "run" | "multiple";
+
 export interface CommandsPanelOptions {
   readonly translator: Translator;
   readonly bridge: CommandsBridge;
@@ -101,7 +104,7 @@ export function createCommandsPanel(
 
   // One form at a time: a second click while a form is open does nothing.
   let formOpen = false;
-  const open = async (entry: CatalogEntry, direct?: "insert" | "run") => {
+  const open = async (entry: CatalogEntry, direct?: CommandDirect) => {
     if (formOpen) return;
     formOpen = true;
     const result = await openCommandForm(
@@ -117,7 +120,15 @@ export function createCommandsPanel(
       formOpen = false;
     });
     if (result)
-      options.run(direct ? { ...result, submit: direct === "run" } : result);
+      options.run(
+        direct
+          ? {
+              text: result.text,
+              submit: direct !== "insert",
+              ...(direct === "multiple" ? { multiple: true } : {}),
+            }
+          : result,
+      );
   };
 
   const menu = (entry: CatalogEntry, position: { x: number; y: number }) => {
@@ -131,6 +142,10 @@ export function createCommandsPanel(
     const items: ContextMenuItem[] = [
       { label: t("commands.insert"), action: () => void open(entry, "insert") },
       { label: t("commands.run"), action: () => void open(entry, "run") },
+      {
+        label: t("commands.runMultiple"),
+        action: () => void open(entry, "multiple"),
+      },
       { separator: true },
       {
         label: entry.favorite
@@ -260,7 +275,7 @@ function commandRow(
   t: Translator["t"],
   entry: CatalogEntry,
   actions: {
-    readonly open: (direct?: "insert" | "run") => void;
+    readonly open: (direct?: CommandDirect) => void;
     readonly menu: (position: { x: number; y: number }) => void;
   },
 ): HTMLElement {

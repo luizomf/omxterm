@@ -22,6 +22,8 @@ import { openModal } from "../ui/modal";
 export interface CommandRun {
   readonly text: string;
   readonly submit: boolean;
+  // Run in the terminals the user checks, not only the focused one.
+  readonly multiple?: boolean;
 }
 
 interface ValueControl {
@@ -124,6 +126,11 @@ export async function openCommandForm(
         kind: "primary",
       },
       { label: t("commands.run"), value: "run" as const, kind: "primary" },
+      {
+        label: t("commands.runMultiple"),
+        value: "multiple" as const,
+        kind: "primary",
+      },
     ],
     beforeResolve: () => {
       // Validate typed values unless the user replaced the preview by hand.
@@ -133,7 +140,10 @@ export async function openCommandForm(
     },
   });
   if (result === undefined) return undefined;
-  return { text: preview.value.trim(), submit: result === "run" };
+  const text = preview.value.trim();
+  return result === "multiple"
+    ? { text, submit: true, multiple: true }
+    : { text, submit: result === "run" };
 }
 
 function createControl(

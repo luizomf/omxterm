@@ -96,6 +96,28 @@ describe("Commands panel", () => {
     );
   });
 
+  it("hands the command over for several terminals from the form", async () => {
+    const { panel, run } = await mount("linux");
+    rowNamed(panel.element, "Ping").click();
+    const dialog = await vi.waitFor(() => document.querySelector("dialog")!);
+    const host = dialog.querySelector<HTMLInputElement>("input[type=text]")!;
+    host.value = "example.org";
+    host.dispatchEvent(new Event("input", { bubbles: true }));
+    const multiple = [
+      ...dialog.querySelectorAll<HTMLButtonElement>(
+        ".omx-modal-actions button",
+      ),
+    ].find((button) => button.textContent === "Run in Multiple Terminals…")!;
+    multiple.click();
+    await vi.waitFor(() =>
+      expect(run).toHaveBeenCalledWith({
+        text: "ping -c 4 example.org",
+        submit: true,
+        multiple: true,
+      }),
+    );
+  });
+
   it("keeps the dialog open when a required field is empty", async () => {
     const { panel, run } = await mount("linux");
     rowNamed(panel.element, "Ping").click();

@@ -66,8 +66,10 @@ describe("Application Network Boundary", () => {
         matches.push(path.relative(root, file).split(path.sep).join("/"));
     }
 
-    // The assistant opens only its providers' fixed API key pages.
+    // The assistant opens only its providers' fixed API key pages, and the
+    // About dialog only the application's own fixed links.
     expect(matches.sort()).toEqual([
+      "main/about-wiring.ts",
       "main/assistant-wiring.ts",
       "main/index.ts",
     ]);

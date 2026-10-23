@@ -102,8 +102,19 @@ export interface TerminalTabs {
   // Every tab's label in order, for the Open Tabs list.
   tabList(): { readonly label: string; readonly selected: boolean }[];
   selectTab(index: number): void;
+  // Every live pane of every tab, for running a command in several.
+  paneTargets(): PaneTarget[];
   openLaunch(launch: PaneLaunch, placement: TerminalLaunchPlacement): void;
   dispose(): void;
+}
+
+export interface PaneTarget {
+  readonly tabLabel: string;
+  readonly paneLabel: string;
+  // The focused pane of the selected tab.
+  readonly current: boolean;
+  // Types and submits into this pane; false once it has closed.
+  run(command: string): boolean;
 }
 
 export type PendingClose =
