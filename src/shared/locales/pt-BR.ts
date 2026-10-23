@@ -84,6 +84,7 @@ export const brazilianPortugueseMessages: EnglishMessages = {
   "action.toggleSessions": "Mostrar ou Ocultar Sessões",
   "action.toggleCommands": "Mostrar ou Ocultar Comandos",
   "action.find": "Buscar no Terminal",
+  "action.toggleAssistant": "Mostrar ou Ocultar Assistente",
   "action.toggleFiles": "Mostrar ou Ocultar Arquivos",
   "action.commandPalette": "Paleta de Comandos",
   "action.preferences": "Preferências",
@@ -466,6 +467,33 @@ export const brazilianPortugueseMessages: EnglishMessages = {
   "assistant.error": "A solicitação ao assistente falhou: {reason}",
   "assistant.testConnection": "Testar Conexão",
   "assistant.connectionOk": "Conectado. {count} modelos disponíveis.",
+  "prefs.assistant": "Assistente",
+  "assistant.noSelection":
+    "Selecione um texto no terminal primeiro ou desmarque a opção.",
+  "assistant.selectionHeader": "Seleção do terminal:",
+  "assistant.unavailable": "O assistente não está disponível.",
+  "assistant.privacy":
+    "Desligado por padrão. Quando ligado, só o que você digita — e a seleção do terminal, quando você a inclui — é enviado ao provedor depois que você clica em Enviar, junto com os nomes do sistema operacional e do shell. A saída do terminal nunca é enviada por conta própria, e comandos sugeridos só rodam depois da sua confirmação.",
+  "assistant.enableToggle": "Ativar o assistente",
+  "assistant.provider": "Provedor",
+  "assistant.model": "Modelo",
+  "assistant.modelHint":
+    "Digite o id de um modelo ou carregue a lista do provedor.",
+  "assistant.loadModels": "Carregar Modelos",
+  "assistant.baseUrl": "Endereço do servidor",
+  "assistant.baseUrlHint":
+    "Endereço compatível com OpenAI, por exemplo http://localhost:11434/v1 para Ollama ou http://localhost:1234/v1 para LM Studio. http sem criptografia só é aceito para este computador.",
+  "assistant.invalidBaseUrl": "Use um endereço https, ou http em localhost.",
+  "assistant.apiKey": "Chave de API",
+  "assistant.saveKey": "Salvar Chave",
+  "assistant.removeKey": "Remover Chave",
+  "assistant.keyStored": "Há uma chave guardada no chaveiro do sistema.",
+  "assistant.keyMissing": "Nenhuma chave guardada para este provedor.",
+  "assistant.keyStorageUnavailable":
+    "Não há um chaveiro seguro no sistema, então as chaves não podem ser salvas.",
+  "assistant.keySaved": "Chave salva no chaveiro do sistema.",
+  "assistant.keyRemoved": "Chave removida.",
+  "assistant.loading": "Contatando o provedor…",
 
   "preferences.title": "Preferências",
   "preferences.search": "Pesquisar configurações",

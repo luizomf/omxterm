@@ -1169,9 +1169,11 @@ IPC, PTY control, resize, duration, and failures; they must never contain PTY
 input/output, clipboard data, environment contents, configuration contents,
 executable names, command arguments, commands, titles, secrets, or transcripts.
 
-The application performs no network requests: no analytics, telemetry, crash
-reporting, update check, or remote log delivery. Child processes retain their
-normal network access.
+The application performs no network requests of its own — no analytics,
+telemetry, crash reporting, update check, or remote log delivery — with one
+opt-in exception: while the AI assistant is enabled, main sends the chat
+requests and model listings the user starts to the chosen provider (see AI
+assistant). Child processes retain their normal network access.
 
 The optional Linux AppImage desktop installer accepts only a user-supplied,
 previously verified local Linux ARM64 OMXTerm AppImage and performs no download,
@@ -1250,7 +1252,7 @@ app-drawn title row; on macOS it overlays the native title inset beside the
 traffic lights. Hiding the title bar (`toggleTitleBar`) hides the toolbar too.
 
 - Before the title: **Sessions**, **Commands** (when the Command Manager is
-  available), **Files**, **Find in Terminal**, then **Split Right**, **Split Down** and
+  available), **Files**, **Assistant**, **Find in Terminal**, then **Split Right**, **Split Down** and
   **Broadcast Input to Panes**. After the title: **New Tab** and the **Main
   Menu**.
 - Each button sends only the name of a keybind action, which main validates
@@ -1315,6 +1317,41 @@ AshyTerm's integrated file manager.
   sessions are browsed while connected, without OMXTerm handling the
   password. Replies are bounded to 256 KiB per packet.
 
+## AI assistant
+
+AshyTerm's optional assistant, in the sidebar (**Assistant** in the header
+toolbar, **☰ → Assistant**, **View → Toggle Assistant**, or `toggleAssistant`:
+`Cmd+Shift+Y` on macOS, `Ctrl+Shift+Y` on Linux and Windows).
+
+- **Off by default.** While off, the panel only explains that and opens
+  **Preferences → Assistant**; main refuses chat requests, and turning it off
+  cancels requests in flight. Settings live in Application Data
+  `assistant.json` (enabled, provider, model per provider, local server
+  address); the conversation in `assistant-history.json` (at most 80
+  messages) until **Clear Conversation**.
+- **Providers:** Groq, Google Gemini (OpenAI-compatible endpoint),
+  OpenRouter, Mistral AI, Cerebras, GitHub Models, and a local
+  OpenAI-compatible server (Ollama, LM Studio). A local address must be https,
+  or http on `localhost`, `127.0.0.1` or `[::1]`, without credentials, query
+  or fragment.
+- **Keys:** entered in Preferences and stored with Electron safeStorage in
+  `credentials.json` (macOS Keychain, Windows DPAPI, Linux Secret Service);
+  where only Chromium's plaintext backend exists, keys cannot be saved. Keys
+  never return to the renderer and are removed from provider error messages.
+- **What is sent, and when:** only after **Send**: a system prompt naming the
+  operating system (from `/etc/os-release` on Linux) and shell basename,
+  sanitized, and the answer language; then the most recent 40 messages, each
+  at most 50,000 characters. The terminal selection is added only when
+  **Include terminal selection** is ticked, and shown in the message. Terminal
+  output, paths and environment values are never sent on their own.
+- **Answers** stream into the panel as text (no markup is interpreted), with
+  fenced code blocks shown as commands offering **Insert** (typed without
+  Enter), **Run** (after a confirmation that shows the command) and **Copy**.
+  Requests time out after 60 seconds (120 for local servers); answers are
+  bounded to 200,000 characters. **Stop** cancels.
+- Preferences → Assistant offers **Load Models** and **Test Connection**,
+  which list the provider's models with the stored key.
+
 ## Preferences
 
 **☰ → Preferences…**, the application menu, or `preferences` (`Cmd+,` on
@@ -1327,8 +1364,8 @@ Application Data switches.
   transparency, blur, padding), **Terminal** (scrollback, macOS Option as
   Alt, Highlight Output, Highlight Rules…), **Window and Tabs** (title bar,
   tab bar and always-on-top for new windows, confirm close, Restore Windows
-  at Startup), **Shortcuts** (every keybind action) and **Advanced** (log
-  level).
+  at Startup), **Shortcuts** (every keybind action), **Assistant** (see AI
+  assistant) and **Advanced** (log level).
 - Each change is saved when it is made. The renderer sends only a patch of
   known settings with in-range values; main merges it into the current
   `config.json` document, validates the result with the same loader a reload

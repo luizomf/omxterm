@@ -17,6 +17,8 @@ export interface TerminalSurface {
   paste(): Promise<void>;
   inject(text: string, options?: { readonly submit?: boolean }): Promise<void>;
   selectAll(): void;
+  // The selected text, read without touching the clipboard.
+  selectionText?(): string;
   // Opens or closes the in-terminal search bar over the scrollback.
   toggleSearch(): void;
   dispose(): void;

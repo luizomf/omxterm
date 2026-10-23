@@ -3,7 +3,8 @@
 OMXTerm is a fast, open-source desktop terminal for **macOS, Linux and Windows,
 on ARM64 and x64**. It starts your shell in tabs and split panes, keeps your SSH
 servers one click away, colors command output, and can be customized in plain
-JSON, without sending anything over the network.
+JSON, without sending anything over the network unless you turn on its
+optional AI assistant.
 
 It is built with Electron and TypeScript on the
 [Restty](https://github.com/wiedymi/restty) renderer and
@@ -77,7 +78,7 @@ Omarchy screenshot are arranged by Hyprland.
 
 ### Workspace
 
-- **Header toolbar** in the title bar: Sessions, Commands, Files, Find, Split Right,
+- **Header toolbar** in the title bar: Sessions, Commands, Files, Assistant, Find, Split Right,
   Split Down and Broadcast before the title; New Tab and a **main menu**
   (☰) with every action after it.
 - Tabs and multiple windows, with hideable title and tab bars, background
@@ -119,6 +120,16 @@ Omarchy screenshot are arranged by Hyprland.
   and cancel.
 - Open a folder in the terminal or insert quoted paths with one click.
 
+### Optional AI assistant
+
+- **Off until you turn it on** in Preferences → Assistant. Providers: Groq,
+  Google Gemini, OpenRouter, Mistral, Cerebras, GitHub Models, and local
+  servers (Ollama, LM Studio).
+- A sidebar panel with streamed answers; suggested commands can be inserted,
+  run (after confirmation) or copied. The conversation is kept between
+  sessions until you clear it.
+- Nothing is sent until you press Send; API keys live in the system keychain.
+
 ### Productivity
 
 - **Output highlighting** (off by default): AshyTerm's 51 rule sets (486
@@ -147,8 +158,8 @@ Omarchy screenshot are arranged by Hyprland.
 - **Back Up / Restore Settings:** one passphrase-encrypted `.omxbackup` file
   (scrypt and AES-256-GCM). Passwords and keys are never included.
 - English and Brazilian Portuguese interface.
-- No telemetry and no network requests of its own; see
-  [Privacy and security](#privacy-and-security).
+- No telemetry, and no network requests of its own unless you enable the
+  assistant; see [Privacy and security](#privacy-and-security).
 
 ## Platforms and downloads
 
@@ -308,6 +319,7 @@ the menus always show the active ones.
 | Reload configuration    | `reloadConfig`                       | `Cmd+Shift+,`                | `Ctrl+Shift+,`                 |
 | Preferences             | `preferences`                        | `Cmd+,`                      | `Ctrl+Shift+X`                 |
 | Files sidebar           | `toggleFiles`                        | `Cmd+Shift+L`                | `Ctrl+Shift+L`                 |
+| Assistant sidebar       | `toggleAssistant`                    | `Cmd+Shift+Y`                | `Ctrl+Shift+Y`                 |
 
 Without a shortcut: **File → Open Local Image…**, **Back Up Settings…**,
 **Restore Settings…**; **View → Highlight Output**, **Highlight Rules…**,
@@ -379,8 +391,13 @@ Diagnostic logs (two files of at most 5 MiB) are in
 
 ## Privacy and security
 
-- OMXTerm makes no network requests of its own and collects no telemetry. SSH
-  connections start only when you open one.
+- OMXTerm collects no telemetry. It makes no network requests of its own
+  except, when you turn the assistant on, the chat requests you send to the
+  provider you chose. SSH connections start only when you open one.
+- The assistant is off by default. It sends only what you type (and the
+  terminal selection when you tick the option) with your operating system and
+  shell names, never terminal output on its own. API keys are kept in the
+  system keychain; suggested commands run only after you confirm.
 - Logs record application events only: never terminal output, commands,
   clipboard data, paths or configuration values.
 - Passwords and keys are never written to disk in plain text and never

@@ -49,6 +49,7 @@ import type {
   BackupBridge,
   PreferencesBridge,
   FilesBridge,
+  AssistantBridge,
 } from "../shared/terminal-bridge";
 import {
   mountWorkspace,
@@ -138,6 +139,7 @@ export interface TerminalWindowPageOptions {
     readonly highlights?: HighlightsBridge;
     readonly preferences?: PreferencesBridge;
     readonly files?: FilesBridge;
+    readonly assistant?: AssistantBridge;
     readonly sessionDirectory?: (
       sessionId: TerminalSessionId,
     ) => Promise<string | null>;

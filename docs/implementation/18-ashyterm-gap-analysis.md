@@ -22,7 +22,7 @@ the advertised behavior works), **missing** (nothing user-visible yet).
 | Input broadcasting         | partial        | choosing target tabs/panes across the window                               |
 | Integrated file manager    | partial        | drag-and-drop upload onto the terminal, rsync, transfer history            |
 | Command manager            | done           | pinned command toolbar, send to several terminals                          |
-| Optional AI assistant      | missing        | whole feature, opt-in, with providers and secret storage                   |
+| Optional AI assistant      | done           | quick prompts; asking about a selection from the terminal menu             |
 | Deep customization         | partial        | custom scheme editor, cursor and scrolling options, header transparency    |
 | Backup and restore         | done           | (OMXTerm uses `.omxbackup`, scrypt + AES-256-GCM, instead of 7z)           |
 | Command-line usage         | partial        | `--new-window`, `--close-after-execute`, `--ssh …:/path`, single instance  |
@@ -102,7 +102,8 @@ terminals at once.
 
 ### 2.7 Optional AI assistant (README "Optional AI assistant")
 
-All **missing**. AshyTerm: opt-in side panel; providers Groq, Google Gemini,
+**Done** (see `docs/spec.md`, AI assistant); quick prompts and an "Ask the
+assistant" item in the terminal's context menu remain. AshyTerm: opt-in side panel; providers Groq, Google Gemini,
 OpenRouter, Cerebras, GitHub Models, Mistral and local OpenAI-compatible
 servers (Ollama, LM Studio); distribution-aware system prompt; persistent chat
 history; quick prompts; click-to-insert and click-to-run command suggestions.
@@ -159,7 +160,7 @@ Linux before the next phase starts.
    browsing over the user's OpenSSH (ControlMaster reuse, existing host-key
    policy), transfers with progress and cancel, remote editing with change
    detection, drag-and-drop upload, and SFTP saved sessions.
-5. **AI assistant** — opt-in panel with OpenAI-compatible providers (Groq,
+5. **AI assistant** — done — opt-in panel with OpenAI-compatible providers (Groq,
    OpenRouter, Gemini, Mistral, Cerebras, GitHub Models, Ollama, LM Studio),
    keys in the secret store, explicit-send only, history, insert/run with
    confirmation.

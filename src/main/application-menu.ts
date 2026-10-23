@@ -48,6 +48,7 @@ export interface TerminalApplicationMenuActions {
   readonly openHighlightRules?: () => void;
   readonly openPreferences?: () => void;
   readonly toggleSelectedFiles?: () => void;
+  readonly toggleSelectedAssistant?: () => void;
 }
 
 export interface TerminalApplicationMenuState {
@@ -196,6 +197,15 @@ export function terminalApplicationMenuTemplate(
                 label: "Toggle Files",
                 accelerator: keybinds.toggleFiles,
                 click: actions.toggleSelectedFiles,
+              },
+            ]
+          : []),
+        ...(actions.toggleSelectedAssistant
+          ? [
+              {
+                label: "Toggle Assistant",
+                accelerator: keybinds.toggleAssistant,
+                click: actions.toggleSelectedAssistant,
               },
             ]
           : []),
@@ -405,6 +415,7 @@ export function terminalActionInvocations(
     find: actions.findInSelectedWindow,
     preferences: actions.openPreferences ?? (() => {}),
     toggleFiles: actions.toggleSelectedFiles ?? (() => {}),
+    toggleAssistant: actions.toggleSelectedAssistant ?? (() => {}),
   });
 }
 

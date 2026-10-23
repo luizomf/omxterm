@@ -289,7 +289,7 @@ body.tabs-visible .terminal-tab.split {
   display: flex;
   flex: none;
   flex-direction: column;
-  width: 300px;
+  width: 340px;
   min-height: 0;
   padding-top: var(--native-title-inset);
   font: var(--omx-font);
@@ -322,7 +322,22 @@ body.tabs-visible #workspace-sidebar {
 .workspace-sidebar-tabs {
   display: flex;
   flex: 1;
-  gap: 2px;
+  gap: 0;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+/* Four panels fit beside the close button at the default width. */
+.workspace-sidebar-tabs button {
+  flex: none;
+  padding-inline: 5px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.workspace-sidebar-header .omx-icon-button {
+  flex: none;
 }
 
 .workspace-sidebar-title {
@@ -1362,5 +1377,166 @@ body.tabs-visible #workspace-sidebar {
 }
 
 .files-transfer.failed .files-transfer-label {
+  color: var(--omx-danger);
+}
+
+/* Assistant panel: notice, conversation log, and the message box. */
+.assistant-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--omx-space-2);
+}
+
+.assistant-panel[hidden],
+.assistant-off[hidden],
+.assistant-on[hidden] {
+  display: none;
+}
+
+.assistant-off {
+  display: flex;
+  flex-direction: column;
+  gap: var(--omx-space-3);
+  align-items: flex-start;
+  padding: var(--omx-space-2);
+  color: var(--omx-muted);
+}
+
+.assistant-on {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--omx-space-2);
+  min-height: 0;
+}
+
+.assistant-notice {
+  margin: 0;
+  padding: 2px var(--omx-space-2);
+  font-size: 11.5px;
+  color: var(--omx-muted);
+  background: var(--omx-surface);
+  border-radius: var(--omx-radius);
+}
+
+.assistant-log {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--omx-space-2);
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.assistant-message {
+  max-width: 100%;
+  padding: var(--omx-space-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-radius: var(--omx-radius-large);
+}
+
+.assistant-message.user {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--omx-accent) 26%, transparent);
+}
+
+.assistant-message.assistant {
+  background: var(--omx-surface);
+}
+
+.assistant-message.error {
+  color: var(--omx-danger);
+  background: color-mix(in srgb, var(--omx-danger) 12%, transparent);
+}
+
+.assistant-message p {
+  margin: 0 0 var(--omx-space-2);
+}
+
+.assistant-message p:last-child {
+  margin-bottom: 0;
+}
+
+.assistant-code {
+  margin: var(--omx-space-1) 0 var(--omx-space-2);
+  overflow: hidden;
+  background: var(--terminal-background, #000000);
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.assistant-code pre {
+  margin: 0;
+  padding: var(--omx-space-2);
+  overflow-x: auto;
+  font:
+    12px ui-monospace,
+    monospace;
+  white-space: pre;
+}
+
+.assistant-command-actions {
+  display: flex;
+  gap: var(--omx-space-1);
+  padding: var(--omx-space-1);
+  border-top: 1px solid var(--omx-border);
+}
+
+.assistant-command-actions .omx-button {
+  padding: 2px var(--omx-space-2);
+  font-size: 11.5px;
+}
+
+.assistant-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 3.5em;
+  padding: var(--omx-space-2);
+  font: inherit;
+  font-size: 12.5px;
+  color: inherit;
+  resize: vertical;
+  background: var(--omx-surface);
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.assistant-input:focus-visible {
+  outline: var(--omx-focus-ring);
+  outline-offset: -1px;
+}
+
+.assistant-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--omx-space-2);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.assistant-actions .omx-checkbox {
+  flex: 1 1 100%;
+  font-size: 12px;
+}
+
+.assistant-send {
+  display: inline-flex;
+  gap: var(--omx-space-1);
+  align-items: center;
+}
+
+.preferences-page-status {
+  min-height: 1.4em;
+  margin: 0;
+  font-size: 12px;
+  color: var(--omx-muted);
+}
+
+.preferences-page-status.error {
   color: var(--omx-danger);
 }

@@ -32,6 +32,7 @@ import { createSessionsBridge } from "./sessions-bridge";
 import { createHighlightsBridge } from "./highlights-bridge";
 import { createPreferencesBridge } from "./preferences-bridge";
 import { createFilesBridge } from "./files-bridge";
+import { createAssistantBridge } from "./assistant-bridge";
 import { createCommandsBridge } from "./commands-bridge";
 import { createBackupBridge } from "./backup-bridge";
 import { isWorkspacePlan, isWorkspaceSnapshot } from "../shared/workspace";
@@ -437,6 +438,7 @@ contextBridge.exposeInMainWorld(
     highlights: Object.freeze(createHighlightsBridge(ipcRenderer)),
     preferences: Object.freeze(createPreferencesBridge(ipcRenderer)),
     files: Object.freeze(createFilesBridge(ipcRenderer)),
+    assistant: Object.freeze(createAssistantBridge(ipcRenderer)),
     commands: Object.freeze(createCommandsBridge(ipcRenderer)),
     backup: Object.freeze(createBackupBridge(ipcRenderer)),
   }),

@@ -162,6 +162,7 @@ app
           isQuitting: () => terminalApplication?.isQuitting() ?? false,
           onMenuStateChange: () => rebuildMenu(),
           sessionLaunch: terminalIpcRouter.sessionLaunch,
+          shell: account.shell ?? "",
           configuration: preferencesConfiguration(
             configurationLoadOptions,
             () => configurationReloader.current(),

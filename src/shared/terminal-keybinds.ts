@@ -47,6 +47,7 @@ export const TERMINAL_ACTION_NAMES = [
   "find",
   "preferences",
   "toggleFiles",
+  "toggleAssistant",
 ] as const;
 
 export type TerminalActionName = (typeof TERMINAL_ACTION_NAMES)[number];
@@ -101,6 +102,7 @@ export const DEFAULT_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   find: "Command+F",
   preferences: "Command+,",
   toggleFiles: "Command+Shift+L",
+  toggleAssistant: "Command+Shift+Y",
 });
 
 // Linux and Windows share the conventional shifted terminal shortcuts so
@@ -161,6 +163,7 @@ const SHIFTED_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   preferences: "Control+Shift+X",
   // AshyTerm's Ctrl+Shift+E is Split Down here.
   toggleFiles: "Control+Shift+L",
+  toggleAssistant: "Control+Shift+Y",
 });
 
 export function terminalDefaultKeybinds(platform: string): TerminalKeybinds {

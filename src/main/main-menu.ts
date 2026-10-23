@@ -87,6 +87,15 @@ export function terminalMainMenuTemplate(
           },
         ]
       : []),
+    ...(actions.toggleSelectedAssistant
+      ? [
+          {
+            label: t("sidebar.assistant"),
+            accelerator: keybinds.toggleAssistant,
+            click: actions.toggleSelectedAssistant,
+          },
+        ]
+      : []),
     {
       label: t("menu.snippets"),
       accelerator: keybinds.toggleSnippets,

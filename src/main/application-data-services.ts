@@ -14,6 +14,7 @@ import { createWorkspaceService } from "./workspace-service";
 import { startPreferences } from "./preferences-wiring";
 import { startFileBrowser } from "./file-browser-wiring";
 import { startRemoteFiles } from "./remote-files-wiring";
+import { startAssistant } from "./assistant-wiring";
 import type { TerminalIpcRouter } from "./terminal-ipc-types";
 import type { PreferencesServiceOptions } from "./preferences-service";
 
@@ -32,6 +33,8 @@ export async function startApplicationDataServices(options: {
   readonly onMenuStateChange: () => void;
   // How each pane started, for remote browsing in the Files panel.
   readonly sessionLaunch: TerminalIpcRouter["sessionLaunch"];
+  // The user's shell, named to the assistant (basename only).
+  readonly shell: string;
   // config.json access for the Preferences dialog.
   readonly configuration: Pick<
     PreferencesServiceOptions,
@@ -45,6 +48,7 @@ export async function startApplicationDataServices(options: {
     onMenuStateChange,
     configuration,
     sessionLaunch,
+    shell,
     ...shared
   } = options;
   const savedSessions = await startSavedSessions({
@@ -53,6 +57,14 @@ export async function startApplicationDataServices(options: {
   });
   const highlightSettings = await startHighlightSettings(shared);
   startRemoteFiles({ ...shared, sessionLaunch, savedSessions });
+  const assistant = await startAssistant({
+    ...shared,
+    directory: resolveApplicationDataDirectory(
+      process.env,
+      options.homeDirectory,
+    ),
+    shell,
+  });
   highlightSettings.subscribe(onMenuStateChange);
   const commandLibrary = await startCommandLibrary(shared);
   startFileBrowser(shared);
@@ -142,6 +154,7 @@ export async function startApplicationDataServices(options: {
     openHighlightRules: () => sendToFocused(highlightIpc.openEditor),
     openPreferences: preferences.open,
     toggleSelectedFiles: () => sendToFocused(fileBrowserIpc.toggle),
+    toggleSelectedAssistant: assistant.toggle,
     toggleRestoreWorkspace: () => {
       void workspace
         .setRestore(!workspace.restoreEnabled())

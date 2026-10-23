@@ -186,13 +186,13 @@ describe("Preferences service", () => {
   it("stores only keybinds that differ from the platform default", async () => {
     const { service, config } = await setup();
     expect(
-      (await service.save({ keybinds: { copy: "Control+Shift+Y" } })).ok,
+      (await service.save({ keybinds: { copy: "Control+Shift+J" } })).ok,
     ).toBe(true);
     expect(await config()).toMatchObject({
-      keybinds: { copy: "Control+Shift+Y" },
+      keybinds: { copy: "Control+Shift+J" },
     });
     const conflict = await service.save({
-      keybinds: { paste: "Control+Shift+Y" },
+      keybinds: { paste: "Control+Shift+J" },
     });
     expect(conflict).toMatchObject({ ok: false });
     expect(conflict.ok ? "" : conflict.error).toMatch(/conflicts/u);

@@ -22,6 +22,7 @@ import type { MessageKey } from "../shared/locales/en";
 import type { TerminalClipboard } from "../terminal-surface/terminal-surface";
 import { createHeaderToolbar, type HeaderToolbar } from "./header-toolbar";
 import { createFilesPanel } from "./files/files-panel";
+import { createAssistantPanel } from "./assistant/assistant-panel";
 import {
   createDirectoryTracker,
   type DirectoryTracker,
@@ -45,6 +46,21 @@ export function mountWorkspace(
 ): () => void {
   const document = workspace.element.ownerDocument;
   const toaster = createToaster(document);
+  function openPreferences(page?: MessageKey) {
+    if (
+      !workspace.preferences ||
+      context.isBlocked() ||
+      document.querySelector(".preferences-dialog")
+    )
+      return;
+    void openPreferencesDialog(document, {
+      translator: context.translator,
+      bridge: workspace.preferences,
+      ...(workspace.highlights ? { openHighlightRules } : {}),
+      ...(workspace.assistant ? { assistant: workspace.assistant } : {}),
+      ...(page ? { page } : {}),
+    }).catch((cause: unknown) => toaster.notify(String(cause)));
+  }
   const sidebar = createWorkspaceSidebar(workspace.element, {
     translator: context.translator,
     focusTerminal: context.focusTerminal,
@@ -52,6 +68,7 @@ export function mountWorkspace(
       context.toolbar?.setPressed("sessions", panelId === "sessions");
       context.toolbar?.setPressed("commands", panelId === "commands");
       context.toolbar?.setPressed("files", panelId === "files");
+      context.toolbar?.setPressed("assistant", panelId === "assistant");
     },
     panels: [
       {
@@ -116,6 +133,28 @@ export function mountWorkspace(
             },
           ]
         : []),
+      ...(workspace.assistant
+        ? [
+            {
+              id: "assistant",
+              label: "sidebar.assistant" as const,
+              create: () =>
+                createAssistantPanel(document, {
+                  translator: context.translator,
+                  bridge: workspace.assistant!,
+                  notify: toaster.notify,
+                  copyText: (text) => void context.clipboard?.writeText(text),
+                  selection: () => context.tabs.focusedSelection(),
+                  openPreferences: () => openPreferences("prefs.assistant"),
+                  typeInTerminal: (text, submit) => {
+                    if (context.isBlocked()) return;
+                    context.tabs.injectSnippet(text, { submit });
+                    if (submit) context.focusTerminal();
+                  },
+                }),
+            },
+          ]
+        : []),
     ],
   });
   const removeToggle = workspace.sessions.onToggleSidebar(() => {
@@ -146,14 +185,11 @@ export function mountWorkspace(
   const removeHighlightEditor = workspace.highlights?.onOpenEditor(() => {
     if (!context.isBlocked()) openHighlightRules();
   });
-  const removePreferences = workspace.preferences?.onOpen(() => {
-    if (context.isBlocked() || document.querySelector(".preferences-dialog"))
-      return;
-    void openPreferencesDialog(document, {
-      translator: context.translator,
-      bridge: workspace.preferences!,
-      ...(workspace.highlights ? { openHighlightRules } : {}),
-    }).catch((cause: unknown) => toaster.notify(String(cause)));
+  const removePreferences = workspace.preferences?.onOpen(() =>
+    openPreferences(),
+  );
+  const removeAssistantToggle = workspace.assistant?.onToggle(() => {
+    if (!context.isBlocked()) sidebar.toggle("assistant");
   });
   const removeBackup = workspace.backup
     ? installBackupDialogs(document, {
@@ -167,6 +203,7 @@ export function mountWorkspace(
     removeBackup?.();
     removeHighlightEditor?.();
     removePreferences?.();
+    removeAssistantToggle?.();
     removePaletteToggle?.();
     palette?.dispose();
     removeCommandsToggle?.();
@@ -278,6 +315,7 @@ export function windowServices(
           ...options.toolbar,
           hasCommands: options.workspace?.commands !== undefined,
           hasFiles: options.workspace?.files !== undefined,
+          hasAssistant: options.workspace?.assistant !== undefined,
         })
       : undefined;
   return {

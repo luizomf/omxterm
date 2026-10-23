@@ -5,7 +5,7 @@ import { icon, type IconName } from "./ui/icons";
 
 // Toolbar buttons that reflect a state owned elsewhere in the window.
 export type HeaderToolbarToggle =
-  "sessions" | "commands" | "files" | "broadcast";
+  "sessions" | "commands" | "files" | "assistant" | "broadcast";
 
 export interface HeaderToolbarOptions {
   readonly translator: Translator;
@@ -15,6 +15,7 @@ export interface HeaderToolbarOptions {
   readonly openMainMenu: (position: MenuPosition) => void;
   readonly hasCommands: boolean;
   readonly hasFiles?: boolean;
+  readonly hasAssistant?: boolean;
 }
 
 export interface HeaderToolbar {
@@ -81,6 +82,16 @@ export function createHeaderToolbar(
       : []),
     ...(options.hasFiles
       ? [action("files", "sidebar.files", "toggleFiles", "files")]
+      : []),
+    ...(options.hasAssistant
+      ? [
+          action(
+            "assistant",
+            "sidebar.assistant",
+            "toggleAssistant",
+            "assistant",
+          ),
+        ]
       : []),
     action("find", "action.find", "find"),
     separator(document),

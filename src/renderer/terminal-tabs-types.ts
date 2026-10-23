@@ -89,6 +89,8 @@ export interface TerminalTabs {
   toggleTabBar(): void;
   focusSelected(): void;
   focusedSessionId(): TerminalSessionId | undefined;
+  // The focused pane's selected text, or "".
+  focusedSelection(): string;
   openLaunch(launch: PaneLaunch, placement: TerminalLaunchPlacement): void;
   dispose(): void;
 }

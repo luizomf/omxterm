@@ -1,4 +1,11 @@
 import type {
+  AssistantEvent,
+  AssistantMessage,
+  AssistantProvider,
+  AssistantSettings,
+  AssistantState,
+} from "./assistant";
+import type {
   DirectoryListing,
   FileBrowserHome,
   FileOperationResult,
@@ -113,6 +120,27 @@ export interface FilesBridge {
   ): Promise<FileOperationResult>;
   cancelTransfer(id: string): Promise<void>;
   onTransfer(listener: (event: TransferEvent) => void): () => void;
+}
+
+export interface AssistantBridge {
+  state(): Promise<AssistantState>;
+  saveSettings(settings: AssistantSettings): Promise<AssistantState>;
+  // null removes the stored key.
+  setKey(
+    provider: AssistantProvider,
+    key: string | null,
+  ): Promise<AssistantState>;
+  models(provider: AssistantProvider): Promise<string[]>;
+  // The number of models the provider lists, proving the connection works.
+  test(provider: AssistantProvider): Promise<number>;
+  // Resolves when the answer ends; its text arrives through onEvent.
+  chat(requestId: string, messages: readonly AssistantMessage[]): Promise<void>;
+  cancel(requestId: string): Promise<void>;
+  history(): Promise<readonly AssistantMessage[]>;
+  saveHistory(messages: readonly AssistantMessage[]): Promise<void>;
+  onEvent(listener: (event: AssistantEvent) => void): () => void;
+  onChanged(listener: (state: AssistantState) => void): () => void;
+  onToggle(listener: () => void): () => void;
 }
 
 export interface PreferencesBridge {
@@ -233,6 +261,7 @@ declare global {
       readonly highlights: HighlightsBridge;
       readonly preferences: PreferencesBridge;
       readonly files: FilesBridge;
+      readonly assistant: AssistantBridge;
       readonly commands: CommandsBridge;
       readonly backup: BackupBridge;
     };

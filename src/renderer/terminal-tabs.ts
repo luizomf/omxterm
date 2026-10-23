@@ -158,6 +158,9 @@ export function createTerminalTabs(
     focusedSessionId() {
       return selectedTab(ctx)?.focused.adapter.sessionId();
     },
+    focusedSelection() {
+      return focusedSurface()?.selectionText?.() ?? "";
+    },
     openLaunch(launch, placement) {
       if (ctx.disposed || ctx.closing) return;
       if (placement === "tab") void createTab(ctx, launch).catch(() => {});

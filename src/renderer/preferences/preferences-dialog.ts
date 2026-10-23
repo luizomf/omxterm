@@ -4,8 +4,12 @@ import type {
   PreferencesSaveResult,
   PreferencesValues,
 } from "../../shared/preferences";
-import type { PreferencesBridge } from "../../shared/terminal-bridge";
+import type {
+  AssistantBridge,
+  PreferencesBridge,
+} from "../../shared/terminal-bridge";
 import { openModal } from "../ui/modal";
+import { assistantPage } from "./assistant-page";
 import {
   advancedPage,
   appearancePage,
@@ -34,6 +38,9 @@ export async function openPreferencesDialog(
     readonly translator: Translator;
     readonly bridge: PreferencesBridge;
     readonly openHighlightRules?: () => void;
+    readonly assistant?: AssistantBridge;
+    // The page to show first, by its label key.
+    readonly page?: MessageKey;
   },
 ): Promise<void> {
   const t = options.translator.t.bind(options.translator);
@@ -101,7 +108,19 @@ export async function openPreferencesDialog(
   nav.setAttribute("aria-orientation", "vertical");
   const pages = document.createElement("div");
   pages.className = "preferences-pages";
-  const tabs = PAGES.map(([label, build], index) => {
+  const definitions = [
+    ...PAGES.slice(0, -1),
+    ...(options.assistant
+      ? [
+          [
+            "prefs.assistant",
+            () => assistantPage(document, t, options.assistant!),
+          ] as const,
+        ]
+      : []),
+    PAGES.at(-1)!,
+  ];
+  const tabs = definitions.map(([label, build], index) => {
     const tab = document.createElement("button");
     tab.type = "button";
     tab.setAttribute("role", "tab");
@@ -134,7 +153,12 @@ export async function openPreferencesDialog(
       tabs[next]!.tab.focus();
     });
   });
-  select(0);
+  select(
+    Math.max(
+      0,
+      definitions.findIndex(([label]) => label === options.page),
+    ),
+  );
   problem.textContent = snapshot.problem ?? "";
   problem.hidden = snapshot.problem === undefined;
   const content = document.createElement("div");
@@ -148,7 +172,10 @@ export async function openPreferencesDialog(
     title: t("prefs.title"),
     className: "preferences-dialog",
     body,
-    initialFocus: tabs[0]!.tab,
+    initialFocus: (
+      tabs.find(({ tab }) => tab.getAttribute("aria-selected") === "true") ??
+      tabs[0]!
+    ).tab,
     actions: [
       { label: t("prefs.restoreDefaults"), value: "reset", kind: "danger" },
       { label: t("common.close"), value: "close", kind: "primary" },
