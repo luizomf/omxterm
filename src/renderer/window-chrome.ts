@@ -39,11 +39,28 @@ export type WindowChromeBridge = Pick<
   "windowChrome" | "onWindowChrome" | "onTitleBarToggle"
 >;
 
+export interface WindowChromeLabels {
+  readonly controls: string;
+  readonly minimize: string;
+  readonly maximize: string;
+  readonly restore: string;
+  readonly close: string;
+}
+
+const ENGLISH_CHROME_LABELS: WindowChromeLabels = {
+  controls: "Window controls",
+  minimize: "Minimize",
+  maximize: "Maximize",
+  restore: "Restore",
+  close: "Close Window",
+};
+
 export function mountWindowChrome(
   document: Document,
   bridge: WindowChromeBridge,
   focusTerminal: () => void,
   toolbar?: HeaderToolbar,
+  labels: WindowChromeLabels = ENGLISH_CHROME_LABELS,
 ) {
   let disposed = false;
   let previewActive = false;
@@ -54,7 +71,7 @@ export function mountWindowChrome(
   const title = document.createElement("span");
   title.className = "window-title";
   const controls = document.createElement("nav");
-  controls.setAttribute("aria-label", "Window controls");
+  controls.setAttribute("aria-label", labels.controls);
   const button = (
     label: string,
     glyph: string,
@@ -72,9 +89,9 @@ export function mountWindowChrome(
     controls.append(element);
     return element;
   };
-  button("Minimize", "−", "minimize");
-  const maximize = button("Maximize", "□", "maximize");
-  button("Close Window", "×", "close");
+  button(labels.minimize, "−", "minimize");
+  const maximize = button(labels.maximize, "□", "maximize");
+  button(labels.close, "×", "close");
   row.append(title, controls);
   // The header toolbar shares the custom title bar; with native controls
   // (macOS) it overlays the title inset beside the traffic lights.
@@ -134,7 +151,7 @@ export function mountWindowChrome(
     maximize.textContent = state.maximized ? "❐" : "□";
     maximize.setAttribute(
       "aria-label",
-      state.maximized ? "Restore" : "Maximize",
+      state.maximized ? labels.restore : labels.maximize,
     );
     handle.hidden =
       state.titleBarVisible ||

@@ -184,10 +184,10 @@ Every field except `version` is optional and falls back to its default when omit
 | `font.size`               | integer `8` – `72` (CSS px)             | `16`                             |
 | `font.lineHeight`         | number `1.0` – `2.0`                    | `1.0`                            |
 | `font.ligatures`          | boolean                                 | `true`                           |
-| `terminal.padding.top`    | integer `0` – `128` (CSS px)            | `0`                              |
-| `terminal.padding.right`  | integer `0` – `128` (CSS px)            | `8`                              |
+| `terminal.padding.top`    | integer `0` – `128` (CSS px)            | `6`                              |
+| `terminal.padding.right`  | integer `0` – `128` (CSS px)            | `12`                             |
 | `terminal.padding.bottom` | integer `0` – `128` (CSS px)            | `8`                              |
-| `terminal.padding.left`   | integer `0` – `128` (CSS px)            | `8`                              |
+| `terminal.padding.left`   | integer `0` – `128` (CSS px)            | `12`                             |
 | `terminal.filePreview`    | boolean                                 | `true`                           |
 | `scrollback.lines`        | integer `0` – `100000`                  | `10000`                          |
 | `keyboard.optionAsAlt`    | `"none"`, `"left"`, `"right"`, `"both"` | `"none"`                         |

@@ -119,7 +119,7 @@ describe("Preferences service", () => {
     const written = await config();
     expect(written).toMatchObject({
       font: { size: 18, lineHeight: 1, ligatures: true },
-      terminal: { padding: { top: 4, right: 8, bottom: 8, left: 8 } },
+      terminal: { padding: { top: 4, right: 12, bottom: 8, left: 12 } },
       window: { showTabBar: false, showTitleBar: true },
       theme: { path: "themes/omtheme.json" },
       keybinds: terminalDefaultKeybinds("linux"),

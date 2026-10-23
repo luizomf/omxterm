@@ -62,16 +62,22 @@ describe("About dialog", () => {
       if (!element) throw new Error("no dialog");
       return element;
     });
-    expect(APPLICATION_COPYLEFT).toBe("Copyleft 🄯 2026 Rafael Ruscher");
+    expect(APPLICATION_COPYLEFT).toBe("Copyleft 🄯 2026");
     expect(dialog.querySelector(".about-copyleft")?.textContent).toBe(
       APPLICATION_COPYLEFT,
     );
     expect(dialog.querySelector(".about-version")?.textContent).toBe(
       "Versão 1.2.3",
     );
-    expect(dialog.querySelector(".about-authors")?.textContent).toBe(
-      "Rafael Ruscher <rruscher@gmail.com>",
-    );
+    expect(
+      [...dialog.querySelectorAll(".about-authors li")].map((item) => [
+        item.querySelector(".about-author-name")?.textContent,
+        item.querySelector(".about-author-email")?.textContent,
+      ]),
+    ).toEqual([
+      ["Luiz Otávio Miranda", "luizomf@gmail.com"],
+      ["Rafael Ruscher", "rruscher@gmail.com"],
+    ]);
     expect(dialog.querySelector(".about-warranty")?.textContent).toBe(
       "Este aplicativo vem sem absolutamente nenhuma garantia. Consulte a Licença MIT para mais detalhes.",
     );

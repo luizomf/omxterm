@@ -15,6 +15,7 @@ import {
   type SnippetsSidebarLabels,
 } from "./snippets-sidebar";
 import type { TerminalTabs } from "./terminal-tabs";
+import type { WindowChromeLabels } from "./window-chrome";
 import type { TerminalWindowPageOptions } from "./terminal-window-host";
 
 export function searchLabels(
@@ -67,6 +68,7 @@ export function createWindowImagePreview(
       : {}),
     focusTerminal: () => tabs().focusSelected(),
     onActivityChange,
+    ...(translator ? { translator } : {}),
   });
 }
 
@@ -87,5 +89,15 @@ function imagePreviewDetails(
     insertPath: (path) => insert(`${quotePathForShell(path, platform)} `),
     open: (path) => files.open(path),
     reveal: (path) => files.reveal(path),
+  };
+}
+
+export function windowChromeLabels(translator: Translator): WindowChromeLabels {
+  return {
+    controls: translator.t("chrome.windowControls"),
+    minimize: translator.t("chrome.minimize"),
+    maximize: translator.t("chrome.maximize"),
+    restore: translator.t("chrome.restore"),
+    close: translator.t("chrome.close"),
   };
 }

@@ -61,8 +61,20 @@ export async function openAboutDialog(
   authors.className = "about-authors";
   authors.append(
     ...info.authors.map((author) => {
+      // "Name <email>": the name, then the address on its own line.
+      const [, name = author, email] =
+        /^(.*?)\s*<([^<>]+)>$/u.exec(author) ?? [];
       const item = document.createElement("li");
-      item.textContent = author;
+      const nameLine = document.createElement("span");
+      nameLine.className = "about-author-name";
+      nameLine.textContent = name;
+      item.append(nameLine);
+      if (email) {
+        const emailLine = document.createElement("span");
+        emailLine.className = "about-author-email";
+        emailLine.textContent = email;
+        item.append(emailLine);
+      }
       return item;
     }),
   );

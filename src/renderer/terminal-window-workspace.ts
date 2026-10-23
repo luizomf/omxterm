@@ -324,6 +324,7 @@ export function windowTabsOptions(
       ? { onWorkspaceChange: options.reportWorkspace }
       : {}),
     dividerLabel: translator.t("pane.divider"),
+    surfaceLabel: translator.t("terminal.surface"),
     ...(options.workspace?.sessionDirectory
       ? { paneBusy: paneBusy(options.workspace.sessionDirectory) }
       : {}),

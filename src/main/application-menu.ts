@@ -1,4 +1,5 @@
 import type { MenuItemConstructorOptions } from "electron";
+import { mainTranslator } from "./main-translator";
 import type {
   TerminalPaneTarget,
   TerminalSplitDirection,
@@ -118,12 +119,13 @@ function applicationSubmenu(
   keybinds: TerminalKeybinds,
   state: TerminalApplicationMenuState,
 ): MenuItemConstructorOptions {
+  const t = mainTranslator().t.bind(mainTranslator());
   return {
     label: applicationName,
     submenu: [
       actions.showAbout
         ? {
-            label: `About ${applicationName}`,
+            label: t("appMenu.about", { name: applicationName }),
             accelerator: keybinds.about,
             click: actions.showAbout,
           }
@@ -132,7 +134,7 @@ function applicationSubmenu(
         ? [
             { type: "separator" as const },
             {
-              label: "Preferences…",
+              label: t("appMenu.preferences"),
               accelerator: keybinds.preferences,
               click: actions.openPreferences,
             },
@@ -142,7 +144,7 @@ function applicationSubmenu(
         ? [
             { type: "separator" as const },
             {
-              label: "Restore Windows at Startup",
+              label: t("appMenu.restoreWindowsAtStartup"),
               accelerator: keybinds.toggleRestoreWindows,
               type: "checkbox" as const,
               checked: state.restoreWorkspace ?? false,
@@ -152,7 +154,7 @@ function applicationSubmenu(
         : []),
       { type: "separator" },
       {
-        label: `Quit ${applicationName}`,
+        label: t("appMenu.quit", { name: applicationName }),
         accelerator: keybinds.quit,
         click: actions.requestQuit,
       },
@@ -166,116 +168,117 @@ export function terminalApplicationMenuTemplate(
   keybinds: TerminalKeybinds,
   state: TerminalApplicationMenuState = {},
 ): MenuItemConstructorOptions[] {
+  const t = mainTranslator().t.bind(mainTranslator());
   return [
     applicationSubmenu(applicationName, actions, keybinds, state),
     {
-      label: "Edit",
+      label: t("appMenu.edit"),
       submenu: [
         {
-          label: "Copy",
+          label: t("appMenu.copy"),
           accelerator: keybinds.copy,
           click: actions.copySelectedTerminal,
         },
         {
-          label: "Paste",
+          label: t("appMenu.paste"),
           accelerator: keybinds.paste,
           click: actions.pasteSelectedTerminal,
         },
         { type: "separator" },
         {
-          label: "Select All",
+          label: t("appMenu.selectAll"),
           accelerator: keybinds.selectAll,
           click: actions.selectAllSelectedTerminal,
         },
         { type: "separator" },
         {
-          label: "Find…",
+          label: t("appMenu.find"),
           accelerator: keybinds.find,
           click: actions.findInSelectedWindow,
         },
       ],
     },
     {
-      label: "File",
+      label: t("appMenu.file"),
       submenu: [
         {
-          label: "New Window",
+          label: t("appMenu.newWindow"),
           accelerator: keybinds.newWindow,
           click: actions.newWindow,
         },
         {
-          label: "New Tab",
+          label: t("appMenu.newTab"),
           accelerator: keybinds.newTab,
           click: actions.newTabInSelectedWindow,
         },
         { type: "separator" },
         {
-          label: "Open Local Image…",
+          label: t("appMenu.openLocalImage"),
           accelerator: keybinds.openLocalImage,
           click: actions.openLocalImage,
         },
         { type: "separator" },
         {
-          label: "Back Up Settings…",
+          label: t("appMenu.backUpSettings"),
           accelerator: keybinds.backUpSettings,
           click: actions.backUpSettings,
         },
         {
-          label: "Restore Settings…",
+          label: t("appMenu.restoreSettings"),
           accelerator: keybinds.restoreSettings,
           click: actions.restoreSettings,
         },
         { type: "separator" },
         {
-          label: "Close Tab",
+          label: t("appMenu.closeTab"),
           accelerator: keybinds.closeTab,
           click: actions.closeSelectedTab,
         },
         {
-          label: "Close Window",
+          label: t("appMenu.closeWindow"),
           accelerator: keybinds.closeWindow,
           click: actions.closeSelectedWindow,
         },
       ],
     },
     {
-      label: "View",
+      label: t("appMenu.view"),
       submenu: [
         {
-          label: "Zoom In",
+          label: t("appMenu.zoomIn"),
           accelerator: keybinds.zoomIn,
           click: actions.zoomInSelectedWindow,
         },
         {
-          label: "Zoom Out",
+          label: t("appMenu.zoomOut"),
           accelerator: keybinds.zoomOut,
           click: actions.zoomOutSelectedWindow,
         },
         {
-          label: "Actual Size",
+          label: t("appMenu.actualSize"),
           accelerator: keybinds.actualSize,
           click: actions.resetSelectedWindowZoom,
         },
         { type: "separator" },
         {
-          label: "Command Palette…",
+          label: t("appMenu.commandPalette"),
           accelerator: keybinds.commandPalette,
           click: actions.toggleSelectedCommandPalette,
         },
         {
-          label: "Toggle Sessions",
+          label: t("appMenu.toggleSessions"),
           accelerator: keybinds.toggleSessions,
           click: actions.toggleSelectedSessions,
         },
         {
-          label: "Toggle Commands",
+          label: t("appMenu.toggleCommands"),
           accelerator: keybinds.toggleCommands,
           click: actions.toggleSelectedCommands,
         },
         ...(actions.toggleSelectedFiles
           ? [
               {
-                label: "Toggle Files",
+                label: t("appMenu.toggleFiles"),
                 accelerator: keybinds.toggleFiles,
                 click: actions.toggleSelectedFiles,
               },
@@ -284,21 +287,21 @@ export function terminalApplicationMenuTemplate(
         ...(actions.toggleSelectedAssistant
           ? [
               {
-                label: "Toggle Assistant",
+                label: t("appMenu.toggleAssistant"),
                 accelerator: keybinds.toggleAssistant,
                 click: actions.toggleSelectedAssistant,
               },
             ]
           : []),
         {
-          label: "Toggle Snippets",
+          label: t("appMenu.toggleSnippets"),
           accelerator: keybinds.toggleSnippets,
           click: actions.toggleSelectedSnippets,
         },
         ...(actions.toggleOutputHighlighting
           ? [
               {
-                label: "Highlight Output",
+                label: t("appMenu.highlightOutput"),
                 accelerator: keybinds.toggleHighlighting,
                 type: "checkbox" as const,
                 checked: state.outputHighlighting ?? false,
@@ -309,19 +312,19 @@ export function terminalApplicationMenuTemplate(
         ...(actions.openHighlightRules
           ? [
               {
-                label: "Highlight Rules…",
+                label: t("appMenu.highlightRules"),
                 accelerator: keybinds.highlightRules,
                 click: actions.openHighlightRules,
               },
             ]
           : []),
         {
-          label: "Toggle Tab Bar",
+          label: t("appMenu.toggleTabBar"),
           accelerator: keybinds.toggleTabBar,
           click: actions.toggleSelectedTabBar,
         },
         {
-          label: "Toggle Title Bar",
+          label: t("appMenu.toggleTitleBar"),
           accelerator: keybinds.toggleTitleBar,
           click: actions.toggleSelectedTitleBar,
         },
@@ -337,18 +340,18 @@ export function terminalApplicationMenuTemplate(
           keybinds,
         ),
         {
-          label: "Reload User Configuration",
+          label: t("appMenu.reloadUserConfiguration"),
           accelerator: keybinds.reloadConfig,
           click: actions.reloadUserConfiguration,
         },
         {
-          label: "Toggle Developer Tools",
+          label: t("appMenu.toggleDeveloperTools"),
           accelerator: keybinds.toggleDevTools,
           click: actions.toggleSelectedDevTools,
         },
         { type: "separator" },
         {
-          label: "Toggle Full Screen",
+          label: t("appMenu.toggleFullScreen"),
           accelerator: keybinds.toggleFullScreen,
           click: actions.toggleSelectedFullScreen,
         },
@@ -356,31 +359,31 @@ export function terminalApplicationMenuTemplate(
     },
     terminalMenu(actions, keybinds),
     {
-      label: "Window",
+      label: t("appMenu.window"),
       submenu: [
         { role: "minimize" },
         {
-          label: "Always on Top",
+          label: t("appMenu.alwaysOnTop"),
           accelerator: keybinds.toggleAlwaysOnTop,
           click: actions.toggleSelectedAlwaysOnTop,
         },
         { type: "separator" },
         {
-          label: "Show Next Tab",
+          label: t("appMenu.showNextTab"),
           accelerator: keybinds.nextTab,
           click: actions.selectNextTab,
         },
         {
-          label: "Show Previous Tab",
+          label: t("appMenu.showPreviousTab"),
           accelerator: keybinds.previousTab,
           click: actions.selectPreviousTab,
         },
         {
-          label: "Select Tab",
+          label: t("appMenu.selectTab"),
           submenu: Array.from({ length: 9 }, (_, index) => {
             const position = index + 1;
             return {
-              label: `Tab ${position}`,
+              label: t("appMenu.tab", { position }),
               accelerator: keybinds[`selectTab${position}` as SelectTabAction],
               click: () => actions.selectTabInSelectedWindow(position),
             };
@@ -397,6 +400,7 @@ function terminalMenu(
   actions: TerminalApplicationMenuActions,
   keybinds: TerminalKeybinds,
 ): MenuItemConstructorOptions {
+  const t = mainTranslator().t.bind(mainTranslator());
   const focus = (
     label: string,
     action: keyof TerminalKeybinds,
@@ -407,36 +411,36 @@ function terminalMenu(
     click: () => actions.focusPaneInSelectedWindow(target),
   });
   return {
-    label: "Terminal",
+    label: t("appMenu.terminal"),
     submenu: [
       {
-        label: "Split Right",
+        label: t("appMenu.splitRight"),
         accelerator: keybinds.splitRight,
         click: () => actions.splitSelectedPane("right"),
       },
       {
-        label: "Split Down",
+        label: t("appMenu.splitDown"),
         accelerator: keybinds.splitDown,
         click: () => actions.splitSelectedPane("down"),
       },
       {
-        label: "Close Pane",
+        label: t("appMenu.closePane"),
         accelerator: keybinds.closePane,
         click: actions.closeSelectedPane,
       },
       { type: "separator" },
       {
-        label: "Maximize or Restore Pane",
+        label: t("appMenu.maximizeOrRestorePane"),
         accelerator: keybinds.toggleMaximizePane,
         click: actions.toggleSelectedPaneMaximized,
       },
       {
-        label: "Equalize Panes",
+        label: t("appMenu.equalizePanes"),
         accelerator: keybinds.equalizePanes,
         click: actions.equalizeSelectedPanes,
       },
       {
-        label: "Focus Pane",
+        label: t("appMenu.focusPane"),
         submenu: [
           focus("Next Pane", "focusNextPane", "next"),
           focus("Previous Pane", "focusPreviousPane", "previous"),
@@ -449,7 +453,7 @@ function terminalMenu(
       },
       { type: "separator" },
       {
-        label: "Broadcast Input to Panes",
+        label: t("appMenu.broadcastInputToPanes"),
         accelerator: keybinds.toggleBroadcast,
         click: actions.toggleSelectedBroadcast,
       },

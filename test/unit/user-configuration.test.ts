@@ -73,10 +73,10 @@ describe("strict version 1 User Configuration", () => {
     expect(configuration.fontLineHeight).toBe(1);
     expect(configuration.fontLigatures).toBe(true);
     expect(configuration.terminalPadding).toEqual({
-      top: 0,
-      right: 8,
+      top: 6,
+      right: 12,
       bottom: 8,
-      left: 8,
+      left: 12,
     });
     expect(Object.isFrozen(configuration)).toBe(true);
     expect(Object.isFrozen(configuration.terminalPadding)).toBe(true);

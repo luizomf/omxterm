@@ -941,8 +941,8 @@ faces. `font.size` accepts only integral pixel sizes from 8 through 72
 inclusive. `font.lineHeight` is an independent row-height multiplier from 1.0
 through 2.0 inclusive, accepts fractional values, does not change glyph size,
 and defaults to 1.0. Terminal padding uses explicit per-side integer CSS pixels
-from 0 through 128 inclusive and defaults to top 0, right 8, bottom 8, and
-left 8. User top padding is added below the 30 px native title inset on macOS
+from 0 through 128 inclusive and defaults to top 6, right 12, bottom 8, and
+left 12. User top padding is added below the 30 px native title inset on macOS
 when that title area is visible, or below the 34 px app-drawn title row on Linux
 and Windows. Hiding the title area or entering fullscreen removes only the
 app-owned title space, without changing configured padding or the macOS system

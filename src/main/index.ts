@@ -11,6 +11,7 @@ import {
 import * as nodePty from "node-pty";
 import { hostname } from "node:os";
 import { startWindowPlacement } from "./window-placement-wiring";
+import { mainTranslator, useSystemLanguages } from "./main-translator";
 import { terminalIpc } from "../shared/terminal-ipc";
 import {
   terminalActionInvocations,
@@ -80,7 +81,6 @@ import { applicationMenuActions } from "./application-menu-actions";
 import { registerCommandPaletteActions } from "./command-palette-actions";
 import { registerMainMenu, terminalMainMenuTemplate } from "./main-menu";
 import { showTerminalContextMenu } from "./terminal-context-menu";
-import { createTranslator, resolveLocale } from "../shared/i18n";
 import { commandIpc } from "../shared/command-ipc";
 import { sessionIpc } from "../shared/session-ipc";
 import { launchTerminalSession } from "./session-launch";
@@ -99,7 +99,10 @@ import {
 } from "./native-confirmations";
 
 const showClipboardError = () =>
-  dialog.showErrorBox("Clipboard Error", "Clipboard operation failed.");
+  dialog.showErrorBox(
+    mainTranslator().t("failure.clipboard.title"),
+    mainTranslator().t("failure.clipboard.message"),
+  );
 let terminalApplication: TerminalApplication<BrowserWindow> | undefined;
 let operationalEvents: OperationalEventLog | undefined;
 let disposeTerminalSessions = () => {};
@@ -121,6 +124,7 @@ app.on("before-quit", () => operationalEvents?.flush());
 app
   .whenReady()
   .then(async () => {
+    useSystemLanguages(app.getPreferredSystemLanguages());
     if (commandLine.action === "invalid") throw commandLine.error;
     if (commandLine.action !== "run") return;
     const startup = prepareStartup(app, commandLine.logLevel);
@@ -320,8 +324,8 @@ app
                 openExternalLink: (url) => shell.openExternal(url),
                 onExternalLinkOpenError: () =>
                   dialog.showErrorBox(
-                    "External Link Error",
-                    "The External Link could not be opened.",
+                    mainTranslator().t("failure.externalLink.title"),
+                    mainTranslator().t("failure.externalLink.message"),
                   ),
                 writeClipboardText: (text) => clipboard.writeText(text),
                 readClipboardText: () =>
@@ -431,9 +435,7 @@ app
           terminalIpcRouter.isTrustedSender,
           keybindActionInvocations,
         );
-        const menuTranslator = createTranslator(
-          resolveLocale(app.getPreferredSystemLanguages()),
-        );
+        const menuTranslator = mainTranslator();
         registerMainMenu(
           ipcMain,
           terminalIpcRouter.isTrustedSender,

@@ -1,3 +1,4 @@
+import { englishMainMessages } from "./en-main";
 import { englishPanelMessages } from "./en-panels";
 
 // English is the source catalog: every message key is declared here, and other
@@ -395,6 +396,7 @@ export const englishMessages = {
   "preferences.language": "Language",
   "preferences.languageSystem": "System default",
   ...englishPanelMessages,
+  ...englishMainMessages,
 } as const;
 
 type Widen<T> = T extends string ? string : { readonly [K in keyof T]: string };

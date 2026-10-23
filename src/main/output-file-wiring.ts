@@ -11,6 +11,7 @@ import { terminalIpc } from "../shared/terminal-ipc";
 import type { OperationalEventLog } from "./operational-events";
 import type { IpcEvent, IpcMainPort } from "./terminal-ipc-types";
 import { registerTrustedHandlers } from "./trusted-ipc";
+import { mainTranslator } from "./main-translator";
 
 export const MAX_SAVED_OUTPUT_LENGTH = 64 * 1024 * 1024;
 
@@ -43,7 +44,12 @@ export function startOutputFiles(options: {
             app.getPath("documents"),
             `omxterm-output-${stamp}.txt`,
           ),
-          filters: [{ name: "Text", extensions: ["txt", "log"] }],
+          filters: [
+            {
+              name: mainTranslator().t("dialog.textFilter"),
+              extensions: ["txt", "log"],
+            },
+          ],
         };
         const window = BrowserWindow.fromWebContents(
           event.sender as unknown as WebContents,

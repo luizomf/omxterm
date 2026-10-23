@@ -197,6 +197,17 @@ export const brazilianPortuguesePanelMessages: Pick<
   "assistant.keySaved": "Chave salva no chaveiro do sistema.",
   "assistant.keyRemoved": "Chave removida.",
   "assistant.loading": "Contatando o provedor…",
+  "imagePreview.dialog": "Visualização de imagem local",
+  "imagePreview.close": "Fechar a visualização de imagem",
+  "imagePreview.closeHint": "Fechar · Esc",
+  "imagePreview.image": "Imagem local selecionada",
+  "imagePreview.error": "Erro na visualização de imagem",
+  "imagePreview.failed":
+    "Não foi possível visualizar esta imagem. O arquivo pode estar indisponível, ser inválido ou passar dos limites de PNG/JPEG estático (64 MiB, 8192 por lado, 32 milhões de pixels).",
+  "imagePreview.unsupported":
+    "Formato de imagem não suportado. Escolha um PNG ou JPEG estático; WebP não é suportado.",
+  "imagePreview.zoom":
+    "Clique na imagem para alternar entre ajustar à janela e o tamanho real.",
   "peek.kind.image": "Imagem",
   "peek.kind.pdf": "Documento PDF",
   "peek.kind.text": "Texto",

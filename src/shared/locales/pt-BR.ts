@@ -1,3 +1,4 @@
+import { brazilianPortugueseMainMessages } from "./pt-BR-main";
 import { brazilianPortuguesePanelMessages } from "./pt-BR-panels";
 import type { EnglishMessages } from "./en";
 
@@ -398,4 +399,5 @@ export const brazilianPortugueseMessages: EnglishMessages = {
   "preferences.language": "Idioma",
   "preferences.languageSystem": "Padrão do sistema",
   ...brazilianPortuguesePanelMessages,
+  ...brazilianPortugueseMainMessages,
 };

@@ -50,6 +50,8 @@ export interface TerminalTabsOptions {
   // The window's layout, after changes settle, for workspace restore.
   readonly onWorkspaceChange?: (snapshot: WorkspaceSnapshot) => void;
   readonly dividerLabel?: string;
+  // The accessible name of each terminal area.
+  readonly surfaceLabel?: string;
   // Labels for the tab and group menus; English when absent.
   readonly translator?: Translator;
   readonly endedBanner?: EndedBannerStrings;

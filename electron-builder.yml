@@ -1,6 +1,6 @@
 appId: com.otaviomiranda.omxterm
 productName: OMXTerm
-copyright: Copyleft 🄯 2026 Rafael Ruscher
+copyright: Copyleft 🄯 2026
 asar:
   smartUnpack: false
 npmRebuild: false

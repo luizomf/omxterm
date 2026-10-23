@@ -44,6 +44,7 @@ import {
   createWindowImagePreview,
   searchLabels,
   snippetsLabels,
+  windowChromeLabels,
 } from "./terminal-window-parts";
 import type { WorkspacePlan, WorkspaceSnapshot } from "../shared/workspace";
 import type { TerminalActionName } from "../shared/terminal-keybinds";
@@ -266,15 +267,17 @@ export function mountTerminalWindowPage(
     },
   );
 
-  function focusUnlessPreview() {
-    if (!(localImagePreview?.isActive() ?? false)) tabs.focusSelected();
-  }
+  const previewActive = () => localImagePreview?.isActive() ?? false;
+  const onPageFocus = () => {
+    if (!previewActive()) tabs.focusSelected();
+  };
   const chrome = options.chrome
     ? mountWindowChrome(
         page.document,
         options.chrome,
-        focusUnlessPreview,
+        onPageFocus,
         toolbar,
+        translator ? windowChromeLabels(translator) : undefined,
       )
     : undefined;
 
@@ -294,10 +297,6 @@ export function mountTerminalWindowPage(
     );
   }
 
-  const previewActive = () => localImagePreview?.isActive() ?? false;
-  const onPageFocus = () => {
-    if (!previewActive()) tabs.focusSelected();
-  };
   const isInternalTabDrag = (event: DragEvent) =>
     [...(event.dataTransfer?.types ?? [])].includes(
       TERMINAL_TAB_DRAG_DATA_TYPE,

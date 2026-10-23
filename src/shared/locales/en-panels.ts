@@ -187,6 +187,17 @@ export const englishPanelMessages = {
   "assistant.keySaved": "Key saved in the system keychain.",
   "assistant.keyRemoved": "Key removed.",
   "assistant.loading": "Contacting the provider…",
+  "imagePreview.dialog": "Local image preview",
+  "imagePreview.close": "Close local image preview",
+  "imagePreview.closeHint": "Close · Esc",
+  "imagePreview.image": "Selected local image",
+  "imagePreview.error": "Local image preview error",
+  "imagePreview.failed":
+    "Could not preview this image. The file may be unavailable, invalid or over the static PNG/JPEG limits (64 MiB, 8192 per side, 32 million pixels).",
+  "imagePreview.unsupported":
+    "Unsupported image format. Choose a static PNG or JPEG; WebP is not supported.",
+  "imagePreview.zoom":
+    "Click the image to switch between fitting the window and its actual size.",
   "peek.kind.image": "Image",
   "peek.kind.pdf": "PDF document",
   "peek.kind.text": "Text",
