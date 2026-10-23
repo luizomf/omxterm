@@ -40,4 +40,5 @@ export const terminalIpc = {
   workspacePlan: "terminal:workspace-plan",
   commandPalette: "terminal:command-palette",
   runAction: "terminal:run-action",
+  mainMenu: "terminal:main-menu",
 } as const;

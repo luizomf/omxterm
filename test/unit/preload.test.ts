@@ -106,6 +106,17 @@ describe("isolated preload terminal bridge requests", () => {
       ).toThrow(TypeError);
   });
 
+  it("asks for the main menu with only integer window coordinates", () => {
+    const bridge = electron.bridge!;
+    bridge.openMainMenu({ x: 900, y: 34, extra: "quit" } as never);
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.mainMenu, {
+      x: 900,
+      y: 34,
+    });
+    for (const position of [null, { x: 1 }, { x: -1, y: 2 }, { x: 0.5, y: 2 }])
+      expect(() => bridge.openMainMenu(position as never)).toThrow(TypeError);
+  });
+
   it("requests title synchronization using only a validated session identity", () => {
     const bridge = electron.bridge!;
     bridge.syncTabTitle("s3");

@@ -67,6 +67,8 @@ export interface TerminalBridge {
   onCommandPalette(listener: () => void): () => void;
   // Runs an application action, as its keyboard shortcut would.
   runAction(action: TerminalActionName): void;
+  // Shows the main menu at a window position, below the toolbar button.
+  openMainMenu(position: { readonly x: number; readonly y: number }): void;
   onTabBarToggle(listener: () => void): () => void;
   onTitleBarToggle(listener: () => void): () => void;
   windowChrome(command: WindowChromeCommand): void;

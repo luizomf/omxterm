@@ -41,6 +41,7 @@ import { createTerminalFontGenerationOwner } from "./terminal-font-generations";
 import type { Translator } from "../shared/i18n";
 import type { WorkspacePlan, WorkspaceSnapshot } from "../shared/workspace";
 import type { TerminalActionName } from "../shared/terminal-keybinds";
+import type { HeaderToolbarOptions } from "./header-toolbar";
 import type {
   CommandsBridge,
   HighlightsBridge,
@@ -71,6 +72,8 @@ export interface TerminalWindowPageOptions {
   ) => ElectronTerminalAdapter;
   readonly configuration?: TerminalRendererConfiguration;
   readonly chrome?: WindowChromeBridge;
+  // Header toolbar actions; the toolbar needs the window chrome to host it.
+  readonly toolbar?: Pick<HeaderToolbarOptions, "runAction" | "openMainMenu">;
   readonly page?: Pick<
     Window,
     "addEventListener" | "removeEventListener" | "document"
@@ -191,15 +194,7 @@ export function mountTerminalWindowPage(
     ...activeSurfaceConfiguration,
     background: "host",
     ...(options.translator
-      ? {
-          searchLabels: {
-            placeholder: options.translator.t("search.placeholder"),
-            previous: options.translator.t("search.previous"),
-            next: options.translator.t("search.next"),
-            clear: options.translator.t("search.clear"),
-            close: options.translator.t("search.close"),
-          },
-        }
+      ? { searchLabels: searchLabels(options.translator) }
       : {}),
     ...(fontGenerations ? { acquireFontInputs: fontGenerations.acquire } : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
@@ -226,11 +221,8 @@ export function mountTerminalWindowPage(
       : {}),
   };
 
-  const { translator, broadcastIndicator, highlighting } = windowServices(
-    page.document,
-    options,
-    () => tabs,
-  );
+  const { translator, toolbar, broadcastIndicator, highlighting } =
+    windowServices(page.document, options, () => tabs);
   const tabs: TerminalTabs = createTerminalTabs(
     { strip: elements.tabStrip, container: elements.tabsContainer },
     {
@@ -249,10 +241,16 @@ export function mountTerminalWindowPage(
     },
   );
 
+  function focusUnlessPreview() {
+    if (!(localImagePreview?.isActive() ?? false)) tabs.focusSelected();
+  }
   const chrome = options.chrome
-    ? mountWindowChrome(page.document, options.chrome, () => {
-        if (!(localImagePreview?.isActive() ?? false)) tabs.focusSelected();
-      })
+    ? mountWindowChrome(
+        page.document,
+        options.chrome,
+        focusUnlessPreview,
+        toolbar,
+      )
     : undefined;
 
   if (options.loadLocalImage) {
@@ -402,10 +400,23 @@ export function mountTerminalWindowPage(
         tabs,
         isBlocked: previewActive,
         focusTerminal: onPageFocus,
+        toolbar,
       });
   });
 
   return { ready, dispose };
+}
+
+function searchLabels(
+  translator: Translator,
+): NonNullable<TerminalSurfaceOptions["searchLabels"]> {
+  return {
+    placeholder: translator.t("search.placeholder"),
+    previous: translator.t("search.previous"),
+    next: translator.t("search.next"),
+    clear: translator.t("search.clear"),
+    close: translator.t("search.close"),
+  };
 }
 
 // The Terminal Theme tints the page, chrome and every tab container.

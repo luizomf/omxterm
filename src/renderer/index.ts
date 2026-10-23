@@ -44,6 +44,10 @@ void Promise.all([
     {
       configuration,
       chrome: window.omxterm.terminal,
+      toolbar: {
+        runAction: window.omxterm.terminal.runAction,
+        openMainMenu: window.omxterm.terminal.openMainMenu,
+      },
       mount: mountResttyTerminalSurface,
       loadFontData: window.omxterm.terminal.fontData,
       onSurfaceFailure(message) {

@@ -18,6 +18,7 @@ import { createCommandPalette, type PaletteEntry } from "./command-palette";
 import { sessionLaunch } from "./sessions/session-actions";
 import { TERMINAL_ACTION_NAMES } from "../shared/terminal-keybinds";
 import type { MessageKey } from "../shared/locales/en";
+import { createHeaderToolbar, type HeaderToolbar } from "./header-toolbar";
 
 // The optional left sidebar with Saved Sessions and the Command Manager.
 // Opening a session or typing a command is ignored while a Local Image
@@ -29,6 +30,8 @@ export function mountWorkspace(
     readonly tabs: TerminalTabs;
     readonly isBlocked: () => boolean;
     readonly focusTerminal: () => void;
+    // Its panel buttons show which sidebar panel is open.
+    readonly toolbar?: HeaderToolbar | undefined;
   },
 ): () => void {
   const document = workspace.element.ownerDocument;
@@ -36,6 +39,10 @@ export function mountWorkspace(
   const sidebar = createWorkspaceSidebar(workspace.element, {
     translator: context.translator,
     focusTerminal: context.focusTerminal,
+    onChange(panelId) {
+      context.toolbar?.setPressed("sessions", panelId === "sessions");
+      context.toolbar?.setPressed("commands", panelId === "commands");
+    },
     panels: [
       {
         id: "sessions",
@@ -191,23 +198,35 @@ export function windowTabsOptions(
   };
 }
 
-// Per-window helpers created before the tabs: translations, the broadcast
-// indicator (which stops broadcasting through the tabs) and highlighting.
+// Per-window helpers created before the tabs: translations, the header
+// toolbar, the broadcast indicator (which stops broadcasting through the
+// tabs) and highlighting.
 export function windowServices(
   document: Document,
   options: TerminalWindowPageOptions,
   tabs: () => TerminalTabs,
 ): {
   readonly translator: Translator;
+  readonly toolbar: HeaderToolbar | undefined;
   readonly broadcastIndicator: BroadcastIndicator;
   readonly highlighting: HighlightingController | undefined;
 } {
   const translator = options.translator ?? createTranslator("en");
+  const toolbar =
+    options.chrome && options.toolbar
+      ? createHeaderToolbar(document, {
+          translator,
+          ...options.toolbar,
+          hasCommands: options.workspace?.commands !== undefined,
+        })
+      : undefined;
   return {
     translator,
+    toolbar,
     broadcastIndicator: createBroadcastIndicator(document, {
       translator,
       stop: () => tabs().handleCommand({ action: "toggle-broadcast" }),
+      onChange: (active) => toolbar?.setPressed("broadcast", active),
     }),
     highlighting: options.highlights
       ? createHighlightingController(options.highlights)

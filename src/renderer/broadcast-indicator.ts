@@ -9,7 +9,11 @@ export interface BroadcastIndicator {
 // strip, with a one-click way to stop.
 export function createBroadcastIndicator(
   document: Document,
-  options: { readonly translator: Translator; readonly stop: () => void },
+  options: {
+    readonly translator: Translator;
+    readonly stop: () => void;
+    readonly onChange?: (active: boolean) => void;
+  },
 ): BroadcastIndicator {
   const element = document.createElement("div");
   element.className = "broadcast-indicator";
@@ -25,6 +29,7 @@ export function createBroadcastIndicator(
   return {
     show(targetCount) {
       element.hidden = targetCount < 1;
+      options.onChange?.(targetCount > 0);
       label.textContent =
         targetCount < 1
           ? ""

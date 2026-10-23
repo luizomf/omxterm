@@ -46,6 +46,7 @@ export interface TerminalApplicationMenuActions {
   readonly toggleOutputHighlighting?: () => void;
   readonly toggleRestoreWorkspace?: () => void;
   readonly openHighlightRules?: () => void;
+  readonly openPreferences?: () => void;
 }
 
 export interface TerminalApplicationMenuState {

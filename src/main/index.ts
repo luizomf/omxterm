@@ -76,6 +76,8 @@ import type { OperationalEventLog } from "./operational-events";
 import { startApplicationDataServices } from "./application-data-services";
 import { applicationMenuActions } from "./application-menu-actions";
 import { registerCommandPaletteActions } from "./command-palette-actions";
+import { registerMainMenu, terminalMainMenuTemplate } from "./main-menu";
+import { createTranslator, resolveLocale } from "../shared/i18n";
 import { commandIpc } from "../shared/command-ipc";
 import { sessionIpc } from "../shared/session-ipc";
 import { launchTerminalSession } from "./session-launch";
@@ -416,6 +418,27 @@ app
           ipcMain,
           terminalIpcRouter.isTrustedSender,
           keybindActionInvocations,
+        );
+        const menuTranslator = createTranslator(
+          resolveLocale(app.getPreferredSystemLanguages()),
+        );
+        registerMainMenu(
+          ipcMain,
+          terminalIpcRouter.isTrustedSender,
+          (sender, { x, y }) => {
+            const window = BrowserWindow.getAllWindows().find(
+              (candidate) => candidate.webContents === sender,
+            );
+            if (!window) return;
+            Menu.buildFromTemplate(
+              terminalMainMenuTemplate(
+                menuTranslator,
+                menuActions,
+                configurationReloader.current().configuration.keybinds,
+                dataMenuState(),
+              ),
+            ).popup({ window, x, y });
+          },
         );
         rebuildMenu = () =>
           nativeMenu.installApplicationMenu(

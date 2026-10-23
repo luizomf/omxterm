@@ -254,7 +254,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   window.
 - Linux and Windows use a frameless native window with a hideable, app-drawn 34
   px title/drag row. The sanitized selected Terminal Title, with the existing
-  fallback, appears at the left; minimize, maximize/restore, and close controls
+  fallback, appears centered between the header toolbar groups (see Header
+  toolbar and main menu); minimize, maximize/restore, and close controls
   appear at the right. Colors follow the active Terminal Theme. Controls invoke
   native actions in main; Close uses the existing guarded Close Window
   lifecycle. Native resize, maximize/restore, and operating-system edge/corner
@@ -1240,6 +1241,32 @@ scrollback, highlights every match, shows the count, and steps with
 Previous/Next. Its labels are translated. Restty's own search shortcut stays
 off, so only OMXTerm's keybind opens it, and each pane searches only its own
 buffer.
+
+## Header toolbar and main menu
+
+The title area carries an AshyTerm-style toolbar so panels and common actions
+are visible without knowing shortcuts. On Linux and Windows it shares the
+app-drawn title row; on macOS it overlays the native title inset beside the
+traffic lights. Hiding the title bar (`toggleTitleBar`) hides the toolbar too.
+
+- Before the title: **Sessions**, **Commands** (when the Command Manager is
+  available), **Find in Terminal**, then **Split Right**, **Split Down** and
+  **Broadcast Input to Panes**. After the title: **New Tab** and the **Main
+  Menu**.
+- Each button sends only the name of a keybind action, which main validates
+  and runs exactly as the shortcut would. Sessions, Commands and Broadcast
+  show a pressed state while their panel is open or input is mirrored.
+  Pointer presses keep keyboard focus in the terminal; every button has a
+  translated accessible name and tooltip and is reachable with Tab.
+- The **Main Menu** button asks main for the menu at the button's window
+  position (validated as two integers inside the window range). Main builds a
+  translated native menu from the same actions as the application menu: New
+  Window, New Tab, Command Palette, Find, Sessions, Commands, Snippets, a
+  Terminal submenu (splits, panes, broadcast, clipboard, Open Local Image), a
+  View submenu (zoom, tab bar, title bar, Always on Top, full screen,
+  Developer Tools), Highlight Output and Highlight Rules, a Settings submenu
+  (Back Up, Restore, Restore Windows at Startup, Reload Configuration),
+  About and Quit. Accelerators shown are the configured keybinds.
 
 ## Command palette
 

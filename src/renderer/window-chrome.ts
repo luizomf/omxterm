@@ -1,5 +1,6 @@
 import type { TerminalBridge } from "../shared/terminal-bridge";
 import type { WindowChromeState } from "../shared/window-chrome";
+import type { HeaderToolbar } from "./header-toolbar";
 
 export type WindowChromeBridge = Pick<
   TerminalBridge,
@@ -10,6 +11,7 @@ export function mountWindowChrome(
   document: Document,
   bridge: WindowChromeBridge,
   focusTerminal: () => void,
+  toolbar?: HeaderToolbar,
 ) {
   let disposed = false;
   let previewActive = false;
@@ -42,6 +44,16 @@ export function mountWindowChrome(
   const maximize = button("Maximize", "□", "maximize");
   button("Close Window", "×", "close");
   row.append(title, controls);
+  // The header toolbar shares the custom title bar; with native controls
+  // (macOS) it overlays the title inset beside the traffic lights.
+  const overlay = document.createElement("header");
+  overlay.className = "window-toolbar-overlay";
+  overlay.hidden = true;
+  if (toolbar) {
+    row.classList.add("with-toolbar");
+    row.insertBefore(toolbar.leading, title);
+    row.insertBefore(toolbar.trailing, controls);
+  }
   const handle = document.createElement("div");
   handle.className = "window-drag-handle";
   handle.setAttribute("aria-hidden", "true");
@@ -65,6 +77,17 @@ export function mountWindowChrome(
       visible && state.style === "native" ? "30px" : "0px",
     );
     row.hidden = !visible || state.style === "native";
+    if (toolbar) {
+      const native = visible && state.style === "native";
+      if (native && overlay.childElementCount === 0) {
+        overlay.append(toolbar.leading, toolbar.trailing);
+        document.body.prepend(overlay);
+      } else if (!native && overlay.childElementCount > 0) {
+        row.insertBefore(toolbar.leading, title);
+        row.insertBefore(toolbar.trailing, controls);
+      }
+      overlay.hidden = !native;
+    }
     title.textContent = state.title;
     maximize.textContent = state.maximized ? "❐" : "□";
     maximize.setAttribute(
@@ -95,7 +118,9 @@ export function mountWindowChrome(
       disposed = true;
       removeToggle();
       removeState();
+      toolbar?.dispose();
       row.remove();
+      overlay.remove();
       handle.remove();
       document.body.classList.remove("window-preview-active");
     },

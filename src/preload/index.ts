@@ -115,6 +115,16 @@ const terminal: TerminalBridge = {
       throw new TypeError("Invalid application action");
     ipcRenderer.send(terminalIpc.runAction, action);
   },
+  openMainMenu(position) {
+    const coordinates = [position?.x, position?.y];
+    if (
+      !coordinates.every(
+        (value) => Number.isInteger(value) && (value as number) >= 0,
+      )
+    )
+      throw new TypeError("Invalid main menu position");
+    ipcRenderer.send(terminalIpc.mainMenu, { x: position.x, y: position.y });
+  },
   onSnippetsToggle(listener: () => void) {
     const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
       if (payload === undefined) listener();
