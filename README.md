@@ -107,7 +107,8 @@ Omarchy screenshot are arranged by Hyprland.
 - **SSH sessions** through your system OpenSSH client, which supports:
   - user, port, key file and agent forwarding;
   - jump hosts and port forwards (`L`, `R`, `D`);
-  - X11 forwarding, compression, and connection reuse;
+  - X11 forwarding, compression, and connection reuse (on by default, so
+    the Files panel browses a connected session without asking again);
   - a remote command and extra options.
 - **Quick Connect** (`user@host:port`), import from `~/.ssh/config`, and JSON
   import and export.
@@ -157,9 +158,10 @@ Omarchy screenshot are arranged by Hyprland.
 - **Preferences window** (☰ → Preferences…, `Ctrl+Shift+X` / `Cmd+,`):
   14 color schemes (OMXTerm's own plus AshyTerm's BigLinux, Solarized,
   Monokai, Dracula, Nord, Tokyo Night, Catppuccin, Rosé Pine and more), font,
-  size, line height, ligatures, transparency, blur, padding, scrollback,
-  window and tab options, a shortcut recorder with conflict checks, and
-  Restore Defaults. Every change is validated, saved to `config.json` and
+  size, line height, ligatures, transparency, blur, rounded corners, padding,
+  scrollback, window and tab options (including the auto-hiding title bar),
+  a shortcut recorder with conflict checks, the AI assistant, and Restore
+  Defaults. Every change is validated, saved to `config.json` and
   applied to all windows at once.
 - Plain-JSON configuration with hot reload, themes, and remappable shortcuts,
   or edit visually with [OMXTerm Studio](https://luizomf.github.io/omxterm-studio/).
@@ -255,9 +257,11 @@ sh linux_install.sh install OMXTerm-0.21.0-x86_64.AppImage
 
 ### Arch Linux, Manjaro and BigLinux
 
-`pkgbuild/PKGBUILD` follows BigLinux's packaging layout. It clones this
-repository, builds for your architecture (x86_64 or aarch64), and versions
-the package by build date. The build downloads npm packages and Electron.
+Two PKGBUILDs build the same package for x86_64 or aarch64. Both download npm
+packages and Electron during the build.
+
+**From GitHub (BigLinux layout).** `pkgbuild/PKGBUILD` clones this
+repository and versions the package by build date (`YY.MM.DD-HHMM`):
 
 ```sh
 sudo pacman -S --needed base-devel git nodejs npm
@@ -266,14 +270,35 @@ curl -fLO https://raw.githubusercontent.com/ruscher/omxterm/main/pkgbuild/PKGBUI
 makepkg -si
 ```
 
-From a checkout, `packaging/arch/PKGBUILD` builds the same package from your
-local source tree (`cd packaging/arch && makepkg -si`).
+It builds the `main` branch; set `OMXTERM_BRANCH` to build another one, for
+example `OMXTERM_BRANCH=feature/ashyterm-ui-parity makepkg -si`.
+
+**From a checkout.** `packaging/arch/PKGBUILD` builds whatever is in your
+local tree, committed or not, with the version from `package.json`:
+
+```sh
+git clone https://github.com/ruscher/omxterm.git
+cd omxterm/packaging/arch
+makepkg -si
+```
+
+Moving from a date-versioned build to a checkout build, pacman reports a
+"downgrade" because `0.21.1dev.0` sorts before `26.10.22`; it installs
+normally.
+
+Optional packages:
+
+- `openssh`: SSH sessions, Quick Connect, and remote files over SFTP in the
+  Files panel;
+- `ollama`: local models for the AI assistant (any OpenAI-compatible server,
+  such as LM Studio, also works).
 
 The package installs:
 
 - `/usr/lib/omxterm`: the application;
 - `/usr/bin/omxterm`: the launcher;
-- the menu entry, theme icons from 16 px to scalable, and licenses.
+- the menu entry (found by "terminal", "ssh" or "sftp"), theme icons from
+  16 px to scalable, this README in `/usr/share/doc/omxterm`, and licenses.
 
 Remove it with `sudo pacman -R omxterm`.
 
@@ -362,16 +387,18 @@ OMXTerm reads its files from `$XDG_CONFIG_HOME/omxterm` (by default
 `~/.config/omxterm` on macOS and Linux, and `%USERPROFILE%\.config\omxterm` on
 Windows).
 
-| File               | Written by          | Contents                                                              |
-| ------------------ | ------------------- | --------------------------------------------------------------------- |
-| `config.json`      | you, or Preferences | Fonts, padding, scrollback, window options, theme, shortcuts          |
-| `snippets.json`    | you                 | Snippets for the Snippets sidebar                                     |
-| `themes/*.json`    | you, or Preferences | Terminal color themes (built-in schemes are written here when chosen) |
-| `sessions.json`    | OMXTerm             | Saved sessions and folders                                            |
-| `highlights.json`  | OMXTerm             | Output highlighting switches and rules                                |
-| `commands.json`    | OMXTerm             | Custom commands, favorites, hidden built-ins                          |
-| `workspace.json`   | OMXTerm             | Windows to restore at startup (only when enabled)                     |
-| `credentials.json` | OMXTerm             | Encrypted secrets, protected by the system keychain                   |
+| File                     | Written by          | Contents                                                              |
+| ------------------------ | ------------------- | --------------------------------------------------------------------- |
+| `config.json`            | you, or Preferences | Fonts, padding, scrollback, window options, theme, shortcuts          |
+| `snippets.json`          | you                 | Snippets for the Snippets sidebar                                     |
+| `themes/*.json`          | you, or Preferences | Terminal color themes (built-in schemes are written here when chosen) |
+| `sessions.json`          | OMXTerm             | Saved sessions and folders                                            |
+| `highlights.json`        | OMXTerm             | Output highlighting switches and rules                                |
+| `commands.json`          | OMXTerm             | Custom commands, favorites, hidden built-ins                          |
+| `workspace.json`         | OMXTerm             | Windows to restore at startup (only when enabled)                     |
+| `credentials.json`       | OMXTerm             | Encrypted secrets (AI API keys), protected by the system keychain     |
+| `assistant.json`         | OMXTerm             | AI assistant on/off, provider, models and server address (no keys)    |
+| `assistant-history.json` | OMXTerm             | The assistant conversation, until you clear it                        |
 
 Every `config.json` key is optional except `"version": 1`:
 
@@ -380,7 +407,12 @@ Every `config.json` key is optional except `"version": 1`:
   "version": 1,
   "font": { "family": "JetBrainsMono Nerd Font Mono", "size": 15 },
   "scrollback": { "lines": 20000 },
-  "window": { "transparency": 0.1, "blur": true, "showTabBar": true },
+  "window": {
+    "transparency": 0.1,
+    "blur": true,
+    "cornerRadius": 12,
+    "autoHideTitleBar": true
+  },
   "theme": { "path": "themes/omtheme.json" },
   "keybinds": { "splitRight": "Control+Shift+D" }
 }

@@ -12,9 +12,9 @@
 pkgname=omxterm
 pkgver=0.21.1dev.0
 pkgrel=1
-pkgdesc='Open-source personal desktop terminal'
+pkgdesc='Open-source terminal with split panes, SSH sessions, an SFTP file manager, output highlighting, a command manager and an optional AI assistant'
 arch=('x86_64' 'aarch64')
-url='https://github.com/luizomf/omxterm'
+url='https://github.com/ruscher/omxterm'
 license=('MIT')
 # Shared libraries of the packaged Electron runtime and node-pty module, plus
 # fontconfig (fc-match) and xdg-utils (external links).
@@ -24,7 +24,10 @@ depends=(
   'libxcb' 'libxcomposite' 'libxdamage' 'libxext' 'libxfixes' 'libxkbcommon'
   'libxrandr' 'mesa' 'nspr' 'nss' 'pango' 'systemd-libs' 'xdg-utils' 'bash'
 )
-optdepends=('openssh: SSH sessions')
+optdepends=(
+  'openssh: SSH sessions, Quick Connect and remote files over SFTP'
+  'ollama: local models for the AI assistant'
+)
 # node-pty's own node-gyp install script is skipped (see build()), so neither
 # python nor make is needed: the project's postinstall compiles pty.node with
 # the C++ compiler and pinned Node-API headers, without network access.
@@ -108,7 +111,8 @@ Terminal=false
 Type=Application
 Icon=omxterm
 StartupWMClass=omxterm
-Categories=Utility;TerminalEmulator;
+Categories=System;TerminalEmulator;
+Keywords=terminal;shell;ssh;sftp;console;command;prompt;
 EOF
 
   # Theme icons at every size, so menus and panels never scale one bitmap.
@@ -125,4 +129,6 @@ EOF
     "${_licenses}/LICENSE.electron.txt"
   install -Dm644 "${_unpacked}/LICENSES.chromium.html" \
     "${_licenses}/LICENSES.chromium.html"
+
+  install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
 }

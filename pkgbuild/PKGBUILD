@@ -5,9 +5,12 @@
 # compiled on the build host for x86_64 or aarch64; npm and Electron downloads
 # need network access during build(). packaging/arch/PKGBUILD builds the same
 # package from a local checkout instead.
+#
+# The default branch is built; another one with, for example:
+#   OMXTERM_BRANCH=feature/ashyterm-ui-parity makepkg -si
 
 pkgname=omxterm
-pkgdesc="Open-source personal desktop terminal with split panes, saved SSH sessions, output highlighting and a command manager"
+pkgdesc="Open-source terminal with split panes, SSH sessions, an SFTP file manager, output highlighting, a command manager and an optional AI assistant"
 
 depends=(
     'alsa-lib'
@@ -40,7 +43,8 @@ depends=(
     'bash' # /usr/bin/sh for the /usr/bin/omxterm launcher
 )
 optdepends=(
-    'openssh: saved SSH sessions and Quick Connect'
+    'openssh: SSH sessions, Quick Connect and remote files over SFTP'
+    'ollama: local models for the AI assistant'
 )
 # node-pty's own node-gyp install script is skipped (see build()): the
 # project's postinstall compiles pty.node with the C++ compiler and pinned
@@ -61,7 +65,8 @@ pkgrel=$(date +%H%M)
 arch=('x86_64' 'aarch64')
 license=('MIT')
 url="https://github.com/ruscher/${pkgname}"
-source=("git+${url}.git")
+_branch="${OMXTERM_BRANCH:-main}"
+source=("git+${url}.git#branch=${_branch}")
 md5sums=('SKIP')
 
 build() {
@@ -120,7 +125,7 @@ Type=Application
 Icon=omxterm
 StartupWMClass=omxterm
 Categories=System;TerminalEmulator;
-Keywords=terminal;shell;ssh;console;
+Keywords=terminal;shell;ssh;sftp;console;command;prompt;
 EOF
 
     # Theme icons at every size, so menus and panels never scale one bitmap.
