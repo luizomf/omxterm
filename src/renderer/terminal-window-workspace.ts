@@ -54,11 +54,24 @@ export function mountWorkspace(
   const document = workspace.element.ownerDocument;
   const toaster = createToaster(document);
   async function runInTerminals(command: string) {
+    // A pane running a program (an editor, a pager) would receive the
+    // command as typed text, so it is offered unchecked.
+    const targets = await Promise.all(
+      context.tabs.paneTargets().map(async (target) => {
+        const state =
+          target.sessionId && workspace.sessionDirectory
+            ? await workspace
+                .sessionDirectory(target.sessionId)
+                .catch(() => null)
+            : null;
+        return state?.busy ? { ...target, busy: true } : target;
+      }),
+    );
     const chosen = await chooseTerminals(
       document,
       context.translator,
       command,
-      context.tabs.paneTargets(),
+      targets,
     );
     if (!chosen || context.isBlocked()) return;
     const count = chosen.filter((target) => target.run(command)).length;

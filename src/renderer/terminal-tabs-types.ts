@@ -118,6 +118,13 @@ export interface TerminalTabs {
 export interface PaneTarget {
   readonly tabLabel: string;
   readonly paneLabel: string;
+  // 1-based positions, and how many panes the tab has.
+  readonly tabNumber: number;
+  readonly paneNumber: number;
+  readonly paneCount: number;
+  readonly sessionId?: TerminalSessionId;
+  // Set by the caller when a program (an editor, a pager) runs in the pane.
+  readonly busy?: boolean;
   // The focused pane of the selected tab.
   readonly current: boolean;
   // Types and submits into this pane; false once it has closed.

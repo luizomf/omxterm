@@ -28,6 +28,10 @@ for 10% discount:
 
 _macOS, with background transparency and blur._
 
+![OMXTerm on Linux with three tabs: Vim, a file listing and a Git log in split panes](docs/images/linux-split-panes.webp)
+
+_Linux (KDE Plasma), with tabs and split panes._
+
 <details>
 <summary>More screenshots: macOS, Windows, and Linux</summary>
 
@@ -56,7 +60,7 @@ Omarchy screenshot are arranged by Hyprland.
 
 </details>
 
-**[Features](#features)** · **[Download](#platforms-and-downloads)** ·
+**[Features](#features)** · **[Tour](#tour)** · **[Download](#platforms-and-downloads)** ·
 **[Install](#installation)** · **[Shortcuts](#keyboard-shortcuts)** ·
 **[Command line](#command-line)** · **[Configuration](#configuration)** ·
 **[Build from source](#building-from-source)** ·
@@ -179,24 +183,38 @@ Omarchy screenshot are arranged by Hyprland.
 - No telemetry, and no network requests of its own unless you enable the
   assistant; see [Privacy and security](#privacy-and-security).
 
+## Tour
+
+These screenshots were taken on Linux (KDE Plasma) with OMXTerm 0.22.0.
+
+| Hover a file name to preview it                                                                                                      | View local images with their details                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| ![A preview card with the first page of a PDF, its size, page count and path, over a file listing](docs/images/linux-hover-pdf.webp) | ![The local image preview showing a wallpaper with its type, dimensions, size, date and path](docs/images/linux-image-preview.webp) |
+| **Run one command in several terminals**                                                                                             | **Files beside the terminal**                                                                                                       |
+| ![The Run in Multiple Terminals dialog listing every tab and pane with check boxes](docs/images/linux-run-multiple.webp)             | ![The Files sidebar showing the folder of the focused terminal](docs/images/linux-files.webp)                                       |
+| **Preferences with 14 color schemes**                                                                                                | **Every setting as JSON, validated before saving**                                                                                  |
+| ![The Preferences window with the color scheme cards](docs/images/linux-preferences.webp)                                            | ![The config.json editor in Preferences with Format, Reload and Save](docs/images/linux-config-editor.webp)                         |
+| **Light themes**                                                                                                                     | **About**                                                                                                                           |
+| ![OMXTerm with the Solarized Light scheme, a file listing and Vim](docs/images/linux-light-theme.webp)                               | ![The About dialog with the version, authors, copyleft and Report an Issue](docs/images/linux-about.webp)                           |
+
 ## Platforms and downloads
 
-**Latest pre-release:
-[0.21.0 — downloads and release notes](https://github.com/ruscher/omxterm/releases/tag/v0.21.0)**
+**Latest release:
+[0.22.0 — downloads and release notes](https://github.com/ruscher/omxterm/releases/tag/v0.22.0)**
 
 | Platform                                 | Download                                                                                                | Checksum                                                                                                      |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Apple Silicon macOS                      | [DMG](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.dmg)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.dmg.sha256)       |
-| Intel macOS                              | [DMG](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x64.dmg)              | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x64.dmg.sha256)         |
-| Linux ARM64                              | [AppImage](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.AppImage)  | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.AppImage.sha256)  |
-| Linux ARM64 (Debian, Ubuntu)             | [DEB](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.deb)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.deb.sha256)       |
-| Linux ARM64 (Fedora, openSUSE)           | [RPM](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-aarch64.rpm)          | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-aarch64.rpm.sha256)     |
-| Linux x64                                | [AppImage](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x86_64.AppImage) | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x86_64.AppImage.sha256) |
-| Linux x64 (Debian, Ubuntu)               | [DEB](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-amd64.deb)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-amd64.deb.sha256)       |
-| Linux x64 (Fedora, openSUSE)             | [RPM](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x86_64.rpm)           | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x86_64.rpm.sha256)      |
-| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/ruscher/omxterm/releases/download/v0.21.0/linux_install.sh)       | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/linux_install.sh.sha256)               |
-| Windows ARM64                            | [Installer](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.exe)      | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.exe.sha256)       |
-| Windows x64                              | [Installer](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x64.exe)        | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x64.exe.sha256)         |
+| Apple Silicon macOS                      | [DMG](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.dmg)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.dmg.sha256)       |
+| Intel macOS                              | [DMG](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x64.dmg)              | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x64.dmg.sha256)         |
+| Linux ARM64                              | [AppImage](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.AppImage)  | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.AppImage.sha256)  |
+| Linux ARM64 (Debian, Ubuntu)             | [DEB](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.deb)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.deb.sha256)       |
+| Linux ARM64 (Fedora, openSUSE)           | [RPM](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-aarch64.rpm)          | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-aarch64.rpm.sha256)     |
+| Linux x64                                | [AppImage](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x86_64.AppImage) | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x86_64.AppImage.sha256) |
+| Linux x64 (Debian, Ubuntu)               | [DEB](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-amd64.deb)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-amd64.deb.sha256)       |
+| Linux x64 (Fedora, openSUSE)             | [RPM](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x86_64.rpm)           | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x86_64.rpm.sha256)      |
+| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/ruscher/omxterm/releases/download/v0.22.0/linux_install.sh)       | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/linux_install.sh.sha256)               |
+| Windows ARM64                            | [Installer](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.exe)      | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.exe.sha256)       |
+| Windows x64                              | [Installer](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x64.exe)        | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x64.exe.sha256)         |
 
 Arch Linux, Manjaro and BigLinux build a native package with the included
 `PKGBUILD` ([below](#arch-linux-manjaro-and-biglinux)).
@@ -244,23 +262,23 @@ Run the installer and start OMXTerm from the Start menu.
 ### Debian and Ubuntu
 
 ```sh
-sudo apt install ./OMXTerm-0.21.0-amd64.deb    # arm64: OMXTerm-0.21.0-arm64.deb
+sudo apt install ./OMXTerm-0.22.0-amd64.deb    # arm64: OMXTerm-0.22.0-arm64.deb
 ```
 
 ### Fedora, openSUSE and other RPM systems
 
 ```sh
-sudo dnf install ./OMXTerm-0.21.0-x86_64.rpm   # arm64: OMXTerm-0.21.0-aarch64.rpm
-# openSUSE: sudo zypper install --allow-unsigned-rpm ./OMXTerm-0.21.0-x86_64.rpm
+sudo dnf install ./OMXTerm-0.22.0-x86_64.rpm   # arm64: OMXTerm-0.22.0-aarch64.rpm
+# openSUSE: sudo zypper install --allow-unsigned-rpm ./OMXTerm-0.22.0-x86_64.rpm
 ```
 
 ### AppImage (any Linux)
 
 ```sh
-chmod +x OMXTerm-0.21.0-x86_64.AppImage
-./OMXTerm-0.21.0-x86_64.AppImage
+chmod +x OMXTerm-0.22.0-x86_64.AppImage
+./OMXTerm-0.22.0-x86_64.AppImage
 # Optional: add it to your application menu
-sh linux_install.sh install OMXTerm-0.21.0-x86_64.AppImage
+sh linux_install.sh install OMXTerm-0.22.0-x86_64.AppImage
 ```
 
 ### Arch Linux, Manjaro and BigLinux
@@ -291,8 +309,7 @@ makepkg -si
 ```
 
 Moving from a date-versioned build to a checkout build, pacman reports a
-"downgrade" because `0.21.1dev.0` sorts before `26.10.22`; it installs
-normally.
+"downgrade" because `0.22.0` sorts before `26.10.22`; it installs normally.
 
 Optional packages:
 
@@ -418,7 +435,11 @@ Windows).
 | `assistant.json`         | OMXTerm             | AI assistant on/off, provider, models and server address (no keys)    |
 | `assistant-history.json` | OMXTerm             | The assistant conversation, until you clear it                        |
 
-Every `config.json` key is optional except `"version": 1`:
+Every `config.json` key is optional except `"version": 1`. OMXTerm adds the
+settings your file does not list yet (with their current values) when it
+starts, so the file always shows every option; values you wrote stay as you
+wrote them. **Preferences → config.json** edits the file in place. A short
+example:
 
 ```json
 {
@@ -447,6 +468,14 @@ Every `config.json` key is optional except `"version": 1`:
 Diagnostic logs (two files of at most 5 MiB) are in
 `$XDG_STATE_HOME/omxterm/logs` (by default `~/.local/state/omxterm/logs`).
 
+## Languages
+
+The interface is available in **English** and **Brazilian Portuguese**,
+including menus, dialogs and messages from the main process. OMXTerm follows
+the system's preferred languages and falls back to English. Translations live
+in [`src/shared/locales/`](src/shared/locales/); a test checks that every
+message exists in both catalogs with the same placeholders.
+
 ## Privacy and security
 
 - OMXTerm collects no telemetry. It makes no network requests of its own
@@ -468,6 +497,26 @@ Diagnostic logs (two files of at most 5 MiB) are in
 To report a vulnerability privately, see [SECURITY.md](SECURITY.md). The
 detailed model is in
 [docs/implementation/03-security-and-privacy.md](docs/implementation/03-security-and-privacy.md).
+
+## Troubleshooting
+
+- **Blank or black window on Linux:** OMXTerm needs WebGL2. In virtual
+  machines or with blocklisted drivers, try `omxterm --ignore-gpu-blocklist`
+  (see [graphics troubleshooting](docs/linux-desktop.md#graphics-troubleshooting)).
+- **Wayland:** OMXTerm runs through XWayland by default; pass
+  `--ozone-platform=wayland` to try native Wayland.
+- **AppImage does not start:** install FUSE 2 (`libfuse2`) or run it with
+  `--appimage-extract-and-run`.
+- **A setting has no effect:** a banner at the top of the window explains
+  why `config.json` was rejected; the last valid configuration stays active.
+- **No PDF thumbnails when hovering file names:** install `poppler`
+  (`pdftoppm` and `pdfinfo`). Previews can be turned off in
+  **Preferences → Terminal**.
+- **macOS "cannot be opened" or Windows SmartScreen:** the packages are not
+  signed; see [Signing](#signing).
+
+More answers are in [Everyday use](docs/usage.md) and the
+[Linux desktop guide](docs/linux-desktop.md).
 
 ## Building from source
 
@@ -530,7 +579,7 @@ because native modules are never cross-compiled. The release procedure is in
 - **Design records:**
   - [docs/spec.md](docs/spec.md): product specification.
   - [CONTEXT.md](CONTEXT.md): domain vocabulary.
-  - [docs/adr/](docs/adr/README.md): 36 architecture decision records.
+  - [docs/adr/](docs/adr/README.md): 35 architecture decision records.
   - [docs/implementation/](docs/implementation/): engineering records,
     including the AshyTerm parity matrix.
 
@@ -547,18 +596,18 @@ because native modules are never cross-compiled. The release procedure is in
 
 Bug reports, feedback, translations, documentation and code are welcome.
 
-- [Open an issue](https://github.com/ruscher/omxterm/issues/new) for bugs or
-  confusing steps.
+- [Open an issue](https://github.com/luizomf/omxterm/issues) for bugs or
+  confusing steps (also **About → Report an Issue** in the app).
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) before sending code. It covers the
   engineering standards, tests and pull request workflow.
 
-### Contributors
+### Authors
 
-- **Luiz Otávio Miranda**: creator and maintainer of OMXTerm.
+- **Luiz Otávio Miranda** ([luizomf@gmail.com](mailto:luizomf@gmail.com)):
+  creator and maintainer of OMXTerm.
 - **Rafael Ruscher** ([rruscher@gmail.com](mailto:rruscher@gmail.com)):
-  collaborator. Brought
-  AshyTerm's feature set, x64 and native Linux packages, and the BigLinux
-  package.
+  brought AshyTerm's feature set, x64 and native Linux packages, and the
+  BigLinux package.
 
 ## License
 

@@ -186,21 +186,28 @@ export function createTerminalTabs(
       return sessionId && token ? { sessionId, token } : null;
     },
     paneTargets() {
-      return ctx.tabs.flatMap((tab, index) =>
-        layoutPanes(tab.layout)
-          .filter((pane) => pane.surface && !pane.ended && !pane.removed)
-          .map((pane) => ({
-            tabLabel: tab.title ?? (tab.focused.label || String(index + 1)),
-            paneLabel: pane.label,
-            current: index === ctx.selectedIndex && pane === tab.focused,
-            run(command: string) {
-              if (pane.removed || pane.ended || !pane.surface) return false;
-              pane.highlighter?.injected(command, true);
-              void pane.surface.inject(command, { submit: true });
-              return true;
-            },
-          })),
-      );
+      return ctx.tabs.flatMap((tab, index) => {
+        const panes = layoutPanes(tab.layout).filter(
+          (pane) => pane.surface && !pane.ended && !pane.removed,
+        );
+        return panes.map((pane, paneIndex) => ({
+          tabLabel: tab.title ?? (tab.focused.label || String(index + 1)),
+          paneLabel: pane.label,
+          tabNumber: index + 1,
+          paneNumber: paneIndex + 1,
+          paneCount: panes.length,
+          ...(pane.adapter.sessionId()
+            ? { sessionId: pane.adapter.sessionId()! }
+            : {}),
+          current: index === ctx.selectedIndex && pane === tab.focused,
+          run(command: string) {
+            if (pane.removed || pane.ended || !pane.surface) return false;
+            pane.highlighter?.injected(command, true);
+            void pane.surface.inject(command, { submit: true });
+            return true;
+          },
+        }));
+      });
     },
     selectTab(index) {
       if (index < 0 || index >= ctx.tabs.length) return;

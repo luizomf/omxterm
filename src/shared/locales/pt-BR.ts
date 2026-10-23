@@ -256,8 +256,11 @@ export const brazilianPortugueseMessages: EnglishMessages = {
   "commands.runMultiple": "Executar em Múltiplos Terminais…",
   "commands.chooseTerminals": "Executar em Múltiplos Terminais",
   "commands.chooseTerminalsHint":
-    "O comando será executado em todos os terminais marcados desta janela.",
+    "O comando será executado em todos os terminais marcados desta janela. Terminais com um programa em execução começam desmarcados.",
   "commands.selectAll": "Selecionar Todos",
+  "commands.tabTarget": "Aba {tab}: {title}",
+  "commands.paneTarget": "Aba {tab}, painel {pane}: {title}",
+  "commands.busyTarget": "(um programa está em execução)",
   "commands.runChecked": "Executar",
   "commands.sentTo": {
     one: "Comando enviado para {count} terminal.",

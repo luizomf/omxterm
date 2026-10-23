@@ -16,6 +16,9 @@ beforeAll(() => {
 const target = (tabLabel: string, current = false): PaneTarget => ({
   tabLabel,
   paneLabel: tabLabel,
+  tabNumber: 1,
+  paneNumber: 1,
+  paneCount: 1,
   current,
   run: vi.fn(() => true),
 });
@@ -65,5 +68,33 @@ describe("Run in Multiple Terminals picker", () => {
     expect(buttons()[1]!.disabled).toBe(false);
     buttons()[0]!.click();
     expect(await chosen).toBeUndefined();
+  });
+
+  it("numbers tabs and the panes of split tabs", async () => {
+    document.body.innerHTML = "";
+    const split = (paneNumber: number): PaneTarget => ({
+      ...target("~/work"),
+      tabNumber: 2,
+      paneNumber,
+      paneCount: 2,
+    });
+    const chosen = chooseTerminals(document, createTranslator("en"), "ls", [
+      target("~"),
+      split(1),
+      { ...split(2), busy: true },
+    ]);
+    expect(
+      [...document.querySelectorAll(".terminal-picker-list label")].map(
+        (label) => label.textContent,
+      ),
+    ).toEqual([
+      "Tab 1: ~",
+      "Tab 2, pane 1: ~/work",
+      "Tab 2, pane 2: ~/work (a program is running)",
+    ]);
+    // A pane running a program starts unchecked.
+    expect([...boxes()].map((box) => box.checked)).toEqual([true, true, false]);
+    buttons()[0]!.click();
+    await chosen;
   });
 });

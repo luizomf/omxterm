@@ -255,8 +255,11 @@ export const englishMessages = {
   "commands.runMultiple": "Run in Multiple Terminals…",
   "commands.chooseTerminals": "Run in Multiple Terminals",
   "commands.chooseTerminalsHint":
-    "The command runs in every checked terminal of this window.",
+    "The command runs in every checked terminal of this window. Terminals running a program start unchecked.",
   "commands.selectAll": "Select All",
+  "commands.tabTarget": "Tab {tab}: {title}",
+  "commands.paneTarget": "Tab {tab}, pane {pane}: {title}",
+  "commands.busyTarget": "(a program is running)",
   "commands.runChecked": "Run",
   "commands.sentTo": {
     one: "Command sent to {count} terminal.",

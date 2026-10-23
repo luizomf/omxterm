@@ -26,11 +26,23 @@ export async function chooseTerminals(
   const list = document.createElement("div");
   list.className = "terminal-picker-list";
   const boxes = targets.map((target) => {
+    // Panes of one tab often share a title; their numbers tell them apart.
     const label =
-      target.paneLabel && target.paneLabel !== target.tabLabel
-        ? `${target.tabLabel} — ${target.paneLabel}`
-        : target.tabLabel;
-    const box = checkbox(document, label, true);
+      target.paneCount > 1
+        ? t("commands.paneTarget", {
+            tab: target.tabNumber,
+            pane: target.paneNumber,
+            title: target.paneLabel || target.tabLabel,
+          })
+        : t("commands.tabTarget", {
+            tab: target.tabNumber,
+            title: target.tabLabel,
+          });
+    const box = checkbox(
+      document,
+      target.busy ? `${label} ${t("commands.busyTarget")}` : label,
+      !target.busy,
+    );
     if (target.current) box.element.classList.add("current");
     list.append(box.element);
     return box.input;
