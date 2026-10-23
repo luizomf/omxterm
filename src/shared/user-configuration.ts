@@ -53,6 +53,8 @@ export interface TerminalRendererConfiguration {
   readonly cornerRadius?: number;
   // The title bar slides in near the top edge and hides again.
   readonly autoHideTitleBar?: boolean;
+  // Hovering a file name shows no preview card; absent means previews on.
+  readonly filePreview?: false;
   readonly terminalTheme: TerminalTheme;
   readonly userFileErrors: readonly string[];
 }
@@ -67,6 +69,7 @@ export interface UserConfiguration {
   readonly fontLineHeight: number;
   readonly fontLigatures: boolean;
   readonly terminalPadding: TerminalPadding;
+  readonly filePreview: boolean;
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
   readonly alwaysOnTop: boolean;
@@ -101,6 +104,7 @@ export function isTerminalRendererConfiguration(
         "showTabBar",
         "cornerRadius",
         "autoHideTitleBar",
+        "filePreview",
         "terminalTheme",
         "userFileErrors",
       ].includes(key),
@@ -142,7 +146,8 @@ function isWindowFrame(value: Record<string, unknown>): boolean {
         (value.cornerRadius as number) >= 0 &&
         (value.cornerRadius as number) <= MAX_WINDOW_CORNER_RADIUS)) &&
     (value.autoHideTitleBar === undefined ||
-      typeof value.autoHideTitleBar === "boolean")
+      typeof value.autoHideTitleBar === "boolean") &&
+    (value.filePreview === undefined || value.filePreview === false)
   );
 }
 

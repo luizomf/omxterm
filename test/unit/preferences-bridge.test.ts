@@ -57,7 +57,7 @@ describe("preload Preferences bridge", () => {
     expect(fake.invoke).toHaveBeenCalledWith(preferencesIpc.save, {
       fontSize: 18,
     });
-    await expect(bridge.save({ windowsShell: "x" } as never)).rejects.toThrow(
+    await expect(bridge.save({ windowsShell: 5 } as never)).rejects.toThrow(
       TypeError,
     );
     await expect(bridge.captureShortcut("yes" as never)).rejects.toThrow(

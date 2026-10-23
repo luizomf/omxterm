@@ -1705,3 +1705,152 @@ body.tabs-visible #workspace-sidebar {
 .terminal-picker-list .current {
   font-weight: 600;
 }
+
+/* Hover preview of a file name printed in the terminal. */
+.file-peek-card {
+  position: fixed;
+  z-index: 44;
+  display: flex;
+  flex-direction: column;
+  gap: var(--omx-space-2);
+  box-sizing: border-box;
+  width: min(380px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px);
+  padding: var(--omx-space-3);
+  overflow: auto;
+  font: var(--omx-font);
+  color: var(--omx-foreground);
+  background: var(--omx-surface);
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius-large);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 40%);
+}
+
+.file-peek-name {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.file-peek-image {
+  align-self: center;
+  max-width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  background: repeating-conic-gradient(
+      rgb(128 128 128 / 18%) 0 25%,
+      transparent 0 50%
+    )
+    0 0 / 16px 16px;
+  border-radius: var(--omx-radius);
+}
+
+.file-peek-text {
+  max-height: 220px;
+  margin: 0;
+  padding: var(--omx-space-2);
+  overflow: auto;
+  font:
+    12px/1.4 ui-monospace,
+    "FiraCode Nerd Font Mono",
+    monospace;
+  white-space: pre;
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    transparent 30%
+  );
+  border: 1px solid var(--omx-border);
+  border-radius: var(--omx-radius);
+}
+
+.file-peek-entries {
+  max-height: 200px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  font:
+    12px/1.5 ui-monospace,
+    "FiraCode Nerd Font Mono",
+    monospace;
+  list-style: none;
+}
+
+.file-peek-more {
+  color: var(--omx-muted);
+}
+
+.file-details {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px var(--omx-space-3);
+  margin: 0;
+}
+
+.file-details dt {
+  color: var(--omx-muted);
+}
+
+.file-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.file-details-path {
+  font-family: ui-monospace, "FiraCode Nerd Font Mono", monospace;
+  font-size: 12px;
+  user-select: text;
+}
+
+.file-peek-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--omx-space-1);
+}
+
+.file-peek-actions .omx-button {
+  padding: 3px var(--omx-space-2);
+  font-size: 12px;
+}
+
+/* Preferences → config.json: the whole file as text. */
+.preferences-config-path {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  user-select: text;
+}
+
+.omx-modal textarea.preferences-config-editor {
+  width: 100%;
+  min-height: 240px;
+  font:
+    12px/1.5 ui-monospace,
+    "FiraCode Nerd Font Mono",
+    monospace;
+  white-space: pre;
+  tab-size: 2;
+  resize: vertical;
+}
+
+.preferences-config-check {
+  flex: 1;
+  min-height: 1.45em;
+  margin: 0;
+  color: var(--omx-muted);
+}
+
+.preferences-config-check.error {
+  color: var(--omx-danger);
+}
+
+.preferences-config-actions {
+  display: flex;
+  gap: var(--omx-space-2);
+  align-items: center;
+}
+
+.preferences-config-save:not(:disabled) {
+  color: #ffffff;
+  background: var(--omx-accent);
+  border-color: var(--omx-accent);
+}

@@ -48,6 +48,7 @@ function bridge(remoteSessions: string[] = []) {
   let transfer: ((event: TransferEvent) => void) | undefined;
   const ok = async () => ({ ok: true as const });
   const fake: FilesBridge = {
+    peek: vi.fn(async () => null),
     home: vi.fn(async () => ({
       home: "/home/me",
       platform: "linux",

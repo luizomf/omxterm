@@ -64,6 +64,7 @@ export const DEFAULT_USER_CONFIGURATION: UserConfiguration = Object.freeze({
   fontLineHeight: DEFAULT_TERMINAL_LINE_HEIGHT,
   fontLigatures: DEFAULT_TERMINAL_FONT_LIGATURES,
   terminalPadding: DEFAULT_TERMINAL_PADDING,
+  filePreview: true,
   scrollbackLines: DEFAULT_SCROLLBACK_LINES,
   optionKeyMode: "none",
   alwaysOnTop: false,
@@ -393,7 +394,10 @@ export function validateUserConfiguration(
       "ligatures",
     ]);
   if (terminal)
-    rejectUnknownKeys(terminal, configurationPath, "terminal", ["padding"]);
+    rejectUnknownKeys(terminal, configurationPath, "terminal", [
+      "padding",
+      "filePreview",
+    ]);
   if (padding)
     rejectUnknownKeys(padding, configurationPath, "terminal.padding", [
       "top",
@@ -562,6 +566,12 @@ export function validateUserConfiguration(
     fontLineHeight,
     fontLigatures,
     terminalPadding,
+    filePreview: optionalBoolean(
+      terminal?.filePreview,
+      configurationPath,
+      "terminal.filePreview",
+      true,
+    ),
     scrollbackLines,
     optionKeyMode,
     ...windowPreferences(window, configurationPath),

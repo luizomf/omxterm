@@ -310,10 +310,14 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Developer Tools never open automatically. The tools can expose private
   Terminal Payload and runtime state, so diagnostic output, screenshots, traces,
   and profiles require review and redaction before sharing.
-- `File -> Open Local Image…` is a menu-only action for the selected Terminal
-  Window. It opens a native picker and previews one validated local static PNG
-  or JPEG in a temporary overlay without writing the file or changing User
-  Configuration. Escape, the close button, or the backdrop dismisses the
+- `File -> Open Local Image…` opens a native picker and previews one
+  validated local static PNG or JPEG in a temporary overlay without writing
+  the file or changing User Configuration. Below the image the overlay shows
+  the name, type, dimensions, size, modification date and full path, with
+  **Copy Path**, **Insert Path**, **Open** and **Show in File Manager**;
+  clicking the image switches between fitting the window and its actual
+  size. Main adds the chosen file's path, size and modification time to the
+  image data; error messages still never carry the path. Escape, the close button, or the backdrop dismisses the
   overlay, releases its renderer Blob source synchronously, and returns focus to
   the live selected Terminal Tab. Picker cancellation returns terminal focus
   without an error. The picker and visible local-image sources share the bounded
@@ -1390,7 +1394,17 @@ Application Data switches.
   Alt, Highlight Output, Highlight Rules…), **Window and Tabs** (title bar,
   tab bar and always-on-top for new windows, confirm close, Restore Windows
   at Startup), **Shortcuts** (every keybind action), **Assistant** (see AI
-  assistant) and **Advanced** (log level).
+  assistant), **Advanced** (log level; the Windows shell on Windows) and
+  **config.json**. The Terminal page also turns file hover previews
+  (`terminal.filePreview`) on or off.
+- **config.json page:** the whole file as text, with its path, a live JSON
+  check, Format, Reload from Disk and Save (also `Ctrl+S`/`Cmd+S` in the
+  editor). Save is enabled only for a changed JSON object; main validates
+  the text with the same loader a reload uses, refuses it with the field and
+  reason when invalid, otherwise copies the previous file to
+  `config.json.bak`, writes the text as typed (plus a final newline) and
+  reloads every window. A clean editor rereads the file after any other
+  page saves; an edited one keeps the user's text.
 - Each change is saved when it is made. The renderer sends only a patch of
   known settings with in-range values; main merges it into the current
   `config.json` document, validates the result with the same loader a reload
@@ -1399,8 +1413,9 @@ Application Data switches.
   not written: the dialog shows the field and reason and restores the saved
   value. A `config.json` that is not JSON is never rewritten by a change;
   Restore Defaults replaces it.
-- Keys the dialog does not manage (`windowsShell`) are kept. Keybinds equal
-  to the platform default are removed from `keybinds` rather than written.
+- Keys the dialog does not manage are kept. An empty Windows shell removes
+  `windowsShell`. Keybinds equal to the platform default are removed from
+  `keybinds` rather than written.
 - **Color schemes:** OMXTerm's `omtheme` (the bundled default, selected by
   removing `theme`) and 13 AshyTerm schemes. Choosing one writes
   `themes/<id>.json` and points `theme.path` at it; if a different theme
@@ -1433,6 +1448,52 @@ Application Data switches.
   While hidden, the bar keeps no drag region. **View → Auto-Hide Title Bar /
   Always Show Title Bar** choose between the two; motion is dropped under
   reduced-motion preferences.
+
+## Window placement
+
+A new window opens on the display the user is working on: on KDE Plasma
+under Wayland, the display KWin reports as active (`dbus-send` to
+`org.kde.KWin.activeOutputName`, mapped to its geometry with `xrandr
+--listmonitors`, both run without a shell and with a short timeout), else the
+display under the pointer. Each display remembers the last normal size and
+position of a window on it, and whether it was maximized, in
+`window-placement.json` (Application Data, keyed by the display's geometry,
+positions relative to the display). The remembered bounds are kept inside the
+display's work area; without a memory the default size is centered. A window
+that would open exactly on top of another one is stepped 32 px down and
+right. Moving, resizing, maximizing and closing update the memory (writes are
+debounced and flushed when OMXTerm quits); full-screen bounds are never
+remembered.
+
+## File hover preview
+
+Resting the pointer for about half a second on a file or folder name printed
+in a local terminal (an `ls` listing, a path, a quoted `'My File.pdf'`) shows
+a card next to it, when `terminal.filePreview` is on (the default):
+
+- The name under the pointer comes from Restty's visible-link lookup, asked
+  for the run of non-blank text (or the quoted name) instead of a link; `ls
+-F` markers and trailing punctuation are dropped. Relative names resolve
+  against the pane's folder, `~/` against the home folder.
+- Nothing is read for remote (SSH) panes, while a program runs in the pane
+  (the shell may be on another computer), while the window is unfocused, or
+  while a Local Image Preview is open.
+- Main checks that the absolute path exists and reads a bounded sample: PNG
+  and JPEG images are decoded and scaled (up to 32 MiB), other image formats
+  are passed to the image element (up to 8 MiB); text shows its first 40
+  lines when the first 32 KiB contain no NUL byte; a folder lists up to 40
+  entries and its count. PDFs, videos and documents use the thumbnail a file
+  manager already saved (freedesktop thumbnail cache) or, for a PDF, the
+  first page rendered by poppler's `pdftoppm`, with the page count and title
+  from `pdfinfo`, when installed. macOS and Windows use the system
+  thumbnailer. Nothing is written except a temporary folder for `pdftoppm`,
+  which is removed.
+- The card lists type, size, dimensions, pages, modification date,
+  permissions and the full path, with **View** (PNG/JPEG in the Local Image
+  Preview), **Open** (not for executables), **Copy Path**, **Insert Path**
+  (quoted, without Enter) and **Show in File Manager**. It stays while the
+  pointer is over it and closes on a key press, click, scroll or when the
+  pointer leaves.
 
 ## Command palette
 

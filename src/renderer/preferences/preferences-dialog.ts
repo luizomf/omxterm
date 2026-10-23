@@ -10,6 +10,7 @@ import type {
 } from "../../shared/terminal-bridge";
 import { openModal } from "../ui/modal";
 import { assistantPage } from "./assistant-page";
+import { configFilePage } from "./config-file-page";
 import {
   advancedPage,
   appearancePage,
@@ -54,9 +55,11 @@ export async function openPreferencesDialog(
   problem.className = "preferences-problem";
   problem.setAttribute("role", "alert");
 
+  const savedListeners: (() => void)[] = [];
   const apply = (result: PreferencesSaveResult) => {
     snapshot = result.snapshot;
     for (const sync of syncs) sync(snapshot.values);
+    for (const listener of savedListeners) listener();
     status.textContent = result.ok
       ? t("prefs.saved")
       : t("prefs.notSaved", { reason: result.error });
@@ -120,6 +123,19 @@ export async function openPreferencesDialog(
         ]
       : []),
     PAGES.at(-1)!,
+    [
+      "prefs.configFile",
+      () =>
+        configFilePage(document, options.translator, {
+          read: () => options.bridge.readFile(),
+          async save(text) {
+            const request = queue.then(() => options.bridge.writeFile(text));
+            queue = request.then(apply, () => undefined);
+            return request;
+          },
+          onSaved: (listener) => savedListeners.push(listener),
+        }),
+    ] as const,
   ];
   const tabs = definitions.map(([label, build], index) => {
     const tab = document.createElement("button");

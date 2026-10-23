@@ -1,5 +1,7 @@
 import type { IpcRenderer, IpcRendererEvent } from "electron";
 import {
+  isConfigurationText,
+  isPreferencesFile,
   isCapturedKeyPress,
   isPreferencesPatch,
   isPreferencesSaveResult,
@@ -30,6 +32,17 @@ export function createPreferencesBridge(ipc: IpcRenderer): PreferencesBridge {
     },
     async reset() {
       return result(await ipc.invoke(preferencesIpc.reset));
+    },
+    async readFile() {
+      const value: unknown = await ipc.invoke(preferencesIpc.readFile);
+      if (!isPreferencesFile(value))
+        throw new TypeError("Invalid configuration file response");
+      return value;
+    },
+    async writeFile(text) {
+      if (!isConfigurationText(text))
+        throw new TypeError("Invalid configuration text");
+      return result(await ipc.invoke(preferencesIpc.writeFile, text));
     },
     async captureShortcut(active) {
       if (typeof active !== "boolean")

@@ -26,6 +26,7 @@ import { showContextMenu } from "./ui/context-menu";
 import { createFilesPanel } from "./files/files-panel";
 import { createAssistantPanel } from "./assistant/assistant-panel";
 import { openAboutDialog } from "./about/about-dialog";
+import { installFileHoverPreview } from "./files/file-hover-preview";
 import {
   createDirectoryTracker,
   type DirectoryTracker,
@@ -45,6 +46,9 @@ export function mountWorkspace(
     readonly toolbar?: HeaderToolbar | undefined;
     readonly directories: DirectoryTracker;
     readonly clipboard?: Pick<TerminalClipboard, "writeText"> | undefined;
+    // The terminal area, for hover previews of printed file names.
+    readonly terminalArea?: HTMLElement;
+    readonly viewImage?: (filePath: string) => void;
   },
 ): () => void {
   const document = workspace.element.ownerDocument;
@@ -233,6 +237,7 @@ export function mountWorkspace(
   const removeAssistantToggle = workspace.assistant?.onToggle(() => {
     if (!context.isBlocked()) sidebar.toggle("assistant");
   });
+  const removeFileHover = mountFileHover(workspace, context, toaster.notify);
   const removeAbout = workspace.about?.onOpen(() => {
     if (context.isBlocked() || document.querySelector(".about-dialog")) return;
     void openAboutDialog(
@@ -256,6 +261,7 @@ export function mountWorkspace(
     removePreferences?.();
     removeAssistantToggle?.();
     removeAbout?.();
+    removeFileHover?.();
     removeSaveOutput?.();
     removePaletteToggle?.();
     palette?.dispose();
@@ -411,4 +417,30 @@ export function windowServices(
       ? createHighlightingController(options.highlights)
       : undefined,
   };
+}
+
+// Hover previews of file names printed in local terminals.
+function mountFileHover(
+  workspace: NonNullable<TerminalWindowPageOptions["workspace"]>,
+  context: Parameters<typeof mountWorkspace>[1],
+  notify: (message: string) => void,
+): (() => void) | undefined {
+  if (!workspace.files || !workspace.sessionDirectory || !context.terminalArea)
+    return undefined;
+  return installFileHoverPreview(workspace.element.ownerDocument, {
+    container: context.terminalArea,
+    translator: context.translator,
+    files: workspace.files,
+    fileAtPoint: (x, y) => context.tabs.fileAtPoint(x, y),
+    sessionDirectory: workspace.sessionDirectory,
+    isBlocked: context.isBlocked,
+    copyText: (text) => context.clipboard?.writeText(text) ?? Promise.resolve(),
+    insertText: (text) => {
+      if (context.isBlocked()) return;
+      context.tabs.injectSnippet(text, { submit: false });
+      context.focusTerminal();
+    },
+    notify,
+    ...(context.viewImage ? { viewImage: context.viewImage } : {}),
+  });
 }

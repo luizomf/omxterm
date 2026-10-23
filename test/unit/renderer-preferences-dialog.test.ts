@@ -62,6 +62,11 @@ function bridge(answer: (patch: PreferencesPatch) => PreferencesSaveResult) {
       };
     }),
     onOpen: vi.fn(() => () => {}),
+    readFile: vi.fn(async () => ({
+      path: "/home/me/.config/omxterm/config.json",
+      text: '{\n  "version": 1\n}\n',
+    })),
+    writeFile: vi.fn(async () => ({ ok: true as const, snapshot: snapshot() })),
   } satisfies PreferencesBridge;
   return { fake, press: (key: CapturedKeyPress) => captured?.(key) };
 }
@@ -107,6 +112,7 @@ describe("Preferences dialog", () => {
       "Window and Tabs",
       "Shortcuts",
       "Advanced",
+      "config.json",
     ]);
     const panels = document.querySelectorAll<HTMLElement>('[role="tabpanel"]');
     expect([...panels].filter((panel) => !panel.hidden)).toHaveLength(1);

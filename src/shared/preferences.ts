@@ -26,7 +26,31 @@ export const preferencesIpc = {
   // The shortcut recorder starts or stops receiving every key press.
   capture: "preferences:capture",
   capturedKey: "preferences:captured-key",
+  // The config.json text for the built-in editor, and saving it whole.
+  readFile: "preferences:read-file",
+  writeFile: "preferences:write-file",
 } as const;
+
+export const MAX_CONFIGURATION_TEXT = 1024 * 1024;
+
+export interface PreferencesFile {
+  readonly path: string;
+  readonly text: string;
+}
+
+export function isConfigurationText(value: unknown): value is string {
+  return typeof value === "string" && value.length <= MAX_CONFIGURATION_TEXT;
+}
+
+export function isPreferencesFile(value: unknown): value is PreferencesFile {
+  return (
+    isRecord(value) &&
+    typeof value.path === "string" &&
+    value.path.length > 0 &&
+    value.path.length <= 4_096 &&
+    isConfigurationText(value.text)
+  );
+}
 
 export const LOG_LEVELS = ["error", "info", "debug"] as const;
 export const OPTION_KEY_MODES = ["none", "left", "right", "both"] as const;
@@ -53,6 +77,10 @@ export interface PreferencesValues {
   readonly alwaysOnTop: boolean;
   readonly confirmClose: boolean;
   readonly logLevel: OperationalLogLevel;
+  // Hovering a printed file name shows a preview card.
+  readonly filePreview: boolean;
+  // Windows only; the empty string uses the default shell.
+  readonly windowsShell: string;
   readonly keybinds: Readonly<Record<TerminalActionName, string>>;
   readonly restoreWindows: boolean;
   readonly highlightOutput: boolean;
@@ -145,6 +173,9 @@ const SCALAR_CHECKS: Readonly<
   alwaysOnTop: isBoolean,
   confirmClose: isBoolean,
   logLevel: oneOf(LOG_LEVELS),
+  filePreview: isBoolean,
+  windowsShell: (value) =>
+    typeof value === "string" && value.length <= 4_096 && !value.includes("\0"),
   restoreWindows: isBoolean,
   highlightOutput: isBoolean,
 };
@@ -183,7 +214,7 @@ function isPadding(value: unknown, complete: boolean): boolean {
 export function isPreferencesPatch(value: unknown): value is PreferencesPatch {
   if (!isRecord(value)) return false;
   const keys = Object.keys(value);
-  if (keys.length === 0 || keys.length > 20) return false;
+  if (keys.length === 0 || keys.length > 32) return false;
   return keys.every((key) => {
     if (key === "padding") return isPadding(value.padding, false);
     if (key === "keybinds") return isKeybindMap(value.keybinds, false);

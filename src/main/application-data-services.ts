@@ -17,6 +17,7 @@ import { startOutputFiles } from "./output-file-wiring";
 import { startRemoteFiles } from "./remote-files-wiring";
 import { startAssistant } from "./assistant-wiring";
 import { startAbout } from "./about-wiring";
+import { startFilePeek } from "./file-peek-wiring";
 import { MAX_WINDOW_CORNER_RADIUS } from "../shared/user-configuration";
 import type { TerminalIpcRouter } from "./terminal-ipc-types";
 import type { PreferencesServiceOptions } from "./preferences-service";
@@ -73,6 +74,7 @@ export async function startApplicationDataServices(options: {
   startFileBrowser(shared);
   startOutputFiles(shared);
   const about = startAbout(shared);
+  startFilePeek(shared);
   const backup = startSettingsBackup({
     ipcMain: options.ipcMain,
     isTrustedSender: options.isTrustedSender,

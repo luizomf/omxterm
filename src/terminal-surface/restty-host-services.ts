@@ -7,7 +7,42 @@ import type {
   TerminalSurfaceOptions,
   TerminalSurface,
 } from "./terminal-surface";
-import { visibleLinkAtOffset } from "./visible-links";
+import { fileTokenAtOffset, visibleLinkAtOffset } from "./visible-links";
+import type { ResttyVisibleLinkInteraction } from "./restty-visible-links";
+
+// The file name under a window point. Restty's link lookup reads the cells;
+// while `state.active` is set, the host's resolver below answers with the
+// printed file name instead of a link.
+export function resttyFileProbe(
+  interaction: () =>
+    | Pick<ResttyVisibleLinkInteraction, "getVisibleLinkAtClientPoint">
+    | undefined,
+) {
+  const state = { active: false };
+  return {
+    services: (
+      transport: PtyTransport,
+      delivery: SemanticInputDelivery,
+      options: TerminalSurfaceOptions,
+      revealInput: () => void,
+    ) => resttyHostServices(transport, delivery, options, revealInput, state),
+    tokenAt(clientX: number, clientY: number): string | null {
+      const current = interaction();
+      if (!current) return null;
+      state.active = true;
+      try {
+        return (
+          current.getVisibleLinkAtClientPoint(clientX, clientY)?.url ?? null
+        );
+      } catch {
+        // A disposed pane has nothing under the pointer.
+        return null;
+      } finally {
+        state.active = false;
+      }
+    },
+  };
+}
 
 export function resttyClipboardActions(
   delivery: SemanticInputDelivery,
@@ -61,6 +96,9 @@ export function resttyHostServices(
   delivery: SemanticInputDelivery,
   options: TerminalSurfaceOptions,
   revealInput: () => void,
+  // While active, Restty's link lookup reports the file name under the
+  // pointer instead of a link (see fileTokenAt).
+  probe: { active: boolean } = { active: false },
 ): PatchedResttyServices {
   return {
     ptyTransport: transport,
@@ -89,7 +127,7 @@ export function resttyHostServices(
         .catch(() => options.onClipboardError?.());
     },
     resolveVisibleLink: (candidate) =>
-      visibleLinkAtOffset(
+      (probe.active ? fileTokenAtOffset : visibleLinkAtOffset)(
         candidate.text,
         candidate.offset,
         candidate.clippedStart,
@@ -106,5 +144,20 @@ export function isWorkingDirectoryReport(payload: string): boolean {
     payload.length <= MAX_WORKING_DIRECTORY_REPORT_LENGTH &&
     /^file:\/\/[^/]*\//u.test(payload) &&
     !/\p{Cc}/u.test(payload)
+  );
+}
+
+// A lost WebGL context ends the Surface.
+export function onContextLost(
+  canvas: HTMLCanvasElement,
+  lost: () => void,
+): void {
+  canvas.addEventListener(
+    "webglcontextlost",
+    (event) => {
+      event.preventDefault();
+      lost();
+    },
+    { once: true },
   );
 }

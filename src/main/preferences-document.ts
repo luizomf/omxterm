@@ -36,6 +36,8 @@ export function preferencesValues(
     alwaysOnTop: configuration.alwaysOnTop,
     confirmClose: configuration.confirmClose,
     logLevel: configuration.logLevel,
+    filePreview: configuration.filePreview,
+    windowsShell: configuration.windowsShell ?? "",
     keybinds: { ...configuration.keybinds },
     restoreWindows: extras.restoreWindows,
     highlightOutput: extras.highlightOutput,
@@ -56,7 +58,7 @@ function section(document: Document, key: string): Document {
 }
 
 // Writes a patch into a copy of the config.json document. Keys the dialog
-// does not manage (windowsShell, unknown future keys) are kept as they are.
+// does not manage (unknown future keys) are kept as they are.
 // Keybinds equal to the platform default are removed instead of written.
 export function applyPreferencesPatch(
   original: Document,
@@ -69,9 +71,7 @@ export function applyPreferencesPatch(
   const set = (key: string, field: string, value: unknown) => {
     section(document, key)[field] = value;
   };
-  if (patch.confirmClose !== undefined)
-    document.confirmClose = patch.confirmClose;
-  if (patch.logLevel !== undefined) document.logLevel = patch.logLevel;
+  applyGeneralSettings(document, patch);
   if (patch.fontFamily !== undefined) {
     if (patch.fontFamily.trim() === "") delete section(document, "font").family;
     else set("font", "family", patch.fontFamily.trim());
@@ -119,6 +119,19 @@ export function applyPreferencesPatch(
     )
       delete document[key];
   return document;
+}
+
+// Top-level settings and file previews.
+function applyGeneralSettings(document: Document, patch: PreferencesPatch) {
+  if (patch.confirmClose !== undefined)
+    document.confirmClose = patch.confirmClose;
+  if (patch.logLevel !== undefined) document.logLevel = patch.logLevel;
+  if (patch.windowsShell !== undefined) {
+    if (patch.windowsShell.trim() === "") delete document.windowsShell;
+    else document.windowsShell = patch.windowsShell.trim();
+  }
+  if (patch.filePreview !== undefined)
+    section(document, "terminal").filePreview = patch.filePreview;
 }
 
 // Restore Defaults keeps only what the dialog does not manage.

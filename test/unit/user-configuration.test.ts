@@ -117,6 +117,7 @@ describe("strict version 1 User Configuration", () => {
       fontLineHeight: 1.15,
       fontLigatures: false,
       terminalPadding: { top: 0, right: 12, bottom: 8, left: 16 },
+      filePreview: true,
       scrollbackLines: 0,
       optionKeyMode: "left",
       alwaysOnTop: true,

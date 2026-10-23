@@ -169,6 +169,22 @@ export function createTerminalTabs(
         selected: index === ctx.selectedIndex,
       }));
     },
+    fileAtPoint(clientX, clientY) {
+      const tab = selectedTab(ctx);
+      if (!tab) return null;
+      const pane = layoutPanes(tab.layout).find((candidate) => {
+        const bounds = candidate.container.getBoundingClientRect();
+        return (
+          clientX >= bounds.left &&
+          clientX < bounds.right &&
+          clientY >= bounds.top &&
+          clientY < bounds.bottom
+        );
+      });
+      const sessionId = pane?.adapter.sessionId();
+      const token = pane?.surface?.fileTokenAt?.(clientX, clientY);
+      return sessionId && token ? { sessionId, token } : null;
+    },
     paneTargets() {
       return ctx.tabs.flatMap((tab, index) =>
         layoutPanes(tab.layout)

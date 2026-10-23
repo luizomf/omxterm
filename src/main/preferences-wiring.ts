@@ -2,7 +2,11 @@ import { execFile } from "node:child_process";
 import { mkdir, open, readdir, readFile, rename, rm } from "node:fs/promises";
 import { promisify } from "node:util";
 import { BrowserWindow, type IpcMain } from "electron";
-import { isPreferencesPatch, preferencesIpc } from "../shared/preferences";
+import {
+  isConfigurationText,
+  isPreferencesPatch,
+  preferencesIpc,
+} from "../shared/preferences";
 import type { KeyCapture } from "./keybind-delivery";
 import { writeAtomically } from "./application-data";
 import type { OperationalEventLog } from "./operational-events";
@@ -82,6 +86,12 @@ export function startPreferences(
         return service.save(payload);
       },
       [preferencesIpc.reset]: () => service.reset(),
+      [preferencesIpc.readFile]: () => service.readFile(),
+      [preferencesIpc.writeFile]: (_event, payload) => {
+        if (!isConfigurationText(payload))
+          throw new TypeError("Invalid configuration text");
+        return service.writeFile(payload);
+      },
       [preferencesIpc.capture]: (event, payload) => {
         if (typeof payload !== "boolean")
           throw new TypeError("Invalid shortcut capture request");

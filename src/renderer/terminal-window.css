@@ -213,6 +213,10 @@ body.tabs-visible .restty-terminal-surface {
   display: none;
 }
 
+#snippets-sidebar .snippets-header {
+  padding: 0;
+}
+
 #snippets-sidebar input[type="search"] {
   box-sizing: border-box;
   width: 100%;
@@ -448,4 +452,43 @@ body.tabs-visible #snippets-sidebar {
   color: #ffffff;
   background: #8c1d18;
   border-radius: 6px;
+}
+
+.local-image-preview[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+}
+
+.local-image-preview img {
+  align-self: center;
+  cursor: zoom-in;
+}
+
+/* Clicking the image shows it at its actual size, scrolling as needed. */
+.local-image-preview.actual-size img {
+  max-width: none;
+  max-height: none;
+  cursor: zoom-out;
+}
+
+.local-image-preview-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font:
+    13px/1.45 -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+}
+
+.local-image-preview-info[hidden] {
+  display: none;
+}
+
+.local-image-preview-status {
+  min-height: 1.45em;
+  margin: 0;
+  opacity: 0.75;
 }

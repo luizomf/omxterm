@@ -71,8 +71,12 @@ Omarchy screenshot are arranged by Hyprland.
 - Bundled Nerd Fonts (FiraCode, JetBrains Mono, DejaVu Sans Mono), or any
   installed font.
 - Scrollback up to 100,000 lines and search through it (**Edit → Find…**).
-- Clickable web links, previews of local PNG/JPEG images, and quoted file
-  paths when you drop files on the window.
+- Clickable web links, previews of local PNG/JPEG images with their details
+  and path, and quoted file paths when you drop files on the window.
+- **File hover previews:** rest the pointer on a file name printed by `ls`
+  (or any path) to see the image, the first PDF page, the first lines of a
+  text file or a folder's contents, with size, date and path, and buttons to
+  view, open, copy or insert the path.
 - **Protected Paste:** pasting multiple lines or control characters asks
   first.
 
@@ -81,6 +85,8 @@ Omarchy screenshot are arranged by Hyprland.
 - **Header toolbar** in the title bar: Sessions, Commands, Files, Assistant, Find, Split Right,
   Split Down and Broadcast before the title; New Tab and a **main menu**
   (☰) with every action after it.
+- New windows open on the monitor you are working on, at the size and
+  position last used on that monitor (each monitor remembers its own).
 - Tabs and multiple windows, with hideable title and tab bars, an
   auto-hiding title bar that slides in from the top edge, rounded window
   corners, background transparency and blur, and always-on-top.
@@ -162,9 +168,9 @@ Omarchy screenshot are arranged by Hyprland.
   Monokai, Dracula, Nord, Tokyo Night, Catppuccin, Rosé Pine and more), font,
   size, line height, ligatures, transparency, blur, rounded corners, padding,
   scrollback, window and tab options (including the auto-hiding title bar),
-  a shortcut recorder with conflict checks, the AI assistant, and Restore
-  Defaults. Every change is validated, saved to `config.json` and
-  applied to all windows at once.
+  a shortcut recorder with conflict checks, file previews, the AI assistant,
+  a built-in **config.json editor**, and Restore Defaults. Every change is
+  validated, saved to `config.json` and applied to all windows at once.
 - Plain-JSON configuration with hot reload, themes, and remappable shortcuts,
   or edit visually with [OMXTerm Studio](https://luizomf.github.io/omxterm-studio/).
 - **Back Up / Restore Settings:** one passphrase-encrypted `.omxbackup` file

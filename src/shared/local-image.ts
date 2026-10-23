@@ -14,6 +14,10 @@ export interface LocalImageData {
   readonly width: number;
   readonly height: number;
   readonly data: Uint8Array;
+  // Facts about the file the preview shows, for its details and actions.
+  readonly path?: string;
+  readonly size?: number;
+  readonly modified?: number;
 }
 
 export type LocalImageActivation =
@@ -45,9 +49,25 @@ export function isLocalImageRequest(
 }
 
 export function isLocalImageData(value: unknown): value is LocalImageData {
-  if (!isRecord(value) || Object.keys(value).length !== 5) return false;
+  if (
+    !isRecord(value) ||
+    !Object.keys(value).every((key) =>
+      [
+        "name",
+        "mime",
+        "width",
+        "height",
+        "data",
+        "path",
+        "size",
+        "modified",
+      ].includes(key),
+    )
+  )
+    return false;
   const { name, mime, width, height, data } = value;
   return (
+    hasFileFacts(value) &&
     typeof name === "string" &&
     name.length > 0 &&
     name.length <= MAX_LOCAL_IMAGE_SOURCE_LENGTH &&
@@ -67,4 +87,20 @@ export function isLocalImageData(value: unknown): value is LocalImageData {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// The optional path, size and modification time of the previewed file.
+function hasFileFacts(value: Record<string, unknown>): boolean {
+  const { path, size, modified } = value;
+  const isCount = (item: unknown) =>
+    typeof item === "number" && Number.isFinite(item) && item >= 0;
+  return (
+    (path === undefined ||
+      (typeof path === "string" &&
+        path.length > 0 &&
+        path.length <= MAX_LOCAL_IMAGE_SOURCE_LENGTH &&
+        !path.includes("\0"))) &&
+    (size === undefined || isCount(size)) &&
+    (modified === undefined || isCount(modified))
+  );
 }

@@ -341,6 +341,9 @@ export function terminalPage(context: PreferencesContext): HTMLElement {
     heading(context, "prefs.highlighting"),
     toggle(context, "highlightOutput", "menu.highlightOutput"),
     rules,
+    heading(context, "prefs.filePreview"),
+    toggle(context, "filePreview", "prefs.filePreviewToggle"),
+    hint(context, "prefs.filePreviewHint"),
   );
 }
 
@@ -458,9 +461,44 @@ export function shortcutsPage(context: PreferencesContext): HTMLElement {
   return page(context, hint, list);
 }
 
+function hint(context: PreferencesContext, key: MessageKey): HTMLElement {
+  const element = context.document.createElement("p");
+  element.className = "omx-field-hint";
+  element.textContent = context.t(key);
+  return element;
+}
+
+// Windows only: the program new local terminals start.
+function windowsShellField(context: PreferencesContext): HTMLElement {
+  const input = textInput(
+    context.document,
+    context.snapshot().values.windowsShell,
+    {
+      placeholder:
+        "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    },
+  );
+  commitOnEnter(input);
+  input.addEventListener("change", () =>
+    context.save({ windowsShell: input.value.trim() }),
+  );
+  context.onSync((values) => {
+    input.value = values.windowsShell;
+  });
+  return field(
+    context.document,
+    context.t("prefs.windowsShell"),
+    input,
+    context.t("prefs.windowsShellHint"),
+  ).element;
+}
+
 export function advancedPage(context: PreferencesContext): HTMLElement {
   return page(
     context,
+    ...(context.snapshot().platform === "win32"
+      ? [heading(context, "prefs.shell"), windowsShellField(context)]
+      : []),
     heading(context, "prefs.diagnostics"),
     choice(context, "logLevel", "prefs.logLevel", [
       [LOG_LEVELS[0], "prefs.logError"],

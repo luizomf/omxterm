@@ -68,6 +68,7 @@ export function terminalRendererConfiguration(
       ? { cornerRadius: configuration.cornerRadius }
       : {}),
     ...(configuration.autoHideTitleBar ? { autoHideTitleBar: true } : {}),
+    ...(configuration.filePreview ? {} : { filePreview: false as const }),
     transparency: configuration.transparency,
     terminalTheme: active.configuration.terminalTheme,
     userFileErrors: active.userFileErrors,

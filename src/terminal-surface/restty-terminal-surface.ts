@@ -30,14 +30,14 @@ import {
 } from "../shared/terminal-theme";
 import type { TerminalSessionAdapter } from "./terminal-session-adapter";
 import {
-  installResttyVisibleLinks,
-  requestVisibleLink,
+  installSurfaceVisibleLinks,
   type ResttyVisibleLinkController,
 } from "./restty-visible-links";
 import {
   resttyClipboardActions,
   resttyContextMenuHandler,
-  resttyHostServices,
+  resttyFileProbe,
+  onContextLost,
 } from "./restty-host-services";
 import { toGhosttyTheme } from "./restty-theme";
 import type {
@@ -136,6 +136,7 @@ export async function mountResttyTerminalSurface(
   let restty: PatchedRestty | undefined;
   let fontLease: TerminalFontInputLease | undefined;
   let pane: PatchedResttyPane | undefined;
+  const fileProbe = resttyFileProbe(() => pane?.runtime.interaction);
   let baselineFontSize = resolveFontSize(options.appearance?.fontSize);
   let currentFontSize = baselineFontSize;
   const initialLineHeight = resolveLineHeight(options.appearance?.lineHeight);
@@ -266,7 +267,7 @@ export async function mountResttyTerminalSurface(
       root: container,
       surface: resttySurfaceConfig(options.searchLabels),
       terminal: { ...terminal, isSurfaceVisible },
-      services: resttyHostServices(transport, delivery, options, revealInput),
+      services: fileProbe.services(transport, delivery, options, revealInput),
     });
     pane = restty.getActivePane() ?? undefined;
     if (!pane) throw new Error("Restty did not create its terminal pane");
@@ -295,22 +296,14 @@ export async function mountResttyTerminalSurface(
     container.dataset.resttyBackend = "webgl2";
     container.dataset.resttyFont =
       initialFamily ?? DEFAULT_TERMINAL_FONT_FAMILY;
-    if (options.onExternalLink || options.onLocalImageActivation)
-      visibleLinkController = installResttyVisibleLinks(
-        canvas,
-        pane.runtime.interaction,
-        (url) => requestVisibleLink(url, options),
-        navigator.platform,
-        options.linkHoverAvailability,
-      );
+    visibleLinkController = installSurfaceVisibleLinks(
+      canvas,
+      pane.runtime.interaction,
+      options,
+    );
     container.addEventListener("contextmenu", onContextMenu);
-    canvas.addEventListener(
-      "webglcontextlost",
-      (event) => {
-        event.preventDefault();
-        fail("The OMXTerm Terminal Surface rendering backend was lost");
-      },
-      { once: true },
+    onContextLost(canvas, () =>
+      fail("The OMXTerm Terminal Surface rendering backend was lost"),
     );
 
     // Allow parser replies before startup output can replay synchronously.
@@ -367,6 +360,7 @@ export async function mountResttyTerminalSurface(
       toggleSearch: () => {
         if (!disposed) restty?.toggleSearch();
       },
+      fileTokenAt: fileProbe.tokenAt,
       dispose,
     };
   } catch (cause) {

@@ -61,7 +61,8 @@ describe("Preferences contract", () => {
       { padding: { middle: 1 } },
       { keybinds: { rm: "Control+R" } },
       { logLevel: "trace" },
-      { windowsShell: "C:\\evil.exe" },
+      { windowsShell: "C:\\evil\0.exe" },
+      { windowsShell: 5 },
       { fontFamily: "x".repeat(300) },
     ])
       expect(isPreferencesPatch(patch), JSON.stringify(patch)).toBe(false);

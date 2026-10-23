@@ -188,6 +188,7 @@ Every field except `version` is optional and falls back to its default when omit
 | `terminal.padding.right`  | integer `0` – `128` (CSS px)            | `8`                              |
 | `terminal.padding.bottom` | integer `0` – `128` (CSS px)            | `8`                              |
 | `terminal.padding.left`   | integer `0` – `128` (CSS px)            | `8`                              |
+| `terminal.filePreview`    | boolean                                 | `true`                           |
 | `scrollback.lines`        | integer `0` – `100000`                  | `10000`                          |
 | `keyboard.optionAsAlt`    | `"none"`, `"left"`, `"right"`, `"both"` | `"none"`                         |
 | `window.alwaysOnTop`      | boolean                                 | `false`                          |
@@ -202,6 +203,8 @@ Every field except `version` is optional and falls back to its default when omit
 
 ### Notes on specific settings
 
+- **`terminal.filePreview`:** hovering a file name printed in a local terminal shows a preview card (picture, first page or first lines, and details). Turn it off in Preferences → Terminal.
+- **Preferences → config.json** edits this file as text; saving validates it like a reload and keeps the previous version as `config.json.bak`.
 - **`scrollback.lines`:** kept in memory per tab (up to a 10 MB per-screen core ceiling). Setting `0` clears and disables scrollback history.
 - **`keyboard.optionAsAlt` (macOS only):** `"none"` keeps standard macOS Option character input (like accented letters or symbols); `"left"`, `"right"`, or `"both"` sends terminal `Alt` sequences instead.
 - **`window.showTitleBar`, `window.showTabBar`, and `window.alwaysOnTop`:** set the initial state for new windows. Use the **View** and **Window** menus to toggle them in your current window.

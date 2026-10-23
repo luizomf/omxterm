@@ -250,4 +250,48 @@ describe("Preferences service", () => {
     expect(reload).not.toHaveBeenCalled();
     await expect(readFile(configurationPath)).rejects.toThrow();
   });
+
+  it("saves file previews in config.json and keeps them on by default", async () => {
+    const { service, config } = await setup();
+    expect((await service.snapshot()).values.filePreview).toBe(true);
+    const result = await service.save({ filePreview: false });
+    expect(result.ok).toBe(true);
+    expect(await config()).toEqual({
+      version: 1,
+      terminal: { filePreview: false },
+    });
+    expect(result.snapshot.values.filePreview).toBe(false);
+  });
+
+  it("edits config.json as text, validating it like a reload", async () => {
+    const { service, reload, config, configurationPath } = await setup(
+      '{"version":1,"font":{"size":20}}',
+    );
+    const file = await service.readFile();
+    expect(file).toEqual({
+      path: configurationPath,
+      text: '{"version":1,"font":{"size":20}}',
+    });
+
+    const broken = await service.writeFile('{"version": 1,');
+    expect(broken.ok).toBe(false);
+    if (!broken.ok) expect(broken.error).toMatch(/^JSON: /u);
+    const invalid = await service.writeFile(
+      '{"version": 1, "font": {"size": 2}}',
+    );
+    expect(invalid.ok).toBe(false);
+    if (!invalid.ok) expect(invalid.error).toContain("font.size");
+    expect(reload).not.toHaveBeenCalled();
+    expect(await config()).toEqual({ version: 1, font: { size: 20 } });
+
+    const text = '{\n  "version": 1,\n  "font": { "size": 22 }\n}';
+    const saved = await service.writeFile(text);
+    expect(saved.ok).toBe(true);
+    expect(reload).toHaveBeenCalledOnce();
+    expect(await readFile(configurationPath, "utf8")).toBe(`${text}\n`);
+    expect(await readFile(`${configurationPath}.bak`, "utf8")).toBe(
+      '{"version":1,"font":{"size":20}}',
+    );
+    expect(saved.snapshot.values.fontSize).toBe(22);
+  });
 });

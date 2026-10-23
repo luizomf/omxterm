@@ -12,6 +12,7 @@ import {
   isFilePathList,
 } from "../shared/file-browser";
 import type { FilesBridge } from "../shared/terminal-bridge";
+import { filePeekIpc, isFilePeek } from "../shared/file-peek";
 
 // The Files panel's access to the local file system through main; requests
 // and answers are checked on this side too.
@@ -39,6 +40,12 @@ export function createFilesBridge(ipc: IpcRenderer): FilesBridge {
     return result;
   };
   return {
+    async peek(filePath) {
+      const peek: unknown = await ipc.invoke(filePeekIpc.peek, path(filePath));
+      if (peek === null) return null;
+      if (!isFilePeek(peek)) throw new TypeError("Invalid file preview");
+      return peek;
+    },
     async home() {
       const value: unknown = await ipc.invoke(fileBrowserIpc.home);
       if (!isFileBrowserHome(value)) throw new TypeError("Invalid response");

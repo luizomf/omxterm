@@ -33,16 +33,18 @@ import {
   type SnippetsSidebar,
 } from "./snippets-sidebar";
 import { renderUserFileErrorBanner } from "./user-file-error-banner";
-import {
-  createLocalImagePreview,
-  type LocalImagePreview,
-} from "./local-image-preview";
+import type { LocalImagePreview } from "./local-image-preview";
 import type {
   LocalImageActivation,
   LocalImageData,
 } from "../shared/local-image";
 import { createTerminalFontGenerationOwner } from "./terminal-font-generations";
 import type { Translator } from "../shared/i18n";
+import {
+  createWindowImagePreview,
+  searchLabels,
+  snippetsLabels,
+} from "./terminal-window-parts";
 import type { WorkspacePlan, WorkspaceSnapshot } from "../shared/workspace";
 import type { TerminalActionName } from "../shared/terminal-keybinds";
 import type { HeaderToolbarOptions } from "./header-toolbar";
@@ -277,14 +279,16 @@ export function mountTerminalWindowPage(
     : undefined;
 
   if (options.loadLocalImage) {
-    localImagePreview = createLocalImagePreview(page.document, {
-      loadImage: options.loadLocalImage,
-      focusTerminal: () => tabs.focusSelected(),
-      onActivityChange: () => {
+    localImagePreview = createWindowImagePreview(
+      page.document,
+      options,
+      translator,
+      () => tabs,
+      () => {
         chrome?.setPreviewActive(localImagePreview?.isActive() ?? false);
         for (const listener of hoverAvailabilityListeners) listener();
       },
-    });
+    );
     removeLocalImageOpenListener = options.subscribeToLocalImageOpen?.(
       () => void localImagePreview?.open(),
     );
@@ -411,6 +415,7 @@ export function mountTerminalWindowPage(
             tabs.injectSnippet(snippet.body, { submit: snippet.execute });
         },
         focusTerminal: onPageFocus,
+        labels: snippetsLabels(options.translator),
       });
       snippetsSidebar = sidebar;
       removeSnippetsToggleListener = options.snippets.subscribeToToggle(() => {
@@ -426,22 +431,13 @@ export function mountTerminalWindowPage(
         toolbar,
         directories,
         clipboard: options.clipboard,
+        terminalArea: elements.tabsContainer,
+        viewImage: (path) =>
+          void localImagePreview?.open({ source: "native-path", path }),
       });
   });
 
   return { ready, dispose };
-}
-
-function searchLabels(
-  translator: Translator,
-): NonNullable<TerminalSurfaceOptions["searchLabels"]> {
-  return {
-    placeholder: translator.t("search.placeholder"),
-    previous: translator.t("search.previous"),
-    next: translator.t("search.next"),
-    clear: translator.t("search.clear"),
-    close: translator.t("search.close"),
-  };
 }
 
 function paintPage(

@@ -1,4 +1,5 @@
 import type { AboutInfo, AboutLink } from "./about";
+import type { FilePeek } from "./file-peek";
 import type {
   AssistantEvent,
   AssistantMessage,
@@ -18,6 +19,7 @@ import type {
 import type {
   CapturedKeyPress,
   PreferencesPatch,
+  PreferencesFile,
   PreferencesSaveResult,
   PreferencesSnapshot,
 } from "./preferences";
@@ -76,6 +78,8 @@ export interface FilesBridge {
     destination: string,
   ): Promise<FileOperationResult>;
   onToggle(listener: () => void): () => void;
+  // A hover preview of a local file or folder, or null when it is missing.
+  peek(filePath: string): Promise<FilePeek | null>;
   // Remote (SFTP) files of an SSH pane, named by its session id.
   location(sessionId: TerminalSessionId): Promise<PaneLocation>;
   remoteHome(sessionId: TerminalSessionId): Promise<string>;
@@ -151,6 +155,10 @@ export interface PreferencesBridge {
   get(): Promise<PreferencesSnapshot>;
   save(patch: PreferencesPatch): Promise<PreferencesSaveResult>;
   reset(): Promise<PreferencesSaveResult>;
+  // config.json as text for the built-in editor, and saving it whole after
+  // the same validation as a reload.
+  readFile(): Promise<PreferencesFile>;
+  writeFile(text: string): Promise<PreferencesSaveResult>;
   // While on, every key press goes to onCapturedKey listeners instead of
   // keybinds, menus or the terminal (main ends it after 30 seconds).
   captureShortcut(active: boolean): Promise<void>;

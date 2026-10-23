@@ -1,4 +1,5 @@
 import { dialog, nativeImage, type BrowserWindow } from "electron";
+import { stat } from "node:fs/promises";
 import type { LocalImageData, LocalImageRequest } from "../shared/local-image";
 import {
   loadLocalImageRequest,
@@ -41,21 +42,10 @@ export async function loadLocalImageForWindow(
           ? null
           : result.filePaths[0]!;
       },
-      read: (filePath) =>
-        readLocalImage(filePath, {
-          platform: process.platform,
-          validateDecodedImage(bytes, expected) {
-            const decoded = nativeImage.createFromBuffer(
-              Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength),
-            );
-            const size = decoded.getSize();
-            return (
-              !decoded.isEmpty() &&
-              size.width === expected.width &&
-              size.height === expected.height
-            );
-          },
-        }),
+      read: async (filePath) => ({
+        ...(await readImage(filePath)),
+        ...(await fileFacts(filePath)),
+      }),
     });
   } catch (error) {
     if (abortSignal.aborted)
@@ -66,3 +56,33 @@ export async function loadLocalImageForWindow(
     throw new Error("The local image could not be loaded");
   }
 }
+
+// The path, size and modification time the preview shows the user.
+async function fileFacts(filePath: string) {
+  try {
+    const info = await stat(filePath);
+    return {
+      path: filePath,
+      size: info.size,
+      modified: Math.round(info.mtimeMs),
+    };
+  } catch {
+    return {};
+  }
+}
+
+const readImage = (filePath: string) =>
+  readLocalImage(filePath, {
+    platform: process.platform,
+    validateDecodedImage(bytes, expected) {
+      const decoded = nativeImage.createFromBuffer(
+        Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength),
+      );
+      const size = decoded.getSize();
+      return (
+        !decoded.isEmpty() &&
+        size.width === expected.width &&
+        size.height === expected.height
+      );
+    },
+  });

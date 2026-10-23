@@ -24,6 +24,9 @@ export interface TerminalSurface {
   outputText?(): string;
   // Opens or closes the in-terminal search bar over the scrollback.
   toggleSearch(): void;
+  // The file name printed under a window point (an `ls` entry, a path), or
+  // null over blank cells.
+  fileTokenAt?(clientX: number, clientY: number): string | null;
   dispose(): void;
 }
 

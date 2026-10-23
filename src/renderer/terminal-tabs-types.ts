@@ -104,6 +104,11 @@ export interface TerminalTabs {
   selectTab(index: number): void;
   // Every live pane of every tab, for running a command in several.
   paneTargets(): PaneTarget[];
+  // The file name printed under a window point in the selected tab.
+  fileAtPoint(
+    clientX: number,
+    clientY: number,
+  ): { readonly sessionId: TerminalSessionId; readonly token: string } | null;
   openLaunch(launch: PaneLaunch, placement: TerminalLaunchPlacement): void;
   dispose(): void;
 }

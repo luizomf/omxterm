@@ -15,7 +15,7 @@ export function applyWindowFrame(
   document: Document,
   configuration: Pick<
     TerminalRendererConfiguration,
-    "cornerRadius" | "autoHideTitleBar"
+    "cornerRadius" | "autoHideTitleBar" | "filePreview"
   >,
 ): void {
   const root = document.documentElement;
@@ -26,6 +26,11 @@ export function applyWindowFrame(
   root.toggleAttribute(
     "data-title-bar-autohide",
     configuration.autoHideTitleBar === true,
+  );
+  // Read by the terminal's file hover preview.
+  root.toggleAttribute(
+    "data-file-preview-off",
+    configuration.filePreview === false,
   );
 }
 

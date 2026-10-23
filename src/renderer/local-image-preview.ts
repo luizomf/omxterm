@@ -1,4 +1,6 @@
 import { UNSUPPORTED_LOCAL_IMAGE_FORMAT } from "../shared/local-image";
+import type { Translator } from "../shared/i18n";
+import { fileDetails } from "./files/file-peek-card";
 import type {
   LocalImageActivation,
   LocalImageData,
@@ -21,6 +23,9 @@ export function createLocalImagePreview(
     ) => Promise<LocalImageData | null>;
     readonly focusTerminal: () => void;
     readonly onActivityChange?: () => void;
+    // Details under the image (dimensions, size, date, path) and actions on
+    // the file; absent, the overlay shows the image alone.
+    readonly details?: LocalImageDetailsOptions;
   },
 ): LocalImagePreview {
   const dialog = document.createElement("dialog");
@@ -40,7 +45,12 @@ export function createLocalImagePreview(
   error.className = "local-image-preview-error";
   error.setAttribute("role", "alert");
   error.hidden = true;
-  dialog.append(closeButton, image, error);
+  const info = document.createElement("div");
+  info.className = "local-image-preview-info";
+  info.hidden = true;
+  // Click toggles between fitting the window and the actual size.
+  image.addEventListener("click", () => dialog.classList.toggle("actual-size"));
+  dialog.append(closeButton, image, error, info);
   document.body.append(dialog);
 
   let objectUrl: string | undefined;
@@ -50,6 +60,9 @@ export function createLocalImagePreview(
   const clear = () => {
     image.removeAttribute("src");
     image.hidden = true;
+    info.hidden = true;
+    info.replaceChildren();
+    dialog.classList.remove("actual-size");
     if (objectUrl !== undefined) URL.revokeObjectURL(objectUrl);
     objectUrl = undefined;
   };
@@ -129,6 +142,12 @@ export function createLocalImagePreview(
         image.src = objectUrl;
         await image.decode();
         if (disposed) return;
+        if (options.details && selected.path) {
+          info.replaceChildren(
+            ...imageDetails(document, options.details, selected, dismiss),
+          );
+          info.hidden = false;
+        }
         show();
       } catch (failure) {
         if (!disposed) showError(failure);
@@ -146,4 +165,79 @@ export function createLocalImagePreview(
       options.onActivityChange?.();
     },
   };
+}
+
+export interface LocalImageDetailsOptions {
+  readonly translator: Translator;
+  readonly copyPath: (path: string) => Promise<void>;
+  readonly insertPath: (path: string) => void;
+  readonly open: (path: string) => Promise<unknown>;
+  readonly reveal: (path: string) => Promise<unknown>;
+}
+
+function imageDetails(
+  document: Document,
+  details: LocalImageDetailsOptions,
+  image: LocalImageData,
+  dismiss: () => void,
+): HTMLElement[] {
+  const t = details.translator.t.bind(details.translator);
+  const path = image.path!;
+  const status = document.createElement("p");
+  status.className = "local-image-preview-status";
+  status.setAttribute("role", "status");
+  const run = (action: () => Promise<unknown>, done?: string) => () =>
+    void action().then(
+      () => {
+        if (done) status.textContent = done;
+      },
+      () => {
+        status.textContent = t("peek.actionFailed");
+      },
+    );
+  const button = (label: string, action: () => void) => {
+    const element = document.createElement("button");
+    element.type = "button";
+    element.className = "omx-button";
+    element.textContent = label;
+    element.addEventListener("click", action);
+    return element;
+  };
+  const title = document.createElement("p");
+  title.className = "file-peek-name";
+  title.textContent = image.name;
+  const actions = document.createElement("div");
+  actions.className = "file-peek-actions";
+  actions.append(
+    button(
+      t("files.copyPath"),
+      run(() => details.copyPath(path), t("peek.pathCopied")),
+    ),
+    button(t("peek.insertPath"), () => {
+      dismiss();
+      details.insertPath(path);
+    }),
+    button(
+      t("files.open"),
+      run(() => details.open(path)),
+    ),
+    button(
+      t("files.reveal"),
+      run(() => details.reveal(path)),
+    ),
+  );
+  return [
+    title,
+    fileDetails(document, details.translator, {
+      path,
+      kind: "image",
+      mime: image.mime,
+      width: image.width,
+      height: image.height,
+      ...(image.size === undefined ? {} : { size: image.size }),
+      ...(image.modified === undefined ? {} : { modified: image.modified }),
+    }),
+    actions,
+    status,
+  ];
 }

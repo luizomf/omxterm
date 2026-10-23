@@ -1,5 +1,6 @@
 import path from "node:path";
 import type {
+  PreferencesFile,
   PreferencesPatch,
   PreferencesSaveResult,
   PreferencesScheme,
@@ -55,7 +56,12 @@ export interface PreferencesService {
   snapshot(): Promise<PreferencesSnapshot>;
   save(patch: PreferencesPatch): Promise<PreferencesSaveResult>;
   reset(): Promise<PreferencesSaveResult>;
+  // config.json as text for the built-in editor, and replacing it whole.
+  readFile(): Promise<PreferencesFile>;
+  writeFile(text: string): Promise<PreferencesSaveResult>;
 }
+
+const EMPTY_CONFIGURATION = '{\n  "version": 1\n}\n';
 
 const THEME_FILE = /^[\w .-]{1,96}\.json$/u;
 const MAX_THEME_FILES = 64;
@@ -241,8 +247,59 @@ export function createPreferencesService(
       ? { ok: true, snapshot: await snapshot() }
       : { ok: false, error: error.slice(0, 4_096), snapshot: await snapshot() };
 
+  const writeFile = async (text: string): Promise<PreferencesSaveResult> => {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch (cause) {
+      return result(
+        `JSON: ${cause instanceof Error ? cause.message : "invalid"}`,
+      );
+    }
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
+      return result("config.json must hold a JSON object");
+    const finalText = text.endsWith("\n") ? text : `${text}\n`;
+    const load = await options.validate(new TextEncoder().encode(finalText));
+    if (load.fallback) {
+      const { location, reason } = load.fallback.error;
+      return result(location ? `${location}: ${reason}` : reason);
+    }
+    // The replaced file stays next to it as config.json.bak.
+    const previous = await options.files
+      .read(options.configurationPath)
+      .catch(() => undefined);
+    if (previous)
+      await options.files.write(
+        `${options.configurationPath}.bak`,
+        new TextDecoder().decode(previous),
+      );
+    await options.files.write(options.configurationPath, finalText);
+    await options.reload();
+    return result();
+  };
+
   return {
     snapshot: () => serialized(snapshot),
+    readFile: () =>
+      serialized(async () => ({
+        path: options.configurationPath,
+        text: await options.files
+          .read(options.configurationPath)
+          .then((bytes) => new TextDecoder().decode(bytes))
+          .catch(() => EMPTY_CONFIGURATION),
+      })),
+    writeFile: (text) =>
+      serialized(async () => {
+        try {
+          return await writeFile(text);
+        } catch (cause) {
+          return await result(
+            cause instanceof Error
+              ? cause.message
+              : "config.json was not saved",
+          );
+        }
+      }),
     save: (patch) =>
       serialized(async () => {
         const { restoreWindows, highlightOutput, scheme, ...rest } = patch;
