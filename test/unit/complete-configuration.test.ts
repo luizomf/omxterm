@@ -1,3 +1,4 @@
+import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   completeConfigurationDocument,
@@ -9,8 +10,9 @@ import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import { expectCompleteConfiguration } from "../fixtures/complete-configuration";
 
-const configPath = "/home/me/.config/omxterm/config.json";
-const themePath = "/home/me/.config/omxterm/themes/omtheme.json";
+// Built with the host's separators, as main builds them.
+const configPath = path.join("/home/me/.config/omxterm", "config.json");
+const themePath = path.join(path.dirname(configPath), "themes", "omtheme.json");
 
 function memoryFiles(initial: Record<string, string>) {
   const files = new Map(Object.entries(initial));

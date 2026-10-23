@@ -19,7 +19,8 @@ async function folder() {
 }
 
 const dependencies = (home: string) => ({
-  platform: "linux",
+  // The real temporary folder: the host's own path rules apply.
+  platform: process.platform,
   // No PATH: no pdftoppm or pdfinfo, and an empty thumbnail cache.
   environment: { XDG_CACHE_HOME: path.join(home, "cache") },
   homeDirectory: home,
