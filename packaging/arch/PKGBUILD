@@ -10,7 +10,7 @@
 # "0.1.0").
 
 pkgname=omxterm
-pkgver=0.22.0
+pkgver=0.22.1dev.0
 pkgrel=1
 pkgdesc='Open-source terminal with split panes, SSH sessions, an SFTP file manager, file hover previews, output highlighting, a command manager and an optional AI assistant'
 arch=('x86_64' 'aarch64')
