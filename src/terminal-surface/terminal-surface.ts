@@ -17,6 +17,8 @@ export interface TerminalSurface {
   paste(): Promise<void>;
   inject(text: string, options?: { readonly submit?: boolean }): Promise<void>;
   selectAll(): void;
+  // Opens the in-memory scrollback search bar, or focuses it when open.
+  find(): void;
   dispose(): void;
 }
 

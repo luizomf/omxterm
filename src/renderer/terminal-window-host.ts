@@ -77,6 +77,7 @@ interface TerminalWindowPageOptions {
     listener: (command: TerminalTabCommand) => void,
   ) => () => void;
   readonly subscribeToTabBarToggle?: (listener: () => void) => () => void;
+  readonly subscribeToFind?: (listener: () => void) => () => void;
   readonly subscribeToTabTitles?: (
     listener: (sessionId: TerminalSessionId, title: string) => void,
   ) => () => void;
@@ -118,6 +119,7 @@ export function mountTerminalWindowPage(
   let removeTabCommandListener: (() => void) | undefined;
   let removeTabTitleListener: (() => void) | undefined;
   let removeTabBarToggleListener: (() => void) | undefined;
+  let removeFindListener: (() => void) | undefined;
   let snippetsSidebar: SnippetsSidebar | undefined;
   let removeSnippetsToggleListener: (() => void) | undefined;
   let removeLocalImageOpenListener: (() => void) | undefined;
@@ -273,6 +275,7 @@ export function mountTerminalWindowPage(
     removeTabCommandListener?.();
     removeTabTitleListener?.();
     removeTabBarToggleListener?.();
+    removeFindListener?.();
     removeSnippetsToggleListener?.();
     removeLocalImageOpenListener?.();
     chrome?.dispose();
@@ -342,6 +345,9 @@ export function mountTerminalWindowPage(
     );
     removeTabBarToggleListener = options.subscribeToTabBarToggle?.(() => {
       if (!previewActive()) tabs.toggleTabBar();
+    });
+    removeFindListener = options.subscribeToFind?.(() => {
+      if (!previewActive()) tabs.find();
     });
     if (options.snippets) {
       const sidebar = createSnippetsSidebar(options.snippets.element, {

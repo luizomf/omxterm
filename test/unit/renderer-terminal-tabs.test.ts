@@ -609,3 +609,17 @@ describe("renderer Terminal Tabs runtime configuration", () => {
       expect(adapter.close).not.toHaveBeenCalled();
   });
 });
+
+describe("Scrollback Search routing", () => {
+  it("opens search in the selected tab only", async () => {
+    const harness = createTabsHarness();
+    await harness.tabs.ready;
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+
+    harness.tabs.find();
+
+    expect(harness.surfaces[1]!.find).toHaveBeenCalledOnce();
+    expect(harness.surfaces[0]!.find).not.toHaveBeenCalled();
+  });
+});

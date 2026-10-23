@@ -44,6 +44,7 @@ The application menu displays your active shortcuts, including any custom bindin
 | Copy                      | `Cmd+C`           | `Ctrl+Shift+C`     |
 | Paste                     | `Cmd+V`           | `Ctrl+Shift+V`     |
 | Select All                | `Cmd+A`           | `Ctrl+Shift+A`     |
+| Find                      | `Cmd+F`           | `Ctrl+Shift+G`     |
 | Zoom In                   | `Cmd++`           | `Ctrl++`           |
 | Zoom Out                  | `Cmd+-`           | `Ctrl+-`           |
 | Actual Size               | `Cmd+0`           | `Ctrl+0`           |
@@ -62,6 +63,12 @@ On Linux and Windows, press and release **Alt** to open the application menu (ev
 - **Copy:** select text with the mouse, then use **Edit → Copy**, its shortcut, or the right-click menu. Selecting text alone does not overwrite your clipboard. If a terminal app (like Vim or `tmux`) captures mouse clicks, hold **Shift** while dragging to select text.
 - **Paste:** use **Edit → Paste**, its shortcut, or the right-click menu.
 - **Terminal control keys:** `Ctrl+C` interrupts the running command, and `Ctrl+V` is sent directly to the terminal program (for example, CLI tools that use `Ctrl+V` to attach clipboard images).
+
+### Searching the scrollback
+
+Choose **Edit → Find…** (`Cmd+F` / `Ctrl+Shift+G`) to search the selected tab's scrollback and visible screen. Matches highlight as you type, and the bar shows the selected match and total. Press `Enter` (or **↓**) for the match below, `Shift+Enter` (or **↑**) for the match above, and `Escape` to close the bar and return to the terminal.
+
+Search only sees output the tab still holds in memory, so lines beyond your [scrollback limit](configuration.md) are not found. Each tab keeps its own search, and the query is never saved or logged.
 
 ### Protected Paste
 

@@ -18,6 +18,7 @@ export interface TerminalBridge {
   snippets(): Promise<TerminalSnippetsResponse>;
   onSnippetsToggle(listener: () => void): () => void;
   onTabBarToggle(listener: () => void): () => void;
+  onFind(listener: () => void): () => void;
   onTitleBarToggle(listener: () => void): () => void;
   windowChrome(command: WindowChromeCommand): void;
   onWindowChrome(listener: (state: WindowChromeState) => void): () => void;

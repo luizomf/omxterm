@@ -104,6 +104,9 @@ const linuxWindowIconPath =
       : developmentApplicationIconPath
     : undefined;
 
+const notifyWindow = (channel: string) => (window: BrowserWindow) =>
+  window.webContents.send(channel);
+
 let terminalApplication: TerminalApplication<BrowserWindow> | undefined;
 let operationalEvents: OperationalEventLog | undefined;
 let disposeTerminalSessions = () => {};
@@ -399,14 +402,11 @@ app
             window.webContents.send(terminalIpc.fontZoom, command),
           sendClipboardAction: (window, action) =>
             window.webContents.send(terminalIpc.clipboardAction, action),
-          sendTitleBarToggle: (window) =>
-            window.webContents.send(terminalIpc.titleBarToggle),
-          sendTabBarToggle: (window) =>
-            window.webContents.send(terminalIpc.tabBarToggle),
-          sendSnippetsToggle: (window) =>
-            window.webContents.send(terminalIpc.snippetsToggle),
-          sendLocalImageOpen: (window) =>
-            window.webContents.send(terminalIpc.localImageOpen),
+          sendFind: notifyWindow(terminalIpc.find),
+          sendTitleBarToggle: notifyWindow(terminalIpc.titleBarToggle),
+          sendTabBarToggle: notifyWindow(terminalIpc.tabBarToggle),
+          sendSnippetsToggle: notifyWindow(terminalIpc.snippetsToggle),
+          sendLocalImageOpen: notifyWindow(terminalIpc.localImageOpen),
           toggleDeveloperTools: (window) => window.webContents.toggleDevTools(),
           sendTabCommand: (window, command) =>
             window.webContents.send(terminalIpc.tabCommand, command),
@@ -453,6 +453,7 @@ app
             terminalApplication!.clipboardSelectedWindow("paste"),
           selectAllSelectedTerminal: () =>
             terminalApplication!.clipboardSelectedWindow("select-all"),
+          findInSelectedTerminal: terminalApplication.findInSelectedWindow,
           toggleSelectedSnippets: terminalApplication.toggleSelectedSnippets,
           toggleSelectedTabBar: terminalApplication.toggleSelectedTabBar,
           toggleSelectedTitleBar: terminalApplication.toggleSelectedTitleBar,

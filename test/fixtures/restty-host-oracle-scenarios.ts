@@ -10,13 +10,15 @@ import {
 import type { createOutputStressHarness } from "./restty-host-output-stress";
 import type { LocalImageRequest } from "../../src/shared/local-image";
 import { exerciseResttyOrdinaryGestures } from "./restty-link-gestures";
+import { exerciseResttyScrollbackSearch } from "./restty-host-search";
 
 export type FocusedHostOracle =
   | "output-checkpoints"
   | "surviving-session"
   | "image-palette"
   | "image-palette-reload"
-  | "gesture-routing";
+  | "gesture-routing"
+  | "scrollback-search";
 
 export function focusedHostOracle(
   arguments_: readonly string[],
@@ -27,6 +29,7 @@ export function focusedHostOracle(
     "image-palette",
     "image-palette-reload",
     "gesture-routing",
+    "scrollback-search",
   ] as const)
     if (arguments_.includes(`--oracle-${oracle}`)) return oracle;
   return undefined;
@@ -82,6 +85,19 @@ export async function runFocusedResttyHostOracle(options: {
         peerIndex: 0,
         failedIndex: 1,
         diagnosticTimeoutMs: 3_000,
+        waitFor,
+      }),
+    };
+  } else if (oracle === "scrollback-search") {
+    await waitFor(
+      () => (options.resizes[0]?.length ?? 0) > 0,
+      "search Surface sized",
+    );
+    evidence = {
+      searchEvidence: await exerciseResttyScrollbackSearch({
+        window,
+        deliverOutput: options.deliverOutputs[0]!,
+        inputs: options.inputs[0]!,
         waitFor,
       }),
     };

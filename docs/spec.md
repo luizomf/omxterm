@@ -53,9 +53,9 @@ OMXTerm:
   neighboring cells;
 - uses one independent shell session per Terminal Tab, with one or more tabs per
   native Terminal Window;
-- provides native new-window, new-tab, close, copy, paste, select-all, zoom,
-  fullscreen, always-on-top, bounded local-image preview, and quit actions
-  without an in-window toolbar;
+- provides native new-window, new-tab, close, copy, paste, select-all,
+  scrollback search, zoom, fullscreen, always-on-top, bounded local-image
+  preview, and quit actions without an in-window toolbar;
 - renders the bundled [`omtheme`](omtheme.json) palette by default, allows one
   explicitly configured external Terminal Theme, keeps SGR bold text on its
   requested ANSI `0–7` color without remapping it to bright `8–15` (applications
@@ -687,6 +687,19 @@ alternate screens; Shift retains the selection override, and explicit copy and
 valid modified-link gestures — web or local image — do not produce duplicate PTY
 mouse input. OSC 8 destinations and all other schemes are ignored.
 
+Scrollback Search opens only through **Edit → Find…** or the `find` keybind
+(`Cmd+F` on macOS, `Ctrl+Shift+G` on Linux and Windows, where `Ctrl+Shift+F`
+already toggles full screen). It uses Restty's search bar and the pinned core's
+search over the selected tab's retained Scrollback Buffer and visible screen; output evicted by the scrollback limits is not searchable.
+Invoking Find again focuses and selects the open query. `Enter` or the down
+button selects the match below (newer output), `Shift+Enter` or the up button
+the match above (older output), and `Escape` or the close button closes the
+bar and returns focus to the terminal. Window focus returns to an open bar
+rather than the terminal. The bar follows the active Terminal Theme. Each tab
+owns its own query; queries and matches stay in renderer memory and are never
+persisted, logged, sent to main or written to the PTY. Find is ignored while a
+Local Image Preview is open.
+
 ## Clipboard
 
 - Selection never copies automatically.
@@ -876,7 +889,7 @@ filesystem access or warning but has no effect on operating-system shell
 selection.
 
 An optional `keybinds` object remaps application-chrome shortcuts for a fixed
-action vocabulary: `quit`, `copy`, `paste`, `selectAll`, `newWindow`,
+action vocabulary: `quit`, `copy`, `paste`, `selectAll`, `find`, `newWindow`,
 `closeWindow`, `newTab`, `closeTab`, `nextTab`, `previousTab`, `selectTab1`
 through `selectTab9`, `zoomIn`, `zoomOut`, `actualSize`, `toggleFullScreen`,
 `toggleSnippets`, `toggleTabBar`, `toggleTitleBar`, and `reloadConfig`. Each

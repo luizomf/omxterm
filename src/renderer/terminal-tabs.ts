@@ -51,6 +51,7 @@ export interface TerminalTabs {
   applyConfiguration(configuration: TerminalSurfaceConfiguration): void;
   zoom(command: TerminalFontZoom): void;
   clipboardAction(action: TerminalClipboardAction): void;
+  find(): void;
   injectText(text: string): void;
   injectSnippet(body: string, options: { readonly submit: boolean }): void;
   toggleTabBar(): void;
@@ -318,6 +319,7 @@ export function createTerminalTabs(
       else if (action === "paste") void surface.paste();
       else surface.selectAll();
     },
+    find: () => selectedTab()?.surface?.find(),
     injectText(text) {
       void selectedTab()?.surface?.inject(text);
     },

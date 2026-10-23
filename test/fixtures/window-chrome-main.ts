@@ -271,6 +271,7 @@ app
         window.webContents.send(terminalIpc.titleBarToggle),
       sendTabBarToggle: (window) =>
         window.webContents.send(terminalIpc.tabBarToggle),
+      sendFind: (window) => window.webContents.send(terminalIpc.find),
       sendTabCommand: (window, command) =>
         window.webContents.send(terminalIpc.tabCommand, command),
       sendFontZoom: (window, command) =>

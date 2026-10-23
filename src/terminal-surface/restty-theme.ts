@@ -1,4 +1,7 @@
-import type { GhosttyTheme } from "restty";
+import type {
+  GhosttyTheme,
+  ResttyManagedPaneSearchUiStyleOptions,
+} from "restty";
 import type { TerminalTheme } from "../shared/terminal-theme";
 
 function color(hex: string) {
@@ -39,5 +42,28 @@ export function toGhosttyTheme(theme: TerminalTheme): GhosttyTheme {
       palette,
     },
     raw: {},
+  };
+}
+
+// The search bar follows the Terminal Theme instead of Restty's fixed dark
+// palette, so light themes keep a legible bar.
+export function toResttySearchUiStyle(
+  theme: TerminalTheme,
+): ResttyManagedPaneSearchUiStyleOptions {
+  const { background, foreground } = theme.colors;
+  const tint = (percent: number) =>
+    `color-mix(in srgb, ${foreground} ${percent}%, ${background})`;
+  return {
+    panelBackground: background,
+    panelBorderColor: tint(25),
+    panelTextColor: foreground,
+    inputBackground: tint(8),
+    inputTextColor: foreground,
+    inputPlaceholderColor: tint(55),
+    buttonTextColor: foreground,
+    buttonHoverBackground: tint(14),
+    statusTextColor: tint(60),
+    statusActiveTextColor: foreground,
+    statusCompleteTextColor: tint(60),
   };
 }

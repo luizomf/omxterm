@@ -108,6 +108,13 @@ const terminal: TerminalBridge = {
     ipcRenderer.on(terminalIpc.tabBarToggle, handler);
     return () => ipcRenderer.removeListener(terminalIpc.tabBarToggle, handler);
   },
+  onFind(listener) {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (payload === undefined) listener();
+    };
+    ipcRenderer.on(terminalIpc.find, handler);
+    return () => ipcRenderer.removeListener(terminalIpc.find, handler);
+  },
   onTitleBarToggle(listener) {
     const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
       if (payload === undefined) listener();

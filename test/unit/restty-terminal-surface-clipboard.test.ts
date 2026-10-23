@@ -13,6 +13,7 @@ const harness = vi.hoisted(() => {
     readonly destroy = vi.fn();
     readonly getSelectionText = vi.fn(() => this.selection);
     readonly selectAll = vi.fn(() => true);
+    readonly isSearchOpen = vi.fn(() => false);
     selection = "";
     bracketedPaste = false;
     readonly pane = {

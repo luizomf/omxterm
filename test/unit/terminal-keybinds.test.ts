@@ -181,6 +181,7 @@ describe("terminal keybind accelerators", () => {
     expect(linux.copy).toBe("Control+Shift+C");
     expect(linux.paste).toBe("Control+Shift+V");
     expect(linux.selectAll).toBe("Control+Shift+A");
+    expect(linux.find).toBe("Control+Shift+G");
     expect(linux.newWindow).toBe("Control+Shift+N");
     expect(linux.newTab).toBe("Control+Shift+T");
     expect(linux.closeTab).toBe("Control+Shift+W");

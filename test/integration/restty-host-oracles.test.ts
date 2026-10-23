@@ -21,6 +21,7 @@ import {
 } from "../fixtures/run-native-fixture";
 import type { ResttyGestureControl } from "../fixtures/restty-gesture-routing-mutation";
 import type { exerciseResttyOrdinaryGestures } from "../fixtures/restty-link-gestures";
+import type { ResttySearchEvidence } from "../fixtures/restty-host-search";
 
 const electronExecutable = createRequire(import.meta.url)("electron") as string;
 const prefix = "__OMXTERM_RESTTY_HOST_RESULT__";
@@ -30,6 +31,7 @@ interface FocusedResult {
   readonly ptyExits: number;
   readonly outputStress?: OutputStressEvidence;
   readonly backendLoss?: Awaited<ReturnType<typeof exerciseResttyBackendLoss>>;
+  readonly searchEvidence?: ResttySearchEvidence;
   readonly gestureEvidence?: Awaited<
     ReturnType<typeof exerciseResttyOrdinaryGestures>
   >;
@@ -409,5 +411,28 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         }
       },
     );
+  },
+);
+
+describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
+  "focused Scrollback Search host oracle",
+  () => {
+    it("finds scrollback matches through main IPC, real typing and keys without PTY input", async (testContext) => {
+      const result = readResult(
+        await runOracle("scrollback-search", testContext),
+      );
+      expect(result.sessionStarts).toBe(1);
+      const { selectedStatus, ...evidence } = result.searchEvidence!;
+      expect(selectedStatus).toMatch(/^\d+\/10$/);
+      expect(evidence).toEqual({
+        openedFocused: true,
+        asciiStatus: "10",
+        unicodeStatus: "1",
+        themed: true,
+        closed: true,
+        focusReturned: true,
+        queryReachedPty: false,
+      });
+    }, 130_000);
   },
 );

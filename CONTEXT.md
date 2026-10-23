@@ -116,6 +116,10 @@ persisted state.
 screen. Each session has its own buffer, with an approximate configured line
 target and an independent core byte limit; zero lines disables retention.
 
+**Scrollback Search** — An explicitly opened find bar over one tab's Scrollback
+Buffer and visible screen. Its query and matches live only in that tab's
+memory; they are never persisted, logged or shared with other tabs.
+
 **Terminal Capability Identity** — The environment advertised to programs:
 `TERM=xterm-256color`, `COLORTERM=truecolor`, `TERM_PROGRAM=OMXTerm` and the
 running version in `TERM_PROGRAM_VERSION`. Cursor-position replies have known

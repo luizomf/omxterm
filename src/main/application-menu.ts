@@ -22,6 +22,7 @@ interface TerminalApplicationMenuActions {
   readonly copySelectedTerminal: () => void;
   readonly pasteSelectedTerminal: () => void;
   readonly selectAllSelectedTerminal: () => void;
+  readonly findInSelectedTerminal: () => void;
   readonly toggleSelectedSnippets: () => void;
   readonly toggleSelectedTabBar: () => void;
   readonly toggleSelectedTitleBar: () => void;
@@ -65,6 +66,12 @@ export function terminalApplicationMenuTemplate(
           label: "Select All",
           accelerator: keybinds.selectAll,
           click: actions.selectAllSelectedTerminal,
+        },
+        { type: "separator" },
+        {
+          label: "Find…",
+          accelerator: keybinds.find,
+          click: actions.findInSelectedTerminal,
         },
       ],
     },
@@ -200,6 +207,7 @@ export function terminalActionInvocations(
     copy: actions.copySelectedTerminal,
     paste: actions.pasteSelectedTerminal,
     selectAll: actions.selectAllSelectedTerminal,
+    find: actions.findInSelectedTerminal,
     newWindow: actions.newWindow,
     closeWindow: actions.closeSelectedWindow,
     newTab: actions.newTabInSelectedWindow,

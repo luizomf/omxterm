@@ -614,6 +614,13 @@ describe("Restty Terminal Surface appearance", () => {
       expectedTheme(changedTheme),
       "OMXTerm",
     );
+    expect(restty.setSearchUiStyleOptions).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        panelBackground: "#102030",
+        panelTextColor: "#f1e2d3",
+        inputBackground: "color-mix(in srgb, #f1e2d3 8%, #102030)",
+      }),
+    );
     expect(container.style.getPropertyValue("--terminal-padding-top")).toBe(
       "128px",
     );

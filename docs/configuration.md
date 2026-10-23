@@ -250,6 +250,7 @@ Customize application shortcuts under `keybinds` using [Electron accelerator](ht
 | `copy`                      | `CommandOrControl+C`       | `Control+Shift+C`     |
 | `paste`                     | `CommandOrControl+V`       | `Control+Shift+V`     |
 | `selectAll`                 | `CommandOrControl+A`       | `Control+Shift+A`     |
+| `find`                      | `CommandOrControl+F`       | `Control+Shift+G`     |
 | `newWindow`                 | `CommandOrControl+N`       | `Control+Shift+N`     |
 | `newTab`                    | `CommandOrControl+T`       | `Control+Shift+T`     |
 | `closeTab`                  | `CommandOrControl+W`       | `Control+Shift+W`     |

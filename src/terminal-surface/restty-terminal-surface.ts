@@ -39,7 +39,7 @@ import {
   resttyContextMenuHandler,
   resttyHostServices,
 } from "./restty-host-services";
-import { toGhosttyTheme } from "./restty-theme";
+import { toGhosttyTheme, toResttySearchUiStyle } from "./restty-theme";
 import type {
   TerminalFontInputLease,
   TerminalSurface,
@@ -159,6 +159,7 @@ export async function mountResttyTerminalSurface(
     paintContainer(container, padding, terminalTheme, options.background);
   const applyRuntimeTheme = (theme: TerminalTheme) => {
     pane?.runtime.terminal.applyTheme(toGhosttyTheme(theme), "OMXTerm");
+    restty?.setSearchUiStyleOptions(toResttySearchUiStyle(theme));
   };
   const isSurfaceVisible = () =>
     !isInactive() && !container.hidden && container.isConnected;
@@ -262,14 +263,7 @@ export async function mountResttyTerminalSurface(
     );
     restty = new PatchedRestty({
       root: container,
-      surface: {
-        autoInit: false,
-        createInitialPane: true,
-        defaultContextMenu: false,
-        paneStyles: false,
-        searchUi: false,
-        shortcuts: false,
-      },
+      surface: resttySurfaceConfig(terminalTheme),
       terminal: { ...terminal, isSurfaceVisible },
       services: resttyHostServices(transport, delivery, options, revealInput),
     });
@@ -340,7 +334,7 @@ export async function mountResttyTerminalSurface(
 
     return {
       focus: () => {
-        if (disposed) return;
+        if (disposed || isSearchFocused(restty, container)) return;
         refit();
         pane?.runtime.interaction.focus();
         // Tab selection calls focus in the switching task, before presentation.
@@ -368,6 +362,9 @@ export async function mountResttyTerminalSurface(
       ...resttyClipboardActions(delivery, options, () =>
         disposed ? undefined : pane?.runtime.interaction,
       ),
+      find: () => {
+        if (!disposed) restty?.openSearch({ selectAll: true });
+      },
       dispose,
     };
   } catch (cause) {
@@ -457,6 +454,31 @@ function throwInitializationFailure(
   throw new Error("Failed to mount the OMXTerm Terminal Surface", { cause });
 }
 
+function resttySurfaceConfig(theme: TerminalTheme) {
+  return {
+    autoInit: false,
+    createInitialPane: true,
+    defaultContextMenu: false,
+    paneStyles: false,
+    // Opened only through the application's find keybind and menu item.
+    searchUi: { shortcut: false, styles: toResttySearchUiStyle(theme) },
+    shortcuts: false,
+  };
+}
+
+// Window focus returns to an open search bar rather than the terminal.
+function isSearchFocused(
+  restty: PatchedRestty | undefined,
+  container: HTMLElement,
+): boolean {
+  const active = container.ownerDocument.activeElement;
+  return (
+    restty?.isSearchOpen() === true &&
+    active?.closest('[role="search"]') != null &&
+    container.contains(active)
+  );
+}
+
 function paintContainer(
   container: HTMLElement,
   padding: TerminalPadding,
@@ -483,6 +505,7 @@ function createDisposedSurface(): TerminalSurface {
     paste: async () => undefined,
     inject: async () => undefined,
     selectAll: () => undefined,
+    find: () => undefined,
     dispose: () => undefined,
   };
 }

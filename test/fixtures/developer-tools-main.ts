@@ -36,6 +36,7 @@ async function run() {
     sendClipboardAction: () => {},
     sendSnippetsToggle: () => {},
     sendTabBarToggle: () => {},
+    sendFind: () => {},
     sendTitleBarToggle: () => {},
     sendLocalImageOpen: () => {},
     toggleDeveloperTools: (window) => window.webContents.toggleDevTools(),

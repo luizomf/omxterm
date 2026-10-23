@@ -460,14 +460,16 @@ describe("isolated preload terminal bridge responses", () => {
     electron.removeListener.mockClear();
   });
 
-  it.each(["tabBarToggle", "titleBarToggle"] as const)(
+  it.each(["tabBarToggle", "titleBarToggle", "find"] as const)(
     "accepts only payload-free %s notifications and removes the exact handler",
     (channel) => {
       const listener = vi.fn();
-      const remove =
-        channel === "tabBarToggle"
-          ? electron.bridge!.onTabBarToggle(listener)
-          : electron.bridge!.onTitleBarToggle(listener);
+      const subscribe = {
+        tabBarToggle: electron.bridge!.onTabBarToggle,
+        titleBarToggle: electron.bridge!.onTitleBarToggle,
+        find: electron.bridge!.onFind,
+      }[channel];
+      const remove = subscribe(listener);
       const handler = electron.listeners.get(terminalIpc[channel])!;
       for (const payload of [null, false, 0, "", {}, []]) handler({}, payload);
       expect(listener).not.toHaveBeenCalled();

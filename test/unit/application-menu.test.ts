@@ -29,6 +29,7 @@ function menuActions() {
     copySelectedTerminal: vi.fn(),
     pasteSelectedTerminal: vi.fn(),
     selectAllSelectedTerminal: vi.fn(),
+    findInSelectedTerminal: vi.fn(),
     toggleSelectedSnippets: vi.fn(),
     toggleSelectedTabBar: vi.fn(),
     toggleSelectedTitleBar: vi.fn(),
@@ -186,6 +187,36 @@ describe("native application menu", () => {
     },
   );
 
+  it.each([
+    ["darwin", "CommandOrControl+F"],
+    ["linux", "Control+Shift+G"],
+    ["win32", "Control+Shift+G"],
+  ])(
+    "offers Find after Select All with shared delivery on %s",
+    (platform, accelerator) => {
+      const actions = menuActions();
+      const template = terminalApplicationMenuTemplate(
+        "OMXTerm",
+        actions,
+        terminalDefaultKeybinds(platform!),
+      );
+      const edit = template.find((item) => item.label === "Edit")!
+        .submenu as MenuTemplate;
+      const index = edit.findIndex((item) => item.label === "Select All");
+      expect(edit[index + 1]).toEqual({ type: "separator" });
+      expect(edit[index + 2]).toEqual({
+        label: "Find…",
+        accelerator,
+        click: actions.findInSelectedTerminal,
+      });
+      (edit[index + 2]!.click as () => void)();
+      expect(actions.findInSelectedTerminal).toHaveBeenCalledOnce();
+      actions.findInSelectedTerminal.mockClear();
+      terminalActionInvocations(actions).find();
+      expect(actions.findInSelectedTerminal).toHaveBeenCalledOnce();
+    },
+  );
+
   it("offers a menu-only local image picker without adding shortcut vocabulary", () => {
     const actions = menuActions();
     const item = flattenMenuItems(
@@ -316,6 +347,8 @@ describe("keybind action invocations", () => {
     expect(actions.pasteSelectedTerminal).toHaveBeenCalledOnce();
     invocations.selectAll();
     expect(actions.selectAllSelectedTerminal).toHaveBeenCalledOnce();
+    invocations.find();
+    expect(actions.findInSelectedTerminal).toHaveBeenCalledOnce();
     invocations.zoomIn();
     expect(actions.zoomInSelectedWindow).toHaveBeenCalledOnce();
     invocations.zoomOut();

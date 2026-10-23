@@ -90,6 +90,7 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
     action: TerminalClipboardAction,
   ) => void;
   readonly sendSnippetsToggle: (window: Window) => void;
+  readonly sendFind: (window: Window) => void;
   readonly sendTabBarToggle: (window: Window) => void;
   readonly sendTitleBarToggle: (window: Window) => void;
   readonly sendLocalImageOpen: (window: Window) => void;
@@ -121,6 +122,7 @@ export interface TerminalApplication<
   toggleSelectedDevTools(): void;
   zoomSelectedWindow(command: TerminalFontZoom): void;
   clipboardSelectedWindow(action: TerminalClipboardAction): void;
+  findInSelectedWindow(): void;
   toggleSelectedSnippets(): void;
   toggleSelectedTabBar(): void;
   toggleSelectedTitleBar(): void;
@@ -375,6 +377,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       const window = selectedWindow();
       if (window) options.sendClipboardAction(window, action);
     },
+    findInSelectedWindow: selectedWindowAction(options.sendFind),
     toggleSelectedTabBar: selectedWindowAction(options.sendTabBarToggle),
     toggleSelectedTitleBar: selectedWindowAction(options.sendTitleBarToggle),
     toggleSelectedSnippets: selectedWindowAction(options.sendSnippetsToggle),
