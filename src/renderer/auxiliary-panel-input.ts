@@ -104,7 +104,7 @@ export function installAuxiliaryPanelInput(
   const onContextMenu = (event: MouseEvent) => {
     if (!field()) return;
     event.preventDefault();
-    options.clipboard?.requestContextMenu();
+    options.clipboard?.requestContextMenu({ target: "field" });
   };
   // Native inertness blocks physical input; this also guards synthetic events
   // targeting retained controls while hidden, blocked or disposed.

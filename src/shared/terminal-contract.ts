@@ -81,9 +81,11 @@ export type TerminalClipboardAction = "copy" | "paste" | "select-all";
 // "content" saves the active tab's retained scrollback and screen. The kind is
 // chosen when the context menu opens, so its label and the saved text agree.
 export type TerminalExportKind = "selection" | "content";
-export interface TerminalContextMenuRequest {
-  readonly hasSelection: boolean;
-}
+// A terminal right-click offers the contextual export; a text field (the
+// search query or an auxiliary panel input) offers only editing actions.
+export type TerminalContextMenuRequest =
+  | { readonly target: "terminal"; readonly hasSelection: boolean }
+  | { readonly target: "field" };
 export interface TerminalExportRequest {
   readonly kind: TerminalExportKind;
   readonly text: string;
@@ -329,8 +331,10 @@ export function isTerminalExportKind(
 export function isTerminalContextMenuRequest(
   value: unknown,
 ): value is TerminalContextMenuRequest {
+  if (isStrictRecord(value, ["target"])) return value.target === "field";
   return (
-    isStrictRecord(value, ["hasSelection"]) &&
+    isStrictRecord(value, ["target", "hasSelection"]) &&
+    value.target === "terminal" &&
     typeof value.hasSelection === "boolean"
   );
 }

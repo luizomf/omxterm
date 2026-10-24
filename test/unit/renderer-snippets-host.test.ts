@@ -53,6 +53,7 @@ async function fixture() {
       paste: vi.fn(async () => {}),
       selectAll: vi.fn(),
       find: vi.fn(),
+      exportText: vi.fn(() => ""),
     };
   }
   const adapters = vi.fn(() => ({

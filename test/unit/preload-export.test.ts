@@ -50,12 +50,15 @@ describe("preload export bridge", () => {
     const bridge = electron.bridge!;
     electron.send.mockClear();
     expect(() =>
-      bridge.requestClipboardContextMenu({ hasSelection: "yes" } as never),
+      bridge.requestClipboardContextMenu({ target: "terminal" } as never),
     ).toThrow("Invalid context menu request");
-    bridge.requestClipboardContextMenu({ hasSelection: true });
+    bridge.requestClipboardContextMenu({
+      target: "terminal",
+      hasSelection: true,
+    });
     expect(electron.send).toHaveBeenCalledExactlyOnceWith(
       terminalIpc.clipboardContextMenu,
-      { hasSelection: true },
+      { target: "terminal", hasSelection: true },
     );
 
     const listener = vi.fn();

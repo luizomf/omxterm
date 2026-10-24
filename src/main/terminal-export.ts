@@ -113,24 +113,29 @@ export function electronTerminalExportHost(
   };
 }
 
-// The context menu offers one contextual export, chosen when it opens.
+// A terminal context menu offers one contextual export, chosen when it opens;
+// a text field's menu offers only editing actions.
 export function popupTerminalContextMenu(
   window: BrowserWindow,
   request: TerminalContextMenuRequest,
 ): void {
   const send = (action: TerminalClipboardAction) =>
     window.webContents.send(terminalIpc.clipboardAction, action);
-  const kind: TerminalExportKind = request.hasSelection
-    ? "selection"
-    : "content";
+  const kind: TerminalExportKind | undefined =
+    request.target === "field"
+      ? undefined
+      : request.hasSelection
+        ? "selection"
+        : "content";
   Menu.buildFromTemplate(
     terminalClipboardContextMenuTemplate(
       {
         copy: () => send("copy"),
         paste: () => send("paste"),
         selectAll: () => send("select-all"),
-        exportText: () =>
-          window.webContents.send(terminalIpc.exportRequest, kind),
+        exportText: () => {
+          if (kind) window.webContents.send(terminalIpc.exportRequest, kind);
+        },
       },
       kind,
     ),

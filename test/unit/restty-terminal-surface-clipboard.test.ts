@@ -186,6 +186,7 @@ describe("Restty clipboard and Protected Paste", () => {
     expect(value.restty.selectAll).toHaveBeenCalledOnce();
     expect(menu.defaultPrevented).toBe(true);
     expect(value.clipboard.requestContextMenu).toHaveBeenCalledExactlyOnceWith({
+      target: "terminal",
       hasSelection: true,
     });
     value.restty.selection = "";
@@ -193,7 +194,19 @@ describe("Restty clipboard and Protected Paste", () => {
       new MouseEvent("contextmenu", { cancelable: true }),
     );
     expect(value.clipboard.requestContextMenu).toHaveBeenLastCalledWith({
+      target: "terminal",
       hasSelection: false,
+    });
+    const search = document.createElement("div");
+    search.setAttribute("role", "search");
+    const query = document.createElement("input");
+    search.append(query);
+    value.container.append(search);
+    query.dispatchEvent(
+      new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+    );
+    expect(value.clipboard.requestContextMenu).toHaveBeenLastCalledWith({
+      target: "field",
     });
     value.surface.dispose();
   });

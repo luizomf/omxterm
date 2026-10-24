@@ -328,9 +328,7 @@ export function createTerminalTabs(
     },
     find: () => selectedTab()?.surface?.find(),
     exportText: (kind) => selectedTab()?.surface?.exportText(kind),
-    injectText(text) {
-      void selectedTab()?.surface?.inject(text);
-    },
+    injectText: (text) => void selectedTab()?.surface?.inject(text),
     injectSnippet(body, injectOptions) {
       void selectedTab()?.surface?.inject(body, injectOptions);
     },

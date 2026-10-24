@@ -254,20 +254,24 @@ export function terminalClipboardContextMenuTemplate(
     readonly selectAll: () => void;
     readonly exportText: () => void;
   },
-  exportKind: TerminalExportKind,
+  exportKind: TerminalExportKind | undefined,
 ): MenuItemConstructorOptions[] {
   return [
     { label: "Copy", click: actions.copy },
     { label: "Paste", click: actions.paste },
     { type: "separator" },
     { label: "Select All", click: actions.selectAll },
-    { type: "separator" },
-    {
-      label:
-        exportKind === "selection"
-          ? "Export Selection…"
-          : "Export Terminal Content…",
-      click: actions.exportText,
-    },
+    ...(exportKind === undefined
+      ? []
+      : ([
+          { type: "separator" },
+          {
+            label:
+              exportKind === "selection"
+                ? "Export Selection…"
+                : "Export Terminal Content…",
+            click: actions.exportText,
+          },
+        ] satisfies MenuItemConstructorOptions[])),
   ];
 }

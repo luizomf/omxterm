@@ -789,7 +789,9 @@ while a Local Image Preview or About owns modal input.
 
 Explicit Export is offered from the terminal context menu. With selected text
 the menu shows **Export Selection…**, otherwise **Export Terminal Content…**;
-the label is fixed when the menu opens, and the saved text matches it. Selection
+the label is fixed when the menu opens, and the saved text matches it. A
+right-click on the search query or an auxiliary panel text field offers only
+Copy, Paste and Select All for that field, without an export item. Selection
 export saves the selected text. Content export saves the selected tab's retained
 Scrollback Buffer and visible screen, or only the alternate screen while it is
 active, read through the prepared runtime without creating, changing or

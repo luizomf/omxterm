@@ -26,7 +26,7 @@ export async function recordExport(
 }
 
 export interface ResttyExportEvidence {
-  readonly contextMenuSelection: readonly boolean[];
+  readonly contextMenuSelection: readonly (boolean | "field")[];
   readonly contentKind: string;
   readonly contentFirstRow: boolean;
   readonly contentLastRow: boolean;
@@ -113,8 +113,8 @@ export async function exerciseResttyTerminalExport(options: {
   const afterSwitch = await switched;
 
   return {
-    contextMenuSelection: evidence.contextMenuRequests.map(
-      (request) => request.hasSelection,
+    contextMenuSelection: evidence.contextMenuRequests.map((request) =>
+      request.target === "terminal" ? request.hasSelection : "field",
     ),
     contentKind: content.kind,
     contentFirstRow: content.text.includes("export-row-0\n"),

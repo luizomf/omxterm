@@ -87,16 +87,19 @@ describe("terminal export IPC", () => {
 
     contextMenu(
       { sender: webContents, senderFrame: {} },
-      { hasSelection: true },
+      { target: "terminal", hasSelection: true },
     );
     contextMenu(owner);
-    contextMenu(owner, { hasSelection: "yes" });
-    contextMenu(owner, { hasSelection: false, kind: "content" });
+    contextMenu(owner, { target: "terminal", hasSelection: "yes" });
+    contextMenu(owner, { target: "field", hasSelection: true });
+    contextMenu(owner, { hasSelection: false });
     expect(options.showClipboardContextMenu).not.toHaveBeenCalled();
 
-    contextMenu(owner, { hasSelection: false });
-    expect(options.showClipboardContextMenu).toHaveBeenCalledExactlyOnceWith({
-      hasSelection: false,
-    });
+    contextMenu(owner, { target: "terminal", hasSelection: false });
+    contextMenu(owner, { target: "field" });
+    expect(options.showClipboardContextMenu.mock.calls).toEqual([
+      [{ target: "terminal", hasSelection: false }],
+      [{ target: "field" }],
+    ]);
   });
 });

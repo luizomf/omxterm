@@ -54,7 +54,7 @@ export function resttyClipboardActions(
 }
 
 // The request reports whether text is selected, so main can label the
-// contextual export it offers.
+// contextual export it offers; the search query field gets editing only.
 export function resttyContextMenuHandler(
   clipboard: TerminalClipboard | undefined,
   liveSelection: () => { getSelectionText(): string } | undefined,
@@ -62,8 +62,15 @@ export function resttyContextMenuHandler(
   return (event: Event) => {
     if (!clipboard) return;
     event.preventDefault();
+    if (
+      event.target instanceof Element &&
+      event.target.closest('[role="search"]') !== null
+    ) {
+      clipboard.requestContextMenu({ target: "field" });
+      return;
+    }
     const hasSelection = (liveSelection()?.getSelectionText() ?? "") !== "";
-    clipboard.requestContextMenu({ hasSelection });
+    clipboard.requestContextMenu({ target: "terminal", hasSelection });
   };
 }
 

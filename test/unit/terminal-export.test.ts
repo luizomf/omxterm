@@ -81,8 +81,17 @@ describe("export request contract", () => {
       { kind: "content", text: "", extra: true },
     ])
       expect(isTerminalExportRequest(value)).toBe(false);
-    expect(isTerminalContextMenuRequest({ hasSelection: false })).toBe(true);
-    expect(isTerminalContextMenuRequest({ hasSelection: 1 })).toBe(false);
+    expect(
+      isTerminalContextMenuRequest({ target: "terminal", hasSelection: false }),
+    ).toBe(true);
+    expect(isTerminalContextMenuRequest({ target: "field" })).toBe(true);
+    for (const value of [
+      { hasSelection: false },
+      { target: "terminal", hasSelection: 1 },
+      { target: "field", hasSelection: true },
+      { target: "panel" },
+    ])
+      expect(isTerminalContextMenuRequest(value)).toBe(false);
     expect(isTerminalContextMenuRequest(undefined)).toBe(false);
   });
 });
@@ -179,7 +188,10 @@ describe("terminal context menu", () => {
     (hasSelection, kind, label) => {
       const send = vi.fn();
       const window = { webContents: { send } };
-      popupTerminalContextMenu(window as never, { hasSelection });
+      popupTerminalContextMenu(window as never, {
+        target: "terminal",
+        hasSelection,
+      });
       const items = electron.template as Array<{
         label?: string;
         click?: () => void;
@@ -194,4 +206,16 @@ describe("terminal context menu", () => {
       expect(electron.popup).toHaveBeenLastCalledWith({ window });
     },
   );
+
+  it("offers only editing actions for a text field", () => {
+    const send = vi.fn();
+    popupTerminalContextMenu({ webContents: { send } } as never, {
+      target: "field",
+    });
+    const labels = (electron.template as Array<{ label?: string }>).map(
+      (entry) => entry.label,
+    );
+    expect(labels).toEqual(["Copy", "Paste", undefined, "Select All"]);
+    expect(send).not.toHaveBeenCalled();
+  });
 });
