@@ -20,6 +20,10 @@ await Promise.all([
     bundle: true,
     format: "esm",
     platform: "node",
+    // Bundled CommonJS dependencies (yaml) still require Node built-ins.
+    banner: {
+      js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);',
+    },
     // Keep only native/host modules external. The main process imports
     // text-shaper directly, so bundling it prevents packaged startup from
     // resolving a development checkout's ancestor node_modules by accident.
