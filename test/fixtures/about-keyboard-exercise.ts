@@ -25,14 +25,14 @@ export async function exerciseAboutKeyboard(
       "!!document.querySelector('.about-dialog[open]')",
     ) as Promise<boolean>;
   for (const mode of [0, 3]) {
-    // The chrome fixture enables focus reporting. This oracle isolates keyboard
-    // bytes; modal focus changes are not key leakage. Restore reporting below.
-    output(`\u001b[?1004l\u001b[>${mode}u\u001b[?u`);
-    await waitFor(
-      () => input().endsWith(`\u001b[?${mode}u`),
-      `mode ${mode} handshake`,
-    );
     try {
+      // The chrome fixture enables focus reporting. This oracle isolates keyboard
+      // bytes; modal focus changes are not key leakage. Restore reporting below.
+      output(`\u001b[?1004l\u001b[>${mode}u\u001b[?u`);
+      await waitFor(
+        () => input().endsWith(`\u001b[?${mode}u`),
+        `mode ${mode} handshake`,
+      );
       for (const key of ["Escape", "Enter", "Space"]) {
         const before = input();
         show();
