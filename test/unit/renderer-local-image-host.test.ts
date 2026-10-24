@@ -6,6 +6,7 @@ import type { LocalImageData } from "../../src/shared/local-image";
 import type { TerminalRendererConfiguration } from "../../src/shared/user-configuration";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import type {
+  TerminalExportContext,
   TerminalFontZoom,
   TerminalTabCommand,
 } from "../../src/shared/terminal-contract";
@@ -85,7 +86,7 @@ async function setup(
   let openAbout!: () => void;
   let toggleTabBar!: () => void;
   let find!: () => void;
-  let exportRequest!: (kind: "selection" | "content") => void;
+  let exportRequest!: (context: TerminalExportContext) => void;
   const saveTerminalExport = vi.fn(async () => {});
   let toggleTitleBar = () => {};
   const chromeCommand = vi.fn();
@@ -109,6 +110,18 @@ async function setup(
         return surface;
       },
       page: window,
+      clipboard: {
+        readText: async () => "",
+        writeText: async () => {},
+        confirmPaste: async () => true,
+        requestContextMenu(request) {
+          if (request.target === "terminal" && "contextId" in request)
+            exportRequest({
+              kind: request.hasSelection ? "selection" : "content",
+              contextId: request.contextId as number,
+            });
+        },
+      },
       about: {
         info: async () => ({ name: "OMXTerm", version: "1", copyright: "MIT" }),
         openLink: async () => {},
@@ -193,7 +206,11 @@ async function setup(
     openAbout,
     toggleTabBar,
     find: () => find(),
-    exportRequest: (kind: "selection" | "content") => exportRequest(kind),
+    exportRequest: (kind: "selection" | "content") =>
+      surfaceOptions.clipboard!.requestContextMenu({
+        target: "terminal",
+        hasSelection: kind === "selection",
+      }),
     saveTerminalExport,
     toggleTitleBar: () => toggleTitleBar(),
     chromeCommand,

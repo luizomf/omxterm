@@ -4,10 +4,18 @@ import type { SaveDialogOptions } from "electron";
 const electron = vi.hoisted(() => ({
   popup: vi.fn(),
   template: undefined as unknown,
+  showSaveDialog:
+    vi.fn<() => Promise<{ canceled: boolean; filePath: string }>>(),
+  showMessageBox: vi.fn(async () => ({ response: 0 })),
+  writeFile: vi.fn(async () => {}),
 }));
+vi.mock("node:fs/promises", () => ({ writeFile: electron.writeFile }));
 vi.mock("electron", () => ({
-  app: {},
-  dialog: {},
+  app: { getPath: () => "/synthetic/Documents" },
+  dialog: {
+    showSaveDialog: electron.showSaveDialog,
+    showMessageBox: electron.showMessageBox,
+  },
   Menu: {
     buildFromTemplate: (template: unknown) => {
       electron.template = template;
@@ -24,6 +32,7 @@ import {
 } from "../../src/shared/terminal-contract";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import {
+  electronTerminalExportHost,
   popupTerminalContextMenu,
   saveTerminalExport,
   suggestedTerminalExportName,
@@ -34,6 +43,7 @@ import {
 function host(overrides: Partial<TerminalExportHost> = {}) {
   const saveDialogs: SaveDialogOptions[] = [];
   const value = {
+    isAlive: () => true,
     showSaveDialog: vi.fn(async (options: SaveDialogOptions) => {
       saveDialogs.push(options);
       return { canceled: false, filePath: "/synthetic/export.txt" };
@@ -82,7 +92,11 @@ describe("export request contract", () => {
     ])
       expect(isTerminalExportRequest(value)).toBe(false);
     expect(
-      isTerminalContextMenuRequest({ target: "terminal", hasSelection: false }),
+      isTerminalContextMenuRequest({
+        target: "terminal",
+        hasSelection: false,
+        contextId: 1,
+      }),
     ).toBe(true);
     expect(isTerminalContextMenuRequest({ target: "field" })).toBe(true);
     for (const value of [
@@ -97,6 +111,38 @@ describe("export request contract", () => {
 });
 
 describe("saving an explicit export", () => {
+  it.each(["controller", "window", "renderer"] as const)(
+    "honors %s loss through the actual Electron host while choosing",
+    async (owner) => {
+      let controllerAlive = true;
+      let windowDestroyed = false;
+      let rendererDestroyed = false;
+      let finish!: (value: { canceled: boolean; filePath: string }) => void;
+      electron.showSaveDialog.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      );
+      electron.showMessageBox.mockClear();
+      electron.writeFile.mockClear();
+      const window = {
+        isDestroyed: () => windowDestroyed,
+        webContents: { isDestroyed: () => rendererDestroyed },
+      };
+      const saving = saveTerminalExport(
+        { kind: "content", text: "synthetic" },
+        electronTerminalExportHost(window as never, () => controllerAlive),
+      );
+      if (owner === "controller") controllerAlive = false;
+      if (owner === "window") windowDestroyed = true;
+      if (owner === "renderer") rendererDestroyed = true;
+      finish({ canceled: false, filePath: "/synthetic/export.txt" });
+      await expect(saving).resolves.toBe("cancelled");
+      expect(electron.writeFile).not.toHaveBeenCalled();
+      expect(electron.showMessageBox).not.toHaveBeenCalled();
+    },
+  );
   it("ends the file with exactly one LF and drops trailing blank rows", () => {
     expect(terminalExportFileContent("a\nb")).toBe("a\nb\n");
     expect(terminalExportFileContent("a\n\n\n")).toBe("a\n");
@@ -132,15 +178,23 @@ describe("saving an explicit export", () => {
     expect(fake.showMessageBox).not.toHaveBeenCalled();
   });
 
-  it("writes nothing when the dialog is cancelled", async () => {
-    const fake = host({
-      showSaveDialog: vi.fn(async () => ({ canceled: true, filePath: "" })),
-    });
-    await expect(
-      saveTerminalExport({ kind: "content", text: "text" }, fake),
-    ).resolves.toBe("cancelled");
-    expect(fake.writeFile).not.toHaveBeenCalled();
-  });
+  it.each([
+    { canceled: true, filePath: "" },
+    { canceled: true, filePath: "/synthetic/existing.txt" },
+    { canceled: false, filePath: "" },
+  ])(
+    "writes nothing for cancellation or no destination: %j",
+    async (choice) => {
+      const fake = host({
+        showSaveDialog: vi.fn(async () => choice),
+      });
+      await expect(
+        saveTerminalExport({ kind: "content", text: "text" }, fake),
+      ).resolves.toBe("cancelled");
+      expect(fake.writeFile).not.toHaveBeenCalled();
+      expect(fake.showMessageBox).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     ["selection", "The selection has no text to export."],
@@ -160,6 +214,145 @@ describe("saving an explicit export", () => {
     },
   );
 
+  it("reports a size preflight rejection with a fixed actionable notice and no chooser/write", async () => {
+    const fake = host();
+    await expect(
+      saveTerminalExport({ notice: "too-large" }, fake),
+    ).resolves.toBe("too-large");
+    expect(fake.showMessageBox).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        title: "Export Too Large",
+        message: "The requested text exceeds the 16 MiB UTF-8 export limit.",
+      }),
+    );
+    expect(vi.mocked(fake.showMessageBox).mock.calls[0]![0].detail).toContain(
+      "Select a smaller portion",
+    );
+    expect(fake.showSaveDialog).not.toHaveBeenCalled();
+    expect(fake.writeFile).not.toHaveBeenCalled();
+  });
+
+  it.each([{ notice: "too-large" }, { kind: "content", text: " " }] as const)(
+    "never retries a rejected informational notice: %j",
+    async (request) => {
+      const fake = host({
+        showMessageBox: vi.fn(async () => {
+          throw new Error("private notice failure");
+        }),
+      });
+      await expect(saveTerminalExport(request, fake)).resolves.toBe("failed");
+      expect(fake.showMessageBox).toHaveBeenCalledTimes(1);
+      expect(fake.showSaveDialog).not.toHaveBeenCalled();
+      expect(fake.writeFile).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    { notice: "too-large" },
+    { kind: "content", text: " " },
+    { kind: "content", text: "text" },
+  ] as const)("does nothing for an already lost owner: %j", async (request) => {
+    const fake = host({ isAlive: () => false });
+    await expect(saveTerminalExport(request, fake)).resolves.toBe("cancelled");
+    expect(fake.showMessageBox).not.toHaveBeenCalled();
+    expect(fake.showSaveDialog).not.toHaveBeenCalled();
+    expect(fake.writeFile).not.toHaveBeenCalled();
+  });
+
+  it.each(["documentsPath", "now", "showSaveDialog"] as const)(
+    "reports %s failures once without writing or exposing raw errors",
+    async (operation) => {
+      const fake = host({
+        [operation]: vi.fn(() => {
+          throw new Error("private native detail /synthetic/private");
+        }),
+      });
+      await expect(
+        saveTerminalExport({ kind: "content", text: "text" }, fake),
+      ).resolves.toBe("failed");
+      expect(fake.writeFile).not.toHaveBeenCalled();
+      expect(fake.showMessageBox).toHaveBeenCalledTimes(1);
+      expect(
+        JSON.stringify(vi.mocked(fake.showMessageBox).mock.calls),
+      ).not.toContain("private");
+    },
+  );
+
+  it("contains a rejected chooser and rejected error notice without retrying", async () => {
+    const fake = host({
+      showSaveDialog: vi.fn(async () => {
+        throw new Error("native chooser");
+      }),
+      showMessageBox: vi.fn(async () => {
+        throw new Error("notice unavailable");
+      }),
+    });
+    await expect(
+      saveTerminalExport({ kind: "content", text: "text" }, fake),
+    ).resolves.toBe("failed");
+    expect(fake.showMessageBox).toHaveBeenCalledTimes(1);
+    expect(fake.writeFile).not.toHaveBeenCalled();
+  });
+
+  it.each(["resolve", "reject"] as const)(
+    "makes a late chooser %s inert after owner loss",
+    async (settlement) => {
+      let alive = true;
+      let resolve!: (value: { canceled: boolean; filePath: string }) => void;
+      let reject!: (cause: Error) => void;
+      const fake = host({
+        isAlive: () => alive,
+        showSaveDialog: vi.fn(
+          () =>
+            new Promise((yes, no) => {
+              resolve = yes;
+              reject = no;
+            }),
+        ),
+      } as Partial<TerminalExportHost>);
+      const saving = saveTerminalExport(
+        { kind: "content", text: "text" },
+        fake,
+      );
+      alive = false;
+      if (settlement === "resolve")
+        resolve({ canceled: false, filePath: "/synthetic/export.txt" });
+      else reject(new Error("native chooser"));
+      await expect(saving).resolves.toBe("cancelled");
+      expect(fake.writeFile).not.toHaveBeenCalled();
+      expect(fake.showMessageBox).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([true, false])(
+    "allows an already-started write to settle (success: %s) without an orphan notice",
+    async (success) => {
+      let alive = true;
+      let resolve!: () => void;
+      let reject!: (cause: Error) => void;
+      const fake = host({
+        isAlive: () => alive,
+        writeFile: vi.fn(
+          () =>
+            new Promise<void>((yes, no) => {
+              resolve = yes;
+              reject = no;
+            }),
+        ),
+      } as Partial<TerminalExportHost>);
+      const saving = saveTerminalExport(
+        { kind: "content", text: "text" },
+        fake,
+      );
+      await vi.waitFor(() => expect(fake.writeFile).toHaveBeenCalledTimes(1));
+      alive = false;
+      if (success) resolve();
+      else reject(new Error("private write failure"));
+      await expect(saving).resolves.toBe(success ? "saved" : "failed");
+      expect(fake.showMessageBox).not.toHaveBeenCalled();
+    },
+  );
+
   it("reports a failed write with an actionable error", async () => {
     const fake = host({
       writeFile: vi.fn(async () => {
@@ -173,7 +366,8 @@ describe("saving an explicit export", () => {
       expect.objectContaining({
         type: "error",
         title: "Export Failed",
-        detail: "EACCES: permission denied",
+        detail:
+          "Try exporting again and choose a writable destination with enough free space.",
       }),
     );
   });
@@ -187,10 +381,14 @@ describe("terminal context menu", () => {
     "labels and requests the %s export from the reported selection",
     (hasSelection, kind, label) => {
       const send = vi.fn();
-      const window = { webContents: { send } };
+      const window = {
+        isDestroyed: () => false,
+        webContents: { send, isDestroyed: () => false },
+      };
       popupTerminalContextMenu(window as never, {
         target: "terminal",
         hasSelection,
+        contextId: 17,
       });
       const items = electron.template as Array<{
         label?: string;
@@ -199,10 +397,10 @@ describe("terminal context menu", () => {
       const item = items.find((entry) => entry.label?.startsWith("Export"))!;
       expect(item.label).toBe(label);
       item.click!();
-      expect(send).toHaveBeenCalledExactlyOnceWith(
-        terminalIpc.exportRequest,
+      expect(send).toHaveBeenCalledExactlyOnceWith(terminalIpc.exportRequest, {
         kind,
-      );
+        contextId: 17,
+      });
       expect(electron.popup).toHaveBeenLastCalledWith({ window });
     },
   );

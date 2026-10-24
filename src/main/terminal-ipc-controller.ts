@@ -729,7 +729,7 @@ function createTerminalIpcController(
     readClipboardText,
     confirmPaste,
     showClipboardContextMenu: contextMenuBoundary(options, reject),
-    saveTerminalExport: exportBoundary(options, reject),
+    saveTerminalExport: exportBoundary(options, reject, () => !disposed),
     bell,
     openExternalLink,
     localImage: localImageBoundary.request,

@@ -312,10 +312,10 @@ app
               },
               showClipboardContextMenu: (request) =>
                 popupTerminalContextMenu(window, request),
-              saveTerminalExport: async (request) => {
+              saveTerminalExport: async (request, isOwnerAlive) => {
                 await saveTerminalExport(
                   request,
-                  electronTerminalExportHost(window),
+                  electronTerminalExportHost(window, isOwnerAlive),
                 );
               },
             });

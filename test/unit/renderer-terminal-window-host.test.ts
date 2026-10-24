@@ -187,6 +187,7 @@ describe("renderer Terminal Window page host", () => {
       expect.any(Object),
       {
         abortSignal: expect.any(AbortSignal) as AbortSignal,
+        onFatalError: expect.any(Function) as (message: string) => void,
         background: "host",
         focus: false,
         appearance: {

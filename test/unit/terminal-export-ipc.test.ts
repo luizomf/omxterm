@@ -3,6 +3,7 @@ import {
   registerTerminalIpcRouter,
   type TrustedWebContents,
 } from "../../src/main/terminal-ipc-controller";
+import { MAX_TERMINAL_EXPORT_BYTES } from "../../src/shared/terminal-contract";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import {
   createIpcHarness,
@@ -18,9 +19,11 @@ describe("terminal export IPC", () => {
       isDestroyed: () => false,
       send: vi.fn(),
     };
-    const saveTerminalExport = vi.fn(async () => undefined);
+    const saveTerminalExport = vi.fn(
+      async (_request: unknown, _isOwnerAlive: () => boolean) => undefined,
+    );
     const router = registerTerminalIpcRouter(ipc.ipcMain);
-    router.registerController({
+    const controller = router.registerController({
       ...clipboardOptions(),
       saveTerminalExport,
       webContents,
@@ -47,7 +50,12 @@ describe("terminal export IPC", () => {
       { kind: "screen", text: "x" },
       { kind: "content", text: 1 },
       { kind: "content", text: "x", path: "/tmp/x" },
-      { kind: "content", text: "é".repeat(8 * 1024 * 1024 + 1) },
+      {
+        kind: "content",
+        text: "é".repeat(MAX_TERMINAL_EXPORT_BYTES / 2) + "a",
+      },
+      { notice: "too-large", text: "untrusted" },
+      { notice: "other" },
     ])
       await expect(save(owner, payload)).rejects.toThrow(
         "Invalid terminal export request",
@@ -55,10 +63,35 @@ describe("terminal export IPC", () => {
     expect(saveTerminalExport).not.toHaveBeenCalled();
 
     await save(owner, { kind: "selection", text: "日本語\n" });
-    expect(saveTerminalExport).toHaveBeenCalledExactlyOnceWith({
-      kind: "selection",
-      text: "日本語\n",
-    });
+    expect(saveTerminalExport).toHaveBeenCalledExactlyOnceWith(
+      {
+        kind: "selection",
+        text: "日本語\n",
+      },
+      expect.any(Function),
+    );
+    const isOwnerAlive = vi.mocked(saveTerminalExport).mock.calls[0]![1];
+    expect(isOwnerAlive()).toBe(true);
+    saveTerminalExport.mockClear();
+    const text = "é".repeat(MAX_TERMINAL_EXPORT_BYTES / 2);
+    await save(owner, { kind: "content", text });
+    expect(saveTerminalExport).toHaveBeenCalledExactlyOnceWith(
+      { kind: "content", text },
+      expect.any(Function),
+    );
+    saveTerminalExport.mockClear();
+    await save(owner, { notice: "too-large" });
+    expect(saveTerminalExport).toHaveBeenCalledExactlyOnceWith(
+      { notice: "too-large" },
+      expect.any(Function),
+    );
+    controller.dispose();
+    expect(isOwnerAlive()).toBe(false);
+    saveTerminalExport.mockClear();
+    expect(() => save(owner, { kind: "content", text: "late" })).toThrow(
+      "untrusted sender",
+    );
+    expect(saveTerminalExport).not.toHaveBeenCalled();
   });
 
   it("forwards only owned, well-formed context-menu requests", () => {
@@ -87,7 +120,7 @@ describe("terminal export IPC", () => {
 
     contextMenu(
       { sender: webContents, senderFrame: {} },
-      { target: "terminal", hasSelection: true },
+      { target: "terminal", hasSelection: true, contextId: 1 },
     );
     contextMenu(owner);
     contextMenu(owner, { target: "terminal", hasSelection: "yes" });
@@ -95,10 +128,14 @@ describe("terminal export IPC", () => {
     contextMenu(owner, { hasSelection: false });
     expect(options.showClipboardContextMenu).not.toHaveBeenCalled();
 
-    contextMenu(owner, { target: "terminal", hasSelection: false });
+    contextMenu(owner, {
+      target: "terminal",
+      hasSelection: false,
+      contextId: 1,
+    });
     contextMenu(owner, { target: "field" });
     expect(options.showClipboardContextMenu.mock.calls).toEqual([
-      [{ target: "terminal", hasSelection: false }],
+      [{ target: "terminal", hasSelection: false, contextId: 1 }],
       [{ target: "field" }],
     ]);
   });

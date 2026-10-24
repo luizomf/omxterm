@@ -625,14 +625,42 @@ describe("Scrollback Search routing", () => {
 });
 
 describe("explicit export routing", () => {
-  it("reads export text from the selected tab only", async () => {
-    const harness = createTabsHarness();
+  it("reads export text from the original context's selected tab only", async () => {
+    const requestContextMenu =
+      vi.fn<
+        (
+          request: import("../../src/shared/terminal-contract").TerminalContextMenuRequest,
+        ) => void
+      >();
+    const harness = createTabsHarness({
+      surfaceOptions: {
+        clipboard: {
+          readText: async () => "",
+          writeText: async () => {},
+          confirmPaste: async () => true,
+          requestContextMenu,
+        },
+      },
+    });
     await harness.tabs.ready;
     harness.tabs.handleCommand({ action: "new" });
     await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
     harness.surfaces[1]!.exportText.mockReturnValue("second tab");
 
-    expect(harness.tabs.exportText("content")).toBe("second tab");
+    harness.mountedSurfaceOptions[1]!.clipboard!.requestContextMenu({
+      target: "terminal",
+      hasSelection: false,
+    });
+    const request = requestContextMenu.mock.calls[0]![0];
+    expect(request.target).toBe("terminal");
+    if (!("contextId" in request) || typeof request.contextId !== "number")
+      throw new Error("Expected a contextual export");
+    expect(
+      harness.tabs.exportRequest(
+        { kind: "content", contextId: request.contextId },
+        true,
+      ),
+    ).toEqual({ kind: "content", text: "second tab" });
     expect(harness.surfaces[1]!.exportText).toHaveBeenCalledExactlyOnceWith(
       "content",
     );

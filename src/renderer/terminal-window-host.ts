@@ -13,8 +13,8 @@ import type {
   TerminalFontZoom,
   TerminalSessionId,
   TerminalTabCommand,
-  TerminalExportKind,
-  TerminalExportRequest,
+  TerminalExportContext,
+  TerminalExportSaveRequest,
 } from "../shared/terminal-contract";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
@@ -82,10 +82,10 @@ interface TerminalWindowPageOptions {
   readonly subscribeToTabBarToggle?: (listener: () => void) => () => void;
   readonly subscribeToFind?: (listener: () => void) => () => void;
   readonly subscribeToExportRequests?: (
-    listener: (kind: TerminalExportKind) => void,
+    listener: (context: TerminalExportContext) => void,
   ) => () => void;
   readonly saveTerminalExport?: (
-    request: TerminalExportRequest,
+    request: TerminalExportSaveRequest,
   ) => Promise<void>;
   readonly subscribeToTabTitles?: (
     listener: (sessionId: TerminalSessionId, title: string) => void,
@@ -331,7 +331,7 @@ export function mountTerminalWindowPage(
     removeGuardedActionListeners = subscribeToGuardedActions(
       options,
       tabs,
-      previewActive,
+      () => disposed || previewActive(),
       (action) => auxiliaryPanel?.clipboardAction(action) ?? false,
     );
     removeTabCommandListener = options.subscribeToTabCommands?.((command) => {
@@ -347,7 +347,9 @@ export function mountTerminalWindowPage(
       const panel = createAuxiliaryPanel(snippets.element, {
         content: snippets.element.parentElement!,
         focusTerminal: tabs.focusSelected,
-        ...(options.clipboard ? { clipboard: options.clipboard } : {}),
+        ...(options.clipboard && {
+          clipboard: tabs.fieldClipboard(options.clipboard),
+        }),
         views: [
           {
             id: "snippets",
@@ -396,12 +398,11 @@ function subscribeToGuardedActions(
     options.subscribeToFind?.(() => {
       if (!blocked()) tabs.find();
     }),
-    // The text is read now, before any dialog, so a later tab switch cannot
-    // substitute another tab's content. Main reports save outcomes.
-    options.subscribeToExportRequests?.((kind) => {
-      const text = blocked() ? undefined : tabs.exportText(kind);
-      if (text !== undefined)
-        void options.saveTerminalExport?.({ kind, text }).catch(() => {});
+    // Resolve only the original live context, then snapshot before any dialog.
+    // Oversized text never crosses IPC; main owns the fixed actionable notice.
+    options.subscribeToExportRequests?.((context) => {
+      const request = tabs.exportRequest(context, !blocked());
+      if (request) void options.saveTerminalExport?.(request).catch(() => {});
     }),
   ];
   return () => {

@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { TerminalBridge } from "../../src/shared/terminal-bridge";
+import { MAX_TERMINAL_EXPORT_BYTES } from "../../src/shared/terminal-contract";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 
 const electron = vi.hoisted(() => {
@@ -46,6 +47,31 @@ beforeAll(async () => {
 });
 
 describe("preload export bridge", () => {
+  it("independently accepts the exact UTF-8 limit, rejects overflow before IPC, and permits only a bounded size notice", async () => {
+    const bridge = electron.bridge!;
+    const text = "é".repeat(MAX_TERMINAL_EXPORT_BYTES / 2);
+    electron.invoke.mockClear();
+    await bridge.saveTerminalExport({ kind: "content", text });
+    expect(electron.invoke).toHaveBeenCalledExactlyOnceWith(
+      terminalIpc.exportSave,
+      { kind: "content", text },
+    );
+    electron.invoke.mockClear();
+    for (const request of [
+      { kind: "content", text: text + "a" },
+      { notice: "too-large", text: "untrusted" },
+      { notice: "other" },
+    ])
+      await expect(bridge.saveTerminalExport(request as never)).rejects.toThrow(
+        "Invalid terminal export request",
+      );
+    expect(electron.invoke).not.toHaveBeenCalled();
+    await bridge.saveTerminalExport({ notice: "too-large" });
+    expect(electron.invoke).toHaveBeenCalledExactlyOnceWith(
+      terminalIpc.exportSave,
+      { notice: "too-large" },
+    );
+  });
   it("validates context-menu and export payloads in both directions", async () => {
     const bridge = electron.bridge!;
     electron.send.mockClear();
@@ -55,20 +81,31 @@ describe("preload export bridge", () => {
     bridge.requestClipboardContextMenu({
       target: "terminal",
       hasSelection: true,
+      contextId: 1,
     });
     expect(electron.send).toHaveBeenCalledExactlyOnceWith(
       terminalIpc.clipboardContextMenu,
-      { target: "terminal", hasSelection: true },
+      { target: "terminal", hasSelection: true, contextId: 1 },
     );
 
     const listener = vi.fn();
     const remove = bridge.onExportRequest(listener);
     const handler = electron.listeners.get(terminalIpc.exportRequest)!;
-    for (const kind of [undefined, "all", { kind: "content" }])
+    for (const kind of [
+      undefined,
+      "all",
+      "selection",
+      { kind: "content" },
+      { kind: "content", contextId: 0 },
+      { kind: "content", contextId: 1, extra: true },
+    ])
       handler({}, kind);
-    handler({}, "selection");
-    handler({}, "content");
-    expect(listener.mock.calls).toEqual([["selection"], ["content"]]);
+    handler({}, { kind: "selection", contextId: 1 });
+    handler({}, { kind: "content", contextId: 2 });
+    expect(listener.mock.calls).toEqual([
+      [{ kind: "selection", contextId: 1 }],
+      [{ kind: "content", contextId: 2 }],
+    ]);
     remove();
     expect(electron.removeListener).toHaveBeenCalledWith(
       terminalIpc.exportRequest,

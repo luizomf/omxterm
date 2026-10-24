@@ -780,7 +780,7 @@ describe("terminal IPC controller", () => {
 
     contextMenu(
       { sender: webContents, senderFrame: mainFrame },
-      { target: "terminal", hasSelection: true },
+      { target: "terminal", hasSelection: true, contextId: 1 },
     );
     expect(clipboard.showClipboardContextMenu).toHaveBeenCalledOnce();
   });

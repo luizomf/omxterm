@@ -795,19 +795,34 @@ Copy, Paste and Select All for that field, without an export item. Selection
 export saves the selected text. Content export saves the selected tab's retained
 Scrollback Buffer and visible screen, or only the alternate screen while it is
 active, read through the prepared runtime without creating, changing or
-clearing a selection. The renderer reads the text when the request arrives,
-before any dialog, so switching tabs cannot substitute another tab's content.
-Main validates the request, a kind plus at most 16 MiB of UTF-8 text (above what
-the core retains for one screen), and owns a native save dialog that suggests
-`omxterm-selection-…` or `omxterm-terminal-…` with a local timestamp in the
-Documents folder and uses the platform's overwrite confirmation. Cancelling
-writes nothing. The file is UTF-8 with LF line breaks: the core trims each row's
-trailing padding, trailing blank rows are dropped, and the file ends with
-exactly one line break. On macOS and Linux a newly created file is readable
-only by its owner. Whitespace-only content shows a notice instead of a dialog,
-and a failed write shows an error with the operating-system reason. Export is
-never automatic or continuous, and neither the text nor the destination enters
-operational logs.
+clearing a selection. The menu retains an opaque context owned by its original
+tab. Switching away (even if later returning), tab removal, session end, Surface
+failure, a newer context menu or window disposal invalidates it; a stale callback
+never exports a replacement tab. The renderer reads the text only for that live
+context when the callback arrives, before any dialog. Later tab switches cannot
+substitute another tab's content.
+
+Export has a deliberate inclusive limit of 16 MiB of UTF-8 text. Real retained
+text can exceed it; the core's history storage limit is not an export-capacity
+guarantee. Renderer preflight sends only a bounded size-notice request for
+oversized text, without transmitting it or truncating it. A fixed actionable
+notice asks the user to select a smaller portion. Preload and main independently
+validate the exact payload shape and UTF-8 limit.
+
+Main owns a native save dialog that suggests `omxterm-selection-…` or
+`omxterm-terminal-…` with a local timestamp in the Documents folder and uses the
+platform's overwrite confirmation. Cancelling writes nothing and shows no error.
+Window/renderer owner loss while the chooser is pending makes its late choice
+or error inert: no new write or notice starts. A write already authorized and
+started while the owner was live may finish; closure does not roll it back.
+The file is UTF-8 with LF line breaks: the core trims each row's trailing padding,
+trailing blank rows are dropped, and the file ends with exactly one line break.
+On macOS and Linux a newly created file is readable only by its owner.
+Whitespace-only content shows a notice instead of a chooser. Documents lookup,
+dialog setup/rejection and write failures share an owner-aware error boundary,
+with one fixed actionable error at most and no raw native error details. Failed
+notices are not retried. Export is never automatic or continuous, and neither
+the text nor the destination enters operational logs.
 
 ## Clipboard
 
@@ -1166,6 +1181,14 @@ rewrites, or silently ignores User Configuration. The same surface also carries
 non-fatal warnings for a valid configuration that stays fully active — currently
 a keybind shadowing a PTY control key — which inform without activating any
 default.
+
+Terminal Payload is not automatically recorded as application history or
+persisted state. Explicit user-requested access is distinct from unsolicited
+collection: Scrollback Search inspects retained content in memory, and Explicit
+Export may save the requested text to the user-chosen file through the normal
+native save chooser, without an extra opt-in toggle. Neither operation turns
+content into operational diagnostics or authorizes automatic recording or network
+transmission.
 
 Operational logs are JSONL under `$XDG_STATE_HOME/omxterm/logs`, falling back to
 `~/.local/state/omxterm/logs`. Levels are `error`, `info`, and `debug`. Only the

@@ -1,7 +1,7 @@
 import { terminalIpc } from "../shared/terminal-ipc";
 import {
   isTerminalContextMenuRequest,
-  isTerminalExportRequest,
+  isTerminalExportSaveRequest,
 } from "../shared/terminal-contract";
 import type { RejectBoundary } from "./terminal-ipc-boundaries";
 import type {
@@ -30,7 +30,7 @@ export function registerTerminalExportIpc(
   return () => ipc.removeHandler(terminalIpc.exportSave);
 }
 
-// The context menu request only reports whether text is selected.
+// The context menu reports its UI target, selection state and opaque context.
 export function contextMenuBoundary(
   options: Pick<TerminalIpcControllerOptions, "showClipboardContextMenu">,
   reject: RejectBoundary,
@@ -47,12 +47,13 @@ export function contextMenuBoundary(
 export function exportBoundary(
   options: Pick<TerminalIpcControllerOptions, "saveTerminalExport">,
   reject: RejectBoundary,
+  isOwnerAlive: () => boolean,
 ): (payload?: unknown) => Promise<void> {
   return async (payload) => {
-    if (!isTerminalExportRequest(payload) || !options.saveTerminalExport) {
+    if (!isTerminalExportSaveRequest(payload) || !options.saveTerminalExport) {
       reject("ipc", "invalid-payload");
       throw new TypeError("Invalid terminal export request");
     }
-    await options.saveTerminalExport(payload);
+    if (isOwnerAlive()) await options.saveTerminalExport(payload, isOwnerAlive);
   };
 }

@@ -1,12 +1,13 @@
 import type { BrowserWindow } from "electron";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import type {
-  TerminalContextMenuRequest,
+  TerminalContextMenuInvocation,
   TerminalExportRequest,
+  TerminalExportSaveRequest,
 } from "../../src/shared/terminal-contract";
 
 export interface ResttyExportEvidenceSink {
-  readonly contextMenuRequests: TerminalContextMenuRequest[];
+  readonly contextMenuRequests: TerminalContextMenuInvocation[];
   readonly exportRequests: TerminalExportRequest[];
   readonly clipboardTexts: string[];
 }
@@ -20,8 +21,10 @@ export const resttyExportEvidence: ResttyExportEvidenceSink = {
 
 // Stands in for main's native save dialog: records the requested text.
 export async function recordExport(
-  request: TerminalExportRequest,
+  request: TerminalExportSaveRequest,
 ): Promise<void> {
+  if ("notice" in request)
+    throw new Error("Synthetic export unexpectedly exceeded the limit");
   resttyExportEvidence.exportRequests.push(request);
 }
 
@@ -44,7 +47,7 @@ const UNICODE = "日本語の端末 café 👩‍💻";
 // Drives export through the real context-menu request, main-to-renderer
 // export IPC, the production window host and the prepared runtime. The
 // fixture's saveTerminalExport records the text main would hand to the
-// native dialog; the dialog itself is covered by unit tests.
+// native dialog. Mocked unit tests do not qualify native chooser behavior.
 export async function exerciseResttyTerminalExport(options: {
   readonly window: BrowserWindow;
   readonly deliverOutput: (data: string) => void;
@@ -70,7 +73,16 @@ export async function exerciseResttyTerminalExport(options: {
   };
   const requestExport = async (kind: "selection" | "content") => {
     const count = evidence.exportRequests.length;
-    window.webContents.send(terminalIpc.exportRequest, kind);
+    const context = evidence.contextMenuRequests.at(-1);
+    if (
+      context?.target !== "terminal" ||
+      context.hasSelection !== (kind === "selection")
+    )
+      throw new Error("Synthetic export must match its original context menu");
+    window.webContents.send(terminalIpc.exportRequest, {
+      kind,
+      contextId: context.contextId,
+    });
     await waitFor(
       () => evidence.exportRequests.length === count + 1,
       `${kind} export request`,
@@ -103,12 +115,12 @@ export async function exerciseResttyTerminalExport(options: {
   await contextMenu();
   const copiedBefore = await copy();
   const selection = await requestExport("selection");
-  await requestExport("content");
   const copiedAfter = await copy();
 
   // The renderer reads the text when the request arrives, so a tab opened
   // right after it cannot substitute its own content.
-  const switched = requestExport("content");
+  await contextMenu();
+  const switched = requestExport("selection");
   window.webContents.send(terminalIpc.tabCommand, { action: "new" });
   const afterSwitch = await switched;
 

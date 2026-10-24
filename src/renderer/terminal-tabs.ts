@@ -1,6 +1,7 @@
 import type {
   TerminalClipboardAction,
-  TerminalExportKind,
+  TerminalExportContext,
+  TerminalExportSaveRequest,
   TerminalFontZoom,
   TerminalSessionId,
   TerminalTabCommand,
@@ -10,11 +11,17 @@ import type {
   TerminalSessionHandlers,
 } from "../terminal-surface/terminal-session-adapter";
 import type {
+  TerminalClipboard,
   TerminalSurface,
   TerminalSurfaceConfiguration,
   TerminalSurfaceOptions,
 } from "../terminal-surface/terminal-surface";
 import { DEFAULT_TERMINAL_FONT_SIZE } from "../shared/user-configuration";
+import {
+  renderTerminalTabStrip,
+  focusTerminalTab as focusTab,
+} from "./terminal-tab-strip";
+import { createTerminalTabExport } from "./terminal-tab-export";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
 
 export const TERMINAL_TAB_DRAG_DATA_TYPE = "application/x-omxterm-tab";
@@ -57,7 +64,11 @@ export interface TerminalTabs {
   zoom(command: TerminalFontZoom): void;
   clipboardAction(action: TerminalClipboardAction): void;
   find(): void;
-  exportText(kind: TerminalExportKind): string | undefined;
+  exportRequest(
+    context: TerminalExportContext,
+    allowed: boolean,
+  ): TerminalExportSaveRequest | undefined;
+  fieldClipboard(clipboard: TerminalClipboard): TerminalClipboard;
   injectText(text: string): void;
   injectSnippet(body: string, options: { readonly submit: boolean }): void;
   toggleTabBar(): void;
@@ -65,7 +76,7 @@ export interface TerminalTabs {
   dispose(): void;
 }
 
-interface TerminalTab {
+export interface TerminalTab {
   readonly container: HTMLElement;
   readonly adapter: ElectronTerminalAdapter;
   readonly mountAbort: AbortController;
@@ -73,6 +84,7 @@ interface TerminalTab {
   label: string;
   removed: boolean;
   startRequested: boolean;
+  ended: boolean;
 }
 
 function closePendingTab(tab: TerminalTab): void {
@@ -93,6 +105,7 @@ export function createTerminalTabs(
   let disposed = false;
   let pendingClose: TerminalTab | undefined;
   let closing = false;
+  const exports = createTerminalTabExport();
 
   const notifyEmpty = (reason?: "rendering-failure") => {
     if (disposed || closing || tabs.length !== 0) return;
@@ -109,38 +122,22 @@ export function createTerminalTabs(
     renderStrip();
   });
 
-  const renderStrip = () => {
-    const visible = tabBarEnabled && tabs.length >= 2;
-    elements.strip.hidden = !visible;
-    document.body.classList.toggle("tabs-visible", visible);
-    if (!visible) {
-      elements.strip.replaceChildren();
-      return;
-    }
-    elements.strip.replaceChildren(
-      ...tabs.map((tab, index) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        tabDragging.bind(button, tab);
-        // Sanitized display title pushed by main (ADR 0010); the literal
-        // position stands in until the first push lands.
-        button.textContent = tab.label || String(index + 1);
-        button.setAttribute("role", "tab");
-        button.setAttribute(
-          "aria-selected",
-          index === selectedIndex ? "true" : "false",
-        );
-        button.addEventListener("click", () => {
-          if (!disposed) select(tabs.indexOf(tab));
-        });
-        return button;
-      }),
+  const renderStrip = () =>
+    renderTerminalTabStrip(
+      elements,
+      tabs,
+      selectedIndex,
+      tabBarEnabled,
+      tabDragging.bind,
+      (tab) => {
+        if (!disposed) select(tabs.indexOf(tab));
+      },
     );
-  };
 
   const select = (index: number, passive = false) => {
     const tab = tabs[index];
     if (!tab) return;
+    if (selectedTab() !== tab) exports.invalidate();
     selectedIndex = index;
     for (const [position, candidate] of tabs.entries())
       candidate.container.hidden = position !== index;
@@ -172,6 +169,7 @@ export function createTerminalTabs(
     tab: TerminalTab,
     exit: { signal: number; startupFailed?: true },
   ) => {
+    tab.ended = true;
     if (disposed || tab.removed) return;
     // An ordinary end removes the tab; an unexpected signal keeps the dead
     // tab visible until main acknowledges the failure and orders removal.
@@ -200,6 +198,15 @@ export function createTerminalTabs(
     const tabSurfaceOptions: TerminalSurfaceOptions = {
       ...activeSurfaceOptions,
       abortSignal: tab.mountAbort.signal,
+      onFatalError(message) {
+        tab.ended = true;
+        activeSurfaceOptions.onFatalError?.(message);
+      },
+      ...exports.clipboardOptions(activeSurfaceOptions.clipboard, () =>
+        !disposed && !tab.removed && !tab.ended && selectedTab() === tab
+          ? tab.surface
+          : undefined,
+      ),
 
       ...(options.notifyTitle
         ? {
@@ -327,7 +334,8 @@ export function createTerminalTabs(
       else surface.selectAll();
     },
     find: () => selectedTab()?.surface?.find(),
-    exportText: (kind) => selectedTab()?.surface?.exportText(kind),
+    fieldClipboard: exports.fieldClipboard,
+    exportRequest: exports.request,
     injectText: (text) => void selectedTab()?.surface?.inject(text),
     injectSnippet(body, injectOptions) {
       void selectedTab()?.surface?.inject(body, injectOptions);
@@ -345,6 +353,7 @@ export function createTerminalTabs(
       if (disposed) return;
       disposed = true;
       pendingClose = undefined;
+      exports.invalidate();
       tabDragging.dispose();
       for (const tab of [...tabs]) {
         tab.removed = true;
@@ -354,19 +363,6 @@ export function createTerminalTabs(
       tabs.length = 0;
     },
   };
-}
-
-function focusTab(
-  tab: TerminalTab | undefined,
-  options: TerminalTabsOptions,
-  passive = false,
-  unchangedFocus = false,
-): void {
-  if (
-    options.canFocus?.() !== false &&
-    (!passive || options.canAutoFocus?.(unchangedFocus) !== false)
-  )
-    tab?.surface?.focus();
 }
 
 function observeMountFocus(document: Document, signal: AbortSignal) {
@@ -397,6 +393,7 @@ function appendTab(
     label: "",
     removed: false,
     startRequested: false,
+    ended: false,
   };
 }
 

@@ -118,8 +118,10 @@ See [terminal behavior](docs/spec.md#terminal-behavior) and
 [clipboard behavior](docs/spec.md#clipboard).
 
 **Terminal Payload** — Private input and output exchanged with terminal
-processes. It is transported without becoming application history, logs or
-persisted state. Only an Explicit Export writes it, to a file the user chooses.
+processes. OMXTerm does not automatically record it as application history or
+persisted state, and excludes it from operational logs. Explicit user-requested
+operations such as copying, local search and Explicit Export follow their feature
+contracts; they do not authorize automatic recording or network transmission.
 
 **Explicit Export** — A user-requested save of the selected text, or of the
 active tab's retained Scrollback Buffer and screen, to a file picked in a native

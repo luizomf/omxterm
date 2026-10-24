@@ -86,12 +86,27 @@ export type TerminalExportKind = "selection" | "content";
 export type TerminalContextMenuRequest =
   | { readonly target: "terminal"; readonly hasSelection: boolean }
   | { readonly target: "field" };
+// The window/tab host adds an opaque identity before crossing IPC. The Surface
+// remains tab-unaware; native callbacks must return this exact context.
+export type TerminalContextMenuInvocation =
+  | {
+      readonly target: "terminal";
+      readonly hasSelection: boolean;
+      readonly contextId: number;
+    }
+  | { readonly target: "field" };
+export interface TerminalExportContext {
+  readonly kind: TerminalExportKind;
+  readonly contextId: number;
+}
 export interface TerminalExportRequest {
   readonly kind: TerminalExportKind;
   readonly text: string;
 }
-// Above what the 10,000,000-byte core can retain for one screen; it bounds the
-// IPC boundary rather than limiting ordinary exports. Measured in UTF-8 bytes.
+export type TerminalExportSaveRequest =
+  TerminalExportRequest | { readonly notice: "too-large" };
+// Deliberate IPC text limit in UTF-8 bytes, not a core capacity guarantee.
+// Real retained text can exceed it; report that without truncation or large IPC.
 export const MAX_TERMINAL_EXPORT_BYTES = 16 * 1024 * 1024;
 
 const encoder = new TextEncoder();
@@ -330,12 +345,36 @@ export function isTerminalExportKind(
 
 export function isTerminalContextMenuRequest(
   value: unknown,
-): value is TerminalContextMenuRequest {
+): value is TerminalContextMenuInvocation {
   if (isStrictRecord(value, ["target"])) return value.target === "field";
   return (
-    isStrictRecord(value, ["target", "hasSelection"]) &&
+    isStrictRecord(value, ["target", "hasSelection", "contextId"]) &&
     value.target === "terminal" &&
-    typeof value.hasSelection === "boolean"
+    typeof value.hasSelection === "boolean" &&
+    isExportContextId(value.contextId)
+  );
+}
+
+function isExportContextId(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+export function isTerminalExportContext(
+  value: unknown,
+): value is TerminalExportContext {
+  return (
+    isStrictRecord(value, ["kind", "contextId"]) &&
+    isTerminalExportKind(value.kind) &&
+    isExportContextId(value.contextId)
+  );
+}
+
+export function isTerminalExportSaveRequest(
+  value: unknown,
+): value is TerminalExportSaveRequest {
+  return (
+    (isStrictRecord(value, ["notice"]) && value.notice === "too-large") ||
+    isTerminalExportRequest(value)
   );
 }
 

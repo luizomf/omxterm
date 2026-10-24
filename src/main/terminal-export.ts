@@ -12,15 +12,17 @@ import {
 import { terminalIpc } from "../shared/terminal-ipc";
 import type {
   TerminalClipboardAction,
-  TerminalContextMenuRequest,
+  TerminalContextMenuInvocation,
   TerminalExportKind,
-  TerminalExportRequest,
+  TerminalExportSaveRequest,
 } from "../shared/terminal-contract";
 import { terminalClipboardContextMenuTemplate } from "./application-menu";
 
-export type TerminalExportOutcome = "saved" | "cancelled" | "empty" | "failed";
+export type TerminalExportOutcome =
+  "saved" | "cancelled" | "empty" | "too-large" | "failed";
 
 export interface TerminalExportHost {
+  isAlive(): boolean;
   showSaveDialog(options: SaveDialogOptions): Promise<SaveDialogReturnValue>;
   showMessageBox(options: MessageBoxOptions): Promise<unknown>;
   writeFile(filePath: string, content: string): Promise<void>;
@@ -51,59 +53,93 @@ export function suggestedTerminalExportName(
 // Saves only what the user explicitly requested, to the destination they pick.
 // Cancellation writes nothing; the destination and text are never logged.
 export async function saveTerminalExport(
-  request: TerminalExportRequest,
+  request: TerminalExportSaveRequest,
   host: TerminalExportHost,
 ): Promise<TerminalExportOutcome> {
-  const title = TITLES[request.kind];
-  if (!/\S/u.test(request.text)) {
-    await host.showMessageBox({
-      type: "info",
-      title,
-      message:
-        request.kind === "selection"
-          ? "The selection has no text to export."
-          : "The terminal has no text to export.",
-      buttons: ["OK"],
-      noLink: true,
-    });
-    return "empty";
-  }
-  const choice = await host.showSaveDialog({
-    title,
-    defaultPath: path.join(
-      host.documentsPath(),
-      suggestedTerminalExportName(request.kind, host.now()),
-    ),
-    filters: [
-      { name: "Text", extensions: ["txt"] },
-      { name: "All Files", extensions: ["*"] },
-    ],
-    properties: ["showOverwriteConfirmation", "createDirectory"],
-  });
-  if (choice.canceled || !choice.filePath) return "cancelled";
+  let noticeStarted = false;
+  let writeStarted = false;
   try {
-    await host.writeFile(
-      choice.filePath,
-      terminalExportFileContent(request.text),
-    );
-    return "saved";
-  } catch (cause) {
-    await host.showMessageBox({
-      type: "error",
-      title: "Export Failed",
-      message: "OMXTerm could not save the exported text.",
-      detail: cause instanceof Error ? cause.message : String(cause),
-      buttons: ["OK"],
-      noLink: true,
+    if (!host.isAlive()) return "cancelled";
+    if ("notice" in request) {
+      noticeStarted = true;
+      await host.showMessageBox({
+        type: "warning",
+        title: "Export Too Large",
+        message: "The requested text exceeds the 16 MiB UTF-8 export limit.",
+        detail:
+          "Select a smaller portion of the terminal text and export the selection. Nothing was saved or truncated.",
+        buttons: ["OK"],
+        noLink: true,
+      });
+      return "too-large";
+    }
+    const title = TITLES[request.kind];
+    if (!/\S/u.test(request.text)) {
+      noticeStarted = true;
+      await host.showMessageBox({
+        type: "info",
+        title,
+        message:
+          request.kind === "selection"
+            ? "The selection has no text to export."
+            : "The terminal has no text to export.",
+        buttons: ["OK"],
+        noLink: true,
+      });
+      return "empty";
+    }
+    const choice = await host.showSaveDialog({
+      title,
+      defaultPath: path.join(
+        host.documentsPath(),
+        suggestedTerminalExportName(request.kind, host.now()),
+      ),
+      filters: [
+        { name: "Text", extensions: ["txt"] },
+        { name: "All Files", extensions: ["*"] },
+      ],
+      properties: ["showOverwriteConfirmation", "createDirectory"],
     });
+    // Losing the owner while the chooser is pending authorizes no new write.
+    if (!host.isAlive() || choice.canceled || !choice.filePath)
+      return "cancelled";
+    const content = terminalExportFileContent(request.text);
+    writeStarted = true;
+    await host.writeFile(choice.filePath, content);
+    // An already-started, user-authorized write may finish after owner loss.
+    return "saved";
+  } catch {
+    if (!host.isAlive()) return writeStarted ? "failed" : "cancelled";
+    // Never retry a failed notice or display a second one. Native details may
+    // include private paths/text, so neither notices nor logs receive them.
+    if (!noticeStarted) {
+      try {
+        await host.showMessageBox({
+          type: "error",
+          title: "Export Failed",
+          message: "OMXTerm could not save the exported text.",
+          detail:
+            "Try exporting again and choose a writable destination with enough free space.",
+          buttons: ["OK"],
+          noLink: true,
+        });
+      } catch {
+        /* The native notice itself is unavailable; do not retry. */
+      }
+    }
     return "failed";
   }
 }
 
 export function electronTerminalExportHost(
   window: BrowserWindow,
+  isOwnerAlive: () => boolean,
 ): TerminalExportHost {
   return {
+    isAlive: () =>
+      isOwnerAlive() &&
+      !window.isDestroyed() &&
+      !window.webContents.isDestroyed(),
     showSaveDialog: (options) => dialog.showSaveDialog(window, options),
     showMessageBox: (options) => dialog.showMessageBox(window, options),
     writeFile: (filePath, content) =>
@@ -117,7 +153,7 @@ export function electronTerminalExportHost(
 // a text field's menu offers only editing actions.
 export function popupTerminalContextMenu(
   window: BrowserWindow,
-  request: TerminalContextMenuRequest,
+  request: TerminalContextMenuInvocation,
 ): void {
   const send = (action: TerminalClipboardAction) =>
     window.webContents.send(terminalIpc.clipboardAction, action);
@@ -134,7 +170,16 @@ export function popupTerminalContextMenu(
         paste: () => send("paste"),
         selectAll: () => send("select-all"),
         exportText: () => {
-          if (kind) window.webContents.send(terminalIpc.exportRequest, kind);
+          if (
+            kind &&
+            request.target === "terminal" &&
+            !window.isDestroyed() &&
+            !window.webContents.isDestroyed()
+          )
+            window.webContents.send(terminalIpc.exportRequest, {
+              kind,
+              contextId: request.contextId,
+            });
         },
       },
       kind,
