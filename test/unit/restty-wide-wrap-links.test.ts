@@ -33,6 +33,138 @@ it("recognizes the complete wide-wrap URL on every occupied row with exact UTF-1
   }
 });
 
+it("keeps every spacer-wrapped hit on its own destination across separate hard lines", async () => {
+  const fixture = await realFrameFixture(26, 8);
+  const oldUrl = "https://old.test/aaaaaaaaa";
+  const newUrl = "https://new.test/aaaaaaaa漢";
+  try {
+    fixture.write(`${oldUrl}\r\n${newUrl}`);
+    fixture.produce();
+    expect(fixture.frame().wide?.[51]).toBe(3);
+    for (const [url, firstRow, cells] of [
+      [oldUrl, 0, range(0, 26)],
+      [newUrl, 1, range(26, 28)],
+    ] as const) {
+      for (const index of cells) {
+        fixture.produce();
+        expect(
+          fixture.runtime.getVisibleLinkAtClientPoint(
+            index % 26,
+            Math.floor(index / 26),
+          ),
+        ).toEqual({
+          url,
+          start: 0,
+          end: 26,
+          cells,
+          id: `0:${firstRow}:0:26:${url}`,
+        });
+      }
+    }
+  } finally {
+    fixture.dispose();
+  }
+});
+
+it.each(["not a link", ""])(
+  "keeps spacer hits off the preceding non-link hard line %j",
+  async (previous) => {
+    const fixture = await realFrameFixture(26, 8);
+    const url = "https://new.test/aaaaaaaa漢";
+    const cells = range(26, 28);
+    try {
+      fixture.write(`${previous}\r\n${url}`);
+      fixture.produce();
+      expect(fixture.frame().wide?.[51]).toBe(3);
+      for (let col = 0; col < 26; col += 1) {
+        fixture.produce();
+        expect(fixture.runtime.getVisibleLinkAtClientPoint(col, 0)).toBeNull();
+      }
+      for (const index of cells) {
+        fixture.produce();
+        expect(
+          fixture.runtime.getVisibleLinkAtClientPoint(
+            index % 26,
+            Math.floor(index / 26),
+          ),
+        ).toEqual({
+          url,
+          start: 0,
+          end: 26,
+          cells,
+          id: `0:1:0:26:${url}`,
+        });
+      }
+    } finally {
+      fixture.dispose();
+    }
+  },
+);
+
+it("maps a spacer past its same-row wide tail without borrowing the previous hard line's wide glyph", async () => {
+  const fixture = await realFrameFixture(26, 8);
+  const oldUrl = "https://old.test/aaaaaaa漢";
+  const newUrl = "https://new.test/aaaaaa漢漢";
+  try {
+    fixture.write(`${oldUrl}\r\n${newUrl}`);
+    fixture.produce();
+    expect(
+      [25, 50, 51, 53].map((index) => fixture.frame().wide?.[index]),
+    ).toEqual([2, 2, 3, 2]);
+    for (const [url, firstRow, cells] of [
+      [oldUrl, 0, range(0, 26)],
+      [newUrl, 1, range(26, 28)],
+    ] as const) {
+      for (const index of cells) {
+        fixture.produce();
+        expect(
+          fixture.runtime.getVisibleLinkAtClientPoint(
+            index % 26,
+            Math.floor(index / 26),
+          ),
+        ).toEqual({
+          url,
+          start: 0,
+          end: 25,
+          cells,
+          id: `0:${firstRow}:0:25:${url}`,
+        });
+      }
+    }
+  } finally {
+    fixture.dispose();
+  }
+});
+
+it("keeps a same-row spacer hit on its destination when selection growth detaches wide flags", async () => {
+  const fixture = await realFrameFixture(26, 8);
+  const url = "https://new.test/aaaaaa漢漢";
+  const selection = fixture.wasm.getSelectionText.bind(fixture.wasm);
+  try {
+    fixture.write(`https://old.test/aaaaaaa漢\r\n${url}`);
+    fixture.produce();
+    const views = fixture.frame();
+    let queries = 0;
+    fixture.wasm.getSelectionText = (...args) => {
+      if (queries++ === 0) fixture.wasm.memory.grow(1);
+      return selection(...args);
+    };
+    expect(fixture.runtime.getVisibleLinkAtClientPoint(25, 1)).toEqual({
+      url,
+      start: 0,
+      end: 25,
+      cells: range(26, 28),
+      id: `0:1:0:25:${url}`,
+    });
+    expect(queries).toBeGreaterThan(0);
+    expect(views.wide!.byteLength).toBe(0);
+    expect(views.codepoints!.byteLength).toBe(0);
+  } finally {
+    fixture.wasm.getSelectionText = selection;
+    fixture.dispose();
+  }
+});
+
 it.each([
   [
     24,

@@ -126,7 +126,7 @@ const priorBlinkDigest =
 const priorWideWrapLinkDigest =
   "8ebccc2aa81d37266bbf4642e3e07e8c0b17e39935a97d8c3703eb9ac5e72649";
 const correctedDigest =
-  "4f74479fdd033e774131712367c833674cd10b8f024717c48ec264acfeb96a5c";
+  "3c4dc8554c8ccc91f0b34ebea8a5638fe6592c1a973acc0a64dafcb33ab8387e";
 
 const nativeScrollFeedbackCorrections = [
   {

@@ -10,7 +10,14 @@ export const wideWrapLinkCorrections = [
     );
     if (proofEnds.some((end) => end < 0))
       return null;
-    const cell = normalizeSelectionCell(positionToCell({ clientX, clientY }));
+    const hit = positionToCell({ clientX, clientY });
+    // Link spacers belong to the preceding cluster on this physical row,
+    // not the previous row used by generic selection normalization.
+    const cell = normalizeSelectionCell(
+      render.wide?.[hit.row * render.cols + hit.col] === 3
+        ? { row: hit.row, col: hit.col - 1 }
+        : hit,
+    );
     const selectionProof = (firstRow, lastRow) => wasm.getSelectionText(
       wasmHandle, firstRow, 0, lastRow, proofEnds[lastRow] ?? render.cols - 1,
     );

@@ -127,7 +127,7 @@ Prepared SHA-256 digests:
 
 | Input                      | SHA-256                                                            |
 | -------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime  | `4f74479fdd033e774131712367c833674cd10b8f024717c48ec264acfeb96a5c` |
+| Restty JavaScript runtime  | `3c4dc8554c8ccc91f0b34ebea8a5638fe6592c1a973acc0a64dafcb33ab8387e` |
 | Embedded-core chunk        | `03d79d4c745e3c74dd90082a100cbf85e5060e23ff9d16fba338b11d2db1e6be` |
 | Event declarations         | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core          | `a52f314c2e91e87394e67307d6b0067c8ba28f6b1e31e7587872b9c41ce88c41` |

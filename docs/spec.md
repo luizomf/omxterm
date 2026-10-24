@@ -692,8 +692,9 @@ destination that may continue beyond the visible viewport. Link-only selection
 proofs exclude a terminal wide-wrap spacer from the queried endpoint, avoiding
 selection's expansion into the next row's grapheme without changing copy or
 selection semantics. Spacers contribute no text and retain the existing hover
-span with the preceding link cluster. Exact row equality, hard-break proofs and
-conservative clipping remain required, including across core pages. Restty enables
+span and hit target with the preceding link cluster on the same physical row.
+Exact row equality, hard-break proofs and conservative clipping remain required,
+including across core pages. Restty enables
 Ghostty's grapheme-cluster mode by default so emoji-presentation and ZWJ
 clusters occupy one two-column terminal cell for rendering and selection. For
 `file:///`, main independently requires the literal lowercase scheme, no remote
