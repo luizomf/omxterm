@@ -189,8 +189,8 @@ describe("native application menu", () => {
 
   it.each([
     ["darwin", "CommandOrControl+F"],
-    ["linux", "Control+Shift+G"],
-    ["win32", "Control+Shift+G"],
+    ["linux", "Control+Shift+F"],
+    ["win32", "Control+Shift+F"],
   ])(
     "offers Find after Select All with shared delivery on %s",
     (platform, accelerator) => {
@@ -216,6 +216,25 @@ describe("native application menu", () => {
       expect(actions.findInSelectedTerminal).toHaveBeenCalledOnce();
     },
   );
+
+  it("keeps a disabled keybind's menu item without an accelerator", () => {
+    const actions = menuActions();
+    const items = flattenMenuItems(
+      terminalApplicationMenuTemplate("OMXTerm", actions, {
+        ...terminalDefaultKeybinds("linux"),
+        toggleFullScreen: null,
+      }),
+    );
+    const fullScreen = items.find(
+      (item) => item.label === "Toggle Full Screen",
+    )!;
+    expect(fullScreen).toEqual({
+      label: "Toggle Full Screen",
+      click: actions.toggleSelectedFullScreen,
+    });
+    (fullScreen.click as () => void)();
+    expect(actions.toggleSelectedFullScreen).toHaveBeenCalledOnce();
+  });
 
   it("offers a menu-only local image picker without adding shortcut vocabulary", () => {
     const actions = menuActions();

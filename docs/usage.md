@@ -22,7 +22,7 @@ To protect active work, OMXTerm asks for confirmation before closing a tab or wi
 
 - **Zoom:** changes the font size in the current window (`Cmd++` / `Cmd+-` on macOS, `Ctrl++` / `Ctrl+-` on Linux/Windows). **Actual Size** (`Cmd+0` / `Ctrl+0`) resets to your configured size.
 - **View → Toggle Title Bar:** hides or shows the window title bar (`Cmd+Shift+D` / `Ctrl+Shift+D`). When hidden, move your pointer near the top center of the window and drag the three-dot handle to reposition the window.
-- **View → Toggle Full Screen:** fills the display (`Ctrl+Cmd+F` on macOS, `Ctrl+Shift+F` on Linux/Windows) and hides the title bar while in fullscreen.
+- **View → Toggle Full Screen:** fills the display (`Ctrl+Cmd+F` on macOS, `F11` on Linux/Windows) and hides the title bar while in fullscreen.
 - **Window → Always on Top:** keeps the current window floating above normal windows.
 
 These toggles apply to the current window. To change the defaults for new windows, see [Configuration](configuration.md).
@@ -44,11 +44,11 @@ The application menu displays your active shortcuts, including any custom bindin
 | Copy                      | `Cmd+C`           | `Ctrl+Shift+C`     |
 | Paste                     | `Cmd+V`           | `Ctrl+Shift+V`     |
 | Select All                | `Cmd+A`           | `Ctrl+Shift+A`     |
-| Find                      | `Cmd+F`           | `Ctrl+Shift+G`     |
+| Find                      | `Cmd+F`           | `Ctrl+Shift+F`     |
 | Zoom In                   | `Cmd++`           | `Ctrl++`           |
 | Zoom Out                  | `Cmd+-`           | `Ctrl+-`           |
 | Actual Size               | `Cmd+0`           | `Ctrl+0`           |
-| Toggle Full Screen        | `Ctrl+Cmd+F`      | `Ctrl+Shift+F`     |
+| Toggle Full Screen        | `Ctrl+Cmd+F`      | `F11`              |
 | Toggle Tab Bar            | `Cmd+Shift+B`     | `Ctrl+Shift+B`     |
 | Toggle Title Bar          | `Cmd+Shift+D`     | `Ctrl+Shift+D`     |
 | Toggle Snippets           | `Cmd+Shift+S`     | `Ctrl+Shift+S`     |
@@ -66,7 +66,7 @@ On Linux and Windows, press and release **Alt** to open the application menu (ev
 
 ### Searching the scrollback
 
-Choose **Edit → Find…** (`Cmd+F` / `Ctrl+Shift+G`) to search the selected tab's scrollback and visible screen. Matches highlight as you type, and the bar shows the selected match and total. Press `Enter` (or **↓**) for the match below, `Shift+Enter` (or **↑**) for the match above, and `Escape` to close the bar and return to the terminal.
+Choose **Edit → Find…** (`Cmd+F` / `Ctrl+Shift+F`) to search the selected tab's scrollback and visible screen. Matches highlight as you type, and the bar shows the selected match and total. Press `Enter` (or **↓**) for the match below, `Shift+Enter` (or **↑**) for the match above, and `Escape` to close the bar and return to the terminal.
 
 Search only sees output the tab still holds in memory, so lines beyond your [scrollback limit](configuration.md) are not found. Each tab keeps its own search, and the query is never saved or logged.
 

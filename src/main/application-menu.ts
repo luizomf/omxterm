@@ -43,7 +43,7 @@ export function terminalApplicationMenuTemplate(
         { type: "separator" },
         {
           label: `Quit ${applicationName}`,
-          accelerator: keybinds.quit,
+          ...accelerator(keybinds.quit),
           click: actions.requestQuit,
         },
       ],
@@ -53,24 +53,24 @@ export function terminalApplicationMenuTemplate(
       submenu: [
         {
           label: "Copy",
-          accelerator: keybinds.copy,
+          ...accelerator(keybinds.copy),
           click: actions.copySelectedTerminal,
         },
         {
           label: "Paste",
-          accelerator: keybinds.paste,
+          ...accelerator(keybinds.paste),
           click: actions.pasteSelectedTerminal,
         },
         { type: "separator" },
         {
           label: "Select All",
-          accelerator: keybinds.selectAll,
+          ...accelerator(keybinds.selectAll),
           click: actions.selectAllSelectedTerminal,
         },
         { type: "separator" },
         {
           label: "Find…",
-          accelerator: keybinds.find,
+          ...accelerator(keybinds.find),
           click: actions.findInSelectedTerminal,
         },
       ],
@@ -80,12 +80,12 @@ export function terminalApplicationMenuTemplate(
       submenu: [
         {
           label: "New Window",
-          accelerator: keybinds.newWindow,
+          ...accelerator(keybinds.newWindow),
           click: actions.newWindow,
         },
         {
           label: "New Tab",
-          accelerator: keybinds.newTab,
+          ...accelerator(keybinds.newTab),
           click: actions.newTabInSelectedWindow,
         },
         { type: "separator" },
@@ -96,12 +96,12 @@ export function terminalApplicationMenuTemplate(
         { type: "separator" },
         {
           label: "Close Tab",
-          accelerator: keybinds.closeTab,
+          ...accelerator(keybinds.closeTab),
           click: actions.closeSelectedTab,
         },
         {
           label: "Close Window",
-          accelerator: keybinds.closeWindow,
+          ...accelerator(keybinds.closeWindow),
           click: actions.closeSelectedWindow,
         },
       ],
@@ -111,38 +111,38 @@ export function terminalApplicationMenuTemplate(
       submenu: [
         {
           label: "Zoom In",
-          accelerator: keybinds.zoomIn,
+          ...accelerator(keybinds.zoomIn),
           click: actions.zoomInSelectedWindow,
         },
         {
           label: "Zoom Out",
-          accelerator: keybinds.zoomOut,
+          ...accelerator(keybinds.zoomOut),
           click: actions.zoomOutSelectedWindow,
         },
         {
           label: "Actual Size",
-          accelerator: keybinds.actualSize,
+          ...accelerator(keybinds.actualSize),
           click: actions.resetSelectedWindowZoom,
         },
         { type: "separator" },
         {
           label: "Toggle Snippets",
-          accelerator: keybinds.toggleSnippets,
+          ...accelerator(keybinds.toggleSnippets),
           click: actions.toggleSelectedSnippets,
         },
         {
           label: "Toggle Tab Bar",
-          accelerator: keybinds.toggleTabBar,
+          ...accelerator(keybinds.toggleTabBar),
           click: actions.toggleSelectedTabBar,
         },
         {
           label: "Toggle Title Bar",
-          accelerator: keybinds.toggleTitleBar,
+          ...accelerator(keybinds.toggleTitleBar),
           click: actions.toggleSelectedTitleBar,
         },
         {
           label: "Reload User Configuration",
-          accelerator: keybinds.reloadConfig,
+          ...accelerator(keybinds.reloadConfig),
           click: actions.reloadUserConfiguration,
         },
         {
@@ -152,7 +152,7 @@ export function terminalApplicationMenuTemplate(
         { type: "separator" },
         {
           label: "Toggle Full Screen",
-          accelerator: keybinds.toggleFullScreen,
+          ...accelerator(keybinds.toggleFullScreen),
           click: actions.toggleSelectedFullScreen,
         },
       ],
@@ -168,12 +168,12 @@ export function terminalApplicationMenuTemplate(
         { type: "separator" },
         {
           label: "Show Next Tab",
-          accelerator: keybinds.nextTab,
+          ...accelerator(keybinds.nextTab),
           click: actions.selectNextTab,
         },
         {
           label: "Show Previous Tab",
-          accelerator: keybinds.previousTab,
+          ...accelerator(keybinds.previousTab),
           click: actions.selectPreviousTab,
         },
         {
@@ -182,7 +182,9 @@ export function terminalApplicationMenuTemplate(
             const position = index + 1;
             return {
               label: `Tab ${position}`,
-              accelerator: keybinds[`selectTab${position}` as SelectTabAction],
+              ...accelerator(
+                keybinds[`selectTab${position}` as SelectTabAction],
+              ),
               click: () => actions.selectTabInSelectedWindow(position),
             };
           }),
@@ -193,6 +195,11 @@ export function terminalApplicationMenuTemplate(
 }
 
 type SelectTabAction = keyof TerminalKeybinds & `selectTab${number}`;
+
+// A null keybind leaves the item without a shortcut; the action stays usable.
+function accelerator(value: string | null): { accelerator?: string } {
+  return value === null ? {} : { accelerator: value };
+}
 
 // The keybind vocabulary keyed by action name, invoking the same application
 // actions as the menu items above. The main-process key-event delivery path

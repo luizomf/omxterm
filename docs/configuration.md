@@ -194,7 +194,7 @@ Every field except `version` is optional and falls back to its default when omit
 | `window.showTitleBar`     | boolean                                 | `true`                           |
 | `window.showTabBar`       | boolean                                 | `true`                           |
 | `theme.path`              | relative or absolute file path          | bundled `omtheme`                |
-| `keybinds.<action>`       | Electron accelerator string             | built-in shortcut per action     |
+| `keybinds.<action>`       | Electron accelerator string or `null`   | built-in shortcut per action     |
 
 ### Notes on specific settings
 
@@ -250,7 +250,7 @@ Customize application shortcuts under `keybinds` using [Electron accelerator](ht
 | `copy`                      | `CommandOrControl+C`       | `Control+Shift+C`     |
 | `paste`                     | `CommandOrControl+V`       | `Control+Shift+V`     |
 | `selectAll`                 | `CommandOrControl+A`       | `Control+Shift+A`     |
-| `find`                      | `CommandOrControl+F`       | `Control+Shift+G`     |
+| `find`                      | `CommandOrControl+F`       | `Control+Shift+F`     |
 | `newWindow`                 | `CommandOrControl+N`       | `Control+Shift+N`     |
 | `newTab`                    | `CommandOrControl+T`       | `Control+Shift+T`     |
 | `closeTab`                  | `CommandOrControl+W`       | `Control+Shift+W`     |
@@ -261,7 +261,7 @@ Customize application shortcuts under `keybinds` using [Electron accelerator](ht
 | `zoomIn`                    | `CommandOrControl+Plus`    | `Control+Plus`        |
 | `zoomOut`                   | `CommandOrControl+-`       | `Control+-`           |
 | `actualSize`                | `CommandOrControl+0`       | `Control+0`           |
-| `toggleFullScreen`          | `Control+Command+F`        | `Control+Shift+F`     |
+| `toggleFullScreen`          | `Control+Command+F`        | `F11`                 |
 | `toggleSnippets`            | `CommandOrControl+Shift+S` | `Control+Shift+S`     |
 | `toggleTabBar`              | `CommandOrControl+Shift+B` | `Control+Shift+B`     |
 | `toggleTitleBar`            | `CommandOrControl+Shift+D` | `Control+Shift+D`     |
@@ -278,9 +278,24 @@ Example overriding a single shortcut:
 }
 ```
 
-- Every shortcut needs one key plus at least one modifier other than Shift (such as `CommandOrControl`, `Control`, `Alt`, or `AltGr`), so a shortcut can never swallow normal typing.
+- Every shortcut needs one key plus at least one modifier other than Shift (such as `CommandOrControl`, `Control`, `Alt`, or `AltGr`), so a shortcut can never swallow normal typing. Function keys `F1` through `F24` are the exception: they can be used alone, like the default `F11`.
+- Set an action to `null` to turn off its shortcut. The action stays in the menu, and the key goes back to your terminal programs. Leave an action out to keep its default.
 - Use literal punctuation characters (such as `Control+Shift+,`), except for `+`, which is written as `Plus`.
-- Each action needs its own shortcut. If you bind an action on Linux or Windows to a bare `Ctrl+<key>` that terminal programs use (like `Ctrl+C` or `Ctrl+D`), OMXTerm keeps the binding but shows a warning, since that key no longer reaches your shell.
+- Each action needs its own shortcut. If two actions end up on the same key, including through a default, OMXTerm reports both actions and the key; pick another shortcut for one of them or set one to `null`. OMXTerm never changes another action's shortcut or your file for you. If you bind an action on Linux or Windows to a bare `Ctrl+<key>` that terminal programs use (like `Ctrl+C` or `Ctrl+D`), OMXTerm keeps the binding but shows a warning, since that key no longer reaches your shell.
+
+For example, to use `F11` for Snippets instead of full screen:
+
+```json
+{
+  "version": 1,
+  "keybinds": {
+    "toggleFullScreen": null,
+    "toggleSnippets": "F11"
+  }
+}
+```
+
+> **Upgrading on Linux or Windows:** Find now uses `Ctrl+Shift+F` and full screen uses `F11`. If your `config.json` sets `"toggleFullScreen": "Control+Shift+F"`, it now conflicts with Find. Remove that entry to use `F11`, move Find (for example `"find": "Control+Alt+F"`), or keep the old combination with `"find": null`. Terminal programs that use `F11` stop receiving it unless you set `"toggleFullScreen": null`.
 
 ## Snippets
 

@@ -688,10 +688,10 @@ valid modified-link gestures — web or local image — do not produce duplicate
 mouse input. OSC 8 destinations and all other schemes are ignored.
 
 Scrollback Search opens only through **Edit → Find…** or the `find` keybind
-(`Cmd+F` on macOS, `Ctrl+Shift+G` on Linux and Windows, where `Ctrl+Shift+F`
-already toggles full screen). It uses Restty's search bar and the pinned core's
-search over the selected tab's retained Scrollback Buffer and visible screen; output evicted by the scrollback limits is not searchable.
-Invoking Find again focuses and selects the open query. `Enter` or the down
+(`Cmd+F` on macOS, `Ctrl+Shift+F` on Linux and Windows). It uses Restty's
+search bar and the pinned core's search over the selected tab's retained
+Scrollback Buffer and visible screen; output evicted by the scrollback limits
+is not searchable. Invoking Find again focuses and selects the open query. `Enter` or the down
 button selects the match below (newer output), `Shift+Enter` or the up button
 the match above (older output), and `Escape` or the close button closes the
 bar and returns focus to the terminal. Window focus returns to an open bar
@@ -893,10 +893,15 @@ action vocabulary: `quit`, `copy`, `paste`, `selectAll`, `find`, `newWindow`,
 `closeWindow`, `newTab`, `closeTab`, `nextTab`, `previousTab`, `selectTab1`
 through `selectTab9`, `zoomIn`, `zoomOut`, `actualSize`, `toggleFullScreen`,
 `toggleSnippets`, `toggleTabBar`, `toggleTitleBar`, and `reloadConfig`. Each
-value is a case-insensitive Electron accelerator containing at least one
-non-Shift modifier and exactly one key; bare or Shift-only accelerators are
-rejected so a keybind can never swallow plain typing. Unmapped actions keep
-their built-in defaults. The application menu displays the effective accelerator
+value is either `null` or a case-insensitive Electron accelerator containing
+exactly one key and at least one non-Shift modifier; bare or Shift-only
+accelerators are rejected so a keybind can never swallow plain typing. Function
+keys `F1` through `F24` type nothing and are the only keys accepted bare or
+with Shift alone. Omitted actions keep their built-in platform defaults. `null`
+disables only that action's shortcut: the menu item stays available without an
+accelerator, and the key reaches the terminal. Linux and Windows default Find to
+`Ctrl+Shift+F` and Toggle Full Screen to `F11`; macOS keeps `Cmd+F` and
+`Ctrl+Cmd+F`. The application menu displays the effective accelerator
 and is the single shortcut registration point; there is no second shortcut
 system, and terminal control sequences inside the PTY are untouched. An
 effective keybind works even when the platform refuses to fire its menu
@@ -913,7 +918,11 @@ AltGr identity, not an inference from Alt. Intrinsic Shift and native key
 identity also count: `Control+!` duplicates `Control+Shift+1`, and
 `Control+Plus` duplicates `Control+Shift+Plus` and `Control+Shift+=`. A remap
 that collides with another action's remaining default is the same error as two
-explicit entries colliding. The main-process matcher uses this identity when the
+explicit entries colliding; OMXTerm never reassigns another action's shortcut.
+The diagnostic names both actions and the key in a form derived from the parsed
+accelerator, never the configured text, and offers both remedies: choose
+another shortcut, or set one of the actions to `null`. A `null` entry holds no
+shortcut and cannot collide. The main-process matcher uses this identity when the
 logical shifted character and native key position agree; it does not translate
 arbitrary keyboard layouts. Separately, application fallback preserves logical
 keypad delivery (for example, keypad Minus for Zoom Out) and logical `Plus`

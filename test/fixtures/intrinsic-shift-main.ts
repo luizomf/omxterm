@@ -150,7 +150,7 @@ void app.whenReady().then(async () => {
     }
     bindings = { ...defaults, zoomIn: "Control+Plus", zoomOut: "Control+-" };
     fallbackActions.length = 0;
-    install(bindings.zoomIn);
+    install("Control+Plus");
     await send("+", ["control", "shift"]);
     await send("numadd", ["control"]);
     assert.deepEqual(fallbackActions, ["zoomIn", "zoomIn"]);

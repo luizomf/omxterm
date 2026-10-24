@@ -24,6 +24,7 @@ import { DEFAULT_TERMINAL_THEME } from "../shared/terminal-theme";
 import {
   canonicalAccelerator,
   DEFAULT_TERMINAL_KEYBINDS,
+  displayAccelerator,
   isValidAccelerator,
   shadowedControlKeyBindings,
   terminalDefaultKeybinds,
@@ -609,6 +610,9 @@ function validateWindowsShell(
   return value;
 }
 
+const INVALID_KEYBIND =
+  "must be null or an accelerator with one key and at least one non-Shift modifier (function keys F1-F24 may stand alone)";
+
 function validateTerminalKeybinds(
   keybinds: Record<string, unknown> | undefined,
   configurationPath: string,
@@ -616,32 +620,30 @@ function validateTerminalKeybinds(
   platform: string,
 ): TerminalKeybinds {
   if (!keybinds) return defaultKeybinds;
-  const effective: Record<TerminalActionName, string> = {
+  const effective: Record<TerminalActionName, string | null> = {
     ...defaultKeybinds,
   };
   for (const action of TERMINAL_ACTION_NAMES) {
     const value = keybinds[action];
     if (value === undefined) continue;
-    if (typeof value !== "string" || !isValidAccelerator(value))
-      fail(
-        configurationPath,
-        `keybinds.${action}`,
-        "must be an accelerator with at least one non-Shift modifier and one key",
-      );
+    if (
+      value !== null &&
+      (typeof value !== "string" || !isValidAccelerator(value))
+    )
+      fail(configurationPath, `keybinds.${action}`, INVALID_KEYBIND);
     effective[action] = value;
   }
   // Duplicates are judged on the effective map: a remap that collides with
   // another action's remaining default is the same error as two explicit
-  // entries colliding. Diagnostics name actions, never accelerator contents.
+  // entries colliding. Diagnostics name actions and the parsed key identity,
+  // never raw accelerator contents. A null entry holds no shortcut.
   const actionsByAccelerator = new Map<string, TerminalActionName>();
   for (const action of TERMINAL_ACTION_NAMES) {
-    const canonical = canonicalAccelerator(effective[action], platform);
+    const value = effective[action];
+    if (value === null) continue;
+    const canonical = canonicalAccelerator(value, platform);
     if (canonical === undefined)
-      fail(
-        configurationPath,
-        `keybinds.${action}`,
-        "must be an accelerator with at least one non-Shift modifier and one key",
-      );
+      fail(configurationPath, `keybinds.${action}`, INVALID_KEYBIND);
     const holder = actionsByAccelerator.get(canonical);
     if (holder === undefined) {
       actionsByAccelerator.set(canonical, action);
@@ -653,7 +655,7 @@ function validateTerminalKeybinds(
     fail(
       configurationPath,
       `keybinds.${blamed}`,
-      `conflicts with the "${other}" keybind`,
+      `conflicts with the "${other}" keybind on ${displayAccelerator(value, platform)}. Choose another shortcut for one of them, or set one of them to null to disable its shortcut`,
     );
   }
   return Object.freeze(effective);

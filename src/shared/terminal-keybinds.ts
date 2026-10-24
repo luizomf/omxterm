@@ -34,50 +34,57 @@ export const TERMINAL_ACTION_NAMES = [
 
 export type TerminalActionName = (typeof TERMINAL_ACTION_NAMES)[number];
 
-export type TerminalKeybinds = Readonly<Record<TerminalActionName, string>>;
+// null disables an action's shortcut; the action stays in the menu.
+export type TerminalKeybinds = Readonly<
+  Record<TerminalActionName, string | null>
+>;
+
+// Built-in defaults always bind every action.
+type DefaultTerminalKeybinds = Readonly<Record<TerminalActionName, string>>;
 
 // Following the macOS convention, Cmd+W closes the selected tab and closing
 // the window moved to Cmd+Shift+W (ADR 0016).
-export const DEFAULT_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
-  quit: "CommandOrControl+Q",
-  copy: "CommandOrControl+C",
-  paste: "CommandOrControl+V",
-  selectAll: "CommandOrControl+A",
-  find: "CommandOrControl+F",
-  newWindow: "CommandOrControl+N",
-  closeWindow: "CommandOrControl+Shift+W",
-  newTab: "CommandOrControl+T",
-  closeTab: "CommandOrControl+W",
-  nextTab: "Control+Tab",
-  previousTab: "Control+Shift+Tab",
-  selectTab1: "CommandOrControl+1",
-  selectTab2: "CommandOrControl+2",
-  selectTab3: "CommandOrControl+3",
-  selectTab4: "CommandOrControl+4",
-  selectTab5: "CommandOrControl+5",
-  selectTab6: "CommandOrControl+6",
-  selectTab7: "CommandOrControl+7",
-  selectTab8: "CommandOrControl+8",
-  selectTab9: "CommandOrControl+9",
-  zoomIn: "CommandOrControl+Plus",
-  zoomOut: "CommandOrControl+-",
-  actualSize: "CommandOrControl+0",
-  toggleFullScreen: "Control+Command+F",
-  toggleSnippets: "CommandOrControl+Shift+S",
-  toggleTabBar: "CommandOrControl+Shift+B",
-  toggleTitleBar: "CommandOrControl+Shift+D",
-  reloadConfig: "CommandOrControl+Shift+,",
-});
+export const DEFAULT_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze(
+  {
+    quit: "CommandOrControl+Q",
+    copy: "CommandOrControl+C",
+    paste: "CommandOrControl+V",
+    selectAll: "CommandOrControl+A",
+    find: "CommandOrControl+F",
+    newWindow: "CommandOrControl+N",
+    closeWindow: "CommandOrControl+Shift+W",
+    newTab: "CommandOrControl+T",
+    closeTab: "CommandOrControl+W",
+    nextTab: "Control+Tab",
+    previousTab: "Control+Shift+Tab",
+    selectTab1: "CommandOrControl+1",
+    selectTab2: "CommandOrControl+2",
+    selectTab3: "CommandOrControl+3",
+    selectTab4: "CommandOrControl+4",
+    selectTab5: "CommandOrControl+5",
+    selectTab6: "CommandOrControl+6",
+    selectTab7: "CommandOrControl+7",
+    selectTab8: "CommandOrControl+8",
+    selectTab9: "CommandOrControl+9",
+    zoomIn: "CommandOrControl+Plus",
+    zoomOut: "CommandOrControl+-",
+    actualSize: "CommandOrControl+0",
+    toggleFullScreen: "Control+Command+F",
+    toggleSnippets: "CommandOrControl+Shift+S",
+    toggleTabBar: "CommandOrControl+Shift+B",
+    toggleTitleBar: "CommandOrControl+Shift+D",
+    reloadConfig: "CommandOrControl+Shift+,",
+  },
+);
 
 // Linux and Windows share the conventional shifted terminal shortcuts so
 // ordinary Ctrl shell and TUI input remains PTY input (#61).
-const SHIFTED_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
+const SHIFTED_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze({
   quit: "Control+Alt+Shift+Q",
   copy: "Control+Shift+C",
   paste: "Control+Shift+V",
   selectAll: "Control+Shift+A",
-  // Control+Shift+F already toggles full screen here.
-  find: "Control+Shift+G",
+  find: "Control+Shift+F",
   newWindow: "Control+Shift+N",
   closeWindow: "Control+Shift+Q",
   newTab: "Control+Shift+T",
@@ -96,14 +103,16 @@ const SHIFTED_TERMINAL_KEYBINDS: TerminalKeybinds = Object.freeze({
   zoomIn: "Control+Plus",
   zoomOut: "Control+-",
   actualSize: "Control+0",
-  toggleFullScreen: "Control+Shift+F",
+  toggleFullScreen: "F11",
   toggleSnippets: "Control+Shift+S",
   toggleTabBar: "Control+Shift+B",
   toggleTitleBar: "Control+Shift+D",
   reloadConfig: "Control+Shift+,",
 });
 
-export function terminalDefaultKeybinds(platform: string): TerminalKeybinds {
+export function terminalDefaultKeybinds(
+  platform: string,
+): DefaultTerminalKeybinds {
   return platform === "linux" || platform === "win32"
     ? SHIFTED_TERMINAL_KEYBINDS
     : DEFAULT_TERMINAL_KEYBINDS;
@@ -113,7 +122,9 @@ export const MAX_ACCELERATOR_LENGTH = 64;
 
 // Electron accelerator grammar, case-insensitive. Shift alone is excluded from
 // the required modifiers: a bare or Shift-only accelerator would swallow plain
-// typing before it reaches the terminal.
+// typing before it reaches the terminal. Function keys type nothing, so they
+// alone may stand bare or with Shift only.
+const FUNCTION_KEY = /^f([1-9]|1[0-9]|2[0-4])$/;
 const COMMAND_MODIFIERS = new Set(["command", "cmd", "super", "meta"]);
 const COMMAND_OR_CONTROL_MODIFIERS = new Set(["commandorcontrol", "cmdorctrl"]);
 const CONTROL_MODIFIERS = new Set(["control", "ctrl"]);
@@ -193,17 +204,18 @@ function parseAccelerator(
     else if (SHIFT_MODIFIERS.has(modifier)) modifiers.add("shift");
     else return undefined;
   }
-  if (
-    !modifiers.has("cmd") &&
-    !modifiers.has("ctrl") &&
-    !modifiers.has("alt") &&
-    !modifiers.has("altgr")
-  )
-    return undefined;
   const key = rawKey.toLowerCase();
   const isSingleCharacter =
     rawKey.length === 1 && rawKey >= "!" && rawKey <= "~";
   if (!isSingleCharacter && !NAMED_KEYS.has(key)) return undefined;
+  if (
+    !modifiers.has("cmd") &&
+    !modifiers.has("ctrl") &&
+    !modifiers.has("alt") &&
+    !modifiers.has("altgr") &&
+    !FUNCTION_KEY.test(key)
+  )
+    return undefined;
   return nativeAccelerator(canonicalKey(key), modifiers);
 }
 
@@ -290,7 +302,9 @@ export function terminalActionForKeyboardInput(
     (nativeKey && input.code === nativeKey.code ? nativeKey.key : logicalKey);
   let logicalFallback: TerminalActionName | undefined;
   for (const action of TERMINAL_ACTION_NAMES) {
-    const parsed = parseAccelerator(keybinds[action], platform);
+    const value = keybinds[action];
+    const parsed =
+      value === null ? undefined : parseAccelerator(value, platform);
     if (
       parsed === undefined ||
       parsed.modifiers.has("cmd") !== input.meta ||
@@ -378,7 +392,9 @@ export function shadowedControlKeyBindings(
 ): readonly ShadowedControlKeyBinding[] {
   const shadowed: ShadowedControlKeyBinding[] = [];
   for (const action of TERMINAL_ACTION_NAMES) {
-    const parsed = parseAccelerator(keybinds[action], platform);
+    const value = keybinds[action];
+    const parsed =
+      value === null ? undefined : parseAccelerator(value, platform);
     if (parsed === undefined) continue;
     if (parsed.modifiers.size !== 1 || !parsed.modifiers.has("ctrl")) continue;
     const shadows = SHADOWED_PTY_CONTROL_KEYS.get(parsed.key);
@@ -405,4 +421,30 @@ export function canonicalAccelerator(
     (modifier) => parsed.modifiers.has(modifier),
   );
   return [...modifiers, parsed.key].join("+");
+}
+
+const DISPLAY_MODIFIERS = {
+  cmd: "Cmd",
+  ctrl: "Ctrl",
+  alt: "Alt",
+  altgr: "AltGr",
+  shift: "Shift",
+} as const;
+
+// A readable form of the native identity, built from the validated grammar
+// rather than echoing configuration text: "Ctrl+Shift+F", "F11".
+export function displayAccelerator(
+  value: string,
+  platform: string = "darwin",
+): string | undefined {
+  const parsed = parseAccelerator(value, platform);
+  if (!parsed) return undefined;
+  const modifiers = (["cmd", "ctrl", "alt", "altgr", "shift"] as const)
+    .filter((modifier) => parsed.modifiers.has(modifier))
+    .map((modifier) => DISPLAY_MODIFIERS[modifier]);
+  const key =
+    parsed.key.length === 1
+      ? parsed.key.toUpperCase()
+      : parsed.key.replace(/^./, (first) => first.toUpperCase());
+  return [...modifiers, key].join("+");
 }
