@@ -25,7 +25,9 @@ export async function exerciseAboutKeyboard(
       "!!document.querySelector('.about-dialog[open]')",
     ) as Promise<boolean>;
   for (const mode of [0, 3]) {
-    output(`\u001b[>${mode}u\u001b[?u`);
+    // The chrome fixture enables focus reporting. This oracle isolates keyboard
+    // bytes; modal focus changes are not key leakage. Restore reporting below.
+    output(`\u001b[?1004l\u001b[>${mode}u\u001b[?u`);
     await waitFor(
       () => input().endsWith(`\u001b[?${mode}u`),
       `mode ${mode} handshake`,
@@ -63,7 +65,7 @@ export async function exerciseAboutKeyboard(
       );
       assert.equal(input().slice(before.length), enter);
     } finally {
-      output("\u001b[<u");
+      output("\u001b[<u\u001b[?1004h");
     }
   }
 }
