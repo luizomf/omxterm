@@ -1,5 +1,6 @@
 import type { BrowserWindow } from "electron";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import { expectFixtureInputReply } from "./fixture-session-input";
 
 export interface ResttySearchEvidence {
   readonly openedFocused: boolean;
@@ -164,25 +165,34 @@ export async function exerciseResttyScrollbackSearch(options: {
 
   // Under Kitty event reporting (flags 3), the Escape that closes the bar
   // must leave no release for the terminal, while a terminal-owned Escape
-  // still reports its press and release. The flags query reply proves the
-  // flags are active before any key is sent.
-  options.deliverOutput("\u001b[>3u\u001b[?u");
-  await waitFor(
-    () => ptyInput().includes("\u001b[?3u"),
-    "Kitty flags 3 active",
-  );
-  window.webContents.send(terminalIpc.find);
-  await until((c) => c.inputFocused, "query focused under Kitty flags");
-  const kittyStart = ptyInput().length;
-  key("Escape");
-  await until((c) => !c.open && c.terminalFocused, "bar closed by Escape");
-  key("Escape");
-  await waitFor(
-    () => ptyInput().slice(kittyStart).includes("\u001b[27;1:3u"),
-    "terminal-owned Escape release",
-  );
-  const kittyEscapeWrites = ptyInput().slice(kittyStart);
-  options.deliverOutput("\u001b[<u");
+  // still reports its press and release. Isolate focus reports in the same
+  // ordered output, then require a fresh exact reply from this session's core.
+  let kittyEscapeWrites: string;
+  try {
+    await expectFixtureInputReply({
+      input: ptyInput,
+      output: options.deliverOutput,
+      request: "\u001b[?1004l\u001b[>3u\u001b[?u",
+      reply: "\u001b[?3u",
+      waitFor,
+      label: "Kitty flags 3 active with focus reporting isolated",
+    });
+    window.webContents.send(terminalIpc.find);
+    await until((c) => c.inputFocused, "query focused under Kitty flags");
+    const kittyStart = ptyInput().length;
+    key("Escape");
+    await until((c) => !c.open && c.terminalFocused, "bar closed by Escape");
+    key("Escape");
+    await waitFor(
+      () => ptyInput().slice(kittyStart).includes("\u001b[27;1:3u"),
+      "terminal-owned Escape release",
+    );
+    kittyEscapeWrites = ptyInput().slice(kittyStart);
+  } finally {
+    // Return to the fixture's reporting-enabled baseline even on a failed
+    // handshake/key assertion; do not leave the Kitty stack pushed.
+    options.deliverOutput("\u001b[<u\u001b[?1004h");
+  }
 
   return {
     openedFocused: opened.open && opened.inputFocused,

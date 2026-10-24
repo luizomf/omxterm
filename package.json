@@ -44,7 +44,7 @@
   "devDependencies": {
     "@electron/asar": "4.3.1",
     "@types/node": "24.19.1",
-    "electron": "43.7.7",
+    "electron": "43.8.1",
     "electron-builder": "26.15.3",
     "esbuild": "0.28.2",
     "jsdom": "29.1.1",

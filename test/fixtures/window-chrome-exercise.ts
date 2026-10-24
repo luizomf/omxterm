@@ -8,7 +8,7 @@ import {
 } from "./window-policy";
 import { windowGridFits } from "./window-grid-fit";
 
-async function waitFor(
+export async function waitFor(
   predicate: () => boolean | Promise<boolean>,
   label: string,
 ) {
