@@ -42,7 +42,7 @@ export async function exerciseAboutDialog(
       if (await contents.executeJavaScript(expression)) return;
       await new Promise((resolve) => setTimeout(resolve, 25));
     }
-    throw new Error("About fixture did not reach its expected state");
+    throw new Error(`About fixture did not reach: ${expression}`);
   };
   const item = Menu.getApplicationMenu()?.getMenuItemById("about");
   assert.ok(item);

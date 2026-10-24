@@ -71,6 +71,19 @@ function exerciseMenu(showAbout: () => void) {
     showAbout,
   );
 }
+async function exerciseScenario(
+  about: ReturnType<typeof createAboutExercise>,
+  options: Parameters<typeof exerciseWindowChrome>[0],
+) {
+  if (process.argv.includes("--fixture-about-only")) {
+    await exerciseMenu(about.show);
+    await about.exercise();
+    return { about: "menu-keyboard-focus-layout-verified" };
+  }
+  const result = await exerciseWindowChrome(options);
+  await about.exercise();
+  return result;
+}
 function fail(error: unknown) {
   if (failing) return;
   failing = true;
@@ -293,7 +306,7 @@ app
       quit() {},
     });
     await application.newWindow();
-    const result = await exerciseWindowChrome({
+    const result = await exerciseScenario(about, {
       nativeExpectation,
       window: windows[0]!,
       cells,
@@ -349,7 +362,6 @@ app
         1 - backgroundTransparencies.get(window)!(),
       exerciseMenu: () => exerciseMenu(about.show),
     });
-    await about.exercise();
     for (const window of windows) application.forceCloseWindow(window);
     router.dispose();
     // Closing requests native termination; wait for every PTY to actually exit.

@@ -43,6 +43,7 @@ async function runChrome(
         root,
         `--fixture-native-maximize=${expectation}`,
         ...(mode === "fail-fast" ? ["--fixture-fail-fast"] : []),
+        ...(mode === "about-only" ? ["--fixture-about-only"] : []),
       ],
       root,
       timeout: mode === "fail-fast" ? 10_000 : 100_000,
@@ -57,7 +58,7 @@ async function runChrome(
 describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   "Window Chrome through real Electron, Surfaces and PTYs",
   () => {
-    it.for(["continuity", "fail-fast"])(
+    it.for(["continuity", "fail-fast", "about-only"])(
       "checks %s without leaking a native dialog or process",
       { timeout: nativeWindowDiscoveryTimeout("chrome") + 120_000 },
       async (mode, testContext) => {
@@ -97,6 +98,12 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           .split("\n")
           .filter((line) => line.startsWith(prefix));
         expect(results).toHaveLength(1);
+        if (mode === "about-only") {
+          expect(
+            JSON.parse(results[0]!.slice(prefix.length)) as unknown,
+          ).toEqual({ about: "menu-keyboard-focus-layout-verified" });
+          return;
+        }
         expect(JSON.parse(results[0]!.slice(prefix.length)) as unknown).toEqual(
           {
             platform: process.platform,
