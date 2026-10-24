@@ -338,15 +338,17 @@ describe("Native fixture preparation lifetime", () => {
         settled = true;
       },
     );
-    const finishing = vi
-      .mocked(context.onTestFinished)
-      .mock.calls[0]![0](actualContext);
+    let finishing: Promise<void> | undefined;
     try {
+      finishing = Promise.resolve(
+        vi.mocked(context.onTestFinished).mock.calls[0]![0](actualContext),
+      );
       await preparing;
       controller.abort();
       expect(settled).toBe(false);
       expect(vi.mocked(childProcess.execFileSync)).not.toHaveBeenCalled();
     } finally {
+      controller.abort();
       release();
       await operation.catch(() => undefined);
     }
