@@ -1,5 +1,6 @@
 export interface AppearanceScenario {
   readonly requestedDPR: number | "actual";
+  readonly paletteOnly?: boolean;
   readonly deferFrames: boolean;
   readonly mixedPointer: boolean;
   readonly gateFrames: boolean;
@@ -146,9 +147,17 @@ function appearanceRunSource(resultPrefix: string): string {
     query: {
       deferFrames: String(scenario.deferFrames),
       gateFrames: String(scenario.gateFrames),
+      paletteOnly: String(scenario.paletteOnly ?? false),
     },
   });
   window.showInactive();
+  if (scenario.paletteOnly) {
+    const result = await window.webContents.executeJavaScript('globalThis.__omxtermPaletteRegression', true);
+    process.stdout.write('${resultPrefix}' + JSON.stringify(result) + '\\n');
+    window.destroy();
+    app.quit();
+    return;
+  }
   let result = await waitForResult(window);
   let bounds = await window.webContents.executeJavaScript("(() => { const r = document.querySelector('canvas').getBoundingClientRect(); return { x:r.x, y:r.y, width:r.width, height:r.height }; })()", true);
   const cellWidth = result.live.cellWidth / result.devicePixelRatio;

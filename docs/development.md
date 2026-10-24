@@ -84,7 +84,15 @@ Vitest discovers `*.test.*` and `*.spec.*` files under `test/unit/` and `test/in
 - `npm run test:integration` — runs `test/integration/local-shell.test.ts` only.
 - `npx vitest list --filesOnly --json` — lists discovered test files without running them.
 
-Test runs write a summary to `.scratch/vitest-results.json`.
+Test runs write Vitest's raw JSON to `.scratch/vitest-results.json`. Confirm that the report belongs to the current invocation, and preserve it with the command, selected scope/configuration, exit status, and terminal output before another run overwrites it. A nonzero exit remains a failure regardless of JSON counters.
+
+In pinned Vitest 4.1.12:
+
+- `num*TestSuites` includes nested suites, not just files, and is not an executed-file count. Entries in `testResults` identify reported files, not proof that they ran.
+- During fail-fast, unreached files can appear as `passed` with empty `assertionResults`. An empty array alone does not distinguish an unreached file from an empty or collection-failed file. Preserve file-level failures and messages, including collection errors.
+- Nonempty `assertionResults` represents collected test cases, not proof that all their bodies ran. Count entry statuses (`passed`, `failed`, `pending`, `skipped`, `todo`) separately; aggregate `numPendingTests` can differ from the number of `pending` entries. Pending is not an intentional skip or a pass.
+
+Do not infer full-suite execution coverage from aggregate counters or empty passed entries.
 
 ## Running native tests
 

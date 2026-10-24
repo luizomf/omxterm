@@ -1,5 +1,6 @@
 import configuredFontBytes from "../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf";
 import { verifyInBandResize } from "./restty-resize-regression";
+import { verifyConfiguredPaletteResets } from "./restty-palette-regression";
 import { createAppearanceOutputDelay } from "./restty-appearance-output-delay";
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
 import { terminalFontInputs } from "../../src/terminal-surface/terminal-font-stack";
@@ -71,6 +72,9 @@ export interface SelectionObservation {
 }
 
 declare global {
+  var __omxtermPaletteRegression: ReturnType<
+    typeof verifyConfiguredPaletteResets
+  >;
   var __omxtermResttyAppearanceResult: AppearanceResult | undefined;
   var __omxtermRenderConfiguredFont: (reference: boolean) => Promise<void>;
   var __omxtermBeginSelection: () => void;
@@ -441,7 +445,10 @@ async function run() {
   };
 }
 
-void run().catch((error: unknown) => {
-  const cause = error instanceof Error ? error.cause : undefined;
-  document.body.dataset.fixtureError = String(error) + ": " + String(cause);
-});
+if (new URLSearchParams(location.search).get("paletteOnly") === "true")
+  globalThis.__omxtermPaletteRegression = verifyConfiguredPaletteResets(root);
+else
+  void run().catch((error: unknown) => {
+    const cause = error instanceof Error ? error.cause : undefined;
+    document.body.dataset.fixtureError = String(error) + ": " + String(cause);
+  });
