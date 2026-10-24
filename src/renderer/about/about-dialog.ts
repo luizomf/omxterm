@@ -23,6 +23,47 @@ export function mountAboutDialog(
   };
 }
 
+// Dismissal restores terminal focus before the physical gesture ends. Keep
+// its repeats/release out of the window-level encoder, but never eat a fresh
+// terminal press after a lost keyup. State belongs to this document's owner.
+function retainAboutDismissalGesture(document: Document) {
+  const page = document.defaultView;
+  let owned: string | undefined;
+  const identity = (event: KeyboardEvent) =>
+    event.code || `${event.key}:${event.location}`;
+  const release = () => {
+    owned = undefined;
+  };
+  const onKey = (event: KeyboardEvent) => {
+    if (owned !== identity(event)) return;
+    if (event.type === "keydown" && !event.repeat) {
+      release();
+      return;
+    }
+    if (event.type === "keyup") release();
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  };
+  page?.addEventListener("keydown", onKey, true);
+  page?.addEventListener("keyup", onKey, true);
+  page?.addEventListener("blur", release);
+  return {
+    track(event: KeyboardEvent, closeButton: HTMLButtonElement) {
+      if (
+        event.key === "Escape" ||
+        (event.key === "Enter" && event.target === closeButton)
+      )
+        owned = identity(event);
+    },
+    dispose() {
+      release();
+      page?.removeEventListener("keydown", onKey, true);
+      page?.removeEventListener("keyup", onKey, true);
+      page?.removeEventListener("blur", release);
+    },
+  };
+}
+
 // Text-safe rendering and named links adapted from ruscher/omxterm PR #622,
 // b3c3a4ad6c1f2224bded65873ba0b09a07ec5d38 (MIT). Its AshyTerm-style
 // presentation is credited in CONTRIBUTORS.md; notices remain in distribution.
@@ -35,6 +76,7 @@ export function createAboutDialog(
 ) {
   let dialog: HTMLDialogElement | undefined;
   let disposed = false;
+  const keyboard = retainAboutDismissalGesture(document);
   const close = (restoreFocus: boolean) => {
     const previous = dialog;
     if (!previous) return;
@@ -105,7 +147,10 @@ export function createAboutDialog(
         event.preventDefault();
         if (dialog === current) close(true);
       });
-      current.addEventListener("keydown", (event) => event.stopPropagation());
+      current.addEventListener("keydown", (event) => {
+        keyboard.track(event, done);
+        event.stopPropagation();
+      });
       current.append(
         title,
         icon,
@@ -136,6 +181,7 @@ export function createAboutDialog(
     },
     dispose() {
       disposed = true;
+      keyboard.dispose();
       close(false);
     },
   };

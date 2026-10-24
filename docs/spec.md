@@ -287,7 +287,11 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   remain intact; the displayed icon is the same canonical asset bundled locally
   for both development and packaged rendering.
 - About can be opened using native menu keyboard navigation. Close or Escape
-  dismisses it and focuses the live selected Terminal Tab. Repeated opening,
+  dismisses it and focuses the live selected Terminal Tab. A closing Escape or
+  Enter-on-Close gesture remains owned by About through held repeats and release,
+  including Kitty event reporting; the next fresh terminal press is not consumed.
+  Window blur and owner disposal clear outstanding gesture ownership. Space keeps
+  the button's native release-time activation. Repeated opening,
   including during metadata loading, focuses the same dialog. Returning from
   the browser does not steal its focus. Owner disposal removes it without
   restoring terminal focus; late metadata and link errors cannot reopen it.

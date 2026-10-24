@@ -29,6 +29,7 @@ import {
 } from "./restty-host-platform";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { createAboutExercise } from "./about-dialog-exercise";
+import { exerciseAboutKeyboard } from "./about-keyboard-exercise";
 import { exerciseWindowChrome } from "./window-chrome-exercise";
 import { assertNativeChromeConstruction } from "./window-chrome-construction";
 import { chromeNativeExpectation } from "./window-policy";
@@ -49,6 +50,8 @@ const sessionExits: Promise<void>[] = [];
 const sizes: Array<Array<{ cols: number; rows: number }>> = [];
 const cells: Array<{ width: number; height: number } | undefined> = [];
 const cellQueries: Array<() => void> = [];
+const sessionOutputs: Array<(data: string) => void> = [];
+let keyboardInput: ((data: string) => void) | undefined;
 const windows: BrowserWindow[] = [];
 const backgroundTransparencies = new WeakMap<BrowserWindow, () => number>();
 const backgroundEffects = createWindowBackgroundEffectsOwner(
@@ -71,6 +74,20 @@ function exerciseMenu(showAbout: () => void) {
     showAbout,
   );
 }
+async function exerciseKeyboard(about: ReturnType<typeof createAboutExercise>) {
+  const inputs: string[] = [];
+  keyboardInput = (data) => inputs.push(data);
+  try {
+    await exerciseAboutKeyboard(
+      windows[0]!,
+      about.show,
+      sessionOutputs[0]!,
+      () => inputs.join(""),
+    );
+  } finally {
+    keyboardInput = undefined;
+  }
+}
 async function exerciseScenario(
   about: ReturnType<typeof createAboutExercise>,
   options: Parameters<typeof exerciseWindowChrome>[0],
@@ -78,10 +95,12 @@ async function exerciseScenario(
   if (process.argv.includes("--fixture-about-only")) {
     await exerciseMenu(about.show);
     await about.exercise();
+    await exerciseKeyboard(about);
     return { about: "menu-keyboard-focus-layout-verified" };
   }
   const result = await exerciseWindowChrome(options);
   await about.exercise();
+  await exerciseKeyboard(about);
   return result;
 }
 function fail(error: unknown) {
@@ -196,6 +215,7 @@ app
             if (failing) throw new Error("Chrome fixture is completing");
             const index = sessions.length;
             sizes[index] = [];
+            sessionOutputs[index] = callbacks.onOutput;
             let queryingCell = false;
             cellQueries[index] = () => {
               queryingCell = true;
@@ -231,6 +251,7 @@ app
             return {
               ...terminal,
               write(data) {
+                if (keyboardInput) return keyboardInput(data);
                 const cell =
                   queryingCell && /^\u001b\[6;(\d+);(\d+)t$/u.exec(data);
                 if (cell) {

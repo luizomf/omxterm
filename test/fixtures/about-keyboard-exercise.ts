@@ -1,0 +1,69 @@
+import assert from "node:assert/strict";
+import type { BrowserWindow } from "electron";
+
+// Real renderer/Surface/core/input IPC; output and input observations use the
+// existing session Adapter seam. OS scan-code + raw PTY qualification is separate.
+export async function exerciseAboutKeyboard(
+  window: BrowserWindow,
+  show: () => void,
+  output: (data: string) => void,
+  input: () => string,
+) {
+  const contents = window.webContents;
+  async function waitFor(
+    check: () => Promise<boolean> | boolean,
+    phase: string,
+  ) {
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      if (await check()) return;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    throw new Error(`About keyboard phase not reached: ${phase}`);
+  }
+  const open = () =>
+    contents.executeJavaScript(
+      "!!document.querySelector('.about-dialog[open]')",
+    ) as Promise<boolean>;
+  for (const mode of [0, 3]) {
+    output(`\u001b[>${mode}u\u001b[?u`);
+    await waitFor(
+      () => input().endsWith(`\u001b[?${mode}u`),
+      `mode ${mode} handshake`,
+    );
+    try {
+      for (const key of ["Escape", "Enter", "Space"]) {
+        const before = input();
+        show();
+        await waitFor(open, `${key} opened`);
+        contents.sendInputEvent({ type: "keyDown", keyCode: key });
+        contents.sendInputEvent({ type: "keyUp", keyCode: key });
+        await waitFor(async () => !(await open()), `${key} dismissed`);
+        // A subsequent control gesture and its complete reply are the receipt
+        // barrier: a delayed dismissal release cannot hide behind an early check.
+        contents.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
+        contents.sendInputEvent({ type: "keyUp", keyCode: "Escape" });
+        const escape = mode === 3 ? "\u001b[27;1:1u\u001b[27;1:3u" : "\u001b";
+        await waitFor(
+          () => input().length >= before.length + escape.length,
+          `${key} terminal control`,
+        );
+        assert.equal(
+          input().slice(before.length),
+          escape,
+          `${key} dismissal leaked in mode ${mode}`,
+        );
+      }
+      const before = input();
+      contents.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
+      contents.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
+      const enter = mode === 3 ? "\r\u001b[13;1:3u" : "\r";
+      await waitFor(
+        () => input().length >= before.length + enter.length,
+        "terminal Enter control",
+      );
+      assert.equal(input().slice(before.length), enter);
+    } finally {
+      output("\u001b[<u");
+    }
+  }
+}
