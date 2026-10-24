@@ -3,6 +3,8 @@ import { build } from "esbuild";
 import { createRequire } from "node:module";
 import { runInNewContext } from "node:vm";
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
+import { createFixtureSessionInput } from "../fixtures/fixture-session-input";
+import { explicitFixtureReadyMarker } from "../fixtures/restty-host-platform";
 
 let entry: string;
 beforeAll(async () => {
@@ -121,7 +123,9 @@ function harness(
         return session;
       },
     },
+    "./fixture-session-input": { createFixtureSessionInput },
     "./restty-host-platform": {
+      explicitFixtureReadyMarker,
       nativeFixturePlatform: {},
       explicitFixtureLaunchRequest: () => ({}),
     },

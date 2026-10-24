@@ -26,12 +26,17 @@ import { createLocalTerminalSession } from "../../src/main/local-terminal-sessio
 import { spawnFixturePty } from "./native-fixture-pty";
 import {
   explicitFixtureLaunchRequest,
+  explicitFixtureReadyMarker,
   nativeFixturePlatform,
 } from "./restty-host-platform";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { createAboutExercise } from "./about-dialog-exercise";
 import { exerciseAboutKeyboard } from "./about-keyboard-exercise";
-import { exerciseWindowChrome } from "./window-chrome-exercise";
+import {
+  exerciseWindowChrome,
+  waitFor as waitForChrome,
+} from "./window-chrome-exercise";
+import { createFixtureSessionInput } from "./fixture-session-input";
 import { exerciseAuxiliaryPanel } from "./auxiliary-panel-exercise";
 import type { LocalImageData } from "../../src/shared/local-image";
 import { assertNativeChromeConstruction } from "./window-chrome-construction";
@@ -57,7 +62,7 @@ const sizes: Array<Array<{ cols: number; rows: number }>> = [];
 const cells: Array<{ width: number; height: number } | undefined> = [];
 const cellQueries: Array<() => void> = [];
 const sessionOutputs: Array<(data: string) => void> = [];
-let keyboardInput: ((data: string) => void) | undefined;
+const sessionInputs: Array<ReturnType<typeof createFixtureSessionInput>> = [];
 const windows: BrowserWindow[] = [];
 const backgroundTransparencies = new WeakMap<BrowserWindow, () => number>();
 const backgroundEffects = createWindowBackgroundEffectsOwner(
@@ -77,6 +82,8 @@ function createChromeSession(callbacks: SessionCallbacks) {
   const index = sessions.length;
   sizes[index] = [];
   sessionOutputs[index] = callbacks.onOutput;
+  const input = createFixtureSessionInput(explicitFixtureReadyMarker);
+  sessionInputs[index] = input;
   let queryingCell = false;
   cellQueries[index] = () => {
     queryingCell = true;
@@ -98,13 +105,19 @@ function createChromeSession(callbacks: SessionCallbacks) {
       environment: { ...process.env, HOME: root },
       applicationVersionProvider: app,
       ...callbacks,
+      onOutput(data) {
+        input.observeOutput(data);
+        callbacks.onOutput(data);
+      },
       onExit(exit, launchKind) {
+        input.dispose();
         resolveExit();
         callbacks.onExit(exit, launchKind);
       },
     });
   } catch (error) {
     // No session was returned; do not leave an unowned pending slot.
+    input.dispose();
     resolveExit();
     throw error;
   }
@@ -112,12 +125,11 @@ function createChromeSession(callbacks: SessionCallbacks) {
   return {
     ...terminal,
     write(data: string) {
-      if (keyboardInput) return keyboardInput(data);
       const cell = queryingCell && /^\u001b\[6;(\d+);(\d+)t$/u.exec(data);
       if (cell) {
         cells[index] = { width: Number(cell[2]), height: Number(cell[1]) };
         queryingCell = false;
-      } else terminal.write(data);
+      } else input.write(data, (bytes) => terminal.write(bytes));
     },
     resize(size: { cols: number; rows: number }) {
       sizes[index]!.push(size);
@@ -136,7 +148,11 @@ function exerciseMenu(showAbout: () => void) {
 }
 async function exerciseKeyboard(about: ReturnType<typeof createAboutExercise>) {
   const inputs: string[] = [];
-  keyboardInput = (data) => inputs.push(data);
+  await waitForChrome(
+    () => sessionInputs[0]!.isReady(),
+    "About native child ready",
+  );
+  const release = sessionInputs[0]!.capture((data) => inputs.push(data));
   try {
     await exerciseAboutKeyboard(
       windows[0]!,
@@ -145,7 +161,7 @@ async function exerciseKeyboard(about: ReturnType<typeof createAboutExercise>) {
       () => inputs.join(""),
     );
   } finally {
-    keyboardInput = undefined;
+    release();
   }
 }
 async function exerciseScenario(
@@ -176,9 +192,9 @@ async function exerciseScenario(
         second: options.second,
         sizes,
         output: (index, data) => sessionOutputs[index]!(data),
-        captureInput: (listener) => {
-          keyboardInput = listener;
-        },
+        inputReady: (index) => sessionInputs[index]?.isReady() ?? false,
+        captureInput: (index, listener) =>
+          sessionInputs[index]!.capture(listener),
         clipboard: panelClipboard,
         showAbout: about.show,
         imagePending: () => finishPanelImage !== undefined,
