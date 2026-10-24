@@ -103,9 +103,14 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   signal, spawn failure, requested close, tab and window closure, and
   last-window quit use the existing Live Terminal Session lifecycle.
 - After its Terminal Surface mounts, an active Terminal Window gives terminal
-  input DOM focus. When the user returns from another application or OMXTerm
-  window, only the active Terminal Window restores that focus. Focus restoration
-  does not activate, raise, or show OMXTerm by itself.
+  input DOM focus unless the user moved focus to panel or overlay controls while
+  initialization was pending. Surface construction does not implicitly focus a
+  window-owned pane. Deliberate tab creation/selection retains its focus contract
+  when no competing control took focus during mounting. Returning from another
+  application or OMXTerm window preserves focused panel/overlay controls;
+  otherwise only the active Terminal Window restores selected Surface focus
+  (including its focused search field). Focus restoration does not activate,
+  raise, or show OMXTerm by itself.
 - Every Terminal Window can be repositioned through its visible title area, or
   its small hover-revealed handle when that area is hidden. Native dragging is
   confined to these areas; the rest of the Terminal Surface remains interactive.
@@ -245,7 +250,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   changes only the selected window's title-bar choice, without rewriting
   configuration or recreating its window, renderer, Terminal Surfaces, or Live
   Terminal Sessions. A layout change refits the selected existing Surface and
-  PTY and restores terminal focus; hidden Surfaces retain valid geometry. Local
+  PTY and preserves focused auxiliary-panel controls, otherwise restoring terminal
+  focus; hidden Surfaces retain valid geometry. Local
   Image Preview choosing/loading/showing suppresses the toggle without changing
   state or focus.
 - When the title area is hidden outside fullscreen, hovering anywhere in the top
@@ -343,7 +349,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Linux and Windows, remappable as `toggleTabBar`) changes only the selected
   window's tab bar enabled flag, even with one tab; without a selected window it
   does nothing. Disabling removes the entire strip row, refits the selected
-  existing Surface and PTY, and restores terminal focus. Hidden Surfaces retain
+  existing Surface and PTY, and preserves focused auxiliary-panel controls,
+  otherwise restoring terminal focus. Hidden Surfaces retain
   their valid geometry and continue ingesting output. Toggling preserves tab
   identities, order, selection, titles and sessions; keyboard and native Window
   menu navigation remain available while hidden. Title/BEL updates, tab
@@ -375,7 +382,10 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Escape interception. Returning to the page preserves focused panel controls;
   deliberate terminal/tab actions still focus the terminal. Clicking a current
   snippet injects its exact body/`execute` intent through the selected Surface's
-  existing Protected Paste path and returns focus immediately. Hiding does not
+  existing Protected Paste path and returns focus immediately. Enter activation
+  of a row retains that gesture's held repeats and release, so they cannot append
+  terminal Enter independently of the snippet's `execute` choice. A fresh
+  terminal key remains ordinary input. Hiding does not
   cancel already accepted Surface-owned delivery; closing that Surface stops
   remaining chunks/Enter without rollback.
 - Panel preferred border-box width starts at 280 CSS px per window. Bounds are

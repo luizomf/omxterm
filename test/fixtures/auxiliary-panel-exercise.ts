@@ -11,6 +11,7 @@ import { terminalIpc } from "../../src/shared/terminal-ipc";
 import type { TerminalApplication } from "../../src/main/terminal-application";
 import type { LocalImageData } from "../../src/shared/local-image";
 import { createNativeHostPng } from "./native-host-png";
+import { exercisePanelKeyboard } from "./auxiliary-panel-keyboard";
 
 interface PanelOptions {
   readonly window: BrowserWindow;
@@ -31,7 +32,8 @@ const searchFocused =
 const terminalFocused =
   "document.querySelector('.terminal-surface:not([hidden])').contains(document.activeElement)";
 const separator = "document.querySelector('.auxiliary-separator')";
-type Scene = ReturnType<typeof createScenario>;
+export type AuxiliaryPanelScenario = ReturnType<typeof createScenario>;
+type Scene = AuxiliaryPanelScenario;
 
 function createScenario(options: PanelOptions) {
   const { window, application } = options;
@@ -386,7 +388,7 @@ async function exerciseRetention(
   hiddenSize: { cols: number; rows: number },
 ) {
   const { window, application, sizes, clipboard } = s.options;
-  const { clickMenu, until, wait, evaluate, width, key, input, contents } = s;
+  const { clickMenu, until, wait, evaluate, width } = s;
   for (const theme of ["#f5f5f5", "#000000"]) {
     clickMenu("Reload User Configuration");
     await until(
@@ -458,45 +460,5 @@ async function exerciseRetention(
     () => clipboard.writes.some((text) => text.includes("HIDDEN_PANEL_OUTPUT")),
     "hidden output retained in same core",
   );
-  s.options.output(0, "\u001b[>3u");
-  key("S", ["control", "alt"]);
-  await until(`!(${shown})`);
-  const beforeDismiss = input.join("");
-  for (const keyCode of ["Escape", "Enter"]) {
-    key("S", ["control", "alt"]);
-    await until(searchFocused);
-    if (keyCode === "Enter")
-      await evaluate(
-        "document.querySelector('.auxiliary-header button').focus()",
-      );
-    contents.sendInputEvent({ type: "keyDown", keyCode });
-    await until(`!(${shown}) && ${terminalFocused}`);
-    contents.sendInputEvent({
-      type: "keyDown",
-      keyCode,
-      modifiers: ["isautorepeat"],
-    });
-    contents.sendInputEvent({ type: "keyUp", keyCode });
-    await evaluate("new Promise(requestAnimationFrame)");
-    assert.equal(input.join(""), beforeDismiss);
-  }
-  key("X");
-  await wait(
-    () => input.join("") !== beforeDismiss,
-    "fresh terminal key remains input",
-  );
-  key("S", ["control", "alt"]);
-  await until(searchFocused);
-  await until("!!document.querySelector('#snippets-sidebar li button')");
-  s.options.output(0, "\u001b[?2004l");
-  const beforeSnippet = input.join("").length;
-  await evaluate(
-    "document.querySelector('#snippets-sidebar li button').click(); document.querySelector('.auxiliary-header button').click()",
-  );
-  await wait(
-    () => input.join("").slice(beforeSnippet).endsWith("\r"),
-    "accepted snippet survives panel hide",
-  );
-  assert.equal(input.join("").slice(beforeSnippet), " synthetic  snippet \r");
-  await until(terminalFocused);
+  await exercisePanelKeyboard(s);
 }

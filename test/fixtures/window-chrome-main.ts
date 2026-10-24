@@ -342,7 +342,7 @@ app
               ? Array.from({ length: 40 }, (_, index) => ({
                   name: `Synthetic ${index}`,
                   body: " synthetic  snippet ",
-                  execute: true,
+                  execute: index !== 0,
                 }))
               : [],
           }),

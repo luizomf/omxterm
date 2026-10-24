@@ -35,7 +35,9 @@ export interface TerminalTabsOptions {
   readonly surfaceOptions: TerminalSurfaceOptions;
   readonly showTabBar?: boolean;
   readonly canFocus?: () => boolean;
-  readonly canAutoFocus?: () => boolean;
+  // A deliberate mount may restore focus if no control took focus while it
+  // was pending. Other passive paths pass false.
+  readonly canAutoFocus?: (unchangedFocus: boolean) => boolean;
   readonly notifyEmpty?: (reason?: "rendering-failure") => void;
   readonly notifySelection?: (sessionId: TerminalSessionId) => void;
   readonly notifyTitle?: (
@@ -218,6 +220,7 @@ export function createTerminalTabs(
         : {}),
     };
 
+    const focus = observeMountFocus(document, tab.mountAbort.signal);
     let surface: TerminalSurface;
     try {
       surface = await options.mount(
@@ -235,6 +238,8 @@ export function createTerminalTabs(
           notifyEmpty("rendering-failure");
       }
       throw error;
+    } finally {
+      focus.dispose();
     }
     if (disposed || tab.removed) {
       surface.dispose();
@@ -247,14 +252,12 @@ export function createTerminalTabs(
     if (selectedTab() === tab) {
       const sessionId = tab.adapter.sessionId();
       if (sessionId !== undefined) options.notifySelection?.(sessionId);
-      if (document.hasFocus()) focusTab(tab, options, true);
+      if (document.hasFocus()) focusTab(tab, options, true, focus.unchanged());
     }
   };
 
-  const ready = createTab();
-
   return {
-    ready,
+    ready: createTab(),
     setSessionTitle(sessionId, title) {
       if (disposed) return;
       const tab = findBySession(tabs, sessionId);
@@ -356,12 +359,25 @@ function focusTab(
   tab: TerminalTab | undefined,
   options: TerminalTabsOptions,
   passive = false,
+  unchangedFocus = false,
 ): void {
   if (
     options.canFocus?.() !== false &&
-    (!passive || options.canAutoFocus?.() !== false)
+    (!passive || options.canAutoFocus?.(unchangedFocus) !== false)
   )
     tab?.surface?.focus();
+}
+
+function observeMountFocus(document: Document, signal: AbortSignal) {
+  let unchanged = true;
+  const changed = () => {
+    unchanged = false;
+  };
+  document.addEventListener("focusin", changed, { once: true, signal });
+  return {
+    unchanged: () => unchanged,
+    dispose: () => document.removeEventListener("focusin", changed),
+  };
 }
 
 function appendTab(

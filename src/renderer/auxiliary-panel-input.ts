@@ -35,16 +35,22 @@ export function installAuxiliaryPanelInput(
     event.stopImmediatePropagation();
   };
   const onPanelKey = (event: KeyboardEvent) => {
+    if (!options.interactive()) return;
+    const button =
+      event.target instanceof page.HTMLButtonElement ? event.target : undefined;
     if (
-      !options.interactive() ||
-      (event.key !== "Escape" &&
-        !(event.key === "Enter" && event.target === close))
+      event.key !== "Escape" &&
+      !(event.key === "Enter" && button && !button.disabled)
     )
       return;
+    // Native Enter clicks any panel button before release. A row may return
+    // terminal focus, so retain the whole gesture without changing its action.
     ownedKey = identity(event);
-    event.preventDefault();
     event.stopPropagation();
-    options.close();
+    if (event.key === "Escape" || button === close) {
+      event.preventDefault();
+      options.close();
+    }
   };
   const onClose = () => {
     if (options.interactive()) options.close();

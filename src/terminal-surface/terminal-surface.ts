@@ -57,6 +57,9 @@ export interface TerminalFontInputLease {
 }
 
 export interface TerminalSurfaceOptions {
+  // Standalone Surfaces focus their initial pane by default. Window/tab owners
+  // disable this implicit construction side effect and call focus() explicitly.
+  readonly focus?: boolean;
   // A window host may paint one shared tint behind Surface, padding and chrome.
   // Otherwise the Surface paints its own opaque default background.
   readonly background?: "surface" | "host";

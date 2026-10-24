@@ -157,6 +157,7 @@ export function mountTerminalWindowPage(
   const surfaceOptions: TerminalSurfaceOptions = {
     ...activeSurfaceConfiguration,
     background: "host",
+    focus: false,
     ...(fontGenerations ? { acquireFontInputs: fontGenerations.acquire } : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.onExternalLink
@@ -188,7 +189,8 @@ export function mountTerminalWindowPage(
     {
       createAdapter: () => options.createAdapter(fontConfigurationId),
       canFocus: () => !disposed && !about?.isActive(),
-      canAutoFocus: () => !previewActive() && !auxiliaryPanel?.ownsFocus(),
+      canAutoFocus: (unchangedFocus) =>
+        !previewActive() && (unchangedFocus || !auxiliaryPanel?.ownsFocus()),
       mount,
       surfaceOptions,
       showTabBar: options.configuration?.showTabBar ?? true,
