@@ -87,6 +87,11 @@ try {
     setAbout(value);
   };
 
+  // Observational only: do not prevent or authorize production shutdown here.
+  app.on("before-quit", () => diagnostics.enter("before-quit"));
+  app.on("will-quit", () => diagnostics.enter("will-quit"));
+  app.on("browser-window-created", () => diagnostics.enter("window-created"));
+
   // Observe the actual application startup at Electron's menu boundary, before
   // a window or PTY exists. No internal application module is replaced.
   const setMenu = Menu.setApplicationMenu.bind(Menu);
@@ -100,6 +105,7 @@ try {
     }
     diagnostics.enter("menu-observation");
     if (process.argv.includes("--fixture-missing-result")) {
+      diagnostics.enter("quit-request");
       app.quit();
       return;
     }
@@ -123,15 +129,23 @@ try {
     try {
       writeFileSync(`${resultPath}.tmp`, observation);
       renameSync(`${resultPath}.tmp`, resultPath);
+      diagnostics.enter("observation-published");
     } catch (error) {
       diagnostics.failure(error);
       throw error;
     }
-    if (process.argv.includes("--fixture-published-failure")) app.exit(3);
+    if (process.argv.includes("--fixture-published-failure")) {
+      app.once("will-quit", (event) => {
+        event.preventDefault();
+        diagnostics.enter("failure-exit");
+        app.exit(3);
+      });
+    }
     if (process.argv.includes("--fixture-published-hang"))
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0);
-    // Mark production startup as quitting before this menu callback returns.
-    // An immediate exit request alone can still let it create the first window.
+    // Normal Quit synchronously latches production shutdown before startup's
+    // first-window continuation. Inject failure only once shutdown permits it.
+    diagnostics.enter("quit-request");
     app.quit();
   };
 
