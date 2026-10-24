@@ -33,6 +33,8 @@ extraResources:
     to: licenses/xterm-visible-links.txt
   - from: node_modules/node-pty/LICENSE
     to: licenses/node-pty.txt
+  - from: assets/licenses/ashyterm-MIT.txt
+    to: licenses/ashyterm.txt
   - from: assets/licenses/restty-MIT.txt
     to: licenses/restty.txt
   - from: assets/licenses/text-shaper-MIT.txt

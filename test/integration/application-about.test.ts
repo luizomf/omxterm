@@ -119,11 +119,14 @@ it.for([
         } | null;
         configuredWhileReady: boolean;
         version: string;
-        nativeAboutRole: string;
+        aboutEntry: { label: string; hasClick: boolean };
         iconSize?: { width: number; height: number };
         iconEmpty?: boolean;
       };
-      expect(result.nativeAboutRole).toBe("about");
+      expect(result.aboutEntry).toEqual({
+        label: "About OMXTerm",
+        hasClick: true,
+      });
       if (
         process.platform === "linux" &&
         process.env.ELECTRON_OZONE_PLATFORM_HINT !== undefined

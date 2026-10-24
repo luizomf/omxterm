@@ -46,4 +46,5 @@ await Promise.all([
     sourcemap: true,
   }),
   cp("src/renderer/index.html", "dist/renderer/index.html"),
+  cp("assets/application-icon.png", "dist/renderer/application-icon.png"),
 ]);

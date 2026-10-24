@@ -28,6 +28,7 @@ import {
   nativeFixturePlatform,
 } from "./restty-host-platform";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import { createAboutExercise } from "./about-dialog-exercise";
 import { exerciseWindowChrome } from "./window-chrome-exercise";
 import { assertNativeChromeConstruction } from "./window-chrome-construction";
 import { chromeNativeExpectation } from "./window-policy";
@@ -62,6 +63,14 @@ let cursor = { x: -100_000, y: -100_000 };
 let nativeCursor = false;
 let application: TerminalApplication<BrowserWindow>;
 let failing = false;
+function exerciseMenu(showAbout: () => void) {
+  return exerciseApplicationMenu(
+    windows[0]!,
+    application,
+    menuOpenings,
+    showAbout,
+  );
+}
 function fail(error: unknown) {
   if (failing) return;
   failing = true;
@@ -113,6 +122,7 @@ app
       `__OMXTERM_CHROME_NATIVE_EXPECTATION__${nativeExpectation}\n`,
     );
     const router = registerTerminalIpcRouter(ipcMain);
+    const about = createAboutExercise(router, () => windows[0]!);
     application = startTerminalApplication<BrowserWindow>({
       createWindow(lifecycle) {
         const nativeOptions = terminalWindowOptions(
@@ -337,9 +347,9 @@ app
       second: () => windows[1]!,
       backgroundOpacity: (window) =>
         1 - backgroundTransparencies.get(window)!(),
-      exerciseMenu: () =>
-        exerciseApplicationMenu(windows[0]!, application, menuOpenings),
+      exerciseMenu: () => exerciseMenu(about.show),
     });
+    await about.exercise();
     for (const window of windows) application.forceCloseWindow(window);
     router.dispose();
     // Closing requests native termination; wait for every PTY to actually exit.

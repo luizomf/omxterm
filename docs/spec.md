@@ -276,11 +276,27 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   and configured padding, not the native popup.
 - `Window -> Always on Top` toggles only the selected window at the ordinary
   native floating level. New windows use the configured default.
-- On Linux and Windows, the existing native About action shows `OMXTerm`, the
-  running application version, project copyright, and the OMXTerm application
-  icon. Packaged applications use their packaged icon resource; development uses
-  the development asset. Native dialog layout and window captions remain
-  platform-owned; macOS retains its bundle-provided About metadata.
+- The application menu's `About OMXTerm` entry opens one compact in-window
+  dialog on every Supported Platform. It shows the application icon, name,
+  running version and copyright, and links to the project, contributors,
+  issue tracker and MIT license. Developer lists live in the repository's
+  `CONTRIBUTORS.md`, not in the dialog; legal notices remain in the distribution.
+  Main supplies runtime metadata and opens only fixed named destinations after
+  validating the owning renderer's main frame. Opening About makes no network
+  request. Existing Linux/Windows native metadata setup and macOS bundle metadata
+  remain intact; the displayed icon is the same canonical asset bundled locally
+  for both development and packaged rendering.
+- About can be opened using native menu keyboard navigation. Close or Escape
+  dismisses it and focuses the live selected Terminal Tab. Repeated opening,
+  including during metadata loading, focuses the same dialog. Returning from
+  the browser does not steal its focus. Owner disposal removes it without
+  restoring terminal focus; late metadata and link errors cannot reopen it.
+  About and Local Image Preview do not stack: opening either while the other
+  is choosing/loading/showing is ignored. While About is active, terminal
+  clipboard, file-drop, zoom, snippet, tab/title-bar and tab-navigation/new-tab
+  actions are suppressed; output, configuration updates and approved tab/session/
+  window closure or Quit remain active. About does not add a configurable
+  shortcut, settings service or persistent state.
 - `View -> Toggle Developer Tools` is a menu-only diagnostic action for the
   selected Terminal Window in development and packaged applications. It opens or
   closes Electron's local Developer Tools without enabling remote debugging;

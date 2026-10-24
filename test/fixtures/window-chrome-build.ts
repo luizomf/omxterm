@@ -58,6 +58,12 @@ export async function buildFixture(
           ),
         ),
         start(() =>
+          cp(
+            path.join(projectRoot, "assets/application-icon.png"),
+            path.join(root, "renderer/application-icon.png"),
+          ),
+        ),
+        start(() =>
           symlink(
             path.join(projectRoot, "node_modules"),
             path.join(root, "node_modules"),

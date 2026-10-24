@@ -555,7 +555,7 @@ it("guards the public preview lifetime seam and removes the fixture getter on di
   const host = readFileSync("src/renderer/terminal-window-host.ts", "utf8");
   const instrumented = instrumentResttyLinkPreview(host);
   expect(instrumented).toContain(
-    "page.document.__resttyLinkPreviewFixture = previewActive;",
+    "page.document.__resttyLinkPreviewFixture = () => localImagePreview?.isActive() ?? false;",
   );
   expect(instrumented).toContain(
     "delete page.document.__resttyLinkPreviewFixture;",

@@ -27,6 +27,7 @@ interface TerminalApplicationMenuActions {
   readonly toggleSelectedTitleBar: () => void;
   readonly reloadUserConfiguration: () => void;
   readonly openLocalImage: () => void;
+  readonly showAbout: () => void;
 }
 
 export function terminalApplicationMenuTemplate(
@@ -38,7 +39,11 @@ export function terminalApplicationMenuTemplate(
     {
       label: applicationName,
       submenu: [
-        { role: "about" },
+        {
+          id: "about",
+          label: `About ${applicationName}`,
+          click: actions.showAbout,
+        },
         { type: "separator" },
         {
           label: `Quit ${applicationName}`,

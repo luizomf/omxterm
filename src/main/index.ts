@@ -19,7 +19,7 @@ import {
   terminalApplicationMenuTemplate,
   terminalClipboardContextMenuTemplate,
 } from "./application-menu";
-import { configureApplicationAbout } from "./application-about";
+import * as applicationAbout from "./application-about";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { createDefaultShellResolver, defaultShellName } from "./default-shell";
 import {
@@ -414,19 +414,18 @@ app
           operationalEvents: operationalEvents!,
         });
 
-        const openNewWindow = () => {
-          void terminalApplication!.newWindow().catch((cause) => {
-            const failure = terminalApplicationFailure("new-window", cause);
-            operationalEvents!.write({
-              name: "application.failure",
-              stage: failure.stage,
-            });
-            const display = terminalApplicationFailureDisplay(failure);
-            dialog.showErrorBox(display.title, display.message);
-          });
-        };
         const menuActions = {
-          newWindow: openNewWindow,
+          newWindow: () => {
+            void terminalApplication!.newWindow().catch((cause) => {
+              const failure = terminalApplicationFailure("new-window", cause);
+              operationalEvents!.write({
+                name: "application.failure",
+                stage: failure.stage,
+              });
+              const display = terminalApplicationFailureDisplay(failure);
+              dialog.showErrorBox(display.title, display.message);
+            });
+          },
           closeSelectedWindow: () =>
             void terminalApplication!.closeSelectedWindow(),
           newTabInSelectedWindow: terminalApplication.newTabInSelectedWindow,
@@ -458,6 +457,7 @@ app
           toggleSelectedTitleBar: terminalApplication.toggleSelectedTitleBar,
           reloadUserConfiguration: () => void configurationReloader.reload(),
           openLocalImage: terminalApplication.openLocalImageInSelectedWindow,
+          showAbout: applicationAbout.startApplicationAbout(terminalIpcRouter),
         };
         const keybindActionInvocations = terminalActionInvocations(menuActions);
         rebuildMenu = () =>
@@ -490,7 +490,7 @@ app
   });
 
 function prepareStartup() {
-  configureApplicationAbout(
+  applicationAbout.configureApplicationAbout(
     app,
     app.isPackaged
       ? packagedApplicationIconPath

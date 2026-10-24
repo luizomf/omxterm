@@ -34,8 +34,8 @@ export async function exerciseApplicationMenu(
   window: BrowserWindow,
   application: TerminalApplication<BrowserWindow>,
   openings: readonly MenuOpening[],
+  showAbout: () => void,
 ) {
-  if (process.platform === "darwin") return "unchanged-macos";
   let bindings = terminalDefaultKeybinds(process.platform);
   let titleActions = 0;
   const unexpected = () => assert.fail("Unexpected fixture menu action");
@@ -65,6 +65,7 @@ export async function exerciseApplicationMenu(
     },
     reloadUserConfiguration: unexpected,
     openLocalImage: unexpected,
+    showAbout,
   };
   const invocations = terminalActionInvocations(actions);
   deliverKeybindsFromKeyEvents(
@@ -129,6 +130,7 @@ export async function exerciseApplicationMenu(
     );
   };
   const initial = install();
+  if (process.platform === "darwin") return "unchanged-macos";
   await open(initial, 42);
   await dismiss(initial);
   // Same effective invocation path as the displayed menu, consumed exactly once.

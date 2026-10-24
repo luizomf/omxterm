@@ -34,6 +34,7 @@ function menuActions() {
     toggleSelectedTitleBar: vi.fn(),
     reloadUserConfiguration: vi.fn(),
     openLocalImage: vi.fn(),
+    showAbout: vi.fn(),
   };
 }
 
@@ -52,6 +53,20 @@ function flattenMenuItems(template: MenuTemplate): MenuTemplate {
 }
 
 describe("native application menu", () => {
+  it("uses one explicit About action without an extra accelerator or native fallback", () => {
+    const actions = menuActions();
+    const items = flattenMenuItems(
+      terminalApplicationMenuTemplate(
+        "OMXTerm",
+        actions,
+        DEFAULT_TERMINAL_KEYBINDS,
+      ),
+    );
+    expect(items.filter((item) => item.id === "about")).toEqual([
+      { id: "about", label: "About OMXTerm", click: actions.showAbout },
+    ]);
+    expect(items.some((item) => item.role === "about")).toBe(false);
+  });
   it("wires native window lifecycle accelerators to application actions", () => {
     const actions = menuActions();
     const template = terminalApplicationMenuTemplate(

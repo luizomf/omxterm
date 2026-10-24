@@ -34,6 +34,7 @@ export interface TerminalTabsOptions {
   readonly mount: MountTerminalSurface;
   readonly surfaceOptions: TerminalSurfaceOptions;
   readonly showTabBar?: boolean;
+  readonly canFocus?: () => boolean;
   readonly notifyEmpty?: (reason?: "rendering-failure") => void;
   readonly notifySelection?: (sessionId: TerminalSessionId) => void;
   readonly notifyTitle?: (
@@ -142,7 +143,7 @@ export function createTerminalTabs(
     // starting has no id yet and is reported once its session starts).
     const sessionId = tab.adapter.sessionId();
     if (sessionId !== undefined) options.notifySelection?.(sessionId);
-    tab.surface?.focus();
+    if (options.canFocus?.() !== false) tab.surface?.focus();
   };
 
   const removeTab = (tab: TerminalTab, notify = true) => {
@@ -244,7 +245,8 @@ export function createTerminalTabs(
     if (selectedTab() === tab) {
       const sessionId = tab.adapter.sessionId();
       if (sessionId !== undefined) options.notifySelection?.(sessionId);
-      if (document.hasFocus()) surface.focus();
+      if (document.hasFocus() && options.canFocus?.() !== false)
+        surface.focus();
     }
   };
 
@@ -330,10 +332,10 @@ export function createTerminalTabs(
       if (disposed) return;
       tabBarEnabled = !tabBarEnabled;
       renderStrip();
-      selectedTab()?.surface?.focus();
+      if (options.canFocus?.() !== false) selectedTab()?.surface?.focus();
     },
     focusSelected() {
-      selectedTab()?.surface?.focus();
+      if (options.canFocus?.() !== false) selectedTab()?.surface?.focus();
     },
     dispose() {
       if (disposed) return;

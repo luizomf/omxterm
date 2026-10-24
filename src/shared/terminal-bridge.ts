@@ -1,3 +1,4 @@
+import type { AboutBridge } from "./about";
 import type {
   TerminalExit,
   TerminalClipboardAction,
@@ -64,6 +65,7 @@ declare global {
   interface Window {
     readonly omxterm: {
       readonly terminal: TerminalBridge;
+      readonly about: AboutBridge;
     };
   }
 }

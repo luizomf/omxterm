@@ -122,6 +122,17 @@ Inline images stay anchored to their terminal cells as you scroll, zoom, or resi
 
 Terminal bells (`BEL`) are silent. When a session rings the bell, OMXTerm adds a `🔔` badge to the tab title and requests desktop attention if the window is unfocused (such as bouncing the Dock icon on macOS). Focusing the window or interacting with the tab clears the indicator.
 
+## About and credits
+
+Choose **OMXTerm → About OMXTerm** in the application menu for the running
+version, project, contributors, issue tracker and MIT license. On Linux and
+Windows, release **Alt** to open that menu; on macOS use the system menu bar.
+The same compact dialog appears on every supported platform. Use **Tab** to
+move between its buttons and **Escape** or **Close** to return to the terminal.
+Links open in your default browser only when activated. Contributor credits
+live in [CONTRIBUTORS.md](../CONTRIBUTORS.md), while legal notices remain bundled.
+About and local-image preview do not stack; dismiss one before opening the other.
+
 ## Troubleshooting
 
 ### The download will not open

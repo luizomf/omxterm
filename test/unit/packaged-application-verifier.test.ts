@@ -54,6 +54,7 @@ describe("packaged startup failure preservation", () => {
 const requiredEntries = [
   "/dist/main/index.js",
   "/dist/preload/index.cjs",
+  "/dist/renderer/application-icon.png",
   "/dist/renderer/index.css",
   "/dist/renderer/index.html",
   "/dist/renderer/index.js",

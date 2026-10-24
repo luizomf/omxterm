@@ -36,7 +36,7 @@ describe("Application Network Boundary", () => {
     }
   });
 
-  it("keeps the sole operating-system External Link capability at the validated main-process call site", async () => {
+  it("keeps terminal and fixed About link opening at their validated main-process call sites", async () => {
     const root = path.resolve(import.meta.dirname, "../../src");
     const matches: string[] = [];
     for (const file of await sourceFiles(root)) {
@@ -45,6 +45,6 @@ describe("Application Network Boundary", () => {
         matches.push(path.relative(root, file).split(path.sep).join("/"));
     }
 
-    expect(matches).toEqual(["main/index.ts"]);
+    expect(matches).toEqual(["main/application-about.ts", "main/index.ts"]);
   });
 });
