@@ -127,6 +127,31 @@ npm run package:win        # or: npm run package:win:x64
 npm run package:verify -- --windows-unpacked-only
 ```
 
+### Hosted Windows x64 candidate evidence
+
+The manual **Windows x64 headless + candidate build (Server)** workflow
+(`.github/workflows/windows-x64.yml`) uses the standard public `windows-2025`
+runner and x64 Node 24. The workflow must be present on the default branch before
+manual dispatch is available; select a reviewed source branch/tag in GitHub's
+normal dispatch selector (there is no separate checkout-ref input).
+
+It runs `npm ci`, a `node-pty` load without spawning a PTY, formatting, lint,
+typecheck, `npm test -- test/unit`, `npm run build`, and
+`npm run package-built:win:x64` (`--publish never`) as separate fail-preserving
+steps. The job summary records source/lock identity, Node/npm, the locked Electron
+dependency version, runner/OS architecture, phase outcomes, and the exact generated
+installer's basename, byte count, and SHA-256. The Electron dependency version is
+not a verified shipped runtime version.
+
+The binary is **transient on the runner**: no artifact upload, dependency cache,
+or release action is configured. The checksum is build evidence, **not a validated
+desktop, installer, or product**. This Windows Server administrator environment
+does not qualify Windows 11 ordinary-user Developer Mode, desktop behavior, or
+SmartScreen/UAC. No graphical suite, `check:portable`, `package:verify`, static
+package inspection, or NSIS execution runs here. Native qualification and release
+acceptance above remain required; [#627](https://github.com/luizomf/omxterm/issues/627)'s
+broader release-delivery automation remains separate and open.
+
 ### Checksums
 
 Generate and verify SHA-256 files inside `release/`:
