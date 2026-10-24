@@ -412,6 +412,10 @@ app
       quit() {},
     });
     await application.newWindow();
+    if (process.platform === "darwin" && !app.isActive()) {
+      app.focus({ steal: true });
+      windows[0]!.focus();
+    }
     const result = await exerciseScenario(about, {
       ...(nativeExpectation !== undefined ? { nativeExpectation } : {}),
       window: windows[0]!,
