@@ -15,6 +15,7 @@ do not remove the upstream attribution.
 | Electron                                               | MIT                             | `LICENSE.electron.txt`             |
 | Chromium and Electron transitive components            | See component notices           | `LICENSES.chromium.html`           |
 | `node-pty`                                             | MIT                             | `licenses/node-pty.txt`            |
+| `yaml` v2                                              | ISC                             | `licenses/yaml.txt`                |
 | Restty 0.3.0                                           | MIT                             | `licenses/restty.txt`              |
 | `text-shaper` 0.1.28 and FreeType-derived portions     | MIT and upstream attribution    | `licenses/text-shaper.txt`         |
 | Ghostty/libghostty-vt (`0309af1`)                      | MIT                             | `licenses/ghostty.txt`             |

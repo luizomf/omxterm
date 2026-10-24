@@ -15,7 +15,7 @@ The versioned public contract covers the user-facing behavior documented in [`sp
 - Security and privacy boundaries
 - Supported platforms and installer formats
 
-Internal module boundaries are not a public API. Configuration (`config.json`), theme (`themes/*.json`), and snippet (`snippets.json`) schema versions (`"version": 1`) are versioned independently of the application release number.
+Internal module boundaries are not a public API. Configuration (`config.json`), theme (`themes/*.json`), and snippet (`snippets.yaml`) schema versions (`"version": 1`) are versioned independently of the application release number.
 
 ## Versioning during `0.y.z`
 

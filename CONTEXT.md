@@ -98,7 +98,8 @@ Font Mono is the default, with bundled and OS fallback faces for coverage.
 layout input (`none`), or use `left`, `right` or `both` Option keys as terminal
 Alt.
 
-**Snippets Sidebar** — A per-window list loaded from the user's `snippets.json`.
+**Snippets Sidebar** — A per-window list loaded from the user's `snippets.yaml`
+(single bounded YAML 1.2 core document with version-1 snippet fields).
 Activating a snippet sends its body through Protected Paste to the selected tab;
 `execute` controls whether Enter is appended. Its fixed 280 px width is not
 included in native minimum-window sizing and can crowd out the visible grid.
