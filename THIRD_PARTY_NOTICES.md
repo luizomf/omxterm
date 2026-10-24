@@ -25,15 +25,33 @@ do not remove the upstream attribution.
 | JetBrainsMono Nerd Font Mono                           | SIL Open Font License 1.1       | `licenses/JetBrainsMono-OFL.txt`   |
 | Nerd Fonts patched glyph sets                          | MIT, OFL, CC BY 4.0, Apache 2.0 | `licenses/NerdFonts-glyphs.txt`    |
 
-About rendering, the fixed-link route, and the Auxiliary Panel's lazy-view,
-visible-dismiss and divider interaction ideas selectively adapt Rafael Ruscher's
-MIT-licensed contribution in PR #622 at
-`b3c3a4ad6c1f2224bded65873ba0b09a07ec5d38` (`workspace-sidebar.ts` and
-`pane-view.ts` under `src/renderer/` for the panel). The About source identifies the
-presentation as AshyTerm-style. The supplied Community Big MIT notice is retained
-at `assets/licenses/ashyterm-MIT.txt` and packaged as `licenses/ashyterm.txt`.
-This attribution does not imply that unrelated AshyTerm data or the rest of the
-contribution was integrated. See [contributors and origins](CONTRIBUTORS.md).
+The compact About implementation adapts text-safe rendering, named link buttons,
+runtime-version delivery, and the typed fixed-link route from
+[Rafael Ruscher (@ruscher)](https://github.com/ruscher)'s MIT-licensed contribution
+in [PR #622](https://github.com/luizomf/omxterm/pull/622), source commit
+[`b3c3a4ad6c1f2224bded65873ba0b09a07ec5d38`](https://github.com/ruscher/omxterm/tree/b3c3a4ad6c1f2224bded65873ba0b09a07ec5d38).
+The selected source files are `src/renderer/about/about-dialog.ts`,
+`src/main/about-wiring.ts`, `src/shared/about.ts`, and
+`src/preload/about-bridge.ts`. OMXTerm adds compact credits, owner lifetime
+handling, and integration with its existing terminal input policy; this is
+selective reuse, not integration of the entire PR.
+
+The resizable Auxiliary Panel also adapts the lazy exclusive-view/visible-dismiss
+ideas from `src/renderer/workspace-sidebar.ts` and pointer/keyboard divider ideas
+from `src/renderer/pane-view.ts` at the same source commit. OMXTerm adds
+deactivation, async lifetime guards, bounded per-window geometry, complete capture
+cleanup, clipboard routing and overlay integration; no workspaces or splits are
+included.
+
+The contributed About source identifies its presentation as
+[AshyTerm](https://github.com/big-comm/ashyterm)-style. We credit that presentation
+origin and the shared work of [Community Big](https://github.com/big-comm) and
+[BigLinux](https://github.com/biglinux) without claiming that all About code
+originated in AshyTerm. The supplied
+[Community Big MIT notice](assets/licenses/ashyterm-MIT.txt) is retained and
+packaged as `licenses/ashyterm.txt`. This attribution does not imply that unrelated
+AshyTerm data or the rest of the contribution was integrated. See
+[contributors](CONTRIBUTORS.md).
 
 The visible-link expression remains derived from `@xterm/addon-web-links`
 0.12.0 even though xterm.js is no longer a runtime dependency; its notice must
