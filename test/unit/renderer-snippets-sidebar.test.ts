@@ -59,7 +59,9 @@ describe("Snippets Sidebar", () => {
 
     await sidebar.toggle();
     expect(root.querySelectorAll("li").length).toBe(0);
-    expect(root.textContent).toContain("No snippets");
+    expect(root.textContent).toContain(
+      "No snippets. Create snippets.yaml next to config.json.",
+    );
     await sidebar.toggle();
     await sidebar.toggle();
     expect(loadSnippets).toHaveBeenCalledTimes(2);
@@ -113,7 +115,7 @@ describe("Snippets Sidebar", () => {
   it("shows the exact error in place of the list for an invalid file, as text only", async () => {
     const root = createRoot();
     const error =
-      'Snippets "/isolated/omxterm/snippets.json" at "snippets[0].body": <img src=x> must be a non-empty string. Fix the file and reopen the Snippets Sidebar.';
+      'Snippets "/isolated/omxterm/snippets.yaml" at "snippets[0].body": <img src=x> must be a non-empty string. Fix the file and reopen the Snippets Sidebar.';
     const sidebar = createSnippetsSidebar(root, {
       loadSnippets: vi.fn(async () => ({ snippets: [], error })),
       inject: vi.fn(),

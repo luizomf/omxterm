@@ -1,5 +1,6 @@
 import "./terminal-window.css";
 import "./window-chrome.css";
+import "./about/about-dialog.css";
 import { createElectronTerminalAdapter } from "./electron-terminal-adapter";
 import { mountTerminalWindowPage } from "./terminal-window-host";
 import { renderUserFileErrorBanner } from "./user-file-error-banner";
@@ -28,6 +29,7 @@ void window.omxterm.terminal.configuration().then((configuration) => {
     { tabStrip, tabsContainer },
     {
       configuration,
+      about: window.omxterm.about,
       chrome: window.omxterm.terminal,
       mount: mountResttyTerminalSurface,
       loadFontData: window.omxterm.terminal.fontData,

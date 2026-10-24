@@ -28,6 +28,7 @@ import {
   nativeFixturePlatform,
 } from "./restty-host-platform";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import { createAboutExercise } from "./about-dialog-exercise";
 import { exerciseWindowChrome } from "./window-chrome-exercise";
 import { assertNativeChromeConstruction } from "./window-chrome-construction";
 import { chromeNativeExpectation } from "./window-policy";
@@ -62,6 +63,27 @@ let cursor = { x: -100_000, y: -100_000 };
 let nativeCursor = false;
 let application: TerminalApplication<BrowserWindow>;
 let failing = false;
+function exerciseMenu(showAbout: () => void) {
+  return exerciseApplicationMenu(
+    windows[0]!,
+    application,
+    menuOpenings,
+    showAbout,
+  );
+}
+async function exerciseScenario(
+  about: ReturnType<typeof createAboutExercise>,
+  options: Parameters<typeof exerciseWindowChrome>[0],
+) {
+  if (process.argv.includes("--fixture-about-only")) {
+    await exerciseMenu(about.show);
+    await about.exercise();
+    return { about: "menu-keyboard-focus-layout-verified" };
+  }
+  const result = await exerciseWindowChrome(options);
+  await about.exercise();
+  return result;
+}
 function fail(error: unknown) {
   if (failing) return;
   failing = true;
@@ -113,6 +135,7 @@ app
       `__OMXTERM_CHROME_NATIVE_EXPECTATION__${nativeExpectation}\n`,
     );
     const router = registerTerminalIpcRouter(ipcMain);
+    const about = createAboutExercise(router, () => windows[0]!);
     application = startTerminalApplication<BrowserWindow>({
       createWindow(lifecycle) {
         const nativeOptions = terminalWindowOptions(
@@ -284,7 +307,7 @@ app
       quit() {},
     });
     await application.newWindow();
-    const result = await exerciseWindowChrome({
+    const result = await exerciseScenario(about, {
       nativeExpectation,
       window: windows[0]!,
       cells,
@@ -338,8 +361,7 @@ app
       second: () => windows[1]!,
       backgroundOpacity: (window) =>
         1 - backgroundTransparencies.get(window)!(),
-      exerciseMenu: () =>
-        exerciseApplicationMenu(windows[0]!, application, menuOpenings),
+      exerciseMenu: () => exerciseMenu(about.show),
     });
     for (const window of windows) application.forceCloseWindow(window);
     router.dispose();

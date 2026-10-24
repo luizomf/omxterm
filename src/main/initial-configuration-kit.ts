@@ -29,17 +29,16 @@ export async function createInitialConfigurationKit(
       path.join(directory, "themes", "omtheme.json"),
       DEFAULT_TERMINAL_THEME,
     );
-    await publishAbsentJson(path.join(directory, "snippets.json"), {
-      version: 1,
-      snippets: [
-        {
-          name: "Hello from OMXTerm",
-          description: "Insert a greeting command without pressing Enter.",
-          body: "echo Hello from OMXTerm",
-          execute: false,
-        },
-      ],
-    });
+    await publishAbsentText(
+      path.join(directory, "snippets.yaml"),
+      `version: 1
+snippets:
+  - name: Print a message
+    body: |-
+      printf '%s\\n' "Hello"
+    execute: false
+`,
+    );
     const defaults = DEFAULT_USER_CONFIGURATION;
     // Publish config last so its theme already exists. Keep platform-specific
     // shell, font selection and keybind defaults implicit.
@@ -70,13 +69,20 @@ export async function createInitialConfigurationKit(
 }
 
 async function publishAbsentJson(destination: string, document: unknown) {
+  await publishAbsentText(
+    destination,
+    `${JSON.stringify(document, null, 2)}\n`,
+  );
+}
+
+async function publishAbsentText(destination: string, text: string) {
   const temporary = path.join(
     path.dirname(destination),
     `.omxterm-${randomUUID()}.tmp`,
   );
   const file = await open(temporary, "wx", 0o600);
   try {
-    await file.writeFile(`${JSON.stringify(document, null, 2)}\n`);
+    await file.writeFile(text);
     // A hard link publishes complete bytes atomically without replacing a file,
     // directory or dangling symlink, including during concurrent launches.
     try {

@@ -356,9 +356,9 @@ export function instrumentResttyLinkPreview(source: string): string {
     source = source.replace(needle, replacement);
   };
   replace(
-    "  const previewActive = () => localImagePreview?.isActive() ?? false;",
-    `  const previewActive = () => localImagePreview?.isActive() ?? false;
-  page.document.__resttyLinkPreviewFixture = previewActive;`,
+    "  let localImagePreview: LocalImagePreview | undefined;",
+    `  let localImagePreview: LocalImagePreview | undefined;
+  page.document.__resttyLinkPreviewFixture = () => localImagePreview?.isActive() ?? false;`,
   );
   replace(
     "    localImagePreview?.dispose();",

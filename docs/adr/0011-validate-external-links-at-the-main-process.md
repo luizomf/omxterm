@@ -36,6 +36,13 @@ A known mismatch between wide-wrap spacer cells and core selection text can
 prevent recognition of a visible URL at some Unicode wrap boundaries
 ([#593](https://github.com/luizomf/omxterm/issues/593)).
 
+Application-owned About links use a separate narrow route: the renderer sends
+only `website`, `contributors`, `issues`, or `license`. Main validates the live
+registered main-frame sender and maps that identifier to a fixed project HTTPS
+destination. This does not extend the Terminal Surface's external-link privilege
+or allow renderer-supplied addresses for About. Opening the dialog itself makes
+no network request.
+
 [ADR 0026](0026-preview-explicitly-activated-local-images.md) adds literal
 `file:///` URL and conservative native path-reference recognition to the same
 visible-destination and gesture owner, but keeps their bounded local-file

@@ -52,6 +52,7 @@ const requiredIcnsRepresentations = [
 const requiredAsarEntries = [
   "/dist/main/index.js",
   "/dist/preload/index.cjs",
+  "/dist/renderer/application-icon.png",
   "/dist/renderer/index.css",
   "/dist/renderer/index.html",
   "/dist/renderer/index.js",
@@ -1000,6 +1001,14 @@ export async function verifyPackagedApplication(
       assertSameFile(
         path.join(projectRoot, "node_modules", "node-pty", "LICENSE"),
         path.join(resources, "licenses", "node-pty.txt"),
+      ),
+      assertSameFile(
+        path.join(projectRoot, "node_modules", "yaml", "LICENSE"),
+        path.join(resources, "licenses", "yaml.txt"),
+      ),
+      assertSameFile(
+        path.join(projectRoot, "assets", "licenses", "ashyterm-MIT.txt"),
+        path.join(resources, "licenses", "ashyterm.txt"),
       ),
       assertSameFile(
         path.join(projectRoot, "assets", "licenses", "restty-MIT.txt"),

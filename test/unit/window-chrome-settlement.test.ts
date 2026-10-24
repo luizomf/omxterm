@@ -139,6 +139,9 @@ function harness(
     "./native-fixture-pty": {},
     "./window-chrome-native-drag": {},
     "./application-menu-exercise": {},
+    "./about-dialog-exercise": {
+      createAboutExercise: () => ({ show() {}, exercise: async () => {} }),
+    },
     "../../src/main/native-application-menu": {},
   };
   runInNewContext(entry, {

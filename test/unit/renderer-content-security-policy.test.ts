@@ -34,7 +34,7 @@ describe("renderer Content Security Policy", () => {
       "'self'",
       "'wasm-unsafe-eval'",
     ]);
-    expect(directives.get("img-src")).toEqual(["blob:"]);
+    expect(directives.get("img-src")).toEqual(["'self'", "blob:"]);
     expect(directives.get("connect-src")).toEqual(["'none'"]);
     expect(directives.get("object-src")).toEqual(["'none'"]);
     expect(directives.get("base-uri")).toEqual(["'none'"]);

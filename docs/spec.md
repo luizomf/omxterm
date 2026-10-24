@@ -276,11 +276,27 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   and configured padding, not the native popup.
 - `Window -> Always on Top` toggles only the selected window at the ordinary
   native floating level. New windows use the configured default.
-- On Linux and Windows, the existing native About action shows `OMXTerm`, the
-  running application version, project copyright, and the OMXTerm application
-  icon. Packaged applications use their packaged icon resource; development uses
-  the development asset. Native dialog layout and window captions remain
-  platform-owned; macOS retains its bundle-provided About metadata.
+- The application menu's `About OMXTerm` entry opens one compact in-window
+  dialog on every Supported Platform. It shows the application icon, name,
+  running version and copyright, and links to the project, contributors,
+  issue tracker and MIT license. Developer lists live in the repository's
+  `CONTRIBUTORS.md`, not in the dialog; legal notices remain in the distribution.
+  Main supplies runtime metadata and opens only fixed named destinations after
+  validating the owning renderer's main frame. Opening About makes no network
+  request. Existing Linux/Windows native metadata setup and macOS bundle metadata
+  remain intact; the displayed icon is the same canonical asset bundled locally
+  for both development and packaged rendering.
+- About can be opened using native menu keyboard navigation. Close or Escape
+  dismisses it and focuses the live selected Terminal Tab. Repeated opening,
+  including during metadata loading, focuses the same dialog. Returning from
+  the browser does not steal its focus. Owner disposal removes it without
+  restoring terminal focus; late metadata and link errors cannot reopen it.
+  About and Local Image Preview do not stack: opening either while the other
+  is choosing/loading/showing is ignored. While About is active, terminal
+  clipboard, file-drop, zoom, snippet, tab/title-bar and tab-navigation/new-tab
+  actions are suppressed; output, configuration updates and approved tab/session/
+  window closure or Quit remain active. About does not add a configurable
+  shortcut, settings service or persistent state.
 - `View -> Toggle Developer Tools` is a menu-only diagnostic action for the
   selected Terminal Window in development and packaged applications. It opens or
   closes Electron's local Developer Tools without enabling remote debugging;
@@ -336,7 +352,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and `Ctrl+Shift+S`
   on Linux and Windows, remappable through `keybinds`) shows or hides the
   selected window's Snippets Sidebar beside its Terminal Surface. The sidebar
-  lists the snippets from `snippets.json`, filters them by name and description
+  lists the snippets from `snippets.yaml`, filters them by name and description
   as the user types, and a click injects the snippet into the selected tab's
   Live Terminal Session and returns focus to the terminal. Opening the sidebar
   rereads the file; there is no file watching. The sidebar does not suspend
@@ -776,8 +792,8 @@ directory, or dangling symlink) skips the entire initial kit without inspecting
 snippets or themes. Otherwise, OMXTerm creates the directory, `config.json` with
 common built-in defaults (including explicit `window.blur: false` and
 `window.transparency: 0`) and `theme.path` set to `themes/omtheme.json`, one
-non-executing example in `snippets.json`, and a copy of the bundled theme at
-`themes/omtheme.json`. Existing sibling files are never replaced. Files are
+non-executing literal-block example in `snippets.yaml`, and a copy of the bundled
+theme at `themes/omtheme.json`. Existing sibling files are never replaced. Files are
 published complete without overwriting concurrent creations; configuration is
 published last. Shell, font family and shortcuts retain their implicit platform
 defaults. Creation failure produces a non-blocking notice and normal
@@ -949,16 +965,24 @@ authored on macOS become `Control` off macOS and can shadow these keys
 unintentionally. Creating new actions, system-global shortcuts, chords or
 sequences, and per-platform alternate maps are unsupported.
 
-An optional user-owned `snippets.json` next to `config.json` defines the
-Snippets Sidebar contents. The file is strict JSON containing exactly
-`"version": 1` and a `snippets` array of at most 512 entries; each entry has a
-non-empty `name` (the searchable label, at most 128 UTF-16 code units), a
+An optional user-owned `snippets.yaml` next to `config.json` defines the
+Snippets Sidebar contents. The file is one UTF-8 YAML 1.2 core document parsed
+with `yaml` v2, containing exactly `version: 1` and a `snippets` array of at
+most 512 entries; each entry has a non-empty `name` (the searchable label, at most 128 UTF-16 code units), a
 non-empty `body` (the text to inject, at most 65,536 UTF-16 code units), an
 optional `description` (at most 512 UTF-16 code units), and an optional boolean
 `execute` defaulting to `false`. Apart from initial kit creation, OMXTerm never
 creates, rewrites, or migrates the file; absence is the clean empty state, and
-the file is reread each time the sidebar opens. Injection uses the same
-Protected Paste path as a normal paste. With bracketed paste disabled, a
+the file is reread each time the sidebar opens. The old `snippets.json` filename
+is not read or migrated. Configuration and themes remain JSON. Source reads are
+bounded to 1 MiB plus one overflow-detection byte; over-limit files are rejected
+before UTF-8 decoding. Before recursive YAML composition/conversion, an iterative
+concrete-tree check enforces at most 16 collection levels (root is level 1) and
+4,096 total mapping pairs and sequence entries, including mapping keys. Duplicate
+keys, aliases, custom/non-core tags, non-scalar mapping keys, non-1.2 YAML versions,
+and multiple documents are rejected. Literal blocks preserve YAML chomping:
+`|-` strips trailing line breaks, `|` keeps one, and `|+` keeps all.
+Injection uses the same Protected Paste path as a normal paste. With bracketed paste disabled, a
 multiline or control-character body requires Protected Paste approval; after
 approval, the body is delivered unchanged and may execute through its embedded
 line breaks or control characters. With bracketed paste enabled, paste-aware
@@ -966,10 +990,11 @@ delivery bypasses the Protected Paste confirmation and sends the body as one
 bracketed paste. `execute` controls only whether OMXTerm appends Enter after
 body delivery: `false` appends nothing, while `true` sends Enter after the body
 and any closing bracketed-paste marker — per-snippet opt-in only. An invalid
-`snippets.json` never blocks startup and is never silent: the sidebar shows the
-exact actionable problem, including the resolved path and field location, in
-place of the list, and the terminal is unaffected. The Electron main process
-reads and validates the file and sends only validated, typed data over the
+`snippets.yaml` never blocks startup and is never silent: the sidebar shows the
+actionable problem, including the resolved path and schema field location or
+syntax line/column coordinates, in place of the list, and the terminal is
+unaffected. Parser excerpts and arbitrary parser messages are never displayed.
+The Electron main process reads and validates the file and sends only validated, typed data over the
 preload bridge. Snippet contents are user payload and are never logged.
 
 An absent `theme` uses the bundled canonical [`omtheme`](omtheme.json). A
@@ -1158,8 +1183,12 @@ in main.
 OMXTerm uses the MIT License and follows the [versioning policy](versioning.md).
 Packages are built natively on ARM64 macOS, Linux and Windows, and on x64 Windows, using native
 filesystems rather than VM shared folders. The formats are DMG, AppImage and
-NSIS respectively. Linux also provides `linux_install.sh` and
-`linux_install.sh.sha256`; the helper's embedded version matches the release.
+NSIS respectively. An explicit maintainer-approved Windows x64 release may use
+x64 emulation on Windows ARM64 while native hardware is unavailable (ADR 0034);
+release evidence must identify that exception and pending native qualification.
+Installer safety requirements are unchanged. Linux also provides
+`linux_install.sh` and `linux_install.sh.sha256`; the helper's embedded version
+matches the release.
 
 Artifacts include SHA-256 checksums but no verified publisher identity. The
 macOS app has an ad-hoc integrity seal, not Developer ID signing or
@@ -1194,9 +1223,10 @@ cleanup preserves user data and is part of full verification; unpacked-only
 diagnostics are partial.
 
 Release verification separates behavioral tests, native builds, exact-artifact
-checks and publication. Each artifact needs native verification against its own
-identity and checksum. Recorded results are reusable only with known equivalent
-relevant inputs. Version-only changes need new packages and package/version
+checks and publication. Each artifact needs verification against its own
+identity and checksum: native by default, or the explicitly approved Windows x64
+emulation exception in ADR 0034 with its limits recorded. Recorded results are
+reusable only with known equivalent relevant inputs. Version-only changes need new packages and package/version
 checks, not wholesale behavioral reruns; changed product, dependency or build
 inputs invalidate affected results. Build-to-tag differences retain the full
 build SHA and digest and require a verified non-artifact explanation. Applicable

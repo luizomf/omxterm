@@ -20,10 +20,12 @@ await Promise.all([
     bundle: true,
     format: "esm",
     platform: "node",
-    // Keep only native/host modules external. The main process imports
+    // Keep native/host modules and yaml's CommonJS runtime external. YAML is
+    // packaged as a direct dependency so Node can resolve its built-in requires.
+    // The main process imports
     // text-shaper directly, so bundling it prevents packaged startup from
     // resolving a development checkout's ancestor node_modules by accident.
-    external: ["electron", "node-pty"],
+    external: ["electron", "node-pty", "yaml"],
     outfile: "dist/main/index.js",
     sourcemap: true,
   }),
@@ -46,4 +48,5 @@ await Promise.all([
     sourcemap: true,
   }),
   cp("src/renderer/index.html", "dist/renderer/index.html"),
+  cp("assets/application-icon.png", "dist/renderer/application-icon.png"),
 ]);

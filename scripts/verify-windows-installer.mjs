@@ -24,6 +24,9 @@ export function inspectWindowsInstallerInputs(
   // NSIS identity, registry/cache paths, shortcuts, templates and options are unchanged.
   // #224 selects the node-pty prebuild by target architecture (arm64 or x64) for the same
   // NSIS footprint; only the packaged native payload differs.
+  // #381 and #633 add only the YAML ISC and About presentation MIT notices
+  // under resources/licenses. NSIS identities, registration, paths, shortcuts,
+  // templates and installer options are unchanged.
   const digest = createHash("sha256")
     .update(configuration.replaceAll("\r\n", "\n"))
     .digest("hex");
@@ -31,7 +34,7 @@ export function inspectWindowsInstallerInputs(
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest !==
-      "93f818da841a894b4bceb4655630f0493209988acdda072c538f45133380e899"
+      "4cbba879e75b5dab13decd3ed956596903d69cfa05ca1932977963d07c7eba4c"
   )
     throw new Error(
       "Unknown Windows installer footprint; review the pinned packaging inputs before exact installer verification",

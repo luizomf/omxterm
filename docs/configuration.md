@@ -8,7 +8,7 @@ OMXTerm works out of the box with its bundled font, theme, and default shortcuts
 ```text
 omxterm/
 ├── config.json
-├── snippets.json
+├── snippets.yaml
 └── themes/
     └── omtheme.json
 ```
@@ -299,25 +299,26 @@ For example, to use `F11` for Snippets instead of full screen:
 
 ## Snippets
 
-Snippets let you save commonly used commands or text in `snippets.json` (next to `config.json`) and insert them from the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`).
+Snippets let you save commonly used commands or text in `snippets.yaml` (next to `config.json`) and insert them from the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`). Configuration and theme files remain JSON.
 
-```json
-{
-  "version": 1,
-  "snippets": [
-    {
-      "name": "Show current directory",
-      "body": "pwd",
-      "description": "Insert a command that prints the current directory",
-      "execute": false
-    }
-  ]
-}
+```yaml
+version: 1
+snippets:
+  - name: Print a message
+    body: |-
+      printf '%s\n' "Hello"
+    execute: false
+  - name: Show current directory
+    body: pwd
+    description: Insert a command that prints the current directory
 ```
 
-- With `"execute": false` (the default), clicking a snippet inserts its text into the prompt so you can edit or review it before pressing Enter.
-- Set `"execute": true` if you want OMXTerm to append `Enter` automatically after inserting the snippet.
-- Up to 512 snippets are supported (`name` up to 128 characters, `body` up to 65,536 characters, optional `description` up to 512 characters).
+- Literal blocks preserve shell quotes and line breaks without JSON escaping. `|-` strips trailing line breaks, `|` keeps one, and `|+` keeps all trailing line breaks. Indent body lines beneath `body:`.
+- `execute: false` (the default) appends no Enter; `execute: true` appends Enter after the body. Embedded line breaks or control characters may themselves execute commands even with `false`. Multiline/control-character bodies use the existing Protected Paste confirmation when bracketed paste is disabled.
+- Up to 512 snippets are supported: `name` is 1–128 characters, `body` is 1–65,536, and optional `description` is at most 512 (UTF-16 code units). `execute` must be a boolean. Unknown fields are rejected.
+- The file must be one UTF-8 YAML 1.2 core document, at most 1 MiB. Collection nesting is limited to 16 levels (root collection is level 1), with at most 4,096 total mapping pairs and sequence entries. Duplicate keys, aliases, custom/non-core tags, and multiple documents are rejected. Quote scalar values that must be text, such as `"true"` or `"123"`.
+- Close and reopen the sidebar to reload edits. Invalid files show a path and safe diagnostic instead of the list; syntax errors include line/column coordinates, not command excerpts.
+- Existing `snippets.json` files are not read, rewritten, or migrated. Move your entries into `snippets.yaml` yourself; JSON-formatted content is also valid YAML, subject to the same limits.
 
 ## Terminal themes
 

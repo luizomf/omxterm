@@ -23,7 +23,7 @@ For security vulnerabilities, follow the private reporting instructions in [SECU
 
 ### Have an x64 Linux or Windows machine?
 
-Windows x64 can be built and verified from source (`npm run package:win:x64`; see [development](docs/development.md#windows)). Prebuilt releases are otherwise ARM64-only; the [Linux x64 issue](https://github.com/luizomf/omxterm/issues/223) is still open if you would like to help build and test native Linux x64 packages.
+Windows x64 installers are available and can also be built from source (`npm run package:win:x64`; see [development](docs/development.md#windows)). Help with native Intel/AMD qualification is welcome in the [Windows x64 issue](https://github.com/luizomf/omxterm/issues/224). The [Linux x64 issue](https://github.com/luizomf/omxterm/issues/223) is still open if you would like to help build and test native Linux x64 packages.
 
 ## Opening a pull request
 

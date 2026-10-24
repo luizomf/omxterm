@@ -1,4 +1,6 @@
 import { mountWindowChrome, type WindowChromeBridge } from "./window-chrome";
+import { mountAboutDialog } from "./about/about-dialog";
+import type { AboutBridge } from "../shared/about";
 import type { TerminalSessionAdapter } from "../terminal-surface/terminal-session-adapter";
 import {
   mountTerminalSurface,
@@ -49,6 +51,7 @@ export interface TerminalWindowPageElements {
 }
 
 interface TerminalWindowPageOptions {
+  readonly about?: AboutBridge;
   readonly createAdapter: (
     fontConfigurationId?: string,
   ) => ElectronTerminalAdapter;
@@ -124,6 +127,9 @@ export function mountTerminalWindowPage(
   let removeSnippetsToggleListener: (() => void) | undefined;
   let removeLocalImageOpenListener: (() => void) | undefined;
   let localImagePreview: LocalImagePreview | undefined;
+  let about: ReturnType<typeof mountAboutDialog>;
+  const previewActive = () =>
+    (localImagePreview?.isActive() ?? false) || (about?.isActive() ?? false);
   const hoverAvailabilityListeners = new Set<() => void>();
   let fontConfigurationId = options.configuration?.fontConfigurationId;
   let activeFontFamily = options.configuration?.fontFamily;
@@ -177,7 +183,7 @@ export function mountTerminalWindowPage(
     ...(options.loadLocalImage
       ? {
           linkHoverAvailability: {
-            isEnabled: () => !(localImagePreview?.isActive() ?? false),
+            isEnabled: () => !previewActive(),
             subscribe(listener: () => void) {
               hoverAvailabilityListeners.add(listener);
               return () => {
@@ -185,8 +191,9 @@ export function mountTerminalWindowPage(
               };
             },
           },
-          onLocalImageActivation: (source: LocalImageActivation) =>
-            void localImagePreview?.open(source),
+          onLocalImageActivation: (source: LocalImageActivation) => {
+            if (!about?.isActive()) void localImagePreview?.open(source);
+          },
         }
       : {}),
     ...(options.onSurfaceFailure
@@ -198,6 +205,7 @@ export function mountTerminalWindowPage(
     { strip: elements.tabStrip, container: elements.tabsContainer },
     {
       createAdapter: () => options.createAdapter(fontConfigurationId),
+      canFocus: () => !disposed && !about?.isActive(),
       mount,
       surfaceOptions,
       showTabBar: options.configuration?.showTabBar ?? true,
@@ -217,7 +225,7 @@ export function mountTerminalWindowPage(
 
   const chrome = options.chrome
     ? mountWindowChrome(page.document, options.chrome, () => {
-        if (!(localImagePreview?.isActive() ?? false)) tabs.focusSelected();
+        if (!previewActive()) tabs.focusSelected();
       })
     : undefined;
 
@@ -226,49 +234,44 @@ export function mountTerminalWindowPage(
       loadImage: options.loadLocalImage,
       focusTerminal: () => tabs.focusSelected(),
       onActivityChange: () => {
-        chrome?.setPreviewActive(localImagePreview?.isActive() ?? false);
+        chrome?.setPreviewActive(previewActive());
         for (const listener of hoverAvailabilityListeners) listener();
       },
     });
-    removeLocalImageOpenListener = options.subscribeToLocalImageOpen?.(
-      () => void localImagePreview?.open(),
-    );
+    removeLocalImageOpenListener = options.subscribeToLocalImageOpen?.(() => {
+      if (!about?.isActive()) void localImagePreview?.open();
+    });
   }
 
-  const previewActive = () => localImagePreview?.isActive() ?? false;
+  about = mountAboutDialog(
+    page.document,
+    options.about,
+    () => !disposed && !localImagePreview?.isActive(),
+    {
+      focusTerminal: tabs.focusSelected,
+      onActivityChange: (active) => {
+        chrome?.setPreviewActive(
+          active || (localImagePreview?.isActive() ?? false),
+        );
+        for (const listener of hoverAvailabilityListeners) listener();
+      },
+    },
+  );
   const onPageFocus = () => {
     if (!previewActive()) tabs.focusSelected();
   };
-  const isInternalTabDrag = (event: DragEvent) =>
-    [...(event.dataTransfer?.types ?? [])].includes(
-      TERMINAL_TAB_DRAG_DATA_TYPE,
-    );
-  const onDragOver = (event: DragEvent) => {
-    event.preventDefault();
-    if (previewActive() || !isInternalTabDrag(event)) event.stopPropagation();
-  };
-  const onDrop = (event: DragEvent) => {
-    // Capture before the Terminal Surface or another target can interpret a native file URI.
-    event.preventDefault();
-    if (previewActive()) {
-      event.stopPropagation();
-      return;
-    }
-    if (isInternalTabDrag(event)) return;
-    event.stopPropagation();
-    const files = event.dataTransfer?.files;
-    if (!files || files.length === 0 || !options.droppedFilePathInsertion)
-      return;
-    const insertion = options.droppedFilePathInsertion([...files]);
-    if (insertion.length > 0) tabs.injectText(insertion);
-  };
+  const removeFileDrops = installFileDrops(
+    page.document,
+    previewActive,
+    tabs.injectText,
+    options.droppedFilePathInsertion,
+  );
   const dispose = () => {
     if (disposed) return;
     disposed = true;
     page.removeEventListener("pagehide", onPageHide);
     page.removeEventListener("focus", onPageFocus);
-    page.document.removeEventListener("dragover", onDragOver, true);
-    page.document.removeEventListener("drop", onDrop, true);
+    removeFileDrops();
     removeZoomListener?.();
     removeConfigurationUpdateListener?.();
     removeClipboardActionListener?.();
@@ -278,6 +281,8 @@ export function mountTerminalWindowPage(
     removeFindListener?.();
     removeSnippetsToggleListener?.();
     removeLocalImageOpenListener?.();
+    about?.dispose();
+    about = undefined;
     chrome?.dispose();
     localImagePreview?.dispose();
     localImagePreview = undefined;
@@ -290,8 +295,6 @@ export function mountTerminalWindowPage(
 
   page.addEventListener("pagehide", onPageHide, { once: true });
   page.addEventListener("focus", onPageFocus);
-  page.document.addEventListener("dragover", onDragOver, true);
-  page.document.addEventListener("drop", onDrop, true);
 
   removeConfigurationUpdateListener = options.subscribeToConfigurationUpdates?.(
     (configuration) => {
@@ -340,9 +343,14 @@ export function mountTerminalWindowPage(
         if (!previewActive()) tabs.clipboardAction(action);
       },
     );
-    removeTabCommandListener = options.subscribeToTabCommands?.((command) =>
-      tabs.handleCommand(command),
-    );
+    removeTabCommandListener = options.subscribeToTabCommands?.((command) => {
+      if (
+        about?.isActive() &&
+        ["new", "next", "previous", "select"].includes(command.action)
+      )
+        return;
+      tabs.handleCommand(command);
+    });
     removeTabBarToggleListener = options.subscribeToTabBarToggle?.(() => {
       if (!previewActive()) tabs.toggleTabBar();
     });
@@ -366,6 +374,42 @@ export function mountTerminalWindowPage(
   });
 
   return { ready, dispose };
+}
+
+function installFileDrops(
+  document: Document,
+  blocked: () => boolean,
+  inject: (text: string) => void,
+  format: TerminalWindowPageOptions["droppedFilePathInsertion"],
+): () => void {
+  const isInternalTabDrag = (event: DragEvent) =>
+    [...(event.dataTransfer?.types ?? [])].includes(
+      TERMINAL_TAB_DRAG_DATA_TYPE,
+    );
+  const onDragOver = (event: DragEvent) => {
+    event.preventDefault();
+    if (blocked() || !isInternalTabDrag(event)) event.stopPropagation();
+  };
+  const onDrop = (event: DragEvent) => {
+    // Capture before the Surface can interpret a native file URI.
+    event.preventDefault();
+    if (blocked()) {
+      event.stopPropagation();
+      return;
+    }
+    if (isInternalTabDrag(event)) return;
+    event.stopPropagation();
+    const files = event.dataTransfer?.files;
+    if (!files?.length || !format) return;
+    const insertion = format([...files]);
+    if (insertion.length > 0) inject(insertion);
+  };
+  document.addEventListener("dragover", onDragOver, true);
+  document.addEventListener("drop", onDrop, true);
+  return () => {
+    document.removeEventListener("dragover", onDragOver, true);
+    document.removeEventListener("drop", onDrop, true);
+  };
 }
 
 function sameSurfaceConfiguration(

@@ -1,6 +1,6 @@
 # Install OMXTerm
 
-OMXTerm ships ready-to-run packages for **ARM64** computers: Apple Silicon Macs, Linux ARM64, and Windows 11 ARM64. Grab the file for your system from the [downloads table](../README.md#platforms-and-downloads) and follow the steps below.
+OMXTerm ships ready-to-run packages for Apple Silicon Macs, Linux ARM64, and Windows 11 ARM64 or x64. Grab the file for your system from the [downloads table](../README.md#platforms-and-downloads) and follow the steps below.
 
 **[macOS](#macos)** · **[Linux](#linux)** · **[Windows](#windows)** · **[Update or uninstall](#updating-or-uninstalling)**
 
@@ -28,7 +28,7 @@ You only do this once. Later, macOS may also ask before OMXTerm opens protected 
 Download the matching `.sha256` file, then run this in the folder where both files are:
 
 ```sh
-shasum -a 256 -c OMXTerm-0.20.2-arm64.dmg.sha256
+shasum -a 256 -c OMXTerm-0.21.0-arm64.dmg.sha256
 ```
 
 A valid file prints `OK`.
@@ -63,14 +63,14 @@ sudo dnf install fontconfig file xorg-x11-server-Xwayland
 Make the AppImage executable and run it:
 
 ```sh
-chmod +x OMXTerm-0.20.2-arm64.AppImage
-./OMXTerm-0.20.2-arm64.AppImage
+chmod +x OMXTerm-0.21.0-arm64.AppImage
+./OMXTerm-0.21.0-arm64.AppImage
 ```
 
 If you get a FUSE error, run it this way instead:
 
 ```sh
-./OMXTerm-0.20.2-arm64.AppImage --appimage-extract-and-run
+./OMXTerm-0.21.0-arm64.AppImage --appimage-extract-and-run
 ```
 
 ### Add it to your application menu (optional)
@@ -79,7 +79,7 @@ Download `linux_install.sh` next to the AppImage and run:
 
 ```sh
 chmod +x linux_install.sh
-./linux_install.sh install ./OMXTerm-0.20.2-arm64.AppImage
+./linux_install.sh install ./OMXTerm-0.21.0-arm64.AppImage
 ```
 
 OMXTerm now shows up in your application launcher. The [Linux installer guide](linux-installer.md) has the details. For blur, HiDPI scaling, or VM graphics, see [Linux desktop tips](linux-desktop.md).
@@ -90,17 +90,17 @@ OMXTerm now shows up in your application launcher. The [Linux installer guide](l
 Download the matching `.sha256` file next to the AppImage and run:
 
 ```sh
-sha256sum --check OMXTerm-0.20.2-arm64.AppImage.sha256
+sha256sum --check OMXTerm-0.21.0-arm64.AppImage.sha256
 ```
 
 </details>
 
 ## Windows
 
-You need a Windows 11 PC with an ARM64 or x64 (Intel/AMD) processor (check **System type** in **Settings → System → About**). Use the `-arm64.exe` installer on ARM and the `-x64.exe` installer on Intel/AMD once a release provides it.
+You need a Windows 11 PC with an ARM64 or x64 (Intel/AMD) processor (check **System type** in **Settings → System → About**). Use the `-arm64.exe` installer on ARM and the `-x64.exe` installer on Intel/AMD. Windows x64 validation uses emulation on Windows ARM64; native Intel/AMD qualification remains pending. See the [release notes](https://github.com/luizomf/omxterm/releases/tag/v0.21.0) for coverage.
 
 1. Install the Microsoft Visual C++ Redistributable for your architecture (ARM64 or x64) if you don't have it yet. See [Microsoft's download page](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist).
-2. Download and run the installer (`OMXTerm-0.20.2-arm64.exe`).
+2. Download and run the matching installer: `OMXTerm-0.21.0-arm64.exe` or `OMXTerm-0.21.0-x64.exe`.
 3. If SmartScreen warns about an unrecognized app, click **More info → Run anyway**.
 4. Launch **OMXTerm** from the Start menu.
 
@@ -112,10 +112,11 @@ OMXTerm starts Windows PowerShell by default. You can [switch to PowerShell 7 or
 In PowerShell, in your download folder:
 
 ```powershell
-Get-FileHash .\OMXTerm-0.20.2-arm64.exe -Algorithm SHA256
+$name = "OMXTerm-0.21.0-arm64.exe" # Use OMXTerm-0.21.0-x64.exe on Intel/AMD
+Get-FileHash $name -Algorithm SHA256
 ```
 
-Compare the result with the hash inside `OMXTerm-0.20.2-arm64.exe.sha256`.
+Compare the result with the hash inside the matching `$name.sha256` file.
 
 </details>
 

@@ -1,6 +1,6 @@
 # Native release procedures
 
-This guide covers building, verifying, and publishing native ARM64 releases for macOS (`.dmg`) and Linux (`.AppImage` + `linux_install.sh`), and ARM64/x64 releases for Windows (`.exe` NSIS installer). Windows x64 release publication requires native qualification; adding its build support does not qualify an installer.
+This guide covers building, verifying, and publishing native ARM64 releases for macOS (`.dmg`) and Linux (`.AppImage` + `linux_install.sh`), and ARM64/x64 releases for Windows (`.exe` NSIS installer). Build support alone does not qualify an installer. Native verification is the default; the explicit Windows x64 emulation exception in [ADR 0034](adr/0034-support-native-windows-x64-packages.md) requires honest host/target and coverage disclosure.
 
 See [versioning.md](versioning.md) for SemVer rules and [development.md](development.md#platform-prerequisites) for platform setup.
 
@@ -9,7 +9,7 @@ See [versioning.md](versioning.md) for SemVer rules and [development.md](develop
 1. Select the release version `X.Y.Z` under [versioning.md](versioning.md) and ensure `package.json` and `package-lock.json` match.
 2. Build and verify native packages on each target platform: macOS ARM64, Linux ARM64, Windows ARM64, and Windows x64.
 3. Collect the verified installers and `.sha256` checksum files in the ignored `release/` directory.
-4. Tag `vX.Y.Z`, publish the GitHub Release with the [qualified release assets](#publication) (ten including Windows x64; currently published releases have eight ARM64 assets), update download links in `README.md` and `docs/installation.md`, and verify the uploaded assets.
+4. Tag `vX.Y.Z`, create a draft GitHub Release with the [qualified release assets](#publication) (ten including Windows x64; eight without it), verify the uploaded bytes, and publish. Update download links in `README.md` and `docs/installation.md`. Published releases are immutable: finish uploading all assets before publication; never move a published tag, replace an asset, or disable immutability to add a missing platform.
 5. Bump `main` to the next `-dev.0` baseline after release.
 
 <a id="changed-inputs-and-build-to-tag-comparison"></a>
@@ -109,9 +109,9 @@ This builds `OMXTerm-<version>-arm64.AppImage`, `linux_install.sh`, and both `.s
 
 ### Windows ARM64 and x64
 
-Build and verify each Windows architecture natively on a host of that architecture. `check:win` picks `package-built:win` (ARM64) or `package-built:win:x64` (x64) from the host. The x64 installer is `OMXTerm-<version>-x64.exe`; the x64 unpacked directory is `release/win-unpacked`.
+Build and verify each Windows architecture natively on a host of that architecture. An explicitly maintainer-approved x64 build may instead use x64 Node and Electron under Windows ARM64 emulation (ADR 0034); record that distinction and pending native qualification in the release notes. `check:win` picks `package-built:win` (ARM64) or `package-built:win:x64` (x64) from Node's process architecture. The x64 installer is `OMXTerm-<version>-x64.exe`; the x64 unpacked directory is `release/win-unpacked`.
 
-> **Warning:** Full Windows NSIS verification installs and uninstalls the real package and can replace an existing OMXTerm installation on the system ([ADR 0023](adr/0023-verify-exact-nsis-only-in-authorized-disposable-vms.md)). Always run it inside a disposable Windows 11 VM of the architecture being verified (ARM64 or x64) with a clean recovery snapshot.
+> **Warning:** Full Windows NSIS verification installs and uninstalls the real package and can replace an existing OMXTerm installation on the system ([ADR 0023](adr/0023-verify-exact-nsis-only-in-authorized-disposable-vms.md)). Always run it inside a disposable Windows 11 VM with a clean recovery snapshot, using the target architecture or the explicitly approved x64 emulation exception.
 
 In an interactive desktop PowerShell session with [Windows prerequisites](development.md#windows):
 
@@ -152,7 +152,7 @@ Get-Content "$name.sha256"
 
 ## Publication
 
-Create tag `vX.Y.Z` and publish the GitHub Release in `luizomf/omxterm` with every file attached (ten when Windows x64 is released):
+Create tag `vX.Y.Z` and a draft GitHub Release in `luizomf/omxterm`. Upload every applicable file (ten when Windows x64 is released), download and verify the complete set against local byte counts and SHA-256 records, then publish to seal the immutable release:
 
 - `OMXTerm-<version>-arm64.dmg` and `OMXTerm-<version>-arm64.dmg.sha256`
 - `OMXTerm-<version>-arm64.AppImage` and `OMXTerm-<version>-arm64.AppImage.sha256`

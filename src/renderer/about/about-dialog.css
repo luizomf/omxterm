@@ -1,0 +1,57 @@
+.about-dialog {
+  box-sizing: border-box;
+  width: min(26rem, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid currentColor;
+  border-radius: 12px;
+  background: var(--terminal-background, #101218);
+  color: var(--terminal-foreground, #f4f4f4);
+  font:
+    14px/1.4 system-ui,
+    sans-serif;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.about-dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+.about-dialog h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+.about-dialog p {
+  margin: 8px 0;
+}
+.about-dialog .about-name {
+  font-size: 20px;
+  font-weight: 600;
+}
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px 0;
+}
+.about-dialog button {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.about-dialog button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.about-dialog .about-close {
+  font-weight: 600;
+}
+.about-dialog [role="status"]:empty {
+  display: none;
+}

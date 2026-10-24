@@ -11,7 +11,7 @@ export interface TerminalSnippet {
   readonly execute: boolean;
 }
 
-// One response shape for both outcomes: an invalid snippets.json yields an
+// One response shape for both outcomes: an invalid snippets.yaml yields an
 // empty list plus the precise diagnostic the sidebar shows in place of it.
 export interface TerminalSnippetsResponse {
   readonly snippets: readonly TerminalSnippet[];

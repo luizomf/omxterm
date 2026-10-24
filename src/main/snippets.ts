@@ -1,5 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { open, type readFile } from "node:fs/promises";
 import path from "node:path";
+import { Composer, CST, Parser } from "yaml";
 import {
   MAX_SNIPPET_BODY_LENGTH,
   MAX_SNIPPET_COUNT,
@@ -10,6 +11,7 @@ import {
 } from "../shared/terminal-snippets";
 
 export const TERMINAL_SNIPPETS_VERSION = 1;
+const MAX_FILE_BYTES = 1_048_576;
 
 export interface LoadTerminalSnippetsOptions {
   readonly environment: Readonly<Record<string, string | undefined>>;
@@ -23,7 +25,7 @@ export function resolveTerminalSnippetsPath(
 ): string {
   const root =
     environment.XDG_CONFIG_HOME || path.join(homeDirectory, ".config");
-  return path.join(root, "omxterm", "snippets.json");
+  return path.join(root, "omxterm", "snippets.yaml");
 }
 
 // Read-only, on-demand load: called each time the Snippets Sidebar opens.
@@ -48,12 +50,15 @@ export async function loadTerminalSnippets(
 
   let bytes: Uint8Array;
   try {
-    bytes = await (options.read ?? readFile)(snippetsPath);
+    bytes = await (options.read ?? readBoundedFile)(snippetsPath);
   } catch (cause) {
     if (isNotFound(cause))
       return Object.freeze({ snippets: Object.freeze([]) });
     return failure(undefined, "the file could not be read");
   }
+
+  if (bytes.byteLength > MAX_FILE_BYTES)
+    return failure(undefined, `must contain at most ${MAX_FILE_BYTES} bytes`);
 
   let text: string;
   try {
@@ -64,12 +69,92 @@ export async function loadTerminalSnippets(
 
   let document: unknown;
   try {
-    document = JSON.parse(text) as unknown;
-  } catch {
-    return failure(undefined, "the file is not valid JSON");
+    document = parseSnippetsYaml(text);
+  } catch (cause) {
+    return failure(
+      undefined,
+      cause instanceof SnippetsYamlError
+        ? cause.message
+        : "the file is not valid YAML",
+    );
   }
 
   return validateTerminalSnippets(document, failure);
+}
+
+class SnippetsYamlError extends Error {}
+
+function parseSnippetsYaml(text: string): unknown {
+  const tokens = [...new Parser().parse(text)];
+  // Inspect the concrete tree iteratively before the composer's recursive work.
+  // A mapping pair or sequence entry counts as one item; root depth is one.
+  const pending = tokens.map((token) => ({ token, depth: 0 }));
+  let items = 0;
+  while (pending.length) {
+    const { token, depth } = pending.pop()!;
+    if (token.type === "alias")
+      throw new SnippetsYamlError("aliases are not supported");
+    if (token.type === "document" && token.value)
+      pending.push({ token: token.value, depth });
+    if (CST.isCollection(token)) {
+      if (depth >= 16)
+        throw new SnippetsYamlError("maximum collection depth is 16");
+      items += token.items.length;
+      if (items > 4096)
+        throw new SnippetsYamlError(
+          "must contain at most 4096 collection items",
+        );
+      for (const item of token.items) {
+        // Flow-sequence pairs ([a: b] or [? a]) compose an extra map that
+        // has no collection token of its own. Budget it before composition.
+        const flowPair =
+          token.type === "flow-collection" &&
+          token.start.type === "flow-seq-start" &&
+          (item.sep !== undefined ||
+            item.start.some((part) => part.type === "explicit-key-ind"));
+        const childDepth = depth + (flowPair ? 2 : 1);
+        if (flowPair && childDepth > 16)
+          throw new SnippetsYamlError("maximum collection depth is 16");
+        items += flowPair ? 1 : 0;
+        if (items > 4096)
+          throw new SnippetsYamlError(
+            "must contain at most 4096 collection items",
+          );
+        if (item.key) pending.push({ token: item.key, depth: childDepth });
+        if (item.value) pending.push({ token: item.value, depth: childDepth });
+      }
+    }
+  }
+  const documents = [
+    ...new Composer({
+      version: "1.2",
+      schema: "core",
+      resolveKnownTags: false,
+      uniqueKeys: true,
+      stringKeys: true,
+      prettyErrors: false,
+      logLevel: "silent",
+    }).compose(tokens, true, text.length),
+  ];
+  if (documents.length !== 1)
+    throw new SnippetsYamlError("must contain exactly one YAML document");
+  const document = documents[0]!;
+  if (document.directives.yaml.version !== "1.2")
+    throw new SnippetsYamlError("YAML version must be 1.2");
+  const error = document.errors[0];
+  if (error) {
+    const prefix = text.slice(0, error.pos[0]);
+    const line = prefix.split("\n").length;
+    const column = prefix.length - prefix.lastIndexOf("\n");
+    const reason =
+      error.code === "DUPLICATE_KEY"
+        ? "duplicate mapping keys are not supported"
+        : "the file is not valid YAML";
+    throw new SnippetsYamlError(`${reason} (line ${line}, column ${column})`);
+  }
+  if (document.warnings.length)
+    throw new SnippetsYamlError("unsupported YAML tag or directive");
+  return document.toJS({ maxAliasCount: 0 }) as unknown;
 }
 
 export function terminalSnippetsDiagnostic(
@@ -169,6 +254,28 @@ function validateTerminalSnippets(
     );
   }
   return Object.freeze({ snippets: Object.freeze(snippets) });
+}
+
+// Read at most one byte beyond the limit, including if the file grows while read.
+async function readBoundedFile(filename: string): Promise<Uint8Array> {
+  const file = await open(filename, "r");
+  try {
+    const bytes = Buffer.alloc(MAX_FILE_BYTES + 1);
+    let length = 0;
+    while (length < bytes.length) {
+      const result = await file.read(
+        bytes,
+        length,
+        bytes.length - length,
+        null,
+      );
+      if (result.bytesRead === 0) break;
+      length += result.bytesRead;
+    }
+    return bytes.subarray(0, length);
+  } finally {
+    await file.close();
+  }
 }
 
 function isNotFound(cause: unknown): boolean {

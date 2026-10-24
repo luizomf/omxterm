@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
+import { createAboutBridge } from "./about-bridge";
 import type { TerminalBridge } from "../shared/terminal-bridge";
 import {
   isWindowChromeCommand,
@@ -348,5 +349,8 @@ const terminal: TerminalBridge = {
 
 contextBridge.exposeInMainWorld(
   "omxterm",
-  Object.freeze({ terminal: Object.freeze(terminal) }),
+  Object.freeze({
+    terminal: Object.freeze(terminal),
+    about: Object.freeze(createAboutBridge(ipcRenderer)),
+  }),
 );

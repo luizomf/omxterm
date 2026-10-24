@@ -2,7 +2,7 @@
 
 OMXTerm is a fast, minimal, open-source desktop terminal you can make your own.
 Open a few tabs, customize your theme and shortcuts, and get to work. Available
-for **Apple Silicon macOS, Linux ARM64, and Windows ARM64**.
+for **Apple Silicon macOS, Linux ARM64, and Windows ARM64 or x64**.
 
 ---
 
@@ -71,17 +71,19 @@ agents.
 ## Platforms and downloads
 
 **Latest release:
-[0.20.2 — downloads and release notes](https://github.com/luizomf/omxterm/releases/tag/v0.20.2)**
+[0.21.0 — downloads and release notes](https://github.com/luizomf/omxterm/releases/tag/v0.21.0)**
 
-Prebuilt packages are currently **ARM64 only** (Apple Silicon on macOS,
-`aarch64` on Linux, and ARM64 on Windows 11).
+Prebuilt packages target **Apple Silicon macOS, Linux ARM64, and Windows 11
+ARM64 or x64**. Windows x64 validation uses emulation on Windows ARM64; native
+Intel/AMD qualification remains pending. See the release notes for actual coverage.
 
 | Platform                                 | Download                                                                                               | Checksum                                                                                                     |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Apple Silicon macOS                      | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.20.2/OMXTerm-0.20.2-arm64.dmg)           | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.2/OMXTerm-0.20.2-arm64.dmg.sha256)      |
-| Linux ARM64                              | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.20.2/OMXTerm-0.20.2-arm64.AppImage) | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.2/OMXTerm-0.20.2-arm64.AppImage.sha256) |
-| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/luizomf/omxterm/releases/download/v0.20.2/linux_install.sh)      | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.2/linux_install.sh.sha256)              |
-| Windows ARM64                            | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.20.2/OMXTerm-0.20.2-arm64.exe)     | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.20.2/OMXTerm-0.20.2-arm64.exe.sha256)      |
+| Apple Silicon macOS                      | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.dmg)           | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.dmg.sha256)      |
+| Linux ARM64                              | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.AppImage) | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.AppImage.sha256) |
+| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/luizomf/omxterm/releases/download/v0.21.0/linux_install.sh)      | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.21.0/linux_install.sh.sha256)              |
+| Windows ARM64                            | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.exe)     | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-arm64.exe.sha256)      |
+| Windows x64                              | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x64.exe)       | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.21.0/OMXTerm-0.21.0-x64.exe.sha256)        |
 
 Linux requires **glibc 2.42+** and X11/XWayland (for example Fedora 43+, Ubuntu
 25.10+, or Arch). First-launch notes for macOS Gatekeeper and Windows
@@ -125,7 +127,7 @@ menu bar.
 ### Make it yours
 
 On first launch, OMXTerm creates starter configuration files (`config.json`,
-`snippets.json`, and `themes/omtheme.json`) in `~/.config/omxterm`. You can edit
+`snippets.yaml`, and `themes/omtheme.json`) in `~/.config/omxterm`. You can edit
 them directly,
 [tweak a single setting](docs/configuration.md#add-one-display-change), or use
 [OMXTerm Studio](docs/configuration.md#edit-visually-with-omxterm-studio) to
@@ -158,7 +160,8 @@ welcome!
   [CONTRIBUTING.md](CONTRIBUTING.md) and the
   [documentation index](docs/README.md), including open efforts to add
   [Linux x64](https://github.com/luizomf/omxterm/issues/223) packages.
-  Windows x64 builds from source; prebuilt installers await native release qualification.
+  Windows x64 testing and feedback are welcome in
+  [#224](https://github.com/luizomf/omxterm/issues/224).
 
 ## License
 

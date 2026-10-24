@@ -15,7 +15,7 @@ export interface SnippetsSidebar {
   dispose(): void;
 }
 
-// Per-window sidebar. snippets.json is reread on every open — plain on-demand
+// Per-window sidebar. snippets.yaml is reread on every open — plain on-demand
 // read, no file watching — so edits show up by closing and reopening it.
 export function createSnippetsSidebar(
   root: HTMLElement,
@@ -76,7 +76,7 @@ export function createSnippetsSidebar(
     empty.hidden = error.hidden === false || visible.length > 0;
     empty.textContent =
       snippets.length === 0
-        ? "No snippets. Create snippets.json next to config.json."
+        ? "No snippets. Create snippets.yaml next to config.json."
         : "No snippets match the search.";
   };
 

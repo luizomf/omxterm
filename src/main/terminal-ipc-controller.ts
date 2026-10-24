@@ -286,6 +286,10 @@ export function registerTerminalIpcRouter(
   ipcMain.on(terminalIpc.clipboardContextMenu, showClipboardContextMenu);
 
   return {
+    isTrustedSender: (event) =>
+      !disposed &&
+      !event.sender.isDestroyed() &&
+      controllerFor(event) !== undefined,
     registerController(options) {
       if (disposed) throw new Error("Terminal IPC router is disposed");
       if (controllers.has(options.webContents))

@@ -81,6 +81,7 @@ async function setup(
     find: vi.fn(),
   };
   let openImage!: () => void;
+  let openAbout!: () => void;
   let toggleTabBar!: () => void;
   let find!: () => void;
   let toggleTitleBar = () => {};
@@ -105,6 +106,14 @@ async function setup(
         return surface;
       },
       page: window,
+      about: {
+        info: async () => ({ name: "OMXTerm", version: "1", copyright: "MIT" }),
+        openLink: async () => {},
+        onOpen(listener) {
+          openAbout = listener;
+          return () => {};
+        },
+      },
       ...(withChrome
         ? {
             chrome: {
@@ -173,6 +182,7 @@ async function setup(
     tabCommand,
     surfaceOptions,
     openImage,
+    openAbout,
     toggleTabBar,
     find: () => find(),
     toggleTitleBar: () => toggleTitleBar(),
@@ -183,6 +193,35 @@ async function setup(
 }
 
 describe("local image preview through the Terminal Window host", () => {
+  it("does not stack About on an asynchronous image picker or image on About", async () => {
+    let finish!: (image: LocalImageData | null) => void;
+    const load = vi.fn(
+      () =>
+        new Promise<LocalImageData | null>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const page = await setup(load, true);
+    page.openImage();
+    page.openAbout();
+    expect(document.querySelector(".about-dialog")).toBeNull();
+    finish(null);
+    await vi.waitFor(() => expect(page.surface.focus).toHaveBeenCalled());
+    page.surface.focus.mockClear();
+    page.openAbout();
+    page.openImage();
+    page.toggleTitleBar();
+    page.toggleTabBar();
+    page.clipboard("paste");
+    page.zoom("in");
+    fileDrop();
+    expect(load).toHaveBeenCalledOnce();
+    expect(page.surface.focus).not.toHaveBeenCalled();
+    expect(page.surface.paste).not.toHaveBeenCalled();
+    expect(page.surface.zoom).not.toHaveBeenCalled();
+    expect(page.surface.inject).not.toHaveBeenCalled();
+    page.host.dispose();
+  });
   it.each(["menu", "destination"])(
     "disables hover throughout %s preview activity",
     async (route) => {

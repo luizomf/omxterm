@@ -14,10 +14,17 @@ Windows x64 is a Supported Platform alongside Windows ARM64. One
 with the builder `${arch}` macro, so each package contains only its own
 architecture. `package-built:win:x64` builds `OMXTerm-<version>-x64.exe`.
 
-Packages are built and verified natively on a host of the target architecture.
+Native builds and verification on the target architecture remain the default.
+While native x64 hardware is unavailable, the maintainer may explicitly authorize
+an x64 release built and tested through Windows x64 emulation on an ARM64 host.
+That release must record its source, host and process architectures, actual
+verification and remaining gaps. Emulated evidence must never be called native
+Intel/AMD qualification. This exception does not relax installer consent,
+disposable-VM, ownership or cleanup requirements.
+
 `check:win` and `package:verify` select the unpacked directory
 (`win-unpacked` for x64), installer name, node-pty prebuild and PE machine type
-(0x8664 for x64, 0xAA64 for ARM64) from the host and reject mismatches.
+(0x8664 for x64, 0xAA64 for ARM64) from the Node process architecture and reject mismatches.
 
 The pinned installer footprint digest of `electron-builder.yml` is updated;
 NSIS identity, registry paths, shortcuts and uninstall behavior are unchanged.
@@ -26,5 +33,6 @@ Exact installer verification still runs only in authorized disposable VMs
 
 ## Consequences
 
-Releases include an x64 installer and checksum, built by the maintainer on x64
-Windows. Linux x64 and Intel macOS remain unsupported.
+Releases can include an x64 installer and checksum with recorded verification
+coverage. Native x64 qualification remains a separate obligation while the
+emulation exception is used. Linux x64 and Intel macOS remain unsupported.
