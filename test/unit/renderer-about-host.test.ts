@@ -16,6 +16,7 @@ it("keeps About focused across startup and menu actions while allowing close and
   let clipboard!: (action: "copy" | "paste" | "select-all") => void;
   let tabCommand!: (command: TerminalTabCommand) => void;
   let imageOpen!: () => void;
+  let find!: () => void;
   let finishMount!: (surface: TerminalSurface) => void;
   const surface = {
     dispose: vi.fn(),
@@ -27,6 +28,7 @@ it("keeps About focused across startup and menu actions while allowing close and
     copy: vi.fn(async () => {}),
     paste: vi.fn(async () => {}),
     selectAll: vi.fn(),
+    find: vi.fn(),
   };
   const adapters = vi.fn(() => ({
     sessionId: () => "s1",
@@ -65,6 +67,10 @@ it("keeps About focused across startup and menu actions while allowing close and
         tabCommand = listener;
         return () => {};
       },
+      subscribeToFind: (listener) => {
+        find = listener;
+        return () => {};
+      },
       loadLocalImage,
       subscribeToLocalImageOpen: (listener) => {
         imageOpen = listener;
@@ -79,14 +85,18 @@ it("keeps About focused across startup and menu actions while allowing close and
     expect(surface.focus).not.toHaveBeenCalled();
     window.dispatchEvent(new Event("focus"));
     clipboard("paste");
+    find();
     tabCommand({ action: "new" });
     imageOpen();
     expect(surface.focus).not.toHaveBeenCalled();
     expect(surface.paste).not.toHaveBeenCalled();
+    expect(surface.find).not.toHaveBeenCalled();
     expect(adapters).toHaveBeenCalledOnce();
     expect(loadLocalImage).not.toHaveBeenCalled();
     document.querySelector<HTMLButtonElement>(".about-close")!.click();
     expect(surface.focus).toHaveBeenCalledOnce();
+    find();
+    expect(surface.find).toHaveBeenCalledOnce();
     opened();
     tabCommand({ action: "close" });
     expect(surface.dispose).toHaveBeenCalledOnce();

@@ -116,13 +116,10 @@ export function mountTerminalWindowPage(
   const page = options.page ?? window;
   const mount = options.mount ?? mountTerminalSurface;
   let disposed = false;
-  let removeZoomListener: (() => void) | undefined;
   let removeConfigurationUpdateListener: (() => void) | undefined;
-  let removeClipboardActionListener: (() => void) | undefined;
   let removeTabCommandListener: (() => void) | undefined;
   let removeTabTitleListener: (() => void) | undefined;
-  let removeTabBarToggleListener: (() => void) | undefined;
-  let removeFindListener: (() => void) | undefined;
+  let removeGuardedActionListeners: (() => void) | undefined;
   let snippetsSidebar: SnippetsSidebar | undefined;
   let removeSnippetsToggleListener: (() => void) | undefined;
   let removeLocalImageOpenListener: (() => void) | undefined;
@@ -272,13 +269,10 @@ export function mountTerminalWindowPage(
     page.removeEventListener("pagehide", onPageHide);
     page.removeEventListener("focus", onPageFocus);
     removeFileDrops();
-    removeZoomListener?.();
+    removeGuardedActionListeners?.();
     removeConfigurationUpdateListener?.();
-    removeClipboardActionListener?.();
     removeTabCommandListener?.();
     removeTabTitleListener?.();
-    removeTabBarToggleListener?.();
-    removeFindListener?.();
     removeSnippetsToggleListener?.();
     removeLocalImageOpenListener?.();
     about?.dispose();
@@ -335,13 +329,10 @@ export function mountTerminalWindowPage(
 
   const ready = tabs.ready.then(() => {
     if (disposed) return;
-    removeZoomListener = options.subscribeToFontZoom?.((command) => {
-      if (!previewActive()) tabs.zoom(command);
-    });
-    removeClipboardActionListener = options.subscribeToClipboardActions?.(
-      (action) => {
-        if (!previewActive()) tabs.clipboardAction(action);
-      },
+    removeGuardedActionListeners = subscribeToGuardedActions(
+      options,
+      tabs,
+      previewActive,
     );
     removeTabCommandListener = options.subscribeToTabCommands?.((command) => {
       if (
@@ -350,12 +341,6 @@ export function mountTerminalWindowPage(
       )
         return;
       tabs.handleCommand(command);
-    });
-    removeTabBarToggleListener = options.subscribeToTabBarToggle?.(() => {
-      if (!previewActive()) tabs.toggleTabBar();
-    });
-    removeFindListener = options.subscribeToFind?.(() => {
-      if (!previewActive()) tabs.find();
     });
     if (options.snippets) {
       const sidebar = createSnippetsSidebar(options.snippets.element, {
@@ -374,6 +359,31 @@ export function mountTerminalWindowPage(
   });
 
   return { ready, dispose };
+}
+
+// Terminal-directed actions are ignored while a preview or About owns input.
+function subscribeToGuardedActions(
+  options: TerminalWindowPageOptions,
+  tabs: TerminalTabs,
+  blocked: () => boolean,
+): () => void {
+  const removals = [
+    options.subscribeToFontZoom?.((command) => {
+      if (!blocked()) tabs.zoom(command);
+    }),
+    options.subscribeToClipboardActions?.((action) => {
+      if (!blocked()) tabs.clipboardAction(action);
+    }),
+    options.subscribeToTabBarToggle?.(() => {
+      if (!blocked()) tabs.toggleTabBar();
+    }),
+    options.subscribeToFind?.(() => {
+      if (!blocked()) tabs.find();
+    }),
+  ];
+  return () => {
+    for (const remove of removals) remove?.();
+  };
 }
 
 function installFileDrops(

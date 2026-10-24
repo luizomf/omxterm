@@ -326,9 +326,7 @@ export function createTerminalTabs(
       void selectedTab()?.surface?.inject(text);
     },
     injectSnippet(body, injectOptions) {
-      void selectedTab()?.surface?.inject(body, {
-        submit: injectOptions.submit,
-      });
+      void selectedTab()?.surface?.inject(body, injectOptions);
     },
     toggleTabBar() {
       if (disposed) return;
