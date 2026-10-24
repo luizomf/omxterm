@@ -20,14 +20,12 @@ await Promise.all([
     bundle: true,
     format: "esm",
     platform: "node",
-    // Bundled CommonJS dependencies (yaml) still require Node built-ins.
-    banner: {
-      js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);',
-    },
-    // Keep only native/host modules external. The main process imports
+    // Keep native/host modules and yaml's CommonJS runtime external. YAML is
+    // packaged as a direct dependency so Node can resolve its built-in requires.
+    // The main process imports
     // text-shaper directly, so bundling it prevents packaged startup from
     // resolving a development checkout's ancestor node_modules by accident.
-    external: ["electron", "node-pty"],
+    external: ["electron", "node-pty", "yaml"],
     outfile: "dist/main/index.js",
     sourcemap: true,
   }),
