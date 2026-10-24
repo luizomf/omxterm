@@ -124,10 +124,16 @@ export async function exerciseAboutDialog(
     ["#101010", "#ffffff"],
   ]) {
     await contents.executeJavaScript(
-      `document.documentElement.style.setProperty('--terminal-background', '${background}'); document.documentElement.style.setProperty('--terminal-foreground', '${foreground}')`,
+      `document.documentElement.style.setProperty('--terminal-background', '${background}'); document.body.style.setProperty('--terminal-background', '${background}'); document.documentElement.style.setProperty('--terminal-foreground', '${foreground}')`,
     );
     await waitFor(
       "(() => { const d = document.querySelector('.about-dialog'); const r = d.getBoundingClientRect(); return r.width <= innerWidth && r.height <= innerHeight && r.top >= 0; })()",
+    );
+    assert.equal(
+      await contents.executeJavaScript(
+        "getComputedStyle(document.querySelector('.about-dialog')).backgroundColor",
+      ),
+      background === "#ffffff" ? "rgb(255, 255, 255)" : "rgb(16, 16, 16)",
     );
     await contents.executeJavaScript(
       "document.querySelector('.about-close').focus()",
