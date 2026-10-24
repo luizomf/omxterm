@@ -119,6 +119,17 @@ While iterating on a specific subsystem, you can run targeted test files before 
 | Unix native resize failure                     | `npx vitest run test/integration/terminal-resize-race.test.ts test/unit/terminal-resize-failure.test.ts`                                                                                      |
 | Linux foreground Busy decision                 | `npx vitest run test/unit/linux-foreground.test.ts test/unit/postinstall.test.ts test/integration/linux-foreground.test.ts`                                                                   |
 
+The `window-chrome` suite includes an independent `about-only` scenario so an
+unrelated native geometry failure cannot skip About coverage. Run it alone with
+`npm test -- test/integration/window-chrome.test.ts -t about-only`. It exercises
+the real menu callback, preload, dialog and Terminal Surface, using synthetic
+keyboard input. For an explicitly scheduled browser handoff check, set
+`OMXTERM_TEST_ABOUT_BROWSER=1`: it opens the fixed project page in the default
+browser, observes focus leaving OMXTerm, then returns focus to the dialog.
+`OMXTERM_ABOUT_EVIDENCE_DIR` optionally saves fixture-only normal/small light/dark
+PNG captures. These checks still require an idle unlocked desktop; they do not
+claim physical keyboard navigation or pixel parity across platforms.
+
 ### Opt-in native test suites
 
 Several specialized integration suites are skipped by default and enabled via environment variables:

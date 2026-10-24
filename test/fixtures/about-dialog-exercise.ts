@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { app, ipcMain, Menu, type BrowserWindow } from "electron";
+import { app, ipcMain, Menu, shell, type BrowserWindow } from "electron";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { startAbout } from "../../src/main/about-wiring";
 import type { TerminalIpcRouter } from "../../src/main/terminal-ipc-types";
 
@@ -15,6 +17,8 @@ export function createAboutExercise(
     selectedContents: () => getWindow().webContents,
     openExternal: async (url) => {
       openedLinks.push(url);
+      if (process.env.OMXTERM_TEST_ABOUT_BROWSER === "1")
+        await shell.openExternal(url);
     },
   });
   return {
@@ -76,20 +80,41 @@ export async function exerciseAboutDialog(
   await waitFor(
     "document.querySelector('.about-dialog').contains(document.activeElement)",
   );
+  const browser = process.env.OMXTERM_TEST_ABOUT_BROWSER === "1";
   await contents.executeJavaScript(
-    "[...document.querySelectorAll('.about-links button')].find(b => b.textContent === 'Contributors').click()",
+    `[...document.querySelectorAll('.about-links button')].find(b => b.textContent === '${browser ? "Project" : "Contributors"}').click()`,
   );
   const deadline = Date.now() + 5_000;
   while (openedLinks.length === 0 && Date.now() < deadline)
     await new Promise((resolve) => setTimeout(resolve, 25));
   assert.equal(
     openedLinks.at(-1),
-    "https://github.com/luizomf/omxterm/blob/main/CONTRIBUTORS.md",
+    browser
+      ? "https://github.com/luizomf/omxterm"
+      : "https://github.com/luizomf/omxterm/blob/main/CONTRIBUTORS.md",
   );
-  await contents.executeJavaScript("window.dispatchEvent(new Event('focus'))");
+  if (browser) {
+    await waitFor("!document.hasFocus()");
+    window.focus();
+    await waitFor("document.hasFocus()");
+    process.stdout.write(
+      "__OMXTERM_ABOUT_BROWSER__external-handoff-and-return\n",
+    );
+  } else
+    await contents.executeJavaScript(
+      "window.dispatchEvent(new Event('focus'))",
+    );
   await waitFor(
     "document.querySelector('.about-dialog').contains(document.activeElement)",
   );
+  const evidence = process.env.OMXTERM_ABOUT_EVIDENCE_DIR;
+  if (evidence) {
+    await mkdir(evidence, { recursive: true });
+    await writeFile(
+      path.join(evidence, "about-normal.png"),
+      (await contents.capturePage()).toPNG(),
+    );
+  }
   const original = window.getSize();
   const minimum = window.getMinimumSize();
   window.setMinimumSize(320, 200);
@@ -110,6 +135,22 @@ export async function exerciseAboutDialog(
     await waitFor(
       "(() => { const r = document.activeElement.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; })()",
     );
+    if (evidence) {
+      await mkdir(evidence, { recursive: true });
+      await contents.executeJavaScript(
+        "new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))",
+      );
+      const image = await contents.capturePage();
+      await writeFile(
+        path.join(
+          evidence,
+          background === "#ffffff"
+            ? "about-light-small.png"
+            : "about-dark-small.png",
+        ),
+        image.toPNG(),
+      );
+    }
   }
   window.setMinimumSize(minimum[0]!, minimum[1]!);
   window.setSize(original[0]!, original[1]!);
