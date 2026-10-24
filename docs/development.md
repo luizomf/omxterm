@@ -99,6 +99,12 @@ Test runs write a summary to `.scratch/vitest-results.json`.
 - On Linux, run the full suite from an external system terminal, not inside OMXTerm itself. The About integration fixtures can hit a relaunch timeout when nested inside OMXTerm on Fedora and Ubuntu ([#609](https://github.com/luizomf/omxterm/issues/609)).
 - Known runtime limitations that tests account for are listed in the [Restty guide](restty-development.md#current-runtime-limitations).
 
+#### Native dialog boundaries
+
+Test OMXTerm's native-dialog boundary: payload validation, API arguments, requesting-owner lifetime, cancellation and error results, and file contents. For terminal export, combine focused automated checks with a representative manual native-chooser smoke using synthetic text: save a new file, cancel, accept overwrite, and refuse overwrite; verify saved UTF-8 bytes and that cancelled/refused actions leave existing files unchanged.
+
+Exhaustive automation of OS-owned chooser widgets on every platform is not a routine delivery prerequisite. Expand native coverage for a demonstrated platform-specific product risk, and record what was actually exercised. Missing widget automation is an evidence limitation, not a product failure; actual crashes, failed assertions, privacy/ownership defects, and separately required packaging or release checks remain blockers.
+
 ### Focused checks
 
 While iterating on a specific subsystem, you can run targeted test files before running the full suite:
