@@ -35,6 +35,7 @@ export interface TerminalTabsOptions {
   readonly surfaceOptions: TerminalSurfaceOptions;
   readonly showTabBar?: boolean;
   readonly canFocus?: () => boolean;
+  readonly canAutoFocus?: () => boolean;
   readonly notifyEmpty?: (reason?: "rendering-failure") => void;
   readonly notifySelection?: (sessionId: TerminalSessionId) => void;
   readonly notifyTitle?: (
@@ -133,7 +134,7 @@ export function createTerminalTabs(
     );
   };
 
-  const select = (index: number) => {
+  const select = (index: number, passive = false) => {
     const tab = tabs[index];
     if (!tab) return;
     selectedIndex = index;
@@ -144,7 +145,7 @@ export function createTerminalTabs(
     // starting has no id yet and is reported once its session starts).
     const sessionId = tab.adapter.sessionId();
     if (sessionId !== undefined) options.notifySelection?.(sessionId);
-    if (options.canFocus?.() !== false) tab.surface?.focus();
+    focusTab(tab, options, passive);
   };
 
   const removeTab = (tab: TerminalTab, notify = true) => {
@@ -160,7 +161,7 @@ export function createTerminalTabs(
       return;
     }
     if (index < selectedIndex) selectedIndex -= 1;
-    select(Math.min(selectedIndex, tabs.length - 1));
+    select(Math.min(selectedIndex, tabs.length - 1), true);
   };
 
   const onSessionEnd = (
@@ -246,8 +247,7 @@ export function createTerminalTabs(
     if (selectedTab() === tab) {
       const sessionId = tab.adapter.sessionId();
       if (sessionId !== undefined) options.notifySelection?.(sessionId);
-      if (document.hasFocus() && options.canFocus?.() !== false)
-        surface.focus();
+      if (document.hasFocus()) focusTab(tab, options, true);
     }
   };
 
@@ -332,10 +332,10 @@ export function createTerminalTabs(
       if (disposed) return;
       tabBarEnabled = !tabBarEnabled;
       renderStrip();
-      if (options.canFocus?.() !== false) selectedTab()?.surface?.focus();
+      focusTab(selectedTab(), options, true);
     },
     focusSelected() {
-      if (options.canFocus?.() !== false) selectedTab()?.surface?.focus();
+      focusTab(selectedTab(), options);
     },
     dispose() {
       if (disposed) return;
@@ -350,6 +350,18 @@ export function createTerminalTabs(
       tabs.length = 0;
     },
   };
+}
+
+function focusTab(
+  tab: TerminalTab | undefined,
+  options: TerminalTabsOptions,
+  passive = false,
+): void {
+  if (
+    options.canFocus?.() !== false &&
+    (!passive || options.canAutoFocus?.() !== false)
+  )
+    tab?.surface?.focus();
 }
 
 function appendTab(

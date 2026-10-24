@@ -24,10 +24,8 @@ import {
   TERMINAL_TAB_DRAG_DATA_TYPE,
   type TerminalTabs,
 } from "./terminal-tabs";
-import {
-  createSnippetsSidebar,
-  type SnippetsSidebar,
-} from "./snippets-sidebar";
+import { createSnippetsView } from "./snippets-sidebar";
+import { createAuxiliaryPanel, type AuxiliaryPanel } from "./auxiliary-panel";
 import { renderUserFileErrorBanner } from "./user-file-error-banner";
 import {
   createLocalImagePreview,
@@ -120,7 +118,7 @@ export function mountTerminalWindowPage(
   let removeTabCommandListener: (() => void) | undefined;
   let removeTabTitleListener: (() => void) | undefined;
   let removeGuardedActionListeners: (() => void) | undefined;
-  let snippetsSidebar: SnippetsSidebar | undefined;
+  let auxiliaryPanel: AuxiliaryPanel | undefined;
   let removeSnippetsToggleListener: (() => void) | undefined;
   let removeLocalImageOpenListener: (() => void) | undefined;
   let localImagePreview: LocalImagePreview | undefined;
@@ -137,26 +135,13 @@ export function mountTerminalWindowPage(
     ? surfaceConfiguration(options.configuration)
     : undefined;
 
-  const applyPageTheme = (theme: TerminalTheme, transparency: number) => {
-    const { background, foreground } = theme.colors;
-    page.document.documentElement.style.setProperty(
-      "--terminal-background-opacity",
-      String(1 - transparency),
+  const applyPageTheme = (theme: TerminalTheme, transparency: number) =>
+    applyWindowTheme(
+      page.document,
+      elements.tabsContainer,
+      theme,
+      transparency,
     );
-    page.document.documentElement.style.setProperty(
-      "--terminal-background",
-      background,
-    );
-    page.document.documentElement.style.setProperty(
-      "--terminal-foreground",
-      foreground,
-    );
-    page.document.body.style.setProperty("--terminal-background", background);
-    elements.tabsContainer.style.setProperty(
-      "--terminal-background",
-      background,
-    );
-  };
 
   if (options.configuration) {
     page.document.documentElement.style.setProperty(
@@ -203,6 +188,7 @@ export function mountTerminalWindowPage(
     {
       createAdapter: () => options.createAdapter(fontConfigurationId),
       canFocus: () => !disposed && !about?.isActive(),
+      canAutoFocus: () => !previewActive() && !auxiliaryPanel?.ownsFocus(),
       mount,
       surfaceOptions,
       showTabBar: options.configuration?.showTabBar ?? true,
@@ -222,7 +208,8 @@ export function mountTerminalWindowPage(
 
   const chrome = options.chrome
     ? mountWindowChrome(page.document, options.chrome, () => {
-        if (!previewActive()) tabs.focusSelected();
+        if (!previewActive() && !auxiliaryPanel?.ownsFocus())
+          tabs.focusSelected();
       })
     : undefined;
 
@@ -232,6 +219,7 @@ export function mountTerminalWindowPage(
       focusTerminal: () => tabs.focusSelected(),
       onActivityChange: () => {
         chrome?.setPreviewActive(previewActive());
+        auxiliaryPanel?.setBlocked(previewActive());
         for (const listener of hoverAvailabilityListeners) listener();
       },
     });
@@ -250,12 +238,13 @@ export function mountTerminalWindowPage(
         chrome?.setPreviewActive(
           active || (localImagePreview?.isActive() ?? false),
         );
+        auxiliaryPanel?.setBlocked(previewActive());
         for (const listener of hoverAvailabilityListeners) listener();
       },
     },
   );
   const onPageFocus = () => {
-    if (!previewActive()) tabs.focusSelected();
+    if (!previewActive() && !auxiliaryPanel?.ownsFocus()) tabs.focusSelected();
   };
   const removeFileDrops = installFileDrops(
     page.document,
@@ -280,8 +269,8 @@ export function mountTerminalWindowPage(
     chrome?.dispose();
     localImagePreview?.dispose();
     localImagePreview = undefined;
-    snippetsSidebar?.dispose();
-    snippetsSidebar = undefined;
+    auxiliaryPanel?.dispose();
+    auxiliaryPanel = undefined;
     tabs.dispose();
     fontGenerations?.dispose();
   };
@@ -333,6 +322,7 @@ export function mountTerminalWindowPage(
       options,
       tabs,
       previewActive,
+      (action) => auxiliaryPanel?.clipboardAction(action) ?? false,
     );
     removeTabCommandListener = options.subscribeToTabCommands?.((command) => {
       if (
@@ -343,18 +333,33 @@ export function mountTerminalWindowPage(
       tabs.handleCommand(command);
     });
     if (options.snippets) {
-      const sidebar = createSnippetsSidebar(options.snippets.element, {
-        loadSnippets: options.snippets.load,
-        inject: (snippet) => {
-          if (!previewActive())
-            tabs.injectSnippet(snippet.body, { submit: snippet.execute });
-        },
-        focusTerminal: onPageFocus,
+      const snippets = options.snippets;
+      const panel = createAuxiliaryPanel(snippets.element, {
+        content: snippets.element.parentElement!,
+        focusTerminal: tabs.focusSelected,
+        ...(options.clipboard ? { clipboard: options.clipboard } : {}),
+        views: [
+          {
+            id: "snippets",
+            label: "Snippets",
+            create: (isInteractive) =>
+              createSnippetsView(page.document, {
+                loadSnippets: snippets.load,
+                isInteractive,
+                inject: (snippet) => {
+                  if (previewActive()) return;
+                  tabs.injectSnippet(snippet.body, { submit: snippet.execute });
+                  tabs.focusSelected();
+                },
+              }),
+          },
+        ],
       });
-      snippetsSidebar = sidebar;
-      removeSnippetsToggleListener = options.snippets.subscribeToToggle(() => {
-        if (!previewActive()) void sidebar.toggle();
-      });
+      auxiliaryPanel = panel;
+      panel.setBlocked(previewActive());
+      removeSnippetsToggleListener = snippets.subscribeToToggle(() =>
+        panel.toggle("snippets"),
+      );
     }
   });
 
@@ -366,13 +371,14 @@ function subscribeToGuardedActions(
   options: TerminalWindowPageOptions,
   tabs: TerminalTabs,
   blocked: () => boolean,
+  panelClipboard: (action: "copy" | "paste" | "select-all") => boolean,
 ): () => void {
   const removals = [
     options.subscribeToFontZoom?.((command) => {
       if (!blocked()) tabs.zoom(command);
     }),
     options.subscribeToClipboardActions?.((action) => {
-      if (!blocked()) tabs.clipboardAction(action);
+      if (!blocked() && !panelClipboard(action)) tabs.clipboardAction(action);
     }),
     options.subscribeToTabBarToggle?.(() => {
       if (!blocked()) tabs.toggleTabBar();
@@ -420,6 +426,29 @@ function installFileDrops(
     document.removeEventListener("dragover", onDragOver, true);
     document.removeEventListener("drop", onDrop, true);
   };
+}
+
+function applyWindowTheme(
+  document: Document,
+  tabs: HTMLElement,
+  theme: TerminalTheme,
+  transparency: number,
+): void {
+  const { background, foreground } = theme.colors;
+  document.documentElement.style.setProperty(
+    "--terminal-background-opacity",
+    String(1 - transparency),
+  );
+  document.documentElement.style.setProperty(
+    "--terminal-background",
+    background,
+  );
+  document.documentElement.style.setProperty(
+    "--terminal-foreground",
+    foreground,
+  );
+  document.body.style.setProperty("--terminal-background", background);
+  tabs.style.setProperty("--terminal-background", background);
 }
 
 function sameSurfaceConfiguration(

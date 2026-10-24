@@ -25,9 +25,11 @@ do not remove the upstream attribution.
 | JetBrainsMono Nerd Font Mono                           | SIL Open Font License 1.1       | `licenses/JetBrainsMono-OFL.txt`   |
 | Nerd Fonts patched glyph sets                          | MIT, OFL, CC BY 4.0, Apache 2.0 | `licenses/NerdFonts-glyphs.txt`    |
 
-About rendering and the fixed-link route selectively adapt Rafael Ruscher's
+About rendering, the fixed-link route, and the Auxiliary Panel's lazy-view,
+visible-dismiss and divider interaction ideas selectively adapt Rafael Ruscher's
 MIT-licensed contribution in PR #622 at
-`b3c3a4ad6c1f2224bded65873ba0b09a07ec5d38`. That source identifies the
+`b3c3a4ad6c1f2224bded65873ba0b09a07ec5d38` (`workspace-sidebar.ts` and
+`pane-view.ts` under `src/renderer/` for the panel). The About source identifies the
 presentation as AshyTerm-style. The supplied Community Big MIT notice is retained
 at `assets/licenses/ashyterm-MIT.txt` and packaged as `licenses/ashyterm.txt`.
 This attribution does not imply that unrelated AshyTerm data or the rest of the

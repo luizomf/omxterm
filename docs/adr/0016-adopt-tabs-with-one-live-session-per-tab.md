@@ -8,7 +8,9 @@ tmux remains the user's persistence and reconnection tool.
 ## Window presentation
 
 The renderer-owned tab strip occupies a full-width row above the Terminal
-Surface and Snippets Sidebar. It appears only with at least two tabs and an
+Surface and right-side Auxiliary Panel containing Snippets. The panel owns its
+own nonmodal lifecycle, focus and bounded resizing; layout changes retain every
+Surface/session and hidden-tab geometry. The tab strip appears only with at least two tabs and an
 enabled window-local tab-bar flag. Title/tab visibility initializes from
 `window.showTitleBar` and `window.showTabBar`, both true by default. Existing
 windows retain their choices after reload; new windows use the latest defaults.

@@ -98,11 +98,19 @@ Font Mono is the default, with bundled and OS fallback faces for coverage.
 layout input (`none`), or use `left`, `right` or `both` Option keys as terminal
 Alt.
 
-**Snippets Sidebar** — A per-window list loaded from the user's `snippets.yaml`
-(single bounded YAML 1.2 core document with version-1 snippet fields).
-Activating a snippet sends its body through Protected Paste to the selected tab;
-`execute` controls whether Enter is appended. Its fixed 280 px width is not
-included in native minimum-window sizing and can crowd out the visible grid.
+**Auxiliary Panel** — One window-owned, nonmodal right-side host below full-width
+chrome. It owns lazy exclusive view lifetimes, visible dismissal, focus and
+pointer/keyboard resizing. Preferred width starts at 280 px (220–560 px bounds,
+6 px separator, 180 px terminal allowance); narrow content clamps or deactivates
+it. Width/visibility are memory-only and independent between windows. It does not
+change native minimum-window bounds or guarantee terminal columns.
+
+**Snippets Sidebar** — The sole production Auxiliary Panel view, loaded from the
+user's `snippets.yaml` (single bounded YAML 1.2 core document with version-1
+snippet fields). Search/loading appears immediately on activation; each
+activation rereads the file, retaining query/scroll but invalidating old actions
+and late reads. Activating a current snippet sends its exact body through
+Protected Paste to the selected tab; `execute` controls whether Enter is appended.
 
 ## Terminal data and interaction
 

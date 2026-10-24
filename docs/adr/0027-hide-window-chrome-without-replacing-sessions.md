@@ -61,7 +61,10 @@ loading or displaying an image and retains focus.
 ## Ownership and consequences
 
 Layout changes refit the selected existing Surface and PTY; hidden Surfaces
-retain their last real geometry. Theme changes do not reset visibility. Small
+retain their last real geometry. The right-side Auxiliary Panel remains below
+full-width chrome; title/tab/fullscreen geometry changes retain its memory-only
+preferred width and focused controls without replacing terminal owners. Theme
+changes do not reset visibility or panel preference. Small
 explicit drag regions preserve selection and application mouse input; recreating
 windows or making the terminal a large invisible drag target would threaten
 those boundaries.

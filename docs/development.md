@@ -111,6 +111,7 @@ While iterating on a specific subsystem, you can run targeted test files before 
 | Integrated host and retained sessions          | `npx vitest run test/integration/restty-host-integration.test.ts`                                                                                                                             |
 | Scrollback readiness and input                 | `npx vitest run test/integration/restty-native-scroll-feedback.test.ts test/integration/restty-scrollback-rendering.test.ts`                                                                  |
 | Hover and local-image activation               | `npx vitest run test/unit/restty-hover-evidence.test.ts test/unit/restty-hover-readiness.test.ts test/integration/restty-hover-readiness.test.ts test/integration/local-image-native.test.ts` |
+| Snippets auxiliary host                        | `npx vitest run test/integration/auxiliary-panel.test.ts`                                                                                                                                     |
 | Native window controls                         | `npx vitest run test/integration/window-chrome.test.ts test/integration/restty-cursor-rendering.test.ts`                                                                                      |
 | About startup                                  | `npx vitest run test/integration/application-about.test.ts`                                                                                                                                   |
 | Native failure acknowledgement                 | `npx vitest run test/integration/failure-acknowledgement.test.ts`                                                                                                                             |
@@ -118,6 +119,14 @@ While iterating on a specific subsystem, you can run targeted test files before 
 | Literal argv                                   | `npx vitest run test/integration/literal-argv.test.ts test/unit/postinstall.test.ts`                                                                                                          |
 | Unix native resize failure                     | `npx vitest run test/integration/terminal-resize-race.test.ts test/unit/terminal-resize-failure.test.ts`                                                                                      |
 | Linux foreground Busy decision                 | `npx vitest run test/unit/linux-foreground.test.ts test/unit/postinstall.test.ts test/integration/linux-foreground.test.ts`                                                                   |
+
+The `auxiliary-panel` suite uses the production window host, real Surfaces/PTYs,
+native menu callbacks and Chromium synthetic input through the main keybind
+matcher (default and remapped). It covers bounded geometry, captured pointer and
+keyboard resize, retained hidden-tab output/grid, window independence, small
+height, light/dark reload, chrome/fullscreen and About/image transitions. It does
+not establish physical keyboard layouts, OS pointer hardware or cross-platform
+pixel parity. Like the suites below, run it only on an idle unlocked desktop.
 
 The `window-chrome` suite includes an independent `about-only` scenario so an
 unrelated native geometry failure cannot skip About coverage. Run it alone with

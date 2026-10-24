@@ -818,6 +818,9 @@ describe("renderer Terminal Window page host continued", () => {
     const snippetsElement = document.createElement("aside");
     snippetsElement.hidden = true;
     document.body.append(snippetsElement);
+    vi.spyOn(document.body, "getBoundingClientRect").mockReturnValue({
+      width: 1000,
+    } as DOMRect);
     let toggleListener: (() => void) | undefined;
     let configurationListener:
       ((configuration: TerminalRendererConfiguration) => void) | undefined;
