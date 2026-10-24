@@ -86,12 +86,13 @@ export type TerminalExportKind = "selection" | "content";
 export type TerminalContextMenuRequest =
   | { readonly target: "terminal"; readonly hasSelection: boolean }
   | { readonly target: "field" };
-export interface TerminalExportRequest {
-  readonly kind: TerminalExportKind;
-  readonly text: string;
-}
-// Above what the 10,000,000-byte core can retain for one screen; it bounds the
-// IPC boundary rather than limiting ordinary exports. Measured in UTF-8 bytes.
+// Text over the export limit is never truncated or sent: the request reports
+// only that the limit was exceeded, so main can tell the user nothing was saved.
+export type TerminalExportRequest =
+  | { readonly kind: TerminalExportKind; readonly text: string }
+  | { readonly kind: TerminalExportKind; readonly overLimit: true };
+// A finite IPC bound in UTF-8 bytes. The core's scrollback byte limit does not
+// imply extracted text fits: combining marks and wide graphemes can exceed it.
 export const MAX_TERMINAL_EXPORT_BYTES = 16 * 1024 * 1024;
 
 const encoder = new TextEncoder();
@@ -342,12 +343,24 @@ export function isTerminalContextMenuRequest(
 export function isTerminalExportRequest(
   value: unknown,
 ): value is TerminalExportRequest {
+  if (isStrictRecord(value, ["kind", "overLimit"]))
+    return isTerminalExportKind(value.kind) && value.overLimit === true;
   return (
     isStrictRecord(value, ["kind", "text"]) &&
     isTerminalExportKind(value.kind) &&
     typeof value.text === "string" &&
     utf8ByteLength(value.text) <= MAX_TERMINAL_EXPORT_BYTES
   );
+}
+
+// The request for text the user chose to export, within the IPC bound.
+export function terminalExportRequest(
+  kind: TerminalExportKind,
+  text: string,
+): TerminalExportRequest {
+  return utf8ByteLength(text) <= MAX_TERMINAL_EXPORT_BYTES
+    ? { kind, text }
+    : { kind, overLimit: true };
 }
 
 // UTF-8 length without encoding a copy; a lone surrogate counts as U+FFFD.

@@ -7,7 +7,7 @@ import type {
 
 export interface ResttyExportEvidenceSink {
   readonly contextMenuRequests: TerminalContextMenuRequest[];
-  readonly exportRequests: TerminalExportRequest[];
+  readonly exportRequests: Extract<TerminalExportRequest, { text: string }>[];
   readonly clipboardTexts: string[];
 }
 
@@ -22,6 +22,7 @@ export const resttyExportEvidence: ResttyExportEvidenceSink = {
 export async function recordExport(
   request: TerminalExportRequest,
 ): Promise<void> {
+  if (!("text" in request)) throw new Error("Unexpected over-limit export");
   resttyExportEvidence.exportRequests.push(request);
 }
 
@@ -103,14 +104,15 @@ export async function exerciseResttyTerminalExport(options: {
   await contextMenu();
   const copiedBefore = await copy();
   const selection = await requestExport("selection");
+  await contextMenu();
   await requestExport("content");
   const copiedAfter = await copy();
 
-  // The renderer reads the text when the request arrives, so a tab opened
-  // right after it cannot substitute its own content.
-  const switched = requestExport("content");
+  // The export reads the tab whose menu offered it, so a tab opened between
+  // the menu and the choice cannot substitute its own content.
+  await contextMenu();
   window.webContents.send(terminalIpc.tabCommand, { action: "new" });
-  const afterSwitch = await switched;
+  const afterSwitch = await requestExport("content");
 
   return {
     contextMenuSelection: evidence.contextMenuRequests.map((request) =>

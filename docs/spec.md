@@ -795,17 +795,25 @@ Copy, Paste and Select All for that field, without an export item. Selection
 export saves the selected text. Content export saves the selected tab's retained
 Scrollback Buffer and visible screen, or only the alternate screen while it is
 active, read through the prepared runtime without creating, changing or
-clearing a selection. The renderer reads the text when the request arrives,
-before any dialog, so switching tabs cannot substitute another tab's content.
-Main validates the request, a kind plus at most 16 MiB of UTF-8 text (above what
-the core retains for one screen), and owns a native save dialog that suggests
+clearing a selection. The choice is bound to the tab whose Surface opened the
+menu: the renderer reads that tab's text once, when the choice arrives and
+before any dialog, so a tab selected in between cannot substitute its content,
+and a choice whose tab has exited or closed does nothing. Export text is limited
+to 16 MiB of UTF-8. The core's scrollback byte limit does not keep extracted
+text below that bound, because combining marks and wide graphemes expand it.
+Text over the limit is never truncated or sent; main shows an error that nothing
+was saved and suggests exporting a smaller selection. Main validates the
+request, a kind plus bounded text or only the over-limit report, and owns a
+native save dialog that suggests
 `omxterm-selection-…` or `omxterm-terminal-…` with a local timestamp in the
 Documents folder and uses the platform's overwrite confirmation. Cancelling
 writes nothing. The file is UTF-8 with LF line breaks: the core trims each row's
 trailing padding, trailing blank rows are dropped, and the file ends with
 exactly one line break. On macOS and Linux a newly created file is readable
 only by its owner. Whitespace-only content shows a notice instead of a dialog,
-and a failed write shows an error with the operating-system reason. Export is
+a failed write shows an error with the operating-system reason, and a save
+dialog that cannot open shows a fixed error. Each outcome is reported once in
+the requesting window; a window that has closed gets no dialog. Export is
 never automatic or continuous, and neither the text nor the destination enters
 operational logs.
 

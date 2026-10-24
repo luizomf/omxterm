@@ -153,6 +153,12 @@ async function setup(
         return () => {};
       },
       droppedFilePathInsertion: () => "'fixture.png'",
+      clipboard: {
+        writeText: async () => {},
+        readText: async () => "",
+        confirmPaste: async () => true,
+        requestContextMenu: () => {},
+      },
       subscribeToClipboardActions: (listener) => {
         clipboard = listener;
         return () => {};
@@ -396,6 +402,10 @@ describe("local image preview through the Terminal Window host", () => {
         view.clipboard("copy");
         view.clipboard("select-all");
         view.find();
+        view.surfaceOptions.clipboard!.requestContextMenu({
+          target: "terminal",
+          hasSelection: true,
+        });
         view.exportRequest("selection");
         view.zoom("in");
         fileDrop();

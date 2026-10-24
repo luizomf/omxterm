@@ -4,10 +4,15 @@ import type { SaveDialogOptions } from "electron";
 const electron = vi.hoisted(() => ({
   popup: vi.fn(),
   template: undefined as unknown,
+  showSaveDialog: vi.fn(),
+  showMessageBox: vi.fn(),
 }));
 vi.mock("electron", () => ({
-  app: {},
-  dialog: {},
+  app: { getPath: () => "/synthetic/Documents" },
+  dialog: {
+    showSaveDialog: electron.showSaveDialog,
+    showMessageBox: electron.showMessageBox,
+  },
   Menu: {
     buildFromTemplate: (template: unknown) => {
       electron.template = template;
@@ -20,10 +25,12 @@ import {
   isTerminalContextMenuRequest,
   isTerminalExportRequest,
   MAX_TERMINAL_EXPORT_BYTES,
+  terminalExportRequest,
   utf8ByteLength,
 } from "../../src/shared/terminal-contract";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import {
+  electronTerminalExportHost,
   popupTerminalContextMenu,
   saveTerminalExport,
   suggestedTerminalExportName,
@@ -93,6 +100,24 @@ describe("export request contract", () => {
     ])
       expect(isTerminalContextMenuRequest(value)).toBe(false);
     expect(isTerminalContextMenuRequest(undefined)).toBe(false);
+  });
+
+  it("reports text over the bound instead of sending or truncating it", () => {
+    const limit = "a".repeat(MAX_TERMINAL_EXPORT_BYTES);
+    expect(terminalExportRequest("content", limit)).toEqual({
+      kind: "content",
+      text: limit,
+    });
+    const over = terminalExportRequest("selection", `${limit}é`);
+    expect(over).toEqual({ kind: "selection", overLimit: true });
+    expect(isTerminalExportRequest(over)).toBe(true);
+    for (const value of [
+      { kind: "content", overLimit: false },
+      { kind: "content", overLimit: "true" },
+      { kind: "all", overLimit: true },
+      { kind: "content", overLimit: true, text: "" },
+    ])
+      expect(isTerminalExportRequest(value)).toBe(false);
   });
 });
 
@@ -176,6 +201,99 @@ describe("saving an explicit export", () => {
         detail: "EACCES: permission denied",
       }),
     );
+  });
+});
+
+describe("export failures outside the write", () => {
+  it.each([
+    [
+      "selection",
+      "The selection is larger than the 16 MiB export limit. Nothing was saved.",
+      "Select less text and export it again.",
+    ],
+    [
+      "content",
+      "The terminal content is larger than the 16 MiB export limit. Nothing was saved.",
+      "Select part of the output and choose Export Selection.",
+    ],
+  ] as const)(
+    "explains %s over the limit without a dialog or write",
+    async (kind, message, detail) => {
+      const fake = host();
+      await expect(
+        saveTerminalExport({ kind, overLimit: true }, fake),
+      ).resolves.toBe("too-large");
+      expect(fake.showSaveDialog).not.toHaveBeenCalled();
+      expect(fake.writeFile).not.toHaveBeenCalled();
+      expect(fake.showMessageBox).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ type: "error", message, detail }),
+      );
+    },
+  );
+
+  it.each([
+    [
+      "a rejected save dialog",
+      {
+        showSaveDialog: vi.fn(async () => {
+          throw new Error("native dialog /private/path");
+        }),
+      },
+    ],
+    [
+      "an unavailable Documents path",
+      {
+        documentsPath: () => {
+          throw new Error("no documents /private/path");
+        },
+      },
+    ],
+  ])("reports %s once without its private detail", async (_case, failing) => {
+    const fake = host(failing);
+    await expect(
+      saveTerminalExport({ kind: "content", text: "text" }, fake),
+    ).resolves.toBe("failed");
+    expect(fake.writeFile).not.toHaveBeenCalled();
+    expect(fake.showMessageBox).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        type: "error",
+        title: "Export Failed",
+        message: "OMXTerm could not open the save dialog. Nothing was saved.",
+      }),
+    );
+    const [notice] = vi.mocked(fake.showMessageBox).mock
+      .calls[0] as unknown as [Record<string, unknown>];
+    expect(notice).not.toHaveProperty("detail");
+  });
+
+  it("settles once when its own notice cannot be shown", async () => {
+    const fake = host({
+      showSaveDialog: vi.fn(async () => {
+        throw new Error("dialog");
+      }),
+      showMessageBox: vi.fn(async () => {
+        throw new Error("window closed");
+      }),
+    });
+    await expect(
+      saveTerminalExport({ kind: "selection", text: "text" }, fake),
+    ).resolves.toBe("failed");
+    expect(fake.showMessageBox).toHaveBeenCalledOnce();
+  });
+
+  it("ends a closed window's export inertly, without native dialogs", async () => {
+    electron.showSaveDialog.mockClear();
+    electron.showMessageBox.mockClear();
+    const window = { isDestroyed: () => true } as Electron.BrowserWindow;
+    const closed = electronTerminalExportHost(window);
+    await expect(
+      saveTerminalExport({ kind: "content", text: "text" }, closed),
+    ).resolves.toBe("cancelled");
+    await expect(
+      saveTerminalExport({ kind: "content", overLimit: true }, closed),
+    ).resolves.toBe("too-large");
+    expect(electron.showSaveDialog).not.toHaveBeenCalled();
+    expect(electron.showMessageBox).not.toHaveBeenCalled();
   });
 });
 

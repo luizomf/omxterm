@@ -16,6 +16,7 @@ import type {
 } from "../terminal-surface/terminal-surface";
 import { DEFAULT_TERMINAL_FONT_SIZE } from "../shared/user-configuration";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
+import { createExportOwnership } from "./terminal-export-ownership";
 
 export const TERMINAL_TAB_DRAG_DATA_TYPE = "application/x-omxterm-tab";
 
@@ -57,6 +58,7 @@ export interface TerminalTabs {
   zoom(command: TerminalFontZoom): void;
   clipboardAction(action: TerminalClipboardAction): void;
   find(): void;
+  // Reads the tab whose terminal context menu offered the export, once.
   exportText(kind: TerminalExportKind): string | undefined;
   injectText(text: string): void;
   injectSnippet(body: string, options: { readonly submit: boolean }): void;
@@ -93,6 +95,7 @@ export function createTerminalTabs(
   let disposed = false;
   let pendingClose: TerminalTab | undefined;
   let closing = false;
+  const exportOwnership = createExportOwnership<TerminalTab>();
 
   const notifyEmpty = (reason?: "rendering-failure") => {
     if (disposed || closing || tabs.length !== 0) return;
@@ -198,7 +201,7 @@ export function createTerminalTabs(
     // itself stays tab-unaware. Events can only follow session output, so
     // the id is always known by the time they fire.
     const tabSurfaceOptions: TerminalSurfaceOptions = {
-      ...activeSurfaceOptions,
+      ...exportOwnership.surfaceOptions(tab, activeSurfaceOptions),
       abortSignal: tab.mountAbort.signal,
 
       ...(options.notifyTitle
@@ -327,7 +330,7 @@ export function createTerminalTabs(
       else surface.selectAll();
     },
     find: () => selectedTab()?.surface?.find(),
-    exportText: (kind) => selectedTab()?.surface?.exportText(kind),
+    exportText: exportOwnership.exportText,
     injectText: (text) => void selectedTab()?.surface?.inject(text),
     injectSnippet(body, injectOptions) {
       void selectedTab()?.surface?.inject(body, injectOptions);

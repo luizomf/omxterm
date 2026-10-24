@@ -16,6 +16,7 @@ import type {
   TerminalExportKind,
   TerminalExportRequest,
 } from "../shared/terminal-contract";
+import { terminalExportRequest } from "../shared/terminal-contract";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type { TerminalTheme } from "../shared/terminal-theme";
@@ -396,12 +397,14 @@ function subscribeToGuardedActions(
     options.subscribeToFind?.(() => {
       if (!blocked()) tabs.find();
     }),
-    // The text is read now, before any dialog, so a later tab switch cannot
-    // substitute another tab's content. Main reports save outcomes.
+    // The text is read now, before any dialog, from the tab whose menu offered
+    // it. Main reports every outcome, including text over the export limit.
     options.subscribeToExportRequests?.((kind) => {
       const text = blocked() ? undefined : tabs.exportText(kind);
       if (text !== undefined)
-        void options.saveTerminalExport?.({ kind, text }).catch(() => {});
+        void options
+          .saveTerminalExport?.(terminalExportRequest(kind, text))
+          .catch(() => {});
     }),
   ];
   return () => {

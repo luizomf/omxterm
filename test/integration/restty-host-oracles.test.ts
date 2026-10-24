@@ -453,7 +453,7 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         await runOracle("terminal-export", testContext),
       );
       expect(result.exportEvidence).toEqual({
-        contextMenuSelection: [false, false, true],
+        contextMenuSelection: [false, false, true, true, true],
         contentKind: "content",
         contentFirstRow: true,
         contentLastRow: true,

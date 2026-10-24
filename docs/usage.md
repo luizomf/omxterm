@@ -74,7 +74,7 @@ Search only sees output the tab still holds in memory, so lines beyond your [scr
 
 ### Exporting terminal text
 
-Right-click the terminal to save text to a file. With text selected, choose **Export Selection…**; with nothing selected, choose **Export Terminal Content…** to save the tab's scrollback and screen (only the current screen while a full-screen program like `vim` uses the alternate screen). Pick where to save in the system dialog; cancelling saves nothing, and your selection stays as it was.
+Right-click the terminal to save text to a file. With text selected, choose **Export Selection…**; with nothing selected, choose **Export Terminal Content…** to save the tab's scrollback and screen (only the current screen while a full-screen program like `vim` uses the alternate screen). Pick where to save in the system dialog; cancelling saves nothing, and your selection stays as it was. Exports are limited to 16 MiB of text; if the content is larger, OMXTerm saves nothing and tells you, so select a smaller part and choose **Export Selection…**.
 
 The file is plain UTF-8 text. OMXTerm only saves when you ask; it never records the terminal automatically.
 
