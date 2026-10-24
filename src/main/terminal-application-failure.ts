@@ -1,3 +1,9 @@
+import {
+  DEFAULT_LANGUAGE,
+  translatorFor,
+  type MessageKey,
+  type Translator,
+} from "../shared/i18n";
 export type TerminalApplicationFailureStage =
   "launch-request" | "renderer-load" | "new-window" | "startup";
 
@@ -8,31 +14,23 @@ interface TerminalApplicationFailureDescription {
 
 const descriptions: Record<
   TerminalApplicationFailureStage,
-  TerminalApplicationFailureDescription
+  readonly [title: MessageKey, message: MessageKey]
 > = {
-  "launch-request": {
-    title: "OMXTerm could not start",
-    message: "The -e option requires an executable.",
-  },
-  "renderer-load": {
-    title: "Terminal Window could not load",
-    message: "OMXTerm could not load the Terminal Window renderer.",
-  },
-  "new-window": {
-    title: "Terminal Window could not open",
-    message: "OMXTerm could not create a new Terminal Window.",
-  },
-  startup: {
-    title: "OMXTerm could not start",
-    message: "The initial Terminal Window could not be created.",
-  },
+  "launch-request": ["failure.start.title", "failure.launchRequest"],
+  "renderer-load": [
+    "failure.rendererLoad.title",
+    "failure.rendererLoad.message",
+  ],
+  "new-window": ["failure.newWindow.title", "failure.newWindow.message"],
+  startup: ["failure.start.title", "failure.startup"],
 };
+const english = translatorFor(DEFAULT_LANGUAGE);
 
 export class TerminalApplicationFailure extends Error {
   readonly stage: TerminalApplicationFailureStage;
 
   constructor(stage: TerminalApplicationFailureStage, cause: unknown) {
-    super(descriptions[stage].message, { cause });
+    super(english.t(descriptions[stage][1]), { cause });
     this.name = "TerminalApplicationFailure";
     this.stage = stage;
   }
@@ -47,6 +45,8 @@ export function terminalApplicationFailure(
 
 export function terminalApplicationFailureDisplay(
   failure: TerminalApplicationFailure,
+  { t }: Translator = english,
 ): TerminalApplicationFailureDescription {
-  return descriptions[failure.stage];
+  const [title, message] = descriptions[failure.stage];
+  return { title: t(title), message: t(message) };
 }

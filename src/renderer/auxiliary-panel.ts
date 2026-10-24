@@ -1,6 +1,11 @@
 import type { TerminalClipboard } from "../terminal-surface/terminal-surface";
 import type { TerminalClipboardAction } from "../shared/terminal-contract";
 import { installAuxiliaryPanelInput } from "./auxiliary-panel-input";
+import {
+  englishLanguage,
+  type RendererLanguage,
+  type Translate,
+} from "./renderer-language";
 
 export interface AuxiliaryView {
   readonly element: HTMLElement;
@@ -11,7 +16,8 @@ export interface AuxiliaryView {
 }
 export interface AuxiliaryViewDefinition {
   readonly id: string;
-  readonly label: string;
+  // A fixed label, or one that follows the window language.
+  readonly label: string | ((t: Translate) => string);
   readonly create: (isInteractive: () => boolean) => AuxiliaryView;
 }
 export interface AuxiliaryPanel {
@@ -33,8 +39,14 @@ export function createAuxiliaryPanel(
     readonly views: readonly AuxiliaryViewDefinition[];
     readonly focusTerminal: () => void;
     readonly clipboard?: TerminalClipboard;
+    readonly language?: RendererLanguage;
   },
 ): AuxiliaryPanel {
+  const language = options.language ?? englishLanguage;
+  const labelOf = (definition: AuxiliaryViewDefinition, t: Translate) =>
+    typeof definition.label === "string"
+      ? definition.label
+      : definition.label(t);
   const document = root.ownerDocument;
   const page = document.defaultView!;
   const created = new Map<string, AuxiliaryView>();
@@ -55,19 +67,26 @@ export function createAuxiliaryPanel(
   separator.hidden = true;
   separator.setAttribute("role", "separator");
   separator.setAttribute("aria-orientation", "vertical");
-  separator.setAttribute("aria-label", "Resize auxiliary panel");
   const header = document.createElement("header");
   header.className = "auxiliary-header";
   const title = document.createElement("h2");
   const close = document.createElement("button");
   close.type = "button";
   close.textContent = "×";
-  close.setAttribute("aria-label", "Close auxiliary panel");
   header.append(title, close);
   const body = document.createElement("div");
   body.className = "auxiliary-body";
   root.replaceChildren(header, body);
   root.before(separator);
+  const unbindLabels = language.bind((t) => {
+    separator.setAttribute("aria-label", t("panel.resize"));
+    close.setAttribute("aria-label", t("panel.close"));
+    const definition = options.views.find((view) => view.id === current);
+    if (definition) {
+      title.textContent = labelOf(definition, t);
+      root.setAttribute("aria-label", title.textContent);
+    }
+  });
   const status = document.createElement("p");
   status.className = "auxiliary-status";
   status.setAttribute("role", "status");
@@ -196,7 +215,9 @@ export function createAuxiliaryPanel(
       if (!definition) return;
       measure();
       if (maximum < 220) {
-        status.textContent = `Widen the window to open ${definition.label}`;
+        status.textContent = language.t("panel.tooNarrow", {
+          view: labelOf(definition, language.t),
+        });
         status.hidden = false;
         if (statusTimer !== undefined) page.clearTimeout(statusTimer);
         statusTimer = page.setTimeout(() => {
@@ -214,8 +235,8 @@ export function createAuxiliaryPanel(
       current = id;
       for (const [key, candidate] of created)
         candidate.element.hidden = key !== id;
-      title.textContent = definition.label;
-      root.setAttribute("aria-label", definition.label);
+      title.textContent = labelOf(definition, language.t);
+      root.setAttribute("aria-label", title.textContent);
       root.hidden = false;
       separator.hidden = false;
       status.hidden = true;
@@ -237,6 +258,7 @@ export function createAuxiliaryPanel(
       hide(false);
       disposed = true;
       input.dispose();
+      unbindLabels();
       if (statusTimer !== undefined) page.clearTimeout(statusTimer);
       observer?.disconnect();
       page.removeEventListener("resize", measure);

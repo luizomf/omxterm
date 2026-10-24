@@ -53,6 +53,7 @@ export function terminalRendererConfiguration(
 ): TerminalRendererConfiguration {
   const configuration: LoadedUserConfiguration = active.configuration;
   return Object.freeze({
+    language: configuration.language,
     ...(configuration.fontFamily
       ? { fontFamily: configuration.fontFamily }
       : {}),

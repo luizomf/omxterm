@@ -1,5 +1,6 @@
 import type { TerminalBridge } from "../shared/terminal-bridge";
 import type { WindowChromeState } from "../shared/window-chrome";
+import { englishLanguage, type RendererLanguage } from "./renderer-language";
 
 export type WindowChromeBridge = Pick<
   TerminalBridge,
@@ -10,6 +11,7 @@ export function mountWindowChrome(
   document: Document,
   bridge: WindowChromeBridge,
   focusTerminal: () => void,
+  language: RendererLanguage = englishLanguage,
 ) {
   let disposed = false;
   let previewActive = false;
@@ -20,15 +22,12 @@ export function mountWindowChrome(
   const title = document.createElement("span");
   title.className = "window-title";
   const controls = document.createElement("nav");
-  controls.setAttribute("aria-label", "Window controls");
   const button = (
-    label: string,
     glyph: string,
     command: "minimize" | "maximize" | "close",
   ) => {
     const element = document.createElement("button");
     element.type = "button";
-    element.setAttribute("aria-label", label);
     element.textContent = glyph;
     // Native-style pointer controls must not steal terminal or preview focus.
     element.addEventListener("mousedown", (event) => event.preventDefault());
@@ -38,9 +37,18 @@ export function mountWindowChrome(
     controls.append(element);
     return element;
   };
-  button("Minimize", "−", "minimize");
-  const maximize = button("Maximize", "□", "maximize");
-  button("Close Window", "×", "close");
+  const minimize = button("−", "minimize");
+  const maximize = button("□", "maximize");
+  const close = button("×", "close");
+  const unbindLabels = language.bind((t) => {
+    controls.setAttribute("aria-label", t("chrome.windowControls"));
+    minimize.setAttribute("aria-label", t("chrome.minimize"));
+    maximize.setAttribute(
+      "aria-label",
+      t(current?.maximized ? "chrome.restore" : "chrome.maximize"),
+    );
+    close.setAttribute("aria-label", t("chrome.closeWindow"));
+  });
   row.append(title, controls);
   const handle = document.createElement("div");
   handle.className = "window-drag-handle";
@@ -69,7 +77,7 @@ export function mountWindowChrome(
     maximize.textContent = state.maximized ? "❐" : "□";
     maximize.setAttribute(
       "aria-label",
-      state.maximized ? "Restore" : "Maximize",
+      language.t(state.maximized ? "chrome.restore" : "chrome.maximize"),
     );
     handle.hidden =
       state.titleBarVisible ||
@@ -93,6 +101,7 @@ export function mountWindowChrome(
     dispose() {
       if (disposed) return;
       disposed = true;
+      unbindLabels();
       removeToggle();
       removeState();
       row.remove();

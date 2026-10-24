@@ -1,4 +1,9 @@
 import type { MenuItemConstructorOptions } from "electron";
+import {
+  DEFAULT_LANGUAGE,
+  translatorFor,
+  type Translator,
+} from "../shared/i18n";
 import type {
   TerminalActionName,
   TerminalKeybinds,
@@ -35,6 +40,7 @@ export function terminalApplicationMenuTemplate(
   applicationName: string,
   actions: TerminalApplicationMenuActions,
   keybinds: TerminalKeybinds,
+  t: Translator["t"] = translatorFor(DEFAULT_LANGUAGE).t,
 ): MenuItemConstructorOptions[] {
   return [
     {
@@ -42,151 +48,151 @@ export function terminalApplicationMenuTemplate(
       submenu: [
         {
           id: "about",
-          label: "About OMXTerm",
+          label: t("menu.about"),
           click: actions.showAbout,
         },
         { type: "separator" },
         {
-          label: `Quit ${applicationName}`,
+          label: t("menu.quit", { name: applicationName }),
           ...accelerator(keybinds.quit),
           click: actions.requestQuit,
         },
       ],
     },
     {
-      label: "Edit",
+      label: t("menu.edit"),
       submenu: [
         {
-          label: "Copy",
+          label: t("menu.copy"),
           ...accelerator(keybinds.copy),
           click: actions.copySelectedTerminal,
         },
         {
-          label: "Paste",
+          label: t("menu.paste"),
           ...accelerator(keybinds.paste),
           click: actions.pasteSelectedTerminal,
         },
         { type: "separator" },
         {
-          label: "Select All",
+          label: t("menu.selectAll"),
           ...accelerator(keybinds.selectAll),
           click: actions.selectAllSelectedTerminal,
         },
         { type: "separator" },
         {
-          label: "Find…",
+          label: t("menu.find"),
           ...accelerator(keybinds.find),
           click: actions.findInSelectedTerminal,
         },
       ],
     },
     {
-      label: "File",
+      label: t("menu.file"),
       submenu: [
         {
-          label: "New Window",
+          label: t("menu.newWindow"),
           ...accelerator(keybinds.newWindow),
           click: actions.newWindow,
         },
         {
-          label: "New Tab",
+          label: t("menu.newTab"),
           ...accelerator(keybinds.newTab),
           click: actions.newTabInSelectedWindow,
         },
         { type: "separator" },
         {
-          label: "Open Local Image…",
+          label: t("menu.openLocalImage"),
           click: actions.openLocalImage,
         },
         { type: "separator" },
         {
-          label: "Close Tab",
+          label: t("menu.closeTab"),
           ...accelerator(keybinds.closeTab),
           click: actions.closeSelectedTab,
         },
         {
-          label: "Close Window",
+          label: t("menu.closeWindow"),
           ...accelerator(keybinds.closeWindow),
           click: actions.closeSelectedWindow,
         },
       ],
     },
     {
-      label: "View",
+      label: t("menu.view"),
       submenu: [
         {
-          label: "Zoom In",
+          label: t("menu.zoomIn"),
           ...accelerator(keybinds.zoomIn),
           click: actions.zoomInSelectedWindow,
         },
         {
-          label: "Zoom Out",
+          label: t("menu.zoomOut"),
           ...accelerator(keybinds.zoomOut),
           click: actions.zoomOutSelectedWindow,
         },
         {
-          label: "Actual Size",
+          label: t("menu.actualSize"),
           ...accelerator(keybinds.actualSize),
           click: actions.resetSelectedWindowZoom,
         },
         { type: "separator" },
         {
-          label: "Toggle Snippets",
+          label: t("menu.toggleSnippets"),
           ...accelerator(keybinds.toggleSnippets),
           click: actions.toggleSelectedSnippets,
         },
         {
-          label: "Toggle Tab Bar",
+          label: t("menu.toggleTabBar"),
           ...accelerator(keybinds.toggleTabBar),
           click: actions.toggleSelectedTabBar,
         },
         {
-          label: "Toggle Title Bar",
+          label: t("menu.toggleTitleBar"),
           ...accelerator(keybinds.toggleTitleBar),
           click: actions.toggleSelectedTitleBar,
         },
         {
-          label: "Reload User Configuration",
+          label: t("menu.reloadConfiguration"),
           ...accelerator(keybinds.reloadConfig),
           click: actions.reloadUserConfiguration,
         },
         {
-          label: "Toggle Developer Tools",
+          label: t("menu.toggleDeveloperTools"),
           click: actions.toggleSelectedDevTools,
         },
         { type: "separator" },
         {
-          label: "Toggle Full Screen",
+          label: t("menu.toggleFullScreen"),
           ...accelerator(keybinds.toggleFullScreen),
           click: actions.toggleSelectedFullScreen,
         },
       ],
     },
     {
-      label: "Window",
+      label: t("menu.window"),
       submenu: [
-        { role: "minimize" },
+        { role: "minimize", label: t("menu.minimize") },
         {
-          label: "Always on Top",
+          label: t("menu.alwaysOnTop"),
           click: actions.toggleSelectedAlwaysOnTop,
         },
         { type: "separator" },
         {
-          label: "Show Next Tab",
+          label: t("menu.showNextTab"),
           ...accelerator(keybinds.nextTab),
           click: actions.selectNextTab,
         },
         {
-          label: "Show Previous Tab",
+          label: t("menu.showPreviousTab"),
           ...accelerator(keybinds.previousTab),
           click: actions.selectPreviousTab,
         },
         {
-          label: "Select Tab",
+          label: t("menu.selectTab"),
           submenu: Array.from({ length: 9 }, (_, index) => {
             const position = index + 1;
             return {
-              label: `Tab ${position}`,
+              label: t("menu.tab", { position }),
               ...accelerator(
                 keybinds[`selectTab${position}` as SelectTabAction],
               ),
@@ -246,15 +252,18 @@ export function terminalActionInvocations(
   });
 }
 
-export function terminalClipboardContextMenuTemplate(actions: {
-  readonly copy: () => void;
-  readonly paste: () => void;
-  readonly selectAll: () => void;
-}): MenuItemConstructorOptions[] {
+export function terminalClipboardContextMenuTemplate(
+  actions: {
+    readonly copy: () => void;
+    readonly paste: () => void;
+    readonly selectAll: () => void;
+  },
+  t: Translator["t"] = translatorFor(DEFAULT_LANGUAGE).t,
+): MenuItemConstructorOptions[] {
   return [
-    { label: "Copy", click: actions.copy },
-    { label: "Paste", click: actions.paste },
+    { label: t("menu.copy"), click: actions.copy },
+    { label: t("menu.paste"), click: actions.paste },
     { type: "separator" },
-    { label: "Select All", click: actions.selectAll },
+    { label: t("menu.selectAll"), click: actions.selectAll },
   ];
 }

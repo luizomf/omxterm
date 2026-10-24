@@ -6,6 +6,7 @@ import {
 } from "./restty-theme";
 import type {
   TerminalSurface,
+  TerminalSurfaceLabels,
   TerminalSurfaceOptions,
 } from "./terminal-surface";
 
@@ -80,13 +81,16 @@ export function withSearchFieldClipboard<Actions extends ClipboardActions>(
 }
 
 // Restty paints the match counter with fixed dark colors that no style option
-// reaches, so the Surface paints it from the Terminal Theme as well.
+// reaches, so the Surface paints it from the Terminal Theme as well, and
+// applies the window language when labels are given.
 export function applySearchTheme(
   restty: Pick<PatchedRestty, "setSearchUiStyleOptions"> | undefined,
   container: HTMLElement,
   theme: TerminalTheme,
+  labels?: TerminalSurfaceLabels,
 ): void {
   restty?.setSearchUiStyleOptions(toResttySearchUiStyle(theme));
+  applySearchLabels(container, labels);
   const { background, borderColor } = toResttySearchStatusStyle(theme);
   for (const status of container.querySelectorAll<HTMLElement>(
     ".restty-pane-search-status",
@@ -135,4 +139,31 @@ export function retainSearchEscapeGesture(container: HTMLElement): () => void {
     page.removeEventListener("keyup", onPageKey, true);
     page.removeEventListener("blur", release);
   };
+}
+
+// Restty builds the bar with fixed English titles and accessible names; the
+// Surface applies the window language to them and follows later changes.
+export function applySearchLabels(
+  container: HTMLElement,
+  labels: TerminalSurfaceLabels | undefined,
+): void {
+  if (!labels) return;
+  container.setAttribute("aria-label", labels.surfaceRegion);
+  for (const root of container.querySelectorAll<HTMLElement>(
+    '[role="search"]',
+  )) {
+    root.setAttribute("aria-label", labels.searchRegion);
+    const input = root.querySelector("input");
+    if (input) input.placeholder = labels.searchPlaceholder;
+    const [above, below, clear, close] = root.querySelectorAll<HTMLElement>(
+      ".restty-pane-search-button",
+    );
+    above?.setAttribute("title", labels.searchMatchAbove);
+    above?.setAttribute("aria-label", labels.searchMatchAbove);
+    below?.setAttribute("title", labels.searchMatchBelow);
+    below?.setAttribute("aria-label", labels.searchMatchBelow);
+    if (clear) clear.textContent = labels.searchClear;
+    close?.setAttribute("title", labels.searchClose);
+    close?.setAttribute("aria-label", labels.searchClose);
+  }
 }

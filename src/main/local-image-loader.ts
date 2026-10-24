@@ -1,6 +1,11 @@
 import { dialog, nativeImage, type BrowserWindow } from "electron";
 import type { LocalImageData, LocalImageRequest } from "../shared/local-image";
 import {
+  DEFAULT_LANGUAGE,
+  translatorFor,
+  type Translator,
+} from "../shared/i18n";
+import {
   loadLocalImageRequest,
   readLocalImage,
   UnsupportedLocalImageFormatError,
@@ -10,6 +15,7 @@ export async function loadLocalImageForWindow(
   window: BrowserWindow,
   request: LocalImageRequest,
   abortSignal: AbortSignal,
+  { t }: Translator = translatorFor(DEFAULT_LANGUAGE),
 ): Promise<LocalImageData | null> {
   try {
     return await loadLocalImageRequest(request, {
@@ -17,7 +23,7 @@ export async function loadLocalImageForWindow(
       abortSignal,
       async chooseDirectory(homeDirectory) {
         const result = await dialog.showOpenDialog(window, {
-          title: "Choose the local base folder for this image reference",
+          title: t("dialog.imageBaseFolder"),
           defaultPath: homeDirectory,
           properties: ["openDirectory", "dontAddToRecent"],
         });
@@ -27,14 +33,14 @@ export async function loadLocalImageForWindow(
       },
       async chooseFile() {
         const result = await dialog.showOpenDialog(window, {
-          title: "Open Local Image",
+          title: t("dialog.openLocalImage"),
           properties: ["openFile", "dontAddToRecent"],
           filters: [
             {
-              name: "PNG and JPEG Images",
+              name: t("dialog.imageFilter"),
               extensions: ["png", "jpg", "jpeg"],
             },
-            { name: "All Files", extensions: ["*"] },
+            { name: t("dialog.allFiles"), extensions: ["*"] },
           ],
         });
         return result.canceled || result.filePaths.length !== 1

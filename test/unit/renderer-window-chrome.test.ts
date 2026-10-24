@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";
+import { surfaceLabels } from "../../src/renderer/renderer-language";
 import { createFakeSurface } from "../fixtures/terminal-tabs-harness";
 import type { WindowChromeState } from "../../src/shared/window-chrome";
 import type { WindowChromeBridge } from "../../src/renderer/window-chrome";
@@ -263,6 +264,53 @@ describe("Window Chrome through the mounted window host", () => {
       expect(adapter.resize).not.toHaveBeenCalled();
       expect(adapter.close).not.toHaveBeenCalled();
     }
+    view.host.dispose();
+  });
+
+  it("switches chrome and Surface labels live without recreating tabs or sessions", async () => {
+    const view = await setup({ style: "custom" });
+    view.tab({ action: "new" });
+    await vi.waitFor(() => expect(view.surfaces).toHaveLength(2));
+    const labels = () =>
+      [...row().querySelectorAll("[aria-label]")].map((element) =>
+        element.getAttribute("aria-label"),
+      );
+    expect(labels()).toEqual([
+      "Window controls",
+      "Minimize",
+      "Maximize",
+      "Close Window",
+    ]);
+    view.configure({ ...view.configuration, language: "pt-BR" });
+    expect(labels()).toEqual([
+      "Controles da janela",
+      "Minimizar",
+      "Maximizar",
+      "Fechar Janela",
+    ]);
+    view.chrome.update({ maximized: true });
+    expect(labels()[2]).toBe("Restaurar");
+    for (const surface of view.surfaces) {
+      expect(surface.applyConfiguration).toHaveBeenLastCalledWith(
+        expect.objectContaining({ labels: surfaceLabels("pt-BR") }),
+      );
+      surface.applyConfiguration.mockClear();
+    }
+    view.configure({ ...view.configuration, language: "pt-BR" });
+    for (const surface of view.surfaces)
+      expect(surface.applyConfiguration).not.toHaveBeenCalled();
+    const { language: _english, ...withoutLanguage } = view.configuration;
+    view.configure(withoutLanguage);
+    expect(labels()[2]).toBe("Restore");
+    expect(view.mount).toHaveBeenCalledTimes(2);
+    for (const surface of view.surfaces) {
+      expect(surface.applyConfiguration).toHaveBeenLastCalledWith(
+        expect.objectContaining({ labels: surfaceLabels("en-US") }),
+      );
+      expect(surface.dispose).not.toHaveBeenCalled();
+    }
+    for (const adapter of view.adapters)
+      expect(adapter.close).not.toHaveBeenCalled();
     view.host.dispose();
   });
 

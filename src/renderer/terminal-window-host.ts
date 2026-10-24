@@ -1,5 +1,11 @@
 import { mountWindowChrome, type WindowChromeBridge } from "./window-chrome";
 import { mountAboutDialog } from "./about/about-dialog";
+import {
+  surfaceLabels,
+  windowLanguage,
+  type RendererLanguage,
+} from "./renderer-language";
+import { DEFAULT_LANGUAGE } from "../shared/i18n";
 import type { AboutBridge } from "../shared/about";
 import type { TerminalSessionAdapter } from "../terminal-surface/terminal-session-adapter";
 import {
@@ -7,6 +13,7 @@ import {
   type TerminalClipboard,
   type TerminalSurface,
   type TerminalSurfaceConfiguration,
+  type TerminalSurfaceLabels,
   type TerminalSurfaceOptions,
 } from "../terminal-surface/terminal-surface";
 import type {
@@ -25,7 +32,8 @@ import {
   type TerminalTabs,
 } from "./terminal-tabs";
 import { createSnippetsView } from "./snippets-sidebar";
-import { createAuxiliaryPanel, type AuxiliaryPanel } from "./auxiliary-panel";
+import type { AuxiliaryPanel } from "./auxiliary-panel";
+import { createSnippetsPanel } from "./snippets-panel";
 import { renderUserFileErrorBanner } from "./user-file-error-banner";
 import {
   createLocalImagePreview,
@@ -154,6 +162,7 @@ export function mountTerminalWindowPage(
     );
   }
 
+  const language = windowLanguage(options.configuration);
   const surfaceOptions: TerminalSurfaceOptions = {
     ...activeSurfaceConfiguration,
     background: "host",
@@ -209,14 +218,20 @@ export function mountTerminalWindowPage(
   );
 
   const chrome = options.chrome
-    ? mountWindowChrome(page.document, options.chrome, () => {
-        if (!previewActive() && !auxiliaryPanel?.ownsFocus())
-          tabs.focusSelected();
-      })
+    ? mountWindowChrome(
+        page.document,
+        options.chrome,
+        () => {
+          if (!previewActive() && !auxiliaryPanel?.ownsFocus())
+            tabs.focusSelected();
+        },
+        language,
+      )
     : undefined;
 
   if (options.loadLocalImage) {
     localImagePreview = createLocalImagePreview(page.document, {
+      language,
       loadImage: options.loadLocalImage,
       focusTerminal: () => tabs.focusSelected(),
       onActivityChange: () => {
@@ -235,6 +250,7 @@ export function mountTerminalWindowPage(
     options.about,
     () => !disposed && !localImagePreview?.isActive(),
     {
+      language,
       focusTerminal: tabs.focusSelected,
       onActivityChange: (active) => {
         chrome?.setPreviewActive(
@@ -284,6 +300,7 @@ export function mountTerminalWindowPage(
   removeConfigurationUpdateListener = options.subscribeToConfigurationUpdates?.(
     (configuration) => {
       if (disposed) return;
+      language.set(configuration.language);
       fontConfigurationId = configuration.fontConfigurationId;
       if (!chrome)
         page.document.documentElement.style.setProperty(
@@ -335,31 +352,14 @@ export function mountTerminalWindowPage(
       tabs.handleCommand(command);
     });
     if (options.snippets) {
-      const snippets = options.snippets;
-      const panel = createAuxiliaryPanel(snippets.element, {
-        content: snippets.element.parentElement!,
-        focusTerminal: tabs.focusSelected,
-        ...(options.clipboard ? { clipboard: options.clipboard } : {}),
-        views: [
-          {
-            id: "snippets",
-            label: "Snippets",
-            create: (isInteractive) =>
-              createSnippetsView(page.document, {
-                loadSnippets: snippets.load,
-                isInteractive,
-                inject: (snippet) => {
-                  if (previewActive()) return;
-                  tabs.injectSnippet(snippet.body, { submit: snippet.execute });
-                  tabs.focusSelected();
-                },
-              }),
-          },
-        ],
+      const panel = createSnippetsPanel(page.document, options.snippets, {
+        tabs,
+        language,
+        blocked: previewActive,
+        clipboard: options.clipboard,
       });
       auxiliaryPanel = panel;
-      panel.setBlocked(previewActive());
-      removeSnippetsToggleListener = snippets.subscribeToToggle(() =>
+      removeSnippetsToggleListener = options.snippets.subscribeToToggle(() =>
         panel.toggle("snippets"),
       );
     }
@@ -460,6 +460,7 @@ function sameSurfaceConfiguration(
   const firstSystemFont = first.appearance.systemFont;
   const secondSystemFont = second.appearance.systemFont;
   return (
+    first.labels === second.labels &&
     first.appearance.fontSize === second.appearance.fontSize &&
     first.appearance.lineHeight === second.appearance.lineHeight &&
     first.appearance.ligatures === second.appearance.ligatures &&
@@ -483,6 +484,7 @@ function surfaceConfiguration(
   configuration: TerminalRendererConfiguration,
 ): TerminalSurfaceConfiguration {
   return {
+    labels: surfaceLabels(configuration.language ?? DEFAULT_LANGUAGE),
     appearance: {
       fontSize: configuration.fontSize,
       lineHeight: configuration.fontLineHeight,

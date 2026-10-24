@@ -175,6 +175,7 @@ Every field except `version` is optional and falls back to its default when omit
 | Preference                | Accepted value                          | Default                          |
 | ------------------------- | --------------------------------------- | -------------------------------- |
 | `version`                 | `1`                                     | required                         |
+| `language`                | `"en-US"` or `"pt-BR"`                  | `"en-US"`                        |
 | `confirmClose`            | boolean                                 | `true`                           |
 | `logLevel`                | `"error"`, `"info"`, or `"debug"`       | `"info"`                         |
 | `windowsShell`            | non-empty absolute executable path      | Windows PowerShell, then ComSpec |
@@ -198,6 +199,7 @@ Every field except `version` is optional and falls back to its default when omit
 
 ### Notes on specific settings
 
+- **`language`:** chooses the language of OMXTerm's menus, dialogs, window controls, snippets panel, image preview, About and search controls. OMXTerm never picks it from your system language. Only the exact tags `"en-US"` and `"pt-BR"` are accepted; any other value is a configuration error, so OMXTerm uses its defaults until you fix it. Reloading the configuration switches the language in open windows without closing tabs. Some text stays in English: the validation detail inside a reload notice, failures that happen before the configuration loads, logs, snippet file diagnostics, and text owned by the operating system. Terminal output is never translated.
 - **`scrollback.lines`:** kept in memory per tab (up to a 10 MB per-screen core ceiling). Setting `0` clears and disables scrollback history.
 - **`keyboard.optionAsAlt` (macOS only):** `"none"` keeps standard macOS Option character input (like accented letters or symbols); `"left"`, `"right"`, or `"both"` sends terminal `Alt` sequences instead.
 - **`window.showTitleBar`, `window.showTabBar`, and `window.alwaysOnTop`:** set the initial state for new windows. Use the **View** and **Window** menus to toggle them in your current window.
@@ -389,7 +391,7 @@ Choose **View → Reload User Configuration** (`Cmd+Shift+,` / `Ctrl+Shift+,`) a
 | --------------------- | ------------------------------------------------------------- |
 | Existing and new tabs | Theme, font size, ligatures, padding, scrollback, Option keys |
 | All windows and tabs  | Background transparency and blur                              |
-| App behavior          | Close confirmation, log level, keyboard shortcuts             |
+| App behavior          | Close confirmation, log level, keyboard shortcuts, language   |
 | New tabs (or restart) | Font family, line height, Windows shell                       |
 | New windows           | Always-on-Top, title-bar, and tab-bar initial defaults        |
 

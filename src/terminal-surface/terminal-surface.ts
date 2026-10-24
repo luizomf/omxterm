@@ -39,7 +39,19 @@ export interface TerminalAppearance {
   };
 }
 
+// Application-owned text inside the Surface, in the window language.
+export interface TerminalSurfaceLabels {
+  readonly surfaceRegion: string;
+  readonly searchRegion: string;
+  readonly searchPlaceholder: string;
+  readonly searchClear: string;
+  readonly searchMatchAbove: string;
+  readonly searchMatchBelow: string;
+  readonly searchClose: string;
+}
+
 export interface TerminalSurfaceConfiguration {
+  readonly labels?: TerminalSurfaceLabels;
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
   readonly appearance: TerminalAppearance & {
@@ -57,6 +69,7 @@ export interface TerminalFontInputLease {
 }
 
 export interface TerminalSurfaceOptions {
+  readonly labels?: TerminalSurfaceLabels;
   // Standalone Surfaces focus their initial pane by default. Window/tab owners
   // disable this implicit construction side effect and call focus() explicitly.
   readonly focus?: boolean;

@@ -87,6 +87,7 @@ describe("strict version 1 User Configuration", () => {
       validateUserConfiguration(
         {
           version: 1,
+          language: "pt-BR",
           confirmClose: false,
           logLevel: "debug",
           windowsShell: "C:\\configured\\shell.exe",
@@ -109,6 +110,7 @@ describe("strict version 1 User Configuration", () => {
       ),
     ).toEqual({
       version: 1,
+      language: "pt-BR",
       confirmClose: false,
       logLevel: "debug",
       windowsShell: "C:\\configured\\shell.exe",

@@ -87,6 +87,10 @@ application-time exceptions can leave partial updates. Surfaces keep their
 creation-time font family and line height; new tabs use the latest values. A
 family change during pending font acquisition can fail an initializing tab.
 
+**Interface Language** — The language of OMXTerm's own menus, dialogs and
+controls, chosen only by the User Configuration `language` key (`en-US` default
+or `pt-BR`). Diagnostics, logs and Terminal Payload stay untranslated.
+
 **Terminal Theme** — The terminal palette: foreground, background, cursor,
 selection and ANSI colors. The bundled default is `omtheme`.
 

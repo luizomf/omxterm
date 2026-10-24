@@ -3,6 +3,7 @@ import type {
   TerminalSnippetsResponse,
 } from "../shared/terminal-snippets";
 import type { AuxiliaryView } from "./auxiliary-panel";
+import { englishLanguage, type RendererLanguage } from "./renderer-language";
 
 // Content/query/scroll belong to this view; visibility, focus transitions and
 // resize belong to the window's auxiliary host. Reread YAML on every activation.
@@ -12,8 +13,10 @@ export function createSnippetsView(
     readonly loadSnippets: () => Promise<TerminalSnippetsResponse>;
     readonly inject: (snippet: TerminalSnippet) => void;
     readonly isInteractive: () => boolean;
+    readonly language?: RendererLanguage;
   },
 ): AuxiliaryView {
+  const language = options.language ?? englishLanguage;
   const root = document.createElement("div");
   root.className = "snippets-view";
   let disposed = false;
@@ -25,8 +28,6 @@ export function createSnippetsView(
   let retainedScroll = 0;
   const search = document.createElement("input");
   search.type = "search";
-  search.placeholder = "Search snippets";
-  search.setAttribute("aria-label", "Search Snippets");
   const results = document.createElement("div");
   results.className = "snippets-results";
   const list = document.createElement("ul");
@@ -79,12 +80,19 @@ export function createSnippetsView(
       }),
     );
     status.hidden = !error.hidden || visible.length > 0;
-    status.textContent = loading
-      ? "Loading snippets…"
-      : snippets.length === 0
-        ? "No snippets. Create snippets.yaml next to config.json."
-        : "No snippets match the search.";
+    status.textContent = statusText(language.t);
   };
+  const statusText = (t: RendererLanguage["t"]) =>
+    loading
+      ? t("snippets.loading")
+      : snippets.length === 0
+        ? t("snippets.empty")
+        : t("snippets.noMatch");
+  const unbindLabels = language.bind((t) => {
+    search.placeholder = t("snippets.searchPlaceholder");
+    search.setAttribute("aria-label", t("snippets.search"));
+    status.textContent = statusText(t);
+  });
   const restoreScroll = () => {
     results.scrollTop = Math.min(
       retainedScroll,
@@ -126,8 +134,7 @@ export function createSnippetsView(
         .then(settle, () =>
           settle({
             snippets: [],
-            error:
-              "Could not load snippets. Close and reopen Snippets to retry.",
+            error: language.t("snippets.loadError"),
           }),
         );
     },
@@ -148,6 +155,7 @@ export function createSnippetsView(
       generation += 1;
       renderGeneration += 1;
       search.removeEventListener("input", onInput);
+      unbindLabels();
       root.replaceChildren();
     },
   };

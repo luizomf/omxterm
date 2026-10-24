@@ -50,6 +50,7 @@ import type {
   TerminalFontInputLease,
   TerminalSurface,
   TerminalSurfaceConfiguration,
+  TerminalSurfaceLabels,
   TerminalSurfaceOptions,
 } from "./terminal-surface";
 import {
@@ -58,6 +59,7 @@ import {
   type TerminalFontInput,
 } from "./terminal-font-stack";
 const RESTTY_SCROLLBACK_MAX_BYTES = 10_000_000;
+type Labels = TerminalSurfaceLabels;
 
 function resttyTerminalConfig(
   fonts: readonly TerminalFontInput[],
@@ -164,9 +166,9 @@ export async function mountResttyTerminalSurface(
 
   const applyContainerAppearance = () =>
     paintContainer(container, padding, terminalTheme, options.background);
-  const applyRuntimeTheme = (theme: TerminalTheme) => {
+  const applyRuntimeTheme = (theme: TerminalTheme, labels?: Labels) => {
     pane?.runtime.terminal.applyTheme(toGhosttyTheme(theme), "OMXTerm");
-    applySearchTheme(restty, container, theme);
+    applySearchTheme(restty, container, theme, labels);
   };
   const isSurfaceVisible = () =>
     !isInactive() && !container.hidden && container.isConnected;
@@ -194,7 +196,7 @@ export async function mountResttyTerminalSurface(
     padding = nextPadding;
     terminalTheme = nextTheme;
     applyContainerAppearance();
-    applyRuntimeTheme(terminalTheme);
+    applyRuntimeTheme(terminalTheme, configuration.labels);
     applyRuntimeSize(Math.max(1, baselineFontSize + zoomDelta));
     pane.runtime.terminal.setLigatures(nextLigatures);
     pane.runtime.terminal.setOptionKeyMode(configuration.optionKeyMode);
@@ -277,7 +279,7 @@ export async function mountResttyTerminalSurface(
     });
     pane = restty.getActivePane() ?? undefined;
     if (!pane) throw new Error("Restty did not create its terminal pane");
-    applySearchTheme(restty, container, terminalTheme);
+    applySearchTheme(restty, container, terminalTheme, options.labels);
 
     removeRuntimeListener = pane.runtime.events.subscribe((event) => {
       if (isInactive()) return;

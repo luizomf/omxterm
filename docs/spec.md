@@ -65,8 +65,8 @@ OMXTerm:
   operating-system emoji/CJK/symbol faces for missing-glyph coverage;
 - uses the black-and-blue OMXTerm application icon in development and on the
   packaged macOS Dock, Finder, application-switcher, and DMG surfaces;
-- reads strict, versioned JSON configuration and writes bounded local JSONL
-  operational logs;
+- reads strict, versioned JSON configuration, including an explicit en-US or
+  pt-BR Interface Language, and writes bounded local JSONL operational logs;
 - packages ready-to-run artifacts from an accepted version: ARM64 DMG for macOS,
   ARM64 AppImage for Linux, and ARM64/x64 NSIS for Windows. Linux releases additionally provide
   an optional versioned per-user AppImage desktop installer and its checksum;
@@ -865,6 +865,7 @@ installation or manual reload. The copied theme belongs to the user and does not
 track subsequent bundled palette changes. A present file must contain
 `"version": 1` and only supported keys:
 
+- `language`: `en-US` or `pt-BR`;
 - `confirmClose`;
 - `logLevel`;
 - `windowsShell`;
@@ -895,6 +896,19 @@ and Windows. Hiding the title area or entering fullscreen removes only the
 app-owned title space, without changing configured padding or the macOS system
 safe area. `logLevel` defaults to `info`, `keyboard.optionAsAlt` to `none`, and
 `window.alwaysOnTop` to `false`.
+
+`language` selects the Interface Language from the exact tags `en-US` and
+`pt-BR`, defaults to `en-US`, and is never inferred from the operating-system
+locale ([ADR 0035](adr/0035-select-the-interface-language-explicitly.md)). It
+covers native menus, OMXTerm's native dialogs, Window Chrome, the Auxiliary
+Panel and Snippets Sidebar, Local Image Preview, About, and the Scrollback
+Search controls. Main resolves it from the active configuration whenever it
+builds a menu or opens a dialog; renderers relabel existing elements in place,
+so a User Configuration Reload changes it without recreating tabs, Surfaces or
+sessions. The validator's diagnostic detail inside a reload notice, failures
+reported before configuration loads, Operational Events, `snippets.yaml`
+diagnostics, and operating-system, Electron or Restty text that OMXTerm does not
+set remain English. Terminal Payload is never translated.
 
 `window.showTitleBar` and `window.showTabBar` accept only booleans and default
 to `true`. They choose initial visibility for newly created windows. A
@@ -1133,8 +1147,8 @@ changing the active family invalidates outstanding old-generation reads,
 including an accepted request for a still-initializing Surface. It can fail that
 tab instead of letting it finish with its original family. Repeating a reload
 cannot erase a notice while an older Surface survives; removing that Surface
-releases its font bookkeeping. Theme, configured font-size baseline, padding and
-Window Font Zoom remain live and preserve the existing Surface and PTY. Invalid,
+releases its font bookkeeping. Theme, Interface Language, configured font-size
+baseline, padding and Window Font Zoom remain live and preserve the existing Surface and PTY. Invalid,
 missing, unreadable, unsupported or corrupt configured font input rejects the
 whole reload. Runtime scrollback reduction, including zero, uses the selected
 Surface's in-memory core behavior described above; programming-ligature changes

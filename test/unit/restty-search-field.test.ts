@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { surfaceLabels } from "../../src/renderer/renderer-language";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import {
   applySearchTheme,
@@ -205,6 +206,45 @@ describe("search bar theme", () => {
 
     applySearchTheme(restty, bar.container, DEFAULT_TERMINAL_THEME);
     expect(bar.status.style.background).not.toBe("rgb(235, 235, 235)");
+  });
+
+  it("relabels Restty's search controls in the configured language", () => {
+    const bar = searchBar();
+    const search = bar.container.querySelector<HTMLElement>('[role="search"]')!;
+    const buttons = ["above", "below", "clear", "close"].map((name) => {
+      const button = document.createElement("button");
+      button.className = "restty-pane-search-button";
+      button.dataset.name = name;
+      search.append(button);
+      return button;
+    });
+    const restty = { setSearchUiStyleOptions: vi.fn() };
+    applySearchTheme(restty, bar.container, DEFAULT_TERMINAL_THEME);
+    expect(bar.container.hasAttribute("aria-label")).toBe(false);
+
+    for (const language of ["pt-BR", "en-US"] as const) {
+      const labels = surfaceLabels(language);
+      applySearchTheme(restty, bar.container, DEFAULT_TERMINAL_THEME, labels);
+      expect(bar.container.getAttribute("aria-label")).toBe(
+        labels.surfaceRegion,
+      );
+      expect(search.getAttribute("aria-label")).toBe(labels.searchRegion);
+      expect(bar.input.placeholder).toBe(labels.searchPlaceholder);
+      expect(
+        buttons.map((button) => button.getAttribute("aria-label")),
+      ).toEqual([
+        labels.searchMatchAbove,
+        labels.searchMatchBelow,
+        null,
+        labels.searchClose,
+      ]);
+      expect(buttons[0]!.title).toBe(labels.searchMatchAbove);
+      expect(buttons[2]!.textContent).toBe(labels.searchClear);
+    }
+    expect(surfaceLabels("pt-BR").searchPlaceholder).toBe(
+      "Buscar no histórico",
+    );
+    expect(surfaceLabels("pt-BR")).toBe(surfaceLabels("pt-BR"));
   });
 });
 

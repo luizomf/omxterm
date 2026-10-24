@@ -1,3 +1,4 @@
+import { validateLanguage } from "./user-configuration-language";
 import { lstat, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import type {
@@ -49,6 +50,7 @@ export const USER_CONFIGURATION_VERSION = 1;
 export const DEFAULT_USER_CONFIGURATION: UserConfiguration = Object.freeze({
   version: USER_CONFIGURATION_VERSION,
   confirmClose: true,
+  language: "en-US",
   logLevel: "info",
   fontSize: DEFAULT_TERMINAL_FONT_SIZE,
   fontLineHeight: DEFAULT_TERMINAL_LINE_HEIGHT,
@@ -342,6 +344,7 @@ export function validateUserConfiguration(
   const root = requireObject(document, configurationPath, "$", "an object");
   rejectUnknownKeys(root, configurationPath, "$", [
     "version",
+    "language",
     "confirmClose",
     "logLevel",
     "windowsShell",
@@ -530,6 +533,7 @@ export function validateUserConfiguration(
     ["error", "info", "debug"] as const,
     "info",
   ) as OperationalLogLevel;
+  const language = validateLanguage(root.language, configurationPath);
   const optionKeyMode = optionalEnum(
     keyboard?.optionAsAlt,
     configurationPath,
@@ -540,6 +544,7 @@ export function validateUserConfiguration(
 
   return Object.freeze({
     version: USER_CONFIGURATION_VERSION,
+    language,
     confirmClose,
     logLevel,
     ...windowsShellProperty(windowsShell),
