@@ -13,6 +13,10 @@ export async function initializeResttyHostWindow(
   await window.loadFile(path.join(root, "renderer", "index.html"));
   window.showInactive();
   await waitFor(sessionReady, "default Restty session");
+  // This host scenario asserts active-window DOM focus. Native activation lets
+  // the production page-focus owner restore it without forcing a DOM target.
+  window.focus();
+  await waitFor(() => window.isFocused(), "native host window activation");
   await waitFor(
     () =>
       window.webContents.executeJavaScript(
