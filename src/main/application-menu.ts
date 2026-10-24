@@ -41,7 +41,7 @@ export function terminalApplicationMenuTemplate(
       submenu: [
         {
           id: "about",
-          label: `About ${applicationName}`,
+          label: "About OMXTerm",
           click: actions.showAbout,
         },
         { type: "separator" },
