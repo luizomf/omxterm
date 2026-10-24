@@ -23,13 +23,8 @@ export function createAboutExercise(
   });
   return {
     show: about.show,
-    async exercise() {
-      try {
-        await exerciseAboutDialog(getWindow(), openedLinks);
-      } finally {
-        about.dispose();
-      }
-    },
+    exercise: () => exerciseAboutDialog(getWindow(), openedLinks),
+    dispose: about.dispose,
   };
 }
 

@@ -92,16 +92,22 @@ async function exerciseScenario(
   about: ReturnType<typeof createAboutExercise>,
   options: Parameters<typeof exerciseWindowChrome>[0],
 ) {
-  if (process.argv.includes("--fixture-about-only")) {
-    await exerciseMenu(about.show);
+  try {
+    if (process.argv.includes("--fixture-about-only")) {
+      await exerciseMenu(about.show);
+      // This independent scenario still owns only its initial selected session.
+      // Continuity deliberately changes selection; do not negotiate on its
+      // now-hidden initial session or repeat this oracle there.
+      await exerciseKeyboard(about);
+      await about.exercise();
+      return { about: "menu-keyboard-focus-layout-verified" };
+    }
+    const result = await exerciseWindowChrome(options);
     await about.exercise();
-    await exerciseKeyboard(about);
-    return { about: "menu-keyboard-focus-layout-verified" };
+    return result;
+  } finally {
+    about.dispose();
   }
-  const result = await exerciseWindowChrome(options);
-  await about.exercise();
-  await exerciseKeyboard(about);
-  return result;
 }
 function fail(error: unknown) {
   if (failing) return;
