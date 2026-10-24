@@ -1084,6 +1084,13 @@ CSS names, functions or variables, inheritance and imports are unsupported.
 Transparency and blur are User Configuration window preferences, not theme
 fields; the Terminal Theme schema has no opacity or tint setting.
 
+The latest successfully applied Terminal Theme is the reset baseline for its 16
+ANSI colors. OSC 104 restores that baseline (all entries or only the requested
+indices); an indexed reset leaves other OSC 4 overrides untouched. Live theme
+application replaces overrides within those 16 entries, while preserving
+unsupplied extended-color overrides. Full OSC 104 also resets extended colors
+to their ordinary defaults. RIS and DECSTR do not act as palette resets.
+
 Unknown keys include the empty string (`""`) at every configuration, theme and
 snippet object boundary, regardless of property order. They are rejected rather
 than ignored alongside otherwise valid settings or entries.

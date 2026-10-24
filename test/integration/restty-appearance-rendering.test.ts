@@ -75,6 +75,38 @@ interface Result {
 }
 
 describe("Restty OMXTerm appearance under production Electron policy", () => {
+  it("preserves the configured palette through actual Surface OSC resets and live reload", async (testContext) => {
+    const execution = await runFixture(
+      testContext,
+      undefined,
+      false,
+      false,
+      false,
+      true,
+    );
+    expect(execution, execution.stderr).toMatchObject({
+      reason: "exit",
+      exitCode: 0,
+      cleanupErrors: [],
+    });
+    const line = execution.stdout
+      .split("\n")
+      .find((entry) => entry.startsWith(resultPrefix));
+    expect(line).toBeDefined();
+    expect(JSON.parse(line!.slice(resultPrefix.length))).toMatchObject({
+      configuredPaletteReset: true,
+      starts: 1,
+      closes: 1,
+      observations: [
+        { phase: "initial" },
+        { phase: "initial-full" },
+        { phase: "live-replaces-supplied-only" },
+        { phase: "split-indexed-ST" },
+        { phase: "live-full-ST" },
+      ],
+    });
+  }, 90_000);
+
   it("renders theme colors and preserves configured geometry through live updates", async (testContext) => {
     const runs: Array<{
       readonly label: string;
@@ -389,6 +421,7 @@ async function runFixture(
   deferFrames = false,
   mixedPointer = false,
   gateFrames = false,
+  paletteOnly = false,
 ) {
   testContext.signal.throwIfAborted();
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-restty-appearance-"));
@@ -414,6 +447,7 @@ async function runFixture(
       prepare: () =>
         buildFixture(root, "runner", {
           requestedDPR: scaleFactor ?? "actual",
+          paletteOnly,
           deferFrames,
           mixedPointer,
           gateFrames,

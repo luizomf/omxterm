@@ -68,6 +68,29 @@ Focused background checks:
 npx vitest run test/integration/restty-background-core.test.ts test/integration/restty-background-rendering.test.ts test/integration/window-chrome.test.ts
 ```
 
+### Configured ANSI palette resets
+
+The core palette setter installs the supplied prefix as allocator-owned reset
+defaults, starting from the previous baseline rather than current OSC 4 overrides.
+It replaces overrides only in that prefix, preserving existing live-theme policy
+and unsupplied extended overrides. Ghostty continues to own OSC 104 parsing and
+indexed/full reset selection; there is no Surface escape interception. RIS and
+DECSTR preserve palette state. Allocation failure returns the existing internal
+ABI error without changing palette state.
+
+Headless behavior and preparation guards:
+
+```sh
+npx vitest run test/integration/restty-palette-core.test.ts test/unit/restty-dependency-contract.test.ts
+```
+
+The narrow actual-Surface pixel regression requires a separately scheduled idle
+desktop (do not mistake the headless core test for graphical qualification):
+
+```sh
+npx vitest run test/integration/restty-appearance-rendering.test.ts -t "preserves the configured palette"
+```
+
 ### Font memory ownership
 
 Each renderer window manages validated font-family generations. Compatible tabs share native font byte snapshots and parsed Restty font resources:
@@ -106,9 +129,9 @@ Prepared SHA-256 digests:
 | Input                      | SHA-256                                                            |
 | -------------------------- | ------------------------------------------------------------------ |
 | Restty JavaScript runtime  | `8ebccc2aa81d37266bbf4642e3e07e8c0b17e39935a97d8c3703eb9ac5e72649` |
-| Embedded-core chunk        | `1fb03cc8360942c613ca98973658de362852a60d88942c482de4b0dc429660fa` |
+| Embedded-core chunk        | `03d79d4c745e3c74dd90082a100cbf85e5060e23ff9d16fba338b11d2db1e6be` |
 | Event declarations         | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
-| Tracked WASM core          | `92aa781340d4bd87f8028c17534fe720bd47e87dd34786d149811923e4e389ec` |
+| Tracked WASM core          | `a52f314c2e91e87394e67307d6b0067c8ba28f6b1e31e7587872b9c41ce88c41` |
 | Unix `node-pty` runtime    | `e1cd61e52f681871c401ca54a21382173281532e8eaa9f679bfe549be9a427b1` |
 | Windows `node-pty` runtime | `3f4cf11eaa6cc07bacb34e3693857e123e3e55edfb446d7657d80cf95f9ce244` |
 
@@ -130,5 +153,5 @@ shasum -a 256 wasm/zig-out/bin/restty.wasm
 Verify core behavior after rebuilding:
 
 ```sh
-npx vitest run test/integration/restty-reflow-core.test.ts test/integration/restty-resize-core.test.ts test/integration/restty-scrollback-core.test.ts test/integration/restty-images-core.test.ts test/integration/restty-events-core.test.ts
+npx vitest run test/integration/restty-palette-core.test.ts test/integration/restty-background-core.test.ts test/integration/restty-reflow-core.test.ts test/integration/restty-resize-core.test.ts test/integration/restty-scrollback-core.test.ts test/integration/restty-images-core.test.ts test/integration/restty-events-core.test.ts
 ```
