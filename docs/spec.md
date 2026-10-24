@@ -352,7 +352,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and `Ctrl+Shift+S`
   on Linux and Windows, remappable through `keybinds`) shows or hides the
   selected window's Snippets Sidebar beside its Terminal Surface. The sidebar
-  lists the snippets from `snippets.json`, filters them by name and description
+  lists the snippets from `snippets.yaml`, filters them by name and description
   as the user types, and a click injects the snippet into the selected tab's
   Live Terminal Session and returns focus to the terminal. Opening the sidebar
   rereads the file; there is no file watching. The sidebar does not suspend
@@ -771,8 +771,8 @@ directory, or dangling symlink) skips the entire initial kit without inspecting
 snippets or themes. Otherwise, OMXTerm creates the directory, `config.json` with
 common built-in defaults (including explicit `window.blur: false` and
 `window.transparency: 0`) and `theme.path` set to `themes/omtheme.json`, one
-non-executing example in `snippets.json`, and a copy of the bundled theme at
-`themes/omtheme.json`. Existing sibling files are never replaced. Files are
+non-executing literal-block example in `snippets.yaml`, and a copy of the bundled
+theme at `themes/omtheme.json`. Existing sibling files are never replaced. Files are
 published complete without overwriting concurrent creations; configuration is
 published last. Shell, font family and shortcuts retain their implicit platform
 defaults. Creation failure produces a non-blocking notice and normal
@@ -935,16 +935,24 @@ authored on macOS become `Control` off macOS and can shadow these keys
 unintentionally. Creating new actions, system-global shortcuts, chords or
 sequences, and per-platform alternate maps are unsupported.
 
-An optional user-owned `snippets.json` next to `config.json` defines the
-Snippets Sidebar contents. The file is strict JSON containing exactly
-`"version": 1` and a `snippets` array of at most 512 entries; each entry has a
-non-empty `name` (the searchable label, at most 128 UTF-16 code units), a
+An optional user-owned `snippets.yaml` next to `config.json` defines the
+Snippets Sidebar contents. The file is one UTF-8 YAML 1.2 core document parsed
+with `yaml` v2, containing exactly `version: 1` and a `snippets` array of at
+most 512 entries; each entry has a non-empty `name` (the searchable label, at most 128 UTF-16 code units), a
 non-empty `body` (the text to inject, at most 65,536 UTF-16 code units), an
 optional `description` (at most 512 UTF-16 code units), and an optional boolean
 `execute` defaulting to `false`. Apart from initial kit creation, OMXTerm never
 creates, rewrites, or migrates the file; absence is the clean empty state, and
-the file is reread each time the sidebar opens. Injection uses the same
-Protected Paste path as a normal paste. With bracketed paste disabled, a
+the file is reread each time the sidebar opens. The old `snippets.json` filename
+is not read or migrated. Configuration and themes remain JSON. Source reads are
+bounded to 1 MiB plus one overflow-detection byte; over-limit files are rejected
+before UTF-8 decoding. Before recursive YAML composition/conversion, an iterative
+concrete-tree check enforces at most 16 collection levels (root is level 1) and
+4,096 total mapping pairs and sequence entries, including mapping keys. Duplicate
+keys, aliases, custom/non-core tags, non-scalar mapping keys, non-1.2 YAML versions,
+and multiple documents are rejected. Literal blocks preserve YAML chomping:
+`|-` strips trailing line breaks, `|` keeps one, and `|+` keeps all.
+Injection uses the same Protected Paste path as a normal paste. With bracketed paste disabled, a
 multiline or control-character body requires Protected Paste approval; after
 approval, the body is delivered unchanged and may execute through its embedded
 line breaks or control characters. With bracketed paste enabled, paste-aware
@@ -952,10 +960,11 @@ delivery bypasses the Protected Paste confirmation and sends the body as one
 bracketed paste. `execute` controls only whether OMXTerm appends Enter after
 body delivery: `false` appends nothing, while `true` sends Enter after the body
 and any closing bracketed-paste marker — per-snippet opt-in only. An invalid
-`snippets.json` never blocks startup and is never silent: the sidebar shows the
-exact actionable problem, including the resolved path and field location, in
-place of the list, and the terminal is unaffected. The Electron main process
-reads and validates the file and sends only validated, typed data over the
+`snippets.yaml` never blocks startup and is never silent: the sidebar shows the
+actionable problem, including the resolved path and schema field location or
+syntax line/column coordinates, in place of the list, and the terminal is
+unaffected. Parser excerpts and arbitrary parser messages are never displayed.
+The Electron main process reads and validates the file and sends only validated, typed data over the
 preload bridge. Snippet contents are user payload and are never logged.
 
 An absent `theme` uses the bundled canonical [`omtheme`](omtheme.json). A

@@ -24,7 +24,7 @@ export async function buildFixture(
           build({
             ...shared,
             entryPoints: ["src/main/index.ts"],
-            external: ["electron", "node-pty"],
+            external: ["electron", "node-pty", "yaml"],
             format: "esm",
             platform: "node",
             outfile: path.join(root, "dist", "main", "index.js"),

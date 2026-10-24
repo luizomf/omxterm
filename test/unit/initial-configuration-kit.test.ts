@@ -73,10 +73,17 @@ describe("initial configuration kit", () => {
       const snippets = await loadTerminalSnippets(options);
       expect(snippets.error).toBeUndefined();
       expect(snippets.snippets).toHaveLength(1);
-      expect(snippets.snippets[0]?.execute).toBe(false);
+      expect(snippets.snippets[0]).toEqual({
+        name: "Print a message",
+        body: "printf '%s\\n' \"Hello\"",
+        execute: false,
+      });
+      expect(
+        await readFile(path.join(directory, "snippets.yaml"), "utf8"),
+      ).toContain("body: |-\n");
       expect(await readdir(directory)).toEqual([
         "config.json",
-        "snippets.json",
+        "snippets.yaml",
         "themes",
       ]);
     },
@@ -96,10 +103,10 @@ describe("initial configuration kit", () => {
   it("does not replace preexisting snippets or theme bytes", async () => {
     const { options, directory } = await fixture();
     await mkdir(path.join(directory, "themes"), { recursive: true });
-    for (const file of ["snippets.json", "themes/omtheme.json"])
+    for (const file of ["snippets.yaml", "themes/omtheme.json"])
       await writeFile(path.join(directory, file), "user bytes");
     expect(await createInitialConfigurationKit(options)).toBeUndefined();
-    for (const file of ["snippets.json", "themes/omtheme.json"])
+    for (const file of ["snippets.yaml", "themes/omtheme.json"])
       expect(await readFile(path.join(directory, file), "utf8")).toBe(
         "user bytes",
       );
@@ -129,7 +136,7 @@ describe("initial configuration kit", () => {
     expect((await loadUserConfiguration(options)).fallback).toBeUndefined();
     expect(await readdir(directory)).toEqual([
       "config.json",
-      "snippets.json",
+      "snippets.yaml",
       "themes",
     ]);
     expect(await readdir(path.join(directory, "themes"))).toEqual([

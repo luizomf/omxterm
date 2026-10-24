@@ -38,7 +38,8 @@
   "dependencies": {
     "node-pty": "1.1.0",
     "restty": "0.3.0",
-    "text-shaper": "0.1.28"
+    "text-shaper": "0.1.28",
+    "yaml": "2.9.1"
   },
   "devDependencies": {
     "@electron/asar": "4.3.1",

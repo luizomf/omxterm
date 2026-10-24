@@ -179,7 +179,7 @@ Editing `config.json` does not apply changes until you press `Cmd+Shift+,` (macO
 - If `config.json` has a syntax error or invalid value, OMXTerm displays an error banner explaining what to fix while keeping your previous valid settings active.
 - Changes to `font.family` and `font.lineHeight` apply to new tabs and require restarting OMXTerm to update existing tabs.
 - Changes to `windowsShell` apply to new tabs; changes to default bar visibility (`showTitleBar`, `showTabBar`, `alwaysOnTop`) apply to new windows.
-- Edits to `snippets.json` load automatically whenever you close and reopen the Snippets sidebar.
+- Edits to `snippets.yaml` load automatically whenever you close and reopen the Snippets sidebar.
 
 See [reloading user configuration](configuration.md#reloading-user-configuration) and [theme troubleshooting](configuration.md#theme-troubleshooting) for details.
 

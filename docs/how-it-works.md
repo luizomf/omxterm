@@ -50,7 +50,7 @@ See [Everyday use](usage.md#windows-tabs-and-sessions) for tab and window shortc
 
 ## Customization and conveniences
 
-- **Your settings stay yours:** OMXTerm separates app settings (`config.json`), color palettes (`themes/*.json`), and reusable text snippets (`snippets.json`). Save your changes and press `Cmd+Shift+,` (macOS) or `Ctrl+Shift+,` (Linux/Windows) to reload them live, or edit visually with [OMXTerm Studio](configuration.md#edit-visually-with-omxterm-studio).
+- **Your settings stay yours:** OMXTerm separates app settings (`config.json`), color palettes (`themes/*.json`), and reusable text snippets (`snippets.yaml`). Save settings or theme changes and press `Cmd+Shift+,` (macOS) or `Ctrl+Shift+,` (Linux/Windows) to reload them live; close and reopen the Snippets sidebar for snippet edits. See [configuration](configuration.md) for file formats and visual editing options.
 - **Safe paste and path insertion:** [Protected Paste](usage.md#protected-paste) warns before pasting multiple lines into a program that hasn't enabled bracketed paste. Dragging files into the window inserts their shell-quoted paths so you can review them before pressing Enter.
 - **Two ways to view images:** you can `Cmd+click` / `Ctrl+click` a local PNG or JPEG path to open a quick [overlay preview](usage.md#previewing-local-images), or display [inline terminal images](usage.md#inline-terminal-images) directly in the grid with tools like `chafa` and `pi`.
 

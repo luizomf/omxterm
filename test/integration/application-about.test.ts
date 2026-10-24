@@ -70,7 +70,7 @@ it.for([
               bundle: true,
               platform: "node",
               format: "esm",
-              external: ["electron", "node-pty"],
+              external: ["electron", "node-pty", "yaml"],
             });
           }
         },

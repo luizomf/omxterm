@@ -127,7 +127,7 @@ menu bar.
 ### Make it yours
 
 On first launch, OMXTerm creates starter configuration files (`config.json`,
-`snippets.json`, and `themes/omtheme.json`) in `~/.config/omxterm`. You can edit
+`snippets.yaml`, and `themes/omtheme.json`) in `~/.config/omxterm`. You can edit
 them directly,
 [tweak a single setting](docs/configuration.md#add-one-display-change), or use
 [OMXTerm Studio](docs/configuration.md#edit-visually-with-omxterm-studio) to

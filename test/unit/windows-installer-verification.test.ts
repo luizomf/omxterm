@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
 import { readFile } from "node:fs/promises";
+import { describe, expect, it, vi } from "vitest";
 import {
   inspectWindowsInstallation,
   inspectWindowsInstallerInputs,
@@ -16,7 +16,7 @@ function adapter() {
 }
 
 describe("exact Windows installer verification", () => {
-  it("accepts the reviewed packaging footprint including the About notice", async () => {
+  it("accepts the reviewed packaging footprint including YAML and About notices", async () => {
     const configuration = await readFile(
       new URL("../../electron-builder.yml", import.meta.url),
       "utf8",

@@ -1003,6 +1003,10 @@ export async function verifyPackagedApplication(
         path.join(resources, "licenses", "node-pty.txt"),
       ),
       assertSameFile(
+        path.join(projectRoot, "node_modules", "yaml", "LICENSE"),
+        path.join(resources, "licenses", "yaml.txt"),
+      ),
+      assertSameFile(
         path.join(projectRoot, "assets", "licenses", "ashyterm-MIT.txt"),
         path.join(resources, "licenses", "ashyterm.txt"),
       ),
