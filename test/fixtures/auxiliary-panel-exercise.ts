@@ -12,6 +12,7 @@ import type { TerminalApplication } from "../../src/main/terminal-application";
 import type { LocalImageData } from "../../src/shared/local-image";
 import { createNativeHostPng } from "./native-host-png";
 import { exercisePanelKeyboard } from "./auxiliary-panel-keyboard";
+import { capturePanelInput } from "./auxiliary-panel-input";
 
 interface PanelOptions {
   readonly window: BrowserWindow;
@@ -19,7 +20,11 @@ interface PanelOptions {
   readonly second: () => BrowserWindow;
   readonly sizes: Array<Array<{ cols: number; rows: number }>>;
   readonly output: (index: number, data: string) => void;
-  readonly captureInput: (listener: (data: string) => void) => void;
+  readonly inputReady: (index: number) => boolean;
+  readonly captureInput: (
+    index: number,
+    listener: (data: string) => void,
+  ) => () => void;
   readonly clipboard: { text: string; writes: string[]; reads: number };
   readonly showAbout: () => void;
   readonly imagePending: () => boolean;
@@ -54,7 +59,7 @@ function createScenario(options: PanelOptions) {
   const until = (expression: string) =>
     wait(() => evaluate<boolean>(expression), expression);
   const input: string[] = [];
-  options.captureInput((data) => input.push(data));
+  const sessionInput: string[][] = [[], []];
   let bindings = terminalDefaultKeybinds(process.platform);
   const unexpected = () => assert.fail("Unexpected panel fixture menu action");
   const actions = {
@@ -133,6 +138,7 @@ function createScenario(options: PanelOptions) {
     key,
     clickMenu,
     input,
+    sessionInput,
     width,
     point,
     remap() {
@@ -163,33 +169,38 @@ export async function exerciseAuxiliaryPanel(options: PanelOptions) {
   application.newTabInSelectedWindow();
   await until("document.querySelectorAll('canvas').length === 2");
   await wait(() => (sizes[1]?.length ?? 0) > 0, "second grid");
-  await evaluate(
-    "window.panelCanvases = [...document.querySelectorAll('canvas')]; window.panelSurfaces = [...document.querySelectorAll('.terminal-surface')]",
-  );
-  const hiddenSize = { ...sizes[0]!.at(-1)! };
-  const originalColumns = sizes[1]!.at(-1)!.cols;
-  clickMenu("Toggle Snippets");
-  await until(`${shown} && ${searchFocused}`);
-  await until("!!document.querySelector('#snippets-sidebar li button')");
-  assert.equal(await width(), 280);
-  await wait(
-    () => sizes[1]!.at(-1)!.cols < originalColumns,
-    "selected grid shrinks",
-  );
-  await until(searchFocused);
-  await evaluate("window.dispatchEvent(new Event('focus'))");
-  await until(searchFocused);
-  await exerciseClipboard(scene);
-  await exerciseResize(scene);
-  assert.deepEqual(sizes[0]!.at(-1), hiddenSize);
-  options.output(0, "\r\nHIDDEN_PANEL_OUTPUT\r\n");
-  await exerciseSmallWindow(scene);
-  await exerciseOverlays(scene);
-  await exerciseRetention(scene, hiddenSize);
-  return {
-    auxiliary: "layout-lifetime-input-overlays-verified",
-    input: "synthetic-chromium-not-physical",
-  };
+  const releaseInput = await capturePanelInput(scene);
+  try {
+    await evaluate(
+      "window.panelCanvases = [...document.querySelectorAll('canvas')]; window.panelSurfaces = [...document.querySelectorAll('.terminal-surface')]",
+    );
+    const hiddenSize = { ...sizes[0]!.at(-1)! };
+    const originalColumns = sizes[1]!.at(-1)!.cols;
+    clickMenu("Toggle Snippets");
+    await until(`${shown} && ${searchFocused}`);
+    await until("!!document.querySelector('#snippets-sidebar li button')");
+    assert.equal(await width(), 280);
+    await wait(
+      () => sizes[1]!.at(-1)!.cols < originalColumns,
+      "selected grid shrinks",
+    );
+    await until(searchFocused);
+    await evaluate("window.dispatchEvent(new Event('focus'))");
+    await until(searchFocused);
+    await exerciseClipboard(scene);
+    await exerciseResize(scene);
+    assert.deepEqual(sizes[0]!.at(-1), hiddenSize);
+    options.output(0, "\r\nHIDDEN_PANEL_OUTPUT\r\n");
+    await exerciseSmallWindow(scene);
+    await exerciseOverlays(scene);
+    await exerciseRetention(scene, hiddenSize);
+    return {
+      auxiliary: "layout-lifetime-input-overlays-verified",
+      input: "synthetic-chromium-not-physical",
+    };
+  } finally {
+    releaseInput();
+  }
 }
 
 async function exerciseClipboard(s: Scene) {
