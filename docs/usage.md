@@ -66,7 +66,9 @@ On Linux and Windows, press and release **Alt** to open the application menu (ev
 
 ### Searching the scrollback
 
-Choose **Edit → Find…** (`Cmd+F` / `Ctrl+Shift+F`) to search the selected tab's scrollback and visible screen. Matches highlight as you type, and the bar shows the selected match and total. Press `Enter` (or **↓**) for the match below, `Shift+Enter` (or **↑**) for the match above, and `Escape` to close the bar and return to the terminal.
+Choose **Edit → Find…** (`Cmd+F` / `Ctrl+Shift+F`) to search the selected tab's scrollback and visible screen. The search field gets focus, matches highlight as you type, and the counter shows the selected match and total. While the search field has focus, press `Enter` (or **↓**) for the next match, `Shift+Enter` (or **↑**) for the previous one, and `Escape` to close the bar and return to the terminal. Copy, Paste, and Select All also work on the search text there.
+
+Click the terminal to keep typing with the bar still open: your keys, including `Enter` and `Escape`, go to the terminal program as usual. Choose **Find…** again to return to the search field.
 
 Search only sees output the tab still holds in memory, so lines beyond your [scrollback limit](configuration.md) are not found. Each tab keeps its own search, and the query is never saved or logged.
 

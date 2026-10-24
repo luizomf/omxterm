@@ -40,6 +40,11 @@ import {
   resttyHostServices,
 } from "./restty-host-services";
 import { toGhosttyTheme, toResttySearchUiStyle } from "./restty-theme";
+import {
+  applySearchTheme,
+  focusedSearchField,
+  withSearchFieldClipboard,
+} from "./restty-search-field";
 import type {
   TerminalFontInputLease,
   TerminalSurface,
@@ -159,7 +164,7 @@ export async function mountResttyTerminalSurface(
     paintContainer(container, padding, terminalTheme, options.background);
   const applyRuntimeTheme = (theme: TerminalTheme) => {
     pane?.runtime.terminal.applyTheme(toGhosttyTheme(theme), "OMXTerm");
-    restty?.setSearchUiStyleOptions(toResttySearchUiStyle(theme));
+    applySearchTheme(restty, container, theme);
   };
   const isSurfaceVisible = () =>
     !isInactive() && !container.hidden && container.isConnected;
@@ -269,6 +274,7 @@ export async function mountResttyTerminalSurface(
     });
     pane = restty.getActivePane() ?? undefined;
     if (!pane) throw new Error("Restty did not create its terminal pane");
+    applySearchTheme(restty, container, terminalTheme);
 
     removeRuntimeListener = pane.runtime.events.subscribe((event) => {
       if (isInactive()) return;
@@ -334,7 +340,8 @@ export async function mountResttyTerminalSurface(
 
     return {
       focus: () => {
-        if (disposed || isSearchFocused(restty, container)) return;
+        // Window focus returns to a focused query field, not the terminal.
+        if (disposed || focusedSearchField(restty, container)) return;
         refit();
         pane?.runtime.interaction.focus();
         // Tab selection calls focus in the switching task, before presentation.
@@ -359,8 +366,12 @@ export async function mountResttyTerminalSurface(
         applyRuntimeSize(nextSize);
         refit();
       },
-      ...resttyClipboardActions(delivery, options, () =>
-        disposed ? undefined : pane?.runtime.interaction,
+      ...withSearchFieldClipboard(
+        resttyClipboardActions(delivery, options, () =>
+          disposed ? undefined : pane?.runtime.interaction,
+        ),
+        () => (disposed ? undefined : focusedSearchField(restty, container)),
+        options,
       ),
       find: () => {
         if (!disposed) restty?.openSearch({ selectAll: true });
@@ -464,19 +475,6 @@ function resttySurfaceConfig(theme: TerminalTheme) {
     searchUi: { shortcut: false, styles: toResttySearchUiStyle(theme) },
     shortcuts: false,
   };
-}
-
-// Window focus returns to an open search bar rather than the terminal.
-function isSearchFocused(
-  restty: PatchedRestty | undefined,
-  container: HTMLElement,
-): boolean {
-  const active = container.ownerDocument.activeElement;
-  return (
-    restty?.isSearchOpen() === true &&
-    active?.closest('[role="search"]') != null &&
-    container.contains(active)
-  );
 }
 
 function paintContainer(

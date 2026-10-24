@@ -45,6 +45,21 @@ export function toGhosttyTheme(theme: TerminalTheme): GhosttyTheme {
   };
 }
 
+// Mixes two validated #rrggbb colors in sRGB, like CSS color-mix(), so the
+// result stays a plain hex color with a checkable contrast.
+export function mixThemeColors(
+  foreground: string,
+  background: string,
+  percent: number,
+): string {
+  const [fg, bg] = [color(foreground), color(background)];
+  const channel = (from: number, to: number) =>
+    Math.round(to + ((from - to) * percent) / 100)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${channel(fg.r, bg.r)}${channel(fg.g, bg.g)}${channel(fg.b, bg.b)}`;
+}
+
 // The search bar follows the Terminal Theme instead of Restty's fixed dark
 // palette, so light themes keep a legible bar.
 export function toResttySearchUiStyle(
@@ -52,18 +67,30 @@ export function toResttySearchUiStyle(
 ): ResttyManagedPaneSearchUiStyleOptions {
   const { background, foreground } = theme.colors;
   const tint = (percent: number) =>
-    `color-mix(in srgb, ${foreground} ${percent}%, ${background})`;
+    mixThemeColors(foreground, background, percent);
   return {
     panelBackground: background,
     panelBorderColor: tint(25),
     panelTextColor: foreground,
     inputBackground: tint(8),
     inputTextColor: foreground,
-    inputPlaceholderColor: tint(55),
+    inputPlaceholderColor: tint(65),
     buttonTextColor: foreground,
     buttonHoverBackground: tint(14),
-    statusTextColor: tint(60),
+    statusTextColor: tint(70),
     statusActiveTextColor: foreground,
-    statusCompleteTextColor: tint(60),
+    statusCompleteTextColor: tint(70),
+  };
+}
+
+// The match counter sits on the same surface as the query field.
+export function toResttySearchStatusStyle(theme: TerminalTheme): {
+  readonly background: string;
+  readonly borderColor: string;
+} {
+  const { background, foreground } = theme.colors;
+  return {
+    background: mixThemeColors(foreground, background, 8),
+    borderColor: mixThemeColors(foreground, background, 25),
   };
 }

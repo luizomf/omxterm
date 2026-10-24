@@ -14,6 +14,7 @@ const harness = vi.hoisted(() => {
     readonly getSelectionText = vi.fn(() => this.selection);
     readonly selectAll = vi.fn(() => true);
     readonly isSearchOpen = vi.fn(() => false);
+    readonly setSearchUiStyleOptions = vi.fn();
     selection = "";
     bracketedPaste = false;
     readonly pane = {

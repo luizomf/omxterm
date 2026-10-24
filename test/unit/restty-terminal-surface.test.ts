@@ -618,7 +618,7 @@ describe("Restty Terminal Surface appearance", () => {
       expect.objectContaining({
         panelBackground: "#102030",
         panelTextColor: "#f1e2d3",
-        inputBackground: "color-mix(in srgb, #f1e2d3 8%, #102030)",
+        inputBackground: "#22303d",
       }),
     );
     expect(container.style.getPropertyValue("--terminal-padding-top")).toBe(

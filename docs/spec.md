@@ -691,14 +691,22 @@ Scrollback Search opens only through **Edit → Find…** or the `find` keybind
 (`Cmd+F` on macOS, `Ctrl+Shift+F` on Linux and Windows). It uses Restty's
 search bar and the pinned core's search over the selected tab's retained
 Scrollback Buffer and visible screen; output evicted by the scrollback limits
-is not searchable. Invoking Find again focuses and selects the open query. `Enter` or the down
-button selects the match below (newer output), `Shift+Enter` or the up button
-the match above (older output), and `Escape` or the close button closes the
-bar and returns focus to the terminal. Window focus returns to an open bar
-rather than the terminal. The bar follows the active Terminal Theme. Each tab
-owns its own query; queries and matches stay in renderer memory and are never
-persisted, logged, sent to main or written to the PTY. Find is ignored while a
-Local Image Preview is open.
+is not searchable. Opening the bar focuses its query field, and invoking Find
+again focuses and selects the query. Keys act on the bar only while its query
+field holds focus: `Enter` or the down button selects the next match below
+(newer output), `Shift+Enter` or the up button the previous match above (older
+output), and `Escape` or the close button closes the bar and returns focus to
+the terminal. An open bar never captures keys while the terminal holds focus;
+`Enter`, `Shift+Enter` and `Escape` then remain ordinary terminal input. Window
+focus returns to the query field only when it held focus before. While the
+field holds focus, application Copy, Paste and Select All, from the menu, a
+keybind or the context menu, act on the query instead of the terminal: Paste
+inserts clipboard text at the field's selection with line breaks replaced by
+spaces, and nothing reaches Protected Paste or the PTY. The bar, including its
+match counter, follows the active Terminal Theme. Each tab owns its own query;
+queries and matches stay in renderer memory and are never persisted, logged,
+sent to main or written to the PTY. Find is ignored while a Local Image Preview
+is open.
 
 ## Clipboard
 

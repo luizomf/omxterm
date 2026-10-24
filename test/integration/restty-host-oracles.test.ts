@@ -417,7 +417,7 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
 describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   "focused Scrollback Search host oracle",
   () => {
-    it("finds scrollback matches through main IPC, real typing and keys without PTY input", async (testContext) => {
+    it("finds scrollback matches, edits the query through the application clipboard, and leaves keys to a focused terminal", async (testContext) => {
       const result = readResult(
         await runOracle("scrollback-search", testContext),
       );
@@ -427,8 +427,12 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
       expect(evidence).toEqual({
         openedFocused: true,
         asciiStatus: "10",
+        pastedQuery: "needleprivate",
         unicodeStatus: "1",
         themed: true,
+        counterMatchesField: true,
+        terminalKeysWhileOpen: true,
+        openAfterTerminalKeys: true,
         closed: true,
         focusReturned: true,
         queryReachedPty: false,
