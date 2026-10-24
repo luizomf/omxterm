@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFile } from "node:fs/promises";
 import {
   inspectWindowsInstallation,
   inspectWindowsInstallerInputs,
@@ -15,6 +16,15 @@ function adapter() {
 }
 
 describe("exact Windows installer verification", () => {
+  it("accepts the reviewed packaging footprint including the About notice", async () => {
+    const configuration = await readFile(
+      new URL("../../electron-builder.yml", import.meta.url),
+      "utf8",
+    );
+    expect(() =>
+      inspectWindowsInstallerInputs(configuration, "26.15.3", "omxterm"),
+    ).not.toThrow();
+  });
   it("recognizes the persistent NSIS cache as existing installation state", async () => {
     const execute = vi.fn().mockResolvedValue({
       stdout: JSON.stringify({
