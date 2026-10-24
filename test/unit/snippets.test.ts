@@ -338,6 +338,31 @@ describe("Snippets YAML parsing", () => {
       "at most 512 snippets",
     ],
     [
+      "implicit flow mapping depth overflow",
+      "version: 1\nsnippets: " + "[a: ".repeat(8) + "0" + "]".repeat(8),
+      "maximum collection depth is 16",
+    ],
+    [
+      "implicit flow mapping depth boundary",
+      "version: 1\nsnippets: " + "[a: ".repeat(7) + "[0]" + "]".repeat(7),
+      "is unknown",
+    ],
+    [
+      "implicit flow mapping item overflow",
+      "version: 1\nsnippets: [" + Array(2048).fill("a: 0").join(", ") + "]",
+      "at most 4096 collection items",
+    ],
+    [
+      "implicit flow mapping item boundary",
+      "version: 1\nsnippets: [" + Array(2047).fill("a: 0").join(", ") + "]",
+      "at most 512 snippets",
+    ],
+    [
+      "explicit flow pair item overflow",
+      "version: 1\nsnippets: [" + Array(2048).fill("? a").join(", ") + "]",
+      "at most 4096 collection items",
+    ],
+    [
       "deep flow input",
       "[".repeat(10_000) + "0" + "]".repeat(10_000),
       "maximum collection depth is 16",

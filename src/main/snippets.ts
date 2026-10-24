@@ -105,8 +105,23 @@ function parseSnippetsYaml(text: string): unknown {
           "must contain at most 4096 collection items",
         );
       for (const item of token.items) {
-        if (item.key) pending.push({ token: item.key, depth: depth + 1 });
-        if (item.value) pending.push({ token: item.value, depth: depth + 1 });
+        // Flow-sequence pairs ([a: b] or [? a]) compose an extra map that
+        // has no collection token of its own. Budget it before composition.
+        const flowPair =
+          token.type === "flow-collection" &&
+          token.start.type === "flow-seq-start" &&
+          (item.sep !== undefined ||
+            item.start.some((part) => part.type === "explicit-key-ind"));
+        const childDepth = depth + (flowPair ? 2 : 1);
+        if (flowPair && childDepth > 16)
+          throw new SnippetsYamlError("maximum collection depth is 16");
+        items += flowPair ? 1 : 0;
+        if (items > 4096)
+          throw new SnippetsYamlError(
+            "must contain at most 4096 collection items",
+          );
+        if (item.key) pending.push({ token: item.key, depth: childDepth });
+        if (item.value) pending.push({ token: item.value, depth: childDepth });
       }
     }
   }
