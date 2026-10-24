@@ -22,6 +22,7 @@ import {
 import type { ResttyGestureControl } from "../fixtures/restty-gesture-routing-mutation";
 import type { exerciseResttyOrdinaryGestures } from "../fixtures/restty-link-gestures";
 import type { ResttySearchEvidence } from "../fixtures/restty-host-search";
+import type { ResttyExportEvidence } from "../fixtures/restty-host-export";
 
 const electronExecutable = createRequire(import.meta.url)("electron") as string;
 const prefix = "__OMXTERM_RESTTY_HOST_RESULT__";
@@ -32,6 +33,7 @@ interface FocusedResult {
   readonly outputStress?: OutputStressEvidence;
   readonly backendLoss?: Awaited<ReturnType<typeof exerciseResttyBackendLoss>>;
   readonly searchEvidence?: ResttySearchEvidence;
+  readonly exportEvidence?: ResttyExportEvidence;
   readonly gestureEvidence?: Awaited<
     ReturnType<typeof exerciseResttyOrdinaryGestures>
   >;
@@ -438,6 +440,29 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         queryReachedPty: false,
         // Only the terminal-owned Escape's press and release.
         kittyEscapeWrites: "\u001b[27;1:1u\u001b[27;1:3u",
+      });
+    }, 130_000);
+  },
+);
+
+describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
+  "focused terminal export host oracle",
+  () => {
+    it("exports retained content or the selection without changing it, from the requesting tab", async (testContext) => {
+      const result = readResult(
+        await runOracle("terminal-export", testContext),
+      );
+      expect(result.exportEvidence).toEqual({
+        contextMenuSelection: [false, false, true],
+        contentKind: "content",
+        contentFirstRow: true,
+        contentLastRow: true,
+        contentUnicode: true,
+        contentRowsInOrder: true,
+        selectionKind: "selection",
+        selectionMatchesCopy: true,
+        selectionPreserved: true,
+        afterTabSwitchFromOriginalTab: true,
       });
     }, 130_000);
   },

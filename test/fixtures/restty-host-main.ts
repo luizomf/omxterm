@@ -12,6 +12,7 @@ import {
 import { registerTerminalWindowHost } from "../../src/main/terminal-window-host";
 import * as resttyConfiguration from "./restty-host-configuration";
 import type { LocalImageRequest } from "../../src/shared/local-image";
+import { recordExport, resttyExportEvidence } from "./restty-host-export";
 import { fixtureLocalImageLoader } from "./restty-local-image-links";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { exerciseExplicitResttyTab } from "./restty-host-explicit-tab";
@@ -177,6 +178,7 @@ function createHost(window: BrowserWindow) {
     onSessionSelected() {},
     writeClipboardText(text) {
       clipboardWrites += 1;
+      resttyExportEvidence.clipboardTexts.push(text);
       outputStress.observeClipboard(text);
       // Both claims must come from the same complete copy, not separate writes
       // or marker substrings in the submitted command.
@@ -193,8 +195,9 @@ function createHost(window: BrowserWindow) {
       protectedPasteConfirmations += 1;
       return true;
     },
-    showClipboardContextMenu() {
+    showClipboardContextMenu(request) {
       contextMenus += 1;
+      resttyExportEvidence.contextMenuRequests.push(request);
     },
     onTitleRequest(sessionId, title) {
       const fixture =
@@ -219,6 +222,7 @@ function createHost(window: BrowserWindow) {
     },
     onExternalLinkOpenError() {},
     loadSnippets: async () => ({ snippets: [] }),
+    saveTerminalExport: recordExport,
     loadLocalImage: fixtureLocalImageLoader(window, root, localImageRequests),
   });
   registerTerminalWindowHost(window, controller, () => router.dispose());
@@ -264,6 +268,7 @@ async function completeFocusedScenario(
       inputs,
       deliverOutputs,
       resizes,
+      exportEvidence: resttyExportEvidence,
       ptyExits: () => ptyExits,
       sessionStarts: () => sessionIndex,
       sessionExited: (index) => exitedSessionIndices.has(index),

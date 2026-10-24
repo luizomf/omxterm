@@ -13,8 +13,16 @@ export function resttyClipboardActions(
   delivery: SemanticInputDelivery,
   options: TerminalSurfaceOptions,
   liveSelection: () =>
-    { getSelectionText(): string; selectAll(): boolean } | undefined,
-): Pick<TerminalSurface, "copy" | "paste" | "inject" | "selectAll"> {
+    | {
+        getSelectionText(): string;
+        getBufferText(): string;
+        selectAll(): boolean;
+      }
+    | undefined,
+): Pick<
+  TerminalSurface,
+  "copy" | "paste" | "inject" | "selectAll" | "exportText"
+> {
   return {
     async copy() {
       const text = liveSelection()?.getSelectionText() ?? "";
@@ -35,16 +43,27 @@ export function resttyClipboardActions(
     selectAll: () => {
       liveSelection()?.selectAll();
     },
+    exportText(kind) {
+      const interaction = liveSelection();
+      if (!interaction) return "";
+      return kind === "selection"
+        ? interaction.getSelectionText()
+        : interaction.getBufferText();
+    },
   };
 }
 
+// The request reports whether text is selected, so main can label the
+// contextual export it offers.
 export function resttyContextMenuHandler(
   clipboard: TerminalClipboard | undefined,
+  liveSelection: () => { getSelectionText(): string } | undefined,
 ) {
   return (event: Event) => {
     if (!clipboard) return;
     event.preventDefault();
-    clipboard.requestContextMenu();
+    const hasSelection = (liveSelection()?.getSelectionText() ?? "") !== "";
+    clipboard.requestContextMenu({ hasSelection });
   };
 }
 

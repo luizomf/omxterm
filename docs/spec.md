@@ -54,8 +54,8 @@ OMXTerm:
 - uses one independent shell session per Terminal Tab, with one or more tabs per
   native Terminal Window;
 - provides native new-window, new-tab, close, copy, paste, select-all,
-  scrollback search, zoom, fullscreen, always-on-top, bounded local-image
-  preview, and quit actions without an in-window toolbar;
+  scrollback search, explicit text export, zoom, fullscreen, always-on-top,
+  bounded local-image preview, and quit actions without an in-window toolbar;
 - renders the bundled [`omtheme`](omtheme.json) palette by default, allows one
   explicitly configured external Terminal Theme, keeps SGR bold text on its
   requested ANSI `0–7` color without remapping it to bright `8–15` (applications
@@ -732,6 +732,26 @@ persisted, logged or written to the PTY, and searching never sends it to main.
 Only an explicit Copy from the focused field moves the selected query text,
 through the same main-owned clipboard IPC as any other Copy. Find is ignored
 while a Local Image Preview or About owns modal input.
+
+Explicit Export is offered from the terminal context menu. With selected text
+the menu shows **Export Selection…**, otherwise **Export Terminal Content…**;
+the label is fixed when the menu opens, and the saved text matches it. Selection
+export saves the selected text. Content export saves the selected tab's retained
+Scrollback Buffer and visible screen, or only the alternate screen while it is
+active, read through the prepared runtime without creating, changing or
+clearing a selection. The renderer reads the text when the request arrives,
+before any dialog, so switching tabs cannot substitute another tab's content.
+Main validates the request, a kind plus at most 16 MiB of UTF-8 text (above what
+the core retains for one screen), and owns a native save dialog that suggests
+`omxterm-selection-…` or `omxterm-terminal-…` with a local timestamp in the
+Documents folder and uses the platform's overwrite confirmation. Cancelling
+writes nothing. The file is UTF-8 with LF line breaks: the core trims each row's
+trailing padding, trailing blank rows are dropped, and the file ends with
+exactly one line break. On macOS and Linux a newly created file is readable
+only by its owner. Whitespace-only content shows a notice instead of a dialog,
+and a failed write shows an error with the operating-system reason. Export is
+never automatic or continuous, and neither the text nor the destination enters
+operational logs.
 
 ## Clipboard
 

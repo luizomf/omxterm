@@ -623,3 +623,19 @@ describe("Scrollback Search routing", () => {
     expect(harness.surfaces[0]!.find).not.toHaveBeenCalled();
   });
 });
+
+describe("explicit export routing", () => {
+  it("reads export text from the selected tab only", async () => {
+    const harness = createTabsHarness();
+    await harness.tabs.ready;
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+    harness.surfaces[1]!.exportText.mockReturnValue("second tab");
+
+    expect(harness.tabs.exportText("content")).toBe("second tab");
+    expect(harness.surfaces[1]!.exportText).toHaveBeenCalledExactlyOnceWith(
+      "content",
+    );
+    expect(harness.surfaces[0]!.exportText).not.toHaveBeenCalled();
+  });
+});

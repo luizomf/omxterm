@@ -77,6 +77,21 @@ export type TerminalTabCommand =
 export type TerminalFontZoom = "in" | "out" | "reset";
 export type TerminalClipboardAction = "copy" | "paste" | "select-all";
 
+// Explicit, user-requested export. "selection" saves the selected text;
+// "content" saves the active tab's retained scrollback and screen. The kind is
+// chosen when the context menu opens, so its label and the saved text agree.
+export type TerminalExportKind = "selection" | "content";
+export interface TerminalContextMenuRequest {
+  readonly hasSelection: boolean;
+}
+export interface TerminalExportRequest {
+  readonly kind: TerminalExportKind;
+  readonly text: string;
+}
+// Above what the 10,000,000-byte core can retain for one screen; it bounds the
+// IPC boundary rather than limiting ordinary exports. Measured in UTF-8 bytes.
+export const MAX_TERMINAL_EXPORT_BYTES = 16 * 1024 * 1024;
+
 const encoder = new TextEncoder();
 
 export function isBoundedTerminalPayload(value: unknown): value is string {
@@ -303,4 +318,49 @@ function isStrictRecord(
     actualKeys.length === keys.length &&
     keys.every((key) => actualKeys.includes(key))
   );
+}
+
+export function isTerminalExportKind(
+  value: unknown,
+): value is TerminalExportKind {
+  return value === "selection" || value === "content";
+}
+
+export function isTerminalContextMenuRequest(
+  value: unknown,
+): value is TerminalContextMenuRequest {
+  return (
+    isStrictRecord(value, ["hasSelection"]) &&
+    typeof value.hasSelection === "boolean"
+  );
+}
+
+export function isTerminalExportRequest(
+  value: unknown,
+): value is TerminalExportRequest {
+  return (
+    isStrictRecord(value, ["kind", "text"]) &&
+    isTerminalExportKind(value.kind) &&
+    typeof value.text === "string" &&
+    utf8ByteLength(value.text) <= MAX_TERMINAL_EXPORT_BYTES
+  );
+}
+
+// UTF-8 length without encoding a copy; a lone surrogate counts as U+FFFD.
+export function utf8ByteLength(value: string): number {
+  let bytes = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const unit = value.charCodeAt(index);
+    if (unit < 0x80) bytes += 1;
+    else if (unit < 0x800) bytes += 2;
+    else if (
+      unit >= 0xd800 &&
+      unit <= 0xdbff &&
+      (value.charCodeAt(index + 1) & 0xfc00) === 0xdc00
+    ) {
+      bytes += 4;
+      index += 1;
+    } else bytes += 3;
+  }
+  return bytes;
 }

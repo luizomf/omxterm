@@ -1,4 +1,8 @@
-import type { TerminalFontZoom } from "../shared/terminal-contract";
+import type {
+  TerminalContextMenuRequest,
+  TerminalExportKind,
+  TerminalFontZoom,
+} from "../shared/terminal-contract";
 import type { LocalImageActivation } from "../shared/local-image";
 import type { TerminalFontInput } from "./terminal-font-stack";
 import type {
@@ -19,6 +23,9 @@ export interface TerminalSurface {
   selectAll(): void;
   // Opens the in-memory scrollback search bar, or focuses it when open.
   find(): void;
+  // Text for an explicit export: the selected text, or the retained
+  // scrollback plus screen. Reading either never changes the selection.
+  exportText(kind: TerminalExportKind): string;
   dispose(): void;
 }
 
@@ -26,7 +33,7 @@ export interface TerminalClipboard {
   writeText(text: string): Promise<void>;
   readText(): Promise<string>;
   confirmPaste(text: string): Promise<boolean>;
-  requestContextMenu(): void;
+  requestContextMenu(request: TerminalContextMenuRequest): void;
 }
 
 export interface TerminalAppearance {

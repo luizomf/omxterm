@@ -54,6 +54,11 @@ import {
   registerSurfaceFontIpc,
   type SurfaceFontRequests,
 } from "./surface-font-ipc";
+import {
+  contextMenuBoundary,
+  exportBoundary,
+  registerTerminalExportIpc,
+} from "./terminal-export-ipc";
 import { createRendererConfigurationState } from "./terminal-renderer-configuration";
 import { createLocalImageIpcBoundary } from "./local-image-ipc";
 export { isValidExternalLink } from "./external-link";
@@ -85,6 +90,7 @@ interface RoutedTerminalIpcController
   readClipboardText(payload?: unknown): string;
   confirmPaste(payload?: unknown): Promise<boolean>;
   showClipboardContextMenu(payload?: unknown): void;
+  saveTerminalExport(payload?: unknown): Promise<void>;
   title(payload?: unknown): void;
   bell(payload?: unknown): void;
   openExternalLink(payload?: unknown): void;
@@ -255,15 +261,21 @@ export function registerTerminalIpcRouter(
     return controller.snippets(payload);
   };
 
+  const rejectUntrustedIpc = () =>
+    operationalEvents?.write({
+      name: "boundary.rejected",
+      boundary: "ipc",
+      reason: "untrusted-sender",
+    });
   const removeSurfaceFontIpc = registerSurfaceFontIpc(
     ipcMain,
     controllerFor,
-    () =>
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "ipc",
-        reason: "untrusted-sender",
-      }),
+    rejectUntrustedIpc,
+  );
+  const removeExportIpc = registerTerminalExportIpc(
+    ipcMain,
+    controllerFor,
+    rejectUntrustedIpc,
   );
   ipcMain.handle(terminalIpc.start, start);
   ipcMain.handle(terminalIpc.configuration, configuration);
@@ -326,6 +338,7 @@ export function registerTerminalIpcRouter(
       disposed = true;
       for (const controller of [...controllers.values()]) controller.dispose();
       removeSurfaceFontIpc();
+      removeExportIpc();
       ipcMain.removeHandler(terminalIpc.start);
       ipcMain.removeHandler(terminalIpc.configuration);
       ipcMain.removeHandler(terminalIpc.fontData);
@@ -650,10 +663,7 @@ function createTerminalIpcController(
   };
   const confirmPaste = (payload?: unknown) =>
     confirmClipboardPaste(payload, options, reject);
-  const showClipboardContextMenu = (payload?: unknown) => {
-    if (payload === undefined) options.showClipboardContextMenu();
-    else reject("clipboard", "invalid-payload");
-  };
+
   const fontData = createFontDataRequest({
     family: () => rendererConfiguration.current().fontFamily,
     generation: () => fontConfigurationGeneration,
@@ -718,7 +728,8 @@ function createTerminalIpcController(
     writeClipboardText,
     readClipboardText,
     confirmPaste,
-    showClipboardContextMenu,
+    showClipboardContextMenu: contextMenuBoundary(options, reject),
+    saveTerminalExport: exportBoundary(options, reject),
     bell,
     openExternalLink,
     localImage: localImageBoundary.request,

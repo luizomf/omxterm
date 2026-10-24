@@ -30,6 +30,7 @@ function harness(initial = configuration) {
     zoom: vi.fn(),
     selectAll: vi.fn(),
     find: vi.fn(),
+    exportText: vi.fn(() => ""),
     copy: vi.fn(async () => {}),
     paste: vi.fn(async () => {}),
     inject: vi.fn(async () => {}),

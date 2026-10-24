@@ -1,4 +1,5 @@
 import type { MenuItemConstructorOptions } from "electron";
+import type { TerminalExportKind } from "../shared/terminal-contract";
 import type {
   TerminalActionName,
   TerminalKeybinds,
@@ -246,15 +247,27 @@ export function terminalActionInvocations(
   });
 }
 
-export function terminalClipboardContextMenuTemplate(actions: {
-  readonly copy: () => void;
-  readonly paste: () => void;
-  readonly selectAll: () => void;
-}): MenuItemConstructorOptions[] {
+export function terminalClipboardContextMenuTemplate(
+  actions: {
+    readonly copy: () => void;
+    readonly paste: () => void;
+    readonly selectAll: () => void;
+    readonly exportText: () => void;
+  },
+  exportKind: TerminalExportKind,
+): MenuItemConstructorOptions[] {
   return [
     { label: "Copy", click: actions.copy },
     { label: "Paste", click: actions.paste },
     { type: "separator" },
     { label: "Select All", click: actions.selectAll },
+    { type: "separator" },
+    {
+      label:
+        exportKind === "selection"
+          ? "Export Selection…"
+          : "Export Terminal Content…",
+      click: actions.exportText,
+    },
   ];
 }

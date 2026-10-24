@@ -111,7 +111,11 @@ See [terminal behavior](docs/spec.md#terminal-behavior) and
 
 **Terminal Payload** — Private input and output exchanged with terminal
 processes. It is transported without becoming application history, logs or
-persisted state.
+persisted state. Only an Explicit Export writes it, to a file the user chooses.
+
+**Explicit Export** — A user-requested save of the selected text, or of the
+active tab's retained Scrollback Buffer and screen, to a file picked in a native
+dialog. It is never automatic or continuous recording.
 
 **Scrollback Buffer** — In-memory output retained above a session's visible
 screen. Each session has its own buffer, with an approximate configured line

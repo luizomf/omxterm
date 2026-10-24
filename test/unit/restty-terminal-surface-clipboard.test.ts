@@ -13,6 +13,7 @@ const harness = vi.hoisted(() => {
     readonly destroy = vi.fn();
     readonly getSelectionText = vi.fn(() => this.selection);
     readonly selectAll = vi.fn(() => true);
+    readonly getBufferText = vi.fn(() => "scrollback\nscreen");
     readonly isSearchOpen = vi.fn(() => false);
     readonly setSearchUiStyleOptions = vi.fn();
     selection = "";
@@ -32,6 +33,7 @@ const harness = vi.hoisted(() => {
         interaction: {
           focus: vi.fn(),
           getSelectionText: this.getSelectionText,
+          getBufferText: this.getBufferText,
           getVisibleLinkAtClientPoint: vi.fn(() => ({
             id: "visible-1",
             url: "https://example.test",
@@ -183,8 +185,31 @@ describe("Restty clipboard and Protected Paste", () => {
     );
     expect(value.restty.selectAll).toHaveBeenCalledOnce();
     expect(menu.defaultPrevented).toBe(true);
-    expect(value.clipboard.requestContextMenu).toHaveBeenCalledOnce();
+    expect(value.clipboard.requestContextMenu).toHaveBeenCalledExactlyOnceWith({
+      hasSelection: true,
+    });
+    value.restty.selection = "";
+    value.container.dispatchEvent(
+      new MouseEvent("contextmenu", { cancelable: true }),
+    );
+    expect(value.clipboard.requestContextMenu).toHaveBeenLastCalledWith({
+      hasSelection: false,
+    });
     value.surface.dispose();
+  });
+
+  it("reads export text without selecting or clearing anything", async () => {
+    const value = await mount();
+    value.restty.selection = "selected 日本語";
+
+    expect(value.surface.exportText("selection")).toBe("selected 日本語");
+    expect(value.surface.exportText("content")).toBe("scrollback\nscreen");
+    expect(value.restty.selectAll).not.toHaveBeenCalled();
+    expect(value.restty.getSelectionText).toHaveBeenCalled();
+    expect(value.restty.selection).toBe("selected 日本語");
+
+    value.surface.dispose();
+    expect(value.surface.exportText("content")).toBe("");
   });
 
   it("diverts native paste asynchronously while ordinary keyboard input stays direct", async () => {
