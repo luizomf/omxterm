@@ -156,10 +156,12 @@ Base64 validator; reads, clears, malformed, cancelled and over-bound requests
 have no clipboard or PTY side effect.
 
 Visible destinations use cell snapshots joined only by core-proven soft wraps.
-Cell text is copied before selection queries can allocate WASM memory. A known
-mismatch between wide-wrap spacer cells and core selection text can prevent
-visible URL recognition at some Unicode wrap boundaries
-([#593](https://github.com/luizomf/omxterm/issues/593)). Hidden OSC 8 destinations
+Cell text, physical-row proof endpoints and normalized hit coordinates are
+copied before selection queries can allocate WASM memory. Link-only row and
+pair proofs end before a terminal wide-wrap spacer, avoiding selection's
+next-grapheme expansion while preserving exact equality and hard-break checks.
+The pair endpoint belongs to its last row; concealed rows do not borrow visible
+wide flags. Copy/selection semantics are unchanged. Hidden OSC 8 destinations
 and uncertain viewport-edge continuations are ignored. A
 stable valid modified primary click overrides application mouse reporting
 without a duplicate PTY report. A narrow compatibility-mouse path completes an

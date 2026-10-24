@@ -199,19 +199,17 @@ export function createLinkDestinationObserver(
         if (render.codepoints && readCluster && resolve) {
           let end = render.cols * render.rows;
           while (end > 0 && !(render.codepoints[end - 1] ?? 0)) end--;
-          let wideWrapSpacer = false;
           const cells = Array.from({ length: end }, (_, index) => {
             const wide = render.wide?.[index] ?? 0;
-            if (wide === 3) wideWrapSpacer = true;
             return wide === 2 || wide === 3 ? "" : readCluster(render, index);
           });
           const text = cells.join("");
           // Both value and cell offsets come from the submitted runtime cells,
           // not code-point counts (wide tails and combining clusters differ).
-          // Current full-row selection includes the next row's wide glyph at
-          // a wide-wrap spacer, so the actual interaction refuses that frame.
+          // Link proofs exclude terminal wide-wrap spacers. The actual-core
+          // lookup regression establishes recognition; this passive observer
+          // checks only this known emitted line, without allocating selection.
           matches =
-            !wideWrapSpacer &&
             text === web.text &&
             web.points.length === 2 &&
             web.points.every(([row, col]) => {

@@ -163,8 +163,9 @@ always names a file on the OMXTerm host, even when SSH produced the text.
 
 **External Link** — A literal visible HTTP(S) URL in terminal output. Opening it
 requires explicit user activation and validation in main. Hidden OSC 8
-destinations are not used. Some Unicode wrap boundaries prevent recognition;
-see the [terminal contract](docs/spec.md#terminal-behavior).
+destinations are not used. Wide-wrap spacers contribute no text; only exact
+core-proven, fully visible soft wraps join a destination. Uncertain viewport
+continuations remain refused; see the [terminal contract](docs/spec.md#terminal-behavior).
 
 ## Diagnostics and distribution
 

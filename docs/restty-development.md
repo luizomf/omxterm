@@ -22,7 +22,6 @@ The portable Terminal Surface (`src/terminal-surface/`) receives a session Adapt
 - **Reload application errors:** `user-configuration-reloader.ts` updates the active configuration snapshot before applying consumers sequentially. While validation errors cleanly retain the previous configuration, an unexpected runtime exception during consumer application has no automatic rollback.
 - **Pending font acquisition across reload:** Changing `font.family` while a tab is still reading native font bytes rejects the in-flight request as superseded ([#569](https://github.com/luizomf/omxterm/issues/569)).
 - **First-tab startup commands:** `terminal-window-host.ts` subscribes to tab-level actions after `tabs.ready`; an early `Close Tab` before the first tab finishes initializing can be dropped ([#571](https://github.com/luizomf/omxterm/issues/571)). `Close Window` and `Quit` remain active on separate main-process routes.
-- **Wide-wrap URL recognition:** A mismatch between wide-wrap spacer cells and core selection text can prevent visible URL recognition when a wide glyph wraps across rows ([#593](https://github.com/luizomf/omxterm/issues/593)).
 
 ### Scrollback and viewport
 
@@ -33,7 +32,7 @@ The portable Terminal Surface (`src/terminal-surface/`) receives a session Adapt
 ### Input, links, and titles
 
 - Copy/paste, Protected Paste, snippets, file-path insertion, local image previews, and write-only OSC 52 use OMXTerm host routes. Restty's built-in browser clipboard and URL-opening callbacks are disabled.
-- Visible HTTP(S) URLs and local image paths are recognized from cell snapshots and Ghostty selection proofs across soft wraps (OSC 8 hyperlinks are ignored).
+- Visible HTTP(S) URLs and local image paths are recognized from cell snapshots and Ghostty selection proofs across soft wraps (OSC 8 hyperlinks are ignored). Link-only proof endpoints exclude a terminal wide-wrap spacer so selection expansion does not borrow the next grapheme; copy/selection semantics stay unchanged. Unknown viewport-edge continuity remains refused.
 - Parsed OSC 0/2 titles and silent BEL events flow from the Ghostty core to OMXTerm's per-session host controllers.
 
 ### Inline Kitty images
@@ -128,7 +127,7 @@ Prepared SHA-256 digests:
 
 | Input                      | SHA-256                                                            |
 | -------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime  | `8ebccc2aa81d37266bbf4642e3e07e8c0b17e39935a97d8c3703eb9ac5e72649` |
+| Restty JavaScript runtime  | `4f74479fdd033e774131712367c833674cd10b8f024717c48ec264acfeb96a5c` |
 | Embedded-core chunk        | `03d79d4c745e3c74dd90082a100cbf85e5060e23ff9d16fba338b11d2db1e6be` |
 | Event declarations         | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core          | `a52f314c2e91e87394e67307d6b0067c8ba28f6b1e31e7587872b9c41ce88c41` |

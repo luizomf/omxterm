@@ -1,5 +1,57 @@
 [
   {
+    "name": "priorWideWrapLinkDigest",
+    "sha256": "8ebccc2aa81d37266bbf4642e3e07e8c0b17e39935a97d8c3703eb9ac5e72649",
+    "edits": [
+      {
+        "start": 49342,
+        "deleteCount": 0,
+        "lines": [
+          "    const cell = normalizeSelectionCell(positionToCell({ clientX, clientY }));"
+        ]
+      },
+      {
+        "start": 49334,
+        "deleteCount": 1,
+        "lines": [
+          "      const pair = wasm.getSelectionText(",
+          "        wasmHandle,",
+          "        firstRow,",
+          "        0,",
+          "        secondRow,",
+          "        render.cols - 1,",
+          "      );"
+        ]
+      },
+      {
+        "start": 49330,
+        "deleteCount": 1,
+        "lines": [
+          "        : wasm.getSelectionText(wasmHandle, row, 0, row, render.cols - 1);"
+        ]
+      },
+      {
+        "start": 49323,
+        "deleteCount": 1,
+        "lines": [
+          "      const pair = wasm.getSelectionText(wasmHandle, row, 0, row + 1, render.cols - 1);"
+        ]
+      },
+      {
+        "start": 49315,
+        "deleteCount": 1,
+        "lines": [
+          "      if (wasm.getSelectionText(wasmHandle, row, 0, row, render.cols - 1) !== rowText[row])"
+        ]
+      },
+      {
+        "start": 49303,
+        "deleteCount": 10,
+        "lines": []
+      }
+    ]
+  },
+  {
     "name": "priorBlinkDigest",
     "sha256": "a5a31366381972750bf98651ac028e6bbe370e89d5ca5cc3855c141cd1002638",
     "edits": [

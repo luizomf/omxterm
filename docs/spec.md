@@ -688,10 +688,12 @@ without a duplicate PTY mouse report; other gestures retain ordinary selection
 or application-mouse routing. Restty reconstructs a destination only across
 core-proven, fully visible soft wraps. It preserves hard breaks and cell
 coordinates for grapheme and wide-cell prefixes, and conservatively refuses a
-destination that may continue beyond the visible viewport. A known mismatch
-between wide-wrap spacer cells and core selection text can prevent visible URL
-recognition at some Unicode wrap boundaries
-([#593](https://github.com/luizomf/omxterm/issues/593)). Restty enables
+destination that may continue beyond the visible viewport. Link-only selection
+proofs exclude a terminal wide-wrap spacer from the queried endpoint, avoiding
+selection's expansion into the next row's grapheme without changing copy or
+selection semantics. Spacers contribute no text and retain the existing hover
+span with the preceding link cluster. Exact row equality, hard-break proofs and
+conservative clipping remain required, including across core pages. Restty enables
 Ghostty's grapheme-cluster mode by default so emoji-presentation and ZWJ
 clusters occupy one two-column terminal cell for rendering and selection. For
 `file:///`, main independently requires the literal lowercase scheme, no remote

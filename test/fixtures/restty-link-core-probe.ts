@@ -9,7 +9,7 @@ import {
 
 // Headless execution of the actual injected hooks and runtime recognition.
 // Only the coordinate conversion, shaping and submission ports are controlled.
-export async function realFrameFixture() {
+export async function realFrameFixture(cols = 80, rows = 6) {
   const source = instrumentResttyLinkDestination(
     readFileSync("node_modules/restty/dist/chunk-c0rcpsc5.js", "utf8"),
   );
@@ -33,7 +33,7 @@ export async function realFrameFixture() {
     ) + 7,
   );
   const wasm = await loadResttyWasm();
-  const handle = wasm.create(80, 6, 10_000_000);
+  const handle = wasm.create(cols, rows, 10_000_000);
   const canvas = {} as {
     __resttyLinkDestinationFixture?: ReturnType<
       typeof createLinkDestinationObserver
@@ -103,7 +103,10 @@ export async function realFrameFixture() {
       getWasm: () => wasm,
       getWasmHandle: () => handle,
       getWasmExports: () => wasm.exports,
-      getGridState: () => ({ cols: 80, rows: 6 }),
+      getGridState: () => ({
+        cols: frame?.cols ?? cols,
+        rows: frame?.rows ?? rows,
+      }),
       positionToCell: ({
         clientX,
         clientY,
@@ -117,7 +120,7 @@ export async function realFrameFixture() {
         selectionState: {},
         linkState: {},
         getCanvas: () => canvas,
-        getGridState: () => ({ cellH: 20, rows: 6 }),
+        getGridState: () => ({ cellH: 20, rows: frame?.rows ?? rows }),
         getWasmReady: () => true,
         getWasm: () => wasm,
         getWasmHandle: () => handle,
@@ -132,7 +135,13 @@ export async function realFrameFixture() {
     getVisibleLinkAtClientPoint(
       col: number,
       row: number,
-    ): { url: string } | null;
+    ): {
+      url: string;
+      start: number;
+      end: number;
+      cells: number[];
+      id: string;
+    } | null;
     scroll: { scrollViewportByLines(lines: number): void };
   };
   return {
