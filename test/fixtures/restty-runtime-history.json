@@ -1,5 +1,26 @@
 [
   {
+    "name": "priorBufferTextDigest",
+    "sha256": "8ebccc2aa81d37266bbf4642e3e07e8c0b17e39935a97d8c3703eb9ac5e72649",
+    "edits": [
+      {
+        "start": 55138,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 49556,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 49448,
+        "deleteCount": 13,
+        "lines": []
+      }
+    ]
+  },
+  {
     "name": "priorBlinkDigest",
     "sha256": "a5a31366381972750bf98651ac028e6bbe370e89d5ca5cc3855c141cd1002638",
     "edits": [

@@ -413,12 +413,28 @@ describe("keybind action invocations", () => {
   });
 });
 
-it("wires the native context menu to explicit Terminal Surface actions", () => {
-  const actions = { copy: vi.fn(), paste: vi.fn(), selectAll: vi.fn() };
-  expect(terminalClipboardContextMenuTemplate(actions)).toEqual([
-    expect.objectContaining({ label: "Copy", click: actions.copy }),
-    expect.objectContaining({ label: "Paste", click: actions.paste }),
-    expect.objectContaining({ type: "separator" }),
-    expect.objectContaining({ label: "Select All", click: actions.selectAll }),
-  ]);
-});
+it.each([
+  ["selection", "Export Selection…"],
+  ["content", "Export Terminal Content…"],
+] as const)(
+  "wires the native context menu to explicit actions with one %s export",
+  (kind, label) => {
+    const actions = {
+      copy: vi.fn(),
+      paste: vi.fn(),
+      selectAll: vi.fn(),
+      exportText: vi.fn(),
+    };
+    expect(terminalClipboardContextMenuTemplate(actions, kind)).toEqual([
+      expect.objectContaining({ label: "Copy", click: actions.copy }),
+      expect.objectContaining({ label: "Paste", click: actions.paste }),
+      expect.objectContaining({ type: "separator" }),
+      expect.objectContaining({
+        label: "Select All",
+        click: actions.selectAll,
+      }),
+      expect.objectContaining({ type: "separator" }),
+      { label, click: actions.exportText },
+    ]);
+  },
+);

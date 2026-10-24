@@ -13,7 +13,10 @@ import type {
   TerminalFontZoom,
   TerminalSessionId,
   TerminalTabCommand,
+  TerminalExportKind,
+  TerminalExportRequest,
 } from "../shared/terminal-contract";
+import { terminalExportRequest } from "../shared/terminal-contract";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type { TerminalTheme } from "../shared/terminal-theme";
@@ -79,6 +82,12 @@ interface TerminalWindowPageOptions {
   ) => () => void;
   readonly subscribeToTabBarToggle?: (listener: () => void) => () => void;
   readonly subscribeToFind?: (listener: () => void) => () => void;
+  readonly subscribeToExportRequests?: (
+    listener: (kind: TerminalExportKind) => void,
+  ) => () => void;
+  readonly saveTerminalExport?: (
+    request: TerminalExportRequest,
+  ) => Promise<void>;
   readonly subscribeToTabTitles?: (
     listener: (sessionId: TerminalSessionId, title: string) => void,
   ) => () => void;
@@ -387,6 +396,15 @@ function subscribeToGuardedActions(
     }),
     options.subscribeToFind?.(() => {
       if (!blocked()) tabs.find();
+    }),
+    // The text is read now, before any dialog, from the tab whose menu offered
+    // it. Main reports every outcome, including text over the export limit.
+    options.subscribeToExportRequests?.((kind) => {
+      const text = blocked() ? undefined : tabs.exportText(kind);
+      if (text !== undefined)
+        void options
+          .saveTerminalExport?.(terminalExportRequest(kind, text))
+          .catch(() => {});
     }),
   ];
   return () => {

@@ -29,6 +29,7 @@ it("keeps About focused across startup and menu actions while allowing close and
     paste: vi.fn(async () => {}),
     selectAll: vi.fn(),
     find: vi.fn(),
+    exportText: vi.fn(() => ""),
   };
   const adapters = vi.fn(() => ({
     sessionId: () => "s1",

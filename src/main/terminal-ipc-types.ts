@@ -1,5 +1,7 @@
 import type {
+  TerminalContextMenuRequest,
   TerminalExit,
+  TerminalExportRequest,
   TerminalSessionId,
 } from "../shared/terminal-contract";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
@@ -82,7 +84,12 @@ export interface TerminalIpcControllerOptions {
   readonly readClipboardText: () => string;
   readonly confirmPaste: (text: string) => Promise<boolean>;
   readonly onClipboardError?: () => void;
-  readonly showClipboardContextMenu: () => void;
+  readonly showClipboardContextMenu: (
+    request: TerminalContextMenuRequest,
+  ) => void;
+  readonly saveTerminalExport?: (
+    request: TerminalExportRequest,
+  ) => Promise<void>;
   readonly onTitleRequest: (
     sessionId: TerminalSessionId,
     request: string,

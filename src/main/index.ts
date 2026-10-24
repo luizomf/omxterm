@@ -4,7 +4,6 @@ import {
   clipboard,
   dialog,
   ipcMain,
-  Menu,
   screen,
   shell,
 } from "electron";
@@ -17,8 +16,12 @@ import { terminalIpc } from "../shared/terminal-ipc";
 import {
   terminalActionInvocations,
   terminalApplicationMenuTemplate,
-  terminalClipboardContextMenuTemplate,
 } from "./application-menu";
+import {
+  electronTerminalExportHost,
+  popupTerminalContextMenu,
+  saveTerminalExport,
+} from "./terminal-export";
 import * as applicationAbout from "./application-about";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { createDefaultShellResolver, defaultShellName } from "./default-shell";
@@ -307,16 +310,13 @@ app
                 });
                 return result.response === 0;
               },
-              showClipboardContextMenu() {
-                const send = (action: "copy" | "paste" | "select-all") =>
-                  window.webContents.send(terminalIpc.clipboardAction, action);
-                Menu.buildFromTemplate(
-                  terminalClipboardContextMenuTemplate({
-                    copy: () => send("copy"),
-                    paste: () => send("paste"),
-                    selectAll: () => send("select-all"),
-                  }),
-                ).popup({ window });
+              showClipboardContextMenu: (request) =>
+                popupTerminalContextMenu(window, request),
+              saveTerminalExport: async (request) => {
+                await saveTerminalExport(
+                  request,
+                  electronTerminalExportHost(window),
+                );
               },
             });
 

@@ -623,3 +623,66 @@ describe("Scrollback Search routing", () => {
     expect(harness.surfaces[0]!.find).not.toHaveBeenCalled();
   });
 });
+
+describe("explicit export routing", () => {
+  const clipboard = () => ({
+    writeText: vi.fn(async () => {}),
+    readText: vi.fn(async () => ""),
+    confirmPaste: vi.fn(async () => true),
+    requestContextMenu: vi.fn(),
+  });
+  const openMenu = (
+    harness: ReturnType<typeof createTabsHarness>,
+    index: number,
+    target: "terminal" | "field" = "terminal",
+  ) =>
+    harness.mountedSurfaceOptions[index]!.clipboard!.requestContextMenu(
+      target === "terminal" ? { target, hasSelection: true } : { target },
+    );
+
+  it("reads export text once from the tab whose terminal menu offered it", async () => {
+    const host = clipboard();
+    const harness = createTabsHarness({ surfaceOptions: { clipboard: host } });
+    await harness.tabs.ready;
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+    harness.surfaces[0]!.exportText.mockReturnValue("first tab");
+    harness.surfaces[1]!.exportText.mockReturnValue("second tab");
+
+    expect(harness.tabs.exportText("content")).toBeUndefined();
+    openMenu(harness, 0);
+    expect(host.requestContextMenu).toHaveBeenCalledExactlyOnceWith({
+      target: "terminal",
+      hasSelection: true,
+    });
+    expect(harness.tabs.exportText("selection")).toBe("first tab");
+    expect(harness.surfaces[0]!.exportText).toHaveBeenCalledExactlyOnceWith(
+      "selection",
+    );
+    expect(harness.tabs.exportText("selection")).toBeUndefined();
+
+    openMenu(harness, 1);
+    openMenu(harness, 1, "field");
+    expect(harness.tabs.exportText("content")).toBeUndefined();
+    expect(harness.surfaces[1]!.exportText).not.toHaveBeenCalled();
+  });
+
+  it("ignores an export whose source tab exited after its menu opened", async () => {
+    const harness = createTabsHarness({
+      surfaceOptions: { clipboard: clipboard() },
+    });
+    await harness.tabs.ready;
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+    harness.tabs.handleCommand({ action: "previous" });
+    openMenu(harness, 0);
+
+    harness.adapters[0]!.handlers!.onExit({ exitCode: 0, signal: 0 });
+    expect(harness.container.children).toHaveLength(1);
+    expect(visibleContainers(harness.container)).toEqual([0]);
+
+    expect(harness.tabs.exportText("content")).toBeUndefined();
+    for (const surface of harness.surfaces)
+      expect(surface.exportText).not.toHaveBeenCalled();
+  });
+});

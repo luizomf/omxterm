@@ -148,7 +148,8 @@ export async function mountResttyTerminalSurface(
   let padding = resolvePadding(options.padding);
   const scrollbackLines = validateScrollbackLines(options.scrollbackLines);
   const initialFamily = options.appearance?.systemFont?.family;
-  const onContextMenu = resttyContextMenuHandler(options.clipboard);
+  const live = () => (disposed ? undefined : pane?.runtime.interaction);
+  const onContextMenu = resttyContextMenuHandler(options.clipboard, live);
   const releaseSearchEscape = retainSearchEscapeGesture(container);
   const revealInput = () => {
     visibleLinkController?.invalidate();
@@ -370,9 +371,7 @@ export async function mountResttyTerminalSurface(
         refit();
       },
       ...withSearchFieldClipboard(
-        resttyClipboardActions(delivery, options, () =>
-          disposed ? undefined : pane?.runtime.interaction,
-        ),
+        resttyClipboardActions(delivery, options, live),
         () => (disposed ? undefined : focusedSearchField(restty, container)),
         options,
       ),
@@ -509,6 +508,7 @@ function createDisposedSurface(): TerminalSurface {
     inject: async () => undefined,
     selectAll: () => undefined,
     find: () => undefined,
+    exportText: () => "",
     dispose: () => undefined,
   };
 }
