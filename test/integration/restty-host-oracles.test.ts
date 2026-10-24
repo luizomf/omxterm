@@ -436,6 +436,8 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         closed: true,
         focusReturned: true,
         queryReachedPty: false,
+        // Only the terminal-owned Escape's press and release.
+        kittyEscapeWrites: "\u001b[27;1:1u\u001b[27;1:3u",
       });
     }, 130_000);
   },

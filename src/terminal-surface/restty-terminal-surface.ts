@@ -43,6 +43,7 @@ import { toGhosttyTheme, toResttySearchUiStyle } from "./restty-theme";
 import {
   applySearchTheme,
   focusedSearchField,
+  retainSearchEscapeGesture,
   withSearchFieldClipboard,
 } from "./restty-search-field";
 import type {
@@ -148,6 +149,7 @@ export async function mountResttyTerminalSurface(
   const scrollbackLines = validateScrollbackLines(options.scrollbackLines);
   const initialFamily = options.appearance?.systemFont?.family;
   const onContextMenu = resttyContextMenuHandler(options.clipboard);
+  const releaseSearchEscape = retainSearchEscapeGesture(container);
   const revealInput = () => {
     visibleLinkController?.invalidate();
     pane?.runtime.interaction.scrollToBottom();
@@ -207,6 +209,7 @@ export async function mountResttyTerminalSurface(
       () => delivery.dispose(),
       () => container.removeEventListener("contextmenu", onContextMenu),
       () => removeRuntimeListener?.(),
+      releaseSearchEscape,
       () => visibleLinkController?.dispose(),
       () => adapter.close(reason),
       () => restty?.destroy(),
@@ -373,9 +376,7 @@ export async function mountResttyTerminalSurface(
         () => (disposed ? undefined : focusedSearchField(restty, container)),
         options,
       ),
-      find: () => {
-        if (!disposed) restty?.openSearch({ selectAll: true });
-      },
+      find: () => openSearch(disposed ? undefined : restty),
       dispose,
     };
   } catch (cause) {
@@ -463,6 +464,10 @@ function throwInitializationFailure(
     );
   }
   throw new Error("Failed to mount the OMXTerm Terminal Surface", { cause });
+}
+
+function openSearch(restty: PatchedRestty | undefined): void {
+  restty?.openSearch({ selectAll: true });
 }
 
 function resttySurfaceConfig(theme: TerminalTheme) {

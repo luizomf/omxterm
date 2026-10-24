@@ -279,7 +279,7 @@ Example overriding a single shortcut:
 ```
 
 - Every shortcut needs one key plus at least one modifier other than Shift (such as `CommandOrControl`, `Control`, `Alt`, or `AltGr`), so a shortcut can never swallow normal typing. Function keys `F1` through `F24` are the exception: they can be used alone, like the default `F11`.
-- Set an action to `null` to turn off its shortcut. The action stays in the menu, and the key goes back to your terminal programs. Leave an action out to keep its default.
+- Set an action to `null` to remove its shortcut. The action stays in the menu. OMXTerm stops using that key for the action, but another binding or your operating system may still use it. Leave an action out to keep its default.
 - Use literal punctuation characters (such as `Control+Shift+,`), except for `+`, which is written as `Plus`.
 - Each action needs its own shortcut. If two actions end up on the same key, including through a default, OMXTerm reports both actions and the key; pick another shortcut for one of them or set one to `null`. OMXTerm never changes another action's shortcut or your file for you. If you bind an action on Linux or Windows to a bare `Ctrl+<key>` that terminal programs use (like `Ctrl+C` or `Ctrl+D`), OMXTerm keeps the binding but shows a warning, since that key no longer reaches your shell.
 
@@ -295,7 +295,7 @@ For example, to use `F11` for Snippets instead of full screen:
 }
 ```
 
-> **Upgrading on Linux or Windows:** Find now uses `Ctrl+Shift+F` and full screen uses `F11`. If your `config.json` sets `"toggleFullScreen": "Control+Shift+F"`, it now conflicts with Find. Remove that entry to use `F11`, move Find (for example `"find": "Control+Alt+F"`), or keep the old combination with `"find": null`. Terminal programs that use `F11` stop receiving it unless you set `"toggleFullScreen": null`.
+> **Upgrading on Linux or Windows:** Find now uses `Ctrl+Shift+F` and full screen uses `F11`. If your `config.json` sets `"toggleFullScreen": "Control+Shift+F"`, it now conflicts with Find. Remove that entry to use `F11`, move Find (for example `"find": "Control+Alt+F"`), or keep the old combination with `"find": null`. While `F11` is bound, terminal programs that use it don't receive it; `"toggleFullScreen": null` removes that binding, although your desktop may still claim the key.
 
 ## Snippets
 

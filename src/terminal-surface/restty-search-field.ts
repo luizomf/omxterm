@@ -95,3 +95,44 @@ export function applySearchTheme(
     status.style.borderColor = borderColor;
   }
 }
+
+// Restty closes the bar on the query's Escape keydown and moves focus to the
+// terminal, whose window-level encoder would then report that gesture's held
+// repeats and release (Kitty event reporting) to the PTY. The bar owns the
+// whole gesture: its repeats and release stop here, before the encoder.
+export function retainSearchEscapeGesture(container: HTMLElement): () => void {
+  const page = container.ownerDocument.defaultView;
+  if (!page) return () => undefined;
+  let owned = false;
+  const onFieldKeyDown = (event: KeyboardEvent) => {
+    if (
+      event.key === "Escape" &&
+      event.target instanceof HTMLInputElement &&
+      event.target.closest('[role="search"]') !== null
+    )
+      owned = true;
+  };
+  const onPageKey = (event: KeyboardEvent) => {
+    if (!owned || event.key !== "Escape") return;
+    if (event.type === "keydown" && !event.repeat) {
+      owned = false;
+      return;
+    }
+    if (event.type === "keyup") owned = false;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  };
+  const release = () => {
+    owned = false;
+  };
+  container.addEventListener("keydown", onFieldKeyDown, true);
+  page.addEventListener("keydown", onPageKey, true);
+  page.addEventListener("keyup", onPageKey, true);
+  page.addEventListener("blur", release);
+  return () => {
+    container.removeEventListener("keydown", onFieldKeyDown, true);
+    page.removeEventListener("keydown", onPageKey, true);
+    page.removeEventListener("keyup", onPageKey, true);
+    page.removeEventListener("blur", release);
+  };
+}

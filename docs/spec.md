@@ -712,17 +712,22 @@ again focuses and selects the query. Keys act on the bar only while its query
 field holds focus: `Enter` or the down button selects the next match below
 (newer output), `Shift+Enter` or the up button the previous match above (older
 output), and `Escape` or the close button closes the bar and returns focus to
-the terminal. An open bar never captures keys while the terminal holds focus;
+the terminal. The bar owns the whole Escape gesture that closes it: its held
+repeats and its release never reach the terminal, including under Kitty
+keyboard event reporting. An open bar never captures keys while the terminal
+holds focus;
 `Enter`, `Shift+Enter` and `Escape` then remain ordinary terminal input. Window
 focus returns to the query field only when it held focus before. While the
 field holds focus, application Copy, Paste and Select All, from the menu, a
 keybind or the context menu, act on the query instead of the terminal: Paste
 inserts clipboard text at the field's selection with line breaks replaced by
 spaces, and nothing reaches Protected Paste or the PTY. The bar, including its
-match counter, follows the active Terminal Theme. Each tab owns its own query;
-queries and matches stay in renderer memory and are never persisted, logged,
-sent to main or written to the PTY. Find is ignored while a Local Image Preview
-is open.
+match counter, follows the active Terminal Theme. Each tab owns its own query.
+Search state, the query and its matches, stays in renderer memory and is never
+persisted, logged or written to the PTY, and searching never sends it to main.
+Only an explicit Copy from the focused field moves the selected query text,
+through the same main-owned clipboard IPC as any other Copy. Find is ignored
+while a Local Image Preview or About owns modal input.
 
 ## Clipboard
 
@@ -922,10 +927,12 @@ exactly one key and at least one non-Shift modifier; bare or Shift-only
 accelerators are rejected so a keybind can never swallow plain typing. Function
 keys `F1` through `F24` type nothing and are the only keys accepted bare or
 with Shift alone. Omitted actions keep their built-in platform defaults. `null`
-disables only that action's shortcut: the menu item stays available without an
-accelerator, and the key reaches the terminal. Linux and Windows default Find to
-`Ctrl+Shift+F` and Toggle Full Screen to `F11`; macOS keeps `Cmd+F` and
-`Ctrl+Cmd+F`. The application menu displays the effective accelerator
+removes only that action's shortcut: the menu item stays available without an
+accelerator, and OMXTerm no longer consumes that key for the action. It does not
+guarantee delivery to the terminal; another binding or the operating system may
+still consume the key. Linux and Windows default Find to `Ctrl+Shift+F` and
+Toggle Full Screen to `F11`; macOS keeps `Cmd+F` and `Ctrl+Cmd+F`. The
+application menu displays the effective accelerator
 and is the single shortcut registration point; there is no second shortcut
 system, and terminal control sequences inside the PTY are untouched. An
 effective keybind works even when the platform refuses to fire its menu

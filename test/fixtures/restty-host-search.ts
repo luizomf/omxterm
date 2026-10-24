@@ -14,6 +14,7 @@ export interface ResttySearchEvidence {
   readonly closed: boolean;
   readonly focusReturned: boolean;
   readonly queryReachedPty: boolean;
+  readonly kittyEscapeWrites: string;
 }
 
 const searchState = `(() => {
@@ -161,6 +162,28 @@ export async function exerciseResttyScrollbackSearch(options: {
   key("Escape");
   const closed = await until((c) => !c.open, "search bar closed");
 
+  // Under Kitty event reporting (flags 3), the Escape that closes the bar
+  // must leave no release for the terminal, while a terminal-owned Escape
+  // still reports its press and release. The flags query reply proves the
+  // flags are active before any key is sent.
+  options.deliverOutput("\u001b[>3u\u001b[?u");
+  await waitFor(
+    () => ptyInput().includes("\u001b[?3u"),
+    "Kitty flags 3 active",
+  );
+  window.webContents.send(terminalIpc.find);
+  await until((c) => c.inputFocused, "query focused under Kitty flags");
+  const kittyStart = ptyInput().length;
+  key("Escape");
+  await until((c) => !c.open && c.terminalFocused, "bar closed by Escape");
+  key("Escape");
+  await waitFor(
+    () => ptyInput().slice(kittyStart).includes("\u001b[27;1:3u"),
+    "terminal-owned Escape release",
+  );
+  const kittyEscapeWrites = ptyInput().slice(kittyStart);
+  options.deliverOutput("\u001b[<u");
+
   return {
     openedFocused: opened.open && opened.inputFocused,
     asciiStatus: ascii.status,
@@ -175,5 +198,6 @@ export async function exerciseResttyScrollbackSearch(options: {
     closed: !closed.open,
     focusReturned: closed.terminalFocused,
     queryReachedPty: /needle|日本語|private/.test(ptyInput()),
+    kittyEscapeWrites,
   };
 }

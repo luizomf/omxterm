@@ -4,6 +4,7 @@ import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import {
   applySearchTheme,
   focusedSearchField,
+  retainSearchEscapeGesture,
   withSearchFieldClipboard,
 } from "../../src/terminal-surface/restty-search-field";
 import {
@@ -204,5 +205,82 @@ describe("search bar theme", () => {
 
     applySearchTheme(restty, bar.container, DEFAULT_TERMINAL_THEME);
     expect(bar.status.style.background).not.toBe("rgb(235, 235, 235)");
+  });
+});
+
+describe("Escape that closes the search bar", () => {
+  // Stands in for Restty's window-level key encoder, which reports releases
+  // under Kitty event reporting.
+  function encoder() {
+    const events: string[] = [];
+    const record = (event: KeyboardEvent) =>
+      events.push(`${event.type}${event.repeat ? ":repeat" : ""}`);
+    window.addEventListener("keydown", record);
+    window.addEventListener("keyup", record);
+    return {
+      events,
+      dispose() {
+        window.removeEventListener("keydown", record);
+        window.removeEventListener("keyup", record);
+      },
+    };
+  }
+  const press = (
+    target: HTMLElement,
+    type: "keydown" | "keyup",
+    repeat = false,
+  ) =>
+    target.dispatchEvent(
+      new KeyboardEvent(type, { key: "Escape", bubbles: true, repeat }),
+    );
+
+  it("keeps the closing gesture's repeats and release from the terminal encoder", () => {
+    const bar = searchBar();
+    const keys = encoder();
+    const release = retainSearchEscapeGesture(bar.container);
+    // Like Restty, the field's own handler closes and focuses the terminal.
+    bar.input.addEventListener("keydown", () => bar.terminalInput.focus());
+    try {
+      bar.input.focus();
+      press(bar.input, "keydown");
+      press(bar.terminalInput, "keydown", true);
+      press(bar.terminalInput, "keyup");
+      expect(document.activeElement).toBe(bar.terminalInput);
+      expect(keys.events).toEqual(["keydown"]);
+
+      // A terminal-owned Escape afterwards is ordinary terminal input.
+      press(bar.terminalInput, "keydown");
+      press(bar.terminalInput, "keydown", true);
+      press(bar.terminalInput, "keyup");
+      expect(keys.events).toEqual([
+        "keydown",
+        "keydown",
+        "keydown:repeat",
+        "keyup",
+      ]);
+    } finally {
+      release();
+      keys.dispose();
+    }
+  });
+
+  it("forgets an unreleased gesture on window blur and after disposal", () => {
+    const bar = searchBar();
+    const keys = encoder();
+    const release = retainSearchEscapeGesture(bar.container);
+    try {
+      press(bar.input, "keydown");
+      window.dispatchEvent(new Event("blur"));
+      press(bar.terminalInput, "keyup");
+      expect(keys.events).toEqual(["keydown", "keyup"]);
+
+      release();
+      press(bar.input, "keydown");
+      press(bar.terminalInput, "keyup");
+      expect(keys.events).toEqual(["keydown", "keyup", "keydown", "keyup"]);
+    } finally {
+      release();
+      keys.dispose();
+    }
   });
 });
