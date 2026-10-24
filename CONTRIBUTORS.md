@@ -1,29 +1,24 @@
-# Contributors and origins
+# Contributors
 
-OMXTerm is maintained by [Luiz Otávio Miranda (@luizomf)](https://github.com/luizomf).
-Thank you to everyone who contributes code, reports, testing, documentation, and
-ideas. This page can grow without expanding the application's compact About dialog.
+OMXTerm grows with its open-source community. Thank you to everyone who helps
+through code, documentation, translations, testing, bug reports, and ideas.
 
-## Adapted contributions
+Everyone whose contribution is integrated belongs here, including a one-line
+translation or documentation fix. The list is alphabetical by GitHub handle,
+with equal recognition for every contributor:
 
-- **Rafael Ruscher (@ruscher)** — the compact About implementation adapts
-  text-safe rendering, named link buttons, runtime-version delivery, and the
-  typed fixed-link route from [PR #622](https://github.com/luizomf/omxterm/pull/622),
-  source commit [`b3c3a4ad6c1f2224bded65873ba0b09a07ec5d38`](https://github.com/ruscher/omxterm/tree/b3c3a4ad6c1f2224bded65873ba0b09a07ec5d38).
-  The selected source files are `src/renderer/about/about-dialog.ts`,
-  `src/main/about-wiring.ts`, `src/shared/about.ts`, and
-  `src/preload/about-bridge.ts`. OMXTerm adds compact credits, owner lifetime
-  handling, and integration with its existing terminal input policy; this is
-  selective reuse, not integration of the entire PR.
-- **AshyTerm / Community Big** — the contributed About source identifies its
-  presentation as AshyTerm-style. We credit that presentation origin without
-  claiming that all About code originated in AshyTerm. Its retained
-  [Community Big MIT notice](assets/licenses/ashyterm-MIT.txt), supplied with
-  the same contribution, is also shipped with OMXTerm.
+- [Francisco Juan (@Juan-Severiano)](https://github.com/Juan-Severiano)
+- [Otávio Miranda (@luizomf)](https://github.com/luizomf)
+- [Rafael Ruscher (@ruscher)](https://github.com/ruscher)
 
-## Licenses
+Missing from the list, or want to correct your name or optional self-provided
+details? Please open an issue or pull request. A handle alone is welcome too.
 
-OMXTerm uses the permissive [MIT License](LICENSE), not a copyleft license.
-Credits do not replace copyright or license notices. See
-[third-party notices](THIRD_PARTY_NOTICES.md) for bundled components and their
-separately retained terms.
+We also thank [AshyTerm](https://github.com/big-comm/ashyterm),
+[Community Big](https://github.com/big-comm), and
+[BigLinux](https://github.com/biglinux) for sharing the work behind the adapted
+About presentation and related interface ideas.
+
+OMXTerm uses the [MIT License](LICENSE). Credits do not replace copyright or
+license notices; see [third-party notices](THIRD_PARTY_NOTICES.md) for source
+attribution and retained license terms.

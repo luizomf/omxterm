@@ -1,33 +1,25 @@
 import * as childProcess from "node:child_process";
 import * as filesystem from "node:fs/promises";
 import { existsSync, writeFileSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rename, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { build } from "esbuild";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { NativeFixtureTestContext } from "../fixtures/run-native-fixture";
 import {
-  runNativeFixture,
-  type NativeFixtureTestContext,
-} from "../fixtures/run-native-fixture";
+  completedFixtureOutcome as completed,
+  createNativeFixtureUnitScope,
+} from "../fixtures/native-fixture-unit-scope";
 
 vi.mock("node:child_process", { spy: true });
 vi.mock("node:fs/promises", { spy: true });
 vi.mock("esbuild", { spy: true });
 
-const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
-const completed = {
-  exitCode: 7,
-  signal: null,
-  reason: "exit",
-  stdout: "synthetic stdout\n",
-  stderr: "synthetic stderr\n",
-  cleanupErrors: ["synthetic cleanup failure"],
-  ownedProcesses: [{ pid: 42, parent: 1, identity: "456" }],
-};
 let root: string;
 let evidencePath: string;
 let preservedRoots: string[];
+let scope: ReturnType<typeof createNativeFixtureUnitScope>;
 beforeEach(async () => {
   vi.clearAllMocks();
   const actualFilesystem =
@@ -43,6 +35,7 @@ beforeEach(async () => {
   root = await mkdtemp(path.join(tmpdir(), "omxterm-outcome-"));
   evidencePath = path.join(root, "outcome.json");
   preservedRoots = [];
+  scope = createNativeFixtureUnitScope(root, preservedRoots);
   // Start the native build service before selecting the Windows caller path.
   await build({ stdin: { contents: "" }, write: false });
   Object.defineProperty(process, "platform", { value: "win32" });
@@ -57,19 +50,10 @@ beforeEach(async () => {
       : JSON.stringify([{ pid: process.pid, parent: 1, identity: "123" }]),
   );
 });
-afterEach(async () => {
-  vi.restoreAllMocks();
-  Object.defineProperty(process, "platform", platform);
-  await rm(root, { recursive: true, force: true });
-  await Promise.all(
-    preservedRoots.map((profile) =>
-      rm(profile, { recursive: true, force: true }),
-    ),
-  );
-});
+afterEach(() => scope.teardown());
 
 function run(testContext?: NativeFixtureTestContext) {
-  return runNativeFixture({
+  return scope.run({
     executable: process.execPath,
     args: [],
     root,
@@ -117,7 +101,7 @@ describe("Native preparation prerequisite guards", () => {
       });
       vi.mocked(build).mockClear();
       await expect(
-        runNativeFixture({
+        scope.run({
           executable: process.execPath,
           args: [],
           root,
@@ -293,7 +277,7 @@ describe("Native fixture preparation lifetime", () => {
     const prepare = vi.fn<() => Promise<void>>();
     const onTestFinished = vi.fn<NativeFixtureTestContext["onTestFinished"]>();
     await expect(
-      runNativeFixture({
+      scope.run({
         executable: process.execPath,
         args: [],
         root,
@@ -333,7 +317,7 @@ describe("Native fixture preparation lifetime", () => {
       started = resolve;
     });
     let settled = false;
-    const operation = runNativeFixture({
+    const operation = scope.run({
       executable: process.execPath,
       args: [],
       root,
@@ -354,15 +338,17 @@ describe("Native fixture preparation lifetime", () => {
         settled = true;
       },
     );
-    const finishing = vi
-      .mocked(context.onTestFinished)
-      .mock.calls[0]![0](actualContext);
+    let finishing: Promise<void> | undefined;
     try {
+      finishing = Promise.resolve(
+        vi.mocked(context.onTestFinished).mock.calls[0]![0](actualContext),
+      );
       await preparing;
       controller.abort();
       expect(settled).toBe(false);
       expect(vi.mocked(childProcess.execFileSync)).not.toHaveBeenCalled();
     } finally {
+      controller.abort();
       release();
       await operation.catch(() => undefined);
     }
@@ -375,7 +361,7 @@ describe("Native fixture preparation lifetime", () => {
   it("preserves preparation failure and reclaims only its unchanged unhanded profile", async () => {
     const failure = new Error("settled builder failure");
     await expect(
-      runNativeFixture({
+      scope.run({
         executable: process.execPath,
         args: [],
         root,
@@ -395,7 +381,7 @@ describe("Native fixture preparation lifetime", () => {
     const failure = new Error("settled builder failure");
     const original = root + "-original";
     preservedRoots.push(original);
-    const operation = runNativeFixture({
+    const operation = scope.run({
       executable: process.execPath,
       args: [],
       root,
@@ -520,6 +506,8 @@ describe("Windows fixture outcome observation", () => {
   );
 
   it("joins 28 seconds of owner cleanup instead of rejecting at timeout + 15 seconds", async () => {
+    // Virtualize polling, not the real filesystem or supervisor preparation.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     let now = 0;
     vi.spyOn(Date, "now").mockImplementation(() => now);
     const outcome = { ...completed, cleanupErrors: [] };
@@ -529,10 +517,14 @@ describe("Windows fixture outcome observation", () => {
         writeFileSync(evidencePath, JSON.stringify(outcome));
         throw Object.assign(new Error("Supervisor settled"), { code: "ESRCH" });
       }
+      // Drive the poll scheduled synchronously after this observation.
+      queueMicrotask(() => vi.advanceTimersByTime(100));
       return true;
     });
     await expect(run()).resolves.toEqual(outcome);
     expect(inventory).toHaveBeenCalledTimes(29);
+    expect(now).toBe(29_000);
+    expect(vi.getTimerCount()).toBe(0);
     expect(existsSync(path.join(root, "ownership-blocked.json"))).toBe(false);
   });
 
@@ -555,9 +547,13 @@ describe("Windows fixture outcome observation", () => {
       settled = true;
       return result;
     });
-    await alive;
-    expect(settled).toBe(false);
-    allowExit = true;
+    try {
+      await alive;
+      expect(settled).toBe(false);
+    } finally {
+      allowExit = true;
+      await operation.catch(() => undefined);
+    }
     await expect(operation).resolves.toEqual(outcome);
   });
 
@@ -592,14 +588,20 @@ describe("Windows fixture outcome observation", () => {
       return result;
     });
     const onFinished = vi.mocked(context.onTestFinished);
-    expect(onFinished).toHaveBeenCalledWith(expect.any(Function), 0);
-    const finishing = onFinished.mock.calls[0]![0](actualContext);
-    await alive;
-    controller.abort();
-    expect(settled).toBe(false);
-    allowExit = true;
-    await expect(operation).resolves.toEqual(outcome);
-    await finishing;
+    try {
+      expect(onFinished).toHaveBeenCalledWith(expect.any(Function), 0);
+      const finishing = onFinished.mock.calls[0]![0](actualContext);
+      await alive;
+      controller.abort();
+      expect(settled).toBe(false);
+      allowExit = true;
+      await expect(operation).resolves.toEqual(outcome);
+      await finishing;
+    } finally {
+      controller.abort();
+      allowExit = true;
+      await operation.catch(() => undefined);
+    }
     const request = JSON.parse(
       await readFile(path.join(root, "supervisor-request.json"), "utf8"),
     ) as { cancellationToken: string; testContext?: unknown };

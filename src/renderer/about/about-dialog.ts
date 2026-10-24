@@ -66,7 +66,7 @@ function retainAboutDismissalGesture(document: Document) {
 
 // Text-safe rendering and named links adapted from ruscher/omxterm PR #622,
 // b3c3a4ad6c1f2224bded65873ba0b09a07ec5d38 (MIT). Its AshyTerm-style
-// presentation is credited in CONTRIBUTORS.md; notices remain in distribution.
+// presentation is credited in THIRD_PARTY_NOTICES.md; notices remain in distribution.
 export function createAboutDialog(
   document: Document,
   options: Pick<AboutBridge, "info" | "openLink"> & {

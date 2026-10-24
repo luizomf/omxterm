@@ -272,7 +272,7 @@ export async function mountResttyTerminalSurface(
     );
     restty = new PatchedRestty({
       root: container,
-      surface: resttySurfaceConfig(terminalTheme),
+      surface: resttySurfaceConfig(terminalTheme, options.focus),
       terminal: { ...terminal, isSurfaceVisible },
       services: resttyHostServices(transport, delivery, options, revealInput),
     });
@@ -469,10 +469,10 @@ function openSearch(restty: PatchedRestty | undefined): void {
   restty?.openSearch({ selectAll: true });
 }
 
-function resttySurfaceConfig(theme: TerminalTheme) {
+function resttySurfaceConfig(theme: TerminalTheme, focus = true) {
   return {
     autoInit: false,
-    createInitialPane: true,
+    createInitialPane: { focus },
     defaultContextMenu: false,
     paneStyles: false,
     // Opened only through the application's find keybind and menu item.

@@ -198,9 +198,13 @@ Editing `config.json` does not apply changes until you press `Cmd+Shift+,` (macO
 
 See [reloading user configuration](configuration.md#reloading-user-configuration) and [theme troubleshooting](configuration.md#theme-troubleshooting) for details.
 
-### The snippets sidebar crowds out a narrow window
+### Resize or close Snippets
 
-The Snippets sidebar has a fixed width of 280 px. In a very narrow window, widen the window or press `Cmd+Shift+S` / `Ctrl+Shift+S` (**View → Toggle Snippets**) to hide the sidebar.
+Drag the left separator to resize the right-side Snippets panel. You can also focus the separator with Tab: Left/Right grow/shrink by 10 px, and Home/End choose the current minimum/maximum. The default width is 280 px, bounded to 220–560 px and the available window space. The header's Close button, Escape inside the panel, or `Cmd+Shift+S` / `Ctrl+Shift+S` (**View → Toggle Snippets**) hides it and returns terminal focus.
+
+The panel shrinks automatically in narrow windows and closes below 406 px of content width. Widen the window and open it again; it does not reopen automatically. Your preferred width, search and scroll survive hiding and configuration/theme changes in that window only, not restart. The remaining terminal allowance does not guarantee columns with extreme padding.
+
+Snippets is nonmodal: clicking the terminal keeps normal terminal input. Copy/Paste/Select All edit the search field while it holds focus; unsupported panel controls suppress terminal clipboard delivery instead. About and Local Image Preview temporarily make the retained panel inert.
 
 ### A program draws text in the wrong place
 

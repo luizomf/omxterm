@@ -36,6 +36,9 @@ export interface TerminalTabsOptions {
   readonly surfaceOptions: TerminalSurfaceOptions;
   readonly showTabBar?: boolean;
   readonly canFocus?: () => boolean;
+  // A deliberate mount may restore focus if no control took focus while it
+  // was pending. Other passive paths pass false.
+  readonly canAutoFocus?: (unchangedFocus: boolean) => boolean;
   readonly notifyEmpty?: (reason?: "rendering-failure") => void;
   readonly notifySelection?: (sessionId: TerminalSessionId) => void;
   readonly notifyTitle?: (
@@ -135,7 +138,7 @@ export function createTerminalTabs(
     );
   };
 
-  const select = (index: number) => {
+  const select = (index: number, passive = false) => {
     const tab = tabs[index];
     if (!tab) return;
     selectedIndex = index;
@@ -146,7 +149,7 @@ export function createTerminalTabs(
     // starting has no id yet and is reported once its session starts).
     const sessionId = tab.adapter.sessionId();
     if (sessionId !== undefined) options.notifySelection?.(sessionId);
-    if (options.canFocus?.() !== false) tab.surface?.focus();
+    focusTab(tab, options, passive);
   };
 
   const removeTab = (tab: TerminalTab, notify = true) => {
@@ -162,7 +165,7 @@ export function createTerminalTabs(
       return;
     }
     if (index < selectedIndex) selectedIndex -= 1;
-    select(Math.min(selectedIndex, tabs.length - 1));
+    select(Math.min(selectedIndex, tabs.length - 1), true);
   };
 
   const onSessionEnd = (
@@ -219,6 +222,7 @@ export function createTerminalTabs(
         : {}),
     };
 
+    const focus = observeMountFocus(document, tab.mountAbort.signal);
     let surface: TerminalSurface;
     try {
       surface = await options.mount(
@@ -236,6 +240,8 @@ export function createTerminalTabs(
           notifyEmpty("rendering-failure");
       }
       throw error;
+    } finally {
+      focus.dispose();
     }
     if (disposed || tab.removed) {
       surface.dispose();
@@ -248,15 +254,12 @@ export function createTerminalTabs(
     if (selectedTab() === tab) {
       const sessionId = tab.adapter.sessionId();
       if (sessionId !== undefined) options.notifySelection?.(sessionId);
-      if (document.hasFocus() && options.canFocus?.() !== false)
-        surface.focus();
+      if (document.hasFocus()) focusTab(tab, options, true, focus.unchanged());
     }
   };
 
-  const ready = createTab();
-
   return {
-    ready,
+    ready: createTab(),
     setSessionTitle(sessionId, title) {
       if (disposed) return;
       const tab = findBySession(tabs, sessionId);
@@ -335,10 +338,10 @@ export function createTerminalTabs(
       if (disposed) return;
       tabBarEnabled = !tabBarEnabled;
       renderStrip();
-      if (options.canFocus?.() !== false) selectedTab()?.surface?.focus();
+      focusTab(selectedTab(), options, true);
     },
     focusSelected() {
-      if (options.canFocus?.() !== false) selectedTab()?.surface?.focus();
+      focusTab(selectedTab(), options);
     },
     dispose() {
       if (disposed) return;
@@ -352,6 +355,31 @@ export function createTerminalTabs(
       }
       tabs.length = 0;
     },
+  };
+}
+
+function focusTab(
+  tab: TerminalTab | undefined,
+  options: TerminalTabsOptions,
+  passive = false,
+  unchangedFocus = false,
+): void {
+  if (
+    options.canFocus?.() !== false &&
+    (!passive || options.canAutoFocus?.(unchangedFocus) !== false)
+  )
+    tab?.surface?.focus();
+}
+
+function observeMountFocus(document: Document, signal: AbortSignal) {
+  let unchanged = true;
+  const changed = () => {
+    unchanged = false;
+  };
+  document.addEventListener("focusin", changed, { once: true, signal });
+  return {
+    unchanged: () => unchanged,
+    dispose: () => document.removeEventListener("focusin", changed),
   };
 }
 

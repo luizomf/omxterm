@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { createSnippetsSidebar } from "../../src/renderer/snippets-sidebar";
+import { createSnippetsView } from "../../src/renderer/snippets-sidebar";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 
 const terminalWindowCss = readFileSync(
@@ -86,7 +86,7 @@ describe("Snippets Sidebar theme contrast", () => {
     );
 
     for (const selector of [
-      "#snippets-sidebar",
+      ".auxiliary-panel",
       "#snippets-sidebar li button:hover",
     ]) {
       const background = declaration(ruleBody(selector), "background");
@@ -116,7 +116,7 @@ describe("Snippets Sidebar theme contrast", () => {
       root.id = "snippets-sidebar";
       root.hidden = true;
       document.body.append(root);
-      const sidebar = createSnippetsSidebar(root, {
+      const sidebar = createSnippetsView(document, {
         loadSnippets: vi.fn(async () => ({
           snippets: [
             {
@@ -128,9 +128,13 @@ describe("Snippets Sidebar theme contrast", () => {
           ],
         })),
         inject: vi.fn(),
-        focusTerminal: vi.fn(),
+        isInteractive: () => true,
       });
-      await sidebar.toggle();
+      root.append(sidebar.element);
+      sidebar.activate();
+      await vi.waitFor(() =>
+        expect(root.querySelector(".snippet-name")).not.toBeNull(),
+      );
 
       expect(root.querySelector('input[type="search"]')).not.toBeNull();
       expect(root.querySelector(".snippet-name")).not.toBeNull();
@@ -140,7 +144,7 @@ describe("Snippets Sidebar theme contrast", () => {
       const background = hexColor(backgroundHex);
       const foreground = hexColor(foregroundHex);
       const chromeNeutral = hexColor("#808090");
-      const sidebarRule = ruleBody("#snippets-sidebar");
+      const sidebarRule = ruleBody(".auxiliary-panel");
       const inputRule = ruleBody('#snippets-sidebar input[type="search"]');
       expect(declaration(sidebarRule, "color")).toContain(
         "--terminal-foreground",

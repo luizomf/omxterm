@@ -2,53 +2,52 @@ import type {
   TerminalSnippet,
   TerminalSnippetsResponse,
 } from "../shared/terminal-snippets";
+import type { AuxiliaryView } from "./auxiliary-panel";
 
-export interface SnippetsSidebarOptions {
-  readonly loadSnippets: () => Promise<TerminalSnippetsResponse>;
-  readonly inject: (snippet: TerminalSnippet) => void;
-  readonly focusTerminal: () => void;
-}
-
-export interface SnippetsSidebar {
-  toggle(): Promise<void>;
-  isOpen(): boolean;
-  dispose(): void;
-}
-
-// Per-window sidebar. snippets.yaml is reread on every open — plain on-demand
-// read, no file watching — so edits show up by closing and reopening it.
-export function createSnippetsSidebar(
-  root: HTMLElement,
-  options: SnippetsSidebarOptions,
-): SnippetsSidebar {
-  const document = root.ownerDocument;
+// Content/query/scroll belong to this view; visibility, focus transitions and
+// resize belong to the window's auxiliary host. Reread YAML on every activation.
+export function createSnippetsView(
+  document: Document,
+  options: {
+    readonly loadSnippets: () => Promise<TerminalSnippetsResponse>;
+    readonly inject: (snippet: TerminalSnippet) => void;
+    readonly isInteractive: () => boolean;
+  },
+): AuxiliaryView {
+  const root = document.createElement("div");
+  root.className = "snippets-view";
   let disposed = false;
+  let active = false;
+  let generation = 0;
+  let renderGeneration = 0;
   let snippets: readonly TerminalSnippet[] = [];
-  let openGeneration = 0;
-
+  let loading = false;
+  let retainedScroll = 0;
   const search = document.createElement("input");
   search.type = "search";
   search.placeholder = "Search snippets";
   search.setAttribute("aria-label", "Search Snippets");
+  const results = document.createElement("div");
+  results.className = "snippets-results";
   const list = document.createElement("ul");
-  const empty = document.createElement("p");
-  empty.className = "snippets-empty";
+  const status = document.createElement("p");
+  status.className = "snippets-empty";
+  status.setAttribute("role", "status");
   const error = document.createElement("p");
   error.className = "snippets-error";
   error.setAttribute("role", "alert");
   error.hidden = true;
-  root.replaceChildren(search, error, empty, list);
+  results.append(error, status, list);
+  root.append(search, results);
 
-  const matches = (snippet: TerminalSnippet, query: string) => {
-    if (query.length === 0) return true;
-    const haystack =
-      `${snippet.name}\n${snippet.description ?? ""}`.toLowerCase();
-    return haystack.includes(query);
-  };
-
-  const renderList = () => {
+  const render = () => {
+    const rendering = ++renderGeneration;
     const query = search.value.trim().toLowerCase();
-    const visible = snippets.filter((snippet) => matches(snippet, query));
+    const visible = snippets.filter((snippet) =>
+      `${snippet.name}\n${snippet.description ?? ""}`
+        .toLowerCase()
+        .includes(query),
+    );
     list.replaceChildren(
       ...visible.map((snippet) => {
         const item = document.createElement("li");
@@ -57,59 +56,99 @@ export function createSnippetsSidebar(
         const name = document.createElement("span");
         name.className = "snippet-name";
         name.textContent = snippet.name;
-        button.appendChild(name);
+        button.append(name);
         if (snippet.description) {
           const description = document.createElement("span");
           description.className = "snippet-description";
           description.textContent = snippet.description;
-          button.appendChild(description);
+          button.append(description);
         }
         button.addEventListener("click", () => {
-          if (disposed) return;
+          if (
+            !active ||
+            disposed ||
+            loading ||
+            rendering !== renderGeneration ||
+            !options.isInteractive()
+          )
+            return;
           options.inject(snippet);
-          options.focusTerminal();
         });
-        item.appendChild(button);
+        item.append(button);
         return item;
       }),
     );
-    empty.hidden = error.hidden === false || visible.length > 0;
-    empty.textContent =
-      snippets.length === 0
+    status.hidden = !error.hidden || visible.length > 0;
+    status.textContent = loading
+      ? "Loading snippets…"
+      : snippets.length === 0
         ? "No snippets. Create snippets.yaml next to config.json."
         : "No snippets match the search.";
   };
-
-  const onSearchInput = () => renderList();
-  search.addEventListener("input", onSearchInput);
+  const restoreScroll = () => {
+    results.scrollTop = Math.min(
+      retainedScroll,
+      Math.max(0, results.scrollHeight - results.clientHeight),
+    );
+    retainedScroll = results.scrollTop;
+  };
+  const onInput = () => {
+    if (!active || !options.isInteractive()) return;
+    retainedScroll = 0;
+    render();
+    restoreScroll();
+  };
+  search.addEventListener("input", onInput);
 
   return {
-    async toggle() {
+    element: root,
+    activate() {
       if (disposed) return;
-      if (!root.hidden) {
-        root.hidden = true;
-        options.focusTerminal();
-        return;
-      }
-      const generation = ++openGeneration;
-      const response = await options.loadSnippets();
-      if (disposed || generation !== openGeneration) return;
-      snippets = response.snippets;
-      error.hidden = response.error === undefined;
-      error.textContent = response.error ?? "";
-      root.hidden = false;
-      renderList();
-      search.focus();
+      active = true;
+      const activation = ++generation;
+      loading = true;
+      snippets = [];
+      error.hidden = true;
+      error.textContent = "";
+      render();
+      const settle = (response: TerminalSnippetsResponse) => {
+        if (disposed || !active || activation !== generation) return;
+        loading = false;
+        snippets = response.error ? [] : response.snippets;
+        error.hidden = response.error === undefined;
+        error.textContent = response.error ?? "";
+        render();
+        restoreScroll();
+      };
+      // Also contain a synchronous loader failure; never render raw rejection text.
+      void Promise.resolve()
+        .then(options.loadSnippets)
+        .then(settle, () =>
+          settle({
+            snippets: [],
+            error:
+              "Could not load snippets. Close and reopen Snippets to retry.",
+          }),
+        );
     },
-    isOpen() {
-      return !root.hidden;
+    deactivate() {
+      if (!active) return;
+      if (!loading) retainedScroll = results.scrollTop;
+      active = false;
+      generation += 1;
+      renderGeneration += 1;
+    },
+    focus() {
+      if (active && options.isInteractive()) search.focus();
     },
     dispose() {
       if (disposed) return;
+      active = false;
       disposed = true;
-      search.removeEventListener("input", onSearchInput);
+      generation += 1;
+      renderGeneration += 1;
+      search.removeEventListener("input", onInput);
       root.replaceChildren();
-      root.hidden = true;
     },
   };
 }

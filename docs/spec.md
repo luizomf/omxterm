@@ -103,9 +103,14 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   signal, spawn failure, requested close, tab and window closure, and
   last-window quit use the existing Live Terminal Session lifecycle.
 - After its Terminal Surface mounts, an active Terminal Window gives terminal
-  input DOM focus. When the user returns from another application or OMXTerm
-  window, only the active Terminal Window restores that focus. Focus restoration
-  does not activate, raise, or show OMXTerm by itself.
+  input DOM focus unless the user moved focus to panel or overlay controls while
+  initialization was pending. Surface construction does not implicitly focus a
+  window-owned pane. Deliberate tab creation/selection retains its focus contract
+  when no competing control took focus during mounting. Returning from another
+  application or OMXTerm window preserves focused panel/overlay controls;
+  otherwise only the active Terminal Window restores selected Surface focus
+  (including its focused search field). Focus restoration does not activate,
+  raise, or show OMXTerm by itself.
 - Every Terminal Window can be repositioned through its visible title area, or
   its small hover-revealed handle when that area is hidden. Native dragging is
   confined to these areas; the rest of the Terminal Surface remains interactive.
@@ -222,11 +227,11 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   startup and after a valid reload, main grows those bounds using configured
   font metrics, line height, padding, a scrollbar allowance, and title space.
   The calculation reserves two columns and one row but does not include the
-  Snippets Sidebar or tab-strip space, creation-time fonts retained by older
+  auxiliary panel or tab-strip space, creation-time fonts retained by older
   Surfaces, or ephemeral Window Font Zoom. It therefore does not guarantee a
-  visible grid at the native minimum in every layout. In particular, the
-  nonshrinking 280 px sidebar can leave less space than accepted horizontal
-  padding alone. Widen the window or hide the sidebar to recover terminal space.
+  visible grid at the native minimum in every layout. The panel's 180 px terminal
+  layout allowance is not a column-count or extreme-padding guarantee. Widen the
+  window, reduce padding, or hide the panel to recover terminal space.
 - On macOS, visible Window Chrome preserves the blended `hiddenInset`
   appearance, with native traffic-light controls on the left and a 30 px
   title/drag inset above configured top padding. The Terminal Theme background
@@ -245,7 +250,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   changes only the selected window's title-bar choice, without rewriting
   configuration or recreating its window, renderer, Terminal Surfaces, or Live
   Terminal Sessions. A layout change refits the selected existing Surface and
-  PTY and restores terminal focus; hidden Surfaces retain valid geometry. Local
+  PTY and preserves focused auxiliary-panel controls, otherwise restoring terminal
+  focus; hidden Surfaces retain valid geometry. Local
   Image Preview choosing/loading/showing suppresses the toggle without changing
   state or focus.
 - When the title area is hidden outside fullscreen, hovering anywhere in the top
@@ -343,7 +349,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Linux and Windows, remappable as `toggleTabBar`) changes only the selected
   window's tab bar enabled flag, even with one tab; without a selected window it
   does nothing. Disabling removes the entire strip row, refits the selected
-  existing Surface and PTY, and restores terminal focus. Hidden Surfaces retain
+  existing Surface and PTY, and preserves focused auxiliary-panel controls,
+  otherwise restoring terminal focus. Hidden Surfaces retain
   their valid geometry and continue ingesting output. Toggling preserves tab
   identities, order, selection, titles and sessions; keyboard and native Window
   menu navigation remain available while hidden. Title/BEL updates, tab
@@ -355,13 +362,60 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   the flag or focus. Title-bar visibility and fullscreen remain independent.
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and `Ctrl+Shift+S`
   on Linux and Windows, remappable through `keybinds`) shows or hides the
-  selected window's Snippets Sidebar beside its Terminal Surface. The sidebar
-  lists the snippets from `snippets.yaml`, filters them by name and description
-  as the user types, and a click injects the snippet into the selected tab's
-  Live Terminal Session and returns focus to the terminal. Opening the sidebar
-  rereads the file; there is no file watching. The sidebar does not suspend
-  terminal input, but its fixed width can crowd out the visible grid in a narrow
-  window.
+  selected window's Snippets view in one right-side, nonmodal Auxiliary Panel
+  below full-width title/tab chrome. Snippets is the only production view; no
+  tool switcher or plugin API is exposed. Views are created lazily. The host
+  owns exclusive visibility, header/Close, resize, focus and lifecycle; the view
+  owns its query, scroll and catalog. Activation reveals loading/search and
+  focuses search immediately, rereading `snippets.yaml` each time without file
+  watching. Old rows cannot act during loading. Results replace the catalog,
+  including empty/error results, without refocusing. Late results from a hidden,
+  superseded or disposed activation are inert. Query and scroll survive hiding
+  in memory; scroll clamps after shorter results. Deactivation stops active-only
+  work and disposal releases all created views and listeners once.
+- Toggle the visible/loading Snippets view, Close, or Escape originating inside
+  the panel hides/deactivates it and focuses the live selected terminal. A
+  closing Escape or Enter-on-Close gesture owns its repeats and release, including
+  Kitty event reporting. Escape in the terminal remains terminal input. Switching
+  internal views deactivates the old view and focuses the new one directly, with
+  no intermediate terminal focus. There is no backdrop, focus trap or global
+  Escape interception. Returning to the page preserves focused panel controls;
+  deliberate terminal/tab actions still focus the terminal. Clicking a current
+  snippet injects its exact body/`execute` intent through the selected Surface's
+  existing Protected Paste path and returns focus immediately. Enter activation
+  of a row retains that gesture's held repeats and release, so they cannot append
+  terminal Enter independently of the snippet's `execute` choice. A fresh
+  terminal key remains ordinary input. Hiding does not
+  cancel already accepted Surface-owned delivery; closing that Surface stops
+  remaining chunks/Enter without rollback.
+- Panel preferred border-box width starts at 280 CSS px per window. Bounds are
+  220–560 px, with a separate 6 px left separator and 180 px terminal layout
+  allowance. Actual content-row width determines the effective maximum:
+  `min(560, contentWidth - 186)`. Automatic clamping preserves preferred width.
+  Below 406 px, hide/deactivate without automatic reopening when space returns;
+  a too-narrow open reports “Widen the window to open Snippets”. Primary-pointer
+  dragging captures the pointer, grows the right panel when moving left and
+  coalesces painting per animation frame. Up, cancel, lost capture, hide, switch,
+  overlay activity and disposal end dragging at the last valid width. The
+  focusable vertical separator exposes current/min/max pixels and readable value
+  text. Left/Right grow/shrink by 10 px; Home/End choose current limits. Resize
+  keys are consumed only on the separator. Width preference survives hiding,
+  view switching, reload/theme and chrome changes in that window's memory only;
+  new windows/restarts reset width and visibility. No configuration or filesystem
+  state is added. Layout changes retain Surface/core/Adapter/session identities,
+  refit the selected grid and preserve hidden-tab geometry/output.
+- Native Copy/Paste/Select All (menu and default/remapped shortcuts) edit the
+  focused panel text field, never the PTY. Paste inserts at its selection with
+  line breaks replaced by spaces; async completion rechecks focus and active,
+  unblocked lifetime. Unsupported panel controls or unavailable clipboard edits
+  suppress terminal delivery; focus the search field or use its ordinary native
+  text editing instead. Terminal-focused actions retain existing routing. About
+  and Local Image Preview choosing/loading/showing keep panel layout/state but
+  make controls/separator inert, cancel drag and ignore competing actions rather
+  than queue them. Valid visible reads may settle without taking focus. Each
+  overlay keeps its existing dismissal, tab/closure and file-drop policies.
+  The fixed header/Close and independently scrolling results contain long content
+  and retain light/dark theme, background-opacity and hidden-chrome composition.
 - BEL is silent. A bell prepends a marker to the ringing session's title —
   visible on its tab and, while that tab is selected, in the window title — and
   an unfocused window requests native platform attention once until the user

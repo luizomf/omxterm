@@ -188,6 +188,7 @@ describe("renderer Terminal Window page host", () => {
       {
         abortSignal: expect.any(AbortSignal) as AbortSignal,
         background: "host",
+        focus: false,
         appearance: {
           fontSize: 19,
           lineHeight: 1.2,
@@ -819,6 +820,9 @@ describe("renderer Terminal Window page host continued", () => {
     const snippetsElement = document.createElement("aside");
     snippetsElement.hidden = true;
     document.body.append(snippetsElement);
+    vi.spyOn(document.body, "getBoundingClientRect").mockReturnValue({
+      width: 1000,
+    } as DOMRect);
     let toggleListener: (() => void) | undefined;
     let configurationListener:
       ((configuration: TerminalRendererConfiguration) => void) | undefined;

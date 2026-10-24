@@ -132,6 +132,7 @@ function harness(
           ? Promise.resolve({ controlled: true })
           : Promise.reject(original),
     },
+    "./auxiliary-panel-exercise": { exerciseAuxiliaryPanel: vi.fn() },
     "./window-chrome-construction": { assertNativeChromeConstruction() {} },
     "./window-policy": {
       chromeNativeExpectation: () => "native-maximize-observed",

@@ -122,4 +122,10 @@ Open a pull request against `luizomf/omxterm` (`main`) and include:
 
 ## Maintainer integration and releases
 
+When integrating a contribution, add any missing contributor to
+[CONTRIBUTORS.md](CONTRIBUTORS.md) in alphabetical GitHub handle order, with a
+profile link and their public name if known (otherwise just the handle). This
+includes small documentation fixes and one-line translations; contributors can
+correct their names or optional self-provided details later.
+
 Contributors do not need to bump versions, run multi-platform release builds, or publish packages. Maintainers handle cross-platform qualification, version bumps ([`docs/versioning.md`](docs/versioning.md)), release builds ([`docs/release.md`](docs/release.md)), and [issue tracker triage](docs/agents/issue-tracker.md).

@@ -172,14 +172,17 @@ body.tabs-visible .restty-terminal-surface {
   );
 }
 
-#snippets-sidebar {
+.auxiliary-panel {
   display: flex;
   flex: none;
   flex-direction: column;
   gap: 8px;
   width: 280px;
+  min-height: 0;
+  min-width: 0;
   padding: calc(var(--native-title-inset) + 8px) 12px 12px;
-  overflow-y: auto;
+  overflow: hidden;
+  app-region: no-drag;
   font:
     13px/1.45 -apple-system,
     BlinkMacSystemFont,
@@ -193,8 +196,100 @@ body.tabs-visible .restty-terminal-surface {
   );
 }
 
-#snippets-sidebar[hidden] {
+.auxiliary-panel[hidden],
+.auxiliary-separator[hidden] {
   display: none;
+}
+
+.auxiliary-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.auxiliary-header h2 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font: inherit;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auxiliary-header button {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font: 22px/1 sans-serif;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+}
+
+.auxiliary-body,
+.snippets-view {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.snippets-view[hidden] {
+  display: none;
+}
+
+.snippets-view input {
+  flex: none;
+}
+
+.snippets-results {
+  min-height: 0;
+  overflow: auto;
+  overflow-anchor: none;
+}
+
+.auxiliary-separator {
+  flex: 0 0 6px;
+  width: 6px;
+  margin-top: var(--native-title-inset);
+  cursor: col-resize;
+  touch-action: none;
+  app-region: no-drag;
+}
+
+.auxiliary-separator:hover,
+.auxiliary-separator.dragging {
+  background: rgb(from var(--terminal-foreground, #e6e6e6) r g b / 30%);
+}
+
+.auxiliary-separator:focus-visible,
+.auxiliary-header button:focus-visible,
+#snippets-sidebar input[type="search"]:focus-visible {
+  outline: 2px solid var(--terminal-foreground, #e6e6e6);
+  outline-offset: -2px;
+}
+
+.auxiliary-status {
+  position: fixed;
+  z-index: 5;
+  right: 12px;
+  bottom: 12px;
+  max-width: calc(100% - 24px);
+  margin: 0;
+  padding: 8px 12px;
+  font: 13px/1.4 sans-serif;
+  color: var(--terminal-background, #000000);
+  background: var(--terminal-foreground, #e6e6e6);
+  border-radius: 6px;
+  pointer-events: none;
 }
 
 #snippets-sidebar input[type="search"] {
@@ -277,10 +372,13 @@ body.tabs-visible .restty-terminal-surface {
 }
 
 #snippets-sidebar .snippet-name {
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-weight: 600;
 }
 
 #snippets-sidebar .snippet-description {
+  max-width: 100%;
   overflow: hidden;
   color: color-mix(
     in srgb,
@@ -349,8 +447,12 @@ body.tabs-visible .restty-terminal-surface {
   app-region: drag;
 }
 
-body.tabs-visible #snippets-sidebar {
+body.tabs-visible .auxiliary-panel {
   padding-top: 12px;
+}
+
+body.tabs-visible .auxiliary-separator {
+  margin-top: 0;
 }
 
 .local-image-preview {

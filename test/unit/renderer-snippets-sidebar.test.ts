@@ -1,16 +1,9 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from "vitest";
-import { createSnippetsSidebar } from "../../src/renderer/snippets-sidebar";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createSnippetsView } from "../../src/renderer/snippets-sidebar";
 import type { TerminalSnippetsResponse } from "../../src/shared/terminal-snippets";
 
-function createRoot(): HTMLElement {
-  const root = document.createElement("aside");
-  root.hidden = true;
-  document.body.appendChild(root);
-  return root;
-}
-
-const twoSnippets: TerminalSnippetsResponse = {
+const catalog: TerminalSnippetsResponse = {
   snippets: [
     {
       name: "greet",
@@ -21,132 +14,194 @@ const twoSnippets: TerminalSnippetsResponse = {
     { name: "update brew", body: "brew update", execute: true },
   ],
 };
+const cleanups: Array<() => void> = [];
+afterEach(() => {
+  for (const cleanup of cleanups.splice(0)) cleanup();
+  document.body.replaceChildren();
+});
+function fixture(load = vi.fn(async () => catalog)) {
+  let interactive = true;
+  const inject = vi.fn();
+  const view = createSnippetsView(document, {
+    loadSnippets: load,
+    inject,
+    isInteractive: () => interactive,
+  });
+  document.body.append(view.element);
+  cleanups.push(view.dispose);
+  const search = view.element.querySelector("input")!;
+  const results = view.element.querySelector<HTMLElement>(".snippets-results")!;
+  const input = (value: string) => {
+    search.value = value;
+    search.dispatchEvent(new Event("input"));
+  };
+  return {
+    view,
+    root: view.element,
+    search,
+    results,
+    input,
+    inject,
+    load,
+    block: () => {
+      interactive = false;
+    },
+  };
+}
+async function settle() {
+  for (let n = 0; n < 6; n++) await Promise.resolve();
+}
 
-describe("Snippets Sidebar", () => {
-  it("opens on toggle, lists snippets, focuses search, and closes on the next toggle", async () => {
-    const root = createRoot();
-    const focusTerminal = vi.fn();
-    const sidebar = createSnippetsSidebar(root, {
-      loadSnippets: vi.fn(async () => twoSnippets),
-      inject: vi.fn(),
-      focusTerminal,
-    });
-
-    await sidebar.toggle();
-    expect(sidebar.isOpen()).toBe(true);
-    expect(root.hidden).toBe(false);
-    expect(root.querySelectorAll("li").length).toBe(2);
-    expect(root.textContent).toContain("greet");
-    expect(root.textContent).toContain("say hi");
-    expect(document.activeElement).toBe(root.querySelector("input"));
-
-    await sidebar.toggle();
-    expect(sidebar.isOpen()).toBe(false);
-    expect(focusTerminal).toHaveBeenCalledOnce();
+describe("Snippets auxiliary view", () => {
+  it("reveals loading/search synchronously, rereads on activation, and never refocuses on completion", async () => {
+    const f = fixture();
+    f.view.activate();
+    f.view.focus();
+    expect(f.root.textContent).toContain("Loading snippets");
+    expect(document.activeElement).toBe(f.search);
+    f.search.blur();
+    await settle();
+    expect(f.root.querySelectorAll("li")).toHaveLength(2);
+    expect(document.activeElement).not.toBe(f.search);
+    f.view.deactivate();
+    f.view.activate();
+    await settle();
+    expect(f.load).toHaveBeenCalledTimes(2);
   });
 
-  it("rereads the file on every open so edits appear without restart", async () => {
-    const root = createRoot();
-    const loadSnippets = vi
+  it("filters name/description, retaining query and clamped scroll across activations", async () => {
+    const f = fixture();
+    f.view.activate();
+    await settle();
+    f.input("brew");
+    expect(f.root.querySelectorAll("li")).toHaveLength(1);
+    expect(f.root.textContent).toContain("update brew");
+    f.input("say hi");
+    expect(f.root.querySelectorAll("li")).toHaveLength(1);
+    expect(f.root.textContent).toContain("greet");
+    Object.defineProperties(f.results, {
+      scrollHeight: { value: 1000, configurable: true },
+      clientHeight: { value: 100 },
+    });
+    f.results.scrollTop = 300;
+    f.view.deactivate();
+    f.view.activate();
+    await settle();
+    expect(f.search.value).toBe("say hi");
+    expect(f.results.scrollTop).toBe(300);
+    f.view.deactivate();
+    Object.defineProperty(f.results, "scrollHeight", { value: 140 });
+    f.view.activate();
+    await settle();
+    expect(f.results.scrollTop).toBe(40);
+    f.input("absent");
+    expect(f.root.textContent).toContain("No snippets match");
+  });
+
+  it("delivers the exact current row and invalidates detached/hidden/loading/blocked callbacks", async () => {
+    const f = fixture();
+    f.view.activate();
+    await settle();
+    const old = f.root.querySelectorAll("li button")[1] as HTMLButtonElement;
+    old.click();
+    expect(f.inject).toHaveBeenCalledExactlyOnceWith(catalog.snippets[1]);
+    f.inject.mockClear();
+    f.input("brew");
+    old.click();
+    const filtered = f.root.querySelector<HTMLButtonElement>("li button")!;
+    f.view.deactivate();
+    filtered.click();
+    f.view.activate();
+    filtered.click();
+    await settle();
+    f.block();
+    f.root.querySelector<HTMLButtonElement>("li button")!.click();
+    expect(f.inject).not.toHaveBeenCalled();
+  });
+
+  it.each(["resolve", "reject"])(
+    "ignores stale %s after close/reopen and disposal",
+    async (outcome) => {
+      let resolve!: (response: TerminalSnippetsResponse) => void;
+      let reject!: (error: Error) => void;
+      const pending = new Promise<TerminalSnippetsResponse>((yes, no) => {
+        resolve = yes;
+        reject = no;
+      });
+      const load = vi
+        .fn<() => Promise<TerminalSnippetsResponse>>()
+        .mockReturnValueOnce(pending)
+        .mockResolvedValue({ snippets: [] });
+      const f = fixture(load);
+      f.view.activate();
+      await settle();
+      f.view.deactivate();
+      f.view.activate();
+      await settle();
+      if (outcome === "resolve") resolve(catalog);
+      else reject(new Error("private details"));
+      await settle();
+      expect(f.root.querySelectorAll("li")).toHaveLength(0);
+      expect(f.root.textContent).toContain("No snippets. Create snippets.yaml");
+      f.view.dispose();
+      f.view.dispose();
+      expect(f.root.childElementCount).toBe(0);
+    },
+  );
+
+  it("replaces old rows with fresh empty/errors, rendering diagnostics safely", async () => {
+    const load = vi
       .fn<() => Promise<TerminalSnippetsResponse>>()
-      .mockResolvedValueOnce({ snippets: [] })
-      .mockResolvedValueOnce(twoSnippets);
-    const sidebar = createSnippetsSidebar(root, {
-      loadSnippets,
-      inject: vi.fn(),
-      focusTerminal: vi.fn(),
-    });
-
-    await sidebar.toggle();
-    expect(root.querySelectorAll("li").length).toBe(0);
-    expect(root.textContent).toContain(
-      "No snippets. Create snippets.yaml next to config.json.",
+      .mockResolvedValueOnce(catalog)
+      .mockResolvedValueOnce({
+        snippets: [],
+        error: "<img src=x> invalid YAML",
+      })
+      .mockRejectedValueOnce(new Error("private details"));
+    const f = fixture(load);
+    f.view.activate();
+    await settle();
+    f.view.deactivate();
+    f.view.activate();
+    await settle();
+    expect(f.root.querySelectorAll("li")).toHaveLength(0);
+    expect(f.root.querySelector("img")).toBeNull();
+    expect(f.root.querySelector<HTMLElement>(".snippets-error")!.hidden).toBe(
+      false,
     );
-    await sidebar.toggle();
-    await sidebar.toggle();
-    expect(loadSnippets).toHaveBeenCalledTimes(2);
-    expect(root.querySelectorAll("li").length).toBe(2);
-  });
-
-  it("filters by name and description as the user types", async () => {
-    const root = createRoot();
-    const sidebar = createSnippetsSidebar(root, {
-      loadSnippets: vi.fn(async () => twoSnippets),
-      inject: vi.fn(),
-      focusTerminal: vi.fn(),
-    });
-    await sidebar.toggle();
-    const search = root.querySelector("input")!;
-
-    search.value = "brew";
-    search.dispatchEvent(new Event("input"));
-    expect(root.querySelectorAll("li").length).toBe(1);
-    expect(root.textContent).toContain("update brew");
-
-    search.value = "say hi";
-    search.dispatchEvent(new Event("input"));
-    expect(root.querySelectorAll("li").length).toBe(1);
-    expect(root.textContent).toContain("greet");
-
-    search.value = "nothing matches this";
-    search.dispatchEvent(new Event("input"));
-    expect(root.querySelectorAll("li").length).toBe(0);
-    expect(root.textContent).toContain("No snippets match the search.");
-  });
-
-  it("injects the clicked snippet and returns focus to the terminal", async () => {
-    const root = createRoot();
-    const inject = vi.fn();
-    const focusTerminal = vi.fn();
-    const sidebar = createSnippetsSidebar(root, {
-      loadSnippets: vi.fn(async () => twoSnippets),
-      inject,
-      focusTerminal,
-    });
-    await sidebar.toggle();
-
-    root.querySelectorAll("button")[1]!.click();
-
-    expect(inject).toHaveBeenCalledExactlyOnceWith(twoSnippets.snippets[1]);
-    expect(focusTerminal).toHaveBeenCalledOnce();
-    expect(sidebar.isOpen()).toBe(true);
-  });
-
-  it("shows the exact error in place of the list for an invalid file, as text only", async () => {
-    const root = createRoot();
-    const error =
-      'Snippets "/isolated/omxterm/snippets.yaml" at "snippets[0].body": <img src=x> must be a non-empty string. Fix the file and reopen the Snippets Sidebar.';
-    const sidebar = createSnippetsSidebar(root, {
-      loadSnippets: vi.fn(async () => ({ snippets: [], error })),
-      inject: vi.fn(),
-      focusTerminal: vi.fn(),
-    });
-
-    await sidebar.toggle();
-
-    expect(sidebar.isOpen()).toBe(true);
-    expect(root.querySelectorAll("li").length).toBe(0);
-    expect(root.textContent).toContain("snippets[0].body");
-    expect(root.querySelector("img")).toBeNull();
-    const errorElement = root.querySelector<HTMLElement>(".snippets-error")!;
-    expect(errorElement.hidden).toBe(false);
-    expect(root.querySelector<HTMLElement>(".snippets-empty")!.hidden).toBe(
+    expect(f.root.querySelector<HTMLElement>(".snippets-empty")!.hidden).toBe(
       true,
     );
+    f.view.deactivate();
+    f.view.activate();
+    await settle();
+    expect(f.root.textContent).toContain("Could not load snippets");
+    expect(f.root.textContent).not.toContain("private details");
   });
 
-  it("clears its content and listeners on dispose", async () => {
-    const root = createRoot();
-    const sidebar = createSnippetsSidebar(root, {
-      loadSnippets: vi.fn(async () => twoSnippets),
-      inject: vi.fn(),
-      focusTerminal: vi.fn(),
-    });
-    await sidebar.toggle();
-    sidebar.dispose();
-    expect(root.hidden).toBe(true);
-    expect(root.childElementCount).toBe(0);
-    await sidebar.toggle();
-    expect(root.hidden).toBe(true);
+  it("settles a visible blocked read without focusing; disposal invalidates pending work", async () => {
+    let resolve!: (response: TerminalSnippetsResponse) => void;
+    const f = fixture(
+      vi.fn(
+        () =>
+          new Promise<TerminalSnippetsResponse>((yes) => {
+            resolve = yes;
+          }),
+      ),
+    );
+    f.view.activate();
+    await settle();
+    f.block();
+    resolve(catalog);
+    await settle();
+    expect(f.root.querySelectorAll("li")).toHaveLength(2);
+    expect(document.activeElement).not.toBe(f.search);
+    f.view.deactivate();
+    f.view.activate();
+    await settle();
+    f.view.dispose();
+    resolve(catalog);
+    await settle();
+    expect(f.root.childElementCount).toBe(0);
   });
 });

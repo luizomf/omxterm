@@ -1,0 +1,184 @@
+name: Windows x64 headless + candidate build (Server)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-x64-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  candidate:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out selected source
+        id: checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        env:
+          # Apply before checkout materializes files, without changing global Git config.
+          GIT_CONFIG_COUNT: "2"
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: "false"
+          GIT_CONFIG_KEY_1: core.symlinks
+          GIT_CONFIG_VALUE_1: "true"
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up x64 Node 24 without dependency caching
+        id: node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24"
+          architecture: x64
+          package-manager-cache: false
+
+      - name: Record environment and check checkout prerequisites
+        id: metadata
+        run: |
+          @'
+          const fs = require('node:fs');
+          const os = require('node:os');
+          const path = require('node:path');
+          const { execFileSync } = require('node:child_process');
+          const { createHash } = require('node:crypto');
+          if (process.platform !== 'win32' || process.arch !== 'x64' ||
+              os.machine() !== 'x86_64' || process.env.RUNNER_ARCH !== 'X64' ||
+              !process.version.startsWith('v24.')) {
+            throw new Error('Expected Windows x64 OS, runner and Node 24');
+          }
+          const sourceSHA = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+          if (!/^[a-f0-9]{40}$/.test(sourceSHA) || sourceSHA !== process.env.GITHUB_SHA) {
+            throw new Error('Checked-out source does not match dispatch SHA');
+          }
+          const lock = fs.readFileSync('package-lock.json');
+          const metadata = {
+            sourceSHA,
+            lockSHA256: createHash('sha256').update(lock).digest('hex'),
+            node: process.version,
+            electronDependencyVersion: JSON.parse(lock).packages['node_modules/electron'].version,
+            runnerOS: process.env.RUNNER_OS,
+            runnerArchitecture: process.env.RUNNER_ARCH,
+            os: os.version(),
+            osRelease: os.release(),
+            osArchitecture: os.machine(),
+            imageOS: process.env.ImageOS,
+            imageVersion: process.env.ImageVersion,
+          };
+          const json = JSON.stringify(metadata);
+          console.log(json);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `json=${json}\n`);
+          if (!fs.lstatSync('CLAUDE.md').isSymbolicLink() || fs.readlinkSync('CLAUDE.md') !== 'AGENTS.md') {
+            throw new Error('Expected repository CLAUDE.md symlink to AGENTS.md');
+          }
+          for (const file of ['package.json', 'package-lock.json', 'AGENTS.md', '.github/workflows/windows-x64.yml']) {
+            if (fs.readFileSync(file).includes(13)) throw new Error(`Expected LF checkout: ${file}`);
+          }
+          const root = fs.mkdtempSync(path.join(os.tmpdir(), 'omxterm-ci-symlink-'));
+          try {
+            fs.writeFileSync(path.join(root, 'target.txt'), 'ok');
+            fs.symlinkSync('target.txt', path.join(root, 'link.txt'), 'file');
+            if (fs.readFileSync(path.join(root, 'link.txt'), 'utf8') !== 'ok') {
+              throw new Error('Temporary file symlink read failed');
+            }
+          } finally {
+            fs.rmSync(root, { recursive: true, force: true });
+          }
+          console.log('PASS: repository symlink, selected LF files and temporary file symlink');
+          '@ | node
+
+      - name: Record npm version
+        id: npm
+        run: |
+          $version = npm.cmd --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Unexpected npm version' }
+          Write-Output "npm=$version"
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Install locked dependencies
+        id: install
+        run: npm.cmd ci
+
+      - name: Load node-pty without spawning a PTY
+        id: native
+        run: node -e "require('node-pty'); const fs = require('node:fs'); const locked = JSON.parse(fs.readFileSync('package-lock.json')).packages['node_modules/electron'].version; if (require('electron/package.json').version !== locked) throw new Error('Electron dependency differs from lock'); console.log('node-pty loaded; no PTY spawned; Electron dependency matches lock (not shipped runtime verification)');"
+
+      - name: Check formatting
+        id: format
+        run: npm.cmd run format:check
+
+      - name: Lint
+        id: lint
+        run: npm.cmd run lint
+
+      - name: Typecheck
+        id: typecheck
+        run: npm.cmd run typecheck
+
+      - name: Run headless unit tests only
+        id: unit
+        run: npm.cmd test -- test/unit
+
+      - name: Build application
+        id: build
+        run: npm.cmd run build
+
+      - name: Build unsigned x64 candidate (publish never)
+        id: package
+        run: npm.cmd run package-built:win:x64
+
+      - name: Hash the exact generated installer without executing it
+        id: checksum
+        run: |
+          $version = (Get-Content -LiteralPath package.json -Raw | ConvertFrom-Json).version
+          if ($version -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') { throw 'Unexpected source version' }
+          $name = "OMXTerm-$version-x64.exe"
+          $file = Get-Item -LiteralPath (Join-Path release $name)
+          if ($file.PSIsContainer -or $file.Length -le 0) { throw 'Missing or empty installer' }
+          $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $json = @{ basename = $name; bytes = $file.Length; sha256 = $hash } | ConvertTo-Json -Compress
+          Write-Output $json
+          "json=$json" >> $env:GITHUB_OUTPUT
+
+      - name: Summarize bounded build evidence even after failure
+        if: ${{ always() }}
+        env:
+          METADATA: ${{ steps.metadata.outputs.json }}
+          NPM_VERSION: ${{ steps.npm.outputs.version }}
+          INSTALLER: ${{ steps.checksum.outputs.json }}
+          PHASE_OUTCOMES: |
+            checkout=${{ steps.checkout.outcome }}
+            node=${{ steps.node.outcome }}
+            metadata=${{ steps.metadata.outcome }}
+            npm=${{ steps.npm.outcome }}
+            install=${{ steps.install.outcome }}
+            native-load=${{ steps.native.outcome }}
+            format=${{ steps.format.outcome }}
+            lint=${{ steps.lint.outcome }}
+            typecheck=${{ steps.typecheck.outcome }}
+            unit=${{ steps.unit.outcome }}
+            build=${{ steps.build.outcome }}
+            package=${{ steps.package.outcome }}
+            checksum=${{ steps.checksum.outcome }}
+        run: |
+          @(
+            '## Windows x64 headless + candidate build (Server)',
+            'Environment/source (Electron version is the locked dependency, not a verified shipped runtime):',
+            '```json', $env:METADATA, '```',
+            "npm: $env:NPM_VERSION",
+            'Exact generated installer build evidence (only when checksum succeeds):',
+            '```json', $env:INSTALLER, '```',
+            'Phase outcomes:', '```text', $env:PHASE_OUTCOMES, '```',
+            'The binary is transient on the runner; no upload, dependency cache or release publication is configured.',
+            'Windows Server hosted runners are administrators. Symlink success is not ordinary-user Developer Mode evidence.',
+            'No real PTY, Electron startup, graphical suite, package inspection or NSIS execution was performed.',
+            'A checksum is build evidence, NOT a validated desktop, installer or product. Windows 11 qualification and release acceptance remain separate.'
+          ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
