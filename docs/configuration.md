@@ -18,8 +18,11 @@ You can find them in:
 - **macOS and Linux:** `~/.config/omxterm` (or `$XDG_CONFIG_HOME/omxterm`)
 - **Windows:** `%USERPROFILE%\.config\omxterm`
 
+**Prefer a form?** Choose **Settings…** in the OMXTerm application menu to change common settings without editing JSON. See [Settings](#settings).
+
 **The basic workflow: edit, save, reload.** Edit your files in any text editor or [OMXTerm Studio](#edit-visually-with-omxterm-studio), then choose **View → Reload User Configuration** (`Cmd+Shift+,` on macOS, `Ctrl+Shift+,` on Linux/Windows). Snippets reload automatically whenever you open the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`).
 
+- [Change settings in the app](#settings)
 - [Make your first display change](#add-one-display-change)
 - [Find or create your configuration folder](#create-the-configuration-directory)
 - [Edit visually with OMXTerm Studio](#edit-visually-with-omxterm-studio)
@@ -29,6 +32,19 @@ You can find them in:
 - [Custom keyboard shortcuts](#keybinds)
 - [Snippets](#snippets) and [Themes](#terminal-themes)
 - [Reloading behavior and validation](#reloading-user-configuration)
+
+## Settings
+
+Choose **Settings…** in the OMXTerm application menu. Each change you make to a control is checked and saved to `config.json` right away, then applied; the status line tells you what happened:
+
+- **Saved.** The change is active.
+- **Saved. New tabs use it.** or **It applies to new windows.** Open tabs and windows keep their current value.
+- **Saved… restart OMXTerm to apply it to open tabs.** Font family and line height apply to new tabs immediately and to open tabs after a restart.
+- **Not saved: …** The value was rejected (for example, a font that isn't installed); your file is unchanged.
+
+Clearing a text or number field removes that entry from `config.json`, so the default applies again. Settings changes only the field you edited and keeps the rest of your file, including edits you make in another editor while it's open. It rewrites the file with two-space indentation.
+
+The **Config File** page shows `config.json` with an explicit **Save**. If the file changes on disk while you edit there, your draft is kept and saving it is refused until you choose **Reload File**, so nothing is overwritten by accident. Shortcuts, transparency, blur and snippets are still edited in the files.
 
 ## Add one display change
 

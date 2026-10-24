@@ -1,0 +1,150 @@
+.settings-dialog {
+  box-sizing: border-box;
+  width: min(40rem, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid currentColor;
+  border-radius: 12px;
+  background: var(--terminal-background, #101218);
+  color: var(--terminal-foreground, #f4f4f4);
+  font:
+    14px/1.4 system-ui,
+    sans-serif;
+  overflow: hidden;
+}
+.settings-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.settings-dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+.settings-body {
+  display: grid;
+  grid-template-columns: minmax(8rem, auto) 1fr;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 8px 16px;
+  min-height: 0;
+  padding: 20px 20px 8px;
+  overflow: auto;
+}
+.settings-body h2,
+.settings-problem,
+.settings-status {
+  grid-column: 1 / -1;
+}
+.settings-body h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.settings-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.settings-panels {
+  min-width: 0;
+}
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.settings-panel[hidden] {
+  display: none;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.settings-toggle {
+  justify-content: flex-start;
+}
+.settings-row input:not([type="checkbox"]),
+.settings-row select {
+  box-sizing: border-box;
+  width: min(16rem, 60%);
+}
+.settings-dialog button,
+.settings-dialog input,
+.settings-dialog select,
+.settings-dialog textarea {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+  border-radius: 6px;
+  padding: 5px 8px;
+}
+.settings-dialog select option {
+  background: var(--terminal-background, #101218);
+}
+.settings-dialog input[type="checkbox"] {
+  accent-color: currentColor;
+}
+.settings-dialog button {
+  cursor: pointer;
+}
+.settings-tabs [role="tab"] {
+  border-color: transparent;
+  text-align: start;
+}
+.settings-tabs [role="tab"][aria-selected="true"] {
+  border-color: currentColor;
+  font-weight: 600;
+}
+.settings-dialog :focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.settings-config-file textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 14rem;
+  resize: vertical;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+}
+.settings-path {
+  margin: 0;
+  overflow-wrap: anywhere;
+  opacity: 0.8;
+}
+.settings-actions {
+  display: flex;
+  gap: 8px;
+}
+.settings-status,
+.settings-problem,
+.settings-config-file [role="status"] {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.settings-status:empty,
+.settings-config-file [role="status"]:empty {
+  display: none;
+}
+.settings-status.error,
+.settings-problem {
+  font-weight: 600;
+}
+.settings-close {
+  align-self: flex-end;
+  margin: 8px 20px 20px;
+  font-weight: 600;
+}
+@media (max-width: 30rem) {
+  .settings-body {
+    grid-template-columns: 1fr;
+  }
+  .settings-tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .settings-row {
+    flex-wrap: wrap;
+  }
+}

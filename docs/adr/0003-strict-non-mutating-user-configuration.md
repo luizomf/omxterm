@@ -2,7 +2,8 @@
 
 OMXTerm rejects missing or unsupported schema versions, unknown keys, invalid
 JSON and invalid values with precise errors. It does not migrate, repair,
-rewrite or silently ignore an existing user document.
+rewrite or silently ignore an existing user document on its own. Only an
+explicit user request in Settings writes `config.json`, as described below.
 
 ## Startup and manual reload
 
@@ -27,6 +28,31 @@ fixing the cause establishes a fresh startup snapshot.
 Creation-time family and line-height behavior and the pending font-acquisition
 race are described in
 [ADR 0025](0025-use-restty-as-the-terminal-surface.md).
+
+## Explicit settings writes
+
+The Settings editor writes `config.json` only when the user deliberately
+changes a control or saves the raw JSON editor. Opening OMXTerm or the editor
+never writes, completes or reformats the document. Every candidate passes the
+same loader as startup, including theme, installed-font and Windows-shell
+checks, before it replaces the file atomically; a rejected candidate leaves the
+file untouched and reports the precise diagnostic.
+
+A graphical change rereads the file and changes only its own field. Other
+entries, including external edits made after the editor opened, are kept, and
+omitted values stay omitted. Clearing a field removes it so it inherits its
+default again. The document is rewritten as two-space JSON; values and key
+order are kept, but custom whitespace is not. A raw JSON save must start from
+the file's current revision: if the file changed since the draft was loaded,
+the save is refused as a conflict instead of overwriting it. Requests are
+serialized. A file that cannot be read, decoded or parsed is reported, never
+replaced with defaults; a parsed but invalid document may be repaired by a
+change whose whole candidate validates.
+
+A successful write is followed by the ordinary manual reload. The editor
+reports what actually happened: saved and applied, saved but not applied (with
+the reload's reason), and settings that apply only to new windows or need a
+restart for open tabs. A resolved request is not reported as application.
 
 ## Initial configuration kit
 

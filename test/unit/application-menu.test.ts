@@ -36,6 +36,7 @@ function menuActions() {
     reloadUserConfiguration: vi.fn(),
     openLocalImage: vi.fn(),
     showAbout: vi.fn(),
+    showSettings: vi.fn(),
   };
 }
 
@@ -69,6 +70,13 @@ describe("native application menu", () => {
         { id: "about", label: "About OMXTerm", click: actions.showAbout },
       ]);
       expect(items.some((item) => item.role === "about")).toBe(false);
+      const settings = items.find((item) => item.label === "Settings…")!;
+      expect(settings).toEqual({
+        label: "Settings…",
+        click: actions.showSettings,
+      });
+      (settings.click as () => void)();
+      expect(actions.showSettings).toHaveBeenCalledOnce();
     },
   );
   it("wires native window lifecycle accelerators to application actions", () => {

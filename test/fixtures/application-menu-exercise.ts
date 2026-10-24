@@ -67,6 +67,7 @@ export async function exerciseApplicationMenu(
     reloadUserConfiguration: unexpected,
     openLocalImage: unexpected,
     showAbout,
+    showSettings: unexpected,
   };
   const invocations = terminalActionInvocations(actions);
   deliverKeybindsFromKeyEvents(

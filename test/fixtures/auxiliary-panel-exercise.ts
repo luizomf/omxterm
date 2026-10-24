@@ -88,6 +88,7 @@ function createScenario(options: PanelOptions) {
     reloadUserConfiguration: options.reload,
     openLocalImage: () => application.openLocalImageInSelectedWindow(),
     showAbout: options.showAbout,
+    showSettings: unexpected,
   };
   const invocations = terminalActionInvocations(actions);
   deliverKeybindsFromKeyEvents(

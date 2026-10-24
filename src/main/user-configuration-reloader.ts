@@ -29,9 +29,15 @@ interface UserConfigurationReloaderOptions {
   >[];
 }
 
+// What a reload actually did: applied with its current notices (warnings and
+// deferred restart-only settings), or rejected with the reported reason.
+export type UserConfigurationReloadOutcome =
+  | { readonly applied: true; readonly notices: readonly string[] }
+  | { readonly applied: false; readonly notice: string };
+
 export interface UserConfigurationReloader {
   current(): ActiveUserConfiguration;
-  reload(): Promise<void>;
+  reload(): Promise<UserConfigurationReloadOutcome>;
 }
 
 export function terminalSurfaceFontBaseline(
@@ -58,10 +64,10 @@ export function createUserConfigurationReloader(
     options.initial.configuration,
     options.initial.userFileErrors,
   );
-  let queue = Promise.resolve();
+  let queue: Promise<unknown> = Promise.resolve();
   const now = options.now ?? Date.now;
 
-  const run = async () => {
+  const run = async (): Promise<UserConfigurationReloadOutcome> => {
     const startedAt = now();
     options.operationalEvents?.write({
       name: "configuration.reload.requested",
@@ -70,10 +76,7 @@ export function createUserConfigurationReloader(
     });
     try {
       const load = await options.load();
-      if (load.fallback) {
-        reject(load.fallback, startedAt);
-        return;
-      }
+      if (load.fallback) return reject(load.fallback, startedAt);
       active = freezeState(
         load.configuration,
         currentNotices(
@@ -90,15 +93,16 @@ export function createUserConfigurationReloader(
         trigger: "manual",
         durationMs: elapsedMilliseconds(startedAt, now()),
       });
+      return { applied: true, notices: active.userFileErrors };
     } catch {
-      reject(undefined, startedAt);
+      return reject(undefined, startedAt);
     }
   };
 
   const reject = (
     fallback: UserConfigurationFallback | undefined,
     startedAt: number,
-  ) => {
+  ): UserConfigurationReloadOutcome => {
     const notice = boundedReloadNotice(fallback);
     options.writeStderr?.(`${notice}\n`);
     active = freezeState(active.configuration, [notice]);
@@ -111,6 +115,7 @@ export function createUserConfigurationReloader(
         ? configurationRejectionReason(fallback.error, fallback.surface)
         : "unexpected-failure",
     });
+    return { applied: false, notice };
   };
 
   return {

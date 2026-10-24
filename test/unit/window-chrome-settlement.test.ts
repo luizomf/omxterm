@@ -179,6 +179,10 @@ function harness(
         dispose() {},
       }),
     },
+    "./settings-dialog-exercise": { runSettingsExercise: async () => ({}) },
+    "./window-chrome-configuration": {
+      fixtureConfigurationApplier: () => () => {},
+    },
     "../../src/main/native-application-menu": {},
   };
   runInNewContext(entry, {

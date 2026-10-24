@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { createAboutBridge } from "./about-bridge";
+import { createSettingsBridge } from "./settings-bridge";
 import type { TerminalBridge } from "../shared/terminal-bridge";
 import {
   isWindowChromeCommand,
@@ -352,5 +353,6 @@ contextBridge.exposeInMainWorld(
   Object.freeze({
     terminal: Object.freeze(terminal),
     about: Object.freeze(createAboutBridge(ipcRenderer)),
+    settings: Object.freeze(createSettingsBridge(ipcRenderer)),
   }),
 );

@@ -26,7 +26,7 @@ export function mountAboutDialog(
 // Dismissal restores terminal focus before the physical gesture ends. Keep
 // its repeats/release out of the window-level encoder, but never eat a fresh
 // terminal press after a lost keyup. State belongs to this document's owner.
-function retainAboutDismissalGesture(document: Document) {
+export function retainDismissalGesture(document: Document) {
   const page = document.defaultView;
   let owned: string | undefined;
   const identity = (event: KeyboardEvent) =>
@@ -76,7 +76,7 @@ export function createAboutDialog(
 ) {
   let dialog: HTMLDialogElement | undefined;
   let disposed = false;
-  const keyboard = retainAboutDismissalGesture(document);
+  const keyboard = retainDismissalGesture(document);
   const close = (restoreFocus: boolean) => {
     const previous = dialog;
     if (!previous) return;

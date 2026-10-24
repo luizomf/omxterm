@@ -29,6 +29,7 @@ interface TerminalApplicationMenuActions {
   readonly reloadUserConfiguration: () => void;
   readonly openLocalImage: () => void;
   readonly showAbout: () => void;
+  readonly showSettings: () => void;
 }
 
 export function terminalApplicationMenuTemplate(
@@ -44,6 +45,11 @@ export function terminalApplicationMenuTemplate(
           id: "about",
           label: "About OMXTerm",
           click: actions.showAbout,
+        },
+        { type: "separator" },
+        {
+          label: "Settings…",
+          click: actions.showSettings,
         },
         { type: "separator" },
         {

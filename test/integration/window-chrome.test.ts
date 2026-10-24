@@ -44,6 +44,7 @@ async function runChrome(
         `--fixture-native-maximize=${expectation}`,
         ...(mode === "fail-fast" ? ["--fixture-fail-fast"] : []),
         ...(mode === "about-only" ? ["--fixture-about-only"] : []),
+        ...(mode === "settings-only" ? ["--fixture-settings-only"] : []),
       ],
       root,
       timeout: mode === "fail-fast" ? 10_000 : 100_000,
@@ -58,7 +59,7 @@ async function runChrome(
 describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   "Window Chrome through real Electron, Surfaces and PTYs",
   () => {
-    it.for(["continuity", "fail-fast", "about-only"])(
+    it.for(["continuity", "fail-fast", "about-only", "settings-only"])(
       "checks %s without leaking a native dialog or process",
       { timeout: nativeWindowDiscoveryTimeout("chrome") + 120_000 },
       async (mode, testContext) => {
@@ -98,6 +99,40 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           .split("\n")
           .filter((line) => line.startsWith(prefix));
         expect(results).toHaveLength(1);
+        if (mode === "settings-only") {
+          const { settings } = JSON.parse(results[0]!.slice(prefix.length)) as {
+            settings: { rejectedStatus: string };
+          };
+          expect(settings.rejectedStatus).toMatch(
+            /font\.family.*must exactly name an installed font family/u,
+          );
+          expect({
+            settings: {
+              ...settings,
+              rejectedStatus:
+                "Settings fixture rejection is checked separately",
+            },
+          }).toEqual({
+            settings: {
+              opened: true,
+              onePanelVisible: true,
+              liveStatus: "Saved.",
+              liveFile: { version: 1, terminal: { padding: { top: 24 } } },
+              livePaddingApplied: true,
+              newWindowStatus: "Saved. It applies to new windows.",
+              newWindowFile: {
+                version: 1,
+                terminal: { padding: { top: 24 } },
+                window: { showTabBar: false },
+              },
+              rejectedStatus:
+                "Settings fixture rejection is checked separately",
+              rejectedFileUnchanged: true,
+              focusReturned: true,
+            },
+          });
+          return;
+        }
         if (mode === "about-only") {
           expect(
             JSON.parse(results[0]!.slice(prefix.length)) as unknown,

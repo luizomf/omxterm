@@ -1,3 +1,4 @@
+import type { SettingsBridge } from "./settings";
 import type { AboutBridge } from "./about";
 import type {
   TerminalExit,
@@ -67,6 +68,7 @@ declare global {
     readonly omxterm: {
       readonly terminal: TerminalBridge;
       readonly about: AboutBridge;
+      readonly settings: SettingsBridge;
     };
   }
 }

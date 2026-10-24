@@ -1,6 +1,7 @@
 import "./terminal-window.css";
 import "./window-chrome.css";
 import "./about/about-dialog.css";
+import "./settings/settings-dialog.css";
 import { createElectronTerminalAdapter } from "./electron-terminal-adapter";
 import { mountTerminalWindowPage } from "./terminal-window-host";
 import { renderUserFileErrorBanner } from "./user-file-error-banner";
@@ -30,6 +31,7 @@ void window.omxterm.terminal.configuration().then((configuration) => {
     {
       configuration,
       about: window.omxterm.about,
+      settings: window.omxterm.settings,
       chrome: window.omxterm.terminal,
       mount: mountResttyTerminalSurface,
       loadFontData: window.omxterm.terminal.fontData,
