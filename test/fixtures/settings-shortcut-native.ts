@@ -84,6 +84,13 @@ export function createShortcutPtyObservation() {
   };
 }
 
+export function assertShortcutCollision(status: string) {
+  assert.match(
+    status,
+    /at "keybinds\.find": conflicts with the "(?:toggleFullScreen|quit)" keybind/u,
+  );
+}
+
 async function waitFor(
   check: () => boolean | Promise<boolean>,
   label: string,
@@ -357,10 +364,7 @@ export async function exerciseShortcutCapture(options: ShortcutCaptureOptions) {
           ),
         `${phase} collision result`,
       );
-      assert.match(
-        await evaluate<string>(status),
-        /keybinds\.find: conflicts with/u,
-      );
+      assertShortcutCollision(await evaluate<string>(status));
       await close();
       send("keyDown", key, [...modifiers, "isautorepeat"]);
       send("keyDown", key, [...modifiers, "isautorepeat"]);

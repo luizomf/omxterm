@@ -1,10 +1,21 @@
 import { expect, it, vi } from "vitest";
 import {
+  assertShortcutCollision,
   createShortcutPtyObservation,
   shortcutCaptureLaunchRequest,
 } from "../fixtures/settings-shortcut-native";
 
 vi.mock("electron", () => ({ Menu: {}, ipcMain: {} }));
+
+it("recognizes the loader's actual quoted-field collision diagnostic, not an invented status prefix", () => {
+  expect(() =>
+    assertShortcutCollision(
+      'User Configuration "/synthetic/config.json" at "keybinds.find": conflicts with the "toggleFullScreen" keybind on F11. Choose another shortcut for one of them, or set one of them to null to disable its shortcut.',
+    ),
+  ).not.toThrow();
+  expect(() => assertShortcutCollision("Saved.")).toThrow();
+  expect(() => assertShortcutCollision("Recording cancelled.")).toThrow();
+});
 
 it("observes actual child-reported bytes across arbitrary native output chunks", () => {
   const observation = createShortcutPtyObservation();
