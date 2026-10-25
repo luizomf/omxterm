@@ -8,8 +8,11 @@ const projectRoot = path.resolve(
   "..",
 );
 export const linuxHelperName = () => "linux_install.sh";
-export const linuxAppImageName = (version) =>
-  `OMXTerm-${version}-arm64.AppImage`;
+export function linuxAppImageName(version, arch = "arm64") {
+  if (!["arm64", "x64"].includes(arch))
+    throw new Error("Unsupported Linux architecture");
+  return `OMXTerm-${version}-${arch}.AppImage`;
+}
 
 export function renderLinuxHelper(source, version) {
   const marker = "@OMXTERM_VERSION@";
@@ -43,9 +46,10 @@ async function writeChecksum(file) {
 
 export async function packageLinuxAssets(
   outputRoot = path.join(projectRoot, "release"),
+  arch = "arm64",
 ) {
   const version = await packageVersion();
-  const appImage = path.join(outputRoot, linuxAppImageName(version));
+  const appImage = path.join(outputRoot, linuxAppImageName(version, arch));
   const helper = path.join(outputRoot, linuxHelperName());
   const helperSource = await readFile(
     path.join(projectRoot, "scripts", "install-linux-appimage.sh"),
@@ -64,7 +68,9 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
-  packageLinuxAssets()
+  if (process.argv.length > 3)
+    throw new Error("Expected at most one Linux architecture");
+  packageLinuxAssets(undefined, process.argv[2])
     .then(({ appImage, helper }) => {
       console.log(
         `Prepared Linux release assets: ${path.basename(appImage)}, ${path.basename(helper)}`,

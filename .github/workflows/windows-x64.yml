@@ -1,4 +1,4 @@
-name: Windows x64 headless + candidate build (Server)
+name: Windows x64 build-only artifacts (Server)
 
 on:
   workflow_dispatch:
@@ -29,6 +29,7 @@ jobs:
           GIT_CONFIG_KEY_1: core.symlinks
           GIT_CONFIG_VALUE_1: "true"
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
           fetch-depth: 1
 
@@ -135,25 +136,36 @@ jobs:
         id: package
         run: npm.cmd run package-built:win:x64
 
-      - name: Hash the exact generated installer without executing it
+      - name: Inspect unpacked payload and load packaged runtime (no GUI or NSIS)
+        id: inspect
+        run: npm.cmd run package:verify -- --inspection-only
+
+      - name: Write and verify exact checksums and build evidence
         id: checksum
-        run: |
-          $version = (Get-Content -LiteralPath package.json -Raw | ConvertFrom-Json).version
-          if ($version -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') { throw 'Unexpected source version' }
-          $name = "OMXTerm-$version-x64.exe"
-          $file = Get-Item -LiteralPath (Join-Path release $name)
-          if ($file.PSIsContainer -or $file.Length -le 0) { throw 'Missing or empty installer' }
-          $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-          $json = @{ basename = $name; bytes = $file.Length; sha256 = $hash } | ConvertTo-Json -Compress
-          Write-Output $json
-          "json=$json" >> $env:GITHUB_OUTPUT
+        env:
+          NPM_VERSION: ${{ steps.npm.outputs.version }}
+        run: node scripts/write-ci-build-evidence.mjs
+
+      - name: Upload allowlisted build-only files
+        id: upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ steps.checksum.outputs.artifact-name }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            release/OMXTerm-${{ steps.checksum.outputs.version }}-x64.exe
+            release/OMXTerm-${{ steps.checksum.outputs.version }}-x64.exe.sha256
+            release/build-evidence.json
 
       - name: Summarize bounded build evidence even after failure
         if: ${{ always() }}
         env:
           METADATA: ${{ steps.metadata.outputs.json }}
           NPM_VERSION: ${{ steps.npm.outputs.version }}
-          INSTALLER: ${{ steps.checksum.outputs.json }}
+          ARTIFACT_NAME: ${{ steps.checksum.outputs.artifact-name }}
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
           PHASE_OUTCOMES: |
             checkout=${{ steps.checkout.outcome }}
             node=${{ steps.node.outcome }}
@@ -167,18 +179,20 @@ jobs:
             unit=${{ steps.unit.outcome }}
             build=${{ steps.build.outcome }}
             package=${{ steps.package.outcome }}
+            inspection=${{ steps.inspect.outcome }}
             checksum=${{ steps.checksum.outcome }}
+            upload=${{ steps.upload.outcome }}
         run: |
           @(
             '## Windows x64 headless + candidate build (Server)',
             'Environment/source (Electron version is the locked dependency, not a verified shipped runtime):',
             '```json', $env:METADATA, '```',
             "npm: $env:NPM_VERSION",
-            'Exact generated installer build evidence (only when checksum succeeds):',
-            '```json', $env:INSTALLER, '```',
+            "Artifact: $env:ARTIFACT_NAME (ID $env:ARTIFACT_ID) $env:ARTIFACT_URL",
+            'Installer checksum and provenance are included in the 7-day artifact when all required checks succeed.',
             'Phase outcomes:', '```text', $env:PHASE_OUTCOMES, '```',
-            'The binary is transient on the runner; no upload, dependency cache or release publication is configured.',
+            'Build-only download; no dependency cache or release publication is configured.',
             'Windows Server hosted runners are administrators. Symlink success is not ordinary-user Developer Mode evidence.',
-            'No real PTY, Electron startup, graphical suite, package inspection or NSIS execution was performed.',
-            'A checksum is build evidence, NOT a validated desktop, installer or product. Windows 11 qualification and release acceptance remain separate.'
+            'Inspection loads the packaged addon in Electron Run-as-Node; no real ConPTY, GUI or NSIS execution.',
+            'Desktop/GPU, Windows 11, ordinary-user integration and installer behavior remain unverified, not gates for this build-only lane.'
           ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY

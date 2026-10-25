@@ -11,8 +11,11 @@ This glossary explains terms used in the code and documentation. The
 ## Platform and architecture
 
 **Supported Platform** — An operating-system/architecture target with maintained
-native packages and tests: macOS ARM64, Linux ARM64, Windows ARM64 and Windows x64. Linux
-uses X11/XWayland.
+native packages and tests: macOS ARM64, Linux ARM64/x64 and Windows ARM64/x64.
+Linux uses X11/XWayland. Linux and Windows x64 packages have build-only
+qualification: native CI and headless integrity checks, with desktop, GPU,
+installer and ordinary-user integration unverified and not release gates
+([ADR 0036](docs/adr/0036-distribute-build-only-x64-ci-artifacts.md)).
 
 **Terminal Surface** — The portable DOM module that renders and operates the
 terminal using Restty and its Ghostty core. It receives a session Adapter rather
@@ -198,10 +201,12 @@ clipboard, configuration and environment contents, commands and titles.
 requests. Child processes retain normal network access; explicitly activated web
 links open through the OS.
 
-**Release Artifact** — An exact native package (ARM64, or x64 on Windows) (DMG, AppImage or NSIS)
-published with its source tag, checksum and verification evidence: native by
-default, or explicitly approved Windows x64 emulation with recorded limitations
-under [ADR 0034](docs/adr/0034-support-native-windows-x64-packages.md).
+**Release Artifact** — An exact native package (ARM64, or x64 on Linux/Windows)
+(DMG, AppImage or NSIS) published with its source tag, checksum and verification
+evidence: native by default, explicitly approved Windows x64 emulation under
+[ADR 0034](docs/adr/0034-support-native-windows-x64-packages.md), or native x64
+build-only CI under [ADR 0036](docs/adr/0036-distribute-build-only-x64-ci-artifacts.md),
+with limitations recorded.
 Artifacts have no verified publisher identity; the macOS app has an ad-hoc
 integrity seal, not Developer ID signing or notarization. See the
 [release procedure](docs/release.md).

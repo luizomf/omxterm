@@ -16,9 +16,12 @@ system-wide security changes. No application auto-update mechanism is present.
 
 Targets are built and verified natively on ARM64 hardware or VM-native
 filesystems, not shared folders. Cross-build or build-only evidence does not
-establish native behavior. Linux x64, Intel macOS and other package formats are
-outside current support; Windows x64 is added by
+establish native behavior. Windows x64 is added by
 [ADR 0034](0034-support-native-windows-x64-packages.md).
+[ADR 0036](0036-distribute-build-only-x64-ci-artifacts.md) adds Linux x64 and
+supersedes x64 qualification gates with owner-approved native build-only CI
+checks. Desktop and installer behavior remain unverified, not release gates for
+those lanes. Intel macOS and other package formats remain outside support.
 
 ## Verification and evidence reuse
 

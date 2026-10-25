@@ -23,7 +23,7 @@ For security vulnerabilities, follow the private reporting instructions in [SECU
 
 ### Have an x64 Linux or Windows machine?
 
-Windows x64 installers are available and can also be built from source (`npm run package:win:x64`; see [development](docs/development.md#windows)). Help with native Intel/AMD qualification is welcome in the [Windows x64 issue](https://github.com/luizomf/omxterm/issues/224). The [Linux x64 issue](https://github.com/luizomf/omxterm/issues/223) is still open if you would like to help build and test native Linux x64 packages.
+Both targets can be built natively from source (`npm run package:win:x64` or `npm run package:linux:x64`). Manual CI lanes provide downloadable build-only artifacts for the next release; see [release guidance](docs/release.md#hosted-x64-build-only-artifact-delivery). Desktop, GPU, installers and ordinary-user integration remain unverified and are not release gates for these lanes. Help with native desktop qualification remains welcome in the [Windows x64 issue](https://github.com/luizomf/omxterm/issues/224) and [Linux x64 issue](https://github.com/luizomf/omxterm/issues/223); build-only delivery does not fully qualify either target.
 
 ## Opening a pull request
 
@@ -40,7 +40,7 @@ For small Markdown fixes, you can edit files directly on GitHub in your fork wit
 
 ## Development environment
 
-For code development, you need ARM64 hardware running macOS, Linux, or Windows (or an x64 Windows PC), Git, and **Node.js 22.13+ (22.x) or 24+** with npm.
+For code development, you need ARM64 hardware running macOS, Linux, or Windows (or an x64 Linux/Windows PC), Git, and **Node.js 22.13+ (22.x) or 24+** with npm.
 
 Install your [platform prerequisites](docs/development.md#platform-prerequisites) before running `npm ci` (Xcode Command Line Tools on macOS; build tools, XWayland, and fixture fonts on Linux; Developer Mode symlink access and Visual C++ Redistributable on Windows).
 

@@ -211,9 +211,11 @@ install_appimage() {
     fail "input must be a readable local regular file (not a symlink)"
   command -v file >/dev/null 2>&1 || fail "the 'file' command is required to validate the AppImage"
   file_description=$(file -Lb -- "$source_app") || fail "could not inspect the AppImage"
-  case $file_description in
-    *ELF*64-bit*ARM\ aarch64*) ;;
-    *) fail "input is not a Linux ARM64 ELF AppImage" ;;
+  host_arch=$(uname -m) || fail "could not inspect host architecture"
+  case "$host_arch:$file_description" in
+    aarch64:*ELF*64-bit*ARM\ aarch64*|arm64:*ELF*64-bit*ARM\ aarch64*) ;;
+    x86_64:*ELF*64-bit*x86-64*) ;;
+    *) fail "input is not a supported Linux ELF AppImage matching the host architecture" ;;
   esac
 
   owned_paths

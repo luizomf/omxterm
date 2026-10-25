@@ -10,7 +10,7 @@ private status channel rather than exit-code or Terminal Payload heuristics.
 ## Decision
 
 Keep the pinned runtime and apply a source-digest-guarded native correction at
-postinstall. Build its Node-API addon locally on supported Unix ARM64 platforms,
+postinstall. Build its Node-API addon locally on macOS ARM64 and Linux ARM64/x64,
 using the locked headers; rebuild the existing macOS spawn helper as a matched
 pair. Both development and packaged native artifact locations receive the same
 correction. Windows retains its separate ConPTY implementation.

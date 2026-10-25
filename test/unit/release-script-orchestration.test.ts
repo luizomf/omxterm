@@ -124,6 +124,19 @@ describe("release script orchestration", () => {
     expect(result.calls).toEqual(calls);
   });
 
+  it("builds Linux x64 with reviewed launcher, explicit arch, matching checksum assets and no publication", () => {
+    const expected = [
+      "node scripts/prepare-linux-launcher.mjs",
+      "electron-builder --config electron-builder.yml --linux AppImage --x64 --publish never",
+      "node scripts/package-linux-assets.mjs x64",
+    ];
+    expect(commands("package-built:linux:x64")).toEqual(expected);
+    expect(commands("package:linux:x64")).toEqual([
+      "node build.mjs",
+      ...expected,
+    ]);
+  });
+
   it("builds the Windows x64 package with the x64 target only", () => {
     expect(commands("package:win:x64")).toEqual([
       "node build.mjs",
@@ -151,7 +164,7 @@ describe("release script orchestration", () => {
     expect(result.stderr).toMatch(/requires native Windows arm64 or x64/u);
   });
 
-  it.each(["--windows-unpacked-only", "--force"])(
+  it.each(["--windows-unpacked-only", "--inspection-only", "--force"])(
     "Windows rejects %s before starting any step",
     async (flag) => {
       const result = await runWindowsCheck([flag]);

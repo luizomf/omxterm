@@ -17,11 +17,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 const execFile = promisify(execFileCallback);
 const repositoryRoot = path.resolve(import.meta.dirname, "../..");
-const helper = path.join(
-  repositoryRoot,
-  "scripts",
-  "install-linux-appimage.sh",
-);
+const helper = path.join(repositoryRoot, "scripts/install-linux-appimage.sh");
 const temporaryRoots: string[] = [];
 
 async function fixtureRoot() {
@@ -29,6 +25,11 @@ async function fixtureRoot() {
   temporaryRoots.push(root);
   const bin = path.join(root, "bin");
   await mkdir(bin);
+  await writeFile(
+    path.join(bin, "uname"),
+    "#!/bin/sh\nprintf '%s\\n' 'aarch64'\n",
+    { mode: 0o755 },
+  );
   await writeFile(
     path.join(bin, "file"),
     "#!/bin/sh\nprintf '%s\\n' 'ELF 64-bit LSB executable, ARM aarch64'\n",

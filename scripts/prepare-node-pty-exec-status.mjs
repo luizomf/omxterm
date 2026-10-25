@@ -26,12 +26,12 @@ const nativeDigests = {
 // build copy, then replace only the native artifacts already used in packages.
 export async function prepareNodePtyExecStatus() {
   if (process.platform === "win32") return;
-  if (
-    !["darwin", "linux"].includes(process.platform) ||
-    process.arch !== "arm64"
-  )
+  if (!(
+    (process.platform === "darwin" && process.arch === "arm64") ||
+    (process.platform === "linux" && ["arm64", "x64"].includes(process.arch))
+  ))
     throw new Error(
-      "PTY exec-status builds require a supported ARM64 platform",
+      "PTY exec-status builds require macOS ARM64 or Linux ARM64/x64",
     );
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-pty-build-"));
   try {

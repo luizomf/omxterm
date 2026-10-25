@@ -8,7 +8,7 @@ if (
   (process.arch !== "arm64" && process.arch !== "x64")
 )
   throw new Error("check:win requires native Windows arm64 or x64");
-if (options.windowsUnpackedOnly)
+if (options.windowsUnpackedOnly || options.inspectionOnly)
   throw new Error(
     "check:win requires exact installer verification; use package:verify -- --windows-unpacked-only for partial diagnostics",
   );

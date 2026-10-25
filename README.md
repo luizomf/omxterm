@@ -91,6 +91,12 @@ SmartScreen are in the [installation guide](docs/installation.md).
 
 <a id="exercised-desktops"></a>
 
+Linux and Windows x64 have manual native CI lanes for **downloadable build-only
+packages for the next release** ([artifact delivery](docs/release.md#hosted-x64-build-only-artifact-delivery)).
+Desktop/GPU, installer and ordinary-user integration remain unverified and are
+not release gates for those lanes. Linux x64 assets are not linked here until
+published; the table above describes the existing release.
+
 ### Tested desktops
 
 OMXTerm is tested on Apple Silicon macOS, Windows 11 ARM64, and Linux ARM64

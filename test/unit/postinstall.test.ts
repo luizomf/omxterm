@@ -123,7 +123,7 @@ describe("node-pty postinstall preparation", () => {
     }
   });
 
-  it("corrects the Linux x64 runtime without a supported native rebuild", async () => {
+  it("rebuilds the Linux x64 runtime with exec status", async () => {
     const rebuild = vi.fn().mockResolvedValue(undefined);
     const chmod = vi.fn().mockResolvedValue(undefined);
 
@@ -135,8 +135,8 @@ describe("node-pty postinstall preparation", () => {
         rebuild,
         chmod,
       }),
-    ).resolves.toBe("corrected");
-    expect(rebuild).not.toHaveBeenCalled();
+    ).resolves.toBe("corrected-and-rebuilt");
+    expect(rebuild).toHaveBeenCalledOnce();
     expect(chmod).not.toHaveBeenCalled();
   });
 });

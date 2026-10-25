@@ -80,6 +80,7 @@ export function verifyPackagedStartupWithCleanup<T>(operations: {
 export function verifyPackagedApplication(
   applicationPath?: string,
   options?: {
+    readonly inspectionOnly?: boolean;
     readonly windowsUnpackedOnly?: boolean;
     readonly disposableVm?: boolean;
   },

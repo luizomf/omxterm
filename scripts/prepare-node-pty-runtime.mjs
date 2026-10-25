@@ -161,7 +161,7 @@ export async function prepareNodePtyRuntime({
     return "corrected";
   }
   await prepareUnixRuntime(unixRuntimePath);
-  if (platform === "linux" && arch === "arm64") {
+  if (platform === "linux" && ["arm64", "x64"].includes(arch)) {
     await rebuild();
     return "corrected-and-rebuilt";
   }

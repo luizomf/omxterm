@@ -37,6 +37,16 @@ A valid file prints `OK`.
 
 ## Linux
 
+The commands below describe the current ARM64 release. Native Linux x64
+AppImages can be built with `npm run package:linux:x64`; manual CI delivers
+build-only downloads for the next release ([artifact guidance](release.md#hosted-x64-build-only-artifact-delivery)).
+Use the matching `-x64.AppImage` and checksum filenames for those downloads and
+restore executable bits after unzipping. The common helper rejects mismatched
+host/ELF architectures before execution. Desktop/GPU, helper installation and
+ordinary-user integration remain unverified, not release gates. CI runner/glibc
+evidence is not a broad distro compatibility promise; do not infer an x64
+minimum from the current ARM64 requirements below.
+
 ### Requirements
 
 OMXTerm needs an `aarch64` (ARM64) processor and **glibc 2.42 or newer**. Check both with:

@@ -1,15 +1,15 @@
 # Native release procedures
 
-This guide covers building, verifying, and publishing native ARM64 releases for macOS (`.dmg`) and Linux (`.AppImage` + `linux_install.sh`), and ARM64/x64 releases for Windows (`.exe` NSIS installer). Build support alone does not qualify an installer. Native verification is the default; the explicit Windows x64 emulation exception in [ADR 0034](adr/0034-support-native-windows-x64-packages.md) requires honest host/target and coverage disclosure.
+This guide covers native ARM64 macOS (`.dmg`) and ARM64/x64 Linux (`.AppImage` + `linux_install.sh`) and Windows (`.exe` NSIS) releases. Linux and Windows x64 packages use owner-approved **build-only qualification**: native CI and enumerated headless checks, with desktop, GPU, installer and ordinary-user integration unverified and not release gates ([ADR 0036](adr/0036-distribute-build-only-x64-ci-artifacts.md)). ARM64 checks and full-verifier safety boundaries are unchanged.
 
 See [versioning.md](versioning.md) for SemVer rules and [development.md](development.md#platform-prerequisites) for platform setup.
 
 ## Release workflow
 
 1. Select the release version `X.Y.Z` under [versioning.md](versioning.md) and ensure `package.json` and `package-lock.json` match.
-2. Build and verify native packages on each target platform: macOS ARM64, Linux ARM64, Windows ARM64, and Windows x64.
+2. Build and verify ARM64 packages on each target platform; collect native Linux/Windows x64 build-only artifacts using the manual lanes below.
 3. Collect the verified installers and `.sha256` checksum files in the ignored `release/` directory.
-4. Tag `vX.Y.Z`, create a draft GitHub Release with the [qualified release assets](#publication) (ten including Windows x64; eight without it), verify the uploaded bytes, and publish. Update download links in `README.md` and `docs/installation.md`. Published releases are immutable: finish uploading all assets before publication; never move a published tag, replace an asset, or disable immutability to add a missing platform.
+4. Tag `vX.Y.Z`, create a draft GitHub Release with the [qualified release assets](#publication) (twelve including both x64 platforms, with one common Linux helper pair), verify the uploaded bytes, and publish. Update download links in `README.md` and `docs/installation.md`. Published releases are immutable: finish uploading all assets before publication; never move a published tag, replace an asset, or disable immutability to add a missing platform.
 5. Bump `main` to the next `-dev.0` baseline after release.
 
 <a id="changed-inputs-and-build-to-tag-comparison"></a>
@@ -20,7 +20,7 @@ When preparing a release across multiple machines or VMs, you only need to rerun
 
 - **Documentation-only changes** do not change packaged application binaries.
 - **Test-only changes** only require running the affected tests, not rebuilding packages.
-- **Version-only bumps** require rebuilding packages and running `package:verify`, without needing to rerun the full behavioral test suite if the code is otherwise identical.
+- **Version-only bumps** require rebuilding packages and running `package:verify` (x64 build-only lanes use `--inspection-only`), without needing to rerun the full behavioral test suite if the code is otherwise identical.
 - **Code, asset, dependency, or build-script changes** require running tests, building new packages, and verifying the resulting artifacts.
 
 To compare a package build commit against the final release tag commit:
@@ -46,7 +46,7 @@ Before tagging a release, verify that the final `X.Y.Z` version (with no `-dev` 
 ### Resume and version-only commands
 
 - `npm run check` (macOS), `npm run check:linux` (Linux), and `npm run check:win` (Windows) run `check:portable`, package the build via `package-built:*`, and run `package:verify`.
-- Standalone `npm run package:mac`, `npm run package:linux`, `npm run package:win` (Windows ARM64), and `npm run package:win:x64` (Windows x64) run `npm run build` and package the installer without running the test suite.
+- Standalone `npm run package:mac`, `npm run package:linux` (ARM64), `npm run package:linux:x64`, `npm run package:win` (ARM64), and `npm run package:win:x64` run `npm run build` and package the installer without running the test suite.
 - If `npm run build` (or `check:portable`) has already completed on the current source, you can package and verify directly:
 
 ```sh
@@ -109,7 +109,7 @@ This builds `OMXTerm-<version>-arm64.AppImage`, `linux_install.sh`, and both `.s
 
 ### Windows ARM64 and x64
 
-Build and verify each Windows architecture natively on a host of that architecture. An explicitly maintainer-approved x64 build may instead use x64 Node and Electron under Windows ARM64 emulation (ADR 0034); record that distinction and pending native qualification in the release notes. `check:win` picks `package-built:win` (ARM64) or `package-built:win:x64` (x64) from Node's process architecture. The x64 installer is `OMXTerm-<version>-x64.exe`; the x64 unpacked directory is `release/win-unpacked`.
+For full verification (optional beyond the x64 build-only lane below), build and verify each Windows architecture natively on a host of that architecture. An explicitly maintainer-approved x64 build may instead use x64 Node and Electron under Windows ARM64 emulation (ADR 0034); record that distinction and pending native qualification in the release notes. `check:win` picks `package-built:win` (ARM64) or `package-built:win:x64` (x64) from Node's process architecture. The x64 installer is `OMXTerm-<version>-x64.exe`; the x64 unpacked directory is `release/win-unpacked`.
 
 > **Warning:** Full Windows NSIS verification installs and uninstalls the real package and can replace an existing OMXTerm installation on the system ([ADR 0023](adr/0023-verify-exact-nsis-only-in-authorized-disposable-vms.md)). Always run it inside a disposable Windows 11 VM with a clean recovery snapshot, using the target architecture or the explicitly approved x64 emulation exception.
 
@@ -127,30 +127,53 @@ npm run package:win        # or: npm run package:win:x64
 npm run package:verify -- --windows-unpacked-only
 ```
 
-### Hosted Windows x64 candidate evidence
+### Hosted x64 build-only artifact delivery
 
-The manual **Windows x64 headless + candidate build (Server)** workflow
-(`.github/workflows/windows-x64.yml`) uses the standard public `windows-2025`
-runner and x64 Node 24. The workflow must be present on the default branch before
-manual dispatch is available; select a reviewed source branch/tag in GitHub's
-normal dispatch selector (there is no separate checkout-ref input).
+The manual `.github/workflows/windows-x64.yml` (`windows-2025`) and
+`.github/workflows/linux-x64.yml` (`ubuntu-22.04`) lanes use native x64 Node 24.
+Workflows must exist on the default branch for dispatch; the maintainer selects a
+reviewed source ref, with checkout pinned to its dispatch SHA. For example:
 
-It runs `npm ci`, a `node-pty` load without spawning a PTY, formatting, lint,
-typecheck, `npm test -- test/unit`, `npm run build`, and
-`npm run package-built:win:x64` (`--publish never`) as separate fail-preserving
-steps. The job summary records source/lock identity, Node/npm, the locked Electron
-dependency version, runner/OS architecture, phase outcomes, and the exact generated
-installer's basename, byte count, and SHA-256. The Electron dependency version is
-not a verified shipped runtime version.
+```sh
+gh workflow run windows-x64.yml --ref <reviewed-ref>
+gh workflow run linux-x64.yml --ref <reviewed-ref>
+```
 
-The binary is **transient on the runner**: no artifact upload, dependency cache,
-or release action is configured. The checksum is build evidence, **not a validated
-desktop, installer, or product**. This Windows Server administrator environment
-does not qualify Windows 11 ordinary-user Developer Mode, desktop behavior, or
-SmartScreen/UAC. No graphical suite, `check:portable`, `package:verify`, static
-package inspection, or NSIS execution runs here. Native qualification and release
-acceptance above remain required; [#627](https://github.com/luizomf/omxterm/issues/627)'s
-broader release-delivery automation remains separate and open.
+Each lane runs locked install, format, lint, typecheck, `npm test -- test/unit`,
+build, explicit `package-built:win:x64` or `package-built:linux:x64` (`--publish never`),
+and `npm run package:verify -- --inspection-only` as fail-preserving steps.
+No GUI suite, NSIS or Linux helper installation runs. The unchanged default
+`package:verify` and even `--windows-unpacked-only` launch the GUI: do not use
+those modes on a headless runner.
+
+Inspection checks architecture, ASAR contents, version, icons and licenses.
+Linux verifies exact AppImage/helper checksums, reviewed AppRun bytes, extracts
+without FUSE, reports ELF dynamic dependencies, and exercises bounded packaged
+PTY output/exit/resize, missing-executable exec failure and successful exit 1.
+Both lanes load the packaged addon in the packaged Electron Run-as-Node runtime,
+recording actual runtime versions separately from the locked dependency.
+Windows inspects `win-unpacked`; the exact NSIS is hashed, not executed or
+proven equivalent to that tree.
+
+Only successful jobs upload an explicit allowlist: binary, its `.sha256`,
+`build-evidence.json`, and (Linux only) the common helper/checksum pair. Names
+contain platform, full source SHA, run ID and attempt; summaries link the upload.
+Retention is **7 days**, no dependency caches or automatic publication. The JSON
+records source/lock, runner image/OS/glibc, Node/npm, actual checks/runtime and
+file basenames/byte counts/digests, plus unverified boundaries. Download before
+expiry, keep each platform's evidence separately, and verify every file against
+those records. The artifact ZIP digest is not the binary checksum. On Linux,
+restore executable bits with `chmod +x <AppImage> linux_install.sh` after checking
+contents; Actions ZIPs do not preserve modes.
+
+Desktop/GPU, ordinary-user OS integration, FUSE launch, actual helper/NSIS
+installation, Windows 11 and SmartScreen/UAC remain unverified and are **not
+release gates** for these lanes. Windows Server administrators do not establish
+ordinary-user Developer Mode. Linux's runner/glibc baseline does not establish
+broad distro compatibility; the static AppImage runtime does not make Electron
+or the addon static. First native runs must establish downloaded AppImage tool
+execution and upload success. Do not call #223/#224 fully qualified; #627's
+broader automation and #680's shortcuts work remain separate.
 
 ### Checksums
 
@@ -177,13 +200,20 @@ Get-Content "$name.sha256"
 
 ## Publication
 
-Create tag `vX.Y.Z` and a draft GitHub Release in `luizomf/omxterm`. Upload every applicable file (ten when Windows x64 is released), download and verify the complete set against local byte counts and SHA-256 records, then publish to seal the immutable release:
+Create tag `vX.Y.Z` and a draft GitHub Release in `luizomf/omxterm`. Upload every applicable file (twelve with both x64 platforms), download and verify the complete set against local byte counts and SHA-256 records, then publish to seal the immutable release:
 
 - `OMXTerm-<version>-arm64.dmg` and `OMXTerm-<version>-arm64.dmg.sha256`
 - `OMXTerm-<version>-arm64.AppImage` and `OMXTerm-<version>-arm64.AppImage.sha256`
-- `linux_install.sh` and `linux_install.sh.sha256`
+- `OMXTerm-<version>-x64.AppImage` and `OMXTerm-<version>-x64.AppImage.sha256` (Linux x64, build-only)
+- `linux_install.sh` and `linux_install.sh.sha256` (one common pair: compare ARM64/x64 generated bytes before upload)
 - `OMXTerm-<version>-arm64.exe` and `OMXTerm-<version>-arm64.exe.sha256`
 - `OMXTerm-<version>-x64.exe` and `OMXTerm-<version>-x64.exe.sha256` (Windows x64)
+
+Before draft assembly, compare each full CI build SHA against the tag inputs using
+the build-to-tag procedure above; explain every non-artifact difference. Upload
+the common helper pair only once. Preserve platform build-evidence JSON with the
+release preparation records (it is not one of the twelve public assets). Include
+explicit x64 build-only coverage and unverified boundaries in release notes.
 
 Include release notes covering new features, bug fixes, any configuration changes, SHA-256 checksums, and first-launch Gatekeeper/SmartScreen notes:
 

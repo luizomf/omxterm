@@ -35,4 +35,7 @@ Exact installer verification still runs only in authorized disposable VMs
 
 Releases can include an x64 installer and checksum with recorded verification
 coverage. Native x64 qualification remains a separate obligation while the
-emulation exception is used. Linux x64 and Intel macOS remain unsupported.
+emulation exception is used. [ADR 0036](0036-distribute-build-only-x64-ci-artifacts.md)
+supersedes x64 release gates for owner-approved native build-only CI delivery on
+Windows and Linux. Desktop, GPU, installer and ordinary-user integration remain
+unverified and are not release gates for those lanes. Intel macOS remains unsupported.

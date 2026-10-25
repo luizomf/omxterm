@@ -14,7 +14,7 @@ import { tmpdir, userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { linuxHelperName } from "./package-linux-assets.mjs";
+import { linuxHelperName, renderLinuxHelper } from "./package-linux-assets.mjs";
 import { verifyExactWindowsInstaller } from "./windows-installer-transaction.mjs";
 import { windowsVerificationOptions } from "./windows-verification-options.mjs";
 import { inspectLinuxAppRun } from "./verify-linux-launcher.mjs";
@@ -242,13 +242,17 @@ async function inspectArchitecture(file, label, platform, arch = process.arch) {
     return;
   }
   const { stdout } = await execFile("file", [file]);
-  const isArm64 =
-    platform === "darwin"
-      ? stdout.includes("arm64") && !stdout.includes("x86_64")
-      : stdout.includes("ARM aarch64") && !stdout.includes("x86-64");
-  if (!isArm64)
+  const matchesArchitecture =
+    platform === "linux" && arch === "x64"
+      ? stdout.includes("ELF 64-bit") &&
+        stdout.includes("x86-64") &&
+        !stdout.includes("aarch64")
+      : platform === "darwin"
+        ? stdout.includes("arm64") && !stdout.includes("x86_64")
+        : stdout.includes("ARM aarch64") && !stdout.includes("x86-64");
+  if (!matchesArchitecture)
     throw new Error(
-      `${label} is not an arm64-only ${platform === "darwin" ? "Mach-O" : "ELF"}: ${stdout.trim()}`,
+      `${label} is not an ${arch}-only ${platform === "darwin" ? "Mach-O" : "ELF"}: ${stdout.trim()}`,
     );
 }
 
@@ -406,7 +410,7 @@ async function inspectApplicationVersion({
     await stat(installer);
     return;
   }
-  const expectedName = `OMXTerm-${expectedVersion}-arm64.AppImage`;
+  const expectedName = `OMXTerm-${expectedVersion}-${process.arch}.AppImage`;
   if (path.basename(artifactPath) !== expectedName)
     throw new Error(
       `Linux artifact filename ${path.basename(artifactPath)} differs from ${expectedName}`,
@@ -431,7 +435,7 @@ async function defaultApplicationPath() {
   return path.join(
     projectRoot,
     "release",
-    `OMXTerm-${await sourceVersion()}-arm64.AppImage`,
+    `OMXTerm-${await sourceVersion()}-${process.arch}.AppImage`,
   );
 }
 
@@ -721,19 +725,27 @@ export async function verifyPackagedStartupWithCleanup({
 
 export async function verifyPackagedApplication(
   applicationPath,
-  { windowsUnpackedOnly = false, disposableVm = false } = {},
+  {
+    windowsUnpackedOnly = false,
+    disposableVm = false,
+    inspectionOnly = false,
+  } = {},
 ) {
   if (
     (process.platform !== "darwin" &&
       process.platform !== "linux" &&
       process.platform !== "win32") ||
     (process.arch !== "arm64" &&
-      !(process.platform === "win32" && process.arch === "x64"))
+      !(
+        ["win32", "linux"].includes(process.platform) && process.arch === "x64"
+      ))
   )
     throw new Error(
-      "Packaged startup verification requires arm64 macOS, Linux, or Windows, or x64 Windows",
+      "Package verification requires macOS ARM64 or Linux/Windows ARM64/x64",
     );
 
+  if (inspectionOnly && (windowsUnpackedOnly || disposableVm))
+    throw new Error("Inspection-only cannot authorize startup or installation");
   const platform = process.platform;
   const packagedPath = path.resolve(
     applicationPath ?? (await defaultApplicationPath()),
@@ -750,72 +762,88 @@ export async function verifyPackagedApplication(
       const version = await sourceVersion();
       const helper = path.join(projectRoot, "release", linuxHelperName());
       await Promise.all([verifyChecksum(packagedPath), verifyChecksum(helper)]);
-      linuxInstallationRoot = await mkdtemp(
-        path.join(tmpdir(), "omxterm-helper-installation-"),
-      );
-      const provisioningDeadline = Date.now() + 60_000;
-      const { stdout: helperVersion } = await provisionLinuxHelper(
-        helper,
-        ["--version"],
-        linuxInstallationRoot,
-      );
-      if (helperVersion.trim() !== version)
-        throw new Error(
-          `Linux helper version ${helperVersion.trim()} differs from source package version ${version}`,
+      if (
+        inspectionOnly &&
+        (await readFile(helper, "utf8")) !==
+          renderLinuxHelper(
+            await readFile(
+              path.join(projectRoot, "scripts", "install-linux-appimage.sh"),
+              "utf8",
+            ),
+            version,
+          )
+      )
+        throw new Error("Linux helper differs from reviewed versioned source");
+      if (!inspectionOnly) {
+        linuxInstallationRoot = await mkdtemp(
+          path.join(tmpdir(), "omxterm-helper-installation-"),
         );
-      await provisionLinuxHelper(
-        helper,
-        ["install", packagedPath],
-        linuxInstallationRoot,
-        {
-          timeoutMs: Math.max(1, provisioningDeadline - Date.now()),
-        },
-      );
-      linuxProvisioningComplete = true;
-      linuxInstalledApp = path.join(
-        linuxInstallationRoot,
-        ".local",
-        "opt",
-        "omxterm",
-        "OMXTerm.AppImage",
-      );
-      const installedDesktop = await readFile(
-        path.join(
+        const provisioningDeadline = Date.now() + 60_000;
+        const { stdout: helperVersion } = await provisionLinuxHelper(
+          helper,
+          ["--version"],
+          linuxInstallationRoot,
+        );
+        if (helperVersion.trim() !== version)
+          throw new Error(
+            `Linux helper version ${helperVersion.trim()} differs from source package version ${version}`,
+          );
+        await provisionLinuxHelper(
+          helper,
+          ["install", packagedPath],
+          linuxInstallationRoot,
+          {
+            timeoutMs: Math.max(1, provisioningDeadline - Date.now()),
+          },
+        );
+        linuxProvisioningComplete = true;
+        linuxInstalledApp = path.join(
+          linuxInstallationRoot,
+          ".local",
+          "opt",
+          "omxterm",
+          "OMXTerm.AppImage",
+        );
+        const installedDesktop = await readFile(
+          path.join(
+            linuxInstallationRoot,
+            ".local",
+            "share",
+            "applications",
+            "omxterm.desktop",
+          ),
+          "utf8",
+        );
+        const installedIcon = path.join(
           linuxInstallationRoot,
           ".local",
           "share",
-          "applications",
-          "omxterm.desktop",
-        ),
-        "utf8",
-      );
-      const installedIcon = path.join(
-        linuxInstallationRoot,
-        ".local",
-        "share",
-        "icons",
-        "hicolor",
-        "1024x1024",
-        "apps",
-        "omxterm.png",
-      );
-      if (!installedDesktop.includes(`Icon=${installedIcon}\n`))
-        throw new Error(
-          "Linux helper desktop entry does not use the installed icon path",
+          "icons",
+          "hicolor",
+          "1024x1024",
+          "apps",
+          "omxterm.png",
         );
-      linuxDirectLaunchAvailable = !installedDesktop.includes(
-        " --appimage-extract-and-run ",
-      );
-      await inspectArchitecture(
-        linuxInstalledApp,
-        "installed AppImage",
-        platform,
-      );
+        if (!installedDesktop.includes(`Icon=${installedIcon}\n`))
+          throw new Error(
+            "Linux helper desktop entry does not use the installed icon path",
+          );
+        linuxDirectLaunchAvailable = !installedDesktop.includes(
+          " --appimage-extract-and-run ",
+        );
+        await inspectArchitecture(
+          linuxInstalledApp,
+          "installed AppImage",
+          platform,
+        );
+      }
       await inspectArchitecture(packagedPath, "AppImage", platform);
       await inspectLinuxAppImageDependencies(packagedPath);
-      const { stdout: signature } = await execFile(packagedPath, [
-        "--appimage-signature",
-      ]);
+      const { stdout: signature } = await execFile(
+        packagedPath,
+        ["--appimage-signature"],
+        { timeout: 10_000 },
+      );
       if (signature.trim().length > 0)
         throw new Error("AppImage unexpectedly contains an embedded signature");
       extractionRoot = await mkdtemp(
@@ -824,6 +852,7 @@ export async function verifyPackagedApplication(
       await execFile(packagedPath, ["--appimage-extract"], {
         cwd: extractionRoot,
         maxBuffer: 16 * 1024 * 1024,
+        timeout: 60_000,
       });
       applicationRoot = path.join(extractionRoot, "squashfs-root");
       inspectLinuxAppRun(await readFile(path.join(applicationRoot, "AppRun")));
@@ -1032,6 +1061,62 @@ export async function verifyPackagedApplication(
       if (cause?.code !== "ENOENT") throw cause;
     }
 
+    if (inspectionOnly) {
+      if (platform === "linux") {
+        // Report dependencies for every shipped ELF, not only the static runtime.
+        for (const entry of await listTreeEntries(applicationRoot)) {
+          const file = path.join(applicationRoot, entry.slice(1));
+          const metadata = await stat(file);
+          if (!metadata.isFile()) continue;
+          const data = await readFile(file);
+          if (data.subarray(0, 4).toString("hex") !== "7f454c46") continue;
+          const { stdout } = await execFile("readelf", ["--dynamic", file], {
+            timeout: 10_000,
+          });
+          console.log(
+            JSON.stringify({
+              elf: entry,
+              needed: inspectElfDynamicDependencies(stdout),
+            }),
+          );
+        }
+      }
+      const { stdout } = await execFile(
+        executable,
+        [
+          path.join(projectRoot, "scripts", "inspect-packaged-runtime.cjs"),
+          asar,
+        ],
+        {
+          env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+          timeout: 25_000,
+          maxBuffer: 1024 * 1024,
+        },
+      );
+      const runtime = JSON.parse(stdout.trim());
+      const locked = JSON.parse(
+        await readFile(path.join(projectRoot, "package-lock.json"), "utf8"),
+      ).packages["node_modules/electron"].version;
+      if (
+        runtime.versions.electron !== locked ||
+        runtime.arch !== process.arch ||
+        runtime.platform !== platform
+      )
+        throw new Error(
+          "Packaged runtime differs from locked Electron/platform/architecture",
+        );
+      await mkdir(path.join(projectRoot, ".scratch"), { recursive: true });
+      await writeFile(
+        path.join(projectRoot, ".scratch", "packaged-runtime.json"),
+        `${JSON.stringify(runtime, null, 2)}\n`,
+      );
+      return {
+        applicationPath: packagedPath,
+        records: 0,
+        verification: "INSPECTION ONLY (desktop and installer unverified)",
+      };
+    }
+
     const linuxLaunchModes =
       platform === "linux"
         ? [
@@ -1185,7 +1270,9 @@ if (
     )
     .then(({ applicationPath, records, verification }) => {
       console.log(
-        `${verification}: verified packaged ${process.arch} startup: ${applicationPath} (${records} operational events)`,
+        verification.startsWith("INSPECTION ONLY")
+          ? `${verification}: packaged ${process.arch}: ${applicationPath}`
+          : `${verification}: verified packaged ${process.arch} startup: ${applicationPath} (${records} operational events)`,
       );
     })
     .catch((cause) => {

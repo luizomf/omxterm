@@ -6,7 +6,7 @@ See the [Restty guide](restty-development.md) for Terminal Surface internals and
 
 ## Platform prerequisites
 
-Development targets native ARM64 macOS, Linux, and Windows (ARM64 or x64) with **Node.js 22.13+ (22.x) or 24+** and npm. When working inside a virtual machine, clone and build on the guest's native filesystem rather than a shared host folder.
+Development targets native ARM64 macOS and ARM64/x64 Linux and Windows with **Node.js 22.13+ (22.x) or 24+** and npm. When working inside a virtual machine, clone and build on the guest's native filesystem rather than a shared host folder.
 
 ### macOS
 
@@ -30,6 +30,9 @@ sudo dnf install gcc-c++ make python3 patch binutils procps-ng fontconfig file x
 sudo pacman -S --needed base-devel python patch binutils procps-ng fontconfig file xorg-xwayland ttf-dejavu ttf-liberation
 ```
 
+`npm ci` rebuilds the source-digest-guarded exec-status PTY addon on native Linux
+ARM64 and x64; use C++ build tools and `patch` on both architectures.
+
 Verify that the fixture fonts are installed with `fc-list : family` (missing fixture fonts cause native font integration tests to fail with `Configured native fixture font is missing`).
 
 If `npm ci` failed part-way because a system tool like `patch` or `make` was missing, install the missing package and run:
@@ -45,7 +48,7 @@ OMXTerm runs with `--no-sandbox` on Linux ([ADR 0024](adr/0024-disable-the-chrom
 1. Enable **Developer Mode** in Windows Settings before cloning or running tests so non-elevated processes can create symbolic links.
 2. Clone with `git clone -c core.autocrlf=false -c core.symlinks=true ...` to preserve LF line endings and repository symlinks.
 3. Install the Microsoft Visual C++ Redistributable that matches your machine (**ARM64** or **x64**), and C++ build tools if building native addons from source. Without it, `npm ci` fails while loading native modules.
-4. Run development and test commands as a normal (non-Administrator) user inside an interactive desktop session (not a headless SSH Session 0).
+4. Run desktop development and graphical tests as a normal (non-Administrator) user inside an interactive desktop session (not a headless SSH Session 0). The separate hosted build-only lane uses headless checks and does not claim ordinary-user integration.
 
 To verify that your user account can create symlinks before running `npm ci`, run in a non-elevated PowerShell window:
 
@@ -240,7 +243,7 @@ Remove-Item Env:OMXTERM_TEST_NATIVE_INTERRUPTION
 
 ### Packaging and verification commands
 
-Complete native checks run `check:portable`, build the platform installer into `release/`, and verify the packaged artifact locally (without publishing):
+ARM64 complete native checks (and optional full x64 checks) run `check:portable`, build the platform installer into `release/`, and verify the packaged artifact locally (without publishing):
 
 | Platform      | Complete native check                                            |
 | ------------- | ---------------------------------------------------------------- |
@@ -255,6 +258,15 @@ Complete native checks run `check:portable`, build the platform installer into `
 > npm run package:win        # ARM64; use npm run package:win:x64 on x64
 > npm run package:verify -- --windows-unpacked-only
 > ```
+
+For native x64 **build-only** delivery, use `npm run package:linux:x64` or
+`npm run package:win:x64`, then `npm run package:verify -- --inspection-only`.
+This mode never launches a GUI, executes NSIS or installs the Linux helper. It
+performs package-content checks and loads the exact packaged addon through
+Electron Run-as-Node; Linux also runs bounded real PTY exec-status checks.
+Desktop/GPU/installer and ordinary-user integration remain unverified, not gates
+for these lanes. `--windows-unpacked-only` is **not** headless: it still launches
+the application. See [hosted artifact delivery](release.md#hosted-x64-build-only-artifact-delivery).
 
 See [release procedures](release.md#resume-and-version-only-commands) for standalone `package:*` and `package-built:*` commands.
 

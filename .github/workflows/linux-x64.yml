@@ -1,0 +1,111 @@
+name: Linux x64 build-only artifacts
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-x64-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  candidate:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out selected source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up x64 Node 24 without dependency caching
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24"
+          architecture: x64
+          package-manager-cache: false
+
+      - name: Assert native environment and source
+        run: |
+          node --input-type=module -e '
+            import assert from "node:assert/strict";
+            import os from "node:os";
+            import { execFileSync } from "node:child_process";
+            assert.equal(process.platform, "linux");
+            assert.equal(process.arch, "x64");
+            assert.equal(os.machine(), "x86_64");
+            assert.equal(process.env.RUNNER_ARCH, "X64");
+            assert(process.version.startsWith("v24."));
+            assert.equal(execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), process.env.GITHUB_SHA);
+          '
+          echo "NPM_VERSION=$(npm --version)" >> "$GITHUB_ENV"
+
+      - name: Install native build and inspection prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y build-essential python3 patch binutils file libnss3 libatk1.0-0 libatk-bridge2.0-0 libdrm2 libgtk-3-0 libgbm1 libasound2
+
+      - name: Install locked dependencies and prepare patched PTY
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run headless unit tests only
+        run: npm test -- test/unit
+
+      - name: Build application
+        run: npm run build
+
+      - name: Build native x64 AppImage (publish never)
+        run: npm run package-built:linux:x64
+
+      - name: Inspect exact AppImage and packaged PTY (no GUI, FUSE or helper installation)
+        run: npm run package:verify -- --inspection-only
+
+      - name: Verify checksums and write build evidence
+        id: evidence
+        run: node scripts/write-ci-build-evidence.mjs
+
+      - name: Upload allowlisted build-only files
+        id: upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ steps.evidence.outputs.artifact-name }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            release/OMXTerm-${{ steps.evidence.outputs.version }}-x64.AppImage
+            release/OMXTerm-${{ steps.evidence.outputs.version }}-x64.AppImage.sha256
+            release/linux_install.sh
+            release/linux_install.sh.sha256
+            release/build-evidence.json
+
+      - name: Summarize bounded outcome even after failure
+        if: ${{ always() }}
+        env:
+          JOB_STATUS: ${{ job.status }}
+          ARTIFACT_NAME: ${{ steps.evidence.outputs.artifact-name }}
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: |
+          {
+            echo '## Linux x64 build-only artifacts'
+            echo "Outcome: $JOB_STATUS"
+            echo "Source: $GITHUB_SHA"
+            echo "Artifact: $ARTIFACT_NAME (ID $ARTIFACT_ID) $ARTIFACT_URL"
+            echo 'Upload occurs only after all required headless checks succeed. Retention: 7 days; no cache or publication.'
+            echo 'Evidence records exact file hashes, runner/glibc baseline and actual packaged Electron versions.'
+            echo 'Desktop/GPU, FUSE launch, helper installation, ordinary-user integration and other distributions remain unverified; not release gates for this lane.'
+            echo 'After download, verify checksums and chmod +x the AppImage/helper (ZIP permissions are not preserved).'
+          } >> "$GITHUB_STEP_SUMMARY"

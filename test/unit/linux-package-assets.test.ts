@@ -17,6 +17,13 @@ describe("Linux release assets", () => {
     expect(linuxAppImageName("0.11.0-dev.0")).toBe(
       "OMXTerm-0.11.0-dev.0-arm64.AppImage",
     );
+    expect(linuxAppImageName("1.2.3", "x64")).toBe(
+      "OMXTerm-1.2.3-x64.AppImage",
+    );
+    // External CLI input must fail before writing any files.
+    expect(() => linuxAppImageName("1.2.3", "ia32" as "x64")).toThrow(
+      "architecture",
+    );
     expect(linuxHelperName()).toBe("linux_install.sh");
   });
 
@@ -39,6 +46,27 @@ describe("Linux release assets", () => {
     try {
       await writeFile(path.join(output, appImageName), "appimage");
       await packageLinuxAssets(output);
+      const originalHelper = await readFile(path.join(output, helperName));
+      const originalChecksum = await readFile(
+        path.join(output, `${helperName}.sha256`),
+      );
+      await writeFile(
+        path.join(output, linuxAppImageName(version, "x64")),
+        "x64-appimage",
+      );
+      await packageLinuxAssets(output, "x64");
+      expect(await readFile(path.join(output, helperName))).toEqual(
+        originalHelper,
+      );
+      expect(await readFile(path.join(output, `${helperName}.sha256`))).toEqual(
+        originalChecksum,
+      );
+      expect(
+        await readFile(
+          path.join(output, `${linuxAppImageName(version, "x64")}.sha256`),
+          "utf8",
+        ),
+      ).toContain(`  ${linuxAppImageName(version, "x64")}\n`);
 
       expect(
         await readFile(path.join(output, `${appImageName}.sha256`), "utf8"),

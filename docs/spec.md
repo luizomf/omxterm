@@ -19,7 +19,9 @@ shell in a native window with a hideable title area and gives the Terminal
 Surface all remaining content space. SSH brokering, AI assistance, persistent
 session management, and IDE features are outside the product scope.
 
-The Supported Platforms are macOS arm64, Linux arm64, Windows arm64, and Windows x64 (ADR 0034). Linux
+The Supported Platforms are macOS arm64, Linux arm64/x64, and Windows arm64/x64.
+Linux and Windows x64 packages have build-only qualification (ADR 0036): native
+CI builds and enumerated headless checks, not verified desktop or installer behavior. Linux
 rendering defaults to X11 and requires XWayland when the desktop session is
 Wayland; native Wayland rendering is not currently claimed. An explicit Electron
 `--ozone-platform` or `--ozone-platform-hint` switch supplied before a Launch
@@ -32,8 +34,7 @@ launcher (`npm run dev`) supplies it before Electron bootstrap, not only after
 application main starts. This is a fixed launch policy, not a fallback or
 configurable mode. OMXTerm leaves host security policy unchanged and installs no
 privileged sandbox helper. Sandboxed Linux support is outside the current
-maintenance scope (ADR 0024). Linux x64, Intel macOS, and other operating systems are
-unsupported.
+maintenance scope (ADR 0024). Intel macOS and other operating systems are unsupported.
 
 ## Product scope
 
@@ -69,7 +70,7 @@ OMXTerm:
 - reads strict, versioned JSON configuration, including an explicit en-US or
   pt-BR Interface Language, and writes bounded local JSONL operational logs;
 - packages ready-to-run artifacts from an accepted version: ARM64 DMG for macOS,
-  ARM64 AppImage for Linux, and ARM64/x64 NSIS for Windows. Linux releases additionally provide
+  ARM64/x64 AppImage for Linux, and ARM64/x64 NSIS for Windows. Linux releases additionally provide
   an optional versioned per-user AppImage desktop installer and its checksum;
   running the AppImage directly remains supported.
 
@@ -1325,7 +1326,8 @@ reporting, update check, or remote log delivery. Child processes retain their
 normal network access.
 
 The optional Linux AppImage desktop installer accepts only a user-supplied,
-previously verified local Linux ARM64 OMXTerm AppImage and performs no download,
+previously checksum-verified local Linux ARM64/x64 OMXTerm AppImage matching the
+host architecture (checked before execution) and performs no download,
 release discovery, package-manager operation, elevation, system-wide change, or
 update. It owns exactly `~/.local/opt/omxterm/OMXTerm.AppImage`,
 `~/.local/share/icons/hicolor/1024x1024/apps/omxterm.png`, and
@@ -1411,12 +1413,20 @@ in main.
 ## Release contract
 
 OMXTerm uses the MIT License and follows the [versioning policy](versioning.md).
-Packages are built natively on ARM64 macOS, Linux and Windows, and on x64 Windows, using native
+Packages are built natively on ARM64 macOS, Linux and Windows, and on x64 Linux/Windows, using native
 filesystems rather than VM shared folders. The formats are DMG, AppImage and
 NSIS respectively. An explicit maintainer-approved Windows x64 release may use
 x64 emulation on Windows ARM64 while native hardware is unavailable (ADR 0034);
 release evidence must identify that exception and pending native qualification.
-Installer safety requirements are unchanged. Linux also provides
+For the owner-approved native x64 CI lanes, downloadable packages have build-only
+qualification. Desktop, GPU, installer and ordinary-user OS integration remain
+unverified and are not release gates. Inspection-only never launches the GUI,
+executes NSIS or installs the Linux helper; it checks package contents and loads
+the exact packaged addon in Electron Run-as-Node mode. Linux additionally checks
+real PTY output/exit/resize and exec-failure versus successful exit 1. Windows
+unpacked inspection does not verify NSIS contents. Exact binary checksums and
+provenance accompany 7-day Actions artifacts; publication remains manual.
+Installer safety requirements for full verification are unchanged. Linux also provides
 `linux_install.sh` and `linux_install.sh.sha256`; the helper's embedded version
 matches the release.
 
@@ -1454,8 +1464,9 @@ diagnostics are partial.
 
 Release verification separates behavioral tests, native builds, exact-artifact
 checks and publication. Each artifact needs verification against its own
-identity and checksum: native by default, or the explicitly approved Windows x64
-emulation exception in ADR 0034 with its limits recorded. Recorded results are
+identity and checksum: native by default, the explicitly approved Windows x64
+emulation exception in ADR 0034, or the owner-approved build-only x64 lanes in
+ADR 0036, with limits recorded. Build-only checks never claim full verification. Recorded results are
 reusable only with known equivalent relevant inputs. Version-only changes need new packages and package/version
 checks, not wholesale behavioral reruns; changed product, dependency or build
 inputs invalidate affected results. Build-to-tag differences retain the full
