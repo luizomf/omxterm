@@ -4,6 +4,7 @@ import {
   isTerminalSessionOutputAck,
   isTerminalSessionReference,
   isTerminalSessionTitle,
+  isTerminalContextMenuRequest,
   type TerminalSessionId,
 } from "../shared/terminal-contract";
 import { isValidExternalLink } from "./external-link";
@@ -180,6 +181,8 @@ export function createClipboardRequests(
     confirmClipboardPaste(payload, options, reject);
   const showClipboardContextMenu = (payload?: unknown) => {
     if (payload === undefined) options.showClipboardContextMenu();
+    else if (isTerminalContextMenuRequest(payload))
+      options.showClipboardContextMenu({ closePane: true });
     else reject("clipboard", "invalid-payload");
   };
   return {

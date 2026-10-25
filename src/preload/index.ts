@@ -9,6 +9,7 @@ import {
   isBoundedTerminalPayload,
   isNonemptyClipboardText,
   isTerminalClipboardAction,
+  isTerminalContextMenuRequest,
   isTerminalFontZoom,
   isTerminalSessionExit,
   isTerminalSessionId,
@@ -445,8 +446,14 @@ const terminal: TerminalBridge = {
       throw new TypeError("Invalid Protected Paste response");
     return confirmed;
   },
-  requestClipboardContextMenu() {
-    ipcRenderer.send(terminalIpc.clipboardContextMenu);
+  requestClipboardContextMenu(request) {
+    if (request === undefined) {
+      ipcRenderer.send(terminalIpc.clipboardContextMenu);
+      return;
+    }
+    if (!isTerminalContextMenuRequest(request))
+      throw new TypeError("Invalid context menu request");
+    ipcRenderer.send(terminalIpc.clipboardContextMenu, { closePane: true });
   },
   onClipboardAction(listener) {
     const handler = (_event: Electron.IpcRendererEvent, action: unknown) => {

@@ -179,8 +179,28 @@ function paneSurfaceOptions(
   const { options } = ctx;
   const highlighter = options.createHighlighter?.();
   pane.highlighter = highlighter;
+  const clipboard = ctx.activeSurfaceOptions.clipboard;
   return {
     ...ctx.activeSurfaceOptions,
+    // The context menu acts on the focused pane, so a right-click focuses its
+    // own pane first; a split pane's menu also offers Close Pane.
+    ...(clipboard
+      ? {
+          clipboard: {
+            ...clipboard,
+            requestContextMenu() {
+              if (ctx.disposed || pane.removed) return;
+              focusPane(ctx, pane.tab, pane);
+              pane.surface?.focus();
+              clipboard.requestContextMenu(
+                layoutPanes(pane.tab.layout).length > 1
+                  ? { closePane: true }
+                  : undefined,
+              );
+            },
+          },
+        }
+      : {}),
     abortSignal: pane.mountAbort.signal,
     ...(pane.launch.retainOnExit ? { retainOnExit: true } : {}),
     ...(highlighter ? { transformOutput: highlighter.transform } : {}),
