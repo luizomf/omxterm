@@ -172,6 +172,19 @@ height, light/dark reload, chrome/fullscreen and About/image transitions. It doe
 not establish physical keyboard layouts, OS pointer hardware or cross-platform
 pixel parity. Like the suites below, run it only on an idle unlocked desktop.
 
+The Linux `settings-shortcut-native` suite uses the same real window host,
+Settings capture/IPC, menu callbacks and Surface, with a raw Python PTY child
+that reports every received byte. It checks held bound fullscreen/Quit gestures,
+overlapping invalid/modifier releases, fresh input after a missing release,
+page departure without button blur, window blur and the real 30-second timeout.
+An exact Kitty press/release control fences each empty-input assertion; real
+fullscreen and guarded Quit callbacks supply positive action/menu controls.
+Two deliberately weakened fixture compositions must fail the same action/PTY
+oracles. Run it alone with `npm test -- test/integration/settings-shortcut-native.test.ts`.
+Its Electron `sendInputEvent` gestures are synthetic, not physical OS/layout or
+AltGr qualification; the native menu positive control calls its actual callback,
+not OS menu navigation. The ordinary fixture supervisor owns all windows/PTYs.
+
 The `window-chrome` suite includes an independent `about-only` scenario so an
 unrelated native geometry failure cannot skip About coverage. Run it alone with
 `npm test -- test/integration/window-chrome.test.ts -t about-only`. It exercises

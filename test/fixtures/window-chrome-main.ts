@@ -25,14 +25,12 @@ import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
 import { createLocalTerminalSession } from "../../src/main/local-terminal-session";
 import { spawnFixturePty } from "./native-fixture-pty";
 import {
-  explicitFixtureLaunchRequest,
   explicitFixtureReadyMarker,
   nativeFixturePlatform,
 } from "./restty-host-platform";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { createAboutExercise } from "./about-dialog-exercise";
-import { createFeatureSmoke } from "./feature-native-smoke";
-import { FEATURE_SMOKE_FLAG } from "./feature-native-smoke-contract";
+import { createWindowChromeFeatureScenario } from "./window-chrome-feature-scenario";
 import { runSettingsExercise } from "./settings-dialog-exercise";
 import { fixtureConfigurationApplier } from "./window-chrome-configuration";
 import { exerciseAboutKeyboardWithInput } from "./about-keyboard-exercise";
@@ -51,9 +49,7 @@ import {
 type ChromeOptions = Parameters<typeof exerciseWindowChrome>[0];
 const root = __dirname;
 const auxiliaryOnly = process.argv.includes("--fixture-auxiliary-only");
-const featureSmoke = createFeatureSmoke(
-  process.argv.includes(FEATURE_SMOKE_FLAG),
-);
+const featureSmoke = createWindowChromeFeatureScenario();
 const panelClipboard = { text: "", writes: [] as string[], reads: 0 };
 const actionOrdinals = new WeakMap<
   BrowserWindow,
@@ -113,7 +109,7 @@ function createChromeSession(callbacks: SessionCallbacks) {
   try {
     terminal = createLocalTerminalSession(spawnFixturePty, {
       shell: nativeFixturePlatform.defaultShell,
-      launchRequest: explicitFixtureLaunchRequest(),
+      launchRequest: featureSmoke.launchRequest(),
       platform: process.platform,
       homeDirectory: root,
       environment: { ...process.env, HOME: root },
@@ -406,7 +402,7 @@ app
         };
       },
       getSelectedWindow: () => windows[0],
-      showQuitConfirmation: async () => false,
+      showQuitConfirmation: featureSmoke.confirmQuit,
       showCloseWindowConfirmation: async () => {
         confirmations += 1;
         return false;
