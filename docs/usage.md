@@ -274,7 +274,7 @@ This is a known issue ([#568](https://github.com/luizomf/omxterm/issues/568)). P
 
 ### The renderer cannot start
 
-OMXTerm requires **WebGL2** to draw the terminal. If WebGL2 fails to initialize (common in some virtual machines without 3D acceleration), try the Linux installer's [graphics compatibility mode](linux-installer.md#only-if-graphics-fail) or the launch flags in [Linux graphics troubleshooting](linux-desktop.md#graphics-troubleshooting).
+OMXTerm requires **WebGL2** to draw the terminal. On Linux it falls back to Chromium's software WebGL when the GPU cannot provide WebGL2, such as in virtual machines without 3D acceleration. If WebGL2 still fails to initialize, try the Linux installer's [graphics compatibility mode](linux-installer.md#only-if-graphics-fail) or the launch flags in [Linux graphics troubleshooting](linux-desktop.md#graphics-troubleshooting).
 
 ### macOS asks for folder permissions again after an update
 

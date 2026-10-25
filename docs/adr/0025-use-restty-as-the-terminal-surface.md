@@ -26,7 +26,9 @@ Restty 0.3.0 is the Surface in ordinary development and packaged applications.
 
 Each Surface reuses the Electron host, typed configuration bridge, Terminal Tab,
 session Adapter and owned local PTY. Bundled TTFs, Ghostty core and an actual
-WebGL2 backend must be ready before PTY creation. Failed initialization releases
+WebGL2 backend must be ready before PTY creation; on Linux that backend may be
+Chromium's SwiftShader WebGL under
+[ADR 0038](0038-allow-the-linux-software-webgl-fallback.md). Failed initialization releases
 partial resources and starts no shell. Closing an initializing owner is
 cancellation: late continuations do not start a shell or notify the removed tab.
 An already accepted Adapter start is closed through that Adapter. Pending work

@@ -101,9 +101,9 @@ Use the value that matches your display. This is a launch option, not a `config.
 
 ## Graphics troubleshooting
 
-OMXTerm needs **WebGL2** to draw the terminal. Some VMs and older GPU drivers cannot provide it, and you see a blank window or a rendering error instead of a shell.
+OMXTerm needs **WebGL2** to draw the terminal. When the GPU cannot provide it, as in VMs without 3D acceleration, OMXTerm falls back to Chromium's built-in software WebGL automatically. It uses more CPU, but no flags are needed.
 
-If you use the [Linux installer](linux-installer.md#only-if-graphics-fail), reinstall with `--compatibility`. If you launch the AppImage directly, run:
+If you still see a blank window or a rendering error instead of a shell, your driver is probably exposed but broken. If you use the [Linux installer](linux-installer.md#only-if-graphics-fail), reinstall with `--compatibility`. If you launch the AppImage directly, run:
 
 ```sh
 LIBGL_ALWAYS_SOFTWARE=1 ./OMXTerm-VERSION-arm64.AppImage \

@@ -225,7 +225,8 @@ Arch Linux, Manjaro and BigLinux build a native package with the included
 - **Windows:** Windows 10 or 11, ARM64 or x64.
 - **Linux:** ARM64 or x64, glibc 2.34 or newer (Ubuntu 22.04+, Debian 12+,
   Fedora 35+, Arch, Manjaro, BigLinux), an X11 or XWayland session, and a GPU
-  with WebGL2 (Mesa's software renderer works with `--ignore-gpu-blocklist`).
+  with WebGL2. Without one (virtual machines without 3D acceleration),
+  OMXTerm falls back to Chromium's software WebGL automatically.
 - **SSH sessions:** an OpenSSH client (`ssh`, or `ssh.exe` on Windows).
 
 ### Signing
@@ -500,8 +501,9 @@ detailed model is in
 
 ## Troubleshooting
 
-- **Blank or black window on Linux:** OMXTerm needs WebGL2. In virtual
-  machines or with blocklisted drivers, try `omxterm --ignore-gpu-blocklist`
+- **Blank or black window on Linux:** OMXTerm needs WebGL2 and falls back to
+  software WebGL when the GPU has none. If a broken driver still fails, try
+  `omxterm --ignore-gpu-blocklist`
   (see [graphics troubleshooting](docs/linux-desktop.md#graphics-troubleshooting)).
 - **Wayland:** OMXTerm runs through XWayland by default; pass
   `--ozone-platform=wayland` to try native Wayland.
