@@ -39,16 +39,34 @@ function processes() {
     });
 }
 
-function signalOwned(targets, signal) {
-  if (!targets.length) return;
+function invokeSignalHelper(request, label) {
   const result = spawnSync("python3", ["-I", signalHelper], {
-    input: JSON.stringify({ targets, signal }),
+    input: JSON.stringify(request),
     encoding: "utf8",
     timeout: 2_000,
   });
   if (result.error || result.status !== 0)
     throw new Error(
-      `Linux identity-checked ${signal} failed: ${result.error?.message ?? result.stderr.trim()}`,
+      `Linux ${label} failed: ${result.error?.message ?? result.stderr.trim()}`,
+    );
+  return result.stdout.trim();
+}
+
+function checkLinuxSignaling() {
+  if (
+    invokeSignalHelper({ check: true }, "pidfd capability preflight") !==
+    "linux-pidfd-ready"
+  )
+    throw new Error(
+      "Linux pidfd capability preflight did not return its proof",
+    );
+}
+
+function signalOwned(targets, signal, recovery = false) {
+  if (targets.length)
+    invokeSignalHelper(
+      { targets, signal, recovery },
+      `identity-checked ${signal}`,
     );
 }
 
@@ -60,6 +78,7 @@ export async function verifyLinuxWrapperPropagation(
   executable,
   timeoutMs = 20_000,
 ) {
+  checkLinuxSignaling();
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-wrapper-outcome-"));
   const artifactDigest = digest(await readFile(executable));
   let complete = false;
@@ -114,48 +133,91 @@ export async function verifyLinuxWrapperPropagation(
       child.stderr.on("data", (chunk) => {
         stderr = (stderr + chunk).slice(-16_384);
       });
-      const deadline = Date.now() + timeoutMs;
-      while (!closed && !error && Date.now() < deadline) {
-        collect();
-        await delay();
+      const failures = [];
+      let beforeCleanup;
+      let remaining;
+      try {
+        const deadline = Date.now() + timeoutMs;
+        while (!closed && !error && Date.now() < deadline) {
+          collect();
+          await delay();
+        }
+        remaining = collect();
+        beforeCleanup = { outcome, closed, remaining };
+        if (!closed || remaining.length)
+          failures.push(
+            new Error("Linux wrapper outcome control did not settle"),
+          );
+        if (error) failures.push(error);
+        if (
+          closed &&
+          (stdout !== marker ||
+            outcome?.signal !== null ||
+            (expected === null
+              ? outcome?.code === 0
+              : outcome?.code !== expected))
+        )
+          failures.push(
+            new Error(
+              `Linux wrapper masks or fails ${name} outcome control (exit ${outcome?.code}, signal ${outcome?.signal}): ${stderr}`,
+            ),
+          );
+      } catch (observation) {
+        failures.push(observation);
       }
-      const remaining = collect();
-      if (!closed || remaining.length) {
+      if (failures.length) {
         try {
-          signalOwned(remaining, "SIGKILL");
+          signalOwned(collect(), "SIGKILL", true);
+        } catch (cleanup) {
+          failures.push(cleanup);
+        }
+        try {
           const cleanupDeadline = Date.now() + 2_000;
           while ((!closed || collect().length) && Date.now() < cleanupDeadline)
             await delay();
-        } finally {
-          child.stdout.destroy();
-          child.stderr.destroy();
-          child.unref();
+          if (!closed || collect().length)
+            failures.push(
+              new Error("Linux wrapper control failure cleanup did not settle"),
+            );
+        } catch (cleanup) {
+          failures.push(cleanup);
         }
-        throw new Error("Linux wrapper outcome control did not settle");
       }
-      await writeFile(
-        path.join(root, `${name}.json`),
-        `${JSON.stringify({ outcome, closed, stdout, stderr, remaining: collect() })}\n`,
-      );
-      if (
-        error ||
-        stdout !== marker ||
-        outcome?.signal !== null ||
-        (expected === null ? outcome?.code === 0 : outcome?.code !== expected)
-      )
-        throw new Error(
-          `Linux wrapper masks or fails ${name} outcome control (exit ${outcome?.code}, signal ${outcome?.signal}): ${stderr}`,
-          { cause: error },
+      try {
+        remaining = collect();
+      } catch (observation) {
+        failures.push(observation);
+      }
+      // Persist after recovery even when signaling failed; never let a cleanup
+      // or recording exception replace the primary timeout/native observation.
+      try {
+        await writeFile(
+          path.join(root, `${name}.json`),
+          `${JSON.stringify({ beforeCleanup, outcome, closed, stdout, stderr, remaining, launchError: error?.message, failures: failures.map((failure) => failure.message) })}\n`,
         );
+      } catch (recording) {
+        failures.push(recording);
+      }
+      if (failures.length) {
+        child.stdout.destroy();
+        child.stderr.destroy();
+        child.unref();
+        throw new AggregateError(
+          failures,
+          failures.map((failure) => failure.message).join("; "),
+        );
+      }
     }
     if (digest(await readFile(executable)) !== artifactDigest)
       throw new Error("Linux wrapper changed during outcome controls");
     complete = true;
     return artifactDigest;
   } catch (cause) {
-    throw new Error(`${cause.message}; wrapper controls retained at ${root}`, {
-      cause,
-    });
+    throw new AggregateError(
+      cause instanceof AggregateError ? cause.errors : [cause],
+      `${cause.message}; wrapper controls retained at ${root}`,
+      { cause },
+    );
   } finally {
     if (complete) await rm(root, { recursive: true, force: true });
   }
@@ -204,6 +266,7 @@ export async function launchLinuxPackagedProcess({
   wrapper = false,
   timeoutMs = 2_000,
 }) {
+  checkLinuxSignaling();
   const expectedDigest = digest(await readFile(expectedExecutable));
   const wrapperDigest = wrapper
     ? await verifyLinuxWrapperPropagation(executable)
@@ -342,7 +405,7 @@ export async function launchLinuxPackagedProcess({
         // or convert a crash/timeout into success because its group disappeared.
         for (const signal of ["SIGTERM", "SIGKILL"]) {
           try {
-            signalOwned(collect(), signal);
+            signalOwned(collect(), signal, true);
             if (await settled()) break;
           } catch (cleanup) {
             failures.push(cleanup);

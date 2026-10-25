@@ -1,6 +1,8 @@
 import { spawnSync } from "node:child_process";
 import {
   mkdtemp,
+  mkdir,
+  cp,
   readFile,
   writeFile,
   symlink,
@@ -19,16 +21,73 @@ import { verifyPackagedStartupWithCleanup } from "../../scripts/verify-packaged-
 const fixture = path.resolve("test/fixtures/linux-packaged-process.mjs");
 const roots: string[] = [];
 const owners: Awaited<ReturnType<typeof launchLinuxPackagedProcess>>[] = [];
+interface ProcessIdentity {
+  pid: number;
+  parent: number;
+  group: number;
+  start: string;
+}
 interface ProcessResult {
   outcome: { code: number | null; signal: string | null };
   closed: boolean;
-  remaining: unknown[];
+  remaining: ProcessIdentity[];
   failures: string[];
 }
 async function resultAt(root: string): Promise<ProcessResult> {
   return JSON.parse(
     await readFile(path.join(root, "linux-process-result.json"), "utf8"),
   ) as ProcessResult;
+}
+async function processIdentity(pid: number): Promise<ProcessIdentity> {
+  const text = await readFile(`/proc/${pid}/stat`, "utf8");
+  const fields = text.slice(text.lastIndexOf(")") + 2).split(" ");
+  return {
+    pid,
+    parent: Number(fields[1]),
+    group: Number(fields[2]),
+    start: fields[19]!,
+  };
+}
+const signalHelper = path.resolve("scripts/linux-packaged-signal.py");
+const realPython = () => {
+  const result = spawnSync(
+    "python3",
+    ["-I", "-c", "import sys; print(sys.executable)"],
+    { encoding: "utf8", timeout: 2_000 },
+  );
+  expect(result.status).toBe(0);
+  return result.stdout.trim();
+};
+async function pythonFault(root: string, mutation: string) {
+  const python = realPython();
+  const tools = path.join(root, "tools");
+  await mkdir(tools);
+  const code = `import os, signal, runpy, sys\n${mutation}\nrunpy.run_path(sys.argv[1], run_name="__main__")`;
+  await writeFile(
+    path.join(tools, "python3"),
+    `#!/bin/sh\nexec ${JSON.stringify(python)} -I -c '${code.replaceAll("'", "'\\''")}' "$2"\n`,
+  );
+  await chmod(path.join(tools, "python3"), 0o700);
+  vi.stubEnv("PATH", tools);
+  return python;
+}
+async function wrapperFailure(launcher: string) {
+  try {
+    await verifyLinuxWrapperPropagation(launcher, 250);
+  } catch (cause) {
+    expect(cause).toBeInstanceOf(AggregateError);
+    const error = cause as AggregateError;
+    const directory = /wrapper controls retained at (.+)$/u.exec(
+      error.message,
+    )![1]!;
+    await cp(
+      directory,
+      path.resolve(".scratch/683-review-controls", path.basename(directory)),
+      { recursive: true },
+    );
+    return { error, directory };
+  }
+  throw new Error("Expected a failing wrapper control");
 }
 async function until(check: () => Promise<boolean>) {
   const deadline = Date.now() + 3_000;
@@ -81,18 +140,18 @@ async function start(wrapper = false, mode = "normal", timeoutMs = 500) {
   return { ...setup_, owner };
 }
 
+afterEach(async () => {
+  // Recover registered fixtures, including deliberate signal-helper faults.
+  for (const owner of owners.splice(0))
+    await owner.stop().catch(() => undefined);
+  vi.unstubAllEnvs();
+  for (const root of roots.splice(0))
+    await rm(root, { recursive: true, force: true });
+});
+
 describe.skipIf(process.platform !== "linux")(
   "Linux packaged process actual shutdown seam",
   () => {
-    afterEach(async () => {
-      // stop() is called once per fixture, including assertion failure recovery.
-      for (const owner of owners.splice(0))
-        await owner.stop().catch(() => undefined);
-      vi.unstubAllEnvs();
-      for (const root of roots.splice(0))
-        await rm(root, { recursive: true, force: true });
-    });
-
     it.each([false, true])(
       "signals actual main first (wrapper=%s), retains wrapper to reap and settles a separate-session PTY",
       async (wrapper) => {
@@ -163,7 +222,199 @@ describe.skipIf(process.platform !== "linux")(
       const result = await resultAt(root);
       expect(result.remaining).toEqual([]);
     });
+  },
+);
 
+describe.skipIf(process.platform !== "linux")(
+  "Linux packaged recovery and preflight regressions",
+  () => {
+    it("settles a hanging wrapper/main/children through reparenting recovery without turning timeout into success", async () => {
+      const { root, owner } = await start(true, "wrapper-hang", 200);
+      owners.pop();
+      await expect(owner.stop()).rejects.toThrow("deadline exceeded");
+      const result = await resultAt(root);
+      expect(result.remaining).toEqual([]);
+      expect(result.closed).toBe(true);
+      expect(result.failures).not.toEqual(
+        expect.arrayContaining([expect.stringContaining("identity changed")]),
+      );
+    });
+
+    it("signals every retained reparented recovery target even when an independent target is stale", async () => {
+      const { root, owner } = await start(true, "wrapper-hang", 200);
+      const receipt = JSON.parse(
+        await readFile(path.join(root, "ready"), "utf8"),
+      ) as { mainPid: number; probePid: number; gpuPid: number };
+      const targets = await Promise.all(
+        [receipt.mainPid, receipt.probePid, receipt.gpuPid].map(
+          processIdentity,
+        ),
+      );
+      owner.child.kill("SIGTERM");
+      await until(
+        async () =>
+          (await processIdentity(receipt.mainPid)).parent !==
+          targets[0]!.parent,
+      );
+      const strict = spawnSync("python3", ["-I", signalHelper], {
+        input: JSON.stringify({ signal: "SIGTERM", targets: [targets[0]] }),
+        encoding: "utf8",
+        timeout: 2_000,
+      });
+      expect(strict.status).toBe(1);
+      expect(strict.stderr).toContain("identity changed; refusing signal");
+      const result = spawnSync("python3", ["-I", signalHelper], {
+        input: JSON.stringify({
+          signal: "SIGKILL",
+          recovery: true,
+          targets: [{ ...targets[0], start: "0" }, ...targets],
+        }),
+        encoding: "utf8",
+        timeout: 2_000,
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("identity changed; refusing signal");
+      await until(async () =>
+        (
+          await Promise.all(
+            targets.map((target) => exists(`/proc/${target.pid}/stat`)),
+          )
+        ).every((present) => !present),
+      );
+      owners.pop();
+      await expect(owner.stop()).rejects.toThrow("signal SIGTERM");
+      expect((await resultAt(root)).remaining).toEqual([]);
+    });
+
+    it.each([
+      "missing-python",
+      "missing-open",
+      "missing-send",
+      "kernel-open",
+      "kernel-send",
+    ])(
+      "blocks %s before any direct, wrapper or control workload launch",
+      async (fault) => {
+        const { root, launcher, launch } = await setup(true);
+        if (fault === "missing-python")
+          vi.stubEnv("PATH", path.join(root, "no-python"));
+        else
+          await pythonFault(
+            root,
+            fault === "missing-open"
+              ? "del os.pidfd_open"
+              : fault === "missing-send"
+                ? "del signal.pidfd_send_signal"
+                : `def unavailable(*args): raise OSError(38, "pidfd syscall unavailable")\n${fault === "kernel-open" ? "os.pidfd_open" : "signal.pidfd_send_signal"} = unavailable`,
+          );
+        await expect(launch()).rejects.toThrow("pidfd capability preflight");
+        await expect(
+          verifyLinuxWrapperPropagation(launcher, 250),
+        ).rejects.toThrow("pidfd capability preflight");
+        await expect(
+          launchLinuxPackagedProcess({
+            executable: process.execPath,
+            args: [fixture, "main"],
+            env: { ...process.env },
+            expectedExecutable: process.execPath,
+            readinessFile: path.join(root, "ready"),
+            profileRoot: root,
+          }),
+        ).rejects.toThrow("pidfd capability preflight");
+        expect(await exists(path.join(root, "launches"))).toBe(false);
+        expect(await exists(path.join(root, "ready"))).toBe(false);
+      },
+    );
+
+    it.each(["control-hang", "control-streams"])(
+      "retains timeout diagnostics and native outcome after %s recovery",
+      async (mode) => {
+        const { launcher } = await setup(true, mode);
+        const { error, directory } = await wrapperFailure(launcher);
+        expect(error.message).toContain("control did not settle");
+        const result = JSON.parse(
+          await readFile(path.join(directory, "zero.json"), "utf8"),
+        ) as ProcessResult & {
+          stdout: string;
+          stderr: string;
+          beforeCleanup: {
+            closed: boolean;
+            outcome?: ProcessResult["outcome"];
+            remaining: ProcessIdentity[];
+          };
+        };
+        expect(result.stdout).toContain("control stdout retained");
+        expect(result.stderr).toContain("control stderr retained");
+        expect(result.beforeCleanup.closed).toBe(false);
+        expect(result.beforeCleanup.remaining.length).toBeGreaterThan(0);
+        expect(result.remaining).toEqual([]);
+        expect(result.closed).toBe(true);
+        if (mode === "control-streams")
+          expect(result.outcome).toEqual({ code: 7, signal: null });
+        else expect(result.outcome.signal).toBe("SIGKILL");
+      },
+    );
+
+    it("aggregates wrapper timeout and cleanup errors and records diagnostics before releasing handles", async () => {
+      const { root, launcher } = await setup(true, "control-hang");
+      const originalPath = process.env.PATH;
+      const python = await pythonFault(
+        root,
+        "original = signal.pidfd_send_signal\ndef denied(fd, sig, *args):\n    if sig: raise PermissionError('synthetic recovery denial')\n    return original(fd, sig, *args)\nsignal.pidfd_send_signal = denied",
+      );
+      // The launcher still needs bash; only the Python helper is faulted.
+      vi.stubEnv("PATH", `${path.join(root, "tools")}:${originalPath}`);
+      let targets: ProcessIdentity[] = [];
+      try {
+        const { error, directory } = await wrapperFailure(launcher);
+        expect(error.message).toContain("control did not settle");
+        expect(error.message).toContain("synthetic recovery denial");
+        const result = JSON.parse(
+          await readFile(path.join(directory, "zero.json"), "utf8"),
+        ) as ProcessResult & { stdout: string; stderr: string };
+        targets = result.remaining;
+        expect(result.stdout).toContain("control stdout retained");
+        expect(result.stderr).toContain("control stderr retained");
+        expect(targets.length).toBeGreaterThan(0);
+        expect(result.failures).toEqual(
+          expect.arrayContaining([
+            expect.stringContaining("control did not settle"),
+            expect.stringContaining("synthetic recovery denial"),
+            expect.stringContaining("failure cleanup did not settle"),
+          ]),
+        );
+      } finally {
+        vi.stubEnv("PATH", originalPath);
+        const recovered = spawnSync(python, ["-I", signalHelper], {
+          input: JSON.stringify({ signal: "SIGKILL", recovery: true, targets }),
+          encoding: "utf8",
+          timeout: 2_000,
+        });
+        expect(recovered.status).toBe(0);
+        await until(async () =>
+          (
+            await Promise.all(
+              targets.map((target) => exists(`/proc/${target.pid}/stat`)),
+            )
+          ).every((present) => !present),
+        );
+      }
+    });
+
+    it("keeps the primary wrapper timeout when recording its post-cleanup evidence fails", async () => {
+      const { launcher } = await setup(true, "control-recording");
+      const { error } = await wrapperFailure(launcher);
+      expect(error.message).toContain("control did not settle");
+      expect(error.errors as unknown[]).toEqual(
+        expect.arrayContaining([expect.objectContaining({ code: "EISDIR" })]),
+      );
+    });
+  },
+);
+
+describe.skipIf(process.platform !== "linux")(
+  "Linux packaged native outcome and identity controls",
+  () => {
     it("refuses stale start identity at the actual pidfd signaling boundary", async () => {
       const fields = (await readFile(`/proc/${process.pid}/stat`, "utf8"))
         .split(") ")[1]!

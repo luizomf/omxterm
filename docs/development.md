@@ -280,7 +280,10 @@ main and probe; the verifier checks owned ancestry, process start identity and
 exact inspected executable bytes before sending TERM **only to main**, using a
 pidfd to prevent PID-reuse signaling. Chromium children and an extract-and-run
 AppImage wrapper remain alive for orderly shutdown. Descendants are retained by
-identity, including PTYs in separate sessions.
+identity, including PTYs in separate sessions. Before any application or wrapper
+control launch, a bounded Python helper check opens a pidfd for itself and sends
+signal 0 through it. Missing Python, APIs or kernel support blocks the launch;
+there is no numeric-PID fallback.
 
 Before trusting an extract-and-run wrapper's result, headless controls on that
 exact AppImage must propagate native Run-as-Node exit 0, exit 3 and signal failure.
@@ -293,7 +296,12 @@ Success requires code 0/no signal, closed streams and owned settlement within
 the existing two-second shutdown bound. Bounded identity-checked tree TERM/KILL
 is failure recovery only, never success. Failures retain the isolated profile,
 inspection/helper trees, and bounded stderr plus `linux-process-result.json` for
-teardown failures; failed wrapper controls retain their own evidence directory.
+teardown failures. Recovery validates retained immutable PID/start identities,
+allowing ordinary reparenting as parents exit; first-signaling main still requires
+strict ancestry/group/executable checks. Independent recovery targets are all
+attempted and errors aggregated. Failed wrapper controls retain bounded output,
+native results and ownership snapshots before/after cleanup, even when cleanup
+fails; recording errors join rather than replace the original failure.
 Helper provisioning and macOS/Windows shutdown policies are unchanged.
 
 Headless Linux regression coverage (real main, Chromium-like child, separate-session
