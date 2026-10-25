@@ -36,6 +36,8 @@ export interface TerminalPane {
   removed: boolean;
   startRequested: boolean;
   ended: boolean;
+  // When the Surface mounted and the session started, for tab tooltips.
+  startedAt?: number | undefined;
 }
 
 export interface TerminalTab {

@@ -13,12 +13,14 @@ import {
 } from "./session-tree";
 import { showPanelMenu } from "./sessions-menus";
 import {
+  applySessionStatus,
   focusRow,
   folderRow,
   handleRowKey,
   sessionRow,
   type RowContext,
 } from "./sessions-rows";
+import { countSessionPanes, type OpenSessionPane } from "./session-activity";
 
 export interface SessionsPanelOptions {
   readonly translator: Translator;
@@ -28,6 +30,12 @@ export interface SessionsPanelOptions {
     placement: TerminalLaunchPlacement,
   ) => void;
   readonly notify: (message: string) => void;
+  // This window's open panes, for status dots and the open-pane menu.
+  readonly openPanes?: {
+    list(): readonly OpenSessionPane[];
+    reveal(pane: OpenSessionPane): void;
+    subscribe(listener: () => void): () => void;
+  };
 }
 
 export interface SessionsPanel {
@@ -81,6 +89,13 @@ export function createSessionsPanel(
   empty.className = "sessions-empty";
   element.append(quick, toolbar, list, empty);
 
+  let counts = countSessionPanes(options.openPanes?.list() ?? []);
+  const openPanesOf = (sessionId: string) =>
+    (options.openPanes?.list() ?? []).filter(
+      (pane) =>
+        pane.launch.spec?.kind === "saved-session" &&
+        pane.launch.spec.id === sessionId,
+    );
   const context: RowContext = {
     document,
     translator,
@@ -91,6 +106,7 @@ export function createSessionsPanel(
     open: options.open,
     notify: options.notify,
     render: () => render(),
+    count: (sessionId) => counts.get(sessionId) ?? { open: 0, running: 0 },
     menu: () => ({
       document,
       translator,
@@ -102,8 +118,26 @@ export function createSessionsPanel(
         context.expanded.add(id);
         render();
       },
+      ...(options.openPanes
+        ? { openPanes: openPanesOf, reveal: options.openPanes.reveal }
+        : {}),
     }),
   };
+  // Pane changes repaint only the dots and tooltips, keeping focus and
+  // scroll in the list.
+  const updateStatus = () => {
+    if (disposed) return;
+    counts = countSessionPanes(options.openPanes?.list() ?? []);
+    for (const row of list.querySelectorAll<HTMLElement>(
+      ".sessions-row.session",
+    )) {
+      const session = sessions.sessions.find(
+        (candidate) => candidate.id === row.dataset.sessionId,
+      );
+      if (session) applySessionStatus(row, context, session);
+    }
+  };
+  const removePanesListener = options.openPanes?.subscribe(updateStatus);
 
   const heading = (text: string) => {
     const item = document.createElement("h3");
@@ -192,6 +226,7 @@ export function createSessionsPanel(
     dispose() {
       disposed = true;
       removeChanged();
+      removePanesListener?.();
       element.remove();
     },
   };

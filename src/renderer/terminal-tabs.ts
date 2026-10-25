@@ -17,7 +17,9 @@ import type {
 import {
   allPanes,
   findBySession,
+  openSessions,
   renderStrip,
+  revealPane,
   select,
   selectedTab,
 } from "./terminal-tabs-view";
@@ -48,9 +50,19 @@ export function createTerminalTabs(
         const color =
           tab.color ?? panes.find((pane) => pane.launch.color)?.launch.color;
         const group = tab.group;
+        const label = tab.title ?? tab.focused.label;
+        const remote = options.describeRemote?.({
+          launch: tab.focused.launch,
+          title: label,
+          ended: tab.focused.ended,
+          ...(tab.focused.startedAt === undefined
+            ? {}
+            : { startedAt: tab.focused.startedAt }),
+        });
         return {
-          label: tab.title ?? tab.focused.label,
+          label,
           paneCount: panes.length,
+          ...(remote ? { remote } : {}),
           broadcasting: tab === ctx.broadcastTab,
           ...(color ? { color } : {}),
           ...(group
@@ -225,6 +237,9 @@ export function createTerminalTabs(
       if (placement === "tab") void createTab(ctx, launch).catch(() => {});
       else split(ctx, placement === "split-right" ? "right" : "down", launch);
     },
+    openSessions: () => openSessions(ctx),
+    revealPane: (tabNumber, paneNumber) =>
+      revealPane(ctx, tabNumber, paneNumber),
     dispose() {
       if (ctx.disposed) return;
       removeWheelZoom();

@@ -434,6 +434,14 @@ Opening one always starts a new process.
   ([ADR 0036](adr/0036-run-saved-ssh-sessions-through-the-system-openssh-client.md)).
 - Quick Connect accepts `[user@]host[:port]`, validated in the renderer and
   again in main, and starts an unsaved SSH session.
+- A tab whose focused pane runs an SSH session shows a server icon before its
+  title and a tooltip with the session name, connection, folder,
+  authentication, jump host, options and connection time. The Sessions list
+  shows, after each name, a status dot for that session's panes in the same
+  window (green: one runs; red: all ended; grey: none) with the open count, a
+  tooltip with the definition's details, and the open panes first in its
+  context menu, each selecting its tab and pane. Tooltips show definitions
+  only; passwords and keys never appear.
 - Saved and Quick Connect sessions that exit with a non-zero code or fail keep
   their final screen with Reconnect and Close actions. Reconnect starts a new
   session in the same pane position. Ordinary zero exits close like any other

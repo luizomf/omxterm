@@ -132,6 +132,7 @@ function onSessionEnd(
 ): void {
   if (ctx.disposed || pane.removed) return;
   pane.ended = true;
+  renderStrip(ctx);
   // A retained pane keeps a failed connection's screen with Reconnect.
   if (
     pane.launch.retainOnExit &&
@@ -288,6 +289,7 @@ async function mountPane(ctx: TabsContext, pane: TerminalPane): Promise<void> {
     return;
   }
   pane.surface = surface;
+  pane.startedAt = Date.now();
   // The pane's session id is known now; main needs it for its directory.
   scheduleWorkspaceReport(ctx);
   const latestConfiguration = completeConfiguration(ctx.activeSurfaceOptions);

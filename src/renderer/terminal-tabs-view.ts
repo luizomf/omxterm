@@ -3,6 +3,7 @@ import { layoutPanes, resizeSplit } from "./pane-layout";
 import { applyPaneWeights, renderPaneLayout } from "./pane-view";
 import type { TerminalPane, TerminalTab } from "./terminal-tab-model";
 import type { TabsContext } from "./terminal-tabs-types";
+import type { OpenSessionPane } from "./sessions/session-activity";
 import {
   flushWorkspaceReport,
   scheduleWorkspaceReport,
@@ -29,6 +30,8 @@ export function renderStrip(ctx: TabsContext): void {
     ctx.selectedIndex,
     ctx.tabBarEnabled && ctx.tabs.length >= 2,
   );
+  // Every change of panes, titles or session state reaches the strip here.
+  ctx.options.onPanesChange?.();
 }
 
 export function applyVisibility(ctx: TabsContext): void {
@@ -118,4 +121,36 @@ export function stopBroadcast(ctx: TabsContext): void {
   ctx.options.onBroadcastChange?.(0);
   applyVisibility(ctx);
   renderStrip(ctx);
+}
+
+// Every open pane with its launch and state, in tab and pane order.
+export function openSessions(ctx: TabsContext): OpenSessionPane[] {
+  return ctx.tabs.flatMap((tab, tabIndex) => {
+    const panes = layoutPanes(tab.layout).filter((pane) => !pane.removed);
+    return panes.map((pane, paneIndex) => ({
+      launch: pane.launch,
+      title: pane.label || tab.title || String(tabIndex + 1),
+      ended: pane.ended,
+      ...(pane.startedAt === undefined ? {} : { startedAt: pane.startedAt }),
+      tabNumber: tabIndex + 1,
+      paneNumber: paneIndex + 1,
+      paneCount: panes.length,
+    }));
+  });
+}
+
+// Selects a tab and focuses one of its panes (1-based positions).
+export function revealPane(
+  ctx: TabsContext,
+  tabNumber: number,
+  paneNumber: number,
+): void {
+  const tab = ctx.tabs[tabNumber - 1];
+  const pane = tab
+    ? layoutPanes(tab.layout).filter((item) => !item.removed)[paneNumber - 1]
+    : undefined;
+  if (ctx.disposed || !tab || !pane) return;
+  select(ctx, tabNumber - 1);
+  focusPane(ctx, tab, pane);
+  pane.surface?.focus();
 }

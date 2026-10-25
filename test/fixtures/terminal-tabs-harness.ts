@@ -40,6 +40,8 @@ export function createTabsHarness(
     paneBusy?: TerminalTabsOptions["paneBusy"];
     detachTab?: TerminalTabsOptions["detachTab"];
     endedSolution?: TerminalTabsOptions["endedSolution"];
+    describeRemote?: TerminalTabsOptions["describeRemote"];
+    onPanesChange?: TerminalTabsOptions["onPanesChange"];
   } = {},
 ) {
   document.body.innerHTML = "";
@@ -116,6 +118,12 @@ export function createTabsHarness(
       ...(options.detachTab ? { detachTab: options.detachTab } : {}),
       ...(options.endedSolution
         ? { endedSolution: options.endedSolution }
+        : {}),
+      ...(options.describeRemote
+        ? { describeRemote: options.describeRemote }
+        : {}),
+      ...(options.onPanesChange
+        ? { onPanesChange: options.onPanesChange }
         : {}),
       ...(options.onWorkspaceChange
         ? { onWorkspaceChange: options.onWorkspaceChange }

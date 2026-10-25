@@ -7,6 +7,12 @@ import type {
 import type { SessionsBridge } from "../../shared/terminal-bridge";
 import type { PaneLaunch, TerminalLaunchPlacement } from "../terminal-tabs";
 import { failure, sessionLaunch } from "./session-actions";
+import {
+  paneCountLine,
+  sessionDetailLines,
+  sessionStatus,
+  type SessionPaneCount,
+} from "./session-details";
 import { sessionSubtitle, type SessionTreeNode } from "./session-tree";
 import {
   showFolderMenu,
@@ -30,6 +36,8 @@ export interface RowContext {
   readonly notify: (message: string) => void;
   readonly menu: () => SessionMenuContext;
   readonly render: () => void;
+  // Panes of a Saved Session open in this window.
+  readonly count: (sessionId: string) => SessionPaneCount;
 }
 
 export function focusRow(list: HTMLElement, row: Element | null): void {
@@ -70,15 +78,20 @@ export function sessionRow(
   if (session.color) icon.style.color = session.color;
   const text = document.createElement("span");
   text.className = "sessions-text";
+  const nameLine = document.createElement("span");
+  nameLine.className = "sessions-name-line";
   const title = document.createElement("span");
   title.className = "sessions-name";
   title.textContent = session.name;
+  const status = document.createElement("span");
+  status.className = "sessions-status";
+  nameLine.append(title, status);
   const subtitle = document.createElement("span");
   subtitle.className = "sessions-subtitle";
   subtitle.textContent = sessionSubtitle(session);
-  text.append(title, subtitle);
+  text.append(nameLine, subtitle);
   row.append(icon, text);
-  row.title = `${session.name}\n${sessionSubtitle(session)}`;
+  applySessionStatus(row, context, session);
   row.setAttribute(
     "aria-label",
     `${t(session.kind === "ssh" ? "sessions.kind.ssh" : "sessions.kind.local")}: ${session.name}`,
@@ -99,6 +112,39 @@ export function sessionRow(
     if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
   });
   return row;
+}
+
+// The status dot after the name (green: a pane runs; red: every open pane
+// has ended; grey: none open here) with the open count inside, and the
+// detailed tooltip. Panes changing update existing rows in place.
+export function applySessionStatus(
+  row: HTMLElement,
+  context: Pick<RowContext, "translator" | "sessions" | "count">,
+  session: SessionDefinition,
+): void {
+  const { translator } = context;
+  const count = context.count(session.id);
+  const state = sessionStatus(count);
+  const dot = row.querySelector<HTMLElement>(".sessions-status");
+  if (dot) {
+    dot.dataset.state = state;
+    dot.textContent = count.open > 0 ? String(count.open) : "";
+    dot.setAttribute(
+      "aria-label",
+      count.open > 0
+        ? translator.t("sessions.status", {
+            open: count.open,
+            running: count.running,
+          })
+        : translator.t("sessions.status.idle"),
+    );
+    dot.setAttribute("role", "img");
+  }
+  row.title = [
+    session.name,
+    ...sessionDetailLines(session, context.sessions(), translator),
+    paneCountLine(count, translator),
+  ].join("\n");
 }
 
 export function folderRow(
