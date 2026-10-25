@@ -353,9 +353,13 @@ export async function exerciseShortcutCapture(options: ShortcutCaptureOptions) {
       await waitFor(
         () =>
           evaluate<boolean>(
-            `${button}.textContent === 'Record' && ${status}.startsWith('Not saved:')`,
+            `${button}.textContent === 'Record' && document.querySelector('.settings-status').classList.contains('error')`,
           ),
         `${phase} collision result`,
+      );
+      assert.match(
+        await evaluate<string>(status),
+        /keybinds\.find: conflicts with/u,
       );
       await close();
       send("keyDown", key, [...modifiers, "isautorepeat"]);
