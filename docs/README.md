@@ -26,6 +26,7 @@ Downloads and checksums are listed in the [README](../README.md#platforms-and-do
 Developer and architecture docs for contributors and coding agents:
 
 - **[Contributing](../CONTRIBUTING.md)** — reporting bugs, setting up a local checkout, running checks, and opening pull requests.
+- **[Contributing translations](translations.md)** — a beginner-friendly browser-only correction, catalog examples, and maintainer help with new languages and checks.
 - **[AGENTS.md](../AGENTS.md)** — quick command reference and repository rules for coding agents.
 - **[Native development](development.md)** — OS prerequisites, test suites, graphical test precautions, and packaging verification.
 - **[Restty Terminal Surface](restty-development.md)** — rendering integration, pinned dependencies, WASM core rebuilds, and optional diagnostics.

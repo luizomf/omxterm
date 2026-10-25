@@ -8,6 +8,7 @@ Thanks for helping improve OMXTerm! Bug reports, feedback, documentation improve
 - Let us know if an installation step or documentation section is unclear.
 - Help reproduce an [open issue](https://github.com/luizomf/omxterm/issues) and share your platform details.
 - Suggest a feature by describing the use case it solves.
+- [Improve a translation](docs/translations.md), starting with one existing message; the guide includes a browser-only fork/edit/PR walkthrough and maintainer help with technical checks.
 
 ### Report a problem
 
