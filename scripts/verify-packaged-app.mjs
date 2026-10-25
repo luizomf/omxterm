@@ -18,6 +18,7 @@ import { linuxHelperName, renderLinuxHelper } from "./package-linux-assets.mjs";
 import { verifyExactWindowsInstaller } from "./windows-installer-transaction.mjs";
 import { windowsVerificationOptions } from "./windows-verification-options.mjs";
 import { inspectLinuxAppRun } from "./verify-linux-launcher.mjs";
+import { launchLinuxPackagedProcess } from "./linux-packaged-process.mjs";
 
 const execFile = promisify(execFileCallback);
 const projectRoot = path.resolve(
@@ -692,6 +693,7 @@ export async function verifyPackagedStartupWithCleanup({
   verify,
   stop,
   removeProfile,
+  retainProfileOnFailure = false,
 }) {
   const failures = [];
   let result;
@@ -708,7 +710,7 @@ export async function verifyPackagedStartupWithCleanup({
     failures.push(cause);
   }
   // An unconfirmed process tree may still use its profile; retain it for diagnosis.
-  if (stopped) {
+  if (stopped && !(retainProfileOnFailure && failures.length)) {
     try {
       await removeProfile();
     } catch (cause) {
@@ -755,6 +757,7 @@ export async function verifyPackagedApplication(
   let linuxInstalledApp;
   let linuxProvisioningComplete = false;
   let linuxDirectLaunchAvailable = false;
+  let retainLinuxRecovery = false;
   let applicationRoot = packagedPath;
 
   try {
@@ -1159,26 +1162,46 @@ export async function verifyPackagedApplication(
       // a Wayland session backend (ADR 0020), and this harness cannot follow a
       // relaunch. Pin the backend explicitly; default-backend selection is
       // covered by unit tests; this explicit override does not prove native defaults.
-      const child = spawn(launchPath, launchArguments, {
-        detached: true,
-        env: {
-          ...process.env,
-          HOME: homeRoot,
-          XDG_CONFIG_HOME: configurationRoot,
-          XDG_STATE_HOME: stateRoot,
-          OMXTERM_PACKAGE_SECRET_CANARY: canary,
-          OMXTERM_PACKAGE_ARGUMENT_CANARY: argumentCanary,
-          OMXTERM_PACKAGE_EXPECTED_HOME: userInfo().homedir,
-          OMXTERM_PACKAGE_READINESS_FILE: readinessFile,
-        },
-        stdio: ["ignore", "ignore", "pipe"],
-      });
-      child.stderr.setEncoding("utf8");
-      child.stderr.on("data", (chunk) => {
-        if (stderr.length < 16_384) stderr += chunk;
-      });
+      const launchEnvironment = {
+        ...process.env,
+        HOME: homeRoot,
+        XDG_CONFIG_HOME: configurationRoot,
+        XDG_STATE_HOME: stateRoot,
+        OMXTERM_PACKAGE_SECRET_CANARY: canary,
+        OMXTERM_PACKAGE_ARGUMENT_CANARY: argumentCanary,
+        OMXTERM_PACKAGE_EXPECTED_HOME: userInfo().homedir,
+        OMXTERM_PACKAGE_READINESS_FILE: readinessFile,
+      };
+      if (platform === "linux") retainLinuxRecovery = true;
+      const linuxProcess =
+        platform === "linux"
+          ? await launchLinuxPackagedProcess({
+              executable: launchPath,
+              args: launchArguments,
+              env: launchEnvironment,
+              expectedExecutable: executable,
+              readinessFile,
+              profileRoot: temporaryRoot,
+              wrapper: runtimeArguments.length > 0,
+            })
+          : undefined;
+      const child =
+        linuxProcess?.child ??
+        spawn(launchPath, launchArguments, {
+          detached: true,
+          env: launchEnvironment,
+          stdio: ["ignore", "ignore", "pipe"],
+        });
+      if (!linuxProcess) {
+        child.stderr.setEncoding("utf8");
+        child.stderr.on("data", (chunk) => {
+          if (stderr.length < 16_384) stderr += chunk;
+        });
+      }
+      const stderrText = () => linuxProcess?.stderrText() ?? stderr;
 
       verifiedRecords += await verifyPackagedStartupWithCleanup({
+        retainProfileOnFailure: platform === "linux",
         async verify() {
           const logFile = path.join(
             stateRoot,
@@ -1190,10 +1213,11 @@ export async function verifyPackagedApplication(
             logFile,
             readinessFile,
             child,
-            () => stderr.trim(),
+            () => stderrText().trim(),
           );
+          await linuxProcess?.verifyMain();
           const logText = await readFile(logFile, "utf8");
-          const diagnostics = `${logText}\n${stderr}`;
+          const diagnostics = `${logText}\n${stderrText()}`;
           const privateLaunchValues = [
             canary,
             argumentCanary,
@@ -1206,7 +1230,21 @@ export async function verifyPackagedApplication(
             );
           return records.length;
         },
-        stop: () => stopProcessGroup(child),
+        async stop() {
+          if (!linuxProcess) return stopProcessGroup(child);
+          const outcome = await linuxProcess.stop();
+          console.log(
+            JSON.stringify({
+              linuxPackagedShutdown: runtimeArguments.length
+                ? "extract-and-run"
+                : "direct",
+              outcomeRole: runtimeArguments.length
+                ? "AppImage wrapper (failure propagation checked)"
+                : "Electron main",
+              ...outcome,
+            }),
+          );
+        },
         // Windows releases the stopped tree's file locks asynchronously.
         removeProfile: () =>
           rm(temporaryRoot, {
@@ -1217,6 +1255,7 @@ export async function verifyPackagedApplication(
           }),
       });
     }
+    retainLinuxRecovery = false;
     let installerVerification;
     if (platform === "win32" && !windowsUnpackedOnly) {
       installerVerification = await verifyExactWindowsInstaller({
@@ -1247,9 +1286,13 @@ export async function verifyPackagedApplication(
       installerVerification,
     };
   } finally {
-    if (extractionRoot)
+    if (extractionRoot && !retainLinuxRecovery)
       await rm(extractionRoot, { recursive: true, force: true });
-    if (linuxInstallationRoot && linuxProvisioningComplete)
+    if (
+      linuxInstallationRoot &&
+      linuxProvisioningComplete &&
+      !retainLinuxRecovery
+    )
       await rm(linuxInstallationRoot, { recursive: true, force: true });
   }
 }

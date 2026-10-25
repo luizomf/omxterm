@@ -32,6 +32,8 @@ sudo pacman -S --needed base-devel python patch binutils procps-ng fontconfig fi
 
 `npm ci` rebuilds the source-digest-guarded exec-status PTY addon on native Linux
 ARM64 and x64; use C++ build tools and `patch` on both architectures.
+Full Linux package startup verification also requires Python 3.9+ and Linux
+pidfd support (kernel 5.3+); identity-checked signaling fails closed without them.
 
 Verify that the fixture fonts are installed with `fc-list : family` (missing fixture fonts cause native font integration tests to fail with `Configured native fixture font is missing`).
 
@@ -269,6 +271,40 @@ for these lanes. `--windows-unpacked-only` is **not** headless: it still launche
 the application. See [hosted artifact delivery](release.md#hosted-x64-build-only-artifact-delivery).
 
 See [release procedures](release.md#resume-and-version-only-commands) for standalone `package:*` and `package-built:*` commands.
+
+### Linux packaged startup teardown
+
+The full Linux verifier observes launch errors, native exit code/signal and stream
+closure from launch. Its controlled PTY output receipt identifies the Electron
+main and probe; the verifier checks owned ancestry, process start identity and
+exact inspected executable bytes before sending TERM **only to main**, using a
+pidfd to prevent PID-reuse signaling. Chromium children and an extract-and-run
+AppImage wrapper remain alive for orderly shutdown. Descendants are retained by
+identity, including PTYs in separate sessions.
+
+Before trusting an extract-and-run wrapper's result, headless controls on that
+exact AppImage must propagate native Run-as-Node exit 0, exit 3 and signal failure.
+These controls intercept the reviewed bash AppRun via a private `BASH_ENV` script;
+they do not launch Electron GUI or alter the package. A wrapper that masks a
+failure is rejected. The wrapper's result is not a separate kernel wait of main;
+a signal may be normalized to a nonzero wrapper code.
+
+Success requires code 0/no signal, closed streams and owned settlement within
+the existing two-second shutdown bound. Bounded identity-checked tree TERM/KILL
+is failure recovery only, never success. Failures retain the isolated profile,
+inspection/helper trees, and bounded stderr plus `linux-process-result.json` for
+teardown failures; failed wrapper controls retain their own evidence directory.
+Helper provisioning and macOS/Windows shutdown policies are unchanged.
+
+Headless Linux regression coverage (real main, Chromium-like child, separate-session
+PTY and reaping/masking wrappers; no desktop required):
+
+```sh
+npm test -- test/unit/linux-packaged-process.test.ts test/unit/packaged-application-verifier.test.ts
+```
+
+These process tests skip on other OSes. They do not replace exact-package desktop
+verification in direct/FUSE and extract-and-run modes.
 
 ## Fixture ownership and cleanup
 

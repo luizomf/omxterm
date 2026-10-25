@@ -75,6 +75,7 @@ export function verifyPackagedStartupWithCleanup<T>(operations: {
   verify(): Promise<T>;
   stop(): Promise<unknown>;
   removeProfile(): Promise<unknown>;
+  retainProfileOnFailure?: boolean;
 }): Promise<T>;
 
 export function verifyPackagedApplication(

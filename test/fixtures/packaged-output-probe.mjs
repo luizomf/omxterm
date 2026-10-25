@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { rename, writeFile } from "node:fs/promises";
 
 const [firstArgument, secondArgument] = process.argv.slice(2);
 const readinessFile = process.env.OMXTERM_PACKAGE_READINESS_FILE;
@@ -32,9 +32,17 @@ process.stdin.on("data", (chunk) => {
   if (Number(match[1]) < 1 || Number(match[2]) < 1) process.exit(26);
   complete = true;
   clearTimeout(deadline);
-  void writeFile(readinessFile, "packaged output parsed\n", {
-    flag: "wx",
-  }).catch(() => process.exit(27));
+  const linux = process.platform === "linux";
+  const publicationFile = linux ? `${readinessFile}.pending` : readinessFile;
+  void writeFile(
+    publicationFile,
+    linux
+      ? `${JSON.stringify({ mainPid: process.ppid, probePid: process.pid })}\n`
+      : "packaged output parsed\n",
+    { flag: "wx" },
+  )
+    .then(() => (linux ? rename(publicationFile, readinessFile) : undefined))
+    .catch(() => process.exit(27));
 });
 
 // The printable marker and parsed cell-size query traverse the same packaged

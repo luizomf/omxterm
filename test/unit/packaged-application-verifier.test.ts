@@ -36,6 +36,21 @@ describe("packaged startup failure preservation", () => {
     expect(stop).toHaveBeenCalledOnce();
     expect(removeProfile).toHaveBeenCalledOnce();
   });
+  it("can retain a Linux failure profile even after successful native termination", async () => {
+    const startup = new Error("startup assertion failed");
+    const removeProfile = vi.fn();
+    await expect(
+      verifyPackagedStartupWithCleanup({
+        verify: async () => {
+          throw startup;
+        },
+        stop: async () => undefined,
+        removeProfile,
+        retainProfileOnFailure: true,
+      }),
+    ).rejects.toMatchObject({ errors: [startup] });
+    expect(removeProfile).not.toHaveBeenCalled();
+  });
   it("retains startup and termination failures without deleting an uncertain profile", async () => {
     const startup = new Error("startup timed out");
     const termination = new Error("termination failed");
