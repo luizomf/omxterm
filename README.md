@@ -124,7 +124,9 @@ Omarchy screenshot are arranged by Hyprland.
   import and export.
 - A failed connection keeps its screen with **Reconnect** and **Close**; when
   an agent or key session is refused, it also offers switching to a password
-  typed when prompted.
+  typed when prompted. When ssh fails (exit code 255), **Solution** explains
+  the cause and, for a changed host key, removes the old key from
+  `known_hosts` only after you check the fingerprint.
 - **Password** sessions can keep their password in the system keyring (with a
   show/hide button) or use **Password (typed when prompted)**. A stored
   password reaches ssh only through a one-time askpass answer, never a

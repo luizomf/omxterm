@@ -1878,3 +1878,23 @@ body.tabs-visible #workspace-sidebar {
   background: var(--omx-accent);
   border-color: var(--omx-accent);
 }
+
+.ssh-solution {
+  display: flex;
+  flex-direction: column;
+  gap: var(--omx-space-2);
+  max-width: 34rem;
+}
+
+.ssh-solution p {
+  margin: 0;
+}
+
+.ssh-solution-fingerprint {
+  font-family: ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}
+
+.ssh-solution-status:empty {
+  display: none;
+}

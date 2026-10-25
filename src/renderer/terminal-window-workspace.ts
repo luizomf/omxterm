@@ -1,5 +1,6 @@
 import { createTranslator, type Translator } from "../shared/i18n";
 import { passwordOffer } from "./sessions/session-password-offer";
+import { sshSolution } from "./sessions/ssh-solution";
 import {
   createBroadcastIndicator,
   type BroadcastIndicator,
@@ -348,9 +349,17 @@ export function windowTabsOptions(
       ended: (exitCode) => translator.t("sessions.ended", { code: exitCode }),
       reconnect: translator.t("sessions.reconnect"),
       close: translator.t("common.close"),
+      solution: translator.t("sessions.solution"),
     },
     ...(options.workspace
-      ? { endedOffer: passwordOffer(options.workspace.sessions, translator) }
+      ? {
+          endedOffer: passwordOffer(options.workspace.sessions, translator),
+          endedSolution: sshSolution(
+            options.workspace.element.ownerDocument,
+            options.workspace.sessions,
+            translator,
+          ),
+        }
       : {}),
     onBroadcastChange: (targetCount) => broadcastIndicator.show(targetCount),
     ...(options.confirmBroadcast

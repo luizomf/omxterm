@@ -81,12 +81,14 @@ export interface EndedBannerStrings {
   readonly ended: (exitCode: number) => string;
   readonly reconnect: string;
   readonly close: string;
+  readonly solution: string;
 }
 
 export const DEFAULT_ENDED_BANNER_STRINGS: EndedBannerStrings = {
   ended: (exitCode) => `The session ended with exit code ${exitCode}.`,
   reconnect: "Reconnect",
   close: "Close",
+  solution: "Solution",
 };
 
 // A further choice on an ended banner, such as switching a Saved Session to
@@ -98,12 +100,17 @@ export interface EndedOffer {
 }
 
 // Shown over a retained pane whose session failed; the final output stays.
-// The returned function adds an offer while the banner is still shown.
+// An SSH failure also gets a Solution button. The returned function adds an
+// offer while the banner is still shown.
 export function showEndedBanner(
   pane: TerminalPane,
   exitCode: number,
   strings: EndedBannerStrings,
-  actions: { readonly reconnect: () => void; readonly close: () => void },
+  actions: {
+    readonly reconnect: () => void;
+    readonly close: () => void;
+    readonly solution?: () => void;
+  },
 ): (offer: EndedOffer) => void {
   const document = pane.container.ownerDocument;
   const banner = document.createElement("div");
@@ -120,6 +127,14 @@ export function showEndedBanner(
   close.textContent = strings.close;
   close.addEventListener("click", actions.close);
   banner.append(message, reconnect, close);
+  if (actions.solution) {
+    const solution = document.createElement("button");
+    solution.type = "button";
+    solution.className = "pane-ended-solution";
+    solution.textContent = strings.solution;
+    solution.addEventListener("click", actions.solution);
+    banner.append(solution);
+  }
   pane.container.append(banner);
   reconnect.focus();
   return (offer) => {

@@ -44,7 +44,11 @@ import type {
   SessionDefinition,
   SessionFolder,
 } from "./saved-sessions";
-import type { SessionFileChoice, SessionPasswordState } from "./session-ipc";
+import type {
+  SessionFileChoice,
+  SessionPasswordState,
+  SshSessionReference,
+} from "./session-ipc";
 import type { HighlightSettings } from "./highlight-settings";
 import type { CommandDefinition, CommandLibraryDocument } from "./commands";
 import type { BackupRequest } from "./backup-ipc";
@@ -193,6 +197,11 @@ export interface SessionsBridge {
   passwordState(id?: string): Promise<SessionPasswordState>;
   // Stores a password for an SSH password session, or removes it (null).
   setPassword(id: string, password: string | null): Promise<void>;
+  // Removes the session host's keys from the user's known_hosts (the
+  // Solution for a changed host key); true when a key was found.
+  forgetHostKey(
+    reference: SshSessionReference,
+  ): Promise<{ readonly removed: boolean }>;
 }
 
 export interface TerminalBridge {

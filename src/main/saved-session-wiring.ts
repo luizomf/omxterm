@@ -16,6 +16,7 @@ import {
   registerSessionPasswordIpc,
 } from "./session-passwords";
 import { startSshAskpass, type SshAskpass } from "./ssh-askpass";
+import { registerHostKeyIpc, userKnownHostsFile } from "./ssh-known-hosts";
 import type { IpcEvent, IpcMainPort } from "./terminal-ipc-types";
 
 // Creates the Saved Session service, loads sessions.json, keeps every window's
@@ -115,17 +116,38 @@ export async function startSavedSessions(options: {
       return target;
     },
   );
+  const rejected = () =>
+    operationalEvents.write({
+      name: "boundary.rejected",
+      boundary: "ipc",
+      reason: "untrusted-sender",
+    });
   registerSessionPasswordIpc(
     options.ipcMain as unknown as IpcMainPort,
     options.isTrustedSender,
     passwords,
     () => service.current(),
-    () =>
-      operationalEvents.write({
-        name: "boundary.rejected",
-        boundary: "ipc",
-        reason: "untrusted-sender",
-      }),
+    rejected,
+  );
+  registerHostKeyIpc(
+    options.ipcMain as unknown as IpcMainPort,
+    options.isTrustedSender,
+    {
+      resolve: (reference) =>
+        reference.kind === "quick-ssh"
+          ? service.quickConnect(reference.target)
+          : service
+              .current()
+              .sessions.find((session) => session.id === reference.id),
+      sshKeygen: () =>
+        findExecutable(
+          process.platform === "win32" ? "ssh-keygen.exe" : "ssh-keygen",
+          process.env,
+          process.platform,
+        ),
+      knownHostsFile: userKnownHostsFile(homeDirectory),
+    },
+    rejected,
   );
   return service;
 }

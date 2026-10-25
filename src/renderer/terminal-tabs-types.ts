@@ -62,6 +62,13 @@ export interface TerminalTabsOptions {
     launch: PaneLaunch,
     output: string,
   ) => Promise<EndedOffer | undefined>;
+  // Opens the Solution for an SSH session that ended with ssh's error
+  // status; reconnect replaces the pane with a new session.
+  readonly endedSolution?: (
+    launch: PaneLaunch,
+    output: string,
+    reconnect: () => void,
+  ) => void;
   readonly notifyEmpty?: (reason?: "rendering-failure") => void;
   // tabSessionIds is supplied only for split tabs; a single-pane tab keeps
   // the original one-session selection message.

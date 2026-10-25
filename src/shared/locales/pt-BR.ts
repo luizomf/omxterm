@@ -228,6 +228,40 @@ export const brazilianPortugueseMessages: EnglishMessages = {
   "sessions.saved": "Sessão salva.",
   "sessions.ended": "A sessão terminou com o código de saída {code}.",
   "sessions.reconnect": "Reconectar",
+  "sessions.solution": "Solução",
+  "solution.hostKeyChanged.title": "A identificação do computador remoto mudou",
+  "solution.hostKeyChanged.body":
+    "O ssh recusou a conexão com {host} porque a chave dele é diferente da que está salva em known_hosts. Isso é esperado depois que o sistema daquele computador foi reinstalado ou o servidor SSH foi reconfigurado, mas também pode significar que alguém está interceptando a conexão.",
+  "solution.hostKeyChanged.fingerprint":
+    "Impressão digital recebida: {fingerprint}",
+  "solution.hostKeyChanged.verify":
+    "Confirme essa impressão digital com quem administra aquele computador. Se ela conferir, remova a chave antiga: o ssh então pede para você aceitar a nova no terminal. O arquivo anterior fica guardado como known_hosts.old.",
+  "solution.hostKeyChanged.otherFile":
+    "A chave antiga está em {file}, que o OMXTerm não altera. Remova-a nesse arquivo, por exemplo com: ssh-keygen -R {name} -f {file}",
+  "solution.hostKeyChanged.remove": "Remover a chave antiga e reconectar",
+  "solution.hostKeyChanged.failed":
+    "Não foi possível atualizar o known_hosts. Remova a chave antiga num terminal com: ssh-keygen -R {name}",
+  "solution.hostKeyUnverified.title": "A chave do computador não foi aceita",
+  "solution.hostKeyUnverified.body":
+    "O ssh não conseguiu verificar a chave de {host}: a pergunta foi respondida com não, ou a sessão só aceita chaves já conhecidas. Reconecte e responda yes depois de conferir a impressão digital, ou mude a verificação da chave do host na sessão.",
+  "solution.authentication.title": "O login foi recusado",
+  "solution.authentication.body":
+    "{host} recusou o usuário, a chave ou a senha. Confira o usuário e a chave na sessão, ou use uma senha.",
+  "solution.refused.title": "A conexão foi recusada",
+  "solution.refused.body":
+    "{host} respondeu, mas nenhum servidor SSH aceitou a conexão nessa porta. Verifique se o servidor SSH está em execução e se a porta está correta.",
+  "solution.timeout.title": "A conexão demorou demais",
+  "solution.timeout.body":
+    "{host} não respondeu. Verifique se o computador está ligado e na mesma rede, e se nenhum firewall bloqueia a porta do SSH.",
+  "solution.unreachable.title": "O computador não pode ser alcançado",
+  "solution.unreachable.body":
+    "Não há rota de rede até {host}. Verifique a sua conexão de rede e o endereço.",
+  "solution.unknownHost.title": "Nome do computador não encontrado",
+  "solution.unknownHost.body":
+    "Não foi possível encontrar o nome {host}. Confira a grafia ou use o endereço IP.",
+  "solution.unknown.title": "O ssh terminou com erro",
+  "solution.unknown.body":
+    "Confira a mensagem no terminal e reconecte. Última linha: {detail}",
   "sessions.loadError": "Não foi possível ler as sessões salvas: {reason}",
 
   "sessions.newTitle": "Nova Sessão",

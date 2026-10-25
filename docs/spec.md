@@ -437,7 +437,15 @@ Opening one always starts a new process.
 - Saved and Quick Connect sessions that exit with a non-zero code or fail keep
   their final screen with Reconnect and Close actions. Reconnect starts a new
   session in the same pane position. Ordinary zero exits close like any other
-  session.
+  session. When ssh itself fails (exit status 255) the banner also offers
+  Solution, which names the cause from the final output (changed or
+  unverified host key, refused sign-in, refused connection, timeout, no route,
+  unknown host name) and the safe next step. A changed host key in the user's
+  `~/.ssh/known_hosts` is removed only after the fingerprint is shown and the
+  user chooses Remove old key and reconnect: main runs
+  `ssh-keygen -R <host> -f ~/.ssh/known_hosts` for the host in the session
+  definition (backup `known_hosts.old`), and ssh asks about the new key on
+  reconnect. Keys in other files are never changed (ADR 0039).
 - Exports contain definitions only; options that execute local programs are
   rejected. Password authentication either stores the password in the system
   keyring or, with Password (typed when prompted), leaves it to ssh's prompt.
