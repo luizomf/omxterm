@@ -18,7 +18,7 @@ import {
 export function createPaneMount(deps: {
   readonly document: Document;
   readonly options: TerminalTabsOptions;
-  readonly surfaceOptions: () => TerminalSurfaceOptions;
+  readonly surfaceOptions: (pane?: TerminalPane) => TerminalSurfaceOptions;
   readonly zoomSteps: () => number;
   readonly disposed: () => boolean;
   readonly selectedTab: () => TerminalTab | undefined;
@@ -52,7 +52,7 @@ export function createPaneMount(deps: {
     // the Surface itself stays pane-unaware. Events can only follow session
     // output, so the id is always known by the time they fire.
     const paneSurfaceOptions: TerminalSurfaceOptions = {
-      ...deps.surfaceOptions(),
+      ...deps.surfaceOptions(pane),
       abortSignal: pane.mountAbort.signal,
       onFatalError(failure) {
         endPane(pane);

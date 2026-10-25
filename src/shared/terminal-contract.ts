@@ -83,6 +83,24 @@ export type TerminalTabCommand =
 export type TerminalFontZoom = "in" | "out" | "reset";
 export type TerminalClipboardAction = "copy" | "paste" | "select-all";
 
+// Explicit, user-requested export. "selection" saves the selected text;
+// "content" saves the active tab's retained scrollback and screen. The kind is
+// chosen when the context menu opens, so its label and the saved text agree.
+export type TerminalExportKind = "selection" | "content";
+// A terminal right-click offers the contextual export; a text field (the
+// search query or an auxiliary panel input) offers only editing actions.
+export type TerminalContextMenuRequest =
+  | { readonly target: "terminal"; readonly hasSelection: boolean }
+  | { readonly target: "field" };
+// Text over the export limit is never truncated or sent: the request reports
+// only that the limit was exceeded, so main can tell the user nothing was saved.
+export type TerminalExportRequest =
+  | { readonly kind: TerminalExportKind; readonly text: string }
+  | { readonly kind: TerminalExportKind; readonly overLimit: true };
+// A finite IPC bound in UTF-8 bytes. The core's scrollback byte limit does not
+// imply extracted text fits: combining marks and wide graphemes can exceed it.
+export const MAX_TERMINAL_EXPORT_BYTES = 16 * 1024 * 1024;
+
 const encoder = new TextEncoder();
 
 export function isBoundedTerminalPayload(value: unknown): value is string {
@@ -310,4 +328,63 @@ function isStrictRecord(
     actualKeys.length === keys.length &&
     keys.every((key) => actualKeys.includes(key))
   );
+}
+
+export function isTerminalExportKind(
+  value: unknown,
+): value is TerminalExportKind {
+  return value === "selection" || value === "content";
+}
+
+export function isTerminalContextMenuRequest(
+  value: unknown,
+): value is TerminalContextMenuRequest {
+  if (isStrictRecord(value, ["target"])) return value.target === "field";
+  return (
+    isStrictRecord(value, ["target", "hasSelection"]) &&
+    value.target === "terminal" &&
+    typeof value.hasSelection === "boolean"
+  );
+}
+
+export function isTerminalExportRequest(
+  value: unknown,
+): value is TerminalExportRequest {
+  if (isStrictRecord(value, ["kind", "overLimit"]))
+    return isTerminalExportKind(value.kind) && value.overLimit === true;
+  return (
+    isStrictRecord(value, ["kind", "text"]) &&
+    isTerminalExportKind(value.kind) &&
+    typeof value.text === "string" &&
+    utf8ByteLength(value.text) <= MAX_TERMINAL_EXPORT_BYTES
+  );
+}
+
+// The request for text the user chose to export, within the IPC bound.
+export function terminalExportRequest(
+  kind: TerminalExportKind,
+  text: string,
+): TerminalExportRequest {
+  return utf8ByteLength(text) <= MAX_TERMINAL_EXPORT_BYTES
+    ? { kind, text }
+    : { kind, overLimit: true };
+}
+
+// UTF-8 length without encoding a copy; a lone surrogate counts as U+FFFD.
+export function utf8ByteLength(value: string): number {
+  let bytes = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const unit = value.charCodeAt(index);
+    if (unit < 0x80) bytes += 1;
+    else if (unit < 0x800) bytes += 2;
+    else if (
+      unit >= 0xd800 &&
+      unit <= 0xdbff &&
+      (value.charCodeAt(index + 1) & 0xfc00) === 0xdc00
+    ) {
+      bytes += 4;
+      index += 1;
+    } else bytes += 3;
+  }
+  return bytes;
 }

@@ -252,6 +252,24 @@ export const englishMessages = {
     "config.json could not be written. Nothing was changed.",
   "settings.applicationError":
     "Unexpected application failure. Some settings may already be active; choose View -> Reload User Configuration again.",
+  "menu.exportSelection": "Export Selection…",
+  "menu.exportContent": "Export Terminal Content…",
+  "export.title.selection": "Export Selection",
+  "export.title.content": "Export Terminal Content",
+  "export.empty.selection": "The selection has no text to export.",
+  "export.empty.content": "The terminal has no text to export.",
+  "export.overLimit.selection":
+    "The selection is larger than the {limit} MiB export limit. Nothing was saved.",
+  "export.overLimit.content":
+    "The terminal content is larger than the {limit} MiB export limit. Nothing was saved.",
+  "export.overLimit.selectionDetail": "Select less text and export it again.",
+  "export.overLimit.contentDetail":
+    "Select part of the output and choose Export Selection.",
+  "export.failed": "Export Failed",
+  "export.dialogError":
+    "OMXTerm could not open the save dialog. Nothing was saved.",
+  "export.writeError": "OMXTerm could not save the exported text.",
+  "export.textFiles": "Text",
 } as const;
 
 export type MessageKey = keyof typeof englishMessages;

@@ -1,5 +1,6 @@
 import type {
   TerminalClipboardAction,
+  TerminalExportKind,
   TerminalFontZoom,
   TerminalSessionId,
   TerminalTabCommand,
@@ -26,6 +27,7 @@ import {
   type TerminalPane,
   type TerminalTab,
 } from "./terminal-panes";
+import { createExportOwnership } from "./terminal-export-ownership";
 
 export const TERMINAL_TAB_DRAG_DATA_TYPE = "application/x-omxterm-tab";
 
@@ -73,6 +75,8 @@ export interface TerminalTabs {
   zoom(command: TerminalFontZoom): void;
   clipboardAction(action: TerminalClipboardAction): void;
   find(): void;
+  // Reads the tab whose terminal context menu offered the export, once.
+  exportText(kind: TerminalExportKind): string | undefined;
   injectText(text: string): void;
   // The selected live terminal, captured for one snippet action.
   captureSnippetTarget(): SnippetTarget | undefined;
@@ -95,6 +99,7 @@ export function createTerminalTabs(
   let disposed = false;
   let pendingClose: TerminalTab | undefined;
   let closing = false;
+  const exportOwnership = createExportOwnership<TerminalPane>();
 
   const notifyEmpty = (reason?: "rendering-failure") => {
     if (disposed || closing || tabs.length !== 0) return;
@@ -208,7 +213,9 @@ export function createTerminalTabs(
   const mountPane = createPaneMount({
     document,
     options,
-    surfaceOptions: () => activeSurfaceOptions,
+    // A pane's Surface claims the export its terminal context menu offers.
+    surfaceOptions: (pane) =>
+      exportOwnership.surfaceOptions(pane, activeSurfaceOptions),
     zoomSteps: () => zoomSteps,
     disposed: () => disposed,
     selectedTab,
@@ -320,6 +327,7 @@ export function createTerminalTabs(
       else surface.selectAll();
     },
     find: () => focusedPane()?.surface?.find(),
+    exportText: exportOwnership.exportText,
     injectText(text) {
       void focusedPane()?.surface?.inject(text);
     },

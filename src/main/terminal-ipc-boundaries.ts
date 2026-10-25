@@ -89,13 +89,13 @@ export function createTerminalTitleRequests(
   };
 }
 
-// The Clipboard Boundary requests of one Terminal Window.
+// The Clipboard Boundary requests of one Terminal Window. Its context menu
+// request is validated separately because it also offers Explicit Export.
 export function clipboardRequests(
   options: {
     readonly writeClipboardText: (text: string) => void;
     readonly readClipboardText: () => string;
     readonly confirmPaste: (text: string) => Promise<boolean>;
-    readonly showClipboardContextMenu: () => void;
     readonly onClipboardError?: () => void;
   },
   reject: RejectBoundary,
@@ -125,10 +125,6 @@ export function clipboardRequests(
     },
     confirmPaste: (payload?: unknown) =>
       confirmClipboardPaste(payload, options, reject),
-    showClipboardContextMenu(payload?: unknown) {
-      if (payload === undefined) options.showClipboardContextMenu();
-      else reject("clipboard", "invalid-payload");
-    },
   };
 }
 

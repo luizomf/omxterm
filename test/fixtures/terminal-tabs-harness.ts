@@ -32,6 +32,7 @@ export function createFakeSurface() {
     inject: vi.fn(async () => {}),
     selectAll: vi.fn(),
     find: vi.fn(),
+    exportText: vi.fn(() => ""),
     dispose: vi.fn(),
   };
 }

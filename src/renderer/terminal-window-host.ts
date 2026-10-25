@@ -19,6 +19,8 @@ import type {
   TerminalSessionId,
   TerminalTabCommand,
 } from "../shared/terminal-contract";
+import type { TerminalExportOptions } from "./terminal-export-requests";
+import { subscribeToGuardedActions } from "./terminal-guarded-actions";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type { TerminalTheme } from "../shared/terminal-theme";
@@ -55,7 +57,7 @@ export interface TerminalWindowPageElements {
   readonly tabsContainer: HTMLElement;
 }
 
-interface TerminalWindowPageOptions {
+export interface TerminalWindowPageOptions extends TerminalExportOptions {
   readonly about?: AboutBridge;
   readonly settings?: SettingsBridge;
   readonly createAdapter: (
@@ -395,36 +397,6 @@ const MODAL_COMPETING_TAB_ACTIONS = new Set<TerminalTabCommand["action"]>([
   "focus-pane",
   "equalize-panes",
 ]);
-
-// Terminal-directed actions are ignored while a preview or About owns input.
-function subscribeToGuardedActions(
-  options: TerminalWindowPageOptions,
-  tabs: TerminalTabs,
-  blocked: () => boolean,
-  editBlocked: (action: TerminalClipboardAction) => void,
-  panelClipboard: (action: TerminalClipboardAction) => boolean,
-): () => void {
-  const removals = [
-    options.subscribeToFontZoom?.((command) => {
-      if (!blocked()) tabs.zoom(command);
-    }),
-    // While an overlay owns input, editing goes to its focused field, never
-    // to the terminal.
-    options.subscribeToClipboardActions?.((action) => {
-      if (blocked()) editBlocked(action);
-      else if (!panelClipboard(action)) tabs.clipboardAction(action);
-    }),
-    options.subscribeToTabBarToggle?.(() => {
-      if (!blocked()) tabs.toggleTabBar();
-    }),
-    options.subscribeToFind?.(() => {
-      if (!blocked()) tabs.find();
-    }),
-  ];
-  return () => {
-    for (const remove of removals) remove?.();
-  };
-}
 
 function installFileDrops(
   document: Document,

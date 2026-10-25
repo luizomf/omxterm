@@ -28,6 +28,7 @@ The portable Terminal Surface (`src/terminal-surface/`) receives a session Adapt
 - `scrollback.lines` (0 to 100,000, default 10,000) sets an approximate history-row target per pane. Ghostty evicts whole pages and enforces a 10,000,000-byte core ceiling. Setting `0` clears and disables history immediately.
 - Accepted user input (typing, paste, snippets, or dropped paths) returns the viewport to the live bottom; background output, focus, and selection do not jump the scroll position.
 - Desktops with a fine pointer use native scrolling even if touch hardware is present.
+- The prepared runtime adds `interaction.getBufferText()`, which reads the same retained rows as Select All (scrollback plus the current screen, or only the alternate screen) through the core's selection-text query, without changing the selection, link hover, cursor, or rendering state. Explicit export uses it.
 
 ### Input, links, and titles
 
@@ -127,7 +128,7 @@ Prepared SHA-256 digests:
 
 | Input                      | SHA-256                                                            |
 | -------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime  | `3c4dc8554c8ccc91f0b34ebea8a5638fe6592c1a973acc0a64dafcb33ab8387e` |
+| Restty JavaScript runtime  | `c55a8f4068e18131a3be762e49b8015a62d8fa4bf8b852edf60f5e85f0cb3380` |
 | Embedded-core chunk        | `03d79d4c745e3c74dd90082a100cbf85e5060e23ff9d16fba338b11d2db1e6be` |
 | Event declarations         | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core          | `a52f314c2e91e87394e67307d6b0067c8ba28f6b1e31e7587872b9c41ce88c41` |

@@ -87,6 +87,12 @@ Click the terminal to keep typing with the bar still open: your keys, including 
 
 Search only sees output the pane still holds in memory, so lines beyond your [scrollback limit](configuration.md) are not found. Each pane keeps its own search, and the query is never saved or logged.
 
+### Exporting terminal text
+
+Right-click the terminal to save text to a file. With text selected, choose **Export Selection…**; with nothing selected, choose **Export Terminal Content…** to save that pane's scrollback and screen (only the current screen while a full-screen program like `vim` uses the alternate screen). Pick where to save in the system dialog; cancelling saves nothing, and your selection stays as it was. Exports are limited to 16 MiB of text; if the content is larger, OMXTerm saves nothing and tells you, so select a smaller part and choose **Export Selection…**.
+
+The file is plain UTF-8 text. OMXTerm only saves when you ask; it never records the terminal automatically.
+
 ### Protected Paste
 
 When you paste multiple lines or control characters into a program that has not enabled **bracketed paste**, OMXTerm asks for confirmation before sending the text so pasted newlines do not accidentally execute commands right away.

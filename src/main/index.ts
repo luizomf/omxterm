@@ -3,7 +3,6 @@ import {
   BrowserWindow,
   clipboard,
   ipcMain,
-  Menu,
   screen,
   shell,
 } from "electron";
@@ -16,8 +15,12 @@ import { terminalIpc } from "../shared/terminal-ipc";
 import {
   terminalActionInvocations,
   terminalApplicationMenuTemplate,
-  terminalClipboardContextMenuTemplate,
 } from "./application-menu";
+import {
+  electronTerminalExportHost,
+  popupTerminalContextMenu,
+  saveTerminalExport,
+} from "./terminal-export";
 import * as applicationAbout from "./application-about";
 import { startApplicationSettings } from "./application-settings";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
@@ -297,19 +300,18 @@ app
                   currentTranslator(),
                 ),
               confirmPaste: () => nativeDialogs.confirmPaste(window),
-              showClipboardContextMenu() {
-                const send = (action: "copy" | "paste" | "select-all") =>
-                  window.webContents.send(terminalIpc.clipboardAction, action);
-                Menu.buildFromTemplate(
-                  terminalClipboardContextMenuTemplate(
-                    {
-                      copy: () => send("copy"),
-                      paste: () => send("paste"),
-                      selectAll: () => send("select-all"),
-                    },
-                    currentTranslator().t,
-                  ),
-                ).popup({ window });
+              showClipboardContextMenu: (request) =>
+                popupTerminalContextMenu(
+                  window,
+                  request,
+                  currentTranslator().t,
+                ),
+              saveTerminalExport: async (request) => {
+                await saveTerminalExport(
+                  request,
+                  electronTerminalExportHost(window),
+                  currentTranslator().t,
+                );
               },
             });
 

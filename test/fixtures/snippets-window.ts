@@ -87,6 +87,7 @@ export async function snippetsWindow() {
       paste: vi.fn(async () => {}),
       selectAll: vi.fn(),
       find: vi.fn(),
+      exportText: vi.fn(() => ""),
     };
   }
   const sessionHandlers: TerminalSessionHandlers[] = [];

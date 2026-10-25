@@ -11,6 +11,10 @@ import type { createOutputStressHarness } from "./restty-host-output-stress";
 import type { LocalImageRequest } from "../../src/shared/local-image";
 import { exerciseResttyOrdinaryGestures } from "./restty-link-gestures";
 import { exerciseResttyScrollbackSearch } from "./restty-host-search";
+import {
+  exerciseResttyTerminalExport,
+  type ResttyExportEvidenceSink,
+} from "./restty-host-export";
 
 export type FocusedHostOracle =
   | "output-checkpoints"
@@ -18,7 +22,8 @@ export type FocusedHostOracle =
   | "image-palette"
   | "image-palette-reload"
   | "gesture-routing"
-  | "scrollback-search";
+  | "scrollback-search"
+  | "terminal-export";
 
 export function focusedHostOracle(
   arguments_: readonly string[],
@@ -30,6 +35,7 @@ export function focusedHostOracle(
     "image-palette-reload",
     "gesture-routing",
     "scrollback-search",
+    "terminal-export",
   ] as const)
     if (arguments_.includes(`--oracle-${oracle}`)) return oracle;
   return undefined;
@@ -48,6 +54,7 @@ export async function runFocusedResttyHostOracle(options: {
   readonly localImageRequests: LocalImageRequest[];
   readonly deliverOutputs: Array<(data: string) => void>;
   readonly resizes: Array<Array<{ cols: number; rows: number }>>;
+  readonly exportEvidence: ResttyExportEvidenceSink;
   readonly ptyExits: () => number;
   readonly sessionStarts: () => number;
   readonly sessionExited: (index: number) => boolean;
@@ -98,6 +105,19 @@ export async function runFocusedResttyHostOracle(options: {
         window,
         deliverOutput: options.deliverOutputs[0]!,
         inputs: options.inputs[0]!,
+        waitFor,
+      }),
+    };
+  } else if (oracle === "terminal-export") {
+    await waitFor(
+      () => (options.resizes[0]?.length ?? 0) > 0,
+      "export Surface sized",
+    );
+    evidence = {
+      exportEvidence: await exerciseResttyTerminalExport({
+        window,
+        deliverOutput: options.deliverOutputs[0]!,
+        evidence: options.exportEvidence,
         waitFor,
       }),
     };

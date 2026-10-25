@@ -340,3 +340,38 @@ describe("Terminal Panes", () => {
     for (const share of shares()) expect(share).toBeCloseTo(1 / 3);
   });
 });
+
+describe("pane export ownership", () => {
+  it("exports from the pane whose menu offered it, never a later focus or an ended pane", async () => {
+    const clipboard = {
+      writeText: vi.fn(async () => {}),
+      readText: vi.fn(async () => ""),
+      confirmPaste: vi.fn(async () => true),
+      requestContextMenu: vi.fn(),
+    };
+    const harness = createTabsHarness({
+      tabSize: { width: 1200, height: 800 },
+      surfaceOptions: { clipboard },
+    });
+    await harness.tabs.ready;
+    harness.sessionAdapters[0]!.resize({ cols: 120, rows: 40 });
+    await split(harness, "right");
+    harness.surfaces[0]!.exportText.mockReturnValue("left pane");
+    harness.surfaces[1]!.exportText.mockReturnValue("right pane");
+    const openMenu = (index: number) =>
+      harness.mountedSurfaceOptions[index]!.clipboard!.requestContextMenu({
+        target: "terminal",
+        hasSelection: false,
+      });
+
+    openMenu(0);
+    harness.tabs.handleCommand({ action: "focus-pane", target: "next" });
+    expect(harness.tabs.exportText("content")).toBe("left pane");
+    expect(harness.surfaces[1]!.exportText).not.toHaveBeenCalled();
+
+    openMenu(0);
+    harness.adapters[0]!.handlers!.onExit({ exitCode: 0, signal: 9 });
+    expect(harness.tabs.exportText("content")).toBeUndefined();
+    expect(harness.surfaces[0]!.exportText).toHaveBeenCalledOnce();
+  });
+});

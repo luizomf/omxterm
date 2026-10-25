@@ -47,6 +47,7 @@ it("owns input while open: blocks terminal actions and edits its own field", asy
     paste: vi.fn(async () => {}),
     selectAll: vi.fn(),
     find: vi.fn(),
+    exportText: vi.fn(() => ""),
   };
   const change = vi.fn(
     async (change: SettingsChange): Promise<SettingsResult> => ({

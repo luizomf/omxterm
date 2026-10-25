@@ -1,4 +1,5 @@
 import type { MenuItemConstructorOptions } from "electron";
+import type { TerminalExportKind } from "../shared/terminal-contract";
 import {
   DEFAULT_LANGUAGE,
   translatorFor,
@@ -334,7 +335,9 @@ export function terminalClipboardContextMenuTemplate(
     readonly copy: () => void;
     readonly paste: () => void;
     readonly selectAll: () => void;
+    readonly exportText: () => void;
   },
+  exportKind: TerminalExportKind | undefined,
   t: Translator["t"] = translatorFor(DEFAULT_LANGUAGE).t,
 ): MenuItemConstructorOptions[] {
   return [
@@ -342,5 +345,18 @@ export function terminalClipboardContextMenuTemplate(
     { label: t("menu.paste"), click: actions.paste },
     { type: "separator" },
     { label: t("menu.selectAll"), click: actions.selectAll },
+    ...(exportKind === undefined
+      ? []
+      : ([
+          { type: "separator" },
+          {
+            label: t(
+              exportKind === "selection"
+                ? "menu.exportSelection"
+                : "menu.exportContent",
+            ),
+            click: actions.exportText,
+          },
+        ] satisfies MenuItemConstructorOptions[])),
   ];
 }

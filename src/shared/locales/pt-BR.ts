@@ -265,4 +265,23 @@ export const brazilianPortugueseMessages: Readonly<
     "Não foi possível gravar config.json. Nada foi alterado.",
   "settings.applicationError":
     "Falha inesperada ao aplicar. Algumas configurações podem já estar ativas; escolha Exibir -> Recarregar Configuração novamente.",
+  "menu.exportSelection": "Exportar Seleção…",
+  "menu.exportContent": "Exportar Conteúdo do Terminal…",
+  "export.title.selection": "Exportar Seleção",
+  "export.title.content": "Exportar Conteúdo do Terminal",
+  "export.empty.selection": "A seleção não tem texto para exportar.",
+  "export.empty.content": "O terminal não tem texto para exportar.",
+  "export.overLimit.selection":
+    "A seleção é maior que o limite de exportação de {limit} MiB. Nada foi salvo.",
+  "export.overLimit.content":
+    "O conteúdo do terminal é maior que o limite de exportação de {limit} MiB. Nada foi salvo.",
+  "export.overLimit.selectionDetail":
+    "Selecione menos texto e exporte de novo.",
+  "export.overLimit.contentDetail":
+    "Selecione parte da saída e escolha Exportar Seleção.",
+  "export.failed": "Falha na Exportação",
+  "export.dialogError":
+    "O OMXTerm não conseguiu abrir o diálogo de salvar. Nada foi salvo.",
+  "export.writeError": "O OMXTerm não conseguiu salvar o texto exportado.",
+  "export.textFiles": "Texto",
 };
