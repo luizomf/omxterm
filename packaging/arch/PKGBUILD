@@ -7,11 +7,13 @@
 # npm and Electron downloads need network access during build(). This file is
 # not published to the AUR. Keep pkgver equal to package.json's version with
 # "-" removed (pacman versions cannot contain "-"; "0.1.0dev.0" sorts before
-# "0.1.0").
+# "0.1.0"). epoch=1 makes these versions newer than the date-versioned
+# packages (YY.MM.DD) that pkgbuild/PKGBUILD built before 0.22.1.
 
 pkgname=omxterm
-pkgver=0.22.1dev.0
+pkgver=0.22.1
 pkgrel=1
+epoch=1
 pkgdesc='Open-source terminal with split panes, SSH sessions, an SFTP file manager, file hover previews, output highlighting, a command manager and an optional AI assistant'
 arch=('x86_64' 'aarch64')
 url='https://github.com/ruscher/omxterm'

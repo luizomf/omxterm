@@ -160,7 +160,11 @@ deb:
   category: Utility;TerminalEmulator
   executableArgs:
     - --no-sandbox
-  # electron-builder's default dependencies, plus fontconfig for fc-match.
+  # electron-builder's default dependencies, plus fontconfig for fc-match and
+  # the ALSA and GBM libraries the Electron binary links against, which a
+  # minimal Debian or Ubuntu does not have. The real ALSA package comes first:
+  # on Ubuntu 24.04 the virtual libasound2 can resolve to the OSS emulation
+  # (liboss4-salsa-asound2), which lacks symbols Electron needs.
   depends:
     - libgtk-3-0
     - libnotify4
@@ -172,6 +176,8 @@ deb:
     - libuuid1
     - libsecret-1-0
     - fontconfig
+    - libasound2t64 | libasound2
+    - libgbm1
   recommends:
     - openssh-client
   afterInstall: packaging/linux/after-install.tpl
@@ -185,7 +191,9 @@ rpm:
   category: Utility;TerminalEmulator
   executableArgs:
     - --no-sandbox
-  # electron-builder's default dependencies, plus fontconfig for fc-match.
+  # electron-builder's default dependencies, plus fontconfig for fc-match and
+  # the ALSA and GBM libraries the Electron binary links against (Fedora and
+  # openSUSE name them differently).
   depends:
     - gtk3
     - libnotify
@@ -196,6 +204,8 @@ rpm:
     - at-spi2-core
     - (libuuid or libuuid1)
     - fontconfig
+    - (alsa-lib or libasound2)
+    - (mesa-libgbm or libgbm1)
   afterInstall: packaging/linux/after-install.tpl
   afterRemove: packaging/linux/after-remove.tpl
   fpm:
