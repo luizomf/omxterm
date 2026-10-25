@@ -30,8 +30,7 @@ export const SHORTCUT_CAPTURE_FLAG = "--fixture-shortcut-capture";
 const PTY_PREFIX = "__SHORTCUT_PTY__";
 const ESCAPE = "\u001b[27;1:1u\u001b[27;1:3u";
 
-// A real raw native PTY child reports every received byte, not an Adapter tap
-// that withholds input. Only fixture-generated input is used in this scenario.
+// Raw PTY child reports every received byte; input is fixture-only.
 export function shortcutCaptureLaunchRequest(): Extract<
   LaunchRequest,
   { kind: "explicit-command" }
@@ -129,7 +128,6 @@ async function createCaptureRouting(options: ShortcutCaptureOptions) {
     platform: process.platform,
     getInstalledFontFamilyMetrics: async () => undefined,
   };
-  let install = () => {};
   const reloader = createUserConfigurationReloader({
     initial: {
       configuration: {
@@ -139,14 +137,13 @@ async function createCaptureRouting(options: ShortcutCaptureOptions) {
       userFileErrors: [],
     },
     load: () => loadUserConfiguration(loadOptions),
-    apply(state, committed) {
-      options.apply(state, committed);
-      install();
-    },
+    apply: options.apply,
   });
   let actionCount = 0;
   let menuCount = 0;
   let starts = 0;
+  let ownedRepeats = 0;
+  let ownedReleases = 0;
   const unexpected = () => assert.fail("Unexpected native shortcut action");
   const actions = {
     newWindow: unexpected,
@@ -186,26 +183,23 @@ async function createCaptureRouting(options: ShortcutCaptureOptions) {
     equalizeSelectedPanes: unexpected,
   };
   const invocations = terminalActionInvocations(actions);
-  install = () => {
-    installApplicationMenu(
-      terminalApplicationMenuTemplate(
-        "OMXTerm",
-        {
-          ...actions,
-          requestQuit() {
-            menuCount += 1;
-            actions.requestQuit();
-          },
-          toggleSelectedFullScreen() {
-            menuCount += 1;
-            actions.toggleSelectedFullScreen();
-          },
+  installApplicationMenu(
+    terminalApplicationMenuTemplate(
+      "OMXTerm",
+      {
+        ...actions,
+        requestQuit() {
+          menuCount += 1;
+          actions.requestQuit();
         },
-        reloader.current().configuration.keybinds,
-      ),
-    );
-  };
-  install();
+        toggleSelectedFullScreen() {
+          menuCount += 1;
+          actions.toggleSelectedFullScreen();
+        },
+      },
+      reloader.current().configuration.keybinds,
+    ),
+  );
   const capture = createKeybindCapture(process.platform);
   deliverKeybindsFromKeyEvents(
     contents,
@@ -215,12 +209,11 @@ async function createCaptureRouting(options: ShortcutCaptureOptions) {
     {
       release: capture.release,
       intercept(target, event) {
-        // Deliberate negative controls weaken only fixture composition. The same
-        // production capture/delivery/menu/renderer/PTY paths otherwise execute.
         if (options.control === "repeat" && event.isAutoRepeat) return false;
-        if (options.control === "release" && event.type === "keyUp")
-          return false;
-        return capture.intercept(target, event);
+        const owned = capture.intercept(target, event);
+        if (owned && event.isAutoRepeat) ownedRepeats += 1;
+        if (owned && event.type === "keyUp") ownedReleases += 1;
+        return owned;
       },
     },
   );
@@ -248,6 +241,10 @@ async function createCaptureRouting(options: ShortcutCaptureOptions) {
     starts: () => starts,
     actions: () => actionCount,
     menus: () => menuCount,
+    receipts: () => ({
+      nativeOwnedRepeats: ownedRepeats,
+      nativeOwnedReleases: ownedReleases,
+    }),
     dispose() {
       settings.dispose();
       window.removeListener("blur", releaseCapture);
@@ -369,6 +366,13 @@ export async function exerciseShortcutCapture(options: ShortcutCaptureOptions) {
       send("keyDown", key, [...modifiers, "isautorepeat"]);
       send("keyDown", key, [...modifiers, "isautorepeat"]);
       send("keyUp", key, [...modifiers]);
+      if (options.control === "release" && phase === "held-fullscreen") {
+        // Prevented downs can suppress native ups. An injected DOM release
+        // proves the PTY oracle, not native-event delivery.
+        await evaluate(
+          "window.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', code: 'Escape', bubbles: true }))",
+        );
+      }
       await finishSample(before, phase);
     }
     {
@@ -497,6 +501,7 @@ export async function exerciseShortcutCapture(options: ShortcutCaptureOptions) {
       syntheticInput: true,
       physicalLayout: false,
       unchangedConfiguration: true,
+      ...routing.receipts(),
     };
   } finally {
     routing.dispose();

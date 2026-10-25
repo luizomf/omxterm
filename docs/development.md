@@ -179,8 +179,10 @@ overlapping invalid/modifier releases, fresh input after a missing release,
 page departure without button blur, window blur and the real 30-second timeout.
 An exact Kitty press/release control fences each empty-input assertion; real
 fullscreen and guarded Quit callbacks supply positive action/menu controls.
-Two deliberately weakened fixture compositions must fail the same action/PTY
-oracles. Run it alone with `npm test -- test/integration/settings-shortcut-native.test.ts`.
+A deliberately bypassed native repeat must fail the action oracle; an explicitly
+injected unmatched DOM release must fail the actual PTY oracle. Chromium can omit
+a native release after a prevented down, so the fixture reports observed owned
+native repeats/releases rather than assuming both arrived. Run it alone with `npm test -- test/integration/settings-shortcut-native.test.ts`.
 Its Electron `sendInputEvent` gestures are synthetic, not physical OS/layout or
 AltGr qualification; the native menu positive control calls its actual callback,
 not OS menu navigation. The ordinary fixture supervisor owns all windows/PTYs.

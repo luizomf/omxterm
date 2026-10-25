@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
 import { buildFixture } from "../fixtures/window-chrome-build";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
+import type { exerciseShortcutCapture } from "../fixtures/settings-shortcut-native";
 
 const executable = createRequire(import.meta.url)("electron") as string;
 const prefix = "__OMXTERM_WINDOW_CHROME_RESULT__";
@@ -65,9 +66,17 @@ describe.skipIf(process.platform !== "linux")(
             .split("\n")
             .filter((line) => line.startsWith(prefix));
           expect(results).toHaveLength(1);
+          const observation = JSON.parse(results[0]!.slice(prefix.length)) as {
+            shortcuts: Awaited<ReturnType<typeof exerciseShortcutCapture>>;
+          };
+          const { nativeOwnedRepeats, nativeOwnedReleases, ...shortcuts } =
+            observation.shortcuts;
+          expect(nativeOwnedRepeats).toBeGreaterThanOrEqual(4);
           expect(
-            JSON.parse(results[0]!.slice(prefix.length)) as unknown,
-          ).toEqual({
+            Number.isSafeInteger(nativeOwnedReleases) &&
+              nativeOwnedReleases >= 0,
+          ).toBe(true);
+          expect({ shortcuts }).toEqual({
             shortcuts: {
               phases: [
                 "held-fullscreen",
