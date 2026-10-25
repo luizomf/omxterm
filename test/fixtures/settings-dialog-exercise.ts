@@ -57,7 +57,8 @@ export function createSettingsExercise(
   // same capture Settings starts, and records actions instead of running them.
   const capture = createKeybindCapture(process.platform);
   const window = getWindow();
-  const releaseCapture = () => capture.release(window.webContents);
+  const captureTarget = window.webContents;
+  const releaseCapture = () => capture.release(captureTarget);
   window.on("blur", releaseCapture);
   const delivered: string[] = [];
   deliverKeybindsFromKeyEvents(
