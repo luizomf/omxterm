@@ -147,6 +147,19 @@ browser, observes focus leaving OMXTerm, then returns focus to the dialog.
 PNG captures. These checks still require an idle unlocked desktop; they do not
 claim physical keyboard navigation or pixel parity across platforms.
 
+The `application-about` startup fixture stops before its first window. Its
+`published-failure` control publishes the real observation, requests normal Quit
+to latch production shutdown, then prevents the default `will-quit` exit and
+injects actual exit code 3. The supervisor must report code 3 with no signal;
+diagnostics never substitute for that outcome. The timeout controls require the
+same producer/role to reach the menu (`missing-result`) or successful atomic
+observation publication (`published-hang`). Bounded metadata outside the removed
+profile records publication completion, Quit progression and unexpected window
+creation; missing/invalid evidence or any window fails the phase check. These
+checks diagnose fixture ordering, not the exact cause of a native SIGTRAP.
+Headless coverage uses the actual fixture callback and production shutdown owner:
+`npm test -- test/unit/application-about-startup.test.ts test/unit/application-about-diagnostics.test.ts test/unit/terminal-shutdown.test.ts test/unit/native-fixture-completion.test.ts`.
+
 ### Opt-in native test suites
 
 Several specialized integration suites are skipped by default and enabled via environment variables:

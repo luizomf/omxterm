@@ -8,6 +8,12 @@ const stages = [
   "relaunch-registration",
   "menu-observation",
   "observation-publication",
+  "observation-published",
+  "quit-request",
+  "before-quit",
+  "will-quit",
+  "failure-exit",
+  "window-created",
   "completion-publication",
   "startup-dialog",
   "watchdog",
@@ -96,6 +102,56 @@ export function createAboutDiagnostics(file: string | undefined) {
       );
     },
   };
+}
+
+/** Intended-phase evidence only; actual outcome and cleanup remain supervisor-owned. */
+export function hasAboutPhaseEvidence(
+  diagnostics: Awaited<ReturnType<typeof readAboutDiagnostics>>,
+  mode:
+    | "development"
+    | "packaged"
+    | "missing-result"
+    | "published-hang"
+    | "published-failure",
+): boolean {
+  if (
+    diagnostics.status !== "available" ||
+    diagnostics.records.some((record) => record.stage === "window-created")
+  )
+    return false;
+  // A previous initial producer must not cover a replacement that stalled.
+  const start = diagnostics.records.findLastIndex(
+    (record) => record.stage === "producer-identity",
+  );
+  const identity = diagnostics.records[start];
+  if (!identity || identity.role === "unknown") return false;
+  const producer = diagnostics.records
+    .slice(start)
+    .filter(
+      (record) => record.pid === identity.pid && record.role === identity.role,
+    );
+  if (
+    producer.some(
+      (record) =>
+        record.category !== "none" ||
+        record.stage === "startup-dialog" ||
+        record.stage === "watchdog",
+    )
+  )
+    return false;
+  const required: AboutStage[] = [
+    "producer-identity",
+    "production-import",
+    "menu-observation",
+  ];
+  if (mode !== "missing-result") required.push("observation-published");
+  if (mode !== "missing-result" && mode !== "published-hang")
+    required.push("quit-request", "before-quit", "will-quit");
+  if (mode === "published-failure") required.push("failure-exit");
+  let reached = 0;
+  for (const record of producer)
+    if (record.stage === required[reached]) reached += 1;
+  return reached === required.length;
 }
 
 function isAboutDiagnostic(value: unknown): value is AboutDiagnostic {
