@@ -85,39 +85,45 @@ async function broker(
   return { askpass, root };
 }
 
+// Stored passwords use a Unix socket; Windows keeps ssh's own prompt.
+const unixOnly = process.platform === "win32";
+
 describe("SSH askpass broker", () => {
-  it("answers one password per launch token and nothing else", async () => {
-    let time = 1_000;
-    const { askpass, root } = await broker(undefined, () => time);
-    const environment = askpass.environment("session:db");
-    expect(Object.keys(environment).sort()).toEqual([
-      "OMXTERM_ASKPASS_SOCKET",
-      "OMXTERM_ASKPASS_TOKEN",
-      "SSH_ASKPASS",
-      "SSH_ASKPASS_REQUIRE",
-    ]);
-    expect(environment.SSH_ASKPASS_REQUIRE).toBe("force");
-    expect(JSON.stringify(environment)).not.toContain("s3cret");
-    const socketPath = environment.OMXTERM_ASKPASS_SOCKET!;
-    expect((await stat(socketPath)).mode & 0o777).toBe(0o600);
-    expect((await stat(path.join(root, "askpass"))).mode & 0o777).toBe(0o700);
+  it.skipIf(unixOnly)(
+    "answers one password per launch token and nothing else",
+    async () => {
+      let time = 1_000;
+      const { askpass, root } = await broker(undefined, () => time);
+      const environment = askpass.environment("session:db");
+      expect(Object.keys(environment).sort()).toEqual([
+        "OMXTERM_ASKPASS_SOCKET",
+        "OMXTERM_ASKPASS_TOKEN",
+        "SSH_ASKPASS",
+        "SSH_ASKPASS_REQUIRE",
+      ]);
+      expect(environment.SSH_ASKPASS_REQUIRE).toBe("force");
+      expect(JSON.stringify(environment)).not.toContain("s3cret");
+      const socketPath = environment.OMXTERM_ASKPASS_SOCKET!;
+      expect((await stat(socketPath)).mode & 0o777).toBe(0o600);
+      expect((await stat(path.join(root, "askpass"))).mode & 0o777).toBe(0o700);
 
-    const token = environment.OMXTERM_ASKPASS_TOKEN!;
-    expect(await ask(socketPath, "forged")).toBe("");
-    expect(await ask(socketPath, token)).toBe("s3cret pass");
-    // A retry after a wrong password is typed at the terminal instead.
-    expect(await ask(socketPath, token)).toBe("");
-    expect(
-      await ask(
-        socketPath,
-        askpass.environment("session:other").OMXTERM_ASKPASS_TOKEN!,
-      ),
-    ).toBe("");
+      const token = environment.OMXTERM_ASKPASS_TOKEN!;
+      expect(await ask(socketPath, "forged")).toBe("");
+      expect(await ask(socketPath, token)).toBe("s3cret pass");
+      // A retry after a wrong password is typed at the terminal instead.
+      expect(await ask(socketPath, token)).toBe("");
+      expect(
+        await ask(
+          socketPath,
+          askpass.environment("session:other").OMXTERM_ASKPASS_TOKEN!,
+        ),
+      ).toBe("");
 
-    const late = askpass.environment("session:db").OMXTERM_ASKPASS_TOKEN!;
-    time += ASKPASS_TOKEN_LIFETIME_MS + 1;
-    expect(await ask(socketPath, late)).toBe("");
-  });
+      const late = askpass.environment("session:db").OMXTERM_ASKPASS_TOKEN!;
+      time += ASKPASS_TOKEN_LIFETIME_MS + 1;
+      expect(await ask(socketPath, late)).toBe("");
+    },
+  );
 
   it("quotes the launcher's paths as literals", () => {
     expect(askpassLauncher("/opt/it's/omxterm", "/run/a b/askpass.cjs")).toBe(
@@ -131,37 +137,40 @@ describe("SSH askpass broker", () => {
     expect(() => new Script(ASKPASS_HELPER_SOURCE)).not.toThrow();
   });
 
-  it("runs the helper: main answers a password prompt, other prompts never get it", async () => {
-    const { askpass, root } = await broker();
-    const helper = path.join(root, "askpass.cjs");
-    expect(await readFile(helper, "utf8")).toBe(ASKPASS_HELPER_SOURCE);
-    const environment = {
-      ...process.env,
-      ...askpass.environment("session:db"),
-    };
-    // The helper runs detached, without a controlling terminal, so its
-    // terminal fallback cancels instead of waiting for input.
-    const run = (prompt: string) =>
-      new Promise<{ status: number | null; stdout: string }>((resolve) => {
-        const child = spawn(process.execPath, [helper, prompt], {
-          env: environment,
-          stdio: ["ignore", "pipe", "ignore"],
-          detached: true,
+  it.skipIf(unixOnly)(
+    "runs the helper: main answers a password prompt, other prompts never get it",
+    async () => {
+      const { askpass, root } = await broker();
+      const helper = path.join(root, "askpass.cjs");
+      expect(await readFile(helper, "utf8")).toBe(ASKPASS_HELPER_SOURCE);
+      const environment = {
+        ...process.env,
+        ...askpass.environment("session:db"),
+      };
+      // The helper runs detached, without a controlling terminal, so its
+      // terminal fallback cancels instead of waiting for input.
+      const run = (prompt: string) =>
+        new Promise<{ status: number | null; stdout: string }>((resolve) => {
+          const child = spawn(process.execPath, [helper, prompt], {
+            env: environment,
+            stdio: ["ignore", "pipe", "ignore"],
+            detached: true,
+          });
+          let stdout = "";
+          child.stdout.setEncoding("utf8");
+          child.stdout.on("data", (data: string) => (stdout += data));
+          child.on("close", (status) => resolve({ status, stdout }));
         });
-        let stdout = "";
-        child.stdout.setEncoding("utf8");
-        child.stdout.on("data", (data: string) => (stdout += data));
-        child.on("close", (status) => resolve({ status, stdout }));
+      const hostKey = await run(
+        "Are you sure you want to continue connecting (yes/no/[fingerprint])? ",
+      );
+      expect(hostKey.stdout).not.toContain("s3cret");
+      expect(await run("deploy@db.internal's password: ")).toEqual({
+        status: 0,
+        stdout: "s3cret pass\n",
       });
-    const hostKey = await run(
-      "Are you sure you want to continue connecting (yes/no/[fingerprint])? ",
-    );
-    expect(hostKey.stdout).not.toContain("s3cret");
-    expect(await run("deploy@db.internal's password: ")).toEqual({
-      status: 0,
-      stdout: "s3cret pass\n",
-    });
-  });
+    },
+  );
 });
 
 describe("Stored session passwords", () => {
