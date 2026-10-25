@@ -82,6 +82,7 @@ import { applicationMenuActions } from "./application-menu-actions";
 import { registerCommandPaletteActions } from "./command-palette-actions";
 import { registerMainMenu, terminalMainMenuTemplate } from "./main-menu";
 import { showTerminalContextMenu } from "./terminal-context-menu";
+import type { TerminalContextMenuRequest } from "../shared/terminal-contract";
 import { commandIpc } from "../shared/command-ipc";
 import { sessionIpc } from "../shared/session-ipc";
 import { launchTerminalSession } from "./session-launch";
@@ -111,6 +112,33 @@ const shutdown = registerTerminalShutdown(app, {
   application: () => terminalApplication,
   disposeSessions: () => disposeTerminalSessions(),
 });
+
+// One window's Clipboard Boundary actions and right-click menu. A split
+// pane's menu adds Close Pane with the current keybind.
+function windowClipboardOptions(
+  window: BrowserWindow,
+  keybinds: () => { readonly closePane: string | null },
+) {
+  return {
+    writeClipboardText: (text: string) => clipboard.writeText(text),
+    readClipboardText: () =>
+      isFilePathPlatform(process.platform)
+        ? readClipboardPathInsertion(clipboard, process.platform)
+        : clipboard.readText(),
+    onClipboardError: showClipboardError,
+    confirmPaste: () => confirmProtectedPaste(window),
+    showClipboardContextMenu: (request?: TerminalContextMenuRequest) =>
+      showTerminalContextMenu(
+        window,
+        request?.closePane
+          ? {
+              click: () => void terminalApplication?.closeSelectedPane(),
+              accelerator: keybinds().closePane,
+            }
+          : undefined,
+      ),
+  };
+}
 
 const commandLine = readStartupCommandLine(app);
 
@@ -330,12 +358,10 @@ app
                     mainTranslator().t("failure.externalLink.title"),
                     mainTranslator().t("failure.externalLink.message"),
                   ),
-                writeClipboardText: (text) => clipboard.writeText(text),
-                readClipboardText: () =>
-                  isFilePathPlatform(process.platform)
-                    ? readClipboardPathInsertion(clipboard, process.platform)
-                    : clipboard.readText(),
-                onClipboardError: showClipboardError,
+                ...windowClipboardOptions(
+                  window,
+                  () => configurationReloader.current().configuration.keybinds,
+                ),
                 loadSnippets: () =>
                   loadTerminalSnippets({
                     environment: process.env,
@@ -343,8 +369,6 @@ app
                   }),
                 loadLocalImage: (request, abortSignal) =>
                   loadLocalImageForWindow(window, request, abortSignal),
-                confirmPaste: () => confirmProtectedPaste(window),
-                showClipboardContextMenu: () => showTerminalContextMenu(window),
               });
 
               window.once("ready-to-show", () =>

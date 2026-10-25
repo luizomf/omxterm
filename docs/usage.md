@@ -142,7 +142,7 @@ Use **Terminal → Split Right** or **Split Down** to divide the focused pane. E
 - Click a pane, or use the pane focus shortcuts, to move focus. The focused pane of a split shows a thin accent edge.
 - Drag a divider to resize, or focus a divider with `Tab` and use the arrow keys. **Equalize Panes** gives every pane the same share.
 - **Maximize or Restore Pane** temporarily shows only the focused pane; the others keep running.
-- **Close Pane** ends only the focused pane's session (it asks first when a program is running, like Close Tab). Closing a tab closes all of its panes, and when a pane's shell exits, its neighbor takes its place.
+- **Close Pane** ends only the focused pane's session (it asks first when a program is running, like Close Tab). In a split tab you can also right-click a pane and choose **Close Pane**; right-clicking focuses that pane first, so Copy, Paste and Save Output act on it too. Closing a tab closes all of its panes, and when a pane's shell exits, its neighbor takes its place.
 - A tab holds up to 16 panes. Tab labels show the focused pane's title and the pane count, for example `vim (3)`.
 
 ### Broadcasting input

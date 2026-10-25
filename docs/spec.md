@@ -403,7 +403,9 @@ is an independent Terminal Surface and Live Terminal Session.
   title, clipboard actions, paste, snippets and dropped paths.
 - An ordinary pane exit removes that pane and focuses its neighbor; the last
   pane follows the existing tab and window lifecycle. Signal exits keep their
-  native failure acknowledgement. Close Pane ends only the focused pane and asks
+  native failure acknowledgement. Right-clicking a pane focuses it before the
+  native context menu opens; in a split tab that menu also offers Close Pane
+  with the current `closePane` keybind. Close Pane ends only the focused pane and asks
   first only when that pane's session is Busy. Close Tab asks when any pane of
   the tab is Busy.
 - A tab holds at most 16 panes.
