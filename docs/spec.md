@@ -505,7 +505,10 @@ The Restty Terminal Surface uses the existing Terminal Tabs, session Adapter and
 real PTY lifecycle for ordinary Unicode input/output, grid resize, focus,
 Default Shell and explicit-command startup, shell exit, tab close and
 renderer-loss cleanup. It requires the bundled Terminal Font Stack TTFs, Ghostty
-core and an actual WebGL2 backend before a PTY starts. Initialization failure
+core and an actual WebGL2 backend before a PTY starts. On Linux, main allows
+Chromium's bundled SwiftShader WebGL when hardware WebGL2 is unavailable; usable
+hardware, the GPU blocklist and driver selection are unchanged (ADR 0038).
+Initialization failure
 releases partial resources and starts no shell. Closing an initializing Surface
 is cancellation, not a rendering failure: font, runtime and session-start
 continuations cannot notify a removed owner or start a session after

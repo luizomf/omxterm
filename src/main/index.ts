@@ -29,6 +29,7 @@ import {
 } from "./command-line-options";
 import { applyLinuxDisplayBackendDefault } from "./linux-display-backend";
 import { applyChromiumSandboxPolicy } from "./chromium-sandbox-policy";
+import { applyChromiumGpuPolicy } from "./chromium-gpu-policy";
 import {
   isFilePathPlatform,
   readClipboardPathInsertion,
@@ -114,6 +115,8 @@ const shutdown = registerTerminalShutdown(app, {
 const commandLine = readStartupCommandLine(app);
 
 applyChromiumSandboxPolicy(app.commandLine);
+
+applyChromiumGpuPolicy(app.commandLine);
 
 // --help and --version exit without a window and an invalid option is
 // reported by this process, so neither relaunches for the display backend.
