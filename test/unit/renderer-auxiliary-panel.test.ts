@@ -246,6 +246,12 @@ describe("window auxiliary panel", () => {
   it("uses keyboard pixel limits, exposes values and consumes only separator resize keys", () => {
     const f = fixture(600);
     f.panel.toggle("a");
+    expect(f.separator.tabIndex).toBe(0);
+    expect(f.separator.getAttribute("role")).toBe("separator");
+    expect(f.separator.getAttribute("aria-orientation")).toBe("vertical");
+    expect(f.separator.getAttribute("aria-label")).toBeTruthy();
+    expect(f.separator.getAttribute("aria-valuemin")).toBe("220");
+    f.separator.focus();
     expect(f.key("ArrowLeft").defaultPrevented).toBe(true);
     expect(f.root.style.width).toBe("290px");
     f.key("ArrowRight");
@@ -255,6 +261,9 @@ describe("window auxiliary panel", () => {
     expect(f.separator.getAttribute("aria-valuemax")).toBe("414");
     expect(f.separator.getAttribute("aria-valuenow")).toBe("414");
     expect(f.separator.getAttribute("aria-valuetext")).toBe("414 pixels wide");
+    expect(document.activeElement).toBe(f.separator);
+    expect(f.key("ArrowUp").defaultPrevented).toBe(false);
+    expect(f.key("Enter").defaultPrevented).toBe(false);
     expect(
       f.key("ArrowLeft", f.root.querySelector("input")!).defaultPrevented,
     ).toBe(false);

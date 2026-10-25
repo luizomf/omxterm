@@ -103,10 +103,21 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   sessions. Dividers drag with the pointer and move with arrow keys as
   `role="separator"` controls, limited by the same minimum; a later resize or
   zoom that cannot fit every minimum keeps every session and the layout; an
-  impossible divider move retains the existing proportions.
+  impossible divider move retains the existing proportions. Dividers paint a
+  1 px line within the existing 4 px resize target/allocation; hover and drag
+  share a neutral highlight, and keyboard focus highlights the line rather than
+  outlining the target.
   Exactly one pane per tab is focused: it receives keyboard input and every
-  terminal-directed action, shows a theme-derived ring without dimming other
-  panes, and supplies the tab and window title. Clicking a pane focuses it, and
+  terminal-directed action and supplies the tab and window title. In a split tab,
+  its only focus marker is a 1 px top line inset horizontally by that Surface's
+  left/right padding, with no side/bottom ring or dimming of other panes. It is
+  a non-intercepting overlay above terminal canvas contents, including opaque
+  first-row backgrounds at zero top padding, locally stacked below app overlays.
+  The marker uses the theme's cyan; if its contrast against the configured opaque
+  background is below 3:1, the theme foreground replaces it only when that
+  improves contrast. This is not a universal accessibility guarantee: a custom
+  palette can leave both colors below 3:1, transparency/blur changes the visible
+  background, and the marker remains only 1 px high. Clicking a pane focuses it, and
   switching tabs restores each tab's focused pane. A new pane starts the Default
   Shell in its source pane's last OSC 7-reported local directory when the shell
   emitted one and it still exists, otherwise in the home directory; main reads
@@ -463,6 +474,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   dragging captures the pointer, grows the right panel when moving left and
   coalesces painting per animation frame. Up, cancel, lost capture, hide, switch,
   overlay activity and disposal end dragging at the last valid width. The
+  separator paints the same 1 px line and hover/drag/keyboard-focus states as
+  pane dividers while keeping its 6 px target/allocation. The
   focusable vertical separator exposes current/min/max pixels and readable value
   text. Left/Right grow/shrink by 10 px; Home/End choose current limits. Resize
   keys are consumed only on the separator. Width preference survives hiding,

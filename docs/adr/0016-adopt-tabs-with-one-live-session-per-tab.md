@@ -29,7 +29,23 @@ the window's minimum size; impossible divider moves retain existing proportions.
 Exactly one pane per tab is focused. It receives keyboard input and every
 terminal-directed action (clipboard, Find, snippets, file drops); clicking a
 pane or Focus Next/Previous/Left/Right/Above/Below moves focus, and the focused
-pane carries a theme-derived ring that never dims or recolors the others.
+pane in a split tab carries only a 1 px top line, horizontally inset by its own
+Surface's left/right padding. A non-intercepting `::after` overlay paints above
+the canvas even with zero top padding and opaque first-row terminal backgrounds;
+a Surface-local stacking context keeps it below external app overlays. Restty's
+search and scrollbar layers remain above the marker. There is no side/bottom
+ring, layout change, dimming or recoloring of the others. The host propagates a theme-derived accent
+on initial configuration and reload: cyan when its contrast against the configured
+opaque background is at least 3:1, otherwise foreground if it improves contrast.
+A low-contrast custom palette can still fail that threshold; transparency/blur
+and the thin marker prevent any universal accessibility claim.
+
+Pane dividers paint a shared 1 px pseudo-element while retaining their 4 px
+resize target and layout allocation. The Auxiliary Panel separator shares that
+paint but retains its 6 px target/allocation. Hover and captured drag use the
+same neutral highlight; keyboard focus uses the foreground-colored line, not a
+rectangle around the target. Separator keyboard handling, ARIA values and
+pointer geometry remain independent of the painted line.
 Structural rebuilds preserve the exact surviving DOM control (including search
 selection), without changing logical pane selection or taking focus from panel
 or modal controls. Removal chooses a non-wrapping neighbor in the nearest split;
@@ -178,6 +194,16 @@ IPC gains per-session identity beneath each window controller, and selection
 refits the active grid. Tab order and visibility are in-memory presentation;
 restoration, workspaces, broadcast input, pane maximize and moving tabs or
 panes between tabs or windows are outside current scope.
+
+Headless style and host tests cover shared separator paint, retained target sizes,
+per-Surface marker insets, initial/reloaded accent propagation, and both split-axis
+keyboard/ARIA behavior. Opaque sRGB contrast checks give bundled `omtheme` cyan
+(`#80d4ff`) against its black background 12.78:1. The same cyan against the
+representative light test background (`#f5f5f5`, not a bundled light theme) gives
+1.51:1; its foreground fallback (`#161616`) gives 16.60:1. A darker cyan
+(`#006b80`) gives 5.64:1 on that light background and is retained. These checks
+establish palette math and source/DOM contracts, not native pixel rendering or
+physical keyboard accessibility.
 
 Production ownership tests cover mounting siblings, ordinary exits, failure
 acknowledgement, tab and pane removal, split admission, pane focus routing,

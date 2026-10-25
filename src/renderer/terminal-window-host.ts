@@ -42,6 +42,7 @@ import type {
   LocalImageData,
 } from "../shared/local-image";
 import { createTerminalFontGenerationOwner } from "./terminal-font-generations";
+import { terminalPaneAccent } from "./terminal-pane-accent";
 
 type MountTerminalSurface = (
   container: HTMLElement,
@@ -472,6 +473,7 @@ function applyWindowTheme(
   style.setProperty("--terminal-background-opacity", String(1 - transparency));
   style.setProperty("--terminal-background", background);
   style.setProperty("--terminal-foreground", foreground);
+  style.setProperty("--terminal-pane-accent", terminalPaneAccent(theme));
   document.body.style.setProperty("--terminal-background", background);
   tabs.style.setProperty("--terminal-background", background);
 }

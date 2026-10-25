@@ -48,6 +48,51 @@ describe("Terminal Panes", () => {
   });
 
   it.each([
+    ["right", "vertical", "ArrowRight", "ArrowLeft", "ArrowUp"],
+    ["down", "horizontal", "ArrowDown", "ArrowUp", "ArrowLeft"],
+  ] as const)(
+    "retains %s separator keyboard focus and ARIA values",
+    async (direction, orientation, increase, decrease, unrelated) => {
+      const harness = await splitHarness();
+      await split(harness, direction);
+      const layout = tab(harness).querySelector<HTMLElement>(
+        ".terminal-pane-split",
+      )!;
+      vi.spyOn(layout, "getBoundingClientRect").mockReturnValue({
+        width: 1200,
+        height: 800,
+      } as DOMRect);
+      const divider =
+        tab(harness).querySelector<HTMLElement>('[role="separator"]')!;
+      expect(divider.tabIndex).toBe(0);
+      expect(divider.getAttribute("aria-orientation")).toBe(orientation);
+      expect(divider.getAttribute("aria-label")).toBe("Resize panes");
+      expect(divider.getAttribute("aria-valuemin")).toBe("0");
+      expect(divider.getAttribute("aria-valuemax")).toBe("100");
+      expect(divider.getAttribute("aria-valuenow")).toBe("50");
+      divider.focus();
+      const key = (value: string) => {
+        const event = new KeyboardEvent("keydown", {
+          key: value,
+          bubbles: true,
+          cancelable: true,
+        });
+        divider.dispatchEvent(event);
+        return event.defaultPrevented;
+      };
+      expect(key(increase)).toBe(true);
+      expect(Number(divider.getAttribute("aria-valuenow"))).toBeGreaterThan(50);
+      expect(document.activeElement).toBe(divider);
+      expect(key(decrease)).toBe(true);
+      expect(divider.getAttribute("aria-valuenow")).toBe("50");
+      expect(key(unrelated)).toBe(false);
+      expect(key("Enter")).toBe(false);
+      expect(document.activeElement).toBe(divider);
+      harness.tabs.dispose();
+    },
+  );
+
+  it.each([
     [{ cols: 40, rows: 40 }, "right"],
     [{ cols: 120, rows: 10 }, "down"],
     [{ cols: 120, rows: 3 }, "right"],

@@ -280,8 +280,9 @@ describe("renderer Terminal Window page host", () => {
       name: "runtime",
       colors: Object.freeze({
         ...initialTheme.colors,
-        background: "#123456",
-        foreground: "#abcdef",
+        background: "#f5f5f5",
+        foreground: "#161616",
+        cyan: "#80d4ff",
       }),
     });
     const elements = createPageElements();
@@ -348,6 +349,9 @@ describe("renderer Terminal Window page host", () => {
       },
     });
     await host.ready;
+    expect(
+      document.documentElement.style.getPropertyValue("--terminal-pane-accent"),
+    ).toBe(initialTheme.colors.cyan);
 
     configurationListener!({
       showTabBar: true,
@@ -379,10 +383,13 @@ describe("renderer Terminal Window page host", () => {
     );
     expect(
       document.documentElement.style.getPropertyValue("--terminal-background"),
-    ).toBe("#123456");
+    ).toBe("#f5f5f5");
     expect(
       document.documentElement.style.getPropertyValue("--terminal-foreground"),
-    ).toBe("#abcdef");
+    ).toBe("#161616");
+    expect(
+      document.documentElement.style.getPropertyValue("--terminal-pane-accent"),
+    ).toBe(updatedTheme.colors.foreground);
     expect(errorBanner.textContent).toContain("/themes/live.json");
     expect(adapterCloses[0]).not.toHaveBeenCalled();
 

@@ -74,6 +74,18 @@ body {
   flex: 0 0 var(--terminal-pane-divider-size, 4px);
   cursor: col-resize;
   touch-action: none;
+  position: relative;
+  background: transparent;
+}
+
+/* Paint a shared hairline without shrinking either resize target. */
+.terminal-pane-divider::before,
+.auxiliary-separator::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 50%;
+  width: 1px;
+  pointer-events: none;
   background: color-mix(
     in srgb,
     var(--terminal-background, #000000),
@@ -85,10 +97,21 @@ body {
   cursor: row-resize;
 }
 
-.terminal-pane-divider:hover,
+.terminal-pane-split[data-direction="column"] > .terminal-pane-divider::before {
+  inset: 50% 0 auto;
+  width: auto;
+  height: 1px;
+}
+
 .terminal-pane-divider:focus-visible,
-.terminal-pane-divider.dragging {
+.auxiliary-separator:focus-visible {
   outline: none;
+}
+
+.terminal-pane-divider:hover::before,
+.terminal-pane-divider.dragging::before,
+.auxiliary-separator:hover::before,
+.auxiliary-separator.dragging::before {
   background: color-mix(
     in srgb,
     var(--terminal-background, #000000),
@@ -96,17 +119,28 @@ body {
   );
 }
 
-/* The focused pane's ring never changes terminal colors or dims others. */
-.terminal-tab[data-split] .terminal-surface.pane-focused {
-  box-shadow: inset 0 0 0 1px
-    color-mix(
-      in srgb,
-      var(--terminal-background, #000000),
-      var(--terminal-foreground, #e6e6e6) 40%
-    );
+.terminal-pane-divider:focus-visible:not(.dragging)::before,
+.auxiliary-separator:focus-visible:not(.dragging)::before {
+  background: var(--terminal-foreground, #e6e6e6);
+}
+
+/* Paint above the canvas even when the Surface has no top padding. */
+.terminal-tab[data-split] .terminal-surface.pane-focused::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: var(--terminal-padding-right, 8px);
+  left: var(--terminal-padding-left, 8px);
+  height: 1px;
+  background: var(--terminal-pane-accent, var(--terminal-foreground));
+  pointer-events: none;
 }
 
 .terminal-surface {
+  /* Keep marker/content stacking local, below window chrome and app overlays. */
+  position: relative;
+  isolation: isolate;
   box-sizing: border-box;
   flex: 1 1 auto;
   min-height: 0;
@@ -333,14 +367,9 @@ body.tabs-visible .terminal-tab {
   cursor: col-resize;
   touch-action: none;
   app-region: no-drag;
+  position: relative;
 }
 
-.auxiliary-separator:hover,
-.auxiliary-separator.dragging {
-  background: rgb(from var(--terminal-foreground, #e6e6e6) r g b / 30%);
-}
-
-.auxiliary-separator:focus-visible,
 .auxiliary-header button:focus-visible,
 #snippets-sidebar input[type="search"]:focus-visible {
   outline: 2px solid var(--terminal-foreground, #e6e6e6);
