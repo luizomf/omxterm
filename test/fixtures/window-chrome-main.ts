@@ -50,6 +50,15 @@ import {
 const root = __dirname;
 const auxiliaryOnly = process.argv.includes("--fixture-auxiliary-only");
 const panelClipboard = { text: "", writes: [] as string[], reads: 0 };
+const actionOrdinals = new WeakMap<
+  BrowserWindow,
+  { clipboard: number; toggle: number }
+>();
+function noteAction(window: BrowserWindow, channel: "clipboard" | "toggle") {
+  const counts = actionOrdinals.get(window) ?? { clipboard: 0, toggle: 0 };
+  counts[channel] += 1;
+  actionOrdinals.set(window, counts);
+}
 let finishPanelImage: ((image: LocalImageData | null) => void) | undefined;
 for (const name of ["userData", "sessionData"] as const) {
   const directory = path.join(root, name);
@@ -196,6 +205,9 @@ async function exerciseScenario(
         captureInput: (index, listener) =>
           sessionInputs[index]!.capture(listener),
         clipboard: panelClipboard,
+        actionOrdinals: () => ({
+          ...(actionOrdinals.get(windows[0]!) ?? { clipboard: 0, toggle: 0 }),
+        }),
         showAbout: about.show,
         imagePending: () => finishPanelImage !== undefined,
         finishImage: (image) => {
@@ -402,10 +414,14 @@ app
         window.webContents.send(terminalIpc.tabCommand, command),
       sendFontZoom: (window, command) =>
         window.webContents.send(terminalIpc.fontZoom, command),
-      sendClipboardAction: (window, action) =>
-        window.webContents.send(terminalIpc.clipboardAction, action),
-      sendSnippetsToggle: (window) =>
-        window.webContents.send(terminalIpc.snippetsToggle),
+      sendClipboardAction: (window, action) => {
+        window.webContents.send(terminalIpc.clipboardAction, action);
+        noteAction(window, "clipboard");
+      },
+      sendSnippetsToggle: (window) => {
+        window.webContents.send(terminalIpc.snippetsToggle);
+        noteAction(window, "toggle");
+      },
       sendLocalImageOpen: (window) =>
         window.webContents.send(terminalIpc.localImageOpen),
       toggleDeveloperTools() {},

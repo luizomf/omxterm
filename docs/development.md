@@ -160,6 +160,14 @@ checks diagnose fixture ordering, not the exact cause of a native SIGTRAP.
 Headless coverage uses the actual fixture callback and production shutdown owner:
 `npm test -- test/unit/application-about-startup.test.ts test/unit/application-about-diagnostics.test.ts test/unit/terminal-shutdown.test.ts test/unit/native-fixture-completion.test.ts`.
 
+The auxiliary-panel native fixture fences overlay transitions with bounded,
+window-owned receipts recorded only after the actual production Toggle/Paste
+listeners return. These receipts establish callback consumption before About
+close, picker cancellation or image Escape; they do not drain asynchronous
+input accepted earlier. The continuous input sample and strict empty assertions
+remain unchanged. Headless ordering/negative controls:
+`npm test -- test/unit/overlay-action-consumption.test.ts test/unit/auxiliary-panel-fixture.test.ts`.
+
 ### Opt-in native test suites
 
 Several specialized integration suites are skipped by default and enabled via environment variables:

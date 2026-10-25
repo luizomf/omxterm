@@ -1,4 +1,9 @@
 import assert from "node:assert/strict";
+import {
+  overlayActionsConsumed,
+  type OverlayAction,
+  type OverlayConsumptionSnapshot,
+} from "./overlay-action-consumption";
 import type { BrowserWindow, KeyboardInputEvent } from "electron";
 import {
   terminalApplicationMenuTemplate,
@@ -26,6 +31,7 @@ interface PanelOptions {
     listener: (data: string) => void,
   ) => () => void;
   readonly clipboard: { text: string; writes: string[]; reads: number };
+  readonly actionOrdinals: () => { clipboard: number; toggle: number };
   readonly showAbout: () => void;
   readonly imagePending: () => boolean;
   readonly finishImage: (image: LocalImageData | null) => void;
@@ -339,6 +345,27 @@ async function exerciseSmallWindow(s: Scene) {
 
 async function exerciseOverlays(s: Scene) {
   const { contents, until, wait, clickMenu, evaluate, input, key } = s;
+  const snapshot = () =>
+    evaluate<OverlayConsumptionSnapshot>(
+      "window.__overlayConsumptionFixture()",
+    );
+  const owner = (await snapshot()).owner;
+  const consumed = (expected: readonly OverlayAction[]) =>
+    wait(
+      async () => overlayActionsConsumed(await snapshot(), owner, expected),
+      "overlay production callback consumption",
+    );
+  const expected = (channels: readonly ("clipboard" | "toggle")[]) => {
+    const ordinals = s.options.actionOrdinals();
+    return channels.map(
+      (channel) =>
+        ({
+          channel,
+          ordinal: ordinals[channel],
+          kind: channel === "clipboard" ? "paste" : "toggle",
+        }) as OverlayAction,
+    );
+  };
   const point = await s.point();
   contents.sendInputEvent({
     type: "mouseDown",
@@ -360,6 +387,7 @@ async function exerciseOverlays(s: Scene) {
   });
   clickMenu("Toggle Snippets");
   clickMenu("Paste");
+  await consumed(expected(["toggle", "clipboard"]));
   await evaluate(
     "document.querySelector('#snippets-sidebar li button').click(); document.querySelector('.auxiliary-header button').click()",
   );
@@ -371,6 +399,7 @@ async function exerciseOverlays(s: Scene) {
   await wait(s.options.imagePending, "image picker pending");
   await until("document.querySelector('#snippets-sidebar').inert");
   clickMenu("Toggle Snippets");
+  await consumed(expected(["toggle"]));
   s.options.finishImage(null);
   await until(terminalFocused);
   await until("!document.querySelector('#snippets-sidebar').inert");
@@ -388,6 +417,7 @@ async function exerciseOverlays(s: Scene) {
   );
   clickMenu("Toggle Snippets");
   clickMenu("Paste");
+  await consumed(expected(["toggle", "clipboard"]));
   key("Escape");
   await until(terminalFocused);
   assert.equal(await evaluate(shown), true);
