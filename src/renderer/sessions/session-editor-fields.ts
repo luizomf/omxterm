@@ -9,7 +9,10 @@ import {
   type SessionDefinition,
   type SshSessionDefinition,
 } from "../../shared/saved-sessions";
-import type { SessionFileChoice } from "../../shared/session-ipc";
+import type {
+  SessionFileChoice,
+  SessionPasswordState,
+} from "../../shared/session-ipc";
 import {
   checkbox,
   field,
@@ -21,6 +24,7 @@ import {
   textInput,
   type FormField,
 } from "../ui/form";
+import { passwordFields, type PasswordChange } from "./session-password-field";
 import { folderPath } from "./session-tree";
 
 export type Choose = (kind: SessionFileChoice) => Promise<string | null>;
@@ -145,7 +149,10 @@ export function sshFields(
   t: Translator["t"],
   ssh: Partial<SshSessionDefinition>,
   choose: Choose,
-): FieldGroup {
+  passwordState: SessionPasswordState,
+): FieldGroup & {
+  passwordChange(): PasswordChange | undefined;
+} {
   const host = field(
     document,
     t("sessions.field.host"),
@@ -188,8 +195,16 @@ export function sshFields(
     t("sessions.field.identityFile"),
     identity.element,
   );
-  const syncIdentity = () =>
+  const password = passwordFields(
+    document,
+    t,
+    passwordState,
+    ssh.authentication,
+  );
+  const syncIdentity = () => {
     identityFile.setVisible(authentication.control.value === "key");
+    password.sync(authentication.control.value);
+  };
   authentication.control.addEventListener("change", syncIdentity);
   syncIdentity();
   const proxyJump = field(
@@ -203,13 +218,23 @@ export function sshFields(
     port.element,
     user.element,
     authentication.element,
+    ...password.elements,
     identityFile.element,
     proxyJump.element,
   );
   const advanced = sshAdvancedFields(document, t, ssh);
   return {
     elements: [connection, ...advanced.elements],
-    fields: { host, port, user, identityFile, proxyJump, ...advanced.fields },
+    fields: {
+      host,
+      port,
+      user,
+      identityFile,
+      proxyJump,
+      password: password.field,
+      ...advanced.fields,
+    },
+    passwordChange: () => password.change(authentication.control.value),
     read() {
       const extra = advanced.read();
       if (!extra) return undefined;

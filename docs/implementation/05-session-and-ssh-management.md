@@ -46,7 +46,7 @@ too (R20).
 
 | AshyTerm                           | OMXTerm                              | Reason                                                  |
 | ---------------------------------- | ------------------------------------ | ------------------------------------------------------- |
-| `sshpass` with stored passwords    | Password typed at ssh's prompt       | No plaintext secrets, no secrets in argv or environment |
+| `sshpass` with stored passwords    | Keyring + one-time `SSH_ASKPASS`     | No plaintext secrets, no secrets in argv or environment |
 | `StrictHostKeyChecking=no` options | Rejected; OpenSSH default `ask`      | Silent key acceptance enables MITM                      |
 | `ProxyCommand` in session options  | Rejected; allowed in `~/.ssh/config` | Would run a local program from an imported definition   |
 | Shell-joined command strings       | Literal argv                         | Injection safety                                        |

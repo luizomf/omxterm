@@ -1,4 +1,5 @@
 import { createTranslator, type Translator } from "../shared/i18n";
+import { passwordOffer } from "./sessions/session-password-offer";
 import {
   createBroadcastIndicator,
   type BroadcastIndicator,
@@ -348,6 +349,9 @@ export function windowTabsOptions(
       reconnect: translator.t("sessions.reconnect"),
       close: translator.t("common.close"),
     },
+    ...(options.workspace
+      ? { endedOffer: passwordOffer(options.workspace.sessions, translator) }
+      : {}),
     onBroadcastChange: (targetCount) => broadcastIndicator.show(targetCount),
     ...(options.confirmBroadcast
       ? { confirmBroadcast: options.confirmBroadcast }

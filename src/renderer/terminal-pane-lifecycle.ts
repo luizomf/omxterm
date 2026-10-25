@@ -118,6 +118,9 @@ export function closeTab(ctx: TabsContext, tab: TerminalTab | undefined): void {
   }
 }
 
+// How much of an ended pane's final output an offer may inspect.
+const ENDED_OUTPUT_TAIL = 4096;
+
 function onSessionEnd(
   ctx: TabsContext,
   pane: TerminalPane,
@@ -132,7 +135,7 @@ function onSessionEnd(
     !exit.startupFailed &&
     exit.exitCode !== 0
   ) {
-    showEndedBanner(
+    const addOffer = showEndedBanner(
       pane,
       exit.exitCode,
       ctx.options.endedBanner ?? DEFAULT_ENDED_BANNER_STRINGS,
@@ -141,6 +144,13 @@ function onSessionEnd(
         close: () => closePane(ctx, pane),
       },
     );
+    const output = pane.surface?.outputText?.().slice(-ENDED_OUTPUT_TAIL);
+    void ctx.options
+      .endedOffer?.(pane.launch, output ?? "")
+      .then((offer) => {
+        if (offer && !ctx.disposed && !pane.removed) addOffer(offer);
+      })
+      .catch(() => {});
     return;
   }
   // An ordinary end removes the pane; an unexpected signal keeps it visible

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, type IpcMain } from "electron";
+import { app, BrowserWindow, safeStorage, type IpcMain } from "electron";
 import { highlightIpc } from "../shared/highlight-ipc";
 import { fileBrowserIpc } from "../shared/file-browser";
 import { statSync } from "node:fs";
@@ -16,6 +16,7 @@ import { startFileBrowser } from "./file-browser-wiring";
 import { startOutputFiles } from "./output-file-wiring";
 import { startRemoteFiles } from "./remote-files-wiring";
 import { startAssistant } from "./assistant-wiring";
+import { createCredentialStore } from "./credential-store";
 import { startAbout } from "./about-wiring";
 import { startFilePeek } from "./file-peek-wiring";
 import { MAX_WINDOW_CORNER_RADIUS } from "../shared/user-configuration";
@@ -55,8 +56,16 @@ export async function startApplicationDataServices(options: {
     shell,
     ...shared
   } = options;
+  // One store for every secret (AI keys, SSH passwords), so writes to
+  // credentials.json never race.
+  const credentials = createCredentialStore(
+    safeStorage,
+    resolveApplicationDataDirectory(process.env, options.homeDirectory),
+    process.platform,
+  );
   const savedSessions = await startSavedSessions({
     ...shared,
+    credentials,
     ...(startupConnection === undefined ? {} : { startupConnection }),
   });
   const highlightSettings = await startHighlightSettings(shared);
@@ -68,6 +77,7 @@ export async function startApplicationDataServices(options: {
       options.homeDirectory,
     ),
     shell,
+    credentials,
   });
   highlightSettings.subscribe(onMenuStateChange);
   const commandLibrary = await startCommandLibrary(shared);

@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, type IpcMain } from "electron";
+import { app, BrowserWindow, dialog, type IpcMain } from "electron";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { sessionIpc } from "../shared/session-ipc";
@@ -9,7 +9,13 @@ import {
   createSavedSessionService,
   type SavedSessionService,
 } from "./saved-sessions";
+import type { CredentialStore } from "./credential-store";
 import { registerSessionIpc } from "./session-ipc";
+import {
+  createSessionPasswords,
+  registerSessionPasswordIpc,
+} from "./session-passwords";
+import { startSshAskpass, type SshAskpass } from "./ssh-askpass";
 import type { IpcEvent, IpcMainPort } from "./terminal-ipc-types";
 
 // Creates the Saved Session service, loads sessions.json, keeps every window's
@@ -20,9 +26,15 @@ export async function startSavedSessions(options: {
   readonly isTrustedSender: (event: IpcEvent) => boolean;
   readonly operationalEvents: Pick<OperationalEventLog, "write">;
   readonly startupConnection?: string;
+  readonly credentials: CredentialStore;
 }): Promise<SavedSessionService> {
   const { homeDirectory, operationalEvents } = options;
   let startupConnection = options.startupConnection;
+  const control = sshControlDirectory(homeDirectory);
+  const askpass = await startAskpass(control.controlDirectory, (id) =>
+    options.credentials.get(id),
+  );
+  const passwords = await createSessionPasswords(options.credentials, askpass);
   const service = createSavedSessionService({
     directory: resolveApplicationDataDirectory(process.env, homeDirectory),
     homeDirectory,
@@ -37,9 +49,11 @@ export async function startSavedSessions(options: {
         throw new Error("The OpenSSH client (ssh) was not found on PATH");
       return executable;
     },
-    ...sshControlDirectory(homeDirectory),
+    ...control,
+    passwordEnvironment: (id) => passwords.environment(id),
   });
   const loaded = await service.load();
+  void passwords.reconcile(service.current()).catch(() => {});
   if (loaded.recovered)
     operationalEvents.write({
       name: "application-data.recovered",
@@ -47,6 +61,7 @@ export async function startSavedSessions(options: {
       reason: loaded.recovered.reason,
     });
   service.subscribe((document) => {
+    void passwords.reconcile(document).catch(() => {});
     for (const window of BrowserWindow.getAllWindows())
       if (!window.webContents.isDestroyed())
         window.webContents.send(sessionIpc.changed, document);
@@ -100,7 +115,39 @@ export async function startSavedSessions(options: {
       return target;
     },
   );
+  registerSessionPasswordIpc(
+    options.ipcMain as unknown as IpcMainPort,
+    options.isTrustedSender,
+    passwords,
+    () => service.current(),
+    () =>
+      operationalEvents.write({
+        name: "boundary.rejected",
+        boundary: "ipc",
+        reason: "untrusted-sender",
+      }),
+  );
   return service;
+}
+
+// Stored passwords reach ssh through SSH_ASKPASS, which needs the private
+// socket directory; Windows' OpenSSH keeps typing at ssh's prompt.
+async function startAskpass(
+  directory: string | undefined,
+  lookup: (credentialId: string) => Promise<string | undefined>,
+): Promise<SshAskpass | undefined> {
+  if (process.platform === "win32" || directory === undefined) return undefined;
+  try {
+    const askpass = await startSshAskpass({
+      directory,
+      executable: process.execPath,
+      lookup,
+    });
+    app.once("will-quit", () => askpass.dispose());
+    return askpass;
+  } catch {
+    return undefined;
+  }
 }
 
 // ControlMaster sockets need a short private path (sun_path is ~104 bytes).

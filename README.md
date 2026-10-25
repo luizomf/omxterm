@@ -122,8 +122,13 @@ Omarchy screenshot are arranged by Hyprland.
   - a remote command and extra options.
 - **Quick Connect** (`user@host:port`), import from `~/.ssh/config`, and JSON
   import and export.
-- A failed connection keeps its screen with **Reconnect** and **Close**.
-- Passwords are typed at ssh's own prompt and are never stored.
+- A failed connection keeps its screen with **Reconnect** and **Close**; when
+  an agent or key session is refused, it also offers switching to a password
+  typed when prompted.
+- **Password** sessions can keep their password in the system keyring (with a
+  show/hide button) or use **Password (typed when prompted)**. A stored
+  password reaches ssh only through a one-time askpass answer, never a
+  command line, the environment or the terminal.
 
 ### Integrated file manager
 
@@ -489,7 +494,8 @@ message exists in both catalogs with the same placeholders.
 - Logs record application events only: never terminal output, commands,
   clipboard data, paths or configuration values.
 - Passwords and keys are never written to disk in plain text and never
-  included in backups or exports. SSH passwords are typed at ssh's prompt.
+  included in backups or exports. A saved SSH password stays in the system
+  keyring; otherwise ssh asks at its prompt.
 - The interface runs in an isolated renderer without Node.js. Only the main
   process starts programs, always with literal argument lists, never shell
   strings. Imported SSH settings that would run local programs

@@ -57,6 +57,11 @@ function fakeBridge(initial = document_) {
     },
     onToggleSidebar: () => () => {},
     startupConnection: vi.fn(async () => null),
+    passwordState: vi.fn(async () => ({
+      storage: "available" as const,
+      saved: false,
+    })),
+    setPassword: vi.fn(async () => undefined),
   };
   return {
     bridge,
@@ -184,18 +189,32 @@ describe("Sessions sidebar panel", () => {
   });
 });
 
+// The editor asks main about password storage before its dialog opens.
+async function openedDialog() {
+  return vi.waitFor(() => {
+    const dialog = document.querySelector("dialog");
+    if (!dialog) throw new Error("The editor has not opened yet");
+    return dialog;
+  });
+}
+
 describe("Saved Session editor", () => {
   it("builds a validated SSH candidate including forwards and options", async () => {
     document.body.innerHTML = "";
-    const save = vi.fn(async () => undefined);
+    const save = vi.fn(
+      async (candidate: unknown) =>
+        ({ id: "s1", ...(candidate as object) }) as never,
+    );
     const pending = editSession({
       document,
       translator,
       sessions: document_,
       chooseFile: async () => null,
       save,
+      passwordState: async () => ({ storage: "available", saved: false }),
+      setPassword: vi.fn(async () => undefined),
     });
-    const dialog = document.querySelector("dialog")!;
+    const dialog = await openedDialog();
     const input = (label: string) =>
       [...dialog.querySelectorAll<HTMLElement>(".omx-field")]
         .find((field) => field.querySelector("label")?.textContent === label)!
@@ -225,15 +244,20 @@ describe("Saved Session editor", () => {
 
   it("keeps the dialog open with field errors for invalid values", async () => {
     document.body.innerHTML = "";
-    const save = vi.fn(async () => undefined);
+    const save = vi.fn(
+      async (candidate: unknown) =>
+        ({ id: "s1", ...(candidate as object) }) as never,
+    );
     void editSession({
       document,
       translator,
       sessions: document_,
       chooseFile: async () => null,
       save,
+      passwordState: async () => ({ storage: "available", saved: false }),
+      setPassword: vi.fn(async () => undefined),
     });
-    const dialog = document.querySelector("dialog")!;
+    const dialog = await openedDialog();
     const fields = [...dialog.querySelectorAll<HTMLElement>(".omx-field")];
     const named = (label: string) =>
       fields.find(

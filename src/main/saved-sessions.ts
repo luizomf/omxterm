@@ -73,6 +73,10 @@ export interface SavedSessionServiceOptions {
   readonly now?: () => number;
   readonly store?: ApplicationDocumentStore<SavedSessionsDocument>;
   readonly readSshConfig?: typeof readSshConfigHosts;
+  // The askpass environment of a password session with a stored password.
+  readonly passwordEnvironment?: (
+    sessionId: string,
+  ) => Readonly<Record<string, string>> | undefined;
 }
 
 export class SavedSessionError extends Error {
@@ -295,9 +299,16 @@ export function createSavedSessionService(
           ? { controlDirectory: options.controlDirectory }
           : {}),
       });
+      const askpass =
+        session.authentication === "password"
+          ? options.passwordEnvironment?.(session.id)
+          : undefined;
       return {
         ...base,
         title: session.name,
+        ...(askpass
+          ? { extraEnvironment: { ...base.extraEnvironment, ...askpass } }
+          : {}),
         launchRequest: {
           kind: "explicit-command",
           executable: options.sshExecutable(),
