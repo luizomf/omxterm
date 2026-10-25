@@ -48,7 +48,15 @@ Each change you make to a control is checked and saved to `config.json` right aw
 
 Clearing a text or number field removes that entry from `config.json`, so the default applies again. Settings changes only the field you edited and keeps the rest of your file, including edits you make in another editor while it's open. It rewrites the file with two-space indentation. If it detects an external edit during validation or write preparation, it refuses the change and asks you to reload instead of overwriting it. Settings does not write through a `config.json` symlink (including a dangling link); edit its target manually, then reload User Configuration.
 
-The **Config File** page shows `config.json` with an explicit **Save**, using the same application and deferred-setting feedback as graphical changes. If the file changes on disk while you edit there, your draft is kept and saving it is refused until you choose **Reload File**. Save and Reload File are disabled while a raw request is pending; you can keep typing, and newer text is kept but is not included in the earlier Save. Reload File replaces your draft only if you have not typed again during its read. Shortcuts, transparency, blur and snippets are still edited in the files.
+The **Config File** page shows `config.json` with an explicit **Save**, using the same application and deferred-setting feedback as graphical changes. If the file changes on disk while you edit there, your draft is kept and saving it is refused until you choose **Reload File**. Save and Reload File are disabled while a raw request is pending; you can keep typing, and newer text is kept but is not included in the earlier Save. Reload File replaces your draft only if you have not typed again during its read. Transparency, blur and snippets are still edited in the files.
+
+The **Shortcuts** page lists every remappable action with the shortcut it uses now and how it is set:
+
+- **Default:** follows OMXTerm's built-in shortcut (no entry in `config.json`). **Default** removes your entry again.
+- **Custom:** **Record**, then press the new combination; it is saved as that action's `keybinds` entry. Escape cancels. A key that cannot be a shortcut by itself (a letter without Ctrl, Alt, Cmd or AltGr) asks you to try again; F1–F24 can stand alone. While recording, the keys you press don't run their actions or reach the terminal.
+- **Unbound:** **Unbind** saves `null`, so the action stays in the menu without a key.
+
+A shortcut that collides with another action is rejected with the same message as in `config.json`, and your file stays unchanged. App shortcuts take their key before terminal programs see it, so binding a key a program uses (like `Ctrl+C`) keeps it from reaching that program.
 
 ## Add one display change
 

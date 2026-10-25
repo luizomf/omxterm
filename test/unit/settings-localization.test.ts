@@ -230,6 +230,8 @@ it("relabels a retained initial load failure without retrying", async () => {
     }),
     change: vi.fn(),
     saveText: vi.fn(),
+    changeKeybind: vi.fn(),
+    captureShortcut: vi.fn(() => () => {}),
     onOpen: () => () => {},
   };
   const dialog = createSettingsDialog(document, bridge, {

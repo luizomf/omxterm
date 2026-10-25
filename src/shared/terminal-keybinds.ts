@@ -364,6 +364,30 @@ export function terminalActionForKeyboardInput(
   return logicalFallback;
 }
 
+// The accelerator a key press spells, for recording a shortcut with the same
+// native identity delivery matches. Modifier-only presses and keys the grammar
+// cannot name yield undefined; the result still passes config.json validation.
+export function acceleratorForKeyboardInput(
+  input: AcceleratorKeyboardInput,
+  platform: string = "darwin",
+): string | undefined {
+  const logicalKey = acceleratorKeyForInputKey(input.key);
+  if (logicalKey === undefined) return undefined;
+  const nativeKey = INTRINSIC_SHIFT_KEYS.get(logicalKey);
+  const key =
+    keypadKeyForInput(logicalKey, input.code) ??
+    (nativeKey && input.code === nativeKey.code ? nativeKey.key : logicalKey);
+  const accelerator = [
+    ...(input.meta ? [platform === "darwin" ? "Command" : "Super"] : []),
+    ...(input.control ? ["Control"] : []),
+    ...(input.alt ? ["Alt"] : []),
+    ...(input.altGr ? ["AltGr"] : []),
+    ...(input.shift ? ["Shift"] : []),
+    key === "+" ? "Plus" : key.replace(/^./u, (first) => first.toUpperCase()),
+  ].join("+");
+  return isValidAccelerator(accelerator) ? accelerator : undefined;
+}
+
 function keypadKeyForInput(
   key: string,
   code: string | undefined,

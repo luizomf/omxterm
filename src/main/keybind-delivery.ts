@@ -5,6 +5,7 @@ import {
   type TerminalKeybinds,
 } from "../shared/terminal-keybinds";
 import { hasNativeAltGr } from "./keyboard-modifiers";
+import type { KeybindCapture } from "./keybind-capture";
 
 export interface KeybindKeyEvent {
   preventDefault(): void;
@@ -15,6 +16,7 @@ export interface KeybindKeyboardInput extends AcceleratorKeyboardInput {
 }
 
 export interface KeybindWebContents {
+  send(channel: string, payload: unknown): void;
   on(
     event: "before-input-event",
     listener: (event: KeybindKeyEvent, input: KeybindKeyboardInput) => void,
@@ -35,8 +37,14 @@ export function deliverKeybindsFromKeyEvents(
   keybinds: () => TerminalKeybinds,
   invokeAction: (action: TerminalActionName) => void,
   platform: string = "darwin",
+  capture?: Pick<KeybindCapture, "intercept">,
 ): void {
   webContents.on("before-input-event", (event, input) => {
+    // A shortcut being recorded never runs or reaches the terminal.
+    if (capture?.intercept(webContents, input)) {
+      event.preventDefault();
+      return;
+    }
     if (input.type !== "keyDown" && input.type !== "rawKeyDown") return;
     const action = terminalActionForKeyboardInput(
       keybinds(),

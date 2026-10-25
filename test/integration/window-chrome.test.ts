@@ -139,6 +139,15 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
               rejectedStatus:
                 "Settings fixture rejection is checked separately",
               rejectedFileUnchanged: true,
+              shortcutStatus: "Saved.",
+              shortcutFile: {
+                version: 1,
+                terminal: { padding: { top: 24 } },
+                window: { showTabBar: false },
+                keybinds: { find: "F2" },
+              },
+              deliveredDuringCapture: [],
+              deliveredAfterCapture: ["find"],
               focusReturned: true,
             },
           });

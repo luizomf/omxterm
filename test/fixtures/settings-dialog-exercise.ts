@@ -4,6 +4,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { createSettingsService } from "../../src/main/settings-service";
 import { startSettings } from "../../src/main/settings-wiring";
+import { createKeybindCapture } from "../../src/main/keybind-capture";
+import { deliverKeybindsFromKeyEvents } from "../../src/main/keybind-delivery";
 import type { TerminalIpcRouter } from "../../src/main/terminal-ipc-types";
 import {
   createUserConfigurationReloader,
@@ -25,6 +27,10 @@ export interface SettingsEvidence {
   readonly newWindowFile: unknown;
   readonly rejectedStatus: string;
   readonly rejectedFileUnchanged: boolean;
+  readonly shortcutStatus: string;
+  readonly shortcutFile: unknown;
+  readonly deliveredDuringCapture: readonly string[];
+  readonly deliveredAfterCapture: readonly string[];
   readonly focusReturned: boolean;
 }
 
@@ -47,6 +53,17 @@ export function createSettingsExercise(
     load: () => loadUserConfiguration(loadOptions),
     apply,
   });
+  // The production capture route: key delivery for this window consults the
+  // same capture Settings starts, and records actions instead of running them.
+  const capture = createKeybindCapture(process.platform);
+  const delivered: string[] = [];
+  deliverKeybindsFromKeyEvents(
+    getWindow().webContents,
+    () => reloader.current().configuration.keybinds,
+    (action) => delivered.push(action),
+    process.platform,
+    capture,
+  );
   const settings = startSettings({
     ipcMain,
     isTrustedSender: router.isTrustedSender,
@@ -55,14 +72,18 @@ export function createSettingsExercise(
       reload: () => reloader.reload(),
     }),
     selectedContents: () => getWindow().webContents,
+    capture,
   });
   const file = path.join(root, "settings-xdg", "omxterm", "config.json");
   return {
     show: settings.show,
     file,
     exercise: () =>
-      exerciseSettingsDialog(getWindow(), settings.show, () =>
-        readFile(file, "utf8"),
+      exerciseSettingsDialog(
+        getWindow(),
+        settings.show,
+        () => readFile(file, "utf8"),
+        delivered,
       ),
     dispose: settings.dispose,
   };
@@ -72,6 +93,7 @@ async function exerciseSettingsDialog(
   window: BrowserWindow,
   show: () => void,
   readConfig: () => Promise<string>,
+  delivered: readonly string[],
 ): Promise<SettingsEvidence> {
   const contents = window.webContents;
   const evaluate = <Value>(expression: string) =>
@@ -101,7 +123,7 @@ async function exerciseSettingsDialog(
 
   window.focus();
   show();
-  await waitFor("document.querySelectorAll('[role=\"tab\"]').length === 5");
+  await waitFor("document.querySelectorAll('[role=\"tab\"]').length === 6");
   const opened = await evaluate<boolean>(
     "document.querySelectorAll('.settings-dialog').length === 1 && document.activeElement?.getAttribute('role') === 'tab'",
   );
@@ -135,6 +157,35 @@ async function exerciseSettingsDialog(
   const rejectedStatus = await settle();
   const rejectedFileUnchanged = (await readConfig()) === beforeRejection;
 
+  await tab("Shortcuts");
+  await evaluate(
+    "document.querySelector('.settings-shortcut[data-action=\"find\"] .settings-shortcut-record').click()",
+  );
+  await waitFor(
+    "document.querySelector('.settings-status').textContent.startsWith('Press the new shortcut')",
+  );
+  const pressF2 = () => {
+    contents.sendInputEvent({ type: "keyDown", keyCode: "F2" });
+    contents.sendInputEvent({ type: "keyUp", keyCode: "F2" });
+  };
+  pressF2();
+  await waitFor(
+    "!document.querySelector('.settings-status').textContent.startsWith('Press the new shortcut')",
+  );
+  const shortcutStatus = await settle();
+  const shortcutFile: unknown = JSON.parse(await readConfig());
+  const deliveredDuringCapture = [...delivered];
+  // Capture ended: the recorded key now runs its action exactly once.
+  pressF2();
+  const deadline = Date.now() + 5_000;
+  while (
+    delivered.length === deliveredDuringCapture.length &&
+    Date.now() < deadline
+  )
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const deliveredAfterCapture = [...delivered];
+
   contents.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
   contents.sendInputEvent({ type: "keyUp", keyCode: "Escape" });
   await waitFor(
@@ -151,6 +202,10 @@ async function exerciseSettingsDialog(
     newWindowFile,
     rejectedStatus,
     rejectedFileUnchanged,
+    shortcutStatus,
+    shortcutFile,
+    deliveredDuringCapture,
+    deliveredAfterCapture,
     focusReturned: true,
   };
 }

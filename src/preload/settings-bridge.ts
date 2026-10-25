@@ -6,6 +6,10 @@ import {
   settingsIpc,
   type SettingsBridge,
 } from "../shared/settings";
+import {
+  isCapturedShortcut,
+  isSettingsKeybindChange,
+} from "../shared/settings-keybinds";
 
 // Follows the About bridge: typed requests out, validated responses back, and
 // an open request delivered once even if it arrives before the listener.
@@ -50,6 +54,35 @@ export function createSettingsBridge(ipc: {
       if (!isSettingsTextSave(save))
         throw new TypeError("Invalid settings text");
       return result(await ipc.invoke(settingsIpc.saveText, save));
+    },
+    async changeKeybind(change) {
+      if (!isSettingsKeybindChange(change))
+        throw new TypeError("Invalid shortcut change");
+      return result(await ipc.invoke(settingsIpc.keybind, change));
+    },
+    // Main owns the keyboard while capturing and ends capture after one key;
+    // stopping early (cancel, close, disposal) releases it as well.
+    captureShortcut(next) {
+      let active = true;
+      const stop = () => {
+        if (!active) return;
+        active = false;
+        ipc.removeListener(settingsIpc.captured, onCaptured);
+        void ipc.invoke(settingsIpc.capture, false).catch(() => undefined);
+      };
+      const onCaptured = (_event: unknown, payload: unknown) => {
+        if (!active || !isCapturedShortcut(payload)) return;
+        // An unusable key keeps capture open for another try.
+        if (!("invalid" in payload)) stop();
+        next(payload);
+      };
+      ipc.on(settingsIpc.captured, onCaptured);
+      void ipc.invoke(settingsIpc.capture, true).catch(() => {
+        if (!active) return;
+        stop();
+        next({ cancelled: true });
+      });
+      return stop;
     },
     onOpen(next) {
       listener = next;
