@@ -1,3 +1,5 @@
+import { icon } from "./ui/icons";
+
 export const TERMINAL_TAB_DRAG_DATA_TYPE = "application/x-omxterm-tab";
 
 export interface TabStripItem {
@@ -5,6 +7,8 @@ export interface TabStripItem {
   readonly paneCount: number;
   readonly color?: string;
   readonly broadcasting?: boolean;
+  // An SSH session: the tab shows a server icon and this tooltip.
+  readonly remote?: { readonly tooltip: string };
   // Membership in a tab group; `first` marks where its chip goes.
   readonly group?: {
     readonly name: string;
@@ -78,7 +82,13 @@ export function createTabStrip<Tab>(
           const label = item.label || String(index + 1);
           button.textContent =
             item.paneCount > 1 ? `${label} (${item.paneCount})` : label;
-          button.title = label;
+          button.title = item.remote?.tooltip ?? label;
+          if (item.remote) {
+            const server = icon(document, "sessions");
+            server.classList.add("tab-remote-icon");
+            button.prepend(server);
+            button.classList.add("tab-remote");
+          }
           button.setAttribute("role", "tab");
           button.setAttribute(
             "aria-selected",

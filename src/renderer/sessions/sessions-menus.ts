@@ -1,4 +1,5 @@
 import type { Translator } from "../../shared/i18n";
+import type { OpenSessionPane } from "./session-activity";
 import type {
   SavedSessionsDocument,
   SessionDefinition,
@@ -23,6 +24,9 @@ export interface SessionMenuContext {
   ) => void;
   readonly notify: (message: string) => void;
   readonly expandFolder: (id: string) => void;
+  // A session's panes open in this window, and revealing one.
+  readonly openPanes?: (sessionId: string) => readonly OpenSessionPane[];
+  readonly reveal?: (pane: OpenSessionPane) => void;
 }
 
 type Position = { readonly x: number; readonly y: number };
@@ -67,6 +71,36 @@ async function deleteSession(
   if (confirmed) await context.bridge.deleteSession(session.id);
 }
 
+// The session's panes open in this window, first in its menu: choosing one
+// selects its tab and focuses the pane.
+function openPaneItems(
+  context: SessionMenuContext,
+  session: SessionDefinition,
+): ContextMenuItem[] {
+  const panes = context.openPanes?.(session.id) ?? [];
+  const reveal = context.reveal;
+  if (panes.length === 0 || !reveal) return [];
+  const t = context.translator.t.bind(context.translator);
+  return [
+    { label: t("sessions.openHere"), action: () => {}, disabled: true },
+    ...panes.map((pane): ContextMenuItem => {
+      const label =
+        pane.paneCount > 1
+          ? t("sessions.openPaneSplit", {
+              tab: pane.tabNumber,
+              pane: pane.paneNumber,
+              title: pane.title,
+            })
+          : t("sessions.openPane", { tab: pane.tabNumber, title: pane.title });
+      return {
+        label: pane.ended ? t("sessions.openPaneEnded", { label }) : label,
+        action: () => reveal(pane),
+      };
+    }),
+    { separator: true },
+  ];
+}
+
 export function showSessionMenu(
   context: SessionMenuContext,
   session: SessionDefinition,
@@ -97,6 +131,7 @@ export function showSessionMenu(
         ),
     }));
   const items: ContextMenuItem[] = [
+    ...openPaneItems(context, session),
     { label: t("sessions.openInNewTab"), action: open("tab") },
     {
       label: `${t("sessions.openInSplit")} → ${t("pane.splitRight")}`,

@@ -120,6 +120,10 @@ export function closeTab(ctx: TabsContext, tab: TerminalTab | undefined): void {
 
 // How much of an ended pane's final output an offer may inspect.
 const ENDED_OUTPUT_TAIL = 4096;
+const SSH_ERROR_STATUS = 255;
+
+const isSshLaunch = (launch: PaneLaunch) =>
+  launch.spec?.kind === "saved-session" || launch.spec?.kind === "quick-ssh";
 
 function onSessionEnd(
   ctx: TabsContext,
@@ -128,6 +132,7 @@ function onSessionEnd(
 ): void {
   if (ctx.disposed || pane.removed) return;
   pane.ended = true;
+  renderStrip(ctx);
   // A retained pane keeps a failed connection's screen with Reconnect.
   if (
     pane.launch.retainOnExit &&
@@ -135,6 +140,12 @@ function onSessionEnd(
     !exit.startupFailed &&
     exit.exitCode !== 0
   ) {
+    const output = pane.surface?.outputText?.().slice(-ENDED_OUTPUT_TAIL);
+    // ssh exits with 255 for its own errors (host key, sign-in, network).
+    const solution =
+      exit.exitCode === SSH_ERROR_STATUS && isSshLaunch(pane.launch)
+        ? ctx.options.endedSolution
+        : undefined;
     const addOffer = showEndedBanner(
       pane,
       exit.exitCode,
@@ -142,9 +153,14 @@ function onSessionEnd(
       {
         reconnect: () => reconnect(ctx, pane),
         close: () => closePane(ctx, pane),
+        ...(solution
+          ? {
+              solution: () =>
+                solution(pane.launch, output ?? "", () => reconnect(ctx, pane)),
+            }
+          : {}),
       },
     );
-    const output = pane.surface?.outputText?.().slice(-ENDED_OUTPUT_TAIL);
     void ctx.options
       .endedOffer?.(pane.launch, output ?? "")
       .then((offer) => {
@@ -273,6 +289,7 @@ async function mountPane(ctx: TabsContext, pane: TerminalPane): Promise<void> {
     return;
   }
   pane.surface = surface;
+  pane.startedAt = Date.now();
   // The pane's session id is known now; main needs it for its directory.
   scheduleWorkspaceReport(ctx);
   const latestConfiguration = completeConfiguration(ctx.activeSurfaceOptions);

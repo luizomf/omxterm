@@ -4,6 +4,7 @@ import {
   isSessionFileChoice,
   isSessionPassword,
   isSessionPasswordState,
+  isSshSessionReference,
   sessionIpc,
 } from "../shared/session-ipc";
 import { isSavedSessionId } from "../shared/terminal-launch";
@@ -102,6 +103,23 @@ export function createSessionsBridge(ipc: IpcRenderer): SessionsBridge {
       if (password !== null && !isSessionPassword(password))
         throw new TypeError("Invalid password");
       await ipc.invoke(sessionIpc.setPassword, { id: requireId(id), password });
+    },
+    async forgetHostKey(reference) {
+      if (!isSshSessionReference(reference))
+        throw new TypeError("Invalid session reference");
+      const response: unknown = await ipc.invoke(
+        sessionIpc.forgetHostKey,
+        reference.kind === "saved-session"
+          ? { kind: reference.kind, id: reference.id }
+          : { kind: reference.kind, target: reference.target },
+      );
+      if (
+        typeof response !== "object" ||
+        response === null ||
+        typeof (response as { removed?: unknown }).removed !== "boolean"
+      )
+        throw new TypeError("Invalid host key response");
+      return { removed: (response as { removed: boolean }).removed };
     },
   };
 }

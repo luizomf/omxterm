@@ -1,3 +1,4 @@
+import type { OpenSessionPane } from "./sessions/session-activity";
 import type { Translator } from "../shared/i18n";
 import type { WorkspacePlan, WorkspaceSnapshot } from "../shared/workspace";
 import type {
@@ -62,6 +63,23 @@ export interface TerminalTabsOptions {
     launch: PaneLaunch,
     output: string,
   ) => Promise<EndedOffer | undefined>;
+  // Called after panes, titles or session states change.
+  readonly onPanesChange?: () => void;
+  // The tooltip of a tab whose focused pane runs an SSH session; the tab
+  // then shows a server icon.
+  readonly describeRemote?: (pane: {
+    readonly launch: PaneLaunch;
+    readonly title: string;
+    readonly ended: boolean;
+    readonly startedAt?: number;
+  }) => { readonly tooltip: string } | undefined;
+  // Opens the Solution for an SSH session that ended with ssh's error
+  // status; reconnect replaces the pane with a new session.
+  readonly endedSolution?: (
+    launch: PaneLaunch,
+    output: string,
+    reconnect: () => void,
+  ) => void;
   readonly notifyEmpty?: (reason?: "rendering-failure") => void;
   // tabSessionIds is supplied only for split tabs; a single-pane tab keeps
   // the original one-session selection message.
@@ -119,6 +137,10 @@ export interface TerminalTabs {
     clientY: number,
   ): { readonly sessionId: TerminalSessionId; readonly token: string } | null;
   openLaunch(launch: PaneLaunch, placement: TerminalLaunchPlacement): void;
+  // Every open pane with its launch and state, for the Sessions sidebar.
+  openSessions(): OpenSessionPane[];
+  // Selects a tab and focuses one of its panes (1-based positions).
+  revealPane(tabNumber: number, paneNumber: number): void;
   dispose(): void;
 }
 

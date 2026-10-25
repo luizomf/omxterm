@@ -62,6 +62,7 @@ function fakeBridge(initial = document_) {
       saved: false,
     })),
     setPassword: vi.fn(async () => undefined),
+    forgetHostKey: vi.fn(async () => ({ removed: true })),
   };
   return {
     bridge,

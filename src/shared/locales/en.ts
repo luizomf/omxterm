@@ -227,6 +227,57 @@ export const englishMessages = {
   "sessions.saved": "Session saved.",
   "sessions.ended": "The session ended with exit code {code}.",
   "sessions.reconnect": "Reconnect",
+  "sessions.solution": "Solution",
+  "sessions.status": "{open} open in this window, {running} connected",
+  "sessions.status.idle": "Not open in this window",
+  "sessions.openHere": "Open in this window",
+  "sessions.openPane": "Tab {tab}: {title}",
+  "sessions.openPaneSplit": "Tab {tab}, pane {pane}: {title}",
+  "sessions.openPaneEnded": "{label} (disconnected)",
+  "details.features": "Options",
+  "details.lastUsed": "Last used",
+  "details.openNone": "Not open in this window",
+  "details.open":
+    "Open in this window: {open} ({running} connected, {ended} disconnected)",
+  "details.sshSession": "SSH session: {name}",
+  "details.quickConnect": "SSH: Quick Connect",
+  "details.title": "Title",
+  "details.connection": "Connection",
+  "details.disconnected": "Disconnected",
+  "details.connectedSince": "Connected since {time}",
+  "details.connecting": "Connecting…",
+  "solution.hostKeyChanged.title": "The remote computer's identity changed",
+  "solution.hostKeyChanged.body":
+    "ssh refused to connect to {host} because its key differs from the one saved in known_hosts. This is expected after that computer's system was reinstalled or its SSH server was reconfigured, but it can also mean that someone is intercepting the connection.",
+  "solution.hostKeyChanged.fingerprint": "Fingerprint received: {fingerprint}",
+  "solution.hostKeyChanged.verify":
+    "Confirm this fingerprint with whoever manages that computer. If it matches, remove the old key: ssh then asks you to accept the new one in the terminal. The previous file is kept as known_hosts.old.",
+  "solution.hostKeyChanged.otherFile":
+    "The old key is in {file}, which OMXTerm does not change. Remove it there, for example with: ssh-keygen -R {name} -f {file}",
+  "solution.hostKeyChanged.remove": "Remove old key and reconnect",
+  "solution.hostKeyChanged.failed":
+    "known_hosts could not be updated. Remove the old key in a terminal with: ssh-keygen -R {name}",
+  "solution.hostKeyUnverified.title": "The host key was not accepted",
+  "solution.hostKeyUnverified.body":
+    "ssh could not verify the key of {host}: the question was answered with no, or the session accepts only keys that are already known. Reconnect and answer yes after checking the fingerprint, or change Host key checking in the session.",
+  "solution.authentication.title": "Sign-in was refused",
+  "solution.authentication.body":
+    "{host} refused the user name, key or password. Check the user name and the key in the session, or use a password.",
+  "solution.refused.title": "The connection was refused",
+  "solution.refused.body":
+    "{host} answered, but no SSH server accepted the connection on that port. Check that the SSH server is running there and that the port is right.",
+  "solution.timeout.title": "The connection timed out",
+  "solution.timeout.body":
+    "{host} did not answer. Check that the computer is on and on the same network, and that no firewall blocks the SSH port.",
+  "solution.unreachable.title": "The computer cannot be reached",
+  "solution.unreachable.body":
+    "There is no network route to {host}. Check your network connection and the address.",
+  "solution.unknownHost.title": "Computer name not found",
+  "solution.unknownHost.body":
+    "The name {host} could not be resolved. Check the spelling, or use the IP address.",
+  "solution.unknown.title": "ssh ended with an error",
+  "solution.unknown.body":
+    "Check the message in the terminal, then reconnect. Last line: {detail}",
   "sessions.loadError": "Saved sessions could not be read: {reason}",
 
   "sessions.newTitle": "New Session",

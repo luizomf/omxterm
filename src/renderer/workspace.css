@@ -1878,3 +1878,69 @@ body.tabs-visible #workspace-sidebar {
   background: var(--omx-accent);
   border-color: var(--omx-accent);
 }
+
+.ssh-solution {
+  display: flex;
+  flex-direction: column;
+  gap: var(--omx-space-2);
+  max-width: 34rem;
+}
+
+.ssh-solution p {
+  margin: 0;
+}
+
+.ssh-solution-fingerprint {
+  font-family: ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}
+
+.ssh-solution-status:empty {
+  display: none;
+}
+
+/* SSH tabs: a server icon before the title. */
+#tab-strip button .tab-remote-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
+  vertical-align: -2px;
+}
+
+/* Sessions: a status dot after the name, with the open count inside. */
+.sessions-name-line {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.sessions-status {
+  --status-color: var(--omx-muted);
+
+  display: inline-block;
+  flex: none;
+  min-width: 8px;
+  height: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  color: #fff;
+  text-align: center;
+  background: var(--status-color);
+  border-radius: 999px;
+}
+
+.sessions-status:not(:empty) {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+}
+
+.sessions-status[data-state="connected"] {
+  --status-color: #2ea043;
+}
+
+.sessions-status[data-state="disconnected"] {
+  --status-color: var(--omx-danger);
+}

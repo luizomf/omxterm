@@ -1,5 +1,11 @@
 import { createTranslator, type Translator } from "../shared/i18n";
 import { passwordOffer } from "./sessions/session-password-offer";
+import { sshSolution } from "./sessions/ssh-solution";
+import {
+  createSessionActivity,
+  openPanesOption,
+  type SessionActivity,
+} from "./sessions/session-activity";
 import {
   createBroadcastIndicator,
   type BroadcastIndicator,
@@ -50,6 +56,7 @@ export function mountWorkspace(
     // The terminal area, for hover previews of printed file names.
     readonly terminalArea?: HTMLElement;
     readonly viewImage?: (filePath: string) => void;
+    readonly sessionActivity?: SessionActivity | undefined;
   },
 ): () => void {
   const document = workspace.element.ownerDocument;
@@ -116,6 +123,7 @@ export function mountWorkspace(
               if (!context.isBlocked())
                 context.tabs.openLaunch(launch, placement);
             },
+            ...openPanesOption(context.tabs, context.sessionActivity),
           }),
       },
       ...(workspace.commands
@@ -320,11 +328,11 @@ async function paletteEntries(
 // Window-level callbacks and translated strings for the Terminal Tabs.
 export function windowTabsOptions(
   options: TerminalWindowPageOptions,
-  translator: Translator,
-  broadcastIndicator: BroadcastIndicator,
-  highlighting: HighlightingController | undefined,
-  directories: DirectoryTracker,
+  services: ReturnType<typeof windowServices>,
 ): Omit<TerminalTabsOptions, "createAdapter" | "mount" | "surfaceOptions"> {
+  const { translator, broadcastIndicator, highlighting, directories } =
+    services;
+  const activity = services.sessionActivity;
   return {
     ...(highlighting
       ? { createHighlighter: () => highlighting.createHighlighter() }
@@ -348,9 +356,23 @@ export function windowTabsOptions(
       ended: (exitCode) => translator.t("sessions.ended", { code: exitCode }),
       reconnect: translator.t("sessions.reconnect"),
       close: translator.t("common.close"),
+      solution: translator.t("sessions.solution"),
     },
     ...(options.workspace
-      ? { endedOffer: passwordOffer(options.workspace.sessions, translator) }
+      ? {
+          endedOffer: passwordOffer(options.workspace.sessions, translator),
+          ...(activity
+            ? {
+                describeRemote: activity.describeRemote,
+                onPanesChange: activity.panesChanged,
+              }
+            : {}),
+          endedSolution: sshSolution(
+            options.workspace.element.ownerDocument,
+            options.workspace.sessions,
+            translator,
+          ),
+        }
       : {}),
     onBroadcastChange: (targetCount) => broadcastIndicator.show(targetCount),
     ...(options.confirmBroadcast
@@ -399,6 +421,7 @@ export function windowServices(
   readonly directories: DirectoryTracker;
   readonly broadcastIndicator: BroadcastIndicator;
   readonly highlighting: HighlightingController | undefined;
+  readonly sessionActivity: SessionActivity | undefined;
 } {
   const translator = options.translator ?? createTranslator("en");
   const toolbar =
@@ -433,6 +456,9 @@ export function windowServices(
     }),
     highlighting: options.highlights
       ? createHighlightingController(options.highlights)
+      : undefined,
+    sessionActivity: options.workspace
+      ? createSessionActivity(options.workspace.sessions, translator)
       : undefined,
   };
 }

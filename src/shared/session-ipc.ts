@@ -1,4 +1,8 @@
-import { isSavedSessionId } from "./terminal-launch";
+import {
+  isSavedSessionId,
+  isTerminalLaunchSpec,
+  type TerminalLaunchSpec,
+} from "./terminal-launch";
 
 export const sessionIpc = {
   list: "sessions:list",
@@ -15,6 +19,7 @@ export const sessionIpc = {
   startupConnection: "sessions:startup-connection",
   passwordState: "sessions:password-state",
   setPassword: "sessions:set-password",
+  forgetHostKey: "sessions:forget-host-key",
 } as const;
 
 export type SessionFileChoice = "identity-file" | "directory" | "program";
@@ -84,5 +89,21 @@ export function isSessionPasswordState(
     (record.storage === "available" ||
       record.storage === "unavailable" ||
       record.storage === "unsupported")
+  );
+}
+
+// The SSH session whose host a Solution acts on: a Saved Session or a Quick
+// Connect target, resolved again in main from its definition.
+export type SshSessionReference = Extract<
+  TerminalLaunchSpec,
+  { readonly kind: "saved-session" | "quick-ssh" }
+>;
+
+export function isSshSessionReference(
+  value: unknown,
+): value is SshSessionReference {
+  return (
+    isTerminalLaunchSpec(value) &&
+    (value.kind === "saved-session" || value.kind === "quick-ssh")
   );
 }

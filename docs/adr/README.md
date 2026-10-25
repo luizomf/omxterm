@@ -47,11 +47,12 @@ source/test boundaries and known limitations.
 | 0036 | [Run saved SSH sessions through the system OpenSSH client](0036-run-saved-ssh-sessions-through-the-system-openssh-client.md)   |
 | 0037 | [Store optional SSH passwords in the system keyring](0037-store-optional-ssh-passwords-in-the-system-keyring.md)               |
 | 0038 | [Allow the Linux software WebGL fallback](0038-allow-the-linux-software-webgl-fallback.md)                                     |
+| 0039 | [Guide failed SSH sessions without accepting host keys](0039-guide-failed-ssh-sessions-without-accepting-host-keys.md)         |
 
 ## Related boundaries
 
 - Tabs/panes/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033, 0035.
-- Saved Sessions, SSH and OMXTerm-owned data: 0006, 0034, 0036, 0037.
+- Saved Sessions, SSH and OMXTerm-owned data: 0006, 0034, 0036, 0037, 0039.
 - Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0038.
 - User-owned configuration and live application: 0002, 0003, 0025, 0029, 0030.
 - Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026.

@@ -246,18 +246,13 @@ export function mountTerminalWindowPage(
       : {}),
   };
 
+  const services = windowServices(page.document, options, () => tabs);
   const { translator, toolbar, broadcastIndicator, highlighting, directories } =
-    windowServices(page.document, options, () => tabs);
+    services;
   const tabs: TerminalTabs = createTerminalTabs(
     { strip: elements.tabStrip, container: elements.tabsContainer },
     {
-      ...windowTabsOptions(
-        options,
-        translator,
-        broadcastIndicator,
-        highlighting,
-        directories,
-      ),
+      ...windowTabsOptions(options, services),
       createAdapter: (launch) =>
         launch === undefined
           ? options.createAdapter(fontConfigurationId)
@@ -343,6 +338,7 @@ export function mountTerminalWindowPage(
     disposeWorkspace?.();
     tabs.dispose();
     broadcastIndicator.dispose();
+    services.sessionActivity?.dispose();
     highlighting?.dispose();
     fontGenerations?.dispose();
   };
@@ -429,6 +425,7 @@ export function mountTerminalWindowPage(
         focusTerminal: onPageFocus,
         toolbar,
         directories,
+        sessionActivity: services.sessionActivity,
         clipboard: options.clipboard,
         terminalArea: elements.tabsContainer,
         viewImage: (path) =>
