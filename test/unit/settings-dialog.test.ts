@@ -198,6 +198,7 @@ describe("settings dialog", () => {
       "Appearance",
       "Terminal",
       "New Windows",
+      "Shortcuts",
       "Config File",
     ]);
     expect(document.activeElement?.textContent).toBe("General");
@@ -387,6 +388,8 @@ describe("settings dialog", () => {
         }),
       change: vi.fn(),
       saveText: vi.fn(),
+      changeKeybind: vi.fn(),
+      captureShortcut: vi.fn(() => () => {}),
       onOpen: () => () => {},
     };
     const dialog = createSettingsDialog(document, bridge, {

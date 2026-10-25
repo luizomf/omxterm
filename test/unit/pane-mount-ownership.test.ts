@@ -112,6 +112,8 @@ it.each(["cancel", "about", "settings"] as const)(
           snapshot: async () => base,
           change: vi.fn(),
           saveText: vi.fn(),
+          changeKeybind: vi.fn(),
+          captureShortcut: vi.fn(() => () => {}),
           onOpen(listener) {
             openSettings = listener;
             return () => {};

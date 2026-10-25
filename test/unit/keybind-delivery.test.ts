@@ -31,6 +31,7 @@ function keybindDeliveryHarness(
     | undefined;
   deliverKeybindsFromKeyEvents(
     {
+      send: vi.fn(),
       on(_event, handler) {
         listener = handler;
       },

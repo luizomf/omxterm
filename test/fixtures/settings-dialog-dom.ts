@@ -75,6 +75,8 @@ export async function open(
       ),
     ),
     saveText: vi.fn(async () => saved({ ...base, revision: "r2" })),
+    changeKeybind: vi.fn(),
+    captureShortcut: vi.fn(() => () => {}),
     onOpen: () => () => {},
     ...overrides,
   };

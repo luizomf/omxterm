@@ -129,6 +129,8 @@ export async function snippetsWindow() {
         snapshot: async () => base,
         change: settingsChange,
         saveText: vi.fn(),
+        changeKeybind: vi.fn(),
+        captureShortcut: vi.fn(() => () => {}),
         onOpen(listener) {
           settingsOpen = listener;
           return vi.fn();

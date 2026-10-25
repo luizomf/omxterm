@@ -16,6 +16,12 @@ function wiring() {
   const handlers = new Map<string, IpcHandler>();
   const service = {
     snapshot: vi.fn(async () => snapshot),
+    changeKeybind: vi.fn(async () => ({
+      status: "saved" as const,
+      snapshot,
+      application: { applied: true as const, notices: [] },
+      lifetimes: [],
+    })),
     change: vi.fn(async () => ({
       status: "saved" as const,
       snapshot,

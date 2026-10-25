@@ -252,6 +252,22 @@ export const englishMessages = {
     "config.json could not be written. Nothing was changed.",
   "settings.applicationError":
     "Unexpected application failure. Some settings may already be active; choose View -> Reload User Configuration again.",
+  "settings.page.shortcuts": "Shortcuts",
+  "shortcuts.hint":
+    "Default follows the built-in shortcut. Unbound keeps the action in the menu without a key. App shortcuts take their key before terminal programs see it.",
+  "shortcuts.prompt": "Press the new shortcut, or Escape to cancel.",
+  "shortcuts.invalid":
+    "That key cannot be a shortcut by itself. Add Ctrl, Alt, Cmd or AltGr, or use F1–F24.",
+  "shortcuts.cancelled": "Recording cancelled.",
+  "shortcuts.pressing": "Press a shortcut…",
+  "shortcuts.none": "None",
+  "shortcuts.record": "Record",
+  "shortcuts.recordLabel": "Record shortcut for {action}",
+  "shortcuts.unbind": "Unbind",
+  "shortcuts.default": "Default",
+  "shortcuts.state.inherit": "Default",
+  "shortcuts.state.custom": "Custom",
+  "shortcuts.state.unbound": "Unbound",
 } as const;
 
 export type MessageKey = keyof typeof englishMessages;

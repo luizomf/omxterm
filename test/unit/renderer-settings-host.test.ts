@@ -79,6 +79,8 @@ it("owns input while open: blocks terminal actions and edits its own field", asy
         snapshot: vi.fn(async () => snapshot),
         change,
         saveText: vi.fn(),
+        changeKeybind: vi.fn(),
+        captureShortcut: vi.fn(() => () => {}),
         onOpen: (listener) => {
           openSettings = listener;
           return () => {};

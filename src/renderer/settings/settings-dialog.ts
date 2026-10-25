@@ -18,6 +18,8 @@ import type { MessageKey } from "../../shared/i18n";
 import { settingsMessageText } from "../../shared/settings-messages";
 import { describeSettingsResult } from "./settings-results";
 export { describeSettingsResult } from "./settings-results";
+import { renderShortcuts } from "./settings-shortcuts";
+import type { SettingsKeybindChange } from "../../shared/settings-keybinds";
 
 // Save-on-change dialog and controls adapted from ruscher/omxterm PR #622 at
 // b3c3a4ad6c1f2224bded65873ba0b09a07ec5d38 (MIT).
@@ -59,6 +61,8 @@ export function createSettingsDialog(
   let unbindView: (() => void) | undefined;
   let dialog: HTMLDialogElement | undefined;
   let disposed = false;
+  // Ends the open view's shortcut capture so main returns the keyboard.
+  let releaseView: (() => void) | undefined;
   const keyboard = retainDismissalGesture(document);
   const close = (restoreFocus: boolean) => {
     const previous = dialog;
@@ -66,6 +70,8 @@ export function createSettingsDialog(
     dialog = undefined;
     unbindView?.();
     unbindView = undefined;
+    releaseView?.();
+    releaseView = undefined;
     if (restoreFocus) previous.close();
     previous.remove();
     options.onActivityChange(false);
@@ -90,6 +96,7 @@ export function createSettingsDialog(
     const done = document.createElement("button");
     const view = buildSettingsView(document, bridge, live, language, done);
     unbindView = view.dispose;
+    releaseView = view.release;
     done.type = "button";
     done.className = "settings-close";
     done.addEventListener("click", () => {
@@ -261,6 +268,26 @@ function buildSettingsView(
       },
     );
   };
+  // A shortcut change reports like any other graphical change.
+  const changeKeybind = (next: SettingsKeybindChange) => {
+    pending += 1;
+    report();
+    void bridge.changeKeybind(next).then(
+      (result) => {
+        if (!live()) return;
+        adopt(result.snapshot);
+        pending -= 1;
+        statusMessage = { result };
+        renderStatus(language.t);
+      },
+      () => {
+        if (!live()) return;
+        pending -= 1;
+        report("settings.requestError", true);
+        for (const sync of syncs) sync();
+      },
+    );
+  };
   const value = (path: SettingsPath) => snapshot?.values[path];
 
   const tabButtons: HTMLButtonElement[] = [];
@@ -304,6 +331,7 @@ function buildSettingsView(
     panels.append(panel);
   };
 
+  let shortcuts: ReturnType<typeof renderShortcuts> | undefined;
   // Pages depend on the main-reported platform, so they are built with the
   // first snapshot; until then the dialog shows a loading status.
   const build = (platform: string) => {
@@ -316,6 +344,17 @@ function buildSettingsView(
         );
       addPage(page.id, page.label, panel);
     }
+    shortcuts = renderShortcuts(document, {
+      snapshot: () => snapshot,
+      platform,
+      live,
+      report,
+      changeKeybind,
+      captureShortcut: (listener) => bridge.captureShortcut(listener),
+      syncs,
+      labels,
+    });
+    addPage("shortcuts", "settings.page.shortcuts", shortcuts.element);
     addPage(
       "config-file",
       "settings.page.file",
@@ -344,6 +383,7 @@ function buildSettingsView(
   return {
     element,
     dispose: unbind,
+    release: () => shortcuts?.release(),
     async load() {
       try {
         const loaded = await bridge.snapshot();

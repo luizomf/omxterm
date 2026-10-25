@@ -21,6 +21,7 @@ import {
 import * as applicationAbout from "./application-about";
 import { startApplicationSettings } from "./application-settings";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
+import { createKeybindCapture } from "./keybind-capture";
 import { createDefaultShellResolver, defaultShellName } from "./default-shell";
 import {
   MalformedLaunchRequestError,
@@ -107,6 +108,8 @@ const notifyWindow = (channel: string) => (window: BrowserWindow) =>
   window.webContents.send(channel);
 
 let terminalApplication: TerminalApplication<BrowserWindow> | undefined;
+// Settings shortcut recording owns a window's keyboard through key delivery.
+const keybindCapture = createKeybindCapture(process.platform);
 let operationalEvents: OperationalEventLog | undefined;
 let disposeTerminalSessions = () => {};
 const shutdown = registerTerminalShutdown(app, {
@@ -211,6 +214,7 @@ app
               () => configurationReloader.current().configuration.keybinds,
               (action) => keybindActionInvocations[action](),
               process.platform,
+              keybindCapture,
             );
             guardTerminalWindowClose(window, terminalApplication!);
             const chrome = registerWindowChrome(window, ipcMain, {
@@ -414,6 +418,7 @@ app
             terminalIpcRouter,
             configurationLoadOptions,
             configurationReloader,
+            keybindCapture,
           ),
         };
         const keybindActionInvocations = terminalActionInvocations(menuActions);

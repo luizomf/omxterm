@@ -129,6 +129,8 @@ it.each([
           snapshot: async () => base,
           change: vi.fn(),
           saveText: vi.fn(),
+          changeKeybind: vi.fn(),
+          captureShortcut: vi.fn(() => () => {}),
           onOpen(listener) {
             openSettings = listener;
             return () => {};

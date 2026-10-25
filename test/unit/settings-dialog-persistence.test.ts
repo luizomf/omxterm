@@ -49,6 +49,8 @@ it("keeps newer typing and external bytes after a BOM raw save finishes applying
       snapshot: service.snapshot,
       change: service.change,
       saveText: save,
+      changeKeybind: vi.fn(),
+      captureShortcut: vi.fn(() => () => {}),
       onOpen: () => () => {},
     },
     { focusTerminal: vi.fn(), onActivityChange: vi.fn() },
@@ -115,7 +117,11 @@ it("orders shared-file reads across two dialog lifetimes without adopting into t
       return { applied: true, notices: [] };
     },
   });
-  const bridge = { ...service, onOpen: () => () => {} };
+  const bridge = {
+    ...service,
+    captureShortcut: vi.fn(() => () => {}),
+    onOpen: () => () => {},
+  };
   const otherDocument =
     document.implementation.createHTMLDocument("second window");
   const first = createSettingsDialog(document, bridge, {
@@ -204,6 +210,8 @@ it.each([false, true])(
         return result;
       },
       saveText: service.saveText,
+      changeKeybind: vi.fn(),
+      captureShortcut: vi.fn(() => () => {}),
       onOpen: () => () => {},
     };
     const dialog = createSettingsDialog(document, bridge, {

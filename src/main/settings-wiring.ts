@@ -4,6 +4,8 @@ import {
   settingsIpc,
 } from "../shared/settings";
 import type { SettingsService } from "./settings-service";
+import { isSettingsKeybindChange } from "../shared/settings-keybinds";
+import type { KeybindCapture } from "./keybind-capture";
 import type {
   IpcEvent,
   IpcMainPort,
@@ -17,6 +19,7 @@ export function startSettings(options: {
   readonly isTrustedSender: (event: IpcEvent) => boolean;
   readonly service: SettingsService;
   readonly selectedContents: () => TrustedWebContents | undefined;
+  readonly capture?: Pick<KeybindCapture, "set">;
 }) {
   let disposed = false;
   const trusted = (event: IpcEvent) =>
@@ -31,6 +34,19 @@ export function startSettings(options: {
     if (!isSettingsChange(payload))
       throw new TypeError("Invalid settings change");
     return options.service.change(payload);
+  });
+  options.ipcMain.handle(settingsIpc.keybind, async (event, payload) => {
+    if (!trusted(event)) throw new Error("Rejected settings sender");
+    if (!isSettingsKeybindChange(payload))
+      throw new TypeError("Invalid shortcut change");
+    return options.service.changeKeybind(payload);
+  });
+  // Capture belongs to the requesting window only.
+  options.ipcMain.handle(settingsIpc.capture, async (event, payload) => {
+    if (!trusted(event)) throw new Error("Rejected settings sender");
+    if (typeof payload !== "boolean")
+      throw new TypeError("Invalid shortcut capture request");
+    options.capture?.set(event.sender, payload);
   });
   options.ipcMain.handle(settingsIpc.saveText, async (event, payload) => {
     if (!trusted(event)) throw new Error("Rejected settings sender");
@@ -51,6 +67,8 @@ export function startSettings(options: {
         settingsIpc.snapshot,
         settingsIpc.change,
         settingsIpc.saveText,
+        settingsIpc.keybind,
+        settingsIpc.capture,
       ])
         options.ipcMain.removeHandler(channel);
     },
