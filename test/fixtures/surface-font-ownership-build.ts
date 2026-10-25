@@ -73,7 +73,10 @@ export async function buildFixture(
                     { filter: /restty-terminal-surface$/ },
                     (args) =>
                       args.importer ===
-                      path.join(projectRoot, "src/renderer/index.ts")
+                      path.join(
+                        projectRoot,
+                        "src/renderer/start-terminal-window.ts",
+                      )
                         ? {
                             path: path.join(
                               projectRoot,

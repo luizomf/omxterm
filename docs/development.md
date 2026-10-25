@@ -168,6 +168,13 @@ input accepted earlier. The continuous input sample and strict empty assertions
 remain unchanged. Headless ordering/negative controls:
 `npm test -- test/unit/overlay-action-consumption.test.ts test/unit/auxiliary-panel-fixture.test.ts`.
 
+Fixture Surface import overrides target the canonical composition importer,
+`src/renderer/start-terminal-window.ts`, not the thin `src/renderer/index.ts`
+entry. After moving composition, check every importer-sensitive consumer; normal
+bootstrap equivalence does not prove fixture interception equivalence. Run
+`npm test -- test/unit/renderer-fixture-consumers.test.ts` for actual headless
+bundle/control checks, including deliberately stale-importer negative controls.
+
 ### Opt-in native test suites
 
 Several specialized integration suites are skipped by default and enabled via environment variables:

@@ -77,7 +77,10 @@ export async function buildFixture(
                     (args) => {
                       if (
                         args.importer ===
-                        path.join(projectRoot, "src/renderer/index.ts")
+                        path.join(
+                          projectRoot,
+                          "src/renderer/start-terminal-window.ts",
+                        )
                       )
                         return {
                           path: path.join(
