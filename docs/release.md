@@ -27,6 +27,8 @@ See [versioning.md](versioning.md) for SemVer rules and [development.md](develop
 
 The CI `package` job ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)) builds unsigned packages for all six targets on every push and pull request and uploads them as short-lived workflow artifacts. They are review builds: CI never tags, publishes, or bumps versions, and it does not replace the native verification below (CI runs startup verification only on Linux; macOS and Windows are checked with `--static-only`).
 
+The CI `install` and `arch` jobs then install those Linux packages on clean distributions (DEB on Ubuntu 24.04 and Debian 12, RPM on Fedora and openSUSE Tumbleweed, the AppImage on Ubuntu 22.04, and both PKGBUILDs on Arch Linux) and run [`scripts/ci-installed-smoke.sh`](../scripts/ci-installed-smoke.sh) under Xvfb without graphics flags. It checks `omxterm --version` and waits for the first terminal session, which starts only after the Terminal Surface has rendered with Chromium's software WebGL.
+
 <a id="changed-inputs-and-build-to-tag-comparison"></a>
 
 ## Reusing test and build results

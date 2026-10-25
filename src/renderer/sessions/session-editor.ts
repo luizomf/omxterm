@@ -5,6 +5,7 @@ import {
   type SavedSessionsDocument,
   type SessionDefinition,
 } from "../../shared/saved-sessions";
+import type { SessionPasswordState } from "../../shared/session-ipc";
 import type { FormField } from "../ui/form";
 import { openModal } from "../ui/modal";
 import {
@@ -19,8 +20,15 @@ export interface SessionEditorContext {
   readonly translator: Translator;
   readonly sessions: SavedSessionsDocument;
   readonly chooseFile: Choose;
-  readonly save: (candidate: unknown) => Promise<unknown>;
+  readonly save: (candidate: unknown) => Promise<SessionDefinition>;
+  readonly passwordState: (id?: string) => Promise<SessionPasswordState>;
+  readonly setPassword: (id: string, password: string | null) => Promise<void>;
 }
+
+const NO_PASSWORD_STORAGE: SessionPasswordState = {
+  storage: "unavailable",
+  saved: false,
+};
 
 // Opens the editor for a new or existing Saved Session. Resolves true after a
 // successful save. Values are validated with the same rules main applies,
@@ -39,11 +47,16 @@ export async function editSession(
     existing,
     folderId,
   );
+  // Without an answer the editor still works; ssh then asks for passwords.
+  const passwordState = await context
+    .passwordState(existing?.id)
+    .catch(() => NO_PASSWORD_STORAGE);
   const ssh = sshFields(
     document,
     t,
     existing?.kind === "ssh" ? existing : {},
     context.chooseFile,
+    passwordState,
   );
   const local = localFields(
     document,
@@ -80,6 +93,9 @@ export async function editSession(
     proxyJump: t("sessions.validation.host"),
     workingDirectory: t("sessions.validation.path"),
   };
+  // A new session keeps its id after the first save, so a retry after a
+  // keyring failure updates it instead of adding a duplicate.
+  let savedId = existing?.id;
   const read = () => {
     for (const item of Object.values(fields)) item.setError(undefined);
     const base = common.read();
@@ -114,14 +130,29 @@ export async function editSession(
       { label: t("common.save"), value: true, kind: "primary" },
     ],
     beforeResolve: async () => {
-      const candidate = read();
-      if (!candidate) return false;
+      const values = read();
+      if (!values) return false;
+      const change =
+        common.kind.value === "ssh"
+          ? ssh.passwordChange()
+          : ({ kind: "keep" } as const);
+      if (!change) return false;
+      const candidate = savedId ? { ...values, id: savedId } : values;
       try {
-        validateSession({ id: existing?.id ?? "pending", ...candidate });
-        await context.save(candidate);
-        return true;
+        validateSession({ id: "pending", ...candidate });
+        savedId = (await context.save(candidate)).id;
       } catch (cause) {
         showError(cause);
+        return false;
+      }
+      try {
+        if (change.kind === "set")
+          await context.setPassword(savedId, change.password);
+        else if (change.kind === "clear")
+          await context.setPassword(savedId, null);
+        return true;
+      } catch {
+        ssh.fields.password!.setError(t("sessions.password.saveFailed"));
         return false;
       }
     },

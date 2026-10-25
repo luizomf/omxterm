@@ -1,13 +1,14 @@
 #Maintainer: ruscher
 
-# BigLinux package for OMXTerm, built from the Git repository like the other
-# BigLinux packages (pkgver/pkgrel from the build date). Native modules are
-# compiled on the build host for x86_64 or aarch64; npm and Electron downloads
-# need network access during build(). packaging/arch/PKGBUILD builds the same
-# package from a local checkout instead.
+# BigLinux package for OMXTerm, built from the Git repository. By default it
+# builds the release tag v${pkgver}; pkgver() reads the version from the
+# checkout's package.json. Native modules are compiled on the build host for
+# x86_64 or aarch64; npm and Electron downloads need network access during
+# build(). packaging/arch/PKGBUILD builds the same package from a local
+# checkout instead.
 #
-# The default branch is built; another one with, for example:
-#   OMXTERM_BRANCH=feature/ashyterm-ui-parity makepkg -si
+# A branch is built instead with, for example:
+#   OMXTERM_BRANCH=main makepkg -si
 
 pkgname=omxterm
 pkgdesc="Open-source terminal with split panes, SSH sessions, an SFTP file manager, file hover previews, output highlighting, a command manager and an optional AI assistant"
@@ -61,19 +62,28 @@ makedepends=(
 # Electron ships prebuilt, already-stripped binaries.
 options=('!strip' '!debug')
 
-# makepkg reads this file more than once (again under fakeroot); one build
-# time keeps pkgver, pkgrel and the package file name in step even when the
-# build crosses a minute. The exported value reaches the fakeroot pass.
-export OMXTERM_BUILD_TIME="${OMXTERM_BUILD_TIME:-$(date +%s)}"
-pkgver=$(date -d "@${OMXTERM_BUILD_TIME}" +%y.%m.%d)
-pkgrel=$(date -d "@${OMXTERM_BUILD_TIME}" +%H%M)
+pkgver=0.22.1
+pkgrel=1
+# Packages built before 0.22.1 were versioned by date (26.10.25 and so on);
+# epoch=1 lets pacman upgrade from them to semantic versions.
+epoch=1
 
 arch=('x86_64' 'aarch64')
 license=('MIT')
 url="https://github.com/ruscher/${pkgname}"
-_branch="${OMXTERM_BRANCH:-main}"
-source=("git+${url}.git#branch=${_branch}")
+if [[ -n "${OMXTERM_BRANCH:-}" ]]; then
+    source=("${pkgname}::git+${url}.git#branch=${OMXTERM_BRANCH}")
+else
+    source=("${pkgname}::git+${url}.git#tag=v${pkgver}")
+fi
 md5sums=('SKIP')
+
+# The checkout's package.json version, without "-" (pacman versions cannot
+# contain it): 0.22.1 for the tag, for example 0.22.2dev.0 for a branch.
+pkgver() {
+    cd "${srcdir}/${pkgname}"
+    node -p 'require("./package.json").version.replaceAll("-", "")'
+}
 
 build() {
     cd "${srcdir}/${pkgname}"

@@ -19,9 +19,10 @@ string.
   reads, so imported aliases keep their full Host blocks.
 - **Host keys:** verification keeps OpenSSH's interactive default. A session
   may opt into `accept-new` or `yes`; `no` is never produced.
-- **Passwords:** typed at ssh's own prompt. OMXTerm does not place them on
-  command lines, in environment variables or in temporary files. AshyTerm's
-  `sshpass -f` file is deliberately not ported.
+- **Passwords:** typed at ssh's own prompt unless the user stores one in the
+  system keyring ([ADR 0037](0037-store-optional-ssh-passwords-in-the-system-keyring.md)).
+  OMXTerm does not place them on command lines, in environment variables or
+  in temporary files. AshyTerm's `sshpass -f` file is deliberately not ported.
 - **Multiplexing:** ControlMaster is optional, Unix-only, and uses OpenSSH's
   `%C` hash in a private `0700` runtime directory. It is skipped whenever
   forwards, X11 or ProxyJump need a fresh connection.

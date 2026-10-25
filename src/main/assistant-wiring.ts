@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { app, BrowserWindow, safeStorage, shell, type IpcMain } from "electron";
+import { app, BrowserWindow, shell, type IpcMain } from "electron";
 import {
   ASSISTANT_PROVIDERS,
   ASSISTANT_PROVIDER_IDS,
@@ -24,7 +24,7 @@ import {
   createAssistantService,
   type AssistantEndpoint,
 } from "./assistant-service";
-import { createCredentialStore } from "./credential-store";
+import type { CredentialStore } from "./credential-store";
 import type { OperationalEventLog } from "./operational-events";
 import type { IpcEvent, IpcMainPort } from "./terminal-ipc-types";
 import { registerTrustedHandlers } from "./trusted-ipc";
@@ -77,6 +77,7 @@ export async function startAssistant(options: {
   readonly operationalEvents: Pick<OperationalEventLog, "write">;
   readonly directory: string;
   readonly shell: string;
+  readonly credentials: CredentialStore;
 }) {
   const settingsStore = createApplicationDocumentStore<AssistantSettings>(
     {
@@ -100,11 +101,7 @@ export async function startAssistant(options: {
   );
   let settings = (await settingsStore.load()).value;
   let history = (await historyStore.load()).value;
-  const credentials = createCredentialStore(
-    safeStorage,
-    options.directory,
-    process.platform,
-  );
+  const { credentials } = options;
   const service = createAssistantService();
   const requests = new Map<string, AbortController>();
   const keyId = (provider: AssistantProvider) => `ai:${provider}`;

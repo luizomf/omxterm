@@ -118,6 +118,9 @@ export function closeTab(ctx: TabsContext, tab: TerminalTab | undefined): void {
   }
 }
 
+// How much of an ended pane's final output an offer may inspect.
+const ENDED_OUTPUT_TAIL = 4096;
+
 function onSessionEnd(
   ctx: TabsContext,
   pane: TerminalPane,
@@ -132,7 +135,7 @@ function onSessionEnd(
     !exit.startupFailed &&
     exit.exitCode !== 0
   ) {
-    showEndedBanner(
+    const addOffer = showEndedBanner(
       pane,
       exit.exitCode,
       ctx.options.endedBanner ?? DEFAULT_ENDED_BANNER_STRINGS,
@@ -141,6 +144,13 @@ function onSessionEnd(
         close: () => closePane(ctx, pane),
       },
     );
+    const output = pane.surface?.outputText?.().slice(-ENDED_OUTPUT_TAIL);
+    void ctx.options
+      .endedOffer?.(pane.launch, output ?? "")
+      .then((offer) => {
+        if (offer && !ctx.disposed && !pane.removed) addOffer(offer);
+      })
+      .catch(() => {});
     return;
   }
   // An ordinary end removes the pane; an unexpected signal keeps it visible
@@ -179,8 +189,28 @@ function paneSurfaceOptions(
   const { options } = ctx;
   const highlighter = options.createHighlighter?.();
   pane.highlighter = highlighter;
+  const clipboard = ctx.activeSurfaceOptions.clipboard;
   return {
     ...ctx.activeSurfaceOptions,
+    // The context menu acts on the focused pane, so a right-click focuses its
+    // own pane first; a split pane's menu also offers Close Pane.
+    ...(clipboard
+      ? {
+          clipboard: {
+            ...clipboard,
+            requestContextMenu() {
+              if (ctx.disposed || pane.removed) return;
+              focusPane(ctx, pane.tab, pane);
+              pane.surface?.focus();
+              clipboard.requestContextMenu(
+                layoutPanes(pane.tab.layout).length > 1
+                  ? { closePane: true }
+                  : undefined,
+              );
+            },
+          },
+        }
+      : {}),
     abortSignal: pane.mountAbort.signal,
     ...(pane.launch.retainOnExit ? { retainOnExit: true } : {}),
     ...(highlighter ? { transformOutput: highlighter.transform } : {}),

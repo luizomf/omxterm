@@ -104,7 +104,7 @@ Omarchy screenshot are arranged by Hyprland.
   collapse behind a colored chip. Many tabs scroll sideways with the mouse
   wheel, and the ⌄ button lists every open tab.
 - **Ctrl+wheel** zooms the terminal font; the right-click menu can **save the
-  output to a file**.
+  output to a file** and, in a split tab, **close the pane** you clicked.
 - **Restore Windows at Startup** (off by default): reopens your windows, tabs,
   splits, folders, connections and groups.
 - **Command palette** to run any action by name.
@@ -122,8 +122,13 @@ Omarchy screenshot are arranged by Hyprland.
   - a remote command and extra options.
 - **Quick Connect** (`user@host:port`), import from `~/.ssh/config`, and JSON
   import and export.
-- A failed connection keeps its screen with **Reconnect** and **Close**.
-- Passwords are typed at ssh's own prompt and are never stored.
+- A failed connection keeps its screen with **Reconnect** and **Close**; when
+  an agent or key session is refused, it also offers switching to a password
+  typed when prompted.
+- **Password** sessions can keep their password in the system keyring (with a
+  show/hide button) or use **Password (typed when prompted)**. A stored
+  password reaches ssh only through a one-time askpass answer, never a
+  command line, the environment or the terminal.
 
 ### Integrated file manager
 
@@ -200,21 +205,21 @@ These screenshots were taken on Linux (KDE Plasma) with OMXTerm 0.22.0.
 ## Platforms and downloads
 
 **Latest release:
-[0.22.0 — downloads and release notes](https://github.com/ruscher/omxterm/releases/tag/v0.22.0)**
+[0.22.1 — downloads and release notes](https://github.com/ruscher/omxterm/releases/tag/v0.22.1)**
 
 | Platform                                 | Download                                                                                                | Checksum                                                                                                      |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Apple Silicon macOS                      | [DMG](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.dmg)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.dmg.sha256)       |
-| Intel macOS                              | [DMG](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x64.dmg)              | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x64.dmg.sha256)         |
-| Linux ARM64                              | [AppImage](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.AppImage)  | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.AppImage.sha256)  |
-| Linux ARM64 (Debian, Ubuntu)             | [DEB](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.deb)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.deb.sha256)       |
-| Linux ARM64 (Fedora, openSUSE)           | [RPM](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-aarch64.rpm)          | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-aarch64.rpm.sha256)     |
-| Linux x64                                | [AppImage](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x86_64.AppImage) | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x86_64.AppImage.sha256) |
-| Linux x64 (Debian, Ubuntu)               | [DEB](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-amd64.deb)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-amd64.deb.sha256)       |
-| Linux x64 (Fedora, openSUSE)             | [RPM](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x86_64.rpm)           | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x86_64.rpm.sha256)      |
-| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/ruscher/omxterm/releases/download/v0.22.0/linux_install.sh)       | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/linux_install.sh.sha256)               |
-| Windows ARM64                            | [Installer](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.exe)      | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-arm64.exe.sha256)       |
-| Windows x64                              | [Installer](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x64.exe)        | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.0/OMXTerm-0.22.0-x64.exe.sha256)         |
+| Apple Silicon macOS                      | [DMG](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-arm64.dmg)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-arm64.dmg.sha256)       |
+| Intel macOS                              | [DMG](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-x64.dmg)              | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-x64.dmg.sha256)         |
+| Linux ARM64                              | [AppImage](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-arm64.AppImage)  | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-arm64.AppImage.sha256)  |
+| Linux ARM64 (Debian, Ubuntu)             | [DEB](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-arm64.deb)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-arm64.deb.sha256)       |
+| Linux ARM64 (Fedora, openSUSE)           | [RPM](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-aarch64.rpm)          | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-aarch64.rpm.sha256)     |
+| Linux x64                                | [AppImage](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-x86_64.AppImage) | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-x86_64.AppImage.sha256) |
+| Linux x64 (Debian, Ubuntu)               | [DEB](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-amd64.deb)            | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-amd64.deb.sha256)       |
+| Linux x64 (Fedora, openSUSE)             | [RPM](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-x86_64.rpm)           | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-x86_64.rpm.sha256)      |
+| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/ruscher/omxterm/releases/download/v0.22.1/linux_install.sh)       | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.1/linux_install.sh.sha256)               |
+| Windows ARM64                            | [Installer](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-arm64.exe)      | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-arm64.exe.sha256)       |
+| Windows x64                              | [Installer](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-x64.exe)        | [SHA-256](https://github.com/ruscher/omxterm/releases/download/v0.22.1/OMXTerm-0.22.1-x64.exe.sha256)         |
 
 Arch Linux, Manjaro and BigLinux build a native package with the included
 `PKGBUILD` ([below](#arch-linux-manjaro-and-biglinux)).
@@ -225,7 +230,8 @@ Arch Linux, Manjaro and BigLinux build a native package with the included
 - **Windows:** Windows 10 or 11, ARM64 or x64.
 - **Linux:** ARM64 or x64, glibc 2.34 or newer (Ubuntu 22.04+, Debian 12+,
   Fedora 35+, Arch, Manjaro, BigLinux), an X11 or XWayland session, and a GPU
-  with WebGL2 (Mesa's software renderer works with `--ignore-gpu-blocklist`).
+  with WebGL2. Without one (virtual machines without 3D acceleration),
+  OMXTerm falls back to Chromium's software WebGL automatically.
 - **SSH sessions:** an OpenSSH client (`ssh`, or `ssh.exe` on Windows).
 
 ### Signing
@@ -262,23 +268,23 @@ Run the installer and start OMXTerm from the Start menu.
 ### Debian and Ubuntu
 
 ```sh
-sudo apt install ./OMXTerm-0.22.0-amd64.deb    # arm64: OMXTerm-0.22.0-arm64.deb
+sudo apt install ./OMXTerm-0.22.1-amd64.deb    # arm64: OMXTerm-0.22.1-arm64.deb
 ```
 
 ### Fedora, openSUSE and other RPM systems
 
 ```sh
-sudo dnf install ./OMXTerm-0.22.0-x86_64.rpm   # arm64: OMXTerm-0.22.0-aarch64.rpm
-# openSUSE: sudo zypper install --allow-unsigned-rpm ./OMXTerm-0.22.0-x86_64.rpm
+sudo dnf install ./OMXTerm-0.22.1-x86_64.rpm   # arm64: OMXTerm-0.22.1-aarch64.rpm
+# openSUSE: sudo zypper install --allow-unsigned-rpm ./OMXTerm-0.22.1-x86_64.rpm
 ```
 
 ### AppImage (any Linux)
 
 ```sh
-chmod +x OMXTerm-0.22.0-x86_64.AppImage
-./OMXTerm-0.22.0-x86_64.AppImage
+chmod +x OMXTerm-0.22.1-x86_64.AppImage
+./OMXTerm-0.22.1-x86_64.AppImage
 # Optional: add it to your application menu
-sh linux_install.sh install OMXTerm-0.22.0-x86_64.AppImage
+sh linux_install.sh install OMXTerm-0.22.1-x86_64.AppImage
 ```
 
 ### Arch Linux, Manjaro and BigLinux
@@ -287,7 +293,7 @@ Two PKGBUILDs build the same package for x86_64 or aarch64. Both download npm
 packages and Electron during the build.
 
 **From GitHub (BigLinux layout).** `pkgbuild/PKGBUILD` clones this
-repository and versions the package by build date (`YY.MM.DD-HHMM`):
+repository at the release tag (`v0.22.1`) and versions the package from it:
 
 ```sh
 sudo pacman -S --needed base-devel git nodejs npm
@@ -296,8 +302,9 @@ curl -fLO https://raw.githubusercontent.com/ruscher/omxterm/main/pkgbuild/PKGBUI
 makepkg -si
 ```
 
-It builds the `main` branch; set `OMXTERM_BRANCH` to build another one, for
-example `OMXTERM_BRANCH=feature/ashyterm-ui-parity makepkg -si`.
+Set `OMXTERM_BRANCH` to build a branch instead, for example
+`OMXTERM_BRANCH=main makepkg -si`; the version then comes from that branch's
+`package.json`.
 
 **From a checkout.** `packaging/arch/PKGBUILD` builds whatever is in your
 local tree, committed or not, with the version from `package.json`:
@@ -308,8 +315,8 @@ cd omxterm/packaging/arch
 makepkg -si
 ```
 
-Moving from a date-versioned build to a checkout build, pacman reports a
-"downgrade" because `0.22.1dev.0` sorts before `26.10.22`; it installs normally.
+Both PKGBUILDs set `epoch=1`, so `1:0.22.1` upgrades the older date-versioned
+packages (such as `26.10.25`) without a "downgrade" warning.
 
 Optional packages:
 
@@ -488,7 +495,8 @@ message exists in both catalogs with the same placeholders.
 - Logs record application events only: never terminal output, commands,
   clipboard data, paths or configuration values.
 - Passwords and keys are never written to disk in plain text and never
-  included in backups or exports. SSH passwords are typed at ssh's prompt.
+  included in backups or exports. A saved SSH password stays in the system
+  keyring; otherwise ssh asks at its prompt.
 - The interface runs in an isolated renderer without Node.js. Only the main
   process starts programs, always with literal argument lists, never shell
   strings. Imported SSH settings that would run local programs
@@ -500,8 +508,9 @@ detailed model is in
 
 ## Troubleshooting
 
-- **Blank or black window on Linux:** OMXTerm needs WebGL2. In virtual
-  machines or with blocklisted drivers, try `omxterm --ignore-gpu-blocklist`
+- **Blank or black window on Linux:** OMXTerm needs WebGL2 and falls back to
+  software WebGL when the GPU has none. If a broken driver still fails, try
+  `omxterm --ignore-gpu-blocklist`
   (see [graphics troubleshooting](docs/linux-desktop.md#graphics-troubleshooting)).
 - **Wayland:** OMXTerm runs through XWayland by default; pass
   `--ozone-platform=wayland` to try native Wayland.

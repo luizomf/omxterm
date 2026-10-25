@@ -27,6 +27,7 @@ import type { TerminalActionName } from "./terminal-keybinds";
 import type {
   TerminalExit,
   TerminalClipboardAction,
+  TerminalContextMenuRequest,
   TerminalFontZoom,
   TerminalSessionId,
   TerminalSize,
@@ -43,7 +44,7 @@ import type {
   SessionDefinition,
   SessionFolder,
 } from "./saved-sessions";
-import type { SessionFileChoice } from "./session-ipc";
+import type { SessionFileChoice, SessionPasswordState } from "./session-ipc";
 import type { HighlightSettings } from "./highlight-settings";
 import type { CommandDefinition, CommandLibraryDocument } from "./commands";
 import type { BackupRequest } from "./backup-ipc";
@@ -187,6 +188,11 @@ export interface SessionsBridge {
   onToggleSidebar(listener: () => void): () => void;
   // The SSH target passed with --ssh, once, to the first window that asks.
   startupConnection(): Promise<string | null>;
+  // Whether a session (or, without an id, a new one) can store a password,
+  // and whether it has one. The stored password itself never comes back.
+  passwordState(id?: string): Promise<SessionPasswordState>;
+  // Stores a password for an SSH password session, or removes it (null).
+  setPassword(id: string, password: string | null): Promise<void>;
 }
 
 export interface TerminalBridge {
@@ -260,7 +266,7 @@ export interface TerminalBridge {
   readClipboardText(): Promise<string>;
   droppedFilePathInsertion(files: readonly File[]): string;
   confirmPaste(text: string): Promise<boolean>;
-  requestClipboardContextMenu(): void;
+  requestClipboardContextMenu(request?: TerminalContextMenuRequest): void;
   onClipboardAction(
     listener: (action: TerminalClipboardAction) => void,
   ): () => void;

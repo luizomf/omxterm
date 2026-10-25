@@ -93,7 +93,7 @@ Press `Cmd+Shift+J` / `Ctrl+Shift+H` (**View → Toggle Sessions**) to open the 
 - **Organizing:** right-click (or use the context-menu key) to edit, duplicate, favorite, move or delete. Drag a session onto a folder to move it. Search matches names, hosts and directories. Favorites and recently used sessions appear at the top.
 - **Import and export:** the **⋯** menu imports hosts from `~/.ssh/config` and imports or exports sessions as JSON. Exports never contain passwords or keys.
 
-OMXTerm runs your system's OpenSSH client (`ssh`, or `ssh.exe` on Windows), so `~/.ssh/config`, your SSH agent and `known_hosts` all apply. Unknown host keys are confirmed in the terminal as usual. Passwords are typed at ssh's own prompt; OMXTerm never stores them or puts them on a command line. Settings that make ssh run local programs, such as `ProxyCommand`, belong in `~/.ssh/config` and are refused as extra options.
+OMXTerm runs your system's OpenSSH client (`ssh`, or `ssh.exe` on Windows), so `~/.ssh/config`, your SSH agent and `known_hosts` all apply. Unknown host keys are confirmed in the terminal as usual. With **Password** authentication you can type the session's password (the eye button shows or hides it) to keep it in your system keyring, or check **Password (typed when prompted)** to type it at ssh's prompt each time. A stored password is never shown again, exported or put on a command line; unknown host keys, verification codes and a retry after a wrong password are still typed in the terminal. Without a secure keyring (or on Windows) ssh always asks. If an agent or key session fails with "Permission denied", the error banner offers switching it to Password (typed when prompted) and reconnecting. Settings that make ssh run local programs, such as `ProxyCommand`, belong in `~/.ssh/config` and are refused as extra options.
 
 When a saved or Quick Connect session fails (for example, `Connection refused`), its tab stays open with the error visible and offers **Reconnect** and **Close**.
 
@@ -142,7 +142,7 @@ Use **Terminal → Split Right** or **Split Down** to divide the focused pane. E
 - Click a pane, or use the pane focus shortcuts, to move focus. The focused pane of a split shows a thin accent edge.
 - Drag a divider to resize, or focus a divider with `Tab` and use the arrow keys. **Equalize Panes** gives every pane the same share.
 - **Maximize or Restore Pane** temporarily shows only the focused pane; the others keep running.
-- **Close Pane** ends only the focused pane's session (it asks first when a program is running, like Close Tab). Closing a tab closes all of its panes, and when a pane's shell exits, its neighbor takes its place.
+- **Close Pane** ends only the focused pane's session (it asks first when a program is running, like Close Tab). In a split tab you can also right-click a pane and choose **Close Pane**; right-clicking focuses that pane first, so Copy, Paste and Save Output act on it too. Closing a tab closes all of its panes, and when a pane's shell exits, its neighbor takes its place.
 - A tab holds up to 16 panes. Tab labels show the focused pane's title and the pane count, for example `vim (3)`.
 
 ### Broadcasting input
@@ -274,7 +274,7 @@ This is a known issue ([#568](https://github.com/luizomf/omxterm/issues/568)). P
 
 ### The renderer cannot start
 
-OMXTerm requires **WebGL2** to draw the terminal. If WebGL2 fails to initialize (common in some virtual machines without 3D acceleration), try the Linux installer's [graphics compatibility mode](linux-installer.md#only-if-graphics-fail) or the launch flags in [Linux graphics troubleshooting](linux-desktop.md#graphics-troubleshooting).
+OMXTerm requires **WebGL2** to draw the terminal. On Linux it falls back to Chromium's software WebGL when the GPU cannot provide WebGL2, such as in virtual machines without 3D acceleration. If WebGL2 still fails to initialize, try the Linux installer's [graphics compatibility mode](linux-installer.md#only-if-graphics-fail) or the launch flags in [Linux graphics troubleshooting](linux-desktop.md#graphics-troubleshooting).
 
 ### macOS asks for folder permissions again after an update
 

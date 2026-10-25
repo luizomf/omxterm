@@ -154,7 +154,15 @@ jobs:
           echo "USE_SYSTEM_FPM=true" >> "$GITHUB_ENV"
       - run: npm ci
       - name: Build and package
-        run: npm run package:${{ matrix.platform }}
+        shell: bash
+        # hdiutil on hosted macOS runners sometimes cannot detach the DMG it
+        # just built ("Resource busy"); one retry repackages the same build.
+        run: |
+          npm run package:${{ matrix.platform }} || {
+            [ "${{ runner.os }}" = macOS ] || exit 1
+            sleep 30
+            npm run package-built:${{ matrix.platform }}
+          }
       - name: Verify packaged startup and contents
         if: runner.os == 'Linux'
         # Hosted runners have no GPU: Chromium blocklists Mesa's software
@@ -199,3 +207,137 @@ jobs:
             release/linux_install.sh
           if-no-files-found: error
           retention-days: 7
+
+  install:
+    # Installs the packages built above on clean distributions, the way a user
+    # would, and starts each with scripts/ci-installed-smoke.sh: the reported
+    # version matches and the first terminal session starts under Xvfb with no
+    # graphics flags (the runners have no GPU).
+    name: Install (${{ matrix.name }})
+    needs: package
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.image }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {
+              name: ubuntu-24.04 deb x64,
+              runner: ubuntu-24.04,
+              image: "ubuntu:24.04",
+              target: linux-x64,
+              kind: apt,
+            }
+          - {
+              name: debian-12 deb arm64,
+              runner: ubuntu-24.04-arm,
+              image: "debian:12",
+              target: linux-arm64,
+              kind: apt,
+            }
+          - {
+              name: fedora rpm x64,
+              runner: ubuntu-24.04,
+              image: "fedora:latest",
+              target: linux-x64,
+              kind: dnf,
+            }
+          - {
+              name: fedora rpm arm64,
+              runner: ubuntu-24.04-arm,
+              image: "fedora:latest",
+              target: linux-arm64,
+              kind: dnf,
+            }
+          - {
+              name: opensuse rpm x64,
+              runner: ubuntu-24.04,
+              image: "opensuse/tumbleweed",
+              target: linux-x64,
+              kind: zypper,
+            }
+          - {
+              name: ubuntu-22.04 AppImage x64,
+              runner: ubuntu-24.04,
+              image: "ubuntu:22.04",
+              target: linux-x64,
+              kind: appimage,
+            }
+          - {
+              name: ubuntu-22.04 AppImage arm64,
+              runner: ubuntu-24.04-arm,
+              image: "ubuntu:22.04",
+              target: linux-arm64,
+              kind: appimage,
+            }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-${{ matrix.target }}
+          path: packages
+      - name: Install the package and Xvfb
+        shell: sh
+        run: |
+          set -eu
+          case "${{ matrix.kind }}" in
+            apt)
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install -y --no-install-recommends ./packages/OMXTerm-*.deb xvfb xauth
+              ;;
+            dnf)
+              dnf install -y ./packages/OMXTerm-*.rpm xorg-x11-server-Xvfb xorg-x11-xauth util-linux
+              ;;
+            zypper)
+              zypper --non-interactive install --allow-unsigned-rpm ./packages/OMXTerm-*.rpm xvfb-run util-linux
+              ;;
+            appimage)
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install -y --no-install-recommends xvfb xauth libgtk-3-0 libnss3 libasound2 libgbm1 libxss1 libxtst6 libnotify4 libsecret-1-0 libdrm2 libxkbcommon0 libatspi2.0-0 ca-certificates
+              chmod +x packages/OMXTerm-*.AppImage
+              ;;
+          esac
+      - name: Start the installed application
+        shell: sh
+        run: |
+          set -eu
+          version=$(sed -n 's/^  "version": "\(.*\)",$/\1/p' package.json)
+          if [ "${{ matrix.kind }}" = appimage ]; then
+            set -- "$(ls packages/OMXTerm-*.AppImage)" --appimage-extract-and-run
+          else
+            set -- omxterm
+          fi
+          xvfb-run -a -s "-screen 0 1280x800x24" sh scripts/ci-installed-smoke.sh "$version" "$@"
+
+  arch:
+    # Builds both PKGBUILDs on a clean Arch Linux, installs the package with
+    # pacman and starts it like the distribution packages above.
+    # pkgbuild/PKGBUILD clones this branch from GitHub (OMXTERM_BRANCH).
+    name: Arch package (${{ matrix.pkgbuild }})
+    runs-on: ubuntu-24.04
+    container: archlinux:latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        pkgbuild: [packaging/arch, pkgbuild]
+    steps:
+      - name: Build tools
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git nodejs npm xorg-server-xvfb xorg-xauth
+          useradd -m builder
+      - uses: actions/checkout@v4
+      - name: Build the package
+        run: |
+          chown -R builder "$GITHUB_WORKSPACE"
+          cd "${{ matrix.pkgbuild }}"
+          runuser -u builder -- env OMXTERM_BRANCH="${{ github.head_ref || github.ref_name }}" makepkg --nodeps --noconfirm
+      - name: Install with pacman and start
+        run: |
+          version=$(sed -n 's/^  "version": "\(.*\)",$/\1/p' package.json)
+          pacman -U --noconfirm "${{ matrix.pkgbuild }}"/omxterm-*.pkg.tar*
+          pacman -Qi omxterm | grep -E '^(Name|Version)'
+          xvfb-run -a -s "-screen 0 1280x800x24" sh scripts/ci-installed-smoke.sh "$version" omxterm

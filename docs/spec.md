@@ -403,7 +403,9 @@ is an independent Terminal Surface and Live Terminal Session.
   title, clipboard actions, paste, snippets and dropped paths.
 - An ordinary pane exit removes that pane and focuses its neighbor; the last
   pane follows the existing tab and window lifecycle. Signal exits keep their
-  native failure acknowledgement. Close Pane ends only the focused pane and asks
+  native failure acknowledgement. Right-clicking a pane focuses it before the
+  native context menu opens; in a split tab that menu also offers Close Pane
+  with the current `closePane` keybind. Close Pane ends only the focused pane and asks
   first only when that pane's session is Busy. Close Tab asks when any pane of
   the tab is Busy.
 - A tab holds at most 16 panes.
@@ -436,8 +438,16 @@ Opening one always starts a new process.
   their final screen with Reconnect and Close actions. Reconnect starts a new
   session in the same pane position. Ordinary zero exits close like any other
   session.
-- Exports contain definitions only. Passwords are typed at ssh's prompt and
-  are never stored; options that execute local programs are rejected.
+- Exports contain definitions only; options that execute local programs are
+  rejected. Password authentication either stores the password in the system
+  keyring or, with Password (typed when prompted), leaves it to ssh's prompt.
+  A stored password is never returned to the renderer, written to
+  `sessions.json`, exports or backups, or placed in argv, the environment or
+  terminal output: ssh asks a one-time `SSH_ASKPASS` helper, and every other
+  prompt (host keys, codes, a retry) is typed at the terminal. Without a
+  secure keyring, or on Windows, storing is unavailable. When an agent or key
+  session fails with "Permission denied", its ended banner offers switching to
+  Password (typed when prompted) and reconnecting (ADR 0037).
 
 ## Output highlighting
 
@@ -505,7 +515,10 @@ The Restty Terminal Surface uses the existing Terminal Tabs, session Adapter and
 real PTY lifecycle for ordinary Unicode input/output, grid resize, focus,
 Default Shell and explicit-command startup, shell exit, tab close and
 renderer-loss cleanup. It requires the bundled Terminal Font Stack TTFs, Ghostty
-core and an actual WebGL2 backend before a PTY starts. Initialization failure
+core and an actual WebGL2 backend before a PTY starts. On Linux, main allows
+Chromium's bundled SwiftShader WebGL when hardware WebGL2 is unavailable; usable
+hardware, the GPU blocklist and driver selection are unchanged (ADR 0038).
+Initialization failure
 releases partial resources and starts no shell. Closing an initializing Surface
 is cancellation, not a rendering failure: font, runtime and session-start
 continuations cannot notify a removed owner or start a session after

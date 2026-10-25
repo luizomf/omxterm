@@ -340,6 +340,24 @@ export function isTerminalFontZoom(value: unknown): value is TerminalFontZoom {
   return value === "in" || value === "out" || value === "reset";
 }
 
+// A split Terminal Pane's context menu also offers Close Pane. Single panes
+// and other text fields send no request.
+export interface TerminalContextMenuRequest {
+  readonly closePane: true;
+}
+
+export function isTerminalContextMenuRequest(
+  value: unknown,
+): value is TerminalContextMenuRequest {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.keys(value).length === 1 &&
+    (value as { closePane?: unknown }).closePane === true
+  );
+}
+
 export function isTerminalClipboardAction(
   value: unknown,
 ): value is TerminalClipboardAction {

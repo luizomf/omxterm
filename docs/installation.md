@@ -109,16 +109,16 @@ makepkg -si
 
 It builds your local tree, committed or not, versioned from `package.json`, and installs OMXTerm in `/usr/lib/omxterm` with the `omxterm` command, an application menu entry, theme icons, the README in `/usr/share/doc/omxterm`, and its licenses in `/usr/share/licenses/omxterm`. Optional packages: `openssh` (SSH sessions, Quick Connect, remote files over SFTP) and `ollama` (local models for the AI assistant).
 
-On **BigLinux**, [`pkgbuild/PKGBUILD`](../pkgbuild/PKGBUILD) follows BigLinux's packaging conventions: it clones the repository's `main` branch (or the branch in `OMXTERM_BRANCH`) and versions the package by build date (`YY.MM.DD-HHMM`). It installs the same files:
+On **BigLinux**, [`pkgbuild/PKGBUILD`](../pkgbuild/PKGBUILD) clones the repository at the release tag (`v0.22.1`), or the branch in `OMXTERM_BRANCH`, and takes the version from that checkout's `package.json`. It installs the same files:
 
 ```sh
 mkdir omxterm-pkg && cd omxterm-pkg
 curl -fLO https://raw.githubusercontent.com/ruscher/omxterm/main/pkgbuild/PKGBUILD
-makepkg -si                                          # main
-OMXTERM_BRANCH=feature/ashyterm-ui-parity makepkg -si  # another branch
+makepkg -si                       # release v0.22.1
+OMXTERM_BRANCH=main makepkg -si   # a branch
 ```
 
-Switching from a date-versioned package to a checkout build, pacman reports a downgrade (`0.22.1dev.0` sorts before `26.10.22`) and installs normally.
+Both PKGBUILDs set `epoch=1`, so `1:0.22.1` upgrades the date-versioned packages built before 0.22.1 (such as `26.10.25`) without a downgrade warning.
 
 ### Run the AppImage
 

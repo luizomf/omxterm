@@ -26,7 +26,7 @@ It automatically detects whether your system supports direct FUSE mounting or ne
 
 ## Only if graphics fail
 
-If OMXTerm opens a blank window or reports a WebGL2 initialization error inside a virtual machine or on older GPU drivers, install with the `--compatibility` flag:
+OMXTerm already falls back to software WebGL when the GPU cannot provide WebGL2, as in virtual machines without 3D acceleration. If it still opens a blank window or reports a WebGL2 initialization error, for example with an older GPU driver, install with the `--compatibility` flag:
 
 ```sh
 ./linux_install.sh install --compatibility "$appimage"

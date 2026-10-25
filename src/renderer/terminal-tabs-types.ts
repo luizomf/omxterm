@@ -18,6 +18,7 @@ import type { TabStrip } from "./tab-strip";
 import type { OutputHighlighter } from "./highlighting/output-highlighter";
 import type {
   EndedBannerStrings,
+  EndedOffer,
   PaneLaunch,
   TerminalPane,
   TerminalTab,
@@ -55,6 +56,12 @@ export interface TerminalTabsOptions {
   // Labels for the tab and group menus; English when absent.
   readonly translator?: Translator;
   readonly endedBanner?: EndedBannerStrings;
+  // An extra choice for a retained pane that failed, from its launch and the
+  // tail of its final output.
+  readonly endedOffer?: (
+    launch: PaneLaunch,
+    output: string,
+  ) => Promise<EndedOffer | undefined>;
   readonly notifyEmpty?: (reason?: "rendering-failure") => void;
   // tabSessionIds is supplied only for split tabs; a single-pane tab keeps
   // the original one-session selection message.

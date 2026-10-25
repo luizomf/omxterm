@@ -1,6 +1,7 @@
 import type { WorkspacePlan } from "../shared/workspace";
 import type { PersistedWorkspaceWindow } from "./terminal-ipc-workspace";
 import type {
+  TerminalContextMenuRequest,
   TerminalExit,
   TerminalSessionId,
 } from "../shared/terminal-contract";
@@ -108,7 +109,9 @@ export interface TerminalIpcControllerOptions {
   readonly readClipboardText: () => string;
   readonly confirmPaste: (text: string) => Promise<boolean>;
   readonly onClipboardError?: () => void;
-  readonly showClipboardContextMenu: () => void;
+  readonly showClipboardContextMenu: (
+    request?: TerminalContextMenuRequest,
+  ) => void;
   readonly onTitleRequest: (
     sessionId: TerminalSessionId,
     request: string,

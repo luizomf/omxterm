@@ -43,6 +43,8 @@ export class CredentialStoreError extends Error {
 export interface CredentialStore {
   availability(): CredentialAvailability;
   has(id: string): Promise<boolean>;
+  // Every stored id, never a secret.
+  ids(): Promise<readonly string[]>;
   get(id: string): Promise<string | undefined>;
   set(id: string, secret: string): Promise<void>;
   delete(id: string): Promise<void>;
@@ -113,12 +115,22 @@ export function createCredentialStore(
       throw new CredentialStoreError("Invalid credential identifier");
   };
   const entries = async () => (await document.load()).value;
+  // Writes rewrite the whole file, so they run one at a time.
+  let writes: Promise<unknown> = Promise.resolve();
+  const serialized = (write: () => Promise<void>): Promise<void> => {
+    const run = writes.then(write, write);
+    writes = run.catch(() => {});
+    return run;
+  };
 
   return {
     availability,
     async has(id) {
       requireId(id);
       return Object.hasOwn(await entries(), id);
+    },
+    async ids() {
+      return Object.keys(await entries());
     },
     async get(id) {
       requireId(id);
@@ -141,14 +153,18 @@ export function createCredentialStore(
         throw new CredentialStoreError("Invalid secret");
       requireAvailable();
       const encrypted = cipher.encryptString(secret).toString("base64");
-      await document.save({ ...(await entries()), [id]: encrypted });
+      await serialized(async () =>
+        document.save({ ...(await entries()), [id]: encrypted }),
+      );
     },
     async delete(id) {
       requireId(id);
-      const current = await entries();
-      if (!Object.hasOwn(current, id)) return;
-      const { [id]: _removed, ...rest } = current;
-      await document.save(rest);
+      await serialized(async () => {
+        const current = await entries();
+        if (!Object.hasOwn(current, id)) return;
+        const { [id]: _removed, ...rest } = current;
+        await document.save(rest);
+      });
     },
   };
 }
