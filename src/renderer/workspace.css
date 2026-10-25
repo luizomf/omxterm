@@ -672,6 +672,16 @@ body.tabs-visible #workspace-sidebar {
   flex: 1;
 }
 
+.omx-password-input {
+  display: flex;
+  align-items: center;
+  gap: var(--omx-space-1);
+}
+
+.omx-password-input input {
+  flex: 1;
+}
+
 .omx-section {
   display: flex;
   flex-direction: column;

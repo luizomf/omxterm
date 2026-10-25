@@ -89,13 +89,22 @@ export const DEFAULT_ENDED_BANNER_STRINGS: EndedBannerStrings = {
   close: "Close",
 };
 
+// A further choice on an ended banner, such as switching a Saved Session to
+// password authentication; Reconnect follows once apply resolves.
+export interface EndedOffer {
+  readonly message: string;
+  readonly label: string;
+  apply(): Promise<void>;
+}
+
 // Shown over a retained pane whose session failed; the final output stays.
+// The returned function adds an offer while the banner is still shown.
 export function showEndedBanner(
   pane: TerminalPane,
   exitCode: number,
   strings: EndedBannerStrings,
   actions: { readonly reconnect: () => void; readonly close: () => void },
-): void {
+): (offer: EndedOffer) => void {
   const document = pane.container.ownerDocument;
   const banner = document.createElement("div");
   banner.className = "pane-ended-banner";
@@ -113,6 +122,24 @@ export function showEndedBanner(
   banner.append(message, reconnect, close);
   pane.container.append(banner);
   reconnect.focus();
+  return (offer) => {
+    if (!banner.isConnected) return;
+    const question = document.createElement("span");
+    question.className = "pane-ended-offer";
+    question.textContent = offer.message;
+    const accept = document.createElement("button");
+    accept.type = "button";
+    accept.textContent = offer.label;
+    accept.addEventListener("click", () => {
+      accept.disabled = true;
+      offer.apply().then(actions.reconnect, () => {
+        accept.disabled = false;
+      });
+    });
+    banner.insertBefore(question, reconnect);
+    banner.insertBefore(accept, reconnect);
+    accept.focus();
+  };
 }
 
 export function closePendingPane(pane: TerminalPane): void {

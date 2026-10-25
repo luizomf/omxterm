@@ -34,10 +34,36 @@ describe("Application Network Boundary", () => {
       // The opt-in AI assistant is the one documented exception (docs/spec.md,
       // AI assistant); it is checked separately below.
       if (file === path.join(root, "main", "assistant-service.ts")) continue;
-      const source = await readFile(file, "utf8");
+      let source = await readFile(file, "utf8");
+      // The SSH askpass broker serves a private Unix socket, not a network;
+      // its one node:net import is checked separately below.
+      if (file === path.join(root, "main", "ssh-askpass.ts"))
+        source = source.replace(
+          'import { createServer, type Socket } from "node:net";',
+          "",
+        );
       for (const pattern of forbidden) expect(source).not.toMatch(pattern);
       expect(source).not.toMatch(/=\s*fetch\b/u);
     }
+  });
+
+  it("limits the SSH askpass broker to a private Unix socket", async () => {
+    const source = await readFile(
+      path.resolve(import.meta.dirname, "../../src/main/ssh-askpass.ts"),
+      "utf8",
+    );
+    const broker = source.slice(
+      0,
+      source.indexOf("export const ASKPASS_HELPER_SOURCE"),
+    );
+    expect(broker.match(/from\s+["']node:net["']/gu)).toHaveLength(1);
+    expect(broker).toMatch(
+      /import \{ createServer, type Socket \} from "node:net";/u,
+    );
+    // It listens on a filesystem path only, never a port, and dials nothing.
+    expect(broker.match(/\.listen\(/gu)).toEqual([".listen("]);
+    expect(broker).toMatch(/server\.listen\(socketPath,/u);
+    expect(broker).not.toMatch(/\b(?:connect|createConnection)\s*\(/u);
   });
 
   it("confines network access to the opt-in assistant service in main", async () => {

@@ -47,6 +47,8 @@ function editorContext(context: SessionMenuContext) {
     sessions: context.sessions,
     chooseFile: context.bridge.chooseFile,
     save: context.bridge.saveSession,
+    passwordState: context.bridge.passwordState,
+    setPassword: context.bridge.setPassword,
   };
 }
 

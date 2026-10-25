@@ -175,7 +175,25 @@ export const brazilianPortugueseMessages: EnglishMessages = {
   "sessions.field.auth": "Autenticação",
   "sessions.auth.agent": "Agente SSH ou chaves padrão",
   "sessions.auth.key": "Arquivo de chave privada",
-  "sessions.auth.password": "Senha (digitada quando solicitada)",
+  "sessions.auth.password": "Senha",
+  "sessions.field.password": "Senha",
+  "sessions.password.show": "Mostrar senha",
+  "sessions.password.hide": "Ocultar senha",
+  "sessions.password.prompt": "Senha (digitada quando solicitada)",
+  "sessions.password.savedPlaceholder": "Salva. Digite para substituir",
+  "sessions.password.noKeyring":
+    "Nenhum chaveiro seguro do sistema está disponível, então o ssh pede a senha ao conectar.",
+  "sessions.password.unsupported":
+    "Salvar a senha não está disponível neste sistema, então o ssh pede a senha ao conectar.",
+  "sessions.password.saveFailed":
+    "A sessão foi salva, mas o chaveiro do sistema não conseguiu guardar a senha.",
+  "sessions.validation.password":
+    "Digite a senha ou marque Senha (digitada quando solicitada).",
+  "sessions.validation.passwordText":
+    "A senha não pode ter quebras de linha e tem no máximo 1.024 caracteres.",
+  "sessions.offer.password":
+    "A autenticação falhou. Mudar esta sessão para Senha (digitada quando solicitada)?",
+  "sessions.offer.passwordAction": "Usar senha e reconectar",
   "sessions.field.identityFile": "Arquivo de chave privada",
   "sessions.field.proxyJump": "Host de salto (ProxyJump)",
   "sessions.field.forwardAgent": "Encaminhar agente SSH",

@@ -436,8 +436,16 @@ Opening one always starts a new process.
   their final screen with Reconnect and Close actions. Reconnect starts a new
   session in the same pane position. Ordinary zero exits close like any other
   session.
-- Exports contain definitions only. Passwords are typed at ssh's prompt and
-  are never stored; options that execute local programs are rejected.
+- Exports contain definitions only; options that execute local programs are
+  rejected. Password authentication either stores the password in the system
+  keyring or, with Password (typed when prompted), leaves it to ssh's prompt.
+  A stored password is never returned to the renderer, written to
+  `sessions.json`, exports or backups, or placed in argv, the environment or
+  terminal output: ssh asks a one-time `SSH_ASKPASS` helper, and every other
+  prompt (host keys, codes, a retry) is typed at the terminal. Without a
+  secure keyring, or on Windows, storing is unavailable. When an agent or key
+  session fails with "Permission denied", its ended banner offers switching to
+  Password (typed when prompted) and reconnecting (ADR 0037).
 
 ## Output highlighting
 

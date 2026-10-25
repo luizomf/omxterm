@@ -1,6 +1,11 @@
 import type { IpcRenderer, IpcRendererEvent } from "electron";
 import type { SessionsBridge } from "../shared/terminal-bridge";
-import { isSessionFileChoice, sessionIpc } from "../shared/session-ipc";
+import {
+  isSessionFileChoice,
+  isSessionPassword,
+  isSessionPasswordState,
+  sessionIpc,
+} from "../shared/session-ipc";
 import { isSavedSessionId } from "../shared/terminal-launch";
 import { parseSshTarget } from "../shared/saved-session-primitives";
 import {
@@ -83,6 +88,20 @@ export function createSessionsBridge(ipc: IpcRenderer): SessionsBridge {
         parseSshTarget(response) !== undefined
         ? response
         : null;
+    },
+    async passwordState(id) {
+      const response: unknown = await ipc.invoke(
+        sessionIpc.passwordState,
+        id === undefined ? null : requireId(id),
+      );
+      if (!isSessionPasswordState(response))
+        throw new TypeError("Invalid password state");
+      return response;
+    },
+    async setPassword(id, password) {
+      if (password !== null && !isSessionPassword(password))
+        throw new TypeError("Invalid password");
+      await ipc.invoke(sessionIpc.setPassword, { id: requireId(id), password });
     },
   };
 }

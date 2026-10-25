@@ -27,9 +27,11 @@ named tests.
   `UserKnownHostsFile`, `Match`, among others).
 - Host keys use OpenSSH's own prompt (`ask`). OMXTerm never accepts a key
   for the user.
-- Passwords and passphrases are typed at ssh's prompt and are never stored,
-  logged or placed on a command line. AshyTerm's `sshpass` path is not
-  ported.
+- Passwords and passphrases are typed at ssh's prompt unless the user stores
+  a session's password, which then lives only in the system keyring and
+  reaches ssh through a one-time `SSH_ASKPASS` answer (ADR 0037). They are
+  never logged, exported or placed on a command line, in the environment or
+  in terminal output. AshyTerm's `sshpass` path is not ported.
 - ControlMaster sockets live in a private (0700) per-user runtime directory.
 
 ## Secrets and data at rest

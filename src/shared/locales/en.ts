@@ -176,7 +176,25 @@ export const englishMessages = {
   "sessions.field.auth": "Authentication",
   "sessions.auth.agent": "SSH agent or default keys",
   "sessions.auth.key": "Private key file",
-  "sessions.auth.password": "Password (typed when prompted)",
+  "sessions.auth.password": "Password",
+  "sessions.field.password": "Password",
+  "sessions.password.show": "Show password",
+  "sessions.password.hide": "Hide password",
+  "sessions.password.prompt": "Password (typed when prompted)",
+  "sessions.password.savedPlaceholder": "Saved. Type to replace it",
+  "sessions.password.noKeyring":
+    "No secure system keyring is available, so ssh asks for the password when connecting.",
+  "sessions.password.unsupported":
+    "Saving a password is not available on this system, so ssh asks for it when connecting.",
+  "sessions.password.saveFailed":
+    "The session was saved, but the system keyring could not store the password.",
+  "sessions.validation.password":
+    "Type the password, or choose Password (typed when prompted).",
+  "sessions.validation.passwordText":
+    "The password cannot contain line breaks and is limited to 1,024 characters.",
+  "sessions.offer.password":
+    "Authentication failed. Switch this session to Password (typed when prompted)?",
+  "sessions.offer.passwordAction": "Use password and reconnect",
   "sessions.field.identityFile": "Private key file",
   "sessions.field.proxyJump": "Jump host (ProxyJump)",
   "sessions.field.forwardAgent": "Forward SSH agent",
