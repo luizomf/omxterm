@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  createRendererLanguage,
+  type RendererLanguage,
+} from "../../src/renderer/renderer-language";
+import {
   createAuxiliaryPanel,
   type AuxiliaryView,
 } from "../../src/renderer/auxiliary-panel";
@@ -11,8 +15,9 @@ afterEach(() => {
   document.body.replaceChildren();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
-function fixture(initialWidth = 1000) {
+function fixture(initialWidth = 1000, language?: RendererLanguage) {
   let width = initialWidth;
   const content = document.createElement("div");
   const root = document.createElement("aside");
@@ -52,6 +57,7 @@ function fixture(initialWidth = 1000) {
     views: factories,
     focusTerminal,
     clipboard,
+    ...(language ? { language } : {}),
   });
   cleanups.push(panel.dispose);
   const separator = content.querySelector<HTMLElement>('[role="separator"]')!;
@@ -101,6 +107,59 @@ function fixture(initialWidth = 1000) {
     pointer,
   };
 }
+
+describe("window auxiliary panel localization", () => {
+  it("announces panel width in the current language after switching and keyboard resizing", () => {
+    const language = createRendererLanguage("pt-BR");
+    const f = fixture(1000, language);
+    f.panel.toggle("a");
+    expect(f.separator.getAttribute("aria-valuetext")).toBe(
+      "280 pixels de largura",
+    );
+    f.key("ArrowLeft");
+    expect(f.separator.getAttribute("aria-valuenow")).toBe("290");
+    expect(f.separator.getAttribute("aria-valuetext")).toBe(
+      "290 pixels de largura",
+    );
+    language.set("en-US");
+    expect(f.separator.getAttribute("aria-valuetext")).toBe("290 pixels wide");
+    f.key("Home");
+    expect(f.separator.getAttribute("aria-valuetext")).toBe("220 pixels wide");
+    language.set("pt-BR");
+    expect(f.separator.getAttribute("aria-valuetext")).toBe(
+      "220 pixels de largura",
+    );
+    const text = f.separator.getAttribute("aria-valuetext");
+    f.panel.dispose();
+    language.set("en-US");
+    expect(f.separator.getAttribute("aria-valuetext")).toBe(text);
+  });
+  it("relabels an already-visible narrow-window notice without restarting its lifetime", () => {
+    vi.useFakeTimers();
+    const language = createRendererLanguage();
+    const f = fixture(405, language);
+    f.panel.toggle("a");
+    const notice = document.querySelector<HTMLElement>(".auxiliary-status")!;
+    expect(notice.textContent).toBe("Widen the window to open A");
+    vi.advanceTimersByTime(2000);
+    language.set("pt-BR");
+    expect(notice.hidden).toBe(false);
+    expect(notice.textContent).toBe("Alargue a janela para abrir A");
+    language.set("en-US");
+    expect(notice.textContent).toBe("Widen the window to open A");
+    expect(f.factories[0]!.create).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1999);
+    expect(notice.hidden).toBe(false);
+    vi.advanceTimersByTime(1);
+    expect(notice.hidden).toBe(true);
+    f.panel.toggle("b");
+    expect(notice.textContent).toBe("Widen the window to open B");
+    f.panel.dispose();
+    language.set("pt-BR");
+    expect(notice.textContent).toBe("Widen the window to open B");
+    vi.advanceTimersByTime(4000);
+  });
+});
 
 describe("window auxiliary panel", () => {
   it("observes actual content and releases geometry callbacks without late mutation", () => {
@@ -187,6 +246,12 @@ describe("window auxiliary panel", () => {
   it("uses keyboard pixel limits, exposes values and consumes only separator resize keys", () => {
     const f = fixture(600);
     f.panel.toggle("a");
+    expect(f.separator.tabIndex).toBe(0);
+    expect(f.separator.getAttribute("role")).toBe("separator");
+    expect(f.separator.getAttribute("aria-orientation")).toBe("vertical");
+    expect(f.separator.getAttribute("aria-label")).toBeTruthy();
+    expect(f.separator.getAttribute("aria-valuemin")).toBe("220");
+    f.separator.focus();
     expect(f.key("ArrowLeft").defaultPrevented).toBe(true);
     expect(f.root.style.width).toBe("290px");
     f.key("ArrowRight");
@@ -196,6 +261,9 @@ describe("window auxiliary panel", () => {
     expect(f.separator.getAttribute("aria-valuemax")).toBe("414");
     expect(f.separator.getAttribute("aria-valuenow")).toBe("414");
     expect(f.separator.getAttribute("aria-valuetext")).toBe("414 pixels wide");
+    expect(document.activeElement).toBe(f.separator);
+    expect(f.key("ArrowUp").defaultPrevented).toBe(false);
+    expect(f.key("Enter").defaultPrevented).toBe(false);
     expect(
       f.key("ArrowLeft", f.root.querySelector("input")!).defaultPrevented,
     ).toBe(false);

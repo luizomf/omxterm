@@ -12,4 +12,8 @@ notification behavior, but it also makes OMXTerm participate in shell startup
 and creates failure modes outside the application Boundary. The current
 architecture prefers a predictable PTY over convenience that modifies or
 interposes on the user's shell. OMXTerm does not infer shell cwd or prompt
-state; richer shell-aware behavior remains outside its current boundary.
+state; richer shell-aware behavior remains outside its current boundary. The
+one exception reads, never requests, an OSC 7 directory a shell already emits:
+a split pane may start in its source pane's last reported local directory
+([ADR 0016](0016-adopt-tabs-with-one-live-session-per-tab.md)). Shells that do
+not report it keep the home directory.

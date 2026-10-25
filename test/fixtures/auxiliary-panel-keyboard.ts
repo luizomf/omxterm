@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import type { AuxiliaryPanelScenario } from "./auxiliary-panel-exercise";
+import { expectFixtureInputReply } from "./fixture-session-input";
 
 const shown = "!document.querySelector('#snippets-sidebar').hidden";
 const searchFocused =
@@ -10,13 +11,8 @@ const terminalFocused =
 export async function exercisePanelKeyboard(s: AuxiliaryPanelScenario) {
   const { until, wait, evaluate, key, input, contents } = s;
   const escape = "\u001b[27;1:1u\u001b[27;1:3u";
-  // Match the About oracle: establish the actual selected core's mode and
-  // exclude focus-reporting bytes before testing keyboard isolation.
-  s.options.output(0, "\u001b[?1004l\u001b[>3u\u001b[?u");
-  await wait(
-    () => input.join("").endsWith("\u001b[?3u"),
-    "panel Kitty mode handshake",
-  );
+  // The outer panel capture already owns focus isolation on both cores.
+  // Only session 0 receives this mode request; session 1 must not acknowledge it.
   const receipt = async (before: number, expected = "") => {
     // A fresh terminal Escape's complete response is an ordered input-IPC
     // receipt barrier; a DOM update or RAF cannot prove the release arrived.
@@ -28,6 +24,14 @@ export async function exercisePanelKeyboard(s: AuxiliaryPanelScenario) {
     assert.equal(input.join("").slice(before), expected + escape);
   };
   try {
+    await expectFixtureInputReply({
+      input: () => s.sessionInput[0]!.join(""),
+      output: (data) => s.options.output(0, data),
+      request: "\u001b[>3u\u001b[?u",
+      reply: "\u001b[?3u",
+      waitFor: wait,
+      label: "panel Kitty mode handshake",
+    });
     key("S", ["control", "alt"]);
     await until(`!(${shown})`);
     for (const keyCode of ["Escape", "Enter"]) {
@@ -55,9 +59,11 @@ export async function exercisePanelKeyboard(s: AuxiliaryPanelScenario) {
     ] as const) {
       key("S", ["control", "alt"]);
       await until(searchFocused);
-      await until("!!document.querySelector('#snippets-sidebar li button')");
+      await until(
+        "!!document.querySelector('#snippets-sidebar li .snippet-activate')",
+      );
       await evaluate(
-        `document.querySelectorAll('#snippets-sidebar li button')[${index}].focus()`,
+        `document.querySelectorAll('#snippets-sidebar li .snippet-activate')[${index}].focus()`,
       );
       const before = input.join("").length;
       contents.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
@@ -89,11 +95,11 @@ export async function exercisePanelKeyboard(s: AuxiliaryPanelScenario) {
     key("S", ["control", "alt"]);
     await until(searchFocused);
     await until(
-      "document.querySelectorAll('#snippets-sidebar li button').length > 1",
+      "document.querySelectorAll('#snippets-sidebar li .snippet-activate').length > 1",
     );
     const beforeSnippet = input.join("").length;
     await evaluate(
-      "document.querySelectorAll('#snippets-sidebar li button')[1].click(); document.querySelector('.auxiliary-header button').click()",
+      "document.querySelectorAll('#snippets-sidebar li .snippet-activate')[1].click(); document.querySelector('.auxiliary-header button').click()",
     );
     await wait(
       () => input.join("").slice(beforeSnippet).endsWith("\r"),
@@ -102,6 +108,6 @@ export async function exercisePanelKeyboard(s: AuxiliaryPanelScenario) {
     assert.equal(input.join("").slice(beforeSnippet), " synthetic  snippet \r");
     await until(terminalFocused);
   } finally {
-    s.options.output(0, "\u001b[<u\u001b[?1004h");
+    s.options.output(0, "\u001b[<u");
   }
 }

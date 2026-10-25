@@ -238,9 +238,10 @@ async function harness(failure?: "rendering" | "spawn") {
                 if (surfaceOptions.abortSignal?.aborted)
                   throw new Error("cancelled");
                 if (second && failure === "rendering") {
-                  surfaceOptions.onFatalError?.(
-                    "Controlled rendering initialization failure",
-                  );
+                  surfaceOptions.onFatalError?.({
+                    kind: "initialization",
+                    detail: "Controlled rendering initialization failure",
+                  });
                   adapter.close("rendering-failure");
                   throw new Error(
                     "Controlled rendering initialization failure",
@@ -254,7 +255,7 @@ async function harness(failure?: "rendering" | "spawn") {
                 };
                 surface.dispose.mockImplementation(() => adapter.close());
                 renderingFailures.push(() => {
-                  surfaceOptions.onFatalError?.("Controlled runtime failure");
+                  surfaceOptions.onFatalError?.({ kind: "backend-loss" });
                   adapter.close("rendering-failure");
                 });
                 await adapter.start({

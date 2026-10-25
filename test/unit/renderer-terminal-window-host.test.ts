@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
+import { surfaceLabels } from "../../src/renderer/renderer-language";
 import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";
 import { TERMINAL_TAB_DRAG_DATA_TYPE } from "../../src/renderer/terminal-tabs";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
@@ -43,6 +44,7 @@ function createAdapterFactory() {
 function createSurface(overrides: Record<string, unknown> = {}) {
   return {
     dispose: vi.fn(),
+    geometry: () => undefined,
     focus: vi.fn(),
     applyTheme: vi.fn(),
     applyConfiguration: vi.fn(),
@@ -187,8 +189,10 @@ describe("renderer Terminal Window page host", () => {
       expect.any(Object),
       {
         abortSignal: expect.any(AbortSignal) as AbortSignal,
+        onFatalError: expect.any(Function) as (message: string) => void,
         background: "host",
         focus: false,
+        labels: surfaceLabels("en-US"),
         appearance: {
           fontSize: 19,
           lineHeight: 1.2,
@@ -277,8 +281,9 @@ describe("renderer Terminal Window page host", () => {
       name: "runtime",
       colors: Object.freeze({
         ...initialTheme.colors,
-        background: "#123456",
-        foreground: "#abcdef",
+        background: "#f5f5f5",
+        foreground: "#161616",
+        cyan: "#80d4ff",
       }),
     });
     const elements = createPageElements();
@@ -345,6 +350,9 @@ describe("renderer Terminal Window page host", () => {
       },
     });
     await host.ready;
+    expect(
+      document.documentElement.style.getPropertyValue("--terminal-pane-accent"),
+    ).toBe(initialTheme.colors.cyan);
 
     configurationListener!({
       showTabBar: true,
@@ -376,10 +384,13 @@ describe("renderer Terminal Window page host", () => {
     );
     expect(
       document.documentElement.style.getPropertyValue("--terminal-background"),
-    ).toBe("#123456");
+    ).toBe("#f5f5f5");
     expect(
       document.documentElement.style.getPropertyValue("--terminal-foreground"),
-    ).toBe("#abcdef");
+    ).toBe("#161616");
+    expect(
+      document.documentElement.style.getPropertyValue("--terminal-pane-accent"),
+    ).toBe(updatedTheme.colors.foreground);
     expect(errorBanner.textContent).toContain("/themes/live.json");
     expect(adapterCloses[0]).not.toHaveBeenCalled();
 

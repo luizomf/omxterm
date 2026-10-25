@@ -8,13 +8,13 @@ For product behavior, see [`spec.md`](spec.md); for architectural rationale, see
 
 The portable Terminal Surface (`src/terminal-surface/`) receives a session Adapter and imports neither Electron nor `node-pty`. Electron `main` owns local PTYs and privileged capabilities; `preload` exposes typed, sender-validated IPC routes.
 
-- **Initialization:** Fonts, the Ghostty WASM core, and a WebGL2 context initialize before the PTY starts. If initialization fails, no shell is spawned. WebGL context loss reports a visible error and disposes the affected tab/session without affecting other tabs.
-- **Tab cancellation:** Closing an initializing tab marks late callbacks inert, waits for pending acquisitions to settle, and releases partial resources. An already accepted session start is closed once through the Adapter.
+- **Initialization:** Fonts, the Ghostty WASM core, and a WebGL2 context initialize before the PTY starts. If initialization fails, no shell is spawned. WebGL context loss reports a visible error and disposes the affected pane/session without affecting siblings.
+- **Pane cancellation:** Closing an initializing pane (directly or through its tab) marks late callbacks inert, waits for pending acquisitions to settle, and releases partial resources. An already accepted session start is closed once through the Adapter.
 
 ### Configuration and Surface lifetime
 
-- **Live-safe settings:** Theme colors, font size, programming ligatures, padding, scrollback lines, and macOS Option Key Mode apply in place to existing tabs and sessions.
-- **Creation-time settings:** `font.family` and `font.lineHeight` are fixed when a Surface is created. New tabs use the latest validated values; existing tabs keep their creation-time values until OMXTerm restarts.
+- **Live-safe settings:** Theme colors, font size, programming ligatures, padding, scrollback lines, and macOS Option Key Mode apply in place to existing panes and sessions; the latest labels also replay after a pending pane mount.
+- **Creation-time settings:** `font.family` and `font.lineHeight` are fixed when a Surface is created. New panes use the latest validated values; existing panes keep their creation-time values until OMXTerm restarts.
 
 ### Current runtime limitations
 
@@ -22,11 +22,10 @@ The portable Terminal Surface (`src/terminal-surface/`) receives a session Adapt
 - **Reload application errors:** `user-configuration-reloader.ts` updates the active configuration snapshot before applying consumers sequentially. While validation errors cleanly retain the previous configuration, an unexpected runtime exception during consumer application has no automatic rollback.
 - **Pending font acquisition across reload:** Changing `font.family` while a tab is still reading native font bytes rejects the in-flight request as superseded ([#569](https://github.com/luizomf/omxterm/issues/569)).
 - **First-tab startup commands:** `terminal-window-host.ts` subscribes to tab-level actions after `tabs.ready`; an early `Close Tab` before the first tab finishes initializing can be dropped ([#571](https://github.com/luizomf/omxterm/issues/571)). `Close Window` and `Quit` remain active on separate main-process routes.
-- **Wide-wrap URL recognition:** A mismatch between wide-wrap spacer cells and core selection text can prevent visible URL recognition when a wide glyph wraps across rows ([#593](https://github.com/luizomf/omxterm/issues/593)).
 
 ### Scrollback and viewport
 
-- `scrollback.lines` (0 to 100,000, default 10,000) sets an approximate history-row target per tab. Ghostty evicts whole pages and enforces a 10,000,000-byte core ceiling. Setting `0` clears and disables history immediately.
+- `scrollback.lines` (0 to 100,000, default 10,000) sets an approximate history-row target per pane. Ghostty evicts whole pages and enforces a 10,000,000-byte core ceiling. Setting `0` clears and disables history immediately.
 - Accepted user input (typing, paste, snippets, or dropped paths) returns the viewport to the live bottom; background output, focus, and selection do not jump the scroll position.
 - Desktops with a fine pointer use native scrolling even if touch hardware is present.
 - The prepared runtime adds `interaction.getBufferText()`, which reads the same retained rows as Select All (scrollback plus the current screen, or only the alternate screen) through the core's selection-text query, without changing the selection, link hover, cursor, or rendering state. Explicit export uses it.
@@ -34,7 +33,7 @@ The portable Terminal Surface (`src/terminal-surface/`) receives a session Adapt
 ### Input, links, and titles
 
 - Copy/paste, Protected Paste, snippets, file-path insertion, local image previews, and write-only OSC 52 use OMXTerm host routes. Restty's built-in browser clipboard and URL-opening callbacks are disabled.
-- Visible HTTP(S) URLs and local image paths are recognized from cell snapshots and Ghostty selection proofs across soft wraps (OSC 8 hyperlinks are ignored).
+- Visible HTTP(S) URLs and local image paths are recognized from cell snapshots and Ghostty selection proofs across soft wraps (OSC 8 hyperlinks are ignored). Link-only proof endpoints exclude a terminal wide-wrap spacer so selection expansion does not borrow the next grapheme; copy/selection semantics stay unchanged. Unknown viewport-edge continuity remains refused.
 - Parsed OSC 0/2 titles and silent BEL events flow from the Ghostty core to OMXTerm's per-session host controllers.
 
 ### Inline Kitty images
@@ -54,7 +53,7 @@ The pinned Ghostty core handles Kitty graphics parsing, decoding, placement, and
 
 ### Hidden Surface rendering
 
-Hidden tabs continue synchronous output ingestion, protocol replies, and Adapter ACKs while suppressing WebGL frame clears, draws, and texture uploads. Disposable renderer image copies are released while hidden and rebuilt from core storage when the tab is selected again.
+Panes in hidden tabs continue synchronous output ingestion, protocol replies, and Adapter ACKs while suppressing WebGL frame clears, draws, and texture uploads. Disposable renderer image copies are released while hidden and rebuilt from core storage when the tab is selected again.
 
 ### Background composition
 
@@ -67,6 +66,29 @@ Focused background checks:
 
 ```sh
 npx vitest run test/integration/restty-background-core.test.ts test/integration/restty-background-rendering.test.ts test/integration/window-chrome.test.ts
+```
+
+### Configured ANSI palette resets
+
+The core palette setter installs the supplied prefix as allocator-owned reset
+defaults, starting from the previous baseline rather than current OSC 4 overrides.
+It replaces overrides only in that prefix, preserving existing live-theme policy
+and unsupplied extended overrides. Ghostty continues to own OSC 104 parsing and
+indexed/full reset selection; there is no Surface escape interception. RIS and
+DECSTR preserve palette state. Allocation failure returns the existing internal
+ABI error without changing palette state.
+
+Headless behavior and preparation guards:
+
+```sh
+npx vitest run test/integration/restty-palette-core.test.ts test/unit/restty-dependency-contract.test.ts
+```
+
+The narrow actual-Surface pixel regression requires a separately scheduled idle
+desktop (do not mistake the headless core test for graphical qualification):
+
+```sh
+npx vitest run test/integration/restty-appearance-rendering.test.ts -t "preserves the configured palette"
 ```
 
 ### Font memory ownership
@@ -106,10 +128,10 @@ Prepared SHA-256 digests:
 
 | Input                      | SHA-256                                                            |
 | -------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime  | `3b1076d32880f0f28b8cbb465687825c4bb980d34d1af67862e23b5eda2871e3` |
-| Embedded-core chunk        | `1fb03cc8360942c613ca98973658de362852a60d88942c482de4b0dc429660fa` |
+| Restty JavaScript runtime  | `c55a8f4068e18131a3be762e49b8015a62d8fa4bf8b852edf60f5e85f0cb3380` |
+| Embedded-core chunk        | `03d79d4c745e3c74dd90082a100cbf85e5060e23ff9d16fba338b11d2db1e6be` |
 | Event declarations         | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
-| Tracked WASM core          | `92aa781340d4bd87f8028c17534fe720bd47e87dd34786d149811923e4e389ec` |
+| Tracked WASM core          | `a52f314c2e91e87394e67307d6b0067c8ba28f6b1e31e7587872b9c41ce88c41` |
 | Unix `node-pty` runtime    | `e1cd61e52f681871c401ca54a21382173281532e8eaa9f679bfe549be9a427b1` |
 | Windows `node-pty` runtime | `3f4cf11eaa6cc07bacb34e3693857e123e3e55edfb446d7657d80cf95f9ce244` |
 
@@ -131,5 +153,5 @@ shasum -a 256 wasm/zig-out/bin/restty.wasm
 Verify core behavior after rebuilding:
 
 ```sh
-npx vitest run test/integration/restty-reflow-core.test.ts test/integration/restty-resize-core.test.ts test/integration/restty-scrollback-core.test.ts test/integration/restty-images-core.test.ts test/integration/restty-events-core.test.ts
+npx vitest run test/integration/restty-palette-core.test.ts test/integration/restty-background-core.test.ts test/integration/restty-reflow-core.test.ts test/integration/restty-resize-core.test.ts test/integration/restty-scrollback-core.test.ts test/integration/restty-images-core.test.ts test/integration/restty-events-core.test.ts
 ```

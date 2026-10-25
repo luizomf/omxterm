@@ -1,4 +1,10 @@
 import type { AboutBridge, AboutLink } from "../../shared/about";
+import type { MessageKey } from "../../shared/i18n";
+import {
+  englishLanguage,
+  type RendererLanguage,
+  type Translate,
+} from "../renderer-language";
 
 export function mountAboutDialog(
   document: Document,
@@ -6,7 +12,7 @@ export function mountAboutDialog(
   canOpen: () => boolean,
   options: Pick<
     Parameters<typeof createAboutDialog>[1],
-    "focusTerminal" | "onActivityChange"
+    "focusTerminal" | "onActivityChange" | "language"
   >,
 ) {
   if (!bridge) return undefined;
@@ -26,7 +32,7 @@ export function mountAboutDialog(
 // Dismissal restores terminal focus before the physical gesture ends. Keep
 // its repeats/release out of the window-level encoder, but never eat a fresh
 // terminal press after a lost keyup. State belongs to this document's owner.
-function retainAboutDismissalGesture(document: Document) {
+export function retainDismissalGesture(document: Document) {
   const page = document.defaultView;
   let owned: string | undefined;
   const identity = (event: KeyboardEvent) =>
@@ -72,15 +78,21 @@ export function createAboutDialog(
   options: Pick<AboutBridge, "info" | "openLink"> & {
     readonly focusTerminal: () => void;
     readonly onActivityChange: (active: boolean) => void;
+    readonly language?: RendererLanguage;
   },
 ) {
+  const language = options.language ?? englishLanguage;
   let dialog: HTMLDialogElement | undefined;
   let disposed = false;
-  const keyboard = retainAboutDismissalGesture(document);
+  // Relabels the open dialog when the window language changes.
+  let relabel: ((t: Translate) => void) | undefined;
+  const unbindLabels = language.bind((t) => relabel?.(t));
+  const keyboard = retainDismissalGesture(document);
   const close = (restoreFocus: boolean) => {
     const previous = dialog;
     if (!previous) return;
     dialog = undefined;
+    relabel = undefined;
     if (restoreFocus) previous.close();
     previous.remove();
     options.onActivityChange(false);
@@ -100,7 +112,6 @@ export function createAboutDialog(
       current.setAttribute("aria-labelledby", "about-title");
       const title = document.createElement("h2");
       title.id = "about-title";
-      title.textContent = "About OMXTerm";
       const icon = document.createElement("img");
       icon.src = "./application-icon.png";
       icon.alt = "";
@@ -110,36 +121,52 @@ export function createAboutDialog(
       name.className = "about-name";
       name.textContent = "OMXTerm";
       const version = document.createElement("p");
-      version.textContent = "Loading version…";
       const copyright = document.createElement("p");
       const license = document.createElement("p");
-      license.textContent = "MIT licensed. Provided without warranty.";
       const error = document.createElement("p");
       error.setAttribute("role", "status");
       const links = document.createElement("div");
       links.className = "about-links";
+      let versionText: string | null | undefined;
+      let linkFailed = false;
+      const linkButtons: [HTMLButtonElement, MessageKey][] = [];
       for (const [label, link] of [
-        ["Project", "website"],
-        ["Contributors", "contributors"],
-        ["Report an issue", "issues"],
-        ["MIT License", "license"],
-      ] satisfies [string, AboutLink][]) {
+        ["about.project", "website"],
+        ["about.contributors", "contributors"],
+        ["about.issues", "issues"],
+        ["about.mitLicense", "license"],
+      ] satisfies [MessageKey, AboutLink][]) {
         const button = document.createElement("button");
         button.type = "button";
-        button.textContent = label;
         button.addEventListener("click", () => {
           if (dialog !== current) return;
           void options.openLink(link).catch(() => {
-            if (dialog === current)
-              error.textContent = "Could not open the link.";
+            if (dialog !== current) return;
+            linkFailed = true;
+            error.textContent = language.t("about.linkError");
           });
         });
+        linkButtons.push([button, label]);
         links.append(button);
       }
       const done = document.createElement("button");
       done.type = "button";
       done.className = "about-close";
-      done.textContent = "Close";
+      relabel = (t) => {
+        title.textContent = t("about.title");
+        version.textContent =
+          versionText === undefined
+            ? t("about.loading")
+            : versionText === null
+              ? t("about.unavailable")
+              : t("about.version", { version: versionText });
+        license.textContent = t("about.license");
+        for (const [button, label] of linkButtons)
+          button.textContent = t(label);
+        error.textContent = linkFailed ? t("about.linkError") : "";
+        done.textContent = t("common.close");
+      };
+      relabel(language.t);
       done.addEventListener("click", () => {
         if (dialog === current) close(true);
       });
@@ -171,16 +198,21 @@ export function createAboutDialog(
         .then((info) => {
           if (dialog !== current) return;
           name.textContent = info.name;
-          version.textContent = `Version ${info.version}`;
+          versionText = info.version;
+          version.textContent = language.t("about.version", {
+            version: info.version,
+          });
           copyright.textContent = info.copyright;
         })
         .catch(() => {
-          if (dialog === current)
-            version.textContent = "Application information unavailable.";
+          if (dialog !== current) return;
+          versionText = null;
+          version.textContent = language.t("about.unavailable");
         });
     },
     dispose() {
       disposed = true;
+      unbindLabels();
       keyboard.dispose();
       close(false);
     },

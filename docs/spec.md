@@ -39,7 +39,8 @@ unsupported.
 
 OMXTerm:
 
-- opens the Default Shell in the user's home directory: on macOS and Linux the
+- opens the Default Shell in the user's home directory (except a split pane's
+  usable OSC 7 directory inheritance described below): on macOS and Linux the
   operating-system-configured shell as an interactive login shell; on Windows,
   which has no login-shell concept, a configured `windowsShell` executable when
   present, otherwise Windows PowerShell — falling back to the ComSpec command
@@ -51,8 +52,8 @@ OMXTerm:
   the protocol limitations documented below; it renders emoji-presentation and
   ZWJ grapheme clusters as single two-column cells that do not overlap
   neighboring cells;
-- uses one independent shell session per Terminal Tab, with one or more tabs per
-  native Terminal Window;
+- uses one independent shell session per Terminal Pane, with one or more panes
+  per Terminal Tab and one or more tabs per native Terminal Window;
 - provides native new-window, new-tab, close, copy, paste, select-all,
   scrollback search, explicit text export, zoom, fullscreen, always-on-top,
   bounded local-image preview, and quit actions without an in-window toolbar;
@@ -65,14 +66,14 @@ OMXTerm:
   operating-system emoji/CJK/symbol faces for missing-glyph coverage;
 - uses the black-and-blue OMXTerm application icon in development and on the
   packaged macOS Dock, Finder, application-switcher, and DMG surfaces;
-- reads strict, versioned JSON configuration and writes bounded local JSONL
-  operational logs;
+- reads strict, versioned JSON configuration, including an explicit en-US or
+  pt-BR Interface Language, and writes bounded local JSONL operational logs;
 - packages ready-to-run artifacts from an accepted version: ARM64 DMG for macOS,
   ARM64 AppImage for Linux, and ARM64/x64 NSIS for Windows. Linux releases additionally provide
   an optional versioned per-user AppImage desktop installer and its checksum;
   running the AppImage directly remains supported.
 
-AI assistance, splits, saved or reconnectable sessions, shell integration,
+AI assistance, broadcast input, saved or reconnectable sessions, shell integration,
 profiles, a theme picker or catalog, automatic configuration reload, automatic
 updates, and remote terminal features are outside the current product contract.
 
@@ -85,8 +86,51 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 
 - Launching OMXTerm creates a Terminal Window with one Terminal Tab. New Window
   and New Tab default to `Cmd+N` and `Cmd+T` on macOS, and `Ctrl+Shift+N` and
-  `Ctrl+Shift+T` on Linux and Windows. Each tab owns its own independent Live
-  Terminal Session.
+  `Ctrl+Shift+T` on Linux and Windows. Each tab starts with one Terminal Pane,
+  and each pane owns its own independent Live Terminal Session.
+- `View -> Pane` splits the selected tab's focused pane right or down
+  (`splitRight`, `splitDown`), moves pane focus (`focusNextPane`,
+  `focusPreviousPane`, `focusPaneLeft`, `focusPaneRight`, `focusPaneUp`,
+  `focusPaneDown`), resets the shares of the focused pane's split
+  (`equalizePanes`) and closes the focused pane (`closePane`); every shortcut
+  is remappable and nullable. A split needs room for two usable grids of at least
+  20 columns by 5 rows, using the source Surface's current cell geometry as the
+  new pane's admission reference. The prospective layout accounts for each
+  existing Surface's own metrics, padding/other non-grid space and every divider,
+  including same-direction sibling allocation. Unknown geometry refuses a split,
+  and a tab holds at most 16 panes; otherwise it starts nothing. Splitting in the same
+  direction adds a sibling; pane containers move without recreating Surfaces or
+  sessions. Dividers drag with the pointer and move with arrow keys as
+  `role="separator"` controls, limited by the same minimum; a later resize or
+  zoom that cannot fit every minimum keeps every session and the layout; an
+  impossible divider move retains the existing proportions. Dividers paint a
+  1 px line within the existing 4 px resize target/allocation; hover and drag
+  share a neutral highlight, and keyboard focus highlights the line rather than
+  outlining the target.
+  Exactly one pane per tab is focused: it receives keyboard input and every
+  terminal-directed action and supplies the tab and window title. In a split tab,
+  its only focus marker is a 1 px top line inset horizontally by that Surface's
+  left/right padding, with no side/bottom ring or dimming of other panes. It is
+  a non-intercepting overlay above terminal canvas contents, including opaque
+  first-row backgrounds at zero top padding, locally stacked below app overlays.
+  The marker uses the theme's cyan; if its contrast against the configured opaque
+  background is below 3:1, the theme foreground replaces it only when that
+  improves contrast. This is not a universal accessibility guarantee: a custom
+  palette can leave both colors below 3:1, transparency/blur changes the visible
+  background, and the marker remains only 1 px high. Clicking a pane focuses it, and
+  switching tabs restores each tab's focused pane. A new pane starts the Default
+  Shell in its source pane's last OSC 7-reported local directory when the shell
+  emitted one and it still exists, otherwise in the home directory; main reads
+  the report from PTY output, rejects non-local host names and UNC/device paths,
+  and never logs or persists the directory. An empty or local host name emitted
+  by a remote shell is indistinguishable from a local report; program output can
+  also emit it. Either can only select an existing local directory, never execute
+  shell text. Ordinary exit removes only that pane
+  and gives its space and focus to the nearest sibling; an unexpected signal
+  keeps the pane until its failure dialog is acknowledged; the last pane closes
+  its tab. Close Pane confirms only a Busy focused pane, Close Tab counts every
+  pane of the tab, and Close Window and Quit count every pane. Hidden tabs hide
+  their pane Surfaces and keep their layout.
 - A startup Launch Request uses `-e <program> [arguments...]`. The value after
   the first `-e` is required as the executable, and every remaining value —
   including another `-e` or an option-looking value — is literal argv. OMXTerm
@@ -131,11 +175,14 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   unchanged. Tab order is ephemeral and is neither shared between windows nor
   persisted or restored.
 - Close Tab defaults to `Cmd+W` on macOS and `Ctrl+Shift+W` on Linux and
-  Windows, and terminates only the selected tab's session. A pending
+  Windows, and terminates every session in the selected tab. A pending
   confirmation retains its original tab: approval never retargets a later
   selection, and does nothing if that tab has already ended. Repeated requests
-  during that confirmation share the same decision, even if the selected session
-  becomes idle. Closing a window's last tab closes that window. During the first
+  during that confirmation share the same decision, even if its sessions
+  become idle. Selection reports the tab's session set even when the focused
+  pane is still mounting or retained after native exit. A pending or dead focused
+  pane never borrows another tab's Busy decision; Close Pane considers only its
+  captured focused pane. Closing a window's last tab closes that window. During the first
   tab's initialization, however, the renderer has not yet subscribed to tab
   commands: an early Close Tab, New Tab or tab-navigation command can be lost
   rather than queued. Clipboard, zoom, tab-bar and snippets actions also
@@ -158,7 +205,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   the session object. Pending failure acknowledgements retain only their
   separate ownership metadata; retired identities cannot route input, resize,
   title, bell or ACKs.
-- `confirmClose` defaults to `true` and guards tab close, window close, and
+- `confirmClose` defaults to `true` and guards pane close, tab close, window close, and
   quit. Each action can produce at most one confirmation, so closing a window
   with several tabs asks once for the whole window. OMXTerm asks only when the
   action affects a Busy Session, defined as a Live Terminal Session whose PTY
@@ -177,12 +224,13 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   neighbor when it was last; removing the only tab retains the last-tab window
   lifecycle.
 - After the Default Shell starts successfully, an ordinary shell exit closes its
-  tab — and its window when that was the last tab — without confirmation or a
-  failure dialog, regardless of its numeric exit code. A tab whose fonts or
-  rendering are still initializing remains a window owner even before its PTY
-  starts: another session's ordinary exit cannot close that window. The pending
-  tab may finish and start one session, or be cancelled without starting one.
-  Cancelling the final pending tab closes the window; final pre-start rendering
+  pane — and its tab/window only when it was their last pane/tab — without
+  confirmation or a failure dialog, regardless of its numeric exit code. A pane
+  whose fonts or rendering are still initializing retains its tab and window
+  even before its PTY starts: another session's ordinary exit cannot close that
+  window. The pending pane may finish and start one session, or be cancelled
+  without starting one. Cancelling the final pending pane of the final tab
+  closes the window; final pre-start rendering
   failure retains a native failure dialog until acknowledgement. Last-tab
   closure is committed by the renderer's tab owner, not inferred from a zero
   native-PTY count. Queued New Tab commands cannot revive an emptied owner;
@@ -193,10 +241,11 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   0032). This applies to explicit commands and the Default Shell, with no
   fallback shell. Safe Operational Events classify it as `spawn-failure`.
 - A spawn failure or unexpected signal remains visible in a native error dialog
-  and local log until acknowledged; the useless tab then closes. Each pending
+  and local log until acknowledged; the failed pane then closes. Each pending
   failure acknowledgement retains its window even if a sibling exits ordinarily
   or another failure is acknowledged first. Acknowledgement removes only its
-  failed tab; automatic window closure waits for both an empty renderer tab
+  failed pane, closing its tab only when no panes remain; automatic window
+  closure waits for both an empty renderer tab
   owner and every pending failure acknowledgement. Explicit authorized window
   closure and Quit remain separate, and late dialog results cannot act on
   disposed owners. Native shutdown completion is recorded independently of
@@ -301,10 +350,11 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   including during metadata loading, focuses the same dialog. Returning from
   the browser does not steal its focus. Owner disposal removes it without
   restoring terminal focus; late metadata and link errors cannot reopen it.
-  About and Local Image Preview do not stack: opening either while the other
-  is choosing/loading/showing is ignored. While About is active, terminal
-  clipboard, file-drop, zoom, snippet, tab/title-bar and tab-navigation/new-tab
-  actions are suppressed; output, configuration updates and approved tab/session/
+  About, Settings, Local Image Preview and a Snippets preview do not stack:
+  opening one while another is choosing/loading/showing is ignored. While a
+  modal owns input, terminal clipboard, file-drop, zoom, snippet, tab/title-bar,
+  tab-navigation/new-tab and pane split/focus/equalize actions are suppressed;
+  output, configuration updates and approved pane/tab/session/
   window closure or Quit remain active. About does not add a configurable
   shortcut, settings service or persistent state.
 - `View -> Toggle Developer Tools` is a menu-only diagnostic action for the
@@ -322,13 +372,14 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   without an error. The picker and visible local-image sources share the bounded
   read and overlay contract below. While choosing, loading, or displaying a
   preview, terminal clipboard actions, file drops, font zoom, tab bar toggles,
-  snippet toggles, title-bar toggles and snippet injection are ignored; page
+  snippet toggles, title-bar toggles, snippet injection, tab navigation/new-tab
+  and pane split/focus/equalize actions are ignored; page
   activation does not steal preview focus. The hover drag handle is suppressed.
   Dismissal restores ordinary routing. Already accepted terminal input is not
   rolled back, and confirmed tab/session/window closure remains active.
 - Dropping one or more native file-manager files or folders anywhere in a
   Terminal Window without an active Local Image Preview inserts their absolute
-  paths into only the selected Terminal Tab. The paths retain platform order,
+  paths into only the focused Terminal Pane of the selected tab. The paths retain platform order,
   are separated by one space, and are delivered through Protected Paste without
   sending Enter. Drag navigation is prevented over the whole renderer document.
   Internal tab dragging only reorders tabs and never inserts a path; any other
@@ -380,9 +431,35 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   internal views deactivates the old view and focuses the new one directly, with
   no intermediate terminal focus. There is no backdrop, focus trap or global
   Escape interception. Returning to the page preserves focused panel controls;
-  deliberate terminal/tab actions still focus the terminal. Clicking a current
-  snippet injects its exact body/`execute` intent through the selected Surface's
-  existing Protected Paste path and returns focus immediately. Enter activation
+  deliberate terminal/tab actions still focus the terminal. Each row shows its
+  default action before activation: **Insert** (`execute` false or omitted) or
+  **Run · adds Enter** (`execute: true`). Clicking a current row captures the
+  focused pane's live Surface at that moment, injects its exact body with that intent
+  through the existing Protected Paste path and returns focus immediately. A
+  separate **Preview** control opens a temporary read-only dialog that shows the
+  stored body exactly, without trimming or normalization, and captures the
+  focused pane's live Surface before anything else happens; with no live Surface it
+  does not open. Its final **Insert — no added Enter** or **Run — adds Enter**
+  choice is authoritative regardless of `execute`, is accepted once, closes the
+  preview and returns focus to the terminal. Cancel or Escape sends nothing and
+  restores the Preview control when it is still connected, enabled and
+  interactive in the visible view, otherwise panel search, otherwise the live
+  selected terminal; it never reopens a hidden panel. If the captured Surface
+  ends or fails while the preview is open, its actions are disabled even when
+  its pane remains visible for failure acknowledgement. Removal, tab closure
+  and host disposal also end that target exactly once, before forwarding exit
+  or fatal failure. Nothing is sent to a sibling or replacement pane, and that
+  unavailable Surface cannot be captured for a new preview.
+  Language switching relabels current row/preview controls and the unavailable
+  notice without replacing their DOM, changing focus, rereading YAML, recapturing
+  the target, mutating user text or re-enabling a dead target's actions.
+  Insert only omits the added Enter: embedded line breaks or control characters
+  can still execute, and Protected Paste may still ask for
+  confirmation after acceptance. The preview, Settings, About and Local Image
+  Preview never stack; while any is choosing/loading/showing, terminal-directed
+  actions, tab navigation/new tabs and pane split/focus/equalize are suppressed.
+  Pane dividers and passive mount/rebuild focus consult that same modal owner;
+  approved captured closure and failure acknowledgement remain deliverable. Enter activation
   of a row retains that gesture's held repeats and release, so they cannot append
   terminal Enter independently of the snippet's `execute` choice. A fresh
   terminal key remains ordinary input. Hiding does not
@@ -397,6 +474,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   dragging captures the pointer, grows the right panel when moving left and
   coalesces painting per animation frame. Up, cancel, lost capture, hide, switch,
   overlay activity and disposal end dragging at the last valid width. The
+  separator paints the same 1 px line and hover/drag/keyboard-focus states as
+  pane dividers while keeping its 6 px target/allocation. The
   focusable vertical separator exposes current/min/max pixels and readable value
   text. Left/Right grow/shrink by 10 px; Home/End choose current limits. Resize
   keys are consumed only on the separator. Width preference survives hiding,
@@ -657,12 +736,12 @@ devices keep the existing touch scrolling path.
 
 OSC 0 and OSC 2 titles are display-only and per session: the raw OSC request
 must be no longer than 256 code points, then control and bidi characters are
-removed and the result must be one printable line. A tab shows its session's
+removed and the result must be one printable line. A tab shows its focused pane's
 accepted title and falls back to the basename of the shell selected when that
-session started. Startup reconciles the current main-owned title once the tab's
+session started. Startup reconciles the current main-owned title once the pane's
 session identity is known, including when the initial fallback arrived before
 the start response. It neither overwrites a newer accepted title nor retargets a
-cancelled tab; unknown titles are not retained for future tabs. The native
+cancelled pane; unknown titles are not retained for future panes. The native
 window title mirrors the selected tab and falls back to `OMXTerm`. Title
 contents are never logged or reported to the PTY.
 
@@ -688,10 +767,13 @@ without a duplicate PTY mouse report; other gestures retain ordinary selection
 or application-mouse routing. Restty reconstructs a destination only across
 core-proven, fully visible soft wraps. It preserves hard breaks and cell
 coordinates for grapheme and wide-cell prefixes, and conservatively refuses a
-destination that may continue beyond the visible viewport. A known mismatch
-between wide-wrap spacer cells and core selection text can prevent visible URL
-recognition at some Unicode wrap boundaries
-([#593](https://github.com/luizomf/omxterm/issues/593)). Restty enables
+destination that may continue beyond the visible viewport. Link-only selection
+proofs exclude a terminal wide-wrap spacer from the queried endpoint, avoiding
+selection's expansion into the next row's grapheme without changing copy or
+selection semantics. Spacers contribute no text and retain the existing hover
+span and hit target with the preceding link cluster on the same physical row.
+Exact row equality, hard-break proofs and conservative clipping remain required,
+including across core pages. Restty enables
 Ghostty's grapheme-cluster mode by default so emoji-presentation and ZWJ
 clusters occupy one two-column terminal cell for rendering and selection. For
 `file:///`, main independently requires the literal lowercase scheme, no remote
@@ -763,7 +845,7 @@ mouse input. OSC 8 destinations and all other schemes are ignored.
 
 Scrollback Search opens only through **Edit → Find…** or the `find` keybind
 (`Cmd+F` on macOS, `Ctrl+Shift+F` on Linux and Windows). It uses Restty's
-search bar and the pinned core's search over the selected tab's retained
+search bar and the pinned core's search over the focused pane's retained
 Scrollback Buffer and visible screen; output evicted by the scrollback limits
 is not searchable. Opening the bar focuses its query field, and invoking Find
 again focuses and selects the query. Keys act on the bar only while its query
@@ -780,7 +862,7 @@ field holds focus, application Copy, Paste and Select All, from the menu, a
 keybind or the context menu, act on the query instead of the terminal: Paste
 inserts clipboard text at the field's selection with line breaks replaced by
 spaces, and nothing reaches Protected Paste or the PTY. The bar, including its
-match counter, follows the active Terminal Theme. Each tab owns its own query.
+match counter, follows the active Terminal Theme. Each Surface owns its own query.
 Search state, the query and its matches, stays in renderer memory and is never
 persisted, logged or written to the PTY, and searching never sends it to main.
 Only an explicit Copy from the focused field moves the selected query text,
@@ -795,10 +877,11 @@ Copy, Paste and Select All for that field, without an export item. Selection
 export saves the selected text. Content export saves the selected tab's retained
 Scrollback Buffer and visible screen, or only the alternate screen while it is
 active, read through the prepared runtime without creating, changing or
-clearing a selection. The choice is bound to the tab whose Surface opened the
-menu: the renderer reads that tab's text once, when the choice arrives and
-before any dialog, so a tab selected in between cannot substitute its content,
-and a choice whose tab has exited or closed does nothing. Export text is limited
+clearing a selection. The choice is bound to the pane whose Surface opened the
+menu: the renderer reads that pane's text once, when the choice arrives and
+before any dialog, so another pane or tab focused in between cannot substitute
+its content, and a choice whose pane has ended, failed or closed does nothing.
+The menu item, dialogs and notices follow the Interface Language. Export text is limited
 to 16 MiB of UTF-8. The core's scrollback byte limit does not keep extracted
 text below that bound, because combining marks and wide graphemes expand it.
 Text over the limit is never truncated or sent; main shows an error that nothing
@@ -895,6 +978,7 @@ installation or manual reload. The copied theme belongs to the user and does not
 track subsequent bundled palette changes. A present file must contain
 `"version": 1` and only supported keys:
 
+- `language`: `en-US` or `pt-BR`;
 - `confirmClose`;
 - `logLevel`;
 - `windowsShell`;
@@ -925,6 +1009,27 @@ and Windows. Hiding the title area or entering fullscreen removes only the
 app-owned title space, without changing configured padding or the macOS system
 safe area. `logLevel` defaults to `info`, `keyboard.optionAsAlt` to `none`, and
 `window.alwaysOnTop` to `false`.
+
+`language` selects the Interface Language from the exact tags `en-US` and
+`pt-BR`, defaults to `en-US`, and is never inferred from the operating-system
+locale ([ADR 0035](adr/0035-select-the-interface-language-explicitly.md)). It
+covers native menus (including View → Pane), singular Close Pane and plural
+Close Tab dialogs, pane Surface/separator accessible names, Window Chrome, the Auxiliary
+Panel and Snippets Sidebar/preview, Settings, Local Image Preview, About, and
+the Scrollback Search controls. Main resolves it from the active configuration whenever it
+builds a menu or opens a dialog; renderers relabel existing elements in place,
+so a User Configuration Reload changes it without recreating tabs, Surfaces or
+sessions, including when a Surface is still mounting. The document's accessibility
+language, application-owned accessible names and resize value text follow the same
+choice. Visible generic Snippets errors, narrow-window notices and renderer
+Surface failure notices relabel without rereading data or resetting their lifetime.
+A Surface reports failure identity and separate technical cause detail to its host;
+the host retains and translates the notice until window teardown, even after
+initial mount rejection. The validator's diagnostic detail inside a reload notice,
+technical cause detail inside a translated Surface failure notice, failures
+reported before configuration loads, Operational Events, `snippets.yaml`
+diagnostics, and operating-system, Electron or Restty text that OMXTerm does not
+set remain English. Terminal Payload is never translated.
 
 `window.showTitleBar` and `window.showTabBar` accept only booleans and default
 to `true`. They choose initial visibility for newly created windows. A
@@ -1009,7 +1114,9 @@ An optional `keybinds` object remaps application-chrome shortcuts for a fixed
 action vocabulary: `quit`, `copy`, `paste`, `selectAll`, `find`, `newWindow`,
 `closeWindow`, `newTab`, `closeTab`, `nextTab`, `previousTab`, `selectTab1`
 through `selectTab9`, `zoomIn`, `zoomOut`, `actualSize`, `toggleFullScreen`,
-`toggleSnippets`, `toggleTabBar`, `toggleTitleBar`, and `reloadConfig`. Each
+`toggleSnippets`, `toggleTabBar`, `toggleTitleBar`, `reloadConfig`, `splitRight`,
+`splitDown`, `closePane`, `focusNextPane`, `focusPreviousPane`, `focusPaneLeft`,
+`focusPaneRight`, `focusPaneUp`, `focusPaneDown`, and `equalizePanes`. Each
 value is either `null` or a case-insensitive Electron accelerator containing
 exactly one key and at least one non-Shift modifier; bare or Shift-only
 accelerators are rejected so a keybind can never swallow plain typing. Function
@@ -1082,9 +1189,12 @@ multiline or control-character body requires Protected Paste approval; after
 approval, the body is delivered unchanged and may execute through its embedded
 line breaks or control characters. With bracketed paste enabled, paste-aware
 delivery bypasses the Protected Paste confirmation and sends the body as one
-bracketed paste. `execute` controls only whether OMXTerm appends Enter after
-body delivery: `false` appends nothing, while `true` sends Enter after the body
-and any closing bracketed-paste marker — per-snippet opt-in only. An invalid
+bracketed paste. For default row activation, `execute` controls only whether
+OMXTerm appends Enter after body delivery: `false` appends nothing, while `true`
+sends Enter after the body and any closing bracketed-paste marker. In the
+read-only preview, the final Insert/Run choice overrides this default in either
+direction, as described under
+[window and session behavior](#window-and-session-behavior). An invalid
 `snippets.yaml` never blocks startup and is never silent: the sidebar shows the
 actionable problem, including the resolved path and schema field location or
 syntax line/column coordinates, in place of the list, and the terminal is
@@ -1113,6 +1223,13 @@ case-insensitive hexadecimal `#RRGGBB` value. Alpha colors, partial palettes,
 CSS names, functions or variables, inheritance and imports are unsupported.
 Transparency and blur are User Configuration window preferences, not theme
 fields; the Terminal Theme schema has no opacity or tint setting.
+
+The latest successfully applied Terminal Theme is the reset baseline for its 16
+ANSI colors. OSC 104 restores that baseline (all entries or only the requested
+indices); an indexed reset leaves other OSC 4 overrides untouched. Live theme
+application replaces overrides within those 16 entries, while preserving
+unsupplied extended-color overrides. Full OSC 104 also resets extended colors
+to their ordinary defaults. RIS and DECSTR do not act as palette resets.
 
 Unknown keys include the empty string (`""`) at every configuration, theme and
 snippet object boundary, regardless of property order. They are rejected rather
@@ -1163,17 +1280,66 @@ changing the active family invalidates outstanding old-generation reads,
 including an accepted request for a still-initializing Surface. It can fail that
 tab instead of letting it finish with its original family. Repeating a reload
 cannot erase a notice while an older Surface survives; removing that Surface
-releases its font bookkeeping. Theme, configured font-size baseline, padding and
-Window Font Zoom remain live and preserve the existing Surface and PTY. Invalid,
+releases its font bookkeeping. Theme, Interface Language, configured font-size
+baseline, padding and Window Font Zoom remain live and preserve the existing Surface and PTY. Invalid,
 missing, unreadable, unsupported or corrupt configured font input rejects the
 whole reload. Runtime scrollback reduction, including zero, uses the selected
 Surface's in-memory core behavior described above; programming-ligature changes
 use the existing Restty runtime setter without reloading fonts, and Option Key
 Mode changes only subsequent keyboard events. OMXTerm never migrates, repairs,
-rewrites, or silently ignores User Configuration. The same surface also carries
+rewrites, or silently ignores User Configuration on its own; only an explicit
+change in Settings writes it (see below). The same surface also carries
 non-fatal warnings for a valid configuration that stays fully active — currently
 a keybind shadowing a PTY control key — which inform without activating any
 default.
+
+**Settings** (application menu, **Settings…**) is a modal editor of the same
+`config.json`. It covers `language`, `confirmClose`, `logLevel`, `windowsShell` (Windows),
+`font.family`, `font.size`, `font.lineHeight`, `font.ligatures`,
+`terminal.padding`, `scrollback.lines`, `keyboard.optionAsAlt` (macOS), the
+new-window defaults `window.showTitleBar`, `window.showTabBar` and
+`window.alwaysOnTop`, and `theme.path`; keybinds, transparency and blur stay
+file-only in this editor. Changing a control saves at once without a separate
+confirmation; a cleared text or number field removes the entry so its default
+applies. The **Config File** page shows the document with an explicit **Save**
+and **Reload File**. Writes follow ADR 0003: full startup validation before an
+atomic replacement, a field-scoped change that keeps every other entry, a raw
+save refused when the file changed since its draft was loaded, and a dirty draft
+never replaced by other changes or late Save/Reload File responses. A final
+revision/presence comparison after write preparation rejects detected external
+changes without retry; it is not a cross-process atomic compare-and-swap.
+Settings preserves configuration symlinks, including dangling links, by refusing
+writes and directing the user to manual editing and reload. Pending graphical
+responses retain newer or unrelated field drafts, and saving feedback remains
+pending until queued changes settle. Graphical requests go directly to main's
+serialized service, so a reopened view reads after already-requested writes
+rather than overtaking undispatched work in a removed view. Raw operations are
+single-flight while typing remains usable; newer edits retain the saved bytes'
+revision as their base and are explicitly reported as not saved. Snapshot text uses the same
+UTF-8 decoding as the loader (omitting a leading BOM), while revisions identify
+the exact persisted bytes; snapshot parsing happens before writing. Closed
+views ignore late results.
+The status line distinguishes saved and applied, saved but not applied (even
+when reload throws after persistence), new-window/session-only settings, and
+settings that need a restart for open tabs. Both save routes include returned
+notices and deferred lifetimes of changed effective values, not no-op spelling
+changes. While Settings is
+open it owns modal input like About, and the auxiliary panel stays visible
+but inert: terminal-directed actions and tab navigation are ignored,
+application Copy, Paste and Select All edit its focused field and never reach
+the terminal, and closing returns focus to the selected terminal. Settings has
+no default shortcut. Its General-page language selector uses exact en-US/pt-BR
+values and the same validated save/reload route as other live controls. Its
+options keep the self-names **English (United States)** and **Português (Brasil)**
+regardless of the current interface language. All Settings text, options,
+placeholders, accessibility labels and visible statuses relabel in place,
+preserving draft bytes/revisions, focused control, caret,
+selection, scroll, selected page and pending operations. Relabeling performs no
+read/save or value adoption/synchronization. Bounded app-owned Settings/reload
+message identities cross IPC separately from literal validator/warning detail,
+so late and already-visible results use the current language without matching
+English sentences. The existing main user-file banner keeps its rendered-text
+contract. Diagnostics shown in Settings never enter operational logs.
 
 Operational logs are JSONL under `$XDG_STATE_HOME/omxterm/logs`, falling back to
 `~/.local/state/omxterm/logs`. Levels are `error`, `info`, and `debug`. Only the

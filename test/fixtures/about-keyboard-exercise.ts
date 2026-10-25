@@ -1,5 +1,24 @@
 import assert from "node:assert/strict";
 import type { BrowserWindow } from "electron";
+import type { createFixtureSessionInput } from "./fixture-session-input";
+import { waitFor as waitForChild } from "./window-chrome-exercise";
+
+// The fixture's real session input capture owns this keyboard observation.
+export async function exerciseAboutKeyboardWithInput(
+  window: BrowserWindow,
+  show: () => void,
+  output: (data: string) => void,
+  input: ReturnType<typeof createFixtureSessionInput>,
+) {
+  const inputs: string[] = [];
+  await waitForChild(() => input.isReady(), "About native child ready");
+  const release = input.capture((data) => inputs.push(data));
+  try {
+    await exerciseAboutKeyboard(window, show, output, () => inputs.join(""));
+  } finally {
+    release();
+  }
+}
 
 // Real renderer/Surface/core/input IPC; output and input observations use the
 // existing session Adapter seam. OS scan-code + raw PTY qualification is separate.
@@ -25,14 +44,14 @@ export async function exerciseAboutKeyboard(
       "!!document.querySelector('.about-dialog[open]')",
     ) as Promise<boolean>;
   for (const mode of [0, 3]) {
-    // The chrome fixture enables focus reporting. This oracle isolates keyboard
-    // bytes; modal focus changes are not key leakage. Restore reporting below.
-    output(`\u001b[?1004l\u001b[>${mode}u\u001b[?u`);
-    await waitFor(
-      () => input().endsWith(`\u001b[?${mode}u`),
-      `mode ${mode} handshake`,
-    );
     try {
+      // The chrome fixture enables focus reporting. This oracle isolates keyboard
+      // bytes; modal focus changes are not key leakage. Restore reporting below.
+      output(`\u001b[?1004l\u001b[>${mode}u\u001b[?u`);
+      await waitFor(
+        () => input().endsWith(`\u001b[?${mode}u`),
+        `mode ${mode} handshake`,
+      );
       for (const key of ["Escape", "Enter", "Space"]) {
         const before = input();
         show();

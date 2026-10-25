@@ -16,9 +16,12 @@ export interface ElectronTerminalAdapter extends TerminalSessionAdapter {
   sessionId(): TerminalSessionId | undefined;
 }
 
+// workingDirectoryOf: a split pane's source session; main resolves its
+// last reported local directory, otherwise the session starts at home.
 export function createElectronTerminalAdapter(
   bridge: TerminalBridge,
   fontConfigurationId?: string,
+  workingDirectoryOf?: TerminalSessionId,
 ): ElectronTerminalAdapter {
   let closed = false;
   let started = false;
@@ -92,9 +95,11 @@ export function createElectronTerminalAdapter(
       });
       const owner = retention ? await retention : undefined;
       if (closed) throw new Error("Terminal Adapter was closed before start");
-      const startedSessionId = await (owner === undefined
-        ? bridge.start()
-        : bridge.start(owner));
+      const startedSessionId = await (workingDirectoryOf !== undefined
+        ? bridge.start(owner, workingDirectoryOf)
+        : owner === undefined
+          ? bridge.start()
+          : bridge.start(owner));
       const closedBeforeStart = closed;
       sessionId = startedSessionId;
       for (const event of pendingEvents) {

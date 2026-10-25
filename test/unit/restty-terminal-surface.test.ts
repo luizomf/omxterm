@@ -217,9 +217,10 @@ describe("Restty Terminal Surface", () => {
     expect(adapter.start).not.toHaveBeenCalled();
     expect(adapter.close).toHaveBeenCalledOnce();
     expect(harness.instances[0]!.destroy).toHaveBeenCalledOnce();
-    expect(onFatalError).toHaveBeenCalledWith(
-      "Failed to initialize the OMXTerm Terminal Surface: font unavailable",
-    );
+    expect(onFatalError).toHaveBeenCalledWith({
+      kind: "initialization",
+      detail: "font unavailable",
+    });
   });
 
   it("reports backend loss and ends only its owning Surface without recreation", async () => {
@@ -238,9 +239,9 @@ describe("Restty Terminal Surface", () => {
     );
 
     expect(loss.defaultPrevented).toBe(true);
-    expect(onFatalError).toHaveBeenCalledExactlyOnceWith(
-      "The OMXTerm Terminal Surface rendering backend was lost",
-    );
+    expect(onFatalError).toHaveBeenCalledExactlyOnceWith({
+      kind: "backend-loss",
+    });
     expect(adapter.close).toHaveBeenCalledExactlyOnceWith("rendering-failure");
     expect(restty.destroy).toHaveBeenCalledOnce();
   });

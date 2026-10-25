@@ -1,5 +1,6 @@
 import { mountResttyTerminalSurface as mount } from "../../src/terminal-surface/restty-terminal-surface";
 import { TAB_REMOVAL_CONTROL_PREFIX } from "./tab-removal-readiness";
+import { observeHostTabCommands } from "./host-tab-command-readiness";
 
 // This module replaces only the fixture entry's mount import, never shipping code.
 const control = new URLSearchParams(location.search).get("tabRemovalControl");
@@ -7,28 +8,40 @@ let first = true;
 let heldSurface = false;
 let newCommands = 0;
 let releaseSurface = () => {};
+const host = observeHostTabCommands(window.omxterm.terminal.onTabCommand);
+export const observeTabRemovalCommands = host.subscribe;
 const globals = globalThis as typeof globalThis & {
   __omxtermTabRemovalControl?: {
-    state(): { heldSurface: boolean; newCommands: number };
+    state(): { heldSurface: boolean; newCommands: number; hostReady: boolean };
+    waitForHost(): Promise<void>;
     release(): void;
     holdRendererBoundary(): Promise<never>;
   };
 };
 globals.__omxtermTabRemovalControl = {
-  state: () => ({ heldSurface, newCommands }),
+  state: () => ({ heldSurface, newCommands, hostReady: host.ready }),
+  waitForHost: host.wait,
   release: () => releaseSurface(),
   holdRendererBoundary() {
     console.log(`${TAB_REMOVAL_CONTROL_PREFIX}held-renderer-boundary`);
     return new Promise<never>(() => {});
   },
 };
-if (control !== "ordinary") {
-  // Observe actual IPC arrival without forwarding a dropped command to the host.
-  const dispose = window.omxterm.terminal.onTabCommand((command) => {
-    if (command.action === "new") newCommands += 1;
-  });
-  window.addEventListener("pagehide", dispose, { once: true });
-}
+// This listener proves arrival only, never host readiness or consumption.
+const removeObserver =
+  control !== "ordinary"
+    ? window.omxterm.terminal.onTabCommand((command) => {
+        if (command.action === "new") newCommands += 1;
+      })
+    : undefined;
+window.addEventListener(
+  "pagehide",
+  () => {
+    host.dispose();
+    removeObserver?.();
+  },
+  { once: true },
+);
 
 export async function mountResttyTerminalSurface(
   ...args: Parameters<typeof mount>

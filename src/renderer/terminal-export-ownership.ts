@@ -6,21 +6,25 @@ import type {
 
 interface ExportSource {
   readonly removed: boolean;
+  // A retained pane whose session ended or whose Surface failed.
+  readonly ended?: boolean;
   readonly surface?: TerminalSurface | undefined;
 }
 
-// Binds an export chosen from a terminal context menu to the tab whose Surface
-// opened that menu. The choice reads that tab once, and nothing once the tab is
-// gone, so a tab selected or exited in between cannot substitute its text.
+// Binds an export chosen from a terminal context menu to the pane whose Surface
+// opened that menu. The choice reads that pane once, and nothing once it is
+// gone or ended, so another pane or tab selected in between cannot substitute
+// its text.
 export function createExportOwnership<Source extends ExportSource>() {
   let owner: Source | undefined;
   return {
+    // Without a source (configuration replay) the options pass unchanged.
     surfaceOptions(
-      source: Source,
+      source: Source | undefined,
       options: TerminalSurfaceOptions,
     ): TerminalSurfaceOptions {
       const clipboard = options.clipboard;
-      if (!clipboard) return options;
+      if (!clipboard || !source) return options;
       return {
         ...options,
         clipboard: {
@@ -35,7 +39,7 @@ export function createExportOwnership<Source extends ExportSource>() {
     exportText(kind: TerminalExportKind): string | undefined {
       const source = owner;
       owner = undefined;
-      return source?.removed === false
+      return source?.removed === false && source.ended !== true
         ? source.surface?.exportText(kind)
         : undefined;
     },

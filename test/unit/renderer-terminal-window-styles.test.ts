@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { createSnippetsView } from "../../src/renderer/snippets-sidebar";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
+import { terminalPaneAccent } from "../../src/renderer/terminal-pane-accent";
 
 const terminalWindowCss = readFileSync(
   "src/renderer/terminal-window.css",
@@ -79,6 +80,139 @@ describe("Terminal Tab theme", () => {
   );
 });
 
+describe("Pane and auxiliary separator presentation", () => {
+  it("shares 1px paint and neutral hover/drag while retaining resize geometry", () => {
+    expect(declaration(ruleBody(".terminal-pane-divider"), "flex")).toBe(
+      "0 0 var(--terminal-pane-divider-size, 4px)",
+    );
+    expect(declaration(ruleBody(".auxiliary-separator"), "flex")).toBe(
+      "0 0 6px",
+    );
+    const line = ruleBody(".terminal-pane-divider::before");
+    expect(ruleBody(".auxiliary-separator::before")).toBe(line);
+    expect(declaration(line, "width")).toBe("1px");
+    expect(declaration(line, "inset")).toBe("0 auto 0 50%");
+    expect(declaration(line, "pointer-events")).toBe("none");
+    expect(foregroundMix(declaration(line, "background"))).toBe(0.18);
+    const horizontal = ruleBody(
+      '.terminal-pane-split[data-direction="column"] > .terminal-pane-divider::before',
+    );
+    expect(declaration(horizontal, "height")).toBe("1px");
+    expect(declaration(horizontal, "width")).toBe("auto");
+    expect(declaration(horizontal, "inset")).toBe("50% 0 auto");
+    const hover = ruleBody(".terminal-pane-divider:hover::before");
+    expect(foregroundMix(declaration(hover, "background"))).toBe(0.45);
+    for (const selector of [
+      ".terminal-pane-divider.dragging::before",
+      ".auxiliary-separator:hover::before",
+      ".auxiliary-separator.dragging::before",
+    ])
+      expect(ruleBody(selector)).toBe(hover);
+  });
+
+  it("paints keyboard focus on the line, not the resize rectangle", () => {
+    for (const selector of [".terminal-pane-divider", ".auxiliary-separator"]) {
+      expect(
+        declaration(ruleBody(`${selector}:focus-visible`), "outline"),
+      ).toBe("none");
+      expect(
+        declaration(
+          ruleBody(`${selector}:focus-visible:not(.dragging)::before`),
+          "background",
+        ),
+      ).toBe("var(--terminal-foreground, #e6e6e6)");
+    }
+  });
+
+  it("overlays only the focused split pane's top edge without intercepting input or changing geometry", () => {
+    const surface = ruleBody(".terminal-surface");
+    expect(declaration(surface, "position")).toBe("relative");
+    expect(declaration(surface, "isolation")).toBe("isolate");
+    expect(surface).not.toContain("z-index");
+    const marker = ruleBody(
+      ".terminal-tab[data-split] .terminal-surface.pane-focused::after",
+    );
+    expect(declaration(marker, "content")).toBe('""');
+    expect(declaration(marker, "position")).toBe("absolute");
+    expect(declaration(marker, "z-index")).toBe("1");
+    expect(declaration(marker, "top")).toBe("0");
+    expect(declaration(marker, "height")).toBe("1px");
+    expect(declaration(marker, "left")).toBe(
+      "var(--terminal-padding-left, 8px)",
+    );
+    expect(declaration(marker, "right")).toBe(
+      "var(--terminal-padding-right, 8px)",
+    );
+    expect(declaration(marker, "background")).toBe(
+      "var(--terminal-pane-accent, var(--terminal-foreground))",
+    );
+    expect(declaration(marker, "pointer-events")).toBe("none");
+    expect(marker).not.toMatch(
+      /(?:^|\n)\s*(?:box-shadow|border|outline|padding|margin|background-image):/u,
+    );
+    expect(
+      terminalWindowCss.match(/\.terminal-surface[^{}]*::after\s*\{/gu),
+    ).toEqual([".terminal-surface.pane-focused::after {"]);
+  });
+
+  it.each([
+    [
+      "bundled omtheme",
+      DEFAULT_TERMINAL_THEME.colors.background,
+      DEFAULT_TERMINAL_THEME.colors.foreground,
+      DEFAULT_TERMINAL_THEME.colors.cyan,
+    ],
+    [
+      "representative light",
+      "#f5f5f5",
+      "#161616",
+      DEFAULT_TERMINAL_THEME.colors.cyan,
+    ],
+    ["light with sufficient cyan", "#f5f5f5", "#161616", "#006b80"],
+  ])(
+    "keeps an opaque-background indicator at least 3:1 for %s",
+    (_name, background, foreground, cyan) => {
+      const theme = {
+        ...DEFAULT_TERMINAL_THEME,
+        colors: {
+          ...DEFAULT_TERMINAL_THEME.colors,
+          background,
+          foreground,
+          cyan,
+        },
+      };
+      const cyanContrast = contrast(hexColor(cyan), hexColor(background));
+      const accent = terminalPaneAccent(theme);
+      expect(accent).toBe(cyanContrast >= 3 ? cyan : foreground);
+      expect(
+        contrast(hexColor(accent), hexColor(background)),
+      ).toBeGreaterThanOrEqual(3);
+      expect(
+        contrast(hexColor(foreground), hexColor(background)),
+      ).toBeGreaterThanOrEqual(3);
+    },
+  );
+
+  it("does not replace cyan with a worse foreground in a low-contrast custom theme", () => {
+    const theme = {
+      ...DEFAULT_TERMINAL_THEME,
+      colors: {
+        ...DEFAULT_TERMINAL_THEME.colors,
+        background: "#ffffff",
+        cyan: "#cccccc",
+        foreground: "#eeeeee",
+      },
+    };
+    expect(terminalPaneAccent(theme)).toBe(theme.colors.cyan);
+    expect(
+      contrast(
+        hexColor(terminalPaneAccent(theme)),
+        hexColor(theme.colors.background),
+      ),
+    ).toBeLessThan(3);
+  });
+});
+
 describe("Snippets Sidebar theme contrast", () => {
   it("keeps chrome surfaces neutral when the Terminal Theme foreground is warm", () => {
     expect(declaration(ruleBody(":root"), "--terminal-chrome-neutral")).toBe(
@@ -128,6 +262,7 @@ describe("Snippets Sidebar theme contrast", () => {
           ],
         })),
         inject: vi.fn(),
+        preview: vi.fn(),
         isInteractive: () => true,
       });
       root.append(sidebar.element);
@@ -242,12 +377,15 @@ describe("Snippets Sidebar theme contrast", () => {
 type Color = readonly [number, number, number];
 
 function ruleBody(selector: string): string {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
-  const match = terminalWindowCss.match(
-    new RegExp(`${escaped}\\s*\\{(?<body>[^}]*)\\}`, "u"),
+  const match = [...terminalWindowCss.matchAll(/([^{}]+)\{([^}]*)\}/gu)].find(
+    (rule) =>
+      rule[1]!
+        .replace(/\/\*[\s\S]*?\*\//gu, "")
+        .split(",")
+        .some((value) => value.trim() === selector),
   );
-  expect(match?.groups?.body, `missing CSS rule ${selector}`).toBeDefined();
-  return match!.groups!.body!;
+  expect(match?.[2], `missing CSS rule ${selector}`).toBeDefined();
+  return match![2]!;
 }
 
 function declaration(rule: string, property: string): string {
@@ -259,7 +397,7 @@ function declaration(rule: string, property: string): string {
     match?.groups?.value,
     `missing CSS property ${property}`,
   ).toBeDefined();
-  return match!.groups!.value!.replace(/\\s+/gu, " ").trim();
+  return match!.groups!.value!.replace(/\s+/gu, " ").trim();
 }
 
 function foregroundMix(value: string): number {

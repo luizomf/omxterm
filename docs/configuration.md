@@ -18,8 +18,11 @@ You can find them in:
 - **macOS and Linux:** `~/.config/omxterm` (or `$XDG_CONFIG_HOME/omxterm`)
 - **Windows:** `%USERPROFILE%\.config\omxterm`
 
+**Prefer a form?** Choose **Settings…** in the OMXTerm application menu to change common settings without editing JSON. See [Settings](#settings).
+
 **The basic workflow: edit, save, reload.** Edit your files in any text editor or [OMXTerm Studio](#edit-visually-with-omxterm-studio), then choose **View → Reload User Configuration** (`Cmd+Shift+,` on macOS, `Ctrl+Shift+,` on Linux/Windows). Snippets reload automatically whenever you open the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`).
 
+- [Change settings in the app](#settings)
 - [Make your first display change](#add-one-display-change)
 - [Find or create your configuration folder](#create-the-configuration-directory)
 - [Edit visually with OMXTerm Studio](#edit-visually-with-omxterm-studio)
@@ -29,6 +32,23 @@ You can find them in:
 - [Custom keyboard shortcuts](#keybinds)
 - [Snippets](#snippets) and [Themes](#terminal-themes)
 - [Reloading behavior and validation](#reloading-user-configuration)
+
+## Settings
+
+Choose **Settings…** in the OMXTerm application menu. **General → Language** selects **English (United States)** (`en-US`) or **Português (Brasil)** (`pt-BR`), always listed by their own names; it defaults to en-US and is never inferred from the system. A successful save/reload updates the menu and all open windows immediately, including Settings and snippet preview labels. Open editors keep their drafts, selected page, focus, selection/caret, scroll and pending saves; an open preview keeps its captured pane/Surface and disabled state if that terminal ended. Pane menus, close dialogs and existing Surface/separator accessible labels also update; panes completing initialization replay the latest labels. JSON, paths, snippet contents and diagnostic detail remain literal.
+
+Each change you make to a control is checked and saved to `config.json` right away, then applied; the status line tells you what happened (examples below use English):
+
+- **Saved.** The change is active.
+- **Saved. New tabs use it.** or **It applies to new windows.** Open tabs and windows keep their current value.
+- **Saved… restart OMXTerm to apply it to open tabs.** Font family and line height apply to new tabs immediately and to open tabs after a restart.
+- **Saved to config.json, but it could not be applied: …** The file was written, but reload failed; some settings may already be active. Fix the reported problem and reload again.
+- **Not saved: …** The value was rejected (for example, a font that isn't installed); your file is unchanged.
+- **Saving…** One or more graphical changes are still pending. An earlier result does not mark a later change completed.
+
+Clearing a text or number field removes that entry from `config.json`, so the default applies again. Settings changes only the field you edited and keeps the rest of your file, including edits you make in another editor while it's open. It rewrites the file with two-space indentation. If it detects an external edit during validation or write preparation, it refuses the change and asks you to reload instead of overwriting it. Settings does not write through a `config.json` symlink (including a dangling link); edit its target manually, then reload User Configuration.
+
+The **Config File** page shows `config.json` with an explicit **Save**, using the same application and deferred-setting feedback as graphical changes. If the file changes on disk while you edit there, your draft is kept and saving it is refused until you choose **Reload File**. Save and Reload File are disabled while a raw request is pending; you can keep typing, and newer text is kept but is not included in the earlier Save. Reload File replaces your draft only if you have not typed again during its read. Shortcuts, transparency, blur and snippets are still edited in the files.
 
 ## Add one display change
 
@@ -175,6 +195,7 @@ Every field except `version` is optional and falls back to its default when omit
 | Preference                | Accepted value                          | Default                          |
 | ------------------------- | --------------------------------------- | -------------------------------- |
 | `version`                 | `1`                                     | required                         |
+| `language`                | `"en-US"` or `"pt-BR"`                  | `"en-US"`                        |
 | `confirmClose`            | boolean                                 | `true`                           |
 | `logLevel`                | `"error"`, `"info"`, or `"debug"`       | `"info"`                         |
 | `windowsShell`            | non-empty absolute executable path      | Windows PowerShell, then ComSpec |
@@ -198,6 +219,7 @@ Every field except `version` is optional and falls back to its default when omit
 
 ### Notes on specific settings
 
+- **`language`:** chooses the language of OMXTerm's menus, dialogs, window controls, Settings, snippets panel and preview, image preview, About and search controls. OMXTerm never picks it from your system language. Only the exact tags `"en-US"` and `"pt-BR"` are accepted; any other value is a configuration error. At startup, invalid configuration uses the built-in defaults; a rejected manual reload keeps the last-valid configuration, including its language. Reloading the configuration switches the language in open windows without closing tabs. Some text stays in English: the validation detail inside a reload notice, technical cause detail inside a translated Terminal Surface failure notice, failures that happen before the configuration loads, logs, snippet file diagnostics, and text owned by the operating system. Terminal output is never translated.
 - **`scrollback.lines`:** kept in memory per tab (up to a 10 MB per-screen core ceiling). Setting `0` clears and disables scrollback history.
 - **`keyboard.optionAsAlt` (macOS only):** `"none"` keeps standard macOS Option character input (like accented letters or symbols); `"left"`, `"right"`, or `"both"` sends terminal `Alt` sequences instead.
 - **`window.showTitleBar`, `window.showTabBar`, and `window.alwaysOnTop`:** set the initial state for new windows. Use the **View** and **Window** menus to toggle them in your current window.
@@ -244,28 +266,38 @@ Reload your configuration and open a new tab to start the new shell. Only the ex
 
 Customize application shortcuts under `keybinds` using [Electron accelerator](https://www.electronjs.org/docs/latest/tutorial/keyboard-shortcuts#accelerators) syntax (or edit them with conflict checking in [OMXTerm Studio](#edit-visually-with-omxterm-studio)):
 
-| Action                      | macOS default              | Linux/Windows default |
-| --------------------------- | -------------------------- | --------------------- |
-| `quit`                      | `CommandOrControl+Q`       | `Control+Alt+Shift+Q` |
-| `copy`                      | `CommandOrControl+C`       | `Control+Shift+C`     |
-| `paste`                     | `CommandOrControl+V`       | `Control+Shift+V`     |
-| `selectAll`                 | `CommandOrControl+A`       | `Control+Shift+A`     |
-| `find`                      | `CommandOrControl+F`       | `Control+Shift+F`     |
-| `newWindow`                 | `CommandOrControl+N`       | `Control+Shift+N`     |
-| `newTab`                    | `CommandOrControl+T`       | `Control+Shift+T`     |
-| `closeTab`                  | `CommandOrControl+W`       | `Control+Shift+W`     |
-| `closeWindow`               | `CommandOrControl+Shift+W` | `Control+Shift+Q`     |
-| `nextTab`                   | `Control+Tab`              | `Control+PageDown`    |
-| `previousTab`               | `Control+Shift+Tab`        | `Control+PageUp`      |
-| `selectTab1` … `selectTab9` | `CommandOrControl+1` … `9` | `Alt+1` … `9`         |
-| `zoomIn`                    | `CommandOrControl+Plus`    | `Control+Plus`        |
-| `zoomOut`                   | `CommandOrControl+-`       | `Control+-`           |
-| `actualSize`                | `CommandOrControl+0`       | `Control+0`           |
-| `toggleFullScreen`          | `Control+Command+F`        | `F11`                 |
-| `toggleSnippets`            | `CommandOrControl+Shift+S` | `Control+Shift+S`     |
-| `toggleTabBar`              | `CommandOrControl+Shift+B` | `Control+Shift+B`     |
-| `toggleTitleBar`            | `CommandOrControl+Shift+D` | `Control+Shift+D`     |
-| `reloadConfig`              | `CommandOrControl+Shift+,` | `Control+Shift+,`     |
+| Action                      | macOS default                | Linux/Windows default |
+| --------------------------- | ---------------------------- | --------------------- |
+| `quit`                      | `CommandOrControl+Q`         | `Control+Alt+Shift+Q` |
+| `copy`                      | `CommandOrControl+C`         | `Control+Shift+C`     |
+| `paste`                     | `CommandOrControl+V`         | `Control+Shift+V`     |
+| `selectAll`                 | `CommandOrControl+A`         | `Control+Shift+A`     |
+| `find`                      | `CommandOrControl+F`         | `Control+Shift+F`     |
+| `newWindow`                 | `CommandOrControl+N`         | `Control+Shift+N`     |
+| `newTab`                    | `CommandOrControl+T`         | `Control+Shift+T`     |
+| `closeTab`                  | `CommandOrControl+W`         | `Control+Shift+W`     |
+| `closeWindow`               | `CommandOrControl+Shift+W`   | `Control+Shift+Q`     |
+| `nextTab`                   | `Control+Tab`                | `Control+PageDown`    |
+| `previousTab`               | `Control+Shift+Tab`          | `Control+PageUp`      |
+| `selectTab1` … `selectTab9` | `CommandOrControl+1` … `9`   | `Alt+1` … `9`         |
+| `splitRight`                | `CommandOrControl+D`         | `Control+Shift+O`     |
+| `splitDown`                 | `CommandOrControl+Shift+E`   | `Control+Shift+E`     |
+| `closePane`                 | `CommandOrControl+Alt+W`     | `Control+Shift+K`     |
+| `focusNextPane`             | `CommandOrControl+]`         | `Control+Shift+]`     |
+| `focusPreviousPane`         | `CommandOrControl+[`         | `Control+Shift+[`     |
+| `focusPaneLeft`             | `CommandOrControl+Alt+Left`  | `Alt+Shift+Left`      |
+| `focusPaneRight`            | `CommandOrControl+Alt+Right` | `Alt+Shift+Right`     |
+| `focusPaneUp`               | `CommandOrControl+Alt+Up`    | `Alt+Shift+Up`        |
+| `focusPaneDown`             | `CommandOrControl+Alt+Down`  | `Alt+Shift+Down`      |
+| `equalizePanes`             | `Command+Control+=`          | `Control+Shift+0`     |
+| `zoomIn`                    | `CommandOrControl+Plus`      | `Control+Plus`        |
+| `zoomOut`                   | `CommandOrControl+-`         | `Control+-`           |
+| `actualSize`                | `CommandOrControl+0`         | `Control+0`           |
+| `toggleFullScreen`          | `Control+Command+F`          | `F11`                 |
+| `toggleSnippets`            | `CommandOrControl+Shift+S`   | `Control+Shift+S`     |
+| `toggleTabBar`              | `CommandOrControl+Shift+B`   | `Control+Shift+B`     |
+| `toggleTitleBar`            | `CommandOrControl+Shift+D`   | `Control+Shift+D`     |
+| `reloadConfig`              | `CommandOrControl+Shift+,`   | `Control+Shift+,`     |
 
 Example overriding a single shortcut:
 
@@ -318,7 +350,7 @@ snippets:
 - Up to 512 snippets are supported: `name` is 1–128 characters, `body` is 1–65,536, and optional `description` is at most 512 (UTF-16 code units). `execute` must be a boolean. Unknown fields are rejected.
 - The file must be one UTF-8 YAML 1.2 core document, at most 1 MiB. Collection nesting is limited to 16 levels (root collection is level 1), with at most 4,096 total mapping pairs and sequence entries. Duplicate keys, aliases, custom/non-core tags, and multiple documents are rejected. Quote scalar values that must be text, such as `"true"` or `"123"`.
 - Opening reveals search/loading immediately and rereads the catalog. Close and reopen to reload edits; query and scroll are retained in window memory. Old rows cannot run during loading, and empty/error results replace them. Invalid files show a path and safe diagnostic instead of the list; syntax errors include line/column coordinates, not command excerpts.
-- The [resizable panel](usage.md#resize-or-close-snippets) keeps its preferred width only for that window's lifetime. There are no panel configuration fields or persistent width/visibility settings. Close/Escape in the panel returns terminal focus; About and Local Image Preview keep it visible but inert.
+- The [resizable panel](usage.md#resize-or-close-snippets) keeps its preferred width only for that window's lifetime. There are no panel configuration fields or persistent width/visibility settings. Close/Escape in the panel returns terminal focus; Settings, About, snippet preview and Local Image Preview keep it visible but inert.
 - Existing `snippets.json` files are not read, rewritten, or migrated. Move your entries into `snippets.yaml` yourself; JSON-formatted content is also valid YAML, subject to the same limits.
 
 ## Terminal themes
@@ -389,7 +421,7 @@ Choose **View → Reload User Configuration** (`Cmd+Shift+,` / `Ctrl+Shift+,`) a
 | --------------------- | ------------------------------------------------------------- |
 | Existing and new tabs | Theme, font size, ligatures, padding, scrollback, Option keys |
 | All windows and tabs  | Background transparency and blur                              |
-| App behavior          | Close confirmation, log level, keyboard shortcuts             |
+| App behavior          | Close confirmation, log level, keyboard shortcuts, language   |
 | New tabs (or restart) | Font family, line height, Windows shell                       |
 | New windows           | Always-on-Top, title-bar, and tab-bar initial defaults        |
 

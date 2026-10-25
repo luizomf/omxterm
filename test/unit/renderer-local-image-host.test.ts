@@ -69,6 +69,7 @@ async function setup(
   const tabsContainer = document.createElement("main");
   document.body.append(tabStrip, tabsContainer);
   const surface = {
+    geometry: () => undefined,
     dispose: vi.fn(),
     focus: vi.fn(),
     applyTheme: vi.fn(),

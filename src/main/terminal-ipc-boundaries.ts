@@ -89,6 +89,45 @@ export function createTerminalTitleRequests(
   };
 }
 
+// The Clipboard Boundary requests of one Terminal Window. Its context menu
+// request is validated separately because it also offers Explicit Export.
+export function clipboardRequests(
+  options: {
+    readonly writeClipboardText: (text: string) => void;
+    readonly readClipboardText: () => string;
+    readonly confirmPaste: (text: string) => Promise<boolean>;
+    readonly onClipboardError?: () => void;
+  },
+  reject: RejectBoundary,
+) {
+  return {
+    writeClipboardText(payload?: unknown) {
+      if (!isNonemptyClipboardText(payload)) {
+        reject("clipboard", "invalid-payload");
+        throw new TypeError("Invalid clipboard write payload");
+      }
+      useClipboard(
+        () => options.writeClipboardText(payload),
+        options.onClipboardError,
+        undefined,
+      );
+    },
+    readClipboardText(payload?: unknown) {
+      if (payload !== undefined) {
+        reject("clipboard", "invalid-payload");
+        throw new TypeError("Invalid clipboard read payload");
+      }
+      return useClipboard(
+        options.readClipboardText,
+        options.onClipboardError,
+        "",
+      );
+    },
+    confirmPaste: (payload?: unknown) =>
+      confirmClipboardPaste(payload, options, reject),
+  };
+}
+
 export async function confirmClipboardPaste(
   payload: unknown,
   options: {

@@ -43,6 +43,13 @@ deactivation, async lifetime guards, bounded per-window geometry, complete captu
 cleanup, clipboard routing and overlay integration; no workspaces or splits are
 included.
 
+The configured Interface Language implementation also adapts the translator,
+English and Brazilian Portuguese catalogs, and catalog tests from
+`src/shared/i18n.ts`, `src/shared/locales/en.ts`,
+`src/shared/locales/pt-BR.ts`, and `test/unit/i18n.test.ts` at the same
+MIT-licensed source commit. OMXTerm uses `en-US` instead of `en` and a single
+explicit User Configuration choice rather than system-language detection.
+
 The contributed About source identifies its presentation as
 [AshyTerm](https://github.com/big-comm/ashyterm)-style. We credit that presentation
 origin and the shared work of [Community Big](https://github.com/big-comm) and

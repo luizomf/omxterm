@@ -12,6 +12,7 @@ import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { spawnFixturePty } from "./native-fixture-pty";
 import { nativeFixturePlatform } from "./restty-host-platform";
 import { createResttyHostSessions } from "./restty-host-sessions";
+import { initialTabRemovalReadiness } from "./tab-removal-initial-readiness";
 import {
   createTabRemovalReadiness,
   TAB_REMOVAL_CONTROL_PREFIX,
@@ -222,7 +223,13 @@ async function exerciseRemoval(window: BrowserWindow) {
     "first-program",
     () => sessions.length === 1 && outputs[0]!.join("").includes("READY"),
   );
-  await initialReadiness(window);
+  await initialTabRemovalReadiness(window.webContents, {
+    control,
+    selected: () => selected,
+    sessionCount: () => sessions.length,
+    readiness,
+    mark: markControl,
+  });
   for (const count of [2, 3]) {
     if (!(count === 2 && control === "early-command"))
       window.webContents.send(terminalIpc.tabCommand, { action: "new" });
@@ -302,11 +309,13 @@ async function exerciseRemoval(window: BrowserWindow) {
   window.webContents.send(terminalIpc.snippetsToggle);
   await waitFor("snippet-loaded", () =>
     evaluate<boolean>(
-      "!!document.querySelector('#snippets-sidebar li button')",
+      "!!document.querySelector('#snippets-sidebar li .snippet-activate')",
     ),
   );
   await step("snippet-click", () =>
-    evaluate("document.querySelector('#snippets-sidebar li button').click()"),
+    evaluate(
+      "document.querySelector('#snippets-sidebar li .snippet-activate').click()",
+    ),
   );
   await waitFor("snippet-delivered", () =>
     outputs[0]!.join("").includes("RECEIVED:snippet"),
@@ -318,79 +327,5 @@ async function exerciseRemoval(window: BrowserWindow) {
     assert.equal(sessions.length, 3);
     assert.equal(clipboardReads, 1);
   });
-}
-interface SurfaceControlState {
-  heldSurface: boolean;
-  newCommands: number;
-}
-const controlState = (window: BrowserWindow) =>
-  window.webContents.executeJavaScript(
-    "globalThis.__omxtermTabRemovalControl.state()",
-    true,
-  ) as Promise<SurfaceControlState>;
-async function initialReadiness(window: BrowserWindow) {
-  if (control === "early-command") {
-    // First establish the real return hold, then issue the actual unsafe command.
-    await waitFor(
-      "control-held-surface",
-      async () => (await controlState(window)).heldSurface,
-    );
-    assert.equal(selected, "");
-    assert.equal(sessions.length, 1);
-    window.webContents.send(terminalIpc.tabCommand, { action: "new" });
-    await releaseAfterEarlyCommand(window);
-    return;
-  }
-  let completed = false;
-  const gate = readiness
-    .initial(
-      () => selected === "s1",
-      () =>
-        window.webContents.executeJavaScript(
-          control === "held-renderer"
-            ? "globalThis.__omxtermTabRemovalControl.holdRendererBoundary()"
-            : "true",
-          true,
-        ),
-    )
-    .then(() => {
-      completed = true;
-    });
-  // Observe the gate below; consume a rejection if a separate control fails first.
-  void gate.catch(() => {});
-  if (control === "held-surface") {
-    await waitFor(
-      "control-held-surface",
-      async () => (await controlState(window)).heldSurface,
-    );
-    await step("control-held-surface", async () => {
-      const state = await controlState(window);
-      assert.equal(selected, "");
-      assert.equal(completed, false);
-      assert.equal(sessions.length, 1);
-      assert.equal(state.newCommands, 0);
-      markControl("readiness-pending");
-    });
-    await releaseSurface(window);
-  }
-  await gate;
-}
-async function releaseSurface(window: BrowserWindow) {
-  await step("control-release-surface", () =>
-    window.webContents.executeJavaScript(
-      "globalThis.__omxtermTabRemovalControl.release()",
-      true,
-    ),
-  );
-  markControl("surface-released");
-}
-async function releaseAfterEarlyCommand(window: BrowserWindow) {
-  await waitFor("control-held-surface", async () => {
-    const state = await controlState(window);
-    return state.heldSurface && state.newCommands === 1;
-  });
-  assert.equal(selected, "");
-  markControl("early-command-observed");
-  await releaseSurface(window);
 }
 void run().catch(fail);

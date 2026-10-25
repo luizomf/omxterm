@@ -126,6 +126,14 @@ describe("isolated preload terminal bridge requests", () => {
     expect(electron.send).toHaveBeenCalledWith(terminalIpc.tabSelected, {
       sessionId: "s3",
     });
+    for (const tabSessionIds of [["s1"], []]) {
+      bridge.notifyTabSelection(null, tabSessionIds);
+      expect(electron.send).toHaveBeenLastCalledWith(terminalIpc.tabSelected, {
+        sessionId: null,
+        tabSessionIds,
+      });
+    }
+    expect(() => bridge.notifyTabSelection(null)).toThrow(TypeError);
   });
 
   it("returns only a validated Live Terminal Session identifier from start", async () => {

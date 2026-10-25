@@ -2,7 +2,10 @@
 
 The Terminal Surface is a portable module whose small interface hides Restty and
 Ghostty setup, rendering, input, resize, appearance, clipboard, zoom, and
-cleanup. It receives a terminal-session Adapter: OMXTerm supplies Electron IPC
+cleanup. A read-only geometry snapshot exposes current CSS cell metrics and
+non-grid overhead for host layout admission/resizing, without exposing Restty
+internals or making the Surface pane-aware. Hidden/dead/unmeasurable Surfaces
+supply no fresh geometry. It receives a terminal-session Adapter: OMXTerm supplies Electron IPC
 backed by a local PTY without importing Electron or `node-pty` into the Surface.
 Electron, native windows and local PTY ownership stay in the desktop host rather
 than a generalized portable application framework.
@@ -10,7 +13,7 @@ than a generalized portable application framework.
 The Terminal Surface owns the lifecycle of the session Adapter it receives:
 mounting starts and subscribes only after rendering readiness, disposal closes
 it and relinquishes owned resources, and a session exit ends the Surface so its
-host can finish the owning Terminal Tab's lifecycle under
+host can finish the owning Terminal Pane's lifecycle under
 [ADR 0016](0016-adopt-tabs-with-one-live-session-per-tab.md). Closing the last tab
 closes its window. Pending initialization can settle before partial resources
 are released, and native session completion remains independently owned by main

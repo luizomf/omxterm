@@ -67,6 +67,11 @@ export async function exerciseApplicationMenu(
     reloadUserConfiguration: unexpected,
     openLocalImage: unexpected,
     showAbout,
+    showSettings: unexpected,
+    splitSelectedPane: unexpected,
+    closeSelectedPane: unexpected,
+    focusSelectedPane: unexpected,
+    equalizeSelectedPanes: unexpected,
   };
   const invocations = terminalActionInvocations(actions);
   deliverKeybindsFromKeyEvents(

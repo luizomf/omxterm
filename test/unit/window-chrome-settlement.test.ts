@@ -3,6 +3,13 @@ import { build } from "esbuild";
 import { createRequire } from "node:module";
 import { runInNewContext } from "node:vm";
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
+import { createFixtureSessionInput } from "../fixtures/fixture-session-input";
+import { explicitFixtureReadyMarker } from "../fixtures/restty-host-platform";
+import { createFeatureSmoke } from "../fixtures/feature-native-smoke";
+import { FEATURE_SMOKE_FLAG } from "../fixtures/feature-native-smoke-contract";
+
+// The added observer is real; its native-only scenario is not invoked here.
+vi.mock("electron", () => ({ ipcMain: {} }));
 
 let entry: string;
 beforeAll(async () => {
@@ -24,20 +31,30 @@ function harness(
     failSpawnAt?: number;
     closeThrows?: boolean;
     exerciseSucceeds?: boolean;
+    platform?: NodeJS.Platform;
+    appActive?: boolean;
+    failFast?: boolean;
+    createPeer?: boolean;
   } = {},
 ) {
   const require = createRequire(import.meta.url);
   const original = new Error("controlled native route failure");
+  const events: string[] = [];
   const app = Object.assign(new EventEmitter(), {
     setPath() {},
     whenReady: async () => {},
+    isActive: vi.fn(() => {
+      events.push("app-is-active");
+      return options.appActive ?? false;
+    }),
+    focus: vi.fn(() => events.push("app-focus")),
     exit: vi.fn(),
     quit: vi.fn(),
   });
   const processPort = Object.assign(new EventEmitter(), {
-    platform: "win32",
+    platform: options.platform ?? "win32",
     env: {},
-    argv: [],
+    argv: options.failFast ? ["--fixture-fail-fast"] : [],
     stdout: { write: vi.fn() },
     stderr: { write: vi.fn() },
     exit: vi.fn(),
@@ -52,16 +69,35 @@ function harness(
     onSessionExit() {},
   };
   const application = {
-    newWindow: async () => {},
+    newWindow: vi.fn(async () => {}),
     forceCloseWindow: vi.fn(),
   };
   const dispose = vi.fn();
   const writeSync = vi.fn();
+  const windows: Array<{ focus: ReturnType<typeof vi.fn> }> = [];
+  const exerciseWindowChrome = vi.fn(async () => {
+    events.push("exercise");
+    if (options.createPeer) {
+      app.isActive.mockReturnValue(false);
+      await application.newWindow();
+    }
+    if (!options.exerciseSucceeds) throw original;
+    return { controlled: true };
+  });
   const ports: Record<string, unknown> = {
     electron: {
       app,
       BrowserWindow: class extends EventEmitter {
+        constructor() {
+          super();
+          windows.push(this);
+        }
         webContents = {};
+        loadFile = vi.fn(async () => {
+          events.push("load");
+        });
+        showInactive = vi.fn(() => events.push("show-inactive"));
+        focus = vi.fn(() => events.push("window-focus"));
       },
       ipcMain: {},
     },
@@ -94,9 +130,12 @@ function harness(
     },
     "../../src/main/terminal-application": {
       startTerminalApplication(options: {
-        createWindow(lifecycle: object): void;
+        createWindow(lifecycle: object): { load(): Promise<void> };
       }) {
-        options.createWindow(lifetime);
+        application.newWindow.mockImplementation(async () => {
+          const window = options.createWindow(lifetime);
+          await window.load();
+        });
         return application;
       },
     },
@@ -121,17 +160,16 @@ function harness(
         return session;
       },
     },
+    "./feature-native-smoke": { createFeatureSmoke },
+    "./feature-native-smoke-contract": { FEATURE_SMOKE_FLAG },
+    "./fixture-session-input": { createFixtureSessionInput },
     "./restty-host-platform": {
+      explicitFixtureReadyMarker,
       nativeFixturePlatform: {},
       explicitFixtureLaunchRequest: () => ({}),
     },
     "../../src/shared/terminal-ipc": { terminalIpc: {} },
-    "./window-chrome-exercise": {
-      exerciseWindowChrome: () =>
-        options.exerciseSucceeds
-          ? Promise.resolve({ controlled: true })
-          : Promise.reject(original),
-    },
+    "./window-chrome-exercise": { exerciseWindowChrome },
     "./auxiliary-panel-exercise": { exerciseAuxiliaryPanel: vi.fn() },
     "./window-chrome-construction": { assertNativeChromeConstruction() {} },
     "./window-policy": {
@@ -147,6 +185,10 @@ function harness(
         exercise: async () => {},
         dispose() {},
       }),
+    },
+    "./settings-dialog-exercise": { runSettingsExercise: async () => ({}) },
+    "./window-chrome-configuration": {
+      fixtureConfigurationApplier: () => () => {},
     },
     "../../src/main/native-application-menu": {},
   };
@@ -169,6 +211,9 @@ function harness(
   return {
     app,
     processPort,
+    events,
+    windows,
+    exerciseWindowChrome,
     sessions,
     original,
     callbacks,
@@ -178,6 +223,59 @@ function harness(
     createLate: () => createSession!(callbacks),
   };
 }
+
+it.each([
+  ["darwin", false, true],
+  ["darwin", true, false],
+  ["linux", false, false],
+  ["win32", false, false],
+] as const)(
+  "%s (app active: %s) activates only the initial window as needed before exercising",
+  async (platform, appActive, shouldActivate) => {
+    const h = harness(0, {
+      platform,
+      appActive,
+      exerciseSucceeds: true,
+      createPeer: true,
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.events).toEqual([
+      "load",
+      "show-inactive",
+      ...(platform === "darwin" ? ["app-is-active"] : []),
+      ...(shouldActivate ? ["app-focus", "window-focus"] : []),
+      "exercise",
+      "load",
+      "show-inactive",
+    ]);
+    expect(h.app.isActive).toHaveBeenCalledTimes(platform === "darwin" ? 1 : 0);
+    if (shouldActivate) {
+      expect(h.app.focus).toHaveBeenCalledExactlyOnceWith({ steal: true });
+    } else {
+      expect(h.app.focus).not.toHaveBeenCalled();
+    }
+    expect(h.windows).toHaveLength(2);
+    expect(h.windows[0]!.focus).toHaveBeenCalledTimes(shouldActivate ? 1 : 0);
+    expect(h.windows[1]!.focus).not.toHaveBeenCalled();
+    expect(h.application.newWindow).toHaveBeenCalledTimes(2);
+    expect(h.exerciseWindowChrome).toHaveBeenCalledOnce();
+    expect(h.app.quit).toHaveBeenCalledOnce();
+    expect(h.app.exit).not.toHaveBeenCalled();
+    expect(h.processPort.stderr.write).not.toHaveBeenCalled();
+  },
+);
+
+it("the fail-fast entry creates no window and performs no activation or exercise", async () => {
+  const h = harness(0, { platform: "darwin", failFast: true });
+  await expect(vi.advanceTimersByTimeAsync(0)).rejects.toThrow(
+    "Controlled fixture failure",
+  );
+  expect(h.application.newWindow).not.toHaveBeenCalled();
+  expect(h.windows).toHaveLength(0);
+  expect(h.app.isActive).not.toHaveBeenCalled();
+  expect(h.app.focus).not.toHaveBeenCalled();
+  expect(h.exerciseWindowChrome).not.toHaveBeenCalled();
+});
 
 it("the actual Chrome failure entry joins every existing PTY acknowledgment before exit1", async () => {
   const h = harness();

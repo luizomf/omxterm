@@ -8,6 +8,7 @@ import { syntheticBoldCorrections } from "./restty-synthetic-bold-corrections.mj
 import { pointerCorrections } from "./restty-pointer-corrections.mjs";
 import { backgroundCorrections } from "./restty-background-corrections.mjs";
 import { blinkCorrections } from "./restty-blink-corrections.mjs";
+import { wideWrapLinkCorrections } from "./restty-wide-wrap-corrections.mjs";
 import { bufferTextCorrections } from "./restty-buffer-text-corrections.mjs";
 import {
   softWrapSpaceCorrections,
@@ -47,10 +48,12 @@ const priorGraphemeCoreDigest =
   "baa7dd9600c034a77e73ed03864c3e15e02ccdc591d2044479652fef1d9c0900";
 const priorReflowCoreDigest =
   "dbe1edf4897f11d0de24acb4fd83d94646200a87a58317341525dc0a9d613662";
-const correctedCoreDigest =
+const priorPaletteCoreDigest =
   "1fb03cc8360942c613ca98973658de362852a60d88942c482de4b0dc429660fa";
+const correctedCoreDigest =
+  "03d79d4c745e3c74dd90082a100cbf85e5060e23ff9d16fba338b11d2db1e6be";
 const correctedCoreWasmDigest =
-  "92aa781340d4bd87f8028c17534fe720bd47e87dd34786d149811923e4e389ec";
+  "a52f314c2e91e87394e67307d6b0067c8ba28f6b1e31e7587872b9c41ce88c41";
 const originalEventTypesDigest =
   "1c9383be2d0377635b3463a5ac2ec31eac3e2b233fc664de751ad3e9f54ea650";
 const correctedEventTypesDigest =
@@ -121,10 +124,12 @@ const priorNativeScrollFeedbackDigest =
   "742a6d14c6906d6d4304199889eff69617f6a5ea25aaee788c2a7d6ee4e31dfa";
 const priorBlinkDigest =
   "a5a31366381972750bf98651ac028e6bbe370e89d5ca5cc3855c141cd1002638";
-const priorBufferTextDigest =
+const priorWideWrapLinkDigest =
   "8ebccc2aa81d37266bbf4642e3e07e8c0b17e39935a97d8c3703eb9ac5e72649";
+const priorBufferTextDigest =
+  "3c4dc8554c8ccc91f0b34ebea8a5638fe6592c1a973acc0a64dafcb33ab8387e";
 const correctedDigest =
-  "3b1076d32880f0f28b8cbb465687825c4bb980d34d1af67862e23b5eda2871e3";
+  "c55a8f4068e18131a3be762e49b8015a62d8fa4bf8b852edf60f5e85f0cb3380";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -1773,6 +1778,7 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     sourceDigest !== priorBackgroundCoreDigest &&
     sourceDigest !== priorGraphemeCoreDigest &&
     sourceDigest !== priorReflowCoreDigest &&
+    sourceDigest !== priorPaletteCoreDigest &&
     sourceDigest !== priorInteractionCoreDigest
   )
     throw new Error(
@@ -1794,6 +1800,7 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
           sourceDigest === priorBackgroundCoreDigest ||
           sourceDigest === priorGraphemeCoreDigest ||
           sourceDigest === priorReflowCoreDigest ||
+          sourceDigest === priorPaletteCoreDigest ||
           sourceDigest === priorInteractionCoreDigest
         ? []
         : parsedEventCoreCorrections,
@@ -1954,6 +1961,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, nativeScrollFeedbackCorrections);
       case priorBlinkDigest:
         source = applyCorrections(source, blinkCorrections);
+      case priorWideWrapLinkDigest:
+        source = applyCorrections(source, wideWrapLinkCorrections);
       case priorBufferTextDigest:
         source = applyCorrections(source, bufferTextCorrections);
         break;

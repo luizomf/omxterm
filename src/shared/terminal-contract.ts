@@ -1,3 +1,8 @@
+import {
+  isTerminalPaneCommand,
+  type TerminalPaneCommand,
+} from "./terminal-panes";
+
 export const MAX_TERMINAL_PAYLOAD_BYTES = 64 * 1024;
 export const MAX_TERMINAL_COLUMNS = 1_000;
 export const MAX_TERMINAL_ROWS = 1_000;
@@ -72,7 +77,8 @@ export type TerminalTabCommand =
   | { readonly action: "next" }
   | { readonly action: "previous" }
   | { readonly action: "select"; readonly position: number }
-  | { readonly action: "close-session"; readonly sessionId: TerminalSessionId };
+  | { readonly action: "close-session"; readonly sessionId: TerminalSessionId }
+  | TerminalPaneCommand;
 
 export type TerminalFontZoom = "in" | "out" | "reset";
 export type TerminalClipboardAction = "copy" | "paste" | "select-all";
@@ -210,6 +216,7 @@ export function isTerminalSessionTitle(
 export function isTerminalTabCommand(
   value: unknown,
 ): value is TerminalTabCommand {
+  if (isTerminalPaneCommand(value)) return true;
   if (isStrictRecord(value, ["action"]))
     return (
       value.action === "new" ||

@@ -18,6 +18,12 @@ import {
   type TerminalExportRequest,
 } from "../shared/terminal-contract";
 import { terminalClipboardContextMenuTemplate } from "./application-menu";
+import {
+  DEFAULT_LANGUAGE,
+  translatorFor,
+  type MessageKey,
+  type Translator,
+} from "../shared/i18n";
 
 export type TerminalExportOutcome =
   "saved" | "cancelled" | "empty" | "too-large" | "failed";
@@ -32,9 +38,9 @@ export interface TerminalExportHost {
   now(): Date;
 }
 
-const TITLES: Readonly<Record<TerminalExportKind, string>> = {
-  selection: "Export Selection",
-  content: "Export Terminal Content",
+const TITLES: Readonly<Record<TerminalExportKind, MessageKey>> = {
+  selection: "export.title.selection",
+  content: "export.title.content",
 };
 
 // The file holds the requested text as UTF-8 with LF line breaks, ending with
@@ -58,8 +64,9 @@ export function suggestedTerminalExportName(
 export async function saveTerminalExport(
   request: TerminalExportRequest,
   host: TerminalExportHost,
+  t: Translator["t"] = translatorFor(DEFAULT_LANGUAGE).t,
 ): Promise<TerminalExportOutcome> {
-  const title = TITLES[request.kind];
+  const title = t(TITLES[request.kind]);
   const subject = request.kind === "selection" ? "selection" : "terminal";
   // A notice that cannot be shown, such as after its window closed, is dropped.
   const notify = async (
@@ -69,7 +76,7 @@ export async function saveTerminalExport(
     try {
       await host.showMessageBox({
         title,
-        buttons: ["OK"],
+        buttons: [t("common.ok")],
         noLink: true,
         ...options,
       });
@@ -80,18 +87,28 @@ export async function saveTerminalExport(
   if ("overLimit" in request) {
     await notify({
       type: "error",
-      message: `The ${subject === "selection" ? "selection" : "terminal content"} is larger than the ${EXPORT_LIMIT_MIB} MiB export limit. Nothing was saved.`,
-      detail:
+      message: t(
         subject === "selection"
-          ? "Select less text and export it again."
-          : "Select part of the output and choose Export Selection.",
+          ? "export.overLimit.selection"
+          : "export.overLimit.content",
+        { limit: EXPORT_LIMIT_MIB },
+      ),
+      detail: t(
+        subject === "selection"
+          ? "export.overLimit.selectionDetail"
+          : "export.overLimit.contentDetail",
+      ),
     });
     return "too-large";
   }
   if (!/\S/u.test(request.text)) {
     await notify({
       type: "info",
-      message: `The ${subject} has no text to export.`,
+      message: t(
+        subject === "selection"
+          ? "export.empty.selection"
+          : "export.empty.content",
+      ),
     });
     return "empty";
   }
@@ -104,16 +121,16 @@ export async function saveTerminalExport(
         suggestedTerminalExportName(request.kind, host.now()),
       ),
       filters: [
-        { name: "Text", extensions: ["txt"] },
-        { name: "All Files", extensions: ["*"] },
+        { name: t("export.textFiles"), extensions: ["txt"] },
+        { name: t("dialog.allFiles"), extensions: ["*"] },
       ],
       properties: ["showOverwriteConfirmation", "createDirectory"],
     });
   } catch {
     await notify({
       type: "error",
-      title: "Export Failed",
-      message: "OMXTerm could not open the save dialog. Nothing was saved.",
+      title: t("export.failed"),
+      message: t("export.dialogError"),
     });
     return "failed";
   }
@@ -127,8 +144,8 @@ export async function saveTerminalExport(
   } catch (cause) {
     await notify({
       type: "error",
-      title: "Export Failed",
-      message: "OMXTerm could not save the exported text.",
+      title: t("export.failed"),
+      message: t("export.writeError"),
       detail: cause instanceof Error ? cause.message : String(cause),
     });
     return "failed";
@@ -159,6 +176,7 @@ export function electronTerminalExportHost(
 export function popupTerminalContextMenu(
   window: BrowserWindow,
   request: TerminalContextMenuRequest,
+  t: Translator["t"] = translatorFor(DEFAULT_LANGUAGE).t,
 ): void {
   const send = (action: TerminalClipboardAction) =>
     window.webContents.send(terminalIpc.clipboardAction, action);
@@ -179,6 +197,7 @@ export function popupTerminalContextMenu(
         },
       },
       kind,
+      t,
     ),
   ).popup({ window });
 }

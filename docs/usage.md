@@ -8,15 +8,24 @@ For fonts, themes, shortcuts, and snippets, see [Configuration](configuration.md
 
 ## Windows, tabs, and sessions
 
-Choose **File → New Tab** for another session in the same window, or **File → New Window** for a separate window. Each tab runs its own independent shell.
+Choose **File → New Tab** for another session in the same window, or **File → New Window** for a separate window. Each tab starts with one independent shell and can hold several panes.
 
 - **Tab bar:** appears automatically when a window has two or more tabs. Click a tab to select it, drag horizontally to reorder tabs, or use keyboard shortcuts. **View → Toggle Tab Bar** (`Cmd+Shift+B` / `Ctrl+Shift+B`) hides or shows the strip at any time.
 - **Tab titles:** each tab starts with your active shell or program name (such as `zsh` or `powershell.exe`) and updates automatically when a program sets a terminal title.
-- **Closing:** closing a tab ends its session, and closing the last window exits the app. Typing `exit` in your shell closes that tab immediately.
+- **Closing:** closing a tab ends its sessions, and closing the last window exits the app. Typing `exit` in your shell closes that pane, or the tab when it is its last pane.
+
+### Split panes
+
+Choose **View → Pane → Split Right** (`Cmd+D` / `Ctrl+Shift+O`) or **Split Down** (`Cmd+Shift+E` / `Ctrl+Shift+E`) to divide the current pane into two independent shells in the same tab.
+
+- **Where the new shell starts:** in the directory your shell last reported through OSC 7, if it reports one (many shells do when configured to; OMXTerm never changes your shell setup to make it happen), otherwise in your home directory. Non-local host names and unavailable directories fall back to home. An empty or local host name emitted over SSH cannot be distinguished from a local report; program output can emit it too. The report can only select an existing local start directory, never execute shell text.
+- **Focus:** click a pane, or use **Focus Next/Previous Pane** (`Cmd+]` / `Cmd+[`, `Ctrl+Shift+]` / `Ctrl+Shift+[`) and the arrow variants (`Cmd+Alt+Arrow` / `Alt+Shift+Arrow`). Typing, Copy, Paste, Find, snippets and dropped paths go to the focused pane, which, in a split tab, has a thin top line inset by its horizontal terminal padding (no side or bottom outline). The line uses your theme's cyan, falling back to its foreground if cyan has low contrast against the configured background and foreground improves it. Custom themes and transparent backgrounds can still make it hard to see. The tab title follows it.
+- **Resize:** drag the line between panes, or focus it with Tab and use the arrow keys. The visible line is 1 px within a 4 px resize target; hover and drag share a neutral highlight, while keyboard focus highlights just the line. **Equalize Panes** (`Cmd+Ctrl+=` / `Ctrl+Shift+0`) gives the panes beside the focused one equal space. New splits require room for two usable grids of at least 20 columns by 5 rows, including padding and dividers. The source pane's current cell size is the new pane's admission reference. A later window shrink or zoom may make those minima impossible: sessions and layout survive, and an impossible divider move keeps the existing proportions.
+- **Close:** **Close Pane** (`Cmd+Alt+W` / `Ctrl+Shift+K`) ends the focused pane's session; its neighbor takes the space. Closing the last pane closes the tab.
 
 ### Close confirmation
 
-To protect active work, OMXTerm asks for confirmation before closing a tab or window with a running command. On Windows, confirmation is shown for all live sessions. You can disable this prompt anytime by setting `"confirmClose": false` in `config.json`.
+To protect active work, OMXTerm asks for confirmation before closing a pane, tab or window with a running command. Close Pane only asks about the focused pane; Close Tab asks once for all of the tab's panes. On Windows, confirmation is shown for all live sessions. You can disable this prompt anytime by setting `"confirmClose": false` in `config.json`.
 
 ## Window controls
 
@@ -31,28 +40,34 @@ These toggles apply to the current window. To change the defaults for new window
 
 The application menu displays your active shortcuts, including any custom bindings from `config.json`.
 
-| Action                    | macOS             | Linux and Windows  |
-| ------------------------- | ----------------- | ------------------ |
-| New Window                | `Cmd+N`           | `Ctrl+Shift+N`     |
-| New Tab                   | `Cmd+T`           | `Ctrl+Shift+T`     |
-| Close Tab                 | `Cmd+W`           | `Ctrl+Shift+W`     |
-| Close Window              | `Cmd+Shift+W`     | `Ctrl+Shift+Q`     |
-| Quit                      | `Cmd+Q`           | `Ctrl+Alt+Shift+Q` |
-| Next Tab                  | `Ctrl+Tab`        | `Ctrl+PageDown`    |
-| Previous Tab              | `Ctrl+Shift+Tab`  | `Ctrl+PageUp`      |
-| Select Tab 1 through 9    | `Cmd+1` … `Cmd+9` | `Alt+1` … `Alt+9`  |
-| Copy                      | `Cmd+C`           | `Ctrl+Shift+C`     |
-| Paste                     | `Cmd+V`           | `Ctrl+Shift+V`     |
-| Select All                | `Cmd+A`           | `Ctrl+Shift+A`     |
-| Find                      | `Cmd+F`           | `Ctrl+Shift+F`     |
-| Zoom In                   | `Cmd++`           | `Ctrl++`           |
-| Zoom Out                  | `Cmd+-`           | `Ctrl+-`           |
-| Actual Size               | `Cmd+0`           | `Ctrl+0`           |
-| Toggle Full Screen        | `Ctrl+Cmd+F`      | `F11`              |
-| Toggle Tab Bar            | `Cmd+Shift+B`     | `Ctrl+Shift+B`     |
-| Toggle Title Bar          | `Cmd+Shift+D`     | `Ctrl+Shift+D`     |
-| Toggle Snippets           | `Cmd+Shift+S`     | `Ctrl+Shift+S`     |
-| Reload User Configuration | `Cmd+Shift+,`     | `Ctrl+Shift+,`     |
+| Action                    | macOS             | Linux and Windows               |
+| ------------------------- | ----------------- | ------------------------------- |
+| New Window                | `Cmd+N`           | `Ctrl+Shift+N`                  |
+| New Tab                   | `Cmd+T`           | `Ctrl+Shift+T`                  |
+| Close Tab                 | `Cmd+W`           | `Ctrl+Shift+W`                  |
+| Close Window              | `Cmd+Shift+W`     | `Ctrl+Shift+Q`                  |
+| Quit                      | `Cmd+Q`           | `Ctrl+Alt+Shift+Q`              |
+| Next Tab                  | `Ctrl+Tab`        | `Ctrl+PageDown`                 |
+| Previous Tab              | `Ctrl+Shift+Tab`  | `Ctrl+PageUp`                   |
+| Select Tab 1 through 9    | `Cmd+1` … `Cmd+9` | `Alt+1` … `Alt+9`               |
+| Split Right               | `Cmd+D`           | `Ctrl+Shift+O`                  |
+| Split Down                | `Cmd+Shift+E`     | `Ctrl+Shift+E`                  |
+| Close Pane                | `Cmd+Alt+W`       | `Ctrl+Shift+K`                  |
+| Focus Next/Previous Pane  | `Cmd+]` / `Cmd+[` | `Ctrl+Shift+]` / `Ctrl+Shift+[` |
+| Focus Pane in a direction | `Cmd+Alt+Arrow`   | `Alt+Shift+Arrow`               |
+| Equalize Panes            | `Cmd+Ctrl+=`      | `Ctrl+Shift+0`                  |
+| Copy                      | `Cmd+C`           | `Ctrl+Shift+C`                  |
+| Paste                     | `Cmd+V`           | `Ctrl+Shift+V`                  |
+| Select All                | `Cmd+A`           | `Ctrl+Shift+A`                  |
+| Find                      | `Cmd+F`           | `Ctrl+Shift+F`                  |
+| Zoom In                   | `Cmd++`           | `Ctrl++`                        |
+| Zoom Out                  | `Cmd+-`           | `Ctrl+-`                        |
+| Actual Size               | `Cmd+0`           | `Ctrl+0`                        |
+| Toggle Full Screen        | `Ctrl+Cmd+F`      | `F11`                           |
+| Toggle Tab Bar            | `Cmd+Shift+B`     | `Ctrl+Shift+B`                  |
+| Toggle Title Bar          | `Cmd+Shift+D`     | `Ctrl+Shift+D`                  |
+| Toggle Snippets           | `Cmd+Shift+S`     | `Ctrl+Shift+S`                  |
+| Reload User Configuration | `Cmd+Shift+,`     | `Ctrl+Shift+,`                  |
 
 On keyboards where `+` shares the `=` key, include `Shift` (`Cmd+Shift+=` or `Ctrl+Shift+=`).
 
@@ -66,15 +81,15 @@ On Linux and Windows, press and release **Alt** to open the application menu (ev
 
 ### Searching the scrollback
 
-Choose **Edit → Find…** (`Cmd+F` / `Ctrl+Shift+F`) to search the selected tab's scrollback and visible screen. The search field gets focus, matches highlight as you type, and the counter shows the selected match and total. While the search field has focus, press `Enter` (or **↓**) for the next match, `Shift+Enter` (or **↑**) for the previous one, and `Escape` to close the bar and return to the terminal. Copy, Paste, and Select All also work on the search text there.
+Choose **Edit → Find…** (`Cmd+F` / `Ctrl+Shift+F`) to search the focused pane's scrollback and visible screen. The search field gets focus, matches highlight as you type, and the counter shows the selected match and total. While the search field has focus, press `Enter` (or **↓**) for the next match, `Shift+Enter` (or **↑**) for the previous one, and `Escape` to close the bar and return to the terminal. Copy, Paste, and Select All also work on the search text there.
 
 Click the terminal to keep typing with the bar still open: your keys, including `Enter` and `Escape`, go to the terminal program as usual. Choose **Find…** again to return to the search field.
 
-Search only sees output the tab still holds in memory, so lines beyond your [scrollback limit](configuration.md) are not found. Each tab keeps its own search, and the query is never saved or logged.
+Search only sees output the pane still holds in memory, so lines beyond your [scrollback limit](configuration.md) are not found. Each pane keeps its own search, and the query is never saved or logged.
 
 ### Exporting terminal text
 
-Right-click the terminal to save text to a file. With text selected, choose **Export Selection…**; with nothing selected, choose **Export Terminal Content…** to save the tab's scrollback and screen (only the current screen while a full-screen program like `vim` uses the alternate screen). Pick where to save in the system dialog; cancelling saves nothing, and your selection stays as it was. Exports are limited to 16 MiB of text; if the content is larger, OMXTerm saves nothing and tells you, so select a smaller part and choose **Export Selection…**.
+Right-click the terminal to save text to a file. With text selected, choose **Export Selection…**; with nothing selected, choose **Export Terminal Content…** to save that pane's scrollback and screen (only the current screen while a full-screen program like `vim` uses the alternate screen). Pick where to save in the system dialog; cancelling saves nothing, and your selection stays as it was. Exports are limited to 16 MiB of text; if the content is larger, OMXTerm saves nothing and tells you, so select a smaller part and choose **Export Selection…**.
 
 The file is plain UTF-8 text. OMXTerm only saves when you ask; it never records the terminal automatically.
 
@@ -86,7 +101,7 @@ Modern shells and editors that enable bracketed paste receive pasted text direct
 
 ## Inserting file and folder paths
 
-Drag files or folders from your file manager into OMXTerm to insert their shell-quoted paths into the current tab, separated by spaces. You can also copy files in your file manager and paste them into the terminal (on Windows, drag-and-drop supports multiple files at once, while clipboard paste inserts one file).
+Drag files or folders from your file manager into OMXTerm to insert their shell-quoted paths into the focused pane, separated by spaces. You can also copy files in your file manager and paste them into the terminal (on Windows, drag-and-drop supports multiple files at once, while clipboard paste inserts one file).
 
 Paths are quoted for POSIX shells on macOS/Linux and PowerShell on Windows. Review the inserted text before pressing Enter, especially if you are inside Git Bash, WSL, or an SSH session.
 
@@ -146,7 +161,7 @@ The same compact dialog appears on every supported platform. Use **Tab** to
 move between its buttons and **Escape** or **Close** to return to the terminal.
 Links open in your default browser only when activated. Contributor credits
 live in [CONTRIBUTORS.md](../CONTRIBUTORS.md), while legal notices remain bundled.
-About and local-image preview do not stack; dismiss one before opening the other.
+About and local-image preview do not stack; dismiss one before opening the other. Pane splitting, focus navigation and equalizing are ignored while either owns input, including image choosing/loading. Confirmed closure and failure acknowledgement still work.
 
 ## Troubleshooting
 
@@ -192,19 +207,25 @@ Open a new tab after editing your shell profile to see the changes.
 Editing `config.json` does not apply changes until you press `Cmd+Shift+,` (macOS) or `Ctrl+Shift+,` (Linux/Windows), or choose **View → Reload User Configuration**:
 
 - If `config.json` has a syntax error or invalid value, OMXTerm displays an error banner explaining what to fix while keeping your previous valid settings active.
-- Changes to `font.family` and `font.lineHeight` apply to new tabs and require restarting OMXTerm to update existing tabs.
-- Changes to `windowsShell` apply to new tabs; changes to default bar visibility (`showTitleBar`, `showTabBar`, `alwaysOnTop`) apply to new windows.
+- Changes to `font.family` and `font.lineHeight` apply to new panes/tabs and require restarting OMXTerm to update existing Surfaces.
+- Changes to `windowsShell` apply to new Default Shell sessions; changes to default bar visibility (`showTitleBar`, `showTabBar`, `alwaysOnTop`) apply to new windows.
 - Edits to `snippets.yaml` load automatically whenever you close and reopen the Snippets sidebar.
 
 See [reloading user configuration](configuration.md#reloading-user-configuration) and [theme troubleshooting](configuration.md#theme-troubleshooting) for details.
 
+### Insert, run or preview a snippet
+
+Each snippet row shows what clicking it does: **Insert** types the snippet without pressing Enter, and **Run · adds Enter** types it and presses Enter (`execute: true` in `snippets.yaml`). Click **Preview** to see the exact text first, then choose **Insert — no added Enter** or **Run — adds Enter**; that choice wins over the snippet's default. The snippet goes only to the focused pane captured when you opened the preview, never to a later selected or replacement pane. If that terminal ends, fails or is removed, the actions are disabled and nothing is sent, even if its pane remains visible for failure acknowledgement. Insert only skips the final Enter: a snippet with several lines can still run each line, and multiline text may still ask for paste confirmation.
+
+Change the interface language in **Settings → General → Language**. Row and preview controls update in place, including an unavailable-terminal notice; your snippet text, captured target, focus and disabled actions are retained. Settings, About, local-image and snippet previews do not stack. They block pane split/focus/equalize, tab navigation and divider input without stealing focused fields; approved closure still works. Pane menus, Surface names and resize separators also follow the interface language without replacing sessions.
+
 ### Resize or close Snippets
 
-Drag the left separator to resize the right-side Snippets panel. You can also focus the separator with Tab: Left/Right grow/shrink by 10 px, and Home/End choose the current minimum/maximum. The default width is 280 px, bounded to 220–560 px and the available window space. The header's Close button, Escape inside the panel, or `Cmd+Shift+S` / `Ctrl+Shift+S` (**View → Toggle Snippets**) hides it and returns terminal focus.
+Drag the left separator to resize the right-side Snippets panel. Its 1 px line matches pane dividers but retains a 6 px resize target; keyboard focus highlights the line, not a rectangle. You can also focus the separator with Tab: Left/Right grow/shrink by 10 px, and Home/End choose the current minimum/maximum. The default width is 280 px, bounded to 220–560 px and the available window space. The header's Close button, Escape inside the panel, or `Cmd+Shift+S` / `Ctrl+Shift+S` (**View → Toggle Snippets**) hides it and returns terminal focus.
 
 The panel shrinks automatically in narrow windows and closes below 406 px of content width. Widen the window and open it again; it does not reopen automatically. Your preferred width, search and scroll survive hiding and configuration/theme changes in that window only, not restart. The remaining terminal allowance does not guarantee columns with extreme padding.
 
-Snippets is nonmodal: clicking the terminal keeps normal terminal input. Copy/Paste/Select All edit the search field while it holds focus; unsupported panel controls suppress terminal clipboard delivery instead. About and Local Image Preview temporarily make the retained panel inert.
+Snippets is nonmodal: clicking the terminal keeps normal terminal input. Copy/Paste/Select All edit the search field while it holds focus; unsupported panel controls suppress terminal clipboard delivery instead. Settings, About, snippet preview and Local Image Preview temporarily make the retained panel inert.
 
 ### A program draws text in the wrong place
 

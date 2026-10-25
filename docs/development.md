@@ -84,7 +84,15 @@ Vitest discovers `*.test.*` and `*.spec.*` files under `test/unit/` and `test/in
 - `npm run test:integration` — runs `test/integration/local-shell.test.ts` only.
 - `npx vitest list --filesOnly --json` — lists discovered test files without running them.
 
-Test runs write a summary to `.scratch/vitest-results.json`.
+Test runs write Vitest's raw JSON to `.scratch/vitest-results.json`. Confirm that the report belongs to the current invocation, and preserve it with the command, selected scope/configuration, exit status, and terminal output before another run overwrites it. A nonzero exit remains a failure regardless of JSON counters.
+
+In pinned Vitest 4.1.12:
+
+- `num*TestSuites` includes nested suites, not just files, and is not an executed-file count. Entries in `testResults` identify reported files, not proof that they ran.
+- During fail-fast, unreached files can appear as `passed` with empty `assertionResults`. An empty array alone does not distinguish an unreached file from an empty or collection-failed file. Preserve file-level failures and messages, including collection errors.
+- Nonempty `assertionResults` represents collected test cases, not proof that all their bodies ran. Count entry statuses (`passed`, `failed`, `pending`, `skipped`, `todo`) separately; aggregate `numPendingTests` can differ from the number of `pending` entries. Pending is not an intentional skip or a pass.
+
+Do not infer full-suite execution coverage from aggregate counters or empty passed entries.
 
 ## Running native tests
 
@@ -138,6 +146,65 @@ browser, observes focus leaving OMXTerm, then returns focus to the dialog.
 `OMXTERM_ABOUT_EVIDENCE_DIR` optionally saves fixture-only normal/small light/dark
 PNG captures. These checks still require an idle unlocked desktop; they do not
 claim physical keyboard navigation or pixel parity across platforms.
+
+The independent Window Chrome feature smoke reuses the real renderer, host,
+Settings service/reloader, owned profiles and native PTY supervisor. Select its
+single literal case on an idle unlocked desktop:
+
+```sh
+node node_modules/vitest/vitest.mjs run test/integration/window-chrome.test.ts -t 'checks pane geometry and live language drafts without leaking a native dialog or process'
+```
+
+It checks a right split in one tab, DOM/command focus reaching main ownership,
+input acknowledged by each actual child, keyboard divider resize changing both
+pane bounds and PTY grids, and Close Pane terminating only its child while the
+survivor refits and accepts input. It then changes the genuine Settings language
+control through persistence/reload into two retained hosts while both dirty raw
+editors keep bytes, selection, scroll, DOM focus and identity. The language event
+is dispatched programmatically without moving focus; pane-close confirmation is
+fixture-approved. This does not automate OS widgets, physical input, every split
+axis/weight case, or preview target death. Headless preparation/control coverage:
+`node node_modules/vitest/vitest.mjs run test/unit/feature-native-smoke-fixture.test.ts`.
+Native behavior is established only by actually running the native case, not by
+its successful bundle build or collection.
+
+The `application-about` startup fixture stops before its first window. Its
+`published-failure` control publishes the real observation, requests normal Quit
+to latch production shutdown, then prevents the default `will-quit` exit and
+injects actual exit code 3. The supervisor must report code 3 with no signal;
+diagnostics never substitute for that outcome. The timeout controls require the
+same producer/role to reach the menu (`missing-result`) or successful atomic
+observation publication (`published-hang`). Bounded metadata outside the removed
+profile records publication completion, Quit progression and unexpected window
+creation; missing/invalid evidence or any window fails the phase check. These
+checks diagnose fixture ordering, not the exact cause of a native SIGTRAP.
+Headless coverage uses the actual fixture callback and production shutdown owner:
+`npm test -- test/unit/application-about-startup.test.ts test/unit/application-about-diagnostics.test.ts test/unit/terminal-shutdown.test.ts test/unit/native-fixture-completion.test.ts`.
+
+The auxiliary-panel native fixture fences overlay transitions with bounded,
+window-owned receipts recorded only after the actual production Toggle/Paste
+listeners return. These receipts establish callback consumption before About
+close, picker cancellation or image Escape; they do not drain asynchronous
+input accepted earlier. The continuous input sample and strict empty assertions
+remain unchanged. Headless ordering/negative controls:
+`npm test -- test/unit/overlay-action-consumption.test.ts test/unit/auxiliary-panel-fixture.test.ts`.
+
+Fixture Surface import overrides target the canonical composition importer,
+`src/renderer/start-terminal-window.ts`, not the thin `src/renderer/index.ts`
+entry. After moving composition, check every importer-sensitive consumer; normal
+bootstrap equivalence does not prove fixture interception equivalence. Run
+`npm test -- test/unit/renderer-fixture-consumers.test.ts` for actual headless
+bundle/control checks, including deliberately stale-importer negative controls.
+
+Session-selection notifications describe ownership, not Surface adoption or host
+command readiness: panes may report a started session before their mount returns.
+The tab-removal and startup-title fixture entries observe successful registration
+of the actual host tab-command callback through their supplied bridge; their
+independent arrival observers never establish readiness. Tab-removal retains its
+held-Surface, early-command and held-renderer controls and original deadlines.
+Headless emitted-entry/production-callback coverage:
+`node node_modules/vitest/vitest.mjs run test/unit/tab-removal-host-readiness.test.ts`.
+This fixture observation does not change the documented first-tab command loss.
 
 ### Opt-in native test suites
 

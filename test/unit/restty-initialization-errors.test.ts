@@ -29,9 +29,10 @@ describe("Surface initialization failure classification", () => {
         onFatalError,
       }),
     ).rejects.toThrow("Failed to mount");
-    expect(onFatalError).toHaveBeenCalledExactlyOnceWith(
-      "Failed to initialize the OMXTerm Terminal Surface: font lookup failed",
-    );
+    expect(onFatalError).toHaveBeenCalledExactlyOnceWith({
+      kind: "initialization",
+      detail: "font lookup failed",
+    });
     expect(adapter.start).not.toHaveBeenCalled();
     expect(adapter.close).toHaveBeenCalledExactlyOnceWith("rendering-failure");
   });

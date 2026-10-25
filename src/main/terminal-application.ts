@@ -1,4 +1,8 @@
 import type {
+  TerminalPaneFocusTarget,
+  TerminalSplitDirection,
+} from "../shared/terminal-panes";
+import type {
   TerminalExit,
   TerminalFontZoom,
   TerminalClipboardAction,
@@ -49,7 +53,10 @@ export type TerminalSessionFailure =
 // Whether the window's sessions run a foreground child process (ADR 0017):
 // close confirmations ask only for busy sessions, never for an idle shell.
 export interface TerminalSessionActivity {
+  // Any Busy Session among the selected tab's panes.
   hasBusySelectedSession(): boolean;
+  // The selected tab's focused pane only, for Close Pane.
+  hasBusyFocusedSession?(): boolean;
   hasBusySession(): boolean;
 }
 
@@ -80,6 +87,7 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
   ) => Promise<boolean>;
   readonly showCloseWindowConfirmation: (window: Window) => Promise<boolean>;
   readonly showCloseTabConfirmation: (window: Window) => Promise<boolean>;
+  readonly showClosePaneConfirmation?: (window: Window) => Promise<boolean>;
   readonly showSessionFailure: (
     window: Window,
     failure: TerminalSessionFailure,
@@ -114,6 +122,10 @@ export interface TerminalApplication<
   requestQuit(): Promise<void>;
   newTabInSelectedWindow(): void;
   closeSelectedTab(): Promise<void>;
+  closeSelectedPane(): Promise<void>;
+  splitSelectedPane(direction: TerminalSplitDirection): void;
+  focusSelectedPane(target: TerminalPaneFocusTarget): void;
+  equalizeSelectedPanes(): void;
   selectNextTab(): void;
   selectPreviousTab(): void;
   selectTabInSelectedWindow(position: number): void;
@@ -351,6 +363,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       });
       return state.tabCloseRequest;
     },
+    ...paneActions(options, selectedWindow, windows, confirmClose),
     selectNextTab() {
       sendToSelected({ action: "next" });
     },
@@ -399,13 +412,21 @@ function confirmTabClose<Window extends NativeTerminalWindow>(
     "sendTabCommand" | "showCloseTabConfirmation"
   >,
   isOwnerAlive: () => boolean,
+  scope: "tab" | "pane" = "tab",
 ): Promise<void> {
   // Capture in the tab owner before any asynchronous decision. Commands
   // share an ordered channel, including ordinary session-exit delivery.
-  options.sendTabCommand(window, { action: "prepare-close" });
+  options.sendTabCommand(window, {
+    action: scope === "tab" ? "prepare-close" : "prepare-close-pane",
+  });
   const resolveClose = (confirmed: boolean) => {
     if (isOwnerAlive())
-      options.sendTabCommand(window, { action: "resolve-close", confirmed });
+      options.sendTabCommand(
+        window,
+        scope === "tab"
+          ? { action: "resolve-close", confirmed }
+          : { action: "resolve-close-pane", confirmed },
+      );
   };
   return options
     .showCloseTabConfirmation(window)
@@ -413,6 +434,58 @@ function confirmTabClose<Window extends NativeTerminalWindow>(
       resolveClose(false);
       throw error;
     });
+}
+
+// View -> Pane actions for the selected window. Close Pane confirms only the
+// focused pane's Busy Session and shares Close Tab's one-at-a-time slot.
+function paneActions<Window extends NativeTerminalWindow>(
+  options: TerminalApplicationOptions<Window>,
+  selectedWindow: () => Window | undefined,
+  windows: ReadonlyMap<Window, TerminalWindowState>,
+  confirmClose: () => boolean,
+): Pick<
+  TerminalApplication<Window>,
+  | "closeSelectedPane"
+  | "splitSelectedPane"
+  | "focusSelectedPane"
+  | "equalizeSelectedPanes"
+> {
+  const send = (command: TerminalTabCommand) => {
+    const window = selectedWindow();
+    if (window) options.sendTabCommand(window, command);
+  };
+  return {
+    closeSelectedPane() {
+      const window = selectedWindow();
+      const state = window ? windows.get(window) : undefined;
+      if (!window || !state) return Promise.resolve();
+      if (state.tabCloseRequest) return state.tabCloseRequest;
+      const activity = state.sessionActivity;
+      const busy =
+        activity.hasBusyFocusedSession?.() ?? activity.hasBusySelectedSession();
+      if (!confirmClose() || !busy) {
+        options.sendTabCommand(window, { action: "close-pane" });
+        return Promise.resolve();
+      }
+      state.tabCloseRequest = confirmTabClose(
+        window,
+        {
+          sendTabCommand: options.sendTabCommand,
+          showCloseTabConfirmation:
+            options.showClosePaneConfirmation ??
+            options.showCloseTabConfirmation,
+        },
+        () => !window.isDestroyed() && windows.has(window),
+        "pane",
+      ).finally(() => {
+        state.tabCloseRequest = undefined;
+      });
+      return state.tabCloseRequest;
+    },
+    splitSelectedPane: (direction) => send({ action: "split", direction }),
+    focusSelectedPane: (target) => send({ action: "focus-pane", target }),
+    equalizeSelectedPanes: () => send({ action: "equalize-panes" }),
+  };
 }
 
 function elapsedMilliseconds(startedAt: number): number {

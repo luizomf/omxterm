@@ -28,14 +28,19 @@ See [window and session behavior](docs/spec.md#window-and-session-behavior).
 **Terminal Window** — An independent native window containing one or more
 Terminal Tabs, with exactly one selected.
 
-**Terminal Tab** — A selectable container owning a Terminal Surface and, after
-initialization succeeds, one Live Terminal Session. Pending initialization and
-failure acknowledgement also retain window ownership. Tabs can be reordered
-within their window. Their state is temporary; removing the last tab follows the
-window-close lifecycle, including pending failure acknowledgement.
+**Terminal Tab** — A selectable container owning one or more Terminal Panes,
+with exactly one focused. Pending initialization and failure acknowledgement also
+retain window ownership. Tabs can be reordered within their window. Their state is
+temporary; removing the last tab follows the window-close lifecycle, including
+pending failure acknowledgement.
+
+**Terminal Pane** — One Terminal Surface and, after initialization succeeds, one
+Live Terminal Session inside a tab's split layout. Removing a tab's last pane
+removes the tab. A split pane may start in its source pane's last OSC 7-reported
+local directory; otherwise in the home directory.
 
 **Live Terminal Session** — A running shell or explicitly launched program and
-its terminal state. Closing its tab ends its processes; application quit waits
+its terminal state. Closing its pane or tab ends its processes; application quit waits
 for owned native sessions to exit. Session persistence belongs to tools such as
 tmux.
 
@@ -47,7 +52,8 @@ was requested. macOS and Linux use the OS-configured shell. Windows uses
 first tab. The program and literal argument list go directly to the PTY.
 
 **Initial Working Directory** — The operating-system account's home directory,
-where both the Default Shell and an explicit Launch Request start.
+where new tabs and an explicit Launch Request start. Split panes instead use
+an available, still-existing local OSC 7-reported directory, with home as fallback.
 
 **Busy Session** — A session whose PTY foreground process differs from the idle
 Default Shell. An unreadable foreground name, any live explicit command, and all
@@ -81,11 +87,21 @@ and the [configuration guide](docs/configuration.md).
 user's preferences. OMXTerm creates an initial kit when no configuration exists;
 subsequent edits belong to the user.
 
+**Settings** — The in-app editor of User Configuration. A deliberate change
+validates, writes and reloads `config.json`; opening OMXTerm or Settings never
+rewrites an existing document. Its language selector and editor text share the
+Interface Language, relabeling in place while retaining drafts and pending
+operations. Initial-kit creation is the startup exception.
+
 **User Configuration Reload** — A manual, serialized load and validation
 followed by sequential application. Validation rejection keeps active settings;
 application-time exceptions can leave partial updates. Surfaces keep their
 creation-time font family and line height; new tabs use the latest values. A
 family change during pending font acquisition can fail an initializing tab.
+
+**Interface Language** — The language of OMXTerm's own menus, dialogs and
+controls, chosen only by the User Configuration `language` key (`en-US` default
+or `pt-BR`). Diagnostics, logs and Terminal Payload stay untranslated.
 
 **Terminal Theme** — The terminal palette: foreground, background, cursor,
 selection and ANSI colors. The bundled default is `omtheme`.
@@ -109,8 +125,13 @@ change native minimum-window bounds or guarantee terminal columns.
 user's `snippets.yaml` (single bounded YAML 1.2 core document with version-1
 snippet fields). Search/loading appears immediately on activation; each
 activation rereads the file, retaining query/scroll but invalidating old actions
-and late reads. Activating a current snippet sends its exact body through
-Protected Paste to the selected tab; `execute` controls whether Enter is appended.
+and late reads. Each row shows its default Insert or Run intent; activating it
+sends the exact body through Protected Paste to the focused pane captured at
+that moment, and `execute` controls whether Enter is appended. A read-only
+preview shows the exact body and its final Insert/Run choice wins, delivered
+only to the pane/Surface captured when it opened. Selection never retargets it;
+removal, exit or fatal failure makes that target unavailable, even while a failed
+pane remains visible for acknowledgement.
 
 ## Terminal data and interaction
 
@@ -129,10 +150,10 @@ dialog. It is never automatic or continuous recording.
 screen. Each session has its own buffer, with an approximate configured line
 target and an independent core byte limit; zero lines disables retention.
 
-**Scrollback Search** — An explicitly opened find bar over one tab's Scrollback
-Buffer and visible screen. It takes keys and clipboard actions only while its
-query field holds focus. Its query and matches live only in that tab's memory;
-they are never persisted, logged or shared with other tabs.
+**Scrollback Search** — An explicitly opened find bar over one Surface's
+Scrollback Buffer and visible screen. It takes keys and clipboard actions only
+while its query field holds focus. Its query and matches live only in that
+Surface's memory; they are never persisted, logged or shared with other panes.
 
 **Terminal Capability Identity** — The environment advertised to programs:
 `TERM=xterm-256color`, `COLORTERM=truecolor`, `TERM_PROGRAM=OMXTerm` and the
@@ -167,8 +188,9 @@ always names a file on the OMXTerm host, even when SSH produced the text.
 
 **External Link** — A literal visible HTTP(S) URL in terminal output. Opening it
 requires explicit user activation and validation in main. Hidden OSC 8
-destinations are not used. Some Unicode wrap boundaries prevent recognition;
-see the [terminal contract](docs/spec.md#terminal-behavior).
+destinations are not used. Wide-wrap spacers contribute no text; only exact
+core-proven, fully visible soft wraps join a destination. Uncertain viewport
+continuations remain refused; see the [terminal contract](docs/spec.md#terminal-behavior).
 
 ## Diagnostics and distribution
 

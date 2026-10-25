@@ -23,6 +23,7 @@ function harness(initial = configuration) {
   const tabsContainer = document.createElement("main");
   document.body.append(tabStrip, tabsContainer);
   const surface = {
+    geometry: () => undefined,
     focus: vi.fn(),
     dispose: vi.fn(),
     applyConfiguration: vi.fn(),

@@ -75,9 +75,10 @@ export function prepareFixtureShell(root: string) {
   return { home, environment };
 }
 
+export const explicitFixtureReadyMarker = "__EXPLICIT_READY__Olá🙂";
+
 export function explicitFixtureLaunchRequest(): LaunchRequest {
-  const payload =
-    "__EXPLICIT_READY__Olá🙂\n\u001b]2;second-title\u0007\u0007\u001b]52;c;dW5zYWZl\u0007\u001b]8;;https://example.com\u0007https://example.com\u001b]8;;\u0007";
+  const payload = `${explicitFixtureReadyMarker}\n\u001b]2;second-title\u0007\u0007\u001b]52;c;dW5zYWZl\u0007\u001b]8;;https://example.com\u0007https://example.com\u001b]8;;\u0007`;
   if (process.platform === "win32") {
     const encoded = Buffer.from(payload).toString("base64");
     return {

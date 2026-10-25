@@ -43,7 +43,7 @@ export async function buildFixture(
           build({
             absWorkingDir: projectRoot,
             bundle: true,
-            entryPoints: ["src/renderer/index.ts"],
+            entryPoints: ["test/fixtures/tab-removal-renderer.ts"],
             format: "iife",
             platform: "browser",
             loader: { ".ttf": "binary" },
@@ -56,7 +56,10 @@ export async function buildFixture(
                     (args) => {
                       if (
                         args.importer ===
-                        path.join(projectRoot, "src/renderer/index.ts")
+                        path.join(
+                          projectRoot,
+                          "src/renderer/start-terminal-window.ts",
+                        )
                       )
                         return {
                           path: path.join(

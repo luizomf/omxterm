@@ -16,22 +16,28 @@ import {
 } from "../../src/main/terminal-application";
 import { createTerminalWindowTitleController } from "../../src/main/terminal-window-title";
 import { registerTerminalIpcRouter } from "../../src/main/terminal-ipc-controller";
-import type { SessionCallbacks } from "../../src/main/terminal-ipc-types";
-import {
-  terminalRendererConfiguration,
-  applyActiveUserConfiguration,
-} from "../../src/main/active-user-configuration";
+import type {
+  SessionCallbacks,
+  TerminalIpcRouter,
+} from "../../src/main/terminal-ipc-types";
+import { terminalRendererConfiguration } from "../../src/main/active-user-configuration";
 import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
 import { createLocalTerminalSession } from "../../src/main/local-terminal-session";
 import { spawnFixturePty } from "./native-fixture-pty";
 import {
   explicitFixtureLaunchRequest,
+  explicitFixtureReadyMarker,
   nativeFixturePlatform,
 } from "./restty-host-platform";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { createAboutExercise } from "./about-dialog-exercise";
-import { exerciseAboutKeyboard } from "./about-keyboard-exercise";
+import { createFeatureSmoke } from "./feature-native-smoke";
+import { FEATURE_SMOKE_FLAG } from "./feature-native-smoke-contract";
+import { runSettingsExercise } from "./settings-dialog-exercise";
+import { fixtureConfigurationApplier } from "./window-chrome-configuration";
+import { exerciseAboutKeyboardWithInput } from "./about-keyboard-exercise";
 import { exerciseWindowChrome } from "./window-chrome-exercise";
+import { createFixtureSessionInput } from "./fixture-session-input";
 import { exerciseAuxiliaryPanel } from "./auxiliary-panel-exercise";
 import type { LocalImageData } from "../../src/shared/local-image";
 import { assertNativeChromeConstruction } from "./window-chrome-construction";
@@ -42,9 +48,22 @@ import {
   type MenuOpening,
 } from "./application-menu-exercise";
 
+type ChromeOptions = Parameters<typeof exerciseWindowChrome>[0];
 const root = __dirname;
 const auxiliaryOnly = process.argv.includes("--fixture-auxiliary-only");
+const featureSmoke = createFeatureSmoke(
+  process.argv.includes(FEATURE_SMOKE_FLAG),
+);
 const panelClipboard = { text: "", writes: [] as string[], reads: 0 };
+const actionOrdinals = new WeakMap<
+  BrowserWindow,
+  { clipboard: number; toggle: number }
+>();
+function noteAction(window: BrowserWindow, channel: "clipboard" | "toggle") {
+  const counts = actionOrdinals.get(window) ?? { clipboard: 0, toggle: 0 };
+  counts[channel] += 1;
+  actionOrdinals.set(window, counts);
+}
 let finishPanelImage: ((image: LocalImageData | null) => void) | undefined;
 for (const name of ["userData", "sessionData"] as const) {
   const directory = path.join(root, name);
@@ -57,7 +76,7 @@ const sizes: Array<Array<{ cols: number; rows: number }>> = [];
 const cells: Array<{ width: number; height: number } | undefined> = [];
 const cellQueries: Array<() => void> = [];
 const sessionOutputs: Array<(data: string) => void> = [];
-let keyboardInput: ((data: string) => void) | undefined;
+const sessionInputs: Array<ReturnType<typeof createFixtureSessionInput>> = [];
 const windows: BrowserWindow[] = [];
 const backgroundTransparencies = new WeakMap<BrowserWindow, () => number>();
 const backgroundEffects = createWindowBackgroundEffectsOwner(
@@ -77,6 +96,8 @@ function createChromeSession(callbacks: SessionCallbacks) {
   const index = sessions.length;
   sizes[index] = [];
   sessionOutputs[index] = callbacks.onOutput;
+  const input = createFixtureSessionInput(explicitFixtureReadyMarker);
+  sessionInputs[index] = input;
   let queryingCell = false;
   cellQueries[index] = () => {
     queryingCell = true;
@@ -98,13 +119,20 @@ function createChromeSession(callbacks: SessionCallbacks) {
       environment: { ...process.env, HOME: root },
       applicationVersionProvider: app,
       ...callbacks,
+      onOutput(data) {
+        featureSmoke.observeOutput(index, data);
+        input.observeOutput(data);
+        callbacks.onOutput(data);
+      },
       onExit(exit, launchKind) {
+        input.dispose();
         resolveExit();
         callbacks.onExit(exit, launchKind);
       },
     });
   } catch (error) {
     // No session was returned; do not leave an unowned pending slot.
+    input.dispose();
     resolveExit();
     throw error;
   }
@@ -112,12 +140,11 @@ function createChromeSession(callbacks: SessionCallbacks) {
   return {
     ...terminal,
     write(data: string) {
-      if (keyboardInput) return keyboardInput(data);
       const cell = queryingCell && /^\u001b\[6;(\d+);(\d+)t$/u.exec(data);
       if (cell) {
         cells[index] = { width: Number(cell[2]), height: Number(cell[1]) };
         queryingCell = false;
-      } else terminal.write(data);
+      } else input.write(data, (bytes) => terminal.write(bytes));
     },
     resize(size: { cols: number; rows: number }) {
       sizes[index]!.push(size);
@@ -134,38 +161,46 @@ function exerciseMenu(showAbout: () => void) {
     showAbout,
   );
 }
-async function exerciseKeyboard(about: ReturnType<typeof createAboutExercise>) {
-  const inputs: string[] = [];
-  keyboardInput = (data) => inputs.push(data);
-  try {
-    await exerciseAboutKeyboard(
-      windows[0]!,
-      about.show,
-      sessionOutputs[0]!,
-      () => inputs.join(""),
-    );
-  } finally {
-    keyboardInput = undefined;
-  }
-}
+const applyFixtureConfiguration = (router: TerminalIpcRouter) =>
+  fixtureConfigurationApplier(
+    router,
+    windows,
+    application,
+    backgroundEffects.apply,
+  );
 async function exerciseScenario(
   about: ReturnType<typeof createAboutExercise>,
-  options: Omit<
-    Parameters<typeof exerciseWindowChrome>[0],
-    "nativeExpectation"
-  > & {
-    readonly nativeExpectation?: Parameters<
-      typeof exerciseWindowChrome
-    >[0]["nativeExpectation"];
-  },
+  router: TerminalIpcRouter,
+  options: Omit<ChromeOptions, "nativeExpectation"> & Partial<ChromeOptions>,
 ) {
   try {
+    if (featureSmoke.enabled)
+      return await featureSmoke.run({
+        ...options,
+        root,
+        router,
+        apply: applyFixtureConfiguration(router),
+      });
+    if (process.argv.includes("--fixture-settings-only"))
+      return {
+        settings: await runSettingsExercise(
+          root,
+          router,
+          () => windows[0]!,
+          applyFixtureConfiguration(router),
+        ),
+      };
     if (process.argv.includes("--fixture-about-only")) {
       await exerciseMenu(about.show);
       // This independent scenario still owns only its initial selected session.
       // Continuity deliberately changes selection; do not negotiate on its
       // now-hidden initial session or repeat this oracle there.
-      await exerciseKeyboard(about);
+      await exerciseAboutKeyboardWithInput(
+        windows[0]!,
+        about.show,
+        sessionOutputs[0]!,
+        sessionInputs[0]!,
+      );
       await about.exercise();
       return { about: "menu-keyboard-focus-layout-verified" };
     }
@@ -176,10 +211,13 @@ async function exerciseScenario(
         second: options.second,
         sizes,
         output: (index, data) => sessionOutputs[index]!(data),
-        captureInput: (listener) => {
-          keyboardInput = listener;
-        },
+        inputReady: (index) => sessionInputs[index]?.isReady() ?? false,
+        captureInput: (index, listener) =>
+          sessionInputs[index]!.capture(listener),
         clipboard: panelClipboard,
+        actionOrdinals: () => ({
+          ...(actionOrdinals.get(windows[0]!) ?? { clipboard: 0, toggle: 0 }),
+        }),
         showAbout: about.show,
         imagePending: () => finishPanelImage !== undefined,
         finishImage: (image) => {
@@ -250,9 +288,10 @@ app
       });
       return;
     }
-    const nativeExpectation = auxiliaryOnly
-      ? undefined
-      : chromeNativeExpectation(process.argv);
+    const nativeExpectation =
+      auxiliaryOnly || featureSmoke.enabled
+        ? undefined
+        : chromeNativeExpectation(process.argv);
     if (nativeExpectation !== undefined)
       process.stdout.write(
         `__OMXTERM_CHROME_NATIVE_EXPECTATION__${nativeExpectation}\n`,
@@ -270,11 +309,7 @@ app
         const window = new BrowserWindow({
           ...nativeOptions,
           webPreferences: {
-            ...terminalWindowOptions(
-              path.join(root, "preload.cjs"),
-              configuration,
-              process.platform,
-            ).webPreferences,
+            ...nativeOptions.webPreferences,
             backgroundThrottling: false,
           },
         });
@@ -317,7 +352,10 @@ app
           ),
           createSession: createChromeSession,
           onSessionStarted: title.sessionStarted,
-          onSessionSelected: title.selectSession,
+          onSessionSelected: featureSmoke.trackFocus(
+            window,
+            title.selectSession,
+          ),
           onSessionStartError: lifecycle.onSessionStartError,
           onSessionExit(exit, context) {
             ended += 1;
@@ -374,6 +412,7 @@ app
         return false;
       },
       showCloseTabConfirmation: async () => false,
+      showClosePaneConfirmation: featureSmoke.confirmClose,
       showSessionFailure: async () => {
         throw new Error("Unexpected fixture session failure");
       },
@@ -386,17 +425,25 @@ app
         window.webContents.send(terminalIpc.tabCommand, command),
       sendFontZoom: (window, command) =>
         window.webContents.send(terminalIpc.fontZoom, command),
-      sendClipboardAction: (window, action) =>
-        window.webContents.send(terminalIpc.clipboardAction, action),
-      sendSnippetsToggle: (window) =>
-        window.webContents.send(terminalIpc.snippetsToggle),
+      sendClipboardAction: (window, action) => {
+        window.webContents.send(terminalIpc.clipboardAction, action);
+        noteAction(window, "clipboard");
+      },
+      sendSnippetsToggle: (window) => {
+        window.webContents.send(terminalIpc.snippetsToggle);
+        noteAction(window, "toggle");
+      },
       sendLocalImageOpen: (window) =>
         window.webContents.send(terminalIpc.localImageOpen),
       toggleDeveloperTools() {},
       quit() {},
     });
     await application.newWindow();
-    const result = await exerciseScenario(about, {
+    if (process.platform === "darwin" && !app.isActive()) {
+      app.focus({ steal: true });
+      windows[0]!.focus();
+    }
+    const result = await exerciseScenario(about, router, {
       ...(nativeExpectation !== undefined ? { nativeExpectation } : {}),
       window: windows[0]!,
       cells,
@@ -446,18 +493,9 @@ app
             },
           },
         };
-        applyActiveUserConfiguration(
+        applyFixtureConfiguration(router)(
           { configuration, userFileErrors: [] },
           true,
-          router,
-          windows,
-          application,
-          {
-            rebuildMenu() {},
-            nativeTitleInset: process.platform === "darwin" ? 30 : 0,
-            platform: process.platform,
-            applyBackgroundEffects: backgroundEffects.apply,
-          },
         );
       },
       second: () => windows[1]!,

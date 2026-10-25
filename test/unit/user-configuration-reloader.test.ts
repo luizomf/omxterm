@@ -375,3 +375,41 @@ describe("User Configuration reloader", () => {
     ).toEqual(["first", "latest"]);
   });
 });
+
+describe("User Configuration reload outcomes", () => {
+  it("reports whether each reload was applied, rejected or failed while applying", async () => {
+    const loads = [
+      async () => valid(configuration("applied"), ["kept warning"]),
+      async () => ({
+        configuration: DEFAULT_USER_CONFIGURATION,
+        fallback: {
+          surface: "configuration" as const,
+          error: new UserConfigurationError(
+            "/config.json",
+            "font.size",
+            "is invalid",
+          ),
+        },
+      }),
+      async () => valid(configuration("throws")),
+    ];
+    const { reloader, apply } = harness(() => loads.shift()!());
+
+    await expect(reloader.reload()).resolves.toEqual({
+      applied: true,
+      notices: ["kept warning"],
+    });
+    const rejected = await reloader.reload();
+    expect(rejected).toMatchObject({ applied: false });
+    expect(rejected.applied === false && rejected.notice).toMatchObject({
+      kind: "reload",
+    });
+    expect(reloader.current().userFileErrors[0]).toMatch(
+      /font\.size.*is invalid/u,
+    );
+    apply.mockImplementationOnce(() => {
+      throw new Error("consumer failed");
+    });
+    await expect(reloader.reload()).resolves.toMatchObject({ applied: false });
+  });
+});

@@ -46,7 +46,101 @@ body {
   background: transparent;
 }
 
+/* A Terminal Tab holds one pane or a split of panes. */
+.terminal-tab {
+  display: flex;
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+}
+
+.terminal-tab[hidden] {
+  display: none;
+}
+
+.terminal-pane-split {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+.terminal-pane-split[data-direction="column"] {
+  flex-direction: column;
+}
+
+.terminal-pane-divider {
+  flex: 0 0 var(--terminal-pane-divider-size, 4px);
+  cursor: col-resize;
+  touch-action: none;
+  position: relative;
+  background: transparent;
+}
+
+/* Paint a shared hairline without shrinking either resize target. */
+.terminal-pane-divider::before,
+.auxiliary-separator::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 50%;
+  width: 1px;
+  pointer-events: none;
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 18%
+  );
+}
+
+.terminal-pane-split[data-direction="column"] > .terminal-pane-divider {
+  cursor: row-resize;
+}
+
+.terminal-pane-split[data-direction="column"] > .terminal-pane-divider::before {
+  inset: 50% 0 auto;
+  width: auto;
+  height: 1px;
+}
+
+.terminal-pane-divider:focus-visible,
+.auxiliary-separator:focus-visible {
+  outline: none;
+}
+
+.terminal-pane-divider:hover::before,
+.terminal-pane-divider.dragging::before,
+.auxiliary-separator:hover::before,
+.auxiliary-separator.dragging::before {
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 45%
+  );
+}
+
+.terminal-pane-divider:focus-visible:not(.dragging)::before,
+.auxiliary-separator:focus-visible:not(.dragging)::before {
+  background: var(--terminal-foreground, #e6e6e6);
+}
+
+/* Paint above the canvas even when the Surface has no top padding. */
+.terminal-tab[data-split] .terminal-surface.pane-focused::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: var(--terminal-padding-right, 8px);
+  left: var(--terminal-padding-left, 8px);
+  height: 1px;
+  background: var(--terminal-pane-accent, var(--terminal-foreground));
+  pointer-events: none;
+}
+
 .terminal-surface {
+  /* Keep marker/content stacking local, below window chrome and app overlays. */
+  position: relative;
+  isolation: isolate;
   box-sizing: border-box;
   flex: 1 1 auto;
   min-height: 0;
@@ -66,8 +160,18 @@ body {
     var(--terminal-padding-left, 8px);
 }
 
-body.tabs-visible .restty-terminal-surface {
+body.tabs-visible .restty-terminal-surface,
+.terminal-tab .restty-terminal-surface {
   padding-top: var(--terminal-padding-top, 0px);
+}
+
+/* The tab owns the native inset once, including before its first split. */
+.terminal-tab {
+  padding-top: var(--native-title-inset);
+}
+
+body.tabs-visible .terminal-tab {
+  padding-top: 0;
 }
 
 .restty-terminal-surface .pane-split {
@@ -263,14 +367,9 @@ body.tabs-visible .restty-terminal-surface {
   cursor: col-resize;
   touch-action: none;
   app-region: no-drag;
+  position: relative;
 }
 
-.auxiliary-separator:hover,
-.auxiliary-separator.dragging {
-  background: rgb(from var(--terminal-foreground, #e6e6e6) r g b / 30%);
-}
-
-.auxiliary-separator:focus-visible,
 .auxiliary-header button:focus-visible,
 #snippets-sidebar input[type="search"]:focus-visible {
   outline: 2px solid var(--terminal-foreground, #e6e6e6);
@@ -387,6 +486,40 @@ body.tabs-visible .restty-terminal-surface {
   );
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+#snippets-sidebar li {
+  display: flex;
+  gap: 2px;
+  align-items: stretch;
+}
+
+#snippets-sidebar li .snippet-activate {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The default action is visible before activation. */
+#snippets-sidebar .snippet-intent {
+  font-size: 11px;
+  color: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 70%
+  );
+}
+
+#snippets-sidebar li .snippet-preview-open {
+  flex: 0 0 auto;
+  align-self: center;
+  width: auto;
+  padding: 4px 6px;
+  font-size: 12px;
+  color: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 70%
+  );
 }
 
 #snippets-sidebar .snippets-empty {
@@ -534,4 +667,103 @@ body.tabs-visible .auxiliary-separator {
   color: #ffffff;
   background: #8c1d18;
   border-radius: 6px;
+}
+
+.snippet-preview {
+  box-sizing: border-box;
+  width: min(36rem, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid currentColor;
+  border-radius: 12px;
+  background: var(--terminal-background, #101218);
+  color: var(--terminal-foreground, #f4f4f4);
+  font:
+    14px/1.4 system-ui,
+    sans-serif;
+}
+
+.snippet-preview::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.snippet-preview h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.snippet-preview-description {
+  margin: 0 0 12px;
+  overflow-wrap: anywhere;
+  color: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 70%
+  );
+}
+
+/* Exact text: no wrapping, trimming or reflow of the body. */
+.snippet-preview-body {
+  max-height: 50vh;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  font:
+    13px/1.45 ui-monospace,
+    monospace;
+  white-space: pre;
+  tab-size: 8;
+  background: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 6%
+  );
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--terminal-background, #000000),
+      var(--terminal-foreground, #e6e6e6) 30%
+    );
+  border-radius: 8px;
+}
+
+.snippet-preview-closed {
+  margin: 10px 0 0;
+  font-weight: 600;
+}
+
+.snippet-preview-closed:empty {
+  display: none;
+}
+
+.snippet-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.snippet-preview button {
+  padding: 6px 10px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+}
+
+.snippet-preview button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.snippet-preview-body:focus-visible,
+.snippet-preview button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
 }

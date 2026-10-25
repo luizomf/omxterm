@@ -3,14 +3,20 @@
 Defines close confirmation for the tab lifecycle in
 [ADR 0016](0016-adopt-tabs-with-one-live-session-per-tab.md).
 
-`confirmClose` keeps guarding closing a tab, closing a window, and quitting
-with one confirmation per action. A close action asks only when an
+`confirmClose` guards closing a pane, closing a tab, closing a window, and
+quitting with one confirmation per action. Close Pane considers only its
+captured focused pane; Close Tab considers every affected pane, including live
+siblings of a focused pane that is pending or retained after exit. A close action asks only when an
 affected Live Terminal Session is a Busy Session: an explicit command, any live
 Windows session, or a Unix session whose PTY foreground name differs from the
 idle Default Shell or cannot be read. ConPTY reports a static console title,
 not a foreground name, so Windows deliberately asks for all live sessions.
 Closing only idle Unix Default Shell sessions proceeds without a dialog. Quit
 asks when any open session is Busy.
+
+Close Pane uses the same prepare/resolve ownership protocol as Close Tab,
+capturing the pane before the asynchronous dialog and consuming that target once.
+A removed target is inert; later focus never retargets the decision.
 
 Confirmation protects running work without adding a dialog for an idle Unix
 shell. The name-only heuristic keeps that decision local and cheap rather than

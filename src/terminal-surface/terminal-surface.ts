@@ -12,7 +12,18 @@ import type {
 export type { OptionKeyMode } from "../shared/user-configuration";
 import type { TerminalTheme } from "../shared/terminal-theme";
 
+// Current CSS-pixel cell metrics and space unavailable to the terminal grid
+// (padding, borders, scrollbar, etc.). Unmeasurable/hidden/dead Surfaces return
+// undefined; hosts must not infer cell size by dividing an outer box by a grid.
+export interface TerminalSurfaceGeometry {
+  readonly cellWidth: number;
+  readonly cellHeight: number;
+  readonly insetWidth: number;
+  readonly insetHeight: number;
+}
+
 export interface TerminalSurface {
+  geometry(): TerminalSurfaceGeometry | undefined;
   focus(): void;
   applyConfiguration(configuration: TerminalSurfaceConfiguration): void;
   applyTheme(theme: TerminalTheme): void;
@@ -46,7 +57,19 @@ export interface TerminalAppearance {
   };
 }
 
+// Application-owned text inside the Surface, in the window language.
+export interface TerminalSurfaceLabels {
+  readonly surfaceRegion: string;
+  readonly searchRegion: string;
+  readonly searchPlaceholder: string;
+  readonly searchClear: string;
+  readonly searchMatchAbove: string;
+  readonly searchMatchBelow: string;
+  readonly searchClose: string;
+}
+
 export interface TerminalSurfaceConfiguration {
+  readonly labels?: TerminalSurfaceLabels;
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
   readonly appearance: TerminalAppearance & {
@@ -63,7 +86,14 @@ export interface TerminalFontInputLease {
   release(): void;
 }
 
+// The host localizes the application-owned frame; technical cause detail stays
+// diagnostic text. Keep identity after disposal so visible notices can relabel.
+export type TerminalSurfaceFailure =
+  | { readonly kind: "initialization"; readonly detail: string }
+  | { readonly kind: "backend-loss" };
+
 export interface TerminalSurfaceOptions {
+  readonly labels?: TerminalSurfaceLabels;
   // Standalone Surfaces focus their initial pane by default. Window/tab owners
   // disable this implicit construction side effect and call focus() explicitly.
   readonly focus?: boolean;
@@ -90,7 +120,7 @@ export interface TerminalSurfaceOptions {
   };
   readonly onExternalLink?: (url: string) => void;
   readonly onLocalImageActivation?: (source: LocalImageActivation) => void;
-  readonly onFatalError?: (message: string) => void;
+  readonly onFatalError?: (failure: TerminalSurfaceFailure) => void;
 }
 
 export { mountResttyTerminalSurface as mountTerminalSurface } from "./restty-terminal-surface";

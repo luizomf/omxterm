@@ -46,7 +46,7 @@ const recipes = [
   },
   {
     name: "chrome",
-    writers: 3,
+    writers: 4,
     prepare: (root: string) => chrome(root, "runner"),
   },
   {
@@ -71,13 +71,32 @@ const recipes = [
     prepare: (root: string) => prepare(root, "runner"),
   })),
 ];
-it.each(
-  recipes.flatMap((recipe) =>
-    ["replacement", "ownership marker"].map((mode) => ({ recipe, mode })),
+function phaseGate() {
+  let release!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { ready, release };
+}
+
+it.each([
+  ...recipes.flatMap((recipe) =>
+    ["replacement", "ownership marker"].map((mode) => ({
+      recipe,
+      mode,
+      holdIcon: false,
+      phase: "all writers settled",
+    })),
   ),
-)(
-  "$recipe.name delegates failure cleanup without deleting $mode",
-  async ({ recipe, mode }) => {
+  {
+    recipe: recipes.find((recipe) => recipe.name === "chrome")!,
+    mode: "replacement",
+    holdIcon: true,
+    phase: "while the icon writer is pending",
+  },
+])(
+  "$recipe.name delegates failure cleanup without deleting $mode — $phase",
+  async ({ recipe, mode, holdIcon }) => {
     const parent = await actual.mkdtemp(
       path.join(tmpdir(), "omxterm-preparation-owner-"),
     );
@@ -89,17 +108,37 @@ it.each(
       complete = resolve;
     });
     if (!recipe.writers) complete();
+    const iconHeld = phaseGate(),
+      releaseIcon = phaseGate(),
+      otherWriters = phaseGate();
+    let failureInjectionStarted = false;
+    let invoked = 0;
     let finished = 0;
     const track = async (operation: Promise<unknown>) => {
+      invoked += 1;
       await operation;
       finished += 1;
       if (finished === recipe.writers) complete();
+      // Chrome has three other writers; the configured barrier must also wait
+      // for the held icon. Resolve after complete() to observe its continuation.
+      if (holdIcon && finished === 3) otherWriters.release();
     };
     vi.mocked(filesystem.writeFile).mockImplementation((...args) =>
       track(actual.writeFile(...args)),
     );
     vi.mocked(filesystem.cp).mockImplementation((...args) =>
-      track(actual.cp(...args)),
+      track(
+        (async () => {
+          await actual.cp(...args);
+          if (
+            holdIcon &&
+            args[1] === path.join(root, "renderer/application-icon.png")
+          ) {
+            iconHeld.release();
+            await releaseIcon.ready;
+          }
+        })(),
+      ),
     );
     vi.mocked(filesystem.symlink).mockImplementation((...args) =>
       track(actual.symlink(...args)),
@@ -115,6 +154,7 @@ it.each(
     vi.mocked(build).mockImplementation(() => {
       fault ??= (async () => {
         await writers;
+        failureInjectionStarted = true;
         if (mode === "replacement") {
           await actual.rename(root, original);
           await actual.mkdir(root);
@@ -126,21 +166,37 @@ it.each(
     });
     const remove = vi.spyOn(filesystem, "rm");
     remove.mockClear();
+    const operation = recipe.prepare
+      ? runNativeFixture({
+          executable: process.execPath,
+          args: [],
+          root,
+          evidencePath: path.join(parent, "outcome.json"),
+          timeout: 1000,
+          prepare: () => recipe.prepare!(root),
+        })
+      : observeNativeWindow("cursor");
+    // Always settle the real writers before restoring spies or deleting our
+    // temporary directory, including when the held-writer assertion fails.
+    const settled = operation.then(
+      () => {},
+      () => {},
+    );
     try {
-      const operation = recipe.prepare
-        ? runNativeFixture({
-            executable: process.execPath,
-            args: [],
-            root,
-            evidencePath: path.join(parent, "outcome.json"),
-            timeout: 1000,
-            prepare: () => recipe.prepare!(root),
-          })
-        : observeNativeWindow("cursor");
+      if (holdIcon) {
+        await Promise.all([iconHeld.ready, otherWriters.ready]);
+        expect(invoked).toBe(4);
+        expect(finished).toBe(3);
+        expect(failureInjectionStarted).toBe(false);
+        expect(existsSync(original)).toBe(false);
+        releaseIcon.release();
+      }
       await expect(operation).rejects.toMatchObject({
         cause: failure,
         errors: [failure, expect.any(Error)],
       });
+      expect(invoked).toBe(recipe.writers);
+      expect(finished).toBe(recipe.writers);
       expect(
         await actual.readFile(path.join(root, "foreign-owned"), "utf8"),
       ).toBe("preserve");
@@ -151,6 +207,8 @@ it.each(
           true,
         );
     } finally {
+      releaseIcon.release();
+      await settled;
       vi.restoreAllMocks();
       await actual.rm(parent, { recursive: true, force: true });
       if (recipe.name === "discovery") {

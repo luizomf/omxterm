@@ -2,7 +2,6 @@ import {
   app,
   BrowserWindow,
   clipboard,
-  dialog,
   ipcMain,
   screen,
   shell,
@@ -23,6 +22,7 @@ import {
   saveTerminalExport,
 } from "./terminal-export";
 import * as applicationAbout from "./application-about";
+import { startApplicationSettings } from "./application-settings";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { createDefaultShellResolver, defaultShellName } from "./default-shell";
 import {
@@ -40,11 +40,7 @@ import {
   startTerminalApplication,
   type TerminalApplication,
 } from "./terminal-application";
-import {
-  terminalApplicationFailure,
-  terminalApplicationFailureDisplay,
-} from "./terminal-application-failure";
-import { terminalSessionFailureDialog } from "./terminal-session-failure";
+import { terminalApplicationFailure } from "./terminal-application-failure";
 import {
   lockTerminalRendererNavigation,
   terminalNativeTitleInset,
@@ -77,13 +73,16 @@ import {
 } from "./active-user-configuration";
 import { startWithUserConfiguration } from "./configured-startup";
 import { loadLocalImageForWindow } from "./local-image-loader";
+import { createNativeDialogs } from "./native-dialogs";
+import { DEFAULT_LANGUAGE, translatorFor } from "../shared/i18n";
 import {
   createOperationalEventLog,
   type OperationalEventLog,
 } from "./operational-events";
 
-const showClipboardError = () =>
-  dialog.showErrorBox("Clipboard Error", "Clipboard operation failed.");
+// Dialogs follow the configured language once the configuration is loaded.
+let currentTranslator = () => translatorFor(DEFAULT_LANGUAGE);
+const nativeDialogs = createNativeDialogs(() => currentTranslator());
 const mainDirectory = path.dirname(fileURLToPath(import.meta.url));
 const applicationRoot = path.resolve(mainDirectory, "..");
 const preloadPath = path.join(applicationRoot, "preload", "index.cjs");
@@ -187,6 +186,8 @@ app
               },
             ),
         });
+        currentTranslator = () =>
+          translatorFor(configurationReloader.current().configuration.language);
         const resolveCurrentDefaultShell = createDefaultShellResolver(
           account.shell,
           () => configurationReloader.current().configuration.windowsShell,
@@ -254,12 +255,13 @@ app
                 active.configuration,
               ),
               webContents: window.webContents,
-              createSession(callbacks) {
+              createSession(callbacks, workingDirectory) {
                 return shutdown.createSession(nodePty.spawn, {
                   shell: resolveCurrentDefaultShell(),
                   launchRequest: consumeLaunch(),
                   platform: process.platform,
                   homeDirectory: account.homedir,
+                  ...(workingDirectory ? { workingDirectory } : {}),
                   applicationVersionProvider: app,
                   environment: process.env,
                   ...callbacks,
@@ -278,44 +280,37 @@ app
               onBell: titleController.ringBell,
               onUserInteraction: titleController.resetAttention,
               openExternalLink: (url) => shell.openExternal(url),
-              onExternalLinkOpenError: () =>
-                dialog.showErrorBox(
-                  "External Link Error",
-                  "The External Link could not be opened.",
-                ),
+              onExternalLinkOpenError: nativeDialogs.externalLinkError,
               writeClipboardText: (text) => clipboard.writeText(text),
               readClipboardText: () =>
                 isFilePathPlatform(process.platform)
                   ? readClipboardPathInsertion(clipboard, process.platform)
                   : clipboard.readText(),
-              onClipboardError: showClipboardError,
+              onClipboardError: nativeDialogs.clipboardError,
               loadSnippets: () =>
                 loadTerminalSnippets({
                   environment: process.env,
                   homeDirectory: account.homedir,
                 }),
               loadLocalImage: (request, abortSignal) =>
-                loadLocalImageForWindow(window, request, abortSignal),
-              async confirmPaste() {
-                const result = await dialog.showMessageBox(window, {
-                  type: "warning",
-                  title: "Protected Paste",
-                  message: "Paste text that may contain multiple commands?",
-                  detail:
-                    "The paste contains multiple lines or control characters.",
-                  buttons: ["Paste", "Cancel"],
-                  defaultId: 1,
-                  cancelId: 1,
-                  noLink: true,
-                });
-                return result.response === 0;
-              },
+                loadLocalImageForWindow(
+                  window,
+                  request,
+                  abortSignal,
+                  currentTranslator(),
+                ),
+              confirmPaste: () => nativeDialogs.confirmPaste(window),
               showClipboardContextMenu: (request) =>
-                popupTerminalContextMenu(window, request),
+                popupTerminalContextMenu(
+                  window,
+                  request,
+                  currentTranslator().t,
+                ),
               saveTerminalExport: async (request) => {
                 await saveTerminalExport(
                   request,
                   electronTerminalExportHost(window),
+                  currentTranslator().t,
                 );
               },
             });
@@ -347,57 +342,11 @@ app
           },
           getSelectedWindow: () =>
             BrowserWindow.getFocusedWindow() ?? undefined,
-          async showQuitConfirmation(window) {
-            const options = {
-              type: "question" as const,
-              title: "Quit OMXTerm",
-              message: "Quit OMXTerm and close all Terminal Windows?",
-              detail: "All open Live Terminal Sessions will end.",
-              buttons: ["Quit", "Cancel"],
-              defaultId: 1,
-              cancelId: 1,
-              noLink: true,
-            };
-            const result =
-              window && !window.isDestroyed()
-                ? await dialog.showMessageBox(window, options)
-                : await dialog.showMessageBox(options);
-            return result.response === 0;
-          },
-          async showCloseWindowConfirmation(window) {
-            const result = await dialog.showMessageBox(window, {
-              type: "question",
-              title: "Close Window",
-              message: "Close this Terminal Window and all of its tabs?",
-              detail: "All of its Live Terminal Sessions will end.",
-              buttons: ["Close", "Cancel"],
-              defaultId: 1,
-              cancelId: 1,
-              noLink: true,
-            });
-            return result.response === 0;
-          },
-          async showCloseTabConfirmation(window) {
-            const result = await dialog.showMessageBox(window, {
-              type: "question",
-              title: "Close Tab",
-              message: "Close this Terminal Tab?",
-              detail: "Its Live Terminal Session will end.",
-              buttons: ["Close", "Cancel"],
-              defaultId: 1,
-              cancelId: 1,
-              noLink: true,
-            });
-            return result.response === 0;
-          },
-          async showSessionFailure(window, failure) {
-            const failureDialog = terminalSessionFailureDialog(failure);
-            await dialog.showMessageBox(window, {
-              ...failureDialog,
-              buttons: [...failureDialog.buttons],
-              noLink: true,
-            });
-          },
+          showQuitConfirmation: nativeDialogs.confirmQuit,
+          showCloseWindowConfirmation: nativeDialogs.confirmCloseWindow,
+          showCloseTabConfirmation: nativeDialogs.confirmCloseTab,
+          showClosePaneConfirmation: nativeDialogs.confirmClosePane,
+          showSessionFailure: nativeDialogs.sessionFailure,
           sendFontZoom: (window, command) =>
             window.webContents.send(terminalIpc.fontZoom, command),
           sendClipboardAction: (window, action) =>
@@ -422,14 +371,18 @@ app
                 name: "application.failure",
                 stage: failure.stage,
               });
-              const display = terminalApplicationFailureDisplay(failure);
-              dialog.showErrorBox(display.title, display.message);
+              nativeDialogs.applicationFailure(failure);
             });
           },
           closeSelectedWindow: () =>
             void terminalApplication!.closeSelectedWindow(),
           newTabInSelectedWindow: terminalApplication.newTabInSelectedWindow,
           closeSelectedTab: () => void terminalApplication!.closeSelectedTab(),
+          closeSelectedPane: () =>
+            void terminalApplication!.closeSelectedPane(),
+          splitSelectedPane: terminalApplication.splitSelectedPane,
+          focusSelectedPane: terminalApplication.focusSelectedPane,
+          equalizeSelectedPanes: terminalApplication.equalizeSelectedPanes,
           selectNextTab: terminalApplication.selectNextTab,
           selectPreviousTab: terminalApplication.selectPreviousTab,
           selectTabInSelectedWindow:
@@ -459,6 +412,11 @@ app
           reloadUserConfiguration: () => void configurationReloader.reload(),
           openLocalImage: terminalApplication.openLocalImageInSelectedWindow,
           showAbout: applicationAbout.startApplicationAbout(terminalIpcRouter),
+          showSettings: startApplicationSettings(
+            terminalIpcRouter,
+            configurationLoadOptions,
+            configurationReloader,
+          ),
         };
         const keybindActionInvocations = terminalActionInvocations(menuActions);
         rebuildMenu = () =>
@@ -467,6 +425,7 @@ app
               app.name,
               menuActions,
               configurationReloader.current().configuration.keybinds,
+              currentTranslator().t,
             ),
           );
         rebuildMenu();
@@ -485,8 +444,7 @@ app
       name: "application.failure",
       stage: failure.stage,
     });
-    const display = terminalApplicationFailureDisplay(failure);
-    dialog.showErrorBox(display.title, display.message);
+    nativeDialogs.applicationFailure(failure);
     app.quit();
   });
 

@@ -164,20 +164,22 @@ describe("renderer Terminal Tabs", () => {
     expect(selectedStates(harness.strip)).toEqual(["1:true", "2:false"]);
     expect(visibleContainers(harness.container)).toEqual([0, -1]);
     expect(harness.surfaces[0]!.focus).toHaveBeenCalledOnce();
-    expect(harness.notifySelection).toHaveBeenCalledExactlyOnceWith("s1");
+    expect(harness.notifySelection).toHaveBeenCalledExactlyOnceWith("s1", [
+      "s1",
+    ]);
   });
 
   it("reports the selected session to main across creation, switching, and closing", async () => {
     const harness = createTabsHarness();
     await harness.tabs.ready;
-    expect(harness.notifySelection).toHaveBeenLastCalledWith("s1");
+    expect(harness.notifySelection).toHaveBeenLastCalledWith("s1", ["s1"]);
 
     harness.tabs.handleCommand({ action: "new" });
     await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
-    expect(harness.notifySelection).toHaveBeenLastCalledWith("s2");
+    expect(harness.notifySelection).toHaveBeenLastCalledWith("s2", ["s2"]);
 
     harness.tabs.handleCommand({ action: "close" });
-    expect(harness.notifySelection).toHaveBeenLastCalledWith("s1");
+    expect(harness.notifySelection).toHaveBeenLastCalledWith("s1", ["s1"]);
   });
 
   it("cycles the selection with wraparound in both directions", async () => {
@@ -344,7 +346,7 @@ describe("renderer Terminal Tabs", () => {
     harness.tabs.clipboardAction("copy");
     harness.tabs.clipboardAction("paste");
     harness.tabs.clipboardAction("select-all");
-    harness.tabs.injectSnippet("printf hi", { submit: true });
+    harness.tabs.captureSnippetTarget()!.deliver("printf hi", true);
 
     expect(harness.surfaces[1]!.copy).toHaveBeenCalledOnce();
     expect(harness.surfaces[1]!.paste).toHaveBeenCalledOnce();
@@ -464,9 +466,11 @@ describe("renderer Terminal Tabs fatal Surface isolation", () => {
     harness.tabs.handleCommand({ action: "new" });
     await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
 
-    harness.mountedSurfaceOptions[1]!.onFatalError?.("backend lost");
+    harness.mountedSurfaceOptions[1]!.onFatalError?.({ kind: "backend-loss" });
 
-    expect(onFatalError).toHaveBeenCalledExactlyOnceWith("backend lost");
+    expect(onFatalError).toHaveBeenCalledExactlyOnceWith({
+      kind: "backend-loss",
+    });
     // Failure disposal belongs to the Surface, preserving its failure reason
     // rather than racing it with ordinary tab-close disposal.
     expect(harness.surfaces[1]!.dispose).not.toHaveBeenCalled();

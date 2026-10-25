@@ -157,7 +157,7 @@ it("observes only a matching submitted current frame and invalidates on subseque
 
 it.each([
   [24, true],
-  [26, false],
+  [26, true],
   [80, true],
 ] as const)(
   "observes readiness only for runtime-recognizable wide/combining-prefix WEB frames at %i columns",
@@ -264,7 +264,7 @@ it.each([
       expect(wasm.exports.restty_scrollbar_offset!(handle)).toBe(0);
       expect(wasm.exports.restty_scrollbar_len!(handle)).toBe(20);
       if (cols === 24) expect(frame!.wide?.[26]).toBe(2);
-      if (!recognizable) expect(frame!.wide?.[25]).toBe(3);
+      if (cols === 26) expect(frame!.wide?.[25]).toBe(3);
       const recognized = [
         lookupFresh(4, 0)?.url ?? null,
         lookupFresh(2, 1)?.url ?? null,

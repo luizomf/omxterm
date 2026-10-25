@@ -32,9 +32,9 @@ Restty's visible-destination provider recognizes lowercase HTTP(S) URLs in cell
 snapshots and joins rows only when Ghostty selection text proves a soft wrap. Surrounding prose punctuation and
 closing brackets are excluded, an opening parenthesis terminates a match, nearby
 URLs remain separate, and clipped destinations are refused rather than guessed.
-A known mismatch between wide-wrap spacer cells and core selection text can
-prevent recognition of a visible URL at some Unicode wrap boundaries
-([#593](https://github.com/luizomf/omxterm/issues/593)).
+Link-only proofs end before terminal wide-wrap spacers so selection expansion
+cannot borrow the next grapheme. Full row equality and core-proven joins remain
+mandatory; this does not change ordinary selection or copy semantics.
 
 Application-owned About links use a separate narrow route: the renderer sends
 only `website`, `contributors`, `issues`, or `license`. Main validates the live

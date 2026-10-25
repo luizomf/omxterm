@@ -29,6 +29,7 @@ import {
   utf8ByteLength,
 } from "../../src/shared/terminal-contract";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import { translatorFor } from "../../src/shared/i18n";
 import {
   electronTerminalExportHost,
   popupTerminalContextMenu,
@@ -335,5 +336,39 @@ describe("terminal context menu", () => {
     );
     expect(labels).toEqual(["Copy", "Paste", undefined, "Select All"]);
     expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe("translated export text", () => {
+  it("words dialogs and the context menu item in the configured language", async () => {
+    const { t } = translatorFor("pt-BR");
+    const fake = host();
+    await saveTerminalExport({ kind: "selection", overLimit: true }, fake, t);
+    expect(fake.showMessageBox).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Exportar Seleção",
+        message:
+          "A seleção é maior que o limite de exportação de 16 MiB. Nada foi salvo.",
+        buttons: ["OK"],
+      }),
+    );
+    await saveTerminalExport({ kind: "content", text: "texto" }, fake, t);
+    expect(
+      fake.saveDialogs.at(-1)?.filters?.map((filter) => filter.name),
+    ).toEqual(["Texto", "Todos os Arquivos"]);
+    popupTerminalContextMenu(
+      { webContents: { send: vi.fn() } } as never,
+      { target: "terminal", hasSelection: false },
+      t,
+    );
+    const labels = (electron.template as { label?: string }[])
+      .map((item) => item.label)
+      .filter(Boolean);
+    expect(labels).toEqual([
+      "Copiar",
+      "Colar",
+      "Selecionar Tudo",
+      "Exportar Conteúdo do Terminal…",
+    ]);
   });
 });

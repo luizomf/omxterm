@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { createAboutDialog } from "../../src/renderer/about/about-dialog";
+import { createRendererLanguage } from "../../src/renderer/renderer-language";
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () {
@@ -104,4 +105,44 @@ it("presents compact runtime metadata and opens only named links", async () => {
   expect(document.querySelector("dialog")).toBeNull();
   expect(focusTerminal).toHaveBeenCalledOnce();
   about.dispose();
+});
+
+it("relabels the open dialog when the window language changes, keeping loaded values", async () => {
+  const language = createRendererLanguage("pt-BR");
+  const about = createAboutDialog(document, {
+    info: async () => ({ name: "OMXTerm", version: "1.2.3", copyright: "©" }),
+    openLink: async () => {
+      throw new Error("private native detail");
+    },
+    focusTerminal: vi.fn(),
+    onActivityChange: vi.fn(),
+    language,
+  });
+  about.open();
+  const text = () =>
+    [...document.querySelectorAll("dialog h2, dialog p, dialog button")].map(
+      (element) => element.textContent,
+    );
+  expect(text()).toContain("Carregando versão…");
+  await vi.waitFor(() => expect(text()).toContain("Versão 1.2.3"));
+  document.querySelector<HTMLButtonElement>(".about-links button")!.click();
+  await vi.waitFor(() =>
+    expect(text()).toContain("Não foi possível abrir o link."),
+  );
+  expect(text()).toEqual(
+    expect.arrayContaining(["Sobre o OMXTerm", "Projeto", "Fechar"]),
+  );
+  language.set("en-US");
+  expect(text()).toEqual(
+    expect.arrayContaining([
+      "About OMXTerm",
+      "Version 1.2.3",
+      "Project",
+      "Could not open the link.",
+      "Close",
+    ]),
+  );
+  about.dispose();
+  language.set("pt-BR");
+  expect(document.querySelector("dialog")).toBeNull();
 });

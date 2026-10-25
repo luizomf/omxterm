@@ -125,18 +125,30 @@ async function run() {
   await window.loadFile(path.join(root, "renderer", "index.html"));
   window.show();
   window.focus();
-  await owner.waitFor(() => selected === "s1", "first silent program mounted");
+  await owner.waitFor(() => selected === "s1", "first silent program selected");
+  await owner.waitFor(
+    async () =>
+      (await window.webContents.executeJavaScript(
+        "globalThis.__omxtermStartupTitlesHost.isReady()",
+      )) === true,
+    "first host tab-command subscription",
+  );
   window.webContents.send(terminalIpc.tabCommand, { action: "new" });
   await owner.waitFor(
     () => selected === "s2",
-    "additional silent program mounted",
+    "additional silent program selected",
   );
-  const labels = (await window.webContents.executeJavaScript(
-    "[...document.querySelectorAll('[role=tab]')].map(tab => tab.textContent)",
-  )) as string[];
+  const labels = () =>
+    window.webContents.executeJavaScript(
+      "[...document.querySelectorAll('[role=tab]')].map(tab => tab.textContent)",
+    ) as Promise<string[]>;
   const expected = path.basename(nativeFixturePlatform.defaultShell);
+  await owner.waitFor(async () => {
+    const current = await labels();
+    return current.length === 2 && current.every((label) => label === expected);
+  }, "silent program fallback labels");
   assert.deepEqual(
-    labels,
+    await labels(),
     [expected, expected],
     "startup fallback labels without OSC repair",
   );

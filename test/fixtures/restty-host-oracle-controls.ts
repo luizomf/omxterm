@@ -88,8 +88,8 @@ export function resttyHostOracleRendererControl(
               replace(call, `    if (!(${predicate})) ${call.trim()}`);
             } else {
               replace(
-                "  const applyRuntimeTheme = (theme: TerminalTheme) => {",
-                `  const applyRuntimeTheme = (theme: TerminalTheme) => {\n    if (${predicate}) ptyCallbacks?.onData?.("\\x1b_Ga=d,d=A,q=2;\\x1b\\\\");`,
+                "  const applyRuntimeTheme = (theme: TerminalTheme, labels?: Labels) => {",
+                `  const applyRuntimeTheme = (theme: TerminalTheme, labels?: Labels) => {\n    if (${predicate}) ptyCallbacks?.onData?.("\\x1b_Ga=d,d=A,q=2;\\x1b\\\\");`,
               );
             }
           }

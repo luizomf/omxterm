@@ -30,7 +30,7 @@ function expectRouting(
   selected: number,
 ) {
   harness.tabs.clipboardAction("paste");
-  harness.tabs.injectSnippet("synthetic snippet", { submit: true });
+  harness.tabs.captureSnippetTarget()!.deliver("synthetic snippet", true);
   harness.tabs.focusSelected();
   for (const [index, surface] of harness.surfaces.entries()) {
     expect(surface.paste).toHaveBeenCalledTimes(index === selected ? 1 : 0);
@@ -40,7 +40,9 @@ function expectRouting(
     "synthetic snippet",
     { submit: true },
   );
-  expect(harness.notifySelection).toHaveBeenLastCalledWith(`s${selected + 1}`);
+  expect(harness.notifySelection).toHaveBeenLastCalledWith(`s${selected + 1}`, [
+    `s${selected + 1}`,
+  ]);
   expect(harness.surfaces[selected]!.focus).toHaveBeenCalled();
   expect(harness.surfaces[selected]!.dispose).not.toHaveBeenCalled();
   expect(harness.adapters[selected]!.close).not.toHaveBeenCalled();
@@ -62,7 +64,7 @@ describe("Terminal Tab removal preserves selected identity", () => {
     // Route before asserting so a failure reports both identity and recipient.
     expectRouting(harness, 0);
     expect(selectedStates(harness.strip)).toEqual(["A:true", "B:false"]);
-    expect(harness.container.querySelector("main:not([hidden])")).toBe(
+    expect(harness.container.querySelector(".terminal-tab:not([hidden])")).toBe(
       selectedContainer,
     );
   });

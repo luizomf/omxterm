@@ -187,7 +187,7 @@ const ordinaryCallers = [
   { name: "pending-tab-ownership", cases: 1 },
   { name: "production-shutdown", cases: 4 },
   { name: "restty-background-rendering", cases: 1 },
-  { name: "restty-appearance-rendering", cases: 1 },
+  { name: "restty-appearance-rendering", cases: 2 },
   { name: "restty-native-scroll-feedback", cases: 3 },
   { name: "startup-tab-titles", cases: 1 },
   { name: "surface-font-ownership", cases: 1 },
@@ -197,9 +197,11 @@ const ordinaryCallers = [
   { name: "terminal-resize-race", cases: 2, allocations: 2 },
   { name: "terminal-session-retirement", cases: 2, allocations: 2 },
 ];
-const ordinaryCases = ordinaryCallers.flatMap((caller) =>
-  Array.from({ length: caller.cases }, (_, index) => ({ ...caller, index })),
-);
+const ordinaryCases = ordinaryCallers
+  .flatMap((caller) =>
+    Array.from({ length: caller.cases }, (_, index) => ({ ...caller, index })),
+  )
+  .concat([{ name: "window-chrome", cases: 5, index: 4, allocations: 1 }]);
 it.each(ordinaryCases)(
   "$name callback $index joins preparation and actual context before native handoff",
   async ({ name, cases, index }) => {
@@ -304,10 +306,16 @@ async function observeCaller(
     onTestFinished: (finish: () => Promise<void>) => finalizers.push(finish),
   };
   const cases: (() => Promise<void>)[] = [];
+  type Callback = (testContext: typeof context) => Promise<void>;
   const register = (
     _name: string,
-    test: (testContext: typeof context) => Promise<void>,
-  ) => cases.push(() => test(context));
+    testOrOptions: Callback | { timeout: number },
+    callback?: Callback,
+  ) => {
+    const test = typeof testOrOptions === "function" ? testOrOptions : callback;
+    if (!test) throw new Error("Missing actual test callback");
+    cases.push(() => test(context));
+  };
   const require = module.createRequire(import.meta.url);
   const stopped = new Error("Controlled external boundary failure");
   const cleanupFailure = new Error("Controlled owned-root removal failure");

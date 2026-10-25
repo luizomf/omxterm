@@ -86,9 +86,10 @@ no arbitrary line joining or second parser is used. Literal final-row spaces
 remain distinct from blank cell padding rather than disappearing before the
 whole-line exclusion. Uncertain continuity at a concealed viewport edge is
 refused, including a spaced image prefix ending before literal spaces. The
-shared provider's known wide-wrap spacer limitation is described in
-[ADR 0011](0011-validate-external-links-at-the-main-process.md). Tests cover
-activation across other wrapped cells, actual image display, Unicode quoted
+shared provider's link-only wide-wrap proof endpoints are described in
+[ADR 0011](0011-validate-external-links-at-the-main-process.md). Headless core
+regressions cover spacer-wrapped whole-line paths. Separate native tests cover
+activation across wrapped cells, actual image display, Unicode quoted
 prefixes, resize/reflow and tmux redraw.
 
 Brackets, assignments

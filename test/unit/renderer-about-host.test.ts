@@ -19,6 +19,7 @@ it("keeps About focused across startup and menu actions while allowing close and
   let find!: () => void;
   let finishMount!: (surface: TerminalSurface) => void;
   const surface = {
+    geometry: () => undefined,
     dispose: vi.fn(),
     focus: vi.fn(),
     applyTheme: vi.fn(),

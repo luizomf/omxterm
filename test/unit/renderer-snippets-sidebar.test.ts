@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSnippetsView } from "../../src/renderer/snippets-sidebar";
+import {
+  createRendererLanguage,
+  type RendererLanguage,
+} from "../../src/renderer/renderer-language";
 import type { TerminalSnippetsResponse } from "../../src/shared/terminal-snippets";
 
 const catalog: TerminalSnippetsResponse = {
@@ -19,13 +23,19 @@ afterEach(() => {
   for (const cleanup of cleanups.splice(0)) cleanup();
   document.body.replaceChildren();
 });
-function fixture(load = vi.fn(async () => catalog)) {
+function fixture(
+  load = vi.fn(async () => catalog),
+  language?: RendererLanguage,
+) {
   let interactive = true;
   const inject = vi.fn();
+  const preview = vi.fn();
   const view = createSnippetsView(document, {
     loadSnippets: load,
     inject,
+    preview,
     isInteractive: () => interactive,
+    ...(language ? { language } : {}),
   });
   document.body.append(view.element);
   cleanups.push(view.dispose);
@@ -42,9 +52,13 @@ function fixture(load = vi.fn(async () => catalog)) {
     results,
     input,
     inject,
+    preview,
     load,
     block: () => {
       interactive = false;
+    },
+    unblock: () => {
+      interactive = true;
     },
   };
 }
@@ -53,6 +67,78 @@ async function settle() {
 }
 
 describe("Snippets auxiliary view", () => {
+  it.each(["reject", "throw"])(
+    "relabels a visible generic %s failure without reloading or replacing the view",
+    async (outcome) => {
+      const language = createRendererLanguage();
+      const load = vi.fn<() => Promise<TerminalSnippetsResponse>>(() => {
+        if (outcome === "throw") throw new Error("private details");
+        return Promise.reject(new Error("private details"));
+      });
+      const f = fixture(load, language);
+      f.view.activate();
+      f.input("retained query");
+      f.view.focus();
+      await settle();
+      const error = f.root.querySelector<HTMLElement>(".snippets-error")!;
+      expect(error.hidden).toBe(false);
+      expect(error.textContent).toBe(
+        "Could not load snippets. Close and reopen Snippets to retry.",
+      );
+      language.set("pt-BR");
+      expect(error.textContent).toBe(
+        "Não foi possível carregar os snippets. Feche e abra Snippets de novo para tentar outra vez.",
+      );
+      expect(f.search.placeholder).toBe("Buscar snippets");
+      language.set("en-US");
+      expect(error.textContent).toBe(
+        "Could not load snippets. Close and reopen Snippets to retry.",
+      );
+      expect(f.root.querySelector("input")).toBe(f.search);
+      expect(f.search.value).toBe("retained query");
+      expect(document.activeElement).toBe(f.search);
+      expect(load).toHaveBeenCalledOnce();
+      expect(f.root.textContent).not.toContain("private details");
+      f.view.dispose();
+      language.set("pt-BR");
+      expect(error.textContent).toBe(
+        "Could not load snippets. Close and reopen Snippets to retry.",
+      );
+    },
+  );
+  it("keeps file diagnostics literal after replacing a transport failure, then clears them on fresh data", async () => {
+    const language = createRendererLanguage();
+    // Even a diagnostic matching a catalog string is not an application notice.
+    const diagnostic =
+      "Could not load snippets. Close and reopen Snippets to retry.";
+    const load = vi
+      .fn<() => Promise<TerminalSnippetsResponse>>()
+      .mockRejectedValueOnce(new Error("private details"))
+      .mockResolvedValueOnce({ snippets: [], error: diagnostic })
+      .mockResolvedValueOnce(catalog);
+    const f = fixture(load, language);
+    f.view.activate();
+    await settle();
+    language.set("pt-BR");
+    f.view.deactivate();
+    f.view.activate();
+    await settle();
+    const error = f.root.querySelector<HTMLElement>(".snippets-error")!;
+    expect(error.textContent).toBe(diagnostic);
+    language.set("en-US");
+    language.set("pt-BR");
+    expect(error.textContent).toBe(diagnostic);
+    expect(error.hidden).toBe(false);
+    f.view.deactivate();
+    f.view.activate();
+    await settle();
+    language.set("en-US");
+    expect(error.hidden).toBe(true);
+    expect(error.textContent).toBe("");
+    expect(f.root.querySelectorAll("li")).toHaveLength(2);
+    expect(load).toHaveBeenCalledTimes(3);
+  });
+
   it("reveals loading/search synchronously, rereads on activation, and never refocuses on completion", async () => {
     const f = fixture();
     f.view.activate();
@@ -102,21 +188,72 @@ describe("Snippets auxiliary view", () => {
     const f = fixture();
     f.view.activate();
     await settle();
-    const old = f.root.querySelectorAll("li button")[1] as HTMLButtonElement;
+    const old = f.root.querySelectorAll(
+      "li .snippet-activate",
+    )[1] as HTMLButtonElement;
     old.click();
     expect(f.inject).toHaveBeenCalledExactlyOnceWith(catalog.snippets[1]);
     f.inject.mockClear();
     f.input("brew");
     old.click();
-    const filtered = f.root.querySelector<HTMLButtonElement>("li button")!;
+    const filtered = f.root.querySelector<HTMLButtonElement>(
+      "li .snippet-activate",
+    )!;
     f.view.deactivate();
     filtered.click();
     f.view.activate();
     filtered.click();
     await settle();
     f.block();
-    f.root.querySelector<HTMLButtonElement>("li button")!.click();
+    f.root.querySelector<HTMLButtonElement>("li .snippet-activate")!.click();
     expect(f.inject).not.toHaveBeenCalled();
+  });
+
+  it("shows each row's default intent and opens a preview without delivering", async () => {
+    const f = fixture();
+    f.view.activate();
+    await settle();
+    expect(
+      [...f.root.querySelectorAll(".snippet-intent")].map((e) => e.textContent),
+    ).toEqual(["Insert", "Run · adds Enter"]);
+    const previews = f.root.querySelectorAll<HTMLButtonElement>(
+      "li .snippet-preview-open",
+    );
+    expect(previews[1]!.getAttribute("aria-label")).toBe("Preview update brew");
+    previews[1]!.click();
+    expect(f.inject).not.toHaveBeenCalled();
+    expect(f.preview).toHaveBeenCalledExactlyOnceWith(
+      catalog.snippets[1],
+      expect.any(Function),
+    );
+    f.block();
+    previews[0]!.click();
+    expect(f.preview).toHaveBeenCalledOnce();
+  });
+
+  it("returns focus to the preview control, then search, never to a hidden view", async () => {
+    const f = fixture();
+    f.view.activate();
+    await settle();
+    f.root
+      .querySelector<HTMLButtonElement>("li .snippet-preview-open")!
+      .click();
+    const [, returnFocus] = f.preview.mock.calls[0] as [unknown, () => boolean];
+    expect(returnFocus()).toBe(true);
+    expect(document.activeElement).toHaveProperty(
+      "className",
+      "snippet-preview-open",
+    );
+    f.input("brew");
+    expect(returnFocus()).toBe(true);
+    expect(document.activeElement).toBe(f.search);
+    f.block();
+    expect(returnFocus()).toBe(false);
+    f.unblock();
+    f.view.deactivate();
+    (document.activeElement as HTMLElement).blur();
+    expect(returnFocus()).toBe(false);
+    expect(document.activeElement).toBe(document.body);
   });
 
   it.each(["resolve", "reject"])(

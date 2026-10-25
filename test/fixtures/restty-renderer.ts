@@ -93,8 +93,11 @@ void mountResttyTerminalSurface(
     close() {},
   },
   {
-    onFatalError(message) {
-      fatal = message;
+    onFatalError(failure) {
+      fatal =
+        failure.kind === "initialization"
+          ? failure.detail
+          : "rendering backend lost";
     },
   },
 )

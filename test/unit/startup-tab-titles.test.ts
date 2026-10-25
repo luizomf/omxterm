@@ -96,7 +96,9 @@ function harness() {
         command = listener;
         return () => {};
       },
-      notifyTabSelection: controller.selectSession,
+      notifyTabSelection: (sessionId) => {
+        if (sessionId !== null) controller.selectSession(sessionId);
+      },
       syncTabTitle: sync,
     },
   );

@@ -1,4 +1,8 @@
-import { MAX_USER_FILE_ERROR_LENGTH } from "../shared/user-configuration";
+import { translatorFor } from "../shared/i18n";
+import {
+  settingsMessageText,
+  type SettingsMessage,
+} from "../shared/settings-messages";
 import type { OperationalEventLog } from "./operational-events";
 import {
   configurationRejectionReason,
@@ -29,9 +33,15 @@ interface UserConfigurationReloaderOptions {
   >[];
 }
 
+// What a reload actually did: applied with its current notices (warnings and
+// deferred restart-only settings), or rejected with the reported reason.
+export type UserConfigurationReloadOutcome =
+  | { readonly applied: true; readonly notices: readonly SettingsMessage[] }
+  | { readonly applied: false; readonly notice: SettingsMessage };
+
 export interface UserConfigurationReloader {
   current(): ActiveUserConfiguration;
-  reload(): Promise<void>;
+  reload(): Promise<UserConfigurationReloadOutcome>;
 }
 
 export function terminalSurfaceFontBaseline(
@@ -58,10 +68,10 @@ export function createUserConfigurationReloader(
     options.initial.configuration,
     options.initial.userFileErrors,
   );
-  let queue = Promise.resolve();
+  let queue: Promise<unknown> = Promise.resolve();
   const now = options.now ?? Date.now;
 
-  const run = async () => {
+  const run = async (): Promise<UserConfigurationReloadOutcome> => {
     const startedAt = now();
     options.operationalEvents?.write({
       name: "configuration.reload.requested",
@@ -70,17 +80,20 @@ export function createUserConfigurationReloader(
     });
     try {
       const load = await options.load();
-      if (load.fallback) {
-        reject(load.fallback, startedAt);
-        return;
-      }
+      if (load.fallback) return reject(load.fallback, startedAt);
+      const notices = currentNotices(
+        load.configuration,
+        load.warnings ?? [],
+        options.terminalSurfaceFontBaseline,
+        options.activeTerminalSurfaceFontConfigurations?.(),
+      );
       active = freezeState(
         load.configuration,
-        currentNotices(
-          load.configuration,
-          load.warnings ?? [],
-          options.terminalSurfaceFontBaseline,
-          options.activeTerminalSurfaceFontConfigurations?.(),
+        notices.map((notice) =>
+          settingsMessageText(
+            notice,
+            translatorFor(load.configuration.language).t,
+          ),
         ),
       );
       options.operationalEvents?.setLevel(load.configuration.logLevel);
@@ -90,18 +103,32 @@ export function createUserConfigurationReloader(
         trigger: "manual",
         durationMs: elapsedMilliseconds(startedAt, now()),
       });
+      return { applied: true, notices };
     } catch {
-      reject(undefined, startedAt);
+      return reject(undefined, startedAt);
     }
   };
 
   const reject = (
     fallback: UserConfigurationFallback | undefined,
     startedAt: number,
-  ) => {
-    const notice = boundedReloadNotice(fallback);
-    options.writeStderr?.(`${notice}\n`);
-    active = freezeState(active.configuration, [notice]);
+  ): UserConfigurationReloadOutcome => {
+    const notice: SettingsMessage = {
+      kind: "reload",
+      ...(fallback
+        ? {
+            detail: fallback.error.message
+              .replace(" Fix the file and restart OMXTerm.", "")
+              .slice(0, 65_536),
+          }
+        : {}),
+    };
+    const rendered = settingsMessageText(
+      notice,
+      translatorFor(active.configuration.language).t,
+    );
+    options.writeStderr?.(`${rendered}\n`);
+    active = freezeState(active.configuration, [rendered]);
     options.apply(active, false);
     options.operationalEvents?.write({
       name: "configuration.reload.rejected",
@@ -111,6 +138,7 @@ export function createUserConfigurationReloader(
         ? configurationRejectionReason(fallback.error, fallback.surface)
         : "unexpected-failure",
     });
+    return { applied: false, notice };
   };
 
   return {
@@ -141,41 +169,24 @@ function currentNotices(
   activeSurfaces:
     | readonly Pick<LoadedUserConfiguration, "fontFamily" | "fontLineHeight">[]
     | undefined,
-): readonly string[] {
+): readonly SettingsMessage[] {
   if (!baseline) return warnings;
   const surfaces =
     activeSurfaces && activeSurfaces.length > 0 ? activeSurfaces : [baseline];
-  const deferred = [
+  const deferred: ("font.family" | "font.lineHeight")[] = [
     ...(surfaces.every(
       (surface) => configuration.fontFamily === surface.fontFamily,
     )
       ? []
-      : ["font.family"]),
+      : ["font.family" as const]),
     ...(surfaces.every(
       (surface) => configuration.fontLineHeight === surface.fontLineHeight,
     )
       ? []
-      : ["font.lineHeight"]),
+      : ["font.lineHeight" as const]),
   ];
   if (deferred.length === 0) return warnings;
-  return [
-    ...warnings,
-    `Existing Terminal Surfaces continue using their previous ${deferred.join(" and ")} ${deferred.length === 1 ? "value" : "values"}. Restart OMXTerm to apply ${deferred.length === 1 ? "it" : "them"} everywhere; new tabs and windows use the latest validated values.`,
-  ];
-}
-
-function boundedReloadNotice(
-  fallback: UserConfigurationFallback | undefined,
-): string {
-  const prefix =
-    "User Configuration reload failed. OMXTerm kept the last valid configuration. ";
-  const detail = fallback
-    ? fallback.error.message.replace(" Fix the file and restart OMXTerm.", "")
-    : "The configuration could not be loaded because of an unexpected application failure.";
-  const suffix =
-    " Fix the file and choose View -> Reload User Configuration again.";
-  const available = MAX_USER_FILE_ERROR_LENGTH - prefix.length - suffix.length;
-  return `${prefix}${detail.slice(0, Math.max(0, available))}${suffix}`;
+  return [...warnings, { kind: "deferred", fields: deferred }];
 }
 
 const MAX_RELOAD_DURATION_MS = 86_400_000;

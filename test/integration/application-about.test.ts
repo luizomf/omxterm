@@ -1,7 +1,10 @@
 import { copyFile, mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
-import { readAboutDiagnostics } from "../fixtures/application-about-diagnostics";
+import {
+  hasAboutPhaseEvidence,
+  readAboutDiagnostics,
+} from "../fixtures/application-about-diagnostics";
 import { build } from "esbuild";
 import electron from "electron";
 import { expect, it } from "vitest";
@@ -12,7 +15,7 @@ it.for([
   "missing-result",
   "published-failure",
   "published-hang",
-])(
+] as const)(
   "configures native About before the menu (%s), preserving macOS defaults",
   { timeout: 35_000 },
   async (mode, testContext) => {
@@ -85,6 +88,7 @@ it.for([
         diagnostics,
         diagnosticsPath,
       });
+      expect(hasAboutPhaseEvidence(diagnostics, mode), evidence).toBe(true);
       if (mode === "missing-result" || mode === "published-hang") {
         expect(execution, evidence).toMatchObject({
           reason: "timeout",
@@ -96,6 +100,7 @@ it.for([
       if (mode === "published-failure") {
         expect(execution, evidence).toMatchObject({
           exitCode: 3,
+          signal: null,
           reason: "exit",
           cleanupErrors: [],
         });

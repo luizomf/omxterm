@@ -3,9 +3,7 @@ import type {
   LocalImageActivation,
   LocalImageData,
 } from "../shared/local-image";
-
-const PREVIEW_ERROR =
-  "Could not preview this image. The file may be unavailable, invalid or over the static PNG/JPEG limits (64 MiB, 8192 per side, 32 million pixels).";
+import { englishLanguage, type RendererLanguage } from "./renderer-language";
 
 export interface LocalImagePreview {
   isActive(): boolean;
@@ -21,21 +19,19 @@ export function createLocalImagePreview(
     ) => Promise<LocalImageData | null>;
     readonly focusTerminal: () => void;
     readonly onActivityChange?: () => void;
+    readonly language?: RendererLanguage;
   },
 ): LocalImagePreview {
+  const language = options.language ?? englishLanguage;
   const dialog = document.createElement("dialog");
   dialog.className = "local-image-preview";
-  dialog.setAttribute("aria-label", "Local image preview");
 
   const closeButton = document.createElement("button");
   closeButton.type = "button";
   closeButton.className = "local-image-preview-close";
   closeButton.textContent = "×";
-  closeButton.title = "Close · Esc";
-  closeButton.setAttribute("aria-label", "Close local image preview");
 
   const image = document.createElement("img");
-  image.alt = "Selected local image";
   const error = document.createElement("p");
   error.className = "local-image-preview-error";
   error.setAttribute("role", "alert");
@@ -46,6 +42,29 @@ export function createLocalImagePreview(
   let objectUrl: string | undefined;
   let opening = false;
   let disposed = false;
+  // What the dialog currently shows, so its labels follow language changes.
+  let shown:
+    | { readonly kind: "image"; readonly name: string }
+    | { readonly kind: "error"; readonly unsupported: boolean }
+    | undefined;
+  const unbindLabels = language.bind((t) => {
+    closeButton.title = t("preview.closeHint");
+    closeButton.setAttribute("aria-label", t("preview.close"));
+    if (shown?.kind === "error") {
+      dialog.setAttribute("aria-label", t("preview.errorRegion"));
+      error.textContent = t(
+        shown.unsupported ? "preview.unsupported" : "preview.error",
+      );
+    } else if (shown?.kind === "image")
+      dialog.setAttribute(
+        "aria-label",
+        t("preview.named", { name: shown.name }),
+      );
+    else {
+      dialog.setAttribute("aria-label", t("preview.region"));
+      image.alt = t("preview.image");
+    }
+  });
 
   const clear = () => {
     image.removeAttribute("src");
@@ -58,6 +77,7 @@ export function createLocalImagePreview(
     clear();
     error.hidden = true;
     error.textContent = "";
+    shown = undefined;
     if (wasOpen) dialog.close();
     options.onActivityChange?.();
     if (wasOpen && !disposed) options.focusTerminal();
@@ -68,13 +88,15 @@ export function createLocalImagePreview(
   };
   const showError = (failure: unknown) => {
     clear();
-    error.textContent =
+    const unsupported =
       failure instanceof Error &&
-      failure.message.includes(UNSUPPORTED_LOCAL_IMAGE_FORMAT)
-        ? UNSUPPORTED_LOCAL_IMAGE_FORMAT
-        : PREVIEW_ERROR;
+      failure.message.includes(UNSUPPORTED_LOCAL_IMAGE_FORMAT);
+    shown = { kind: "error", unsupported };
+    error.textContent = language.t(
+      unsupported ? "preview.unsupported" : "preview.error",
+    );
     error.hidden = false;
-    dialog.setAttribute("aria-label", "Local image preview error");
+    dialog.setAttribute("aria-label", language.t("preview.errorRegion"));
     show();
   };
 
@@ -111,6 +133,8 @@ export function createLocalImagePreview(
         const selected = await options.loadImage(source);
         if (disposed) return;
         if (!selected) {
+          opening = false;
+          options.onActivityChange?.();
           options.focusTerminal();
           return;
         }
@@ -118,9 +142,10 @@ export function createLocalImagePreview(
         error.hidden = true;
         image.hidden = false;
         image.alt = selected.name;
+        shown = { kind: "image", name: selected.name };
         dialog.setAttribute(
           "aria-label",
-          `Local image preview: ${selected.name}`,
+          language.t("preview.named", { name: selected.name }),
         );
         const bytes = new Uint8Array(selected.data);
         objectUrl = URL.createObjectURL(
@@ -133,13 +158,16 @@ export function createLocalImagePreview(
       } catch (failure) {
         if (!disposed) showError(failure);
       } finally {
-        opening = false;
-        options.onActivityChange?.();
+        if (opening) {
+          opening = false;
+          options.onActivityChange?.();
+        }
       }
     },
     dispose() {
       if (disposed) return;
       disposed = true;
+      unbindLabels();
       clear();
       if (dialog.open) dialog.close();
       dialog.remove();

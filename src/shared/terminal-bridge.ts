@@ -1,3 +1,4 @@
+import type { SettingsBridge } from "./settings";
 import type { AboutBridge } from "./about";
 import type {
   TerminalExit,
@@ -31,7 +32,12 @@ export interface TerminalBridge {
   ): () => void;
   retainSurface(configurationId: string): Promise<string>;
   releaseSurface(surfaceId: string): void;
-  start(surfaceId?: string): Promise<TerminalSessionId>;
+  // workingDirectoryOf names the session whose reported directory a split
+  // pane inherits; main resolves and validates it.
+  start(
+    surfaceId?: string,
+    workingDirectoryOf?: TerminalSessionId,
+  ): Promise<TerminalSessionId>;
   input(sessionId: TerminalSessionId, data: string): void;
   resize(sessionId: TerminalSessionId, size: TerminalSize): void;
   close(sessionId: TerminalSessionId, reason?: "rendering-failure"): void;
@@ -51,7 +57,10 @@ export interface TerminalBridge {
   onTabTitle(
     listener: (sessionId: TerminalSessionId, title: string) => void,
   ): () => void;
-  notifyTabSelection(sessionId: TerminalSessionId): void;
+  notifyTabSelection(
+    sessionId: TerminalSessionId | null,
+    tabSessionIds?: readonly TerminalSessionId[],
+  ): void;
   syncTabTitle(sessionId: TerminalSessionId): void;
   notifyTabsEmpty(reason?: "rendering-failure"): void;
   onFontZoom(listener: (command: TerminalFontZoom) => void): () => void;
@@ -72,6 +81,7 @@ declare global {
     readonly omxterm: {
       readonly terminal: TerminalBridge;
       readonly about: AboutBridge;
+      readonly settings: SettingsBridge;
     };
   }
 }

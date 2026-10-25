@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { createAboutBridge } from "./about-bridge";
+import { createSettingsBridge } from "./settings-bridge";
 import type { TerminalBridge } from "../shared/terminal-bridge";
 import {
   isWindowChromeCommand,
@@ -29,6 +30,7 @@ import {
   type TerminalTabCommand,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
+import { isTerminalTabSelection } from "../shared/terminal-panes";
 import {
   formatFilePathInsertion,
   isFilePathPlatform,
@@ -162,12 +164,22 @@ const terminal: TerminalBridge = {
       throw new TypeError("Invalid Surface identity");
     ipcRenderer.send(terminalIpc.releaseSurface, surfaceId);
   },
-  async start(surfaceId) {
+  async start(surfaceId, workingDirectoryOf) {
     if (surfaceId !== undefined && !isSurfaceIdentity(surfaceId))
       throw new TypeError("Invalid Surface identity");
-    const sessionId: unknown = await (surfaceId === undefined
-      ? ipcRenderer.invoke(terminalIpc.start)
-      : ipcRenderer.invoke(terminalIpc.start, surfaceId));
+    if (
+      workingDirectoryOf !== undefined &&
+      !isTerminalSessionId(workingDirectoryOf)
+    )
+      throw new TypeError("Invalid Live Terminal Session identifier");
+    const sessionId: unknown = await (workingDirectoryOf !== undefined
+      ? ipcRenderer.invoke(terminalIpc.start, {
+          ...(surfaceId === undefined ? {} : { surfaceId }),
+          workingDirectoryOf,
+        })
+      : surfaceId === undefined
+        ? ipcRenderer.invoke(terminalIpc.start)
+        : ipcRenderer.invoke(terminalIpc.start, surfaceId));
     if (!isTerminalSessionId(sessionId))
       throw new TypeError("Invalid Live Terminal Session identifier");
     return sessionId;
@@ -285,10 +297,14 @@ const terminal: TerminalBridge = {
       throw new TypeError("Invalid empty Terminal Tabs reason");
     ipcRenderer.send(terminalIpc.tabsEmpty, reason);
   },
-  notifyTabSelection(sessionId: TerminalSessionId) {
-    if (!isTerminalSessionId(sessionId))
+  notifyTabSelection(sessionId, tabSessionIds) {
+    const selection =
+      tabSessionIds === undefined
+        ? { sessionId }
+        : { sessionId, tabSessionIds: [...tabSessionIds] };
+    if (!isTerminalTabSelection(selection))
       throw new TypeError("Invalid Terminal Tab selection");
-    ipcRenderer.send(terminalIpc.tabSelected, { sessionId });
+    ipcRenderer.send(terminalIpc.tabSelected, selection);
   },
   onFontZoom(listener: (command: TerminalFontZoom) => void) {
     const handler = (_event: Electron.IpcRendererEvent, command: unknown) => {
@@ -369,5 +385,6 @@ contextBridge.exposeInMainWorld(
   Object.freeze({
     terminal: Object.freeze(terminal),
     about: Object.freeze(createAboutBridge(ipcRenderer)),
+    settings: Object.freeze(createSettingsBridge(ipcRenderer)),
   }),
 );

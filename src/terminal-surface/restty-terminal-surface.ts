@@ -4,6 +4,7 @@ import {
   type PatchedResttyPane,
   type PatchedResttyTerminalConfig,
 } from "./restty-runtime-contract";
+import { createSurfaceGeometry } from "./surface-geometry";
 import type { TerminalSize } from "../shared/terminal-contract";
 import {
   createSemanticInputDelivery,
@@ -43,6 +44,7 @@ import { toGhosttyTheme, toResttySearchUiStyle } from "./restty-theme";
 import {
   applySearchTheme,
   focusedSearchField,
+  focusSurfacePreservingSearch,
   retainSearchEscapeGesture,
   withSearchFieldClipboard,
 } from "./restty-search-field";
@@ -50,6 +52,8 @@ import type {
   TerminalFontInputLease,
   TerminalSurface,
   TerminalSurfaceConfiguration,
+  TerminalSurfaceFailure,
+  TerminalSurfaceLabels,
   TerminalSurfaceOptions,
 } from "./terminal-surface";
 import {
@@ -58,6 +62,7 @@ import {
   type TerminalFontInput,
 } from "./terminal-font-stack";
 const RESTTY_SCROLLBACK_MAX_BYTES = 10_000_000;
+type Labels = TerminalSurfaceLabels;
 
 function resttyTerminalConfig(
   fonts: readonly TerminalFontInput[],
@@ -165,9 +170,9 @@ export async function mountResttyTerminalSurface(
 
   const applyContainerAppearance = () =>
     paintContainer(container, padding, terminalTheme, options.background);
-  const applyRuntimeTheme = (theme: TerminalTheme) => {
+  const applyRuntimeTheme = (theme: TerminalTheme, labels?: Labels) => {
     pane?.runtime.terminal.applyTheme(toGhosttyTheme(theme), "OMXTerm");
-    applySearchTheme(restty, container, theme);
+    applySearchTheme(restty, container, theme, labels);
   };
   const isSurfaceVisible = () =>
     !isInactive() && !container.hidden && container.isConnected;
@@ -179,6 +184,7 @@ export async function mountResttyTerminalSurface(
     visibleLinkController?.invalidate();
     pane?.runtime.interaction.updateSize(true);
   };
+  const geometry = createSurfaceGeometry(container, isSurfaceVisible, refit);
   const applyConfiguration = (configuration: TerminalSurfaceConfiguration) => {
     const nextBaseline = resolveFontSize(configuration.appearance.fontSize);
     resolveLineHeight(configuration.appearance.lineHeight);
@@ -195,7 +201,7 @@ export async function mountResttyTerminalSurface(
     padding = nextPadding;
     terminalTheme = nextTheme;
     applyContainerAppearance();
-    applyRuntimeTheme(terminalTheme);
+    applyRuntimeTheme(terminalTheme, configuration.labels);
     applyRuntimeSize(Math.max(1, baselineFontSize + zoomDelta));
     pane.runtime.terminal.setLigatures(nextLigatures);
     pane.runtime.terminal.setOptionKeyMode(configuration.optionKeyMode);
@@ -220,10 +226,10 @@ export async function mountResttyTerminalSurface(
     removeRuntimeListener = undefined;
     visibleLinkController = undefined;
   };
-  const fail = (message: string) => {
+  const fail = (failure: TerminalSurfaceFailure) => {
     if (isInactive()) return;
     try {
-      options.onFatalError?.(message);
+      options.onFatalError?.(failure);
     } finally {
       dispose("rendering-failure");
     }
@@ -247,7 +253,8 @@ export async function mountResttyTerminalSurface(
       if (!isInactive() && ready) adapter.write(data);
       return !isInactive() && ready;
     },
-    resize(cols, rows) {
+    resize(cols, rows, meta) {
+      geometry.record(meta);
       const size = { cols, rows };
       settledSize = size;
       if (!isInactive() && ready) adapter.resize(size);
@@ -278,7 +285,7 @@ export async function mountResttyTerminalSurface(
     });
     pane = restty.getActivePane() ?? undefined;
     if (!pane) throw new Error("Restty did not create its terminal pane");
-    applySearchTheme(restty, container, terminalTheme);
+    applySearchTheme(restty, container, terminalTheme, options.labels);
 
     removeRuntimeListener = pane.runtime.events.subscribe((event) => {
       if (isInactive()) return;
@@ -317,7 +324,7 @@ export async function mountResttyTerminalSurface(
       "webglcontextlost",
       (event) => {
         event.preventDefault();
-        fail("The OMXTerm Terminal Surface rendering backend was lost");
+        fail({ kind: "backend-loss" });
       },
       { once: true },
     );
@@ -343,13 +350,9 @@ export async function mountResttyTerminalSurface(
     pane.runtime.render.refresh();
 
     return {
+      geometry: geometry.measure,
       focus: () => {
-        // Window focus returns to a focused query field, not the terminal.
-        if (disposed || focusedSearchField(restty, container)) return;
-        refit();
-        pane?.runtime.interaction.focus();
-        // Tab selection calls focus in the switching task, before presentation.
-        pane?.runtime.render.refresh();
+        if (!disposed) focusSurfacePreservingSearch(restty, container, refit);
       },
       applyConfiguration,
       applyTheme(theme) {
@@ -450,11 +453,11 @@ function resolveTheme(theme = DEFAULT_TERMINAL_THEME): TerminalTheme {
 
 function throwInitializationFailure(
   cause: unknown,
-  fail: (message: string) => void,
+  fail: (failure: TerminalSurfaceFailure) => void,
 ): never {
   const detail = cause instanceof Error ? cause.message : String(cause);
   try {
-    fail(`Failed to initialize the OMXTerm Terminal Surface: ${detail}`);
+    fail({ kind: "initialization", detail });
   } catch (cleanupError) {
     throw new AggregateError(
       [cause, cleanupError],
@@ -499,6 +502,7 @@ function paintContainer(
 
 function createDisposedSurface(): TerminalSurface {
   return {
+    geometry: () => undefined,
     focus: () => undefined,
     applyConfiguration: () => undefined,
     applyTheme: () => undefined,

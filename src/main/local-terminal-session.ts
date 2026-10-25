@@ -57,6 +57,8 @@ export interface LocalTerminalSessionOptions {
   readonly launchRequest?: LaunchRequest;
   readonly platform: NodeJS.Platform | string;
   readonly homeDirectory: string;
+  // A split pane's inherited local directory; otherwise the home directory.
+  readonly workingDirectory?: string;
   readonly applicationVersionProvider: ApplicationVersionProvider;
   readonly environment: NodeJS.ProcessEnv;
   readonly onOutput: (data: string) => void;
@@ -90,7 +92,7 @@ export function createLocalTerminalSession(
   let pty: IPty;
   try {
     pty = spawnPty(executable, arguments_, {
-      cwd: options.homeDirectory,
+      cwd: options.workingDirectory ?? options.homeDirectory,
       env: {
         ...options.environment,
         TERM: "xterm-256color",
