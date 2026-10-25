@@ -1,4 +1,8 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { Arch, getArtifactArchName } from "builder-util";
+import { expandMacro } from "app-builder-lib/out/util/macroExpander";
+import { parse } from "yaml";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -50,11 +54,43 @@ describe("Linux release assets", () => {
       const originalChecksum = await readFile(
         path.join(output, `${helperName}.sha256`),
       );
-      await writeFile(
-        path.join(output, linuxAppImageName(version, "x64")),
-        "x64-appimage",
+      // Exercise the pinned builder's actual AppImage macro expansion, not our
+      // canonical filename function: AppImageTarget.build passes "AppImage".
+      const config = parse(
+        readFileSync(
+          new URL("../../electron-builder.yml", import.meta.url),
+          "utf8",
+        ),
+      ) as { artifactName: string };
+      const builderName = expandMacro(
+        config.artifactName,
+        getArtifactArchName(Arch.x64, "AppImage"),
+        { sanitizedProductName: "OMXTerm", version } as Parameters<
+          typeof expandMacro
+        >[2],
+        { ext: "AppImage" },
       );
+      expect(builderName).toBe(`OMXTerm-${version}-x86_64.AppImage`);
+      expect(getArtifactArchName(Arch.arm64, "AppImage")).toBe("arm64");
+      await writeFile(path.join(output, builderName), "x64-appimage");
       await packageLinuxAssets(output, "x64");
+      expect(
+        await readFile(
+          path.join(output, linuxAppImageName(version, "x64")),
+          "utf8",
+        ),
+      ).toBe("x64-appimage");
+      await expect(
+        readFile(path.join(output, builderName)),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+      inspectChecksumRecord(
+        await readFile(
+          path.join(output, `${linuxAppImageName(version, "x64")}.sha256`),
+          "utf8",
+        ),
+        linuxAppImageName(version, "x64"),
+        createHash("sha256").update("x64-appimage").digest("hex"),
+      );
       expect(await readFile(path.join(output, helperName))).toEqual(
         originalHelper,
       );
@@ -77,6 +113,29 @@ describe("Linux release assets", () => {
       expect(
         await readFile(path.join(output, `${helperName}.sha256`), "utf8"),
       ).toContain(`  ${helperName}\n`);
+    } finally {
+      await rm(output, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses old-version aliases or a canonical leftover without the current builder output", async () => {
+    const output = await mkdtemp(path.join(tmpdir(), "omxterm-linux-alias-"));
+    const { version } = JSON.parse(
+      await readFile(new URL("../../package.json", import.meta.url), "utf8"),
+    ) as { version: string };
+    try {
+      const old = path.join(output, "OMXTerm-0.0.0-x86_64.AppImage");
+      const canonical = path.join(output, linuxAppImageName(version, "x64"));
+      await writeFile(old, "old-version");
+      await writeFile(canonical, "leftover");
+      await expect(packageLinuxAssets(output, "x64")).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      expect(await readFile(old, "utf8")).toBe("old-version");
+      expect(await readFile(canonical, "utf8")).toBe("leftover");
+      await expect(readFile(`${canonical}.sha256`)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
     } finally {
       await rm(output, { recursive: true, force: true });
     }

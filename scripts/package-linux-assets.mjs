@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { chmod, readFile, writeFile } from "node:fs/promises";
+import { chmod, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -55,6 +55,14 @@ export async function packageLinuxAssets(
     path.join(projectRoot, "scripts", "install-linux-appimage.sh"),
     "utf8",
   );
+  // AppImageTarget expands x64 to x86_64. The successful builder step must
+  // supply this exact version's output; never fall back to a canonical leftover
+  // or discover another version by globbing. Keep public names architecture-consistent.
+  if (arch === "x64")
+    await rename(
+      path.join(outputRoot, `OMXTerm-${version}-x86_64.AppImage`),
+      appImage,
+    );
   await readFile(appImage);
   await writeFile(helper, renderLinuxHelper(helperSource, version), {
     mode: 0o755,
