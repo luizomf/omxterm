@@ -53,8 +53,10 @@ The **Config File** page shows `config.json` with an explicit **Save**, using th
 The **Shortcuts** page lists every remappable action with the shortcut it uses now and how it is set:
 
 - **Default:** follows OMXTerm's built-in shortcut (no entry in `config.json`). **Default** removes your entry again.
-- **Custom:** **Record**, then press the new combination; it is saved as that action's `keybinds` entry. Escape cancels. A key that cannot be a shortcut by itself (a letter without Ctrl, Alt, Cmd or AltGr) asks you to try again; F1–F24 can stand alone. While recording, the keys you press don't run their actions or reach the terminal.
+- **Custom:** **Record**, then press the new combination; it is saved as that action's `keybinds` entry. Plain Escape cancels; modified Escape can be recorded. An unsupported combination (including a letter without Ctrl, Alt, Cmd or AltGr, or a layout identity the accelerator cannot represent) asks you to try again; F1–F24 can stand alone. While recording, the keys you press, their held repeats and releases don't run their actions or reach the terminal.
 - **Unbound:** **Unbind** saves `null`, so the action stays in the menu without a key.
+
+**Cancel**, leaving the Shortcuts page, losing recording-button/window focus, or closing Settings ends recording without saving. Recording also cancels automatically after 30 seconds, and the status changes so it no longer asks you to press a key. A delayed result from an old recording cannot change a replacement recording.
 
 A shortcut that collides with another action is rejected with the same message as in `config.json`, and your file stays unchanged. App shortcuts take their key before terminal programs see it, so binding a key a program uses (like `Ctrl+C`) keeps it from reaching that program.
 

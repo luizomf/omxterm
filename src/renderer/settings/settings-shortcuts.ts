@@ -100,10 +100,13 @@ export function renderShortcuts(
   };
   // Ends any capture: on a new recording, cancel, page close or disposal.
   const release = () => {
-    stopCapture?.();
-    stopCapture = undefined;
+    const wasRecording = recording !== undefined;
     recording = undefined;
+    const stop = stopCapture;
+    stopCapture = undefined;
+    stop?.();
     syncAll();
+    if (wasRecording && context.live()) context.report("shortcuts.cancelled");
   };
   const save = (action: TerminalActionName, choice: KeybindChoice) =>
     context.changeKeybind({ action, choice });
@@ -176,10 +179,23 @@ export function renderShortcuts(
       );
       recordButton.setAttribute(
         "aria-label",
-        t("shortcuts.recordLabel", { action: actionName }),
+        t(
+          recording === action
+            ? "shortcuts.cancelLabel"
+            : "shortcuts.recordLabel",
+          { action: actionName },
+        ),
       );
       unbind.textContent = t("shortcuts.unbind");
+      unbind.setAttribute(
+        "aria-label",
+        t("shortcuts.unbindLabel", { action: actionName }),
+      );
       inherit.textContent = t("shortcuts.default");
+      inherit.setAttribute(
+        "aria-label",
+        t("shortcuts.defaultLabel", { action: actionName }),
+      );
       unbind.disabled = keybind?.state === "unbound";
       inherit.disabled = keybind?.state === "inherit";
     });

@@ -335,33 +335,41 @@ export function terminalActionForKeyboardInput(
     const value = keybinds[action];
     const parsed =
       value === null ? undefined : parseAccelerator(value, platform);
-    if (
-      parsed === undefined ||
-      parsed.modifiers.has("cmd") !== input.meta ||
-      parsed.modifiers.has("ctrl") !== input.control ||
-      parsed.modifiers.has("alt") !== input.alt ||
-      parsed.modifiers.has("altgr") !== (input.altGr ?? false)
-    )
-      continue;
-    const shifted = parsed.modifiers.has("shift");
-    if (parsed.key === key && shifted === input.shift) return action;
-
-    // Preserve logical keypad delivery (e.g. keypad Minus for zoomOut), but
-    // prefer any specific keypad binding's native identity over this fallback.
-    const logicalKeypad =
-      keypadKey !== undefined &&
-      parsed.logicalKey === logicalKey &&
-      parsed.logicalShift === input.shift;
-    // Plus is also a deliberate logical-key convenience, not another native
-    // accelerator. Without explicit Shift it accepts unshifted +; Ctrl+= is
-    // still not an unrequested zoom shortcut.
-    const logicalPlus =
-      parsed.logicalKey === "+" &&
-      logicalKey === "+" &&
-      (input.shift || !parsed.logicalShift);
-    if (logicalKeypad || logicalPlus) logicalFallback ??= action;
+    if (parsed === undefined) continue;
+    const match = acceleratorMatch(parsed, input, key, logicalKey, keypadKey);
+    if (match === "native") return action;
+    if (match === "logical") logicalFallback ??= action;
   }
   return logicalFallback;
+}
+
+// Recording and delivery must agree, including the deliberate logical Plus
+// and keypad conveniences. Native matches take precedence over fallbacks.
+function acceleratorMatch(
+  parsed: ParsedAccelerator,
+  input: AcceleratorKeyboardInput,
+  key: string,
+  logicalKey: string,
+  keypadKey: string | undefined,
+): "native" | "logical" | undefined {
+  if (
+    parsed.modifiers.has("cmd") !== input.meta ||
+    parsed.modifiers.has("ctrl") !== input.control ||
+    parsed.modifiers.has("alt") !== input.alt ||
+    parsed.modifiers.has("altgr") !== (input.altGr ?? false)
+  )
+    return undefined;
+  if (parsed.key === key && parsed.modifiers.has("shift") === input.shift)
+    return "native";
+  const logicalKeypad =
+    keypadKey !== undefined &&
+    parsed.logicalKey === logicalKey &&
+    parsed.logicalShift === input.shift;
+  const logicalPlus =
+    parsed.logicalKey === "+" &&
+    logicalKey === "+" &&
+    (input.shift || !parsed.logicalShift);
+  return logicalKeypad || logicalPlus ? "logical" : undefined;
 }
 
 // The accelerator a key press spells, for recording a shortcut with the same
@@ -374,8 +382,9 @@ export function acceleratorForKeyboardInput(
   const logicalKey = acceleratorKeyForInputKey(input.key);
   if (logicalKey === undefined) return undefined;
   const nativeKey = INTRINSIC_SHIFT_KEYS.get(logicalKey);
+  const keypadKey = keypadKeyForInput(logicalKey, input.code);
   const key =
-    keypadKeyForInput(logicalKey, input.code) ??
+    keypadKey ??
     (nativeKey && input.code === nativeKey.code ? nativeKey.key : logicalKey);
   const accelerator = [
     ...(input.meta ? [platform === "darwin" ? "Command" : "Super"] : []),
@@ -385,7 +394,10 @@ export function acceleratorForKeyboardInput(
     ...(input.shift ? ["Shift"] : []),
     key === "+" ? "Plus" : key.replace(/^./u, (first) => first.toUpperCase()),
   ].join("+");
-  return isValidAccelerator(accelerator) ? accelerator : undefined;
+  const parsed = parseAccelerator(accelerator, platform);
+  return parsed && acceleratorMatch(parsed, input, key, logicalKey, keypadKey)
+    ? accelerator
+    : undefined;
 }
 
 function keypadKeyForInput(

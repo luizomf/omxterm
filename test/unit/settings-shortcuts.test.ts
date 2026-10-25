@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -11,10 +12,15 @@ import { settingsIpc } from "../../src/shared/settings";
 import {
   isCapturedShortcut,
   isSettingsKeybindChange,
+  isShortcutCaptureRequest,
+  isShortcutCaptureResult,
 } from "../../src/shared/settings-keybinds";
 import {
   acceleratorForKeyboardInput,
   terminalDefaultKeybinds,
+  terminalActionForKeyboardInput,
+  TERMINAL_ACTION_NAMES,
+  type TerminalKeybinds,
 } from "../../src/shared/terminal-keybinds";
 
 const roots: string[] = [];
@@ -58,6 +64,85 @@ const key = (overrides: Record<string, unknown>) => ({
 });
 
 describe("recorded accelerators", () => {
+  it.each([
+    ["<", "Comma", true, "Control+Shift+,"],
+    ["!", "Digit1", true, "Control+Shift+1"],
+    ["+", "Equal", true, "Control+Shift+="],
+    ["+", "IntlBackslash", false, "Control+Plus"],
+    ["+", "IntlBackslash", true, "Control+Shift+Plus"],
+    ["+", "NumpadAdd", false, "Control+Numadd"],
+    ["-", "NumpadSubtract", false, "Control+Numsub"],
+    ["*", "NumpadMultiply", false, "Control+Nummult"],
+    ["/", "NumpadDivide", true, "Control+Shift+Numdiv"],
+    [".", "NumpadDecimal", false, "Control+Numdec"],
+    ["3", "Numpad3", false, "Control+Num3"],
+  ] as const)(
+    "roundtrips %s at %s (shift=%s) including Plus/keypad exceptions",
+    (logical, code, shift, expected) => {
+      const input = key({ key: logical, code, shift, control: true });
+      expect(acceleratorForKeyboardInput(input, "linux")).toBe(expected);
+      const bindings = Object.fromEntries(
+        TERMINAL_ACTION_NAMES.map((action) => [action, null]),
+      ) as TerminalKeybinds;
+      expect(
+        terminalActionForKeyboardInput(
+          { ...bindings, find: expected },
+          input,
+          "linux",
+        ),
+      ).toBe("find");
+    },
+  );
+
+  it("validates the exact bounded capture request and notification envelopes", () => {
+    expect(
+      isShortcutCaptureRequest({ captureId: "capture-1", active: true }),
+    ).toBe(true);
+    expect(
+      isShortcutCaptureResult({
+        captureId: "capture-1",
+        shortcut: { cancelled: true },
+      }),
+    ).toBe(true);
+    for (const captureId of [
+      "",
+      "x".repeat(65),
+      "space not allowed",
+      1,
+      null,
+    ]) {
+      expect(isShortcutCaptureRequest({ captureId, active: true })).toBe(false);
+      expect(
+        isShortcutCaptureResult({ captureId, shortcut: { invalid: true } }),
+      ).toBe(false);
+    }
+    for (const value of [
+      true,
+      { captureId: "capture-1" },
+      { captureId: "capture-1", active: "yes" },
+      { captureId: "capture-1", active: true, extra: false },
+    ])
+      expect(isShortcutCaptureRequest(value)).toBe(false);
+    for (const value of [
+      { accelerator: "F2" },
+      { captureId: "capture-1", shortcut: { accelerator: "a" } },
+      { captureId: "capture-1", shortcut: { cancelled: true }, extra: false },
+    ])
+      expect(isShortcutCaptureResult(value)).toBe(false);
+  });
+  it("rejects shifted characters whose spelling names a different native key", () => {
+    expect(
+      acceleratorForKeyboardInput(
+        key({
+          key: "<",
+          code: "IntlBackslash",
+          control: true,
+          shift: true,
+        }),
+        "linux",
+      ),
+    ).toBeUndefined();
+  });
   it("spells the native identity delivery matches", () => {
     const spell = (input: Record<string, unknown>, platform = "linux") =>
       acceleratorForKeyboardInput(key(input), platform);
@@ -175,16 +260,7 @@ describe("main-owned capture", () => {
     const capture = createKeybindCapture("linux", () => time);
     const window = target();
     const invoke = vi.fn();
-    let listener!: (
-      event: { preventDefault(): void },
-      input: ReturnType<typeof key>,
-    ) => void;
-    const contents = {
-      send: window.send,
-      on: (_event: "before-input-event", handler: typeof listener) => {
-        listener = handler;
-      },
-    };
+    const contents = Object.assign(new EventEmitter(), { send: window.send });
     deliverKeybindsFromKeyEvents(
       contents,
       () => terminalDefaultKeybinds("linux"),
@@ -194,12 +270,12 @@ describe("main-owned capture", () => {
     );
     const press = (input: Record<string, unknown>) => {
       const event = { preventDefault: vi.fn() };
-      listener(event, key(input));
+      contents.emit("before-input-event", event, key(input));
       return event.preventDefault.mock.calls.length > 0;
     };
     const find = { key: "F", code: "KeyF", control: true, shift: true };
 
-    capture.set(contents, true);
+    capture.set(contents, { captureId: "first", active: true });
     expect(press({ key: "Control", code: "ControlLeft", control: true })).toBe(
       true,
     );
@@ -207,8 +283,8 @@ describe("main-owned capture", () => {
     expect(press(find)).toBe(true);
     expect(press({ ...find, type: "keyUp" })).toBe(true);
     expect(window.sent).toEqual([
-      { invalid: true },
-      { accelerator: "Control+Shift+F" },
+      { captureId: "first", shortcut: { invalid: true } },
+      { captureId: "first", shortcut: { accelerator: "Control+Shift+F" } },
     ]);
     expect(invoke).not.toHaveBeenCalled();
 
@@ -217,17 +293,23 @@ describe("main-owned capture", () => {
     expect(invoke).toHaveBeenCalledExactlyOnceWith("find");
     expect(press({ ...find, type: "keyUp" })).toBe(false);
 
-    capture.set(contents, true);
+    capture.set(contents, { captureId: "escape", active: true });
     expect(press({ key: "Escape", code: "Escape" })).toBe(true);
-    expect(window.sent.at(-1)).toEqual({ cancelled: true });
+    expect(window.sent.at(-1)).toEqual({
+      captureId: "escape",
+      shortcut: { cancelled: true },
+    });
 
-    capture.set(contents, true);
+    capture.set(contents, { captureId: "timeout", active: true });
     time = 30_001;
     expect(press({ key: "b", code: "KeyB" })).toBe(false);
-    expect(window.sent.at(-1)).toEqual({ cancelled: true });
+    expect(window.sent.at(-1)).toEqual({
+      captureId: "timeout",
+      shortcut: { cancelled: true },
+    });
   });
 
-  it("accepts capture only from a trusted sender with a boolean", async () => {
+  it("accepts capture only from a trusted sender with an exact bounded generation request", async () => {
     const handlers = new Map<
       string,
       (event: never, payload?: unknown) => Promise<unknown>
@@ -247,8 +329,9 @@ describe("main-owned capture", () => {
     });
     const run = handlers.get(settingsIpc.capture)!;
     const trusted = { sender, senderFrame: sender.mainFrame } as never;
-    await run(trusted, true);
-    expect(capture.set).toHaveBeenCalledExactlyOnceWith(sender, true);
+    const request = { captureId: "first", active: true };
+    await run(trusted, request);
+    expect(capture.set).toHaveBeenCalledExactlyOnceWith(sender, request);
     await expect(run(trusted, "yes")).rejects.toThrow(TypeError);
     await expect(
       run({ sender, senderFrame: {} } as never, false),
@@ -266,7 +349,9 @@ describe("main-owned capture", () => {
       string,
       (event: unknown, payload: unknown) => void
     >();
-    const invoke = vi.fn(async () => undefined);
+    const invoke = vi.fn(
+      async (_channel: string, _payload?: unknown) => undefined,
+    );
     const bridge = createSettingsBridge({
       invoke,
       on: (channel, listener) => listeners.set(channel, listener),
@@ -274,9 +359,18 @@ describe("main-owned capture", () => {
     });
     const received = vi.fn();
     bridge.captureShortcut(received);
-    expect(invoke).toHaveBeenCalledWith(settingsIpc.capture, true);
-    const deliver = (payload: unknown) =>
-      listeners.get(settingsIpc.captured)?.({}, payload);
+    const request = invoke.mock.calls.at(-1)![1] as {
+      captureId: string;
+      active: boolean;
+    };
+    expect(typeof request.captureId).toBe("string");
+    expect(request.captureId.length).toBeGreaterThan(0);
+    expect(request.active).toBe(true);
+    const deliver = (shortcut: unknown) =>
+      listeners.get(settingsIpc.captured)?.(
+        {},
+        { captureId: request.captureId, shortcut },
+      );
     deliver({ invalid: true });
     deliver({ accelerator: "nonsense" });
     deliver({ accelerator: "Control+K" });
@@ -285,7 +379,10 @@ describe("main-owned capture", () => {
       [{ invalid: true }],
       [{ accelerator: "Control+K" }],
     ]);
-    expect(invoke).toHaveBeenLastCalledWith(settingsIpc.capture, false);
+    expect(invoke).toHaveBeenLastCalledWith(settingsIpc.capture, {
+      captureId: request.captureId,
+      active: false,
+    });
     await Promise.resolve();
   });
 });

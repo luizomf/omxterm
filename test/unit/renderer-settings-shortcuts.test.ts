@@ -108,6 +108,78 @@ async function open(language?: RendererLanguage) {
 }
 
 describe("Shortcuts page", () => {
+  it("names the current operation and action accessibly through live relabel", async () => {
+    const language = createRendererLanguage("en-US");
+    const view = await open(language);
+    const record = view.button("find", "record");
+    expect(view.button("find", "unbind").getAttribute("aria-label")).toBe(
+      "Unbind shortcut for Find…",
+    );
+    expect(view.button("find", "default").getAttribute("aria-label")).toBe(
+      "Use default shortcut for Find…",
+    );
+    record.focus();
+    record.click();
+    expect(record.getAttribute("aria-label")).toBe(
+      "Cancel shortcut recording for Find…",
+    );
+    language.set("pt-BR");
+    expect(view.button("find", "record")).toBe(record);
+    expect(document.activeElement).toBe(record);
+    expect(record.textContent).toBe("Cancelar");
+    expect(record.getAttribute("aria-label")).toBe(
+      "Cancelar gravação de atalho para Buscar…",
+    );
+    expect(view.button("find", "unbind").getAttribute("aria-label")).toBe(
+      "Remover atalho para Buscar…",
+    );
+    expect(view.button("find", "default").getAttribute("aria-label")).toBe(
+      "Usar atalho padrão para Buscar…",
+    );
+    record.click();
+    expect(record.getAttribute("aria-label")).toBe(
+      "Gravar atalho para Buscar…",
+    );
+    expect(view.status()).toBe("Gravação cancelada.");
+  });
+  it("releases capture on page departure even when activation never focused Record", async () => {
+    const view = await open();
+    view.button("find", "record").click();
+    expect(document.activeElement).not.toBe(view.button("find", "record"));
+    document.querySelector<HTMLButtonElement>("#settings-tab-general")!.click();
+    expect(
+      document
+        .querySelector("#settings-panel-shortcuts")!
+        .hasAttribute("hidden"),
+    ).toBe(true);
+    expect(view.stopCapture).toHaveBeenCalledOnce();
+    expect(view.status()).toBe("Recording cancelled.");
+    view.deliver({ accelerator: "F2" });
+    expect(view.changeKeybind).not.toHaveBeenCalled();
+    document
+      .querySelector<HTMLButtonElement>("#settings-tab-shortcuts")!
+      .click();
+    expect(view.button("find", "record").textContent).toBe("Record");
+  });
+  it.each(["cancel", "blur"])(
+    "replaces recording instructions after %s",
+    async (reason) => {
+      const view = await open();
+      const record = view.button("find", "record");
+      if (reason === "blur") record.focus();
+      record.click();
+      expect(view.status()).toBe(
+        "Press the new shortcut, or Escape to cancel.",
+      );
+      if (reason === "cancel") record.click();
+      else record.blur();
+      expect(view.status()).toBe("Recording cancelled.");
+      expect(record.textContent).toBe("Record");
+      expect(view.stopCapture).toHaveBeenCalledOnce();
+      view.deliver({ accelerator: "F2" });
+      expect(view.changeKeybind).not.toHaveBeenCalled();
+    },
+  );
   it("shows each action's effective shortcut and state", async () => {
     const view = await open();
     expect(view.cells("find")).toEqual(["Ctrl+Shift+F", "Default"]);
@@ -124,7 +196,7 @@ describe("Shortcuts page", () => {
     view.button("find", "record").click();
     expect(view.cells("find")[0]).toBe("Press a shortcut…");
     view.deliver({ invalid: true });
-    expect(view.status()).toContain("cannot be a shortcut by itself");
+    expect(view.status()).toContain("key combination is not supported");
     expect(view.changeKeybind).not.toHaveBeenCalled();
     view.deliver({ accelerator: "F2" });
     await view.settle();

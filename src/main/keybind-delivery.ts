@@ -13,10 +13,15 @@ export interface KeybindKeyEvent {
 
 export interface KeybindKeyboardInput extends AcceleratorKeyboardInput {
   readonly type: string;
+  readonly isAutoRepeat?: boolean;
 }
+
+type CaptureLifetimeEvent =
+  "blur" | "did-start-loading" | "render-process-gone" | "destroyed";
 
 export interface KeybindWebContents {
   send(channel: string, payload: unknown): void;
+  on(event: CaptureLifetimeEvent, listener: () => void): unknown;
   on(
     event: "before-input-event",
     listener: (event: KeybindKeyEvent, input: KeybindKeyboardInput) => void,
@@ -37,8 +42,18 @@ export function deliverKeybindsFromKeyEvents(
   keybinds: () => TerminalKeybinds,
   invokeAction: (action: TerminalActionName) => void,
   platform: string = "darwin",
-  capture?: Pick<KeybindCapture, "intercept">,
+  capture?: Pick<KeybindCapture, "intercept" | "release">,
 ): void {
+  if (capture) {
+    const release = () => capture.release(webContents);
+    for (const event of [
+      "blur",
+      "did-start-loading",
+      "render-process-gone",
+      "destroyed",
+    ] as const)
+      webContents.on(event, release);
+  }
   webContents.on("before-input-event", (event, input) => {
     // A shortcut being recorded never runs or reaches the terminal.
     if (capture?.intercept(webContents, input)) {

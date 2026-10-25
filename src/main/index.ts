@@ -219,6 +219,10 @@ app
               process.platform,
               keybindCapture,
             );
+            window.on("blur", () => keybindCapture.release(window.webContents));
+            window.once("closed", () =>
+              keybindCapture.release(window.webContents),
+            );
             guardTerminalWindowClose(window, terminalApplication!);
             const chrome = registerWindowChrome(window, ipcMain, {
               platform: process.platform,

@@ -7,7 +7,7 @@ import {
   type SettingsBridge,
 } from "../shared/settings";
 import {
-  isCapturedShortcut,
+  isShortcutCaptureResult,
   isSettingsKeybindChange,
 } from "../shared/settings-keybinds";
 
@@ -25,6 +25,7 @@ export function createSettingsBridge(ipc: {
   ): unknown;
 }): SettingsBridge {
   let pending = false;
+  let stopCapture: (() => void) | undefined;
   let listener: (() => void) | undefined;
   const handler = (_event: unknown, payload: unknown) => {
     if (payload !== undefined) return;
@@ -63,25 +64,38 @@ export function createSettingsBridge(ipc: {
     // Main owns the keyboard while capturing and ends capture after one key;
     // stopping early (cancel, close, disposal) releases it as well.
     captureShortcut(next) {
+      stopCapture?.();
+      const captureId = crypto.randomUUID();
       let active = true;
       const stop = () => {
         if (!active) return;
         active = false;
         ipc.removeListener(settingsIpc.captured, onCaptured);
-        void ipc.invoke(settingsIpc.capture, false).catch(() => undefined);
+        if (stopCapture === stop) stopCapture = undefined;
+        void ipc
+          .invoke(settingsIpc.capture, { captureId, active: false })
+          .catch(() => undefined);
       };
       const onCaptured = (_event: unknown, payload: unknown) => {
-        if (!active || !isCapturedShortcut(payload)) return;
+        if (
+          !active ||
+          !isShortcutCaptureResult(payload) ||
+          payload.captureId !== captureId
+        )
+          return;
         // An unusable key keeps capture open for another try.
-        if (!("invalid" in payload)) stop();
-        next(payload);
+        if (!("invalid" in payload.shortcut)) stop();
+        next(payload.shortcut);
       };
+      stopCapture = stop;
       ipc.on(settingsIpc.captured, onCaptured);
-      void ipc.invoke(settingsIpc.capture, true).catch(() => {
-        if (!active) return;
-        stop();
-        next({ cancelled: true });
-      });
+      void ipc
+        .invoke(settingsIpc.capture, { captureId, active: true })
+        .catch(() => {
+          if (!active) return;
+          stop();
+          next({ cancelled: true });
+        });
       return stop;
     },
     onOpen(next) {

@@ -4,7 +4,10 @@ import {
   settingsIpc,
 } from "../shared/settings";
 import type { SettingsService } from "./settings-service";
-import { isSettingsKeybindChange } from "../shared/settings-keybinds";
+import {
+  isSettingsKeybindChange,
+  isShortcutCaptureRequest,
+} from "../shared/settings-keybinds";
 import type { KeybindCapture } from "./keybind-capture";
 import type {
   IpcEvent,
@@ -44,7 +47,7 @@ export function startSettings(options: {
   // Capture belongs to the requesting window only.
   options.ipcMain.handle(settingsIpc.capture, async (event, payload) => {
     if (!trusted(event)) throw new Error("Rejected settings sender");
-    if (typeof payload !== "boolean")
+    if (!isShortcutCaptureRequest(payload))
       throw new TypeError("Invalid shortcut capture request");
     options.capture?.set(event.sender, payload);
   });

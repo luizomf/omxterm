@@ -27,11 +27,46 @@ export interface SettingsKeybind {
 
 // A key recorded by main while capture owns the keyboard: the accelerator it
 // spells and the end of capture, a cancellation (Escape or timeout), or a key
-// that cannot be a shortcut on its own, after which capture continues.
+// the supported grammar/native identity cannot represent, after which capture continues.
 export type CapturedShortcut =
   | { readonly accelerator: string }
   | { readonly cancelled: true }
   | { readonly invalid: true };
+
+// One bounded, opaque generation per recording, including start, stop and result.
+// This is correlation, not authorization; main still validates the sender.
+export interface ShortcutCaptureRequest {
+  readonly captureId: string;
+  readonly active: boolean;
+}
+
+export interface ShortcutCaptureResult {
+  readonly captureId: string;
+  readonly shortcut: CapturedShortcut;
+}
+
+const isCaptureId = (value: unknown): value is string =>
+  typeof value === "string" && /^[a-zA-Z0-9-]{1,64}$/u.test(value);
+
+export function isShortcutCaptureRequest(
+  value: unknown,
+): value is ShortcutCaptureRequest {
+  return (
+    hasExactKeys(value, ["captureId", "active"]) &&
+    isCaptureId(value.captureId) &&
+    typeof value.active === "boolean"
+  );
+}
+
+export function isShortcutCaptureResult(
+  value: unknown,
+): value is ShortcutCaptureResult {
+  return (
+    hasExactKeys(value, ["captureId", "shortcut"]) &&
+    isCaptureId(value.captureId) &&
+    isCapturedShortcut(value.shortcut)
+  );
+}
 
 const ACTIONS = new Set<string>(TERMINAL_ACTION_NAMES);
 

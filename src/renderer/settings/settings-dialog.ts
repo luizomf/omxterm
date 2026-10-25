@@ -292,6 +292,8 @@ function buildSettingsView(
 
   const tabButtons: HTMLButtonElement[] = [];
   const select = (index: number) => {
+    if (shortcuts && panels.children[index] !== shortcuts.element)
+      shortcuts.release();
     tabButtons.forEach((button, position) => {
       const selected = position === index;
       button.setAttribute("aria-selected", String(selected));

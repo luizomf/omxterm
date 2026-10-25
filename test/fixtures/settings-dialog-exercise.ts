@@ -56,6 +56,9 @@ export function createSettingsExercise(
   // The production capture route: key delivery for this window consults the
   // same capture Settings starts, and records actions instead of running them.
   const capture = createKeybindCapture(process.platform);
+  const window = getWindow();
+  const releaseCapture = () => capture.release(window.webContents);
+  window.on("blur", releaseCapture);
   const delivered: string[] = [];
   deliverKeybindsFromKeyEvents(
     getWindow().webContents,
@@ -85,7 +88,11 @@ export function createSettingsExercise(
         () => readFile(file, "utf8"),
         delivered,
       ),
-    dispose: settings.dispose,
+    dispose() {
+      settings.dispose();
+      window.removeListener("blur", releaseCapture);
+      releaseCapture();
+    },
   };
 }
 
