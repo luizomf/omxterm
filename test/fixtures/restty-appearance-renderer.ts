@@ -1,5 +1,8 @@
 import configuredFontBytes from "../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf";
-import { verifyInBandResize } from "./restty-resize-regression";
+import {
+  verifyInBandResize,
+  type PendingWrapResizeEvidence,
+} from "./restty-resize-regression";
 import { verifyConfiguredPaletteResets } from "./restty-palette-regression";
 import { createAppearanceOutputDelay } from "./restty-appearance-output-delay";
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
@@ -42,6 +45,7 @@ export interface Measurement {
 }
 
 interface AppearanceResult {
+  readonly pendingWrapResize?: PendingWrapResizeEvidence;
   readonly deferredOutputFrame: boolean;
   readonly measurements: readonly Measurement[];
   readonly live: {
@@ -240,8 +244,10 @@ async function measure(
 }
 
 async function run() {
-  if (document.body.dataset.configuredFont !== "true")
-    await verifyInBandResize(root);
+  const pendingWrapResize =
+    document.body.dataset.configuredFont !== "true"
+      ? await verifyInBandResize(root)
+      : undefined;
   const measurements = [];
   for (const [size, lineHeight, padding, zoom, nativeTitleInset] of [
     [8, 1, 0, false, 0],
@@ -418,6 +424,7 @@ async function run() {
     };
   };
   globalThis.__omxtermResttyAppearanceResult = {
+    ...(pendingWrapResize ? { pendingWrapResize } : {}),
     deferredOutputFrame: outputDelay?.deferredFrame ?? false,
     measurements,
     live: {

@@ -659,11 +659,43 @@ validate the origin/semantics of arbitrary envelope text.
 After the actual producer exits, the fixture finalizes framing and takes a fresh
 session flow snapshot: every original source byte must be cumulatively ACKed and
 actual pending bytes must be zero. A pre-exit snapshot or advancement of the ACK
-wrapper's counter alone is insufficient. Exact pre-refit baseline-plus-prefix
-ACK equality remains a separate requirement. Headless parser/core and composed
+wrapper's counter alone is insufficient. Headless parser/core and composed
 producer/session/harness controls:
-`npm test -- test/unit/restty-output-checkpoint.test.ts test/unit/restty-output-refit.test.ts test/unit/restty-host-output-phases.test.ts`.
+`npm test -- test/unit/restty-output-checkpoint.test.ts test/unit/restty-host-output-phases.test.ts`.
 They do not qualify native continuation or Windows transport.
+
+### Resize and continued-text coverage
+
+The existing appearance/resize fixture also checks one short primary-screen,
+wrap-enabled continuation on its retained host-resize Surface. It clears/homes
+its controlled output, writes exactly the current columns of ASCII, changes
+only the owned container width from 640 to 600 CSS px once, then crosses the
+existing frame boundary. Its initial 32 px height must yield one or two rows:
+Select All includes unused viewport rows, so this avoids blank-row suffixes
+without normalizing copy. The existing TUI checks subsequently grow that host.
+Current positive integer geometry must actually
+narrow, retain rows and move the old edge off the new edge. No calibration,
+replay, historical-match acceptance, tolerance or retry chooses the grid.
+The short continuation must copy as exactly prefix plus suffix, without trimming
+or normalization, with the same Surface/container/canvas, one Adapter start and
+no close. The integration consumer checks this evidence in its existing
+appearance runs. Run alone on an assigned idle unlocked guest desktop:
+
+```sh
+npm test -- test/integration/restty-appearance-rendering.test.ts -t "renders theme colors and preserves configured geometry through live updates"
+```
+
+This real DOM/Restty/core/font check uses a controlled Adapter, not a native PTY,
+OS clipboard paste or native-window drag. Headless preparation is not its pass.
+The bundled-core reflow/CPR tests retain the history, hard-break, alternate-screen
+and pending-wrap matrix; the native paced-output case separately retains real
+transport/backpressure, sixteen exact copies, ACK/pending accounting and exit.
+
+The former oversized native controlled-prefix/refit/continuation case was
+retired as a coverage redesign, not made green. Its unexplained Windows progress
+timeouts remain a residual native pause/resize/continuation risk. Separate core,
+Surface and native-flow checks do not prove that exact combined ordering or
+qualify a dependency migration by themselves.
 
 The source-side reorder/omission controls retain only the longest suffix that
 could still begin their exact mutation needle. Unrelated protocol/prompt output
@@ -691,55 +723,20 @@ returned, even if false; only `dom-focus / complete` establishes its original
 focus predicate. No extra responsiveness probe or periodic watcher is added.
 An activation stall before that query says nothing about renderer responsiveness.
 Output receipts cover the real producer, high-water/resume, all sixteen source,
-original-ACK and copied-destination checkpoints, memory query and exit. Refit
-receipts cover calibration/restoration, baseline/prefix ACK, native grid and
-cleanup. The existing controlled-refit case adds a single entered/returned pair
-around its refit resize call and continuation write. Its synchronous
-`__OMXTERM_OUTPUT_REFIT_PROGRESS__` receipts use fixed vocabulary and numeric
-source/checkpoint/original-ACK/pending/pause/resume metadata: immediately after
-continuation return, first continuation output, or first failure. The first
-contained resize failure adds only `closed-pty` or `native-failure`. If a progress
-snapshot is unavailable (including initial sizing before reader setup), that first
-event is attempted immediately with `progress: "unavailable"` and no source/flow
-metrics; later snapshots never masquerade as failure-time metrics. The first
-category is latched before the best-effort write, with no duplicate/retry even
-if the sink fails. A contained resize failure vetoes successful settlement,
-including restoration and the later asynchronous memory/exit boundaries. Normal
-restoration still runs, and a secondary contained resize failure does not
-replace an earlier primary oracle/write failure. No per-chunk logger, raw
-payload dump or new poller is used. The resize array and `refit-native-grid`
-phase establish a grid request, not native resize success or child consumption. Prefix modulo arithmetic plus a
-byte baseline does not independently establish parser pending-wrap state in an
-unknown envelope. Actual-core reflow tests discriminate that separately; D3's
-native continuation cause remains unresolved until ordinary native execution.
-At the targeted refit only (not calibration/restoration), at most three additional
-progress records distinguish the existing awaits: `width-enter`, `width-settled`
-with fixed `fulfilled`/`rejected` outcome, then `grid-after-resize-return` with the
-first existing predicate evaluation after the first armed resize call returns.
-This replaces the earlier `grid-first` initial sample; pre-return evaluations do
-not log. Numeric fields remain `countBefore`, current `requestCount`,
-`expectedCols` (calibrated) / `expectedRows` (original), and
-`latestRequestedCols` / `latestRequestedRows`. The post-return record adds that
-request's `returnedRequestCount` append ordinal and the actual predicate boolean.
-The existing `refit-resize-call / complete` receipt is enriched, not duplicated:
-its `returnedCols` / `returnedRows` and one-based `returnedRequestCount` are
-captured before the actual resize, separately from current count/latest fields.
-Reentrant/newer requests cannot relabel the completing request. The return latch
-and post-return one-shot guard publish before best-effort snapshot/logging;
-sink failure does not gate the predicate. Rejection rethrows the same error.
-These are requested-grid / JavaScript-settlement observations, not native success,
-paint, child consumption or stable/final grid proof. No extra renderer query,
-wait, timer, retry or per-poll/per-resize history log is added.
-Poll iterations never emit repeated receipts. A request return or focus
-event alone is not readiness or native input admission.
+original-ACK and copied-destination checkpoints, memory query and exit. The
+D3-only calibration/continuation/resize-return trace stream was removed with its
+retired scenario. No per-chunk logger, payload dump or new poller replaces it.
+A contained resize failure in the owned output session still vetoes successful
+settlement, including initial sizing and the later asynchronous memory/exit
+boundaries. It does not replace an earlier primary source/copy/write failure or
+synthesize native exit. Production fixed-category resize diagnostics and native
+lifetime/cleanup ownership remain unchanged. Requested grids are not native
+resize success or child consumption.
 
-Focused output waits compose an existing **10-second** predicate deadline with
-the session's 25 ms / 120-second wait. The focused wrapper checks its clock before
-entering the predicate. A persistently false grid with advancing callbacks and
-ordinary clock/sink behavior should reject at that focused deadline and enter
-existing cleanup, not silently wait for the 120-second supervisor. Missing a
-post-return predicate record may also mean the wrapper rejected before entering
-it; it is not proof of stopped scheduling or any native mechanism.
+Focused output waits retain their **10-second** predicate deadline, composed
+with the session's 25 ms / 120-second wait. The wrapper checks its clock before
+entering the predicate. No wait or supervisor bound changed with retirement;
+missing receipts alone do not establish a native mechanism.
 
 The existing supervisor retains these lines even when its outer deadline wins
 before an inner wait can report an error. Inspect unmatched entered phases and

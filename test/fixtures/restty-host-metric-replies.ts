@@ -15,12 +15,6 @@ export function createFixtureMetricReplyRouter<T extends TerminalIo>(
   evidence: {
     inputs: string[];
     resizes: Size[];
-    onResize?: (
-      status: "begin" | "complete",
-      cols: number,
-      rows: number,
-      requestCount: number,
-    ) => void;
   },
 ) {
   let pending = false;
@@ -43,12 +37,8 @@ export function createFixtureMetricReplyRouter<T extends TerminalIo>(
         terminal.write(data);
       },
       resize(size: Size) {
-        const { cols, rows } = size;
         evidence.resizes.push(size);
-        const requestCount = evidence.resizes.length;
-        evidence.onResize?.("begin", cols, rows, requestCount);
         terminal.resize(size);
-        evidence.onResize?.("complete", cols, rows, requestCount);
       },
     },
   };

@@ -8,11 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runInNewContext } from "node:vm";
 import { afterEach, expect, it, vi } from "vitest";
-import {
-  recordResttyHostPhase,
-  recordOutputRefitProgress,
-  recordOutputRefitBoundary,
-} from "../fixtures/restty-host-phases";
+import { recordResttyHostPhase } from "../fixtures/restty-host-phases";
 
 vi.mock("node:fs", { spy: true });
 afterEach(() => vi.restoreAllMocks());
@@ -29,131 +25,6 @@ it("rejects arbitrary context, phase, status and out-of-range checkpoint values 
     throw new Error("sink unavailable");
   });
   expect(() => recordResttyHostPhase("first-session", "begin")).not.toThrow();
-});
-
-it("bounds refit progress to fixed numeric metadata and never substitutes diagnostic sink success", () => {
-  const sink = vi
-    .mocked(fs.writeSync)
-    .mockClear()
-    .mockImplementation(() => 0);
-  const progress = {
-    sourceBytes: 65_698,
-    checkpoints: 0,
-    cumulativeAck: 65_698,
-    pendingBytes: 0,
-    pauseCount: 1,
-    resumeCount: 1,
-    privatePayload: "never publish",
-  };
-  recordOutputRefitProgress("private text" as never, progress);
-  recordOutputRefitProgress("continuation-output", undefined);
-  recordOutputRefitProgress("resize-failure", undefined);
-  recordOutputRefitProgress("continuation-output", {
-    ...progress,
-    pendingBytes: NaN,
-  });
-  recordOutputRefitProgress(
-    "resize-failure",
-    progress,
-    undefined,
-    "private error" as never,
-  );
-  expect(sink).not.toHaveBeenCalled();
-  recordOutputRefitProgress("continuation-output", progress);
-  expect(String(sink.mock.calls[0]![1])).not.toContain("never publish");
-  expect(String(sink.mock.calls[0]![1]).length).toBeLessThan(512);
-  sink.mockImplementation(() => {
-    throw new Error("sink unavailable");
-  });
-  expect(() =>
-    recordOutputRefitProgress("continuation-failure", progress),
-  ).not.toThrow();
-});
-
-it("validates the fixed width/grid boundary schema without leaking extra context or sink errors", () => {
-  const sink = vi
-    .mocked(fs.writeSync)
-    .mockClear()
-    .mockImplementation(() => 0);
-  const boundary = {
-    countBefore: 3,
-    requestCount: 4,
-    expectedCols: 60,
-    expectedRows: 24,
-    latestRequestedCols: 59,
-    latestRequestedRows: 24,
-    privateError: "never publish",
-    returnedRequestCount: 4,
-  };
-  recordOutputRefitBoundary("private phase" as never, boundary);
-  recordOutputRefitBoundary("width-enter", boundary, "fulfilled");
-  recordOutputRefitBoundary(
-    "width-settled",
-    boundary,
-    "private error" as never,
-  );
-  recordOutputRefitBoundary("grid-first" as never, boundary, false);
-  recordOutputRefitBoundary(
-    "grid-after-resize-return",
-    boundary,
-    "false" as never,
-  );
-  recordOutputRefitBoundary(
-    "grid-after-resize-return",
-    { ...boundary, returnedRequestCount: undefined } as never,
-    false,
-  );
-  for (const invalid of [-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])
-    recordOutputRefitBoundary("width-enter", {
-      ...boundary,
-      requestCount: invalid,
-    });
-  expect(sink).not.toHaveBeenCalled();
-  recordOutputRefitBoundary("width-enter", boundary);
-  recordOutputRefitBoundary("width-settled", boundary, "rejected");
-  recordOutputRefitBoundary("grid-after-resize-return", boundary, false);
-  const records = sink.mock.calls.map(
-    ([, value]) =>
-      JSON.parse(
-        String(value).slice("__OMXTERM_OUTPUT_REFIT_PROGRESS__".length),
-      ) as Record<string, unknown>,
-  );
-  expect(
-    records.map(({ phase, outcome, predicate }) => [phase, outcome, predicate]),
-  ).toEqual([
-    ["width-enter", undefined, undefined],
-    ["width-settled", "rejected", undefined],
-    ["grid-after-resize-return", undefined, false],
-  ]);
-  expect(
-    sink.mock.calls.every(
-      ([, value]) =>
-        String(value).length < 512 && !String(value).includes("never publish"),
-    ),
-  ).toBe(true);
-  const returned = { ...boundary, returnedCols: 60, returnedRows: 24 };
-  sink.mockClear();
-  recordResttyHostPhase("dom-focus", "complete", undefined, returned);
-  recordResttyHostPhase("refit-resize-call", "begin", undefined, returned);
-  for (const invalid of [-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])
-    recordResttyHostPhase("refit-resize-call", "complete", undefined, {
-      ...returned,
-      returnedCols: invalid,
-    });
-  expect(sink).not.toHaveBeenCalled();
-  recordResttyHostPhase("refit-resize-call", "complete", undefined, returned);
-  expect(String(sink.mock.calls[0]![1])).not.toContain("never publish");
-  expect(String(sink.mock.calls[0]![1])).toContain('"returnedRequestCount":4');
-  expect(String(sink.mock.calls[0]![1]).length).toBeLessThan(512);
-  sink.mockImplementation(() => {
-    throw Error("closed sink");
-  });
-  expect(() =>
-    recordResttyHostPhase("refit-resize-call", "complete", undefined, returned),
-  ).not.toThrow();
-  expect(() =>
-    recordOutputRefitBoundary("width-settled", boundary, "fulfilled"),
-  ).not.toThrow();
 });
 
 it("records actual emitted main app-ready entry/completion around the existing Electron promise", async () => {

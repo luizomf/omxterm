@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
 
+import type { PendingWrapResizeEvidence } from "../fixtures/restty-resize-regression";
 import type {
   Measurement,
   SelectionObservation,
@@ -26,6 +27,7 @@ const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
 const electronExecutable = createRequire(import.meta.url)("electron") as string;
 
 interface Result {
+  readonly pendingWrapResize: PendingWrapResizeEvidence;
   readonly selection: SelectionObservation;
   readonly controlledReadiness?: {
     readonly firstSelectionPixels: number;
@@ -173,6 +175,7 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
               requestedScaleFactor,
               devicePixelRatio: result.devicePixelRatio,
               measurements: result.measurements,
+              pendingWrapResize: result.pendingWrapResize,
               live: result.live,
               selection: result.selection,
               controlledReadiness: result.controlledReadiness,
@@ -210,6 +213,28 @@ describe("Restty OMXTerm appearance under production Electron policy", () => {
     expect(runs[1]!.result.devicePixelRatio).toBeCloseTo(1, 5);
     expect(runs[2]!.result.devicePixelRatio).toBeCloseTo(2, 5);
     for (const { result, label } of runs) {
+      const wrap = result.pendingWrapResize;
+      expect(wrap, label).toMatchObject({
+        sameSurface: true,
+        sameCanvas: true,
+        starts: 1,
+        closesBeforeDispose: 0,
+      });
+      for (const value of [
+        wrap.original.cols,
+        wrap.original.rows,
+        wrap.resized.cols,
+        wrap.resized.rows,
+      ]) {
+        expect(Number.isSafeInteger(value), label).toBe(true);
+        expect(value, label).toBeGreaterThan(0);
+      }
+      expect(wrap.resized.cols, label).toBeLessThan(wrap.original.cols);
+      expect(wrap.resized.rows, label).toBe(wrap.original.rows);
+      expect(wrap.original.cols % wrap.resized.cols, label).not.toBe(0);
+      expect(wrap.copied, label).toBe(
+        "a".repeat(wrap.original.cols - 1) + "PCONTINUOU",
+      );
       assertFontGeometry(result, label);
       expect(result.configuredFont.regularInk, label).toBeGreaterThan(20);
       expect(result.configuredFont.preservesConfiguredRendering, label).toBe(

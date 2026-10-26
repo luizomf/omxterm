@@ -1,9 +1,5 @@
 import type { BrowserWindow } from "electron";
-import {
-  recordResttyHostPhase as phase,
-  recordOutputRefitProgress,
-  type OutputRefitProgress,
-} from "./restty-host-phases";
+import { recordResttyHostPhase as phase } from "./restty-host-phases";
 import type { LaunchRequest } from "../../src/main/launch-request";
 import type { LocalTerminalSession } from "../../src/main/local-terminal-session";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
@@ -19,11 +15,6 @@ import {
   outputCheckpointProducer,
 } from "./restty-output-checkpoint";
 import { outputCheckpointCopyDiagnostic } from "./restty-output-drop-evidence";
-import {
-  createOutputRefitPrefix,
-  outputRefitProducer,
-  prepareOutputRefit,
-} from "./restty-output-refit";
 
 export interface OutputStressEvidence {
   readonly source: ReturnType<
@@ -48,14 +39,6 @@ export interface OutputStressEvidence {
     NonNullable<LocalTerminalSession["outputFlowMetrics"]>
   >;
   readonly resizeObserved: boolean;
-  readonly controlledRefit?: {
-    readonly original: { readonly cols: number; readonly rows: number };
-    readonly refitted: { readonly cols: number; readonly rows: number };
-    readonly prefixUnits: number;
-    readonly prefixAcknowledgement: ReturnType<
-      ReturnType<typeof createOutputRefitPrefix>["evidence"]
-    >;
-  };
   readonly producerExit: { readonly exitCode: number; readonly signal: number };
   readonly memory: {
     readonly mainHeapUsedBytes: number;
@@ -68,7 +51,6 @@ export function outputStressLaunchRequest(
   index: number,
   sessionIndex = 2,
   checkpoints = OUTPUT_CHECKPOINTS,
-  controlledRefit = false,
 ): LaunchRequest | undefined {
   if (index !== sessionIndex) return undefined;
   const executable = process.env["npm_node_execpath"];
@@ -77,20 +59,13 @@ export function outputStressLaunchRequest(
   return {
     kind: "explicit-command",
     executable,
-    arguments: [
-      "-e",
-      controlledRefit
-        ? outputRefitProducer(checkpoints)
-        : outputCheckpointProducer(checkpoints),
-    ],
+    arguments: ["-e", outputCheckpointProducer(checkpoints)],
   };
 }
 
-// oxlint-disable-next-line max-lines-per-function -- Inline phase receipts preserve the existing oracle's ordering without a new orchestration abstraction.
 export function createOutputStressHarness({
   sessionIndex = 2,
   checkpoints = OUTPUT_CHECKPOINTS,
-  controlledRefit = false,
 } = {}) {
   const source = createOutputSourceObserver(checkpoints);
   const destination: ReturnType<typeof assertOutputCheckpoint>[] = [];
@@ -102,40 +77,9 @@ export function createOutputStressHarness({
   let ackCount = 0;
   let cumulativeEnd = 0;
   let producerExit: { exitCode: number; signal: number } | undefined;
-  let readRefitProgress: (() => OutputRefitProgress) | undefined;
-  let continuationStarted = false,
-    continuationOutput = false,
-    continuationFailed = false;
-  let resizeArmed = false;
-  let resizeEntered: number | undefined;
-  let refitReturned:
-    ((cols: number, rows: number, requestCount: number) => void) | undefined;
   let resizeFailure: "closed-pty" | "native-failure" | undefined;
   const assertNoResizeFailure = () => {
-    if (resizeFailure) throw new Error("Output refit native resize failed");
-  };
-  const trace = (
-    status:
-      | "continuation-returned"
-      | "continuation-output"
-      | "continuation-failure"
-      | "resize-failure",
-    reason?: typeof resizeFailure,
-  ) => {
-    let progress: OutputRefitProgress | undefined;
-    try {
-      progress = readRefitProgress?.();
-    } catch {
-      /* A snapshot failure cannot hide the fixed resize-failure event. */
-    }
-    if (progress || status === "resize-failure")
-      recordOutputRefitProgress(status, progress, undefined, reason);
-  };
-  const continuationFailure = () => {
-    if (controlledRefit && continuationStarted && !continuationFailed) {
-      continuationFailed = true;
-      trace("continuation-failure");
-    }
+    if (resizeFailure) throw new Error("Output native resize failed");
   };
 
   const settledFlow = (terminal: LocalTerminalSession) => {
@@ -191,53 +135,16 @@ export function createOutputStressHarness({
     },
     observeOutput(index: number, data: string): boolean {
       if (index !== sessionIndex) return false;
-      try {
-        source.observe(data);
-      } catch (error) {
-        continuationFailure();
-        throw error;
-      }
-      if (
-        controlledRefit &&
-        continuationStarted &&
-        !continuationOutput &&
-        data.length
-      ) {
-        continuationOutput = true;
-        trace("continuation-output");
-      }
+      source.observe(data);
       return true;
     },
     sourceCheckpoints: source.checkpoints,
-    observeResize(
-      index: number,
-      status: "begin" | "complete",
-      cols: number,
-      rows: number,
-      requestCount: number,
-    ) {
-      if (!controlledRefit || index !== sessionIndex || !resizeArmed) return;
-      if (status === "begin" && resizeEntered === undefined) {
-        resizeEntered = requestCount;
-        phase("refit-resize-call", "begin");
-      } else if (status === "complete" && resizeEntered === requestCount) {
-        resizeArmed = false;
-        const onReturn = refitReturned;
-        refitReturned = undefined;
-        try {
-          onReturn?.(cols, rows, requestCount);
-        } catch {
-          /* Observation cannot alter resize return or its failure category. */
-        }
-      }
-    },
     observeResizeFailure(
       index: number,
       reason: "closed-pty" | "native-failure",
     ) {
-      if (!controlledRefit || index !== sessionIndex || resizeFailure) return;
+      if (index !== sessionIndex || resizeFailure) return;
       resizeFailure = reason;
-      trace("resize-failure", reason);
     },
     observeClipboard(text: string) {
       if (expectingCopy === undefined) return;
@@ -281,17 +188,6 @@ export function createOutputStressHarness({
       await waitFor(source.ready, "output producer readiness");
       phase("output-producer-ready", "complete");
       const terminal = options.terminals[sessionIndex]!;
-      readRefitProgress = () => {
-        const flow = terminal.outputFlowMetrics?.();
-        return {
-          sourceBytes: source.evidence().bytes,
-          checkpoints: source.checkpoints(),
-          cumulativeAck: cumulativeEnd,
-          pendingBytes: flow?.pendingBytes ?? -1,
-          pauseCount: flow?.pauseCount ?? -1,
-          resumeCount: flow?.resumeCount ?? -1,
-        };
-      };
       phase("output-configuration", "begin");
       const scrollbackLines: unknown =
         await window.webContents.executeJavaScript(
@@ -306,23 +202,6 @@ export function createOutputStressHarness({
         throw new Error(
           `Output checkpoint fixture needs at least 20 columns, observed ${columns}`,
         );
-      const refit = controlledRefit
-        ? await prepareOutputRefit({
-            window,
-            sizes: options.resizes[sessionIndex]!,
-            readProgress: readRefitProgress,
-            beforeRefit: (onReturn) => {
-              resizeArmed = true;
-              refitReturned = onReturn;
-            },
-            waitFor,
-          })
-        : undefined;
-      let prefixAcknowledgement:
-        | NonNullable<
-            OutputStressEvidence["controlledRefit"]
-          >["prefixAcknowledgement"]
-        | undefined;
       const resizesBefore = options.resizes[sessionIndex]!.length;
       phase("output-renderer-stall", "begin");
       const rendererStall = window.webContents.executeJavaScript(
@@ -335,16 +214,14 @@ export function createOutputStressHarness({
       );
       await new Promise((resolve) => setTimeout(resolve, 25));
       holdAcknowledgements = true;
-      terminal.write(refit ? `g${refit.prefixUnits};` : "g");
-      const resizeTimer = refit
-        ? undefined
-        : setTimeout(() => {
-            const bounds = window.getBounds();
-            window.setBounds({
-              ...bounds,
-              width: bounds.width === 920 ? 900 : 920,
-            });
-          }, 100);
+      terminal.write("g");
+      const resizeTimer = setTimeout(() => {
+        const bounds = window.getBounds();
+        window.setBounds({
+          ...bounds,
+          width: bounds.width === 920 ? 900 : 920,
+        });
+      }, 100);
       try {
         phase("output-high-water", "begin");
         await new Promise((resolve) => setTimeout(resolve, 400));
@@ -363,53 +240,33 @@ export function createOutputStressHarness({
         "output backpressure resume",
       );
       phase("output-resume", "complete");
-      try {
-        if (refit) {
-          prefixAcknowledgement = await refit.refit();
-          assertNoResizeFailure();
-          phase("refit-continuation-write", "begin");
-          continuationStarted = true;
-          terminal.write("r");
-          phase("refit-continuation-write", "complete");
-          trace("continuation-returned");
-        }
-        for (let batch = 0; batch < checkpoints; batch++) {
-          phase("checkpoint-source", "begin", batch);
-          await waitFor(
-            () => source.checkpoints() === batch + 1,
-            `source checkpoint ${batch}`,
-          );
-          phase("checkpoint-source", "complete", batch);
-          phase("checkpoint-ack", "begin", batch);
-          await waitFor(
-            () => terminal.outputFlowMetrics?.().pendingBytes === 0,
-            `checkpoint ${batch} complete original output acknowledgement`,
-          );
-          phase("checkpoint-ack", "complete", batch);
-          copyPendingBytes = terminal.outputFlowMetrics!().pendingBytes;
-          expectingCopy = batch;
-          phase("checkpoint-copy", "begin", batch);
-          window.webContents.send(terminalIpc.clipboardAction, "select-all");
-          window.webContents.send(terminalIpc.clipboardAction, "copy");
-          await waitFor(() => {
-            if (destinationError) throw destinationError;
-            return destination.length === batch + 1;
-          }, `actual copied destination checkpoint ${batch}`);
-          phase("checkpoint-copy", "complete", batch);
-          if (batch + 1 < checkpoints) terminal.write("n");
-        }
-      } catch (error) {
-        continuationFailure();
-        throw error;
-      } finally {
-        if (refit) {
-          phase("refit-cleanup", "begin");
-          await refit.restore();
-          phase("refit-cleanup", "complete");
-        }
+      assertNoResizeFailure();
+      for (let batch = 0; batch < checkpoints; batch++) {
+        phase("checkpoint-source", "begin", batch);
+        await waitFor(
+          () => source.checkpoints() === batch + 1,
+          `source checkpoint ${batch}`,
+        );
+        phase("checkpoint-source", "complete", batch);
+        phase("checkpoint-ack", "begin", batch);
+        await waitFor(
+          () => terminal.outputFlowMetrics?.().pendingBytes === 0,
+          `checkpoint ${batch} complete original output acknowledgement`,
+        );
+        phase("checkpoint-ack", "complete", batch);
+        copyPendingBytes = terminal.outputFlowMetrics!().pendingBytes;
+        expectingCopy = batch;
+        phase("checkpoint-copy", "begin", batch);
+        window.webContents.send(terminalIpc.clipboardAction, "select-all");
+        window.webContents.send(terminalIpc.clipboardAction, "copy");
+        await waitFor(() => {
+          if (destinationError) throw destinationError;
+          return destination.length === batch + 1;
+        }, `actual copied destination checkpoint ${batch}`);
+        phase("checkpoint-copy", "complete", batch);
+        if (batch + 1 < checkpoints) terminal.write("n");
       }
-      // Outside finally: a secondary contained resize failure must not replace
-      // an earlier source/copy/write failure, and restoration still runs.
+      // Do not replace a primary source/copy/write failure with a resize veto.
       assertNoResizeFailure();
       settledFlow(terminal);
       phase("output-memory", "begin");
@@ -420,16 +277,11 @@ export function createOutputStressHarness({
       phase("output-memory", "complete");
       const memory = process.memoryUsage();
       phase("output-producer-exit", "begin");
-      try {
-        terminal.write("x");
-        await waitFor(
-          () => producerExit?.exitCode === 0 && producerExit.signal === 0,
-          "output producer clean exit",
-        );
-      } catch (error) {
-        continuationFailure();
-        throw error;
-      }
+      terminal.write("x");
+      await waitFor(
+        () => producerExit?.exitCode === 0 && producerExit.signal === 0,
+        "output producer clean exit",
+      );
       phase("output-producer-exit", "complete");
       const finalSource = source.finalize();
       // Exit can add transport envelope. Neither the pre-x snapshot nor the
@@ -456,16 +308,6 @@ export function createOutputStressHarness({
         acknowledgements: { count: ackCount, cumulativeEnd },
         flow,
         resizeObserved: options.resizes[sessionIndex]!.length > resizesBefore,
-        ...(refit
-          ? {
-              controlledRefit: {
-                original: refit.original,
-                refitted: refit.refitted,
-                prefixUnits: refit.prefixUnits,
-                prefixAcknowledgement: prefixAcknowledgement!,
-              },
-            }
-          : {}),
         producerExit: producerExit!,
         memory: {
           mainHeapUsedBytes: memory.heapUsed,

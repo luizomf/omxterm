@@ -1,6 +1,7 @@
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
+import type { TerminalSurface } from "../../src/terminal-surface/terminal-surface";
 
 const frame = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -40,9 +41,100 @@ function assertReloadPreserved(
     );
 }
 
+export interface PendingWrapResizeEvidence {
+  readonly original: { readonly cols: number; readonly rows: number };
+  readonly resized: { readonly cols: number; readonly rows: number };
+  readonly copied: string;
+  readonly sameSurface: boolean;
+  readonly sameCanvas: boolean;
+  readonly starts: number;
+  readonly closesBeforeDispose: number;
+}
+
+// One short primary-screen check on the existing host-resize Surface. Unlike
+// native output stress, this fixture owns every output byte and the cursor.
+async function verifyPendingWrapResize(
+  container: HTMLElement,
+  surface: TerminalSurface,
+  output: (text: string) => void,
+  observe: () => {
+    grid: { cols: number; rows: number };
+    resizes: number;
+    starts: number;
+    closes: number;
+    copied: string;
+  },
+): Promise<PendingWrapResizeEvidence> {
+  const before = observe();
+  const original = { ...before.grid };
+  if (
+    ![original.cols, original.rows].every(
+      (value) => Number.isSafeInteger(value) && value > 0,
+    ) ||
+    original.rows > 2
+  )
+    throw new Error("Pending-wrap Surface needs a valid one- or two-row grid");
+  const parent = container.parentElement;
+  const canvas = container.querySelector("canvas");
+  if (!parent || !canvas)
+    throw new Error("Pending-wrap Surface canvas is missing");
+  const prefix = "a".repeat(original.cols - 1) + "P";
+  output("\u001b[?1049l\u001b[?7h\u001b[3J\u001b[2J\u001b[H" + prefix);
+  container.style.width = "600px";
+  await frame();
+  const after = observe();
+  const resized = { ...after.grid };
+  if (
+    ![resized.cols, resized.rows].every(
+      (value) => Number.isSafeInteger(value) && value > 0,
+    ) ||
+    after.resizes <= before.resizes ||
+    resized.cols >= original.cols ||
+    resized.rows !== original.rows ||
+    original.cols % resized.cols === 0
+  )
+    throw new Error(
+      "Pending-wrap Surface did not reach a fresh narrower non-edge grid",
+    );
+  output("CONTINUOU");
+  surface.selectAll();
+  await surface.copy();
+  const current = observe();
+  const sameSurface =
+    container.isConnected &&
+    container.parentElement === parent &&
+    container.classList.contains("restty-terminal-surface");
+  const sameCanvas =
+    canvas.isConnected && canvas === container.querySelector("canvas");
+  if (
+    current.copied !== prefix + "CONTINUOU" ||
+    !sameSurface ||
+    !sameCanvas ||
+    current.starts !== 1 ||
+    current.closes !== 0 ||
+    current.grid.cols !== resized.cols ||
+    current.grid.rows !== resized.rows
+  )
+    throw new Error(
+      "Pending-wrap Surface lost exact continuation/copy or its retained lifetime",
+    );
+  return {
+    original,
+    resized,
+    copied: current.copied,
+    sameSurface,
+    sameCanvas,
+    starts: current.starts,
+    closesBeforeDispose: current.closes,
+  };
+}
+
 // A reduced mode-2048 client: like Neovim, it trusts in-band notifications,
 // not PTY resize callbacks, for its screen and cursor coordinates.
-export async function verifyInBandResize(root: HTMLElement): Promise<void> {
+export async function verifyInBandResize(
+  root: HTMLElement,
+): Promise<PendingWrapResizeEvidence> {
+  let pendingWrapResize!: PendingWrapResizeEvidence;
   for (const trigger of [
     "zoom",
     "reload",
@@ -56,7 +148,15 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
     container.className = "terminal-surface";
     // Own the test's geometry, not the native window's eventual allocation.
     // Border-box sizing still lets title inset and font changes refit the grid.
-    container.style.cssText = "flex:none;width:640px;height:360px";
+    // Select All includes unused viewport rows. Keep the short primary check
+    // to at most two rows, not a trimmed copy; the existing TUI then grows it.
+    const height = {
+      zoom: 360,
+      reload: 360,
+      "fullscreen-inset": 360,
+      "host-resize": 32,
+    }[trigger];
+    container.style.cssText = `flex:none;width:640px;height:${height}px`;
     layoutHost.append(container);
     root.replaceChildren(layoutHost);
     let handlers: TerminalSessionHandlers | undefined;
@@ -68,6 +168,8 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
     let copied = "";
     let cursor = "";
     let starts = 0;
+    let closes = 0;
+    let configuredSize = 16;
     let step = -1;
     const events: Array<Record<string, unknown>> = [];
     const record = (event: Record<string, unknown>) => {
@@ -105,7 +207,9 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
             record({ type: "cpr", cursor });
           }
         },
-        close() {},
+        close() {
+          closes += 1;
+        },
       },
       {
         appearance: { fontSize: 16, lineHeight: 1 },
@@ -123,7 +227,14 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
     );
     try {
       await frame();
-      const output = (text: string) => handlers?.onOutput(text);
+      const output = (text: string) => handlers!.onOutput(text);
+      if (trigger === "host-resize")
+        pendingWrapResize = await verifyPendingWrapResize(
+          container,
+          surface,
+          output,
+          () => ({ grid, resizes, starts, closes, copied }),
+        );
       output("\u001b[?1049h\u001b[?7l\u001b[?2048h");
       for (step = 0; step < 3; step += 1) {
         redraw = undefined;
@@ -139,14 +250,20 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
             "--native-title-inset",
             step % 2 === 0 ? "30px" : "0px",
           );
-        else
+        else {
+          configuredSize = 17 + step;
           surface.applyConfiguration({
-            appearance: { fontSize: 17 + step, lineHeight: 1, ligatures: true },
+            appearance: {
+              fontSize: configuredSize,
+              lineHeight: 1,
+              ligatures: true,
+            },
             padding: { top: 0, right: 0, bottom: 0, left: 0 },
             theme: DEFAULT_TERMINAL_THEME,
             scrollbackLines: 10_000,
             optionKeyMode: "none",
           });
+        }
         await frame();
         // No application output is supplied to flush a queued resize reply.
         if (
@@ -215,7 +332,7 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
         throw new Error("Parent layout perturbation did not take effect");
       surface.applyConfiguration({
         appearance: {
-          fontSize: trigger === "reload" ? 19 : 16,
+          fontSize: configuredSize,
           lineHeight: 1,
           ligatures: true,
         },
@@ -262,4 +379,5 @@ export async function verifyInBandResize(root: HTMLElement): Promise<void> {
       document.documentElement.style.setProperty("--native-title-inset", "0px");
     }
   }
+  return pendingWrapResize;
 }
