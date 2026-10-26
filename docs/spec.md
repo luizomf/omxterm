@@ -36,6 +36,14 @@ configurable mode. OMXTerm leaves host security policy unchanged and installs no
 privileged sandbox helper. Sandboxed Linux support is outside the current
 maintenance scope (ADR 0024). Intel macOS and other operating systems are unsupported.
 
+When Linux display startup needs an X11 relaunch, it selects the persistent
+`APPIMAGE` only when both `APPIMAGE` and `APPDIR` are nonempty absolute paths
+and `APPDIR/omxterm` matches `process.execPath`, the packaged AppRun layout.
+Otherwise it relaunches `process.execPath`; inherited AppImage variables from
+another application do not select the replacement executable. The X11 switch
+is inserted before a Launch Request's `-e`, preserving its literal argv. This
+selection does not remove variables from the inherited environment (ADR 0020).
+
 ## Product scope
 
 OMXTerm:

@@ -58,6 +58,7 @@
       // These suites keep one large fixture/harness close to the behavior it specifies.
       "files": [
         "test/unit/preload.test.ts",
+        "test/unit/linux-wrapper-acquisition.test.ts",
         "test/unit/renderer-terminal-window-host.test.ts",
         "test/unit/terminal-application.test.ts",
         "test/unit/user-configuration.test.ts"
@@ -70,6 +71,15 @@
         "max-lines-per-function": [
           "error",
           { "max": 600, "skipBlankLines": true, "skipComments": true }
+        ]
+      }
+    },
+    {
+      "files": ["test/unit/linux-wrapper-acquisition.test.ts"],
+      "rules": {
+        "max-lines": [
+          "error",
+          { "max": 900, "skipBlankLines": true, "skipComments": true }
         ]
       }
     },

@@ -140,7 +140,7 @@ Do not infer full-suite execution coverage from aggregate counters or empty pass
 
 `npm run check:portable` is the baseline for every code change (formatting, lint, typecheck, the default Vitest suite, and an unpackaged build). Two things to know before running it:
 
-- On Linux, run the full suite from an external system terminal, not inside OMXTerm itself. The About integration fixtures can hit a relaunch timeout when nested inside OMXTerm on Fedora and Ubuntu ([#609](https://github.com/luizomf/omxterm/issues/609)).
+- Controlled Fedora and Ubuntu reproductions of [#609](https://github.com/luizomf/omxterm/issues/609) traced the nested About relaunch timeout to inherited `APPIMAGE`: development Electron relaunched the outer terminal's AppImage instead of its own executable. Display relaunch now selects `APPIMAGE` only when `APPDIR/omxterm` matches the current executable ([ADR 0020](adr/0020-default-linux-rendering-to-x11.md)); terminal environment propagation is unchanged. Matched About cases and genuine packaged default-relaunch probes passed with the correction on both prepared desktops. This establishes a mechanism for those bounded reproductions, not the cause of every historical Linux or Windows startup failure or all-platform qualification.
 - Known runtime limitations that tests account for are listed in the [Restty guide](restty-development.md#current-runtime-limitations).
 - Linux runs that include `terminal-popup-native` (including the full suite) need the explicitly provisioned native-input lane described below. Set `OMXTERM_TEST_PROVISIONED_NATIVE_INPUT=1` only after provisioning it. Missing prerequisites fail; they are not skipped as successful qualification.
 
@@ -556,10 +556,41 @@ Malformed, oversized, stale and foreign controls fail within the existing
 bounds; recovery cannot turn a timeout/native failure into success. This does
 not provide containment of arbitrary unobserved orphans.
 
+`beforeCleanup.outcome` records only the native exit notification already
+observed by the verifier at that snapshot; it can be absent even when a retained
+worker has been reparented after its wrapper exited. Reparenting does not prove
+that the JavaScript exit callback has run. Acquisition-gap regressions compare
+that field with independently observed notification delivery, including a real
+exit notification deferred until recovery. They still require final native
+exit 7/no signal, the acquired worker's retained identity, open streams before
+recovery, exact output, closed streams and no remaining actors after recovery,
+and the original settlement-timeout failure. Cleanup never supplies a substitute
+native outcome or turns that intentional failure into verifier success.
+
+Only those notification-order cases hold the verifier's test clock at launch
+until the actual native exit emission is captured, then advance it to the same
+250 ms expiry. One independent 3-second wall-clock guard bounds readiness and
+capture together; this is event ordering, not native 250 ms latency
+qualification. Recovery closes the deferral gate before releasing any captured
+notification, so genuinely later arrivals pass through. Real time is restored
+before recovery timing and on setup/capture failure, before joining cleanup.
+An independent retirement timer shares that wall deadline, so a missing capture
+or recovery transition cannot leave an asynchronous join on a frozen clock. Portable real-Node
+controls cover late delivery, capture-gated expiry and wall-guard retirement,
+not Linux ownership qualification. The no-capture control awaits actual clock
+restoration by that watchdog before asserting retirement; elapsed wall time
+alone is not its completion receipt. The other real 250 ms negative controls and
+production deadlines remain unchanged.
+
 Positive generated-actor tests share the existing 3-second readiness/setup
 allowance with their readiness polling; their outer test guards also allow all
 three native controls and bounded recovery. This is not a 250 ms native-latency
-requirement. Deliberate 250 ms negative controls still require failure: the same
+requirement. The six bad/missing-acknowledgement cases also use that positive
+setup allowance: they require actual acquisition before exercising exactly one
+ACK-publication fault, not acquisition expiry. The missing-publication case
+forces a late hidden collection while retaining the worker, native SIGKILL,
+stream closure and intentional settlement failure. Deliberate 250 ms
+acquisition-expiry controls still require failure: the same
 late hidden collection that succeeds with the positive allowance must expire
 without an acknowledgement or action under the negative budget, then settle
 cleanup. Controlled-clock tests call the actual actor acquisition helper to

@@ -21,7 +21,17 @@ Electron has selected a non-X11 backend and the user chose none, OMXTerm
 relaunches once with literal `--ozone-platform=x11` so the whole process tree
 uses X11. macOS and Windows are unaffected.
 
-Argument/environment tests cover selection and relaunch decisions. Native
-startup evidence is separate: an explicit X11 fixture does not prove the default
+The replacement uses the persistent outer `APPIMAGE` rather than Chromium's
+relauncher inside a FUSE mount that disappears on exit. AppImage variables can
+also be inherited by unrelated programs launched in the terminal, so packaging
+status alone is insufficient: both `APPIMAGE` and `APPDIR` must be nonempty
+absolute paths, and `process.execPath` must equal `APPDIR/omxterm`, matching the
+packaged AppRun layout. Otherwise the replacement uses `process.execPath`.
+This is a path-ownership check for relaunch selection, not environment cleanup
+or an authenticity check of the AppImage bytes.
+
+Argument/environment tests cover selection and the actual spawn/unref/exit
+relaunch path, including foreign inherited AppImage values and literal `-e` argv.
+Native startup evidence is separate: an explicit X11 fixture does not prove the default
 selection or native Wayland visibility. See [development](../development.md)
 and [release verification](../release.md).

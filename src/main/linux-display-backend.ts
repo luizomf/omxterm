@@ -1,5 +1,6 @@
 import type { App } from "electron";
 import { spawn } from "node:child_process";
+import { posix as path } from "node:path";
 import { withSwitchBeforeLaunchRequest } from "./launch-request";
 
 export function applyLinuxDisplayBackendDefault(
@@ -12,10 +13,21 @@ export function applyLinuxDisplayBackendDefault(
     app.commandLine.appendSwitch("ozone-platform", "x11");
   } else if (action === "relaunch-x11") {
     // Chromium's relauncher lives inside the FUSE mount, which disappears on
-    // exit. Spawn the persistent outer AppImage (or on-disk executable) instead.
+    // exit. Use the persistent AppImage only for our own AppRun layout:
+    // unrelated executables can inherit APPIMAGE/APPDIR through a terminal.
+    const appImage = process.env["APPIMAGE"];
+    const appDir = process.env["APPDIR"];
+    const executable =
+      appImage &&
+      path.isAbsolute(appImage) &&
+      appDir &&
+      path.isAbsolute(appDir) &&
+      process.execPath === path.join(appDir, "omxterm")
+        ? appImage
+        : process.execPath;
     try {
       spawn(
-        process.env["APPIMAGE"] ?? process.execPath,
+        executable,
         withSwitchBeforeLaunchRequest(
           process.argv.slice(1),
           "--ozone-platform=x11",

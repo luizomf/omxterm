@@ -16,10 +16,103 @@ import { verifyLinuxWrapperPropagation } from "../../scripts/linux-packaged-proc
 
 // Control external filesystem I/O through the unchanged verifier caller.
 // Native actors, streams, outcomes, recovery and pidfd validation remain real.
+// Intercept only the owned launcher's real native notification. Recovery still
+// invokes the unchanged pidfd helper with the verifier's actual targets.
+const exitView = vi.hoisted(() => ({
+  launcher: "",
+  defer: false,
+  received: undefined as Outcome | undefined,
+  delivered: undefined as Outcome | undefined,
+  atRecovery: undefined as
+    | {
+        outcome: Outcome | undefined;
+        held: boolean;
+        targets: Identity[];
+        now: number;
+      }
+    | undefined,
+  releasedAtRecovery: false,
+  release: undefined as (() => void) | undefined,
+  restore: undefined as (() => void) | undefined,
+  onCapture: undefined as (() => void) | undefined,
+  restoreClock: undefined as (() => void) | undefined,
+  startRecovery(targets: Identity[]) {
+    this.atRecovery = {
+      outcome: this.delivered,
+      held: this.release !== undefined,
+      targets,
+      now: Date.now(),
+    };
+    this.releasedAtRecovery = this.release !== undefined;
+    this.retire();
+  },
+  retire() {
+    // Recovery/failure admits late events even if none has been captured yet.
+    this.defer = false;
+    this.restoreClock?.();
+    this.release?.();
+  },
+}));
+vi.mock("node:child_process", async (importOriginal) => {
+  const native = await importOriginal<typeof import("node:child_process")>();
+  const path = await import("node:path");
+  return {
+    ...native,
+    spawn(...args: Parameters<typeof native.spawn>) {
+      const child = native.spawn(...args);
+      if (args[0] !== exitView.launcher) return child;
+      const emit: (event: string | symbol, ...values: unknown[]) => boolean =
+        child.emit;
+      exitView.restore = () => {
+        child.emit = emit;
+      };
+      child.emit = function (event: string | symbol, ...values: unknown[]) {
+        if (event !== "exit") return emit.call(this, event, ...values);
+        const [code, signal] = values as [number | null, NodeJS.Signals | null];
+        const outcome = { code, signal };
+        exitView.received = outcome;
+        exitView.onCapture?.();
+        const deliver = () => {
+          const result = emit.call(this, event, ...values);
+          exitView.delivered = outcome;
+          return result;
+        };
+        if (!exitView.defer) return deliver();
+        exitView.release = () => {
+          exitView.release = undefined;
+          deliver();
+        };
+        return true;
+      };
+      return child;
+    },
+    spawnSync(...args: Parameters<typeof native.spawnSync>) {
+      if (
+        exitView.launcher &&
+        args[0] === "python3" &&
+        args[1]?.[1] === path.resolve("scripts/linux-packaged-signal.py") &&
+        typeof args[2]?.input === "string"
+      ) {
+        const request = JSON.parse(args[2].input) as {
+          signal?: string;
+          recovery?: boolean;
+          targets: Identity[];
+        };
+        if (request.recovery && request.signal === "SIGKILL") {
+          // Snapshot construction, collection and this helper call are
+          // synchronous: no exit callback can run between those boundaries.
+          exitView.startRecovery(request.targets);
+        }
+      }
+      return native.spawnSync(...args);
+    },
+  };
+});
 const procView = vi.hoisted(() => ({
   sample: undefined as undefined | ((names: string[]) => string[]),
   stat: undefined as undefined | ((file: string, text: string) => string),
   ackFault: "" as string,
+  ackFaultCalls: 0,
   recordSuccess: false,
   recordedRoot: "",
 }));
@@ -44,6 +137,7 @@ vi.mock("node:fs", async (importOriginal) => {
     },
     renameSync(from: string, to: string) {
       if (procView.ackFault && to.endsWith(".acquired.json")) {
+        procView.ackFaultCalls++;
         if (procView.ackFault === "missing") return;
         const ack = JSON.parse(fs.readFileSync(from, "utf8")) as {
           control: string;
@@ -87,6 +181,29 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 });
 const fs = await vi.importActual<typeof import("node:fs")>("node:fs");
 const positiveSetupBudgetMs = 3_000;
+const wallNow = Date.now;
+function holdWrapperExpiryUntilExit() {
+  const started = wallNow();
+  let now = started;
+  const clock = vi.spyOn(Date, "now").mockImplementation(() => now);
+  const wallDeadline = started + positiveSetupBudgetMs;
+  // Retire even if capture occurred but a failed setup never invokes recovery.
+  const guard = setTimeout(
+    () => exitView.retire(),
+    Math.max(0, wallDeadline - wallNow()),
+  );
+  exitView.onCapture = () => {
+    now = started + 250;
+  };
+  const retired = new Promise<void>((resolve) => {
+    exitView.restoreClock = () => {
+      clearTimeout(guard);
+      clock.mockRestore();
+      resolve();
+    };
+  });
+  return { expiry: started + 250, wallDeadline, retired };
+}
 // Three controls, preflight/signaling/recovery bounds, and witness cleanup.
 const nativeOutcomeGuardMs = 4 * positiveSetupBudgetMs + 3 * 2_000;
 const roots: string[] = [];
@@ -96,6 +213,10 @@ interface Identity {
   parent: number;
   group: number;
   start: string;
+}
+interface Outcome {
+  code: number | null;
+  signal: string | null;
 }
 interface Receipt {
   acquired?: Identity;
@@ -127,10 +248,13 @@ function identity(pid: number): Identity {
 function json<T>(file: string): T {
   return JSON.parse(fs.readFileSync(file, "utf8")) as T;
 }
-async function until(check: () => boolean) {
-  const deadline = Date.now() + positiveSetupBudgetMs;
+async function until(
+  check: () => boolean,
+  now = Date.now,
+  deadline = now() + positiveSetupBudgetMs,
+) {
   while (!check()) {
-    if (Date.now() >= deadline)
+    if (now() >= deadline)
       throw new Error("Acquisition fixture deadline exceeded");
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
@@ -154,10 +278,10 @@ async function setup(mode = "control-streams") {
   vi.stubEnv("OMXTERM_FIXTURE_MODE", mode);
   return { root, launcher };
 }
-async function failed(launcher: string) {
+async function failed(launcher: string, timeoutMs = 250) {
   let failure: unknown;
   try {
-    await verifyLinuxWrapperPropagation(launcher, 250);
+    await verifyLinuxWrapperPropagation(launcher, timeoutMs);
   } catch (cause) {
     failure = cause;
   }
@@ -246,9 +370,24 @@ function lateHiddenCollection(root: string, timeoutMs: number) {
   return { state, sample };
 }
 afterEach(async () => {
+  // Release any captured real event even if an assertion or recovery failed,
+  // then retire interception before independent fixture cleanup.
+  exitView.retire();
+  exitView.restore?.();
+  exitView.launcher = "";
+  exitView.defer = false;
+  exitView.received = undefined;
+  exitView.delivered = undefined;
+  exitView.atRecovery = undefined;
+  exitView.releasedAtRecovery = false;
+  exitView.release = undefined;
+  exitView.restore = undefined;
+  exitView.onCapture = undefined;
+  exitView.restoreClock = undefined;
   procView.sample = undefined;
   procView.stat = undefined;
   procView.ackFault = "";
+  procView.ackFaultCalls = 0;
   procView.recordSuccess = false;
   procView.recordedRoot = "";
   vi.unstubAllEnvs();
@@ -281,57 +420,193 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
+it.each(["before native capture", "after native capture"])(
+  "delivers the real exit with an open gate and real clock when recovery starts %s",
+  async (ordering) => {
+    const expectedHeld = ordering === "after native capture";
+    exitView.launcher = process.execPath;
+    exitView.defer = true;
+    const clock = expectedHeld ? holdWrapperExpiryUntilExit() : undefined;
+    const child = spawn(process.execPath, ["-e", "process.exit(7)"], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const closed = new Promise<void>((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", () => resolve());
+    });
+    const delivered: Outcome[] = [];
+    let realClockAtDelivery = false;
+    let gateOpenAtDelivery = false;
+    child.on("exit", (code, signal) => {
+      delivered.push({ code, signal });
+      realClockAtDelivery = Date.now === wallNow;
+      gateOpenAtDelivery = !exitView.defer;
+    });
+    try {
+      if (clock) {
+        expect(Date.now()).toBe(clock.expiry - 250);
+        await until(
+          () => exitView.received !== undefined,
+          wallNow,
+          clock.wallDeadline,
+        );
+        expect(Date.now()).toBe(clock.expiry);
+        expect(exitView.delivered).toBeUndefined();
+      }
+      // Without the capture wait, this transition precedes any native callback.
+      exitView.startRecovery([]);
+      expect(exitView.atRecovery).toMatchObject({
+        outcome: undefined,
+        held: expectedHeld,
+        targets: [],
+      });
+      await closed;
+      expect(child.exitCode).toBe(7);
+      expect(child.signalCode).toBeNull();
+      expect(exitView.received).toStrictEqual({ code: 7, signal: null });
+      expect(delivered).toStrictEqual([exitView.received]);
+      expect(exitView.delivered).toBe(exitView.received);
+      expect(exitView.release).toBeUndefined();
+      expect(exitView.releasedAtRecovery).toBe(expectedHeld);
+      expect(realClockAtDelivery).toBe(true);
+      expect(gateOpenAtDelivery).toBe(true);
+    } finally {
+      exitView.retire();
+      await closed;
+    }
+  },
+);
+
+it(
+  "retires the frozen wrapper clock on the independent wall guard when capture never arrives",
+  async () => {
+    exitView.defer = true;
+    const { expiry, retired } = holdWrapperExpiryUntilExit();
+    try {
+      expect(Date.now()).toBe(expiry - 250);
+      await retired;
+      // Retirement cannot depend on reaching finally after a blocked join.
+      expect(Date.now).toBe(wallNow);
+      expect(exitView.defer).toBe(false);
+      expect(exitView.received).toBeUndefined();
+      expect(exitView.release).toBeUndefined();
+    } finally {
+      exitView.retire();
+    }
+  },
+  nativeOutcomeGuardMs,
+);
+
 describe.skipIf(process.platform !== "linux")(
   "Linux finite wrapper acquisition through the verifier",
   () => {
-    it("holds a ready stream-owning worker through a collection gap until actual retention, then preserves exit 7 and timeout on recovery", async () => {
-      const { root, launcher } = await setup();
-      let release = false;
-      let sampledReady = false;
-      rootOnlyUntilReleased(
-        () => release,
-        () => {
-          sampledReady ||= fs.existsSync(`${root}/control-ready.json`);
-        },
-      );
-      const pending = failed(launcher);
-      try {
-        await until(() => sampledReady);
-        const witness = json<{ leader: Identity; worker: Identity }>(
+    it.each(["normal", "deferred"])(
+      "holds a ready stream-owning worker through a collection gap with %s exit notification, preserving exit 7 and timeout on recovery",
+      async (notification) => {
+        const { root, launcher } = await setup();
+        exitView.launcher = launcher;
+        exitView.defer = notification === "deferred";
+        const { expiry, wallDeadline } = holdWrapperExpiryUntilExit();
+        let release = false;
+        let sampledReady = false;
+        rootOnlyUntilReleased(
+          () => release,
+          () => {
+            sampledReady ||= fs.existsSync(`${root}/control-ready.json`);
+          },
+        );
+        const pending = failed(launcher);
+        // Observe any early setup rejection while the independent guard runs.
+        void pending.catch(() => undefined);
+        try {
+          await until(
+            () => {
+              if (!sampledReady) return false;
+              if (!release) {
+                const witness = json<{ leader: Identity; worker: Identity }>(
+                  `${root}/control-ready.json`,
+                );
+                cleanup.push(witness.worker, witness.leader);
+                const stem = fs.readFileSync(`${root}/control-path`, "utf8");
+                // Readiness alone cannot release the wrapper or authorize a signal target.
+                expect(identity(witness.leader.pid).start).toBe(
+                  witness.leader.start,
+                );
+                expect(identity(witness.worker.pid).parent).toBe(
+                  witness.leader.pid,
+                );
+                expect(fs.existsSync(`${stem}.acquired.json`)).toBe(false);
+                expect(
+                  Number(fs.readFileSync(`${root}/control-deadline`, "utf8")),
+                ).toBe(expiry);
+                release = true;
+              }
+              return exitView.received !== undefined;
+            },
+            wallNow,
+            wallDeadline,
+          );
+          await pending;
+        } finally {
+          release = true;
+          // A setup/capture failure must unfreeze expiry before joining recovery.
+          exitView.retire();
+          await pending;
+        }
+        const { receipt } = await pending;
+        const witness = json<{ worker: Identity }>(
           `${root}/control-ready.json`,
         );
-        cleanup.push(witness.worker, witness.leader);
-        const stem = fs.readFileSync(`${root}/control-path`, "utf8");
-        // Readiness alone cannot release the wrapper or authorize a signal target.
-        expect(identity(witness.leader.pid).start).toBe(witness.leader.start);
-        expect(identity(witness.worker.pid).parent).toBe(witness.leader.pid);
-        expect(fs.existsSync(`${stem}.acquired.json`)).toBe(false);
-        release = true;
-      } finally {
-        release = true;
-        await pending;
-      }
-      const { receipt } = await pending;
-      const witness = json<{ worker: Identity }>(`${root}/control-ready.json`);
-      expect(receipt.acquired).toEqual(witness.worker);
-      expect(receipt.beforeCleanup).toMatchObject({
-        outcome: { code: 7, signal: null },
-        closed: false,
-      });
-      expect(receipt.beforeCleanup.remaining).toHaveLength(1);
-      const orphan = receipt.beforeCleanup.remaining[0]!;
-      expect(orphan.pid).toBe(witness.worker.pid);
-      expect(orphan.start).toBe(witness.worker.start);
-      expect(orphan.group).toBe(witness.worker.group);
-      expect(orphan.parent).toBeTypeOf("number");
-      expect(orphan.parent).not.toBe(witness.worker.parent);
-      expect(receipt.outcome).toEqual({ code: 7, signal: null });
-      expect(receipt.remaining).toEqual([]);
-      expect(receipt.closed).toBe(true);
-      expect(receipt.failures).toEqual([
-        "Linux wrapper outcome control did not settle",
-      ]);
-    });
+        expect(receipt.acquired).toEqual(witness.worker);
+        expect(exitView.atRecovery).toBeDefined();
+        expect(exitView.atRecovery!.now).toBe(expiry);
+        expect(Date.now).toBe(wallNow);
+        expect(exitView.atRecovery!.targets).toEqual(
+          receipt.beforeCleanup.remaining,
+        );
+        if (notification === "deferred") {
+          expect(exitView.atRecovery!.held).toBe(true);
+          expect(exitView.atRecovery!.outcome).toBeUndefined();
+          expect(exitView.releasedAtRecovery).toBe(true);
+          expect(receipt.beforeCleanup).not.toHaveProperty("outcome");
+        } else {
+          expect(exitView.atRecovery!.held).toBe(false);
+          expect(exitView.releasedAtRecovery).toBe(false);
+        }
+        expect(exitView.release).toBeUndefined();
+        expect(exitView.received).toStrictEqual({ code: 7, signal: null });
+        expect(exitView.delivered).toBe(exitView.received);
+        // Reparenting proves native parent exit, not JS notification delivery.
+        // Require exactly what was observed at the snapshot, including absence.
+        expect(receipt.beforeCleanup.outcome).toStrictEqual(
+          exitView.atRecovery!.outcome,
+        );
+        if (exitView.atRecovery!.outcome !== undefined)
+          expect(receipt.beforeCleanup.outcome).toStrictEqual({
+            code: 7,
+            signal: null,
+          });
+        expect(receipt.beforeCleanup.closed).toBe(false);
+        expect(receipt.beforeCleanup.remaining).toHaveLength(1);
+        const orphan = receipt.beforeCleanup.remaining[0]!;
+        expect(orphan.pid).toBe(witness.worker.pid);
+        expect(orphan.start).toBe(witness.worker.start);
+        expect(orphan.group).toBe(witness.worker.group);
+        expect(orphan.parent).toBeTypeOf("number");
+        expect(orphan.parent).not.toBe(witness.worker.parent);
+        expect(receipt.outcome).toStrictEqual({ code: 7, signal: null });
+        expect(receipt.outcome).toStrictEqual(exitView.received);
+        expect(receipt.stdout).toBe("control stdout retained\n");
+        expect(receipt.stderr).toBe("control stderr retained\n");
+        expect(receipt.remaining).toEqual([]);
+        expect(receipt.closed).toBe(true);
+        expect(receipt.failures).toEqual([
+          "Linux wrapper outcome control did not settle",
+        ]);
+      },
+      // Existing outer guard covers wall-clock setup and bounded native recovery.
+      nativeOutcomeGuardMs,
+    );
 
     it(
       "keeps the generated Run-as-Node actor alive without acknowledgement before exercising all three native outcomes",
@@ -552,7 +827,11 @@ describe.skipIf(process.platform !== "linux")(
       async (fault) => {
         const { launcher } = await setup("normal");
         procView.ackFault = fault;
-        const { error, receipt } = await failed(launcher);
+        const { error, receipt } = await failed(
+          launcher,
+          positiveSetupBudgetMs,
+        );
+        expect(procView.ackFaultCalls).toBe(1);
         expect(receipt.acquired).toBeDefined();
         expect(receipt.stdout).toBe("");
         expect(receipt.closed).toBe(true);
@@ -561,24 +840,41 @@ describe.skipIf(process.platform !== "linux")(
           /control did not settle|masks or fails zero outcome/u,
         );
       },
+      nativeOutcomeGuardMs,
     );
 
-    it("does not release a worker when acknowledgement publication is missing", async () => {
-      const { root, launcher } = await setup();
-      procView.ackFault = "missing";
-      const { receipt } = await failed(launcher);
-      const witness = json<{ leader: Identity; worker: Identity }>(
-        `${root}/control-ready.json`,
-      );
-      expect(receipt.acquired?.pid).toBe(witness.worker.pid);
-      expect(receipt.beforeCleanup.outcome).toBeUndefined();
-      expect(receipt.outcome).toEqual({ code: null, signal: "SIGKILL" });
-      expect(receipt.closed).toBe(true);
-      expect(receipt.remaining).toEqual([]);
-      expect(receipt.failures).toEqual([
-        "Linux wrapper outcome control did not settle",
-      ]);
-    });
+    it(
+      "does not release a worker when acknowledgement publication is missing after a late hidden collection",
+      async () => {
+        const { root, launcher } = await setup();
+        procView.ackFault = "missing";
+        const hidden = lateHiddenCollection(root, positiveSetupBudgetMs);
+        rootOnlyUntilReleased(() => hidden.state.ready, hidden.sample);
+        const { receipt, directory } = await failed(
+          launcher,
+          positiveSetupBudgetMs,
+        );
+        const witness = json<{ leader: Identity; worker: Identity }>(
+          `${root}/control-ready.json`,
+        );
+        expect(procView.ackFaultCalls).toBe(1);
+        expect(fs.existsSync(`${directory}/zero.acquired.json`)).toBe(false);
+        expect(receipt).toStrictEqual({
+          acquired: witness.worker,
+          beforeCleanup: {
+            closed: false,
+            remaining: [witness.leader, witness.worker],
+          },
+          outcome: { code: null, signal: "SIGKILL" },
+          stdout: "control stdout retained\n",
+          stderr: "control stderr retained\n",
+          closed: true,
+          remaining: [],
+          failures: ["Linux wrapper outcome control did not settle"],
+        });
+      },
+      nativeOutcomeGuardMs,
+    );
   },
 );
 
