@@ -228,6 +228,118 @@ it.each([false, true])(
   },
 );
 
+it.each([
+  "matching",
+  "wrong-cols",
+  "wrong-rows",
+  "held-callback",
+  "superseded",
+  "reentrant",
+  "sink-failure",
+] as const)(
+  "observes the late return/evaluation pair through the actual focused deadline: %s",
+  async (mode) => {
+    const failSink = mode === "sink-failure";
+    const {
+      exercise,
+      lines,
+      calls,
+      failedDiagnostics,
+      routedTerminal,
+      rendererCalls,
+    } = await exerciseOutput(
+      "refit-late-grid",
+      0,
+      failSink,
+      mode === "reentrant",
+    );
+    const records = (phase: string, status?: string) =>
+      phaseLines([...lines, ...failedDiagnostics], phase, status).map(
+        (line) =>
+          JSON.parse(line.slice(line.indexOf("{"))) as Record<string, unknown>,
+      );
+    const ready = mode === "matching" || mode === "held-callback";
+    const cols = mode === "wrong-cols" || failSink ? 59 : 60;
+    const rows = mode === "wrong-rows" ? 23 : 24;
+    try {
+      expect(records("width-settled")).toMatchObject([
+        { outcome: "fulfilled", countBefore: 3, requestCount: 3 },
+      ]);
+      expect(records("grid-first")).toEqual([]);
+      expect(records("grid-after-resize-return")).toEqual([]);
+      expect(vi.getTimerCount()).toBe(1);
+      expect(rendererCalls).toEqual({ total: 6, width: 3 });
+      expect(calls).toEqual({ copies: 0, exitRequests: 0 });
+      routedTerminal.resize({ cols, rows });
+      expect(records("refit-resize-call", "complete")).toMatchObject([
+        {
+          countBefore: 3,
+          expectedCols: 60,
+          expectedRows: 24,
+          returnedRequestCount: 4,
+          returnedCols: cols,
+          returnedRows: rows,
+          requestCount: mode === "reentrant" ? 5 : 4,
+          latestRequestedCols: mode === "reentrant" ? 80 : cols,
+          latestRequestedRows: rows,
+        },
+      ]);
+      if (mode === "superseded") routedTerminal.resize({ cols: 80, rows: 24 });
+      expect(records("grid-after-resize-return")).toEqual([]);
+      expect(vi.getTimerCount()).toBe(1);
+      if (mode === "held-callback") {
+        await vi.advanceTimersByTimeAsync(24);
+        expect(records("grid-after-resize-return")).toEqual([]);
+        expect(calls).toEqual({ copies: 0, exitRequests: 0 });
+        expect(rendererCalls).toEqual({ total: 6, width: 3 });
+      }
+      await vi.advanceTimersByTimeAsync(mode === "held-callback" ? 1 : 25);
+      expect(records("grid-after-resize-return")).toMatchObject([
+        {
+          countBefore: 3,
+          returnedRequestCount: 4,
+          expectedCols: 60,
+          expectedRows: 24,
+          requestCount: mode === "superseded" || mode === "reentrant" ? 5 : 4,
+          latestRequestedCols:
+            mode === "superseded" || mode === "reentrant" ? 80 : cols,
+          latestRequestedRows: rows,
+          predicate: ready,
+        },
+      ]);
+      if (ready) {
+        const result = await exercise;
+        expect(result.flow.pendingBytes).toBe(0);
+        expect(result.destination.checkpoints).toHaveLength(1);
+        expect(calls).toEqual({ copies: 1, exitRequests: 1 });
+      } else {
+        await vi.advanceTimersByTimeAsync(100);
+        expect(calls).toEqual({ copies: 0, exitRequests: 0 });
+        expect(vi.getTimerCount()).toBe(1);
+        expect(records("grid-after-resize-return")).toHaveLength(1);
+        expect(rendererCalls).toEqual({ total: 6, width: 3 });
+        await vi.advanceTimersByTimeAsync(10_000);
+        await expect(exercise).rejects.toThrow(
+          "Focused oracle timed out: controlled output Surface grid and PTY resize request",
+        );
+        expect(phaseLines(lines, "refit-cleanup", "complete")).toHaveLength(1);
+      }
+      expect(phaseLines(lines, "refit-resize-call", "begin")).toHaveLength(1);
+      expect(records("refit-resize-call", "complete")).toHaveLength(1);
+      expect(records("grid-after-resize-return")).toHaveLength(1);
+      expect(failedDiagnostics).toHaveLength(failSink ? 2 : 0);
+      if (failSink)
+        expect(phaseLines(lines, "refit-resize-call", "complete")).toEqual([]);
+      expect(rendererCalls).toEqual({ total: ready ? 8 : 7, width: 4 });
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      routedTerminal.resize({ cols: 60, rows: 24 });
+      await vi.advanceTimersByTimeAsync(25);
+      await exercise.catch(() => {});
+    }
+  },
+);
+
 it.each(["matching-deferred-width", "wrong-grid", "rejected", "sink-failure"])(
   "distinguishes targeted width settlement from first grid evaluation: %s",
   async (mode) => {
@@ -247,7 +359,11 @@ it.each(["matching-deferred-width", "wrong-grid", "rejected", "sink-failure"])(
       boundaries: Array<Record<string, unknown>> = [];
     vi.mocked(writeSync).mockImplementation((_fd, value) => {
       const line = String(value);
-      if (/"phase":"(?:width-enter|width-settled|grid-first)"/u.test(line)) {
+      if (
+        /"phase":"(?:width-enter|width-settled|grid-after-resize-return)"/u.test(
+          line,
+        )
+      ) {
         boundaries.push(
           JSON.parse(
             line.slice("__OMXTERM_OUTPUT_REFIT_PROGRESS__".length),
@@ -263,10 +379,18 @@ it.each(["matching-deferred-width", "wrong-grid", "rejected", "sink-failure"])(
       return 0;
     });
     const sizes = [{ cols: 80, rows: 24 }];
+    let onReturn:
+      ((cols: number, rows: number, requestCount: number) => void) | undefined;
     const { terminal } = createFixtureMetricReplyRouter(
       { write() {}, resize() {} },
       () => {},
-      { inputs: [], resizes: sizes },
+      {
+        inputs: [],
+        resizes: sizes,
+        onResize(status, cols, rows, requestCount) {
+          if (status === "complete") onReturn?.(cols, rows, requestCount);
+        },
+      },
     );
     let maxWidth = "",
       widthCalls = 0,
@@ -312,6 +436,9 @@ it.each(["matching-deferred-width", "wrong-grid", "rejected", "sink-failure"])(
     const refit = await prepareOutputRefit({
       window: window as unknown as BrowserWindow,
       sizes,
+      beforeRefit: (observeReturn) => {
+        onReturn = observeReturn;
+      },
       readProgress: () => ({
         sourceBytes,
         cumulativeAck: sourceBytes,
@@ -372,7 +499,7 @@ it.each(["matching-deferred-width", "wrong-grid", "rejected", "sink-failure"])(
         await gridEntered.promise;
         if (mode === "wrong-grid") {
           expect(boundaries.at(-1)).toMatchObject({
-            phase: "grid-first",
+            phase: "grid-after-resize-return",
             predicate: false,
             latestRequestedCols: 59,
           });
@@ -399,7 +526,7 @@ it.each(["matching-deferred-width", "wrong-grid", "rejected", "sink-failure"])(
       });
       if (mode !== "rejected")
         expect(boundaries[2]).toMatchObject({
-          phase: "grid-first",
+          phase: "grid-after-resize-return",
           predicate: mode !== "wrong-grid",
         });
       expect(gridEvaluations).toBe(
@@ -407,7 +534,9 @@ it.each(["matching-deferred-width", "wrong-grid", "rejected", "sink-failure"])(
       );
       if (mode === "sink-failure")
         expect(phaseLines(lines, "width-enter")).toHaveLength(0);
-      const records = phaseRecords(lines);
+      const records = phaseRecords(lines).filter(
+        (r) => r.phase !== "refit-resize-call",
+      );
       const phases = [
         "refit-layout",
         "refit-calibration",

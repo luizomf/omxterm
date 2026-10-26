@@ -81,7 +81,9 @@ export async function prepareOutputRefit({
   readonly window: BrowserWindow;
   readonly sizes: readonly { cols: number; rows: number }[];
   readonly readProgress: () => OutputRefitProgress;
-  readonly beforeRefit?: () => void;
+  readonly beforeRefit?: (
+    onReturn: (cols: number, rows: number, requestCount: number) => void,
+  ) => void;
   readonly waitFor: (
     predicate: () => boolean | Promise<boolean>,
     label: string,
@@ -175,7 +177,32 @@ export async function prepareOutputRefit({
         trace("prefix-ready");
         const count = sizes.length;
         recordPhase("refit-native-grid", "begin");
-        beforeRefit?.();
+        let firstReturn:
+          | {
+              returnedCols: number;
+              returnedRows: number;
+              returnedRequestCount: number;
+            }
+          | undefined;
+        let gridAfterReturn = true;
+        beforeRefit?.((returnedCols, returnedRows, returnedRequestCount) => {
+          if (firstReturn) return;
+          firstReturn = { returnedCols, returnedRows, returnedRequestCount };
+          try {
+            const latest = sizes.at(-1)!;
+            recordPhase("refit-resize-call", "complete", undefined, {
+              ...firstReturn,
+              countBefore: count,
+              expectedCols: refitted.cols,
+              expectedRows: original.rows,
+              requestCount: sizes.length,
+              latestRequestedCols: latest.cols,
+              latestRequestedRows: latest.rows,
+            });
+          } catch {
+            /* Publish the return before any fallible snapshot/write. */
+          }
+        });
         const boundary = (
           phase: Parameters<typeof recordOutputRefitBoundary>[0],
           result?: Parameters<typeof recordOutputRefitBoundary>[2],
@@ -192,6 +219,9 @@ export async function prepareOutputRefit({
                 expectedRows: original.rows,
                 latestRequestedCols: latest.cols,
                 latestRequestedRows: latest.rows,
+                ...(firstReturn
+                  ? { returnedRequestCount: firstReturn.returnedRequestCount }
+                  : {}),
               },
               result,
             );
@@ -207,15 +237,14 @@ export async function prepareOutputRefit({
           throw error;
         }
         boundary("width-settled", "fulfilled");
-        let gridFirst = true;
         await waitFor(() => {
           const ready =
             sizes.length > count &&
             sizes.at(-1)!.cols === refitted.cols &&
             sizes.at(-1)!.rows === original.rows;
-          if (gridFirst) {
-            gridFirst = false;
-            boundary("grid-first", ready);
+          if (firstReturn && gridAfterReturn) {
+            gridAfterReturn = false;
+            boundary("grid-after-resize-return", ready);
           }
           return ready;
         }, "controlled output Surface grid and PTY resize request");

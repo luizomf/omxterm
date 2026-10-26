@@ -48,9 +48,14 @@ export interface OutputRefitBoundary {
   readonly expectedRows: number;
   readonly latestRequestedCols: number;
   readonly latestRequestedRows: number;
+  readonly returnedRequestCount?: number;
 }
 
-const boundaryPhases = ["width-enter", "width-settled", "grid-first"] as const;
+const boundaryPhases = [
+  "width-enter",
+  "width-settled",
+  "grid-after-resize-return",
+] as const;
 export function recordOutputRefitBoundary(
   phase: (typeof boundaryPhases)[number],
   boundary: OutputRefitBoundary,
@@ -63,7 +68,7 @@ export function recordOutputRefitBoundary(
       (phase === "width-settled" &&
         result !== "fulfilled" &&
         result !== "rejected") ||
-      (phase === "grid-first" && typeof result !== "boolean")
+      (phase === "grid-after-resize-return" && typeof result !== "boolean")
     )
       return;
     const values = {
@@ -73,6 +78,9 @@ export function recordOutputRefitBoundary(
       expectedRows: boundary.expectedRows,
       latestRequestedCols: boundary.latestRequestedCols,
       latestRequestedRows: boundary.latestRequestedRows,
+      ...(phase === "grid-after-resize-return"
+        ? { returnedRequestCount: boundary.returnedRequestCount }
+        : {}),
     };
     if (
       !Object.values(values).every(
@@ -82,7 +90,7 @@ export function recordOutputRefitBoundary(
       return;
     writeSync(
       1,
-      `__OMXTERM_OUTPUT_REFIT_PROGRESS__${JSON.stringify({ version: 1, phase, ...values, ...(phase === "width-settled" ? { outcome: result } : phase === "grid-first" ? { predicate: result } : {}), at: Date.now(), monotonicMs: performance.now() })}\n`,
+      `__OMXTERM_OUTPUT_REFIT_PROGRESS__${JSON.stringify({ version: 1, phase, ...values, ...(phase === "width-settled" ? { outcome: result } : phase === "grid-after-resize-return" ? { predicate: result } : {}), at: Date.now(), monotonicMs: performance.now() })}\n`,
     );
   } catch {
     // Observation cannot starve the width operation or grid predicate.
@@ -161,6 +169,11 @@ export function recordResttyHostPhase(
   phase: (typeof phases)[number],
   status: "begin" | "complete",
   checkpoint?: number,
+  resizeReturn?: OutputRefitBoundary & {
+    readonly returnedRequestCount: number;
+    readonly returnedCols: number;
+    readonly returnedRows: number;
+  },
 ): void {
   try {
     if (!phases.includes(phase) || !["begin", "complete"].includes(status))
@@ -169,9 +182,31 @@ export function recordResttyHostPhase(
       if (!Number.isInteger(checkpoint) || checkpoint! < 0 || checkpoint! >= 16)
         return;
     } else if (checkpoint !== undefined) return;
+    const returned = resizeReturn
+      ? {
+          countBefore: resizeReturn.countBefore,
+          expectedCols: resizeReturn.expectedCols,
+          expectedRows: resizeReturn.expectedRows,
+          returnedRequestCount: resizeReturn.returnedRequestCount,
+          returnedCols: resizeReturn.returnedCols,
+          returnedRows: resizeReturn.returnedRows,
+          requestCount: resizeReturn.requestCount,
+          latestRequestedCols: resizeReturn.latestRequestedCols,
+          latestRequestedRows: resizeReturn.latestRequestedRows,
+        }
+      : undefined;
+    if (
+      resizeReturn !== undefined &&
+      (phase !== "refit-resize-call" ||
+        status !== "complete" ||
+        !Object.values(returned!).every(
+          (value) => Number.isSafeInteger(value) && value >= 0,
+        ))
+    )
+      return;
     writeSync(
       1,
-      `__OMXTERM_RESTTY_HOST_PHASE__${JSON.stringify({ version: 1, phase, status, ...(checkpoint === undefined ? {} : { checkpoint }), at: Date.now(), monotonicMs: performance.now() })}\n`,
+      `__OMXTERM_RESTTY_HOST_PHASE__${JSON.stringify({ version: 1, phase, status, ...(checkpoint === undefined ? {} : { checkpoint }), ...returned, at: Date.now(), monotonicMs: performance.now() })}\n`,
     );
   } catch {
     // The original operation and mechanical supervisor outcome remain authority.

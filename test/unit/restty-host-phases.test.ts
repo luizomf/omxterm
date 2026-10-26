@@ -83,6 +83,7 @@ it("validates the fixed width/grid boundary schema without leaking extra context
     latestRequestedCols: 59,
     latestRequestedRows: 24,
     privateError: "never publish",
+    returnedRequestCount: 4,
   };
   recordOutputRefitBoundary("private phase" as never, boundary);
   recordOutputRefitBoundary("width-enter", boundary, "fulfilled");
@@ -91,7 +92,17 @@ it("validates the fixed width/grid boundary schema without leaking extra context
     boundary,
     "private error" as never,
   );
-  recordOutputRefitBoundary("grid-first", boundary, "false" as never);
+  recordOutputRefitBoundary("grid-first" as never, boundary, false);
+  recordOutputRefitBoundary(
+    "grid-after-resize-return",
+    boundary,
+    "false" as never,
+  );
+  recordOutputRefitBoundary(
+    "grid-after-resize-return",
+    { ...boundary, returnedRequestCount: undefined } as never,
+    false,
+  );
   for (const invalid of [-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])
     recordOutputRefitBoundary("width-enter", {
       ...boundary,
@@ -100,7 +111,7 @@ it("validates the fixed width/grid boundary schema without leaking extra context
   expect(sink).not.toHaveBeenCalled();
   recordOutputRefitBoundary("width-enter", boundary);
   recordOutputRefitBoundary("width-settled", boundary, "rejected");
-  recordOutputRefitBoundary("grid-first", boundary, false);
+  recordOutputRefitBoundary("grid-after-resize-return", boundary, false);
   const records = sink.mock.calls.map(
     ([, value]) =>
       JSON.parse(
@@ -112,7 +123,7 @@ it("validates the fixed width/grid boundary schema without leaking extra context
   ).toEqual([
     ["width-enter", undefined, undefined],
     ["width-settled", "rejected", undefined],
-    ["grid-first", undefined, false],
+    ["grid-after-resize-return", undefined, false],
   ]);
   expect(
     sink.mock.calls.every(
@@ -120,9 +131,26 @@ it("validates the fixed width/grid boundary schema without leaking extra context
         String(value).length < 512 && !String(value).includes("never publish"),
     ),
   ).toBe(true);
+  const returned = { ...boundary, returnedCols: 60, returnedRows: 24 };
+  sink.mockClear();
+  recordResttyHostPhase("dom-focus", "complete", undefined, returned);
+  recordResttyHostPhase("refit-resize-call", "begin", undefined, returned);
+  for (const invalid of [-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])
+    recordResttyHostPhase("refit-resize-call", "complete", undefined, {
+      ...returned,
+      returnedCols: invalid,
+    });
+  expect(sink).not.toHaveBeenCalled();
+  recordResttyHostPhase("refit-resize-call", "complete", undefined, returned);
+  expect(String(sink.mock.calls[0]![1])).not.toContain("never publish");
+  expect(String(sink.mock.calls[0]![1])).toContain('"returnedRequestCount":4');
+  expect(String(sink.mock.calls[0]![1]).length).toBeLessThan(512);
   sink.mockImplementation(() => {
     throw Error("closed sink");
   });
+  expect(() =>
+    recordResttyHostPhase("refit-resize-call", "complete", undefined, returned),
+  ).not.toThrow();
   expect(() =>
     recordOutputRefitBoundary("width-settled", boundary, "fulfilled"),
   ).not.toThrow();

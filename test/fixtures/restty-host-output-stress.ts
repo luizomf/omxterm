@@ -106,8 +106,10 @@ export function createOutputStressHarness({
   let continuationStarted = false,
     continuationOutput = false,
     continuationFailed = false;
-  let resizeArmed = false,
-    resizeEntered = false;
+  let resizeArmed = false;
+  let resizeEntered: number | undefined;
+  let refitReturned:
+    ((cols: number, rows: number, requestCount: number) => void) | undefined;
   let resizeFailure: "closed-pty" | "native-failure" | undefined;
   const assertNoResizeFailure = () => {
     if (resizeFailure) throw new Error("Output refit native resize failed");
@@ -207,14 +209,26 @@ export function createOutputStressHarness({
       return true;
     },
     sourceCheckpoints: source.checkpoints,
-    observeResize(index: number, status: "begin" | "complete") {
+    observeResize(
+      index: number,
+      status: "begin" | "complete",
+      cols: number,
+      rows: number,
+      requestCount: number,
+    ) {
       if (!controlledRefit || index !== sessionIndex || !resizeArmed) return;
-      if (status === "begin" && !resizeEntered) {
-        resizeEntered = true;
+      if (status === "begin" && resizeEntered === undefined) {
+        resizeEntered = requestCount;
         phase("refit-resize-call", "begin");
-      } else if (status === "complete" && resizeEntered) {
-        phase("refit-resize-call", "complete");
+      } else if (status === "complete" && resizeEntered === requestCount) {
         resizeArmed = false;
+        const onReturn = refitReturned;
+        refitReturned = undefined;
+        try {
+          onReturn?.(cols, rows, requestCount);
+        } catch {
+          /* Observation cannot alter resize return or its failure category. */
+        }
       }
     },
     observeResizeFailure(
@@ -297,8 +311,9 @@ export function createOutputStressHarness({
             window,
             sizes: options.resizes[sessionIndex]!,
             readProgress: readRefitProgress,
-            beforeRefit: () => {
+            beforeRefit: (onReturn) => {
               resizeArmed = true;
+              refitReturned = onReturn;
             },
             waitFor,
           })

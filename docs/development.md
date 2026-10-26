@@ -714,15 +714,32 @@ unknown envelope. Actual-core reflow tests discriminate that separately; D3's
 native continuation cause remains unresolved until ordinary native execution.
 At the targeted refit only (not calibration/restoration), at most three additional
 progress records distinguish the existing awaits: `width-enter`, `width-settled`
-with fixed `fulfilled`/`rejected` outcome, then `grid-first` with its first actual
-predicate boolean. Numeric fields are `countBefore`, current `requestCount`,
+with fixed `fulfilled`/`rejected` outcome, then `grid-after-resize-return` with the
+first existing predicate evaluation after the first armed resize call returns.
+This replaces the earlier `grid-first` initial sample; pre-return evaluations do
+not log. Numeric fields remain `countBefore`, current `requestCount`,
 `expectedCols` (calibrated) / `expectedRows` (original), and
-`latestRequestedCols` / `latestRequestedRows`. Rejection rethrows the same error.
+`latestRequestedCols` / `latestRequestedRows`. The post-return record adds that
+request's `returnedRequestCount` append ordinal and the actual predicate boolean.
+The existing `refit-resize-call / complete` receipt is enriched, not duplicated:
+its `returnedCols` / `returnedRows` and one-based `returnedRequestCount` are
+captured before the actual resize, separately from current count/latest fields.
+Reentrant/newer requests cannot relabel the completing request. The return latch
+and post-return one-shot guard publish before best-effort snapshot/logging;
+sink failure does not gate the predicate. Rejection rethrows the same error.
 These are requested-grid / JavaScript-settlement observations, not native success,
-paint, child consumption or stable/final grid proof. Sink failure does not change
-the operation; no extra renderer query, wait, timer, retry or per-poll log is added.
+paint, child consumption or stable/final grid proof. No extra renderer query,
+wait, timer, retry or per-poll/per-resize history log is added.
 Poll iterations never emit repeated receipts. A request return or focus
 event alone is not readiness or native input admission.
+
+Focused output waits compose an existing **10-second** predicate deadline with
+the session's 25 ms / 120-second wait. The focused wrapper checks its clock before
+entering the predicate. A persistently false grid with advancing callbacks and
+ordinary clock/sink behavior should reject at that focused deadline and enter
+existing cleanup, not silently wait for the 120-second supervisor. Missing a
+post-return predicate record may also mean the wrapper rejected before entering
+it; it is not proof of stopped scheduling or any native mechanism.
 
 The existing supervisor retains these lines even when its outer deadline wins
 before an inner wait can report an error. Inspect unmatched entered phases and

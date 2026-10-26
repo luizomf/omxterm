@@ -160,7 +160,8 @@ function createHost(window: BrowserWindow) {
         createFixtureMetricReplyRouter(terminal, callbacks.onOutput, {
           inputs: inputs[index]!,
           resizes: resizes[index]!,
-          onResize: (status) => outputStress.observeResize(index, status),
+          onResize: (status, cols, rows, requestCount) =>
+            outputStress.observeResize(index, status, cols, rows, requestCount),
         });
       deliverOutputs[index] = deliverOutput;
       terminals[index] = routedTerminal;

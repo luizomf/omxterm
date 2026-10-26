@@ -15,29 +15,40 @@ import { createOutputStressHarness } from "./restty-host-output-stress";
 import { outputCheckpointProducer } from "./restty-output-checkpoint";
 import { outputRefitProducer } from "./restty-output-refit";
 import { createFixtureMetricReplyRouter } from "./restty-host-metric-replies";
+import { runFocusedResttyHostOracle } from "./restty-host-oracle-scenarios";
+import { createResttyHostSessions } from "./restty-host-sessions";
 
-// Existing controlled composition, moved intact from its unit file to keep the
-// expanded boundary-ordering specification within the unchanged file bound.
+type OutputMode =
+  | "acknowledged"
+  | "withheld"
+  | "counter-only"
+  | "refit-fragmented"
+  | "refit-no-r"
+  | "refit-no-end"
+  | "refit-no-exit"
+  | "refit-resize-failure"
+  | "refit-write-failure"
+  | "refit-late-grid";
+
+// Shared controlled producer/session/renderer ports; no actual child or cleanup.
 export async function exerciseOutput(
-  mode:
-    | "acknowledged"
-    | "withheld"
-    | "counter-only"
-    | "refit-fragmented"
-    | "refit-no-r"
-    | "refit-no-end"
-    | "refit-no-exit"
-    | "refit-resize-failure"
-    | "refit-write-failure",
+  mode: OutputMode,
   failureResizeCall = mode === "refit-resize-failure" ? 3 : 0,
   failResizeDiagnostic = false,
+  reentrantResize = false,
 ) {
   vi.useFakeTimers();
   const lines: string[] = [],
     failedDiagnostics: string[] = [];
   vi.mocked(writeSync).mockImplementation((_fd, value) => {
     const line = String(value);
-    if (failResizeDiagnostic && line.includes('"phase":"resize-failure"')) {
+    if (
+      failResizeDiagnostic &&
+      (line.includes('"phase":"resize-failure"') ||
+        (mode === "refit-late-grid" &&
+          (line.includes('"phase":"grid-after-resize-return"') ||
+            line.includes('"phase":"refit-resize-call","status":"complete"'))))
+    ) {
       failedDiagnostics.push(line);
       throw new Error("controlled diagnostic sink failure");
     }
@@ -53,6 +64,7 @@ export async function exerciseOutput(
   });
   const continuation: string[] = [];
   const calls = { copies: 0, exitRequests: 0 };
+  const rendererCalls = { total: 0, width: 0 };
   const sizes = [{ cols: 80, rows: 24 }];
   let resizeCalls = 0;
   let acknowledge!: IpcListener;
@@ -100,7 +112,7 @@ export async function exerciseOutput(
                 (suppress ? "" : text),
             ),
           );
-          if (refit && text === "r") {
+          if (refit && text === "r" && mode !== "refit-late-grid") {
             if (mode === "refit-no-end") queued = queued.slice(0, -24);
             for (let at = 0; at < queued.length; at += 47)
               continuation.push(queued.slice(at, at + 47));
@@ -122,6 +134,8 @@ export async function exerciseOutput(
                 ? "ioctl(2) failed, EBADF"
                 : "controlled resize failure",
             );
+          if (reentrantResize && resizeCalls === 3)
+            routedTerminal.resize({ cols: 80, rows: 24 });
         },
       }) as unknown as ReturnType<SpawnPty>,
     {
@@ -153,7 +167,8 @@ export async function exerciseOutput(
     {
       inputs: [],
       resizes: sizes,
-      onResize: (status) => harness.observeResize(0, status),
+      onResize: (status, cols, rows, requestCount) =>
+        harness.observeResize(0, status, cols, rows, requestCount),
     },
   );
   runInNewContext(
@@ -192,6 +207,7 @@ export async function exerciseOutput(
       },
       set maxWidth(value: string) {
         maxWidth = value;
+        if (++rendererCalls.width === 3 && mode === "refit-late-grid") return;
         routedTerminal.resize({ cols: value ? 60 : 80, rows: 24 });
       },
     },
@@ -203,6 +219,7 @@ export async function exerciseOutput(
     },
     webContents: {
       async executeJavaScript(script: string) {
+        rendererCalls.total++;
         if (script.includes("scrollbackLines")) {
           if (failureResizeCall === 1)
             harness.observeResizeFailure(0, "native-failure");
@@ -213,7 +230,7 @@ export async function exerciseOutput(
           return runInNewContext(script, {
             document: { querySelector: () => surface },
           }) as unknown;
-        return undefined; // Adapt the existing renderer stall, not its ordering.
+        // Adapt the existing renderer stall, not its ordering.
       },
       send(_channel: string, action: string) {
         if (action === "copy") {
@@ -231,13 +248,13 @@ export async function exerciseOutput(
       harness.observeResizeFailure(0, "native-failure"),
     ).not.toThrow();
   }
-  const exercise = harness.exercise({
+  const options = {
     window: window as unknown as BrowserWindow,
     terminals: [routedTerminal],
     resizes: [sizes],
     launchKinds: ["explicit-command"],
     existingSession: true,
-    async waitFor(predicate, label) {
+    async waitFor(predicate: () => boolean | Promise<boolean>, label: string) {
       if (label === "output producer clean exit" && failureResizeCall === 5) {
         // A contained resize after restoration, at the final async exit wait.
         await Promise.resolve();
@@ -252,8 +269,73 @@ export async function exerciseOutput(
       }
       throw new Error(`Not ready: ${label}`);
     },
-  });
+  };
+  const exercise =
+    mode === "refit-late-grid"
+      ? focusedOutput(harness, options, lines)
+      : harness.exercise(options);
   void exercise.catch(() => {});
   await vi.advanceTimersByTimeAsync(500);
-  return { exercise, lines, calls, failedDiagnostics };
+  return {
+    exercise,
+    lines,
+    calls,
+    failedDiagnostics,
+    routedTerminal,
+    rendererCalls,
+  };
+}
+
+// Only adapt unused caller ports. Both the focused 10 s wrapper and the session's
+// 25 ms / 120 s wait execute unchanged; no session is spawned or completed.
+async function focusedOutput(
+  harness: ReturnType<typeof createOutputStressHarness>,
+  options: Parameters<typeof harness.exercise>[0],
+  lines: string[],
+) {
+  const sessions = createResttyHostSessions({
+    spawn() {
+      throw Error("No spawn allowed");
+    },
+    app: {
+      on() {},
+      exit() {
+        throw Error("No native completion allowed");
+      },
+    },
+    signals: { on() {} },
+    windows: () => [],
+    reportError: vi.fn(),
+  });
+  await runFocusedResttyHostOracle({
+    ...options,
+    oracle: "output-checkpoints",
+    root: "/synthetic",
+    outputStress: harness,
+    terminals: [...options.terminals],
+    launchKinds: [...options.launchKinds],
+    resizes: options.resizes.map(
+      (sizes) => sizes as Array<{ cols: number; rows: number }>,
+    ),
+    outputs: [[]],
+    inputs: [[]],
+    externalLinks: [],
+    localImageRequests: [],
+    deliverOutputs: [],
+    ptyExits: () => 0,
+    sessionStarts: () => 1,
+    sessionExited: () => false,
+    reload: async () => {},
+    complete: async (code) => {
+      expect(code).toBe(0);
+    },
+    waitFor: sessions.waitFor,
+  });
+  return (
+    JSON.parse(
+      lines
+        .find((line) => line.startsWith("__OMXTERM_RESTTY_HOST_RESULT__"))!
+        .slice("__OMXTERM_RESTTY_HOST_RESULT__".length),
+    ) as { outputStress: Awaited<ReturnType<typeof harness.exercise>> }
+  ).outputStress;
 }
