@@ -1,5 +1,9 @@
 import type { BrowserWindow } from "electron";
-import { recordResttyHostPhase as phase } from "./restty-host-phases";
+import {
+  recordResttyHostPhase as phase,
+  recordOutputRefitProgress,
+  type OutputRefitProgress,
+} from "./restty-host-phases";
 import type { LaunchRequest } from "../../src/main/launch-request";
 import type { LocalTerminalSession } from "../../src/main/local-terminal-session";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
@@ -98,6 +102,39 @@ export function createOutputStressHarness({
   let ackCount = 0;
   let cumulativeEnd = 0;
   let producerExit: { exitCode: number; signal: number } | undefined;
+  let readRefitProgress: (() => OutputRefitProgress) | undefined;
+  let continuationStarted = false,
+    continuationOutput = false,
+    continuationFailed = false;
+  let resizeArmed = false,
+    resizeEntered = false;
+  let resizeFailure: "closed-pty" | "native-failure" | undefined;
+  const trace = (
+    status:
+      | "continuation-returned"
+      | "continuation-output"
+      | "continuation-failure"
+      | "resize-failure",
+    reason?: typeof resizeFailure,
+  ) => {
+    try {
+      if (readRefitProgress)
+        recordOutputRefitProgress(
+          status,
+          readRefitProgress(),
+          undefined,
+          reason,
+        );
+    } catch {
+      /* Never throw through a lifecycle/output observer. */
+    }
+  };
+  const continuationFailure = () => {
+    if (controlledRefit && continuationStarted && !continuationFailed) {
+      continuationFailed = true;
+      trace("continuation-failure");
+    }
+  };
 
   const settledFlow = (terminal: LocalTerminalSession) => {
     const flow = terminal.outputFlowMetrics?.();
@@ -152,10 +189,42 @@ export function createOutputStressHarness({
     },
     observeOutput(index: number, data: string): boolean {
       if (index !== sessionIndex) return false;
-      source.observe(data);
+      try {
+        source.observe(data);
+      } catch (error) {
+        continuationFailure();
+        throw error;
+      }
+      if (
+        controlledRefit &&
+        continuationStarted &&
+        !continuationOutput &&
+        data.length
+      ) {
+        continuationOutput = true;
+        trace("continuation-output");
+      }
       return true;
     },
     sourceCheckpoints: source.checkpoints,
+    observeResize(index: number, status: "begin" | "complete") {
+      if (!controlledRefit || index !== sessionIndex || !resizeArmed) return;
+      if (status === "begin" && !resizeEntered) {
+        resizeEntered = true;
+        phase("refit-resize-call", "begin");
+      } else if (status === "complete" && resizeEntered) {
+        phase("refit-resize-call", "complete");
+        resizeArmed = false;
+      }
+    },
+    observeResizeFailure(
+      index: number,
+      reason: "closed-pty" | "native-failure",
+    ) {
+      if (!controlledRefit || index !== sessionIndex || resizeFailure) return;
+      resizeFailure = reason;
+      trace("resize-failure", reason);
+    },
     observeClipboard(text: string) {
       if (expectingCopy === undefined) return;
       try {
@@ -198,6 +267,17 @@ export function createOutputStressHarness({
       await waitFor(source.ready, "output producer readiness");
       phase("output-producer-ready", "complete");
       const terminal = options.terminals[sessionIndex]!;
+      readRefitProgress = () => {
+        const flow = terminal.outputFlowMetrics?.();
+        return {
+          sourceBytes: source.evidence().bytes,
+          checkpoints: source.checkpoints(),
+          cumulativeAck: cumulativeEnd,
+          pendingBytes: flow?.pendingBytes ?? -1,
+          pauseCount: flow?.pauseCount ?? -1,
+          resumeCount: flow?.resumeCount ?? -1,
+        };
+      };
       phase("output-configuration", "begin");
       const scrollbackLines: unknown =
         await window.webContents.executeJavaScript(
@@ -216,11 +296,10 @@ export function createOutputStressHarness({
         ? await prepareOutputRefit({
             window,
             sizes: options.resizes[sessionIndex]!,
-            readProgress: () => ({
-              sourceBytes: source.evidence().bytes,
-              cumulativeAck: cumulativeEnd,
-              pendingBytes: terminal.outputFlowMetrics?.().pendingBytes ?? -1,
-            }),
+            readProgress: readRefitProgress,
+            beforeRefit: () => {
+              resizeArmed = true;
+            },
             waitFor,
           })
         : undefined;
@@ -272,7 +351,13 @@ export function createOutputStressHarness({
       try {
         if (refit) {
           prefixAcknowledgement = await refit.refit();
+          if (resizeFailure)
+            throw new Error("Output refit native resize failed");
+          phase("refit-continuation-write", "begin");
+          continuationStarted = true;
           terminal.write("r");
+          phase("refit-continuation-write", "complete");
+          trace("continuation-returned");
         }
         for (let batch = 0; batch < checkpoints; batch++) {
           phase("checkpoint-source", "begin", batch);
@@ -299,6 +384,9 @@ export function createOutputStressHarness({
           phase("checkpoint-copy", "complete", batch);
           if (batch + 1 < checkpoints) terminal.write("n");
         }
+      } catch (error) {
+        continuationFailure();
+        throw error;
       } finally {
         if (refit) {
           phase("refit-cleanup", "begin");
@@ -315,11 +403,16 @@ export function createOutputStressHarness({
       phase("output-memory", "complete");
       const memory = process.memoryUsage();
       phase("output-producer-exit", "begin");
-      terminal.write("x");
-      await waitFor(
-        () => producerExit?.exitCode === 0 && producerExit.signal === 0,
-        "output producer clean exit",
-      );
+      try {
+        terminal.write("x");
+        await waitFor(
+          () => producerExit?.exitCode === 0 && producerExit.signal === 0,
+          "output producer clean exit",
+        );
+      } catch (error) {
+        continuationFailure();
+        throw error;
+      }
       phase("output-producer-exit", "complete");
       const finalSource = source.finalize();
       // Exit can add transport envelope. Neither the pre-x snapshot nor the

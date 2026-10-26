@@ -148,10 +148,9 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           records: 4_096,
           recordBytes: 131_072,
         });
-      expect(stress.source.framedBytes + stress.source.envelopeBytes).toBe(
-        stress.source.bytes,
-      );
-      expect(stress.source.envelopeBytes).toBeGreaterThanOrEqual(0);
+      const { framedBytes, envelopeBytes, bytes } = stress.source;
+      expect(framedBytes + envelopeBytes).toBe(bytes);
+      expect(envelopeBytes).toBeGreaterThanOrEqual(0);
       expect(stress.load).toBe("paced-128KiB-checkpoints");
       expect(stress.scrollbackLines).toBe(10_000);
       expect(stress.pinnedCoreByteLimit).toBe(10_000_000);
@@ -216,12 +215,9 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         recordBytes: 131_072,
         endSeen: true,
       });
-      expect(stress.source.framedBytes + stress.source.envelopeBytes).toBe(
-        stress.source.bytes,
-      );
-      expect(stress.source.envelopeBytes).toBeGreaterThanOrEqual(
-        acknowledged.baselineBytes,
-      );
+      const { framedBytes, envelopeBytes, bytes } = stress.source;
+      expect(framedBytes + envelopeBytes).toBe(bytes);
+      expect(envelopeBytes).toBeGreaterThanOrEqual(acknowledged.baselineBytes);
       expect(stress.acknowledgements.cumulativeEnd).toBe(stress.source.bytes);
       expect(stress.flow.pendingBytes).toBe(0);
       expect(stress.flow.pauseCount).toBeGreaterThan(0);

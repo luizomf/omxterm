@@ -238,17 +238,24 @@ it.each([
 );
 
 it("accounts exact frames separately from arbitrary original envelope through finalization", () => {
-  const source = createOutputSourceObserver(1);
-  source.observe("startup 🦊\u001b[6n");
-  source.observe(outputCheckpointText(0) + "\u001b[?1004l\u001b[?9001l");
-  source.observe("different printable envelope\u0007");
+  const source = createOutputSourceObserver(2);
+  source.observe(
+    "startup 🦊\u001b[6n" +
+      outputCheckpointText(0) +
+      "\u001b[?1004l\u001b[?9001l",
+  );
+  source.observe(
+    "between\u0001" +
+      outputCheckpointText(1) +
+      "different printable envelope\u0007",
+  );
   const result = source.finalize();
   expect(result).toMatchObject({
-    framedBytes: 131_122,
-    envelopeBytes: 61,
+    framedBytes: 262_244,
+    envelopeBytes: 69,
     bufferedCodeUnits: 0,
     finalized: true,
-    checkpoints: 1,
+    checkpoints: 2,
   });
   expect(result.framedBytes + result.envelopeBytes).toBe(result.bytes);
 });

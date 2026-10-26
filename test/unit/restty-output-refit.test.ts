@@ -110,7 +110,13 @@ it("waits for explicit refit phases despite replies, wrong-phase keys and fragme
   child.send(";");
   expect(child.output()).toHaveLength(30 + 65_882);
   expect(child.output()).not.toContain("__OMXTERM_BATCH_00_END__");
-  child.send("\u001b[?1;2cgnx");
+  for (const reply of [
+    "\u001b[?",
+    "1;2c\u001b[12;",
+    "34R\u001b[6;16;",
+    "8tgnx",
+  ])
+    child.send(reply);
   expect(child.output()).toHaveLength(30 + 65_882);
   expect(child.exits).toEqual([]);
   child.send("r");

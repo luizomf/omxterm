@@ -8,7 +8,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runInNewContext } from "node:vm";
 import { afterEach, expect, it, vi } from "vitest";
-import { recordResttyHostPhase } from "../fixtures/restty-host-phases";
+import {
+  recordResttyHostPhase,
+  recordOutputRefitProgress,
+} from "../fixtures/restty-host-phases";
 
 vi.mock("node:fs", { spy: true });
 afterEach(() => vi.restoreAllMocks());
@@ -25,6 +28,43 @@ it("rejects arbitrary context, phase, status and out-of-range checkpoint values 
     throw new Error("sink unavailable");
   });
   expect(() => recordResttyHostPhase("first-session", "begin")).not.toThrow();
+});
+
+it("bounds refit progress to fixed numeric metadata and never substitutes diagnostic sink success", () => {
+  const sink = vi
+    .mocked(fs.writeSync)
+    .mockClear()
+    .mockImplementation(() => 0);
+  const progress = {
+    sourceBytes: 65_698,
+    checkpoints: 0,
+    cumulativeAck: 65_698,
+    pendingBytes: 0,
+    pauseCount: 1,
+    resumeCount: 1,
+    privatePayload: "never publish",
+  };
+  recordOutputRefitProgress("private text" as never, progress);
+  recordOutputRefitProgress("continuation-output", {
+    ...progress,
+    pendingBytes: NaN,
+  });
+  recordOutputRefitProgress(
+    "resize-failure",
+    progress,
+    undefined,
+    "private error" as never,
+  );
+  expect(sink).not.toHaveBeenCalled();
+  recordOutputRefitProgress("continuation-output", progress);
+  expect(String(sink.mock.calls[0]![1])).not.toContain("never publish");
+  expect(String(sink.mock.calls[0]![1]).length).toBeLessThan(512);
+  sink.mockImplementation(() => {
+    throw new Error("sink unavailable");
+  });
+  expect(() =>
+    recordOutputRefitProgress("continuation-failure", progress),
+  ).not.toThrow();
 });
 
 it("records actual emitted main app-ready entry/completion around the existing Electron promise", async () => {

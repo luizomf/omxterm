@@ -13,7 +13,11 @@ import type {
 } from "../../src/main/terminal-ipc-types";
 import { createOutputStressHarness } from "../fixtures/restty-host-output-stress";
 import { outputCheckpointProducer } from "../fixtures/restty-output-checkpoint";
-import { prepareOutputRefit } from "../fixtures/restty-output-refit";
+import {
+  prepareOutputRefit,
+  outputRefitProducer,
+} from "../fixtures/restty-output-refit";
+import { createFixtureMetricReplyRouter } from "../fixtures/restty-host-metric-replies";
 
 vi.mock("node:fs", { spy: true });
 afterEach(() => {
@@ -22,7 +26,16 @@ afterEach(() => {
 });
 
 async function exerciseOutput(
-  mode: "acknowledged" | "withheld" | "counter-only",
+  mode:
+    | "acknowledged"
+    | "withheld"
+    | "counter-only"
+    | "refit-fragmented"
+    | "refit-no-r"
+    | "refit-no-end"
+    | "refit-no-exit"
+    | "refit-resize-failure"
+    | "refit-write-failure",
 ) {
   vi.useFakeTimers();
   const lines: string[] = [];
@@ -30,8 +43,17 @@ async function exerciseOutput(
     lines.push(String(value));
     return 0;
   });
+  const refit = mode.startsWith("refit-");
   const checkpoints = mode === "acknowledged" ? 16 : 1;
-  const harness = createOutputStressHarness({ sessionIndex: 0, checkpoints });
+  const harness = createOutputStressHarness({
+    sessionIndex: 0,
+    checkpoints,
+    controlledRefit: refit,
+  });
+  const continuation: string[] = [];
+  const calls = { copies: 0, exitRequests: 0 };
+  const sizes = [{ cols: 80, rows: 24 }];
+  let resizeCalls = 0;
   let acknowledge!: IpcListener;
   const port = harness.ipcPort({
     on(_channel, listener) {
@@ -64,15 +86,37 @@ async function exerciseOutput(
           return { dispose() {} };
         },
         write(text: string) {
+          if (text === "r" && mode === "refit-write-failure")
+            throw new Error("controlled continuation write failed");
           exiting = text === "x";
-          input(Buffer.from(text));
-          if (exiting) queued += "\u001b[?1004l\u001b[?9001l";
+          if (exiting) calls.exitRequests++;
+          const suppress =
+            (text === "r" && mode === "refit-no-r") ||
+            (exiting && mode === "refit-no-exit");
+          input(
+            Buffer.from(
+              (refit ? "\u001b[?1;2c\u001b[12;34R\u001b[6;16;8t" : "") +
+                (suppress ? "" : text),
+            ),
+          );
+          if (refit && text === "r") {
+            if (mode === "refit-no-end") queued = queued.slice(0, -24);
+            for (let at = 0; at < queued.length; at += 47)
+              continuation.push(queued.slice(at, at + 47));
+            queued = ""; // Only release controlled continuation after write returns.
+          }
+          if (exiting && exitCode !== undefined)
+            queued += "\u001b[?1004l\u001b[?9001l";
           flush();
           if (exitCode !== undefined) onExit({ exitCode, signal: 0 });
         },
         pause() {},
         resume() {},
         kill() {},
+        resize() {
+          if (++resizeCalls === 3 && mode === "refit-resize-failure")
+            throw new Error("controlled resize failure");
+        },
       }) as unknown as ReturnType<SpawnPty>,
     {
       shell: "controlled",
@@ -88,6 +132,7 @@ async function exerciseOutput(
           acknowledge({} as never, { sessionId: "s1", end: sourceBytes });
       },
       onExit: (exit) => harness.observeExit(0, exit),
+      onResizeFailure: (reason) => harness.observeResizeFailure(0, reason),
     },
   );
   port.on(terminalIpc.outputAck, (_event, payload) => {
@@ -96,29 +141,55 @@ async function exerciseOutput(
     expect(terminal.acknowledgeOutput!(end - acceptedEnd)).toBe(true);
     acceptedEnd = end;
   });
-  runInNewContext(outputCheckpointProducer(checkpoints), {
-    process: {
-      stdin: {
-        isTTY: false,
-        on(_event: string, listener: typeof input) {
-          input = listener;
+  const { terminal: routedTerminal } = createFixtureMetricReplyRouter(
+    terminal,
+    () => {},
+    {
+      inputs: [],
+      resizes: sizes,
+      onResize: (status) => harness.observeResize(0, status),
+    },
+  );
+  runInNewContext(
+    refit
+      ? outputRefitProducer(checkpoints)
+      : outputCheckpointProducer(checkpoints),
+    {
+      process: {
+        stdin: {
+          isTTY: false,
+          on(_event: string, listener: typeof input) {
+            input = listener;
+          },
+          resume() {},
         },
-        resume() {},
-      },
-      stdout: {
-        write(text: string, done?: () => void) {
-          queued += text;
-          done?.();
-          return true;
+        stdout: {
+          write(text: string, done?: () => void) {
+            queued += text;
+            done?.();
+            return true;
+          },
         },
-      },
-      exit(code: number) {
-        exitCode = code;
+        exit(code: number) {
+          exitCode = code;
+        },
       },
     },
-  });
+  );
   flush();
-  const sizes = [{ cols: 80, rows: 24 }];
+  let maxWidth = "";
+  const surface = {
+    getBoundingClientRect: () => ({ width: 800 }),
+    style: {
+      get maxWidth() {
+        return maxWidth;
+      },
+      set maxWidth(value: string) {
+        maxWidth = value;
+        routedTerminal.resize({ cols: value ? 60 : 80, rows: 24 });
+      },
+    },
+  };
   const window = {
     getBounds: () => ({ width: 900, height: 600, x: 0, y: 0 }),
     setBounds() {
@@ -128,26 +199,39 @@ async function exerciseOutput(
       async executeJavaScript(script: string) {
         if (script.includes("scrollbackLines")) return 10000;
         if (script.includes("usedJSHeapSize")) return 123;
+        if (script.includes("surface"))
+          return runInNewContext(script, {
+            document: { querySelector: () => surface },
+          }) as unknown;
         return undefined; // Adapt the existing renderer stall, not its ordering.
       },
       send(_channel: string, action: string) {
-        if (action === "copy") harness.observeClipboard(transcript);
+        if (action === "copy") {
+          calls.copies++;
+          harness.observeClipboard(transcript);
+        }
       },
     },
   };
   const exercise = harness.exercise({
     window: window as unknown as BrowserWindow,
-    terminals: [terminal],
+    terminals: [routedTerminal],
     resizes: [sizes],
     launchKinds: ["explicit-command"],
     existingSession: true,
     async waitFor(predicate, label) {
-      if (!(await predicate())) throw new Error(`Not ready: ${label}`);
+      if (await predicate()) return;
+      while (continuation.length) {
+        await Promise.resolve();
+        onData(continuation.shift()!);
+        if (await predicate()) return;
+      }
+      throw new Error(`Not ready: ${label}`);
     },
   });
   void exercise.catch(() => {});
   await vi.advanceTimersByTimeAsync(500);
-  return { exercise, lines };
+  return { exercise, lines, calls };
 }
 
 it.each(["withheld", "counter-only"] as const)(
@@ -199,7 +283,113 @@ it("records each actual source/ACK/copy checkpoint without replacing the output 
   expect(lines.every((line) => line.length < 256)).toBe(true);
 });
 
-it("records calibration, exact-prefix acknowledgement and actual native-grid refit in order", async () => {
+it("records first delayed continuation after the actual refit producer write returns, without losing exact framing or ACKs", async () => {
+  const { exercise, lines, calls } = await exerciseOutput("refit-fragmented");
+  const result = await exercise;
+  expect(result.source).toMatchObject({
+    framedBytes: 131_122,
+    envelopeBytes: 46,
+    finalized: true,
+  });
+  expect(result.controlledRefit!.prefixAcknowledgement).toMatchObject({
+    pendingBytes: 0,
+    cumulativeAck: result.controlledRefit!.prefixAcknowledgement.sourceBytes,
+  });
+  expect(result.flow.pendingBytes).toBe(0);
+  expect(calls).toEqual({ copies: 1, exitRequests: 1 });
+  const entered = lines.findIndex((line) =>
+    line.includes('"phase":"refit-continuation-write","status":"begin"'),
+  );
+  const returned = lines.findIndex((line) =>
+    line.includes('"phase":"refit-continuation-write","status":"complete"'),
+  );
+  const firstOutput = lines.findIndex((line) =>
+    line.includes('"phase":"continuation-output"'),
+  );
+  expect(entered).toBeGreaterThanOrEqual(0);
+  expect(returned).toBeGreaterThan(entered);
+  expect(firstOutput).toBeGreaterThan(returned);
+  expect(
+    lines.filter((line) => line.includes('"phase":"continuation-output"')),
+  ).toHaveLength(1);
+  const metadata = JSON.parse(
+    lines[firstOutput]!.slice("__OMXTERM_OUTPUT_REFIT_PROGRESS__".length),
+  ) as Record<string, number>;
+  const prefix = result.controlledRefit!.prefixAcknowledgement.sourceBytes;
+  expect(metadata).toMatchObject({
+    sourceBytes: prefix + 47,
+    cumulativeAck: prefix,
+    checkpoints: 0,
+    pendingBytes: 47,
+    pauseCount: 1,
+    resumeCount: 1,
+  });
+  expect(
+    lines.filter((line) => line.includes('"phase":"refit-resize-call"')),
+  ).toHaveLength(2);
+});
+
+it.each(["refit-no-r", "refit-no-end", "refit-no-exit"] as const)(
+  "does not substitute copy/exit success for %s at the composed producer/harness seam",
+  async (mode) => {
+    const { exercise, calls, lines } = await exerciseOutput(mode);
+    await expect(exercise).rejects.toThrow(
+      mode === "refit-no-exit"
+        ? "output producer clean exit"
+        : "source checkpoint 0",
+    );
+    expect(calls).toEqual(
+      mode === "refit-no-exit"
+        ? { copies: 1, exitRequests: 1 }
+        : { copies: 0, exitRequests: 0 },
+    );
+    expect(
+      lines.filter((line) => line.includes('"phase":"continuation-failure"')),
+    ).toHaveLength(1);
+  },
+);
+
+it("retains entered-without-returned continuation and one failure snapshot when the write throws", async () => {
+  const { exercise, calls, lines } = await exerciseOutput(
+    "refit-write-failure",
+  );
+  await expect(exercise).rejects.toThrow(
+    "controlled continuation write failed",
+  );
+  expect(calls).toEqual({ copies: 0, exitRequests: 0 });
+  expect(
+    lines.filter((line) => line.includes('"phase":"refit-continuation-write"')),
+  ).toHaveLength(1);
+  expect(
+    lines.find((line) => line.includes('"phase":"refit-continuation-write"')),
+  ).toContain('"status":"begin"');
+  expect(
+    lines.filter((line) => line.includes('"phase":"continuation-failure"')),
+  ).toHaveLength(1);
+});
+
+it("distinguishes a returned resize request from contained native resize failure without allowing continuation", async () => {
+  const { exercise, calls, lines } = await exerciseOutput(
+    "refit-resize-failure",
+  );
+  await expect(exercise).rejects.toThrow("Output refit native resize failed");
+  expect(calls).toEqual({ copies: 0, exitRequests: 0 });
+  const first = lines.findIndex((line) =>
+    line.includes('"phase":"refit-resize-call","status":"begin"'),
+  );
+  expect(lines[first + 1]).toContain('"resizeFailure":"native-failure"');
+  expect(lines[first + 2]).toContain(
+    '"phase":"refit-resize-call","status":"complete"',
+  );
+  expect(
+    lines.filter((line) => line.includes('"phase":"resize-failure"')),
+  ).toHaveLength(1);
+  expect(lines.some((line) => line.includes("controlled resize failure"))).toBe(
+    false,
+  );
+});
+
+it("records calibration, exact-prefix acknowledgement and requested native-grid refit in order", async () => {
   const lines: string[] = [];
   vi.mocked(writeSync).mockImplementation((_fd, value) => {
     lines.push(String(value));
@@ -236,6 +426,9 @@ it("records calibration, exact-prefix acknowledgement and actual native-grid ref
       sourceBytes,
       cumulativeAck: sourceBytes,
       pendingBytes: 0,
+      checkpoints: 0,
+      pauseCount: 1,
+      resumeCount: 1,
     }),
     async waitFor(predicate, label) {
       if (!(await predicate())) throw new Error(`Not ready: ${label}`);

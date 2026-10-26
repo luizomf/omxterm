@@ -1,5 +1,9 @@
 import type { BrowserWindow } from "electron";
-import { recordResttyHostPhase as recordPhase } from "./restty-host-phases";
+import {
+  recordResttyHostPhase as recordPhase,
+  recordOutputRefitProgress,
+  type OutputRefitProgress,
+} from "./restty-host-phases";
 
 // Keep the ordinary producer unchanged. This control pauses its identical
 // checkpoint bytes at an insertion boundary until the real host refit finishes.
@@ -71,12 +75,12 @@ export async function prepareOutputRefit({
   sizes,
   readProgress,
   waitFor,
+  beforeRefit,
 }: {
   readonly window: BrowserWindow;
   readonly sizes: readonly { cols: number; rows: number }[];
-  readonly readProgress: Parameters<
-    typeof createOutputRefitPrefix
-  >[0]["readProgress"];
+  readonly readProgress: () => OutputRefitProgress;
+  readonly beforeRefit?: () => void;
   readonly waitFor: (
     predicate: () => boolean | Promise<boolean>,
     label: string,
@@ -125,7 +129,8 @@ export async function prepareOutputRefit({
     recordPhase("refit-restoration", "complete");
     // READY has 24 printable units (plus six cursor-hide control units).
     // Choose a prefix above high water, exactly at the old right edge, but not
-    // at the new right edge. Geometry is observed, never guessed from pixels.
+    // at the new right edge. Grid requests are observed, not native success or
+    // proof of parser cursor placement in the presence of transport envelope.
     let visibleUnits = Math.ceil((65_536 + 24) / original.cols) * original.cols;
     if (visibleUnits % refitted.cols === 0) visibleUnits += original.cols;
     if (visibleUnits % refitted.cols === 0)
@@ -145,12 +150,7 @@ export async function prepareOutputRefit({
     const prefix = createOutputRefitPrefix({ prefixUnits, readProgress });
     const trace = (
       phase: "baseline" | "prefix-enter" | "prefix-ready" | "prefix-failure",
-    ) =>
-      process.stdout.write(
-        "__OMXTERM_OUTPUT_REFIT_PROGRESS__" +
-          JSON.stringify({ phase, ...prefix.evidence() }) +
-          "\n",
-      );
+    ) => recordOutputRefitProgress(phase, readProgress(), prefix.evidence());
     trace("baseline");
     return {
       original,
@@ -174,13 +174,14 @@ export async function prepareOutputRefit({
         trace("prefix-ready");
         const count = sizes.length;
         recordPhase("refit-native-grid", "begin");
+        beforeRefit?.();
         await setWidth(`${layout.width - 50}px`);
         await waitFor(
           () =>
             sizes.length > count &&
             sizes.at(-1)!.cols === refitted.cols &&
             sizes.at(-1)!.rows === original.rows,
-          "controlled output native Surface and PTY refit",
+          "controlled output Surface grid and PTY resize request",
         );
         recordPhase("refit-native-grid", "complete");
         return prefixAcknowledgement;

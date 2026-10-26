@@ -27,8 +27,77 @@ const phases = [
   "refit-baseline-ack",
   "refit-prefix-ack",
   "refit-native-grid",
+  "refit-resize-call",
+  "refit-continuation-write",
   "refit-cleanup",
 ] as const;
+
+export interface OutputRefitProgress {
+  readonly sourceBytes: number;
+  readonly checkpoints: number;
+  readonly cumulativeAck: number;
+  readonly pendingBytes: number;
+  readonly pauseCount: number;
+  readonly resumeCount: number;
+}
+
+const progressPhases = [
+  "baseline",
+  "prefix-enter",
+  "prefix-ready",
+  "prefix-failure",
+  "continuation-returned",
+  "continuation-output",
+  "continuation-failure",
+  "resize-failure",
+] as const;
+
+export function recordOutputRefitProgress(
+  phase: (typeof progressPhases)[number],
+  progress: OutputRefitProgress,
+  prefix?: {
+    readonly baselineBytes: number;
+    readonly prefixUnits: number;
+    readonly expectedSourceBytes: number;
+  },
+  resizeFailure?: "closed-pty" | "native-failure",
+): void {
+  try {
+    if (!progressPhases.includes(phase)) return;
+    const values = {
+      sourceBytes: progress.sourceBytes,
+      checkpoints: progress.checkpoints,
+      cumulativeAck: progress.cumulativeAck,
+      pendingBytes: progress.pendingBytes,
+      pauseCount: progress.pauseCount,
+      resumeCount: progress.resumeCount,
+      ...(prefix
+        ? {
+            baselineBytes: prefix.baselineBytes,
+            prefixUnits: prefix.prefixUnits,
+            expectedSourceBytes: prefix.expectedSourceBytes,
+          }
+        : {}),
+    };
+    if (
+      !Object.values(values).every(
+        (value) => Number.isSafeInteger(value) && value >= 0,
+      )
+    )
+      return;
+    if (
+      resizeFailure !== undefined &&
+      !["closed-pty", "native-failure"].includes(resizeFailure)
+    )
+      return;
+    writeSync(
+      1,
+      `__OMXTERM_OUTPUT_REFIT_PROGRESS__${JSON.stringify({ version: 1, phase, ...values, ...(resizeFailure ? { resizeFailure } : {}), at: Date.now(), monotonicMs: performance.now() })}\n`,
+    );
+  } catch {
+    // Diagnostics cannot throw through output/resize/lifecycle listeners.
+  }
+}
 
 // Fixed synthetic vocabulary only. Synchronous writes survive an outer timeout;
 // diagnostic failure must not change an operation, its result or its deadline.

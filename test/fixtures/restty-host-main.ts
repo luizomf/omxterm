@@ -147,6 +147,8 @@ function createHost(window: BrowserWindow) {
             outputs[index]!.push(data);
           callbacks.onOutput(sourceControl.transform(index, data));
         },
+        onResizeFailure: (reason) =>
+          outputStress.observeResizeFailure(index, reason),
         onExit(exit, launchKind) {
           exitedSessionIndices.add(index);
           outputStress.observeExit(index, exit);
@@ -158,6 +160,7 @@ function createHost(window: BrowserWindow) {
         createFixtureMetricReplyRouter(terminal, callbacks.onOutput, {
           inputs: inputs[index]!,
           resizes: resizes[index]!,
+          onResize: (status) => outputStress.observeResize(index, status),
         });
       deliverOutputs[index] = deliverOutput;
       terminals[index] = routedTerminal;

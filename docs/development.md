@@ -677,7 +677,19 @@ An activation stall before that query says nothing about renderer responsiveness
 Output receipts cover the real producer, high-water/resume, all sixteen source,
 original-ACK and copied-destination checkpoints, memory query and exit. Refit
 receipts cover calibration/restoration, baseline/prefix ACK, native grid and
-cleanup. Poll iterations never emit repeated receipts. A request return or focus
+cleanup. The existing controlled-refit case adds a single entered/returned pair
+around its refit resize call and continuation write. Its synchronous
+`__OMXTERM_OUTPUT_REFIT_PROGRESS__` receipts carry only fixed phases and numeric
+source/checkpoint/original-ACK/pending/pause/resume metadata: immediately after
+continuation return, first continuation output, or first failure. The first
+contained resize failure adds only `closed-pty` or `native-failure`; it prevents
+continuation acceptance. No per-chunk logger, raw payload dump or new poller is
+used. The resize array and `refit-native-grid` phase establish a grid request,
+not native resize success or child consumption. Prefix modulo arithmetic plus a
+byte baseline does not independently establish parser pending-wrap state in an
+unknown envelope. Actual-core reflow tests discriminate that separately; D3's
+native continuation cause remains unresolved until ordinary native execution.
+Poll iterations never emit repeated receipts. A request return or focus
 event alone is not readiness or native input admission.
 
 The existing supervisor retains these lines even when its outer deadline wins
