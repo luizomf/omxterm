@@ -56,15 +56,23 @@ export async function exerciseSettingsTabCapture(options: {
   const evaluate = <T>(script: string) =>
     options.window.webContents.executeJavaScript(script, true) as Promise<T>;
   await options.open();
-  await evaluate(
-    "document.querySelector('#settings-tab-config-file').click(); document.querySelector('.settings-config-file textarea').focus()",
-  );
+  const initial = await evaluate<string>(`(() => {
+    document.querySelector('#settings-tab-config-file').click();
+    const editor = document.querySelector('.settings-config-file textarea');
+    editor.focus();
+    editor.setSelectionRange(editor.value.length, editor.value.length, 'forward');
+    return editor.value;
+  })()`);
+  const expectedDraft = initial + "x";
+  const matchesDraft = `editor.value === ${JSON.stringify(expectedDraft)} && editor.selectionStart === ${expectedDraft.length} && editor.selectionEnd === ${expectedDraft.length}`;
   options.window.webContents.sendInputEvent({ type: "keyDown", keyCode: "X" });
+  // Supply text explicitly for the pinned Chromium synthetic input path.
+  options.window.webContents.sendInputEvent({ type: "char", keyCode: "x" });
   options.window.webContents.sendInputEvent({ type: "keyUp", keyCode: "X" });
   await options.waitFor(
     () =>
       evaluate<boolean>(
-        "document.querySelector('.settings-config-file textarea').value.endsWith('x')",
+        `(() => { const editor = document.querySelector('.settings-config-file textarea'); return document.activeElement === editor && ${matchesDraft}; })()`,
       ),
     "graphical field received native input",
   );
@@ -90,7 +98,7 @@ export async function exerciseSettingsTabCapture(options: {
   await options.open();
   assert.equal(
     await evaluate<boolean>(
-      "globalThis.retainedSettingsEditor === document.querySelector('.settings-config-file textarea') && globalThis.retainedSettingsEditor.value.endsWith('x')",
+      `(() => { const editor = document.querySelector('.settings-config-file textarea'); return globalThis.retainedSettingsEditor === editor && ${matchesDraft}; })()`,
     ),
     true,
   );
