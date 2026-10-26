@@ -8,7 +8,11 @@ import type { SessionCallbacks } from "../../src/main/terminal-ipc-types";
 import { createElectronTerminalAdapter } from "../../src/renderer/electron-terminal-adapter";
 import type { TerminalBridge } from "../../src/shared/terminal-bridge";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
-import type { TerminalContextMenuClipboardAction } from "../../src/shared/terminal-contract";
+import type {
+  TerminalContextMenuClipboardAction,
+  TerminalExportContext,
+  TerminalExportSaveRequest,
+} from "../../src/shared/terminal-contract";
 import { translatorFor } from "../../src/shared/i18n";
 import {
   createIpcHarness,
@@ -17,6 +21,14 @@ import {
 import { createTabsHarness } from "../fixtures/terminal-tabs-harness";
 
 afterEach(() => vi.restoreAllMocks());
+
+const popupActions = [
+  ["Copy", "copy"],
+  ["Paste", "paste"],
+  ["Select All", "selectAll"],
+  ["Close Pane", "dispose"],
+  ["Export Terminal Content…", "exportText"],
+] as const;
 
 async function popupHarness(busy = false) {
   const ipc = createIpcHarness();
@@ -29,6 +41,17 @@ async function popupHarness(busy = false) {
   let menu: MenuItemConstructorOptions[] = [];
   let holdClipboard = false;
   const heldClipboard: unknown[] = [];
+  let holdExport = false;
+  const heldExports: TerminalExportContext[] = [];
+  const sentExports: TerminalExportContext[] = [];
+  const save = vi.fn(async (_request: TerminalExportSaveRequest) => {});
+  const saveIpc = vi.fn((request: TerminalExportSaveRequest) =>
+    ipc.handlers.get(terminalIpc.exportSave)!(owner, request),
+  );
+  const deliverExport = (context: TerminalExportContext) => {
+    const request = view.tabs.exportRequest(context, true);
+    if (request) void saveIpc(request);
+  };
   let removeWindow = () => {};
   const deliverClipboard = (payload: unknown) => {
     if (typeof payload === "string")
@@ -54,6 +77,12 @@ async function popupHarness(busy = false) {
         if (channel === terminalIpc.clipboardAction) {
           if (holdClipboard) heldClipboard.push(payload);
           else deliverClipboard(payload);
+        }
+        if (channel === terminalIpc.exportRequest) {
+          const context = payload as TerminalExportContext;
+          sentExports.push(context);
+          if (holdExport) heldExports.push(context);
+          else deliverExport(context);
         }
         if (channel === terminalIpc.exit) {
           const { sessionId, ...exit } = payload as {
@@ -103,6 +132,7 @@ async function popupHarness(busy = false) {
       if (ownedWindow === window) removeWindow = lifecycle.onWindowClosed;
       const controller = router.registerController({
         ...clipboardOptions(),
+        exportText: save,
         webContents: ownedWindow.webContents,
         createSession(callbacks) {
           sessions.push(callbacks);
@@ -144,6 +174,9 @@ async function popupHarness(busy = false) {
         target ? { action, target } : action,
       );
     },
+    sendExportRequest: (window, context) => {
+      window.webContents.send(terminalIpc.exportRequest, context);
+    },
     sendSnippetsToggle: vi.fn(),
     sendFind: vi.fn(),
     sendTabBarToggle: vi.fn(),
@@ -183,6 +216,9 @@ async function popupHarness(busy = false) {
   return {
     ...view,
     sessions,
+    save,
+    saveIpc,
+    sentExports,
     confirm,
     nativeClose,
     inspectBusy,
@@ -197,6 +233,13 @@ async function popupHarness(busy = false) {
       );
       return menu.map((item) => item.label).filter(Boolean);
     },
+    clickCurrent(label: string) {
+      menu.find((entry) => entry.label === label)!.click!(
+        {} as never,
+        undefined,
+        {} as never,
+      );
+    },
     holdClipboard: () => {
       holdClipboard = true;
     },
@@ -204,8 +247,18 @@ async function popupHarness(busy = false) {
       holdClipboard = false;
       for (const payload of heldClipboard.splice(0)) deliverClipboard(payload);
     },
-    open(index = 1) {
-      view.mountedSurfaceOptions[index]!.clipboard!.requestContextMenu();
+    holdExport: () => {
+      holdExport = true;
+    },
+    deliverExports() {
+      holdExport = false;
+      for (const context of heldExports.splice(0)) deliverExport(context);
+    },
+    open(index = 1, hasSelection = false) {
+      view.mountedSurfaceOptions[index]!.clipboard!.requestContextMenu({
+        target: "terminal",
+        hasSelection,
+      });
       const capturedMenu = menu;
       return (label: string) => {
         const item = capturedMenu.find((entry) => entry.label === label)!;
@@ -226,10 +279,145 @@ async function popupHarness(busy = false) {
   };
 }
 
+describe("export through the shared native popup and trusted save IPC", () => {
+  it.each([false, true])(
+    "snapshots the fixed kind and clicked target before request mutation (selection: %s)",
+    async (selection) => {
+      const view = await popupHarness();
+      try {
+        view.surfaces[0]!.exportText.mockReturnValue("clicked pane é 😀");
+        view.surfaces[1]!.exportText.mockReturnValue("other pane");
+        const activate = view.open(0, selection);
+        const label = selection
+          ? "Export Selection…"
+          : "Export Terminal Content…";
+        const offer = { sessionId: "s1", menuId: 1, hasSelection: selection };
+        const labels = view.requestMenu(offer);
+        expect(labels).toContain(label);
+        offer.sessionId = "s99";
+        offer.menuId = 99;
+        offer.hasSelection = !selection;
+        view.clickCurrent(label);
+        activate(label);
+        const kind = selection ? "selection" : "content";
+        expect(view.sentExports).toEqual([
+          { kind, target: { sessionId: "s1", menuId: 1 } },
+        ]);
+        expect(view.surfaces[0]!.exportText).toHaveBeenCalledExactlyOnceWith(
+          kind,
+        );
+        expect(view.surfaces[1]!.exportText).not.toHaveBeenCalled();
+        expect(view.saveIpc).toHaveBeenCalledExactlyOnceWith({
+          kind,
+          text: "clicked pane é 😀",
+        });
+        expect(view.save).toHaveBeenCalledExactlyOnceWith(
+          { kind, text: "clicked pane é 😀" },
+          expect.any(Function),
+        );
+      } finally {
+        view.dispose();
+      }
+    },
+  );
+
+  it.each([
+    "exit",
+    "fatal",
+    "selection",
+    "replacement popup",
+    "field",
+    "disposal",
+  ] as const)(
+    "rejects export delivery held in transport across %s",
+    async (change) => {
+      const view = await popupHarness();
+      try {
+        view.holdExport();
+        view.open()("Export Terminal Content…");
+        expect(view.sentExports).toEqual([
+          { kind: "content", target: { sessionId: "s2", menuId: 1 } },
+        ]);
+        if (change === "exit")
+          view.sessions[1]!.onExit({ exitCode: 0, signal: 0 });
+        else if (change === "fatal")
+          view.mountedSurfaceOptions[1]!.onFatalError!({
+            kind: "backend-loss",
+          });
+        else if (change === "selection") {
+          view.tabs.handleCommand({ action: "focus-pane", target: "previous" });
+          view.tabs.handleCommand({ action: "focus-pane", target: "next" });
+        } else if (change === "replacement popup") view.open();
+        else if (change === "field")
+          view.mountedSurfaceOptions[1]!.clipboard!.requestContextMenu({
+            target: "field",
+          });
+        else view.tabs.dispose();
+        view.deliverExports();
+        expect(view.saveIpc).not.toHaveBeenCalled();
+        expect(view.save).not.toHaveBeenCalled();
+        for (const surface of view.surfaces)
+          expect(surface.exportText).not.toHaveBeenCalled();
+      } finally {
+        view.dispose();
+      }
+    },
+  );
+
+  it("a stale native export callback leaves the replacement popup claim intact", async () => {
+    const view = await popupHarness();
+    try {
+      const old = view.open(0, false);
+      const current = view.open(0, true);
+      old("Export Terminal Content…");
+      expect(view.sentExports).toEqual([]);
+      current("Export Selection…");
+      expect(view.sentExports).toEqual([
+        { kind: "selection", target: { sessionId: "s1", menuId: 2 } },
+      ]);
+      expect(view.saveIpc).toHaveBeenCalledExactlyOnceWith({
+        kind: "selection",
+        text: "",
+      });
+    } finally {
+      view.dispose();
+    }
+  });
+
+  it.each(popupActions)(
+    "%s consumes the same main claim as export and all other popup actions",
+    async (first) => {
+      const view = await popupHarness();
+      try {
+        const activate = view.open();
+        activate(first);
+        for (const [label] of popupActions) activate(label);
+        expect(view.sentExports).toHaveLength(
+          first === "Export Terminal Content…" ? 1 : 0,
+        );
+        expect(view.saveIpc).toHaveBeenCalledTimes(
+          first === "Export Terminal Content…" ? 1 : 0,
+        );
+        for (const [label, operation] of popupActions)
+          expect(view.surfaces[1]![operation]).toHaveBeenCalledTimes(
+            first === label ? 1 : 0,
+          );
+      } finally {
+        view.dispose();
+      }
+    },
+  );
+});
+
 describe("retained terminal context menu callbacks", () => {
   it("retains main-frame validation and refuses unknown/dead session targets", async () => {
     const view = await popupHarness();
-    const offer = { sessionId: "s2", menuId: 1, closePane: true };
+    const offer = {
+      sessionId: "s2",
+      menuId: 1,
+      hasSelection: false,
+      closePane: true,
+    };
     expect(view.requestMenu(offer, {})).toEqual([]);
     expect(view.requestMenu({ ...offer, sessionId: "s99" })).toEqual([]);
     view.sessions[1]!.onExit({ exitCode: 0, signal: 9 });
@@ -244,12 +432,7 @@ describe("retained terminal context menu callbacks", () => {
     view.dispose();
   });
 
-  it.each([
-    ["Copy", "copy"],
-    ["Paste", "paste"],
-    ["Select All", "selectAll"],
-    ["Close Pane", "dispose"],
-  ] as const)(
+  it.each(popupActions)(
     "delivers %s only to the clicked live pane, once",
     async (label, operation) => {
       const view = await popupHarness();
@@ -300,14 +483,23 @@ describe("retained terminal context menu callbacks", () => {
         surface.dispose.mockClear();
       }
       view.inspectBusy.mockClear();
-      for (const action of ["Copy", "Paste", "Select All", "Close Pane"])
+      for (const action of [
+        "Export Terminal Content…",
+        "Copy",
+        "Paste",
+        "Select All",
+        "Close Pane",
+      ])
         activate(action);
       for (const surface of view.surfaces) {
         expect(surface.copy).not.toHaveBeenCalled();
         expect(surface.paste).not.toHaveBeenCalled();
         expect(surface.selectAll).not.toHaveBeenCalled();
         expect(surface.dispose).not.toHaveBeenCalled();
+        expect(surface.exportText).not.toHaveBeenCalled();
       }
+      expect(view.saveIpc).not.toHaveBeenCalled();
+      expect(view.save).not.toHaveBeenCalled();
       expect(view.otherWindow.webContents.send).not.toHaveBeenCalled();
       expect(view.inspectBusy).not.toHaveBeenCalled();
       expect(view.confirm).not.toHaveBeenCalled();
@@ -344,7 +536,11 @@ describe("retained terminal context menu callbacks", () => {
           resolve = done;
         }),
     );
-    view.open()("Close Pane");
+    const activate = view.open();
+    activate("Close Pane");
+    activate("Export Terminal Content…");
+    expect(view.sentExports).toEqual([]);
+    expect(view.saveIpc).not.toHaveBeenCalled();
     const shared = view.application.closeSelectedTab();
     view.tabs.handleCommand({ action: "focus-pane", target: "previous" });
     expect(view.confirm).toHaveBeenCalledOnce();

@@ -8,7 +8,6 @@ import type { AboutBridge } from "../shared/about";
 import type { TerminalSessionAdapter } from "../terminal-surface/terminal-session-adapter";
 import {
   mountTerminalSurface,
-  type TerminalClipboard,
   type TerminalSurface,
   type TerminalSurfaceConfiguration,
   type TerminalSurfaceOptions,
@@ -26,7 +25,9 @@ import {
   createTerminalTabs,
   TERMINAL_TAB_DRAG_DATA_TYPE,
   type TerminalTabs,
+  type TerminalTabsOptions,
 } from "./terminal-tabs";
+import type { TerminalHostClipboard } from "./terminal-pane-context-menu";
 import { mountSnippetsPanel } from "./snippets-host";
 import type { SnippetPreview } from "./snippet-preview";
 import type { AuxiliaryPanel } from "./auxiliary-panel";
@@ -78,7 +79,7 @@ interface TerminalWindowPageOptions extends TerminalWindowActionSubscriptions {
   ) => () => void;
   readonly userFileErrorBanner?: HTMLElement;
   readonly surfaceFailureBanner?: HTMLElement;
-  readonly clipboard?: TerminalClipboard;
+  readonly clipboard?: TerminalHostClipboard;
   readonly droppedFilePathInsertion?: (files: readonly File[]) => string;
   readonly subscribeToTabCommands?: (
     listener: (command: TerminalTabCommand) => void,
@@ -119,7 +120,6 @@ export function mountTerminalWindowPage(
   options: TerminalWindowPageOptions,
 ): TerminalWindowPageHost {
   const page = options.page ?? window;
-  const mount = options.mount ?? mountTerminalSurface;
   let disposed = false;
   let removeConfigurationUpdateListener: (() => void) | undefined;
   let removeTabCommandListener: (() => void) | undefined;
@@ -148,13 +148,11 @@ export function mountTerminalWindowPage(
     ? surfaceConfiguration(options.configuration)
     : undefined;
 
-  const applyPageTheme = (theme: TerminalTheme, transparency: number) =>
-    applyWindowTheme(
-      page.document,
-      elements.tabsContainer,
-      theme,
-      transparency,
-    );
+  const applyPageTheme = applyWindowTheme.bind(
+    null,
+    page.document,
+    elements.tabsContainer,
+  );
 
   if (options.configuration) {
     page.document.documentElement.style.setProperty(
@@ -174,7 +172,7 @@ export function mountTerminalWindowPage(
     language,
     options,
   );
-  const surfaceOptions: TerminalSurfaceOptions = {
+  const surfaceOptions: TerminalTabsOptions["surfaceOptions"] = {
     ...activeSurfaceConfiguration,
     background: "host",
     focus: false,
@@ -211,7 +209,7 @@ export function mountTerminalWindowPage(
       canFocus: () => !disposed && !previewActive(),
       canAutoFocus: (unchangedFocus) =>
         !previewActive() && (unchangedFocus || !auxiliaryPanel?.ownsFocus()),
-      mount,
+      mount: options.mount ?? mountTerminalSurface,
       surfaceOptions,
       showTabBar: options.configuration?.showTabBar ?? true,
       ...(options.notifyTabsEmpty
@@ -228,6 +226,7 @@ export function mountTerminalWindowPage(
     },
   );
 
+  const fieldClipboard = tabs.fieldClipboard(options.clipboard);
   const onPageFocus = () => {
     if (!previewActive() && !auxiliaryPanel?.ownsFocus()) tabs.focusSelected();
   };
@@ -348,7 +347,7 @@ export function mountTerminalWindowPage(
         options,
         tabs,
         previewActive,
-        (action) => dialogs?.editClipboard(action, options.clipboard),
+        (action) => dialogs?.editClipboard(action, fieldClipboard),
         (action) => auxiliaryPanel?.clipboardAction(action) ?? false,
       );
       removeTabCommandListener = options.subscribeToTabCommands?.((command) => {
@@ -361,7 +360,7 @@ export function mountTerminalWindowPage(
         const { panel, preview } = mountSnippetsPanel(page.document, snippets, {
           tabs,
           language,
-          clipboard: options.clipboard,
+          clipboard: fieldClipboard,
           blocked: previewActive,
           onPreviewActivity: onOverlayActivity,
         });

@@ -10,6 +10,7 @@ import { backgroundCorrections } from "./restty-background-corrections.mjs";
 import { blinkCorrections } from "./restty-blink-corrections.mjs";
 import { wideWrapLinkCorrections } from "./restty-wide-wrap-corrections.mjs";
 import { cprCorrections } from "./restty-cpr-corrections.mjs";
+import { bufferTextCorrections } from "./restty-buffer-text-corrections.mjs";
 import {
   softWrapSpaceCorrections,
   visiblePathBoundaryCorrections,
@@ -128,8 +129,14 @@ const priorWideWrapLinkDigest =
   "8ebccc2aa81d37266bbf4642e3e07e8c0b17e39935a97d8c3703eb9ac5e72649";
 const priorCprDigest =
   "3c4dc8554c8ccc91f0b34ebea8a5638fe6592c1a973acc0a64dafcb33ab8387e";
-const correctedDigest =
+const priorBufferTextDigest =
   "f15c6c25cb2efb879b5a00b09640fcdb2d364c8d566237ff5d0ae63975bb3e44";
+const maintainerExportDigest =
+  "3b1076d32880f0f28b8cbb465687825c4bb980d34d1af67862e23b5eda2871e3";
+const contributorExportDigest =
+  "c55a8f4068e18131a3be762e49b8015a62d8fa4bf8b852edf60f5e85f0cb3380";
+const correctedDigest =
+  "f4adfe4712a8edda01733f712318c39fb56574c16340f2960a4538802fe92d7b";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -1850,8 +1857,14 @@ export async function prepareResttyRuntime(options = {}) {
   const sourceDigest = digest(source);
   if (sourceDigest !== correctedDigest) {
     // Intentional fallthrough: each reviewed input enters one ordered suffix.
-    // Historical alternatives are handled at their stage, never in a second tail.
+    // Export branch tips already contain buffer-text: apply only their missing
+    // wide-wrap/CPR corrections, then skip the canonical buffer-text suffix.
     switch (sourceDigest) {
+      case maintainerExportDigest:
+        source = applyCorrections(source, wideWrapLinkCorrections);
+      case contributorExportDigest:
+        source = applyCorrections(source, cprCorrections);
+        break;
       case originalDigest:
         source = applyCorrections(source, securityCorrections);
       case priorCorrectedDigest:
@@ -1965,6 +1978,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, wideWrapLinkCorrections);
       case priorCprDigest:
         source = applyCorrections(source, cprCorrections);
+      case priorBufferTextDigest:
+        source = applyCorrections(source, bufferTextCorrections);
         break;
       default:
         throw new Error(

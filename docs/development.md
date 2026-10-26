@@ -144,6 +144,12 @@ Do not infer full-suite execution coverage from aggregate counters or empty pass
 - Known runtime limitations that tests account for are listed in the [Restty guide](restty-development.md#current-runtime-limitations).
 - Linux runs that include `terminal-popup-native` (including the full suite) need the explicitly provisioned native-input lane described below. Set `OMXTERM_TEST_PROVISIONED_NATIVE_INPUT=1` only after provisioning it. Missing prerequisites fail; they are not skipped as successful qualification.
 
+#### Native dialog boundaries
+
+Test OMXTerm's native-dialog boundary: payload validation, API arguments, requesting-owner lifetime, cancellation and error results, and file contents. For terminal export, combine focused automated checks with a representative manual native-chooser smoke using synthetic text: save a new file, cancel, accept overwrite, and refuse overwrite; verify saved UTF-8 bytes and that cancelled/refused actions leave existing files unchanged.
+
+Exhaustive automation of OS-owned chooser widgets on every platform is not a routine delivery prerequisite. Expand native coverage for a demonstrated platform-specific product risk, and record what was actually exercised. Missing widget automation is an evidence limitation, not a product failure; actual crashes, failed assertions, privacy/ownership defects, and separately required packaging or release checks remain blockers.
+
 ### Focused checks
 
 While iterating on a specific subsystem, you can run targeted test files before running the full suite:

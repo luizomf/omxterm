@@ -167,10 +167,14 @@ describe("Restty actual-core cursor position reports", () => {
 
   it("rejects the old interception with the same coordinate oracle", async () => {
     const lines = preparedCprRuntime().split("\n");
-    const prior = history[0]!;
-    expect(prior.name).toBe("priorCprDigest");
-    for (const edit of prior.edits)
-      lines.splice(edit.start, edit.deleteCount, ...edit.lines);
+    // Reverse each fixed delta in order: export prepends a state above CPR.
+    const priorIndex = history.findIndex(
+      (entry) => entry.name === "priorCprDigest",
+    );
+    expect(priorIndex).toBeGreaterThanOrEqual(0);
+    for (const prior of history.slice(0, priorIndex + 1))
+      for (const edit of prior.edits)
+        lines.splice(edit.start, edit.deleteCount, ...edit.lines);
     const baseline = lines.join("\n");
     expect(createHash("sha256").update(baseline).digest("hex")).toBe(
       "3c4dc8554c8ccc91f0b34ebea8a5638fe6592c1a973acc0a64dafcb33ab8387e",

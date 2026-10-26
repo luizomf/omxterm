@@ -1,4 +1,5 @@
 import type { MenuItemConstructorOptions } from "electron";
+import type { TerminalExportKind } from "../shared/terminal-contract";
 import {
   DEFAULT_LANGUAGE,
   translatorFor,
@@ -334,6 +335,10 @@ export function terminalClipboardContextMenuTemplate(
     readonly copy: () => void;
     readonly paste: () => void;
     readonly selectAll: () => void;
+    readonly exportText?: {
+      readonly kind: TerminalExportKind;
+      readonly click: () => void;
+    };
     // Present only for a split pane; shows the current closePane keybind.
     readonly closePane?: {
       readonly click: () => void;
@@ -347,6 +352,19 @@ export function terminalClipboardContextMenuTemplate(
     { label: t("menu.paste"), click: actions.paste },
     { type: "separator" },
     { label: t("menu.selectAll"), click: actions.selectAll },
+    ...(actions.exportText
+      ? [
+          { type: "separator" as const },
+          {
+            label: t(
+              actions.exportText.kind === "selection"
+                ? "menu.exportSelection"
+                : "menu.exportContent",
+            ),
+            click: actions.exportText.click,
+          },
+        ]
+      : []),
     ...(actions.closePane
       ? ([
           { type: "separator" },

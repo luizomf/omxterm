@@ -12,6 +12,8 @@ export interface TerminalWindowActionSubscriptions {
   readonly subscribeToClipboardActions?: TerminalBridge["onClipboardAction"];
   readonly subscribeToTabBarToggle?: (listener: () => void) => () => void;
   readonly subscribeToFind?: (listener: () => void) => () => void;
+  readonly subscribeToExportRequests?: TerminalBridge["onExportRequest"];
+  readonly saveTerminalExport?: TerminalBridge["saveTerminalExport"];
 }
 
 // Terminal-directed actions are ignored while a preview or About owns input.
@@ -31,7 +33,8 @@ export function subscribeToGuardedActions(
       options.subscribeToClipboardActions?.((action, target) => {
         // A terminal popup never migrates into panel or modal editing.
         if (target) {
-          if (!blocked()) tabs.clipboardAction(action, target);
+          // The shared resolver consumes even a currently blocked interaction.
+          tabs.clipboardAction(action, target);
         } else if (blocked()) editBlocked(action);
         else if (!panelClipboard(action)) tabs.clipboardAction(action);
       }),
@@ -42,6 +45,12 @@ export function subscribeToGuardedActions(
     () =>
       options.subscribeToFind?.(() => {
         if (!blocked()) tabs.find();
+      }),
+    () =>
+      options.subscribeToExportRequests?.((context) => {
+        // Consume first, even when blocked. Snapshot once before any async save.
+        const request = tabs.exportRequest(context, !blocked());
+        if (request) void options.saveTerminalExport?.(request).catch(() => {});
       }),
   ];
   const removals: Array<(() => void) | undefined> = [];
