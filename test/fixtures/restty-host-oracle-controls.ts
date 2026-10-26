@@ -29,9 +29,10 @@ export function createHostOracleSourceControl(arguments_: readonly string[]) {
           combined.slice(at + needle.length)
         );
       }
-      const deliver = Math.max(0, combined.length - needle.length + 1);
-      tail = combined.slice(deliver);
-      return combined.slice(0, deliver);
+      let keep = Math.min(combined.length, needle.length - 1);
+      while (keep > 0 && !needle.startsWith(combined.slice(-keep))) keep--;
+      tail = keep ? combined.slice(-keep) : "";
+      return combined.slice(0, combined.length - keep);
     },
     evidence: () => ({
       reorder,

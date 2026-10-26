@@ -642,6 +642,16 @@ producer/session/harness controls:
 `npm test -- test/unit/restty-output-checkpoint.test.ts test/unit/restty-output-refit.test.ts test/unit/restty-host-output-phases.test.ts`.
 They do not qualify native continuation or Windows transport.
 
+The source-side reorder/omission controls retain only the longest suffix that
+could still begin their exact mutation needle. Unrelated protocol/prompt output
+is released immediately, with no timer or assumed later read. Raw source
+observation precedes the single targeted mutation. Reorder preserves byte length
+and must fail actual destination order at record 100; omission must first prove
+fresh raw execution (not command echo), then fail response presence in that same
+surviving core. Original-source ACK semantics and diagnostic deadlines are
+unchanged; omission never synthesizes ACKs for removed bytes. These fixture
+corrections do not establish the cause of historical native control timeouts.
+
 ### Host/oracle phase receipts
 
 The shared Restty host fixture emits `__OMXTERM_RESTTY_HOST_PHASE__` JSON lines

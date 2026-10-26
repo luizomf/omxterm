@@ -1,6 +1,8 @@
 import { createHeadlessTerminal } from "restty/headless";
 import { createInputHandler } from "restty/internal";
 import { expect, it } from "vitest";
+import { createHostOracleSourceControl } from "../fixtures/restty-host-oracle-controls";
+import { siblingResponseToken } from "../fixtures/restty-sibling-response";
 import {
   assertOutputCheckpoint,
   outputCheckpointText,
@@ -9,18 +11,80 @@ import {
   outputCheckpointMarker,
 } from "../fixtures/restty-output-checkpoint";
 
-it("rejects reordered destination records despite valid source and END in the actual core", async () => {
+it.each(["--reorder-output", "--omit-sibling-response"])(
+  "releases unrelated protocol and prompt output immediately for %s without a future read",
+  (flag) => {
+    const control = createHostOracleSourceControl([flag]);
+    const text = "\u001b[6n\u001b[c\u001b[?25hPS> ready ";
+    expect(control.transform(0, text)).toBe(text);
+    expect(control.evidence()).toMatchObject({
+      applied: false,
+      retainedCodeUnits: 0,
+    });
+  },
+);
+
+it("mutates once across every split, releasing mismatches and preserving overlapping prefixes and other sessions", () => {
+  for (const omit of [false, true]) {
+    const args = [omit ? "--omit-sibling-response" : "--reorder-output"];
+    const needle = omit
+      ? siblingResponseToken
+      : outputRecord(100) + outputRecord(101);
+    const replacement = omit ? "" : outputRecord(101) + outputRecord(100);
+    for (let split = 0; split <= needle.length; split++) {
+      const control = createHostOracleSourceControl(args);
+      const before = control.transform(0, "prompt> " + needle.slice(0, split));
+      if (split < needle.length) {
+        expect(before).toBe("prompt> ");
+        expect(control.evidence().retainedCodeUnits).toBe(split);
+      }
+      const after = control.transform(0, needle.slice(split) + "!" + needle);
+      expect(before + after).toBe("prompt> " + replacement + "!" + needle);
+      expect(control.evidence()).toMatchObject({
+        applied: true,
+        retainedCodeUnits: 0,
+      });
+      expect(control.transform(0, needle)).toBe(needle);
+    }
+    const control = createHostOracleSourceControl(args);
+    expect(control.transform(1, needle)).toBe(needle);
+    const partial = needle.slice(0, 5);
+    expect(control.transform(0, partial)).toBe("");
+    expect(control.transform(1, "other output")).toBe("other output");
+    expect(control.transform(0, "!" + needle.slice(0, 3))).toBe(partial + "!");
+    expect(control.evidence().retainedCodeUnits).toBe(3);
+    expect(control.transform(0, needle.slice(3) + "tail")).toBe(
+      replacement + "tail",
+    );
+    expect(createHostOracleSourceControl([]).transform(0, needle)).toBe(needle);
+  }
+});
+
+it("rejects source-control reorder at record 100 despite valid raw source and END in the actual core", async () => {
   const core = await createHeadlessTerminal({
     cols: 20,
     rows: 24,
     replay: false,
   });
   const filter = createInputHandler({ sendReply() {} });
-  const source = outputCheckpointText(7);
-  const destination = source.replace(
-    outputRecord(28_772) + outputRecord(28_773),
-    outputRecord(28_773) + outputRecord(28_772),
-  );
+  const source = outputCheckpointText(0);
+  const observer = createOutputSourceObserver(1);
+  const control = createHostOracleSourceControl(["--reorder-output"]);
+  let destination = "";
+  for (let at = 0; at < source.length; at += 17) {
+    const chunk = source.slice(at, at + 17);
+    observer.observe(chunk); // Same raw-before-mutation ordering as the host.
+    destination += control.transform(0, chunk);
+  }
+  expect(observer.finalize()).toMatchObject({
+    endSeen: true,
+    framedBytes: 131_122,
+  });
+  expect(Buffer.byteLength(destination)).toBe(observer.evidence().bytes);
+  expect(control.evidence()).toMatchObject({
+    applied: true,
+    retainedCodeUnits: 0,
+  });
   try {
     for (let offset = 0; offset < destination.length; offset += 8_192)
       core.write(
@@ -36,10 +100,10 @@ it("rejects reordered destination records despite valid source and END in the ac
       total - scroll - 1,
       19,
     );
-    expect(() => assertOutputCheckpoint(source, 7)).not.toThrow();
-    expect(copied).toContain("__OMXTERM_BATCH_07_END__");
-    expect(() => assertOutputCheckpoint(copied, 7)).toThrow(
-      /destination checkpoint 7 order at 28772/iu,
+    expect(() => assertOutputCheckpoint(source, 0)).not.toThrow();
+    expect(copied).toContain("__OMXTERM_BATCH_00_END__");
+    expect(() => assertOutputCheckpoint(copied, 0)).toThrow(
+      /destination checkpoint 0 order at 100/iu,
     );
   } finally {
     core.dispose();

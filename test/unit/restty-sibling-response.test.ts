@@ -4,6 +4,7 @@ import { createHeadlessTerminal } from "restty/headless";
 import { createInputHandler } from "restty/internal";
 import { expect, it, vi } from "vitest";
 import { snapshotLocalImageCoreCells } from "../fixtures/restty-local-image-core-probe";
+import { createHostOracleSourceControl } from "../fixtures/restty-host-oracle-controls";
 import {
   hasSiblingResponse,
   siblingResponseCommand,
@@ -38,22 +39,48 @@ async function observeOnce(
   if (!(await predicate())) throw new Error(`Timed out waiting for ${label}`);
 }
 
-it("rejects destination echo even when the sibling source executed successfully", async () => {
+it("rejects actual source-control omission only after raw execution, not split echo, in the same surviving core", async () => {
   const core = await createHeadlessTerminal({
     cols: 80,
     rows: 24,
     replay: false,
   });
   const input = createInputHandler({ sendReply() {} });
-  const echo = `$ ${siblingResponseCommand("linux")}\r\n`;
+  const echo = `PS> ${siblingResponseCommand("win32")}\r\n`;
+  const control = createHostOracleSourceControl(["--omit-sibling-response"]);
+  const handle = core.handle;
+  let source = "";
+  let rawExecutedBeforeMutation = false;
+  const deliver = (text: string) => {
+    source += text; // Raw observer runs first in restty-host-main too.
+    rawExecutedBeforeMutation ||=
+      hasSiblingResponse(source) && !control.evidence().applied;
+    core.write(input.filterOutput(control.transform(0, text)));
+  };
   try {
-    // Source response is observed first, then suppressed only on delivery.
-    // Echo still traverses the actual OutputFilter and actual Ghostty core.
-    core.write(input.filterOutput(echo));
-    const source = `${echo}__UNAFFECTED_AFTER_BACKEND_LOSS__\r\n`;
-    expect(hasSiblingResponse(source)).toBe(true);
+    for (const character of echo) deliver(character);
+    expect(hasSiblingResponse(source)).toBe(false);
+    expect(control.evidence().applied).toBe(false);
+    await expect(
+      waitForSiblingResponse({
+        sourceOutput: () => source,
+        destinationText: () =>
+          snapshotLocalImageCoreCells(core.wasm, core.handle)!.text,
+        waitFor: observeOnce,
+      }),
+    ).rejects.toThrow("sibling source executed response after backend loss");
+    for (const character of "before\r\n__UNAFFECTED_AFTER_BACKEND_LOSS__\r\nafter")
+      deliver(character);
+    expect(rawExecutedBeforeMutation).toBe(true);
+    expect(control.evidence()).toMatchObject({
+      applied: true,
+      retainedCodeUnits: 0,
+    });
+    expect(core.handle).toBe(handle);
     const cells = snapshotLocalImageCoreCells(core.wasm, core.handle)!;
-    expect(cells.text).toContain("printf");
+    expect(cells.text).toContain("Write-Output");
+    expect(cells.text).toContain("before");
+    expect(cells.text).toContain("after");
     expect(hasSiblingResponse(cells.text)).toBe(false);
     await expect(
       waitForSiblingResponse({
