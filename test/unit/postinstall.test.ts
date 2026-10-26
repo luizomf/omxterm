@@ -202,22 +202,34 @@ describe("node-pty postinstall preparation", () => {
     const root = await mkdtemp(path.join(tmpdir(), "omxterm-node-pty-drift-"));
     try {
       const runtimePath = path.join(root, "unixTerminal.js");
-      const installed = await readFile(installedUnixRuntime, "utf8");
-      const partial = installed.replace(
+      const terminalRuntimePath = path.join(root, "terminal.js");
+      await copyFile(installedUnixRuntime, runtimePath);
+      await copyFile(
+        path.join(path.dirname(installedUnixRuntime), "terminal.js"),
+        terminalRuntimePath,
+      );
+      const options = {
+        platform: "darwin",
+        arch: "x64",
+        unixRuntimePath: runtimePath,
+        terminalRuntimePath,
+        rebuild: vi.fn(),
+        chmod: vi.fn(),
+      };
+      // Windows installs leave Unix source upstream; prepare only these copies
+      // before removing one forwarding change to create a genuine partial patch.
+      await expect(prepareNodePtyRuntime(options)).resolves.toBe("corrected");
+      const prepared = await readFile(runtimePath, "utf8");
+      const partial = prepared.replace(
         "var onexit = function (code, signal, execFailed)",
         "var onexit = function (code, signal)",
       );
+      expect(partial).not.toBe(prepared);
       for (const unknown of ["unreviewed runtime\n", partial]) {
         await writeFile(runtimePath, unknown);
-        await expect(
-          prepareNodePtyRuntime({
-            platform: "darwin",
-            arch: "x64",
-            unixRuntimePath: runtimePath,
-            rebuild: vi.fn(),
-            chmod: vi.fn(),
-          }),
-        ).rejects.toThrow("Unrecognized node-pty Unix runtime");
+        await expect(prepareNodePtyRuntime(options)).rejects.toThrow(
+          "Unrecognized node-pty Unix runtime",
+        );
         expect(await readFile(runtimePath, "utf8")).toBe(unknown);
       }
     } finally {
