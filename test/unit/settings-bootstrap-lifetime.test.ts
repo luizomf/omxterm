@@ -11,9 +11,20 @@ import { expect, it, vi } from "vitest";
 import { base, deferred } from "../fixtures/settings-dialog-dom";
 import { clipboardOptions } from "../fixtures/terminal-ipc-harness";
 
+const compositionPath = /[\\/]src[\\/]renderer[\\/]start-terminal-window\.ts$/;
+
 it.each([false, true])(
   "keeps the actual bootstrap's graphical survivor after first-mount rejection (dispose control=%s)",
   async (oldDispose) => {
+    for (const file of [
+      "C:/synthetic/src/renderer/start-terminal-window.ts",
+      "C:\\synthetic\\src\\renderer\\start-terminal-window.ts",
+    ])
+      expect(compositionPath.test(file)).toBe(true);
+    expect(compositionPath.test("C:/synthetic/src/renderer/index.ts")).toBe(
+      false,
+    );
+    const hits = { gpu: 0, disposal: 0 };
     const bundle = await build({
       entryPoints: ["src/renderer/index.ts"],
       bundle: true,
@@ -26,10 +37,13 @@ it.each([false, true])(
         {
           name: "headless-gpu-seam",
           setup(builder) {
-            builder.onResolve({ filter: /restty-terminal-surface$/ }, (args) =>
-              args.importer.endsWith("/src/renderer/start-terminal-window.ts")
-                ? { path: "held-surface", namespace: "headless" }
-                : undefined,
+            builder.onResolve(
+              { filter: /restty-terminal-surface$/ },
+              (args) => {
+                if (!compositionPath.test(args.importer)) return;
+                hits.gpu += 1;
+                return { path: "held-surface", namespace: "headless" };
+              },
             );
             builder.onLoad({ filter: /.*/, namespace: "headless" }, () => ({
               loader: "js",
@@ -37,24 +51,25 @@ it.each([false, true])(
                 "export function mountResttyTerminalSurface() { return globalThis.heldSurface; }",
             }));
             if (oldDispose)
-              builder.onLoad(
-                { filter: /src\/renderer\/start-terminal-window\.ts$/ },
-                async (args) => {
-                  const source = await readFile(args.path, "utf8");
-                  expect(source).toContain("void host.ready.catch(() => {});");
-                  return {
-                    loader: "ts",
-                    contents: source.replace(
-                      "void host.ready.catch(() => {});",
-                      "void host.ready.catch(() => host.dispose());",
-                    ),
-                  };
-                },
-              );
+              builder.onLoad({ filter: compositionPath }, async (args) => {
+                const source = await readFile(args.path, "utf8");
+                expect(
+                  source.split("void host.ready.catch(() => {});"),
+                ).toHaveLength(2);
+                hits.disposal += 1;
+                return {
+                  loader: "ts",
+                  contents: source.replace(
+                    "void host.ready.catch(() => {});",
+                    "void host.ready.catch(() => host.dispose());",
+                  ),
+                };
+              });
           },
         },
       ],
     });
+    expect(hits).toEqual({ gpu: 1, disposal: oldDispose ? 1 : 0 });
     const dom = new JSDOM(
       '<nav id="tab-strip"></nav><main id="terminal-tabs"></main><aside id="snippets-sidebar" hidden></aside><div id="user-file-errors" hidden></div><div id="terminal-surface-failure" hidden></div>',
       { runScripts: "outside-only" },
