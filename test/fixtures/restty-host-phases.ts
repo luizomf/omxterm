@@ -54,7 +54,7 @@ const progressPhases = [
 
 export function recordOutputRefitProgress(
   phase: (typeof progressPhases)[number],
-  progress: OutputRefitProgress,
+  progress: OutputRefitProgress | undefined,
   prefix?: {
     readonly baselineBytes: number;
     readonly prefixUnits: number;
@@ -64,13 +64,21 @@ export function recordOutputRefitProgress(
 ): void {
   try {
     if (!progressPhases.includes(phase)) return;
+    // A failure can precede the exercise's flow reader. Report the event now,
+    // without pretending that later metrics describe its original boundary.
+    if (!progress && (phase !== "resize-failure" || !resizeFailure || prefix))
+      return;
     const values = {
-      sourceBytes: progress.sourceBytes,
-      checkpoints: progress.checkpoints,
-      cumulativeAck: progress.cumulativeAck,
-      pendingBytes: progress.pendingBytes,
-      pauseCount: progress.pauseCount,
-      resumeCount: progress.resumeCount,
+      ...(progress
+        ? {
+            sourceBytes: progress.sourceBytes,
+            checkpoints: progress.checkpoints,
+            cumulativeAck: progress.cumulativeAck,
+            pendingBytes: progress.pendingBytes,
+            pauseCount: progress.pauseCount,
+            resumeCount: progress.resumeCount,
+          }
+        : {}),
       ...(prefix
         ? {
             baselineBytes: prefix.baselineBytes,
@@ -92,7 +100,7 @@ export function recordOutputRefitProgress(
       return;
     writeSync(
       1,
-      `__OMXTERM_OUTPUT_REFIT_PROGRESS__${JSON.stringify({ version: 1, phase, ...values, ...(resizeFailure ? { resizeFailure } : {}), at: Date.now(), monotonicMs: performance.now() })}\n`,
+      `__OMXTERM_OUTPUT_REFIT_PROGRESS__${JSON.stringify({ version: 1, phase, ...values, ...(!progress ? { progress: "unavailable" } : {}), ...(resizeFailure ? { resizeFailure } : {}), at: Date.now(), monotonicMs: performance.now() })}\n`,
     );
   } catch {
     // Diagnostics cannot throw through output/resize/lifecycle listeners.

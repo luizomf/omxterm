@@ -45,6 +45,8 @@ it("bounds refit progress to fixed numeric metadata and never substitutes diagno
     privatePayload: "never publish",
   };
   recordOutputRefitProgress("private text" as never, progress);
+  recordOutputRefitProgress("continuation-output", undefined);
+  recordOutputRefitProgress("resize-failure", undefined);
   recordOutputRefitProgress("continuation-output", {
     ...progress,
     pendingBytes: NaN,

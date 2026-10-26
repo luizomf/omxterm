@@ -109,6 +109,9 @@ export function createOutputStressHarness({
   let resizeArmed = false,
     resizeEntered = false;
   let resizeFailure: "closed-pty" | "native-failure" | undefined;
+  const assertNoResizeFailure = () => {
+    if (resizeFailure) throw new Error("Output refit native resize failed");
+  };
   const trace = (
     status:
       | "continuation-returned"
@@ -117,17 +120,14 @@ export function createOutputStressHarness({
       | "resize-failure",
     reason?: typeof resizeFailure,
   ) => {
+    let progress: OutputRefitProgress | undefined;
     try {
-      if (readRefitProgress)
-        recordOutputRefitProgress(
-          status,
-          readRefitProgress(),
-          undefined,
-          reason,
-        );
+      progress = readRefitProgress?.();
     } catch {
-      /* Never throw through a lifecycle/output observer. */
+      /* A snapshot failure cannot hide the fixed resize-failure event. */
     }
+    if (progress || status === "resize-failure")
+      recordOutputRefitProgress(status, progress, undefined, reason);
   };
   const continuationFailure = () => {
     if (controlledRefit && continuationStarted && !continuationFailed) {
@@ -351,8 +351,7 @@ export function createOutputStressHarness({
       try {
         if (refit) {
           prefixAcknowledgement = await refit.refit();
-          if (resizeFailure)
-            throw new Error("Output refit native resize failed");
+          assertNoResizeFailure();
           phase("refit-continuation-write", "begin");
           continuationStarted = true;
           terminal.write("r");
@@ -394,6 +393,9 @@ export function createOutputStressHarness({
           phase("refit-cleanup", "complete");
         }
       }
+      // Outside finally: a secondary contained resize failure must not replace
+      // an earlier source/copy/write failure, and restoration still runs.
+      assertNoResizeFailure();
       settledFlow(terminal);
       phase("output-memory", "begin");
       const rendererHeapUsedBytes = (await window.webContents.executeJavaScript(
@@ -418,6 +420,9 @@ export function createOutputStressHarness({
       // Exit can add transport envelope. Neither the pre-x snapshot nor the
       // wrapper's requested ACK counter proves actual retirement of those bytes.
       const flow = settledFlow(terminal);
+      // The memory query and actual exit wait above are asynchronous. Keep the
+      // final success decision synchronous with the last latch check.
+      assertNoResizeFailure();
       return {
         source: finalSource,
         destination: {

@@ -679,13 +679,20 @@ original-ACK and copied-destination checkpoints, memory query and exit. Refit
 receipts cover calibration/restoration, baseline/prefix ACK, native grid and
 cleanup. The existing controlled-refit case adds a single entered/returned pair
 around its refit resize call and continuation write. Its synchronous
-`__OMXTERM_OUTPUT_REFIT_PROGRESS__` receipts carry only fixed phases and numeric
+`__OMXTERM_OUTPUT_REFIT_PROGRESS__` receipts use fixed vocabulary and numeric
 source/checkpoint/original-ACK/pending/pause/resume metadata: immediately after
 continuation return, first continuation output, or first failure. The first
-contained resize failure adds only `closed-pty` or `native-failure`; it prevents
-continuation acceptance. No per-chunk logger, raw payload dump or new poller is
-used. The resize array and `refit-native-grid` phase establish a grid request,
-not native resize success or child consumption. Prefix modulo arithmetic plus a
+contained resize failure adds only `closed-pty` or `native-failure`. If a progress
+snapshot is unavailable (including initial sizing before reader setup), that first
+event is attempted immediately with `progress: "unavailable"` and no source/flow
+metrics; later snapshots never masquerade as failure-time metrics. The first
+category is latched before the best-effort write, with no duplicate/retry even
+if the sink fails. A contained resize failure vetoes successful settlement,
+including restoration and the later asynchronous memory/exit boundaries. Normal
+restoration still runs, and a secondary contained resize failure does not
+replace an earlier primary oracle/write failure. No per-chunk logger, raw
+payload dump or new poller is used. The resize array and `refit-native-grid`
+phase establish a grid request, not native resize success or child consumption. Prefix modulo arithmetic plus a
 byte baseline does not independently establish parser pending-wrap state in an
 unknown envelope. Actual-core reflow tests discriminate that separately; D3's
 native continuation cause remains unresolved until ordinary native execution.

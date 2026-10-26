@@ -36,11 +36,19 @@ async function exerciseOutput(
     | "refit-no-exit"
     | "refit-resize-failure"
     | "refit-write-failure",
+  failureResizeCall = mode === "refit-resize-failure" ? 3 : 0,
+  failResizeDiagnostic = false,
 ) {
   vi.useFakeTimers();
-  const lines: string[] = [];
+  const lines: string[] = [],
+    failedDiagnostics: string[] = [];
   vi.mocked(writeSync).mockImplementation((_fd, value) => {
-    lines.push(String(value));
+    const line = String(value);
+    if (failResizeDiagnostic && line.includes('"phase":"resize-failure"')) {
+      failedDiagnostics.push(line);
+      throw new Error("controlled diagnostic sink failure");
+    }
+    lines.push(line);
     return 0;
   });
   const refit = mode.startsWith("refit-");
@@ -108,14 +116,19 @@ async function exerciseOutput(
           if (exiting && exitCode !== undefined)
             queued += "\u001b[?1004l\u001b[?9001l";
           flush();
-          if (exitCode !== undefined) onExit({ exitCode, signal: 0 });
+          if (exitCode !== undefined && failureResizeCall !== 5)
+            onExit({ exitCode, signal: 0 });
         },
         pause() {},
         resume() {},
         kill() {},
         resize() {
-          if (++resizeCalls === 3 && mode === "refit-resize-failure")
-            throw new Error("controlled resize failure");
+          if (++resizeCalls === failureResizeCall)
+            throw new Error(
+              failureResizeCall === 1
+                ? "ioctl(2) failed, EBADF"
+                : "controlled resize failure",
+            );
         },
       }) as unknown as ReturnType<SpawnPty>,
     {
@@ -197,7 +210,11 @@ async function exerciseOutput(
     },
     webContents: {
       async executeJavaScript(script: string) {
-        if (script.includes("scrollbackLines")) return 10000;
+        if (script.includes("scrollbackLines")) {
+          if (failureResizeCall === 1)
+            harness.observeResizeFailure(0, "native-failure");
+          return 10000;
+        }
         if (script.includes("usedJSHeapSize")) return 123;
         if (script.includes("surface"))
           return runInNewContext(script, {
@@ -213,6 +230,14 @@ async function exerciseOutput(
       },
     },
   };
+  if (failureResizeCall === 1) {
+    // Initial sizing can call the real router/session observer before exercise
+    // installs a flow reader. A later different category must not replace it.
+    expect(() => routedTerminal.resize({ cols: 80, rows: 24 })).not.toThrow();
+    expect(() =>
+      harness.observeResizeFailure(0, "native-failure"),
+    ).not.toThrow();
+  }
   const exercise = harness.exercise({
     window: window as unknown as BrowserWindow,
     terminals: [routedTerminal],
@@ -220,6 +245,12 @@ async function exerciseOutput(
     launchKinds: ["explicit-command"],
     existingSession: true,
     async waitFor(predicate, label) {
+      if (label === "output producer clean exit" && failureResizeCall === 5) {
+        // A contained resize after restoration, at the final async exit wait.
+        await Promise.resolve();
+        routedTerminal.resize({ cols: 80, rows: 24 });
+        onExit({ exitCode: exitCode!, signal: 0 });
+      }
       if (await predicate()) return;
       while (continuation.length) {
         await Promise.resolve();
@@ -231,7 +262,7 @@ async function exerciseOutput(
   });
   void exercise.catch(() => {});
   await vi.advanceTimersByTimeAsync(500);
-  return { exercise, lines, calls };
+  return { exercise, lines, calls, failedDiagnostics };
 }
 
 it.each(["withheld", "counter-only"] as const)(
@@ -349,45 +380,127 @@ it.each(["refit-no-r", "refit-no-end", "refit-no-exit"] as const)(
   },
 );
 
-it("retains entered-without-returned continuation and one failure snapshot when the write throws", async () => {
-  const { exercise, calls, lines } = await exerciseOutput(
-    "refit-write-failure",
-  );
-  await expect(exercise).rejects.toThrow(
-    "controlled continuation write failed",
-  );
-  expect(calls).toEqual({ copies: 0, exitRequests: 0 });
-  expect(
-    lines.filter((line) => line.includes('"phase":"refit-continuation-write"')),
-  ).toHaveLength(1);
-  expect(
-    lines.find((line) => line.includes('"phase":"refit-continuation-write"')),
-  ).toContain('"status":"begin"');
-  expect(
-    lines.filter((line) => line.includes('"phase":"continuation-failure"')),
-  ).toHaveLength(1);
-});
+it.each([0, 4])(
+  "retains the primary write failure through restoration resize control %i",
+  async (failureResizeCall) => {
+    const { exercise, calls, lines } = await exerciseOutput(
+      "refit-write-failure",
+      failureResizeCall,
+    );
+    await expect(exercise).rejects.toThrow(
+      "controlled continuation write failed",
+    );
+    expect(calls).toEqual({ copies: 0, exitRequests: 0 });
+    expect(
+      lines.filter((line) =>
+        line.includes('"phase":"refit-continuation-write"'),
+      ),
+    ).toHaveLength(1);
+    expect(
+      lines.find((line) => line.includes('"phase":"refit-continuation-write"')),
+    ).toContain('"status":"begin"');
+    expect(
+      lines.filter((line) => line.includes('"phase":"continuation-failure"')),
+    ).toHaveLength(1);
+    expect(
+      lines.some((line) =>
+        line.includes('"phase":"refit-cleanup","status":"complete"'),
+      ),
+    ).toBe(true);
+    expect(
+      lines.filter((line) => line.includes('"phase":"resize-failure"')),
+    ).toHaveLength(failureResizeCall ? 1 : 0);
+  },
+);
 
-it("distinguishes a returned resize request from contained native resize failure without allowing continuation", async () => {
-  const { exercise, calls, lines } = await exerciseOutput(
-    "refit-resize-failure",
-  );
-  await expect(exercise).rejects.toThrow("Output refit native resize failed");
-  expect(calls).toEqual({ copies: 0, exitRequests: 0 });
-  const first = lines.findIndex((line) =>
-    line.includes('"phase":"refit-resize-call","status":"begin"'),
-  );
-  expect(lines[first + 1]).toContain('"resizeFailure":"native-failure"');
-  expect(lines[first + 2]).toContain(
-    '"phase":"refit-resize-call","status":"complete"',
-  );
-  expect(
-    lines.filter((line) => line.includes('"phase":"resize-failure"')),
-  ).toHaveLength(1);
-  expect(lines.some((line) => line.includes("controlled resize failure"))).toBe(
-    false,
-  );
-});
+it.each([3, 4, 5])(
+  "vetoes settlement for contained resize failure at call %i, including restoration and late exit wait",
+  async (failureResizeCall) => {
+    const { exercise, calls, lines } = await exerciseOutput(
+      "refit-resize-failure",
+      failureResizeCall,
+    );
+    await expect(exercise).rejects.toThrow("Output refit native resize failed");
+    expect(calls).toEqual({
+      copies: failureResizeCall === 3 ? 0 : 1,
+      exitRequests: failureResizeCall === 5 ? 1 : 0,
+    });
+    expect(
+      lines.some((line) =>
+        line.includes('"phase":"refit-cleanup","status":"complete"'),
+      ),
+    ).toBe(true);
+    if (failureResizeCall === 3) {
+      const first = lines.findIndex((line) =>
+        line.includes('"phase":"refit-resize-call","status":"begin"'),
+      );
+      expect(lines[first + 1]).toContain('"resizeFailure":"native-failure"');
+      expect(lines[first + 2]).toContain(
+        '"phase":"refit-resize-call","status":"complete"',
+      );
+    }
+    if (failureResizeCall === 5)
+      expect(
+        lines.some((line) =>
+          line.includes('"phase":"output-producer-exit","status":"complete"'),
+        ),
+      ).toBe(true);
+    expect(
+      lines.filter((line) => line.includes('"phase":"resize-failure"')),
+    ).toHaveLength(1);
+    expect(
+      lines.some((line) => line.includes("controlled resize failure")),
+    ).toBe(false);
+  },
+);
+
+it.each([false, true])(
+  "retains one pre-exercise resize category without invented metrics, including sink failure=%s",
+  async (failSink) => {
+    const { exercise, lines, calls, failedDiagnostics } = await exerciseOutput(
+      "refit-resize-failure",
+      1,
+      failSink,
+    );
+    await expect(exercise).rejects.toThrow("Output refit native resize failed");
+    expect(calls).toEqual({ copies: 0, exitRequests: 0 });
+    const failures = lines.filter((line) =>
+      line.includes('"phase":"resize-failure"'),
+    );
+    expect(failures).toHaveLength(failSink ? 0 : 1);
+    expect(failedDiagnostics).toHaveLength(failSink ? 1 : 0);
+    if (!failSink)
+      expect(lines.indexOf(failures[0]!)).toBeLessThan(
+        lines.findIndex((line) =>
+          line.includes('"phase":"output-session","status":"begin"'),
+        ),
+      );
+    const receipt = JSON.parse(
+      (failSink ? failedDiagnostics[0]! : failures[0]!).slice(
+        "__OMXTERM_OUTPUT_REFIT_PROGRESS__".length,
+      ),
+    ) as Record<string, unknown>;
+    expect(receipt).toMatchObject({
+      phase: "resize-failure",
+      resizeFailure: "closed-pty",
+      progress: "unavailable",
+    });
+    for (const field of [
+      "sourceBytes",
+      "checkpoints",
+      "cumulativeAck",
+      "pendingBytes",
+      "pauseCount",
+      "resumeCount",
+    ])
+      expect(receipt).not.toHaveProperty(field);
+    expect(
+      lines.some((line) =>
+        line.includes('"phase":"refit-cleanup","status":"complete"'),
+      ),
+    ).toBe(true);
+  },
+);
 
 it("records calibration, exact-prefix acknowledgement and requested native-grid refit in order", async () => {
   const lines: string[] = [];
