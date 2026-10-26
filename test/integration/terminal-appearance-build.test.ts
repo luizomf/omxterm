@@ -105,9 +105,21 @@ describe("Terminal appearance build", () => {
       "utf8",
     );
     const surfaceRule = css.match(/\.terminal-surface\s*\{(?<body>[^}]*)\}/u);
-    const titleAreaRule = css.match(
-      /\.terminal-surface::before\s*\{(?<body>[^}]*)\}/u,
+    const titleAreaRule = [
+      ...css
+        .replace(/\/\*[\s\S]*?\*\//gu, "")
+        .matchAll(/(?<selectors>[^{}]+)\{(?<body>[^}]*)\}/gu),
+    ].find((rule) =>
+      rule.groups?.selectors
+        ?.split(",")
+        .some((selector) => selector.trim() === ".terminal-surface::before"),
     );
+    expect(
+      titleAreaRule?.groups?.selectors
+        ?.split(",")
+        .map((selector) => selector.trim())
+        .sort(),
+    ).toEqual([".settings-tab::before", ".terminal-surface::before"]);
     const resttyRule = css.match(
       /\.restty-terminal-surface\s*\{(?<body>[^}]*)\}/u,
     );
