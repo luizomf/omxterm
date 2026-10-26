@@ -154,10 +154,26 @@ must accompany the source/lock, target and compiler/SDK evidence; Unix compiler
 outputs are not claimed bit-for-bit reproducible across toolchains. Prepared
 JavaScript identities are listed in the [Restty guide](restty-development.md#pinned-inputs-and-wasm-core-rebuild).
 
-Supervised PTY fixtures register only a verified positive PID or actual early
-exit. The fixture PTY adapter alone knows beta.18's `ready_datapipe` ordering;
-it never waits for payload or a prompt. Production session/shutdown interfaces
-and their actual-exit barrier remain unchanged. Windows public kill/resize still
+Supervised PTY fixtures register only a verified positive PID or an actual early
+exit with a positive PID and reinspection. PID 0, inventory absence and an
+`execFailed` marker do not prove failed-connect native resource retirement;
+that registration remains pending. The fixture PTY adapter alone knows beta.18's
+`ready_datapipe` ordering; it never waits for payload or a prompt. Production
+session/shutdown interfaces and their actual-exit barrier remain unchanged.
+
+Readiness/exit ownership-observation failures retain the pending write-ahead
+record and retire temporary observers, without throwing through the dependency's
+synchronous listener queue and starving later session lifecycle consumers. The
+existing safe registration diagnostic adds `ready-observation` and
+`exit-observation` phases; publication failures retain their precise publication
+phase too. Later events cannot turn failed observation into completed registration.
+Synchronous registration failures still throw. The supervisor's pending-record
+check still fails cleanup and retains the blocked scope, even when downstream
+session exit delivery succeeds. Headless composition and receipt coverage:
+`npm test -- test/unit/native-fixture-ownership.test.ts test/unit/native-fixture-registration-receipt.test.ts`.
+Passing those controlled cases does not qualify native failed-connect retirement.
+
+Windows public kill/resize still
 defer until first output; controlled callback-order units are not native timing
 qualification or proof of containment of later native resize exceptions.
 

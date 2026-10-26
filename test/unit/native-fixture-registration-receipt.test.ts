@@ -121,7 +121,7 @@ it.each([
         received = error;
       }
       expect(spawn).toHaveBeenCalledOnce();
-      expect(received).toBe(primary);
+      expect(received).toBe(branch === "normal" ? primary : undefined);
       const registry = path.join(root, FIXTURE_PROCESS_DIRECTORY);
       const recordsBefore = fs
         .readdirSync(registry)
@@ -199,13 +199,26 @@ it.each([
         ],
       });
       const lines = result!.stderr.trimEnd().split("\n");
-      expect(lines).toHaveLength(1);
+      expect(lines).toHaveLength(branch === "normal" ? 1 : 2);
       expect(lines[0]).toMatch(/^__OMXTERM_FIXTURE_REGISTRATION_FAILURE__/u);
       expect(
         JSON.parse(
           lines[0]!.slice("__OMXTERM_FIXTURE_REGISTRATION_FAILURE__".length),
         ),
       ).toEqual({ version: 1, branch, phase, code: "EIO", errno: -5, syscall });
+      if (branch === "early-exit")
+        expect(
+          JSON.parse(
+            lines[1]!.slice("__OMXTERM_FIXTURE_REGISTRATION_FAILURE__".length),
+          ),
+        ).toEqual({
+          version: 1,
+          branch,
+          phase: "exit-observation",
+          code: "EIO",
+          errno: -5,
+          syscall,
+        });
       expect(result!.stderr).not.toContain("private");
       expect(forbiddenSpawn).not.toHaveBeenCalled();
       expect(supervisor.exit).toHaveBeenCalledWith(1);

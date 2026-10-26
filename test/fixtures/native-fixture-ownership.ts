@@ -59,17 +59,38 @@ export function spawnFixtureProcess<T extends { readonly pid: number }>(
   const child = spawn();
   const owned = new Map([[owner.pid, owner]]);
   let settled = false;
+  let failed = false;
   let retire: (() => void) | void;
-  const ready = () => {
+  const failObservation = (
+    branch: "normal" | "early-exit",
+    phase: "ready-observation" | "exit-observation",
+    error: unknown,
+  ) => {
+    // Keep the write-ahead record pending. The supervisor must retain/block this
+    // scope even if downstream sessions consume their actual exit notification.
+    failed = true;
+    recordFixtureRegistrationFailure(branch, phase, error);
+    retire?.();
+  };
+  const ready = (observed = false) => {
     if (settled) return true;
+    if (failed) return false;
     if (!Number.isSafeInteger(child.pid) || child.pid <= 0) return false;
-    const rows = fixtureProcesses();
-    collectFixtureDescendants(rows, owned);
-    if (!owned.has(child.pid)) return false;
-    publishRegistration(record, "normal", {
-      owner,
-      processes: [...owned.values()],
-    });
+    try {
+      const rows = fixtureProcesses();
+      collectFixtureDescendants(rows, owned);
+      if (!owned.has(child.pid)) return false;
+      publishRegistration(record, "normal", {
+        owner,
+        processes: [...owned.values()],
+      });
+    } catch (error) {
+      // Initial synchronous registration still throws to its caller. Only the
+      // event observer must preserve the dependency's remaining listener queue.
+      if (!observed) throw error;
+      failObservation("normal", "ready-observation", error);
+      return false;
+    }
     settled = true;
     retire?.();
     registered?.(child);
@@ -80,21 +101,30 @@ export function spawnFixtureProcess<T extends { readonly pid: number }>(
   retire = observeLifecycle?.(
     child,
     () => {
-      if (settled) return;
-      const remaining = fixtureProcesses();
-      if (remaining.some((row) => row.pid === child.pid))
-        throw new Error("Early-exit fixture PID remains observable");
-      collectFixtureDescendants(remaining, owned);
-      publishRegistration(record, "early-exit", {
-        owner,
-        processes: [...owned.values()],
-      });
+      if (settled || failed) return;
+      try {
+        // PID 0/absence and an exec-failure marker do not prove that a failed
+        // connection retired all native resources. Retain uncertainty here.
+        if (!Number.isSafeInteger(child.pid) || child.pid <= 0)
+          throw new Error("Early-exit fixture has no verified positive PID");
+        const remaining = fixtureProcesses();
+        if (remaining.some((row) => row.pid === child.pid))
+          throw new Error("Early-exit fixture PID remains observable");
+        collectFixtureDescendants(remaining, owned);
+        publishRegistration(record, "early-exit", {
+          owner,
+          processes: [...owned.values()],
+        });
+      } catch (error) {
+        failObservation("early-exit", "exit-observation", error);
+        return;
+      }
       settled = true;
       retire?.();
     },
-    ready,
+    () => ready(true),
   );
-  if (settled) retire?.();
+  if (settled || failed) retire?.();
   else if (!ready() && !observeLifecycle)
     throw new Error("Cannot establish ownership of spawned fixture process");
   return child;

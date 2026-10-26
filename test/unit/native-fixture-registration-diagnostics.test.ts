@@ -92,7 +92,7 @@ it.each([
   ["early-exit", "completed-write", "close"],
   ["early-exit", "completed-replacement", "rename"],
 ] as const)(
-  "distinguishes %s %s despite identical pending/complete files and rethrows the original exception",
+  "distinguishes %s %s with pending records, throwing synchronously but recording observer failures",
   async (branch, phase, syscall) => {
     io.fault = phase;
     io.error = Object.assign(new Error("private path/argv"), {
@@ -115,7 +115,7 @@ it.each([
     } catch (error) {
       received = error;
     }
-    expect(received).toBe(io.error);
+    expect(received).toBe(branch === "normal" ? io.error : undefined);
     expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
     const entries = [...io.files.entries()];
     expect(entries).toHaveLength(2);
@@ -125,7 +125,7 @@ it.each([
     expect(
       JSON.parse(entries.find(([name]) => name.endsWith(".tmp"))![1]),
     ).toEqual({ owner, processes: [owner, ...children] });
-    expect(output).toHaveLength(1);
+    expect(output).toHaveLength(branch === "normal" ? 1 : 2);
     expect(JSON.parse(output[0]!.slice(prefix.length))).toEqual({
       version: 1,
       branch,
@@ -134,7 +134,16 @@ it.each([
       errno: -5,
       syscall,
     });
-    expect(output[0]).not.toContain("private");
+    if (branch === "early-exit")
+      expect(JSON.parse(output[1]!.slice(prefix.length))).toEqual({
+        version: 1,
+        branch,
+        phase: "exit-observation",
+        code: "EIO",
+        errno: -5,
+        syscall,
+      });
+    expect(output.join("")).not.toContain("private");
   },
 );
 
