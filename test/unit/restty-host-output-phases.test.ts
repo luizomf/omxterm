@@ -2,7 +2,10 @@ import type { BrowserWindow } from "electron";
 import { writeSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { afterEach, expect, it, vi } from "vitest";
-import type { LocalTerminalSession } from "../../src/main/local-terminal-session";
+import {
+  createLocalTerminalSession,
+  type SpawnPty,
+} from "../../src/main/local-terminal-session";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import type {
   IpcListener,
@@ -18,25 +21,82 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it("records each actual source/ACK/copy checkpoint without replacing the output oracle", async () => {
+async function exerciseOutput(
+  mode: "acknowledged" | "withheld" | "counter-only",
+) {
   vi.useFakeTimers();
   const lines: string[] = [];
   vi.mocked(writeSync).mockImplementation((_fd, value) => {
     lines.push(String(value));
     return 0;
   });
-  const harness = createOutputStressHarness({ sessionIndex: 0 });
+  const checkpoints = mode === "acknowledged" ? 16 : 1;
+  const harness = createOutputStressHarness({ sessionIndex: 0, checkpoints });
   let acknowledge!: IpcListener;
   const port = harness.ipcPort({
     on(_channel, listener) {
       acknowledge = listener;
     },
   } as IpcMainPort);
-  port.on(terminalIpc.outputAck, () => {});
   let sourceBytes = 0,
-    transcript = "";
+    acceptedEnd = 0,
+    transcript = "",
+    queued = "";
+  let exiting = false;
+  let exitCode: number | undefined;
+  let onData!: (data: string) => void;
+  let onExit!: (exit: { exitCode: number; signal: number }) => void;
   let input!: (data: Buffer) => void;
-  runInNewContext(outputCheckpointProducer(16), {
+  const flush = () => {
+    const text = queued;
+    queued = "";
+    if (text) onData(text);
+  };
+  const terminal = createLocalTerminalSession(
+    () =>
+      ({
+        onData(listener: typeof onData) {
+          onData = listener;
+          return { dispose() {} };
+        },
+        onExit(listener: typeof onExit) {
+          onExit = listener;
+          return { dispose() {} };
+        },
+        write(text: string) {
+          exiting = text === "x";
+          input(Buffer.from(text));
+          if (exiting) queued += "\u001b[?1004l\u001b[?9001l";
+          flush();
+          if (exitCode !== undefined) onExit({ exitCode, signal: 0 });
+        },
+        pause() {},
+        resume() {},
+        kill() {},
+      }) as unknown as ReturnType<SpawnPty>,
+    {
+      shell: "controlled",
+      platform: "linux",
+      homeDirectory: "/synthetic",
+      applicationVersionProvider: { getVersion: () => "0.0.0" },
+      environment: {},
+      onOutput(text) {
+        sourceBytes += Buffer.byteLength(text);
+        transcript += text;
+        harness.observeOutput(0, text);
+        if (!exiting || mode !== "withheld")
+          acknowledge({} as never, { sessionId: "s1", end: sourceBytes });
+      },
+      onExit: (exit) => harness.observeExit(0, exit),
+    },
+  );
+  port.on(terminalIpc.outputAck, (_event, payload) => {
+    const end = (payload as { end: number }).end;
+    if (exiting && mode === "counter-only") return;
+    expect(terminal.acknowledgeOutput!(end - acceptedEnd)).toBe(true);
+    acceptedEnd = end;
+  });
+  runInNewContext(outputCheckpointProducer(checkpoints), {
     process: {
       stdin: {
         isTTY: false,
@@ -47,19 +107,17 @@ it("records each actual source/ACK/copy checkpoint without replacing the output 
       },
       stdout: {
         write(text: string, done?: () => void) {
-          sourceBytes += Buffer.byteLength(text);
-          transcript += text;
-          harness.observeOutput(0, text);
-          acknowledge({} as never, { sessionId: "s1", end: sourceBytes });
+          queued += text;
           done?.();
           return true;
         },
       },
       exit(code: number) {
-        harness.observeExit(0, { exitCode: code, signal: 0 });
+        exitCode = code;
       },
     },
   });
+  flush();
   const sizes = [{ cols: 80, rows: 24 }];
   const window = {
     getBounds: () => ({ width: 900, height: 600, x: 0, y: 0 }),
@@ -77,21 +135,9 @@ it("records each actual source/ACK/copy checkpoint without replacing the output 
       },
     },
   };
-  const terminal = {
-    write(text: string) {
-      input(Buffer.from(text));
-    },
-    outputFlowMetrics: () => ({
-      pendingBytes: 0,
-      pauseCount: 1,
-      resumeCount: 1,
-      maxPendingBytes: 65536,
-      largestNativeReadBytes: 65536,
-    }),
-  };
   const exercise = harness.exercise({
     window: window as unknown as BrowserWindow,
-    terminals: [terminal as unknown as LocalTerminalSession],
+    terminals: [terminal],
     resizes: [sizes],
     launchKinds: ["explicit-command"],
     existingSession: true,
@@ -101,7 +147,27 @@ it("records each actual source/ACK/copy checkpoint without replacing the output 
   });
   void exercise.catch(() => {});
   await vi.advanceTimersByTimeAsync(500);
+  return { exercise, lines };
+}
+
+it.each(["withheld", "counter-only"] as const)(
+  "rejects an exit trailer with %s ACK even after all copies and pre-exit settlement",
+  async (mode) => {
+    const { exercise } = await exerciseOutput(mode);
+    await expect(exercise).rejects.toThrow(
+      mode === "withheld"
+        ? "Output ACK cumulative end differs"
+        : "Output actual pending bytes remain",
+    );
+  },
+);
+
+it("records each actual source/ACK/copy checkpoint without replacing the output oracle", async () => {
+  const { exercise, lines } = await exerciseOutput("acknowledged");
   const result = await exercise;
+  expect(result.source.bytes).toBe(2_097_998);
+  expect(result.source.envelopeBytes).toBe(46);
+  expect(result.flow.pendingBytes).toBe(0);
   expect(result.destination.checkpoints).toHaveLength(16);
   expect(result.destination.records).toBe(65536);
   const records = lines.map(

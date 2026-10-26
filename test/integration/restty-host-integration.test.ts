@@ -176,8 +176,14 @@ function assertDestinationOutputEvidence(stress: OutputStressEvidence) {
     recordBytes: 2_097_152,
     checkpoints: 16,
     endSeen: true,
-    remainderCodeUnits: 0,
+    framedBytes: 2_097_952,
+    bufferedCodeUnits: 0,
+    finalized: true,
   });
+  expect(stress.source.framedBytes + stress.source.envelopeBytes).toBe(
+    stress.source.bytes,
+  );
+  expect(stress.source.envelopeBytes).toBeGreaterThanOrEqual(0);
   expect(stress.destination).toMatchObject({
     records: 65_536,
     recordBytes: 2_097_152,

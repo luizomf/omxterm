@@ -99,6 +99,19 @@ export function createOutputStressHarness({
   let cumulativeEnd = 0;
   let producerExit: { exitCode: number; signal: number } | undefined;
 
+  const settledFlow = (terminal: LocalTerminalSession) => {
+    const flow = terminal.outputFlowMetrics?.();
+    if (!flow) throw new Error("Output flow metadata is unavailable");
+    if (cumulativeEnd !== source.evidence().bytes)
+      throw new Error(
+        "Output ACK cumulative end differs from original source bytes",
+      );
+    if (flow.pendingBytes !== 0)
+      throw new Error(
+        "Output actual pending bytes remain after acknowledgement",
+      );
+    return flow;
+  };
   const releaseAcknowledgements = () => {
     holdAcknowledgements = false;
     for (const acknowledge of pendingAcknowledgements.splice(0)) acknowledge();
@@ -293,12 +306,7 @@ export function createOutputStressHarness({
           phase("refit-cleanup", "complete");
         }
       }
-      const flow = terminal.outputFlowMetrics?.();
-      if (!flow) throw new Error("Output flow metadata is unavailable");
-      if (cumulativeEnd !== source.evidence().bytes)
-        throw new Error(
-          "Output ACK cumulative end differs from original source bytes",
-        );
+      settledFlow(terminal);
       phase("output-memory", "begin");
       const rendererHeapUsedBytes = (await window.webContents.executeJavaScript(
         "performance.memory?.usedJSHeapSize ?? null",
@@ -313,8 +321,12 @@ export function createOutputStressHarness({
         "output producer clean exit",
       );
       phase("output-producer-exit", "complete");
+      const finalSource = source.finalize();
+      // Exit can add transport envelope. Neither the pre-x snapshot nor the
+      // wrapper's requested ACK counter proves actual retirement of those bytes.
+      const flow = settledFlow(terminal);
       return {
-        source: source.evidence(),
+        source: finalSource,
         destination: {
           checkpoints: destination,
           records: destination.reduce((sum, batch) => sum + batch.records, 0),

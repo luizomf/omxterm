@@ -615,6 +615,33 @@ requires an executed command marker, not just a prompt or observed PTY write.
 Headless encoded-setup and readiness checks (not native console-mode evidence):
 `npm test -- test/unit/restty-host-sessions.test.ts test/unit/restty-host-paste.test.ts`.
 
+### Host output evidence
+
+The paced output fixture keeps all sixteen actual Select All/Copy checks over
+2 MiB of ordered records, with unchanged pacing, history/core limits and real
+pause/resume. Each source workload window is one literal BEGIN, 4096 exact
+32-byte records and its matching END (131,122 bytes). The reserved
+`__OMXTERM_BATCH_` namespace must occur once in configured order; malformed,
+duplicate, reordered or truncated framing fails without resynchronization.
+Bytes inside frames are never normalized, including controls and line endings.
+
+Outside those frames, arbitrary printable/control output is uninterpreted
+transport envelope, not an ANSI allowlist or a tolerated trailer length. It is
+forwarded unchanged and counted without retaining the whole envelope. Only a
+bounded possible-marker prefix is carried between callbacks. Original source
+bytes use each callback's UTF-8 byte length; finalized framed bytes plus envelope
+bytes must equal that total. This scoped workload oracle does not identify or
+validate the origin/semantics of arbitrary envelope text.
+
+After the actual producer exits, the fixture finalizes framing and takes a fresh
+session flow snapshot: every original source byte must be cumulatively ACKed and
+actual pending bytes must be zero. A pre-exit snapshot or advancement of the ACK
+wrapper's counter alone is insufficient. Exact pre-refit baseline-plus-prefix
+ACK equality remains a separate requirement. Headless parser/core and composed
+producer/session/harness controls:
+`npm test -- test/unit/restty-output-checkpoint.test.ts test/unit/restty-output-refit.test.ts test/unit/restty-host-output-phases.test.ts`.
+They do not qualify native continuation or Windows transport.
+
 ### Host/oracle phase receipts
 
 The shared Restty host fixture emits `__OMXTERM_RESTTY_HOST_PHASE__` JSON lines

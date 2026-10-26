@@ -41,40 +41,83 @@ process.stdin.resume(); process.stdout.write('\\x1b[?25l__OMXTERM_OUTPUT_READY__
 }
 
 export function createOutputSourceObserver(batches = OUTPUT_CHECKPOINTS) {
+  const namespace = "__OMXTERM_BATCH_";
+  const readyMarker = "__OMXTERM_OUTPUT_READY__";
+  const frameBytes = OUTPUT_CHECKPOINT_RECORDS * OUTPUT_RECORD_BYTES + 26 + 24;
   let bytes = 0;
   let records = 0;
   let batch = 0;
   let inBody = false;
   let remainder = "";
+  let readyTail = "";
   let ready = false;
+  let finalized = false;
+  let failure: Error | undefined;
+  const fail = (message: string): never => {
+    failure = new Error(message);
+    throw failure;
+  };
+  const evidence = () => ({
+    bytes,
+    records,
+    recordBytes: records * OUTPUT_RECORD_BYTES,
+    checkpoints: batch,
+    endSeen: batch === batches,
+    framedBytes: batch * frameBytes,
+    // Only ASCII frame/prefix carry is subtracted. Count original UTF-8 chunks,
+    // never sliced envelope surrogates (which can change byte accounting).
+    envelopeBytes:
+      bytes -
+      batch * frameBytes -
+      (inBody ? 26 + (records - batch * OUTPUT_CHECKPOINT_RECORDS) * 32 : 0) -
+      remainder.length,
+    bufferedCodeUnits: remainder.length,
+    finalized,
+  });
   return {
     observe(data: string) {
+      if (failure) throw failure;
+      if (finalized) fail("Source output observed after finalization");
       bytes += Buffer.byteLength(data);
+      const readiness = readyTail + data;
+      ready ||= readiness.includes(readyMarker);
+      readyTail = ready ? "" : readiness.slice(-(readyMarker.length - 1));
       remainder += data;
-      ready ||= remainder.includes("__OMXTERM_OUTPUT_READY__");
-      while (batch < batches) {
+      while (true) {
         if (!inBody) {
-          const marker = outputCheckpointMarker(batch);
-          const from = remainder.indexOf(marker);
+          const from = remainder.indexOf(namespace);
           if (from < 0) {
-            remainder = remainder.slice(-Math.max(marker.length, 24));
+            // Outside frames, retain only a possible reserved namespace prefix.
+            let keep = Math.min(remainder.length, namespace.length - 1);
+            while (keep > 0 && !namespace.startsWith(remainder.slice(-keep)))
+              keep--;
+            remainder = keep ? remainder.slice(-keep) : "";
             return;
           }
-          remainder = remainder.slice(from + marker.length);
+          remainder = remainder.slice(from);
+          const begin = outputCheckpointMarker(batch);
+          if (
+            batch >= batches ||
+            !begin.startsWith(remainder.slice(0, begin.length))
+          )
+            fail(`Source output checkpoint ${batch} reserved framing`);
+          if (remainder.length < begin.length) return;
+          remainder = remainder.slice(begin.length);
           inBody = true;
         }
         const limit = (batch + 1) * OUTPUT_CHECKPOINT_RECORDS;
-        while (records < limit && remainder.length >= OUTPUT_RECORD_BYTES) {
-          if (remainder.slice(0, OUTPUT_RECORD_BYTES) !== outputRecord(records))
-            throw new Error(`Source output stress order at ${records}`);
+        while (records < limit) {
+          const record = outputRecord(records);
+          if (!record.startsWith(remainder.slice(0, OUTPUT_RECORD_BYTES)))
+            fail(`Source output stress order at ${records}`);
+          if (remainder.length < OUTPUT_RECORD_BYTES) return;
           remainder = remainder.slice(OUTPUT_RECORD_BYTES);
           records++;
         }
-        if (records < limit) return;
         const end = outputCheckpointMarker(batch, true);
+        if (!end.startsWith(remainder.slice(0, end.length)))
+          fail(`Source output checkpoint ${batch} framing`);
         if (remainder.length < end.length) return;
-        if (!remainder.startsWith(end))
-          throw new Error(`Source output checkpoint ${batch} framing`);
         remainder = remainder.slice(end.length);
         batch++;
         inBody = false;
@@ -82,14 +125,17 @@ export function createOutputSourceObserver(batches = OUTPUT_CHECKPOINTS) {
     },
     ready: () => ready,
     checkpoints: () => batch,
-    evidence: () => ({
-      bytes,
-      records,
-      recordBytes: records * OUTPUT_RECORD_BYTES,
-      checkpoints: batch,
-      endSeen: batch === batches,
-      remainderCodeUnits: remainder.length,
-    }),
+    evidence,
+    finalize() {
+      if (failure) throw failure;
+      if (inBody || remainder.length || batch !== batches)
+        fail(`Source output incomplete framing at checkpoint ${batch}`);
+      const result = evidence();
+      if (result.framedBytes + result.envelopeBytes !== bytes)
+        fail("Source output transport accounting differs");
+      finalized = true;
+      return evidence();
+    },
   };
 }
 

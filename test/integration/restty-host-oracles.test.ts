@@ -127,7 +127,9 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         recordBytes: 2_097_152,
         checkpoints: 16,
         endSeen: true,
-        remainderCodeUnits: 0,
+        framedBytes: 2_097_952,
+        bufferedCodeUnits: 0,
+        finalized: true,
       });
       expect(stress.destination).toMatchObject({
         records: 65_536,
@@ -146,6 +148,10 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           records: 4_096,
           recordBytes: 131_072,
         });
+      expect(stress.source.framedBytes + stress.source.envelopeBytes).toBe(
+        stress.source.bytes,
+      );
+      expect(stress.source.envelopeBytes).toBeGreaterThanOrEqual(0);
       expect(stress.load).toBe("paced-128KiB-checkpoints");
       expect(stress.scrollbackLines).toBe(10_000);
       expect(stress.pinnedCoreByteLimit).toBe(10_000_000);
@@ -184,15 +190,16 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
       expect(acknowledged.expectedSourceBytes).toBe(acknowledged.sourceBytes);
       expect(acknowledged.cumulativeAck).toBe(acknowledged.sourceBytes);
       expect(acknowledged.pendingBytes).toBe(0);
-      // The producer emits exactly 26 BEGIN + 131072 record + 24 END bytes.
-      // Native startup stays in both original source and ACK totals.
+      // Exact frames exclude envelope, but every original transport byte still
+      // needs an actual ACK. Pre-refit prefix equality above remains exact.
       expect(stress.source).toMatchObject({
-        bytes: acknowledged.baselineBytes + 131_122,
+        framedBytes: 131_122,
         records: 4_096,
         recordBytes: 131_072,
         checkpoints: 1,
         endSeen: true,
-        remainderCodeUnits: 0,
+        bufferedCodeUnits: 0,
+        finalized: true,
       });
       expect(stress.destination.checkpoints).toEqual([
         {
@@ -209,6 +216,12 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         recordBytes: 131_072,
         endSeen: true,
       });
+      expect(stress.source.framedBytes + stress.source.envelopeBytes).toBe(
+        stress.source.bytes,
+      );
+      expect(stress.source.envelopeBytes).toBeGreaterThanOrEqual(
+        acknowledged.baselineBytes,
+      );
       expect(stress.acknowledgements.cumulativeEnd).toBe(stress.source.bytes);
       expect(stress.flow.pendingBytes).toBe(0);
       expect(stress.flow.pauseCount).toBeGreaterThan(0);
