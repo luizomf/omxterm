@@ -111,6 +111,56 @@ npm.cmd ci
 npm.cmd run check:portable
 ```
 
+## Pinned PTY runtime
+
+OMXTerm pins the official `node-pty@1.2.0-beta.18` archive, not a floating beta
+channel or custom Windows fork. Its npm integrity is
+`sha512-3Rej3788OnasAwoSmTZhlCeUraJ9CQldtL5b571b9+3Nv47+PaxA5VPIGOOs+16OYQePTrC1Lrs8a9/df5WPRg==`.
+This dependency maintenance incorporates upstream's merged ConPTY synchronization
+and readiness corrections; it does not attribute historical crashes or establish
+native/package qualification by source inspection alone. Electron stays locked
+independently.
+
+Postinstall guards complete input, intermediate and final JavaScript bytes,
+applies exact replacements, and rejects unknown or partially modified sources.
+It retains literal Windows argv, pause-aware Unix output-tail closure,
+unavailable Linux foreground reads, and explicit boolean startup-failure
+forwarding. The Windows agent-error handler supplies that boolean for deferred
+connection failures; ordinary numeric exits never imply startup failure.
+
+On macOS ARM64 and Linux ARM64/x64, preparation patches a temporary copy of the
+pinned Unix sources with zero fuzz, verifies the patched digests, and builds with
+C++17, Node-API 8 and locked headers. Installed upstream C++ sources remain
+unchanged. macOS targets 12.0 and installs the rebuilt addon and matched executable
+spawn helper in both `build/Release` and `prebuilds/darwin-arm64`. Linux installs
+the same corrected addon in `build/Release` and the matching Linux prebuild, so
+loader fallback cannot lose exec-status reporting even when upstream's install
+hook skips compilation.
+
+Windows ARM64/x64 retain unmodified official `conpty.node`,
+`conpty_console_list.node`, and sibling `conpty/{conpty.dll,OpenConsole.exe}`
+(bundled ConPTY `1.25.260303002`, selected with `useConptyDll: true`). Preparation
+checks their archive-derived hashes and rejects any shadowing `build/Release` or
+`build/Debug` addon. A DLL-only directory from upstream postinstall is not an
+addon shadow. Windows source builds are not a supported fallback for this pin.
+
+Packages exclude foreign prebuilds, Windows `pty.node`/winpty/PDBs and redundant
+`third_party` build inputs. Package verification compares prepared JavaScript and
+selected native bytes against the exact packaged files. macOS instead records
+final native hashes after its required ad-hoc signing and verifies the complete
+seal. `.scratch/node-pty-package.json` records selected native/runtime hashes;
+inspection-only runtime evidence also carries this provenance. These records
+must accompany the source/lock, target and compiler/SDK evidence; Unix compiler
+outputs are not claimed bit-for-bit reproducible across toolchains. Prepared
+JavaScript identities are listed in the [Restty guide](restty-development.md#pinned-inputs-and-wasm-core-rebuild).
+
+Supervised PTY fixtures register only a verified positive PID or actual early
+exit. The fixture PTY adapter alone knows beta.18's `ready_datapipe` ordering;
+it never waits for payload or a prompt. Production session/shutdown interfaces
+and their actual-exit barrier remain unchanged. Windows public kill/resize still
+defer until first output; controlled callback-order units are not native timing
+qualification or proof of containment of later native resize exceptions.
+
 ## Test discovery
 
 Vitest discovers `*.test.*` and `*.spec.*` files under `test/unit/` and `test/integration/`. Support code lives in `test/fixtures/`.

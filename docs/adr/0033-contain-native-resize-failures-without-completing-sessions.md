@@ -3,7 +3,7 @@
 ## Context
 
 A validated owned resize can race real native descriptor closure before
-node-pty delivers its exit callback. Pinned Unix node-pty 1.1.0 throws the exact
+node-pty delivers its exit callback. Pinned Unix node-pty 1.2.0-beta.18 throws the exact
 `ioctl(2) failed, EBADF` error in that interval. Letting it escape main's IPC
 listener makes an ordinary teardown race an unhandled native-control failure.
 
@@ -32,4 +32,8 @@ provides a safe diagnostic rather than declaring that usable work has ended.
 Native Unix fixtures drive the production IPC listeners in-process and exercise
 real PTY closure races under Node and Electron. They check actual exit, safe
 classification and a usable sibling. Windows resize failures have controlled
-unit coverage.
+unit coverage. Its public Windows resize remains deferred until first output;
+main's synchronous catch is not a claim to contain a later deferred callback
+exception. Unix's public columns/rows wrapper supplies zero pixel dimensions to
+the five-argument native resize; direct packaged invalid-FD inspection must also
+supply those zeros.

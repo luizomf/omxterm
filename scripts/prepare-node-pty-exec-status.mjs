@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  chmod,
   copyFile,
   mkdir,
   mkdtemp,
@@ -17,18 +18,23 @@ const ptyRoot = path.dirname(require.resolve("node-pty/package.json"));
 const nativeRoot = path.resolve(import.meta.dirname, "../native");
 const digest = (source) => createHash("sha256").update(source).digest("hex");
 const nativeDigests = {
-  "pty.cc": "5e1005d6bdcfbe97b486ee415419fe7adae99035047f07340fbad36419e0bae6",
+  "pty.cc": "5809f87b15122f335017b0b3020071df4c6205c7827186a2c5a9e0edc9ef59b2",
   "spawn-helper.cc":
     "22195de1710b574d5904fc89be5624c25e531de20d5e17e5998a2fd19d86e0e6",
 };
 
 // The installed package remains the pinned upstream source. Patch a private
 // build copy, then replace only the native artifacts already used in packages.
-export async function prepareNodePtyExecStatus() {
-  if (process.platform === "win32") return;
+export async function prepareNodePtyExecStatus({
+  platform = process.platform,
+  arch = process.arch,
+  nodePtyRoot = ptyRoot,
+  execute = execFileSync,
+} = {}) {
+  if (platform === "win32") return;
   if (!(
-    (process.platform === "darwin" && process.arch === "arm64") ||
-    (process.platform === "linux" && ["arm64", "x64"].includes(process.arch))
+    (platform === "darwin" && arch === "arm64") ||
+    (platform === "linux" && ["arm64", "x64"].includes(arch))
   ))
     throw new Error(
       "PTY exec-status builds require macOS ARM64 or Linux ARM64/x64",
@@ -36,7 +42,7 @@ export async function prepareNodePtyExecStatus() {
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-pty-build-"));
   try {
     for (const [file, expected] of Object.entries(nativeDigests)) {
-      const source = await readFile(path.join(ptyRoot, "src/unix", file));
+      const source = await readFile(path.join(nodePtyRoot, "src/unix", file));
       if (digest(source) !== expected)
         throw new Error("Unrecognized node-pty native exec source");
       await writeFile(path.join(root, file), source);
@@ -45,7 +51,7 @@ export async function prepareNodePtyExecStatus() {
       path.join(nativeRoot, "node-pty-exec-status.h"),
       path.join(root, "node-pty-exec-status.h"),
     );
-    execFileSync(
+    execute(
       "patch",
       [
         "--batch",
@@ -56,15 +62,24 @@ export async function prepareNodePtyExecStatus() {
       ],
       { cwd: root, stdio: "pipe", timeout: 10_000 },
     );
-    const mac = process.platform === "darwin";
+    for (const [file, expected] of Object.entries({
+      "pty.cc":
+        "73c161abda7425778368b69ddaf33f8d8c364c17e0c8ea07f44d50663c7e57ba",
+      "spawn-helper.cc":
+        "c7151b1be942b0a111afae4e2d81bd2bc7b00ea66fdd043fece687607c696748",
+    })) {
+      if (digest(await readFile(path.join(root, file))) !== expected)
+        throw new Error("node-pty native patch did not produce reviewed bytes");
+    }
+    const mac = platform === "darwin";
     const output = path.join(
-      ptyRoot,
+      nodePtyRoot,
       mac ? "prebuilds/darwin-arm64" : "build/Release",
     );
     await mkdir(output, { recursive: true });
     const { include_dir: apiHeaders } = require("node-api-headers");
     const addonHeaders = path.dirname(
-      createRequire(path.join(ptyRoot, "package.json")).resolve(
+      createRequire(path.join(nodePtyRoot, "package.json")).resolve(
         "node-addon-api/package.json",
       ),
     );
@@ -72,7 +87,7 @@ export async function prepareNodePtyExecStatus() {
     const targetFlags = mac
       ? ["-arch", "arm64", "-mmacosx-version-min=12.0"]
       : ["-fPIC", "-pthread"];
-    execFileSync(
+    execute(
       compiler,
       [
         "-std=c++17",
@@ -92,7 +107,7 @@ export async function prepareNodePtyExecStatus() {
       { stdio: "pipe", timeout: 60_000 },
     );
     if (mac) {
-      execFileSync(
+      execute(
         compiler,
         [
           "-std=c++17",
@@ -108,33 +123,26 @@ export async function prepareNodePtyExecStatus() {
         path.join(root, "spawn-helper"),
         path.join(output, "spawn-helper"),
       );
+      await chmod(path.join(output, "spawn-helper"), 0o755);
     }
     await copyFile(path.join(root, "pty.node"), path.join(output, "pty.node"));
     if (mac) {
       // node-pty prefers a local build over prebuilds during development.
-      const localBuild = path.join(ptyRoot, "build/Release");
+      const localBuild = path.join(nodePtyRoot, "build/Release");
       await mkdir(localBuild, { recursive: true });
       for (const file of ["pty.node", "spawn-helper"])
         await copyFile(path.join(root, file), path.join(localBuild, file));
+      await chmod(path.join(localBuild, "spawn-helper"), 0o755);
+    } else {
+      // beta.18 adds Linux prebuilds. Never leave an unpatched loader fallback.
+      const fallback = path.join(nodePtyRoot, "prebuilds", `linux-${arch}`);
+      await mkdir(fallback, { recursive: true });
+      await copyFile(
+        path.join(root, "pty.node"),
+        path.join(fallback, "pty.node"),
+      );
     }
-    await patchExitEvents();
   } finally {
     await rm(root, { recursive: true, force: true });
   }
-}
-
-async function patchExitEvents() {
-  const file = path.join(ptyRoot, "lib/terminal.js");
-  const source = await readFile(file, "utf8");
-  const original =
-    "this.on('exit', function (exitCode, signal) { return _this._onExit.fire({ exitCode: exitCode, signal: signal }); });";
-  const corrected =
-    "this.on('exit', function (exitCode, signal, execFailed) { return _this._onExit.fire(execFailed === true ? { exitCode: exitCode, signal: signal, execFailed: true } : { exitCode: exitCode, signal: signal }); });";
-  const upstream = source.replace(corrected, original);
-  if (
-    digest(upstream) !==
-    "5ed5cd66a766afba4a04093284e999f8516d41936501839055800b10eca5d304"
-  )
-    throw new Error("Unrecognized node-pty terminal exit runtime");
-  await writeFile(file, upstream.replace(original, corrected));
 }

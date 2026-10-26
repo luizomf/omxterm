@@ -27,6 +27,9 @@ export function inspectWindowsInstallerInputs(
   // #381 and #633 add only the YAML ISC and About presentation MIT notices
   // under resources/licenses. NSIS identities, registration, paths, shortcuts,
   // templates and installer options are unchanged.
+  // #704 excludes Linux prebuilds and redundant third_party native inputs from
+  // the payload. App ID/name, NSIS options, registration/cache paths, shortcuts
+  // and the locked builder/templates remain unchanged; retain exact guarding.
   const digest = createHash("sha256")
     .update(configuration.replaceAll("\r\n", "\n"))
     .digest("hex");
@@ -34,7 +37,7 @@ export function inspectWindowsInstallerInputs(
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest !==
-      "4cbba879e75b5dab13decd3ed956596903d69cfa05ca1932977963d07c7eba4c"
+      "2968aba47725a35838909be20dba72b44e37461054d2a56e28c88b97cdf4c071"
   )
     throw new Error(
       "Unknown Windows installer footprint; review the pinned packaging inputs before exact installer verification",

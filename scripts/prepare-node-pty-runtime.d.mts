@@ -4,6 +4,9 @@ export interface PrepareNodePtyRuntimeOptions {
   readonly helperPath?: string;
   readonly unixRuntimePath?: string;
   readonly windowsRuntimePath?: string;
+  readonly windowsTerminalPath?: string;
+  readonly terminalRuntimePath?: string;
+  readonly nodePtyRoot?: string;
   readonly rebuild?: () => Promise<void>;
   readonly chmod?: (path: string, mode: number) => Promise<void>;
 }

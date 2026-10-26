@@ -77,6 +77,25 @@ const requiredEntries = [
   "/package.json",
 ];
 
+const windowsEntries = (arch: string) => [
+  ...[
+    "conpty.node",
+    "conpty_console_list.node",
+    "conpty/conpty.dll",
+    "conpty/OpenConsole.exe",
+  ].map((file) => `/node_modules/node-pty/prebuilds/win32-${arch}/${file}`),
+  ...[
+    "windowsTerminal.js",
+    "windowsPtyAgent.js",
+    "windowsConoutConnection.js",
+    "worker/conoutSocketWorker.js",
+    "conpty_console_list_agent.js",
+    "eventEmitter2.js",
+    "terminal.js",
+    "utils.js",
+  ].map((file) => `/node_modules/node-pty/lib/${file}`),
+];
+
 describe("packaged application verifier", () => {
   afterEach(() => vi.restoreAllMocks());
 
@@ -308,9 +327,7 @@ describe("packaged application verifier", () => {
         [
           ...requiredEntries,
           "/node_modules/node-pty/prebuilds/win32-arm64",
-          "/node_modules/node-pty/prebuilds/win32-arm64/pty.node",
-          "/node_modules/node-pty/prebuilds/win32-arm64/conpty.node",
-          "/node_modules/node-pty/prebuilds/win32-arm64/conpty/OpenConsole.exe",
+          ...windowsEntries("arm64"),
         ],
         "win32",
       ),
@@ -338,6 +355,8 @@ describe("packaged application verifier", () => {
     "/dist/main/index.js.map",
     "/node_modules/node-pty/src/index.ts",
     "/node_modules/node-pty/prebuilds/darwin-x64/pty.node",
+    "/node_modules/node-pty/prebuilds/linux-arm64/pty.node",
+    "/node_modules/node-pty/third_party/conpty/1.25.260303002/win10-x64/conpty.dll",
     "/node_modules/node-pty/lib/terminal.test.js",
     "/node_modules/node-addon-api/napi.h",
     "/session-transcript.txt",
@@ -389,6 +408,33 @@ describe("packaged application verifier", () => {
       "/usr/share/omxterm/session-transcript.txt",
     ]);
   });
+});
+
+describe("pinned PTY packaged inventory", () => {
+  it("requires the complete official Windows runtime and rejects removed or foreign artifacts", () => {
+    const entries = windowsEntries("x64");
+    for (const entry of entries)
+      expect(
+        inspectAsarEntries(
+          [...requiredEntries, ...entries.filter((file) => file !== entry)],
+          "win32",
+          "x64",
+        ).missing,
+      ).toEqual([entry]);
+    for (const entry of [
+      "/node_modules/node-pty/prebuilds/win32-x64/pty.node",
+      "/node_modules/node-pty/prebuilds/win32-x64/winpty.dll",
+      "/node_modules/node-pty/prebuilds/linux-x64/pty.node",
+      "/node_modules/node-pty/third_party/conpty/runtime.dll",
+    ])
+      expect(
+        inspectAsarEntries(
+          [...requiredEntries, ...entries, entry],
+          "win32",
+          "x64",
+        ).forbidden,
+      ).toEqual([entry]);
+  });
 
   it("reports a missing runtime asset", () => {
     expect(
@@ -438,7 +484,7 @@ describe("Windows native runtime architecture", () => {
           [
             ...requiredEntries,
             `/node_modules/node-pty/prebuilds/win32-${arch}`,
-            `/node_modules/node-pty/prebuilds/win32-${arch}/pty.node`,
+            ...windowsEntries(arch),
           ],
           "win32",
           arch,

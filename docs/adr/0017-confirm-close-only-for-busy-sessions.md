@@ -35,7 +35,7 @@ polling, argument reading or process-tree traversal. An unreadable name counts
 as Busy so a detection failure asks before ending work. A nested shell with the
 same name counts as idle; a differently named shell counts as Busy. This is a limitation of the name-only heuristic.
 
-Pinned node-pty 1.1.0's Linux public getter substitutes the spawned shell when
+Pinned node-pty 1.2.0-beta.18's Linux public getter substitutes the spawned shell when
 its native foreground lookup is unavailable. Postinstall removes that fallback
 from the reviewed Unix runtime so unreadable names count as Busy. An ordinary Linux pipeline can reach this state when its short-lived
 foreground group leader exits before another pipeline member. The preparation

@@ -15,8 +15,14 @@ const nativeRoot = path.join(
       ? ["prebuilds", "darwin-arm64"]
       : ["build", "Release"]),
 );
-const native = require(path.join(nativeRoot, "pty.node"));
-if (process.platform === "win32") require(path.join(nativeRoot, "conpty.node"));
+const native = require(
+  path.join(
+    nativeRoot,
+    process.platform === "win32" ? "conpty.node" : "pty.node",
+  ),
+);
+if (process.platform === "win32")
+  require(path.join(nativeRoot, "conpty_console_list.node"));
 
 async function unixCase(
   executable,
@@ -68,7 +74,10 @@ async function unixCase(
 (async () => {
   const checks = ["packaged-addon-load"];
   if (process.platform === "linux") {
-    assert.throws(() => native.resize(-1, 80, 24), /ioctl\(2\) failed, EBADF/u);
+    assert.throws(
+      () => native.resize(-1, 80, 24, 0, 0),
+      /ioctl\(2\) failed, EBADF/u,
+    );
     checks.push("invalid-fd-resize-error");
     await unixCase(
       "/bin/sh",

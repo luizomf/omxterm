@@ -283,8 +283,10 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   explicit window closure and Quit still cancel pending initialization.
 - Native executable-start failure is distinct from a successfully executed
   program returning nonzero. Unix reports exec failure through a private native
-  status channel, never by interpreting an exit code or Terminal Payload (ADR
-  0032). This applies to explicit commands and the Default Shell, with no
+  status channel. Windows' pinned dependency explicitly marks its asynchronous
+  agent connection/worker failure through the same boolean forwarding, while
+  missing-file rejection remains synchronous. Neither platform infers startup
+  failure from an exit code, error text or Terminal Payload (ADR 0032). This applies to explicit commands and the Default Shell, with no
   fallback shell. Safe Operational Events classify it as `spawn-failure`.
 - A spawn failure or unexpected signal remains visible in a native error dialog
   and local log until acknowledged; the failed pane then closes. Each pending

@@ -16,7 +16,7 @@ function adapter() {
 }
 
 describe("exact Windows installer verification", () => {
-  it("accepts the reviewed packaging footprint including YAML and About notices", async () => {
+  it("accepts the reviewed packaging footprint including beta PTY artifact exclusions", async () => {
     const configuration = await readFile(
       new URL("../../electron-builder.yml", import.meta.url),
       "utf8",

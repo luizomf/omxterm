@@ -9,11 +9,16 @@ private status channel rather than exit-code or Terminal Payload heuristics.
 
 ## Decision
 
-Keep the pinned runtime and apply a source-digest-guarded native correction at
+Keep the exact official node-pty 1.2.0-beta.18 pin and apply a source-digest-guarded native correction at
 postinstall. Build its Node-API addon locally on macOS ARM64 and Linux ARM64/x64,
 using the locked headers; rebuild the existing macOS spawn helper as a matched
 pair. Both development and packaged native artifact locations receive the same
-correction. Windows retains its separate ConPTY implementation.
+correction, including Linux's prebuild fallback. Windows retains its unmodified
+official ConPTY addons and bundled runtime, not a locally rebuilt native fork.
+Shared guarded JavaScript forwards the optional boolean on both platforms.
+Windows' specific agent `onError` handler supplies it for deferred connect/worker
+failure after spawn returns; synchronous missing-file rejection stays synchronous.
+Neither a numeric status nor error text is used by OMXTerm to infer failure.
 
 A private close-on-exec pipe carries one fixed failure byte from the existing
 child/helper when setup or exec fails. Successful exec closes the writer. The
@@ -46,5 +51,8 @@ Shells through real Electron, node-pty, renderer ownership and native failure
 dialogs. A simultaneously live, successfully executed program returns 1 without
 a second dialog. Tests assert safe operational metadata and acknowledgement,
 plus preservation of the mounting-tab and shutdown boundaries from ADR 0016.
-Tests must distinguish native evidence for each platform and package from mocks
+A Windows deferred-connect case uses an existing executable with an unavailable
+fixture cwd; headless prepared-JavaScript checks separately exercise worker
+error, timeout, late readiness and ordinary numeric exit. These are distinct
+from native/package evidence. Tests must distinguish native evidence for each platform and package from mocks
 or source review. Terminal Payload never supplies the failure classification.

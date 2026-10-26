@@ -39,7 +39,12 @@ function publishRegistration(
 // cooperative test-fixture protocol, not containment for arbitrary programs.
 export function spawnFixtureProcess<T extends { readonly pid: number }>(
   spawn: () => T,
-  observeEarlyExit?: (child: T, completed: () => void) => void,
+  observeLifecycle?: (
+    child: T,
+    exited: () => void,
+    ready: () => boolean,
+  ) => (() => void) | void,
+  registered?: (child: T) => void,
 ): T {
   const root = process.env["OMXTERM_NATIVE_FIXTURE_ROOT"];
   if (!root) throw new Error("Native fixture ownership root is missing");
@@ -52,16 +57,30 @@ export function spawnFixtureProcess<T extends { readonly pid: number }>(
   );
   publishRegistration(record, "normal", { owner });
   const child = spawn();
-  const rows = fixtureProcesses();
   const owned = new Map([[owner.pid, owner]]);
-  collectFixtureDescendants(rows, owned);
-  if (!owned.has(child.pid)) {
-    if (!observeEarlyExit)
-      throw new Error("Cannot establish ownership of spawned fixture process");
-    // A real native exit callback can prove that a short-lived PTY was reaped
-    // before the inventory. Keep the write-ahead record pending until then;
-    // absence in one process snapshot alone never completes registration.
-    observeEarlyExit(child, () => {
+  let settled = false;
+  let retire: (() => void) | void;
+  const ready = () => {
+    if (settled) return true;
+    if (!Number.isSafeInteger(child.pid) || child.pid <= 0) return false;
+    const rows = fixtureProcesses();
+    collectFixtureDescendants(rows, owned);
+    if (!owned.has(child.pid)) return false;
+    publishRegistration(record, "normal", {
+      owner,
+      processes: [...owned.values()],
+    });
+    settled = true;
+    retire?.();
+    registered?.(child);
+    return true;
+  };
+  // Install the observer before inspecting a potentially delayed PID. Only an
+  // actual exit plus reinspection can settle a child that vanished before ready.
+  retire = observeLifecycle?.(
+    child,
+    () => {
+      if (settled) return;
       const remaining = fixtureProcesses();
       if (remaining.some((row) => row.pid === child.pid))
         throw new Error("Early-exit fixture PID remains observable");
@@ -70,13 +89,14 @@ export function spawnFixtureProcess<T extends { readonly pid: number }>(
         owner,
         processes: [...owned.values()],
       });
-    });
-    return child;
-  }
-  publishRegistration(record, "normal", {
-    owner,
-    processes: [...owned.values()],
-  });
+      settled = true;
+      retire?.();
+    },
+    ready,
+  );
+  if (settled) retire?.();
+  else if (!ready() && !observeLifecycle)
+    throw new Error("Cannot establish ownership of spawned fixture process");
   return child;
 }
 

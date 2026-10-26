@@ -143,8 +143,11 @@ These opt-in diagnostic runs inspect specific rendering and memory boundaries in
 
 ## Pinned inputs and WASM core rebuild
 
-`npm ci` (and `npm run postinstall`) runs checksum-guarded `node-pty` and Restty runtime preparation against `assets/restty-sources.json`:
+`npm ci` (and `npm run postinstall`) runs checksum-guarded `node-pty` preparation
+(see the [native runtime contract](development.md#pinned-pty-runtime)) and Restty
+runtime preparation against `assets/restty-sources.json`:
 
+- **`node-pty` `1.2.0-beta.18`:** exact official npm archive/integrity in `package-lock.json`; JavaScript/native source guards in `scripts/prepare-node-pty-{runtime,exec-status}.mjs`
 - **Restty `0.3.0`:** `3db45b0e10dbe53c52a77131d366f519546e4f04`
 - **Ghostty:** `0309af1b7f0724105a0805efa88bbee808a616ae`
 - **`text-shaper` `0.1.28`:** `a23058f475f2b0655b93a89bfce426eecafb9439`
@@ -152,14 +155,16 @@ These opt-in diagnostic runs inspect specific rendering and memory boundaries in
 
 Prepared SHA-256 digests:
 
-| Input                      | SHA-256                                                            |
-| -------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime  | `f15c6c25cb2efb879b5a00b09640fcdb2d364c8d566237ff5d0ae63975bb3e44` |
-| Embedded-core chunk        | `03d79d4c745e3c74dd90082a100cbf85e5060e23ff9d16fba338b11d2db1e6be` |
-| Event declarations         | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
-| Tracked WASM core          | `a52f314c2e91e87394e67307d6b0067c8ba28f6b1e31e7587872b9c41ce88c41` |
-| Unix `node-pty` runtime    | `e1cd61e52f681871c401ca54a21382173281532e8eaa9f679bfe549be9a427b1` |
-| Windows `node-pty` runtime | `3f4cf11eaa6cc07bacb34e3693857e123e3e55edfb446d7657d80cf95f9ce244` |
+| Input                     | SHA-256                                                            |
+| ------------------------- | ------------------------------------------------------------------ |
+| Restty JavaScript runtime | `f15c6c25cb2efb879b5a00b09640fcdb2d364c8d566237ff5d0ae63975bb3e44` |
+| Embedded-core chunk       | `03d79d4c745e3c74dd90082a100cbf85e5060e23ff9d16fba338b11d2db1e6be` |
+| Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
+| Tracked WASM core         | `a52f314c2e91e87394e67307d6b0067c8ba28f6b1e31e7587872b9c41ce88c41` |
+| Unix `node-pty` runtime   | `a8ee8107e9d1a26c133e6d450149d2712facce0e97db12b57500e869bbab6578` |
+| Windows argv agent        | `6042a70008684243efbc865d2615c22a16a910c7a65475bc1a33e49447bcd815` |
+| Windows terminal          | `4ceeb76ee0c99ec013678828a3fdf309a612c4613190e5ce16840f5096f7e162` |
+| Shared exit forwarding    | `61698286a777b0c76826e138a9d07424e10db77a28b91ca62a9f96f06f76ff3c` |
 
 ### Rebuilding the WASM core
 

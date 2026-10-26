@@ -62,12 +62,28 @@ const requiredAsarEntries = [
 ];
 
 const macBlurEntry = "/dist/main/macos-window-blur.node";
+const windowsNativeFiles = [
+  "conpty.node",
+  "conpty_console_list.node",
+  "conpty/conpty.dll",
+  "conpty/OpenConsole.exe",
+];
+const windowsRuntimeFiles = [
+  "windowsTerminal.js",
+  "windowsPtyAgent.js",
+  "windowsConoutConnection.js",
+  "worker/conoutSocketWorker.js",
+  "conpty_console_list_agent.js",
+  "eventEmitter2.js",
+  "terminal.js",
+  "utils.js",
+];
 
 const forbiddenEntryPatterns = [
   /(^|\/)\.(?:env|git|npmrc)(?:\.|\/|$)/iu,
   /(^|\/)(?:src|test|tests|scripts|typings)(?:\/|$)/iu,
   /(?:^|\/)node_modules\/(?:node-addon-api|node-api-headers)(?:\/|$)/iu,
-  /(?:^|\/)node_modules\/node-pty\/deps(?:\/|$)/iu,
+  /(?:^|\/)node_modules\/node-pty\/(?:deps|third_party)(?:\/|$)/iu,
   /\.(?:map|pem|p12|key)$/iu,
   /\.test\.js$/iu,
   /(?:credential|private[_-]?key|session[_-]?transcript)/iu,
@@ -101,6 +117,16 @@ export function inspectAsarEntries(
   const required = [
     ...requiredAsarEntries,
     ...(platform === "darwin" ? [macBlurEntry] : []),
+    ...(platform === "win32"
+      ? [
+          ...windowsNativeFiles.map(
+            (file) => `/node_modules/node-pty/prebuilds/win32-${arch}/${file}`,
+          ),
+          ...windowsRuntimeFiles.map(
+            (file) => `/node_modules/node-pty/lib/${file}`,
+          ),
+        ]
+      : []),
   ];
   const missing = required.filter((entry) => !normalized.includes(entry));
   const privateLooking = new Set(inspectForbiddenPackagedEntries(normalized));
@@ -123,6 +149,13 @@ export function inspectAsarEntries(
       (platform === "win32" &&
         entry.includes("/node_modules/node-pty/build/")) ||
       (platform === "win32" && entry.endsWith(".pdb")) ||
+      (platform === "win32" &&
+        entry.startsWith(`/node_modules/node-pty/prebuilds/win32-${arch}/`) &&
+        entry !== `/node_modules/node-pty/prebuilds/win32-${arch}/conpty` &&
+        !windowsNativeFiles.some(
+          (file) =>
+            entry === `/node_modules/node-pty/prebuilds/win32-${arch}/${file}`,
+        )) ||
       (platform === "win32" &&
         entry.includes("/node_modules/node-pty/prebuilds/") &&
         entry !== `/node_modules/node-pty/prebuilds/win32-${arch}` &&
@@ -901,17 +934,34 @@ export async function verifyPackagedApplication(
     );
 
     await inspectArchitecture(executable, "OMXTerm executable", platform);
-    await inspectArchitecture(
-      path.join(nativeRoot, "pty.node"),
-      "node-pty module",
-      platform,
+    const selectedNativeFiles =
+      platform === "win32"
+        ? windowsNativeFiles
+        : platform === "darwin"
+          ? ["pty.node", "spawn-helper"]
+          : ["pty.node"];
+    const preparedNativeRoot = path.join(
+      projectRoot,
+      "node_modules/node-pty",
+      path.relative(
+        path.join(resources, "app.asar.unpacked/node_modules/node-pty"),
+        nativeRoot,
+      ),
     );
-    if (platform === "win32")
-      await inspectArchitecture(
-        path.join(nativeRoot, "conpty.node"),
-        "node-pty ConPTY module",
-        platform,
-      );
+    const nativeArtifacts = [];
+    for (const file of selectedNativeFiles) {
+      const packaged = path.join(nativeRoot, file);
+      await inspectArchitecture(packaged, `node-pty ${file}`, platform);
+      // macOS's final ad-hoc seal can change native bytes. The complete seal is
+      // checked below; record those final sealed hashes instead of raw equality.
+      if (platform !== "darwin")
+        await assertSameFile(path.join(preparedNativeRoot, file), packaged);
+      nativeArtifacts.push({
+        file,
+        preparedSHA256: await sha256(path.join(preparedNativeRoot, file)),
+        packagedSHA256: await sha256(packaged),
+      });
+    }
     if (platform === "darwin") {
       const blurModule = path.join(
         resources,
@@ -943,11 +993,6 @@ export async function verifyPackagedApplication(
       `,
         ],
         { env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" }, timeout: 10_000 },
-      );
-      await inspectArchitecture(
-        path.join(nativeRoot, "spawn-helper"),
-        "node-pty spawn helper",
-        platform,
       );
       await inspectApplicationIcon(applicationRoot);
       await inspectAdHocApplication(applicationRoot);
@@ -982,8 +1027,48 @@ export async function verifyPackagedApplication(
       artifactPath: packagedPath,
     });
 
+    const preparedRuntimeFiles =
+      platform === "win32"
+        ? windowsRuntimeFiles
+        : ["unixTerminal.js", "terminal.js", "utils.js"];
+    const runtimeArtifacts = [];
+    for (const file of preparedRuntimeFiles) {
+      const preparedSHA256 = await sha256(
+        path.join(projectRoot, "node_modules/node-pty/lib", file),
+      );
+      const packagedSHA256 = createHash("sha256")
+        .update(extractFile(asar, `node_modules/node-pty/lib/${file}`))
+        .digest("hex");
+      if (preparedSHA256 !== packagedSHA256)
+        throw new Error(
+          "Packaged node-pty JavaScript differs from prepared runtime",
+        );
+      runtimeArtifacts.push({ file, preparedSHA256, packagedSHA256 });
+    }
+    const nodePtyLock = JSON.parse(
+      await readFile(path.join(projectRoot, "package-lock.json"), "utf8"),
+    ).packages["node_modules/node-pty"];
+    const packagedNodePty = JSON.parse(
+      extractFile(asar, "node_modules/node-pty/package.json").toString("utf8"),
+    );
+    if (packagedNodePty.version !== nodePtyLock.version)
+      throw new Error("Packaged node-pty version differs from lock");
+    const nodePtyEvidence = {
+      version: nodePtyLock.version,
+      integrity: nodePtyLock.integrity,
+      nativeArtifacts,
+      runtimeArtifacts,
+    };
+    await mkdir(path.join(projectRoot, ".scratch"), { recursive: true });
+    await writeFile(
+      path.join(projectRoot, ".scratch/node-pty-package.json"),
+      `${JSON.stringify(nodePtyEvidence, null, 2)}\n`,
+    );
     const asarInspection = inspectAsarEntries(
-      await listPackage(asar),
+      [
+        ...(await listPackage(asar)),
+        ...(await listTreeEntries(`${asar}.unpacked`)),
+      ],
       platform,
       process.arch,
     );
@@ -1097,6 +1182,7 @@ export async function verifyPackagedApplication(
         },
       );
       const runtime = JSON.parse(stdout.trim());
+      runtime.nodePty = nodePtyEvidence;
       const locked = JSON.parse(
         await readFile(path.join(projectRoot, "package-lock.json"), "utf8"),
       ).packages["node_modules/electron"].version;

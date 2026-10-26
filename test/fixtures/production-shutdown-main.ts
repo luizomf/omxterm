@@ -6,7 +6,7 @@ import path from "node:path";
 import { createRequire, syncBuiltinESMExports } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type * as NodePty from "node-pty";
-import { spawnFixtureProcess } from "./native-fixture-ownership";
+import { spawnFixturePty } from "./native-fixture-pty";
 
 // Import the separately built, unchanged production main. No fixture quit
 // barrier, window-all-closed observer, replacement router, or renderer exists.
@@ -84,7 +84,7 @@ const prompts: Promise<void>[] = [];
 const pty = createRequire(import.meta.url)("node-pty") as typeof NodePty;
 const spawn = pty.spawn;
 pty.spawn = (...args) => {
-  const terminal = spawnFixtureProcess(() => spawn(...args));
+  const terminal = spawnFixturePty(...args, { spawn });
   const index = created++;
   assert.ok(index < 3, "Unexpected extra native session");
   if (index > 0) {

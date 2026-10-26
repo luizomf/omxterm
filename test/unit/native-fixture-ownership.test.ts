@@ -1,4 +1,7 @@
 import path from "node:path";
+import { EventEmitter } from "node:events";
+import type { IPty } from "node-pty";
+import { spawnFixturePty } from "../fixtures/native-fixture-pty";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import {
   fixtureProcesses,
@@ -8,6 +11,12 @@ import {
   collectFixtureRegistrations,
   spawnFixtureProcess,
 } from "../fixtures/native-fixture-ownership";
+
+vi.mock("node-pty", () => ({
+  spawn: vi.fn(() => {
+    throw new Error("Native PTY must not run in ownership units");
+  }),
+}));
 
 const io = vi.hoisted(() => ({
   files: new Map<string, string>(),
@@ -158,6 +167,91 @@ describe("native fixture spawn ownership", () => {
     expect(nativeExit).toThrow("PID remains observable");
     expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
   });
+
+  it("registers a pending PID only at verified readiness, without waiting for output", () => {
+    const spawned = { pid: 0 };
+    let ready!: () => boolean;
+    const retire = vi.fn();
+    vi.mocked(fixtureProcesses).mockReturnValue([owner, unrelated]);
+    spawnFixtureProcess(
+      () => spawned,
+      (_child, _exited, atReady) => {
+        ready = atReady;
+        return retire;
+      },
+    );
+    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
+    expect(ready()).toBe(false);
+    spawned.pid = child.pid;
+    // A foreign PID is not readiness proof.
+    vi.mocked(fixtureProcesses).mockReturnValue([
+      owner,
+      { ...child, parent: 1 },
+    ]);
+    expect(ready()).toBe(false);
+    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
+    vi.mocked(fixtureProcesses).mockReturnValue([owner, child]);
+    expect(ready()).toBe(true);
+    const owned = new Map<number, FixtureProcess>();
+    expect(collectFixtureRegistrations(root, owner.pid, owned)).toBe(0);
+    expect([...owned.values()]).toEqual([owner, child]);
+    expect(retire).toHaveBeenCalledOnce();
+  });
+
+  it.each(["ready", "early-exit", "disappeared-at-ready"])(
+    "retires PTY readiness/exit observation at %s without registering PID 0 or republishing",
+    (ordering) => {
+      const events = new EventEmitter();
+      const terminal = Object.assign(events, {
+        pid: 0,
+        onExit(listener: () => void) {
+          events.on("exit", listener);
+          return {
+            dispose: () => {
+              events.removeListener("exit", listener);
+            },
+          };
+        },
+      });
+      vi.mocked(fixtureProcesses).mockReturnValue([owner]);
+      const registered = vi.fn();
+      const originalSpawn = vi.fn(() => terminal as unknown as IPty);
+      expect(
+        spawnFixturePty(
+          "silent.exe",
+          [],
+          {},
+          { spawn: originalSpawn, registered },
+        ),
+      ).toBe(terminal);
+      expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
+      expect(events.listenerCount("exit")).toBe(1);
+      if (ordering === "early-exit") events.emit("exit");
+      else {
+        terminal.pid = child.pid;
+        vi.mocked(fixtureProcesses).mockReturnValue(
+          ordering === "ready" ? [owner, child] : [owner],
+        );
+        events.emit("ready_datapipe");
+        if (ordering === "disappeared-at-ready") {
+          expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(
+            1,
+          );
+          events.emit("exit");
+        }
+      }
+      expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(0);
+      expect(events.listenerCount("exit")).toBe(0);
+      expect(events.listenerCount("ready_datapipe")).toBe(0);
+      expect(registered).toHaveBeenCalledTimes(ordering === "ready" ? 1 : 0);
+      const completed = [...files.values()];
+      terminal.pid = child.pid;
+      events.emit("ready_datapipe");
+      events.emit("exit");
+      expect([...files.values()]).toEqual(completed);
+      expect(completed.some((text) => text.includes('"pid":0'))).toBe(false);
+    },
+  );
 
   it("refuses to spawn without a supervised profile", () => {
     vi.stubEnv("OMXTERM_NATIVE_FIXTURE_ROOT", undefined);

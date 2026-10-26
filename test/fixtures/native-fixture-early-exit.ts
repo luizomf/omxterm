@@ -5,7 +5,7 @@ import { fixtureProcesses } from "./native-fixture-processes";
 // The readiness record is outside the disposable profile so the test can
 // independently check for an escaped PTY even if the supervisor removes it.
 const ready = process.argv[2]!;
-const terminal = spawnFixturePty(
+spawnFixturePty(
   process.execPath,
   [
     "-e",
@@ -14,13 +14,19 @@ const terminal = spawnFixturePty(
      setInterval(()=>{},1000);`,
   ],
   { name: "xterm-256color", cols: 80, rows: 24, env: process.env },
+  {
+    registered(terminal) {
+      const identity = fixtureProcesses().find(
+        (row) => row.pid === terminal.pid,
+      );
+      if (!identity) throw new Error("Cannot identify the regression PTY");
+      writeFileSync(ready, JSON.stringify(identity));
+    },
+  },
 );
-const identity = fixtureProcesses().find((row) => row.pid === terminal.pid);
-if (!identity) throw new Error("Cannot identify the regression PTY");
-writeFileSync(ready, JSON.stringify(identity));
 const deadline = Date.now() + 10_000;
 const exitWhenReady = () => {
-  if (existsSync(`${ready}.started`)) process.exit(0);
+  if (existsSync(ready) && existsSync(`${ready}.started`)) process.exit(0);
   if (Date.now() >= deadline) process.exit(2);
   setTimeout(exitWhenReady, 10);
 };

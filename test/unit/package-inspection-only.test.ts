@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
+import { readFile } from "node:fs/promises";
+import { runInNewContext } from "node:vm";
+import { createRequire } from "node:module";
 import { afterEach, expect, it, vi } from "vitest";
 import { windowsVerificationOptions } from "../../scripts/windows-verification-options.mjs";
 
@@ -21,6 +24,94 @@ it("inspection is explicit, platform-independent and cannot authorize full verif
     expect(() => windowsVerificationOptions(args, "win32")).toThrow();
   }
 });
+
+it.each(["win32", "linux"])(
+  "the actual %s inspection helper uses only its target addons and native resize contract",
+  async (platform) => {
+    const source = await readFile(
+      "scripts/inspect-packaged-runtime.cjs",
+      "utf8",
+    );
+    const asar = path.resolve("exact-package/app.asar");
+    const loaded: string[] = [];
+    const spawn = vi.fn((_file: string, _args: string[]) => {
+      const index = spawn.mock.calls.length;
+      return {
+        kill: vi.fn(),
+        resize: vi.fn(),
+        onData(listener: (text: string) => void) {
+          queueMicrotask(() => listener("OMXTERM_PTY_OK"));
+        },
+        onExit(listener: (event: object) => void) {
+          queueMicrotask(() =>
+            listener({
+              exitCode: index === 1 ? 0 : 1,
+              execFailed: index === 2,
+            }),
+          );
+        },
+      };
+    });
+    const resize = vi.fn((...args: number[]) => {
+      if (JSON.stringify(args) !== JSON.stringify([-1, 80, 24, 0, 0]))
+        throw new Error("wrong resize arguments");
+      throw new Error("ioctl(2) failed, EBADF");
+    });
+    const runtimeProcess = {
+      argv: ["electron", "helper", asar],
+      platform,
+      arch: "x64",
+      versions: { electron: "43.8.1" },
+      exitCode: 0,
+    };
+    const require = createRequire(import.meta.url);
+    const result = await new Promise<unknown>((resolve, reject) => {
+      runInNewContext(source, {
+        process: runtimeProcess,
+        setTimeout,
+        clearTimeout,
+        console: {
+          log: (text: string) => resolve(JSON.parse(text) as unknown),
+          error: reject,
+        },
+        require(id: string) {
+          if (!path.isAbsolute(id)) return require(id) as unknown;
+          loaded.push(id);
+          if (id === path.join(asar, "node_modules/node-pty")) return { spawn };
+          const root = path.join(
+            `${asar}.unpacked`,
+            "node_modules/node-pty",
+            platform === "win32" ? "prebuilds/win32-x64" : "build/Release",
+          );
+          if (
+            id ===
+            path.join(root, platform === "win32" ? "conpty.node" : "pty.node")
+          )
+            return { resize };
+          if (
+            platform === "win32" &&
+            id === path.join(root, "conpty_console_list.node")
+          )
+            return {};
+          throw new Error(`Unexpected addon: ${id}`);
+        },
+      });
+    });
+    expect(result).toMatchObject({ platform, arch: "x64" });
+    if (platform === "win32") {
+      expect(spawn).not.toHaveBeenCalled();
+      expect(resize).not.toHaveBeenCalled();
+      expect(loaded.map((file) => path.basename(file))).toEqual([
+        "node-pty",
+        "conpty.node",
+        "conpty_console_list.node",
+      ]);
+    } else {
+      expect(spawn).toHaveBeenCalledTimes(3);
+      expect(resize).toHaveBeenCalledWith(-1, 80, 24, 0, 0);
+    }
+  },
+);
 
 const originalPlatform = Object.getOwnPropertyDescriptor(process, "platform")!;
 const originalArch = Object.getOwnPropertyDescriptor(process, "arch")!;
@@ -60,7 +151,9 @@ it.each(["linux", "win32"])(
     const readFile = vi.fn(async (file: string, encoding?: string) => {
       if (
         platform === "win32" &&
-        (file.endsWith(".exe") || file.endsWith(".node"))
+        (file.endsWith(".exe") ||
+          file.endsWith(".node") ||
+          file.endsWith(".dll"))
       ) {
         const pe = Buffer.alloc(128);
         pe.writeUInt16LE(0x5a4d, 0);
@@ -77,7 +170,13 @@ it.each(["linux", "win32"])(
         contents = `${digest(name === "linux_install.sh" ? helper : "same licensed/icon bytes")}  ${name}\n`;
       } else if (file.endsWith("package-lock.json"))
         contents = JSON.stringify({
-          packages: { "node_modules/electron": { version: "43.8.1" } },
+          packages: {
+            "node_modules/electron": { version: "43.8.1" },
+            "node_modules/node-pty": {
+              version: "1.2.0-beta.18",
+              integrity: "selected-integrity",
+            },
+          },
         });
       else if (file.endsWith("package.json")) contents = '{"version":"1.2.3"}';
       else if (file.endsWith("omxterm.desktop"))
@@ -139,7 +238,14 @@ it.each(["linux", "win32"])(
     });
     vi.doMock("node:child_process", () => ({ execFile, spawn }));
     vi.doMock("@electron/asar", () => ({
-      extractFile: () => Buffer.from('{"version":"1.2.3"}'),
+      extractFile: (_asar: string, file: string) =>
+        Buffer.from(
+          file === "package.json"
+            ? '{"version":"1.2.3"}'
+            : file === "node_modules/node-pty/package.json"
+              ? '{"version":"1.2.0-beta.18"}'
+              : "same licensed/icon bytes",
+        ),
       listPackage: async () => [
         "/dist/main/index.js",
         "/dist/preload/index.cjs",
@@ -148,6 +254,28 @@ it.each(["linux", "win32"])(
         "/dist/renderer/index.html",
         "/dist/renderer/index.js",
         "/node_modules/node-pty/lib/index.js",
+        ...(platform === "win32"
+          ? [
+              ...[
+                "conpty.node",
+                "conpty_console_list.node",
+                "conpty/conpty.dll",
+                "conpty/OpenConsole.exe",
+              ].map(
+                (file) => `/node_modules/node-pty/prebuilds/win32-x64/${file}`,
+              ),
+              ...[
+                "windowsTerminal.js",
+                "windowsPtyAgent.js",
+                "windowsConoutConnection.js",
+                "worker/conoutSocketWorker.js",
+                "conpty_console_list_agent.js",
+                "eventEmitter2.js",
+                "terminal.js",
+                "utils.js",
+              ].map((file) => `/node_modules/node-pty/lib/${file}`),
+            ]
+          : []),
         "/package.json",
       ],
     }));

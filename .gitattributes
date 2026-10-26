@@ -1,2 +1,4 @@
 # Preserve the accepted upstream OFL bytes, including its original whitespace.
 assets/fonts/OFL.txt -whitespace
+# Unified-diff context retains upstream blank-line prefixes.
+native/node-pty-exec-status.patch -whitespace

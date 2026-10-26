@@ -14,7 +14,11 @@ const prefix = "__OMXTERM_FAILURE_ACK_RESULT__";
 describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   "Failure acknowledgement through real Electron, Restty, PTY and native dialog",
   () => {
-    it.for(["explicit-command", "default-shell"])(
+    it.for([
+      "explicit-command",
+      "default-shell",
+      ...(process.platform === "win32" ? ["deferred-connect"] : []),
+    ])(
       "retains failed %s B's native dialog through ordinary code-1 A exit and closes once after acknowledgement",
       { timeout: 110_000 },
       async (kind, testContext) => {
@@ -37,6 +41,9 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
               ...args,
               root,
               ...(kind === "default-shell" ? ["--missing-default-shell"] : []),
+              ...(kind === "deferred-connect"
+                ? ["--deferred-connect-failure"]
+                : []),
             ],
             root,
             timeout: 90_000,

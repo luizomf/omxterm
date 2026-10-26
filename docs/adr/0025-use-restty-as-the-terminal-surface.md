@@ -190,7 +190,7 @@ synchronous Surface submission, not rendered pixels or parser/resource release.
 Main pauses at 65,536 pending bytes and resumes at or below 16,384. The crossing
 native read can exceed the high water, so the bound includes that read. Disposal
 or renderer/send loss resumes and terminates only the owned PTY. A guarded
-node-pty 1.1.0 Unix correction defers its stuck-close socket timeout while paused
+node-pty 1.2.0-beta.18 Unix correction defers its stuck-close socket timeout while paused
 to preserve the readable tail; ConPTY is separate.
 
 ## Keyboard input and terminal controls

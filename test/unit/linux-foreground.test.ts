@@ -83,10 +83,21 @@ it("keeps unavailable Linux native foreground reads Busy through the pinned publ
   try {
     const installed = await readFile(runtimePath, "utf8");
     // Recover the reviewed pre-#484 input even after production postinstall.
-    const previous = installed.replace(
-      "            // OMXTerm keeps unavailable Linux foreground reads unavailable (ADR 0017).\n            return pty.process(this._fd, this._pty);",
-      "            return pty.process(this._fd, this._pty) || this._file;",
-    );
+    // Reconstruct exactly the reviewed paused-tail intermediate, without a
+    // partially applied exec-forwarding extension (which must fail closed).
+    const previous = installed
+      .replace(
+        "            // OMXTerm keeps unavailable Linux foreground reads unavailable (ADR 0017).\n            return pty.process(this._fd, this._pty);",
+        "            return pty.process(this._fd, this._pty) || this._file;",
+      )
+      .replace(
+        "var onexit = function (code, signal, execFailed)",
+        "var onexit = function (code, signal)",
+      )
+      .replaceAll(
+        "_this.emit('exit', code, signal, execFailed)",
+        "_this.emit('exit', code, signal)",
+      );
     const unavailable = () => undefined;
     const fallback = publicForeground(previous, "linux", unavailable);
     expect(fallback()).toBe("/bin/bash");

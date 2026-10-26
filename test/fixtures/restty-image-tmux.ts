@@ -39,7 +39,12 @@ export async function withTmuxImageOutput(options: {
       if (!child.pid) throw new Error("tmux server did not spawn");
       return Object.assign(child, { pid: child.pid });
     },
-    (child, completed) => child.once("exit", completed),
+    (child, completed) => {
+      child.once("exit", completed);
+      return () => {
+        child.removeListener("exit", completed);
+      };
+    },
   );
   let serverExited = false;
   server.once("exit", () => {

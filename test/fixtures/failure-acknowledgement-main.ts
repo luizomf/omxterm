@@ -19,6 +19,10 @@ import { createResttyHostSessions } from "./restty-host-sessions";
 
 const root = __dirname;
 const missingDefaultShell = process.argv.includes("--missing-default-shell");
+const deferredConnectFailure = process.argv.includes(
+  "--deferred-connect-failure",
+);
+if (deferredConnectFailure) assert.equal(process.platform, "win32");
 for (const name of ["userData", "sessionData"] as const) {
   const directory = path.join(root, name);
   mkdirSync(directory, { recursive: true });
@@ -30,7 +34,11 @@ let windowsStartRejected = false;
 const owner = createResttyHostSessions({
   app,
   spawn: (...args) => {
-    if (process.platform !== "win32" || attempts !== 2)
+    if (
+      process.platform !== "win32" ||
+      attempts !== 2 ||
+      deferredConnectFailure
+    )
       return spawnFixturePty(...args);
     // Pinned ConPTY startProcess rejects a missing file before allocating its
     // pseudoconsole or any child. There is no PID to register on this path.
@@ -128,7 +136,7 @@ async function run() {
                   launchRequest: {
                     kind: "explicit-command" as const,
                     executable:
-                      attempts === 1
+                      attempts === 1 || deferredConnectFailure
                         ? nativeFixturePlatform.defaultShell
                         : path.join(root, "missing-fixture-program"),
                     arguments:
@@ -140,7 +148,10 @@ async function run() {
                   },
                 }),
             platform: process.platform,
-            homeDirectory: root,
+            homeDirectory:
+              attempt === 2 && deferredConnectFailure
+                ? path.join(root, "unavailable-fixture-cwd")
+                : root,
             environment: { ...process.env, HOME: root },
             applicationVersionProvider: app,
             onOutput(data) {
@@ -242,7 +253,7 @@ async function run() {
   await owner.waitFor(
     async () =>
       (await window.webContents.executeJavaScript(
-        `document.querySelectorAll('.terminal-surface').length === ${process.platform === "win32" ? 1 : 2}`,
+        `document.querySelectorAll('.terminal-surface').length === ${process.platform === "win32" && !deferredConnectFailure ? 1 : 2}`,
       )) as boolean,
     "failed B ownership established",
   );
@@ -269,8 +280,10 @@ async function run() {
   // disposal and application completion must still each happen exactly once.
   assert.equal(closed, 1, "one completed native owner disposal");
   assert.equal(quits, 1);
-  if (process.platform !== "win32") assert.equal(nativeFailure, true);
+  if (process.platform !== "win32" || deferredConnectFailure)
+    assert.equal(nativeFailure, true);
   else assert.equal(windowsStartRejected, true);
+  if (deferredConnectFailure) assert.equal(windowsStartRejected, false);
   assert.equal(attempts, 2);
   assert.equal(failures, 1);
   assert.equal(empty, true);

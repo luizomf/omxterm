@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { appendFile, readFile, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
+import { createRequire } from "node:module";
 import path from "node:path";
 import {
   checksumContents,
@@ -9,6 +10,8 @@ import {
 } from "./package-linux-assets.mjs";
 import { inspectChecksumRecord } from "./verify-packaged-app.mjs";
 
+const require = createRequire(import.meta.url);
+const ptyRequire = createRequire(require.resolve("node-pty/package.json"));
 const platform = process.platform;
 if (
   !["linux", "win32"].includes(platform) ||
@@ -90,6 +93,44 @@ const evidence = {
   electronDependencyVersion:
     JSON.parse(lock).packages["node_modules/electron"].version,
   packagedRuntime: runtime,
+  nodePtyPreparation: {
+    // Bind the selected outputs to their reviewed recipe, not just a version.
+    inputs: Object.fromEntries(
+      await Promise.all(
+        [
+          "scripts/prepare-node-pty-runtime.mjs",
+          "scripts/prepare-node-pty-exec-status.mjs",
+          "native/node-pty-exec-status.patch",
+          "native/node-pty-exec-status.h",
+        ].map(async (file) => [
+          file,
+          createHash("sha256")
+            .update(await readFile(file))
+            .digest("hex"),
+        ]),
+      ),
+    ),
+    compiler:
+      platform === "linux"
+        ? execFileSync("c++", ["--version"], {
+            encoding: "utf8",
+            timeout: 10_000,
+          }).trim()
+        : null,
+    nativeSource:
+      platform === "win32"
+        ? "official integrity-pinned archive prebuilds"
+        : "guarded Unix source with locked Node-API headers",
+    headers:
+      platform === "linux"
+        ? {
+            nodeApiHeaders:
+              JSON.parse(lock).packages["node_modules/node-api-headers"]
+                .version,
+            nodeAddonApi: ptyRequire("node-addon-api/package.json").version,
+          }
+        : null,
+  },
   checks: [
     "npm-ci",
     "format",
