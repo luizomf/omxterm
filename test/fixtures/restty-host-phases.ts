@@ -41,6 +41,54 @@ export interface OutputRefitProgress {
   readonly resumeCount: number;
 }
 
+export interface OutputRefitBoundary {
+  readonly countBefore: number;
+  readonly requestCount: number;
+  readonly expectedCols: number;
+  readonly expectedRows: number;
+  readonly latestRequestedCols: number;
+  readonly latestRequestedRows: number;
+}
+
+const boundaryPhases = ["width-enter", "width-settled", "grid-first"] as const;
+export function recordOutputRefitBoundary(
+  phase: (typeof boundaryPhases)[number],
+  boundary: OutputRefitBoundary,
+  result?: "fulfilled" | "rejected" | boolean,
+): void {
+  try {
+    if (!boundaryPhases.includes(phase)) return;
+    if (
+      (phase === "width-enter" && result !== undefined) ||
+      (phase === "width-settled" &&
+        result !== "fulfilled" &&
+        result !== "rejected") ||
+      (phase === "grid-first" && typeof result !== "boolean")
+    )
+      return;
+    const values = {
+      countBefore: boundary.countBefore,
+      requestCount: boundary.requestCount,
+      expectedCols: boundary.expectedCols,
+      expectedRows: boundary.expectedRows,
+      latestRequestedCols: boundary.latestRequestedCols,
+      latestRequestedRows: boundary.latestRequestedRows,
+    };
+    if (
+      !Object.values(values).every(
+        (value) => Number.isSafeInteger(value) && value >= 0,
+      )
+    )
+      return;
+    writeSync(
+      1,
+      `__OMXTERM_OUTPUT_REFIT_PROGRESS__${JSON.stringify({ version: 1, phase, ...values, ...(phase === "width-settled" ? { outcome: result } : phase === "grid-first" ? { predicate: result } : {}), at: Date.now(), monotonicMs: performance.now() })}\n`,
+    );
+  } catch {
+    // Observation cannot starve the width operation or grid predicate.
+  }
+}
+
 const progressPhases = [
   "baseline",
   "prefix-enter",

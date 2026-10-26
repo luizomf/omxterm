@@ -2,6 +2,7 @@ import type { BrowserWindow } from "electron";
 import {
   recordResttyHostPhase as recordPhase,
   recordOutputRefitProgress,
+  recordOutputRefitBoundary,
   type OutputRefitProgress,
 } from "./restty-host-phases";
 
@@ -175,14 +176,49 @@ export async function prepareOutputRefit({
         const count = sizes.length;
         recordPhase("refit-native-grid", "begin");
         beforeRefit?.();
-        await setWidth(`${layout.width - 50}px`);
-        await waitFor(
-          () =>
+        const boundary = (
+          phase: Parameters<typeof recordOutputRefitBoundary>[0],
+          result?: Parameters<typeof recordOutputRefitBoundary>[2],
+        ) => {
+          try {
+            const latest = sizes.at(-1);
+            if (!latest) return;
+            recordOutputRefitBoundary(
+              phase,
+              {
+                countBefore: count,
+                requestCount: sizes.length,
+                expectedCols: refitted.cols,
+                expectedRows: original.rows,
+                latestRequestedCols: latest.cols,
+                latestRequestedRows: latest.rows,
+              },
+              result,
+            );
+          } catch {
+            /* Snapshot failure cannot change the awaited operation. */
+          }
+        };
+        boundary("width-enter");
+        try {
+          await setWidth(`${layout.width - 50}px`);
+        } catch (error) {
+          boundary("width-settled", "rejected");
+          throw error;
+        }
+        boundary("width-settled", "fulfilled");
+        let gridFirst = true;
+        await waitFor(() => {
+          const ready =
             sizes.length > count &&
             sizes.at(-1)!.cols === refitted.cols &&
-            sizes.at(-1)!.rows === original.rows,
-          "controlled output Surface grid and PTY resize request",
-        );
+            sizes.at(-1)!.rows === original.rows;
+          if (gridFirst) {
+            gridFirst = false;
+            boundary("grid-first", ready);
+          }
+          return ready;
+        }, "controlled output Surface grid and PTY resize request");
         recordPhase("refit-native-grid", "complete");
         return prefixAcknowledgement;
       },

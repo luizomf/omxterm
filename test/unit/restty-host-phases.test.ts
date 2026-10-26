@@ -11,6 +11,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import {
   recordResttyHostPhase,
   recordOutputRefitProgress,
+  recordOutputRefitBoundary,
 } from "../fixtures/restty-host-phases";
 
 vi.mock("node:fs", { spy: true });
@@ -66,6 +67,64 @@ it("bounds refit progress to fixed numeric metadata and never substitutes diagno
   });
   expect(() =>
     recordOutputRefitProgress("continuation-failure", progress),
+  ).not.toThrow();
+});
+
+it("validates the fixed width/grid boundary schema without leaking extra context or sink errors", () => {
+  const sink = vi
+    .mocked(fs.writeSync)
+    .mockClear()
+    .mockImplementation(() => 0);
+  const boundary = {
+    countBefore: 3,
+    requestCount: 4,
+    expectedCols: 60,
+    expectedRows: 24,
+    latestRequestedCols: 59,
+    latestRequestedRows: 24,
+    privateError: "never publish",
+  };
+  recordOutputRefitBoundary("private phase" as never, boundary);
+  recordOutputRefitBoundary("width-enter", boundary, "fulfilled");
+  recordOutputRefitBoundary(
+    "width-settled",
+    boundary,
+    "private error" as never,
+  );
+  recordOutputRefitBoundary("grid-first", boundary, "false" as never);
+  for (const invalid of [-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])
+    recordOutputRefitBoundary("width-enter", {
+      ...boundary,
+      requestCount: invalid,
+    });
+  expect(sink).not.toHaveBeenCalled();
+  recordOutputRefitBoundary("width-enter", boundary);
+  recordOutputRefitBoundary("width-settled", boundary, "rejected");
+  recordOutputRefitBoundary("grid-first", boundary, false);
+  const records = sink.mock.calls.map(
+    ([, value]) =>
+      JSON.parse(
+        String(value).slice("__OMXTERM_OUTPUT_REFIT_PROGRESS__".length),
+      ) as Record<string, unknown>,
+  );
+  expect(
+    records.map(({ phase, outcome, predicate }) => [phase, outcome, predicate]),
+  ).toEqual([
+    ["width-enter", undefined, undefined],
+    ["width-settled", "rejected", undefined],
+    ["grid-first", undefined, false],
+  ]);
+  expect(
+    sink.mock.calls.every(
+      ([, value]) =>
+        String(value).length < 512 && !String(value).includes("never publish"),
+    ),
+  ).toBe(true);
+  sink.mockImplementation(() => {
+    throw Error("closed sink");
+  });
+  expect(() =>
+    recordOutputRefitBoundary("width-settled", boundary, "fulfilled"),
   ).not.toThrow();
 });
 

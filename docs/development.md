@@ -712,6 +712,15 @@ phase establish a grid request, not native resize success or child consumption. 
 byte baseline does not independently establish parser pending-wrap state in an
 unknown envelope. Actual-core reflow tests discriminate that separately; D3's
 native continuation cause remains unresolved until ordinary native execution.
+At the targeted refit only (not calibration/restoration), at most three additional
+progress records distinguish the existing awaits: `width-enter`, `width-settled`
+with fixed `fulfilled`/`rejected` outcome, then `grid-first` with its first actual
+predicate boolean. Numeric fields are `countBefore`, current `requestCount`,
+`expectedCols` (calibrated) / `expectedRows` (original), and
+`latestRequestedCols` / `latestRequestedRows`. Rejection rethrows the same error.
+These are requested-grid / JavaScript-settlement observations, not native success,
+paint, child consumption or stable/final grid proof. Sink failure does not change
+the operation; no extra renderer query, wait, timer, retry or per-poll log is added.
 Poll iterations never emit repeated receipts. A request return or focus
 event alone is not readiness or native input admission.
 
