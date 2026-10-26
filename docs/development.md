@@ -393,7 +393,14 @@ breakpoint edges. It checks clicked/selected/hidden/rendered category agreement,
 readable label width/line geometry, actual form and shortcut placement on both
 sides of their content breakpoints, horizontal containment and reachable focused
 controls. Retained editor identity, palette color-scheme and native minima are
-also checked. `OMXTERM_SETTINGS_EVIDENCE_DIR` optionally saves synthetic-only
+also checked. Viewport targeting uses the initial request plus at most two
+request-delta corrections on both axes, each followed by the same two-animation-
+frame boundary. Deltas accumulate from the last request, not observed/native
+size. Breakpoint targeting uses the same bounded rule for panel width and exact
+640 px viewport height. Exact first observations stop immediately; clamped or
+unreachable targets fail without tolerance, minimum/zoom/scale changes or layout
+retries. Category-level exact size and layout assertions remain independent.
+`OMXTERM_SETTINGS_EVIDENCE_DIR` optionally saves synthetic-only
 PNGs. Before throwing, a failure captures bounded app-only geometry and a frame
 (up to 1920×1080 logical pixels and 32 MiB encoded), without refocusing or
 restoring the renderer first. The runner's per-invocation failure destination is

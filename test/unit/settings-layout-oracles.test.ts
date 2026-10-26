@@ -9,7 +9,10 @@ import {
   type SettingsLayoutObservation,
 } from "../fixtures/settings-layout-observation";
 import { captureSettingsLayoutFailure } from "../fixtures/settings-layout-failure";
-import { exerciseSettingsLayout } from "../fixtures/settings-layout-exercise";
+import {
+  exerciseSettingsLayout,
+  targetSettingsGeometry,
+} from "../fixtures/settings-layout-exercise";
 
 it("uses only the content query container and viewport queries for outer Settings layout", () => {
   const css = readFileSync("src/renderer/settings/settings-dialog.css", "utf8");
@@ -190,71 +193,219 @@ it("rejects the removed-inner-container control and one-character-per-line label
     ),
   ).toThrow("label wraps into excessive lines");
 });
-it("captures the actual failed category state before restoring the renderer", async () => {
+it("reaches exact matrix viewports and breakpoint heights under persistent +1 native height bias", async () => {
+  vi.stubEnv("OMXTERM_SETTINGS_EVIDENCE_DIR", undefined);
   const directory = await mkdtemp(
-    path.join(tmpdir(), "omxterm-layout-failure-"),
+    path.join(tmpdir(), "omxterm-layout-target-"),
   );
   const previousArgs = [...process.argv];
-  vi.stubEnv("OMXTERM_SETTINGS_EVIDENCE_DIR", undefined);
   process.argv.push(`--fixture-settings-evidence=${directory}`);
-  const order: string[] = [];
-  const observation = sample();
-  const mismatch = {
-    ...observation,
-    panels: observation.panels.map((panel) => ({
-      ...panel,
-      display: panel.id === "settings-panel-config-file" ? "flex" : "none",
-    })),
-  };
-  const capturePage = vi.fn(async () => {
-    order.push("capture");
-    return { toPNG: () => Buffer.from("synthetic PNG port") };
-  });
+  let width = 960,
+    height = 640,
+    selected = "general",
+    light = false;
+  const requests: number[][] = [];
+  const minimum = vi.fn(() => [320, 200]);
+  const panelWidth = () => width - (width >= 900 ? 200 : 40);
   const window = {
     getContentBounds: () => ({ width: 960, height: 640 }),
-    getContentSize: () => [320, 200],
-    getMinimumSize: () => [320, 200],
-    setContentSize: (width: number) => {
-      order.push(`size-${width}`);
+    getMinimumSize: minimum,
+    setContentSize(w: number, h: number) {
+      requests.push([w, h]);
+      width = w;
+      height = h + 1;
     },
     webContents: {
-      executeJavaScript: async (script: string) =>
-        script.includes("measureText") ? mismatch : undefined,
-      capturePage,
+      sendInputEvent() {},
+      async executeJavaScript(script: string) {
+        if (script.startsWith("["))
+          return [
+            script.includes("settings-panels") ? panelWidth() : width,
+            height,
+          ];
+        if (script.includes("measureText"))
+          return {
+            ...sample(
+              panelWidth(),
+              panelWidth() < 560 ? "stacked" : "columns",
+              panelWidth() < 760 ? "wrapped" : "inline",
+              `settings-panel-${selected}`,
+            ),
+            width,
+            height,
+            scheme: light ? "light" : "dark",
+          };
+        const category = /#settings-tab-([a-z-]+)'/u.exec(script)?.[1];
+        if (category) selected = category;
+        if (script.includes(":focus-visible")) return true;
+        if (script.includes(".settings-panels")) return panelWidth();
+        return undefined;
+      },
     },
   } as unknown as BrowserWindow;
   try {
     await expect(
       exerciseSettingsLayout(
         window,
-        () => {},
-        () => {
-          order.push("restore");
+        (_language, value) => {
+          light = value;
         },
+        () => {},
       ),
-    ).rejects.toThrow("rendered panel does not match click");
-    expect(capturePage).toHaveBeenCalledOnce();
-    expect(order.indexOf("capture")).toBeLessThan(order.indexOf("restore"));
-    const [name] = await readdir(directory);
-    const metadata = JSON.parse(
-      await readFile(path.join(directory, name!, "observation.json"), "utf8"),
-    ) as {
-      context: { category: string };
-      observation: SettingsLayoutObservation;
-      screenshot: boolean;
-    };
-    expect(metadata.context.category).toBe("general");
-    expect(metadata.observation.panels).toEqual(mismatch.panels);
-    expect(metadata.screenshot).toBe(true);
-    expect(
-      await readFile(path.join(directory, name!, "frame.png"), "utf8"),
-    ).toBe("synthetic PNG port");
+    ).resolves.toMatchObject({ cases: 144, breakpoints: 4 });
+    expect(requests.slice(0, 2)).toEqual([
+      [320, 200],
+      [320, 199],
+    ]);
+    const at = requests.findIndex(([w]) => w === 1000);
+    expect(requests.slice(at, at + 3)).toEqual([
+      [1000, 640],
+      [759, 639],
+      [599, 639],
+    ]);
+    expect(requests.at(-1)).toEqual([960, 640]);
+    expect(minimum).toHaveBeenCalledTimes(2);
   } finally {
     process.argv = previousArgs;
     vi.unstubAllEnvs();
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+it("stops at an exact first request, corrects both biased axes and rejects invalid requests", async () => {
+  for (const bias of [0, 1]) {
+    const requests: number[][] = [];
+    const frame = vi.fn(async () => {});
+    await targetSettingsGeometry({
+      initial: [320, 200],
+      target: [320, 200],
+      setSize: (w, h) => {
+        requests.push([w, h]);
+      },
+      frame,
+      measure: async () =>
+        requests.at(-1)!.map((value) => value + bias) as [number, number],
+    });
+    expect(requests).toEqual(
+      bias
+        ? [
+            [320, 200],
+            [319, 199],
+          ]
+        : [[320, 200]],
+    );
+    expect(frame).toHaveBeenCalledTimes(requests.length);
+  }
+  for (const width of [0, -1, Infinity, NaN]) {
+    const setSize = vi.fn();
+    await expect(
+      targetSettingsGeometry({
+        initial: [width, 200],
+        target: [320, 200],
+        setSize,
+        frame: async () => {},
+        measure: async () => [320, 200],
+      }),
+    ).rejects.toThrow("Settings invalid geometry request");
+    expect(setSize).not.toHaveBeenCalled();
+  }
+});
+
+it.each(["category", "unreachable"])(
+  "captures the actual failed %s state before restoring the renderer",
+  async (mode) => {
+    const directory = await mkdtemp(
+      path.join(tmpdir(), "omxterm-layout-failure-"),
+    );
+    const previousArgs = [...process.argv];
+    vi.stubEnv("OMXTERM_SETTINGS_EVIDENCE_DIR", undefined);
+    process.argv.push(`--fixture-settings-evidence=${directory}`);
+    const order: string[] = [];
+    const observation = sample();
+    const mismatch = {
+      ...observation,
+      panels: observation.panels.map((panel) => ({
+        ...panel,
+        display: panel.id === "settings-panel-config-file" ? "flex" : "none",
+      })),
+    };
+    const capturePage = vi.fn(async () => {
+      order.push("capture");
+      return { toPNG: () => Buffer.from("synthetic PNG port") };
+    });
+    const requests: number[][] = [];
+    const minimum = vi.fn(() => [320, 200]);
+    const window = {
+      getContentBounds: () => ({ width: 960, height: 640 }),
+      getContentSize: () => [320, mode === "unreachable" ? 201 : 200],
+      getMinimumSize: minimum,
+      setContentSize: (width: number, height: number) => {
+        requests.push([width, height]);
+        order.push(`size-${width}`);
+      },
+      webContents: {
+        executeJavaScript: async (script: string) =>
+          script.startsWith("[")
+            ? [320, mode === "unreachable" ? 201 : 200]
+            : script.includes("measureText")
+              ? mismatch
+              : undefined,
+        capturePage,
+      },
+    } as unknown as BrowserWindow;
+    try {
+      await expect(
+        exerciseSettingsLayout(
+          window,
+          () => {},
+          () => {
+            order.push("restore");
+          },
+        ),
+      ).rejects.toThrow(
+        mode === "unreachable"
+          ? "Settings exact geometry target was not reached"
+          : "rendered panel does not match click",
+      );
+      expect(requests).toEqual(
+        mode === "unreachable"
+          ? [
+              [320, 200],
+              [320, 199],
+              [320, 198],
+              [960, 640],
+            ]
+          : [
+              [320, 200],
+              [960, 640],
+            ],
+      );
+      expect(minimum).toHaveBeenCalledOnce();
+      expect(capturePage).toHaveBeenCalledOnce();
+      expect(order.indexOf("capture")).toBeLessThan(order.indexOf("restore"));
+      const [name] = await readdir(directory);
+      const metadata = JSON.parse(
+        await readFile(path.join(directory, name!, "observation.json"), "utf8"),
+      ) as {
+        context: { category: string };
+        observation: SettingsLayoutObservation;
+        screenshot: boolean;
+      };
+      expect(metadata.context.category).toBe(
+        mode === "category" ? "general" : undefined,
+      );
+      expect(metadata.observation.panels).toEqual(mismatch.panels);
+      expect(metadata.screenshot).toBe(true);
+      expect(
+        await readFile(path.join(directory, name!, "frame.png"), "utf8"),
+      ).toBe("synthetic PNG port");
+    } finally {
+      process.argv = previousArgs;
+      vi.unstubAllEnvs();
+      await rm(directory, { recursive: true, force: true });
+    }
+  },
+);
 it.each(["capture-error", "empty", "oversize"] as const)(
   "keeps bounded diagnostics when screenshot is %s without replacing the oracle failure",
   async (mode) => {

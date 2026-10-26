@@ -13,6 +13,33 @@ import {
   type SettingsLayoutContext,
 } from "./settings-layout-failure";
 
+// Shared by viewport and panel-breakpoint targeting; each set keeps the same
+// two-frame boundary. Corrections accumulate from requests, not biased results.
+export async function targetSettingsGeometry(options: {
+  readonly initial: readonly [number, number];
+  readonly target: readonly [number, number];
+  readonly setSize: (width: number, height: number) => void;
+  readonly frame: () => Promise<unknown>;
+  readonly measure: () => Promise<readonly [number, number]>;
+}) {
+  const requested: [number, number] = [...options.initial];
+  for (let correction = 0; correction <= 2; correction++) {
+    assert.ok(
+      requested.every((value) => Number.isFinite(value) && value > 0),
+      "Settings invalid geometry request",
+    );
+    options.setSize(...requested);
+    await options.frame();
+    const observed = await options.measure();
+    if (observed[0] === options.target[0] && observed[1] === options.target[1])
+      return;
+    if (correction === 2) break;
+    requested[0] += options.target[0] - observed[0];
+    requested[1] += options.target[1] - observed[1];
+  }
+  assert.fail("Settings exact geometry target was not reached");
+}
+
 // Real Chromium layout/focus over the retained production Settings view. This
 // establishes synthetic native input, not physical keyboard or OS widgets.
 export async function exerciseSettingsLayout(
@@ -76,8 +103,13 @@ export async function exerciseSettingsLayout(
       context = { phase: "matrix", language, light, width, height };
       configure(language, light);
       await frame();
-      window.setContentSize(width, height);
-      await frame();
+      await targetSettingsGeometry({
+        initial: [width, height],
+        target: [width, height],
+        setSize: (w, h) => window.setContentSize(w, h),
+        frame,
+        measure: () => evaluate<[number, number]>("[innerWidth, innerHeight]"),
+      });
       await evaluate(`(() => {
         const editor = document.querySelector('.settings-config-file textarea');
         globalThis.settingsLayoutEditor ??= editor;
@@ -138,19 +170,18 @@ export async function exerciseSettingsLayout(
     );
     for (const target of [559, 560, 759, 760]) {
       context = { phase: "breakpoint", contentTarget: target };
-      window.setContentSize(1000, 640);
-      await frame();
       const panelWidth =
         "(() => { const e = document.querySelector('.settings-panels'); const s = getComputedStyle(e); return e.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight); })()";
       // One correction can cross the outer 900 px viewport budget. The second
       // is a bounded geometry correction, never a retry of an oracle failure.
-      for (let correction = 0; correction < 2; correction += 1) {
-        const [viewport, width] = await evaluate<[number, number]>(
-          `[innerWidth, ${panelWidth}]`,
-        );
-        window.setContentSize(viewport + target - width, 640);
-        await frame();
-      }
+      await targetSettingsGeometry({
+        initial: [1000, 640],
+        target: [target, 640],
+        setSize: (w, h) => window.setContentSize(w, h),
+        frame,
+        measure: () =>
+          evaluate<[number, number]>(`[${panelWidth}, innerHeight]`),
+      });
       assert.equal(
         await evaluate<number>(panelWidth),
         target,
@@ -164,6 +195,7 @@ export async function exerciseSettingsLayout(
           target,
           "Settings breakpoint observation drifted",
         );
+        assert.equal(result.height, 640, "Settings breakpoint height drifted");
       }
     }
     return { cases, breakpoints: 4, synthetic: true, physicalKeyboard: false };
