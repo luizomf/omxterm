@@ -143,6 +143,38 @@ it("every owned PowerShell requires an executed isolation acknowledgement before
   expect(h.ptys[0]!.write).toHaveBeenCalledExactlyOnceWith("\u0016");
 });
 
+it("encodes a typed Ctrl+V no-op registration while retaining binding and history isolation checks", () => {
+  const h = harness();
+  h.start(windowsShell);
+  const args = h.spawn.mock.calls[0]![1];
+  expect(args[3]).toBe("-EncodedCommand");
+  const setup = Buffer.from(args[4]!, "base64").toString("utf16le");
+  // Inspect the actual spawn payload, not native console-mode behavior.
+  expect(setup).toContain(
+    "$noClipboard=[Action[Nullable[ConsoleKeyInfo],object]]{}",
+  );
+  expect(setup).toContain(
+    "[Microsoft.PowerShell.PSConsoleReadLine]::SetKeyHandler(@('Ctrl+v'), $noClipboard, 'FixtureNoClipboard', $null)",
+  );
+  expect(setup).not.toMatch(/Set-PSReadLineKeyHandler|-ScriptBlock/);
+  expect(setup).toContain(
+    "Set-PSReadLineOption -HistorySavePath $env:OMXTERM_RESTTY_HISTORY -HistorySaveStyle SaveNothing",
+  );
+  expect(setup).toContain(
+    "$binding=Get-PSReadLineKeyHandler | Where-Object Key -eq 'Ctrl+v'",
+  );
+  expect(setup).toContain(
+    "if($binding.Function -ne 'FixtureNoClipboard'){throw 'Fixture CtrlV isolation failed'}",
+  );
+  expect(setup).toContain("$history=Get-PSReadLineOption");
+  expect(setup).toContain(
+    "if($history.HistorySaveStyle -ne 'SaveNothing' -or $history.HistorySavePath -ne $env:OMXTERM_RESTTY_HISTORY){throw 'Fixture history isolation failed'}",
+  );
+  expect(setup.trimEnd()).toMatch(
+    /\[Console\]::WriteLine\('__OMXTERM_RESTTY_SHELL_ISOLATED__'\)$/,
+  );
+});
+
 it.each([
   ["SIGINT", 130],
   ["SIGTERM", 143],

@@ -32,7 +32,9 @@ const powerShellSetup = Buffer.from(
 $ErrorActionPreference='Stop'
 Import-Module PSReadLine
 Set-PSReadLineOption -HistorySavePath $env:OMXTERM_RESTTY_HISTORY -HistorySaveStyle SaveNothing
-Set-PSReadLineKeyHandler -Chord 'Ctrl+v' -BriefDescription 'FixtureNoClipboard' -ScriptBlock {}
+# A direct delegate preserves PSReadLine's input mode so immediate Ctrl+C reaches CancelLine.
+$noClipboard=[Action[Nullable[ConsoleKeyInfo],object]]{}
+[Microsoft.PowerShell.PSConsoleReadLine]::SetKeyHandler(@('Ctrl+v'), $noClipboard, 'FixtureNoClipboard', $null)
 $binding=Get-PSReadLineKeyHandler | Where-Object Key -eq 'Ctrl+v'
 $history=Get-PSReadLineOption
 if($binding.Function -ne 'FixtureNoClipboard'){throw 'Fixture CtrlV isolation failed'}

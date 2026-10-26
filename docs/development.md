@@ -496,6 +496,20 @@ npm test -- test/unit/linux-packaged-process.test.ts test/unit/packaged-applicat
 These process tests skip on other OSes. They do not replace exact-package desktop
 verification in direct/FUSE and extract-and-run modes.
 
+### Restty host PowerShell isolation
+
+The shared Restty host fixture disables Ctrl+V clipboard access with a typed
+`Action<Nullable<ConsoleKeyInfo>, object>` no-op registered through public
+`PSConsoleReadLine.SetKeyHandler`. Unlike a ScriptBlock handler, the delegate
+preserves PSReadLine's console input mode: an immediate Ctrl+C must reach
+`CancelLine` and generate the fresh prompt required by large-paste readiness.
+History remains isolated with `SaveNothing` and a fixture-owned path; input
+phases still require the executed setup marker. The readiness oracle also
+requires an executed command marker, not just a prompt or observed PTY write.
+
+Headless encoded-setup and readiness checks (not native console-mode evidence):
+`npm test -- test/unit/restty-host-sessions.test.ts test/unit/restty-host-paste.test.ts`.
+
 ### Host/oracle phase receipts
 
 The shared Restty host fixture emits `__OMXTERM_RESTTY_HOST_PHASE__` JSON lines
