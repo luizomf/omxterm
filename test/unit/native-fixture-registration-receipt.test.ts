@@ -8,6 +8,7 @@ import { runInNewContext } from "node:vm";
 import { beforeAll, expect, it, vi } from "vitest";
 import { readOutcome } from "../fixtures/native-fixture-outcome";
 import { FIXTURE_PROCESS_DIRECTORY } from "../fixtures/native-fixture-ownership";
+import type { FixtureProcess } from "../fixtures/native-fixture-processes";
 
 let ownershipProgram: string, supervisorProgram: string;
 beforeAll(async () => {
@@ -233,6 +234,271 @@ it.each([
       ).toEqual(recordsBefore);
     } finally {
       // No real process was created; this is solely the test-owned model root.
+      fs.rmSync(base, { recursive: true, force: true });
+    }
+  },
+);
+
+it.each([
+  "settled",
+  "survived",
+  "reused",
+  "inspection",
+  "write",
+  "rename",
+  "nonzero",
+  "timeout",
+])(
+  "hands failed-start ledger acquisition to independent emitted cleanup (%s)",
+  async (mode) => {
+    const base = fs.mkdtempSync(
+      path.join(tmpdir(), "omxterm-failed-start-receipt-"),
+    );
+    const root = path.join(base, "profile");
+    const registry = path.join(root, FIXTURE_PROCESS_DIRECTORY);
+    fs.mkdirSync(registry, { recursive: true });
+    const parent = { pid: 9990, parent: 1, identity: "50" };
+    const owner = { pid: 10000, parent: parent.pid, identity: "100" };
+    const child = { pid: 10001, parent: owner.pid, identity: "200" };
+    const require = createRequire(import.meta.url);
+    let producerRows = [parent, owner];
+    let failedStart!: () => void;
+    let observing = false;
+    let stderr = "";
+    const module = { exports: {} };
+    try {
+      runInNewContext(ownershipProgram, {
+        module,
+        exports: module.exports,
+        process: {
+          pid: owner.pid,
+          platform: "win32",
+          env: { OMXTERM_NATIVE_FIXTURE_ROOT: root },
+        },
+        require: (name: string) => {
+          if (name === "node:child_process")
+            return {
+              execFileSync: () => {
+                if (observing && mode === "inspection")
+                  throw new Error("controlled inspection failure");
+                return JSON.stringify(producerRows);
+              },
+            };
+          if (name === "node:fs")
+            return {
+              ...fs,
+              writeSync: (_fd: number, text: string) => {
+                stderr += text;
+                return text.length;
+              },
+              writeFileSync: (...args: Parameters<typeof fs.writeFileSync>) => {
+                fs.writeFileSync(...args);
+                if (observing && mode === "write")
+                  throw new Error("controlled publication failure");
+              },
+              renameSync: (from: fs.PathLike, to: fs.PathLike) => {
+                if (observing && mode === "rename")
+                  throw new Error("controlled publication failure");
+                fs.renameSync(from, to);
+              },
+            };
+          return require(name) as unknown;
+        },
+      });
+      (
+        module.exports as typeof import("../fixtures/native-fixture-ownership")
+      ).spawnFixtureProcess(
+        () => ({ pid: 0 }),
+        (_child, _exit, _ready, failed) => {
+          failedStart = failed;
+        },
+      );
+      fs.writeFileSync(
+        path.join(root, "native-process.json"),
+        JSON.stringify(owner),
+      );
+      fs.writeFileSync(path.join(root, "native-stdout"), "");
+      fs.writeFileSync(path.join(root, "native-stderr"), "");
+      const evidencePath = path.join(base, "receipt.json");
+      const requestPath = path.join(root, "supervisor-request.json");
+      fs.writeFileSync(
+        requestPath,
+        JSON.stringify({
+          executable: "never-executed",
+          args: [],
+          root,
+          timeout: 5000,
+          evidencePath,
+          parent,
+          externalChild: true,
+        }),
+      );
+      const pending = ["inspection", "write", "rename"].includes(mode);
+      let live: FixtureProcess[] = [parent, owner];
+      const inventories: FixtureProcess[][] = [];
+      const requested: FixtureProcess[][] = [];
+      const signaled: FixtureProcess[] = [];
+      let inspect!: () => void;
+      let clock = 0;
+      class Clock extends Date {
+        static override now() {
+          return clock;
+        }
+      }
+      let finish!: () => void;
+      const exited = new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      const supervisor = Object.assign(new EventEmitter(), {
+        argv: ["node", "supervisor", requestPath],
+        platform: "win32",
+        connected: false,
+        exit: vi.fn(() => {
+          finish();
+        }),
+      });
+      const forbiddenSpawn = vi.fn(() => {
+        throw new Error("Native spawn forbidden");
+      });
+      runInNewContext(supervisorProgram, {
+        process: supervisor,
+        Buffer,
+        Date: Clock,
+        setInterval: (callback: () => void) => {
+          inspect = callback;
+          return 1;
+        },
+        clearInterval: () => {},
+        clearTimeout: () => {},
+        setTimeout: (callback: () => void, delay: number) => {
+          if (delay === 5000)
+            queueMicrotask(() => {
+              // The supervisor's first sample already missed the child and saw
+              // only a pending write-ahead record. Acquire while owner is live,
+              // then remove owner before any further supervisor inventory.
+              expect(inventories).toEqual([[parent, owner]]);
+              producerRows = [parent, owner, child];
+              observing = true;
+              failedStart();
+              live = pending ? [parent] : [parent, { ...child, parent: 1 }];
+              fs.writeFileSync(path.join(root, "native-stderr"), stderr);
+              fs.writeFileSync(
+                path.join(root, "native-exit.json"),
+                JSON.stringify({
+                  exitCode: mode === "nonzero" ? 7 : 0,
+                  signal: null,
+                  reason: "exit",
+                }),
+              );
+              if (mode === "timeout") callback();
+              else inspect();
+            });
+          else if (delay === 50)
+            queueMicrotask(() => {
+              clock += 5000;
+              callback();
+            });
+          else expect(delay).toBe(1000); // Existing stream-close race, no real timer.
+          return 2;
+        },
+        require: (name: string) => {
+          if (name === "node:child_process")
+            return {
+              spawn: forbiddenSpawn,
+              execFileSync: (file: string, args: string[], options: object) => {
+                expect(file).toBe("powershell.exe");
+                expect(options).toMatchObject({
+                  timeout: 5000,
+                  windowsHide: true,
+                });
+                const command = args[args.indexOf("-Command") + 1]!;
+                if (command.startsWith("@(Get-CimInstance")) {
+                  inventories.push([...live]);
+                  return JSON.stringify(live);
+                }
+                // Execute no PowerShell. Decode the actual process helper's
+                // literal targets and model its handle/birth-identity guard.
+                expect(command).toContain("$null = $p.Handle");
+                expect(command).toContain(
+                  "$c.CreationDate.ToUniversalTime().Ticks.ToString() -eq $target.identity",
+                );
+                expect(command).toContain("$p.Kill()");
+                const encoded = /FromBase64String\('([^']+)'\)/u.exec(
+                  command,
+                )![1]!;
+                const targets = JSON.parse(
+                  Buffer.from(encoded, "base64").toString(),
+                ) as FixtureProcess[];
+                requested.push(targets);
+                if (mode === "reused")
+                  live = [parent, { ...child, parent: 1, identity: "999" }];
+                for (const target of targets) {
+                  if (
+                    !live.some(
+                      (row) =>
+                        row.pid === target.pid &&
+                        row.identity === target.identity,
+                    )
+                  )
+                    continue;
+                  signaled.push(target);
+                  if (mode !== "survived")
+                    live = live.filter((row) => row.pid !== target.pid);
+                }
+                return "";
+              },
+            };
+          return require(name) as unknown;
+        },
+      });
+      await exited;
+      const result = await readOutcome(evidencePath);
+      expect(result).toMatchObject({
+        exitCode: mode === "nonzero" ? 7 : 0,
+        signal: null,
+        reason: mode === "timeout" ? "timeout" : "exit",
+        cleanupErrors: pending
+          ? [
+              "Error: Fixture process registration was interrupted; cleanup is uncertain",
+            ]
+          : mode === "survived"
+            ? ["Error: Fixture processes survived cleanup: 10001"]
+            : [],
+        ownedProcesses: pending ? [owner] : [owner, child],
+      });
+      expect(forbiddenSpawn).not.toHaveBeenCalled();
+      expect(requested).toEqual([pending ? [owner] : [child, owner]]);
+      expect(signaled).toEqual(pending || mode === "reused" ? [] : [child]);
+      // Cleanup must inspect again after its identity-specific command; merely
+      // publishing the completed record is not the disappearance receipt.
+      expect(inventories.length).toBeGreaterThanOrEqual(5);
+      expect(inventories.at(-1)).toEqual(live);
+      expect(live).toEqual(
+        mode === "survived"
+          ? [parent, { ...child, parent: 1 }]
+          : mode === "reused"
+            ? [parent, { ...child, parent: 1, identity: "999" }]
+            : [parent],
+      );
+      expect(supervisor.exit).toHaveBeenCalledExactlyOnceWith(
+        mode === "settled" || mode === "reused" ? 0 : 1,
+      );
+      expect(fs.existsSync(root)).toBe(pending || mode === "survived");
+      if (pending)
+        expect(
+          JSON.parse(
+            fs.readFileSync(
+              path.join(
+                registry,
+                fs
+                  .readdirSync(registry)
+                  .find((name) => name.endsWith(".json"))!,
+              ),
+              "utf8",
+            ),
+          ),
+        ).toEqual({ owner });
+    } finally {
       fs.rmSync(base, { recursive: true, force: true });
     }
   },

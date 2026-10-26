@@ -18,12 +18,22 @@ export function spawnFixturePty(
   const [file, argv, options, ownership] = args;
   return spawnFixtureProcess(
     () => (ownership?.spawn ?? spawn)(file, argv, options),
-    (terminal, exited, ready) => {
+    (terminal, exited, ready, failedStart) => {
       const pinned = terminal as ReadyPty;
       const onReady = () => {
         ready();
       };
-      const subscription = terminal.onExit(exited);
+      const subscription = terminal.onExit((event) => {
+        // Only prepared beta.18 Windows agent errors seal deferred connect
+        // admission before this event. Unix's shared flag is an actual-child
+        // exit, not failed-start acquisition. Neither flag proves no child.
+        if (
+          process.platform === "win32" &&
+          (event as typeof event & { execFailed?: boolean }).execFailed === true
+        )
+          failedStart();
+        else exited();
+      });
       if (terminal.pid <= 0) pinned.on("ready_datapipe", onReady);
       return () => {
         subscription.dispose();

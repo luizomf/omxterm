@@ -23,6 +23,11 @@ const deferredConnectFailure = process.argv.includes(
   "--deferred-connect-failure",
 );
 if (deferredConnectFailure) assert.equal(process.platform, "win32");
+// Preserve the missing-cwd oracle, but keep any post-creation survivor bounded,
+// non-spawning and profile-free under the cooperative ownership protocol.
+const failedAttemptArguments = deferredConnectFailure
+  ? ["-NoLogo", "-NoProfile", "-Command", "exit 1"]
+  : [];
 for (const name of ["userData", "sessionData"] as const) {
   const directory = path.join(root, name);
   mkdirSync(directory, { recursive: true });
@@ -144,7 +149,7 @@ async function run() {
                         ? process.platform === "win32"
                           ? ["-NoLogo", "-NoProfile", "-Command", script]
                           : ["-c", script]
-                        : [],
+                        : failedAttemptArguments,
                   },
                 }),
             platform: process.platform,

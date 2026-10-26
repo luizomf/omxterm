@@ -12,39 +12,34 @@ import {
   fixtureProcesses,
   type FixtureProcess,
 } from "../fixtures/native-fixture-processes";
-import {
-  collectFixtureRegistrations,
-  spawnFixtureProcess,
-} from "../fixtures/native-fixture-ownership";
+import { collectFixtureRegistrations } from "../fixtures/native-fixture-ownership";
 
 vi.mock("node-pty", () => ({
   spawn: vi.fn(() => {
     throw new Error("Native PTY must not run in ownership units");
   }),
 }));
-
 const io = vi.hoisted(() => ({
   files: new Map<string, string>(),
-  observeWrite: undefined as (() => void) | undefined,
+  failure: undefined as "write" | "rename" | undefined,
+  published: 0,
 }));
 const { files } = io;
 vi.mock("node:fs", () => ({
   writeSync: vi.fn(() => 0),
   writeFileSync: (name: string, text: string) => {
-    files.set(name, "");
-    io.observeWrite?.();
-    files.set(name, text.slice(0, Math.floor(text.length / 2)));
-    io.observeWrite?.();
     files.set(name, text);
-    io.observeWrite?.();
+    if (io.failure === "write") throw new Error("private publication details");
   },
   readFileSync: (name: string) => {
     if (!files.has(name)) throw new Error("Missing ownership record");
     return files.get(name)!;
   },
   renameSync: (from: string, to: string) => {
+    if (io.failure === "rename") throw new Error("private publication details");
     files.set(to, files.get(from)!);
     files.delete(from);
+    io.published += 1;
   },
   readdirSync: () => [...files.keys()].map((name) => path.basename(name)),
 }));
@@ -66,27 +61,32 @@ const unrelated: FixtureProcess = {
   parent: 1,
   identity: "300",
 };
-
+const connectedChild = { ...child, pid: 1234 };
+const temporary: string[] = [];
 beforeEach(() => {
   files.clear();
-  io.observeWrite = undefined;
+  io.failure = undefined;
+  io.published = 0;
   vi.mocked(writeSync).mockClear();
   vi.stubEnv("OMXTERM_NATIVE_FIXTURE_ROOT", root);
   vi.mocked(fixtureProcesses).mockReturnValue([owner, child, unrelated]);
 });
-afterEach(() => vi.unstubAllEnvs());
-
-const temporary: string[] = [];
 afterEach(async () => {
+  vi.useRealTimers();
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
   for (const directory of temporary.splice(0))
     await rm(directory, { recursive: true, force: true });
 });
 
-async function composedOwnership() {
+async function composedOwnership(platform = "win32") {
   const directory = await mkdtemp(path.join(tmpdir(), "omxterm-ownership-js-"));
   temporary.push(directory);
   const runtime = await preparedWindows(directory);
-  const terminal = runtime.spawn();
+  // Select the real adapter's OS branch without changing its dependency seam.
+  vi.stubGlobal("process", { ...process, platform });
+  const terminal = runtime.spawn() as IPty & EventEmitter;
+  const removeListener = vi.spyOn(terminal, "removeListener");
   const subscribe = terminal.onExit;
   const disposals: ReturnType<typeof vi.fn>[] = [];
   Object.defineProperty(terminal, "onExit", {
@@ -136,12 +136,16 @@ async function composedOwnership() {
     window,
     registered,
     exited,
-    disposed: () => disposals.map((dispose) => dispose.mock.calls.length),
+    disposed: () => {
+      const counts = disposals.map((dispose) => dispose.mock.calls.length);
+      expect(removeListener.mock.calls.map(([event]) => event)).toEqual(
+        counts[0] ? ["ready_datapipe"] : [],
+      );
+      return counts;
+    },
     registration,
   };
 }
-
-const connectedChild = { ...child, pid: 1234 };
 const observationRecords = () =>
   vi
     .mocked(writeSync)
@@ -152,50 +156,241 @@ const observationRecords = () =>
         ) as unknown,
     );
 
+// These execute guarded prepared JS -> real ownership adapter -> real session
+// owner. Inventories, native calls, sockets and workers remain controlled ports.
 describe("prepared PTY, ownership adapter and real session-owner composition", () => {
   it.each([true, false])(
-    "delivers a marked connect error without completing PID 0 ownership (inventory sentinel=%s)",
+    "acquires a child created before connect throws despite public PID 0 (inventory sentinel=%s)",
     async (sentinel) => {
-      vi.mocked(fixtureProcesses).mockReturnValue([
-        owner,
-        ...(sentinel ? [{ pid: 0, parent: 0, identity: "sentinel" }] : []),
-      ]);
+      vi.mocked(fixtureProcesses).mockReturnValue([owner]);
       const h = await composedOwnership();
       expect(h.registration().pending).toBe(1);
+      const descendant = {
+        pid: child.pid + 10,
+        parent: child.pid,
+        identity: "250",
+      };
+      const stale = { pid: child.pid + 11, parent: child.pid, identity: "150" };
+      const orphan = {
+        pid: child.pid + 12,
+        parent: stale.pid,
+        identity: "260",
+      };
       h.runtime.native.connect.mockImplementationOnce(() => {
+        // Model successful CreateProcess followed by a native throw before the
+        // public PID assignment. Descendant order also requires closure traversal.
+        vi.mocked(fixtureProcesses).mockReturnValue([
+          owner,
+          descendant,
+          orphan,
+          child,
+          stale,
+          unrelated,
+          ...(sentinel ? [{ pid: 0, parent: 0, identity: "sentinel" }] : []),
+        ]);
         throw new Error("error code: 1");
       });
-      let thrown: unknown;
-      try {
-        h.runtime.worker.ready();
-      } catch (error) {
-        thrown = error;
-      }
-      // The original emitter aborts its copied listener queue on the ownership throw.
-      expect({ thrown, downstream: h.exited.mock.calls }).toEqual({
-        thrown: undefined,
-        downstream: [
-          [{ exitCode: 1, signal: 0, startupFailed: true }, "explicit-command"],
-        ],
+      // Acquisition must precede the copied listener queue's session consumer.
+      h.exited.mockImplementation(() => {
+        expect(h.registration()).toEqual({
+          pending: 0,
+          processes: [owner, child, descendant],
+        });
       });
+      expect(() => h.runtime.worker.ready()).not.toThrow();
+      expect(h.exited).toHaveBeenCalledExactlyOnceWith(
+        { exitCode: 1, signal: 0, startupFailed: true },
+        "explicit-command",
+      );
       expect(h.terminal.pid).toBe(0);
-      expect(h.registration()).toEqual({ pending: 1, processes: [owner] });
-      expect(observationRecords()).toEqual([
-        { version: 1, branch: "early-exit", phase: "exit-observation" },
-      ]);
+      expect(h.registration()).toEqual({
+        pending: 0,
+        processes: [owner, child, descendant],
+      });
+      expect(observationRecords()).toEqual([]);
       expect(h.disposed()).toEqual([1, 1]);
       expect(h.registered).not.toHaveBeenCalled();
       const retained = [...files.values()];
       h.runtime.worker.ready();
+      h.runtime.worker.error(new Error("late error"));
+      h.terminal.emit("exit", 1, undefined, true);
       expect([...files.values()]).toEqual(retained);
+      expect(io.published).toBe(2); // Write-ahead plus one atomic acquisition.
       expect(h.runtime.native.connect).toHaveBeenCalledOnce();
+      expect(h.exited).toHaveBeenCalledOnce();
+      expect(h.disposed()).toEqual([1, 1]);
       await h.fixture.complete(1);
       expect(h.app.exit).toHaveBeenCalledExactlyOnceWith(1);
-      // Session delivery is not registration success or proof of native retirement.
-      expect(h.registration().pending).toBe(1);
     },
   );
 
+  it.each(["connect", "worker", "timeout"])(
+    "acquires an owner-only snapshot on terminal %s failure and seals late admission",
+    async (failure) => {
+      vi.mocked(fixtureProcesses).mockReturnValue([owner, unrelated]);
+      vi.useFakeTimers();
+      const h = await composedOwnership();
+      if (failure === "connect") {
+        h.runtime.native.connect.mockImplementationOnce(() => {
+          throw new Error("error code: 1");
+        });
+        h.runtime.worker.ready();
+      } else if (failure === "worker")
+        h.runtime.worker.error(new Error("worker unavailable"));
+      else vi.advanceTimersByTime(5000);
+      expect(h.registration()).toEqual({ pending: 0, processes: [owner] });
+      expect(h.terminal.pid).toBe(0);
+      expect(h.exited).toHaveBeenCalledExactlyOnceWith(
+        {
+          exitCode: failure === "connect" ? 1 : -1,
+          signal: 0,
+          startupFailed: true,
+        },
+        "explicit-command",
+      );
+      expect(h.registered).not.toHaveBeenCalled();
+      expect(h.disposed()).toEqual([1, 1]);
+      expect(h.runtime.worker.dispose).toHaveBeenCalledOnce();
+      const retained = [...files.values()];
+      for (let repeat = 0; repeat < 2; repeat += 1) {
+        h.runtime.worker.ready();
+        h.runtime.worker.error(new Error("late worker error"));
+      }
+      vi.advanceTimersByTime(5000);
+      expect(h.runtime.native.connect).toHaveBeenCalledTimes(
+        failure === "connect" ? 1 : 0,
+      );
+      expect([...files.values()]).toEqual(retained);
+      expect(io.published).toBe(2);
+      expect(h.exited).toHaveBeenCalledOnce();
+      expect(h.disposed()).toEqual([1, 1]);
+      expect(observationRecords()).toEqual([]);
+      await h.fixture.complete(1);
+      expect(h.app.exit).toHaveBeenCalledExactlyOnceWith(1);
+    },
+  );
+
+  it.each([
+    "missing-owner",
+    "reused-owner",
+    "duplicate-owner",
+    "inspection",
+    "malformed-child",
+    "write",
+    "rename",
+  ])(
+    "latches failed-start %s failure without starving lifecycle or allowing later rescue",
+    async (failure) => {
+      vi.mocked(fixtureProcesses).mockReturnValue([owner]);
+      const h = await composedOwnership();
+      h.runtime.native.connect.mockImplementationOnce(() => {
+        if (failure === "inspection")
+          vi.mocked(fixtureProcesses).mockImplementationOnce(() => {
+            throw new Error("private inventory details");
+          });
+        else
+          vi.mocked(fixtureProcesses).mockReturnValue(
+            failure === "missing-owner"
+              ? [child]
+              : failure === "reused-owner"
+                ? [{ ...owner, identity: "999" }, child]
+                : failure === "duplicate-owner"
+                  ? [owner, { ...owner, identity: "999" }, child]
+                  : failure === "malformed-child"
+                    ? [owner, { ...child, identity: "not-a-creation-time" }]
+                    : [owner, child],
+          );
+        if (failure === "write" || failure === "rename") io.failure = failure;
+        throw new Error("error code: 1");
+      });
+      h.exited.mockImplementation(() => {
+        expect(h.registration().pending).toBe(1);
+      });
+      expect(() => h.runtime.worker.ready()).not.toThrow();
+      expect(h.exited).toHaveBeenCalledExactlyOnceWith(
+        { exitCode: 1, signal: 0, startupFailed: true },
+        "explicit-command",
+      );
+      expect(h.registration()).toEqual({ pending: 1, processes: [owner] });
+      expect(observationRecords()).toEqual([
+        ...(failure === "write" || failure === "rename"
+          ? [
+              {
+                version: 1,
+                branch: "failed-start",
+                phase:
+                  failure === "write"
+                    ? "completed-write"
+                    : "completed-replacement",
+              },
+            ]
+          : []),
+        {
+          version: 1,
+          branch: "failed-start",
+          phase: "failed-start-observation",
+        },
+      ]);
+      expect(h.disposed()).toEqual([1, 1]);
+      const retained = [...files.entries()];
+      io.failure = undefined;
+      vi.mocked(fixtureProcesses).mockReturnValue([owner, connectedChild]);
+      h.runtime.worker.ready();
+      h.runtime.output.emit("connect");
+      h.runtime.output.emit("ready_datapipe");
+      h.terminal.emit("exit", 1, undefined, true);
+      expect([...files.entries()]).toEqual(retained);
+      expect(io.published).toBe(1);
+      expect(h.registration().pending).toBe(1);
+      expect(h.exited).toHaveBeenCalledOnce();
+      expect(h.registered).not.toHaveBeenCalled();
+      expect(h.disposed()).toEqual([1, 1]);
+      await h.fixture.complete(1);
+      expect(h.app.exit).toHaveBeenCalledExactlyOnceWith(1);
+    },
+  );
+
+  it.each([
+    ["win32", false, false, "early-exit"],
+    ["linux", true, true, "early-exit"],
+    ["win32", true, true, "failed-start"],
+  ] as const)(
+    "keeps platform=%s marked=%s positive=%s contradictory/unproven acquisition pending",
+    async (platform, marked, positive, branch) => {
+      vi.mocked(fixtureProcesses).mockReturnValue([owner]);
+      const h = await composedOwnership(platform);
+      if (positive) {
+        h.runtime.worker.ready();
+        h.runtime.output.emit("connect");
+      }
+      vi.mocked(fixtureProcesses).mockReturnValue([owner, connectedChild]);
+      expect(() => h.terminal.emit("exit", 1, undefined, marked)).not.toThrow();
+      expect(h.registration()).toEqual({ pending: 1, processes: [owner] });
+      expect(observationRecords()).toEqual([
+        {
+          version: 1,
+          branch,
+          phase:
+            branch === "failed-start"
+              ? "failed-start-observation"
+              : "exit-observation",
+        },
+      ]);
+      expect(h.exited).toHaveBeenCalledExactlyOnceWith(
+        { exitCode: 1, signal: 0, ...(marked ? { startupFailed: true } : {}) },
+        "explicit-command",
+      );
+      expect(h.registered).not.toHaveBeenCalled();
+      expect(h.disposed()).toEqual([1, 1]);
+      // Consume any still-pending controlled connection before returning.
+      h.runtime.worker.error(new Error("late error"));
+      expect(h.registration().pending).toBe(1);
+      await h.fixture.complete(1);
+    },
+  );
+});
+
+describe("ordinary prepared PTY actual-exit barriers", () => {
   it("retains a still-observable positive identity without starving the ordinary exit consumer", async () => {
     vi.mocked(fixtureProcesses).mockReturnValue([owner]);
     const h = await composedOwnership();
@@ -205,16 +400,11 @@ describe("prepared PTY, ownership adapter and real session-owner composition", (
     expect(h.registration().pending).toBe(1);
     vi.mocked(fixtureProcesses).mockReturnValue([owner, connectedChild]);
     h.runtime.nativeExit(1);
-    let thrown: unknown;
-    try {
-      h.runtime.output.emit("close");
-    } catch (error) {
-      thrown = error;
-    }
-    expect({ thrown, downstream: h.exited.mock.calls }).toEqual({
-      thrown: undefined,
-      downstream: [[{ exitCode: 1, signal: 0 }, "explicit-command"]],
-    });
+    expect(() => h.runtime.output.emit("close")).not.toThrow();
+    expect(h.exited).toHaveBeenCalledExactlyOnceWith(
+      { exitCode: 1, signal: 0 },
+      "explicit-command",
+    );
     expect(h.registration()).toEqual({ pending: 1, processes: [owner] });
     expect(observationRecords()).toEqual([
       { version: 1, branch: "early-exit", phase: "exit-observation" },
@@ -230,7 +420,7 @@ describe("prepared PTY, ownership adapter and real session-owner composition", (
     expect(h.registration().pending).toBe(1);
   });
 
-  it("keeps verified readiness separate from close and completes only on an ordinary actual exit", async () => {
+  it("keeps acquired readiness separate from close and completes only on an ordinary actual exit", async () => {
     vi.mocked(fixtureProcesses).mockReturnValue([
       owner,
       connectedChild,
@@ -245,16 +435,21 @@ describe("prepared PTY, ownership adapter and real session-owner composition", (
     });
     expect(h.registered).toHaveBeenCalledExactlyOnceWith(h.terminal);
     expect(h.disposed()).toEqual([1, 0]);
+    const retained = [...files.values()];
+    h.runtime.output.emit("ready_datapipe");
+    h.runtime.worker.error(new Error("late worker error"));
     const complete = h.fixture.complete(0);
     expect(h.fixture.complete(0)).toBe(complete);
     await Promise.resolve();
     expect(h.exited).not.toHaveBeenCalled();
     expect(h.app.exit).not.toHaveBeenCalled();
     expect(h.window.destroy).not.toHaveBeenCalled();
+    expect([...files.values()]).toEqual(retained);
     vi.mocked(fixtureProcesses).mockReturnValue([owner, unrelated]);
     h.runtime.nativeExit(1);
     h.runtime.output.emit("close");
     await complete;
+    h.terminal.emit("exit", 1, undefined, true);
     expect(h.exited).toHaveBeenCalledExactlyOnceWith(
       { exitCode: 1, signal: 0 },
       "explicit-command",
@@ -262,10 +457,9 @@ describe("prepared PTY, ownership adapter and real session-owner composition", (
     expect(h.app.exit).toHaveBeenCalledExactlyOnceWith(0);
     expect(h.window.destroy).toHaveBeenCalledOnce();
     expect(h.disposed()).toEqual([1, 1]);
-    expect(h.registration()).toEqual({
-      pending: 0,
-      processes: [owner, connectedChild],
-    });
+    expect([...files.values()]).toEqual(retained);
+    expect(h.registered).toHaveBeenCalledOnce();
+    expect(io.published).toBe(2);
     expect(observationRecords()).toEqual([]);
   });
 
@@ -361,262 +555,5 @@ describe("prepared PTY, ownership adapter and real session-owner composition", (
         code: "EIO",
       },
     ]);
-  });
-});
-
-describe("native fixture spawn ownership", () => {
-  it("recovers an explicitly registered child after its parent disappears, excluding unrelated processes", () => {
-    const spawned = { pid: child.pid };
-    expect(spawnFixtureProcess(() => spawned)).toBe(spawned);
-    vi.mocked(fixtureProcesses).mockReturnValue([
-      { ...child, parent: 1 },
-      unrelated,
-    ]);
-    const owned = new Map<number, FixtureProcess>();
-    expect(collectFixtureRegistrations(root, owner.pid, owned)).toBe(0);
-    expect([...owned.values()]).toEqual([owner, child]);
-  });
-
-  it("exposes only complete records while either ownership state is being published", () => {
-    let spawned = false;
-    let observations = 0;
-    io.observeWrite = () => {
-      observations += 1;
-      expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(
-        spawned ? 1 : 0,
-      );
-    };
-    spawnFixtureProcess(() => {
-      expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
-      spawned = true;
-      return { pid: child.pid };
-    });
-    expect(observations).toBeGreaterThan(0);
-    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(0);
-  });
-
-  it("defers Windows ownership until launcher metadata arrives without adopting unverified processes", () => {
-    spawnFixtureProcess(() => ({ pid: child.pid }));
-    const owned = new Map<number, FixtureProcess>();
-    expect(collectFixtureRegistrations(root, undefined, owned)).toBe(1);
-    expect(owned.size).toBe(0);
-    // Unresolved bootstrap must continue to count as uncertainty at cleanup.
-    expect(collectFixtureRegistrations(root, undefined, owned)).toBe(1);
-    expect(collectFixtureRegistrations(root, owner.pid, owned)).toBe(0);
-    expect([...owned.values()]).toEqual([owner, child]);
-    expect(() =>
-      collectFixtureRegistrations(root, unrelated.pid, new Map()),
-    ).toThrow("Invalid native fixture ownership record");
-  });
-
-  it("publishes uncertainty before invoking spawn and preserves it on a spawn exception", () => {
-    expect(() =>
-      spawnFixtureProcess(() => {
-        expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
-        throw new Error("partial native spawn failure");
-      }),
-    ).toThrow("partial native spawn failure");
-    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
-  });
-
-  it("does not complete registration when the spawned identity cannot be established", () => {
-    vi.mocked(fixtureProcesses).mockReturnValue([owner, unrelated]);
-    expect(() => spawnFixtureProcess(() => ({ pid: child.pid }))).toThrow(
-      "Cannot establish ownership",
-    );
-    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
-  });
-
-  it("retains early-exit uncertainty until the actual native callback and excludes unrelated PIDs", () => {
-    vi.mocked(fixtureProcesses).mockReturnValue([owner, unrelated]);
-    let nativeExit!: () => void;
-    const spawned = { pid: child.pid };
-    expect(
-      spawnFixtureProcess(
-        () => spawned,
-        (_child, completed) => {
-          nativeExit = completed;
-        },
-      ),
-    ).toBe(spawned);
-    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
-    nativeExit();
-    const owned = new Map<number, FixtureProcess>();
-    expect(collectFixtureRegistrations(root, owner.pid, owned)).toBe(0);
-    expect([...owned.values()]).toEqual([owner]);
-  });
-
-  it("does not settle early-exit ownership while that PID is still observable", () => {
-    vi.mocked(fixtureProcesses).mockReturnValue([owner]);
-    let nativeExit!: () => void;
-    spawnFixtureProcess(
-      () => ({ pid: child.pid }),
-      (_child, completed) => {
-        nativeExit = completed;
-      },
-    );
-    vi.mocked(fixtureProcesses).mockReturnValue([
-      owner,
-      { ...child, parent: 1 },
-    ]);
-    expect(nativeExit).not.toThrow();
-    expect(observationRecords()).toEqual([
-      { version: 1, branch: "early-exit", phase: "exit-observation" },
-    ]);
-    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
-  });
-
-  it("registers a pending PID only at verified readiness, without waiting for output", () => {
-    const spawned = { pid: 0 };
-    let ready!: () => boolean;
-    const retire = vi.fn();
-    vi.mocked(fixtureProcesses).mockReturnValue([owner, unrelated]);
-    spawnFixtureProcess(
-      () => spawned,
-      (_child, _exited, atReady) => {
-        ready = atReady;
-        return retire;
-      },
-    );
-    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
-    expect(ready()).toBe(false);
-    spawned.pid = child.pid;
-    // A foreign PID is not readiness proof.
-    vi.mocked(fixtureProcesses).mockReturnValue([
-      owner,
-      { ...child, parent: 1 },
-    ]);
-    expect(ready()).toBe(false);
-    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
-    vi.mocked(fixtureProcesses).mockReturnValue([owner, child]);
-    expect(ready()).toBe(true);
-    const owned = new Map<number, FixtureProcess>();
-    expect(collectFixtureRegistrations(root, owner.pid, owned)).toBe(0);
-    expect([...owned.values()]).toEqual([owner, child]);
-    expect(retire).toHaveBeenCalledOnce();
-  });
-
-  it.each(["ready", "early-exit", "disappeared-at-ready"])(
-    "retires PTY readiness/exit observation at %s without registering PID 0 or republishing",
-    (ordering) => {
-      const events = new EventEmitter();
-      const terminal = Object.assign(events, {
-        pid: 0,
-        onExit(listener: () => void) {
-          events.on("exit", listener);
-          return {
-            dispose: () => {
-              events.removeListener("exit", listener);
-            },
-          };
-        },
-      });
-      vi.mocked(fixtureProcesses).mockReturnValue([owner]);
-      const registered = vi.fn();
-      const originalSpawn = vi.fn(() => terminal as unknown as IPty);
-      expect(
-        spawnFixturePty(
-          "silent.exe",
-          [],
-          {},
-          { spawn: originalSpawn, registered },
-        ),
-      ).toBe(terminal);
-      expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
-      expect(events.listenerCount("exit")).toBe(1);
-      if (ordering === "early-exit") {
-        terminal.pid = child.pid;
-        events.emit("exit");
-      } else {
-        terminal.pid = child.pid;
-        vi.mocked(fixtureProcesses).mockReturnValue(
-          ordering === "ready" ? [owner, child] : [owner],
-        );
-        events.emit("ready_datapipe");
-        if (ordering === "disappeared-at-ready") {
-          expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(
-            1,
-          );
-          events.emit("exit");
-        }
-      }
-      expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(0);
-      expect(events.listenerCount("exit")).toBe(0);
-      expect(events.listenerCount("ready_datapipe")).toBe(0);
-      expect(registered).toHaveBeenCalledTimes(ordering === "ready" ? 1 : 0);
-      const completed = [...files.values()];
-      terminal.pid = child.pid;
-      events.emit("ready_datapipe");
-      events.emit("exit");
-      expect([...files.values()]).toEqual(completed);
-      expect(completed.some((text) => text.includes('"pid":0'))).toBe(false);
-    },
-  );
-
-  it("refuses to spawn without a supervised profile", () => {
-    vi.stubEnv("OMXTERM_NATIVE_FIXTURE_ROOT", undefined);
-    const spawn = vi.fn(() => ({ pid: child.pid }));
-    expect(() => spawnFixtureProcess(spawn)).toThrow(
-      "ownership root is missing",
-    );
-    expect(spawn).not.toHaveBeenCalled();
-  });
-
-  it("rejects ownership records belonging to another leader or a reused leader PID", () => {
-    spawnFixtureProcess(() => ({ pid: child.pid }));
-    expect(() =>
-      collectFixtureRegistrations(root, unrelated.pid, new Map()),
-    ).toThrow("Invalid native fixture ownership");
-    expect(() =>
-      collectFixtureRegistrations(
-        root,
-        owner.pid,
-        new Map([[owner.pid, { ...owner, identity: "999" }]]),
-      ),
-    ).toThrow("Invalid native fixture ownership");
-  });
-
-  it("does not adopt an unrelated process that reused a registered PID", () => {
-    spawnFixtureProcess(() => ({ pid: child.pid }));
-    vi.mocked(fixtureProcesses).mockReturnValue([
-      { ...child, parent: 1, identity: "999" },
-    ]);
-    const owned = new Map<number, FixtureProcess>();
-    expect(collectFixtureRegistrations(root, owner.pid, owned)).toBe(0);
-    expect(owned.has(child.pid)).toBe(false);
-  });
-
-  it("keeps the live registered incarnation regardless of historical record order", () => {
-    spawnFixtureProcess(() => ({ pid: child.pid }));
-    vi.mocked(fixtureProcesses).mockReturnValue([
-      owner,
-      { ...child, identity: "999" },
-    ]);
-    spawnFixtureProcess(() => ({ pid: child.pid }));
-    for (const records of [
-      [...files.entries()],
-      [...files.entries()].reverse(),
-    ]) {
-      files.clear();
-      for (const [name, text] of records) files.set(name, text);
-      const owned = new Map([[child.pid, child]]);
-      expect(collectFixtureRegistrations(root, owner.pid, owned)).toBe(0);
-      expect(owned.get(child.pid)?.identity).toBe("999");
-    }
-  });
-
-  it("rejects malformed and unrelated process records instead of declaring cleanup safe", () => {
-    spawnFixtureProcess(() => ({ pid: child.pid }));
-    const name = [...files.keys()][0]!;
-    for (const processes of [[owner, unrelated], [{ pid: -1 }], "invalid"]) {
-      files.set(name, JSON.stringify({ owner, processes }));
-      expect(() =>
-        collectFixtureRegistrations(root, owner.pid, new Map()),
-      ).toThrow();
-    }
-    files.set(name, "{");
-    expect(() =>
-      collectFixtureRegistrations(root, owner.pid, new Map()),
-    ).toThrow();
   });
 });

@@ -7,6 +7,7 @@ const phases = [
   "completed-replacement",
   "ready-observation",
   "exit-observation",
+  "failed-start-observation",
 ] as const;
 const codes = new Set([
   "EACCES",
@@ -54,12 +55,15 @@ function field(error: unknown, name: string): unknown {
 // Observation phases retain callback failures without aborting native event
 // dispatch. The pending ownership record, not this best-effort sink, blocks cleanup.
 export function recordFixtureRegistrationFailure(
-  branch: "normal" | "early-exit",
+  branch: "normal" | "early-exit" | "failed-start",
   phase: (typeof phases)[number],
   error: unknown,
 ): void {
   try {
-    if (!["normal", "early-exit"].includes(branch) || !phases.includes(phase))
+    if (
+      !["normal", "early-exit", "failed-start"].includes(branch) ||
+      !phases.includes(phase)
+    )
       return;
     const code = field(error, "code");
     const errno = field(error, "errno");

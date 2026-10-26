@@ -13,7 +13,7 @@ export const FIXTURE_PROCESS_DIRECTORY = "native-process-ownership";
 
 function publishRegistration(
   record: string,
-  branch: "normal" | "early-exit",
+  branch: Parameters<typeof recordFixtureRegistrationFailure>[0],
   data: {
     readonly owner: FixtureProcess;
     readonly processes?: readonly FixtureProcess[];
@@ -43,6 +43,7 @@ export function spawnFixtureProcess<T extends { readonly pid: number }>(
     child: T,
     exited: () => void,
     ready: () => boolean,
+    failedStart: () => void,
   ) => (() => void) | void,
   registered?: (child: T) => void,
 ): T {
@@ -62,8 +63,9 @@ export function spawnFixtureProcess<T extends { readonly pid: number }>(
   let failed = false;
   let retire: (() => void) | void;
   const failObservation = (
-    branch: "normal" | "early-exit",
-    phase: "ready-observation" | "exit-observation",
+    branch: Parameters<typeof recordFixtureRegistrationFailure>[0],
+    phase:
+      "ready-observation" | "exit-observation" | "failed-start-observation",
     error: unknown,
   ) => {
     // Keep the write-ahead record pending. The supervisor must retain/block this
@@ -103,8 +105,8 @@ export function spawnFixtureProcess<T extends { readonly pid: number }>(
     () => {
       if (settled || failed) return;
       try {
-        // PID 0/absence and an exec-failure marker do not prove that a failed
-        // connection retired all native resources. Retain uncertainty here.
+        // An ordinary exit needs a positive child and disappearance. Only the
+        // adapter's distinct terminal failed-start path can acquire at PID 0.
         if (!Number.isSafeInteger(child.pid) || child.pid <= 0)
           throw new Error("Early-exit fixture has no verified positive PID");
         const remaining = fixtureProcesses();
@@ -123,6 +125,43 @@ export function spawnFixtureProcess<T extends { readonly pid: number }>(
       retire?.();
     },
     () => ready(true),
+    () => {
+      if (settled || failed) return;
+      try {
+        // The pinned adapter establishes terminal connect admission, not native
+        // quiescence. A post-creation throw may leave live descendants at PID 0.
+        if (child.pid !== 0)
+          throw new Error(
+            "Failed-start fixture has a contradictory public PID",
+          );
+        const rows = fixtureProcesses().filter((row) => row.pid !== 0);
+        if (
+          !isProcess(owner) ||
+          // This path is Windows-only: creation identities must retain numeric
+          // tick ordering, not bypass ancestry checks with malformed strings.
+          !rows.every((row) => isProcess(row) && /^\d+$/u.test(row.identity)) ||
+          new Set(rows.map((row) => row.pid)).size !== rows.length ||
+          !rows.some(
+            (row) => row.pid === owner.pid && row.identity === owner.identity,
+          )
+        )
+          throw new Error(
+            "Cannot verify live failed-start fixture owner/inventory",
+          );
+        const acquired = new Map([[owner.pid, owner]]);
+        collectFixtureDescendants(rows, acquired);
+        publishRegistration(record, "failed-start", {
+          owner,
+          processes: [...acquired.values()],
+        });
+      } catch (error) {
+        failObservation("failed-start", "failed-start-observation", error);
+        return;
+      }
+      settled = true;
+      retire?.();
+      // No successful terminal readiness was observed; do not call registered.
+    },
   );
   if (settled || failed) retire?.();
   else if (!ready() && !observeLifecycle)
