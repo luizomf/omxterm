@@ -55,15 +55,26 @@ are tied to Settings selection. Large JSON content scrolls within its editor.
 
 Headless host/Settings tests establish ownership, retained identity and palette
 selection, not visual quality. The real `window-chrome` **settings-only** fixture
-covers six categories at 320×200, 640×480, 800×600, 960×640, 1280×800 and
-1920×1080, both Interface Languages and representative light/dark palettes,
-plus actual panel-container breakpoint edges. It checks the clicked category
+covers six categories after a native-minimum window-size request, then at five
+exact renderer viewports: 640×480, 800×600, 960×640, 1280×800 and 1920×1080.
+Both Interface Languages and representative light/dark palettes retain 144
+matrix cases plus four exact panel-container edges (559/560/759/760 px at viewport
+height 640). Opening Settings separately preserves native outer bounds and
+minimum before deliberate configuration edits.
+
+The native-minimum slot records requested minimum and actual outer/content/
+viewport sizes, not a claimed exact 320×200 renderer viewport. It requires a
+compact viewport at most 639 px wide / 360 px high, smaller on both axes than
+the original desktop viewport, and stable across the same category checks.
+The runtime minimum is never lowered; no rounding tolerance or native clamp
+cause is inferred. The fixture finally requests the original outer bounds once,
+without claiming independent physical restoration proof. It checks the clicked category
 against selected/hidden/computed-display state, form and shortcut placement on
 each side of the content breakpoints, and label width/line geometry (not only
 last-control reachability). Optional synthetic-only captures use
 `OMXTERM_SETTINGS_EVIDENCE_DIR`. Failures capture a bounded frame and geometry
-before restoring the renderer; the normal runner retains them outside its
-removed profile under `.scratch/native-fixtures/`. Its programmatic focus/input
+before restoring the renderer and requesting the saved outer bounds; the normal
+runner retains them outside its removed profile under `.scratch/native-fixtures/`. Its programmatic focus/input
 is not physical keyboard/layout qualification. Record actual execution and
 limitations separately;
 a built fixture is not a rendered pass.

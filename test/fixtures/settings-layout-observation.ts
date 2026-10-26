@@ -1,4 +1,19 @@
 import assert from "node:assert/strict";
+import type { SupportedLanguage } from "../../src/shared/i18n";
+
+export interface SettingsGeometrySize {
+  readonly width: number;
+  readonly height: number;
+}
+export interface SettingsCompactGeometry {
+  readonly kind: "native-minimum-request";
+  readonly language: SupportedLanguage;
+  readonly light: boolean;
+  readonly requestedMinimum: SettingsGeometrySize;
+  readonly outer: SettingsGeometrySize;
+  readonly content: SettingsGeometrySize;
+  readonly viewport: SettingsGeometrySize;
+}
 
 interface Box {
   readonly left: number;

@@ -1,4 +1,5 @@
 import { buildFixture } from "../fixtures/window-chrome-build";
+import type { SettingsEvidence } from "../fixtures/settings-dialog-exercise";
 import { createRequire } from "node:module";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -118,8 +119,52 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         expect(results).toHaveLength(1);
         if (mode === "settings-only") {
           const { settings } = JSON.parse(results[0]!.slice(prefix.length)) as {
-            settings: { rejectedStatus: string };
+            settings: SettingsEvidence;
           };
+          const { compact, originalViewport } = settings.layout;
+          expect(compact).toHaveLength(4);
+          for (const [index, geometry] of compact.entries()) {
+            expect(geometry).toEqual({
+              kind: "native-minimum-request",
+              language: index < 2 ? "en-US" : "pt-BR",
+              light: index % 2 === 1,
+              requestedMinimum: geometry.requestedMinimum,
+              outer: geometry.outer,
+              content: geometry.content,
+              viewport: geometry.viewport,
+            });
+            for (const size of [
+              originalViewport,
+              geometry.requestedMinimum,
+              geometry.outer,
+              geometry.content,
+              geometry.viewport,
+            ]) {
+              expect(Object.keys(size).sort()).toEqual(["height", "width"]);
+              expect(
+                Object.values(size).every(
+                  (value) => Number.isFinite(value) && value > 0,
+                ),
+              ).toBe(true);
+            }
+            expect(geometry.requestedMinimum).toEqual(
+              compact[0]!.requestedMinimum,
+            );
+            expect(geometry.outer.width).toBeGreaterThanOrEqual(
+              geometry.requestedMinimum.width,
+            );
+            expect(geometry.outer.height).toBeGreaterThanOrEqual(
+              geometry.requestedMinimum.height,
+            );
+            expect(geometry.viewport.width).toBeLessThanOrEqual(639);
+            expect(geometry.viewport.height).toBeLessThanOrEqual(360);
+            expect(geometry.viewport.width).toBeLessThan(
+              originalViewport.width,
+            );
+            expect(geometry.viewport.height).toBeLessThan(
+              originalViewport.height,
+            );
+          }
           expect(settings.rejectedStatus).toMatch(
             /font\.family.*must exactly name an installed font family/u,
           );
@@ -132,6 +177,7 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           }).toEqual({
             settings: {
               opened: true,
+              nativeGeometryPreservedOnOpen: true,
               onePanelVisible: true,
               liveStatus: "Saved.",
               liveFile: { version: 1, terminal: { padding: { top: 24 } } },
@@ -160,6 +206,8 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
                 breakpoints: 4,
                 synthetic: true,
                 physicalKeyboard: false,
+                originalViewport,
+                compact,
               },
             },
           });

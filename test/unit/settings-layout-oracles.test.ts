@@ -9,6 +9,9 @@ import {
   type SettingsLayoutObservation,
 } from "../fixtures/settings-layout-observation";
 import { captureSettingsLayoutFailure } from "../fixtures/settings-layout-failure";
+import { exerciseSettingsDialog } from "../fixtures/settings-dialog-exercise";
+
+vi.mock("electron", () => ({ ipcMain: {} }));
 import {
   exerciseSettingsLayout,
   targetSettingsGeometry,
@@ -193,38 +196,70 @@ it("rejects the removed-inner-container control and one-character-per-line label
     ),
   ).toThrow("label wraps into excessive lines");
 });
-it("reaches exact matrix viewports and breakpoint heights under persistent +1 native height bias", async () => {
-  vi.stubEnv("OMXTERM_SETTINGS_EVIDENCE_DIR", undefined);
-  const directory = await mkdtemp(
-    path.join(tmpdir(), "omxterm-layout-target-"),
-  );
-  const previousArgs = [...process.argv];
-  process.argv.push(`--fixture-settings-evidence=${directory}`);
-  let width = 960,
+function layoutPort(mode = "normal", restoreFails = false) {
+  const original = { x: 50, y: 40, width: 961, height: 642 };
+  let outer = { ...original },
+    width = 960,
     height = 640,
     selected = "general",
     light = false;
-  const requests: number[][] = [];
-  const minimum = vi.fn(() => [320, 200]);
+  const contentRequests: number[][] = [],
+    nativeRequests: number[][] = [],
+    restoredBounds: unknown[] = [],
+    categories: string[] = [],
+    order: string[] = [];
   const panelWidth = () => width - (width >= 900 ? 200 : 40);
   const window = {
-    getContentBounds: () => ({ width: 960, height: 640 }),
-    getMinimumSize: minimum,
+    getBounds: () => ({ ...outer }),
+    getContentBounds: () => ({
+      x: 51,
+      y: 40,
+      width: mode === "invalid" ? NaN : width,
+      height,
+    }),
+    getContentSize: () => [width, height],
+    getMinimumSize: () => [
+      mode === "changed-minimum" && nativeRequests.length ? 321 : 320,
+      200,
+    ],
+    setMinimumSize: vi.fn(() => {
+      throw Error("Minimum must not be mutated");
+    }),
+    setSize(w: number, h: number) {
+      nativeRequests.push([w, h]);
+      if (mode !== "ignored-minimum") {
+        width = 320;
+        height = 201;
+        outer = { ...outer, width: 321, height: 202 };
+      }
+    },
     setContentSize(w: number, h: number) {
-      requests.push([w, h]);
+      contentRequests.push([w, h]);
+      if (w === 320)
+        throw Error("Native-minimum sample used the content-size domain");
       width = w;
-      height = h + 1;
+      height = mode === "unreachable" && w === 640 ? 481 : h + 1;
+      outer = { ...outer, width: width + 1, height: height + 1 };
+    },
+    setBounds(bounds: typeof original) {
+      restoredBounds.push(bounds);
+      order.push("bounds");
+      outer = { ...bounds };
     },
     webContents: {
       sendInputEvent() {},
+      capturePage: vi.fn(async () => {
+        order.push("capture");
+        return { toPNG: () => Buffer.from("synthetic PNG port") };
+      }),
       async executeJavaScript(script: string) {
         if (script.startsWith("["))
           return [
             script.includes("settings-panels") ? panelWidth() : width,
             height,
           ];
-        if (script.includes("measureText"))
-          return {
+        if (script.includes("measureText")) {
+          const observation = {
             ...sample(
               panelWidth(),
               panelWidth() < 560 ? "stacked" : "columns",
@@ -235,36 +270,113 @@ it("reaches exact matrix viewports and breakpoint heights under persistent +1 na
             height,
             scheme: light ? "light" : "dark",
           };
+          if (mode === "category")
+            return {
+              ...observation,
+              panels: observation.panels.map((p) => ({
+                ...p,
+                display:
+                  p.id === "settings-panel-config-file" ? "flex" : "none",
+              })),
+            };
+          return {
+            ...observation,
+            focus: mode !== "focus",
+            height: mode === "unstable" ? height + 1 : height,
+          };
+        }
         const category = /#settings-tab-([a-z-]+)'/u.exec(script)?.[1];
-        if (category) selected = category;
+        if (category) {
+          selected = category;
+          categories.push(category);
+        }
         if (script.includes(":focus-visible")) return true;
         if (script.includes(".settings-panels")) return panelWidth();
         return undefined;
       },
     },
-  } as unknown as BrowserWindow;
+  };
+  return {
+    window: window as unknown as BrowserWindow,
+    original,
+    contentRequests,
+    nativeRequests,
+    restoredBounds,
+    categories,
+    order,
+    capture: window.webContents.capturePage,
+    setMinimum: window.setMinimumSize,
+    configure: (_language: string, value: boolean) => {
+      light = value;
+    },
+    restore: () => {
+      order.push("restore");
+      if (restoreFails) throw Error("secondary restoration failure");
+    },
+  };
+}
+
+it("samples native minimum at actual compact 320x201 while preserving five exact targets and breakpoint corrections", async () => {
+  vi.stubEnv("OMXTERM_SETTINGS_EVIDENCE_DIR", undefined);
+  const directory = await mkdtemp(
+    path.join(tmpdir(), "omxterm-layout-target-"),
+  );
+  const previousArgs = [...process.argv];
+  process.argv.push(`--fixture-settings-evidence=${directory}`);
+  const port = layoutPort();
   try {
-    await expect(
-      exerciseSettingsLayout(
-        window,
-        (_language, value) => {
-          light = value;
-        },
-        () => {},
+    const result = await exerciseSettingsLayout(
+      port.window,
+      port.configure,
+      port.restore,
+    );
+    expect(result).toEqual({
+      cases: 144,
+      breakpoints: 4,
+      synthetic: true,
+      physicalKeyboard: false,
+      originalViewport: { width: 960, height: 640 },
+      compact: ["en-US", "pt-BR"].flatMap((language) =>
+        [false, true].map((light) => ({
+          kind: "native-minimum-request",
+          language,
+          light,
+          requestedMinimum: { width: 320, height: 200 },
+          outer: { width: 321, height: 202 },
+          content: { width: 320, height: 201 },
+          viewport: { width: 320, height: 201 },
+        })),
       ),
-    ).resolves.toMatchObject({ cases: 144, breakpoints: 4 });
-    expect(requests.slice(0, 2)).toEqual([
-      [320, 200],
-      [320, 199],
-    ]);
-    const at = requests.findIndex(([w]) => w === 1000);
-    expect(requests.slice(at, at + 3)).toEqual([
+    });
+    expect(port.nativeRequests).toEqual(
+      Array.from({ length: 4 }, () => [320, 200]),
+    );
+    expect(port.contentRequests.slice(0, 40)).toEqual(
+      Array.from({ length: 4 }, () =>
+        [
+          [640, 480],
+          [800, 600],
+          [960, 640],
+          [1280, 800],
+          [1920, 1080],
+        ].flatMap(([w, h]) => [
+          [w, h],
+          [w, h! - 1],
+        ]),
+      ).flat(),
+    );
+    expect(port.contentRequests.every(([w, h]) => w! > 320 && h! > 360)).toBe(
+      true,
+    );
+    const at = port.contentRequests.findIndex(([w]) => w === 1000);
+    expect(port.contentRequests.slice(at, at + 3)).toEqual([
       [1000, 640],
       [759, 639],
       [599, 639],
     ]);
-    expect(requests.at(-1)).toEqual([960, 640]);
-    expect(minimum).toHaveBeenCalledTimes(2);
+    expect(port.restoredBounds).toEqual([port.original]);
+    expect(port.setMinimum).not.toHaveBeenCalled();
+    expect(port.categories).toHaveLength(153); // 144 matrix + 8 breakpoint + final General.
   } finally {
     process.argv = previousArgs;
     vi.unstubAllEnvs();
@@ -272,13 +384,65 @@ it("reaches exact matrix viewports and breakpoint heights under persistent +1 na
   }
 });
 
-it("stops at an exact first request, corrects both biased axes and rejects invalid requests", async () => {
+it.each(["unchanged", "bounds", "minimum"])(
+  "checks opening native %s geometry after focus and before configuration edits",
+  async (mode) => {
+    const stop = new Error("Stop before deliberate configuration edit");
+    const order: string[] = [];
+    let bounds = { x: 1, y: 40, width: 961, height: 642 },
+      minimum = [320, 200];
+    const window = {
+      focus() {
+        order.push("focus");
+        bounds = { ...bounds, x: 50 };
+      },
+      getBounds: () => ({ ...bounds }),
+      getMinimumSize: () => [...minimum],
+      webContents: {
+        executeJavaScript: async (script: string) => {
+          if (script.includes("dispatchEvent")) {
+            order.push("edit");
+            throw stop;
+          }
+          return true;
+        },
+      },
+    } as unknown as BrowserWindow;
+    const exercise = exerciseSettingsDialog(
+      window,
+      () => {
+        order.push("show");
+        if (mode === "bounds") bounds = { ...bounds, width: 962 };
+        if (mode === "minimum") minimum = [321, 200];
+      },
+      async () => {
+        throw Error("No config read allowed");
+      },
+      [],
+      async () => {
+        throw Error("No layout allowed");
+      },
+    );
+    await expect(exercise).rejects.toThrow(
+      mode === "unchanged"
+        ? stop.message
+        : mode === "bounds"
+          ? "Opening Settings changed native bounds"
+          : "Opening Settings changed native minimum",
+    );
+    expect(order).toEqual(
+      mode === "unchanged" ? ["focus", "show", "edit"] : ["focus", "show"],
+    );
+  },
+);
+
+it("keeps the larger exact-target helper affine, bounded and strict about both axes and invalid requests", async () => {
   for (const bias of [0, 1]) {
     const requests: number[][] = [];
     const frame = vi.fn(async () => {});
     await targetSettingsGeometry({
-      initial: [320, 200],
-      target: [320, 200],
+      initial: [640, 480],
+      target: [640, 480],
       setSize: (w, h) => {
         requests.push([w, h]);
       },
@@ -289,10 +453,10 @@ it("stops at an exact first request, corrects both biased axes and rejects inval
     expect(requests).toEqual(
       bias
         ? [
-            [320, 200],
-            [319, 199],
+            [640, 480],
+            [639, 479],
           ]
-        : [[320, 200]],
+        : [[640, 480]],
     );
     expect(frame).toHaveBeenCalledTimes(requests.length);
   }
@@ -300,101 +464,69 @@ it("stops at an exact first request, corrects both biased axes and rejects inval
     const setSize = vi.fn();
     await expect(
       targetSettingsGeometry({
-        initial: [width, 200],
-        target: [320, 200],
+        initial: [width, 480],
+        target: [640, 480],
         setSize,
         frame: async () => {},
-        measure: async () => [320, 200],
+        measure: async () => [640, 480],
       }),
     ).rejects.toThrow("Settings invalid geometry request");
     expect(setSize).not.toHaveBeenCalled();
   }
 });
 
-it.each(["category", "unreachable"])(
-  "captures the actual failed %s state before restoring the renderer",
-  async (mode) => {
+it.each([
+  ["category", "rendered panel does not match click"],
+  ["focus", "Settings unreachable control"],
+  ["ignored-minimum", "native-minimum request did not reach compact viewport"],
+  ["invalid", "Settings invalid geometry"],
+  ["changed-minimum", "Settings changed native minimum bounds"],
+  ["unstable", "202 !== 201"],
+  ["unreachable", "Settings exact geometry target was not reached"],
+])(
+  "captures failed %s before single outer restoration without masking the primary error",
+  async (mode, message) => {
     const directory = await mkdtemp(
       path.join(tmpdir(), "omxterm-layout-failure-"),
     );
     const previousArgs = [...process.argv];
     vi.stubEnv("OMXTERM_SETTINGS_EVIDENCE_DIR", undefined);
     process.argv.push(`--fixture-settings-evidence=${directory}`);
-    const order: string[] = [];
-    const observation = sample();
-    const mismatch = {
-      ...observation,
-      panels: observation.panels.map((panel) => ({
-        ...panel,
-        display: panel.id === "settings-panel-config-file" ? "flex" : "none",
-      })),
-    };
-    const capturePage = vi.fn(async () => {
-      order.push("capture");
-      return { toPNG: () => Buffer.from("synthetic PNG port") };
-    });
-    const requests: number[][] = [];
-    const minimum = vi.fn(() => [320, 200]);
-    const window = {
-      getContentBounds: () => ({ width: 960, height: 640 }),
-      getContentSize: () => [320, mode === "unreachable" ? 201 : 200],
-      getMinimumSize: minimum,
-      setContentSize: (width: number, height: number) => {
-        requests.push([width, height]);
-        order.push(`size-${width}`);
-      },
-      webContents: {
-        executeJavaScript: async (script: string) =>
-          script.startsWith("[")
-            ? [320, mode === "unreachable" ? 201 : 200]
-            : script.includes("measureText")
-              ? mismatch
-              : undefined,
-        capturePage,
-      },
-    } as unknown as BrowserWindow;
+    const port = layoutPort(mode, mode === "category");
     try {
       await expect(
-        exerciseSettingsLayout(
-          window,
-          () => {},
-          () => {
-            order.push("restore");
-          },
-        ),
-      ).rejects.toThrow(
-        mode === "unreachable"
-          ? "Settings exact geometry target was not reached"
-          : "rendered panel does not match click",
-      );
-      expect(requests).toEqual(
+        exerciseSettingsLayout(port.window, port.configure, port.restore),
+      ).rejects.toThrow(message);
+      expect(port.nativeRequests).toEqual([[320, 200]]);
+      expect(port.contentRequests).toEqual(
         mode === "unreachable"
           ? [
-              [320, 200],
-              [320, 199],
-              [320, 198],
-              [960, 640],
+              [640, 480],
+              [640, 479],
+              [640, 478],
             ]
-          : [
-              [320, 200],
-              [960, 640],
-            ],
+          : [],
       );
-      expect(minimum).toHaveBeenCalledOnce();
-      expect(capturePage).toHaveBeenCalledOnce();
-      expect(order.indexOf("capture")).toBeLessThan(order.indexOf("restore"));
+      expect(port.restoredBounds).toEqual([port.original]);
+      expect(port.setMinimum).not.toHaveBeenCalled();
+      expect(port.capture).toHaveBeenCalledOnce();
+      expect(port.order).toEqual(["capture", "restore", "bounds"]);
       const [name] = await readdir(directory);
       const metadata = JSON.parse(
         await readFile(path.join(directory, name!, "observation.json"), "utf8"),
       ) as {
-        context: { category: string };
+        context: { category?: string; targetKind: string; compact?: unknown };
         observation: SettingsLayoutObservation;
         screenshot: boolean;
       };
       expect(metadata.context.category).toBe(
-        mode === "category" ? "general" : undefined,
+        ["category", "focus", "unstable"].includes(mode)
+          ? "general"
+          : undefined,
       );
-      expect(metadata.observation.panels).toEqual(mismatch.panels);
+      expect(metadata.context.targetKind).toBe(
+        mode === "unreachable" ? "exact-viewport" : "native-minimum-request",
+      );
       expect(metadata.screenshot).toBe(true);
       expect(
         await readFile(path.join(directory, name!, "frame.png"), "utf8"),

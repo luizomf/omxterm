@@ -1,7 +1,10 @@
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { writeSync } from "node:fs";
 import path from "node:path";
-import type { SettingsLayoutObservation } from "./settings-layout-observation";
+import type {
+  SettingsLayoutObservation,
+  SettingsCompactGeometry,
+} from "./settings-layout-observation";
 
 export interface SettingsLayoutContext {
   readonly phase: "matrix" | "breakpoint" | "minimum";
@@ -11,6 +14,8 @@ export interface SettingsLayoutContext {
   readonly height?: number;
   readonly category?: string;
   readonly contentTarget?: number;
+  readonly targetKind?: "native-minimum-request" | "exact-viewport";
+  readonly compact?: SettingsCompactGeometry;
 }
 
 // One bounded synthetic failure frame/observation, before renderer restoration.

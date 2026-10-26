@@ -21,6 +21,7 @@ import {
 
 export interface SettingsEvidence {
   readonly opened: boolean;
+  readonly nativeGeometryPreservedOnOpen: true;
   readonly onePanelVisible: boolean;
   readonly liveStatus: string;
   readonly liveFile: unknown;
@@ -133,7 +134,7 @@ export function createSettingsExercise(
   };
 }
 
-async function exerciseSettingsDialog(
+export async function exerciseSettingsDialog(
   window: BrowserWindow,
   show: () => void,
   readConfig: () => Promise<string>,
@@ -167,6 +168,8 @@ async function exerciseSettingsDialog(
     `[...document.querySelectorAll('.settings-dialog label')].find((row) => row.textContent.startsWith(${JSON.stringify(label)})).querySelector('input')`;
 
   window.focus();
+  const openingBounds = { ...window.getBounds() };
+  const openingMinimum = [...window.getMinimumSize()];
   show();
   await waitFor(
     "document.querySelectorAll('.settings-tabs [role=\"tab\"]').length === 6",
@@ -175,6 +178,17 @@ async function exerciseSettingsDialog(
     "document.querySelectorAll('.settings-dialog').length === 1 && document.activeElement?.getAttribute('role') === 'tab'",
   );
 
+  // Opening is separate from later deliberate saves/reloads of geometry.
+  assert.deepEqual(
+    window.getBounds(),
+    openingBounds,
+    "Opening Settings changed native bounds",
+  );
+  assert.deepEqual(
+    window.getMinimumSize(),
+    openingMinimum,
+    "Opening Settings changed native minimum",
+  );
   await tab("Terminal");
   // Real CSS: only the selected tab panel renders.
   const onePanelVisible = await evaluate<boolean>(
@@ -248,6 +262,7 @@ async function exerciseSettingsDialog(
   assert.ok(opened, "Settings did not open with focus inside it");
   return {
     opened,
+    nativeGeometryPreservedOnOpen: true,
     onePanelVisible,
     liveStatus,
     liveFile,
