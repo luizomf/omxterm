@@ -1430,7 +1430,9 @@ minimum. Below it, compact wrapping navigation and scrolling retain small-window
 access. Native bounds/minima are unchanged by opening Settings. The workspace
 caps at 1440 px, ordinary forms at 720 px and dense pages at 1120 px. Panel-width
 container queries stack form labels below 560 px and wrap shortcut actions below
-760 px. Shortcuts retain visible Record/Cancel, Unbind, Default and textual state;
+760 px. Outer layout uses viewport media queries at 639/900/1200 px, with only
+the content panel acting as a size-query container. Shortcuts retain visible
+Record/Cancel, Unbind, Default and textual state;
 config JSON overflow stays within its editor. Shared palette-aware tokens keep
 decoration subdued, inputs identifiable and keyboard focus foreground-colored,
 independent of optionally transparent pane paint. Native control color-scheme

@@ -577,7 +577,9 @@ body.tabs-visible .terminal-tab {
   margin-top: 6px;
 }
 
-.terminal-surface::before {
+/* Native title dragging must survive graphical selection and last PTY exit. */
+.terminal-surface::before,
+.settings-tab::before {
   content: "";
   position: fixed;
   z-index: 1;

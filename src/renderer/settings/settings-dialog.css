@@ -30,7 +30,6 @@ body.tabs-visible .settings-tab {
     14px/1.4 system-ui,
     sans-serif;
   overflow: hidden;
-  container-type: inline-size;
 }
 .settings-body {
   display: grid;
@@ -276,7 +275,7 @@ body.tabs-visible .settings-tab {
     grid-column: auto;
   }
 }
-@container (min-width: 900px) {
+@media (min-width: 900px) {
   .settings-body {
     grid-template-columns: 192px minmax(0, 1fr);
     gap: 8px 24px;
@@ -287,7 +286,7 @@ body.tabs-visible .settings-tab {
     right: max(24px, calc((100% - 1440px) / 2 + 24px));
   }
 }
-@container (min-width: 1200px) {
+@media (min-width: 1200px) {
   .settings-body {
     padding: 32px;
   }
@@ -307,7 +306,7 @@ body.tabs-visible .settings-tab {
     max-height: 40px;
   }
 }
-@container (max-width: 639px) {
+@media (max-width: 639px) {
   .settings-body {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto auto minmax(0, 1fr) auto;

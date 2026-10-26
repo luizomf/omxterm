@@ -81,6 +81,12 @@ export function createSettingsView(
     dialog = current;
     current.className = "settings-dialog";
     current.setAttribute("aria-labelledby", "settings-title");
+    // Remember focus while Settings owns it, before pointer focus or ancestor
+    // inertness moves it away. Clipboard invalidation remains independent.
+    current.addEventListener("focusin", (event) => {
+      if (interactive() && event.target instanceof HTMLElement)
+        lastFocus = event.target;
+    });
     const live = () => dialog === current;
     const done = document.createElement("button");
     const view = buildSettingsView(
@@ -117,8 +123,6 @@ export function createSettingsView(
     open,
     setSelected(value: boolean) {
       if (selected === value) return;
-      if (!value && dialog?.contains(document.activeElement))
-        lastFocus = document.activeElement as HTMLElement;
       selected = value;
       invalidate();
       if (!value) releaseView?.();
@@ -129,8 +133,6 @@ export function createSettingsView(
     },
     setBlocked(value: boolean) {
       if (blocked === value) return;
-      if (value && dialog?.contains(document.activeElement))
-        lastFocus = document.activeElement as HTMLElement;
       blocked = value;
       invalidate();
       if (value) releaseView?.();
@@ -144,7 +146,7 @@ export function createSettingsView(
           : (dialog?.querySelector<HTMLElement>(
               '.settings-tabs [aria-selected="true"]',
             ) ?? dialog?.querySelector<HTMLElement>(".settings-close"));
-      target?.focus();
+      target?.focus({ preventScroll: true });
     },
     // App Copy/Paste/Select All edit the focused text field and never reach
     // the terminal while Settings owns input.
@@ -387,7 +389,8 @@ function buildSettingsView(
     shortcuts = renderShortcuts(document, {
       snapshot: () => snapshot,
       platform,
-      live: () => live() && interactive(),
+      live,
+      interactive,
       report,
       changeKeybind,
       captureShortcut: (listener) => bridge.captureShortcut(listener),

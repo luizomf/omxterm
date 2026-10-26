@@ -12,8 +12,11 @@ and the Settings menu remain usable. Settings uses its own localized native
 title, isolated from background terminal titles/bells.
 
 macOS uses blended `hiddenInset` chrome and native traffic-light controls.
-Hiding removes the buttons and the 30 px app-owned title inset. Linux and Windows
-use frameless native windows with a 34 px renderer-drawn title/drag row, sanitized
+Hiding removes the buttons and the 30 px app-owned title inset. Terminal and
+Settings content share the same bounded native-title drag hit region, independent
+of live Surface existence. Hidden title/fullscreen reduce its height to zero;
+modal preview ownership suppresses dragging without covering Settings controls.
+Linux and Windows use frameless native windows with a 34 px renderer-drawn title/drag row, sanitized
 selected title and native minimize/maximize/restore/close actions. Colors follow
 the theme and background ownership in
 [ADR 0029](0029-compose-background-effects-with-explicit-cell-identity.md).

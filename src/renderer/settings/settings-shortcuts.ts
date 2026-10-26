@@ -74,6 +74,7 @@ export function renderShortcuts(
     readonly snapshot: () => SettingsSnapshot | undefined;
     readonly platform: string;
     readonly live: () => boolean;
+    readonly interactive: () => boolean;
     readonly report: (key?: MessageKey, error?: boolean) => void;
     readonly changeKeybind: (change: SettingsKeybindChange) => void;
     readonly captureShortcut: (
@@ -111,7 +112,7 @@ export function renderShortcuts(
   const save = (action: TerminalActionName, choice: KeybindChoice) =>
     context.changeKeybind({ action, choice });
   const record = (action: TerminalActionName) => {
-    if (!context.live()) return;
+    if (!context.live() || !context.interactive()) return;
     const again = recording === action;
     release();
     if (again) return;
@@ -119,7 +120,8 @@ export function renderShortcuts(
     syncAll();
     context.report("shortcuts.prompt");
     stopCapture = context.captureShortcut((shortcut) => {
-      if (!context.live() || recording !== action) return;
+      if (!context.live() || !context.interactive() || recording !== action)
+        return;
       if ("invalid" in shortcut) {
         context.report("shortcuts.invalid", true);
         return;

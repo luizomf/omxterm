@@ -54,7 +54,12 @@ async function runChrome(
           : [`--fixture-native-maximize=${expectation}`]),
         ...(mode === "fail-fast" ? ["--fixture-fail-fast"] : []),
         ...(mode === "about-only" ? ["--fixture-about-only"] : []),
-        ...(mode === "settings-only" ? ["--fixture-settings-only"] : []),
+        ...(mode === "settings-only"
+          ? [
+              "--fixture-settings-only",
+              `--fixture-settings-evidence=${path.resolve(".scratch/native-fixtures", `${path.basename(root)}-settings`)}`,
+            ]
+          : []),
         ...(mode === "feature-smoke" ? [FEATURE_SMOKE_FLAG] : []),
         ...(mode === "theme-appearance" ? ["--fixture-theme-appearance"] : []),
       ],

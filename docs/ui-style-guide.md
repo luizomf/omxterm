@@ -35,9 +35,10 @@ these conventions do not establish universal accessibility or compositor parity.
 
 The full-area workspace caps at 1440 px. Sidebar width is 168 px below 900 px
 and 192 px above; outer padding grows from 16 to 24 to 32 px at 900/1200 px.
-The content edge stays consistent across categories. Ordinary forms cap at
-720 px; Shortcuts and Config File at 1120 px. Content and navigation scroll
-independently, with wrapped translated labels and diagnostics.
+These outer breakpoints use viewport media queries; `.settings-panels` is the
+only size-query container. The content edge stays consistent across categories.
+Ordinary forms cap at 720 px; Shortcuts and Config File at 1120 px. Content and
+navigation scroll independently, with wrapped translated labels and diagnostics.
 
 Container width, not viewport width, controls density: below 560 px labels sit
 above their fields; number inputs cap at 112 px and other fields at 384 px.
@@ -56,7 +57,13 @@ Headless host/Settings tests establish ownership, retained identity and palette
 selection, not visual quality. The real `window-chrome` **settings-only** fixture
 covers six categories at 320×200, 640×480, 800×600, 960×640, 1280×800 and
 1920×1080, both Interface Languages and representative light/dark palettes,
-plus actual panel-container breakpoint edges. Optional synthetic-only captures
-use `OMXTERM_SETTINGS_EVIDENCE_DIR`. Its programmatic focus/input is not physical
-keyboard/layout qualification. Record actual execution and limitations separately;
+plus actual panel-container breakpoint edges. It checks the clicked category
+against selected/hidden/computed-display state, form and shortcut placement on
+each side of the content breakpoints, and label width/line geometry (not only
+last-control reachability). Optional synthetic-only captures use
+`OMXTERM_SETTINGS_EVIDENCE_DIR`. Failures capture a bounded frame and geometry
+before restoring the renderer; the normal runner retains them outside its
+removed profile under `.scratch/native-fixtures/`. Its programmatic focus/input
+is not physical keyboard/layout qualification. Record actual execution and
+limitations separately;
 a built fixture is not a rendered pass.

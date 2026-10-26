@@ -72,6 +72,75 @@ it("retains one graphical editor in the shared literal order without allocating 
   expect(document.querySelector("textarea")).not.toBe(editor);
 });
 
+it.each(["menu", "pointer"] as const)(
+  "restores the latest Settings field after pointer-focus-before-click and %s return",
+  async (returnBy) => {
+    const bridge = settings();
+    const h = createTabsHarness({ tabsOptions: { settings: bridge } });
+    owners.push(h.tabs);
+    await h.tabs.ready;
+    h.tabs.openSettings();
+    await vi.waitFor(() =>
+      expect(document.querySelector("textarea")).not.toBeNull(),
+    );
+    document
+      .querySelector<HTMLButtonElement>("#settings-tab-appearance")!
+      .click();
+    document.querySelector<HTMLInputElement>(".settings-text input")!.focus();
+    h.tabs.handleCommand({ action: "previous" });
+    h.tabs.openSettings();
+    document
+      .querySelector<HTMLButtonElement>("#settings-tab-config-file")!
+      .click();
+    const editor = document.querySelector("textarea")!;
+    const panels = document.querySelector<HTMLElement>(".settings-panels")!;
+    const navigation = document.querySelector<HTMLElement>(".settings-tabs")!;
+    editor.value = "synthetic retained draft\n".repeat(40);
+    editor.dispatchEvent(new Event("input"));
+    editor.focus();
+    editor.setSelectionRange(2, 15, "backward");
+    editor.scrollTop = 72;
+    panels.scrollTop = 36;
+    navigation.scrollTop = 24;
+    const clipboard = deferred<string>();
+    h.tabs.editSettingsClipboard("paste", {
+      readText: () => clipboard.promise,
+      writeText: async () => {},
+      confirmPaste: async () => true,
+      requestContextMenu() {},
+    });
+    const terminal = h.strip.querySelector<HTMLButtonElement>("button")!;
+    terminal.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    terminal.focus(); // Browser pointer focus precedes the strip's click handler.
+    terminal.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    terminal.click();
+    if (returnBy === "menu") h.tabs.openSettings();
+    else {
+      const tab = [...h.strip.querySelectorAll("button")].find(
+        (button) => button.textContent === "Settings",
+      )!;
+      tab.focus();
+      tab.click();
+    }
+    expect(document.activeElement).toBe(editor);
+    clipboard.resolve("obsolete clipboard");
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(document.querySelector("textarea")).toBe(editor);
+    expect(editor.value).toBe("synthetic retained draft\n".repeat(40));
+    expect([
+      editor.selectionStart,
+      editor.selectionEnd,
+      editor.selectionDirection,
+    ]).toEqual([2, 15, "backward"]);
+    expect([editor.scrollTop, panels.scrollTop, navigation.scrollTop]).toEqual([
+      72, 36, 24,
+    ]);
+    expect(bridge.snapshot).toHaveBeenCalledOnce();
+    expect(bridge.saveText).not.toHaveBeenCalled();
+  },
+);
+
 it("settles hidden saves but rejects paste after leave-and-return, overlay and focus loss", async () => {
   const result = deferred<SettingsResult>();
   const bridge = settings({ change: () => result.promise });
@@ -294,10 +363,10 @@ it.each(["tab", "overlay", "close"] as const)(
     const changeKeybind = vi.fn();
     const bridge = settings({
       changeKeybind,
-      captureShortcut: (listener) => {
+      captureShortcut: vi.fn<SettingsBridge["captureShortcut"]>((listener) => {
         captured = listener;
         return release;
-      },
+      }),
     });
     const h = createTabsHarness({ tabsOptions: { settings: bridge } });
     owners.push(h.tabs);
@@ -314,11 +383,31 @@ it.each(["tab", "overlay", "close"] as const)(
     )!;
     record.click();
     expect(document.activeElement).not.toBe(record);
+    expect(document.querySelector(".settings-status")!.textContent).toBe(
+      "Press the new shortcut, or Escape to cancel.",
+    );
     if (departure === "tab") h.tabs.handleCommand({ action: "previous" });
     else if (departure === "overlay") h.tabs.setBlocked(true);
     else h.tabs.handleCommand({ action: "close" });
     expect(release).toHaveBeenCalledOnce();
     captured({ accelerator: "F2" });
     expect(changeKeybind).not.toHaveBeenCalled();
+    if (departure !== "close") {
+      expect(document.querySelector(".settings-status")!.textContent).toBe(
+        "Recording cancelled.",
+      );
+      expect(record.textContent).toBe("Record");
+      const focused = document.activeElement;
+      record.click();
+      expect(document.activeElement).toBe(focused);
+      expect(bridge.captureShortcut).toHaveBeenCalledOnce();
+      if (departure === "tab") h.tabs.openSettings();
+      else h.tabs.setBlocked(false);
+      captured({ accelerator: "F3" });
+      expect(changeKeybind).not.toHaveBeenCalled();
+      expect(document.querySelector(".settings-status")!.textContent).toBe(
+        "Recording cancelled.",
+      );
+    }
   },
 );

@@ -299,9 +299,17 @@ They do not replace native Windows execution.
 The Window Chrome `settings-only` case additionally runs the graphical editor's
 layout matrix: six categories at 320×200, 640×480, 800×600, 960×640, 1280×800
 and 1920×1080, en-US/pt-BR, representative dark/light palettes and actual panel
-breakpoint edges. It checks horizontal containment, reachable focused controls,
-retained editor identity, palette control color-scheme and unchanged native
-minima. `OMXTERM_SETTINGS_EVIDENCE_DIR` optionally saves synthetic-only PNGs.
+breakpoint edges. It checks clicked/selected/hidden/rendered category agreement,
+readable label width/line geometry, actual form and shortcut placement on both
+sides of their content breakpoints, horizontal containment and reachable focused
+controls. Retained editor identity, palette color-scheme and native minima are
+also checked. `OMXTERM_SETTINGS_EVIDENCE_DIR` optionally saves synthetic-only
+PNGs. Before throwing, a failure captures bounded app-only geometry and a frame
+(up to 1920×1080 logical pixels and 32 MiB encoded), without refocusing or
+restoring the renderer first. The runner's per-invocation failure destination is
+outside the removed profile under `.scratch/native-fixtures/`; with an explicit
+evidence directory it creates a unique `failure-*` child there. Capture/write
+errors are recorded and never replace the original oracle failure.
 Run alone on an assigned idle desktop with
 `npm test -- test/integration/window-chrome.test.ts -t settings-only`.
 Headless preparation does not establish rendered layout or physical input.
