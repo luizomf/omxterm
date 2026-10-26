@@ -298,9 +298,11 @@ const terminal: TerminalBridge = {
   },
   notifyTabSelection(sessionId, tabSessionIds) {
     const selection =
-      tabSessionIds === undefined
-        ? { sessionId }
-        : { sessionId, tabSessionIds: [...tabSessionIds] };
+      typeof sessionId === "object" && sessionId !== null
+        ? sessionId
+        : tabSessionIds === undefined
+          ? { sessionId }
+          : { sessionId, tabSessionIds: [...tabSessionIds] };
     if (!isTerminalTabSelection(selection))
       throw new TypeError("Invalid Terminal Tab selection");
     ipcRenderer.send(terminalIpc.tabSelected, selection);

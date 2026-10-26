@@ -17,7 +17,7 @@ export function terminalPaneAccent(theme: TerminalTheme): string {
     : cyan;
 }
 
-function luminance(hex: string): number {
+export function luminance(hex: string): number {
   // Terminal Theme validation guarantees six-digit sRGB colors.
   const channels = [1, 3, 5].map((offset) => {
     const channel = Number.parseInt(hex.slice(offset, offset + 2), 16) / 255;

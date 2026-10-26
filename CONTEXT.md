@@ -29,13 +29,17 @@ pseudo-terminal (PTY), through the typed preload bridge and Electron main.
 See [window and session behavior](docs/spec.md#window-and-session-behavior).
 
 **Terminal Window** — An independent native window containing one or more
-Terminal Tabs, with exactly one selected.
+Application Tabs, with exactly one selected. It starts with a Terminal Tab.
 
-**Terminal Tab** — A selectable container owning one or more Terminal Panes,
+**Application Tab** — A terminal or graphical Settings entry in one window's
+single ordered tab collection. Reordering and literal/next/previous navigation
+include both kinds. Removing the last Application Tab follows the window-close
+lifecycle, including pending failure acknowledgement.
+
+**Terminal Tab** — An Application Tab owning one or more Terminal Panes,
 with exactly one focused. Pending initialization and failure acknowledgement also
-retain window ownership. Tabs can be reordered within their window. Their state is
-temporary; removing the last tab follows the window-close lifecycle, including
-pending failure acknowledgement.
+retain window ownership. Its state is temporary; closing its last pane removes
+that Terminal Tab, not any surviving Settings tab.
 
 **Terminal Pane** — One Terminal Surface and, after initialization succeeds, one
 Live Terminal Session inside a tab's split layout. Removing a tab's last pane
@@ -90,7 +94,11 @@ and the [configuration guide](docs/configuration.md).
 user's preferences. OMXTerm creates an initial kit when no configuration exists;
 subsequent edits belong to the user.
 
-**Settings** — The in-app editor of User Configuration. A deliberate change
+**Settings** — One lazy, retained graphical Application Tab per window, without
+a pane, Surface, Adapter or PTY. Switching retains drafts/category/scroll/pending
+results, but cancels recording and invalidates clipboard interaction. Closing
+discards the editor lifetime without implicit raw Save; reopening reads anew.
+A deliberate change
 validates, writes and reloads `config.json`; opening OMXTerm or Settings never
 rewrites an existing document. Its language selector and editor text share the
 Interface Language, relabeling in place while retaining drafts and pending

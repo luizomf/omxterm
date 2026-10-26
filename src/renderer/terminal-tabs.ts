@@ -1,3 +1,7 @@
+import type { SettingsBridge } from "../shared/settings";
+import { createSettingsView } from "./settings/settings-dialog";
+import { retainDismissalGesture } from "./about/about-dialog";
+import type { SettingsTabSelection } from "../shared/terminal-panes";
 import type {
   TerminalClipboardAction,
   TerminalContextMenuTarget,
@@ -11,7 +15,8 @@ import type {
   TerminalSurfaceOptions,
 } from "../terminal-surface/terminal-surface";
 import type { TerminalSessionAdapter } from "../terminal-surface/terminal-session-adapter";
-import { DEFAULT_TERMINAL_FONT_SIZE } from "../shared/user-configuration";
+import { createApplicationTabCommands } from "./application-tab-commands";
+import { createTerminalTabConfiguration } from "./terminal-tab-configuration";
 import { snippetTarget, type SnippetTarget } from "./snippet-target";
 import { englishLanguage, type RendererLanguage } from "./renderer-language";
 import { createPaneOperations } from "./terminal-pane-operations";
@@ -29,7 +34,8 @@ import {
   type TerminalTab,
 } from "./terminal-panes";
 
-export const TERMINAL_TAB_DRAG_DATA_TYPE = "application/x-omxterm-tab";
+import { createApplicationTabStrip } from "./application-tab-strip";
+export { TERMINAL_TAB_DRAG_DATA_TYPE } from "./application-tab-strip";
 
 type MountTerminalSurface = (
   container: HTMLElement,
@@ -42,7 +48,17 @@ export interface TerminalTabsElements {
   readonly container: HTMLElement;
 }
 
+interface SettingsTab {
+  readonly kind: "settings";
+  readonly container: HTMLElement;
+  readonly view: ReturnType<typeof createSettingsView>;
+  removed: boolean;
+}
+type ApplicationTab = TerminalTab | SettingsTab;
+
 export interface TerminalTabsOptions {
+  readonly settings?: SettingsBridge;
+  readonly onSettingsSelected?: () => void;
   readonly language?: RendererLanguage;
   // A split pane passes its source session to inherit a reported directory.
   readonly createAdapter: CreatePaneAdapter;
@@ -56,7 +72,7 @@ export interface TerminalTabsOptions {
   readonly notifyEmpty?: (reason?: "rendering-failure") => void;
   // The selected tab's focused pane and every started session of that tab.
   readonly notifySelection?: (
-    sessionId: TerminalSessionId | null,
+    sessionId: TerminalSessionId | null | SettingsTabSelection,
     tabSessionIds: readonly TerminalSessionId[],
   ) => void;
   readonly notifyTitle?: (
@@ -69,6 +85,13 @@ export interface TerminalTabsOptions {
 
 export interface TerminalTabs {
   readonly ready: Promise<void>;
+  openSettings(): void;
+  isSettingsSelected(): boolean;
+  setBlocked(blocked: boolean): void;
+  editSettingsClipboard(
+    action: TerminalClipboardAction,
+    clipboard: TerminalSurfaceOptions["clipboard"],
+  ): boolean;
   handleCommand(command: TerminalTabCommand): void;
   setSessionTitle(sessionId: TerminalSessionId, title: string): void;
   applyConfiguration(configuration: TerminalSurfaceConfiguration): void;
@@ -92,13 +115,17 @@ export function createTerminalTabs(
 ): TerminalTabs {
   const document = elements.container.ownerDocument;
   const language = options.language ?? englishLanguage;
-  const tabs: TerminalTab[] = [];
+  const tabs: ApplicationTab[] = [];
+  const terminalTabs = () =>
+    tabs.filter((tab): tab is TerminalTab => tab.kind === "terminal");
+  const keyboard = retainDismissalGesture(document);
   let tabBarEnabled = options.showTabBar ?? true;
   let selectedIndex = -1;
-  let zoomSteps = 0;
-  let activeSurfaceOptions = options.surfaceOptions;
+  const configuration = createTerminalTabConfiguration(
+    options.surfaceOptions,
+    terminalTabs,
+  );
   let disposed = false;
-  let pendingClose: TerminalTab | undefined;
   let closing = false;
 
   const notifyEmpty = (reason?: "rendering-failure") => {
@@ -108,48 +135,32 @@ export function createTerminalTabs(
     options.notifyEmpty?.(reason);
   };
 
-  const selectedTab = (): TerminalTab | undefined => tabs[selectedIndex];
+  const selectedApplicationTab = () => tabs[selectedIndex];
+  const selectedTab = (): TerminalTab | undefined => {
+    const tab = selectedApplicationTab();
+    return tab?.kind === "terminal" ? tab : undefined;
+  };
   const focusedPane = () => selectedTab()?.focused;
   const contextMenu = createPaneContextMenu({
     focusedPane,
     disposed: () => disposed,
     canInteract: () => options.canFocus?.() !== false,
   });
-  const tabDragging = installTabDragging(elements.strip, (tab, clientX) => {
-    const selected = selectedTab();
-    if (!moveTabToHorizontalDrop(tabs, tab, elements.strip, clientX)) return;
-    selectedIndex = selected ? tabs.indexOf(selected) : -1;
-    renderStrip();
+  const strip = createApplicationTabStrip(elements.strip, tabs, {
+    label: (tab, index) =>
+      tab.kind === "settings"
+        ? language.t("settings.title")
+        : tab.focused.label || String(index + 1),
+    select: (tab) => select(tabs.indexOf(tab)),
+    canInteract: () => !disposed && options.canFocus?.() !== false,
+    reordered(reorder) {
+      const selected = selectedApplicationTab();
+      reorder();
+      selectedIndex = selected ? tabs.indexOf(selected) : -1;
+      renderStrip();
+    },
   });
-
-  const renderStrip = () => {
-    const visible = tabBarEnabled && tabs.length >= 2;
-    elements.strip.hidden = !visible;
-    document.body.classList.toggle("tabs-visible", visible);
-    if (!visible) {
-      elements.strip.replaceChildren();
-      return;
-    }
-    elements.strip.replaceChildren(
-      ...tabs.map((tab, index) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        tabDragging.bind(button, tab);
-        // The focused pane's sanitized title pushed by main (ADR 0010); the
-        // literal position stands in until the first push lands.
-        button.textContent = tab.focused.label || String(index + 1);
-        button.setAttribute("role", "tab");
-        button.setAttribute(
-          "aria-selected",
-          index === selectedIndex ? "true" : "false",
-        );
-        button.addEventListener("click", () => {
-          if (!disposed) select(tabs.indexOf(tab));
-        });
-        return button;
-      }),
-    );
-  };
+  const renderStrip = () => strip.render(selectedIndex, tabBarEnabled);
 
   // Selection is a complete snapshot even while focus has no live session.
   const notifyFocus = (tab: TerminalTab) => {
@@ -166,26 +177,39 @@ export function createTerminalTabs(
     const tab = tabs[index];
     // Lifecycle selection stays deliverable; requested navigation is guarded.
     if (!tab || (!passive && options.canFocus?.() === false)) return;
+    const changed = selectedApplicationTab() !== tab;
     selectedIndex = index;
     for (const [position, candidate] of tabs.entries()) {
       candidate.container.hidden = position !== index;
-      // Each Surface reads its own container's visibility.
-      for (const pane of tabPanes(candidate))
-        pane.container.hidden = position !== index;
+      if (candidate.kind === "settings")
+        candidate.view.setSelected(position === index);
+      else
+        for (const pane of tabPanes(candidate))
+          pane.container.hidden = position !== index;
     }
     renderStrip();
-    notifyFocus(tab);
-    focusPane(tab.focused, options, passive);
+    contextMenu.selectionChanged();
+    if (tab.kind === "settings") {
+      if (changed) options.onSettingsSelected?.();
+      options.notifySelection?.({ kind: "settings" }, []);
+      if ((changed || !passive) && options.canFocus?.() !== false)
+        tab.view.focus();
+    } else {
+      notifyFocus(tab);
+      focusPane(tab.focused, options, passive);
+    }
   };
 
-  const removeTab = (tab: TerminalTab, notify = true) => {
+  const removeTab = (tab: ApplicationTab, notify = true) => {
     const index = tabs.indexOf(tab);
     if (tab.removed || index < 0) return;
     tab.removed = true;
-    for (const pane of tabPanes(tab)) {
-      pane.removed = true;
-      endPane(pane);
-    }
+    if (tab.kind === "settings") tab.view.dispose();
+    else
+      for (const pane of tabPanes(tab)) {
+        pane.removed = true;
+        endPane(pane);
+      }
     tabs.splice(index, 1);
     tab.container.remove();
     if (tabs.length === 0) {
@@ -198,9 +222,9 @@ export function createTerminalTabs(
     select(Math.min(selectedIndex, tabs.length - 1), true);
   };
 
-  const closeTab = (tab: TerminalTab | undefined) => {
+  const closeTab = (tab: ApplicationTab | undefined) => {
     if (!tab || tab.removed) return;
-    const panes = tabPanes(tab);
+    const panes = tab.kind === "terminal" ? tabPanes(tab) : [];
     removeTab(tab);
     for (const pane of panes) disposePane(pane);
   };
@@ -219,15 +243,17 @@ export function createTerminalTabs(
   const mountPane = createPaneMount({
     document,
     options,
-    surfaceOptions: () => activeSurfaceOptions,
-    zoomSteps: () => zoomSteps,
+    surfaceOptions: configuration.current,
+    zoomSteps: configuration.zoomSteps,
     disposed: () => disposed,
     selectedTab,
     onSessionEnd,
     notifyFocus,
     removePane: (pane, notify) => panes.removePane(pane, notify),
     notifyEmpty,
-    focus: (pane, unchanged) => focusPane(pane, options, true, unchanged),
+    focus: (pane, unchanged) => {
+      if (pane.tab === selectedTab()) focusPane(pane, options, true, unchanged);
+    },
     focusClicked: (pane) => panes.focusPane(pane.tab, pane, true),
     captureContextMenuTarget: contextMenu.capture,
   });
@@ -238,7 +264,9 @@ export function createTerminalTabs(
     removeTab,
     createAdapter: options.createAdapter,
     mountPane,
-    focusSurface: (pane, passive) => focusPane(pane, options, passive),
+    focusSurface: (pane, passive) => {
+      if (pane.tab === selectedTab()) focusPane(pane, options, passive);
+    },
     canInteract: () => options.canFocus?.() !== false,
     surfaceLabel: () => language.t("terminal.surface"),
     resizeLabel: () => language.t("pane.resize"),
@@ -249,7 +277,7 @@ export function createTerminalTabs(
     disposed: () => disposed,
   });
 
-  const removeLanguage = bindPaneLabels(language, tabs);
+  const removeLanguage = bindTabLabels(language, terminalTabs, renderStrip);
 
   const createTab = async (): Promise<void> => {
     const pane = appendTab(elements.container, options.createAdapter);
@@ -260,71 +288,46 @@ export function createTerminalTabs(
     await mountPane(pane);
   };
 
+  const commands = createApplicationTabCommands(tabs, {
+    available: () => !disposed && !closing,
+    selected: selectedApplicationTab,
+    select,
+    create: createTab,
+    close: closeTab,
+    closeSession: (id) =>
+      panes.closePane(findPaneBySession(terminalTabs(), id)),
+    pane: panes.handleCommand,
+  });
   return {
     ready: createTab(),
+    ...settingsTabActions(tabs, {
+      selected: selectedApplicationTab,
+      select,
+      canOpen: () => !disposed && !closing && options.canFocus?.() !== false,
+      create: () =>
+        options.settings
+          ? createSettingsTab(
+              elements.container,
+              options.settings,
+              language,
+              keyboard,
+              closeTab,
+            )
+          : undefined,
+    }),
     setSessionTitle(sessionId, title) {
       if (disposed) return;
-      const pane = findPaneBySession(tabs, sessionId);
+      const pane = findPaneBySession(terminalTabs(), sessionId);
       if (!pane) return;
       pane.label = title;
       renderStrip();
     },
-    applyConfiguration(configuration) {
-      if (disposed) return;
-      activeSurfaceOptions = { ...activeSurfaceOptions, ...configuration };
-      zoomSteps = Math.max(1 - configuration.appearance.fontSize, zoomSteps);
-      for (const tab of tabs)
-        for (const pane of tabPanes(tab))
-          pane.surface?.applyConfiguration(configuration);
+    applyConfiguration(next) {
+      if (!disposed) configuration.apply(next);
     },
-    handleCommand(command) {
-      if (disposed || closing) return;
-      switch (command.action) {
-        case "new":
-          // A failed additional spawn already dropped its tab; main shows
-          // the native failure dialog, so the renderer only swallows here.
-          void createTab().catch(() => {});
-          return;
-        case "close":
-          closeTab(selectedTab());
-          return;
-        case "prepare-close":
-          pendingClose = selectedTab();
-          return;
-        case "resolve-close": {
-          const target = pendingClose;
-          pendingClose = undefined;
-          if (command.confirmed) closeTab(target);
-          return;
-        }
-        case "next":
-        case "previous": {
-          if (tabs.length === 0) return;
-          const offset = command.action === "next" ? 1 : -1;
-          select((selectedIndex + offset + tabs.length) % tabs.length);
-          return;
-        }
-        case "select":
-          if (command.position <= tabs.length) select(command.position - 1);
-          return;
-        case "close-session":
-          panes.closePane(findPaneBySession(tabs, command.sessionId));
-          return;
-        default:
-          panes.handleCommand(command);
-      }
-    },
+    handleCommand: commands.handle,
     zoom(command) {
-      const baseline =
-        activeSurfaceOptions.appearance?.fontSize ?? DEFAULT_TERMINAL_FONT_SIZE;
-      zoomSteps =
-        command === "reset"
-          ? 0
-          : command === "in"
-            ? zoomSteps + 1
-            : Math.max(1 - baseline, zoomSteps - 1);
-      for (const tab of tabs)
-        for (const pane of tabPanes(tab)) pane.surface?.zoom(command);
+      if (!disposed && selectedTab()) configuration.zoom(command);
     },
     clipboardAction: (action, target) =>
       applyClipboardAction(
@@ -338,24 +341,92 @@ export function createTerminalTabs(
       if (disposed) return;
       tabBarEnabled = !tabBarEnabled;
       renderStrip();
-      focusPane(focusedPane(), options, true);
+      if (selectedApplicationTab()?.kind !== "settings")
+        focusPane(focusedPane(), options, true);
     },
-    focusSelected: () => focusPane(focusedPane(), options),
+    focusSelected() {
+      const tab = selectedApplicationTab();
+      if (tab?.kind === "settings") tab.view.focus();
+      else focusPane(focusedPane(), options);
+    },
     dispose() {
       if (disposed) return;
       disposed = true;
-      pendingClose = undefined;
+      commands.dispose();
       contextMenu.dispose();
       removeLanguage();
-      tabDragging.dispose();
+      strip.dispose();
+      keyboard.dispose();
       for (const tab of [...tabs]) {
         tab.removed = true;
+        if (tab.kind === "settings") {
+          tab.view.dispose();
+          continue;
+        }
         for (const pane of tabPanes(tab)) {
           pane.removed = true;
           disposePane(pane);
         }
       }
       tabs.length = 0;
+    },
+  };
+}
+
+function bindTabLabels(
+  language: RendererLanguage,
+  terminalTabs: () => readonly TerminalTab[],
+  renderStrip: () => void,
+) {
+  return language.bind((t) => {
+    for (const tab of terminalTabs()) {
+      for (const pane of tabPanes(tab))
+        pane.container.setAttribute("aria-label", t("terminal.surface"));
+      for (const divider of tab.container.querySelectorAll(
+        ".terminal-pane-divider",
+      ))
+        divider.setAttribute("aria-label", t("pane.resize"));
+    }
+    renderStrip();
+  });
+}
+
+function settingsTabActions(
+  tabs: ApplicationTab[],
+  options: {
+    readonly selected: () => ApplicationTab | undefined;
+    readonly select: (index: number) => void;
+    readonly canOpen: () => boolean;
+    readonly create: () => SettingsTab | undefined;
+  },
+): Pick<
+  TerminalTabs,
+  "openSettings" | "isSettingsSelected" | "setBlocked" | "editSettingsClipboard"
+> {
+  return {
+    openSettings() {
+      if (!options.canOpen()) return;
+      let tab = tabs.find(
+        (candidate): candidate is SettingsTab => candidate.kind === "settings",
+      );
+      if (!tab) {
+        tab = options.create();
+        if (!tab) return;
+        tabs.push(tab);
+        options.select(tabs.length - 1);
+        void tab.view.open();
+      } else if (tab !== options.selected()) options.select(tabs.indexOf(tab));
+    },
+    isSettingsSelected: () => options.selected()?.kind === "settings",
+    setBlocked(blocked) {
+      for (const tab of tabs)
+        if (tab.kind === "settings") tab.view.setBlocked(blocked);
+    },
+    editSettingsClipboard(action, clipboard) {
+      const tab = options.selected();
+      if (tab?.kind !== "settings") return false;
+      tab.view.editClipboard(action, clipboard);
+      return true;
     },
   };
 }
@@ -384,87 +455,27 @@ function focusPane(
     pane?.surface?.focus();
 }
 
-function bindPaneLabels(
+function createSettingsTab(
+  parent: HTMLElement,
+  bridge: SettingsBridge,
   language: RendererLanguage,
-  tabs: readonly TerminalTab[],
-) {
-  return language.bind((t) => {
-    for (const tab of tabs) {
-      for (const pane of tabPanes(tab))
-        pane.container.setAttribute("aria-label", t("terminal.surface"));
-      for (const divider of tab.container.querySelectorAll(
-        ".terminal-pane-divider",
-      ))
-        divider.setAttribute("aria-label", t("pane.resize"));
-    }
+  keyboard: ReturnType<typeof retainDismissalGesture>,
+  close: (tab: SettingsTab) => void,
+): SettingsTab {
+  const container = parent.ownerDocument.createElement("div");
+  container.className = "settings-tab";
+  parent.append(container);
+  const view = createSettingsView(parent.ownerDocument, bridge, {
+    container,
+    language,
+    keyboard,
+    onClose: () => close(tab),
   });
-}
-
-function installTabDragging(
-  strip: HTMLElement,
-  reorder: (tab: TerminalTab, clientX: number) => void,
-) {
-  let draggedTab: TerminalTab | undefined;
-  let enabled = true;
-  const onDragOver = (event: DragEvent) => {
-    if (!draggedTab) return;
-    event.preventDefault();
-    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  const tab: SettingsTab = {
+    kind: "settings",
+    container,
+    view,
+    removed: false,
   };
-  const onDrop = (event: DragEvent) => {
-    const tab = draggedTab;
-    draggedTab = undefined;
-    if (!tab) return;
-    event.preventDefault();
-    event.stopPropagation();
-    reorder(tab, event.clientX);
-  };
-  const onDragEnd = () => {
-    draggedTab = undefined;
-  };
-  strip.addEventListener("dragover", onDragOver);
-  strip.addEventListener("drop", onDrop);
-  strip.addEventListener("dragend", onDragEnd);
-  return {
-    bind(button: HTMLButtonElement, tab: TerminalTab) {
-      button.draggable = true;
-      button.addEventListener("dragstart", (event) => {
-        if (!enabled) return;
-        draggedTab = tab;
-        if (!event.dataTransfer) return;
-        event.dataTransfer.effectAllowed = "move";
-        event.dataTransfer.setData(TERMINAL_TAB_DRAG_DATA_TYPE, "reorder");
-      });
-    },
-    dispose() {
-      enabled = false;
-      draggedTab = undefined;
-      strip.removeEventListener("dragover", onDragOver);
-      strip.removeEventListener("drop", onDrop);
-      strip.removeEventListener("dragend", onDragEnd);
-    },
-  };
-}
-
-function moveTabToHorizontalDrop(
-  tabs: TerminalTab[],
-  tab: TerminalTab,
-  strip: HTMLElement,
-  clientX: number,
-): boolean {
-  const sourceIndex = tabs.indexOf(tab);
-  if (sourceIndex < 0) return false;
-  const rawDestination = [...strip.querySelectorAll("button")].findIndex(
-    (button) =>
-      clientX <
-      button.getBoundingClientRect().left +
-        button.getBoundingClientRect().width / 2,
-  );
-  const insertionIndex = rawDestination < 0 ? tabs.length : rawDestination;
-  const destinationIndex =
-    sourceIndex < insertionIndex ? insertionIndex - 1 : insertionIndex;
-  if (destinationIndex === sourceIndex) return false;
-  tabs.splice(sourceIndex, 1);
-  tabs.splice(destinationIndex, 0, tab);
-  return true;
+  return tab;
 }

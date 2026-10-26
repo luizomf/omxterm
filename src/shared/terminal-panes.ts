@@ -40,6 +40,11 @@ export type TerminalPaneCommand =
 
 // The renderer reports the focused pane's session and every live session of
 // the selected tab, so Close Tab can count Busy Sessions across its panes.
+export interface SettingsTabSelection {
+  readonly kind: "settings";
+}
+export type ApplicationTabSelection =
+  TerminalTabSelection | SettingsTabSelection;
 export interface TerminalTabSelection {
   // null means the focused pane is pending or retained after native exit.
   readonly sessionId: TerminalSessionId | null;
@@ -98,7 +103,8 @@ export function isTerminalPaneCommand(
 
 export function isTerminalTabSelection(
   value: unknown,
-): value is TerminalTabSelection {
+): value is ApplicationTabSelection {
+  if (hasExactKeys(value, ["kind"])) return value.kind === "settings";
   if (hasExactKeys(value, ["sessionId"]))
     return isTerminalSessionId(value.sessionId);
   return (

@@ -1,6 +1,7 @@
 import { mountWindowChrome, type WindowChromeBridge } from "./window-chrome";
 import { mountWindowDialogs } from "./window-dialogs";
 import type { SettingsBridge } from "../shared/settings";
+import type { SettingsTabSelection } from "../shared/terminal-panes";
 import { surfaceLabels, windowLanguage } from "./renderer-language";
 import { DEFAULT_LANGUAGE } from "../shared/i18n";
 import { bindTerminalWindowLanguage } from "./terminal-window-language";
@@ -87,7 +88,7 @@ interface TerminalWindowPageOptions extends TerminalWindowActionSubscriptions {
     listener: (sessionId: TerminalSessionId, title: string) => void,
   ) => () => void;
   readonly notifyTabSelection?: (
-    sessionId: TerminalSessionId | null,
+    sessionId: TerminalSessionId | null | SettingsTabSelection,
     tabSessionIds?: readonly TerminalSessionId[],
   ) => void;
   readonly syncTabTitle?: (sessionId: TerminalSessionId) => void;
@@ -124,12 +125,12 @@ export function mountTerminalWindowPage(
   let removeConfigurationUpdateListener: (() => void) | undefined;
   let removeTabCommandListener: (() => void) | undefined;
   let removeTabTitleListener: (() => void) | undefined;
+  let removeSettingsOpen: (() => void) | undefined;
   let removeGuardedActionListeners: (() => void) | undefined;
   let auxiliaryPanel: AuxiliaryPanel | undefined;
   let removeSnippetsToggleListener: (() => void) | undefined;
   let removeLocalImageOpenListener: (() => void) | undefined;
   let localImagePreview: LocalImagePreview | undefined;
-  let dialogs: ReturnType<typeof mountWindowDialogs> | undefined;
   // Buffered bridge opens replay inside construction, before `dialogs` is
   // assigned. Activity must already own exclusion, chrome and hover then.
   let dialogsActive = false;
@@ -183,22 +184,14 @@ export function mountTerminalWindowPage(
     ...(options.onExternalLink
       ? { onExternalLink: options.onExternalLink }
       : {}),
-    ...(options.loadLocalImage
-      ? {
-          linkHoverAvailability: {
-            isEnabled: () => !previewActive(),
-            subscribe(listener: () => void) {
-              hoverAvailabilityListeners.add(listener);
-              return () => {
-                hoverAvailabilityListeners.delete(listener);
-              };
-            },
-          },
-          onLocalImageActivation: (source: LocalImageActivation) => {
-            if (!modalActive()) void localImagePreview?.open(source);
-          },
-        }
-      : {}),
+    ...localImageSurfaceOptions(
+      options.loadLocalImage,
+      previewActive,
+      hoverAvailabilityListeners,
+      (source) => {
+        if (!modalActive()) void localImagePreview?.open(source);
+      },
+    ),
     ...pageLabels.surfaceOptions,
   };
 
@@ -206,6 +199,8 @@ export function mountTerminalWindowPage(
     { strip: elements.tabStrip, container: elements.tabsContainer },
     {
       language,
+      ...(options.settings ? { settings: options.settings } : {}),
+      onSettingsSelected: () => auxiliaryPanel?.deactivate(),
       createAdapter: (workingDirectoryOf) =>
         options.createAdapter(fontConfigurationId, workingDirectoryOf),
       canFocus: () => !disposed && !previewActive(),
@@ -241,6 +236,7 @@ export function mountTerminalWindowPage(
     elements.tabsContainer.inert = active;
     chrome?.setPreviewActive(active);
     auxiliaryPanel?.setBlocked(active);
+    tabs.setBlocked(active);
     for (const listener of hoverAvailabilityListeners) listener();
   };
   if (options.loadLocalImage) {
@@ -255,7 +251,7 @@ export function mountTerminalWindowPage(
     });
   }
 
-  dialogs = mountWindowDialogs(
+  const dialogs = mountWindowDialogs(
     page.document,
     options,
     () => !disposed && !previewActive(),
@@ -285,10 +281,10 @@ export function mountTerminalWindowPage(
     pageLabels.dispose();
     removeTabCommandListener?.();
     removeTabTitleListener?.();
+    removeSettingsOpen?.();
     removeSnippetsToggleListener?.();
     removeLocalImageOpenListener?.();
-    dialogs?.dispose();
-    dialogs = undefined;
+    dialogs.dispose();
     chrome?.dispose();
     localImagePreview?.dispose();
     localImagePreview = undefined;
@@ -348,8 +344,9 @@ export function mountTerminalWindowPage(
         options,
         tabs,
         previewActive,
-        (action) => dialogs?.editClipboard(action, options.clipboard),
-        (action) => auxiliaryPanel?.clipboardAction(action) ?? false,
+        (action) =>
+          tabs.editSettingsClipboard(action, options.clipboard) ||
+          (auxiliaryPanel?.clipboardAction(action) ?? false),
       );
       removeTabCommandListener = options.subscribeToTabCommands?.((command) => {
         if (previewActive() && MODAL_COMPETING_TAB_ACTIONS.has(command.action))
@@ -368,10 +365,13 @@ export function mountTerminalWindowPage(
         auxiliaryPanel = panel;
         snippetPreview = preview;
         panel.setBlocked(previewActive());
-        removeSnippetsToggleListener = snippets.subscribeToToggle(() =>
-          panel.toggle("snippets"),
-        );
+        removeSnippetsToggleListener = snippets.subscribeToToggle(() => {
+          if (!tabs.isSettingsSelected()) panel.toggle("snippets");
+        });
       }
+      removeSettingsOpen = options.settings?.onOpen(() => {
+        if (!disposed && !previewActive()) tabs.openSettings();
+      });
     })();
   } catch (error) {
     dispose();
@@ -427,6 +427,28 @@ function installFileDrops(
     document.removeEventListener("dragover", onDragOver, true);
     document.removeEventListener("drop", onDrop, true);
   };
+}
+
+function localImageSurfaceOptions(
+  load: TerminalWindowPageOptions["loadLocalImage"],
+  blocked: () => boolean,
+  listeners: Set<() => void>,
+  activate: (source: LocalImageActivation) => void,
+): Partial<TerminalSurfaceOptions> {
+  return load
+    ? {
+        linkHoverAvailability: {
+          isEnabled: () => !blocked(),
+          subscribe(listener) {
+            listeners.add(listener);
+            return () => {
+              listeners.delete(listener);
+            };
+          },
+        },
+        onLocalImageActivation: activate,
+      }
+    : {};
 }
 
 function sameSurfaceConfiguration(

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { createSettingsService } from "../../src/main/settings-service";
-import { createSettingsDialog } from "../../src/renderer/settings/settings-dialog";
+import { createSettingsView as createSettingsDialog } from "../../src/renderer/settings/settings-dialog";
 import { loadUserConfiguration } from "../../src/main/user-configuration";
 import { createUserConfigurationReloader } from "../../src/main/user-configuration-reloader";
 import type { SettingsBridge, SettingsResult } from "../../src/shared/settings";

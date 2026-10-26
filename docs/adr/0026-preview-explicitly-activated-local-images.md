@@ -51,7 +51,8 @@ URL under a CSP that permits `blob:` only for images while preserving
 failure, page teardown, and owner close synchronously remove the image source
 and revoke the Blob URL. This drops application ownership; browser/allocator caches
 and native/GPU reclamation need not produce an immediate RSS drop. Focus returns
-to the live selected Terminal Tab after dismissal or picker cancellation. Late picker/read/decode results cannot reopen
+to the live selected Application Tab after dismissal or picker cancellation,
+including a retained Settings field when graphical content is selected. Late picker/read/decode results cannot reopen
 a disposed overlay. The preview exposes only its active interaction state to
 the Terminal Window host. While choosing, loading, or viewing, that host
 suppresses terminal clipboard, file-drop, zoom and snippet actions and avoids

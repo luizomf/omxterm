@@ -79,7 +79,7 @@ function registerHost(window: BrowserWindow) {
     },
     onSessionStarted: titles.sessionStarted,
     onSessionSelected(sessionId) {
-      selected = sessionId;
+      selected = sessionId ?? "";
       titles.selectSession(sessionId);
     },
     onSessionTitleSync: titles.syncSessionTitle,

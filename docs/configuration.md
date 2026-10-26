@@ -35,6 +35,23 @@ You can find them in:
 
 ## Settings
 
+Settings opens as one graphical tab per window, beside your terminals, with no
+shell or terminal session. Choosing **Settings…** again selects that same tab
+without rereading the file or resetting your work. Switch freely using the tab
+strip or normal tab-navigation shortcuts, including when the strip is hidden.
+Your selected category, drafts, caret, scroll and pending save results survive
+switching. **Close Tab** or Settings' **Close** discards that editor lifetime;
+reopening reads a fresh snapshot. Closing does not implicitly save raw JSON and
+adds no unsaved-change prompt. Escape does not close the Settings tab.
+
+Settings uses the full content area with independent category/content scrolling.
+Small windows use compact navigation; opening it does not resize your window or
+change its native minimum. Terminal-only pane, Find, zoom, snippet and file-drop
+actions do nothing there. Copy/Paste/Select All edit the focused Settings field,
+never a hidden terminal. Selecting Settings hides Snippets; returning to a
+terminal does not reopen it. About and menu-opened image previews can appear
+over Settings, making it inert and restoring its focused control on dismissal.
+
 Choose **Settings…** in the OMXTerm application menu. **General → Language** selects **English (United States)** (`en-US`) or **Português (Brasil)** (`pt-BR`), always listed by their own names; it defaults to en-US and is never inferred from the system. A successful save/reload updates the menu and all open windows immediately, including Settings and snippet preview labels. Open editors keep their drafts, selected page, focus, selection/caret, scroll and pending saves; an open preview keeps its captured pane/Surface and disabled state if that terminal ended. Pane menus, close dialogs and existing Surface/separator accessible labels also update; panes completing initialization replay the latest labels. JSON, paths, snippet contents and diagnostic detail remain literal.
 
 Each change you make to a control is checked and saved to `config.json` right away, then applied; the status line tells you what happened (examples below use English):
@@ -56,7 +73,7 @@ The **Shortcuts** page lists every remappable action with the shortcut it uses n
 - **Custom:** **Record**, then press the new combination; it is saved as that action's `keybinds` entry. Plain Escape cancels; modified Escape can be recorded. An unsupported combination (including a letter without Ctrl, Alt, Cmd or AltGr, or a layout identity the accelerator cannot represent) asks you to try again; F1–F24 can stand alone. While recording, the keys you press, their held repeats and releases don't run their actions or reach the terminal.
 - **Unbound:** **Unbind** saves `null`, so the action stays in the menu without a key.
 
-**Cancel**, leaving the Shortcuts page, losing recording-button/window focus, or closing Settings ends recording without saving. Recording also cancels automatically after 30 seconds, and the status changes so it no longer asks you to press a key. A delayed result from an old recording cannot change a replacement recording.
+**Cancel**, leaving the Shortcuts page or Settings tab, opening a modal preview/About, losing recording-button/window focus, or closing Settings ends recording without saving. While recording, tab-navigation shortcuts are candidate bindings: cancel first, or select another tab with the pointer/menu. Recording also cancels automatically after 30 seconds, and the status changes so it no longer asks you to press a key. A delayed result from an old recording cannot change a replacement recording.
 
 A shortcut that collides with another action is rejected with the same message as in `config.json`, and your file stays unchanged. App shortcuts take their key before terminal programs see it, so binding a key a program uses (like `Ctrl+C`) keeps it from reaching that program.
 
@@ -361,7 +378,7 @@ snippets:
 - Up to 512 snippets are supported: `name` is 1–128 characters, `body` is 1–65,536, and optional `description` is at most 512 (UTF-16 code units). `execute` must be a boolean. Unknown fields are rejected.
 - The file must be one UTF-8 YAML 1.2 core document, at most 1 MiB. Collection nesting is limited to 16 levels (root collection is level 1), with at most 4,096 total mapping pairs and sequence entries. Duplicate keys, aliases, custom/non-core tags, and multiple documents are rejected. Quote scalar values that must be text, such as `"true"` or `"123"`.
 - Opening reveals search/loading immediately and rereads the catalog. Close and reopen to reload edits; query and scroll are retained in window memory. Old rows cannot run during loading, and empty/error results replace them. Invalid files show a path and safe diagnostic instead of the list; syntax errors include line/column coordinates, not command excerpts.
-- The [resizable panel](usage.md#resize-or-close-snippets) keeps its preferred width only for that window's lifetime. There are no panel configuration fields or persistent width/visibility settings. Close/Escape in the panel returns terminal focus; Settings, About, snippet preview and Local Image Preview keep it visible but inert.
+- The [resizable panel](usage.md#resize-or-close-snippets) keeps its preferred width only for that window's lifetime. There are no panel configuration fields or persistent width/visibility settings. Close/Escape in the panel returns terminal focus. Selecting Settings deactivates/hides it without losing its query/scroll/width; About, snippet preview and Local Image Preview keep it visible but inert.
 - Existing `snippets.json` files are not read, rewritten, or migrated. Move your entries into `snippets.yaml` yourself; JSON-formatted content is also valid YAML, subject to the same limits.
 
 ## Terminal themes

@@ -84,6 +84,7 @@ describe.skipIf(process.platform !== "linux")(
                 "overlapping-invalid-modifier",
                 "missing-release-fresh-press",
                 "page-departure-without-blur",
+                "settings-field-and-tab-departure",
                 "window-blur",
                 "real-timeout",
                 "normal-action-menu-controls",

@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 import type { RendererLanguage } from "../../src/renderer/renderer-language";
-import { createSettingsDialog } from "../../src/renderer/settings/settings-dialog";
+import { createSettingsView as createSettingsDialog } from "../../src/renderer/settings/settings-dialog";
 import type {
   SettingsBridge,
   SettingsChange,

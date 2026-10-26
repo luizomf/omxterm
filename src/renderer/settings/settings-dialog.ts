@@ -21,49 +21,42 @@ export { describeSettingsResult } from "./settings-results";
 import { renderShortcuts } from "./settings-shortcuts";
 import type { SettingsKeybindChange } from "../../shared/settings-keybinds";
 
-// Save-on-change dialog and controls adapted from ruscher/omxterm PR #622 at
+// Retained graphical editor and save-on-change controls adapted from ruscher/omxterm PR #622 at
 // b3c3a4ad6c1f2224bded65873ba0b09a07ec5d38 (MIT).
-export function mountSettingsDialog(
-  document: Document,
-  bridge: SettingsBridge | undefined,
-  canOpen: () => boolean,
-  options: {
-    readonly focusTerminal: () => void;
-    readonly onActivityChange: (active: boolean) => void;
-    readonly language?: RendererLanguage;
-  },
-) {
-  if (!bridge) return undefined;
-  const dialog = createSettingsDialog(document, bridge, options);
-  const removeOpen = bridge.onOpen(() => {
-    if (canOpen()) void dialog.open();
-  });
-  return {
-    isActive: dialog.isActive,
-    editClipboard: dialog.editClipboard,
-    dispose() {
-      removeOpen();
-      dialog.dispose();
-    },
-  };
-}
-
-export function createSettingsDialog(
+export function createSettingsView(
   document: Document,
   bridge: SettingsBridge,
   options: {
-    readonly focusTerminal: () => void;
-    readonly onActivityChange: (active: boolean) => void;
+    readonly focusTerminal?: () => void;
+    readonly onActivityChange?: (active: boolean) => void;
     readonly language?: RendererLanguage;
+    readonly container?: HTMLElement;
+    readonly onClose?: () => void;
+    readonly keyboard?: ReturnType<typeof retainDismissalGesture>;
   },
 ) {
   const language = options.language ?? englishLanguage;
   let unbindView: (() => void) | undefined;
-  let dialog: HTMLDialogElement | undefined;
+  let dialog: HTMLElement | undefined;
+  let selected = true;
+  let blocked = false;
+  let interaction = 0;
+  let lastFocus: HTMLElement | undefined;
+  const interactive = () => !disposed && selected && !blocked && !!dialog;
+  const invalidate = () => {
+    interaction += 1;
+  };
+  const onBlur = () => {
+    invalidate();
+    releaseView?.();
+  };
+  const onFocusOut = () => invalidate();
+  document.defaultView?.addEventListener("blur", onBlur);
+  document.addEventListener("focusout", onFocusOut);
   let disposed = false;
   // Ends the open view's shortcut capture so main returns the keyboard.
   let releaseView: (() => void) | undefined;
-  const keyboard = retainDismissalGesture(document);
+  const keyboard = options.keyboard ?? retainDismissalGesture(document);
   const close = (restoreFocus: boolean) => {
     const previous = dialog;
     if (!previous) return;
@@ -72,29 +65,32 @@ export function createSettingsDialog(
     unbindView = undefined;
     releaseView?.();
     releaseView = undefined;
-    if (restoreFocus) previous.close();
+    invalidate();
     previous.remove();
-    options.onActivityChange(false);
-    if (restoreFocus) options.focusTerminal();
+    options.onActivityChange?.(false);
+    if (restoreFocus) {
+      options.onClose?.();
+      options.focusTerminal?.();
+    }
   };
 
   const open = async () => {
     if (disposed) return;
-    if (dialog) {
-      (
-        dialog.querySelector<HTMLElement>(
-          '[role="tab"][aria-selected="true"]',
-        ) ?? dialog.querySelector<HTMLElement>(".settings-close")
-      )?.focus();
-      return;
-    }
-    const current = document.createElement("dialog");
+    if (dialog) return;
+    const current = document.createElement("section");
     dialog = current;
     current.className = "settings-dialog";
     current.setAttribute("aria-labelledby", "settings-title");
     const live = () => dialog === current;
     const done = document.createElement("button");
-    const view = buildSettingsView(document, bridge, live, language, done);
+    const view = buildSettingsView(
+      document,
+      bridge,
+      live,
+      language,
+      done,
+      interactive,
+    );
     unbindView = view.dispose;
     releaseView = view.release;
     done.type = "button";
@@ -102,31 +98,62 @@ export function createSettingsDialog(
     done.addEventListener("click", () => {
       if (live()) close(true);
     });
-    current.addEventListener("cancel", (event) => {
-      event.preventDefault();
-      if (live()) close(true);
-    });
     current.addEventListener("keydown", (event) => {
-      keyboard.track(event, done);
+      // Escape belongs to capture, not to ordinary application-tab closure.
+      if (event.key === "Enter") keyboard.track(event, done);
       event.stopPropagation();
     });
     current.append(view.element, done);
-    document.body.append(current);
-    options.onActivityChange(true);
-    current.showModal();
-    done.focus();
+    (options.container ?? document.body).append(current);
+    current.hidden = !selected;
+    current.inert = blocked || !selected;
+    options.onActivityChange?.(interactive());
+    if (interactive()) done.focus();
     await view.load();
   };
 
   return {
-    isActive: () => dialog !== undefined,
+    isActive: interactive,
     open,
+    setSelected(value: boolean) {
+      if (selected === value) return;
+      if (!value && dialog?.contains(document.activeElement))
+        lastFocus = document.activeElement as HTMLElement;
+      selected = value;
+      invalidate();
+      if (!value) releaseView?.();
+      if (dialog) {
+        dialog.hidden = !value;
+        dialog.inert = blocked || !value;
+      }
+    },
+    setBlocked(value: boolean) {
+      if (blocked === value) return;
+      if (value && dialog?.contains(document.activeElement))
+        lastFocus = document.activeElement as HTMLElement;
+      blocked = value;
+      invalidate();
+      if (value) releaseView?.();
+      if (dialog) dialog.inert = blocked || !selected;
+    },
+    focus() {
+      if (!interactive() || dialog?.contains(document.activeElement)) return;
+      const target =
+        lastFocus?.isConnected && !lastFocus.closest("[hidden]")
+          ? lastFocus
+          : (dialog?.querySelector<HTMLElement>(
+              '.settings-tabs [aria-selected="true"]',
+            ) ?? dialog?.querySelector<HTMLElement>(".settings-close"));
+      target?.focus();
+    },
     // App Copy/Paste/Select All edit the focused text field and never reach
     // the terminal while Settings owns input.
     editClipboard(
       action: TerminalClipboardAction,
       clipboard: Pick<TerminalClipboard, "readText" | "writeText"> | undefined,
     ) {
+      if (!interactive()) return;
+      const generation = interaction;
       const field = dialog?.contains(document.activeElement)
         ? document.activeElement
         : undefined;
@@ -135,11 +162,19 @@ export function createSettingsDialog(
         !(field instanceof HTMLTextAreaElement)
       )
         return;
-      void editField(field, action, clipboard);
+      void editField(
+        field,
+        action,
+        clipboard,
+        () => interactive() && generation === interaction,
+      );
     },
     dispose() {
       disposed = true;
-      keyboard.dispose();
+      invalidate();
+      document.defaultView?.removeEventListener("blur", onBlur);
+      document.removeEventListener("focusout", onFocusOut);
+      if (!options.keyboard) keyboard.dispose();
       close(false);
     },
   };
@@ -149,6 +184,7 @@ async function editField(
   field: HTMLInputElement | HTMLTextAreaElement,
   action: TerminalClipboardAction,
   clipboard: Pick<TerminalClipboard, "readText" | "writeText"> | undefined,
+  interactive: () => boolean,
 ) {
   const start = field.selectionStart;
   const end = field.selectionEnd;
@@ -168,6 +204,7 @@ async function editField(
   const text = await clipboard?.readText().catch(() => "");
   if (
     !text ||
+    !interactive() ||
     !field.isConnected ||
     field.ownerDocument.activeElement !== field ||
     field.value !== previous ||
@@ -190,6 +227,7 @@ function buildSettingsView(
   live: () => boolean,
   language: RendererLanguage,
   done: HTMLButtonElement,
+  interactive: () => boolean,
 ) {
   let snapshot: SettingsSnapshot | undefined;
   const syncs: (() => void)[] = [];
@@ -335,7 +373,7 @@ function buildSettingsView(
 
   let shortcuts: ReturnType<typeof renderShortcuts> | undefined;
   // Pages depend on the main-reported platform, so they are built with the
-  // first snapshot; until then the dialog shows a loading status.
+  // first snapshot; until then the retained editor shows a loading status.
   const build = (platform: string) => {
     for (const page of pages(platform)) {
       const panel = document.createElement("div");
@@ -349,7 +387,7 @@ function buildSettingsView(
     shortcuts = renderShortcuts(document, {
       snapshot: () => snapshot,
       platform,
-      live,
+      live: () => live() && interactive(),
       report,
       changeKeybind,
       captureShortcut: (listener) => bridge.captureShortcut(listener),
@@ -394,7 +432,7 @@ function buildSettingsView(
         relabel(language.t);
         adopt(loaded);
         report();
-        tabButtons[0]?.focus();
+        if (interactive()) tabButtons[0]?.focus();
       } catch {
         if (live()) report("settings.loadError", true);
       }

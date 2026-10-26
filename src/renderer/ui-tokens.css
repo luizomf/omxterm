@@ -1,0 +1,29 @@
+:root {
+  --ui-surface: var(--terminal-background, #101218);
+  --ui-text: var(--terminal-foreground, #f4f4f4);
+  --ui-raised: color-mix(
+    in srgb,
+    var(--ui-surface),
+    var(--terminal-chrome-neutral, #808090) 12%
+  );
+  --ui-hover: color-mix(
+    in srgb,
+    var(--ui-surface),
+    var(--terminal-chrome-neutral, #808090) 25%
+  );
+  --ui-selected: color-mix(
+    in srgb,
+    var(--ui-surface),
+    var(--terminal-chrome-neutral, #808090) 35%
+  );
+  --ui-decoration: color-mix(in srgb, var(--ui-surface), var(--ui-text) 18%);
+  --ui-input-border: color-mix(in srgb, var(--ui-surface), var(--ui-text) 55%);
+  --ui-secondary: color-mix(in srgb, var(--ui-surface), var(--ui-text) 75%);
+  --ui-radius: 6px;
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-6: 24px;
+  --ui-space-8: 32px;
+}

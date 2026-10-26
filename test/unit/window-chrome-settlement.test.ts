@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { createTranslator } from "../../src/shared/i18n";
 import { build } from "esbuild";
 import { createRequire } from "node:module";
 import { runInNewContext } from "node:vm";
@@ -202,6 +203,7 @@ function harness(
     setImmediate,
     process: processPort,
     require(id: string): unknown {
+      if (id === "../../src/shared/i18n") return { createTranslator };
       if (id in ports) return ports[id];
       if (id.startsWith("node:")) return require(id) as unknown;
       throw new Error(`Unexpected entry dependency: ${id}`);

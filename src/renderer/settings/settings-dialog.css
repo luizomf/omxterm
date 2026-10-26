@@ -1,33 +1,49 @@
+.settings-tab {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  padding-top: var(--native-title-inset, 0px);
+  background: var(--ui-surface);
+}
+body.tabs-visible .settings-tab {
+  padding-top: 0;
+}
+.settings-tab[hidden],
+.settings-dialog[hidden] {
+  display: none;
+}
+/* Historical filename; Settings is ordinary retained application content. */
 .settings-dialog {
-  box-sizing: border-box;
-  width: min(40rem, calc(100vw - 24px));
-  max-height: calc(100vh - 24px);
-  margin: auto;
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  margin: 0;
   padding: 0;
-  border: 1px solid currentColor;
-  border-radius: 12px;
-  background: var(--terminal-background, #101218);
-  color: var(--terminal-foreground, #f4f4f4);
+  background: var(--ui-surface, var(--terminal-background));
+  color: var(--ui-text, var(--terminal-foreground));
+  color-scheme: var(--ui-color-scheme, dark);
   font:
     14px/1.4 system-ui,
     sans-serif;
   overflow: hidden;
-}
-.settings-dialog[open] {
-  display: flex;
-  flex-direction: column;
-}
-.settings-dialog::backdrop {
-  background: rgb(0 0 0 / 45%);
+  container-type: inline-size;
 }
 .settings-body {
   display: grid;
-  grid-template-columns: minmax(8rem, auto) 1fr;
-  grid-template-rows: auto auto 1fr auto;
-  gap: 8px 16px;
+  flex: 1 1 auto;
+  grid-template-columns: 168px minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: var(--ui-space-2) var(--ui-space-4);
+  width: 100%;
+  max-width: 1440px;
+  min-width: 0;
   min-height: 0;
-  padding: 20px 20px 8px;
-  overflow: auto;
+  margin-inline: auto;
+  padding: var(--ui-space-4);
 }
 .settings-body h2,
 .settings-problem,
@@ -36,92 +52,159 @@
 }
 .settings-body h2 {
   margin: 0;
-  font-size: 16px;
+  padding-right: 90px;
+  font-size: 20px;
+  font-weight: 600;
+}
+.settings-problem {
+  grid-row: 2;
+  max-height: 20vh;
+  overflow: auto;
 }
 .settings-tabs {
+  grid-row: 3;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  align-self: stretch;
+  min-height: 0;
+  padding: 4px;
+  overflow: auto;
+  background: var(--ui-raised);
+  border-radius: var(--ui-radius);
 }
 .settings-panels {
+  grid-row: 3;
   min-width: 0;
+  min-height: 0;
+  padding: 4px;
+  overflow: auto;
+  container-type: inline-size;
+  scrollbar-gutter: stable;
 }
 .settings-panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--ui-space-4);
+  max-width: 720px;
+  min-width: 0;
 }
 .settings-panel[hidden] {
   display: none;
 }
 .settings-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ui-space-2);
+  min-width: 0;
+}
+.settings-row > span {
+  overflow-wrap: anywhere;
 }
 .settings-toggle {
-  justify-content: flex-start;
+  flex-direction: row;
+  align-items: center;
 }
 .settings-row input:not([type="checkbox"]),
 .settings-row select {
-  box-sizing: border-box;
-  width: min(16rem, 60%);
+  width: min(100%, 384px);
+  min-width: 0;
+}
+.settings-number input {
+  max-width: 112px;
 }
 .settings-dialog button,
 .settings-dialog input,
 .settings-dialog select,
 .settings-dialog textarea {
+  box-sizing: border-box;
   font: inherit;
   color: inherit;
-  background: transparent;
-  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
-  border-radius: 6px;
+  background: var(--ui-raised);
+  border: 1px solid var(--ui-input-border);
+  border-radius: var(--ui-radius);
   padding: 5px 8px;
+  min-height: 32px;
+  max-width: 100%;
 }
 .settings-dialog select option {
-  background: var(--terminal-background, #101218);
+  background: var(--ui-surface);
 }
 .settings-dialog input[type="checkbox"] {
-  accent-color: currentColor;
+  accent-color: var(--ui-text);
+  min-height: auto;
 }
 .settings-dialog button {
   cursor: pointer;
+  border-color: transparent;
+}
+.settings-dialog button:hover:not(:disabled) {
+  background: var(--ui-hover);
+}
+.settings-dialog button:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 .settings-tabs [role="tab"] {
-  border-color: transparent;
+  flex: none;
   text-align: start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  background: transparent;
 }
 .settings-tabs [role="tab"][aria-selected="true"] {
-  border-color: currentColor;
+  background: var(--ui-selected);
   font-weight: 600;
 }
 .settings-dialog :focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
+  outline: 2px solid var(--ui-text);
+  outline-offset: 1px;
+}
+.settings-config-file,
+.settings-shortcuts {
+  max-width: 1120px;
+}
+.settings-config-file {
+  min-height: 100%;
 }
 .settings-config-file textarea {
-  box-sizing: border-box;
+  flex: 1 0 160px;
   width: 100%;
-  min-height: 14rem;
+  min-height: 160px;
   resize: vertical;
-  font-family: ui-monospace, monospace;
-  font-size: 13px;
+  overflow: auto;
+  font:
+    13px/1.5 ui-monospace,
+    monospace;
 }
 .settings-path {
   margin: 0;
   overflow-wrap: anywhere;
-  opacity: 0.8;
+  color: var(--ui-secondary);
 }
 .settings-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+.settings-actions button:first-child {
+  background: var(--ui-text);
+  color: var(--ui-surface);
+}
+.settings-actions button:first-child:hover:not(:disabled) {
+  background: var(--ui-secondary);
 }
 .settings-status,
 .settings-problem,
 .settings-config-file [role="status"] {
   margin: 0;
   overflow-wrap: anywhere;
+}
+.settings-status {
+  grid-row: 4;
+  max-height: 20vh;
+  overflow: auto;
 }
 .settings-status:empty,
 .settings-config-file [role="status"]:empty {
@@ -132,42 +215,128 @@
   font-weight: 600;
 }
 .settings-close {
-  align-self: flex-end;
-  margin: 8px 20px 20px;
-  font-weight: 600;
+  position: absolute;
+  right: 16px;
+  top: 16px;
 }
 .settings-hint {
-  margin: 0 0 4px;
-  color: color-mix(in srgb, currentColor 75%, transparent);
+  margin: 0;
+  color: var(--ui-secondary);
 }
 .settings-shortcut {
   display: grid;
-  grid-template-columns: minmax(9rem, 1fr) minmax(7rem, auto) 4.5rem repeat(
-      3,
-      auto
-    );
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px 16px;
   align-items: center;
+  padding-block: 8px 16px;
+  border-bottom: 1px solid var(--ui-decoration);
+}
+.settings-shortcut-name,
+.settings-shortcut-binding {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.settings-shortcut-binding {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .settings-shortcut-value {
   font-family: ui-monospace, monospace;
 }
 .settings-shortcut-state {
   font-size: 12px;
-  color: color-mix(in srgb, currentColor 70%, transparent);
+  color: var(--ui-secondary);
 }
-@media (max-width: 30rem) {
+.settings-shortcut-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.settings-shortcut-record {
+  min-width: 84px;
+}
+.settings-shortcut-actions .settings-shortcut-unbind,
+.settings-shortcut-actions .settings-shortcut-default {
+  background: transparent;
+}
+@container (min-width: 560px) {
+  .settings-row:not(.settings-toggle) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(112px, 384px);
+    align-items: center;
+  }
+}
+@container (min-width: 760px) {
+  .settings-shortcut {
+    grid-template-columns: minmax(144px, 1fr) minmax(112px, 1fr) auto;
+  }
+  .settings-shortcut-actions {
+    grid-column: auto;
+  }
+}
+@container (min-width: 900px) {
   .settings-body {
-    grid-template-columns: 1fr;
+    grid-template-columns: 192px minmax(0, 1fr);
+    gap: 8px 24px;
+    padding: 24px;
+  }
+  .settings-close {
+    top: 24px;
+    right: max(24px, calc((100% - 1440px) / 2 + 24px));
+  }
+}
+@container (min-width: 1200px) {
+  .settings-body {
+    padding: 32px;
+  }
+  .settings-close {
+    top: 32px;
+    right: max(32px, calc((100% - 1440px) / 2 + 32px));
+  }
+}
+@media (max-height: 360px) {
+  .settings-body {
+    overflow-y: auto;
+  }
+  .settings-panels {
+    min-height: 64px;
   }
   .settings-tabs {
-    flex-direction: row;
-    flex-wrap: wrap;
+    max-height: 40px;
   }
-  .settings-row {
-    flex-wrap: wrap;
+}
+@container (max-width: 639px) {
+  .settings-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    padding: 8px;
+    gap: 4px;
   }
-  .settings-shortcut {
-    grid-template-columns: 1fr auto;
+  .settings-body h2 {
+    font-size: 18px;
+    min-height: 32px;
+  }
+  .settings-tabs {
+    grid-row: 3;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-height: min(100px, 30vh);
+  }
+  @media (max-height: 360px) {
+    .settings-tabs {
+      max-height: 40px;
+    }
+  }
+  .settings-panels {
+    grid-row: 4;
+  }
+  .settings-status {
+    grid-row: 5;
+  }
+  .settings-close {
+    top: 8px;
+    right: 8px;
   }
 }

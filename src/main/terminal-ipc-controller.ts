@@ -434,6 +434,9 @@ function createTerminalIpcController(
     hasBusySession,
     reject: () => reject("ipc", "invalid-payload"),
     onSessionSelected: options.onSessionSelected,
+    ...(options.onSettingsSelected
+      ? { onSettingsSelected: options.onSettingsSelected }
+      : {}),
   });
   const contextMenu = createTerminalContextMenuTarget({
     isOwnerAlive: () => !disposed && !options.webContents.isDestroyed(),
@@ -688,6 +691,7 @@ function createTerminalIpcController(
       )
         fontConfigurationGeneration += 1;
       rendererConfiguration.apply(surfaceFonts.configure(configuration));
+      selection.refreshTitle();
     },
     applyFullScreen(fullScreen) {
       if (!disposed && !options.webContents.isDestroyed())

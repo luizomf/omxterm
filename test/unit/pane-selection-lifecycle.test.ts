@@ -6,6 +6,40 @@ import { startTerminalApplication } from "../../src/main/terminal-application";
 
 afterEach(() => vi.restoreAllMocks());
 
+it("validates fixed graphical selection and excludes every unrelated Busy session", () => {
+  const selected = vi.fn();
+  const graphical = vi.fn();
+  const reject = vi.fn();
+  const selection = createTabSelection({
+    routed: () => ({ busy: true }),
+    current: () => ({ busy: true }),
+    isBusy: (s) => s.busy,
+    hasBusySession: () => true,
+    reject,
+    onSessionSelected: selected,
+    onSettingsSelected: graphical,
+  });
+  selection.tabSelected({ sessionId: "s1", tabSessionIds: ["s1"] });
+  expect(selection.hasBusySelectedSession()).toBe(true);
+  selection.tabSelected({ kind: "settings" });
+  expect(selection.hasBusySelectedSession()).toBe(false);
+  expect(selection.hasBusyFocusedSession()).toBe(false);
+  expect(selection.isFocusedSession("s1")).toBe(false);
+  expect(graphical).toHaveBeenCalledOnce();
+  selection.refreshTitle();
+  expect(graphical).toHaveBeenCalledTimes(2);
+  for (const payload of [
+    { kind: "settings", title: "untrusted" },
+    { kind: "settings", sessionId: "s1" },
+    { kind: "other" },
+  ])
+    selection.tabSelected(payload);
+  expect(reject).toHaveBeenCalledTimes(3);
+  expect(selection.hasBusySelectedSession()).toBe(false);
+  selection.tabSelected({ sessionId: null, tabSessionIds: [] });
+  expect(selected).toHaveBeenLastCalledWith(null);
+});
+
 it("reports a retained dead focused pane without borrowing another tab's busy decision", async () => {
   const snapshots: unknown[] = [];
   const sessions = new Map([

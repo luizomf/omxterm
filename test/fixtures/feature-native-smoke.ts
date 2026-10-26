@@ -26,9 +26,12 @@ export function createFeatureSmoke(enabled: boolean) {
     observeOutput(index: number, data: string) {
       if (enabled) output[index] = ((output[index] ?? "") + data).slice(-4096);
     },
-    trackFocus(window: BrowserWindow, select: (id: string) => void) {
-      return (id: string) => {
-        if (enabled) focused.set(window, id);
+    trackFocus(window: BrowserWindow, select: (id: string | null) => void) {
+      return (id: string | null) => {
+        if (enabled) {
+          if (id === null) focused.delete(window);
+          else focused.set(window, id);
+        }
         select(id);
       };
     },

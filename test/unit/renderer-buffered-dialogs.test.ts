@@ -28,7 +28,7 @@ it.each([
   "early-settings",
   "early-about",
 ] as const)(
-  "%s uses first-open exclusion and publishes modal activity from the initial subscription",
+  "%s reconciles buffered Settings selection separately from modal activity",
   async (scenario) => {
     vi.spyOn(document, "hasFocus").mockReturnValue(true);
     const listeners = new Map<
@@ -144,9 +144,7 @@ it.each([
         ...document.querySelectorAll<HTMLDialogElement>("dialog[open]"),
       ];
       expect(open).toHaveLength(1);
-      expect(open[0]!.className).toBe(
-        scenario === "early-settings" ? "settings-dialog" : "about-dialog",
-      );
+      expect(open[0]!.className).toBe("about-dialog");
       expect(
         document.querySelector<HTMLElement>(".window-drag-handle")!.hidden,
       ).toBe(true);
@@ -161,6 +159,12 @@ it.each([
     try {
       // Buffered onOpen callbacks replay synchronously during host construction,
       // before mount completion or aggregate assignment. Do not test only ready.
+      if (scenario === "early-settings") {
+        expect(document.querySelector(".settings-dialog")).not.toBeNull();
+        expect(document.querySelector("dialog[open]")).toBeNull();
+        expect(surfaceOptions.linkHoverAvailability!.isEnabled()).toBe(true);
+        emit(aboutIpc.open);
+      }
       if (scenario !== "normal-both") {
         assertModal();
         expect(hoverChanged).toHaveBeenCalled();
@@ -179,21 +183,25 @@ it.each([
       expect(loadSnippets).not.toHaveBeenCalled();
       // Closing the current owner publishes inactivity; a fresh competing intent
       // is then delivered normally, not discarded/queued by a startup shortcut.
-      document
-        .querySelector<HTMLButtonElement>(
-          scenario === "early-settings" ? ".settings-close" : ".about-close",
-        )!
-        .click();
+      document.querySelector<HTMLButtonElement>(".about-close")!.click();
       expect(document.querySelectorAll("dialog[open]")).toHaveLength(0);
       expect(commands.at(-1)).toBe("preview-inactive");
       expect(surfaceOptions.linkHoverAvailability!.isEnabled()).toBe(true);
+      if (scenario === "early-settings") {
+        togglePanel();
+        expect(loadSnippets).not.toHaveBeenCalled();
+        document.querySelector<HTMLButtonElement>(".settings-close")!.click();
+      }
       togglePanel();
       await Promise.resolve();
       expect(loadSnippets).toHaveBeenCalledOnce();
       togglePanel();
       toggleTitle();
       expect(commands.at(-1)).toBe("toggle-title-bar");
-      emit(scenario === "early-settings" ? aboutIpc.open : settingsIpc.open);
+      emit(settingsIpc.open);
+      expect(document.querySelector(".settings-dialog")).not.toBeNull();
+      expect(document.querySelectorAll("dialog[open]")).toHaveLength(0);
+      emit(aboutIpc.open);
       expect(document.querySelectorAll("dialog[open]")).toHaveLength(1);
       expect(commands.at(-1)).toBe("preview-active");
       const count = commands.length;

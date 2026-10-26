@@ -97,7 +97,9 @@ function harness() {
         return () => {};
       },
       notifyTabSelection: (sessionId) => {
-        if (sessionId !== null) controller.selectSession(sessionId);
+        if (typeof sessionId === "object" && sessionId !== null)
+          controller.selectSettings("Settings");
+        else controller.selectSession(sessionId);
       },
       syncTabTitle: sync,
     },

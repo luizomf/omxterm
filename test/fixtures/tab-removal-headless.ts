@@ -108,7 +108,7 @@ export async function tabRemovalScene(
       throw new Error("Invalid fixture selection");
     },
     onSessionSelected(id) {
-      selected = id;
+      selected = id ?? "";
     },
   });
   const subscribe = () => () => {};

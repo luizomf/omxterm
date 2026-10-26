@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { exerciseSettingsLayout } from "./settings-layout-exercise";
+import { terminalRendererConfiguration } from "../../src/main/active-user-configuration";
 import { ipcMain, type BrowserWindow } from "electron";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -32,6 +34,7 @@ export interface SettingsEvidence {
   readonly deliveredDuringCapture: readonly string[];
   readonly deliveredAfterCapture: readonly string[];
   readonly focusReturned: boolean;
+  readonly layout: Awaited<ReturnType<typeof exerciseSettingsLayout>>;
 }
 
 // Real settings service, IPC, preload, window host and dialog against a
@@ -88,6 +91,39 @@ export function createSettingsExercise(
         settings.show,
         () => readFile(file, "utf8"),
         delivered,
+        () =>
+          exerciseSettingsLayout(
+            getWindow(),
+            (language, light) => {
+              const current = reloader.current();
+              const configuration = {
+                ...current.configuration,
+                language,
+                terminalTheme: {
+                  ...current.configuration.terminalTheme,
+                  colors: {
+                    ...current.configuration.terminalTheme.colors,
+                    background: light ? "#f5f5f5" : "#101218",
+                    foreground: light ? "#161616" : "#f4f4f4",
+                  },
+                  appearance: { activePaneHighlight: null },
+                },
+              };
+              router.applyConfiguration(
+                terminalRendererConfiguration(
+                  { ...current, configuration },
+                  process.platform === "darwin" ? 30 : 0,
+                ),
+              );
+            },
+            () =>
+              router.applyConfiguration(
+                terminalRendererConfiguration(
+                  reloader.current(),
+                  process.platform === "darwin" ? 30 : 0,
+                ),
+              ),
+          ),
       ),
     dispose() {
       settings.dispose();
@@ -102,6 +138,7 @@ async function exerciseSettingsDialog(
   show: () => void,
   readConfig: () => Promise<string>,
   delivered: readonly string[],
+  layoutExercise: () => Promise<SettingsEvidence["layout"]>,
 ): Promise<SettingsEvidence> {
   const contents = window.webContents;
   const evaluate = <Value>(expression: string) =>
@@ -124,14 +161,16 @@ async function exerciseSettingsDialog(
   };
   const tab = (label: string) =>
     evaluate(
-      `[...document.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent === ${JSON.stringify(label)}).click()`,
+      `[...document.querySelectorAll('.settings-tabs [role="tab"]')].find((tab) => tab.textContent === ${JSON.stringify(label)}).click()`,
     );
   const field = (label: string) =>
     `[...document.querySelectorAll('.settings-dialog label')].find((row) => row.textContent.startsWith(${JSON.stringify(label)})).querySelector('input')`;
 
   window.focus();
   show();
-  await waitFor("document.querySelectorAll('[role=\"tab\"]').length === 6");
+  await waitFor(
+    "document.querySelectorAll('.settings-tabs [role=\"tab\"]').length === 6",
+  );
   const opened = await evaluate<boolean>(
     "document.querySelectorAll('.settings-dialog').length === 1 && document.activeElement?.getAttribute('role') === 'tab'",
   );
@@ -194,8 +233,15 @@ async function exerciseSettingsDialog(
   await new Promise((resolve) => setTimeout(resolve, 100));
   const deliveredAfterCapture = [...delivered];
 
+  const layout = await layoutExercise();
   contents.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
   contents.sendInputEvent({ type: "keyUp", keyCode: "Escape" });
+  assert.equal(
+    await evaluate<boolean>("!!document.querySelector('.settings-dialog')"),
+    true,
+    "Escape closed ordinary Settings",
+  );
+  await evaluate("document.querySelector('.settings-close').click()");
   await waitFor(
     "!document.querySelector('.settings-dialog') && document.querySelector('.terminal-surface:not([hidden])').contains(document.activeElement)",
   );
@@ -215,6 +261,7 @@ async function exerciseSettingsDialog(
     deliveredDuringCapture,
     deliveredAfterCapture,
     focusReturned: true,
+    layout,
   };
 }
 

@@ -55,9 +55,12 @@ system is involved. Validator and warning detail is interpolated literally.
 Snippet row labels update on retained controls instead of rebuilding rows. An
 open preview relabels controls and its unavailable notice without recapturing a
 pane/Surface target, replacing its body, resetting disabled actions, resubscribing or moving
-focus. User-owned names/descriptions/bodies are never translated. Settings,
-About, local-image and snippet previews do not stack; all use the window's same
-language owner, and each removes its bindings at teardown.
+focus. User-owned names/descriptions/bodies are never translated. About,
+local-image and snippet previews do not stack. Settings is a retained graphical
+Application Tab; its tab/native titles and hidden editor also relabel in place.
+About or a menu-opened image may cover it, restoring selected-content focus on
+dismissal. All use the same window language owner and remove their bindings at
+teardown.
 
 These stay English: the validator's diagnostic detail inside a translated reload
 notice, technical cause detail inside a translated Surface failure notice,

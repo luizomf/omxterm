@@ -10,7 +10,7 @@ import { createSettingsService } from "../../src/main/settings-service";
 import { startSettings } from "../../src/main/settings-wiring";
 import type { IpcHandler } from "../../src/main/terminal-ipc-types";
 import { createSettingsBridge } from "../../src/preload/settings-bridge";
-import { createSettingsDialog } from "../../src/renderer/settings/settings-dialog";
+import { createSettingsView as createSettingsDialog } from "../../src/renderer/settings/settings-dialog";
 import { settingsIpc } from "../../src/shared/settings";
 import { terminalDefaultKeybinds } from "../../src/shared/terminal-keybinds";
 

@@ -1,9 +1,10 @@
 # Adopt tabs with one live session per pane
 
-A Terminal Window holds one or more Terminal Tabs. Each tab owns one or more
-Terminal Panes; each pane owns a Terminal Surface and, after successful
-initialization, one ephemeral Live Terminal Session. A tab starts with one
-pane. Application-drawn tabs and panes provide selectable independent local
+A Terminal Window holds one ordered collection of Application Tabs, exactly one
+selected. Each entry is a Terminal Tab or one lazy retained Settings tab. A
+Terminal Tab owns one or more Terminal Panes; each pane owns a Terminal Surface
+and, after successful initialization, one ephemeral Live Terminal Session.
+A Terminal Tab starts with one pane. Application-drawn tabs and panes provide selectable independent local
 sessions; tmux remains the user's persistence and reconnection tool.
 
 ## Panes
@@ -49,9 +50,11 @@ pointer geometry remain independent of the painted line.
 Structural rebuilds preserve the exact surviving DOM control (including search
 selection), without changing logical pane selection or taking focus from panel
 or modal controls. Removal chooses a non-wrapping neighbor in the nearest split;
-explicit next/previous navigation still wraps. Settings, About, snippet preview
-and Local Image Preview share the window's modal predicate. It suppresses
-competing pane split/focus/equalize and tab-navigation/new-tab commands,
+explicit next/previous navigation still wraps. About, snippet preview
+and Local Image Preview share the window's modal predicate. Settings is ordinary
+graphical tab content, not a modal or fake pane. Terminal-only actions and hidden
+pane focus/divider activity are inert while Settings is selected. The modal
+predicate suppresses competing pane split/focus/equalize and tab-navigation/new-tab commands,
 including image choosing/loading, and guards passive mount/rebuild focus and
 divider input. Captured closure and failure acknowledgement remain deliverable.
 Application clipboard actions still edit a focused Settings field before
@@ -187,8 +190,43 @@ cycling uses `Ctrl+Tab`/`Ctrl+Shift+Tab` on macOS and
 The effective native map remains remappable and duplicate-checked. Main's menu
 and key-event delivery share actions under
 [ADR 0018](0018-deliver-menu-refused-accelerators-in-main.md); no renderer shortcut
-system is added. Unselected-tab removal preserves selection by identity; selected
+system is added. Settings participates at its literal position in that same
+order without creating a pane, Surface, Adapter or session. Unselected-tab removal preserves selection by identity; selected
 removal chooses its right neighbor or, at the end, its left neighbor.
+
+## Settings content ownership
+
+Settings appends on first open; subsequent opens select it without reread,
+reorder, draft/category/scroll reset or replacing its focused field. Switching
+retains the editor lifetime and pending save results while ending recording and
+invalidating clipboard interaction. Closing disposes it; reopening snapshots
+through the existing main queue. No implicit raw Save or new unsaved-change
+prompt is introduced. Escape is not application-tab closure; the visible Close
+control retains its Enter repeats/release in a document-owned gesture guard
+that outlives the removed view.
+
+Settings selection hides/deactivates Snippets, retaining memory state but not
+automatically restoring visibility. It leaves window and application-tab actions
+available, and prevents terminal pane/Find/zoom/snippet/file-drop delivery. About
+and menu-opened images may cover it with the ordinary modal guards. Retained
+views distinguish alive from interactive: saves can settle hidden, but loading,
+clipboard and capture cannot focus or edit a hidden/blocked view. Clipboard
+interaction generations invalidate leave-and-return and blur races.
+
+Main validates a fixed `{ kind: "settings" }` selection, distinct from a pending
+terminal's empty session snapshot. It counts no Busy Sessions and selects a
+localized app-owned title, never renderer-provided text. Background titles/bells
+continue per terminal without taking graphical title ownership or clearing unseen
+bells. Closing a terminal still retains its captured target even after selecting
+Settings. Last-terminal exit/cancellation/failure leaves graphical content alive;
+first-mount rejection is not host-setup failure, and `ready` still rejects.
+Only final Application Tab removal reports owner emptiness. Queued Settings/New
+Tab opens cannot revive it; native acknowledgement/drain guarantees are unchanged.
+
+The strip and both content lifetimes compose through the existing host, not a
+plugin registry, workspace persistence layer or second tab index. Native window
+minima stay unchanged. Layout tokens/budgets are recorded in the
+[style guide](../ui-style-guide.md).
 
 ## Consequences and verification
 

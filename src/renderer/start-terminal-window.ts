@@ -1,6 +1,7 @@
 import "./terminal-window.css";
 import "./window-chrome.css";
 import "./about/about-dialog.css";
+import "./ui-tokens.css";
 import "./settings/settings-dialog.css";
 import { createElectronTerminalAdapter } from "./electron-terminal-adapter";
 import { mountTerminalWindowPage } from "./terminal-window-host";
@@ -75,15 +76,9 @@ export function startTerminalWindow(bridge: Window["omxterm"]): void {
         },
       },
     );
-    void host.ready.catch((error: unknown) => {
-      // Reported Surface failures keep live notice translation until teardown.
-      // Unreported host-setup failures still dispose and propagate.
-      if (surfaceFailure.hidden) {
-        host.dispose();
-        throw new Error("Failed to mount the Terminal Surface", {
-          cause: error,
-        });
-      }
-    });
+    // Pane initialization owns its failure/empty notification. A rejected first
+    // mount is not host-setup failure: Settings or another tab may survive.
+    // Synchronous host setup still throws after disposing partial subscriptions.
+    void host.ready.catch(() => {});
   });
 }

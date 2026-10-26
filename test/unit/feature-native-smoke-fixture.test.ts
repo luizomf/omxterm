@@ -42,6 +42,15 @@ it("builds the maintained feature smoke and real shared renderer without launchi
     expect(scenario).toContain("await evaluate(FEATURE_SMOKE_SPLIT_SCRIPT)");
     expect(main).toContain("stripChildren");
     expect(main).toContain("settings-xdg");
+    expect(main).toContain("Settings horizontal overflow");
+    expect(main).toContain(
+      "Settings native synthetic keyboard traversal/focus cue failed",
+    );
+    expect(main).toContain("Settings changed native minimum bounds");
+    expect(main).toContain("OMXTERM_SETTINGS_EVIDENCE_DIR");
+    const css = await readFile(path.join(root, "renderer/index.css"), "utf8");
+    expect(css).toContain("--ui-input-border");
+    expect(css).toContain("@container (min-width: 760px)");
     expect(main).toContain("registerTerminalIpcRouter");
     expect(main).toContain("Promise.all(sessionExits)");
 

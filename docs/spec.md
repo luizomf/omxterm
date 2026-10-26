@@ -62,7 +62,8 @@ OMXTerm:
   ZWJ grapheme clusters as single two-column cells that do not overlap
   neighboring cells;
 - uses one independent shell session per Terminal Pane, with one or more panes
-  per Terminal Tab and one or more tabs per native Terminal Window;
+  per Terminal Tab and one or more Application Tabs per native Terminal Window,
+  including an optional graphical Settings tab;
 - provides native new-window, new-tab, close, copy, paste, select-all,
   scrollback search, zoom, fullscreen, always-on-top, bounded local-image
   preview, and quit actions without an in-window toolbar;
@@ -95,8 +96,28 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 
 - Launching OMXTerm creates a Terminal Window with one Terminal Tab. New Window
   and New Tab default to `Cmd+N` and `Cmd+T` on macOS, and `Ctrl+Shift+N` and
-  `Ctrl+Shift+T` on Linux and Windows. Each tab starts with one Terminal Pane,
+  `Ctrl+Shift+T` on Linux and Windows. Each Terminal Tab starts with one Terminal Pane,
   and each pane owns its own independent Live Terminal Session.
+- Settings is one lazy graphical Application Tab per native window, appended
+  on first open and reused without reread, reorder or state reset. It has no
+  Terminal Pane, Surface, Adapter, shell or PTY. One ordered collection owns
+  both kinds' selection, reordering and literal/next/previous navigation. The
+  existing strip flag and two-tab threshold include Settings; opening it never
+  reveals a disabled strip. Switching preserves its DOM, category, drafts,
+  revisions, scroll and pending save results; it cancels shortcut recording and
+  invalidates pending clipboard interaction. Close disposes that editor without
+  implicit raw Save or a new unsaved-change prompt. Reopen reads through the
+  existing serialized service. Escape does not close the ordinary tab; the
+  explicit Close action uses ordinary tab removal and retains its closing Enter
+  gesture through repeats/release. Settings survives last-terminal exit,
+  cancellation or first-mount failure without inventing a shell or reporting
+  false renderer emptiness. First-mount readiness still reports the actual
+  terminal outcome. Final Application Tab removal commits the existing empty
+  owner/failure-acknowledgement path; Settings adds no Busy Session/native drain.
+  Main accepts only a fixed validated graphical selection identity, not an
+  arbitrary renderer title. Settings supplies a localized native title;
+  background OSC/BEL still update terminal tabs without stealing that title or
+  marking an unseen terminal bell visited.
 - `View -> Pane` splits the selected tab's focused pane right or down
   (`splitRight`, `splitDown`), moves pane focus (`focusNextPane`,
   `focusPreviousPane`, `focusPaneLeft`, `focusPaneRight`, `focusPaneUp`,
@@ -367,7 +388,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   remain intact; the displayed icon is the same canonical asset bundled locally
   for both development and packaged rendering.
 - About can be opened using native menu keyboard navigation. Close or Escape
-  dismisses it and focuses the live selected Terminal Tab. A closing Escape or
+  dismisses it and focuses the live selected Application Tab. A closing Escape or
   Enter-on-Close gesture remains owned by About through held repeats and release,
   including Kitty event reporting; the next fresh terminal press is not consumed.
   Window blur and owner disposal clear outstanding gesture ownership. Space keeps
@@ -375,8 +396,12 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   including during metadata loading, focuses the same dialog. Returning from
   the browser does not steal its focus. Owner disposal removes it without
   restoring terminal focus; late metadata and link errors cannot reopen it.
-  About, Settings, Local Image Preview and a Snippets preview do not stack:
-  opening one while another is choosing/loading/showing is ignored. While a
+  About, Local Image Preview and a Snippets preview do not stack:
+  opening one while another is choosing/loading/showing is ignored. Settings is
+  nonmodal application content; About and menu-triggered image preview may open
+  above it. Modal activation makes Settings inert, cancels recording and
+  invalidates clipboard interaction. Dismissal restores selected-content focus,
+  including a surviving Settings field; already submitted writes may settle. While a
   modal owns input, terminal clipboard, file-drop, zoom, snippet, tab/title-bar,
   tab-navigation/new-tab and pane split/focus/equalize actions are suppressed;
   output, configuration updates and approved pane/tab/session/
@@ -393,7 +418,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   or JPEG in a temporary overlay without writing the file or changing User
   Configuration. Escape, the close button, or the backdrop dismisses the
   overlay, releases its renderer Blob source synchronously, and returns focus to
-  the live selected Terminal Tab. Picker cancellation returns terminal focus
+  the live selected Application Tab. Picker cancellation returns selected-content focus
   without an error. The picker and visible local-image sources share the bounded
   read and overlay contract below. While choosing, loading, or displaying a
   preview, terminal clipboard actions, file drops, font zoom, tab bar toggles,
@@ -480,7 +505,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   the target, mutating user text or re-enabling a dead target's actions.
   Insert only omits the added Enter: embedded line breaks or control characters
   can still execute, and Protected Paste may still ask for
-  confirmation after acceptance. The preview, Settings, About and Local Image
+  confirmation after acceptance. The preview, About and Local Image
   Preview never stack; while any is choosing/loading/showing, terminal-directed
   actions, tab navigation/new tabs and pane split/focus/equalize are suppressed.
   Pane dividers and passive mount/rebuild focus consult that same modal owner;
@@ -1319,7 +1344,7 @@ non-fatal warnings for a valid configuration that stays fully active — current
 a keybind shadowing a PTY control key — which inform without activating any
 default.
 
-**Settings** (application menu, **Settings…**) is a modal editor of the same
+**Settings** (application menu, **Settings…**) is a retained graphical editor of the same
 `config.json`. It covers `language`, `confirmClose`, `logLevel`, `windowsShell` (Windows),
 `font.family`, `font.size`, `font.lineHeight`, `font.ligatures`,
 `terminal.padding`, `scrollback.lines`, `keyboard.optionAsAlt` (macOS), the
@@ -1340,7 +1365,7 @@ cancels; modified Escape, including native AltGr, can be recorded. A key that
 cannot round-trip through the supported accelerator identity reports invalid and
 keeps capture open; arbitrary layout translation is not added, and the existing
 logical Plus/keypad exceptions remain. Capture ends after one accepted key, on
-cancel, button/window blur, page departure, dialog disposal or at a real
+cancel, button/window blur, category/tab departure, overlay activation, editor disposal or at a real
 30-second timeout that notifies the current view without waiting for another
 key. Ending a recording retains its consumed gestures until release or a fresh
 press; window blur, renderer loss/reload and window disposal clear that ownership.
@@ -1373,11 +1398,18 @@ The status line distinguishes saved and applied, saved but not applied (even
 when reload throws after persistence), new-window/session-only settings, and
 settings that need a restart for open tabs. Both save routes include returned
 notices and deferred lifetimes of changed effective values, not no-op spelling
-changes. While Settings is
-open it owns modal input like About, and the auxiliary panel stays visible
-but inert: terminal-directed actions and tab navigation are ignored,
-application Copy, Paste and Select All edit its focused field and never reach
-the terminal, and closing returns focus to the selected terminal. Settings has
+changes. While Settings is selected, pane commands, terminal Find, snippet
+capture/delivery, terminal file-drop insertion and font zoom are no-ops; window
+and Application Tab actions remain usable. Configuration updates still reach
+retained hidden terminals. Application Copy, Paste and Select All edit its
+focused field; unsupported controls consume/no-op, never falling through to a
+terminal. Retained terminal-popup targets cannot become Settings field edits.
+Clipboard reads recheck interaction generation as well as focus/value/selection;
+tab deactivation, modal activation, focus loss and disposal invalidate them even
+after returning to the same unchanged field. Hidden save results may settle
+without focusing. Selecting Settings deactivates/hides Snippets while retaining
+its existing query/scroll/width memory. It does not automatically reopen, and
+Toggle Snippets is a no-op on Settings. Settings has
 no default shortcut. Its General-page language selector uses exact en-US/pt-BR
 values and the same validated save/reload route as other live controls. Its
 options keep the self-names **English (United States)** and **Português (Brasil)**
@@ -1390,6 +1422,20 @@ message identities cross IPC separately from literal validator/warning detail,
 so late and already-visible results use the current language without matching
 English sentences. The existing main user-file banner keeps its rendered-text
 contract. Diagnostics shown in Settings never enter operational logs.
+
+Settings occupies an opaque full-area surface with the existing six categories
+and independently scrolling content, not a modal perimeter/backdrop. Its 640×480
+renderer viewport target is comfortable desktop coverage, not a new native
+minimum. Below it, compact wrapping navigation and scrolling retain small-window
+access. Native bounds/minima are unchanged by opening Settings. The workspace
+caps at 1440 px, ordinary forms at 720 px and dense pages at 1120 px. Panel-width
+container queries stack form labels below 560 px and wrap shortcut actions below
+760 px. Shortcuts retain visible Record/Cancel, Unbind, Default and textual state;
+config JSON overflow stays within its editor. Shared palette-aware tokens keep
+decoration subdued, inputs identifiable and keyboard focus foreground-colored,
+independent of optionally transparent pane paint. Native control color-scheme
+follows palette luminance. These are not universal accessibility guarantees for
+arbitrary custom palettes. See the [UI style guide](ui-style-guide.md).
 
 Operational logs are JSONL under `$XDG_STATE_HOME/omxterm/logs`, falling back to
 `~/.local/state/omxterm/logs`. Levels are `error`, `info`, and `debug`. Only the

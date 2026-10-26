@@ -22,6 +22,7 @@ export interface AuxiliaryViewDefinition {
 }
 export interface AuxiliaryPanel {
   toggle(id: string): void;
+  deactivate(): void;
   setBlocked(blocked: boolean): void;
   ownsFocus(): boolean;
   clipboardAction(action: TerminalClipboardAction): boolean;
@@ -197,6 +198,7 @@ export function createAuxiliaryPanel(
       : undefined;
   observer?.observe(options.content);
   return {
+    deactivate: () => hide(false),
     toggle(id) {
       if (disposed || blocked) return;
       if (current === id) {

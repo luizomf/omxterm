@@ -8,10 +8,15 @@ For fonts, themes, shortcuts, and snippets, see [Configuration](configuration.md
 
 ## Windows, tabs, and sessions
 
-Choose **File → New Tab** for another session in the same window, or **File → New Window** for a separate window. Each tab starts with one independent shell and can hold several panes.
+Choose **File → New Tab** for another session in the same window, or **File → New Window** for a separate window. Each Terminal Tab starts with one independent shell and can hold several panes.
+**Settings…** opens a graphical tab in the same strip, with no shell. It is
+included in reordered/numbered/next/previous navigation, and repeated open
+returns to the same editor. Settings remains open after the last terminal exits;
+closing the last application tab closes the window. See [Settings](configuration.md#settings)
+for retained drafts and explicit JSON Save.
 
 - **Tab bar:** appears automatically when a window has two or more tabs. Click a tab to select it, drag horizontally to reorder tabs, or use keyboard shortcuts. **View → Toggle Tab Bar** (`Cmd+Shift+B` / `Ctrl+Shift+B`) hides or shows the strip at any time.
-- **Tab titles:** each tab starts with your active shell or program name (such as `zsh` or `powershell.exe`) and updates automatically when a program sets a terminal title.
+- **Tab titles:** Settings has a localized title; each Terminal Tab starts with your active shell or program name (such as `zsh` or `powershell.exe`) and updates automatically when a program sets a terminal title.
 - **Closing:** closing a tab ends its sessions, and closing the last window exits the app. Typing `exit` in your shell closes that pane, or the tab when it is its last pane.
 
 ### Split panes
@@ -110,7 +115,7 @@ You can preview local PNG and JPEG images in an overlay without leaving OMXTerm 
 - **Click a path in output:** hold **Cmd** (macOS) or **Ctrl** (Linux/Windows) and click a visible image path or `file:///` URL.
 - **Open via file picker:** choose **File → Open Local Image…** from the menu.
 - **Relative paths:** if you click a relative path (like `./screenshot.png`), OMXTerm prompts you to choose the base folder.
-- **Close the preview:** press **Escape**, click the close button, or click outside the image to return focus to your terminal.
+- **Close the preview:** press **Escape**, click the close button, or click outside the image to return focus to the selected content (terminal or Settings).
 
 If an image path contains spaces, wrap it in single or double quotes in your terminal output (or print the full path on its own line) so OMXTerm can recognize the complete path. Note that clicked paths always open files on the machine running OMXTerm, even if the text was printed inside an SSH session.
 
@@ -152,7 +157,7 @@ Choose **OMXTerm → About OMXTerm** in the application menu for the running
 version, project, contributors, issue tracker and MIT license. On Linux and
 Windows, release **Alt** to open that menu; on macOS use the system menu bar.
 The same compact dialog appears on every supported platform. Use **Tab** to
-move between its buttons and **Escape** or **Close** to return to the terminal.
+move between its buttons and **Escape** or **Close** to return to the selected terminal or Settings control.
 Links open in your default browser only when activated. Contributor credits
 live in [CONTRIBUTORS.md](../CONTRIBUTORS.md), while legal notices remain bundled.
 About and local-image preview do not stack; dismiss one before opening the other. Pane splitting, focus navigation and equalizing are ignored while either owns input, including image choosing/loading. Confirmed closure and failure acknowledgement still work.
@@ -211,7 +216,7 @@ See [reloading user configuration](configuration.md#reloading-user-configuration
 
 Each snippet row shows what clicking it does: **Insert** types the snippet without pressing Enter, and **Run · adds Enter** types it and presses Enter (`execute: true` in `snippets.yaml`). Click **Preview** to see the exact text first, then choose **Insert — no added Enter** or **Run — adds Enter**; that choice wins over the snippet's default. The snippet goes only to the focused pane captured when you opened the preview, never to a later selected or replacement pane. If that terminal ends, fails or is removed, the actions are disabled and nothing is sent, even if its pane remains visible for failure acknowledgement. Insert only skips the final Enter: a snippet with several lines can still run each line, and multiline text may still ask for paste confirmation.
 
-Change the interface language in **Settings → General → Language**. Row and preview controls update in place, including an unavailable-terminal notice; your snippet text, captured target, focus and disabled actions are retained. Settings, About, local-image and snippet previews do not stack. They block pane split/focus/equalize, tab navigation and divider input without stealing focused fields; approved closure still works. Pane menus, Surface names and resize separators also follow the interface language without replacing sessions.
+Change the interface language in **Settings → General → Language**. Row and preview controls update in place, including an unavailable-terminal notice; your snippet text, captured target, focus and disabled actions are retained. About, local-image and snippet previews do not stack. Those modals block pane split/focus/equalize, tab navigation and divider input; approved closure still works. Settings is instead a normal tab: terminal-only actions do nothing there, while tab/window actions stay available. Pane menus, Surface names and resize separators also follow the interface language without replacing sessions.
 
 ### Resize or close Snippets
 
@@ -219,7 +224,7 @@ Drag the left separator to resize the right-side Snippets panel. Its 1 px line m
 
 The panel shrinks automatically in narrow windows and closes below 406 px of content width. Widen the window and open it again; it does not reopen automatically. Your preferred width, search and scroll survive hiding and configuration/theme changes in that window only, not restart. The remaining terminal allowance does not guarantee columns with extreme padding.
 
-Snippets is nonmodal: clicking the terminal keeps normal terminal input. Copy/Paste/Select All edit the search field while it holds focus; unsupported panel controls suppress terminal clipboard delivery instead. Settings, About, snippet preview and Local Image Preview temporarily make the retained panel inert.
+Snippets is nonmodal: clicking the terminal keeps normal terminal input. Copy/Paste/Select All edit the search field while it holds focus; unsupported panel controls suppress terminal clipboard delivery instead. Selecting Settings deactivates/hides the panel without automatically reopening it on return to a terminal. About, snippet preview and Local Image Preview temporarily make the retained visible panel inert.
 
 ### A program draws text in the wrong place
 

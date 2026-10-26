@@ -16,7 +16,7 @@ const snapshot: SettingsSnapshot = {
   values: { "font.family": "" },
 };
 
-it("owns input while open: blocks terminal actions and edits its own field", async () => {
+it("owns selected graphical input, allows tab creation and restores Settings below About", async () => {
   HTMLDialogElement.prototype.showModal = function () {
     this.setAttribute("open", "");
   };
@@ -121,7 +121,13 @@ it("owns input while open: blocks terminal actions and edits its own field", asy
       expect(document.querySelector('[role="tab"]')).not.toBeNull(),
     );
     openAbout();
-    expect(document.querySelector(".about-dialog")).toBeNull();
+    expect(document.querySelector(".about-dialog")).not.toBeNull();
+    expect(tabsContainer.inert).toBe(true);
+    document.querySelector<HTMLButtonElement>(".about-close")!.click();
+    expect(tabsContainer.inert).toBe(false);
+    document
+      .querySelector<HTMLButtonElement>("#settings-tab-appearance")!
+      .click();
 
     const family = [...document.querySelectorAll("label")]
       .find((row) => row.textContent?.startsWith("Font family"))!
@@ -134,7 +140,6 @@ it("owns input while open: blocks terminal actions and edits its own field", asy
     expect(family.value).toBe("");
     clipboardAction("paste");
     find();
-    tabCommand({ action: "new" });
     await vi.waitFor(() => expect(family.value).toBe("Installed Mono"));
     expect(change).toHaveBeenCalledExactlyOnceWith({
       path: "font.family",
@@ -142,7 +147,11 @@ it("owns input while open: blocks terminal actions and edits its own field", asy
     });
     expect(surface.paste).not.toHaveBeenCalled();
     expect(surface.find).not.toHaveBeenCalled();
-    expect(createAdapter).toHaveBeenCalledOnce();
+    tabCommand({ action: "new" });
+    await vi.waitFor(() => expect(createAdapter).toHaveBeenCalledTimes(2));
+    openSettings();
+    family.focus();
+    surface.focus.mockClear();
     window.dispatchEvent(new Event("focus"));
     expect(surface.focus).not.toHaveBeenCalled();
 

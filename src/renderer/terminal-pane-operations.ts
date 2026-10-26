@@ -67,10 +67,16 @@ export function createPaneOperations(deps: {
     rendering = true;
     try {
       renderPaneLayout(tab.container, tab.layout, {
-        isInteractive: deps.canInteract,
+        isInteractive: () => tab === deps.selectedTab() && deps.canInteract(),
         resizeLabel: deps.resizeLabel(),
         onResize(path, index, delta, length) {
-          if (tab.removed || !deps.canInteract() || length <= 0) return;
+          if (
+            tab.removed ||
+            tab !== deps.selectedTab() ||
+            !deps.canInteract() ||
+            length <= 0
+          )
+            return;
           tab.layout = resizeSplit(tab.layout, path, index, delta, (child) =>
             minimumFraction(child, axisAt(tab.layout, path), length),
           );
@@ -83,7 +89,13 @@ export function createPaneOperations(deps: {
   };
 
   const focusPane = (tab: TerminalTab, pane: TerminalPane, move = false) => {
-    if (pane.removed || tab.removed || !deps.canInteract()) return;
+    if (
+      pane.removed ||
+      tab.removed ||
+      tab !== deps.selectedTab() ||
+      !deps.canInteract()
+    )
+      return;
     const changed = tab.focused !== pane;
     tab.focused = pane;
     if (changed) {

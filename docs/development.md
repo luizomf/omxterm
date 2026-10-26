@@ -197,7 +197,10 @@ A deliberately bypassed native repeat must fail the action oracle; an explicitly
 injected unmatched DOM release must fail the actual PTY oracle. Chromium can omit
 a native release after a prevented down, so the fixture reports observed owned
 native repeats/releases rather than assuming both arrived. Run it alone with `npm test -- test/integration/settings-shortcut-native.test.ts`.
-Its Electron `sendInputEvent` gestures are synthetic, not physical OS/layout or
+The retained-Settings phase types into its graphical raw field, switches to a
+terminal without disposing the editor or blurring Record, checks capture
+cancellation and exact empty PTY input fenced by the fresh Kitty Escape, then
+reopens the same draft/DOM. Its Electron `sendInputEvent` gestures are synthetic, not physical OS/layout or
 AltGr qualification; the native menu positive control calls its actual callback,
 not OS menu navigation. The ordinary fixture supervisor owns all windows/PTYs.
 
@@ -292,6 +295,16 @@ foreground/point ownership, pointer release/restoration and continuity checks ar
 still required. Headless validator and caller controls:
 `npm test -- test/unit/window-chrome-drag-geometry.test.ts test/unit/window-chrome-native-drag.test.ts`.
 They do not replace native Windows execution.
+
+The Window Chrome `settings-only` case additionally runs the graphical editor's
+layout matrix: six categories at 320×200, 640×480, 800×600, 960×640, 1280×800
+and 1920×1080, en-US/pt-BR, representative dark/light palettes and actual panel
+breakpoint edges. It checks horizontal containment, reachable focused controls,
+retained editor identity, palette control color-scheme and unchanged native
+minima. `OMXTERM_SETTINGS_EVIDENCE_DIR` optionally saves synthetic-only PNGs.
+Run alone on an assigned idle desktop with
+`npm test -- test/integration/window-chrome.test.ts -t settings-only`.
+Headless preparation does not establish rendered layout or physical input.
 
 The independent Window Chrome feature smoke reuses the real renderer, host,
 Settings service/reloader, owned profiles and native PTY supervisor. Select its

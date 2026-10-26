@@ -36,6 +36,7 @@ export interface TerminalPane {
 
 // A Terminal Tab: one or more panes and exactly one focused pane.
 export interface TerminalTab {
+  readonly kind: "terminal";
   readonly container: HTMLElement;
   layout: PaneLayout<TerminalPane>;
   focused: TerminalPane;
@@ -50,7 +51,11 @@ export function appendTab(
   container.className = "terminal-tab";
   parent.append(container);
   // Its layout and focused pane are completed once the first pane exists.
-  const tab = { container, removed: false } as unknown as TerminalTab;
+  const tab = {
+    kind: "terminal",
+    container,
+    removed: false,
+  } as unknown as TerminalTab;
   const pane = createPane(tab, createAdapter);
   tab.layout = leaf(pane);
   tab.focused = pane;

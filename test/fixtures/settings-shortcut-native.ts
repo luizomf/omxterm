@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import {
+  assertCaptureSample,
+  exerciseSettingsTabCapture,
+} from "./settings-shortcut-oracles";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Menu, type BrowserWindow, type KeyboardInputEvent } from "electron";
@@ -314,31 +318,7 @@ export async function exerciseShortcutCapture(options: ShortcutCaptureOptions) {
       () => input().length >= before.bytes + ESCAPE.length,
       `${phase} native PTY control`,
     );
-    assert.equal(
-      input().slice(before.bytes),
-      ESCAPE,
-      `${phase}: captured gesture leaked to the actual PTY`,
-    );
-    assert.equal(
-      routing.actions(),
-      before.actions,
-      `${phase}: application action invoked during capture`,
-    );
-    assert.equal(
-      routing.menus(),
-      before.menu,
-      `${phase}: native menu callback invoked during capture`,
-    );
-    assert.equal(
-      options.quitConfirmations(),
-      before.quit,
-      `${phase}: actual Quit lifecycle entered`,
-    );
-    assert.equal(
-      window.isFullScreen(),
-      before.fullScreen,
-      `${phase}: actual fullscreen changed`,
-    );
+    assertCaptureSample(input(), before, sample(), phase, ESCAPE);
     phases.push(phase);
   };
   try {
@@ -420,6 +400,17 @@ export async function exerciseShortcutCapture(options: ShortcutCaptureOptions) {
       assert.equal(await evaluate<string>(status), "Recording cancelled.");
       await close();
       await finishSample(before, "page-departure-without-blur");
+    }
+    {
+      const before = sample();
+      await exerciseSettingsTabCapture({
+        window,
+        open,
+        record,
+        close,
+        waitFor,
+        finish: () => finishSample(before, "settings-field-and-tab-departure"),
+      });
     }
     {
       const before = sample();

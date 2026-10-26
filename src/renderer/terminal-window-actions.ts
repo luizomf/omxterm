@@ -19,7 +19,6 @@ export function subscribeToGuardedActions(
   options: TerminalWindowActionSubscriptions,
   tabs: TerminalTabs,
   blocked: () => boolean,
-  editBlocked: (action: TerminalClipboardAction) => void,
   panelClipboard: (action: TerminalClipboardAction) => boolean,
 ): () => void {
   const subscriptions = [
@@ -30,9 +29,8 @@ export function subscribeToGuardedActions(
     () =>
       options.subscribeToClipboardActions?.((action, target) => {
         // A terminal popup never migrates into panel or modal editing.
-        if (target) {
-          if (!blocked()) tabs.clipboardAction(action, target);
-        } else if (blocked()) editBlocked(action);
+        if (blocked()) return;
+        if (target) tabs.clipboardAction(action, target);
         else if (!panelClipboard(action)) tabs.clipboardAction(action);
       }),
     () =>

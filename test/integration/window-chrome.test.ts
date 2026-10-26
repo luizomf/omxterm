@@ -150,6 +150,12 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
               deliveredDuringCapture: [],
               deliveredAfterCapture: ["find"],
               focusReturned: true,
+              layout: {
+                cases: 144,
+                breakpoints: 4,
+                synthetic: true,
+                physicalKeyboard: false,
+              },
             },
           });
           return;

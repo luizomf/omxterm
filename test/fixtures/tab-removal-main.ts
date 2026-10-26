@@ -191,7 +191,7 @@ function registerHost(window: BrowserWindow) {
     },
     onSessionStarted() {},
     onSessionSelected(sessionId) {
-      selected = sessionId;
+      selected = sessionId ?? "";
     },
     onSessionStartError() {
       throw new Error("Unexpected fixture spawn failure");

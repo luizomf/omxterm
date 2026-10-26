@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
-  createSettingsDialog,
+  createSettingsView as createSettingsDialog,
   describeSettingsResult,
 } from "../../src/renderer/settings/settings-dialog";
 import type {

@@ -283,6 +283,10 @@ app
               },
               onSessionStarted: titleController.sessionStarted,
               onSessionSelected: titleController.selectSession,
+              onSettingsSelected: () =>
+                titleController.selectSettings(
+                  currentTranslator().t("settings.title"),
+                ),
               onSessionTitleSync: titleController.syncSessionTitle,
               onTitleRequest: titleController.requestTitle,
               onBell: titleController.ringBell,

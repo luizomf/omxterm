@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, Menu, screen } from "electron";
 import { mkdirSync, writeSync } from "node:fs";
 import assert from "node:assert/strict";
+import { createTranslator } from "../../src/shared/i18n";
 import path from "node:path";
 import { terminalWindowOptions } from "../../src/main/terminal-window";
 import { createWindowBackgroundEffectsOwner } from "../../src/main/window-background-effects";
@@ -348,6 +349,10 @@ app
           ),
           createSession: createChromeSession,
           onSessionStarted: title.sessionStarted,
+          onSettingsSelected: () =>
+            title.selectSettings(
+              createTranslator(configuration.language).t("settings.title"),
+            ),
           onSessionSelected: featureSmoke.trackFocus(
             window,
             title.selectSession,
@@ -449,9 +454,7 @@ app
       sizes,
       ended: () => ended,
       confirmations: () => confirmations,
-      cursor: (point) => {
-        cursor = point;
-      },
+      cursor: (point) => (cursor = point),
       async nativeDrag() {
         try {
           return await exerciseWindowsHandleDrag(windows[0]!, () => {

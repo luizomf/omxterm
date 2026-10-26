@@ -82,7 +82,8 @@ export interface TerminalIpcControllerOptions {
     sessionId: TerminalSessionId,
     fallbackTitle?: string,
   ) => void;
-  readonly onSessionSelected: (sessionId: TerminalSessionId) => void;
+  readonly onSessionSelected: (sessionId: TerminalSessionId | null) => void;
+  readonly onSettingsSelected?: () => void;
   readonly onSessionTitleSync?: (sessionId: TerminalSessionId) => void;
   readonly writeClipboardText: (text: string) => void;
   readonly readClipboardText: () => string;

@@ -1,5 +1,5 @@
 import type { TerminalTheme } from "../shared/terminal-theme";
-import { terminalPaneAccent } from "./terminal-pane-accent";
+import { luminance, terminalPaneAccent } from "./terminal-pane-accent";
 
 // Window-owned paint uses the complete validated theme, independently of
 // Surface configuration and separator interaction/geometry owners.
@@ -14,6 +14,10 @@ export function applyWindowTheme(
   style.setProperty("--terminal-background-opacity", String(1 - transparency));
   style.setProperty("--terminal-background", background);
   style.setProperty("--terminal-foreground", foreground);
+  style.setProperty(
+    "--ui-color-scheme",
+    luminance(background) > 0.179 ? "light" : "dark",
+  );
   const appearance = theme.appearance;
   for (const [property, color] of [
     ["--terminal-pane-divider-color", appearance?.paneDivider],

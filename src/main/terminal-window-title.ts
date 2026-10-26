@@ -31,7 +31,8 @@ export interface TerminalWindowTitleController {
     fallbackSessionTitle?: string,
   ): void;
   sessionEnded(sessionId: TerminalSessionId): void;
-  selectSession(sessionId: TerminalSessionId): void;
+  selectSession(sessionId: TerminalSessionId | null): void;
+  selectSettings(title: string): void;
   syncSessionTitle(sessionId: TerminalSessionId): void;
   requestTitle(sessionId: TerminalSessionId, request: string): void;
   ringBell(sessionId: TerminalSessionId): void;
@@ -78,6 +79,7 @@ export function createTerminalWindowTitleController(
 ): TerminalWindowTitleController {
   const sessions = new Map<TerminalSessionId, SessionTitleState>();
   let selectedSessionId: TerminalSessionId | undefined;
+  let settingsTitle: string | undefined;
   let cancelAttention: (() => void) | undefined;
   let disposed = false;
   const onRejected = options.onRejected ?? (() => {});
@@ -97,7 +99,9 @@ export function createTerminalWindowTitleController(
     const selected = selectedSessionId
       ? sessions.get(selectedSessionId)
       : undefined;
-    const title = selected ? displayTitle(selected) : DEFAULT_TERMINAL_TITLE;
+    const title =
+      settingsTitle ??
+      (selected ? displayTitle(selected) : DEFAULT_TERMINAL_TITLE);
     window.setTitle(title);
     options.onWindowTitle?.(title);
   };
@@ -144,11 +148,18 @@ export function createTerminalWindowTitleController(
         updateWindowTitle();
       }
     },
+    selectSettings(title) {
+      if (disposed) return;
+      selectedSessionId = undefined;
+      settingsTitle = title;
+      updateWindowTitle();
+    },
     selectSession(sessionId) {
-      if (disposed || !sessions.has(sessionId)) return;
-      selectedSessionId = sessionId;
+      if (disposed || (sessionId !== null && !sessions.has(sessionId))) return;
+      settingsTitle = undefined;
+      selectedSessionId = sessionId ?? undefined;
       // Selecting a ringing tab is looking at it: its marker is done.
-      if (window.isFocused()) clearBell(sessionId);
+      if (window.isFocused()) clearBell(selectedSessionId);
       updateWindowTitle();
     },
     syncSessionTitle(sessionId) {

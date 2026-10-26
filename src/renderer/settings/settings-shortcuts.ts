@@ -111,6 +111,7 @@ export function renderShortcuts(
   const save = (action: TerminalActionName, choice: KeybindChoice) =>
     context.changeKeybind({ action, choice });
   const record = (action: TerminalActionName) => {
+    if (!context.live()) return;
     const again = recording === action;
     release();
     if (again) return;
@@ -199,7 +200,13 @@ export function renderShortcuts(
       unbind.disabled = keybind?.state === "unbound";
       inherit.disabled = keybind?.state === "inherit";
     });
-    row.append(name, value, state, recordButton, unbind, inherit);
+    const binding = document.createElement("div");
+    binding.className = "settings-shortcut-binding";
+    binding.append(value, state);
+    const actions = document.createElement("div");
+    actions.className = "settings-shortcut-actions";
+    actions.append(recordButton, unbind, inherit);
+    row.append(name, binding, actions);
     panel.append(row);
   }
   context.labels.push((t) => {

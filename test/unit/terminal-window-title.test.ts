@@ -51,6 +51,33 @@ function createControllerHarness(focused = false) {
 }
 
 describe("native Terminal Title and bell attention", () => {
+  it("keeps localized graphical title while background OSC/BEL and focus preserve unseen bells", () => {
+    const h = createControllerHarness();
+    h.controller.sessionStarted("s1");
+    h.controller.selectSession("s1");
+    h.controller.selectSettings("Settings");
+    h.controller.ringBell("s1");
+    h.controller.requestTitle("s1", "synthetic background");
+    h.focus();
+    expect(h.window.setTitle).toHaveBeenLastCalledWith("Settings");
+    expect(h.sessionTitles).toHaveBeenLastCalledWith(
+      "s1",
+      "🔔 synthetic background",
+    );
+    h.controller.selectSettings("Configurações");
+    h.controller.syncSessionTitle("s1");
+    expect(h.window.setTitle).toHaveBeenLastCalledWith("Configurações");
+    expect(h.sessionTitles).toHaveBeenLastCalledWith(
+      "s1",
+      "🔔 synthetic background",
+    );
+    h.controller.selectSession("s1");
+    expect(h.window.setTitle).toHaveBeenLastCalledWith("synthetic background");
+    h.controller.selectSettings("Settings");
+    h.controller.selectSession(null);
+    expect(h.window.setTitle).toHaveBeenLastCalledWith("OMXTerm");
+    h.controller.dispose();
+  });
   it("publishes exactly the native sanitized selected title and fallback to app-drawn chrome", () => {
     const harness = createControllerHarness();
     harness.controller.sessionStarted("s1");

@@ -14,14 +14,23 @@ export function createTabSelection<State>(options: {
   readonly isBusy: (state: State) => boolean;
   readonly hasBusySession: () => boolean;
   readonly reject: () => void;
-  readonly onSessionSelected: (sessionId: TerminalSessionId) => void;
+  readonly onSessionSelected: (sessionId: TerminalSessionId | null) => void;
+  readonly onSettingsSelected?: () => void;
 }) {
   let focused: TerminalSessionId | null = null;
+  let settings = false;
   let tab: readonly TerminalSessionId[] | undefined;
   return {
     tabSelected(payload?: unknown) {
       if (!isTerminalTabSelection(payload)) {
         options.reject();
+        return;
+      }
+      if ("kind" in payload) {
+        settings = true;
+        focused = null;
+        tab = [];
+        options.onSettingsSelected?.();
         return;
       }
       // Legacy one-session notifications must still name a live owned session.
@@ -31,10 +40,14 @@ export function createTabSelection<State>(options: {
         (payload.sessionId === null || !options.routed(payload.sessionId))
       )
         return;
+      settings = false;
       focused = payload.sessionId;
       tab = payload.tabSessionIds ?? (focused === null ? [] : [focused]);
-      if (focused !== null && options.current(focused))
+      if (focused === null || options.current(focused))
         options.onSessionSelected(focused);
+    },
+    refreshTitle() {
+      if (settings) options.onSettingsSelected?.();
     },
     hasBusySelectedSession() {
       if (tab === undefined) return options.hasBusySession();

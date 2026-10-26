@@ -1,4 +1,5 @@
 import type { SettingsBridge } from "./settings";
+import type { SettingsTabSelection } from "./terminal-panes";
 import type { AboutBridge } from "./about";
 import type {
   TerminalExit,
@@ -57,7 +58,7 @@ export interface TerminalBridge {
     listener: (sessionId: TerminalSessionId, title: string) => void,
   ): () => void;
   notifyTabSelection(
-    sessionId: TerminalSessionId | null,
+    sessionId: TerminalSessionId | null | SettingsTabSelection,
     tabSessionIds?: readonly TerminalSessionId[],
   ): void;
   syncTabTitle(sessionId: TerminalSessionId): void;
