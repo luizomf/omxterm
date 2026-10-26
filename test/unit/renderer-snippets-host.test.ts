@@ -115,6 +115,22 @@ it("excludes competing modals, deactivates Snippets on Settings, and keeps its c
   expect(settings.querySelector("h2")!.textContent).toBe("Configurações");
 });
 
+it("deactivates Snippets and restores Settings when selected terminal exit chooses graphical fallback", async () => {
+  const f = await fixture();
+  f.settingsOpen();
+  await vi.waitFor(() =>
+    expect(document.querySelector("#settings-tab-general")).not.toBeNull(),
+  );
+  f.tabCommand({ action: "previous" });
+  f.toggle();
+  expect(f.root.hidden).toBe(false);
+  f.sessionHandlers[0]!.onExit({ exitCode: 0, signal: 0 });
+  expect(f.root.hidden).toBe(true);
+  expect(document.activeElement).toBe(
+    document.querySelector("#settings-tab-general"),
+  );
+});
+
 it("routes native action subscriptions to panel text, retains passive focus, and preserves exact selected injection", async () => {
   const f = await fixture();
   f.tabCommand({ action: "new" });

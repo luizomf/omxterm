@@ -201,6 +201,7 @@ export function createTerminalTabs(
   };
 
   const removeTab = (tab: ApplicationTab, notify = true) => {
+    const selected = selectedApplicationTab();
     const index = tabs.indexOf(tab);
     if (tab.removed || index < 0) return;
     tab.removed = true;
@@ -219,7 +220,11 @@ export function createTerminalTabs(
       return;
     }
     if (index < selectedIndex) selectedIndex -= 1;
-    select(Math.min(selectedIndex, tabs.length - 1), true);
+    const nextIndex = Math.min(selectedIndex, tabs.length - 1);
+    // Splicing a selected tab already puts its neighbor at the same index.
+    // Preserve the identity transition so graphical activation/focus still run.
+    if (selected === tab) selectedIndex = -1;
+    select(nextIndex, true);
   };
 
   const closeTab = (tab: ApplicationTab | undefined) => {
