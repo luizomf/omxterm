@@ -6,6 +6,7 @@ import { appendTab } from "../../src/renderer/terminal-panes";
 import type { TerminalBridge } from "../../src/shared/terminal-bridge";
 import {
   MAX_TERMINAL_EXPORT_BYTES,
+  type TerminalClipboardAction,
   type TerminalContextMenuRequest,
   type TerminalExportContext,
   type TerminalTabCommand,
@@ -124,6 +125,10 @@ async function setup() {
     deliver: (context: TerminalExportContext) => onExport(context),
     copy: (context: TerminalExportContext) =>
       onClipboard("copy", context.target),
+    clipboardAction: (
+      action: TerminalClipboardAction,
+      context: TerminalExportContext,
+    ) => onClipboard(action, context.target),
     block: () => opened(),
     unblock: () =>
       document.querySelector<HTMLButtonElement>(".about-close")!.click(),
@@ -265,6 +270,89 @@ describe("renderer contextual export lifetime", () => {
       view.host.dispose();
     }
   });
+
+  it.each(["close-pane", "prepare-close-pane"] as const)(
+    "delivers authorized %s when About opens before target receipt",
+    async (action) => {
+      const view = await setup();
+      try {
+        view.command({ action: "split", direction: "right" });
+        await vi.waitFor(() => expect(view.surfaces).toHaveLength(2));
+        const context = view.open(1);
+        view.block();
+        expect(
+          document.querySelector<HTMLDialogElement>(".about-dialog")?.open,
+        ).toBe(true);
+        view.command({ action, target: context.target });
+        if (action === "prepare-close-pane")
+          view.command({ action: "resolve-close-pane", confirmed: true });
+        // The targeted lifecycle interaction is consumed once, despite About.
+        view.command({ action, target: context.target });
+        if (action === "prepare-close-pane")
+          view.command({ action: "resolve-close-pane", confirmed: true });
+        expect(view.surfaces[1]!.dispose).toHaveBeenCalledOnce();
+        expect(view.surfaces[0]!.dispose).not.toHaveBeenCalled();
+        expect(view.save).not.toHaveBeenCalled();
+      } finally {
+        view.host.dispose();
+      }
+    },
+  );
+
+  it.each([
+    ["copy", "copy"],
+    ["paste", "paste"],
+    ["select-all", "selectAll"],
+  ] as const)(
+    "consumes blocked popup %s without replay or export adoption",
+    async (action, effect) => {
+      const view = await setup();
+      try {
+        const context = view.open();
+        view.block();
+        view.clipboardAction(action, context);
+        expect(view.surfaces[0]![effect]).not.toHaveBeenCalled();
+        view.unblock();
+        view.clipboardAction(action, context);
+        view.deliver(context);
+        expect(view.surfaces[0]![effect]).not.toHaveBeenCalled();
+        expect(view.surfaces[0]!.exportText).not.toHaveBeenCalled();
+        expect(view.save).not.toHaveBeenCalled();
+        view.clipboardAction(action, view.open());
+        expect(view.surfaces[0]![effect]).toHaveBeenCalledOnce();
+      } finally {
+        view.host.dispose();
+      }
+    },
+  );
+
+  it.each(["copy", "paste", "select-all", "export"] as const)(
+    "a blocked stale %s target cannot consume a newer popup",
+    async (action) => {
+      const view = await setup();
+      try {
+        const stale = view.open();
+        const current = view.open(0, true);
+        view.block();
+        if (action === "export") view.deliver(stale);
+        else view.clipboardAction(action, stale);
+        view.unblock();
+        view.deliver(current);
+        expect(view.save).toHaveBeenCalledExactlyOnceWith({
+          kind: "selection",
+          text: "source 0",
+        });
+        expect(view.surfaces[0]!.exportText).toHaveBeenCalledExactlyOnceWith(
+          "selection",
+        );
+        expect(view.surfaces[0]!.copy).not.toHaveBeenCalled();
+        expect(view.surfaces[0]!.paste).not.toHaveBeenCalled();
+        expect(view.surfaces[0]!.selectAll).not.toHaveBeenCalled();
+      } finally {
+        view.host.dispose();
+      }
+    },
+  );
 
   it.each(["copy first", "export first", "close first"] as const)(
     "shares one popup consumption with %s",

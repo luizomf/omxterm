@@ -83,9 +83,10 @@ export function createPaneContextMenu(options: {
       };
       return target;
     },
+    // Lifecycle delivery consumes identity/lifetime even while a modal owns input.
+    // Clipboard/export consumers apply their interaction policy after consumption.
     take(target: TerminalContextMenuTarget): TerminalPane | undefined {
-      const original = take(target);
-      return options.canInteract() ? original?.pane : undefined;
+      return take(target)?.pane;
     },
     exportRequest(
       context: TerminalExportContext,

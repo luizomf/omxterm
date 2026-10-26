@@ -325,11 +325,11 @@ export function createTerminalTabs(
       for (const tab of tabs)
         for (const pane of tabPanes(tab)) pane.surface?.zoom(command);
     },
-    clipboardAction: (action, target) =>
-      applyClipboardAction(
-        target ? contextMenu.take(target) : focusedPane(),
-        action,
-      ),
+    clipboardAction(action, target) {
+      // Consume a matching popup even when its clipboard effect is blocked.
+      const pane = target ? contextMenu.take(target) : focusedPane();
+      if (options.canFocus?.() !== false) applyClipboardAction(pane, action);
+    },
     exportRequest: contextMenu.exportRequest,
     fieldClipboard: contextMenu.fieldClipboard,
     find: () => focusedPane()?.surface?.find(),

@@ -1,24 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { MenuItemConstructorOptions } from "electron";
-import { terminalContextMenuTemplate } from "../../src/main/terminal-context-menu";
-import { startTerminalApplication } from "../../src/main/terminal-application";
-import { registerTerminalIpcRouter } from "../../src/main/terminal-ipc-controller";
-import type { SessionCallbacks } from "../../src/main/terminal-ipc-types";
-import { createElectronTerminalAdapter } from "../../src/renderer/electron-terminal-adapter";
-import type { TerminalBridge } from "../../src/shared/terminal-bridge";
-import { terminalIpc } from "../../src/shared/terminal-ipc";
-import type {
-  TerminalContextMenuClipboardAction,
-  TerminalExportContext,
-  TerminalExportSaveRequest,
-} from "../../src/shared/terminal-contract";
-import { translatorFor } from "../../src/shared/i18n";
-import {
-  createIpcHarness,
-  clipboardOptions,
-} from "../fixtures/terminal-ipc-harness";
-import { createTabsHarness } from "../fixtures/terminal-tabs-harness";
+import { popupHarness } from "../fixtures/terminal-context-menu-harness";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -29,255 +11,6 @@ const popupActions = [
   ["Close Pane", "dispose"],
   ["Export Terminal Content…", "exportText"],
 ] as const;
-
-async function popupHarness(busy = false) {
-  const ipc = createIpcHarness();
-  const router = registerTerminalIpcRouter(ipc.ipcMain);
-  const exits = new Set<Parameters<TerminalBridge["onExit"]>[0]>();
-  const sessions: SessionCallbacks[] = [];
-  const nativeClose = vi.fn();
-  const inspectBusy = vi.fn(() => busy);
-  let destroyed = false;
-  let menu: MenuItemConstructorOptions[] = [];
-  let holdClipboard = false;
-  const heldClipboard: unknown[] = [];
-  let holdExport = false;
-  const heldExports: TerminalExportContext[] = [];
-  const sentExports: TerminalExportContext[] = [];
-  const save = vi.fn(async (_request: TerminalExportSaveRequest) => {});
-  const saveIpc = vi.fn((request: TerminalExportSaveRequest) =>
-    ipc.handlers.get(terminalIpc.exportSave)!(owner, request),
-  );
-  const deliverExport = (context: TerminalExportContext) => {
-    const request = view.tabs.exportRequest(context, true);
-    if (request) void saveIpc(request);
-  };
-  let removeWindow = () => {};
-  const deliverClipboard = (payload: unknown) => {
-    if (typeof payload === "string")
-      view.tabs.clipboardAction(payload as never);
-    else {
-      const { action, target } = payload as TerminalContextMenuClipboardAction;
-      view.tabs.clipboardAction(action, target);
-    }
-  };
-  const window = {
-    isDestroyed: () => destroyed,
-    close: vi.fn(),
-    isFullScreen: () => false,
-    setFullScreen: vi.fn(),
-    isAlwaysOnTop: () => false,
-    setAlwaysOnTop: vi.fn(),
-    webContents: {
-      mainFrame: {},
-      isDestroyed: () => destroyed,
-      send(channel: string, payload: unknown) {
-        if (channel === terminalIpc.tabCommand)
-          view.tabs.handleCommand(payload as never);
-        if (channel === terminalIpc.clipboardAction) {
-          if (holdClipboard) heldClipboard.push(payload);
-          else deliverClipboard(payload);
-        }
-        if (channel === terminalIpc.exportRequest) {
-          const context = payload as TerminalExportContext;
-          sentExports.push(context);
-          if (holdExport) heldExports.push(context);
-          else deliverExport(context);
-        }
-        if (channel === terminalIpc.exit) {
-          const { sessionId, ...exit } = payload as {
-            sessionId: string;
-            exitCode: number;
-            signal: number;
-          };
-          for (const listener of exits) listener(sessionId, exit);
-        }
-      },
-    },
-  };
-  const owner = {
-    sender: window.webContents,
-    senderFrame: window.webContents.mainFrame,
-  };
-  const send = (channel: string, payload?: unknown) =>
-    ipc.listeners.get(channel)?.(owner, payload);
-  const bridge = {
-    start: async () => ipc.handlers.get(terminalIpc.start)!(owner) as string,
-    onOutput: () => () => {},
-    onExit(listener: Parameters<TerminalBridge["onExit"]>[0]) {
-      exits.add(listener);
-      return () => {
-        exits.delete(listener);
-      };
-    },
-    resize: (sessionId: string, size: { cols: number; rows: number }) =>
-      send(terminalIpc.resize, { sessionId, ...size }),
-    close: (sessionId: string) => send(terminalIpc.close, { sessionId }),
-  } satisfies Pick<
-    TerminalBridge,
-    "start" | "onOutput" | "onExit" | "resize" | "close"
-  >;
-  // This adapter test exercises only the session-facing bridge operations.
-  const sessionBridge = bridge as unknown as TerminalBridge;
-  const otherWindow = {
-    ...window,
-    webContents: { ...window.webContents, mainFrame: {}, send: vi.fn() },
-  };
-  let windowCount = 0;
-  let selected = window;
-  const confirm = vi.fn(async () => true);
-  const application = startTerminalApplication({
-    createWindow(lifecycle) {
-      const ownedWindow = windowCount++ === 0 ? window : otherWindow;
-      if (ownedWindow === window) removeWindow = lifecycle.onWindowClosed;
-      const controller = router.registerController({
-        ...clipboardOptions(),
-        exportText: save,
-        webContents: ownedWindow.webContents,
-        createSession(callbacks) {
-          sessions.push(callbacks);
-          return {
-            write: vi.fn(),
-            resize: vi.fn(),
-            close: nativeClose,
-            hasForegroundChildProcess: inspectBusy,
-          };
-        },
-        onSessionStartError: lifecycle.onSessionStartError,
-        onSessionExit: lifecycle.onSessionExit,
-        showClipboardContextMenu(request) {
-          menu = terminalContextMenuTemplate(
-            ownedWindow,
-            application,
-            request,
-            null,
-            translatorFor("en-US").t,
-          );
-        },
-      });
-      return {
-        window: ownedWindow,
-        sessionActivity: controller,
-        load: async () => {},
-      };
-    },
-    getSelectedWindow: () => selected,
-    showQuitConfirmation: confirm,
-    showCloseWindowConfirmation: confirm,
-    showCloseTabConfirmation: confirm,
-    showClosePaneConfirmation: confirm,
-    showSessionFailure: async () => {},
-    sendFontZoom: vi.fn(),
-    sendClipboardAction: (window, action, target) => {
-      window.webContents.send(
-        terminalIpc.clipboardAction,
-        target ? { action, target } : action,
-      );
-    },
-    sendExportRequest: (window, context) => {
-      window.webContents.send(terminalIpc.exportRequest, context);
-    },
-    sendSnippetsToggle: vi.fn(),
-    sendFind: vi.fn(),
-    sendTabBarToggle: vi.fn(),
-    sendTitleBarToggle: vi.fn(),
-    sendLocalImageOpen: vi.fn(),
-    toggleDeveloperTools: vi.fn(),
-    sendTabCommand: (target, command) => {
-      target.webContents.send(terminalIpc.tabCommand, command);
-    },
-    quit: vi.fn(),
-  });
-  await application.newWindow();
-  const view = createTabsHarness({
-    surfaceOptions: {
-      clipboard: {
-        writeText: async () => {},
-        readText: async () => "",
-        confirmPaste: async () => false,
-        requestContextMenu: (request) =>
-          send(terminalIpc.clipboardContextMenu, request),
-      },
-    },
-    tabsOptions: {
-      createAdapter: () => createElectronTerminalAdapter(sessionBridge),
-      notifySelection: (sessionId, tabSessionIds) =>
-        send(terminalIpc.tabSelected, { sessionId, tabSessionIds }),
-    },
-  });
-  await view.tabs.ready;
-  view.sessionAdapters[0]!.resize({ cols: 120, rows: 40 });
-  view.tabs.handleCommand({ action: "split", direction: "right" });
-  await vi.waitFor(() => expect(view.surfaces).toHaveLength(2));
-  for (const [index, surface] of view.surfaces.entries())
-    surface.dispose.mockImplementation(() =>
-      view.sessionAdapters[index]!.close(),
-    );
-  return {
-    ...view,
-    sessions,
-    save,
-    saveIpc,
-    sentExports,
-    confirm,
-    nativeClose,
-    inspectBusy,
-    application,
-    otherWindow,
-    removeWindow: () => removeWindow(),
-    disposeController: () => router.dispose(),
-    requestMenu(payload?: unknown, senderFrame = owner.senderFrame) {
-      ipc.listeners.get(terminalIpc.clipboardContextMenu)!(
-        { ...owner, senderFrame },
-        payload,
-      );
-      return menu.map((item) => item.label).filter(Boolean);
-    },
-    clickCurrent(label: string) {
-      menu.find((entry) => entry.label === label)!.click!(
-        {} as never,
-        undefined,
-        {} as never,
-      );
-    },
-    holdClipboard: () => {
-      holdClipboard = true;
-    },
-    deliverClipboard() {
-      holdClipboard = false;
-      for (const payload of heldClipboard.splice(0)) deliverClipboard(payload);
-    },
-    holdExport: () => {
-      holdExport = true;
-    },
-    deliverExports() {
-      holdExport = false;
-      for (const context of heldExports.splice(0)) deliverExport(context);
-    },
-    open(index = 1, hasSelection = false) {
-      view.mountedSurfaceOptions[index]!.clipboard!.requestContextMenu({
-        target: "terminal",
-        hasSelection,
-      });
-      const capturedMenu = menu;
-      return (label: string) => {
-        const item = capturedMenu.find((entry) => entry.label === label)!;
-        item.click!({} as never, undefined, {} as never);
-      };
-    },
-    destroy: () => {
-      destroyed = true;
-    },
-    async changeWindow() {
-      await application.newWindow();
-      selected = otherWindow;
-    },
-    dispose() {
-      view.tabs.dispose();
-      router.dispose();
-    },
-  };
-}
 
 describe("export through the shared native popup and trusted save IPC", () => {
   it.each([false, true])(
@@ -402,6 +135,42 @@ describe("export through the shared native popup and trusted save IPC", () => {
           expect(view.surfaces[1]![operation]).toHaveBeenCalledTimes(
             first === label ? 1 : 0,
           );
+      } finally {
+        view.dispose();
+      }
+    },
+  );
+});
+
+describe("main-authorized popup delivery across modal activation", () => {
+  it.each([false, true])(
+    "delivers held Close Pane after interaction blocks (Busy: %s)",
+    async (busy) => {
+      const view = await popupHarness(busy);
+      try {
+        view.holdCommands();
+        view.open(1)("Close Pane");
+        await vi.waitFor(() =>
+          expect(view.pendingCommands()).toHaveLength(busy ? 2 : 1),
+        );
+        const commands = view.pendingCommands();
+        expect(commands[0]).toEqual({
+          action: busy ? "prepare-close-pane" : "close-pane",
+          target: { sessionId: "s2", menuId: 1 },
+        });
+        if (busy)
+          expect(commands[1]).toEqual({
+            action: "resolve-close-pane",
+            confirmed: true,
+          });
+        expect(view.confirm).toHaveBeenCalledTimes(busy ? 1 : 0);
+        view.setInteractionBlocked(true);
+        view.deliverCommands();
+        for (const command of commands) view.tabs.handleCommand(command);
+        expect(view.surfaces[1]!.dispose).toHaveBeenCalledOnce();
+        expect(view.surfaces[0]!.dispose).not.toHaveBeenCalled();
+        expect(view.nativeClose).toHaveBeenCalledOnce();
+        expect(view.save).not.toHaveBeenCalled();
       } finally {
         view.dispose();
       }
