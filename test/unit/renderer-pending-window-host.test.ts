@@ -29,6 +29,7 @@ function createSurface() {
     paste: vi.fn(),
     selectAll: vi.fn(),
     find: vi.fn(),
+    exportText: vi.fn(() => "first mounted source"),
   };
 }
 
@@ -36,7 +37,7 @@ it.each([true, false])(
   "receives related actions during first mount and cleans early subscriptions (settle before pagehide: %s)",
   async (settleBeforeHide) => {
     type Options = Parameters<typeof mountTerminalWindowPage>[1];
-    const removals = Array.from({ length: 6 }, () => vi.fn());
+    const removals = Array.from({ length: 7 }, () => vi.fn());
     const zoom = vi.fn<NonNullable<Options["subscribeToFontZoom"]>>(
       () => removals[0]!,
     );
@@ -55,6 +56,19 @@ it.each([true, false])(
     const snippets = vi.fn<
       NonNullable<NonNullable<Options["snippets"]>["subscribeToToggle"]>
     >(() => removals[5]!);
+    const exports = vi.fn<NonNullable<Options["subscribeToExportRequests"]>>(
+      () => removals[6]!,
+    );
+    const save = vi.fn<NonNullable<Options["saveTerminalExport"]>>(
+      async () => {},
+    );
+    const clipboardHost = {
+      readText: async () => "",
+      writeText: async () => {},
+      confirmPaste: async () => false,
+      requestContextMenu:
+        vi.fn<NonNullable<Options["clipboard"]>["requestContextMenu"]>(),
+    };
     const elements = createPageElements();
     const aside = document.createElement("aside");
     aside.hidden = true;
@@ -69,7 +83,12 @@ it.each([true, false])(
       release = resolve;
     });
     const load = vi.fn(async () => ({ snippets: [] }));
-    const mount = vi.fn<NonNullable<Options["mount"]>>(() => pending);
+    const mount = vi.fn<NonNullable<Options["mount"]>>(
+      async (_container, adapter) => {
+        await adapter.start({ onOutput() {}, onExit() {} });
+        return pending;
+      },
+    );
     const host = mountTerminalWindowPage(elements, {
       createAdapter: createAdapterFactory(),
       mount,
@@ -78,6 +97,9 @@ it.each([true, false])(
       subscribeToTabBarToggle: tabbar,
       subscribeToFind: find,
       subscribeToTabCommands: commands,
+      subscribeToExportRequests: exports,
+      saveTerminalExport: save,
+      clipboard: clipboardHost,
       snippets: { element: aside, load, subscribeToToggle: snippets },
     });
     try {
@@ -85,6 +107,17 @@ it.each([true, false])(
       void host.ready.then(() => {
         ready = true;
       });
+      expect(exports).toHaveBeenCalledOnce();
+      const earlyExport = {
+        kind: "content",
+        target: { sessionId: "s1", menuId: 1 },
+      } as const;
+      mount.mock.calls[0]![2].clipboard!.requestContextMenu({
+        target: "terminal",
+        hasSelection: false,
+      });
+      expect(clipboardHost.requestContextMenu).not.toHaveBeenCalled();
+      exports.mock.calls[0]![0](earlyExport);
       zoom.mock.calls[0]![0]("in");
       clipboard.mock.calls[0]![0]("paste");
       find.mock.calls[0]![0]();
@@ -103,7 +136,23 @@ it.each([true, false])(
       expect(surface.find).not.toHaveBeenCalled();
       expect(surface.paste).not.toHaveBeenCalled();
       expect(surface.focus).not.toHaveBeenCalled();
+      expect(surface.exportText).not.toHaveBeenCalled();
+      expect(save).not.toHaveBeenCalled();
+      // No queued export is replayed on mount settlement.
       if (settleBeforeHide) {
+        mount.mock.calls[0]![2].clipboard!.requestContextMenu({
+          target: "terminal",
+          hasSelection: false,
+        });
+        const target = clipboardHost.requestContextMenu.mock.calls.at(-1)![0]!;
+        const context = { kind: "content", target } as const;
+        exports.mock.calls[0]![0](context);
+        exports.mock.calls[0]![0](context);
+        expect(save).toHaveBeenCalledExactlyOnceWith({
+          kind: "content",
+          text: "first mounted source",
+        });
+        expect(surface.exportText).toHaveBeenCalledExactlyOnceWith("content");
         expect(surface.zoom).toHaveBeenCalledExactlyOnceWith("in");
         expect(document.activeElement).toBe(search);
         mount.mockImplementation(async () => createSurface());
@@ -113,6 +162,9 @@ it.each([true, false])(
         window.dispatchEvent(new Event("pagehide"));
       }
       host.dispose();
+      const reads = surface.exportText.mock.calls.length;
+      exports.mock.calls[0]![0](earlyExport);
+      expect(surface.exportText).toHaveBeenCalledTimes(reads);
       for (const remove of removals) expect(remove).toHaveBeenCalledOnce();
       expect(surface.dispose).toHaveBeenCalledOnce();
     } finally {
@@ -124,7 +176,7 @@ it.each([true, false])(
   },
 );
 
-it.each(["clipboard", "tabs", "snippets"] as const)(
+it.each(["clipboard", "export", "tabs", "snippets"] as const)(
   "cleans partial synchronous setup when %s registration throws",
   async (failureAt) => {
     const elements = createPageElements();
@@ -133,6 +185,9 @@ it.each(["clipboard", "tabs", "snippets"] as const)(
     const removeZoom = vi.fn();
     const removeClipboard = vi.fn();
     const removeTabs = vi.fn();
+    const removeTabbar = vi.fn();
+    const removeFind = vi.fn();
+    const removeExport = vi.fn();
     const removeConfiguration = vi.fn();
     const failure = new Error("registration failed");
     let finish!: (surface: TerminalSurface) => void;
@@ -153,6 +208,12 @@ it.each(["clipboard", "tabs", "snippets"] as const)(
           if (failureAt === "clipboard") throw failure;
           return removeClipboard;
         },
+        subscribeToTabBarToggle: () => removeTabbar,
+        subscribeToFind: () => removeFind,
+        subscribeToExportRequests() {
+          if (failureAt === "export") throw failure;
+          return removeExport;
+        },
         subscribeToTabCommands() {
           if (failureAt === "tabs") throw failure;
           return removeTabs;
@@ -172,6 +233,13 @@ it.each(["clipboard", "tabs", "snippets"] as const)(
       failureAt === "clipboard" ? 0 : 1,
     );
     expect(removeTabs).toHaveBeenCalledTimes(failureAt === "snippets" ? 1 : 0);
+    expect(removeTabbar).toHaveBeenCalledTimes(
+      failureAt === "clipboard" ? 0 : 1,
+    );
+    expect(removeFind).toHaveBeenCalledTimes(failureAt === "clipboard" ? 0 : 1);
+    expect(removeExport).toHaveBeenCalledTimes(
+      failureAt === "tabs" || failureAt === "snippets" ? 1 : 0,
+    );
     expect(mount.mock.calls[0]![2].abortSignal?.aborted).toBe(true);
     finish(surface);
     await vi.waitFor(() => expect(surface.dispose).toHaveBeenCalledOnce());

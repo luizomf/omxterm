@@ -63,6 +63,37 @@ describe("message catalogs", () => {
     },
   );
 
+  it.each([
+    [
+      "en-US",
+      "Export Selection…",
+      "Export Terminal Content…",
+      "Export Selection",
+      "Export Terminal Content",
+      "Text",
+    ],
+    [
+      "pt-BR",
+      "Exportar Seleção…",
+      "Exportar Conteúdo do Terminal…",
+      "Exportar Seleção",
+      "Exportar Conteúdo do Terminal",
+      "Texto",
+    ],
+  ] as const)(
+    "%s provides localized export menu, chooser and filter labels",
+    (language, selection, content, selectionTitle, contentTitle, textFiles) => {
+      const { t } = translatorFor(language);
+      expect(t("menu.exportSelection")).toBe(selection);
+      expect(t("menu.exportContent")).toBe(content);
+      expect(t("export.title.selection")).toBe(selectionTitle);
+      expect(t("export.title.content")).toBe(contentTitle);
+      expect(t("export.textFiles")).toBe(textFiles);
+      expect(t("export.tooLarge.message", { limit: 16 })).toContain("16 MiB");
+      expect(t("export.tooLarge.detail")).not.toContain("{limit}");
+    },
+  );
+
   it("names each Settings language in itself in every catalog", () => {
     for (const catalog of Object.values(MESSAGE_CATALOGS)) {
       expect(catalog["settings.english"]).toBe("English (United States)");
@@ -190,7 +221,13 @@ describe("translated main-process text", () => {
       labels(
         terminalClipboardContextMenuTemplate(actions, translatorFor("pt-BR").t),
       ),
-    ).toEqual(["Copiar", "Colar", "Selecionar Tudo", "Fechar Painel"]);
+    ).toEqual([
+      "Copiar",
+      "Colar",
+      "Selecionar Tudo",
+      "Exportar Conteúdo do Terminal…",
+      "Fechar Painel",
+    ]);
   });
 
   it("translates failure dialogs without exposing raw causes", () => {

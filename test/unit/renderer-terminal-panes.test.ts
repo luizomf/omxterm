@@ -362,12 +362,18 @@ describe("Terminal Pane context menu", () => {
     await harness.tabs.ready;
     harness.sessionAdapters[0]!.resize({ cols: 120, rows: 40 });
     harness.tabs.handleCommand({ action: "split", direction: "right" });
-    harness.mountedSurfaceOptions[1]!.clipboard!.requestContextMenu();
+    harness.mountedSurfaceOptions[1]!.clipboard!.requestContextMenu({
+      target: "terminal",
+      hasSelection: false,
+    });
     expect(clipboard.requestContextMenu).not.toHaveBeenCalled();
     finish();
     await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
     harness.adapters[1]!.handlers!.onExit({ exitCode: 0, signal: 9 });
-    harness.mountedSurfaceOptions[1]!.clipboard!.requestContextMenu();
+    harness.mountedSurfaceOptions[1]!.clipboard!.requestContextMenu({
+      target: "terminal",
+      hasSelection: false,
+    });
     expect(clipboard.requestContextMenu).not.toHaveBeenCalled();
     harness.tabs.dispose();
   });
@@ -386,12 +392,16 @@ describe("Terminal Pane context menu", () => {
     await harness.tabs.ready;
     harness.sessionAdapters[0]!.resize({ cols: 120, rows: 40 });
     const menu = (index: number) =>
-      harness.mountedSurfaceOptions[index]!.clipboard!.requestContextMenu();
+      harness.mountedSurfaceOptions[index]!.clipboard!.requestContextMenu({
+        target: "terminal",
+        hasSelection: false,
+      });
 
     menu(0);
     expect(clipboard.requestContextMenu).toHaveBeenLastCalledWith({
       sessionId: "s1",
       menuId: 1,
+      hasSelection: false,
     });
 
     await split(harness, "right");
@@ -401,6 +411,7 @@ describe("Terminal Pane context menu", () => {
     expect(clipboard.requestContextMenu).toHaveBeenLastCalledWith({
       sessionId: "s1",
       menuId: 2,
+      hasSelection: false,
       closePane: true,
     });
     expect(harness.notifySelection.mock.calls.at(-1)?.[0]).toBe("s1");
@@ -420,6 +431,7 @@ describe("Terminal Pane context menu", () => {
     expect(clipboard.requestContextMenu).toHaveBeenLastCalledWith({
       sessionId: "s2",
       menuId: 3,
+      hasSelection: false,
     });
     harness.tabs.dispose();
   });

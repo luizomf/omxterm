@@ -508,6 +508,40 @@ it("wires the native context menu to explicit Terminal Surface actions", () => {
   ]);
 });
 
+it.each([
+  ["en-US", "selection", "Export Selection…"],
+  ["en-US", "content", "Export Terminal Content…"],
+  ["pt-BR", "selection", "Exportar Seleção…"],
+  ["pt-BR", "content", "Exportar Conteúdo do Terminal…"],
+] as const)(
+  "offers one localized %s %s export alongside Close Pane",
+  (language, kind, label) => {
+    const click = vi.fn();
+    const menu = terminalClipboardContextMenuTemplate(
+      {
+        copy: vi.fn(),
+        paste: vi.fn(),
+        selectAll: vi.fn(),
+        exportText: { kind, click },
+        closePane: { click: vi.fn(), accelerator: "Control+Shift+K" },
+      },
+      translatorFor(language).t,
+    );
+    expect(menu.filter((item) => item.click === click)).toEqual([
+      { label, click },
+    ]);
+    expect(menu.at(-1)).toMatchObject({ accelerator: "Control+Shift+K" });
+    const applicationMenu = JSON.stringify(
+      terminalApplicationMenuTemplate(
+        "OMXTerm",
+        menuActions(),
+        DEFAULT_TERMINAL_KEYBINDS,
+      ),
+    );
+    expect(applicationMenu).not.toContain("Export");
+  },
+);
+
 it("offers Close Pane in a split pane's context menu with its current keybind", () => {
   const actions = { copy: vi.fn(), paste: vi.fn(), selectAll: vi.fn() };
   const click = vi.fn();

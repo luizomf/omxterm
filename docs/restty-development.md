@@ -28,6 +28,15 @@ The portable Terminal Surface (`src/terminal-surface/`) receives a session Adapt
 - Accepted user input (typing, paste, snippets, or dropped paths) returns the viewport to the live bottom; background output, focus, and selection do not jump the scroll position.
 - Desktops with a fine pointer use native scrolling even if touch hardware is present.
 
+### Read-only export snapshots
+
+The prepared runtime exposes `getBufferText` through its existing selection-text
+query, using the retained scrollback and screen range without changing selection,
+hover, cursor or rendering state. The alternate screen reads only its active
+contents. This is a synchronous text snapshot, not recording or persistence;
+the host owns the explicit-save interaction and its inclusive 16 MiB UTF-8 limit.
+The core's storage ceiling is not an export-size guarantee.
+
 ### Input, links, and titles
 
 - Copy/paste, Protected Paste, snippets, file-path insertion, local image previews, and write-only OSC 52 use OMXTerm host routes. Restty's built-in browser clipboard and URL-opening callbacks are disabled.
@@ -154,12 +163,39 @@ Prepared SHA-256 digests:
 
 | Input                      | SHA-256                                                            |
 | -------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime  | `f15c6c25cb2efb879b5a00b09640fcdb2d364c8d566237ff5d0ae63975bb3e44` |
+| Restty JavaScript runtime  | `f4adfe4712a8edda01733f712318c39fb56574c16340f2960a4538802fe92d7b` |
 | Embedded-core chunk        | `03d79d4c745e3c74dd90082a100cbf85e5060e23ff9d16fba338b11d2db1e6be` |
 | Event declarations         | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core          | `a52f314c2e91e87394e67307d6b0067c8ba28f6b1e31e7587872b9c41ce88c41` |
 | Unix `node-pty` runtime    | `e1cd61e52f681871c401ca54a21382173281532e8eaa9f679bfe549be9a427b1` |
 | Windows `node-pty` runtime | `3f4cf11eaa6cc07bacb34e3693857e123e3e55edfb446d7657d80cf95f9ce244` |
+
+### JavaScript preparation history
+
+Preparation retains the ordered historical suffix: pre-wide-wrap → wide-wrap →
+core-authoritative CPR → buffer-text. The previous current-main `f15c6c25…` input
+receives buffer-text once. Two explicit export branch inputs already contain it:
+maintainer `3b1076d3…` receives wide-wrap then CPR, and contributor `c55a8f40…`
+receives CPR only. All routes produce the identical JavaScript digest above;
+combined input is a no-op and unknown/drifted input is rejected before writing
+JavaScript. Core/WASM artifacts and source pins are unchanged by this composition.
+
+`restty-runtime-history.json` preserves the linear reverse deltas, beginning with
+combined → previous current main. The sibling `restty-export-runtime-history.json`
+contains two fixed reverse deltas, each independently based on the combined seed.
+The history test reconstructs these bytes without importing correction arrays,
+checks their exact hashes, prepares twice, and verifies drift rejection without
+rewriting the rejected JavaScript:
+
+```sh
+npm ci --ignore-scripts
+node scripts/prepare-restty-runtime.mjs
+node scripts/prepare-restty-runtime.mjs
+npx vitest run test/integration/restty-runtime-history.test.ts test/integration/restty-buffer-text-core.test.ts test/integration/restty-cpr-core.test.ts test/integration/restty-reflow-core.test.ts test/integration/restty-resize-core.test.ts test/integration/restty-palette-core.test.ts test/unit/restty-dependency-contract.test.ts test/unit/restty-terminal-capabilities.test.ts test/unit/restty-clipboard-parser.test.ts
+```
+
+This source/headless preparation deliberately omits Electron and native PTY
+postinstall work; it is not native runtime or graphical qualification.
 
 ### Rebuilding the WASM core
 

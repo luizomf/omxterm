@@ -7,10 +7,11 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { prepareResttyRuntime } from "../../scripts/prepare-restty-runtime.mjs";
 import history from "../fixtures/restty-runtime-history.json";
+import exportHistory from "../fixtures/restty-export-runtime-history.json";
 
 const dist = path.dirname(createRequire(import.meta.url).resolve("restty"));
 const correctedDigest =
-  "f15c6c25cb2efb879b5a00b09640fcdb2d364c8d566237ff5d0ae63975bb3e44";
+  "f4adfe4712a8edda01733f712318c39fb56574c16340f2960a4538802fe92d7b";
 
 // Prepare only task-owned copies, including core and types: other fixtures may
 // still be exercising the installed prior runtime during a correction review.
@@ -43,7 +44,7 @@ try {
 const digest = (source: string) =>
   createHash("sha256").update(source).digest("hex");
 
-// Fixed reverse line deltas captured from the pre-refactor runtime history.
+// Fixed reverse line deltas captured from reviewed runtime snapshots.
 // Every reconstructed input is independently identified by its reviewed hash;
 // this does not import correction arrays or derive expected bytes from them.
 let lines = corrected.split("\n");
@@ -57,6 +58,19 @@ for (const state of history) {
     name: state.name,
     sha256: state.sha256,
     source: lines.join("\n"),
+  });
+}
+
+// Each export branch delta starts independently at the combined seed. Its line
+// offsets do not describe either the linear history or the other export branch.
+for (const state of exportHistory) {
+  const branchLines = corrected.split("\n");
+  for (const edit of state.edits)
+    branchLines.splice(edit.start, edit.deleteCount, ...edit.lines);
+  states.push({
+    name: state.name,
+    sha256: state.sha256,
+    source: branchLines.join("\n"),
   });
 }
 

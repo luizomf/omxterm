@@ -56,8 +56,8 @@ OMXTerm:
 - uses one independent shell session per Terminal Pane, with one or more panes
   per Terminal Tab and one or more tabs per native Terminal Window;
 - provides native new-window, new-tab, close, copy, paste, select-all,
-  scrollback search, zoom, fullscreen, always-on-top, bounded local-image
-  preview, and quit actions without an in-window toolbar;
+  scrollback search, explicit text export, zoom, fullscreen, always-on-top,
+  bounded local-image preview, and quit actions without an in-window toolbar;
 - renders the bundled [`omtheme`](omtheme.json) palette by default, allows one
   explicitly configured external Terminal Theme, keeps SGR bold text on its
   requested ANSI `0–7` color without remapping it to bright `8–15` (applications
@@ -196,7 +196,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   pane is still mounting or retained after native exit. A pending or dead focused
   pane never borrows another tab's Busy decision; Close Pane considers only its
   captured focused pane. Closing a window's last tab closes that window. The
-  renderer subscribes to tab commands, clipboard, Find, zoom, tab-bar and snippets
+  renderer subscribes to tab commands, clipboard, export, Find, zoom, tab-bar and snippets
   actions during host setup, without waiting for the first Surface to mount.
   Close Tab cancels a pending first tab through the normal empty-window lifecycle;
   queued New Tab cannot revive that owner. Host-owned zoom and tab-bar state and
@@ -898,6 +898,44 @@ Only an explicit Copy from the focused field moves the selected query text,
 through the same main-owned clipboard IPC as any other Copy. Find is ignored
 while a Local Image Preview or About owns modal input.
 
+Explicit Export is offered from the terminal context menu. With selected text
+the menu shows **Export Selection…**, otherwise **Export Terminal Content…**;
+the label is fixed when the menu opens, and the saved text matches it. A
+right-click on the search query or an auxiliary panel text field offers only
+Copy, Paste and Select All for that field, without an export item. Selection
+export saves the selected text. Content export saves the source pane's retained
+Scrollback Buffer and visible screen, or only the alternate screen while it is
+active, read through the prepared runtime without creating, changing or
+clearing a selection. The choice is bound to the pane whose Surface opened the
+menu, its exact live Surface and the offered kind, through the same one-shot
+popup identity as clipboard and Close Pane. Before callback receipt, changing
+panes or tabs (including away and back), pane end/failure/removal, a field or
+newer popup, and owner disposal invalidate the interaction. A stale callback
+never consumes a newer popup; a matching blocked or wrong-kind callback consumes
+its own interaction without reading. A valid callback reads the original Surface
+once synchronously, before any dialog; later focus changes cannot alter those
+bytes, and there is no replacement-pane fallback.
+The menu item, dialogs and notices follow the Interface Language. Export text is limited
+to an inclusive 16 MiB of UTF-8, with renderer preflight and independent preload/main validation. The core's scrollback byte limit does not keep extracted
+text below that bound, because combining marks and wide graphemes expand it.
+Text over the limit is never truncated or sent; main shows an error that nothing
+was saved and suggests exporting a smaller selection. Main validates the
+request, a kind plus bounded text or the fixed `{ notice: "too-large" }` report, and owns a
+native save dialog that suggests
+`omxterm-selection-…` or `omxterm-terminal-…` with a local timestamp in the
+Documents folder and uses the platform's overwrite confirmation. Cancelling
+writes nothing. The file is UTF-8 with LF line breaks: the core trims each row's
+trailing padding, trailing blank rows are dropped, and the file ends with
+exactly one line break. On macOS and Linux a newly created file is readable
+only by its owner. Whitespace-only content shows a notice instead of a dialog,
+setup, save-dialog or write failures show a fixed actionable error without raw
+native details or paths. A notice that fails is not retried. Controller,
+BrowserWindow and WebContents must remain alive: initial owner loss is inert;
+late chooser resolution or rejection starts no write or orphan notice. A write
+already started may settle after owner loss, without a rollback promise or an
+orphan error notice. Export is never automatic or continuous, and neither the
+text nor the destination enters operational logs.
+
 ## Clipboard
 
 - Selection never copies automatically.
@@ -1392,6 +1430,12 @@ contents, or Terminal Payload. Logs may describe OMXTerm lifecycle, validation,
 IPC, PTY control, resize, duration, and failures; they must never contain PTY
 input/output, clipboard data, environment contents, configuration contents,
 executable names, command arguments, commands, titles, secrets, or transcripts.
+
+Explicit user-requested copying, local search and saving terminal output are
+separate from diagnostic logging. Scrollback Search stays in memory; Explicit
+Export may persist only the requested text to the user-chosen file through the
+normal save chooser, without an additional opt-in setting. Neither authorizes
+automatic recording, diagnostic payload capture or network transmission.
 
 The application performs no network requests: no analytics, telemetry, crash
 reporting, update check, or remote log delivery. Child processes retain their

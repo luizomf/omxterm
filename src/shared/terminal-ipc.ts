@@ -23,6 +23,8 @@ export const terminalIpc = {
   clipboardRead: "terminal:clipboard-read",
   clipboardConfirmPaste: "terminal:clipboard-confirm-paste",
   clipboardContextMenu: "terminal:clipboard-context-menu",
+  exportRequest: "terminal:export-request",
+  exportSave: "terminal:export-save",
   snippets: "terminal:snippets",
   snippetsToggle: "terminal:snippets-toggle",
   tabBarToggle: "terminal:tab-bar-toggle",

@@ -1,11 +1,14 @@
 import type {
   TerminalClipboardAction,
   TerminalContextMenuTarget,
+  TerminalExportContext,
+  TerminalExportSaveRequest,
   TerminalFontZoom,
   TerminalSessionId,
   TerminalTabCommand,
 } from "../shared/terminal-contract";
 import type {
+  TerminalClipboard,
   TerminalSurface,
   TerminalSurfaceConfiguration,
   TerminalSurfaceOptions,
@@ -16,7 +19,10 @@ import { snippetTarget, type SnippetTarget } from "./snippet-target";
 import { englishLanguage, type RendererLanguage } from "./renderer-language";
 import { createPaneOperations } from "./terminal-pane-operations";
 import { createPaneMount } from "./terminal-pane-mount";
-import { createPaneContextMenu } from "./terminal-pane-context-menu";
+import {
+  createPaneContextMenu,
+  type TerminalHostClipboard,
+} from "./terminal-pane-context-menu";
 import {
   appendTab,
   disposePane,
@@ -47,7 +53,9 @@ export interface TerminalTabsOptions {
   // A split pane passes its source session to inherit a reported directory.
   readonly createAdapter: CreatePaneAdapter;
   readonly mount: MountTerminalSurface;
-  readonly surfaceOptions: TerminalSurfaceOptions;
+  readonly surfaceOptions: Omit<TerminalSurfaceOptions, "clipboard"> & {
+    readonly clipboard?: TerminalHostClipboard;
+  };
   readonly showTabBar?: boolean;
   readonly canFocus?: () => boolean;
   // A deliberate mount may restore focus if no control took focus while it
@@ -77,6 +85,13 @@ export interface TerminalTabs {
     action: TerminalClipboardAction,
     target?: TerminalContextMenuTarget,
   ): void;
+  exportRequest(
+    context: TerminalExportContext,
+    allowed: boolean,
+  ): TerminalExportSaveRequest | undefined;
+  fieldClipboard(
+    clipboard?: TerminalHostClipboard,
+  ): TerminalClipboard | undefined;
   find(): void;
   injectText(text: string): void;
   // The selected live terminal, captured for one snippet action.
@@ -122,34 +137,17 @@ export function createTerminalTabs(
     renderStrip();
   });
 
-  const renderStrip = () => {
-    const visible = tabBarEnabled && tabs.length >= 2;
-    elements.strip.hidden = !visible;
-    document.body.classList.toggle("tabs-visible", visible);
-    if (!visible) {
-      elements.strip.replaceChildren();
-      return;
-    }
-    elements.strip.replaceChildren(
-      ...tabs.map((tab, index) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        tabDragging.bind(button, tab);
-        // The focused pane's sanitized title pushed by main (ADR 0010); the
-        // literal position stands in until the first push lands.
-        button.textContent = tab.focused.label || String(index + 1);
-        button.setAttribute("role", "tab");
-        button.setAttribute(
-          "aria-selected",
-          index === selectedIndex ? "true" : "false",
-        );
-        button.addEventListener("click", () => {
-          if (!disposed) select(tabs.indexOf(tab));
-        });
-        return button;
-      }),
+  const renderStrip = () =>
+    renderTabStrip(
+      elements.strip,
+      tabs,
+      selectedIndex,
+      tabBarEnabled,
+      tabDragging.bind,
+      (tab) => {
+        if (!disposed) select(tabs.indexOf(tab));
+      },
     );
-  };
 
   // Selection is a complete snapshot even while focus has no live session.
   const notifyFocus = (tab: TerminalTab) => {
@@ -230,6 +228,7 @@ export function createTerminalTabs(
     focus: (pane, unchanged) => focusPane(pane, options, true, unchanged),
     focusClicked: (pane) => panes.focusPane(pane.tab, pane, true),
     captureContextMenuTarget: contextMenu.capture,
+    fieldClipboard: contextMenu.fieldClipboard,
   });
 
   const panes = createPaneOperations({
@@ -326,11 +325,13 @@ export function createTerminalTabs(
       for (const tab of tabs)
         for (const pane of tabPanes(tab)) pane.surface?.zoom(command);
     },
-    clipboardAction: (action, target) =>
-      applyClipboardAction(
-        target ? contextMenu.take(target) : focusedPane(),
-        action,
-      ),
+    clipboardAction(action, target) {
+      // Consume a matching popup even when its clipboard effect is blocked.
+      const pane = target ? contextMenu.take(target) : focusedPane();
+      if (options.canFocus?.() !== false) applyClipboardAction(pane, action);
+    },
+    exportRequest: contextMenu.exportRequest,
+    fieldClipboard: contextMenu.fieldClipboard,
     find: () => focusedPane()?.surface?.find(),
     injectText: (text) => void focusedPane()?.surface?.inject(text),
     captureSnippetTarget: () => snippetTarget(focusedPane()),
@@ -358,6 +359,39 @@ export function createTerminalTabs(
       tabs.length = 0;
     },
   };
+}
+
+// Presentation only; tab order, selection and lifetime remain in the owner.
+function renderTabStrip(
+  strip: HTMLElement,
+  tabs: readonly TerminalTab[],
+  selectedIndex: number,
+  enabled: boolean,
+  bindDragging: (button: HTMLButtonElement, tab: TerminalTab) => void,
+  select: (tab: TerminalTab) => void,
+): void {
+  const document = strip.ownerDocument;
+  const visible = enabled && tabs.length >= 2;
+  strip.hidden = !visible;
+  document.body.classList.toggle("tabs-visible", visible);
+  strip.replaceChildren(
+    ...(visible
+      ? tabs.map((tab, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          bindDragging(button, tab);
+          // The focused pane's sanitized title pushed by main (ADR 0010).
+          button.textContent = tab.focused.label || String(index + 1);
+          button.setAttribute("role", "tab");
+          button.setAttribute(
+            "aria-selected",
+            index === selectedIndex ? "true" : "false",
+          );
+          button.addEventListener("click", () => select(tab));
+          return button;
+        })
+      : []),
+  );
 }
 
 function applyClipboardAction(

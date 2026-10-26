@@ -3,11 +3,13 @@ import type {
   TerminalSessionId,
 } from "../shared/terminal-contract";
 import type {
+  TerminalClipboard,
   TerminalSurface,
   TerminalSurfaceConfiguration,
   TerminalSurfaceOptions,
 } from "../terminal-surface/terminal-surface";
 import type { TerminalTabsOptions } from "./terminal-tabs";
+import type { TerminalHostClipboard } from "./terminal-pane-context-menu";
 import {
   endPane,
   paneSessionAdapter,
@@ -21,7 +23,7 @@ import {
 export function createPaneMount(deps: {
   readonly document: Document;
   readonly options: TerminalTabsOptions;
-  readonly surfaceOptions: () => TerminalSurfaceOptions;
+  readonly surfaceOptions: () => TerminalTabsOptions["surfaceOptions"];
   readonly zoomSteps: () => number;
   readonly disposed: () => boolean;
   readonly selectedTab: () => TerminalTab | undefined;
@@ -36,7 +38,11 @@ export function createPaneMount(deps: {
   readonly focusClicked: (pane: TerminalPane) => void;
   readonly captureContextMenuTarget: (
     pane: TerminalPane,
+    hasSelection: boolean,
   ) => TerminalContextMenuTarget | undefined;
+  readonly fieldClipboard: (
+    clipboard?: TerminalHostClipboard,
+  ) => TerminalClipboard | undefined;
 }) {
   const { document, options } = deps;
   return async (pane: TerminalPane): Promise<void> => {
@@ -59,21 +65,31 @@ export function createPaneMount(deps: {
     // the Surface itself stays pane-unaware. Events can only follow session
     // output, so the id is always known by the time they fire.
     const clipboard = deps.surfaceOptions().clipboard;
+    const { clipboard: _clipboard, ...baseSurfaceOptions } =
+      deps.surfaceOptions();
     const paneSurfaceOptions: TerminalSurfaceOptions = {
-      ...deps.surfaceOptions(),
+      ...baseSurfaceOptions,
       // Focus before capturing this pane and its live Surface for one popup;
       // a split pane's menu also offers Close Pane.
       ...(clipboard
         ? {
             clipboard: {
               ...clipboard,
-              requestContextMenu() {
+              requestContextMenu(request) {
                 if (deps.disposed() || pane.removed || pane.ended) return;
+                if (request.target === "field") {
+                  deps.fieldClipboard(clipboard)?.requestContextMenu(request);
+                  return;
+                }
                 deps.focusClicked(pane);
-                const target = deps.captureContextMenuTarget(pane);
+                const target = deps.captureContextMenuTarget(
+                  pane,
+                  request.hasSelection,
+                );
                 if (!target) return;
                 clipboard.requestContextMenu({
                   ...target,
+                  hasSelection: request.hasSelection,
                   ...(tabPanes(pane.tab).length > 1 ? { closePane: true } : {}),
                 });
               },
@@ -150,7 +166,7 @@ function observeMountFocus(document: Document, signal: AbortSignal) {
 }
 
 function completeConfiguration(
-  options: TerminalSurfaceOptions,
+  options: TerminalTabsOptions["surfaceOptions"],
 ): TerminalSurfaceConfiguration | undefined {
   if (
     options.appearance?.fontSize === undefined ||

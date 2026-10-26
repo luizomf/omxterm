@@ -1,5 +1,26 @@
 [
   {
+    "name": "priorBufferTextDigest",
+    "sha256": "f15c6c25cb2efb879b5a00b09640fcdb2d364c8d566237ff5d0ae63975bb3e44",
+    "edits": [
+      {
+        "start": 55152,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 49570,
+        "deleteCount": 1,
+        "lines": []
+      },
+      {
+        "start": 49462,
+        "deleteCount": 13,
+        "lines": []
+      }
+    ]
+  },
+  {
     "name": "priorCprDigest",
     "sha256": "3c4dc8554c8ccc91f0b34ebea8a5638fe6592c1a973acc0a64dafcb33ab8387e",
     "edits": [

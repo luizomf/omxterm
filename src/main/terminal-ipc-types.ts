@@ -3,6 +3,7 @@ import type {
   TerminalSessionId,
   TerminalContextMenuRequest,
   TerminalContextMenuTarget,
+  TerminalExportSaveRequest,
 } from "../shared/terminal-contract";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
@@ -91,6 +92,10 @@ export interface TerminalIpcControllerOptions {
   readonly showClipboardContextMenu: (
     request?: TerminalContextMenuRequest,
   ) => void;
+  readonly exportText?: (
+    request: TerminalExportSaveRequest,
+    isOwnerAlive: () => boolean,
+  ) => Promise<void>;
   readonly onTitleRequest: (
     sessionId: TerminalSessionId,
     request: string,
