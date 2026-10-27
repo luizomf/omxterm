@@ -6,13 +6,16 @@ import { expect, it } from "vitest";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
 import { buildFixture } from "../fixtures/font-read-reload-build";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
+import {
+  assertOldPostReadRejection,
+  fontReadReloadResultPrefix as prefix,
+} from "../fixtures/font-read-reload-checks";
 
 const executable = createRequire(import.meta.url)("electron") as string;
-const prefix = "__OMXTERM_FONT_READ_RELOAD_RESULT__";
 it
   .skipIf(!["darwin", "linux", "win32"].includes(process.platform))
   .for(["current", "old-post-read"] as const)(
-  "checks actual started font read/reload through native host/preload/Surface/PTY (%s)",
+  "checks a held native font read across reload with four mounted live Surfaces (%s)",
   { timeout: 110_000 },
   async (control, testContext) => {
     testContext.signal.throwIfAborted();
@@ -39,16 +42,7 @@ it
         prepare: () => buildFixture(root, "runner", control),
       });
       if (control === "old-post-read") {
-        expect(execution).toMatchObject({
-          exitCode: 1,
-          signal: null,
-          reason: "exit",
-          cleanupErrors: [],
-        });
-        expect(execution.stderr).toContain(
-          "Started A must complete; old post-read rejection fails here",
-        );
-        expect(execution.stdout).not.toContain(prefix);
+        assertOldPostReadRejection(execution);
         return;
       }
       expect(
@@ -60,17 +54,15 @@ it
         reason: "exit",
         cleanupErrors: [],
       });
-      const result = execution.stdout
+      const results = execution.stdout
         .split("\n")
-        .find((line) => line.startsWith(prefix));
-      expect(result).toBeDefined();
-      expect(JSON.parse(result!.slice(prefix.length)) as unknown).toEqual({
+        .filter((line) => line.startsWith(prefix));
+      expect(results).toHaveLength(1);
+      expect(JSON.parse(results[0]!.slice(prefix.length)) as unknown).toEqual({
         acceptedA: true,
         queuedB: true,
-        cancelledSibling: true,
-        disposed: true,
-        sessions: 6,
-        usable: true,
+        sessions: 4,
+        mountedSurfaces: 4,
         handlesClosed: true,
       });
     } finally {

@@ -255,18 +255,31 @@ While iterating on a specific subsystem, you can run targeted test files before 
 | Unix native resize failure                     | `npx vitest run test/integration/terminal-resize-race.test.ts test/unit/terminal-resize-failure.test.ts`                                                                                      |
 | Linux foreground Busy decision                 | `npx vitest run test/unit/linux-foreground.test.ts test/unit/postinstall.test.ts test/integration/linux-foreground.test.ts`                                                                   |
 
-The `font-read-reload` suite holds an actual main-process `FileHandle.read` before
-its positional read, retaining native discovery, bounded bytes/face validation,
-production preload, host, Surface and supervised PTYs. It checks two pending A
-consumers and queued B, one cancelled sibling during reload, exact input/child
-acknowledgements, retained healthy session identity, handle cleanup and window
-disposal without late startup. Its `old-post-read` build control restores the
-original rejection and must fail the main accepted-A result oracle, not time out
-or pass through a runtime-init delay. Run it alone on an explicitly assigned idle
-desktop with `npm test -- test/integration/font-read-reload.test.ts`.
-Headless preparation/physical-read adapter checks:
-`npm test -- test/unit/font-read-reload-fixture.test.ts`.
-Successful bundle preparation is not native runtime acceptance.
+The `font-read-reload` suite holds one actual main-process `FileHandle.read`
+before its positional read, retaining native discovery, bounded bytes/face
+validation, production preload, host, Surface and supervised PTYs. One window
+retains default/A/A/B Surfaces: two A consumers share the started read while B
+queues. It requires exact request/load outcomes, creation-time families/line
+heights and lease names, four mounted live sessions with distinct actual start
+receipts, the original healthy session identity, closed font handles and actual
+native exits. Its `old-post-read` control qualifies only the fixed A-supersession
+outcome after the held-read/B-queued preconditions, with default and B fulfilled
+and exact counts; unrelated read errors, timeouts and cleanup failures do not
+qualify. A fixture-local 60-second total scenario deadline also bounds hung
+awaits inside the unchanged 90-second supervisor allowance; observed failed or
+cancelled mounts fail immediately. Native exits and independent supervision are
+still required, not replaced by a result marker or local timeout.
+
+This fixture no longer checks six-child post-reload input/acknowledgement,
+cancelled-sibling usability or a second disposed window. The existing real-read
+headless lifetime matrix retains cancellation/disposal, admission, serialization
+and genuine read-error policy coverage, not that full native usability
+cross-product. Reducing the scenario does not explain or qualify a historical
+native timeout. Run the native suite alone on an idle unlocked desktop with
+`npm test -- test/integration/font-read-reload.test.ts`.
+Headless fixture/oracle/deadline and real-read lifetime checks:
+`npm test -- test/unit/font-read-reload-fixture.test.ts test/unit/terminal-font-read-reload.test.ts`.
+Successful headless checks or bundle preparation are not native runtime acceptance.
 
 The `auxiliary-panel` suite uses the production window host, real Surfaces/PTYs,
 native menu callbacks and Chromium synthetic input through the main keybind

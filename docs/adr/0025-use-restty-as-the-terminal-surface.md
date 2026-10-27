@@ -145,9 +145,23 @@ before starting is rejected without another read. Same-generation requests
 share pending work, and completion clears only its own pending identity. Retained
 Surface identities do not grant historical-family lookup. Line-height-only
 reload does not change the family-data generation. Headless read/reload tests
-hold a real FileHandle.read; the supervised native fixture uses the production
-host/preload/Surface/PTY and the same physical-read boundary, not a runtime-init
-delay after acquisition.
+hold a real FileHandle.read and retain the admission, serialization, genuine
+read-error, cancelled-sibling and disposed-owner lifetime matrix. The supervised
+native fixture retains one window with default/A/A/B Surfaces across one held
+physical read and queued B, using the production host/preload/Surface/PTY rather
+than a runtime-init delay after acquisition. Exact outcomes, creation-time
+settings/lease names, four distinct mounted live sessions, font-handle closure
+and actual native exits remain required. The old-post-read control qualifies
+only A's fixed supersession rejection after its explicit race preconditions,
+with default and B fulfilled and exact request/load counts.
+
+The native fixture does not cover the former six-child post-reload input and
+cancelled-sibling usability campaign or second-window disposal campaign.
+Headless lifetime checks do not replace that full OS/renderer cross-product.
+This coverage reduction does not attribute or turn an unexplained historical
+native timeout into a pass. A fixture-local total scenario deadline bounds
+awaits inside the unchanged supervisor allowance; neither deadline nor a result
+marker substitutes for actual native exit and supervisor settlement.
 
 Complete validation rejects invalid configured font inputs before application;
 application-time exceptions are not an atomic rollback guarantee. See
