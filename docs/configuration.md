@@ -512,13 +512,13 @@ node scripts/convert-ghostty-theme.mjs input-theme output-theme.json
 
 Choose **View → Reload User Configuration** (`Cmd+Shift+,` / `Ctrl+Shift+,`) after saving edits to `config.json` or your theme file:
 
-| Scope                 | Settings updated                                              |
-| --------------------- | ------------------------------------------------------------- |
-| Existing and new tabs | Theme, font size, ligatures, padding, scrollback, Option keys |
-| All windows and tabs  | Background transparency and blur                              |
-| App behavior          | Close confirmation, log level, keyboard shortcuts, language   |
-| New tabs (or restart) | Font family, line height, Windows shell                       |
-| New windows           | Always-on-Top, title-bar, and tab-bar initial defaults        |
+| Scope                 | Settings updated                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------------ |
+| Existing and new tabs | Theme, font size, ligatures, padding, scrollback, Option keys, terminal context-menu eligibility |
+| All windows and tabs  | Background transparency and blur                                                                 |
+| App behavior          | Close confirmation, log level, keyboard shortcuts, language                                      |
+| New tabs (or restart) | Font family, line height, Windows shell                                                          |
+| New windows           | Always-on-Top, title-bar, and tab-bar initial defaults                                           |
 
 A native font read already started for an initializing tab can finish with its
 creation-time family after reload; new tabs use the latest family. Requests must
