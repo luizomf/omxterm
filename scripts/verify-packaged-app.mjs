@@ -1037,7 +1037,9 @@ export async function verifyPackagedApplication(
         path.join(projectRoot, "node_modules/node-pty/lib", file),
       );
       const packagedSHA256 = createHash("sha256")
-        .update(extractFile(asar, `node_modules/node-pty/lib/${file}`))
+        .update(
+          extractFile(asar, path.join("node_modules", "node-pty", "lib", file)),
+        )
         .digest("hex");
       if (preparedSHA256 !== packagedSHA256)
         throw new Error(
@@ -1049,7 +1051,10 @@ export async function verifyPackagedApplication(
       await readFile(path.join(projectRoot, "package-lock.json"), "utf8"),
     ).packages["node_modules/node-pty"];
     const packagedNodePty = JSON.parse(
-      extractFile(asar, "node_modules/node-pty/package.json").toString("utf8"),
+      extractFile(
+        asar,
+        path.join("node_modules", "node-pty", "package.json"),
+      ).toString("utf8"),
     );
     if (packagedNodePty.version !== nodePtyLock.version)
       throw new Error("Packaged node-pty version differs from lock");

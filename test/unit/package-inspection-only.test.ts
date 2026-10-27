@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import * as realAsar from "@electron/asar";
 import { runInNewContext } from "node:vm";
 import { createRequire } from "node:module";
 import { afterEach, expect, it, vi } from "vitest";
@@ -113,9 +115,36 @@ it.each(["win32", "linux"])(
   },
 );
 
+const windowsRuntimeFiles = [
+  "windowsTerminal.js",
+  "windowsPtyAgent.js",
+  "windowsConoutConnection.js",
+  "worker/conoutSocketWorker.js",
+  "conpty_console_list_agent.js",
+  "eventEmitter2.js",
+  "terminal.js",
+  "utils.js",
+];
+const temporary: string[] = [];
+async function tinyRuntimeArchive(
+  root: string,
+  name: string,
+  entries: Record<string, string>,
+) {
+  const input = path.join(root, name);
+  for (const [member, contents] of Object.entries(entries)) {
+    const file = path.join(input, member);
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, contents);
+  }
+  const archive = path.join(root, `${name}.asar`);
+  await realAsar.createPackage(input, archive);
+  return archive;
+}
+
 const originalPlatform = Object.getOwnPropertyDescriptor(process, "platform")!;
 const originalArch = Object.getOwnPropertyDescriptor(process, "arch")!;
-afterEach(() => {
+afterEach(async () => {
   Object.defineProperty(process, "platform", originalPlatform);
   Object.defineProperty(process, "arch", originalArch);
   vi.restoreAllMocks();
@@ -124,12 +153,65 @@ afterEach(() => {
   vi.doUnmock("node:child_process");
   vi.doUnmock("@electron/asar");
   vi.doUnmock("../../scripts/verify-linux-launcher.mjs");
+  realAsar.uncacheAll();
+  for (const directory of temporary.splice(0))
+    await rm(directory, { recursive: true, force: true });
 });
 
 it.each(["linux", "win32"])(
   "%s x64 inspection loads only the packaged runtime, never provisions or starts a desktop",
   async (platform) => {
-    const root = path.resolve("inspection-fixture");
+    const root = await mkdtemp(path.join(tmpdir(), "omxterm-asar-inspection-"));
+    temporary.push(root);
+    const runtimeFiles =
+      platform === "win32"
+        ? windowsRuntimeFiles
+        : ["unixTerminal.js", "terminal.js", "utils.js"];
+    const runtimeBytes = Object.fromEntries(
+      runtimeFiles.map((file) => [file, `// prepared ${file}\n`]),
+    );
+    const nodePtyMetadata = path.join(
+      "node_modules",
+      "node-pty",
+      "package.json",
+    );
+    const chosenFile =
+      platform === "win32" ? "worker/conoutSocketWorker.js" : "unixTerminal.js";
+    const chosenMember = path.join(
+      "node_modules",
+      "node-pty",
+      "lib",
+      chosenFile,
+    );
+    const entries = {
+      "package.json": '{"version":"1.2.3"}',
+      [nodePtyMetadata]: '{"version":"1.2.0-beta.18"}',
+      ...Object.fromEntries(
+        runtimeFiles.map((file) => [
+          path.join("node_modules", "node-pty", "lib", file),
+          runtimeBytes[file]!,
+        ]),
+      ),
+    };
+    // Create real tiny archives BEFORE platform/FS mocks. Extraction later uses
+    // the actual HOST path semantics, not Windows emulation by process.platform.
+    const validArchive = await tinyRuntimeArchive(root, "valid", entries);
+    const missingEntries = { ...entries };
+    delete missingEntries[chosenMember];
+    const missingArchive = await tinyRuntimeArchive(
+      root,
+      "missing",
+      missingEntries,
+    );
+    const changedArchive = await tinyRuntimeArchive(root, "changed", {
+      ...entries,
+      [chosenMember]: "// different packaged bytes\n",
+    });
+    const wrongVersionArchive = await tinyRuntimeArchive(root, "version", {
+      ...entries,
+      [nodePtyMetadata]: '{"version":"9.9.9"}',
+    });
+    let selectedArchive = validArchive;
     const packagedPath = path.join(
       root,
       platform === "linux" ? "OMXTerm-1.2.3-x64.AppImage" : "win-unpacked",
@@ -163,7 +245,12 @@ it.each(["linux", "win32"])(
         return pe;
       }
       let contents = "same licensed/icon bytes";
-      if (file.endsWith("install-linux-appimage.sh")) contents = helperSource;
+      const runtimeFile = runtimeFiles.find((member) =>
+        file.endsWith(path.join("node_modules", "node-pty", "lib", member)),
+      );
+      if (runtimeFile) contents = runtimeBytes[runtimeFile]!;
+      else if (file.endsWith("install-linux-appimage.sh"))
+        contents = helperSource;
       else if (file.endsWith("linux_install.sh")) contents = helper;
       else if (file.endsWith(".sha256")) {
         const name = path.basename(file.slice(0, -7));
@@ -217,9 +304,10 @@ it.each(["linux", "win32"])(
           ),
         );
         expect(options.env?.ELECTRON_RUN_AS_NODE).toBe("1");
-        expect(args[1]).toBe(
+        expect(args).toEqual([
+          path.resolve("scripts/inspect-packaged-runtime.cjs"),
           path.join(applicationRoot, "resources", "app.asar"),
-        );
+        ]);
         return {
           stdout: JSON.stringify({
             versions: { electron: "43.8.1" },
@@ -237,15 +325,15 @@ it.each(["linux", "win32"])(
       throw new Error("No GUI or helper may be spawned");
     });
     vi.doMock("node:child_process", () => ({ execFile, spawn }));
+    const expectedAsar = path.join(applicationRoot, "resources", "app.asar");
+    const extract = vi.fn((archive: string, member: string) => {
+      expect(archive).toBe(expectedAsar);
+      return realAsar.extractFile(selectedArchive, member);
+    });
+    // Only map archive identity; member lookup/payload bytes are the real reader.
+    // Native files, inventory, licenses and subprocesses remain controlled ports.
     vi.doMock("@electron/asar", () => ({
-      extractFile: (_asar: string, file: string) =>
-        Buffer.from(
-          file === "package.json"
-            ? '{"version":"1.2.3"}'
-            : file === "node_modules/node-pty/package.json"
-              ? '{"version":"1.2.0-beta.18"}'
-              : "same licensed/icon bytes",
-        ),
+      extractFile: extract,
       listPackage: async () => [
         "/dist/main/index.js",
         "/dist/preload/index.cjs",
@@ -264,16 +352,9 @@ it.each(["linux", "win32"])(
               ].map(
                 (file) => `/node_modules/node-pty/prebuilds/win32-x64/${file}`,
               ),
-              ...[
-                "windowsTerminal.js",
-                "windowsPtyAgent.js",
-                "windowsConoutConnection.js",
-                "worker/conoutSocketWorker.js",
-                "conpty_console_list_agent.js",
-                "eventEmitter2.js",
-                "terminal.js",
-                "utils.js",
-              ].map((file) => `/node_modules/node-pty/lib/${file}`),
+              ...windowsRuntimeFiles.map(
+                (file) => `/node_modules/node-pty/lib/${file}`,
+              ),
             ]
           : []),
         "/package.json",
@@ -292,8 +373,38 @@ it.each(["linux", "win32"])(
     expect(result.verification).not.toContain("FULL");
     expect(result.records).toBe(0);
     expect(spawn).not.toHaveBeenCalled();
+    expect(extract.mock.calls).toEqual([
+      [expectedAsar, "package.json"],
+      ...runtimeFiles.map((file) => [
+        expectedAsar,
+        path.join("node_modules", "node-pty", "lib", file),
+      ]),
+      [expectedAsar, nodePtyMetadata],
+    ]);
+    const nativeHelperCalls = () =>
+      execute.mock.calls.filter(
+        ([, args]) =>
+          args[0] === path.resolve("scripts/inspect-packaged-runtime.cjs"),
+      ).length;
+    expect(nativeHelperCalls()).toBe(1);
+    if (platform === "linux") expect(launcher).toHaveBeenCalledOnce();
+    for (const [archive, expectedError] of [
+      [missingArchive, "was not found in this archive"],
+      [
+        changedArchive,
+        "Packaged node-pty JavaScript differs from prepared runtime",
+      ],
+      [wrongVersionArchive, "Packaged node-pty version differs from lock"],
+    ] as const) {
+      selectedArchive = archive;
+      await expect(
+        verifyPackagedApplication(packagedPath, { inspectionOnly: true }),
+      ).rejects.toThrow(expectedError);
+      expect(nativeHelperCalls()).toBe(1); // all three failures precede native load
+      expect(spawn).not.toHaveBeenCalled();
+    }
     if (platform === "linux") {
-      expect(launcher).toHaveBeenCalledOnce();
+      expect(launcher).toHaveBeenCalledTimes(4);
       execute.mockResolvedValueOnce({
         stdout: "ELF 64-bit LSB executable, ARM aarch64",
         stderr: "",
