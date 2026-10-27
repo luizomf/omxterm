@@ -136,6 +136,7 @@ describe("User Configuration reloader", () => {
       version: 1,
       font: { size: 24 },
       window: { blur: true, transparency: 2 },
+      terminal: { contextMenuEnabled: false },
     };
     const load = () =>
       loadUserConfiguration({
@@ -163,12 +164,14 @@ describe("User Configuration reloader", () => {
     expect(accepted).toMatchObject({
       blur: true,
       transparency: 0.375,
+      terminalContextMenuEnabled: false,
       fontSize: 24,
     });
     document = {
       version: 1,
       font: { size: 32 },
       window: { blur: false, transparency: -1 },
+      terminal: { contextMenuEnabled: true },
     };
     await reloader.reload();
     expect(reloader.current().configuration).toBe(accepted);
@@ -181,8 +184,19 @@ describe("User Configuration reloader", () => {
     expect(reloader.current().configuration).toMatchObject({
       blur: false,
       transparency: 1,
+      terminalContextMenuEnabled: true,
       fontSize: 32,
     });
+    // Wrong boolean alone rejects the entire reload and keeps enabled state.
+    const enabled = reloader.current().configuration;
+    document.terminal.contextMenuEnabled = "false" as unknown as boolean;
+    await reloader.reload();
+    expect(reloader.current().configuration).toBe(enabled);
+    expect(reloader.current().userFileErrors[0]).toContain(
+      "terminal.contextMenuEnabled",
+    );
+    document.terminal.contextMenuEnabled = true;
+    await reloader.reload();
     expect(reloader.current().userFileErrors).toEqual([]);
   });
 

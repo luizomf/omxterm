@@ -181,6 +181,13 @@ shell initialization to the user and injects no hooks.
 clipboard. Selection alone does not copy. Programs can request bounded OSC 52
 writes, but cannot read or clear the clipboard.
 
+**Terminal Context Menu** — The native host popup over terminal content and
+padding. `terminal.contextMenuEnabled` is a live boolean, true by default;
+false suppresses pointer- and keyboard-originated popup requests without
+changing application mouse input, DOM-default cancellation or clicked-pane
+focus. The Scrollback Search query and unrelated application menus are excluded;
+existing Edit actions and configured keybindings remain available.
+
 **Protected Paste** — Confirmation for multiline or control-character paste when
 the receiving process has not enabled bracketed paste. It is not command
 validation; clipboard contents remain private.

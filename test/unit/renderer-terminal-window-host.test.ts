@@ -189,6 +189,8 @@ describe("renderer Terminal Window page host", () => {
       {
         abortSignal: expect.any(AbortSignal) as AbortSignal,
         onFatalError: expect.any(Function) as (message: string) => void,
+        onContextMenu: expect.any(Function) as () => void,
+        contextMenuEnabled: true,
         background: "host",
         focus: false,
         labels: surfaceLabels("en-US"),
@@ -353,7 +355,7 @@ describe("renderer Terminal Window page host", () => {
       document.documentElement.style.getPropertyValue("--terminal-pane-accent"),
     ).toBe(initialTheme.colors.cyan);
 
-    configurationListener!({
+    const liveConfiguration: TerminalRendererConfiguration = {
       showTabBar: true,
       transparency: 0,
       fontFamily: "Changed Family",
@@ -366,7 +368,8 @@ describe("renderer Terminal Window page host", () => {
       nativeTitleInset: 0,
       terminalTheme: updatedTheme,
       userFileErrors: ["startup warning", "reload failed at /themes/live.json"],
-    });
+    };
+    configurationListener!(liveConfiguration);
 
     expect(first.applyConfiguration).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -421,6 +424,23 @@ describe("renderer Terminal Window page host", () => {
         theme: updatedTheme,
       }),
     );
+    // A menu-only reload must bypass neither equality nor hidden-tab delivery.
+    for (const terminalContextMenuEnabled of [false, true]) {
+      first.applyConfiguration.mockClear();
+      second.applyConfiguration.mockClear();
+      configurationListener!({
+        ...liveConfiguration,
+        terminalContextMenuEnabled,
+      });
+      for (const surface of [first, second]) {
+        expect(surface.applyConfiguration).toHaveBeenCalledExactlyOnceWith(
+          expect.objectContaining({
+            contextMenuEnabled: terminalContextMenuEnabled,
+          }),
+        );
+        expect(surface.dispose).not.toHaveBeenCalled();
+      }
+    }
     expect(adapterCloses[0]).not.toHaveBeenCalled();
     expect(adapterCloses[1]).not.toHaveBeenCalled();
     host.dispose();

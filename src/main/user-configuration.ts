@@ -56,6 +56,7 @@ export const DEFAULT_USER_CONFIGURATION: UserConfiguration = Object.freeze({
   fontLineHeight: DEFAULT_TERMINAL_LINE_HEIGHT,
   fontLigatures: DEFAULT_TERMINAL_FONT_LIGATURES,
   terminalPadding: DEFAULT_TERMINAL_PADDING,
+  terminalContextMenuEnabled: true,
   scrollbackLines: DEFAULT_SCROLLBACK_LINES,
   optionKeyMode: "none",
   alwaysOnTop: false,
@@ -384,7 +385,10 @@ export function validateUserConfiguration(
       "ligatures",
     ]);
   if (terminal)
-    rejectUnknownKeys(terminal, configurationPath, "terminal", ["padding"]);
+    rejectUnknownKeys(terminal, configurationPath, "terminal", [
+      "padding",
+      "contextMenuEnabled",
+    ]);
   if (padding)
     rejectUnknownKeys(padding, configurationPath, "terminal.padding", [
       "top",
@@ -478,39 +482,20 @@ export function validateUserConfiguration(
     "font.ligatures",
     DEFAULT_TERMINAL_FONT_LIGATURES,
   );
+  const readPadding = (side: keyof typeof DEFAULT_TERMINAL_PADDING) =>
+    integerInRange(
+      padding?.[side],
+      configurationPath,
+      `terminal.padding.${side}`,
+      MIN_TERMINAL_PADDING,
+      MAX_TERMINAL_PADDING,
+      DEFAULT_TERMINAL_PADDING[side],
+    );
   const terminalPadding = Object.freeze({
-    top: integerInRange(
-      padding?.top,
-      configurationPath,
-      "terminal.padding.top",
-      MIN_TERMINAL_PADDING,
-      MAX_TERMINAL_PADDING,
-      DEFAULT_TERMINAL_PADDING.top,
-    ),
-    right: integerInRange(
-      padding?.right,
-      configurationPath,
-      "terminal.padding.right",
-      MIN_TERMINAL_PADDING,
-      MAX_TERMINAL_PADDING,
-      DEFAULT_TERMINAL_PADDING.right,
-    ),
-    bottom: integerInRange(
-      padding?.bottom,
-      configurationPath,
-      "terminal.padding.bottom",
-      MIN_TERMINAL_PADDING,
-      MAX_TERMINAL_PADDING,
-      DEFAULT_TERMINAL_PADDING.bottom,
-    ),
-    left: integerInRange(
-      padding?.left,
-      configurationPath,
-      "terminal.padding.left",
-      MIN_TERMINAL_PADDING,
-      MAX_TERMINAL_PADDING,
-      DEFAULT_TERMINAL_PADDING.left,
-    ),
+    top: readPadding("top"),
+    right: readPadding("right"),
+    bottom: readPadding("bottom"),
+    left: readPadding("left"),
   });
   const scrollbackLines = integerInRange(
     scrollback?.lines,
@@ -553,6 +538,12 @@ export function validateUserConfiguration(
     fontLineHeight,
     fontLigatures,
     terminalPadding,
+    terminalContextMenuEnabled: optionalBoolean(
+      terminal?.contextMenuEnabled,
+      configurationPath,
+      "terminal.contextMenuEnabled",
+      true,
+    ),
     scrollbackLines,
     optionKeyMode,
     ...windowPreferences(window, configurationPath),

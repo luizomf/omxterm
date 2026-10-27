@@ -205,7 +205,9 @@ async function popupHarness(busy = false) {
       for (const payload of heldClipboard.splice(0)) deliverClipboard(payload);
     },
     open(index = 1) {
-      view.mountedSurfaceOptions[index]!.clipboard!.requestContextMenu();
+      const options = view.mountedSurfaceOptions[index]!;
+      options.onContextMenu?.();
+      options.clipboard!.requestContextMenu();
       const capturedMenu = menu;
       return (label: string) => {
         const item = capturedMenu.find((entry) => entry.label === label)!;

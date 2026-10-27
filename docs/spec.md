@@ -163,7 +163,9 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   keeps the pane until its failure dialog is acknowledged; the last pane closes
   its tab. Close Pane confirms only a Busy focused pane, Close Tab counts every
   pane of the tab, and Close Window and Quit count every pane. Right-clicking a
-  pane focuses it before the native context menu opens, so its Copy, Paste and
+  pane focuses it, including its padding, even with the terminal context menu
+  disabled. With `terminal.contextMenuEnabled` omitted or true, the native menu
+  opens and its Copy, Paste and
   Select All act on that pane; in a split tab the menu also offers Close Pane,
   showing the current `closePane` keybind and following the same confirmation.
   Each terminal popup captures its source window, pane and live Surface, not
@@ -439,7 +441,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 - `View -> Reload User Configuration` defaults to `Cmd+Shift+,` on macOS and
   `Ctrl+Shift+,` on Linux and Windows. It manually rereads and validates the
   complete configuration. Successful application updates font-size baseline,
-  padding, scrollback, ligatures, Option Key Mode, theme, transparency and blur
+  padding, terminal context-menu eligibility, scrollback, ligatures, Option Key Mode, theme, transparency and blur
   in place, plus close confirmation, logging, menu and keybind delivery. It
   updates Always-on-Top, title-bar and tab-bar defaults for new windows and, on
   Windows, shell selection for new Default Shell sessions. Existing windows keep
@@ -907,6 +909,20 @@ alternate screens; Shift retains the selection override, and explicit copy and
 valid modified-link gestures — web or local image — do not produce duplicate PTY
 mouse input. OSC 8 destinations and all other schemes are ignored.
 
+`terminal.contextMenuEnabled` accepts only a boolean and defaults to true.
+Omission or true preserves existing native host-menu eligibility, even when
+Restty has already cancelled the canvas context event for application mouse
+reporting. False suppresses OMXTerm popup requests over terminal content and
+padding for all modifiers, application mouse modes and contextmenu origins,
+including keyboard-originated events. The DOM default is still cancelled; real
+application mouse input, clipboard actions and OSC 52 are unchanged. There is
+no automatic mouse-mode policy or Shift exception for menu access. The Scrollback
+Search query field keeps its menu, as do unrelated Snippets, Settings and Window
+Chrome controls. Existing Edit actions and configured keybindings remain
+available, but disabling the popup reduces pointer access and discoverability;
+this is not an accessibility guarantee. Valid reloads apply to existing, hidden
+and mounting panes without replacing a Surface, core or Live Terminal Session.
+
 Scrollback Search opens only through **Edit → Find…** or the `find` keybind
 (`Cmd+F` on macOS, `Ctrl+Shift+F` on Linux and Windows). It uses Restty's
 search bar and the pinned core's search over the focused pane's retained
@@ -1016,6 +1032,7 @@ track subsequent bundled palette changes. A present file must contain
 - `logLevel`;
 - `windowsShell`;
 - `font.family`, `font.size`, `font.lineHeight`, and `font.ligatures`;
+- `terminal.contextMenuEnabled`;
 - `terminal.padding.top`, `terminal.padding.right`, `terminal.padding.bottom`,
   and `terminal.padding.left`;
 - `scrollback.lines`;
@@ -1349,7 +1366,8 @@ default.
 **Settings** (application menu, **Settings…**) is a retained graphical editor of the same
 `config.json`. It covers `language`, `confirmClose`, `logLevel`, `windowsShell` (Windows),
 `font.family`, `font.size`, `font.lineHeight`, `font.ligatures`,
-`terminal.padding`, `scrollback.lines`, `keyboard.optionAsAlt` (macOS), the
+`terminal.padding`, `terminal.contextMenuEnabled`, `scrollback.lines`,
+`keyboard.optionAsAlt` (macOS), the
 new-window defaults `window.showTitleBar`, `window.showTabBar` and
 `window.alwaysOnTop`, and `theme.path`; transparency and blur stay file-only in
 this editor. Its **Shortcuts** page shows each action of the current keybind

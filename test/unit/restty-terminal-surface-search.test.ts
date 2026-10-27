@@ -78,6 +78,7 @@ describe("Restty Scrollback Search", () => {
     };
     const surface = await mountResttyTerminalSurface(container, adapter, {
       theme: DEFAULT_TERMINAL_THEME,
+      contextMenuEnabled: false,
       clipboard,
     });
     const restty = harness.instances[0]!;
@@ -90,6 +91,14 @@ describe("Restty Scrollback Search", () => {
     restty.isSearchOpen.mockReturnValue(true);
     input.focus();
     input.setSelectionRange(8, 8);
+    const menu = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+    });
+    input.dispatchEvent(menu);
+    expect(menu.defaultPrevented).toBe(true);
+    expect(clipboard.requestContextMenu).toHaveBeenCalledOnce();
+    expect(document.activeElement).toBe(input);
 
     await surface.paste();
     surface.selectAll();

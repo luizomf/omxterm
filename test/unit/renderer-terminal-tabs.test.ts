@@ -511,52 +511,58 @@ describe("renderer Terminal Tabs fatal Surface isolation", () => {
 });
 
 describe("renderer Terminal Tabs runtime configuration", () => {
-  it("reconciles an update received while a Surface mount is pending", async () => {
+  it("reconciles live updates when a pending Surface finishes in a hidden tab", async () => {
     const { DEFAULT_TERMINAL_THEME } =
       await import("../../src/shared/terminal-theme");
-    const strip = document.createElement("nav");
-    const container = document.createElement("div");
-    document.body.replaceChildren(strip, container);
-    let finishMount: ((surface: TerminalSurface) => void) | undefined;
-    const pendingMount = new Promise<TerminalSurface>((resolve) => {
+    let finishMount!: () => void;
+    const gate = new Promise<void>((resolve) => {
       finishMount = resolve;
     });
-    const adapter: ElectronTerminalAdapter = {
-      sessionId: () => "s1",
-      start: vi.fn(async () => undefined),
-      write: vi.fn(),
-      resize: vi.fn(),
-      close: vi.fn(),
-    };
-    const surface = createFakeSurface();
-    const tabs = createTerminalTabs(
-      { strip, container },
-      {
-        createAdapter: () => adapter,
-        mount: vi.fn(() => pendingMount),
-        surfaceOptions: {
-          appearance: { fontSize: 16, lineHeight: 1, ligatures: true },
-          padding: { top: 0, right: 8, bottom: 8, left: 8 },
-          scrollbackLines: 10_000,
-          optionKeyMode: "none",
-          theme: DEFAULT_TERMINAL_THEME,
-        },
+    const harness = createTabsHarness({
+      beforeStart: async (index) => {
+        if (index === 2) await gate;
       },
+      surfaceOptions: {
+        appearance: { fontSize: 16, lineHeight: 1, ligatures: true },
+        padding: { top: 0, right: 8, bottom: 8, left: 8 },
+        scrollbackLines: 10_000,
+        optionKeyMode: "none",
+        theme: DEFAULT_TERMINAL_THEME,
+      },
+    });
+    const { tabs } = harness;
+    await tabs.ready;
+    tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() =>
+      expect(harness.mountedSurfaceOptions).toHaveLength(2),
     );
+    tabs.handleCommand({ action: "select", position: 1 });
+    expect(visibleContainers(harness.container)).toEqual([0, -1]);
     const update = {
       appearance: { fontSize: 24, lineHeight: 1.25, ligatures: true },
       padding: { top: 1, right: 2, bottom: 3, left: 4 },
+      contextMenuEnabled: false,
       scrollbackLines: 0,
       optionKeyMode: "both" as const,
       theme: DEFAULT_TERMINAL_THEME,
     };
 
     tabs.applyConfiguration(update);
-    finishMount!(surface);
-    await tabs.ready;
-
+    finishMount();
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+    const surface = harness.surfaces[1]!;
     expect(surface.applyConfiguration).toHaveBeenCalledExactlyOnceWith(update);
-    expect(adapter.close).not.toHaveBeenCalled();
+    expect(visibleContainers(harness.container)).toEqual([0, -1]);
+    expect(harness.mount).toHaveBeenCalledTimes(2);
+    for (const adapter of harness.adapters) {
+      expect(adapter.start).toHaveBeenCalledOnce();
+      expect(adapter.close).not.toHaveBeenCalled();
+    }
+    tabs.applyConfiguration({ ...update, contextMenuEnabled: true });
+    expect(surface.applyConfiguration).toHaveBeenLastCalledWith({
+      ...update,
+      contextMenuEnabled: true,
+    });
     tabs.dispose();
   });
 

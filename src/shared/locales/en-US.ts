@@ -207,6 +207,8 @@ export const englishMessages = {
   "settings.bundledTheme": "Bundled omtheme",
   "settings.defaultShell": "Windows PowerShell",
   "settings.scrollback": "Scrollback lines",
+  "settings.contextMenu":
+    "Terminal context menu (application mouse input is unchanged)",
   "settings.padding.top": "Padding top",
   "settings.padding.right": "Padding right",
   "settings.padding.bottom": "Padding bottom",

@@ -170,7 +170,15 @@ application-time exceptions are not an atomic rollback guarantee. See
 ## Clipboard, links, events and output delivery
 
 Explicit copy/paste, selection, context menus, snippets/path injection and OSC 52
-use OMXTerm host policy. Restty's synchronous `beforeInput` diverts raw DOM paste
+use OMXTerm host policy. The Surface owns the live `terminal.contextMenuEnabled`
+opt-out at its DOM contextmenu/host-request seam, where the query target is still
+known. Omitted/true preserves existing eligibility (prior DOM cancellation is
+not a veto); false suppresses content/padding requests, not application mouse
+input. DOM defaults stay cancelled and a narrow host callback retains clicked-pane
+focus even without a popup. Search query editing is exempt. Main/preload native
+target and callback guards are unchanged; no global IPC veto is introduced.
+Configuration snapshots, equality and pending-mount replay carry the preference
+without replacing Surfaces, cores or PTYs. Restty's synchronous `beforeInput` diverts raw DOM paste
 into the asynchronous semantic-delivery queue. Delivery rechecks current
 bracketed mode and ownership, preserves request order without blocking ordinary
 keyboard input, and stops later chunks and snippet Enter on disposal. Sent bytes

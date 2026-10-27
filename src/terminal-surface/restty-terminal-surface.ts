@@ -37,7 +37,7 @@ import {
 } from "./restty-visible-links";
 import {
   resttyClipboardActions,
-  resttyContextMenuHandler,
+  createResttyContextMenu,
   resttyHostServices,
 } from "./restty-host-services";
 import { toGhosttyTheme, toResttySearchUiStyle } from "./restty-theme";
@@ -153,7 +153,7 @@ export async function mountResttyTerminalSurface(
   let padding = resolvePadding(options.padding);
   const scrollbackLines = validateScrollbackLines(options.scrollbackLines);
   const initialFamily = options.appearance?.systemFont?.family;
-  const onContextMenu = resttyContextMenuHandler(options.clipboard);
+  const contextMenu = createResttyContextMenu(container, options);
   const releaseSearchEscape = retainSearchEscapeGesture(container);
   const revealInput = () => {
     visibleLinkController?.invalidate();
@@ -198,6 +198,7 @@ export async function mountResttyTerminalSurface(
     const zoomDelta = currentFontSize - baselineFontSize;
     baselineFontSize = nextBaseline;
     padding = nextPadding;
+    contextMenu.setEnabled(configuration.contextMenuEnabled);
     terminalTheme = nextTheme;
     applyContainerAppearance();
     applyRuntimeTheme(terminalTheme, configuration.labels);
@@ -213,7 +214,7 @@ export async function mountResttyTerminalSurface(
     disposed = true;
     releaseResttyResources([
       () => delivery.dispose(),
-      () => container.removeEventListener("contextmenu", onContextMenu),
+      () => container.removeEventListener("contextmenu", contextMenu.handle),
       () => removeRuntimeListener?.(),
       releaseSearchEscape,
       () => visibleLinkController?.dispose(),
@@ -318,7 +319,7 @@ export async function mountResttyTerminalSurface(
         navigator.platform,
         options.linkHoverAvailability,
       );
-    container.addEventListener("contextmenu", onContextMenu);
+    container.addEventListener("contextmenu", contextMenu.handle);
     canvas.addEventListener(
       "webglcontextlost",
       (event) => {
@@ -340,9 +341,7 @@ export async function mountResttyTerminalSurface(
           if (!isSurfaceVisible()) pane?.runtime.render.refresh();
         }
       },
-      onExit() {
-        dispose();
-      },
+      onExit: () => dispose(),
     });
     if (isInactive()) return createDisposedSurface();
     if (settledSize) adapter.resize(settledSize);

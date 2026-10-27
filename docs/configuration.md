@@ -77,6 +77,34 @@ The **Shortcuts** page lists every remappable action with the shortcut it uses n
 
 A shortcut that collides with another action is rejected with the same message as in `config.json`, and your file stays unchanged. App shortcuts take their key before terminal programs see it, so binding a key a program uses (like `Ctrl+C`) keeps it from reaching that program.
 
+### Terminal context menu
+
+In **Settings → Terminal**, the labelled **Terminal context menu** checkbox
+controls OMXTerm's popup over terminal content and padding. It is enabled by
+default. To disable it in `config.json`, set:
+
+```json
+{
+  "version": 1,
+  "terminal": {
+    "contextMenuEnabled": false
+  }
+}
+```
+
+Only booleans are accepted. Omission or `true` retains existing behavior,
+including when an application uses mouse reporting. `false` suppresses the popup
+for all modifiers and mouse modes, including keyboard-originated context-menu
+events; there is no Shift exception or automatic mode detection. Application
+mouse input (for example, tmux bindings), clipboard actions and OSC 52 are not
+disabled. The clicked pane still receives focus, including on its padding.
+Scrollback Search's query field and unrelated Settings, Snippets and chrome
+menus keep working. Existing **Edit** actions and configured keybindings remain
+available, but pointer access and discoverability are reduced; this is not an
+accessibility guarantee. A valid reload updates existing, hidden and mounting
+panes without restarting their sessions. Rejected reloads retain the last valid
+settings.
+
 ## Add one display change
 
 Open `config.json`, update `font.size` (for example, from `16` to `18`), save, and reload (`Cmd+Shift+,` / `Ctrl+Shift+,`) to resize your terminal text immediately:
@@ -220,30 +248,31 @@ See the [Linux desktop guide](linux-desktop.md) for compositor-specific setup:
 
 Every field except `version` is optional and falls back to its default when omitted:
 
-| Preference                | Accepted value                          | Default                          |
-| ------------------------- | --------------------------------------- | -------------------------------- |
-| `version`                 | `1`                                     | required                         |
-| `language`                | `"en-US"` or `"pt-BR"`                  | `"en-US"`                        |
-| `confirmClose`            | boolean                                 | `true`                           |
-| `logLevel`                | `"error"`, `"info"`, or `"debug"`       | `"info"`                         |
-| `windowsShell`            | non-empty absolute executable path      | Windows PowerShell, then ComSpec |
-| `font.family`             | exact installed system font-family name | bundled FiraCode Nerd Font Mono  |
-| `font.size`               | integer `8` – `72` (CSS px)             | `16`                             |
-| `font.lineHeight`         | number `1.0` – `2.0`                    | `1.0`                            |
-| `font.ligatures`          | boolean                                 | `true`                           |
-| `terminal.padding.top`    | integer `0` – `128` (CSS px)            | `0`                              |
-| `terminal.padding.right`  | integer `0` – `128` (CSS px)            | `8`                              |
-| `terminal.padding.bottom` | integer `0` – `128` (CSS px)            | `8`                              |
-| `terminal.padding.left`   | integer `0` – `128` (CSS px)            | `8`                              |
-| `scrollback.lines`        | integer `0` – `100000`                  | `10000`                          |
-| `keyboard.optionAsAlt`    | `"none"`, `"left"`, `"right"`, `"both"` | `"none"`                         |
-| `window.alwaysOnTop`      | boolean                                 | `false`                          |
-| `window.blur`             | boolean                                 | `false`                          |
-| `window.transparency`     | number `0` – `1`                        | `0`                              |
-| `window.showTitleBar`     | boolean                                 | `true`                           |
-| `window.showTabBar`       | boolean                                 | `true`                           |
-| `theme.path`              | relative or absolute file path          | bundled `omtheme`                |
-| `keybinds.<action>`       | Electron accelerator string or `null`   | built-in shortcut per action     |
+| Preference                    | Accepted value                          | Default                          |
+| ----------------------------- | --------------------------------------- | -------------------------------- |
+| `version`                     | `1`                                     | required                         |
+| `language`                    | `"en-US"` or `"pt-BR"`                  | `"en-US"`                        |
+| `confirmClose`                | boolean                                 | `true`                           |
+| `logLevel`                    | `"error"`, `"info"`, or `"debug"`       | `"info"`                         |
+| `windowsShell`                | non-empty absolute executable path      | Windows PowerShell, then ComSpec |
+| `font.family`                 | exact installed system font-family name | bundled FiraCode Nerd Font Mono  |
+| `font.size`                   | integer `8` – `72` (CSS px)             | `16`                             |
+| `font.lineHeight`             | number `1.0` – `2.0`                    | `1.0`                            |
+| `font.ligatures`              | boolean                                 | `true`                           |
+| `terminal.contextMenuEnabled` | boolean                                 | `true`                           |
+| `terminal.padding.top`        | integer `0` – `128` (CSS px)            | `0`                              |
+| `terminal.padding.right`      | integer `0` – `128` (CSS px)            | `8`                              |
+| `terminal.padding.bottom`     | integer `0` – `128` (CSS px)            | `8`                              |
+| `terminal.padding.left`       | integer `0` – `128` (CSS px)            | `8`                              |
+| `scrollback.lines`            | integer `0` – `100000`                  | `10000`                          |
+| `keyboard.optionAsAlt`        | `"none"`, `"left"`, `"right"`, `"both"` | `"none"`                         |
+| `window.alwaysOnTop`          | boolean                                 | `false`                          |
+| `window.blur`                 | boolean                                 | `false`                          |
+| `window.transparency`         | number `0` – `1`                        | `0`                              |
+| `window.showTitleBar`         | boolean                                 | `true`                           |
+| `window.showTabBar`           | boolean                                 | `true`                           |
+| `theme.path`                  | relative or absolute file path          | bundled `omtheme`                |
+| `keybinds.<action>`           | Electron accelerator string or `null`   | built-in shortcut per action     |
 
 ### Notes on specific settings
 

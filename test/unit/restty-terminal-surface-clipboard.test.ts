@@ -5,6 +5,16 @@ import type {
   PatchedResttyPane,
 } from "../../src/terminal-surface/restty-runtime-contract";
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
+import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
+import { bindResttyMouse } from "../fixtures/restty-pointer-routing";
+
+const configuration = {
+  appearance: { fontSize: 16, lineHeight: 1, ligatures: true },
+  padding: { top: 0, right: 8, bottom: 8, left: 8 },
+  scrollbackLines: 10_000,
+  optionKeyMode: "none" as const,
+  theme: DEFAULT_TERMINAL_THEME,
+};
 
 const harness = vi.hoisted(() => {
   class FakeRestty {
@@ -114,11 +124,11 @@ async function mount(
   };
 }
 
-describe("Restty clipboard and Protected Paste", () => {
-  beforeEach(() => {
-    harness.FakeRestty.instances.length = 0;
-  });
+beforeEach(() => {
+  harness.FakeRestty.instances.length = 0;
+});
 
+describe("Restty clipboard actions", () => {
   it("reveals accepted input but not focus, replies, empty input or rejected paste", async () => {
     const value = await mount();
     const reveal = value.restty.pane.runtime.interaction.scrollToBottom;
@@ -186,7 +196,133 @@ describe("Restty clipboard and Protected Paste", () => {
     expect(value.clipboard.requestContextMenu).toHaveBeenCalledOnce();
     value.surface.dispose();
   });
+});
 
+describe("Restty terminal context-menu policy", () => {
+  it("preserves enabled eligibility and real right-button bytes independently of the live menu policy", async () => {
+    const focus = vi.fn();
+    const value = await mount(createHarness(), { onContextMenu: focus });
+    const routing = bindResttyMouse(value.restty.canvas, (data) => {
+      value.restty.services().ptyTransport.sendInput(data);
+    });
+    let inheritedCancellation = false;
+    value.restty.canvas.addEventListener("contextmenu", (event) => {
+      inheritedCancellation = event.defaultPrevented;
+    });
+    const gesture = (
+      mode: boolean,
+      enabled: boolean | undefined,
+      shiftKey = false,
+    ) => {
+      value.surface.applyConfiguration({
+        ...configuration,
+        ...(enabled === undefined ? {} : { contextMenuEnabled: enabled }),
+      });
+      routing.input.filterOutput(
+        mode ? "\u001b[?1000h\u001b[?1006h" : "\u001b[?1000l",
+      );
+      value.adapter.write.mockClear();
+      value.clipboard.requestContextMenu.mockClear();
+      for (const type of ["pointerdown", "pointerup"])
+        value.restty.canvas.dispatchEvent(
+          new PointerEvent(type, {
+            button: 2,
+            pointerId: 1,
+            pointerType: "mouse",
+            shiftKey,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      const menu = new MouseEvent("contextmenu", {
+        button: 2,
+        shiftKey,
+        bubbles: true,
+        cancelable: true,
+      });
+      value.restty.canvas.dispatchEvent(menu);
+      expect(menu.defaultPrevented).toBe(true);
+      expect(inheritedCancellation).toBe(mode && !shiftKey);
+      expect(value.clipboard.requestContextMenu).toHaveBeenCalledTimes(
+        enabled === false ? 0 : 1,
+      );
+      expect(value.adapter.write.mock.calls.flat()).toEqual(
+        mode && !shiftKey ? ["\u001b[<2;5;3M", "\u001b[<2;5;3m"] : [],
+      );
+    };
+    // Omitted/true must still open after Restty already cancelled the event.
+    for (const mode of [false, true])
+      for (const enabled of [undefined, false, true]) gesture(mode, enabled);
+    gesture(true, false, true); // No new Shift menu exception or mouse override.
+    gesture(true, true, true); // Enabled Shift retains its ordinary menu.
+    expect(focus).toHaveBeenCalledTimes(8);
+    expect(value.adapter.start).toHaveBeenCalledOnce();
+    expect(value.adapter.close).not.toHaveBeenCalled();
+    expect(value.restty.destroy).not.toHaveBeenCalled();
+    routing.dispose();
+    value.surface.dispose();
+  });
+
+  it("suppresses content and padding for every modifier and keyboard origin but retains the search query menu", async () => {
+    const focus = vi.fn();
+    const value = await mount(createHarness(), {
+      contextMenuEnabled: false,
+      onContextMenu: focus,
+    });
+    const dispatch = (target: HTMLElement, init: MouseEventInit = {}) => {
+      const event = new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        ...init,
+      });
+      target.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+    };
+    for (let modifiers = 0; modifiers < 16; modifiers++)
+      for (const target of [value.container, value.restty.canvas])
+        dispatch(target, {
+          button: 2,
+          shiftKey: !!(modifiers & 1),
+          ctrlKey: !!(modifiers & 2),
+          altKey: !!(modifiers & 4),
+          metaKey: !!(modifiers & 8),
+        });
+    // A plain Event has no pointer/button coordinates: do not guess origin.
+    const keyboard = new Event("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+    });
+    value.container.dispatchEvent(keyboard);
+    expect(keyboard.defaultPrevented).toBe(true);
+    expect(focus).toHaveBeenCalledTimes(33);
+    expect(value.clipboard.requestContextMenu).not.toHaveBeenCalled();
+    const search = document.createElement("div");
+    search.setAttribute("role", "search");
+    const query = document.createElement("input");
+    search.append(query);
+    value.container.append(search);
+    dispatch(query);
+    expect(value.clipboard.requestContextMenu).toHaveBeenCalledOnce();
+    // Search chrome is not the query editor.
+    dispatch(search);
+    expect(value.clipboard.requestContextMenu).toHaveBeenCalledOnce();
+    value.restty.selection = "still copyable";
+    await value.surface.copy();
+    value.restty.services().onOsc(52, "c;aGVsbG8=");
+    expect(value.clipboard.writeText.mock.calls.flat()).toEqual([
+      "still copyable",
+      "hello",
+    ]);
+    expect(value.adapter.write).not.toHaveBeenCalled();
+    value.surface.dispose();
+    const retired = new Event("contextmenu", { cancelable: true });
+    value.container.dispatchEvent(retired);
+    expect(retired.defaultPrevented).toBe(false);
+    expect(value.clipboard.requestContextMenu).toHaveBeenCalledOnce();
+  });
+});
+
+describe("Restty Protected Paste", () => {
   it("diverts native paste asynchronously while ordinary keyboard input stays direct", async () => {
     let decide: ((approved: boolean) => void) | undefined;
     const value = createHarness();

@@ -303,6 +303,7 @@ function settingsValues(
     "font.size": configuration.fontSize,
     "font.lineHeight": configuration.fontLineHeight,
     "font.ligatures": configuration.fontLigatures,
+    "terminal.contextMenuEnabled": configuration.terminalContextMenuEnabled,
     "terminal.padding.top": configuration.terminalPadding.top,
     "terminal.padding.right": configuration.terminalPadding.right,
     "terminal.padding.bottom": configuration.terminalPadding.bottom,

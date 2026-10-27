@@ -3,7 +3,6 @@ import type { PatchedResttyServices } from "./restty-runtime-contract";
 import { decodeOsc52Write } from "./osc52-clipboard";
 import type { SemanticInputDelivery } from "./semantic-input-delivery";
 import type {
-  TerminalClipboard,
   TerminalSurfaceOptions,
   TerminalSurface,
 } from "./terminal-surface";
@@ -38,13 +37,30 @@ export function resttyClipboardActions(
   };
 }
 
-export function resttyContextMenuHandler(
-  clipboard: TerminalClipboard | undefined,
+export function createResttyContextMenu(
+  container: HTMLElement,
+  options: Pick<
+    TerminalSurfaceOptions,
+    "clipboard" | "contextMenuEnabled" | "onContextMenu"
+  >,
 ) {
-  return (event: Event) => {
-    if (!clipboard) return;
-    event.preventDefault();
-    clipboard.requestContextMenu();
+  let enabled = options.contextMenuEnabled ?? true;
+  return {
+    setEnabled(value = true) {
+      enabled = value;
+    },
+    handle(event: Event) {
+      // Prior cancellation (e.g. application mouse reporting) is not a veto:
+      // enabled retains the existing unconditional host-menu eligibility.
+      event.preventDefault();
+      if (!options.clipboard) return;
+      options.onContextMenu?.();
+      const query =
+        event.target instanceof HTMLInputElement &&
+        event.target.closest('[role="search"]') !== null &&
+        container.contains(event.target);
+      if (enabled || query) options.clipboard.requestContextMenu();
+    },
   };
 }
 

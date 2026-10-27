@@ -84,6 +84,13 @@ On Linux and Windows, press and release **Alt** to open the application menu (ev
 - **Paste:** use **Edit → Paste**, its shortcut, or the right-click menu.
 - **Terminal control keys:** `Ctrl+C` interrupts the running command, and `Ctrl+V` is sent directly to the terminal program (for example, CLI tools that use `Ctrl+V` to attach clipboard images).
 
+To hide OMXTerm's popup over terminal content and padding, disable **Terminal
+context menu** in **Settings → Terminal**, or set
+[`terminal.contextMenuEnabled`](configuration.md#terminal-context-menu) to
+`false` and reload. Application mouse input is unchanged. This also disables
+keyboard-originated terminal popups, without a Shift exception; existing Edit
+actions/keybindings and the Scrollback Search query menu remain available.
+
 ### Searching the scrollback
 
 Choose **Edit → Find…** (`Cmd+F` / `Ctrl+Shift+F`) to search the focused pane's scrollback and visible screen. The search field gets focus, matches highlight as you type, and the counter shows the selected match and total. While the search field has focus, press `Enter` (or **↓**) for the next match, `Shift+Enter` (or **↑**) for the previous one, and `Escape` to close the bar and return to the terminal. Copy, Paste, and Select All also work on the search text there.

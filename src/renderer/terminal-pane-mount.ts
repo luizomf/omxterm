@@ -61,7 +61,12 @@ export function createPaneMount(deps: {
     const clipboard = deps.surfaceOptions().clipboard;
     const paneSurfaceOptions: TerminalSurfaceOptions = {
       ...deps.surfaceOptions(),
-      // Focus before capturing this pane and its live Surface for one popup;
+      // Focus also applies to padding and suppressed terminal popups.
+      onContextMenu() {
+        if (!deps.disposed() && !pane.removed && !pane.ended)
+          deps.focusClicked(pane);
+      },
+      // Capture this pane and its live Surface for one popup;
       // a split pane's menu also offers Close Pane.
       ...(clipboard
         ? {
@@ -69,7 +74,6 @@ export function createPaneMount(deps: {
               ...clipboard,
               requestContextMenu() {
                 if (deps.disposed() || pane.removed || pane.ended) return;
-                deps.focusClicked(pane);
                 const target = deps.captureContextMenuTarget(pane);
                 if (!target) return;
                 clipboard.requestContextMenu({
@@ -172,6 +176,7 @@ function completeConfiguration(
         ? { systemFont: options.appearance.systemFont }
         : {}),
     },
+    contextMenuEnabled: options.contextMenuEnabled ?? true,
     padding: options.padding,
     scrollbackLines: options.scrollbackLines,
     optionKeyMode: options.optionKeyMode,

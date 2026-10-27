@@ -61,6 +61,7 @@ export function terminalRendererConfiguration(
     fontLineHeight: configuration.fontLineHeight,
     fontLigatures: configuration.fontLigatures,
     terminalPadding: configuration.terminalPadding,
+    terminalContextMenuEnabled: configuration.terminalContextMenuEnabled,
     scrollbackLines: configuration.scrollbackLines,
     optionKeyMode: configuration.optionKeyMode,
     nativeTitleInset: configuration.showTitleBar ? nativeTitleInset : 0,

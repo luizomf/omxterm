@@ -71,6 +71,7 @@ export const SETTINGS_FIELDS = {
       value <= MAX_TERMINAL_LINE_HEIGHT,
   },
   "font.ligatures": { lifetime: "live", accepts: isBoolean },
+  "terminal.contextMenuEnabled": { lifetime: "live", accepts: isBoolean },
   "terminal.padding.top": { lifetime: "live", accepts: padding },
   "terminal.padding.right": { lifetime: "live", accepts: padding },
   "terminal.padding.bottom": { lifetime: "live", accepts: padding },

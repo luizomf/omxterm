@@ -9,6 +9,7 @@ import { loadUserConfiguration } from "../../src/main/user-configuration";
 import { createUserConfigurationReloader } from "../../src/main/user-configuration-reloader";
 import type { SettingsBridge, SettingsResult } from "../../src/shared/settings";
 import { deferred, installSettingsDom } from "../fixtures/settings-dialog-dom";
+import { createRendererLanguage } from "../../src/renderer/renderer-language";
 
 it("keeps newer typing and external bytes after a BOM raw save finishes applying", async () => {
   const root = await mkdtemp(
@@ -93,6 +94,84 @@ it("keeps newer typing and external bytes after a BOM raw save finishes applying
     expect(await readFile(file, "utf8")).toBe(external);
   } finally {
     resume.resolve();
+    dialog.dispose();
+  }
+});
+
+it("round-trips the labelled Terminal menu toggle through persistence and reload in both languages", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "omxterm-settings-menu-"));
+  roots.push(root);
+  const loadOptions = {
+    environment: { XDG_CONFIG_HOME: root },
+    homeDirectory: root,
+    getInstalledFontFamilyMetrics: async () => undefined,
+  };
+  const initial = await loadUserConfiguration(loadOptions);
+  const reloader = createUserConfigurationReloader({
+    initial: { configuration: initial.configuration, userFileErrors: [] },
+    load: () => loadUserConfiguration(loadOptions),
+    apply: vi.fn(),
+  });
+  const service = createSettingsService({
+    loadOptions,
+    reload: reloader.reload,
+  });
+  const language = createRendererLanguage();
+  const changes: Promise<SettingsResult>[] = [];
+  const dialog = createSettingsDialog(
+    document,
+    {
+      ...service,
+      change: (change) => {
+        const result = service.change(change);
+        changes.push(result);
+        return result;
+      },
+      captureShortcut: vi.fn(() => () => {}),
+      onOpen: () => () => {},
+    },
+    { focusTerminal: vi.fn(), onActivityChange: vi.fn(), language },
+  );
+  try {
+    await dialog.open();
+    [...document.querySelectorAll<HTMLButtonElement>("[role=tab]")]
+      .find((button) => button.textContent === "Terminal")!
+      .click();
+    const field = [...document.querySelectorAll("label")]
+      .find((row) => row.textContent === language.t("settings.contextMenu"))!
+      .querySelector("input")!;
+    expect(field.type).toBe("checkbox");
+    expect(field.checked).toBe(true);
+    expect(field.tabIndex).toBe(0);
+    field.focus();
+    for (const [locale, enabled] of [
+      ["pt-BR", false],
+      ["en-US", true],
+    ] as const) {
+      language.set(locale);
+      expect(field.labels![0]!.textContent).toBe(
+        language.t("settings.contextMenu"),
+      );
+      expect(document.activeElement).toBe(field);
+      field.click();
+      const result = await changes.at(-1)!;
+      expect(result).toMatchObject({
+        status: "saved",
+        application: { applied: true },
+        snapshot: { values: { "terminal.contextMenuEnabled": enabled } },
+        lifetimes: [],
+      });
+      expect(reloader.current().configuration.terminalContextMenuEnabled).toBe(
+        enabled,
+      );
+      expect(
+        JSON.parse(
+          await readFile(path.join(root, "omxterm", "config.json"), "utf8"),
+        ),
+      ).toEqual({ version: 1, terminal: { contextMenuEnabled: enabled } });
+      expect(field.checked).toBe(enabled);
+    }
+  } finally {
     dialog.dispose();
   }
 });

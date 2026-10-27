@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTabsHarness } from "../fixtures/terminal-tabs-harness";
+import { createResttyContextMenu } from "../../src/terminal-surface/restty-host-services";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -385,8 +386,11 @@ describe("Terminal Pane context menu", () => {
     });
     await harness.tabs.ready;
     harness.sessionAdapters[0]!.resize({ cols: 120, rows: 40 });
-    const menu = (index: number) =>
-      harness.mountedSurfaceOptions[index]!.clipboard!.requestContextMenu();
+    const menu = (index: number) => {
+      const options = harness.mountedSurfaceOptions[index]!;
+      options.onContextMenu?.();
+      options.clipboard!.requestContextMenu();
+    };
 
     menu(0);
     expect(clipboard.requestContextMenu).toHaveBeenLastCalledWith({
@@ -397,6 +401,23 @@ describe("Terminal Pane context menu", () => {
     await split(harness, "right");
     expect(harness.notifySelection.mock.calls.at(-1)?.[0]).toBe("s2");
     harness.surfaces[0]!.focus.mockClear();
+    // Compose the Surface's production listener with the pane host. A padding
+    // context event still selects/focuses the clicked pane without a popup.
+    const firstOptions = harness.mountedSurfaceOptions[0]!;
+    const padding = tab(harness).querySelector<HTMLElement>("main")!;
+    const suppressed = createResttyContextMenu(padding, {
+      ...firstOptions,
+      contextMenuEnabled: false,
+    });
+    padding.addEventListener("contextmenu", suppressed.handle);
+    clipboard.requestContextMenu.mockClear();
+    const event = new Event("contextmenu", { bubbles: true, cancelable: true });
+    padding.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(clipboard.requestContextMenu).not.toHaveBeenCalled();
+    expect(harness.notifySelection.mock.calls.at(-1)?.[0]).toBe("s1");
+    expect(harness.surfaces[0]!.focus).toHaveBeenCalled();
+    padding.removeEventListener("contextmenu", suppressed.handle);
     menu(0);
     expect(clipboard.requestContextMenu).toHaveBeenLastCalledWith({
       sessionId: "s1",

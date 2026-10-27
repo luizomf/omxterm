@@ -105,6 +105,11 @@ export function pages(platform: string): readonly Page[] {
       label: "settings.page.terminal",
       controls: [
         {
+          kind: "toggle",
+          path: "terminal.contextMenuEnabled",
+          label: "settings.contextMenu",
+        },
+        {
           kind: "number",
           path: "scrollback.lines",
           label: "settings.scrollback",

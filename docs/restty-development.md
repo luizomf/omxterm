@@ -14,7 +14,7 @@ The portable Terminal Surface (`src/terminal-surface/`) receives a session Adapt
 
 ### Configuration and Surface lifetime
 
-- **Live-safe settings:** Theme colors, font size, programming ligatures, padding, scrollback lines, and macOS Option Key Mode apply in place to existing panes and sessions; the latest labels also replay after a pending pane mount.
+- **Live-safe settings:** Theme colors, font size, programming ligatures, padding, terminal context-menu eligibility, scrollback lines, and macOS Option Key Mode apply in place to existing panes and sessions; the latest labels also replay after a pending pane mount.
 - **Creation-time settings:** `font.family` and `font.lineHeight` are fixed when a Surface is created. New panes use the latest validated values; existing panes keep their creation-time values until OMXTerm restarts.
 - **Native font acquisition across reload:** A started read completes for its surviving creation-time consumers across family changes. Controller disposal still invalidates completion. Admission requires the current family, and obsolete queued generations are rejected before starting; there is no historical-family lookup.
 
@@ -57,6 +57,35 @@ the combined native progress risk remains explicitly unresolved. See
 - Copy/paste, Protected Paste, snippets, file-path insertion, local image previews, and write-only OSC 52 use OMXTerm host routes. Restty's built-in browser clipboard and URL-opening callbacks are disabled.
 - Visible HTTP(S) URLs and local image paths are recognized from cell snapshots and Ghostty selection proofs across soft wraps (OSC 8 hyperlinks are ignored). Link-only proof endpoints exclude a terminal wide-wrap spacer so selection expansion does not borrow the next grapheme; copy/selection semantics stay unchanged. Unknown viewport-edge continuity remains refused.
 - Parsed OSC 0/2 titles and silent BEL events flow from the Ghostty core to OMXTerm's per-session host controllers.
+
+### Terminal context-menu policy checks
+
+`terminal.contextMenuEnabled` defaults to true without changing existing
+application-mouse/default-cancellation eligibility. The portable Surface cancels
+the DOM default, notifies host pane focus and conditionally requests the popup;
+false excludes content/padding for every modifier and event origin, not the
+Scrollback Search query. Clipboard, OSC 52, Restty mouse routing and native
+callback target guards remain independent.
+
+Headless regressions use the production Surface with a controlled Restty
+rendering adapter and the installed pinned `bindPointerEvents`,
+`createPointerUpHandler`, `createPointerAuxHandlers` and real `createInputHandler`
+encoder. They compare exact right-button SGR down/up bytes separately from menu
+request counts, including an already-cancelled enabled control and mode-off/
+Shift controls. Pane focus, hidden/live reload, pending-mount replay, query
+clipboard and Settings persistence use existing test seams:
+
+```sh
+npm test -- test/unit/restty-terminal-surface-clipboard.test.ts test/unit/restty-terminal-surface-search.test.ts test/unit/renderer-terminal-panes.test.ts test/unit/renderer-terminal-tabs.test.ts test/unit/renderer-terminal-window-host.test.ts test/unit/settings-dialog-persistence.test.ts
+```
+
+Controlled DOM events and transport bytes do not establish native popup
+visibility, physical gesture ordering or a child's actual receipt. The original
+tmux/fzf incident remains unreproduced. Native follow-up should reuse the
+existing supervised popup/raw-child fixture with one assigned desktop,
+distinguishing received mouse bytes, real popup visibility and focused pane,
+plus a positive enabled-menu control; do not substitute its container-only
+`contextmenu` helper for an actual canvas right-button gesture.
 
 ### Inline Kitty images
 

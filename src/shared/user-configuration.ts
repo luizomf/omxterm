@@ -46,6 +46,8 @@ export interface TerminalRendererConfiguration {
   readonly fontLineHeight: number;
   readonly fontLigatures: boolean;
   readonly terminalPadding: TerminalPadding;
+  // Main sends the effective value; standalone/older hosts inherit true.
+  readonly terminalContextMenuEnabled?: boolean;
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
   readonly nativeTitleInset: 0 | 30;
@@ -66,6 +68,7 @@ export interface UserConfiguration {
   readonly fontLineHeight: number;
   readonly fontLigatures: boolean;
   readonly terminalPadding: TerminalPadding;
+  readonly terminalContextMenuEnabled: boolean;
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
   readonly alwaysOnTop: boolean;
@@ -102,6 +105,7 @@ export function isTerminalRendererConfiguration(
         "fontLineHeight",
         "fontLigatures",
         "terminalPadding",
+        "terminalContextMenuEnabled",
         "scrollbackLines",
         "optionKeyMode",
         "nativeTitleInset",
@@ -121,6 +125,8 @@ export function isTerminalRendererConfiguration(
     (value.fontLineHeight as number) <= MAX_TERMINAL_LINE_HEIGHT &&
     typeof value.fontLigatures === "boolean" &&
     isTerminalPadding(value.terminalPadding) &&
+    (value.terminalContextMenuEnabled === undefined ||
+      typeof value.terminalContextMenuEnabled === "boolean") &&
     Number.isInteger(value.scrollbackLines) &&
     (value.scrollbackLines as number) >= 0 &&
     (value.scrollbackLines as number) <= MAX_SCROLLBACK_LINES &&

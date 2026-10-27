@@ -219,6 +219,8 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.bundledTheme": "omtheme incluído",
   "settings.defaultShell": "Windows PowerShell",
   "settings.scrollback": "Linhas de histórico",
+  "settings.contextMenu":
+    "Menu de contexto do terminal (entrada do mouse para aplicativos não muda)",
   "settings.padding.top": "Espaçamento superior",
   "settings.padding.right": "Espaçamento direito",
   "settings.padding.bottom": "Espaçamento inferior",

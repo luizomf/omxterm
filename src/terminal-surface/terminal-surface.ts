@@ -67,6 +67,7 @@ export interface TerminalSurfaceLabels {
 
 export interface TerminalSurfaceConfiguration {
   readonly labels?: TerminalSurfaceLabels;
+  readonly contextMenuEnabled?: boolean;
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
   readonly appearance: TerminalAppearance & {
@@ -108,6 +109,10 @@ export interface TerminalSurfaceOptions {
   readonly padding?: TerminalPadding;
   readonly theme?: TerminalTheme;
   readonly clipboard?: TerminalClipboard;
+  // Defaults to true. Only terminal content/padding, not the search query.
+  readonly contextMenuEnabled?: boolean;
+  // Retain host pane focus even when the terminal popup is disabled.
+  readonly onContextMenu?: () => void;
   readonly onClipboardError?: () => void;
   readonly onTitleRequest?: (request: string) => void;
   readonly onBell?: () => void;
