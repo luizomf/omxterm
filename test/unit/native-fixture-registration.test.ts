@@ -13,11 +13,7 @@ import {
   spawnFixtureProcess,
 } from "../fixtures/native-fixture-ownership";
 
-vi.mock("node-pty", () => ({
-  spawn: vi.fn(() => {
-    throw new Error("Native PTY must not run in ownership units");
-  }),
-}));
+// Every PTY call supplies its controlled spawn; no ESM mock of CJS fallback.
 const io = vi.hoisted(() => ({
   files: new Map<string, string>(),
   observeWrite: undefined as (() => void) | undefined,

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { prepareNodePtyExecStatus } from "../../scripts/prepare-node-pty-exec-status.mjs";
 import {
   copyFile,
@@ -21,15 +22,69 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prepareNodePtyRuntime } from "../../scripts/prepare-node-pty-runtime.mjs";
 
+// Target-platform preparation tests must never invoke a host tool.
+vi.mock("node:child_process", () => ({
+  execFileSync: vi.fn(() => {
+    throw new Error("Unexpected external preparation command");
+  }),
+}));
+
 const require = createRequire(import.meta.url);
 const installedUnixRuntime = path.join(
   path.dirname(require.resolve("node-pty")),
   "unixTerminal.js",
 );
 
+const nativePatch = fileURLToPath(
+  new URL("../../native/node-pty-exec-status.patch", import.meta.url),
+);
+
+// Only this checked-in two-file unified patch, with exact positions/context.
+// This substitutes the external tool, not preparation's independent digests.
+function applyExecStatusPatch(cwd: string): void {
+  const sections = readFileSync(nativePatch, "utf8").split(/(?=^--- a\/)/mu);
+  expect(sections).toHaveLength(2);
+  for (const [index, file] of ["pty.cc", "spawn-helper.cc"].entries()) {
+    const section = sections[index]!;
+    expect(section.endsWith("\n")).toBe(true);
+    const lines = section.slice(0, -1).split("\n");
+    expect(lines.shift()).toBe(`--- a/${file}`);
+    expect(lines.shift()).toBe(`+++ b/${file}`);
+    const source = readFileSync(path.join(cwd, file), "utf8").split("\n");
+    const result: string[] = [];
+    let cursor = 0;
+    while (lines.length) {
+      const header = /^@@ -(\d+),(\d+) \+(\d+),(\d+) @@$/u.exec(lines.shift()!);
+      expect(
+        header,
+        "Only reviewed explicit unified hunks are supported",
+      ).not.toBeNull();
+      const start = Number(header![1]) - 1;
+      const old: string[] = [],
+        replacement: string[] = [];
+      while (lines.length && !lines[0]!.startsWith("@@")) {
+        const line = lines.shift()!;
+        expect([" ", "+", "-"]).toContain(line[0]);
+        if (line[0] !== "+") old.push(line.slice(1));
+        if (line[0] !== "-") replacement.push(line.slice(1));
+      }
+      expect(old).toHaveLength(Number(header![2]));
+      expect(replacement).toHaveLength(Number(header![4]));
+      expect(start).toBeGreaterThanOrEqual(cursor);
+      expect(source.slice(start, start + old.length)).toEqual(old);
+      expect(result.length + start - cursor).toBe(Number(header![3]) - 1);
+      result.push(...source.slice(cursor, start), ...replacement);
+      cursor = start + old.length;
+    }
+    result.push(...source.slice(cursor));
+    writeFileSync(path.join(cwd, file), result.join("\n"));
+  }
+}
+
 let root: string;
 let unixRuntimePath: string;
 beforeEach(async () => {
+  vi.mocked(execFileSync).mockClear();
   root = await mkdtemp(path.join(tmpdir(), "omxterm-node-pty-preparation-"));
   unixRuntimePath = path.join(root, "unixTerminal.js");
   await copyFile(installedUnixRuntime, unixRuntimePath);
@@ -225,13 +280,59 @@ describe("node-pty prepared artifact and callback ordering", () => {
         headerPackage,
         path.join(isolated, "node_modules/node-addon-api/package.json"),
       );
+      for (const location of ["build/Release", `prebuilds/linux-${arch}`]) {
+        await mkdir(path.join(isolated, location), { recursive: true });
+        await writeFile(
+          path.join(isolated, location, "pty.node"),
+          "stale addon",
+        );
+      }
+      let buildRoot: string;
       const execute = vi.fn(
         (file: string, args: readonly string[], options: object) => {
-          if (file === "patch") return execFileSync(file, args, options);
+          if (file === "patch") {
+            buildRoot = (options as { cwd: string }).cwd;
+            expect(options).toEqual({
+              cwd: buildRoot,
+              stdio: "pipe",
+              timeout: 10_000,
+            });
+            expect(path.dirname(buildRoot)).toBe(tmpdir());
+            expect(path.basename(buildRoot)).toMatch(/^omxterm-pty-build-/u);
+            expect(buildRoot).not.toBe(isolated);
+            expect(args).toEqual([
+              "--batch",
+              "--fuzz=0",
+              "-p1",
+              "-i",
+              nativePatch,
+            ]);
+            applyExecStatusPatch(buildRoot);
+            return Buffer.alloc(0);
+          }
           expect(file).toBe("c++");
-          expect(args).toContain("-std=c++17");
+          const { include_dir } = require("node-api-headers") as {
+            include_dir: string;
+          };
+          expect(args).toEqual([
+            "-std=c++17",
+            "-O2",
+            "-DNAPI_VERSION=8",
+            "-DNODE_GYP_MODULE_NAME=pty",
+            "-DNAPI_CPP_EXCEPTIONS",
+            `-I${include_dir}`,
+            `-I${path.dirname(createRequire(path.join(isolated, "package.json")).resolve("node-addon-api/package.json"))}`,
+            "-fPIC",
+            "-pthread",
+            "-shared",
+            path.join(buildRoot!, "pty.cc"),
+            "-lutil",
+            "-o",
+            path.join(buildRoot!, "pty.node"),
+          ]);
+          expect(options).toEqual({ stdio: "pipe", timeout: 60_000 });
           writeFileSync(
-            args[args.indexOf("-o") + 1]!,
+            path.join(buildRoot!, "pty.node"),
             "controlled compiler output",
           );
           return Buffer.alloc(0);
@@ -247,10 +348,11 @@ describe("node-pty prepared artifact and callback ordering", () => {
         expect(
           await readFile(path.join(isolated, location, "pty.node"), "utf8"),
         ).toBe("controlled compiler output");
-      expect(await readFile(path.join(isolated, "src/unix/pty.cc"))).toEqual(
-        await readFile(path.join(installed, "src/unix/pty.cc")),
-      );
-      expect(execute.mock.calls[0]?.[1]).toContain("--fuzz=0");
+      for (const file of ["pty.cc", "spawn-helper.cc"])
+        expect(await readFile(path.join(isolated, "src/unix", file))).toEqual(
+          await readFile(path.join(installed, "src/unix", file)),
+        );
+      expect(execFileSync).not.toHaveBeenCalled();
       await writeFile(path.join(isolated, "src/unix/pty.cc"), "unknown source");
       await expect(
         prepareNodePtyExecStatus({
@@ -263,6 +365,53 @@ describe("node-pty prepared artifact and callback ordering", () => {
       expect(execute).toHaveBeenCalledTimes(2);
     },
   );
+
+  it("rejects wrong patched bytes before compilation or artifact replacement", async () => {
+    const isolated = path.join(root, "node-pty");
+    const installed = path.dirname(require.resolve("node-pty/package.json"));
+    await cp(
+      path.join(installed, "src/unix"),
+      path.join(isolated, "src/unix"),
+      { recursive: true },
+    );
+    const destinations = ["build/Release", "prebuilds/linux-arm64"];
+    for (const location of destinations) {
+      await mkdir(path.join(isolated, location), { recursive: true });
+      await writeFile(
+        path.join(isolated, location, "pty.node"),
+        "retained addon",
+      );
+    }
+    const execute = vi.fn(
+      (file: string, args: readonly string[], options: { cwd: string }) => {
+        expect(file).toBe("patch");
+        expect(args).toEqual(["--batch", "--fuzz=0", "-p1", "-i", nativePatch]);
+        writeFileSync(
+          path.join(options.cwd, "pty.cc"),
+          "wrong patched bytes\n",
+        );
+        return Buffer.alloc(0);
+      },
+    );
+    await expect(
+      prepareNodePtyExecStatus({
+        platform: "linux",
+        arch: "arm64",
+        nodePtyRoot: isolated,
+        execute: execute as unknown as typeof execFileSync,
+      }),
+    ).rejects.toThrow("node-pty native patch did not produce reviewed bytes");
+    expect(execute).toHaveBeenCalledOnce();
+    expect(execFileSync).not.toHaveBeenCalled();
+    for (const location of destinations)
+      expect(
+        await readFile(path.join(isolated, location, "pty.node"), "utf8"),
+      ).toBe("retained addon");
+    for (const file of ["pty.cc", "spawn-helper.cc"])
+      expect(await readFile(path.join(isolated, "src/unix", file))).toEqual(
+        await readFile(path.join(installed, "src/unix", file)),
+      );
+  });
 
   it("refuses shadowing Windows builds and nonofficial native bytes", async () => {
     const isolated = path.join(root, "node-pty");

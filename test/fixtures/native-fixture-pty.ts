@@ -1,4 +1,5 @@
-import { spawn, type IPty } from "node-pty";
+import type { spawn, IPty } from "node-pty";
+import { createRequire } from "node:module";
 import type { EventEmitter } from "node:events";
 import { spawnFixtureProcess } from "./native-fixture-ownership";
 
@@ -17,7 +18,17 @@ export function spawnFixturePty(
 ): IPty {
   const [file, argv, options, ownership] = args;
   return spawnFixtureProcess(
-    () => (ownership?.spawn ?? spawn)(file, argv, options),
+    // Do not instantiate node-pty's ESM namespace before a fixture CJS hook.
+    // Explicit spawns also keep controlled callers entirely addon-free.
+    () =>
+      (
+        ownership?.spawn ??
+        (
+          createRequire(
+            typeof __filename === "string" ? __filename : import.meta.url,
+          )("node-pty") as { spawn: typeof spawn }
+        ).spawn
+      )(file, argv, options),
     (terminal, exited, ready, failedStart) => {
       const pinned = terminal as ReadyPty;
       const onReady = () => {
