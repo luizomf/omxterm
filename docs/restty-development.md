@@ -38,7 +38,8 @@ Select All/Copy while retaining the same Surface/canvas and one Adapter start.
 Its current narrower grid must be valid and have a different edge; it does not
 replay a calibrated target or normalize copied text.
 
-Run the real-Surface check only on an assigned idle unlocked guest desktop:
+Run the real-Surface check on an idle unlocked desktop, one graphical suite at a
+time:
 
 ```sh
 npm test -- test/integration/restty-appearance-rendering.test.ts -t "renders theme colors and preserves configured geometry through live updates"

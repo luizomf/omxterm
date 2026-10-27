@@ -106,8 +106,9 @@ async function verifyPendingWrapResize(
     container.classList.contains("restty-terminal-surface");
   const sameCanvas =
     canvas.isConnected && canvas === container.querySelector("canvas");
+  const expected = prefix + "CONTINUOU";
   if (
-    current.copied !== prefix + "CONTINUOU" ||
+    current.copied !== expected ||
     !sameSurface ||
     !sameCanvas ||
     current.starts !== 1 ||
@@ -116,7 +117,21 @@ async function verifyPendingWrapResize(
     current.grid.rows !== resized.rows
   )
     throw new Error(
-      "Pending-wrap Surface lost exact continuation/copy or its retained lifetime",
+      `Pending-wrap Surface lost exact continuation/copy or its retained lifetime: ${JSON.stringify(
+        {
+          // Only fixture-owned synthetic text; previews stay bounded on corruption.
+          expected: expected.slice(0, 1024),
+          actual: current.copied.slice(0, 1024),
+          lengths: { expected: expected.length, actual: current.copied.length },
+          original,
+          resized,
+          current: { cols: current.grid.cols, rows: current.grid.rows },
+          sameSurface,
+          sameCanvas,
+          starts: current.starts,
+          closes: current.closes,
+        },
+      )}`,
     );
   return {
     original,

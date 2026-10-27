@@ -679,7 +679,7 @@ replay, historical-match acceptance, tolerance or retry chooses the grid.
 The short continuation must copy as exactly prefix plus suffix, without trimming
 or normalization, with the same Surface/container/canvas, one Adapter start and
 no close. The integration consumer checks this evidence in its existing
-appearance runs. Run alone on an assigned idle unlocked guest desktop:
+appearance runs. Run on an idle unlocked desktop, one graphical suite at a time:
 
 ```sh
 npm test -- test/integration/restty-appearance-rendering.test.ts -t "renders theme colors and preserves configured geometry through live updates"
