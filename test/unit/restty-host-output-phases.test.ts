@@ -1,11 +1,112 @@
 import { writeSync } from "node:fs";
 import { afterEach, expect, it, vi } from "vitest";
-import { exerciseOutput } from "../fixtures/restty-host-output-test-ports";
+import {
+  exerciseOutput,
+  type CopyAckControl,
+} from "../fixtures/restty-host-output-test-ports";
+import { assertOutputDropRejection } from "../fixtures/restty-output-drop-evidence";
 
 vi.mock("node:fs", { spy: true });
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+});
+
+it("settles failed drop/reorder Copy against every original UTF-8 chunk and real retirement in one decision", async () => {
+  for (const copy of ["drop", "reorder"] as const) {
+    for (const { chunks, bytes } of [
+      { chunks: ["transport-envelope", "🙂é"], bytes: 24 },
+      { chunks: ["🙂", "漢é"], bytes: 9 },
+    ] as const) {
+      const afterDecisionChunk =
+        copy === "drop" && bytes === 24 ? "late" : undefined;
+      const { exercise, copyFlow, calls, kill } = await exerciseOutput({
+        copy,
+        ack: "delayed",
+        chunks,
+        ...(afterDecisionChunk ? { afterDecisionChunk } : {}),
+      });
+      const failure: unknown = await exercise.then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+      expect(failure).toBeInstanceOf(Error);
+      const message = (failure as Error).message;
+      if (copy === "drop") assertOutputDropRejection(message);
+      else expect(message).toContain("Destination checkpoint 0 order at 100");
+      expect(message).toContain("END present: true");
+      expect(message).toContain(
+        "source checkpoints=1, source records=4096, pending=0",
+      );
+      // One 30-byte ready prefix + one exact 131122-byte frame, plus BOTH original
+      // chunks. The literal byte counts include multi-byte text, not code units.
+      const total = 131_152 + bytes;
+      expect(message).toContain(`ACK=${total}/${total}`);
+      expect(copyFlow()).toMatchObject({
+        sourceBytes: total + (afterDecisionChunk ? 4 : 0),
+        acceptedEnd: total + (afterDecisionChunk ? 4 : 0),
+        pendingBytes: 0,
+      });
+      expect(failure).toBe(copyFlow().rejectedAtPredicate);
+      expect(calls).toEqual({ copies: 1, exitRequests: 0 });
+      expect(kill).not.toHaveBeenCalled();
+    }
+  }
+});
+
+it("keeps accounting timeout, missing real metrics and unmodified Copy out of destination-only negatives", async () => {
+  const chunks = ["transport-envelope", "🙂é"] as const;
+  const cases: CopyAckControl[] = [
+    { copy: "drop", ack: "withheld", chunks },
+    { copy: "drop", ack: "counter-only", chunks },
+    { copy: "drop", ack: "delayed", chunks, missingMetrics: true },
+    { copy: "unmodified", ack: "delayed", chunks },
+  ];
+  for (const control of cases) {
+    const { exercise, copyFlow, calls, kill } = await exerciseOutput(control);
+    await vi.advanceTimersByTimeAsync(10_100);
+    const failure: unknown = await exercise.then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(Error);
+    const message = (failure as Error).message;
+    expect(() => assertOutputDropRejection(message)).toThrow();
+    expect(message).not.toContain(
+      "source checkpoints=1, source records=4096, pending=0",
+    );
+    if (control.copy === "unmodified") {
+      // Unchanged positive flow checks can reject delayed progress, but an intact
+      // Copy must never masquerade as a drop/reorder destination rejection.
+      expect(message).toContain("Output ACK cumulative end differs");
+      expect(message).not.toContain("Destination checkpoint");
+    } else {
+      expect(message).toContain(
+        "Output failed-copy ACK/accounting did not settle",
+      );
+      expect(failure).toMatchObject({
+        cause: {
+          message:
+            "Destination checkpoint 0 record length 131040 (END present: true)",
+        },
+      });
+      if (control.missingMetrics)
+        expect(message).toContain("Output flow metadata is unavailable");
+      else {
+        expect(message).toContain(
+          "Focused oracle timed out: actual copied destination checkpoint 0",
+        );
+        expect(copyFlow()).toMatchObject({
+          sourceBytes: 131_176,
+          acceptedEnd: 131_152,
+          pendingBytes: 24,
+          observedAckEnd: control.ack === "counter-only" ? 131_176 : 131_152,
+        });
+      }
+    }
+    expect(calls).toEqual({ copies: 1, exitRequests: 0 });
+    expect(kill).not.toHaveBeenCalled();
+  }
 });
 
 it.each(["withheld", "counter-only"] as const)(

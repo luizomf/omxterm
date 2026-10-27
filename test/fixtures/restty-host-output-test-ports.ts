@@ -7,13 +7,35 @@ import {
   type SpawnPty,
 } from "../../src/main/local-terminal-session";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import { createTerminalOutputFlow } from "../../src/main/terminal-output-flow";
 import type {
   IpcListener,
   IpcMainPort,
 } from "../../src/main/terminal-ipc-types";
 import { createOutputStressHarness } from "./restty-host-output-stress";
-import { outputCheckpointProducer } from "./restty-output-checkpoint";
+import {
+  outputCheckpointProducer,
+  outputRecord,
+} from "./restty-output-checkpoint";
 import { createFixtureMetricReplyRouter } from "./restty-host-metric-replies";
+
+export interface CopyAckControl {
+  copy: "drop" | "reorder" | "unmodified";
+  ack: "delayed" | "withheld" | "counter-only";
+  chunks: readonly [string, string];
+  missingMetrics?: boolean;
+  afterDecisionChunk?: string;
+}
+
+function mutateCopiedCheckpoint(text: string, control: CopyAckControl["copy"]) {
+  if (control === "drop") return text.replace(outputRecord(100), "");
+  if (control === "reorder")
+    return text.replace(
+      outputRecord(100) + outputRecord(101),
+      outputRecord(101) + outputRecord(100),
+    );
+  return text;
+}
 
 // Execute the ordinary D2 producer/session/router with controlled external ports.
 // Copy uses the transcript here, not a real Surface selection or native PTY.
@@ -25,7 +47,8 @@ export async function exerciseOutput(
     | "no-end"
     | "no-exit"
     | "resize-failure"
-    | "write-failure",
+    | "write-failure"
+    | CopyAckControl,
   failureAt: "initial" | "resize" | "memory" | "exit" = "resize",
 ) {
   vi.useFakeTimers();
@@ -34,10 +57,16 @@ export async function exerciseOutput(
     lines.push(String(value));
     return 0;
   });
+  const copyControl = typeof mode === "object" ? mode : undefined;
   const checkpoints =
     mode === "acknowledged" ? 16 : mode === "write-failure" ? 2 : 1;
   const harness = createOutputStressHarness({ sessionIndex: 0, checkpoints });
   const calls = { copies: 0, exitRequests: 0 };
+  const kill = vi.fn();
+  const flow = createTerminalOutputFlow();
+  let copying = false;
+  let observedAckEnd = 0;
+  let rejectedAtPredicate: unknown;
   const sizes = [{ cols: 80, rows: 24 }];
   let acknowledge!: IpcListener;
   const port = harness.ipcPort({
@@ -92,7 +121,7 @@ export async function exerciseOutput(
         },
         pause() {},
         resume() {},
-        kill() {},
+        kill,
         resize() {
           if (failResize) throw new Error("PRIVATE_NATIVE_CANARY");
         },
@@ -107,17 +136,31 @@ export async function exerciseOutput(
         sourceBytes += Buffer.byteLength(text);
         transcript += text;
         harness.observeOutput(0, text);
-        if (!exiting || mode !== "withheld")
-          acknowledge({} as never, { sessionId: "s1", end: sourceBytes });
+        const end = flow.record(text);
+        expect(end).toBe(sourceBytes);
+        if (copyControl && copying) {
+          if (copyControl.ack !== "withheld")
+            setTimeout(
+              () => acknowledge({} as never, { sessionId: "s1", end }),
+              20,
+            );
+        } else if (!exiting || mode !== "withheld")
+          acknowledge({} as never, { sessionId: "s1", end });
       },
       onExit: (exit) => harness.observeExit(0, exit),
       onResizeFailure: (reason) => harness.observeResizeFailure(0, reason),
     },
   );
+  flow.bind(terminal);
   port.on(terminalIpc.outputAck, (_event, payload) => {
     const end = (payload as { end: number }).end;
-    if (exiting && mode === "counter-only") return;
-    expect(terminal.acknowledgeOutput!(end - acceptedEnd)).toBe(true);
+    observedAckEnd = end;
+    if (
+      (exiting && mode === "counter-only") ||
+      (copying && copyControl?.ack === "counter-only")
+    )
+      return;
+    expect(flow.acknowledge(end)).toBe(true);
     acceptedEnd = end;
   });
   const { terminal: routedTerminal } = createFixtureMetricReplyRouter(
@@ -168,7 +211,17 @@ export async function exerciseOutput(
       send(_channel: string, action: string) {
         if (action === "copy") {
           calls.copies++;
-          harness.observeClipboard(transcript);
+          if (!copyControl) {
+            harness.observeClipboard(transcript);
+            return;
+          }
+          const copied = mutateCopiedCheckpoint(transcript, copyControl.copy);
+          copying = true;
+          onData(copyControl.chunks[0]);
+          setTimeout(() => onData(copyControl.chunks[1]), 10);
+          if (copyControl.missingMetrics)
+            delete routedTerminal.outputFlowMetrics;
+          harness.observeClipboard(copied);
         }
       },
     },
@@ -189,10 +242,47 @@ export async function exerciseOutput(
         resizeFailure();
         onExit({ exitCode: exitCode!, signal: 0 });
       }
-      if (!(await predicate())) throw new Error(`Not ready: ${label}`);
+      if (!copyControl) {
+        if (!(await predicate())) throw new Error(`Not ready: ${label}`);
+        return;
+      }
+      // Controlled adapter for the existing focused 10 s / session 25 ms wait.
+      // Virtual time only; no new runtime waiter or native deadline is introduced.
+      const deadline = Date.now() + 10_000;
+      while (true) {
+        if (Date.now() > deadline)
+          throw new Error(`Focused oracle timed out: ${label}`);
+        try {
+          if (await predicate()) return;
+        } catch (error) {
+          if (label.startsWith("actual copied destination")) {
+            rejectedAtPredicate = error;
+            if (
+              copyControl.afterDecisionChunk &&
+              error instanceof Error &&
+              error.message.startsWith("Destination checkpoint")
+            )
+              onData(copyControl.afterDecisionChunk);
+          }
+          throw error;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
     },
   });
   void exercise.catch(() => {});
   await vi.advanceTimersByTimeAsync(500);
-  return { exercise, lines, calls };
+  return {
+    exercise,
+    lines,
+    calls,
+    kill,
+    copyFlow: () => ({
+      sourceBytes,
+      observedAckEnd,
+      acceptedEnd,
+      pendingBytes: terminal.outputFlowMetrics!().pendingBytes,
+      rejectedAtPredicate,
+    }),
+  };
 }

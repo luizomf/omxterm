@@ -63,6 +63,61 @@ export function outputStressLaunchRequest(
   };
 }
 
+interface FailedOutputCopy {
+  readonly cause: unknown;
+  readonly message: string;
+  readonly diagnostic: ReturnType<typeof outputCheckpointCopyDiagnostic>;
+}
+
+function observeCopiedCheckpoint(
+  text: string,
+  batch: number,
+  destination: ReturnType<typeof assertOutputCheckpoint>[],
+): FailedOutputCopy | undefined {
+  try {
+    destination.push(assertOutputCheckpoint(text, batch));
+    return undefined;
+  } catch (cause) {
+    // Retain actual failed-copy evidence, not asynchronous flow observations.
+    return {
+      cause,
+      message: cause instanceof Error ? cause.message : String(cause),
+      diagnostic: outputCheckpointCopyDiagnostic(text, batch),
+    };
+  }
+}
+
+// Called only from the synchronous copy-result predicate. Never re-read live
+// accounting after returning this error to the asynchronous wait/catch path.
+function copyError(
+  failure: FailedOutputCopy,
+  source: ReturnType<typeof createOutputSourceObserver>,
+  ackEnd: number,
+  terminal: LocalTerminalSession,
+): Error | undefined {
+  const original = source.evidence();
+  const flow = terminal.outputFlowMetrics?.();
+  if (!flow) throw new Error("Output flow metadata is unavailable");
+  if (ackEnd !== original.bytes || flow.pendingBytes !== 0) return undefined;
+  return new Error(
+    `${failure.message}; source checkpoints=${original.checkpoints}, source records=${original.records}, pending=${flow.pendingBytes}, ACK=${ackEnd}/${original.bytes}; copied checkpoint=${JSON.stringify(failure.diagnostic)}`,
+    { cause: failure.cause },
+  );
+}
+
+function rethrowCopyFailure(
+  error: unknown,
+  failure: FailedOutputCopy | undefined,
+  qualified: Error | undefined,
+): never {
+  if (failure && (qualified === undefined || error !== qualified))
+    throw new Error(
+      `Output failed-copy ACK/accounting did not settle: ${error instanceof Error ? error.message : String(error)}; original destination cause: ${failure.message}`,
+      { cause: failure.cause },
+    );
+  throw error;
+}
+
 export function createOutputStressHarness({
   sessionIndex = 2,
   checkpoints = OUTPUT_CHECKPOINTS,
@@ -70,8 +125,7 @@ export function createOutputStressHarness({
   const source = createOutputSourceObserver(checkpoints);
   const destination: ReturnType<typeof assertOutputCheckpoint>[] = [];
   let expectingCopy: number | undefined;
-  let destinationError: Error | undefined;
-  let copyPendingBytes = -1;
+  let failedCopy: FailedOutputCopy | undefined;
   let holdAcknowledgements = false;
   const pendingAcknowledgements: Array<() => void> = [];
   let ackCount = 0;
@@ -148,13 +202,7 @@ export function createOutputStressHarness({
     },
     observeClipboard(text: string) {
       if (expectingCopy === undefined) return;
-      try {
-        destination.push(assertOutputCheckpoint(text, expectingCopy));
-      } catch (cause) {
-        destinationError = new Error(
-          `${cause instanceof Error ? cause.message : String(cause)}; source checkpoints=${source.checkpoints()}, source records=${source.evidence().records}, pending=${copyPendingBytes}, ACK=${cumulativeEnd}/${source.evidence().bytes}; copied checkpoint=${JSON.stringify(outputCheckpointCopyDiagnostic(text, expectingCopy))}`,
-        );
-      }
+      failedCopy = observeCopiedCheckpoint(text, expectingCopy, destination);
       expectingCopy = undefined;
     },
     observeExit(index: number, exit: { exitCode: number; signal: number }) {
@@ -254,15 +302,22 @@ export function createOutputStressHarness({
           `checkpoint ${batch} complete original output acknowledgement`,
         );
         phase("checkpoint-ack", "complete", batch);
-        copyPendingBytes = terminal.outputFlowMetrics!().pendingBytes;
         expectingCopy = batch;
         phase("checkpoint-copy", "begin", batch);
         window.webContents.send(terminalIpc.clipboardAction, "select-all");
         window.webContents.send(terminalIpc.clipboardAction, "copy");
-        await waitFor(() => {
-          if (destinationError) throw destinationError;
-          return destination.length === batch + 1;
-        }, `actual copied destination checkpoint ${batch}`);
+        let rejection: Error | undefined;
+        try {
+          await waitFor(() => {
+            if (!failedCopy) return destination.length === batch + 1;
+            rejection = copyError(failedCopy, source, cumulativeEnd, terminal);
+            if (!rejection) return false;
+            // Capture, format and throw in this SAME synchronous check.
+            throw rejection;
+          }, `actual copied destination checkpoint ${batch}`);
+        } catch (error) {
+          rethrowCopyFailure(error, failedCopy, rejection);
+        }
         phase("checkpoint-copy", "complete", batch);
         if (batch + 1 < checkpoints) terminal.write("n");
       }

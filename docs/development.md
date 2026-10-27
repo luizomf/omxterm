@@ -672,8 +672,17 @@ validate the origin/semantics of arbitrary envelope text.
 After the actual producer exits, the fixture finalizes framing and takes a fresh
 session flow snapshot: every original source byte must be cumulatively ACKed and
 actual pending bytes must be zero. A pre-exit snapshot or advancement of the ACK
-wrapper's counter alone is insufficient. Headless parser/core and composed
-producer/session/harness controls:
+wrapper's counter alone is insufficient.
+
+For a deliberately failed Copy, the callback retains the actual destination
+cause and copy diagnostic without sampling flow. The existing bounded copy-result
+wait requires exact cumulative ACK equality with **all currently observed original
+UTF-8 bytes** and actual session pending bytes zero, then captures/formats/throws
+the destination rejection in that same synchronous check, before failure cleanup.
+New chunks before settlement remain counted. A timeout or unavailable real flow
+metadata is an accounting failure retaining the destination cause, not a qualified
+destination-only negative. This snapshot is not the positive post-exit finalization.
+Headless parser/core and composed producer/session/harness controls:
 `npm test -- test/unit/restty-output-checkpoint.test.ts test/unit/restty-host-output-phases.test.ts`.
 They do not qualify native continuation or Windows transport.
 
