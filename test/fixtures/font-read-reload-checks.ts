@@ -61,6 +61,10 @@ export function fontReadRendererReady(observation: {
 
 export const fontReadReloadResultPrefix = "__OMXTERM_FONT_READ_RELOAD_RESULT__";
 const mutationSentinel = "__OMXTERM_FONT_READ_RELOAD_A_SUPERSEDED__";
+const fatalReceiptPrefix = "__OMXTERM_FONT_READ_RELOAD_FATAL__";
+// Only the exact checked race outcome can produce this category; message text
+// from an unrelated exception is not authoritative.
+const mutationFailures = new WeakSet<Error>();
 export interface FontReadResult {
   family: unknown;
   status: "pending" | "fulfilled" | "rejected";
@@ -100,8 +104,11 @@ export function assertFontReadResults(
       { family: A, status: "rejected", failure: "superseded" },
       { family: B, status: "fulfilled" },
     ])
-  )
-    throw new Error(mutationSentinel);
+  ) {
+    const error = new Error(mutationSentinel);
+    mutationFailures.add(error);
+    throw error;
+  }
   assert.deepEqual(
     evidence.received,
     [
@@ -112,6 +119,31 @@ export function assertFontReadResults(
     "Exact default/A/B font results must fulfill",
   );
 }
+export function createFontReadFailureHandler(options: {
+  releaseReads(): void;
+  writeError(text: string): unknown;
+  complete(code: 1): Promise<void>;
+}) {
+  let ordinal = 0;
+  return (error: unknown) => {
+    // Account for every invocation, including failures during an existing drain.
+    // Keep the existing release, raw diagnostic and native completion handling.
+    const receipt = {
+      ordinal: ++ordinal,
+      category:
+        error instanceof Error && mutationFailures.has(error)
+          ? "a-superseded"
+          : "fatal",
+    };
+    options.releaseReads();
+    options.writeError(`${fatalReceiptPrefix}${JSON.stringify(receipt)}\n`);
+    options.writeError(
+      `${error instanceof Error ? error.stack : String(error)}\n`,
+    );
+    void options.complete(1);
+  };
+}
+
 export function assertOldPostReadRejection(execution: NativeFixtureResult) {
   assert.deepEqual(
     [
@@ -122,6 +154,17 @@ export function assertOldPostReadRejection(execution: NativeFixtureResult) {
       execution.cleanupFailure,
     ],
     [1, null, "exit", [], undefined],
+  );
+  const receipts = execution.stderr
+    .split(/\r?\n/u)
+    .filter((line) => line.startsWith(fatalReceiptPrefix))
+    .map(
+      (line) => JSON.parse(line.slice(fatalReceiptPrefix.length)) as unknown,
+    );
+  assert.deepEqual(
+    receipts,
+    [{ ordinal: 1, category: "a-superseded" }],
+    "Exactly one intended mutation fatal invocation, and no other fatal failure",
   );
   assert.equal(
     execution.stderr

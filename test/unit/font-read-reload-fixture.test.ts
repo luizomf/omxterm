@@ -8,6 +8,7 @@ import type { TerminalBridge } from "../../src/shared/terminal-bridge";
 import { buildFixture } from "../fixtures/font-read-reload-build";
 import {
   assertFontReadResults,
+  createFontReadFailureHandler,
   assertOldPostReadRejection,
   fontReadFailure,
   fontReadRendererReady,
@@ -112,14 +113,40 @@ it("qualifies only the exact held-read A supersession, never unrelated native fa
       { family: "B", status: "fulfilled" },
     ],
   };
-  function execution(observed: FontReadResults) {
+  function execution(
+    observed: FontReadResults,
+    additional: readonly unknown[] = [],
+  ) {
     let stderr = "";
+    const releaseReads = vi.fn();
+    let settle!: () => void;
+    const drain = new Promise<void>((resolve) => {
+      settle = resolve;
+    });
+    const complete = vi.fn((_code: 1) => drain);
+    const fail = createFontReadFailureHandler({
+      releaseReads,
+      writeError: (text) => {
+        stderr += text;
+      },
+      complete,
+    });
+    let failures = 0;
     try {
       assertFontReadResults("A", "B", observed);
     } catch (error) {
-      stderr =
-        error instanceof Error ? (error.stack ?? error.message) : String(error);
+      failures++;
+      fail(error);
     }
+    for (const error of additional) {
+      failures++;
+      fail(error);
+    }
+    expect(releaseReads).toHaveBeenCalledTimes(failures);
+    expect(complete.mock.calls).toEqual(
+      Array.from({ length: failures }, () => [1]),
+    );
+    settle();
     return {
       exitCode: stderr ? 1 : 0,
       signal: null,
@@ -129,8 +156,21 @@ it("qualifies only the exact held-read A supersession, never unrelated native fa
       cleanupErrors: [],
     } as const;
   }
+  const fulfilled: FontReadResults = {
+    ...evidence,
+    received: evidence.received.map((record) => ({
+      family: record.family,
+      status: "fulfilled",
+    })),
+  };
   const intended = execution(evidence);
   expect(() => assertOldPostReadRejection(intended)).not.toThrow();
+  expect(() =>
+    assertOldPostReadRejection({
+      ...intended,
+      stderr: `Error occurred in handler for 'fixture-font-data': Error: Terminal Font request was superseded\n${intended.stderr}`,
+    }),
+  ).not.toThrow();
   const unrelated: FontReadResults[] = [
     {
       ...evidence,
@@ -168,6 +208,17 @@ it("qualifies only the exact held-read A supersession, never unrelated native fa
     { stderr: "Started A must complete; old post-read rejection fails here" },
     { stderr: `${intended.stderr}\n${intended.stderr}` },
     { stderr: `${intended.stderr}\nRestty fixture session close failed` },
+    {
+      stderr: execution(evidence, [
+        new Error("Unrelated asynchronous fixture failure"),
+      ]).stderr,
+    },
+    { stderr: execution(evidence, ["Unrelated rejected value"]).stderr },
+    {
+      stderr: execution(fulfilled, [
+        new Error("__OMXTERM_FONT_READ_RELOAD_A_SUPERSEDED__"),
+      ]).stderr,
+    },
     { reason: "timeout" },
     { signal: "SIGTERM" as const },
     { cleanupErrors: ["termination failed"] },
@@ -180,18 +231,11 @@ it("qualifies only the exact held-read A supersession, never unrelated native fa
     },
     { stdout: "__OMXTERM_FONT_READ_RELOAD_RESULT__{}" },
   ])
-    expect(() =>
-      assertOldPostReadRejection({ ...intended, ...changed }),
+    expect(
+      () => assertOldPostReadRejection({ ...intended, ...changed }),
+      JSON.stringify(changed),
     ).toThrow();
-  expect(() =>
-    assertFontReadResults("A", "B", {
-      ...evidence,
-      received: evidence.received.map((record) => ({
-        family: record.family,
-        status: "fulfilled",
-      })),
-    }),
-  ).not.toThrow();
+  expect(() => assertFontReadResults("A", "B", fulfilled)).not.toThrow();
 });
 
 it("associates each Surface with its actual bridge start receipt even when startups finish out of order", async () => {

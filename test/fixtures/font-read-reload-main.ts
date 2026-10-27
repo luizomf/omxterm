@@ -27,6 +27,7 @@ import type { TerminalFontData } from "../../src/shared/terminal-font-data";
 import { spawnFixturePty } from "./native-fixture-pty";
 import {
   assertFontReadResults,
+  createFontReadFailureHandler,
   fontReadFailure,
   fontReadRendererReady,
   fontReadReloadResultPrefix,
@@ -59,13 +60,11 @@ const owner = createResttyHostSessions({
   signals: process,
   reportError: (message) => process.stderr.write(`${message}\n`),
 });
-function fail(error: unknown) {
-  releaseFontReads();
-  process.stderr.write(
-    `${error instanceof Error ? error.stack : String(error)}\n`,
-  );
-  void owner.complete(1);
-}
+const fail = createFontReadFailureHandler({
+  releaseReads: releaseFontReads,
+  writeError: (text) => process.stderr.write(text),
+  complete: (code) => owner.complete(code),
+});
 process.on("uncaughtException", fail);
 process.on("unhandledRejection", fail);
 
