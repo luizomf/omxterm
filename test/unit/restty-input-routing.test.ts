@@ -59,7 +59,10 @@ describe("actual prepared final-key routing", () => {
       createHash("sha256").update(text).digest("hex");
     const reverse = (
       text: string,
-      edits: { original: string; corrected: string }[],
+      edits: readonly {
+        readonly original: string;
+        readonly corrected: string;
+      }[],
     ) =>
       edits.reduce((value, { original, corrected }) => {
         expect(value.split(corrected)).toHaveLength(2);

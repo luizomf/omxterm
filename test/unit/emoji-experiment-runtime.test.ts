@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import runtimeHistory from "../fixtures/restty-runtime-history.json";
+import { inputRoutingCorrections } from "../../scripts/restty-input-routing-corrections.mjs";
 
 const harness = vi.hoisted(() => ({
   runtime: "",
@@ -145,7 +146,9 @@ it("accepts the prepared runtime and instruments all eighteen emoji trial recipe
     expect(source).toContain(
       "globalThis.emojiProbe.atlas++;atlas = buildAtlas",
     );
-    // The new product correction survives this unrelated fixture transform.
+    for (const { corrected } of inputRoutingCorrections)
+      expect(source).toContain(corrected);
+    // Prior product corrections also survive this unrelated fixture transform.
     expect(source).toContain(
       "if (host.scrollTop !== scrollTopBeforeSpacer) ignoreNextScroll = true;",
     );
