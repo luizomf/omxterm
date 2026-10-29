@@ -112,8 +112,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   on first open and reused without reread, reorder or state reset. It has no
   Terminal Pane, Surface, Adapter, shell or PTY. One ordered collection owns
   all kinds' selection, reordering and literal/next/previous navigation, including
-  hosted content opened by the separately installed Files development preview's
-  explicit action, within its documented qualification limits. The
+  general hosted Application Tabs. Separately installed Files and SSH Connect
+  open in the companion Auxiliary Panel instead and do not enter tab ordering. The
   existing strip flag and two-tab threshold include Settings; opening it never
   reveals a disabled strip. Switching preserves its DOM, category, drafts,
   revisions, scroll and pending save results; it cancels shortcut recording and
@@ -536,10 +536,13 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and `Ctrl+Shift+S`
   on Linux and Windows, remappable through `keybinds`) shows or hides the
   selected window's Snippets view in one right-side, nonmodal Auxiliary Panel
-  below full-width title/tab chrome. Snippets is the only production view; no
-  tool switcher or plugin API is exposed. Window composition creates the shared
-  panel independently of the optional Snippets wiring; Snippets contributes its
-  lazy view definition and preview, not the panel owner. Views are created lazily.
+  below full-width title/tab chrome. Installed Files and SSH Connect share this
+  panel after explicit activation through their existing actions. A labeled tool
+  switcher selects among opened tools and Snippets; one view is visible at a time.
+  Reopening an active extension tool reveals its retained view. Closing the panel
+  hides it without retiring its extension epoch or ending terminal sessions.
+  Window composition creates the shared panel independently of Snippets wiring;
+  Snippets contributes its lazy view definition and preview. Views are created lazily.
   The host owns exclusive visibility, header/Close, resize, focus and lifecycle; the view
   owns its query, scroll and catalog. Activation reveals loading/search and
   focuses search immediately, rereading `snippets.yaml` each time without file
@@ -547,7 +550,18 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   including empty/error results, without refocusing. Late results from a hidden,
   superseded or disposed activation are inert. Query and scroll survive hiding
   in memory; scroll clamps after shorter results. Deactivation stops active-only
-  work and disposal releases all created views and listeners once.
+  work and disposal releases all created views and listeners once. Native extension
+  views retain their page state while hidden; accepted filesystem work may finish.
+  Terminal-tab changes preserve the selected companion view. Settings and general
+  hosted tabs suspend the panel and restore its selected view on terminal return.
+  Panel tools are window-owned, independently of the opening terminal's lifetime;
+  backend/window loss and disable/update/uninstall still retire their views.
+  Legacy Files keeps the local directory captured on its initial opening.
+  SSH Connect creates a new Terminal Tab, preserving previous sessions and the
+  visible panel. Its foreground handoff acknowledges native focus returning to
+  core while the panel remains visible; a background result does not steal focus.
+  One window-native presentation owner orders panel and tab geometry, focus,
+  acknowledged hiding before DOM overlays, and stale continuation rejection.
 - Toggle the visible/loading Snippets view, Close, or Escape originating inside
   the panel hides/deactivates it and focuses the live selected terminal. A
   closing Escape or Enter-on-Close gesture owns its repeats and release, including
@@ -1579,8 +1593,9 @@ terminal. Retained terminal-popup targets cannot become Settings field edits.
 Clipboard reads recheck interaction generation as well as focus/value/selection;
 tab deactivation, modal activation, focus loss and disposal invalidate them even
 after returning to the same unchanged field. Hidden save results may settle
-without focusing. Selecting Settings deactivates/hides Snippets while retaining
-its existing query/scroll/width memory. It does not automatically reopen, and
+without focusing. Selecting Settings suspends the shared Auxiliary Panel while
+retaining its selected view and query/scroll/width memory. Returning to a terminal
+restores that view; Snippets retains its reread-on-activation behavior.
 Toggle Snippets is a no-op on Settings. Settings has
 no default shortcut. Its General-page language selector uses exact en-US/pt-BR
 values and the same validated save/reload route as other live controls. Its
@@ -1645,8 +1660,10 @@ Remote/foreign origins, navigation, connect and browser-worker routes are refuse
 See [ADR 0039](adr/0039-own-packaged-web-content-by-epoch.md) for admission,
 hide-before-overlay, retirement and the unqualified main-death file-read gate.
 
-Hosted content is optional internal Application Tab content, with retained
-Settings and real terminal panes unchanged. Main-issued identities and monotonic
+Hosted content is optional internal Application Tab or companion-panel content,
+with retained Settings and real terminal panes unchanged. Main selects Files/SSH
+panel presentation from captured package identity/action metadata; presentation
+selection does not assert publisher trust or confer extra capabilities. Main-issued identities and monotonic
 slot presentations are owner-bound. The host hides native views before admitting
 host DOM overlays and restores only a still-current content owner. Field input
 and clipboard remain in the child, never forwarded into a terminal. Closing or

@@ -13,8 +13,10 @@ import {
 it.each([
   ["ssh", "0.24.0-dev.1"],
   ["ssh", "0.24.0-dev.2"],
+  ["ssh", "0.24.0-dev.3"],
   ["restoration", "0.24.0-dev.1"],
   ["restoration", "0.24.0-dev.2"],
+  ["restoration", "0.24.0-dev.3"],
 ])(
   "keeps the unchanged %s manifest compatible with host %s",
   async (name, appVersion) => {
@@ -33,7 +35,7 @@ it.each([
   },
 );
 
-it.each(["0.24.0-dev.0", "0.24.0-dev.1", "0.24.0-dev.2"])(
+it.each(["0.24.0-dev.0", "0.24.0-dev.1", "0.24.0-dev.2", "0.24.0-dev.3"])(
   "admits unchanged Files on explicitly assigned host %s across store and catalog",
   async (appVersion) => {
     const manifest = parseManifest(
@@ -52,7 +54,7 @@ it.each(["0.24.0-dev.0", "0.24.0-dev.1", "0.24.0-dev.2"])(
     } as unknown as CatalogRelease;
     expect(catalogCompatible(release, runtime, "linux-arm64")).toBe(true);
     expect(catalogCompatible(release, runtime, "darwin-arm64")).toBe(false);
-    for (const appVersion of ["0.24.0", "0.24.0-dev.3", "0.25.0-dev.0"])
+    for (const appVersion of ["0.24.0", "0.24.0-dev.4", "0.25.0-dev.0"])
       expect(packageCompatible(manifest, { ...runtime, appVersion })).toBe(
         false,
       );

@@ -33,8 +33,9 @@ Application Tabs, with exactly one selected. It starts with a Terminal Tab.
 
 **Application Tab** — A terminal, graphical Settings or internal hosted-content entry in one window's
 single ordered tab collection. Reordering and literal/next/previous navigation
-include all kinds. Separately installed Files preview activation is available through
-its explicit shared action, within the documented preview qualification limits.
+include all kinds. Separately installed Files and SSH Connect preview tools use
+the companion Auxiliary Panel through their explicit shared actions, rather than
+adding Application Tabs.
 Removing the last Application Tab follows the window-close
 lifecycle, including pending failure acknowledgement.
 
@@ -152,9 +153,14 @@ chrome. It owns lazy exclusive view lifetimes, visible dismissal, focus and
 pointer/keyboard resizing. Preferred width starts at 280 px (220–560 px bounds,
 6 px separator, 180 px terminal allowance); narrow content clamps or deactivates
 it. Width/visibility are memory-only and independent between windows. It does not
-change native minimum-window bounds or guarantee terminal columns.
+change native minimum-window bounds or guarantee terminal columns. One labeled
+switcher selects among opened tools and Snippets. Terminal-tab changes preserve
+the panel; Settings/general hosted tabs suspend it until terminal return.
+Extension views retain state when hidden, survive the opening terminal, and
+retire with package management, backend loss or window loss.
 
-**Snippets Sidebar** — The sole production Auxiliary Panel view, loaded from the
+**Snippets Sidebar** — The built-in Auxiliary Panel view, alongside explicitly
+opened Files/SSH companion tools, loaded from the
 user's `snippets.yaml` (single bounded YAML 1.2 core document with version-1
 snippet fields). Search/loading appears immediately on activation; each
 activation rereads the file, retaining query/scroll but invalidating old actions
@@ -249,10 +255,11 @@ replay or startup restoration. Its revisioned state survives uninstall; Forget
 removes the active snapshot, not possible interrupted-write remnants. See
 [the guide](docs/saved-layout.md).
 
-**SSH Connect** — A separately installed Linux ARM64 preview application page
+**SSH Connect** — A separately installed Linux ARM64 preview companion-panel page
 with an incomplete bounded OpenSSH alias index and distinct quick-connect field.
-Its declared `terminal.openSsh.v1` capability transfers a typed target to core,
-which owns literal system-ssh launch, PTY, Busy/close/Quit and retained nonzero
+Its declared `terminal.openSsh.v1` capability transfers a typed target to a new
+core Terminal Tab while preserving the panel and existing sessions. Core
+owns literal system-ssh launch, PTY, Busy/close/Quit and retained nonzero
 exit output independently of extension lifetime. It is not an SSH broker,
 credential vault or reconnect service. See [the guide](docs/ssh-connect.md).
 
@@ -322,7 +329,9 @@ see [the preview contract](docs/files-development-preview.md) for qualification 
 **Extension View Host** — Internal owner of lazy native web-content views in a
 nonpersistent epoch. It retains a captured package reader/pin, materializes bounded
 local resource responses, and retires known views/reads without terminating core
-PTYs. The Application Tab adapter acknowledges native hiding before DOM overlays.
+PTYs. A shared window presentation owner composes Application Tab and companion-panel
+slots, acknowledging native hiding before DOM overlays and core focus handoff
+while retaining a visible companion view.
 It is not a public SDK, activation UI or proof of main-death disk-read exclusion.
 
 **Application Network Boundary** — OMXTerm requests remote bytes only for explicit

@@ -276,13 +276,27 @@ Each snippet row shows what clicking it does: **Insert** types the snippet witho
 
 Change the interface language in **Settings → General → Language**. Row and preview controls update in place, including an unavailable-terminal notice; your snippet text, captured target, focus and disabled actions are retained. About, local-image and snippet previews do not stack. Those modals block pane split/focus/equalize, tab navigation and divider input; approved closure still works. Settings is instead a normal tab: terminal-only actions do nothing there, while tab/window actions stay available. Pane menus, Surface names and resize separators also follow the interface language without replacing sessions.
 
+### Shared companion panel
+
+The Linux ARM64 preview's installed **Files** and **SSH Connect** tools open beside
+the terminal through their existing File-menu, palette or terminal-context actions.
+The panel's labeled buttons switch between opened tools and Snippets. Hiding or
+switching tools retains their state; reopening a tool reuses its existing view.
+Switching terminal tabs keeps the panel visible. Connecting through SSH opens a
+new terminal tab without replacing the current session or closing the panel.
+Settings and general extension tabs temporarily suspend it.
+
+Files keeps the terminal directory captured when its view first opened. Closing
+that terminal leaves the tool available; disabling or removing the extension
+retires its view. Published legacy extension pages retain their own styling.
+
 ### Resize or close Snippets
 
 Drag the left separator to resize the right-side Snippets panel. Its 1 px line matches pane dividers but retains a 6 px resize target; keyboard focus highlights the line, not a rectangle. You can also focus the separator with Tab: Left/Right grow/shrink by 10 px, and Home/End choose the current minimum/maximum. The default width is 280 px, bounded to 220–560 px and the available window space. The header's Close button, Escape inside the panel, or `Cmd+Shift+S` / `Ctrl+Shift+S` (**View → Toggle Snippets**) hides it and returns terminal focus.
 
 The panel shrinks automatically in narrow windows and closes below 406 px of content width. Widen the window and open it again; it does not reopen automatically. Your preferred width, search and scroll survive hiding and configuration/theme changes in that window only, not restart. The remaining terminal allowance does not guarantee columns with extreme padding.
 
-Snippets is nonmodal: clicking the terminal keeps normal terminal input. Copy/Paste/Select All edit the search field while it holds focus; unsupported panel controls suppress terminal clipboard delivery instead. Selecting Settings deactivates/hides the panel without automatically reopening it on return to a terminal. About, snippet preview and Local Image Preview temporarily make the retained visible panel inert.
+Snippets is nonmodal: clicking the terminal keeps normal terminal input. Copy/Paste/Select All edit the search field while it holds focus; unsupported panel controls suppress terminal clipboard delivery instead. Selecting Settings or a general extension tab suspends the panel; returning to a terminal restores the selected tool. About, snippet preview and Local Image Preview temporarily make the retained visible panel inert.
 
 ### A program draws text in the wrong place
 

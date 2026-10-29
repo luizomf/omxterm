@@ -86,8 +86,10 @@ undispatched gesture. Pointer Connect is immediate. Pending controls prevent
 accidental duplicate submission. An accepted result means a **core terminal tab
 was accepted**, not that authentication or connection succeeded. An uncertain
 reply says a terminal may already have opened; check tabs rather than retrying
-automatically. Focus transfers only while this same page remains selected and no
-modal owns input; otherwise the tab is appended in the background.
+automatically. In the companion panel, Connect opens a new Terminal Tab while
+keeping the panel visible and existing sessions alive. Focus transfers only while
+this same panel page owns foreground interaction and no modal owns input;
+otherwise the tab is appended in the background.
 
 Main resolves an executable regular `ssh` file (symlinks allowed) only from
 absolute, nonempty application-PATH directories at Connect time. That PATH can
@@ -151,10 +153,10 @@ does not detect manually typed ssh inside an ordinary shell.
 The optional exact manifest declaration is
 `"capabilities": ["terminal.openSsh.v1"]`; unknown declarations are rejected.
 The unchanged Files 0.1.0 preview remains compatible and receives no SSH
-capability. Host 0.24.0-dev.0 explicitly admits its original
+capability. Hosts 0.24.0-dev.0 through 0.24.0-dev.3 explicitly admit its original
 `>=0.23.0-dev.8 <0.24.0` host range at both catalog and installed-store checks;
 ordinary semver would exclude this new prerelease tuple. This exception is
-limited to that host version, Files identity/version and its original host/API
+limited to those enumerated host versions, Files identity/version and its original host/API
 ranges. API compatibility and target checks still apply. It does not modify the
 published Files archive or admit other packages or future host versions.
 The own-view bridge's `{operation:"host.capabilities"}` query reports declared
