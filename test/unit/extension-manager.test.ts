@@ -45,8 +45,10 @@ afterEach(async () => {
 async function setup() {
   const entry = (await packages.snapshot())[0]!;
   const call = vi.fn(async (value: Value) => value);
+  const backendLifetime = new AbortController();
   const backend: Backend = {
     epoch: "backend-epoch",
+    signal: backendLifetime.signal,
     state: () => "active",
     selection: {
       id: entry.id,
@@ -86,7 +88,16 @@ async function setup() {
       temporaryDirectory: root,
     }),
   });
-  return { manager, runtime, views, createViews, opens, call, backend };
+  return {
+    manager,
+    runtime,
+    views,
+    createViews,
+    opens,
+    call,
+    backend,
+    backendLifetime,
+  };
 }
 it("leaves installed-unused dormant and gives each invocation its own captured target and view pin", async () => {
   const setupResult = await setup();
@@ -164,6 +175,40 @@ it.each(["cross-instance", "local", "source", "request", "backend"])(
     await manager.dispose();
   },
 );
+
+it("revokes view authority immediately on backend loss, without waiting for retirement", async () => {
+  const { manager, views, createViews, backendLifetime } = await setup();
+  let finish!: () => void;
+  const settlement = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  createViews.mockImplementation((input) => {
+    views.push(input);
+    return {
+      open: async () => {},
+      retire: async () => {
+        await settlement;
+        await input.pin.release();
+        input.retired();
+        return { status: "settled" };
+      },
+    };
+  });
+  await manager.open(manifest.id, {
+    owner: {},
+    signal: new AbortController().signal,
+    terminalDirectory: null,
+  });
+  backendLifetime.abort();
+  expect(views[0]!.signal.aborted).toBe(true);
+  await expect(
+    views[0]!.admit(new AbortController().signal, () => {
+      throw new Error("must not commit");
+    }),
+  ).rejects.toThrow("unavailable");
+  finish();
+  expect(await manager.dispose()).toBe(true);
+});
 
 it("disable revokes calls and independently retires all local views and the backend", async () => {
   const { manager, views, runtime, call } = await setup();

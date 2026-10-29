@@ -80,6 +80,25 @@ function boundedSettlement(work: Promise<unknown>[]): Promise<boolean> {
   });
 }
 
+async function retireGroups(groups: Set<Group>, id?: string): Promise<boolean> {
+  const selected = [...groups].filter(
+    (group) => id === undefined || group.id === id,
+  );
+  for (const group of selected) group.abort.abort();
+  const results = await Promise.all(
+    selected.map(async (group) => {
+      try {
+        const result = await group.views.retire();
+        if (result.status === "settled") groups.delete(group);
+        return result.status === "settled";
+      } catch {
+        return false;
+      }
+    }),
+  );
+  return results.every(Boolean);
+}
+
 /** One application owner for consent, generation admission, views and backends.
  * Settings/menu/fixture callers use this same interface, never a parallel store. */
 export function createExtensionManager(options: Options) {
@@ -108,24 +127,6 @@ export function createExtensionManager(options: Options) {
     !busy.has(id) &&
     revision(id) === captured &&
     !target.signal.aborted;
-  async function retireGroups(id?: string): Promise<boolean> {
-    const selected = [...groups].filter(
-      (group) => id === undefined || group.id === id,
-    );
-    for (const group of selected) group.abort.abort();
-    const results = await Promise.all(
-      selected.map(async (group) => {
-        try {
-          const result = await group.views.retire();
-          if (result.status === "settled") groups.delete(group);
-          return result.status === "settled";
-        } catch {
-          return false;
-        }
-      }),
-    );
-    return results.every(Boolean);
-  }
   async function start(
     id: string,
     target: ExtensionTarget,
@@ -148,11 +149,13 @@ export function createExtensionManager(options: Options) {
         !(await pin.revalidate())
       )
         throw new PackageError("unavailable");
-      if (!alive(id, captured, target)) throw new PackageError("unavailable");
+      if (!alive(id, captured, target) || backend.signal.aborted)
+        throw new PackageError("unavailable");
       // Each invocation has its own captured context and independent view pin.
       // Sharing the backend must not make a new tab inherit an older pane's cwd.
       {
         const abort = new AbortController();
+        const ownerLost = AbortSignal.any([target.signal, backend.signal]);
         let group: Group;
         const lost = () => {
           abort.abort();
@@ -169,7 +172,7 @@ export function createExtensionManager(options: Options) {
           ...viewRequests(
             pin,
             backend,
-            AbortSignal.any([abort.signal, target.signal]),
+            AbortSignal.any([abort.signal, ownerLost]),
             () => alive(id, captured, target),
           ),
           target,
@@ -178,17 +181,21 @@ export function createExtensionManager(options: Options) {
           retired: () => {
             abort.abort();
             groups.delete(group);
-            target.signal.removeEventListener("abort", lost);
+            ownerLost.removeEventListener("abort", lost);
           },
         });
         pin = undefined; // ownership transferred; never released by both owners
         group = { id, target, views, abort };
         groups.add(group);
-        target.signal.addEventListener("abort", lost, { once: true });
-        if (target.signal.aborted || !alive(id, captured, target)) lost();
+        ownerLost.addEventListener("abort", lost, { once: true });
+        if (ownerLost.aborted || !alive(id, captured, target)) {
+          lost();
+          throw new PackageError("unavailable");
+        }
         await views.open();
       }
-      if (!alive(id, captured, target)) throw new PackageError("unavailable");
+      if (!alive(id, captured, target) || backend.signal.aborted)
+        throw new PackageError("unavailable");
       if (state.get(id) !== "unknown") state.set(id, "active");
     } catch (error) {
       await pin?.release();
@@ -212,7 +219,7 @@ export function createExtensionManager(options: Options) {
       state.set(id, "unknown");
       // Still retire invalidated local callbacks even when publication failed.
       try {
-        await retireGroups(id);
+        await retireGroups(groups, id);
         await options.runtime.retire(id);
       } finally {
         busy.delete(id);
@@ -221,7 +228,7 @@ export function createExtensionManager(options: Options) {
     }
     try {
       const [views, backend, pending] = await Promise.all([
-        retireGroups(id),
+        retireGroups(groups, id),
         options.runtime.retire(id),
         boundedSettlement(
           [...opening]
@@ -322,7 +329,7 @@ export function createExtensionManager(options: Options) {
       for (const group of groups) group.abort.abort();
       disposal = (async () => {
         const [views, backends, pending] = await Promise.all([
-          retireGroups(),
+          retireGroups(groups),
           options.runtime.dispose(),
           boundedSettlement(
             [...opening.keys()].map((work) => work.catch(() => {})),

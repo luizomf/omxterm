@@ -93,6 +93,7 @@ beforeEach(async () => {
         const entry = (await packages.snapshot())[0]!;
         return {
           epoch: "controlled-backend",
+          signal: new AbortController().signal,
           selection: {
             id,
             generation: entry.generation,

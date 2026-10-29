@@ -26,6 +26,7 @@ import { deferred, within } from "./backend-process.js";
 export type * from "./backend-process.js";
 class Activation {
   readonly epoch = randomUUID();
+  private readonly lifetime = new AbortController();
   readonly ready = deferred<Backend>();
   private readonly ended = deferred<Retirement>();
   private readonly exit = deferred<void>();
@@ -173,6 +174,7 @@ class Activation {
       clearTimeout(this.activationTimer);
       this.ready.resolve({
         epoch: this.epoch,
+        signal: this.lifetime.signal,
         selection: { ...this.selection! },
         state: () => {
           if (this.cleanupFailed) return "unknown";
@@ -378,6 +380,7 @@ class Activation {
   }
   private revoke(): void {
     this.phase = "stopping";
+    this.lifetime.abort();
     clearTimeout(this.activationTimer);
     for (const cancel of this.admissions.values()) cancel();
     for (const pending of this.pending.values()) {

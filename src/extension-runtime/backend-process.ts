@@ -13,6 +13,8 @@ export type RuntimeOptions = {
 };
 export type Backend = {
   readonly epoch: string;
+  /** Revoked synchronously on stop, channel loss or exit, before settlement. */
+  readonly signal: AbortSignal;
   readonly selection: VersionSelection;
   state(): "active" | "stopping" | "dormant" | "failed" | "unknown";
   call(value: Value, signal?: AbortSignal): Promise<Value>;
