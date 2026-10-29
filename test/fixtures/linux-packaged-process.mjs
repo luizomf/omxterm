@@ -199,6 +199,10 @@ if (role === "wrapper") {
       stopping = true;
       let exited = 0;
       for (const child of [probe, gpu]) {
+        if (child.exitCode !== null || child.signalCode !== null) {
+          if (++exited === 2) process.exit(0);
+          continue;
+        }
         child.once("exit", () => {
           if (++exited === 2) process.exit(0);
         });
@@ -207,6 +211,8 @@ if (role === "wrapper") {
     }, 25);
   });
   setInterval(() => {
+    if (mode === "probe-exit" && existsSync(`${root}/retire-probe`))
+      probe.kill("SIGKILL");
     if (existsSync(`${root}/fail`)) {
       probe.kill("SIGKILL");
       gpu.kill("SIGKILL");

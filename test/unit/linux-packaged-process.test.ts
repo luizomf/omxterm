@@ -169,6 +169,23 @@ describe.skipIf(process.platform !== "linux")(
     );
 
     it.each([false, true])(
+      "revalidates captured main after its readiness probe exits (wrapper=%s)",
+      async (wrapper) => {
+        const { root, owner } = await start(wrapper, "probe-exit");
+        const receipt = JSON.parse(
+          await readFile(path.join(root, "ready"), "utf8"),
+        ) as { probePid: number };
+        await writeFile(path.join(root, "retire-probe"), "");
+        await until(
+          async () => !(await exists(`/proc/${receipt.probePid}/stat`)),
+        );
+        await expect(owner.verifyMain()).resolves.toBeUndefined();
+        owners.pop();
+        await expect(owner.stop()).resolves.toEqual({ code: 0, signal: null });
+      },
+    );
+
+    it.each([false, true])(
       "fails exit 3 after readiness even when cleanup settles (wrapper=%s)",
       async (wrapper) => {
         const { root, owner } = await start(wrapper);

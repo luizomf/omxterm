@@ -354,6 +354,7 @@ export async function launchLinuxPackagedProcess({
   let closed = false;
   let trackingError;
   let main;
+  let readinessProbePid;
   const owned = new Map();
   child.on("error", (cause) => {
     launchError = cause;
@@ -401,8 +402,11 @@ export async function launchLinuxPackagedProcess({
     if (
       !leader ||
       !candidate ||
-      !probe ||
-      probe.parent !== candidate.pid ||
+      // The probe proves initial acquisition, not the main's whole lifetime.
+      // Its shell may exit while the captured main continues serving other tabs.
+      (main
+        ? receipt.probePid !== readinessProbePid
+        : !probe || probe.parent !== candidate.pid) ||
       candidate.group !== leader.pid ||
       (wrapper
         ? candidate.parent !== leader.pid
@@ -420,6 +424,7 @@ export async function launchLinuxPackagedProcess({
     if (main && (main.pid !== candidate.pid || main.start !== candidate.start))
       throw new Error("Linux main identity changed after readiness");
     main = { ...candidate, digest: expectedDigest };
+    readinessProbePid = receipt.probePid;
   }
 
   async function settled() {
