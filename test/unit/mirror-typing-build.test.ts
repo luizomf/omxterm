@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { expect, it } from "vitest";
@@ -46,7 +46,7 @@ it("declares only memory-only mirror authority for the implementing host and API
 
 // Parent-owned archive qualification after integrating the capability allowlist.
 it.skipIf(process.env.OMXTERM_MIRROR_TYPING_BUILD !== "1")(
-  "builds a licensed separate archive with shared styles and no-clobber receipts",
+  "builds a licensed separate archive with shared styles and the common receipt",
   async () => {
     const root = await mkdtemp(
       path.join(os.tmpdir(), "omxterm-mirror-build-test-"),
@@ -93,19 +93,7 @@ it.skipIf(process.env.OMXTERM_MIRROR_TYPING_BUILD !== "1")(
       const view = await readFile(path.join(extracted, "view.js"), "utf8");
       expect(view).toContain("terminal.mirrorTyping.v1");
       expect(view).not.toContain("localStorage");
-      await expect(
-        buildMirrorTypingExtension(output, "a".repeat(40)),
-      ).rejects.toThrow();
-      expect(await readFile(output)).toEqual(bytes);
-      const collision = path.join(root, "collision.omxext");
-      await writeFile(collision + ".json", "preserved");
-      await expect(
-        buildMirrorTypingExtension(collision, "a".repeat(40)),
-      ).rejects.toThrow();
-      expect(await readFile(collision + ".json", "utf8")).toBe("preserved");
-      await expect(readFile(collision)).rejects.toMatchObject({
-        code: "ENOENT",
-      });
+      // Shared publication/no-clobber invariants belong to restoration-build.test.ts.
     } finally {
       await rm(root, { recursive: true, force: true });
     }

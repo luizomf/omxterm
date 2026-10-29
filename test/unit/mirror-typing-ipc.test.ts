@@ -2,7 +2,10 @@ import { EventEmitter } from "node:events";
 import { randomUUID } from "node:crypto";
 import type { BrowserWindow } from "electron";
 import { expect, it, vi } from "vitest";
-import { registerMirrorTypingIpc } from "../../src/main/mirror-typing-ipc";
+import {
+  registerMirrorTypingIpc,
+  MirrorSetupError,
+} from "../../src/main/mirror-typing-ipc";
 import { registerTerminalIpcRouter } from "../../src/main/terminal-ipc-controller";
 import {
   mirrorTypingIpc,
@@ -92,10 +95,11 @@ function fixture() {
       reply(command.request, true, panes);
     if (command.kind === "prepare") {
       prepared = command.request;
-      if (!holdPrepare) {
-        select();
-        reply(command.request);
-      }
+      if (!holdPrepare) reply(command.request);
+    }
+    if (command.kind === "handoff") {
+      select();
+      reply(command.request);
     }
     if (command.kind === "activate") {
       lease = command.lease;
@@ -176,6 +180,42 @@ async function setup(f: ReturnType<typeof fixture>) {
     },
   };
 }
+it.each(["focus-live-pane", "need-two-panes"] as const)(
+  "preserves bounded initial eligibility recovery: %s",
+  async (reason) => {
+    const f = fixture();
+    f.send.mockImplementation((channel, value) => {
+      if (channel !== mirrorTypingIpc.command) return;
+      const command = value as MirrorCommand;
+      if (command.kind === "capture")
+        f.ipc.listeners.get(mirrorTypingIpc.reply)!(f.event, {
+          request: command.request,
+          ok: false,
+          error: reason,
+        });
+    });
+    await expect(f.capture()).rejects.toMatchObject({ reason });
+    await expect(
+      f.service.capture(f.window, f.lifetime.signal),
+    ).rejects.toBeInstanceOf(MirrorSetupError);
+    f.dispose();
+  },
+);
+
+it("late retirement of an old setup cannot revoke a replacement context", async () => {
+  const f = fixture();
+  const old = await f.capture();
+  const { context, start } = await setup(f);
+  await f.request(context, start);
+  f.service.retire(f.window, old);
+  f.key();
+  expect(f.writes[0]).toHaveBeenCalledTimes(1);
+  f.service.retire(f.window, context);
+  f.key(2);
+  expect(f.writes[0]).toHaveBeenCalledTimes(1);
+  f.dispose();
+});
+
 it("composes explicit visible handoff, final admission and fixed native recipients without exposing session IDs", async () => {
   const f = fixture();
   const { context, start } = await setup(f);
@@ -216,7 +256,7 @@ it("drops held prepare after Stop, including a late renderer ready response", as
   expect(f.writes.every((write) => !write.mock.calls.length)).toBe(true);
   f.dispose();
 });
-it("rechecks Stop after a delayed final store admission without granting", async () => {
+it("establishes cancellable renderer preparation before the first delayed store admission", async () => {
   const f = fixture();
   const { context, start } = await setup(f);
   let release!: () => void;
@@ -224,11 +264,8 @@ it("rechecks Stop after a delayed final store admission without granting", async
     release = resolve;
   });
   let entered!: () => void;
-  const ready = new Promise<void>((resolve) => {
+  const firstAdmission = new Promise<void>((resolve) => {
     entered = resolve;
-  });
-  f.admit.mockImplementationOnce(async (_signal, commit) => {
-    commit();
   });
   f.admit.mockImplementationOnce(async (_signal, commit) => {
     entered();
@@ -236,13 +273,59 @@ it("rechecks Stop after a delayed final store admission without granting", async
     commit();
   });
   const starting = f.request(context, start);
-  await ready;
-  await f.request(context, { action: "stop" });
+  await firstAdmission;
+  expect(f.prepared()).toBeDefined();
+  // Main also retains navigation invalidation before the intentional handoff,
+  // including leave-and-return before the renderer handles its next message.
+  f.service.selectionChanged(f.window, "s1");
+  f.service.selectionChanged(f.window, null);
   release();
   expect(await starting).toMatchObject({ ok: false });
   expect(f.lease()).toBeUndefined();
   f.dispose();
 });
+
+it.each([false, true])(
+  "rejects stopped final admission without affecting a later explicit start: %s",
+  async (replacement) => {
+    const f = fixture();
+    const { context, start } = await setup(f);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let entered!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    f.admit.mockImplementationOnce(async (_signal, commit) => {
+      commit();
+    });
+    f.admit.mockImplementationOnce(async (_signal, commit) => {
+      entered();
+      await gate;
+      commit();
+    });
+    const starting = f.request(context, start);
+    await ready;
+    await f.request(context, { action: "stop" });
+    if (replacement) {
+      const fresh = (await f.request(context, { action: "describe" })) as {
+        setupToken: string;
+      };
+      expect(
+        await f.request(context, { ...start, setupToken: fresh.setupToken }),
+      ).toMatchObject({ ok: true });
+    }
+    release();
+    expect(await starting).toMatchObject({ ok: false });
+    if (replacement) {
+      f.key();
+      expect(f.writes[0]).toHaveBeenCalledTimes(1);
+    } else expect(f.lease()).toBeUndefined();
+    f.dispose();
+  },
+);
 it("keeps active authority through blur without background writes, then revokes on hide and lifetime loss", async () => {
   const f = fixture();
   let setupResult = await setup(f);

@@ -58,6 +58,8 @@ export interface ExtensionViewHostOptions {
   // owner bounds AND the renderer's CSS slot; never inferred from renderer IDs.
   contentSlot(): Rectangle;
   onRetired?(id: string): void;
+  // Admission loss precedes native/resource settlement, including failed closes.
+  onViewRevoked?(id: string): void;
   onState?(state: ExtensionViewState, outcome?: ExtensionViewOutcome): void;
   onRendererProcess?(id: string, pid: number): void;
   onKeybind?(event: Event, input: Input, owner: BrowserWindow): void;
@@ -187,6 +189,7 @@ class NativeExtensionViewHost {
     if (entry.closing) return;
     entry.closing = true;
     entry.abort.abort();
+    notify(() => this.options.onViewRevoked?.(entry.descriptor.id));
     if (this.#selected === entry.descriptor.id) this.#selected = null;
     try {
       if (!entry.contents.isDestroyed()) this.#visibility(entry, false);

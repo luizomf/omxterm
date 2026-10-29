@@ -295,6 +295,24 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.runtime-unavailable":
     "Armazenamento ou execução de extensões indisponível. Os terminais continuam utilizáveis",
   "extensions.unsupported": "A prévia de Files requer Linux ARM64",
+  "mirrorTyping.title": "Espelhar digitação",
+  "mirrorTyping.preparing": "Iniciando espelhamento…",
+  "mirrorTyping.active": "Espelhando digitação · {count} painéis",
+  "mirrorTyping.stop": "Parar",
+  "mirrorTyping.cancel": "Cancelar",
+  "mirrorTyping.source": "Origem da digitação espelhada",
+  "mirrorTyping.member": "Destino da digitação espelhada",
+  "mirrorTyping.stopped": "Espelhamento parado",
+  "mirrorTyping.semantic":
+    "Espelhamento parado — colagem/inserção vai para um painel.",
+  "mirrorTyping.failed":
+    "Espelhamento parado — a entrada pode ter chegado a apenas alguns painéis. Confira antes de digitar novamente. Nada será reenviado automaticamente.",
+  "mirrorTyping.limitation":
+    "A digitação é copiada exatamente no modo do terminal de origem. Use programas/modos de terminal iguais. A entrada já enviada não pode ser desfeita.",
+  "mirrorTyping.focusLivePane":
+    "Foque um painel ativo e abra Espelhar digitação.",
+  "mirrorTyping.needTwoPanes":
+    "Abra pelo menos dois painéis ativos na mesma aba e abra Espelhar digitação.",
   "extensions.unavailable": "Extensão indisponível",
   "extensions.unavailableDetail":
     "Atualize Extensões nas Configurações para consultar a instalação. Nenhuma operação foi repetida automaticamente.",

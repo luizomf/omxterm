@@ -1,5 +1,6 @@
 import { expect, it, vi } from "vitest";
 import type { BrowserWindow } from "electron";
+import { createMirrorInputLease } from "../../src/main/mirror-input-lease";
 import { applicationViews } from "../../src/main/application-extension-views";
 import type { ApplicationExtensionsOptions } from "../../src/main/application-extensions";
 import type { ExtensionViewHostOptions } from "../../src/main/extension-view-host";
@@ -38,7 +39,7 @@ it.each([false, true])(
       request,
       register: vi.fn(),
       stopped: vi.fn(),
-      retire: vi.fn(),
+      retire: vi.fn<(window: BrowserWindow, context?: string) => void>(),
       selectionChanged: vi.fn(),
       dispose: vi.fn(),
     };
@@ -59,6 +60,7 @@ it.each([false, true])(
     const window = {
       getContentSize: () => [800, 600],
     } as unknown as BrowserWindow;
+    const retired = vi.fn();
     const views = applicationViews(options, {
       pin: version,
       target: {
@@ -70,7 +72,7 @@ it.each([false, true])(
       signal: lifetime.signal,
       call,
       admit,
-      retired: vi.fn(),
+      retired,
     });
     await views.open();
     const signal = new AbortController().signal;
@@ -92,6 +94,46 @@ it.each([false, true])(
     }
     expect(call).not.toHaveBeenCalled();
     expect(bind).toHaveBeenCalledTimes(1);
+    if (declared) {
+      const sessions = new Map([
+        ["s1", {}],
+        ["s2", {}],
+      ]);
+      const write = vi.fn();
+      const lease = createMirrorInputLease({
+        current: (id) => sessions.get(id),
+        selected: () => true,
+        focused: (id) => id === "s1",
+        windowFocused: () => true,
+        available: () => true,
+        write,
+        stopped: vi.fn(),
+      });
+      const token = lease.grant(["s1", "s2"], "s1", lifetime.signal);
+      mirrorTyping.retire.mockImplementation((_window, context) => {
+        if (context === "captured-context") lease.revoke();
+      });
+      adapter.options!.onState!("retiring");
+      lease.input({
+        lease: token,
+        sequence: 1,
+        sourceSessionId: "s1",
+        data: "must drop",
+      });
+      expect(write).not.toHaveBeenCalled();
+      expect(lifetime.signal.aborted).toBe(false);
+      expect(retired).not.toHaveBeenCalled();
+      adapter.options!.onState!("failed", {
+        status: "failed",
+        reason: "cleanup",
+      });
+      expect(retired).not.toHaveBeenCalled();
+      adapter.options!.onViewRevoked!("owned-view");
+      expect(mirrorTyping.retire).toHaveBeenLastCalledWith(
+        window,
+        "captured-context",
+      );
+    }
     lifetime.abort();
     await expect(adapter.options!.onRequest!(value, signal)).rejects.toThrow(
       "unavailable",

@@ -284,6 +284,23 @@ export const englishMessages = {
   "extensions.runtime-unavailable":
     "Extension store or runtime unavailable. Terminal sessions remain usable",
   "extensions.unsupported": "Files development preview requires Linux ARM64",
+  "mirrorTyping.title": "Mirror Typing",
+  "mirrorTyping.preparing": "Starting mirroring…",
+  "mirrorTyping.active": "Mirroring typing · {count} panes",
+  "mirrorTyping.stop": "Stop",
+  "mirrorTyping.cancel": "Cancel",
+  "mirrorTyping.source": "Mirror typing source",
+  "mirrorTyping.member": "Mirror typing member",
+  "mirrorTyping.stopped": "Mirroring stopped",
+  "mirrorTyping.semantic":
+    "Mirroring stopped — paste/insertion goes to one pane.",
+  "mirrorTyping.failed":
+    "Mirroring stopped — input may have reached only some panes. Check them before typing again. Nothing will be retried automatically.",
+  "mirrorTyping.limitation":
+    "Typing is copied exactly in the source terminal's mode. Use matching terminal programs/modes. Input already sent cannot be undone.",
+  "mirrorTyping.focusLivePane": "Focus a live pane, then open Mirror Typing.",
+  "mirrorTyping.needTwoPanes":
+    "Open at least two live panes in one tab, then open Mirror Typing.",
   "extensions.unavailable": "Extension unavailable",
   "extensions.unavailableDetail":
     "Refresh Extensions in Settings to inspect the installed state. No operation was automatically retried.",

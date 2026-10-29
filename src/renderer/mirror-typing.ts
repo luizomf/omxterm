@@ -27,6 +27,8 @@ interface Attempt {
   readonly snapshot: Context;
   readonly request: string;
   readonly members: Member[];
+  readonly sourceView: string;
+  handoff?: string;
   ready: boolean;
   lease?: string;
   sequence: number;
@@ -60,6 +62,55 @@ function live(value: Member) {
     pane.adapter.sessionId() === value.sessionId &&
     tabPanes(pane.tab).includes(pane)
   );
+}
+
+function selectedMembers(
+  snapshot: Context | undefined,
+  command: Extract<MirrorCommand, { kind: "prepare" }>,
+  selected: ApplicationTab | undefined,
+  available: boolean,
+): Member[] | undefined {
+  if (
+    !snapshot ||
+    !live(snapshot.original) ||
+    !available ||
+    selected?.kind !== "hosted" ||
+    selected.id !== command.sourceView ||
+    selected.removed
+  )
+    return;
+  const members = command.handles.map((handle) =>
+    snapshot.members.find((item) => item.handle === handle),
+  );
+  if (
+    members.length < 2 ||
+    members.length > 16 ||
+    new Set(command.handles).size !== members.length ||
+    members.some((item) => !item || !live(item)) ||
+    !members.some((item) => item?.pane === snapshot.original.pane)
+  )
+    return;
+  return members as Member[];
+}
+function refreshMembers(context: Context) {
+  context.members = tabPanes(context.tab).flatMap((pane) => {
+    const item = member(pane);
+    return item ? [{ ...item, required: pane === context.original.pane }] : [];
+  });
+}
+function observeMembers(members: readonly Member[], ended: () => void) {
+  return members.map(({ pane }) => {
+    pane.snippetTargetListeners.add(ended);
+    return () => pane.snippetTargetListeners.delete(ended);
+  });
+}
+function publicPanes(members: readonly Member[]): MirrorPane[] {
+  return members.map(({ handle, sessionId, title, required }) => ({
+    handle,
+    sessionId,
+    title,
+    required,
+  }));
 }
 
 // Renderer owns exact DOM/Surface identities; main independently owns native
@@ -97,8 +148,15 @@ export function createMirrorTyping(deps: {
     attempt = undefined; // Close local admission before crossing IPC.
     clear();
     if (!previous) return;
-    status.show(reason === "semantic-input" ? "semantic" : "stopped");
-    if (!previous.ready) bridge.reply({ request: previous.request, ok: false });
+    status.show(
+      reason === "semantic-input"
+        ? "semantic"
+        : reason === "write-failed"
+          ? "failed"
+          : "stopped",
+    );
+    if (previous.handoff && !previous.ready)
+      bridge.reply({ request: previous.handoff, ok: false });
     if (echo) bridge.stop(previous.context, reason);
   };
   const valid = (value: Attempt) =>
@@ -135,50 +193,39 @@ export function createMirrorTyping(deps: {
           : undefined;
     }
     if (!context || !deps.available() || !live(context.original)) {
-      bridge.reply({ request: command.request, ok: false });
+      bridge.reply({
+        request: command.request,
+        ok: false,
+        error: "focus-live-pane",
+      });
       return;
     }
-    const original = context.original;
-    context.members = tabPanes(context.tab).flatMap((pane) => {
-      const item = member(pane);
-      return item ? [{ ...item, required: pane === original.pane }] : [];
-    });
+    refreshMembers(context);
     if (context.members.length < 2) {
-      bridge.reply({ request: command.request, ok: false });
+      bridge.reply({
+        request: command.request,
+        ok: false,
+        error: "need-two-panes",
+      });
       return;
     }
     contexts.set(command.context, context);
     bridge.reply({
       request: command.request,
       ok: true,
-      panes: context.members.map(({ handle, sessionId, title, required }) => ({
-        handle,
-        sessionId,
-        title,
-        required,
-      })),
+      panes: publicPanes(context.members),
     });
   };
   const prepare = (command: Extract<MirrorCommand, { kind: "prepare" }>) => {
     stop("stopped");
     const snapshot = contexts.get(command.context);
-    const selected = deps.selected();
-    const members = command.handles.map((handle) =>
-      snapshot?.members.find((item) => item.handle === handle),
+    const members = selectedMembers(
+      snapshot,
+      command,
+      deps.selected(),
+      deps.available(),
     );
-    if (
-      !snapshot ||
-      !live(snapshot.original) ||
-      !deps.available() ||
-      selected?.kind !== "hosted" ||
-      selected.id !== command.sourceView ||
-      selected.removed ||
-      members.length < 2 ||
-      members.length > 16 ||
-      new Set(command.handles).size !== members.length ||
-      members.some((item) => !item || !live(item)) ||
-      !members.some((item) => item?.pane === snapshot.original.pane)
-    ) {
+    if (!snapshot || !members) {
       bridge.reply({ request: command.request, ok: false });
       return;
     }
@@ -186,19 +233,38 @@ export function createMirrorTyping(deps: {
       context: command.context,
       snapshot,
       request: command.request,
-      members: members as Member[],
+      members,
+      sourceView: command.sourceView,
       ready: false,
       sequence: 0,
     };
     attempt = current;
     status.guardStart();
     status.show("preparing");
-    for (const item of current.members) {
-      const ended = () => stop("unavailable");
-      item.pane.snippetTargetListeners.add(ended);
-      unsubscribers.push(() => item.pane.snippetTargetListeners.delete(ended));
-    }
+    unsubscribers.push(
+      ...observeMembers(current.members, () => stop("unavailable")),
+    );
     timer = setTimeout(() => stop("unavailable"), 5000);
+    bridge.reply({ request: command.request, ok: true });
+  };
+  const handoff = (command: Extract<MirrorCommand, { kind: "handoff" }>) => {
+    const current = attempt;
+    const selected = deps.selected();
+    if (
+      !current ||
+      current.context !== command.context ||
+      current.request !== command.prepared ||
+      current.handoff ||
+      !valid(current) ||
+      selected?.kind !== "hosted" ||
+      selected.id !== current.sourceView ||
+      selected.removed
+    ) {
+      bridge.reply({ request: command.request, ok: false });
+      return;
+    }
+    current.handoff = command.request;
+    const snapshot = current.snapshot;
     deps.handoff(
       snapshot.tab,
       snapshot.original.pane,
@@ -226,6 +292,7 @@ export function createMirrorTyping(deps: {
     if (command.kind === "capture" || command.kind === "describe")
       describe(command);
     else if (command.kind === "prepare") prepare(command);
+    else if (command.kind === "handoff") handoff(command);
     else if (command.kind === "activate") {
       const current = attempt;
       const ok =
@@ -273,7 +340,6 @@ export function createMirrorTyping(deps: {
         stop("unavailable");
         return true;
       }
-      // Never fall back to a speculative local send after claiming a route.
       if (!deps.parent.ownerDocument.hasFocus()) return true;
       bridge.input({
         lease: current.lease,

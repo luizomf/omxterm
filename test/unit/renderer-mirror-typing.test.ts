@@ -69,7 +69,7 @@ async function harness() {
     await settle();
     return result;
   };
-  const prepare = async (handles: string[]) => {
+  const prepare = async (handles: string[], handoff = true) => {
     command({
       kind: "prepare",
       context: "context",
@@ -77,6 +77,13 @@ async function harness() {
       handles,
       sourceView: "setup",
     });
+    if (handoff && reply().ok)
+      command({
+        kind: "handoff",
+        context: "context",
+        request: "handoff",
+        prepared: "prepare",
+      });
     await settle();
   };
   const activate = (prepared = "prepare") =>
@@ -120,11 +127,11 @@ it("captures exact original focus, hands off only after native hide, and sends o
       }),
   );
   await h.prepare(snapshot.panes!.map((pane) => pane.handle));
-  expect(h.reply().request).toBe("capture");
+  expect(h.reply()).toEqual({ request: "prepare", ok: true });
   expect(h.mountedSurfaceOptions[1]!.routeKeyInput!("before")).toBe(false);
   hidden(true);
   await settle();
-  expect(h.reply()).toEqual({ request: "prepare", ok: true });
+  expect(h.reply()).toEqual({ request: "handoff", ok: true });
   h.activate();
   expect(h.mountedSurfaceOptions[1]!.routeKeyInput!("\u001b[A")).toBe(true);
   expect(h.bridge.input).toHaveBeenCalledExactlyOnceWith({
@@ -147,6 +154,31 @@ it("captures exact original focus, hands off only after native hide, and sends o
   h.language.set("pt-BR");
   expect(row.textContent).toContain("Parar");
   expect(h.surfaces[1]!.focus).toHaveBeenCalledTimes(focusCount);
+});
+
+it("owns cancellable Preparing before store admission and rejects leave-and-return", async () => {
+  const h = await harness();
+  const snapshot = await h.setup();
+  await h.prepare(
+    snapshot.panes!.map((pane) => pane.handle),
+    false,
+  );
+  expect(
+    document.querySelector(".mirror-typing-status")!.textContent,
+  ).toContain("Starting mirroring");
+  h.tabs.handleCommand({ action: "previous" });
+  h.tabs.handleCommand({ action: "next" });
+  await settle();
+  expect(h.bridge.stop).toHaveBeenCalledWith("context", "unavailable");
+  h.command({
+    kind: "handoff",
+    context: "context",
+    request: "late-handoff",
+    prepared: "prepare",
+  });
+  expect(h.reply()).toEqual({ request: "late-handoff", ok: false });
+  h.activate();
+  expect(h.reply().ok).toBe(false);
 });
 
 it("semantic gestures synchronously stop once, then leave ordinary local delivery available", async () => {
@@ -217,10 +249,38 @@ it("retains original context for describe and refuses an ended original even wit
   expect(h.reply().panes![0]!.handle).not.toBe(original.panes![0]!.handle);
   h.adapters[2]!.handlers!.onExit({ exitCode: 0, signal: 0, retained: true });
   h.command({ kind: "describe", context: "context", request: "dead" });
-  expect(h.reply()).toEqual({ request: "dead", ok: false });
+  expect(h.reply()).toEqual({
+    request: "dead",
+    ok: false,
+    error: "focus-live-pane",
+  });
   h.tabs.handleCommand({ action: "previous" });
   await settle();
   expect(h.capture().ok).toBe(false);
+});
+
+it("shows localized partial-delivery failure and preserves same-element marker padding", async () => {
+  const h = await harness();
+  await h.start();
+  const { readFile } = await import("node:fs/promises");
+  const css = await readFile("src/renderer/terminal-window.css", "utf8");
+  const pane = document.querySelector<HTMLElement>(".pane-mirroring")!;
+  // The real Surface adds its class to this exact pane, not a child.
+  pane.classList.add("restty-terminal-surface");
+  const selector = ".terminal-tab .pane-mirroring.restty-terminal-surface";
+  expect(pane.matches(selector)).toBe(true);
+  expect(css).toContain(
+    `${selector} {\n  padding-top: calc(22px + var(--terminal-padding-top, 0px));`,
+  );
+  h.command({ kind: "stop", context: "context", reason: "write-failed" });
+  expect(
+    document.querySelector(".mirror-typing-status")!.textContent,
+  ).toContain("only some panes");
+  h.language.set("pt-BR");
+  expect(
+    document.querySelector(".mirror-typing-status")!.textContent,
+  ).toContain("apenas alguns painéis");
+  expect(pane.classList.contains("pane-mirroring")).toBe(false);
 });
 
 it("keeps active blur dormant, stops on new unselected split, and never enrolls it", async () => {
@@ -303,7 +363,7 @@ it("times out failed native hide without arming, and fences the exact ready requ
   vi.mocked(h.hosted.present).mockResolvedValueOnce(false);
   await h.prepare(snapshot.panes!.map((pane) => pane.handle));
   vi.advanceTimersByTime(5000);
-  expect(h.reply()).toEqual({ request: "prepare", ok: false });
+  expect(h.reply()).toEqual({ request: "handoff", ok: false });
   h.activate();
   expect(h.reply().ok).toBe(false);
   vi.useRealTimers();

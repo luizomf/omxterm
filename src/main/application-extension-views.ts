@@ -91,10 +91,18 @@ export function applicationViews(
       }
       return call(value, signal);
     },
+    onViewRevoked() {
+      revokeMirror();
+    },
     onState(state) {
+      if (state === "retiring" || state === "failed") revokeMirror();
       if (state === "settled") retired();
     },
   });
+  function revokeMirror() {
+    if (target.mirrorContext)
+      options.mirrorTyping?.retire(window, target.mirrorContext);
+  }
   function mirrorRequest(value: Record<string, Value>, signal: AbortSignal) {
     if (
       !pin.manifest.capabilities?.includes("terminal.mirrorTyping.v1") ||

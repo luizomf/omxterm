@@ -29,6 +29,7 @@ export type MirrorCommand =
       handles: string[];
       sourceView: string;
     }
+  | { kind: "handoff"; request: string; context: string; prepared: string }
   | {
       kind: "activate";
       request: string;
@@ -42,6 +43,7 @@ export interface MirrorReply {
   readonly request: string;
   readonly ok: boolean;
   readonly panes?: readonly MirrorPane[];
+  readonly error?: "focus-live-pane" | "need-two-panes";
 }
 export interface MirrorKeyInput {
   readonly lease: string;
@@ -89,10 +91,15 @@ export function isMirrorPanes(value: unknown): value is MirrorPane[] {
 export function isMirrorReply(value: unknown): value is MirrorReply {
   return (
     (exactLayoutKeys(value, ["request", "ok"]) ||
-      exactLayoutKeys(value, ["request", "ok", "panes"])) &&
+      exactLayoutKeys(value, ["request", "ok", "panes"]) ||
+      exactLayoutKeys(value, ["request", "ok", "error"])) &&
     isLayoutToken(value.request) &&
     typeof value.ok === "boolean" &&
-    (!("panes" in value) || isMirrorPanes(value.panes))
+    (!("panes" in value) || isMirrorPanes(value.panes)) &&
+    (!("error" in value) ||
+      (value.ok === false &&
+        (value.error === "focus-live-pane" ||
+          value.error === "need-two-panes")))
   );
 }
 export function isMirrorCommand(value: unknown): value is MirrorCommand {
@@ -109,6 +116,11 @@ export function isMirrorCommand(value: unknown): value is MirrorCommand {
   if (!isLayoutToken(command.request)) return false;
   if (command.kind === "capture" || command.kind === "describe")
     return exactLayoutKeys(command, ["kind", "context", "request"]);
+  if (command.kind === "handoff")
+    return (
+      exactLayoutKeys(command, ["kind", "context", "request", "prepared"]) &&
+      isLayoutToken(command.prepared)
+    );
   if (command.kind === "prepare")
     return (
       exactLayoutKeys(command, [

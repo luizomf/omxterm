@@ -2,35 +2,6 @@ import { retainDismissalGesture } from "./about/about-dialog";
 import type { RendererLanguage } from "./renderer-language";
 import type { TerminalPane } from "./terminal-panes";
 
-const labels = {
-  "en-US": {
-    preparing: "Starting mirroring…",
-    active: "Mirroring typing",
-    panes: "panes",
-    stop: "Stop",
-    cancel: "Cancel",
-    source: "Mirror typing source",
-    member: "Mirror typing member",
-    stopped: "Mirroring stopped",
-    semantic: "Mirroring stopped — paste/insertion goes to one pane.",
-    limitation:
-      "Typing is copied exactly in the source terminal's mode. Use matching terminal programs/modes. Input already sent cannot be undone.",
-  },
-  "pt-BR": {
-    preparing: "Iniciando espelhamento…",
-    active: "Espelhando digitação",
-    panes: "painéis",
-    stop: "Parar",
-    cancel: "Cancelar",
-    source: "Origem da digitação espelhada",
-    member: "Destino da digitação espelhada",
-    stopped: "Espelhamento parado",
-    semantic: "Espelhamento parado — colagem/inserção vai para um painel.",
-    limitation:
-      "A digitação é copiada exatamente no modo do terminal de origem. Use programas/modos de terminal iguais. A entrada já enviada não pode ser desfeita.",
-  },
-};
-
 export function createMirrorTypingStatus(
   parent: HTMLElement,
   language: RendererLanguage,
@@ -52,25 +23,24 @@ export function createMirrorTypingStatus(
   // activation releases; a fresh non-repeat press releases each guard normally.
   const enter = retainDismissalGesture(document);
   const space = retainDismissalGesture(document);
-  let state: "preparing" | "active" | "stopped" | "semantic" | undefined;
+  let state:
+    "preparing" | "active" | "stopped" | "semantic" | "failed" | undefined;
   let members: readonly TerminalPane[] = [];
   let source: TerminalPane | undefined;
   const markers = new Map<TerminalPane, HTMLElement>();
   const render = () => {
-    const t = labels[language.language];
     row.hidden = !state;
-    text.textContent =
-      state === "active"
-        ? `${t.active} · ${members.length} ${t.panes}`
-        : state
-          ? t[state]
-          : "";
+    text.textContent = state
+      ? language.t(`mirrorTyping.${state}`, { count: members.length })
+      : "";
     button.hidden = state !== "active" && state !== "preparing";
-    button.textContent = state === "preparing" ? t.cancel : t.stop;
-    limitation.textContent = t.limitation;
+    button.textContent = language.t(
+      state === "preparing" ? "mirrorTyping.cancel" : "mirrorTyping.stop",
+    );
+    limitation.textContent = language.t("mirrorTyping.limitation");
     limitation.hidden = state !== "active" && state !== "preparing";
     for (const [pane, marker] of markers) {
-      marker.textContent = `↔ ${pane === source ? t.source : t.member}`;
+      marker.textContent = `↔ ${language.t(pane === source ? "mirrorTyping.source" : "mirrorTyping.member")}`;
     }
   };
   const removeLanguage = language.bind(render);

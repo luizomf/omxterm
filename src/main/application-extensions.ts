@@ -21,6 +21,7 @@ import { CatalogError, createExtensionCatalog } from "./extension-catalog";
 import { createCatalogAcquisition } from "./extension-catalog-acquisition";
 import { createExtensionLinkInstaller } from "./extension-link-install";
 import { applicationViews } from "./application-extension-views";
+import { MirrorSetupError } from "./mirror-typing-ipc";
 import { startExtensionViewHost } from "./extension-view-ipc";
 import {
   extensionsIpc,
@@ -147,13 +148,25 @@ async function invokeExtension(
       invocation = { ...captured, signal, mirrorContext };
     }
     await open(invocation);
-  } catch {
-    if (!window.isDestroyed() && !stopping())
+  } catch (error) {
+    if (!window.isDestroyed() && !stopping()) {
+      const t = options.translator().t;
+      const eligibility =
+        error instanceof MirrorSetupError ? error.reason : undefined;
       void dialog.showMessageBox(window, {
         type: "error",
-        message: options.translator().t("extensions.unavailable"),
-        detail: options.translator().t("extensions.unavailableDetail"),
+        message: t(
+          eligibility ? "mirrorTyping.title" : "extensions.unavailable",
+        ),
+        detail: t(
+          eligibility === "focus-live-pane"
+            ? "mirrorTyping.focusLivePane"
+            : eligibility === "need-two-panes"
+              ? "mirrorTyping.needTwoPanes"
+              : "extensions.unavailableDetail",
+        ),
       });
+    }
   }
 }
 

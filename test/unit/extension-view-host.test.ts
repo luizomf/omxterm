@@ -175,6 +175,7 @@ async function fixture(createHost = true) {
     }),
   } satisfies ExtensionViewRuntime;
   const retired = vi.fn();
+  const revoked = vi.fn();
   const state = vi.fn();
   const keybind = vi.fn();
   const options = {
@@ -184,6 +185,7 @@ async function fixture(createHost = true) {
     contentSlot: () => ({ x: 0, y: 60, width: 800, height: 540 }),
     runtime: native,
     onRetired: retired,
+    onViewRevoked: revoked,
     onState: state,
     onKeybind: keybind,
   };
@@ -209,6 +211,7 @@ async function fixture(createHost = true) {
     native,
     resourceOwner,
     retired,
+    revoked,
     state,
     keybind,
     request,
@@ -498,13 +501,21 @@ describe("epoch lifetime and failure settlement", () => {
     const f = await fixture();
     await f.host.open(opening);
     await f.host.open(opening);
+    const barrier = deferred();
+    f.ses.clearData.mockImplementation(() => barrier.promise);
     const crashed = f.views[0]!.webContents;
     crashed.send.mockClear();
     crashed.send.mockImplementation(() => {
       throw new Error("Render frame disposed while WebContents remains alive");
     });
     crashed.emit("render-process-gone", {}, { reason: "crashed" });
-    expect(await f.host.retire()).toEqual({ status: "settled" });
+    expect(f.state).toHaveBeenLastCalledWith("retiring", undefined);
+    const retirement = f.host.retire();
+    await Promise.resolve();
+    expect(f.resourceOwner.release).not.toHaveBeenCalled();
+    expect(f.revoked).toHaveBeenCalledTimes(2);
+    barrier.resolve();
+    expect(await retirement).toEqual({ status: "settled" });
     expect(f.views.every((view) => view.webContents.dead)).toBe(true);
     expect(crashed.send).not.toHaveBeenCalled();
     expect(f.views[0]!.setVisible).toHaveBeenCalledWith(false);
@@ -662,7 +673,11 @@ describe("epoch lifetime and failure settlement", () => {
     const descriptors = [];
     for (let i = 0; i < 8; i++) descriptors.push(await f.host.open(opening));
     await expect(f.host.open(opening)).rejects.toThrow("unavailable");
-    for (const descriptor of descriptors) await f.host.close(descriptor.id);
+    for (const descriptor of descriptors) {
+      const closing = f.host.close(descriptor.id);
+      expect(f.revoked).toHaveBeenLastCalledWith(descriptor.id);
+      await closing;
+    }
     expect(f.resourceOwner.release).toHaveBeenCalledTimes(1);
     await expect(f.host.open(opening)).rejects.toThrow("unavailable");
   });

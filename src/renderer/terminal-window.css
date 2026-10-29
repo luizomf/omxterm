@@ -61,7 +61,7 @@ body {
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }
-.terminal-tab .pane-mirroring .restty-terminal-surface {
+.terminal-tab .pane-mirroring.restty-terminal-surface {
   padding-top: calc(22px + var(--terminal-padding-top, 0px));
 }
 .mirror-typing-marker {

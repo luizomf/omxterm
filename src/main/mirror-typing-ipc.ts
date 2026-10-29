@@ -17,6 +17,12 @@ import type {
 } from "./terminal-ipc-types";
 import type { Value } from "../extension-runtime/protocol";
 
+export class MirrorSetupError extends Error {
+  constructor(readonly reason: "focus-live-pane" | "need-two-panes") {
+    super("Mirror setup unavailable");
+  }
+}
+
 type Context = {
   id: string;
   source: string;
@@ -27,6 +33,7 @@ type Context = {
   token?: string;
   lease?: string;
   starting: boolean;
+  handoff?: boolean;
   bound?: boolean;
 };
 type Admission = (signal: AbortSignal, commit: () => void) => Promise<void>;
@@ -150,6 +157,7 @@ class MirrorWindow {
     delete context.token;
     delete context.lease;
     context.starting = false;
+    delete context.handoff;
     for (const work of [...this.pending.values()]) work.reject();
     this.controller.mirrorTyping?.revoke();
     try {
@@ -169,9 +177,9 @@ class MirrorWindow {
     )
       this.stop(value.reason);
   }
-  retire() {
+  retire(id?: string) {
     const context = this.context;
-    if (!context) return;
+    if (!context || (id !== undefined && context.id !== id)) return;
     this.stop("unavailable");
     this.context = undefined;
     context.cleanup.forEach((cleanup) => cleanup());
@@ -187,7 +195,7 @@ class MirrorWindow {
     source: string | undefined,
   ): Promise<string> {
     this.retire();
-    if (!source) throw new Error("Focus a live pane, then open Mirror Typing.");
+    if (!source) throw new MirrorSetupError("focus-live-pane");
     const context: Context = {
       id: randomUUID(),
       source,
@@ -206,14 +214,13 @@ class MirrorWindow {
         context.lifetime.signal,
       );
       this.require(context, 0);
+      if (!reply.ok)
+        throw new MirrorSetupError(reply.error ?? "focus-live-pane");
       if (
-        !reply.ok ||
         !reply.panes ||
         reply.panes.find((pane) => pane.required)?.sessionId !== source
       )
-        throw new Error(
-          "Focus a live pane in a tab with at least two live panes, then open Mirror Typing.",
-        );
+        throw new MirrorSetupError("focus-live-pane");
       context.panes = reply.panes;
       return context.id;
     } catch (error) {
@@ -229,8 +236,10 @@ class MirrorWindow {
     context.bound = true;
   }
   selectionChanged(source: string | null) {
-    if (this.context && !this.context.bound && this.context.source !== source)
-      this.retire();
+    const context = this.context;
+    if (!context) return;
+    if (!context.bound && context.source !== source) this.retire();
+    else if (context.starting && !context.handoff) this.stop("unavailable");
   }
   async request(
     id: string,
@@ -245,6 +254,7 @@ class MirrorWindow {
         ok: false,
         error: "Focus a live pane, then open Mirror Typing.",
       };
+    let revision = context.revision;
     try {
       if (
         value.action === "stop" &&
@@ -259,7 +269,7 @@ class MirrorWindow {
         exactLayoutKeys(value, ["operation", "action"])
       ) {
         this.stop();
-        const revision = context.revision;
+        revision = context.revision;
         await admit(signal, () => this.require(context, revision));
         const result = await this.ask(
           { kind: "describe", context: id, request: randomUUID() },
@@ -286,9 +296,12 @@ class MirrorWindow {
           })),
         };
       }
-      return await this.start(context, view, value, signal, admit);
+      const starting = this.start(context, view, value, signal, admit);
+      revision = context.revision;
+      return await starting;
     } catch {
-      if (this.context === context) this.stop("unavailable");
+      if (this.context === context && context.revision === revision)
+        this.stop("unavailable");
       return {
         ok: false,
         error:
@@ -335,8 +348,8 @@ class MirrorWindow {
     const revision = ++context.revision;
     const prepared = randomUUID();
     const pendingSignal = AbortSignal.any([signal, context.lifetime.signal]);
-    await admit(pendingSignal, () => this.require(context, revision));
-    const ready = await this.ask(
+    // Establish cancellable core Preparing before the first store await.
+    const preparing = await this.ask(
       {
         kind: "prepare",
         request: prepared,
@@ -344,6 +357,14 @@ class MirrorWindow {
         handles: value.handles,
         sourceView: view,
       },
+      pendingSignal,
+    );
+    this.require(context, revision);
+    if (!preparing.ok) throw new Error("Unavailable preparation");
+    await admit(pendingSignal, () => this.require(context, revision));
+    context.handoff = true;
+    const ready = await this.ask(
+      { kind: "handoff", request: randomUUID(), context: context.id, prepared },
       pendingSignal,
     );
     this.require(context, revision);
@@ -423,7 +444,8 @@ export function registerMirrorTypingIpc(options: {
     ) => owner(window).request(context, view, value, signal, admit),
     stopped: (window: BrowserWindow, lease: string, reason: MirrorStopReason) =>
       owner(window).stopped(lease, reason),
-    retire: (window: BrowserWindow) => owner(window).retire(),
+    retire: (window: BrowserWindow, context?: string) =>
+      owner(window).retire(context),
     selectionChanged: (window: BrowserWindow, source: string | null) =>
       owners.get(window.webContents)?.selectionChanged(source),
     dispose() {

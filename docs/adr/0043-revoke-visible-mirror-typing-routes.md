@@ -39,8 +39,10 @@ Surface-owned and single-target; a late local approval cannot arm a group.
 
 Core shows an in-flow status and keyboard-reachable Stop independent of hidden
 title/tab chrome or extension responsiveness, plus distinct source/member marks.
-Preparing is input-inert and cancellable. Start must await acknowledged native
-setup hide and revalidate original focus/context before arming. Start/Stop
+Preparing is input-inert and cancellable before the first asynchronous package
+admission. Only then may the acknowledged native hide handoff begin; Start
+revalidates original focus/context before arming. Leave-and-return navigation
+invalidates the attempt rather than merely checking its final selected page. Start/Stop
 activation keys, repeats and releases must not leak to terminals. Escape remains
 terminal input, not a new global Stop shortcut.
 
@@ -56,8 +58,9 @@ No per-key backend RPC, filesystem validation, queue, history or replay is added
 Stop closes admission before cleanup. Local disable/update/uninstall, backend
 lifetime loss, view destruction, renderer/window teardown, member loss, tab or
 unselected-pane selection, modal entry and hide/minimize revoke authority.
-The backend lifetime signal revokes views before native settlement; signal abort
-is not proof that views, processes or pins settled. Ordinary active-window blur
+The backend lifetime signal and native-view admission-loss notifications revoke
+input before native settlement, including cleanup failure. They are not proof
+that views, processes or pins settled. Ordinary active-window blur
 suspends input admission without ending the group; pending Start cancels on blur.
 Resize, reorder, theme/language changes and chrome visibility alone retain it.
 There is no instantaneous cross-application management revocation promise.
@@ -70,7 +73,8 @@ This is not shell-state synchronization or equivalent arbitrary SSH/tmux/TUI
 behavior. A key may cause each program to read its own clipboard. Stop neither
 undoes input nor sends synthetic releases. Native writes are sequential and
 best-effort, not an atomic multi-PTY transaction; partial delivery is possible
-and never rolled back or retried.
+and never rolled back or retried. Detectable write failure shows a fixed localized
+notice warning that only some panes may have received the input.
 
 Semantic per-target encoding and multi-pane Protected Paste would require a
 different contract. They are not silently approximated by this typing-only route.
