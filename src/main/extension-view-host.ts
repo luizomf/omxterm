@@ -491,6 +491,19 @@ class NativeExtensionViewHost {
       throw new Error("Hosted content failed to open");
     }
   }
+  #canFocusCore(entry: Entry) {
+    return (
+      this.options.owner.isFocused() &&
+      (entry.contents.isFocused() || this.#ownerContents.isFocused())
+    );
+  }
+  #focusPresented(entry: Entry, focus: HostedContentPresentation["focus"]) {
+    if (focus === "core") this.#ownerContents.focus();
+    else if (focus || this.#layoutFocus === entry.descriptor.id)
+      entry.contents.focus();
+    this.#layoutFocus = null;
+    this.#reportFocus();
+  }
   // No await between invalidating the old selection and setting visibility.
   // Awaiting the IPC result acknowledges native hide-before-DOM-overlay.
   async present(presentation: HostedContentPresentation): Promise<boolean> {
@@ -543,20 +556,12 @@ class NativeExtensionViewHost {
         this.#hideAll();
         return false;
       }
-      if (
-        presentation.focus === "core" &&
-        (!this.options.owner.isFocused() ||
-          (!entry.contents.isFocused() && !this.#ownerContents.isFocused()))
-      )
+      if (presentation.focus === "core" && !this.#canFocusCore(entry))
         return false;
       entry.view.setBounds(bounds);
       this.#visibility(entry, true);
       this.#selected = entry.descriptor.id;
-      if (presentation.focus === "core") this.#ownerContents.focus();
-      else if (presentation.focus || this.#layoutFocus === presentation.id)
-        entry.contents.focus();
-      this.#layoutFocus = null;
-      this.#reportFocus();
+      this.#focusPresented(entry, presentation.focus);
       return true;
     } catch {
       void this.retire();

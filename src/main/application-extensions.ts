@@ -171,6 +171,24 @@ async function invokeExtension(
   }
 }
 
+function captureExtensionTarget(
+  source: ExtensionTarget,
+  context: "window" | undefined,
+  presentation: "panel" | undefined,
+  captureWindow:
+    ((sessionId?: string, context?: "window") => ExtensionTarget) | undefined,
+): ExtensionTarget | undefined {
+  if (presentation !== "panel" && context !== "window") return source;
+  const windowTarget = captureWindow?.(source.sourceSessionId, "window");
+  return presentation === "panel"
+    ? windowTarget && {
+        ...windowTarget,
+        terminalDirectory: source.terminalDirectory,
+        presentation,
+      }
+    : windowTarget;
+}
+
 // Startup creates infrastructure, never activates installed code. Unsupported
 // platforms retain Settings with an explicit preview-unavailable result.
 export async function startApplicationExtensions(
@@ -347,23 +365,14 @@ export async function startApplicationExtensions(
             if (claim && !claim()) return;
             const source =
               target ?? capture(BrowserWindow.getFocusedWindow() ?? undefined);
-            const windowTarget =
-              source && (view.context === "window" || presentation === "panel")
-                ? windows.get(source.owner as BrowserWindow)?.(
-                    source.sourceSessionId,
-                    "window",
-                  )
-                : undefined;
             const captured =
-              presentation === "panel"
-                ? windowTarget && {
-                    ...windowTarget,
-                    terminalDirectory: source!.terminalDirectory,
-                    presentation,
-                  }
-                : view.context === "window"
-                  ? windowTarget
-                  : source;
+              source &&
+              captureExtensionTarget(
+                source,
+                view.context,
+                presentation,
+                windows.get(source.owner as BrowserWindow),
+              );
             if (!captured || captured.signal.aborted || stopping) return;
             const window = captured.owner as BrowserWindow;
             const token = randomUUID();

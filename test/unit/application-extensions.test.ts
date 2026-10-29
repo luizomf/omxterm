@@ -1,6 +1,4 @@
 import { EventEmitter } from "node:events";
-import { packageArchive } from "../fixtures/extension-package-archive";
-import { extensionInvocationTarget } from "../../src/main/extension-invocation-target";
 import { catalogBytes as catalogFixture } from "../fixtures/extension-catalog";
 import { OFFICIAL_CATALOG_URL } from "../../src/main/extension-catalog";
 import { translatorFor, type SupportedLanguage } from "../../src/shared/i18n";
@@ -22,6 +20,7 @@ import {
   bytes,
   manifest,
   exerciseSshRouting,
+  exerciseCompanionRouting,
   applicationBackend,
 } from "../fixtures/ssh-view-routing";
 import { extensionsIpc } from "../../src/shared/extensions";
@@ -402,52 +401,8 @@ it.each([false, true])(
       sshOpen: adapters.sshOpen,
     }),
 );
-it("retains companion Files after its source terminal ends and reopens the same view", async () => {
-  await writeFile(
-    archive,
-    packageArchive([
-      {
-        name: "extension.json",
-        data: JSON.stringify({
-          ...manifest,
-          id: "omxterm.files",
-          view: { ...manifest.view, action: "omxterm.files.open" },
-        }),
-      },
-      { name: "backend.mjs", data: "" },
-      { name: "index.html", data: "<h1>Files</h1>" },
-    ]),
-  );
-  await request({ operation: "install" });
-  const targets = extensionInvocationTarget(window);
-  targets.started("s1");
-  targets.selected("s1");
-  service.registerWindow(window, (source, context) =>
-    targets.capture(() => "/original", source, context),
-  );
-  service.actions()[0]!.invoke();
-  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
-  const host = adapters.hosts[0]!;
-  expect(host.open).toHaveBeenCalledWith({
-    entryResource: "index.html",
-    title: "Files",
-    presentation: "panel",
-  });
-  targets.ended("s1");
-  expect(host.retire).not.toHaveBeenCalled();
-  expect(
-    await host.options.onRequest!(
-      { operation: "terminal-directory" },
-      new AbortController().signal,
-    ),
-  ).toEqual({ ok: true, directory: "/original" });
-  service.actions()[0]!.invoke();
-  await vi.waitFor(() => expect(host.reveal).toHaveBeenCalledOnce());
-  expect(adapters.hosts).toHaveLength(1);
-  expect(adapters.activate).toHaveBeenCalledOnce();
-  window.emit("closed");
-  expect(host.retire).toHaveBeenCalledOnce();
-});
+it("retains companion Files after its source terminal ends and reopens the same view", () =>
+  exerciseCompanionRouting({ archive, window, service, request }, adapters));
 
 it("a valid claimed terminal contribution retains its captured directory", async () => {
   await request({ operation: "install" });

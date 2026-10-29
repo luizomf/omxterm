@@ -1,4 +1,5 @@
 import { writeFile } from "node:fs/promises";
+import { extensionInvocationTarget } from "../../src/main/extension-invocation-target";
 import type { IpcEvent } from "../../src/main/terminal-ipc-types";
 import type { ExtensionsResult } from "../../src/shared/extensions";
 export type Handler = (
@@ -53,6 +54,68 @@ export function bytes(version = "1.0.0") {
     { name: "index.html", data: "<h1>Files</h1>" },
   ]);
 }
+export async function exerciseCompanionRouting(
+  context: Pick<
+    Parameters<typeof exerciseSshRouting>[1],
+    "archive" | "window" | "service" | "request"
+  >,
+  adapters: {
+    hosts: {
+      open: ReturnType<typeof vi.fn>;
+      reveal: ReturnType<typeof vi.fn>;
+      retire: ReturnType<typeof vi.fn>;
+      options: ExtensionViewHostOptions;
+    }[];
+    activate: ReturnType<typeof vi.fn>;
+  },
+) {
+  const { archive, window, service, request } = context;
+  await writeFile(
+    archive,
+    packageArchive([
+      {
+        name: "extension.json",
+        data: JSON.stringify({
+          ...manifest,
+          id: "omxterm.files",
+          view: { ...manifest.view, action: "omxterm.files.open" },
+        }),
+      },
+      { name: "backend.mjs", data: "" },
+      { name: "index.html", data: "<h1>Files</h1>" },
+    ]),
+  );
+  await request({ operation: "install" });
+  const targets = extensionInvocationTarget(window);
+  targets.started("s1");
+  targets.selected("s1");
+  service.registerWindow(window, (source, context) =>
+    targets.capture(() => "/original", source, context),
+  );
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+  const host = adapters.hosts[0]!;
+  expect(host.open).toHaveBeenCalledWith({
+    entryResource: "index.html",
+    title: "Files",
+    presentation: "panel",
+  });
+  targets.ended("s1");
+  expect(host.retire).not.toHaveBeenCalled();
+  expect(
+    await host.options.onRequest!(
+      { operation: "terminal-directory" },
+      new AbortController().signal,
+    ),
+  ).toEqual({ ok: true, directory: "/original" });
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(host.reveal).toHaveBeenCalledOnce());
+  expect(adapters.hosts).toHaveLength(1);
+  expect(adapters.activate).toHaveBeenCalledOnce();
+  window.emit("closed");
+  expect(host.retire).toHaveBeenCalledOnce();
+}
+
 export async function exerciseSshRouting(
   declared: boolean,
   context: {

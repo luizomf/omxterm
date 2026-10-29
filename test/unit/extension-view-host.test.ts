@@ -118,7 +118,10 @@ it("publishes actual panel focus and reveals the retained identity", async () =>
   ]);
   const handler = (ipc.handle as ReturnType<typeof vi.fn>).mock.calls.find(
     ([channel]) => channel === extensionViewIpc.present,
-  )![1];
+  )![1] as (
+    event: unknown,
+    presentation: HostedContentPresentation,
+  ) => Promise<boolean>;
   const sender = {
     sender: f.owner.webContents,
     senderFrame: f.owner.webContents.mainFrame,

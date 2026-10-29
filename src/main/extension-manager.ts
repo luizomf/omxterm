@@ -144,6 +144,76 @@ async function openInvocation(
   }
 }
 
+function createPanelOpener(
+  groups: Set<Group>,
+  start: (
+    id: string,
+    target: ExtensionTarget,
+    expected?: VersionSelection,
+  ) => Promise<void>,
+  canAllocate: () => boolean,
+) {
+  const pending = new Map<object, Map<string, Promise<void>>>();
+  return (
+    id: string,
+    target: ExtensionTarget,
+    expected?: VersionSelection,
+  ): Promise<void> => {
+    const existing = pending.get(target.owner)?.get(id);
+    if (existing) return existing;
+    const retained = [...groups].find(
+      (group) =>
+        group.id === id &&
+        group.target.owner === target.owner &&
+        group.target.presentation === "panel",
+    );
+    if (!retained && !canAllocate())
+      return Promise.reject(new PackageError("busy"));
+    const work = (async () => {
+      if (!retained) return start(id, target, expected);
+      if (
+        expected &&
+        (retained.selection.generation !== expected.generation ||
+          retained.selection.digest !== expected.digest)
+      ) {
+        if (!(await retireGroups(groups, id, target.owner)))
+          throw new PackageError("outcome-unknown");
+        return start(id, target, expected);
+      }
+      let shown: Promise<void> | undefined;
+      await retained.admit(target.signal, () => {
+        shown = retained.views.open();
+      });
+      await shown;
+    })();
+    const ownerPending =
+      pending.get(target.owner) ?? new Map<string, Promise<void>>();
+    ownerPending.set(id, work);
+    pending.set(target.owner, ownerPending);
+    const settled = () => {
+      ownerPending.delete(id);
+      if (!ownerPending.size) pending.delete(target.owner);
+    };
+    void work.then(settled, settled);
+    return work;
+  };
+}
+
+async function installationSnapshot(
+  packages: InstalledPackages,
+  state: Map<string, LocalState>,
+  backends: Map<string, Backend>,
+) {
+  const installations = await packages.snapshot();
+  return installations.map((entry) => ({
+    ...entry,
+    local: ["unknown", "stopping"].includes(state.get(entry.id) ?? "")
+      ? state.get(entry.id)!
+      : (backends.get(entry.id)?.state() ?? state.get(entry.id) ?? "dormant"),
+    otherInstances: "unknown" as const,
+  }));
+}
+
 /** One application owner for consent, generation admission, views and backends.
  * Settings/menu/fixture callers use this same interface, never a parallel store. */
 export function createExtensionManager(options: Options) {
@@ -155,7 +225,11 @@ export function createExtensionManager(options: Options) {
   const busy = new Set<string>();
   const opening = new Map<Promise<void>, string>();
   const replacing = new Map<object, Set<string>>();
-  const panelOpens = new Map<object, Map<string, Promise<void>>>();
+  const openPanel = createPanelOpener(
+    groups,
+    start,
+    () => opening.size + groups.size < 32,
+  );
   let pendingCleanup: boolean | undefined;
   let disposed = false;
   let disposal: Promise<boolean> | undefined;
@@ -306,54 +380,17 @@ export function createExtensionManager(options: Options) {
       busy.delete(id);
     }
   }
-  async function revealPanel(
-    id: string,
-    target: ExtensionTarget,
-    expected?: VersionSelection,
-  ): Promise<void> {
-    const retained = [...groups].find(
-      (group) =>
-        group.id === id &&
-        group.target.owner === target.owner &&
-        group.target.presentation === "panel",
-    );
-    if (!retained) return start(id, target, expected);
-    if (
-      expected &&
-      (retained.selection.generation !== expected.generation ||
-        retained.selection.digest !== expected.digest)
-    ) {
-      const settled = await retireGroups(groups, id, target.owner);
-      if (!settled) throw new PackageError("outcome-unknown");
-      return start(id, target, expected);
-    }
-    let shown: Promise<void> | undefined;
-    await retained.admit(target.signal, () => {
-      shown = retained.views.open();
-    });
-    await shown;
-  }
   function open(
     id: string,
     target: ExtensionTarget,
     expected?: VersionSelection,
   ): Promise<void> {
     const panel = target.presentation === "panel";
-    const pending = panel ? panelOpens.get(target.owner)?.get(id) : undefined;
-    if (pending) return pending;
-    const retained =
-      panel &&
-      [...groups].some(
-        (group) =>
-          group.id === id &&
-          group.target.owner === target.owner &&
-          group.target.presentation === "panel",
-      );
-    if (!retained && opening.size + groups.size >= 32)
+    if (!panel && opening.size + groups.size >= 32)
       return Promise.reject(new PackageError("busy"));
     const capturedTarget = { ...target };
     const work = panel
-      ? revealPanel(id, capturedTarget, expected)
+      ? openPanel(id, capturedTarget, expected)
       : openInvocation(
           groups,
           replacing,
@@ -362,17 +399,6 @@ export function createExtensionManager(options: Options) {
           () => start(id, capturedTarget, expected),
           () => state.set(id, "unknown"),
         );
-    if (panel) {
-      const pending =
-        panelOpens.get(target.owner) ?? new Map<string, Promise<void>>();
-      pending.set(id, work);
-      panelOpens.set(target.owner, pending);
-      const settled = () => {
-        pending.delete(id);
-        if (!pending.size) panelOpens.delete(target.owner);
-      };
-      void work.then(settled, settled);
-    }
     opening.set(work, id);
     void work.then(
       () => opening.delete(work),
@@ -383,18 +409,7 @@ export function createExtensionManager(options: Options) {
   return {
     pendingCleanup: () => pendingCleanup,
     collect,
-    async snapshot() {
-      const installations = await options.packages.snapshot();
-      return installations.map((entry) => ({
-        ...entry,
-        local: ["unknown", "stopping"].includes(state.get(entry.id) ?? "")
-          ? state.get(entry.id)!
-          : (backends.get(entry.id)?.state() ??
-            state.get(entry.id) ??
-            "dormant"),
-        otherInstances: "unknown" as const,
-      }));
-    },
+    snapshot: () => installationSnapshot(options.packages, state, backends),
     async prepare(
       owner: object,
       filename: string | Buffer,
