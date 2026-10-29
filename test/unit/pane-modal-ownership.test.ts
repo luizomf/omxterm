@@ -87,7 +87,7 @@ it.each([
     const surfaces: ReturnType<typeof createFakeSurface>[] = [];
     const notifyTabSelection = vi.fn();
     const host = mountTerminalWindowPage(
-      { tabStrip, tabsContainer },
+      { tabStrip, tabsContainer, auxiliaryPanel: snippets },
       {
         page: window,
         createAdapter: () => {
@@ -137,7 +137,6 @@ it.each([
           },
         },
         snippets: {
-          element: snippets,
           load: async () => ({
             snippets: [{ name: "B", body: "exact", execute: false }],
           }),

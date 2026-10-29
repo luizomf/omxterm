@@ -537,8 +537,10 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   on Linux and Windows, remappable through `keybinds`) shows or hides the
   selected window's Snippets view in one right-side, nonmodal Auxiliary Panel
   below full-width title/tab chrome. Snippets is the only production view; no
-  tool switcher or plugin API is exposed. Views are created lazily. The host
-  owns exclusive visibility, header/Close, resize, focus and lifecycle; the view
+  tool switcher or plugin API is exposed. Window composition creates the shared
+  panel independently of the optional Snippets wiring; Snippets contributes its
+  lazy view definition and preview, not the panel owner. Views are created lazily.
+  The host owns exclusive visibility, header/Close, resize, focus and lifecycle; the view
   owns its query, scroll and catalog. Activation reveals loading/search and
   focuses search immediately, rereading `snippets.yaml` each time without file
   watching. Old rows cannot act during loading. Results replace the catalog,

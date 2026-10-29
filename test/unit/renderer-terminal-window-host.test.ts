@@ -849,6 +849,38 @@ describe("renderer Terminal Window page host continued", () => {
     expect(removeTabCommandListener).toHaveBeenCalledOnce();
   });
 
+  it("owns an empty Auxiliary Panel without enabling Snippets", async () => {
+    const elements = createPageElements();
+    const auxiliaryPanel = document.createElement("aside");
+    document.body.append(auxiliaryPanel);
+    const host = mountTerminalWindowPage(
+      { ...elements, auxiliaryPanel },
+      {
+        createAdapter: createAdapterFactory(),
+        page: window,
+        mount: vi.fn(async () => createSurface()),
+      },
+    );
+    await host.ready;
+
+    expect(auxiliaryPanel.hidden).toBe(true);
+    expect(auxiliaryPanel.classList.contains("auxiliary-panel")).toBe(true);
+    expect(
+      auxiliaryPanel.querySelector(".auxiliary-header button"),
+    ).not.toBeNull();
+    expect(document.querySelectorAll(".auxiliary-separator")).toHaveLength(1);
+    expect(
+      auxiliaryPanel.querySelector(".auxiliary-body")!.children,
+    ).toHaveLength(0);
+    expect(document.querySelector(".snippet-preview")).toBeNull();
+
+    host.dispose();
+    host.dispose();
+    expect(auxiliaryPanel.children).toHaveLength(0);
+    expect(document.querySelector(".auxiliary-separator")).toBeNull();
+    expect(document.querySelector(".auxiliary-status")).toBeNull();
+  });
+
   it("injects a chosen snippet into the selected tab's session", async () => {
     const surface = createSurface();
     const elements = createPageElements();
@@ -861,27 +893,32 @@ describe("renderer Terminal Window page host continued", () => {
     let toggleListener: (() => void) | undefined;
     let configurationListener:
       ((configuration: TerminalRendererConfiguration) => void) | undefined;
-    const host = mountTerminalWindowPage(elements, {
-      createAdapter: createAdapterFactory(),
-      page: window,
-      mount: vi.fn(async () => surface),
-      subscribeToConfigurationUpdates(listener) {
-        configurationListener = listener;
-        return vi.fn();
-      },
-      snippets: {
-        element: snippetsElement,
-        load: vi.fn(async () => ({
-          snippets: [{ name: "greet", body: "printf hi", execute: true }],
-        })),
-        subscribeToToggle: (listener) => {
-          toggleListener = listener;
+    const load = vi.fn(async () => ({
+      snippets: [{ name: "greet", body: "printf hi", execute: true }],
+    }));
+    const host = mountTerminalWindowPage(
+      { ...elements, auxiliaryPanel: snippetsElement },
+      {
+        createAdapter: createAdapterFactory(),
+        page: window,
+        mount: vi.fn(async () => surface),
+        subscribeToConfigurationUpdates(listener) {
+          configurationListener = listener;
           return vi.fn();
         },
+        snippets: {
+          load,
+          subscribeToToggle: (listener) => {
+            toggleListener = listener;
+            return vi.fn();
+          },
+        },
       },
-    });
+    );
     await host.ready;
 
+    expect(load).not.toHaveBeenCalled();
+    expect(document.querySelectorAll(".auxiliary-separator")).toHaveLength(1);
     toggleListener!();
     await vi.waitFor(() => {
       expect(snippetsElement.querySelector("li button")).not.toBeNull();

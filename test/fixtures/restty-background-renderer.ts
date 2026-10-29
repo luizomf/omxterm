@@ -38,7 +38,11 @@ let tabCommand!: (command: TerminalTabCommand) => void;
 let snippetsToggle!: () => void;
 let currentSession = 0;
 const host = mountTerminalWindowPage(
-  { tabStrip: element("tab-strip"), tabsContainer: element("terminal-tabs") },
+  {
+    tabStrip: element("tab-strip"),
+    tabsContainer: element("terminal-tabs"),
+    auxiliaryPanel: element("snippets-sidebar"),
+  },
   {
     configuration,
     createAdapter() {
@@ -86,7 +90,6 @@ const host = mountTerminalWindowPage(
       return () => {};
     },
     snippets: {
-      element: element("snippets-sidebar"),
       load: async () => ({
         snippets: [{ name: "Fixture", body: "no execution", execute: false }],
       }),

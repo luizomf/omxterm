@@ -110,7 +110,7 @@ it.each([
     const loadSnippets = vi.fn(async () => ({ snippets: [] }));
     let togglePanel!: () => void;
     const host = mountTerminalWindowPage(
-      { tabStrip: strip, tabsContainer: tabs },
+      { tabStrip: strip, tabsContainer: tabs, auxiliaryPanel: panel },
       {
         page: window,
         about,
@@ -130,7 +130,6 @@ it.each([
         },
         loadLocalImage: async () => null,
         snippets: {
-          element: panel,
           load: loadSnippets,
           subscribeToToggle(listener) {
             togglePanel = listener;

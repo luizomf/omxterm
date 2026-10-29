@@ -117,7 +117,7 @@ export async function snippetsWindow() {
     .fn<() => Promise<LocalImageData | null>>()
     .mockResolvedValue(null);
   const host = mountTerminalWindowPage(
-    { tabsContainer, tabStrip },
+    { tabsContainer, tabStrip, auxiliaryPanel: root },
     {
       page: window,
       configuration,
@@ -152,7 +152,6 @@ export async function snippetsWindow() {
       onSurfaceFailure: failure,
       clipboard,
       snippets: {
-        element: root,
         load,
         subscribeToToggle(listener) {
           toggle = listener;

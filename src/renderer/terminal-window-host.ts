@@ -33,9 +33,9 @@ import {
   TERMINAL_TAB_DRAG_DATA_TYPE,
   type TerminalTabs,
 } from "./terminal-tabs";
-import { mountSnippetsPanel } from "./snippets-host";
+import { createSnippetsTool } from "./snippets-host";
 import type { SnippetPreview } from "./snippet-preview";
-import type { AuxiliaryPanel } from "./auxiliary-panel";
+import { createAuxiliaryPanel, type AuxiliaryPanel } from "./auxiliary-panel";
 import { renderUserFileErrorBanner } from "./user-file-error-banner";
 import {
   createLocalImagePreview,
@@ -61,6 +61,7 @@ type MountTerminalSurface = (
 export interface TerminalWindowPageElements {
   readonly tabStrip: HTMLElement;
   readonly tabsContainer: HTMLElement;
+  readonly auxiliaryPanel?: HTMLElement;
 }
 
 interface TerminalWindowPageOptions extends TerminalWindowActionSubscriptions {
@@ -115,7 +116,6 @@ interface TerminalWindowPageOptions extends TerminalWindowActionSubscriptions {
   ) => Promise<LocalImageData | null>;
   readonly subscribeToLocalImageOpen?: (listener: () => void) => () => void;
   readonly snippets?: {
-    readonly element: HTMLElement;
     readonly load: () => Promise<TerminalSnippetsResponse>;
     readonly subscribeToToggle: (listener: () => void) => () => void;
   };
@@ -362,21 +362,30 @@ export function mountTerminalWindowPage(
           (auxiliaryPanel?.clipboardAction(action) ?? false),
         (action) => palette?.clipboardAction(action) ?? false,
       );
-      if (options.snippets) {
-        const snippets = options.snippets;
-        const { panel, preview } = mountSnippetsPanel(page.document, snippets, {
-          tabs,
+      if (elements.auxiliaryPanel) {
+        const snippets = options.snippets
+          ? createSnippetsTool(page.document, options.snippets.load, {
+              tabs,
+              language,
+              blocked: previewActive,
+              onPreviewActivity: onOverlayActivity,
+            })
+          : undefined;
+        snippetPreview = snippets?.preview;
+        const panel = createAuxiliaryPanel(elements.auxiliaryPanel, {
           language,
-          clipboard: options.clipboard,
-          blocked: previewActive,
-          onPreviewActivity: onOverlayActivity,
+          content: elements.auxiliaryPanel.parentElement!,
+          focusTerminal: tabs.focusSelected,
+          ...(options.clipboard ? { clipboard: options.clipboard } : {}),
+          views: snippets ? [snippets.view] : [],
         });
         auxiliaryPanel = panel;
-        snippetPreview = preview;
         panel.setBlocked(previewActive());
-        removeSnippetsToggleListener = snippets.subscribeToToggle(() => {
-          if (tabs.isTerminalSelected()) panel.toggle("snippets");
-        });
+        removeSnippetsToggleListener = options.snippets?.subscribeToToggle(
+          () => {
+            if (tabs.isTerminalSelected()) panel.toggle("snippets");
+          },
+        );
       }
       removeSettingsOpen = options.settings?.onOpen(() => {
         if (!disposed && !previewActive()) tabs.openSettings();

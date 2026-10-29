@@ -91,7 +91,7 @@ async function setup() {
   let mounts = 0,
     completed = 0;
   const host = mountTerminalWindowPage(
-    { tabStrip, tabsContainer },
+    { tabStrip, tabsContainer, auxiliaryPanel: root },
     {
       createAdapter: adapter,
       mount: async (container, transport, options) => {
@@ -111,7 +111,6 @@ async function setup() {
         return () => {};
       },
       snippets: {
-        element: root,
         load: async () => ({ snippets: [] }),
         subscribeToToggle(listener) {
           toggle = listener;

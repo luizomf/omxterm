@@ -70,16 +70,19 @@ it.each([true, false])(
     });
     const load = vi.fn(async () => ({ snippets: [] }));
     const mount = vi.fn<NonNullable<Options["mount"]>>(() => pending);
-    const host = mountTerminalWindowPage(elements, {
-      createAdapter: createAdapterFactory(),
-      mount,
-      subscribeToFontZoom: zoom,
-      subscribeToClipboardActions: clipboard,
-      subscribeToTabBarToggle: tabbar,
-      subscribeToFind: find,
-      subscribeToTabCommands: commands,
-      snippets: { element: aside, load, subscribeToToggle: snippets },
-    });
+    const host = mountTerminalWindowPage(
+      { ...elements, auxiliaryPanel: aside },
+      {
+        createAdapter: createAdapterFactory(),
+        mount,
+        subscribeToFontZoom: zoom,
+        subscribeToClipboardActions: clipboard,
+        subscribeToTabBarToggle: tabbar,
+        subscribeToFind: find,
+        subscribeToTabCommands: commands,
+        snippets: { load, subscribeToToggle: snippets },
+      },
+    );
     try {
       let ready = false;
       void host.ready.then(() => {
@@ -144,27 +147,29 @@ it.each(["clipboard", "tabs", "snippets"] as const)(
       NonNullable<Parameters<typeof mountTerminalWindowPage>[1]["mount"]>
     >(() => pending);
     expect(() =>
-      mountTerminalWindowPage(elements, {
-        createAdapter: createAdapterFactory(),
-        mount,
-        subscribeToConfigurationUpdates: () => removeConfiguration,
-        subscribeToFontZoom: () => removeZoom,
-        subscribeToClipboardActions() {
-          if (failureAt === "clipboard") throw failure;
-          return removeClipboard;
-        },
-        subscribeToTabCommands() {
-          if (failureAt === "tabs") throw failure;
-          return removeTabs;
-        },
-        snippets: {
-          element: aside,
-          load: async () => ({ snippets: [] }),
-          subscribeToToggle() {
-            throw failure;
+      mountTerminalWindowPage(
+        { ...elements, auxiliaryPanel: aside },
+        {
+          createAdapter: createAdapterFactory(),
+          mount,
+          subscribeToConfigurationUpdates: () => removeConfiguration,
+          subscribeToFontZoom: () => removeZoom,
+          subscribeToClipboardActions() {
+            if (failureAt === "clipboard") throw failure;
+            return removeClipboard;
+          },
+          subscribeToTabCommands() {
+            if (failureAt === "tabs") throw failure;
+            return removeTabs;
+          },
+          snippets: {
+            load: async () => ({ snippets: [] }),
+            subscribeToToggle() {
+              throw failure;
+            },
           },
         },
-      }),
+      ),
     ).toThrow(failure);
     expect(removeZoom).toHaveBeenCalledOnce();
     expect(removeConfiguration).toHaveBeenCalledOnce();

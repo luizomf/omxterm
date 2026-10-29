@@ -17,10 +17,9 @@ export function startTerminalWindow(bridge: Window["omxterm"]): void {
   if (!tabsContainer) throw new Error("Terminal Tabs container is missing");
   const errorBanner = document.querySelector<HTMLElement>("#user-file-errors");
   if (!errorBanner) throw new Error("User File Error banner is missing");
-  const snippetsElement =
+  const auxiliaryPanel =
     document.querySelector<HTMLElement>("#snippets-sidebar");
-  if (!snippetsElement)
-    throw new Error("Snippets Sidebar container is missing");
+  if (!auxiliaryPanel) throw new Error("Auxiliary Panel container is missing");
   const surfaceFailure = document.querySelector<HTMLElement>(
     "#terminal-surface-failure",
   );
@@ -47,7 +46,7 @@ export function startTerminalWindow(bridge: Window["omxterm"]): void {
       // banner leaves, instead of resizing right after it appears.
       renderUserFileErrorBanner(errorBanner, configuration.userFileErrors);
       const host = mountTerminalWindowPage(
-        { tabStrip, tabsContainer },
+        { tabStrip, tabsContainer, auxiliaryPanel },
         {
           configuration,
           ...(layout ? { layout } : {}),
@@ -109,7 +108,6 @@ export function startTerminalWindow(bridge: Window["omxterm"]): void {
             requestContextMenu: bridge.terminal.requestClipboardContextMenu,
           },
           snippets: {
-            element: snippetsElement,
             load: bridge.terminal.snippets,
             subscribeToToggle: bridge.terminal.onSnippetsToggle,
           },

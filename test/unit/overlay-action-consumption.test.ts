@@ -75,7 +75,7 @@ async function fixture(
   const surfacePaste = vi.fn(() => (paste = actions.paste()));
   const input = document.createElement("textarea");
   const host = mountTerminalWindowPage(
-    { tabStrip, tabsContainer },
+    { tabStrip, tabsContainer, auxiliaryPanel: panel },
     {
       page: window,
       createAdapter: () => ({
@@ -103,7 +103,6 @@ async function fixture(
       },
       clipboard,
       snippets: {
-        element: panel,
         load: async () => ({ snippets: [] }),
         subscribeToToggle: consumption.toggle((listener) => {
           toggleListener = listener;
