@@ -64,6 +64,12 @@ export interface TerminalIpcControllerOptions {
   readonly configuration: TerminalRendererConfiguration;
   readonly webContents: TrustedWebContents;
   readonly initialFullScreen?: boolean;
+  readonly mirrorWindowFocused?: () => boolean;
+  readonly mirrorWindowAvailable?: () => boolean;
+  readonly onMirrorStopped?: (
+    lease: string,
+    reason: "stopped" | "unavailable" | "write-failed",
+  ) => void;
   readonly homeDirectory?: string;
   readonly initialLayout?: () =>
     import("../shared/terminal-layout").InitialLayout | null;
@@ -117,6 +123,9 @@ export interface TerminalIpcControllerOptions {
 }
 
 export interface TerminalIpcController {
+  readonly mirrorTyping?: ReturnType<
+    typeof import("./mirror-input-lease").createMirrorInputLease<LocalTerminalSession>
+  >;
   applyConfiguration(configuration: TerminalRendererConfiguration): void;
   applyFullScreen(fullScreen: boolean): void;
   hasBusySelectedSession(): boolean;

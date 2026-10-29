@@ -12,6 +12,7 @@ import {
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
 import { layoutIpc, type InitialLayout } from "../shared/terminal-layout";
+import { createMirrorInputLease } from "./mirror-input-lease";
 import { createTerminalContextMenuTarget } from "./terminal-context-menu";
 import {
   type LocalTerminalSession,
@@ -437,6 +438,7 @@ function createTerminalIpcController(
     const state = sessions.get(sessionId);
     if (!state || state.closed) return;
     state.closed = true;
+    mirrorTyping.recheck();
     if (reason) state.closeReason = reason;
     state.session.close();
   };
@@ -455,6 +457,26 @@ function createTerminalIpcController(
     ...(options.onSettingsSelected
       ? { onSettingsSelected: options.onSettingsSelected }
       : {}),
+  });
+  const mirrorTyping = createMirrorInputLease<LocalTerminalSession>({
+    current(id) {
+      const state = sessions.get(id);
+      return state && !state.closed && !state.exited
+        ? state.session
+        : undefined;
+    },
+    selected: selection.containsSessions,
+    focused: selection.isFocusedSession,
+    windowFocused: () => options.mirrorWindowFocused?.() === true,
+    available: () =>
+      !disposed &&
+      !options.webContents.isDestroyed() &&
+      options.mirrorWindowAvailable?.() === true,
+    write(session, data) {
+      options.onUserInteraction();
+      session.write(data);
+    },
+    stopped: (lease, reason) => options.onMirrorStopped?.(lease, reason),
   });
   const contextMenu = createTerminalContextMenuTarget({
     isOwnerAlive: () => !disposed && !options.webContents.isDestroyed(),
@@ -534,6 +556,7 @@ function createTerminalIpcController(
             const state = sessions.get(sessionId);
             if (state) state.exited = true;
             else exitedBeforeRegistration = true;
+            mirrorTyping.recheck();
             const context = sessionEndContext(
               sessionId,
               state,
@@ -730,11 +753,13 @@ function createTerminalIpcController(
     },
     start,
     input,
+    mirrorTyping,
     resize,
     acknowledgeOutput,
     close,
     tabSelected(payload) {
       selection.tabSelected(payload);
+      mirrorTyping.recheck();
       contextMenu.selectionChanged();
     },
     ...createTerminalTitleRequests(routedSession, options, reject),
@@ -774,6 +799,7 @@ function createTerminalIpcController(
     dispose() {
       if (disposed) return;
       disposed = true;
+      mirrorTyping.revoke();
       contextMenu.selectionChanged();
       surfaceFonts.dispose();
       localImageBoundary.dispose();

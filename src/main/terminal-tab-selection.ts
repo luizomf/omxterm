@@ -57,6 +57,14 @@ export function createTabSelection<State>(options: {
       });
       return states.some(options.isBusy);
     },
+    containsSessions(ids: readonly TerminalSessionId[]) {
+      const selected = tab;
+      return (
+        !settings &&
+        selected !== undefined &&
+        ids.every((id) => selected.includes(id))
+      );
+    },
     isFocusedSession(sessionId: TerminalSessionId) {
       return focused === sessionId && options.routed(sessionId) !== undefined;
     },
