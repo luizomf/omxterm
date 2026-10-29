@@ -51,6 +51,8 @@ interface InputOptions {
     | "buttons"
     | "target"
     | "not-dragging";
+  moveAfterRelease?: boolean;
+  interveningPointer?: boolean;
   registerAfterDelivery?: boolean;
   deliveryDelayMs?: number;
   consumptionDelayMs?: number;
@@ -84,7 +86,13 @@ function rendererInput(options: InputOptions) {
     () => false,
     evidence,
   );
-  const deliver = (type: string, x: number, y: number, buttons: number) => {
+  const deliver = (
+    type: string,
+    x: number,
+    y: number,
+    buttons: number,
+    pointerId = 1,
+  ) => {
     // This port models browser-trusted delivery and live product drag state;
     // it does not synthesize native/rendering qualification or a scroll result.
     const moved = type === "pointermove";
@@ -96,7 +104,7 @@ function rendererInput(options: InputOptions) {
       clientX: x,
       clientY: moved && options.invalid === "coordinates" ? y + 1 : y,
       buttons: moved && options.invalid === "buttons" ? 0 : buttons,
-      pointerId: moved && options.invalid === "identity" ? 2 : 1,
+      pointerId: moved && options.invalid === "identity" ? 2 : pointerId,
       isTrusted:
         moved && options.invalid === "malformed"
           ? undefined
@@ -187,6 +195,15 @@ async function exercise(withholdPoll: boolean, options: InputOptions = {}) {
           released = true;
           releasedAt = Date.now() - startedAt;
           renderer.deliver("pointerup", event.x, event.y, 0);
+          if (options.moveAfterRelease)
+            renderer.deliver("pointermove", event.x + 100, event.y + 100, 0);
+          // A second pointer at the release point overwrites down and up after
+          // the acknowledged gesture. The oracle must not pair that release
+          // with the saved drag.
+          if (options.interveningPointer) {
+            renderer.deliver("pointerdown", event.x, event.y, 1, 2);
+            renderer.deliver("pointerup", event.x, event.y, 0, 2);
+          }
         }
       },
     },
@@ -409,4 +426,70 @@ it("releases the held button when the renderer evaluation is cancelled", async (
   expect(result.viewportReads).toEqual([]);
   expect(result.pendingEvaluations).toBe(0);
   expect(result.observed.up).toMatchObject({ buttons: 0, dragging: false });
+});
+
+it("retains acknowledged drag evidence when a later unpressed move precedes the release snapshot", async () => {
+  const result = await exercise(false, { moveAfterRelease: true });
+  expect(result.error).toBeNull();
+  expect(result.observed.move).toMatchObject({ buttons: 0, x: 180, y: 100 });
+  expect(result.value?.nativeDrag.move).toMatchObject({
+    trusted: true,
+    canvas: true,
+    buttons: 1,
+    x: 80,
+    y: 0,
+    dragging: true,
+  });
+  expect(result.value?.nativeDrag.up).toMatchObject({
+    buttons: 0,
+    id: 1,
+    x: 80,
+    y: 0,
+  });
+  expect(result.value?.nativeDrag.down?.id).toBe(1);
+  expect(result.value?.nativeDrag.move?.id).toBe(1);
+  expect(result.value?.nativeDrag.up?.id).toBe(
+    result.value?.nativeDrag.down?.id,
+  );
+  expect(result.releasedAt).toBe(505);
+});
+
+it("rejects an intervening pointer release that is not the acknowledged gesture", async () => {
+  const result = await exercise(false, { interveningPointer: true });
+  expect(result.error).toBe(
+    "Error: Scrollback stimulus-unavailable at mouse-up",
+  );
+  expect(result.value).toBeNull();
+  expect(result.released).toBe(true);
+  expect(result.releasedAt).toBe(505);
+  expect(result.observed.down?.id).toBe(2);
+  expect(result.observed.move?.id).toBe(1);
+  expect(result.observed.up).toMatchObject({
+    id: 2,
+    buttons: 0,
+    trusted: true,
+    x: 80,
+    y: 0,
+  });
+  const phases = result.records.map(
+    (line) =>
+      JSON.parse(line.slice("__OMXTERM_SCROLLBACK_INPUT__".length)) as {
+        phase: string;
+        status: string;
+        category: string;
+      },
+  );
+  expect(phases).toContainEqual(
+    expect.objectContaining({ phase: "mouse-drag", status: "complete" }),
+  );
+  expect(phases).toContainEqual(
+    expect.objectContaining({
+      phase: "mouse-up",
+      status: "failure",
+      category: "stimulus-unavailable",
+    }),
+  );
+  expect(phases).not.toContainEqual(
+    expect.objectContaining({ phase: "mouse-up", status: "complete" }),
+  );
 });
