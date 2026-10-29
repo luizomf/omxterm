@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "id": "omxterm.mirror-typing",
+  "version": "0.1.0",
+  "name": "Mirror Typing",
+  "engines": { "omxterm": ">=0.24.0-dev.2 <0.25.0", "api": "^0.1.0" },
+  "backend": "backend.mjs",
+  "capabilities": ["terminal.mirrorTyping.v1"],
+  "view": {
+    "entry": "index.html",
+    "action": "omxterm.mirror-typing.open",
+    "title": "Mirror Typing",
+    "context": "window"
+  }
+}

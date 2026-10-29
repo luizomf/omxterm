@@ -1,0 +1,57 @@
+@import "../../src/renderer/ui-tokens.css";
+@import "../../src/renderer/application-page.css";
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+body {
+  display: flex;
+  background: var(--ui-surface);
+}
+.application-page-content > * {
+  max-width: 720px;
+}
+.application-page-content > p:first-child {
+  margin-top: 0;
+}
+fieldset {
+  margin: 24px 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+legend {
+  padding: 0;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+.mirror-targets {
+  display: grid;
+  gap: 4px;
+}
+.mirror-targets label {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--ui-radius);
+  background: var(--ui-raised);
+  overflow-wrap: anywhere;
+}
+.mirror-targets input {
+  flex: none;
+}
+.mirror-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mirror-help {
+  margin-top: 24px;
+  color: var(--ui-secondary);
+}

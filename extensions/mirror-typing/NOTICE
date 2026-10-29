@@ -1,0 +1,11 @@
+Mirror Typing is distributed under the OMXTerm MIT license in LICENSE.
+
+The Mirror Typing workflow adapts the broadcast-input proposal and concepts
+contributed by Rafael Ruscher (@ruscher) in OMXTerm PR #622, with attribution
+to Community Big and BigLinux. It is a narrower typing-only implementation,
+not a wholesale merge of that contribution. AshyTerm's applicable MIT notice
+is preserved in full in licenses/ashyterm.txt (Copyright 2024 Community Big).
+
+The archive bundles OMXTerm's shared application-page controls, layout and UI
+tokens under the MIT license in LICENSE. Core owns input routing; extension
+code neither receives keyboard payloads nor persists mirroring authority.
