@@ -14,7 +14,8 @@ export interface HostedContentSlot {
 export function createHostedContentPresentation(
   parent: HTMLElement,
   bridge:
-    Pick<HostedContentBridge, "present" | "close" | "onFailure"> | undefined,
+    | Pick<HostedContentBridge, "present" | "close" | "onFailure" | "onFocus">
+    | undefined,
   language: RendererLanguage = englishLanguage,
 ) {
   const page = parent.ownerDocument.defaultView!;
@@ -22,6 +23,8 @@ export function createHostedContentPresentation(
   let selectionIdentity: object | undefined;
   let revision = 0;
   let generation = 0;
+  let selectionRevision = 0;
+  let focused: string | null = null;
   let nativePossible = false;
   let blocked = false;
   let pendingOverlay = false;
@@ -48,7 +51,7 @@ export function createHostedContentPresentation(
   });
   const present = async (
     target: HostedContentSlot | undefined,
-    focus = false,
+    focus: boolean | "core" = false,
   ) => {
     if (!bridge) return true;
     const bounds = target?.slot.getBoundingClientRect();
@@ -70,7 +73,10 @@ export function createHostedContentPresentation(
       });
       if (request === revision) {
         if (!accepted) fail();
-        else if (!target) nativePossible = false;
+        else if (!target) {
+          nativePossible = false;
+          focused = null;
+        } else if (focus === "core") focused = null;
       }
       return accepted;
     } catch {
@@ -78,7 +84,7 @@ export function createHostedContentPresentation(
       return false;
     }
   };
-  const show = (focus = false) => {
+  const show = (focus: boolean | "core" = false) => {
     if (
       !disposed &&
       !failed &&
@@ -105,17 +111,30 @@ export function createHostedContentPresentation(
       : new ResizeObserver(layout);
   page.addEventListener("resize", layout);
   const removeFailure = bridge?.onFailure(fail);
+  const removeFocus = bridge?.onFocus?.((id) => {
+    focused = id;
+  });
   return {
     // identity also identifies DOM-only selections, which have no native slot.
     select(
       target: HostedContentSlot | undefined,
       activate: () => void,
       identity?: object,
+      focus: boolean | "core" = true,
     ) {
       if (disposed) return;
-      if (selectionIdentity !== identity) generation += 1;
+      if (selectionIdentity !== identity || selected !== target)
+        generation += 1;
       selectionIdentity = identity;
-      const current = generation;
+      const current = ++selectionRevision;
+      const retained =
+        nativePossible &&
+        selected === target &&
+        !!target &&
+        !blocked &&
+        !pendingOverlay &&
+        !failed &&
+        !restoreSuppressed;
       transitioning = true;
       if (!blocked) restoreSuppressed = false;
       if (selected?.slot !== target?.slot) {
@@ -123,19 +142,34 @@ export function createHostedContentPresentation(
         if (target) observer?.observe(target.slot);
       }
       selected = target;
-      const finish = () => {
-        if (disposed || current !== generation) return;
+      const finish = (shown = false) => {
+        if (disposed || current !== selectionRevision) return;
         transitioning = false;
         activate();
-        show(true);
+        if (!shown) show(focus);
       };
-      if (nativePossible) {
+      if (retained) {
+        if (focus === false) finish(true);
+        else
+          void present(target, focus).then((ok) => {
+            if (ok) finish(true);
+          });
+      } else if (nativePossible) {
         void present(undefined).then((ok) => {
           if (ok) finish();
         });
       } else finish();
     },
     focus: () => show(true),
+    isBlocked: () => blocked || pendingOverlay,
+    ownsFocus: (id?: string) =>
+      !disposed &&
+      !blocked &&
+      !pendingOverlay &&
+      !!selected &&
+      !selected.removed &&
+      focused === selected.id &&
+      (id === undefined || focused === id),
     setBlocked(value: boolean) {
       if (disposed) return;
       const changed = blocked !== value;
@@ -182,6 +216,8 @@ export function createHostedContentPresentation(
       if (disposed) return;
       disposed = true;
       generation += 1;
+      selectionRevision += 1;
+      removeFocus?.();
       removeFailure?.();
       observer?.disconnect();
       page.removeEventListener("resize", layout);

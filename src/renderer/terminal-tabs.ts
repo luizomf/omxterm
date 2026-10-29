@@ -73,7 +73,16 @@ export interface TerminalTabsOptions {
   readonly mirrorTyping?: MirrorTypingBridge | undefined;
   readonly initialLayout?: InitialLayout | undefined;
   readonly layout?: TerminalLayoutBridge | undefined;
-  readonly hostedContent?: HostedContentBridge;
+  readonly hostedContent?: HostedContentBridge | undefined;
+  readonly hostedPresentation?: ReturnType<
+    typeof import("./hosted-content-presentation").createHostedContentPresentation
+  >;
+  readonly selectContent?: (
+    tab: ApplicationTab,
+    activate: () => void,
+    passive: boolean,
+  ) => void;
+  readonly isSshSourceForeground?: (id: string) => boolean;
   readonly onGraphicalSelected?: () => void;
   readonly settings?: SettingsBridge;
   readonly extensions?: import("../shared/extensions").ExtensionsBridge;
@@ -233,24 +242,22 @@ export function createTerminalTabs(
     contextMenu.selectionChanged();
     if (tab.kind === "hosted") options.notifySelection?.(null, []);
     contentReady = false;
-    hosted.select(
-      tab.kind === "hosted" ? tab : undefined,
-      () => {
-        contentReady = true;
-        activateTabContent(
-          tabs,
-          tab,
-          changed,
-          passive,
-          mirrorReady && !mirrorReady.current()
-            ? { ...options, canFocus: () => false }
-            : options,
-          notifyFocus,
-        );
-        mirrorReady?.ready();
-      },
-      tab,
-    );
+    const activate = () => {
+      contentReady = true;
+      activateTabContent(
+        tabs,
+        tab,
+        changed,
+        passive,
+        mirrorReady && !mirrorReady.current()
+          ? { ...options, canFocus: () => false }
+          : options,
+        notifyFocus,
+      );
+      mirrorReady?.ready();
+    };
+    if (options.selectContent) options.selectContent(tab, activate, passive);
+    else hosted.select(tab.kind === "hosted" ? tab : undefined, activate, tab);
   };
 
   const removeTab = (tab: ApplicationTab, notify = true) => {

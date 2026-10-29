@@ -66,8 +66,9 @@ export function terminalTabCreator(
     const previous = owner.selected();
     const foreground =
       !ssh ||
-      (previous?.kind === "hosted" &&
-        previous.id === ssh.sourceView &&
+      ((options.isSshSourceForeground
+        ? options.isSshSourceForeground(ssh.sourceView)
+        : previous?.kind === "hosted" && previous.id === ssh.sourceView) &&
         options.canFocus?.() !== false);
     const pane = appendTab(
       parent,

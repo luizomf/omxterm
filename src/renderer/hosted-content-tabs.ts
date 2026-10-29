@@ -28,13 +28,11 @@ export function createHostedContentTabs(
   },
   keyboard: ReturnType<typeof retainDismissalGesture>,
   language: RendererLanguage = englishLanguage,
+  owner?: ReturnType<typeof createHostedContentPresentation>,
 ) {
   let disposed = false;
-  const presentation = createHostedContentPresentation(
-    parent,
-    bridge,
-    language,
-  );
+  const presentation =
+    owner ?? createHostedContentPresentation(parent, bridge, language);
   const removeLanguage = language.bind(() => {
     for (const button of parent.querySelectorAll(
       ".hosted-content-tab > button",
@@ -42,7 +40,7 @@ export function createHostedContentTabs(
       button.textContent = language.t("hosted.close");
   });
   const removeOpen = bridge?.onOpen((descriptor: HostedContentDescriptor) => {
-    if (disposed) return;
+    if (disposed || descriptor.presentation === "panel") return;
     const container = parent.ownerDocument.createElement("section");
     container.className = "hosted-content-tab";
     container.hidden = true;
@@ -81,7 +79,7 @@ export function createHostedContentTabs(
       removeOpen?.();
       removeRetired?.();
       removeLanguage();
-      presentation.dispose();
+      if (!owner) presentation.dispose();
     },
   };
 }

@@ -436,8 +436,42 @@ body.tabs-visible .terminal-tab {
   min-height: 0;
 }
 
-.snippets-view[hidden] {
+.snippets-view[hidden],
+.companion-native-slot[hidden],
+.auxiliary-tools[hidden] {
   display: none;
+}
+
+.companion-native-slot {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.auxiliary-tools {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.auxiliary-tools button {
+  padding: 4px 8px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.auxiliary-tools button[aria-pressed="true"] {
+  border-color: currentColor;
+}
+
+.auxiliary-tools button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
 }
 
 .snippets-view input {

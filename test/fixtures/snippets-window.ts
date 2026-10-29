@@ -22,7 +22,13 @@ export function cleanupSnippetsWindows() {
   document.body.replaceChildren();
 }
 
-export async function snippetsWindow() {
+export async function snippetsWindow(
+  hosted: Pick<
+    Parameters<typeof mountTerminalWindowPage>[1],
+    "hostedContent" | "sshPane"
+  > = {},
+  includeSnippets = true,
+) {
   installSettingsDom();
   const content = document.createElement("div"),
     root = document.createElement("aside"),
@@ -121,6 +127,7 @@ export async function snippetsWindow() {
     {
       page: window,
       configuration,
+      ...hosted,
       subscribeToConfigurationUpdates(listener) {
         update = listener;
         return vi.fn();
@@ -151,13 +158,17 @@ export async function snippetsWindow() {
       },
       onSurfaceFailure: failure,
       clipboard,
-      snippets: {
-        load,
-        subscribeToToggle(listener) {
-          toggle = listener;
-          return vi.fn();
-        },
-      },
+      ...(includeSnippets
+        ? {
+            snippets: {
+              load,
+              subscribeToToggle(listener: () => void) {
+                toggle = listener;
+                return vi.fn();
+              },
+            },
+          }
+        : {}),
       subscribeToClipboardActions(listener) {
         clipboardAction = listener;
         return vi.fn();

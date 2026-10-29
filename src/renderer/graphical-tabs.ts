@@ -56,6 +56,7 @@ export function createGraphicalTabs(
     },
     keyboard,
     language,
+    options.hostedPresentation,
   );
   const settingsActions: Pick<
     TerminalTabs,

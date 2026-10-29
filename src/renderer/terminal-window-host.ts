@@ -2,7 +2,7 @@ import type {
   InitialLayout,
   TerminalLayoutBridge,
 } from "../shared/terminal-layout";
-import { hostedTabOptions } from "./hosted-overlay-subscriptions";
+import { createCompanionContent } from "./companion-content";
 import type { HostedContentBridge } from "../shared/extension-view";
 import { mountWindowChrome, type WindowChromeBridge } from "./window-chrome";
 import { createCommandPalette } from "./command-palette";
@@ -24,7 +24,6 @@ import {
 } from "../terminal-surface/terminal-surface";
 import type { TerminalSessionId } from "../shared/terminal-contract";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
-import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type { TerminalTheme } from "../shared/terminal-theme";
 import type { TerminalFontData } from "../shared/terminal-font-data";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
@@ -33,9 +32,10 @@ import {
   TERMINAL_TAB_DRAG_DATA_TYPE,
   type TerminalTabs,
 } from "./terminal-tabs";
-import { createSnippetsTool } from "./snippets-host";
+import type { WindowSnippetsSource } from "./snippets-host";
+import { subscribeToWindowTools } from "./window-tool-subscriptions";
 import type { SnippetPreview } from "./snippet-preview";
-import { createAuxiliaryPanel, type AuxiliaryPanel } from "./auxiliary-panel";
+import type { AuxiliaryPanel } from "./auxiliary-panel";
 import { renderUserFileErrorBanner } from "./user-file-error-banner";
 import {
   createLocalImagePreview,
@@ -47,10 +47,7 @@ import type {
 } from "../shared/local-image";
 import { createTerminalFontGenerationOwner } from "./terminal-font-generations";
 import { applyWindowTheme } from "./terminal-window-theme";
-import {
-  subscribeToGuardedActions,
-  type TerminalWindowActionSubscriptions,
-} from "./terminal-window-actions";
+import type { TerminalWindowActionSubscriptions } from "./terminal-window-actions";
 
 type MountTerminalSurface = (
   container: HTMLElement,
@@ -115,10 +112,7 @@ interface TerminalWindowPageOptions extends TerminalWindowActionSubscriptions {
     source?: LocalImageActivation,
   ) => Promise<LocalImageData | null>;
   readonly subscribeToLocalImageOpen?: (listener: () => void) => () => void;
-  readonly snippets?: {
-    readonly load: () => Promise<TerminalSnippetsResponse>;
-    readonly subscribeToToggle: (listener: () => void) => () => void;
-  };
+  readonly snippets?: WindowSnippetsSource;
 }
 
 export interface TerminalWindowPageHost {
@@ -135,10 +129,8 @@ export function mountTerminalWindowPage(
   let disposed = false;
   let removeConfigurationUpdateListener: (() => void) | undefined;
   let removeTabTitleListener: (() => void) | undefined;
-  let removeSettingsOpen: (() => void) | undefined;
-  let removeGuardedActionListeners: (() => void) | undefined;
+  let removeToolSubscriptions: (() => void) | undefined;
   let auxiliaryPanel: AuxiliaryPanel | undefined;
-  let removeSnippetsToggleListener: (() => void) | undefined;
   let removeLocalImageOpenListener: (() => void) | undefined;
   let localImagePreview: LocalImagePreview | undefined;
   // Buffered bridge opens replay inside construction, before `dialogs` is
@@ -196,6 +188,18 @@ export function mountTerminalWindowPage(
     ...pageLabels.surfaceOptions,
   };
 
+  const companion = createCompanionContent(
+    elements.tabsContainer,
+    elements.auxiliaryPanel,
+    options.hostedContent,
+    {
+      language,
+      clipboard: options.clipboard,
+      focusTerminal: () => tabs.focusSelected(),
+      blocked: previewActive,
+    },
+  );
+  auxiliaryPanel = companion.panel;
   const tabs: TerminalTabs = createTerminalTabs(
     { strip: elements.tabStrip, container: elements.tabsContainer },
     {
@@ -205,15 +209,18 @@ export function mountTerminalWindowPage(
       layout: options.layout,
       ...(options.settings ? { settings: options.settings } : {}),
       ...(options.extensions ? { extensions: options.extensions } : {}),
-      ...hostedTabOptions(options.hostedContent, () =>
-        auxiliaryPanel?.deactivate(),
-      ),
+      hostedContent: options.hostedContent,
+      hostedPresentation: companion.presentation,
+      selectContent: companion.select,
+      isSshSourceForeground: companion.isSourceForeground,
       createAdapter: (...intent) =>
         options.createAdapter(fontConfigurationId, ...intent),
       sshPane: options.sshPane,
       canFocus: () => !disposed && !previewActive(),
       canAutoFocus: (unchangedFocus) =>
-        !previewActive() && (unchangedFocus || !auxiliaryPanel?.ownsFocus()),
+        !previewActive() &&
+        !companion.presentation.ownsFocus() &&
+        (unchangedFocus || !companion.ownsPanelFocus()),
       mount,
       surfaceOptions,
       showTabBar: options.configuration?.showTabBar ?? true,
@@ -232,7 +239,7 @@ export function mountTerminalWindowPage(
   );
 
   const onPageFocus = () => {
-    if (!previewActive() && !auxiliaryPanel?.ownsFocus()) tabs.focusSelected();
+    if (!previewActive() && !companion.ownsPanelFocus()) tabs.focusSelected();
   };
   const chrome = options.chrome
     ? mountWindowChrome(page.document, options.chrome, onPageFocus, language)
@@ -288,12 +295,10 @@ export function mountTerminalWindowPage(
     page.removeEventListener("pagehide", dispose);
     page.removeEventListener("focus", onPageFocus);
     removeFileDrops();
-    removeGuardedActionListeners?.();
+    removeToolSubscriptions?.();
     removeConfigurationUpdateListener?.();
     pageLabels.dispose();
     removeTabTitleListener?.();
-    removeSettingsOpen?.();
-    removeSnippetsToggleListener?.();
     removeLocalImageOpenListener?.();
     palette?.dispose();
     dialogs.dispose();
@@ -302,7 +307,7 @@ export function mountTerminalWindowPage(
     localImagePreview = undefined;
     snippetPreview?.dispose();
     snippetPreview = undefined;
-    auxiliaryPanel?.dispose();
+    companion.dispose();
     auxiliaryPanel = undefined;
     tabs.dispose();
     fontGenerations?.dispose();
@@ -351,46 +356,16 @@ export function mountTerminalWindowPage(
   // Command reception must not wait for the first Surface's mount settlement.
   // Pending tabs already own cancellation; unavailable Surface actions are no-ops.
   try {
-    (() => {
-      removeGuardedActionListeners = subscribeToGuardedActions(
-        options,
-        tabs,
-        previewActive,
-        (action) =>
-          (!tabs.isTerminalSelected() && !tabs.isSettingsSelected()) ||
-          tabs.editSettingsClipboard(action, options.clipboard) ||
-          (auxiliaryPanel?.clipboardAction(action) ?? false),
-        (action) => palette?.clipboardAction(action) ?? false,
-      );
-      if (elements.auxiliaryPanel) {
-        const snippets = options.snippets
-          ? createSnippetsTool(page.document, options.snippets.load, {
-              tabs,
-              language,
-              blocked: previewActive,
-              onPreviewActivity: onOverlayActivity,
-            })
-          : undefined;
-        snippetPreview = snippets?.preview;
-        const panel = createAuxiliaryPanel(elements.auxiliaryPanel, {
-          language,
-          content: elements.auxiliaryPanel.parentElement!,
-          focusTerminal: tabs.focusSelected,
-          ...(options.clipboard ? { clipboard: options.clipboard } : {}),
-          views: snippets ? [snippets.view] : [],
-        });
-        auxiliaryPanel = panel;
-        panel.setBlocked(previewActive());
-        removeSnippetsToggleListener = options.snippets?.subscribeToToggle(
-          () => {
-            if (tabs.isTerminalSelected()) panel.toggle("snippets");
-          },
-        );
-      }
-      removeSettingsOpen = options.settings?.onOpen(() => {
-        if (!disposed && !previewActive()) tabs.openSettings();
-      });
-    })();
+    const tools = subscribeToWindowTools(page.document, options, {
+      tabs,
+      panel: auxiliaryPanel,
+      language,
+      blocked: previewActive,
+      onPreviewActivity: onOverlayActivity,
+      modalClipboard: (action) => palette?.clipboardAction(action) ?? false,
+    });
+    snippetPreview = tools.preview;
+    removeToolSubscriptions = tools.unsubscribe;
   } catch (error) {
     dispose();
     throw error;

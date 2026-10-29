@@ -1,6 +1,7 @@
 import type { TerminalClipboard } from "../terminal-surface/terminal-surface";
 import type { TerminalClipboardAction } from "../shared/terminal-contract";
 import { installAuxiliaryPanelInput } from "./auxiliary-panel-input";
+import { createAuxiliaryPanelGeometry } from "./auxiliary-panel-geometry";
 import {
   englishLanguage,
   type RendererLanguage,
@@ -21,6 +22,11 @@ export interface AuxiliaryViewDefinition {
   readonly create: (isInteractive: () => boolean) => AuxiliaryView;
 }
 export interface AuxiliaryPanel {
+  register(view: AuxiliaryViewDefinition): void;
+  remove(id: string): void;
+  show(id: string): void;
+  selected(): string | undefined;
+  setSuspended(suspended: boolean): void;
   toggle(id: string): void;
   deactivate(): void;
   setBlocked(blocked: boolean): void;
@@ -39,6 +45,7 @@ export function createAuxiliaryPanel(
     readonly content: HTMLElement;
     readonly views: readonly AuxiliaryViewDefinition[];
     readonly focusTerminal: () => void;
+    readonly select?: (id: string | undefined, activate: () => void) => void;
     readonly clipboard?: TerminalClipboard;
     readonly language?: RendererLanguage;
   },
@@ -50,18 +57,41 @@ export function createAuxiliaryPanel(
       : definition.label(t);
   const document = root.ownerDocument;
   const page = document.defaultView!;
+  const definitions = new Map(options.views.map((view) => [view.id, view]));
   const created = new Map<string, AuxiliaryView>();
+  let suspended = false;
+  let transition = 0;
   let current: string | undefined;
   let disposed = false;
   let blocked = false;
-  let preferred = 280;
-  let maximum = 560;
-  let effective = 280;
-  let drag: { id: number; x: number; width: number } | undefined;
-  let frame: number | undefined;
   let statusTimer: number | undefined;
   let narrowView: AuxiliaryViewDefinition | undefined;
   const { separator, title, close, body, status } = createPanelElements(root);
+  const switcher = document.createElement("nav");
+  switcher.className = "auxiliary-tools";
+  body.before(switcher);
+  const toolButtons = new Map<string, HTMLButtonElement>();
+  const renderTools = () => {
+    switcher.hidden = definitions.size < 2;
+    for (const [id, button] of toolButtons) {
+      if (!definitions.has(id)) {
+        button.remove();
+        toolButtons.delete(id);
+      }
+    }
+    for (const definition of definitions.values()) {
+      let button = toolButtons.get(definition.id);
+      if (!button) {
+        button = document.createElement("button");
+        button.type = "button";
+        button.addEventListener("click", () => show(definition.id));
+        toolButtons.set(definition.id, button);
+        switcher.append(button);
+      }
+      button.textContent = labelOf(definition, language.t);
+      button.setAttribute("aria-pressed", String(definition.id === current));
+    }
+  };
   const renderNarrowNotice = (t: Translate) => {
     if (narrowView)
       status.textContent = t("panel.tooNarrow", {
@@ -69,157 +99,83 @@ export function createAuxiliaryPanel(
       });
   };
   const unbindLabels = language.bind((t) => {
-    separator.setAttribute("aria-label", t("panel.resize"));
-    separator.setAttribute(
-      "aria-valuetext",
-      t("panel.width", { width: effective }),
-    );
     close.setAttribute("aria-label", t("panel.close"));
-    const definition = options.views.find((view) => view.id === current);
+    const definition = definitions.get(current ?? "");
     if (definition) {
       title.textContent = labelOf(definition, t);
       root.setAttribute("aria-label", title.textContent);
     }
     renderNarrowNotice(t);
+    renderTools();
   });
   const ownsFocus = () =>
     !disposed &&
+    !suspended &&
     current !== undefined &&
     (root.contains(document.activeElement) ||
       document.activeElement === separator);
-  const interactive = () => !disposed && !blocked && current !== undefined;
-  const paint = () => {
-    effective = Math.max(220, Math.min(preferred, maximum));
-    root.style.width = `${effective}px`;
-    separator.setAttribute("aria-valuemin", "220");
-    separator.setAttribute("aria-valuemax", String(maximum));
-    separator.setAttribute("aria-valuenow", String(effective));
-    separator.setAttribute(
-      "aria-valuetext",
-      language.t("panel.width", { width: effective }),
-    );
-  };
-  const endDrag = () => {
-    const previous = drag;
-    drag = undefined;
-    if (frame !== undefined) page.cancelAnimationFrame(frame);
-    frame = undefined;
-    if (previous) {
-      separator.classList.remove("dragging");
-      if (separator.hasPointerCapture?.(previous.id))
-        separator.releasePointerCapture(previous.id);
-      paint();
-    }
-  };
-  const hide = (restoreFocus: boolean) => {
-    if (current === undefined) return;
-    endDrag();
-    created.get(current)?.deactivate();
+  const interactive = () =>
+    !disposed && !blocked && !suspended && current !== undefined;
+
+  const hideNow = () => {
+    geometry.endDrag();
+    if (current && !suspended) created.get(current)?.deactivate();
     current = undefined;
     input.invalidate();
     root.hidden = true;
     separator.hidden = true;
-    if (restoreFocus && !blocked) options.focusTerminal();
+    renderTools();
   };
-  const measure = () => {
-    if (disposed) return;
-    maximum = Math.min(
-      560,
-      options.content.getBoundingClientRect().width - 186,
-    );
-    if (maximum < 220) hide(true);
-    else paint();
+  const select = (id: string | undefined, activate: () => void) => {
+    const captured = ++transition;
+    const commit = () => {
+      if (!disposed && captured === transition) activate();
+    };
+    if (options.select) options.select(id, commit);
+    else commit();
   };
-  const resize = (width: number) => {
-    preferred = Math.max(220, Math.min(width, maximum));
+  const hide = (restoreFocus: boolean) => {
+    if (current === undefined) return;
+    select(undefined, () => {
+      hideNow();
+      if (restoreFocus && !blocked) options.focusTerminal();
+    });
   };
-  const onPointerDown = (event: PointerEvent) => {
-    if (!interactive() || event.button !== 0 || !event.isPrimary || drag)
-      return;
-    event.preventDefault();
-    separator.focus();
-    drag = { id: event.pointerId, x: event.clientX, width: effective };
-    separator.setPointerCapture(event.pointerId);
-    separator.classList.add("dragging");
-  };
-  const onPointerMove = (event: PointerEvent) => {
-    if (!drag || event.pointerId !== drag.id) return;
-    resize(drag.width + drag.x - event.clientX);
-    if (frame === undefined)
-      frame = page.requestAnimationFrame(() => {
-        frame = undefined;
-        if (drag && interactive()) paint();
-      });
-  };
-  const onPointerEnd = (event: PointerEvent) => {
-    if (drag?.id === event.pointerId) endDrag();
-  };
-  const onResizeKey = (event: KeyboardEvent) => {
-    if (!interactive()) return;
-    let width: number;
-    switch (event.key) {
-      case "ArrowLeft":
-        width = effective + 10;
-        break;
-      case "ArrowRight":
-        width = effective - 10;
-        break;
-      case "Home":
-        width = 220;
-        break;
-      case "End":
-        width = maximum;
-        break;
-      default:
-        return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    endDrag();
-    resize(width);
-    paint();
-  };
+  const geometry = createAuxiliaryPanelGeometry(root, separator, {
+    content: options.content,
+    language,
+    interactive,
+    tooNarrow: () => hide(true),
+  });
   const input = installAuxiliaryPanelInput(root, separator, close, {
     interactive,
     ownsFocus,
     close: () => hide(true),
-    blur: endDrag,
+    blur: geometry.endDrag,
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
   });
-  separator.addEventListener("keydown", onResizeKey);
-  separator.addEventListener("pointerdown", onPointerDown);
-  separator.addEventListener("pointermove", onPointerMove);
-  for (const type of ["pointerup", "pointercancel", "lostpointercapture"])
-    separator.addEventListener(type, onPointerEnd as EventListener);
-  page.addEventListener("resize", measure);
-  const observer =
-    typeof page.ResizeObserver === "function"
-      ? new page.ResizeObserver(measure)
-      : undefined;
-  observer?.observe(options.content);
-  return {
-    deactivate: () => hide(false),
-    toggle(id) {
-      if (disposed || blocked) return;
+  function show(id: string) {
+    if (disposed || blocked || suspended) return;
+    const definition = definitions.get(id);
+    if (!definition) return;
+    if (!geometry.measure()) {
+      narrowView = definition;
+      renderNarrowNotice(language.t);
+      status.hidden = false;
+      if (statusTimer !== undefined) page.clearTimeout(statusTimer);
+      statusTimer = page.setTimeout(() => {
+        status.hidden = true;
+        narrowView = undefined;
+      }, 4000);
+      return;
+    }
+    select(id, () => {
+      if (blocked || suspended || !definitions.has(id)) return;
       if (current === id) {
-        hide(true);
+        created.get(id)?.focus();
         return;
       }
-      const definition = options.views.find((view) => view.id === id);
-      if (!definition) return;
-      measure();
-      if (maximum < 220) {
-        narrowView = definition;
-        renderNarrowNotice(language.t);
-        status.hidden = false;
-        if (statusTimer !== undefined) page.clearTimeout(statusTimer);
-        statusTimer = page.setTimeout(() => {
-          status.hidden = true;
-          narrowView = undefined;
-        }, 4000);
-        return;
-      }
-      hide(false);
+      hideNow();
       let view = created.get(id);
       if (!view) {
         view = definition.create(() => interactive() && current === id);
@@ -236,7 +192,49 @@ export function createAuxiliaryPanel(
       status.hidden = true;
       narrowView = undefined;
       view.activate();
+      renderTools();
       view.focus();
+    });
+  }
+  return {
+    register(definition) {
+      if (disposed || definitions.has(definition.id)) return;
+      definitions.set(definition.id, definition);
+      renderTools();
+    },
+    remove(id) {
+      if (disposed) return;
+      ++transition;
+      if (current === id) hideNow();
+      created.get(id)?.dispose();
+      created.delete(id);
+      definitions.delete(id);
+      renderTools();
+    },
+    show,
+    selected: () => current,
+    setSuspended(value) {
+      if (disposed || value === suspended) return;
+      ++transition;
+      suspended = value;
+      geometry.endDrag();
+      input.invalidate();
+      root.hidden = value || current === undefined;
+      separator.hidden = root.hidden;
+      if (current) {
+        const view = created.get(current);
+        if (value) view?.deactivate();
+        else {
+          geometry.measure();
+          if (current) view?.activate();
+        }
+      }
+    },
+    deactivate: () => hide(false),
+    toggle(id) {
+      if (disposed || blocked || suspended) return;
+      if (current === id) hide(true);
+      else show(id);
     },
     setBlocked(value) {
       if (disposed || value === blocked) return;
@@ -244,24 +242,19 @@ export function createAuxiliaryPanel(
       input.invalidate();
       root.inert = value;
       separator.inert = value;
-      if (value) endDrag();
+      if (value) geometry.endDrag();
     },
     ownsFocus,
     clipboardAction: input.clipboardAction,
     dispose() {
       if (disposed) return;
-      hide(false);
+      ++transition;
+      hideNow();
       disposed = true;
       input.dispose();
       unbindLabels();
       if (statusTimer !== undefined) page.clearTimeout(statusTimer);
-      observer?.disconnect();
-      page.removeEventListener("resize", measure);
-      separator.removeEventListener("keydown", onResizeKey);
-      separator.removeEventListener("pointerdown", onPointerDown);
-      separator.removeEventListener("pointermove", onPointerMove);
-      for (const type of ["pointerup", "pointercancel", "lostpointercapture"])
-        separator.removeEventListener(type, onPointerEnd as EventListener);
+      geometry.dispose();
       for (const view of created.values()) view.dispose();
       created.clear();
       root.replaceChildren();
