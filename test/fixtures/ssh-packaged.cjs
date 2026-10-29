@@ -339,7 +339,19 @@ async function run(options) {
     true,
   );
   assert.ok(alive(ptys[0]), "opening panel preserves original PTY");
-  menu("SSH Connect");
+  // Repeated admission is asynchronous even while the retained view is visible.
+  await js(`(() => {
+    window.__sshReopened = false;
+    window.__removeSshReopen = window.omxterm.terminal.hostedContent.onOpen(() => {
+      window.__sshReopened = true;
+    });
+  })()`);
+  try {
+    menu("SSH Connect");
+    await until(() => js("window.__sshReopened"), "repeated SSH admission");
+  } finally {
+    await js("window.__removeSshReopen(); void 0;");
+  }
   await panel(view, true, "child");
   await js("document.querySelector('.auxiliary-header button').click()");
   await panel(view, false, "core");

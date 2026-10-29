@@ -406,7 +406,20 @@ async function run(options) {
     "initial captured OSC 7 directory",
   );
   const initialDirectory = options.root;
-  menu("Files");
+  // Already-visible pixels cannot acknowledge asynchronous repeated admission.
+  // Observe its delivered open before testing the following Close gesture.
+  await js(`(() => {
+    window.__filesReopened = false;
+    window.__removeFilesReopen = window.omxterm.terminal.hostedContent.onOpen(() => {
+      window.__filesReopened = true;
+    });
+  })()`);
+  try {
+    menu("Files");
+    await until(() => js("window.__filesReopened"), "repeated Files admission");
+  } finally {
+    await js("window.__removeFilesReopen(); void 0;");
+  }
   await panel(view, true, "child");
   await js("document.querySelector('.auxiliary-header button').click()");
   await panel(view, false, "core");
