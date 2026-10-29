@@ -574,22 +574,33 @@ async function run(options) {
   const afterCanvas = await canvasGeometry();
   // Restty fonts are WASM-owned bytes, not document.fonts/CSS FontFaces.
   // Keep the actual rendered canvas for owner visual readability adjudication.
-  const image = await core.capturePage({
-    x: afterCanvas.x,
-    y: afterCanvas.y,
-    width: afterCanvas.width,
-    height: afterCanvas.height,
-  });
-  const pixels = image.toBitmap();
-  assert.ok(pixels.length > 0);
-  let contrast = false;
-  for (let index = 4; index < pixels.length; index += 4) {
-    if (pixels.readUInt32LE(index) !== pixels.readUInt32LE(0)) {
-      contrast = true;
-      break;
+  let image;
+  let textPixels = 0;
+  // Geometry/backing-store resize is not a compositor paint fence. Check the
+  // synthetic text rows, not the exit notice that can paint over a blank canvas.
+  await until(async () => {
+    image = await core.capturePage({
+      x: afterCanvas.x,
+      y: afterCanvas.y,
+      width: afterCanvas.width,
+      height: afterCanvas.height,
+    });
+    const pixels = image.toBitmap();
+    const size = image.getSize();
+    textPixels = 0;
+    for (let y = 0; y < Math.min(100, size.height); y++) {
+      for (let x = 0; x < size.width; x++) {
+        const index = (y * size.width + x) * 4;
+        if (
+          pixels[index] > 150 &&
+          pixels[index + 1] > 150 &&
+          pixels[index + 2] > 150
+        )
+          textPixels++;
+      }
     }
-  }
-  assert.ok(contrast, "retained canvas is not a uniform blank frame");
+    return textPixels > 100;
+  }, "retained synthetic text rows painted after refit");
   fs.writeFileSync(
     path.join(options.evidence, "retained-canvas.png"),
     image.toPNG(),
@@ -597,7 +608,7 @@ async function run(options) {
   save("retained-render.json", {
     beforeCanvas,
     afterCanvas,
-    contrast,
+    textPixels,
     fontEvidence:
       "real packaged Restty canvas; visual readability requires owner inspection, not CSS FontFace enumeration",
   });
