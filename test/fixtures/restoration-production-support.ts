@@ -211,7 +211,14 @@ export async function selectPane(
     "pane canvas",
   );
   const point = (await core.executeJavaScript(
-    `(() => { const r = document.querySelectorAll('.terminal-tab')[${tab}].querySelectorAll('.terminal-surface')[${pane}].getBoundingClientRect(); return {x:Math.round(r.x+20),y:Math.round(r.y+20)}; })()`,
+    `(() => {
+      const canvas = document.querySelectorAll('.terminal-tab')[${tab}].querySelectorAll('.terminal-surface')[${pane}].querySelector('canvas');
+      const r = canvas.getBoundingClientRect();
+      const x = Math.round(r.x + r.width / 2), y = Math.round(r.y + r.height / 2);
+      if (r.width <= 0 || r.height <= 0 || document.elementFromPoint(x, y) !== canvas)
+        throw Error('pane canvas is not a visible pointer target');
+      return {x, y};
+    })()`,
   )) as { x: number; y: number };
   core.sendInputEvent({
     type: "mouseDown",
