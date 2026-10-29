@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { runInNewContext } from "node:vm";
-import { stripTypeScriptTypes } from "node:module";
+import { execFileSync } from "node:child_process";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { mountResttyTerminalSurface } from "../fixtures/pending-tab-surface";
 import {
@@ -89,7 +89,23 @@ it("does not admit Paste on B's native start or mount resolution before producti
       h.tabs.clipboardAction(action),
     );
     const continuation = runInNewContext(
-      stripTypeScriptTypes(`(async () => {${main.slice(begin, end)}})()`),
+      // Compile outside jsdom's mixed TextEncoder/Uint8Array realm. Do not
+      // depend on optional Node TypeScript support in distribution builds.
+      execFileSync(
+        process.execPath,
+        [
+          "-e",
+          `process.stdout.write(require("esbuild").transformSync(
+            require("node:fs").readFileSync(0, "utf8"),
+            { loader: "ts", target: "es2022" },
+          ).code)`,
+        ],
+        {
+          input: `(async () => {${main.slice(begin, end)}})()`,
+          encoding: "utf8",
+          timeout: 10_000,
+        },
+      ),
       {
         assert,
         sessions: [{}, {}],
