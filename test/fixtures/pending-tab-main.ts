@@ -257,6 +257,13 @@ async function run() {
     "B native program ready",
   );
   assert.equal(sessions.length, 2, "Exactly one B PTY");
+  await waitFor(
+    async () =>
+      (await window.webContents.executeJavaScript(
+        "globalThis.pendingTabMountedAndFocused === true",
+      )) as boolean,
+    "B Surface published and focused before Paste",
+  );
   const inputOffset = inputs[1]!.length;
   trace("B paste dispatch", "begin");
   window.webContents.send(terminalIpc.clipboardAction, "paste");

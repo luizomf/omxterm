@@ -8,11 +8,12 @@ const gate = new Promise<void>((resolve) => {
 Object.assign(globalThis, {
   releasePendingTab: release,
   pendingTabHeld: false,
+  pendingTabMountedAndFocused: false,
 });
 
 // The production renderer and tab owner use the real Restty mount. Only B's
 // font acquisition is held, before rendering readiness and Adapter.start.
-export const mountResttyTerminalSurface: typeof mountRealSurface = (
+export const mountResttyTerminalSurface: typeof mountRealSurface = async (
   container,
   adapter,
   options = {},
@@ -21,7 +22,7 @@ export const mountResttyTerminalSurface: typeof mountRealSurface = (
   const second = mounts === 2;
   const acquire = options.acquireFontInputs;
   if (!acquire) throw new Error("Fixture requires production font acquisition");
-  return mountRealSurface(container, adapter, {
+  const surface = await mountRealSurface(container, adapter, {
     ...options,
     async acquireFontInputs(family, signal) {
       if (second) {
@@ -31,4 +32,14 @@ export const mountResttyTerminalSurface: typeof mountRealSurface = (
       return acquire(family, signal);
     },
   });
+  if (second) {
+    const focus = surface.focus.bind(surface);
+    surface.focus = () => {
+      focus();
+      // The production pane owner publishes pane.surface before calling focus.
+      // Native READY and even mount resolution alone cannot witness that point.
+      Object.assign(globalThis, { pendingTabMountedAndFocused: true });
+    };
+  }
+  return surface;
 };
