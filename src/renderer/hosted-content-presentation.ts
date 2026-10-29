@@ -118,7 +118,7 @@ export function createHostedContentPresentation(
     // identity also identifies DOM-only selections, which have no native slot.
     select(
       target: HostedContentSlot | undefined,
-      activate: () => void,
+      activate: (focusAllowed?: boolean) => void,
       identity?: object,
       focus: boolean | "core" = true,
     ) {
@@ -142,17 +142,17 @@ export function createHostedContentPresentation(
         if (target) observer?.observe(target.slot);
       }
       selected = target;
-      const finish = (shown = false) => {
+      const finish = (shown = false, focusAllowed = true) => {
         if (disposed || current !== selectionRevision) return;
         transitioning = false;
-        activate();
+        activate(focusAllowed);
         if (!shown) show(focus);
       };
       if (retained) {
         if (focus === false) finish(true);
         else
           void present(target, focus).then((ok) => {
-            if (ok) finish(true);
+            if (ok) finish(true, ok === true);
           });
       } else if (nativePossible) {
         void present(undefined).then((ok) => {

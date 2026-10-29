@@ -43,6 +43,15 @@ export function createHostedContentBridge(ipc: Transport): HostedContentBridge {
         ipc.removeListener(extensionViewIpc.focus, handler);
       };
     },
+    onDismissPanel(listener) {
+      const handler: Listener = (_event, value) => {
+        if (isHostedContentId(value)) listener(value);
+      };
+      ipc.on(extensionViewIpc.dismissPanel, handler);
+      return () => {
+        ipc.removeListener(extensionViewIpc.dismissPanel, handler);
+      };
+    },
     onFailure(listener) {
       const handler: Listener = (_event, value) => {
         if (value === true) listener();
@@ -56,7 +65,10 @@ export function createHostedContentBridge(ipc: Transport): HostedContentBridge {
       if (!isHostedContentPresentation(value))
         throw new TypeError("Invalid hosted presentation");
       const result = await ipc.invoke(extensionViewIpc.present, value);
-      if (typeof result !== "boolean")
+      if (
+        typeof result !== "boolean" &&
+        !(value.focus === "core" && result === "focus-unavailable")
+      )
         throw new TypeError("Invalid hosted presentation result");
       return result;
     },

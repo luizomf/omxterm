@@ -76,6 +76,20 @@ describe("hosted application-tab contract", () => {
     ).toBe(false);
   });
 
+  it("accepts a recoverable refusal only for a core-focus presentation", async () => {
+    const bridge = createHostedContentBridge({
+      invoke: vi.fn(async () => "focus-unavailable"),
+      on: vi.fn(),
+      removeListener: vi.fn(),
+    });
+    await expect(
+      bridge.present({ ...presentation, id: "ssh", focus: "core" }),
+    ).resolves.toBe("focus-unavailable");
+    await expect(bridge.present(presentation)).rejects.toThrow(
+      "Invalid hosted presentation result",
+    );
+  });
+
   it("validates native focus notifications and removes its subscription", () => {
     let handler:
       ((event: Electron.IpcRendererEvent, value: unknown) => void) | undefined;
@@ -95,6 +109,28 @@ describe("hosted application-tab contract", () => {
     remove();
     expect(transport.removeListener).toHaveBeenCalledWith(
       extensionViewIpc.focus,
+      handler,
+    );
+  });
+
+  it("validates native companion dismissals and removes the listener", () => {
+    let handler!: (event: Electron.IpcRendererEvent, value: unknown) => void;
+    const transport = {
+      invoke: vi.fn(),
+      on: vi.fn((_channel: string, listener: typeof handler) => {
+        handler = listener;
+      }),
+      removeListener: vi.fn(),
+    };
+    const bridge = createHostedContentBridge(transport);
+    const dismiss = vi.fn();
+    const remove = bridge.onDismissPanel!(dismiss);
+    for (const value of ["ssh", null, {}, "../bad", undefined])
+      handler({} as Electron.IpcRendererEvent, value);
+    expect(dismiss.mock.calls).toEqual([["ssh"]]);
+    remove();
+    expect(transport.removeListener).toHaveBeenCalledWith(
+      extensionViewIpc.dismissPanel,
       handler,
     );
   });

@@ -26,9 +26,11 @@ export interface AuxiliaryPanel {
   remove(id: string): void;
   show(id: string): void;
   selected(): string | undefined;
+  requested(): string | undefined;
   setSuspended(suspended: boolean): void;
   toggle(id: string): void;
   deactivate(): void;
+  dismiss(): void;
   setBlocked(blocked: boolean): void;
   ownsFocus(): boolean;
   clipboardAction(action: TerminalClipboardAction): boolean;
@@ -62,6 +64,7 @@ export function createAuxiliaryPanel(
   let suspended = false;
   let transition = 0;
   let current: string | undefined;
+  let requested: string | undefined;
   let disposed = false;
   let blocked = false;
   let statusTimer: number | undefined;
@@ -128,6 +131,7 @@ export function createAuxiliaryPanel(
   };
   const select = (id: string | undefined, activate: () => void) => {
     const captured = ++transition;
+    requested = id;
     const commit = () => {
       if (!disposed && captured === transition) activate();
     };
@@ -135,7 +139,7 @@ export function createAuxiliaryPanel(
     else commit();
   };
   const hide = (restoreFocus: boolean) => {
-    if (current === undefined) return;
+    if (current === undefined && requested === undefined) return;
     select(undefined, () => {
       hideNow();
       if (restoreFocus && !blocked) options.focusTerminal();
@@ -204,7 +208,10 @@ export function createAuxiliaryPanel(
     },
     remove(id) {
       if (disposed) return;
-      ++transition;
+      if (requested === id) {
+        ++transition;
+        requested = undefined;
+      }
       if (current === id) hideNow();
       created.get(id)?.dispose();
       created.delete(id);
@@ -213,9 +220,11 @@ export function createAuxiliaryPanel(
     },
     show,
     selected: () => current,
+    requested: () => requested,
     setSuspended(value) {
       if (disposed || value === suspended) return;
       ++transition;
+      requested = current;
       suspended = value;
       geometry.endDrag();
       input.invalidate();
@@ -231,6 +240,7 @@ export function createAuxiliaryPanel(
       }
     },
     deactivate: () => hide(false),
+    dismiss: () => hide(true),
     toggle(id) {
       if (disposed || blocked || suspended) return;
       if (current === id) hide(true);

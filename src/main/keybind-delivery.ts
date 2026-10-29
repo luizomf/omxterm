@@ -8,6 +8,7 @@ import { hasNativeAltGr } from "./keyboard-modifiers";
 import type { KeybindCapture } from "./keybind-capture";
 
 export interface KeybindKeyEvent {
+  readonly defaultPrevented?: boolean;
   preventDefault(): void;
 }
 
@@ -55,6 +56,7 @@ export function deliverKeybindsFromKeyEvents(
       webContents.on(event, release);
   }
   webContents.on("before-input-event", (event, input) => {
+    if (event.defaultPrevented) return;
     // A shortcut being recorded never runs or reaches the terminal.
     if (capture?.intercept(webContents, input)) {
       event.preventDefault();

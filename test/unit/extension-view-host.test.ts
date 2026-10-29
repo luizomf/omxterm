@@ -86,7 +86,7 @@ it.each([
     f.owner.webContents.focused = coreFocused;
     expect(
       await f.host!.present({ ...present(view.id, 2), focus: "core" }),
-    ).toBe(accepted);
+    ).toBe(accepted ? true : "focus-unavailable");
     expect(child.setVisible).not.toHaveBeenCalledWith(false);
     expect(child.webContents.focus).not.toHaveBeenCalled();
     expect(f.owner.webContents.focus).toHaveBeenCalledTimes(accepted ? 1 : 0);
@@ -153,6 +153,82 @@ it("publishes actual panel focus and reveals the retained identity", async () =>
   await host.retire();
   expect(() => host.reveal(descriptor)).toThrow("retired");
 });
+
+it.each([true, false])(
+  "owns native Escape only for companion content (panel=%s)",
+  async (panel) => {
+    const f = await fixture(false);
+    const ipc = {
+      handle: vi.fn(),
+      removeHandler: vi.fn(),
+    } as unknown as IpcMain;
+    const host = startExtensionViewHost({ ...f.options, ipcMain: ipc });
+    cleanups.push(() => host.retire());
+    const descriptor = await host.open({
+      ...opening,
+      ...(panel ? { presentation: "panel" as const } : {}),
+    });
+    const handler = (ipc.handle as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([channel]) => channel === extensionViewIpc.present,
+    )![1] as (
+      event: unknown,
+      request: HostedContentPresentation,
+    ) => Promise<unknown>;
+    const sender = {
+      sender: f.owner.webContents,
+      senderFrame: f.owner.webContents.mainFrame,
+    };
+    await handler(sender, present(descriptor.id));
+    const child = f.views[0]!.webContents;
+    const key = (
+      contents: Contents,
+      type = "keyDown",
+      isAutoRepeat = false,
+    ) => {
+      const event = { preventDefault: vi.fn() };
+      contents.emit("before-input-event", event, {
+        type,
+        key: "Escape",
+        code: "Escape",
+        isAutoRepeat,
+      });
+      return event.preventDefault;
+    };
+    expect(key(f.owner.webContents)).not.toHaveBeenCalled();
+    f.owner.webContents.send.mockClear();
+    const press = key(child);
+    if (!panel) {
+      expect(press).not.toHaveBeenCalled();
+      expect(f.owner.webContents.send).not.toHaveBeenCalled();
+      expect(f.keybind).toHaveBeenCalledOnce();
+      return;
+    }
+    expect(press).toHaveBeenCalledOnce();
+    expect(f.keybind).not.toHaveBeenCalled();
+    expect(f.owner.webContents.send).toHaveBeenCalledWith(
+      extensionViewIpc.dismissPanel,
+      descriptor.id,
+    );
+    expect(key(child, "keyDown", true)).toHaveBeenCalledOnce();
+    await handler(sender, { ...present(null, 2), focus: false });
+    child.focused = false;
+    child.emit("blur");
+    expect(f.owner.webContents.focus).toHaveBeenCalledOnce();
+    expect(key(f.owner.webContents, "keyDown", true)).toHaveBeenCalledOnce();
+    expect(key(f.owner.webContents, "keyUp")).toHaveBeenCalledOnce();
+    expect(key(f.owner.webContents)).not.toHaveBeenCalled();
+    expect(key(f.owner.webContents, "keyUp")).not.toHaveBeenCalled();
+    // Hidden and unfocused children cannot originate another dismissal.
+    expect(key(child)).not.toHaveBeenCalled();
+    await handler(sender, present(descriptor.id, 3));
+    expect(key(child)).toHaveBeenCalledOnce();
+    // A fresh press recovers a lost release, and OS blur drops gesture ownership.
+    expect(key(f.owner.webContents)).not.toHaveBeenCalled();
+    expect(key(child)).toHaveBeenCalledOnce();
+    f.owner.emit("blur");
+    expect(key(f.owner.webContents, "keyUp")).not.toHaveBeenCalled();
+  },
+);
 
 function deferred<T = void>() {
   let resolve!: (value: T) => void;

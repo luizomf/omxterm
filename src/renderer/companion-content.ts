@@ -83,6 +83,16 @@ export function createCompanionContent(
     )
       panel.show(descriptor.id);
   });
+  const removeDismiss = bridge?.onDismissPanel?.((id) => {
+    if (
+      !disposed &&
+      application?.kind === "terminal" &&
+      panel?.requested() === id &&
+      !options.blocked() &&
+      !presentation.isBlocked()
+    )
+      panel.dismiss();
+  });
   const removeRetired = bridge?.onRetired((id) => {
     const slot = slots.get(id);
     if (!slot || disposed) return;
@@ -92,7 +102,7 @@ export function createCompanionContent(
       slots.delete(id);
       presentation.forget(slot);
     };
-    if (application?.kind === "terminal" && panel?.selected() === id)
+    if (application?.kind === "terminal" && panel?.requested() === id)
       presentation.select(
         undefined,
         () => {
@@ -107,7 +117,11 @@ export function createCompanionContent(
   return {
     panel,
     presentation,
-    select(tab: ApplicationTab, activate: () => void, passive: boolean) {
+    select(
+      tab: ApplicationTab,
+      activate: (focusAllowed?: boolean) => void,
+      passive: boolean,
+    ) {
       application = tab;
       const target =
         tab.kind === "hosted"
@@ -117,9 +131,9 @@ export function createCompanionContent(
             : undefined;
       presentation.select(
         target,
-        () => {
+        (focusAllowed) => {
           panel?.setSuspended(tab.kind !== "terminal");
-          activate();
+          activate(focusAllowed);
         },
         tab,
         tab.kind === "terminal" && target ? (passive ? false : "core") : true,
@@ -148,6 +162,7 @@ export function createCompanionContent(
       disposed = true;
       removeOpen?.();
       removeRetired?.();
+      removeDismiss?.();
       panel?.dispose();
       slots.clear();
       presentation.dispose();

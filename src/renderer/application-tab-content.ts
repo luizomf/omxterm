@@ -32,6 +32,17 @@ export function activateTabContent(
   } else options.onGraphicalSelected?.();
 }
 
+export function focusApplicationTab(
+  tab: ApplicationTab | undefined,
+  options: TerminalTabsOptions,
+  focusHosted: () => void,
+) {
+  if (options.canFocus?.() === false) return;
+  if (tab?.kind === "hosted") focusHosted();
+  else if (tab?.kind === "settings") tab.view.focus();
+  else if (tab?.kind === "terminal") focusPane(tab.focused, options);
+}
+
 export function disposeTabContent(tabs: ApplicationTab[]) {
   for (const tab of tabs) {
     tab.removed = true;

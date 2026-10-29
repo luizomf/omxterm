@@ -14,12 +14,19 @@ export interface HostedContentPresentation {
   focus: boolean | "core";
 }
 
+// The pixels are presented, but a foreground-only core focus handoff lost
+// eligibility. This is recoverable and distinct from failed native hiding.
+export type HostedContentPresentationResult = boolean | "focus-unavailable";
+
 export interface HostedContentBridge {
   onOpen(listener: (descriptor: HostedContentDescriptor) => void): () => void;
   onRetired(listener: (id: string) => void): () => void;
   onFailure(listener: () => void): () => void;
   onFocus?(listener: (id: string | null) => void): () => void;
-  present(presentation: HostedContentPresentation): Promise<boolean>;
+  onDismissPanel?(listener: (id: string) => void): () => void;
+  present(
+    presentation: HostedContentPresentation,
+  ): Promise<HostedContentPresentationResult>;
   close(id: string): Promise<void>;
 }
 
@@ -31,6 +38,7 @@ export const extensionViewIpc = {
   close: "extension-view:close",
   visibility: "extension-view:visibility",
   focus: "extension-view:focus",
+  dismissPanel: "extension-view:dismiss-panel",
 } as const;
 
 function record(

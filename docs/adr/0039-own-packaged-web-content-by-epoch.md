@@ -34,14 +34,20 @@ owns which DOM terminal/control may receive it. A core-focus presentation can
 also retain the selected child's visible bounds while returning input to the
 core WebContents. Main accepts that handoff only in a focused window whose child
 or core WebContents already owns native focus; it follows the same window
-revision ordering as other presentations. This supports companion tools that
+revision ordering as other presentations. Loss of focus eligibility returns a
+distinct recoverable result: retain the pixels and settle DOM selection without
+focusing, rather than latching the native-hide failure state. This supports companion tools that
 remain visible while the terminal receives input. Overlay
 closure can restore only the same still-current content owner. Failed hides
 suppress presentation rather than showing a DOM modal behind live native pixels.
 Pending or failed terminal handoffs also refuse terminal injection, Find,
 clipboard and Snippets targeting; refused actions are not buffered or replayed.
 Field input stays in the child; core commands use the existing matcher with the
-owning window. Native clipboard operations target selected hosted contents,
+owning window. Escape from a selected, natively focused companion child sends a
+host-owned dismissal to core. A window-owned native gesture guard consumes its
+repeats/release across the child-to-core focus transfer; it does not intercept a
+fresh terminal Escape or general hosted-tab Escape. OS window blur or a fresh
+press recovers a lost release. No extension bytes participate in this route. Native clipboard operations target selected hosted contents,
 never a former terminal field. Host Close retains its Enter gesture through
 repeats/release using the same window dismissal owner as Settings. Closing a
 hosted tab does not close a PTY.

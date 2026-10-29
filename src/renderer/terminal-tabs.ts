@@ -8,6 +8,7 @@ import type {
 import {
   activateTabContent,
   disposeTabContent,
+  focusApplicationTab,
   focusPane,
 } from "./application-tab-content";
 import type { HostedTab } from "./hosted-content-tabs";
@@ -79,7 +80,7 @@ export interface TerminalTabsOptions {
   >;
   readonly selectContent?: (
     tab: ApplicationTab,
-    activate: () => void,
+    activate: (focusAllowed?: boolean) => void,
     passive: boolean,
   ) => void;
   readonly isSshSourceForeground?: (id: string) => boolean;
@@ -149,10 +150,14 @@ export function createTerminalTabs(
 ): TerminalTabs {
   let mirror: ReturnType<typeof createMirrorTyping> | undefined;
   let contentReady = true;
+  let automaticFocusAllowed = true;
   const canFocus = options.canFocus;
+  const canAutoFocus = options.canAutoFocus;
   options = {
     ...options,
     canFocus: () => contentReady && canFocus?.() !== false,
+    canAutoFocus: (unchangedFocus) =>
+      automaticFocusAllowed && canAutoFocus?.(unchangedFocus) !== false,
   };
   const language = options.language ?? englishLanguage;
   const tabs: ApplicationTab[] = [];
@@ -242,14 +247,15 @@ export function createTerminalTabs(
     contextMenu.selectionChanged();
     if (tab.kind === "hosted") options.notifySelection?.(null, []);
     contentReady = false;
-    const activate = () => {
+    const activate = (focusAllowed = true) => {
       contentReady = true;
+      automaticFocusAllowed = focusAllowed;
       activateTabContent(
         tabs,
         tab,
         changed,
-        passive,
-        mirrorReady && !mirrorReady.current()
+        passive || !focusAllowed,
+        !focusAllowed || (mirrorReady && !mirrorReady.current())
           ? { ...options, canFocus: () => false }
           : options,
         notifyFocus,
@@ -453,8 +459,10 @@ export function createTerminalTabs(
       renderStrip();
       focusPane(focusedPane(), options, true);
     },
-    focusSelected: () =>
-      focusApplicationTab(selectedApplicationTab(), options, hosted.focus),
+    focusSelected() {
+      automaticFocusAllowed = true;
+      focusApplicationTab(selectedApplicationTab(), options, hosted.focus);
+    },
     dispose() {
       if (disposed) return;
       mirror?.dispose();
@@ -480,17 +488,6 @@ function tabLabel(
   return tab.kind === "hosted"
     ? tab.title
     : tab.focused.label || String(index + 1);
-}
-
-function focusApplicationTab(
-  tab: ApplicationTab | undefined,
-  options: TerminalTabsOptions,
-  focusHosted: () => void,
-) {
-  if (options.canFocus?.() === false) return;
-  if (tab?.kind === "hosted") focusHosted();
-  else if (tab?.kind === "settings") tab.view.focus();
-  else if (tab?.kind === "terminal") focusPane(tab.focused, options);
 }
 
 function captureActionTarget(

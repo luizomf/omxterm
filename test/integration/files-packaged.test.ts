@@ -141,6 +141,8 @@ async function observeScenario(
       approvals: 2,
       checks: [
         "exact-archive-trust-dormant-install",
+        "panel-outside-tabs-native-focus-reopen-close-settings-terminal-switch",
+        "legacy-captured-initial-directory",
         "packaged-backend-create-move-conflict",
         "explicit-reinstall-actual-retirement-dormant",
         "fresh-activation-disable-uninstall",

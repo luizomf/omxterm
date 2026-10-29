@@ -13,11 +13,11 @@ qualify FUSE/helper installation. See the stable release notes for its separate
 package checks and [below](#build-and-evidence-boundary) for other evidence limits.
 
 The [foundation's exact-host exception](extension-installation-foundation.md#archive-contract)
-admits unchanged Files 0.1.0 on hosts 0.24.0-dev.0, dev.1 and dev.2 without
+admits unchanged Files 0.1.0 on hosts 0.24.0-dev.0, dev.1, dev.2 and dev.3 without
 broadening its manifest range or replacing published bytes. The
 [Saved Layout delivery](https://github.com/luizomf/omxterm/issues/673#issuecomment-6495927726)
-records the unchanged archive's lifecycle check on dev.1. Admission on dev.2 is
-not dev.2 package or Files lifecycle qualification; earlier host evidence does
+records the unchanged archive's lifecycle check on dev.1. Admission on dev.2 or
+dev.3 is not package or Files lifecycle qualification; earlier host evidence does
 not qualify every admitted version.
 
 ## Concrete consumer

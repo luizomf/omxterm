@@ -25,6 +25,7 @@ async function fixture() {
   const opens = new Set<(descriptor: HostedContentDescriptor) => void>();
   const retired = new Set<(id: string) => void>();
   const focuses = new Set<(id: string | null) => void>();
+  const dismissals = new Set<(id: string) => void>();
   const focus = (id: string | null) => {
     for (const listener of focuses) listener(id);
   };
@@ -42,6 +43,12 @@ async function fixture() {
       };
     },
     onFailure: () => () => {},
+    onDismissPanel(listener) {
+      dismissals.add(listener);
+      return () => {
+        dismissals.delete(listener);
+      };
+    },
     onFocus(listener) {
       focuses.add(listener);
       return () => {
@@ -69,6 +76,9 @@ async function fixture() {
           title: id,
           ...(panel ? { presentation: "panel" as const } : {}),
         });
+    },
+    dismiss(id: string) {
+      for (const listener of dismissals) listener(id);
     },
     retire(id: string) {
       for (const listener of retired) listener(id);
@@ -167,6 +177,31 @@ it("keeps panel pixels across terminal changes and awaits core focus before acti
   expect(f.surfaces[0]!.dispose).not.toHaveBeenCalled();
 });
 
+it("settles a refused core focus handoff without focus theft or poisoning later selections", async () => {
+  const f = await fixture();
+  f.open("ssh");
+  await settle();
+  vi.mocked(f.bridge.present).mockResolvedValueOnce("focus-unavailable");
+  f.tabCommand({ action: "new" });
+  await settle();
+  expect(f.surfaces[1]!.focus).not.toHaveBeenCalled();
+  expect(document.querySelectorAll(".terminal-tab:not([hidden])")).toHaveLength(
+    1,
+  );
+  expect(document.querySelector('[role="status"]')?.textContent).not.toContain(
+    "could not",
+  );
+  f.tool("Snippets").click();
+  await settle();
+  f.tool("ssh").click();
+  await settle();
+  expect(vi.mocked(f.bridge.present).mock.lastCall?.[0]).toMatchObject({
+    id: "ssh",
+    focus: true,
+  });
+  expect(f.root.hidden).toBe(false);
+});
+
 it("suspends for Settings and ordinary hosted tabs and restores the retained tool on terminal return", async () => {
   const f = await fixture();
   f.open();
@@ -228,6 +263,45 @@ it("waits for modal hide, ignores late tool opens, and retires hidden tools with
   expect(f.surfaces[0]!.dispose).not.toHaveBeenCalled();
 });
 
+it("keeps a pending Snippets selection when a hidden native tool retires", async () => {
+  const f = await fixture();
+  f.open("ssh");
+  await settle();
+  f.open("files");
+  await settle();
+  const hide = deferred<boolean>();
+  vi.mocked(f.bridge.present).mockImplementationOnce(() => hide.promise);
+  f.tool("Snippets").click();
+  f.retire("ssh");
+  hide.resolve(true);
+  await settle();
+  expect(f.root.hidden).toBe(false);
+  expect(f.root.querySelector("h2")?.textContent).toBe("Snippets");
+  expect(f.tool("ssh")).toBeUndefined();
+  expect(vi.mocked(f.bridge.present).mock.lastCall?.[0].id).toBeNull();
+});
+
+it("keeps a pending Files selection when the previously selected SSH tool retires", async () => {
+  const f = await fixture();
+  f.open("files");
+  await settle();
+  f.open("ssh");
+  await settle();
+  const hide = deferred<boolean>();
+  vi.mocked(f.bridge.present).mockImplementationOnce(() => hide.promise);
+  f.tool("files").click();
+  f.retire("ssh");
+  hide.resolve(true);
+  await settle();
+  expect(f.root.hidden).toBe(false);
+  expect(f.root.querySelector("h2")?.textContent).toBe("files");
+  expect(f.tool("ssh")).toBeUndefined();
+  expect(vi.mocked(f.bridge.present).mock.lastCall?.[0]).toMatchObject({
+    id: "files",
+    focus: true,
+  });
+});
+
 it("drops a stale overlay continuation after terminal selection changes", async () => {
   const f = await fixture();
   f.open();
@@ -264,6 +338,31 @@ it("keeps a late SSH transfer in the background when its panel no longer owns fo
   expect(f.surfaces[1]!.focus).not.toHaveBeenCalled();
   expect(f.root.hidden).toBe(false);
   expect(f.sshPane).toHaveBeenCalledWith("background", true);
+});
+
+it("dismisses the native companion only after acknowledged hiding and ignores stale dismissals", async () => {
+  const f = await fixture();
+  f.open("ssh");
+  await settle();
+  f.open("files");
+  await settle();
+  f.surfaces[0]!.focus.mockClear();
+  f.dismiss("ssh");
+  await settle();
+  expect(f.root.hidden).toBe(false);
+  const hide = deferred<boolean>();
+  vi.mocked(f.bridge.present).mockImplementationOnce(() => hide.promise);
+  f.dismiss("files");
+  expect(f.root.hidden).toBe(false);
+  expect(f.surfaces[0]!.focus).not.toHaveBeenCalled();
+  hide.resolve(true);
+  await settle();
+  expect(f.root.hidden).toBe(true);
+  expect(f.surfaces[0]!.focus).toHaveBeenCalled();
+  expect(f.bridge.close).not.toHaveBeenCalled();
+  f.open("files");
+  await settle();
+  expect(f.root.hidden).toBe(false);
 });
 
 it("fails closed when a native panel refuses the overlay hide", async () => {

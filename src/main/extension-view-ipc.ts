@@ -1,4 +1,5 @@
 import { isAbsolute } from "node:path";
+import { createCompanionDismissal } from "./companion-dismissal";
 import { terminalIpc } from "../shared/terminal-ipc";
 import type {
   TerminalClipboardAction,
@@ -23,6 +24,8 @@ type Route = {
   issued: Map<string, Host>;
   revision: number;
   focused: string | null;
+  panels: Set<string>;
+  dismissal: ReturnType<typeof createCompanionDismissal>;
 };
 const routers = new WeakMap<IpcMain, Map<WebContents, Route>>();
 
@@ -128,6 +131,8 @@ export function startExtensionViewHost(
       issued: new Map(),
       revision: 0,
       focused: null,
+      panels: new Set(),
+      dismissal: createCompanionDismissal(options.owner),
     };
     registry.set(contents, route);
     contents.once("destroyed", () => {
@@ -153,7 +158,16 @@ export function startExtensionViewHost(
   const host = createExtensionViewHost({
     ...options,
     onFocusChange: reportFocus,
+    interceptInput(event, input, sourceId) {
+      const id = host.focusedId();
+      return ownerRoute.dismissal.handle(
+        event,
+        input,
+        id === sourceId && ownerRoute.panels.has(id) ? id : undefined,
+      );
+    },
     onRetired(id) {
+      ownerRoute.panels.delete(id);
       if (ownerRoute.issued.get(id) === host) {
         ownerRoute.issued.delete(id);
         if (!contents.isDestroyed())
@@ -192,6 +206,8 @@ export function startExtensionViewHost(
       if (!host.owns(descriptor.id) || contents.isDestroyed())
         throw new Error("Hosted owner retired");
       ownerRoute.issued.set(descriptor.id, host);
+      if (descriptor.presentation === "panel")
+        ownerRoute.panels.add(descriptor.id);
       try {
         reveal(descriptor);
       } catch {

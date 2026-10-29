@@ -20,6 +20,7 @@ import {
   isHostedContentTitle,
   type HostedContentDescriptor,
   type HostedContentPresentation,
+  type HostedContentPresentationResult,
 } from "../shared/extension-view";
 import {
   createExtensionResources,
@@ -64,6 +65,7 @@ export interface ExtensionViewHostOptions {
   onState?(state: ExtensionViewState, outcome?: ExtensionViewOutcome): void;
   onRendererProcess?(id: string, pid: number): void;
   onKeybind?(event: Event, input: Input, owner: BrowserWindow): void;
+  interceptInput?(event: Event, input: Input, id: string): boolean;
   onRequest?(value: Value, signal: AbortSignal): Promise<Value>;
   // Host/native-test seam only. Not exposed to either renderer.
   runtime?: ExtensionViewRuntime;
@@ -407,6 +409,8 @@ class NativeExtensionViewHost {
         this.#visibility(entry, entry.visible);
     });
     contents.on("before-input-event", (event, input) => {
+      if (this.options.interceptInput?.(event, input, entry.descriptor.id))
+        return;
       if (
         this.#live() &&
         this.#selected === entry.descriptor.id &&
@@ -506,7 +510,9 @@ class NativeExtensionViewHost {
   }
   // No await between invalidating the old selection and setting visibility.
   // Awaiting the IPC result acknowledges native hide-before-DOM-overlay.
-  async present(presentation: HostedContentPresentation): Promise<boolean> {
+  async present(
+    presentation: HostedContentPresentation,
+  ): Promise<HostedContentPresentationResult> {
     if (!isHostedContentPresentation(presentation))
       throw new TypeError("Invalid hosted presentation");
     if (!this.#live() || presentation.revision <= this.#revision) return false;
@@ -556,11 +562,16 @@ class NativeExtensionViewHost {
         this.#hideAll();
         return false;
       }
-      if (presentation.focus === "core" && !this.#canFocusCore(entry))
-        return false;
+      const focusUnavailable =
+        presentation.focus === "core" && !this.#canFocusCore(entry);
       entry.view.setBounds(bounds);
       this.#visibility(entry, true);
       this.#selected = entry.descriptor.id;
+      if (focusUnavailable) {
+        this.#layoutFocus = null;
+        this.#reportFocus();
+        return "focus-unavailable";
+      }
       this.#focusPresented(entry, presentation.focus);
       return true;
     } catch {
