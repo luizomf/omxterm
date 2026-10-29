@@ -27,6 +27,17 @@ describe("hosted application-tab contract", () => {
     ])
       expect(isHostedContentDescriptor(descriptor)).toBe(false);
     expect(isHostedContentPresentation(presentation)).toBe(true);
+    expect(
+      isHostedContentPresentation({
+        ...presentation,
+        id: "host-1",
+        focus: "core",
+      }),
+    ).toBe(true);
+    for (const focus of ["core", "child", null, 1])
+      expect(isHostedContentPresentation({ ...presentation, focus })).toBe(
+        false,
+      );
     for (const revision of [
       0,
       -1,

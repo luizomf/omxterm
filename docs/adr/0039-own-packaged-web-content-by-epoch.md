@@ -30,7 +30,12 @@ DOM selection and overlay opening await an acknowledged native hide. When that
 hide removes the selected, natively focused child of an already focused window,
 main returns native focus to the core WebContents before acknowledging. Hiding
 an unfocused child or a background window does not move focus; the renderer still
-owns which DOM terminal/control may receive it. Overlay
+owns which DOM terminal/control may receive it. A core-focus presentation can
+also retain the selected child's visible bounds while returning input to the
+core WebContents. Main accepts that handoff only in a focused window whose child
+or core WebContents already owns native focus; it follows the same window
+revision ordering as other presentations. This supports companion tools that
+remain visible while the terminal receives input. Overlay
 closure can restore only the same still-current content owner. Failed hides
 suppress presentation rather than showing a DOM modal behind live native pixels.
 Pending or failed terminal handoffs also refuse terminal injection, Find,

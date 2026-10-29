@@ -63,6 +63,42 @@ it.each([
   },
 );
 
+it.each([
+  [true, true, false, true],
+  [true, false, true, true],
+  [true, false, false, false],
+  [false, true, false, false],
+  [false, false, true, false],
+])(
+  "hands focus to core with the child retained (%s, %s, %s)",
+  async (windowFocused, childFocused, coreFocused, accepted) => {
+    const f = await fixture();
+    const view = await f.host!.open({
+      entryResource: "index.html",
+      title: "SSH",
+    });
+    await f.host!.present(present(view.id));
+    const child = f.views[0]!;
+    child.setVisible.mockClear();
+    child.webContents.focus.mockClear();
+    f.owner.isFocused.mockReturnValue(windowFocused);
+    child.webContents.focused = childFocused;
+    f.owner.webContents.focused = coreFocused;
+    expect(
+      await f.host!.present({ ...present(view.id, 2), focus: "core" }),
+    ).toBe(accepted);
+    expect(child.setVisible).not.toHaveBeenCalledWith(false);
+    expect(child.webContents.focus).not.toHaveBeenCalled();
+    expect(f.owner.webContents.focus).toHaveBeenCalledTimes(accepted ? 1 : 0);
+    if (accepted) expect(child.setVisible).toHaveBeenCalledWith(true);
+    // A late request cannot transfer focus a second time.
+    expect(
+      await f.host!.present({ ...present(view.id, 2), focus: "core" }),
+    ).toBe(false);
+    expect(f.owner.webContents.focus).toHaveBeenCalledTimes(accepted ? 1 : 0);
+  },
+);
+
 function deferred<T = void>() {
   let resolve!: (value: T) => void;
   let reject!: (reason?: unknown) => void;

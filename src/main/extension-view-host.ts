@@ -535,10 +535,17 @@ class NativeExtensionViewHost {
         this.#hideAll();
         return false;
       }
+      if (
+        presentation.focus === "core" &&
+        (!this.options.owner.isFocused() ||
+          (!entry.contents.isFocused() && !this.#ownerContents.isFocused()))
+      )
+        return false;
       entry.view.setBounds(bounds);
       this.#visibility(entry, true);
       this.#selected = entry.descriptor.id;
-      if (presentation.focus || this.#layoutFocus === presentation.id)
+      if (presentation.focus === "core") this.#ownerContents.focus();
+      else if (presentation.focus || this.#layoutFocus === presentation.id)
         entry.contents.focus();
       this.#layoutFocus = null;
       return true;

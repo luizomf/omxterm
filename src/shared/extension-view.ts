@@ -8,7 +8,8 @@ export interface HostedContentPresentation {
   id: string | null;
   revision: number;
   bounds: { x: number; y: number; width: number; height: number };
-  focus: boolean;
+  // true selects the child; "core" hands input back while retaining its pixels.
+  focus: boolean | "core";
 }
 
 export interface HostedContentBridge {
@@ -71,7 +72,8 @@ export function isHostedContentPresentation(
     !(value.id === null || isHostedContentId(value.id)) ||
     !Number.isSafeInteger(value.revision) ||
     (value.revision as number) <= 0 ||
-    typeof value.focus !== "boolean" ||
+    !(typeof value.focus === "boolean" || value.focus === "core") ||
+    (value.focus === "core" && value.id === null) ||
     !record(value.bounds, ["x", "y", "width", "height"])
   )
     return false;
