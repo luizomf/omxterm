@@ -93,6 +93,9 @@ See [ADR0043](adr/0043-revoke-visible-mirror-typing-routes.md) for the core boun
 These describe the implementation contract, not completed portable/native
 qualification. A separate archive, built host and installed-host observation
 remain distinct inputs; no release or catalog publication is selected here.
+The opt-in [production native fixture](../test/fixtures/mirror-native.md) documents
+its assigned-guest recipe, byte fences, screenshots and acceptance contract;
+headless preparation is not native qualification.
 
 ## Build from source
 
