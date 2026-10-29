@@ -34,7 +34,51 @@ const owner = createResttyHostSessions({
   signals: process,
   reportError: (message) => process.stderr.write(`${message}\n`),
 });
+// Metadata-only phase evidence survives supervisor timeout; no terminal payloads.
+function trace(label: string, status: string) {
+  writeSync(
+    1,
+    "__OMXTERM_PENDING_TAB_PHASE__" +
+      JSON.stringify({
+        label,
+        status,
+        sessions: sessions.length,
+        exited: [...exited],
+        closeRequests,
+        quits,
+        ready: outputs.map((chunks) => chunks.join("").includes("READY")),
+        inputLengths: inputs.map((chunks) =>
+          chunks.reduce((length, chunk) => length + chunk.length, 0),
+        ),
+        receivedUsable: outputs.map((chunks) =>
+          chunks.join("").includes("RECEIVED:usable"),
+        ),
+      }) +
+      "\n",
+  );
+}
+async function phase<T>(
+  label: string,
+  operation: () => Promise<T>,
+): Promise<T> {
+  trace(label, "begin");
+  const timer = setTimeout(() => trace(label, "still-pending-10s"), 10_000);
+  try {
+    const value = await operation();
+    trace(label, "complete");
+    return value;
+  } catch (error) {
+    trace(label, "failed");
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+function waitFor(predicate: () => boolean | Promise<boolean>, label: string) {
+  return phase(label, () => owner.waitFor(predicate, label));
+}
 function fail(error: unknown) {
+  trace("fixture", "failed");
   process.stderr.write(
     `${error instanceof Error ? error.stack : String(error)}\n`,
   );
@@ -63,7 +107,7 @@ function launchRequest(index: number) {
 }
 
 async function run() {
-  await app.whenReady();
+  await phase("app-ready", () => app.whenReady());
   const router = registerTerminalIpcRouter(ipcMain);
   let window!: BrowserWindow;
   const application = startTerminalApplication({
@@ -165,15 +209,15 @@ async function run() {
       quits += 1;
     },
   });
-  await application.newWindow();
+  await phase("window-load", () => application.newWindow());
   window.show();
   window.focus();
-  await owner.waitFor(
+  await waitFor(
     () => outputs[0]?.join("").includes("READY") ?? false,
     "A native program ready",
   );
   application.newTabInSelectedWindow();
-  await owner.waitFor(
+  await waitFor(
     async () =>
       (await window.webContents.executeJavaScript(
         "globalThis.pendingTabHeld === true",
@@ -188,7 +232,7 @@ async function run() {
     2,
   );
   sessions[0]!.write("\r");
-  await owner.waitFor(() => exited.includes(0), "ordinary A native exit");
+  await waitFor(() => exited.includes(0), "ordinary A native exit");
   assert.equal(
     closeRequests,
     0,
@@ -200,7 +244,7 @@ async function run() {
     "A exit must not destroy B's owner",
   );
   assert.equal(quits, 0);
-  await owner.waitFor(
+  await waitFor(
     async () =>
       (await window.webContents.executeJavaScript(
         "document.querySelectorAll('.terminal-surface').length === 1",
@@ -208,14 +252,15 @@ async function run() {
     "A tab removed, pending B retained",
   );
   await window.webContents.executeJavaScript("globalThis.releasePendingTab()");
-  await owner.waitFor(
+  await waitFor(
     () => outputs[1]?.join("").includes("READY") ?? false,
     "B native program ready",
   );
   assert.equal(sessions.length, 2, "Exactly one B PTY");
   const inputOffset = inputs[1]!.length;
+  trace("B paste dispatch", "begin");
   window.webContents.send(terminalIpc.clipboardAction, "paste");
-  await owner.waitFor(
+  await waitFor(
     () => inputs[1]!.slice(inputOffset).join("").includes("usable"),
     "B receives exact Paste input",
   );
@@ -223,13 +268,13 @@ async function run() {
   // Paste is not Enter. In particular, Console.ReadLine on ConPTY does not
   // submit on a pasted LF. Submit the received text with a separate CR.
   sessions[1]!.write("\r");
-  await owner.waitFor(
+  await waitFor(
     () => outputs[1]!.join("").includes("RECEIVED:usable"),
     "B receives Paste through its real Surface and Adapter",
   );
   assert.equal(window.isDestroyed(), false);
   sessions[1]!.write("quit\r");
-  await owner.waitFor(() => window.isDestroyed(), "last B exit closes window");
+  await waitFor(() => window.isDestroyed(), "last B exit closes window");
   assert.deepEqual(exited, [0, 1]);
   assert.equal(quits, 1);
   router.dispose();
@@ -245,6 +290,6 @@ async function run() {
       }) +
       "\n",
   );
-  await owner.complete(0);
+  await phase("native-completion", () => owner.complete(0));
 }
 void run().catch(fail);

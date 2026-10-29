@@ -15,6 +15,21 @@ const applicationIconSource = path.join(
   "application-icon.svg",
 );
 
+// Match a complete selector, not a suffix of a more-specific override.
+function ruleBody(css: string, selector: string) {
+  const rules = [
+    ...css
+      .replace(/\/\*[\s\S]*?\*\//gu, "")
+      .matchAll(/(?<selectors>[^{}]+)\{(?<body>[^}]*)\}/gu),
+  ].filter((rule) =>
+    rule.groups?.selectors
+      ?.split(",")
+      .some((candidate) => candidate.trim() === selector),
+  );
+  expect(rules, `one base rule for ${selector}`).toHaveLength(1);
+  return rules[0]!.groups!.body!;
+}
+
 const expectedAssets = {
   "DejaVu-LICENSE.txt":
     "f88d5294af5a772f9114eb385009e3478d62b21f3e5bbc34d159d328047c8867",
@@ -80,22 +95,14 @@ describe("Terminal appearance build", () => {
       path.join(projectRoot, "src", "renderer", "terminal-window.css"),
       "utf8",
     );
-    const resttyRule = css.match(
-      /\.restty-terminal-surface\s*\{(?<body>[^}]*)\}/u,
-    );
-    expect(resttyRule?.groups?.body).toContain("display: flex");
-    expect(resttyRule?.groups?.body).toContain(
+    const resttyRule = ruleBody(css, ".restty-terminal-surface");
+    expect(resttyRule).toContain("display: flex");
+    expect(resttyRule).toContain(
       "var(--native-title-inset) + var(--terminal-padding-top, 0px)",
     );
-    expect(resttyRule?.groups?.body).toContain(
-      "var(--terminal-padding-right, 8px)",
-    );
-    expect(resttyRule?.groups?.body).toContain(
-      "var(--terminal-padding-bottom, 8px)",
-    );
-    expect(resttyRule?.groups?.body).toContain(
-      "var(--terminal-padding-left, 8px)",
-    );
+    expect(resttyRule).toContain("var(--terminal-padding-right, 8px)");
+    expect(resttyRule).toContain("var(--terminal-padding-bottom, 8px)");
+    expect(resttyRule).toContain("var(--terminal-padding-left, 8px)");
     expect(css).not.toContain(".xterm");
   });
 
@@ -104,7 +111,7 @@ describe("Terminal appearance build", () => {
       path.join(projectRoot, "src", "renderer", "terminal-window.css"),
       "utf8",
     );
-    const surfaceRule = css.match(/\.terminal-surface\s*\{(?<body>[^}]*)\}/u);
+    const surfaceRule = ruleBody(css, ".terminal-surface");
     const titleAreaRule = [
       ...css
         .replace(/\/\*[\s\S]*?\*\//gu, "")
@@ -120,9 +127,7 @@ describe("Terminal appearance build", () => {
         .map((selector) => selector.trim())
         .sort(),
     ).toEqual([".settings-tab::before", ".terminal-surface::before"]);
-    const resttyRule = css.match(
-      /\.restty-terminal-surface\s*\{(?<body>[^}]*)\}/u,
-    );
+    const resttyRule = ruleBody(css, ".restty-terminal-surface");
 
     expect(titleAreaRule?.groups?.body).toContain('content: ""');
     expect(titleAreaRule?.groups?.body).toContain("position: fixed");
@@ -130,7 +135,7 @@ describe("Terminal appearance build", () => {
       "height: var(--native-title-inset)",
     );
     expect(titleAreaRule?.groups?.body).toContain("app-region: drag");
-    expect(surfaceRule?.groups?.body).not.toContain("app-region");
-    expect(resttyRule?.groups?.body).not.toContain("app-region");
+    expect(surfaceRule).not.toContain("app-region");
+    expect(resttyRule).not.toContain("app-region");
   });
 });
