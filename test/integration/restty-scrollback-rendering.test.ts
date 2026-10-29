@@ -389,6 +389,7 @@ describe("Restty scrollback through the production Surface seam", () => {
       dragging: true,
     });
     expect(result!.nativeDrag.move!.id).toBe(result!.nativeDrag.down!.id);
+    expect(result!.nativeDrag.up?.id).toBe(result!.nativeDrag.down!.id);
     expect(result!.nativeDrag.up?.trusted).toBe(true);
     expect(result!.nativeCharacter.character).toEqual({
       trusted: true,

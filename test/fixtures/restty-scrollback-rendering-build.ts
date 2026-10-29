@@ -298,18 +298,20 @@ app.whenReady().then(async () => {
       return { startTop: host.scrollTop, x: Math.floor(bounds.left + 80), startY: Math.floor(bounds.bottom - 30), endY: Math.floor(bounds.top) };
     })()\`, true);
   const autoscrollStartTop = autoscroll.startTop;
+  let acknowledgedDrag;
   try {
     window.webContents.sendInputEvent({ type: "mouseDown", x: autoscroll.x, y: autoscroll.startY, button: "left", clickCount: 1 });
     await inputPhase('mouse-down', value => value.down?.trusted && value.down.canvas && value.down.buttons === 1 && value.down.x === autoscroll.x && value.down.y === autoscroll.startY);
     window.webContents.sendInputEvent({ type: "mouseMove", x: autoscroll.x, y: autoscroll.endY, button: "left", modifiers: ["leftButtonDown"], clickCount: 1 });
     await inputPhase('mouse-drag', value => hasNativeDrag(value, autoscroll), undefined, undefined,
       () => window.webContents.executeJavaScript('globalThis.__omxtermResttyScrollback.waitForNativeDrag(' + JSON.stringify(autoscroll) + ')', true));
+    acknowledgedDrag = inputObservation;
     await new Promise((resolve) => setTimeout(resolve, 500));
   } finally {
     window.webContents.sendInputEvent({ type: "mouseUp", x: autoscroll.x, y: autoscroll.endY, button: "left", clickCount: 1 });
   }
-  await inputPhase('mouse-up', value => value.up?.trusted && value.up.canvas && value.up.buttons === 0 && value.up.id === value.down.id && value.up.x === autoscroll.x && value.up.y === autoscroll.endY && !value.up.dragging);
-  const nativeDrag = inputObservation;
+  await inputPhase('mouse-up', value => value.up?.trusted && value.up.canvas && value.up.buttons === 0 && value.up.id === acknowledgedDrag.down.id && value.up.id === acknowledgedDrag.move.id && value.up.x === autoscroll.x && value.up.y === autoscroll.endY && !value.up.dragging);
+  const nativeDrag = { ...inputObservation, down: acknowledgedDrag.down, move: acknowledgedDrag.move };
   const autoscrolledTop = await window.webContents.executeJavaScript("document.querySelector('.restty-native-scroll-host').scrollTop", true);
   window.setSize(700, 440);
   await new Promise((resolve) => setTimeout(resolve, 150));
