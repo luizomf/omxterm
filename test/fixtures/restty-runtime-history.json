@@ -1,5 +1,21 @@
 [
   {
+    "name": "priorInputRoutingDigest",
+    "sha256": "f15c6c25cb2efb879b5a00b09640fcdb2d364c8d566237ff5d0ae63975bb3e44",
+    "edits": [
+      { "start": 55802, "deleteCount": 1, "lines": [] },
+      { "start": 55789, "deleteCount": 1, "lines": [] },
+      {
+        "start": 48331,
+        "deleteCount": 1,
+        "lines": ["        sendKeyInput(seq);"]
+      },
+      { "start": 48121, "deleteCount": 1, "lines": [] },
+      { "start": 48072, "deleteCount": 1, "lines": [] },
+      { "start": 47874, "deleteCount": 2, "lines": [] }
+    ]
+  },
+  {
     "name": "priorCprDigest",
     "sha256": "3c4dc8554c8ccc91f0b34ebea8a5638fe6592c1a973acc0a64dafcb33ab8387e",
     "edits": [

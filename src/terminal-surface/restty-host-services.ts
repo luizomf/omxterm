@@ -25,10 +25,12 @@ export function resttyClipboardActions(
       }
     },
     async paste() {
+      options.onSemanticInput?.();
       if (options.clipboard)
         await delivery.deliverFrom(options.clipboard.readText);
     },
     async inject(text, injectOptions) {
+      options.onSemanticInput?.();
       await delivery.deliver(text, injectOptions);
     },
     selectAll: () => {
@@ -73,6 +75,11 @@ export function resttyHostServices(
 ): PatchedResttyServices {
   return {
     ptyTransport: transport,
+    routeKeyInput: (text) =>
+      !isLive() || options.routeKeyInput?.(text) === true,
+    onPasteGesture: () => {
+      if (isLive()) options.onSemanticInput?.();
+    },
     beforeInput: ({ text, source }) => {
       if (!isLive()) return null;
       if (source !== "paste") {

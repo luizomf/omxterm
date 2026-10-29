@@ -52,7 +52,14 @@ and final checksums reject dependency drift. Recognized input digests select
 the remaining ordered preparation steps, not approximate patching.
 
 Private typed runtime seams expose readiness, raw DOM-paste origin,
-bracketed-paste mode, selection, parsed events and rendering controls. Direct
+bracketed-paste mode, selection, parsed events and rendering controls.
+A core-host input-routing callback sees genuine keyboard bytes after the
+runtime's final PTY mapping and can claim delivery without a second local send.
+OSC 133 prompt-click reports carry a separate pointer origin and remain local,
+like ordinary mouse and program replies. A semantic-input notification precedes
+terminal DOM paste payload filtering, native clipboard reads and explicit
+injection, including empty input; search-field editing is separate. With no
+host callbacks, ordinary input delivery is unchanged. Direct
 browser clipboard and link-opening callbacks stay disabled. These internals do
 not enter the public Surface interface. The cost is maintaining a pinned
 adaptation; dependency upgrades need source and behavioral review.

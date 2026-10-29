@@ -46,9 +46,12 @@ export type PatchedResttyTerminalConfig = ResttyTerminalConfig & {
 // Origins emitted into beforeInput by the pinned runtime with OMXTerm's
 // configuration. PTY output uses beforeRenderOutput instead; no plugins or
 // arbitrary-source sendInput API are exposed by this adapter.
-export type ResttyInputOrigin = "key" | "paste" | "program";
+export type ResttyInputOrigin = "key" | "paste" | "program" | "pointer";
 export interface PatchedResttyServices {
   readonly ptyTransport: PtyTransport;
+  // true claims the final encoded keyboard payload, suppressing its local send.
+  routeKeyInput(text: string): boolean;
+  onPasteGesture(): void;
   beforeInput(payload: {
     text: string;
     source: ResttyInputOrigin;

@@ -10,6 +10,7 @@ import { backgroundCorrections } from "./restty-background-corrections.mjs";
 import { blinkCorrections } from "./restty-blink-corrections.mjs";
 import { wideWrapLinkCorrections } from "./restty-wide-wrap-corrections.mjs";
 import { cprCorrections } from "./restty-cpr-corrections.mjs";
+import { inputRoutingCorrections } from "./restty-input-routing-corrections.mjs";
 import {
   softWrapSpaceCorrections,
   visiblePathBoundaryCorrections,
@@ -128,8 +129,10 @@ const priorWideWrapLinkDigest =
   "8ebccc2aa81d37266bbf4642e3e07e8c0b17e39935a97d8c3703eb9ac5e72649";
 const priorCprDigest =
   "3c4dc8554c8ccc91f0b34ebea8a5638fe6592c1a973acc0a64dafcb33ab8387e";
-const correctedDigest =
+const priorInputRoutingDigest =
   "f15c6c25cb2efb879b5a00b09640fcdb2d364c8d566237ff5d0ae63975bb3e44";
+const correctedDigest =
+  "e0ca1593ded32df536777fba23b835fafd7993680b6e550958fe0ac6c8e4b7df";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -1965,6 +1968,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, wideWrapLinkCorrections);
       case priorCprDigest:
         source = applyCorrections(source, cprCorrections);
+      case priorInputRoutingDigest:
+        source = applyCorrections(source, inputRoutingCorrections);
         break;
       default:
         throw new Error(

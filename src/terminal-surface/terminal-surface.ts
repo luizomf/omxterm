@@ -114,6 +114,11 @@ export interface TerminalSurfaceOptions {
   // Retain host pane focus even when the terminal popup is disabled.
   readonly onContextMenu?: () => void;
   readonly onClipboardError?: () => void;
+  // Core host only: final encoded genuine-key bytes, never parser/pointer input.
+  // Returning true owns delivery, including a later revocation refusal.
+  readonly routeKeyInput?: (text: string) => boolean;
+  // Synchronous admission before native reads, raw DOM filtering or injection.
+  readonly onSemanticInput?: () => void;
   readonly onTitleRequest?: (request: string) => void;
   readonly onBell?: () => void;
   readonly linkHoverAvailability?: {

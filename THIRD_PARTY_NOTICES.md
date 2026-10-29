@@ -54,6 +54,12 @@ workspace/session restoration. The separate `extensions/restoration` archive
 includes its adaptation notice, OMXTerm MIT license and the complete Community
 Big MIT notice as `licenses/ashyterm.txt`, alongside the host's retained notices.
 
+The core-host input-routing seam adapts the origin-aware input-observation idea
+from `src/terminal-surface/restty-host-services.ts` at the same @ruscher source
+commit. OMXTerm places keyboard routing after final PTY mapping and preserves
+pointer/program origins separately; this does not import the fork's broadcast
+controller or grant extensions raw terminal access.
+
 The configured Interface Language implementation also adapts the translator,
 English and Brazilian Portuguese catalogs, and catalog tests from
 `src/shared/i18n.ts`, `src/shared/locales/en.ts`,

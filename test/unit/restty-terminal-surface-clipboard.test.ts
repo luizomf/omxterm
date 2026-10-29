@@ -129,6 +129,32 @@ beforeEach(() => {
 });
 
 describe("Restty clipboard actions", () => {
+  it("notifies semantic admission before clipboard reads or empty injection", async () => {
+    const semantic = vi.fn();
+    const route = vi.fn(() => true);
+    const value = await mount(createHarness(), {
+      onSemanticInput: semantic,
+      routeKeyInput: route,
+    });
+    value.clipboard.readText.mockImplementation(async () => {
+      expect(semantic).toHaveBeenCalledOnce();
+      return "";
+    });
+    await value.surface.paste();
+    await value.surface.inject("", { submit: true });
+    expect(semantic).toHaveBeenCalledTimes(2);
+    const services = value.restty.services();
+    services.onPasteGesture();
+    expect(semantic).toHaveBeenCalledTimes(3);
+    expect(services.routeKeyInput("x")).toBe(true);
+    expect(route).toHaveBeenCalledExactlyOnceWith("x");
+    value.surface.dispose();
+    services.onPasteGesture();
+    services.routeKeyInput("late");
+    expect(semantic).toHaveBeenCalledTimes(3);
+    expect(route).toHaveBeenCalledOnce();
+  });
+
   it("reveals accepted input but not focus, replies, empty input or rejected paste", async () => {
     const value = await mount();
     const reveal = value.restty.pane.runtime.interaction.scrollToBottom;
