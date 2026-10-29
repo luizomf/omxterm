@@ -72,6 +72,28 @@ restored at startup or included in Saved Layout. Disabling in another applicatio
 instance does not promise instantaneous revocation here; local core Stop remains
 available.
 
+## Capability and lifetime
+
+The manifest declares `terminal.mirrorTyping.v1` and `view.context: "window"`.
+Own-view requests describe captured candidates, start an inspected selection or
+stop that view's authority. Describe returns opaque setup/pane handles and display
+labels, not raw session IDs, cwd, output or keyboard bytes. Start consumes a fresh
+token and requires 2–16 unique live members including the original focused pane;
+foreign, stale or replaced targets refuse. Discovery is declaration-gated, not a
+stable public SDK or permission for arbitrary PTY writes.
+
+Only one setup per extension/window is retained. A fresh action revokes the old
+route and waits for actual prior-view retirement before replacement; uncertainty
+refuses rather than stacking obsolete views. Backend lifetime loss revokes views
+before settlement, so input does not wait for backend or native-view cleanup.
+Main/native and renderer generation checks independently reject delayed Start
+acknowledgements and old input. The extension backend performs no per-key work.
+See [ADR0043](adr/0043-revoke-visible-mirror-typing-routes.md) for the core boundary.
+
+These describe the implementation contract, not completed portable/native
+qualification. A separate archive, built host and installed-host observation
+remain distinct inputs; no release or catalog publication is selected here.
+
 ## Build from source
 
 From a clean, committed checkout with installed locked dependencies:

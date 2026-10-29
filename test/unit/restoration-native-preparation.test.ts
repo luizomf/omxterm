@@ -19,7 +19,7 @@ afterEach(async () => {
 });
 const hash = (bytes: Buffer) =>
   createHash("sha256").update(bytes).digest("hex");
-async function inputs() {
+async function inputs(version = "0.24.0-dev.2") {
   const root = await mkdtemp(
     path.join(os.tmpdir(), "omxterm-restoration-preparation-"),
   );
@@ -30,7 +30,7 @@ async function inputs() {
   await mkdir(run);
   await writeFile(
     path.join(source, "package.json"),
-    JSON.stringify({ version: "0.24.0-dev.1" }),
+    JSON.stringify({ version }),
   );
   for (const name of RESTORATION_ARTIFACTS) {
     await mkdir(path.dirname(path.join(source, name)), { recursive: true });
@@ -50,46 +50,53 @@ async function inputs() {
     },
   };
 }
-it("bundles only observation/registration helpers and preserves production artifacts and archive bytes", async () => {
-  const f = await inputs();
-  const before = await readFile(
-    path.join(f.options.source, "dist/main/index.js"),
-  );
-  await prepareRestorationFixture(f.root, f.options);
-  expect(await readFile(path.join(f.root, "restoration.omxext"))).toEqual(
-    await readFile(f.options.archive),
-  );
-  expect(
-    await readFile(path.join(f.options.source, "dist/main/index.js")),
-  ).toEqual(before);
-  const metadata = JSON.parse(
-    await readFile(path.join(f.root, "package.json"), "utf8"),
-  ) as { version: string; main: string };
-  expect(metadata).toMatchObject({ version: "0.24.0-dev.1", main: "main.mjs" });
-  const build = JSON.parse(
-    await readFile(
-      path.join(f.options.evidence, "observer-build.json"),
-      "utf8",
-    ),
-  ) as { sha256: string; inputs: string[] };
-  expect(build.sha256).toBe(
-    hash(await readFile(path.join(f.root, "main.mjs"))),
-  );
-  expect(build.inputs).toContain("test/fixtures/native-fixture-pty.ts");
-  expect(build.inputs).toContain("test/fixtures/native-fixture-ownership.ts");
-  expect(build.inputs).not.toContain("src/main/index.ts");
-  expect(
-    build.inputs.some((input) => input.includes("restty-terminal-surface")),
-  ).toBe(false);
-  const bundled = await readFile(path.join(f.root, "main.mjs"), "utf8");
-  expect(bundled).toContain("dist/main/index.js");
-  expect(bundled).toContain("extension-runtime/bootstrap.mjs");
-  expect(bundled).toContain("cold-saved-layout.png");
-  expect(bundled).toContain("restored-window-fallback.png");
-  await expect(
-    prepareRestorationFixture(f.root, f.options),
-  ).rejects.toMatchObject({ code: "EEXIST" });
-});
+it.each(["0.24.0-dev.1", "0.24.0-dev.2"])(
+  "preserves actual host %s and production artifacts while bundling only observers",
+  async (version) => {
+    const f = await inputs(version);
+    const before = await readFile(
+      path.join(f.options.source, "dist/main/index.js"),
+    );
+    await prepareRestorationFixture(f.root, f.options);
+    expect(await readFile(path.join(f.root, "restoration.omxext"))).toEqual(
+      await readFile(f.options.archive),
+    );
+    expect(
+      await readFile(path.join(f.options.source, "dist/main/index.js")),
+    ).toEqual(before);
+    const metadata = JSON.parse(
+      await readFile(path.join(f.root, "package.json"), "utf8"),
+    ) as { version: string; main: string };
+    expect(metadata).toMatchObject({ version, main: "main.mjs" });
+    const recorded = JSON.parse(
+      await readFile(path.join(f.options.evidence, "inputs.json"), "utf8"),
+    );
+    expect(recorded.version).toBe(version);
+    const build = JSON.parse(
+      await readFile(
+        path.join(f.options.evidence, "observer-build.json"),
+        "utf8",
+      ),
+    ) as { sha256: string; inputs: string[] };
+    expect(build.sha256).toBe(
+      hash(await readFile(path.join(f.root, "main.mjs"))),
+    );
+    expect(build.inputs).toContain("test/fixtures/native-fixture-pty.ts");
+    expect(build.inputs).toContain("test/fixtures/native-fixture-ownership.ts");
+    expect(build.inputs).not.toContain("src/main/index.ts");
+    expect(
+      build.inputs.some((input) => input.includes("restty-terminal-surface")),
+    ).toBe(false);
+    const bundled = await readFile(path.join(f.root, "main.mjs"), "utf8");
+    expect(bundled).toContain("dist/main/index.js");
+    expect(bundled).toContain("extension-runtime/bootstrap.mjs");
+    expect(bundled).toContain("cold-saved-layout.png");
+    expect(bundled).toContain("restored-window-fallback.png");
+    await expect(
+      prepareRestorationFixture(f.root, f.options),
+    ).rejects.toMatchObject({ code: "EEXIST" });
+  },
+);
 it("refuses the wrong archive digest or host version before building/launching", async () => {
   const f = await inputs();
   await expect(
@@ -98,13 +105,15 @@ it("refuses the wrong archive digest or host version before building/launching",
       archiveSha256: "0".repeat(64),
     }),
   ).rejects.toThrow("separate archive digest");
-  await writeFile(
-    path.join(f.options.source, "package.json"),
-    JSON.stringify({ version: "0.24.0-dev.0" }),
-  );
-  await expect(prepareRestorationFixture(f.root, f.options)).rejects.toThrow(
-    "selected host milestone",
-  );
+  for (const version of ["0.24.0-dev.0", "0.24.0-dev.3", "0.24.0", "0.25.0"]) {
+    await writeFile(
+      path.join(f.options.source, "package.json"),
+      JSON.stringify({ version }),
+    );
+    await expect(prepareRestorationFixture(f.root, f.options)).rejects.toThrow(
+      "selected host milestone",
+    );
+  }
 });
 function receipt(): RestorationReceipt {
   return {

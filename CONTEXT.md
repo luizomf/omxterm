@@ -232,6 +232,15 @@ continuations remain refused; see the [terminal contract](docs/spec.md#terminal-
 
 ## Extensions
 
+**Mirror Typing** — Optional separately installed Linux ARM64 preview that copies
+final genuine keyboard bytes, in source mode, to an inspected fixed group of 2–16
+live panes in one tab. The originally focused live pane is required. Core owns
+visible Stop, native/renderer generation fencing and revocable memory-only
+authority; extension code receives no keyboard payloads. Paste, snippets and
+drops stop mirroring before ordinary single-target delivery. No persistence,
+autostart, semantic per-target encoding or atomic multi-PTY transaction is implied.
+See [Mirror Typing](docs/mirror-typing.md).
+
 **Saved Layout** — One explicitly saved current-window terminal arrangement:
 terminal order, weighted splits, focused panes and local-folder provenance.
 The separately installed Linux ARM64 preview opens fresh Default Shells in a new

@@ -18,7 +18,8 @@
 | Update or uninstall OMXTerm                                | [Installation guide](installation.md#updating-or-uninstalling)          |
 
 Optional Linux ARM64 development extensions: [Files](files-development-preview.md),
-[SSH Connect](ssh-connect.md) and [Saved Layout](saved-layout.md).
+[SSH Connect](ssh-connect.md), [Saved Layout](saved-layout.md) and
+[Mirror Typing](mirror-typing.md).
 They are separately installed, not bundled
 features or a stable extension SDK.
 

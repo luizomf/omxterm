@@ -28,7 +28,10 @@ that cannot fit every minimum keeps sessions and layout rather than closing pane
 the window's minimum size; impossible divider moves retain existing proportions. Maximizing a pane is outside this slice.
 
 Exactly one pane per tab is focused. It receives keyboard input and every
-terminal-directed action (clipboard, Find, snippets, file drops); clicking a
+terminal-directed action (clipboard, Find, snippets, file drops). Explicit optional
+[Mirror Typing](0043-revoke-visible-mirror-typing-routes.md) is the narrow exception:
+core routes final genuine keyboard bytes to a fixed inspected same-tab group;
+paste/insertion stops that route before ordinary single-target delivery. Clicking a
 pane or Focus Next/Previous/Left/Right/Above/Below moves focus, and the focused
 pane in a split tab carries only a 1 px top line, horizontally inset by its own
 Surface's left/right padding. A non-intercepting `::after` overlay paints above
@@ -241,7 +244,7 @@ minima stay unchanged. Layout tokens/budgets are recorded in the
 
 IPC gains per-session identity beneath each window controller, and selection
 refits the active grid. Tab order and visibility are in-memory presentation;
-workspaces, broadcast input, pane maximize and moving tabs or panes between
+workspaces, unrestricted broadcast input, pane maximize and moving tabs or panes between
 tabs or windows are outside current scope. Explicit optional
 [Saved Layout](0042-save-layouts-without-restoring-sessions.md) is the narrow
 exception for saving terminal order/layout/cwd and opening fresh shells in a

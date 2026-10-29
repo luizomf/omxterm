@@ -37,7 +37,11 @@ export async function prepareRestorationFixture(
   const metadata = JSON.parse(
     await readFile(path.join(options.source, "package.json"), "utf8"),
   ) as { version: string };
-  assert.equal(metadata.version, "0.24.0-dev.1", "selected host milestone");
+  // Keep historical dev.1 runs reproducible; admit only the assigned follow-up.
+  assert.ok(
+    ["0.24.0-dev.1", "0.24.0-dev.2"].includes(metadata.version),
+    "selected host milestone",
+  );
   const archive = await readFile(options.archive);
   assert.equal(
     digest(archive),

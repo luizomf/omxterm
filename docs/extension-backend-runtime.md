@@ -36,6 +36,12 @@ type ActivatedBackend = {
 `activate` receives the real epoch-lifetime cancellation signal; individual invocations receive their own real signal. Deactivation is best effort and receives a grace-bounded signal. The concrete Files no-replace operation runs in the backend's worker-pool addon, with no overwrite fallback. The separate [SSH Connect](ssh-connect.md) consumer uses a declared, own-view
 main capability (`terminal.openSsh.v1`), not a backend-owned PTY. Its package
 requires host0.24.0-dev.0; API0.1.x and existing Files manifests remain compatible.
+The separate [Mirror Typing](mirror-typing.md#capability-and-lifetime) consumer
+requires host 0.24.0-dev.2 and declares `terminal.mirrorTyping.v1`. Core owns
+its visible revocable input lease; no keyboard bytes or per-key calls enter the
+backend. Backend lifetime loss revokes its views and input authority before
+settlement. One settled-replacement setup per extension/window is specific to
+this capability, not a change to ordinary Files/SSH invocation semantics.
 There are no dummy action/tab/terminal methods, automatic registrations, or stable discovery promises. The module owns its channels, timers and pending calls; future capability registrations need their own concrete consumer and retirement contract.
 
 ## Explicit extension state

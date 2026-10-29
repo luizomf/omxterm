@@ -60,6 +60,17 @@ commit. OMXTerm places keyboard routing after final PTY mapping and preserves
 pointer/program origins separately; this does not import the fork's broadcast
 controller or grant extensions raw terminal access.
 
+Mirror Typing also adapts the visible status/Stop and focused-source fanout
+concepts from `src/renderer/broadcast-indicator.ts` and
+`src/renderer/terminal-pane-lifecycle.ts` at that same Rafael Ruscher (@ruscher)
+source commit. The implementation uses `src/renderer/mirror-typing.ts`, `src/renderer/mirror-typing-status.ts`
+and a separate `extensions/mirror-typing` setup, with fixed inspected members,
+core revocation and stop-before-local-paste rather than dynamic enrollment.
+The separate archive retains its own NOTICE, OMXTerm MIT license and the full
+AshyTerm/Community Big MIT notice as `licenses/ashyterm.txt`, crediting Rafael
+Ruscher, Community Big and BigLinux. This is selective concept adaptation, not
+wholesale incorporation of PR #622.
+
 The configured Interface Language implementation also adapts the translator,
 English and Brazilian Portuguese catalogs, and catalog tests from
 `src/shared/i18n.ts`, `src/shared/locales/en.ts`,

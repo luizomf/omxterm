@@ -241,6 +241,11 @@ Do not infer full-suite execution coverage from aggregate counters or empty pass
 
 ### Focused checks
 
+The separately built [Mirror Typing preview](mirror-typing.md#build-from-source)
+has its own archive builder, manifest compatibility and licensed payload. Its
+build receipt is not native installed-host qualification; see the guide's
+[capability contract](mirror-typing.md#capability-and-lifetime).
+
 The [internal extension backend runtime](extension-backend-runtime.md) has an
 explicit `npm run build:extension-runtime` artifact and actual native process/store
 tests. Normal Linux ARM64 `npm run build` also includes the runtime and native

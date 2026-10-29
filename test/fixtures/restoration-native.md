@@ -24,7 +24,10 @@ input and fixture-controlled chooser/trust responses are used; this is not
 physical keyboard or native dialog qualification.
 
 Prepare the host on that guest with the normal project prerequisites and
-`npm run build`. The package metadata must be **0.24.0-dev.1**. This includes the
+`npm run build`. The package metadata must be **0.24.0-dev.1** (the original
+Saved Layout milestone) or the explicitly admitted **0.24.0-dev.2** follow-up.
+The fixture records the actual supplied version; previous dev.1 receipts do not
+qualify dev.2. This includes the
 Linux native lease addon and extension runtime; do not substitute host-native
 artifacts copied from macOS. The fixture hashes the built main, preload,
 renderer, bootstrap, package runtime and lease addon, without modifying them.

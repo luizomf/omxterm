@@ -40,6 +40,14 @@ fresh shells in a new window without closing current work. It does not restore
 output, processes or commands. Installation, conflicts, folder provenance and
 Forget's active-snapshot/remnant limits are described in its guide.
 
+### Mirror typing to selected panes
+
+The optional Linux ARM64 [Mirror Typing preview](mirror-typing.md) copies final
+keyboard bytes to an inspected fixed group in one tab. Use matching terminal
+programs/modes. Paste, snippets and drops stop mirroring before ordinary
+single-pane delivery; core Stop remains visible with hidden title/tab chrome.
+Install/build availability and limitations are described in the guide.
+
 ## Window controls
 
 - **Zoom:** changes the font size in the current window (`Cmd++` / `Cmd+-` on macOS, `Ctrl++` / `Ctrl+-` on Linux/Windows). **Actual Size** (`Cmd+0` / `Ctrl+0`) resets to your configured size.

@@ -54,6 +54,8 @@ source/test boundaries and known limitations.
 adds the optional Linux ARM64 SSH Connect capability and ended-readable Surface.
 [ADR0042: Save layouts without restoring sessions](0042-save-layouts-without-restoring-sessions.md)
 adds explicit optional Saved Layout capture/open and extension-scoped CAS state.
+[ADR0043: Revoke visible Mirror Typing routes](0043-revoke-visible-mirror-typing-routes.md)
+adds the optional fixed same-tab keyboard route with core-owned Stop.
 
 ## Related boundaries
 

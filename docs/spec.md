@@ -83,7 +83,7 @@ OMXTerm:
   an optional versioned per-user AppImage desktop installer and its checksum;
   running the AppImage directly remains supported.
 
-AI assistance, broadcast input, saved or reconnectable running sessions, shell integration,
+AI assistance, unrestricted broadcast input, saved or reconnectable running sessions, shell integration,
 profiles, a theme picker or catalog, automatic configuration reload, automatic
 updates, and remote terminal features beyond the optional
 [Linux ARM64 SSH Connect preview](ssh-connect.md) are outside the current product
@@ -93,7 +93,9 @@ system-ssh launch, without brokering authentication or adding reconnect. The opt
 [Saved Layout preview](saved-layout.md) explicitly saves one window's terminal
 layout and local-directory provenance, opening fresh Default Shells in a new
 window without changing current work. It never saves/restores running sessions,
-commands or output; no startup restore or autosave is added.
+commands or output; no startup restore or autosave is added. The optional
+[Mirror Typing preview](mirror-typing.md) is a narrow same-tab keyboard-byte
+exception, not unrestricted broadcast or multi-pane paste.
 
 Restty 0.3.0 and its pinned Ghostty core provide the sole Terminal Surface in
 ordinary development and every packaged application. OMXTerm has no renderer
@@ -156,7 +158,9 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   rather than outlining the target, including during drag and with decorative
   paint disabled.
   Exactly one pane per tab is focused: it receives keyboard input and every
-  terminal-directed action and supplies the tab and window title. In a split tab,
+  terminal-directed action and supplies the tab and window title. Explicit
+  [Mirror Typing](#mirror-typing) additionally routes genuine keyboard bytes to
+  its inspected fixed members; other input remains single-target. In a split tab,
   its only focus marker is a 1 px top line inset horizontally by that Surface's
   left/right padding, with no side/bottom ring or dimming of other panes. It is
   a non-intercepting overlay above terminal canvas contents, including opaque
@@ -658,6 +662,47 @@ fall back to home on missing/unavailable paths without creating folders or
 retrying a failed PTY launch. OS-mounted folders and ordinary shell startup may
 access networks. See [ADR0042](adr/0042-save-layouts-without-restoring-sessions.md).
 
+## Mirror Typing
+
+The separately installed Linux ARM64 [Mirror Typing extension](mirror-typing.md)
+requires host 0.24.0-dev.2 and API 0.1.x. These are implementation contracts, not
+claims of native qualification or catalog/release publication.
+
+- An explicit action captures one terminal tab and its live mounted focused pane
+  before setup opens. An ineligible original focus refuses even with live siblings.
+  Inspect a fixed subset of 2–16 live panes, always including that original focus.
+  Start consumes fresh setup authority and returns only to that exact tab/source
+  after acknowledged native setup hide and focus/lifetime revalidation.
+- Core mirrors final genuine keyboard bytes in source mode, exactly once per
+  member. Any selected member may become source; additions never join. Mouse,
+  pointer-origin prompt reports, focus/program/parser replies and graphical fields
+  remain local. Extension code receives no keyboard payloads.
+- Paste, snippet Insert/Run and drops synchronously Stop before ordinary captured
+  original-target delivery, including empty/unsupported terminal paste and before
+  clipboard reads or Protected Paste confirmation. Cancelled paste stays stopped;
+  delayed local approval cannot fan out or reactivate mirroring.
+- A persistent core content row and source/member marks expose Stop even with
+  hidden chrome, independent of extension responsiveness. Preparing is input-inert
+  and cancellable; Start/Stop key releases cannot leak into terminal input.
+- Unselected-pane/tab selection, modal entry, member loss, view/backend loss,
+  local disable/update/uninstall, renderer/window teardown and hide/minimize revoke
+  the whole group. Active-window blur blocks input but retains the group; pending
+  Start cancels on blur. Healthy resize/reorder/theme/language/chrome changes do not
+  silently restart or end it.
+- One settled-replacement setup per extension/window prevents accumulating obsolete
+  views. Returning to setup stops the group; another Start needs fresh authority.
+  Main/native and renderer generation fences reject stale starts and input. Backend
+  lifetime loss revokes views before settlement; cleanup is not input authority.
+  Membership, tokens and leases are memory-only, excluded from Saved Layout,
+  startup, configuration and extension state.
+
+Use matching terminal programs/modes: source-mode bytes are not semantic
+per-recipient keys or synchronized shell state. Stop cannot undo input or synthesize
+key releases. Native writes are best-effort sequential, not atomic, with no replay
+or rollback. There is no instantaneous cross-instance revocation guarantee.
+[ADR0043](adr/0043-revoke-visible-mirror-typing-routes.md) explains ownership and
+tradeoffs; the guide covers installation, recovery and separate archive builds.
+
 ## Terminal behavior
 
 The Restty Terminal Surface uses the existing Terminal Tabs, session Adapter and
@@ -1048,6 +1093,9 @@ while a Local Image Preview or About owns modal input.
 ## Clipboard
 
 - Selection never copies automatically.
+- Terminal Paste stops active [Mirror Typing](#mirror-typing) synchronously before
+  payload filtering, clipboard reads or confirmation, even for empty/unsupported
+  payloads. Ordinary original-target Protected Paste follows; it never fans out.
 - `Ctrl+C` and `Ctrl+V` remain PTY input.
 - `Cmd+C` and `Cmd+V` on macOS, `Ctrl+Shift+C` and `Ctrl+Shift+V` on Linux and
   Windows, and the native context menu perform explicit text copy and paste. Any

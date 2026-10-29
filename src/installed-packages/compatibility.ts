@@ -11,7 +11,8 @@ export function packageCompatible(
 ): boolean {
   const unchangedFilesPreview =
     (runtime.appVersion === "0.24.0-dev.0" ||
-      runtime.appVersion === "0.24.0-dev.1") &&
+      runtime.appVersion === "0.24.0-dev.1" ||
+      runtime.appVersion === "0.24.0-dev.2") &&
     manifest.id === "omxterm.files" &&
     manifest.version === "0.1.0" &&
     manifest.engines.omxterm === ">=0.23.0-dev.8 <0.24.0" &&
