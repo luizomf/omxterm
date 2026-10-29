@@ -1,4 +1,7 @@
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { inputRoutingCorrections } from "../../scripts/restty-input-routing-corrections.mjs";
+import { syntheticBoldCorrections } from "../../scripts/restty-synthetic-bold-corrections.mjs";
 import { runInNewContext } from "node:vm";
 import { createInputHandler } from "restty/internal";
 import { describe, expect, it, vi } from "vitest";
@@ -51,6 +54,33 @@ function harness(claim = true) {
 }
 
 describe("actual prepared final-key routing", () => {
+  it("preserves the historical font baseline while isolating synthesis on current routing", () => {
+    const hash = (text: string) =>
+      createHash("sha256").update(text).digest("hex");
+    const reverse = (
+      text: string,
+      edits: { original: string; corrected: string }[],
+    ) =>
+      edits.reduce((value, { original, corrected }) => {
+        expect(value.split(corrected)).toHaveLength(2);
+        return value.replace(corrected, original);
+      }, text);
+    const prior = reverse(source, inputRoutingCorrections);
+    expect(hash(prior)).toBe(
+      "f15c6c25cb2efb879b5a00b09640fcdb2d364c8d566237ff5d0ae63975bb3e44",
+    );
+    const historicalControl = reverse(prior, syntheticBoldCorrections);
+    expect(hash(historicalControl)).toBe(
+      "b4112dacd54853f78333a3d5d65f8a87825b1ff45adb53cbfb45726b58a83625",
+    );
+    const currentControl = reverse(source, syntheticBoldCorrections);
+    expect(hash(currentControl)).toBe(
+      "20a8fc66883c87c5832e4a8054919ad901be1e538cadead3a775bd86c9abceb6",
+    );
+    expect(reverse(currentControl, inputRoutingCorrections)).toBe(
+      historicalControl,
+    );
+  });
   it("claims only final mapped key bytes, or preserves ordinary local delivery", () => {
     const f = harness();
     // This Kitty-shaped input is mapped to ordinary Enter by the real encoder.

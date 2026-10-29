@@ -71,7 +71,9 @@ async function observe(
         probed = probed.replace(corrected, original);
       }
       expect(createHash("sha256").update(probed).digest("hex")).toBe(
-        "b4112dacd54853f78333a3d5d65f8a87825b1ff45adb53cbfb45726b58a83625",
+        // Current input routing retained; only bold synthesis is reversed.
+        // The historical b4112dac baseline remains verified separately.
+        "20a8fc66883c87c5832e4a8054919ad901be1e538cadead3a775bd86c9abceb6",
       );
     }
     const synthesisRuntimeSha256 = capture
