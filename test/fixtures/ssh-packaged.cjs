@@ -63,7 +63,7 @@ function identity(pid) {
       .split(/\s+/);
     return { pid, start: fields[19], state: fields[0] };
   } catch (error) {
-    if (error.code === "ENOENT") return null;
+    if (["ENOENT", "ESRCH"].includes(error.code)) return null;
     throw error;
   }
 }

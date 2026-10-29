@@ -204,7 +204,7 @@ async function run(options) {
       const fields = text.slice(text.lastIndexOf(")") + 2).split(" ");
       return { state: fields[0], start: fields[19] };
     } catch (error) {
-      if (error.code === "ENOENT") return null;
+      if (["ENOENT", "ESRCH"].includes(error.code)) return null;
       throw error;
     }
   };
@@ -480,7 +480,8 @@ async function run(options) {
   await until(async () => {
     const proc = await readFile(`/proc/${secondPid}/stat`, "utf8").catch(
       (error) => {
-        if (error.code === "ENOENT") return "";
+        // procfs can lose the task after open but before read completes.
+        if (["ENOENT", "ESRCH"].includes(error.code)) return "";
         throw error;
       },
     );
