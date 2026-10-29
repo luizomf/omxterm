@@ -31,6 +31,10 @@ type Host = {
   retire: ReturnType<typeof vi.fn<() => Promise<{ status: "settled" }>>>;
 };
 import { startApplicationExtensions } from "../../src/main/application-extensions";
+import type {
+  Backend,
+  ExtensionRuntime,
+} from "../../src/extension-runtime/runtime";
 import { createTerminalContextMenuTarget } from "../../src/main/terminal-context-menu";
 const adapters = vi.hoisted(() => ({
   root: "",
@@ -52,7 +56,8 @@ const adapters = vi.hoisted(() => ({
       ) => Promise<{ response: number }>
     >(),
   download: vi.fn<(url: string, signal: AbortSignal) => Promise<Buffer>>(),
-  activate: vi.fn(),
+  activate: vi.fn<ExtensionRuntime["activate"]>(),
+  backendLifetime: new AbortController(),
   sshOpen:
     vi.fn<Parameters<typeof startApplicationExtensions>[0]["ssh"]["open"]>(),
   sendOpen:
@@ -168,6 +173,7 @@ function request(
 }
 beforeEach(async () => {
   vi.resetAllMocks();
+  adapters.backendLifetime = new AbortController();
   adapters.root = await mkdtemp(path.join(os.tmpdir(), "omxterm-service-"));
   language = "en-US";
   adapters.sendOpen.mockImplementation((_sender, _channel, command) => {
@@ -204,9 +210,16 @@ beforeEach(async () => {
     });
     const entry = (await packages.snapshot())[0]!;
     return {
-      selection: entry,
+      epoch: "controlled-application-backend",
+      signal: adapters.backendLifetime.signal,
+      selection: {
+        id: entry.id,
+        generation: entry.generation,
+        digest: entry.digest!,
+      },
       state: () => "active",
       call: vi.fn(async () => ({ ok: true })),
+      retire: vi.fn<Backend["retire"]>(),
     };
   });
   // Model preview admission/catalog targeting, not the host filesystem. Startup
