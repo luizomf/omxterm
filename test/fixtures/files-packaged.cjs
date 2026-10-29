@@ -6,6 +6,7 @@ const { syncBuiltinESMExports } = require("node:module");
 const { readFile, writeFile, stat } = require("node:fs/promises");
 const { readFileSync, writeFileSync } = require("node:fs");
 const path = require("node:path");
+const { pathToFileURL } = require("node:url");
 
 let catalogTransport;
 async function cleanup() {
@@ -172,6 +173,30 @@ async function run(options) {
         (view) =>
           !view.isDestroyed() && view.getURL().startsWith("omx-extension://"),
       );
+  const tabCount = () =>
+    js(
+      "Math.max(1, document.querySelectorAll('#tab-strip [role=tab]').length)",
+    );
+  async function panel(view, visible, focus) {
+    await until(async () => {
+      const native = window.contentView.children.find(
+        (child) => child.webContents === view,
+      );
+      return (
+        !view.isDestroyed() &&
+        !!native &&
+        native.getVisible() === visible &&
+        (await js(
+          `document.querySelector('.auxiliary-panel')?.hidden === ${!visible}`,
+        )) &&
+        (focus === "core"
+          ? core.isFocused() && !view.isFocused()
+          : view.isFocused() && !core.isFocused())
+      );
+    }, `retained panel visible=${visible} native focus=${focus}`);
+    assert.equal(hosted().length, 1, "one retained native tool");
+    assert.equal(hosted()[0], view, "same native WebContents identity");
+  }
   const shell = JSON.parse(await readFile(options.readiness, "utf8"));
   const shellStat = () => {
     try {
@@ -195,7 +220,9 @@ async function run(options) {
     );
     assert.equal(shellStat()?.start, identity.start);
     const file = path.join(options.root, marker);
-    await core.insertText(`printf '%s' "$$" > ${quote(file)}`);
+    await core.insertText(
+      `printf '\\033]7;%s\\007' ${quote(pathToFileURL(options.root).href)}; printf '%s' "$$" > ${quote(file)}`,
+    );
     core.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
     core.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
     await until(
@@ -211,6 +238,7 @@ async function run(options) {
       () => js("!!document.querySelector('#settings-tab-extensions')"),
       "Settings",
     );
+    if (hosted().length === 1) await panel(hosted()[0], false, "core");
     await click(core, "Extensions");
     await until(
       () =>
@@ -241,12 +269,18 @@ async function run(options) {
         hosted().length === 1 &&
         (await hosted()[0].executeJavaScript(
           "!!document.querySelector('form.location') && document.querySelector('.summary').textContent.includes('entries')",
-        )) &&
-        (await js(
-          "!!document.querySelector('#tab-strip [role=tab][aria-selected=true]')?.textContent.includes('Files')",
         )),
-      "Files selected and initial listing complete",
+      "Files panel initial listing complete",
     );
+    await panel(hosted()[0], true, "child");
+    assert.equal(await tabCount(), 1, "Files is outside Application Tabs");
+    assert.equal(
+      await js(
+        "window.__packagedCanvas === document.querySelector('.terminal-surface canvas')",
+      ),
+      true,
+    );
+    assert.equal(shellStat()?.start, identity.start);
     return hosted()[0];
   }
   async function apply(view, value) {
@@ -363,6 +397,95 @@ async function run(options) {
   let view = await openFiles();
   listeners("first-view-active");
   assert.equal(children.length, 1);
+  await click(view, "Use terminal directory");
+  await until(
+    () =>
+      view.executeJavaScript(
+        `document.querySelector('[aria-label=Directory]').value === ${JSON.stringify(options.root)} && document.querySelector('.summary').textContent.includes('entries')`,
+      ),
+    "initial captured OSC 7 directory",
+  );
+  const initialDirectory = options.root;
+  menu("Files");
+  await panel(view, true, "child");
+  await js("document.querySelector('.auxiliary-header button').click()");
+  await panel(view, false, "core");
+  menu("Files");
+  await panel(view, true, "child");
+  await settings();
+  await js("document.querySelector('.settings-close').click()");
+  await panel(view, true, "core");
+  menu("New Tab");
+  await until(async () => (await tabCount()) === 2, "second terminal selected");
+  await panel(view, true, "core");
+  // Change the new terminal's directory, then prove the old package still uses
+  // its captured initial directory rather than silently acquiring live context.
+  const receipt = path.join(options.root, "second-shell");
+  await until(
+    () => js("!!document.activeElement?.closest('.terminal-surface')"),
+    "new terminal DOM focus",
+  );
+  await core.insertText(
+    `cd ${quote(options.files)}; printf '\\033]7;%s\\007' ${quote(pathToFileURL(options.files).href)}; printf '%s' "$$" > ${quote(receipt)}`,
+  );
+  core.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
+  core.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
+  await until(
+    async () => /^\d+$/.test(await readFile(receipt, "utf8").catch(() => "")),
+    "new shell receipt",
+  );
+  const secondPid = Number(await readFile(receipt, "utf8"));
+  assert.notEqual(secondPid, shell.probePid);
+  menu("Files");
+  await panel(view, true, "child");
+  await view.executeJavaScript(
+    `document.querySelector('[aria-label=Directory]').value = ${JSON.stringify(options.files)}; document.querySelector('form.location').requestSubmit()`,
+  );
+  await until(
+    () =>
+      view.executeJavaScript(
+        "!![...document.querySelectorAll('.entries button')].find(b => b.textContent.includes('source.txt'))",
+      ),
+    "second directory listing",
+  );
+  await click(view, "Use terminal directory");
+  await until(
+    () =>
+      view.executeJavaScript(
+        `document.querySelector('[aria-label=Directory]').value === ${JSON.stringify(initialDirectory)} && document.querySelector('.summary').textContent.includes('entries')`,
+      ),
+    "legacy captured initial directory",
+  );
+  // Selecting the second tab must return actual native input to core without
+  // hiding the retained tool. Do not call core.focus() to repair production.
+  await js("document.querySelectorAll('#tab-strip [role=tab]')[0].click()");
+  await panel(view, true, "core");
+  await js("document.querySelectorAll('#tab-strip [role=tab]')[1].click()");
+  await panel(view, true, "core");
+  menu("Close Tab");
+  await until(async () => (await tabCount()) === 1, "second terminal closed");
+  await until(async () => {
+    const proc = await readFile(`/proc/${secondPid}/stat`, "utf8").catch(
+      (error) => {
+        if (error.code === "ENOENT") return "";
+        throw error;
+      },
+    );
+    return (
+      !proc ||
+      ["Z", "X", "x"].includes(
+        proc.slice(proc.lastIndexOf(")") + 2).split(" ")[0],
+      )
+    );
+  }, "second shell kernel exit");
+  await panel(view, true, "core");
+  menu("Files");
+  await panel(view, true, "child");
+  assert.equal(children.length, 1, "reopen never restarts backend");
+  checks.push(
+    "panel-outside-tabs-native-focus-reopen-close-settings-terminal-switch",
+    "legacy-captured-initial-directory",
+  );
   await view.executeJavaScript(
     `document.querySelector('[aria-label=Directory]').value = ${JSON.stringify(options.files)}; document.querySelector('form.location').requestSubmit()`,
   );

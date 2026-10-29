@@ -226,8 +226,36 @@ async function run(options) {
       "tab selected",
     );
   }
+  // The sole Application Tab deliberately has no strip button.
   const tabCount = () =>
-    js("document.querySelectorAll('#tab-strip [role=tab]').length");
+    js(
+      "Math.max(1, document.querySelectorAll('#tab-strip [role=tab]').length)",
+    );
+  async function panel(view, visible, focus) {
+    await until(
+      async () => {
+        const native = window.contentView.children.find(
+          (child) => child.webContents === view,
+        );
+        return (
+          !view.isDestroyed() &&
+          !!native &&
+          native.getVisible() === visible &&
+          (await js(
+            `document.querySelector('.auxiliary-panel')?.hidden === ${!visible}`,
+          )) &&
+          (focus === "core"
+            ? core.isFocused() && !view.isFocused()
+            : focus === "child"
+              ? view.isFocused() && !core.isFocused()
+              : true)
+        );
+      },
+      `retained panel visible=${visible} native focus=${focus ?? "unchanged"}`,
+    );
+    assert.equal(hosted().length, 1, "one retained native tool");
+    assert.equal(hosted()[0], view, "same native WebContents identity");
+  }
   const screenshot = async (name) =>
     fs.writeFileSync(
       path.join(options.evidence, name),
@@ -302,6 +330,30 @@ async function run(options) {
     "real SSH page capability and alias discovery",
   );
   const view = hosted()[0];
+  await panel(view, true, "child");
+  assert.equal(await tabCount(), 1, "tool is outside Application Tabs");
+  assert.equal(
+    await js(
+      "window.__sshPublicCanvas === document.querySelector('.terminal-surface canvas')",
+    ),
+    true,
+  );
+  assert.ok(alive(ptys[0]), "opening panel preserves original PTY");
+  menu("SSH Connect");
+  await panel(view, true, "child");
+  await js("document.querySelector('.auxiliary-header button').click()");
+  await panel(view, false, "core");
+  menu("SSH Connect");
+  await panel(view, true, "child");
+  await settings();
+  await panel(view, false, "core");
+  await closeSettings();
+  await panel(view, true, "core");
+  menu("SSH Connect");
+  await panel(view, true, "child");
+  checks.push(
+    "panel-outside-tabs-reopen-identity-close-focus-settings-suspend-restore",
+  );
   assert.equal(children.length, 1);
   assert.deepEqual(
     await view.executeJavaScript(
@@ -440,6 +492,8 @@ async function run(options) {
     "retained nonzero notice",
   );
   assert.equal(await tabCount(), baselineTabs + 1);
+  await panel(view, true, "core");
+  assert.ok(alive(ptys[0]), "Connect preserves original PTY");
   await until(
     () =>
       view.executeJavaScript(
@@ -546,7 +600,8 @@ async function run(options) {
   );
   assert.equal(state.busyClose, 0, "ended pane is not Busy");
   checks.push("retained-search-copy-nonblank-canvas-local-refit-close");
-  await selectTab("SSH Connect");
+  menu("SSH Connect");
+  await panel(view, true, "child");
   // Remove only our controlled executable. A page error must not allocate a tab.
   fs.renameSync(file("bin/ssh"), file("bin/ssh.hidden"));
   await view.executeJavaScript(
@@ -602,13 +657,36 @@ async function run(options) {
   save("selected-title.json", { selectedTitle: true });
   try {
     await until(
-      () => js("!!document.activeElement?.closest('.terminal-surface')"),
-      "foreground terminal DOM focus",
+      async () =>
+        core.isFocused() &&
+        !view.isFocused() &&
+        (await js("!!document.activeElement?.closest('.terminal-surface')")),
+      "foreground terminal DOM and actual native core focus",
     );
   } catch (originalFailure) {
     save("focus-before.json", await diagnose());
     throw originalFailure;
   }
+  assert.equal(
+    await js(
+      "document.activeElement.closest('.terminal-surface').querySelector('canvas') !== window.__sshPublicCanvas",
+    ),
+    true,
+    "Connect selected a new Surface, not the original terminal",
+  );
+  assert.ok(
+    alive(ptys[0]),
+    "original PTY remains alive after foreground handoff",
+  );
+  await panel(view, true, "core");
+  save("panel-focus.json", {
+    coreNativeFocused: core.isFocused(),
+    childNativeFocused: view.isFocused(),
+    panelVisible: true,
+    tabs: await tabCount(),
+    originalPtyAlive: alive(ptys[0]),
+    distinctSelectedSurface: true,
+  });
   assert.equal(
     fs.existsSync(file("ssh-live-input.bin")),
     false,
@@ -665,6 +743,7 @@ async function run(options) {
     async () => (await tabCount()) === beforeNewTab + 1,
     "new Default Shell tab allocated",
   );
+  await panel(view, true, "core");
   await defaultShellReceipt("new-tab-shell");
   menu("Close Tab");
   await until(() => !alive(ptys.at(-1)), "new tab shell actual exit");
@@ -686,7 +765,29 @@ async function run(options) {
   checks.push(
     "remote-osc7-ignored-new-tab-and-split-default-shell-at-account-home",
   );
+  // The tool belongs to the window, not the shell that originally opened it.
+  await js("document.querySelector('#tab-strip [role=tab]').click()");
+  await panel(view, true, "core");
+  assert.equal(
+    await js("window.__sshPublicCanvas.getBoundingClientRect().width > 0"),
+    true,
+  );
+  await core.insertText("exit");
+  key(core, "Enter");
+  await until(() => !alive(ptys[0]), "original source shell actual exit");
+  await until(
+    () => tabCount().then((count) => count === 1),
+    "source terminal removed",
+  );
+  await panel(view, true, "core");
+  menu("SSH Connect");
+  await panel(view, true, "child");
+  assert.equal(children.length, 1, "source exit does not restart backend");
+  checks.push(
+    "terminal-switch-preserves-panel-source-exit-retains-window-owned-tool",
+  );
   await settings();
+  await panel(view, false, "core");
   await click(core, "Disable");
   await until(
     () => hosted().length === 0 && children[0].closed,
@@ -695,7 +796,8 @@ async function run(options) {
   assert.deepEqual(children[0].exit, { code: 0, signal: null });
   assert.ok(alive(live), "core SSH survives extension disable");
   await closeSettings();
-  await selectTab("SYNTHETIC-SSH-live");
+  // Only the SSH terminal remains; its strip is now intentionally hidden.
+  await until(() => core.isFocused(), "core focus after Disable and Settings");
   menu("Close Tab");
   await until(() => state.busyClose === 1, "live SSH Busy confirmation");
   assert.ok(alive(live), "cancelled Busy close keeps client");
