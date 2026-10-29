@@ -99,6 +99,58 @@ it.each([
   },
 );
 
+it("publishes actual panel focus and reveals the retained identity", async () => {
+  const f = await fixture(false);
+  const ipc = { handle: vi.fn(), removeHandler: vi.fn() } as unknown as IpcMain;
+  const host = startExtensionViewHost({ ...f.options, ipcMain: ipc });
+  cleanups.push(() => host.retire());
+  const descriptor = await host.open({ ...opening, presentation: "panel" });
+  expect(descriptor.presentation).toBe("panel");
+  host.reveal(descriptor);
+  expect(f.native.createView).toHaveBeenCalledTimes(1);
+  expect(
+    f.owner.webContents.send.mock.calls.filter(
+      ([channel]) => channel === extensionViewIpc.open,
+    ),
+  ).toEqual([
+    [extensionViewIpc.open, descriptor],
+    [extensionViewIpc.open, descriptor],
+  ]);
+  const handler = (ipc.handle as ReturnType<typeof vi.fn>).mock.calls.find(
+    ([channel]) => channel === extensionViewIpc.present,
+  )![1];
+  const sender = {
+    sender: f.owner.webContents,
+    senderFrame: f.owner.webContents.mainFrame,
+  };
+  await handler(sender, present(descriptor.id));
+  expect(f.owner.webContents.send).toHaveBeenCalledWith(
+    extensionViewIpc.focus,
+    descriptor.id,
+  );
+  const child = f.views[0]!.webContents;
+  child.focused = false;
+  child.emit("blur");
+  expect(f.owner.webContents.send).toHaveBeenLastCalledWith(
+    extensionViewIpc.focus,
+    null,
+  );
+  child.focused = true;
+  child.emit("focus");
+  expect(f.owner.webContents.send).toHaveBeenLastCalledWith(
+    extensionViewIpc.focus,
+    descriptor.id,
+  );
+  f.owner.isFocused.mockReturnValue(false);
+  f.owner.emit("blur");
+  expect(f.owner.webContents.send).toHaveBeenLastCalledWith(
+    extensionViewIpc.focus,
+    null,
+  );
+  await host.retire();
+  expect(() => host.reveal(descriptor)).toThrow("retired");
+});
+
 function deferred<T = void>() {
   let resolve!: (value: T) => void;
   let reject!: (reason?: unknown) => void;

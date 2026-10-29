@@ -19,7 +19,16 @@ describe("hosted application-tab contract", () => {
     expect(isHostedContentDescriptor({ id: "host-1", title: "Files" })).toBe(
       true,
     );
+    expect(
+      isHostedContentDescriptor({
+        id: "host-1",
+        title: "Files",
+        presentation: "panel",
+      }),
+    ).toBe(true);
     for (const descriptor of [
+      { id: "a", title: "Files", presentation: "arbitrary" },
+      { id: "a", title: "Files", presentation: "panel", extra: true },
       { id: "../path", title: "Files" },
       { id: "a", title: "x".repeat(161) },
       { id: "a", title: "a\n" },
@@ -65,6 +74,29 @@ describe("hosted application-tab contract", () => {
         bounds: { ...presentation.bounds, extra: 1 },
       }),
     ).toBe(false);
+  });
+
+  it("validates native focus notifications and removes its subscription", () => {
+    let handler:
+      ((event: Electron.IpcRendererEvent, value: unknown) => void) | undefined;
+    const transport = {
+      invoke: vi.fn(),
+      on: vi.fn((_channel: string, listener: typeof handler) => {
+        handler = listener;
+      }),
+      removeListener: vi.fn(),
+    };
+    const bridge = createHostedContentBridge(transport);
+    const focus = vi.fn();
+    const remove = bridge.onFocus!(focus);
+    for (const value of ["host-1", null, {}, "../bad", undefined])
+      handler!({} as Electron.IpcRendererEvent, value);
+    expect(focus.mock.calls).toEqual([["host-1"], [null]]);
+    remove();
+    expect(transport.removeListener).toHaveBeenCalledWith(
+      extensionViewIpc.focus,
+      handler,
+    );
   });
 
   it("validates incoming events and acknowledgments, with removable listeners", async () => {

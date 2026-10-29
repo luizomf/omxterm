@@ -34,6 +34,15 @@ export function createHostedContentBridge(ipc: Transport): HostedContentBridge {
         ipc.removeListener(extensionViewIpc.retired, handler);
       };
     },
+    onFocus(listener) {
+      const handler: Listener = (_event, value) => {
+        if (value === null || isHostedContentId(value)) listener(value);
+      };
+      ipc.on(extensionViewIpc.focus, handler);
+      return () => {
+        ipc.removeListener(extensionViewIpc.focus, handler);
+      };
+    },
     onFailure(listener) {
       const handler: Listener = (_event, value) => {
         if (value === true) listener();

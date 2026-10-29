@@ -19,6 +19,7 @@ export type ExtensionTarget = {
   terminalDirectory: string | null;
   sourceSessionId?: string;
   mirrorContext?: string;
+  presentation?: "panel";
 };
 export type ManagedViews = {
   open(): Promise<void>;
@@ -29,6 +30,8 @@ type Group = {
   target: ExtensionTarget;
   views: ManagedViews;
   abort: AbortController;
+  selection: VersionSelection;
+  admit(signal: AbortSignal, commit: () => void): Promise<void>;
 };
 type Options = {
   packages: InstalledPackages;
@@ -152,6 +155,7 @@ export function createExtensionManager(options: Options) {
   const busy = new Set<string>();
   const opening = new Map<Promise<void>, string>();
   const replacing = new Map<object, Set<string>>();
+  const panelOpens = new Map<object, Map<string, Promise<void>>>();
   let pendingCleanup: boolean | undefined;
   let disposed = false;
   let disposal: Promise<boolean> | undefined;
@@ -210,14 +214,20 @@ export function createExtensionManager(options: Options) {
             () => state.set(id, "unknown"),
           );
         };
+        const requests = viewRequests(
+          pin,
+          backend,
+          AbortSignal.any([abort.signal, ownerLost]),
+          () => alive(id, captured, target),
+        );
+        const selection = {
+          id: pin.id,
+          generation: pin.generation,
+          digest: pin.digest,
+        };
         const views = options.createViews({
           pin,
-          ...viewRequests(
-            pin,
-            backend,
-            AbortSignal.any([abort.signal, ownerLost]),
-            () => alive(id, captured, target),
-          ),
+          ...requests,
           target,
           signal: abort.signal,
 
@@ -228,7 +238,7 @@ export function createExtensionManager(options: Options) {
           },
         });
         pin = undefined; // ownership transferred; never released by both owners
-        group = { id, target, views, abort };
+        group = { id, target, views, abort, selection, admit: requests.admit };
         groups.add(group);
         ownerLost.addEventListener("abort", lost, { once: true });
         if (ownerLost.aborted || !alive(id, captured, target)) {
@@ -296,22 +306,73 @@ export function createExtensionManager(options: Options) {
       busy.delete(id);
     }
   }
+  async function revealPanel(
+    id: string,
+    target: ExtensionTarget,
+    expected?: VersionSelection,
+  ): Promise<void> {
+    const retained = [...groups].find(
+      (group) =>
+        group.id === id &&
+        group.target.owner === target.owner &&
+        group.target.presentation === "panel",
+    );
+    if (!retained) return start(id, target, expected);
+    if (
+      expected &&
+      (retained.selection.generation !== expected.generation ||
+        retained.selection.digest !== expected.digest)
+    ) {
+      const settled = await retireGroups(groups, id, target.owner);
+      if (!settled) throw new PackageError("outcome-unknown");
+      return start(id, target, expected);
+    }
+    let shown: Promise<void> | undefined;
+    await retained.admit(target.signal, () => {
+      shown = retained.views.open();
+    });
+    await shown;
+  }
   function open(
     id: string,
     target: ExtensionTarget,
     expected?: VersionSelection,
   ): Promise<void> {
-    if (opening.size + groups.size >= 32)
+    const panel = target.presentation === "panel";
+    const pending = panel ? panelOpens.get(target.owner)?.get(id) : undefined;
+    if (pending) return pending;
+    const retained =
+      panel &&
+      [...groups].some(
+        (group) =>
+          group.id === id &&
+          group.target.owner === target.owner &&
+          group.target.presentation === "panel",
+      );
+    if (!retained && opening.size + groups.size >= 32)
       return Promise.reject(new PackageError("busy"));
     const capturedTarget = { ...target };
-    const work = openInvocation(
-      groups,
-      replacing,
-      id,
-      capturedTarget,
-      () => start(id, capturedTarget, expected),
-      () => state.set(id, "unknown"),
-    );
+    const work = panel
+      ? revealPanel(id, capturedTarget, expected)
+      : openInvocation(
+          groups,
+          replacing,
+          id,
+          capturedTarget,
+          () => start(id, capturedTarget, expected),
+          () => state.set(id, "unknown"),
+        );
+    if (panel) {
+      const pending =
+        panelOpens.get(target.owner) ?? new Map<string, Promise<void>>();
+      pending.set(id, work);
+      panelOpens.set(target.owner, pending);
+      const settled = () => {
+        pending.delete(id);
+        if (!pending.size) panelOpens.delete(target.owner);
+      };
+      void work.then(settled, settled);
+    }
     opening.set(work, id);
     void work.then(
       () => opening.delete(work),

@@ -128,6 +128,62 @@ it("leaves installed-unused dormant and gives each invocation its own captured t
   expect(runtime.retire).not.toHaveBeenCalled();
   expect(await manager.dispose()).toBe(true);
 });
+it("coalesces panel activation and reveals one retained view per window", async () => {
+  const { manager, runtime, views, createViews, opens } = await setup();
+  const lifetime = new AbortController();
+  const target = {
+    owner: {},
+    signal: lifetime.signal,
+    terminalDirectory: "/first",
+    presentation: "panel" as const,
+  };
+  const first = manager.open(manifest.id, target);
+  const second = manager.open(manifest.id, target);
+  expect(second).toBe(first);
+  await Promise.all([first, second]);
+  await manager.open(manifest.id, { ...target, terminalDirectory: "/later" });
+  expect(runtime.activate).toHaveBeenCalledTimes(1);
+  expect(createViews).toHaveBeenCalledTimes(1);
+  expect(opens).toHaveBeenCalledTimes(2);
+  expect(views[0]!.target.terminalDirectory).toBe("/first");
+  await manager.open(manifest.id, { ...target, owner: {} });
+  expect(createViews).toHaveBeenCalledTimes(2);
+  lifetime.abort();
+  expect(views.every((view) => view.signal.aborted)).toBe(true);
+  expect(await manager.dispose()).toBe(true);
+});
+
+it("revalidates a retained panel before revealing it after external disable", async () => {
+  const { manager, opens } = await setup();
+  const target = {
+    owner: {},
+    signal: new AbortController().signal,
+    terminalDirectory: null,
+    presentation: "panel" as const,
+  };
+  await manager.open(manifest.id, target);
+  await packages.setEnabled(manifest.id, 1, false);
+  await expect(manager.open(manifest.id, target)).rejects.toThrow();
+  expect(opens).toHaveBeenCalledTimes(1);
+  expect(await manager.dispose()).toBe(true);
+});
+
+it("revokes retained panel admission on backend loss", async () => {
+  const { manager, backendLifetime, views, opens } = await setup();
+  const target = {
+    owner: {},
+    signal: new AbortController().signal,
+    terminalDirectory: null,
+    presentation: "panel" as const,
+  };
+  await manager.open(manifest.id, target);
+  backendLifetime.abort();
+  expect(views[0]!.signal.aborted).toBe(true);
+  await expect(manager.open(manifest.id, target)).rejects.toThrow();
+  expect(opens).toHaveBeenCalledTimes(1);
+  expect(await manager.dispose()).toBe(true);
+});
+
 it.each(["settled", "failed"] as const)(
   "bounds mirror setup replacement until prior retirement is %s",
   async (outcome) => {

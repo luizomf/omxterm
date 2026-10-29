@@ -163,7 +163,9 @@ available selectors. The concrete request is
 It is not a generic terminal SDK or a security sandbox for trusted Node code.
 
 Actual child/main-frame routing binds requests to the captured pin, generation,
-digest, local revision, original window and source-session lifetime. Store
+digest, local revision and original window/view lifetime. The companion panel
+survives the terminal that originally opened it; its SSH launches remain new,
+independently core-owned terminal sessions. Store
 revalidation is the first authorization point. A different instance's later
 change cannot retroactively revoke admission. A separate synchronous main
 transfer rechecks local revocation before committing a one-shot core pane token;

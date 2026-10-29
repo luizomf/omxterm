@@ -106,12 +106,20 @@ SDK. Missing runtime/store infrastructure leaves terminals usable.
 Files appears in the shared palette, File menu and terminal context menu with no
 default or configurable shortcut. Terminal-popup actions must claim the same live,
 one-shot popup/window target as core actions. All explicit openings pass through
-core renderer modal admission before activation. An already-admitted opening that
-finishes during a modal appends a background tab without stealing the modal's selected
-owner or restoration generation. Each invocation owns its copied terminal
-context and independent view pin, even within one window; backends remain shared.
-Use terminal directory reports captured local OSC7 provenance, never later
-selection or process inspection. No local report means an explicit unavailable
+core renderer modal admission before activation. Files and SSH Connect use one
+retained companion view per tool/window. Concurrent opens coalesce; later opens
+revalidate the captured package generation and reveal that view instead of
+allocating another epoch. The main-owned presentation policy recognizes their
+captured package ID and matching open-action metadata; this selects layout, not
+publisher trust or additional capabilities. General extensions retain Application
+Tab presentation and independent per-invocation context/view pins.
+
+Companion view lifetime follows the window rather than the terminal that opened
+it. Its initial terminal context is still copied before asynchronous activation:
+Use terminal directory reports that captured local OSC7 provenance, never later
+selection or process inspection. Closing the source terminal preserves the panel;
+window loss, backend loss and package management still retire it. Hiding the panel
+retains its state and does not cancel or replay an accepted filesystem mutation. No local report means an explicit unavailable
 result, with Home and explicit paths still usable. Views reserve a 34-DIP
 core-owned recovery strip, further intersected with the real renderer slot.
 

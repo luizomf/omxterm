@@ -9,6 +9,7 @@ import {
   extensionViewIpc,
   isHostedContentId,
   isHostedContentPresentation,
+  type HostedContentDescriptor,
 } from "../shared/extension-view";
 import {
   createExtensionViewHost,
@@ -21,6 +22,7 @@ type Route = {
   retiring: Set<Host>;
   issued: Map<string, Host>;
   revision: number;
+  focused: string | null;
 };
 const routers = new WeakMap<IpcMain, Map<WebContents, Route>>();
 
@@ -125,6 +127,7 @@ export function startExtensionViewHost(
       retiring: new Set(),
       issued: new Map(),
       revision: 0,
+      focused: null,
     };
     registry.set(contents, route);
     contents.once("destroyed", () => {
@@ -137,8 +140,19 @@ export function startExtensionViewHost(
     });
   }
   const ownerRoute = route;
+  const reportFocus = () => {
+    const focused =
+      [...ownerRoute.hosts]
+        .map((candidate) => candidate.focusedId())
+        .find((id) => id !== null) ?? null;
+    if (focused === ownerRoute.focused) return;
+    ownerRoute.focused = focused;
+    if (!contents.isDestroyed()) contents.send(extensionViewIpc.focus, focused);
+    options.onFocusChange?.();
+  };
   const host = createExtensionViewHost({
     ...options,
+    onFocusChange: reportFocus,
     onRetired(id) {
       if (ownerRoute.issued.get(id) === host) {
         ownerRoute.issued.delete(id);
@@ -159,14 +173,27 @@ export function startExtensionViewHost(
     },
   });
   ownerRoute.hosts.add(host);
+  const reveal = (descriptor: HostedContentDescriptor) => {
+    if (!host.owns(descriptor.id) || contents.isDestroyed())
+      throw new Error("Hosted owner retired");
+    contents.send(extensionViewIpc.open, descriptor);
+  };
   return {
-    async open(input: { entryResource: string; title: string }) {
-      const descriptor = await host.open(input);
+    reveal,
+    async open(input: {
+      entryResource: string;
+      title: string;
+      presentation?: "panel";
+    }) {
+      const opened = await host.open(input);
+      const descriptor: HostedContentDescriptor = input.presentation
+        ? { ...opened, presentation: input.presentation }
+        : opened;
       if (!host.owns(descriptor.id) || contents.isDestroyed())
         throw new Error("Hosted owner retired");
       ownerRoute.issued.set(descriptor.id, host);
       try {
-        contents.send(extensionViewIpc.open, descriptor);
+        reveal(descriptor);
       } catch {
         await host.retire();
         throw new Error("Hosted notification failed");

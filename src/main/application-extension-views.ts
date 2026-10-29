@@ -1,4 +1,5 @@
 import { ipcMain, type BrowserWindow } from "electron";
+import type { HostedContentDescriptor } from "../shared/extension-view";
 import path from "node:path";
 import { PackageError } from "../installed-packages/installed-packages";
 import type { Value } from "../extension-runtime/protocol";
@@ -29,6 +30,7 @@ export function applicationViews(
       AbortSignal.any([epochSignal, target.signal]),
     );
   let viewId: string | undefined;
+  let descriptor: HostedContentDescriptor | undefined;
   const host = startExtensionViewHost({
     ipcMain,
     owner: window,
@@ -154,9 +156,18 @@ export function applicationViews(
   }
   return {
     open: async () => {
-      viewId = (
-        await host.open({ entryResource: view.entry, title: view.title })
-      ).id;
+      if (epochSignal.aborted || target.signal.aborted)
+        throw new PackageError("unavailable");
+      if (descriptor) {
+        host.reveal(descriptor);
+        return;
+      }
+      descriptor = await host.open({
+        entryResource: view.entry,
+        title: view.title,
+        ...(target.presentation ? { presentation: target.presentation } : {}),
+      });
+      viewId = descriptor.id;
     },
     retire: host.retire,
   };

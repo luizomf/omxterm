@@ -21,6 +21,7 @@ import { CatalogError, createExtensionCatalog } from "./extension-catalog";
 import { createCatalogAcquisition } from "./extension-catalog-acquisition";
 import { createExtensionLinkInstaller } from "./extension-link-install";
 import { applicationViews } from "./application-extension-views";
+import { extensionPresentation } from "./extension-presentation";
 import { MirrorSetupError } from "./mirror-typing-ipc";
 import { startExtensionViewHost } from "./extension-view-ipc";
 import {
@@ -329,6 +330,7 @@ export async function startApplicationExtensions(
     return installations.flatMap((entry) => {
       const view = entry.enabled && entry.digest && entry.manifest?.view;
       if (!view) return [];
+      const presentation = extensionPresentation(entry.manifest!);
       const open = manager!.action({
         id: entry.id,
         generation: entry.generation,
@@ -345,13 +347,23 @@ export async function startApplicationExtensions(
             if (claim && !claim()) return;
             const source =
               target ?? capture(BrowserWindow.getFocusedWindow() ?? undefined);
-            const captured =
-              source && view.context === "window"
+            const windowTarget =
+              source && (view.context === "window" || presentation === "panel")
                 ? windows.get(source.owner as BrowserWindow)?.(
-                    undefined,
+                    source.sourceSessionId,
                     "window",
                   )
-                : source;
+                : undefined;
+            const captured =
+              presentation === "panel"
+                ? windowTarget && {
+                    ...windowTarget,
+                    terminalDirectory: source!.terminalDirectory,
+                    presentation,
+                  }
+                : view.context === "window"
+                  ? windowTarget
+                  : source;
             if (!captured || captured.signal.aborted || stopping) return;
             const window = captured.owner as BrowserWindow;
             const token = randomUUID();

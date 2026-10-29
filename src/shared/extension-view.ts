@@ -1,7 +1,9 @@
-// Internal application-tab transport; not an extension SDK.
+// Internal window-content transport; not an extension SDK.
 export interface HostedContentDescriptor {
   id: string;
   title: string;
+  // Omission keeps the existing general application-tab presentation.
+  presentation?: "panel";
 }
 
 export interface HostedContentPresentation {
@@ -16,6 +18,7 @@ export interface HostedContentBridge {
   onOpen(listener: (descriptor: HostedContentDescriptor) => void): () => void;
   onRetired(listener: (id: string) => void): () => void;
   onFailure(listener: () => void): () => void;
+  onFocus?(listener: (id: string | null) => void): () => void;
   present(presentation: HostedContentPresentation): Promise<boolean>;
   close(id: string): Promise<void>;
 }
@@ -27,6 +30,7 @@ export const extensionViewIpc = {
   failure: "extension-view:failure",
   close: "extension-view:close",
   visibility: "extension-view:visibility",
+  focus: "extension-view:focus",
 } as const;
 
 function record(
@@ -58,7 +62,9 @@ export function isHostedContentDescriptor(
   value: unknown,
 ): value is HostedContentDescriptor {
   return (
-    record(value, ["id", "title"]) &&
+    (record(value, ["id", "title"]) ||
+      (record(value, ["id", "title", "presentation"]) &&
+        value.presentation === "panel")) &&
     isHostedContentId(value.id) &&
     isHostedContentTitle(value.title)
   );

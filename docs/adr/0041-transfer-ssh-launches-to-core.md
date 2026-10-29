@@ -13,7 +13,7 @@ owns the exact grammar, discovery budgets and user-visible limitations.
 
 A manager admission callback revalidates the captured independent UI pin under
 the short store transaction. That authorizes this generation at that instant,
-not a global disable broadcast. Local revision, source/view/window lifetime and
+not a global disable broadcast. Local revision, view/window lifetime and
 Quit are checked again before synchronous transfer into a core-owned pending
 record. Cross-instance changes after store admission cannot undo that request;
 local revocation before transfer refuses. No lock spans rendering or spawn.
@@ -25,6 +25,12 @@ Pending cancellation, owner loss, bounded expiry and Quit remove unused tokens.
 Startup `-e` stays independently consume-once. Core PTY/shutdown owns transferred
 sessions and no extension pin follows them. Disable/uninstall/backend loss cannot
 kill already transferred sessions. Reply loss is outcome-unknown, not retryable.
+
+SSH Connect's companion view is retained per window independently of the source
+terminal's lifetime. The package manager revalidates its captured generation on
+explicit reopen and retires it on backend/window loss or package management.
+This presentation policy leaves general hosted Application Tab invocations and
+their captured source-session lifetimes unchanged.
 
 Keyboard Connect finishes its initiating Enter gesture before dispatch, rather
 than trying to guard a held key after crossing WebContents. Foreground selection

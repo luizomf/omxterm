@@ -58,6 +58,7 @@ export interface ExtensionViewHostOptions {
   // owner bounds AND the renderer's CSS slot; never inferred from renderer IDs.
   contentSlot(): Rectangle;
   onRetired?(id: string): void;
+  onFocusChange?(): void;
   // Admission loss precedes native/resource settlement, including failed closes.
   onViewRevoked?(id: string): void;
   onState?(state: ExtensionViewState, outcome?: ExtensionViewOutcome): void;
@@ -131,8 +132,10 @@ class NativeExtensionViewHost {
   #layoutFocus: string | null = null;
   #revision = 0;
   #focusGeneration = 0;
+  #reportFocus = () => notify(() => this.options.onFocusChange?.());
   #blur = () => {
     this.#focusGeneration++;
+    this.#reportFocus();
   };
   #cleanupFailed = false;
   constructor(private readonly options: ExtensionViewHostOptions) {
@@ -147,6 +150,7 @@ class NativeExtensionViewHost {
     options.owner.webContents.on("did-start-navigation", this.#ownerNavigation);
     options.owner.on("resize", this.#hideForLayout);
     options.owner.on("blur", this.#blur);
+    options.owner.on("focus", this.#reportFocus);
     options.owner.webContents.on("zoom-changed", this.#hideForLayout);
   }
   #live() {
@@ -167,6 +171,7 @@ class NativeExtensionViewHost {
     // hiding still applies, but no presentation IPC belongs to a lost/closing view.
     if (!entry.rendererGone && !entry.closing && !entry.contents.isDestroyed())
       entry.contents.send(extensionViewIpc.visibility, visible);
+    this.#reportFocus();
   }
   #hideAll = (keep?: Entry) => {
     this.#selected = keep?.descriptor.id ?? null;
@@ -292,6 +297,7 @@ class NativeExtensionViewHost {
       );
       this.options.owner.removeListener("resize", this.#hideForLayout);
       this.options.owner.removeListener("blur", this.#blur);
+      this.options.owner.removeListener("focus", this.#reportFocus);
       this.#ownerContents.removeListener("zoom-changed", this.#hideForLayout);
       this.#changeState(outcome.status, outcome);
       return outcome;
@@ -392,6 +398,8 @@ class NativeExtensionViewHost {
       entry.rendererGone = true;
       this.#ownerLost();
     });
+    contents.on("focus", this.#reportFocus);
+    contents.on("blur", this.#reportFocus);
     contents.on("dom-ready", () => this.#trackProcess(entry));
     contents.on("did-finish-load", () => {
       this.#trackProcess(entry);
@@ -548,6 +556,7 @@ class NativeExtensionViewHost {
       else if (presentation.focus || this.#layoutFocus === presentation.id)
         entry.contents.focus();
       this.#layoutFocus = null;
+      this.#reportFocus();
       return true;
     } catch {
       void this.retire();
@@ -573,6 +582,18 @@ class NativeExtensionViewHost {
       this.#notifyRetired(entry);
     }
   }
+  focusedId = (): string | null => {
+    const entry =
+      this.#selected === null ? undefined : this.#views.get(this.#selected);
+    return this.#live() &&
+      this.options.owner.isFocused() &&
+      entry?.visible &&
+      !entry.closing &&
+      !entry.contents.isDestroyed() &&
+      entry.contents.isFocused()
+      ? entry.descriptor.id
+      : null;
+  };
   clipboard = (action: "copy" | "paste" | "selectAll"): boolean => {
     const entry =
       this.#selected === null ? undefined : this.#views.get(this.#selected);
