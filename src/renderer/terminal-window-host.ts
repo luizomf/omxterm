@@ -67,6 +67,7 @@ interface TerminalWindowPageOptions extends TerminalWindowActionSubscriptions {
   readonly initialLayout?: InitialLayout;
   readonly layout?: TerminalLayoutBridge;
   readonly hostedContent?: HostedContentBridge;
+  readonly mirrorTyping?: import("../shared/mirror-typing").MirrorTypingBridge;
   readonly about?: AboutBridge;
   readonly palette?: CommandPaletteBridge;
   readonly settings?: SettingsBridge;
@@ -199,6 +200,7 @@ export function mountTerminalWindowPage(
     { strip: elements.tabStrip, container: elements.tabsContainer },
     {
       language,
+      mirrorTyping: options.mirrorTyping,
       initialLayout: options.initialLayout,
       layout: options.layout,
       ...(options.settings ? { settings: options.settings } : {}),

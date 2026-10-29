@@ -1,3 +1,5 @@
+import { createMirrorTyping } from "./mirror-typing";
+import type { MirrorTypingBridge } from "../shared/mirror-typing";
 import { createTerminalTabsLayout } from "./terminal-tabs-layout";
 import type {
   InitialLayout,
@@ -68,6 +70,7 @@ export interface TerminalTabsElements {
 export type ApplicationTab = TerminalTab | SettingsTab | HostedTab;
 
 export interface TerminalTabsOptions {
+  readonly mirrorTyping?: MirrorTypingBridge | undefined;
   readonly initialLayout?: InitialLayout | undefined;
   readonly layout?: TerminalLayoutBridge | undefined;
   readonly hostedContent?: HostedContentBridge;
@@ -135,6 +138,7 @@ export function createTerminalTabs(
   elements: TerminalTabsElements,
   options: TerminalTabsOptions,
 ): TerminalTabs {
+  let mirror: ReturnType<typeof createMirrorTyping> | undefined;
   let contentReady = true;
   const canFocus = options.canFocus;
   options = {
@@ -172,7 +176,10 @@ export function createTerminalTabs(
     selectedApplicationTab,
     () => disposed || closing,
   );
-  const selectedTab = () => terminalTab(selectedApplicationTab());
+  const selectedTab = () => {
+    const tab = selectedApplicationTab();
+    return tab?.kind === "terminal" ? tab : undefined;
+  };
   const focusedPane = () => (disposed ? undefined : selectedTab()?.focused);
   const interactivePane = () => (contentReady ? focusedPane() : undefined);
   const contextMenu = createPaneContextMenu({
@@ -204,14 +211,22 @@ export function createTerminalTabs(
       ? null
       : (focused.adapter.sessionId() ?? null);
     options.notifySelection?.(sessionId, tabSessionIds(tab));
+    mirror?.changed();
   };
 
-  const select = (index: number, passive = false) => {
+  const select = (
+    index: number,
+    passive = false,
+    mirrorReady?: { ready(): void; current(): boolean },
+  ) => {
     const tab = tabs[index];
     // Lifecycle selection stays deliverable; requested navigation is guarded.
     if (!tab || (!passive && canFocus?.() === false)) return;
     const changed = selectedApplicationTab() !== tab;
-    if (changed) actionGeneration += 1;
+    if (changed) {
+      actionGeneration += 1;
+      if (!mirrorReady) mirror?.stop();
+    }
     selectedIndex = index;
     layout.selected(tab);
     renderStrip();
@@ -222,7 +237,17 @@ export function createTerminalTabs(
       tab.kind === "hosted" ? tab : undefined,
       () => {
         contentReady = true;
-        activateTabContent(tabs, tab, changed, passive, options, notifyFocus);
+        activateTabContent(
+          tabs,
+          tab,
+          changed,
+          passive,
+          mirrorReady && !mirrorReady.current()
+            ? { ...options, canFocus: () => false }
+            : options,
+          notifyFocus,
+        );
+        mirrorReady?.ready();
       },
       tab,
     );
@@ -293,6 +318,8 @@ export function createTerminalTabs(
     },
     focusClicked: (pane) => panes.focusPane(pane.tab, pane, true),
     captureContextMenuTarget: contextMenu.capture,
+    routeKeyInput: (pane, data) => mirror?.route(pane, data) ?? false,
+    onSemanticInput: (pane) => mirror?.semantic(pane),
   });
 
   const panes = createPaneOperations({
@@ -351,6 +378,19 @@ export function createTerminalTabs(
     pane: panes.handleCommand,
     extensions: options.extensions,
   });
+  if (options.mirrorTyping)
+    mirror = createMirrorTyping({
+      bridge: options.mirrorTyping,
+      parent: elements.container,
+      language,
+      selected: selectedApplicationTab,
+      available: () => !disposed && !closing && canFocus?.() !== false,
+      handoff(tab, pane, ready, current) {
+        tab.focused = pane;
+        select(tabs.indexOf(tab), false, { ready, current });
+      },
+      focus: () => focusPane(focusedPane(), options),
+    });
   const initialReady = layout.initialize({
     panes,
     select,
@@ -361,7 +401,14 @@ export function createTerminalTabs(
     ready: initialReady ?? createTab(),
     ...settingsActions,
     isTerminalSelected: () => !!interactivePane(),
-    openOverlay: hosted.openOverlay,
+    openOverlay(open) {
+      mirror?.stop();
+      hosted.openOverlay(open);
+    },
+    setBlocked(blocked) {
+      if (blocked) mirror?.stop();
+      settingsActions.setBlocked(blocked);
+    },
     setSessionTitle(sessionId, title) {
       if (disposed) return;
       const pane = findPaneBySession(terminalTabs(), sessionId);
@@ -378,10 +425,11 @@ export function createTerminalTabs(
     },
     clipboardAction(action, target) {
       if (!interactivePane()) return;
-      applyClipboardAction(
-        target ? contextMenu.take(target) : focusedPane(),
-        action,
-      );
+      const surface = (target ? contextMenu.take(target) : focusedPane())
+        ?.surface;
+      if (action === "copy") void surface?.copy();
+      else if (action === "paste") void surface?.paste();
+      else surface?.selectAll();
     },
     find: () => interactivePane()?.surface?.find(),
     injectText: (text) => void interactivePane()?.surface?.inject(text),
@@ -402,6 +450,7 @@ export function createTerminalTabs(
       focusApplicationTab(selectedApplicationTab(), options, hosted.focus),
     dispose() {
       if (disposed) return;
+      mirror?.dispose();
       disposed = true;
       commands.dispose();
       layout.dispose();
@@ -413,10 +462,6 @@ export function createTerminalTabs(
       disposeTabContent(tabs);
     },
   };
-}
-
-function terminalTab(tab: ApplicationTab | undefined) {
-  return tab?.kind === "terminal" ? tab : undefined;
 }
 
 function tabLabel(
@@ -479,15 +524,4 @@ function bindTabLabels(
     }
     renderStrip();
   });
-}
-
-function applyClipboardAction(
-  pane: TerminalPane | undefined,
-  action: TerminalClipboardAction,
-): void {
-  const surface = pane?.surface;
-  if (!surface) return;
-  if (action === "copy") void surface.copy();
-  else if (action === "paste") void surface.paste();
-  else surface.selectAll();
 }

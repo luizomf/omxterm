@@ -61,6 +61,9 @@ export function startTerminalWindow(bridge: Window["omxterm"]): void {
           ...(bridge.terminal.hostedContent
             ? { hostedContent: bridge.terminal.hostedContent }
             : {}),
+          ...(bridge.terminal.mirrorTyping
+            ? { mirrorTyping: bridge.terminal.mirrorTyping }
+            : {}),
           chrome: bridge.terminal,
           mount: mountResttyTerminalSurface,
           loadFontData: bridge.terminal.fontData,

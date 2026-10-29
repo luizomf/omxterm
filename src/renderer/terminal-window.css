@@ -31,6 +31,52 @@ body {
   );
 }
 
+.mirror-typing-status {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--terminal-chrome-neutral);
+  color: var(--terminal-foreground, #eee);
+  background: var(--terminal-background, #111);
+  font: 13px/1.4 sans-serif;
+}
+.mirror-typing-status[hidden] {
+  display: none;
+}
+.mirror-typing-status small {
+  flex-basis: 100%;
+}
+.mirror-typing-status button {
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+.mirror-typing-status button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.terminal-tab .pane-mirroring .restty-terminal-surface {
+  padding-top: calc(22px + var(--terminal-padding-top, 0px));
+}
+.mirror-typing-marker {
+  position: absolute;
+  top: 2px;
+  left: 8px;
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  color: var(--terminal-foreground, #eee);
+  font: 11px/18px sans-serif;
+}
+
 .terminal-exit-notice {
   position: absolute;
   z-index: 5;

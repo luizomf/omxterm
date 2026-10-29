@@ -20,6 +20,8 @@ import {
 // native session exists drop the pane; the last pane follows the last-tab path.
 export function createPaneMount(deps: {
   readonly document: Document;
+  readonly routeKeyInput?: (pane: TerminalPane, data: string) => boolean;
+  readonly onSemanticInput?: (pane: TerminalPane) => void;
   readonly options: TerminalTabsOptions;
   readonly surfaceOptions: () => TerminalSurfaceOptions;
   readonly zoomSteps: () => number;
@@ -61,6 +63,14 @@ export function createPaneMount(deps: {
     const clipboard = deps.surfaceOptions().clipboard;
     const paneSurfaceOptions: TerminalSurfaceOptions = {
       ...deps.surfaceOptions(),
+      routeKeyInput: (data) =>
+        deps.routeKeyInput?.(pane, data) ||
+        deps.surfaceOptions().routeKeyInput?.(data) ||
+        false,
+      onSemanticInput: () => {
+        deps.onSemanticInput?.(pane);
+        deps.surfaceOptions().onSemanticInput?.();
+      },
       // Focus also applies to padding and suppressed terminal popups.
       onContextMenu() {
         if (!deps.disposed() && !pane.removed && !pane.ended)
