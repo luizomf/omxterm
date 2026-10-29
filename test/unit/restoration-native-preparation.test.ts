@@ -70,7 +70,7 @@ it.each(["0.24.0-dev.1", "0.24.0-dev.2"])(
     expect(metadata).toMatchObject({ version, main: "main.mjs" });
     const recorded = JSON.parse(
       await readFile(path.join(f.options.evidence, "inputs.json"), "utf8"),
-    );
+    ) as { version: string };
     expect(recorded.version).toBe(version);
     const build = JSON.parse(
       await readFile(

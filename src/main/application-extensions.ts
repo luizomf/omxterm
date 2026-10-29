@@ -20,7 +20,7 @@ import { ExtensionDownloadError } from "./extension-download";
 import { CatalogError, createExtensionCatalog } from "./extension-catalog";
 import { createCatalogAcquisition } from "./extension-catalog-acquisition";
 import { createExtensionLinkInstaller } from "./extension-link-install";
-import { extensionResourceOwner } from "./extension-view-reader";
+import { applicationViews } from "./application-extension-views";
 import { startExtensionViewHost } from "./extension-view-ipc";
 import {
   extensionsIpc,
@@ -54,133 +54,6 @@ function managementEntry(
     installed: entry.digest !== null,
     enabled: entry.enabled,
     local: entry.local,
-  };
-}
-
-function applicationViews(
-  options: Parameters<typeof startApplicationExtensions>[0],
-  {
-    pin,
-    target,
-    signal: epochSignal,
-    call,
-    admit,
-    retired,
-  }: Parameters<Parameters<typeof createExtensionManager>[0]["createViews"]>[0],
-) {
-  const window = target.owner as BrowserWindow;
-  const view = pin.manifest.view!;
-  const viewOwner = {};
-  let viewId: string | undefined;
-  const host = startExtensionViewHost({
-    ipcMain,
-    owner: window,
-    preloadPath: path.join(
-      options.applicationRoot,
-      "preload",
-      "extension-view.cjs",
-    ),
-    resources: extensionResourceOwner(pin),
-    contentSlot: () => {
-      const [width, height] = window.getContentSize();
-      // Preserve a core-owned recovery strip; renderer geometry may only narrow it.
-      return { x: 0, y: 34, width: width!, height: Math.max(0, height! - 34) };
-    },
-    onKeybind: options.keybind,
-    onRequest(value, signal) {
-      if (epochSignal.aborted || target.signal.aborted || signal.aborted)
-        return Promise.reject(new PackageError("unavailable"));
-      if (
-        value &&
-        typeof value === "object" &&
-        !Array.isArray(value) &&
-        value.operation === "terminal-directory"
-      )
-        return Promise.resolve(
-          target.terminalDirectory
-            ? { ok: true, directory: target.terminalDirectory }
-            : {
-                ok: false,
-                error:
-                  "No local terminal directory was reported at invocation. Use Home or enter a path.",
-              },
-        );
-      if (value && typeof value === "object" && !Array.isArray(value)) {
-        if (
-          value.operation === "host.capabilities" &&
-          Object.keys(value).length === 1
-        )
-          return Promise.resolve({
-            capabilities: (pin.manifest.capabilities ?? []).filter(
-              (capability) => capability !== "state.v1",
-            ),
-          });
-        if (
-          value.operation === "terminal.captureLayout.v1" ||
-          value.operation === "terminal.openLayout.v1"
-        )
-          return layoutRequest(value, signal);
-        if (value.operation === "terminal.openSsh.v1") {
-          if (
-            !pin.manifest.capabilities?.includes("terminal.openSsh.v1") ||
-            Object.keys(value).sort().join() !== "operation,target" ||
-            !viewId
-          )
-            return Promise.reject(new PackageError("unavailable"));
-          return options.ssh.open(
-            window,
-            viewOwner,
-            viewId,
-            value.target,
-            (commit) => admit(signal, commit),
-          );
-        }
-      }
-      return call(value, signal);
-    },
-    onState(state) {
-      if (state === "settled") retired();
-    },
-  });
-  async function layoutRequest(
-    value: { [key: string]: import("../extension-runtime/protocol").Value },
-    signal: AbortSignal,
-  ) {
-    if (value.operation === "terminal.captureLayout.v1") {
-      if (
-        !pin.manifest.capabilities?.includes("terminal.captureLayout.v1") ||
-        Object.keys(value).length !== 1
-      )
-        throw new PackageError("unavailable");
-      let capture!: ReturnType<typeof options.layout.capture>;
-      await admit(signal, () => {
-        capture = options.layout.capture(
-          window,
-          AbortSignal.any([signal, epochSignal, target.signal]),
-        );
-      });
-      return capture;
-    }
-    if (
-      !pin.manifest.capabilities?.includes("terminal.openLayout.v1") ||
-      Object.keys(value).sort().join() !== "layout,operation" ||
-      !viewId
-    )
-      throw new PackageError("unavailable");
-    return options.layout.open(
-      window,
-      value.layout,
-      host.captureFocusIntent(viewId),
-      (commit) => admit(signal, commit),
-    );
-  }
-  return {
-    open: async () => {
-      viewId = (
-        await host.open({ entryResource: view.entry, title: view.title })
-      ).id;
-    },
-    retire: host.retire,
   };
 }
 
@@ -224,8 +97,11 @@ async function applicationManager(
   });
 }
 
-type ApplicationExtensionsOptions = {
+export type ApplicationExtensionsOptions = {
   applicationRoot: string;
+  mirrorTyping?: ReturnType<
+    typeof import("./mirror-typing-ipc").registerMirrorTypingIpc
+  >;
   layout: {
     capture: ReturnType<
       typeof import("./terminal-layout-ipc").registerTerminalLayoutIpc
@@ -248,6 +124,38 @@ type ApplicationExtensionsOptions = {
     Parameters<typeof startExtensionViewHost>[0]["onKeybind"]
   >;
 };
+
+async function invokeExtension(
+  options: ApplicationExtensionsOptions,
+  captured: ExtensionTarget,
+  source: ExtensionTarget,
+  open: (target: ExtensionTarget) => Promise<void>,
+  mirror: boolean,
+  stopping: () => boolean,
+) {
+  const window = captured.owner as BrowserWindow;
+  try {
+    let invocation = captured;
+    if (mirror) {
+      if (!options.mirrorTyping) throw new PackageError("unavailable");
+      const signal = AbortSignal.any([captured.signal, source.signal]);
+      const mirrorContext = await options.mirrorTyping.capture(
+        window,
+        signal,
+        source.sourceSessionId,
+      );
+      invocation = { ...captured, signal, mirrorContext };
+    }
+    await open(invocation);
+  } catch {
+    if (!window.isDestroyed() && !stopping())
+      void dialog.showMessageBox(window, {
+        type: "error",
+        message: options.translator().t("extensions.unavailable"),
+        detail: options.translator().t("extensions.unavailableDetail"),
+      });
+  }
+}
 
 // Startup creates infrastructure, never activates installed code. Unsupported
 // platforms retain Settings with an explicit preview-unavailable result.
@@ -436,20 +344,17 @@ export async function startApplicationExtensions(
             const token = randomUUID();
             pending.set(window, {
               token,
-              invoke: async () => {
-                try {
-                  await open(captured);
-                } catch {
-                  if (!window.isDestroyed() && !stopping)
-                    void dialog.showMessageBox(window, {
-                      type: "error",
-                      message: options.translator().t("extensions.unavailable"),
-                      detail: options
-                        .translator()
-                        .t("extensions.unavailableDetail"),
-                    });
-                }
-              },
+              invoke: () =>
+                invokeExtension(
+                  options,
+                  captured,
+                  source!,
+                  open,
+                  entry.manifest?.capabilities?.includes(
+                    "terminal.mirrorTyping.v1",
+                  ) === true,
+                  () => stopping,
+                ),
             });
             options.sendAction(window.webContents, terminalIpc.tabCommand, {
               action: "open-extension",

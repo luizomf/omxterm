@@ -40,6 +40,7 @@ export function extensionInvocationTarget(window: BrowserWindow) {
           owner: window,
           signal: lifetime.signal,
           terminalDirectory: null,
+          ...(source ? { sourceSessionId: source } : {}),
         };
       const session = source ? sessions.get(source) : undefined;
       return {
@@ -51,6 +52,7 @@ export function extensionInvocationTarget(window: BrowserWindow) {
           : lifetime.signal,
         terminalDirectory:
           source && session ? (directory(source) ?? null) : null,
+        ...(source ? { sourceSessionId: source } : {}),
       };
     },
   };

@@ -17,6 +17,8 @@ export type ExtensionTarget = {
   owner: object;
   signal: AbortSignal;
   terminalDirectory: string | null;
+  sourceSessionId?: string;
+  mirrorContext?: string;
 };
 export type ManagedViews = {
   open(): Promise<void>;
@@ -80,9 +82,15 @@ function boundedSettlement(work: Promise<unknown>[]): Promise<boolean> {
   });
 }
 
-async function retireGroups(groups: Set<Group>, id?: string): Promise<boolean> {
+async function retireGroups(
+  groups: Set<Group>,
+  id?: string,
+  owner?: object,
+): Promise<boolean> {
   const selected = [...groups].filter(
-    (group) => id === undefined || group.id === id,
+    (group) =>
+      (id === undefined || group.id === id) &&
+      (owner === undefined || group.target.owner === owner),
   );
   for (const group of selected) group.abort.abort();
   const results = await Promise.all(
@@ -99,6 +107,40 @@ async function retireGroups(groups: Set<Group>, id?: string): Promise<boolean> {
   return results.every(Boolean);
 }
 
+async function openInvocation(
+  groups: Set<Group>,
+  replacing: Map<object, Set<string>>,
+  id: string,
+  target: ExtensionTarget,
+  start: () => Promise<void>,
+  uncertain: () => void,
+) {
+  if (!target.mirrorContext) return start();
+  const keys = replacing.get(target.owner) ?? new Set<string>();
+  if (keys.has(id)) throw new PackageError("busy");
+  keys.add(id);
+  replacing.set(target.owner, keys);
+  try {
+    // Retirement is settled before another pin/view is allocated. Failed
+    // retirement retains its recovery owner, never stacks another setup page.
+    let settled = false;
+    const finished = await boundedSettlement([
+      retireGroups(groups, id, target.owner).then((result) => {
+        settled = result;
+      }),
+    ]);
+    if (!finished || !settled) {
+      uncertain();
+      throw new PackageError("outcome-unknown");
+    }
+    if (target.signal.aborted) throw new PackageError("unavailable");
+    await start();
+  } finally {
+    keys.delete(id);
+    if (!keys.size) replacing.delete(target.owner);
+  }
+}
+
 /** One application owner for consent, generation admission, views and backends.
  * Settings/menu/fixture callers use this same interface, never a parallel store. */
 export function createExtensionManager(options: Options) {
@@ -109,6 +151,7 @@ export function createExtensionManager(options: Options) {
   const backends = new Map<string, Backend>();
   const busy = new Set<string>();
   const opening = new Map<Promise<void>, string>();
+  const replacing = new Map<object, Set<string>>();
   let pendingCleanup: boolean | undefined;
   let disposed = false;
   let disposal: Promise<boolean> | undefined;
@@ -260,7 +303,15 @@ export function createExtensionManager(options: Options) {
   ): Promise<void> {
     if (opening.size + groups.size >= 32)
       return Promise.reject(new PackageError("busy"));
-    const work = start(id, { ...target }, expected);
+    const capturedTarget = { ...target };
+    const work = openInvocation(
+      groups,
+      replacing,
+      id,
+      capturedTarget,
+      () => start(id, capturedTarget, expected),
+      () => state.set(id, "unknown"),
+    );
     opening.set(work, id);
     void work.then(
       () => opening.delete(work),

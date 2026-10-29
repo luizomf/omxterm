@@ -19,6 +19,7 @@ import type { TerminalSnippetsResponse } from "./terminal-snippets";
 import type { LocalImageActivation, LocalImageData } from "./local-image";
 
 export interface TerminalBridge {
+  readonly mirrorTyping?: import("./mirror-typing").MirrorTypingBridge;
   readonly layout?: import("./terminal-layout").TerminalLayoutBridge;
   readonly hostedContent?: import("./extension-view").HostedContentBridge;
   readonly palette?: import("./command-palette").CommandPaletteBridge;

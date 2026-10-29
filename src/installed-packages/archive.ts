@@ -36,6 +36,7 @@ export type PackageManifest = {
     | "terminal.openSsh.v1"
     | "terminal.captureLayout.v1"
     | "terminal.openLayout.v1"
+    | "terminal.mirrorTyping.v1"
     | "state.v1"
   )[];
   view?: { entry: string; action: string; title: string; context?: "window" };
@@ -129,7 +130,7 @@ function validateCapabilities(value: Record<string, unknown>): void {
     "capabilities" in value &&
     (!Array.isArray(value.capabilities) ||
       value.capabilities.length < 1 ||
-      value.capabilities.length > 4 ||
+      value.capabilities.length > 5 ||
       new Set(value.capabilities).size !== value.capabilities.length ||
       value.capabilities.some(
         (capability) =>
@@ -138,6 +139,7 @@ function validateCapabilities(value: Record<string, unknown>): void {
             "terminal.openSsh.v1",
             "terminal.captureLayout.v1",
             "terminal.openLayout.v1",
+            "terminal.mirrorTyping.v1",
             "state.v1",
           ].includes(capability),
       ))

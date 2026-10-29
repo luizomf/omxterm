@@ -128,6 +128,62 @@ it("leaves installed-unused dormant and gives each invocation its own captured t
   expect(runtime.retire).not.toHaveBeenCalled();
   expect(await manager.dispose()).toBe(true);
 });
+it.each(["settled", "failed"] as const)(
+  "bounds mirror setup replacement until prior retirement is %s",
+  async (outcome) => {
+    const { manager, views, createViews, opens } = await setup();
+    let release!: () => void;
+    let entered!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const retiring = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    let recover = false;
+    createViews.mockImplementationOnce((input) => {
+      views.push(input);
+      return {
+        open: opens,
+        retire: async () => {
+          entered();
+          await gate;
+          if (outcome === "failed" && !recover) return { status: "failed" };
+          await input.pin.release();
+          input.retired();
+          return { status: "settled" };
+        },
+      };
+    });
+    const target = {
+      owner: {},
+      signal: new AbortController().signal,
+      terminalDirectory: null,
+      mirrorContext: "captured-setup",
+    };
+    await manager.open(manifest.id, target);
+    const acquisition = vi.spyOn(packages, "openVersion");
+    const replacement = manager.open(manifest.id, target).then(
+      () => "opened",
+      () => "refused",
+    );
+    await retiring;
+    expect(views[0]!.signal.aborted).toBe(true);
+    expect(createViews).toHaveBeenCalledTimes(1);
+    expect(acquisition).not.toHaveBeenCalled();
+    await expect(manager.open(manifest.id, target)).rejects.toThrow("busy");
+    release();
+    expect(await replacement).toBe(
+      outcome === "settled" ? "opened" : "refused",
+    );
+    expect(createViews).toHaveBeenCalledTimes(outcome === "settled" ? 2 : 1);
+    if (outcome === "failed")
+      expect((await manager.snapshot())[0]?.local).toBe("unknown");
+    recover = true;
+    expect(await manager.dispose()).toBe(true);
+  },
+);
+
 it.each(["cross-instance", "local", "source", "request", "backend"])(
   "separates store admission from local transfer: %s",
   async (change) => {

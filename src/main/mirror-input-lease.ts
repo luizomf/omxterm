@@ -1,29 +1,6 @@
 import { randomUUID } from "node:crypto";
-import {
-  isBoundedTerminalPayload,
-  isTerminalSessionId,
-} from "../shared/terminal-contract";
-
-export interface MirrorKeyInput {
-  readonly lease: string;
-  readonly sequence: number;
-  readonly sourceSessionId: string;
-  readonly data: string;
-}
-function isKeyInput(value: unknown): value is MirrorKeyInput {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  const record = value as Record<string, unknown>;
-  return (
-    Object.keys(record).sort().join() ===
-      "data,lease,sequence,sourceSessionId" &&
-    typeof record.lease === "string" &&
-    record.lease.length <= 128 &&
-    Number.isSafeInteger(record.sequence) &&
-    (record.sequence as number) > 0 &&
-    isTerminalSessionId(record.sourceSessionId) &&
-    isBoundedTerminalPayload(record.data)
-  );
-}
+import { isTerminalSessionId } from "../shared/terminal-contract";
+import { isMirrorKeyInput } from "../shared/mirror-typing";
 
 /** One window's revocable, fixed native recipients. This is NOT extension IPC:
  * only the core setup coordinator may grant, after its asynchronous admission
@@ -111,7 +88,8 @@ export function createMirrorInputLease<Session extends object>(options: {
     },
     input(value: unknown): void {
       const lease = active;
-      if (!lease || !isKeyInput(value) || value.lease !== lease.id) return;
+      if (!lease || !isMirrorKeyInput(value) || value.lease !== lease.id)
+        return;
       if (
         !valid(lease) ||
         !lease.members.has(value.sourceSessionId) ||

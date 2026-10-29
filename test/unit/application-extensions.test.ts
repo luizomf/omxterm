@@ -20,6 +20,7 @@ import {
   bytes,
   manifest,
   exerciseSshRouting,
+  applicationBackend,
 } from "../fixtures/ssh-view-routing";
 import { extensionsIpc } from "../../src/shared/extensions";
 import type { IpcEvent } from "../../src/main/terminal-ipc-types";
@@ -31,10 +32,7 @@ type Host = {
   retire: ReturnType<typeof vi.fn<() => Promise<{ status: "settled" }>>>;
 };
 import { startApplicationExtensions } from "../../src/main/application-extensions";
-import type {
-  Backend,
-  ExtensionRuntime,
-} from "../../src/extension-runtime/runtime";
+import type { ExtensionRuntime } from "../../src/extension-runtime/runtime";
 import { createTerminalContextMenuTarget } from "../../src/main/terminal-context-menu";
 const adapters = vi.hoisted(() => ({
   root: "",
@@ -202,26 +200,9 @@ beforeEach(async () => {
   archive = path.join(adapters.root, "files.omxext");
   await writeFile(archive, bytes());
   adapters.picker.mockResolvedValue({ canceled: false, filePaths: [archive] });
-  adapters.activate.mockImplementation(async () => {
-    const packages = await InstalledPackages.open({
-      root: path.join(adapters.root, "extensions"),
-      runtime: { appVersion: "0.23.0-dev.5", apiVersion: "0.1.0" },
-      leases: { tryAcquire: async () => ({ release: async () => {} }) },
-    });
-    const entry = (await packages.snapshot())[0]!;
-    return {
-      epoch: "controlled-application-backend",
-      signal: adapters.backendLifetime.signal,
-      selection: {
-        id: entry.id,
-        generation: entry.generation,
-        digest: entry.digest!,
-      },
-      state: () => "active",
-      call: vi.fn(async () => ({ ok: true })),
-      retire: vi.fn<Backend["retire"]>(),
-    };
-  });
+  adapters.activate.mockImplementation(() =>
+    applicationBackend(adapters.root, adapters.backendLifetime.signal),
+  );
   // Model preview admission/catalog targeting, not the host filesystem. Startup
   // captures both synchronously before its first await; Windows store operations
   // must retain their native directory-sync policy after that boundary.

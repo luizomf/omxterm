@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { createTerminalLayoutBridge } from "./terminal-layout-bridge";
+import { createMirrorTypingBridge } from "./mirror-typing-bridge";
 import { isLayoutToken } from "../shared/terminal-layout";
 import { createHostedContentBridge } from "./extension-view-bridge";
 import { createPaletteTransport } from "./command-palette-bridge";
@@ -187,6 +188,7 @@ const terminal: TerminalBridge = {
     ipcRenderer.send("terminal:ssh-pane", { token, accepted });
   },
   layout: createTerminalLayoutBridge(ipcRenderer),
+  mirrorTyping: createMirrorTypingBridge(ipcRenderer),
   async start(surfaceId, workingDirectoryOf, launchToken, restoreToken) {
     if (surfaceId !== undefined && !isSurfaceIdentity(surfaceId))
       throw new TypeError("Invalid Surface identity");

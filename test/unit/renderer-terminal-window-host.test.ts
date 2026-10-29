@@ -154,7 +154,9 @@ describe("renderer Terminal Window page host", () => {
       (listener: (command: TerminalFontZoom) => void) =>
         listeners.delete(listener),
     );
-    const mount = vi.fn(async () => createSurface({ zoom }));
+    const mount = vi.fn<
+      NonNullable<Parameters<typeof mountTerminalWindowPage>[1]["mount"]>
+    >(async () => createSurface({ zoom }));
     const configuration = {
       showTabBar: true,
       transparency: 0,
@@ -190,6 +192,8 @@ describe("renderer Terminal Window page host", () => {
         abortSignal: expect.any(AbortSignal) as AbortSignal,
         onFatalError: expect.any(Function) as (message: string) => void,
         onContextMenu: expect.any(Function) as () => void,
+        routeKeyInput: expect.any(Function) as (data: string) => boolean,
+        onSemanticInput: expect.any(Function) as () => void,
         contextMenuEnabled: true,
         background: "host",
         focus: false,
@@ -206,6 +210,7 @@ describe("renderer Terminal Window page host", () => {
         theme: DEFAULT_TERMINAL_THEME,
       },
     );
+    expect(mount.mock.calls[0]![2].routeKeyInput?.("local typing")).toBe(false);
     expect(zoom).toHaveBeenCalledWith("in");
 
     host.dispose();

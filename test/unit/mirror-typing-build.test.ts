@@ -7,11 +7,14 @@ import { buildMirrorTypingExtension } from "../../scripts/build-mirror-typing-ex
 import {
   checkCompatibility,
   extractPackage,
+  parseManifest,
 } from "../../src/installed-packages/archive";
 
 it("declares only memory-only mirror authority for the implementing host and API preview", async () => {
-  const manifest = JSON.parse(
-    await readFile("extensions/mirror-typing/extension.json", "utf8"),
+  const manifest = parseManifest(
+    JSON.parse(
+      await readFile("extensions/mirror-typing/extension.json", "utf8"),
+    ),
   );
   expect(manifest).toMatchObject({
     id: "omxterm.mirror-typing",

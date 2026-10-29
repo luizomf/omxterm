@@ -26,6 +26,7 @@ import { extensionInvocationTarget } from "./extension-invocation-target";
 import { startApplicationExtensions } from "./application-extensions";
 import { registerSshTerminalLaunch } from "./ssh-terminal-ipc";
 import { startApplicationLayout } from "./application-layout";
+import { registerMirrorTypingIpc } from "./mirror-typing-ipc";
 import { terminalContextMenuTemplate } from "./terminal-context-menu";
 import * as applicationAbout from "./application-about";
 import { startApplicationSettings } from "./application-settings";
@@ -126,11 +127,13 @@ let extensions:
   Awaited<ReturnType<typeof startApplicationExtensions>> | undefined;
 let sshLaunch: ReturnType<typeof registerSshTerminalLaunch>;
 let layouts: ReturnType<typeof startApplicationLayout>;
+let mirrors: ReturnType<typeof registerMirrorTypingIpc>;
 const shutdown = registerTerminalShutdown(app, {
   application: () => terminalApplication,
   disposeSessions: () => {
     sshLaunch?.dispose();
     layouts?.dispose();
+    mirrors?.dispose();
     disposeTerminalSessions();
   },
   disposeExtensions: () => extensions?.dispose() ?? Promise.resolve(true),
@@ -190,6 +193,11 @@ app
           home: account.homedir,
           application: () => terminalApplication,
         });
+        mirrors = registerMirrorTypingIpc({
+          ipc: ipcMain,
+          trusted: terminalIpcRouter.isTrustedSender,
+          quitting: () => terminalApplication?.isQuitting() === true,
+        });
         let rebuildMenu = () => {};
         let actionCatalog: CoreActionCatalog;
         extensions = await startApplicationExtensions({
@@ -198,6 +206,7 @@ app
           applicationRoot,
           ssh: sshLaunch,
           layout: layouts,
+          mirrorTyping: mirrors,
           isTrustedSender: terminalIpcRouter.isTrustedSender,
           changed: () => rebuildMenu(),
           keybind: (event, input) =>
@@ -300,6 +309,14 @@ app
                 nativeTitleInset,
               ),
               initialFullScreen: window.isFullScreen(),
+              mirrorWindowFocused: () => window.isFocused(),
+              mirrorWindowAvailable: () =>
+                !terminalApplication?.isQuitting() &&
+                !window.isDestroyed() &&
+                window.isVisible() &&
+                !window.isMinimized(),
+              onMirrorStopped: (lease, reason) =>
+                mirrors.stopped(window, lease, reason),
               backgroundTransparency: backgroundEffects.register(
                 window,
                 active.configuration,
@@ -338,11 +355,13 @@ app
               },
               onSessionSelected: (sessionId) => {
                 invocationTarget.selected(sessionId);
+                mirrors.selectionChanged(window, sessionId);
                 actionDelivery.select(sessionId);
                 titleController.selectSession(sessionId);
               },
               onSettingsSelected: () => {
                 invocationTarget.selected(null);
+                mirrors.selectionChanged(window, null);
                 actionDelivery.select("settings");
                 titleController.selectSettings(
                   currentTranslator().t("settings.title"),
@@ -394,6 +413,7 @@ app
             });
 
             layouts.register(window, controller, restoration?.plan);
+            mirrors.register(window, controller);
             extensions!.registerWindow(window, (source, context) =>
               invocationTarget.capture(
                 (id) => controller.reportedWorkingDirectory?.(id),

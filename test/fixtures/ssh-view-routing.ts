@@ -10,6 +10,33 @@ import type { BrowserWindow } from "electron";
 import type { startApplicationExtensions } from "../../src/main/application-extensions";
 import type { ExtensionViewHostOptions } from "../../src/main/extension-view-host";
 import { packageArchive } from "./extension-package-archive";
+import type { Backend } from "../../src/extension-runtime/runtime";
+import { InstalledPackages } from "../../src/installed-packages/installed-packages";
+import path from "node:path";
+
+export async function applicationBackend(
+  root: string,
+  signal: AbortSignal,
+): Promise<Backend> {
+  const packages = await InstalledPackages.open({
+    root: path.join(root, "extensions"),
+    runtime: { appVersion: "0.23.0-dev.5", apiVersion: "0.1.0" },
+    leases: { tryAcquire: async () => ({ release: async () => {} }) },
+  });
+  const entry = (await packages.snapshot())[0]!;
+  return {
+    epoch: "controlled-application-backend",
+    signal,
+    selection: {
+      id: entry.id,
+      generation: entry.generation,
+      digest: entry.digest!,
+    },
+    state: () => "active",
+    call: vi.fn(async () => ({ ok: true })),
+    retire: vi.fn<Backend["retire"]>(),
+  };
+}
 export const manifest = {
   format: 1,
   id: "example.files",
