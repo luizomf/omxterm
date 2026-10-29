@@ -316,6 +316,11 @@ class MirrorWindow {
     signal: AbortSignal,
     admit: Admission,
   ): Promise<Value> {
+    // Hosted requests contain prototype-free arrays; normalize before using
+    // array methods or iteration, without changing transport hardening.
+    const handles = Array.isArray(value.handles)
+      ? Array.from(value.handles)
+      : [];
     if (
       !exactLayoutKeys(value, [
         "operation",
@@ -328,13 +333,13 @@ class MirrorWindow {
       value.setupToken !== context.token ||
       !isLayoutToken(value.setupToken) ||
       !Array.isArray(value.handles) ||
-      value.handles.length < 2 ||
-      value.handles.length > 16 ||
-      !value.handles.every(isLayoutToken) ||
-      new Set(value.handles).size !== value.handles.length
+      handles.length < 2 ||
+      handles.length > 16 ||
+      !handles.every(isLayoutToken) ||
+      new Set(handles).size !== handles.length
     )
       throw new Error("Unavailable setup");
-    const selected = value.handles.map((handle) =>
+    const selected = handles.map((handle) =>
       context.panes.find((pane) => pane.handle === handle),
     );
     if (
@@ -354,7 +359,7 @@ class MirrorWindow {
         kind: "prepare",
         request: prepared,
         context: context.id,
-        handles: value.handles,
+        handles,
         sourceView: view,
       },
       pendingSignal,

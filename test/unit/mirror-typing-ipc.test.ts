@@ -13,7 +13,7 @@ import {
   type MirrorPane,
 } from "../../src/shared/mirror-typing";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
-import type { Value } from "../../src/extension-runtime/protocol";
+import { captureValue, type Value } from "../../src/extension-runtime/protocol";
 import {
   clipboardOptions,
   createIpcHarness,
@@ -116,7 +116,11 @@ function fixture() {
       window,
       context,
       "view-id",
-      { operation: "terminal.mirrorTyping.v1", ...value },
+      // Hosted views forward captured JSON arrays with no prototype/iterator.
+      captureValue({
+        operation: "terminal.mirrorTyping.v1",
+        ...value,
+      }) as Record<string, Value>,
       lifetime.signal,
       admit,
     );
@@ -216,7 +220,7 @@ it("late retirement of an old setup cannot revoke a replacement context", async 
   f.dispose();
 });
 
-it("composes explicit visible handoff, final admission and fixed native recipients without exposing session IDs", async () => {
+it("composes captured view requests, visible handoff and fixed native recipients without exposing session IDs", async () => {
   const f = fixture();
   const { context, start } = await setup(f);
   expect(await f.request(context, start)).toEqual({

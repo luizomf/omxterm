@@ -82,6 +82,9 @@ it("selects all candidates, locks original focus, uses literal labels and requir
   expect(document.querySelector("img")).toBeNull();
   expect(document.body.textContent).toContain("<img src=x onerror=alert(1)>");
   f.inputs()[2]!.click();
+  expect(document.querySelector('[role="status"]')?.textContent).toBe(
+    "Choose your targets, then Start mirroring.",
+  );
   f.inputs()[1]!.click();
   expect(f.button("start").disabled).toBe(true);
   f.inputs()[1]!.click();

@@ -172,9 +172,7 @@ export function mountMirrorTypingPage(
         return input;
       });
       list.replaceChildren(...inputs.map((input) => input.parentElement!));
-      message(
-        "All listed panes selected. Choose your targets, then Start mirroring.",
-      );
+      message("Choose your targets, then Start mirroring.");
     } catch {
       if (!disposed && intent === generation)
         message(
