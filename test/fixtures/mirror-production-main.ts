@@ -189,6 +189,7 @@ async function start(window: BrowserWindow, capture = false) {
     false,
     "native setup hidden before active input",
   );
+  return page;
 }
 // Chromium dispatch, not insertText, DOM KeyboardEvent or mirror IPC. The char
 // event is Chromium's text phase of the same synthetic keyboard gesture.
@@ -379,12 +380,15 @@ async function run(window: BrowserWindow) {
   ipcMain.removeListener("terminal:mirror-stop", observeStop);
   assert.equal(semanticStopBeforeWrite, true);
   checks.push(MIRROR_CHECKS[4]);
-  await start(window);
+  const retiringPage = await start(window);
   assert.equal(children.length, 1);
   assert.equal(children[0]!.child.kill("SIGTERM"), true);
   await status(window, "Mirroring stopped");
   await until(
-    () => children[0]!.closed && hosted().length === 0,
+    () =>
+      children[0]!.closed &&
+      retiringPage.isDestroyed() &&
+      hosted().length === 0,
     "actual backend and native view retirement",
   );
   assert.equal(ptys.length, 3);
