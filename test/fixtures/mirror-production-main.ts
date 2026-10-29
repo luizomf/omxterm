@@ -19,6 +19,10 @@ import {
   type MirrorReceipt,
 } from "./mirror-native-contract";
 import type { MirrorInputs } from "./mirror-production-build";
+import type {
+  MirrorCommand,
+  MirrorReply,
+} from "../../src/shared/mirror-typing";
 import {
   click,
   focus,
@@ -171,8 +175,98 @@ async function start(window: BrowserWindow, capture = false) {
     if (inputs.filter(i => i.checked).length !== 2) throw Error('fixed pair mismatch');
   })()`);
   if (capture) await screenshot(page, "setup.png");
-  await click(page, "Start mirroring");
-  await status(window, "Mirroring typing · 2 panes");
+  const events: object[] = [];
+  const requests = new Map<string, MirrorCommand["kind"]>();
+  const core = window.webContents;
+  const originalSend = core.send;
+  const native = () => ({
+    windowFocused: window.isFocused(),
+    coreFocused: core.isFocused(),
+    setupFocused: !page.isDestroyed() && page.isFocused(),
+    setupVisible: window.contentView.children
+      .find(
+        (view) => view instanceof WebContentsView && view.webContents === page,
+      )
+      ?.getVisible(),
+  });
+  const record = (event: object) => {
+    if (events.length < 32) events.push({ ...event, ...native() });
+  };
+  const reply = (event: Electron.IpcMainEvent, value: MirrorReply) => {
+    if (event.sender === core)
+      record({
+        direction: "reply",
+        kind: requests.get(value.request),
+        ok: value.ok,
+      });
+  };
+  const stop = (event: Electron.IpcMainEvent, value: { reason?: unknown }) => {
+    if (event.sender === core)
+      record({ direction: "renderer-stop", reason: value.reason });
+  };
+  if (capture) {
+    core.send = (channel: string, ...args: unknown[]) => {
+      if (channel === "terminal:mirror-command") {
+        const command = args[0] as MirrorCommand;
+        if ("request" in command) requests.set(command.request, command.kind);
+        record({
+          direction: "command",
+          kind: command.kind,
+          reason: "reason" in command ? command.reason : undefined,
+        });
+      }
+      return originalSend.call(core, channel, ...args);
+    };
+    ipcMain.on("terminal:mirror-reply", reply);
+    ipcMain.on("terminal:mirror-stop", stop);
+    record({ direction: "before-click" });
+  }
+  let active = false;
+  try {
+    await click(page, "Start mirroring");
+    await status(window, "Mirroring typing · 2 panes");
+    active = true;
+  } finally {
+    if (capture) {
+      core.send = originalSend;
+      ipcMain.removeListener("terminal:mirror-reply", reply);
+      ipcMain.removeListener("terminal:mirror-stop", stop);
+      const dom: unknown = await core
+        .executeJavaScript(
+          `(() => {
+        const row = document.querySelector('.mirror-typing-status');
+        return {
+          focused: document.hasFocus(),
+          statusRows: document.querySelectorAll('.mirror-typing-status').length,
+          status: row?.querySelector('[role=status]')?.textContent,
+          hidden: row?.hidden,
+          markers: document.querySelectorAll('.mirror-typing-marker').length,
+          terminalFocused: !!document.activeElement?.closest('.terminal-surface'),
+        };
+      })()`,
+        )
+        .catch(() => ({ unavailable: true }));
+      const setup: unknown = page.isDestroyed()
+        ? { destroyed: true }
+        : await page
+            .executeJavaScript(
+              `({
+          notice: document.querySelector('[role=status]')?.textContent,
+          startDisabled: document.querySelector('[data-action=start]')?.disabled,
+          selected: document.querySelectorAll('.mirror-targets input:checked').length,
+        })`,
+            )
+            .catch(() => ({ unavailable: true }));
+      await writeFile(
+        path.join(fixture.evidence, "start-boundary.json"),
+        JSON.stringify(
+          { active, events, finalNative: native(), dom, setup },
+          null,
+          2,
+        ),
+      );
+    }
+  }
   await until(
     () =>
       window.webContents.executeJavaScript(
