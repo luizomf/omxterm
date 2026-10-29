@@ -1,8 +1,17 @@
 # Internal extension backend runtime
 
-Internal checkpoint for [#719](https://github.com/luizomf/omxterm/issues/719), under [#712](https://github.com/luizomf/omxterm/issues/712). This module is not a public SDK, catalog/installer UI or completed extension support. Its production application consumer is now the [Linux ARM64 Files preview](files-development-preview.md), with startup construction but no automatic code activation. Web-content hosting belongs to [#718](https://github.com/luizomf/omxterm/issues/718), not this module. See [ADR 0040](adr/0040-run-backends-in-owned-node-children.md) and the [Installed Packages contract](extension-installation-foundation.md).
+This internal runtime lazily activates installed backends for the Linux ARM64
+extension preview. Consumers include [Files](files-development-preview.md),
+[SSH Connect](ssh-connect.md), [Saved Layout](saved-layout.md) and
+[Mirror Typing](mirror-typing.md). Application startup constructs infrastructure,
+not active extension code. The application manager composes backend and view
+owners with independent generation-matched pins and bounded Quit retirement.
 
-The Files application manager composes the separate backend and UI consumers with independent generation-matched pins and bounded Quit retirement. Internal/native module fixtures alone do not qualify that production composition or surviving-browser file-read exclusion after main death.
+The runtime is not a public SDK or the owner of installation UI, catalogs or
+[web-content hosting](adr/0039-own-packaged-web-content-by-epoch.md). See
+[ADR 0040](adr/0040-run-backends-in-owned-node-children.md) for its rationale and
+the [Installed Packages contract](extension-installation-foundation.md) for
+archive/version ownership.
 
 ## Caller and backend interfaces
 
@@ -109,4 +118,15 @@ The explicit artifact includes `index.mjs`, app-owned `bootstrap.mjs`, `packages
 
 Controlled tests cover admission races, cancellation, bounded pending calls, replay rejection and separate exit/close facts. Native tests use the actual runtime/store/ESM/bootstrap interface and real direct children, not a copied prototype. They require an assigned disposable native environment; never run them on an owner's working desktop merely because the outer Vitest wrapper is headless. Test artifacts remain when settlement is unknown. Actual parent-process death is a separate native gate from channel loss; do not substitute one for the other. The Linux-only parent-death test uses a read-only Python pidfd observer, opened while the backend still belongs to its live main. It neither signals nor reaps the backend; the parent is terminated through its retained ChildProcess handle. Missing Python/pidfd support fails before deliberate parent death. This test-only observer is not an app dependency or a cross-platform exit-code claim; non-Linux explicitly skips that case. Its source/build/profile receipts are retained for the outer qualification owner to export and remove only after verified settlement.
 
-Earlier utility-process and throwaway Node-child outcomes retain their original identities. The utility path is not retained as a speculative alternate implementation. Production qualification must name its exact source and runtime, including architecture/elevation limits. This internal artifact alone does not qualify packaged inclusion/unpacking, security-fuse bytes, Developer ID/notarization, deployment floors, x64 or Windows ordinary-user permissions. Separate Linux ARM64 Files product observations cover composed actions/views and joined Quit. A current module-native management observation additionally confirms backend exit/close before re-enable, dormant enable and explicit fresh-generation activation with an independent view pin; its controlled view port is not graphical recovery qualification. See the Files guide for the separate renderer-crash/core-survival and bounded actual-main-death observations. Surviving-browser file-read exclusion remains unqualified. Source wiring alone is not qualification, and these observations do not establish signed distribution or a cross-platform matrix.
+Qualification must identify exact source/runtime and architecture/elevation limits.
+Module tests and this artifact alone do not qualify packaged inclusion/unpacking,
+security-fuse bytes, Developer ID/notarization, deployment floors, x64 or Windows
+ordinary-user permissions. The [Files evidence summary](files-development-preview.md#build-and-evidence-boundary)
+distinguishes production, renderer-crash, module-native management and actual
+main-death observations; controlled views are not graphical recovery evidence.
+Surviving-browser file-read exclusion remains unqualified. Neither source wiring
+nor those observations establish signed distribution or a cross-platform matrix.
+[ADR 0040](adr/0040-run-backends-in-owned-node-children.md#why-change-the-utility-choice)
+retains the failed utility-process evidence and bounded Node-child discriminator;
+neither qualifies later production code, and utilityProcess is not an alternate
+implementation.

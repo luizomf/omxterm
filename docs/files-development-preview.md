@@ -1,25 +1,24 @@
 # Files development preview implementation
 
-Development preview for [#723](https://github.com/luizomf/omxterm/issues/723) and
-[#728](https://github.com/luizomf/omxterm/issues/728). The separate
-[Linux ARM64 host dev.9](https://github.com/luizomf/omxterm/releases/tag/v0.23.0-dev.9)
-and [Files 0.1.0](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.1.0)
-prereleases are published with checksums. The current stable
-[Linux ARM64 host 0.23.0](https://github.com/luizomf/omxterm/releases/tag/v0.23.0)
-also supports these unchanged Files bytes; the extension/runtime remain a
-Linux ARM64 development preview. Actual public catalog/archive installation
-passed on both qualified hosts with the exact extracted
-AppImage, Files operations/conflicts, reinstall/management, the same live PTY
-and joined Quit. Input and consent were fixture-controlled. This Files lifecycle
-check uses extraction, not FUSE/helper installation; the stable host's separate
-package checks are recorded in its release notes. Other extension platforms and
-a stable extension SDK remain unqualified.
+Files is a separately installed Linux ARM64 development preview
+([#723](https://github.com/luizomf/omxterm/issues/723),
+[#728](https://github.com/luizomf/omxterm/issues/728)), not a stable extension SDK.
+The published [Files 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.1.0)
+works with the separately published [host dev.9](https://github.com/luizomf/omxterm/releases/tag/v0.23.0-dev.9)
+and [stable host 0.23.0](https://github.com/luizomf/omxterm/releases/tag/v0.23.0).
+Public catalog/archive installation passed on both exact extracted AppImages,
+including Files operations/conflicts, reinstall/management, same-PTY continuity
+and joined Quit. Input and consent were fixture-controlled; extraction does not
+qualify FUSE/helper installation. See the stable release notes for its separate
+package checks and [below](#build-and-evidence-boundary) for other evidence limits.
 
-Host0.24.0-dev.1 deliberately extends the exact immutable Files0.1.0 admission
-already present in0.24.0-dev.0; it does not broaden the manifest range or replace
-published archive bytes. The Saved Layout candidate requires a focused
-unchanged-artifact lifecycle check on that exact new host. Prior host results
-above are not a claim that this new candidate has passed native verification.
+The [foundation's exact-host exception](extension-installation-foundation.md#archive-contract)
+admits unchanged Files 0.1.0 on hosts 0.24.0-dev.0, dev.1 and dev.2 without
+broadening its manifest range or replacing published bytes. The
+[Saved Layout delivery](https://github.com/luizomf/omxterm/issues/673#issuecomment-6495927726)
+records the unchanged archive's lifecycle check on dev.1. Admission on dev.2 is
+not dev.2 package or Files lifecycle qualification; earlier host evidence does
+not qualify every admitted version.
 
 ## Concrete consumer
 
@@ -290,35 +289,33 @@ Input is synthetic Chromium and trust answers are controlled, not physical nativ
 dialog qualification. Successful inspection-only evidence does not substitute for
 this opt-in vertical.
 
-Qualification is phase-specific, not one final replay of every workflow:
+Qualification is scoped to distinct observations, not one final replay on a
+single source revision:
 
-- A production vertical passed local Settings trust, shared actions, two views sharing
-  a backend, create/folder/no-clobber move/trash/confirmed deletion, backend loss without
-  replay, disable/uninstall, retained draft, same-PTY continuity and joined Quit.
-  The composed native window was inspected; selected hosted Copy/Paste and About
-  were exercised separately.
-- After author corrections, native checks passed dormant installation, modal refusal,
-  and actual hosted-renderer crash retirement while the same core remained responsive
-  and its backend remained active. No per-view renderer-process isolation is promised.
-- A separate headless Electron module qualification used the real manager/store,
-  runtime, Files archive, native leases and children: Disable joined actual backend
-  exit/close before Enable; Enable stayed dormant; explicit opening acquired a fresh
-  generation/backend and independent view pin. Both children settled cooperatively.
-  View presentation was controlled in this case: it is not a graphical recovery pass.
-  Headless renderer/main/store checks separately cover management admission and stale
-  generations. A resolved DOM click is not proof that a disabled control sent a request.
+- **Production workflow:** local Settings trust, shared actions, two views sharing
+  a backend, create/folder/no-clobber move/trash/confirmed deletion, backend loss
+  without replay, disable/uninstall, retained draft, same-PTY continuity and joined
+  Quit passed. The composed window was inspected; selected hosted Copy/Paste and
+  About were exercised separately.
+- **Native view lifecycle:** dormant installation, modal refusal and hosted-renderer
+  crash retirement passed with the core responsive and backend active. No per-view
+  renderer-process isolation is promised.
+- **Module-native management:** real manager/store/runtime, Files archive, leases
+  and children established backend exit/close before Enable, dormant Enable,
+  fresh-generation activation and an independent view pin; both children settled
+  cooperatively. Controlled view presentation is not graphical recovery. Headless
+  renderer/main/store checks cover admission and stale generations; a resolved DOM
+  click does not prove that a disabled control sent a request.
+- **Actual main death:** after main SIGKILL, the hosted renderer exited. An
+  independent backend pin retained the delivered/read version A through uninstall
+  and collection attempts until backend kernel exit, then collection succeeded.
+  The original orphan's exit code was unknown. This does not prove universal
+  renderer termination or a surviving renderer's later/fresh A or B read exclusion.
 
-Failed composite recovery attempts remain failures; their historical Disable
-admission, an earlier directory-list failure and an uncorrelated negative backend
-reply remain unexplained. Correcting private fixture readiness and an invalid
-optional-argument assertion does not retroactively turn those attempts into passes.
-
-An actual main-process SIGKILL observation delivered and began reading pinned A;
-its hosted renderer exited. An independent backend pin retained A through uninstall
-and collection attempts until that backend's kernel exit, after which A was collected.
-The original orphan's exit code was not observed. This is bounded lifetime evidence,
-not proof of universal browser termination or later/fresh A or B read exclusion in a
-surviving renderer. **Surviving-browser main-death file-read exclusion remains
-unqualified.** Normal retirement or all-browser exit cannot establish that property.
-These Linux ARM64 observations do not qualify other platforms, a display/locale
-matrix, signed distribution or a stable SDK.
+Historical composite recovery attempts remain failed: Disable admission, an
+earlier directory-list failure and an uncorrelated negative backend reply remain
+unexplained. Later fixture corrections and passing checks do not resolve them.
+**Surviving-browser main-death file-read exclusion remains unqualified**; normal
+retirement or all-browser exit cannot establish it. These Linux ARM64 observations
+do not qualify other platforms, a display/locale matrix, signed distribution or
+a stable SDK.

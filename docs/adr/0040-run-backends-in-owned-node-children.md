@@ -26,14 +26,22 @@ Keeping utilityProcess while silently raising the responsiveness threshold would
 
 The [runtime contract](../extension-backend-runtime.md) governs actual caller/export interfaces, limits, cancellation and settlement. The environment allowlist excludes app bootstrap/diagnostic variables but cannot isolate trusted code from user files or credentials. Each application establishes fresh authority; surviving orphan versions can remain Pending Cleanup while unrelated management and fresh admission continue.
 
-### Original delivery boundary
-
-The #719 checkpoint exposed activation only to explicit internal callers, without an application startup/user activation path, catalog or composed Files/action/tab/web-host integration. Normal application build/startup were unchanged; runtime artifacts were built explicitly. Those were the module's original delivery boundaries, not permanent exclusions on application consumers.
-
 ### Current application consumer
 
-On Linux ARM64, `src/main/application-extensions.ts` now constructs the runtime during application startup, without activating installed code. Its application manager composes separate installation/trust, backend and web-content owners. Settings local-file, explicit HTTPS-link and official-catalog installation and enable remain dormant. Explicit shared actions activate the separately installed [Files development preview](../files-development-preview.md), with independent generation-matched backend/view pins, application tabs and bounded normal Quit retirement. The runtime itself does not own Settings, catalog acquisition, action discovery or web-content hosting, and exposes no stable SDK.
+Linux ARM64 application startup constructs the runtime without activating
+installed code. The [runtime reference](../extension-backend-runtime.md) covers
+current consumers and builds; [Files composition](../files-development-preview.md#owned-composition-modules)
+covers the application manager's separate installation/trust, backend and view
+owners. Installation and enable remain dormant; explicit actions activate code.
+Settings, catalog acquisition, action discovery and web-content hosting are not
+runtime responsibilities. Extension archives remain separate from the host;
+there is no stable SDK.
 
-Normal Linux ARM64 `npm run build` includes runtime artifacts and the native lease/Files move addons; explicit runtime builds remain available. The Files archive is built and distributed separately, not bundled into the host. The Files guide records the published host dev.9/Files 0.1.0 preview and exact extracted-AppImage public-consumption lifecycle with controlled input/consent. Package inspection and module-native tests alone are not that composed lifecycle evidence.
-
-Prototype evidence, historical failures and subsequent platform/product observations retain their exact source identities and limits. Surviving-browser main-death file-read exclusion remains unqualified. FUSE/helper installation, physical dialogs/input, security-fuse bytes, signing/notarization, selected deployment floors, ordinary-user Windows behavior and other-platform qualification are not established by this integration or the bounded public-consumption milestone.
+[Files qualification](../files-development-preview.md#build-and-evidence-boundary)
+keeps product observations distinct from package inspection and module-native
+tests. Prototype evidence and historical failures retain their identities and
+limits. Surviving-browser main-death file-read exclusion remains unqualified.
+The integration and bounded public-consumption evidence do not establish
+FUSE/helper installation, physical dialogs/input, security-fuse bytes,
+signing/notarization, deployment floors, ordinary-user Windows behavior or
+other-platform qualification.

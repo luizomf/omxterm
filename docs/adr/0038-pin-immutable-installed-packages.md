@@ -19,14 +19,20 @@ A whole-root process-lifetime lock/quarantine would block ordinary independent i
 
 The selected adapter adds a small per-target native build obligation, including Windows C++/SDK/import-library and runtime-loading qualification. Node-API reduces ABI churn, not architecture/deployment/signing obligations. It is separate from the Files no-clobber move primitive. Pinned `yauzl` and `semver` are direct runtime dependencies; implementing ZIP parsing or semver from scratch would increase security/maintenance cost.
 
-## Original delivery boundary
-
-The #715 checkpoint delivered the isolated module/addon with an explicit build, without an application startup caller, graphical installation, catalog acquisition, extension execution, action contribution or Files release. Normal app build/startup were unchanged at that checkpoint. Those were delivery boundaries, not permanent exclusions on consumers or transfers of their responsibilities into Installed Packages.
-
 ## Current integration and qualification
 
-The [foundation contract](../extension-installation-foundation.md) governs the implemented interface, limits, build and error behavior. On Linux ARM64, `src/main/application-extensions.ts` now opens the store and constructs runtime/management infrastructure during application startup; it never activates installed code at startup. Settings composes local-file, explicit HTTPS-link and official-catalog installation with captured-byte trust. Installation and enable remain dormant; explicit shared actions activate the separately installed [Files development preview](../files-development-preview.md).
+The [foundation contract](../extension-installation-foundation.md) owns interfaces,
+limits, builds and error behavior. Linux ARM64 application startup constructs
+installation/runtime infrastructure without activating installed code. Execution,
+web-content hosting, acquisition and trust UI remain consumer responsibilities;
+[Files composition](../files-development-preview.md#owned-composition-modules)
+documents their integration. Installation and enable remain dormant. Separate
+extension archives are not bundled into the host. Terminal ownership and ADR 0018
+are unchanged; the [specification](../spec.md#configuration-and-local-state) owns
+the application network policy.
 
-Normal Linux ARM64 `npm run build` includes the backend bootstrap and native lease/Files move addons. The isolated foundation build remains available. Files is built and distributed separately, not bundled into the host. Execution, web-content hosting, acquisition and trust UI remain consumer responsibilities, not capabilities owned by this module. Terminal ownership and ADR 0018 are unchanged; the current application network policy is governed by the [specification](../spec.md#configuration-and-local-state).
-
-The Files guide records the published host dev.9 and separate Files 0.1.0 preview and its exact extracted-AppImage public-consumption evidence with controlled input/consent. Neither source wiring nor module tests qualify FUSE/helper installation, physical dialogs/input, other platforms, signing or a stable SDK. Historical failures remain failures; surviving-browser main-death file-read exclusion remains unqualified as documented there.
+[Files qualification](../files-development-preview.md#build-and-evidence-boundary)
+separates product, module and main-death evidence. Source wiring and module tests
+do not qualify FUSE/helper installation, physical dialogs/input, other platforms,
+signing or a stable SDK. Historical failures remain failed; surviving-browser
+main-death file-read exclusion remains unqualified.
