@@ -273,7 +273,13 @@ void ready
       execFileSync("/usr/bin/xdotool", ["keydown", "Return"]);
       try {
         await terminalFocus();
-        execFileSync("/usr/bin/xdotool", ["keydown", "Return"]);
+        await until(
+          () =>
+            nativeKeys.some(
+              (input) => input.type === "keyDown" && input.repeat,
+            ),
+          "native held Enter autorepeat",
+        );
       } finally {
         execFileSync("/usr/bin/xdotool", ["keyup", "Return"]);
       }
