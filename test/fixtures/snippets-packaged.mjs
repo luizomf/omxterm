@@ -58,7 +58,19 @@ const children = [];
 const childProcess = require("node:child_process");
 const fork = childProcess.fork;
 childProcess.fork = (...args) => {
+  // [DEBUG-741-lock] Only this synthetic fixture's known backend diagnostics.
+  if (String(args[0]).endsWith("extension-runtime/bootstrap.mjs"))
+    args[2] = { ...args[2], stdio: ["ignore", "ignore", "pipe", "ipc"] };
   const child = fork(...args);
+  let diagnostic = "";
+  child.stderr?.on("data", (chunk) => {
+    diagnostic += chunk.toString();
+    const lines = diagnostic.split("\n");
+    diagnostic = lines.pop();
+    for (const line of lines)
+      if (line.startsWith("[DEBUG-741-lock]"))
+        process.stderr.write(line + "\n");
+  });
   if (String(args[0]).endsWith("extension-runtime/bootstrap.mjs")) {
     const record = { closed: false, exit: null };
     children.push(record);

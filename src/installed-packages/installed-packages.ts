@@ -168,7 +168,10 @@ export class InstalledPackages {
       await directory(path.join(this.root, name));
   }
   private async bounded<T>(operation: () => Promise<T>): Promise<T> {
-    if (this.active >= 32) throw new PackageError("busy");
+    if (this.active >= 32) {
+      console.error("[DEBUG-741-lock] capacity", process.pid);
+      throw new PackageError("busy");
+    }
     this.active++;
     try {
       return await operation();
@@ -179,11 +182,29 @@ export class InstalledPackages {
   private async writer<T>(
     operation: () => Promise<T>,
     publication?: Publication,
+    label = "writer",
   ): Promise<T> {
     await this.checkRoot();
+    // [DEBUG-741-lock] Temporary metadata-only cross-process contention probe.
+    const trace = (phase: string) =>
+      console.error(
+        "[DEBUG-741-lock]",
+        JSON.stringify({ pid: process.pid, label, phase }),
+      );
+    trace("acquire");
     const lease = await this.lock("writer", true);
+    trace(lease ? "acquired" : "busy");
     if (!lease) throw new PackageError("busy");
-    return withCleanup(operation, [() => lease.release()], publication);
+    return withCleanup(
+      operation,
+      [
+        async () => {
+          await lease.release();
+          trace("released");
+        },
+      ],
+      publication,
+    );
   }
   private async readRegistry(): Promise<Registry> {
     try {
@@ -426,17 +447,21 @@ export class InstalledPackages {
               },
               revalidate: () =>
                 this.bounded(() =>
-                  this.writer(async () => {
-                    if (released) return false;
-                    const current = (
-                      await this.readRegistry()
-                    ).installations.find((item) => item.id === id);
-                    return (
-                      current?.enabled === true &&
-                      current.generation === entry.generation &&
-                      current.digest === entry.digest
-                    );
-                  }),
+                  this.writer(
+                    async () => {
+                      if (released) return false;
+                      const current = (
+                        await this.readRegistry()
+                      ).installations.find((item) => item.id === id);
+                      return (
+                        current?.enabled === true &&
+                        current.generation === entry.generation &&
+                        current.digest === entry.digest
+                      );
+                    },
+                    undefined,
+                    "revalidate",
+                  ),
                 ),
             };
             return opened;
