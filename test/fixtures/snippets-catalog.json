@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "snippets": [
+    {
+      "name": "Exact insert",
+      "body": "  printf '%s\\n' 'SNIPPETS_INSERT_RECEIPT'  ",
+      "execute": false
+    },
+    {
+      "name": "Exact run",
+      "body": "printf '%s\\n' 'SNIPPETS_RUN_RECEIPT'",
+      "execute": true
+    }
+  ]
+}

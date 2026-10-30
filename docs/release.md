@@ -216,7 +216,7 @@ OMXTERM_FILES_BUILD=1 npm test -- test/integration/files-extension-build.test.ts
 Build Files **after** `npm run build` (which clears `dist`) and **before** packaging
 so exclusion is actually checked. The Files archive and its `.sha256`/`.json`
 sidecars live in `dist/extensions`, outside the host package. Current source builds
-Files `0.2.0` with minimum host `0.24.0-dev.4`. The immutable published Files
+Files `0.3.0` with minimum host `0.24.0-dev.4`. The immutable published Files
 `0.1.0` archive retains its historical minimum host `0.23.0-dev.8`; neither archive
 supports `v0.22.0`. When building an exported source
 archive, pass `OUTPUT.omxext FULL_SOURCE_COMMIT` to the Files builder and verify
@@ -318,6 +318,49 @@ lifecycle may be reused while relevant inputs remain unchanged. None establishes
 real SSH authentication/connectivity, other-platform extension support, a stable
 SDK or public acquisition before the separate checkpoint. Do not mutate sealed
 release notes/assets to retroactively claim later verification.
+
+## Snippets preview preparation and publication
+
+The Linux ARM64 source transition in ADR0044 is not a distributed migration.
+Prepare a partial prerelease, not the complete stable asset set. Other targets
+retain built-in Snippets until their own replacement is qualified. Source-native
+qualification does not substitute for the exact packaged host/archive pair.
+
+1. Select exact committed host and Snippets source identities. Build the host,
+   then `node scripts/build-snippets-extension.mjs /absolute/new/snippets.omxext`
+   (append the verified full source commit for an exported checkout). Preserve
+   archive/checksum/receipt identities; do not overwrite an earlier candidate or
+   change the build receipt's `qualification.status: not-run` field. A rebuild,
+   including changed embedded documentation/locales, is a new artifact identity.
+2. Package and verify the Linux ARM64 host with the normal release tools. Run the
+   [exact Snippets AppImage fixture](../test/fixtures/snippets-packaged.md#exact-appimage-adapter)
+   against those exact bytes and the chosen archive. Keep its synthetic-input,
+   software-rendering and controlled-consent limits explicit. Record full Linux
+   verifier evidence separately: extraction-only execution does not qualify FUSE
+   launch or helper installation. Include the [migration guide](snippets-migration.md).
+3. After complete source review/corrections and matching qualification, check
+   that the proposed host/extension tags and releases are absent. Create verified
+   exact-source tags and separate draft prereleases with `--verify-tag --draft
+--prerelease --latest=false`. The Snippets release gets its archive, checksum
+   and original receipt; the host gets its qualified AppImage/helper and checksum
+   pairs. Bind release notes to actual hashes, versions, source identities and
+   limitations, not a generic claim that every compatible host is qualified.
+4. Download draft assets and compare exact sizes/SHA-256. **Publish Snippets
+   first and verify anonymous public downloads before publishing a host that
+   removes built-in access.** Then publish/download/verify the compatible host.
+   Keep stable Latest unchanged. Never replace published same-version bytes,
+   move a sealed tag or retrofit assets into an immutable release.
+5. Ordinary local-archive installation remains available offline. Catalog
+   discovery is a separate optional promotion: publish and verify assets first,
+   preserve existing Files/SSH entries, bind the new entry to actual manifest,
+   receipt, size/digest and immutable URLs, then verify fixed-endpoint readback
+   and actual packaged public acquisition. Do not use the Files-specific generator
+   to erase other entries or claim Snippets public consumption from a local test.
+
+Record actual readback/consumption results separately from pre-publication
+qualification. A Linux preview does not close #741's other-platform work, create
+a stable SDK or imply automatic installation/enablement. Existing user catalogs
+remain untouched.
 
 ## Publication
 

@@ -21,6 +21,7 @@ it.skipIf(!enabled)(
   async (testContext) => {
     assert.equal(process.platform, "linux");
     assert.equal(process.arch, "arm64");
+    assert.equal(process.env.OMXTERM_SNIPPETS_APPIMAGE_APPIMAGE, undefined);
     const values = Object.fromEntries(
       names.map((name) => {
         const value = process.env[prefix + name];
@@ -68,6 +69,12 @@ it.skipIf(!enabled)(
             "test/fixtures/snippets-packaged.mjs",
             path.join(root, "main.mjs"),
           );
+          for (const name of [
+            "snippets-scenario.cjs",
+            "snippets-observer.cjs",
+            "snippets-catalog.json",
+          ])
+            await cp(path.join("test/fixtures", name), path.join(root, name));
           await writeFile(
             path.join(root, "package.json"),
             JSON.stringify({ type: "module", main: "main.mjs" }),

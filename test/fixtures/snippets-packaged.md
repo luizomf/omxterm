@@ -2,8 +2,9 @@
 
 This fixture exercises an ordinary `.omxext` install and explicit trust through
 Settings, followed by real hosted-page requests through production semantic
-admission, presentation, Surface and PTY delivery. It is not qualification of an
-unchanged packaged host, physical keyboard, default GPU, or platform cutover.
+admission, presentation, Surface and PTY delivery. Source and exact-AppImage
+adapters share one nine-scenario body. Their evidence remains distinct; neither
+qualifies physical keyboards, the default GPU or other platforms.
 
 ## Composition supplied by the integration owner
 
@@ -43,6 +44,41 @@ launch, timeout, cancellation and cleanup. A successful result requires normal
 exit, no cleanup errors, joined backend/PTY shutdown and exactly one scenario
 receipt. The integration owner should retain the supervisor receipts alongside
 host commit/build and archive provenance.
+
+## Exact AppImage adapter
+
+`test/integration/snippets-appimage.test.ts` extracts the supplied exact AppImage
+without replacing its entry, dependencies or ASAR. It uses the existing packaged
+process owner and loopback inspector, loading a separate CommonJS observer. The
+application runs with isolated HOME/XDG/profile and a PATH without source
+Node/npm dependencies. The ordinary guest account shell must be sh or bash.
+
+```sh
+OMXTERM_SNIPPETS_APPIMAGE_APPIMAGE=/absolute/host.AppImage \
+OMXTERM_SNIPPETS_APPIMAGE_APPIMAGE_SHA256=<sha256> \
+OMXTERM_SNIPPETS_APPIMAGE_ARCHIVE=/absolute/snippets.omxext \
+OMXTERM_SNIPPETS_APPIMAGE_ARCHIVE_SHA256=<sha256> \
+OMXTERM_SNIPPETS_APPIMAGE_VERSION=<host-version> \
+OMXTERM_SNIPPETS_APPIMAGE_EVIDENCE=/absolute/evidence \
+  npm test -- test/integration/snippets-appimage.test.ts
+```
+
+Do not set the source adapter's variables in this mode. Partial configuration
+fails; with no opt-in variables the test skips. Each run has new receipts. The
+observer asserts actual packaged version, executable, ASAR and backend paths.
+AppImage/archive/ASAR hashes are rechecked even on failure. Successful completion
+requires normal Quit, actual main exit and joined process ownership; failed roots
+and evidence are retained. Extraction does not qualify FUSE/helper installation
+or public acquisition.
+
+Both adapters observe new `node-pty` instances at their existing event-forwarding
+prototype seam and forward writes unchanged. This avoids assuming that replacing
+a CommonJS export changes main's already captured ESM spawn binding. The package
+adapter creates one ordinary New Tab after attachment; that new session runs the
+shared scenario. The initial readiness session remains alive and is independently
+checked for kernel exit at Quit. The scenario session and backend must join too.
+The source adapter observes its initial session before importing production main.
+Neither observer exposes a product input API or bypasses semantic admission.
 
 ## Oracles and limits
 
