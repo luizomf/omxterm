@@ -160,7 +160,7 @@ outputs are not claimed bit-for-bit reproducible across toolchains. Prepared
 JavaScript identities are listed in the [Restty guide](restty-development.md#pinned-inputs-and-wasm-core-rebuild).
 
 For the fixture adapter's readiness, early-exit and failed-start protocol, see
-[Supervised PTY acquisition](#supervised-pty-acquisition). Acquisition does not
+[Supervised PTY acquisition](native-test-reference.md#supervised-pty-acquisition). Acquisition does not
 establish native-resource quiescence or fixture settlement.
 
 Windows public kill/resize still
@@ -410,71 +410,14 @@ Host/oracle phase receipts: [fixture reference](native-test-reference.md#hostora
 
 ## Fixture ownership and cleanup
 
-- [Linux packaged-wrapper controls](#linux-packaged-wrapper-controls)
+- [Linux packaged-wrapper controls](native-test-reference.md#linux-packaged-wrapper-controls)
 - [Graphical fixture supervision](#graphical-fixture-supervision)
-- [Supervised PTY acquisition](#supervised-pty-acquisition)
-- [Windows cleanup diagnostics](#windows-cleanup-diagnostics)
+- [Supervised PTY acquisition](native-test-reference.md#supervised-pty-acquisition)
+- [Windows cleanup diagnostics](native-test-reference.md#windows-cleanup-diagnostics)
 
-### Linux packaged-wrapper controls
+<a id="linux-packaged-wrapper-controls"></a>
 
-Linux packaged-wrapper outcome controls use a private acquire-before-release
-handoff. A finite Run-as-Node actor (or the stream-retention control worker)
-proposes its PID/start identity and waits for an exact acknowledgement before
-its native action or wrapper exit. The verifier acknowledges only an actually
-collected actor with a live retained parent chain to the immutable initial
-wrapper identity. Proposals never seed ownership or authorize signaling.
-Malformed, oversized, stale and foreign controls fail within the existing
-bounds; recovery cannot turn a timeout/native failure into success. This does
-not provide containment of arbitrary unobserved orphans.
-
-`beforeCleanup.outcome` records only the native exit notification already
-observed by the verifier at that snapshot; it can be absent even when a retained
-worker has been reparented after its wrapper exited. Reparenting does not prove
-that the JavaScript exit callback has run. Acquisition-gap regressions compare
-that field with independently observed notification delivery, including a real
-exit notification deferred until recovery. They still require final native
-exit 7/no signal, the acquired worker's retained identity, open streams before
-recovery, exact output, closed streams and no remaining actors after recovery,
-and the original settlement-timeout failure. Cleanup never supplies a substitute
-native outcome or turns that intentional failure into verifier success.
-
-Only those notification-order cases hold the verifier's test clock at launch
-until the actual native exit emission is captured, then advance it to the same
-250 ms expiry. One independent 3-second wall-clock guard bounds readiness and
-capture together; this is event ordering, not native 250 ms latency
-qualification. Recovery closes the deferral gate before releasing any captured
-notification, so genuinely later arrivals pass through. Real time is restored
-before recovery timing and on setup/capture failure, before joining cleanup.
-An independent retirement timer shares that wall deadline, so a missing capture
-or recovery transition cannot leave an asynchronous join on a frozen clock. Portable real-Node
-controls cover late delivery, capture-gated expiry and wall-guard retirement,
-not Linux ownership qualification. The no-capture control awaits actual clock
-restoration by that watchdog before asserting retirement; elapsed wall time
-alone is not its completion receipt. The other real 250 ms negative controls and
-production deadlines remain unchanged.
-
-Positive generated-actor tests share the existing 3-second readiness/setup
-allowance with their readiness polling; their outer test guards also allow all
-three native controls and bounded recovery. This is not a 250 ms native-latency
-requirement. The six bad/missing-acknowledgement cases also use that positive
-setup allowance: they require actual acquisition before exercising exactly one
-ACK-publication fault, not acquisition expiry. The missing-publication case
-forces a late hidden collection while retaining the worker, native SIGKILL,
-stream closure and intentional settlement failure. Deliberate 250 ms
-acquisition-expiry controls still require failure: the same
-late hidden collection that succeeds with the positive allowance must expire
-without an acknowledgement or action under the negative budget, then settle
-cleanup. Controlled-clock tests call the actual actor acquisition helper to
-check matching acknowledgements just before, exactly at and after expiry, plus
-missing/mismatched acknowledgements. Production deadlines and ownership/signaling
-rules are unchanged.
-
-Headless regressions, including a deliberately bypassed handoff and forced
-procfs observation gaps:
-
-```sh
-node node_modules/vitest/vitest.mjs run test/unit/linux-packaged-process.test.ts test/unit/linux-wrapper-acquisition.test.ts test/unit/linux-wrapper-control.test.ts
-```
+Linux packaged-wrapper controls: [fixture reference](native-test-reference.md#linux-packaged-wrapper-controls).
 
 ### Graphical fixture supervision
 
@@ -490,70 +433,10 @@ To run the unit tests for fixture preparation and supervision headlessly:
 npx vitest run test/unit/fixture-preparation.test.ts test/unit/fixture-preparation-recipes.test.ts test/unit/fixture-preparation-callers.test.ts test/unit/native-preparation-ownership.test.ts test/unit/run-native-fixture-windows.test.ts test/unit/native-fixture-recovery.test.ts
 ```
 
-### Supervised PTY acquisition
+<a id="supervised-pty-acquisition"></a>
 
-Supervised PTY registration completes **process acquisition**, not native-resource
-quiescence or fixture settlement. Ordinary readiness requires a verified positive
-child identity; ordinary early exit requires a positive PID and reinspection
-confirming its disappearance. The fixture PTY adapter alone knows beta.18's
-`ready_datapipe` ordering; it never waits for payload or a prompt. Production
-session/shutdown interfaces and their actual-exit barrier remain unchanged.
+Supervised PTY acquisition: [fixture reference](native-test-reference.md#supervised-pty-acquisition).
 
-Only the pinned prepared **Windows** `execFailed === true` agent-error event
-selects failed-start acquisition. Reviewed dependency ordering consumes the
-attempt's deferred-connect admission before that notification, so late worker
-readiness cannot initiate another connect. The synchronous observer must verify
-the exact retained live owner and a valid positive-identity descendant closure,
-then atomically publish that snapshot before forwarding lifecycle downstream.
-Include live children/helpers created before native connect threw, even when the
-public PID remains 0. An inspected owner-only snapshot is also allowed; neither
-PID 0, absence nor the marker proves that no child existed or that native handles
-or threads retired. This path does not invoke the successful-readiness callback;
-Unix's shared marker still follows the ordinary actual-child exit path.
+<a id="windows-cleanup-diagnostics"></a>
 
-Readiness/exit/failed-start observation or publication failures retain the pending
-write-ahead record and retire temporary observers, without throwing through the
-dependency's synchronous listener queue and starving session lifecycle consumers.
-Safe diagnostics distinguish `ready-observation`, `exit-observation` and
-`failed-start-observation` (branch `failed-start`); publication failures retain
-their precise publication phase too. Later events cannot rescue failed
-observation. Synchronous registration failures still throw. The unchanged
-independent supervisor acquires retained ledger identities, rechecks exact birth
-identity before signaling, verifies disappearance and rejects pending/failed
-cleanup even after a fixture exit 0 or empty final inventory. Its join and the
-original native outcome/scenario assertions remain required; cleanup cannot turn
-a nonzero exit or timeout into success.
-
-This is a cooperative fixture protocol, not containment of arbitrary programs or
-unobserved orphan trees. A child that launches descendants and disappears before
-any accepted ancestry snapshot cannot be reconstructed from PID/name or empty
-inventories. The deferred-failure fixture therefore attempts valid PowerShell
-with literal no-profile, bounded, non-spawning arguments while preserving its
-real unavailable-cwd failure oracle. Unknown escaping ancestry is a blocker, not
-permission to invent identities or clear historical blocked receipts.
-Headless composition and receipt coverage:
-`npm test -- test/unit/native-fixture-ownership.test.ts test/unit/native-fixture-registration.test.ts test/unit/native-fixture-registration-receipt.test.ts`.
-Passing those controlled cases does not qualify Windows native D9 or its baseline.
-
-### Windows cleanup diagnostics
-
-Windows supervisor receipts can additionally contain optional `cleanupFailure`
-metadata when an existing cleanup PowerShell command throws. Its fixed `callsite`
-is `final-sample`, `registration-before-kill`, `termination`,
-`registration-after-kill`, or `survival`. `elapsedMs` measures the synchronous
-boundary around the failed `execFileSync` call (including JavaScript call/argument
-overhead) using the process-local monotonic clock, floored to whole milliseconds
-and capped at 86,400,000 (one day). It excludes inventory parsing, registration
-file processing and target encoding; it is not total cleanup time or an internal
-PowerShell phase duration. `category` uses only own data properties: `timeout`
-for `ETIMEDOUT`, `command-failed` for a nonzero safe-integer command exit status,
-otherwise `unknown`. No arbitrary error codes/text, command arguments, output, environment
-values or paths enter this metadata. The original `cleanupErrors` strings and
-native exit/signal/reason remain authoritative and unchanged. Successful cleanup
-and failures outside those command boundaries omit the field; legacy receipts
-without it remain valid. This improves future failure discrimination, not
-historical Windows performance or diagnosis of a rare timeout's cause. Command
-bounds, ownership blocking, profile retention and supervisor joining are unchanged.
-Headless emitted-supervisor/schema controls:
-`npm test -- test/unit/native-fixture-cleanup-failure.test.ts test/unit/native-fixture-cleanup-outcome.test.ts test/unit/run-native-fixture-windows.test.ts`.
-They do not replace actual Windows execution.
+Windows cleanup diagnostics: [fixture reference](native-test-reference.md#windows-cleanup-diagnostics).
