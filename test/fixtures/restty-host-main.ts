@@ -15,10 +15,7 @@ import type { LocalImageRequest } from "../../src/shared/local-image";
 import { fixtureLocalImageLoader } from "./restty-local-image-links";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { exerciseExplicitResttyTab } from "./restty-host-explicit-tab";
-import {
-  createControlledFontLoads,
-  exerciseConcurrentResttyTabs,
-} from "./restty-host-concurrent-font";
+import * as resttyConcurrent from "./restty-host-concurrent-font";
 import { exerciseResttyEvents } from "./restty-host-events";
 import { exerciseResttyCapabilities } from "./restty-host-capabilities";
 import * as resttyFailures from "./restty-host-failures";
@@ -85,7 +82,7 @@ let openedWindows = 0;
 let permissionRequests = 0;
 let ptyExits = 0;
 let sessionIndex = 0;
-const fontLoads = createControlledFontLoads();
+const fontLoads = resttyConcurrent.createControlledFontLoads();
 const outputStress = createOutputStressHarness({
   sessionIndex: oracle === "output-checkpoints" ? 0 : 2,
   checkpoints: checkpointCount,
@@ -460,15 +457,16 @@ app
       outputs,
       waitFor,
     });
-    const concurrentFontInitialization = await exerciseConcurrentResttyTabs({
-      window,
-      beginFontLoad: fontLoads.begin,
-      sessionDiagnostics: fixtureSessions.sessionDiagnostics,
-      sessionStarts: () => sessionIndex,
-      ptyExits: () => ptyExits,
-      sessionExited: (index) => exitedSessionIndices.has(index),
-      waitFor,
-    });
+    const concurrentFontInitialization =
+      await resttyConcurrent.exerciseConcurrentResttyTabs({
+        window,
+        beginFontLoad: fontLoads.begin,
+        sessionDiagnostics: fixtureSessions.sessionDiagnostics,
+        sessionStarts: () => sessionIndex,
+        ptyExits: () => ptyExits,
+        sessionExited: (index) => exitedSessionIndices.has(index),
+        waitFor,
+      });
     const { fontMutation, beforeDestroy, renderedFontFamily } =
       await resttyFailures.exerciseResttyRendererLoss({
         window,
