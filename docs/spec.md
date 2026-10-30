@@ -1925,8 +1925,8 @@ Files archive version/compatibility is maintained separately from the host;
 the current catalog selects immutable Files0.4.0 for Linux ARM64 with host
 `>=0.24.0-dev.8` and API `0.1.x`, preserving historical0.1.0 local/link delivery.
 The [distribution evidence](files-development-preview.md#files-040-distribution-and-controlled-qualification)
-distinguishes published bytes and controlled dev.11 qualification from the pending
-public-HTTPS native checkpoint; admission does not qualify every host.
+distinguishes published bytes, controlled dev.11 qualification and the separately
+passed public-HTTPS native checkpoint; admission does not qualify every host.
 Archives and build receipts are excluded from application packages. Build receipts
 bind final archive bytes to source/tool metadata without claiming qualification.
 macOS and Linux ARM64 package inspection exercises packaged store/lease/bootstrap

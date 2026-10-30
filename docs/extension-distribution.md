@@ -71,8 +71,8 @@ source `b6044d65d14345adb8d7ae59340fbca978512107`. It requires host
 `>=0.24.0-dev.8`, API `0.1.x`, and target `linux-arm64`. All three original assets
 passed draft and anonymous public readback; the original receipt remains
 `not-run` with intended host dev.12. Separate controlled qualification passed on
-the already-public dev.11 ARM64 AppImage. The actual public-HTTPS native
-consumption checkpoint is pending after catalog integration; see
+the already-public dev.11 ARM64 AppImage. A separate actual public-HTTPS native
+consumption checkpoint also passed after reviewed catalog integration; see
 [exact evidence and limits](files-development-preview.md#files-040-distribution-and-controlled-qualification).
 The promotion preserves SSH/Snippets metadata and all historical releases.
 Stable0.23.0 users need the historical Files0.1.0 local/link archive rather than

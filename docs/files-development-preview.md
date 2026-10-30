@@ -9,8 +9,8 @@ controlled-qualified pair uses the already-public
 [host 0.24.0-dev.11](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
 AppImage, not a new host build. The archive and both original sidecars were
 published and anonymously byte-verified on 2026-10-30. The separate actual
-public-HTTPS consumption checkpoint after catalog integration remains pending;
-controlled transport and release downloads do not establish it. See
+public-HTTPS consumption checkpoint after catalog integration also passed;
+it is distinct from controlled transport and release downloads. See
 [current qualification](#files-040-distribution-and-controlled-qualification).
 
 The historical published [Files 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.1.0)
@@ -286,9 +286,35 @@ qualify default GPU, physical input/dialogs, FUSE/helper installation, the compl
 trash/deletion-edge matrix, dev.20 execution, macOS, Linux x64 or surviving-browser
 main-death file-read exclusion. Original failures remain failed. A corrected
 plural-only listing-readiness fixture defect does not erase failed campaigns.
-The separate public catalog/archive HTTPS native checkpoint is **pending**, not
-implied by publication, byte readback or this controlled campaign. Historical
-0.1.0 public-consumption evidence above remains scoped to its original pairs.
+Historical 0.1.0 public-consumption evidence above remains scoped to its original
+pairs, not this controlled campaign.
+
+### Public Files 0.4.0 checkpoint
+
+The separately executed public-HTTPS checkpoint passed on 2026-10-30 after
+catalog integration at `fd7691a972f8e364bd3b3b2ba9ec1d90fcccf8b5` (tree-identical
+to independently reviewed `29f4c165b7733031802ab62d2a6a81af88284435`). Fixed raw
+catalog readback matched SHA-256
+`315c7208328b401a31944c97f8c259d8b449ab6c7185a1ded00c691d997c26f9`.
+SSH and Snippets metadata remained unchanged.
+
+Using the same exact dev.11 AppImage and Files0.4 archive identities above, a
+fresh isolated profile acquired the catalog and archive through production
+public HTTPS, without a fixture CA, controlled catalog file or interceptor.
+Seven scenario checks and two exact-digest consents passed: dormant install,
+companion/focus/terminal transitions, captured directory, actual file creation
+and no-clobber move/conflict, reinstall with normal backend retirement, fresh
+activation/disable/uninstall, and the same live PTY/Surface. Normal Quit joined
+main exit0, both backend exits0 and the PTY's kernel exit. Independent settlement
+confirmed process/profile/lane cleanup and unchanged artifact/helper hashes.
+
+The Install/Reinstall cards and Files operation capture were visually inspected.
+The final capture named `terminal-after.png` retained Settings pixels, so it is
+not terminal-paint evidence; terminal continuity is established by the same-shell
+command receipts and retained Surface identity instead. Nested-X11/GPU fallback,
+synthetic input/controlled consent and all other scope limits above still apply.
+No controlled negative-catalog or language campaign was repeated. Sealed release
+notes and original build receipts were not rewritten with this later outcome.
 
 ## Build and evidence boundary
 

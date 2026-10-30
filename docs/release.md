@@ -263,12 +263,17 @@ The generator emits a **Files-only** catalog. Merge only that entry into the ful
 Keep historical0.1.0 exception test fixtures independent of the current catalog;
 do not change compatibility code or sealed historical releases.
 
-After reviewed integration, read back the fixed raw endpoint byte-for-byte and
-run the separate exact-pair packaged `OMXTERM_FILES_PACKAGED_CATALOG=public`
-checkpoint with fresh evidence, no fixture CA/interceptor or controlled catalog
-file. This public-consumption checkpoint is **pending**. Controlled qualification,
-asset upload and anonymous byte readback are distinct milestones, not substitutes.
-Preserve failed campaigns and report the native limits in the preview guide.
+Reviewed catalog integration at `fd7691a972f8e364bd3b3b2ba9ec1d90fcccf8b5`
+preserved SSH/Snippets; fixed raw-endpoint readback matched SHA-256
+`315c7208328b401a31944c97f8c259d8b449ab6c7185a1ded00c691d997c26f9`.
+The separate exact-pair packaged `OMXTERM_FILES_PACKAGED_CATALOG=public`
+checkpoint then passed with fresh evidence, no fixture CA/interceptor or
+controlled catalog file. See the [public checkpoint](files-development-preview.md#public-files-040-checkpoint)
+for seven checks, two consents, normal joined Quit and qualification limits.
+Controlled qualification, asset upload, anonymous byte readback and actual
+packaged public consumption remain distinct milestones. Future promotions must
+repeat the relevant publication sequence with new identities, not mutate sealed
+releases or replay already-settled qualification without changed inputs.
 
 ### Historical Files 0.1.0 publication
 

@@ -17,9 +17,10 @@ previews, not a stable SDK or Files support for macOS/Linux x64.
 The separate release provides `omxterm-files-language-b6044d6.omxext`, its checksum
 and original build receipt. Verify the checksum and use **Install local .omxext…**
 or **Install from link** if not browsing the catalog. Exact-pair controlled
-installation/operations/management/Quit qualification passed; the separate actual
-public-HTTPS consumption checkpoint is still pending. Publication and checksum
-readback alone do not qualify that checkpoint.
+installation/operations/management/Quit qualification passed, followed by a
+separate actual public-HTTPS consumption checkpoint on the same pair. See
+[the checkpoint and its limits](files-development-preview.md#public-files-040-checkpoint);
+publication and checksum readback alone are not native qualification.
 
 Stable [host 0.23.0](https://github.com/luizomf/omxterm/releases/tag/v0.23.0)
 remains unchanged and requires the historical
