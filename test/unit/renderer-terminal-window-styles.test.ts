@@ -8,6 +8,8 @@ import { terminalPaneAccent } from "../../src/renderer/terminal-pane-accent";
 const terminalWindowCss = readFileSync(
   "src/renderer/terminal-window.css",
   "utf8",
+).replace('@import "./snippets-view.css";', () =>
+  readFileSync("src/renderer/snippets-view.css", "utf8"),
 );
 
 describe("Restty Terminal Window viewport", () => {
@@ -238,7 +240,7 @@ describe("Snippets Sidebar theme contrast", () => {
 
     for (const selector of [
       ".auxiliary-panel",
-      "#snippets-sidebar li button:hover",
+      ".snippets-view li button:hover",
     ]) {
       const background = declaration(ruleBody(selector), "background");
       expect(background).toContain("--terminal-chrome-neutral");
@@ -247,7 +249,7 @@ describe("Snippets Sidebar theme contrast", () => {
 
     expect(
       declaration(
-        ruleBody("#snippets-sidebar li button:focus-visible"),
+        ruleBody(".snippets-view li button:focus-visible"),
         "background",
       ),
     ).toBe("transparent");
@@ -297,28 +299,26 @@ describe("Snippets Sidebar theme contrast", () => {
       const foreground = hexColor(foregroundHex);
       const chromeNeutral = hexColor("#808090");
       const sidebarRule = ruleBody(".auxiliary-panel");
-      const inputRule = ruleBody('#snippets-sidebar input[type="search"]');
+      const inputRule = ruleBody('.snippets-view input[type="search"]');
       expect(declaration(sidebarRule, "color")).toContain(
         "--terminal-foreground",
       );
       expect(declaration(inputRule, "color")).toBe("inherit");
-      expect(
-        declaration(ruleBody("#snippets-sidebar li button"), "color"),
-      ).toBe("inherit");
+      expect(declaration(ruleBody(".snippets-view li button"), "color")).toBe(
+        "inherit",
+      );
 
       const inputFocusRule = ruleBody(
-        '#snippets-sidebar input[type="search"]:focus',
+        '.snippets-view input[type="search"]:focus',
       );
-      const buttonHoverRule = ruleBody("#snippets-sidebar li button:hover");
+      const buttonHoverRule = ruleBody(".snippets-view li button:hover");
       const buttonFocusRule = ruleBody(
-        "#snippets-sidebar li button:focus-visible",
+        ".snippets-view li button:focus-visible",
       );
-      const descriptionRule = ruleBody(
-        "#snippets-sidebar .snippet-description",
-      );
-      const emptyRule = ruleBody("#snippets-sidebar .snippets-empty");
+      const descriptionRule = ruleBody(".snippets-view .snippet-description");
+      const emptyRule = ruleBody(".snippets-view .snippets-empty");
       const placeholderRule = ruleBody(
-        '#snippets-sidebar input[type="search"]::placeholder',
+        '.snippets-view input[type="search"]::placeholder',
       );
       const sidebarBackground = mix(
         background,

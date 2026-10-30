@@ -1682,7 +1682,13 @@ Run and read-only preview reuse Protected Paste, modal exclusion and the same
 core preview owner as built-in Snippets. Native Enter repeats/release remain
 owned across focus handoff. Retirement cancels unaccepted interactions but does
 not revoke accepted Surface-owned input or end sessions. This preparatory
-capability does not install an optional Snippets package or cut over any platform;
+capability does not install an optional Snippets package or cut over any platform.
+Preparatory `extensions/snippets` source builds a separate archive using the shared
+Snippets UI/CSS and bounded catalog client. Its action is withheld from production;
+qualification composition selects it instead of the built-in view. Native child
+logical activity is separate from temporary visibility, and committed language
+and explicit search/restore focus intent preserve controls across overlays.
+No package publication or platform migration is implied;
 see [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md).
 This is a production-facing development module consumed by the Linux ARM64 Files preview.
 Catalog acquisition and stable SDK exposure remain separate. Packaged child

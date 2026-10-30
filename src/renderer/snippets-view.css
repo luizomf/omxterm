@@ -1,0 +1,176 @@
+.snippets-view {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.snippets-view[hidden] {
+  display: none;
+}
+
+.snippets-view input {
+  flex: none;
+}
+
+.snippets-view .snippets-results {
+  min-height: 0;
+  overflow: auto;
+  overflow-anchor: none;
+}
+
+.snippets-view input[type="search"]:focus-visible {
+  outline: 2px solid var(--terminal-foreground, #e6e6e6);
+  outline-offset: -2px;
+}
+
+.snippets-view input[type="search"] {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--terminal-background, #000000),
+      var(--terminal-foreground, #e6e6e6) 60%
+    );
+  border-radius: 6px;
+  outline: none;
+}
+
+.snippets-view input[type="search"]::placeholder {
+  color: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 70%
+  );
+}
+
+.snippets-view input[type="search"]:focus {
+  border-color: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 70%
+  );
+}
+
+.snippets-view ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.snippets-view li button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+}
+
+.snippets-view li button:hover {
+  /* Over the sidebar's 15% overlay, this retains the opaque 45% appearance. */
+  background: color-mix(
+    in srgb,
+    transparent,
+    var(--terminal-chrome-neutral)
+      calc(35.294118% * var(--terminal-background-opacity, 1))
+  );
+}
+
+.snippets-view li button:focus-visible {
+  background: transparent;
+  outline: 2px solid
+    color-mix(
+      in srgb,
+      var(--terminal-background, #000000),
+      var(--terminal-foreground, #e6e6e6) 70%
+    );
+  outline-offset: -2px;
+}
+
+.snippets-view .snippet-name {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.snippets-view .snippet-description {
+  max-width: 100%;
+  overflow: hidden;
+  color: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 70%
+  );
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.snippets-view li {
+  display: flex;
+  gap: 2px;
+  align-items: stretch;
+}
+
+.snippets-view li .snippet-activate {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The default action is visible before activation. */
+.snippets-view .snippet-intent {
+  font-size: 11px;
+  color: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 70%
+  );
+}
+
+.snippets-view li .snippet-preview-open {
+  flex: 0 0 auto;
+  align-self: center;
+  width: auto;
+  padding: 4px 6px;
+  font-size: 12px;
+  color: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 70%
+  );
+}
+
+.snippets-view .snippets-empty {
+  margin: 0;
+  color: color-mix(
+    in srgb,
+    var(--terminal-background, #000000),
+    var(--terminal-foreground, #e6e6e6) 70%
+  );
+}
+
+.snippets-view .snippets-error {
+  margin: 0;
+  padding: 8px;
+  overflow-wrap: anywhere;
+  color: #ffffff;
+  background: #8c1d18;
+  border-radius: 6px;
+}

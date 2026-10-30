@@ -17,7 +17,10 @@ export interface HostedContentPresentation {
   revision: number;
   bounds: { x: number; y: number; width: number; height: number };
   // true selects the child; "core" hands input back while retaining its pixels.
-  focus: boolean | "core";
+  focus: boolean | "core" | "restore";
+  // Logical selection survives temporary overlay/layout hiding. Older callers
+  // without this field retain visibility-based activity.
+  activeId?: string | null;
 }
 
 // The pixels are presented, but a foreground-only core focus handoff lost
@@ -44,6 +47,9 @@ export const extensionViewIpc = {
   close: "extension-view:close",
   visibility: "extension-view:visibility",
   appearance: "extension-view:appearance",
+  activity: "extension-view:activity",
+  language: "extension-view:language",
+  focusIntent: "extension-view:focus-intent",
   focus: "extension-view:focus",
   dismissPanel: "extension-view:dismiss-panel",
 } as const;
@@ -89,12 +95,21 @@ export function isHostedContentPresentation(
   value: unknown,
 ): value is HostedContentPresentation {
   if (
-    !record(value, ["id", "revision", "bounds", "focus"]) ||
+    !(
+      record(value, ["id", "revision", "bounds", "focus"]) ||
+      (record(value, ["id", "revision", "bounds", "focus", "activeId"]) &&
+        (value.activeId === null || isHostedContentId(value.activeId)))
+    ) ||
     !(value.id === null || isHostedContentId(value.id)) ||
     !Number.isSafeInteger(value.revision) ||
     (value.revision as number) <= 0 ||
-    !(typeof value.focus === "boolean" || value.focus === "core") ||
-    (value.focus === "core" && value.id === null) ||
+    !(
+      typeof value.focus === "boolean" ||
+      value.focus === "core" ||
+      value.focus === "restore"
+    ) ||
+    ((value.focus === "core" || value.focus === "restore") &&
+      value.id === null) ||
     !record(value.bounds, ["x", "y", "width", "height"])
   )
     return false;

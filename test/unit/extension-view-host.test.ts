@@ -86,6 +86,130 @@ it("replays window appearance on load, updates hidden views, isolates owners and
   expect(view.webContents.send).not.toHaveBeenCalled();
 });
 
+it("keeps logical activity through overlay/layout hiding and emits only explicit focus intents", async () => {
+  const f = await fixture();
+  const first = await f.host.open(opening);
+  const second = await f.host.open(opening);
+  const child = f.views[0]!.webContents;
+  const other = f.views[1]!.webContents;
+  child.send.mockClear();
+  other.send.mockClear();
+  const events = (channel: string): unknown[] =>
+    child.send.mock.calls
+      .filter(([name]: unknown[]) => name === channel)
+      .map(([, value]: unknown[]) => value);
+  await f.host.present({ ...present(first.id), activeId: first.id });
+  expect(events(extensionViewIpc.activity)).toEqual([true]);
+  expect(events(extensionViewIpc.focusIntent)).toEqual(["search"]);
+  await f.host.present({
+    ...present(first.id, 2),
+    activeId: first.id,
+    focus: false,
+  });
+  f.owner.emit("resize", {});
+  await f.host.present({
+    ...present(first.id, 3),
+    activeId: first.id,
+    focus: false,
+  });
+  expect(events(extensionViewIpc.activity)).toEqual([true]);
+  expect(events(extensionViewIpc.focusIntent)).toEqual(["search"]);
+  await f.host.present({
+    ...present(null, 4),
+    activeId: first.id,
+    focus: false,
+  });
+  expect(events(extensionViewIpc.activity)).toEqual([true]);
+  await f.host.present({
+    ...present(first.id, 5),
+    activeId: first.id,
+    focus: "restore",
+  });
+  expect(events(extensionViewIpc.focusIntent)).toEqual(["search", "restore"]);
+  await f.host.present({ ...present(second.id, 6), activeId: second.id });
+  expect(events(extensionViewIpc.activity)).toEqual([true, false]);
+  expect(other.send).toHaveBeenCalledWith(extensionViewIpc.activity, true);
+  expect(
+    await f.host.present({ ...present(first.id, 5), activeId: first.id }),
+  ).toBe(false);
+  expect(events(extensionViewIpc.activity)).toEqual([true, false]);
+  // Legacy callers without activeId continue deriving activity from visibility.
+  await f.host.present({ ...present(null, 7), focus: false });
+  expect(other.send).toHaveBeenCalledWith(extensionViewIpc.activity, false);
+  await f.host.present({ ...present(first.id, 8), activeId: first.id });
+  child.send.mockClear();
+  await f.host.retire();
+  expect(child.send).toHaveBeenCalledWith(extensionViewIpc.activity, false);
+});
+
+it("replays language on load, updates hidden children and stops language delivery on retirement", async () => {
+  const f = await fixture();
+  const configuration = {
+    ...DEFAULT_USER_CONFIGURATION,
+    nativeTitleInset: 0 as const,
+    userFileErrors: [],
+    language: "pt-BR" as const,
+  };
+  publishHostedAppearance(f.owner.webContents, configuration);
+  await f.host.open(opening);
+  const child = f.views[0]!.webContents;
+  expect(child.send).toHaveBeenCalledWith(extensionViewIpc.language, "pt-BR");
+  expect(child.send).toHaveBeenCalledWith(extensionViewIpc.activity, false);
+  child.send.mockClear();
+  publishHostedAppearance(f.owner.webContents, {
+    ...configuration,
+    language: "en-US",
+  });
+  expect(child.send).toHaveBeenCalledExactlyOnceWith(
+    extensionViewIpc.language,
+    "en-US",
+  );
+  child.send.mockClear();
+  child.emit("did-finish-load");
+  expect(child.send).toHaveBeenCalledWith(extensionViewIpc.language, "en-US");
+  await f.host.retire();
+  child.send.mockClear();
+  publishHostedAppearance(f.owner.webContents, configuration);
+  expect(child.send).not.toHaveBeenCalled();
+});
+
+it("authenticates logical activeId against the owner window before advancing revisions", async () => {
+  const f = await fixture(false);
+  const foreign = await fixture(false);
+  const ipc = { handle: vi.fn(), removeHandler: vi.fn() } as unknown as IpcMain;
+  const host = startExtensionViewHost({ ...f.options, ipcMain: ipc });
+  const other = startExtensionViewHost({ ...foreign.options, ipcMain: ipc });
+  cleanups.push(
+    () => host.retire(),
+    () => other.retire(),
+  );
+  const own = await host.open(opening);
+  const stranger = await other.open(opening);
+  const handler = (ipc.handle as ReturnType<typeof vi.fn>).mock.calls.find(
+    ([channel]) => channel === extensionViewIpc.present,
+  )![1] as (
+    event: unknown,
+    value: HostedContentPresentation,
+  ) => Promise<unknown>;
+  const sender = {
+    sender: f.owner.webContents,
+    senderFrame: f.owner.webContents.mainFrame,
+  };
+  for (const activeId of [stranger.id, "unknown-content"]) {
+    await expect(
+      handler(sender, { ...present(null), focus: false, activeId }),
+    ).rejects.toThrow("Unknown active hosted content");
+  }
+  expect(
+    await handler(sender, { ...present(null), focus: false, activeId: own.id }),
+  ).toBe(true);
+  expect(f.views[0]!.webContents.send).toHaveBeenCalledWith(
+    extensionViewIpc.activity,
+    true,
+  );
+  expect(f.views[0]!.setVisible).toHaveBeenLastCalledWith(false);
+});
+
 it.each([
   [true, true],
   [false, true],

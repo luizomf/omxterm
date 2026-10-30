@@ -5,8 +5,9 @@ import type { PackageManifest } from "../installed-packages/installed-packages";
 export function extensionPresentation(
   manifest: Pick<PackageManifest, "id" | "view">,
 ): "panel" | undefined {
-  return (manifest.id === "omxterm.files" || manifest.id === "omxterm.ssh") &&
-    manifest.view?.action === `${manifest.id}.open`
+  return ["omxterm.files", "omxterm.ssh", "omxterm.snippets"].includes(
+    manifest.id,
+  ) && manifest.view?.action === `${manifest.id}.open`
     ? "panel"
     : undefined;
 }

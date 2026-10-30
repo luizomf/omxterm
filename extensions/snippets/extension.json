@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "id": "omxterm.snippets",
+  "version": "0.1.0",
+  "name": "Snippets",
+  "engines": { "omxterm": ">=0.24.0-dev.8", "api": "0.1.x" },
+  "backend": "backend.mjs",
+  "capabilities": ["terminal.semanticInput.v1"],
+  "view": {
+    "entry": "index.html",
+    "action": "omxterm.snippets.open",
+    "title": "Snippets"
+  }
+}

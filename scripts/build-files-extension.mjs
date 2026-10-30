@@ -25,7 +25,9 @@ export async function buildFilesExtension(output, suppliedCommit) {
 }
 
 export async function buildExtension(name, output, suppliedCommit) {
-  if (!["files", "ssh", "restoration", "mirror-typing"].includes(name))
+  if (
+    !["files", "ssh", "restoration", "mirror-typing", "snippets"].includes(name)
+  )
     throw new Error("Unknown extension source");
   const manifest = JSON.parse(
     await readFile(
@@ -62,6 +64,15 @@ export async function buildExtension(name, output, suppliedCommit) {
       bundle: true,
       platform: "node",
       format: "esm",
+      // YAML's bundled CommonJS helpers still require Node built-ins. Keep
+      // those available in the ESM backend without external package lookups.
+      ...(name === "snippets"
+        ? {
+            banner: {
+              js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);',
+            },
+          }
+        : {}),
       outfile: path.join(stage, "backend.mjs"),
     });
     await build({
@@ -87,6 +98,18 @@ export async function buildExtension(name, output, suppliedCommit) {
         path.join(stage, resource),
       );
     await cp(path.join(root, "LICENSE"), path.join(stage, "LICENSE"));
+    if (name === "snippets") {
+      for (const resource of ["README.md", "snippets.example.yaml"])
+        await cp(
+          path.join(root, "extensions/snippets", resource),
+          path.join(stage, resource),
+        );
+      await mkdir(path.join(stage, "licenses"));
+      await cp(
+        path.join(root, "node_modules/yaml/LICENSE"),
+        path.join(stage, "licenses/yaml.txt"),
+      );
+    }
     if (name === "ssh" || name === "restoration" || name === "mirror-typing")
       await cp(
         path.join(root, `extensions/${name}/NOTICE`),
@@ -119,7 +142,7 @@ export async function buildExtension(name, output, suppliedCommit) {
         `import pathlib,sys,zipfile
 source=pathlib.Path(sys.argv[1])
 with zipfile.ZipFile(sys.argv[2], 'x', compression=zipfile.ZIP_DEFLATED) as archive:
- for name in ['extension.json','backend.mjs','index.html','${name}.css','view.js','LICENSE'${name === "ssh" ? ",'NOTICE'" : name === "restoration" || name === "mirror-typing" ? ",'NOTICE','licenses/ashyterm.txt'" : ""}]:
+ for name in ['extension.json','backend.mjs','index.html','${name}.css','view.js','LICENSE'${name === "snippets" ? ",'README.md','snippets.example.yaml','licenses/yaml.txt'" : name === "ssh" ? ",'NOTICE'" : name === "restoration" || name === "mirror-typing" ? ",'NOTICE','licenses/ashyterm.txt'" : ""}]:
   entry=zipfile.ZipInfo(name, (2026,1,1,0,0,0))
   entry.external_attr=0o100600 << 16
   entry.compress_type=zipfile.ZIP_DEFLATED

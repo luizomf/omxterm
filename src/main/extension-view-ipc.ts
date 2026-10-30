@@ -76,6 +76,11 @@ function registryFor(ipcMain: IpcMain) {
         (!selected || !selected.owns(presentation.id))
       )
         throw new Error("Unknown hosted content");
+      if (
+        presentation.activeId != null &&
+        !route.issued.get(presentation.activeId)?.owns(presentation.activeId)
+      )
+        throw new Error("Unknown active hosted content");
       if (presentation.revision <= route.revision) return false;
       route.revision = presentation.revision;
       // One window revision orders ALL epochs. Never show a target until every

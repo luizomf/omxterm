@@ -1,7 +1,49 @@
 import { expect, it, vi } from "vitest";
-import { subscribeHostedAppearance } from "../../src/main/hosted-appearance";
+import {
+  subscribeHostedAppearance,
+  subscribeHostedLanguage,
+} from "../../src/main/hosted-appearance";
 import { createRendererConfigurationState } from "../../src/main/terminal-renderer-configuration";
 import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
+
+it("publishes language independently of appearance, replays only within its owner and unsubscribes", () => {
+  const owner = { mainFrame: {}, isDestroyed: () => false, send: vi.fn() };
+  const language = vi.fn();
+  const appearance = vi.fn();
+  const other = vi.fn();
+  const unsubscribe = subscribeHostedLanguage(owner, language);
+  subscribeHostedAppearance(owner, appearance);
+  const offOther = subscribeHostedLanguage({}, other);
+  expect(language).not.toHaveBeenCalled();
+  const configuration = {
+    ...DEFAULT_USER_CONFIGURATION,
+    nativeTitleInset: 0 as const,
+    userFileErrors: [],
+    language: "en-US" as const,
+  };
+  const state = createRendererConfigurationState(
+    configuration,
+    false,
+    owner,
+    () => 0,
+  );
+  expect(language).toHaveBeenCalledExactlyOnceWith("en-US");
+  state.apply({ ...configuration, language: "pt-BR" });
+  expect(language).toHaveBeenLastCalledWith("pt-BR");
+  expect(appearance).toHaveBeenCalledTimes(1);
+  state.apply({ ...configuration, language: "pt-BR", fontSize: 24 });
+  expect(language).toHaveBeenCalledTimes(2);
+  const replay = vi.fn();
+  const offReplay = subscribeHostedLanguage(owner, replay);
+  expect(replay).toHaveBeenCalledExactlyOnceWith("pt-BR");
+  expect(other).not.toHaveBeenCalled();
+  unsubscribe();
+  offReplay();
+  offOther();
+  state.apply(configuration);
+  expect(language).toHaveBeenCalledTimes(2);
+  expect(replay).toHaveBeenCalledTimes(1);
+});
 
 it("projects only effective appearance, replays and deduplicates unrelated configuration updates", () => {
   const owner = { mainFrame: {}, isDestroyed: () => false, send: vi.fn() };

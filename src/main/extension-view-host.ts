@@ -1,5 +1,9 @@
 /* eslint-disable max-lines -- Keep one epoch's admission, presentation and bounded retirement transitions together. */
-import { subscribeHostedAppearance } from "./hosted-appearance";
+import {
+  subscribeHostedAppearance,
+  subscribeHostedLanguage,
+} from "./hosted-appearance";
+import type { SupportedLanguage } from "../shared/i18n";
 import { randomUUID } from "node:crypto";
 import { captureValue, type Value } from "../extension-runtime/protocol.js";
 import { isAbsolute } from "node:path";
@@ -99,6 +103,7 @@ type Entry = {
   rendererGone: boolean;
   notified: boolean;
   visible: boolean;
+  active: boolean;
   pid: number;
   entryUrl: string;
   loading: boolean;
@@ -159,6 +164,8 @@ class NativeExtensionViewHost {
   #cleanupFailed = false;
   #appearance: HostedAppearance | undefined;
   readonly #unsubscribeAppearance: () => void;
+  #language: SupportedLanguage = "en-US";
+  readonly #unsubscribeLanguage: () => void;
   constructor(private readonly options: ExtensionViewHostOptions) {
     if (!isAbsolute(options.preloadPath))
       throw new TypeError("App-owned absolute preload required");
@@ -170,6 +177,13 @@ class NativeExtensionViewHost {
       (appearance) => {
         this.#appearance = appearance;
         for (const entry of this.#views.values()) this.#sendAppearance(entry);
+      },
+    );
+    this.#unsubscribeLanguage = subscribeHostedLanguage(
+      this.#ownerContents,
+      (language) => {
+        this.#language = language;
+        for (const entry of this.#views.values()) this.#sendLanguage(entry);
       },
     );
     options.owner.on("closed", this.#ownerLost);
@@ -207,6 +221,31 @@ class NativeExtensionViewHost {
       notify(() =>
         entry.contents.send(extensionViewIpc.appearance, this.#appearance),
       );
+    }
+  }
+  #sendLanguage(entry: Entry) {
+    if (
+      this.#live() &&
+      !entry.rendererGone &&
+      !entry.closing &&
+      !entry.contents.isDestroyed()
+    )
+      notify(() =>
+        entry.contents.send(extensionViewIpc.language, this.#language),
+      );
+  }
+  #activity(id: string | null | undefined, fallback: string | null = null) {
+    if (id === undefined) id = fallback;
+    for (const entry of this.#views.values()) {
+      const active = entry.descriptor.id === id;
+      if (entry.active === active) continue;
+      entry.active = active;
+      if (
+        !entry.rendererGone &&
+        !entry.closing &&
+        !entry.contents.isDestroyed()
+      )
+        notify(() => entry.contents.send(extensionViewIpc.activity, active));
     }
   }
   #visibility(entry: Entry, visible: boolean) {
@@ -320,6 +359,8 @@ class NativeExtensionViewHost {
     if (this.#retirement) return this.#retirement;
     this.#state = "retiring";
     this.#unsubscribeAppearance();
+    this.#unsubscribeLanguage();
+    this.#activity(null);
     this.#resources.revoke();
     this.#hideAll();
     // Publish before any consumer callback can reenter. A timeout keeps the
@@ -477,6 +518,8 @@ class NativeExtensionViewHost {
       this.#trackProcess(entry);
       if (!entry.closing && this.#live()) {
         this.#sendAppearance(entry);
+        this.#sendLanguage(entry);
+        entry.contents.send(extensionViewIpc.activity, entry.active);
         this.#visibility(entry, entry.visible);
       }
     });
@@ -534,6 +577,7 @@ class NativeExtensionViewHost {
         rendererGone: false,
         notified: false,
         visible: false,
+        active: false,
         pid: 0,
         entryUrl: `${this.#origin}/${input.entryResource}`,
         loading: true,
@@ -578,8 +622,14 @@ class NativeExtensionViewHost {
   }
   #focusPresented(entry: Entry, focus: HostedContentPresentation["focus"]) {
     if (focus === "core") this.#ownerContents.focus();
-    else if (focus || this.#layoutFocus === entry.descriptor.id)
+    else if (focus || this.#layoutFocus === entry.descriptor.id) {
       entry.contents.focus();
+      if (focus === true || focus === "restore")
+        entry.contents.send(
+          extensionViewIpc.focusIntent,
+          focus === "restore" ? "restore" : "search",
+        );
+    }
     this.#layoutFocus = null;
     this.#reportFocus();
   }
@@ -592,6 +642,7 @@ class NativeExtensionViewHost {
       throw new TypeError("Invalid hosted presentation");
     if (!this.#live() || presentation.revision <= this.#revision) return false;
     this.#revision = presentation.revision;
+    this.#activity(presentation.activeId, presentation.id);
     const entry =
       presentation.id === null ? undefined : this.#views.get(presentation.id);
     // Hiding a focused native child does not focus the parent WebContents.

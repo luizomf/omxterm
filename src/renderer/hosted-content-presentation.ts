@@ -51,7 +51,7 @@ export function createHostedContentPresentation(
   });
   const present = async (
     target: HostedContentSlot | undefined,
-    focus: boolean | "core" = false,
+    focus: boolean | "core" | "restore" = false,
   ) => {
     if (!bridge) return true;
     const bounds = target?.slot.getBoundingClientRect();
@@ -60,6 +60,7 @@ export function createHostedContentPresentation(
     try {
       const accepted = await bridge.present({
         id: target?.id ?? null,
+        activeId: disposed ? null : (selected?.id ?? null),
         revision: request,
         bounds: bounds
           ? {
@@ -84,7 +85,7 @@ export function createHostedContentPresentation(
       return false;
     }
   };
-  const show = (focus: boolean | "core" = false) => {
+  const show = (focus: boolean | "core" | "restore" = false) => {
     if (
       !disposed &&
       !failed &&
@@ -161,6 +162,7 @@ export function createHostedContentPresentation(
       } else finish();
     },
     focus: () => show(true),
+    restoreFocus: () => show("restore"),
     focusCore(activate: () => void) {
       if (disposed || blocked || pendingOverlay || transitioning || failed)
         return;

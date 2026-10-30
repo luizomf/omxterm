@@ -43,11 +43,11 @@ function managementFailure(error: unknown): ExtensionsResult {
   return { ok: false, error: errorCode };
 }
 
-function managementEntry(
-  entry: Awaited<
-    ReturnType<ReturnType<typeof createExtensionManager>["snapshot"]>
-  >[number],
-) {
+type Installation = Awaited<
+  ReturnType<ReturnType<typeof createExtensionManager>["snapshot"]>
+>[number];
+
+function managementEntry(entry: Installation) {
   return {
     id: entry.id,
     generation: entry.generation,
@@ -101,6 +101,9 @@ async function applicationManager(
 
 export type ApplicationExtensionsOptions = {
   applicationRoot: string;
+  // Native qualification fixtures omit built-in Snippets and opt into exactly
+  // one replacement. Production keeps the built-in until platform cutover.
+  qualifySnippets?: boolean;
   semanticInput?: Pick<
     ReturnType<typeof import("./semantic-input-ipc").registerSemanticInputIpc>,
     "request"
@@ -208,9 +211,7 @@ export async function startApplicationExtensions(
     { token: string; invoke(): Promise<void> }
   >();
   let manager: ReturnType<typeof createExtensionManager> | undefined;
-  let installations: Awaited<
-    ReturnType<NonNullable<typeof manager>["snapshot"]>
-  > = [];
+  let installations: Installation[] = [];
   let stopping = false;
   const catalog = createExtensionCatalog(
     { appVersion: app.getVersion(), apiVersion: "0.1.0" },
@@ -350,6 +351,8 @@ export async function startApplicationExtensions(
   ): CoreAction[] {
     if (stopping) return [];
     return installations.flatMap((entry) => {
+      if (entry.id === "omxterm.snippets" && !options.qualifySnippets)
+        return [];
       const view = entry.enabled && entry.digest && entry.manifest?.view;
       if (!view) return [];
       const presentation = extensionPresentation(entry.manifest!);

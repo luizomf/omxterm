@@ -43,7 +43,32 @@ describe("hosted application-tab contract", () => {
         focus: "core",
       }),
     ).toBe(true);
-    for (const focus of ["core", "child", null, 1])
+    expect(
+      isHostedContentPresentation({
+        ...presentation,
+        id: "host-1",
+        focus: "restore",
+        activeId: "host-1",
+      }),
+    ).toBe(true);
+    expect(
+      isHostedContentPresentation({ ...presentation, activeId: "host-1" }),
+    ).toBe(true);
+    expect(
+      isHostedContentPresentation({ ...presentation, activeId: null }),
+    ).toBe(true);
+    for (const activeId of [undefined, "../foreign", "", 1, true, {}])
+      expect(isHostedContentPresentation({ ...presentation, activeId })).toBe(
+        false,
+      );
+    expect(
+      isHostedContentPresentation({
+        ...presentation,
+        activeId: "host-1",
+        extra: true,
+      }),
+    ).toBe(false);
+    for (const focus of ["core", "restore", "child", null, 1])
       expect(isHostedContentPresentation({ ...presentation, focus })).toBe(
         false,
       );
@@ -197,7 +222,9 @@ describe("hosted application-tab contract", () => {
     offFailure();
     expect(handlers.size).toBe(0);
   });
+});
 
+describe("hosted child preload subscriptions and requests", () => {
   it("executes the actual child preload with bounded own-view requests and visibility", async () => {
     const source = await readFile(
       new URL("../../src/preload/extension-view.cjs", import.meta.url),
@@ -209,6 +236,9 @@ describe("hosted application-tab contract", () => {
         bridge: {
           onVisibility(listener: unknown): () => void;
           onAppearance(listener: unknown): () => void;
+          onActivity(listener: unknown): () => void;
+          onLanguage(listener: unknown): () => void;
+          onFocusIntent(listener: unknown): () => void;
           request(value: unknown): Promise<unknown>;
         },
       ) => void
@@ -243,11 +273,80 @@ describe("hosted application-tab contract", () => {
     expect(expose).toHaveBeenCalledTimes(1);
     const [name, bridge] = expose.mock.calls[0]!;
     expect(name).toBe("omxHostedContent");
-    expect(Object.keys(bridge)).toEqual([
-      "request",
+    expect(Object.keys(bridge).sort()).toEqual([
+      "onActivity",
       "onAppearance",
+      "onFocusIntent",
+      "onLanguage",
       "onVisibility",
+      "request",
     ]);
+    const subscriptions = [
+      {
+        subscribe: bridge.onActivity,
+        channel: extensionViewIpc.activity,
+        initial: false,
+        values: [true, false],
+        invalid: [null, 1, "true", { active: true }],
+        replay: true,
+      },
+      {
+        subscribe: bridge.onLanguage,
+        channel: extensionViewIpc.language,
+        initial: "en-US",
+        values: ["pt-BR", "en-US"],
+        invalid: [null, "pt", "fr-FR", { language: "pt-BR" }],
+        replay: true,
+      },
+      {
+        subscribe: bridge.onFocusIntent,
+        channel: extensionViewIpc.focusIntent,
+        initial: undefined,
+        values: ["restore", "search"],
+        invalid: [null, true, "focus", { intent: "search" }],
+        replay: false,
+      },
+    ];
+    for (const subscription of subscriptions) {
+      const event = on.mock.calls.find(
+        ([channel]) => channel === subscription.channel,
+      )![1];
+      const listener = vi.fn();
+      const off = subscription.subscribe(listener);
+      if (subscription.replay)
+        expect(listener).toHaveBeenCalledExactlyOnceWith(subscription.initial);
+      else expect(listener).not.toHaveBeenCalled();
+      listener.mockClear();
+      for (const invalid of subscription.invalid) event({}, invalid);
+      expect(listener).not.toHaveBeenCalled();
+      event({}, subscription.values[0]);
+      expect(listener).toHaveBeenCalledExactlyOnceWith(subscription.values[0]);
+      const late = vi.fn();
+      const offLate = subscription.subscribe(late);
+      if (subscription.replay)
+        expect(late).toHaveBeenCalledExactlyOnceWith(subscription.values[0]);
+      else expect(late).not.toHaveBeenCalled();
+      off();
+      offLate();
+      const offThrowing = subscription.subscribe(() => {
+        throw new Error("package listener");
+      });
+      const survivor = vi.fn();
+      const offSurvivor = subscription.subscribe(survivor);
+      survivor.mockClear();
+      event({}, subscription.values[1]);
+      expect(survivor).toHaveBeenCalledExactlyOnceWith(subscription.values[1]);
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(late).toHaveBeenCalledTimes(subscription.replay ? 1 : 0);
+      offThrowing();
+      offSurvivor();
+      expect(() => subscription.subscribe(null)).toThrow("Invalid");
+      const removals = Array.from({ length: 32 }, () =>
+        subscription.subscribe(() => {}),
+      );
+      expect(() => subscription.subscribe(() => {})).toThrow("Invalid");
+      for (const remove of removals) remove();
+    }
     const appearanceEvent = on.mock.calls.find(
       ([channel]) => channel === extensionViewIpc.appearance,
     )![1];

@@ -160,7 +160,7 @@ export function createCompanionContent(
         selectedPanel()?.id !== id
       )
         return false;
-      presentation.focus();
+      presentation.restoreFocus();
       return true;
     },
     isSourceForeground(id: string) {

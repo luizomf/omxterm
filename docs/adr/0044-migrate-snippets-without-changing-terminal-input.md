@@ -2,9 +2,9 @@
 
 Status: accepted migration design for [#741](https://github.com/luizomf/omxterm/issues/741);
 platform migration not implemented. Preparatory source includes activation-scoped
-catalog paging and a declared native own-view semantic-input capability reusing
-core capture/preview ownership. This is not an installed Snippets replacement,
-package qualification or platform cutover.
+catalog paging, a declared native own-view semantic-input capability reusing
+core capture/preview ownership, and separately buildable package/UI source.
+This is not a published Snippets replacement, package qualification or platform cutover.
 The built-in feature remains the shipping behavior described in
 [the specification](../spec.md). This decision does not remove it or claim a
 stable extension SDK.
@@ -133,7 +133,14 @@ Unsupported platforms retain the current starter kit with their built-in feature
 Deliver the capability and separately built Snippets package first, without
 removing built-in access from any shipping platform. Development qualification
 selects one implementation at a time; it must not register duplicate production
-actions or compete for the panel. This preparatory delivery is not completion of
+actions or compete for the panel. The preparatory package action is withheld from
+production composition; native qualification explicitly selects `qualifySnippets`
+and omits the built-in view. Its archive still uses ordinary installation/trust.
+Logical activity is transported separately from visibility: geometry updates and
+overlay hiding do not reload the catalog or discard preview focus restoration.
+The child receives committed language changes and explicit search/restore focus
+intent through the existing native presentation owner.
+This preparatory delivery is not completion of
 #741 and does not advertise optional Snippets to ordinary users yet.
 
 Cut over a platform only after the package is installable through the ordinary

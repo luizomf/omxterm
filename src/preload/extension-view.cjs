@@ -45,8 +45,53 @@ if (process.isMainFrame) {
     });
     for (const listener of appearanceListeners) deliverAppearance(listener);
   });
+  // Activity is logical panel selection, not transient native visibility.
+  const subscription = (channel, valid, initial, replay) => {
+    let current = initial;
+    const subscribers = new Set();
+    const deliver = (listener, value) => {
+      try {
+        listener(value);
+      } catch {
+        /* Isolate package listeners. */
+      }
+    };
+    ipcRenderer.on(channel, (_event, value) => {
+      if (!valid(value)) return;
+      current = value;
+      for (const listener of subscribers) deliver(listener, value);
+    });
+    return (listener) => {
+      if (typeof listener !== "function" || subscribers.size >= 32)
+        throw new TypeError("Invalid hosted subscription");
+      subscribers.add(listener);
+      if (replay) deliver(listener, current);
+      return () => subscribers.delete(listener);
+    };
+  };
+  const onActivity = subscription(
+    "extension-view:activity",
+    (value) => typeof value === "boolean",
+    false,
+    true,
+  );
+  const onLanguage = subscription(
+    "extension-view:language",
+    (value) => value === "en-US" || value === "pt-BR",
+    "en-US",
+    true,
+  );
+  const onFocusIntent = subscription(
+    "extension-view:focus-intent",
+    (value) => value === "search" || value === "restore",
+    undefined,
+    false,
+  );
   let pending = 0;
   contextBridge.exposeInMainWorld("omxHostedContent", {
+    onActivity,
+    onLanguage,
+    onFocusIntent,
     async request(value) {
       if (pending >= 32) throw new Error("Request capacity exceeded");
       pending++;

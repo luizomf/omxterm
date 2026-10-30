@@ -1,3 +1,5 @@
+@import "./snippets-view.css";
+
 :root {
   color-scheme: dark;
   background: transparent;
@@ -426,8 +428,7 @@ body.tabs-visible .terminal-tab {
   border-radius: 4px;
 }
 
-.auxiliary-body,
-.snippets-view {
+.auxiliary-body {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -436,7 +437,6 @@ body.tabs-visible .terminal-tab {
   min-height: 0;
 }
 
-.snippets-view[hidden],
 .companion-native-slot[hidden],
 .auxiliary-tools[hidden] {
   display: none;
@@ -474,16 +474,6 @@ body.tabs-visible .terminal-tab {
   outline-offset: -2px;
 }
 
-.snippets-view input {
-  flex: none;
-}
-
-.snippets-results {
-  min-height: 0;
-  overflow: auto;
-  overflow-anchor: none;
-}
-
 .auxiliary-separator {
   --separator-color: var(--auxiliary-panel-divider-color);
   flex: 0 0 6px;
@@ -495,8 +485,7 @@ body.tabs-visible .terminal-tab {
   position: relative;
 }
 
-.auxiliary-header button:focus-visible,
-#snippets-sidebar input[type="search"]:focus-visible {
+.auxiliary-header button:focus-visible {
   outline: 2px solid var(--terminal-foreground, #e6e6e6);
   outline-offset: -2px;
 }
@@ -514,155 +503,6 @@ body.tabs-visible .terminal-tab {
   background: var(--terminal-foreground, #e6e6e6);
   border-radius: 6px;
   pointer-events: none;
-}
-
-#snippets-sidebar input[type="search"] {
-  box-sizing: border-box;
-  width: 100%;
-  padding: 6px 8px;
-  font: inherit;
-  color: inherit;
-  background: transparent;
-  border: 1px solid
-    color-mix(
-      in srgb,
-      var(--terminal-background, #000000),
-      var(--terminal-foreground, #e6e6e6) 60%
-    );
-  border-radius: 6px;
-  outline: none;
-}
-
-#snippets-sidebar input[type="search"]::placeholder {
-  color: color-mix(
-    in srgb,
-    var(--terminal-background, #000000),
-    var(--terminal-foreground, #e6e6e6) 70%
-  );
-}
-
-#snippets-sidebar input[type="search"]:focus {
-  border-color: color-mix(
-    in srgb,
-    var(--terminal-background, #000000),
-    var(--terminal-foreground, #e6e6e6) 70%
-  );
-}
-
-#snippets-sidebar ul {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-#snippets-sidebar li button {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 6px 8px;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-}
-
-#snippets-sidebar li button:hover {
-  /* Over the sidebar's 15% overlay, this retains the opaque 45% appearance. */
-  background: color-mix(
-    in srgb,
-    transparent,
-    var(--terminal-chrome-neutral)
-      calc(35.294118% * var(--terminal-background-opacity, 1))
-  );
-}
-
-#snippets-sidebar li button:focus-visible {
-  background: transparent;
-  outline: 2px solid
-    color-mix(
-      in srgb,
-      var(--terminal-background, #000000),
-      var(--terminal-foreground, #e6e6e6) 70%
-    );
-  outline-offset: -2px;
-}
-
-#snippets-sidebar .snippet-name {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  font-weight: 600;
-}
-
-#snippets-sidebar .snippet-description {
-  max-width: 100%;
-  overflow: hidden;
-  color: color-mix(
-    in srgb,
-    var(--terminal-background, #000000),
-    var(--terminal-foreground, #e6e6e6) 70%
-  );
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-#snippets-sidebar li {
-  display: flex;
-  gap: 2px;
-  align-items: stretch;
-}
-
-#snippets-sidebar li .snippet-activate {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-/* The default action is visible before activation. */
-#snippets-sidebar .snippet-intent {
-  font-size: 11px;
-  color: color-mix(
-    in srgb,
-    var(--terminal-background, #000000),
-    var(--terminal-foreground, #e6e6e6) 70%
-  );
-}
-
-#snippets-sidebar li .snippet-preview-open {
-  flex: 0 0 auto;
-  align-self: center;
-  width: auto;
-  padding: 4px 6px;
-  font-size: 12px;
-  color: color-mix(
-    in srgb,
-    var(--terminal-background, #000000),
-    var(--terminal-foreground, #e6e6e6) 70%
-  );
-}
-
-#snippets-sidebar .snippets-empty {
-  margin: 0;
-  color: color-mix(
-    in srgb,
-    var(--terminal-background, #000000),
-    var(--terminal-foreground, #e6e6e6) 70%
-  );
-}
-
-#snippets-sidebar .snippets-error {
-  margin: 0;
-  padding: 8px;
-  overflow-wrap: anywhere;
-  color: #ffffff;
-  background: #8c1d18;
-  border-radius: 6px;
 }
 
 .terminal-layout-status {

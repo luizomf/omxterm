@@ -344,7 +344,11 @@ Its declared own-view semantic-input operation transfers bounded exact text to a
 core-captured Surface with Protected Paste and a shared read-only preview, not a
 PTY handle or raw key route. View retirement revokes unaccepted interactions,
 not accepted Surface-owned delivery. This capability alone is not an optional
-Snippets replacement.
+Snippets replacement. Separately buildable preparatory Snippets package source
+reuses the built-in view/parser and shared styles; production retains the built-in
+entry point. Native qualification selects one implementation. Logical hosted-view
+activity survives temporary overlay/layout hiding, separately from visibility;
+language and search/restore focus intent do not recreate controls.
 It is not a public SDK, activation UI or proof of main-death disk-read exclusion.
 
 **Application Network Boundary** — OMXTerm requests remote bytes only for explicit

@@ -44,6 +44,47 @@ function fixture() {
   return { owner, bridge, slot, unsubscribe, fail: () => failure() };
 }
 
+it("retains logical activity through overlay hiding and distinguishes restored focus from search focus", async () => {
+  const h = fixture();
+  const target = h.slot("panel");
+  h.owner.select(target, () => {}, target);
+  await settle();
+  expect(h.bridge.present.mock.lastCall?.[0]).toMatchObject({
+    id: "panel",
+    activeId: "panel",
+    focus: true,
+  });
+  h.owner.openOverlay(() => h.owner.setBlocked(true));
+  await settle();
+  expect(h.bridge.present.mock.lastCall?.[0]).toMatchObject({
+    id: null,
+    activeId: "panel",
+    focus: false,
+  });
+  h.owner.setBlocked(false);
+  h.owner.restoreFocus();
+  await settle();
+  expect(h.bridge.present.mock.lastCall?.[0]).toMatchObject({
+    id: "panel",
+    activeId: "panel",
+    focus: "restore",
+  });
+  h.owner.focus();
+  await settle();
+  expect(h.bridge.present.mock.lastCall?.[0].focus).toBe(true);
+  h.owner.select(undefined, () => {}, {});
+  await settle();
+  expect(h.bridge.present.mock.lastCall?.[0]).toMatchObject({
+    id: null,
+    activeId: null,
+  });
+  h.owner.dispose();
+  expect(h.bridge.present.mock.lastCall?.[0]).toMatchObject({
+    id: null,
+    activeId: null,
+  });
+});
+
 it("orders tab-independent slots and DOM activation through one revision stream", async () => {
   const h = fixture();
   const first = h.slot("first");
@@ -113,6 +154,7 @@ it("observes the selected allocation and coalesces geometry without stealing foc
   await settle();
   expect(h.bridge.present.mock.lastCall?.[0]).toMatchObject({
     id: "panel",
+    activeId: "panel",
     focus: false,
     bounds: { x: 4, y: 80, width: 280, height: 500 },
   });
