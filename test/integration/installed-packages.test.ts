@@ -262,7 +262,9 @@ describe("Installed Packages production interface", () => {
     await Promise.all([use.release(), use.release()]);
     expect(await use.revalidate()).toBe(false);
   });
+});
 
+describe("Installed Packages concurrent registry admission", () => {
   it.each(["snapshot", "revalidate", "openVersion"] as const)(
     "allows concurrent %s admission while excluding registry mutation",
     async (operation) => {
@@ -356,7 +358,9 @@ describe("Installed Packages production interface", () => {
     }
     expect((await store.snapshot())[0]?.generation).toBe(1);
   });
+});
 
+describe("Installed Packages archive and lifetime", () => {
   it("keeps referenced bytes and registry untouched after invalid/incompatible/stale archive failures", async () => {
     const installed = await store.install(await archive(), {
       expectedGeneration: 0,

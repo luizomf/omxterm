@@ -680,6 +680,9 @@ describe("native extension host through its production resource interface", () =
     await rejected;
     await expect(handler(sender, null)).rejects.toThrow("unavailable");
   });
+});
+
+describe("native extension visible request admission", () => {
   it("preserves authenticated visible request admission across same-view geometry revisions", async () => {
     const f = await fixture(false);
     const captures: ExtensionViewRequestContext[] = [];
@@ -773,6 +776,9 @@ describe("native extension host through its production resource interface", () =
     await host.retire();
     expect(captures.every((context) => !context.isCurrentVisible())).toBe(true);
   });
+});
+
+describe("native extension resources and presentation", () => {
   it("is lazy, owns hidden views, uses unique ephemeral sessions and secure preferences", async () => {
     const f = await fixture();
     expect(f.native.fromPartition).not.toHaveBeenCalled();
