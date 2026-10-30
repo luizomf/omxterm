@@ -36,6 +36,8 @@ export function inspectWindowsInstallerInputs(
   // registry/cache location, shortcut, template or locked builder dependency.
   // #712 adds only the macOS extension lease unpack entry. Windows payload,
   // NSIS identities/options, registry/cache paths and locked templates are unchanged.
+  // #670 additionally unpacks the macOS Files move addon only; the same Windows
+  // payload, NSIS options and locked installer footprint remain unchanged.
   const digest = createHash("sha256")
     .update(configuration.replaceAll("\r\n", "\n"))
     .digest("hex");
@@ -43,7 +45,7 @@ export function inspectWindowsInstallerInputs(
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest !==
-      "2c21c3b3e2b58fb5375ccddafc92fd75c7696e101f52f509408dda4e31a3777a"
+      "81e4511a8a1c4b877af313efb6a8ef17389f4e9c193029cf3a9357b6bf775780"
   )
     throw new Error(
       "Unknown Windows installer footprint; review the pinned packaging inputs before exact installer verification",

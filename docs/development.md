@@ -210,7 +210,7 @@ build receipt is not native installed-host qualification; see the guide's
 The [internal extension backend runtime](extension-backend-runtime.md) has an
 explicit `npm run build:extension-runtime` artifact and actual native process/store
 tests. Normal macOS and Linux ARM64 `npm run build` also includes the runtime
-and native lease addon; only Linux ARM64 includes the Files move addon for the
+and native lease and Files move addons for the
 [Files preview](files-development-preview.md). Linux ARM64 and preparatory macOS
 ARM64 application startup construct infrastructure without activating installed
 code; explicit shared actions activate it. The opt-in
@@ -354,11 +354,11 @@ for these lanes. `--windows-unpacked-only` is **not** headless: it still launche
 the application. See [hosted artifact delivery](release.md#hosted-x64-build-only-artifact-delivery).
 
 macOS ARM64 package verification (also with `--inspection-only`) checks the
-unpacked extension lease addon, complete ad-hoc seal, architecture/deployment
-floor and packaged Node-mode store/lease/bootstrap resolution. Prepared and
+unpacked extension lease and Files move addons, complete ad-hoc seal,
+architecture/deployment floor and packaged Node-mode store/lease/bootstrap resolution. Prepared and
 final hashes are recorded in `.scratch/extensions-package.json`; native bytes
-may differ after signing, but JavaScript must match exactly. Linux ARM64 keeps
-its additional Files no-clobber move/conflict checks. This is not macOS Files,
+may differ after signing, but JavaScript must match exactly. Both macOS and Linux
+ARM64 run Files no-clobber move/conflict checks. This is not full macOS Files,
 backend activation, production platform admission or Snippets qualification.
 
 See [release procedures](release.md#resume-and-version-only-commands) for standalone `package:*` and `package-built:*` commands.

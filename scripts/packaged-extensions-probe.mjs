@@ -31,8 +31,8 @@ const packages = await InstalledPackages.open({
 });
 assert.deepEqual(await packages.snapshot(), []);
 const checks = ["packaged-store-and-lease"];
-// Files move is a separate Linux-only artifact, not a macOS qualification.
-if (process.platform === "linux") {
+// Native loading/conflict evidence only, not a complete Files qualification.
+{
   const move = require("./files-move.node");
   const source = path.join(scratch, "source");
   const target = path.join(scratch, "target");
@@ -40,6 +40,7 @@ if (process.platform === "linux") {
   await writeFile(target, "preserved");
   await assert.rejects(move.moveNoReplace(source, target), { code: "EEXIST" });
   assert.equal(await readFile(target, "utf8"), "preserved");
+  assert.equal(await readFile(source, "utf8"), "source");
   await move.moveNoReplace(source, path.join(scratch, "moved"));
   assert.equal(await readFile(path.join(scratch, "moved"), "utf8"), "source");
   checks.push("native-move-and-conflict");

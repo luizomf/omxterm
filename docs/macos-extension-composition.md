@@ -24,8 +24,11 @@ not that changed minimal-fixture assertion.
   selects the optional implementation through the same owners. Its native campaign
   passed; macOS host distribution remains a separate gate. The duplicate
   package action remains withheld and existing shortcut configuration is preserved.
-- Files' native no-clobber move remains Linux ARM64-only; macOS refuses that
-  operation. There is no replacement primitive or macOS Files qualification.
+- The subsequent macOS ARM64 Files move prerequisite adds the native
+  `renameatx_np(RENAME_EXCL)` operation through the existing bounded service.
+  This is not full macOS Files qualification: trash remains Linux-only, and
+  Files archive publication/catalog admission remains separate. See the
+  [primitive contract and evidence boundary](files-development-preview.md#build-and-evidence-boundary).
 - Published archives/manifests and catalog target restrictions are unchanged.
   Broader host admission does not make a catalog release macOS-compatible.
 - Surviving-browser main-death package-file-read exclusion remains unqualified.

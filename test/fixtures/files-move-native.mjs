@@ -7,14 +7,16 @@ import {
   mkdir,
   symlink,
   readlink,
+  readdir,
   stat,
+  lstat,
   chmod,
   rm,
 } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-assert.equal(process.platform, "linux");
+assert.ok(["linux", "darwin"].includes(process.platform));
 assert.equal(process.arch, "arm64");
 assert.ok(process.versions.electron, "must use bundled Electron Run-as-Node");
 assert.notEqual(
@@ -22,12 +24,30 @@ assert.notEqual(
   0,
   "permission evidence requires ordinary user",
 );
+assert.notEqual(
+  process.geteuid(),
+  0,
+  "permission evidence requires ordinary effective user",
+);
 const native = createRequire(import.meta.url)(path.resolve(process.argv[2]));
-const root = await mkdtemp(path.join(os.tmpdir(), "omx-files-native-"));
-const other = await mkdtemp("/dev/shm/omx-files-native-");
+// macOS callers must supply a writable directory on a distinct mounted device.
+const otherDirectory =
+  process.argv[3] ?? (process.platform === "linux" ? "/dev/shm" : undefined);
+assert.ok(
+  otherDirectory && path.isAbsolute(otherDirectory),
+  "absolute other-device directory required",
+);
+let root, other;
 const checks = [];
 let failure;
 try {
+  root = await mkdtemp(path.join(os.tmpdir(), "omx-files-native-"));
+  other = await mkdtemp(path.join(otherDirectory, "omx-files-native-"));
+  assert.notEqual(
+    (await stat(root)).dev,
+    (await stat(other)).dev,
+    "cross-device precondition",
+  );
   const source = path.join(root, "source");
   const destination = path.join(root, "destination");
   await writeFile(source, "source");
@@ -52,6 +72,38 @@ try {
     "inside",
   );
   checks.push("directory-move");
+  const sourceDirectory = path.join(root, "source-directory");
+  const existingDirectory = path.join(root, "existing-directory");
+  await mkdir(sourceDirectory);
+  await writeFile(path.join(sourceDirectory, "entry"), "source-entry");
+  await mkdir(existingDirectory);
+  const directoryInode = (await lstat(existingDirectory)).ino;
+  for (const populated of [false, true]) {
+    if (populated)
+      await writeFile(
+        path.join(existingDirectory, "entry"),
+        "destination-entry",
+      );
+    await assert.rejects(
+      native.moveNoReplace(sourceDirectory, existingDirectory),
+      { code: "EEXIST" },
+    );
+    assert.equal((await lstat(existingDirectory)).ino, directoryInode);
+    assert.deepEqual(
+      await readdir(existingDirectory),
+      populated ? ["entry"] : [],
+    );
+    assert.equal(
+      await readFile(path.join(sourceDirectory, "entry"), "utf8"),
+      "source-entry",
+    );
+    if (populated)
+      assert.equal(
+        await readFile(path.join(existingDirectory, "entry"), "utf8"),
+        "destination-entry",
+      );
+  }
+  checks.push("existing-directory-no-clobber");
   await symlink("destination", path.join(root, "link"));
   await native.moveNoReplace(
     path.join(root, "link"),
@@ -65,7 +117,20 @@ try {
     native.moveNoReplace(destination, path.join(root, "dangling")),
     { code: "EEXIST" },
   );
+  assert.equal(await readlink(path.join(root, "dangling")), "absent");
+  assert.equal(await readFile(destination, "utf8"), "preserved");
   checks.push("dangling-destination-conflict");
+  const target = path.join(root, "link-target");
+  const existingLink = path.join(root, "existing-link");
+  await writeFile(target, "target-preserved");
+  await symlink("link-target", existingLink);
+  await assert.rejects(native.moveNoReplace(destination, existingLink), {
+    code: "EEXIST",
+  });
+  assert.equal(await readlink(existingLink), "link-target");
+  assert.equal(await readFile(target, "utf8"), "target-preserved");
+  assert.equal(await readFile(destination, "utf8"), "preserved");
+  checks.push("existing-symlink-no-clobber");
   const raceA = path.join(root, "race-a"),
     raceB = path.join(root, "race-b"),
     winner = path.join(root, "winner");
@@ -110,12 +175,19 @@ try {
     { code: "EXDEV" },
   );
   assert.equal(await readFile(destination, "utf8"), "preserved");
+  await assert.rejects(lstat(path.join(other, "target")), { code: "ENOENT" });
   checks.push("cross-device-refusal");
 } catch (error) {
   failure = error;
 } finally {
-  await rm(root, { recursive: true, force: true });
-  await rm(other, { recursive: true, force: true });
+  // Attempt both cleanups even if setup or one removal fails.
+  const cleanup = await Promise.allSettled(
+    [root, other]
+      .filter(Boolean)
+      .map((directory) => rm(directory, { recursive: true, force: true })),
+  );
+  const cleanupFailure = cleanup.find((result) => result.status === "rejected");
+  failure ??= cleanupFailure?.reason;
   console.log(
     JSON.stringify({
       checks,
@@ -124,7 +196,7 @@ try {
       runtime: process.versions,
       platform: process.platform,
       arch: process.arch,
-      cleanup: "completed",
+      cleanup: cleanupFailure ? "failed" : "completed",
     }),
   );
 }

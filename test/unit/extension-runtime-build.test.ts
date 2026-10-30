@@ -6,7 +6,14 @@ import type { BuildOptions } from "esbuild";
 const calls = vi.hoisted(() => ({
   build: vi.fn<(options: BuildOptions) => Promise<void>>(),
   leases: vi.fn(),
-  native: vi.fn(),
+  native:
+    vi.fn<
+      (
+        command: string,
+        args: string[],
+        options: { stdio: "pipe"; timeout: number },
+      ) => void
+    >(),
   blur: vi.fn(),
 }));
 vi.mock("esbuild", () => ({ build: calls.build }));
@@ -33,7 +40,7 @@ afterEach(() => {
 });
 
 it.each([
-  ["darwin", "arm64", true, false],
+  ["darwin", "arm64", true, true],
   ["linux", "arm64", true, true],
   ["linux", "x64", false, false],
   ["win32", "arm64", false, false],
@@ -49,6 +56,34 @@ it.each([
     await import(entry);
     expect(calls.leases).toHaveBeenCalledTimes(runtime ? 1 : 0);
     expect(calls.native).toHaveBeenCalledTimes(move ? 1 : 0);
+    if (move) {
+      const [command, args, options] = calls.native.mock.calls[0]!;
+      expect(command).toBe(
+        os === "darwin" ? "/usr/bin/xcrun" : process.env.CXX || "c++",
+      );
+      expect(args).toEqual(
+        expect.arrayContaining([
+          "-DNAPI_VERSION=8",
+          "-DNODE_GYP_MODULE_NAME=files_move",
+          "-Werror",
+        ]),
+      );
+      expect(options).toEqual({ stdio: "pipe", timeout: 60_000 });
+      if (os === "darwin") {
+        expect(args.slice(0, 2)).toEqual([
+          "clang++",
+          "-mmacosx-version-min=12.0",
+        ]);
+        expect(args).toEqual(
+          expect.arrayContaining(["-bundle", "-undefined", "dynamic_lookup"]),
+        );
+        expect(args).not.toContain("-shared");
+        expect(args).not.toContain("-fPIC");
+      } else {
+        expect(args).toEqual(expect.arrayContaining(["-shared", "-fPIC"]));
+        expect(args).not.toContain("-bundle");
+      }
+    }
     const runtimeBuild = calls.build.mock.calls.find(([options]) =>
       options.outdir?.endsWith("extension-runtime"),
     );
@@ -66,7 +101,7 @@ it.each([
   },
 );
 
-it("unpacks the macOS lease addon explicitly with smart unpacking disabled", () => {
+it("unpacks the macOS lease and Files move addons explicitly with smart unpacking disabled", () => {
   const config = parse(readFileSync("electron-builder.yml", "utf8")) as {
     asar: { smartUnpack: boolean };
     mac: { asarUnpack: string[] };
@@ -75,7 +110,7 @@ it("unpacks the macOS lease addon explicitly with smart unpacking disabled", () 
   expect(config.mac.asarUnpack).toContain(
     "dist/extension-runtime/extension-leases.node",
   );
-  expect(config.mac.asarUnpack).not.toContain(
+  expect(config.mac.asarUnpack).toContain(
     "dist/extension-runtime/files-move.node",
   );
 });

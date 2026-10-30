@@ -243,19 +243,56 @@ catalog does not mean a usable public preview has shipped.
 
 ## Build and evidence boundary
 
-Normal Linux ARM64 application builds include the bootstrap, independent native
-lease addon and Files no-replace addon. The tiny Node-API8 worker-pool adapter
-uses Linux `renameat2(RENAME_NOREPLACE)`, at most32 pending calls and fixed error
-categories. Destination conflicts, permissions, unsupported filesystems and
-cross-device moves fail explicitly. Other platforms are not enabled by this
-preview and have no overwrite fallback. Explicit runtime builds remain available.
-No fuse or Electron version change is required.
+Normal Linux and macOS ARM64 application builds include the bootstrap, independent
+native lease addon and Files no-replace addon. The tiny Node-API8 worker-pool
+adapter uses Linux `renameat2(RENAME_NOREPLACE)` or macOS
+`renameatx_np(RENAME_EXCL)`, at most32 pending calls and fixed error categories.
+The macOS API is available since 10.12, below the application's macOS12 deployment
+floor; API availability is not execution qualification on that floor.
+Destination conflicts, permissions, unsupported filesystems and cross-device moves
+fail explicitly. Other platforms have no overwrite fallback. Explicit runtime
+builds remain available. No fuse or Electron version change is required.
+The macOS primitive is a bounded prerequisite, not complete Files support: trash
+remains Linux-only, and no Files archive/catalog/publication change follows.
 
-`test/fixtures/files-move-native.mjs <absolute-addon>` must run under the bundled
-Electron executable with `ELECTRON_RUN_AS_NODE=1`, as an ordinary Linux ARM64
-user, inside an assigned disposable environment. It checks actual file/directory/
+`test/fixtures/files-move-native.mjs <absolute-addon> [absolute-other-device-directory]`
+must run under the bundled Electron executable with `ELECTRON_RUN_AS_NODE=1`, as
+an ordinary Linux or macOS ARM64 user, inside an assigned disposable environment.
+The other-device directory defaults to `/dev/shm` on Linux and must be supplied
+explicitly on macOS. It must be writable and have a different device identity
+from the temporary source directory; the fixture owns only its newly created
+scratch children, not that parent or its mount. It checks actual file/directory/
 symlink moves, destination races, permissions and cross-device refusal. Source
 inspection and controlled adapter tests are not native qualification.
+
+**macOS ARM64 move prerequisite evidence.**
+
+On macOS27.0.1 ARM64, source `660c911bc00923abb42d853b36140396bfa26737`
+(host `0.24.0-dev.18`) passed a fresh locked install, ordinary build and all ten
+native fixture checks under Electron43.8.1 / bundled Node24.22.0 as an ordinary
+user. Local APFS checks covered existing files, empty/nonempty directories,
+symlinks and dangling destinations, competing writers, successful moves and
+permission refusal. A separate mounted APFS image established distinct-device
+`EXDEV` refusal with both source preservation and destination absence.
+
+The ordinary DMG build and inspection of both the staged application and the
+exact DMG-derived copy passed: native ARM64/macOS12 targets, unpacked addons,
+complete ad-hoc seal, packaged store/lease/move loading and bootstrap refusal.
+DMG SHA-256 is `6cbe9b76aa4c8bc8707069f1f3ddcf28d4cd3a20d9d4cfb2c9f4aefacaee7382`
+(129,718,868 bytes). Mounted/copied bundle file bytes, modes and symlinks matched;
+the image was detached before the copied application was inspected. Root separately
+verified unchanged source/artifact/bundle identities, the seal, absent task mounts,
+fixture scratch cleanup and no current processes naming the owned scope. Bounded
+process-group joins and that snapshot are not a historical escaped-descendant census.
+
+One complete independent review found two issues, both corrected: test tuple
+inference and stale runtime documentation. A subsequent test-mock typing fix
+changed no application or package input. Full formatting, typecheck, lint,
+4,291 headless tests (66 skips) and build passed on `2dae2c8`; earlier typecheck
+and lint failures remain distinct from the corrected results. Package inspection
+is not GUI/Files lifecycle, trash, macOS12 execution, Finder/Gatekeeper,
+notarization, full portable-suite or public-distribution qualification. No release,
+archive, original receipt or catalog entry was changed.
 
 The opt-in `test/integration/files-production.test.ts` runs the already-built
 production entry point when `OMXTERM_FILES_PRODUCTION_SOURCE` names its exact

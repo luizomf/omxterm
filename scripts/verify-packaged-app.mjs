@@ -75,12 +75,7 @@ const extensionEntries = [
 
 function packagedExtensionEntries(platform, arch) {
   if (arch !== "arm64" || !["linux", "darwin"].includes(platform)) return [];
-  return [
-    ...extensionEntries,
-    ...(platform === "linux"
-      ? ["/dist/extension-runtime/files-move.node"]
-      : []),
-  ];
+  return [...extensionEntries, "/dist/extension-runtime/files-move.node"];
 }
 
 const macBlurEntry = "/dist/main/macos-window-blur.node";
@@ -159,7 +154,7 @@ export function inspectAsarEntries(
     (entry) =>
       privateLooking.has(entry) ||
       (platform !== "darwin" && entry === macBlurEntry) ||
-      (platform !== "linux" &&
+      ((!["linux", "darwin"].includes(platform) || arch !== "arm64") &&
         entry === "/dist/extension-runtime/files-move.node") ||
       entry.includes("/node_modules/@xterm/") ||
       (platform === "linux" &&
@@ -206,10 +201,10 @@ async function verifyPackagedExtensions(executable, asar) {
       if (!statFile(asar, entry.slice(1)).unpacked)
         throw new Error(`Packaged native extension must be unpacked: ${entry}`);
       const addon = path.join(`${asar}.unpacked`, entry.slice(1));
-      await inspectArchitecture(addon, "extension lease module", "darwin");
+      await inspectArchitecture(addon, "extension native module", "darwin");
       const { stdout } = await execFile("otool", ["-l", addon]);
       if (!/\bminos 12\.0\b/u.test(stdout))
-        throw new Error("Extension lease module must target macOS 12.0");
+        throw new Error("Extension native module must target macOS 12.0");
       // The complete app seal is verified before this probe.
     } else if (!prepared.equals(packaged)) {
       throw new Error(`Packaged extension resource differs: ${entry}`);

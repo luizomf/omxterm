@@ -3,8 +3,13 @@
 #include <atomic>
 #include <cerrno>
 #include <string>
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 #include <fcntl.h>
+#endif
+#ifdef __APPLE__
+#include <stdio.h>
+#endif
+#ifdef __linux__
 #include <sys/syscall.h>
 #include <unistd.h>
 #endif
@@ -44,11 +49,17 @@ void Execute(napi_env, void* data) {
   // dangling symlinks/directories and competing writers. EXDEV stays refusal.
   if (syscall(SYS_renameat2, AT_FDCWD, move->source.c_str(), AT_FDCWD,
               move->destination.c_str(), 1U) < 0) move->error = errno;
+#elif defined(__APPLE__)
+  // RENAME_EXCL excludes existing entries atomically; never retry or fall back.
+  if (renameatx_np(AT_FDCWD, move->source.c_str(), AT_FDCWD,
+                  move->destination.c_str(), RENAME_EXCL) < 0) move->error = errno;
 #else
   move->error = ENOSYS;
 #endif
 }
 const char* Code(int error) {
+  // ENOTSUP and EOPNOTSUPP may alias; keep them out of duplicate case labels.
+  if (error == ENOTSUP || error == EOPNOTSUPP) return "ENOTSUP";
   switch (error) {
     case EEXIST: case ENOTEMPTY: return "EEXIST";
     case EXDEV: return "EXDEV";

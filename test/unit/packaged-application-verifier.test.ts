@@ -85,12 +85,10 @@ const extensionEntries = [
   "/dist/extension-runtime/extension-leases.node",
   "/node_modules/semver/package.json",
   "/node_modules/yauzl/package.json",
-];
-
-const linuxExtensionEntries = [
-  ...extensionEntries,
   "/dist/extension-runtime/files-move.node",
 ];
+
+const linuxExtensionEntries = extensionEntries;
 
 const windowsEntries = (arch: string) => [
   ...[
@@ -504,7 +502,7 @@ describe("separately installed Files package inventory", () => {
       ).missing,
     ).toEqual([]);
   });
-  it("requires each macOS ARM64 runtime asset without a Files move addon", () => {
+  it("requires each macOS ARM64 runtime asset including Files move", () => {
     const base = [...requiredEntries, "/dist/main/macos-window-blur.node"];
     expect(inspectAsarEntries(base, "darwin").missing).toEqual(
       extensionEntries,
@@ -517,12 +515,24 @@ describe("separately installed Files package inventory", () => {
         ).missing,
       ).toEqual([omitted]);
     }
-    const move = "/dist/extension-runtime/files-move.node";
     expect(
-      inspectAsarEntries([...base, ...extensionEntries, move], "darwin")
-        .forbidden,
-    ).toEqual([move]);
+      inspectAsarEntries([...base, ...extensionEntries], "darwin").forbidden,
+    ).toEqual([]);
   });
+  it.each([
+    ["darwin", "x64"],
+    ["linux", "x64"],
+    ["win32", "arm64"],
+    ["win32", "x64"],
+  ] as const)(
+    "rejects the Files move addon on unsupported %s %s",
+    (platform, arch) => {
+      const move = "/dist/extension-runtime/files-move.node";
+      expect(inspectAsarEntries([move], platform, arch).forbidden).toContain(
+        move,
+      );
+    },
+  );
   it("rejects separate archives and receipts both inside and outside ASAR", () => {
     expect(
       inspectForbiddenPackagedEntries([
