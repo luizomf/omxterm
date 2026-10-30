@@ -12,6 +12,11 @@ import { wideWrapLinkCorrections } from "./restty-wide-wrap-corrections.mjs";
 import { cprCorrections } from "./restty-cpr-corrections.mjs";
 import { inputRoutingCorrections } from "./restty-input-routing-corrections.mjs";
 import {
+  applicationCursorCorrections,
+  applicationCursorCoreCorrections,
+  applicationCursorDeclarations,
+} from "./restty-application-cursor-corrections.mjs";
+import {
   softWrapSpaceCorrections,
   visiblePathBoundaryCorrections,
 } from "./restty-soft-wrap-corrections.mjs";
@@ -51,10 +56,12 @@ const priorReflowCoreDigest =
   "dbe1edf4897f11d0de24acb4fd83d94646200a87a58317341525dc0a9d613662";
 const priorPaletteCoreDigest =
   "1fb03cc8360942c613ca98973658de362852a60d88942c482de4b0dc429660fa";
-const correctedCoreDigest =
+const priorApplicationCursorCoreDigest =
   "03d79d4c745e3c74dd90082a100cbf85e5060e23ff9d16fba338b11d2db1e6be";
+const correctedCoreDigest =
+  "0a8f6ef4c8c204a25199b51022a6d6c9d46e871526d79c300e5f31747d797307";
 const correctedCoreWasmDigest =
-  "a52f314c2e91e87394e67307d6b0067c8ba28f6b1e31e7587872b9c41ce88c41";
+  "a67bf4f562d895ea3580115e31f7c31117b2b3509582aa3744f262758e163513";
 const originalEventTypesDigest =
   "1c9383be2d0377635b3463a5ac2ec31eac3e2b233fc664de751ad3e9f54ea650";
 const correctedEventTypesDigest =
@@ -131,8 +138,10 @@ const priorCprDigest =
   "3c4dc8554c8ccc91f0b34ebea8a5638fe6592c1a973acc0a64dafcb33ab8387e";
 const priorInputRoutingDigest =
   "f15c6c25cb2efb879b5a00b09640fcdb2d364c8d566237ff5d0ae63975bb3e44";
-const correctedDigest =
+const priorApplicationCursorDigest =
   "e0ca1593ded32df536777fba23b835fafd7993680b6e550958fe0ac6c8e4b7df";
+const correctedDigest =
+  "7cbe4d0fe281a9c221ee88342e7f76fd35f1f285fe5b7eace402c059772a44e7";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -1782,6 +1791,7 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     sourceDigest !== priorGraphemeCoreDigest &&
     sourceDigest !== priorReflowCoreDigest &&
     sourceDigest !== priorPaletteCoreDigest &&
+    sourceDigest !== priorApplicationCursorCoreDigest &&
     sourceDigest !== priorInteractionCoreDigest
   )
     throw new Error(
@@ -1804,15 +1814,34 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
           sourceDigest === priorGraphemeCoreDigest ||
           sourceDigest === priorReflowCoreDigest ||
           sourceDigest === priorPaletteCoreDigest ||
+          sourceDigest === priorApplicationCursorCoreDigest ||
           sourceDigest === priorInteractionCoreDigest
         ? []
         : parsedEventCoreCorrections,
   );
+  source = applyCorrections(source, applicationCursorCoreCorrections);
   if (digest(source) !== correctedCoreDigest)
     throw new Error(
       `Restty WASM correction did not produce reviewed bytes: ${digest(source)}`,
     );
   await writeFile(selectedCorePath, source);
+}
+
+async function prepareApplicationCursorDeclarations(root) {
+  for (const correction of applicationCursorDeclarations) {
+    const selectedPath = path.join(root, correction.path);
+    const source = await readFile(selectedPath, "utf8");
+    const sourceDigest = digest(source);
+    if (sourceDigest === correction.correctedDigest) continue;
+    if (sourceDigest !== correction.originalDigest)
+      throw new Error(`Unrecognized Restty declaration: ${correction.path}`);
+    const corrected = applyCorrections(source, [correction]);
+    if (digest(corrected) !== correction.correctedDigest)
+      throw new Error(
+        `Restty declaration correction drift: ${correction.path}`,
+      );
+    await writeFile(selectedPath, corrected);
+  }
 }
 
 async function prepareResttyEventTypes(selectedPath) {
@@ -1970,6 +1999,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, cprCorrections);
       case priorInputRoutingDigest:
         source = applyCorrections(source, inputRoutingCorrections);
+      case priorApplicationCursorDigest:
+        source = applyCorrections(source, applicationCursorCorrections);
         break;
       default:
         throw new Error(
@@ -1984,6 +2015,9 @@ export async function prepareResttyRuntime(options = {}) {
   }
   await prepareResttyCore(selectedCorePath, selectedArtifactPath);
   await prepareResttyEventTypes(selectedEventTypesPath);
+  await prepareApplicationCursorDeclarations(
+    options.declarationRoot ?? packageDist,
+  );
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)

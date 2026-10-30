@@ -1,6 +1,13 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  copyFile,
+  cp,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -10,7 +17,7 @@ import history from "../fixtures/restty-runtime-history.json";
 
 const dist = path.dirname(createRequire(import.meta.url).resolve("restty"));
 const correctedDigest =
-  "e0ca1593ded32df536777fba23b835fafd7993680b6e550958fe0ac6c8e4b7df";
+  "7cbe4d0fe281a9c221ee88342e7f76fd35f1f285fe5b7eace402c059772a44e7";
 
 // Prepare only task-owned copies, including core and types: other fixtures may
 // still be exercising the installed prior runtime during a correction review.
@@ -19,8 +26,15 @@ async function copyInputs(root: string) {
     runtimePath: path.join(root, "runtime.js"),
     corePath: path.join(root, "core.js"),
     eventTypesPath: path.join(root, "events.d.ts"),
+    declarationRoot: path.join(root, "declarations"),
   };
   await Promise.all([
+    cp(path.join(dist, "input"), path.join(options.declarationRoot, "input"), {
+      recursive: true,
+    }),
+    cp(path.join(dist, "wasm"), path.join(options.declarationRoot, "wasm"), {
+      recursive: true,
+    }),
     copyFile(path.join(dist, "chunk-c0rcpsc5.js"), options.runtimePath),
     copyFile(path.join(dist, "chunk-6dxqza9q.js"), options.corePath),
     copyFile(

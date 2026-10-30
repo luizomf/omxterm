@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { inputRoutingCorrections } from "../../scripts/restty-input-routing-corrections.mjs";
+import { applicationCursorCorrections } from "../../scripts/restty-application-cursor-corrections.mjs";
 import { syntheticBoldCorrections } from "../../scripts/restty-synthetic-bold-corrections.mjs";
 import { runInNewContext } from "node:vm";
 import { createInputHandler } from "restty/internal";
@@ -68,7 +69,11 @@ describe("actual prepared final-key routing", () => {
         expect(value.split(corrected)).toHaveLength(2);
         return value.replace(corrected, original);
       }, text);
-    const prior = reverse(source, inputRoutingCorrections);
+    const routingBaseline = reverse(source, applicationCursorCorrections);
+    expect(hash(routingBaseline)).toBe(
+      "e0ca1593ded32df536777fba23b835fafd7993680b6e550958fe0ac6c8e4b7df",
+    );
+    const prior = reverse(routingBaseline, inputRoutingCorrections);
     expect(hash(prior)).toBe(
       "f15c6c25cb2efb879b5a00b09640fcdb2d364c8d566237ff5d0ae63975bb3e44",
     );
@@ -76,7 +81,7 @@ describe("actual prepared final-key routing", () => {
     expect(hash(historicalControl)).toBe(
       "b4112dacd54853f78333a3d5d65f8a87825b1ff45adb53cbfb45726b58a83625",
     );
-    const currentControl = reverse(source, syntheticBoldCorrections);
+    const currentControl = reverse(routingBaseline, syntheticBoldCorrections);
     expect(hash(currentControl)).toBe(
       "20a8fc66883c87c5832e4a8054919ad901be1e538cadead3a775bd86c9abceb6",
     );

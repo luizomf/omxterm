@@ -840,7 +840,12 @@ dead-key literals completed with Space retain the keyboard layout's text,
 including on X11 paths that emit `insertText` without composition events. They
 produce neither a substituted ASCII space nor a duplicate keyboard-protocol
 release. Ordinary Space input and configured terminal modifiers retain their
-existing encoding. Restty image rendering and scrollback follow the shared
+existing encoding. Unmodified legacy arrows follow the live Ghostty DECCKM
+application-cursor mode: normal mode sends CSI A/B/C/D; application mode sends
+SS3 A/B/C/D. The encoder reads parser-owned state, including mode save/restore
+and reset, without a render-frame dependency or a second JavaScript mode tracker.
+Modified arrows and negotiated Kitty keyboard events retain their existing
+encoding, and non-arrow keys are unchanged. Restty image rendering and scrollback follow the shared
 contracts below through the pinned Ghostty core. Bar cursors remain visible
 inside their addressed cell at the first column, independently of terminal
 padding or font family; block/underline styles and focus/blink behavior remain

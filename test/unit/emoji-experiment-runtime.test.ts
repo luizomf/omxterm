@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import runtimeHistory from "../fixtures/restty-runtime-history.json";
 import { inputRoutingCorrections } from "../../scripts/restty-input-routing-corrections.mjs";
+import { applicationCursorCorrections } from "../../scripts/restty-application-cursor-corrections.mjs";
 
 const harness = vi.hoisted(() => ({
   runtime: "",
@@ -146,7 +147,10 @@ it("accepts the prepared runtime and instruments all eighteen emoji trial recipe
     expect(source).toContain(
       "globalThis.emojiProbe.atlas++;atlas = buildAtlas",
     );
-    for (const { corrected } of inputRoutingCorrections)
+    for (const { corrected } of [
+      ...inputRoutingCorrections,
+      ...applicationCursorCorrections,
+    ])
       expect(source).toContain(corrected);
     // Prior product corrections also survive this unrelated fixture transform.
     expect(source).toContain(
@@ -171,20 +175,24 @@ it("accepts the prepared runtime and instruments all eighteen emoji trial recipe
     expect(transformSync(source, { loader: "js" }).code).not.toBe("");
 });
 
-it("rejects the previous prepared runtime instead of relabeling historical bytes", async () => {
-  const previous = runtimeHistory[0]!;
-  const lines = harness.runtime.split("\n");
-  for (const edit of previous.edits)
-    lines.splice(edit.start, edit.deleteCount, ...edit.lines);
-  harness.runtime = lines.join("\n");
-  expect(createHash("sha256").update(harness.runtime).digest("hex")).toBe(
-    previous.sha256,
-  );
-  await expect(runDriver()).rejects.toThrow("Unreviewed Restty runtime");
-  expect(spawnSync).not.toHaveBeenCalled();
-  expect(harness.renderers).toEqual([]);
-  expect(harness.mainReaders).toEqual([]);
-});
+it.each([0, 1])(
+  "rejects prior prepared runtime %s instead of relabeling historical bytes",
+  async (index) => {
+    const previous = runtimeHistory[index]!;
+    const lines = harness.runtime.split("\n");
+    for (const state of runtimeHistory.slice(0, index + 1))
+      for (const edit of state.edits)
+        lines.splice(edit.start, edit.deleteCount, ...edit.lines);
+    harness.runtime = lines.join("\n");
+    expect(createHash("sha256").update(harness.runtime).digest("hex")).toBe(
+      previous.sha256,
+    );
+    await expect(runDriver()).rejects.toThrow("Unreviewed Restty runtime");
+    expect(spawnSync).not.toHaveBeenCalled();
+    expect(harness.renderers).toEqual([]);
+    expect(harness.mainReaders).toEqual([]);
+  },
+);
 
 it("rejects modified runtime bytes before any renderer instrumentation or native launch", async () => {
   harness.runtime += "\n";

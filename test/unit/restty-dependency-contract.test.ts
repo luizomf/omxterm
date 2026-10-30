@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { copyFile, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { prepareResttyRuntime } from "../../scripts/prepare-restty-runtime.mjs";
+import { applicationCursorDeclarations } from "../../scripts/restty-application-cursor-corrections.mjs";
 
 const require = createRequire(import.meta.url);
 const packageRoot = path.dirname(path.dirname(require.resolve("restty")));
@@ -126,16 +127,17 @@ describe("Restty dependency contract", () => {
       path.join(packageRoot, "dist", "chunk-c0rcpsc5.js"),
     );
     expect(digest(runtime)).toBe(
-      "e0ca1593ded32df536777fba23b835fafd7993680b6e550958fe0ac6c8e4b7df",
+      "7cbe4d0fe281a9c221ee88342e7f76fd35f1f285fe5b7eace402c059772a44e7",
     );
     const core = readFileSync(
       path.join(packageRoot, "dist", "chunk-6dxqza9q.js"),
     );
     expect(digest(core)).toBe(
-      "03d79d4c745e3c74dd90082a100cbf85e5060e23ff9d16fba338b11d2db1e6be",
+      "0a8f6ef4c8c204a25199b51022a6d6c9d46e871526d79c300e5f31747d797307",
     );
     expect(core.toString("utf8")).toContain("restty_set_scrollback_limits");
     expect(core.toString("utf8")).toContain("restty_event_consume");
+    expect(core.toString("utf8")).toContain("restty_application_cursor_keys");
     expect(core.toString("utf8")).toContain("restty_debug_kitty_total_limit");
     expect(core.toString("utf8")).toContain("ignoreBOM: true");
     const source = runtime.toString("utf8");
@@ -195,7 +197,7 @@ describe("Restty dependency contract", () => {
     );
   });
 
-  it("rejects runtime, embedded-core, event-type, and artifact drift", async () => {
+  it("guards runtime, core, artifact and declaration preparation against drift", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "omxterm-restty-drift-"));
     try {
       const runtimePath = path.join(root, "runtime.js");
@@ -223,11 +225,19 @@ describe("Restty dependency contract", () => {
         copyFile(installedEventTypes, eventTypesPath),
         copyFile(trackedCore, artifactPath),
       ]);
+      const declarationRoot = path.join(root, "declarations");
+      for (const directory of ["input", "wasm"])
+        await cp(
+          path.join(packageRoot, "dist", directory),
+          path.join(declarationRoot, directory),
+          { recursive: true },
+        );
       const options = {
         runtimePath,
         corePath,
         correctedCorePath: artifactPath,
         eventTypesPath,
+        declarationRoot,
       };
 
       await writeFile(runtimePath, `${readFileSync(runtimePath, "utf8")}\n`);
@@ -254,6 +264,28 @@ describe("Restty dependency contract", () => {
       await expect(prepareResttyRuntime(options)).rejects.toThrow(
         /Unrecognized Restty event types/u,
       );
+      await copyFile(installedEventTypes, eventTypesPath);
+      for (const correction of applicationCursorDeclarations) {
+        const file = path.join(declarationRoot, correction.path);
+        const corrected = readFileSync(file, "utf8");
+        expect(digest(Buffer.from(corrected))).toBe(correction.correctedDigest);
+        expect(corrected.split(correction.corrected)).toHaveLength(2);
+        const original = corrected.replace(
+          correction.corrected,
+          correction.original,
+        );
+        expect(digest(Buffer.from(original))).toBe(correction.originalDigest);
+        await writeFile(file, original);
+        await prepareResttyRuntime(options);
+        await prepareResttyRuntime(options);
+        expect(readFileSync(file, "utf8")).toBe(corrected);
+        await writeFile(file, `${corrected}\n`);
+        await expect(prepareResttyRuntime(options)).rejects.toThrow(
+          /Unrecognized Restty declaration/u,
+        );
+        expect(readFileSync(file, "utf8")).toBe(`${corrected}\n`);
+        await writeFile(file, corrected);
+      }
     } finally {
       await rm(root, { recursive: true, force: true });
     }

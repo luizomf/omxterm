@@ -1,4 +1,4 @@
-import { copyFile, mkdtemp, readFile, rm } from "node:fs/promises";
+import { copyFile, cp, mkdtemp, readFile, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -15,9 +15,20 @@ beforeAll(async () => {
     runtimePath: path.join(root, "runtime.js"),
     corePath: path.join(root, "core.js"),
     eventTypesPath: path.join(root, "events.d.ts"),
+    declarationRoot: path.join(root, "declarations"),
   };
   try {
     await Promise.all([
+      cp(
+        path.join(dist, "input"),
+        path.join(options.declarationRoot, "input"),
+        {
+          recursive: true,
+        },
+      ),
+      cp(path.join(dist, "wasm"), path.join(options.declarationRoot, "wasm"), {
+        recursive: true,
+      }),
       copyFile(path.join(dist, "chunk-c0rcpsc5.js"), options.runtimePath),
       copyFile(path.join(dist, "chunk-6dxqza9q.js"), options.corePath),
       copyFile(

@@ -46,6 +46,35 @@ unexplained; separate checks do not qualify that combined ordering.
 - Visible HTTP(S) URLs and local image paths are recognized from cell snapshots and Ghostty selection proofs across soft wraps (OSC 8 hyperlinks are ignored). Link-only proof endpoints exclude a terminal wide-wrap spacer so selection expansion does not borrow the next grapheme; copy/selection semantics stay unchanged. Unknown viewport-edge continuity remains refused.
 - Parsed OSC 0/2 titles and silent BEL events flow from the Ghostty core to OMXTerm's per-session host controllers.
 
+### Application-cursor keyboard coverage
+
+The prepared encoder reads DECCKM from a narrow Ghostty WASM getter, not a
+JavaScript mode mirror. Unmodified legacy arrows select CSI or SS3 from current
+parser state; modified arrows, negotiated Kitty events and non-arrow keys retain
+their existing encoding. Headless coverage executes actual PTY output ingestion,
+core state providers, keyboard press/repeat/release binding and final PTY mapping,
+including local and claimed routing. It covers split mode controls, save/restore,
+hard reset and the pinned core's soft-reset behavior without waiting for a frame.
+
+```sh
+npx vitest run test/integration/restty-keyboard-core.test.ts test/unit/restty-input-routing.test.ts test/unit/restty-dependency-contract.test.ts test/integration/restty-runtime-history.test.ts
+```
+
+A bounded local-PTY diagnosis with htop 3.5.3 linked CSI arrows in application
+mode to synthetic-target nice increases; SS3 Down navigated correctly. This is
+not owner-desktop/native-event qualification. A separate macOS ARM64 source
+fixture exercised Electron-injected native key events through the production
+Surface and a controlled Adapter into a real PTY: all four arrows produced CSI,
+SS3 and CSI across normal/application/reset phases, and htop 3.5.3 Up/Down changed
+the selected synthetic process without changing its nice value. Explicit bracket
+actions identified the selected process; only disposable targets were used.
+
+A fresh btop 1.4.8 fixture stayed alive after all four arrows and exited normally
+only after explicit `q`. This is bounded non-reproduction, not a fix for the
+reported closure. These fixtures do not qualify physical keyboards, the complete
+application shortcut/IPC composition, packaged artifacts or navigation through
+tmux. Keep those checks separate from the demonstrated direct-input correction.
+
 ### Terminal context-menu policy checks
 
 `terminal.contextMenuEnabled` defaults to true without changing existing
@@ -203,14 +232,18 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `f15c6c25cb2efb879b5a00b09640fcdb2d364c8d566237ff5d0ae63975bb3e44` |
-| Embedded-core chunk       | `03d79d4c745e3c74dd90082a100cbf85e5060e23ff9d16fba338b11d2db1e6be` |
+| Restty JavaScript runtime | `7cbe4d0fe281a9c221ee88342e7f76fd35f1f285fe5b7eace402c059772a44e7` |
+| Embedded-core chunk       | `0a8f6ef4c8c204a25199b51022a6d6c9d46e871526d79c300e5f31747d797307` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
-| Tracked WASM core         | `a52f314c2e91e87394e67307d6b0067c8ba28f6b1e31e7587872b9c41ce88c41` |
+| Tracked WASM core         | `a67bf4f562d895ea3580115e31f7c31117b2b3509582aa3744f262758e163513` |
 | Unix `node-pty` runtime   | `a8ee8107e9d1a26c133e6d450149d2712facce0e97db12b57500e869bbab6578` |
 | Windows argv agent        | `6042a70008684243efbc865d2615c22a16a910c7a65475bc1a33e49447bcd815` |
 | Windows terminal          | `4ceeb76ee0c99ec013678828a3fdf309a612c4613190e5ce16840f5096f7e162` |
 | Shared exit forwarding    | `61698286a777b0c76826e138a9d07424e10db77a28b91ca62a9f96f06f76ff3c` |
+
+The additional application-cursor wrapper, export and input declarations are
+checksum-guarded in `scripts/restty-application-cursor-corrections.mjs`; unknown
+input bytes fail preparation rather than being approximately patched.
 
 ### Rebuilding the WASM core
 

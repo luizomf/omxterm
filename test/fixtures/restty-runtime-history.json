@@ -1,5 +1,43 @@
 [
   {
+    "name": "priorApplicationCursorDigest",
+    "sha256": "e0ca1593ded32df536777fba23b835fafd7993680b6e550958fe0ac6c8e4b7df",
+    "edits": [
+      { "start": 55766, "deleteCount": 5, "lines": [] },
+      {
+        "start": 1525,
+        "deleteCount": 1,
+        "lines": [
+          "    encodeKeyEvent: (event) => encodeKeyEvent(event, config, options.getKittyKeyboardFlags?.() ?? 0),"
+        ]
+      },
+      {
+        "start": 531,
+        "deleteCount": 1,
+        "lines": ["    seq = encodeDefaultKeyEvent(event);"]
+      },
+      {
+        "start": 513,
+        "deleteCount": 1,
+        "lines": [
+          "function encodeKeyEvent(event, config = DEFAULT_CONFIG, kittyFlags = 0) {"
+        ]
+      },
+      {
+        "start": 143,
+        "deleteCount": 1,
+        "lines": [
+          "    return event.shiftKey || event.altKey || event.ctrlKey ? `\\x1B[1;${modifierCode(event)}${modifierFinal}` : `\\x1B[${modifierFinal}`;"
+        ]
+      },
+      {
+        "start": 131,
+        "deleteCount": 1,
+        "lines": ["function encodeDefaultKeyEvent(event) {"]
+      }
+    ]
+  },
+  {
     "name": "priorInputRoutingDigest",
     "sha256": "f15c6c25cb2efb879b5a00b09640fcdb2d364c8d566237ff5d0ae63975bb3e44",
     "edits": [

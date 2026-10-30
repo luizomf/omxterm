@@ -225,7 +225,15 @@ to preserve the readable tail; ConPTY is separate.
 ## Keyboard input and terminal controls
 
 Application accelerators remain in main. Restty's encoder owns terminal keys
-and mouse modes. Live Option Key Mode preserves native Unicode/composition for
+and mouse modes. Legacy unmodified arrows use Ghostty's live DECCKM value through
+a narrow read-only WASM export and typed private runtime provider: CSI in normal
+mode, SS3 in application mode. Core remains the authority for save/restore and
+reset; the host and OutputFilter do not duplicate its mode state or rewrite final
+PTY bytes. Modified arrows, negotiated Kitty events and non-arrow input preserve
+their prior encodings. This addresses the demonstrated application-mode htop
+nice/navigation mismatch; it does not establish a cause or fix for the separately
+reported btop closure. Headless regressions join actual output ingestion, core
+state, keyboard binding and final local/claimed delivery, not a simulated encoder. Live Option Key Mode preserves native Unicode/composition for
 unconfigured macOS Option keys and produces terminal Alt only for configured
 physical sides. Native dead-key text, including X11 `insertText` without
 composition events, stays on the browser text path. The completing Space does
