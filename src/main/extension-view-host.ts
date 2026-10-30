@@ -470,19 +470,43 @@ class NativeExtensionViewHost {
             !this.options.owner.isMinimized();
           const context: ExtensionViewRequestContext = {
             id: entry.descriptor.id,
-            isCurrentVisible: () =>
-              visible &&
-              this.#live() &&
-              this.options.owner.isVisible() &&
-              !this.options.owner.isMinimized() &&
-              this.#revision === revision &&
-              this.#admissionGeneration === generation &&
-              this.#selected === entry.descriptor.id &&
-              entry.visible &&
-              !entry.closing &&
-              !entry.rendererGone &&
-              !entry.abort.signal.aborted &&
-              !contents.isDestroyed(),
+            isCurrentVisible: () => {
+              // [DEBUG-741-admission] Temporary metadata-only presentation probe.
+              const current =
+                visible &&
+                this.#live() &&
+                this.options.owner.isVisible() &&
+                !this.options.owner.isMinimized() &&
+                this.#revision === revision &&
+                this.#admissionGeneration === generation &&
+                this.#selected === entry.descriptor.id &&
+                entry.visible &&
+                !entry.closing &&
+                !entry.rendererGone &&
+                !entry.abort.signal.aborted &&
+                !contents.isDestroyed();
+              if (!current)
+                console.error(
+                  "[DEBUG-741-admission] visibility",
+                  JSON.stringify({
+                    capturedVisible: visible,
+                    live: this.#live(),
+                    windowVisible: this.options.owner.isVisible(),
+                    minimized: this.options.owner.isMinimized(),
+                    capturedRevision: revision,
+                    revision: this.#revision,
+                    capturedGeneration: generation,
+                    generation: this.#admissionGeneration,
+                    selected: this.#selected === entry.descriptor.id,
+                    visible: entry.visible,
+                    closing: entry.closing,
+                    rendererGone: entry.rendererGone,
+                    aborted: entry.abort.signal.aborted,
+                    destroyed: contents.isDestroyed(),
+                  }),
+                );
+              return current;
+            },
           };
           pending++;
           try {
