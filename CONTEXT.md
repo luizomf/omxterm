@@ -161,10 +161,14 @@ Insert, Run and read-only preview deliver exact text through Protected Paste to
 a captured live Surface, never a replacement target. See
 [interaction behavior](docs/spec.md#window-and-session-behavior) and
 [catalog configuration](docs/spec.md#configuration-and-local-state).
-Linux ARM64 and macOS ARM64 source use the optional installed extension; other
-targets retain the built-in view. The macOS source transition has bounded native
-qualification, not a published host release. Distributed cutover requires a published compatible package
-and migration guidance ([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).
+Published Linux ARM64 `0.24.0-dev.11` and macOS ARM64 `0.24.0-dev.16` previews
+use optional Snippets `0.1.0`, available through the official catalog or local
+archive; see [delivery evidence and limits](docs/snippets-migration.md#macos-arm64-catalog-delivery).
+Stable `0.23.0` remains Latest with built-in Snippets; Windows and Linux x64
+retain the built-in view. Published artifacts and original receipts remain
+immutable. Each remaining cutover requires matching host/package qualification,
+migration guidance and compatible package publication/verification before distributed removal
+([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).
 
 ## Terminal data and interaction
 
