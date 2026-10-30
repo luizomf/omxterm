@@ -59,10 +59,10 @@ adds the optional fixed same-tab keyboard route with core-owned Stop.
 
 [ADR0044: Migrate Snippets without changing terminal input](0044-migrate-snippets-without-changing-terminal-input.md)
 records the accepted optional-extension migration design and platform cutover
-prerequisites. Linux ARM64 source composition uses the optional installed companion;
-other targets retain built-in Snippets. Distributed Linux migration still requires
-compatible package publication and matching qualification; source integration does
-not complete the migration.
+prerequisites. The published Linux ARM64 OMXTerm `0.24.0-dev.11` / Snippets `0.1.0`
+preview uses the optional installed companion; the [migration guide](../snippets-migration.md)
+records installation and qualification limits. Other targets retain built-in
+Snippets until their own platform prerequisites are met; #741 remains open.
 
 ## Related boundaries
 

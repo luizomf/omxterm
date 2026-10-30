@@ -1,8 +1,11 @@
 # ADR 0044: Migrate Snippets without changing terminal input
 
 Status: accepted migration design for [#741](https://github.com/luizomf/omxterm/issues/741);
-Linux ARM64 source transition implemented; distributed migration remains pending
-compatible package publication and matching qualification. Source includes
+Linux ARM64 migration is available in the published OMXTerm `0.24.0-dev.11` /
+Snippets `0.1.0` preview pair. The compatible package was published and download-verified
+before the host; matching exact-package qualification and full Linux package
+verification are recorded in the [migration guide](../snippets-migration.md#preview-coverage-and-remaining-platforms)
+and linked release notes, with their input/rendering limits. Source includes
 activation-scoped catalog paging, a declared own-view semantic-input capability,
 separately buildable package/UI and the compatibility entry point described in
 [the specification](../spec.md). Other targets retain built-in Snippets. Source
@@ -148,9 +151,10 @@ Logical activity is transported separately from visibility: geometry updates and
 overlay hiding do not reload the catalog or discard preview focus restoration.
 The child receives committed language changes and explicit search/restore focus
 intent through the existing native presentation owner.
-The Linux source transition is not completion of #741 or a published migration.
-The [migration guide](../snippets-migration.md) preserves the distribution gate
-and explains explicit/local-archive installation and unchanged user data.
+The published Linux ARM64 preview does not complete #741; other-platform
+migrations remain outstanding. The [migration guide](../snippets-migration.md)
+identifies the exact public pair and explains explicit/local-archive installation,
+unchanged user data and the remaining platform gates.
 
 Cut over a platform only after the package is installable through the ordinary
 extension-management path on that platform, the matching host/package pair is
