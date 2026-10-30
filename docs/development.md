@@ -59,7 +59,7 @@ Linux tests need a writable temporary directory on a filesystem that permits exe
 - [`linux-desktop-launch`](../test/integration/linux-desktop-launch.test.ts) executes inspection stubs and a synthetic AppImage, including its installed copy through `gio launch`.
 - [`linux-helper-provisioning`](../test/integration/linux-helper-provisioning.test.ts), [`linux-installer-lifecycle`](../test/integration/linux-installer-lifecycle.test.ts), and [`linux-packaged-process`](../test/unit/linux-packaged-process.test.ts) execute temporary helper, AppImage, or wrapper scripts.
 
-If `/tmp` is mounted with `noexec`, executable permission bits alone do not satisfy this prerequisite. Failures can look like an invalid AppImage or a helper that never starts, rather than an explicit permission error. [#688](https://github.com/luizomf/omxterm/issues/688) records a contributor's reported failures and successful reruns with an executable `TMPDIR`; those results are not a fresh maintainer reproduction or evidence of an architecture defect.
+If `/tmp` is mounted with `noexec`, executable permission bits alone do not satisfy this prerequisite. Failures can look like an invalid AppImage or a helper that never starts, rather than an explicit permission error. See [#688](https://github.com/luizomf/omxterm/issues/688) for the contributor-reported example, not a maintainer reproduction or established architecture defect.
 
 Use a newly created, private directory on an execution-capable filesystem you own. For example, from the repository root, this subshell tries your home filesystem, checks direct script execution, and scopes `TMPDIR` to one focused, non-graphical test run:
 
@@ -233,9 +233,9 @@ Do not infer full-suite execution coverage from aggregate counters or empty pass
 
 ### Qualification scope
 
-`npm run check:portable` is the baseline for every code change (formatting, lint, typecheck, the default Vitest suite, and an unpackaged build). Two things to know before running it:
+`npm run check:portable` is the baseline for every code change (formatting, lint, typecheck, the default Vitest suite, and an unpackaged build). Before running it:
 
-- Controlled Fedora and Ubuntu reproductions of [#609](https://github.com/luizomf/omxterm/issues/609) traced the nested About relaunch timeout to inherited `APPIMAGE`: development Electron relaunched the outer terminal's AppImage instead of its own executable. Display relaunch now selects `APPIMAGE` only when `APPDIR/omxterm` matches the current executable ([ADR 0020](adr/0020-default-linux-rendering-to-x11.md)); terminal environment propagation is unchanged. Matched About cases and genuine packaged default-relaunch probes passed with the correction on both prepared desktops. This establishes a mechanism for those bounded reproductions, not the cause of every historical Linux or Windows startup failure or all-platform qualification.
+- Linux display relaunch selects `APPIMAGE` only when `APPDIR/omxterm` matches the current executable, preventing development Electron from relaunching an inherited outer AppImage; terminal environment propagation is unchanged ([ADR 0020](adr/0020-default-linux-rendering-to-x11.md)). [#609](https://github.com/luizomf/omxterm/issues/609) records the bounded Fedora/Ubuntu reproductions and corrected About/packaged-relaunch checks, not a diagnosis of every historical startup failure or all-platform qualification.
 - Known runtime limitations that tests account for are listed in the [Restty guide](restty-development.md#current-runtime-limitations).
 - Linux runs that include `terminal-popup-native` (including the full suite) need the explicitly provisioned native-input lane described below. Set `OMXTERM_TEST_PROVISIONED_NATIVE_INPUT=1` only after provisioning it. Missing prerequisites fail; they are not skipped as successful qualification.
 
