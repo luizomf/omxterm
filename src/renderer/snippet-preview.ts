@@ -28,6 +28,7 @@ export function createSnippetPreview(
   let dialog: HTMLDialogElement | undefined;
   let disposed = false;
   let stopWatching: (() => void) | undefined;
+  let stopRevocation: (() => void) | undefined;
   const keyboard = retainDismissalGesture(document);
 
   const close = () => {
@@ -37,6 +38,8 @@ export function createSnippetPreview(
     relabel = undefined;
     stopWatching?.();
     stopWatching = undefined;
+    stopRevocation?.();
+    stopRevocation = undefined;
     previous.close();
     previous.remove();
     options.onActivityChange(false);
@@ -51,8 +54,16 @@ export function createSnippetPreview(
       snippet: TerminalSnippet,
       target: SnippetTarget,
       returnFocus: () => boolean,
+      signal?: AbortSignal,
     ) {
-      if (disposed || dialog || !options.canOpen() || !target.live()) return;
+      if (
+        disposed ||
+        dialog ||
+        signal?.aborted ||
+        !options.canOpen() ||
+        !target.live()
+      )
+        return;
       const current = document.createElement("dialog");
       dialog = current;
       current.className = "snippet-preview";
@@ -114,6 +125,11 @@ export function createSnippetPreview(
       };
       stopWatching = target.onUnavailable(refresh);
 
+      if (signal) {
+        signal.addEventListener("abort", cancelPreview, { once: true });
+        stopRevocation = () =>
+          signal.removeEventListener("abort", cancelPreview);
+      }
       cancel.addEventListener("click", cancelPreview);
       insert.addEventListener("click", () => accept(false));
       run.addEventListener("click", () => accept(true));
@@ -130,6 +146,7 @@ export function createSnippetPreview(
       current.append(title, description, body, closed, actions);
       document.body.append(current);
       options.onActivityChange(true);
+      if (dialog !== current) return;
       current.showModal();
       (snippet.execute ? run : insert).focus();
     },

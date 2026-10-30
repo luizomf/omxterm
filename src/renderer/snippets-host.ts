@@ -3,7 +3,7 @@ import type {
   AuxiliaryPanel,
   AuxiliaryViewDefinition,
 } from "./auxiliary-panel";
-import { createSnippetPreview } from "./snippet-preview";
+import { createSemanticInput } from "./semantic-input";
 import { createSnippetsView } from "./snippets-sidebar";
 import type { TerminalTabs } from "./terminal-tabs";
 import { englishLanguage, type RendererLanguage } from "./renderer-language";
@@ -52,12 +52,15 @@ export function createSnippetsTool(
 ) {
   const { tabs } = options;
   const language = options.language ?? englishLanguage;
-  const preview = createSnippetPreview(document, {
+  const input = createSemanticInput(document, {
     language,
-    canOpen: () => !options.blocked(),
+    capture: tabs.captureSnippetTarget,
+    blocked: options.blocked,
     focusTerminal: tabs.focusSelected,
-    onActivityChange: options.onPreviewActivity,
+    onPreviewActivity: options.onPreviewActivity,
+    ...(options.openOverlay ? { openOverlay: options.openOverlay } : {}),
   });
+  const { preview } = input;
   const view: AuxiliaryViewDefinition = {
     id: "snippets",
     label: (t) => t("snippets.title"),
@@ -67,16 +70,10 @@ export function createSnippetsTool(
         loadSnippets: load,
         isInteractive,
         inject: (snippet) => {
-          if (options.blocked() || preview.isActive()) return;
-          tabs.captureSnippetTarget()?.deliver(snippet.body, snippet.execute);
-          tabs.focusSelected();
+          input.request(snippet, snippet.execute ? "run" : "insert");
         },
         preview: (snippet, returnFocus) => {
-          const target = tabs.captureSnippetTarget();
-          if (!target) return;
-          const open = () => preview.open(snippet, target, returnFocus);
-          if (options.openOverlay) options.openOverlay(open);
-          else open();
+          input.request(snippet, "preview", returnFocus);
         },
       }),
   };

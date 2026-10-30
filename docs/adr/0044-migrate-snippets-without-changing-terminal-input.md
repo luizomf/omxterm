@@ -1,7 +1,10 @@
 # ADR 0044: Migrate Snippets without changing terminal input
 
 Status: accepted migration design for [#741](https://github.com/luizomf/omxterm/issues/741);
-not implemented. The built-in feature remains the shipping behavior described in
+migration not implemented. Preparatory source now includes activation-scoped
+catalog paging and reusable core semantic-input capture/preview ownership.
+Neither is an installed Snippets replacement or a native own-view capability yet.
+The built-in feature remains the shipping behavior described in
 [the specification](../spec.md). This decision does not remove it or claim a
 stable extension SDK.
 
