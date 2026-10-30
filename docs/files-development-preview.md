@@ -125,8 +125,27 @@ are removed/moved without following their targets. Recursive deletion may fail
 after partial effects and is then outcome-unknown. Linux trash invokes the OS
 `/usr/bin/gio trash -- <literal-path>` facility asynchronously with no shell, an
 eight-second timeout and bounded output; unavailable or failed trash never falls
-back to permanent deletion. Dispatched desktop-command failure is conservatively
-unknown. No failed or uncertain mutation is retried automatically.
+back to permanent deletion. macOS ARM64 host source now supplies the optional
+`files.trash` service through Foundation `NSFileManager` in the existing owned
+Node child's native worker pool. The OS chooses the Trash destination; there is
+no Finder automation, main-process RPC or manually managed Trash directory.
+Dispatched trash failure is conservatively unknown on both platforms. No failed
+or uncertain mutation is retried automatically.
+
+The macOS service rejects root, trailing separators, empty and dot path components
+instead of resolving final symlink referents. It passes a literal filesystem URL
+to the OS, never shell/script text. Pre-aborted calls refuse before dispatch;
+after dispatch the promise retains actual worker completion. Foundation offers
+no cancellation/timeout parameter: the existing runtime's ten-second request
+deadline and owned child retirement apply, not the Linux command's eight-second
+timeout or a rollback promise. Fixed errors exclude native text and private paths;
+the host wrapper discards the native resulting Trash path. Implementation alone
+does not establish symlink/volume semantics, native or package qualification,
+macOS Files lifecycle, archive/catalog admission or distribution. Current backend
+source preserves the original request spelling for the optional host hook so
+normalization cannot bypass its rejection. Historical Files0.4 archive bytes
+retain their earlier normalization behavior; a future macOS-capable archive must
+include this correction, not inherit a qualification claim from the host alone.
 
 ## Owned composition modules
 
@@ -327,8 +346,83 @@ floor; API availability is not execution qualification on that floor.
 Destination conflicts, permissions, unsupported filesystems and cross-device moves
 fail explicitly. Other platforms have no overwrite fallback. Explicit runtime
 builds remain available. No fuse or Electron version change is required.
-The macOS primitive is a bounded prerequisite, not complete Files support: trash
-remains Linux-only, and no Files archive/catalog/publication change follows.
+The macOS move primitive and subsequent source trash implementation are bounded
+prerequisites, not complete Files support. No Files archive/catalog/publication
+change follows. The same addon now links Foundation on macOS and shares its
+32-operation native bound between move and trash. Linux's native move and gio
+trash implementations remain unchanged.
+
+**macOS ARM64 trash prerequisite evidence — 2026-10-30.**
+
+Source `8b9eab97a82d6ea01982fb79062b5642a10e2b7a` (host 0.24.0-dev.21)
+passed nine native check groups on macOS 27.0.1 ARM64 / Electron 43.8.1,
+using the bundled Electron and signed addon from an exact DMG-derived app copy:
+
+- literal punctuation/Unicode names; empty/nonempty directories;
+- links to files/directories and dangling links, preserving referents;
+- ambiguous-path refusal, distinct recoverable entries after name collisions;
+- fixed missing-source and ordinary-user permission failures, without deletion fallback;
+- shared 32-operation admission/release and recoverable trash on a distinct APFS volume.
+
+All nine trashed entries were verified by device/inode and contents or link text,
+then restored through no-clobber moves before owned scratch removal. This is
+recoverability evidence, not merely source disappearance. Fresh locked install,
+ordinary build, DMG packaging, staged inspection and inspection of the exact
+copied app passed. Full copied-bundle bytes/modes/symlinks matched before the
+readonly DMG was detached; native semantics ran afterward. Independent read-only
+audit confirmed 1,224 source entries, 629 bundle entries, complete ad-hoc seal,
+unchanged artifact/image hashes, absent owned mounts/scratch and no current
+scope processes. Bounded group joins/current snapshots are not a historical
+escaped-descendant census.
+
+The retained DMG is 129,721,647 bytes, SHA-256
+`2d5767510034a8059996762ab72d821c1e139cd0968859e9b15d5d74d79378c1`.
+The signed Files addon is
+`2e78bff78a7f01ae1bea71658be805266f7459888f956c6bb12df677a6b0ee83`;
+its prepared pre-signing bytes differ as expected. Complete independent review
+covered 21 paths; both findings were corrected (raw-path validation composition
+and shell documentation continuations). Full formatting/lint/typecheck passed;
+4,422 headless tests passed, 66 skipped. The earlier private source-export attempt
+failed before install/build/native execution because archive modes differed from
+Git modes; it remains failed. An explicit archive-mode correction passed full
+source identity verification before the successful campaign.
+
+This is a native prerequisite, not full Files UI/backend lifecycle, native-I/O
+cancellation, read-only/trash-unavailable-volume, macOS 12 execution,
+Finder/Gatekeeper/notarization or public distribution qualification. Existing
+runtime ownership evidence is separate; no blocked Foundation call was proved
+cancellable. Published archives, receipts and catalog targets are unchanged.
+
+The package probe itself checks only the macOS trash export and root-path
+refusal, not a recoverable Trash operation. An assigned ordinary-user
+macOS ARM64 environment can run the prepared fixture with the bundled Electron:
+
+```sh
+ELECTRON_RUN_AS_NODE=1 /absolute/Electron \
+  test/fixtures/files-trash-native.mjs /absolute/files-move.node \
+  /absolute/new-private-evidence-directory /absolute/writable-fixture-parent \
+  /absolute/optional-other-device-parent
+```
+
+Omit the final argument for the local-volume checks only. The evidence directory
+must not already exist. Both supplied parents must already exist and be writable;
+the optional parent must be on a distinct device, with OS Trash support selected
+by the qualification owner. The fixture creates only its own private scratch
+children. It verifies returned Trash entries by device/inode and contents or link
+text, including literal names, directories, final symlinks, dangling links and
+same-name collisions. It also checks ambiguous-path refusal, missing-source and
+ordinary-user permission failures, plus the shared native admission bound.
+Successful qualification restores only those verified entries through no-clobber
+move before removing owned scratch. No unrelated Trash enumeration occurs.
+
+The private mode-0600 receipt records source identity before dispatch and exact
+returned destinations; it is not a public artifact. Unknown/failing operations
+preserve the scratch and any Trash entries for deliberate recovery, with no retry
+or automatic deletion. Partial cleanup failure remains failed. Do not delete a
+failed evidence directory before inspecting its recovery identities. Read-only
+or trash-unavailable volumes, macOS12 execution, actual runtime retirement,
+full Files lifecycle and exact-package/public-consumption evidence remain separate
+requirements. Never treat source disappearance alone as recoverable trash proof.
 
 `test/fixtures/files-move-native.mjs <absolute-addon> [absolute-other-device-directory]`
 must run under the bundled Electron executable with `ELECTRON_RUN_AS_NODE=1`, as

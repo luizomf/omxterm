@@ -79,9 +79,22 @@ it.each([
         );
         expect(args).not.toContain("-shared");
         expect(args).not.toContain("-fPIC");
+        expect(args).toContainEqual(
+          expect.stringMatching(/\/native\/files-trash-macos\.mm$/),
+        );
+        expect(
+          args.slice(
+            args.indexOf("-framework"),
+            args.indexOf("-framework") + 2,
+          ),
+        ).toEqual(["-framework", "Foundation"]);
       } else {
         expect(args).toEqual(expect.arrayContaining(["-shared", "-fPIC"]));
         expect(args).not.toContain("-bundle");
+        expect(args).not.toContain("Foundation");
+        expect(args).not.toContainEqual(
+          expect.stringMatching(/files-trash-macos\.mm$/),
+        );
       }
     }
     const runtimeBuild = calls.build.mock.calls.find(([options]) =>

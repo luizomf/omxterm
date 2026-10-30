@@ -4,8 +4,8 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 export async function buildFilesMove(outputDirectory) {
-  // Only these ARM64 hosts provide the native no-replace primitive. This does
-  // not qualify the full Files preview on either platform.
+  // These ARM64 hosts provide native no-replace moves; macOS also supplies
+  // Foundation trash. This does not qualify the full Files preview.
   if (
     (process.platform !== "linux" && process.platform !== "darwin") ||
     process.arch !== "arm64"
@@ -30,6 +30,13 @@ export async function buildFilesMove(outputDirectory) {
         ? ["-bundle", "-undefined", "dynamic_lookup"]
         : ["-shared", "-fPIC"]),
       path.resolve(import.meta.dirname, "../native/files-move.cc"),
+      ...(mac
+        ? [
+            path.resolve(import.meta.dirname, "../native/files-trash-macos.mm"),
+            "-framework",
+            "Foundation",
+          ]
+        : []),
       "-o",
       path.join(outputDirectory, "files-move.node"),
     ],

@@ -34,6 +34,11 @@ const checks = ["packaged-store-and-lease"];
 // Native loading/conflict evidence only, not a complete Files qualification.
 {
   const move = require("./files-move.node");
+  if (process.platform === "darwin") {
+    assert.equal(typeof move.trash, "function");
+    assert.throws(() => move.trash("/"), { code: "EINVAL" });
+    checks.push("native-trash-export-and-root-refusal");
+  }
   const source = path.join(scratch, "source");
   const target = path.join(scratch, "target");
   await writeFile(source, "source");

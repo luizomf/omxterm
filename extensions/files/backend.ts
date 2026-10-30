@@ -230,8 +230,14 @@ export function activate(context: {
           }
           case "trash":
             mutation = true;
-            uncertain = true; // A desktop command's failure is not rollback.
-            await (context.files.trash ?? systemTrash)(target, signal);
+            uncertain = true; // A dispatched OS trash failure is not rollback.
+            // pathname already validated the string. Preserve its original
+            // spelling for the host hook's destructive-path checks; normalizing
+            // first would erase dot/empty components around final symlinks.
+            await (context.files.trash ?? systemTrash)(
+              context.files.trash ? (request.path as string) : target,
+              signal,
+            );
             break;
           default:
             throw new Error("invalid-request");

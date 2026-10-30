@@ -358,7 +358,11 @@ unpacked extension lease and Files move addons, complete ad-hoc seal,
 architecture/deployment floor and packaged Node-mode store/lease/bootstrap resolution. Prepared and
 final hashes are recorded in `.scratch/extensions-package.json`; native bytes
 may differ after signing, but JavaScript must match exactly. Both macOS and Linux
-ARM64 run Files no-clobber move/conflict checks. This is not full macOS Files,
+ARM64 run Files no-clobber move/conflict checks. The same macOS addon now links
+Foundation for trash; inspection checks its export and root refusal only. Actual
+recoverable Trash semantics require the separate assigned
+[native trash fixture](files-development-preview.md#build-and-evidence-boundary),
+whose bounded exact-package evidence is recorded there. These probes are not full macOS Files,
 backend activation, production platform admission or Snippets qualification.
 
 See [release procedures](release.md#resume-and-version-only-commands) for standalone `package:*` and `package-built:*` commands.

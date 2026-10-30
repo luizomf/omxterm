@@ -26,8 +26,12 @@ not that changed minimal-fixture assertion.
   package action remains withheld and existing shortcut configuration is preserved.
 - The subsequent macOS ARM64 Files move prerequisite adds the native
   `renameatx_np(RENAME_EXCL)` operation through the existing bounded service.
-  This is not full macOS Files qualification: trash remains Linux-only, and
-  Files archive publication/catalog admission remains separate. See the
+  Host source now also implements optional Foundation trash in the same owned
+  Node-child addon, with shared bounded asynchronous admission and conservative
+  unknown outcomes. Bounded exact-package trash semantics passed on local and
+  distinct APFS volumes, including final symlinks and recoverable identity;
+  this is not full macOS Files lifecycle qualification. Files archive
+  publication/catalog admission remains separate. See the
   [primitive contract and evidence boundary](files-development-preview.md#build-and-evidence-boundary).
 - Published archives/manifests and catalog target restrictions are unchanged.
   Broader host admission does not make a catalog release macOS-compatible.

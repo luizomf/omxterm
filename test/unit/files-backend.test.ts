@@ -212,6 +212,46 @@ describe("separately installed Files backend", () => {
     expect(await readFile(target, "utf8")).toBe("replacement");
     expect(trash).toHaveBeenCalledWith(target, signal);
   });
+  it("keeps trash separate from one-shot permanent-delete confirmation", async () => {
+    const trash = vi.fn(async () => {
+      throw Object.assign(new Error("EIO"), { code: "EIO" });
+    });
+    const files = backend(trash);
+    const target = path.join(root, "preserved");
+    await writeFile(target, "safe");
+    const confirmation = object(
+      await files.invoke({ operation: "prepare-delete", path: target }, signal),
+    );
+    expect(
+      object(
+        await files.invoke(
+          { operation: "trash", path: target },
+          AbortSignal.abort(),
+        ),
+      ).ok,
+    ).toBe(false);
+    expect(trash).not.toHaveBeenCalled();
+    expect(
+      await files.invoke({ operation: "trash", path: target }, signal),
+    ).toEqual({ ok: false, error: "outcome-unknown" });
+    expect(await readFile(target, "utf8")).toBe("safe");
+    expect(trash).toHaveBeenCalledExactlyOnceWith(target, signal);
+    // Only this separate, deliberate confirmation can permanently delete it.
+    expect(
+      await files.invoke(
+        { operation: "delete", token: confirmation.token! },
+        signal,
+      ),
+    ).toEqual({ ok: true });
+    expect(
+      object(
+        await files.invoke(
+          { operation: "delete", token: confirmation.token! },
+          signal,
+        ),
+      ).ok,
+    ).toBe(false);
+  });
   it("refuses aborted requests without dispatching mutations", async () => {
     const files = backend();
     const cancelled = AbortSignal.abort();
