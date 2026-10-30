@@ -38,33 +38,38 @@ const digest = (bytes: Buffer) =>
 const scope =
   "unchanged extracted AppImage; synthetic Chromium/X11; ANGLE SwiftShader; controlled consent; no FUSE/helper installation or public acquisition";
 
+function qualificationInputs() {
+  assert.equal(process.platform, "linux");
+  assert.equal(process.arch, "arm64");
+  assert.notEqual(process.getuid?.(), 0);
+  const values = Object.fromEntries(
+    names.map((name) => {
+      const value = process.env[prefix + name];
+      assert.ok(value, `${prefix}${name} is required`);
+      return [name, value];
+    }),
+  ) as Record<(typeof names)[number], string>;
+  for (const name of ["APPIMAGE", "ARCHIVE", "EVIDENCE"] as const)
+    assert.ok(path.isAbsolute(values[name]), `${name} must be absolute`);
+  for (const name of ["APPIMAGE_SHA256", "ARCHIVE_SHA256"] as const)
+    assert.match(values[name], /^[a-f0-9]{64}$/);
+  // New Tab uses the real account shell, not HOME or an overridden policy.
+  assert.ok(
+    ["/bin/sh", "/usr/bin/sh", "/bin/bash", "/usr/bin/bash"].includes(
+      os.userInfo().shell ?? "",
+    ),
+    "Prepared guest needs a POSIX sh/bash account shell",
+  );
+  return values;
+}
+
 // Opt-in on the assigned disposable Linux ARM64 desktop only. The shared
 // scenario observes the untouched package, not a replacement application entry.
 it.skipIf(!enabled)(
   "qualifies separate Snippets in the exact Linux ARM64 AppImage",
   { timeout: 360000 },
   async () => {
-    assert.equal(process.platform, "linux");
-    assert.equal(process.arch, "arm64");
-    assert.notEqual(process.getuid?.(), 0);
-    const values = Object.fromEntries(
-      names.map((name) => {
-        const value = process.env[prefix + name];
-        assert.ok(value, `${prefix}${name} is required`);
-        return [name, value];
-      }),
-    ) as Record<(typeof names)[number], string>;
-    for (const name of ["APPIMAGE", "ARCHIVE", "EVIDENCE"] as const)
-      assert.ok(path.isAbsolute(values[name]), `${name} must be absolute`);
-    for (const name of ["APPIMAGE_SHA256", "ARCHIVE_SHA256"] as const)
-      assert.match(values[name], /^[a-f0-9]{64}$/);
-    // New Tab uses the real account shell, not HOME or an overridden policy.
-    assert.ok(
-      ["/bin/sh", "/usr/bin/sh", "/bin/bash", "/usr/bin/bash"].includes(
-        os.userInfo().shell ?? "",
-      ),
-      "Prepared guest needs a POSIX sh/bash account shell",
-    );
+    const values = qualificationInputs();
     const root = await mkdtemp(
       path.join(os.tmpdir(), "omxterm-snippets-appimage-"),
     );
