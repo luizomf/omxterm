@@ -39,6 +39,12 @@ not that changed minimal-fixture assertion.
   Normal Quit is not a substitute for that experiment. Historical #746 diagnostics
   remain open; do not suppress their output or relax assertions.
 
+The separate [Files0.5.0 exact-DMG fixture](../test/fixtures/files-dmg.md) now
+prepares the actual Files consumer checkpoint against a compatible retained dev.21
+host. It does not replace this minimal fixture or the qualified Snippets campaign.
+Its local archive, recovery and active-Quit scenarios have not yet been executed;
+source metadata and prepared tooling are not macOS Files qualification.
+
 ## Installed-package production fixture
 
 On an assigned disposable, logged-in, idle macOS ARM64 desktop, build ordinary

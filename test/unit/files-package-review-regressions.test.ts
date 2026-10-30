@@ -55,7 +55,9 @@ async function retirementOracle() {
     new URL("../fixtures/files-packaged.cjs", import.meta.url),
     "utf8",
   );
-  const require = createRequire(import.meta.url);
+  const require = createRequire(
+    new URL("../fixtures/files-packaged.cjs", import.meta.url),
+  );
   const module = {
     exports: {} as { assertNormalBackendRetirement: (child: Child) => void },
   };

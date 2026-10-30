@@ -334,7 +334,10 @@ a build receipt identifies bytes and inputs, not completed qualification or ship
 macOS host source provides no-clobber move and optional Foundation trash in its
 owned Node-child service. Bounded exact-package trash semantics passed on macOS
 ARM64; full macOS Files lifecycle/distribution remain separate pending gates,
-not implied by installation admission. No startup code activation, default/configurable shortcut or stable SDK is implied;
+not implied by installation admission. Source Files0.5.0 prepares a corrected
+archive requiring host dev.21; its neutral ARM64 preview name is display metadata,
+not a manifest platform fence or native qualification. The published Linux0.4.0
+catalog remains unchanged. No startup code activation, default/configurable shortcut or stable SDK is implied;
 see [the preview contract](docs/files-development-preview.md) for qualification limits.
 
 **Extension View Host** — Internal owner of lazy native packaged-content views

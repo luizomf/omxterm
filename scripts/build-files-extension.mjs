@@ -20,11 +20,22 @@ const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 // Maintainer build only. A transported git archive supplies its original commit
 // explicitly; that assertion is recorded, not represented as a local Git check.
-export async function buildFilesExtension(output, suppliedCommit) {
-  return buildExtension("files", output, suppliedCommit);
+export async function buildFilesExtension(
+  output,
+  suppliedCommit,
+  target = "linux-arm64",
+) {
+  return buildExtension("files", output, suppliedCommit, target);
 }
 
-export async function buildExtension(name, output, suppliedCommit) {
+export async function buildExtension(
+  name,
+  output,
+  suppliedCommit,
+  target = "linux-arm64",
+) {
+  if (!["linux-arm64", "darwin-arm64"].includes(target))
+    throw new Error("Unknown intended qualification target");
   if (
     !["files", "ssh", "restoration", "mirror-typing", "snippets"].includes(name)
   )
@@ -177,7 +188,7 @@ with zipfile.ZipFile(sys.argv[2], 'x', compression=zipfile.ZIP_DEFLATED) as arch
       qualification: {
         status: "not-run",
         intendedHost: host.version,
-        target: "linux-arm64",
+        target,
       },
     };
     // All outputs refuse replacement. Roll back only outputs created by this
@@ -210,11 +221,11 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
-  if (process.argv.length > 4)
+  if (process.argv.length > 5)
     throw new Error(
-      "Usage: build-files-extension.mjs [OUTPUT [SOURCE_COMMIT]]",
+      "Usage: build-files-extension.mjs [OUTPUT [SOURCE_COMMIT [INTENDED_TARGET]]]",
     );
-  await buildFilesExtension(process.argv[2], process.argv[3]);
+  await buildFilesExtension(process.argv[2], process.argv[3], process.argv[4]);
   console.log(
     "Built separate Files archive, checksum and unqualified build receipt.",
   );

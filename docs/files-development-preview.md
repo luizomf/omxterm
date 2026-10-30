@@ -29,15 +29,34 @@ broadening its manifest range or replacing published bytes. The
 records the unchanged archive's lifecycle check on dev.1. Admission alone is not package or Files lifecycle qualification; earlier host evidence does
 not qualify every admitted version.
 
+## Files 0.5.0 macOS preparation
+
+Source now builds **Files 0.5.0 — ARM64 preview**, requiring host
+`>=0.24.0-dev.21` and API `0.1.x`. It includes the corrected raw-path forwarding
+for optional host trash. This is a new archive identity, not a replacement or
+new qualification of immutable Files0.4.0. The catalog remains Linux-only0.4.0;
+no host/archive publication or macOS native lifecycle pass is claimed here.
+
+The opt-in [exact-DMG Files fixture](../test/fixtures/files-dmg.md) prepares the
+remaining real consumer checkpoint against the retained compatible dev.21 host.
+Current source's dev.22 metadata does not relabel or require rebuilding those
+host bytes. The fixture uses local captured-byte trust, actual installed Files
+operations, one-entry Trash recovery, retained companion state, source-terminal
+closure with a distinct surviving PTY, management and an active Files backend
+at normal Quit. It reuses existing package identity and process ownership tools;
+there is no new product service or native-cancellation promise. Actual execution
+and its exact host/archive evidence remain pending.
+
 ## Concrete consumer
 
 `extensions/files` is separately built, not imported into application main or the
 terminal renderer. Maintainers run `node scripts/build-files-extension.mjs` to
-produce `dist/extensions/files-0.4.0.omxext`. This build needs Python 3's ZIP
+produce `dist/extensions/files-0.5.0.omxext`. This build needs Python 3's ZIP
 writer and the locked esbuild tool; users receive the precompiled archive and do
 not run Python/npm or compilation to install it. An existing destination is not
 overwritten. The archive includes its MIT license. Version and compatibility come from
-`extensions/files/extension.json`; source version 0.4.0 requires host
+`extensions/files/extension.json`; source version 0.5.0 requires host
+`0.24.0-dev.21` or later for the macOS trash service. Historical0.4.0 requires
 `0.24.0-dev.8` or later for the hosted-language subscription. The current catalog
 selects the original 0.4.0 archive, not a new build from the catalog commit.
 The historical 0.1.0 release remains immutable; building source alone does not
@@ -92,7 +111,10 @@ Git checkout, commit changes first: the builder requires a clean source tree.
 For an exported source tree, supply the original full commit as the second
 argument after the output filename; the receipt labels it `supplied-commit`,
 not a locally verified Git identity. Maintainers must verify that transport
-against the commit. A build receipt records the intended host/target with
+against the commit. The optional third builder argument selects the intended qualification target
+(`linux-arm64`, the preserved default, or explicit `darwin-arm64`); it is never
+inferred from the builder OS or used as a manifest platform declaration.
+A build receipt records the source host version/intended target with
 `qualification.status: not-run`; it is not native or packaged qualification.
 Keep actual test evidence separately, bound to these exact artifact hashes.
 

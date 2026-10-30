@@ -101,7 +101,7 @@ it.each(["files", "ssh"])(
     const manifest = parseManifest(
       JSON.parse(await readFile(`extensions/${name}/extension.json`, "utf8")),
     );
-    expect(manifest.version).toBe(name === "files" ? "0.4.0" : "0.3.0");
+    expect(manifest.version).toBe(name === "files" ? "0.5.0" : "0.3.0");
     const release = {
       ...manifest,
       targets: ["linux-arm64"],
@@ -114,6 +114,9 @@ it.each(["files", "ssh"])(
       "0.24.0-dev.5",
       "0.24.0-dev.6",
       "0.24.0-dev.7",
+      ...(name === "files"
+        ? ["0.24.0-dev.8", "0.24.0-dev.11", "0.24.0-dev.16", "0.24.0-dev.20"]
+        : []),
     ];
     for (const appVersion of incompatibleHosts) {
       const runtime = { appVersion, apiVersion: "0.1.0" };
@@ -123,9 +126,9 @@ it.each(["files", "ssh"])(
       expect(catalogCompatible(release, runtime, "linux-arm64")).toBe(false);
     }
     const compatibleHosts = [
-      "0.24.0-dev.8",
-      "0.24.0-dev.11",
-      "0.24.0-dev.12",
+      ...(name === "files"
+        ? ["0.24.0-dev.21", "0.24.0-dev.22"]
+        : ["0.24.0-dev.8", "0.24.0-dev.11", "0.24.0-dev.12"]),
       "0.24.0",
     ];
     for (const appVersion of compatibleHosts) {
