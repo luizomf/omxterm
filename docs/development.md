@@ -258,7 +258,15 @@ startup activation, package/fuse/signing qualification or public SDK follows fro
 building that artifact. Controlled lifecycle tests under `test/unit/extension-runtime-*`
 remain headless and do not execute the native addon.
 
-While iterating on a specific subsystem, you can run targeted test files before running the full suite:
+While iterating on a specific subsystem, you can run targeted test files before running the full suite. Detailed prerequisites and evidence boundaries are grouped below:
+
+- [Host, hover and font lifecycle](#host-hover-and-font-lifecycle)
+- [Auxiliary panel and shortcut capture](#auxiliary-panel-and-shortcut-capture)
+- [Native terminal popup and input provisioning](#native-terminal-popup-and-input-provisioning)
+- [Window chrome, About and drag geometry](#window-chrome-about-and-drag-geometry)
+- [Settings layout](#settings-layout)
+- [Split, language and theme smoke checks](#split-language-and-theme-smoke-checks)
+- [Fixture ordering and failure controls](#fixture-ordering-and-failure-controls)
 
 | Subsystem                                      | Command                                                                                                                                                                                       |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -276,6 +284,8 @@ While iterating on a specific subsystem, you can run targeted test files before 
 | Literal argv                                   | `npx vitest run test/integration/literal-argv.test.ts test/unit/postinstall.test.ts`                                                                                                          |
 | Unix native resize failure                     | `npx vitest run test/integration/terminal-resize-race.test.ts test/unit/terminal-resize-failure.test.ts`                                                                                      |
 | Linux foreground Busy decision                 | `npx vitest run test/unit/linux-foreground.test.ts test/unit/postinstall.test.ts test/integration/linux-foreground.test.ts`                                                                   |
+
+#### Host, hover and font lifecycle
 
 The integrated host's concurrent-font phase requires actual exit callbacks from
 all four removed sessions and no exit from previously live peers; aggregate
@@ -331,6 +341,8 @@ Headless fixture/oracle/deadline and real-read lifetime checks:
 `npm test -- test/unit/font-read-reload-fixture.test.ts test/unit/terminal-font-read-reload.test.ts`.
 Successful headless checks or bundle preparation are not native runtime acceptance.
 
+#### Auxiliary panel and shortcut capture
+
 The `auxiliary-panel` suite uses the production window host, real Surfaces/PTYs,
 native menu callbacks and Chromium synthetic input through the main keybind
 matcher (default and remapped). It covers bounded geometry, captured pointer and
@@ -356,6 +368,8 @@ cancellation and exact empty PTY input fenced by the fresh Kitty Escape, then
 reopens the same draft/DOM. Its Electron `sendInputEvent` gestures are synthetic, not physical OS/layout or
 AltGr qualification; the native menu positive control calls its actual callback,
 not OS menu navigation. The ordinary fixture supervisor owns all windows/PTYs.
+
+#### Native terminal popup and input provisioning
 
 The Linux `terminal-popup-native` suite builds the production popup callbacks,
 preload, renderer, Surfaces and real raw Python PTYs. It opens `Menu.popup` from
@@ -427,6 +441,8 @@ input is synthetic, not physical keyboard/layout or cross-platform qualification
 Headless input-observer/child/build checks (no native input or provisioning declaration needed):
 `npm test -- test/unit/terminal-popup-input-admission.test.ts test/unit/terminal-popup-native-submission.test.ts test/unit/terminal-popup-native-fixture.test.ts`.
 
+#### Window chrome, About and drag geometry
+
 The `window-chrome` suite includes an independent `about-only` scenario so an
 unrelated native geometry failure cannot skip About coverage. Run it alone with
 `npm test -- test/integration/window-chrome.test.ts -t about-only`. It exercises
@@ -448,6 +464,8 @@ foreground/point ownership, pointer release/restoration and continuity checks ar
 still required. Headless validator and caller controls:
 `npm test -- test/unit/window-chrome-drag-geometry.test.ts test/unit/window-chrome-native-drag.test.ts`.
 They do not replace native Windows execution.
+
+#### Settings layout
 
 The Window Chrome `settings-only` case additionally runs the graphical editor's
 layout matrix: six categories after a native-minimum request and at five exact
@@ -490,6 +508,8 @@ Run alone on an assigned idle desktop with
 `npm test -- test/integration/window-chrome.test.ts -t settings-only`.
 Headless preparation does not establish rendered layout or physical input.
 
+#### Split, language and theme smoke checks
+
 The independent Window Chrome feature smoke reuses the real renderer, host,
 Settings service/reloader, owned profiles and native PTY supervisor. Select its
 single literal case on an idle unlocked desktop:
@@ -526,6 +546,8 @@ plus programmatic separator focus, ordered after the owned renderer consumes the
 actual trusted Shift-Tab down/up pair and its default focus movement. Consumption
 and the strict `:focus-visible` oracle share the existing response budget; no CSS
 modality flag is forced. This is not physical tab traversal or OS-compositor pixel parity.
+
+#### Fixture ordering and failure controls
 
 The `application-about` startup fixture stops before its first window. Its
 `published-failure` control publishes the real observation, requests normal Quit
