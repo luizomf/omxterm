@@ -1,3 +1,4 @@
+import { usesOptionalSnippets } from "../shared/snippets-mode";
 import { randomUUID } from "node:crypto";
 import { link, lstat, mkdir, open, unlink } from "node:fs/promises";
 import path from "node:path";
@@ -10,7 +11,10 @@ import {
 
 /** Seed only absent files. Existing configuration opts out of the entire kit. */
 export async function createInitialConfigurationKit(
-  options: Pick<LoadUserConfigurationOptions, "environment" | "homeDirectory">,
+  options: Pick<
+    LoadUserConfigurationOptions,
+    "environment" | "homeDirectory" | "platform"
+  > & { architecture?: string },
 ): Promise<string | undefined> {
   const configPath = resolveUserConfigurationPath(
     options.environment,
@@ -29,16 +33,22 @@ export async function createInitialConfigurationKit(
       path.join(directory, "themes", "omtheme.json"),
       DEFAULT_TERMINAL_THEME,
     );
-    await publishAbsentText(
-      path.join(directory, "snippets.yaml"),
-      `version: 1
+    if (
+      !usesOptionalSnippets(
+        options.platform ?? process.platform,
+        options.architecture ?? process.arch,
+      )
+    )
+      await publishAbsentText(
+        path.join(directory, "snippets.yaml"),
+        `version: 1
 snippets:
   - name: Print a message
     body: |-
       printf '%s\\n' "Hello"
     execute: false
 `,
-    );
+      );
     const defaults = DEFAULT_USER_CONFIGURATION;
     // Publish config last so its theme already exists. Keep platform-specific
     // shell, font selection and keybind defaults implicit.

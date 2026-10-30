@@ -12,11 +12,9 @@ const names = ["ENTRY", "ARCHIVE", "ARCHIVE_SHA256"] as const;
 const enabled = names.some((name) => process.env[prefix + name] !== undefined);
 const executable = createRequire(import.meta.url)("electron") as string;
 
-// Opt-in on the assigned disposable Linux ARM64 desktop. ENTRY is a built,
-// root-owned qualification composition using qualifySnippets:true and omitting
-// the built-in view. It must retain production semantic-input/presentation and
-// normal shutdown. This is installed-package evidence, NOT unchanged-host or
-// physical-keyboard qualification. No production environment switches are used.
+// Opt-in on the assigned disposable Linux ARM64 desktop. ENTRY uses unchanged
+// production composition in an isolated output with normal shutdown. This is
+// installed-package evidence, not publication or physical-keyboard qualification.
 it.skipIf(!enabled)(
   "qualifies an ordinarily installed Snippets archive with a live Surface and PTY",
   { timeout: 150_000 },
@@ -110,17 +108,20 @@ it.skipIf(!enabled)(
         JSON.parse(receipts[0]!.slice("SNIPPETS_PACKAGED_RESULT:".length)),
       ).toEqual({
         checks: [
+          "absent-package-management-no-activation",
           "ordinary-archive-trust-enabled-activation",
+          "compatibility-toggle-single-retained-view",
           "exact-insert-run-native-enter-repeat-release",
           "preview-overrides-both-intents-cancel-restores-focus",
           "retained-search-hide-reactivate",
           "live-en-US-pt-BR-retained-query",
+          "disabled-package-management-no-enable",
           "disable-uninstall-unchanged-catalog-live-surface-pty",
         ],
         archiveSha256: values.ARCHIVE_SHA256,
         approvals: 1,
         input:
-          "synthetic Chromium/X11; controlled native consent; explicit qualification composition",
+          "synthetic Chromium/X11; controlled native consent; production Linux ARM64 composition",
       });
       assert.equal(
         digest(await readFile(values.ENTRY)),

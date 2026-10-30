@@ -207,6 +207,8 @@ export const englishMessages = {
   "settings.page.file": "Config File",
   "settings.page.extensions": "Extensions",
   "extensions.heading": "Local extensions · development preview",
+  "extensions.snippetsOptional":
+    "Snippets is an optional extension. Use the existing installation controls to install it, or Enable if it is installed but disabled. Opening this page does not install or enable it. Your snippets.yaml catalog stays unchanged. Check the extension status below for availability.",
   "extensions.explanation":
     "Install a separately downloaded .omxext package. Trusted extension code has your user permissions; it is not sandboxed. Installed packages stay dormant until invoked. This preview is Linux ARM64 only.",
   "extensions.install": "Install local .omxext…",

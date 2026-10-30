@@ -3,7 +3,7 @@
 > [!TIP]
 > **Prefer visual editing?** [OMXTerm Studio](#edit-visually-with-omxterm-studio) lets you import, customize, and export your settings, themes, and shortcuts in the browser.
 
-OMXTerm works out of the box with its bundled font, theme, and default shortcuts. On your first launch, it creates three editable starter files:
+OMXTerm works out of the box with its bundled font, theme, and default shortcuts. On your first launch, it creates editable configuration and theme files. Targets with built-in Snippets also create the example catalog below; Linux ARM64's optional extension leaves it user-owned and absent until you create it:
 
 ```text
 omxterm/
@@ -405,6 +405,12 @@ For example, to use `F11` for Snippets instead of full screen:
 > **Upgrading on Linux or Windows:** Find now uses `Ctrl+Shift+F` and full screen uses `F11`. If your `config.json` sets `"toggleFullScreen": "Control+Shift+F"`, it now conflicts with Find. Remove that entry to use `F11`, move Find (for example `"find": "Control+Alt+F"`), or keep the old combination with `"find": null`. While `F11` is bound, terminal programs that use it don't receive it; `"toggleFullScreen": null` removes that binding, although your desktop may still claim the key.
 
 ## Snippets
+
+Linux ARM64 source uses the optional Snippets extension; other targets retain
+built-in Snippets. See the [migration guide](snippets-migration.md) for explicit
+installation, offline archives and existing catalogs. No catalog conversion or
+automatic installation occurs. Published host versions retain their documented
+behavior until a matching host/package migration is released.
 
 Snippets let you save commonly used commands or text in `snippets.yaml` (next to `config.json`) and insert them from the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`). Configuration and theme files remain JSON.
 

@@ -26,7 +26,18 @@ describe("hosted application-tab contract", () => {
         presentation: "panel",
       }),
     ).toBe(true);
+    expect(
+      isHostedContentDescriptor({
+        id: "host-1",
+        title: "Snippets",
+        presentation: "panel",
+        toggle: true,
+      }),
+    ).toBe(true);
     for (const descriptor of [
+      { id: "a", title: "Snippets", toggle: true },
+      { id: "a", title: "Snippets", presentation: "panel", toggle: false },
+      { id: "a", title: "Snippets", presentation: "panel", toggle: "true" },
       { id: "a", title: "Files", presentation: "arbitrary" },
       { id: "a", title: "Files", presentation: "panel", extra: true },
       { id: "../path", title: "Files" },

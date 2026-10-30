@@ -1,13 +1,13 @@
 # ADR 0044: Migrate Snippets without changing terminal input
 
 Status: accepted migration design for [#741](https://github.com/luizomf/omxterm/issues/741);
-platform migration not implemented. Preparatory source includes activation-scoped
-catalog paging, a declared native own-view semantic-input capability reusing
-core capture/preview ownership, and separately buildable package/UI source.
-This is not a published Snippets replacement, package qualification or platform cutover.
-The built-in feature remains the shipping behavior described in
-[the specification](../spec.md). This decision does not remove it or claim a
-stable extension SDK.
+Linux ARM64 source transition implemented; distributed migration remains pending
+compatible package publication and matching qualification. Source includes
+activation-scoped catalog paging, a declared own-view semantic-input capability,
+separately buildable package/UI and the compatibility entry point described in
+[the specification](../spec.md). Other targets retain built-in Snippets. Source
+integration does not publish a replacement, qualify every platform or establish
+a stable extension SDK.
 
 ## Context
 
@@ -136,15 +136,21 @@ Unsupported platforms retain the current starter kit with their built-in feature
 Deliver the capability and separately built Snippets package first, without
 removing built-in access from any shipping platform. Development qualification
 selects one implementation at a time; it must not register duplicate production
-actions or compete for the panel. The preparatory package action is withheld from
-production composition; native qualification explicitly selects `qualifySnippets`
-and omits the built-in view. Its archive still uses ordinary installation/trust.
+actions or compete for the panel. The package's separate action is withheld from production composition: the
+existing `toggleSnippets` command is the sole Snippets menu/palette action.
+Linux ARM64 composition omits the built-in view and invokes the installed tool
+through ordinary captured-target/token admission. Repeated invocation toggles
+the retained companion; other extension actions still reveal. Missing or disabled
+installations open the retained Settings Extensions page with localized guidance,
+without execution. Runtime failures retain the management owner's distinct status.
+Native qualification uses unchanged production composition, not source substitutions. Its archive still uses ordinary installation/trust.
 Logical activity is transported separately from visibility: geometry updates and
 overlay hiding do not reload the catalog or discard preview focus restoration.
 The child receives committed language changes and explicit search/restore focus
 intent through the existing native presentation owner.
-This preparatory delivery is not completion of
-#741 and does not advertise optional Snippets to ordinary users yet.
+The Linux source transition is not completion of #741 or a published migration.
+The [migration guide](../snippets-migration.md) preserves the distribution gate
+and explains explicit/local-archive installation and unchanged user data.
 
 Cut over a platform only after the package is installable through the ordinary
 extension-management path on that platform, the matching host/package pair is

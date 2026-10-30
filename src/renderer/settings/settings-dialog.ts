@@ -24,8 +24,10 @@ import { settingsMessageText } from "../../shared/settings-messages";
 import { describeSettingsResult } from "./settings-results";
 export { describeSettingsResult } from "./settings-results";
 import { renderShortcuts } from "./settings-shortcuts";
-import { renderExtensions } from "./settings-extensions";
+import { extensionsPage, extensionsNavigation } from "./settings-extensions";
 import type { SettingsKeybindChange } from "../../shared/settings-keybinds";
+
+export type SettingsDestination = { page: "extensions"; reason: "snippets" };
 
 // Retained graphical editor and save-on-change controls adapted from ruscher/omxterm PR #622 at
 // b3c3a4ad6c1f2224bded65873ba0b09a07ec5d38 (MIT).
@@ -43,6 +45,7 @@ export function createSettingsView(
 ) {
   const language = options.language ?? englishLanguage;
   let unbindView: (() => void) | undefined;
+  let navigateView: ((destination: SettingsDestination) => void) | undefined;
   let dialog: HTMLElement | undefined;
   let selected = true;
   let blocked = false;
@@ -69,6 +72,7 @@ export function createSettingsView(
     dialog = undefined;
     unbindView?.();
     unbindView = undefined;
+    navigateView = undefined;
     releaseView?.();
     releaseView = undefined;
     invalidate();
@@ -80,9 +84,12 @@ export function createSettingsView(
     }
   };
 
-  const open = async () => {
+  const open = async (destination?: SettingsDestination) => {
     if (disposed) return;
-    if (dialog) return;
+    if (dialog) {
+      if (destination && interactive()) navigateView?.(destination);
+      return;
+    }
     const current = document.createElement("section");
     dialog = current;
     current.className = "settings-dialog";
@@ -104,6 +111,8 @@ export function createSettingsView(
       interactive,
     );
     unbindView = view.dispose;
+    navigateView = view.navigate;
+    if (destination) view.navigate(destination);
     releaseView = view.release;
     done.type = "button";
     done.classList.add("settings-close");
@@ -127,6 +136,9 @@ export function createSettingsView(
   return {
     isActive: interactive,
     open,
+    navigate(destination: SettingsDestination) {
+      if (interactive()) navigateView?.(destination);
+    },
     setSelected(value: boolean) {
       if (selected === value) return;
       selected = value;
@@ -229,6 +241,24 @@ async function editField(
     field.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+function renderSettingsProblem(
+  problem: HTMLElement,
+  issue: SettingsSnapshot["problem"],
+  t: Translate,
+) {
+  const detail = issue === undefined ? "" : settingsMessageText(issue, t);
+  const external = typeof issue !== "string" && issue?.kind === "symlink";
+  setPageNotice(problem, {
+    text:
+      issue === undefined
+        ? ""
+        : external
+          ? detail
+          : `${detail}\n${t("settings.fileGuidance")}`,
+    severity: "error",
+  });
+}
+
 function buildSettingsView(
   document: Document,
   bridge: SettingsBridge,
@@ -280,20 +310,8 @@ function buildSettingsView(
             : "info",
     });
   };
-  const renderProblem = (t: Translate) => {
-    const issue = snapshot?.problem;
-    const detail = issue === undefined ? "" : settingsMessageText(issue, t);
-    const external = typeof issue !== "string" && issue?.kind === "symlink";
-    setPageNotice(problem, {
-      text:
-        issue === undefined
-          ? ""
-          : external
-            ? detail
-            : `${detail}\n${t("settings.fileGuidance")}`,
-      severity: "error",
-    });
-  };
+  const renderProblem = (t: Translate) =>
+    renderSettingsProblem(problem, snapshot?.problem, t);
   const report = (key?: MessageKey, error = false) => {
     statusMessage = key ? { key, error } : undefined;
     renderStatus(language.t);
@@ -349,6 +367,15 @@ function buildSettingsView(
   const value = (path: SettingsPath) => snapshot?.values[path];
 
   const tabButtons: HTMLButtonElement[] = [];
+  let showSnippetsNotice: (() => void) | undefined;
+  const navigation = extensionsNavigation(
+    tabButtons,
+    (index) => {
+      showSnippetsNotice?.();
+      select(index);
+    },
+    interactive,
+  );
   const select = (index: number) => {
     if (shortcuts && panels.children[index] !== shortcuts.element)
       shortcuts.release();
@@ -418,12 +445,17 @@ function buildSettingsView(
     });
     addPage("shortcuts", "settings.page.shortcuts", shortcuts.element);
     const extensions = document.defaultView?.omxterm?.extensions;
-    if (extensions)
-      addPage(
-        "extensions",
-        "settings.page.extensions",
-        renderExtensions(document, extensions, live, labels, disposers),
+    if (extensions) {
+      const page = extensionsPage(
+        document,
+        extensions,
+        live,
+        labels,
+        disposers,
       );
+      showSnippetsNotice = page.showSnippetsNotice;
+      addPage("extensions", "settings.page.extensions", page.element);
+    }
     addPage(
       "config-file",
       "settings.page.file",
@@ -437,6 +469,7 @@ function buildSettingsView(
       }),
     );
     select(0);
+    navigation.restore();
   };
   const element = createApplicationPage(document, {
     title,
@@ -459,6 +492,7 @@ function buildSettingsView(
 
   return {
     element,
+    navigate: navigation.navigate,
     dispose() {
       unbind();
       for (const dispose of disposers) dispose();
@@ -472,7 +506,10 @@ function buildSettingsView(
         relabel(language.t);
         adopt(loaded);
         report();
-        if (interactive()) tabButtons[0]?.focus();
+        if (interactive() && document.activeElement === done)
+          tabButtons
+            .find((button) => button.getAttribute("aria-selected") === "true")
+            ?.focus();
       } catch {
         if (live()) report("settings.loadError", true);
       }

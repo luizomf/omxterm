@@ -69,11 +69,12 @@ async function fixture() {
     bridge,
     sshPane,
     focus,
-    open(id = "files", panel = true) {
+    open(id = "files", panel = true, toggle = false) {
       for (const listener of opens)
         listener({
           id,
           title: id,
+          ...(toggle ? { toggle: true as const } : {}),
           ...(panel ? { presentation: "panel" as const } : {}),
         });
     },
@@ -148,6 +149,60 @@ it("retains exclusive tools outside Application Tabs and repeat opens reuse the 
   expect(f.root.querySelector(".companion-native-slot")).toBe(files);
   expect(f.adapters).toHaveBeenCalledOnce();
 });
+
+it("toggles the retained companion without closing it or allocating another slot", async () => {
+  const f = await fixture();
+  f.open("optional-snippets");
+  await settle();
+  const slot = f.root.querySelector(".companion-native-slot");
+  expect(f.root.hidden).toBe(false);
+  f.open("optional-snippets", true, true);
+  await settle();
+  expect(f.root.hidden).toBe(true);
+  f.open("optional-snippets", true, true);
+  await settle();
+  expect(f.root.hidden).toBe(false);
+  expect(f.root.querySelector(".companion-native-slot")).toBe(slot);
+  expect(f.root.querySelectorAll(".companion-native-slot")).toHaveLength(1);
+  f.open("files");
+  await settle();
+  f.open("optional-snippets", true, true);
+  await settle();
+  expect(f.root.hidden).toBe(false);
+  expect((slot as HTMLElement).hidden).toBe(false);
+  expect(f.bridge.close).not.toHaveBeenCalled();
+});
+
+it.each(["settings", "modal"])(
+  "ignores companion toggle while %s blocks presentation",
+  async (blocker) => {
+    const f = await fixture();
+    f.open("optional-snippets");
+    await settle();
+    if (blocker === "settings") f.settingsOpen();
+    else f.about();
+    await settle();
+    vi.mocked(f.bridge.present).mockClear();
+    f.open("optional-snippets", true, true);
+    await settle();
+    expect(
+      vi
+        .mocked(f.bridge.present)
+        .mock.calls.some(
+          ([request]) =>
+            request.id === "optional-snippets" && request.focus === true,
+        ),
+    ).toBe(false);
+    if (blocker === "settings") {
+      expect(f.root.hidden).toBe(true);
+      f.tabCommand({ action: "select", position: 1 });
+      await settle();
+      expect(f.root.hidden).toBe(false);
+    } else {
+      expect(document.querySelector(".about-dialog")).not.toBeNull();
+    }
+  },
+);
 
 it("keeps panel pixels across terminal changes and awaits core focus before activating the new terminal", async () => {
   const f = await fixture();

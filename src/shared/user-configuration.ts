@@ -38,6 +38,8 @@ export interface TerminalPadding {
 }
 
 export interface TerminalRendererConfiguration {
+  // Startup composition policy, not a user setting. Standalone hosts retain built-in.
+  readonly optionalSnippets?: boolean;
   // Main always sends the configured language; absent means en-US.
   readonly language?: SupportedLanguage;
   readonly fontConfigurationId?: string;
@@ -85,6 +87,8 @@ function hasValidOptionalRendererFields(
 ): boolean {
   return (
     (value.language === undefined || isSupportedLanguage(value.language)) &&
+    (value.optionalSnippets === undefined ||
+      typeof value.optionalSnippets === "boolean") &&
     isOptionalSurfaceFontIdentity(value.fontConfigurationId) &&
     (value.fontFamily === undefined || typeof value.fontFamily === "string")
   );
@@ -99,6 +103,7 @@ export function isTerminalRendererConfiguration(
     keys.every((key) =>
       [
         "language",
+        "optionalSnippets",
         "fontConfigurationId",
         "fontFamily",
         "fontSize",

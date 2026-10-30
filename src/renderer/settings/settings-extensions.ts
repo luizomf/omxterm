@@ -8,6 +8,51 @@ import type { MessageKey } from "../../shared/i18n";
 import { englishLanguage, type Translate } from "../renderer-language";
 import { createPageButton, setPageNotice } from "../application-page";
 
+import type { SettingsDestination } from "./settings-dialog";
+
+// Remember explicit Extensions navigation until the Settings snapshot builds pages.
+export function extensionsNavigation(
+  buttons: HTMLButtonElement[],
+  select: (index: number) => void,
+  interactive: () => boolean,
+) {
+  let destination: SettingsDestination | undefined;
+  const navigate = (next: SettingsDestination, focus = true) => {
+    destination = next;
+    const index = buttons.findIndex(
+      (button) => button.id === `settings-tab-${next.page}`,
+    );
+    if (index < 0) return;
+    select(index);
+    if (focus && interactive()) buttons[index]?.focus();
+  };
+  return {
+    navigate,
+    restore: () => {
+      if (destination) navigate(destination, false);
+    },
+  };
+}
+
+// Settings keeps contextual guidance separate from operation/runtime status.
+export function extensionsPage(...args: Parameters<typeof renderExtensions>) {
+  const [document, , , labels] = args;
+  const element = renderExtensions(...args);
+  const notice = document.createElement("p");
+  notice.className = "settings-snippets-notice";
+  notice.hidden = true;
+  labels?.push((t) => {
+    notice.textContent = t("extensions.snippetsOptional");
+  });
+  element.prepend(notice);
+  return {
+    element,
+    showSnippetsNotice: () => {
+      notice.hidden = false;
+    },
+  };
+}
+
 const statusWords = [
   "enabled",
   "disabled",

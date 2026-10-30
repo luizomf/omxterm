@@ -348,10 +348,16 @@ export async function startApplicationExtensions(
   function actions(
     target?: ExtensionTarget,
     claim?: () => boolean,
+    snippetsCompatibility = false,
   ): CoreAction[] {
     if (stopping) return [];
     return installations.flatMap((entry) => {
-      if (entry.id === "omxterm.snippets" && !options.qualifySnippets)
+      if (snippetsCompatibility && entry.id !== "omxterm.snippets") return [];
+      if (
+        entry.id === "omxterm.snippets" &&
+        !options.qualifySnippets &&
+        !snippetsCompatibility
+      )
         return [];
       const view = entry.enabled && entry.digest && entry.manifest?.view;
       if (!view) return [];
@@ -388,7 +394,9 @@ export async function startApplicationExtensions(
               invoke: () =>
                 invokeExtension(
                   options,
-                  captured,
+                  snippetsCompatibility
+                    ? { ...captured, togglePanel: true }
+                    : captured,
                   source!,
                   open,
                   entry.manifest?.capabilities?.includes(
@@ -398,7 +406,9 @@ export async function startApplicationExtensions(
                 ),
             });
             options.sendAction(window.webContents, terminalIpc.tabCommand, {
-              action: "open-extension",
+              action: snippetsCompatibility
+                ? "toggle-snippets-extension"
+                : "open-extension",
               token,
             });
           },
@@ -409,6 +419,19 @@ export async function startApplicationExtensions(
   return {
     actions,
     capture,
+    toggleSnippets(window: BrowserWindow) {
+      if (stopping || BrowserWindow.getFocusedWindow() !== window) return;
+      const target = capture(window);
+      if (!target || target.signal.aborted) return;
+      const action = actions(target, undefined, true).find(
+        (entry) => entry.id === "omxterm.snippets.open",
+      );
+      if (action) action.invoke();
+      else
+        options.sendAction(window.webContents, terminalIpc.tabCommand, {
+          action: "snippets-management",
+        });
+    },
     contextMenu(
       window: BrowserWindow,
       sessionId: string | undefined,

@@ -158,14 +158,15 @@ suspend it. It is independent of the opening terminal's lifetime. See
 [window and session behavior](docs/spec.md#window-and-session-behavior) for
 geometry, view retention and retirement rules.
 
-**Snippets Sidebar** — The built-in Auxiliary Panel view of the user's
+**Snippets Sidebar** — The Auxiliary Panel view of the user's
 `snippets.yaml` catalog, reread on activation with retained search/scroll.
 Insert, Run and read-only preview deliver exact text through Protected Paste to
 a captured live Surface, never a replacement target. See
 [interaction behavior](docs/spec.md#window-and-session-behavior) and
 [catalog configuration](docs/spec.md#configuration-and-local-state).
-The optional-extension migration remains preparatory, not a replacement of the
-shipping built-in feature ([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).
+Linux ARM64 source uses the optional installed extension; other targets retain
+the built-in view. Distributed cutover requires a published compatible package
+and migration guidance ([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).
 
 ## Terminal data and interaction
 

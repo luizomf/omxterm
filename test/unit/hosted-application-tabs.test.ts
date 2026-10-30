@@ -136,6 +136,33 @@ it("denies modal action admission and keeps late hosted publication behind the s
   await settle();
   expect(selectedStates(h.strip)).toEqual(["1:false", "late:true"]);
 });
+it.each(["terminal", "settings", "hosted", "modal"])(
+  "admits the Snippets compatibility command only on an unblocked terminal: %s",
+  async (mode) => {
+    let blocked = false;
+    const h = harness(() => !blocked);
+    await h.tabs.ready;
+    if (mode === "settings") h.tabs.openSettings();
+    if (mode === "hosted") h.open();
+    await settle();
+    if (mode === "modal") blocked = true;
+    h.tabs.handleCommand({
+      action: "toggle-snippets-extension",
+      token: "00000000-0000-0000-0000-000000000001",
+    });
+    expect(h.extensionRequest).toHaveBeenCalledWith({
+      operation: "open",
+      token: "00000000-0000-0000-0000-000000000001",
+      accepted: mode === "terminal",
+    });
+    h.tabs.handleCommand({ action: "snippets-management" });
+    expect(h.tabs.isSettingsSelected()).toBe(
+      mode === "terminal" || mode === "settings",
+    );
+    expect(h.surfaces[0]!.inject).not.toHaveBeenCalled();
+  },
+);
+
 it("opens only on main descriptors in the ordered list, with no PTY or clipboard forwarding", async () => {
   const h = harness();
   await h.tabs.ready;

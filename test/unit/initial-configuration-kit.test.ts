@@ -35,12 +35,72 @@ async function fixture(xdg = false) {
     options: {
       homeDirectory,
       environment,
+      architecture: "x64",
       getInstalledFontFamilyMetrics: async () => undefined,
     },
   };
 }
 
 describe("initial configuration kit", () => {
+  it.each([
+    ["linux", "arm64", false],
+    ["linux", "x64", true],
+    ["darwin", "arm64", true],
+    ["darwin", "x64", true],
+    ["win32", "arm64", true],
+    ["win32", "x64", true],
+  ] as const)(
+    "seeds Snippets for %s/%s: %s",
+    async (platform, architecture, seeded) => {
+      const { options, directory } = await fixture(true);
+      expect(
+        await createInitialConfigurationKit({
+          ...options,
+          platform,
+          architecture,
+        }),
+      ).toBeUndefined();
+      expect(await readdir(directory)).toEqual(
+        seeded
+          ? ["config.json", "snippets.yaml", "themes"]
+          : ["config.json", "themes"],
+      );
+    },
+  );
+
+  it("defaults the cutover policy to the running process", async () => {
+    const { options, directory } = await fixture();
+    await createInitialConfigurationKit({
+      environment: options.environment,
+      homeDirectory: options.homeDirectory,
+    });
+    expect((await readdir(directory)).includes("snippets.yaml")).toBe(
+      !(process.platform === "linux" && process.arch === "arm64"),
+    );
+  });
+
+  it.each([false, true])(
+    "preserves arbitrary existing catalog bytes on Linux ARM64 (config exists: %s)",
+    async (existingConfig) => {
+      const { options, directory } = await fixture();
+      await mkdir(directory, { recursive: true });
+      const bytes = Buffer.from([0xef, 0xbb, 0xbf, 0x23, 0x0d, 0x0a, 0xff]);
+      const catalog = path.join(directory, "snippets.yaml");
+      await writeFile(catalog, bytes);
+      if (existingConfig)
+        await writeFile(path.join(directory, "config.json"), "user config");
+      await createInitialConfigurationKit({
+        ...options,
+        platform: "linux",
+        architecture: "arm64",
+      });
+      expect(await readFile(catalog)).toEqual(bytes);
+      if (existingConfig)
+        expect(
+          await readFile(path.join(directory, "config.json"), "utf8"),
+        ).toBe("user config");
+    },
+  );
   it.each(["darwin", "linux", "win32"])(
     "starts with real default files for %s",
     async (platform) => {

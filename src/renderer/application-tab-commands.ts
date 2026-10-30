@@ -21,6 +21,8 @@ export function createApplicationTabCommands<Tab>(
     readonly closeSession: (id: TerminalSessionId) => void;
     readonly pane: (command: TerminalPaneCommand) => void;
     readonly extensions?: ExtensionsBridge | undefined;
+    readonly canOpenSnippets?: () => boolean;
+    readonly openSnippetsManagement?: () => void;
     readonly refuseSsh?: (token: string) => void;
     readonly canFocus?: (() => boolean) | undefined;
   },
@@ -36,12 +38,20 @@ export function createApplicationTabCommands<Tab>(
         case "open-ssh":
           options.openSsh?.(command);
           return;
+        case "snippets-management":
+          if (options.canFocus?.() !== false && options.canOpenSnippets?.())
+            options.openSnippetsManagement?.();
+          return;
+        case "toggle-snippets-extension":
         case "open-extension":
           void options.extensions
             ?.request({
               operation: "open",
               token: command.token,
-              accepted: options.canFocus?.() !== false,
+              accepted:
+                options.canFocus?.() !== false &&
+                (command.action !== "toggle-snippets-extension" ||
+                  options.canOpenSnippets?.() === true),
             })
             .catch(() => {});
           return;

@@ -20,9 +20,10 @@ export type ExtensionTarget = {
   sourceSessionId?: string;
   mirrorContext?: string;
   presentation?: "panel";
+  togglePanel?: boolean;
 };
 export type ManagedViews = {
-  open(): Promise<void>;
+  open(togglePanel?: boolean): Promise<void>;
   retire(): Promise<{ status: "settled" | "failed" }>;
 };
 type Group = {
@@ -182,7 +183,7 @@ function createPanelOpener(
       }
       let shown: Promise<void> | undefined;
       await retained.admit(target.signal, () => {
-        shown = retained.views.open();
+        shown = retained.views.open(target.togglePanel);
       });
       await shown;
     })();

@@ -74,6 +74,8 @@ export const MAX_TAB_SELECT_POSITION = 9;
 export type TerminalTabCommand =
   | { readonly action: "new" }
   | { readonly action: "open-extension"; readonly token: string }
+  | { readonly action: "toggle-snippets-extension"; readonly token: string }
+  | { readonly action: "snippets-management" }
   | {
       readonly action: "open-ssh";
       readonly token: string;
@@ -223,13 +225,15 @@ export function isTerminalTabCommand(
     );
   if (isStrictRecord(value, ["action", "token"]))
     return (
-      value.action === "open-extension" &&
+      (value.action === "open-extension" ||
+        value.action === "toggle-snippets-extension") &&
       typeof value.token === "string" &&
       /^[0-9a-f-]{36}$/.test(value.token)
     );
   if (isStrictRecord(value, ["action"]))
     return (
       value.action === "new" ||
+      value.action === "snippets-management" ||
       value.action === "close" ||
       value.action === "prepare-close" ||
       value.action === "next" ||

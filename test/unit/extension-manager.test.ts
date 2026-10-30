@@ -153,6 +153,37 @@ it("coalesces panel activation and reveals one retained view per window", async 
   expect(await manager.dispose()).toBe(true);
 });
 
+it("opens a new panel normally, then forwards toggle only to its admitted retained view", async () => {
+  const { manager, opens, createViews, runtime } = await setup();
+  const target = {
+    owner: {},
+    signal: new AbortController().signal,
+    terminalDirectory: null,
+    presentation: "panel" as const,
+    togglePanel: true,
+  };
+  const first = manager.open(manifest.id, target);
+  expect(manager.open(manifest.id, target)).toBe(first);
+  await first;
+  expect(opens.mock.calls).toEqual([[]]);
+  await manager.open(manifest.id, target);
+  expect(opens).toHaveBeenLastCalledWith(true);
+  await manager.open(manifest.id, { ...target, togglePanel: false });
+  expect(opens).toHaveBeenLastCalledWith(false);
+  expect(createViews).toHaveBeenCalledOnce();
+  expect(runtime.activate).toHaveBeenCalledOnce();
+  const aborted = new AbortController();
+  aborted.abort();
+  await expect(
+    manager.open(manifest.id, { ...target, signal: aborted.signal }),
+  ).rejects.toThrow();
+  expect(opens).toHaveBeenCalledTimes(3);
+  await packages.setEnabled(manifest.id, 1, false);
+  await expect(manager.open(manifest.id, target)).rejects.toThrow();
+  expect(opens).toHaveBeenCalledTimes(3);
+  expect(await manager.dispose()).toBe(true);
+});
+
 it("revalidates a retained panel before revealing it after external disable", async () => {
   const { manager, opens } = await setup();
   const target = {

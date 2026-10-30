@@ -542,13 +542,22 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and `Ctrl+Shift+S`
   on Linux and Windows, remappable through `keybinds`) shows or hides the
   selected window's Snippets view in one right-side, nonmodal Auxiliary Panel
-  below full-width title/tab chrome. Installed Files and SSH Connect share this
+  below full-width title/tab chrome. Linux ARM64 uses the separately installed
+  Snippets extension; other targets retain the built-in view. The existing
+  command remains the sole menu/palette entry, including remapped/null bindings.
+  Without an enabled installation, it opens Extensions management with an
+  optional-tool explanation and the actual installation/runtime status, without
+  installing, enabling or executing code. Settings and modal owners remain no-op
+  targets. Runtime failure never restores a competing built-in implementation. Installed Files and SSH Connect share this
   panel after explicit activation through their existing actions. A labeled tool
   switcher selects among opened tools and Snippets; one view is visible at a time.
-  Reopening an active extension tool reveals its retained view. Closing the panel
+  Reopening an active extension tool reveals its retained view; the existing
+  Snippets compatibility command instead toggles its retained companion. Closing the panel
   hides it without retiring its extension epoch or ending terminal sessions.
   Window composition creates the shared panel independently of Snippets wiring;
-  Snippets contributes its lazy view definition and preview. Views are created lazily.
+  Built-in Snippets contributes its lazy view definition; installed Snippets
+  uses the native companion presenter. Core owns semantic preview in either
+  mode. Views are created lazily.
   The host owns exclusive visibility, header/Close, resize, focus and lifecycle; the view
   owns its query, scroll and catalog. Activation reveals loading/search and
   focuses search immediately, rereading `snippets.yaml` each time without file
@@ -1183,8 +1192,10 @@ directory, or dangling symlink) skips the entire initial kit without inspecting
 snippets or themes. Otherwise, OMXTerm creates the directory, `config.json` with
 common built-in defaults (including explicit `window.blur: false` and
 `window.transparency: 0`) and `theme.path` set to `themes/omtheme.json`, one
-non-executing literal-block example in `snippets.yaml`, and a copy of the bundled
-theme at `themes/omtheme.json`. Existing sibling files are never replaced. Files are
+copy of the bundled theme at `themes/omtheme.json`. Targets retaining built-in
+Snippets also create one non-executing literal-block example in `snippets.yaml`;
+Linux ARM64 leaves that user-owned catalog absent and the optional package
+provides an example instead. Existing sibling files are never replaced. Files are
 published complete without overwriting concurrent creations; configuration is
 published last. Shell, font family and shortcuts retain their implicit platform
 defaults. Creation failure produces a non-blocking notice and normal
@@ -1421,8 +1432,13 @@ direction, as described under
 actionable problem, including the resolved path and schema field location or
 syntax line/column coordinates, in place of the list, and the terminal is
 unaffected. Parser excerpts and arbitrary parser messages are never displayed.
-The Electron main process reads and validates the file and sends only validated, typed data over the
-preload bridge. Snippet contents are user payload and are never logged.
+For built-in Snippets, Electron main reads and validates the file and sends only
+validated, typed data over the preload bridge. On Linux ARM64, the installed
+Snippets backend reuses that parser and configuration-root resolution, returning
+complete activation-scoped catalog snapshots in bounded pages. Installation,
+disabling and uninstalling never modify the catalog. Core retains captured-target
+semantic input and preview authority in both modes ([ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md)).
+Snippet contents are user payload and are never logged.
 
 An absent `theme` uses the bundled canonical [`omtheme`](omtheme.json). A
 present `theme` must contain exactly one required `path`: a non-empty string

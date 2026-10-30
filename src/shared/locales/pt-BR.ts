@@ -219,6 +219,8 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.page.file": "Arquivo de Configuração",
   "settings.page.extensions": "Extensões",
   "extensions.heading": "Extensões locais · prévia de desenvolvimento",
+  "extensions.snippetsOptional":
+    "Snippets é uma extensão opcional. Use os controles de instalação existentes para instalá-la, ou Ativar se estiver instalada, mas desativada. Abrir esta página não instala nem ativa a extensão. Seu catálogo snippets.yaml permanece inalterado. Consulte o estado da extensão abaixo para verificar a disponibilidade.",
   "extensions.explanation":
     "Instale um pacote .omxext baixado separadamente. O código da extensão tem as permissões do seu usuário; não há isolamento de segurança. Pacotes instalados ficam inativos até serem acionados. Esta prévia é exclusiva para Linux ARM64.",
   "extensions.install": "Instalar .omxext local…",

@@ -110,10 +110,14 @@ export function startTerminalWindow(bridge: Window["omxterm"]): void {
             confirmPaste: bridge.terminal.confirmPaste,
             requestContextMenu: bridge.terminal.requestClipboardContextMenu,
           },
-          snippets: {
-            load: bridge.terminal.snippets,
-            subscribeToToggle: bridge.terminal.onSnippetsToggle,
-          },
+          ...(configuration.optionalSnippets
+            ? {}
+            : {
+                snippets: {
+                  load: bridge.terminal.snippets,
+                  subscribeToToggle: bridge.terminal.onSnippetsToggle,
+                },
+              }),
         },
       );
       // Pane initialization owns its failure/empty notification. A rejected first

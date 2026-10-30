@@ -1,17 +1,20 @@
-# Snippets package — preparatory source
+# Optional Snippets package
 
 This separately built package preserves the built-in Snippets YAML v1 catalog,
-search, exact text, Insert/Run and core-owned preview. It is not a platform
-cutover or a published replacement. Built-in Snippets remains available.
+search, exact text, Insert/Run and core-owned preview. Linux ARM64 development
+source uses this installed tool; other targets retain built-in Snippets. This
+source does not announce a published replacement. See the
+[migration guide](../../docs/snippets-migration.md) and its release prerequisite.
 
 Build committed source with `node scripts/build-snippets-extension.mjs`. The
 archive, checksum and receipt are separate artifacts; the receipt starts with
 `qualification.status: not-run`. Install the archive through the ordinary
 Extensions management path. Installation does not create or change a catalog.
-Production intentionally does not register this preparatory package's action.
-Native qualification composition opts into `qualifySnippets` while omitting the
-built-in view, so only one implementation is active. No automatic installation,
-enablement, catalog listing or migration is implied.
+Production intentionally omits the package's duplicate action: the existing
+Toggle Snippets menu, palette and shortcut command opens or hides the single
+installed companion. Absent/disabled packages open Extensions guidance instead.
+Native qualification uses unchanged production composition. No automatic
+installation, enablement or catalog listing is implied.
 
 The backend reads `snippets.yaml` beside the host's `config.json`, honoring the
 same XDG/home configuration root. A missing catalog is an empty state. To create

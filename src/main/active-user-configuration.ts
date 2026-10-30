@@ -1,3 +1,4 @@
+import { usesOptionalSnippets } from "../shared/snippets-mode";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalIpcRouter } from "./terminal-ipc-controller";
 import type { LoadedUserConfiguration } from "./user-configuration";
@@ -54,6 +55,7 @@ export function terminalRendererConfiguration(
   const configuration: LoadedUserConfiguration = active.configuration;
   return Object.freeze({
     language: configuration.language,
+    optionalSnippets: usesOptionalSnippets(process.platform, process.arch),
     ...(configuration.fontFamily
       ? { fontFamily: configuration.fontFamily }
       : {}),

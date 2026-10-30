@@ -81,7 +81,8 @@ export function createCompanionContent(
       !options.blocked() &&
       !presentation.isBlocked()
     )
-      panel.show(descriptor.id);
+      if (descriptor.toggle) panel.toggle(descriptor.id);
+      else panel.show(descriptor.id);
   });
   const removeDismiss = bridge?.onDismissPanel?.((id) => {
     if (

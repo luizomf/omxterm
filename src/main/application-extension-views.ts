@@ -179,11 +179,15 @@ export function applicationViews(
     );
   }
   return {
-    open: async () => {
+    open: async (togglePanel?: boolean) => {
       if (epochSignal.aborted || target.signal.aborted)
         throw new PackageError("unavailable");
       if (descriptor) {
-        host.reveal(descriptor);
+        host.reveal(
+          togglePanel && descriptor.presentation === "panel"
+            ? { ...descriptor, toggle: true }
+            : descriptor,
+        );
         return;
       }
       descriptor = await host.open({

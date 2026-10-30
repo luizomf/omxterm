@@ -23,6 +23,7 @@ import {
 import { startCommandPalette } from "./command-palette";
 import { terminalMenuActions } from "./terminal-menu-actions";
 import { extensionInvocationTarget } from "./extension-invocation-target";
+import { usesOptionalSnippets } from "../shared/snippets-mode";
 import { startApplicationExtensions } from "./application-extensions";
 import { registerSshTerminalLaunch } from "./ssh-terminal-ipc";
 import { registerSemanticInputIpc } from "./semantic-input-ipc";
@@ -478,7 +479,11 @@ app
           sendFind: notifyWindow(terminalIpc.find),
           sendTitleBarToggle: notifyWindow(terminalIpc.titleBarToggle),
           sendTabBarToggle: notifyWindow(terminalIpc.tabBarToggle),
-          sendSnippetsToggle: notifyWindow(terminalIpc.snippetsToggle),
+          sendSnippetsToggle: (window) => {
+            if (usesOptionalSnippets(process.platform, process.arch))
+              extensions?.toggleSnippets(window);
+            else notifyWindow(terminalIpc.snippetsToggle)(window);
+          },
           sendLocalImageOpen: notifyWindow(terminalIpc.localImageOpen),
           toggleDeveloperTools: (window) => window.webContents.toggleDevTools(),
           sendTabCommand: (window, command) =>

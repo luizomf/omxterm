@@ -113,7 +113,15 @@ vi.mock("../../src/main/extension-view-ipc", () => ({
   startExtensionViewHost: (options: ExtensionViewHostOptions) => {
     const host = {
       options,
-      open: vi.fn(async () => ({ id: "hosted-view", title: "Files" })),
+      open: vi.fn(
+        async (descriptor: { title: string; presentation?: "panel" }) => ({
+          id: "hosted-view",
+          title: descriptor.title,
+          ...(descriptor.presentation
+            ? { presentation: descriptor.presentation }
+            : {}),
+        }),
+      ),
       reveal: vi.fn(),
       claimActivation: vi.fn(),
       retire: vi.fn(async () => {
@@ -258,6 +266,214 @@ afterEach(async () => {
   await service?.dispose();
   await rm(adapters.root, { recursive: true, force: true });
 });
+async function installSnippets() {
+  await writeFile(
+    archive,
+    packageArchive([
+      {
+        name: "extension.json",
+        data: JSON.stringify({
+          ...manifest,
+          id: "omxterm.snippets",
+          view: {
+            ...manifest.view,
+            action: "omxterm.snippets.open",
+            title: "Snippets",
+          },
+        }),
+      },
+      { name: "backend.mjs", data: "" },
+      { name: "index.html", data: "<h1>Snippets</h1>" },
+    ]),
+  );
+  expect(await request({ operation: "install" })).toMatchObject({ ok: true });
+}
+
+it.each(["absent", "disabled"])(
+  "guides %s Snippets to management without executing code",
+  async (state) => {
+    adapters.sendOpen.mockImplementation(() => {});
+    if (state === "disabled") {
+      await installSnippets();
+      await request({
+        operation: "disable",
+        id: "omxterm.snippets",
+        generation: 1,
+      });
+    }
+    service.toggleSnippets(window);
+    expect(adapters.sendOpen).toHaveBeenCalledExactlyOnceWith(
+      window.webContents,
+      expect.any(String),
+      { action: "snippets-management" },
+    );
+    expect(adapters.activate).not.toHaveBeenCalled();
+    expect(adapters.hosts).toHaveLength(0);
+    if (state === "disabled")
+      expect(await request({ operation: "snapshot" })).toMatchObject({
+        entries: [{ enabled: false, generation: 2 }],
+      });
+  },
+);
+
+it("keeps Snippets out of ordinary actions and captures its compatibility invocation until acknowledgment", async () => {
+  await installSnippets();
+  expect(service.actions()).toEqual([]);
+  expect(service.contextMenu(window, "s1", () => true)).toEqual([]);
+  adapters.sendOpen.mockImplementation(() => {});
+  let directory = "/original";
+  service.registerWindow(window, () => ({
+    owner: window,
+    signal: new AbortController().signal,
+    terminalDirectory: directory,
+  }));
+  service.toggleSnippets(window);
+  const command = adapters.sendOpen.mock.calls[0]![2];
+  if (
+    !isTerminalTabCommand(command) ||
+    command.action !== "toggle-snippets-extension"
+  )
+    throw new Error("Expected Snippets admission");
+  expect(adapters.activate).not.toHaveBeenCalled();
+  directory = "/replacement";
+  await request({ operation: "open", token: command.token, accepted: true });
+  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+  const host = adapters.hosts[0]!;
+  expect(host.open).toHaveBeenCalledWith(
+    expect.objectContaining({ presentation: "panel" }),
+  );
+  expect(host.reveal).not.toHaveBeenCalled();
+  expect(
+    await host.options.onRequest!(
+      { operation: "terminal-directory" },
+      new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => true },
+    ),
+  ).toEqual({ ok: true, directory: "/original" });
+  expect(
+    await request({ operation: "open", token: command.token, accepted: true }),
+  ).toMatchObject({ ok: false });
+  service.toggleSnippets(window);
+  const next = adapters.sendOpen.mock.calls[1]![2];
+  if (
+    !isTerminalTabCommand(next) ||
+    next.action !== "toggle-snippets-extension"
+  )
+    throw new Error("Expected Snippets admission");
+  await request({ operation: "open", token: next.token, accepted: true });
+  await vi.waitFor(() => expect(host.reveal).toHaveBeenCalledOnce());
+  expect(host.reveal).toHaveBeenCalledWith(
+    expect.objectContaining({ toggle: true }),
+  );
+  expect(adapters.hosts).toHaveLength(1);
+  expect(adapters.activate).toHaveBeenCalledOnce();
+});
+
+it.each(["denied", "disabled", "aborted"])(
+  "refuses pending Snippets activation when %s",
+  async (cause) => {
+    await installSnippets();
+    adapters.sendOpen.mockImplementation(() => {});
+    const lifetime = new AbortController();
+    service.registerWindow(window, () => ({
+      owner: window,
+      signal: lifetime.signal,
+      terminalDirectory: null,
+    }));
+    service.toggleSnippets(window);
+    const command = adapters.sendOpen.mock.calls[0]![2];
+    if (
+      !isTerminalTabCommand(command) ||
+      command.action !== "toggle-snippets-extension"
+    )
+      throw new Error("Expected Snippets admission");
+    if (cause === "disabled")
+      await request({
+        operation: "disable",
+        id: "omxterm.snippets",
+        generation: 1,
+      });
+    if (cause === "aborted") lifetime.abort();
+    await request({
+      operation: "open",
+      token: command.token,
+      accepted: cause !== "denied",
+    });
+    expect(
+      await request({
+        operation: "open",
+        token: command.token,
+        accepted: true,
+      }),
+    ).toMatchObject({ ok: false });
+    expect(adapters.activate).not.toHaveBeenCalled();
+  },
+);
+
+it("routes runtime-unavailable Snippets to management without activation", async () => {
+  await service.dispose();
+  adapters.sendOpen.mockImplementation(() => {});
+  const unavailable = vi
+    .spyOn(InstalledPackages, "open")
+    .mockRejectedValueOnce(new Error("unavailable"));
+  try {
+    Object.defineProperty(process, "platform", {
+      value: "linux",
+      configurable: true,
+    });
+    Object.defineProperty(process, "arch", {
+      value: "arm64",
+      configurable: true,
+    });
+    service = await startApplicationExtensions({
+      applicationRoot: adapters.root,
+      ssh: { open: adapters.sshOpen },
+      layout: { capture: vi.fn(), open: vi.fn() },
+      translator: () => translatorFor(language),
+      sendAction: adapters.sendOpen,
+      isTrustedSender: (event) => event.sender === window.webContents,
+      changed() {},
+      keybind() {},
+    });
+  } finally {
+    Object.defineProperty(process, "platform", originalPlatform);
+    Object.defineProperty(process, "arch", originalArch);
+    unavailable.mockRestore();
+  }
+  service.registerWindow(window, () => ({
+    owner: window,
+    signal: new AbortController().signal,
+    terminalDirectory: null,
+  }));
+  expect(await request({ operation: "snapshot" })).toMatchObject({
+    error: "runtime-unavailable",
+  });
+  service.toggleSnippets(window);
+  expect(adapters.sendOpen).toHaveBeenCalledExactlyOnceWith(
+    window.webContents,
+    expect.any(String),
+    { action: "snippets-management" },
+  );
+  expect(adapters.activate).not.toHaveBeenCalled();
+});
+
+it("ignores compatibility commands for an unfocused or unavailable target", () => {
+  adapters.sendOpen.mockImplementation(() => {});
+  adapters.selected = {};
+  service.toggleSnippets(window);
+  adapters.selected = window;
+  const lifetime = new AbortController();
+  lifetime.abort();
+  service.registerWindow(window, () => ({
+    owner: window,
+    signal: lifetime.signal,
+    terminalDirectory: null,
+  }));
+  service.toggleSnippets(window);
+  expect(adapters.sendOpen).not.toHaveBeenCalled();
+  expect(adapters.activate).not.toHaveBeenCalled();
+});
+
 it("HTTPS installs exact captured bytes with the same consent, replacement generation and dormant runtime", async () => {
   await request({ operation: "install" });
   adapters.download.mockResolvedValueOnce(bytes("2.0.0"));

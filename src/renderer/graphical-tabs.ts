@@ -65,7 +65,7 @@ export function createGraphicalTabs(
     | "setBlocked"
     | "editSettingsClipboard"
   > = {
-    openSettings() {
+    openSettings(destination) {
       if (
         !owner.available() ||
         options.canFocus?.() === false ||
@@ -85,8 +85,11 @@ export function createGraphicalTabs(
         );
         tabs.push(tab);
         owner.select(tabs.length - 1);
-        void tab.view.open();
-      } else if (tab !== owner.selected()) owner.select(tabs.indexOf(tab));
+        void tab.view.open(destination);
+      } else {
+        if (tab !== owner.selected()) owner.select(tabs.indexOf(tab));
+        if (destination) tab.view.navigate(destination);
+      }
     },
     isSettingsSelected: () => owner.selected()?.kind === "settings",
     setBlocked(blocked) {

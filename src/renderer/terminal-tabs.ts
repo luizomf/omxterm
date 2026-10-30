@@ -118,7 +118,9 @@ export interface TerminalTabsOptions {
 
 export interface TerminalTabs {
   readonly ready: Promise<void>;
-  openSettings(): void;
+  openSettings(
+    destination?: import("./settings/settings-dialog").SettingsDestination,
+  ): void;
   isSettingsSelected(): boolean;
   isTerminalSelected(): boolean;
   openOverlay(open: () => void, refused?: () => void): void;
@@ -397,6 +399,9 @@ export function createTerminalTabs(
       panes.closePane(findPaneBySession(terminalTabs(), id)),
     pane: panes.handleCommand,
     extensions: options.extensions,
+    canOpenSnippets: () => !!interactivePane(),
+    openSnippetsManagement: () =>
+      settingsActions.openSettings({ page: "extensions", reason: "snippets" }),
   });
   if (options.mirrorTyping)
     mirror = createMirrorTyping({

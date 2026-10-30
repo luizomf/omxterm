@@ -10,6 +10,8 @@ export interface HostedContentDescriptor {
   title: string;
   // Omission keeps the existing general application-tab presentation.
   presentation?: "panel";
+  // Main-only compatibility command for an already retained companion.
+  toggle?: true;
 }
 
 export interface HostedContentPresentation {
@@ -85,7 +87,10 @@ export function isHostedContentDescriptor(
   return (
     (record(value, ["id", "title"]) ||
       (record(value, ["id", "title", "presentation"]) &&
-        value.presentation === "panel")) &&
+        value.presentation === "panel") ||
+      (record(value, ["id", "title", "presentation", "toggle"]) &&
+        value.presentation === "panel" &&
+        value.toggle === true)) &&
     isHostedContentId(value.id) &&
     isHostedContentTitle(value.title)
   );

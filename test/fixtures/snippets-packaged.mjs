@@ -162,12 +162,16 @@ void ready
         0,
         "built-in omitted",
       );
-      menu("Settings");
+      menu("Toggle Snippets");
       await until(
-        () => js("!!document.querySelector('#settings-tab-extensions')"),
-        "Settings",
+        () =>
+          js(
+            "document.querySelector('#settings-tab-extensions')?.getAttribute('aria-selected') === 'true' && document.querySelector('.settings-snippets-notice')?.hidden === false",
+          ),
+        "absent package opens Extensions guidance",
       );
-      await button(core, "Extensions");
+      assert.equal(children.length, 0, "guidance never activates code");
+      checks.push("absent-package-management-no-activation");
       await button(core, "Install local .omxext…");
       await until(
         () =>
@@ -219,7 +223,20 @@ void ready
         );
       }
       assert.equal(children.length, 1);
+      menu("Toggle Snippets");
+      await until(
+        () => !native.getVisible(),
+        "compatibility toggle hides retained child",
+      );
+      menu("Toggle Snippets");
+      await until(
+        () => native.getVisible() && view.isFocused(),
+        "compatibility toggle restores retained child",
+      );
+      assert.equal(hosted()[0], view);
+      assert.equal(children.length, 1);
       checks.push("ordinary-archive-trust-enabled-activation");
+      checks.push("compatibility-toggle-single-retained-view");
       const terminalFocus = () =>
         until(
           async () =>
@@ -476,6 +493,21 @@ print('Enter released')`,
         "joined retirement",
       );
       assert.deepEqual(children[0].exit, { code: 0, signal: null });
+      await click(core, ".settings-close");
+      menu("Toggle Snippets");
+      await until(
+        () =>
+          js(
+            "document.querySelector('#settings-tab-extensions')?.getAttribute('aria-selected') === 'true' && document.querySelector('.extensions-panel')?.textContent.includes('disabled') && document.querySelector('.settings-snippets-notice')?.hidden === false",
+          ),
+        "disabled package guidance without re-enabling",
+      );
+      assert.equal(
+        children.length,
+        1,
+        "disabled guidance never starts another backend",
+      );
+      checks.push("disabled-package-management-no-enable");
       await button(core, "Uninstall");
       await until(
         () =>
@@ -515,7 +547,7 @@ print('Enter released')`,
               archiveSha256,
               approvals,
               input:
-                "synthetic Chromium/X11; controlled native consent; explicit qualification composition",
+                "synthetic Chromium/X11; controlled native consent; production Linux ARM64 composition",
             }),
         );
       });
