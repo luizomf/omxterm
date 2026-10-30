@@ -25,10 +25,15 @@ function fixture() {
   const parent = document.createElement("main");
   document.body.append(parent);
   let failure!: () => void;
+  let retired!: (id: string) => void;
   const unsubscribe = vi.fn();
   const bridge = {
     present: vi.fn<HostedContentBridge["present"]>(async () => true),
     close: vi.fn<HostedContentBridge["close"]>(async () => {}),
+    onRetired(listener: (id: string) => void) {
+      retired = listener;
+      return vi.fn();
+    },
     onFailure(listener: () => void) {
       failure = listener;
       return unsubscribe;
@@ -41,7 +46,14 @@ function fixture() {
     parent.append(element);
     return { id, slot: element, removed: false };
   };
-  return { owner, bridge, slot, unsubscribe, fail: () => failure() };
+  return {
+    owner,
+    bridge,
+    slot,
+    unsubscribe,
+    fail: () => failure(),
+    retire: (id: string) => retired(id),
+  };
 }
 
 it("retains logical activity through overlay hiding and distinguishes restored focus from search focus", async () => {
@@ -231,6 +243,121 @@ it.each(["refused", "rejected", "notification"] as const)(
     const count = h.bridge.present.mock.calls.length;
     h.owner.focus();
     expect(h.bridge.present).toHaveBeenCalledTimes(count);
+    expect(document.querySelector('[role="status"]')?.textContent).toContain(
+      "could not",
+    );
+  },
+);
+
+it.each(["before", "after"] as const)(
+  "reconciles rejected geometry only after exact retirement and a hide ACK (%s rejection settlement)",
+  async (notification) => {
+    const h = fixture();
+    const target = h.slot("old");
+    h.owner.select(target, () => {}, target);
+    await settle();
+    let reject!: (error: Error) => void;
+    h.bridge.present.mockImplementationOnce(
+      () =>
+        new Promise<boolean>((_resolve, no) => {
+          reject = no;
+        }),
+    );
+    h.owner.focus();
+    if (notification === "before") h.retire(target.id);
+    reject(new Error("Unknown hosted content"));
+    await settle();
+    const refused = vi.fn();
+    h.owner.openOverlay(vi.fn(), refused);
+    expect(refused).toHaveBeenCalledOnce();
+    h.retire("unrelated");
+    const hidden = deferred<boolean>();
+    h.bridge.present.mockImplementationOnce(() => hidden.promise);
+    h.owner.select(undefined, () => {}, {});
+    await settle();
+    expect(document.querySelector('[role="status"]')?.textContent).toContain(
+      "could not",
+    );
+    hidden.resolve(true);
+    await settle();
+    // A successful hide without the matching receipt cannot clear failure.
+    if (notification === "after") {
+      expect(document.querySelector('[role="status"]')?.textContent).toContain(
+        "could not",
+      );
+      h.retire(target.id);
+    }
+    expect(document.querySelector('[role="status"]')?.textContent).toBe("");
+    const next = h.slot("next");
+    h.owner.select(next, () => {}, next);
+    await settle();
+    expect(h.bridge.present.mock.lastCall?.[0].id).toBe("next");
+    const open = vi.fn();
+    h.owner.openOverlay(open);
+    await settle();
+    expect(open).toHaveBeenCalledOnce();
+  },
+);
+
+it("does not let a scoped rejection overwrite an epoch failure or another rejected identity", async () => {
+  const h = fixture();
+  const first = h.slot("first");
+  const second = h.slot("second");
+  h.owner.select(first, () => {}, first);
+  await settle();
+  h.bridge.present.mockRejectedValueOnce(new Error("first unavailable"));
+  h.owner.focus();
+  await settle();
+  h.bridge.present.mockRejectedValueOnce(new Error("second unavailable"));
+  h.owner.select(second, () => {}, second);
+  await settle();
+  h.retire(second.id);
+  h.owner.select(undefined, () => {}, {});
+  await settle();
+  expect(document.querySelector('[role="status"]')?.textContent).toContain(
+    "could not",
+  );
+  h.fail();
+  h.retire(first.id);
+  h.owner.select(undefined, () => {}, {});
+  await settle();
+  expect(document.querySelector('[role="status"]')?.textContent).toContain(
+    "could not",
+  );
+});
+
+it.each([
+  "false-hide",
+  "epoch-failure",
+  "close-failure",
+  "identity-free-rejection",
+] as const)(
+  "does not reconcile %s after retirement and a later hide ACK",
+  async (failure) => {
+    const h = fixture();
+    const target = h.slot("old");
+    h.owner.select(target, () => {}, target);
+    await settle();
+    if (failure === "close-failure") {
+      h.bridge.close.mockRejectedValueOnce(new Error("unknown close outcome"));
+      h.owner.close(target.id, vi.fn());
+    } else if (failure === "epoch-failure") h.fail();
+    else {
+      h.bridge.present.mockImplementationOnce(async () => {
+        if (failure === "identity-free-rejection")
+          throw new Error("transport lost");
+        return false;
+      });
+      if (failure === "false-hide") h.owner.openOverlay(vi.fn());
+      else h.owner.select(undefined, () => {}, {});
+    }
+    await settle();
+    h.retire(target.id);
+    h.owner.select(undefined, () => {}, {});
+    await settle();
+    const open = vi.fn();
+    h.owner.openOverlay(open);
+    expect(open).not.toHaveBeenCalled();
     expect(document.querySelector('[role="status"]')?.textContent).toContain(
       "could not",
     );

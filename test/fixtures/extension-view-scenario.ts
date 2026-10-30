@@ -440,6 +440,70 @@ export async function exerciseExtensionViews(options: {
     );
     await select(1);
     const resourceReceipts = await resources.assertRetired();
+    // Resource settlement alone is not presentation usability: #746 left a
+    // failure latch while the original Surface and PTY continued to work.
+    const replacement = await resources.openReplacement();
+    const recoveryHost = startExtensionViewHost({
+      owner: window,
+      preloadPath: path.join(options.root, "extension-view.cjs"),
+      resources: replacement.resources,
+      contentSlot: approvedSlot,
+      ipcMain,
+    });
+    try {
+      await recoveryHost.open({
+        entryResource: "index.html",
+        title: "Replacement B",
+      });
+      const fresh = window.contentView.children.at(-1) as WebContentsView;
+      const contents = fresh.webContents;
+      await waitFor(
+        () => fresh.getVisible() && contents.isFocused(),
+        "replacement epoch presented after crash",
+      );
+      assert.equal(
+        await contents.executeJavaScript(
+          "document.querySelector('h1').textContent",
+        ),
+        "Latest B",
+      );
+      assert.equal(
+        await js(
+          "[...document.querySelectorAll('[role=status]')].some(element => !element.hidden && element.textContent.includes('Hosted content could not'))",
+        ),
+        false,
+      );
+      palette.show();
+      await until("!!document.querySelector('.command-palette input')");
+      assert.equal(fresh.getVisible(), false);
+      assert.equal(
+        await js(
+          "window.__extensionOverlayReceipts.at(-1)?.hiddenAcknowledged",
+        ),
+        true,
+      );
+      key(core, "Escape");
+      await until("!document.querySelector('.command-palette')");
+      await waitFor(
+        () => fresh.getVisible() && contents.isFocused(),
+        "replacement restored after overlay",
+      );
+      assert.deepEqual(await recoveryHost.retire(), { status: "settled" });
+      assert.equal(contents.isDestroyed(), true);
+      await until(
+        "document.querySelectorAll('.hosted-content-tab').length === 0",
+      );
+      await terminalRoundTrip("after-replacement");
+    } finally {
+      await recoveryHost.retire();
+    }
+    assert.equal(replacement.releases(), 1);
+    const postCrashRecovery = {
+      replacementPresented: true,
+      overlayHiddenAndRestored: true,
+      replacementReleased: replacement.releases(),
+      originalPtyContinued: true,
+    };
     const result = {
       extensionViews: "production-composition-verified",
       corePid,
@@ -452,6 +516,7 @@ export async function exerciseExtensionViews(options: {
       overlays,
       states,
       retirement,
+      postCrashRecovery,
       crash,
       destroyedViews: [
         firstContents.isDestroyed(),

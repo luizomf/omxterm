@@ -11,10 +11,15 @@ export interface HostedContentSlot {
 
 // One owner per window, shared by all native content adapters. Revisions order
 // native work; selection identities fence DOM activation and overlay restoration.
+// eslint-disable-next-line max-lines-per-function -- Selection, hide acknowledgements and scoped retirement recovery share one ordered window lifetime.
 export function createHostedContentPresentation(
   parent: HTMLElement,
   bridge:
-    | Pick<HostedContentBridge, "present" | "close" | "onFailure" | "onFocus">
+    | (Pick<
+        HostedContentBridge,
+        "present" | "close" | "onFailure" | "onFocus"
+      > &
+        Partial<Pick<HostedContentBridge, "onRetired">>)
     | undefined,
   language: RendererLanguage = englishLanguage,
 ) {
@@ -32,19 +37,38 @@ export function createHostedContentPresentation(
   let scheduled = false;
   let transitioning = false;
   let failed = false;
+  // Only rejected identity-bearing requests can be reconciled. False hide ACKs,
+  // close failures and epoch failure notifications remain terminal failures.
+  let failedIdentities: Set<string> | undefined;
+  const pendingIdentities = new Set<Set<string>>();
   let overlayGeneration = -1;
   let restoreSuppressed = false;
   const notice = parent.ownerDocument.createElement("div");
   notice.setAttribute("role", "status");
   notice.hidden = true;
   parent.before(notice);
-  const fail = () => {
+  const fail = (identities?: Set<string>) => {
     if (disposed) return;
+    if (!failed) failedIdentities = identities && new Set(identities);
+    else if (!identities) failedIdentities = undefined;
+    else if (failedIdentities)
+      for (const id of identities) failedIdentities.add(id);
     failed = true;
     setPageNotice(notice, {
       text: language.t("hosted.failure"),
       severity: "error",
     });
+  };
+  const reconcileRetirement = () => {
+    // Require both exact retirement receipts and a successful current hide.
+    // Neither an unrelated retirement nor a failed/unknown hide is recovery.
+    if (!nativePossible && failedIdentities?.size === 0) {
+      failed = false;
+      failedIdentities = undefined;
+      pendingOverlay = false;
+      notice.hidden = true;
+      notice.textContent = "";
+    }
   };
   const removeLanguage = language.bind(() => {
     if (failed) notice.textContent = language.t("hosted.failure");
@@ -57,10 +81,16 @@ export function createHostedContentPresentation(
     const bounds = target?.slot.getBoundingClientRect();
     if (target) nativePossible = true;
     const request = ++revision;
+    const activeId = disposed ? null : (selected?.id ?? null);
+    const identities = new Set<string>();
+    if (target) identities.add(target.id);
+    if (activeId) identities.add(activeId);
+    const identityBearing = identities.size > 0;
+    pendingIdentities.add(identities);
     try {
       const accepted = await bridge.present({
         id: target?.id ?? null,
-        activeId: disposed ? null : (selected?.id ?? null),
+        activeId,
         revision: request,
         bounds: bounds
           ? {
@@ -77,12 +107,15 @@ export function createHostedContentPresentation(
         else if (!target) {
           nativePossible = false;
           focused = null;
+          reconcileRetirement();
         } else if (focus === "core") focused = null;
       }
       return accepted;
     } catch {
-      if (request === revision) fail();
+      if (request === revision) fail(identityBearing ? identities : undefined);
       return false;
+    } finally {
+      pendingIdentities.delete(identities);
     }
   };
   const show = (focus: boolean | "core" | "restore" = false) => {
@@ -111,7 +144,13 @@ export function createHostedContentPresentation(
       ? undefined
       : new ResizeObserver(layout);
   page.addEventListener("resize", layout);
-  const removeFailure = bridge?.onFailure(fail);
+  const removeFailure = bridge?.onFailure(() => fail());
+  const removeRetired = bridge?.onRetired?.((id) => {
+    failedIdentities?.delete(id);
+    // Notifications can precede settlement of the rejected invocation too.
+    for (const identities of pendingIdentities) identities.delete(id);
+    reconcileRetirement();
+  });
   const removeFocus = bridge?.onFocus?.((id) => {
     focused = id;
   });
@@ -239,9 +278,12 @@ export function createHostedContentPresentation(
     },
     close(id: string, remove: () => void) {
       if (disposed) return;
-      void bridge?.close(id).then(() => {
-        if (!disposed) remove();
-      }, fail);
+      void bridge?.close(id).then(
+        () => {
+          if (!disposed) remove();
+        },
+        () => fail(),
+      );
     },
     dispose() {
       if (disposed) return;
@@ -250,6 +292,7 @@ export function createHostedContentPresentation(
       selectionRevision += 1;
       removeFocus?.();
       removeFailure?.();
+      removeRetired?.();
       observer?.disconnect();
       page.removeEventListener("resize", layout);
       notice.remove();

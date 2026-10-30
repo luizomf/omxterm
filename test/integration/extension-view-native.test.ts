@@ -69,6 +69,12 @@ it.skipIf(!["linux", "darwin"].includes(process.platform))(
     expect(JSON.parse(lines[0]!.slice(prefix.length))).toMatchObject({
       extensionViews: "production-composition-verified",
       retirement: { status: "settled" },
+      postCrashRecovery: {
+        replacementPresented: true,
+        overlayHiddenAndRestored: true,
+        replacementReleased: 1,
+        originalPtyContinued: true,
+      },
       resourceReceipts: {
         admitted: true,
         released: 1,

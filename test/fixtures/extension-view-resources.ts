@@ -5,11 +5,33 @@ import { packageArchive } from "./extension-package-archive";
 import type {
   Installation,
   CleanupResult,
+  OpenVersion,
 } from "../../src/installed-packages/installed-packages";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { extensionResourceOwner } from "../../src/main/extension-view-reader";
 import type { CapturedResourceOwner } from "../../src/main/extension-view-resources";
+
+async function replacementResources(fresh: OpenVersion, digest: string) {
+  try {
+    assert.equal(fresh.digest, digest);
+    assert.equal(await fresh.revalidate(), true);
+  } catch (error) {
+    await fresh.release();
+    throw error;
+  }
+  let releases = 0;
+  return {
+    resources: extensionResourceOwner({
+      ...fresh,
+      async release() {
+        await fresh.release();
+        releases += 1;
+      },
+    }),
+    releases: () => releases,
+  };
+}
 
 // Load the real build artifact as ESM: bundling its import.meta-based native
 // loader into Window Chrome's CJS entry would destroy the addon loader's base.
@@ -160,6 +182,14 @@ window.probePolicy = async () => {
   };
   return {
     resources,
+    async openReplacement() {
+      assert.ok(replacement);
+      assert.ok(replacement.digest);
+      return replacementResources(
+        await store.openVersion(first.id),
+        replacement.digest,
+      );
+    },
     async replaceCurrent() {
       assert.equal(replacement, undefined, "one bounded update only");
       replacement = await store.install(await archive("B"), {

@@ -320,7 +320,10 @@ see [the preview contract](docs/files-development-preview.md) for qualification 
 **Extension View Host** — Internal owner of lazy native packaged-content views
 and their reads in a nonpersistent epoch, retaining an immutable package-version
 pin. Shared window presentation composes tab/panel slots, focus and overlays;
-retirement does not terminate core PTYs. It is not a public SDK or activation UI,
+retirement does not terminate core PTYs. Presentation rejection racing retirement
+is reconciled only by exact main-issued retirement notifications plus an
+acknowledged native hide; unrelated or failed retirement cannot restore usability.
+It is not a public SDK or activation UI,
 and main-death disk-read exclusion remains unqualified. See
 [ADR 0039](docs/adr/0039-own-packaged-web-content-by-epoch.md) for resource and
 presentation ownership, and the

@@ -1689,7 +1689,14 @@ selection does not assert publisher trust or confer extra capabilities. Main-iss
 slot presentations are owner-bound. The host hides native views before admitting
 host DOM overlays and restores only a still-current content owner. Field input
 and clipboard remain in the child, never forwarded into a terminal. Closing or
-crashing a hosted epoch retires its known views, not core PTYs. The declared
+crashing a hosted epoch retires its known views, not core PTYs. Presentation
+requests racing that retirement remain subject to owner/identity refusal. A
+rejected identity-bearing presentation temporarily blocks native presentation
+and overlays; recovery requires retirement notifications for all identities
+implicated in the rejected requests and a successful current native-hide
+acknowledgement. This restores later hosted epochs and overlays without admitting
+retired content. Unrelated retirement, refused hides, close failures and epoch
+cleanup failures do not clear the recovery notice. The declared
 `terminal.semanticInput.v1` own-view operation is a separate explicit semantic
 text request, not key forwarding. Main authenticates the actual visible child
 and epoch, captures core selection revision before asynchronous admission, and

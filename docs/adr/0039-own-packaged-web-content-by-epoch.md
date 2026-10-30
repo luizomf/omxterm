@@ -92,8 +92,21 @@ silently retries. Tab retirement is published only after native destruction and,
 for the final epoch view, successful read/session/pin settlement. Failed epochs
 keep their core-owned tab and recovery notice; they do not publish an empty
 window. The owner-bound IPC route continues acknowledging safe null presentations
-after settled retirement, but never admits old view identities. No session-destroy
-API or arbitrary-descendant containment is
+after settled retirement, but never admits old view identities. A renderer
+presentation can race revocation before its per-view retirement notification;
+removing one tab can also briefly select an already-revoked sibling. These
+requests remain rejected by main. The renderer retains the exact identities of
+rejected presentation requests and fails closed while their outcomes are
+unreconciled. It clears that scoped failure only after main has published
+retirement for every implicated identity and a current null presentation has
+acknowledged hiding all native epochs. The two observations may arrive in either
+order. It does not parse IPC error strings, treat rejection as a hide ACK, retry
+the rejected request, or retain a window-lifetime history of retired IDs.
+Unrelated retirement cannot clear the failure. A false presentation result,
+identity-free rejection, close failure or epoch failure notification remains
+fail-closed and cannot be cleared by this reconciliation. Successful reconciliation
+allows later epochs and host overlays to work without reviving a retired identity.
+No session-destroy API or arbitrary-descendant containment is
 invented. Renderer loss conservatively retires all views in that epoch. Native hiding still
 runs, but visibility IPC is not sent to a lost renderer or a closing view: its
 WebContents may remain alive after its frame is disposed. Actual
