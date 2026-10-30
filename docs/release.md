@@ -216,7 +216,7 @@ OMXTERM_FILES_BUILD=1 npm test -- test/integration/files-extension-build.test.ts
 Build Files **after** `npm run build` (which clears `dist`) and **before** packaging
 so exclusion is actually checked. The Files archive and its `.sha256`/`.json`
 sidecars live in `dist/extensions`, outside the host package. Current source builds
-Files `0.3.0` with minimum host `0.24.0-dev.4`. The immutable published Files
+Files `0.4.0` with minimum host `0.24.0-dev.8`. The immutable published Files
 `0.1.0` archive retains its historical minimum host `0.23.0-dev.8`; neither archive
 supports `v0.22.0`. When building an exported source
 archive, pass `OUTPUT.omxext FULL_SOURCE_COMMIT` to the Files builder and verify

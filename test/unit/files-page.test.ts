@@ -2,6 +2,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { mountFilesPage } from "../../extensions/files/page";
 import type { FilesTreeEntry } from "../../extensions/files/tree";
+import type { SupportedLanguage } from "../../src/shared/i18n";
 type Reply = Awaited<
   ReturnType<Parameters<typeof mountFilesPage>[1]["request"]>
 >;
@@ -27,7 +28,7 @@ const deferred = <T>() => {
   });
   return { promise, resolve };
 };
-async function setup() {
+async function setup(initialLanguage: SupportedLanguage = "en-US") {
   const listings: Record<string, FilesTreeEntry[]> = {
     "/root": [folder("folder"), file("alpha"), file("beta")],
     "/root/folder": [file("child")],
@@ -52,8 +53,15 @@ async function setup() {
     return { ok: true };
   });
   let visibility!: (visible: boolean) => void;
+  let language!: (language: SupportedLanguage) => void;
+  const unsubscribeLanguage = vi.fn();
   const page = mountFilesPage(document, {
     request,
+    onLanguage(listener) {
+      language = listener;
+      listener(initialLanguage);
+      return unsubscribeLanguage;
+    },
     onVisibility(listener) {
       visibility = listener;
       listener(true);
@@ -66,6 +74,8 @@ async function setup() {
     request,
     listings,
     visibility,
+    language,
+    unsubscribeLanguage,
     handle(value: typeof handler) {
       handler = value;
     },
@@ -333,6 +343,146 @@ it("cancels a late delete token when another editor replaces its request", async
     "Create folder",
   );
 });
+it("starts in Portuguese and relabels retained rows, menus and address drafts without requests", async () => {
+  const { language, request } = await setup("pt-BR");
+  expect(document.documentElement.lang).toBe("pt-BR");
+  expect(button("Pasta pessoal")).toBeTruthy();
+  expect(
+    document.querySelector('[role="tree"]')?.getAttribute("aria-label"),
+  ).toBe("Arquivos locais");
+  const retainedRow = row("/root/folder");
+  expect(retainedRow.getAttribute("aria-label")).toBe("folder, pasta");
+  const address = document.querySelector<HTMLInputElement>(".location input")!;
+  address.value = "/unsubmitted/<literal>";
+  address.focus();
+  address.setSelectionRange(2, 8);
+  const count = request.mock.calls.length;
+  language("en-US");
+  expect(address.value).toBe("/unsubmitted/<literal>");
+  expect(address.selectionStart).toBe(2);
+  expect(address.selectionEnd).toBe(8);
+  expect(document.activeElement).toBe(address);
+  expect(row("/root/folder")).toBe(retainedRow);
+  expect(retainedRow.getAttribute("aria-label")).toBe("folder, directory");
+  context("/root/alpha");
+  const retainedAction = button("Rename / move", menu());
+  retainedAction.focus();
+  language("pt-BR");
+  expect(button("Renomear / mover", menu())).toBe(retainedAction);
+  expect(document.activeElement).toBe(retainedAction);
+  expect(request).toHaveBeenCalledTimes(count);
+});
+
+it("preserves editor identity, caret and captured paths through live language changes", async () => {
+  const { language, request } = await setup();
+  context("/root/alpha");
+  button("Rename / move", menu()).click();
+  const input = document.querySelector<HTMLInputElement>(
+    ".operation-editor input",
+  )!;
+  input.value = "/root/<draft>";
+  input.setSelectionRange(3, 7);
+  row("/root/beta").click();
+  input.focus();
+  language("pt-BR");
+  expect(document.querySelector(".operation-editor input")).toBe(input);
+  expect(input.value).toBe("/root/<draft>");
+  expect(input.selectionStart).toBe(3);
+  expect(input.selectionEnd).toBe(7);
+  expect(document.activeElement).toBe(input);
+  expect(
+    document.querySelector(".operation-editor label")?.textContent,
+  ).toContain("Renomear / mover /root/alpha");
+  apply(input.value);
+  await settled();
+  expect(request).toHaveBeenCalledWith({
+    operation: "move",
+    path: "/root/alpha",
+    destination: "/root/<draft>",
+  });
+});
+
+it("relabels pending and settled notices without repeating a mutation or refreshing on failure", async () => {
+  const { language, handle, request } = await setup();
+  const pending = deferred<Reply>();
+  handle((value) => (value.operation === "move" ? pending.promise : undefined));
+  context("/root/alpha");
+  button("Rename / move", menu()).click();
+  apply("/root/new");
+  language("pt-BR");
+  expect(document.querySelector('[role="status"]')?.textContent).toBe(
+    "Operação em andamento…",
+  );
+  expect(document.querySelector<HTMLElement>(".operation-editor")!.inert).toBe(
+    true,
+  );
+  pending.resolve({ ok: false, error: "outcome-unknown" });
+  await settled();
+  expect(document.querySelector('[role="status"]')?.textContent).toContain(
+    "Resultado desconhecido",
+  );
+  language("en-US");
+  expect(document.querySelector('[role="status"]')?.textContent).toContain(
+    "Outcome unknown",
+  );
+  expect(
+    request.mock.calls.filter(
+      ([value]) => (value as { operation: string }).operation === "move",
+    ),
+  ).toHaveLength(1);
+  expect(
+    request.mock.calls.filter(
+      ([value]) => (value as { operation: string }).operation === "list",
+    ),
+  ).toHaveLength(1);
+});
+
+it("keeps a late and then visible delete confirmation bound to the same token", async () => {
+  const { language, handle, request } = await setup();
+  const pending = deferred<Reply>();
+  handle((value) =>
+    value.operation === "prepare-delete" ? pending.promise : undefined,
+  );
+  context("/root/alpha");
+  button("Delete permanently…", menu()).click();
+  language("pt-BR");
+  pending.resolve({ ok: true, path: "/root/alpha", token: "original" });
+  await vi.waitFor(() =>
+    expect(document.querySelector(".operation-editor")?.textContent).toContain(
+      "Excluir /root/alpha permanentemente?",
+    ),
+  );
+  const confirm = button("Excluir permanentemente");
+  row("/root/beta").click();
+  confirm.focus();
+  const count = request.mock.calls.length;
+  language("en-US");
+  expect(button("Delete permanently")).toBe(confirm);
+  expect(document.activeElement).toBe(confirm);
+  expect(request).toHaveBeenCalledTimes(count);
+  confirm.click();
+  await settled();
+  expect(request).toHaveBeenCalledWith({
+    operation: "delete",
+    token: "original",
+  });
+  expect(
+    request.mock.calls.filter(
+      ([value]) =>
+        (value as { operation: string }).operation === "prepare-delete",
+    ),
+  ).toHaveLength(1);
+});
+
+it("unsubscribes language at disposal and ignores a stale callback", async () => {
+  const { language, unsubscribeLanguage } = await setup();
+  dispose?.();
+  language("pt-BR");
+  expect(unsubscribeLanguage).toHaveBeenCalledTimes(1);
+  expect(document.documentElement.lang).toBe("en-US");
+  expect(button("New folder")).toBeTruthy();
+});
+
 it("reports a successful mutation separately from refresh failure", async () => {
   const { handle } = await setup();
   handle((value) =>

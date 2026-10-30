@@ -23,22 +23,28 @@ not qualify every admitted version.
 
 `extensions/files` is separately built, not imported into application main or the
 terminal renderer. Maintainers run `node scripts/build-files-extension.mjs` to
-produce `dist/extensions/files-0.3.0.omxext`. This build needs Python 3's ZIP
+produce `dist/extensions/files-0.4.0.omxext`. This build needs Python 3's ZIP
 writer and the locked esbuild tool; users receive the precompiled archive and do
 not run Python/npm or compilation to install it. An existing destination is not
 overwritten. The archive includes its MIT license. Version and compatibility come from
-`extensions/files/extension.json`; source version 0.3.0 requires host
-`0.24.0-dev.4` or later. This is distinct from the immutable distributed 0.1.0
+`extensions/files/extension.json`; source version 0.4.0 requires host
+`0.24.0-dev.8` or later for the hosted-language subscription. This is distinct from the immutable distributed 0.1.0
 preview above; building new source does not update the published catalog.
 
-Files 0.3.0 retains compact shared controls and a read-only host appearance
+Files 0.4.0 retains compact shared controls and a read-only host appearance
 subscription. Its base surface reveals the parent window's theme tint; text,
 focus and control borders remain visible. Live theme/opacity updates do not
 recreate the listing or discard operation drafts. Native blur remains a host
 and compositor effect, not child CSS. The separately bundled stylesheet embeds
 its shared tokens and requires no remote resources.
-Existing #622 attribution and third-party notices elsewhere in the application
-remain unchanged.
+Files follows the host's explicit `en-US` / `pt-BR` interface language. Live
+changes relabel retained controls, tree descriptions, menus, operation editors,
+confirmation text and visible notices without listing again, replaying a mutation
+or replacing an editor. Focus, caret, drafts, selected paths and confirmation tokens
+remain unchanged. File names, paths and technical backend error codes remain
+literal; the package name stays Files. This reuses the hosted-language subscription,
+not a new localization SDK. Existing #622 attribution and third-party notices
+elsewhere in the application remain unchanged.
 
 The current Files page presents expandable folders and nested file rows. Click
 an entry to select it; use its disclosure arrow, double-click a folder, or use
@@ -64,8 +70,8 @@ mutation result never navigates back to its old root. Collapsing drops hidden
 subtrees; refresh errors remain visible rather than implying rollback or retrying
 the mutation. Manual Refresh remains available for external changes. Listings
 are read sequentially, including pagination, and obsolete cursors are closed;
-there are no filesystem watchers or polling. Source 0.3.0 is a new archive
-identity, not a replacement of retained 0.2.0 or published 0.1.0 bytes.
+there are no filesystem watchers or polling. Source 0.4.0 is a new archive
+identity, not a replacement of retained 0.2.0/0.3.0 or published 0.1.0 bytes.
 
 The builder also writes `<archive>.sha256` and `<archive>.json`, refusing to
 replace any of the three outputs. The JSON binds the final archive size/digest,

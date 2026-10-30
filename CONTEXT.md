@@ -318,7 +318,8 @@ extension consumed through Settings captured-byte trust and shared namespaced
 actions. Current source browses expandable local folders with contextual and
 keyboard-accessible actions, captured operation targets and automatic refresh
 after successful mutations; manual refresh handles external changes without
-watchers. Its application owner composes independent backend/view version pins,
+watchers. Host-language updates relabel retained controls and notices without
+changing drafts, captured paths or pending operations. Its application owner composes independent backend/view version pins,
 per-invocation terminal context, local management and bounded Quit retirement.
 Its separately built archive/checksum/receipt are not bundled into the host;
 a build receipt identifies bytes and inputs, not completed qualification or shipment.

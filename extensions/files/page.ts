@@ -10,9 +10,13 @@ import {
   type FilesTreeSnapshot,
 } from "./tree.js";
 
+import type { SupportedLanguage } from "../../src/shared/i18n.js";
+import { filesMessages, type FilesMessages } from "./messages.js";
+
+type Label = (messages: FilesMessages) => string;
 type Reply = FilesTreeReply & { path?: string; token?: string };
 type Target = { path: string; kind: string };
-type Action = { label: string; run: () => void; disabled?: boolean };
+type Action = { label: Label; run: () => void; disabled?: boolean };
 const join = (base: string, name: string) =>
   `${base.replace(/\/$/, "")}/${name}`;
 const parent = (path: string) => path.slice(0, path.lastIndexOf("/")) || "/";
@@ -23,11 +27,28 @@ export function mountFilesPage(
   bridge: {
     request(value: unknown): Promise<Reply>;
     onVisibility?(listener: (visible: boolean) => void): () => void;
+    onLanguage?(listener: (language: SupportedLanguage) => void): () => void;
   },
 ) {
+  let messages = filesMessages("en-US");
+  let disposed = false;
+  const labels = new Map<HTMLElement, () => void>();
+  function label(element: HTMLElement, read: Label, attribute?: string) {
+    const update = () => {
+      if (attribute) element.setAttribute(attribute, read(messages));
+      else element.textContent = read(messages);
+    };
+    labels.set(element, update);
+    update();
+  }
+  function clear(element: HTMLElement) {
+    for (const bound of labels.keys())
+      if (element.contains(bound)) labels.delete(bound);
+    element.replaceChildren();
+  }
   const title = document.createElement("div");
   const heading = document.createElement("h1");
-  heading.textContent = "Files";
+  label(heading, (m) => m.title);
   title.append(heading);
   const notice = document.createElement("div");
   notice.setAttribute("role", "status");
@@ -38,12 +59,12 @@ export function mountFilesPage(
   const location = document.createElement("form");
   location.className = "location";
   const address = document.createElement("input");
-  address.setAttribute("aria-label", "Directory");
+  label(address, (m) => m.directory, "aria-label");
   address.spellcheck = false;
   const entries = document.createElement("div");
   entries.className = "entries";
   entries.setAttribute("role", "tree");
-  entries.setAttribute("aria-label", "Local files");
+  label(entries, (m) => m.localFiles, "aria-label");
   entries.tabIndex = 0;
   const status = document.createElement("p");
   status.className = "summary";
@@ -53,7 +74,7 @@ export function mountFilesPage(
   const menu = document.createElement("div");
   menu.className = "file-menu";
   menu.setAttribute("role", "menu");
-  menu.setAttribute("aria-label", "File actions");
+  label(menu, (m) => m.fileActions, "aria-label");
   menu.hidden = true;
   let selected: Target | undefined;
   let mutationPending = false;
@@ -63,9 +84,14 @@ export function mountFilesPage(
   let menuReturn: HTMLElement | undefined;
   let state: FilesTreeSnapshot;
   const message = (
-    text: string,
+    text: Label,
     severity: "info" | "success" | "warning" | "error" = "info",
-  ) => setPageNotice(notice, { text, severity });
+  ) => {
+    const update = () =>
+      setPageNotice(notice, { text: text(messages), severity });
+    labels.set(notice, update);
+    update();
+  };
   async function request(value: unknown): Promise<Reply> {
     try {
       return await bridge.request(value);
@@ -75,19 +101,20 @@ export function mountFilesPage(
   }
   function report(reply: Reply) {
     message(
-      reply.error === "outcome-unknown"
-        ? "Outcome unknown. Do not repeat the operation automatically. Refresh to inspect the directory."
-        : `Operation not completed: ${reply.error ?? "failed"}.`,
+      (m) =>
+        reply.error === "outcome-unknown"
+          ? m.unknown
+          : m.failed(reply.error ?? "failed"),
       "error",
     );
   }
   function button(
-    label: string,
+    text: Label,
     action: () => void,
     container: HTMLElement = toolbar,
   ) {
     const element = createPageButton(document);
-    element.textContent = label;
+    label(element, text);
     element.addEventListener("click", action);
     container.append(element);
     return element;
@@ -121,7 +148,8 @@ export function mountFilesPage(
     }
     if (document.activeElement !== address) address.value = state.root ?? "";
     entries.setAttribute("aria-busy", String(state.loading));
-    entries.replaceChildren();
+    clear(entries);
+    label(entries, (m) => m.localFiles, "aria-label");
     const focusPath = selected?.path ?? state.rows[0]?.path;
     for (const item of state.rows) {
       const row = document.createElement("div");
@@ -130,10 +158,7 @@ export function mountFilesPage(
       row.setAttribute("role", "treeitem");
       row.setAttribute("aria-level", String(item.depth + 1));
       row.setAttribute("aria-selected", String(selected?.path === item.path));
-      row.setAttribute(
-        "aria-label",
-        `${item.name}, ${item.kind === "link" ? "symbolic link" : item.kind}`,
-      );
+      label(row, (m) => `${item.name}, ${m.kind(item.kind)}`, "aria-label");
       row.tabIndex = item.path === focusPath ? 0 : -1;
       row.style.setProperty("--depth", String(Math.min(item.depth, 8)));
       if (item.kind === "directory")
@@ -148,12 +173,13 @@ export function mountFilesPage(
       name.textContent = item.name;
       const detail = document.createElement("span");
       detail.className = "kind";
-      detail.textContent =
+      label(detail, (m) =>
         item.kind === "directory"
-          ? "Folder"
+          ? m.folder
           : item.kind === "link"
-            ? "Link"
-            : "";
+            ? m.link
+            : "",
+      );
       row.title = item.path;
       row.append(disclosure, name, detail);
       row.addEventListener("click", (event) => {
@@ -179,13 +205,15 @@ export function mountFilesPage(
       ) {
         const hint = document.createElement("div");
         hint.className = "tree-hint";
-        hint.textContent = item.loading
-          ? "Reading folder…"
-          : item.error
-            ? `Folder unavailable: ${item.error}`
-            : item.truncated
-              ? "Truncated at 5,000 entries"
-              : "Empty folder";
+        label(hint, (m) =>
+          item.loading
+            ? m.readingFolder
+            : item.error
+              ? m.folderUnavailable(item.error)
+              : item.truncated
+                ? m.truncatedFolder
+                : m.emptyFolder,
+        );
         entries.append(hint);
       }
     }
@@ -196,11 +224,13 @@ export function mountFilesPage(
         rowElement(focusPath ?? "") ??
         entries
       ).focus();
-    status.textContent = state.rootLoading
-      ? "Reading directory…"
-      : state.error
-        ? `Directory unavailable: ${state.error}`
-        : `${state.rows.length.toLocaleString()} visible entries${state.truncated ? " · Truncated at 5,000 per folder" : ""}`;
+    label(status, (m) =>
+      state.rootLoading
+        ? m.readingDirectory
+        : state.error
+          ? m.directoryUnavailable(state.error)
+          : m.entries(state.rows.length, state.truncated),
+    );
   }
   const tree = createFilesTree(request, render);
   state = tree.snapshot();
@@ -285,7 +315,7 @@ export function mountFilesPage(
     mutationPending = true;
     discardConfirmation();
     editor.inert = true;
-    message("Operation in progress…");
+    message((m) => m.pending);
     try {
       const reply = await request(value);
       if (reply.ok) {
@@ -293,9 +323,10 @@ export function mountFilesPage(
         await tree.refresh();
         const current = tree.snapshot();
         message(
-          current.error || current.rows.some((row) => row.error)
-            ? "Operation completed, but a listing could not be refreshed. Use Refresh to inspect it."
-            : "Operation completed.",
+          (m) =>
+            current.error || current.rows.some((row) => row.error)
+              ? m.refreshFailed
+              : m.completed,
           current.error || current.rows.some((row) => row.error)
             ? "warning"
             : "success",
@@ -309,16 +340,18 @@ export function mountFilesPage(
     }
   }
   function form(
-    label: string,
+    caption: Label,
     initial: string,
     submit: (value: string) => void,
   ) {
     if (mutationPending) return;
     discardConfirmation();
-    editor.replaceChildren();
+    clear(editor);
     editor.hidden = false;
     const text = document.createElement("label");
-    text.textContent = label;
+    const captionElement = document.createElement("span");
+    label(captionElement, caption);
+    text.append(captionElement);
     const input = document.createElement("input");
     input.value = initial;
     input.required = true;
@@ -327,9 +360,9 @@ export function mountFilesPage(
     editor.append(text);
     const save = createPageButton(document, "primary");
     save.type = "submit";
-    save.textContent = "Apply";
+    label(save, (m) => m.apply);
     editor.append(save);
-    button("Cancel", dismissEditor, editor);
+    button((m) => m.cancel, dismissEditor, editor);
     editor.onsubmit = (event) => {
       event.preventDefault();
       submit(input.value);
@@ -343,7 +376,7 @@ export function mountFilesPage(
   ) {
     if (!directory) return;
     form(
-      `Create ${operation === "create-file" ? "file" : "folder"} in ${directory}`,
+      (m) => m.create(operation === "create-file", directory),
       "",
       (name) => {
         if (
@@ -353,7 +386,7 @@ export function mountFilesPage(
           name.includes("/") ||
           name.includes("\0")
         ) {
-          message("Enter one file or folder name.", "warning");
+          message((m) => m.invalidName, "warning");
           return;
         }
         void mutate({ operation, path: join(directory, name) });
@@ -363,7 +396,7 @@ export function mountFilesPage(
   function rename(target: Target) {
     const captured = target.path;
     form(
-      `Rename / move ${captured} to (absolute destination; never overwrite)`,
+      (m) => m.move(captured),
       captured,
       (destination) => {
         void mutate({ operation: "move", path: captured, destination });
@@ -388,20 +421,20 @@ export function mountFilesPage(
       return;
     }
     confirmation = reply.token;
-    editor.replaceChildren();
+    clear(editor);
     editor.hidden = false;
     const warning = document.createElement("p");
-    warning.textContent = `Permanently delete ${reply.path}? This cannot be undone. Folders include their contents; symbolic links are removed without deleting their targets.`;
+    label(warning, (m) => m.confirmation(reply.path ?? target.path));
     editor.append(warning);
     const confirm = button(
-      "Delete permanently",
+      (m) => m.delete,
       () => {
         confirmation = undefined;
         void mutate({ operation: "delete", token: reply.token });
       },
       editor,
     );
-    button("Cancel", dismissEditor, editor);
+    button((m) => m.cancel, dismissEditor, editor);
     editor.onsubmit = (event) => event.preventDefault();
     confirm.focus();
   }
@@ -415,7 +448,7 @@ export function mountFilesPage(
       ...(target?.kind === "directory"
         ? [
             {
-              label: "Open directory",
+              label: (m: FilesMessages) => m.openDirectory,
               run: () => {
                 void navigate(target.path);
               },
@@ -423,31 +456,31 @@ export function mountFilesPage(
           ]
         : []),
       {
-        label: "New file",
+        label: (m) => m.newFile,
         run: () => creation("create-file", directory),
         disabled: !directory || mutationPending,
       },
       {
-        label: "New folder",
+        label: (m) => m.newFolder,
         run: () => creation("create-directory", directory),
         disabled: !directory || mutationPending,
       },
       ...(target
         ? [
             {
-              label: "Rename / move",
+              label: (m: FilesMessages) => m.rename,
               run: () => rename(target),
               disabled: mutationPending,
             },
             {
-              label: "Move to Trash",
+              label: (m: FilesMessages) => m.trash,
               run: () => {
                 void mutate({ operation: "trash", path: target.path });
               },
               disabled: mutationPending,
             },
             {
-              label: "Delete permanently…",
+              label: (m: FilesMessages) => m.prepareDelete,
               run: () => {
                 void prepareDelete(target);
               },
@@ -456,13 +489,13 @@ export function mountFilesPage(
           ]
         : []),
       {
-        label: "Refresh",
+        label: (m) => m.refresh,
         run: () => {
           void tree.refresh();
         },
       },
       {
-        label: "Use terminal directory",
+        label: (m) => m.terminalDirectory,
         run: () => {
           void navigateFrom("terminal-directory");
         },
@@ -486,7 +519,8 @@ export function mountFilesPage(
     anchor?: HTMLElement,
   ) {
     menuReturn = anchor ?? actionsButton;
-    menu.replaceChildren();
+    clear(menu);
+    label(menu, (m) => m.fileActions, "aria-label");
     for (const action of actions(target)) {
       const item = button(
         action.label,
@@ -552,22 +586,37 @@ export function mountFilesPage(
       dismissEditor();
     }
   });
-  button("Home", () => {
-    void navigateFrom("home");
-  });
-  button("Up", () => {
-    if (state.root) void navigate(parent(state.root));
-  });
-  button("Refresh", () => {
-    void tree.refresh();
-  });
-  button("New folder", () => creation("create-directory"));
-  const actionsButton = button("Actions…", () => openMenu(selected));
+  button(
+    (m) => m.home,
+    () => {
+      void navigateFrom("home");
+    },
+  );
+  button(
+    (m) => m.up,
+    () => {
+      if (state.root) void navigate(parent(state.root));
+    },
+  );
+  button(
+    (m) => m.refresh,
+    () => {
+      void tree.refresh();
+    },
+  );
+  button(
+    (m) => m.newFolder,
+    () => creation("create-directory"),
+  );
+  const actionsButton = button(
+    (m) => m.actions,
+    () => openMenu(selected),
+  );
   actionsButton.setAttribute("aria-haspopup", "menu");
   actionsButton.setAttribute("aria-expanded", "false");
   const go = createPageButton(document);
   go.type = "submit";
-  go.textContent = "Go";
+  label(go, (m) => m.go);
   location.append(address, go);
   location.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -584,13 +633,24 @@ export function mountFilesPage(
   const unsubscribeVisibility = bridge.onVisibility?.((visible) => {
     if (!visible) closeMenu(false);
   });
+  document.documentElement.lang = "en-US";
+  const unsubscribeLanguage = bridge.onLanguage?.((language) => {
+    if (disposed) return;
+    document.documentElement.lang = language;
+    messages = filesMessages(language);
+    for (const update of labels.values()) update();
+  });
   const ready = navigateFrom("home");
   return {
     ready,
     dispose() {
+      if (disposed) return;
+      disposed = true;
       navigationRevision++;
       discardConfirmation();
       unsubscribeVisibility?.();
+      unsubscribeLanguage?.();
+      labels.clear();
       document.removeEventListener("pointerdown", dismissMenu);
     },
   };

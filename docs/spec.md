@@ -1855,7 +1855,11 @@ SDK or extension shortcut configuration. An empty source catalog is valid but
 does not constitute public distribution.
 Current-source Files provides an expandable local folder tree with keyboard
 navigation, discoverable Actions and item/background context menus. Operation
-editors retain captured targets. Successful filesystem mutations refresh the
+editors retain captured targets. The page follows the host's explicit en-US/pt-BR
+language and relabels retained controls, accessible names, menus, confirmations and
+notices without rereading listings, replaying operations or resetting focus/caret,
+drafts, selection or deletion tokens. Names, paths and technical error codes remain
+literal. Successful filesystem mutations refresh the
 current root and surviving expanded folders automatically without navigating
 back to a previous root; failures and unknown outcomes never trigger mutation
 retry. Manual refresh handles external changes without watchers or polling.
