@@ -329,13 +329,23 @@ release notes/assets to retroactively claim later verification.
 
 ## Snippets preview preparation and publication
 
-The initial Linux ARM64 host `0.24.0-dev.11` / Snippets `0.1.0` preview is
-published; see the [migration guide](snippets-migration.md) for exact identities,
-installation and qualification limits. The procedure below applies to future
-preview pairs; source transition alone does not establish distributed migration.
-Prepare a partial prerelease, not the complete stable asset set. Other targets
-retain built-in Snippets until their own replacement is qualified. Source-native
-qualification does not substitute for the exact packaged host/archive pair.
+The Linux ARM64 host `0.24.0-dev.11` and macOS ARM64 host `0.24.0-dev.16`
+Snippets previews are published, each using the unchanged Snippets `0.1.0` archive.
+The macOS release was sealed on 2026-10-30 at 16:25:11 UTC as an immutable,
+non-Latest prerelease with only the DMG/checksum. The existing public archive was
+verified before host publication; public host/checksum downloads subsequently
+verified the exact qualified DMG. Stable `0.23.0` remains Latest. See the
+[migration guide](snippets-migration.md#macos-arm64-published-preview) for exact
+source/artifact identities, local/offline installation and separate native
+nine-scenario/FULL package evidence. Public byte verification is not native macOS
+public-HTTPS installation. The official catalog remains Linux ARM64 only; no
+archive or original receipt was replaced.
+
+The Linux-oriented procedure below applies to future preview pairs, not permission
+to recreate either sealed release; source transition alone does not establish
+distributed migration. Prepare a partial prerelease, not the complete stable asset
+set. Windows and Linux x64 retain built-in Snippets until their own replacement is
+qualified. Source-native qualification does not substitute for the exact packaged host/archive pair.
 
 1. Select exact committed host and Snippets source identities. Build the host,
    then `node scripts/build-snippets-extension.mjs /absolute/new/snippets.omxext`

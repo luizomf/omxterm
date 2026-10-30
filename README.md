@@ -105,13 +105,15 @@ ConPTY. Desktop/GPU, installer and ordinary-user integration remain unverified;
 Linux FUSE/helper installation and Windows 11/SmartScreen/UAC are also unverified.
 These are not release gates for the build-only lanes.
 
-### Optional Linux ARM64 Snippets preview
+### Optional Snippets previews
 
-[Host 0.24.0-dev.11 and Snippets 0.1.0](docs/installation.md#optional-snippets-preview)
-are separate, non-Latest preview downloads. This host requires deliberate Snippets
-installation; existing catalogs stay intact. Stable **0.23.0** and other platforms
-retain built-in Snippets. Follow the [migration guide](docs/snippets-migration.md)
-for the exact pairing, local-archive installation and qualification limits.
+[Linux ARM64 host 0.24.0-dev.11 and macOS ARM64 host 0.24.0-dev.16](docs/installation.md#optional-snippets-preview)
+use the separate Snippets 0.1.0 archive. These are non-Latest prereleases requiring
+deliberate Snippets installation; existing catalogs stay intact. On macOS, use
+local-archive installation (available offline after download), not the Linux-only
+official catalog. Stable **0.23.0**, Windows and Linux x64 retain built-in Snippets.
+Follow the [migration guide](docs/snippets-migration.md) for exact pairings and
+qualification limits.
 
 ### Tested desktops
 
@@ -148,12 +150,14 @@ menu bar.
 
 ### Make it yours
 
-On first launch, OMXTerm creates starter configuration files (`config.json`,
+On first launch, stable OMXTerm creates starter configuration files (`config.json`,
 `snippets.yaml`, and `themes/omtheme.json`) in `~/.config/omxterm`. You can edit
 them directly,
 [tweak a single setting](docs/configuration.md#add-one-display-change), or use
 [OMXTerm Studio](docs/configuration.md#edit-visually-with-omxterm-studio) to
-customize your settings and colors visually.
+customize your settings and colors visually. The optional Snippets previews do
+not create `snippets.yaml` in fresh configuration kits; use the extension's example
+as described in the [migration guide](docs/snippets-migration.md).
 
 See [Everyday use](docs/usage.md) for all keyboard shortcuts, image previews,
 and tips.

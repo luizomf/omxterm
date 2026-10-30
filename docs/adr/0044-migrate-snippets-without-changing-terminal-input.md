@@ -10,10 +10,15 @@ activation-scoped catalog paging, a declared own-view semantic-input capability,
 separately buildable package/UI and the compatibility entry point described in
 [the specification](../spec.md). The macOS ARM64 source transition selects that
 same optional implementation and has passed bounded nine-scenario native
-qualification. Review and correction verification are complete; this does not
-authorize distributed cutover or publish a macOS host. Other targets retain built-in Snippets. Source
-integration does not publish a replacement, qualify every platform or establish
-a stable extension SDK.
+qualification. The subsequent exact-DMG nine-scenario campaign and separate FULL
+macOS package verifier passed. The immutable, non-Latest macOS ARM64 host
+`0.24.0-dev.16` is now published with the unchanged Snippets `0.1.0` archive
+verified publicly before host publication. Use the
+[local/offline archive route](../snippets-migration.md#macos-arm64-published-preview);
+the official catalog remains Linux ARM64 only. Public byte verification is not
+native macOS public-HTTPS installation or broader platform qualification.
+Stable `0.23.0` remains Latest; Windows and Linux x64 retain built-in Snippets.
+Remaining platform gates and #741 stay open; no stable extension SDK is established.
 
 ## Context
 

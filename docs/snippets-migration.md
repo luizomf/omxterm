@@ -1,12 +1,12 @@
 # Optional Snippets migration
 
 The published [OMXTerm 0.24.0-dev.11 Linux ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
-uses the separately installed [Snippets 0.1.0 extension](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0).
-Both are non-Latest prereleases; stable **0.23.0** remains unchanged with built-in
-Snippets. Distributed macOS, Windows and Linux x64 hosts retain built-in Snippets.
-The macOS ARM64 **source transition** selects optional Snippets through ordinary
-production composition and has passed bounded native qualification. It is not a
-published macOS host migration; distribution remains a separate gate.
+and [OMXTerm 0.24.0-dev.16 macOS ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.16)
+use the separately installed [Snippets 0.1.0 extension](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0).
+All are immutable non-Latest prereleases; stable **0.23.0** remains Latest with
+built-in Snippets. Windows and Linux x64 retain built-in Snippets. macOS uses
+local-archive installation, available offline after download; the official catalog
+remains Linux ARM64 only.
 
 ## Existing catalogs and shortcuts
 
@@ -26,25 +26,29 @@ from a missing installation. Terminal sessions remain usable.
 
 ## Install deliberately
 
-Use the exact preview pair linked above. From the host release, download the
-ARM64 AppImage, its checksum and, if wanted, the version-matched application-menu
-helper and checksum. Follow that release's installation instructions, not
-`/latest/download` or the stable-version filenames in the general installation
+Use the exact preview pair for your platform linked above. On macOS, download the
+ARM64 DMG and checksum; see [macOS installation](#macos-arm64-published-preview).
+On Linux, download the ARM64 AppImage, its checksum and, if wanted, the
+version-matched application-menu helper and checksum. Follow that release's
+installation instructions, not `/latest/download` or the stable-version filenames in the general installation
 guide. From the Snippets release, download `snippets-0.1.0.omxext` and its checksum
 into the same folder, then verify before installation:
 
 ```sh
+# macOS
+shasum -a 256 -c snippets-0.1.0.omxext.sha256
+# Linux
 sha256sum --check snippets-0.1.0.omxext.sha256
 ```
 
 No source build is required. Older hosts are not qualified for this package, and
 existing Files/SSH packages were not newly qualified on dev.11. The official
-catalog now lists these same Snippets bytes. A separate bounded public-HTTPS
-checkpoint passed on this exact published host/archive pair; see
+catalog lists these same Snippets bytes for Linux ARM64 only. A separate bounded
+public-HTTPS checkpoint passed on the Linux dev.11 host/archive pair, not macOS; see
 [coverage below](#preview-coverage-and-remaining-platforms).
 
 1. Open **Settings → Extensions** and choose **Install local .omxext…**. A local
-   archive works offline. Alternatively, choose
+   archive works offline after download. On Linux ARM64 only, alternatively choose
    **Browse official extensions**, select the Snippets Linux ARM64 preview and
    install it. Browse/Refresh is explicit; reopening Settings does not fetch the
    catalog. Both routes use the same captured-byte trust and installation flow.
@@ -61,14 +65,44 @@ Disabling/removing Snippets retires its view and cancels unaccepted previews,
 not terminal sessions or already accepted Surface-owned paste. It does not undo
 commands already sent. Reinstalling does not require rebuilding your catalog.
 
+## macOS ARM64 published preview
+
+Host `0.24.0-dev.16` was published on **2026-10-30 at 16:25:11 UTC**, with the
+DMG and its checksum only. Download them from the macOS release linked above and
+verify before installation:
+
+```sh
+shasum -a 256 -c OMXTerm-0.24.0-dev.16-arm64.dmg.sha256
+```
+
+Follow that release's copy-to-Applications and first-launch instructions. The app
+is ad-hoc signed, not Developer ID signed or notarized; Finder/Gatekeeper first
+launch was not qualified. Install the separate Snippets archive using the local
+archive/trust/enable steps above, not the official catalog.
+
+The final source/tag target is `42328767a1510f5cec15deb6e274366ca76f972c`.
+The qualified build source is `c3655a5b6ec13dbfb870665fc23b83caef71aac6`;
+squash integration means it is not an ancestor of the tag. Complete tree comparison
+found only 35 added factual documentation lines; application and packaging inputs
+were unchanged. The published DMG is the original qualified artifact identified
+[below](#macos-arm64-exact-dmg-qualification), not a rebuild.
+
+The unchanged public Snippets `0.1.0` archive (76,653 bytes, SHA-256
+`6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7`)
+was downloaded and verified **before** host publication. Public host/checksum
+readback also verified the exact DMG bytes. The archive and its original Linux
+build receipt remain immutable, including source
+`805e95dbc77552dc137707578b18b48ad6d047e9` and build-time
+`qualification.status: not-run`; later qualification is separate evidence.
+Public downloads do not establish native macOS public-HTTPS installation.
+
 ## macOS ARM64 source transition
 
 The source transition reuses the single compatibility action, preserves existing catalogs
 and omits the example only in newly created configuration kits. It does not install
-or silently enable a package. For deliberate local/offline testing, obtain the
-exact published Snippets `0.1.0` archive and checksum linked above, verify with
-`shasum -a 256 -c snippets-0.1.0.omxext.sha256` on macOS, then follow the local
-archive/trust/enable steps above. The existing archive has no manifest platform
+or silently enable a package. The source campaign used the
+exact published Snippets `0.1.0` archive linked above through ordinary local
+archive/trust/enable steps. The existing archive has no manifest platform
 restriction and requires host `>=0.24.0-dev.8`; compatibility metadata alone is
 not qualification. Keep the user's existing YAML beside `config.json`.
 
@@ -93,10 +127,8 @@ exact-DMG GUI, physical-keyboard, natural-autorepeat, Kitty, OS-compositor or
 public-HTTPS qualification. The historical minimal-composition fixture remains
 separate; its changed optional-Snippets assertion was not rerun.
 
-A compatible package must be published and verified for the matching macOS host
-before any distributed macOS host removes built-in access. Whether to reuse the
-immutable archive for that release is a later maintainer decision; no catalog,
-archive, receipt or host release is changed here.
+This historical source campaign preceded the exact-DMG checkpoint and publication
+recorded separately here; it does not itself establish either boundary.
 
 ## macOS ARM64 exact-DMG qualification
 
@@ -127,17 +159,17 @@ is distinct from the campaign's normal-Quit evidence. Full formatting, types,
 lint and 4,261 headless tests passed (66 skips); independent review's two ownership/
 cancellation findings and composition-test gap were corrected and verified.
 
-This is not host publication, catalog promotion, public-HTTPS acquisition,
+This checkpoint is separate from the later host publication above. It does not
+qualify catalog promotion, native macOS public-HTTPS installation,
 Finder/Gatekeeper/notarization, physical-keyboard, natural-autorepeat, Kitty,
-OS-compositor, macOS Files/SSH or full portable-suite qualification. No immutable
-archive or original build receipt was changed; distributed cutover remains a
-separate maintainer decision under ADR 0044.
+OS-compositor, macOS Files/SSH or the full portable suite. No immutable archive
+or original build receipt was changed.
 
 ## Preview coverage and remaining platforms
 
-The Snippets package was published and anonymously downloaded/hash-verified
-before the matching host. The exact host/archive pair passed local installation,
-compatibility entry points, guidance, input/focus and retirement scenarios. The
+For the Linux ARM64 dev.11 preview, the Snippets package was published and
+anonymously downloaded/hash-verified before the matching host. The exact host/archive
+pair passed local installation, compatibility entry points, guidance, input/focus and retirement scenarios. The
 host also passed full Linux package verification, including isolated helper
 installation, direct/FUSE and extract-and-run startup/output. See both release
 notes for exact identities and evidence.
@@ -157,7 +189,7 @@ consent, synthetic input, ANGLE SwiftShader and an isolated plain-paste shell;
 this does not expand the earlier keyboard/GPU/platform limits or requalify
 Files/SSH. No archive, host package or original build receipt was changed.
 
-Other-platform migrations remain open in [#741](https://github.com/luizomf/omxterm/issues/741).
+Windows and Linux x64 migrations remain open in [#741](https://github.com/luizomf/omxterm/issues/741).
 Each requires its own compatible, published package and matching qualification
 before removing built-in access from a distributed host, as required by
 [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md).

@@ -48,16 +48,25 @@ responsibility.
 ## Optional Snippets preview
 
 The [Linux ARM64 host 0.24.0-dev.11](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
-uses the separate [Snippets 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0)
-instead of built-in Snippets. Both are non-Latest prereleases; stable 0.23.0 and
-other platforms retain built-in Snippets. This pairing does not newly qualify
-existing Files/SSH packages on dev.11.
+and [macOS ARM64 host 0.24.0-dev.16](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.16)
+use the separate [Snippets 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0)
+instead of built-in Snippets. All are non-Latest prereleases; stable 0.23.0 remains
+Latest, and Windows and Linux x64 retain built-in Snippets. These pairings do not
+newly qualify Files/SSH.
 
-Download the versioned host AppImage/checksum and optional matching helper from
-that release, not `/latest/download`. Download and verify the Snippets archive
+Download the versioned host DMG/checksum for macOS, or AppImage/checksum and optional
+matching helper for Linux, from the respective release, not `/latest/download`.
+On macOS, verify the DMG with
+`shasum -a 256 -c OMXTerm-0.24.0-dev.16-arm64.dmg.sha256` and follow the release's
+installation/first-launch instructions. Download and verify the Snippets archive
 and checksum, then choose **Settings → Extensions → Install local .omxext…**.
-Review trust, enable deliberately if disabled, and open **View → Toggle Snippets**.
-No source build, automatic installation or new catalog listing is involved.
+On macOS, use `shasum -a 256 -c snippets-0.1.0.omxext.sha256`; on Linux, use
+`sha256sum --check snippets-0.1.0.omxext.sha256`. Local installation works offline
+after download. The official catalog remains **Linux ARM64 only**, not a macOS
+installation route. Review trust, enable deliberately if disabled, and open
+**View → Toggle Snippets**. No source build or automatic installation is involved.
+Public download verification is not native macOS public-HTTPS installation or
+Finder/Gatekeeper first-launch qualification.
 Existing YAML catalogs remain untouched; without the enabled package, the shortcut
 opens Extensions guidance. See the [migration guide](snippets-migration.md) for
 offline installation, new catalogs and qualification limits. The stable-version
