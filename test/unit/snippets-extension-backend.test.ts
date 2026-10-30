@@ -49,7 +49,7 @@ async function directory() {
   roots.push(root);
   return root;
 }
-function adapter(read: LoadTerminalSnippetsOptions["read"]) {
+function adapter(read: typeof readFile): LoadTerminalSnippetsOptions {
   return { environment: {}, homeDirectory: "/synthetic/home", read };
 }
 function deferredRead() {
