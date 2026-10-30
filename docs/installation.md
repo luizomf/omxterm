@@ -6,13 +6,27 @@ OMXTerm ships packages for Apple Silicon Macs, Linux ARM64 or x64, and Windows 1
 
 ## Optional Files preview
 
-Files is separately installed, never bundled. The stable
-[Linux ARM64 host 0.23.0](https://github.com/luizomf/omxterm/releases/tag/v0.23.0)
-supports the separate [Files 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.1.0).
-Both downloads include checksums. Files and the extension runtime remain a
-Linux ARM64 development preview, not a stable SDK or support for other platforms.
-Older preview hosts support local/link installation from `0.23.0-dev.8` and
-catalog browsing from `0.23.0-dev.9`.
+Files is separately installed, never bundled. The catalog offers
+[Files 0.4.0](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.4.0),
+requiring host `>=0.24.0-dev.8` and API `0.1.x` on Linux ARM64. Use the
+[Linux ARM64 host 0.24.0-dev.11 prerelease](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11),
+the exact host used for controlled qualification. Download the versioned AppImage
+and matching checksum, not `/latest/download`. Files and this host are non-Latest
+previews, not a stable SDK or Files support for macOS/Linux x64.
+
+The separate release provides `omxterm-files-language-b6044d6.omxext`, its checksum
+and original build receipt. Verify the checksum and use **Install local .omxext…**
+or **Install from link** if not browsing the catalog. Exact-pair controlled
+installation/operations/management/Quit qualification passed; the separate actual
+public-HTTPS consumption checkpoint is still pending. Publication and checksum
+readback alone do not qualify that checkpoint.
+
+Stable [host 0.23.0](https://github.com/luizomf/omxterm/releases/tag/v0.23.0)
+remains unchanged and requires the historical
+[Files 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.1.0)
+via local/link installation, not the current catalog's 0.4.0 entry. Historical
+preview hosts support local/link installation from `0.23.0-dev.8` and catalog
+browsing from `0.23.0-dev.9`; that does not make current Files compatible.
 
 On a compatible Linux ARM64 host, open Settings → Extensions → **Browse official
 extensions**. Choose Install/Update/Reinstall, then review the exact version/digest
@@ -31,8 +45,8 @@ SSH Connect0.3.0 requires host0.24.0-dev.8 or later; use the qualified
 It does not run on stable0.23.0 or 0.23.0-dev.9; the normal stable downloads below
 remain unchanged. Download the preview AppImage, matching checksum and
 version-matched helper from that release, not `/latest/download`. Verify the
-checksums before launch/install. Historical Files0.1.0 compatibility on dev.0
-does not extend to this dev.11 host.
+checksums before launch/install. This host uses the current Files0.4.0 preview
+above; historical Files0.1.0 compatibility on dev.0 does not extend to dev.11.
 
 The [separate SSH0.3.0 release](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.0)
 provides the verified prebuilt archive/checksum/original receipt for local-file or

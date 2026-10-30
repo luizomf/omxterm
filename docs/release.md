@@ -216,7 +216,8 @@ OMXTERM_FILES_BUILD=1 npm test -- test/integration/files-extension-build.test.ts
 Build Files **after** `npm run build` (which clears `dist`) and **before** packaging
 so exclusion is actually checked. The Files archive and its `.sha256`/`.json`
 sidecars live in `dist/extensions`, outside the host package. Current source builds
-Files `0.4.0` with minimum host `0.24.0-dev.8`. The immutable published Files
+Files `0.4.0` with minimum host `0.24.0-dev.8`; its original archive is now
+published separately as `ext-files-v0.4.0` (see below). The historical published Files
 `0.1.0` archive retains its historical minimum host `0.23.0-dev.8`; neither archive
 supports `v0.22.0`. When building an exported source
 archive, pass `OUTPUT.omxext FULL_SOURCE_COMMIT` to the Files builder and verify
@@ -242,6 +243,35 @@ The normal stable-release procedure and its complete asset set remain unchanged.
 
 ## Files catalog publication
 
+### Current Files 0.4.0 promotion
+
+`ext-files-v0.4.0` was published on 2026-10-30 as an immutable non-Latest
+prerelease at original archive source `b6044d65d14345adb8d7ae59340fbca978512107`.
+All three original assets passed draft and anonymous public byte readback.
+Retain the basename `omxterm-files-language-b6044d6.omxext` and its original
+checksum/receipt, including `not-run` and intended dev.12 fields. The
+[preview guide](files-development-preview.md#files-040-distribution-and-controlled-qualification)
+records exact hashes and separate controlled qualification with the already-public
+host0.24.0-dev.11 ARM64 AppImage. No new host build/version is needed for this
+catalog/docs/test-only promotion; neither declared dev.20 compatibility nor
+source currency is dev.20 execution qualification.
+
+Generate from the retained original set with
+`node scripts/create-files-catalog.mjs PATH/omxterm-files-language-b6044d6.omxext CANDIDATE.json`.
+The generator emits a **Files-only** catalog. Merge only that entry into the full
+`distribution/official-extensions-v1.json`, preserving SSH and Snippets metadata.
+Keep historical0.1.0 exception test fixtures independent of the current catalog;
+do not change compatibility code or sealed historical releases.
+
+After reviewed integration, read back the fixed raw endpoint byte-for-byte and
+run the separate exact-pair packaged `OMXTERM_FILES_PACKAGED_CATALOG=public`
+checkpoint with fresh evidence, no fixture CA/interceptor or controlled catalog
+file. This public-consumption checkpoint is **pending**. Controlled qualification,
+asset upload and anonymous byte readback are distinct milestones, not substitutes.
+Preserve failed campaigns and report the native limits in the preview guide.
+
+### Historical Files 0.1.0 publication
+
 The initial Files catalog preview was published and
 [#728](https://github.com/luizomf/omxterm/issues/728) is closed. See the
 [Files preview guide](files-development-preview.md) for distributed versions and
@@ -253,8 +283,8 @@ This partial preview is separate from the complete stable release below. The
 integration maintainer owns publication after full candidate review/corrections and
 exact packaged qualification. Keep source review SHA, final SHA, host package and
 Files archive identities distinct; a reused archive retains its original source
-receipt. Files0.1.0 minimum dev.8 remains valid for local/link installation; dev.9
-adds catalog browsing. Do not rebuild or replace published same-version bytes.
+receipt. Historical Files0.1.0 minimum 0.23.0-dev.8 remains valid for local/link
+installation; 0.23.0-dev.9 adds catalog browsing. Do not rebuild or replace published same-version bytes.
 
 1. Qualify the final Linux ARM64 host AppImage with the separate Files archive:
    catalog → exact-byte trust → dormant install → Files operation/conflict →
@@ -272,8 +302,9 @@ adds catalog browsing. Do not rebuild or replace published same-version bytes.
 4. Generate the candidate from those verified archive/receipt/checksum files:
    `node scripts/create-files-catalog.mjs PATH/files-0.1.0.omxext CANDIDATE.json`.
    Inspect its original source commit, immutable release URLs, target, engine range,
-   byte count and digest. Promote this reviewed JSON to
-   `distribution/official-extensions-v1.json` only after public availability.
+   byte count and digest. Promote the reviewed Files entry into
+   `distribution/official-extensions-v1.json` only after public availability,
+   preserving all other entries.
 5. Read back the exact fixed raw catalog endpoint; run one bounded actual packaged
    public-endpoint installation and retained-terminal/management/Quit smoke. Verify
    downloaded bytes against the published release receipt. A localhost transport

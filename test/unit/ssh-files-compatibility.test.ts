@@ -7,11 +7,27 @@ import {
 import { packageCompatible } from "../../src/installed-packages/compatibility";
 import {
   catalogCompatible,
-  parseCatalog,
   type CatalogRelease,
 } from "../../src/main/extension-catalog";
 
-// Historical sealed archive, independent of the currently promoted catalog.
+// Historical sealed archives, independent of the currently promoted catalog.
+const historicalFiles: CatalogRelease = {
+  id: "omxterm.files",
+  name: "Files — Linux ARM64 preview",
+  description:
+    "Project-maintained local file manager preview: browse, create, rename, move, trash and delete files.",
+  version: "0.1.0",
+  engines: { omxterm: ">=0.23.0-dev.8 <0.24.0", api: "0.1.x" },
+  targets: ["linux-arm64"],
+  archive: {
+    url: "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.1.0/files-0.1.0.omxext",
+    sha256: "c1fd36c4ddb966c93235f38973730a74c86303051ca7a095b6e5df4787bc7b9f",
+    bytes: 7917,
+  },
+  sourceCommit: "959f69ae5148182b0da67734b15b77922f7e4212",
+  releaseUrl:
+    "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.1.0",
+};
 const historicalSsh: CatalogRelease = {
   id: "omxterm.ssh",
   name: "SSH Connect",
@@ -37,16 +53,10 @@ it.each([
   "0.24.0-dev.5",
 ])(
   "retains historical Files/SSH admission on explicitly assigned host %s",
-  async (appVersion) => {
-    const catalog = parseCatalog(
-      await readFile("distribution/official-extensions-v1.json"),
-    );
+  (appVersion) => {
     const runtime = { appVersion, apiVersion: "0.1.0" };
-    for (const id of ["omxterm.files", "omxterm.ssh"]) {
-      const release =
-        id === "omxterm.ssh"
-          ? historicalSsh
-          : catalog.find((entry) => entry.id === id)!;
+    for (const release of [historicalFiles, historicalSsh]) {
+      const { id } = release;
       expect(release.version).toBe("0.1.0");
       const manifest = parseManifest({
         format: 1,
@@ -63,7 +73,13 @@ it.each([
         packageCompatible(manifest, { ...runtime, apiVersion: "0.2.0" }),
       ).toBe(false);
       if (id !== "omxterm.files") continue;
-      for (const appVersion of ["0.24.0", "0.24.0-dev.6", "0.25.0-dev.0"])
+      for (const appVersion of [
+        "0.24.0",
+        "0.24.0-dev.6",
+        "0.24.0-dev.11",
+        "0.24.0-dev.20",
+        "0.25.0-dev.0",
+      ])
         expect(packageCompatible(manifest, { ...runtime, appVersion })).toBe(
           false,
         );

@@ -61,6 +61,22 @@ must be published and downloaded/hash-verified before promoting the generated
 entry. Empty source catalog integration is useful implementation, not completed
 public distribution. Public-endpoint packaged consumption is a separate required
 milestone; follow the [Files publication procedure](release.md#files-catalog-publication).
+The generator emits only Files: merge its entry into the complete catalog rather
+than replacing SSH or Snippets.
+
+The current Files entry selects the immutable `ext-files-v0.4.0` release,
+`omxterm-files-language-b6044d6.omxext` (13,188 bytes, SHA-256
+`384de7da4cc2fafe7e42cd4ccf19a455a2e634036069160c75e15b7371d2eb6e`), from original
+source `b6044d65d14345adb8d7ae59340fbca978512107`. It requires host
+`>=0.24.0-dev.8`, API `0.1.x`, and target `linux-arm64`. All three original assets
+passed draft and anonymous public readback; the original receipt remains
+`not-run` with intended host dev.12. Separate controlled qualification passed on
+the already-public dev.11 ARM64 AppImage. The actual public-HTTPS native
+consumption checkpoint is pending after catalog integration; see
+[exact evidence and limits](files-development-preview.md#files-040-distribution-and-controlled-qualification).
+The promotion preserves SSH/Snippets metadata and all historical releases.
+Stable0.23.0 users need the historical Files0.1.0 local/link archive rather than
+the current catalog entry; no host or archive rebuild is part of this promotion.
 
 SSH Connect0.3.0 uses the same catalog/installation owner, with target Linux ARM64
 and host minimum0.24.0-dev.8. The immutable `ext-ssh-v0.3.0` release provides

@@ -18,7 +18,7 @@ it("generates a production-valid catalog from exact archive/receipt metadata, re
       { name: "extension.json", data: JSON.stringify(metadata) },
       { name: "LICENSE", data: "MIT" },
     ]);
-    const file = path.join(root, "files-0.1.0.omxext");
+    const file = path.join(root, "files-candidate.omxext");
     const output = path.join(root, "catalog.json");
     const sha256 = createHash("sha256").update(bytes).digest("hex");
     const receipt = {

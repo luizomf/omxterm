@@ -1907,7 +1907,7 @@ shared action invocation does. The explicit
 official catalog reuses the same installation owner/store; there is no public
 SDK or extension shortcut configuration. An empty source catalog is valid but
 does not constitute public distribution.
-Current-source Files provides an expandable local folder tree with keyboard
+Files provides an expandable local folder tree with keyboard
 navigation, discoverable Actions and item/background context menus. Operation
 editors retain captured targets. The page follows the host's explicit en-US/pt-BR
 language and relabels retained controls, accessible names, menus, confirmations and
@@ -1922,7 +1922,12 @@ moves and one-shot permanent-delete confirmation remain unchanged. See the
 [Files interaction contract](files-development-preview.md#concrete-consumer).
 
 Files archive version/compatibility is maintained separately from the host;
-archives and build receipts are excluded from application packages. Build receipts
+the current catalog selects immutable Files0.4.0 for Linux ARM64 with host
+`>=0.24.0-dev.8` and API `0.1.x`, preserving historical0.1.0 local/link delivery.
+The [distribution evidence](files-development-preview.md#files-040-distribution-and-controlled-qualification)
+distinguishes published bytes and controlled dev.11 qualification from the pending
+public-HTTPS native checkpoint; admission does not qualify every host.
+Archives and build receipts are excluded from application packages. Build receipts
 bind final archive bytes to source/tool metadata without claiming qualification.
 macOS and Linux ARM64 package inspection exercises packaged store/lease/bootstrap
 resolution, not backend activation or the user-facing Files lifecycle. macOS

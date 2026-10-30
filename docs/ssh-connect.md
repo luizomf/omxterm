@@ -236,8 +236,8 @@ does not detect manually typed ssh inside an ordinary shell.
 
 The optional exact manifest declaration is
 `"capabilities": ["terminal.openSsh.v1"]`; unknown declarations are rejected.
-The unchanged Files 0.1.0 preview remains compatible and receives no SSH
-capability. Hosts 0.24.0-dev.0 through 0.24.0-dev.5 explicitly admit its original
+The historical Files 0.1.0 preview receives no SSH capability. Hosts
+0.24.0-dev.0 through 0.24.0-dev.5 explicitly admit its original
 `>=0.23.0-dev.8 <0.24.0` host range at both catalog and installed-store checks;
 ordinary semver would exclude this new prerelease tuple. This exception is
 limited to those enumerated host versions, Files identity/version and its original host/API

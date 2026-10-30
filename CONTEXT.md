@@ -323,7 +323,7 @@ clipboard, configuration and environment contents, commands and titles.
 
 **Files Development Preview** — Separately installed, precompiled Linux ARM64
 extension consumed through Settings captured-byte trust and shared namespaced
-actions. Current source browses expandable local folders with contextual and
+actions. Published Files0.4.0 browses expandable local folders with contextual and
 keyboard-accessible actions, captured operation targets and automatic refresh
 after successful mutations; manual refresh handles external changes without
 watchers. Host-language updates relabel retained controls and notices without

@@ -36,12 +36,11 @@ const bytes = (entries: unknown[] = [release]) =>
   Buffer.from(JSON.stringify({ schemaVersion: 1, entries }));
 beforeEach(() => vi.mocked(downloadExtension).mockReset());
 describe("official catalog", () => {
-  it("offers the exact separate SSH preview without changing immutable Files metadata", async () => {
+  it("offers the exact separate SSH preview", async () => {
     const catalog = parseCatalog(
       await readFile("distribution/official-extensions-v1.json"),
     );
     const ssh = catalog.find((entry) => entry.id === "omxterm.ssh")!;
-    const files = catalog.find((entry) => entry.id === "omxterm.files")!;
     expect(ssh).toMatchObject({
       version: "0.3.0",
       engines: { omxterm: ">=0.24.0-dev.8", api: "0.1.x" },
@@ -56,23 +55,7 @@ describe("official catalog", () => {
         url: "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.0/ssh-0.3.0-77937fc.omxext",
       },
     });
-    expect(files).toMatchObject({
-      version: "0.1.0",
-      engines: { omxterm: ">=0.23.0-dev.8 <0.24.0", api: "0.1.x" },
-      archive: {
-        bytes: 7917,
-        sha256:
-          "c1fd36c4ddb966c93235f38973730a74c86303051ca7a095b6e5df4787bc7b9f",
-      },
-    });
     expect(catalogCompatible(ssh, runtime, "linux-arm64")).toBe(false);
-    expect(
-      catalogCompatible(
-        files,
-        { ...runtime, appVersion: "0.24.0-dev.0" },
-        "linux-arm64",
-      ),
-    ).toBe(true);
     for (const appVersion of ["0.24.0-dev.0", "0.24.0-dev.7"])
       expect(
         catalogCompatible(ssh, { ...runtime, appVersion }, "linux-arm64"),

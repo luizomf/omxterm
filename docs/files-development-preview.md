@@ -3,7 +3,17 @@
 Files is a separately installed Linux ARM64 development preview
 ([#723](https://github.com/luizomf/omxterm/issues/723),
 [#728](https://github.com/luizomf/omxterm/issues/728)), not a stable extension SDK.
-The published [Files 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.1.0)
+The current catalog offers [Files 0.4.0](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.4.0)
+for Linux ARM64, requiring host `>=0.24.0-dev.8` and API `0.1.x`. The exact
+controlled-qualified pair uses the already-public
+[host 0.24.0-dev.11](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
+AppImage, not a new host build. The archive and both original sidecars were
+published and anonymously byte-verified on 2026-10-30. The separate actual
+public-HTTPS consumption checkpoint after catalog integration remains pending;
+controlled transport and release downloads do not establish it. See
+[current qualification](#files-040-distribution-and-controlled-qualification).
+
+The historical published [Files 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.1.0)
 works with the separately published [host dev.9](https://github.com/luizomf/omxterm/releases/tag/v0.23.0-dev.9)
 and [stable host 0.23.0](https://github.com/luizomf/omxterm/releases/tag/v0.23.0).
 Public catalog/archive installation passed on both exact extracted AppImages,
@@ -28,8 +38,10 @@ writer and the locked esbuild tool; users receive the precompiled archive and do
 not run Python/npm or compilation to install it. An existing destination is not
 overwritten. The archive includes its MIT license. Version and compatibility come from
 `extensions/files/extension.json`; source version 0.4.0 requires host
-`0.24.0-dev.8` or later for the hosted-language subscription. This is distinct from the immutable distributed 0.1.0
-preview above; building new source does not update the published catalog.
+`0.24.0-dev.8` or later for the hosted-language subscription. The current catalog
+selects the original 0.4.0 archive, not a new build from the catalog commit.
+The historical 0.1.0 release remains immutable; building source alone does not
+update the published catalog.
 
 Files 0.4.0 retains compact shared controls and a read-only host appearance
 subscription. Its base surface reveals the parent window's theme tint; text,
@@ -235,11 +247,48 @@ Installation/replacement remains dormant. Cancel or owner loss before approval
 revokes consent; publication already dispatched cannot be recalled or retried
 implicitly. Refresh cannot retarget a captured installation.
 
-Files0.1.0 still supports local/link installation on dev.8; catalog-capable host
-source starts at dev.9. Declared compatibility is not qualification of every version.
+The current Files0.4.0 entry excludes stable0.23.0 and the older preview hosts.
+Historical Files0.1.0 remains available for local/link installation from
+0.23.0-dev.8; catalog-capable host source started at 0.23.0-dev.9. The catalog
+is not an index of every historical release. Declared compatibility is not
+qualification of every version.
 See [distribution](extension-distribution.md) and the
 [publication procedure](release.md#files-catalog-publication). An empty source
 catalog does not mean a usable public preview has shipped.
+
+## Files 0.4.0 distribution and controlled qualification
+
+The immutable `ext-files-v0.4.0` prerelease was published at
+2026-10-30T22:40:06Z, targeting original source
+`b6044d65d14345adb8d7ae59340fbca978512107`. Its archive is
+`omxterm-files-language-b6044d6.omxext`, 13,188 bytes, SHA-256
+`384de7da4cc2fafe7e42cd4ccf19a455a2e634036069160c75e15b7371d2eb6e`.
+Draft and anonymous public readback verified all three original assets. The
+original checksum and build receipt remain unchanged, including the intended
+host dev.12 and `qualification.status: not-run`; actual qualification is separate.
+Current-source comparison produced identical archive bytes.
+
+Controlled exact-pair qualification used public host0.24.0-dev.11 ARM64 AppImage
+SHA-256 `04344920a6229baf695d01e03fedcf5396c897f6805d6ed2ed4b9f4104f67c86`
+and fixture source `fa8983ff1163377faf384698266bb862ef09fa6f` (integrated in
+`b091fd1247e8bbc0b00851457978c7f586c9bbb4`). Seven scenario checks and two
+captured-byte consents passed: dormant installation, catalog failure/retry/stale
+snapshot/wrong-byte refusal, companion/focus transitions, real file creation and
+no-clobber move/conflict, reinstall retirement, fresh activation, disable/uninstall,
+same terminal/PTY and joined normal Quit. Both backend generations exited normally.
+The synthetic newer offer tested Update presentation only and was never installed.
+Earlier exact-pair language evidence covers live relabeling with retained editor
+focus/draft/caret, menus, captured confirmation and expansion.
+
+This is extracted-AppImage, nested-X11 qualification with synthetic input and
+controlled native-dialog responses. GPU fallback diagnostics remain. It does not
+qualify default GPU, physical input/dialogs, FUSE/helper installation, the complete
+trash/deletion-edge matrix, dev.20 execution, macOS, Linux x64 or surviving-browser
+main-death file-read exclusion. Original failures remain failed. A corrected
+plural-only listing-readiness fixture defect does not erase failed campaigns.
+The separate public catalog/archive HTTPS native checkpoint is **pending**, not
+implied by publication, byte readback or this controlled campaign. Historical
+0.1.0 public-consumption evidence above remains scoped to its original pairs.
 
 ## Build and evidence boundary
 

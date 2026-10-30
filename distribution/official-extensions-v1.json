@@ -3,21 +3,21 @@
   "entries": [
     {
       "id": "omxterm.files",
-      "name": "Files \u2014 Linux ARM64 preview",
+      "name": "Files — Linux ARM64 preview",
       "description": "Project-maintained local file manager preview: browse, create, rename, move, trash and delete files.",
-      "version": "0.1.0",
+      "version": "0.4.0",
       "engines": {
-        "omxterm": ">=0.23.0-dev.8 <0.24.0",
+        "omxterm": ">=0.24.0-dev.8",
         "api": "0.1.x"
       },
       "targets": ["linux-arm64"],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.1.0/files-0.1.0.omxext",
-        "sha256": "c1fd36c4ddb966c93235f38973730a74c86303051ca7a095b6e5df4787bc7b9f",
-        "bytes": 7917
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.4.0/omxterm-files-language-b6044d6.omxext",
+        "sha256": "384de7da4cc2fafe7e42cd4ccf19a455a2e634036069160c75e15b7371d2eb6e",
+        "bytes": 13188
       },
-      "sourceCommit": "959f69ae5148182b0da67734b15b77922f7e4212",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.1.0"
+      "sourceCommit": "b6044d65d14345adb8d7ae59340fbca978512107",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.4.0"
     },
     {
       "id": "omxterm.ssh",
