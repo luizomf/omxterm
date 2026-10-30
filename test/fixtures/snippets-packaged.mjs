@@ -176,16 +176,6 @@ void ready
         "installed catalog",
       );
       const view = hosted()[0];
-      if (fixture.evidence) {
-        await writeFile(
-          path.join(fixture.evidence, "installed-child.png"),
-          (await view.capturePage()).toPNG(),
-        );
-        await writeFile(
-          path.join(fixture.evidence, "installed-core.png"),
-          (await core.capturePage()).toPNG(),
-        );
-      }
       assert.equal(
         await view.executeJavaScript("document.documentElement.lang"),
         "en-US",
@@ -199,6 +189,26 @@ void ready
         (child) => child.webContents === view,
       );
       assert.ok(native);
+      await until(
+        () =>
+          native.getVisible() &&
+          view.isFocused() &&
+          native.getBounds().width > 0,
+        "presented native child",
+      );
+      await view.executeJavaScript(
+        "new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))",
+      );
+      if (fixture.evidence) {
+        await writeFile(
+          path.join(fixture.evidence, "installed-child.png"),
+          (await view.capturePage()).toPNG(),
+        );
+        await writeFile(
+          path.join(fixture.evidence, "installed-core.png"),
+          (await core.capturePage()).toPNG(),
+        );
+      }
       assert.equal(children.length, 1);
       checks.push("ordinary-archive-trust-enabled-activation");
       const terminalFocus = () =>
