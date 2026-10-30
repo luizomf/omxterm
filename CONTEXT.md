@@ -331,7 +331,10 @@ nonpersistent epoch. It retains a captured package reader/pin, materializes boun
 local resource responses, and retires known views/reads without terminating core
 PTYs. A shared window presentation owner composes Application Tab and companion-panel
 slots, acknowledging native hiding before DOM overlays and core focus handoff
-while retaining a visible companion view.
+while retaining a visible companion view. A read-only child appearance
+subscription projects effective window colors/tint without configuration paths
+or native-effect authority; transparent native backing permits opt-in content
+to share the parent's single tint.
 It is not a public SDK, activation UI or proof of main-death disk-read exclusion.
 
 **Application Network Boundary** — OMXTerm requests remote bytes only for explicit

@@ -1,4 +1,10 @@
 // Internal window-content transport; not an extension SDK.
+export interface HostedAppearance {
+  readonly background: string;
+  readonly foreground: string;
+  // Effective window tint opacity, not whole-view opacity or a blur command.
+  readonly opacity: number;
+}
 export interface HostedContentDescriptor {
   id: string;
   title: string;
@@ -37,6 +43,7 @@ export const extensionViewIpc = {
   failure: "extension-view:failure",
   close: "extension-view:close",
   visibility: "extension-view:visibility",
+  appearance: "extension-view:appearance",
   focus: "extension-view:focus",
   dismissPanel: "extension-view:dismiss-panel",
 } as const;

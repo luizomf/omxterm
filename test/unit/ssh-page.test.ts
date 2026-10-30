@@ -23,6 +23,7 @@ async function setup() {
     return { ok: true, status: "accepted" };
   });
   const page = mountSshPage(document, {
+    onAppearance: () => () => {},
     request,
     onVisibility(listener) {
       visibility = listener;
@@ -174,6 +175,7 @@ it("keeps two views' Refresh results and search state independent", async () => 
   > = [];
   const pages = frames.map((frame) =>
     mountSshPage(frame.contentDocument!, {
+      onAppearance: () => () => {},
       request: async (value) =>
         (value as { operation: string }).operation === "host.capabilities"
           ? { capabilities: ["terminal.openSsh.v1"] }
@@ -219,6 +221,7 @@ it("does not invalidate initial discovery when the host republishes the initial 
   let visible!: (value: boolean) => void;
   let finish!: (reply: Awaited<ReturnType<SshBridge["request"]>>) => void;
   const page = mountSshPage(document, {
+    onAppearance: () => () => {},
     request: async (value) =>
       (value as { operation: string }).operation === "host.capabilities"
         ? { capabilities: ["terminal.openSsh.v1"] }

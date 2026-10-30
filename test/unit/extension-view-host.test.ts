@@ -28,11 +28,62 @@ import {
   startExtensionViewHost,
   sendExtensionAwareClipboard,
 } from "../../src/main/extension-view-ipc";
+import { publishHostedAppearance } from "../../src/main/hosted-appearance";
+import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import {
   extensionViewIpc,
   type HostedContentPresentation,
 } from "../../src/shared/extension-view";
+
+it("replays window appearance on load, updates hidden views, isolates owners and revokes on retirement", async () => {
+  const f = await fixture();
+  const other = await fixture();
+  const configuration = {
+    ...DEFAULT_USER_CONFIGURATION,
+    nativeTitleInset: 0 as const,
+    userFileErrors: [],
+    transparency: 0.6,
+  };
+  publishHostedAppearance(f.owner.webContents, configuration);
+  await f.host!.open({ entryResource: "index.html", title: "Themed" });
+  await other.host!.open({ entryResource: "index.html", title: "Other" });
+  const view = f.views[0]!;
+  const expected = {
+    background: configuration.terminalTheme.colors.background,
+    foreground: configuration.terminalTheme.colors.foreground,
+    opacity: 0.4,
+  };
+  expect(view.setBackgroundColor).toHaveBeenCalledExactlyOnceWith("#00000000");
+  expect(view.webContents.send).toHaveBeenCalledWith(
+    extensionViewIpc.appearance,
+    expected,
+  );
+  expect(
+    other.views[0]!.webContents.send.mock.calls.some(
+      ([channel]) => channel === extensionViewIpc.appearance,
+    ),
+  ).toBe(false);
+  view.webContents.send.mockClear();
+  publishHostedAppearance(f.owner.webContents, {
+    ...configuration,
+    transparency: 1,
+  });
+  expect(view.webContents.send).toHaveBeenCalledExactlyOnceWith(
+    extensionViewIpc.appearance,
+    { ...expected, opacity: 0 },
+  );
+  view.webContents.send.mockClear();
+  view.webContents.emit("did-finish-load");
+  expect(view.webContents.send).toHaveBeenCalledWith(
+    extensionViewIpc.appearance,
+    { ...expected, opacity: 0 },
+  );
+  await f.host!.retire();
+  view.webContents.send.mockClear();
+  publishHostedAppearance(f.owner.webContents, configuration);
+  expect(view.webContents.send).not.toHaveBeenCalled();
+});
 
 it.each([
   [true, true],
@@ -316,6 +367,7 @@ async function fixture(createHost = true) {
   const views: {
     webContents: Contents;
     setVisible: ReturnType<typeof vi.fn>;
+    setBackgroundColor: ReturnType<typeof vi.fn>;
     setBounds: ReturnType<typeof vi.fn>;
   }[] = [];
   const ses = Object.assign(new EventEmitter(), {
@@ -335,6 +387,7 @@ async function fixture(createHost = true) {
       const view = {
         webContents: new Contents(),
         setVisible: vi.fn(),
+        setBackgroundColor: vi.fn(),
         setBounds: vi.fn(),
       };
       views.push(view);

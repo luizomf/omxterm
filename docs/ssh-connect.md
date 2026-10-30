@@ -5,12 +5,20 @@ preview**, first supported by OMXTerm **0.24.0-dev.0**. It is not bundled with t
 terminal, a stable SDK, an SSH broker, or a cross-platform availability claim.
 
 Build the committed source with `node scripts/build-ssh-extension.mjs`. The
-builder produces `dist/extensions/ssh-0.1.0.omxext`, a SHA-256 sidecar and an
+builder produces `dist/extensions/ssh-0.2.0.omxext`, a SHA-256 sidecar and an
 unqualified source/tool receipt; existing outputs are never overwritten. Install
 the archive through Settings → Extensions and review the ordinary trusted-code
 warning. Open **SSH Connect** from File, the Command Palette or the terminal
 context menu. There is no new toolbar or default shortcut. Building an archive
 alone does not publish it.
+
+Source version 0.2.0 requires host 0.24.0-dev.4 or later for its read-only
+appearance subscription. Compact controls share the terminal's theme tokens;
+the base surface reveals the parent window's single tint rather than painting
+an opaque background. Live theme/opacity updates retain search, quick-connect
+and other view state, including while hidden. Native blur remains host-owned
+and compositor dependent. The bundled stylesheet includes all shared tokens.
+The immutable distributed 0.1.0 archive and catalog below remain unchanged.
 
 ## Installing the distributed preview
 
@@ -153,7 +161,7 @@ does not detect manually typed ssh inside an ordinary shell.
 The optional exact manifest declaration is
 `"capabilities": ["terminal.openSsh.v1"]`; unknown declarations are rejected.
 The unchanged Files 0.1.0 preview remains compatible and receives no SSH
-capability. Hosts 0.24.0-dev.0 through 0.24.0-dev.3 explicitly admit its original
+capability. Hosts 0.24.0-dev.0 through 0.24.0-dev.4 explicitly admit its original
 `>=0.23.0-dev.8 <0.24.0` host range at both catalog and installed-store checks;
 ordinary semver would exclude this new prerelease tuple. This exception is
 limited to those enumerated host versions, Files identity/version and its original host/API

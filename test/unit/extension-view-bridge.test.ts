@@ -208,6 +208,7 @@ describe("hosted application-tab contract", () => {
         _name: string,
         bridge: {
           onVisibility(listener: unknown): () => void;
+          onAppearance(listener: unknown): () => void;
           request(value: unknown): Promise<unknown>;
         },
       ) => void
@@ -242,7 +243,55 @@ describe("hosted application-tab contract", () => {
     expect(expose).toHaveBeenCalledTimes(1);
     const [name, bridge] = expose.mock.calls[0]!;
     expect(name).toBe("omxHostedContent");
-    expect(Object.keys(bridge)).toEqual(["request", "onVisibility"]);
+    expect(Object.keys(bridge)).toEqual([
+      "request",
+      "onAppearance",
+      "onVisibility",
+    ]);
+    const appearanceEvent = on.mock.calls.find(
+      ([channel]) => channel === extensionViewIpc.appearance,
+    )![1];
+    const appearance = vi.fn();
+    const offAppearance = bridge.onAppearance(appearance);
+    expect(appearance).not.toHaveBeenCalled();
+    const snapshot = {
+      background: "#102030",
+      foreground: "#efefef",
+      opacity: 0.25,
+    };
+    for (const invalid of [
+      null,
+      [],
+      {},
+      { ...snapshot, opacity: NaN },
+      { ...snapshot, opacity: -1 },
+      { ...snapshot, opacity: 2 },
+      { ...snapshot, background: "red" },
+      { ...snapshot, foreground: "#fff" },
+      { ...snapshot, path: "/private" },
+    ])
+      appearanceEvent({}, invalid);
+    expect(appearance).not.toHaveBeenCalled();
+    appearanceEvent({}, snapshot);
+    expect(appearance).toHaveBeenLastCalledWith(snapshot);
+    const replay = vi.fn();
+    const offReplay = bridge.onAppearance(replay);
+    expect(replay).toHaveBeenCalledExactlyOnceWith(snapshot);
+    expect(Object.isFrozen(replay.mock.calls[0]![0])).toBe(true);
+    offAppearance();
+    offReplay();
+    bridge.onAppearance(() => {
+      throw new Error("extension callback");
+    });
+    const later = vi.fn();
+    bridge.onAppearance(later);
+    appearanceEvent({}, { ...snapshot, opacity: 1 });
+    expect(later).toHaveBeenLastCalledWith({ ...snapshot, opacity: 1 });
+    expect(appearance).toHaveBeenCalledTimes(1);
+    expect(replay).toHaveBeenCalledTimes(1);
+    for (let i = 0; i < 30; i++) bridge.onAppearance(() => {});
+    expect(() => bridge.onAppearance(() => {})).toThrow("Invalid");
+    expect(() => bridge.onAppearance(null)).toThrow("Invalid");
     const calls = Array.from({ length: 32 }, () =>
       bridge.request({ operation: "home" }),
     );

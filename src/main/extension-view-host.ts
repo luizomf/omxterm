@@ -1,4 +1,5 @@
 /* eslint-disable max-lines -- Keep one epoch's admission, presentation and bounded retirement transitions together. */
+import { subscribeHostedAppearance } from "./hosted-appearance";
 import { randomUUID } from "node:crypto";
 import { captureValue, type Value } from "../extension-runtime/protocol.js";
 import { isAbsolute } from "node:path";
@@ -18,6 +19,7 @@ import {
   extensionViewIpc,
   isHostedContentPresentation,
   isHostedContentTitle,
+  type HostedAppearance,
   type HostedContentDescriptor,
   type HostedContentPresentation,
   type HostedContentPresentationResult,
@@ -140,12 +142,21 @@ class NativeExtensionViewHost {
     this.#reportFocus();
   };
   #cleanupFailed = false;
+  #appearance: HostedAppearance | undefined;
+  readonly #unsubscribeAppearance: () => void;
   constructor(private readonly options: ExtensionViewHostOptions) {
     if (!isAbsolute(options.preloadPath))
       throw new TypeError("App-owned absolute preload required");
     this.#ownerContents = options.owner.webContents;
     this.#native = options.runtime ?? runtime;
     this.#resources = createExtensionResources(options.resources, this.#origin);
+    this.#unsubscribeAppearance = subscribeHostedAppearance(
+      this.#ownerContents,
+      (appearance) => {
+        this.#appearance = appearance;
+        for (const entry of this.#views.values()) this.#sendAppearance(entry);
+      },
+    );
     options.owner.on("closed", this.#ownerLost);
     options.owner.webContents.on("destroyed", this.#ownerLost);
     options.owner.webContents.on("render-process-gone", this.#ownerLost);
@@ -165,6 +176,21 @@ class NativeExtensionViewHost {
   #changeState(next: ExtensionViewState, outcome?: ExtensionViewOutcome) {
     this.#state = next;
     notify(() => this.options.onState?.(next, outcome));
+  }
+  #sendAppearance(entry: Entry) {
+    if (
+      this.#appearance &&
+      this.#live() &&
+      !entry.rendererGone &&
+      !entry.closing &&
+      !entry.contents.isDestroyed()
+    ) {
+      // A disposed frame must not prevent other epochs or core configuration
+      // from receiving the committed snapshot. Renderer loss owns retirement.
+      notify(() =>
+        entry.contents.send(extensionViewIpc.appearance, this.#appearance),
+      );
+    }
   }
   #visibility(entry: Entry, visible: boolean) {
     entry.visible = visible;
@@ -276,6 +302,7 @@ class NativeExtensionViewHost {
   retire = (): Promise<ExtensionViewOutcome> => {
     if (this.#retirement) return this.#retirement;
     this.#state = "retiring";
+    this.#unsubscribeAppearance();
     this.#resources.revoke();
     this.#hideAll();
     // Publish before any consumer callback can reenter. A timeout keeps the
@@ -405,8 +432,10 @@ class NativeExtensionViewHost {
     contents.on("dom-ready", () => this.#trackProcess(entry));
     contents.on("did-finish-load", () => {
       this.#trackProcess(entry);
-      if (!entry.closing && this.#live())
+      if (!entry.closing && this.#live()) {
+        this.#sendAppearance(entry);
         this.#visibility(entry, entry.visible);
+      }
     });
     contents.on("before-input-event", (event, input) => {
       if (this.options.interceptInput?.(event, input, entry.descriptor.id))
@@ -474,6 +503,9 @@ class NativeExtensionViewHost {
         if (!current.closing) void this.retire();
       });
       this.#bindView(current);
+      // Parent owns the one theme tint; child CSS may opt into transparent
+      // surfaces without an opaque native backing or a second alpha layer.
+      view.setBackgroundColor("#00000000");
       this.options.owner.contentView.addChildView(view);
       this.#changeState("active");
       if (!this.#live() || current.closing)

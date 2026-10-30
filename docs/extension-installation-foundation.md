@@ -63,7 +63,7 @@ keyboard payload route; see [the capability contract](mirror-typing.md#capabilit
 
 The immutable Files0.1.0 manifest's exact historical engine metadata is admitted
 on the deliberately enumerated hosts 0.24.0-dev.0, 0.24.0-dev.1,
-0.24.0-dev.2 and 0.24.0-dev.3, in both store
+0.24.0-dev.2, 0.24.0-dev.3 and 0.24.0-dev.4, in both store
 and catalog compatibility. This is not an open-ended prerelease exception or a
 mutation of published bytes; other host versions need ordinary range admission
 or another explicit reviewed decision.

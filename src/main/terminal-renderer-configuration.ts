@@ -1,4 +1,5 @@
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
+import { publishHostedAppearance } from "./hosted-appearance";
 import { terminalIpc } from "../shared/terminal-ipc";
 import type { TrustedWebContents } from "./terminal-ipc-types";
 
@@ -21,8 +22,12 @@ export function createRendererConfigurationState(
       ? Object.freeze({ ...configuration, nativeTitleInset, transparency })
       : configuration;
   };
-  const send = () =>
-    webContents.send(terminalIpc.configurationUpdate, effective());
+  const send = () => {
+    const snapshot = effective();
+    publishHostedAppearance(webContents, snapshot);
+    webContents.send(terminalIpc.configurationUpdate, snapshot);
+  };
+  publishHostedAppearance(webContents, effective());
   return {
     current: () => configuration,
     effective,

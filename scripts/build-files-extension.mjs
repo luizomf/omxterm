@@ -72,16 +72,16 @@ export async function buildExtension(name, output, suppliedCommit) {
       format: "iife",
       outfile: path.join(stage, "view.js"),
     });
-    if (name === "mirror-typing")
+    if (name !== "restoration")
       await build({
         absWorkingDir: root,
         entryPoints: [`extensions/${name}/${name}.css`],
         bundle: true,
         outfile: path.join(stage, `${name}.css`),
       });
-    for (const resource of name === "mirror-typing"
-      ? ["index.html"]
-      : ["index.html", `${name}.css`])
+    for (const resource of name === "restoration"
+      ? ["index.html", `${name}.css`]
+      : ["index.html"])
       await cp(
         path.join(root, "extensions", name, resource),
         path.join(stage, resource),

@@ -12,20 +12,26 @@ type Reply = Partial<AliasIndex> & {
   status?: string;
   capabilities?: string[];
 };
-export interface SshBridge {
+import {
+  mountHostedAppearance,
+  type AppearanceBridge,
+} from "../shared/appearance.js";
+
+export interface SshBridge extends AppearanceBridge {
   request(value: unknown): Promise<Reply>;
   onVisibility(listener: (visible: boolean) => void): () => void;
 }
 
 export function mountSshPage(document: Document, bridge: SshBridge) {
+  const unsubscribeAppearance = mountHostedAppearance(document, bridge);
   const window = document.defaultView!;
   const lifetime = new window.AbortController();
   const title = document.createElement("div");
   const heading = document.createElement("h1");
   heading.textContent = "SSH Connect";
   const subtitle = document.createElement("p");
-  subtitle.textContent = "OPENSSH · LINUX ARM64 PREVIEW";
-  title.append(subtitle, heading);
+  subtitle.textContent = "OpenSSH connections";
+  title.append(heading, subtitle);
   const notice = document.createElement("div");
   notice.setAttribute("role", "status");
   notice.setAttribute("aria-live", "polite");
@@ -338,6 +344,7 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
       discoveryRevision++;
       cancelGesture();
       unsubscribe();
+      unsubscribeAppearance();
       lifetime.abort();
       page.remove();
     },

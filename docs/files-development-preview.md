@@ -13,22 +13,30 @@ qualify FUSE/helper installation. See the stable release notes for its separate
 package checks and [below](#build-and-evidence-boundary) for other evidence limits.
 
 The [foundation's exact-host exception](extension-installation-foundation.md#archive-contract)
-admits unchanged Files 0.1.0 on hosts 0.24.0-dev.0, dev.1, dev.2 and dev.3 without
+admits unchanged Files 0.1.0 on hosts 0.24.0-dev.0 through dev.4 without
 broadening its manifest range or replacing published bytes. The
 [Saved Layout delivery](https://github.com/luizomf/omxterm/issues/673#issuecomment-6495927726)
-records the unchanged archive's lifecycle check on dev.1. Admission on dev.2 or
-dev.3 is not package or Files lifecycle qualification; earlier host evidence does
+records the unchanged archive's lifecycle check on dev.1. Admission alone is not package or Files lifecycle qualification; earlier host evidence does
 not qualify every admitted version.
 
 ## Concrete consumer
 
 `extensions/files` is separately built, not imported into application main or the
 terminal renderer. Maintainers run `node scripts/build-files-extension.mjs` to
-produce `dist/extensions/files-0.1.0.omxext`. This build needs Python 3's ZIP
+produce `dist/extensions/files-0.2.0.omxext`. This build needs Python 3's ZIP
 writer and the locked esbuild tool; users receive the precompiled archive and do
 not run Python/npm or compilation to install it. An existing destination is not
 overwritten. The archive includes its MIT license. Version and compatibility come from
-`extensions/files/extension.json`; the minimum host is now `0.23.0-dev.8`.
+`extensions/files/extension.json`; source version 0.2.0 requires host
+`0.24.0-dev.4` or later. This is distinct from the immutable distributed 0.1.0
+preview above; building new source does not update the published catalog.
+
+Files 0.2.0 uses compact shared controls and a read-only host appearance
+subscription. Its base surface reveals the parent window's theme tint; text,
+focus and control borders remain visible. Live theme/opacity updates do not
+recreate the listing or discard operation drafts. Native blur remains a host
+and compositor effect, not child CSS. The separately bundled stylesheet embeds
+its shared tokens and requires no remote resources.
 Existing #622 attribution and third-party notices elsewhere in the application
 remain unchanged.
 

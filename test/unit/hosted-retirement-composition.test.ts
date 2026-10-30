@@ -132,6 +132,7 @@ it.each([
           ({
             webContents: child,
             setVisible: vi.fn(),
+            setBackgroundColor: vi.fn(),
             setBounds: vi.fn(),
           }) as unknown as WebContentsView,
       },

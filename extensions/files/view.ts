@@ -4,6 +4,11 @@ import {
   setPageNotice,
 } from "../../src/renderer/application-page.js";
 
+import {
+  mountHostedAppearance,
+  type AppearanceBridge,
+} from "../shared/appearance.js";
+
 type Reply = {
   ok: boolean;
   error?: string;
@@ -17,15 +22,18 @@ type Reply = {
 };
 const bridge = (
   window as unknown as {
-    omxHostedContent: { request(value: unknown): Promise<Reply> };
+    omxHostedContent: AppearanceBridge & {
+      request(value: unknown): Promise<Reply>;
+    };
   }
 ).omxHostedContent;
+mountHostedAppearance(document, bridge);
 const title = document.createElement("div");
 const heading = document.createElement("h1");
 heading.textContent = "Files";
 const subtitle = document.createElement("p");
-subtitle.textContent = "LOCAL FILES · DEVELOPMENT PREVIEW";
-title.append(subtitle, heading);
+subtitle.textContent = "Local files";
+title.append(heading, subtitle);
 const notice = document.createElement("div");
 notice.setAttribute("role", "status");
 notice.setAttribute("aria-live", "polite");

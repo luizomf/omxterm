@@ -1669,7 +1669,15 @@ host DOM overlays and restores only a still-current content owner. Field input
 and clipboard remain in the child, never forwarded into a terminal. Closing or
 crashing a hosted epoch retires its known views, not core PTYs. This is a
 production-facing development module consumed by the Linux ARM64 Files preview.
-Catalog acquisition and stable SDK exposure remain separate. See the
+Catalog acquisition and stable SDK exposure remain separate. Packaged child
+content can subscribe to read-only appearance updates: theme background and
+foreground plus effective per-window tint opacity. Initial/latest snapshots
+replay to bounded subscribers, including while views are hidden; epoch
+retirement stops updates. The native child backing is transparent, allowing
+opt-in package CSS to reveal the window's single theme tint without fading
+foreground controls. Existing opaque packages retain their own paint. No
+configuration paths or native blur authority cross this bridge; visible desktop
+blur remains platform/compositor dependent. See the
 [Files development preview qualification](files-development-preview.md#build-and-evidence-boundary)
 for distinct production workflow, renderer-crash/core-survival and module-native
 management evidence. The bounded actual-main-death observation saw renderer exit

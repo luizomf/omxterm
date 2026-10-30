@@ -42,12 +42,9 @@ describe("official catalog", () => {
     );
     const ssh = catalog.find((entry) => entry.id === "omxterm.ssh")!;
     const files = catalog.find((entry) => entry.id === "omxterm.files")!;
-    const manifest = JSON.parse(
-      await readFile("extensions/ssh/extension.json", "utf8"),
-    ) as { version: string; engines: CatalogRelease["engines"] };
     expect(ssh).toMatchObject({
-      version: manifest.version,
-      engines: manifest.engines,
+      version: "0.1.0",
+      engines: { omxterm: ">=0.24.0-dev.0", api: "0.1.x" },
       sourceCommit: "6d939f0e837dba90728e6e892010a4a1889fe0c9",
       targets: ["linux-arm64"],
       archive: {

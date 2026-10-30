@@ -108,5 +108,17 @@ Retained native views have material memory cost; create substantial views lazily
 not one native view per widget. Hidden views retain drafts only within their
 epoch. Activation consumers must supply trusted admission, the main-approved
 slot and existing core command routing; this module is not successful no-op
-extension support. Theme/language adaptation beyond the owning core tab chrome
-is not a public web-content capability in this internal slice.
+extension support. The internal child preload offers a bounded `onAppearance(listener)` subscription.
+Main projects only theme background/foreground hex colors and effective window
+tint opacity from the same configuration snapshot as core, including native
+Windows opacity fallback. Initial/latest values replay, hidden views receive
+updates, and retirement removes the epoch subscription. The child receives no
+configuration paths, terminal data, native-effect commands or new backend
+capabilities. Existing content need not subscribe; this is not a public SDK.
+
+Native child backgrounds are explicitly transparent. Opt-in content leaves its
+base surface transparent so the owning window paints the theme tint exactly
+once; opacity describes that parent tint and is not an instruction to fade text
+or repaint the entire child. Existing opaque package CSS remains opaque. Main
+still owns native blur. Neither source inspection nor child page captures prove
+desktop composition or visible blur. Language adaptation remains separate.
