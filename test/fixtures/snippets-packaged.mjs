@@ -264,8 +264,27 @@ void ready
       await view.executeJavaScript(
         "document.querySelector('li:last-child .snippet-activate').focus()",
       );
+      await view.executeJavaScript(
+        `window.__activationEvents = []; for (const type of ['keydown', 'keypress', 'click']) document.addEventListener(type, event => window.__activationEvents.push({ type, key: event.key, trusted: event.isTrusted }), true);`,
+      );
       view.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
+      // sendInputEvent does not synthesize the native character event used by
+      // Chromium's default button activation. Keep Enter held through handoff.
+      view.sendInputEvent({ type: "char", keyCode: "\r" });
       await terminalFocus();
+      const activationEvents = await view.executeJavaScript(
+        "window.__activationEvents",
+      );
+      assert.ok(
+        activationEvents.some(
+          (event) => event.type === "click" && event.trusted,
+        ),
+      );
+      if (fixture.evidence)
+        await writeFile(
+          path.join(fixture.evidence, "activation-events.json"),
+          JSON.stringify(activationEvents, null, 2),
+        );
       // Follow native focus handoff: repeats and release are sent to core, not
       // an artificially retained child. Chromium-generated, not physical input.
       core.sendInputEvent({
