@@ -85,7 +85,8 @@ The existing catalog allows 512 entries, while backend protocol arrays permit
 256 members and serialized messages have a separate byte budget. Do not lower
 the catalog limit or pass the entire catalog through one backend response.
 Transfer one immutable, activation-scoped snapshot in bounded pages, respecting
-both actual encoded bytes and member limits. Assemble the complete snapshot
+the protocol's conservative capture budget, actual encoded bytes and member
+limits. Assemble the complete snapshot
 before replacing rows; cancellation releases it and no page can mix snapshots.
 Tests must include 512 entries, long bodies and JSON-escape expansion, not only
 small examples. No truncation, normalization or automatic retry is permitted.
