@@ -1,9 +1,10 @@
 # Optional Snippets on Linux ARM64
 
-The development source uses a separately installed Snippets extension on Linux
-ARM64. macOS, Windows and Linux x64 retain built-in Snippets until their extension
-infrastructure and matching migration are qualified. This guide does not announce
-a published Snippets package or a new host release.
+The published [OMXTerm 0.24.0-dev.11 Linux ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
+uses the separately installed [Snippets 0.1.0 extension](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0).
+Both are non-Latest prereleases; stable **0.23.0** remains unchanged with built-in
+Snippets. macOS, Windows and Linux x64 also retain built-in Snippets until their
+extension infrastructure and matching migration are qualified.
 
 ## Existing catalogs and shortcuts
 
@@ -22,9 +23,21 @@ from a missing installation. Terminal sessions remain usable.
 
 ## Install deliberately
 
-Use a Snippets `.omxext` archive compatible with your exact host version and
-platform. Once a compatible release is published, use its release instructions
-and checksum; a source build or catalog entry alone is not qualification.
+Use the exact preview pair linked above. From the host release, download the
+ARM64 AppImage, its checksum and, if wanted, the version-matched application-menu
+helper and checksum. Follow that release's installation instructions, not
+`/latest/download` or the stable-version filenames in the general installation
+guide. From the Snippets release, download `snippets-0.1.0.omxext` and its checksum
+into the same folder, then verify before installation:
+
+```sh
+sha256sum --check snippets-0.1.0.omxext.sha256
+```
+
+No source build is required. Older hosts are not qualified for this package, and
+existing Files/SSH packages were not newly qualified on dev.11. No Snippets
+catalog entry was promoted with this release; use the explicit local archive
+rather than expecting it in **Browse official extensions**.
 
 1. Open **Settings → Extensions** and choose **Install local .omxext…**. A local
    archive works offline; browsing the official catalog is optional and explicit.
@@ -41,12 +54,24 @@ Disabling/removing Snippets retires its view and cancels unaccepted previews,
 not terminal sessions or already accepted Surface-owned paste. It does not undo
 commands already sent. Reinstalling does not require rebuilding your catalog.
 
-## Release prerequisite
+## Preview coverage and remaining platforms
 
-Maintainers must publish and download/hash-verify a compatible Snippets package
-before distributing a Linux ARM64 host that removes built-in access. Qualify the
-matching host/package through ordinary installation, compatibility entry points,
-guidance, native input/focus and retirement. Preserve explicit input/rendering
-limits and provide both release/catalog and local-archive instructions. Existing
-published artifacts are immutable. Until that release work is complete, source
-integration is not a claim that ordinary released hosts have migrated.
+The Snippets package was published and anonymously downloaded/hash-verified
+before the matching host. The exact host/archive pair passed local installation,
+compatibility entry points, guidance, input/focus and retirement scenarios. The
+host also passed full Linux package verification, including isolated helper
+installation, direct/FUSE and extract-and-run startup/output. See both release
+notes for exact identities and evidence.
+
+Snippets scenarios used synthetic Chromium/X11 input, explicit SwiftShader,
+controlled consent and a controlled plain-paste shell. They do not qualify
+physical keyboards, default GPUs, account-shell/bracketed-paste behavior or other
+platforms. Public download verification is not a new public-HTTPS installation
+campaign. The full package verifier used an authenticated nested X11 desktop,
+not a broad distro/GPU campaign.
+
+Other-platform migrations remain open in [#741](https://github.com/luizomf/omxterm/issues/741).
+Each requires its own compatible, published package and matching qualification
+before removing built-in access from a distributed host, as required by
+[ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md).
+Existing published artifacts remain immutable; this preview is not a stable SDK.

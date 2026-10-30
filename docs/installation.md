@@ -45,6 +45,24 @@ source/qualification distinctions and grammar limits. Extensions are trusted
 code, not sandboxed; OpenSSH configuration and authentication remain OpenSSH's
 responsibility.
 
+## Optional Snippets preview
+
+The [Linux ARM64 host 0.24.0-dev.11](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
+uses the separate [Snippets 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0)
+instead of built-in Snippets. Both are non-Latest prereleases; stable 0.23.0 and
+other platforms retain built-in Snippets. This pairing does not newly qualify
+existing Files/SSH packages on dev.11.
+
+Download the versioned host AppImage/checksum and optional matching helper from
+that release, not `/latest/download`. Download and verify the Snippets archive
+and checksum, then choose **Settings → Extensions → Install local .omxext…**.
+Review trust, enable deliberately if disabled, and open **View → Toggle Snippets**.
+No source build, automatic installation or new catalog listing is involved.
+Existing YAML catalogs remain untouched; without the enabled package, the shortcut
+opens Extensions guidance. See the [migration guide](snippets-migration.md) for
+offline installation, new catalogs and qualification limits. The stable-version
+installation examples below remain unchanged.
+
 ## macOS
 
 You need an Apple Silicon Mac (M1 or later) with macOS 12 Monterey or newer.

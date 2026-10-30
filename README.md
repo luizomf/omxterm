@@ -105,6 +105,14 @@ ConPTY. Desktop/GPU, installer and ordinary-user integration remain unverified;
 Linux FUSE/helper installation and Windows 11/SmartScreen/UAC are also unverified.
 These are not release gates for the build-only lanes.
 
+### Optional Linux ARM64 Snippets preview
+
+[Host 0.24.0-dev.11 and Snippets 0.1.0](docs/installation.md#optional-snippets-preview)
+are separate, non-Latest preview downloads. This host requires deliberate Snippets
+installation; existing catalogs stay intact. Stable **0.23.0** and other platforms
+retain built-in Snippets. Follow the [migration guide](docs/snippets-migration.md)
+for the exact pairing, local-archive installation and qualification limits.
+
 ### Tested desktops
 
 OMXTerm is tested on Apple Silicon macOS, Windows 11 ARM64, and Linux ARM64

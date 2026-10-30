@@ -18,10 +18,13 @@
 | Update or uninstall OMXTerm                                | [Installation guide](installation.md#updating-or-uninstalling)          |
 
 Optional Linux ARM64 development extensions: [Files](files-development-preview.md),
-[SSH Connect](ssh-connect.md), [Saved Layout](saved-layout.md) and
-[Mirror Typing](mirror-typing.md).
+[SSH Connect](ssh-connect.md), [Snippets](snippets-migration.md),
+[Saved Layout](saved-layout.md) and [Mirror Typing](mirror-typing.md).
 They are separately installed, not bundled
-features or a stable extension SDK.
+features or a stable extension SDK. The [published Snippets preview](installation.md#optional-snippets-preview)
+pairs host 0.24.0-dev.11 with Snippets 0.1.0; stable 0.23.0 and other platforms
+retain built-in Snippets. Follow each guide's exact host/package pairing rather
+than assuming all preview packages share qualification.
 
 Downloads and checksums are listed in the [README](../README.md#platforms-and-downloads), and full changelogs are in [GitHub Releases](https://github.com/luizomf/omxterm/releases).
 
