@@ -1,5 +1,8 @@
 import type { SupportedLanguage } from "../../src/shared/i18n.js";
 
+const englishPlural = new Intl.PluralRules("en-US");
+const portuguesePlural = new Intl.PluralRules("pt-BR");
+
 const english = {
   title: "Files",
   directory: "Directory",
@@ -38,7 +41,7 @@ const english = {
   directoryUnavailable: (error: string) => `Directory unavailable: ${error}`,
   kind: (kind: string) => (kind === "link" ? "symbolic link" : kind),
   entries: (count: number, truncated: boolean) =>
-    `${count.toLocaleString("en-US")} visible ${count === 1 ? "entry" : "entries"}${truncated ? " · Truncated at 5,000 per folder" : ""}`,
+    `${count.toLocaleString("en-US")} visible ${englishPlural.select(count) === "one" ? "entry" : "entries"}${truncated ? " · Truncated at 5,000 per folder" : ""}`,
   create: (file: boolean, directory: string) =>
     `Create ${file ? "file" : "folder"} in ${directory}`,
   move: (path: string) =>
@@ -95,7 +98,7 @@ const portuguese: FilesMessages = {
       other: "outro",
     })[kind] ?? kind,
   entries: (count, truncated) =>
-    `${count.toLocaleString("pt-BR")} ${count === 1 ? "entrada visível" : "entradas visíveis"}${truncated ? " · Limitado a 5.000 por pasta" : ""}`,
+    `${count.toLocaleString("pt-BR")} ${portuguesePlural.select(count) === "one" ? "entrada visível" : "entradas visíveis"}${truncated ? " · Limitado a 5.000 por pasta" : ""}`,
   create: (file, directory) =>
     `Criar ${file ? "arquivo" : "pasta"} em ${directory}`,
   move: (path) =>

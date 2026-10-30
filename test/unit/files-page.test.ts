@@ -343,6 +343,27 @@ it("cancels a late delete token when another editor replaces its request", async
     "Create folder",
   );
 });
+it.each([
+  [0, "0 visible entries", "0 entrada visível"],
+  [1, "1 visible entry", "1 entrada visível"],
+  [2, "2 visible entries", "2 entradas visíveis"],
+] as const)(
+  "uses selected-language plural rules for %i entries",
+  async (count, english, portuguese) => {
+    const { language, listings, request } = await setup();
+    listings["/root"] = Array.from({ length: count }, (_, index) =>
+      file(`item-${index}`),
+    );
+    button("Refresh").click();
+    await settled();
+    expect(document.querySelector(".summary")?.textContent).toBe(english);
+    const requests = request.mock.calls.length;
+    language("pt-BR");
+    expect(document.querySelector(".summary")?.textContent).toBe(portuguese);
+    expect(request).toHaveBeenCalledTimes(requests);
+  },
+);
+
 it("starts in Portuguese and relabels retained rows, menus and address drafts without requests", async () => {
   const { language, request } = await setup("pt-BR");
   expect(document.documentElement.lang).toBe("pt-BR");

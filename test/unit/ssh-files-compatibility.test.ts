@@ -60,24 +60,34 @@ it.each([
 );
 
 it.each(["files", "ssh"])(
-  "requires appearance-capable hosts for new %s bytes",
+  "requires hosts with the presentation capabilities used by new %s bytes",
   async (name) => {
     const manifest = parseManifest(
       JSON.parse(await readFile(`extensions/${name}/extension.json`, "utf8")),
     );
-    expect(manifest.version).toBe(name === "files" ? "0.3.0" : "0.2.0");
+    expect(manifest.version).toBe(name === "files" ? "0.4.0" : "0.2.0");
     const release = {
       ...manifest,
       targets: ["linux-arm64"],
     } as unknown as CatalogRelease;
-    for (const appVersion of ["0.23.0-dev.8", "0.24.0-dev.0", "0.24.0-dev.3"]) {
+    const incompatibleHosts = ["0.23.0-dev.8", "0.24.0-dev.0", "0.24.0-dev.3"];
+    if (name === "files")
+      incompatibleHosts.push(
+        "0.24.0-dev.4",
+        "0.24.0-dev.5",
+        "0.24.0-dev.6",
+        "0.24.0-dev.7",
+      );
+    for (const appVersion of incompatibleHosts) {
       const runtime = { appVersion, apiVersion: "0.1.0" };
       expect(() => checkCompatibility(manifest, runtime)).toThrow(
         "incompatible",
       );
       expect(catalogCompatible(release, runtime, "linux-arm64")).toBe(false);
     }
-    for (const appVersion of ["0.24.0-dev.4", "0.24.0-dev.5", "0.24.0"]) {
+    const compatibleHosts = ["0.24.0-dev.8", "0.24.0-dev.12", "0.24.0"];
+    if (name === "ssh") compatibleHosts.push("0.24.0-dev.4", "0.24.0-dev.5");
+    for (const appVersion of compatibleHosts) {
       const runtime = { appVersion, apiVersion: "0.1.0" };
       expect(() => checkCompatibility(manifest, runtime)).not.toThrow();
       expect(catalogCompatible(release, runtime, "linux-arm64")).toBe(true);
