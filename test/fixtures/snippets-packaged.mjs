@@ -8,53 +8,12 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
-import { EventEmitter } from "node:events";
 import { pathToFileURL } from "node:url";
 
 const root = import.meta.dirname;
 const fixture = JSON.parse(
   await readFile(path.join(root, "fixture.json"), "utf8"),
 );
-// Temporary #742 diagnostic: capture registration sites without listener limits.
-const listenerOrigins = new WeakMap();
-const listenerEvents = new Set(["closed", "destroyed", "render-process-gone"]);
-const listenerTrace = [];
-let listenerPhase = "startup";
-for (const method of ["on", "addListener", "prependListener"]) {
-  const original = EventEmitter.prototype[method];
-  EventEmitter.prototype[method] = function (event, listener, ...args) {
-    if (listenerEvents.has(event)) {
-      const stack = new Error().stack;
-      listenerOrigins.set(listener, stack);
-      listenerTrace.push({
-        phase: listenerPhase,
-        operation: "add",
-        emitter: this.constructor.name,
-        event,
-        count: this.listenerCount(event) + 1,
-        stack,
-      });
-    }
-    return original.call(this, event, listener, ...args);
-  };
-}
-function snapshotListeners(phase, window) {
-  listenerPhase = phase;
-  for (const emitter of [window, window.webContents]) {
-    for (const event of listenerEvents) {
-      listenerTrace.push({
-        phase,
-        operation: "snapshot",
-        emitter: emitter.constructor.name,
-        event,
-        listeners: emitter.rawListeners(event).map((listener) => ({
-          name: (listener.listener ?? listener).name,
-          stack: listenerOrigins.get(listener),
-        })),
-      });
-    }
-  }
-}
 const require = createRequire(path.join(fixture.source, "package.json"));
 const catalogPath = path.join(root, "config/omxterm/snippets.yaml");
 const insert = "  printf '%s\\n' 'SNIPPETS_INSERT_RECEIPT'  ";
@@ -122,7 +81,6 @@ dialog.showOpenDialog = async () => ({
   filePaths: [fixture.archive],
 });
 dialog.showMessageBox = async (_owner, prompt) => {
-  snapshotListeners("trust-dialog", _owner);
   assert.equal(prompt.title, "Trust extension code?");
   assert.ok(prompt.detail.includes(archiveSha256));
   approvals++;
@@ -136,7 +94,6 @@ const ready = new Promise((resolve) =>
 await import(pathToFileURL(fixture.entry).href);
 void ready
   .then(async (window) => {
-    snapshotListeners("initial", window);
     const core = window.webContents;
     const js = (code) => core.executeJavaScript(code);
     const until = async (check, label) => {
@@ -221,7 +178,6 @@ void ready
       );
       assert.equal(approvals, 1);
       assert.equal(children.length, 0, "installation dormant");
-      snapshotListeners("installed-dormant", window);
       await click(core, ".settings-close");
       menu("Toggle Snippets");
       await until(
@@ -232,7 +188,6 @@ void ready
           )),
         "installed catalog",
       );
-      snapshotListeners("first-view", window);
       const view = hosted()[0];
       view.on("before-input-event", observeInput("child"));
       assert.equal(
@@ -521,7 +476,6 @@ print('Enter released')`,
         "joined retirement",
       );
       assert.deepEqual(children[0].exit, { code: 0, signal: null });
-      snapshotListeners("disabled", window);
       await button(core, "Uninstall");
       await until(
         () =>
@@ -530,12 +484,6 @@ print('Enter released')`,
           ),
         "uninstalled",
       );
-      snapshotListeners("uninstalled", window);
-      if (fixture.evidence)
-        await writeFile(
-          path.join(fixture.evidence, "listener-trace.json"),
-          JSON.stringify(listenerTrace, null, 2),
-        );
       assert.equal(await readFile(catalogPath, "utf8"), catalog);
       await click(core, ".settings-close");
       await terminalFocus();
@@ -574,10 +522,6 @@ print('Enter released')`,
       app.quit();
     } catch (error) {
       if (fixture.evidence) {
-        await writeFile(
-          path.join(fixture.evidence, "listener-trace.json"),
-          JSON.stringify(listenerTrace, null, 2),
-        );
         await writeFile(
           path.join(fixture.evidence, "failure.png"),
           (await core.capturePage()).toPNG(),
