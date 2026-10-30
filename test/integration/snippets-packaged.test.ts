@@ -102,7 +102,10 @@ it.skipIf(!enabled)(
       const receipts = result.stdout
         .split("\n")
         .filter((line) => line.startsWith("SNIPPETS_PACKAGED_RESULT:"));
-      expect(receipts).toHaveLength(1);
+      expect(
+        receipts,
+        `stdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+      ).toHaveLength(1);
       expect(
         JSON.parse(receipts[0]!.slice("SNIPPETS_PACKAGED_RESULT:".length)),
       ).toEqual({
@@ -117,7 +120,7 @@ it.skipIf(!enabled)(
         archiveSha256: values.ARCHIVE_SHA256,
         approvals: 1,
         input:
-          "synthetic Chromium; controlled native consent; explicit qualification composition",
+          "synthetic Chromium/X11; controlled native consent; explicit qualification composition",
       });
       assert.equal(
         digest(await readFile(values.ENTRY)),

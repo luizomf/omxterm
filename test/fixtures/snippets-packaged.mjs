@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { createRequire, syncBuiltinESMExports } from "node:module";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -267,11 +268,15 @@ void ready
       await view.executeJavaScript(
         `window.__activationEvents = []; for (const type of ['keydown', 'keypress', 'click']) document.addEventListener(type, event => window.__activationEvents.push({ type, key: event.key, trusted: event.isTrusted }), true);`,
       );
-      view.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
-      // sendInputEvent does not synthesize the native character event used by
-      // Chromium's default button activation. Keep Enter held through handoff.
-      view.sendInputEvent({ type: "char", keyCode: "\r" });
-      await terminalFocus();
+      // XTest owns the full native key sequence across WebContents focus.
+      // Per-WebContents sendInputEvent did not expose a cross-view keyUp receipt.
+      execFileSync("/usr/bin/xdotool", ["keydown", "Return"]);
+      try {
+        await terminalFocus();
+        execFileSync("/usr/bin/xdotool", ["keydown", "Return"]);
+      } finally {
+        execFileSync("/usr/bin/xdotool", ["keyup", "Return"]);
+      }
       const activationEvents = await view.executeJavaScript(
         "window.__activationEvents",
       );
@@ -285,14 +290,10 @@ void ready
           path.join(fixture.evidence, "activation-events.json"),
           JSON.stringify(activationEvents, null, 2),
         );
-      // Follow native focus handoff: repeats and release are sent to core, not
-      // an artificially retained child. Chromium-generated, not physical input.
-      core.sendInputEvent({
-        type: "keyDown",
-        keyCode: "Enter",
-        modifiers: ["isautorepeat"],
-      });
-      core.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
+      await until(
+        () => nativeKeys.at(-1)?.type === "keyUp",
+        "native Enter release receipt",
+      );
       await assertWrites(offset, run + "\r");
       assert.ok(
         nativeKeys.some((input) => input.type === "keyDown" && input.repeat),
@@ -460,7 +461,7 @@ void ready
               archiveSha256,
               approvals,
               input:
-                "synthetic Chromium; controlled native consent; explicit qualification composition",
+                "synthetic Chromium/X11; controlled native consent; explicit qualification composition",
             }),
         );
       });

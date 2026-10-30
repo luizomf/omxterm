@@ -63,7 +63,10 @@ host commit/build and archive provenance.
 Rendering explicitly selects ANGLE SwiftShader, not the default GPU. Optional
 evidence retains supervisor results, child/core/preview captures and failure
 DOM outside the cleaned fixture profile. Input uses DOM clicks and Electron
-`sendInputEvent`, not physical keys. Consent is
+`sendInputEvent`, plus `/usr/bin/xdotool` XTest events for the held Enter sequence
+across native focus handoff (install xdotool in the assigned guest). Keydown,
+repeat and release must be observed rather than inferred from no PTY bytes. This
+is synthetic X11 input, not physical keys. Consent is
 controlled. There is a bounded post-delivery drain assertion, not proof against
 arbitrarily delayed events. This fixture does not cover Kitty protocol, Protected
 Paste, stale selection, missing targets, removal during preview, update, backend
