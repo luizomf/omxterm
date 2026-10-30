@@ -23,9 +23,9 @@ Optional Linux ARM64 development extensions: [Files](files-development-preview.m
 They are separately installed, not bundled
 features or a stable extension SDK. The [published Snippets previews](installation.md#optional-snippets-preview)
 pair Linux ARM64 host 0.24.0-dev.11 or macOS ARM64 host 0.24.0-dev.16 with
-Snippets 0.1.0. macOS uses the local/offline archive route; the official catalog
-remains Linux ARM64 only. Stable 0.23.0, Windows and Linux x64 retain built-in
-Snippets. Follow each guide's exact host/package pairing rather than assuming all
+Snippets 0.1.0. Both offer Snippets through the official catalog and passed separate
+bounded public-HTTPS checkpoints; local/offline archive installation remains
+available. Stable 0.23.0, Windows and Linux x64 retain built-in Snippets. Follow each guide's exact host/package pairing rather than assuming all
 preview packages share qualification. The earlier
 [macOS ARM64 composition](macos-extension-composition.md) fixture remains separate
 from Snippets qualification and does not qualify macOS Files/SSH.

@@ -338,11 +338,12 @@ official-catalog browsing and HTTPS extension archive installation on Linux ARM6
 and macOS ARM64, through bounded main-owned acquisition and
 captured-byte trust. No startup/reopen catalog, telemetry or background update
 requests are made. macOS composition alone does not broaden published catalog
-targets or qualify Files. The published Snippets dev.16 preview uses explicit
-local-archive installation; its repository catalog candidate adds `darwin-arm64`
-to the same immutable entry without new Files/SSH qualification. Promotion and
-public readback remain separate from the pending macOS packaged public-HTTPS
-checkpoint; see [the candidate scope](docs/snippets-migration.md#macos-arm64-catalog-promotion-candidate).
+targets or qualify Files. The published Snippets dev.16 preview now offers the
+same immutable archive through the official catalog on `darwin-arm64`, alongside
+`linux-arm64`, while retaining local/offline installation. Exact public catalog
+readback and a separate bounded macOS packaged public-HTTPS checkpoint passed;
+see [the delivery scope](docs/snippets-migration.md#macos-arm64-catalog-delivery).
+This does not add Files/SSH qualification.
 Internal hosted content remains
 restricted to its owned epoch-local packaged-resource protocol. Child processes
 retain normal network access; explicitly activated terminal web links open through the OS.

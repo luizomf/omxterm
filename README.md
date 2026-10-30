@@ -109,9 +109,10 @@ These are not release gates for the build-only lanes.
 
 [Linux ARM64 host 0.24.0-dev.11 and macOS ARM64 host 0.24.0-dev.16](docs/installation.md#optional-snippets-preview)
 use the separate Snippets 0.1.0 archive. These are non-Latest prereleases requiring
-deliberate Snippets installation; existing catalogs stay intact. On macOS, use
-local-archive installation (available offline after download), not the Linux-only
-official catalog. Stable **0.23.0**, Windows and Linux x64 retain built-in Snippets.
+deliberate Snippets installation; existing catalogs stay intact. Both ARM64 previews
+offer Snippets through the official catalog, with local-archive installation
+also available offline after download. Stable **0.23.0**, Windows and Linux x64
+retain built-in Snippets.
 Follow the [migration guide](docs/snippets-migration.md) for exact pairings and
 qualification limits.
 

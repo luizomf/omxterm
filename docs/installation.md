@@ -62,11 +62,13 @@ installation/first-launch instructions. Download and verify the Snippets archive
 and checksum, then choose **Settings → Extensions → Install local .omxext…**.
 On macOS, use `shasum -a 256 -c snippets-0.1.0.omxext.sha256`; on Linux, use
 `sha256sum --check snippets-0.1.0.omxext.sha256`. Local installation works offline
-after download. The official catalog remains **Linux ARM64 only**, not a macOS
-installation route. Review trust, enable deliberately if disabled, and open
+after download. On either ARM64 preview, you can instead choose **Settings →
+Extensions → Browse official extensions** and install **Snippets — Linux and
+macOS ARM64 preview**. Review trust, enable deliberately if disabled, and open
 **View → Toggle Snippets**. No source build or automatic installation is involved.
-Public download verification is not native macOS public-HTTPS installation or
-Finder/Gatekeeper first-launch qualification.
+Separate bounded public-HTTPS installation checkpoints passed on both exact
+preview pairs; see [macOS coverage](snippets-migration.md#macos-arm64-catalog-delivery).
+This does not qualify Finder/Gatekeeper first launch.
 Existing YAML catalogs remain untouched; without the enabled package, the shortcut
 opens Extensions guidance. See the [migration guide](snippets-migration.md) for
 offline installation, new catalogs and qualification limits. The stable-version

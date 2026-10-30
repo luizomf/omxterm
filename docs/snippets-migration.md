@@ -4,10 +4,10 @@ The published [OMXTerm 0.24.0-dev.11 Linux ARM64 preview](https://github.com/lui
 and [OMXTerm 0.24.0-dev.16 macOS ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.16)
 use the separately installed [Snippets 0.1.0 extension](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0).
 All are immutable non-Latest prereleases; stable **0.23.0** remains Latest with
-built-in Snippets. Windows and Linux x64 retain built-in Snippets. macOS uses
-local-archive installation, available offline after download; the official catalog
-remains Linux ARM64 only until the [macOS catalog candidate](#macos-arm64-catalog-promotion-candidate)
-is promoted and verified.
+built-in Snippets. Windows and Linux x64 retain built-in Snippets. Both previews
+offer Snippets through the official catalog; local-archive installation remains
+available offline after download. See the separate
+[macOS public-catalog checkpoint](#macos-arm64-catalog-delivery).
 
 ## Existing catalogs and shortcuts
 
@@ -32,8 +32,8 @@ ARM64 DMG and checksum; see [macOS installation](#macos-arm64-published-preview)
 On Linux, download the ARM64 AppImage, its checksum and, if wanted, the
 version-matched application-menu helper and checksum. Follow that release's
 installation instructions, not `/latest/download` or the stable-version filenames in the general installation
-guide. From the Snippets release, download `snippets-0.1.0.omxext` and its checksum
-into the same folder, then verify before installation:
+guide. For local installation, download `snippets-0.1.0.omxext` and its checksum
+from the Snippets release into the same folder, then verify before installation:
 
 ```sh
 # macOS
@@ -43,14 +43,15 @@ sha256sum --check snippets-0.1.0.omxext.sha256
 ```
 
 No source build is required. Older hosts are not qualified for this package, and
-existing Files/SSH packages were not newly qualified on dev.11. The official
-catalog lists these same Snippets bytes for Linux ARM64 only. A separate bounded
-public-HTTPS checkpoint passed on the Linux dev.11 host/archive pair, not macOS; see
-[coverage below](#preview-coverage-and-remaining-platforms).
+existing Files/SSH packages were not newly qualified on either preview. The official
+catalog lists these same Snippets bytes for Linux ARM64 and macOS ARM64. Separate
+bounded public-HTTPS checkpoints passed on the Linux dev.11 and macOS dev.16
+host/archive pairs; see [macOS delivery](#macos-arm64-catalog-delivery) and
+[Linux coverage](#preview-coverage-and-remaining-platforms).
 
 1. Open **Settings → Extensions** and choose **Install local .omxext…**. A local
-   archive works offline after download. On Linux ARM64 only, alternatively choose
-   **Browse official extensions**, select the Snippets Linux ARM64 preview and
+   archive works offline after download. On either ARM64 preview, alternatively choose
+   **Browse official extensions**, select **Snippets — Linux and macOS ARM64 preview** and
    install it. Browse/Refresh is explicit; reopening Settings does not fetch the
    catalog. Both routes use the same captured-byte trust and installation flow.
 2. Inspect the captured package identity and trust information before approving.
@@ -78,8 +79,8 @@ shasum -a 256 -c OMXTerm-0.24.0-dev.16-arm64.dmg.sha256
 
 Follow that release's copy-to-Applications and first-launch instructions. The app
 is ad-hoc signed, not Developer ID signed or notarized; Finder/Gatekeeper first
-launch was not qualified. Install the separate Snippets archive using the local
-archive/trust/enable steps above, not the official catalog.
+launch was not qualified. Install Snippets through the official catalog or the
+local archive/trust/enable steps above.
 
 The final source/tag target is `42328767a1510f5cec15deb6e274366ca76f972c`.
 The qualified build source is `c3655a5b6ec13dbfb870665fc23b83caef71aac6`;
@@ -95,11 +96,14 @@ readback also verified the exact DMG bytes. The archive and its original Linux
 build receipt remain immutable, including source
 `805e95dbc77552dc137707578b18b48ad6d047e9` and build-time
 `qualification.status: not-run`; later qualification is separate evidence.
-Public downloads do not establish native macOS public-HTTPS installation.
+That public-download verification alone did not establish native macOS
+public-HTTPS installation; the subsequent checkpoint is recorded below.
 
-## macOS ARM64 catalog promotion candidate
+<a id="macos-arm64-catalog-promotion-candidate"></a>
 
-The repository catalog candidate extends the existing Snippets `0.1.0` entry to
+## macOS ARM64 catalog delivery
+
+The promoted catalog extends the existing Snippets `0.1.0` entry to
 `darwin-arm64`, retaining `linux-arm64` and the unchanged Files/SSH entries.
 It names the already published macOS `0.24.0-dev.16` / Linux `0.24.0-dev.11`
 hosts without changing the archive, original receipt, source, digest, size,
@@ -107,18 +111,44 @@ immutable URLs or manifest engine ranges. The manifest has no platform restricti
 its host/API ranges express compatibility, not qualification of every admitted host.
 Windows and Linux x64 retain built-in Snippets.
 
-This is a **promotion candidate**, not a claim of live macOS catalog delivery.
-Complete independent review, integration and exact public catalog readback remain
-with the integration maintainer, followed by a separate bounded macOS packaged
-production public-HTTPS consumption checkpoint. The exact-DMG nine-scenario and
-FULL verifier passes below remain valid, separate evidence; neither is that
-public-HTTPS checkpoint. No new Files/SSH qualification or stable SDK is implied.
+Catalog source `dbbc1a9814606f72bcaea226ab68564da4a345fb` received complete
+independent review and was integrated. Fixed public endpoint readback matched
+source byte-for-byte, SHA-256
+`c86ea2ee6f4f27eb17718e5832ce29a8e862aca99fb91afe358c9572ca844ead`.
+A separate bounded **production public-HTTPS checkpoint passed** using freshly
+downloaded public dev.16 DMG (129,712,879 bytes, SHA-256
+`52b8a6b60dce7380b1157755e5ba3dcda0dfdc8e4c54ed2a71b723b160ef061f`)
+and the unchanged Snippets archive identified above:
 
-After promotion, **Browse official extensions** can offer the same archive on
-macOS ARM64. Installation/trust, enablement and Toggle remain deliberate; no
-startup acquisition or automatic activation is added. Until then use the local
-archive route above, which also remains available offline after download.
-Existing YAML and terminal sessions remain untouched by installation/removal.
+1. Actual Browse/Install, exact-digest trust and dormant first-generation installation.
+2. Explicit Toggle, existing YAML and one exact Run with actual shell output.
+3. Public Reinstall, joined old backend and dormant second generation.
+4. Disable/disabled guidance, explicit dormant enablement/Toggle, disable/uninstall
+   and unchanged YAML.
+5. The same Surface/canvas and PTY remained usable after retirement; normal Quit
+   joined baseline/scenario PTYs and both backends.
+
+Both controlled trust prompts, four actual WebContents captures, main exit/stream
+closure and controller/supervisor settlement were inspected. Independent checks
+confirmed recorded process absence, packet/artifact and complete bundle identity,
+code seal, unchanged YAML, no task mount or unresolved ownership/input guard, and
+final OS Return key-up state. Supplementary process sampling is not a complete
+historical descendant census.
+
+Scope is synthetic Chromium input, controlled DOM/menu interaction and consent,
+an isolated plain-paste shell and unchanged native macOS graphics/sandboxing.
+This is not physical-keyboard, natural-autorepeat, held-Enter, Kitty,
+OS-compositor, Finder/Gatekeeper/notarization or full portable-suite qualification.
+The earlier exact-DMG nine-scenario and FULL verifier passes remain separate;
+neither was rerun. No application version, published release/tag/asset, original
+receipt or Files/SSH entry changed; no new Files/SSH qualification or stable SDK
+is implied.
+
+**Browse official extensions** now offers the same archive on macOS ARM64.
+Installation/trust, enablement and Toggle remain deliberate; no startup acquisition
+or automatic activation is added. The local archive route remains available
+offline after download. Existing YAML and terminal sessions remain untouched by
+installation/removal.
 
 ## macOS ARM64 source transition
 

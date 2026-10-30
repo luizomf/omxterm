@@ -546,12 +546,12 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   separately installed Snippets extension; other targets retain the built-in view.
   The published Linux ARM64 `0.24.0-dev.11` and macOS ARM64 `0.24.0-dev.16`
   previews use optional Snippets; stable `0.23.0` retains the built-in view.
-  The macOS preview uses explicit local-archive installation. The repository
-  catalog candidate adds `darwin-arm64` alongside `linux-arm64` for the same
-  immutable Snippets archive; promotion/public readback and the separate macOS
-  packaged public-HTTPS checkpoint remain pending. Source, exact-DMG/FULL,
-  publication and catalog-consumption evidence remain distinct in the
-  [migration guide](snippets-migration.md#macos-arm64-catalog-promotion-candidate). The existing
+  Both previews offer the same immutable Snippets archive through the official
+  catalog on `darwin-arm64` and `linux-arm64`, retaining local/offline installation.
+  Exact public catalog readback and separate bounded packaged public-HTTPS
+  checkpoints passed. Source, exact-DMG/FULL, publication and catalog-consumption
+  evidence remain distinct in the
+  [migration guide](snippets-migration.md#macos-arm64-catalog-delivery). The existing
   command remains the sole menu/palette entry, including remapped/null bindings.
   Without an enabled installation, it opens Extensions management with an
   optional-tool explanation and the actual installation/runtime status, without
