@@ -47,19 +47,22 @@ export function createSnippetsTool(
     // Whether another overlay (About, Local Image Preview) owns input.
     readonly blocked: () => boolean;
     readonly onPreviewActivity: () => void;
-    readonly openOverlay?: (open: () => void) => void;
+    readonly openOverlay?: (open: () => void, refused?: () => void) => void;
+    readonly input?: ReturnType<typeof createSemanticInput>;
   },
 ) {
   const { tabs } = options;
   const language = options.language ?? englishLanguage;
-  const input = createSemanticInput(document, {
-    language,
-    capture: tabs.captureSnippetTarget,
-    blocked: options.blocked,
-    focusTerminal: tabs.focusSelected,
-    onPreviewActivity: options.onPreviewActivity,
-    ...(options.openOverlay ? { openOverlay: options.openOverlay } : {}),
-  });
+  const input =
+    options.input ??
+    createSemanticInput(document, {
+      language,
+      capture: tabs.captureSnippetTarget,
+      blocked: options.blocked,
+      focusTerminal: tabs.focusSelected,
+      onPreviewActivity: options.onPreviewActivity,
+      ...(options.openOverlay ? { openOverlay: options.openOverlay } : {}),
+    });
   const { preview } = input;
   const view: AuxiliaryViewDefinition = {
     id: "snippets",
@@ -70,10 +73,10 @@ export function createSnippetsTool(
         loadSnippets: load,
         isInteractive,
         inject: (snippet) => {
-          input.request(snippet, snippet.execute ? "run" : "insert");
+          void input.request(snippet, snippet.execute ? "run" : "insert");
         },
         preview: (snippet, returnFocus) => {
-          input.request(snippet, "preview", returnFocus);
+          void input.request(snippet, "preview", returnFocus);
         },
       }),
   };

@@ -101,6 +101,10 @@ async function applicationManager(
 
 export type ApplicationExtensionsOptions = {
   applicationRoot: string;
+  semanticInput?: Pick<
+    ReturnType<typeof import("./semantic-input-ipc").registerSemanticInputIpc>,
+    "request"
+  >;
   mirrorTyping?: ReturnType<
     typeof import("./mirror-typing-ipc").registerMirrorTypingIpc
   >;

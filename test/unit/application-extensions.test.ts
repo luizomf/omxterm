@@ -1,3 +1,4 @@
+import { packageArchive } from "../fixtures/extension-package-archive";
 import { EventEmitter } from "node:events";
 import { catalogBytes as catalogFixture } from "../fixtures/extension-catalog";
 import { OFFICIAL_CATALOG_URL } from "../../src/main/extension-catalog";
@@ -31,6 +32,7 @@ type Host = {
   options: ExtensionViewHostOptions;
   open: ReturnType<typeof vi.fn>;
   reveal: ReturnType<typeof vi.fn>;
+  claimActivation: ReturnType<typeof vi.fn>;
   retire: ReturnType<typeof vi.fn<() => Promise<{ status: "settled" }>>>;
 };
 import { startApplicationExtensions } from "../../src/main/application-extensions";
@@ -62,6 +64,12 @@ const adapters = vi.hoisted(() => ({
     vi.fn<Parameters<typeof startApplicationExtensions>[0]["ssh"]["open"]>(),
   sendOpen:
     vi.fn<Parameters<typeof startApplicationExtensions>[0]["sendAction"]>(),
+  semanticRequest:
+    vi.fn<
+      NonNullable<
+        Parameters<typeof startApplicationExtensions>[0]["semanticInput"]
+      >["request"]
+    >(),
   retire: vi.fn(),
   hosts: [] as Host[],
 }));
@@ -106,6 +114,7 @@ vi.mock("../../src/main/extension-view-ipc", () => ({
       options,
       open: vi.fn(async () => ({ id: "hosted-view", title: "Files" })),
       reveal: vi.fn(),
+      claimActivation: vi.fn(),
       retire: vi.fn(async () => {
         await options.resources.release();
         options.onState?.("settled");
@@ -222,6 +231,7 @@ beforeEach(async () => {
     starting = startApplicationExtensions({
       applicationRoot: adapters.root,
       ssh: { open: adapters.sshOpen },
+      semanticInput: { request: adapters.semanticRequest },
       layout: {
         capture: vi.fn(() => Promise.reject(new Error("unavailable"))),
         open: vi.fn(async () => ({ ok: false, error: "unavailable" })),
@@ -404,6 +414,73 @@ it.each([false, true])(
 it("retains companion Files after its source terminal ends and reopens the same view", () =>
   exerciseCompanionRouting({ archive, window, service, request }, adapters));
 
+it.each([true, false])(
+  "admits semantic input only for a declared current visible view (%s)",
+  async (declared) => {
+    await writeFile(
+      archive,
+      packageArchive([
+        {
+          name: "extension.json",
+          data: JSON.stringify({
+            ...manifest,
+            ...(declared
+              ? { capabilities: ["terminal.semanticInput.v1"] }
+              : {}),
+          }),
+        },
+        { name: "backend.mjs", data: "" },
+        { name: "index.html", data: "<h1>Input</h1>" },
+      ]),
+    );
+    await request({ operation: "install" });
+    service.actions()[0]!.invoke();
+    await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+    const host = adapters.hosts[0]!;
+    const visible = vi.fn(() => false);
+    const context = {
+      id: "authenticated-native-view",
+      isCurrentVisible: visible,
+    };
+    const signal = new AbortController().signal;
+    const input = {
+      operation: "terminal.semanticInput.v1",
+      text: " exact\n",
+      title: "Exact",
+      intent: "insert",
+      preview: true,
+    };
+    await expect(
+      host.options.onRequest!(input, signal, context),
+    ).rejects.toThrow("unavailable");
+    expect(adapters.semanticRequest).not.toHaveBeenCalled();
+    visible.mockReturnValue(true);
+    adapters.semanticRequest.mockResolvedValue({ ok: true });
+    const result = host.options.onRequest!(input, signal, context);
+    if (!declared) {
+      await expect(result).rejects.toThrow("unavailable");
+      expect(host.claimActivation).not.toHaveBeenCalled();
+      return;
+    }
+    expect(await result).toEqual({ ok: true });
+    expect(host.claimActivation).toHaveBeenCalledExactlyOnceWith(context.id);
+    expect(adapters.semanticRequest).toHaveBeenCalledWith(
+      window,
+      input,
+      context,
+      expect.any(AbortSignal),
+      expect.any(Function),
+    );
+    const lifetime = adapters.semanticRequest.mock.calls[0]![3];
+    expect(lifetime.aborted).toBe(false);
+    await request({ operation: "disable", id: manifest.id, generation: 1 });
+    expect(lifetime.aborted).toBe(true);
+    await expect(
+      host.options.onRequest!(input, signal, context),
+    ).rejects.toThrow("unavailable");
+  },
+);
+
 it("a valid claimed terminal contribution retains its captured directory", async () => {
   await request({ operation: "install" });
   let directory = "/original";
@@ -420,6 +497,7 @@ it("a valid claimed terminal contribution retains its captured directory", async
     await adapters.hosts[0]!.options.onRequest!(
       { operation: "terminal-directory" },
       new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => true },
     ),
   ).toEqual({ ok: true, directory: "/original" });
 });
@@ -577,12 +655,14 @@ it("actions capture separate contexts; disable revokes both views and callbacks"
     await adapters.hosts[0]!.options.onRequest!(
       { operation: "terminal-directory" },
       new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => true },
     ),
   ).toEqual({ ok: true, directory: "/captured" });
   expect(
     await adapters.hosts[1]!.options.onRequest!(
       { operation: "terminal-directory" },
       new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => true },
     ),
   ).toEqual({ ok: true, directory: "/second" });
   expect(
@@ -599,6 +679,7 @@ it("actions capture separate contexts; disable revokes both views and callbacks"
     adapters.hosts[0]!.options.onRequest!(
       { operation: "terminal-directory" },
       new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => true },
     ),
   ).rejects.toThrow("unavailable");
 });

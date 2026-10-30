@@ -164,6 +164,7 @@ export function startExtensionViewHost(
         event,
         input,
         id === sourceId && ownerRoute.panels.has(id) ? id : undefined,
+        id === sourceId ? id : undefined,
       );
     },
     onRetired(id) {
@@ -217,6 +218,9 @@ export function startExtensionViewHost(
       return descriptor;
     },
     captureFocusIntent: (id: string) => host.captureFocusIntent(id),
+    claimActivation(id: string) {
+      if (host.focusedId() === id) ownerRoute.dismissal.claimActivation(id);
+    },
     clipboard: host.clipboard,
     retire: host.retire,
   };

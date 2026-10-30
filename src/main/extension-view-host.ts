@@ -53,6 +53,13 @@ export interface ExtensionViewRuntime {
   fromPartition(partition: string): Session;
   createView(options: WebContentsViewConstructorOptions): WebContentsView;
 }
+/** Main-only identity captured after authenticating the requesting frame. */
+export interface ExtensionViewRequestContext {
+  readonly id: string;
+  // Captured presentation admission, not a reusable view lookup. A hidden
+  // request never becomes eligible later; hide/reveal cannot revive a capture.
+  isCurrentVisible(): boolean;
+}
 export interface ExtensionViewHostOptions {
   owner: BrowserWindow;
   preloadPath: string;
@@ -68,7 +75,11 @@ export interface ExtensionViewHostOptions {
   onRendererProcess?(id: string, pid: number): void;
   onKeybind?(event: Event, input: Input, owner: BrowserWindow): void;
   interceptInput?(event: Event, input: Input, id: string): boolean;
-  onRequest?(value: Value, signal: AbortSignal): Promise<Value>;
+  onRequest?(
+    value: Value,
+    signal: AbortSignal,
+    context: ExtensionViewRequestContext,
+  ): Promise<Value>;
   // Host/native-test seam only. Not exposed to either renderer.
   runtime?: ExtensionViewRuntime;
 }
@@ -136,6 +147,10 @@ class NativeExtensionViewHost {
   #layoutFocus: string | null = null;
   #revision = 0;
   #focusGeneration = 0;
+  #admissionGeneration = 0;
+  #windowHidden = () => {
+    this.#admissionGeneration++;
+  };
   #reportFocus = () => notify(() => this.options.onFocusChange?.());
   #blur = () => {
     this.#focusGeneration++;
@@ -164,6 +179,8 @@ class NativeExtensionViewHost {
     options.owner.on("resize", this.#hideForLayout);
     options.owner.on("blur", this.#blur);
     options.owner.on("focus", this.#reportFocus);
+    options.owner.on("hide", this.#windowHidden);
+    options.owner.on("minimize", this.#windowHidden);
     options.owner.webContents.on("zoom-changed", this.#hideForLayout);
   }
   #live() {
@@ -327,6 +344,8 @@ class NativeExtensionViewHost {
       this.options.owner.removeListener("resize", this.#hideForLayout);
       this.options.owner.removeListener("blur", this.#blur);
       this.options.owner.removeListener("focus", this.#reportFocus);
+      this.options.owner.removeListener("hide", this.#windowHidden);
+      this.options.owner.removeListener("minimize", this.#windowHidden);
       this.#ownerContents.removeListener("zoom-changed", this.#hideForLayout);
       this.#changeState(outcome.status, outcome);
       return outcome;
@@ -403,11 +422,35 @@ class NativeExtensionViewHost {
           )
             throw new Error("Request unavailable");
           const value = captureValue(args[0]);
+          const revision = this.#revision;
+          const generation = this.#admissionGeneration;
+          const visible =
+            entry.visible &&
+            this.#selected === entry.descriptor.id &&
+            this.options.owner.isVisible() &&
+            !this.options.owner.isMinimized();
+          const context: ExtensionViewRequestContext = {
+            id: entry.descriptor.id,
+            isCurrentVisible: () =>
+              visible &&
+              this.#live() &&
+              this.options.owner.isVisible() &&
+              !this.options.owner.isMinimized() &&
+              this.#revision === revision &&
+              this.#admissionGeneration === generation &&
+              this.#selected === entry.descriptor.id &&
+              entry.visible &&
+              !entry.closing &&
+              !entry.rendererGone &&
+              !entry.abort.signal.aborted &&
+              !contents.isDestroyed(),
+          };
           pending++;
           try {
             const result = await this.options.onRequest!(
               value,
               entry.abort.signal,
+              context,
             );
             if (!this.#live() || entry.closing || entry.abort.signal.aborted)
               throw new Error("Outcome unknown");

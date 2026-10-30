@@ -106,6 +106,7 @@ export async function exerciseCompanionRouting(
     await host.options.onRequest!(
       { operation: "terminal-directory" },
       new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => true },
     ),
   ).toEqual({ ok: true, directory: "/original" });
   service.actions()[0]!.invoke();
@@ -152,7 +153,14 @@ export async function exerciseSshRouting(
   await request({ operation: "install" });
   service.contextMenu(window, "s1", () => true)[0]!.click();
   await vi.waitFor(() => expect(hosts[0]?.open).toHaveBeenCalled());
-  const viewRequest = hosts[0]!.options.onRequest!;
+  const viewRequest = (
+    value: Parameters<NonNullable<ExtensionViewHostOptions["onRequest"]>>[0],
+    signal: AbortSignal,
+  ) =>
+    hosts[0]!.options.onRequest!(value, signal, {
+      id: "hosted-view",
+      isCurrentVisible: () => true,
+    });
   const signal = new AbortController().signal;
   expect(await viewRequest({ operation: "host.capabilities" }, signal)).toEqual(
     { capabilities: declared ? ["terminal.openSsh.v1"] : [] },

@@ -59,7 +59,8 @@ adds the optional fixed same-tab keyboard route with core-owned Stop.
 
 [ADR0044: Migrate Snippets without changing terminal input](0044-migrate-snippets-without-changing-terminal-input.md)
 records the accepted optional-extension migration design and platform cutover
-prerequisites. It is not implemented; the built-in feature remains current behavior.
+prerequisites. Preparatory backend and native semantic-input source do not complete
+that migration; the built-in feature remains current behavior.
 
 ## Related boundaries
 

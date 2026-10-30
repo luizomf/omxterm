@@ -1673,8 +1673,18 @@ selection does not assert publisher trust or confer extra capabilities. Main-iss
 slot presentations are owner-bound. The host hides native views before admitting
 host DOM overlays and restores only a still-current content owner. Field input
 and clipboard remain in the child, never forwarded into a terminal. Closing or
-crashing a hosted epoch retires its known views, not core PTYs. This is a
-production-facing development module consumed by the Linux ARM64 Files preview.
+crashing a hosted epoch retires its known views, not core PTYs. The declared
+`terminal.semanticInput.v1` own-view operation is a separate explicit semantic
+text request, not key forwarding. Main authenticates the actual visible child
+and epoch, captures core selection revision before asynchronous admission, and
+core refuses a changed selection before capturing the exact live Surface. Insert,
+Run and read-only preview reuse Protected Paste, modal exclusion and the same
+core preview owner as built-in Snippets. Native Enter repeats/release remain
+owned across focus handoff. Retirement cancels unaccepted interactions but does
+not revoke accepted Surface-owned input or end sessions. This preparatory
+capability does not install an optional Snippets package or cut over any platform;
+see [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md).
+This is a production-facing development module consumed by the Linux ARM64 Files preview.
 Catalog acquisition and stable SDK exposure remain separate. Packaged child
 content can subscribe to read-only appearance updates: theme background and
 foreground plus effective per-window tint opacity. Initial/latest snapshots

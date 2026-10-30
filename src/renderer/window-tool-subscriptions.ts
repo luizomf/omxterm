@@ -1,3 +1,6 @@
+import type { SemanticInputBridge } from "../shared/semantic-input";
+import { createSemanticInput } from "./semantic-input";
+import { subscribeNativeSemanticInput } from "./native-semantic-input";
 import type { SettingsBridge } from "../shared/settings";
 import type { TerminalClipboardAction } from "../shared/terminal-contract";
 import type { TerminalClipboard } from "../terminal-surface/terminal-surface";
@@ -18,6 +21,7 @@ import {
 export function subscribeToWindowTools(
   document: Document,
   options: TerminalWindowActionSubscriptions & {
+    semanticInput?: SemanticInputBridge;
     settings?: SettingsBridge;
     snippets?: WindowSnippetsSource;
     clipboard?: TerminalClipboard;
@@ -29,11 +33,22 @@ export function subscribeToWindowTools(
     blocked(): boolean;
     onPreviewActivity(): void;
     modalClipboard(action: TerminalClipboardAction): boolean;
+    focusTerminal?(): void;
+    restoreSourceFocus?(id: string): boolean;
   },
 ) {
   const { tabs, panel } = owner;
   let removeActions: (() => void) | undefined;
   let removeSettings: (() => void) | undefined;
+  let removeNative: (() => void) | undefined;
+  const input = createSemanticInput(document, {
+    language: owner.language,
+    capture: tabs.captureSnippetTarget,
+    blocked: owner.blocked,
+    focusTerminal: owner.focusTerminal ?? tabs.focusSelected,
+    onPreviewActivity: owner.onPreviewActivity,
+    openOverlay: tabs.openOverlay,
+  });
   let snippets: ReturnType<typeof mountWindowSnippets>;
   let disposed = false;
   const unsubscribe = () => {
@@ -42,6 +57,7 @@ export function subscribeToWindowTools(
     removeActions?.();
     snippets?.unsubscribe();
     removeSettings?.();
+    removeNative?.();
   };
   try {
     removeActions = subscribeToGuardedActions(
@@ -56,18 +72,26 @@ export function subscribeToWindowTools(
     );
     snippets = mountWindowSnippets(document, panel, options.snippets, {
       tabs,
+      input,
       language: owner.language,
       blocked: owner.blocked,
       onPreviewActivity: owner.onPreviewActivity,
       openOverlay: tabs.openOverlay,
     });
+    if (options.semanticInput)
+      removeNative = subscribeNativeSemanticInput(
+        options.semanticInput,
+        input,
+        tabs.selectionRevision,
+        owner.restoreSourceFocus ?? (() => false),
+      );
     removeSettings = options.settings?.onOpen(() => {
       if (!disposed && !owner.blocked()) tabs.openSettings();
     });
-    return { preview: snippets?.preview, unsubscribe };
+    return { preview: input.preview, unsubscribe };
   } catch (error) {
     unsubscribe();
-    snippets?.preview.dispose();
+    input.preview.dispose();
     throw error;
   }
 }

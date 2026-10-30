@@ -340,6 +340,11 @@ while retaining a visible companion view. A read-only child appearance
 subscription projects effective window colors/tint without configuration paths
 or native-effect authority; transparent native backing permits opt-in content
 to share the parent's single tint.
+Its declared own-view semantic-input operation transfers bounded exact text to a
+core-captured Surface with Protected Paste and a shared read-only preview, not a
+PTY handle or raw key route. View retirement revokes unaccepted interactions,
+not accepted Surface-owned delivery. This capability alone is not an optional
+Snippets replacement.
 It is not a public SDK, activation UI or proof of main-death disk-read exclusion.
 
 **Application Network Boundary** — OMXTerm requests remote bytes only for explicit

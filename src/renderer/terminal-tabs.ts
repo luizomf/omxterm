@@ -102,6 +102,7 @@ export interface TerminalTabsOptions {
   readonly canAutoFocus?: (unchangedFocus: boolean) => boolean;
   readonly notifyEmpty?: (reason?: "rendering-failure") => void;
   // The selected tab's focused pane and every started session of that tab.
+  readonly notifySelectionRevision?: (revision: number) => void;
   readonly notifySelection?: (
     sessionId: TerminalSessionId | null | SettingsTabSelection,
     tabSessionIds: readonly TerminalSessionId[],
@@ -119,7 +120,7 @@ export interface TerminalTabs {
   openSettings(): void;
   isSettingsSelected(): boolean;
   isTerminalSelected(): boolean;
-  openOverlay(open: () => void): void;
+  openOverlay(open: () => void, refused?: () => void): void;
   setBlocked(blocked: boolean): void;
   editSettingsClipboard(
     action: TerminalClipboardAction,
@@ -137,6 +138,7 @@ export interface TerminalTabs {
   injectText(text: string): void;
   // The selected live terminal, captured for one snippet action.
   captureSnippetTarget(): SnippetTarget | undefined;
+  selectionRevision(): number;
   captureActionTarget(): { isCurrent(): boolean };
   toggleTabBar(): void;
   focusSelected(): void;
@@ -173,6 +175,10 @@ export function createTerminalTabs(
   let disposed = false;
   let closing = false;
   let actionGeneration = 0;
+  const selectionChanged = () => {
+    actionGeneration += 1;
+    options.notifySelectionRevision?.(actionGeneration);
+  };
   let lastFocusedPane: TerminalPane | undefined;
 
   const notifyEmpty = (reason?: "rendering-failure") => {
@@ -218,7 +224,7 @@ export function createTerminalTabs(
   const notifyFocus = (tab: TerminalTab) => {
     if (disposed || tab !== selectedTab()) return;
     const focused = tab.focused;
-    if (lastFocusedPane !== focused) actionGeneration += 1;
+    if (lastFocusedPane !== focused) selectionChanged();
     lastFocusedPane = focused;
     contextMenu.selectionChanged();
     const sessionId = focused.ended
@@ -238,7 +244,7 @@ export function createTerminalTabs(
     if (!tab || (!passive && canFocus?.() === false)) return;
     const changed = selectedApplicationTab() !== tab;
     if (changed) {
-      actionGeneration += 1;
+      selectionChanged();
       if (!mirrorReady) mirror?.stop();
     }
     selectedIndex = index;
@@ -414,9 +420,9 @@ export function createTerminalTabs(
     ready: initialReady ?? createTab(),
     ...settingsActions,
     isTerminalSelected: () => !!interactivePane(),
-    openOverlay(open) {
+    openOverlay(open, refused) {
       mirror?.stop();
-      hosted.openOverlay(open);
+      hosted.openOverlay(open, refused);
     },
     setBlocked(blocked) {
       if (blocked) mirror?.stop();
@@ -447,6 +453,7 @@ export function createTerminalTabs(
     find: () => interactivePane()?.surface?.find(),
     injectText: (text) => void interactivePane()?.surface?.inject(text),
     captureSnippetTarget: () => snippetTarget(interactivePane()),
+    selectionRevision: () => actionGeneration,
     captureActionTarget: () =>
       captureActionTarget(
         selectedApplicationTab,

@@ -22,6 +22,7 @@ import {
   createExtensionViewHost,
   registerExtensionViewScheme,
   type ExtensionViewRuntime,
+  type ExtensionViewRequestContext,
 } from "../../src/main/extension-view-host";
 import { extensionResourceLimits } from "../../src/main/extension-view-resources";
 import {
@@ -281,6 +282,70 @@ it.each([true, false])(
   },
 );
 
+it.each([true, false])(
+  "claims a native view's Enter activation across core focus handoff (panel=%s)",
+  async (panel) => {
+    const f = await fixture(false);
+    const ipc = {
+      handle: vi.fn(),
+      removeHandler: vi.fn(),
+    } as unknown as IpcMain;
+    const host = startExtensionViewHost({ ...f.options, ipcMain: ipc });
+    cleanups.push(() => host.retire());
+    const descriptor = await host.open({
+      ...opening,
+      ...(panel ? { presentation: "panel" as const } : {}),
+    });
+    const handler = (ipc.handle as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([channel]) => channel === extensionViewIpc.present,
+    )![1] as (
+      event: unknown,
+      request: HostedContentPresentation,
+    ) => Promise<unknown>;
+    const sender = {
+      sender: f.owner.webContents,
+      senderFrame: f.owner.webContents.mainFrame,
+    };
+    const child = f.views[0]!.webContents;
+    const key = (
+      contents: Contents,
+      type = "keyDown",
+      isAutoRepeat = false,
+    ) => {
+      const event = { preventDefault: vi.fn() };
+      contents.emit("before-input-event", event, {
+        type,
+        key: "Enter",
+        code: "Enter",
+        isAutoRepeat,
+      });
+      return event.preventDefault;
+    };
+    await handler(sender, present(descriptor.id));
+    expect(key(child)).not.toHaveBeenCalled();
+    host.claimActivation("foreign");
+    expect(key(child, "keyDown", true)).not.toHaveBeenCalled();
+    host.claimActivation(descriptor.id);
+    expect(key(child, "keyDown", true)).toHaveBeenCalledOnce();
+    await handler(sender, { ...present(descriptor.id, 2), focus: "core" });
+    child.focused = false;
+    child.emit("blur");
+    expect(key(f.owner.webContents, "keyDown", true)).toHaveBeenCalledOnce();
+    expect(key(f.owner.webContents, "keyUp")).toHaveBeenCalledOnce();
+    expect(key(f.owner.webContents)).not.toHaveBeenCalled();
+    expect(key(f.owner.webContents, "keyUp")).not.toHaveBeenCalled();
+    await handler(sender, present(descriptor.id, 3));
+    expect(key(child)).not.toHaveBeenCalled();
+    expect(key(child, "keyUp")).not.toHaveBeenCalled();
+    host.claimActivation(descriptor.id);
+    expect(key(f.owner.webContents, "keyUp")).not.toHaveBeenCalled();
+    expect(key(child)).not.toHaveBeenCalled();
+    host.claimActivation(descriptor.id);
+    f.owner.emit("blur");
+    expect(key(f.owner.webContents, "keyUp")).not.toHaveBeenCalled();
+  },
+);
+
 function deferred<T = void>() {
   let resolve!: (value: T) => void;
   let reject!: (reason?: unknown) => void;
@@ -360,6 +425,8 @@ async function fixture(createHost = true) {
   const owner = Object.assign(new EventEmitter(), {
     webContents: new Contents(),
     isFocused: vi.fn(() => true),
+    isVisible: vi.fn(() => true),
+    isMinimized: vi.fn(() => false),
     isDestroyed: (): boolean => false,
     getContentSize: () => [800, 600],
     contentView: { addChildView: vi.fn(), removeChildView: vi.fn() },
@@ -488,6 +555,71 @@ describe("native extension host through its production resource interface", () =
     held.resolve(null);
     await rejected;
     await expect(handler(sender, null)).rejects.toThrow("unavailable");
+  });
+  it("captures authenticated visible request admission without banning hidden backend work", async () => {
+    const f = await fixture(false);
+    const captures: ExtensionViewRequestContext[] = [];
+    const host = createExtensionViewHost({
+      ...f.options,
+      async onRequest(_value, _signal, context) {
+        captures.push(context);
+        return { ok: true };
+      },
+    });
+    cleanups.push(() => host.retire());
+    const first = await host.open(opening);
+    const second = await host.open(opening);
+    const request = (index: number, value: unknown = null) => {
+      const contents = f.views[index]!.webContents;
+      const handler = contents.ipc.handle.mock.calls[0]![1] as (
+        event: unknown,
+        value: unknown,
+      ) => Promise<unknown>;
+      return handler(
+        { sender: contents, senderFrame: contents.mainFrame },
+        value,
+      );
+    };
+    // Background data requests remain valid, but cannot gain terminal authority
+    // by waiting for this same view to become visible.
+    await expect(request(0)).resolves.toEqual({ ok: true });
+    expect(captures[0]!.id).toBe(first.id);
+    expect(captures[0]!.isCurrentVisible()).toBe(false);
+    await host.present(present(first.id));
+    expect(captures[0]!.isCurrentVisible()).toBe(false);
+    await request(0, { id: second.id });
+    expect(captures[1]!.id).toBe(first.id);
+    expect(captures[1]!.isCurrentVisible()).toBe(true);
+    await request(1, { id: first.id });
+    expect(captures[2]!.id).toBe(second.id);
+    expect(captures[2]!.isCurrentVisible()).toBe(false);
+    await host.present(present(null, 2));
+    expect(captures[1]!.isCurrentVisible()).toBe(false);
+    await host.present(present(first.id, 3));
+    expect(captures[1]!.isCurrentVisible()).toBe(false);
+    await request(0);
+    expect(captures[3]!.isCurrentVisible()).toBe(true);
+    // Even a geometry revision invalidates earlier asynchronous admission.
+    await host.present(present(first.id, 4));
+    expect(captures[3]!.isCurrentVisible()).toBe(false);
+    await request(0);
+    expect(captures[4]!.isCurrentVisible()).toBe(true);
+    f.owner.isVisible.mockReturnValue(false);
+    f.owner.emit("hide");
+    expect(captures[4]!.isCurrentVisible()).toBe(false);
+    f.owner.isVisible.mockReturnValue(true);
+    expect(captures[4]!.isCurrentVisible()).toBe(false);
+    await request(0);
+    expect(captures[5]!.isCurrentVisible()).toBe(true);
+    f.owner.isMinimized.mockReturnValue(true);
+    f.owner.emit("minimize");
+    expect(captures[5]!.isCurrentVisible()).toBe(false);
+    await request(0);
+    f.owner.isMinimized.mockReturnValue(false);
+    expect(captures[5]!.isCurrentVisible()).toBe(false);
+    expect(captures[6]!.isCurrentVisible()).toBe(false);
+    await host.retire();
+    expect(captures.every((context) => !context.isCurrentVisible())).toBe(true);
   });
   it("is lazy, owns hidden views, uses unique ephemeral sessions and secure preferences", async () => {
     const f = await fixture();

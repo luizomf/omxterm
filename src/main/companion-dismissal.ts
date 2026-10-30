@@ -6,10 +6,17 @@ import { extensionViewIpc } from "../shared/extension-view";
 export function createCompanionDismissal(window: BrowserWindow) {
   const contents = window.webContents;
   let owned: string | undefined;
+  let activation: { id: string; identity: string } | undefined;
   const release = () => {
     owned = undefined;
+    activation = undefined;
   };
-  const handle = (event: Event, input: Input, panelId?: string) => {
+  const handle = (
+    event: Event,
+    input: Input,
+    panelId?: string,
+    activationId = panelId,
+  ) => {
     const down = input.type === "keyDown" || input.type === "rawKeyDown";
     if (!down && input.type !== "keyUp") return false;
     const identity = input.code || input.key;
@@ -21,6 +28,9 @@ export function createCompanionDismissal(window: BrowserWindow) {
         return true;
       }
     }
+    if (activation?.identity === identity && !down) activation = undefined;
+    if (activationId && down && !input.isAutoRepeat && input.key === "Enter")
+      activation = { id: activationId, identity };
     if (!panelId || !down || input.key !== "Escape") return false;
     owned = identity;
     event.preventDefault();
@@ -41,5 +51,15 @@ export function createCompanionDismissal(window: BrowserWindow) {
     contents.removeListener("render-process-gone", release);
     window.removeListener("blur", release);
   });
-  return { handle };
+  return {
+    handle,
+    // A trusted semantic request claims the still-held Enter that reached its
+    // own child. The initial press remains a DOM activation; only subsequent
+    // repeats/release are swallowed across the child-to-core handoff.
+    claimActivation(id: string) {
+      if (activation?.id !== id) return;
+      owned = activation.identity;
+      activation = undefined;
+    },
+  };
 }

@@ -50,6 +50,9 @@ export function startTerminalWindow(bridge: Window["omxterm"]): void {
         {
           configuration,
           ...(layout ? { layout } : {}),
+          ...(bridge.terminal.semanticInput
+            ? { semanticInput: bridge.terminal.semanticInput }
+            : {}),
           ...(initialLayout ? { initialLayout } : {}),
           about: bridge.about,
           ...(bridge.terminal.palette

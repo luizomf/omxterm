@@ -148,6 +148,21 @@ export function createCompanionContent(
           presentation.ownsFocus(target.id))
       );
     },
+    focusTerminal() {
+      presentation.focusCore(options.focusTerminal);
+    },
+    restoreSourceFocus(id: string) {
+      if (
+        disposed ||
+        options.blocked() ||
+        presentation.isBlocked() ||
+        application?.kind !== "terminal" ||
+        selectedPanel()?.id !== id
+      )
+        return false;
+      presentation.focus();
+      return true;
+    },
     isSourceForeground(id: string) {
       return (
         !options.blocked() &&

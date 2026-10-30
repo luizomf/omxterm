@@ -161,6 +161,25 @@ export function createHostedContentPresentation(
       } else finish();
     },
     focus: () => show(true),
+    focusCore(activate: () => void) {
+      if (disposed || blocked || pendingOverlay || transitioning || failed)
+        return;
+      if (!nativePossible || !selected || selected.removed) {
+        activate();
+        return;
+      }
+      const current = generation;
+      void present(selected, "core").then((ok) => {
+        if (
+          ok === true &&
+          !disposed &&
+          !blocked &&
+          !pendingOverlay &&
+          current === generation
+        )
+          activate();
+      });
+    },
     isBlocked: () => blocked || pendingOverlay,
     ownsFocus: (id?: string) =>
       !disposed &&
@@ -182,8 +201,11 @@ export function createHostedContentPresentation(
       if (value && nativePossible) void present(undefined);
       else show();
     },
-    openOverlay(open: () => void) {
-      if (disposed || pendingOverlay || transitioning) return;
+    openOverlay(open: () => void, refused?: () => void) {
+      if (disposed || blocked || pendingOverlay || transitioning || failed) {
+        refused?.();
+        return;
+      }
       if (!nativePossible) {
         open();
         return;
@@ -191,13 +213,20 @@ export function createHostedContentPresentation(
       pendingOverlay = true;
       const current = generation;
       void present(undefined).then((ok) => {
-        if (disposed) return;
+        if (disposed) {
+          refused?.();
+          return;
+        }
         if (current !== generation) {
           pendingOverlay = false;
           show();
+          refused?.();
           return;
         }
-        if (!ok) return;
+        if (!ok) {
+          refused?.();
+          return;
+        }
         open();
         pendingOverlay = false;
         show();

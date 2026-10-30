@@ -49,10 +49,10 @@ service is consumed by the production Settings local/HTTPS install dialog; it ne
 Unknown fields are rejected. ID is bounded lowercase ASCII namespace/name; version is semver; application and API ranges must parse and match the explicitly supplied runtime. Normal semver prerelease rules apply: a development application requires a range admitting that prerelease tuple. Backend must name an exact regular archive entry. It is validated but never imported. An optional exact `view` object declares one concrete application-tab entry and shared action: `{ "entry": "view/index.html", "action": "example.files.open", "title": "Files" }`. The entry must be an exact regular `.html` archive member admitted by the hosted resource grammar: at most 512 characters, slash-separated ASCII components starting with a letter, digit, underscore or hyphen, containing only letters, digits, underscores, hyphens and dots, with no trailing dot. The action is the exact package ID plus one dot-separated leaf (no further dots), preventing nested package namespaces from claiming the same action; the title is bounded nonblank display text. It grants no startup activation or shortcut. Other contribution fields, platform declarations and publisher/source trust metadata remain rejected, not permissive placeholders. This internal schema is not a stable extension author API or an assignment of an application release number.
 
 The preview now admits the exact capability names `terminal.openSsh.v1`,
-`terminal.captureLayout.v1`, `terminal.openLayout.v1`, `terminal.mirrorTyping.v1`
-and `state.v1` in an
+`terminal.captureLayout.v1`, `terminal.openLayout.v1`, `terminal.mirrorTyping.v1`,
+`terminal.semanticInput.v1` and `state.v1` in an
 optional nonempty unique `capabilities` array. Unknown names refuse. The first
-four are own-view host operations; state is declaration-gated backend bootstrap
+five are own-view host operations; state is declaration-gated backend bootstrap
 support, not browser filesystem access. Optional `view.context: "window"`
 selects original-window lifetime without a captured source-session directory;
 omission retains existing session context. Layout/state declarations require a
@@ -60,6 +60,11 @@ compatible newer host; older hosts reject them rather than partially activating.
 Mirror Typing requires host 0.24.0-dev.2 or newer within its declared 0.24.x
 range. Its own-view describe/start/stop capability grants no extension-authored
 keyboard payload route; see [the capability contract](mirror-typing.md#capability-and-lifetime).
+Semantic input requires host 0.24.0-dev.7 or newer and validates a currently visible,
+authenticated view before admitting exact text to a captured core Surface. It
+shares core Protected Paste and the read-only choice preview; it grants no PTY,
+terminal-output or key-injection handle. See [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md).
+Its availability does not install Snippets or remove the built-in feature.
 
 The immutable Files0.1.0 manifest's exact historical engine metadata is admitted
 on the deliberately enumerated hosts 0.24.0-dev.0, 0.24.0-dev.1,

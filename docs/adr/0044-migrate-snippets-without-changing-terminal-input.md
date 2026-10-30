@@ -1,9 +1,10 @@
 # ADR 0044: Migrate Snippets without changing terminal input
 
 Status: accepted migration design for [#741](https://github.com/luizomf/omxterm/issues/741);
-migration not implemented. Preparatory source now includes activation-scoped
-catalog paging and reusable core semantic-input capture/preview ownership.
-Neither is an installed Snippets replacement or a native own-view capability yet.
+platform migration not implemented. Preparatory source includes activation-scoped
+catalog paging and a declared native own-view semantic-input capability reusing
+core capture/preview ownership. This is not an installed Snippets replacement,
+package qualification or platform cutover.
 The built-in feature remains the shipping behavior described in
 [the specification](../spec.md). This decision does not remove it or claim a
 stable extension SDK.
@@ -35,7 +36,12 @@ modal admission, focus handoff and held-gesture ownership. Do not expose a PTY
 handle, terminal output, raw key injection or an arbitrary target selector to the
 package. A single declared own-view semantic-input capability is sufficient:
 request exact text for Insert, Run, or a read-only choice preview. Concrete wire
-names are internal until implementation; the capability's behavior is fixed here.
+names are internal, not a stable SDK; the capability's behavior is fixed here.
+The implemented `terminal.semanticInput.v1` request carries exact `text`, a
+`title`, optional `description`, `intent` (`insert` or `run`) and a boolean
+`preview`. It accepts no caller-supplied terminal target. A successful response
+means the interaction finished while available, not that a preview was confirmed
+or that Surface-owned paste completed.
 
 The capability validates bounded text and intent, authenticates the current
 sender/window/view/installation epoch and rejects stale or hidden views. Core

@@ -25,6 +25,7 @@ import { terminalMenuActions } from "./terminal-menu-actions";
 import { extensionInvocationTarget } from "./extension-invocation-target";
 import { startApplicationExtensions } from "./application-extensions";
 import { registerSshTerminalLaunch } from "./ssh-terminal-ipc";
+import { registerSemanticInputIpc } from "./semantic-input-ipc";
 import { startApplicationLayout } from "./application-layout";
 import { registerMirrorTypingIpc } from "./mirror-typing-ipc";
 import { terminalContextMenuTemplate } from "./terminal-context-menu";
@@ -128,12 +129,14 @@ let extensions:
 let sshLaunch: ReturnType<typeof registerSshTerminalLaunch>;
 let layouts: ReturnType<typeof startApplicationLayout>;
 let mirrors: ReturnType<typeof registerMirrorTypingIpc>;
+let semanticInput: ReturnType<typeof registerSemanticInputIpc>;
 const shutdown = registerTerminalShutdown(app, {
   application: () => terminalApplication,
   disposeSessions: () => {
     sshLaunch?.dispose();
     layouts?.dispose();
     mirrors?.dispose();
+    semanticInput?.dispose();
     disposeTerminalSessions();
   },
   disposeExtensions: () => extensions?.dispose() ?? Promise.resolve(true),
@@ -198,6 +201,11 @@ app
           trusted: terminalIpcRouter.isTrustedSender,
           quitting: () => terminalApplication?.isQuitting() === true,
         });
+        semanticInput = registerSemanticInputIpc({
+          ipc: ipcMain,
+          trusted: terminalIpcRouter.isTrustedSender,
+          quitting: () => terminalApplication?.isQuitting() === true,
+        });
         let rebuildMenu = () => {};
         let actionCatalog: CoreActionCatalog;
         extensions = await startApplicationExtensions({
@@ -207,6 +215,7 @@ app
           ssh: sshLaunch,
           layout: layouts,
           mirrorTyping: mirrors,
+          semanticInput,
           isTrustedSender: terminalIpcRouter.isTrustedSender,
           changed: () => rebuildMenu(),
           keybind: (event, input) =>
@@ -414,6 +423,7 @@ app
 
             layouts.register(window, controller, restoration?.plan);
             mirrors.register(window, controller);
+            semanticInput.register(window);
             extensions!.registerWindow(window, (source, context) =>
               invocationTarget.capture(
                 (id) => controller.reportedWorkingDirectory?.(id),

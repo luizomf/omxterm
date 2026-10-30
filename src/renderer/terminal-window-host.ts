@@ -64,6 +64,7 @@ export interface TerminalWindowPageElements {
 interface TerminalWindowPageOptions extends TerminalWindowActionSubscriptions {
   readonly initialLayout?: InitialLayout;
   readonly layout?: TerminalLayoutBridge;
+  readonly semanticInput?: import("../shared/semantic-input").SemanticInputBridge;
   readonly hostedContent?: HostedContentBridge;
   readonly mirrorTyping?: import("../shared/mirror-typing").MirrorTypingBridge;
   readonly about?: AboutBridge;
@@ -207,6 +208,9 @@ export function mountTerminalWindowPage(
       mirrorTyping: options.mirrorTyping,
       initialLayout: options.initialLayout,
       layout: options.layout,
+      ...(options.semanticInput
+        ? { notifySelectionRevision: options.semanticInput.selection }
+        : {}),
       ...(options.settings ? { settings: options.settings } : {}),
       ...(options.extensions ? { extensions: options.extensions } : {}),
       hostedContent: options.hostedContent,
@@ -363,6 +367,8 @@ export function mountTerminalWindowPage(
       blocked: previewActive,
       onPreviewActivity: onOverlayActivity,
       modalClipboard: (action) => palette?.clipboardAction(action) ?? false,
+      focusTerminal: companion.focusTerminal,
+      restoreSourceFocus: companion.restoreSourceFocus,
     });
     snippetPreview = tools.preview;
     removeToolSubscriptions = tools.unsubscribe;

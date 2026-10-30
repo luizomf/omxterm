@@ -37,7 +37,7 @@ function fixture() {
 }
 it("captures before asynchronous overlay admission and never follows a replacement", () => {
   const f = fixture();
-  f.input.request(snippet, "preview");
+  void f.input.request(snippet, "preview");
   const replacement = { ...f.target, deliver: vi.fn() };
   f.capture.mockReturnValue(replacement);
   f.overlays[0]!();
@@ -53,36 +53,36 @@ it("captures before asynchronous overlay admission and never follows a replaceme
 it("revokes a pending or open choice without revoking accepted delivery", () => {
   const f = fixture();
   const pending = new AbortController();
-  f.input.request(snippet, "preview", () => false, pending.signal);
+  void f.input.request(snippet, "preview", () => false, pending.signal);
   pending.abort();
   f.overlays[0]!();
   expect(document.querySelector("dialog")).toBeNull();
   const open = new AbortController();
   const returnFocus = vi.fn(() => true);
-  f.input.request(snippet, "preview", returnFocus, open.signal);
+  void f.input.request(snippet, "preview", returnFocus, open.signal);
   f.overlays[1]!();
   open.abort();
   expect(document.querySelector("dialog")).toBeNull();
   expect(returnFocus).toHaveBeenCalledOnce();
   expect(f.target.deliver).not.toHaveBeenCalled();
   const accepted = new AbortController();
-  f.input.request(snippet, "insert", returnFocus, accepted.signal);
+  void f.input.request(snippet, "insert", returnFocus, accepted.signal);
   accepted.abort();
   expect(f.target.deliver).toHaveBeenCalledExactlyOnceWith(snippet.body, false);
 });
 it("disposal revokes delayed previews and subsequent immediate input", () => {
   const f = fixture();
-  f.input.request(snippet, "preview");
+  void f.input.request(snippet, "preview");
   f.input.preview.dispose();
   f.overlays[0]!();
-  f.input.request(snippet, "run");
+  void f.input.request(snippet, "run");
   expect(document.querySelector("dialog")).toBeNull();
   expect(f.capture).toHaveBeenCalledOnce();
   expect(f.target.deliver).not.toHaveBeenCalled();
 });
 it("does not capture already revoked requests", () => {
   const f = fixture();
-  f.input.request(snippet, "run", () => false, AbortSignal.abort());
+  void f.input.request(snippet, "run", () => false, AbortSignal.abort());
   expect(f.capture).not.toHaveBeenCalled();
   expect(f.target.deliver).not.toHaveBeenCalled();
 });

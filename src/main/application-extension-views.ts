@@ -1,3 +1,4 @@
+import { isSemanticInputRequest } from "../shared/semantic-input";
 import { ipcMain, type BrowserWindow } from "electron";
 import type { HostedContentDescriptor } from "../shared/extension-view";
 import path from "node:path";
@@ -45,10 +46,27 @@ export function applicationViews(
       return { x: 0, y: 34, width: width!, height: Math.max(0, height! - 34) };
     },
     onKeybind: options.keybind,
-    onRequest(value, signal) {
+    onRequest(value, signal, context) {
       if (epochSignal.aborted || target.signal.aborted || signal.aborted)
         return Promise.reject(new PackageError("unavailable"));
       if (value && typeof value === "object" && !Array.isArray(value)) {
+        if (value.operation === "terminal.semanticInput.v1") {
+          if (
+            !pin.manifest.capabilities?.includes("terminal.semanticInput.v1") ||
+            !options.semanticInput ||
+            !isSemanticInputRequest(value) ||
+            !context.isCurrentVisible()
+          )
+            return Promise.reject(new PackageError("unavailable"));
+          host.claimActivation(context.id);
+          return options.semanticInput.request(
+            window,
+            value,
+            context,
+            AbortSignal.any([signal, epochSignal, target.signal]),
+            admit,
+          );
+        }
         if (value.operation === "terminal-directory")
           return Promise.resolve(
             target.terminalDirectory

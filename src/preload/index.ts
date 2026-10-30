@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
+import { createSemanticInputBridge } from "./semantic-input-bridge";
 import { createTerminalLayoutBridge } from "./terminal-layout-bridge";
 import { createMirrorTypingBridge } from "./mirror-typing-bridge";
 import { isLayoutToken } from "../shared/terminal-layout";
@@ -188,6 +189,7 @@ const terminal: TerminalBridge = {
     ipcRenderer.send("terminal:ssh-pane", { token, accepted });
   },
   layout: createTerminalLayoutBridge(ipcRenderer),
+  semanticInput: createSemanticInputBridge(ipcRenderer),
   mirrorTyping: createMirrorTypingBridge(ipcRenderer),
   async start(surfaceId, workingDirectoryOf, launchToken, restoreToken) {
     if (surfaceId !== undefined && !isSurfaceIdentity(surfaceId))

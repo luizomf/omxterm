@@ -158,12 +158,14 @@ it("ignores an overlay hide continuation after its selection changes", async () 
   const hide = deferred<boolean>();
   h.bridge.present.mockImplementationOnce(() => hide.promise);
   const open = vi.fn();
-  h.owner.openOverlay(open);
+  const refused = vi.fn();
+  h.owner.openOverlay(open, refused);
   h.owner.select(undefined, () => {}, {});
   await settle();
   hide.resolve(true);
   await settle();
   expect(open).not.toHaveBeenCalled();
+  expect(refused).toHaveBeenCalledOnce();
 });
 
 it.each(["refused", "rejected", "notification"] as const)(
@@ -192,6 +194,49 @@ it.each(["refused", "rejected", "notification"] as const)(
     );
   },
 );
+
+it.each([true, "focus-unavailable", false] as const)(
+  "returns native focus through the shared presenter only after successful acknowledgement (%s)",
+  async (result) => {
+    const h = fixture();
+    const target = h.slot("panel");
+    h.owner.select(target, () => {}, target);
+    await settle();
+    const pending = deferred<boolean | "focus-unavailable">();
+    h.bridge.present.mockImplementationOnce(() => pending.promise);
+    const activate = vi.fn();
+    h.owner.focusCore(activate);
+    expect(activate).not.toHaveBeenCalled();
+    expect(h.bridge.present.mock.lastCall?.[0]).toMatchObject({
+      id: "panel",
+      focus: "core",
+    });
+    pending.resolve(result);
+    await settle();
+    expect(activate).toHaveBeenCalledTimes(result === true ? 1 : 0);
+  },
+);
+
+it("settles refused overlays and discards core focus after selection replacement", async () => {
+  const h = fixture();
+  const target = h.slot("panel");
+  h.owner.select(target, () => {}, target);
+  await settle();
+  const pending = deferred<boolean>();
+  h.bridge.present.mockImplementationOnce(() => pending.promise);
+  const activate = vi.fn();
+  h.owner.focusCore(activate);
+  h.owner.select(undefined, () => {}, {});
+  pending.resolve(true);
+  await settle();
+  expect(activate).not.toHaveBeenCalled();
+  h.fail();
+  const open = vi.fn();
+  const refused = vi.fn();
+  h.owner.openOverlay(open, refused);
+  expect(open).not.toHaveBeenCalled();
+  expect(refused).toHaveBeenCalledOnce();
+});
 
 it("retires once and suppresses late selection, close and overlay callbacks", async () => {
   const h = fixture();
