@@ -96,8 +96,11 @@ it("projects Files appearance without replacing its listing or operation draft",
     await vi.waitFor(() =>
       expect(document.querySelector(".file-row")).not.toBeNull(),
     );
-    const row = document.querySelector<HTMLButtonElement>(".file-row")!;
+    const row = document.querySelector<HTMLElement>(".file-row")!;
     row.click();
+    [...document.querySelectorAll("button")]
+      .find((button) => button.textContent === "Actions…")!
+      .click();
     [...document.querySelectorAll("button")]
       .find((button) => button.textContent === "New file")!
       .click();
@@ -108,7 +111,7 @@ it("projects Files appearance without replacing its listing or operation draft",
     request.mockClear();
     appearance(light);
     expect(document.querySelector(".file-row")).toBe(row);
-    expect(row.getAttribute("aria-pressed")).toBe("true");
+    expect(row.getAttribute("aria-selected")).toBe("true");
     expect(input.value).toBe("draft.txt");
     expect(document.documentElement.style.colorScheme).toBe("light");
     expect(request).not.toHaveBeenCalled();

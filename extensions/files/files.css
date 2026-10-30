@@ -1,7 +1,9 @@
 @import "../shared/appearance.css";
 
+.application-page {
+  max-width: none;
+}
 .toolbar,
-.operations,
 .location {
   display: flex;
   flex-wrap: wrap;
@@ -12,16 +14,22 @@
   flex: 1;
   font-family: ui-monospace, monospace;
 }
-.operations {
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--ui-decoration);
+.entries {
+  min-height: 100px;
 }
 .operation-editor {
-  padding: 10px;
-  border: 1px solid var(--ui-decoration);
-  border-radius: 4px;
-  margin: 10px 0;
+  position: fixed;
+  z-index: 2;
+  inset: auto 8px 8px;
+  max-height: calc(100vh - 16px);
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--ui-input-border);
+  border-radius: 6px;
+  background: var(--ui-raised);
+  color: var(--ui-text);
   overflow-wrap: anywhere;
+  box-shadow: 0 4px 16px #0004;
 }
 .operation-editor label {
   display: grid;
@@ -33,42 +41,65 @@
 }
 .file-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 80px 90px;
-  gap: 8px;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  gap: 4px;
+  align-items: center;
   width: 100%;
-  border: 0;
+  min-height: 29px;
   border-radius: 3px;
-  background: transparent;
-  padding: 5px 8px;
-  text-align: left;
+  padding: 4px 6px 4px calc(4px + var(--depth) * 12px);
+  cursor: default;
+  user-select: none;
 }
-.file-row > span:first-child {
+.file-row:hover {
+  background: var(--tool-hover);
+}
+.file-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.file-row[aria-pressed="true"] {
+.disclosure {
+  cursor: pointer;
+  text-align: center;
+}
+.file-row[aria-selected="true"] {
   background: var(--tool-hover);
   box-shadow: inset 2px 0 var(--ui-text);
 }
 .kind,
-.size,
-.summary {
+.summary,
+.tree-hint {
   color: var(--ui-secondary);
   font-size: 11px;
+}
+.tree-hint {
+  padding: 4px 12px;
+  overflow-wrap: anywhere;
 }
 .summary {
   margin: 0;
 }
-.size {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+.file-menu {
+  position: fixed;
+  z-index: 3;
+  display: grid;
+  padding: 4px;
+  max-width: calc(100vw - 8px);
+  max-height: calc(100vh - 8px);
+  overflow: auto;
+  background: var(--ui-raised);
+  border: 1px solid var(--ui-input-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px #0004;
 }
-@media (max-width: 500px) {
-  .file-row {
-    grid-template-columns: minmax(0, 1fr) 64px;
-  }
-  .size {
+.file-menu button {
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+@media (max-width: 300px) {
+  .kind {
     display: none;
   }
 }

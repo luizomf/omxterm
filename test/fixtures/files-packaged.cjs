@@ -173,6 +173,31 @@ async function run(options) {
         (view) =>
           !view.isDestroyed() && view.getURL().startsWith("omx-extension://"),
       );
+  // These DOM-driven gestures qualify fixture-controlled input, not physical keys.
+  async function filesAction(contents, label) {
+    const visible = await contents.executeJavaScript(
+      `!![...document.querySelectorAll('button')].find(b => b.textContent === ${JSON.stringify(label)} && !b.closest('[hidden]'))`,
+    );
+    if (!visible) await click(contents, "Actions…");
+    await click(contents, label);
+  }
+  function entryQuery(directory, name) {
+    return `(() => {
+      const entries = document.querySelector('.entries');
+      if (entries.getAttribute('aria-busy') === 'true' || document.querySelector('.operation-editor').inert) return null;
+      if (document.querySelector('[aria-label=Directory]').value !== ${JSON.stringify(directory)} || !document.querySelector('.summary').textContent.includes('entries')) return null;
+      return entries.matches('[role=tree]')
+        ? [...entries.querySelectorAll('.file-row[role=treeitem][data-path]')].find(row => row.dataset.path === ${JSON.stringify(path.join(directory, name))})
+        : [...entries.querySelectorAll('button.file-row')].find(row => row.firstElementChild?.textContent === ${JSON.stringify(name)});
+    })()`;
+  }
+  async function select(view, name) {
+    if (await view.executeJavaScript("!!document.querySelector('.operations')"))
+      await click(view, "Refresh");
+    const query = entryQuery(options.files, name);
+    await until(() => view.executeJavaScript(`!!${query}`), "exact entry");
+    await view.executeJavaScript(`${query}.click()`);
+  }
   const tabCount = () =>
     js(
       "Math.max(1, document.querySelectorAll('#tab-strip [role=tab]').length)",
@@ -283,13 +308,15 @@ async function run(options) {
     assert.equal(shellStat()?.start, identity.start);
     return hosted()[0];
   }
-  async function apply(view, value) {
+  async function apply(view, value, outcome = "success") {
     await view.executeJavaScript(
       `document.querySelector('.operation-editor input').value = ${JSON.stringify(value)}; document.querySelector('.operation-editor').requestSubmit()`,
     );
     await until(
       () =>
-        view.executeJavaScript("!document.querySelector('.operations').inert"),
+        view.executeJavaScript(
+          `!document.querySelector('.operation-editor').inert && [...document.querySelectorAll('[role=status]')].some(notice => ${outcome === "conflict" ? "notice.textContent.startsWith('Operation not completed: conflict.')" : "notice.textContent === 'Operation completed.' || notice.textContent === 'Operation completed. Refresh to see the current directory.'"})`,
+        ),
       "mutation settled",
     );
   }
@@ -397,7 +424,7 @@ async function run(options) {
   let view = await openFiles();
   listeners("first-view-active");
   assert.equal(children.length, 1);
-  await click(view, "Use terminal directory");
+  await filesAction(view, "Use terminal directory");
   await until(
     () =>
       view.executeJavaScript(
@@ -456,12 +483,10 @@ async function run(options) {
   );
   await until(
     () =>
-      view.executeJavaScript(
-        "!![...document.querySelectorAll('.entries button')].find(b => b.textContent.includes('source.txt'))",
-      ),
+      view.executeJavaScript(`!!${entryQuery(options.files, "source.txt")}`),
     "second directory listing",
   );
-  await click(view, "Use terminal directory");
+  await filesAction(view, "Use terminal directory");
   await until(
     () =>
       view.executeJavaScript(
@@ -505,29 +530,18 @@ async function run(options) {
   );
   await until(
     () =>
-      view.executeJavaScript(
-        "!![...document.querySelectorAll('.entries button')].find(b => b.textContent.includes('source.txt'))",
-      ),
+      view.executeJavaScript(`!!${entryQuery(options.files, "source.txt")}`),
     "owned directory list",
   );
-  await click(view, "New file");
+  await filesAction(view, "New file");
   await apply(view, "created.txt");
   assert.equal(
     (await stat(path.join(options.files, "created.txt"))).isFile(),
     true,
   );
-  await until(
-    () =>
-      view.executeJavaScript(
-        "!![...document.querySelectorAll('.entries button')].find(b => b.textContent.includes('source.txt'))",
-      ),
-    "source entry",
-  );
-  await view.executeJavaScript(
-    "[...document.querySelectorAll('.entries button')].find(b => b.textContent.includes('source.txt')).click()",
-  );
-  await click(view, "Rename / move");
-  await apply(view, path.join(options.files, "conflict.txt"));
+  await select(view, "source.txt");
+  await filesAction(view, "Rename / move");
+  await apply(view, path.join(options.files, "conflict.txt"), "conflict");
   assert.equal(
     await readFile(path.join(options.files, "source.txt"), "utf8"),
     "source",
@@ -536,7 +550,7 @@ async function run(options) {
     await readFile(path.join(options.files, "conflict.txt"), "utf8"),
     "preserved",
   );
-  await click(view, "Rename / move");
+  await filesAction(view, "Rename / move");
   await apply(view, path.join(options.files, "moved.txt"));
   assert.equal(
     await readFile(path.join(options.files, "moved.txt"), "utf8"),

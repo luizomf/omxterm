@@ -1,5 +1,5 @@
 // Disposable assigned-guest fixture. Runs the built production entry point;
-// only native chooser/consent responses and observability are controlled here.
+// native chooser/consent responses, DOM/Chromium input and observability are controlled here.
 import { app, BrowserWindow, Menu, dialog, webContents } from "electron";
 import assert from "node:assert/strict";
 import { createRequire, syncBuiltinESMExports } from "node:module";
@@ -95,7 +95,10 @@ const fork = childProcess.fork;
 childProcess.fork = (...args) => {
   const child = fork(...args);
   if (String(args[0]).endsWith("extension-runtime/bootstrap.mjs")) {
-    const record = { child, pid: child.pid, closed: false };
+    const record = { child, pid: child.pid, closed: false, exit: null };
+    child.once("exit", (code, signal) => {
+      record.exit = { code, signal };
+    });
     child.once("close", () => {
       record.closed = true;
     });
@@ -165,6 +168,95 @@ void ready.then(async (window) => {
           contents.getURL().startsWith("omx-extension://") &&
           !contents.isDestroyed(),
       );
+  async function sameTerminal(selected = true) {
+    assert.equal(ptys.length, 1, "no extra PTY allocated");
+    assert.equal(ptys[0].exited, false, "original PTY remains live");
+    assert.equal(
+      await js(
+        "Math.max(1, document.querySelectorAll('#tab-strip [role=tab]').length)",
+      ),
+      selected ? 1 : 2,
+      "only the original terminal and explicitly opened Settings own tabs",
+    );
+    assert.equal(
+      await js(
+        `window.__filesOriginalCanvas === document.querySelector('.terminal-surface canvas') && (window.__filesOriginalCanvas.getBoundingClientRect().width > 0) === ${selected}`,
+      ),
+      true,
+      "same selected terminal Surface",
+    );
+  }
+  async function panel(view, visible, focus, terminalSelected = true) {
+    await until(async () => {
+      const native = window.contentView.children.find(
+        (child) => child.webContents === view,
+      );
+      return (
+        !view.isDestroyed() &&
+        !!native &&
+        native.getVisible() === visible &&
+        (await js(
+          `document.querySelector('.auxiliary-panel')?.hidden === ${!visible}`,
+        )) &&
+        (focus === "core"
+          ? core.isFocused() && !view.isFocused()
+          : view.isFocused() && !core.isFocused())
+      );
+    }, `Files panel visible=${visible} native focus=${focus}`);
+    assert.equal(hosted().length, 1, "one retained Files companion");
+    assert.equal(hosted()[0], view, "same native view identity");
+    await sameTerminal(terminalSelected);
+  }
+  async function reopen(action) {
+    // Existing pixels cannot acknowledge a new asynchronous admission.
+    await js(`(() => {
+      window.__filesReopened = false;
+      window.__removeFilesReopen = window.omxterm.terminal.hostedContent.onOpen(() => {
+        window.__filesReopened = true;
+      });
+    })()`);
+    try {
+      await action();
+      await until(
+        () => js("window.__filesReopened"),
+        "repeated Files admission",
+      );
+    } finally {
+      await js("window.__removeFilesReopen(); void 0;");
+    }
+  }
+  async function openFiles() {
+    menu("Files");
+    await until(
+      async () =>
+        hosted().length === 1 &&
+        (await hosted()[0].executeJavaScript(
+          "!!document.querySelector('form.location') && document.querySelector('.summary').textContent.includes('entries')",
+        )),
+      "Files companion loaded",
+    );
+    const view = hosted()[0];
+    await panel(view, true, "child");
+    return view;
+  }
+  // These DOM-driven gestures qualify fixture-controlled input, not physical keys.
+  async function filesAction(contents, label) {
+    const visible = await contents.executeJavaScript(
+      `!![...document.querySelectorAll('button')].find(b => b.textContent === ${JSON.stringify(label)} && !b.closest('[hidden]'))`,
+    );
+    if (!visible) await click(contents, "Actions…");
+    await click(contents, label);
+  }
+  function entryQuery(directory, name) {
+    return `(() => {
+      const entries = document.querySelector('.entries');
+      if (entries.getAttribute('aria-busy') === 'true' || document.querySelector('.operation-editor').inert) return null;
+      if (document.querySelector('[aria-label=Directory]').value !== ${JSON.stringify(directory)} || !document.querySelector('.summary').textContent.includes('entries')) return null;
+      return entries.matches('[role=tree]')
+        ? [...entries.querySelectorAll('.file-row[role=treeitem][data-path]')].find(row => row.dataset.path === ${JSON.stringify(path.join(directory, name))})
+        : [...entries.querySelectorAll('button.file-row')].find(row => row.firstElementChild?.textContent === ${JSON.stringify(name)});
+    })()`;
+  }
   async function terminal(marker) {
     await js("document.querySelector('#tab-strip [role=tab]')?.click()");
     await until(
@@ -189,26 +281,25 @@ void ready.then(async (window) => {
     );
   }
   async function select(contents, name) {
-    await click(contents, "Refresh");
-    await until(
-      () =>
-        contents.executeJavaScript(
-          `!![...document.querySelectorAll('.entries button')].find(b => b.textContent.includes(${JSON.stringify(name)}))`,
-        ),
-      "entry",
-    );
-    await contents.executeJavaScript(
-      `[...document.querySelectorAll('.entries button')].find(b => b.textContent.includes(${JSON.stringify(name)})).click()`,
-    );
+    // Legacy mutations leave a stale flat list; the tree refreshes on success.
+    if (
+      await contents.executeJavaScript(
+        "!!document.querySelector('.operations')",
+      )
+    )
+      await click(contents, "Refresh");
+    const query = entryQuery(files, name);
+    await until(() => contents.executeJavaScript(`!!${query}`), "exact entry");
+    await contents.executeJavaScript(`${query}.click()`);
   }
-  async function apply(contents, value) {
+  async function apply(contents, value, outcome = "success") {
     await contents.executeJavaScript(
       `document.querySelector('.operation-editor input').value = ${JSON.stringify(value)}; document.querySelector('.operation-editor').requestSubmit()`,
     );
     await until(
       () =>
         contents.executeJavaScript(
-          "!document.querySelector('.operations').inert",
+          `!document.querySelector('.operation-editor').inert && [...document.querySelectorAll('[role=status]')].some(notice => ${outcome === "conflict" ? "notice.textContent.startsWith('Operation not completed: conflict.')" : "notice.textContent === 'Operation completed.' || notice.textContent === 'Operation completed. Refresh to see the current directory.'"})`,
         ),
       "mutation completion",
     );
@@ -223,7 +314,7 @@ void ready.then(async (window) => {
       "native PTY exits joined before Quit",
     );
     process.stdout.write(
-      `__FILES_PRODUCTION__${JSON.stringify({ checks, failed, approved, backends: children.map(({ pid, closed }) => ({ pid, closed })), ptys, input: "synthetic-Chromium-input; native chooser responses controlled", quit: "joined" })}\n`,
+      `__FILES_PRODUCTION__${JSON.stringify({ checks, failed, approved, backends: children.map(({ pid, closed, exit }) => ({ pid, closed, exit })), ptys, input: "synthetic-Chromium-input; native chooser responses controlled", quit: "joined" })}\n`,
     );
   });
   try {
@@ -309,6 +400,11 @@ void ready.then(async (window) => {
           (await core.capturePage()).toPNG(),
         );
       }
+      await js("document.querySelector('.settings-close').click()");
+      await until(
+        () => js("!document.querySelector('.settings-dialog')"),
+        "HTTPS Settings closed",
+      );
       await terminal("OMX_HTTPS_AFTER");
       assert.equal(ptys.length, 1);
       assert.equal(
@@ -329,21 +425,13 @@ void ready.then(async (window) => {
       () => js("!document.querySelector('.settings-dialog')"),
       "Settings closed",
     );
-    menu("Files");
-    // A navigation URL precedes load completion and Application Tab selection.
-    // Stabilize the intended palette owner; do not bypass its stale-target guard.
-    await until(async () => {
-      if (hosted().length !== 1) return false;
-      if (
-        !(await js(
-          "!!document.querySelector('#tab-strip [role=tab][aria-selected=true]')?.textContent.includes('Files')",
-        ))
-      )
-        return false;
-      return hosted()[0].executeJavaScript(
-        "!!document.querySelector('form.location')",
-      );
-    }, "first Files selected and loaded");
+    const view = await openFiles();
+    await reopen(() => menu("Files"));
+    await panel(view, true, "child");
+    assert.equal(children.length, 1, "menu reopen retains backend");
+    await js("document.querySelector('.auxiliary-header button').click()");
+    await panel(view, false, "core");
+    await terminal("OMX_FILES_HIDDEN");
     menu("Command Palette");
     await until(
       () =>
@@ -352,37 +440,43 @@ void ready.then(async (window) => {
         ),
       "shared Files palette contribution",
     );
-    await js(
-      "[...document.querySelectorAll('.command-palette [role=option]')].find(row => row.textContent === 'Files').click()",
+    await reopen(() =>
+      js(
+        "[...document.querySelectorAll('.command-palette [role=option]')].find(row => row.textContent === 'Files').click()",
+      ),
     );
-    await until(() => hosted().length === 2, "second Files view");
-    assert.equal(children.length, 1, "two real views share one backend");
-    checks.push("shared-menu-palette-two-real-views-one-backend");
-    const view = hosted()[1];
+    await panel(view, true, "child");
+    assert.equal(children.length, 1, "palette reopen retains backend");
+    menu("Settings");
     await until(
-      () => view.executeJavaScript("!!document.querySelector('form.location')"),
-      "Files UI loaded",
+      () => js("!!document.querySelector('#settings-tab-extensions')"),
+      "Settings suspends Files",
     );
+    await panel(view, false, "core", false);
+    await js("document.querySelector('.settings-close').click()");
     await until(
-      () =>
-        js(
-          "[...document.querySelectorAll('#tab-strip [role=tab]')].filter(tab => tab.textContent.includes('Files')).length === 2 && !!document.querySelector('#tab-strip [role=tab][aria-selected=true]')?.textContent.includes('Files')",
-        ),
-      "two registered Files tabs",
+      () => js("!document.querySelector('.settings-dialog')"),
+      "Settings closed with retained Files",
+    );
+    await panel(view, true, "core");
+    await reopen(() => menu("Files"));
+    await panel(view, true, "child");
+    checks.push(
+      "menu-palette-single-companion-reopen-hide-settings-same-terminal",
     );
     await location(view);
-    await click(view, "New file");
+    await filesAction(view, "New file");
     await apply(view, "created.txt");
     assert.equal((await stat(path.join(files, "created.txt"))).isFile(), true);
-    await click(view, "New folder");
+    await filesAction(view, "New folder");
     await apply(view, "created-folder");
     assert.equal(
       (await stat(path.join(files, "created-folder"))).isDirectory(),
       true,
     );
     await select(view, "source.txt");
-    await click(view, "Rename / move");
-    await apply(view, path.join(files, "conflict.txt"));
+    await filesAction(view, "Rename / move");
+    await apply(view, path.join(files, "conflict.txt"), "conflict");
     assert.equal(
       await readFile(path.join(files, "source.txt"), "utf8"),
       "preserved-source",
@@ -391,14 +485,14 @@ void ready.then(async (window) => {
       await readFile(path.join(files, "conflict.txt"), "utf8"),
       "preserved-destination",
     );
-    await click(view, "Rename / move");
+    await filesAction(view, "Rename / move");
     await apply(view, path.join(files, "moved.txt"));
     assert.equal(
       await readFile(path.join(files, "moved.txt"), "utf8"),
       "preserved-source",
     );
     await select(view, "created.txt");
-    await click(view, "Delete permanently…");
+    await filesAction(view, "Delete permanently…");
     await until(
       () =>
         view.executeJavaScript(
@@ -414,7 +508,7 @@ void ready.then(async (window) => {
       "permanent delete",
     );
     await select(view, "moved.txt");
-    await click(view, "Move to Trash");
+    await filesAction(view, "Move to Trash");
     await until(
       async () =>
         !(await stat(path.join(files, "moved.txt")).catch(() => null)),
@@ -435,31 +529,41 @@ void ready.then(async (window) => {
         (await core.capturePage()).toPNG(),
       );
     }
-    // Backend loss is observed before deliberately losing the view domain.
-    // Chromium need not place two hosted views in different renderer processes.
+    // Backend loss revokes and destroys its view. Never send a request or crash
+    // gesture to that retired WebContents; independent renderer loss is not tested here.
     assert.equal(children.length, 1);
-    children[0].child.kill("SIGKILL");
-    await until(() => children[0].closed, "actual backend close");
-    await click(view, "Refresh");
-    await until(
-      () =>
-        view.executeJavaScript(
-          "document.body.textContent.includes('Outcome unknown')",
-        ),
-      "truthful backend transport failure",
-    );
     const coreRenderer = core.getOSProcessId();
-    assert.notEqual(view.getOSProcessId(), coreRenderer);
-    view.forcefullyCrashRenderer();
-    await until(() => view.isDestroyed(), "renderer-domain retirement");
+    assert.equal(children[0].child.kill("SIGKILL"), true);
+    await until(
+      () => children[0].closed && view.isDestroyed() && hosted().length === 0,
+      "backend loss retires actual companion view",
+    );
+    assert.deepEqual(children[0].exit, { code: null, signal: "SIGKILL" });
+    await until(
+      () => js("document.querySelector('.auxiliary-panel')?.hidden === true"),
+      "retired companion removed from core",
+    );
     assert.equal(core.getOSProcessId(), coreRenderer);
     assert.equal(
       await js("!!document.querySelector('.terminal-surface canvas')"),
       true,
     );
     assert.equal(children.length, 1, "no automatic backend restart");
-    checks.push("renderer-domain-isolation-backend-loss-no-mutation-retry");
-    await terminal("OMX_FILES_WITH_VIEWS");
+    checks.push("backend-loss-retires-companion-core-survives");
+    await terminal("OMX_FILES_AFTER_BACKEND_LOSS");
+    assert.equal(
+      children.length,
+      1,
+      "no backend restart through terminal roundtrip",
+    );
+    await sameTerminal();
+    // Explicit fresh admission, not automatic recovery, supplies a live backend
+    // for the normal Disable retirement assertion below.
+    const replacement = await openFiles();
+    assert.notEqual(replacement, view);
+    assert.equal(children.length, 2);
+    assert.notEqual(children[0].pid, children[1].pid);
+    checks.push("explicit-reopen-fresh-view-and-backend");
     assert.equal(
       await js(
         "window.__filesOriginalCanvas === document.querySelector('.terminal-surface canvas')",
@@ -469,9 +573,12 @@ void ready.then(async (window) => {
     menu("Settings");
     await until(
       () =>
-        js("!document.querySelector('.settings-dialog').closest('[hidden]')"),
+        js(
+          "!!document.querySelector('.settings-dialog') && !document.querySelector('.settings-dialog').closest('[hidden]')",
+        ),
       "Settings return",
     );
+    await panel(replacement, false, "core", false);
     await click(core, "Config File");
     await until(
       () => js("!!document.querySelector('.settings-config-file textarea')"),
@@ -481,10 +588,28 @@ void ready.then(async (window) => {
       "window.__filesDraft = document.querySelector('.settings-config-file textarea'); window.__filesDraft.value += '\\n '; window.__filesDraft.dispatchEvent(new Event('input', {bubbles:true})); window.__filesDraftValue = window.__filesDraft.value",
     );
     await click(core, "Extensions");
+    await until(
+      () =>
+        js(
+          "![...document.querySelectorAll('.extensions-panel button')].some(b => b.disabled)",
+        ),
+      "management admission",
+    );
     await click(core, "Disable");
     await until(
-      () => hosted().length === 0 && children[0].closed,
+      () =>
+        replacement.isDestroyed() &&
+        hosted().length === 0 &&
+        children[1].closed,
       "disable actual view and backend settlement",
+    );
+    assert.deepEqual(children[1].exit, { code: 0, signal: null });
+    await until(
+      () =>
+        js(
+          "document.querySelector('.extensions-panel').textContent.includes('disabled') && ![...document.querySelectorAll('.extensions-panel button')].some(b => b.disabled)",
+        ),
+      "Disable management response settled",
     );
     await click(core, "Uninstall");
     await until(
@@ -506,7 +631,8 @@ void ready.then(async (window) => {
       "Settings closed after cleanup",
     );
     await terminal("OMX_FILES_AFTER");
-    assert.equal(ptys.length, 1);
+    await sameTerminal();
+    assert.equal(children.length, 2, "management never restarts the backend");
     checks.push("disable-uninstall-real-settlement-retained-draft-same-PTY");
     app.quit();
   } catch (error) {

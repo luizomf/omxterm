@@ -64,7 +64,7 @@ it.each(["files", "ssh"])(
     const manifest = parseManifest(
       JSON.parse(await readFile(`extensions/${name}/extension.json`, "utf8")),
     );
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe(name === "files" ? "0.3.0" : "0.2.0");
     const release = {
       ...manifest,
       targets: ["linux-arm64"],

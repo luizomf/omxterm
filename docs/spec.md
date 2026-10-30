@@ -1811,6 +1811,16 @@ shared action invocation does. The explicit
 official catalog reuses the same installation owner/store; there is no public
 SDK or extension shortcut configuration. An empty source catalog is valid but
 does not constitute public distribution.
+Current-source Files provides an expandable local folder tree with keyboard
+navigation, discoverable Actions and item/background context menus. Operation
+editors retain captured targets. Successful filesystem mutations refresh the
+current root and surviving expanded folders automatically without navigating
+back to a previous root; failures and unknown outcomes never trigger mutation
+retry. Manual refresh handles external changes without watchers or polling.
+Links are not implicitly expanded, and existing bounded listings, no-clobber
+moves and one-shot permanent-delete confirmation remain unchanged. See the
+[Files interaction contract](files-development-preview.md#concrete-consumer).
+
 Files archive version/compatibility is maintained separately from the host;
 archives and build receipts are excluded from application packages. Build receipts
 bind final archive bytes to source/tool metadata without claiming qualification.
