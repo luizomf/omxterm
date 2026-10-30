@@ -1701,9 +1701,11 @@ core preview owner as built-in Snippets. Native Enter repeats/release remain
 owned across focus handoff. Retirement cancels unaccepted interactions but does
 not revoke accepted Surface-owned input or end sessions. This preparatory
 capability does not install an optional Snippets package or cut over any platform.
-Preparatory `extensions/snippets` source builds a separate archive using the shared
-Snippets UI/CSS and bounded catalog client. Its action is withheld from production;
-qualification composition selects it instead of the built-in view. Native child
+`extensions/snippets` source builds a separate archive using the shared
+Snippets UI/CSS and bounded catalog client. Its separate action is withheld from
+production; Linux ARM64 production composition routes the existing Snippets
+command to the optional installed companion or Extensions guidance. Other targets
+retain the built-in view. Native qualification uses unchanged production composition. Native child
 logical activity is separate from temporary visibility, and committed language
 and explicit search/restore focus intent preserve controls across overlays.
 No package publication or platform migration is implied;

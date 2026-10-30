@@ -79,6 +79,13 @@ shared scenario. The initial readiness session remains alive and is independentl
 checked for kernel exit at Quit. The scenario session and backend must join too.
 The source adapter observes its initial session before importing production main.
 Neither observer exposes a product input API or bypasses semantic admission.
+Before the shared scenario, ordinary terminal text and Enter replace the scenario
+shell with `/bin/sh -i` in the same PTY. A preceding shell output marker explicitly
+disables bracketed paste; the fixture verifies that marker and that plain-paste
+mode remains selected at every exact-byte assertion. This makes source and
+account-shell launches comparable without stripping framing from observed writes
+or accepting either encoding. Account-shell startup and bracketed-paste delivery
+are not qualified by this controlled-shell scenario.
 
 ## Oracles and limits
 

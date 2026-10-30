@@ -79,6 +79,25 @@ async function runScenario({
       "live PTY",
     );
     const session = ptys[0];
+    // New Tab starts the account shell (often Bash with bracketed paste).
+    // Enter a controlled POSIX shell through ordinary terminal input, never
+    // through the observer or a product injection API. Its output establishes
+    // plain-paste mode before the exact-byte scenario shared with source runs.
+    await until(
+      async () =>
+        core.isFocused() &&
+        (await js("!!document.activeElement?.closest('.terminal-surface')")),
+      "initial terminal focus",
+    );
+    await core.insertText(
+      `exec /bin/sh -c 'printf "\\033[?2004lSNIPPETS_SHELL_READY\\n"; exec /bin/sh -i'`,
+    );
+    core.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
+    core.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
+    await until(
+      () => session.output.includes("\u001b[?2004lSNIPPETS_SHELL_READY\r\n"),
+      "controlled shell emitted plain-paste mode",
+    );
     await js(`window.__snippetsCanvas = ${visibleCanvas}`);
     assert.equal(
       await js("document.querySelectorAll('.snippets-view').length"),
@@ -190,6 +209,11 @@ async function runScenario({
     };
     const drain = () => new Promise((resolve) => setTimeout(resolve, 150));
     const assertWrites = async (offset, expected) => {
+      assert.equal(
+        session.output.match(/\u001b\[\?2004[hl]/g)?.at(-1),
+        "\u001b[?2004l",
+        "controlled shell retains plain-paste mode",
+      );
       await until(
         () => session.writes.slice(offset).join("") === expected,
         "exact PTY bytes",
