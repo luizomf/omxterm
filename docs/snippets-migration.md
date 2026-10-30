@@ -35,14 +35,13 @@ sha256sum --check snippets-0.1.0.omxext.sha256
 ```
 
 No source build is required. Older hosts are not qualified for this package, and
-existing Files/SSH packages were not newly qualified on dev.11. The source official
-catalog now includes a candidate entry for these same Snippets bytes. Catalog
-publication and packaged public-HTTPS consumption are separate checkpoints, not
-established by this source change. The original release did not promote a catalog
-entry.
+existing Files/SSH packages were not newly qualified on dev.11. The official
+catalog now lists these same Snippets bytes. A separate bounded public-HTTPS
+checkpoint passed on this exact published host/archive pair; see
+[coverage below](#preview-coverage-and-remaining-platforms).
 
 1. Open **Settings → Extensions** and choose **Install local .omxext…**. A local
-   archive works offline. Alternatively, after catalog publication, choose
+   archive works offline. Alternatively, choose
    **Browse official extensions**, select the Snippets Linux ARM64 preview and
    install it. Browse/Refresh is explicit; reopening Settings does not fetch the
    catalog. Both routes use the same captured-byte trust and installation flow.
@@ -71,9 +70,17 @@ notes for exact identities and evidence.
 Snippets scenarios used synthetic Chromium/X11 input, explicit SwiftShader,
 controlled consent and a controlled plain-paste shell. They do not qualify
 physical keyboards, default GPUs, account-shell/bracketed-paste behavior or other
-platforms. Public download verification is not a new public-HTTPS installation
-campaign. The full package verifier used an authenticated nested X11 desktop,
+platforms. The full package verifier used an authenticated nested X11 desktop,
 not a broad distro/GPU campaign.
+
+A separate public-catalog checkpoint passed on the same published pair: production
+HTTPS catalog acquisition and Install/Reinstall, exact-digest trust, dormant
+installation, explicit enablement/Toggle, one exact Run with shell output,
+disable/uninstall, unchanged YAML, the same usable terminal and joined normal
+Quit. Actual captures and process settlement were checked. It used controlled
+consent, synthetic input, ANGLE SwiftShader and an isolated plain-paste shell;
+this does not expand the earlier keyboard/GPU/platform limits or requalify
+Files/SSH. No archive, host package or original build receipt was changed.
 
 Other-platform migrations remain open in [#741](https://github.com/luizomf/omxterm/issues/741).
 Each requires its own compatible, published package and matching qualification

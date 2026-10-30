@@ -72,12 +72,12 @@ entries. Follow the [SSH preview procedure](release.md#ssh-preview-publication)
 for its partial host/extension prereleases and bounded public-consumption gate.
 Catalog admission is not qualification of every version in an engine range.
 
-The source catalog also includes a Snippets0.1.0 Linux ARM64 candidate bound to
-its already published `snippets-0.1.0.omxext`, original receipt and checksum.
+The public catalog also lists Snippets0.1.0 for Linux ARM64, bound to the
+published `snippets-0.1.0.omxext`, original receipt and checksum.
 Its embedded host range remains `>=0.24.0-dev.8` with API `0.1.x`; the qualified
 published pair is host `0.24.0-dev.11`, not every admitted host. Files/SSH entries
-are unchanged. This source addition does not establish catalog publication or
-packaged public-HTTPS consumption. Follow the
-[Snippets catalog checkpoint](release.md#snippets-catalog-promotion) before claiming
-public delivery. [Local/offline installation](snippets-migration.md#install-deliberately),
+are unchanged. The fixed endpoint was read back byte-for-byte and the separate
+[packaged public-HTTPS checkpoint](snippets-migration.md#preview-coverage-and-remaining-platforms)
+passed on that exact pair. The [promotion procedure](release.md#snippets-catalog-promotion)
+retains the evidence requirements for future entries. [Local/offline installation](snippets-migration.md#install-deliberately),
 explicit trust/enablement and other-platform built-in Snippets remain unchanged.

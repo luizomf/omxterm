@@ -375,10 +375,12 @@ remain untouched.
 
 ### Snippets catalog promotion
 
-The source catalog candidate adds already published Snippets0.1.0 alongside
-unchanged Files/SSH entries; it is not evidence of a public consumption checkpoint.
-No application-version bump, rebuild or release-asset replacement is needed for
-this catalog/tests/docs change.
+Snippets0.1.0 is now listed alongside unchanged Files/SSH entries. Exact public
+endpoint readback and the separate dev.11 packaged public-HTTPS checkpoint passed;
+see the [migration guide](snippets-migration.md#preview-coverage-and-remaining-platforms)
+for coverage and limits. No application-version bump, rebuild or release-asset
+replacement was needed. The sequence below records the promotion requirements,
+not outstanding work or permission to repeat completed qualification.
 
 1. Independently download the immutable `ext-snippets-v0.1.0` archive and its
    original `.sha256`/`.json`. Bind 76,653 bytes and SHA-256
@@ -398,8 +400,8 @@ this catalog/tests/docs change.
    and input/rendering limits; local download or headless parser tests are not
    this checkpoint. Do not rewrite sealed release notes to claim later evidence.
 
-Maintainer integration/publication and this native checkpoint remain separate
-obligations. Keep explicit local/offline installation available; no new Files/SSH
+Maintainer integration/publication and the native checkpoint are distinct
+evidence boundaries. Keep explicit local/offline installation available; no new Files/SSH
 qualification, other-platform cutover, stable SDK or full #741 completion follows.
 
 ## Publication
