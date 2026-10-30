@@ -8,8 +8,8 @@ import { buildExtensionFixturePackages } from "../fixtures/extension-view-packag
 import { runNativeFixture } from "../fixtures/run-native-fixture";
 import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
 
-// Assigned idle Linux desktop only; no new supervisor or destructive main-death probe.
-it.skipIf(process.platform !== "linux")(
+// Assigned idle POSIX desktop only; no new supervisor or destructive main-death probe.
+it.skipIf(!["linux", "darwin"].includes(process.platform))(
   "composes two production hosted tabs with retained Settings and a continuing real Surface/PTY",
   { timeout: 250_000 },
   async (testContext) => {

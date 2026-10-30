@@ -4,6 +4,30 @@ This reference details focused native subsystem fixtures, their prerequisites, a
 
 For fixture ownership and cleanup, see [Linux packaged-wrapper controls](#linux-packaged-wrapper-controls), [supervised PTY acquisition](#supervised-pty-acquisition), and [Windows cleanup diagnostics](#windows-cleanup-diagnostics). The [graphical fixture supervision overview](development.md#graphical-fixture-supervision) and its headless entry recipe remain in the development guide.
 
+## Hosted extension view composition
+
+On an assigned idle, unlocked Linux or macOS desktop, run the existing hosted-view
+composition and native installed-version pin fixtures together:
+
+```sh
+OMXTERM_EXTENSION_VIEW_EVIDENCE_DIR=/absolute/evidence/directory npm test -- test/integration/extension-view-native.test.ts test/integration/extension-view-package-pin.test.ts
+```
+
+Use a fresh evidence directory outside disposable fixture profiles. The graphical
+fixture retains captures and composition/supervisor receipts there. It exercises
+two production hosted tabs, retained Settings, the same real Surface/PTY, native
+field editing/clipboard routing, hide-before-overlay, packaged-resource policy,
+A/B version pinning and renderer-crash retirement. The package-pin fixture uses
+the real native store without opening Electron or a PTY. Both use existing
+fixture preparation and lifetime infrastructure; neither enables production
+macOS extension composition or changes built-in Snippets availability.
+
+Input is synthetic Chromium/native editing API input, not physical-keyboard
+qualification. Page captures do not prove OS compositor behavior. These fixtures
+do not qualify packaged inclusion/signing, production application Quit or
+surviving-browser main-death file-read exclusion; see
+[ADR 0039](adr/0039-own-packaged-web-content-by-epoch.md).
+
 ## Host, hover and font lifecycle
 
 The integrated host's concurrent-font phase requires actual exit callbacks from
