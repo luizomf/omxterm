@@ -32,7 +32,7 @@ and records source hashes. It leaves shipping `dist` unchanged. The copied host
 uses the source's installed dependencies; keep both until qualification settles.
 
 ```sh
-OMXTERM_SNIPPETS_PACKAGED_ENTRY=/absolute/qualification/main.js \
+OMXTERM_SNIPPETS_PACKAGED_ENTRY=/absolute/qualification/main/index.js \
 OMXTERM_SNIPPETS_PACKAGED_ARCHIVE=/absolute/snippets.omxext \
 OMXTERM_SNIPPETS_PACKAGED_ARCHIVE_SHA256=<sha256> \
 OMXTERM_SNIPPETS_PACKAGED_EVIDENCE=/absolute/evidence \
