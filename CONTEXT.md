@@ -79,14 +79,11 @@ its native floating behavior. The menu toggles the selected window;
 configuration sets the default for new windows.
 
 **Command Palette** — A temporary window-owned dialog for searching and invoking
-core application actions from the native View menu or the configurable
-`commandPalette` shortcut (default: Cmd+Shift+P on macOS, Ctrl+Shift+P on Linux/Windows). It uses
-localized substring matching without fuzzy search or history and validates its
-captured selected tab/pane rather than retargeting a replacement. Copy, Paste,
-Select All, Find, positional tab selection and self-opening are excluded. Find
-awaits an established formerly focused Surface targeting contract. Settings
-remains retained application content underneath, not another modal. The palette
-shares theme-aware overlay styling with About without changing action ownership.
+core application actions from the native View menu or configurable
+`commandPalette` shortcut. It uses the Action Catalog and validates its captured
+tab/pane rather than retargeting a replacement. See
+[window and session behavior](docs/spec.md#window-and-session-behavior) for
+bindings, matching, excluded actions, modal ownership and appearance.
 
 **Action Catalog** — The internal core action definitions shared by native-menu
 presentation, Command Palette results and main-process key delivery. It owns
@@ -113,24 +110,18 @@ and the [configuration guide](docs/configuration.md).
 user's preferences. OMXTerm creates an initial kit when no configuration exists;
 subsequent edits belong to the user.
 
-**Settings** — One lazy, retained graphical Application Tab per window, without
-a pane, Surface, Adapter or PTY. Switching retains drafts/category/scroll/pending
-results, but cancels recording and invalidates clipboard interaction. Closing
-discards the editor lifetime without implicit raw Save; reopening reads anew.
-A deliberate change
-validates, writes and reloads `config.json`; opening OMXTerm or Settings never
-rewrites an existing document. Its language selector and editor text share the
-Interface Language, relabeling in place while retaining drafts and pending
-operations. Its page layers leave the window theme tint visible rather than
-forcing an opaque background. Initial-kit creation is the startup exception.
+**Settings** — One lazy, retained graphical Application Tab per window for editing
+`config.json`, without a pane, Surface, Adapter or PTY. Only deliberate changes
+write configuration; opening the editor does not. See
+[window and session behavior](docs/spec.md#window-and-session-behavior) for tab
+lifetime and appearance, and [configuration and local state](docs/spec.md#configuration-and-local-state)
+for save/reload, retained drafts, clipboard, recording and language contracts.
 
 **User Configuration Reload** — A manual, serialized load and validation
 followed by sequential application. Validation rejection keeps active settings;
-application-time exceptions can leave partial updates. Surfaces keep their
-creation-time font family and line height; new tabs use the latest values. A
-started native font read completes for surviving consumers across family changes;
-requests must still name the current family at admission, and obsolete queued
-reads are rejected before starting.
+application-time exceptions can leave partial updates. See
+[configuration and local state](docs/spec.md#configuration-and-local-state) for
+live-safe versus creation-time settings and native font-read lifetime rules.
 
 **Interface Language** — The language of OMXTerm's own menus, dialogs and
 controls, chosen only by the User Configuration `language` key (`en-US` default
