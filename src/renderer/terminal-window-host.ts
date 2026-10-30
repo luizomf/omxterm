@@ -208,9 +208,7 @@ export function mountTerminalWindowPage(
       mirrorTyping: options.mirrorTyping,
       initialLayout: options.initialLayout,
       layout: options.layout,
-      ...(options.semanticInput
-        ? { notifySelectionRevision: options.semanticInput.selection }
-        : {}),
+      notifySelectionRevision: options.semanticInput?.selection,
       ...(options.settings ? { settings: options.settings } : {}),
       ...(options.extensions ? { extensions: options.extensions } : {}),
       hostedContent: options.hostedContent,

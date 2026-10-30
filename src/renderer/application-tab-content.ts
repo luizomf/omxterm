@@ -32,6 +32,26 @@ export function activateTabContent(
   } else options.onGraphicalSelected?.();
 }
 
+export function captureActionTarget(
+  selected: () => ApplicationTab | undefined,
+  revision: () => number,
+  available: () => boolean,
+): { isCurrent(): boolean } {
+  const tab = selected();
+  const pane = tab?.kind === "terminal" ? tab.focused : undefined;
+  const generation = revision();
+  return {
+    isCurrent: () =>
+      available() &&
+      !!tab &&
+      !tab.removed &&
+      revision() === generation &&
+      selected() === tab &&
+      (tab.kind !== "terminal" ||
+        (!!pane && tab.focused === pane && !pane.removed && !pane.ended)),
+  };
+}
+
 export function focusApplicationTab(
   tab: ApplicationTab | undefined,
   options: TerminalTabsOptions,

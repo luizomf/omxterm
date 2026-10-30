@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Keep the shared installation adapter and its capability/lifetime matrix together. */
 import { packageArchive } from "../fixtures/extension-package-archive";
 import { EventEmitter } from "node:events";
 import { catalogBytes as catalogFixture } from "../fixtures/extension-catalog";

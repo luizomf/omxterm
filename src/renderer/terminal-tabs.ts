@@ -10,6 +10,7 @@ import {
   disposeTabContent,
   focusApplicationTab,
   focusPane,
+  captureActionTarget,
 } from "./application-tab-content";
 import type { HostedTab } from "./hosted-content-tabs";
 import { createGraphicalTabs } from "./graphical-tabs";
@@ -102,7 +103,7 @@ export interface TerminalTabsOptions {
   readonly canAutoFocus?: (unchangedFocus: boolean) => boolean;
   readonly notifyEmpty?: (reason?: "rendering-failure") => void;
   // The selected tab's focused pane and every started session of that tab.
-  readonly notifySelectionRevision?: (revision: number) => void;
+  readonly notifySelectionRevision?: ((revision: number) => void) | undefined;
   readonly notifySelection?: (
     sessionId: TerminalSessionId | null | SettingsTabSelection,
     tabSessionIds: readonly TerminalSessionId[],
@@ -495,26 +496,6 @@ function tabLabel(
   return tab.kind === "hosted"
     ? tab.title
     : tab.focused.label || String(index + 1);
-}
-
-function captureActionTarget(
-  selected: () => ApplicationTab | undefined,
-  revision: () => number,
-  available: () => boolean,
-): { isCurrent(): boolean } {
-  const tab = selected();
-  const pane = tab?.kind === "terminal" ? tab.focused : undefined;
-  const generation = revision();
-  return {
-    isCurrent: () =>
-      available() &&
-      !!tab &&
-      !tab.removed &&
-      revision() === generation &&
-      selected() === tab &&
-      (tab.kind !== "terminal" ||
-        (!!pane && tab.focused === pane && !pane.removed && !pane.ended)),
-  };
 }
 
 function bindTabLabels(

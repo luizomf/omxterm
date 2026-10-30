@@ -263,7 +263,11 @@ it("ignores foreign, untrusted, malformed, unknown and stale replies", async () 
     reply({ ...owner.event, senderFrame: {} }, value);
     reply(
       {
-        sender: { mainFrame: foreign.contents.mainFrame },
+        sender: {
+          mainFrame: foreign.contents.mainFrame,
+          isDestroyed: () => false,
+          send: vi.fn(),
+        },
         senderFrame: foreign.contents.mainFrame,
       },
       value,

@@ -50,23 +50,8 @@ export function applicationViews(
       if (epochSignal.aborted || target.signal.aborted || signal.aborted)
         return Promise.reject(new PackageError("unavailable"));
       if (value && typeof value === "object" && !Array.isArray(value)) {
-        if (value.operation === "terminal.semanticInput.v1") {
-          if (
-            !pin.manifest.capabilities?.includes("terminal.semanticInput.v1") ||
-            !options.semanticInput ||
-            !isSemanticInputRequest(value) ||
-            !context.isCurrentVisible()
-          )
-            return Promise.reject(new PackageError("unavailable"));
-          host.claimActivation(context.id);
-          return options.semanticInput.request(
-            window,
-            value,
-            context,
-            AbortSignal.any([signal, epochSignal, target.signal]),
-            admit,
-          );
-        }
+        if (value.operation === "terminal.semanticInput.v1")
+          return semanticRequest(value, signal, context);
         if (value.operation === "terminal-directory")
           return Promise.resolve(
             target.terminalDirectory
@@ -119,6 +104,27 @@ export function applicationViews(
       if (state === "settled") retired();
     },
   });
+  function semanticRequest(
+    value: Value,
+    signal: AbortSignal,
+    context: import("./extension-view-host").ExtensionViewRequestContext,
+  ) {
+    if (
+      !pin.manifest.capabilities?.includes("terminal.semanticInput.v1") ||
+      !options.semanticInput ||
+      !isSemanticInputRequest(value) ||
+      !context.isCurrentVisible()
+    )
+      return Promise.reject(new PackageError("unavailable"));
+    host.claimActivation(context.id);
+    return options.semanticInput.request(
+      window,
+      value,
+      context,
+      AbortSignal.any([signal, epochSignal, target.signal]),
+      admit,
+    );
+  }
   function revokeMirror() {
     if (target.mirrorContext)
       options.mirrorTyping?.retire(window, target.mirrorContext);

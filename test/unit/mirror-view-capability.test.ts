@@ -77,7 +77,8 @@ it.each([false, true])(
     await views.open();
     const signal = new AbortController().signal;
     const value = { operation: "terminal.mirrorTyping.v1", action: "describe" };
-    const invocation = adapter.options!.onRequest!(value, signal);
+    const context = { id: "owned-view", isCurrentVisible: () => true };
+    const invocation = adapter.options!.onRequest!(value, signal, context);
     if (declared) {
       await expect(invocation).resolves.toEqual({ ok: true });
       expect(request).toHaveBeenCalledWith(
@@ -135,8 +136,8 @@ it.each([false, true])(
       );
     }
     lifetime.abort();
-    await expect(adapter.options!.onRequest!(value, signal)).rejects.toThrow(
-      "unavailable",
-    );
+    await expect(
+      adapter.options!.onRequest!(value, signal, context),
+    ).rejects.toThrow("unavailable");
   },
 );
