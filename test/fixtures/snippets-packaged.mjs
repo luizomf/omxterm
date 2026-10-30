@@ -131,6 +131,16 @@ void ready
           (v) => !v.isDestroyed() && v.getURL().startsWith("omx-extension://"),
         );
     const checks = [];
+    const nativeKeys = [];
+    core.on("before-input-event", (event, input) => {
+      nativeKeys.push({
+        type: input.type,
+        key: input.key,
+        code: input.code,
+        repeat: input.isAutoRepeat,
+        prevented: event.defaultPrevented,
+      });
+    });
     try {
       window.focus();
       await until(
@@ -181,11 +191,6 @@ void ready
         await view.executeJavaScript("document.documentElement.lang"),
         "en-US",
       );
-      const nativeKeys = [];
-      core.on("before-input-event", (_event, input) => {
-        if (input.key === "Enter")
-          nativeKeys.push({ type: input.type, repeat: input.isAutoRepeat });
-      });
       const native = window.contentView.children.find(
         (child) => child.webContents === view,
       );
@@ -306,6 +311,12 @@ void ready
         "Chromium delivered a native repeat",
       );
       assert.equal(nativeKeys.at(-1)?.type, "keyUp");
+      assert.equal(nativeKeys.at(-1)?.code, "Enter");
+      if (fixture.evidence)
+        await writeFile(
+          path.join(fixture.evidence, "native-keys.json"),
+          JSON.stringify(nativeKeys, null, 2),
+        );
       await until(
         () => /\r?\nSNIPPETS_RUN_RECEIPT\r?\n/.test(session.output),
         "shell executed Run",
@@ -484,6 +495,7 @@ void ready
             {
               error: String(error),
               checks,
+              nativeKeys,
               core: await js("document.body.outerHTML"),
               children: await Promise.all(
                 hosted().map(async (view) => ({
