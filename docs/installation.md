@@ -39,9 +39,9 @@ provides the verified prebuilt archive/checksum/original receipt for local-file 
 **Install from link** installation in Settings → Extensions. Review the trusted-code
 warning and deliberately install/update the extension; upgrading the host alone
 does not update it. Open SSH Connect separately from File or the Command Palette;
-installation remains dormant. Official-catalog promotion and its public packaged
-checkpoint are pending; after promotion, **Browse official extensions** offers
-0.3.0 as well. Historical0.1.0 assets remain immutable.
+installation remains dormant. **Browse official extensions** also offers 0.3.0;
+fixed-endpoint readback and bounded public installation/management qualification
+passed on the exact dev.11 host. Historical0.1.0 assets remain immutable.
 No source build is needed. Both releases are non-Latest previews;
 only Linux ARM64 is qualified, with synthetic clients rather than real SSH
 authentication/connectivity. See [SSH Connect](ssh-connect.md) for requirements,

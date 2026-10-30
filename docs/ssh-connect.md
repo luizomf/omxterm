@@ -34,10 +34,9 @@ Neither is Latest; stable 0.23.0 and 0.23.0-dev.9 cannot run SSH Connect.
 The new archive requires host 0.24.0-dev.8 or later; dev.11 is the exact qualified
 Linux ARM64 host, not a claim of qualification for every admitted version.
 Install the published archive locally or through **Install from link** and review
-the version/digest and trusted-code warning. The official-catalog promotion is a
-candidate; fixed-endpoint readback and its public packaged checkpoint are pending.
-After promotion, **Browse official extensions** offers the new version for a
-deliberate install/update. Installation is dormant; open SSH Connect separately
+the version/digest and trusted-code warning. **Browse official extensions** also
+offers the new version for a deliberate install/update; fixed-endpoint readback
+and the bounded public packaged checkpoint passed on this exact pair. Installation is dormant; open SSH Connect separately
 to activate it. Official does not mean sandboxed.
 
 The published [ssh-0.3.0-77937fc.omxext archive](https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.0/ssh-0.3.0-77937fc.omxext)
@@ -57,7 +56,8 @@ synthetic Connect campaign, including normal/narrow geometry, retained state,
 core-owned terminals and joined Quit. A noncomposited nested desktop does not
 qualify native blur or universal transparency readability. Controlled inputs and
 synthetic clients do not establish real authentication or remote connectivity.
-Public asset verification is separate from the still-pending catalog checkpoint.
+Public asset verification and the subsequent catalog checkpoint remain separate
+evidence boundaries.
 
 ### Historical 0.1.0 preview
 
@@ -77,6 +77,33 @@ public-only checkpoint after rollout; record its actual outcome, never infer it
 from source integration or these instructions.
 
 ## Public distribution checkpoint
+
+The SSH0.3 catalog promotion at `6f4355d6573b0fb4e3f8591655d7db789106a8a7`
+passed independent review, full formatting/types/lint and 4,305 headless tests
+(66 skipped). Fixed raw endpoint bytes matched SHA-256
+`0a446b1a3c53960508f0d0b16a951e5f889d9998230832624d8f1edddef6dd15` after the
+initial CDN cache expired. Files and Snippets entries were preserved.
+
+A separate ordinary-user Linux ARM64 public-HTTPS checkpoint passed using fresh
+public dev.11 AppImage/SSH0.3 downloads with the hashes above. Production Settings
+installed and reinstalled the captured archive with two digest-bound consents;
+installation stayed dormant, explicit activation worked, reinstall/disable joined
+both backends, uninstall completed, and the same original terminal/Surface
+remained usable. Normal Busy Quit joined the PTY and main exit0; independent
+process/profile/lane absence and unchanged source/artifact hashes were checked.
+No SSH client was executed. Controlled input/dialogs, extracted AppImage execution
+and noncomposited rendering do not qualify real authentication, physical input,
+FUSE/helper installation, native blur or broad GPU support.
+
+The initial public run failed because its observer required every Settings button
+to be enabled, including an intentionally incompatible Files card. The failure
+was retained; fixture `f65c1c1d38a5a5866d2fe5118b75d575c21c5f55` scopes readiness
+to the page's own acquisition controls, with busy/missing-control negatives checked.
+The corrected run passed without changing product or archive bytes. The retained
+terminal capture was inspected; the two catalog captures lagged DOM transitions
+and are **not** additional visual qualification. Public lifecycle proof comes from
+actual production actions/receipts; SSH appearance evidence is the separate
+12-cell exact-package campaign above.
 
 On an assigned idle ordinary-user Linux ARM64 guest, reuse the opt-in
 `test/integration/ssh-packaged.test.ts` with absolute `OMXTERM_SSH_PACKAGED_APPIMAGE`,

@@ -67,9 +67,10 @@ and host minimum0.24.0-dev.8. The immutable `ext-ssh-v0.3.0` release provides
 `ssh-0.3.0-77937fc.omxext` (11,572 bytes, SHA-256
 `13b265058ba051bb1dcf57ba1cef9347ed8d6851069a4ad1206af0469feb46cf`), bound to source
 `77937fcf87ae71a68709111df7ace7359fb3f0b6` and its original checksum/receipt.
-Draft and anonymous public asset readback passed; the catalog promotion candidate
-preserves Files and Snippets metadata. Fixed-endpoint readback and bounded public
-packaged consumption remain pending. The exact native-qualified pair reuses public
+Draft and anonymous public asset readback passed; catalog promotion preserves
+Files and Snippets metadata. Fixed-endpoint readback and bounded public packaged
+consumption passed; [the SSH guide](ssh-connect.md#public-distribution-checkpoint)
+records the exact catalog digest, lifecycle results and capture limitations. The exact native-qualified pair reuses public
 Linux ARM64 host0.24.0-dev.11; the original receipt's build-time `not-run` and
 intended dev.19 fields remain unchanged. Historical SSH0.1.0
 `ssh-6d939f0.omxext` and its original sidecars remain immutable. Installing0.3.0

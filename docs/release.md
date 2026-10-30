@@ -308,15 +308,18 @@ recorded in the [SSH guide](ssh-connect.md#installing-the-distributed-preview).
 No host rebuild/release is required; stable `v0.23.0` remains Latest. Historical
 SSH0.1 assets, tags, notes and receipts remain immutable.
 
-The catalog/docs/test promotion candidate replaces only SSH metadata, preserving
-Files and Snippets. Bind version0.3.0, minimum host `>=0.24.0-dev.8`, API `0.1.x`,
-Linux ARM64 target, original source and exact archive identity to the new immutable
-release URLs. Complete independent candidate review before integration. Fixed raw
-catalog readback and the bounded [public SSH checkpoint](ssh-connect.md#public-distribution-checkpoint)
-are **pending**; do not infer them from published bytes or native qualification.
-Use extension version0.3.0 on exact publicdev.11 without appearance mode; retain
-actual catalog digest and outcomes separately. Catalog/docs/test-only promotion
-needs no application-version bump. Never retrofit sealed notes with later evidence.
+The independently reviewed catalog/docs/test promotion replaced only SSH metadata,
+preserving Files and Snippets, and was integrated at
+`6f4355d6573b0fb4e3f8591655d7db789106a8a7`. Fixed raw catalog readback matched SHA-256
+`0a446b1a3c53960508f0d0b16a951e5f889d9998230832624d8f1edddef6dd15`.
+The bounded [public SSH checkpoint](ssh-connect.md#public-distribution-checkpoint)
+then passed on exact publicdev.11/SSH0.3 with fresh public downloads, without
+appearance mode. Its results and initial fixture failure are separate from
+prepublication qualification. Catalog/docs/test-only promotion needed no
+application-version bump or rebuild. Future promotions must bind actual manifest,
+source, target and archive identities after public byte verification, complete
+independent review, then verify fixed-endpoint readback and packaged consumption.
+Never retrofit sealed notes with later evidence.
 
 ### Historical SSH 0.1.0 procedure
 

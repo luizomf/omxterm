@@ -209,7 +209,9 @@ async function run(options) {
     await until(
       () =>
         js(
-          "!!document.querySelector('.extensions-panel') && ![...document.querySelectorAll('.extensions-panel button')].some(b => b.disabled)",
+          // Incompatible catalog cards deliberately keep Install disabled. Only
+          // the page's own acquisition controls indicate snapshot readiness.
+          "!!document.querySelector('.extensions-panel > .application-page-actions') && ![...document.querySelectorAll('.extensions-panel > .application-page-actions button')].some(b => b.disabled)",
         ),
       "Extensions ready",
     );

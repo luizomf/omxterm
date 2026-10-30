@@ -1749,7 +1749,7 @@ and accessible names, including hidden retained views. Relabeling preserves
 literal targets, drafts, focus and pending operations without rediscovery or
 connection replay. Its minimum host is 0.24.0-dev.8. SSH 0.3.0 is separately
 published and qualified with the exact Linux ARM64 dev.11 host; catalog promotion
-and its public packaged checkpoint remain pending. Historical SSH 0.1.0 bytes
+and its bounded public packaged checkpoint passed on that pair. Historical SSH 0.1.0 bytes
 remain immutable: changing the host does not update an installed extension;
 installing the new archive requires a deliberate update. No
 configuration paths or native blur authority cross this bridge; visible desktop
