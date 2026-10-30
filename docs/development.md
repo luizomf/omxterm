@@ -159,48 +159,9 @@ must accompany the source/lock, target and compiler/SDK evidence; Unix compiler
 outputs are not claimed bit-for-bit reproducible across toolchains. Prepared
 JavaScript identities are listed in the [Restty guide](restty-development.md#pinned-inputs-and-wasm-core-rebuild).
 
-Supervised PTY registration completes **process acquisition**, not native-resource
-quiescence or fixture settlement. Ordinary readiness requires a verified positive
-child identity; ordinary early exit requires a positive PID and reinspection
-confirming its disappearance. The fixture PTY adapter alone knows beta.18's
-`ready_datapipe` ordering; it never waits for payload or a prompt. Production
-session/shutdown interfaces and their actual-exit barrier remain unchanged.
-
-Only the pinned prepared **Windows** `execFailed === true` agent-error event
-selects failed-start acquisition. Reviewed dependency ordering consumes the
-attempt's deferred-connect admission before that notification, so late worker
-readiness cannot initiate another connect. The synchronous observer must verify
-the exact retained live owner and a valid positive-identity descendant closure,
-then atomically publish that snapshot before forwarding lifecycle downstream.
-Include live children/helpers created before native connect threw, even when the
-public PID remains 0. An inspected owner-only snapshot is also allowed; neither
-PID 0, absence nor the marker proves that no child existed or that native handles
-or threads retired. This path does not invoke the successful-readiness callback;
-Unix's shared marker still follows the ordinary actual-child exit path.
-
-Readiness/exit/failed-start observation or publication failures retain the pending
-write-ahead record and retire temporary observers, without throwing through the
-dependency's synchronous listener queue and starving session lifecycle consumers.
-Safe diagnostics distinguish `ready-observation`, `exit-observation` and
-`failed-start-observation` (branch `failed-start`); publication failures retain
-their precise publication phase too. Later events cannot rescue failed
-observation. Synchronous registration failures still throw. The unchanged
-independent supervisor acquires retained ledger identities, rechecks exact birth
-identity before signaling, verifies disappearance and rejects pending/failed
-cleanup even after a fixture exit 0 or empty final inventory. Its join and the
-original native outcome/scenario assertions remain required; cleanup cannot turn
-a nonzero exit or timeout into success.
-
-This is a cooperative fixture protocol, not containment of arbitrary programs or
-unobserved orphan trees. A child that launches descendants and disappears before
-any accepted ancestry snapshot cannot be reconstructed from PID/name or empty
-inventories. The deferred-failure fixture therefore attempts valid PowerShell
-with literal no-profile, bounded, non-spawning arguments while preserving its
-real unavailable-cwd failure oracle. Unknown escaping ancestry is a blocker, not
-permission to invent identities or clear historical blocked receipts.
-Headless composition and receipt coverage:
-`npm test -- test/unit/native-fixture-ownership.test.ts test/unit/native-fixture-registration.test.ts test/unit/native-fixture-registration-receipt.test.ts`.
-Passing those controlled cases does not qualify Windows native D9 or its baseline.
+For the fixture adapter's readiness, early-exit and failed-start protocol, see
+[Supervised PTY acquisition](#supervised-pty-acquisition). Acquisition does not
+establish native-resource quiescence or fixture settlement.
 
 Windows public kill/resize still
 defer until first output; controlled callback-order units are not native timing
@@ -858,6 +819,13 @@ node node_modules/vitest/vitest.mjs run test/unit/restty-host-window.test.ts tes
 
 ## Fixture ownership and cleanup
 
+- [Linux packaged-wrapper controls](#linux-packaged-wrapper-controls)
+- [Graphical fixture supervision](#graphical-fixture-supervision)
+- [Supervised PTY acquisition](#supervised-pty-acquisition)
+- [Windows cleanup diagnostics](#windows-cleanup-diagnostics)
+
+### Linux packaged-wrapper controls
+
 Linux packaged-wrapper outcome controls use a private acquire-before-release
 handoff. A finite Run-as-Node actor (or the stream-retention control worker)
 proposes its PID/start identity and waits for an exact acknowledgement before
@@ -917,11 +885,66 @@ procfs observation gaps:
 node node_modules/vitest/vitest.mjs run test/unit/linux-packaged-process.test.ts test/unit/linux-wrapper-acquisition.test.ts test/unit/linux-wrapper-control.test.ts
 ```
 
+### Graphical fixture supervision
+
 Graphical integration tests use [`runNativeFixture`](../test/fixtures/run-native-fixture.ts) and [`prepareFixture`](../test/fixtures/prepare-fixture.ts) to manage temporary user profiles, child Electron processes, and PTYs (`spawnFixturePty` / `spawnFixtureProcess`):
 
 - Fixture diagnostics and stdout/stderr logs are written under `.scratch/native-fixtures/`.
 - The supervisor removes temporary profiles only after verifying that child processes have exited and streams have closed.
 - If a fixture process cannot be cleanly verified on exit, it writes an `ownership-blocked.json` receipt in `.scratch/native-fixtures/` and blocks further launches in that scope until inspected (except for abandoned Windows pre-bootstrap receipts whose parent process has already exited, which are archived automatically).
+
+To run the unit tests for fixture preparation and supervision headlessly:
+
+```sh
+npx vitest run test/unit/fixture-preparation.test.ts test/unit/fixture-preparation-recipes.test.ts test/unit/fixture-preparation-callers.test.ts test/unit/native-preparation-ownership.test.ts test/unit/run-native-fixture-windows.test.ts test/unit/native-fixture-recovery.test.ts
+```
+
+### Supervised PTY acquisition
+
+Supervised PTY registration completes **process acquisition**, not native-resource
+quiescence or fixture settlement. Ordinary readiness requires a verified positive
+child identity; ordinary early exit requires a positive PID and reinspection
+confirming its disappearance. The fixture PTY adapter alone knows beta.18's
+`ready_datapipe` ordering; it never waits for payload or a prompt. Production
+session/shutdown interfaces and their actual-exit barrier remain unchanged.
+
+Only the pinned prepared **Windows** `execFailed === true` agent-error event
+selects failed-start acquisition. Reviewed dependency ordering consumes the
+attempt's deferred-connect admission before that notification, so late worker
+readiness cannot initiate another connect. The synchronous observer must verify
+the exact retained live owner and a valid positive-identity descendant closure,
+then atomically publish that snapshot before forwarding lifecycle downstream.
+Include live children/helpers created before native connect threw, even when the
+public PID remains 0. An inspected owner-only snapshot is also allowed; neither
+PID 0, absence nor the marker proves that no child existed or that native handles
+or threads retired. This path does not invoke the successful-readiness callback;
+Unix's shared marker still follows the ordinary actual-child exit path.
+
+Readiness/exit/failed-start observation or publication failures retain the pending
+write-ahead record and retire temporary observers, without throwing through the
+dependency's synchronous listener queue and starving session lifecycle consumers.
+Safe diagnostics distinguish `ready-observation`, `exit-observation` and
+`failed-start-observation` (branch `failed-start`); publication failures retain
+their precise publication phase too. Later events cannot rescue failed
+observation. Synchronous registration failures still throw. The unchanged
+independent supervisor acquires retained ledger identities, rechecks exact birth
+identity before signaling, verifies disappearance and rejects pending/failed
+cleanup even after a fixture exit 0 or empty final inventory. Its join and the
+original native outcome/scenario assertions remain required; cleanup cannot turn
+a nonzero exit or timeout into success.
+
+This is a cooperative fixture protocol, not containment of arbitrary programs or
+unobserved orphan trees. A child that launches descendants and disappears before
+any accepted ancestry snapshot cannot be reconstructed from PID/name or empty
+inventories. The deferred-failure fixture therefore attempts valid PowerShell
+with literal no-profile, bounded, non-spawning arguments while preserving its
+real unavailable-cwd failure oracle. Unknown escaping ancestry is a blocker, not
+permission to invent identities or clear historical blocked receipts.
+Headless composition and receipt coverage:
+`npm test -- test/unit/native-fixture-ownership.test.ts test/unit/native-fixture-registration.test.ts test/unit/native-fixture-registration-receipt.test.ts`.
+Passing those controlled cases does not qualify Windows native D9 or its baseline.
+
+### Windows cleanup diagnostics
 
 Windows supervisor receipts can additionally contain optional `cleanupFailure`
 metadata when an existing cleanup PowerShell command throws. Its fixed `callsite`
@@ -943,9 +966,3 @@ bounds, ownership blocking, profile retention and supervisor joining are unchang
 Headless emitted-supervisor/schema controls:
 `npm test -- test/unit/native-fixture-cleanup-failure.test.ts test/unit/native-fixture-cleanup-outcome.test.ts test/unit/run-native-fixture-windows.test.ts`.
 They do not replace actual Windows execution.
-
-To run the unit tests for fixture preparation and supervision headlessly:
-
-```sh
-npx vitest run test/unit/fixture-preparation.test.ts test/unit/fixture-preparation-recipes.test.ts test/unit/fixture-preparation-callers.test.ts test/unit/native-preparation-ownership.test.ts test/unit/run-native-fixture-windows.test.ts test/unit/native-fixture-recovery.test.ts
-```
