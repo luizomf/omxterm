@@ -132,15 +132,17 @@ void ready
         );
     const checks = [];
     const nativeKeys = [];
-    core.on("before-input-event", (event, input) => {
+    const observeInput = (target) => (event, input) => {
       nativeKeys.push({
+        target,
         type: input.type,
         key: input.key,
         code: input.code,
         repeat: input.isAutoRepeat,
         prevented: event.defaultPrevented,
       });
-    });
+    };
+    core.on("before-input-event", observeInput("core"));
     try {
       window.focus();
       await until(
@@ -187,6 +189,7 @@ void ready
         "installed catalog",
       );
       const view = hosted()[0];
+      view.on("before-input-event", observeInput("child"));
       assert.equal(
         await view.executeJavaScript("document.documentElement.lang"),
         "en-US",
@@ -281,7 +284,10 @@ void ready
         await until(
           () =>
             nativeKeys.some(
-              (input) => input.type === "keyDown" && input.repeat,
+              (input) =>
+                input.target === "core" &&
+                input.type === "keyDown" &&
+                input.repeat,
             ),
           "native held Enter autorepeat",
         );
@@ -307,7 +313,10 @@ void ready
       );
       await assertWrites(offset, run + "\r");
       assert.ok(
-        nativeKeys.some((input) => input.type === "keyDown" && input.repeat),
+        nativeKeys.some(
+          (input) =>
+            input.target === "core" && input.type === "keyDown" && input.repeat,
+        ),
         "Chromium delivered a native repeat",
       );
       assert.equal(nativeKeys.at(-1)?.type, "keyUp");
