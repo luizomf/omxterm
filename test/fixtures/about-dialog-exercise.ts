@@ -126,12 +126,34 @@ export async function exerciseAboutDialog(
     await waitFor(
       "(() => { const d = document.querySelector('.about-dialog'); const r = d.getBoundingClientRect(); return r.width <= innerWidth && r.height <= innerHeight && r.top >= 0; })()",
     );
-    assert.equal(
-      await contents.executeJavaScript(
-        "getComputedStyle(document.querySelector('.about-dialog')).backgroundColor",
-      ),
-      background === "#ffffff" ? "rgb(255, 255, 255)" : "rgb(16, 16, 16)",
+    const originalOpacity = await contents.executeJavaScript(
+      "document.documentElement.style.getPropertyValue('--terminal-background-opacity')",
     );
+    try {
+      for (const opacity of [0, 0.65, 1]) {
+        // Normalize browser color serialization through actual RGBA readback.
+        // Relative rgb() may serialize as color(srgb), not legacy rgb().
+        const pixels = await contents.executeJavaScript(`(() => {
+          document.documentElement.style.setProperty('--terminal-background-opacity', '${opacity}');
+          const canvas = document.createElement('canvas');
+          canvas.width = 2; canvas.height = 1;
+          const context = canvas.getContext('2d');
+          context.fillStyle = getComputedStyle(document.querySelector('.about-dialog')).backgroundColor;
+          context.fillRect(0, 0, 1, 1);
+          context.fillStyle = 'rgba(${background === "#ffffff" ? "255,255,255" : "16,16,16"},${opacity})';
+          context.fillRect(1, 0, 1, 1);
+          return Array.from(context.getImageData(0, 0, 2, 1).data);
+        })()`);
+        assert.deepEqual(pixels.slice(0, 4), pixels.slice(4, 8));
+        assert.equal(pixels[3], Math.round(opacity * 255));
+      }
+    } finally {
+      await contents.executeJavaScript(
+        originalOpacity
+          ? `document.documentElement.style.setProperty('--terminal-background-opacity', ${JSON.stringify(originalOpacity)})`
+          : "document.documentElement.style.removeProperty('--terminal-background-opacity')",
+      );
+    }
     await contents.executeJavaScript(
       "document.querySelector('.about-close').focus()",
     );

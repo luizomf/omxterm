@@ -1616,7 +1616,7 @@ so late and already-visible results use the current language without matching
 English sentences. The existing main user-file banner keeps its rendered-text
 contract. Diagnostics shown in Settings never enter operational logs.
 
-Settings occupies an opaque full-area surface with six core categories plus
+Settings occupies a full-area, theme-aware surface with six core categories plus
 Extensions, and independently scrolling content, not a modal perimeter/backdrop. Its 640×480
 renderer viewport target is comfortable desktop coverage, not a new native
 minimum. Below it, compact wrapping navigation and scrolling retain small-window
