@@ -7,7 +7,6 @@ import {
 } from "../../src/main/action-catalog";
 import { coreActionMenuTemplate } from "../../src/main/application-menu";
 import { startCommandPalette } from "../../src/main/command-palette";
-import { deliverKeybindsFromKeyEvents } from "../../src/main/keybind-delivery";
 import { installApplicationMenu } from "../../src/main/native-application-menu";
 import { terminalDefaultKeybinds } from "../../src/shared/terminal-keybinds";
 import type { TerminalApplication } from "../../src/main/terminal-application";
@@ -61,6 +60,10 @@ export async function exerciseCommandPalette(options: {
     options.router,
     () => window,
     options.apply,
+    {
+      keybinds: () => coreActionKeybinds(catalog),
+      invokeAction: (action) => coreActionInvocations(catalog)[action](),
+    },
   );
   const unexpected = () => assert.fail("Unexpected palette fixture action");
   let toggles = 0;
@@ -100,12 +103,6 @@ export async function exerciseCommandPalette(options: {
     catalog: () => catalog,
   });
   options.ownPalette(palette);
-  deliverKeybindsFromKeyEvents(
-    contents,
-    () => coreActionKeybinds(catalog),
-    (action) => coreActionInvocations(catalog)[action](),
-    process.platform,
-  );
   const install = () =>
     installApplicationMenu(coreActionMenuTemplate("OMXTerm", catalog));
   const opened = () =>

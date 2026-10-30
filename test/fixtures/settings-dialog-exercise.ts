@@ -9,6 +9,10 @@ import { startSettings } from "../../src/main/settings-wiring";
 import { createKeybindCapture } from "../../src/main/keybind-capture";
 import { deliverKeybindsFromKeyEvents } from "../../src/main/keybind-delivery";
 import type { TerminalIpcRouter } from "../../src/main/terminal-ipc-types";
+import type {
+  TerminalActionName,
+  TerminalKeybinds,
+} from "../../src/shared/terminal-keybinds";
 import {
   extensionsIpc,
   isExtensionsRequest,
@@ -50,6 +54,10 @@ export function createSettingsExercise(
   router: TerminalIpcRouter,
   getWindow: () => BrowserWindow,
   apply: (state: ActiveUserConfiguration, committed: boolean) => void,
+  keyDelivery?: {
+    keybinds(): TerminalKeybinds;
+    invokeAction(action: TerminalActionName): void;
+  },
 ) {
   const loadOptions: LoadUserConfigurationOptions = {
     environment: { XDG_CONFIG_HOME: path.join(root, "settings-xdg") },
@@ -62,8 +70,9 @@ export function createSettingsExercise(
     load: () => loadUserConfiguration(loadOptions),
     apply,
   });
-  // The production capture route: key delivery for this window consults the
-  // same capture Settings starts, and records actions instead of running them.
+  // One key-delivery owner consults the same capture Settings starts. Standalone
+  // Settings exercises record actions; composed exercises supply their actions
+  // here rather than installing a competing listener ahead of capture.
   const capture = createKeybindCapture(process.platform);
   const window = getWindow();
   const captureTarget = window.webContents;
@@ -72,8 +81,8 @@ export function createSettingsExercise(
   const delivered: string[] = [];
   deliverKeybindsFromKeyEvents(
     getWindow().webContents,
-    () => reloader.current().configuration.keybinds,
-    (action) => delivered.push(action),
+    keyDelivery?.keybinds ?? (() => reloader.current().configuration.keybinds),
+    keyDelivery?.invokeAction ?? ((action) => delivered.push(action)),
     process.platform,
     capture,
   );
