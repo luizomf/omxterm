@@ -31,26 +31,14 @@ The portable Terminal Surface (`src/terminal-surface/`) receives a session Adapt
 ### Pending-wrap resize coverage
 
 The bundled-core reflow tests preserve exact pending-wrap insertion/copy across
-width changes, history, hard breaks and alternate/wrap-disabled modes. The
-existing appearance fixture separately checks primary-screen output of exactly
-one current row, one owned DOM width reduction, short continuation and exact
-Select All/Copy while retaining the same Surface/canvas and one Adapter start.
-Its current narrower grid must be valid and have a different edge; it does not
-replay a calibrated target or normalize copied text.
+width changes, history, hard breaks and alternate/wrap-disabled modes. A separate
+real-Surface check covers a short primary-screen resize continuation with a
+controlled Adapter, not native PTY or OS clipboard qualification.
 
-Run the real-Surface check on an idle unlocked desktop, one graphical suite at a
-time:
-
-```sh
-npm test -- test/integration/restty-appearance-rendering.test.ts -t "renders theme colors and preserves configured geometry through live updates"
-```
-
-This controlled Adapter check is not native PTY or OS clipboard qualification.
-The separate native output oracle keeps its sixteen copies, transport ACK,
-pause/resume, resize and real-exit requirements. Retiring the oversized combined
-native prefix/refit/continuation scenario does not explain its Windows timeout;
-the combined native progress risk remains explicitly unresolved. See
-[the coverage boundaries](development.md#resize-and-continued-text-coverage).
+See [resize and continued-text coverage](development.md#resize-and-continued-text-coverage)
+for the test command, fixture invariants and evidence boundaries. The retired
+combined native prefix/refit/continuation scenario's Windows timeouts remain
+unexplained; separate checks do not qualify that combined ordering.
 
 ### Input, links, and titles
 
