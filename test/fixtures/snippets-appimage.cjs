@@ -1,4 +1,4 @@
-// Inspector-loaded observer; the extracted application's entry/ASAR stay intact.
+// Shared inspector observer; the AppImage/DMG application's entry/ASAR stay intact.
 const { app, BrowserWindow, Menu, webContents } = require("electron");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -6,6 +6,7 @@ const path = require("node:path");
 const { createRequire } = require("node:module");
 const { observe } = require("./snippets-observer.cjs");
 const { runScenario } = require("./snippets-scenario.cjs");
+const { identity, alive } = require("./snippets-process-identity.cjs");
 let observer;
 let requestQuit;
 function inspect(options) {
@@ -19,26 +20,6 @@ function inspect(options) {
     appPath: app.getAppPath(),
     executable: process.execPath,
   };
-}
-function identity(pid) {
-  try {
-    const fields = fs
-      .readFileSync(`/proc/${pid}/stat`, "utf8")
-      .split(")")
-      .at(-1)
-      .trim()
-      .split(/\s+/);
-    return { pid, start: fields[19], state: fields[0] };
-  } catch (error) {
-    if (["ENOENT", "ESRCH"].includes(error.code)) return null;
-    throw error;
-  }
-}
-function alive(record) {
-  const current = identity(record.pid);
-  return (
-    current?.start === record.start && !["Z", "X", "x"].includes(current.state)
-  );
 }
 async function run(options) {
   inspect(options);
@@ -93,6 +74,7 @@ async function run(options) {
           {
             joined,
             baselineExited,
+            baseline,
             ptys: observer.ptys.map(({ pid, exited }) => ({ pid, exited })),
             children: observer.children,
           },

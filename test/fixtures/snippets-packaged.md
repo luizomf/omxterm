@@ -2,7 +2,7 @@
 
 This fixture exercises an ordinary `.omxext` install and explicit trust through
 Settings, followed by real hosted-page requests through production semantic
-admission, presentation, Surface and PTY delivery. Source and exact-AppImage
+admission, presentation, Surface and PTY delivery. Source, exact-AppImage and exact-DMG
 adapters share one nine-scenario body. Their evidence remains distinct; neither
 qualifies physical keyboards or other platforms; Linux uses software rendering.
 
@@ -144,7 +144,7 @@ requires normal Quit, actual main exit and joined process ownership; failed root
 and evidence are retained. Extraction does not qualify FUSE/helper installation
 or public acquisition.
 
-Both adapters observe new `node-pty` instances at their existing event-forwarding
+All adapters observe new `node-pty` instances at their existing event-forwarding
 prototype seam and forward writes unchanged. This avoids assuming that replacing
 a CommonJS export changes main's already captured ESM spawn binding. The package
 adapter creates one ordinary New Tab after attachment; that new session runs the
@@ -159,6 +159,87 @@ mode remains selected at every exact-byte assertion. This makes source and
 account-shell launches comparable without stripping framing from observed writes
 or accepting either encoding. Account-shell startup and bracketed-paste delivery
 are not qualified by this controlled-shell scenario.
+
+## Exact macOS ARM64 DMG adapter
+
+`test/integration/snippets-dmg.test.ts` is opt-in tooling, not a qualification
+receipt. On the assigned disposable, unlocked Aqua desktop, supply:
+
+```sh
+OMXTERM_SNIPPETS_DMG_DMG=/absolute/host.dmg \
+OMXTERM_SNIPPETS_DMG_DMG_SHA256=<sha256> \
+OMXTERM_SNIPPETS_DMG_ARCHIVE=/absolute/snippets.omxext \
+OMXTERM_SNIPPETS_DMG_ARCHIVE_SHA256=<sha256> \
+OMXTERM_SNIPPETS_DMG_VERSION=<host-version> \
+OMXTERM_SNIPPETS_DMG_EVIDENCE=/absolute/private-evidence \
+OMXTERM_SNIPPETS_DMG_QUARTZ_TOOL=/absolute/stable/quartz-tool/tool.json \
+  npm test -- test/integration/snippets-dmg.test.ts
+```
+
+No opt-in skips; partial or mixed-adapter configuration refuses. The guest must
+have Command Line Tools, `hdiutil`, `ditto`, `codesign`, `lipo`, `plutil`, a
+sh/bash/zsh account shell and the already provisioned Quartz permissions described
+above. No permissions are requested automatically. Root owns exclusive native-lane
+preflight and execution. Build a fresh DMG from verified source and locked,
+self-contained dependencies, and run the existing package inspection separately.
+Do not reuse an unpackaged build as DMG evidence.
+
+Preparation mounts the exact digest-bound DMG read-only, copies `OMXTerm.app`
+with `ditto`, compares the complete bundle's files/modes/symlink targets and
+unmounts before launch. Mount/copy/detach failures refuse launch. It verifies the
+app's code seal, ARM64 executable, plist and ASAR version, and records executable,
+ASAR, backend and complete bundle digests. No entry, dependency, ASAR, signature or
+quarantine attribute is rewritten. This is a copied DMG application, not Finder,
+Gatekeeper/notarization or public-download qualification.
+
+The thin integration entry calls `snippets-dmg-campaign.ts`; a separate
+`snippets-dmg-main.ts` entry invokes the finite `snippets-dmg-driver.ts` controller.
+These are the same orchestration functions exercised by controlled headless tests,
+not alternate scenario implementations. The controller runs under
+`runNativeFixture`; it registers the actual
+packaged launch with the existing write-ahead ownership protocol. The unchanged
+app receives only a loopback inspector, isolated profile and readiness-shell
+arguments. Its environment excludes source Node/npm settings and uses system
+commands, isolated HOME/XDG roots, native graphics and Chromium sandboxing—no
+Linux flags. The existing inspector observer asserts actual app/version/executable/
+ASAR and backend identity, creates an ordinary New Tab and invokes the same nine
+scenarios. Baseline readiness PTY liveness uses real macOS `ps` start identity,
+not `/proc` or PID-only existence.
+
+Normal Quit must join baseline/scenario PTYs and backends; the controller also
+requires actual main exit, stream closure and absence of its captured descendants
+before it can succeed. The shared scenario joins the Quartz observer and verifies
+OS release independently. The outer supervisor owns timeout, cancellation,
+controller loss and remaining native descendants. It may recover processes but
+cannot convert forced settlement into a successful normal Quit or prove OS keyup.
+
+Each run uses fresh private `EVIDENCE/run-*` receipts, but supervisor receipts use
+unique `EVIDENCE/supervisor-run-*.json` filenames in the **same configured lane**.
+`run-*/supervisor-location.json` records that path. The existing runner therefore
+shares `EVIDENCE/ownership-blocked.json` across attempts and refuses unresolved
+ownership before preparing or launching another controller. Do not change the
+configured evidence lane to evade a stop receipt; macOS recovery remains manual.
+
+The application/profile and input evidence are outside the supervisor's disposable
+launcher directory and are retained on **every** outcome, including success. Root
+owns later useful-profile cleanup; profile existence is not evidence of live
+processes. There is no asynchronous profile-deletion race to disguise cancellation
+or destroy failure evidence. DMG, archive and complete copied-bundle identities
+are checked again even after a reported failure. Finalization first writes an
+asynchronous non-success checkpoint, then checks cancellation and synchronously
+publishes the final outcome without another await. Cancellation during final
+identity checks or checkpoint publication rejects and records failure. A failed,
+missing, truncated or still-finalizing result is not PASS. The final receipt is a
+completion-boundary snapshot, not a promise of filesystem atomicity or protection
+against cancellation after completion. If the worker itself is killed, root must
+perform identity checks from the retained receipts; missing `result.json` is not
+PASS. The external Quartz
+marker is never reset by this adapter. After interruption, inspect the marker,
+PID/start settlement and independent OS state before authorizing another run.
+
+This adapter does not repeat or supersede the delivered source qualification,
+promote the Linux-only catalog, change immutable archives/receipts or authorize a
+release. Exact native DMG execution remains an integration-owner gate.
 
 ## Oracles and limits
 

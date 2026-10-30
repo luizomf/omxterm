@@ -98,6 +98,41 @@ before any distributed macOS host removes built-in access. Whether to reuse the
 immutable archive for that release is a later maintainer decision; no catalog,
 archive, receipt or host release is changed here.
 
+## macOS ARM64 exact-DMG qualification
+
+A separate exact-package checkpoint passed using host `0.24.0-dev.16`,
+source `c3655a5b6ec13dbfb870665fc23b83caef71aac6`, and the same immutable
+Snippets `0.1.0` archive identified above. The freshly built ARM64 DMG was
+129,712,879 bytes, SHA-256
+`52b8a6b60dce7380b1157755e5ba3dcda0dfdc8e4c54ed2a71b723b160ef061f`.
+Its application was copied from a read-only mount, checked for complete bundle
+identity and code seal, and launched only after detachment. The packaged ASAR
+SHA-256 was `997d1c70e6d54c97495226d148c419e879baacd87ae3ad93d47f968b0c69c14c`.
+
+All nine shared Snippets scenarios passed through ordinary production composition,
+installation and controlled trust. Exact PTY assertions, targeted Quartz
+activation/repeat/release and fresh Enter passed; three separate WebContents
+captures were inspected. Normal Quit joined the baseline/scenario PTYs and
+backend, actual main exit, stream closure and supervisor settlement. Independent
+checks confirmed recorded process absence, final OS key-up state, unchanged
+artifact identities and no unsettled-input or ownership marker. Useful campaign
+profiles were deliberately retained for the integration owner, not deleted by
+the adapter.
+
+The same DMG-derived application also passed the ordinary **FULL macOS package
+verifier**, including native/runtime resources, code seal, real PTY startup,
+parsed Restty output-query response, launch-data non-disclosure and process-group
+cleanup. Its isolated temporary scope was empty afterward. This startup verifier
+is distinct from the campaign's normal-Quit evidence. Full formatting, types,
+lint and 4,261 headless tests passed (66 skips); independent review's two ownership/
+cancellation findings and composition-test gap were corrected and verified.
+
+This is not host publication, catalog promotion, public-HTTPS acquisition,
+Finder/Gatekeeper/notarization, physical-keyboard, natural-autorepeat, Kitty,
+OS-compositor, macOS Files/SSH or full portable-suite qualification. No immutable
+archive or original build receipt was changed; distributed cutover remains a
+separate maintainer decision under ADR 0044.
+
 ## Preview coverage and remaining platforms
 
 The Snippets package was published and anonymously downloaded/hash-verified

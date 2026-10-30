@@ -154,7 +154,11 @@ it.skipIf(!enabled)(
         "test/fixtures/snippets-appimage.cjs",
         path.join(root, "observer.cjs"),
       );
-      for (const name of ["snippets-scenario.cjs", "snippets-observer.cjs"])
+      for (const name of [
+        "snippets-scenario.cjs",
+        "snippets-observer.cjs",
+        "snippets-process-identity.cjs",
+      ])
         await cp(path.join("test/fixtures", name), path.join(root, name));
       const env: NodeJS.ProcessEnv = {
         HOME: path.join(root, "home"),
