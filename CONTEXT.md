@@ -150,29 +150,22 @@ Font Mono is the default, with bundled and OS fallback faces for coverage.
 layout input (`none`), or use `left`, `right` or `both` Option keys as terminal
 Alt.
 
-**Auxiliary Panel** — One window-owned, nonmodal right-side host below full-width
-chrome. It owns lazy exclusive view lifetimes, visible dismissal, focus and
-pointer/keyboard resizing. Preferred width starts at 280 px (220–560 px bounds,
-6 px separator, 180 px terminal allowance); narrow content clamps or deactivates
-it. Width/visibility are memory-only and independent between windows. It does not
-change native minimum-window bounds or guarantee terminal columns. One labeled
-switcher selects among opened tools and Snippets. Terminal-tab changes preserve
-the panel; Settings/general hosted tabs suspend it until terminal return.
-Extension views retain state when hidden, survive the opening terminal, and
-retire with package management, backend loss or window loss.
+**Auxiliary Panel** — One window-owned, nonmodal right-side host shared by
+Snippets and explicitly opened companion tools, with one visible view at a time.
+It owns dismissal, focus and pointer/keyboard resizing; width and visibility are
+memory-only. Terminal-tab changes preserve it; Settings/general hosted tabs
+suspend it. It is independent of the opening terminal's lifetime. See
+[window and session behavior](docs/spec.md#window-and-session-behavior) for
+geometry, view retention and retirement rules.
 
-**Snippets Sidebar** — The built-in Auxiliary Panel view, alongside explicitly
-opened Files/SSH companion tools, loaded from the
-user's `snippets.yaml` (single bounded YAML 1.2 core document with version-1
-snippet fields). Search/loading appears immediately on activation; each
-activation rereads the file, retaining query/scroll but invalidating old actions
-and late reads. Each row shows its default Insert or Run intent; activating it
-sends the exact body through Protected Paste to the focused pane captured at
-that moment, and `execute` controls whether Enter is appended. A read-only
-preview shows the exact body and its final Insert/Run choice wins, delivered
-only to the pane/Surface captured when it opened. Selection never retargets it;
-removal, exit or fatal failure makes that target unavailable, even while a failed
-pane remains visible for acknowledgement.
+**Snippets Sidebar** — The built-in Auxiliary Panel view of the user's
+`snippets.yaml` catalog, reread on activation with retained search/scroll.
+Insert, Run and read-only preview deliver exact text through Protected Paste to
+a captured live Surface, never a replacement target. See
+[interaction behavior](docs/spec.md#window-and-session-behavior) and
+[catalog configuration](docs/spec.md#configuration-and-local-state).
+The optional-extension migration remains preparatory, not a replacement of the
+shipping built-in feature ([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).
 
 ## Terminal data and interaction
 
@@ -331,25 +324,17 @@ a build receipt identifies bytes and inputs, not completed qualification or ship
 No startup code activation, default/configurable shortcut or stable SDK is implied;
 see [the preview contract](docs/files-development-preview.md) for qualification limits.
 
-**Extension View Host** — Internal owner of lazy native web-content views in a
-nonpersistent epoch. It retains a captured package reader/pin, materializes bounded
-local resource responses, and retires known views/reads without terminating core
-PTYs. A shared window presentation owner composes Application Tab and companion-panel
-slots, acknowledging native hiding before DOM overlays and core focus handoff
-while retaining a visible companion view. A read-only child appearance
-subscription projects effective window colors/tint without configuration paths
-or native-effect authority; transparent native backing permits opt-in content
-to share the parent's single tint.
-Its declared own-view semantic-input operation transfers bounded exact text to a
-core-captured Surface with Protected Paste and a shared read-only preview, not a
-PTY handle or raw key route. View retirement revokes unaccepted interactions,
-not accepted Surface-owned delivery. This capability alone is not an optional
-Snippets replacement. Separately buildable preparatory Snippets package source
-reuses the built-in view/parser and shared styles; production retains the built-in
-entry point. Native qualification selects one implementation. Logical hosted-view
-activity survives temporary overlay/layout hiding, separately from visibility;
-language and search/restore focus intent do not recreate controls.
-It is not a public SDK, activation UI or proof of main-death disk-read exclusion.
+**Extension View Host** — Internal owner of lazy native packaged-content views
+and their reads in a nonpersistent epoch, retaining an immutable package-version
+pin. Shared window presentation composes tab/panel slots, focus and overlays;
+retirement does not terminate core PTYs. It is not a public SDK or activation UI,
+and main-death disk-read exclusion remains unqualified. See
+[ADR 0039](docs/adr/0039-own-packaged-web-content-by-epoch.md) for resource and
+presentation ownership, and the
+[hosted-content contract](docs/spec.md#configuration-and-local-state) for
+appearance, language and declared own-view semantic input. Semantic input
+transfers exact text to a core-captured Surface, not a PTY handle or raw key route;
+retirement revokes unaccepted interactions, not accepted Surface-owned delivery.
 
 **Application Network Boundary** — OMXTerm requests remote bytes only for explicit
 official-catalog browsing and HTTPS extension archive installation in the Linux
