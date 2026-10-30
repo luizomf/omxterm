@@ -14,6 +14,11 @@ const fixture = {
   ...JSON.parse(await readFile(path.join(root, "fixture.json"), "utf8")),
   root,
 };
+assert.equal(typeof fixture.hostVersion, "string");
+assert.equal(app.getVersion(), fixture.hostVersion, "matching host version");
+console.log(
+  "SNIPPETS_SOURCE_HOST:" + JSON.stringify({ version: app.getVersion() }),
+);
 const require = createRequire(path.join(fixture.source, "package.json"));
 await mkdir(path.join(root, "config/omxterm"), { recursive: true });
 await copyFile(

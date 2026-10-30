@@ -272,8 +272,10 @@ See [reloading user configuration](configuration.md#reloading-user-configuration
 
 ### Insert, run or preview a snippet
 
-Linux ARM64 development source uses optional installed Snippets; other targets
-retain the built-in tool. The [migration guide](snippets-migration.md) explains
+Linux ARM64 and macOS ARM64 source use optional installed Snippets; other targets
+retain the built-in tool. The macOS source transition has passed bounded native
+qualification; published macOS hosts still retain built-in Snippets.
+The [migration guide](snippets-migration.md) explains
 installation, disabled/unavailable states and unchanged catalogs. The existing
 shortcut opens Extensions management when no enabled package is available.
 

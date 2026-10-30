@@ -60,6 +60,7 @@ async function runScenario({
       );
   const checks = [];
   const nativeKeys = [];
+  let quartz;
   const observeInput = (target) => (event, input) => {
     nativeKeys.push({
       target,
@@ -243,23 +244,37 @@ async function runScenario({
     await view.executeJavaScript(
       `window.__activationEvents = []; for (const type of ['keydown', 'keypress', 'click']) document.addEventListener(type, event => window.__activationEvents.push({ type, key: event.key, trusted: event.isTrusted }), true);`,
     );
-    // XTest owns the full native key sequence across WebContents focus.
-    // Per-WebContents sendInputEvent did not expose a cross-view keyUp receipt.
-    execFileSync("/usr/bin/xdotool", ["keydown", "Return"]);
+    const gestureStart = nativeKeys.length;
+    // Both platforms retain synthetic OS input across native focus handoff.
+    // Neither API submission nor a constant key-up query is release evidence.
+    if (process.platform === "darwin") {
+      const { openQuartzInput } = require("./snippets-quartz.cjs");
+      quartz = await openQuartzInput({
+        manifest: fixture.quartzTool,
+        root: fixture.root,
+        evidence: fixture.evidence,
+      });
+      await quartz.down();
+    } else execFileSync("/usr/bin/xdotool", ["keydown", "Return"]);
     try {
       await terminalFocus();
+      if (quartz) await quartz.repeat();
       await until(
         () =>
-          nativeKeys.some(
-            (input) =>
-              input.target === "core" &&
-              input.type === "keyDown" &&
-              input.repeat,
-          ),
+          nativeKeys
+            .slice(gestureStart)
+            .some(
+              (input) =>
+                input.target === "core" &&
+                input.type === "keyDown" &&
+                input.key === "Enter" &&
+                input.repeat,
+            ),
         "native held Enter autorepeat",
       );
     } finally {
-      execFileSync("/usr/bin/xdotool", ["keyup", "Return"]);
+      if (quartz) await quartz.up();
+      else execFileSync("/usr/bin/xdotool", ["keyup", "Return"]);
     }
     const activationEvents = await view.executeJavaScript(
       "window.__activationEvents",
@@ -272,14 +287,31 @@ async function runScenario({
         path.join(fixture.evidence, "activation-events.json"),
         JSON.stringify(activationEvents, null, 2),
       );
-    // Electron can omit before-input-event/DOM keyUp after a prevented
-    // autorepeat (also reproduced without OMXTerm). Observe X11 key state
-    // instead; successful xdotool exit alone is not a release receipt.
-    const released = execFileSync(
-      "/usr/bin/python3",
-      [
-        "-c",
-        `import ctypes
+    // Electron can omit keyUp after prevented autorepeat on both platforms,
+    // independently reproduced without OMXTerm. Observe OS release instead;
+    // retain exact PTY isolation and the next fresh Enter as product oracles.
+    let released;
+    if (process.platform === "darwin") {
+      released = "Quartz targeted release and session held-to-up observed";
+      assert.ok(
+        nativeKeys
+          .slice(gestureStart)
+          .some(
+            (input) =>
+              input.target === "child" &&
+              input.type === "keyDown" &&
+              input.key === "Enter" &&
+              !input.repeat &&
+              !input.prevented,
+          ),
+        "native child Enter activation",
+      );
+    } else {
+      released = execFileSync(
+        "/usr/bin/python3",
+        [
+          "-c",
+          `import ctypes
 x = ctypes.CDLL('libX11.so.6')
 x.XOpenDisplay.argtypes = [ctypes.c_char_p]
 x.XOpenDisplay.restype = ctypes.c_void_p
@@ -295,22 +327,61 @@ x.XQueryKeymap(d, keys)
 x.XCloseDisplay(d)
 if not code or keys[code // 8] & (1 << (code % 8)): raise SystemExit('Enter still held')
 print('Enter released')`,
-      ],
-      { encoding: "utf8" },
-    ).trim();
-    assert.equal(released, "Enter released");
+        ],
+        { encoding: "utf8" },
+      ).trim();
+      assert.equal(released, "Enter released");
+    }
     await assertWrites(offset, run + "\r");
+    if (quartz)
+      assert.ok(
+        nativeKeys
+          .slice(gestureStart)
+          .filter(
+            (input) =>
+              input.target === "core" &&
+              input.type === "keyUp" &&
+              input.key === "Enter",
+          )
+          .every((input) => input.prevented),
+        "any delivered held release is consumed",
+      );
     assert.ok(
-      nativeKeys.some(
-        (input) =>
-          input.target === "core" && input.type === "keyDown" && input.repeat,
-      ),
+      nativeKeys
+        .slice(gestureStart)
+        .some(
+          (input) =>
+            input.target === "core" &&
+            input.type === "keyDown" &&
+            input.key === "Enter" &&
+            input.repeat &&
+            input.prevented,
+        ),
       "Chromium delivered a native repeat",
     );
     // The next fresh gesture must not remain swallowed by the old owner.
     const freshOffset = session.writes.length;
-    execFileSync("/usr/bin/xdotool", ["key", "Return"]);
+    if (quartz) {
+      const freshKeyStart = nativeKeys.length;
+      await quartz.down();
+      await until(
+        () =>
+          nativeKeys
+            .slice(freshKeyStart)
+            .some(
+              (input) =>
+                input.target === "core" &&
+                input.type === "keyDown" &&
+                input.key === "Enter" &&
+                !input.repeat &&
+                !input.prevented,
+            ),
+        "fresh native core Enter",
+      );
+      await quartz.up();
+    } else execFileSync("/usr/bin/xdotool", ["key", "Return"]);
     await assertWrites(freshOffset, "\r");
+    await quartz?.close();
     if (fixture.evidence)
       await writeFile(
         path.join(fixture.evidence, "native-keys.json"),
@@ -485,7 +556,9 @@ print('Enter released')`,
       archiveSha256,
       approvals: approvalCount(),
       input:
-        "synthetic Chromium/X11; controlled native consent; production Linux ARM64 composition",
+        process.platform === "darwin"
+          ? "synthetic Quartz session input; tagged OS release and held-state observation; controlled native consent; production macOS ARM64 composition"
+          : "synthetic Chromium/X11; controlled native consent; production Linux ARM64 composition",
     };
   } catch (error) {
     if (fixture.evidence) {
@@ -514,6 +587,8 @@ print('Enter released')`,
       ).catch(() => {});
     }
     throw error;
+  } finally {
+    await quartz?.close();
   }
 }
 module.exports = { runScenario };

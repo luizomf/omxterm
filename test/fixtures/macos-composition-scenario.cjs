@@ -107,14 +107,18 @@ async function runScenario({ window, fixture, ptys, children, approvalCount }) {
     await until(
       () =>
         js(
-          "[...document.querySelectorAll('.snippets-view')].some(v => v.getBoundingClientRect().width > 0)",
+          "document.querySelector('#settings-tab-extensions')?.getAttribute('aria-selected') === 'true' && document.querySelector('.settings-snippets-notice')?.hidden === false",
         ),
-      "built-in Snippets retained",
+      "absent optional Snippets opens management",
     );
     assert.equal(hosted().length, 0);
     assert.equal(children.length, 0);
-    menu("Toggle Snippets");
-    checks.push("built-in-snippets-retained");
+    assert.equal(
+      await js("document.querySelectorAll('.snippets-view').length"),
+      0,
+    );
+    await closeSettings();
+    checks.push("optional-snippets-management-no-activation");
     await management();
     await button("Install local .omxext…");
     await installed();

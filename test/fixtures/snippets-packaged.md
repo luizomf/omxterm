@@ -4,12 +4,12 @@ This fixture exercises an ordinary `.omxext` install and explicit trust through
 Settings, followed by real hosted-page requests through production semantic
 admission, presentation, Surface and PTY delivery. Source and exact-AppImage
 adapters share one nine-scenario body. Their evidence remains distinct; neither
-qualifies physical keyboards, the default GPU or other platforms.
+qualifies physical keyboards or other platforms; Linux uses software rendering.
 
 ## Composition supplied by the integration owner
 
 `OMXTERM_SNIPPETS_PACKAGED_ENTRY` must be an absolute path to a built Electron
-main entry with unchanged production Linux ARM64 composition, lifecycle and
+main entry with unchanged production Linux or macOS ARM64 composition, lifecycle and
 assets. Production routes the ordinary Snippets command to the optional installed
 companion or Extensions guidance, with no duplicate action or built-in view. Retain production
 `registerSemanticInputIpc`, renderer semantic capture/preview, native gesture
@@ -21,17 +21,25 @@ The fixture imports this entry after installing test-only observers for PTY writ
 backend retirement, native chooser and trust responses. Observed PTY writes are
 forwarded unchanged; no input is admitted by those observers. Catalog and profile
 are created inside the supervisor-owned temporary root. The supplied archive and
-entry are read only. The archive digest is checked before launch, at consent, in
+entry are read only. The source adapter copies the matching source host version
+into its temporary application manifest, asserts actual `app.getVersion()` before
+installation and records it as `SNIPPETS_SOURCE_HOST`; Electron's fallback version
+is not matching-host evidence. The archive digest is checked before launch, at consent, in
 the result, and after execution; the entry digest is checked before/after.
 
-On the assigned disposable Linux ARM64 desktop only, run the normal source build,
+On an assigned disposable Linux or macOS ARM64 desktop only, run the normal source build,
 then `node test/fixtures/snippets-qualification-build.mjs /absolute/new/qualification`
 to copy its artifacts and rebuild main/renderer without source substitutions.
-The builder refuses output reuse and records source hashes and `differences: []`. It leaves shipping `dist` unchanged. The copied host
-uses the source's installed dependencies; keep both until qualification settles.
+The builder refuses output reuse and records source hashes (including the real
+application icon) and `differences: []`. Its owned output preserves the development
+layout: `dist/`, `assets/application-icon.png`, `node_modules` (a dependency link),
+`package.json` and `qualification.json`. Main still resolves its normal relative
+assets; no parent-directory writes, dummy icon or product fallback are used.
+It leaves shipping `dist` unchanged. The copied host uses the source's installed
+dependencies; keep both until qualification settles.
 
 ```sh
-OMXTERM_SNIPPETS_PACKAGED_ENTRY=/absolute/qualification/main/index.js \
+OMXTERM_SNIPPETS_PACKAGED_ENTRY=/absolute/qualification/dist/main/index.js \
 OMXTERM_SNIPPETS_PACKAGED_ARCHIVE=/absolute/snippets.omxext \
 OMXTERM_SNIPPETS_PACKAGED_ARCHIVE_SHA256=<sha256> \
 OMXTERM_SNIPPETS_PACKAGED_EVIDENCE=/absolute/evidence \
@@ -44,6 +52,71 @@ launch, timeout, cancellation and cleanup. A successful result requires normal
 exit, no cleanup errors, joined backend/PTY shutdown and exactly one scenario
 receipt. The integration owner should retain the supervisor receipts alongside
 host commit/build and archive provenance.
+
+The macOS ARM64 source transition passed all nine ordinary scenarios on the exact
+host/archive pair recorded in the [migration guide](../../docs/snippets-migration.md#macos-arm64-source-transition).
+The source layout preserves the development icon under the owned output and has a
+headless CLI/filesystem regression. This does not establish a universal remedy for
+pre-JavaScript AppKit stalls. Startup timeouts are not held-key failures, and
+neither scenario oracles nor timeouts are relaxed.
+
+The campaign uses native macOS graphics and Chromium sandboxing, without Linux/X11 flags. The published
+Snippets 0.1.0 manifest has no platform restriction and its engine permits the
+qualified source host; reuse its exact archive without editing the Linux-only catalog
+or original build receipt. A new macOS receipt must identify that archive and
+matching host independently. The extension builder's `qualification.target` is
+still `linux-arm64` / `not-run`, not macOS evidence; no rebuild is needed here.
+
+## macOS Quartz tool provisioning and ownership
+
+On the assigned disposable macOS ARM64 desktop, build the stock Swift helper into
+a new **stable** directory (Command Line Tools required). Do not rebuild it for each
+fixture profile or grant permissions to arbitrary newly generated tools:
+
+```sh
+node test/fixtures/snippets-quartz-build.mjs /absolute/stable/quartz-tool
+/absolute/stable/quartz-tool/quartz-input status
+```
+
+The explicit builder compiles and ad-hoc signs the helper, writes `tool.json` with
+absolute executable path and SHA-256 bindings to the exact tracked Swift source and
+binary, and does not post input or request permissions. The manifest is local trusted
+provisioning evidence, not a signed supply-chain attestation. Keep its directory
+writable by the fixture user for the durable input-ownership marker. To reuse an
+already provisioned identical source/binary, the integration owner may create the
+same manifest from independently verified hashes without replacing that binary.
+
+If needed, explicitly run `quartz-input request-access` and approve the actual guest
+responsible executable/application in Accessibility/Input Monitoring. Request return
+is not permission. Observe post/listen preflights and successful tap creation in the
+actual fixture ancestry; TCC attribution can differ from a shell invocation. Do not
+edit TCC databases, disable SIP, or assume root/SSH access grants input access. Run
+nonroot in the active unlocked Aqua session, with no competing GUI suite, real held
+keys or modifiers. No host GUI or permission changes are part of headless tests.
+
+Set `OMXTERM_SNIPPETS_PACKAGED_QUARTZ_TOOL=/absolute/stable/quartz-tool/tool.json`
+alongside the three source-adapter inputs on macOS. Missing configuration or changed
+source/binary hashes refuses the native launch. Linux retains its existing X11 route
+and needs no Quartz tool. `snippets-quartz.cjs` owns a separate listen-only annotated
+session observer, literal-argument bounded poster calls, per-gesture cursors and
+fresh token/PID checks. It records `quartz.jsonl` and `quartz-lifecycle.jsonl` in the
+private evidence directory (or temporary root if none was requested).
+
+Before observation/posting it exclusively creates `<executable>.unsettled.json`,
+**outside** the disposable profile. It removes that marker only after normal joined
+observer close, continuous observation, completed gestures and independent final
+session/HID-up queries. Interrupted input, unexpected observer exit, disabled taps,
+missing observations and cleanup releases retain refusal. A cleanup keyUp is labeled
+and cannot turn a failed gesture into successful qualification. The existing joined
+native supervisor still owns all descendant processes; if observer close cannot be
+established, the fixture fails and leaves the marker for the integration owner.
+
+After cancellation/SIGKILL, process/profile cleanup alone does not prove OS key
+release. Before another campaign the owner must inspect the retained marker and
+receipts, verify PID/start settlement and independently check guest key state; any
+necessary release is a separate documented recovery, never retroactive PASS. Only
+then may the owner archive/remove the marker explicitly. There is no automatic
+marker reset, rerun, permission prompt, or fallback from failed Quartz evidence.
 
 ## Exact AppImage adapter
 
@@ -103,7 +176,7 @@ are not qualified by this controlled-shell scenario.
 - Disable/uninstall joins backend retirement, preserves catalog bytes, and leaves
   the same canvas and PTY usable for a subsequent shell command.
 
-Rendering explicitly selects ANGLE SwiftShader, not the default GPU. Optional
+Linux rendering explicitly selects ANGLE SwiftShader, not the default GPU. Optional
 evidence retains supervisor results, child/core/preview captures and failure
 DOM outside the cleaned fixture profile. Input uses DOM clicks and Electron
 `sendInputEvent`, plus `/usr/bin/xdotool` XTest events for the held Enter sequence
@@ -114,7 +187,30 @@ byte isolation and a fresh Enter that must reach the terminal. A minimal Electro
 comparison reproduced missing `before-input-event` and DOM keyUp after prevented
 autorepeat, even without OMXTerm; this fixture does not claim an Electron keyUp
 receipt for that suppressed sequence. This is synthetic X11 input, not physical keys. Consent is
-controlled. There is a bounded post-delivery drain assertion, not proof against
+controlled.
+
+On macOS, the held and fresh Enter sequences use synthetic Quartz session events.
+The fixture requires trusted child activation, actual prevented Chromium core
+repeat after focus handoff, and independently observed tagged OS release to the
+actual application PID with session key state transitioning from held to up.
+Product-independent Electron 43.8.1 comparisons reproduced omitted keyUp after
+prevented autorepeat; a Quartz comparison observed both OS release and session
+state while that omission persisted. The fixture does not claim a consumed
+Electron keyUp when it was omitted. Any delivered held keyUp must still be consumed.
+Exact PTY bytes, bounded no-leak drain and a fresh Enter delivered to the same PTY
+remain unchanged. API submission, stale prior-gesture receipts, wrong tokens/PIDs,
+and constant HID-key-up queries cannot satisfy release. Missing observation or
+observer continuity fails without fallback or timeout increases.
+
+This is synthetic Quartz **session** input, not hardware/HID state or physical
+keyboard/natural autorepeat timing. Repeat is explicitly marked in a posted event.
+Native graphics selection is not broad GPU qualification. Separate WebContents
+captures are not OS-compositor evidence. The full ordinary nine-scenario macOS
+source campaign passed with inspected child/core/preview captures, joined native
+cleanup, final session/HID-up state, no unsettled-input marker and verified tool
+hashes. It does not qualify exact-DMG GUI execution or public-HTTPS acquisition.
+
+There is a bounded post-delivery drain assertion, not proof against
 arbitrarily delayed events. This fixture does not cover Kitty protocol, Protected
 Paste, stale selection, missing targets, removal during preview, update, backend
 crash, all catalog boundaries or published artifact compatibility; those require

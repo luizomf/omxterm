@@ -8,7 +8,10 @@ verification are recorded in the [migration guide](../snippets-migration.md#prev
 and linked release notes, with their input/rendering limits. Source includes
 activation-scoped catalog paging, a declared own-view semantic-input capability,
 separately buildable package/UI and the compatibility entry point described in
-[the specification](../spec.md). Other targets retain built-in Snippets. Source
+[the specification](../spec.md). The macOS ARM64 source transition selects that
+same optional implementation and has passed bounded nine-scenario native
+qualification. Review and correction verification are complete; this does not
+authorize distributed cutover or publish a macOS host. Other targets retain built-in Snippets. Source
 integration does not publish a replacement, qualify every platform or establish
 a stable extension SDK.
 
@@ -21,10 +24,11 @@ keyboard behavior. Merely moving the sidebar to a web page would lose the
 captured-target and gesture guarantees currently owned by the terminal renderer.
 
 There is also a platform prerequisite: application extension composition admits
-Linux ARM64 and now preparatory macOS ARM64 (`startApplicationExtensions`).
-[macOS composition](../macos-extension-composition.md) does not select the installed
-Snippets implementation or change its starter kit. Matching Snippets migration
-qualification remains separate. A Linux preview cannot replace the existing
+Linux ARM64 and macOS ARM64 (`startApplicationExtensions`).
+The delivered [macOS composition](../macos-extension-composition.md) prerequisite
+did not select installed Snippets or change its starter kit. The subsequent source
+transition reuses its ordinary production owners and the existing optional-Snippets
+policy; its matching Snippets qualification passed separately. A Linux preview cannot replace the existing
 feature on macOS or Windows. Published host and extension artifacts remain immutable.
 
 ## Decision
@@ -143,7 +147,7 @@ removing built-in access from any shipping platform. Development qualification
 selects one implementation at a time; it must not register duplicate production
 actions or compete for the panel. The package's separate action is withheld from production composition: the
 existing `toggleSnippets` command is the sole Snippets menu/palette action.
-Linux ARM64 composition omits the built-in view and invokes the installed tool
+Linux ARM64 composition and the qualified macOS ARM64 source transition omit the built-in view and invoke the installed tool
 through ordinary captured-target/token admission. Repeated invocation toggles
 the retained companion; other extension actions still reveal. Missing or disabled
 installations open the retained Settings Extensions page with localized guidance,
@@ -201,6 +205,24 @@ Add coverage for:
 Update the current-behavior specification, glossary and user guides when each
 behavior actually ships. This ADR selects the migration architecture; it is not
 a claim that the tests or platform prerequisites above have passed.
+
+### macOS synthetic input observation
+
+The macOS fixture uses Quartz session events and an independent, listen-only event
+observer. Product-independent comparisons reproduced Electron keyUp omission after
+prevented autorepeat. Release evidence therefore requires a tagged OS keyUp for the
+actual application PID and observed session key state from held to released, not
+`sendInputEvent`/`CGEventPost` return or a constant hardware-key-up query. Actual
+child activation and prevented core repeat, exact PTY isolation and a fresh Enter
+to the same session remain mandatory, parallel to Linux's XTest/XQueryKeymap route.
+This explicitly adopts a synthetic observation contract, not a product input change
+or a claim that Chromium consumed an event it omitted. Provisioning, source/binary
+binding and unsettled-input refusal are specified in the
+[native fixture guide](../../test/fixtures/snippets-packaged.md). Full ordinary
+macOS nine-scenario source qualification passed on the exact host/archive pair
+recorded in the [migration guide](../snippets-migration.md#macos-arm64-source-transition).
+Minimal probes are not product qualification, and source qualification is not
+published-host cutover.
 
 ## Consequences
 

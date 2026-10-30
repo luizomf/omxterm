@@ -542,8 +542,10 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and `Ctrl+Shift+S`
   on Linux and Windows, remappable through `keybinds`) shows or hides the
   selected window's Snippets view in one right-side, nonmodal Auxiliary Panel
-  below full-width title/tab chrome. Linux ARM64 uses the separately installed
-  Snippets extension; other targets retain the built-in view. The existing
+  below full-width title/tab chrome. Linux ARM64 and macOS ARM64 source use the
+  separately installed Snippets extension; other targets retain the built-in view.
+  The macOS source transition has passed bounded native qualification; published
+  macOS hosts still retain built-in Snippets pending a matching distribution. The existing
   command remains the sole menu/palette entry, including remapped/null bindings.
   Without an enabled installation, it opens Extensions management with an
   optional-tool explanation and the actual installation/runtime status, without
@@ -1194,7 +1196,7 @@ common built-in defaults (including explicit `window.blur: false` and
 `window.transparency: 0`) and `theme.path` set to `themes/omtheme.json`, one
 copy of the bundled theme at `themes/omtheme.json`. Targets retaining built-in
 Snippets also create one non-executing literal-block example in `snippets.yaml`;
-Linux ARM64 leaves that user-owned catalog absent and the optional package
+Linux ARM64 and macOS ARM64 source leave that user-owned catalog absent and the optional package
 provides an example instead. Existing sibling files are never replaced. Files are
 published complete without overwriting concurrent creations; configuration is
 published last. Shell, font family and shortcuts retain their implicit platform
@@ -1433,7 +1435,7 @@ actionable problem, including the resolved path and schema field location or
 syntax line/column coordinates, in place of the list, and the terminal is
 unaffected. Parser excerpts and arbitrary parser messages are never displayed.
 For built-in Snippets, Electron main reads and validates the file and sends only
-validated, typed data over the preload bridge. On Linux ARM64, the installed
+validated, typed data over the preload bridge. On Linux ARM64 and in macOS ARM64 source, the installed
 Snippets backend reuses that parser and configuration-root resolution, returning
 complete activation-scoped catalog snapshots in bounded pages. Installation,
 disabling and uninstalling never modify the catalog. Core retains captured-target
@@ -1660,8 +1662,8 @@ executable names, command arguments, commands, titles, secrets, or transcripts.
 
 The application makes remote requests only for deliberate official-catalog browsing
 and HTTPS extension archive installation on Linux ARM64 and macOS ARM64.
-macOS production composition is preparatory; published catalog target restrictions
-remain unchanged (see [qualification scope](macos-extension-composition.md)).
+macOS source composition includes the qualified optional Snippets transition;
+published catalog target restrictions remain unchanged (see [qualification scope](macos-extension-composition.md)).
 The fixed project catalog is fetched only on Browse/Refresh, never startup or
 Settings reopen. Its bounded versioned JSON supplies plain-text release cards;
 main captures selections, checks supported target and host/API compatibility,
@@ -1712,12 +1714,14 @@ not revoke accepted Surface-owned input or end sessions. This preparatory
 capability does not install an optional Snippets package or cut over any platform.
 `extensions/snippets` source builds a separate archive using the shared
 Snippets UI/CSS and bounded catalog client. Its separate action is withheld from
-production; Linux ARM64 production composition routes the existing Snippets
-command to the optional installed companion or Extensions guidance. Other targets
+production; Linux ARM64 and macOS ARM64 source composition route
+the existing Snippets command to the optional installed companion or Extensions
+guidance. The macOS source transition passed its nine-scenario native campaign;
+macOS host publication remains separate. Other targets
 retain the built-in view. Native qualification uses unchanged production composition. Native child
 logical activity is separate from temporary visibility, and committed language
 and explicit search/restore focus intent preserve controls across overlays.
-No package publication or platform migration is implied;
+No macOS host publication or distributed-platform migration is implied;
 see [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md).
 This is a production-facing development module consumed by the Linux ARM64 Files preview.
 Catalog acquisition and stable SDK exposure remain separate. Packaged child
@@ -1839,10 +1843,12 @@ A separately owned backend runtime consumes Installed Packages through an
 app-owned bootstrap. Normal macOS and Linux ARM64 builds include its artifacts and
 native lease addon; only Linux ARM64 includes the separate Files move addon.
 macOS ARM64 production composition admits installation and explicit activation
-through the same management/runtime/view owners as Linux ARM64. Built-in macOS
-Snippets and its starter kit remain until separate matching migration qualification;
-the package's duplicate Snippets action stays withheld. This is preparatory wiring,
-not macOS Files support or a platform qualification claim. Isolated
+through the same management/runtime/view owners as Linux ARM64. macOS ARM64 source
+selects optional Snippets and omits its starter example from new configuration kits;
+the package's duplicate Snippets action stays withheld. The [bounded source
+qualification](snippets-migration.md#macos-arm64-source-transition) does not qualify
+macOS Files or publish a macOS host. Distributed macOS hosts retain built-in
+Snippets until the matching distribution gate is met. Isolated
 foundation/runtime builds remain available.
 Explicit activation through the application manager lazily forks one
 standard Node ChildProcess per active extension/application runtime using bundled

@@ -1,10 +1,12 @@
-# Optional Snippets on Linux ARM64
+# Optional Snippets migration
 
 The published [OMXTerm 0.24.0-dev.11 Linux ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
 uses the separately installed [Snippets 0.1.0 extension](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0).
 Both are non-Latest prereleases; stable **0.23.0** remains unchanged with built-in
-Snippets. macOS, Windows and Linux x64 also retain built-in Snippets until their
-extension infrastructure and matching migration are qualified.
+Snippets. Distributed macOS, Windows and Linux x64 hosts retain built-in Snippets.
+The macOS ARM64 **source transition** selects optional Snippets through ordinary
+production composition and has passed bounded native qualification. It is not a
+published macOS host migration; distribution remains a separate gate.
 
 ## Existing catalogs and shortcuts
 
@@ -14,7 +16,8 @@ delete that file. YAML v1, exact text, search, Insert/Run, preview and Protected
 Paste remain the same. There is no conversion or second Commands catalog.
 
 **View → Toggle Snippets**, its Command Palette entry and existing shortcut
-(`Ctrl+Shift+S` on Linux, including custom remaps or `null`) remain supported.
+(`Ctrl+Shift+S` on Linux, `Cmd+Shift+S` on macOS, including custom remaps or
+`null`) remain supported.
 An enabled package opens in the shared companion panel; invoking the command
 again hides it. Without an enabled package, the command opens **Settings →
 Extensions** with an explanation. It never installs or enables anything for you.
@@ -57,6 +60,43 @@ checkpoint passed on this exact published host/archive pair; see
 Disabling/removing Snippets retires its view and cancels unaccepted previews,
 not terminal sessions or already accepted Surface-owned paste. It does not undo
 commands already sent. Reinstalling does not require rebuilding your catalog.
+
+## macOS ARM64 source transition
+
+The source transition reuses the single compatibility action, preserves existing catalogs
+and omits the example only in newly created configuration kits. It does not install
+or silently enable a package. For deliberate local/offline testing, obtain the
+exact published Snippets `0.1.0` archive and checksum linked above, verify with
+`shasum -a 256 -c snippets-0.1.0.omxext.sha256` on macOS, then follow the local
+archive/trust/enable steps above. The existing archive has no manifest platform
+restriction and requires host `>=0.24.0-dev.8`; compatibility metadata alone is
+not qualification. Keep the user's existing YAML beside `config.json`.
+
+The official catalog still advertises **Linux ARM64 only**. Do not treat its
+listing or the original Linux build receipt as macOS evidence. The full ordinary
+nine-scenario source campaign passed on macOS 27.0.1 ARM64, Electron 43.8.1,
+host `0.24.0-dev.16`, source `117428a31d897d6ba4775cbe31f3e3d52df5d917`, using
+published Snippets `0.1.0` SHA-256
+`6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7`.
+It used native macOS graphics and sandboxing, controlled consent and a plain-paste
+shell. Tagged Quartz down/repeat/up and session held/up observations accompanied
+trusted child activation, prevented Chromium core repeat, exact PTY bytes and
+fresh Enter. Normal Quit joined backend/PTY shutdown; owned PID/start identities
+and profiles were absent after all nine scenarios. Three separate WebContents captures were inspected,
+as were final session/HID-up state, absent unsettled-input marker and tool hashes.
+
+Formatting, types, lint, 118 focused tests, Swift code generation and build passed;
+prior 4,198 headless passes and 66 skips were reused only for unchanged inputs.
+Independent review was completed, its version finding corrected, and later
+corrections verified by the integration owner. This is not a full portable-suite,
+exact-DMG GUI, physical-keyboard, natural-autorepeat, Kitty, OS-compositor or
+public-HTTPS qualification. The historical minimal-composition fixture remains
+separate; its changed optional-Snippets assertion was not rerun.
+
+A compatible package must be published and verified for the matching macOS host
+before any distributed macOS host removes built-in access. Whether to reuse the
+immutable archive for that release is a later maintainer decision; no catalog,
+archive, receipt or host release is changed here.
 
 ## Preview coverage and remaining platforms
 

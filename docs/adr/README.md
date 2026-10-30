@@ -61,8 +61,10 @@ adds the optional fixed same-tab keyboard route with core-owned Stop.
 records the accepted optional-extension migration design and platform cutover
 prerequisites. The published Linux ARM64 OMXTerm `0.24.0-dev.11` / Snippets `0.1.0`
 preview uses the optional installed companion; the [migration guide](../snippets-migration.md)
-records installation and qualification limits. Other targets retain built-in
-Snippets until their own platform prerequisites are met; #741 remains open.
+records installation and qualification limits, including the natively qualified
+macOS ARM64 source transition, which is not a published macOS host migration. Distributed
+hosts on other platforms retain built-in Snippets until their own prerequisites
+are met; #741 remains open.
 
 ## Related boundaries
 

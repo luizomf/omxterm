@@ -45,7 +45,7 @@ describe("initial configuration kit", () => {
   it.each([
     ["linux", "arm64", false],
     ["linux", "x64", true],
-    ["darwin", "arm64", true],
+    ["darwin", "arm64", false],
     ["darwin", "x64", true],
     ["win32", "arm64", true],
     ["win32", "x64", true],
@@ -75,13 +75,21 @@ describe("initial configuration kit", () => {
       homeDirectory: options.homeDirectory,
     });
     expect((await readdir(directory)).includes("snippets.yaml")).toBe(
-      !(process.platform === "linux" && process.arch === "arm64"),
+      !(
+        ["linux", "darwin"].includes(process.platform) &&
+        process.arch === "arm64"
+      ),
     );
   });
 
-  it.each([false, true])(
-    "preserves arbitrary existing catalog bytes on Linux ARM64 (config exists: %s)",
-    async (existingConfig) => {
+  it.each([
+    ["linux", false],
+    ["linux", true],
+    ["darwin", false],
+    ["darwin", true],
+  ] as const)(
+    "preserves arbitrary existing catalog bytes on %s ARM64 (config exists: %s)",
+    async (platform, existingConfig) => {
       const { options, directory } = await fixture();
       await mkdir(directory, { recursive: true });
       const bytes = Buffer.from([0xef, 0xbb, 0xbf, 0x23, 0x0d, 0x0a, 0xff]);
@@ -91,7 +99,7 @@ describe("initial configuration kit", () => {
         await writeFile(path.join(directory, "config.json"), "user config");
       await createInitialConfigurationKit({
         ...options,
-        platform: "linux",
+        platform,
         architecture: "arm64",
       });
       expect(await readFile(catalog)).toEqual(bytes);

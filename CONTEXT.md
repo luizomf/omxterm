@@ -155,8 +155,9 @@ Insert, Run and read-only preview deliver exact text through Protected Paste to
 a captured live Surface, never a replacement target. See
 [interaction behavior](docs/spec.md#window-and-session-behavior) and
 [catalog configuration](docs/spec.md#configuration-and-local-state).
-Linux ARM64 source uses the optional installed extension; other targets retain
-the built-in view. Distributed cutover requires a published compatible package
+Linux ARM64 and macOS ARM64 source use the optional installed extension; other
+targets retain the built-in view. The macOS source transition has bounded native
+qualification, not a published host release. Distributed cutover requires a published compatible package
 and migration guidance ([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).
 
 ## Terminal data and interaction
@@ -280,7 +281,7 @@ review, support or a safety guarantee.
 
 **Installed Packages** — The internal module that owns local archive validation,
 immutable installed versions, aggregate registry transactions, installation
-generations and deferred cleanup. It is consumed by the Linux ARM64 and preparatory
+generations and deferred cleanup. It is consumed by the Linux ARM64 and
 macOS ARM64 application composition, but does not itself own management UI or execution. See the
 [foundation contract](docs/extension-installation-foundation.md).
 
@@ -336,8 +337,9 @@ retirement revokes unaccepted interactions, not accepted Surface-owned delivery.
 official-catalog browsing and HTTPS extension archive installation on Linux ARM64
 and macOS ARM64, through bounded main-owned acquisition and
 captured-byte trust. No startup/reopen catalog, telemetry or background update
-requests are made. macOS composition does not broaden published catalog targets,
-qualify Files or migrate built-in Snippets; see [its scope](docs/macos-extension-composition.md).
+requests are made. macOS composition does not broaden published catalog targets
+or qualify Files. Its qualified Snippets source transition is not a distributed
+host migration; see [its scope](docs/macos-extension-composition.md).
 Internal hosted content remains
 restricted to its owned epoch-local packaged-resource protocol. Child processes
 retain normal network access; explicitly activated terminal web links open through the OS.

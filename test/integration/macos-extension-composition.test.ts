@@ -92,7 +92,7 @@ it.skipIf(!enabled)(
       JSON.parse(receipts[0]!.slice("MACOS_COMPOSITION_RESULT:".length)),
     ).toEqual({
       checks: [
-        "built-in-snippets-retained",
+        "optional-snippets-management-no-activation",
         "ordinary-install-trust-dormancy",
         "explicit-activation-hosted-backend-and-editing",
         "disable-uninstall-retained-surface-pty",
