@@ -58,6 +58,142 @@ Headless fixture/oracle/deadline and real-read lifetime checks:
 `npm test -- test/unit/font-read-reload-fixture.test.ts test/unit/terminal-font-read-reload.test.ts`.
 Successful headless checks or bundle preparation are not native runtime acceptance.
 
+## Restty host PowerShell isolation
+
+The shared Restty host fixture disables Ctrl+V clipboard access with a typed
+`Action<Nullable<ConsoleKeyInfo>, object>` no-op registered through public
+`PSConsoleReadLine.SetKeyHandler`. Unlike a ScriptBlock handler, the delegate
+preserves PSReadLine's console input mode: an immediate Ctrl+C must reach
+`CancelLine` and generate the fresh prompt required by large-paste readiness.
+History remains isolated with `SaveNothing` and a fixture-owned path; input
+phases still require the executed setup marker. The readiness oracle also
+requires an executed command marker, not just a prompt or observed PTY write.
+
+Headless encoded-setup and readiness checks (not native console-mode evidence):
+`npm test -- test/unit/restty-host-sessions.test.ts test/unit/restty-host-paste.test.ts`.
+
+## Host output evidence
+
+The paced output fixture keeps all sixteen actual Select All/Copy checks over
+2 MiB of ordered records, with unchanged pacing, history/core limits and real
+pause/resume. Each source workload window is one literal BEGIN, 4096 exact
+32-byte records and its matching END (131,122 bytes). The reserved
+`__OMXTERM_BATCH_` namespace must occur once in configured order; malformed,
+duplicate, reordered or truncated framing fails without resynchronization.
+Bytes inside frames are never normalized, including controls and line endings.
+
+Outside those frames, arbitrary printable/control output is uninterpreted
+transport envelope, not an ANSI allowlist or a tolerated trailer length. It is
+forwarded unchanged and counted without retaining the whole envelope. Only a
+bounded possible-marker prefix is carried between callbacks. Original source
+bytes use each callback's UTF-8 byte length; finalized framed bytes plus envelope
+bytes must equal that total. This scoped workload oracle does not identify or
+validate the origin/semantics of arbitrary envelope text.
+
+After the actual producer exits, the fixture finalizes framing and takes a fresh
+session flow snapshot: every original source byte must be cumulatively ACKed and
+actual pending bytes must be zero. A pre-exit snapshot or advancement of the ACK
+wrapper's counter alone is insufficient.
+
+For a deliberately failed Copy, the callback retains the actual destination
+cause and copy diagnostic without sampling flow. The existing bounded copy-result
+wait requires exact cumulative ACK equality with **all currently observed original
+UTF-8 bytes** and actual session pending bytes zero, then captures/formats/throws
+the destination rejection in that same synchronous check, before failure cleanup.
+New chunks before settlement remain counted. A timeout or unavailable real flow
+metadata is an accounting failure retaining the destination cause, not a qualified
+destination-only negative. This snapshot is not the positive post-exit finalization.
+Headless parser/core and composed producer/session/harness controls:
+`npm test -- test/unit/restty-output-checkpoint.test.ts test/unit/restty-host-output-phases.test.ts`.
+They do not qualify native continuation or Windows transport.
+
+## Resize and continued-text coverage
+
+The existing appearance/resize fixture also checks one short primary-screen,
+wrap-enabled continuation on its retained host-resize Surface. It clears/homes
+its controlled output, writes exactly the current columns of ASCII, changes
+only the owned container width from 640 to 600 CSS px once, then crosses the
+existing frame boundary. Its initial 32 px height must yield one or two rows:
+Select All includes unused viewport rows, so this avoids blank-row suffixes
+without normalizing copy. The existing TUI checks subsequently grow that host.
+Current positive integer geometry must actually
+narrow, retain rows and move the old edge off the new edge. No calibration,
+replay, historical-match acceptance, tolerance or retry chooses the grid.
+The short continuation must copy as exactly prefix plus suffix, without trimming
+or normalization, with the same Surface/container/canvas, one Adapter start and
+no close. The integration consumer checks this evidence in its existing
+appearance runs. Run on an idle unlocked desktop, one graphical suite at a time:
+
+```sh
+npm test -- test/integration/restty-appearance-rendering.test.ts -t "renders theme colors and preserves configured geometry through live updates"
+```
+
+This real DOM/Restty/core/font check uses a controlled Adapter, not a native PTY,
+OS clipboard paste or native-window drag. Headless preparation is not its pass.
+The bundled-core reflow/CPR tests retain the history, hard-break, alternate-screen
+and pending-wrap matrix; the native paced-output case separately retains real
+transport/backpressure, sixteen exact copies, ACK/pending accounting and exit.
+
+The former oversized native controlled-prefix/refit/continuation case was
+retired as a coverage redesign, not made green. Its unexplained Windows progress
+timeouts remain a residual native pause/resize/continuation risk. Separate core,
+Surface and native-flow checks do not prove that exact combined ordering or
+qualify a dependency migration by themselves.
+
+The source-side reorder/omission controls retain only the longest suffix that
+could still begin their exact mutation needle. Unrelated protocol/prompt output
+is released immediately, with no timer or assumed later read. Raw source
+observation precedes the single targeted mutation. Reorder preserves byte length
+and must fail actual destination order at record 100; omission must first prove
+fresh raw execution (not command echo), then fail response presence in that same
+surviving core. Original-source ACK semantics and diagnostic deadlines are
+unchanged; omission never synthesizes ACKs for removed bytes. These fixture
+corrections do not establish the cause of historical native control timeouts.
+
+## Host/oracle phase receipts
+
+The shared Restty host fixture emits `__OMXTERM_RESTTY_HOST_PHASE__` JSON lines
+with version 1, a fixed `phase`, `begin`/`complete`, wall-clock `at` and
+process-local monotonic `monotonicMs`. Only source/ACK/copy checkpoint phases
+carry a zero-based `checkpoint` (0–15). These synchronous, best-effort receipts
+contain no terminal text, commands, titles or paths; they do not replace the
+supervisor's mechanical outcome or any oracle assertion.
+
+App readiness, load, first session, the original single native focus request,
+its observed focus event, native focus predicate and DOM readiness are separate
+boundaries. `dom-focus-query / complete` means the first existing renderer query
+returned, even if false; only `dom-focus / complete` establishes its original
+focus predicate. No extra responsiveness probe or periodic watcher is added.
+An activation stall before that query says nothing about renderer responsiveness.
+Output receipts cover the real producer, high-water/resume, all sixteen source,
+original-ACK and copied-destination checkpoints, memory query and exit. The
+D3-only calibration/continuation/resize-return trace stream was removed with its
+retired scenario. No per-chunk logger, payload dump or new poller replaces it.
+A contained resize failure in the owned output session still vetoes successful
+settlement, including initial sizing and the later asynchronous memory/exit
+boundaries. It does not replace an earlier primary source/copy/write failure or
+synthesize native exit. Production fixed-category resize diagnostics and native
+lifetime/cleanup ownership remain unchanged. Requested grids are not native
+resize success or child consumption.
+
+Focused output waits retain their **10-second** predicate deadline, composed
+with the session's 25 ms / 120-second wait. The wrapper checks its clock before
+entering the predicate. No wait or supervisor bound changed with retirement;
+missing receipts alone do not establish a native mechanism.
+
+The existing supervisor retains these lines even when its outer deadline wins
+before an inner wait can report an error. Inspect unmatched entered phases and
+completed phases together, including asynchronous stall completion and cleanup;
+the last line alone need not identify the first failed operation. Absence of a
+receipt is not success. Diagnostic sink failure is ignored, never converted to
+acceptance. Deadlines, focus policy, producer pacing, backpressure and original
+assertions remain unchanged. Headless ordering, privacy and real-supervisor
+outer-termination controls:
+
+```sh
+node node_modules/vitest/vitest.mjs run test/unit/restty-host-window.test.ts test/unit/restty-host-phases.test.ts test/unit/restty-host-output-phases.test.ts test/unit/restty-host-phase-supervision.test.ts
+```
+
 ## Auxiliary panel and shortcut capture
 
 The `auxiliary-panel` suite uses the production window host, real Surfaces/PTYs,
