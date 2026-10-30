@@ -166,7 +166,7 @@ void ready
       assert.equal(approvals, 1);
       assert.equal(children.length, 0, "installation dormant");
       await click(core, ".settings-close");
-      menu("Snippets");
+      menu("Toggle Snippets");
       await until(
         async () =>
           hosted().length === 1 &&
@@ -213,7 +213,7 @@ void ready
       const open = async () => {
         // Header close, then ordinary menu activation: deterministic toggle state.
         if (native.getVisible()) await click(core, ".auxiliary-header button");
-        menu("Snippets");
+        menu("Toggle Snippets");
         await until(
           () => native.getVisible() && view.isFocused(),
           "native child focus",
@@ -339,7 +339,7 @@ void ready
         "const search = document.querySelector('input[type=search]'); search.value = 'Exact run'; search.dispatchEvent(new Event('input', { bubbles: true }));",
       );
       await click(core, ".auxiliary-header button");
-      menu("Snippets");
+      menu("Toggle Snippets");
       await until(
         async () =>
           native.getVisible() &&
