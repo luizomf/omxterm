@@ -1,6 +1,36 @@
 // @vitest-environment jsdom
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { expect, it, vi } from "vitest";
+
+it("selects the current source archive for both production installation paths", async () => {
+  const entry = await readFile("test/fixtures/files-production.mjs", "utf8");
+  const start = entry.indexOf("const manifest = JSON.parse(");
+  const end = entry.indexOf("const require =", start);
+  expect(start).toBeGreaterThan(0);
+  expect(end).toBeGreaterThan(start);
+  const resolveArchive = new Function(
+    "readFile",
+    "path",
+    "source",
+    `return (async () => { ${entry.slice(start, end)} return archivePath; })();`,
+  ) as (
+    read: typeof readFile,
+    paths: typeof path,
+    source: string,
+  ) => Promise<string>;
+  const manifest = JSON.parse(
+    await readFile("extensions/files/extension.json", "utf8"),
+  ) as { version: string };
+  await expect(resolveArchive(readFile, path, process.cwd())).resolves.toBe(
+    path.join(
+      process.cwd(),
+      `dist/extensions/files-${manifest.version}.omxext`,
+    ),
+  );
+  expect(entry).toContain("const archive = await readFile(archivePath)");
+  expect(entry).toContain("filePaths: [archivePath]");
+});
 
 it("rejects unavailable fixture controls instead of reporting an ignored click as admission", async () => {
   const source = await readFile("test/fixtures/files-production.mjs", "utf8");

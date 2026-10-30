@@ -12,6 +12,13 @@ const fixture = JSON.parse(
   await readFile(path.join(root, "fixture.json"), "utf8"),
 );
 const source = fixture.source;
+const manifest = JSON.parse(
+  await readFile(path.join(source, "extensions/files/extension.json"), "utf8"),
+);
+const archivePath = path.join(
+  source,
+  `dist/extensions/files-${manifest.version}.omxext`,
+);
 const require = createRequire(path.join(source, "package.json"));
 await mkdir(path.join(root, "profile"));
 app.setPath("userData", path.join(root, "profile"));
@@ -31,9 +38,7 @@ let archiveUrl;
 let slowStarted = false;
 let slowClosed = false;
 if (fixture.https) {
-  const archive = await readFile(
-    path.join(source, "dist/extensions/files-0.1.0.omxext"),
-  );
+  const archive = await readFile(archivePath);
   server = createServer(
     {
       key: await readFile(path.join(root, "key.pem")),
@@ -102,7 +107,7 @@ syncBuiltinESMExports();
 let approved = 0;
 dialog.showOpenDialog = async () => ({
   canceled: false,
-  filePaths: [path.join(source, "dist/extensions/files-0.1.0.omxext")],
+  filePaths: [archivePath],
 });
 dialog.showMessageBox = async (_window, options) => {
   assert.equal(

@@ -54,13 +54,13 @@ it.skipIf(process.env.OMXTERM_FILES_BUILD !== "1")(
       const extracted = path.join(root, "extracted");
       await mkdir(extracted);
       const validated = await extractPackage(bytes, extracted, {
-        appVersion: "0.23.0-dev.8",
+        appVersion: host.version,
         apiVersion: "0.1.0",
       });
       expect(validated).toEqual({ digest, manifest: receipt.manifest });
       expect(() =>
         checkCompatibility(validated.manifest, {
-          appVersion: "0.23.0-dev.7",
+          appVersion: "0.24.0-dev.3",
           apiVersion: "0.1.0",
         }),
       ).toThrow("incompatible");
