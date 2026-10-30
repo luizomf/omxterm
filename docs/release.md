@@ -242,6 +242,13 @@ The normal stable-release procedure and its complete asset set remain unchanged.
 
 ## Files catalog publication
 
+The initial Files catalog preview was published and
+[#728](https://github.com/luizomf/omxterm/issues/728) is closed. See the
+[Files preview guide](files-development-preview.md) for distributed versions and
+qualification limits. The version-specific sequence below records that initial
+publication, not outstanding work or permission to recreate its sealed releases.
+Future previews require new identities and matching review/qualification.
+
 This partial preview is separate from the complete stable release below. The
 integration maintainer owns publication after full candidate review/corrections and
 exact packaged qualification. Keep source review SHA, final SHA, host package and
@@ -272,10 +279,11 @@ adds catalog browsing. Do not rebuild or replace published same-version bytes.
    downloaded bytes against the published release receipt. A localhost transport
    fixture or successful upload does not qualify this boundary.
 
-Record publication URLs, exact readback hashes and actual outcomes. Until both a
-compatible public host and public Files consumption succeed, #728 remains open;
-source integration or a valid empty catalog is not product distribution. No signing
-infrastructure, stable SDK or broader platform campaign is implied.
+Record publication URLs, exact readback hashes and actual outcomes. Source
+integration or a valid empty catalog is not product distribution: the initial
+#728 delivery required both a compatible public host and verified public Files
+consumption. No signing infrastructure, stable SDK or broader platform campaign
+is implied.
 
 ## SSH preview publication
 
@@ -321,7 +329,10 @@ release notes/assets to retroactively claim later verification.
 
 ## Snippets preview preparation and publication
 
-The Linux ARM64 source transition in ADR0044 is not a distributed migration.
+The initial Linux ARM64 host `0.24.0-dev.11` / Snippets `0.1.0` preview is
+published; see the [migration guide](snippets-migration.md) for exact identities,
+installation and qualification limits. The procedure below applies to future
+preview pairs; source transition alone does not establish distributed migration.
 Prepare a partial prerelease, not the complete stable asset set. Other targets
 retain built-in Snippets until their own replacement is qualified. Source-native
 qualification does not substitute for the exact packaged host/archive pair.
