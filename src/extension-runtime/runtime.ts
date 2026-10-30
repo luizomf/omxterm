@@ -209,7 +209,7 @@ class Activation {
     this.admissions.set(owned, () => {});
     try {
       const valid = await this.guard!.revalidate();
-      // Admission linearizes at this short writer-protected read. A later disable
+      // Admission linearizes at this short registry-protected read. A later disable
       // cannot retroactively revoke already admitted ordinary trusted code.
       if (this.phase !== "checking" || this.options.owner.aborted || !valid)
         return this.fail("unavailable");

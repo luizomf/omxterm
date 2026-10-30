@@ -120,7 +120,11 @@ export class InstalledPackages {
       options.leases,
     );
     const publication = { attempted: false };
-    await store.writer(() => store.initialize(publication), publication);
+    await store.registry(
+      "write",
+      () => store.initialize(publication),
+      publication,
+    );
     return store;
   }
   private async initialize(publication: Publication): Promise<void> {
@@ -168,10 +172,7 @@ export class InstalledPackages {
       await directory(path.join(this.root, name));
   }
   private async bounded<T>(operation: () => Promise<T>): Promise<T> {
-    if (this.active >= 32) {
-      console.error("[DEBUG-741-lock] capacity", process.pid);
-      throw new PackageError("busy");
-    }
+    if (this.active >= 32) throw new PackageError("busy");
     this.active++;
     try {
       return await operation();
@@ -179,32 +180,16 @@ export class InstalledPackages {
       this.active--;
     }
   }
-  private async writer<T>(
+  private async registry<T>(
+    mode: "read" | "write",
     operation: () => Promise<T>,
     publication?: Publication,
-    label = "writer",
   ): Promise<T> {
     await this.checkRoot();
-    // [DEBUG-741-lock] Temporary metadata-only cross-process contention probe.
-    const trace = (phase: string) =>
-      console.error(
-        "[DEBUG-741-lock]",
-        JSON.stringify({ pid: process.pid, label, phase }),
-      );
-    trace("acquire");
-    const lease = await this.lock("writer", true);
-    trace(lease ? "acquired" : "busy");
+    // Readers share the same sidecar; mutations and collection remain exclusive.
+    const lease = await this.lock("writer", mode === "write");
     if (!lease) throw new PackageError("busy");
-    return withCleanup(
-      operation,
-      [
-        async () => {
-          await lease.release();
-          trace("released");
-        },
-      ],
-      publication,
-    );
+    return withCleanup(operation, [() => lease.release()], publication);
   }
   private async readRegistry(): Promise<Registry> {
     try {
@@ -266,7 +251,10 @@ export class InstalledPackages {
 
   snapshot(): Promise<Installation[]> {
     return this.bounded(() =>
-      this.writer(async () => (await this.readRegistry()).installations),
+      this.registry(
+        "read",
+        async () => (await this.readRegistry()).installations,
+      ),
     );
   }
   install(
@@ -311,39 +299,43 @@ export class InstalledPackages {
             await metadata.sync();
           }, [() => metadata.close()]);
           await syncDirectory(stage);
-          return this.writer(async () => {
-            const registry = await this.readRegistry();
-            const old = this.entry(registry, manifest.id, expectedGeneration);
-            const version = path.join(this.root, "versions", digest);
-            if (await exists(version)) {
-              await directory(version);
-              const existing = await readBoundedFile(
-                path.join(version, ".omxterm-install.json"),
-                128 * 1024,
+          return this.registry(
+            "write",
+            async () => {
+              const registry = await this.readRegistry();
+              const old = this.entry(registry, manifest.id, expectedGeneration);
+              const version = path.join(this.root, "versions", digest);
+              if (await exists(version)) {
+                await directory(version);
+                const existing = await readBoundedFile(
+                  path.join(version, ".omxterm-install.json"),
+                  128 * 1024,
+                );
+                if (existing.toString("utf8") !== marker)
+                  throw new PackageError("invalid-store");
+              } else {
+                // All managed publishers/collectors use writer exclusion. This is
+                // not a generic no-replace filesystem operation for arbitrary paths.
+                await rename(stage, version);
+                await syncDirectory(path.join(this.root, "versions"));
+                await syncDirectory(path.join(this.root, "staging"));
+              }
+              const installed: Installation = {
+                id: manifest.id,
+                generation: nextGeneration(old),
+                digest,
+                enabled,
+                manifest,
+              };
+              registry.installations = registry.installations.filter(
+                (entry) => entry.id !== manifest.id,
               );
-              if (existing.toString("utf8") !== marker)
-                throw new PackageError("invalid-store");
-            } else {
-              // All managed publishers/collectors use writer exclusion. This is
-              // not a generic no-replace filesystem operation for arbitrary paths.
-              await rename(stage, version);
-              await syncDirectory(path.join(this.root, "versions"));
-              await syncDirectory(path.join(this.root, "staging"));
-            }
-            const installed: Installation = {
-              id: manifest.id,
-              generation: nextGeneration(old),
-              digest,
-              enabled,
-              manifest,
-            };
-            registry.installations = registry.installations.filter(
-              (entry) => entry.id !== manifest.id,
-            );
-            registry.installations.push(installed);
-            await this.publish(registry, publication);
-            return installed;
-          }, publication);
+              registry.installations.push(installed);
+              await this.publish(registry, publication);
+              return installed;
+            },
+            publication,
+          );
         },
         [
           async () => {
@@ -372,27 +364,34 @@ export class InstalledPackages {
   ): Promise<Installation> {
     const publication = { attempted: false };
     return this.bounded(() =>
-      this.writer(async () => {
-        const registry = await this.readRegistry();
-        const old = this.entry(registry, id, expectedGeneration);
-        if (!old?.digest || (enabled !== null && typeof enabled !== "boolean"))
-          throw new PackageError("unavailable");
-        const entry: Installation =
-          enabled === null
-            ? {
-                id,
-                generation: nextGeneration(old),
-                digest: null,
-                enabled: false,
-                manifest: null,
-              }
-            : { ...old, generation: nextGeneration(old), enabled };
-        registry.installations = registry.installations.map((current) =>
-          current.id === id ? entry : current,
-        );
-        await this.publish(registry, publication);
-        return entry;
-      }, publication),
+      this.registry(
+        "write",
+        async () => {
+          const registry = await this.readRegistry();
+          const old = this.entry(registry, id, expectedGeneration);
+          if (
+            !old?.digest ||
+            (enabled !== null && typeof enabled !== "boolean")
+          )
+            throw new PackageError("unavailable");
+          const entry: Installation =
+            enabled === null
+              ? {
+                  id,
+                  generation: nextGeneration(old),
+                  digest: null,
+                  enabled: false,
+                  manifest: null,
+                }
+              : { ...old, generation: nextGeneration(old), enabled };
+          registry.installations = registry.installations.map((current) =>
+            current.id === id ? entry : current,
+          );
+          await this.publish(registry, publication);
+          return entry;
+        },
+        publication,
+      ),
     );
   }
 
@@ -400,7 +399,7 @@ export class InstalledPackages {
     return this.bounded(async () => {
       let opened: OpenVersion | undefined;
       try {
-        return await this.writer(async () => {
+        return await this.registry("read", async () => {
           const entry = (await this.readRegistry()).installations.find(
             (entry) => entry.id === id,
           );
@@ -447,21 +446,17 @@ export class InstalledPackages {
               },
               revalidate: () =>
                 this.bounded(() =>
-                  this.writer(
-                    async () => {
-                      if (released) return false;
-                      const current = (
-                        await this.readRegistry()
-                      ).installations.find((item) => item.id === id);
-                      return (
-                        current?.enabled === true &&
-                        current.generation === entry.generation &&
-                        current.digest === entry.digest
-                      );
-                    },
-                    undefined,
-                    "revalidate",
-                  ),
+                  this.registry("read", async () => {
+                    if (released) return false;
+                    const current = (
+                      await this.readRegistry()
+                    ).installations.find((item) => item.id === id);
+                    return (
+                      current?.enabled === true &&
+                      current.generation === entry.generation &&
+                      current.digest === entry.digest
+                    );
+                  }),
                 ),
             };
             return opened;
@@ -489,7 +484,7 @@ export class InstalledPackages {
         this.root,
         this.leases,
         (operation) =>
-          this.writer(async () =>
+          this.registry("write", async () =>
             operation(
               new Set(
                 (await this.readRegistry()).installations.map(

@@ -252,6 +252,9 @@ class NativeExtensionViewHost {
     }
   }
   #visibility(entry: Entry, visible: boolean) {
+    // Losing visible ownership is final for captured semantic requests. A
+    // same-view geometry refresh must not invalidate otherwise live admission.
+    if (entry.visible && !visible) this.#admissionGeneration++;
     entry.visible = visible;
     entry.view.setVisible(visible);
     // WebContents can outlive its disposed frame after renderer loss. Native
@@ -461,7 +464,6 @@ class NativeExtensionViewHost {
           )
             throw new Error("Request unavailable");
           const value = captureValue(args[0]);
-          const revision = this.#revision;
           const generation = this.#admissionGeneration;
           const visible =
             entry.visible &&
@@ -470,43 +472,18 @@ class NativeExtensionViewHost {
             !this.options.owner.isMinimized();
           const context: ExtensionViewRequestContext = {
             id: entry.descriptor.id,
-            isCurrentVisible: () => {
-              // [DEBUG-741-admission] Temporary metadata-only presentation probe.
-              const current =
-                visible &&
-                this.#live() &&
-                this.options.owner.isVisible() &&
-                !this.options.owner.isMinimized() &&
-                this.#revision === revision &&
-                this.#admissionGeneration === generation &&
-                this.#selected === entry.descriptor.id &&
-                entry.visible &&
-                !entry.closing &&
-                !entry.rendererGone &&
-                !entry.abort.signal.aborted &&
-                !contents.isDestroyed();
-              if (!current)
-                console.error(
-                  "[DEBUG-741-admission] visibility",
-                  JSON.stringify({
-                    capturedVisible: visible,
-                    live: this.#live(),
-                    windowVisible: this.options.owner.isVisible(),
-                    minimized: this.options.owner.isMinimized(),
-                    capturedRevision: revision,
-                    revision: this.#revision,
-                    capturedGeneration: generation,
-                    generation: this.#admissionGeneration,
-                    selected: this.#selected === entry.descriptor.id,
-                    visible: entry.visible,
-                    closing: entry.closing,
-                    rendererGone: entry.rendererGone,
-                    aborted: entry.abort.signal.aborted,
-                    destroyed: contents.isDestroyed(),
-                  }),
-                );
-              return current;
-            },
+            isCurrentVisible: () =>
+              visible &&
+              this.#live() &&
+              this.options.owner.isVisible() &&
+              !this.options.owner.isMinimized() &&
+              this.#admissionGeneration === generation &&
+              this.#selected === entry.descriptor.id &&
+              entry.visible &&
+              !entry.closing &&
+              !entry.rendererGone &&
+              !entry.abort.signal.aborted &&
+              !contents.isDestroyed(),
           };
           pending++;
           try {

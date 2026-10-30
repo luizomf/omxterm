@@ -15,7 +15,7 @@ Status: internal foundation from [#715](https://github.com/luizomf/omxterm/issue
 
 The separate [internal backend runtime](extension-backend-runtime.md) acquires its independent pin before extension import, obtains live main authority after generation revalidation and retains the child pin until actual process exit. That IPC/activation protocol belongs to the runtime consumer, **not** this installation module. New main authority must not adopt orphan ports or replay mutations after response loss. A retained native lease protects only managed version bytes, not arbitrary descendants or external writes.
 
-A store admits at most 32 pending operations per instance, native addon at most 128 pending/live/retiring leases. Busy writer acquisition is nonblocking and returns `busy`; it does not wait for another process or replay an operation. Native capacity failure is distinct from lock contention. Caller-controlled runtime/lease objects are infrastructure, not untrusted manifest data.
+A store admits at most 32 pending operations per instance, native addon at most 128 pending/live/retiring leases. Contended registry acquisition is nonblocking and returns `busy`; it does not wait for another process or replay an operation. Native capacity failure is distinct from lock contention. Caller-controlled runtime/lease objects are infrastructure, not untrusted manifest data.
 
 ## Archive contract
 
@@ -76,6 +76,8 @@ or another explicit reviewed decision.
 ## Shared store transactions
 
 The canonical root contains a permanent `initialized` witness, `registry.json`, permanent `locks/`, `versions/<sha256>/`, unique `staging/` and detached `garbage/`. All cooperating writers use one short exclusive writer lease. Under it, re-read bounded aggregate metadata, compare the captured generation, then publish a complete JSON replacement. Distinct IDs cannot overwrite one another's latest changes. Downloads/extraction, bootstrap/import waiting, process retirement and recursive deletion are outside writer exclusion. Registry limits are 2 MiB and 1,000 IDs including tombstones. First initialization is permitted only in an otherwise empty managed namespace and records its witness before registry publication. An interrupted initialization or subsequently missing/corrupt registry is a targeted error, never automatic generation reset, including after all versions have been collected.
+
+Read-only `snapshot()`, `openVersion()` and pin `revalidate()` take shared ownership of the same registry sidecar. Independent main/backend admissions may overlap without refusing each other; initialization, publication and collection still require exclusive ownership. `openVersion()` acquires its independent version pin before releasing registry exclusion, so collection cannot detach the selected bytes in between. Contention against an actual writer still refuses admission without waiting or retrying.
 
 Staging holds a use lease from before directory creation through commit/abandonment. Completed versions are never overlaid; existing digest reuse requires matching app-written identity/manifest metadata. Managed publishers and collectors use the same writer exclusion for no-overlay publication. This is **not** a general filesystem no-replace move primitive; the Files operation remains separate.
 

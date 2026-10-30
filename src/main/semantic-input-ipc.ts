@@ -95,21 +95,6 @@ export function registerSemanticInputIpc(options: {
       admit: (signal: AbortSignal, commit: () => void) => Promise<void>,
     ): Promise<{ ok: boolean }> {
       const owner = owners.get(window.webContents);
-      // [DEBUG-741-admission] Temporary metadata-only probe; no input payload.
-      const trace = (stage: string) =>
-        console.error(
-          "[DEBUG-741-admission]",
-          JSON.stringify({
-            stage,
-            owner: !!owner,
-            pending: !!owner?.pending,
-            revision: owner?.revision,
-            aborted: signal.aborted,
-            quitting: options.quitting(),
-            visible: source.isCurrentVisible(),
-          }),
-        );
-      trace("request");
       if (
         !owner ||
         owner.pending ||
@@ -134,7 +119,6 @@ export function registerSemanticInputIpc(options: {
         };
         const cancel = () => {
           if (settled) return;
-          trace("cancel");
           settled = true;
           cleanup();
           if (sent && !owner.contents.isDestroyed()) {
@@ -168,7 +152,6 @@ export function registerSemanticInputIpc(options: {
         void Promise.resolve()
           .then(() =>
             admit(signal, () => {
-              trace("commit");
               if (
                 settled ||
                 sent ||
@@ -189,13 +172,7 @@ export function registerSemanticInputIpc(options: {
               });
             }),
           )
-          .catch((error: unknown) => {
-            console.error(
-              "[DEBUG-741-admission] admission rejection",
-              error instanceof Error ? error.message : "unknown",
-            );
-            cancel();
-          });
+          .catch(cancel);
       });
     },
     dispose() {

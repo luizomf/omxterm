@@ -1677,7 +1677,9 @@ crashing a hosted epoch retires its known views, not core PTYs. The declared
 `terminal.semanticInput.v1` own-view operation is a separate explicit semantic
 text request, not key forwarding. Main authenticates the actual visible child
 and epoch, captures core selection revision before asynchronous admission, and
-core refuses a changed selection before capturing the exact live Surface. Insert,
+core refuses a changed selection before capturing the exact live Surface.
+Same-view geometry updates preserve visible-child admission; actual hiding or
+selection loss revokes it even if the child is subsequently shown again. Insert,
 Run and read-only preview reuse Protected Paste, modal exclusion and the same
 core preview owner as built-in Snippets. Native Enter repeats/release remain
 owned across focus handoff. Retirement cancels unaccepted interactions but does

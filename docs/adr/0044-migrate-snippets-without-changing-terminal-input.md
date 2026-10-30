@@ -49,7 +49,10 @@ captures the selected live Surface before asynchronous admission or overlay work
 all later continuations retain that capture. If native-child delivery requires
 an asynchronous bridge to the terminal renderer, carry a core-owned selection
 revision and refuse a changed selection rather than capture its replacement.
-A package cannot choose or reuse another view's capture. A request without a
+A package cannot choose or reuse another view's capture. Harmless same-view
+geometry refreshes preserve admission, while actual hiding or ownership loss
+revokes it without hide/show revival. Registry reads for main/backend admission
+share a read lease; they still refuse conflicting registry writers without retry. A request without a
 live target does nothing and reports unavailability.
 
 The preview uses a core-owned semantic-input dialog derived from the existing

@@ -680,6 +680,32 @@ describe("native extension host through its production resource interface", () =
     await rejected;
     await expect(handler(sender, null)).rejects.toThrow("unavailable");
   });
+  it("preserves authenticated visible request admission across same-view geometry revisions", async () => {
+    const f = await fixture(false);
+    const captures: ExtensionViewRequestContext[] = [];
+    const host = createExtensionViewHost({
+      ...f.options,
+      async onRequest(_value, _signal, context) {
+        captures.push(context);
+        return { ok: true };
+      },
+    });
+    cleanups.push(() => host.retire());
+    const view = await host.open(opening);
+    await host.present(present(view.id, 9));
+    const contents = f.views[0]!.webContents;
+    const handler = contents.ipc.handle.mock.calls[0]![1] as (
+      event: unknown,
+      value: unknown,
+    ) => Promise<unknown>;
+    await handler({ sender: contents, senderFrame: contents.mainFrame }, null);
+    expect(captures[0]!.isCurrentVisible()).toBe(true);
+    await host.present({
+      ...present(view.id, 10),
+      bounds: { x: 20, y: 60, width: 700, height: 480 },
+    });
+    expect(captures[0]!.isCurrentVisible()).toBe(true);
+  });
   it("captures authenticated visible request admission without banning hidden backend work", async () => {
     const f = await fixture(false);
     const captures: ExtensionViewRequestContext[] = [];
@@ -723,8 +749,10 @@ describe("native extension host through its production resource interface", () =
     expect(captures[1]!.isCurrentVisible()).toBe(false);
     await request(0);
     expect(captures[3]!.isCurrentVisible()).toBe(true);
-    // Even a geometry revision invalidates earlier asynchronous admission.
-    await host.present(present(first.id, 4));
+    // Switching away and back never revives earlier asynchronous admission.
+    await host.present(present(second.id, 4));
+    expect(captures[3]!.isCurrentVisible()).toBe(false);
+    await host.present(present(first.id, 5));
     expect(captures[3]!.isCurrentVisible()).toBe(false);
     await request(0);
     expect(captures[4]!.isCurrentVisible()).toBe(true);

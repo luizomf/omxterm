@@ -263,6 +263,100 @@ describe("Installed Packages production interface", () => {
     expect(await use.revalidate()).toBe(false);
   });
 
+  it.each(["snapshot", "revalidate", "openVersion"] as const)(
+    "allows concurrent %s admission while excluding registry mutation",
+    async (operation) => {
+      const entry = await store.install(await archive(), {
+        expectedGeneration: 0,
+        enabled: true,
+      });
+      let hold = false;
+      let acquired!: () => void;
+      const held = new Promise<void>((resolve) => {
+        acquired = resolve;
+      });
+      let resume!: () => void;
+      const resumed = new Promise<void>((resolve) => {
+        resume = resolve;
+      });
+      const controlled = await InstalledPackages.open({
+        root: path.join(root, "store"),
+        runtime,
+        leases: {
+          async tryAcquire(file, exclusive) {
+            const lease = await adapter.tryAcquire(file, exclusive);
+            if (lease && hold && file.endsWith("writer.lock")) {
+              hold = false;
+              acquired();
+              await resumed;
+            }
+            return lease;
+          },
+        },
+      });
+      const reader = await controlled.openVersion(entry.id);
+      const independent = await store.openVersion(entry.id);
+      let opened: typeof reader | undefined;
+      hold = true;
+      const reading = reader.revalidate();
+      try {
+        await Promise.race([
+          held,
+          reading.then(() => {
+            throw new Error("Reader did not reach held lease");
+          }),
+        ]);
+        if (operation === "snapshot")
+          expect((await store.snapshot())[0]?.generation).toBe(1);
+        else if (operation === "revalidate")
+          expect(await independent.revalidate()).toBe(true);
+        else {
+          opened = await store.openVersion(entry.id, independent);
+          expect(opened.digest).toBe(entry.digest);
+        }
+        await expect(
+          store.setEnabled(entry.id, 1, false),
+        ).rejects.toMatchObject({ code: "busy" });
+        await expect(store.collect()).rejects.toMatchObject({ code: "busy" });
+      } finally {
+        resume();
+        await reading;
+        await Promise.all([
+          reader.release(),
+          independent.release(),
+          opened?.release(),
+        ]);
+      }
+      expect((await store.snapshot())[0]?.generation).toBe(1);
+      await store.setEnabled(entry.id, 1, false);
+      expect(await independent.revalidate()).toBe(false);
+    },
+  );
+
+  it("refuses read admissions during an exclusive registry transaction without retry", async () => {
+    const entry = await store.install(await archive(), {
+      expectedGeneration: 0,
+      enabled: true,
+    });
+    const pin = await store.openVersion(entry.id);
+    const writer = await adapter.tryAcquire(
+      path.join(root, "store/locks/writer.lock"),
+      true,
+    );
+    expect(writer).not.toBeNull();
+    try {
+      await expect(store.snapshot()).rejects.toMatchObject({ code: "busy" });
+      await expect(pin.revalidate()).rejects.toMatchObject({ code: "busy" });
+      await expect(store.openVersion(entry.id)).rejects.toMatchObject({
+        code: "busy",
+      });
+    } finally {
+      await writer?.release();
+      await pin.release();
+    }
+    expect((await store.snapshot())[0]?.generation).toBe(1);
+  });
+
   it("keeps referenced bytes and registry untouched after invalid/incompatible/stale archive failures", async () => {
     const installed = await store.install(await archive(), {
       expectedGeneration: 0,
