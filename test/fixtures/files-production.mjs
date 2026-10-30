@@ -230,9 +230,7 @@ void ready.then(async (window) => {
     await until(
       async () =>
         hosted().length === 1 &&
-        (await hosted()[0].executeJavaScript(
-          "!!document.querySelector('form.location') && document.querySelector('.summary').textContent.includes('entries')",
-        )),
+        (await hosted()[0].executeJavaScript(listingReady())),
       "Files companion loaded",
     );
     const view = hosted()[0];
@@ -247,11 +245,23 @@ void ready.then(async (window) => {
     if (!visible) await click(contents, "Actions…");
     await click(contents, label);
   }
+  // Both fixtures run en-US. Settled errors are not successful listings.
+  function listingReady(directory) {
+    return `(() => {
+      const location = document.querySelector('form.location');
+      const entries = document.querySelector('.entries');
+      const summary = document.querySelector('.summary')?.textContent ?? '';
+      if (!location || !entries) return false;
+      if (${directory !== undefined} && location.querySelector('input')?.value !== ${JSON.stringify(directory)}) return false;
+      return entries.matches('[role=tree]')
+        ? entries.getAttribute('aria-busy') === 'false' && /^[0-9][0-9,]* visible entr(?:y|ies)(?: · Truncated at 5,000 per folder)?$/.test(summary)
+        : entries.matches('[role=list]') && entries.getAttribute('aria-busy') !== 'true' && /^[0-9][0-9,]* entries(?: · Truncated at 5,000; refine the directory)?(?:\\. Double-click a folder to open it\\.)?$/.test(summary);
+    })()`;
+  }
   function entryQuery(directory, name) {
     return `(() => {
       const entries = document.querySelector('.entries');
-      if (entries.getAttribute('aria-busy') === 'true' || document.querySelector('.operation-editor').inert) return null;
-      if (document.querySelector('[aria-label=Directory]').value !== ${JSON.stringify(directory)} || !document.querySelector('.summary').textContent.includes('entries')) return null;
+      if (!(${listingReady(directory)}) || document.querySelector('.operation-editor').inert) return null;
       return entries.matches('[role=tree]')
         ? [...entries.querySelectorAll('.file-row[role=treeitem][data-path]')].find(row => row.dataset.path === ${JSON.stringify(path.join(directory, name))})
         : [...entries.querySelectorAll('button.file-row')].find(row => row.firstElementChild?.textContent === ${JSON.stringify(name)});
@@ -273,10 +283,7 @@ void ready.then(async (window) => {
       `document.querySelector('[aria-label=Directory]').value = ${JSON.stringify(files)}; document.querySelector('form.location').requestSubmit()`,
     );
     await until(
-      () =>
-        contents.executeJavaScript(
-          `document.querySelector('.summary').textContent.includes('entries') && document.querySelector('[aria-label=Directory]').value === ${JSON.stringify(files)}`,
-        ),
+      () => contents.executeJavaScript(listingReady(files)),
       "directory list",
     );
   }

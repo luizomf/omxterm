@@ -30,6 +30,45 @@ function inspect(options) {
   };
 }
 
+// Failure-only observation: no navigation, refresh, paths or native error text.
+async function diagnoseListing(root) {
+  const views = webContents
+    .getAllWebContents()
+    .filter(
+      (view) =>
+        !view.isDestroyed() && view.getURL().startsWith("omx-extension://"),
+    );
+  const ownedDirectories = [
+    root,
+    path.join(root, "home"),
+    path.join(root, "owned-files"),
+  ];
+  return {
+    hostedCount: views.length,
+    views: await Promise.all(
+      views.slice(0, 8).map(async (view) => {
+        try {
+          return await view.executeJavaScript(`(() => {
+          const entries = document.querySelector('.entries');
+          const summary = document.querySelector('.summary')?.textContent ?? '';
+          const directory = document.querySelector('form.location input')?.value;
+          return {
+            locationPresent: !!document.querySelector('form.location'),
+            role: entries?.getAttribute('role')?.slice(0, 32) ?? null,
+            busy: entries?.getAttribute('aria-busy')?.slice(0, 8) ?? null,
+            summary: /[/\\\\]/.test(summary) ? '[redacted]' : summary.slice(0, 256),
+            rowCount: entries?.querySelectorAll('.file-row').length ?? 0,
+            ownedDirectory: ${JSON.stringify(ownedDirectories)}.includes(directory)
+          };
+        })()`);
+        } catch {
+          return { snapshotError: "view-unavailable" };
+        }
+      }),
+    ),
+  };
+}
+
 function assertNormalBackendRetirement(child) {
   assert.ok(
     child.closed && child.exit !== null,
@@ -181,11 +220,23 @@ async function run(options) {
     if (!visible) await click(contents, "Actions…");
     await click(contents, label);
   }
+  // Both fixtures run en-US. Settled errors are not successful listings.
+  function listingReady(directory) {
+    return `(() => {
+      const location = document.querySelector('form.location');
+      const entries = document.querySelector('.entries');
+      const summary = document.querySelector('.summary')?.textContent ?? '';
+      if (!location || !entries) return false;
+      if (${directory !== undefined} && location.querySelector('input')?.value !== ${JSON.stringify(directory)}) return false;
+      return entries.matches('[role=tree]')
+        ? entries.getAttribute('aria-busy') === 'false' && /^[0-9][0-9,]* visible entr(?:y|ies)(?: · Truncated at 5,000 per folder)?$/.test(summary)
+        : entries.matches('[role=list]') && entries.getAttribute('aria-busy') !== 'true' && /^[0-9][0-9,]* entries(?: · Truncated at 5,000; refine the directory)?(?:\\. Double-click a folder to open it\\.)?$/.test(summary);
+    })()`;
+  }
   function entryQuery(directory, name) {
     return `(() => {
       const entries = document.querySelector('.entries');
-      if (entries.getAttribute('aria-busy') === 'true' || document.querySelector('.operation-editor').inert) return null;
-      if (document.querySelector('[aria-label=Directory]').value !== ${JSON.stringify(directory)} || !document.querySelector('.summary').textContent.includes('entries')) return null;
+      if (!(${listingReady(directory)}) || document.querySelector('.operation-editor').inert) return null;
       return entries.matches('[role=tree]')
         ? [...entries.querySelectorAll('.file-row[role=treeitem][data-path]')].find(row => row.dataset.path === ${JSON.stringify(path.join(directory, name))})
         : [...entries.querySelectorAll('button.file-row')].find(row => row.firstElementChild?.textContent === ${JSON.stringify(name)});
@@ -292,9 +343,7 @@ async function run(options) {
     await until(
       async () =>
         hosted().length === 1 &&
-        (await hosted()[0].executeJavaScript(
-          "!!document.querySelector('form.location') && document.querySelector('.summary').textContent.includes('entries')",
-        )),
+        (await hosted()[0].executeJavaScript(listingReady())),
       "Files panel initial listing complete",
     );
     await panel(hosted()[0], true, "child");
@@ -409,15 +458,25 @@ async function run(options) {
     // Render an offered update without pretending these bytes implement it.
     // Restore the actual release before any further installation.
     catalogTransport.available(true);
-    catalogTransport.offeredVersion("0.2.0");
-    await click(core, "Retry catalog");
-    await state("Catalog loaded.");
-    await captureCatalog(
-      "catalog-update.png",
-      ".extension-catalog-card",
-      "Update",
-    );
-    catalogTransport.offeredVersion("0.1.0");
+    const requestsBeforePreview = catalogTransport.requests.length;
+    catalogTransport.previewUpdate();
+    try {
+      await click(core, "Retry catalog");
+      await state("Catalog loaded.");
+      await captureCatalog(
+        "catalog-update.png",
+        ".extension-catalog-card",
+        "Update",
+      );
+      assert.equal(approvals, 1, "synthetic offer never reaches consent");
+      assert.deepEqual(
+        catalogTransport.requests.slice(requestsBeforePreview),
+        ["/catalog"],
+        "synthetic offer never requests archive bytes",
+      );
+    } finally {
+      catalogTransport.restoreRelease();
+    }
     await click(core, "Refresh catalog");
     await state("Reinstall");
   }
@@ -426,10 +485,7 @@ async function run(options) {
   assert.equal(children.length, 1);
   await filesAction(view, "Use terminal directory");
   await until(
-    () =>
-      view.executeJavaScript(
-        `document.querySelector('[aria-label=Directory]').value === ${JSON.stringify(options.root)} && document.querySelector('.summary').textContent.includes('entries')`,
-      ),
+    () => view.executeJavaScript(listingReady(options.root)),
     "initial captured OSC 7 directory",
   );
   const initialDirectory = options.root;
@@ -488,10 +544,7 @@ async function run(options) {
   );
   await filesAction(view, "Use terminal directory");
   await until(
-    () =>
-      view.executeJavaScript(
-        `document.querySelector('[aria-label=Directory]').value === ${JSON.stringify(initialDirectory)} && document.querySelector('.summary').textContent.includes('entries')`,
-      ),
+    () => view.executeJavaScript(listingReady(initialDirectory)),
     "legacy captured initial directory",
   );
   // Selecting the second tab must return actual native input to core without
@@ -676,5 +729,6 @@ module.exports = {
   run,
   cleanup,
   assertNormalBackendRetirement,
+  diagnoseListing,
   quit: () => app.quit(),
 };

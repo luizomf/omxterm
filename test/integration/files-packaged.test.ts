@@ -81,6 +81,32 @@ async function prepareCatalog(root: string) {
     { timeout: 15000 },
   );
 }
+async function captureListingFailure(
+  client: Awaited<ReturnType<typeof inspector>> | undefined,
+  observer: string | undefined,
+  root: string,
+  evidence: string,
+) {
+  if (!client || !observer) return;
+  let snapshot: unknown = { snapshotError: "observer-unavailable" };
+  try {
+    snapshot = await client.evaluate(
+      `${observer}.diagnoseListing(${JSON.stringify(root)})`,
+      3000,
+    );
+  } catch {
+    // A diagnostic failure must not replace the original scenario failure.
+  }
+  try {
+    await writeFile(
+      path.join(evidence, "listing-failure.json"),
+      JSON.stringify(snapshot, null, 2),
+    );
+  } catch {
+    // Preserve the primary failure even if its evidence directory is unavailable.
+  }
+}
+
 async function closeObserver(
   client: Awaited<ReturnType<typeof inspector>> | undefined,
   observer: string | undefined,
@@ -380,6 +406,7 @@ it.skipIf(
       passed = true;
     } catch (error) {
       failure = error;
+      await captureListingFailure(client, observer, root, evidence);
       if (client) {
         try {
           const state = await client.evaluate(

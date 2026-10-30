@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { readFile } from "node:fs/promises";
+import assert from "node:assert/strict";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mountFilesPage } from "../../extensions/files/page";
@@ -27,15 +28,29 @@ async function helpers(file: string) {
   const create = new Function(
     "path",
     "until",
-    `${extract("  function click(", "  const hosted")}
+    "view",
+    "assert",
+    `const hosted = () => [view];
+     const js = async () => true;
+     const menu = () => {};
+     const panel = async () => {};
+     const tabCount = async () => 1;
+     const identity = { start: 1 };
+     const shellStat = () => identity;
+     ${extract("  function click(", "  const hosted")}
      ${extract("  async function filesAction(", "  function entryQuery(")}
      ${extract("  function entryQuery(", file.endsWith("mjs") ? "  async function terminal(" : "  async function select(")}
      ${extract("  async function apply(", applyEnd)}
-     return { filesAction, entryQuery, apply };`,
+     ${extract("  async function openFiles(", file.endsWith("mjs") ? "  // These DOM-driven" : "  async function apply(")}
+     return { filesAction, listingReady, entryQuery, apply, openFiles };`,
   ) as (
     paths: typeof path,
     wait: typeof until,
+    contents: typeof view,
+    assertion: typeof assert,
   ) => {
+    listingReady(directory?: string): string;
+    openFiles(): Promise<unknown>;
     filesAction(contents: typeof view, label: string): Promise<void>;
     entryQuery(directory: string, name: string): string;
     apply(
@@ -44,7 +59,7 @@ async function helpers(file: string) {
       outcome?: string,
     ): Promise<void>;
   };
-  return create(path, until);
+  return create(path, until, view, assert);
 }
 it.each([
   "settled",
@@ -225,6 +240,132 @@ afterEach(() => {
 describe.each(["files-production.mjs", "files-packaged.cjs"])(
   "%s DOM capabilities",
   (file) => {
+    it.each([0, 1, 2])(
+      "admits completed actual-page listings with %s rows",
+      async (count) => {
+        const fixture = await helpers(file);
+        const names = [".cache", "second.txt"].slice(0, count);
+        const page = mountFilesPage(document, {
+          request: async (value) => {
+            const request = value as { operation: string };
+            return request.operation === "home"
+              ? { ok: true, directory: "/owned" }
+              : {
+                  ok: true,
+                  directory: "/owned",
+                  rows: names.map((name) => ({
+                    name,
+                    kind: "directory",
+                    size: 0,
+                  })),
+                };
+          },
+        });
+        dispose = page.dispose;
+        await page.ready;
+        expect(evaluate(fixture.listingReady("/owned"))).toBe(true);
+        expect(evaluate(fixture.listingReady("/elsewhere"))).toBe(false);
+        await fixture.openFiles();
+        expect(document.querySelector(".summary")!.textContent).toBe(
+          `${count} visible ${count === 1 ? "entry" : "entries"}`,
+        );
+        if (count) {
+          const row = evaluate(
+            fixture.entryQuery("/owned", ".cache"),
+          ) as HTMLElement;
+          expect(row.dataset.path).toBe("/owned/.cache");
+          row.click();
+          expect(row.getAttribute("aria-selected")).toBe("true");
+          expect(
+            evaluate(fixture.entryQuery("/elsewhere", ".cache")),
+          ).toBeNull();
+        }
+      },
+    );
+
+    it.each(["loading", "list-error", "home-error"])(
+      "rejects actual-page %s instead of treating settlement as success",
+      async (state) => {
+        const fixture = await helpers(file);
+        let release: (() => void) | undefined;
+        let started!: () => void;
+        const listingStarted = new Promise<void>((resolve) => {
+          started = resolve;
+        });
+        const page = mountFilesPage(document, {
+          request: async (value) => {
+            const request = value as { operation: string };
+            if (request.operation === "home")
+              return state === "home-error"
+                ? { ok: false, error: "permission" }
+                : { ok: true, directory: "/owned" };
+            if (state === "loading") {
+              started();
+              await new Promise<void>((resolve) => {
+                release = resolve;
+              });
+            }
+            return { ok: false, error: "not-found" };
+          },
+        });
+        dispose = page.dispose;
+        if (state === "loading") await listingStarted;
+        else await page.ready;
+        try {
+          expect(evaluate(fixture.listingReady())).toBe(false);
+          await expect(fixture.openFiles()).rejects.toThrow(
+            "fixture predicate did not settle",
+          );
+          expect(evaluate(fixture.entryQuery("/owned", ".cache"))).toBeNull();
+          if (state === "list-error")
+            expect(
+              document.querySelector(".entries")!.getAttribute("aria-busy"),
+            ).toBe("false");
+        } finally {
+          release?.();
+          await page.ready;
+        }
+      },
+    );
+
+    it.each([
+      ["0 entries. Double-click a folder to open it.", true],
+      ["1 entries. Double-click a folder to open it.", true],
+      [
+        "5,000 entries · Truncated at 5,000; refine the directory. Double-click a folder to open it.",
+        true,
+      ],
+      ["Reading directory…", false],
+      ["Directory unavailable", false],
+      ["Directory unavailable: not-found", false],
+      ["", false],
+    ])(
+      "preserves legacy successful-listing distinction: %s",
+      async (summary, ready) => {
+        const fixture = await helpers(file);
+        document.body.innerHTML =
+          '<form class="location"><input value="/owned"></form><div class="entries" role="list"></div><p class="summary"></p>';
+        document.querySelector(".summary")!.textContent = summary;
+        expect(evaluate(fixture.listingReady("/owned"))).toBe(ready);
+        expect(evaluate(fixture.listingReady("/elsewhere"))).toBe(false);
+        document.querySelector(".entries")!.setAttribute("aria-busy", "true");
+        expect(evaluate(fixture.listingReady("/owned"))).toBe(false);
+      },
+    );
+
+    it("admits current truncation but refuses busy or malformed success markers", async () => {
+      const fixture = await helpers(file);
+      document.body.innerHTML =
+        '<form class="location"><input value="/owned"></form><div class="entries" role="tree" aria-busy="false"></div><p class="summary">5,000 visible entries · Truncated at 5,000 per folder</p>';
+      expect(evaluate(fixture.listingReady("/owned"))).toBe(true);
+      document.querySelector(".entries")!.removeAttribute("aria-busy");
+      expect(evaluate(fixture.listingReady("/owned"))).toBe(false);
+      document.querySelector(".entries")!.setAttribute("aria-busy", "false");
+      document.querySelector(".summary")!.textContent =
+        "Directory unavailable: entries";
+      expect(evaluate(fixture.listingReady("/owned"))).toBe(false);
+    });
+
     it("uses the actual tree menu, exact paths, captured rename and settled mutation notices", async () => {
       const fixture = await helpers(file);
       const requests: Record<string, string>[] = [];
@@ -295,7 +436,7 @@ describe.each(["files-production.mjs", "files-packaged.cjs"])(
 
     it("keeps exact legacy row text and visible flat actions; rejects unavailable actions", async () => {
       const fixture = await helpers(file);
-      document.body.innerHTML = `<input aria-label="Directory" value="/owned"><p class="summary">3 entries</p>
+      document.body.innerHTML = `<form class="location"><input aria-label="Directory" value="/owned"></form><p class="summary">3 entries</p>
       <div class="entries" role="list"><button class="file-row"><span>source.txt.bak</span><span>file</span></button><button class="file-row"><span>source.txt</span><span>file</span><span>1 B</span></button></div>
       <div class="operations"><button>New file</button></div><form class="operation-editor"></form>`;
       const invoked = vi.fn();

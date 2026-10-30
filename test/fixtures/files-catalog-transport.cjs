@@ -8,10 +8,25 @@ const catalogUrl =
   "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-v1.json";
 
 async function start(options) {
-  const catalog = JSON.parse(await readFile(options.catalogFile, "utf8"));
+  const originalCatalog = await readFile(options.catalogFile);
+  const catalog = JSON.parse(originalCatalog.toString("utf8"));
   assert.equal(catalog.entries.length, 1);
   const entry = catalog.entries[0];
+  assert.equal(entry.id, "omxterm.files");
   assert.equal(entry.archive.sha256, options.archiveSha256);
+  // The copied observer has no checkout dependencies. A next-patch stable
+  // version is newer than this release, including any prerelease suffix.
+  const version = /^(\d+)\.(\d+)\.(\d+)(?:[-+]|$)/.exec(entry.version);
+  assert.ok(version, "expected a catalog release version");
+  const nextPatch = Number(version[3]) + 1;
+  assert.ok(Number.isSafeInteger(nextPatch), "synthetic patch must be safe");
+  const updateCatalog = JSON.stringify({
+    ...catalog,
+    entries: [
+      { ...entry, version: `${version[1]}.${version[2]}.${nextPatch}` },
+    ],
+  });
+  let previewingUpdate = false;
   const archive = await readFile(options.archive);
   const requests = [];
   let catalogAvailable = false;
@@ -24,11 +39,22 @@ async function start(options) {
       if (request.url === "/catalog") {
         response.writeHead(catalogAvailable ? 200 : 503);
         response.end(
-          catalogAvailable ? JSON.stringify(catalog) : "offline fixture",
+          catalogAvailable
+            ? previewingUpdate
+              ? updateCatalog
+              : originalCatalog
+            : "offline fixture",
         );
       } else if (request.url === "/archive") {
-        response.writeHead(200);
-        response.end(archiveValid ? archive : Buffer.from("wrong bytes"));
+        // The synthetic offer qualifies presentation only, never installation.
+        response.writeHead(previewingUpdate ? 409 : 200);
+        response.end(
+          previewingUpdate
+            ? "synthetic offer has no archive"
+            : archiveValid
+              ? archive
+              : Buffer.from("wrong bytes"),
+        );
       } else {
         response.writeHead(404);
         response.end();
@@ -68,8 +94,11 @@ async function start(options) {
     validArchive(value) {
       archiveValid = value;
     },
-    offeredVersion(value) {
-      entry.version = value;
+    previewUpdate() {
+      previewingUpdate = true;
+    },
+    restoreRelease() {
+      previewingUpdate = false;
     },
     async close() {
       if (closed) return;

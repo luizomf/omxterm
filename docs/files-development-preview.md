@@ -358,9 +358,11 @@ endpoint/configuration and package bytes are unchanged. The server, sockets and
 interceptor are retired before successful Quit. This is controlled transport
 composition, **not public GitHub TLS/availability qualification**. Captures scroll
 and focus the actual card or error notice, asserting its viewport bounds. A
-controlled catalog-only `0.2.0` offer exercises rendered Update presentation;
-it is never installed and the original `0.1.0` offer is restored before Reinstall.
-This visual fixture does not qualify a real Files `0.2.0` artifact. Listener-count
+controlled catalog-only next-patch offer, derived from the supplied release,
+exercises rendered Update presentation. Archive requests are refused while that
+synthetic offer is visible; it is never installed, and the exact original catalog
+bytes are restored before Reinstall. This visual fixture does not qualify a real
+newer Files artifact. Listener-count
 checkpoints and warning traces distinguish lifecycle fan-out from retention;
 the observer does not raise or suppress listener limits.
 
@@ -376,6 +378,12 @@ tracks children and joins exit/streams/owned settlement. `scenario.json` records
 assertions, `quit.json` records backend exit/close and shell kernel exit at normal
 Quit, and `supervisor.json` records the native outcome/cleanup distinction. A
 failure preserves its profile/diagnostics, never a successful cleanup as a pass.
+Before cleanup, the packaged fixture attempts one bounded `listing-failure.json`
+snapshot of hosted-view count and listing DOM state (role, busy, summary, row
+count and whether the directory belongs to the fixture). It omits directory
+paths, redacts path-bearing summaries and reports snapshot unavailability without
+replacing the original failure. Settled listing errors are not readiness: the
+fixtures require current singular/plural or supported legacy success summaries.
 Input is synthetic Chromium and trust answers are controlled, not physical native
 dialog qualification. Successful inspection-only evidence does not substitute for
 this opt-in vertical.
