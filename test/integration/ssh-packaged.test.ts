@@ -16,6 +16,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { it } from "vitest";
+import { valid } from "semver";
 import { launchLinuxPackagedProcess } from "../../scripts/linux-packaged-process.mjs";
 import { inspector, until } from "../fixtures/packaged-inspector.js";
 import {
@@ -34,9 +35,13 @@ const names = [
   "VERSION",
   "EVIDENCE",
 ] as const;
-const enabled = [...names, "CATALOG", "CATALOG_SHA256"].some(
-  (name) => process.env[prefix + name] !== undefined,
-);
+const enabled = [
+  ...names,
+  "CATALOG",
+  "CATALOG_SHA256",
+  "EXTENSION_VERSION",
+  "APPEARANCE",
+].some((name) => process.env[prefix + name] !== undefined);
 const execute = promisify(execFile);
 const digest = (bytes: Buffer) =>
   createHash("sha256").update(bytes).digest("hex");
@@ -55,10 +60,48 @@ function publicCatalogMode() {
       : "unchanged extracted AppImage; separate SSH; synthetic client, no connectivity",
   };
 }
+function checkpointOptions() {
+  const extensionVersion = process.env[prefix + "EXTENSION_VERSION"] ?? "0.1.0";
+  assert.equal(
+    valid(extensionVersion),
+    extensionVersion,
+    "canonical extension SemVer required",
+  );
+  const appearance = process.env[prefix + "APPEARANCE"];
+  assert.ok(
+    appearance === undefined || appearance === "1",
+    "APPEARANCE must be 1 or unset",
+  );
+  const { mode: catalogMode, timeout, scope } = publicCatalogMode();
+  if (appearance) {
+    assert.equal(
+      extensionVersion,
+      "0.3.0",
+      "appearance/language checkpoint targets SSH 0.3.0",
+    );
+    assert.equal(
+      catalogMode,
+      undefined,
+      "appearance checkpoint must continue the synthetic Connect campaign",
+    );
+  }
+  return {
+    extensionVersion,
+    appearance: !!appearance,
+    catalogMode,
+    timeout: appearance ? 240000 : timeout,
+    scope,
+  };
+}
+async function prepareAppearance(appearance: boolean, root: string) {
+  if (appearance)
+    await cp("docs/omtheme.json", path.join(root, "theme-template.json"));
+}
 async function recordPublicCatalog(
   mode: string | undefined,
   receipts: string,
   archiveSha256: string,
+  extensionVersion: string,
 ) {
   if (!mode) return;
   const url = OFFICIAL_CATALOG_URL;
@@ -71,7 +114,7 @@ async function recordPublicCatalog(
     (entry) => entry.id === "omxterm.ssh",
   );
   assert.equal(release?.archive.sha256, archiveSha256);
-  assert.equal(release?.version, "0.1.0");
+  assert.equal(release?.version, extensionVersion);
   assert.equal(digest(bytes), process.env.OMXTERM_SSH_PACKAGED_CATALOG_SHA256);
   await writeFile(path.join(receipts, "public-catalog.json"), bytes);
   await writeFile(
@@ -118,7 +161,8 @@ it.skipIf(!enabled)(
       ),
       "Prepared guest needs a POSIX sh/bash account shell",
     );
-    const { mode: catalogMode, timeout, scope } = publicCatalogMode();
+    const { extensionVersion, appearance, catalogMode, timeout, scope } =
+      checkpointOptions();
     const root = await mkdtemp(path.join(os.tmpdir(), "omxterm-ssh-packaged-"));
     const evidence = values.EVIDENCE;
     await mkdir(evidence, { recursive: true });
@@ -138,7 +182,12 @@ it.skipIf(!enabled)(
     const json = (name: string, value: unknown) =>
       writeFile(path.join(receipts, name), JSON.stringify(value, null, 2));
     try {
-      await recordPublicCatalog(catalogMode, receipts, values.ARCHIVE_SHA256);
+      await recordPublicCatalog(
+        catalogMode,
+        receipts,
+        values.ARCHIVE_SHA256,
+        extensionVersion,
+      );
       const appBytes = await readFile(values.APPIMAGE);
       const archiveBytes = await readFile(values.ARCHIVE);
       assert.equal(digest(appBytes), values.APPIMAGE_SHA256);
@@ -147,7 +196,8 @@ it.skipIf(!enabled)(
         appImage: values.APPIMAGE_SHA256,
         archive: values.ARCHIVE_SHA256,
         version: values.VERSION,
-        extensionVersion: "0.1.0",
+        extensionVersion,
+        appearance: !!appearance,
       });
       await execute(values.APPIMAGE, ["--appimage-extract"], {
         cwd: root,
@@ -195,6 +245,7 @@ it.skipIf(!enabled)(
           window: { blur: false },
         }),
       );
+      await prepareAppearance(appearance, root);
       const readiness = path.join(root, "shell.json");
       await writeFile(
         path.join(root, "shell.sh"),
@@ -275,6 +326,8 @@ it.skipIf(!enabled)(
         version: values.VERSION,
         readiness,
         catalogMode,
+        extensionVersion,
+        appearance: !!appearance,
       };
       await json(
         "attachment.json",

@@ -7,6 +7,7 @@ const {
   dialog,
   webContents,
   clipboard,
+  desktopCapturer,
 } = require("electron");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -87,6 +88,7 @@ async function run(options) {
   assert.ok(window);
   const core = window.webContents;
   const js = (code) => core.executeJavaScript(code);
+  const extensionTitle = `SSH Connect · ${options.extensionVersion}`;
   const checks = [];
   const children = [];
   const ptys = [];
@@ -156,9 +158,15 @@ async function run(options) {
       state.busyClose++;
       return { response: prompt.cancelId, checkboxChecked: false };
     }
-    assert.equal(prompt.title, "Quit OMXTerm", "unexpected dialog");
+    assert.ok(
+      ["Quit OMXTerm", "Sair do OMXTerm"].includes(prompt.title),
+      "unexpected dialog",
+    );
     state.busyQuit++;
-    const response = prompt.buttons.indexOf("Quit");
+    // Failure recovery can quit before the language checkpoint restores English.
+    const response = prompt.buttons.indexOf(
+      prompt.title === "Sair do OMXTerm" ? "Sair" : "Quit",
+    );
     assert.ok(response >= 0);
     return { response, checkboxChecked: false };
   };
@@ -276,14 +284,14 @@ async function run(options) {
     );
   async function catalogInstall(label) {
     await js(`(() => {
-      const card = [...document.querySelectorAll('.extension-catalog-card')].find(c => c.querySelector('h4')?.textContent === 'SSH Connect · 0.1.0');
+      const card = [...document.querySelectorAll('.extension-catalog-card')].find(c => c.querySelector('h4')?.textContent === ${JSON.stringify(extensionTitle)});
       const button = card?.querySelector('button');
       if (!button || button.disabled || button.textContent !== ${JSON.stringify(label)}) throw Error('SSH catalog action unavailable');
       card.scrollIntoView({block:'center'});
     })()`);
     await screenshot(`public-catalog-${label.toLowerCase()}.png`);
     await js(`(() => {
-      const card = [...document.querySelectorAll('.extension-catalog-card')].find(c => c.querySelector('h4')?.textContent === 'SSH Connect · 0.1.0');
+      const card = [...document.querySelectorAll('.extension-catalog-card')].find(c => c.querySelector('h4')?.textContent === ${JSON.stringify(extensionTitle)});
       const button = card?.querySelector('button');
       if (!button || button.disabled || button.textContent !== ${JSON.stringify(label)}) throw Error('SSH catalog action unavailable');
       button.click();
@@ -314,7 +322,13 @@ async function run(options) {
     "document.querySelector('.extensions-panel').textContent",
   );
   assert.match(installed, /SSH Connect/);
-  assert.match(installed, /0\.1\.0/);
+  assert.equal(
+    await js(
+      `!![...document.querySelectorAll('.extensions-panel section h3')].find(h => h.textContent === ${JSON.stringify(extensionTitle)})`,
+    ),
+    true,
+    "installed SSH identity matches selected archive version",
+  );
   assert.equal(state.approvals, 1);
   assert.equal(children.length, 0);
   assert.equal(hosted().length, 0);
@@ -412,7 +426,7 @@ async function run(options) {
     await until(
       () =>
         js(`(() => {
-        const row = [...document.querySelectorAll('.extensions-panel section')].find(s => s.querySelector('h3')?.textContent === 'SSH Connect · 0.1.0');
+        const row = [...document.querySelectorAll('.extensions-panel section')].find(s => s.querySelector('h3')?.textContent === ${JSON.stringify(extensionTitle)});
         const uninstall = [...(row?.querySelectorAll('button') ?? [])].find(b => b.textContent === 'Uninstall');
         return !!row?.textContent.includes('generation 3') && row.textContent.includes('disabled') && !!uninstall && !uninstall.disabled;
       })()`),
@@ -462,6 +476,239 @@ async function run(options) {
       scope:
         "Production public HTTPS; controlled input/consent; no client execution or real authentication",
     };
+  }
+  if (options.appearance) {
+    // Ordinary configuration files and production reload only: do not synthesize
+    // preload notifications or mutate product appearance/language state.
+    const configPath = file("config/omxterm/config.json");
+    const originalConfig = fs.readFileSync(configPath, "utf8");
+    const theme = read("theme-template.json");
+    const themePath = file("config/omxterm/appearance-theme.json");
+    const native = () =>
+      window.contentView.children.find((c) => c.webContents === view);
+    const initialWidth = await js(
+      "Number(document.querySelector('.auxiliary-separator').getAttribute('aria-valuenow'))",
+    );
+    let language = "en-US";
+    const reload = () =>
+      menu(
+        language === "en-US"
+          ? "Reload User Configuration"
+          : "Recarregar Configuração",
+      );
+    const snapshot = () =>
+      view.executeJavaScript(`(() => {
+      const style = document.documentElement.style;
+      return {
+        language: document.documentElement.lang,
+        background: style.getPropertyValue('--terminal-background'),
+        foreground: style.getPropertyValue('--terminal-foreground'),
+        opacity: Number(style.getPropertyValue('--terminal-background-opacity')),
+        bodyBackground: getComputedStyle(document.body).backgroundColor,
+        viewport: innerWidth, width: document.documentElement.scrollWidth,
+        quick: document.querySelector('.quick-connect input').value,
+        search: document.querySelector('input[type=search]').value,
+        connect: document.querySelector('.quick-connect button').textContent,
+        searchLabel: document.querySelector('input[type=search]').closest('label').textContent,
+        searchFocused: document.activeElement === document.querySelector('input[type=search]')
+      };
+    })()`);
+    async function width(target) {
+      assert.equal((target - 220) % 10, 0, "panel width uses keyboard steps");
+      await js(`(() => {
+        const separator = document.querySelector('.auxiliary-separator');
+        for (const key of ['Home', ...Array(${(target - 220) / 10}).fill('ArrowLeft')])
+          separator.dispatchEvent(new KeyboardEvent('keydown', {key, bubbles:true, cancelable:true}));
+      })()`);
+      await until(
+        () =>
+          js(
+            `Number(document.querySelector('.auxiliary-separator').getAttribute('aria-valuenow')) === ${target}`,
+          ),
+        "panel width " + target,
+      );
+    }
+    async function capture(label, sample) {
+      let geometry;
+      await until(async () => {
+        geometry = await js(`(() => {
+          const slot = document.querySelector('.companion-native-slot:not([hidden])').getBoundingClientRect();
+          const header = document.querySelector('.auxiliary-header').getBoundingClientRect();
+          const terminal = document.querySelector('.terminal-surface').getBoundingClientRect();
+          return {slot:{x:slot.x,y:slot.y,width:slot.width,height:slot.height},headerBottom:header.bottom,terminalRight:terminal.right,width:innerWidth,height:innerHeight};
+        })()`);
+        const bounds = native().getBounds();
+        return ["x", "y", "width", "height"].every(
+          (k) => Math.abs(bounds[k] - geometry.slot[k]) <= 2,
+        );
+      }, "native slot geometry " + label);
+      const bounds = native().getBounds();
+      assert.ok(bounds.y >= geometry.headerBottom - 2);
+      assert.ok(bounds.x >= geometry.terminalRight - 2);
+      assert.ok(bounds.x + bounds.width <= geometry.width + 2);
+      assert.ok(bounds.y + bounds.height <= geometry.height + 2);
+      const appearance = await snapshot();
+      assert.ok(
+        appearance.width <= appearance.viewport,
+        "no horizontal page overflow",
+      );
+      assert.equal(appearance.bodyBackground, "rgba(0, 0, 0, 0)");
+      fs.writeFileSync(
+        path.join(options.evidence, label + "-tool.png"),
+        (await view.capturePage()).toPNG(),
+      );
+      await screenshot(label + "-core.png");
+      const sources = await desktopCapturer.getSources({
+        types: ["screen"],
+        thumbnailSize: { width: 1920, height: 1200 },
+      });
+      assert.equal(sources.length, 1, "assigned single-screen desktop lane");
+      assert.ok(
+        !sources[0].thumbnail.isEmpty(),
+        "actual desktop capture required",
+      );
+      fs.writeFileSync(
+        path.join(options.evidence, label + "-desktop.png"),
+        sources[0].thumbnail.toPNG(),
+      );
+      save(label + ".json", {
+        sample,
+        appearance,
+        geometry,
+        native: bounds,
+        viewId: view.id,
+        limitation:
+          "Desktop captures require owner pixel inspection. Nested X11 without a compositor cannot prove native blur or desktop transparency; requested blur and propagated tint are not blur evidence.",
+      });
+    }
+    await view.executeJavaScript(`(() => {
+      document.querySelector('.quick-connect input').value = 'fixture@[2001:db8::7]:2207';
+      const search = document.querySelector('input[type=search]');
+      search.value = 'fixture'; search.dispatchEvent(new Event('input', {bubbles:true})); search.focus();
+    })()`);
+    // Each color/opacity is exercised at normal and minimum width. Alternate
+    // visible and hidden reloads; both directions of language replay are real.
+    let index = 0;
+    for (const panelWidth of [initialWidth, 220]) {
+      await width(panelWidth);
+      for (const palette of [
+        { name: "dark", background: "#15171b", foreground: "#e5e9f0" },
+        { name: "light", background: "#f4f4f0", foreground: "#20242b" },
+      ])
+        for (const opacity of [0, 0.65, 1]) {
+          const hidden = index++ % 2 === 1;
+          const nextLanguage = language === "en-US" ? "pt-BR" : "en-US";
+          const sample = {
+            ...palette,
+            opacity,
+            language: nextLanguage,
+            hidden,
+            panelWidth,
+            blur: true,
+          };
+          if (hidden) {
+            await js(
+              "document.querySelector('.auxiliary-header button').click()",
+            );
+            await panel(view, false, "core");
+          }
+          fs.writeFileSync(
+            themePath,
+            JSON.stringify({
+              ...theme,
+              name: "SSH appearance fixture",
+              colors: {
+                ...theme.colors,
+                background: palette.background,
+                foreground: palette.foreground,
+              },
+            }),
+          );
+          fs.writeFileSync(
+            configPath,
+            JSON.stringify({
+              version: 1,
+              language: nextLanguage,
+              confirmClose: true,
+              theme: { path: themePath },
+              window: { transparency: 1 - opacity, blur: true },
+            }),
+          );
+          reload();
+          await until(async () => {
+            const current = await snapshot();
+            return (
+              current.language === nextLanguage &&
+              current.background === palette.background &&
+              current.foreground === palette.foreground &&
+              Math.abs(current.opacity - opacity) < 0.001 &&
+              current.connect ===
+                (nextLanguage === "pt-BR" ? "Conectar" : "Connect") &&
+              current.searchLabel ===
+                (nextLanguage === "pt-BR" ? "Buscar aliases" : "Search aliases")
+            );
+          }, "actual language/appearance reload");
+          language = nextLanguage;
+          const retained = await snapshot();
+          assert.equal(retained.quick, "fixture@[2001:db8::7]:2207");
+          assert.equal(retained.search, "fixture");
+          if (hidden) {
+            await panel(view, false, "core");
+            menu("SSH Connect");
+          } else
+            assert.equal(
+              retained.searchFocused,
+              true,
+              "visible relabel preserves focused input",
+            );
+          await panel(view, true, "child");
+          await view.executeJavaScript(
+            "document.querySelector('input[type=search]').focus()",
+          );
+          await capture(
+            `appearance-${panelWidth}-${palette.name}-${opacity}`,
+            sample,
+          );
+        }
+    }
+    fs.writeFileSync(configPath, originalConfig);
+    reload();
+    await until(async () => {
+      const current = await snapshot();
+      return (
+        current.language === "en-US" &&
+        current.connect === "Connect" &&
+        current.opacity === 1
+      );
+    }, "restore original English configuration");
+    await width(initialWidth);
+    await view.executeJavaScript(`(() => {
+      document.querySelector('.quick-connect input').value = '';
+      const search = document.querySelector('input[type=search]');
+      search.value = ''; search.dispatchEvent(new Event('input', {bubbles:true})); search.focus();
+    })()`);
+    await until(
+      () =>
+        view.executeJavaScript(
+          "!!document.querySelector('[data-alias=fixture-fast]') && !document.querySelector('.quick-connect button').disabled",
+        ),
+      "restored synthetic alias campaign",
+    );
+    await panel(view, true, "child");
+    assert.equal(children.length, 1);
+    assert.equal(await tabCount(), 1);
+    assert.ok(alive(ptys[0]));
+    assert.equal(
+      await js(
+        "window.__sshPublicCanvas === document.querySelector('.terminal-surface canvas')",
+      ),
+      true,
+    );
+    assert.equal(fs.existsSync(file("client-invocations.jsonl")), false);
+    checks.push(
+      "appearance-normal-220-dark-light-opacity-matrix-desktop-captures",
+      "visible-hidden-language-relabel-focus-drafts-retained-restored",
+    );
   }
   const baselineTabs = await tabCount();
   // DOM gestures are deliberate: exact repeat/release ownership, not physical

@@ -22,6 +22,7 @@ it("updates the retained SSH view without replacing drafts or issuing requests a
   );
   const page = mountSshPage(document, {
     request,
+    onLanguage: () => () => {},
     onAppearance(listener) {
       appearance = listener;
       listener(dark);

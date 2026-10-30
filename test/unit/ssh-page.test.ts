@@ -7,8 +7,10 @@ afterEach(() => {
   document.body.replaceChildren();
   vi.useRealTimers();
 });
-async function setup() {
+async function setup(initialLanguage: "en-US" | "pt-BR" = "en-US") {
   let visibility!: (value: boolean) => void;
+  let language!: (value: "en-US" | "pt-BR") => void;
+  const unsubscribeLanguage = vi.fn();
   const request = vi.fn<SshBridge["request"]>(async (value) => {
     const operation = (value as { operation: string }).operation;
     if (operation === "host.capabilities")
@@ -24,6 +26,11 @@ async function setup() {
   });
   const page = mountSshPage(document, {
     onAppearance: () => () => {},
+    onLanguage(listener) {
+      language = listener;
+      listener(initialLanguage);
+      return unsubscribeLanguage;
+    },
     request,
     onVisibility(listener) {
       visibility = listener;
@@ -36,6 +43,8 @@ async function setup() {
   return {
     request,
     visibility,
+    language,
+    unsubscribeLanguage,
     search: document.querySelector<HTMLInputElement>('input[type="search"]')!,
     quick: document.querySelector<HTMLInputElement>("input[maxlength]")!,
   };
@@ -54,6 +63,209 @@ const launches = (request: ReturnType<typeof vi.fn<SshBridge["request"]>>) =>
     ([value]) =>
       (value as { operation: string }).operation === "terminal.openSsh.v1",
   );
+it("replays the initial language and preserves keyboard selection across relabeling", async () => {
+  const { request, search, language } = await setup("pt-BR");
+  expect(document.documentElement.lang).toBe("pt-BR");
+  expect(document.body.textContent).toContain("Buscar aliases");
+  search.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+  );
+  const selected = document.querySelector(".alias-row.selected");
+  language("en-US");
+  expect(document.querySelector(".alias-row.selected")).toBe(selected);
+  expect(selected?.textContent).toBe("beta");
+  key(search, "keydown");
+  key(search, "keyup");
+  expect(launches(request)[0]).toEqual([
+    { operation: "terminal.openSsh.v1", target: { host: "beta" } },
+  ]);
+});
+it("relabels in place without requests, lost drafts, focus or captured target", async () => {
+  const { request, quick, search, language, unsubscribeLanguage } =
+    await setup();
+  quick.value = "alice@example.org:2222";
+  search.value = "alp";
+  search.dispatchEvent(new Event("input"));
+  const row = document.querySelector<HTMLButtonElement>("[data-alias=alpha]")!;
+  row.focus();
+  key(row, "keydown");
+  const calls = request.mock.calls.length;
+  language("pt-BR");
+  expect(document.documentElement.lang).toBe("pt-BR");
+  expect(document.body.textContent).toContain("Conexão rápida");
+  expect(document.activeElement).toBe(row);
+  expect(row.getAttribute("aria-label")).toBe("Conectar a alpha");
+  expect(quick.value).toBe("alice@example.org:2222");
+  expect(search.value).toBe("alp");
+  expect(request.mock.calls).toHaveLength(calls);
+  key(row, "keyup");
+  expect(launches(request)[0]).toEqual([
+    { operation: "terminal.openSsh.v1", target: { host: "alpha" } },
+  ]);
+  await Promise.resolve();
+  expect(document.body.textContent).toContain("Terminal aceito");
+  language("en-US");
+  expect(document.body.textContent).toContain("Terminal accepted");
+  dispose?.();
+  expect(unsubscribeLanguage).toHaveBeenCalledOnce();
+  dispose = undefined;
+});
+it.each([
+  [{ ok: true, status: "accepted" }, "Terminal aceito", "Terminal accepted"],
+  [
+    { ok: false, error: "ssh-not-found" },
+    "Cliente OpenSSH não encontrado",
+    "OpenSSH client not found",
+  ],
+  [
+    { ok: false, error: "outcome-unknown" },
+    "Um terminal pode já",
+    "A terminal may already",
+  ],
+  [{ ok: false, error: "unavailable" }, "Não foi possível", "Unable to open"],
+] as const)(
+  "relabels pending and settled notices without replay: %j",
+  async (reply, portuguese, english) => {
+    const { request, quick, language, visibility } = await setup();
+    let finish!: (value: Awaited<ReturnType<SshBridge["request"]>>) => void;
+    request.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    quick.value = "alice@example.org";
+    quick.focus();
+    key(quick, "keydown");
+    key(quick, "keyup");
+    const calls = request.mock.calls.length;
+    language("pt-BR");
+    expect(document.activeElement).toBe(quick);
+    expect(document.body.textContent).toContain("Abrindo terminal");
+    expect(
+      document.querySelector<HTMLButtonElement>(".quick-connect button")!
+        .disabled,
+    ).toBe(true);
+    visibility(false);
+    language("en-US");
+    expect(document.body.textContent).toContain("Opening terminal");
+    finish(reply);
+    await Promise.resolve();
+    language("pt-BR");
+    expect(document.body.textContent).toContain(portuguese);
+    language("en-US");
+    expect(document.body.textContent).toContain(english);
+    expect(quick.value).toBe("alice@example.org");
+    expect(request.mock.calls).toHaveLength(calls);
+  },
+);
+it.each([
+  "host:0",
+  "host:65536",
+  "[bad::address]",
+  "a".repeat(385),
+  "user@host command",
+])(
+  "localizes validation without exposing parser English: %s",
+  async (target) => {
+    const { request, quick, language } = await setup();
+    quick.value = target;
+    language("pt-BR");
+    key(quick, "keydown");
+    key(quick, "keyup");
+    expect(document.body.textContent).toContain("Destino inválido");
+    expect(document.body.textContent).toContain("65535");
+    language("en-US");
+    expect(document.body.textContent).toContain("Invalid target");
+    expect(launches(request)).toHaveLength(0);
+    expect(quick.value).toBe(target);
+  },
+);
+it("relabels reading, incomplete discovery and invalidated results without rereading", async () => {
+  const { request, language, visibility } = await setup();
+  const refresh = document.querySelector<HTMLButtonElement>(
+    ".alias-toolbar button",
+  )!;
+  let finish!: (value: Awaited<ReturnType<SshBridge["request"]>>) => void;
+  request.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  refresh.click();
+  language("pt-BR");
+  expect(document.body.textContent).toContain("Lendo aliases");
+  finish({
+    ok: true,
+    aliases: ["literal-alias"],
+    incomplete: true,
+    reasons: { syntax: 2, "file-limit": 1 },
+  });
+  await Promise.resolve();
+  expect(document.body.textContent).toContain("1 de 1 aliases indexados");
+  expect(document.body.textContent).toContain(
+    "sintaxe: 2; limite de arquivos: 1",
+  );
+  const row = document.querySelector("[data-alias]");
+  const calls = request.mock.calls.length;
+  visibility(false);
+  language("en-US");
+  expect(document.querySelector("[data-alias]")).toBe(row);
+  expect(document.body.textContent).toContain("syntax: 2; file limit: 1");
+  expect(request.mock.calls).toHaveLength(calls);
+  visibility(true);
+  request.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  refresh.click();
+  visibility(false);
+  finish({ ok: true, aliases: ["stale"] });
+  await Promise.resolve();
+  language("pt-BR");
+  expect(document.body.textContent).toContain(
+    "resultado da descoberta foi invalidado",
+  );
+});
+it.each([false, true])(
+  "relabels capability failure and discovery failure (throw=%s)",
+  async (throws) => {
+    let language!: (value: "en-US" | "pt-BR") => void;
+    const request = vi.fn<SshBridge["request"]>(async () => {
+      if (throws) throw new Error("private transport diagnostic");
+      return { ok: false };
+    });
+    const page = mountSshPage(document, {
+      request,
+      onAppearance: () => () => {},
+      onVisibility: () => () => {},
+      onLanguage(listener) {
+        language = listener;
+        listener("en-US");
+        return () => {};
+      },
+    });
+    dispose = page.dispose;
+    await page.ready;
+    const calls = request.mock.calls.length;
+    language("pt-BR");
+    expect(document.body.textContent).toContain(
+      throws
+        ? "Recursos do host indisponíveis"
+        : "Este host não oferece SSH Connect",
+    );
+    expect(document.body.textContent).toContain(
+      "A descoberta de aliases está indisponível",
+    );
+    expect(document.body.textContent).not.toContain(
+      "private transport diagnostic",
+    );
+    expect(request.mock.calls).toHaveLength(calls);
+  },
+);
 it("keeps alias search distinct from quick connect and finishes held Enter before dispatch", async () => {
   const { request, search, quick } = await setup();
   search.value = "not-an-alias";
@@ -176,6 +388,7 @@ it("keeps two views' Refresh results and search state independent", async () => 
   const pages = frames.map((frame) =>
     mountSshPage(frame.contentDocument!, {
       onAppearance: () => () => {},
+      onLanguage: () => () => {},
       request: async (value) =>
         (value as { operation: string }).operation === "host.capabilities"
           ? { capabilities: ["terminal.openSsh.v1"] }
@@ -222,6 +435,7 @@ it("does not invalidate initial discovery when the host republishes the initial 
   let finish!: (reply: Awaited<ReturnType<SshBridge["request"]>>) => void;
   const page = mountSshPage(document, {
     onAppearance: () => () => {},
+    onLanguage: () => () => {},
     request: async (value) =>
       (value as { operation: string }).operation === "host.capabilities"
         ? { capabilities: ["terminal.openSsh.v1"] }

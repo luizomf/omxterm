@@ -5,20 +5,25 @@ preview**, first supported by OMXTerm **0.24.0-dev.0**. It is not bundled with t
 terminal, a stable SDK, an SSH broker, or a cross-platform availability claim.
 
 Build the committed source with `node scripts/build-ssh-extension.mjs`. The
-builder produces `dist/extensions/ssh-0.2.0.omxext`, a SHA-256 sidecar and an
+builder produces `dist/extensions/ssh-0.3.0.omxext`, a SHA-256 sidecar and an
 unqualified source/tool receipt; existing outputs are never overwritten. Install
 the archive through Settings → Extensions and review the ordinary trusted-code
 warning. Open **SSH Connect** from File, the Command Palette or the terminal
 context menu. There is no new toolbar or default shortcut. Building an archive
 alone does not publish it.
 
-Source version 0.2.0 requires host 0.24.0-dev.4 or later for its read-only
-appearance subscription. Compact controls share the terminal's theme tokens;
+Source version 0.3.0 requires host 0.24.0-dev.8 or later for its read-only
+appearance and interface-language subscriptions. Compact controls share the terminal's theme tokens;
 the base surface reveals the parent window's single tint rather than painting
 an opaque background. Live theme/opacity updates retain search, quick-connect
 and other view state, including while hidden. Native blur remains host-owned
 and compositor dependent. The bundled stylesheet includes all shared tokens.
-The immutable distributed 0.1.0 archive and catalog below remain unchanged.
+Controls, accessible names and notices follow the host's `en-US` or `pt-BR`
+interface language. Live language changes retain drafts, selected aliases, focus
+and pending operations without rediscovery or automatic connection retries.
+Alias names and connection targets remain literal, untranslated data.
+The immutable distributed 0.1.0 archive and catalog below remain unchanged;
+updating the host alone does not update a separately installed extension.
 
 ## Installing the distributed preview
 
@@ -56,6 +61,16 @@ also set `OMXTERM_SSH_PACKAGED_CATALOG=public` and
 ```sh
 npm test -- test/integration/ssh-packaged.test.ts
 ```
+
+`OMXTERM_SSH_PACKAGED_EXTENSION_VERSION` selects the expected archive version
+(default `0.1.0`). With version `0.3.0`, optional
+`OMXTERM_SSH_PACKAGED_APPEARANCE=1` adds normal/narrow dark/light opacity and
+visible/hidden language checks before the synthetic Connect campaign. It requires
+an assigned single-screen desktop lane, retains captures for visual inspection,
+and does not establish native blur in a noncomposited nested lane. It cannot be
+combined with public-catalog mode. Exact-package appearance/language qualification
+is separate from public catalog consumption; neither a source build nor the
+historical compact 0.2.0 rendering campaign proves a new archive's Connect behavior.
 
 The public mode verifies a separate fixed-endpoint readback, then the unchanged
 packaged app independently browses the production endpoint and installs the SSH
