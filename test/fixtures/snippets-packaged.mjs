@@ -575,6 +575,10 @@ print('Enter released')`,
     } catch (error) {
       if (fixture.evidence) {
         await writeFile(
+          path.join(fixture.evidence, "listener-trace.json"),
+          JSON.stringify(listenerTrace, null, 2),
+        );
+        await writeFile(
           path.join(fixture.evidence, "failure.png"),
           (await core.capturePage()).toPNG(),
         ).catch(() => {});
